@@ -14,3 +14,16 @@ pub(crate) enum AssetsError {
     #[error("map parse error: {0}")]
     Map(String),
 }
+
+impl AssetsError {
+    /// Whether a source file doesn't exist for the requested version (e.g.
+    /// `scripts/loot_tables.vdata`, which is gone from build 6711 on).
+    pub(crate) fn is_not_found(&self) -> bool {
+        matches!(
+            self,
+            Self::Store(store::VersionStoreError::ObjectStore(
+                object_store::Error::NotFound { .. }
+            ))
+        )
+    }
+}

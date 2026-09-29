@@ -128,9 +128,19 @@ pub(crate) async fn resolve_version(
     }
 }
 
-/// Wrap an `AssetsError` from a `fetch_*` call in a 500 with the given label.
+/// Wrap an `AssetsError` from a `fetch_*` call: a source file missing for the
+/// requested version is a 404, everything else a 500 with the given label.
 fn map_build_err(label: &'static str) -> impl FnOnce(AssetsError) -> APIError {
-    move |e| APIError::internal(format!("building {label}: {e}"))
+    move |e| {
+        if e.is_not_found() {
+            APIError::status_msg(
+                StatusCode::NOT_FOUND,
+                format!("{label}: not available for the requested client_version ({e})"),
+            )
+        } else {
+            APIError::internal(format!("building {label}: {e}"))
+        }
+    }
 }
 
 /// Resolve version, then call `fetch(r2, version, language)` and wrap errors.

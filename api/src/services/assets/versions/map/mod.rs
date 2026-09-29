@@ -1,8 +1,9 @@
 //! `/v1/assets/map` data layer.
 //!
 //! The objective marker positions come from the per-version
-//! `styles/objectives_map.css`; the radius, image URLs, and zip-line lane
-//! splines ([`geometry`]) are fixed constants.
+//! `styles/objectives_map.css`; the radius, image URLs (which switch to the
+//! layered midtown minimap from build 6711 on), and zip-line lane splines
+//! ([`geometry`]) are fixed constants.
 
 mod geometry;
 
@@ -23,6 +24,9 @@ use crate::services::assets::versions::store;
 
 const MAP_RADIUS: u32 = 10752;
 const CSS_PATH: &str = "styles/objectives_map.css";
+/// First build of the "City Never Sleeps" map (layered midtown minimap with
+/// tunnel overlays).
+const CITY_NEVER_SLEEPS_BUILD: u32 = 6711;
 
 /// Tower/objective markers. The `serialize` value is the CSS selector to read
 /// (drives `FromStr`); the `to_string` value is the output key (drives
@@ -88,14 +92,25 @@ pub(crate) struct ObjectivePosition {
     pub(crate) top_relative: f64,
 }
 
-/// Fixed CDN URLs for the minimap image layers.
+/// CDN URLs for the minimap image layers.
 #[derive(Debug, Clone, Serialize, ToSchema)]
 pub(crate) struct MapImages {
+    /// Full minimap. From build 6711 on this is the midtown base layer.
     minimap: String,
+    /// Minimap without overlays. From build 6711 on this is the midtown base layer.
     plain: String,
+    /// Background layer. No longer shipped by the game from build 6711 on; the
+    /// last extracted image is kept in the bucket.
     background: String,
     frame: String,
+    /// Midtown base layer.
     mid: String,
+    /// Mid tunnels overlay, drawn above `mid` (build 6711+).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    mid_tunnels: Option<String>,
+    /// Rat tunnels overlay, drawn above `mid_tunnels` (build 6711+).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    rat_tunnels: Option<String>,
 }
 
 /// A single lane's zip-line cubic spline.
@@ -122,13 +137,30 @@ pub(crate) struct MapData {
     zipline_paths: Vec<ZiplanePath>,
 }
 
-fn images() -> MapImages {
-    MapImages {
-        minimap: format!("{IMAGE_BASE_URL}/maps/minimap.png"),
-        plain: format!("{IMAGE_BASE_URL}/maps/minimap_plain.png"),
-        background: format!("{IMAGE_BASE_URL}/maps/minimap_bg.png"),
-        frame: format!("{IMAGE_BASE_URL}/maps/minimap_frame.png"),
-        mid: format!("{IMAGE_BASE_URL}/maps/minimap_midtown_mid_2k.png"),
+/// Image layers for `version`. Images aren't versioned in the bucket and
+/// uploads never delete, so the pre-6711 files stay available for older builds.
+fn images(version: u32) -> MapImages {
+    let url = |name: &str| format!("{IMAGE_BASE_URL}/maps/{name}.png");
+    if version >= CITY_NEVER_SLEEPS_BUILD {
+        MapImages {
+            minimap: url("minimap_midtown_mid"),
+            plain: url("minimap_midtown_mid"),
+            background: url("minimap_bg"),
+            frame: url("minimap_frame"),
+            mid: url("minimap_midtown_mid"),
+            mid_tunnels: Some(url("minimap_midtown_mid_tunnels")),
+            rat_tunnels: Some(url("minimap_midtown_rat_tunnels")),
+        }
+    } else {
+        MapImages {
+            minimap: url("minimap"),
+            plain: url("minimap_plain"),
+            background: url("minimap_bg"),
+            frame: url("minimap_frame"),
+            mid: url("minimap_midtown_mid_2k"),
+            mid_tunnels: None,
+            rat_tunnels: None,
+        }
     }
 }
 
@@ -190,10 +222,10 @@ pub(crate) fn build_objective_positions(
 }
 
 /// Build the full map response from the version's `objectives_map.css`.
-pub(crate) fn build_map(css: &str) -> Result<MapData, AssetsError> {
+pub(crate) fn build_map(css: &str, version: u32) -> Result<MapData, AssetsError> {
     Ok(MapData {
         radius: MAP_RADIUS,
-        images: images(),
+        images: images(version),
         objective_positions: build_objective_positions(css)?,
         zipline_paths: zipline_paths(),
     })
@@ -207,7 +239,7 @@ pub(crate) fn build_map(css: &str) -> Result<MapData, AssetsError> {
 )]
 pub(crate) async fn fetch_map(r2: &AmazonS3, version: u32) -> Result<Arc<MapData>, AssetsError> {
     let css_src = store::fetch_text(r2, version, CSS_PATH).await?;
-    Ok(Arc::new(build_map(&css_src)?))
+    Ok(Arc::new(build_map(&css_src, version)?))
 }
 
 #[cfg(test)]
@@ -218,10 +250,30 @@ mod tests {
 
     #[test]
     fn snapshot_map() {
-        let map = build_map(FIXTURE).expect("builds");
+        let map = build_map(FIXTURE, 6701).expect("builds");
         insta::with_settings!(
             { snapshot_path => "map_snapshots", prepend_module_to_snapshot => false },
             { insta::assert_json_snapshot!("map", map); }
+        );
+    }
+
+    #[test]
+    fn city_never_sleeps_uses_layered_minimap() {
+        let old = images(CITY_NEVER_SLEEPS_BUILD - 1);
+        assert!(old.minimap.ends_with("/maps/minimap.png"));
+        assert!(old.mid_tunnels.is_none());
+
+        let new = images(CITY_NEVER_SLEEPS_BUILD);
+        assert!(new.mid.ends_with("/maps/minimap_midtown_mid.png"));
+        assert!(new.minimap.ends_with("/maps/minimap_midtown_mid.png"));
+        assert!(new.frame.ends_with("/maps/minimap_frame.png"));
+        assert!(
+            new.mid_tunnels
+                .is_some_and(|u| u.ends_with("/maps/minimap_midtown_mid_tunnels.png"))
+        );
+        assert!(
+            new.rat_tunnels
+                .is_some_and(|u| u.ends_with("/maps/minimap_midtown_rat_tunnels.png"))
         );
     }
 

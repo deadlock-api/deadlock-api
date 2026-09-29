@@ -2,6 +2,7 @@
 
 #![expect(clippy::struct_field_names, clippy::needless_pass_by_value)]
 
+use std::collections::HashMap;
 use std::sync::Arc;
 
 use cached::macros::cached;
@@ -13,21 +14,40 @@ use utoipa::ToSchema;
 
 use crate::services::assets::versions::common::Color;
 use crate::services::assets::versions::error::AssetsError;
-use crate::services::assets::versions::store;
+use crate::services::assets::versions::{localization, store};
 use crate::utils::kv3;
 
+#[derive(Debug, Deserialize)]
+struct RawColorGradientStop {
+    #[serde(rename = "m_flPosition")]
+    position: f64,
+    #[serde(rename = "m_Color")]
+    color: Color,
+}
+
+#[derive(Debug, Deserialize)]
+struct RawColorGradient {
+    #[serde(default, rename = "m_Stops")]
+    stops: Vec<RawColorGradientStop>,
+}
+
+/// Up to build 6701 every flash type carried a flat `m_Color` plus
+/// coverage/hardness/brightness scalars; from 6711 on the color is an
+/// `m_ColorGradient` and most of the scalars are gone.
 #[derive(Debug, Deserialize)]
 struct RawFlashData {
     #[serde(rename = "m_flDuration")]
     duration: f64,
-    #[serde(rename = "m_flCoverage")]
-    coverage: f64,
-    #[serde(rename = "m_flHardness")]
-    hardness: f64,
-    #[serde(rename = "m_flBrightness")]
-    brightness: f64,
-    #[serde(rename = "m_Color")]
-    color: Color,
+    #[serde(default, rename = "m_flCoverage")]
+    coverage: Option<f64>,
+    #[serde(default, rename = "m_flHardness")]
+    hardness: Option<f64>,
+    #[serde(default, rename = "m_flBrightness")]
+    brightness: Option<f64>,
+    #[serde(default, rename = "m_Color")]
+    color: Option<Color>,
+    #[serde(default, rename = "m_ColorGradient")]
+    color_gradient: Option<RawColorGradient>,
     #[serde(default, rename = "m_flBrightnessInLightSensitivityMode")]
     brightness_in_light_sensitivity_mode: Option<f64>,
 }
@@ -44,6 +64,8 @@ struct RawDamageFlash {
     crit_damage: RawFlashData,
     #[serde(rename = "EFlashType_MeleeActivate")]
     melee_damage: RawFlashData,
+    #[serde(default, rename = "EFlashType_GenericDamage")]
+    generic_damage: Option<RawFlashData>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -72,18 +94,25 @@ struct RawGlitchSettings {
     breakup_strength: f64,
 }
 
+/// Since build 6711 unused lane slots are bare `{ m_strLaneName = "Unused" }`
+/// entries (kept so `assigned_lane` still indexes the list) and lane names
+/// are localization tokens (`#Citadel_LaneNameYellow`).
 #[derive(Debug, Deserialize)]
 struct RawLaneInfo {
     #[serde(rename = "m_strLaneName")]
     lane_name: String,
     #[serde(default, rename = "m_strCSSClass")]
     css_class: Option<String>,
-    #[serde(rename = "m_Color")]
-    color: Color,
+    #[serde(default, rename = "m_Color")]
+    color: Option<Color>,
     #[serde(default, rename = "m_MinimapZiplineColorOverride")]
     minimap_zipline_color_override: Option<Color>,
     #[serde(default, rename = "m_ObjectiveColor")]
     objective_color: Option<Color>,
+    #[serde(default, rename = "m_MinimapColor")]
+    minimap_color: Option<Color>,
+    #[serde(default, rename = "m_bIsEnemyLane")]
+    is_enemy_lane: bool,
 }
 
 #[derive(Debug, Deserialize)]
@@ -174,10 +203,27 @@ struct RawItemGroup {
     upgrades: Vec<String>,
 }
 
+/// Up to build 6701 the weights are wrapped in `{ m_mapOutcomesToWeights = {..} }`;
+/// from 6711 on they are the bare `{ "0" = .., "1" = .. }` map.
 #[derive(Debug, Deserialize)]
-struct RawOutcomeToWeights {
-    #[serde(rename = "m_mapOutcomesToWeights")]
-    outcomes_to_weights: IndexMap<String, f64>,
+#[serde(untagged)]
+enum RawOutcomeToWeights {
+    Wrapped {
+        #[serde(rename = "m_mapOutcomesToWeights")]
+        outcomes_to_weights: IndexMap<String, f64>,
+    },
+    Flat(IndexMap<String, f64>),
+}
+
+impl RawOutcomeToWeights {
+    fn into_weights(self) -> IndexMap<String, f64> {
+        match self {
+            Self::Wrapped {
+                outcomes_to_weights,
+            }
+            | Self::Flat(outcomes_to_weights) => outcomes_to_weights,
+        }
+    }
 }
 
 #[derive(Debug, Deserialize)]
@@ -294,6 +340,14 @@ struct RawGenericData {
     enemy_objectives_color: Option<Color>,
     #[serde(default, rename = "m_enemyZiplineColor")]
     enemy_zipline_color: Option<Color>,
+    #[serde(default, rename = "m_ColorFriend")]
+    color_friend: Option<Color>,
+    #[serde(default, rename = "m_ColorEnemy")]
+    color_enemy: Option<Color>,
+    #[serde(default, rename = "m_ColorTeam1")]
+    color_team1: Option<Color>,
+    #[serde(default, rename = "m_ColorTeam2")]
+    color_team2: Option<Color>,
     #[serde(rename = "m_nItemPricePerTier")]
     item_price_per_tier: Vec<i64>,
     #[serde(rename = "m_flTrooperKillGoldShareFrac")]
@@ -372,12 +426,29 @@ impl<'de> Deserialize<'de> for ItemTier {
 }
 
 #[derive(Debug, Serialize, Clone, ToSchema)]
+pub(crate) struct ColorGradientStop {
+    /// Position of the stop along the flash's lifetime, `0.0..=1.0`.
+    pub position: f64,
+    pub color: Color,
+}
+
+#[derive(Debug, Serialize, Clone, ToSchema)]
 pub(crate) struct FlashData {
     pub duration: f64,
-    pub coverage: f64,
-    pub hardness: f64,
-    pub brightness: f64,
+    /// Only present up to build 6701.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub coverage: Option<f64>,
+    /// Only present up to build 6701.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub hardness: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub brightness: Option<f64>,
+    /// Flat flash color. From build 6711 on it is derived from the first
+    /// `color_gradient` stop.
     pub color: Color,
+    /// Color gradient over the flash's lifetime (build 6711+).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub color_gradient: Option<Vec<ColorGradientStop>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub brightness_in_light_sensitivity_mode: Option<f64>,
 }
@@ -389,6 +460,9 @@ pub(crate) struct DamageFlash {
     pub healing_damage: FlashData,
     pub crit_damage: FlashData,
     pub melee_damage: FlashData,
+    /// Build 6711+.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub generic_damage: Option<FlashData>,
 }
 
 #[derive(Debug, Serialize, Clone, ToSchema)]
@@ -409,14 +483,23 @@ pub(crate) struct GlitchSettings {
 
 #[derive(Debug, Serialize, Clone, ToSchema)]
 pub(crate) struct LaneInfo {
+    /// Localized lane name. Unused lane slots are named `Unused`.
     pub lane_name: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub css_class: Option<String>,
-    pub color: Color,
+    /// Absent for unused lane slots (build 6711+).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub color: Option<Color>,
+    /// Only present up to build 6701.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub minimap_zipline_color_override: Option<Color>,
+    /// Only present up to build 6701.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub objective_color: Option<Color>,
+    /// Build 6711+.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub minimap_color: Option<Color>,
+    pub is_enemy_lane: bool,
 }
 
 #[derive(Debug, Serialize, Clone, ToSchema)]
@@ -560,6 +643,18 @@ pub(crate) struct GenericData {
     pub enemy_objectives_color: Option<Color>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub enemy_zipline_color: Option<Color>,
+    /// Build 6711+.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub color_friend: Option<Color>,
+    /// Build 6711+.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub color_enemy: Option<Color>,
+    /// Build 6711+.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub color_team1: Option<Color>,
+    /// Build 6711+.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub color_team2: Option<Color>,
     pub item_price_per_tier: Vec<i64>,
     pub trooper_kill_gold_share_frac: Vec<f64>,
     pub hero_kill_gold_share_frac: Vec<f64>,
@@ -575,10 +670,13 @@ pub(crate) struct GenericData {
     pub street_brawl: Option<StreetBrawl>,
 }
 
-pub(crate) fn build_generic_data(vdata: &str) -> Result<GenericData, AssetsError> {
+pub(crate) fn build_generic_data(
+    vdata: &str,
+    loc: &HashMap<String, String>,
+) -> Result<GenericData, AssetsError> {
     let root: serde_json::Value = kv3::from_str(vdata)?;
     let raw: RawGenericData = serde_json::from_value(unwrap_root(root))?;
-    Ok(transform(raw))
+    Ok(transform(raw, loc))
 }
 
 /// Source publishes either `{ m_mapDamageFlash = ... }` at top, or
@@ -600,11 +698,15 @@ fn unwrap_root(v: serde_json::Value) -> serde_json::Value {
     v
 }
 
-fn transform(r: RawGenericData) -> GenericData {
+fn transform(r: RawGenericData, loc: &HashMap<String, String>) -> GenericData {
     GenericData {
         damage_flash: damage_flash_out(r.damage_flash),
         glitch_settings: glitch_out(r.glitch_settings),
-        lane_info: r.lane_info.into_iter().map(lane_info_out).collect(),
+        lane_info: r
+            .lane_info
+            .into_iter()
+            .map(|l| lane_info_out(l, loc))
+            .collect(),
         new_player_metrics: r
             .new_player_metrics
             .into_iter()
@@ -615,6 +717,10 @@ fn transform(r: RawGenericData) -> GenericData {
         enemy_objectives_and_zipline_color: r.enemy_objectives_and_zipline_color,
         enemy_objectives_color: r.enemy_objectives_color,
         enemy_zipline_color: r.enemy_zipline_color,
+        color_friend: r.color_friend,
+        color_enemy: r.color_enemy,
+        color_team1: r.color_team1,
+        color_team2: r.color_team2,
         item_price_per_tier: r.item_price_per_tier,
         trooper_kill_gold_share_frac: r.trooper_kill_gold_share_frac,
         hero_kill_gold_share_frac: r.hero_kill_gold_share_frac,
@@ -631,12 +737,31 @@ fn transform(r: RawGenericData) -> GenericData {
 }
 
 fn flash_out(r: RawFlashData) -> FlashData {
+    let color_gradient: Option<Vec<ColorGradientStop>> = r.color_gradient.map(|g| {
+        g.stops
+            .into_iter()
+            .map(|s| ColorGradientStop {
+                position: s.position,
+                color: s.color,
+            })
+            .collect()
+    });
+    let color = r
+        .color
+        .or_else(|| color_gradient.as_ref()?.first().map(|s| s.color))
+        .unwrap_or(Color {
+            red: 0,
+            green: 0,
+            blue: 0,
+            alpha: 255,
+        });
     FlashData {
         duration: r.duration,
         coverage: r.coverage,
         hardness: r.hardness,
         brightness: r.brightness,
-        color: r.color,
+        color,
+        color_gradient,
         brightness_in_light_sensitivity_mode: r.brightness_in_light_sensitivity_mode,
     }
 }
@@ -648,6 +773,7 @@ fn damage_flash_out(r: RawDamageFlash) -> DamageFlash {
         healing_damage: flash_out(r.healing_damage),
         crit_damage: flash_out(r.crit_damage),
         melee_damage: flash_out(r.melee_damage),
+        generic_damage: r.generic_damage.map(flash_out),
     }
 }
 
@@ -667,13 +793,22 @@ fn glitch_out(r: RawGlitchSettings) -> GlitchSettings {
     }
 }
 
-fn lane_info_out(r: RawLaneInfo) -> LaneInfo {
+fn lane_info_out(r: RawLaneInfo, loc: &HashMap<String, String>) -> LaneInfo {
+    // Up to build 6701 lane names are plain English; only `#`-prefixed
+    // tokens (6711+) are localized.
+    let lane_name = if r.lane_name.starts_with('#') {
+        localization::localize(loc, &r.lane_name)
+    } else {
+        r.lane_name
+    };
     LaneInfo {
-        lane_name: r.lane_name,
+        lane_name,
         css_class: r.css_class,
         color: r.color,
         minimap_zipline_color_override: r.minimap_zipline_color_override,
         objective_color: r.objective_color,
+        minimap_color: r.minimap_color,
+        is_enemy_lane: r.is_enemy_lane,
     }
 }
 
@@ -783,10 +918,10 @@ fn street_brawl_out(r: RawStreetBrawl) -> StreetBrawl {
             .into_iter()
             .map(|x| ItemDraftRoundPerGameRound {
                 chance_rare: OutcomeToWeights {
-                    outcomes_to_weights: x.chance_rare.outcomes_to_weights,
+                    outcomes_to_weights: x.chance_rare.into_weights(),
                 },
                 chance_enhanced: OutcomeToWeights {
-                    outcomes_to_weights: x.chance_enhanced.outcomes_to_weights,
+                    outcomes_to_weights: x.chance_enhanced.into_weights(),
                 },
                 item_draft_rounds: x
                     .item_draft_rounds
@@ -806,33 +941,96 @@ fn street_brawl_out(r: RawStreetBrawl) -> StreetBrawl {
     }
 }
 
-#[cached(max_size = 64, ttl_secs = 86400, convert = "{ version }", key = "u32")]
+#[cached(
+    max_size = 64,
+    ttl_secs = 86400,
+    convert = r#"{ (version, language.to_owned()) }"#,
+    key = "(u32, String)"
+)]
 pub(crate) async fn fetch_generic_data(
     r2: &AmazonS3,
     version: u32,
+    language: &str,
 ) -> Result<Arc<GenericData>, AssetsError> {
-    let vdata = store::fetch_text(r2, version, "scripts/generic_data.vdata").await?;
-    Ok(Arc::new(build_generic_data(&vdata)?))
+    let (vdata, loc) = tokio::try_join!(
+        async {
+            Ok::<_, AssetsError>(
+                store::fetch_text(r2, version, "scripts/generic_data.vdata").await?,
+            )
+        },
+        localization::fetch_localization(r2, version, language),
+    )?;
+    Ok(Arc::new(build_generic_data(&vdata, &loc)?))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    fn fixture() -> String {
+    fn fixture(name: &str) -> String {
         let manifest = env!("CARGO_MANIFEST_DIR");
         std::fs::read_to_string(format!(
-            "{manifest}/src/services/assets/versions/generic_data_fixtures/generic_data.vdata"
+            "{manifest}/src/services/assets/versions/generic_data_fixtures/{name}"
         ))
         .expect("vdata fixture")
     }
 
     #[test]
     fn snapshot_generic_data() {
-        let data = build_generic_data(&fixture()).expect("builds");
+        let data =
+            build_generic_data(&fixture("generic_data.vdata"), &HashMap::new()).expect("builds");
         insta::with_settings!(
             { snapshot_path => "generic_data_snapshots", prepend_module_to_snapshot => false },
             { insta::assert_json_snapshot!("generic_data", data); }
+        );
+    }
+
+    /// Build 6711 ("City Never Sleeps") reshaped damage flashes, lane info,
+    /// minimap colors and item draft weights.
+    #[test]
+    fn snapshot_generic_data_6711() {
+        let loc = HashMap::from([
+            ("Citadel_LaneNameYellow".to_owned(), "York".to_owned()),
+            ("Citadel_LaneNameBlue".to_owned(), "Broadway".to_owned()),
+            ("Citadel_LaneNameGreen".to_owned(), "Greenwich".to_owned()),
+        ]);
+        let data = build_generic_data(&fixture("generic_data_6711.vdata"), &loc).expect("builds");
+
+        let names: Vec<&str> = data
+            .lane_info
+            .iter()
+            .map(|l| l.lane_name.as_str())
+            .collect();
+        assert_eq!(
+            names,
+            [
+                "Unused",
+                "York",
+                "Unused",
+                "Unused",
+                "Broadway",
+                "Unused",
+                "Greenwich",
+                "Enemy"
+            ]
+        );
+        assert!(data.lane_info[0].color.is_none());
+        assert!(data.lane_info[7].is_enemy_lane);
+        let bullet = &data.damage_flash.bullet_damage;
+        let first_stop = bullet.color_gradient.as_ref().expect("gradient")[0].color;
+        assert_eq!(bullet.color, first_stop);
+        assert!(data.damage_flash.generic_damage.is_some());
+        assert!(data.color_enemy.is_some());
+        let round = &data
+            .street_brawl
+            .as_ref()
+            .expect("street brawl")
+            .item_draft_rounds_per_game_round[0];
+        assert!(!round.chance_rare.outcomes_to_weights.is_empty());
+
+        insta::with_settings!(
+            { snapshot_path => "generic_data_snapshots", prepend_module_to_snapshot => false },
+            { insta::assert_json_snapshot!("generic_data_6711", data); }
         );
     }
 }

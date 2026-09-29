@@ -6,65 +6,285 @@ expression: data
   "damage_flash": {
     "bullet_damage": {
       "duration": 0.1,
-      "coverage": 1.0,
-      "hardness": 1.0,
-      "brightness": 0.2,
+      "brightness": 2.0,
       "color": {
         "red": 255,
-        "green": 128,
-        "blue": 0,
-        "alpha": 255
+        "green": 52,
+        "blue": 52,
+        "alpha": 120
       },
+      "color_gradient": [
+        {
+          "position": 0.0,
+          "color": {
+            "red": 255,
+            "green": 52,
+            "blue": 52,
+            "alpha": 120
+          }
+        },
+        {
+          "position": 0.250646,
+          "color": {
+            "red": 255,
+            "green": 153,
+            "blue": 153,
+            "alpha": 120
+          }
+        },
+        {
+          "position": 0.268734,
+          "color": {
+            "red": 112,
+            "green": 0,
+            "blue": 0,
+            "alpha": 120
+          }
+        },
+        {
+          "position": 0.364341,
+          "color": {
+            "red": 145,
+            "green": 0,
+            "blue": 0,
+            "alpha": 120
+          }
+        },
+        {
+          "position": 0.77261,
+          "color": {
+            "red": 203,
+            "green": 0,
+            "blue": 0,
+            "alpha": 50
+          }
+        },
+        {
+          "position": 0.78553,
+          "color": {
+            "red": 255,
+            "green": 0,
+            "blue": 0,
+            "alpha": 6
+          }
+        },
+        {
+          "position": 0.989664,
+          "color": {
+            "red": 255,
+            "green": 0,
+            "blue": 0,
+            "alpha": 7
+          }
+        }
+      ],
       "brightness_in_light_sensitivity_mode": 0.0
     },
     "tech_damage": {
-      "duration": 0.1,
-      "coverage": 1.0,
-      "hardness": 1.0,
-      "brightness": 0.2,
+      "duration": 0.2,
       "color": {
         "red": 165,
         "green": 51,
         "blue": 255,
         "alpha": 255
-      }
+      },
+      "color_gradient": [
+        {
+          "position": 0.0,
+          "color": {
+            "red": 165,
+            "green": 51,
+            "blue": 255,
+            "alpha": 255
+          }
+        },
+        {
+          "position": 1.0,
+          "color": {
+            "red": 165,
+            "green": 51,
+            "blue": 255,
+            "alpha": 0
+          }
+        }
+      ],
+      "brightness_in_light_sensitivity_mode": 0.0
     },
     "healing_damage": {
       "duration": 1.0,
-      "coverage": 0.5,
-      "hardness": 0.0,
-      "brightness": 1.2,
       "color": {
         "red": 0,
         "green": 195,
         "blue": 45,
         "alpha": 255
       },
-      "brightness_in_light_sensitivity_mode": 0.6
+      "color_gradient": [
+        {
+          "position": 0.0,
+          "color": {
+            "red": 0,
+            "green": 195,
+            "blue": 45,
+            "alpha": 255
+          }
+        },
+        {
+          "position": 0.457364,
+          "color": {
+            "red": 0,
+            "green": 195,
+            "blue": 45,
+            "alpha": 10
+          }
+        },
+        {
+          "position": 1.0,
+          "color": {
+            "red": 0,
+            "green": 195,
+            "blue": 45,
+            "alpha": 5
+          }
+        }
+      ],
+      "brightness_in_light_sensitivity_mode": 0.0
     },
     "crit_damage": {
-      "duration": 0.33,
-      "coverage": 0.8,
-      "hardness": 0.9,
-      "brightness": 0.5,
+      "duration": 0.1,
+      "brightness": 4.0,
       "color": {
         "red": 255,
-        "green": 255,
+        "green": 128,
         "blue": 0,
-        "alpha": 255
-      }
+        "alpha": 200
+      },
+      "color_gradient": [
+        {
+          "position": 0.010336,
+          "color": {
+            "red": 255,
+            "green": 128,
+            "blue": 0,
+            "alpha": 200
+          }
+        },
+        {
+          "position": 0.02584,
+          "color": {
+            "red": 255,
+            "green": 255,
+            "blue": 255,
+            "alpha": 200
+          }
+        },
+        {
+          "position": 0.183463,
+          "color": {
+            "red": 255,
+            "green": 255,
+            "blue": 255,
+            "alpha": 200
+          }
+        },
+        {
+          "position": 0.209302,
+          "color": {
+            "red": 255,
+            "green": 128,
+            "blue": 0,
+            "alpha": 100
+          }
+        },
+        {
+          "position": 0.547804,
+          "color": {
+            "red": 255,
+            "green": 128,
+            "blue": 0,
+            "alpha": 10
+          }
+        },
+        {
+          "position": 0.894057,
+          "color": {
+            "red": 255,
+            "green": 128,
+            "blue": 0,
+            "alpha": 6
+          }
+        },
+        {
+          "position": 1.0,
+          "color": {
+            "red": 255,
+            "green": 128,
+            "blue": 0,
+            "alpha": 7
+          }
+        }
+      ],
+      "brightness_in_light_sensitivity_mode": 0.0
     },
     "melee_damage": {
-      "duration": 0.1,
-      "coverage": 1.0,
-      "hardness": 0.0,
-      "brightness": 0.8,
+      "duration": 0.15,
+      "brightness": 4.0,
       "color": {
         "red": 49,
         "green": 169,
         "blue": 250,
-        "alpha": 255
-      }
+        "alpha": 90
+      },
+      "color_gradient": [
+        {
+          "position": 0.0,
+          "color": {
+            "red": 49,
+            "green": 169,
+            "blue": 250,
+            "alpha": 90
+          }
+        },
+        {
+          "position": 1.0,
+          "color": {
+            "red": 49,
+            "green": 169,
+            "blue": 250,
+            "alpha": 0
+          }
+        }
+      ],
+      "brightness_in_light_sensitivity_mode": 0.0
+    },
+    "generic_damage": {
+      "duration": 0.1,
+      "color": {
+        "red": 255,
+        "green": 0,
+        "blue": 0,
+        "alpha": 20
+      },
+      "color_gradient": [
+        {
+          "position": 0.0,
+          "color": {
+            "red": 255,
+            "green": 0,
+            "blue": 0,
+            "alpha": 20
+          }
+        },
+        {
+          "position": 1.0,
+          "color": {
+            "red": 255,
+            "green": 0,
+            "blue": 0,
+            "alpha": 10
+          }
+        }
+      ],
+      "brightness_in_light_sensitivity_mode": 0.0
     }
   },
   "glitch_settings": {
@@ -82,30 +302,11 @@ expression: data
   },
   "lane_info": [
     {
-      "lane_name": "White",
-      "css_class": "whiteLane",
-      "color": {
-        "red": 200,
-        "green": 200,
-        "blue": 200,
-        "alpha": 255
-      },
-      "minimap_zipline_color_override": {
-        "red": 200,
-        "green": 200,
-        "blue": 200,
-        "alpha": 255
-      },
-      "objective_color": {
-        "red": 200,
-        "green": 200,
-        "blue": 200,
-        "alpha": 255
-      },
+      "lane_name": "Unused",
       "is_enemy_lane": false
     },
     {
-      "lane_name": "Yellow",
+      "lane_name": "York",
       "css_class": "yellowLane",
       "color": {
         "red": 241,
@@ -113,55 +314,24 @@ expression: data
         "blue": 48,
         "alpha": 255
       },
-      "minimap_zipline_color_override": {
+      "minimap_color": {
         "red": 190,
         "green": 169,
         "blue": 78,
         "alpha": 255
       },
-      "objective_color": {
-        "red": 249,
-        "green": 212,
-        "blue": 5,
-        "alpha": 255
-      },
       "is_enemy_lane": false
     },
     {
-      "lane_name": "Yellow + Orange",
-      "color": {
-        "red": 0,
-        "green": 0,
-        "blue": 0,
-        "alpha": 255
-      },
+      "lane_name": "Unused",
       "is_enemy_lane": false
     },
     {
-      "lane_name": "Green",
-      "css_class": "greenLane",
-      "color": {
-        "red": 255,
-        "green": 20,
-        "blue": 147,
-        "alpha": 255
-      },
-      "minimap_zipline_color_override": {
-        "red": 255,
-        "green": 20,
-        "blue": 147,
-        "alpha": 255
-      },
-      "objective_color": {
-        "red": 255,
-        "green": 20,
-        "blue": 147,
-        "alpha": 255
-      },
+      "lane_name": "Unused",
       "is_enemy_lane": false
     },
     {
-      "lane_name": "Blue",
+      "lane_name": "Broadway",
       "css_class": "blueLane",
       "color": {
         "red": 41,
@@ -169,32 +339,20 @@ expression: data
         "blue": 204,
         "alpha": 255
       },
-      "minimap_zipline_color_override": {
+      "minimap_color": {
         "red": 85,
         "green": 155,
         "blue": 190,
         "alpha": 255
       },
-      "objective_color": {
-        "red": 67,
-        "green": 125,
-        "blue": 220,
-        "alpha": 255
-      },
       "is_enemy_lane": false
     },
     {
-      "lane_name": " + Purple",
-      "color": {
-        "red": 0,
-        "green": 0,
-        "blue": 0,
-        "alpha": 255
-      },
+      "lane_name": "Unused",
       "is_enemy_lane": false
     },
     {
-      "lane_name": "Purple",
+      "lane_name": "Greenwich",
       "css_class": "purpleLane",
       "color": {
         "red": 89,
@@ -202,19 +360,30 @@ expression: data
         "blue": 71,
         "alpha": 255
       },
-      "minimap_zipline_color_override": {
+      "minimap_color": {
         "red": 102,
         "green": 153,
         "blue": 92,
         "alpha": 255
       },
-      "objective_color": {
-        "red": 89,
-        "green": 178,
-        "blue": 71,
+      "is_enemy_lane": false
+    },
+    {
+      "lane_name": "Enemy",
+      "css_class": "enemyLane",
+      "color": {
+        "red": 140,
+        "green": 55,
+        "blue": 38,
         "alpha": 255
       },
-      "is_enemy_lane": false
+      "minimap_color": {
+        "red": 140,
+        "green": 55,
+        "blue": 38,
+        "alpha": 255
+      },
+      "is_enemy_lane": true
     }
   ],
   "new_player_metrics": [
@@ -267,28 +436,28 @@ expression: data
       "mods_purchased": 1
     }
   ],
-  "minimap_team_rebels_color": {
-    "red": 58,
-    "green": 91,
-    "blue": 66,
+  "color_friend": {
+    "red": 255,
+    "green": 239,
+    "blue": 215,
     "alpha": 255
   },
-  "minimap_team_combine_color": {
-    "red": 83,
-    "green": 51,
-    "blue": 51,
-    "alpha": 255
-  },
-  "enemy_objectives_color": {
+  "color_enemy": {
     "red": 220,
     "green": 76,
     "blue": 47,
     "alpha": 255
   },
-  "enemy_zipline_color": {
-    "red": 140,
-    "green": 55,
-    "blue": 38,
+  "color_team1": {
+    "red": 231,
+    "green": 182,
+    "blue": 89,
+    "alpha": 255
+  },
+  "color_team2": {
+    "red": 91,
+    "green": 121,
+    "blue": 230,
     "alpha": 255
   },
   "item_price_per_tier": [
@@ -329,10 +498,10 @@ expression: data
   ],
   "objective_params": {
     "gold_per_orb": 0,
-    "near_player_split_pct": 40.0,
-    "tier1_gold_kill": 1500,
+    "near_player_split_pct": 25.0,
+    "tier1_gold_kill": 1375,
     "tier1_gold_orbs": 0,
-    "tier2_gold_kill": 4000,
+    "tier2_gold_kill": 3675,
     "tier2_gold_orbs": 0,
     "base_guardians_gold_kill": 1000,
     "base_guardians_gold_orbs": 0,
@@ -343,7 +512,7 @@ expression: data
   },
   "rejuv_params": {
     "rejuvinator_expiration_warning_timing": 30.0,
-    "rejuvinator_buff_duration": 240.0,
+    "rejuvinator_buff_duration": 180.0,
     "rejuvinator_drop_height": 500.0,
     "rejuvinator_drop_duration": 6.0,
     "trooper_health_mult": [
@@ -357,9 +526,9 @@ expression: data
       0.3
     ],
     "rejuvinator_rebirth_duration": [
-      240.0,
-      240.0,
-      240.0
+      180.0,
+      180.0,
+      180.0
     ]
   },
   "mini_map_offsets": [
@@ -368,8 +537,7 @@ expression: data
       "offset_2d": [
         0.0,
         1000.0
-      ],
-      "lane_index": 0
+      ]
     },
     {
       "entity_class": "CLASS_BOSS_BARRACKS",
@@ -393,6 +561,46 @@ expression: data
         0.0,
         400.0
       ]
+    },
+    {
+      "entity_class": "CLASS_ABILITY_SHOP",
+      "offset_2d": [
+        0.0,
+        0.0
+      ],
+      "lane_index": -1
+    },
+    {
+      "entity_class": "CLASS_ABILITY_SHOP",
+      "offset_2d": [
+        -3000.0,
+        -1800.0
+      ],
+      "lane_index": 0
+    },
+    {
+      "entity_class": "CLASS_ABILITY_SHOP",
+      "offset_2d": [
+        600.0,
+        -100.0
+      ],
+      "lane_index": 1
+    },
+    {
+      "entity_class": "CLASS_ABILITY_SHOP",
+      "offset_2d": [
+        0.0,
+        0.0
+      ],
+      "lane_index": 4
+    },
+    {
+      "entity_class": "CLASS_ABILITY_SHOP",
+      "offset_2d": [
+        -800.0,
+        200.0
+      ],
+      "lane_index": 6
     }
   ],
   "weapon_groups": [
@@ -1023,22 +1231,22 @@ expression: data
       },
       "2": {
         "bucket": {
-          "normal": 50.0,
-          "good": 50.0
+          "normal": 60.0,
+          "good": 40.0
         },
         "name": "Tier 2"
       },
       "3": {
         "bucket": {
-          "normal": 50.0,
-          "good": 50.0
+          "normal": 60.0,
+          "good": 40.0
         },
         "name": "Tier 3"
       },
       "4": {
         "bucket": {
-          "normal": 55.0,
-          "good": 45.0
+          "normal": 65.0,
+          "good": 35.0
         },
         "name": "Tier 4"
       },
