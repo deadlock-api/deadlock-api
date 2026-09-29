@@ -187,7 +187,8 @@ pub(super) struct MatchPlayer {
     #[graphql(complexity = "20 + 5 * child_complexity")]
     pub(super) items: Option<Vec<Item>>,
     /// The `items` entries that are purchased upgrade items (no abilities, no
-    /// starting items).
+    /// starting items, no corrupted items: those keep the normal item's id and are
+    /// only in `items`, with bit 23 (`0x800000`) set in `upgrade_info`).
     #[graphql(complexity = "20 + 5 * child_complexity")]
     pub(super) upgrades: Option<Vec<UpgradePurchase>>,
     #[graphql(complexity = "20 + 5 * child_complexity")]

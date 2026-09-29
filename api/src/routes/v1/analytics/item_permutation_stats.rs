@@ -12,7 +12,7 @@ use utoipa::{IntoParams, ToSchema};
 
 use super::common_filters::{
     MatchInfoFilters, PlayerFilters, default_min_matches_u32, filter_protected_accounts,
-    join_filters, round_timestamps,
+    join_filters, not_corrupted_sql, round_timestamps,
 };
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
@@ -126,6 +126,10 @@ pub(super) struct ItemPermutationStatsQuery {
         proptest(strategy = "crate::utils::proptest_utils::arb_small_u32_list()")
     )]
     ability_unlock_order_prefix: Option<Vec<u32>>,
+    /// Count corrupted items (build 6712+: a T3/T4 upgrade the Broker swapped for a corrupted version with the same item id) as the normal item. **Default:** `false`, corrupted purchases are ignored.
+    #[serde(default)]
+    #[param(default = false)]
+    include_corrupted_items: Option<bool>,
 }
 
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
@@ -137,6 +141,7 @@ struct ItemPermutationStats {
     matches: u64,
 }
 
+#[expect(clippy::too_many_lines)]
 fn build_query(query: &ItemPermutationStatsQuery) -> String {
     let info_filters = MatchInfoFilters {
         min_unix_timestamp: query.min_unix_timestamp,
@@ -182,20 +187,36 @@ fn build_query(query: &ItemPermutationStatsQuery) -> String {
         Some(min_matches) => format!("HAVING matches >= {min_matches}"),
         None => String::new(),
     };
+    // Corrupted purchases keep the normal item's id; only `items.upgrade_info` tells them
+    // apart. The swapped-out normal purchase stays in `items`, so a player who had an item
+    // corrupted still counts as owning the normal item.
+    let include_corrupted = query.include_corrupted_items == Some(true);
     if let Some(item_ids) = &query.item_ids {
         if item_ids.len() < 2 {
             return String::new();
         }
         let items_list = format!("[{}]", item_ids.iter().map(ToString::to_string).join(", "));
+        // `hasAll(items.item_id, ...)` stays as-is so the bf_items_item_id skip index still
+        // prunes; the corruption-aware check is an extra predicate on the surviving rows.
+        let (owned_items, corrupted_filter) = if include_corrupted {
+            ("items.item_id".to_owned(), String::new())
+        } else {
+            let owned = format!(
+                "arrayFilter((x, u) -> {}, items.item_id, items.upgrade_info)",
+                not_corrupted_sql("u")
+            );
+            let filter = format!("\n            AND hasAll({owned}, {items_list})");
+            (owned, filter)
+        };
         format!(
             "
         SELECT
-            arrayIntersect(items.item_id, {items_list}) AS item_ids,
+            arrayIntersect({owned_items}, {items_list}) AS item_ids,
             countIf(won)      AS wins,
             countIf(not won)  AS losses,
             wins + losses AS matches
         FROM match_player
-        WHERE hasAll(items.item_id, {items_list})
+        WHERE hasAll(items.item_id, {items_list}){corrupted_filter}
             AND {match_mode_filter} AND {game_mode_filter} {info_filters}
             {player_filters}
         GROUP BY item_ids
@@ -213,6 +234,14 @@ fn build_query(query: &ItemPermutationStatsQuery) -> String {
             .map(|i| format!(" ARRAY JOIN p_items AS i{i}, arrayEnumerate(p_items) AS i{i}_index "))
             .join("\n");
         let intersect_array = (0..comb_size).map(|i| format!("i{i}")).join(", ");
+        let owned_items = if include_corrupted {
+            "arrayFilter(x -> x IN t_upgrades, arrayDistinct(items.item_id))".to_owned()
+        } else {
+            format!(
+                "arrayDistinct(arrayFilter((x, u) -> x IN t_upgrades AND {}, items.item_id, items.upgrade_info))",
+                not_corrupted_sql("u")
+            )
+        };
         let filters_distinct = (0..comb_size)
             .tuple_windows()
             .map(|(i, j)| format!("i{i}_index < i{j}_index"))
@@ -220,7 +249,7 @@ fn build_query(query: &ItemPermutationStatsQuery) -> String {
         format!(
             "
         WITH t_upgrades AS (SELECT id from items WHERE type = 'upgrade'),
-            t_players AS (SELECT arrayFilter(x -> x IN t_upgrades, arrayDistinct(items.item_id))
+            t_players AS (SELECT {owned_items}
              as p_items, won
                 FROM match_player
                 WHERE {match_mode_filter} AND {game_mode_filter} {info_filters} {player_filters})
@@ -345,6 +374,41 @@ mod tests {
         for max_matches in [None, Some(50), Some(900)] {
             assert_eq!(baseline, query_with(Some(500), max_matches));
         }
+    }
+
+    #[test]
+    fn corrupted_items_are_excluded_by_default() {
+        let combos = build_query(&ItemPermutationStatsQuery::default());
+        assert!(combos.contains(
+            "arrayDistinct(arrayFilter((x, u) -> x IN t_upgrades AND bitAnd(u, 8388608) = 0, items.item_id, items.upgrade_info))"
+        ));
+        let intersect = build_query(&ItemPermutationStatsQuery {
+            item_ids: Some(vec![1, 2]),
+            ..Default::default()
+        });
+        let owned =
+            "arrayFilter((x, u) -> bitAnd(u, 8388608) = 0, items.item_id, items.upgrade_info)";
+        assert!(intersect.contains(&format!("arrayIntersect({owned}, [1, 2]) AS item_ids")));
+        assert!(intersect.contains(&format!(
+            "WHERE hasAll(items.item_id, [1, 2])\n            AND hasAll({owned}, [1, 2])"
+        )));
+    }
+
+    #[test]
+    fn include_corrupted_items_keeps_the_raw_item_ids() {
+        let combos = build_query(&ItemPermutationStatsQuery {
+            include_corrupted_items: Some(true),
+            ..Default::default()
+        });
+        assert!(combos.contains("arrayFilter(x -> x IN t_upgrades, arrayDistinct(items.item_id))"));
+        assert!(!combos.contains("upgrade_info"));
+        let intersect = build_query(&ItemPermutationStatsQuery {
+            item_ids: Some(vec![1, 2]),
+            include_corrupted_items: Some(true),
+            ..Default::default()
+        });
+        assert!(intersect.contains("arrayIntersect(items.item_id, [1, 2]) AS item_ids"));
+        assert!(!intersect.contains("upgrade_info"));
     }
 
     #[test]

@@ -1,5 +1,16 @@
 use itertools::Itertools;
 
+/// Bit of `items.upgrade_info` marking a corrupted item (build 6712+): the Broker swaps
+/// a T3/T4 upgrade for a corrupted version that keeps the normal item's `item_id`. Only
+/// ever test this bit; the other bits changed with the patch (0x10001 -> 0x10000).
+pub(super) const CORRUPTED_ITEM_BIT: u32 = 0x80_0000;
+
+/// SQL predicate that is true for non-corrupted purchases, given an expression for the
+/// purchase's `upgrade_info` value.
+pub(super) fn not_corrupted_sql(upgrade_info_expr: &str) -> String {
+    format!("bitAnd({upgrade_info_expr}, {CORRUPTED_ITEM_BIT}) = 0")
+}
+
 #[cfg_attr(test, derive(Debug, proptest_derive::Arbitrary))]
 pub(super) struct MatchInfoFilters {
     pub min_unix_timestamp: Option<i64>,

@@ -227,7 +227,7 @@ pub(super) const ITEM_SUBFIELDS: &[&str] = &[
 ];
 
 /// Sub-fields of the materialized `upgrades.*` arrays: the `items` entries that
-/// are purchased upgrade items. All `UInt32`.
+/// are purchased, non-corrupted upgrade items (migrations 30 and 42). All `UInt32`.
 pub(super) const UPGRADE_SUBFIELDS: &[&str] =
     &["item_id", "game_time_s", "sold_time_s", "net_worth_at_buy"];
 

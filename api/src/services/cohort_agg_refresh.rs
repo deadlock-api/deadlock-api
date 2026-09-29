@@ -84,6 +84,9 @@ fn cohort_specs() -> [CohortSpec; 3] {
     ]
 }
 
+/// The purchase side reads `upgrades.*`, which excludes corrupted purchases (migration 42);
+/// the cohort side keeps the raw `items.item_id` so it matches the `hasAll(items.item_id, ...)`
+/// presence filter of the base query.
 fn select_body(spec: &CohortSpec, since_clause: &str) -> String {
     let Source::Cohort {
         bucket_select,

@@ -397,7 +397,8 @@ fn build_totals_query(parts: &QueryParts) -> String {
 }
 
 /// Per-purchase rows: one row per (player, upgrade purchased) with its phase column assigned.
-/// Reads the materialized `upgrades.*` arrays, which are upgrade-only with `buy_time > 0`.
+/// Reads the materialized `upgrades.*` arrays, which are upgrade-only with `buy_time > 0` and
+/// exclude corrupted purchases (migration 42).
 fn purchases_subquery(parts: &QueryParts) -> String {
     let QueryParts {
         match_filters,
@@ -689,6 +690,9 @@ rate across net-worth buckets to the stage-wide distribution, isolating the item
 the buyer's lead. It is still observational, not a controlled/causal estimate. `reached_per_column`
 gives the distinct baseline games that bought any upgrade in each column, so consumers can show how
 survivorship-selected (e.g. long-game-only) a late stage is.
+
+Corrupted items (build 6712+, same item id as the normal item) are not counted as purchases; the
+normal item they replaced still is.
 
 Results are cached for **1 hour** based on the unique combination of query parameters provided.
 
