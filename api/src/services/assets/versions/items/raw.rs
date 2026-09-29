@@ -122,6 +122,9 @@ pub(crate) struct RawItemProperty {
     pub(crate) display_units: Option<String>,
     #[serde(default, rename = "m_subclassScaleFunction")]
     pub(crate) scale_function: Option<RawItemPropertyScaleFunctionWrap>,
+    /// Pipe-separated `ABILITY_UPGRADE_BIT_*` flags (build 6711+).
+    #[serde(default, rename = "m_nRequiredUpgradeBits")]
+    pub(crate) required_upgrade_bits: Option<UsageFlagsField>,
 }
 
 #[derive(Debug, Clone)]
@@ -237,6 +240,20 @@ pub(crate) struct RawAbilityUpgradePropertyUpgrade {
         skip_serializing_if = "Option::is_none"
     )]
     pub(crate) upgrade_type: Option<String>,
+    /// Corrupted item bonuses only (build 6711+).
+    #[serde(
+        default,
+        alias = "m_bRoundCorruptedBonus",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub(crate) round_corrupted_bonus: Option<bool>,
+    /// Corrupted item bonuses only (build 6711+).
+    #[serde(
+        default,
+        alias = "m_bFixedCorruptedBonus",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub(crate) fixed_corrupted_bonus: Option<bool>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -264,6 +281,16 @@ impl<'de> Deserialize<'de> for BonusValue {
 pub(crate) struct RawAbilityUpgrade {
     #[serde(default, alias = "m_vecPropertyUpgrades")]
     pub(crate) property_upgrades: Vec<RawAbilityUpgradePropertyUpgrade>,
+}
+
+/// `m_CorruptedItemInfo` on upgrades that the Broker can corrupt (build 6711+).
+#[derive(Debug, Deserialize, Clone)]
+pub(crate) struct RawCorruptedItemInfo {
+    #[serde(default, rename = "m_Upgrade")]
+    pub(crate) upgrade: Option<RawAbilityUpgrade>,
+    /// Names of `generic_data` corrupted penalty defs that never roll for this item.
+    #[serde(default, rename = "m_vecExcludedPenalties")]
+    pub(crate) excluded_penalties: Option<Vec<String>>,
 }
 
 // ============================== tooltip details ==============================
@@ -767,6 +794,18 @@ pub(crate) struct RawUpgrade {
     pub(crate) tooltip_sections: Option<Vec<RawUpgradeTooltipSection>>,
     #[serde(default, rename = "m_vecAbilityUpgrades")]
     pub(crate) upgrades: Option<Vec<RawAbilityUpgrade>>,
+    #[serde(default, rename = "m_CorruptedItemInfo")]
+    pub(crate) corrupted_info: Option<RawCorruptedItemInfo>,
+    /// Pipe-separated `EShopFilter*` flags (build 6711+).
+    #[serde(default, rename = "m_eAdditionalShopFilters")]
+    pub(crate) additional_shop_filters: Option<UsageFlagsField>,
+    /// Pipe-separated `EShopFilter*` flags (build 6711+).
+    #[serde(default, rename = "m_eDisableShopFilters")]
+    pub(crate) disable_shop_filters: Option<UsageFlagsField>,
+    #[serde(default, rename = "m_nShopVersion")]
+    pub(crate) shop_version: Option<i64>,
+    #[serde(default, rename = "m_strDisableItemTarget")]
+    pub(crate) disable_item_target: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Clone)]

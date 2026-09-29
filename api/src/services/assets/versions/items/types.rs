@@ -10,9 +10,10 @@ use strum::{Display, EnumString};
 use utoipa::ToSchema;
 
 use crate::services::assets::versions::items::raw::{
-    DependantAbilities, RawAbilityUpgrade, RawCustomCrosshairSettings,
-    RawItemPropertyScaleFunctionSubclass, RawItemWeaponInfoBulletSpeedCurve,
-    RawItemWeaponInfoInner, RawWeaponInfoHorizontalRecoil, RawWeaponInfoVerticalRecoil,
+    DependantAbilities, RawAbilityUpgrade, RawAbilityUpgradePropertyUpgrade,
+    RawCustomCrosshairSettings, RawItemPropertyScaleFunctionSubclass,
+    RawItemWeaponInfoBulletSpeedCurve, RawItemWeaponInfoInner, RawWeaponInfoHorizontalRecoil,
+    RawWeaponInfoVerticalRecoil,
 };
 
 #[derive(Debug, Clone, Copy, Serialize, EnumString, ToSchema, PartialEq, Eq, Enum)]
@@ -150,6 +151,20 @@ pub(crate) struct ItemProperty {
     pub(crate) conditional: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) icon: Option<String>,
+    /// Raw `ABILITY_UPGRADE_BIT_*` flags the ability needs for this property
+    /// to apply (e.g. `ABILITY_UPGRADE_BIT_TRAINED`, `ABILITY_UPGRADE_BIT_4`).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) required_upgrade_bits: Option<Vec<String>>,
+}
+
+/// Broker ("City Never Sleeps", build 6711+) corruption data of an upgrade.
+#[derive(Debug, Clone, Serialize, ToSchema)]
+pub(crate) struct CorruptedItemInfo {
+    /// Property bonuses the corrupted variant gains.
+    pub(crate) property_upgrades: Vec<RawAbilityUpgradePropertyUpgrade>,
+    /// Names of corrupted penalty definitions (`generic_data`) that can never
+    /// roll on this item.
+    pub(crate) excluded_penalties: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, ToSchema)]
@@ -607,6 +622,22 @@ pub(crate) struct Upgrade {
     pub(crate) shopable: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) cost: Option<u32>,
+    /// Present on upgrades the Broker can corrupt (build 6711+).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[graphql(skip)]
+    pub(crate) corrupted_info: Option<CorruptedItemInfo>,
+    /// Extra shop filters (`snake_case` `EShopFilter*` names, e.g. `status_grounded`)
+    /// this item shows up under, beyond those derived from its stats.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) shop_filters: Option<Vec<String>>,
+    /// Shop filters (`snake_case` `EShopFilter*` names) this item is hidden from
+    /// even though its stats would match them.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) disabled_shop_filters: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) shop_version: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) disable_item_target: Option<String>,
 }
 
 #[ComplexObject(rename_fields = "snake_case")]
@@ -622,6 +653,9 @@ impl Upgrade {
     }
     async fn upgrades(&self) -> Json<Option<Vec<RawAbilityUpgrade>>> {
         Json(self.upgrades.clone())
+    }
+    async fn corrupted_info(&self) -> Json<Option<CorruptedItemInfo>> {
+        Json(self.corrupted_info.clone())
     }
 }
 

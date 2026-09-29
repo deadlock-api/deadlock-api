@@ -12,16 +12,18 @@ use crate::services::assets::versions::items::paths::{extract_video_url, parse_i
 use crate::services::assets::versions::items::raw::{
     RawAbility, RawAbilityTooltipDetails, RawHeroLite, RawItemBaseFields, RawItemProperty,
     RawUpgrade, RawUpgradeTooltipSection, RawWeapon, RawWeaponInfo, StringOrFloatList,
+    UsageFlagsField,
 };
 use crate::services::assets::versions::items::template::{
     ItemView, TemplateCtx, replace_templates,
 };
 use crate::services::assets::versions::items::types::{
     Ability, AbilityActivation, AbilityDescription, AbilityImbue, AbilitySectionType,
-    AbilityTooltipDetails, AbilityVideos, Item, ItemProperty, ItemSlotType, ItemType,
-    StatsUsageFlag, TooltipDetailsBlock, TooltipDetailsBlockProperty, TooltipDetailsInfoSection,
-    Upgrade, UpgradeDescription, UpgradeProperty, UpgradeTooltipImportantPropertyWithIcon,
-    UpgradeTooltipSection, UpgradeTooltipSectionAttribute, Weapon, WeaponInfo,
+    AbilityTooltipDetails, AbilityVideos, CorruptedItemInfo, Item, ItemProperty, ItemSlotType,
+    ItemType, StatsUsageFlag, TooltipDetailsBlock, TooltipDetailsBlockProperty,
+    TooltipDetailsInfoSection, Upgrade, UpgradeDescription, UpgradeProperty,
+    UpgradeTooltipImportantPropertyWithIcon, UpgradeTooltipSection, UpgradeTooltipSectionAttribute,
+    Weapon, WeaponInfo,
 };
 
 pub(super) struct BuildInputs<'a> {
@@ -280,7 +282,53 @@ fn transform_property(
         postvalue_label,
         conditional,
         icon,
+        required_upgrade_bits: pipe_flags(raw.required_upgrade_bits.as_ref()),
     }
+}
+
+/// Split a pipe-separated (or list) enum-flag field, dropping empty entries;
+/// `None` when nothing remains (source ships `""` for "no flags").
+fn pipe_flags(field: Option<&UsageFlagsField>) -> Option<Vec<String>> {
+    field
+        .map(|f| {
+            f.as_list()
+                .into_iter()
+                .map(|s| s.trim().to_owned())
+                .filter(|s| !s.is_empty())
+                .collect::<Vec<_>>()
+        })
+        .filter(|v| !v.is_empty())
+}
+
+/// `EShopFilterStatus_Grounded` -> `status_grounded`, `EShopFilterAntiCC` -> `anti_cc`.
+fn shop_filters(field: Option<&UsageFlagsField>) -> Option<Vec<String>> {
+    pipe_flags(field).map(|v| {
+        v.iter()
+            .map(|s| pascal_to_snake(s.strip_prefix("EShopFilter").unwrap_or(s)))
+            .collect()
+    })
+}
+
+/// `SpiritAdditionalDamagePct` -> `spirit_additional_damage_pct`; acronym runs
+/// stay one word (`AntiCC` -> `anti_cc`, `HP` -> `hp`), `_` is kept as-is.
+fn pascal_to_snake(s: &str) -> String {
+    let chars: Vec<char> = s.chars().collect();
+    let mut out = String::with_capacity(s.len() + 4);
+    for (i, &c) in chars.iter().enumerate() {
+        if c.is_ascii_uppercase() && i > 0 {
+            let prev = chars[i - 1];
+            let next_lower = chars.get(i + 1).is_some_and(char::is_ascii_lowercase);
+            if prev != '_'
+                && (prev.is_ascii_lowercase()
+                    || prev.is_ascii_digit()
+                    || (prev.is_ascii_uppercase() && next_lower))
+            {
+                out.push('_');
+            }
+        }
+        out.push(c.to_ascii_lowercase());
+    }
+    out
 }
 
 fn renamed_property_key(k: &str) -> &str {
@@ -940,6 +988,10 @@ async fn transform_upgrade(
     let is_active_item = !matches!(activation, AbilityActivation::Passive);
     let shopable = raw.disabled != Some(true) && shop_image.is_some();
     let cost = item_price_per_tier.get(usize::from(raw.item_tier)).copied();
+    let corrupted_info = raw.corrupted_info.map(|c| CorruptedItemInfo {
+        property_upgrades: c.upgrade.map(|u| u.property_upgrades).unwrap_or_default(),
+        excluded_penalties: c.excluded_penalties.unwrap_or_default(),
+    });
 
     Upgrade {
         id,
@@ -970,6 +1022,11 @@ async fn transform_upgrade(
         is_active_item,
         shopable,
         cost,
+        corrupted_info,
+        shop_filters: shop_filters(raw.additional_shop_filters.as_ref()),
+        disabled_shop_filters: shop_filters(raw.disable_shop_filters.as_ref()),
+        shop_version: raw.shop_version,
+        disable_item_target: raw.disable_item_target.filter(|s| !s.is_empty()),
     }
 }
 
@@ -1118,6 +1175,29 @@ mod tests {
     use super::*;
 
     const SNAPSHOT_VERSION: u32 = 6064;
+
+    #[test]
+    fn shop_filters_to_snake_case() {
+        let field = UsageFlagsField::Pipe(
+            "EShopFilterStatus_Grounded | EShopFilterAntiCC|EShopFilterHP | \
+             EShopFilterSpiritAdditionalDamagePct"
+                .to_owned(),
+        );
+        assert_eq!(
+            shop_filters(Some(&field)),
+            Some(vec![
+                "status_grounded".to_owned(),
+                "anti_cc".to_owned(),
+                "hp".to_owned(),
+                "spirit_additional_damage_pct".to_owned(),
+            ])
+        );
+        assert_eq!(
+            shop_filters(Some(&UsageFlagsField::Pipe(String::new()))),
+            None
+        );
+        assert_eq!(shop_filters(None), None);
+    }
     const PUBLIC_BASE: &str = "https://assets-bucket.deadlock-api.com/assets-api-res/versions";
 
     async fn fetch_zst(client: &reqwest::Client, version: u32, rel: &str) -> String {
