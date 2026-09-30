@@ -10,9 +10,11 @@ use tracing::debug;
 use valveprotos::deadlock::{CCitadelUserMsgBannedHeroes, CitadelUserMessageIds};
 
 use crate::hashes::{
-    CONTROLLER_HASH, HERO_BUILD_ID_HASH, PREGAME_HERO_ID_HASH, STEAM_ID_HASH, STEAM_NAME_HASH,
+    BANNED_HEROES_HASH, CONTROLLER_HASH, HERO_BUILD_ID_HASH, PREGAME_HERO_ID_HASH, STEAM_ID_HASH,
+    STEAM_NAME_HASH,
 };
 
+const GAME_RULES_PROXY_HASH: u64 = fxhash::hash_bytes(b"CCitadelGameRulesProxy");
 const PLAYER_CONTROLLER_HASH: u64 = fxhash::hash_bytes(b"CCitadelPlayerController");
 const PLAYER_PAWN_HASH: u64 = fxhash::hash_bytes(b"CCitadelPlayerPawn");
 
@@ -166,6 +168,8 @@ impl DemoAnalyzerVisitor {
                     return Err(VisitorError::AllDataCollected);
                 }
             }
+        } else if hash == GAME_RULES_PROXY_HASH {
+            return self.handle_game_rules(ctx, entity);
         } else if hash == PLAYER_PAWN_HASH {
             let idx = entity.index();
             let mut state = self
@@ -203,6 +207,43 @@ impl DemoAnalyzerVisitor {
             }
         }
 
+        Ok(())
+    }
+
+    /// Bans from the game rules entity (build 6711+). Read once the array's length and every
+    /// element are present; older demos send them in the `BannedHeroes` message instead.
+    fn handle_game_rules(&mut self, ctx: &Context, entity: &Entity) -> Result<(), VisitorError> {
+        let Some(len) = entity.get_value::<u64>(&BANNED_HEROES_HASH) else {
+            return Ok(());
+        };
+        let Some(banned_hero_ids) = (0..len)
+            .map(|i| {
+                entity
+                    .get_value::<u64>(&fxhash::add_u64_to_hash(
+                        BANNED_HEROES_HASH,
+                        fxhash::add_u64_to_hash(0, i),
+                    ))
+                    .and_then(|id| u32::try_from(id).ok())
+            })
+            .collect::<Option<Vec<u32>>>()
+        else {
+            return Ok(());
+        };
+        let mut state = self
+            .state
+            .lock()
+            .map_err(|e| VisitorError::LockPoisoned(e.to_string()))?;
+        if state.bans_received && state.banned_hero_ids == banned_hero_ids {
+            return Ok(());
+        }
+        state.banned_hero_ids = banned_hero_ids;
+        state.bans_received = true;
+        let tick = ctx.tick();
+        debug!(tick, banned_heroes = ?state.banned_hero_ids, "Extracted banned heroes from game rules");
+        if state.all_data_complete(self.expected_players) {
+            debug!(tick, "All data collected after bans, stopping parse early");
+            return Err(VisitorError::AllDataCollected);
+        }
         Ok(())
     }
 
