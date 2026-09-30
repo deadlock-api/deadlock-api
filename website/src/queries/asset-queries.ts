@@ -14,7 +14,9 @@ import { queryKeys } from "./query-keys";
 // Game-data routes preload heroes and item upgrades into their HTML.
 // The keys below carry ~2.7 MB of balance tables, tooltips and lore that only
 // the Deadlockdle and flashcard pages read, so the shared queries drop them and
-// those pages fetch the *Full variants on demand.
+// those pages fetch the *Full variants on demand. `popular_items` (~300 KB of
+// per-hero item pick rates) is read by nothing and would otherwise be dehydrated
+// into every hero page.
 const HEAVY_HERO_KEYS = [
   "cost_bonuses",
   "description",
@@ -23,6 +25,7 @@ const HEAVY_HERO_KEYS = [
   "item_draft_weights",
   "item_slot_info",
   "level_info",
+  "popular_items",
   "purchase_bonuses",
   "shop_stat_display",
   "standard_level_up_upgrades",
