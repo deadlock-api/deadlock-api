@@ -13,7 +13,7 @@ import { Heading } from "~/components/ui/heading";
 import { IconTile } from "~/components/ui/icon-tile";
 import { Input } from "~/components/ui/input";
 import { OptionRow } from "~/components/ui/option-row";
-import { ProgressBar, ProgressBarSegment } from "~/components/ui/progress-bar";
+import { ProgressBar, ProgressBarMarker, ProgressBarSegment } from "~/components/ui/progress-bar";
 import { DivergingBar } from "~/components/ui/rate-bar";
 import { Segmented, SegmentedItem } from "~/components/ui/segmented";
 import { Slider } from "~/components/ui/slider";
@@ -409,6 +409,17 @@ export function Round3PrimitivesMore() {
             <ProgressBarSegment value={4} color="var(--item-weapon)" />
             <ProgressBarSegment value={2} color="var(--item-vitality)" />
             <ProgressBarSegment value={1} color="var(--item-spirit)" />
+          </ProgressBar>
+        </Variants>
+        <Variants
+          label="ProgressBarMarker: a second value to compare, above (extends the fill) and below (shades its end)"
+          className="items-center gap-6"
+        >
+          <ProgressBar value={0.55} className="w-40">
+            <ProgressBarMarker value={0.72} color="var(--chart-5)" />
+          </ProgressBar>
+          <ProgressBar value={0.65} className="w-40">
+            <ProgressBarMarker value={0.47} color="var(--chart-5)" />
           </ProgressBar>
         </Variants>
         <Variants label='variant="thin": beside a visible rate; positive unless a color is given' className="gap-6">

@@ -22,7 +22,7 @@ import { StaleOverlay } from "~/components/patterns/states/StaleOverlay";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { Field } from "~/components/ui/field";
-import { ProgressBarSegment } from "~/components/ui/progress-bar";
+import { ProgressBarMarker, ProgressBarSegment } from "~/components/ui/progress-bar";
 import { SearchInput } from "~/components/ui/search-input";
 import { Segmented, SegmentedItem } from "~/components/ui/segmented";
 import { Stack } from "~/components/ui/stack";
@@ -48,6 +48,30 @@ interface SortState {
 }
 
 const DEFAULT_SORT_STATE: SortState = { field: "winRate", direction: "desc" };
+
+const NO_CORRUPTED: CorruptedStats = { wins: 0, matches: 0 };
+
+/** A column header label with the key to its normal and corrupted colors. Spans: it sits inside the sort button. */
+function KeyedHeaderLabel({ normalColor = NORMAL_COLOR, children }: { normalColor?: string; children: ReactNode }) {
+  return (
+    <span className="inline-flex flex-col items-start gap-0.5">
+      <span>{children}</span>
+      <span className="flex items-center gap-3 text-xs font-normal text-muted-foreground">
+        <span className="flex items-center gap-1">
+          <ChartSwatch color={normalColor} size="sm" />
+          Normal
+        </span>
+        <span className="flex items-center gap-1">
+          <ChartSwatch color={CORRUPTED_COLOR} size="sm" />
+          Corrupted
+        </span>
+      </span>
+    </span>
+  );
+}
+/** Normal purchases in the stacked cells and header keys; corrupted ones in the second color. */
+const NORMAL_COLOR = "var(--chart-4)";
+const CORRUPTED_COLOR = "var(--chart-5)";
 
 /** Rows in the server-rendered HTML; a tall screen shows about 15. */
 const SERVER_ROWS = 30;
@@ -76,8 +100,8 @@ export interface ItemStatsTableProps {
   /** The request behind `data`: hovering a win rate charts that item's win rate over time from it. */
   trendParams: AnalyticsApiItemStatsRequest;
   prevStatsMap?: Map<number, { winrate: number; pickrate: number; normalizedPickrate: number }>;
-  /** With both kinds of purchase counted: each item's corrupted matches, which split its usage bar in two. */
-  corruptedMatchesMap?: Map<number, number>;
+  /** With both kinds of purchase counted: each item's corrupted purchases, split out in the pick and win rate cells. */
+  corruptedStatsMap?: Map<number, CorruptedStats>;
   customDropdownContent?: ({
     itemId,
     rowWins,
@@ -89,6 +113,12 @@ export interface ItemStatsTableProps {
     rowLosses: number;
     rowTotal: number;
   }) => ReactNode;
+}
+
+/** The corrupted purchases of one item: part of its row's counts when both kinds of purchase are counted. */
+export interface CorruptedStats {
+  wins: number;
+  matches: number;
 }
 
 export interface DisplayItemStats {
@@ -127,8 +157,8 @@ interface ItemStatsTableRowProps {
   isIncluded: boolean;
   isExcluded: boolean;
   prevStatsMap?: Map<number, { winrate: number; pickrate: number; normalizedPickrate: number }>;
-  /** This item's corrupted matches, when both kinds of purchase are counted: splits the usage bar in two. */
-  corruptedMatches?: number;
+  /** This item's corrupted purchases, when both kinds are counted: split out in the pick and win rate cells. */
+  corrupted?: CorruptedStats;
   onItemInclude: (item: number) => void;
   onItemExclude: (item: number) => void;
   customDropdownContent?: ({
@@ -266,7 +296,7 @@ const ItemStatsTableRow = memo(function ItemStatsTableRow({
   isIncluded,
   isExcluded,
   prevStatsMap,
-  corruptedMatches,
+  corrupted,
   onItemInclude,
   onItemExclude,
   customDropdownContent,
@@ -306,73 +336,101 @@ const ItemStatsTableRow = memo(function ItemStatsTableRow({
       )}
       {columns.includes("winRate") && (
         <TableCell>
-          <ItemStatTrend
-            params={trendParams}
-            itemId={row.item_id}
-            itemName={itemName}
-            stat="winRate"
-            bucket={trendBucket}
-            onBucketChange={onTrendBucketChange}
-            min={minWinRate}
-            max={maxWinRate}
-            value={row.wins / row.matches}
-            color="var(--primary)"
-            label={`${formatPercent(row.wins / row.matches)} `}
-            delta={
-              prevStatsMap?.get(row.item_id) !== undefined
-                ? row.wins / row.matches - prevStatsMap.get(row.item_id)!.winrate
-                : undefined
-            }
-          />
+          {(() => {
+            // With both kinds of purchase counted, the row's counts include the corrupted purchases: the bar is the
+            // normal purchases' win rate, with the corrupted purchases' win rate marked on it and the difference
+            // between them beside it (in place of the change from the previous period).
+            const normalMatches = row.matches - Math.min(corrupted?.matches ?? 0, row.matches);
+            const normalWins = row.wins - Math.min(corrupted?.wins ?? 0, row.wins);
+            const winRate = corrupted && normalMatches > 0 ? normalWins / normalMatches : row.wins / row.matches;
+            const corruptedWinRate =
+              corrupted && corrupted.matches > 0 ? corrupted.wins / corrupted.matches : undefined;
+            return (
+              <ItemStatTrend
+                params={trendParams}
+                itemId={row.item_id}
+                itemName={itemName}
+                stat="winRate"
+                bucket={trendBucket}
+                onBucketChange={onTrendBucketChange}
+                min={minWinRate}
+                max={maxWinRate}
+                value={winRate}
+                color="var(--primary)"
+                label={
+                  corruptedWinRate === undefined ? (
+                    `${formatPercent(winRate)} `
+                  ) : (
+                    <span className="flex flex-wrap items-baseline gap-x-1">
+                      <span>{formatPercent(winRate)}</span>
+                      <span className="text-muted-foreground">vs</span>
+                      <span className="text-chart-5">
+                        <span className="sr-only">corrupted </span>
+                        {formatPercent(corruptedWinRate)}
+                      </span>
+                      <span className="text-xs">({corrupted!.matches.toLocaleString()})</span>
+                    </span>
+                  )
+                }
+                delta={
+                  corruptedWinRate !== undefined
+                    ? corruptedWinRate - winRate
+                    : prevStatsMap?.get(row.item_id) !== undefined
+                      ? winRate - prevStatsMap.get(row.item_id)!.winrate
+                      : undefined
+                }
+              >
+                {corruptedWinRate !== undefined && (
+                  <ProgressBarMarker value={corruptedWinRate} color={CORRUPTED_COLOR} />
+                )}
+              </ItemStatTrend>
+            );
+          })()}
         </TableCell>
       )}
       {columns.includes("matches") && (
         <TableCell>
-          <ItemStatTrend
-            params={trendParams}
-            itemId={row.item_id}
-            itemName={itemName}
-            stat="pickRate"
-            bucket={trendBucket}
-            onBucketChange={onTrendBucketChange}
-            min={minUsage}
-            max={maxUsage}
-            value={row.matches}
-            color="var(--chart-4)"
-            label={
-              corruptedMatches === undefined ? (
-                `${Math.round((row.matches / maxUsage) * 100).toFixed(0)}%`
-              ) : (
-                <span className="flex flex-wrap items-baseline gap-x-1">
-                  <span className="text-chart-4">
-                    {(((row.matches - Math.min(corruptedMatches, row.matches)) / maxUsage) * 100).toFixed(1)}%
-                  </span>
-                  <span className="text-muted-foreground">+</span>
-                  <span className="text-chart-5">{((corruptedMatches / maxUsage) * 100).toFixed(1)}%</span>
-                  <span className="sr-only">corrupted</span>
-                </span>
-              )
-            }
-            delta={
-              prevStatsMap?.get(row.item_id) !== undefined
-                ? row.matches / maxUsage - prevStatsMap.get(row.item_id)!.normalizedPickrate
-                : undefined
-            }
-          >
-            {/* An array, not a fragment: ProgressBar sums its direct segment children. */}
-            {corruptedMatches !== undefined && [
-              <ProgressBarSegment
-                key="normal"
-                value={row.matches - Math.min(corruptedMatches, row.matches)}
-                color="var(--chart-4)"
-              />,
-              <ProgressBarSegment
-                key="corrupted"
-                value={Math.min(corruptedMatches, row.matches)}
-                color="var(--chart-5)"
-              />,
-            ]}
-          </ItemStatTrend>
+          {(() => {
+            const corruptedMatches = corrupted ? Math.min(corrupted.matches, row.matches) : undefined;
+            const normalMatches = row.matches - (corruptedMatches ?? 0);
+            return (
+              <ItemStatTrend
+                params={trendParams}
+                itemId={row.item_id}
+                itemName={itemName}
+                stat="pickRate"
+                bucket={trendBucket}
+                onBucketChange={onTrendBucketChange}
+                min={minUsage}
+                max={maxUsage}
+                value={row.matches}
+                color={NORMAL_COLOR}
+                label={
+                  corruptedMatches === undefined ? (
+                    `${Math.round((row.matches / maxUsage) * 100).toFixed(0)}%`
+                  ) : (
+                    <span className="flex flex-wrap items-baseline gap-x-1">
+                      <span className="text-chart-4">{((normalMatches / maxUsage) * 100).toFixed(1)}%</span>
+                      <span className="text-muted-foreground">+</span>
+                      <span className="text-chart-5">{((corruptedMatches / maxUsage) * 100).toFixed(1)}%</span>
+                      <span className="sr-only">corrupted</span>
+                    </span>
+                  )
+                }
+                delta={
+                  prevStatsMap?.get(row.item_id) !== undefined
+                    ? row.matches / maxUsage - prevStatsMap.get(row.item_id)!.normalizedPickrate
+                    : undefined
+                }
+              >
+                {/* An array, not a fragment: ProgressBar sums its direct segment children. */}
+                {corruptedMatches !== undefined && [
+                  <ProgressBarSegment key="normal" value={normalMatches} color={NORMAL_COLOR} />,
+                  <ProgressBarSegment key="corrupted" value={corruptedMatches} color={CORRUPTED_COLOR} />,
+                ]}
+              </ItemStatTrend>
+            );
+          })()}
         </TableCell>
       )}
       {columns.includes("confidence") && (
@@ -456,7 +514,7 @@ export function ItemStatsTable({
   actions,
   trendParams,
   prevStatsMap,
-  corruptedMatchesMap,
+  corruptedStatsMap,
   customDropdownContent,
 }: ItemStatsTableProps) {
   const [trendBucket, setTrendBucket] = useState<StatTrendBucket>("start_time_day");
@@ -686,7 +744,19 @@ export function ItemStatsTable({
                     )}
                     {columns.includes("winRate") && (
                       <SortableHeader
-                        label="Win Rate"
+                        label={
+                          corruptedMode === "include" ? (
+                            <KeyedHeaderLabel normalColor="var(--primary)">Win Rate</KeyedHeaderLabel>
+                          ) : (
+                            "Win Rate"
+                          )
+                        }
+                        sortLabel={corruptedMode === "include" ? "Win Rate" : undefined}
+                        description={
+                          corruptedMode === "include"
+                            ? "The bar is the normal purchases’ win rate; the tick marks the corrupted purchases’ win rate, with the difference beside it (corrupted match count in brackets)."
+                            : undefined
+                        }
                         sortKey="winRate"
                         activeSortKey={sort.field}
                         sortDir={sort.direction}
@@ -700,20 +770,7 @@ export function ItemStatsTable({
                         // "Bought" is the share of players instead, so a bare "Pick Rate" read as a contradiction.
                         label={
                           corruptedMode === "include" ? (
-                            <span className="inline-flex flex-col items-start gap-0.5">
-                              <span>Pick Rate (Normalized)</span>
-                              {/* The key to the split bar: spans, as the label sits inside the sort button. */}
-                              <span className="flex items-center gap-3 text-xs font-normal text-muted-foreground">
-                                <span className="flex items-center gap-1">
-                                  <ChartSwatch color="var(--chart-4)" size="sm" />
-                                  Normal
-                                </span>
-                                <span className="flex items-center gap-1">
-                                  <ChartSwatch color="var(--chart-5)" size="sm" />
-                                  Corrupted
-                                </span>
-                              </span>
-                            </span>
+                            <KeyedHeaderLabel>Pick Rate (Normalized)</KeyedHeaderLabel>
                           ) : (
                             "Pick Rate (Normalized)"
                           )
@@ -761,7 +818,7 @@ export function ItemStatsTable({
                     isIncluded={includeItems.has(row.item_id)}
                     isExcluded={excludeItems.has(row.item_id)}
                     prevStatsMap={prevStatsMap}
-                    corruptedMatches={corruptedMatchesMap ? (corruptedMatchesMap.get(row.item_id) ?? 0) : undefined}
+                    corrupted={corruptedStatsMap ? (corruptedStatsMap.get(row.item_id) ?? NO_CORRUPTED) : undefined}
                     onItemInclude={toggleInclude}
                     onItemExclude={toggleExclude}
                     customDropdownContent={customDropdownContent}

@@ -1,5 +1,5 @@
 import { cva, type VariantProps } from "class-variance-authority";
-import { Children, createContext, isValidElement, use, type ReactNode } from "react";
+import { Children, createContext, isValidElement, use, useMemo, type ReactNode } from "react";
 
 import { Delta } from "~/components/ui/delta";
 import { NoValue } from "~/components/ui/no-value";
@@ -10,7 +10,7 @@ const progressBarVariants = cva("", {
   variants: {
     variant: {
       /** The square comparative bar of analytics tables. */
-      bar: "h-2.5 w-full bg-muted",
+      bar: "relative h-2.5 w-full bg-muted",
       /**
        * Drawn behind the value of a table cell, as scoreboards do. The cell is `relative` and its value sits in a
        * `relative` element so it stays above the fill.
@@ -26,12 +26,27 @@ const progressBarVariants = cva("", {
 /** The sum of the segments, which each segment is a share of. */
 const ProgressBarTotalContext = createContext(0);
 
+/** The bar's scale and its (clamped) value, which a marker is placed on and compared with. */
+const ProgressBarScaleContext = createContext({ min: 0, max: 1, value: 0 });
+
 function segmentTotal(children: ReactNode) {
   let total = 0;
   Children.forEach(children, (child) => {
-    if (isValidElement<{ value?: number }>(child)) total += child.props.value ?? 0;
+    if (isValidElement<{ value?: number }>(child) && child.type === ProgressBarSegment) {
+      total += child.props.value ?? 0;
+    }
   });
   return total;
+}
+
+function partition(children: ReactNode) {
+  const segments: ReactNode[] = [];
+  const markers: ReactNode[] = [];
+  Children.forEach(children, (child) => {
+    if (isValidElement(child) && child.type === ProgressBarMarker) markers.push(child);
+    else segments.push(child);
+  });
+  return { segments, markers };
 }
 
 /** One part of a stacked ProgressBar, as a direct child of it. `value` is on the bar's `min` to `max` scale. */
@@ -57,6 +72,54 @@ export function ProgressBarSegment({
   );
 }
 
+/**
+ * A second value on a ProgressBar, as a direct child of it: a tick at `value`, and the span between it and the bar's
+ * value shaded in `color`. Above the bar's value it extends the fill, below it shades the end of the fill, so a gain
+ * and a loss against the bar's value read alike. `value` is on the bar's `min` to `max` scale. Print both numbers
+ * beside the bar: the marker is decorative.
+ */
+export function ProgressBarMarker({
+  value,
+  color,
+  className,
+  style,
+  ...props
+}: Omit<React.ComponentProps<"div">, "children" | "color"> & {
+  value: number;
+  /** A CSS color, usually one that comes from data: `var(--chart-5)`, a hero color. */
+  color: string;
+}) {
+  const scale = use(ProgressBarScaleContext);
+  const span = scale.max - scale.min;
+  if (!Number.isFinite(value) || span <= 0) return null;
+  const at = (v: number) => (Math.max(Math.min(v, scale.max), scale.min) - scale.min) / span;
+  const markerAt = at(value);
+  const barAt = at(scale.value);
+  const pct = (fraction: number) => `${(fraction * 100).toFixed(2)}%`;
+  return (
+    <div
+      data-slot="progress-bar-marker"
+      aria-hidden="true"
+      className={cn("contents", className)}
+      style={style}
+      {...props}
+    >
+      <div
+        className="absolute inset-y-0 opacity-50"
+        style={{
+          backgroundColor: color,
+          insetInlineStart: pct(Math.min(markerAt, barAt)),
+          width: pct(Math.abs(markerAt - barAt)),
+        }}
+      />
+      <div
+        className="absolute -inset-y-0.5 w-0.5 -translate-x-1/2 rtl:translate-x-1/2"
+        style={{ backgroundColor: color, insetInlineStart: pct(markerAt) }}
+      />
+    </div>
+  );
+}
+
 export function ProgressBar({
   value,
   min,
@@ -72,7 +135,10 @@ export function ProgressBar({
     min?: number;
     max?: number;
     color?: Color;
-    /** `ProgressBarSegment` elements, for a stacked bar. Their sum replaces `value`. */
+    /**
+     * `ProgressBarSegment` elements, for a stacked bar (their sum replaces `value`), and `ProgressBarMarker` elements,
+     * for a second value to compare with.
+     */
     children?: ReactNode;
     /**
      * Names the bar and makes it a `progressbar` with its values. Without it the bar is decorative, which is right
@@ -82,7 +148,8 @@ export function ProgressBar({
   }) {
   const minVal = min || 0;
   const maxVal = max || 1;
-  const total = segmentTotal(children);
+  const { segments, markers } = partition(children);
+  const total = segmentTotal(segments);
   const clamped = Math.max(Math.min(total || value || 0, maxVal), minVal);
   // An empty range (one row, or every row equal) has no scale: the value is the maximum, so the bar is full rather
   // than a width of NaN% (which only happened to fill the track) or an empty bar that reads as the worst value.
@@ -90,6 +157,7 @@ export function ProgressBar({
   const width = `${(span > 0 ? ((clamped - minVal) / span) * 100 : 100).toFixed(2)}%`;
   const fill = cn("h-full transition-all duration-slow ease-standard", variant === "thin" && "rounded-full");
   const fallbackFill = variant === "thin" ? "bg-positive" : "bg-primary";
+  const scale = useMemo(() => ({ min: minVal, max: maxVal, value: clamped }), [minVal, maxVal, clamped]);
 
   return (
     <div
@@ -103,11 +171,12 @@ export function ProgressBar({
     >
       {total > 0 ? (
         <div className={cn("flex overflow-hidden", fill)} style={{ width }}>
-          <ProgressBarTotalContext value={total}>{children}</ProgressBarTotalContext>
+          <ProgressBarTotalContext value={total}>{segments}</ProgressBarTotalContext>
         </div>
       ) : (
         <div className={cn(fill, !color && fallbackFill)} style={{ backgroundColor: color, width }} />
       )}
+      {markers.length > 0 && <ProgressBarScaleContext value={scale}>{markers}</ProgressBarScaleContext>}
     </div>
   );
 }
@@ -134,7 +203,7 @@ export function ProgressBarWithLabel({
   deltaFormat?: React.ComponentProps<typeof Delta>["format"];
   /** Decimals of the delta; a share far below 1% needs more than one to show its change. */
   deltaDigits?: number;
-  /** `ProgressBarSegment` elements, for a stacked bar. */
+  /** `ProgressBarSegment` elements, for a stacked bar, and `ProgressBarMarker` elements, for a value to compare. */
   children?: ReactNode;
 }) {
   const reading = typeof value === "number" && Number.isFinite(value);

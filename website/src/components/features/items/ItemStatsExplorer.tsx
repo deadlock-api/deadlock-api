@@ -137,16 +137,16 @@ export function ItemStatsExplorer({
     placeholderData: keepPreviousData,
   });
 
-  // With both kinds of purchase counted, the corrupted share of each item's matches splits its usage bar.
+  // With both kinds of purchase counted, each item's corrupted purchases split its pick rate and win rate cells.
   const { data: corruptedData } = useQuery({
     ...itemStatsQueryOptions({ ...queryStatOptions, corruptedItems: "only" }),
     enabled: corruptedMode === "include",
     placeholderData: keepPreviousData,
   });
-  const corruptedMatchesMap = useMemo(
+  const corruptedStatsMap = useMemo(
     () =>
       corruptedMode === "include" && corruptedData
-        ? new Map(corruptedData.map((stat) => [stat.item_id, stat.matches]))
+        ? new Map(corruptedData.map((stat) => [stat.item_id, { wins: stat.wins, matches: stat.matches }]))
         : undefined,
     [corruptedMode, corruptedData],
   );
@@ -320,7 +320,7 @@ export function ItemStatsExplorer({
             maxUsage={maxUsage}
             trendParams={rowQueryOptions}
             prevStatsMap={prevStatsMap}
-            corruptedMatchesMap={corruptedMatchesMap}
+            corruptedStatsMap={corruptedStatsMap}
             customDropdownContent={renderBuyTiming}
             actions={
               topBuildsEnabled && (
