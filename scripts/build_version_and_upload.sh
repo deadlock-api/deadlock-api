@@ -328,7 +328,7 @@ safe_cp -r "$citadel_folder"/panorama/images/overviews images/
 mkdir -p images/events images/seasonal/2026 images/tooltips/items
 safe_cp -r "$citadel_folder"/panorama/images/events/voting_sept2026 images/events/
 safe_cp "$citadel_folder"/panorama/images/seasonal/2026/vote_* images/seasonal/2026/
-safe_cp "$citadel_folder"/panorama/images/tooltips/items/*_corrupted* images/tooltips/items/
+safe_cp "$citadel_folder"/panorama/images/tooltips/items/* images/tooltips/items/
 
 mkdir -p images/abilities
 safe_cp -r "$citadel_folder"/panorama/images/hud/abilities images/
