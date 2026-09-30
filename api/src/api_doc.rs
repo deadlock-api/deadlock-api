@@ -136,7 +136,7 @@ const TAG_GROUPS: &[(&str, &[&str])] = &[
             "Ranked Seasons",
         ],
     ),
-    ("Game Info", &["Info", "Patches"]),
+    ("Game Info", &["Info", "Patches", "Crosshair"]),
     ("Developer", &["GraphQL", "SQL", "Commands", "Internal"]),
 ];
 

@@ -72,6 +72,7 @@ arc-swap = "1.9.2"
 cssparser = "0.38"
 indexmap = { version = "2", features = ["serde"] }
 murmur2 = "0.1.0"
+crc32fast = "1.5"
 datafusion = { version = "55", default-features = false, features = [
     "sql",
     "parquet",

@@ -7,6 +7,7 @@ use thiserror::Error;
 use tracing::{debug, error, info, warn};
 
 use crate::context::AppStateError;
+use crate::services::crosshair::CrosshairError;
 use crate::services::rate_limiter;
 use crate::services::steam::types::SteamProxyError;
 
@@ -65,6 +66,8 @@ pub(super) enum APIError {
     Snappy(#[from] snap::Error),
     #[error("Object Store Error: {0}")]
     ObjectStore(#[from] object_store::Error),
+    #[error("{0}")]
+    Crosshair(#[from] CrosshairError),
 }
 
 impl APIError {
@@ -170,6 +173,10 @@ impl IntoResponse for APIError {
                     )
                     .unwrap_or_else(|_| "Internal server error".to_owned().into_response())
             }
+            Self::Crosshair(e) => match e {
+                CrosshairError::Encode(_) => Self::internal(e.to_string()).into_response(),
+                _ => Self::status_msg(StatusCode::BAD_REQUEST, e.to_string()).into_response(),
+            },
             Self::InternalError { message } => {
                 error!("Internal Error: {message}");
                 build_error_response(

@@ -8,6 +8,7 @@ mod assets;
 mod auth;
 pub mod builds;
 mod commands;
+mod crosshair;
 pub(crate) mod data_privacy;
 mod feedback;
 pub(crate) mod graphql;
@@ -34,6 +35,7 @@ pub(super) fn router(state: &AppState) -> OpenApiRouter<AppState> {
         .nest("/builds", builds::router())
         .nest("/patches", patches::router())
         .nest("/commands", commands::router())
+        .nest("/crosshair", crosshair::router())
         .nest("/info", info::router())
         .nest("/sql", sql::router())
         .nest("/assets", assets::router())

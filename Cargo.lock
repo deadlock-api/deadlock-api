@@ -2851,6 +2851,7 @@ dependencies = [
  "chrono",
  "clickhouse",
  "clickhouse-sql-parser",
+ "crc32fast",
  "cssparser",
  "datafusion",
  "duckdb",

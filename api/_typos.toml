@@ -15,6 +15,7 @@ Verticall = "Verticall"
 [files]
 extend-exclude = [
     "src/services/assets/versions/items/items_snapshots/",
+    "src/services/crosshair/fixtures/",
     "src/utils/kv3_fixtures/",
     "src/utils/kv3_snapshots/",
     "src/utils/localization_fixtures/",
