@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import type { AnalyticsApiHeroStatsRequest, AnalyticsApiItemStatsRequest } from "deadlock_api_client";
 import { useMemo } from "react";
 
+import { PATCH_MARKERS } from "~/components/domain/charts/PatchMarkers";
 import { ChartCard } from "~/components/patterns/charts/ChartCard";
 import { ChartEmpty, ChartError, ChartLoading } from "~/components/patterns/charts/ChartStates";
 import { type WeekEntry, WeeklyTrendChart } from "~/components/patterns/charts/WeeklyTrendChart";
@@ -117,7 +118,13 @@ export function ItemWinRateOverTime({
         ) : weeks.length < 2 ? (
           <ChartEmpty label="weekly win rates" description="Fewer than two weeks of purchases so far." />
         ) : (
-          <WeeklyTrendChart variant="flush" weeks={weeks} shareLabel="Bought" label={chartLabel} />
+          <WeeklyTrendChart
+            variant="flush"
+            markers={PATCH_MARKERS}
+            weeks={weeks}
+            shareLabel="Bought"
+            label={chartLabel}
+          />
         )}
       </PanelBody>
     </ChartCard>

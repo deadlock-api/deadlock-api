@@ -27,6 +27,7 @@ import {
   YAxis,
 } from "recharts";
 
+import { PatchMarkers } from "~/components/domain/charts/PatchMarkers";
 import { ChartHeroSelector } from "~/components/domain/selectors/ChartHeroSelector";
 import { HeroTrendSummary } from "~/components/features/heroes/HeroTrendSummary";
 import { HeroTrendTooltip } from "~/components/features/heroes/HeroTrendTooltip";
@@ -39,6 +40,7 @@ import {
   CHART_BASELINE,
   CHART_COLOR,
   CHART_GRID,
+  CHART_MARGIN_MARKED,
   CHART_X_AXIS,
   CHART_Y_AXIS,
 } from "~/components/patterns/charts/theme";
@@ -60,7 +62,7 @@ import { type HERO_STATS_WITH_BAN_RATE, hero_stats_transform } from "~/types/api
 
 // Recharts still measures every x-axis label for vertical grid coordinates when vertical lines are disabled.
 const noVerticalGridCoordinates = () => [];
-const CHART_MARGIN = { top: 20, right: 12, bottom: 8, left: 0 };
+const CHART_MARGIN = { ...CHART_MARGIN_MARKED, right: 12 };
 
 /** Hands the chart's y scale to the hover handler, which runs outside the chart context the scale hook needs. */
 function YScaleProbe({ scaleRef }: { scaleRef: RefObject<ScaleFunction | undefined> }) {
@@ -399,6 +401,7 @@ export function HeroStatsOverTimeChart({
         {heroStat === "winrate" && yTicks[0] <= 50 && yTicks[yTicks.length - 1] >= 50 && (
           <ReferenceLine y={50} {...CHART_BASELINE} />
         )}
+        <PatchMarkers />
       </>
     ),
     [minDataDate, maxDataDate, isHourly, yTicks, isPercentStat, heroStat],

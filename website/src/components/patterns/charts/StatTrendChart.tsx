@@ -1,10 +1,18 @@
 import { useId } from "react";
 import { Area, AreaChart, CartesianGrid, Tooltip, XAxis, YAxis } from "recharts";
 
+import { type ChartMarker, ChartMarkers } from "~/components/patterns/charts/ChartMarkers";
 import { ChartReading, ChartReadings } from "~/components/patterns/charts/ChartReadings";
 import { ChartEmpty, ChartError, ChartLoading } from "~/components/patterns/charts/ChartStates";
 import { chartSizeVariants, ChartSurface } from "~/components/patterns/charts/ChartSurface";
-import { CHART_COLOR, CHART_GRID, CHART_MARGIN, CHART_X_AXIS, CHART_Y_AXIS } from "~/components/patterns/charts/theme";
+import {
+  CHART_COLOR,
+  CHART_GRID,
+  CHART_MARGIN,
+  CHART_MARGIN_MARKED,
+  CHART_X_AXIS,
+  CHART_Y_AXIS,
+} from "~/components/patterns/charts/theme";
 import { Segmented, SegmentedItem } from "~/components/ui/segmented";
 import { day } from "~/dayjs";
 import { formatAxisTick, formatStatValue, type StatFormat, type StatTrendPoint, valueSpan } from "~/lib/stat-format";
@@ -40,6 +48,8 @@ interface StatTrendChartProps extends Omit<React.ComponentProps<"div">, "onChang
    */
   comparisonLabel?: string;
   valueLabel?: string;
+  /** Events drawn as labelled vertical lines, such as patches; `at` is a timestamp in ms. */
+  markers?: readonly ChartMarker[];
   onValueChange?: (value: StatTrendBucket) => void;
 }
 
@@ -51,6 +61,7 @@ export default function StatTrendChart({
   onValueChange,
   comparisonLabel,
   valueLabel = stat.label,
+  markers,
   className,
   ...props
 }: StatTrendChartProps) {
@@ -86,7 +97,7 @@ export default function StatTrendChart({
           <ChartEmpty label={`${stat.label} trend`} className={STATE_SIZE} />
         ) : (
           <ChartSurface label={`${stat.label} over time`} size="md" variant="bare">
-            <AreaChart data={chartData} margin={CHART_MARGIN}>
+            <AreaChart data={chartData} margin={markers ? CHART_MARGIN_MARKED : CHART_MARGIN}>
               <defs>
                 <linearGradient id={fillId} x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor={CHART_COLOR.primary} stopOpacity={0.35} />
@@ -110,6 +121,7 @@ export default function StatTrendChart({
                 {...CHART_Y_AXIS}
                 tickMargin={6}
               />
+              {markers && <ChartMarkers markers={markers} />}
               <Tooltip
                 wrapperStyle={{ pointerEvents: "auto" }}
                 isAnimationActive={false}

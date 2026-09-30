@@ -4,12 +4,13 @@ import { ChartNoAxesCombined } from "lucide-react";
 import { useMemo } from "react";
 import { CartesianGrid, Line, LineChart, Tooltip, XAxis, YAxis } from "recharts";
 
+import { PatchMarkers } from "~/components/domain/charts/PatchMarkers";
 import { ChartCard } from "~/components/patterns/charts/ChartCard";
 import { ChartReading, ChartReadings } from "~/components/patterns/charts/ChartReadings";
 import { ChartLoading, ChartError, ChartEmpty } from "~/components/patterns/charts/ChartStates";
 import { ChartSurface } from "~/components/patterns/charts/ChartSurface";
 import { MetricSelect } from "~/components/patterns/charts/MetricSelect";
-import { CHART_GRID, CHART_X_AXIS, CHART_Y_AXIS } from "~/components/patterns/charts/theme";
+import { CHART_GRID, CHART_MARGIN_MARKED, CHART_X_AXIS, CHART_Y_AXIS } from "~/components/patterns/charts/theme";
 import { TrendIntervalField } from "~/components/patterns/charts/TrendControls";
 import { FilterBar } from "~/components/patterns/filter-bar/FilterBar";
 import { Field } from "~/components/ui/field";
@@ -112,7 +113,7 @@ export default function GamesOverTimeChart({
             description={`${day.utc(chartData[0].date).format("MMM D, YYYY")} – ${day.utc(chartData.at(-1)!.date).format("MMM D, YYYY")} · UTC`}
           >
             <ChartSurface label={`${statDef?.label ?? stat} over time chart`} variant="flush">
-              <LineChart data={chartData} margin={{ top: 16, right: 12, bottom: 8, left: 0 }}>
+              <LineChart data={chartData} margin={{ ...CHART_MARGIN_MARKED, right: 12 }}>
                 <CartesianGrid {...CHART_GRID} verticalCoordinatesGenerator={() => []} />
                 <XAxis
                   dataKey="date"
@@ -128,6 +129,7 @@ export default function GamesOverTimeChart({
                   tickFormatter={(v) => (statDef ? formatAxisTick(v, statDef.format, span) : String(v))}
                   {...CHART_Y_AXIS}
                 />
+                <PatchMarkers />
                 <Tooltip
                   wrapperStyle={{ pointerEvents: "auto" }}
                   isAnimationActive={false}

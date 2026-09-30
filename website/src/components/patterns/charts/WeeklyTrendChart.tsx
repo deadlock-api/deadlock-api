@@ -2,6 +2,7 @@ import { useId } from "react";
 import { CartesianGrid, Line, LineChart, ReferenceLine, Tooltip, XAxis, YAxis } from "recharts";
 
 import { ChartLegend, ChartLegendItem } from "~/components/patterns/charts/ChartLegend";
+import { type ChartMarker, ChartMarkers } from "~/components/patterns/charts/ChartMarkers";
 import { ChartReading, ChartReadings } from "~/components/patterns/charts/ChartReadings";
 import { ChartSurface } from "~/components/patterns/charts/ChartSurface";
 import {
@@ -10,6 +11,7 @@ import {
   CHART_CURSOR_LINE,
   CHART_GRID,
   CHART_MARGIN,
+  CHART_MARGIN_MARKED,
   CHART_X_AXIS,
   CHART_Y_AXIS,
 } from "~/components/patterns/charts/theme";
@@ -34,6 +36,7 @@ export function WeeklyTrendChart({
   weeks,
   shareLabel,
   label,
+  markers,
   variant = "card",
   ...props
 }: Omit<React.ComponentProps<typeof Card>, "children" | "size" | "tone"> & {
@@ -42,12 +45,25 @@ export function WeeklyTrendChart({
   weeks: WeekEntry[];
   shareLabel: string;
   label: string;
+  /** Events drawn as vertical lines through both plots, labelled above the top one, such as patches; `at` in ms. */
+  markers?: readonly ChartMarker[];
 }) {
   const winRateAxis = winRateDomain(weeks.map((week) => week.winRate));
   const maxShare = Math.max(...weeks.map((week) => week.share));
   const shareStep = maxShare < 0.1 ? 0.01 : 0.1;
   const shareAxis: [number, number] = [0, Math.ceil(maxShare / shareStep) * shareStep];
 
+  // A time axis rather than one slot per week, so a marker lands on its day inside the week.
+  const data = weeks.map((week) => ({ ...week, date: week.weekStart * 1000 }));
+  const xAxis = {
+    ...CHART_X_AXIS,
+    dataKey: "date",
+    type: "number",
+    scale: "time",
+    domain: ["dataMin", "dataMax"],
+    ticks: data.map((week) => week.date),
+    tickFormatter: (date: number) => data.find((week) => week.date === date)?.label ?? "",
+  } as const;
   const syncId = useId();
   const { ref: plotsRef, width: axisWidth } = useSharedAxisWidth<HTMLDivElement>();
   const percentAxis = {
@@ -77,11 +93,12 @@ export function WeeklyTrendChart({
           </ChartLegendItem>
         </ChartLegend>
         <ChartSurface label="Win rate by week" size="md" variant="bare">
-          <LineChart data={weeks} syncId={syncId} margin={CHART_MARGIN}>
+          <LineChart data={data} syncId={syncId} margin={markers ? CHART_MARGIN_MARKED : CHART_MARGIN}>
             <CartesianGrid {...CHART_GRID} />
-            <XAxis dataKey="label" {...CHART_X_AXIS} tick={false} height={4} />
+            <XAxis {...xAxis} tick={false} height={4} />
             <YAxis domain={winRateAxis} ticks={percentTicks(winRateAxis)} {...percentAxis} />
             <ReferenceLine y={0.5} {...CHART_BASELINE} />
+            {markers && <ChartMarkers markers={markers} />}
             <Tooltip
               wrapperStyle={{ pointerEvents: "auto" }}
               isAnimationActive={false}
@@ -110,9 +127,10 @@ export function WeeklyTrendChart({
           </LineChart>
         </ChartSurface>
         <ChartSurface label={`${shareLabel} by week`} size="sm" variant="bare">
-          <LineChart data={weeks} syncId={syncId} margin={CHART_MARGIN}>
+          <LineChart data={data} syncId={syncId} margin={CHART_MARGIN}>
             <CartesianGrid {...CHART_GRID} />
-            <XAxis dataKey="label" {...CHART_X_AXIS} />
+            <XAxis {...xAxis} minTickGap={16} />
+            {markers && <ChartMarkers markers={markers} labels={false} />}
             <YAxis domain={shareAxis} ticks={[shareAxis[0], shareAxis[1]]} {...percentAxis} />
             {/* The readings live in the plot above; here the synced cursor alone marks the week. */}
             <Tooltip isAnimationActive={false} cursor={CHART_CURSOR_LINE} content={() => null} />

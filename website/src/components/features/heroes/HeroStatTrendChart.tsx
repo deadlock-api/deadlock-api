@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import type { AnalyticsApiHeroStatsRequest, AnalyticsApiHeroBanStatsRequest } from "deadlock_api_client";
 import { useMemo } from "react";
 
+import { PATCH_MARKERS_SHORT } from "~/components/domain/charts/PatchMarkers";
 import StatTrendChart, { type StatTrendBucket } from "~/components/patterns/charts/StatTrendChart";
 import { CACHE_DURATIONS } from "~/constants/cache";
 import { api } from "~/lib/api";
@@ -77,6 +78,7 @@ export default function HeroStatTrendChart({ params, heroId, stat, bucket, onBuc
   return (
     <StatTrendChart
       data={chartData}
+      markers={PATCH_MARKERS_SHORT}
       state={
         (needsHeroes && heroQuery.isPending) || (needsBans && banQuery.isPending)
           ? "loading"
