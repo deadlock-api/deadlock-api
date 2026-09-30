@@ -1,10 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import type { AnalyticsApiItemStatsRequest } from "deadlock_api_client";
-import { ArrowDown, ArrowRight } from "lucide-react";
+import { ArrowDown } from "lucide-react";
 
 import { ItemImage } from "~/components/domain/assets/ItemImage";
-import { Section } from "~/components/patterns/page/Section";
+import { Panel, PanelBody, PanelFooter, PanelHeader } from "~/components/patterns/panel/Panel";
 import { Card } from "~/components/ui/card";
 import { Heading } from "~/components/ui/heading";
 import { Stack } from "~/components/ui/stack";
@@ -47,8 +47,7 @@ function UpgradeTile({ item, winRate, current }: { item: SlimUpgrade; winRate?: 
 function PathArrow() {
   return (
     <div aria-hidden className="flex shrink-0 justify-center text-muted-foreground">
-      <ArrowDown className="size-4 sm:hidden" />
-      <ArrowRight className="hidden size-4 sm:block" />
+      <ArrowDown className="size-4" />
     </div>
   );
 }
@@ -58,7 +57,9 @@ export function ItemUpgradePath({
   itemName,
   request,
   rankRange,
+  className,
 }: {
+  className?: string;
   itemId: number;
   itemName: string;
   request: AnalyticsApiItemStatsRequest;
@@ -85,46 +86,40 @@ export function ItemUpgradePath({
     .filter(Boolean)
     .join(" and ");
 
-  const column = (list: SlimUpgrade[], label: string) => (
-    <div className="flex w-full min-w-0 flex-col gap-2 sm:max-w-64 sm:flex-1">
-      <Heading as="h3" size="eyebrow">
+  const group = (list: SlimUpgrade[], label: string, current?: boolean) => (
+    <div className="flex min-w-0 flex-col gap-2">
+      <Heading as="h4" size="eyebrow">
         {label}
       </Heading>
-      <ul className="flex flex-col gap-2">
+      <ul className="grid gap-2 @md:grid-cols-2">
         {list.map((entry) => (
-          <UpgradeTile key={entry.id} item={entry} winRate={winRates.get(entry.id)} />
+          <UpgradeTile key={entry.id} item={entry} winRate={winRates.get(entry.id)} current={current} />
         ))}
       </ul>
     </div>
   );
 
   return (
-    <Section
-      title={`${itemName} Upgrade Path`}
-      description={`${itemName} ${summary}. Win rates are for ${rankRange} matches in ${period}.`}
-    >
-      <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center">
+    <Panel className={className}>
+      <PanelHeader title="Upgrade Path" description={`Win rates · ${rankRange}`} />
+      <PanelBody className="@container flex flex-1 flex-col gap-2">
         {components.length > 0 && (
           <>
-            {column(components, "Builds from")}
+            {group(components, "Builds from")}
             <PathArrow />
           </>
         )}
-        <div className="flex w-full min-w-0 flex-col gap-2 sm:max-w-64 sm:flex-1">
-          <Heading as="h3" size="eyebrow">
-            This item
-          </Heading>
-          <ul>
-            <UpgradeTile item={item} winRate={winRates.get(item.id)} current />
-          </ul>
-        </div>
+        {group([item], "This item", true)}
         {upgrades.length > 0 && (
           <>
             <PathArrow />
-            {column(upgrades, "Upgrades into")}
+            {group(upgrades, "Upgrades into")}
           </>
         )}
-      </div>
-    </Section>
+      </PanelBody>
+      <PanelFooter>
+        {itemName} {summary}. Win rates are for {rankRange} matches in {period}.
+      </PanelFooter>
+    </Panel>
   );
 }

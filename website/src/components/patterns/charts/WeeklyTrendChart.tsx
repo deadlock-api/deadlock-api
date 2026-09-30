@@ -34,8 +34,11 @@ export function WeeklyTrendChart({
   weeks,
   shareLabel,
   label,
+  variant = "card",
   ...props
-}: Omit<React.ComponentProps<typeof Card>, "children" | "size"> & {
+}: Omit<React.ComponentProps<typeof Card>, "children" | "size" | "tone"> & {
+  /** `card` stands alone; `flush` sits in a ChartCard, which brings the surface and the title. */
+  variant?: "card" | "flush";
   weeks: WeekEntry[];
   shareLabel: string;
   label: string;
@@ -56,8 +59,14 @@ export function WeeklyTrendChart({
   // Two measures on different scales get a plot each, stacked on a shared week axis: a second y-axis would let
   // the reader compare heights that mean nothing.
   return (
-    // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- the tags it suggests (fieldset, details, optgroup) are none of them a chart
-    <Card size="xs" role="group" aria-label={label} {...props}>
+    <Card
+      size={variant === "flush" ? "flush" : "xs"}
+      tone={variant === "flush" ? "bare" : "card"}
+      // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- the tags it suggests (fieldset, details, optgroup) are none of them a chart
+      role="group"
+      aria-label={label}
+      {...props}
+    >
       <CardContent ref={plotsRef} className="flex flex-col gap-1">
         <ChartLegend>
           <ChartLegendItem color={WIN_RATE_COLOR} shape="line">

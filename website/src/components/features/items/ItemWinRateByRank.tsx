@@ -3,16 +3,16 @@ import type { AnalyticsApiItemStatsRequest } from "deadlock_api_client";
 import { useMemo } from "react";
 
 import { RankTierTick } from "~/components/domain/rank/RankTierTick";
-import { ChartLoading } from "~/components/patterns/charts/ChartStates";
+import { ChartCard } from "~/components/patterns/charts/ChartCard";
+import { ChartEmpty, ChartError, ChartLoading } from "~/components/patterns/charts/ChartStates";
 import { CHART_COLOR } from "~/components/patterns/charts/theme";
 import { WinRateBarChart } from "~/components/patterns/charts/WinRateBarChart";
-import { Section } from "~/components/patterns/page/Section";
-import { ErrorState } from "~/components/patterns/states/ErrorState";
+import { PanelBody } from "~/components/patterns/panel/Panel";
 import { TooltipCard, TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
 import { CACHE_DURATIONS } from "~/constants/cache";
 import { useDefaultPeriodLabel } from "~/hooks/useDefaultPeriodLabel";
 import { api } from "~/lib/api";
-import { formatPercent, possessive } from "~/lib/format";
+import { formatPercent } from "~/lib/format";
 import { queryKeys } from "~/queries/query-keys";
 import { ranksQueryOptions } from "~/queries/ranks-query";
 
@@ -51,7 +51,9 @@ export function ItemWinRateByRank({
   itemId,
   itemName,
   request,
+  className,
 }: {
+  className?: string;
   itemId: number;
   itemName: string;
   request: AnalyticsApiItemStatsRequest;
@@ -95,45 +97,51 @@ export function ItemWinRateByRank({
     [rows, ranks],
   );
 
-  if (failed.length > 0) {
-    return (
-      <Section title={`${itemName} Win Rate by Rank`}>
-        <ErrorState
-          title={`Could not load ${possessive(itemName)} win rate by rank`}
-          retrying={failed.some((q) => q.isFetching)}
-          onRetry={() => failed.forEach((q) => void q.refetch())}
-        />
-      </Section>
-    );
-  }
-  if (isPending) return <ChartLoading label={`${itemName} win rate by rank`} />;
-  if (tiers.length < 2) return null;
-
-  const best = tiers.reduce((a, b) => (b.winRate > a.winRate ? b : a));
-  const worst = tiers.reduce((a, b) => (b.winRate < a.winRate ? b : a));
+  const best = tiers.length > 0 ? tiers.reduce((a, b) => (b.winRate > a.winRate ? b : a)) : undefined;
+  const worst = tiers.length > 0 ? tiers.reduce((a, b) => (b.winRate < a.winRate ? b : a)) : undefined;
+  const chartLabel = `${itemName} win rate by rank tier`;
 
   return (
-    <Section
-      title={`${itemName} Win Rate by Rank`}
-      description={
-        <>
-          Buyers win most at <span className="font-semibold text-foreground">{best.name}</span> (
-          {formatPercent(best.winRate)}) and least at{" "}
-          <span className="font-semibold text-foreground">{worst.name}</span> ({formatPercent(worst.winRate)}). Each bar
-          is one rank tier in {period}; hover for match count.
-        </>
+    <ChartCard
+      className={className}
+      title="Win Rate by Rank"
+      description={`All ranks · ${period}`}
+      footer={
+        best &&
+        worst &&
+        tiers.length >= 2 && (
+          <>
+            Buyers win most at {best.name} ({formatPercent(best.winRate)}) and least at {worst.name} (
+            {formatPercent(worst.winRate)}). Hover a bar for matches.
+          </>
+        )
       }
     >
-      <WinRateBarChart
-        label={`${itemName} win rate by rank tier`}
-        data={tiers}
-        xKey="tier"
-        valueKey="winRate"
-        colorKey="color"
-        xAxisHeight={48}
-        xTick={<RankTierTick tiers={tiers} />}
-        tooltip={<TierTooltip />}
-      />
-    </Section>
+      <PanelBody size="sm">
+        {failed.length > 0 ? (
+          <ChartError
+            label="win rate by rank"
+            retrying={failed.some((q) => q.isFetching)}
+            onRetry={() => failed.forEach((q) => void q.refetch())}
+          />
+        ) : isPending ? (
+          <ChartLoading label={chartLabel} />
+        ) : tiers.length < 2 ? (
+          <ChartEmpty label="rank tiers with enough purchases" />
+        ) : (
+          <WinRateBarChart
+            variant="flush"
+            label={chartLabel}
+            data={tiers}
+            xKey="tier"
+            valueKey="winRate"
+            colorKey="color"
+            xAxisHeight={48}
+            xTick={<RankTierTick tiers={tiers} />}
+            tooltip={<TierTooltip />}
+          />
+        )}
+      </PanelBody>
+    </ChartCard>
   );
 }

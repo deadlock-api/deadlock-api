@@ -3,13 +3,14 @@ import { Link } from "@tanstack/react-router";
 import type { AnalyticsApiItemStatsRequest, Upgrade } from "deadlock_api_client";
 import { useMemo } from "react";
 
-import { RankedEntityCard, RankedEntityGrid } from "~/components/domain/assets/RankedEntityGrid";
-import { Section } from "~/components/patterns/page/Section";
+import { RankedEntityList, RankedEntityMetric, RankedEntityRow } from "~/components/domain/assets/RankedEntityList";
+import { Panel, PanelBody, PanelFooter, PanelHeader } from "~/components/patterns/panel/Panel";
+import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
-import { Button } from "~/components/ui/button";
-import { KeyValue } from "~/components/ui/key-value";
+import { TextLink } from "~/components/ui/text-link";
 import { formatPercent, formatShare } from "~/lib/format";
+import { toneOf } from "~/lib/tone";
 import { wilsonScoreInterval } from "~/lib/wilson";
 import { itemUpgradesQueryOptions } from "~/queries/asset-queries";
 import { itemStatsQueryOptions } from "~/queries/item-stats-query";
@@ -38,7 +39,14 @@ function pickTopItems(
       if (!item || row.matches < heroMatches * MIN_USAGE) return [];
       const [lowerBound] = wilsonScoreInterval(row.wins, row.matches);
       return [
-        { item, winRate: row.wins / row.matches, usage: row.matches / heroMatches, matches: row.matches, lowerBound },
+        {
+          item,
+          winRate: row.wins / row.matches,
+          // Purchases, not matches: an item sold and bought back counts twice, so the share is capped at all of them.
+          usage: Math.min(1, row.matches / heroMatches),
+          matches: row.matches,
+          lowerBound,
+        },
       ];
     })
     .sort((a, b) => b.lowerBound - a.lowerBound)
@@ -51,7 +59,9 @@ export function HeroTopItems({
   heroMatches,
   request,
   rankRange,
+  className,
 }: {
+  className?: string;
   heroId: number;
   heroName: string;
   heroMatches: number;
@@ -69,47 +79,52 @@ export function HeroTopItems({
 
   // Checked before loading: without the item list the ranking never resolves, so a failed one would spin forever.
   const failed = [statsQuery, itemsQuery].filter((query) => query.isError && !query.data);
-  if (failed.length > 0) {
-    return (
-      <Section title={`Best ${heroName} Items`}>
-        <ErrorState
-          title={`Could not load the best ${heroName} items`}
-          retrying={failed.some((query) => query.isFetching)}
-          onRetry={() => failed.forEach((query) => void query.refetch())}
-        />
-      </Section>
-    );
-  }
-  if (!topItems) return <LoadingState label="top items" />;
-  if (topItems.length === 0) return null;
 
   return (
-    <Section
-      title={`Best ${heroName} Items`}
-      description={`The items that most reliably win on ${heroName} in ${rankRange} matches, ranked by the lower bound of their win rate's confidence interval so a handful of lucky matches can't carry an item to the top.`}
-    >
-      <RankedEntityGrid>
-        {topItems.map(({ item, winRate, usage, matches }, index) => (
-          <RankedEntityCard
-            key={item.id}
-            rank={index + 1}
-            entity={{ itemId: item.id }}
-            title={`${item.name}: ${matches.toLocaleString("en-US")} matches`}
+    <Panel className={className}>
+      <PanelHeader title={`Best ${heroName} Items`} description={`${rankRange} · by win rate`} />
+      <PanelBody>
+        {failed.length > 0 ? (
+          <ErrorState
+            variant="inline"
+            title={`Could not load the best ${heroName} items`}
+            retrying={failed.some((query) => query.isFetching)}
+            onRetry={() => failed.forEach((query) => void query.refetch())}
+          />
+        ) : !topItems ? (
+          <LoadingState label="top items" variant="skeleton" />
+        ) : topItems.length === 0 ? (
+          <EmptyState variant="inline" title={`No item is bought often enough on ${heroName} to rank yet`} />
+        ) : (
+          <RankedEntityList>
+            {topItems.map(({ item, winRate, usage, matches }, index) => (
+              <RankedEntityRow
+                key={item.id}
+                rank={index + 1}
+                entity={{ itemId: item.id }}
+                meta={`${matches.toLocaleString("en-US")} matches`}
+              >
+                <RankedEntityMetric label="Win rate" value={formatPercent(winRate)} tone={toneOf(winRate, 0.5)} />
+                <RankedEntityMetric label="Bought" value={formatShare(usage)} share={usage} />
+              </RankedEntityRow>
+            ))}
+          </RankedEntityList>
+        )}
+      </PanelBody>
+      <PanelFooter className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
+        <span>
+          Ranked by the low end of each win rate&apos;s confidence interval, so a few lucky games can&apos;t top it.
+        </span>
+        <TextLink asChild>
+          <Link
+            to="/analytics/items"
+            search={{ hero: heroId, min_rank: request.minAverageBadge, max_rank: request.maxAverageBadge }}
+            preload="intent"
           >
-            <KeyValue label="Win" value={formatPercent(winRate)} />
-            <KeyValue label="Bought" value={formatShare(usage)} />
-          </RankedEntityCard>
-        ))}
-      </RankedEntityGrid>
-      <Button asChild variant="link" size="inline" className="self-start">
-        <Link
-          to="/analytics/items"
-          search={{ hero: heroId, min_rank: request.minAverageBadge, max_rank: request.maxAverageBadge }}
-          preload="intent"
-        >
-          All {heroName} item stats
-        </Link>
-      </Button>
-    </Section>
+            All {heroName} item stats
+          </Link>
+        </TextLink>
+      </PanelFooter>
+    </Panel>
   );
 }

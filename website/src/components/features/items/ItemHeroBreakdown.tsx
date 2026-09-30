@@ -2,14 +2,15 @@ import { useQuery } from "@tanstack/react-query";
 import type { AnalyticsApiItemStatsRequest } from "deadlock_api_client";
 import { useMemo } from "react";
 
-import { RankedEntityCard, RankedEntityGrid } from "~/components/domain/assets/RankedEntityGrid";
-import { Section } from "~/components/patterns/page/Section";
+import { RankedEntityList, RankedEntityMetric, RankedEntityRow } from "~/components/domain/assets/RankedEntityList";
+import { Panel, PanelBody, PanelFooter, PanelHeader } from "~/components/patterns/panel/Panel";
+import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
-import { KeyValue } from "~/components/ui/key-value";
 import { buildComponentImplications } from "~/lib/build-transform";
 import { formatPercent, formatShare, possessive } from "~/lib/format";
 import type { ItemBestHero } from "~/lib/item-hero-fns";
+import { toneOf } from "~/lib/tone";
 import { filterShopableItems, itemUpgradesQueryOptions, type SlimUpgrade } from "~/queries/asset-queries";
 import { itemStatsQueryOptions } from "~/queries/item-stats-query";
 
@@ -50,7 +51,8 @@ function pickPairedItems(rows: readonly CohortRow[], item: SlimUpgrade, items: r
       const acc = totals.get(other.id);
       if (!acc || other.id === item.id) return [];
       if (components.has(other.id) || implied.get(other.id)?.includes(item.id)) return [];
-      return [{ item: other, winRate: acc.wins / acc.matches, pairRate: acc.matches / own.matches }];
+      // Purchases, not builds: an item sold and bought back counts twice, so the share is capped at all of them.
+      return [{ item: other, winRate: acc.wins / acc.matches, pairRate: Math.min(1, acc.matches / own.matches) }];
     })
     .sort((a, b) => b.pairRate - a.pairRate)
     .slice(0, TOP_COUNT);
@@ -58,67 +60,61 @@ function pickPairedItems(rows: readonly CohortRow[], item: SlimUpgrade, items: r
 
 /**
  * `bestHeroes` comes from the page loader (`fetchItemBestHeroes`), so it is in the server HTML; undefined when it failed.
- * The pairings need the whole cohort of builds with the item and load in the browser.
  */
-export function ItemHeroBreakdown({
-  itemId,
+export function ItemBestHeroes({
   itemName,
-  itemRequest,
   bestHeroes,
   onRetry,
+  className,
 }: {
-  itemId: number;
   itemName: string;
-  itemRequest: AnalyticsApiItemStatsRequest;
   bestHeroes: ItemBestHero[] | undefined;
   onRetry?: () => void;
+  className?: string;
 }) {
   return (
-    <>
-      {bestHeroes === undefined ? (
-        <Section title={`Best Heroes for ${itemName}`}>
-          <ErrorState title={`Could not load ${possessive(itemName)} best heroes`} onRetry={onRetry} />
-        </Section>
-      ) : (
-        bestHeroes.length > 0 && (
-          <Section
-            title={`Best Heroes for ${itemName}`}
-            description={
-              <>
-                The heroes that win most reliably after buying {itemName}, ranked by the lower bound of their win rate's
-                confidence interval. "Bought" is how often the hero picks it up.
-              </>
-            }
-          >
-            <RankedEntityGrid>
-              {bestHeroes.map(({ heroId, winRate, usage, matches }, index) => (
-                <RankedEntityCard
-                  key={heroId}
-                  rank={index + 1}
-                  entity={{ heroId }}
-                  title={`${matches.toLocaleString("en-US")} matches`}
-                >
-                  <KeyValue label="Win" value={formatPercent(winRate)} />
-                  <KeyValue label="Bought" value={formatShare(usage)} />
-                </RankedEntityCard>
-              ))}
-            </RankedEntityGrid>
-          </Section>
-        )
-      )}
-      <ItemPairings itemId={itemId} itemName={itemName} itemRequest={itemRequest} />
-    </>
+    <Panel className={className}>
+      <PanelHeader title={`Best Heroes for ${itemName}`} description="by win rate after buying it" />
+      <PanelBody className="flex-1">
+        {bestHeroes === undefined ? (
+          <ErrorState variant="inline" title={`Could not load ${possessive(itemName)} best heroes`} onRetry={onRetry} />
+        ) : bestHeroes.length === 0 ? (
+          <EmptyState variant="inline" title={`No hero buys ${itemName} often enough to rank yet`} />
+        ) : (
+          <RankedEntityList>
+            {bestHeroes.map(({ heroId, winRate, usage, matches }, index) => (
+              <RankedEntityRow
+                key={heroId}
+                rank={index + 1}
+                entity={{ heroId }}
+                meta={`${matches.toLocaleString("en-US")} matches`}
+              >
+                <RankedEntityMetric label="Win rate" value={formatPercent(winRate)} tone={toneOf(winRate, 0.5)} />
+                <RankedEntityMetric label="Bought" value={formatShare(usage)} share={usage} />
+              </RankedEntityRow>
+            ))}
+          </RankedEntityList>
+        )}
+      </PanelBody>
+      <PanelFooter>
+        Ranked by the low end of each win rate&apos;s confidence interval. &quot;Bought&quot; is the share of the
+        hero&apos;s matches with {itemName}.
+      </PanelFooter>
+    </Panel>
   );
 }
 
-function ItemPairings({
+/** The pairings need the whole cohort of builds with the item and load in the browser. */
+export function ItemPairings({
   itemId,
   itemName,
   itemRequest,
+  className,
 }: {
   itemId: number;
   itemName: string;
   itemRequest: AnalyticsApiItemStatsRequest;
+  className?: string;
 }) {
   const cohortQuery = useQuery(itemStatsQueryOptions({ ...itemRequest, bucket: "hero", includeItemIds: [itemId] }));
   const itemsQuery = useQuery(itemUpgradesQueryOptions);
@@ -132,38 +128,37 @@ function ItemPairings({
 
   // Checked before loading: without the item list the pairings never resolve, so a failed one would spin forever.
   const failed = [cohortQuery, itemsQuery].filter((query) => query.isError && !query.data);
-  if (failed.length > 0) {
-    return (
-      <Section title={`Often Built with ${itemName}`}>
-        <ErrorState
-          title={`Could not load ${possessive(itemName)} pairings`}
-          retrying={failed.some((query) => query.isFetching)}
-          onRetry={() => failed.forEach((query) => void query.refetch())}
-        />
-      </Section>
-    );
-  }
-  if (!paired) return <LoadingState label={`${itemName} pairings`} />;
-  if (paired.length === 0) return null;
 
   return (
-    <Section
-      title={`Often Built with ${itemName}`}
-      description={
-        <>
-          The items that most often share a build with {itemName}. "Together" is how many {itemName} buyers also bought
-          the item, and the win rate counts only builds with both.
-        </>
-      }
-    >
-      <RankedEntityGrid>
-        {paired.map(({ item, winRate, pairRate }, index) => (
-          <RankedEntityCard key={item.id} rank={index + 1} entity={{ itemId: item.id }}>
-            <KeyValue label="Win" value={formatPercent(winRate)} />
-            <KeyValue label="Together" value={formatShare(pairRate)} />
-          </RankedEntityCard>
-        ))}
-      </RankedEntityGrid>
-    </Section>
+    <Panel className={className}>
+      <PanelHeader title={`Often Built with ${itemName}`} description="in the same build" />
+      <PanelBody className="flex-1">
+        {failed.length > 0 ? (
+          <ErrorState
+            variant="inline"
+            title={`Could not load ${possessive(itemName)} pairings`}
+            retrying={failed.some((query) => query.isFetching)}
+            onRetry={() => failed.forEach((query) => void query.refetch())}
+          />
+        ) : !paired ? (
+          <LoadingState label={`${itemName} pairings`} variant="skeleton" />
+        ) : paired.length === 0 ? (
+          <EmptyState variant="inline" title={`No item shares enough builds with ${itemName} yet`} />
+        ) : (
+          <RankedEntityList>
+            {paired.map(({ item, winRate, pairRate }, index) => (
+              <RankedEntityRow key={item.id} rank={index + 1} entity={{ itemId: item.id }}>
+                <RankedEntityMetric label="Win rate" value={formatPercent(winRate)} tone={toneOf(winRate, 0.5)} />
+                <RankedEntityMetric label="Together" value={formatShare(pairRate)} share={pairRate} />
+              </RankedEntityRow>
+            ))}
+          </RankedEntityList>
+        )}
+      </PanelBody>
+      <PanelFooter>
+        &quot;Together&quot; is the share of {itemName} buyers who also bought the item; the win rate counts only builds
+        with both. Its own components and upgrades are left out.
+      </PanelFooter>
+    </Panel>
   );
 }

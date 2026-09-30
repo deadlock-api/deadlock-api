@@ -1,13 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
 
 import { Specimen, Variants } from "~/components/dev/design-system/Specimen";
+import { AbilityOrderGrid } from "~/components/domain/assets/AbilityOrderGrid";
 import { BadgeImage } from "~/components/domain/assets/BadgeImage";
 import { HeroCell } from "~/components/domain/assets/HeroCell";
 import { HeroImage } from "~/components/domain/assets/HeroImage";
 import { ItemCell } from "~/components/domain/assets/ItemCell";
-import { RankedEntityCard, RankedEntityGrid } from "~/components/domain/assets/RankedEntityGrid";
-import { KeyValue } from "~/components/ui/key-value";
+import { RankedEntityList, RankedEntityMetric, RankedEntityRow } from "~/components/domain/assets/RankedEntityList";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
+import { toneOf } from "~/lib/tone";
 import { itemUpgradesQueryOptions } from "~/queries/asset-queries";
 import { ranksQueryOptions } from "~/queries/ranks-query";
 
@@ -15,11 +16,13 @@ const HERO_IDS = [1, 2, 3, 4];
 const ITEM_IDS = [1548066885, 968099481, 2678489038];
 const UNKNOWN_ID = 0;
 const RANKED_HEROES = [
-  { heroId: 1, winRate: "54.2%", usage: "31%" },
-  { heroId: 2, winRate: "53.1%", usage: "12%" },
-  { heroId: 3, winRate: "52.8%", usage: "44%" },
-  { heroId: 4, winRate: "52.0%", usage: "8%" },
+  { heroId: 1, winRate: 0.542, usage: 0.31 },
+  { heroId: 2, winRate: 0.531, usage: 0.12 },
+  { heroId: 3, winRate: 0.528, usage: 0.44 },
+  { heroId: 4, winRate: 0.497, usage: 0.08 },
 ];
+/** Four ability ids, standing in for one hero's slots. */
+const ABILITY_IDS = [1065103387, 1074714947, 539192269, 2061574352];
 
 export function Round3DomainAssets() {
   const { data: ranks } = useQuery(ranksQueryOptions);
@@ -117,26 +120,55 @@ export function Round3DomainAssets() {
       </Specimen>
 
       <Specimen
-        name="RankedEntityGrid"
-        source="domain/assets/RankedEntityGrid"
-        note="A short leaderboard of heroes or items (best items of a hero, best heroes for an item): rank, image, the name linked to its page, and KeyValue rows for the numbers. Two columns in a narrow container, four in a wide one."
+        name="HeroImage art"
+        source="domain/assets/HeroImage"
+        note='art="portrait" draws the tall hero-card art (3:4) instead of the round minimap head, for the header of a page about the hero (in a ProfileHeaderMedia). A hero without a card falls back to the icon.'
       >
-        <RankedEntityGrid>
+        <Variants label="art: icon, portrait">
+          <HeroImage heroId={HERO_IDS[0]} className="size-10" />
+          <HeroImage heroId={HERO_IDS[0]} art="portrait" className="w-20" />
+        </Variants>
+      </Specimen>
+
+      <Specimen
+        name="RankedEntityList"
+        source="domain/assets/RankedEntityList"
+        note="A short leaderboard of heroes or items (best items of a hero, best heroes for an item): one RankedEntityRow per place with the rank, the art, the name linked to its page and a meta line, and RankedEntityMetric children for the numbers. A metric with share draws a bar under its value; tone colors a value that has a pivot. One column in a narrow container, two (filled top to bottom) from @3xl."
+      >
+        <RankedEntityList>
           {RANKED_HEROES.map(({ heroId, winRate, usage }, index) => (
-            <RankedEntityCard key={heroId} rank={index + 1} entity={{ heroId }} title="12,345 matches">
-              <KeyValue label="Win" value={winRate} />
-              <KeyValue label="Bought" value={usage} />
-            </RankedEntityCard>
+            <RankedEntityRow key={heroId} rank={index + 1} entity={{ heroId }} meta="12,345 matches">
+              <RankedEntityMetric
+                label="Win rate"
+                value={`${(winRate * 100).toFixed(1)}%`}
+                tone={toneOf(winRate, 0.5)}
+              />
+              <RankedEntityMetric label="Bought" value={`${Math.round(usage * 100)}%`} share={usage} />
+            </RankedEntityRow>
           ))}
-        </RankedEntityGrid>
-        <RankedEntityGrid>
+        </RankedEntityList>
+        <RankedEntityList className="max-w-sm">
           {ITEM_IDS.map((itemId, index) => (
-            <RankedEntityCard key={itemId} rank={index + 1} entity={{ itemId }}>
-              <KeyValue label="Win" value="55.0%" />
-              <KeyValue label="Together" value="23%" />
-            </RankedEntityCard>
+            <RankedEntityRow key={itemId} rank={index + 1} entity={{ itemId }}>
+              <RankedEntityMetric label="Win rate" value="48.0%" tone="negative" />
+              <RankedEntityMetric label="Together" value="23%" share={0.23} />
+            </RankedEntityRow>
           ))}
-        </RankedEntityGrid>
+        </RankedEntityList>
+      </Specimen>
+
+      <Specimen
+        name="AbilityOrderGrid"
+        source="domain/assets/AbilityOrderGrid"
+        note="A skill order: a row per ability in slot order, a column per upgrade, the upgrade's number in its slot color where the ability was taken. pickRate on the steps adds the row of how many players took each step, from @lg. Screen readers get a numbered list of the upgrades instead of the grid."
+      >
+        <AbilityOrderGrid
+          abilityIds={ABILITY_IDS}
+          steps={[0, 1, 0, 2, 0, 3, 1, 1, 2, 2, 3, 0].map((slot, index) => ({
+            abilityId: ABILITY_IDS[slot],
+            pickRate: 1 - index * 0.04,
+          }))}
+        />
       </Specimen>
     </>
   );

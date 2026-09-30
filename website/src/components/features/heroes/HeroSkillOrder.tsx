@@ -3,14 +3,13 @@ import { Link } from "@tanstack/react-router";
 import type { AnalyticsApiAbilityOrderStatsRequest } from "deadlock_api_client";
 import { useMemo } from "react";
 
-import { AbilityImage } from "~/components/domain/assets/AbilityImage";
-import { AbilityName } from "~/components/domain/assets/AbilityName";
-import { Section } from "~/components/patterns/page/Section";
+import { AbilityOrderGrid } from "~/components/domain/assets/AbilityOrderGrid";
+import { Panel, PanelBody, PanelFooter, PanelHeader } from "~/components/patterns/panel/Panel";
+import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
-import { Badge } from "~/components/ui/badge";
-import { Button } from "~/components/ui/button";
-import { Card } from "~/components/ui/card";
+import { InlineStat } from "~/components/ui/inline-stat";
+import { TextLink } from "~/components/ui/text-link";
 import { useDefaultPeriodLabel } from "~/hooks/useDefaultPeriodLabel";
 import { type AbilityTrieNode, buildAbilityTrie, getSortedChildren } from "~/lib/ability-order-utils";
 import { formatPercent, possessive } from "~/lib/format";
@@ -21,13 +20,6 @@ const MAX_STEPS = 12;
 /** Stop following the path once fewer than this share of the hero's players are still on it. */
 const MIN_PATH_SHARE = 0.05;
 const HERO_ABILITY_SLOTS = ["signature1", "signature2", "signature3", "signature4"] as const;
-
-const SLOT_VARIANTS: Record<number, "chart-4" | "chart-2" | "chart-6" | "chart-5"> = {
-  1: "chart-4",
-  2: "chart-2",
-  3: "chart-6",
-  4: "chart-5",
-};
 
 interface Step {
   level: number;
@@ -54,7 +46,9 @@ export function HeroSkillOrder({
   heroName,
   request,
   rankRange,
+  className,
 }: {
+  className?: string;
   heroId: number;
   heroName: string;
   request: Omit<AnalyticsApiAbilityOrderStatsRequest, "heroId">;
@@ -70,15 +64,14 @@ export function HeroSkillOrder({
   const { data: heroes } = useQuery(heroesQueryOptions);
   const { data: abilities } = useQuery(abilitiesQueryOptions);
 
-  const slotByAbility = useMemo(() => {
+  /** The hero's four abilities in slot order: the rows of the grid. */
+  const slotAbilities = useMemo(() => {
     const hero = heroes?.find((h) => h.id === heroId);
-    const map = new Map<number, number>();
-    if (!hero || !abilities) return map;
-    HERO_ABILITY_SLOTS.forEach((slot, i) => {
+    if (!hero || !abilities) return [];
+    return HERO_ABILITY_SLOTS.flatMap((slot) => {
       const ability = abilities.find((a) => a.class_name === hero.items?.[slot]);
-      if (ability) map.set(ability.id, i + 1);
+      return ability ? [ability.id] : [];
     });
-    return map;
   }, [heroes, abilities, heroId]);
 
   const path = useMemo(() => {
@@ -90,72 +83,54 @@ export function HeroSkillOrder({
     return { steps, share: leaf.matches / players, winRate: leaf.wins / leaf.matches, matches: leaf.matches };
   }, [orderQuery.data, totalMatches]);
 
-  if (orderQuery.isPending) {
-    return <LoadingState label="skill order" align="center" className="py-8" />;
-  }
-  if (orderQuery.isError && !orderQuery.data) {
-    return (
-      <Section title={`${heroName} Skill Order`}>
-        <ErrorState
-          title={`Could not load ${possessive(heroName)} skill order`}
-          retrying={orderQuery.isFetching}
-          onRetry={() => void orderQuery.refetch()}
-        />
-      </Section>
-    );
-  }
-  if (!path) return null;
-
-  const opener = path.steps.slice(0, 3).map((step) => slotByAbility.get(step.abilityId) ?? "?");
+  const opener = path?.steps.slice(0, 3).map((step) => {
+    const slot = slotAbilities.indexOf(step.abilityId);
+    return slot >= 0 ? slot + 1 : "?";
+  });
 
   return (
-    <Section
-      title={`${heroName} Skill Order`}
-      description={
-        <>
-          The most common {heroName} build opens{" "}
-          <span className="font-semibold text-foreground">{opener.join(" → ")}</span> and follows this order for its
-          first {path.steps.length} upgrades.{" "}
-          <span className="font-semibold text-foreground">{formatPercent(path.share, 0)}</span> of {rankRange}{" "}
-          {heroName} players in {period} level up exactly this way, winning{" "}
-          <span className="font-semibold text-foreground">{formatPercent(path.winRate)}</span> of{" "}
-          {path.matches.toLocaleString("en-US")} matches. The number under each ability is how many players took it
-          next.
-        </>
-      }
-    >
-      <ol className="flex flex-wrap gap-2">
-        {path.steps.map((step) => {
-          const slot = slotByAbility.get(step.abilityId);
-          return (
-            <li key={step.level} title={`${step.level}. ${slot ? `Ability ${slot}` : "Ability"}`}>
-              <Card size="xs" className="w-16 items-center gap-1">
-                <span className="text-xs font-medium text-muted-foreground tabular-nums">{step.level}</span>
-                <AbilityImage abilityId={step.abilityId} className="size-8" />
-                <Badge
-                  variant={(slot && SLOT_VARIANTS[slot]) || "muted"}
-                  size="sm"
-                  shape="square"
-                  className="font-semibold"
-                >
-                  {slot ?? "?"}
-                </Badge>
-                <span className="text-xs text-muted-foreground tabular-nums">{formatPercent(step.pickRate, 0)}</span>
-                <AbilityName abilityId={step.abilityId} className="sr-only" />
-              </Card>
-            </li>
-          );
-        })}
-      </ol>
-      <Button asChild variant="link" size="inline" className="self-start">
-        <Link
-          to="/analytics/abilities"
-          search={{ hero_id: heroId, min_rank: request.minAverageBadge, max_rank: request.maxAverageBadge }}
-          preload="intent"
-        >
-          Explore all {heroName} skill orders
-        </Link>
-      </Button>
-    </Section>
+    <Panel className={className}>
+      <PanelHeader title={`${heroName} Skill Order`} description={`Most common · ${rankRange}`} />
+      <PanelBody className="flex flex-col gap-4">
+        {orderQuery.isError && !orderQuery.data ? (
+          <ErrorState
+            variant="inline"
+            title={`Could not load ${possessive(heroName)} skill order`}
+            retrying={orderQuery.isFetching}
+            onRetry={() => void orderQuery.refetch()}
+          />
+        ) : orderQuery.isPending || (path && slotAbilities.length === 0) ? (
+          <LoadingState label="skill order" variant="skeleton" />
+        ) : !path || !opener ? (
+          <EmptyState variant="inline" title={`Too few ${heroName} games share one skill order to show it yet`} />
+        ) : (
+          <>
+            <div className="flex flex-wrap gap-x-5 gap-y-1 text-sm">
+              <InlineStat value={opener.join(" → ")} label="opener" />
+              <InlineStat value={formatPercent(path.winRate)} label="win rate" />
+              <InlineStat value={formatPercent(path.share, 0)} label="of players" />
+            </div>
+            <AbilityOrderGrid abilityIds={slotAbilities} steps={path.steps} />
+            <p className="text-xs leading-relaxed text-muted-foreground">
+              {formatPercent(path.share, 0)} of {rankRange} {heroName} players in {period} take exactly these first{" "}
+              {path.steps.length} upgrades, winning {formatPercent(path.winRate)} of{" "}
+              {path.matches.toLocaleString("en-US")} matches. The bottom row is how many players at each step took that
+              upgrade next.
+            </p>
+          </>
+        )}
+      </PanelBody>
+      <PanelFooter>
+        <TextLink asChild>
+          <Link
+            to="/analytics/abilities"
+            search={{ hero_id: heroId, min_rank: request.minAverageBadge, max_rank: request.maxAverageBadge }}
+            preload="intent"
+          >
+            Explore all {heroName} skill orders
+          </Link>
+        </TextLink>
+      </PanelFooter>
+    </Panel>
   );
 }

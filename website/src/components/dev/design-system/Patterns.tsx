@@ -24,6 +24,7 @@ import { StringOption, StringSelector } from "~/components/patterns/filter-bar/S
 import { type TriState, TriStateItem, TriStateSelector } from "~/components/patterns/filter-bar/TriStateSelector";
 import { ResponsiveTab, ResponsiveTabsList } from "~/components/patterns/navigation/ResponsiveTabsList";
 import { PageHeader } from "~/components/patterns/page/PageHeader";
+import { ProfileHeader, ProfileHeaderMedia } from "~/components/patterns/page/ProfileHeader";
 import { Section } from "~/components/patterns/page/Section";
 import { Panel, PanelBody, PanelFooter, PanelHeader, PanelShowMore } from "~/components/patterns/panel/Panel";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
@@ -40,6 +41,7 @@ import { Segmented, SegmentedItem } from "~/components/ui/segmented";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
 import { type SortDir } from "~/components/ui/sort-button";
 import { Inline } from "~/components/ui/stack";
+import { Stat, StatGroup } from "~/components/ui/stat";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { Tabs, TabsContent } from "~/components/ui/tabs";
 import type { Dayjs } from "~/dayjs";
@@ -140,6 +142,71 @@ export function Patterns() {
             title="Data Dumps"
             description="Every match we have ever ingested, as Parquet files you can query in place."
           />
+        </Variants>
+      </Specimen>
+
+      <Specimen
+        name="ProfileHeader"
+        source="patterns/page/ProfileHeader"
+        note="The opening block of a page about one thing: its art in a ProfileHeaderMedia, an eyebrow of facts, the h1 and a description, and the headline numbers (a plain StatGroup) in a strip under them. accent is the subject's own color (a hero's, an item category's), tinting the top edge, the glow and the art's backdrop. Narrow, the art sits beside the title and the description spans the width; from @lg the art spans both."
+      >
+        <Variants label="portrait media, hero accent, four stats" className="block">
+          <ProfileHeader
+            as="div"
+            accent="var(--chart-6)"
+            media={
+              <ProfileHeaderMedia shape="portrait">
+                <Avatar className="size-full rounded-none">
+                  <AvatarFallback className="rounded-none">IN</AvatarFallback>
+                </Avatar>
+              </ProfileHeaderMedia>
+            }
+            eyebrow={
+              <>
+                <Badge variant="outline" size="sm">
+                  Brawler
+                </Badge>
+                <span>Phantom 1+ · this season</span>
+              </>
+            }
+            title={
+              <>
+                Infernus <span className="text-muted-foreground">Stats &amp; Builds</span>
+              </>
+            }
+            description="Infernus wins 52.4% of 84,120 tracked matches this season."
+          >
+            <StatGroup variant="plain" className="grid-cols-2 @lg:grid-cols-4">
+              <Stat label="Win Rate" value="52.4%" tone="positive" sub="#6 of 32" />
+              <Stat label="Pick Rate" value="31.0%" sub="#12 of 32" />
+              <Stat label="Ban Rate" value="4.1%" sub="#20 of 32" />
+              <Stat label="Matches" value="84,120" sub="tracked" />
+            </StatGroup>
+          </ProfileHeader>
+        </Variants>
+        <Variants
+          label="square media, item category accent, no stats, zero-prop accent is the brand color"
+          className="block"
+        >
+          <ProfileHeader
+            as="div"
+            accent="var(--item-spirit)"
+            media={
+              <ProfileHeaderMedia shape="square">
+                <Avatar className="size-full rounded-md">
+                  <AvatarFallback className="rounded-md">EC</AvatarFallback>
+                </Avatar>
+              </ProfileHeaderMedia>
+            }
+            eyebrow={
+              <Badge variant="outline" size="sm">
+                Spirit · Tier 2
+              </Badge>
+            }
+            title="Extra Charge"
+            description="A spirit item that adds a charge to every charged ability."
+          />
+          <ProfileHeader as="div" title="Plain" description="No media, no accent: the brand color." />
         </Variants>
       </Specimen>
 
