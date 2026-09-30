@@ -22,7 +22,7 @@ pub(crate) enum CrosshairError {
     CodeTooLong,
     #[error("Not a crosshair code: it must start with `DL.`")]
     MissingPrefix,
-    #[error("Crosshair code is not valid base64: {0}")]
+    #[error("Crosshair code is not valid base64")]
     Base64(#[from] base64::DecodeError),
     #[error("Unsupported crosshair code version {0}")]
     UnsupportedVersion(u8),
