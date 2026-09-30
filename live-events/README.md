@@ -126,11 +126,14 @@ Additional event names:
 - `chat_message` — in-game chat (requires `subscribed_chat_messages=true`)
 - `player_typing` — a player started/stopped typing (requires `subscribed_chat_messages=true`)
 - `hero_killed` — hero kill (includes `killfeed_gold` and `killer_ability_id`)
-- `banned_heroes` — heroes banned in the draft
+- `banned_heroes` — heroes banned in the draft (`banned_hero_ids`); sent once the bans are known and again if they change
 - `soul_bag_pickup` — soul bag picked up (`pickup_player` / `victim_player` are entity indices, `killfeed_gold`)
 - `hero_release_vote` — a player voted for a hero release (`player_slot`, `voted_hero_id`)
 - `combat_log_entry` / `combat_log_bulk_data` — combat log entries (`CMsgCitadelCombatLogEntry`)
 - `music_queue` — music cue (`queue`, `queue_name`; `corrupted_item_shop_announce` is the Broker's arrival)
+- `corrupted_item_shop_spawn` — the Broker (corrupted item shop) spawned (`corrupted_items_limit`: 1)
+- `corrupted_item_shop_restock` — the Broker restocked (`corrupted_items_limit`: 2 for the first restock, +1 per restock)
+- `corrupted_item` — a player got a corrupted item from the Broker (`entity_index` of the item, `owner_entity` pawn entity index, `team`, `item_id`, packed `upgrade_info` with bit 23 set)
 - `tick_end` — marks the end of a game tick
 - `end` — the demo stream has ended
 
@@ -140,7 +143,7 @@ Additional event names:
 
 | Entity Type | Description | Key Fields |
 |---|---|---|
-| `game_rules_proxy` | Game state and timing | `game_start_time`, `game_paused`, `total_paused_ticks` |
+| `game_rules_proxy` | Game state and timing | `game_start_time`, `game_paused`, `total_paused_ticks`, `corrupted_penalty_seed`, `num_corrupted_items_limit` |
 | `player_controller` | Player stats and info | `steam_id`, `steam_name`, `hero_id`, `kills`, `deaths`, `assists`, `net_worth`, `hero_damage` |
 | `player_pawn` | Player character state | `position`, `health`, `max_health`, `level`, `hero_build_id` |
 | `team` | Team info | `team`, `score`, `teamname` |
@@ -212,6 +215,21 @@ Additional event names:
   "position": [1234.5, -678.9, 128.0],
   "lane": 1,
   "team": 2
+}
+```
+
+**Corrupted Item:**
+
+```json
+{
+  "tick": 123631,
+  "game_time": 1881.4,
+  "event_type": "corrupted_item",
+  "entity_index": 3949,
+  "owner_entity": 89,
+  "team": 2,
+  "item_id": 787198704,
+  "upgrade_info": 8454144
 }
 ```
 

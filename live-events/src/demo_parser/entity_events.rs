@@ -72,6 +72,12 @@ pub(super) struct GameRulesProxyEvent {
     game_paused: Option<bool>,
     pause_start_tick: Option<i32>,
     pub(super) total_paused_ticks: Option<i32>,
+    /// Seed of the corrupted item penalties (build 6711+; equals the match metadata's
+    /// `corrupted_penalty_seed`).
+    corrupted_penalty_seed: Option<u32>,
+    /// Number of corrupted items the Broker offers (build 6711+): 0 until it spawns, then +1 on
+    /// the spawn and on each restock.
+    pub(super) num_corrupted_items_limit: Option<i32>,
 }
 
 impl EntityUpdateEvent for GameRulesProxyEvent {
@@ -81,9 +87,40 @@ impl EntityUpdateEvent for GameRulesProxyEvent {
             game_paused: entity.get_value(&PAUSED_HASH),
             pause_start_tick: entity.get_value(&PAUSE_START_TICK_HASH),
             total_paused_ticks: entity.get_value(&PAUSED_TICKS_HASH),
+            corrupted_penalty_seed: entity.get_value(&CORRUPTED_PENALTY_SEED_HASH),
+            num_corrupted_items_limit: entity.get_value(&NUM_CORRUPTED_ITEMS_LIMIT_HASH),
         }
         .into()
     }
+}
+
+/// Banned heroes from the game rules entity's `m_vecBannedHeroes` (build 6711+; older builds send
+/// the `BannedHeroes` user message instead). `None` until the length and every element are set.
+pub(super) fn banned_heroes_from_game_rules(entity: &Entity) -> Option<Vec<u32>> {
+    let len: u64 = entity.get_value(&BANNED_HEROES_HASH)?;
+    (0..len)
+        .map(|i| {
+            entity
+                .get_value::<u64>(&add_u64_to_hash(BANNED_HEROES_HASH, add_u64_to_hash(0, i)))
+                .and_then(|id| u32::try_from(id).ok())
+        })
+        .collect()
+}
+
+/// Bit of an item's `m_nUpgradeInfo` that marks it as corrupted (bought from the Broker).
+pub(super) const CORRUPTED_UPGRADE_INFO_BIT: u32 = 1 << 23;
+
+/// A corrupted item on an item/upgrade entity: `(item id, upgrade info)`, or `None` if the entity
+/// is not a corrupted item.
+pub(super) fn corrupted_item(entity: &Entity) -> Option<(u32, u32)> {
+    let upgrade_info: u32 = entity.get_value(&UPGRADE_INFO_HASH)?;
+    if upgrade_info & CORRUPTED_UPGRADE_INFO_BIT == 0 {
+        return None;
+    }
+    let item_id = entity
+        .get_value::<u64>(&SUBCLASS_ID_HASH)
+        .and_then(|id| u32::try_from(id).ok())?;
+    Some((item_id, upgrade_info))
 }
 
 #[derive(Serialize, Debug, Clone, Default)]

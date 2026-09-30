@@ -1,4 +1,5 @@
 use core::future::{Future, ready};
+use core::ops::Range;
 use std::collections::HashSet;
 
 use axum::response::sse::Event;
@@ -12,17 +13,24 @@ use tracing::debug;
 use valveprotos::common::{CMsgPlayerInfo, EDemoCommands};
 use valveprotos::deadlock::{
     CCitadelUserMsgBannedHeroes, CCitadelUserMsgChatMsg, CCitadelUserMsgCombatLogBulkData,
-    CCitadelUserMsgHeroKilled, CCitadelUserMsgHeroReleaseVote, CCitadelUserMsgMusicQueue,
-    CCitadelUserMsgPlayerTyping, CCitadelUserMsgSoulBagPickup, CMsgCitadelCombatLogEntry,
-    CitadelMusicMsgType, CitadelUserMessageIds,
+    CCitadelUserMsgHeroKilled, CCitadelUserMsgHeroReleaseVote, CCitadelUserMsgHudGameAnnouncement,
+    CCitadelUserMsgMusicQueue, CCitadelUserMsgPlayerTyping, CCitadelUserMsgSoulBagPickup,
+    CMsgCitadelCombatLogEntry, CitadelMusicMsgType, CitadelUserMessageIds,
 };
 
+use crate::demo_parser::broker::BrokerStock;
 use crate::demo_parser::entity_events::{
     EntityType, EntityUpdateEvent, EntityUpdateEvents, GameRulesProxyEvent,
+    banned_heroes_from_game_rules, corrupted_item,
 };
 use crate::demo_parser::error::DemoParseError;
-use crate::demo_parser::types::{DemoEvent, DemoEventPayload};
-use crate::demo_parser::utils::handle_to_entity_index;
+#[allow(
+    clippy::wildcard_imports,
+    reason = "`expect` on a `use` item is not fulfilled"
+)]
+use crate::demo_parser::hashes::*;
+use crate::demo_parser::types::{Delta, DemoEvent, DemoEventPayload};
+use crate::demo_parser::utils::{get_entity_handle_index, handle_to_entity_index};
 use crate::utils::steamid64_to_steamid3;
 
 pub(crate) struct SendingVisitor {
@@ -32,6 +40,11 @@ pub(crate) struct SendingVisitor {
     game_time: f32,
     tick_interval: f32,
     rules: GameRulesProxyEvent,
+    /// Last emitted bans, to emit `banned_heroes` once per distinct set of bans.
+    banned_heroes: Option<Vec<u32>>,
+    broker: BrokerStock,
+    /// Item entities already reported as corrupted.
+    corrupted_items: HashSet<i32>,
 }
 
 impl SendingVisitor {
@@ -47,6 +60,9 @@ impl SendingVisitor {
             game_time: 0.0,
             tick_interval: 1.0 / 60.0,
             rules: GameRulesProxyEvent::default(),
+            banned_heroes: None,
+            broker: BrokerStock::default(),
+            corrupted_items: HashSet::new(),
         }
     }
 }
@@ -97,6 +113,8 @@ impl SendingVisitor {
         delta_header: DeltaHeader,
         entity: &Entity,
     ) -> Result<(), DemoParseError> {
+        self.handle_corrupted_item(ctx, delta_header.into(), entity)?;
+
         let Some(entity_type) = EntityType::from_opt(entity) else {
             return Ok(());
         };
@@ -107,6 +125,7 @@ impl SendingVisitor {
         {
             debug!("Updating game rules");
             self.rules = rules;
+            self.handle_game_rules(ctx, entity)?;
         }
 
         if self
@@ -135,6 +154,91 @@ impl SendingVisitor {
         };
         let sse_event = demo_event.try_into()?;
         self.sender.send(sse_event)?;
+        Ok(())
+    }
+
+    /// Bans and Broker stock from the game rules (build 6711+).
+    fn handle_game_rules(&mut self, ctx: &Context, entity: &Entity) -> Result<(), DemoParseError> {
+        if let Some(banned_hero_ids) = banned_heroes_from_game_rules(entity)
+            && !banned_hero_ids.is_empty()
+        {
+            self.emit_banned_heroes(ctx, banned_hero_ids)?;
+        }
+        if let Some(limit) = self.rules.num_corrupted_items_limit {
+            let levels = self.broker.on_limit(ctx.tick(), limit);
+            self.emit_broker_stock(ctx, levels)?;
+        }
+        Ok(())
+    }
+
+    fn emit_banned_heroes(
+        &mut self,
+        ctx: &Context,
+        banned_hero_ids: Vec<u32>,
+    ) -> Result<(), DemoParseError> {
+        if self.banned_heroes.as_ref() == Some(&banned_hero_ids) {
+            return Ok(());
+        }
+        self.banned_heroes = Some(banned_hero_ids.clone());
+        self.send(ctx, DemoEventPayload::BannedHeroes { banned_hero_ids })
+    }
+
+    /// Emits `corrupted_item_shop_spawn` (level 1) / `corrupted_item_shop_restock` (above 1) for
+    /// each new Broker stock level.
+    fn emit_broker_stock(&self, ctx: &Context, levels: Range<i32>) -> Result<(), DemoParseError> {
+        for corrupted_items_limit in levels {
+            let event = if corrupted_items_limit == 1 {
+                DemoEventPayload::CorruptedItemShopSpawn {
+                    corrupted_items_limit,
+                }
+            } else {
+                DemoEventPayload::CorruptedItemShopRestock {
+                    corrupted_items_limit,
+                }
+            };
+            self.send(ctx, event)?;
+        }
+        Ok(())
+    }
+
+    /// Emits `corrupted_item` the first time an item entity is seen with the corrupted bit set.
+    fn handle_corrupted_item(
+        &mut self,
+        ctx: &Context,
+        delta: Delta,
+        entity: &Entity,
+    ) -> Result<(), DemoParseError> {
+        let entity_index = entity.index();
+        if delta == Delta::Delete {
+            self.corrupted_items.remove(&entity_index);
+            return Ok(());
+        }
+        if self.corrupted_items.contains(&entity_index) {
+            return Ok(());
+        }
+        let Some((item_id, upgrade_info)) = corrupted_item(entity) else {
+            return Ok(());
+        };
+        self.corrupted_items.insert(entity_index);
+        self.send(
+            ctx,
+            DemoEventPayload::CorruptedItem {
+                entity_index,
+                owner_entity: get_entity_handle_index(entity, OWNER_ENTITY_HASH),
+                team: entity.get_value(&TEAM_HASH),
+                item_id,
+                upgrade_info,
+            },
+        )
+    }
+
+    fn send(&self, ctx: &Context, event: DemoEventPayload) -> Result<(), DemoParseError> {
+        let demo_event = DemoEvent {
+            tick: ctx.tick(),
+            game_time: self.game_time,
+            event,
+        };
+        self.sender.send(demo_event.try_into()?)?;
         Ok(())
     }
 
@@ -190,18 +294,19 @@ impl SendingVisitor {
             self.sender.send(sse_event)?;
         }
 
+        // Builds before 6711 send the bans in this message; newer ones in the game rules.
         if packet_type == CitadelUserMessageIds::KEUserMsgBannedHeroes as u32
             && let Ok(msg) = CCitadelUserMsgBannedHeroes::decode(data)
         {
-            let demo_event = DemoEvent {
-                tick: ctx.tick(),
-                game_time: self.game_time,
-                event: DemoEventPayload::BannedHeroes {
-                    banned_hero_ids: msg.banned_hero_ids,
-                },
-            };
-            let sse_event = demo_event.try_into()?;
-            self.sender.send(sse_event)?;
+            self.emit_banned_heroes(ctx, msg.banned_hero_ids)?;
+        }
+
+        if packet_type == CitadelUserMessageIds::KEUserMsgHudGameAnnouncement as u32
+            && let Ok(msg) = CCitadelUserMsgHudGameAnnouncement::decode(data)
+        {
+            let title = msg.title_locstring.as_deref().unwrap_or_default();
+            let levels = self.broker.on_announcement(ctx.tick(), title);
+            self.emit_broker_stock(ctx, levels)?;
         }
 
         if let Some(event) = self.decode_user_message(packet_type, data) {
@@ -343,7 +448,10 @@ mod tests {
                 .and_then(|rest| rest.split("\\n").next())
                 .unwrap_or("?")
                 .to_owned();
-            if !name.contains("_entity_") && name != "tick_end" {
+            // Rare match milestones are printed in full.
+            if name == "banned_heroes" || name.starts_with("corrupted_item") {
+                println!("{debug}");
+            } else if !name.contains("_entity_") && name != "tick_end" {
                 samples.entry(name.clone()).or_insert(debug);
             }
             *counts.entry(name).or_default() += 1;

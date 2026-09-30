@@ -69,3 +69,14 @@ pub(super) const PAUSED_HASH: u64 = fkey_from_path(&["m_pGameRules", "m_bGamePau
 pub(super) const PAUSE_START_TICK_HASH: u64 =
     fkey_from_path(&["m_pGameRules", "m_nPauseStartTick"]);
 pub(super) const PAUSED_TICKS_HASH: u64 = fkey_from_path(&["m_pGameRules", "m_nTotalPausedTicks"]);
+/// Dynamic array of banned hero ids (build 6711+): the key holds its length, element `i` is at
+/// `add_u64_to_hash(key, add_u64_to_hash(0, i))`.
+pub(super) const BANNED_HEROES_HASH: u64 = fkey_from_path(&["m_pGameRules", "m_vecBannedHeroes"]);
+pub(super) const CORRUPTED_PENALTY_SEED_HASH: u64 =
+    fkey_from_path(&["m_pGameRules", "m_nCorruptedPenaltySeed"]);
+/// Number of corrupted items the Broker offers: 0 before it spawns, +1 on the spawn and on each
+/// restock.
+pub(super) const NUM_CORRUPTED_ITEMS_LIMIT_HASH: u64 =
+    fkey_from_path(&["m_pGameRules", "m_nNumCorruptedItemsLimit"]);
+/// Item id of an item/upgrade entity (the id the assets API uses).
+pub(super) const SUBCLASS_ID_HASH: u64 = fxhash::hash_bytes(b"m_nSubclassID");

@@ -55,6 +55,9 @@ fn all_sse_events() -> Vec<String> {
                 "combat_log_bulk_data",
                 "player_typing",
                 "music_queue",
+                "corrupted_item_shop_spawn",
+                "corrupted_item_shop_restock",
+                "corrupted_item",
                 "end",
                 "error",
             ]
