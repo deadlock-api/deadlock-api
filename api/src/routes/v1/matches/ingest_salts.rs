@@ -17,6 +17,9 @@ use crate::services::rate_limiter::extractor::RateLimitKey;
 
 const MAX_SALTS_PER_REQUEST: usize = 1000;
 
+/// Attributed to salts submitted without a username, so they don't show up as unknown.
+const DEFAULT_USERNAME: &str = "api-ingest";
+
 #[utoipa::path(
     post,
     path = "/salts",
@@ -38,7 +41,7 @@ The endpoint accepts a list of MatchSalts objects, which contain the following f
 - `cluster_id`: The cluster ID
 - `metadata_salt`: The metadata salt
 - `replay_salt`: The replay salt
-- `username`: The username of the person who submitted the match
+- `username`: The username of the person who submitted the match (defaults to `api-ingest`)
 
 ### Rate Limits:
 | Type | Limit |
@@ -109,6 +112,12 @@ pub(super) async fn ingest_salts(
             let metadata_new = salt.metadata_salt.is_some() && !has_metadata;
             let replay_new = salt.replay_salt.is_some() && !has_replay;
             metadata_new || replay_new
+        })
+        .map(|mut salt| {
+            if salt.username.as_deref().is_none_or(|u| u.trim().is_empty()) {
+                salt.username = Some(DEFAULT_USERNAME.to_owned());
+            }
+            salt
         })
         .collect();
 
