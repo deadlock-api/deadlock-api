@@ -1,5 +1,5 @@
 ---
-source: api/src/services/assets/versions/map/mod.rs
+source: src/services/assets/versions/map/mod.rs
 expression: map
 ---
 {
@@ -15,11 +15,11 @@ expression: map
   "objective_positions": {
     "team0_core": {
       "left_relative": 0.2905,
-      "top_relative": 0.9258
+      "top_relative": 0.92
     },
     "team1_core": {
       "left_relative": 0.4095,
-      "top_relative": -0.0147
+      "top_relative": 0.0
     },
     "team0_titan": {
       "left_relative": 0.3905,
