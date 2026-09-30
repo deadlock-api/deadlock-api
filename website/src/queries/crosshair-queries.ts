@@ -69,17 +69,6 @@ function toParams(s: CrosshairSettings): CrosshairApiSettingsCodeRequest {
   };
 }
 
-/**
- * The settings as console commands, to paste into the game's console or an autoexec. `themed` is left out: the
- * game's name for it could not be confirmed as a console variable.
- */
-export function toConsoleCommand(settings: CrosshairSettings): string {
-  return Object.entries(settings)
-    .filter(([key]) => key !== "themed")
-    .map(([key, value]) => `citadel_crosshair_${key} ${value}`)
-    .join("; ");
-}
-
 function toDataUrl(blob: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();

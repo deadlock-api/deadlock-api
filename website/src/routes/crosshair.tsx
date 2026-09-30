@@ -1,8 +1,8 @@
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { Bookmark, BookmarkX, ClipboardPaste, Download, Library, Link } from "lucide-react";
+import { Bookmark, BookmarkX, ClipboardPaste, Dices, Download, Library, Link } from "lucide-react";
 import { parseAsString, parseAsStringLiteral, useQueryState } from "nuqs";
-import { useId, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { PageHeader } from "~/components/patterns/page/PageHeader";
@@ -31,7 +31,7 @@ import { useHydrated } from "~/hooks/useHydrated";
 import { API_ORIGIN } from "~/lib/constants";
 import { renderCrosshair, toPngDataUrl } from "~/lib/crosshair-render";
 import { isClientError } from "~/lib/http";
-import { pageTitle, seo } from "~/lib/seo";
+import { pageTitle, seo, SITE_URL } from "~/lib/seo";
 import { useStoredState } from "~/lib/use-stored-state";
 import {
   CROSSHAIR_CODE_PREFIX,
@@ -41,19 +41,44 @@ import {
   crosshairCodeQueryOptions,
   crosshairCodeSettingsQueryOptions,
   isCrosshairCode,
-  toConsoleCommand,
 } from "~/queries/crosshair-queries";
 
 export const Route = createFileRoute("/crosshair")({
   component: CrosshairEditor,
-  head: () =>
-    seo({
-      title: pageTitle("Crosshair Editor"),
+  // The crosshair lives in the URL under nuqs; read it here so a shared link previews that crosshair.
+  loaderDeps: ({ search }) => {
+    const { code, res } = search as { code?: unknown; res?: unknown };
+    return {
+      code: typeof code === "string" ? code.trim() : "",
+      screenHeight: RESOLUTIONS.find((resolution) => resolution === String(res)) ?? "1080",
+    };
+  },
+  loader: ({ deps }) => deps,
+  head: ({ loaderData }) => {
+    const code = loaderData?.code ?? "";
+    const base = {
       description:
         "Import a Deadlock crosshair share code or design your own with sliders, see it at its true size over a game scene, and copy the code to use in game.",
       path: "/crosshair",
-    }),
+    };
+    if (!isCrosshairCode(code)) return seo({ ...base, title: pageTitle("Crosshair Editor") });
+    const screenHeight = loaderData?.screenHeight ?? "1080";
+    const image = new URLSearchParams({ code, screen_height: screenHeight, scale: String(PREVIEW_SCALE) });
+    return seo({
+      ...base,
+      title: pageTitle("Deadlock Crosshair"),
+      description:
+        "A Deadlock crosshair: see it at its true size, tweak it with sliders and copy the code to use in game.",
+      shareUrl: `${SITE_URL}/crosshair?${new URLSearchParams({ code, res: screenHeight })}`,
+      // The API's picture of the crosshair, each pixel enlarged to a square so a link preview can show it.
+      ogImage: `${API_ORIGIN}/v1/crosshair/code/image?${image}`,
+      ogImageKind: "thumbnail",
+    });
+  },
 });
+
+/** How much a link preview enlarges the crosshair's true-size image. */
+const PREVIEW_SCALE = 8;
 
 const RESOLUTION_LABELS = { "1080": "1080p", "1440": "1440p", "2160": "4K" } as const;
 type Resolution = keyof typeof RESOLUTION_LABELS;
@@ -131,6 +156,34 @@ function fromHex(hex: string): [number, number, number] {
   return [(value >> 16) & 255, (value >> 8) & 255, value & 255];
 }
 
+const randomInt = (min: number, max: number) => min + Math.floor(Math.random() * (max - min + 1));
+
+/**
+ * A random crosshair within the sliders' ranges. Fills stay at least half opaque and the dot or the pips always
+ * show, so a roll is never an invisible crosshair.
+ */
+function randomSettings(): CrosshairSettings {
+  const settings = { ...DEFAULT_CROSSHAIR_SETTINGS };
+  for (const { sliders } of SLIDER_GROUPS) {
+    for (const { key, min, max, step = 1 } of sliders) {
+      settings[key] = min + randomInt(0, Math.round((max - min) / step)) * step;
+    }
+  }
+  settings.dot_opacity = Math.max(settings.dot_opacity, 0.5);
+  settings.pip_opacity = Math.max(settings.pip_opacity, 0.5);
+  if (Math.random() < 0.5) settings.dot_size = Math.max(settings.dot_size, 2);
+  else settings.pip_height = Math.max(settings.pip_height, 4);
+  // Big values of every length at once make a crosshair nobody would use; keep most of them modest.
+  settings.pip_gap = Math.min(settings.pip_gap, 16);
+  settings.pip_height = Math.min(settings.pip_height, 24);
+  settings.dot_outline_gap = Math.min(settings.dot_outline_gap, 3);
+  settings.pip_outline_gap = Math.min(settings.pip_outline_gap, 3);
+  settings.pip_gap_static = Math.random() < 0.5;
+  [settings.color_r, settings.color_g, settings.color_b] = [randomInt(0, 255), randomInt(0, 255), randomInt(0, 255)];
+  [settings.outline_color_r, settings.outline_color_g, settings.outline_color_b] = [0, 0, 0];
+  return settings;
+}
+
 function CrosshairEditor() {
   const [codeParam, setCodeParam] = useQueryState(
     "code",
@@ -147,10 +200,9 @@ function CrosshairEditor() {
   const queryClient = useQueryClient();
   const imported = useQuery(crosshairCodeSettingsQueryOptions(code));
   // Slider changes apply on top of the imported code; importing another code starts over from it.
-  const [edits, setEdits] = useState<{ code: string; settings: CrosshairSettings }>();
-  const edited = edits?.code === code;
-  const settings = edited ? edits.settings : (imported.data ?? DEFAULT_CROSSHAIR_SETTINGS);
-  const update = (patch: Partial<CrosshairSettings>) => setEdits({ code, settings: { ...settings, ...patch } });
+  const [edits, setEdits] = useState<CrosshairSettings>();
+  const settings = edits ?? imported.data ?? DEFAULT_CROSSHAIR_SETTINGS;
+  const update = (patch: Partial<CrosshairSettings>) => setEdits({ ...settings, ...patch });
 
   // Drawn here on every change, pixel for pixel as the API draws it; the server has no canvas, so only once hydrated.
   const hydrated = useHydrated();
@@ -167,6 +219,17 @@ function CrosshairEditor() {
       : undefined;
   // The code of what is on screen, once it is encoded; a placeholder is the previous crosshair's.
   const currentCode = shareCode.isPlaceholderData ? undefined : shareCode.data;
+
+  // The code of what is on screen becomes the URL's once it arrives, so the address (and its link preview) always holds
+  // a share code, also for console commands or the default crosshair. A code from the link is left alone until it has
+  // loaded, and kept when it is invalid so its error shows. The settings are cached under the new code, so opening
+  // that address shows them without asking the API.
+  const importing = code !== "" && edits === undefined && imported.data === undefined;
+  useEffect(() => {
+    if (importing || currentCode === undefined || currentCode === code) return;
+    queryClient.setQueryData(crosshairCodeSettingsQueryOptions(currentCode).queryKey, settings);
+    void setCodeParam(currentCode);
+  }, [importing, currentCode, code, settings, queryClient, setCodeParam]);
 
   const [bookmarks, saveBookmarks] = useStoredState<CrosshairBookmark[]>(BOOKMARKS_KEY, () => []);
   const bookmarked = currentCode !== undefined && bookmarks.some((bookmark) => bookmark.code === currentCode);
@@ -223,6 +286,15 @@ function CrosshairEditor() {
           <Card className="relative flex-1">
             {/* The crosshair's own actions, pinned in the card's corner above the first group. */}
             <Inline gap={1} wrap="nowrap" className="absolute inset-e-3 top-3">
+              <Button
+                variant="outline"
+                size="icon-sm"
+                aria-label="Random crosshair"
+                title="Random crosshair"
+                onClick={() => setEdits(randomSettings())}
+              >
+                <Dices />
+              </Button>
               <Button
                 variant="outline"
                 size="icon-sm"
@@ -385,9 +457,6 @@ function CrosshairEditor() {
               <Inline gap={2}>
                 <CopyButton text={shareCode.data ?? ""} disabled={!shareCode.data || shareCode.isPlaceholderData}>
                   Copy code
-                </CopyButton>
-                <CopyButton variant="outline" text={toConsoleCommand(settings)}>
-                  Copy console command
                 </CopyButton>
               </Inline>
             </Stack>
