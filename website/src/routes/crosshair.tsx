@@ -3,6 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Bookmark, BookmarkX, ClipboardPaste, Download, Library, Link } from "lucide-react";
 import { parseAsString, parseAsStringLiteral, useQueryState } from "nuqs";
 import { useId, useMemo, useState } from "react";
+import { toast } from "sonner";
 
 import { PageHeader } from "~/components/patterns/page/PageHeader";
 import { PageShell } from "~/components/patterns/page/PageShell";
@@ -169,12 +170,19 @@ function CrosshairEditor() {
 
   const [bookmarks, saveBookmarks] = useStoredState<CrosshairBookmark[]>(BOOKMARKS_KEY, () => []);
   const bookmarked = currentCode !== undefined && bookmarks.some((bookmark) => bookmark.code === currentCode);
-  const toggleBookmark = () => {
-    if (currentCode === undefined) return;
+  const toggleBookmark = async () => {
+    // While a slider moves, the code for its latest value may still be on its way; the click waits for it.
+    let code = currentCode;
+    try {
+      code ??= await queryClient.query(crosshairCodeQueryOptions(settings));
+    } catch {
+      toast.error("Could not bookmark this crosshair. Please try again.");
+      return;
+    }
     saveBookmarks(
-      bookmarked
-        ? bookmarks.filter((bookmark) => bookmark.code !== currentCode)
-        : [{ code: currentCode, savedAt: new Date().toISOString() }, ...bookmarks],
+      bookmarks.some((bookmark) => bookmark.code === code)
+        ? bookmarks.filter((bookmark) => bookmark.code !== code)
+        : [{ code, savedAt: new Date().toISOString() }, ...bookmarks],
     );
   };
 
@@ -221,8 +229,7 @@ function CrosshairEditor() {
                 aria-label={bookmarked ? "Remove this crosshair's bookmark" : "Bookmark this crosshair"}
                 aria-pressed={bookmarked}
                 title={bookmarked ? "Bookmarked on this browser · click to remove" : "Bookmark on this browser"}
-                disabled={currentCode === undefined}
-                onClick={toggleBookmark}
+                onClick={() => void toggleBookmark()}
               >
                 <Bookmark fill={bookmarked ? "currentColor" : "none"} />
               </Button>
