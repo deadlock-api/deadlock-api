@@ -47,8 +47,18 @@ const COLOR_GROUPS: { name: string; note: string; tokens: string[] }[] = [
   },
   {
     name: "Game and third-party",
-    note: "Item categories as colored in the client; brand colors of services we link to.",
-    tokens: ["item-weapon", "item-vitality", "item-spirit", "steam-bg", "steam-border", "discord"],
+    note: "Item categories as colored in the client; the backdrops that stand in for the game world behind a crosshair; brand colors of services we link to.",
+    tokens: [
+      "item-weapon",
+      "item-vitality",
+      "item-spirit",
+      "stage-neutral",
+      "stage-light",
+      "stage-dark",
+      "steam-bg",
+      "steam-border",
+      "discord",
+    ],
   },
 ];
 

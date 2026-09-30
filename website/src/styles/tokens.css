@@ -31,6 +31,10 @@
   --series-violet: #9085e9;
   --series-forest: #008300;
   --series-magenta: #d55181;
+  /* Neutral greys for backdrops that stand in for the game world, not for UI surfaces */
+  --grey-300: #c3cacf;
+  --grey-500: #808080;
+  --grey-850: #1e2226;
 
   /* Dense data type size: Tailwind's text-xs (12px), the floor. In rem, so it follows the reader's font size. */
   --type-xs: 0.75rem;
@@ -110,6 +114,11 @@
   --lane-yellow: #facc15;
   --lane-blue: #22d3ee;
   --lane-purple: #a78bfa;
+  /* Game identity: backdrops that stand in for the game world behind a HUD element (a crosshair). Mid grey is the
+     default, so both a light and a dark element stay visible; light and dark test one against its worst case. */
+  --stage-neutral: var(--grey-500);
+  --stage-light: var(--grey-300);
+  --stage-dark: var(--grey-850);
 
   /* Sidebar */
   --sidebar: var(--ink-950);
@@ -212,6 +221,9 @@
   --color-lane-yellow: var(--lane-yellow);
   --color-lane-blue: var(--lane-blue);
   --color-lane-purple: var(--lane-purple);
+  --color-stage-neutral: var(--stage-neutral);
+  --color-stage-light: var(--stage-light);
+  --color-stage-dark: var(--stage-dark);
 
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);

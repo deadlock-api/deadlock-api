@@ -45,6 +45,7 @@ const STATIC_ENTRIES: SitemapEntry[] = [
   { path: "/games/flashcards/item-effects" },
   { path: "/games/flashcards/item-upgrades" },
   { path: "/data-dumps" },
+  { path: "/crosshair" },
 ];
 
 const ANALYTICS_VIEW_ENTRIES: SitemapEntry[] = Object.entries(ANALYTICS_TABS).flatMap(([section, tabs]) =>

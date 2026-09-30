@@ -213,9 +213,17 @@ export function Patterns() {
       <Specimen
         name="Section"
         source="patterns/page/Section"
-        note="A named block. as picks the heading level by outline; size picks the look."
+        note="A named block. as picks the heading level by outline; size picks the look; action puts a control for the whole section at the end of the title row."
       >
-        <Section title="Win rate by rank" description="How the hero performs from Initiate to Eternus.">
+        <Section
+          title="Win rate by rank"
+          description="How the hero performs from Initiate to Eternus."
+          action={
+            <Button variant="outline" size="sm">
+              Export
+            </Button>
+          }
+        >
           <div className="rounded-lg border border-dashed p-4 text-center text-xs text-muted-foreground">
             Section content
           </div>

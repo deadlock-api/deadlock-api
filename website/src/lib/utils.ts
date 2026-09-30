@@ -8,14 +8,17 @@ export function cn(...inputs: ClassValue[]) {
 
 export function useDebouncedState<S>(initialState: S, delay: number): [S, S, (state: S) => void] {
   const [state, setState] = useState(initialState);
-  const [debouncedState, setDebouncedState] = useState(initialState);
+  return [state, useDebouncedValue(state, delay), setState];
+}
 
+/** `value`, once it has stopped changing for `delay` ms. It starts at the first value, so a value from the URL applies at once. */
+export function useDebouncedValue<T>(value: T, delay: number): T {
+  const [debounced, setDebounced] = useState(value);
   useEffect(() => {
-    const timer = setTimeout(() => setDebouncedState(state), delay);
+    const timer = setTimeout(() => setDebounced(value), delay);
     return () => clearTimeout(timer);
-  }, [state, delay]);
-
-  return [state, debouncedState, setState];
+  }, [value, delay]);
+  return debounced;
 }
 
 export function snakeToPretty(str: string): string {

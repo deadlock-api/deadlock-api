@@ -64,6 +64,8 @@ export const NAV: readonly NavChapter[] = [
           "Control states",
           "Input spinners",
           "SharePreview",
+          "PixelStage",
+          "SliderField",
           "ReorderHandle",
           "ReorderItem",
           "Input",

@@ -2,6 +2,7 @@ import type { LucideIcon } from "lucide-react";
 import {
   BarChart3,
   BookOpen,
+  Crosshair,
   Database,
   Gamepad2,
   GraduationCap,
@@ -68,6 +69,7 @@ export const navGroups: NavGroup[] = [
     links: [
       { to: "/streamkit", label: "Stream Kit", icon: Radio },
       { to: "/data-dumps", label: "MCP & Data Dumps", icon: HardDrive },
+      { to: "/crosshair", label: "Crosshair Editor", icon: Crosshair },
       { to: "/blog", label: "Blog", icon: BookOpen },
     ],
   },

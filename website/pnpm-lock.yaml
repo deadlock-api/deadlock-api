@@ -183,7 +183,7 @@ importers:
         version: 1.11.23
       deadlock_api_client:
         specifier: github:deadlock-api/openapi-clients#path:/typescript
-        version: https://codeload.github.com/deadlock-api/openapi-clients/tar.gz/d03163dba62d3f5cbca6ac24051b1f6b321092a1#path:/typescript(debug@4.4.3(supports-color@10.2.2))(supports-color@10.2.2)
+        version: https://codeload.github.com/deadlock-api/openapi-clients/tar.gz/bb3d030be463565140a6eaece1c418c93621f13e#path:/typescript(debug@4.4.3(supports-color@10.2.2))(supports-color@10.2.2)
       deadlock_api_graphql_client:
         specifier: github:deadlock-api/openapi-clients#path:/typescript-graphql
         version: https://codeload.github.com/deadlock-api/openapi-clients/tar.gz/ca6d18154cb4a1011f425cb25426b0e192ecdb42#path:/typescript-graphql
@@ -3502,8 +3502,8 @@ packages:
   dayjs@1.11.23:
     resolution: {integrity: sha512-QDTCU0M0MxR3hQfnlDJfwekQiaanm1ubOD231u73WBckQ/fsamwRLiE2GBz6D3a/xF1NgfiDLJjXBa1hYOYTtQ==}
 
-  deadlock_api_client@https://codeload.github.com/deadlock-api/openapi-clients/tar.gz/d03163dba62d3f5cbca6ac24051b1f6b321092a1#path:/typescript:
-    resolution: {gitHosted: true, integrity: sha512-yiFdS4ktR6vzs9k5Q8W3B54N1eZuIn0LUZIg7ZqVBTys8bLy3Qa1zNkPpQsb1Sdhn9Sx4ZxOCc6nDz5mp0+IUQ==, path: /typescript, tarball: https://codeload.github.com/deadlock-api/openapi-clients/tar.gz/d03163dba62d3f5cbca6ac24051b1f6b321092a1}
+  deadlock_api_client@https://codeload.github.com/deadlock-api/openapi-clients/tar.gz/bb3d030be463565140a6eaece1c418c93621f13e#path:/typescript:
+    resolution: {gitHosted: true, integrity: sha512-khraLTPPWRK0BZQ2ciceM+2c5leFgOBqUH+vf9zVheS9/0E/OCdKqFbiE89uTXmyqPwHna+/wPA5pZlD5sEZdw==, path: /typescript, tarball: https://codeload.github.com/deadlock-api/openapi-clients/tar.gz/bb3d030be463565140a6eaece1c418c93621f13e}
     version: 0.1.0
 
   deadlock_api_graphql_client@https://codeload.github.com/deadlock-api/openapi-clients/tar.gz/ca6d18154cb4a1011f425cb25426b0e192ecdb42#path:/typescript-graphql:
@@ -8164,7 +8164,7 @@ snapshots:
 
   dayjs@1.11.23: {}
 
-  deadlock_api_client@https://codeload.github.com/deadlock-api/openapi-clients/tar.gz/d03163dba62d3f5cbca6ac24051b1f6b321092a1#path:/typescript(debug@4.4.3(supports-color@10.2.2))(supports-color@10.2.2):
+  deadlock_api_client@https://codeload.github.com/deadlock-api/openapi-clients/tar.gz/bb3d030be463565140a6eaece1c418c93621f13e#path:/typescript(debug@4.4.3(supports-color@10.2.2))(supports-color@10.2.2):
     dependencies:
       axios: 1.20.0(debug@4.4.3(supports-color@10.2.2))(supports-color@10.2.2)
     transitivePeerDependencies:

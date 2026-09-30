@@ -24,6 +24,8 @@ interface SectionProps
   titleDisplay?: "visible" | "hidden";
   /** `center` for marketing pages; data and content pages stay start-aligned. */
   align?: "start" | "center";
+  /** A control for the whole section ("Import code"), at the trailing end of the title row. */
+  action?: ReactNode;
 }
 
 /** A titled region of a page. Every block under a PageHeader that has a name is one of these. */
@@ -34,6 +36,7 @@ export function Section({
   size,
   titleDisplay = "visible",
   align = "start",
+  action,
   className,
   children,
   ...props
@@ -53,6 +56,7 @@ export function Section({
             <Heading className={sectionTitleVariants({ size })}>{title}</Heading>
             {description && <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">{description}</p>}
           </div>
+          {action && <div data-slot="section-action">{action}</div>}
         </div>
       )}
       {children}

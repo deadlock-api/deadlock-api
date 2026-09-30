@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AbilitiesRouteImport } from './routes/abilities'
 import { Route as BadgeDistributionRouteImport } from './routes/badge-distribution'
 import { Route as CompareRouteImport } from './routes/compare'
+import { Route as CrosshairRouteImport } from './routes/crosshair'
 import { Route as DataDumpsRouteImport } from './routes/data-dumps'
 import { Route as DataPrivacyRouteImport } from './routes/data-privacy'
 import { Route as DeadlockdleRouteImport } from './routes/deadlockdle'
@@ -126,6 +127,11 @@ const BadgeDistributionRoute = BadgeDistributionRouteImport.update({
 const CompareRoute = CompareRouteImport.update({
   id: '/compare',
   path: '/compare',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CrosshairRoute = CrosshairRouteImport.update({
+  id: '/crosshair',
+  path: '/crosshair',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DataDumpsRoute = DataDumpsRouteImport.update({
@@ -620,6 +626,7 @@ export interface FileRoutesByFullPath {
   '/abilities': typeof AbilitiesRoute
   '/badge-distribution': typeof BadgeDistributionRoute
   '/compare': typeof CompareRoute
+  '/crosshair': typeof CrosshairRoute
   '/data-dumps': typeof DataDumpsRoute
   '/data-privacy': typeof DataPrivacyRoute
   '/deadlockdle': typeof DeadlockdleRouteWithChildren
@@ -720,6 +727,7 @@ export interface FileRoutesByTo {
   '/abilities': typeof AbilitiesRoute
   '/badge-distribution': typeof BadgeDistributionRoute
   '/compare': typeof CompareRoute
+  '/crosshair': typeof CrosshairRoute
   '/data-dumps': typeof DataDumpsRoute
   '/data-privacy': typeof DataPrivacyRoute
   '/deadlockstats-privacy': typeof DeadlockstatsPrivacyRoute
@@ -811,6 +819,7 @@ export interface FileRoutesById {
   '/abilities': typeof AbilitiesRoute
   '/badge-distribution': typeof BadgeDistributionRoute
   '/compare': typeof CompareRoute
+  '/crosshair': typeof CrosshairRoute
   '/data-dumps': typeof DataDumpsRoute
   '/data-privacy': typeof DataPrivacyRoute
   '/deadlockdle': typeof DeadlockdleRouteWithChildren
@@ -913,6 +922,7 @@ export interface FileRouteTypes {
     | '/abilities'
     | '/badge-distribution'
     | '/compare'
+    | '/crosshair'
     | '/data-dumps'
     | '/data-privacy'
     | '/deadlockdle'
@@ -1013,6 +1023,7 @@ export interface FileRouteTypes {
     | '/abilities'
     | '/badge-distribution'
     | '/compare'
+    | '/crosshair'
     | '/data-dumps'
     | '/data-privacy'
     | '/deadlockstats-privacy'
@@ -1103,6 +1114,7 @@ export interface FileRouteTypes {
     | '/abilities'
     | '/badge-distribution'
     | '/compare'
+    | '/crosshair'
     | '/data-dumps'
     | '/data-privacy'
     | '/deadlockdle'
@@ -1204,6 +1216,7 @@ export interface RootRouteChildren {
   AbilitiesRoute: typeof AbilitiesRoute
   BadgeDistributionRoute: typeof BadgeDistributionRoute
   CompareRoute: typeof CompareRoute
+  CrosshairRoute: typeof CrosshairRoute
   DataDumpsRoute: typeof DataDumpsRoute
   DataPrivacyRoute: typeof DataPrivacyRoute
   DeadlockdleRoute: typeof DeadlockdleRouteWithChildren
@@ -1276,6 +1289,13 @@ declare module '@tanstack/react-router' {
       path: '/compare'
       fullPath: '/compare'
       preLoaderRoute: typeof CompareRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/crosshair': {
+      id: '/crosshair'
+      path: '/crosshair'
+      fullPath: '/crosshair'
+      preLoaderRoute: typeof CrosshairRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/data-dumps': {
@@ -2144,6 +2164,7 @@ const rootRouteChildren: RootRouteChildren = {
   AbilitiesRoute: AbilitiesRoute,
   BadgeDistributionRoute: BadgeDistributionRoute,
   CompareRoute: CompareRoute,
+  CrosshairRoute: CrosshairRoute,
   DataDumpsRoute: DataDumpsRoute,
   DataPrivacyRoute: DataPrivacyRoute,
   DeadlockdleRoute: DeadlockdleRouteWithChildren,

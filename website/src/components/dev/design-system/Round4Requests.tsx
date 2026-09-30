@@ -6,10 +6,17 @@ import { Button } from "~/components/ui/button";
 import { Card, CardContent } from "~/components/ui/card";
 import { moveItem, useReorder } from "~/components/ui/hooks/use-reorder";
 import { Input } from "~/components/ui/input";
+import { PixelImage, PixelStage } from "~/components/ui/pixel-stage";
 import { ReorderHandle, ReorderItem } from "~/components/ui/reorder-handle";
 import { SelectionBox } from "~/components/ui/selection-box";
 import { SharePreview } from "~/components/ui/share-preview";
+import { SliderField } from "~/components/ui/slider-field";
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "~/components/ui/table";
+
+// A real crosshair render from the API (red pips at 1080p), copied from its test fixtures.
+import crosshairSample from "./crosshair-sample.png";
+
+const PIXEL_BACKDROPS = ["game", "neutral", "light", "dark"] as const;
 
 const TEXT_SIZES = ["xs", "sm", "default", "lg"] as const;
 const ICON_SIZES = ["icon-xs", "icon-sm", "icon", "icon-lg"] as const;
@@ -243,6 +250,45 @@ export function Round4Requests() {
       </Specimen>
 
       <Specimen
+        name="PixelStage"
+        source="ui/pixel-stage"
+        note="A backdrop that stands in for the game world behind small HUD art, with a PixelImage centred on it. backdrop: neutral (mid grey, the default, where light and dark art both show), light and dark (each art's worst case). PixelImage draws the art at a whole multiple of its size with every pixel a crisp square; scale 1 is its true size. It shrinks to fit a narrow stage instead of scrolling."
+      >
+        {PIXEL_BACKDROPS.map((backdrop) => (
+          <Variants key={backdrop} label={`backdrop="${backdrop}", scale 1, 4 and 8`}>
+            {[1, 4, 8].map((scale) => (
+              <PixelStage key={scale} backdrop={backdrop}>
+                <PixelImage src={crosshairSample} scale={scale} alt={`A crosshair at ${scale}× its true size`} />
+              </PixelStage>
+            ))}
+          </Variants>
+        ))}
+        <Variants label="scale 8 in a stage narrower than the art: it shrinks to fit">
+          <PixelStage className="w-24">
+            <PixelImage src={crosshairSample} scale={8} alt="The crosshair enlarged, fit to a narrow stage" />
+          </PixelStage>
+        </Variants>
+        <Variants label='size="sm": a thumbnail beside a list row'>
+          {PIXEL_BACKDROPS.map((backdrop) => (
+            <PixelStage key={backdrop} size="sm" backdrop={backdrop}>
+              <PixelImage src={crosshairSample} alt={`A crosshair thumbnail on the ${backdrop} backdrop`} />
+            </PixelStage>
+          ))}
+        </Variants>
+        <Variants label="zero props: an empty neutral stage">
+          <PixelStage />
+        </Variants>
+      </Specimen>
+
+      <Specimen
+        name="SliderField"
+        source="ui/slider-field"
+        note="One number on a Slider, labelled above with its value at the trailing end. format sets how the value reads and is what the thumb announces."
+      >
+        <SliderFieldDemo />
+      </Specimen>
+
+      <Specimen
         name="ReorderHandle"
         source="ui/reorder-handle + ui/hooks/use-reorder"
         note="The part of an item you grab to move it. useReorder (count, onMove(from, to), axis, itemLabel) gives each handle its props: drag it by mouse, touch or pen over another item and release to move it there, or focus it and press the arrow keys to move it one place. Handles alone: the dragged one dims and the drop target rings in primary. With boxProps on a ReorderItem around each item, the dragged box lifts and follows the pointer and the others slide to where they would land. The announcement goes in a polite live region. Try it."
@@ -327,5 +373,26 @@ export function Round4Requests() {
         </Variants>
       </Specimen>
     </>
+  );
+}
+
+function SliderFieldDemo() {
+  const [size, setSize] = useState(4);
+  const [opacity, setOpacity] = useState(0.7);
+  return (
+    <Variants label="an integer, a percentage, and disabled">
+      <SliderField label="Dot size" min={0} max={20} value={size} onValueChange={setSize} className="w-64" />
+      <SliderField
+        label="Opacity"
+        min={0}
+        max={1}
+        step={0.05}
+        value={opacity}
+        onValueChange={setOpacity}
+        format={(value) => `${Math.round(value * 100)}%`}
+        className="w-64"
+      />
+      <SliderField label="Gap" min={0} max={10} value={3} onValueChange={() => {}} disabled className="w-64" />
+    </Variants>
   );
 }

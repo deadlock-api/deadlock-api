@@ -141,6 +141,20 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* A game scene behind a HUD element (a crosshair), the same screenshot the Stream Kit preview uses. */
+@utility bg-stage-game {
+  background: var(--stage-dark) center / cover no-repeat;
+  background-image: image-set(
+    url("/streamkit/deadlock-background.webp") type("image/webp"),
+    url("/streamkit/deadlock-background.png") type("image/png")
+  );
+}
+
+/* Scales pixel art (a crosshair) by repeating its pixels instead of blurring them. */
+@utility rendering-pixelated {
+  image-rendering: pixelated;
+}
+
 /* Draws dark line art (ability glyphs) in the theme's ink. */
 @utility glyph-ink {
   filter: var(--glyph-filter);

@@ -7,6 +7,27 @@ export class ApiError extends Error {
     this.name = "ApiError";
     this.status = status;
   }
+
+  /** The error for a failed response, with the message from its JSON body when it has one. */
+  static fromResponse(status: number, statusText: string, body: unknown): ApiError {
+    const fallback = `HTTP ${status}: ${statusText}`;
+    const data = typeof body === "object" && body !== null ? (body as Record<string, unknown>) : {};
+    const message = [data.message, data.error, data.detail].find((value): value is string => typeof value === "string");
+    return new ApiError(status, message ?? fallback);
+  }
+}
+
+/** Whether `error` is a 4xx from the API (an `ApiError` or an Axios error), which a retry will not fix. */
+export function isClientError(error: unknown): boolean {
+  // Axios's public error marker classifies errors without loading the HTTP client on pages that make no API requests.
+  const isAxiosError =
+    typeof error === "object" && error !== null && "isAxiosError" in error && error.isAxiosError === true;
+  const status = isAxiosError
+    ? (error as { response?: { status?: number } }).response?.status
+    : error instanceof ApiError
+      ? error.status
+      : undefined;
+  return status !== undefined && status >= 400 && status < 500;
 }
 
 interface FetchApiOptions {
@@ -36,9 +57,8 @@ export async function fetchApi<T>(path: string, options?: FetchApiOptions): Prom
     });
 
     if (!response.ok) {
-      const fallback = `HTTP ${response.status}: ${response.statusText}`;
-      const errorData = await response.json().catch(() => ({ message: fallback }));
-      throw new ApiError(response.status, errorData.message ?? errorData.error ?? errorData.detail ?? fallback);
+      const errorData = await response.json().catch(() => null);
+      throw ApiError.fromResponse(response.status, response.statusText, errorData);
     }
 
     const text = await response.text();
