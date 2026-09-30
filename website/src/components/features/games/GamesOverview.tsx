@@ -83,10 +83,8 @@ export default function GamesOverview({ params, prevParams, onStatClick, isStree
   const prevTeamWinTotal = prev ? prev.team0_wins + prev.team1_wins : 0;
   const teamWinRow =
     teamWinTotal > 0 ? (
-      <Inline justify="between" gap={3} wrap="nowrap" className="px-4 py-2.5 @2xl:col-span-2">
-        <Text tone="muted" className="@2xl:shrink-0">
-          The Hidden King vs The Archmother
-        </Text>
+      <Inline justify="between" gap={3} wrap="nowrap" className="px-4 py-2.5">
+        <Text tone="muted">The Hidden King vs The Archmother</Text>
         <div className="flex flex-wrap items-center justify-end gap-x-2.5 gap-y-1">
           <Inline gap={1} wrap="nowrap" className="text-sm font-semibold tabular-nums">
             <span className="text-primary">{((current.team0_wins / teamWinTotal) * 100).toFixed(2)}%</span>
