@@ -153,8 +153,8 @@ fn compile_deadlock_protos(externs: &[ExternDefs]) -> io::Result<()> {
             .type_attribute(".", "#[derive(serde::Serialize, serde::Deserialize)]");
     }
 
-    // both serde (prost-wkt) and reflect (prost-reflect) need the descriptor set on disk.
-    #[cfg(any(feature = "serde", feature = "reflect"))]
+    // reflect (prost-reflect) needs the descriptor set on disk.
+    #[cfg(feature = "reflect")]
     {
         config.file_descriptor_set_path(&descriptor_file);
     }
@@ -173,16 +173,6 @@ fn compile_deadlock_protos(externs: &[ExternDefs]) -> io::Result<()> {
     }
 
     config.compile_protos(&protos, includes)?;
-
-    #[cfg(feature = "serde")]
-    {
-        use prost_wkt_build::*;
-        let descriptor_bytes = std::fs::read(&descriptor_file)?;
-
-        let descriptor = FileDescriptorSet::decode(&descriptor_bytes[..])?;
-
-        prost_wkt_build::add_serde(out, descriptor);
-    }
 
     // expose the descriptor set path to dependent crates' build scripts (via the `links` key)
     // as DEP_VALVEPROTOS_DESCRIPTORS.
