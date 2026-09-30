@@ -42,7 +42,6 @@ function ItemImageView({
         item
           ? {
               webp: item.shop_image_webp,
-              png: item.shop_image,
               fallbackSrc: item.shop_image_small,
               alt: alt ?? item.name ?? "Unknown Item",
               title,

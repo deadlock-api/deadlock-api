@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import type { AnalyticsApiItemStatsRequest, Upgrade } from "deadlock_api_client";
+import type { AnalyticsApiItemStatsRequest } from "deadlock_api_client";
 import { useMemo } from "react";
 
 import { RankedEntityList, RankedEntityMetric, RankedEntityRow } from "~/components/domain/assets/RankedEntityList";
@@ -12,7 +12,7 @@ import { TextLink } from "~/components/ui/text-link";
 import { formatPercent, formatShare } from "~/lib/format";
 import { toneOf } from "~/lib/tone";
 import { wilsonScoreInterval } from "~/lib/wilson";
-import { itemUpgradesQueryOptions } from "~/queries/asset-queries";
+import { itemUpgradesQueryOptions, type SlimUpgrade } from "~/queries/asset-queries";
 import { itemStatsQueryOptions } from "~/queries/item-stats-query";
 
 const TOP_ITEM_COUNT = 8;
@@ -20,7 +20,7 @@ const TOP_ITEM_COUNT = 8;
 const MIN_USAGE = 0.05;
 
 interface TopItem {
-  item: Upgrade;
+  item: SlimUpgrade;
   winRate: number;
   usage: number;
   matches: number;
@@ -29,7 +29,7 @@ interface TopItem {
 /** Ranks by the Wilson lower bound so a few lucky matches can't put a rarely bought item on top. */
 function pickTopItems(
   stats: readonly { item_id: number; wins: number; matches: number }[],
-  items: readonly Upgrade[],
+  items: readonly SlimUpgrade[],
   heroMatches: number,
 ): TopItem[] {
   const itemsById = new Map(items.map((item) => [item.id, item]));

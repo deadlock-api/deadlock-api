@@ -182,7 +182,7 @@ export const Route = createFileRoute("/analytics/items/$itemName")({
       itemId: item.id,
       itemName: item.name,
       slug: params.itemName,
-      image: item.shop_image_webp ?? item.shop_image ?? null,
+      image: item.shop_image_webp ?? null,
       tier: item.item_tier,
       slot: SLOT_LABEL[item.item_slot_type],
       slotType: item.item_slot_type,

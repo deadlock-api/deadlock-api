@@ -1,4 +1,3 @@
-import type { Upgrade } from "deadlock_api_client";
 import type { AnalyticsApiItemStatsRequest, ItemStats } from "deadlock_api_client";
 import { Table2 } from "lucide-react";
 import { parseAsArrayOf, parseAsInteger, parseAsStringLiteral, throttle, useQueryState } from "nuqs";
@@ -43,6 +42,7 @@ import { formatPercent } from "~/lib/format";
 import { parseAsSetOf } from "~/lib/nuqs-parsers";
 import { cn } from "~/lib/utils";
 import { wilsonScoreInterval } from "~/lib/wilson";
+import type { SlimUpgrade } from "~/queries/asset-queries";
 
 // Parsers for sort field and direction using nuqs string literal parser
 const parseAsSortField = parseAsStringLiteral(["winRate", "matches", "name", "tier"] as const);
@@ -138,7 +138,7 @@ export interface CorruptedStats {
 }
 
 export interface DisplayItemStats {
-  item?: Upgrade;
+  item?: SlimUpgrade;
   item_id: number;
   wins: number;
   losses: number;
@@ -190,7 +190,7 @@ interface ItemStatsTableRowProps {
   }) => ReactNode;
 }
 
-export function getDisplayItemStats(data: ItemStats[] | undefined, assetsItems: Upgrade[]): DisplayItemStats[] {
+export function getDisplayItemStats(data: ItemStats[] | undefined, assetsItems: SlimUpgrade[]): DisplayItemStats[] {
   if (!data || data.length === 0) return [];
   const baselineRow = data.reduce((max, d) => (d.matches > max.matches ? d : max), data[0]);
   const [baselineLower, baselineUpper] = wilsonScoreInterval(baselineRow.wins, baselineRow.matches);

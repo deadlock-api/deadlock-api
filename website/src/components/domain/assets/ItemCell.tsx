@@ -1,10 +1,9 @@
-import type { Upgrade } from "deadlock_api_client";
-
 import { CorruptedItemImage } from "~/components/domain/assets/CorruptedItemImage";
 import { ItemImage, type ItemSource } from "~/components/domain/assets/ItemImage";
 import { ItemName } from "~/components/domain/assets/ItemName";
 import { useItemById } from "~/hooks/useAssetById";
 import { cn } from "~/lib/utils";
+import type { SlimUpgrade } from "~/queries/asset-queries";
 
 type ItemCellProps = Omit<React.ComponentProps<"span">, "children"> & {
   /** Links the name to the item's analytics page. */
@@ -35,7 +34,7 @@ function ItemCellView({
   variant = "normal",
   className,
   ...props
-}: ItemCellProps & { item: Upgrade | undefined; loading?: boolean }) {
+}: ItemCellProps & { item: SlimUpgrade | undefined; loading?: boolean }) {
   return (
     <span
       data-slot="item-cell"

@@ -1,11 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import type { Upgrade } from "deadlock_api_client";
 import { useMemo } from "react";
 
 import { FlashcardGame } from "~/components/features/flashcards/FlashcardGame";
 import { pageTitle, seo } from "~/lib/seo";
-import { filterShopableItems, itemUpgradesQueryOptions } from "~/queries/asset-queries";
+import { filterShopableItems, itemUpgradesQueryOptions, type SlimUpgrade } from "~/queries/asset-queries";
 
 export const Route = createFileRoute("/games_/flashcards/items")({
   component: ItemFlashcards,
@@ -17,7 +16,7 @@ export const Route = createFileRoute("/games_/flashcards/items")({
     }),
 });
 
-function itemIconSrc(item: Upgrade): string {
+function itemIconSrc(item: SlimUpgrade): string {
   return item.shop_image_webp ?? "";
 }
 

@@ -16,7 +16,8 @@ import { queryKeys } from "./query-keys";
 // the Deadlockdle and flashcard pages read, so the shared queries drop them and
 // those pages fetch the *Full variants on demand. `popular_items` (~300 KB of
 // per-hero item pick rates) is read by nothing and would otherwise be dehydrated
-// into every hero page.
+// into every hero page. Upgrades likewise drop fields nothing reads (the PNG
+// images duplicate the WebP ones), ~90 KB on every hero and item page.
 const HEAVY_HERO_KEYS = [
   "cost_bonuses",
   "description",
@@ -32,7 +33,21 @@ const HEAVY_HERO_KEYS = [
   "starting_stats",
   "stats_display",
 ] as const;
-const HEAVY_UPGRADE_KEYS = ["description", "properties", "tooltip_sections"] as const;
+const HEAVY_UPGRADE_KEYS = [
+  "activation",
+  "description",
+  "disabled_shop_filters",
+  "image",
+  "properties",
+  "shop_filters",
+  "shop_image",
+  "shop_version",
+  "start_trained",
+  "tooltip_sections",
+  "update_time",
+  "upgrades",
+  "weapon_info",
+] as const;
 
 export type SlimHero = Omit<Hero, (typeof HEAVY_HERO_KEYS)[number]>;
 export type SlimUpgrade = Omit<Upgrade, (typeof HEAVY_UPGRADE_KEYS)[number]>;

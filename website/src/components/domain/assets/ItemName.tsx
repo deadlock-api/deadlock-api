@@ -1,11 +1,11 @@
 import { Link } from "@tanstack/react-router";
-import type { Upgrade } from "deadlock_api_client";
 import { memo } from "react";
 
 import { EntityName, type EntityNameProps } from "~/components/domain/assets/EntityName";
 import type { ItemSource } from "~/components/domain/assets/ItemImage";
 import { useItemById } from "~/hooks/useAssetById";
 import { itemSlug } from "~/lib/item-slug";
+import type { SlimUpgrade } from "~/queries/asset-queries";
 
 type ItemNameLook = Omit<EntityNameProps, "name" | "loading" | "link" | "size"> & {
   /** Links the name to the item's analytics page. */
@@ -26,7 +26,7 @@ function ItemNameView({
   item,
   linkToDetail = false,
   ...props
-}: ItemNameLook & { item: Upgrade | undefined; loading?: boolean }) {
+}: ItemNameLook & { item: SlimUpgrade | undefined; loading?: boolean }) {
   return (
     <EntityName
       name={item?.name ?? "Unknown Item"}

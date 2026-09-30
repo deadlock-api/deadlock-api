@@ -1,6 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import type { Upgrade } from "deadlock_api_client";
 import { AnimatePresence, motion } from "framer-motion";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -24,7 +23,7 @@ import { Inline, Stack } from "~/components/ui/stack";
 import { Text } from "~/components/ui/text";
 import { useHydrated } from "~/hooks/useHydrated";
 import { pageTitle, seo } from "~/lib/seo";
-import { filterShopableItems, itemUpgradesQueryOptions } from "~/queries/asset-queries";
+import { filterShopableItems, itemUpgradesQueryOptions, type SlimUpgrade } from "~/queries/asset-queries";
 
 const OPTION_COUNT = 4;
 const CORRECT_FEEDBACK_MS = 600;
@@ -32,8 +31,8 @@ const WRONG_FEEDBACK_MS = 1800;
 
 interface UpgradePathEntry {
   id: number;
-  target: Upgrade;
-  components: Upgrade[];
+  target: SlimUpgrade;
+  components: SlimUpgrade[];
   answerKey: string;
   answerLabel: string;
 }
@@ -41,7 +40,7 @@ interface UpgradePathEntry {
 interface UpgradePathOption {
   key: string;
   label: string;
-  components: Upgrade[];
+  components: SlimUpgrade[];
 }
 
 interface UpgradePathCard {
@@ -53,7 +52,7 @@ export const Route = createFileRoute("/games_/flashcards/item-upgrades")({
   component: ItemUpgradePathFlashcards,
   head: () => {
     const s = seo({
-      title: pageTitle("Item Upgrade Flashcards - Learn Components"),
+      title: pageTitle("Item SlimUpgrade Flashcards - Learn Components"),
       description: "Study Deadlock item upgrade paths by matching upgraded items to their component items.",
       path: "/games/flashcards/item-upgrades",
     });
@@ -61,23 +60,23 @@ export const Route = createFileRoute("/games_/flashcards/item-upgrades")({
   },
 });
 
-function itemImageSrc(item: Upgrade): string {
-  return item.shop_image_webp ?? item.shop_image ?? item.image_webp ?? item.image ?? "";
+function itemImageSrc(item: SlimUpgrade): string {
+  return item.shop_image_webp ?? item.image_webp ?? "";
 }
 
-function isUsableShopItem(item: Upgrade): boolean {
+function isUsableShopItem(item: SlimUpgrade): boolean {
   return item.shopable && !item.disabled && itemImageSrc(item).length > 0;
 }
 
-function buildAnswerKey(components: Upgrade[]): string {
+function buildAnswerKey(components: SlimUpgrade[]): string {
   return components.map((item) => item.id).join("+");
 }
 
-function buildAnswerLabel(components: Upgrade[]): string {
+function buildAnswerLabel(components: SlimUpgrade[]): string {
   return components.map((item) => item.name).join(" + ");
 }
 
-function buildUpgradePathPool(items: Upgrade[]): UpgradePathEntry[] {
+function buildUpgradePathPool(items: SlimUpgrade[]): UpgradePathEntry[] {
   const itemByClassName = new Map(items.map((item) => [item.class_name, item]));
 
   return filterShopableItems(items)
@@ -87,7 +86,7 @@ function buildUpgradePathPool(items: Upgrade[]): UpgradePathEntry[] {
 
       const components = componentClassNames
         .map((className) => itemByClassName.get(className))
-        .filter((item): item is Upgrade => item != null);
+        .filter((item): item is SlimUpgrade => item != null);
 
       if (components.length !== componentClassNames.length || !components.every(isUsableShopItem)) {
         return [];
@@ -231,7 +230,7 @@ function ItemUpgradePathFlashcards() {
   return <ItemUpgradePathFlashcardsReady pool={pool} />;
 }
 
-const TITLE = "Item Upgrade Paths";
+const TITLE = "Item SlimUpgrade Paths";
 const SUBTITLE = "Match each upgraded item to its direct component path.";
 
 function ItemUpgradePathFlashcardsReady({ pool }: { pool: UpgradePathEntry[] }) {
