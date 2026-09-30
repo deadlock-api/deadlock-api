@@ -1285,22 +1285,6 @@ dependencies = [
 
 [[package]]
 name = "cached"
-version = "3.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "133b6b7d6a828c24d5055ef51e67457002b4017ae5ea3d1b1552ca35a44b1119"
-dependencies = [
- "ahash",
- "async-lock",
- "cached_proc_macro",
- "cached_proc_macro_types",
- "hashbrown 0.17.1",
- "parking_lot",
- "thiserror",
- "web-time",
-]
-
-[[package]]
-name = "cached"
 version = "4.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c5a6cf8262820194a1488ece477f5fb5ba9256ef25229d525470e71d6e9a5835"
@@ -2827,7 +2811,7 @@ dependencies = [
  "base64 0.23.1",
  "bytes",
  "bzip2",
- "cached 3.1.1",
+ "cached",
  "chrono",
  "clickhouse",
  "clickhouse-sql-parser",
@@ -4019,7 +4003,7 @@ dependencies = [
  "async-compression",
  "axum",
  "base64 0.23.1",
- "cached 4.0.0",
+ "cached",
  "clap",
  "common",
  "dashmap",
@@ -4887,7 +4871,7 @@ name = "matchdata-downloader"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "cached 4.0.0",
+ "cached",
  "clap",
  "clickhouse",
  "common",
@@ -7412,7 +7396,7 @@ name = "steam-profile-fetcher"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "cached 4.0.0",
+ "cached",
  "clickhouse",
  "common",
  "futures",
@@ -7728,7 +7712,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "32497e9a4c7b38532efcdebeef879707aa9f794296a4f0244f6f69e9bc8574bd"
 dependencies = [
  "fastrand",
- "getrandom 0.3.4",
+ "getrandom 0.4.3",
  "once_cell",
  "rustix 1.1.5",
  "windows-sys 0.59.0",
