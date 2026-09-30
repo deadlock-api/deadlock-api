@@ -83,7 +83,7 @@ pub(super) struct SQLQuery {
     query: String,
     /// The response format. Valid values: `json` (a JSON array), `ndjson` (newline-delimited JSON objects).
     #[serde(default)]
-    #[param(inline, default = "json")]
+    #[param(inline)]
     format: ResponseFormat,
 }
 

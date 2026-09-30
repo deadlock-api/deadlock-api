@@ -6,6 +6,7 @@ use utoipa::ToSchema;
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize, Serialize, ToSchema)]
 #[serde(rename_all = "lowercase")]
+#[schema(default = "json")]
 pub(crate) enum ResponseFormat {
     #[default]
     Json,

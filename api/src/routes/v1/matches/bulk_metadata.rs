@@ -1,5 +1,4 @@
 #![expect(clippy::struct_excessive_bools)]
-#![expect(clippy::large_stack_arrays)]
 
 use core::fmt::Write;
 use core::time::Duration;
@@ -246,7 +245,7 @@ pub(super) struct BulkMatchMetadataQuery {
     limit: u32,
     /// The response format. Valid values: `json` (a JSON array), `ndjson` (newline-delimited JSON objects).
     #[serde(default)]
-    #[param(inline, default = "json")]
+    #[param(inline)]
     #[cfg_attr(test, proptest(value = "ResponseFormat::Json"))]
     format: ResponseFormat,
 }

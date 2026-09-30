@@ -11,7 +11,6 @@
 #![deny(clippy::std_instead_of_core)]
 #![expect(clippy::unreadable_literal)]
 #![expect(clippy::missing_errors_doc)]
-#![expect(clippy::large_stack_arrays)] // Triggered by utoipa's `IntoParams` derive on large query-param structs.
 #![expect(clippy::unused_async_trait_impl)]
 
 mod api_doc;
@@ -179,6 +178,7 @@ pub async fn router(port: u16) -> Result<NormalizePath<Router>, StartupError> {
         "https://api.deadlock-api.com"
     };
     api.servers = Some(vec![utoipa::openapi::Server::new(server_url)]);
+    api_doc::fill_missing_response_descriptions(&mut api);
 
     let docs = Router::new()
         .merge(Scalar::with_url("/docs", api.clone()).custom_html(api_doc::SCALAR_HTML))

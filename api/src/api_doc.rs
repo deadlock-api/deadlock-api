@@ -155,6 +155,42 @@ impl Modify for TagGroupsAddon {
     }
 }
 
+/// `OpenAPI` 3.1 requires a `description` on every response, but utoipa (since 6.0) omits it
+/// when a `responses(...)` entry has none. Falls back to the status code's reason phrase.
+pub(super) fn fill_missing_response_descriptions(openapi: &mut utoipa::openapi::OpenApi) {
+    use utoipa::openapi::RefOr;
+
+    for item in openapi.paths.paths.values_mut() {
+        for op in [
+            &mut item.get,
+            &mut item.put,
+            &mut item.post,
+            &mut item.delete,
+            &mut item.options,
+            &mut item.head,
+            &mut item.patch,
+            &mut item.trace,
+            &mut item.query,
+        ]
+        .into_iter()
+        .flatten()
+        {
+            for (status, response) in &mut op.responses.responses {
+                if let RefOr::T(response) = response
+                    && response.description.is_empty()
+                {
+                    response.description = status
+                        .parse::<axum::http::StatusCode>()
+                        .ok()
+                        .and_then(|s| s.canonical_reason())
+                        .unwrap_or("Response")
+                        .to_string();
+                }
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::collections::HashSet;
