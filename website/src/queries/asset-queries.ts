@@ -17,8 +17,10 @@ import { queryKeys } from "./query-keys";
 // those pages fetch the *Full variants on demand. `popular_items` (~300 KB of
 // per-hero item pick rates) is read by nothing and would otherwise be dehydrated
 // into every hero page, and of the 15 hero images only the portrait, minimap
-// and card art are shown (~40 KB). Upgrades likewise drop fields nothing reads (the PNG
-// images duplicate the WebP ones), ~90 KB on every hero and item page.
+// and card art are shown (~40 KB). Of the 15 `items` slots (weapons, movement,
+// innates) only the four signature abilities are read (~18 KB). Upgrades
+// likewise drop fields nothing reads (the PNG images duplicate the WebP ones),
+// ~90 KB on every hero and item page.
 const HEAVY_HERO_KEYS = [
   "cost_bonuses",
   "description",
@@ -49,6 +51,7 @@ const HERO_IMAGE_KEYS = [
   "minimap_image",
   "minimap_image_webp",
 ] as const;
+const HERO_ITEM_SLOTS = new Set(["signature1", "signature2", "signature3", "signature4"]);
 const HEAVY_UPGRADE_KEYS = [
   "activation",
   "description",
@@ -93,7 +96,10 @@ export const heroesQueryOptions = queryOptions({
   queryKey: queryKeys.assets.heroes(),
   queryFn: async (): Promise<SlimHero[]> =>
     (await fetchHeroes()).map((hero) =>
-      Object.assign(omitKeys(hero, HEAVY_HERO_KEYS), { images: pickKeys(hero.images, HERO_IMAGE_KEYS) }),
+      Object.assign(omitKeys(hero, HEAVY_HERO_KEYS), {
+        images: pickKeys(hero.images, HERO_IMAGE_KEYS),
+        items: Object.fromEntries(Object.entries(hero.items).filter(([slot]) => HERO_ITEM_SLOTS.has(slot))),
+      }),
     ),
   staleTime: CACHE_DURATIONS.FOREVER,
 });
