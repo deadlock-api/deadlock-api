@@ -1,5 +1,5 @@
 import { type QueryClient, queryOptions } from "@tanstack/react-query";
-import type { Ability, Hero, Upgrade } from "deadlock_api_client";
+import type { Ability, Hero, HeroImages, Upgrade } from "deadlock_api_client";
 
 import { CACHE_DURATIONS } from "~/constants/cache";
 import { api } from "~/lib/api";
@@ -16,22 +16,38 @@ import { queryKeys } from "./query-keys";
 // the Deadlockdle and flashcard pages read, so the shared queries drop them and
 // those pages fetch the *Full variants on demand. `popular_items` (~300 KB of
 // per-hero item pick rates) is read by nothing and would otherwise be dehydrated
-// into every hero page. Upgrades likewise drop fields nothing reads (the PNG
+// into every hero page, and of the 15 hero images only the portrait, minimap
+// and card art are shown (~40 KB). Upgrades likewise drop fields nothing reads (the PNG
 // images duplicate the WebP ones), ~90 KB on every hero and item page.
 const HEAVY_HERO_KEYS = [
   "cost_bonuses",
   "description",
+  "gender",
   "hero_stats_ui",
+  "hideout_rich_presence",
   "item_draft_bucketing",
   "item_draft_weights",
   "item_slot_info",
   "level_info",
+  "physics",
   "popular_items",
   "purchase_bonuses",
+  "scaling_stats",
   "shop_stat_display",
+  "skin",
   "standard_level_up_upgrades",
   "starting_stats",
   "stats_display",
+  "tags",
+] as const;
+const HERO_IMAGE_KEYS = [
+  "hero_card_critical_webp",
+  "icon_hero_card",
+  "icon_hero_card_webp",
+  "icon_image_small",
+  "icon_image_small_webp",
+  "minimap_image",
+  "minimap_image_webp",
 ] as const;
 const HEAVY_UPGRADE_KEYS = [
   "activation",
@@ -49,12 +65,18 @@ const HEAVY_UPGRADE_KEYS = [
   "weapon_info",
 ] as const;
 
-export type SlimHero = Omit<Hero, (typeof HEAVY_HERO_KEYS)[number]>;
+export type SlimHero = Omit<Hero, (typeof HEAVY_HERO_KEYS)[number] | "images"> & {
+  images: Pick<HeroImages, (typeof HERO_IMAGE_KEYS)[number]>;
+};
 export type SlimUpgrade = Omit<Upgrade, (typeof HEAVY_UPGRADE_KEYS)[number]>;
 
 function omitKeys<T extends object, K extends keyof T>(obj: T, keys: readonly K[]): Omit<T, K> {
   const dropped = new Set<PropertyKey>(keys);
   return Object.fromEntries(Object.entries(obj).filter(([key]) => !dropped.has(key))) as Omit<T, K>;
+}
+
+function pickKeys<T extends object, K extends keyof T>(obj: T, keys: readonly K[]): Pick<T, K> {
+  return Object.fromEntries(keys.filter((key) => key in obj).map((key) => [key, obj[key]])) as Pick<T, K>;
 }
 
 async function fetchHeroes(): Promise<Hero[]> {
@@ -69,7 +91,10 @@ async function fetchItemUpgrades(): Promise<Upgrade[]> {
 
 export const heroesQueryOptions = queryOptions({
   queryKey: queryKeys.assets.heroes(),
-  queryFn: async (): Promise<SlimHero[]> => (await fetchHeroes()).map((hero) => omitKeys(hero, HEAVY_HERO_KEYS)),
+  queryFn: async (): Promise<SlimHero[]> =>
+    (await fetchHeroes()).map((hero) =>
+      Object.assign(omitKeys(hero, HEAVY_HERO_KEYS), { images: pickKeys(hero.images, HERO_IMAGE_KEYS) }),
+    ),
   staleTime: CACHE_DURATIONS.FOREVER,
 });
 
