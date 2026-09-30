@@ -21,6 +21,7 @@ struct ApiDoc;
 pub(super) fn router() -> OpenApiRouter<AppState> {
     OpenApiRouter::with_openapi(ApiDoc::openapi())
         .routes(routes!(route::code_image))
+        .routes(routes!(route::code_settings))
         .routes(routes!(route::settings_code))
         .routes(routes!(route::settings_image))
         .layer(

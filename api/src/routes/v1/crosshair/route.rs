@@ -64,6 +64,24 @@ pub(super) async fn code_image(
 
 #[utoipa::path(
     get,
+    path = "/code/settings",
+    params(CodeQuery),
+    responses(
+        (status = OK, body = Settings),
+        (status = BAD_REQUEST, description = "Invalid crosshair code"),
+    ),
+    tags = ["Crosshair"],
+    summary = "Crosshair Code Settings",
+    description = "Decodes a crosshair share code into its settings. Settings the code does not carry have the game's defaults."
+)]
+pub(super) async fn code_settings(
+    Query(CodeQuery { code }): Query<CodeQuery>,
+) -> APIResult<Json<Settings>> {
+    Ok(Json(crosshair::decode(&code)?))
+}
+
+#[utoipa::path(
+    get,
     path = "/settings/code",
     params(Settings),
     responses(

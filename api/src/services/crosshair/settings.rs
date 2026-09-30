@@ -8,8 +8,8 @@
 
 use core::fmt::Display;
 
-use serde::Deserialize;
-use utoipa::IntoParams;
+use serde::{Deserialize, Serialize};
+use utoipa::{IntoParams, ToSchema};
 
 /// Seed of the murmur2 hash that identifies a convar inside a share code.
 const HASH_SEED: u32 = 0x4453_4554;
@@ -63,13 +63,14 @@ impl ConvarValue for u8 {
 macro_rules! settings {
     ($($(#[doc = $doc:literal])* $field:ident: $ty:ty = $default:expr,)*) => {
         /// Crosshair convars. Anything not given keeps the game's default.
-        #[derive(Debug, Clone, Copy, PartialEq, Deserialize, IntoParams)]
+        #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize, ToSchema, IntoParams)]
         #[serde(default)]
         #[into_params(parameter_in = Query)]
         pub(crate) struct Settings {
             $(
                 $(#[doc = $doc])*
                 #[param(default = $default)]
+                #[schema(default = $default)]
                 pub(crate) $field: $ty,
             )*
         }
