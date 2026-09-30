@@ -74,8 +74,8 @@ export function ProgressBarSegment({
 
 /**
  * A second value on a ProgressBar, as a direct child of it: a tick at `value`, and the span between it and the bar's
- * value shaded in `color`. Above the bar's value it extends the fill, below it shades the end of the fill, so a gain
- * and a loss against the bar's value read alike. `value` is on the bar's `min` to `max` scale. Print both numbers
+ * value in `color`. Above the bar's value the span extends the fill; below it, the end of the fill is striped with the
+ * track, so a gain and a loss against the bar's value read alike and differ by pattern as well as length. `value` is on the bar's `min` to `max` scale. Print both numbers
  * beside the bar: the marker is decorative.
  */
 export function ProgressBarMarker({
@@ -105,9 +105,14 @@ export function ProgressBarMarker({
       {...props}
     >
       <div
-        className="absolute inset-y-0 opacity-50"
+        className={cn("absolute inset-y-0", markerAt >= barAt && "opacity-50")}
         style={{
-          backgroundColor: color,
+          // Above the bar's value the span is a plain extension of the fill; below it, the fill it gives up is
+          // striped in the marker color over the track, so a loss reads as such without relying on color alone.
+          background:
+            markerAt >= barAt
+              ? color
+              : `repeating-linear-gradient(-45deg, ${color} 0 0.125rem, var(--muted) 0.125rem 0.3125rem)`,
           insetInlineStart: pct(Math.min(markerAt, barAt)),
           width: pct(Math.abs(markerAt - barAt)),
         }}

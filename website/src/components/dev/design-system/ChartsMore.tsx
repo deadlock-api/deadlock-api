@@ -206,6 +206,25 @@ export function ChartsMore() {
               </Card>
             </div>
           ))}
+          <div className="flex min-w-0 flex-col gap-1.5">
+            <span className="eyebrow">comparisonLabel: a second series (e.g. corrupted purchases)</span>
+            <Card size="sm" className="px-3">
+              <StatTrendChart
+                data={trendPoints(bucket).map((point, i) => ({
+                  date: point.date,
+                  value: point.value,
+                  matches: point.matches,
+                  comparison: point.value === null ? null : point.value + 0.04 - (i % 5) * 0.012,
+                  comparisonMatches: 90 + ((i * 37) % 60),
+                }))}
+                stat={stat}
+                value={bucket}
+                onValueChange={setBucket}
+                valueLabel="Normal"
+                comparisonLabel="Corrupted"
+              />
+            </Card>
+          </div>
         </Variants>
       </Specimen>
 

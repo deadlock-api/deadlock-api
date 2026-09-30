@@ -34,6 +34,12 @@ interface StatTrendChartProps extends Omit<React.ComponentProps<"div">, "onChang
   stat: { label: string; format: StatFormat };
   /** The time bucket the series is grouped into. */
   value?: StatTrendBucket;
+  /**
+   * Names the points' `comparison` series, drawn as a second line in the comparison color and read out beside the
+   * main value in the tooltip. `valueLabel` then names the main series.
+   */
+  comparisonLabel?: string;
+  valueLabel?: string;
   onValueChange?: (value: StatTrendBucket) => void;
 }
 
@@ -43,6 +49,8 @@ export default function StatTrendChart({
   stat,
   value = "start_time_day",
   onValueChange,
+  comparisonLabel,
+  valueLabel = stat.label,
   className,
   ...props
 }: StatTrendChartProps) {
@@ -107,9 +115,30 @@ export default function StatTrendChart({
                 isAnimationActive={false}
                 content={({ active, payload, label }) => {
                   if (!active || !payload?.length) return null;
-                  const entry = payload[0].payload;
+                  const entry = payload[0].payload as StatTrendPoint;
+                  const title = day.utc(Number(label)).format(`${bucketDef.tooltipFormat} [UTC]`);
+                  if (comparisonLabel) {
+                    return (
+                      <ChartReadings title={title} extraLabel="Matches">
+                        <ChartReading
+                          label={valueLabel}
+                          color={CHART_COLOR.primary}
+                          extra={entry.matches?.toLocaleString("en-US")}
+                        >
+                          {formatStatValue(entry.value, stat.format)}
+                        </ChartReading>
+                        <ChartReading
+                          label={comparisonLabel}
+                          color={CHART_COLOR.comparison}
+                          extra={entry.comparisonMatches?.toLocaleString("en-US")}
+                        >
+                          {formatStatValue(entry.comparison ?? null, stat.format)}
+                        </ChartReading>
+                      </ChartReadings>
+                    );
+                  }
                   return (
-                    <ChartReadings title={day.utc(Number(label)).format(`${bucketDef.tooltipFormat} [UTC]`)}>
+                    <ChartReadings title={title}>
                       <ChartReading label={stat.label}>{formatStatValue(entry.value, stat.format)}</ChartReading>
                       {entry.matches != null && (
                         <ChartReading label="Matches">{entry.matches.toLocaleString("en-US")}</ChartReading>
@@ -127,8 +156,22 @@ export default function StatTrendChart({
                 dot={chartData.length === 1 ? { r: 3, strokeWidth: 0 } : false}
                 activeDot={{ r: 3, strokeWidth: 0 }}
                 strokeWidth={2}
-                name={stat.label}
+                name={valueLabel}
               />
+              {comparisonLabel && (
+                <Area
+                  type="linear"
+                  isAnimationActive={false}
+                  dataKey="comparison"
+                  stroke={CHART_COLOR.comparison}
+                  fill="none"
+                  connectNulls
+                  dot={{ r: 2, strokeWidth: 0, fill: CHART_COLOR.comparison }}
+                  activeDot={{ r: 3, strokeWidth: 0 }}
+                  strokeWidth={2}
+                  name={comparisonLabel}
+                />
+              )}
             </AreaChart>
           </ChartSurface>
         )}

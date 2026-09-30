@@ -62,6 +62,8 @@ export const CHART_COLOR = {
   neutral: "var(--muted-foreground)",
   winRate: "var(--chart-win-rate)",
   share: "var(--chart-share)",
+  /** The second series a chart compares its main one with, such as corrupted item purchases. */
+  comparison: "var(--chart-5)",
   /** A hero or rank whose own color is missing from the assets API. */
   fallback: "var(--foreground)",
 } as const;

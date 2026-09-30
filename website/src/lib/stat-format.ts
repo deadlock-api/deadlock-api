@@ -57,4 +57,7 @@ export interface StatTrendPoint {
   date: number;
   value: number | null;
   matches?: number;
+  /** The same stat for a second series, compared with `value` (a chart's `comparisonLabel` names it). */
+  comparison?: number | null;
+  comparisonMatches?: number;
 }
