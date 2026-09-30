@@ -3,6 +3,11 @@
 //! The layout mirrors the reticle panels in `client.dll`: a round dot with a ring outline in the
 //! centre and four pips around it, each with a rectangular outline. Lengths are in units of 1/1080
 //! of the screen height. Each pixel is covered by a 16x16 grid of samples.
+//!
+//! **Twin implementation:** `website/src/lib/crosshair-render.ts` is a line-by-line TypeScript
+//! port, so the crosshair editor can redraw without a request. Any change here must be made there
+//! too, in the same commit. Its test (`crosshair-render.test.ts`) checks it against the PNG files in
+//! `fixtures/`, so regenerate those whenever the output changes.
 
 #![expect(
     clippy::cast_possible_truncation,

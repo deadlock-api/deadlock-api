@@ -1,5 +1,5 @@
 import { queryOptions } from "@tanstack/react-query";
-import type { CrosshairApiSettingsImageRequest, Settings } from "deadlock_api_client";
+import type { CrosshairApiSettingsCodeRequest, Settings } from "deadlock_api_client";
 
 import { CACHE_DURATIONS } from "~/constants/cache";
 import { api, requestBlob, toApiError } from "~/lib/api";
@@ -9,8 +9,12 @@ import { queryKeys } from "./query-keys";
 /** Every in-game crosshair share code starts with this. */
 export const CROSSHAIR_CODE_PREFIX = "DL.";
 
+/** A crosshair setting as a console command: `citadel_crosshair_dot_size 4`. */
+const CONSOLE_COMMAND = /(^|[;\s])(citadel_)?crosshair_\w+\s+\S/;
+
+/** Whether `code` looks like something the API reads as a crosshair: a share code or crosshair console commands. */
 export function isCrosshairCode(code: string): boolean {
-  return code.startsWith(CROSSHAIR_CODE_PREFIX);
+  return code.startsWith(CROSSHAIR_CODE_PREFIX) || CONSOLE_COMMAND.test(code);
 }
 
 export type CrosshairSettings = Required<Settings>;
@@ -40,7 +44,7 @@ export const DEFAULT_CROSSHAIR_SETTINGS: CrosshairSettings = {
 };
 
 /** The settings as query parameters of the generated client, which names them in camelCase. */
-function toParams(s: CrosshairSettings): Omit<CrosshairApiSettingsImageRequest, "screenHeight"> {
+function toParams(s: CrosshairSettings): CrosshairApiSettingsCodeRequest {
   return {
     themed: s.themed,
     pipGapStatic: s.pip_gap_static,
@@ -63,6 +67,17 @@ function toParams(s: CrosshairSettings): Omit<CrosshairApiSettingsImageRequest, 
     outlineColorG: s.outline_color_g,
     outlineColorB: s.outline_color_b,
   };
+}
+
+/**
+ * The settings as console commands, to paste into the game's console or an autoexec. `themed` is left out: the
+ * game's name for it could not be confirmed as a console variable.
+ */
+export function toConsoleCommand(settings: CrosshairSettings): string {
+  return Object.entries(settings)
+    .filter(([key]) => key !== "themed")
+    .map(([key, value]) => `citadel_crosshair_${key} ${value}`)
+    .join("; ");
 }
 
 function toDataUrl(blob: Blob): Promise<string> {
@@ -90,24 +105,9 @@ export function crosshairCodeSettingsQueryOptions(code: string) {
 }
 
 /**
- * The PNG the settings draw at a screen height, as a data URL for an `<img>` (a crosshair is a few hundred bytes, and a
+ * The PNG a share code draws at a screen height, as a data URL for an `<img>` (a crosshair is a few hundred bytes, and a
  * data URL needs no revoking). The image is a pure function of its inputs, so it never goes stale.
  */
-export function crosshairImageQueryOptions(settings: CrosshairSettings, screenHeight: number) {
-  return queryOptions({
-    queryKey: queryKeys.crosshair.image(settings, screenHeight),
-    queryFn: async ({ signal }) =>
-      toDataUrl(
-        await requestBlob(
-          (options) => api.crosshair_api.settingsImage({ ...toParams(settings), screenHeight }, options),
-          signal,
-        ),
-      ),
-    staleTime: CACHE_DURATIONS.FOREVER,
-  });
-}
-
-/** The PNG a share code draws at a screen height, as a data URL for an `<img>`, like `crosshairImageQueryOptions`. */
 export function crosshairCodeImageQueryOptions(code: string, screenHeight: number) {
   return queryOptions({
     queryKey: queryKeys.crosshair.codeImage(code, screenHeight),

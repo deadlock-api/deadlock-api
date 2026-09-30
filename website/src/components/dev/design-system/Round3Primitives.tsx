@@ -414,7 +414,7 @@ export function Round3Primitives() {
       <Specimen
         name="CornerBadge"
         source="ui/corner-badge"
-        note="A count pinned to the corner of an icon or portrait. The parent is relative."
+        note="A count pinned to the corner of an icon or portrait. The parent is relative. tone: surface, muted, scrim (on artwork), primary (a count that should catch the eye)."
       >
         <Variants className="gap-6 py-2">
           {(["top-end", "bottom-end", "top-start"] as const).map((corner) => (
@@ -438,6 +438,12 @@ export function Round3Primitives() {
             <CornerBadge tone="scrim" corner="bottom-end">
               12
             </CornerBadge>
+          </span>
+          <span className="relative">
+            <Avatar className="rounded-md">
+              <AvatarFallback className="rounded-md">IN</AvatarFallback>
+            </Avatar>
+            <CornerBadge tone="primary">5</CornerBadge>
           </span>
         </Variants>
       </Specimen>

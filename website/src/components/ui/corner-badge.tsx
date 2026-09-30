@@ -16,6 +16,8 @@ const cornerBadgeVariants = cva(
         muted: "bg-background text-muted-foreground",
         /** On artwork, where no surface color is guaranteed behind the badge. */
         scrim: "bg-background/85 text-foreground",
+        /** A count that should catch the eye, on a control: saved items. */
+        primary: "bg-primary text-primary-foreground",
       },
     },
     defaultVariants: { corner: "top-end", tone: "surface" },

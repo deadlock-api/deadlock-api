@@ -1,8 +1,8 @@
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { Bookmark, BookmarkX, ClipboardPaste, Library } from "lucide-react";
+import { Bookmark, BookmarkX, ClipboardPaste, Download, Library, Link } from "lucide-react";
 import { parseAsString, parseAsStringLiteral, useQueryState } from "nuqs";
-import { useId, useState } from "react";
+import { useId, useMemo, useState } from "react";
 
 import { PageHeader } from "~/components/patterns/page/PageHeader";
 import { PageShell } from "~/components/patterns/page/PageShell";
@@ -26,10 +26,12 @@ import { Inline, Stack } from "~/components/ui/stack";
 import { SwitchField } from "~/components/ui/switch-field";
 import { Text } from "~/components/ui/text";
 import { Textarea } from "~/components/ui/textarea";
+import { useHydrated } from "~/hooks/useHydrated";
+import { API_ORIGIN } from "~/lib/constants";
+import { renderCrosshair, toPngDataUrl } from "~/lib/crosshair-render";
 import { isClientError } from "~/lib/http";
 import { pageTitle, seo } from "~/lib/seo";
 import { useStoredState } from "~/lib/use-stored-state";
-import { useDebouncedValue } from "~/lib/utils";
 import {
   CROSSHAIR_CODE_PREFIX,
   type CrosshairSettings,
@@ -37,8 +39,8 @@ import {
   crosshairCodeImageQueryOptions,
   crosshairCodeQueryOptions,
   crosshairCodeSettingsQueryOptions,
-  crosshairImageQueryOptions,
   isCrosshairCode,
+  toConsoleCommand,
 } from "~/queries/crosshair-queries";
 
 export const Route = createFileRoute("/crosshair")({
@@ -52,14 +54,11 @@ export const Route = createFileRoute("/crosshair")({
     }),
 });
 
-/** Dragging a slider redraws a moment after it stops, not on every step. */
-const SETTINGS_DEBOUNCE_MS = 150;
-
 const RESOLUTION_LABELS = { "1080": "1080p", "1440": "1440p", "2160": "4K" } as const;
 type Resolution = keyof typeof RESOLUTION_LABELS;
 const RESOLUTIONS = Object.keys(RESOLUTION_LABELS) as Resolution[];
 
-const BACKDROP_LABELS = { game: "Game", neutral: "Grey", light: "Light", dark: "Dark" } as const;
+const BACKDROP_LABELS = { game: "Game", light: "Light", dark: "Dark" } as const;
 type Backdrop = keyof typeof BACKDROP_LABELS;
 
 const ZOOMS = ["2", "4", "8"] as const;
@@ -152,12 +151,19 @@ function CrosshairEditor() {
   const settings = edited ? edits.settings : (imported.data ?? DEFAULT_CROSSHAIR_SETTINGS);
   const update = (patch: Partial<CrosshairSettings>) => setEdits({ code, settings: { ...settings, ...patch } });
 
-  const rendered = useDebouncedValue(settings, SETTINGS_DEBOUNCE_MS);
-  const image = useQuery({
-    ...crosshairImageQueryOptions(rendered, Number(resolution)),
-    placeholderData: keepPreviousData,
-  });
-  const shareCode = useQuery({ ...crosshairCodeQueryOptions(rendered), placeholderData: keepPreviousData });
+  // Drawn here on every change, pixel for pixel as the API draws it; the server has no canvas, so only once hydrated.
+  const hydrated = useHydrated();
+  const image = useMemo(() => {
+    if (!hydrated) return undefined;
+    const drawn = renderCrosshair(settings, Number(resolution));
+    return drawn && toPngDataUrl(drawn);
+  }, [hydrated, settings, resolution]);
+  const shareCode = useQuery({ ...crosshairCodeQueryOptions(settings), placeholderData: keepPreviousData });
+  // The API serves the same PNG for the share code, so a link to it shows this crosshair anywhere.
+  const imageLink =
+    shareCode.data && !shareCode.isPlaceholderData
+      ? `${API_ORIGIN}/v1/crosshair/code/image?${new URLSearchParams({ code: shareCode.data, screen_height: resolution })}`
+      : undefined;
   // The code of what is on screen, once it is encoded; a placeholder is the previous crosshair's.
   const currentCode = shareCode.isPlaceholderData ? undefined : shareCode.data;
 
@@ -176,7 +182,7 @@ function CrosshairEditor() {
   const importCode = async (value: string): Promise<string | null> => {
     const next = value.trim();
     if (!isCrosshairCode(next)) {
-      return `A crosshair code starts with "${CROSSHAIR_CODE_PREFIX}". Check that you copied all of it.`;
+      return `Paste a code that starts with "${CROSSHAIR_CODE_PREFIX}" or crosshair console commands. Check that you copied all of it.`;
     }
     try {
       await queryClient.query(crosshairCodeSettingsQueryOptions(next));
@@ -197,51 +203,40 @@ function CrosshairEditor() {
         description="Import a crosshair code or design your own with sliders"
       >
         <p>
-          In Deadlock, a crosshair is shared as a code that starts with <code>DL.</code>. Paste one to see it at its
-          true size over a game scene and tweak it, or start from the game's default and design your own. Copy the code
-          below the preview into the crosshair settings in game.
+          In Deadlock, a crosshair is shared as a code that starts with <code>DL.</code>, or as console commands. Paste
+          either to see it at its true size over a game scene and tweak it, or start from the game's default and design
+          your own. Copy the code into the crosshair settings in game, or the console command into the game's console.
         </p>
       </PageHeader>
 
       {/* Settings span both rows on the left; the preview takes whatever height the code card leaves. */}
       <Grid columns={{ base: 1, lg: 2 }} gap={6} className="@2xl:grid-rows-[1fr_auto]">
         <Section title="Settings" className="@2xl:row-span-2">
-          <Card className="flex-1">
+          <Card className="relative flex-1">
+            {/* The crosshair's own actions, pinned in the card's corner above the first group. */}
+            <Inline gap={1} wrap="nowrap" className="absolute inset-e-3 top-3">
+              <Button
+                variant="outline"
+                size="icon-sm"
+                aria-label={bookmarked ? "Remove this crosshair's bookmark" : "Bookmark this crosshair"}
+                aria-pressed={bookmarked}
+                title={bookmarked ? "Bookmarked on this browser · click to remove" : "Bookmark on this browser"}
+                disabled={currentCode === undefined}
+                onClick={toggleBookmark}
+              >
+                <Bookmark fill={bookmarked ? "currentColor" : "none"} />
+              </Button>
+              <BookmarksButton
+                bookmarks={bookmarks}
+                onLoad={importCode}
+                onRemove={(code) => saveBookmarks(bookmarks.filter((bookmark) => bookmark.code !== code))}
+              />
+              <ImportCodeButton onImport={importCode} />
+            </Inline>
             <CardContent>
               <Stack gap={6}>
-                {SLIDER_GROUPS.map((group, index) => (
-                  <Section
-                    key={group.title}
-                    as="h3"
-                    size="sm"
-                    title={group.title}
-                    // The card's first row holds the import, at its top right.
-                    action={
-                      index === 0 && (
-                        <Inline gap={1} wrap="nowrap">
-                          <Button
-                            variant="ghost"
-                            size="icon-sm"
-                            aria-label={bookmarked ? "Remove this crosshair's bookmark" : "Bookmark this crosshair"}
-                            aria-pressed={bookmarked}
-                            title={
-                              bookmarked ? "Bookmarked on this browser · click to remove" : "Bookmark on this browser"
-                            }
-                            disabled={currentCode === undefined}
-                            onClick={toggleBookmark}
-                          >
-                            <Bookmark fill={bookmarked ? "currentColor" : "none"} />
-                          </Button>
-                          <BookmarksButton
-                            bookmarks={bookmarks}
-                            onLoad={importCode}
-                            onRemove={(code) => saveBookmarks(bookmarks.filter((bookmark) => bookmark.code !== code))}
-                          />
-                          <ImportCodeButton onImport={importCode} />
-                        </Inline>
-                      )
-                    }
-                  >
+                {SLIDER_GROUPS.map((group) => (
+                  <Section key={group.title} as="h3" size="sm" title={group.title}>
                     <Grid columns={{ base: 1, md: 2 }} gap={4}>
                       {group.sliders.map(({ key, label, min, max, ...slider }) => (
                         <SliderField
@@ -329,25 +324,40 @@ function CrosshairEditor() {
                       ))}
                     </Segmented>
                   </Field>
-                  <Field label="Zoom" orientation="horizontal">
-                    <Segmented value={zoom} onValueChange={setZoom} size="sm" width="hug">
+                </Inline>
+                <Preview
+                  image={image}
+                  backdrop={backdrop}
+                  zoom={Number(zoom)}
+                  resolutionLabel={RESOLUTION_LABELS[resolution]}
+                  zoomControl={
+                    <Segmented value={zoom} onValueChange={setZoom} size="sm" width="hug" aria-label="Zoom">
                       {ZOOMS.map((value) => (
                         <SegmentedItem key={value} value={value}>
                           {value}×
                         </SegmentedItem>
                       ))}
                     </Segmented>
-                  </Field>
-                </Inline>
-                <Preview
-                  image={image.data}
-                  error={image.error}
-                  fetching={image.isFetching}
-                  onRetry={() => void image.refetch()}
-                  backdrop={backdrop}
-                  zoom={Number(zoom)}
-                  resolutionLabel={RESOLUTION_LABELS[resolution]}
+                  }
                 />
+                <Inline gap={2}>
+                  <CopyButton variant="outline" icon={Link} text={imageLink ?? ""} disabled={!imageLink}>
+                    Copy image link
+                  </CopyButton>
+                  {typeof image === "string" ? (
+                    <Button variant="outline" asChild>
+                      <a href={image} download={`crosshair-${resolution}p.png`}>
+                        <Download data-icon="inline-start" />
+                        Download image
+                      </a>
+                    </Button>
+                  ) : (
+                    <Button variant="outline" disabled>
+                      <Download data-icon="inline-start" />
+                      Download image
+                    </Button>
+                  )}
+                </Inline>
               </Stack>
             </CardContent>
           </Card>
@@ -365,13 +375,14 @@ function CrosshairEditor() {
               ) : (
                 <Text variant="label">{shareCode.isError ? shareCode.error.message : "Encoding…"}</Text>
               )}
-              <CopyButton
-                text={shareCode.data ?? ""}
-                disabled={!shareCode.data || shareCode.isPlaceholderData}
-                className="self-start"
-              >
-                Copy code
-              </CopyButton>
+              <Inline gap={2}>
+                <CopyButton text={shareCode.data ?? ""} disabled={!shareCode.data || shareCode.isPlaceholderData}>
+                  Copy code
+                </CopyButton>
+                <CopyButton variant="outline" text={toConsoleCommand(settings)}>
+                  Copy console command
+                </CopyButton>
+              </Inline>
             </Stack>
           </CardContent>
         </Card>
@@ -382,32 +393,28 @@ function CrosshairEditor() {
 
 function Preview({
   image,
-  error,
-  fetching,
-  onRetry,
   backdrop,
   zoom,
   resolutionLabel,
+  zoomControl,
 }: {
-  image: string | undefined;
-  error: Error | null;
-  fetching: boolean;
-  onRetry: () => void;
+  /** A data URL; `null` when the crosshair is too large to draw, `undefined` until the page can draw. */
+  image: string | null | undefined;
   backdrop: Backdrop;
   zoom: number;
   resolutionLabel: string;
+  /** Picks the zoom, beside the enlarged view's label. */
+  zoomControl: React.ReactNode;
 }) {
-  if (error && !image) {
+  if (image === null) {
     return (
       <ErrorState
-        title="Could not draw this crosshair"
-        description={error.message}
-        onRetry={onRetry}
-        retrying={fetching}
+        title="This crosshair is too large to draw"
+        description="Make the dot, the pips or their gap smaller."
       />
     );
   }
-  if (!image) return <LoadingState label="crosshair" />;
+  if (image === undefined) return <LoadingState label="crosshair" />;
 
   const views = [
     {
@@ -418,22 +425,26 @@ function Preview({
     },
     {
       id: "enlarged",
-      label: `Enlarged ${zoom}×`,
+      label: "Enlarged",
+      control: zoomControl,
       scale: zoom,
       alt: `The crosshair enlarged ${zoom} times, each pixel drawn as a square`,
     },
   ];
   return (
-    <Grid columns={{ base: 1, md: 2 }} gap={4} aria-busy={fetching || undefined}>
+    <Grid columns={{ base: 1, md: 2 }} gap={4}>
       {views.map((view) => (
         <Stack key={view.id} gap={2}>
-          <Text variant="label">{view.label}</Text>
+          {/* Both label rows are as tall as the zoom control, so the two stages start level. */}
+          <Inline justify="between" wrap="nowrap" className="min-h-8">
+            <Text variant="label">{view.label}</Text>
+            {view.control}
+          </Inline>
           <PixelStage backdrop={backdrop} className="min-h-56 flex-1">
             <PixelImage src={image} scale={view.scale} alt={view.alt} />
           </PixelStage>
         </Stack>
       ))}
-      {error && <Text variant="label">{error.message}</Text>}
     </Grid>
   );
 }
@@ -471,7 +482,7 @@ function ImportCodeButton({ onImport }: { onImport: (code: string) => Promise<st
     >
       <PopoverTrigger asChild>
         <Button
-          variant="ghost"
+          variant="outline"
           size="icon-sm"
           aria-label="Import a crosshair code"
           title="Import a crosshair code"
@@ -500,7 +511,7 @@ function ImportCodeButton({ onImport }: { onImport: (code: string) => Promise<st
             id={codeId}
             value={draft}
             onChange={(event) => void load(event.target.value)}
-            placeholder="DL.AQHL887tKLUv_WAF..."
+            placeholder="DL.AQHL887tKLUv_WAF… or citadel_crosshair_dot_size 4; …"
             spellCheck={false}
             autoCapitalize="off"
             autoComplete="off"
@@ -536,14 +547,19 @@ function BookmarksButton({
     >
       <PopoverTrigger asChild>
         <Button
-          variant="ghost"
+          variant="outline"
           size="icon-sm"
           aria-label={`Bookmarked crosshairs (${bookmarks.length})`}
           title="Bookmarked crosshairs"
           className="relative"
         >
           <Library />
-          {bookmarks.length > 0 && <CornerBadge aria-hidden="true">{bookmarks.length}</CornerBadge>}
+          {bookmarks.length > 0 && (
+            // Pulled in over the icon button, which is small enough that the default corner leaves it floating.
+            <CornerBadge tone="primary" aria-hidden="true" className="-inset-e-0.5 -top-0.5">
+              {bookmarks.length}
+            </CornerBadge>
+          )}
         </Button>
       </PopoverTrigger>
       <PopoverContent align="end" aria-label="Bookmarked crosshairs" className="w-80 p-2">

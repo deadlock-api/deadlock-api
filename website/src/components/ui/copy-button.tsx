@@ -1,4 +1,4 @@
-import { Check, Copy } from "lucide-react";
+import { Check, Copy, type LucideIcon } from "lucide-react";
 import type { ComponentProps } from "react";
 import { toast } from "sonner";
 
@@ -9,11 +9,22 @@ import { cn } from "~/lib/utils";
 type CopyButtonProps = ComponentProps<typeof Button> & {
   /** A function defers the value to click time, for text that only exists in the browser like the page URL. */
   text: string | (() => string);
+  /** What is copied, when it is not plain text: `Link` for a URL. A check mark replaces it once copied. */
+  icon?: LucideIcon;
 };
 
 /** An `icon*` size shows the icon alone and needs an `aria-label` or `title`; any other size adds the children. */
 
-export function CopyButton({ text, children = "Copy", className, variant, size, onClick, ...props }: CopyButtonProps) {
+export function CopyButton({
+  text,
+  icon: Icon = Copy,
+  children = "Copy",
+  className,
+  variant,
+  size,
+  onClick,
+  ...props
+}: CopyButtonProps) {
   const { copied, copy } = useCopyToClipboard();
   const iconDisplay = size?.startsWith("icon") ?? false;
 
@@ -38,7 +49,7 @@ export function CopyButton({ text, children = "Copy", className, variant, size, 
         }
       }}
     >
-      {copied ? <Check /> : <Copy />}
+      {copied ? <Check /> : <Icon />}
       {!iconDisplay && (copied ? "Copied" : children)}
     </Button>
   );

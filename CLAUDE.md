@@ -15,6 +15,12 @@ All Rust crates form one cargo workspace rooted at `Cargo.toml` (single `Cargo.l
 `.cargo/`, `rust-toolchain.toml`, `rustfmt.toml`, sqlx offline cache in `.sqlx/`). Rust Dockerfiles
 build with the repo root as context.
 
+## Twin implementations
+
+The crosshair renderer exists twice, in Rust (`api/src/services/crosshair/render.rs`, used by the API) and as a
+line-by-line TypeScript port (`website/src/lib/crosshair-render.ts`, used by the crosshair editor). A change to one must
+be made to the other in the same commit. The TypeScript test checks pixel parity against the Rust fixture PNGs.
+
 ## Website UI: strict laws
 
 Any change that touches UI under `website/` is bound by **The 20 Laws of React Design Systems** in

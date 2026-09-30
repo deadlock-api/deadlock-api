@@ -5,6 +5,7 @@ import {
   Download,
   Info,
   LayoutGrid,
+  Link2,
   List,
   Plus,
   RefreshCw,
@@ -721,6 +722,14 @@ export function Primitives() {
         <Variants>
           <CopyButton text="deadlock-api.com" variant="outline" size="sm" />
           <CopyButton text="deadlock-api.com" variant="ghost" size="icon-sm" />
+          <CopyButton
+            text="https://deadlock-api.com"
+            icon={Link2}
+            variant="outline"
+            size="icon"
+            aria-label="Copy link"
+            title="Copy link"
+          />
         </Variants>
       </Specimen>
 

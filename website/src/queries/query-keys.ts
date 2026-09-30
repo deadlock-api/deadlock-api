@@ -91,7 +91,6 @@ export const queryKeys = {
   crosshair: {
     codeSettings: (code: string) => ["api-crosshair-code-settings", code] as const,
     codeImage: (code: string, screenHeight: number) => ["api-crosshair-code-image", code, screenHeight] as const,
-    image: (settings: object, screenHeight: number) => ["api-crosshair-image", settings, screenHeight] as const,
     code: (settings: object) => ["api-crosshair-code", settings] as const,
   },
   map: (clientVersion?: number) => ["assets-map", clientVersion ?? "latest"] as const,
