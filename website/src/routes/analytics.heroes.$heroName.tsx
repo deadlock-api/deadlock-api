@@ -30,7 +30,7 @@ import { formatPercent } from "~/lib/format";
 import { DEFAULT_MATCH_MODE } from "~/lib/game-mode";
 import { fetchHeroMatchups, type HeroMatchupsRequest } from "~/lib/hero-matchup-fns";
 import { findHeroBySlug, heroSlug } from "~/lib/hero-slug";
-import { prefetchSafe } from "~/lib/prefetch-safe";
+import { catchPrefetch, prefetchSafe } from "~/lib/prefetch-safe";
 import { rankOf } from "~/lib/rank-of";
 import { rankRangeLabel } from "~/lib/rank-utils";
 import { defaultPeriodLabel, defaultPrevUnixRange, defaultUnixRange, type SeasonInfo } from "~/lib/seasons";
@@ -202,7 +202,7 @@ export const Route = createFileRoute("/analytics/heroes/$heroName")({
         }),
       ),
       prefetchSafe(queryClient.query({ ...itemUpgradesQueryOptions, staleTime: "static" })),
-      prefetchSafe(fetchHeroMatchups({ data: matchupsRequest(hero.id, seasons, preferences.dateFilter) })),
+      catchPrefetch(fetchHeroMatchups({ data: matchupsRequest(hero.id, seasons, preferences.dateFilter) })),
     ]);
     const cardImage = hero.images.hero_card_critical_webp ?? hero.images.icon_hero_card_webp ?? null;
     const summary = summarizeHeroStats(stats, hero.id);

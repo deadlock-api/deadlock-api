@@ -26,7 +26,7 @@ import { formatPercent } from "~/lib/format";
 import { DEFAULT_MATCH_MODE } from "~/lib/game-mode";
 import { fetchItemBestHeroes } from "~/lib/item-hero-fns";
 import { findItemBySlug, itemSlug } from "~/lib/item-slug";
-import { prefetchSafe } from "~/lib/prefetch-safe";
+import { catchPrefetch, prefetchSafe } from "~/lib/prefetch-safe";
 import { rankOf } from "~/lib/rank-of";
 import { rankRangeLabel } from "~/lib/rank-utils";
 import { defaultPeriodLabel, defaultUnixRange, type SeasonInfo } from "~/lib/seasons";
@@ -162,7 +162,7 @@ export const Route = createFileRoute("/analytics/items/$itemName")({
       prefetchSafe(queryClient.query({ ...itemQueryOptions(item.id), staleTime: "static" })),
       // The corrupted section's penalties and frame art; only items the Broker trades have one.
       item.corrupted_info && prefetchSafe(queryClient.query({ ...corruptionQueryOptions, staleTime: "static" })),
-      prefetchSafe(
+      catchPrefetch(
         fetchItemBestHeroes({
           data: {
             itemId: item.id,

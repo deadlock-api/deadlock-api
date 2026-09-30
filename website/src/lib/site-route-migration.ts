@@ -3,7 +3,7 @@ import { redirect } from "@tanstack/react-router";
 
 import { ANALYTICS_TABS, canonicalAnalyticsHref } from "./analytics-tabs";
 import { heroSlug } from "./hero-slug";
-import { prefetchSafe } from "./prefetch-safe";
+import { catchPrefetch } from "./prefetch-safe";
 
 export const LEGACY_PAGE_PATHS = {
   "/games": "/analytics/games",
@@ -71,7 +71,7 @@ export async function redirectLegacyHeroId({
 }) {
   if (!location.href.includes("heroId=")) return;
   const { filterPlayableHeroes, heroesQueryOptions } = await import("~/queries/asset-queries");
-  const heroes = await prefetchSafe(context.queryClient.query({ ...heroesQueryOptions, staleTime: "static" }));
+  const heroes = await catchPrefetch(context.queryClient.query({ ...heroesQueryOptions, staleTime: "static" }));
   const href = heroes && legacyHeroIdHref(location.href, filterPlayableHeroes(heroes));
   if (href) throw redirect({ href, statusCode: 301 });
 }
