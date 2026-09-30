@@ -395,6 +395,28 @@ mod tests {
     }
 
     #[test]
+    fn peak_rank_sort_takes_the_highest_ranked_badge_on_both_paths() {
+        let deduped = build_query(&PlayerScoreboardQuery {
+            sort_by: ScoreboardQuerySortBy::PeakRank,
+            hero_id: Some(15),
+            ..Default::default()
+        });
+        assert_valid_sql(&deduped);
+        assert!(deduped.contains(
+            ", any(player_rank_initial_display_rank) as player_rank_initial_display_rank"
+        ));
+        assert!(deduped.contains("toFloat64(maxIf("));
+        assert!(deduped.contains("ifNull(player_rank_initial_display_rank, 0) > 0)"));
+
+        let unscoped = build_query(&PlayerScoreboardQuery {
+            sort_by: ScoreboardQuerySortBy::PeakRank,
+            ..Default::default()
+        });
+        assert_valid_sql(&unscoped);
+        assert!(unscoped.contains("FROM player_match_stats FINAL"));
+    }
+
+    #[test]
     fn time_and_hero_filtered_scans_stay_on_match_player() {
         let by_time = build_query(&PlayerScoreboardQuery {
             min_unix_timestamp: Some(1_785_715_200),

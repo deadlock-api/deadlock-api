@@ -41,7 +41,9 @@ const ALL_VARIANTS: SortVariant[] = ["avg", "max", "total"];
 
 export const SORT_CATEGORIES: SortCategory[] = [
   { label: "Matches", key: "matches" },
-  { label: "Rank", key: "rank", playersOnly: true },
+  // `rank` is the badge of the latest ranked match in range, `peak_rank` the highest one.
+  { label: "Current Rank", key: "rank", playersOnly: true },
+  { label: "Peak Rank", key: "peak_rank", playersOnly: true },
   { label: "Wins", key: "wins" },
   { label: "Losses", key: "losses" },
   { label: "Winrate", key: "winrate" },

@@ -219,10 +219,13 @@ pub(super) async fn hero_scoreboard(
             message: "Cannot filter by average badge for street brawl game mode".to_string(),
         });
     }
-    if query.sort_by == ScoreboardQuerySortBy::Rank {
+    if query.sort_by.is_rank_sort() {
         return Err(APIError::status_msg(
             StatusCode::BAD_REQUEST,
-            "sort_by=rank is only supported by the player scoreboard",
+            format!(
+                "sort_by={} is only supported by the player scoreboard",
+                query.sort_by
+            ),
         ));
     }
     #[expect(deprecated)]

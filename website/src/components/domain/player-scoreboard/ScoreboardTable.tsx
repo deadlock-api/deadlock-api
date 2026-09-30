@@ -103,7 +103,7 @@ export function ScoreboardTable({
 
   const { profiles, isLoading: isLoadingProfiles } = useSteamProfiles(steamAccountIds);
 
-  const isRankSort = sortBy === "rank";
+  const isRankSort = sortBy === "rank" || sortBy === "peak_rank";
   const { data: ranks } = useQuery({ ...ranksQueryOptions, enabled: isRankSort });
   const badgeMap = useMemo(() => extractBadgeMap(ranks ?? []), [ranks]);
 

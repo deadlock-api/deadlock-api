@@ -14,6 +14,8 @@ pub enum ScoreboardQuerySortBy {
     Matches,
     /// Sort by the rank badge of the player's latest ranked match. Player scoreboard only.
     Rank,
+    /// Sort by the highest rank badge the player ended any ranked match in range on. Player scoreboard only.
+    PeakRank,
     /// Sort by the number of wins
     Wins,
     /// Sort by the number of losses
@@ -156,10 +158,21 @@ fn latest_badge_clause() -> String {
     format!("if({latest_progress} IS NULL, 0, {badge})")
 }
 
+/// Highest badge the player ended any ranked match on, `0` when no grouped row carries a rank.
+/// Placement rows (`initial_display_rank = 0`) are skipped like in [`latest_badge_clause`].
+fn peak_badge_clause() -> String {
+    let badge = badge_from_flat_progress_sql(
+        "assumeNotNull(player_rank_final_flat_progress)",
+        "assumeNotNull(player_rank_initial_display_rank)",
+    );
+    format!("maxIf({badge}, ifNull(player_rank_initial_display_rank, 0) > 0)")
+}
+
 impl ScoreboardQuerySortBy {
     pub(super) fn get_select_clause(self) -> String {
         let clause = match self {
             Self::Rank => return latest_badge_clause(),
+            Self::PeakRank => return peak_badge_clause(),
             Self::MaxPermanentBuffsPerMatch => "max(permanent_buffs)",
             Self::AvgPermanentBuffsPerMatch => "avg(permanent_buffs)",
             Self::PermanentBuffs => "sum(permanent_buffs)",
@@ -239,6 +252,11 @@ impl ScoreboardQuerySortBy {
         matches!(self, Self::Matches)
     }
 
+    /// Whether the sort reads the player's rank, which heroes do not have.
+    pub(super) fn is_rank_sort(self) -> bool {
+        matches!(self, Self::Rank | Self::PeakRank)
+    }
+
     /// Whether the sort reads `match_player.permanent_buffs`. The scoreboards' account-scoped
     /// path (`player_match_stats`) has the column too, but only for recent rows, and none of
     /// `match_player`'s projections carries it.
@@ -258,7 +276,7 @@ impl ScoreboardQuerySortBy {
     pub(super) fn inner_columns(self) -> &'static [&'static str] {
         match self {
             Self::Matches => &[],
-            Self::Rank => &[
+            Self::Rank | Self::PeakRank => &[
                 "player_rank_final_flat_progress",
                 "player_rank_initial_display_rank",
             ],
