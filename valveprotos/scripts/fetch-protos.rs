@@ -11,9 +11,13 @@
 use std::{fs, path::Path};
 
 // (local dir, remote dir)
+//
+// The shared Source 2 engine protos (common, gcsdk) come from Deadlock's own dump too: Dota 2's
+// copies lag behind Deadlock's engine branch and would drop fields haste relies on (e.g.
+// `ProtoCoordSizeParams_t`, `quantized_float_encoder_aliases`, `max_coord`).
 const PROTO_DIR_PAIRS: &[(&str, &str)] = &[
-    ("common", "dota2"),
-    ("gcsdk", "dota2"),
+    ("common", "deadlock"),
+    ("gcsdk", "deadlock"),
     ("deadlock", "deadlock"),
 ];
 
