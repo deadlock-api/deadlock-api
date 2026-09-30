@@ -718,6 +718,41 @@ pub(crate) struct CorruptedTooltipBackers {
     pub vitality: ImagePair,
 }
 
+/// Item tooltip background of one slot type: the backer, its alpha mask and the
+/// color layer.
+#[derive(Debug, Serialize, Clone, ToSchema)]
+pub(crate) struct ItemTooltipBacker {
+    pub backer: ImagePair,
+    pub mask: ImagePair,
+    pub color: ImagePair,
+}
+
+/// Item tooltip backgrounds, one per item slot type.
+#[derive(Debug, Serialize, Clone, ToSchema)]
+pub(crate) struct ItemTooltipBackers {
+    pub weapon: ItemTooltipBacker,
+    pub spirit: ItemTooltipBacker,
+    pub vitality: ItemTooltipBacker,
+}
+
+impl ItemTooltipBackers {
+    fn new() -> Self {
+        let slot = |slot: &str| {
+            let base = format!("tooltips/items/tooltip_backer_{slot}");
+            ItemTooltipBacker {
+                backer: ImagePair::at(&base),
+                mask: ImagePair::at(&format!("{base}_mask")),
+                color: ImagePair::at(&format!("{base}_color")),
+            }
+        };
+        Self {
+            weapon: slot("weapon"),
+            spirit: slot("spirit"),
+            vitality: slot("vitality"),
+        }
+    }
+}
+
 /// Shop art for corrupted items (build 6711+). The game has no per-item corrupted
 /// icon: a corrupted item is its normal image drawn inside `frame`, with the tooltip
 /// backer of its `item_slot_type`.
@@ -854,6 +889,9 @@ pub(crate) struct GenericData {
     /// Shop art for corrupted items (build 6711+).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub corrupted_item_images: Option<CorruptedItemImages>,
+    /// Item tooltip backgrounds per slot type (the corrupted variants are in
+    /// `corrupted_item_images`).
+    pub item_tooltip_backers: ItemTooltipBackers,
     /// Distance within which a neutral camp's respawn timer is shown (build 6711+).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub neutral_camp_respawn_timer_show_distance: Option<f64>,
@@ -930,6 +968,7 @@ fn transform(r: RawGenericData, loc: &HashMap<String, String>) -> GenericData {
         color_team2: r.color_team2,
         item_price_per_tier: r.item_price_per_tier,
         item_corruption_price_per_tier: r.item_corruption_price_per_tier,
+        item_tooltip_backers: ItemTooltipBackers::new(),
         corrupted_item_images: r
             .corrupted_penalty_defs
             .is_some()

@@ -763,6 +763,50 @@ expression: data
       }
     }
   },
+  "item_tooltip_backers": {
+    "weapon": {
+      "backer": {
+        "png": "https://assets-bucket.deadlock-api.com/assets-api-res/images/tooltips/items/tooltip_backer_weapon.png",
+        "webp": "https://assets-bucket.deadlock-api.com/assets-api-res/images/tooltips/items/tooltip_backer_weapon.webp"
+      },
+      "mask": {
+        "png": "https://assets-bucket.deadlock-api.com/assets-api-res/images/tooltips/items/tooltip_backer_weapon_mask.png",
+        "webp": "https://assets-bucket.deadlock-api.com/assets-api-res/images/tooltips/items/tooltip_backer_weapon_mask.webp"
+      },
+      "color": {
+        "png": "https://assets-bucket.deadlock-api.com/assets-api-res/images/tooltips/items/tooltip_backer_weapon_color.png",
+        "webp": "https://assets-bucket.deadlock-api.com/assets-api-res/images/tooltips/items/tooltip_backer_weapon_color.webp"
+      }
+    },
+    "spirit": {
+      "backer": {
+        "png": "https://assets-bucket.deadlock-api.com/assets-api-res/images/tooltips/items/tooltip_backer_spirit.png",
+        "webp": "https://assets-bucket.deadlock-api.com/assets-api-res/images/tooltips/items/tooltip_backer_spirit.webp"
+      },
+      "mask": {
+        "png": "https://assets-bucket.deadlock-api.com/assets-api-res/images/tooltips/items/tooltip_backer_spirit_mask.png",
+        "webp": "https://assets-bucket.deadlock-api.com/assets-api-res/images/tooltips/items/tooltip_backer_spirit_mask.webp"
+      },
+      "color": {
+        "png": "https://assets-bucket.deadlock-api.com/assets-api-res/images/tooltips/items/tooltip_backer_spirit_color.png",
+        "webp": "https://assets-bucket.deadlock-api.com/assets-api-res/images/tooltips/items/tooltip_backer_spirit_color.webp"
+      }
+    },
+    "vitality": {
+      "backer": {
+        "png": "https://assets-bucket.deadlock-api.com/assets-api-res/images/tooltips/items/tooltip_backer_vitality.png",
+        "webp": "https://assets-bucket.deadlock-api.com/assets-api-res/images/tooltips/items/tooltip_backer_vitality.webp"
+      },
+      "mask": {
+        "png": "https://assets-bucket.deadlock-api.com/assets-api-res/images/tooltips/items/tooltip_backer_vitality_mask.png",
+        "webp": "https://assets-bucket.deadlock-api.com/assets-api-res/images/tooltips/items/tooltip_backer_vitality_mask.webp"
+      },
+      "color": {
+        "png": "https://assets-bucket.deadlock-api.com/assets-api-res/images/tooltips/items/tooltip_backer_vitality_color.png",
+        "webp": "https://assets-bucket.deadlock-api.com/assets-api-res/images/tooltips/items/tooltip_backer_vitality_color.webp"
+      }
+    }
+  },
   "neutral_camp_respawn_timer_show_distance": 15.0,
   "breakable_powerup_loot_params": {
     "loot_list_deck_size": 3,
