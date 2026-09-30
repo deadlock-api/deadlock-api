@@ -2,13 +2,14 @@ import { useQuery } from "@tanstack/react-query";
 
 import type { PickableHero } from "~/components/domain/selectors/hero-picker";
 import { type PickerSelectionProps, usePicker } from "~/components/patterns/picker/usePicker";
+import { isPlayableHero } from "~/lib/hero-roster";
 import { heroesQueryOptions } from "~/queries/asset-queries";
 
-/** The playable roster (no hero still in development), sorted by name: what every hero picker offers by default. */
+/** The playable roster (released heroes only), sorted by name: what every hero picker offers by default. */
 export function useHeroRoster() {
   const { data: heroes = [], isLoading } = useQuery({
     ...heroesQueryOptions,
-    select: (all) => all.filter((hero) => !hero.in_development).sort((a, b) => a.name.localeCompare(b.name)),
+    select: (all) => all.filter(isPlayableHero).sort((a, b) => a.name.localeCompare(b.name)),
   });
   return { heroes, isLoading };
 }

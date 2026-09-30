@@ -5,6 +5,7 @@ import { CACHE_DURATIONS } from "~/constants/cache";
 import { api } from "~/lib/api";
 import { buffInfoByType } from "~/lib/buffs";
 import { toCorruptionData } from "~/lib/corrupted-items";
+import { isPlayableHero } from "~/lib/hero-roster";
 import { catchPrefetch } from "~/lib/prefetch-safe";
 import { type SeasonInfo, toSeasons } from "~/lib/seasons";
 
@@ -151,7 +152,7 @@ export async function loadSeasons(queryClient: QueryClient): Promise<SeasonInfo[
 }
 
 export function filterPlayableHeroes<T extends SlimHero>(heroes: T[]): T[] {
-  return heroes.filter((h) => h.player_selectable && !h.disabled && !h.in_development);
+  return heroes.filter(isPlayableHero);
 }
 
 export function filterShopableItems<T extends SlimUpgrade>(items: T[]): T[] {

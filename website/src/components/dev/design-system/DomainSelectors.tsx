@@ -29,6 +29,7 @@ import { Separator } from "~/components/ui/separator";
 import type { Dayjs } from "~/dayjs";
 import { PATCHES } from "~/lib/constants";
 import type { Mode } from "~/lib/game-mode";
+import { isPlayableHero } from "~/lib/hero-roster";
 import { heroesQueryOptions, type SlimUpgrade } from "~/queries/asset-queries";
 
 type TimeRange = [number | undefined, number | undefined];
@@ -111,7 +112,7 @@ function ItemGridDemo({
 export function DomainSelectors() {
   const { data: heroes = [] } = useQuery({
     ...heroesQueryOptions,
-    select: (all) => all.filter((hero) => !hero.in_development).sort((a, b) => a.name.localeCompare(b.name)),
+    select: (all) => all.filter(isPlayableHero).sort((a, b) => a.name.localeCompare(b.name)),
   });
   const roster = heroes.slice(0, 15);
   const rosterIds = roster.map((hero) => hero.id);

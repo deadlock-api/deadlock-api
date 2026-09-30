@@ -8,6 +8,7 @@ import type {
   SteamProfile,
 } from "deadlock_api_client";
 
+import { isPlayableHero } from "~/lib/hero-roster";
 import type { SlimHero, SlimUpgrade } from "~/queries/asset-queries";
 import type {
   TrackerAbility,
@@ -523,7 +524,7 @@ export function demoMatchMetadata(
   const roster = matchRoster(matchId);
   const otherHeroes = shuffled(
     rng,
-    assets.heroes.filter((hero) => hero.player_selectable && !hero.disabled && hero.id !== entry.hero_id),
+    assets.heroes.filter((hero) => isPlayableHero(hero) && hero.id !== entry.hero_id),
   );
   const seats = [
     { accountId: DEMO_ACCOUNT_ID, team: ownTeam, heroId: entry.hero_id },
