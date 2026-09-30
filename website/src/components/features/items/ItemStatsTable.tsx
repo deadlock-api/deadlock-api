@@ -1,8 +1,18 @@
 import type { Upgrade } from "deadlock_api_client";
 import type { AnalyticsApiItemStatsRequest, ItemStats } from "deadlock_api_client";
 import { Table2 } from "lucide-react";
-import { parseAsArrayOf, parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
-import { memo, type ReactNode, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
+import { parseAsArrayOf, parseAsInteger, parseAsStringLiteral, throttle, useQueryState } from "nuqs";
+import {
+  memo,
+  type ReactNode,
+  startTransition,
+  useCallback,
+  useDeferredValue,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
 import { ItemCell } from "~/components/domain/assets/ItemCell";
 import { ItemSelector } from "~/components/domain/selectors/ItemSelector";
@@ -37,6 +47,12 @@ import { wilsonScoreInterval } from "~/lib/wilson";
 // Parsers for sort field and direction using nuqs string literal parser
 const parseAsSortField = parseAsStringLiteral(["winRate", "matches", "name", "tier"] as const);
 const parseAsSortDirection = parseAsStringLiteral(["asc", "desc"] as const);
+/**
+ * Filter and sort choices re-render the table in a transition, so the tap paints first. The URL update is throttled,
+ * not debounced (the app default): nuqs keeps debounced values in a sync external store, which defeats the transition.
+ * Two lists changed by one tap also land in one history entry.
+ */
+const together = { limitUrlUpdates: throttle(50) };
 
 // Infer types from parsers
 type SortField = "winRate" | "matches" | "name" | "tier";
@@ -526,8 +542,10 @@ export function ItemStatsTable({
 
   const sort: SortState = useMemo(() => ({ field: sortField, direction: sortDirection }), [sortField, sortDirection]);
   const setSort = (newSort: SortState) => {
-    void setSortField(newSort.field);
-    void setSortDirection(newSort.direction);
+    startTransition(() => {
+      void setSortField(newSort.field, together);
+      void setSortDirection(newSort.direction, together);
+    });
   };
 
   const [itemTiers, setItemTiers] = useQueryState(
@@ -563,8 +581,10 @@ export function ItemStatsTable({
   );
   const setItemStates = (next: Map<number, TriState>) => {
     const ids = (state: TriState) => new Set([...next].filter(([, s]) => s === state).map(([id]) => id));
-    void setIncludeItems(ids("included"));
-    void setExcludeItems(ids("excluded"));
+    startTransition(() => {
+      void setIncludeItems(ids("included"), together);
+      void setExcludeItems(ids("excluded"), together);
+    });
   };
 
   // Functional updates keep both callbacks stable, so a click re-renders one memoized row instead of the whole table.
@@ -577,16 +597,26 @@ export function ItemStatsTable({
   const toggleInclude = useCallback(
     (id: number) => {
       lastToggled.current = id;
-      void setIncludeItems((prev) => toggled(prev, id));
-      void setExcludeItems((prev) => (prev.has(id) ? new Set([...prev].filter((other) => other !== id)) : prev));
+      startTransition(() => {
+        void setIncludeItems((prev) => toggled(prev, id), together);
+        void setExcludeItems(
+          (prev) => (prev.has(id) ? new Set([...prev].filter((other) => other !== id)) : prev),
+          together,
+        );
+      });
     },
     [setIncludeItems, setExcludeItems],
   );
   const toggleExclude = useCallback(
     (id: number) => {
       lastToggled.current = id;
-      void setExcludeItems((prev) => toggled(prev, id));
-      void setIncludeItems((prev) => (prev.has(id) ? new Set([...prev].filter((other) => other !== id)) : prev));
+      startTransition(() => {
+        void setExcludeItems((prev) => toggled(prev, id), together);
+        void setIncludeItems(
+          (prev) => (prev.has(id) ? new Set([...prev].filter((other) => other !== id)) : prev),
+          together,
+        );
+      });
     },
     [setIncludeItems, setExcludeItems],
   );
@@ -685,15 +715,25 @@ export function ItemStatsTable({
               size="sm"
               className="w-full sm:w-60"
             />
-            <ItemSlotSelector orientation="horizontal" value={itemSlots} onValueChange={setItemSlots} />
-            <ItemTierSelector orientation="horizontal" value={itemTiers} onValueChange={setItemTiers} />
+            <ItemSlotSelector
+              orientation="horizontal"
+              value={itemSlots}
+              onValueChange={(slots) => startTransition(() => void setItemSlots(slots, together))}
+            />
+            <ItemTierSelector
+              orientation="horizontal"
+              value={itemTiers}
+              onValueChange={(tiers) => startTransition(() => void setItemTiers(tiers, together))}
+            />
           </>
         )}
         <Field label="Purchases" orientation="horizontal">
           <Segmented
             width="hug"
             value={corruptedMode}
-            onValueChange={(mode) => void setCorruptedMode(mode === "exclude" ? null : mode)}
+            onValueChange={(mode) =>
+              startTransition(() => void setCorruptedMode(mode === "exclude" ? null : mode, together))
+            }
           >
             <SegmentedItem value="exclude">Normal</SegmentedItem>
             <SegmentedItem value="only">Corrupted</SegmentedItem>
