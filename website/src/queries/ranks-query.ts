@@ -21,11 +21,21 @@ function withResizedBadges(rank: Rank): Rank {
   return { ...rank, images };
 }
 
+/**
+ * Only the large badges (per tier and per subrank) are shown; the chalk, small and plain subrank variants are 24 of
+ * the 40 URLs per rank and would otherwise be dehydrated into every analytics, badge and heatmap page.
+ */
+function withLargeBadgesOnly(rank: Rank): Rank {
+  const images = Object.fromEntries(Object.entries(rank.images).filter(([key]) => key.startsWith("large")));
+  return { ...rank, images };
+}
+
 export const ranksQueryOptions = queryOptions({
   queryKey: queryKeys.assets.ranks(),
   queryFn: async () => {
     const response = await api.ranks_api.listRanks();
-    return import.meta.env.PROD ? response.data.map(withResizedBadges) : response.data;
+    const ranks = response.data.map(withLargeBadgesOnly);
+    return import.meta.env.PROD ? ranks.map(withResizedBadges) : ranks;
   },
   staleTime: CACHE_DURATIONS.FOREVER,
 });
