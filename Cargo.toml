@@ -8,7 +8,6 @@ members = [
     "tools/builds-fetcher",
     "tools/common",
     "tools/demo-analyzer",
-    "tools/friends-rank-fetcher",
     "tools/history-fetcher",
     "tools/hltv-scraper",
     "tools/ingest-worker",

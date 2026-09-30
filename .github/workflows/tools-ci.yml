@@ -49,7 +49,7 @@ jobs:
     with:
       working-directory: tools
       packages: >-
-        active-matches-scraper builds-fetcher common demo-analyzer friends-rank-fetcher
+        active-matches-scraper builds-fetcher common demo-analyzer
         history-fetcher hltv-scraper ingest-worker matchdata-downloader salt-scraper
         steam-profile-fetcher update-assets-tables
       clippy-args: --all-features
@@ -101,7 +101,6 @@ jobs:
           - steam-profile-fetcher
           - update-assets-tables
           - demo-analyzer
-          - friends-rank-fetcher
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Filter changed paths

@@ -3565,22 +3565,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "friends-rank-fetcher"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "clickhouse",
- "common",
- "metrics",
- "reqwest 0.13.5",
- "serde",
- "sqlx",
- "tokio",
- "tracing",
- "valveprotos",
-]
-
-[[package]]
 name = "fs4"
 version = "0.13.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"

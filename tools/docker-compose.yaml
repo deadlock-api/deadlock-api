@@ -90,15 +90,6 @@ services:
     restart: always
     env_file: .env
 
-  friends-rank-fetcher:
-    build:
-      context: ..
-      dockerfile: tools/Dockerfile
-      args:
-        EXE_NAME: friends-rank-fetcher
-    restart: always
-    env_file: .env
-
   hltv-spectator:
     build:
       context: ..
