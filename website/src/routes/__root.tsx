@@ -11,6 +11,7 @@ import { Component, type ErrorInfo, type ReactNode } from "react";
 import { ApiErrorFallback } from "~/components/app/ApiErrorFallback";
 import { AppSidebar, MobileMenuButton } from "~/components/app/AppSidebar";
 import { Breadcrumbs } from "~/components/app/Breadcrumbs";
+import { PendingNavigation } from "~/components/app/PendingNavigation";
 import { ThemeProvider } from "~/components/app/ThemeProvider";
 import { FeedbackWidget } from "~/components/features/annotate/FeedbackWidget";
 import { AppBody, AppFrame, PageBackdrop } from "~/components/patterns/page/AppFrame";
@@ -239,20 +240,22 @@ function RootComponent() {
                 <AppFrame>
                   <Stack gap={4} className="flex-1">
                     <Breadcrumbs />
-                    <Stack gap={0} className="flex-1">
-                      <QueryErrorResetBoundary>
-                        {({ reset }) => (
-                          <QueryErrorBoundary
-                            onReset={reset}
-                            fallbackRender={({ resetErrorBoundary }) => (
-                              <ApiErrorFallback resetErrorBoundary={resetErrorBoundary} />
-                            )}
-                          >
-                            <Outlet />
-                          </QueryErrorBoundary>
-                        )}
-                      </QueryErrorResetBoundary>
-                    </Stack>
+                    <PendingNavigation className="flex flex-1 flex-col">
+                      <Stack gap={0} className="flex-1">
+                        <QueryErrorResetBoundary>
+                          {({ reset }) => (
+                            <QueryErrorBoundary
+                              onReset={reset}
+                              fallbackRender={({ resetErrorBoundary }) => (
+                                <ApiErrorFallback resetErrorBoundary={resetErrorBoundary} />
+                              )}
+                            >
+                              <Outlet />
+                            </QueryErrorBoundary>
+                          )}
+                        </QueryErrorResetBoundary>
+                      </Stack>
+                    </PendingNavigation>
                   </Stack>
                 </AppFrame>
               </main>

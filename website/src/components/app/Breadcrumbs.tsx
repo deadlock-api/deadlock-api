@@ -58,9 +58,12 @@ function buildBreadcrumbs(pathname: string, labelsByPath: Map<string, string>): 
 const REDIRECTING_SECTIONS = new Set(["/analytics", "/community"]);
 
 export function Breadcrumbs() {
-  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  // The trail describes the page on screen: during a navigation that is still the one being left (its loader labels
+  // are the ones in `useMatches` too), so the trail changes together with the page.
+  const location = useRouterState({ select: (s) => s.resolvedLocation ?? s.location });
+  const pathname = location.pathname;
   // Archive puzzles carry ?date=; the hub crumb keeps it so players land back on the day they were replaying.
-  const puzzleDate = useRouterState({ select: (s) => (s.location.search as { date?: string }).date });
+  const puzzleDate = (location.search as { date?: string }).date;
   // Routes with dynamic segments return a `breadcrumb` label from their loader.
   const labelsByPath = useMatches({
     select: (matches) => {
