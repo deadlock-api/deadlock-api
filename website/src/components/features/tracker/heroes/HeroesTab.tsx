@@ -17,6 +17,7 @@ import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { QueryRenderer } from "~/components/patterns/states/QueryRenderer";
 import { Button } from "~/components/ui/button";
+import { NoValue } from "~/components/ui/no-value";
 import { ProgressBar } from "~/components/ui/progress-bar";
 import { SwitchField } from "~/components/ui/switch-field";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
@@ -32,6 +33,10 @@ import { HeroComparison } from "./HeroComparison";
 
 const FORM_LENGTH = 10;
 
+/** Player hero stats count buff pickups only for matches played since the update that added the timings. */
+const BUFF_COUNTS_NOTE =
+  "Buff pickups are counted for matches since the City Never Sleeps update (September 29, 2026).";
+
 interface HeroAverage {
   winrate: number;
   kda: number;
@@ -41,7 +46,7 @@ interface HeroAverage {
 const COLUMNS: {
   key: HeroSortKey;
   label: string;
-  format: (row: HeroRow, fromNow: (unix: number) => string) => string;
+  format: (row: HeroRow, fromNow: (unix: number) => string) => React.ReactNode;
   className?: string;
 }[] = [
   { key: "matches", label: "Matches", format: (row) => row.matches.toLocaleString("en-US") },
@@ -67,6 +72,12 @@ const COLUMNS: {
     label: "LH/min",
     format: (row) => row.lastHitsPerMin.toFixed(1),
     className: "hidden @2xl:table-cell",
+  },
+  {
+    key: "buffsPerMin",
+    label: "Buffs/min",
+    format: (row) => (row.buffsPerMin == null ? <NoValue label={BUFF_COUNTS_NOTE} /> : row.buffsPerMin.toFixed(2)),
+    className: "hidden @3xl:table-cell",
   },
   { key: "recentWinrate", label: "Form", format: () => "", className: "hidden @lg:table-cell" },
   {

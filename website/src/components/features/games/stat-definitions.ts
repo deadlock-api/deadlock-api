@@ -1,6 +1,7 @@
 import type { AnalyticsGameStats } from "deadlock_api_client";
-import { Activity, Coins, Flame, HeartPulse, type LucideIcon, Shield, Swords, Wheat } from "lucide-react";
+import { Activity, Coins, Flame, HeartPulse, type LucideIcon, Shield, Sparkles, Swords, Wheat } from "lucide-react";
 
+import { BUFF_TIMINGS_SINCE } from "~/lib/buffs";
 import type { StatFormat } from "~/lib/stat-format";
 
 export { formatAxisTick, formatStatValue, type StatFormat, valueSpan } from "~/lib/stat-format";
@@ -14,11 +15,18 @@ export interface StatDefinition {
    * how games are played (an average of kills rises with the deaths it causes), so they default to neutral.
    */
   polarity?: "higher-is-better" | "lower-is-better" | "neutral";
+  /**
+   * Unix time the game started recording the stat. Earlier matches have no value (`null`), which is shown as missing
+   * rather than as a zero.
+   */
+  recordedSince?: number;
 }
 
 export interface StatCategory {
   label: string;
   stats: StatDefinition[];
+  /** A line under the category's title: what its numbers cover. */
+  note?: string;
 }
 
 export const GAME_STAT_CATEGORIES: StatCategory[] = [
@@ -81,6 +89,20 @@ export const GAME_STAT_CATEGORIES: StatCategory[] = [
     ],
   },
   {
+    label: "Permanent Buffs",
+    note: "Pickup times since the September 29, 2026 update",
+    stats: [
+      { key: "avg_permanent_buffs", label: "Avg Buff Pickups", format: "decimal1" },
+      { key: "avg_permanent_buffs_per_min", label: "Avg Buff Pickups / Min", format: "decimal2" },
+      {
+        key: "avg_first_permanent_buff_time_s",
+        label: "Avg First Buff Pickup",
+        format: "duration",
+        recordedSince: BUFF_TIMINGS_SINCE,
+      },
+    ],
+  },
+  {
     label: "Character Stats",
     stats: [
       { key: "avg_max_health", label: "Avg Max Health", format: "integer" },
@@ -113,6 +135,7 @@ export const CATEGORY_ICONS: Record<string, LucideIcon> = {
   Damage: Flame,
   "Healing & Mitigation": HeartPulse,
   Farming: Wheat,
+  "Permanent Buffs": Sparkles,
   "Character Stats": Shield,
   Economy: Coins,
 };

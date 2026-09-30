@@ -1,6 +1,7 @@
 import type {
   AnalyticsApiAbilityOrderStatsRequest,
   AnalyticsApiBadgeDistributionRequest,
+  AnalyticsApiBuffStatsRequest,
   AnalyticsApiGameStatsRequest,
   AnalyticsApiHeroBanStatsRequest,
   AnalyticsApiHeroCombStatsRequest,
@@ -33,6 +34,7 @@ export const queryKeys = {
     hero: (heroId: number) => ["assets-hero", heroId] as const,
     item: (itemId: number) => ["assets-item", itemId] as const,
     rankedSeasons: () => ["assets-ranked-seasons"] as const,
+    miscEntities: () => ["assets-misc-entities"] as const,
   },
   leaderboard: {
     data: (region: string, heroId?: number | null) => ["api-leaderboard-data", region, heroId] as const,
@@ -57,6 +59,7 @@ export const queryKeys = {
     heroStatsByDuration: (params: AnalyticsApiHeroStatsRequest) => ["api-hero-stats-by-duration", params] as const,
     heroStatsByExperience: (params: AnalyticsApiHeroStatsRequest) => ["api-hero-stats-by-experience", params] as const,
     gameStats: (params: AnalyticsApiGameStatsRequest) => ["api-game-stats", params] as const,
+    buffStats: (params: AnalyticsApiBuffStatsRequest) => ["api-buff-stats", params] as const,
     playerPerformanceCurve: (params: AnalyticsApiPlayerPerformanceCurveRequest) =>
       ["api-player-performance-curve", params] as const,
     playerScoreboard: (params: AnalyticsApiPlayerScoreboardRequest) => ["api-player-scoreboard", params] as const,

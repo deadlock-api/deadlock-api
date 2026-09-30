@@ -60,6 +60,8 @@ export const SORT_CATEGORIES: SortCategory[] = [
   { label: "Creep Kills", key: "creep_kills", variants: ALL_VARIANTS },
   { label: "Neutral Kills", key: "neutral_kills", variants: ALL_VARIANTS },
   { label: "Max Health", key: "max_health", variants: ALL_VARIANTS },
+  // Golden statue pickups. The player scoreboard needs a start date for them, which it always sends.
+  { label: "Permanent Buffs", key: "permanent_buffs", variants: ALL_VARIANTS },
   { label: "Shots Hit", key: "shots_hit", variants: ALL_VARIANTS },
   { label: "Shots Missed", key: "shots_missed", variants: ALL_VARIANTS },
   { label: "Hero Bullets Hit", key: "hero_bullets_hit", variants: ALL_VARIANTS },

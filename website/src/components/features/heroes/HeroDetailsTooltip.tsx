@@ -1,10 +1,13 @@
 import { Info } from "lucide-react";
 
 import { Button } from "~/components/ui/button";
+import { NoValue } from "~/components/ui/no-value";
 import { Popover, PopoverContent, PopoverTrigger } from "~/components/ui/popover";
 import { Separator } from "~/components/ui/separator";
 import { Stack } from "~/components/ui/stack";
 import { TooltipStat, TooltipStats } from "~/components/ui/tooltip";
+import { BUFF_TIMINGS_NOTE } from "~/lib/buffs";
+import { formatStatValue } from "~/lib/stat-format";
 
 interface HeroDetailsRow {
   hero_id: number;
@@ -25,6 +28,10 @@ interface HeroDetailsRow {
   total_shots_hit: number;
   total_shots_missed: number;
   total_max_health: number;
+  total_permanent_buffs: number;
+  permanent_buff_matches: number;
+  total_first_permanent_buff_time_s: number;
+  permanent_buff_timing_matches: number;
 }
 
 function DetailGroup({ title, children }: { title: string; children: React.ReactNode }) {
@@ -64,6 +71,12 @@ export function HeroDetailsTooltip({
   const totalShots = row.total_shots_hit + row.total_shots_missed;
   const accuracy = totalShots > 0 ? (row.total_shots_hit / totalShots) * 100 : 0;
   const mult = pickrateMultiplier ?? 1;
+  const avgBuffs = row.permanent_buff_matches > 0 ? row.total_permanent_buffs / row.permanent_buff_matches : undefined;
+  // Pickup times exist only for matches since the City Never Sleeps update: older ranges have none, not a zero.
+  const avgFirstBuff =
+    row.permanent_buff_timing_matches > 0
+      ? row.total_first_permanent_buff_time_s / row.permanent_buff_timing_matches
+      : undefined;
 
   return (
     <Popover>
@@ -114,6 +127,20 @@ export function HeroDetailsTooltip({
             <TooltipStat label="Boss Damage" value={Math.round(avgBossDmg).toLocaleString("en-US")} />
             <TooltipStat label="Creep Damage" value={Math.round(avgCreepDmg).toLocaleString("en-US")} />
             <TooltipStat label="Neutral Damage" value={Math.round(avgNeutralDmg).toLocaleString("en-US")} />
+          </DetailGroup>
+          <Separator />
+          <DetailGroup title="Permanent Buffs">
+            <TooltipStat label="Pickups per Match" value={formatStatValue(avgBuffs, "decimal1")} />
+            <TooltipStat
+              label="First Pickup"
+              value={
+                avgFirstBuff !== undefined ? (
+                  formatStatValue(avgFirstBuff, "duration")
+                ) : (
+                  <NoValue label={BUFF_TIMINGS_NOTE} />
+                )
+              }
+            />
           </DetailGroup>
           <Separator />
           <DetailGroup title="Shooting">

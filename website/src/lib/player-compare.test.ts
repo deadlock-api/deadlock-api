@@ -54,6 +54,8 @@ function row(overrides: Partial<HeroStats>): HeroStats {
     total_neutral_damage: 0,
     total_player_damage: 0,
     total_player_damage_taken: 0,
+    permanent_buff_matches: 0,
+    permanent_buffs: 0,
     ...overrides,
   };
 }

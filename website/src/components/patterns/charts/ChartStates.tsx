@@ -46,10 +46,20 @@ export function ChartError({ label, onRetry, retrying = false, className, ...pro
   );
 }
 
-export function ChartEmpty({ label, className, ...props }: ChartStateProps) {
+interface ChartEmptyProps extends ChartStateProps {
+  /** Why there is nothing, or what to try. Say so when the data only begins at some date. */
+  description?: React.ReactNode;
+}
+
+export function ChartEmpty({
+  label,
+  description = "Try a wider date range or fewer filters.",
+  className,
+  ...props
+}: ChartEmptyProps) {
   return (
     <div data-slot="chart-empty" className={cn(stateRoot, className)} {...props}>
-      <EmptyState title={`No ${label} for these filters`} description="Try a wider date range or fewer filters." />
+      <EmptyState title={`No ${label} for these filters`} description={description} />
     </div>
   );
 }

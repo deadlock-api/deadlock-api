@@ -296,6 +296,7 @@ export function Charts() {
         <Variants className="grid items-start md:grid-cols-2">
           <ChartError label="hero trends" onRetry={() => {}} retrying={false} />
           <ChartEmpty label="hero trends" />
+          <ChartEmpty label="buff pickup times" description="Pickup times are recorded since the September update." />
         </Variants>
       </Specimen>
 

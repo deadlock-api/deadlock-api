@@ -3,6 +3,7 @@ import type { Ability, Hero, Upgrade } from "deadlock_api_client";
 
 import { CACHE_DURATIONS } from "~/constants/cache";
 import { api } from "~/lib/api";
+import { buffInfoByType } from "~/lib/buffs";
 import { prefetchSafe } from "~/lib/prefetch-safe";
 import { type SeasonInfo, toSeasons } from "~/lib/seasons";
 
@@ -91,6 +92,29 @@ export const abilitiesQueryOptions = queryOptions({
     });
     return response.data as Ability[];
   },
+  staleTime: CACHE_DURATIONS.FOREVER,
+});
+
+/**
+ * Pickup entities (power-ups, permanent buffs) by class name, for the names, units and graph colors of the buff
+ * analytics. Everything else the misc entities carry (spawners, shop triggers) is dropped.
+ */
+export const buffInfoQueryOptions = queryOptions({
+  queryKey: queryKeys.assets.miscEntities(),
+  queryFn: async () => {
+    const response = await api.misc_entities_api.listMiscEntities();
+    // Plain data in the cache (it may be dehydrated into the page); the lookup map is built in `select`.
+    return response.data
+      .filter((entity) => entity.name || entity.buff_type_name)
+      .map(({ class_name, name, buff_type_name, buff_type_value_unit, buff_type_graph_color }) => ({
+        class_name,
+        name,
+        buff_type_name,
+        buff_type_value_unit,
+        buff_type_graph_color,
+      }));
+  },
+  select: buffInfoByType,
   staleTime: CACHE_DURATIONS.FOREVER,
 });
 

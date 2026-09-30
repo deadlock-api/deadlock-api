@@ -11,9 +11,11 @@ import { StaleOverlay } from "~/components/patterns/states/StaleOverlay";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { Delta } from "~/components/ui/delta";
+import { NoValue } from "~/components/ui/no-value";
 import { Inline } from "~/components/ui/stack";
 import { Text } from "~/components/ui/text";
 import { Tooltip } from "~/components/ui/tooltip";
+import { BUFF_TIMINGS_NOTE } from "~/lib/buffs";
 import { cn } from "~/lib/utils";
 import { gameStatsQueryOptions } from "~/queries/games-query";
 
@@ -118,7 +120,12 @@ export default function GamesOverview({ params, prevParams, onStatClick, isStree
 
         return (
           <Panel key={category.label} className={cn("@container", isWide && "lg:col-span-2")}>
-            <PanelHeader title={category.label} icon={Icon} size="sm" />
+            <PanelHeader
+              title={category.label}
+              icon={Icon}
+              size="sm"
+              description={category.stats.some((stat) => stat.recordedSince) ? category.note : undefined}
+            />
 
             <div className={cn(isWide && "@2xl:grid @2xl:grid-cols-2")}>
               {stats.map((stat) => {
@@ -128,7 +135,7 @@ export default function GamesOverview({ params, prevParams, onStatClick, isStree
                 // A rate changes in points (2% to 3% is +1.0 pp); a relative change of it (+50%) read as the new rate.
                 const inPoints = stat.format === "percent";
                 const delta =
-                  prevValue == null
+                  prevValue == null || value == null
                     ? null
                     : inPoints
                       ? Math.round((value - prevValue) * 1000) / 1000
@@ -163,7 +170,12 @@ export default function GamesOverview({ params, prevParams, onStatClick, isStree
                         <span className="text-start text-sm text-muted-foreground">{stat.label}</span>
                         <div className="flex items-center gap-2.5">
                           <span className="text-sm font-semibold tabular-nums">
-                            {formatStatValue(value, stat.format)}
+                            {/* A stat the game only records since an update has no value over older matches. */}
+                            {value == null && stat.recordedSince ? (
+                              <NoValue label={BUFF_TIMINGS_NOTE} />
+                            ) : (
+                              formatStatValue(value, stat.format)
+                            )}
                           </span>
                           {delta != null && (
                             <Delta

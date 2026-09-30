@@ -13,6 +13,11 @@ export interface HeroRow {
   soulsPerMin: number;
   dmgPerMin: number;
   lastHitsPerMin: number;
+  /**
+   * Permanent buff pickups per minute, or null without matches that count them: player hero stats only have buff
+   * counts for matches since the City Never Sleeps update (build 6712).
+   */
+  buffsPerMin: number | null;
   /** Win rate over the available recent history, or null when no recent results are available. */
   recentWinrate: number | null;
   lastPlayed: number;
@@ -31,6 +36,7 @@ export function toHeroRow(stats: HeroStats, form: FormResult[] | undefined): Her
     soulsPerMin: stats.networth_per_min,
     dmgPerMin: stats.damage_per_min,
     lastHitsPerMin: stats.last_hits_per_min,
+    buffsPerMin: stats.permanent_buff_matches > 0 ? (stats.permanent_buffs_per_min ?? null) : null,
     recentWinrate: form?.length ? form.filter((result) => result === "win").length / form.length : null,
     lastPlayed: stats.last_played,
   };

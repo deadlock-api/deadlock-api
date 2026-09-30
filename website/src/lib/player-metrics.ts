@@ -2,7 +2,7 @@ import { formatStatValue, type StatFormat } from "~/lib/stat-format";
 
 export type PlayerMetricFormat = StatFormat;
 
-export type PlayerMetricCategory = "Combat" | "Farming" | "Economy" | "Damage" | "Healing";
+export type PlayerMetricCategory = "Combat" | "Farming" | "Economy" | "Damage" | "Healing" | "Permanent Buffs";
 
 export interface PlayerMetricDefinition {
   key: string;
@@ -11,7 +11,14 @@ export interface PlayerMetricDefinition {
   category: PlayerMetricCategory;
 }
 
-export const PLAYER_METRIC_CATEGORIES: PlayerMetricCategory[] = ["Combat", "Farming", "Economy", "Damage", "Healing"];
+export const PLAYER_METRIC_CATEGORIES: PlayerMetricCategory[] = [
+  "Combat",
+  "Farming",
+  "Economy",
+  "Damage",
+  "Healing",
+  "Permanent Buffs",
+];
 
 export const PLAYER_METRICS: PlayerMetricDefinition[] = [
   { key: "kills", label: "Kills", format: "decimal1", category: "Combat" },
@@ -43,6 +50,17 @@ export const PLAYER_METRICS: PlayerMetricDefinition[] = [
   { key: "teammate_healing", label: "Teammate Healing", format: "integer", category: "Healing" },
   { key: "teammate_barriering", label: "Teammate Barriering", format: "integer", category: "Healing" },
   { key: "heal_prevented", label: "Heal Prevented", format: "integer", category: "Healing" },
+];
+
+/**
+ * Golden statue pickups. The API returns them only with `include_buff_metrics`, which costs about twice as much on a
+ * hero filter, so they stay out of `PLAYER_METRICS` and are fetched only where they are shown. The first pickup time
+ * only covers matches since the City Never Sleeps update (`BUFF_TIMINGS_SINCE`); over older ranges it is `null`.
+ */
+export const PLAYER_BUFF_METRICS: PlayerMetricDefinition[] = [
+  { key: "permanent_buffs", label: "Buff Pickups", format: "decimal1", category: "Permanent Buffs" },
+  { key: "permanent_buffs_per_min", label: "Buff Pickups / Min", format: "decimal2", category: "Permanent Buffs" },
+  { key: "first_permanent_buff_time_s", label: "First Buff Pickup", format: "duration", category: "Permanent Buffs" },
 ];
 
 /** A player metric in its format; the same formats, and output, as every other stat on the site. */

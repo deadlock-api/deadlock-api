@@ -47,6 +47,10 @@ function heroRow(id: number): AnalyticsHeroStats {
     total_player_damage_taken: 0,
     total_shots_hit: 0,
     total_shots_missed: 0,
+    permanent_buff_matches: matches,
+    permanent_buff_timing_matches: 0,
+    total_first_permanent_buff_time_s: 0,
+    total_permanent_buffs: 0,
   };
 }
 

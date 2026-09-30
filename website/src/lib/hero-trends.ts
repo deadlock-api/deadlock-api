@@ -15,6 +15,7 @@ export const HERO_TREND_LABELS: Record<HeroTrendStat, string> = {
   net_worth_per_match: "Net worth per match",
   last_hits_per_match: "Last hits per match",
   denies_per_match: "Denies per match",
+  permanent_buffs_per_match: "Buff pickups per match",
   ban_rate: "Ban rate",
 };
 

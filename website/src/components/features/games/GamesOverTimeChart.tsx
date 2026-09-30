@@ -16,6 +16,7 @@ import { Field } from "~/components/ui/field";
 import { SegmentedItem } from "~/components/ui/segmented";
 import { SelectGroup, SelectItem, SelectLabel } from "~/components/ui/select";
 import { day } from "~/dayjs";
+import { BUFF_TIMINGS_NOTE } from "~/lib/buffs";
 import { wholeTimeBuckets } from "~/lib/time-buckets";
 import { gameStatsQueryOptions } from "~/queries/games-query";
 
@@ -63,7 +64,7 @@ export default function GamesOverTimeChart({
       .sort((a, b) => a.bucket - b.bucket)
       .map((entry) => ({
         date: day.unix(entry.bucket).valueOf(),
-        value: entry[stat as keyof typeof entry],
+        value: entry[stat as keyof typeof entry] ?? null,
         matches: entry.total_matches,
       }));
   }, [data, stat, timeBucket, params]);
@@ -103,8 +104,8 @@ export default function GamesOverTimeChart({
           <ChartLoading label="game trends" />
         ) : isError ? (
           <ChartError label="game trends" retrying={isFetching} onRetry={() => void refetch()} />
-        ) : chartData.length === 0 ? (
-          <ChartEmpty label="game trends" />
+        ) : chartData.every((entry) => entry.value == null) ? (
+          <ChartEmpty label="game trends" description={statDef?.recordedSince ? BUFF_TIMINGS_NOTE : undefined} />
         ) : (
           <ChartCard
             title={`${statDef?.label ?? stat} over time`}

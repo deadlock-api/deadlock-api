@@ -23,6 +23,7 @@ const METRIC_GROUPS = [
       "denies_per_match",
     ],
   },
+  { label: "Permanent buffs", stats: ["permanent_buffs_per_match"] },
 ] as const;
 
 const intervals = TIME_INTERVALS.map((interval) => ({ value: interval.query, label: interval.label }));

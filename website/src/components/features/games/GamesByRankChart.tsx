@@ -9,6 +9,7 @@ import { ChartLoading, ChartError, ChartEmpty } from "~/components/patterns/char
 import { ChartSurface } from "~/components/patterns/charts/ChartSurface";
 import { CHART_GRID, CHART_X_AXIS, CHART_Y_AXIS, CHART_Y_LABEL } from "~/components/patterns/charts/theme";
 import { TooltipCard, TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
+import { BUFF_TIMINGS_NOTE } from "~/lib/buffs";
 import { extractBadgeMap } from "~/lib/leaderboard";
 import { gameStatsQueryOptions } from "~/queries/games-query";
 import { ranksQueryOptions } from "~/queries/ranks-query";
@@ -80,7 +81,7 @@ export default function GamesByRankChart({ params, stat, onStatChange, isStreetB
         badge: entry.bucket,
         tier,
         label: rank ? `${rank.name} ${subtier}` : `${entry.bucket}`,
-        value: entry[stat as keyof typeof entry],
+        value: entry[stat as keyof typeof entry] ?? null,
         fill: rank?.color ?? "var(--color-accent)",
       });
 
@@ -119,8 +120,8 @@ export default function GamesByRankChart({ params, stat, onStatChange, isStreetB
           <ChartLoading label="game rank data" />
         ) : isError ? (
           <ChartError label="game rank data" retrying={isFetching} onRetry={() => void refetch()} />
-        ) : chartData.length === 0 ? (
-          <ChartEmpty label="game rank data" />
+        ) : chartData.every((entry) => entry.value == null) ? (
+          <ChartEmpty label="game rank data" description={statDef?.recordedSince ? BUFF_TIMINGS_NOTE : undefined} />
         ) : (
           <ChartSurface label={`${statDef?.label ?? stat} by rank chart`}>
             <BarChart data={chartData} margin={{ top: 16, right: 20, bottom: 12, left: 0 }}>

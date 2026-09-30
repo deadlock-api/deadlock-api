@@ -22,6 +22,7 @@ import { getEffectiveRankRange } from "~/lib/game-mode";
 const GamesOverTimeChart = lazy(() => import("~/components/features/games/GamesOverTimeChart"));
 const GamesByRankChart = lazy(() => import("~/components/features/games/GamesByRankChart"));
 const EconomyTab = lazy(() => import("~/components/features/games/EconomyTab"));
+const BuffsTab = lazy(() => import("~/components/features/games/BuffsTab"));
 
 export function Games() {
   const [tab, setTab] = useAnalyticsTab("games");
@@ -119,6 +120,7 @@ export function Games() {
           <ResponsiveTab value="over-time">Over Time</ResponsiveTab>
           <ResponsiveTab value="by-rank">By Rank</ResponsiveTab>
           <ResponsiveTab value="economy">Economy</ResponsiveTab>
+          <ResponsiveTab value="buffs">Buffs</ResponsiveTab>
         </ResponsiveTabsList>
 
         <TabsContent value="overview">
@@ -174,6 +176,16 @@ export function Games() {
             <ChunkErrorBoundary>
               <Suspense fallback={<LoadingState />}>
                 <EconomyTab params={baseParams} isStreetBrawl={isStreetBrawl} />
+              </Suspense>
+            </ChunkErrorBoundary>
+          </Section>
+        </TabsContent>
+
+        <TabsContent value="buffs">
+          <Section titleDisplay="hidden" title="Permanent Buffs">
+            <ChunkErrorBoundary>
+              <Suspense fallback={<LoadingState />}>
+                <BuffsTab params={baseParams} />
               </Suspense>
             </ChunkErrorBoundary>
           </Section>

@@ -276,7 +276,7 @@ export function demoHeroStats(history: readonly PlayerMatchHistoryEntry[], filte
     const damagePerMin = netWorthPerMin * between(rng, 0.65, 0.9);
     const damageTakenPerMin = netWorthPerMin * between(rng, 0.6, 0.85);
     const objDamagePerMin = netWorthPerMin * between(rng, 0.12, 0.25);
-    return {
+    const row: HeroStats = {
       account_id: DEMO_ACCOUNT_ID,
       hero_id: heroId,
       matches: entries.map((entry) => entry.match_id),
@@ -312,7 +312,16 @@ export function demoHeroStats(history: readonly PlayerMatchHistoryEntry[], filte
       total_neutral_damage: damagePerMin * minutes * between(rng, 0.2, 0.4),
       mvp_rank_counts: [],
       mvp_rated_matches: 0,
+      // Every demo match counts buff pickups, as if all were played after the City Never Sleeps update.
+      permanent_buff_matches: entries.length,
+      permanent_buffs: 0,
     };
+    // Drawn after the other figures, so those keep the values they had before buffs were tracked.
+    const buffsPerMin = between(rng, 0.55, 0.85);
+    row.permanent_buffs_per_min = buffsPerMin;
+    row.permanent_buffs = Math.round(buffsPerMin * minutes);
+    row.avg_first_permanent_buff_time_s = between(rng, 300, 480);
+    return row;
   });
 }
 

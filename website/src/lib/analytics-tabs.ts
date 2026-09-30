@@ -19,7 +19,7 @@ export const ANALYTICS_TABS = {
     "build-flow": "build-flow",
     "item-combos": "combos",
   },
-  games: { overview: "", "over-time": "over-time", "by-rank": "by-rank", economy: "economy" },
+  games: { overview: "", "over-time": "over-time", "by-rank": "by-rank", economy: "economy", buffs: "buffs" },
   players: { scoreboard: "", "stats-metrics": "stats-metrics", compare: "compare" },
 } as const;
 
@@ -196,6 +196,13 @@ export const ANALYTICS_VIEWS: { [S in AnalyticsSection]: Record<AnalyticsTab<S>,
       summary: "Where souls come from and how net worth grows.",
       description:
         "Where Deadlock souls come from, how the sources shift by rank, and how net worth grows over a match.",
+    },
+    buffs: {
+      title: "Deadlock Permanent Buffs & Statue Pickups",
+      heading: "Deadlock Permanent Buffs",
+      summary: "How often players pick up each golden statue buff, and when.",
+      description:
+        "Deadlock golden statue buffs: pickups per match for every stat and level, and when players grab them.",
     },
   },
   players: {

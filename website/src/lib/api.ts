@@ -7,6 +7,7 @@ import {
   LeaderboardApi,
   MatchesApi,
   MapApi,
+  MiscEntitiesApi,
   NPCUnitsApi,
   PlayersApi,
   RankedSeasonsApi,
@@ -37,6 +38,7 @@ export class Api {
   public ranked_seasons_api: RankedSeasonsApi;
   public npc_units_api: NPCUnitsApi;
   public map_api: MapApi;
+  public misc_entities_api: MiscEntitiesApi;
   public assets_bucket_api: AssetsBucketApi;
   public client: AxiosInstance;
 
@@ -54,6 +56,7 @@ export class Api {
     this.ranked_seasons_api = new RankedSeasonsApi(undefined, API_ORIGIN, axios_client);
     this.npc_units_api = new NPCUnitsApi(undefined, API_ORIGIN, axios_client);
     this.map_api = new MapApi(undefined, API_ORIGIN, axios_client);
+    this.misc_entities_api = new MiscEntitiesApi(undefined, API_ORIGIN, axios_client);
     this.assets_bucket_api = new AssetsBucketApi(undefined, API_ORIGIN, axios_client);
   }
 }

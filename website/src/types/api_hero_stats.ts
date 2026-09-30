@@ -11,6 +11,7 @@ export const HERO_STATS = [
   "net_worth_per_match",
   "last_hits_per_match",
   "denies_per_match",
+  "permanent_buffs_per_match",
 ] as const;
 
 export const HERO_STATS_WITH_BAN_RATE = [...HERO_STATS, "ban_rate"] as const;
@@ -37,6 +38,11 @@ export function hero_stats_transform(heroStats: AnalyticsHeroStats, heroStat: (t
       return heroStats.total_last_hits / heroStats.matches;
     case "denies_per_match":
       return heroStats.total_denies / heroStats.matches;
+    case "permanent_buffs_per_match":
+      // Over the matches that carry buff counts, which account-scoped requests only have since build 6712.
+      return heroStats.permanent_buff_matches > 0
+        ? heroStats.total_permanent_buffs / heroStats.permanent_buff_matches
+        : Number.NaN;
   }
 }
 

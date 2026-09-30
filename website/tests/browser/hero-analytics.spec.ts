@@ -21,10 +21,13 @@ const totals = {
   total_neutral_damage: 1000,
   total_shots_hit: 500,
   total_shots_missed: 100,
+  total_permanent_buffs: 2500,
+  permanent_buff_timing_matches: 0,
+  total_first_permanent_buff_time_s: 0,
 };
 const stats: AnalyticsHeroStats[] = [
-  { ...totals, hero_id: 11, matches: 100, wins: 60, losses: 40 },
-  { ...totals, hero_id: 1, matches: 200, wins: 90, losses: 110 },
+  { ...totals, hero_id: 11, matches: 100, permanent_buff_matches: 100, wins: 60, losses: 40 },
+  { ...totals, hero_id: 1, matches: 200, permanent_buff_matches: 200, wins: 90, losses: 110 },
 ];
 const trendStart = Math.floor(Date.now() / 86_400_000) * 86_400 - 3 * 86_400;
 const trendStats = stats.flatMap((row) => [

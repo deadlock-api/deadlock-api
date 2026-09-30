@@ -155,6 +155,8 @@ interface AggregatedTier {
   total_net_worth: number;
   total_last_hits: number;
   total_denies: number;
+  total_permanent_buffs: number;
+  permanent_buff_matches: number;
 }
 
 function newAggregatedTier(): AggregatedTier {
@@ -170,6 +172,8 @@ function newAggregatedTier(): AggregatedTier {
     total_net_worth: 0,
     total_last_hits: 0,
     total_denies: 0,
+    total_permanent_buffs: 0,
+    permanent_buff_matches: 0,
   };
 }
 
@@ -184,6 +188,8 @@ function addToAggregatedTier(agg: AggregatedTier, entry: AnalyticsHeroStats): vo
   agg.total_net_worth += entry.total_net_worth;
   agg.total_last_hits += entry.total_last_hits;
   agg.total_denies += entry.total_denies;
+  agg.total_permanent_buffs += entry.total_permanent_buffs;
+  agg.permanent_buff_matches += entry.permanent_buff_matches;
 }
 
 export function HeroStatsByRankChart({

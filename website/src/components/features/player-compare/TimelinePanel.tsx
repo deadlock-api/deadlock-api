@@ -20,6 +20,7 @@ import { Panel, PanelBody, PanelHeader } from "~/components/patterns/panel/Panel
 import { NoValue } from "~/components/ui/no-value";
 import { Segmented, SegmentedItem } from "~/components/ui/segmented";
 import { Stack } from "~/components/ui/stack";
+import { BUFF_TIMINGS_NOTE } from "~/lib/buffs";
 import { formatCompactAxisTick, niceTicks } from "~/lib/chart-axis";
 import { formatStatValue } from "~/lib/stat-format";
 import { type CompareFilters } from "~/queries/player-compare-queries";
@@ -37,6 +38,8 @@ const METRICS = {
   souls: { label: "Souls", key: "net_worth_avg", digits: 0 },
   kills: { label: "Kills", key: "kills_avg", digits: 1 },
   deaths: { label: "Deaths", key: "deaths_avg", digits: 1 },
+  // Permanent buff pickups so far. Only matches since the City Never Sleeps update record when they happen.
+  buffs: { label: "Buffs", key: "permanent_buffs_avg", digits: 1 },
 } as const satisfies Record<string, { label: string; key: keyof PlayerPerformanceCurvePoint; digits: number }>;
 type TimelineMetric = keyof typeof METRICS;
 
@@ -114,7 +117,7 @@ export function TimelinePanel({
   }
   const valueAt = (points: PlayerPerformanceCurvePoint[] | undefined, time: number) => {
     const point = points?.find((entry) => entry.game_time === time);
-    return point ? point[selected.key] : null;
+    return point?.[selected.key] ?? null;
   };
   const rows: Row[] = [...times]
     .sort((a, b) => a - b)
@@ -167,8 +170,12 @@ export function TimelinePanel({
             />
           ) : pending ? (
             <ChartLoading label={LABEL} size="grow" />
-          ) : rows.length === 0 ? (
-            <ChartEmpty label={LABEL} className="min-h-32 flex-1" />
+          ) : rows.every((row) => keys.every((key) => row.value[key] == null)) ? (
+            <ChartEmpty
+              label={LABEL}
+              description={metric === "buffs" ? BUFF_TIMINGS_NOTE : undefined}
+              className="min-h-32 flex-1"
+            />
           ) : (
             <ChartSurface label={summary} announce="label" size="grow" variant="flush">
               <LineChart data={rows} margin={CHART_MARGIN} accessibilityLayer={false}>

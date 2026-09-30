@@ -18,6 +18,7 @@ function row(heroId: number, recentWinrate: number | null, matches = 10): HeroRo
     soulsPerMin: 1000,
     dmgPerMin: 500,
     lastHitsPerMin: 3,
+    buffsPerMin: null,
     lastPlayed: 1000,
   };
 }
@@ -77,4 +78,16 @@ test("absent and empty recent history are missing form, while all losses remain 
   assert.equal(toHeroRow(stats, ["win"]).recentWinrate, 1);
   assert.equal(toHeroRow(stats, []).winrate, 0);
   assert.equal(toHeroRow(stats, []).kda, 0);
+});
+
+test("buffs per minute are missing without matches that count buff pickups", () => {
+  const stats = {
+    hero_id: 1,
+    matches_played: 5,
+    permanent_buff_matches: 0,
+    permanent_buffs_per_min: null,
+  } as HeroStats;
+  assert.equal(toHeroRow(stats, undefined).buffsPerMin, null);
+  const counted = { ...stats, permanent_buff_matches: 2, permanent_buffs: 40, permanent_buffs_per_min: 0.7 };
+  assert.equal(toHeroRow(counted, undefined).buffsPerMin, 0.7);
 });
