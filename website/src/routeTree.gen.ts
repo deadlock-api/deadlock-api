@@ -65,6 +65,7 @@ import { Route as HeroesHeroNameRouteImport } from './routes/heroes.$heroName'
 import { Route as ItemsIndexRouteImport } from './routes/items.index'
 import { Route as ItemsItemNameRouteImport } from './routes/items.$itemName'
 import { Route as OgCompareDotpngRouteImport } from './routes/og.compare[.]png'
+import { Route as OgCrosshairDotpngRouteImport } from './routes/og.crosshair[.]png'
 import { Route as PlayersAccountIdRouteImport } from './routes/players_.$accountId'
 import { Route as StreamkitIndexRouteImport } from './routes/streamkit/index'
 import { Route as TrackerDemoRouteImport } from './routes/tracker_.demo'
@@ -390,6 +391,11 @@ const OgCompareDotpngRoute = OgCompareDotpngRouteImport.update({
   path: '/og/compare.png',
   getParentRoute: () => rootRouteImport,
 } as any)
+const OgCrosshairDotpngRoute = OgCrosshairDotpngRouteImport.update({
+  id: '/og/crosshair.png',
+  path: '/og/crosshair.png',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PlayersAccountIdRoute = PlayersAccountIdRouteImport.update({
   id: '/players_/$accountId',
   path: '/players/$accountId',
@@ -671,6 +677,7 @@ export interface FileRoutesByFullPath {
   '/heroes/$heroName': typeof HeroesHeroNameRoute
   '/items/$itemName': typeof ItemsItemNameRoute
   '/og/compare.png': typeof OgCompareDotpngRoute
+  '/og/crosshair.png': typeof OgCrosshairDotpngRoute
   '/players/$accountId': typeof PlayersAccountIdRoute
   '/tracker/demo': typeof TrackerDemoRoute
   '/analytics/': typeof AnalyticsIndexRoute
@@ -762,6 +769,7 @@ export interface FileRoutesByTo {
   '/heroes/$heroName': typeof HeroesHeroNameRoute
   '/items/$itemName': typeof ItemsItemNameRoute
   '/og/compare.png': typeof OgCompareDotpngRoute
+  '/og/crosshair.png': typeof OgCrosshairDotpngRoute
   '/players/$accountId': typeof PlayersAccountIdRoute
   '/tracker/demo': typeof TrackerDemoRoute
   '/analytics': typeof AnalyticsIndexRoute
@@ -864,6 +872,7 @@ export interface FileRoutesById {
   '/heroes/$heroName': typeof HeroesHeroNameRoute
   '/items/$itemName': typeof ItemsItemNameRoute
   '/og/compare.png': typeof OgCompareDotpngRoute
+  '/og/crosshair.png': typeof OgCrosshairDotpngRoute
   '/players_/$accountId': typeof PlayersAccountIdRoute
   '/tracker_/demo': typeof TrackerDemoRoute
   '/analytics/': typeof AnalyticsIndexRoute
@@ -967,6 +976,7 @@ export interface FileRouteTypes {
     | '/heroes/$heroName'
     | '/items/$itemName'
     | '/og/compare.png'
+    | '/og/crosshair.png'
     | '/players/$accountId'
     | '/tracker/demo'
     | '/analytics/'
@@ -1058,6 +1068,7 @@ export interface FileRouteTypes {
     | '/heroes/$heroName'
     | '/items/$itemName'
     | '/og/compare.png'
+    | '/og/crosshair.png'
     | '/players/$accountId'
     | '/tracker/demo'
     | '/analytics'
@@ -1159,6 +1170,7 @@ export interface FileRouteTypes {
     | '/heroes/$heroName'
     | '/items/$itemName'
     | '/og/compare.png'
+    | '/og/crosshair.png'
     | '/players_/$accountId'
     | '/tracker_/demo'
     | '/analytics/'
@@ -1249,6 +1261,7 @@ export interface RootRouteChildren {
   GamesDeadlockdleRoute: typeof GamesDeadlockdleRouteWithChildren
   GamesFlashcardsRoute: typeof GamesFlashcardsRouteWithChildren
   OgCompareDotpngRoute: typeof OgCompareDotpngRoute
+  OgCrosshairDotpngRoute: typeof OgCrosshairDotpngRoute
   PlayersAccountIdRoute: typeof PlayersAccountIdRoute
   TrackerDemoRoute: typeof TrackerDemoRoute
   AnalyticsIndexRoute: typeof AnalyticsIndexRoute
@@ -1653,6 +1666,13 @@ declare module '@tanstack/react-router' {
       path: '/og/compare.png'
       fullPath: '/og/compare.png'
       preLoaderRoute: typeof OgCompareDotpngRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/og/crosshair.png': {
+      id: '/og/crosshair.png'
+      path: '/og/crosshair.png'
+      fullPath: '/og/crosshair.png'
+      preLoaderRoute: typeof OgCrosshairDotpngRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/players_/$accountId': {
@@ -2197,6 +2217,7 @@ const rootRouteChildren: RootRouteChildren = {
   GamesDeadlockdleRoute: GamesDeadlockdleRouteWithChildren,
   GamesFlashcardsRoute: GamesFlashcardsRouteWithChildren,
   OgCompareDotpngRoute: OgCompareDotpngRoute,
+  OgCrosshairDotpngRoute: OgCrosshairDotpngRoute,
   PlayersAccountIdRoute: PlayersAccountIdRoute,
   TrackerDemoRoute: TrackerDemoRoute,
   AnalyticsIndexRoute: AnalyticsIndexRoute,

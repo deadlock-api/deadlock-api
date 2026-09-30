@@ -3,38 +3,8 @@ import { GoogleFont, ImageResponse, type ImageResponseOptions } from "@cf-wasm/o
 import { CARD_HEIGHT, CARD_WIDTH, LOGO } from "./card-kit";
 import { CompareCard } from "./compare-card";
 import { type CompareCardData, loadCompareCardData } from "./compare-card-data";
+import { inlineImage } from "./inline-image";
 import { ComparePromoCard } from "./promo-card";
-
-/**
- * Images as data URIs, kept for the life of the isolate: rank badges and the logo repeat on every card. Avatars are
- * loaded per card and not kept, since the edge cache already answers a repeated card. Handing satori data URIs also
- * spares it its own fetches.
- */
-const IMAGE_CACHE = new Map<string, Promise<string | undefined>>();
-const IMAGE_CACHE_SIZE = 300;
-
-async function fetchDataUri(url: string): Promise<string> {
-  const response = await fetch(url);
-  if (!response.ok) throw new Error(String(response.status));
-  const type = response.headers.get("content-type") ?? "image/png";
-  return `data:${type};base64,${Buffer.from(await response.arrayBuffer()).toString("base64")}`;
-}
-
-function inlineImage(url: string | undefined, keep = true): Promise<string | undefined> {
-  if (!url) return Promise.resolve(undefined);
-  if (!keep) return fetchDataUri(url).catch(() => undefined);
-  const hit = IMAGE_CACHE.get(url);
-  if (hit) return hit;
-  // Oldest out first; a Map iterates in insertion order.
-  if (IMAGE_CACHE.size >= IMAGE_CACHE_SIZE) IMAGE_CACHE.delete(IMAGE_CACHE.keys().next().value!);
-  const load = fetchDataUri(url).catch(() => {
-    // A failed image is not remembered: the next card tries again, this one draws its fallback.
-    IMAGE_CACHE.delete(url);
-    return undefined;
-  });
-  IMAGE_CACHE.set(url, load);
-  return load;
-}
 
 /** The card's data with every image already loaded, all at once. */
 async function withInlineImages(data: CompareCardData): Promise<CompareCardData> {

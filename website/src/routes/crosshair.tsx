@@ -63,22 +63,18 @@ export const Route = createFileRoute("/crosshair")({
     };
     if (!isCrosshairCode(code)) return seo({ ...base, title: pageTitle("Crosshair Editor") });
     const screenHeight = loaderData?.screenHeight ?? "1080";
-    const image = new URLSearchParams({ code, screen_height: screenHeight, scale: String(PREVIEW_SCALE) });
+    const query = new URLSearchParams({ code, res: screenHeight });
     return seo({
       ...base,
       title: pageTitle("Deadlock Crosshair"),
       description:
         "A Deadlock crosshair: see it at its true size, tweak it with sliders and copy the code to use in game.",
-      shareUrl: `${SITE_URL}/crosshair?${new URLSearchParams({ code, res: screenHeight })}`,
-      // The API's picture of the crosshair, each pixel enlarged to a square so a link preview can show it.
-      ogImage: `${API_ORIGIN}/v1/crosshair/code/image?${image}`,
-      ogImageKind: "thumbnail",
+      shareUrl: `${SITE_URL}/crosshair?${query}`,
+      // A 1200x630 card of the crosshair over a game scene, the size link previews show large.
+      ogImage: `${SITE_URL}/og/crosshair.png?${query}`,
     });
   },
 });
-
-/** How much a link preview enlarges the crosshair's true-size image. */
-const PREVIEW_SCALE = 8;
 
 const RESOLUTION_LABELS = { "1080": "1080p", "1440": "1440p", "2160": "4K" } as const;
 type Resolution = keyof typeof RESOLUTION_LABELS;
