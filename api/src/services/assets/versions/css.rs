@@ -2,17 +2,16 @@
 
 use std::collections::{BTreeMap, HashMap};
 
-use cssparser::{Delimiter, Parser, ParserInput, Token};
+use cssparser::{Delimiter, Parser, Token};
 
 use crate::services::assets::versions::common::Color;
 
-type ParseErr<'i> = cssparser::ParseError<'i, ()>;
+type ParseErr = cssparser::ParseError<()>;
 
 /// Walk every `@define <ident>: #<hex>;` rule whose value is a single hex hash
 /// (no trailing tokens). Calls `f(name, hex_without_hash)` for each match.
 fn walk_define_hex_rules<F: FnMut(&str, &str)>(css: &str, mut f: F) {
-    let mut input = ParserInput::new(css);
-    let mut p = Parser::new(&mut input);
+    let mut p = Parser::new(css);
     while let Ok(tok) = p.next().cloned() {
         match tok {
             Token::AtKeyword(kw) if kw.as_ref() == "define" => {
@@ -31,7 +30,7 @@ fn walk_define_hex_rules<F: FnMut(&str, &str)>(css: &str, mut f: F) {
     }
 }
 
-fn capture_define_hex(p: &mut Parser<'_, '_>) -> Option<(String, String)> {
+fn capture_define_hex(p: &mut Parser<'_>) -> Option<(String, String)> {
     let name = match p.next().ok()?.clone() {
         Token::Ident(s) => s.to_string(),
         _ => return None,
@@ -94,8 +93,7 @@ pub(crate) fn parse_hero_style_colors(css: &str) -> HashMap<String, String> {
 /// `hero_background_default.css` rules: maps each `.hero_<name>` selector to
 /// the first rule's `background-image` URL.
 pub(crate) fn parse_hero_backgrounds(css: &str) -> HashMap<String, String> {
-    let mut input = ParserInput::new(css);
-    let mut p = Parser::new(&mut input);
+    let mut p = Parser::new(css);
     let mut out = HashMap::new();
 
     while !p.is_exhausted() {
@@ -126,7 +124,7 @@ pub(crate) fn parse_hero_backgrounds(css: &str) -> HashMap<String, String> {
     out
 }
 
-fn find_background_image(p: &mut Parser<'_, '_>) -> Option<String> {
+fn find_background_image(p: &mut Parser<'_>) -> Option<String> {
     let mut found: Option<String> = None;
     while !p.is_exhausted() {
         let _ = p.parse_until_after::<_, _, ()>(Delimiter::Semicolon, |inner| {
@@ -156,7 +154,7 @@ fn find_background_image(p: &mut Parser<'_, '_>) -> Option<String> {
                     }
                 }
             }
-            Ok::<(), ParseErr<'_>>(())
+            Ok::<(), ParseErr>(())
         });
     }
     found
@@ -169,8 +167,7 @@ fn find_background_image(p: &mut Parser<'_, '_>) -> Option<String> {
 /// never collide with single-selector lookups. First occurrence of a selector
 /// wins.
 pub(crate) fn parse_margin_percentages(css: &str) -> HashMap<String, (f64, f64)> {
-    let mut input = ParserInput::new(css);
-    let mut p = Parser::new(&mut input);
+    let mut p = Parser::new(css);
     let mut out = HashMap::new();
 
     while !p.is_exhausted() {
@@ -199,7 +196,7 @@ pub(crate) fn parse_margin_percentages(css: &str) -> HashMap<String, (f64, f64)>
 }
 
 /// Scan a declaration block for `margin-left` / `margin-top` percentage values.
-fn find_margins(p: &mut Parser<'_, '_>) -> (Option<f64>, Option<f64>) {
+fn find_margins(p: &mut Parser<'_>) -> (Option<f64>, Option<f64>) {
     let mut left = None;
     let mut top = None;
     while !p.is_exhausted() {
@@ -225,7 +222,7 @@ fn find_margins(p: &mut Parser<'_, '_>) -> (Option<f64>, Option<f64>) {
                     );
                 }
             }
-            Ok::<(), ParseErr<'_>>(())
+            Ok::<(), ParseErr>(())
         });
     }
     (left, top)

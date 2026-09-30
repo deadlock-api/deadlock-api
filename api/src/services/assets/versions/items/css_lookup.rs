@@ -6,7 +6,7 @@
 
 use std::collections::HashMap;
 
-use cssparser::{Delimiter, Parser, ParserInput, Token};
+use cssparser::{Delimiter, Parser, Token};
 
 /// Each CSS file is parsed once and the extracted (selector, bg, wash_color)
 /// list is reused across lookups. Builds aren't cheap, but each file is at
@@ -29,8 +29,7 @@ impl CssIndex {
     pub(super) fn parse(css: &str) -> Self {
         let mut rules = Vec::new();
         let mut defines = HashMap::new();
-        let mut input = ParserInput::new(css);
-        let mut p = Parser::new(&mut input);
+        let mut p = Parser::new(css);
 
         while !p.is_exhausted() {
             let mut selector = String::new();
@@ -192,7 +191,7 @@ fn to_panorama_url(raw: &str) -> String {
 
 /// Walks the declarations inside a `{ ... }` block, capturing the first
 /// `background-image` and `wash-color` values.
-fn scan_block(p: &mut Parser<'_, '_>) -> (Option<String>, Option<String>) {
+fn scan_block(p: &mut Parser<'_>) -> (Option<String>, Option<String>) {
     let mut bg: Option<String> = None;
     let mut wash: Option<String> = None;
     while !p.is_exhausted() {
@@ -226,7 +225,7 @@ fn scan_block(p: &mut Parser<'_, '_>) -> (Option<String>, Option<String>) {
     (bg, wash)
 }
 
-fn read_url_value(p: &mut Parser<'_, '_>) -> Option<String> {
+fn read_url_value(p: &mut Parser<'_>) -> Option<String> {
     while let Ok(t) = p.next().cloned() {
         match t {
             Token::UnquotedUrl(u) => return Some(u.to_string()),
