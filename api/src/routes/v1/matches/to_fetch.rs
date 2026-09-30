@@ -14,6 +14,7 @@ use tracing::debug;
 
 use crate::context::AppState;
 use crate::error::APIResult;
+use crate::routes::v1::players::rank::badge_from_flat_progress_sql;
 
 const BATCH_SIZE: usize = 100;
 const CLAIM_TTL_SECS: u64 = 15 * 60;
@@ -43,8 +44,8 @@ async fn prioritized_account_ids(pg_client: &Pool<Postgres>) -> Result<Arc<Vec<u
 }
 
 /// Pending matches in fetch order: prioritized accounts' matches, then ranked, unranked,
-/// street brawl and everything else; ranked games with higher-badge players (from
-/// `player_card`) first, then the newest. Holds every pending prioritized match plus the
+/// street brawl and everything else; ranked games with higher-badge players (badge after each
+/// player's latest ranked match) first, then the newest. Holds every pending prioritized match plus the
 /// newest others, up to `POOL_LIMIT`.
 #[cached(ttl_secs = 60, convert = "{ 0 }", key = "u8", sync_writes = "default")]
 async fn pending_pool(
@@ -65,6 +66,10 @@ async fn pending_pool(
         )
     };
     // Matches missing from `player_match_by_match` get the defaults 'Invalid' and badge 0.
+    let badge = badge_from_flat_progress_sql(
+        "player_rank_final_flat_progress",
+        "player_rank_initial_display_rank",
+    );
     let query = format!(
         "WITH prio AS ({prio}),
          pool AS (
@@ -77,8 +82,14 @@ async fn pending_pool(
              WHERE match_id IN (SELECT match_id FROM pool)
          ),
          badges AS (
-             SELECT account_id, argMax(ranked_badge_level, created_at) AS badge
-             FROM player_card GROUP BY account_id
+             SELECT account_id,
+                    argMax(if(player_rank_final_flat_progress IS NULL,
+                              toUInt32(player_rank_initial_display_rank),
+                              {badge}), match_id) AS badge
+             FROM player_match_stats
+             WHERE account_id IN (SELECT account_id FROM players WHERE match_mode = 'Ranked')
+               AND match_mode = 'Ranked' AND player_rank_initial_display_rank > 0
+             GROUP BY account_id
          )
          SELECT match_id
          FROM pool LEFT JOIN players USING match_id LEFT JOIN badges USING account_id

@@ -15,6 +15,7 @@ use valveprotos::deadlock::{
 
 use crate::context::AppState;
 use crate::error::APIResult;
+use crate::routes::v1::players::rank::{LastRankedMatch, fetch_last_ranked_match};
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::steam::client::SteamClient;
 use crate::services::steam::types::{
@@ -75,6 +76,8 @@ impl From<c_msg_citadel_profile_card::Slot> for PlayerCardSlot {
 #[derive(Debug, Clone, Serialize, ToSchema)]
 pub(crate) struct PlayerCard {
     pub(crate) account_id: u32,
+    /// Rank badge after the player's latest ranked match (player cards no longer carry a rank
+    /// since build 6711), `null` when no recent ranked match reports one.
     /// See more: <https://api.deadlock-api.com/v1/assets/ranks>
     pub(crate) ranked_badge_level: Option<u32>,
     /// See more: <https://api.deadlock-api.com/v1/assets/ranks>
@@ -84,14 +87,17 @@ pub(crate) struct PlayerCard {
     pub(crate) slots: Vec<PlayerCardSlot>,
 }
 
-impl From<CMsgCitadelProfileCard> for PlayerCard {
-    fn from(value: CMsgCitadelProfileCard) -> Self {
+impl PlayerCard {
+    fn new(card: CMsgCitadelProfileCard, last_ranked_match: Option<&LastRankedMatch>) -> Self {
+        let badge = last_ranked_match
+            .map(LastRankedMatch::badge)
+            .filter(|&b| b > 0);
         Self {
-            account_id: value.account_id(),
-            ranked_badge_level: value.ranked_badge_level,
-            ranked_rank: value.ranked_badge_level.map(|b| b / 10),
-            ranked_subrank: value.ranked_badge_level.map(|b| b % 10),
-            slots: value.slots.into_iter().map(Into::into).collect(),
+            account_id: card.account_id(),
+            ranked_badge_level: badge,
+            ranked_rank: badge.map(|b| b / 10),
+            ranked_subrank: badge.map(|b| b % 10),
+            slots: card.slots.into_iter().map(Into::into).collect(),
         }
     }
 }
@@ -108,14 +114,14 @@ struct PlayerCardClickhouse {
     slots_stat_score: Vec<Option<u32>>,
 }
 
-impl From<&PlayerCard> for PlayerCardClickhouse {
-    fn from(value: &PlayerCard) -> Self {
+impl From<&CMsgCitadelProfileCard> for PlayerCardClickhouse {
+    fn from(value: &CMsgCitadelProfileCard) -> Self {
+        let slots: Vec<PlayerCardSlot> = value.slots.iter().copied().map(Into::into).collect();
         Self {
-            account_id: value.account_id,
+            account_id: value.account_id(),
             ranked_badge_level: value.ranked_badge_level,
-            slots_slots_id: value.slots.iter().map(|s| s.slot_id).collect(),
-            slots_hero_id: value
-                .slots
+            slots_slots_id: slots.iter().map(|s| s.slot_id).collect(),
+            slots_hero_id: slots
                 .iter()
                 .filter_map(|s| {
                     s.hero
@@ -123,23 +129,19 @@ impl From<&PlayerCard> for PlayerCardClickhouse {
                         .map(|h| h.id.map(|id| u8::try_from(id).unwrap_or_default()))
                 })
                 .collect(),
-            slots_hero_kills: value
-                .slots
+            slots_hero_kills: slots
                 .iter()
                 .filter_map(|s| s.hero.as_ref().map(|h| h.kills))
                 .collect(),
-            slots_hero_wins: value
-                .slots
+            slots_hero_wins: slots
                 .iter()
                 .filter_map(|s| s.hero.as_ref().map(|h| h.wins))
                 .collect(),
-            slots_stat_id: value
-                .slots
+            slots_stat_id: slots
                 .iter()
                 .filter_map(|s| s.stat.as_ref().map(|h| h.stat_id))
                 .collect(),
-            slots_stat_score: value
-                .slots
+            slots_stat_score: slots
                 .iter()
                 .filter_map(|s| s.stat.as_ref().map(|h| h.stat_score))
                 .collect(),
@@ -177,21 +179,24 @@ pub(crate) async fn fetch_player_card_raw(
         .await
 }
 
-pub(crate) async fn get_player_card(
-    steam_client: &SteamClient,
-    ch_client: &clickhouse::Client,
+async fn get_player_card(
+    state: &AppState,
     account_id: u32,
     bot_username: String,
 ) -> APIResult<PlayerCard> {
+    let steam_client = &state.steam_client;
     let raw_data =
         tryhard::retry_fn(|| fetch_player_card_raw(steam_client, account_id, bot_username.clone()))
             .retries(3)
             .fixed_backoff(Duration::from_millis(10))
             .await?;
     let proto_player_card: SteamProxyResponse<CMsgCitadelProfileCard> = raw_data.try_into()?;
-    let player_card: PlayerCard = proto_player_card.msg.into();
-    let ch_player_card = PlayerCardClickhouse::from(&player_card);
-    let ch_client = ch_client
+    let ch_player_card = PlayerCardClickhouse::from(&proto_player_card.msg);
+    let last_ranked_match =
+        fetch_last_ranked_match(&state.batchers.player_rank, account_id).await?;
+    let player_card = PlayerCard::new(proto_player_card.msg, last_ranked_match.as_ref());
+    let ch_client = state
+        .ch_client
         .clone()
         .with_setting("async_insert", "1")
         .with_setting("wait_for_async_insert", "0")
@@ -230,6 +235,9 @@ pub(crate) async fn get_player_card(
     description = "
 This endpoint returns the player card for the given `account_id`.
 
+Since build 6711 player cards no longer carry a rank, so `ranked_badge_level`, `ranked_rank` and
+`ranked_subrank` are the rank after the player's latest ranked match (same as `/v1/players/{account_id}/rank`).
+
 !THIS IS A PATREON ONLY ENDPOINT!
 
 You have to be friend with one of the bots to use this endpoint.
@@ -258,12 +266,6 @@ pub(super) async fn card(
     let bot_username =
         super::resolve_bot_for_account(&mut state, &rate_limit_key, account_id, "card").await?;
 
-    let player_card = get_player_card(
-        &state.steam_client,
-        &state.ch_client,
-        account_id,
-        bot_username,
-    )
-    .await?;
+    let player_card = get_player_card(&state, account_id, bot_username).await?;
     Ok(Json(player_card))
 }

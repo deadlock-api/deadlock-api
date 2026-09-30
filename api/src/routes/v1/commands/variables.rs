@@ -14,7 +14,6 @@ use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::leaderboard::route::fetch_leaderboard_raw;
 use crate::routes::v1::leaderboard::types::{Leaderboard, LeaderboardEntry, LeaderboardRegion};
-use crate::routes::v1::players::card::{PlayerCard, get_player_card};
 use crate::routes::v1::players::match_history::{
     MatchHistoryInsertBatcher, MatchHistoryReadBatcher, PlayerMatchHistory,
     PlayerMatchHistoryEntry, fetch_steam_match_history,
@@ -777,18 +776,12 @@ impl Variable {
         }
     }
 
-    /// Player cards are only readable for accounts befriended by one of our bots, so fall back to
-    /// the rank Valve reports for the player at the end of their latest ranked match.
-    /// A card rank of `0` means the card carries no rank and is treated the same as a failure.
+    /// The rank Valve reports for the player at the end of their latest ranked match (player cards
+    /// no longer carry a rank since build 6711).
     async fn fetch_player_ranks(
         state: &AppState,
         steam_id: u32,
     ) -> Result<(u32, u32), VariableResolveError> {
-        if let Ok((rank, subrank)) = Self::fetch_card_ranks(state, steam_id).await
-            && rank > 0
-        {
-            return Ok((rank, subrank));
-        }
         let badge = fetch_last_ranked_match(&state.batchers.player_rank, steam_id)
             .await?
             .ok_or(VariableResolveError::NoData("rank"))?
@@ -796,9 +789,7 @@ impl Variable {
         Ok((badge / 10, badge % 10))
     }
 
-    /// Returns `(badge, progress, subrank width)`. Progress is only reported on ranked matches, so
-    /// unlike [`Self::fetch_player_ranks`] there is no player card fallback; the badge is returned
-    /// alongside it so both are read from the same match.
+    /// Returns `(badge, progress, subrank width)`, both read from the latest ranked match.
     async fn fetch_rank_progress(
         state: &AppState,
         steam_id: u32,
@@ -810,38 +801,6 @@ impl Variable {
             .progress()
             .ok_or(VariableResolveError::NoData("rank progress"))?;
         Ok((last_match.badge(), progress, width))
-    }
-
-    async fn fetch_card_ranks(
-        state: &AppState,
-        steam_id: u32,
-    ) -> Result<(u32, u32), VariableResolveError> {
-        let player_card = Self::fetch_card(state, steam_id).await?;
-        Ok((
-            player_card.ranked_rank.unwrap_or_default(),
-            player_card.ranked_subrank.unwrap_or_default(),
-        ))
-    }
-
-    async fn fetch_card(
-        state: &AppState,
-        steam_id: u32,
-    ) -> Result<PlayerCard, VariableResolveError> {
-        let bot_username = sqlx::query!(
-            "SELECT bot_id FROM bot_friends WHERE friend_id = $1",
-            i32::try_from(steam_id).map_err(|_| VariableResolveError::NoData("bot id"))?
-        )
-        .fetch_one(&state.pg_client)
-        .await?
-        .bot_id;
-        let player_card = get_player_card(
-            &state.steam_client,
-            &state.ch_client,
-            steam_id,
-            bot_username,
-        )
-        .await?;
-        Ok(player_card)
     }
 
     async fn get_max_ability_stat(
