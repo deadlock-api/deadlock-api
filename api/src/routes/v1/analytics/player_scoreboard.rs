@@ -107,6 +107,16 @@ pub struct PlayerEntry {
     account_id: u32,
     pub value: f64,
     pub matches: u64,
+    /// `rank` and `peak_rank` sorts only: the rank badge the progress in `value` falls in, `0`
+    /// when the player has no ranked match in range. Omitted for every other sort.
+    /// See more: <https://api.deadlock-api.com/v1/assets/ranks>
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub badge: Option<u32>,
+    /// `rank` and `peak_rank` sorts only: progress points into `badge`. A subrank spans 1000
+    /// points, the sixth of a tier 2000. `null` in Eternus, whose subranks are percentile cuts
+    /// rather than point spans, and when the player has no ranked match in range.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub badge_progress: Option<u32>,
 }
 
 /// Picks the `FROM`/dedup strategy: returns the from-clause, whether the outer query keeps the
@@ -242,13 +252,18 @@ fn build_query(query: &PlayerScoreboardQuery) -> String {
     } else {
         query.sort_by.get_select_clause()
     };
+    let (badge_clause, badge_progress_clause) = query.sort_by.badge_columns().map_or_else(
+        || ("NULL".to_owned(), "NULL".to_owned()),
+        |c| (c.badge, c.badge_progress),
+    );
     let sort_direction = query.sort_direction;
     let limit = query.limit.unwrap_or_default();
 
     format!(
         "
 SELECT rowNumberInAllBlocks() + {offset} as rank, account_id, toFloat64({select_clause}) as \
-         value, {matches_expr} as matches
+         value, {matches_expr} as matches, CAST({badge_clause}, 'Nullable(UInt32)') as badge, \
+         CAST({badge_progress_clause}, 'Nullable(UInt32)') as badge_progress
 {from_clause}
 {outer_where}
 GROUP BY account_id
@@ -395,7 +410,7 @@ mod tests {
     }
 
     #[test]
-    fn peak_rank_sort_takes_the_highest_ranked_badge_on_both_paths() {
+    fn peak_rank_sort_takes_the_highest_ranked_progress_on_both_paths() {
         let deduped = build_query(&PlayerScoreboardQuery {
             sort_by: ScoreboardQuerySortBy::PeakRank,
             hero_id: Some(15),
@@ -405,8 +420,14 @@ mod tests {
         assert!(deduped.contains(
             ", any(player_rank_initial_display_rank) as player_rank_initial_display_rank"
         ));
-        assert!(deduped.contains("toFloat64(maxIf("));
-        assert!(deduped.contains("ifNull(player_rank_initial_display_rank, 0) > 0)"));
+        assert!(deduped.contains(
+            "toFloat64(ifNull(maxIf(player_rank_final_flat_progress, \
+             ifNull(player_rank_initial_display_rank, 0) > 0), 0)) as value"
+        ));
+        // The Eternus division comes from the row that set the peak.
+        assert!(deduped.contains(
+            "argMaxIf(player_rank_initial_display_rank, player_rank_final_flat_progress,"
+        ));
 
         let unscoped = build_query(&PlayerScoreboardQuery {
             sort_by: ScoreboardQuerySortBy::PeakRank,
@@ -472,7 +493,31 @@ mod tests {
             sort_by: ScoreboardQuerySortBy::Rank,
             ..Default::default()
         });
+        assert!(sql.contains(
+            "toFloat64(ifNull(argMaxIf(player_rank_final_flat_progress, match_id, \
+             ifNull(player_rank_initial_display_rank, 0) > 0), 0)) as value"
+        ));
         assert!(sql.contains("IS NULL, 0,"));
+    }
+
+    #[test]
+    fn only_rank_sorts_report_a_badge() {
+        let kills = build_query(&PlayerScoreboardQuery {
+            sort_by: ScoreboardQuerySortBy::Kills,
+            ..Default::default()
+        });
+        assert_valid_sql(&kills);
+        assert!(kills.contains("CAST(NULL, 'Nullable(UInt32)') as badge,"));
+        assert!(kills.contains("CAST(NULL, 'Nullable(UInt32)') as badge_progress"));
+        let rank = build_query(&PlayerScoreboardQuery {
+            sort_by: ScoreboardQuerySortBy::Rank,
+            ..Default::default()
+        });
+        assert!(!rank.contains("CAST(NULL,"));
+        assert_valid_sql(&rank);
+        assert!(rank.contains("'Nullable(UInt32)') as badge,"));
+        assert!(rank.contains("'Nullable(UInt32)') as badge_progress"));
+        assert!(rank.contains("% 1000 + if(intDiv("));
     }
 }
 

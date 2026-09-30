@@ -75,6 +75,16 @@ pub(crate) fn badge_from_flat_progress_sql(
     )
 }
 
+/// `ClickHouse` expression for the progress half of [`subrank_progress`], `NULL` in Eternus where
+/// subranks are percentile cuts rather than point spans. `flat_progress` must be a non-nullable
+/// numeric expression and is inlined three times.
+pub(crate) fn subrank_progress_sql(flat_progress: &str) -> String {
+    format!(
+        "if({flat_progress} >= {ETERNUS_PROGRESS}, NULL, toUInt32({flat_progress} % 1000 + \
+         if(intDiv({flat_progress}, 1000) % 7 = 6, 1000, 0)))"
+    )
+}
+
 #[derive(Debug, Serialize, ToSchema)]
 pub(crate) struct RankResponse {
     /// Rank badge, `tier * 10 + subrank`, including the progress the last ranked match awarded.

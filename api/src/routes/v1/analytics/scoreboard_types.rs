@@ -2,7 +2,7 @@ use serde::Deserialize;
 use strum::Display;
 use utoipa::ToSchema;
 
-use crate::routes::v1::players::rank::badge_from_flat_progress_sql;
+use crate::routes::v1::players::rank::{badge_from_flat_progress_sql, subrank_progress_sql};
 
 #[derive(Copy, Clone, Debug, Deserialize, ToSchema, Display, Eq, PartialEq, Hash, Default)]
 #[cfg_attr(test, derive(proptest_derive::Arbitrary))]
@@ -12,9 +12,12 @@ pub enum ScoreboardQuerySortBy {
     /// Sort by the number of matches
     #[default]
     Matches,
-    /// Sort by the rank badge of the player's latest ranked match. Player scoreboard only.
+    /// Sort by the rank progress the player ended their latest ranked match in range on, which
+    /// also orders players within Eternus. The entry's `badge` is the matching rank badge.
+    /// Player scoreboard only.
     Rank,
-    /// Sort by the highest rank badge the player ended any ranked match in range on. Player scoreboard only.
+    /// Sort by the highest rank progress the player ended any ranked match in range on. The
+    /// entry's `badge` is the matching rank badge. Player scoreboard only.
     PeakRank,
     /// Sort by the number of wins
     Wins,
@@ -144,35 +147,47 @@ pub enum ScoreboardQuerySortBy {
     PermanentBuffs,
 }
 
-/// Badge the player ended their latest ranked match on, `0` when no grouped row carries a rank.
-/// `initial_display_rank` stays `0` through placement, so those rows must not contribute a badge.
-fn latest_badge_clause() -> String {
-    let latest_progress = "argMaxIf(player_rank_final_flat_progress, match_id, \
-                           ifNull(player_rank_initial_display_rank, 0) > 0)";
-    let latest_display_rank = "argMaxIf(player_rank_initial_display_rank, match_id, \
-                               ifNull(player_rank_initial_display_rank, 0) > 0)";
-    let badge = badge_from_flat_progress_sql(
-        &format!("assumeNotNull({latest_progress})"),
-        &format!("assumeNotNull({latest_display_rank})"),
-    );
-    format!("if({latest_progress} IS NULL, 0, {badge})")
+/// Only rows of ranked matches after placement carry a rank: `initial_display_rank` stays `0`
+/// through placement, so those rows must not contribute.
+const RANKED_ROW: &str = "ifNull(player_rank_initial_display_rank, 0) > 0";
+
+/// Rank progress the player ended their latest ranked match on.
+fn latest_progress_clause() -> String {
+    format!("argMaxIf(player_rank_final_flat_progress, match_id, {RANKED_ROW})")
 }
 
-/// Highest badge the player ended any ranked match on, `0` when no grouped row carries a rank.
-/// Placement rows (`initial_display_rank = 0`) are skipped like in [`latest_badge_clause`].
-fn peak_badge_clause() -> String {
+/// Highest rank progress the player ended any ranked match on.
+fn peak_progress_clause() -> String {
+    format!("maxIf(player_rank_final_flat_progress, {RANKED_ROW})")
+}
+
+/// Badge for `progress`, with the Eternus division read from `display_rank` of the same row, and
+/// the progress into that badge. The badge is `0` and the progress `NULL` when no grouped row
+/// carries a rank; the progress is also `NULL` in Eternus.
+fn badge_columns(progress: &str, display_rank: &str) -> RankBadgeColumns {
     let badge = badge_from_flat_progress_sql(
-        "assumeNotNull(player_rank_final_flat_progress)",
-        "assumeNotNull(player_rank_initial_display_rank)",
+        &format!("assumeNotNull({progress})"),
+        &format!("assumeNotNull({display_rank})"),
     );
-    format!("maxIf({badge}, ifNull(player_rank_initial_display_rank, 0) > 0)")
+    let badge_progress = subrank_progress_sql(&format!("assumeNotNull({progress})"));
+    RankBadgeColumns {
+        badge: format!("if({progress} IS NULL, 0, {badge})"),
+        badge_progress: format!("if({progress} IS NULL, NULL, {badge_progress})"),
+    }
+}
+
+/// `SELECT` expressions for the badge a rank sort's `value` falls in.
+pub(super) struct RankBadgeColumns {
+    pub(super) badge: String,
+    pub(super) badge_progress: String,
 }
 
 impl ScoreboardQuerySortBy {
     pub(super) fn get_select_clause(self) -> String {
         let clause = match self {
-            Self::Rank => return latest_badge_clause(),
-            Self::PeakRank => return peak_badge_clause(),
+            // Sorting by progress rather than badge orders players within Eternus by points.
+            Self::Rank => return format!("ifNull({}, 0)", latest_progress_clause()),
+            Self::PeakRank => return format!("ifNull({}, 0)", peak_progress_clause()),
             Self::MaxPermanentBuffsPerMatch => "max(permanent_buffs)",
             Self::AvgPermanentBuffsPerMatch => "avg(permanent_buffs)",
             Self::PermanentBuffs => "sum(permanent_buffs)",
@@ -250,6 +265,25 @@ impl ScoreboardQuerySortBy {
     /// use `FINAL` + `count()` regardless, which is exact and cheaper than the raw scan.
     pub(super) fn dedup_free(self) -> bool {
         matches!(self, Self::Matches)
+    }
+
+    /// The badge the rank sorts report next to their progress value, `None` for the others.
+    pub(super) fn badge_columns(self) -> Option<RankBadgeColumns> {
+        match self {
+            Self::Rank => Some(badge_columns(
+                &latest_progress_clause(),
+                &format!("argMaxIf(player_rank_initial_display_rank, match_id, {RANKED_ROW})"),
+            )),
+            // The Eternus division comes from the row that set the peak.
+            Self::PeakRank => Some(badge_columns(
+                &peak_progress_clause(),
+                &format!(
+                    "argMaxIf(player_rank_initial_display_rank, player_rank_final_flat_progress, \
+                     {RANKED_ROW})"
+                ),
+            )),
+            _ => None,
+        }
     }
 
     /// Whether the sort reads the player's rank, which heroes do not have.
