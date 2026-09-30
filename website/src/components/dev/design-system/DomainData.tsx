@@ -1,11 +1,21 @@
 import { useQuery } from "@tanstack/react-query";
 import type { PlayerScoreboardSortByEnum } from "deadlock_api_client";
 import { type ComponentProps, useState } from "react";
+import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
 
 import { Specimen, Variants } from "~/components/dev/design-system/Specimen";
+import { PatchMarkers } from "~/components/domain/charts/PatchMarkers";
 import MatchHistoryCard from "~/components/domain/match/MatchHistoryCard";
 import { ScoreboardTable } from "~/components/domain/player-scoreboard/ScoreboardTable";
 import { SortBySelector } from "~/components/domain/player-scoreboard/SortBySelector";
+import { ChartSurface } from "~/components/patterns/charts/ChartSurface";
+import {
+  CHART_GRID,
+  CHART_MARGIN_MARKED,
+  CHART_X_AXIS,
+  CHART_Y_AXIS,
+  SERIES_COLORS,
+} from "~/components/patterns/charts/theme";
 import { QueryRenderer } from "~/components/patterns/states/QueryRenderer";
 import { PATCHES } from "~/lib/constants";
 import { normalizeUnixFloor } from "~/lib/time-normalize";
@@ -39,6 +49,12 @@ const BUILD_MATCH: ComponentProps<typeof MatchHistoryCard> = {
   },
 };
 
+const PATCH_TREND_START = Date.UTC(2026, 4, 1);
+const PATCH_TREND = Array.from({ length: 150 }, (_, i) => ({
+  date: PATCH_TREND_START + i * 86_400_000,
+  value: 0.5 + Math.sin(i / 9) * 0.02,
+}));
+
 export function DomainData() {
   const { data: ranks } = useQuery(ranksQueryOptions);
   const [clickedPlayer, setClickedPlayer] = useState<string>();
@@ -60,6 +76,30 @@ export function DomainData() {
 
   return (
     <>
+      <Specimen
+        name="PatchMarkers"
+        source="domain/charts/PatchMarkers"
+        note="Every patch on a time axis in ms, as ChartMarkers: labelled with the name the date picker lists. Render it inside the chart with CHART_MARGIN_MARKED; size=sm (PATCH_MARKERS_SHORT) uses each patch's shortName, Patch for minor updates. StatTrendChart and WeeklyTrendChart take the markers through markers."
+      >
+        <ChartSurface label="Example trend across the recent patches" size="md">
+          <LineChart data={PATCH_TREND} margin={CHART_MARGIN_MARKED}>
+            <CartesianGrid {...CHART_GRID} />
+            <XAxis
+              dataKey="date"
+              type="number"
+              scale="time"
+              domain={["dataMin", "dataMax"]}
+              tickFormatter={(date: number) => new Date(date).toISOString().slice(5, 10)}
+              minTickGap={32}
+              {...CHART_X_AXIS}
+            />
+            <YAxis domain={[0.46, 0.54]} {...CHART_Y_AXIS} />
+            <PatchMarkers />
+            <Line dataKey="value" stroke={SERIES_COLORS[0]} strokeWidth={2} dot={false} isAnimationActive={false} />
+          </LineChart>
+        </ChartSurface>
+      </Specimen>
+
       <Specimen
         name="MatchHistoryCard"
         source="domain/match/MatchHistoryCard"

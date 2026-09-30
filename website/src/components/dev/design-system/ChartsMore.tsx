@@ -4,6 +4,7 @@ import { CartesianGrid, Line, LineChart, ReferenceLine, XAxis, YAxis } from "rec
 
 import { Specimen, Variants } from "~/components/dev/design-system/Specimen";
 import { ChartCard } from "~/components/patterns/charts/ChartCard";
+import { type ChartMarker, ChartMarkers } from "~/components/patterns/charts/ChartMarkers";
 import { ChartSidebarLayout } from "~/components/patterns/charts/ChartSidebarLayout";
 import { ChartSurface } from "~/components/patterns/charts/ChartSurface";
 import { MetricSelect } from "~/components/patterns/charts/MetricSelect";
@@ -12,6 +13,7 @@ import {
   CHART_BASELINE,
   CHART_GRID,
   CHART_MARGIN,
+  CHART_MARGIN_MARKED,
   CHART_X_AXIS,
   CHART_Y_AXIS,
   SERIES_COLORS,
@@ -86,6 +88,14 @@ const WEEKS: WeekEntry[] = Array.from({ length: 10 }, (_, i) => {
     matches: 61000 + ((i * 7919) % 9000),
   };
 });
+
+const DAY = 24 * HOUR;
+const MARKERS: ChartMarker[] = [
+  { at: FIRST_BUCKET + 9 * DAY, label: "Gameplay Update (2026-07-15)" },
+  { at: FIRST_BUCKET + 11 * DAY, label: "Minor Update (2026-07-17)" },
+  { at: FIRST_BUCKET + 40 * DAY, label: "Minor Update (2026-08-15)" },
+];
+const MARKED_WEEKS = WEEKS.map((week) => ({ ...week, date: week.weekStart * 1000 }));
 
 const HEROES = ["Infernus", "Haze", "Seven", "Paradox", "Abrams", "Bebop", "Dynamo", "Kelvin", "Lash", "Wraith"];
 const HERO_WEEKS = WEEKS.map((week, w) => ({
@@ -203,7 +213,14 @@ export function ChartsMore() {
             <div key={label} className="flex min-w-0 flex-col gap-1.5">
               <span className="eyebrow">{label}</span>
               <Card size="sm" className="px-3">
-                <StatTrendChart data={[...data]} state={state} stat={stat} value={bucket} onValueChange={setBucket} />
+                <StatTrendChart
+                  data={[...data]}
+                  state={state}
+                  stat={stat}
+                  value={bucket}
+                  onValueChange={setBucket}
+                  markers={MARKERS}
+                />
               </Card>
             </div>
           ))}
@@ -230,6 +247,30 @@ export function ChartsMore() {
       </Specimen>
 
       <Specimen
+        name="ChartMarkers"
+        source="patterns/charts/ChartMarkers"
+        note="Events on a time axis (patches) as dotted vertical lines, each labelled beside its line in the top margin (CHART_MARGIN_MARKED). Colliding labels stack into further rows over the plot on a halo, up to a third of its height. labels={false} for the lower plots of a stack. Features pass PATCH_MARKERS or render PatchMarkers from domain/charts."
+      >
+        <ChartSurface label="Win rate by week with patch markers" size="md">
+          <LineChart data={MARKED_WEEKS} margin={CHART_MARGIN_MARKED}>
+            <CartesianGrid {...CHART_GRID} />
+            <XAxis
+              dataKey="date"
+              type="number"
+              scale="time"
+              domain={["dataMin", "dataMax"]}
+              ticks={MARKED_WEEKS.map((week) => week.date)}
+              tickFormatter={(date: number) => MARKED_WEEKS.find((week) => week.date === date)?.label ?? ""}
+              {...CHART_X_AXIS}
+            />
+            <YAxis domain={[0.46, 0.54]} tickFormatter={percent} {...CHART_Y_AXIS} />
+            <ChartMarkers markers={MARKERS} />
+            <Line dataKey="winRate" stroke={SERIES_COLORS[0]} strokeWidth={2} dot={false} isAnimationActive={false} />
+          </LineChart>
+        </ChartSurface>
+      </Specimen>
+
+      <Specimen
         name="WeeklyTrendChart"
         source="patterns/charts/WeeklyTrendChart"
         note='Win rate and a share (pick or purchase rate) by week, as two plots on one synced week axis: each measure keeps its own scale without a second y-axis. variant="flush" drops its own card to sit in a ChartCard.'
@@ -239,6 +280,7 @@ export function ChartsMore() {
           <PanelBody size="sm">
             <WeeklyTrendChart
               variant="flush"
+              markers={MARKERS}
               weeks={WEEKS}
               shareLabel="Pick rate"
               label="Infernus win rate and pick rate by week"

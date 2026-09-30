@@ -38,6 +38,18 @@ export const CHART_Y_LABEL = {
 /** The "even" or "average" line a series is read against. */
 export const CHART_BASELINE = { stroke: "var(--chart-axis)", strokeDasharray: "4 4" } as const;
 
+/** An event on the x-axis, such as a patch: a fine dotted rule under the series, and its label in tick text. */
+export const CHART_MARKER_LINE = { stroke: "var(--chart-axis)", strokeDasharray: "2 3", strokeWidth: 1 } as const;
+/** The label beside a marker line; the halo keeps a label in a lower row readable over the series. */
+export const CHART_MARKER_LABEL = {
+  ...CHART_TICK,
+  textAnchor: "start",
+  stroke: "var(--card)",
+  strokeWidth: 3,
+  strokeLinejoin: "round",
+  paintOrder: "stroke",
+} as const;
+
 /** Tooltip cursors: a vertical rule for line and area charts, a column highlight for bars. */
 export const CHART_CURSOR_LINE = { stroke: "var(--chart-axis)", strokeWidth: 1 } as const;
 export const CHART_CURSOR_BAND = { fill: "var(--subtle-hover)" } as const;
@@ -69,6 +81,8 @@ export const CHART_COLOR = {
 } as const;
 
 export const CHART_MARGIN = { top: 8, right: 8, bottom: 8, left: 0 } as const;
+/** `CHART_MARGIN` with a lane at the top for the labels of `ChartMarkers`. */
+export const CHART_MARGIN_MARKED = { ...CHART_MARGIN, top: 24 } as const;
 
 /**
  * Small multiples (distribution strips): a little air above the curve and room at the sides for a line drawn on
