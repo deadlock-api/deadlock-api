@@ -25,7 +25,6 @@ import { SearchInput } from "~/components/ui/search-input";
 import { Segmented, SegmentedItem } from "~/components/ui/segmented";
 import { Stack } from "~/components/ui/stack";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
-import { Text } from "~/components/ui/text";
 import { Tooltip, TooltipHeader, TooltipStat, TooltipStats, TooltipTarget } from "~/components/ui/tooltip";
 import { useHydrated } from "~/hooks/useHydrated";
 import { formatPercent } from "~/lib/format";
@@ -614,19 +613,6 @@ export function ItemStatsTable({
             plus the related `dim_low_confidence` useQueryState (see git history) and wire it
             through to `ItemStatsTableRow`'s `dimLowConfidence` prop. Delete this comment on revival. */}
       </FilterBar>
-      {corruptedMode === "only" && (
-        <Text as="p" variant="caption" tone="muted" className="max-w-3xl">
-          Each row is the corrupted version of a tier 3 or 4 item, traded with the Broker (or picked after round 5 in
-          Street Brawl). Corrupted items exist since the City Never Sleeps update on September 29, 2026, so samples are
-          small: read the matches under each item and the confidence column before the win rate. There is no earlier
-          period to compare with.
-        </Text>
-      )}
-      {corruptedMode === "include" && (
-        <Text as="p" variant="caption" tone="muted" className="max-w-3xl">
-          A corrupted purchase counts as the normal item it replaced.
-        </Text>
-      )}
       {isLoading ? (
         <LoadingState label="item statistics" align="center" />
       ) : (
