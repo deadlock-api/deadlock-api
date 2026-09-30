@@ -61,8 +61,10 @@ export function HeroSkillOrder({
 }) {
   const period = useDefaultPeriodLabel();
   const orderQuery = useQuery(abilityOrderQueryOptions({ ...request, heroId }));
-  const { data: heroes } = useQuery(heroesQueryOptions);
-  const { data: abilities } = useQuery(abilitiesQueryOptions);
+  const heroesQuery = useQuery(heroesQueryOptions);
+  const abilitiesQuery = useQuery(abilitiesQueryOptions);
+  const heroes = heroesQuery.data;
+  const abilities = abilitiesQuery.data;
 
   /** The hero's four abilities in slot order: the rows of the grid. */
   const slotAbilities = useMemo(() => {
@@ -83,6 +85,9 @@ export function HeroSkillOrder({
     return { steps, share: leaf.matches / players, winRate: leaf.wins / leaf.matches, matches: leaf.matches };
   }, [orderQuery.data, totalMatches]);
 
+  // The grid's rows need the hero and ability lists too; without them it would wait forever, so a failure of any of
+  // the three is the panel's error.
+  const failed = [orderQuery, heroesQuery, abilitiesQuery].filter((query) => query.isError && !query.data);
   const opener = path?.steps.slice(0, 3).map((step) => {
     const slot = slotAbilities.indexOf(step.abilityId);
     return slot >= 0 ? slot + 1 : "?";
@@ -92,16 +97,16 @@ export function HeroSkillOrder({
     <Panel className={className}>
       <PanelHeader title={`${heroName} Skill Order`} description={`Most common · ${rankRange}`} />
       <PanelBody className="flex flex-col gap-4">
-        {orderQuery.isError && !orderQuery.data ? (
+        {failed.length > 0 ? (
           <ErrorState
             variant="inline"
             title={`Could not load ${possessive(heroName)} skill order`}
-            retrying={orderQuery.isFetching}
-            onRetry={() => void orderQuery.refetch()}
+            retrying={failed.some((query) => query.isFetching)}
+            onRetry={() => failed.forEach((query) => void query.refetch())}
           />
-        ) : orderQuery.isPending || (path && slotAbilities.length === 0) ? (
+        ) : [orderQuery, heroesQuery, abilitiesQuery].some((query) => query.isPending) ? (
           <LoadingState label="skill order" variant="skeleton" />
-        ) : !path || !opener ? (
+        ) : !path || !opener || slotAbilities.length === 0 ? (
           <EmptyState variant="inline" title={`Too few ${heroName} games share one skill order to show it yet`} />
         ) : (
           <>
