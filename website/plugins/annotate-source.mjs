@@ -1,5 +1,6 @@
 import { execSync } from "node:child_process";
 import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
 import path from "node:path";
 
 import * as babel from "@babel/core";
@@ -34,11 +35,24 @@ const SKIPPED_ELEMENTS = new Set([
   "noscript",
 ]);
 
+/**
+ * The commit, so feedback maps to the code, plus a hash of the uncommitted changes when there are any: the Worker's
+ * HTML cache (src/lib/html-cache.ts) and scripts/preserve-old-assets.mjs need one id per distinct build, and the same
+ * id from every evaluation of the Vite config within one build (so no timestamps). Without git, one id per process.
+ */
 function buildId() {
+  const git = (args) =>
+    execSync(`git ${args}`, { encoding: "utf8", maxBuffer: 1 << 30, stdio: ["ignore", "pipe", "ignore"] }).trim();
   try {
-    return execSync("git rev-parse --short HEAD", { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim();
+    const sha = git("rev-parse --short HEAD");
+    const changes = createHash("sha1").update(git("diff HEAD --no-ext-diff --binary"));
+    const untracked = git("ls-files --others --exclude-standard --full-name -z :/").split("\0").filter(Boolean);
+    const top = git("rev-parse --show-toplevel");
+    for (const file of untracked) changes.update(file).update(readFileSync(path.join(top, file)));
+    return git("status --porcelain") ? `${sha}-${changes.digest("hex").slice(0, 8)}` : sha;
   } catch {
-    return "unknown";
+    process.env.DEADLOCK_BUILD_ID ??= `unknown-${Date.now().toString(36)}`;
+    return process.env.DEADLOCK_BUILD_ID;
   }
 }
 
