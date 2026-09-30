@@ -22,7 +22,7 @@ use prost::encoding::{decode_varint, encode_varint, encoded_len_varint};
 use super::CrosshairError;
 use super::settings::Settings;
 
-const PREFIX: &str = "DL.";
+pub(super) const PREFIX: &str = "DL.";
 const VERSION: u8 = 1;
 const FLAG_ZSTD: u8 = 1;
 const HEADER_LEN: usize = 6;
@@ -31,8 +31,6 @@ const REVISION: u32 = 6712;
 const SETTINGS_TAG: u32 = 2;
 const KEY_TAG: u32 = 1;
 const VALUE_TAG: u32 = 2;
-/// Codes exported by the game are a few hundred characters.
-const MAX_CODE_LEN: usize = 4096;
 /// Real codes decompress to well under 1 KiB; this only guards against decompression bombs.
 const MAX_PAYLOAD_LEN: usize = 64 * 1024;
 
@@ -47,7 +45,8 @@ const BASE64: GeneralPurpose = GeneralPurpose::new(
     GeneralPurposeConfig::new().with_decode_padding_mode(DecodePaddingMode::Indifferent),
 );
 
-pub(crate) fn decode(code: &str) -> Result<Settings, CrosshairError> {
+/// Decodes a `DL.` code; the caller checks its length.
+pub(super) fn decode(code: &str) -> Result<Settings, CrosshairError> {
     let payload = decode_payload(code)?;
     let mut settings = Settings::default();
     for group in Records::tagged(&payload, SETTINGS_TAG) {
@@ -91,13 +90,10 @@ pub(crate) fn encode(settings: &Settings) -> String {
 
 /// Strips the prefix, base64-decodes, decompresses and checksums the code, returning its payload.
 fn decode_payload(code: &str) -> Result<Vec<u8>, CrosshairError> {
-    if code.len() > MAX_CODE_LEN {
-        return Err(CrosshairError::CodeTooLong);
-    }
     let encoded = code
         .trim()
         .strip_prefix(PREFIX)
-        .ok_or(CrosshairError::MissingPrefix)?;
+        .ok_or(CrosshairError::NotACode)?;
     let raw = BASE64.decode(encoded)?;
     let Some((&[version, flags, c0, c1, c2, c3], body)) = raw.split_first_chunk::<HEADER_LEN>()
     else {
@@ -246,14 +242,7 @@ mod tests {
 
     #[test]
     fn rejects_bad_codes() {
-        assert!(matches!(
-            decode(&"A".repeat(MAX_CODE_LEN + 1)),
-            Err(CrosshairError::CodeTooLong)
-        ));
-        assert!(matches!(
-            decode("AQDehwon"),
-            Err(CrosshairError::MissingPrefix)
-        ));
+        assert!(matches!(decode("AQDehwon"), Err(CrosshairError::NotACode)));
         assert!(matches!(decode("DL.!!!"), Err(CrosshairError::Base64(_))));
         assert!(matches!(decode("DL.AQDe"), Err(CrosshairError::Malformed)));
         assert!(matches!(

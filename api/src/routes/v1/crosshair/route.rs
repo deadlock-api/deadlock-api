@@ -11,7 +11,8 @@ use crate::services::crosshair::{self, DEFAULT_SCREEN_HEIGHT, Settings};
 #[derive(Debug, Deserialize, IntoParams)]
 #[into_params(parameter_in = Query)]
 pub(super) struct CodeQuery {
-    /// Crosshair share code, as copied from the game's crosshair settings (`DL.…`).
+    /// Crosshair share code, as copied from the game's crosshair settings (`DL.…`), or crosshair console commands
+    /// (`citadel_crosshair_dot_size 4; citadel_crosshair_color_r 245`).
     code: String,
 }
 

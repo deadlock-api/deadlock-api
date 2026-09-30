@@ -82,14 +82,16 @@ macro_rules! settings {
         }
 
         impl Settings {
-            /// Applies one `(convar hash, value)` entry of a share code, ignoring unknown convars.
-            pub(super) fn apply(&mut self, key: u32, value: &str) {
+            /// Applies one `(convar hash, value)` entry, returning whether the convar is a crosshair setting; unknown
+            /// convars are ignored.
+            pub(super) fn apply(&mut self, key: u32, value: &str) -> bool {
                 $(
                     if key == convar_hash(concat!("crosshair_", stringify!($field))) {
                         self.$field = ConvarValue::parse(value);
-                        return;
+                        return true;
                     }
                 )*
+                false
             }
 
             /// The `(convar hash, value)` entries of a share code, in the game's order.
@@ -133,7 +135,7 @@ settings! {
     outline_color_b: u8 = 0,
 }
 
-fn convar_hash(name: &str) -> u32 {
+pub(super) fn convar_hash(name: &str) -> u32 {
     murmur2::murmur2(name.as_bytes(), HASH_SEED)
 }
 
