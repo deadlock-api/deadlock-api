@@ -2,6 +2,8 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "deadlock-api",
   "workers_dev": true,
+  // Per-PR preview versions (see .github/workflows/website-ci.yml) are served on workers.dev.
+  "preview_urls": true,
   "main": "./dist/server/server.js",
   "compatibility_date": "2026-05-14",
   "keep_names": false,
