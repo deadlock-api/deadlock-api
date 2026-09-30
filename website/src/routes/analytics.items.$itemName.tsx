@@ -87,10 +87,11 @@ function byRankItemStatsParams(seasons: readonly SeasonInfo[], preference: DateF
   };
 }
 
+// The denominator of every "bought" share. No `minHeroMatches` / `minHeroMatchesTotal`, not even 0: either one sends
+// the request to the exact-timestamp base table while the item stats come from day-grained rollups, and right after a
+// mid-day patch the shares passed 100%. Without them both come from the rollups over the same days.
 function currentHeroStatsParams(seasons: readonly SeasonInfo[], preference: DateFilterPreference = "season") {
   return {
-    minHeroMatches: 0,
-    minHeroMatchesTotal: 0,
     minAverageBadge: DEFAULT_MIN_RANK,
     maxAverageBadge: DEFAULT_MAX_RANK,
     gameMode: GAME_MODE,

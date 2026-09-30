@@ -49,7 +49,8 @@ function pickTopHeroes(
       const hero = {
         heroId: row.bucket,
         winRate: row.wins / row.matches,
-        usage: row.matches / total,
+        // Purchases, not matches: an item sold and bought back counts twice, so the share is capped at all of them.
+        usage: Math.min(1, row.matches / total),
         matches: row.matches,
       };
       return [{ hero, lowerBound }];
@@ -69,7 +70,9 @@ export const fetchItemBestHeroes = createServerFn({ method: "GET" })
     // The same parameters the item page's own item and hero stats use, so both responses are usually cached.
     const [itemStats, heroStats] = await Promise.all([
       api.analytics_api.itemStats({ ...filters, minMatches: 10, bucket: "hero" }),
-      api.analytics_api.heroStats({ ...filters, minHeroMatches: 0, minHeroMatchesTotal: 0 }),
+      // No `minHeroMatches` (even 0): it routes to the exact-timestamp base table, while the item stats above come
+      // from day-grained rollups, and after a mid-day patch the "bought" shares passed 100%.
+      api.analytics_api.heroStats(filters),
     ]);
     return pickTopHeroes(itemStats.data, heroStats.data, itemId);
   });

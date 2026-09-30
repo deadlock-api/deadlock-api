@@ -65,10 +65,12 @@ const GAME_MODE = "normal" as const;
 /** The rank range as the analytics pages read it from the URL, so a link lands on the numbers this page quotes. */
 const RANK_SEARCH = { min_rank: DEFAULT_MIN_RANK, max_rank: DEFAULT_MAX_RANK };
 
+// No `minHeroMatches` / `minHeroMatchesTotal`, not even 0: either one sends the request to the exact-timestamp base
+// table, while item stats come from day-grained rollups that start at midnight. Right after a mid-day patch the item
+// counts then cover hours the hero counts do not, and "bought in X% of matches" passed 100%. Without them both come
+// from the rollups over the same days.
 function currentStatsParams(seasons: readonly SeasonInfo[], preference: DateFilterPreference = "season") {
   return {
-    minHeroMatches: 0,
-    minHeroMatchesTotal: 0,
     minAverageBadge: DEFAULT_MIN_RANK,
     maxAverageBadge: DEFAULT_MAX_RANK,
     gameMode: GAME_MODE,
@@ -79,8 +81,6 @@ function currentStatsParams(seasons: readonly SeasonInfo[], preference: DateFilt
 
 function byRankStatsParams(seasons: readonly SeasonInfo[], preference: DateFilterPreference = "season") {
   return {
-    minHeroMatches: 0,
-    minHeroMatchesTotal: 0,
     gameMode: GAME_MODE,
     matchMode: DEFAULT_MATCH_MODE,
     ...defaultUnixRange(seasons, preference),
