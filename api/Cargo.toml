@@ -45,7 +45,7 @@ base64 = "0.23.1"
 tryhard = "0.5.2"
 async-compression = { version = "0.4.43", features = ["bzip2", "zstd", "tokio"] }
 bzip2 = "0.6"
-zstd = "0.13"
+zstd = "0.14"
 strum = { version = "0.28.0", features = ["derive"] }
 axum-extra = { version = "0.12.6", features = ["query"] }
 async-graphql = { version = "7", features = ["chrono", "dataloader", "uuid"] }

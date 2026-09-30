@@ -2879,7 +2879,7 @@ dependencies = [
  "valveprotos",
  "wreq",
  "wreq-util",
- "zstd 0.13.3",
+ "zstd 0.14.0",
 ]
 
 [[package]]
