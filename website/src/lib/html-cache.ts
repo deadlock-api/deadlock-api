@@ -5,8 +5,11 @@
  * and answers from it: fresh for `FRESH_SECONDS`, then served stale while one background render replaces it, up to
  * `STALE_SECONDS`.
  *
- * The key is everything the server render reads: the build, the full URL with its query, the `preferences` cookie
- * and, on the leaderboard, the region the request's country or language picks. Nothing else a request carries
+ * The key is everything the server render reads: the full URL with its query, the `preferences` cookie and, on the
+ * leaderboard, the region the request's country or language picks. The build is not in the key, so a deploy does not
+ * empty the cache: a page another build rendered is served stale while this build re-renders it, but only when this
+ * deploy still serves that build's hashed assets (`servedBuilds`, from scripts/preserve-old-assets.mjs). Otherwise,
+ * after a rollback for one, it is rendered again like a miss. Nothing else a request carries
  * reaches the server render (experiments render "control" on the server, patron auth runs in the browser); a new
  * `getRequestHeader` in a loader must be added to the key here.
  */
@@ -17,14 +20,14 @@ import { regionForRequest } from "~/lib/region";
 export const FRESH_SECONDS = 600;
 /**
  * Most of these URLs (filter combinations) are loaded a few times a day, so a short window would miss almost always.
- * A stale page shows one visitor numbers up to a day old while its refresh runs; a deploy (a new patch included)
- * changes the build id and drops them all.
+ * A stale page shows one visitor numbers up to a day old while its refresh runs.
  */
 export const STALE_SECONDS = 86_400;
 
 /** The response header that tells how the page was served: HIT, STALE (a refresh runs behind it) or MISS. */
 export const CACHE_STATUS_HEADER = "x-html-cache";
 const STORED_AT_HEADER = "x-html-cache-stored-at";
+const BUILD_HEADER = "x-html-cache-build";
 
 const CACHEABLE_PATH = /^\/(analytics|community)(\/|$)/;
 const REGION_PATH = /^\/community\/leaderboard(\/|$)/;
@@ -38,8 +41,10 @@ export interface HtmlCacheOptions {
   /** Adds the headers every served page carries (security headers, the browser's Cache-Control). */
   finalize: (response: Response) => Response;
   waitUntil: (promise: Promise<unknown>) => void;
-  /** Changes with every build, so a cached page never points at hashed assets a later deploy removed. */
+  /** Changes with every build. */
   buildId: string;
+  /** The builds whose complete asset sets this deploy serves; a page one of them rendered may be served stale. */
+  servedBuilds: () => Promise<ReadonlySet<string>>;
   now?: () => number;
 }
 
@@ -47,11 +52,11 @@ export function isCacheableRequest(request: Request): boolean {
   return request.method === "GET" && CACHEABLE_PATH.test(new URL(request.url).pathname);
 }
 
-export function htmlCacheKey(request: Request, buildId: string): Request {
+export function htmlCacheKey(request: Request): Request {
   const url = new URL(request.url);
   const preferences = parsePreferencesCookie(request.headers.get("cookie") ?? "");
   const sorted = Object.fromEntries(Object.entries(preferences).sort(([a], [b]) => a.localeCompare(b)));
-  const variant = new URLSearchParams({ build: buildId, preferences: JSON.stringify(sorted) });
+  const variant = new URLSearchParams({ preferences: JSON.stringify(sorted) });
   if (REGION_PATH.test(url.pathname)) {
     variant.set(
       "region",
@@ -76,10 +81,11 @@ function isStorable(response: Response): boolean {
   );
 }
 
-function toStored(response: Response, now: number): Response {
+function toStored(response: Response, now: number, buildId: string): Response {
   const headers = new Headers(response.headers);
   headers.set("Cache-Control", `public, max-age=${STALE_SECONDS}`);
   headers.set(STORED_AT_HEADER, String(now));
+  headers.set(BUILD_HEADER, buildId);
   // The key already carries every variant; the Cache API must not split or refuse entries on the served Vary.
   headers.delete("Vary");
   return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
@@ -88,6 +94,7 @@ function toStored(response: Response, now: number): Response {
 function toServed(response: Response, status: CacheStatus, ageSeconds?: number): Response {
   const headers = new Headers(response.headers);
   headers.delete(STORED_AT_HEADER);
+  headers.delete(BUILD_HEADER);
   headers.delete("CF-Cache-Status");
   // The browser must still revalidate every time: the edge copy is the one that may be reused, not the browser's.
   headers.set("Cache-Control", "private, max-age=0, must-revalidate");
@@ -112,19 +119,21 @@ async function renderAndStore(
   const stored = isStorable(rendered);
   const response = options.finalize(rendered);
   if (!stored) return { response, stored };
-  options.waitUntil(options.cache.put(key, toStored(response.clone(), now())).catch(() => undefined));
+  options.waitUntil(options.cache.put(key, toStored(response.clone(), now(), options.buildId)).catch(() => undefined));
   return { response, stored };
 }
 
 export async function serveCachedHtml(request: Request, options: HtmlCacheOptions): Promise<Response> {
   const now = options.now ?? Date.now;
-  const key = htmlCacheKey(request, options.buildId);
+  const key = htmlCacheKey(request);
   const cached = await options.cache.match(key).catch(() => undefined);
   if (cached) {
     const storedAt = Number(cached.headers.get(STORED_AT_HEADER));
     const age = Number.isFinite(storedAt) ? Math.max(0, Math.floor((now() - storedAt) / 1000)) : STALE_SECONDS;
-    if (age < STALE_SECONDS) {
-      if (age < FRESH_SECONDS) return toServed(cached, "HIT", age);
+    const build = cached.headers.get(BUILD_HEADER) ?? "";
+    const sameBuild = build === options.buildId;
+    if (age < STALE_SECONDS && (sameBuild || (await options.servedBuilds().catch(() => new Set())).has(build))) {
+      if (age < FRESH_SECONDS && sameBuild) return toServed(cached, "HIT", age);
       if (!refreshing.has(key.url)) {
         refreshing.add(key.url);
         options.waitUntil(

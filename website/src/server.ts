@@ -13,6 +13,29 @@ function isHtmlResponse(res: Response): boolean {
   return !!ct && ct.toLowerCase().includes("text/html");
 }
 
+/** The Workers Static Assets binding (`assets.binding` in wrangler.jsonc). */
+interface AssetsBinding {
+  fetch(url: string): Promise<Response>;
+}
+
+/** The builds whose assets this deploy serves (scripts/preserve-old-assets.mjs); read once per isolate. */
+let servedBuilds: Promise<ReadonlySet<string>> | undefined;
+
+function readServedBuilds(assets: AssetsBinding | undefined, origin: string): Promise<ReadonlySet<string>> {
+  servedBuilds ??= (async () => {
+    if (!assets) return new Set<string>();
+    const res = await assets.fetch(`${origin}/asset-history.json`);
+    if (!res.ok) throw new Error(`asset-history.json: HTTP ${res.status}`);
+    const history = (await res.json()) as { builds?: Record<string, unknown> };
+    return new Set(Object.keys(history.builds ?? {}));
+  })().catch(() => {
+    // A failed read is not kept: the next request tries again.
+    servedBuilds = undefined;
+    return new Set<string>();
+  });
+  return servedBuilds;
+}
+
 /** The part of the Workers `ExecutionContext` this entry uses; absent in the Vite dev server. */
 interface WorkerContext {
   waitUntil(promise: Promise<unknown>): void;
@@ -65,6 +88,7 @@ export default {
         finalize: (res) => finalize(url, res),
         waitUntil: (promise) => ctx.waitUntil(promise),
         buildId: import.meta.env.VITE_BUILD_ID,
+        servedBuilds: () => readServedBuilds((env as { ASSETS?: AssetsBinding }).ASSETS, url.origin),
       });
     }
     return finalize(url, await render(request));

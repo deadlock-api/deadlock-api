@@ -30,6 +30,7 @@ function setup(renderResponse: () => Response = () => html("page")) {
   const pending: Promise<unknown>[] = [];
   let clock = 1_000_000;
   let renders = 0;
+  let served: ReadonlySet<string> = new Set(["b1"]);
   const options: HtmlCacheOptions = {
     cache,
     render: async () => {
@@ -39,6 +40,7 @@ function setup(renderResponse: () => Response = () => html("page")) {
     finalize: (res) => res,
     waitUntil: (promise) => void pending.push(promise),
     buildId: "b1",
+    servedBuilds: async () => served,
     now: () => clock,
   };
   return {
@@ -47,6 +49,7 @@ function setup(renderResponse: () => Response = () => html("page")) {
     renders: () => renders,
     advance: (seconds: number) => void (clock += seconds * 1000),
     settle: () => Promise.all(pending.splice(0)),
+    serve: (...builds: string[]) => void (served = new Set(builds)),
   };
 }
 
@@ -68,9 +71,8 @@ test("only GET requests for analytics and community pages are cached", () => {
   assert.ok(!isCacheableRequest(new Request("https://deadlock-api.com/analytics", { method: "HEAD" })));
 });
 
-test("the key separates builds, queries and preferences, and ignores other cookies", () => {
-  const key = (request: Request, build = "b1") => htmlCacheKey(request, build).url;
-  assert.notEqual(key(page()), key(page(), "b2"));
+test("the key separates queries and preferences, and ignores other cookies", () => {
+  const key = (request: Request) => htmlCacheKey(request).url;
   assert.notEqual(key(page()), key(page("/analytics/heroes?min_rank=91")));
   const patch = { cookie: `preferences=${encodeURIComponent('{"dateFilter":"patch"}')}` };
   assert.notEqual(key(page()), key(page("/analytics/heroes", patch)));
@@ -82,7 +84,7 @@ test("the key separates builds, queries and preferences, and ignores other cooki
 });
 
 test("the leaderboard key carries the request's region, other pages do not", () => {
-  const key = (path: string, headers: Record<string, string>) => htmlCacheKey(page(path, headers), "b1").url;
+  const key = (path: string, headers: Record<string, string>) => htmlCacheKey(page(path, headers)).url;
   assert.notEqual(
     key("/community/leaderboard", { "cf-ipcountry": "US" }),
     key("/community/leaderboard", { "cf-ipcountry": "DE" }),
@@ -120,6 +122,51 @@ test("a stored page is a hit while fresh, stale with one background render after
   t.advance(STALE_SECONDS);
   assert.equal((await serveCachedHtml(page(), t.options)).headers.get(CACHE_STATUS_HEADER), "MISS");
   assert.equal(t.renders(), 3);
+});
+
+test("a page an earlier build rendered is served stale while this build re-renders it", async () => {
+  const t = setup();
+  await serveCachedHtml(page(), t.options);
+  await t.settle();
+
+  t.advance(1);
+  t.options.buildId = "b2";
+  t.serve("b2", "b1");
+  const stale = await serveCachedHtml(page(), t.options);
+  assert.equal(stale.headers.get(CACHE_STATUS_HEADER), "STALE");
+  assert.equal(stale.headers.get("x-html-cache-build"), null);
+  await t.settle();
+  assert.equal(t.renders(), 2);
+  assert.equal((await serveCachedHtml(page(), t.options)).headers.get(CACHE_STATUS_HEADER), "HIT");
+});
+
+test("a page of a build this deploy does not serve the assets of is rendered again", async () => {
+  // A rollback to b0, or a deploy that could not carry b1's assets.
+  const t = setup();
+  await serveCachedHtml(page(), t.options);
+  await t.settle();
+
+  t.options.buildId = "b0";
+  t.serve("b0");
+  assert.equal((await serveCachedHtml(page(), t.options)).headers.get(CACHE_STATUS_HEADER), "MISS");
+  await t.settle();
+  assert.equal(t.renders(), 2);
+  assert.equal((await serveCachedHtml(page(), t.options)).headers.get(CACHE_STATUS_HEADER), "HIT");
+
+  // The served builds cannot be read: only this build's own pages are reused.
+  t.options.buildId = "b1";
+  t.options.servedBuilds = () => Promise.reject(new Error("offline"));
+  assert.equal((await serveCachedHtml(page(), t.options)).headers.get(CACHE_STATUS_HEADER), "MISS");
+});
+
+test("an earlier build's page past the stale window is rendered again", async () => {
+  const t = setup();
+  await serveCachedHtml(page(), t.options);
+  await t.settle();
+  t.advance(STALE_SECONDS);
+  t.options.buildId = "b2";
+  t.serve("b2", "b1");
+  assert.equal((await serveCachedHtml(page(), t.options)).headers.get(CACHE_STATUS_HEADER), "MISS");
 });
 
 test("errors, redirects, cookies and pages with their own caching policy go out as rendered and are not stored", async () => {
