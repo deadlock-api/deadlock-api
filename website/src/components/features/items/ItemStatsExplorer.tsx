@@ -137,6 +137,20 @@ export function ItemStatsExplorer({
     placeholderData: keepPreviousData,
   });
 
+  // With both kinds of purchase counted, the corrupted share of each item's matches splits its usage bar.
+  const { data: corruptedData } = useQuery({
+    ...itemStatsQueryOptions({ ...queryStatOptions, corruptedItems: "only" }),
+    enabled: corruptedMode === "include",
+    placeholderData: keepPreviousData,
+  });
+  const corruptedMatchesMap = useMemo(
+    () =>
+      corruptedMode === "include" && corruptedData
+        ? new Map(corruptedData.map((stat) => [stat.item_id, stat.matches]))
+        : undefined,
+    [corruptedMode, corruptedData],
+  );
+
   const prevQueryStatOptions: AnalyticsApiItemStatsRequest = useMemo(
     () => ({
       minMatches,
@@ -306,6 +320,7 @@ export function ItemStatsExplorer({
             maxUsage={maxUsage}
             trendParams={rowQueryOptions}
             prevStatsMap={prevStatsMap}
+            corruptedMatchesMap={corruptedMatchesMap}
             customDropdownContent={renderBuyTiming}
             actions={
               topBuildsEnabled && (
