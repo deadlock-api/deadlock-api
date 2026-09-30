@@ -102,7 +102,12 @@ impl ObjectiveMarker {
     }
 }
 
-/// A position on the minimap, as fractions of its width/height.
+/// The top-left corner of an objective marker on the minimap, as fractions of
+/// its width/height (like a CSS `margin-left`/`margin-top`). The marker is a
+/// `Core` (30% x 8%) for the cores and an `Icon` (10% x 10%) otherwise, so its
+/// centre is this position plus half that size. Unlike `neutral_camps`, whose
+/// `left_relative`/`top_relative` are the point itself. Before build 6711 these
+/// are the HUD's schematic layout; from 6711 on they are real map positions.
 #[derive(Debug, Clone, Copy, Serialize, ToSchema)]
 pub(crate) struct ObjectivePosition {
     pub(crate) left_relative: f64,
@@ -316,7 +321,12 @@ fn round4(v: f64) -> f64 {
 /// `margin + size / 2`; the centre of a `Core` (30% x 8%) / `Icon` (10% x 10%)
 /// coincides with the structure's minimap position on the cores and titans of
 /// the old layout (`0.5` horizontally). Here the margin is therefore
-/// `(x + R) / 2R - w / 2` and `(R - y) / 2R - h / 2`, the same anchor.
+/// `(x + R) / 2R - w / 2` and `(R - y) / 2R - h / 2`, the same anchor, clamped
+/// so the whole marker stays on the minimap (the cores sit at the map edge).
+///
+/// The cores have no structure entity of their own: their position is the
+/// centroid of the team's `info_team_spawn` points (the base area), matching
+/// the old CSS `Core` bar, which marks the base rather than a building.
 fn city_never_sleeps_objective_positions()
 -> Result<IndexMap<String, ObjectivePosition>, AssetsError> {
     let radius = f64::from(MAP_RADIUS);
@@ -335,8 +345,12 @@ fn city_never_sleeps_objective_positions()
             Some(Ok((
                 key,
                 ObjectivePosition {
-                    left_relative: round4((x + radius) / (2.0 * radius) - w / 2.0),
-                    top_relative: round4((radius - y) / (2.0 * radius) - h / 2.0),
+                    left_relative: round4(
+                        ((x + radius) / (2.0 * radius) - w / 2.0).clamp(0.0, 1.0 - w),
+                    ),
+                    top_relative: round4(
+                        ((radius - y) / (2.0 * radius) - h / 2.0).clamp(0.0, 1.0 - h),
+                    ),
                 },
             )))
         })
@@ -367,7 +381,13 @@ pub(crate) fn build_map(css: &str, version: u32) -> Result<MapData, AssetsError>
     key = "u32"
 )]
 pub(crate) async fn fetch_map(r2: &AmazonS3, version: u32) -> Result<Arc<MapData>, AssetsError> {
-    let css_src = store::fetch_text(r2, version, CSS_PATH).await?;
+    // From 6711 on the objective positions don't come from the CSS, so don't
+    // depend on the file existing.
+    let css_src = if version >= CITY_NEVER_SLEEPS_BUILD {
+        String::new()
+    } else {
+        store::fetch_text(r2, version, CSS_PATH).await?
+    };
     Ok(Arc::new(build_map(&css_src, version)?))
 }
 
@@ -413,6 +433,22 @@ mod tests {
             bits(new.zipline_paths[0].origin),
             bits(city_never_sleeps::LANE_ORIGINS[0])
         );
+        for (key, pos) in &new.objective_positions {
+            let marker = ObjectiveMarker::iter()
+                .find(|m| m.to_string() == *key)
+                .expect("marker key");
+            let (w, h) = marker.size();
+            assert!(
+                (0.0..=1.0 - w).contains(&pos.left_relative),
+                "{key} left {}",
+                pos.left_relative
+            );
+            assert!(
+                (0.0..=1.0 - h).contains(&pos.top_relative),
+                "{key} top {}",
+                pos.top_relative
+            );
+        }
         let camps = new.neutral_camps.expect("camps for 6711+");
         assert!(!camps.is_empty());
         for camp in &camps {
