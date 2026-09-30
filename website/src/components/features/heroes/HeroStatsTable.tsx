@@ -3,8 +3,8 @@ import { Link } from "@tanstack/react-router";
 import type { AnalyticsHeroStats } from "deadlock_api_client";
 import type { AnalyticsApiHeroBanStatsRequest } from "deadlock_api_client";
 import { Crosshair, Skull, Sparkles, Swords, type LucideIcon } from "lucide-react";
-import { parseAsStringLiteral, useQueryState } from "nuqs";
-import { useMemo, useState } from "react";
+import { parseAsStringLiteral, throttle, useQueryState } from "nuqs";
+import { startTransition, useMemo, useState } from "react";
 
 import { HeroCell } from "~/components/domain/assets/HeroCell";
 import { HeroImage } from "~/components/domain/assets/HeroImage";
@@ -65,6 +65,8 @@ const SORT_KEYS = ["hero", "winrate", "zScore", "residual", "pickRate", "banRate
 type SortKey = (typeof SORT_KEYS)[number];
 const parseAsSortKey = parseAsStringLiteral(SORT_KEYS);
 const parseAsSortDir = parseAsStringLiteral(["asc", "desc"] as const);
+/** A sort or metric change lands in one throttled URL update, so one history entry. */
+const together = { limitUrlUpdates: throttle(50) };
 
 function GroupStat({
   label,
@@ -133,20 +135,25 @@ export function HeroStatsTable({
     parseAsStringLiteral(PICK_RATE_MODES).withDefault("presence"),
   );
 
+  // Sorting re-renders every row: in a transition with a throttled (not debounced) URL update, the tap paints first.
   const handleSort = (key: SortKey) => {
-    if (key === activeSortKey) {
-      void setSortDir((d) => (d === "desc" ? "asc" : "desc"));
-    } else {
-      void setActiveSortKey(key);
-      void setSortDir("desc");
-    }
+    startTransition(() => {
+      if (key === activeSortKey) {
+        void setSortDir((d) => (d === "desc" ? "asc" : "desc"), together);
+      } else {
+        void setActiveSortKey(key, together);
+        void setSortDir("desc", together);
+      }
+    });
   };
 
   // Picking the column's metric is asking to rank heroes by it, so the table sorts by that column right away.
   const handlePickRateModeChange = (mode: PickRateMode) => {
-    void setPickRateMode(mode);
-    void setActiveSortKey("pickRate");
-    if (activeSortKey !== "pickRate") void setSortDir("desc");
+    startTransition(() => {
+      void setPickRateMode(mode, together);
+      void setActiveSortKey("pickRate", together);
+      if (activeSortKey !== "pickRate") void setSortDir("desc", together);
+    });
   };
 
   const { minUnixTimestamp, maxUnixTimestamp } = useNormalizedTimeRange(minDate, maxDate);

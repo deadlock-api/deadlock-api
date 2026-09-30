@@ -1,4 +1,5 @@
 import { type Options, throttle, useQueryStates } from "nuqs";
+import { startTransition } from "react";
 
 import { type Mode, MODE_CONFIG, modeFromParams, parseAsGameMode, parseAsMatchMode } from "~/lib/game-mode";
 
@@ -17,10 +18,14 @@ export function useModeState() {
 
   const setMode = (next: Mode, options?: Options) => {
     // One choice updates both parameters together, without the app's per-key debounce splitting browser history.
-    void setModeParams(
-      { game_mode: MODE_CONFIG[next].gameMode, match_mode: MODE_CONFIG[next].matchMode },
-      { ...options, limitUrlUpdates: options?.limitUrlUpdates ?? throttle(50) },
-    );
+    // The page re-renders in a transition, so the tap paints first (a synchronous re-render cost ~150 ms of INP on
+    // phones). A debounced update would defeat that: nuqs tracks queued values in a sync external store.
+    startTransition(() => {
+      void setModeParams(
+        { game_mode: MODE_CONFIG[next].gameMode, match_mode: MODE_CONFIG[next].matchMode },
+        { ...options, limitUrlUpdates: options?.limitUrlUpdates ?? throttle(50) },
+      );
+    });
   };
 
   const { gameMode, matchMode } = MODE_CONFIG[mode];

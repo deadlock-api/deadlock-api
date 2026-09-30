@@ -1,3 +1,6 @@
+import { throttle } from "nuqs";
+import { startTransition } from "react";
+
 import { Filter } from "~/components/domain/filters";
 import { STATS_TABS, type useHeroFilters } from "~/hooks/useHeroFilters";
 import { DEFAULT_MODE } from "~/lib/game-mode";
@@ -22,6 +25,8 @@ type HeroFiltersProps = Pick<
   | "handleDateChange"
   | "defaultRange"
 >;
+
+const together = { limitUrlUpdates: throttle(50) };
 
 export function HeroFiltersSection({
   tab,
@@ -77,8 +82,11 @@ export function HeroFiltersSection({
         onValueChange={(next) => {
           if (next.mode !== mode) setMode(next.mode);
           if (next.rank[0] !== minRankId || next.rank[1] !== maxRankId) {
-            void setMinRankId(next.rank[0]);
-            void setMaxRankId(next.rank[1]);
+            // Both bounds in one throttled URL update, and the table re-renders in a transition so the tap paints first.
+            startTransition(() => {
+              void setMinRankId(next.rank[0], together);
+              void setMaxRankId(next.rank[1], together);
+            });
           }
         }}
         hideRankRange={tab === "stats-by-rank"}
