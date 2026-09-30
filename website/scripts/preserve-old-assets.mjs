@@ -74,7 +74,21 @@ async function liveHistory() {
       if (res.status === 404) return null;
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       // oxlint-disable-next-line no-await-in-loop -- retries run one after another
-      const history = await res.json();
+      const text = await res.text();
+      let history;
+      try {
+        history = JSON.parse(text);
+      } catch {
+        history = undefined;
+      }
+      // A real history always lists the build that published it; anything else is not one.
+      if (typeof history?.current !== "string" || !history.builds?.[history.current]) {
+        const type = res.headers.get("content-type");
+        console.warn(
+          `[preserve-old-assets] no history: HTTP ${res.status} ${type} ${JSON.stringify(text.slice(0, 80))}`,
+        );
+        return null;
+      }
       const builds = Object.entries(history?.builds ?? {}).filter(
         ([id, build]) =>
           Number.isFinite(build?.usedAt) &&
@@ -82,7 +96,7 @@ async function liveHistory() {
           build.assets.every((name) => typeof name === "string" && ASSET_NAME.test(name)) &&
           id.length > 0,
       );
-      return { current: history?.current, builds: Object.fromEntries(builds) };
+      return { current: history.current, builds: Object.fromEntries(builds) };
     } catch (err) {
       console.warn(`[preserve-old-assets] history attempt ${attempt} failed: ${err.message}`);
     }
