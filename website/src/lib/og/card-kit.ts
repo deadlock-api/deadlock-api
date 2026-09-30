@@ -3,6 +3,11 @@ export const CARD_WIDTH = 1200;
 export const CARD_HEIGHT = 630;
 export const LOGO = "https://deadlock-api.com/favicon.png";
 export const SITE_LABEL = "deadlock-api.com/compare";
+/**
+ * The crosshair card's design version, in its URL and its edge cache key. Bump it whenever the card's look changes:
+ * cached cards and link previews (Discord keeps its own by image URL) then fetch the new one.
+ */
+export const CROSSHAIR_CARD_VERSION = "2";
 
 /** Relative advance of one grapheme in Inter bold, in em: wide capitals, emoji and CJK count for more. */
 function glyphWidth(glyph: string): number {

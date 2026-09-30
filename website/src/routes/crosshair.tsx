@@ -31,6 +31,7 @@ import { useHydrated } from "~/hooks/useHydrated";
 import { API_ORIGIN } from "~/lib/constants";
 import { renderCrosshair, toPngDataUrl } from "~/lib/crosshair-render";
 import { isClientError } from "~/lib/http";
+import { CROSSHAIR_CARD_VERSION } from "~/lib/og/card-kit";
 import { pageTitle, seo, SITE_URL } from "~/lib/seo";
 import { useStoredState } from "~/lib/use-stored-state";
 import {
@@ -71,7 +72,7 @@ export const Route = createFileRoute("/crosshair")({
         "A Deadlock crosshair: see it at its true size, tweak it with sliders and copy the code to use in game.",
       shareUrl: `${SITE_URL}/crosshair?${query}`,
       // A 1200x630 card of the crosshair over a game scene, the size link previews show large.
-      ogImage: `${SITE_URL}/og/crosshair.png?${query}`,
+      ogImage: `${SITE_URL}/og/crosshair.png?${query}&v=${CROSSHAIR_CARD_VERSION}`,
     });
   },
 });
