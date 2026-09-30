@@ -22,6 +22,7 @@ import { getAnalytics } from "~/lib/analytics";
 import { ANALYTICS_TABS } from "~/lib/analytics-tabs";
 import { installChunkReloadHandlers, isChunkLoadError, reloadOnceForStaleChunk } from "~/lib/chunk-reload";
 import { readPreferences } from "~/lib/preferences.isomorphic";
+import { catchPrefetch } from "~/lib/prefetch-safe";
 import { seo } from "~/lib/seo";
 import type { RouterContext } from "~/router";
 
@@ -191,6 +192,28 @@ function RootComponent() {
     const id = setTimeout(start, 1000);
     return () => clearTimeout(id);
   }, [isWidgetEmbed]);
+
+  const { queryClient } = Route.useRouteContext();
+  React.useEffect(() => {
+    if (isWidgetEmbed) return;
+    // The catalogs every analytics loader waits on, warmed in idle time on any page (the home page included), so the
+    // first click into analytics does not stall on them.
+    const warm = () =>
+      void Promise.all([import("~/queries/asset-queries"), import("~/queries/ranks-query")]).then(
+        ([{ heroesQueryOptions, rankedSeasonsQueryOptions }, { ranksQueryOptions }]) =>
+          Promise.all([
+            catchPrefetch(queryClient.query({ ...rankedSeasonsQueryOptions, staleTime: "static" })),
+            catchPrefetch(queryClient.query({ ...heroesQueryOptions, staleTime: "static" })),
+            catchPrefetch(queryClient.query({ ...ranksQueryOptions, staleTime: "static" })),
+          ]),
+      );
+    if (typeof window.requestIdleCallback === "function") {
+      const id = window.requestIdleCallback(warm, { timeout: 3000 });
+      return () => window.cancelIdleCallback(id);
+    }
+    const id = setTimeout(warm, 1500);
+    return () => clearTimeout(id);
+  }, [isWidgetEmbed, queryClient]);
 
   if (isWidgetEmbed) {
     return (
