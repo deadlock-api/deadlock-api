@@ -17,6 +17,8 @@ const cardVariants = cva("group/card flex min-w-0 flex-col text-card-foreground"
       inset: "border bg-background",
       /** A border and nothing else, for a tile nested inside a Card or Panel. */
       outline: "border",
+      /** No surface at all: the content of a Card placed inside a surface that already frames it (a ChartCard). */
+      bare: "",
       muted: "bg-muted/50",
       /** A widget that floats over content it does not belong to: a map legend, a graph toolbar, a sticky bar. */
       floating: "border bg-popover/90 text-popover-foreground shadow-lg backdrop-blur-md",

@@ -2,10 +2,11 @@ import { useQuery } from "@tanstack/react-query";
 import type { AnalyticsApiHeroStatsRequest } from "deadlock_api_client";
 import { useMemo } from "react";
 
+import { ChartCard } from "~/components/patterns/charts/ChartCard";
+import { ChartEmpty, ChartError, ChartLoading } from "~/components/patterns/charts/ChartStates";
 import { type WeekEntry, WeeklyTrendChart } from "~/components/patterns/charts/WeeklyTrendChart";
-import { Section } from "~/components/patterns/page/Section";
-import { ErrorState } from "~/components/patterns/states/ErrorState";
-import { LoadingState } from "~/components/patterns/states/LoadingState";
+import { PanelBody } from "~/components/patterns/panel/Panel";
+import { Delta } from "~/components/ui/delta";
 import { CACHE_DURATIONS } from "~/constants/cache";
 import { day } from "~/dayjs";
 import { useDefaultPeriodLabel } from "~/hooks/useDefaultPeriodLabel";
@@ -23,7 +24,9 @@ export function HeroWinRateOverTime({
   heroName,
   request,
   rankRange,
+  className,
 }: {
+  className?: string;
   heroId: number;
   heroName: string;
   request: Omit<AnalyticsApiHeroStatsRequest, "gameMode"> & { gameMode?: GameMode };
@@ -62,44 +65,47 @@ export function HeroWinRateOverTime({
       }));
   }, [data, heroId, request.gameMode, request.minUnixTimestamp]);
 
-  if (isPending) {
-    return <LoadingState label="win rate over time" align="center" className="py-8" />;
-  }
-  if (isError && !data) {
-    return (
-      <Section title={`${heroName} Win Rate Over Time`}>
-        <ErrorState
-          title={`Could not load ${possessive(heroName)} win rate over time`}
-          retrying={isFetching}
-          onRetry={() => void refetch()}
-        />
-      </Section>
-    );
-  }
-  if (weeks.length < 2) return null;
-
   const first = weeks[0];
-  const last = weeks[weeks.length - 1];
+  const last = weeks.at(-1);
   // From the printed (rounded) rates, so "climbed 4.5 points from 45.7% to 50.2%" adds up for the reader.
-  const delta = Number(formatPercent(last.winRate).slice(0, -1)) - Number(formatPercent(first.winRate).slice(0, -1));
+  const delta =
+    first && last
+      ? Number(formatPercent(last.winRate).slice(0, -1)) - Number(formatPercent(first.winRate).slice(0, -1))
+      : 0;
   // In percentage points: "-2.3%" from 64.6% to 62.3% reads as a relative change.
   const points = `${Math.abs(delta).toFixed(1)} points`;
   const movement =
     Math.abs(delta) < 1 ? "has held steady" : delta > 0 ? `has climbed ${points}` : `has slipped ${points}`;
+  const chartLabel = `${heroName} win rate and pick rate by week`;
 
   return (
-    <Section
-      title={`${heroName} Win Rate Over Time`}
-      description={
-        <>
-          {possessive(heroName)} win rate <span className="font-semibold text-foreground">{movement}</span> from{" "}
-          {formatPercent(first.winRate)} in the week of {first.label} to {formatPercent(last.winRate)} in the week of{" "}
-          {last.label}. The upper line is win rate against a dashed 50% mark, the lower one pick rate; both cover{" "}
-          {rankRange} matches in {period}, week by week.
-        </>
+    <ChartCard
+      className={className}
+      title="Win Rate Over Time"
+      description={`${rankRange} · week by week`}
+      actions={weeks.length >= 2 && <Delta value={delta / 100} digits={1} unit=" pp" />}
+      footer={
+        first &&
+        last &&
+        weeks.length >= 2 && (
+          <>
+            {possessive(heroName)} win rate {movement}, from {formatPercent(first.winRate)} in the week of {first.label}{" "}
+            to {formatPercent(last.winRate)} in the week of {last.label}, in {period}.
+          </>
+        )
       }
     >
-      <WeeklyTrendChart weeks={weeks} shareLabel="Pick rate" label={`${heroName} win rate and pick rate by week`} />
-    </Section>
+      <PanelBody size="sm">
+        {isError && !data ? (
+          <ChartError label="win rate over time" retrying={isFetching} onRetry={() => void refetch()} />
+        ) : isPending ? (
+          <ChartLoading label={chartLabel} size="lg" />
+        ) : weeks.length < 2 ? (
+          <ChartEmpty label="weekly win rates" description="Fewer than two weeks of matches so far." />
+        ) : (
+          <WeeklyTrendChart variant="flush" weeks={weeks} shareLabel="Pick rate" label={chartLabel} />
+        )}
+      </PanelBody>
+    </ChartCard>
   );
 }

@@ -2,16 +2,16 @@ import { useQueries } from "@tanstack/react-query";
 import type { AnalyticsApiHeroStatsRequest } from "deadlock_api_client";
 import { useMemo } from "react";
 
+import { ChartCard } from "~/components/patterns/charts/ChartCard";
+import { ChartEmpty, ChartError, ChartLoading } from "~/components/patterns/charts/ChartStates";
 import { WinRateBarChart } from "~/components/patterns/charts/WinRateBarChart";
-import { Section } from "~/components/patterns/page/Section";
-import { ErrorState } from "~/components/patterns/states/ErrorState";
-import { LoadingState } from "~/components/patterns/states/LoadingState";
+import { PanelBody } from "~/components/patterns/panel/Panel";
 import { TooltipCard, TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
 import { CACHE_DURATIONS } from "~/constants/cache";
 import { useDefaultPeriodLabel } from "~/hooks/useDefaultPeriodLabel";
 import { api } from "~/lib/api";
 import { DURATION_BUCKETS } from "~/lib/constants";
-import { formatPercent, possessive } from "~/lib/format";
+import { formatPercent } from "~/lib/format";
 import type { GameMode } from "~/lib/game-mode";
 import { queryKeys } from "~/queries/query-keys";
 
@@ -46,7 +46,9 @@ export function HeroWinRateByDuration({
   heroName,
   request,
   rankRange,
+  className,
 }: {
+  className?: string;
   heroId: number;
   heroName: string;
   request: Omit<AnalyticsApiHeroStatsRequest, "gameMode"> & { gameMode?: GameMode };
@@ -87,50 +89,55 @@ export function HeroWinRateByDuration({
     });
   }, [rows]);
 
-  if (failed.length > 0) {
-    return (
-      <Section title={`${heroName} Win Rate by Match Duration`}>
-        <ErrorState
-          title={`Could not load ${possessive(heroName)} win rate by match duration`}
-          retrying={failed.some((q) => q.isFetching)}
-          onRetry={() => failed.forEach((q) => void q.refetch())}
-        />
-      </Section>
-    );
-  }
-  if (isPending) {
-    return <LoadingState label="win rate by match duration" align="center" className="py-8" />;
-  }
-  if (entries.length < 2) return null;
-
   const early = entries[0];
-  const late = entries[entries.length - 1];
-  const delta = late.winRate - early.winRate;
+  const late = entries.at(-1);
+  const delta = early && late ? late.winRate - early.winRate : 0;
   const verdict =
     Math.abs(delta) < 0.02
       ? `${heroName} wins about as often in short games as in long ones`
       : delta > 0
         ? `${heroName} scales into the late game`
         : `${heroName} falls off in longer games`;
+  const chartLabel = `${heroName} win rate by match duration`;
 
   return (
-    <Section
-      title={`${heroName} Win Rate by Match Duration`}
-      description={
-        <>
-          <span className="font-semibold text-foreground">{verdict}</span>: {formatPercent(early.winRate)} in{" "}
-          {early.label} games versus {formatPercent(late.winRate)} in {late.label} games. Each bar is one duration
-          bracket of {rankRange} matches in {period}; hover for how many of {possessive(heroName)} games end there.
-        </>
+    <ChartCard
+      className={className}
+      title="Win Rate by Match Length"
+      description={`${rankRange} · ${period}`}
+      footer={
+        early &&
+        late &&
+        entries.length >= 2 && (
+          <>
+            {verdict}: {formatPercent(early.winRate)} in {early.label} games versus {formatPercent(late.winRate)} in{" "}
+            {late.label} games.
+          </>
+        )
       }
     >
-      <WinRateBarChart
-        label={`${heroName} win rate by match duration`}
-        data={entries}
-        xKey="tick"
-        valueKey="winRate"
-        tooltip={<DurationTooltip />}
-      />
-    </Section>
+      <PanelBody size="sm">
+        {failed.length > 0 ? (
+          <ChartError
+            label="win rate by match duration"
+            retrying={failed.some((q) => q.isFetching)}
+            onRetry={() => failed.forEach((q) => void q.refetch())}
+          />
+        ) : isPending ? (
+          <ChartLoading label={chartLabel} />
+        ) : entries.length < 2 ? (
+          <ChartEmpty label="match lengths with enough games" />
+        ) : (
+          <WinRateBarChart
+            variant="flush"
+            label={chartLabel}
+            data={entries}
+            xKey="tick"
+            valueKey="winRate"
+            tooltip={<DurationTooltip />}
+          />
+        )}
+      </PanelBody>
+    </ChartCard>
   );
 }

@@ -2,10 +2,10 @@ import { useQuery } from "@tanstack/react-query";
 import type { AnalyticsApiItemStatsRequest } from "deadlock_api_client";
 import { useMemo } from "react";
 
-import { ChartLoading } from "~/components/patterns/charts/ChartStates";
+import { ChartCard } from "~/components/patterns/charts/ChartCard";
+import { ChartEmpty, ChartError, ChartLoading } from "~/components/patterns/charts/ChartStates";
 import { WinRateBarChart } from "~/components/patterns/charts/WinRateBarChart";
-import { Section } from "~/components/patterns/page/Section";
-import { ErrorState } from "~/components/patterns/states/ErrorState";
+import { PanelBody } from "~/components/patterns/panel/Panel";
 import { TooltipCard, TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
 import { CACHE_DURATIONS } from "~/constants/cache";
 import { api } from "~/lib/api";
@@ -73,7 +73,9 @@ export function ItemWinRateByBuyTime({
   itemId,
   itemName,
   request,
+  className,
 }: {
+  className?: string;
   itemId: number;
   itemName: string;
   request: AnalyticsApiItemStatsRequest;
@@ -88,44 +90,48 @@ export function ItemWinRateByBuyTime({
 
   const entries = useMemo(() => binByBuyMinute(data?.filter((row) => row.item_id === itemId) ?? []), [data, itemId]);
 
-  if (isPending) return <ChartLoading label={`${itemName} win rate by purchase time`} />;
-  if (isError && !data) {
-    return (
-      <Section title={`When to Buy ${itemName}`}>
-        <ErrorState
-          title={`Could not load when ${itemName} is bought`}
-          retrying={isFetching}
-          onRetry={() => void refetch()}
-        />
-      </Section>
-    );
-  }
-  if (entries.length < 2) return null;
-
   const early = entries[0];
-  const late = entries[entries.length - 1];
-  const peak = entries.reduce((a, b) => (b.share > a.share ? b : a));
+  const late = entries.at(-1);
+  const peak = entries.length > 0 ? entries.reduce((a, b) => (b.share > a.share ? b : a)) : undefined;
+  const chartLabel = `${itemName} win rate by purchase time`;
 
   return (
-    <Section
-      title={`When to Buy ${itemName}`}
-      description={
-        <>
-          {/* The largest bucket is often well under half of all purchases, so it is "most often", not "most players". */}
-          {itemName} is bought most often at <span className="font-semibold text-foreground">{peak.label}</span> (
-          {formatPercent(peak.share, 0)} of purchases). Buyers at {early.label} win {formatPercent(early.winRate)},
-          versus {formatPercent(late.winRate)} at {late.label}. An early buy partly reflects a team that is already
-          ahead, so read this as when the item tends to pay off rather than proof that rushing it wins.
-        </>
+    <ChartCard
+      className={className}
+      title="When to Buy"
+      description="Win rate by purchase minute"
+      footer={
+        early &&
+        late &&
+        peak &&
+        entries.length >= 2 && (
+          <>
+            {/* The largest bucket is often well under half of all purchases, so it is "most often", not "most players". */}
+            Bought most often at {peak.label} ({formatPercent(peak.share, 0)} of purchases). Buyers at {early.label} win{" "}
+            {formatPercent(early.winRate)}, versus {formatPercent(late.winRate)} at {late.label}. An early buy partly
+            reflects a team already ahead, so read it as when the item pays off, not proof that rushing it wins.
+          </>
+        )
       }
     >
-      <WinRateBarChart
-        label={`${itemName} win rate by purchase time`}
-        data={entries}
-        xKey="tick"
-        valueKey="winRate"
-        tooltip={<BinTooltip />}
-      />
-    </Section>
+      <PanelBody size="sm">
+        {isError && !data ? (
+          <ChartError label="purchase timings" retrying={isFetching} onRetry={() => void refetch()} />
+        ) : isPending ? (
+          <ChartLoading label={chartLabel} />
+        ) : entries.length < 2 ? (
+          <ChartEmpty label="purchase timings" />
+        ) : (
+          <WinRateBarChart
+            variant="flush"
+            label={chartLabel}
+            data={entries}
+            xKey="tick"
+            valueKey="winRate"
+            tooltip={<BinTooltip />}
+          />
+        )}
+      </PanelBody>
+    </ChartCard>
   );
 }

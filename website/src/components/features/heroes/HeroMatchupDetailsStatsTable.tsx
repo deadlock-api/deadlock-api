@@ -6,14 +6,13 @@ import { TableEmptyRow } from "~/components/patterns/data-table/TableEmptyRow";
 import { PanelShowMore } from "~/components/patterns/panel/Panel";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { Delta } from "~/components/ui/delta";
-import { ProgressBarWithLabel } from "~/components/ui/progress-bar";
+import { DivergingBar } from "~/components/ui/rate-bar";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { Tooltip, TooltipStat, TooltipStats, TooltipTarget } from "~/components/ui/tooltip";
 import { CACHE_DURATIONS } from "~/constants/cache";
 import type { Dayjs } from "~/dayjs";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { api } from "~/lib/api";
-import { formatSignedPercent } from "~/lib/format";
 import type { GameMode, MatchMode } from "~/lib/game-mode";
 import { heroMatchups, type HeroMatchups } from "~/lib/matchup-stats";
 import { queryKeys } from "~/queries/query-keys";
@@ -236,9 +235,8 @@ export function HeroMatchupDetailsStatsTable({
 }) {
   const isSynergy = stat === HeroMatchupDetailsStatsTableStat.SYNERGY;
   const rows = (isSynergy ? matchups?.synergyRows : matchups?.counterRows) ?? [];
-  const relWinrates = rows.map((row) => row.relWinrate);
-  const minRelWinrate = rows.length ? Math.min(...relWinrates) : 0;
-  const maxRelWinrate = rows.length ? Math.max(...relWinrates) : 0;
+  // One symmetric scale for the table, so a bar's length compares across rows and its side gives the sign.
+  const scale = rows.reduce((max, row) => Math.max(max, Math.abs(row.relWinrate)), 0);
   const [expanded, setExpanded] = useState(false);
   const visibleRows = expanded ? rows : rows.slice(0, COLLAPSED_ROWS);
 
@@ -284,14 +282,10 @@ export function HeroMatchupDetailsStatsTable({
                   }
                 >
                   <TooltipTarget display="block">
-                    <ProgressBarWithLabel
-                      min={minRelWinrate}
-                      max={maxRelWinrate}
-                      value={row.relWinrate}
-                      color={isSynergy ? "var(--primary)" : "var(--chart-4)"}
-                      label={formatSignedPercent(row.relWinrate)}
-                      delta={row.prevRelWinrate !== undefined ? row.relWinrate - row.prevRelWinrate : undefined}
-                    />
+                    <span className="flex min-w-32 items-center gap-3">
+                      <Delta value={row.relWinrate} className="w-14 shrink-0 text-end text-sm" />
+                      <DivergingBar value={row.relWinrate} scale={scale} className="flex-1" />
+                    </span>
                   </TooltipTarget>
                 </Tooltip>
               </TableCell>

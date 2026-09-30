@@ -3,16 +3,16 @@ import type { AnalyticsApiHeroStatsRequest, Rank } from "deadlock_api_client";
 import { useMemo } from "react";
 
 import { RankTierTick } from "~/components/domain/rank/RankTierTick";
+import { ChartCard } from "~/components/patterns/charts/ChartCard";
+import { ChartEmpty, ChartError, ChartLoading } from "~/components/patterns/charts/ChartStates";
 import { WinRateBarChart } from "~/components/patterns/charts/WinRateBarChart";
-import { Section } from "~/components/patterns/page/Section";
-import { ErrorState } from "~/components/patterns/states/ErrorState";
-import { LoadingState } from "~/components/patterns/states/LoadingState";
+import { PanelBody } from "~/components/patterns/panel/Panel";
 import { TooltipCard, TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
 import { CACHE_DURATIONS } from "~/constants/cache";
 import { useDefaultPeriodLabel } from "~/hooks/useDefaultPeriodLabel";
 import { api } from "~/lib/api";
 import { getPickrateMultiplier } from "~/lib/constants";
-import { formatPercent, possessive } from "~/lib/format";
+import { formatPercent } from "~/lib/format";
 import type { GameMode } from "~/lib/game-mode";
 import { queryKeys } from "~/queries/query-keys";
 import { ranksQueryOptions } from "~/queries/ranks-query";
@@ -47,7 +47,9 @@ export function HeroWinRateByRank({
   heroId,
   heroName,
   request,
+  className,
 }: {
+  className?: string;
   heroId: number;
   heroName: string;
   request: Omit<AnalyticsApiHeroStatsRequest, "gameMode"> & { gameMode?: GameMode };
@@ -98,47 +100,50 @@ export function HeroWinRateByRank({
 
   // Both are needed: without the rank list every tier is dropped.
   const failed = [statsQuery, ranksQuery].filter((query) => query.isError && !query.data);
-  if (failed.length > 0) {
-    return (
-      <Section title={`${heroName} Win Rate by Rank`}>
-        <ErrorState
-          title={`Could not load ${possessive(heroName)} win rate by rank`}
-          retrying={failed.some((query) => query.isFetching)}
-          onRetry={() => failed.forEach((query) => void query.refetch())}
-        />
-      </Section>
-    );
-  }
-  if (statsQuery.isPending) {
-    return <LoadingState label="win rate by rank" align="center" className="py-8" />;
-  }
-  if (tiers.length === 0) return null;
-
-  const best = tiers.reduce((a, b) => (b.winRate > a.winRate ? b : a));
-  const worst = tiers.reduce((a, b) => (b.winRate < a.winRate ? b : a));
+  const best = tiers.length > 0 ? tiers.reduce((a, b) => (b.winRate > a.winRate ? b : a)) : undefined;
+  const worst = tiers.length > 0 ? tiers.reduce((a, b) => (b.winRate < a.winRate ? b : a)) : undefined;
+  const chartLabel = `${heroName} win rate by rank tier`;
 
   return (
-    <Section
-      title={`${heroName} Win Rate by Rank`}
-      description={
-        <>
-          {heroName} wins most at <span className="font-semibold text-foreground">{best.name}</span> (
-          {formatPercent(best.winRate)}) and least at{" "}
-          <span className="font-semibold text-foreground">{worst.name}</span> ({formatPercent(worst.winRate)}). Each bar
-          is one rank tier in {period}; hover for pick rate and match count.
-        </>
+    <ChartCard
+      className={className}
+      title="Win Rate by Rank"
+      description={`All ranks · ${period}`}
+      footer={
+        best &&
+        worst && (
+          <>
+            {heroName} wins most at {best.name} ({formatPercent(best.winRate)}) and least at {worst.name} (
+            {formatPercent(worst.winRate)}). Hover a bar for pick rate and matches.
+          </>
+        )
       }
     >
-      <WinRateBarChart
-        label={`${heroName} win rate by rank tier`}
-        data={tiers}
-        xKey="tier"
-        valueKey="winRate"
-        colorKey="color"
-        xAxisHeight={48}
-        xTick={<RankTierTick tiers={tiers} />}
-        tooltip={<TierTooltip />}
-      />
-    </Section>
+      <PanelBody size="sm">
+        {failed.length > 0 ? (
+          <ChartError
+            label="win rate by rank"
+            retrying={failed.some((query) => query.isFetching)}
+            onRetry={() => failed.forEach((query) => void query.refetch())}
+          />
+        ) : statsQuery.isPending || ranksQuery.isPending ? (
+          <ChartLoading label={chartLabel} />
+        ) : tiers.length === 0 ? (
+          <ChartEmpty label="rank tiers with enough matches" />
+        ) : (
+          <WinRateBarChart
+            variant="flush"
+            label={chartLabel}
+            data={tiers}
+            xKey="tier"
+            valueKey="winRate"
+            colorKey="color"
+            xAxisHeight={48}
+            xTick={<RankTierTick tiers={tiers} />}
+            tooltip={<TierTooltip />}
+          />
+        )}
+      </PanelBody>
+    </ChartCard>
   );
 }

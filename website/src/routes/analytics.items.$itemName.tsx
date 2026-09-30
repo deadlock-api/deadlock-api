@@ -1,24 +1,24 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link, type NotFoundRouteProps, createFileRoute, notFound, redirect, useRouter } from "@tanstack/react-router";
 import type { AnalyticsHeroStats, ItemStats } from "deadlock_api_client";
+import { BarChart3, Layers } from "lucide-react";
 import { lazy, Suspense, useMemo } from "react";
 
 import { NotFound } from "~/components/app/NotFound";
 import { ItemImage } from "~/components/domain/assets/ItemImage";
 import { ItemCorruption } from "~/components/features/items/ItemCorruption";
 import { ItemEffectCard } from "~/components/features/items/ItemEffectCard";
-import { ItemHeroBreakdown } from "~/components/features/items/ItemHeroBreakdown";
+import { ItemBestHeroes, ItemPairings } from "~/components/features/items/ItemHeroBreakdown";
 import { ItemUpgradePath } from "~/components/features/items/ItemUpgradePath";
 import { ChartLoading } from "~/components/patterns/charts/ChartStates";
-import { PageHeader } from "~/components/patterns/page/PageHeader";
+import { LinkCard } from "~/components/patterns/content/LinkCard";
 import { PageShell } from "~/components/patterns/page/PageShell";
+import { ProfileHeader, ProfileHeaderMedia } from "~/components/patterns/page/ProfileHeader";
 import { Section } from "~/components/patterns/page/Section";
+import { Panel, PanelBody, PanelHeader } from "~/components/patterns/panel/Panel";
 import { ChunkErrorBoundary } from "~/components/patterns/states/ChunkErrorBoundary";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
-import { Button } from "~/components/ui/button";
-import { Card } from "~/components/ui/card";
-import { Separator } from "~/components/ui/separator";
-import { Inline, Stack } from "~/components/ui/stack";
+import { Badge } from "~/components/ui/badge";
 import { Stat, StatGroup } from "~/components/ui/stat";
 import { useSeasons } from "~/hooks/useSeasons";
 import type { DateFilterPreference } from "~/lib/date-filter-preference";
@@ -32,6 +32,7 @@ import { rankRangeLabel } from "~/lib/rank-utils";
 import { defaultPeriodLabel, defaultUnixRange, type SeasonInfo } from "~/lib/seasons";
 import { datasetJsonLd, pageTitle, seo } from "~/lib/seo";
 import { closestNameBySlug, findByIdSegment, slugify } from "~/lib/slug";
+import { toneOf } from "~/lib/tone";
 import {
   corruptionQueryOptions,
   filterShopableItems,
@@ -184,6 +185,7 @@ export const Route = createFileRoute("/analytics/items/$itemName")({
       image: item.shop_image_webp ?? item.shop_image ?? null,
       tier: item.item_tier,
       slot: SLOT_LABEL[item.item_slot_type],
+      slotType: item.item_slot_type,
       cost: item.cost ?? null,
       breadcrumb: item.name,
       bestHeroes,
@@ -228,9 +230,16 @@ function clock(seconds: number): string {
   return `${Math.floor(whole / 60)}:${String(whole % 60).padStart(2, "0")}`;
 }
 
+/** The shop category's color tints the header, as the shop tints its columns. */
+const SLOT_ACCENT = {
+  weapon: "var(--item-weapon)",
+  vitality: "var(--item-vitality)",
+  spirit: "var(--item-spirit)",
+} as const;
+
 function ItemDetailPage() {
   const { preferences } = Route.useRouteContext();
-  const { itemId, itemName, tier, slot, cost, rankRange, bestHeroes } = Route.useLoaderData();
+  const { itemId, itemName, tier, slot, slotType, cost, rankRange, bestHeroes } = Route.useLoaderData();
   const router = useRouter();
   const { seasons } = useSeasons();
   const period = defaultPeriodLabel(seasons, preferences.dateFilter);
@@ -244,131 +253,166 @@ function ItemDetailPage() {
     () => summarizeItemStats(statsQuery.data, heroStatsQuery.data, itemId),
     [statsQuery.data, heroStatsQuery.data, itemId],
   );
-
-  const facts = [`Tier ${tier}`, slot, cost !== null && `${cost.toLocaleString("en-US")} souls`].filter(Boolean);
+  const hasEffect = (itemQuery.data?.tooltip_sections?.length ?? 0) > 0;
 
   return (
-    <PageShell density="data">
-      <PageHeader
-        title={`${itemName}: Deadlock Win Rate & Best Heroes`}
-        description={facts.join(" · ")}
-        media={<ItemImage itemId={itemId} className="size-16" />}
-      />
-
-      {summary ? (
-        <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">
-          {period === "this season" ? "This season" : "In the current patch"}, in{" "}
-          <span className="font-semibold text-foreground">{rankRange}</span> matches, players who buy {itemName} win{" "}
-          <span className="font-semibold text-foreground">{formatPercent(summary.winRate)}</span> of their{" "}
-          <span className="font-semibold text-foreground">{summary.matches.toLocaleString("en-US")}</span> tracked
-          matches
-          {summary.usage !== undefined && (
+    <PageShell density="content">
+      <ProfileHeader
+        accent={SLOT_ACCENT[slotType]}
+        media={
+          <ProfileHeaderMedia shape="square">
+            <ItemImage itemId={itemId} title="" className="size-full" />
+          </ProfileHeaderMedia>
+        }
+        eyebrow={
+          <>
+            <Badge variant="outline" size="sm">
+              {slot}
+            </Badge>
+            <Badge variant="outline" size="sm">
+              Tier {tier}
+            </Badge>
+            {cost !== null && <span className="tabular-nums">{cost.toLocaleString("en-US")} souls</span>}
+            <span>
+              {rankRange} · {period}
+            </span>
+          </>
+        }
+        title={
+          <>
+            {itemName} <span className="text-muted-foreground">Stats &amp; Best Heroes</span>
+          </>
+        }
+        description={
+          summary ? (
             <>
-              , and it shows up in <span className="font-semibold text-foreground">{formatPercent(summary.usage)}</span>{" "}
-              of all builds
+              Players who buy {itemName} win{" "}
+              <span className="font-semibold text-foreground">{formatPercent(summary.winRate)}</span> of{" "}
+              {summary.matches.toLocaleString("en-US")} tracked {rankRange} matches in {period}
+              {summary.usage !== undefined && <>, and it shows up in {formatPercent(summary.usage)} of all builds</>}.
+              Refreshed daily from live match data.
             </>
+          ) : (
+            `Live win rate, purchase rate and best heroes for ${itemName} in Deadlock, from tracked ${rankRange} matches and updated daily.`
+          )
+        }
+      >
+        {summary ? (
+          <StatGroup variant="plain" className="grid-cols-2 @lg:grid-cols-4">
+            <Stat
+              label="Win Rate"
+              value={formatPercent(summary.winRate)}
+              tone={toneOf(summary.winRate, 0.5)}
+              sub={`#${summary.winRateRank} of ${summary.itemCount}`}
+            />
+            <Stat
+              label="Bought"
+              value={summary.usage !== undefined ? formatPercent(summary.usage) : undefined}
+              sub={`by ${summary.players.toLocaleString("en-US")} players`}
+            />
+            <Stat label="Avg Buy Time" value={clock(summary.avgBuyTimeS)} sub="into the match" />
+            <Stat label="Matches" value={summary.matches.toLocaleString("en-US")} sub="tracked" />
+          </StatGroup>
+        ) : (
+          (statsQuery.isError || heroStatsQuery.isError) && (
+            // The summary and the sections below read these stats; a failure would otherwise leave only the header.
+            <ErrorState
+              variant="inline"
+              title={`${itemName} stats did not load`}
+              onRetry={() => void Promise.all([statsQuery.refetch(), heroStatsQuery.refetch()])}
+            />
+          )
+        )}
+      </ProfileHeader>
+
+      <Section
+        title={`What ${itemName} Does`}
+        description="Its effect in the shop, and where it sits in the upgrade tree."
+      >
+        <div className="grid gap-4 lg:grid-cols-2">
+          {hasEffect && itemQuery.data && (
+            <Panel>
+              <PanelHeader title="Effect" description={`Tier ${tier} ${slot}`} />
+              <PanelBody>
+                <ItemEffectCard item={itemQuery.data} />
+              </PanelBody>
+            </Panel>
           )}
-          . Numbers are drawn from live match data and refreshed daily.
-        </p>
-      ) : (
-        <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">
-          Live win rate, purchase rate, and hero statistics for {itemName} in Deadlock, drawn from tracked {rankRange}{" "}
-          matches and updated daily.
-        </p>
-      )}
-
-      {summary && (
-        <StatGroup variant="tiles" className="grid-cols-2 sm:grid-cols-4">
-          <Stat
-            label="Win Rate"
-            value={formatPercent(summary.winRate)}
-            sub={`#${summary.winRateRank} of ${summary.itemCount} items`}
-          />
-          <Stat
-            label="Bought"
-            value={summary.usage !== undefined ? formatPercent(summary.usage) : "—"}
-            sub={`by ${summary.players.toLocaleString("en-US")} players`}
-          />
-          <Stat label="Matches" value={summary.matches.toLocaleString("en-US")} />
-          <Stat label="Avg Buy Time" value={clock(summary.avgBuyTimeS)} sub="into the match" />
-        </StatGroup>
-      )}
-
-      {/* The summary and the sections below read these stats; a failure would otherwise leave only the header. */}
-      {!summary && (statsQuery.isError || heroStatsQuery.isError) && (
-        <ErrorState
-          title={`${itemName} stats did not load`}
-          onRetry={() => void Promise.all([statsQuery.refetch(), heroStatsQuery.refetch()])}
-        />
-      )}
-
-      {itemQuery.data && (itemQuery.data.tooltip_sections?.length ?? 0) > 0 && (
-        <Section title={`What ${itemName} Does`}>
-          <Card size="sm" className="max-w-3xl p-4">
-            <ItemEffectCard item={itemQuery.data} />
-          </Card>
-        </Section>
-      )}
+          <ItemUpgradePath itemId={itemId} itemName={itemName} request={itemRequest} rankRange={rankRange} />
+        </div>
+      </Section>
 
       {itemQuery.data?.corrupted_info && (
         <ItemCorruption item={itemQuery.data} request={itemRequest} rankRange={rankRange} />
       )}
 
-      <ItemUpgradePath itemId={itemId} itemName={itemName} request={itemRequest} rankRange={rankRange} />
+      <Section
+        title={`Who Should Buy ${itemName}`}
+        description={`The heroes it works best on, and the items it is built with, in ${rankRange} matches.`}
+      >
+        <div className="grid gap-4 lg:grid-cols-2">
+          <ItemBestHeroes itemName={itemName} bestHeroes={bestHeroes} onRetry={() => void router.invalidate()} />
+          <ItemPairings itemId={itemId} itemName={itemName} itemRequest={itemRequest} />
+        </div>
+      </Section>
 
-      <ItemHeroBreakdown
-        itemId={itemId}
-        itemName={itemName}
-        itemRequest={itemRequest}
-        bestHeroes={bestHeroes}
-        onRetry={() => void router.invalidate()}
-      />
+      <Section title={`${itemName} Win Rate Trends`} description="Over time, by rank, and by the minute it is bought.">
+        <div className="grid gap-4 lg:grid-cols-2">
+          <ChunkErrorBoundary>
+            <Suspense
+              fallback={<ChartLoading label={`${itemName} win rate over time`} size="lg" className="lg:col-span-2" />}
+            >
+              <ItemWinRateOverTime
+                className="lg:col-span-2"
+                itemId={itemId}
+                itemName={itemName}
+                itemRequest={itemRequest}
+                heroRequest={heroRequest}
+                rankRange={rankRange}
+              />
+            </Suspense>
+          </ChunkErrorBoundary>
+          <ChunkErrorBoundary>
+            <Suspense fallback={<ChartLoading label={`${itemName} win rate by rank`} />}>
+              <ItemWinRateByRank
+                itemId={itemId}
+                itemName={itemName}
+                request={byRankItemStatsParams(seasons, preferences.dateFilter)}
+              />
+            </Suspense>
+          </ChunkErrorBoundary>
+          <ChunkErrorBoundary>
+            <Suspense fallback={<ChartLoading label={`${itemName} win rate by purchase time`} />}>
+              <ItemWinRateByBuyTime itemId={itemId} itemName={itemName} request={itemRequest} />
+            </Suspense>
+          </ChunkErrorBoundary>
+        </div>
+      </Section>
 
-      <ChunkErrorBoundary>
-        <Suspense fallback={<ChartLoading label={`${itemName} win rate over time`} />}>
-          <ItemWinRateOverTime
-            itemId={itemId}
-            itemName={itemName}
-            itemRequest={itemRequest}
-            heroRequest={heroRequest}
-            rankRange={rankRange}
-          />
-        </Suspense>
-      </ChunkErrorBoundary>
-
-      <ChunkErrorBoundary>
-        <Suspense fallback={<ChartLoading label={`${itemName} win rate by rank`} />}>
-          <ItemWinRateByRank
-            itemId={itemId}
-            itemName={itemName}
-            request={byRankItemStatsParams(seasons, preferences.dateFilter)}
-          />
-        </Suspense>
-      </ChunkErrorBoundary>
-
-      <ChunkErrorBoundary>
-        <Suspense fallback={<ChartLoading label={`${itemName} win rate by purchase time`} />}>
-          <ItemWinRateByBuyTime itemId={itemId} itemName={itemName} request={itemRequest} />
-        </Suspense>
-      </ChunkErrorBoundary>
-
-      <Stack gap={4}>
-        <Separator />
-        <Inline asChild gap={4} className="text-sm">
-          <nav aria-label="Related pages">
-            <Button asChild variant="link" size="inline">
-              <Link to="/analytics/items" search={{ include_items: itemId, ...RANK_SEARCH }} preload="intent">
-                Builds with {itemName}
-              </Link>
-            </Button>
-            <Button asChild variant="link" size="inline">
-              <Link to="/analytics/items" search={RANK_SEARCH} preload="intent">
-                All item win rates
-              </Link>
-            </Button>
-          </nav>
-        </Inline>
-      </Stack>
+      <Section title={`More ${itemName} Stats`}>
+        <nav aria-label={`More ${itemName} stats`} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <LinkCard
+            asChild
+            size="sm"
+            orientation="horizontal"
+            media={<Layers />}
+            title={`Builds with ${itemName}`}
+            description={`Every item's win rate in builds that include ${itemName}.`}
+          >
+            <Link to="/analytics/items" search={{ include_items: itemId, ...RANK_SEARCH }} preload="intent" />
+          </LinkCard>
+          <LinkCard
+            asChild
+            size="sm"
+            orientation="horizontal"
+            media={<BarChart3 />}
+            title="All Items"
+            description="Win and purchase rates of every item, side by side."
+          >
+            <Link to="/analytics/items" search={RANK_SEARCH} preload="intent" />
+          </LinkCard>
+        </nav>
+      </Section>
     </PageShell>
   );
 }

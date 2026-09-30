@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link, type NotFoundRouteProps, createFileRoute, notFound, redirect, useRouter } from "@tanstack/react-router";
 import type { AnalyticsHeroStats } from "deadlock_api_client";
-import { ListOrdered, type LucideIcon, Map, ShoppingBag, Trophy, Users } from "lucide-react";
+import { BarChart3, ListOrdered, type LucideIcon, Map, ShoppingBag, Trophy, Users } from "lucide-react";
 import { lazy, Suspense, useMemo } from "react";
 
 import { NotFound } from "~/components/app/NotFound";
@@ -10,17 +10,17 @@ import { HeroMatchupDetailsStatsTable } from "~/components/features/heroes/HeroM
 import { HeroMatchupSummary } from "~/components/features/heroes/HeroMatchupSummary";
 import { HeroSkillOrder } from "~/components/features/heroes/HeroSkillOrder";
 import { HeroTopItems } from "~/components/features/heroes/HeroTopItems";
+import { ChartLoading } from "~/components/patterns/charts/ChartStates";
 import { LinkCard } from "~/components/patterns/content/LinkCard";
-import { PageHeader } from "~/components/patterns/page/PageHeader";
 import { PageShell } from "~/components/patterns/page/PageShell";
+import { ProfileHeader, ProfileHeaderMedia } from "~/components/patterns/page/ProfileHeader";
 import { Section } from "~/components/patterns/page/Section";
 import { Panel, PanelHeader } from "~/components/patterns/panel/Panel";
 import { ChunkErrorBoundary } from "~/components/patterns/states/ChunkErrorBoundary";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
-import { LoadingState } from "~/components/patterns/states/LoadingState";
-import { Button } from "~/components/ui/button";
-import { Separator } from "~/components/ui/separator";
-import { Stack } from "~/components/ui/stack";
+import { Badge } from "~/components/ui/badge";
+import { Pips } from "~/components/ui/pips";
+import { Inline } from "~/components/ui/stack";
 import { Stat, StatGroup } from "~/components/ui/stat";
 import { useSeasons } from "~/hooks/useSeasons";
 import { computeBanRates } from "~/lib/ban-rate";
@@ -36,6 +36,7 @@ import { rankRangeLabel } from "~/lib/rank-utils";
 import { defaultPeriodLabel, defaultPrevUnixRange, defaultUnixRange, type SeasonInfo } from "~/lib/seasons";
 import { datasetJsonLd, pageTitle, seo } from "~/lib/seo";
 import { closestNameBySlug, findByIdSegment, slugify } from "~/lib/slug";
+import { toneOf } from "~/lib/tone";
 import {
   filterPlayableHeroes,
   heroesQueryOptions,
@@ -206,9 +207,14 @@ export const Route = createFileRoute("/analytics/heroes/$heroName")({
     ]);
     const cardImage = hero.images.hero_card_critical_webp ?? hero.images.icon_hero_card_webp ?? null;
     const summary = summarizeHeroStats(stats, hero.id);
+    const color = hero.colors?.style ?? hero.colors?.ui;
     return {
       heroId: hero.id,
       heroName: hero.name,
+      // The hero's own color tints its header; a data color, so it is passed to the component built for it.
+      accent: color ? `rgb(${color.join(" ")})` : undefined,
+      heroType: hero.hero_type ?? null,
+      complexity: hero.complexity,
       slug: params.heroName,
       cardImage,
       breadcrumb: hero.name,
@@ -256,6 +262,7 @@ function HeroLinkCard({
   description,
 }: {
   to:
+    | "/analytics/heroes"
     | "/analytics/items"
     | "/analytics/abilities"
     | "/community/leaderboard"
@@ -273,9 +280,12 @@ function HeroLinkCard({
   );
 }
 
+const HERO_TYPE_LABEL = { assassin: "Assassin", brawler: "Brawler", marksman: "Marksman", mystic: "Mystic" } as const;
+const MAX_COMPLEXITY = 3;
+
 function HeroDetailPage() {
   const { preferences } = Route.useRouteContext();
-  const { heroId, heroName, rankRange, matchups } = Route.useLoaderData();
+  const { heroId, heroName, rankRange, matchups, accent, heroType, complexity } = Route.useLoaderData();
   const router = useRouter();
   const retryMatchups = () => void router.invalidate();
   const { seasons } = useSeasons();
@@ -294,124 +304,153 @@ function HeroDetailPage() {
   }, [statsQuery.data, banQuery.data, heroId]);
 
   const rankLabel = (rank: number | undefined, total?: number) =>
-    summary && rank !== undefined ? `#${rank} of ${total ?? summary.heroCount} heroes` : undefined;
+    summary && rank !== undefined ? `#${rank} of ${total ?? summary.heroCount}` : undefined;
 
   return (
-    <PageShell>
-      <PageHeader
-        media={<HeroImage heroId={heroId} className="size-12" />}
-        title={<>{heroName}: Deadlock Win Rate &amp; Pick Rate</>}
+    <PageShell density="content">
+      <ProfileHeader
+        accent={accent}
+        media={
+          <ProfileHeaderMedia shape="portrait">
+            <HeroImage heroId={heroId} art="portrait" title="" className="size-full" />
+          </ProfileHeaderMedia>
+        }
+        eyebrow={
+          <>
+            {heroType && (
+              <Badge variant="outline" size="sm">
+                {HERO_TYPE_LABEL[heroType]}
+              </Badge>
+            )}
+            {complexity > 0 && (
+              <Inline gap={1.5} align="center">
+                Complexity
+                <Pips value={complexity} max={MAX_COMPLEXITY} label={`Complexity ${complexity} of ${MAX_COMPLEXITY}`} />
+              </Inline>
+            )}
+            <span>
+              {rankRange} · {period}
+            </span>
+          </>
+        }
+        title={
+          <>
+            {heroName} <span className="text-muted-foreground">Stats &amp; Builds</span>
+          </>
+        }
         description={
           summary ? (
             <>
-              {period === "this season" ? "This season" : "In the current patch"}, in{" "}
-              <span className="font-semibold text-foreground">{rankRange}</span> matches, {heroName} holds a{" "}
-              <span className="font-semibold text-foreground">{formatPercent(summary.winRate)}</span> win rate across{" "}
-              <span className="font-semibold text-foreground">{summary.matches.toLocaleString("en-US")}</span> tracked
-              matches, with a <span className="font-semibold text-foreground">{formatPercent(summary.pickRate)}</span>{" "}
-              pick rate
-              {summary.banRate !== undefined && (
-                <>
-                  {" "}
-                  and a <span className="font-semibold text-foreground">{formatPercent(summary.banRate)}</span> ban rate
-                </>
-              )}
-              . Numbers are drawn from live match data and refreshed daily.
+              {heroName} wins <span className="font-semibold text-foreground">{formatPercent(summary.winRate)}</span> of{" "}
+              {summary.matches.toLocaleString("en-US")} tracked {rankRange} matches in {period}. Best items, skill
+              order, matchups and trends below, refreshed daily from live match data.
             </>
           ) : (
-            `Live win rate, pick rate, and matchup statistics for ${heroName} in Deadlock, drawn from tracked ${rankRange} matches and updated daily.`
+            `Live win rate, pick rate, builds and matchups for ${heroName} in Deadlock, from tracked ${rankRange} matches and updated daily.`
           )
         }
-      />
+      >
+        {summary ? (
+          <StatGroup variant="plain" className="grid-cols-2 @lg:grid-cols-4">
+            <Stat
+              label="Win Rate"
+              value={formatPercent(summary.winRate)}
+              tone={toneOf(summary.winRate, 0.5)}
+              sub={rankLabel(summary.winRateRank)}
+            />
+            <Stat label="Pick Rate" value={formatPercent(summary.pickRate)} sub={rankLabel(summary.pickRateRank)} />
+            <Stat
+              label="Ban Rate"
+              value={summary.banRate !== undefined ? formatPercent(summary.banRate) : undefined}
+              sub={rankLabel(summary.banRateRank, summary.banHeroCount)}
+            />
+            <Stat label="Matches" value={summary.matches.toLocaleString("en-US")} sub="tracked" />
+          </StatGroup>
+        ) : (
+          statsQuery.isError && (
+            // Every section below reads these stats; without them the page would silently end after its header.
+            <ErrorState
+              variant="inline"
+              title={`${heroName}'s stats did not load`}
+              onRetry={() => void statsQuery.refetch()}
+            />
+          )
+        )}
+      </ProfileHeader>
 
       {summary && (
-        <StatGroup variant="tiles" className="grid-cols-2 sm:grid-cols-4">
-          <Stat label="Win Rate" value={formatPercent(summary.winRate)} sub={rankLabel(summary.winRateRank)} />
-          <Stat label="Pick Rate" value={formatPercent(summary.pickRate)} sub={rankLabel(summary.pickRateRank)} />
-          <Stat label="Matches" value={summary.matches.toLocaleString("en-US")} />
-          <Stat
-            label="Ban Rate"
-            value={summary.banRate !== undefined ? formatPercent(summary.banRate) : "—"}
-            sub={rankLabel(summary.banRateRank, summary.banHeroCount)}
-          />
-        </StatGroup>
-      )}
-
-      {/* Every section below reads these stats; without them the page would silently end after its header. */}
-      {!summary && statsQuery.isError && (
-        <ErrorState title={`${heroName}'s stats did not load`} onRetry={() => void statsQuery.refetch()} />
-      )}
-
-      {summary && (
-        <HeroTopItems
-          heroId={heroId}
-          heroName={heroName}
-          heroMatches={summary.matches}
-          rankRange={rankRange}
-          request={currentItemStatsParams(seasons, preferences.dateFilter)}
-        />
-      )}
-
-      {summary && (
-        <HeroSkillOrder
-          heroId={heroId}
-          heroName={heroName}
-          request={currentAbilityOrderParams(seasons, preferences.dateFilter)}
-          rankRange={rankRange}
-          totalMatches={summary?.matches}
-        />
-      )}
-
-      {summary && (
-        <ChunkErrorBoundary>
-          <Suspense fallback={<LoadingState label="win rate over time" align="center" className="py-8" />}>
-            <HeroWinRateOverTime
+        <Section title={`${heroName} Builds`} description={`What ${heroName} buys and levels first.`}>
+          <div className="grid gap-4">
+            <HeroTopItems
               heroId={heroId}
               heroName={heroName}
-              request={currentStatsParams(seasons, preferences.dateFilter)}
+              heroMatches={summary.matches}
               rankRange={rankRange}
+              request={currentItemStatsParams(seasons, preferences.dateFilter)}
             />
-          </Suspense>
-        </ChunkErrorBoundary>
-      )}
-
-      {summary && (
-        <ChunkErrorBoundary>
-          <Suspense fallback={<LoadingState label="win rate by rank" align="center" className="py-8" />}>
-            <HeroWinRateByRank
+            <HeroSkillOrder
               heroId={heroId}
               heroName={heroName}
-              request={byRankStatsParams(seasons, preferences.dateFilter)}
-            />
-          </Suspense>
-        </ChunkErrorBoundary>
-      )}
-
-      {summary && (
-        <ChunkErrorBoundary>
-          <Suspense fallback={<LoadingState label="win rate by match duration" align="center" className="py-8" />}>
-            <HeroWinRateByDuration
-              heroId={heroId}
-              heroName={heroName}
-              request={currentStatsParams(seasons, preferences.dateFilter)}
+              request={currentAbilityOrderParams(seasons, preferences.dateFilter)}
               rankRange={rankRange}
+              totalMatches={summary.matches}
             />
-          </Suspense>
-        </ChunkErrorBoundary>
+          </div>
+        </Section>
+      )}
+
+      {summary && (
+        <Section
+          title={`${heroName} Win Rate Trends`}
+          description={`How ${heroName} performs over time, by rank and by match length.`}
+        >
+          <div className="grid gap-4 lg:grid-cols-2">
+            <ChunkErrorBoundary>
+              <Suspense fallback={<ChartLoading label="win rate over time" size="lg" className="lg:col-span-2" />}>
+                <HeroWinRateOverTime
+                  className="lg:col-span-2"
+                  heroId={heroId}
+                  heroName={heroName}
+                  request={currentStatsParams(seasons, preferences.dateFilter)}
+                  rankRange={rankRange}
+                />
+              </Suspense>
+            </ChunkErrorBoundary>
+            <ChunkErrorBoundary>
+              <Suspense fallback={<ChartLoading label="win rate by rank" />}>
+                <HeroWinRateByRank
+                  heroId={heroId}
+                  heroName={heroName}
+                  request={byRankStatsParams(seasons, preferences.dateFilter)}
+                />
+              </Suspense>
+            </ChunkErrorBoundary>
+            <ChunkErrorBoundary>
+              <Suspense fallback={<ChartLoading label="win rate by match length" />}>
+                <HeroWinRateByDuration
+                  heroId={heroId}
+                  heroName={heroName}
+                  request={currentStatsParams(seasons, preferences.dateFilter)}
+                  rankRange={rankRange}
+                />
+              </Suspense>
+            </ChunkErrorBoundary>
+          </div>
+        </Section>
       )}
 
       <Section
         title={`${heroName} Matchups & Synergies`}
-        description={`Which heroes ${heroName} counters, which heroes counter ${heroName}, and the best teammates to pair with, in ${rankRange} matches.`}
+        description={`Who ${heroName} beats, who beats ${heroName}, and the teammates that lift both, in ${rankRange} matches.`}
       >
         <HeroMatchupSummary heroName={heroName} matchups={matchups} onRetry={retryMatchups} />
         <div className="grid items-start gap-4 lg:grid-cols-2">
           <Panel>
-            <PanelHeader title={`${heroName} with Teammates`} />
+            <PanelHeader title={`${heroName} with Teammates`} description="Win rate change as allies" />
             <HeroMatchupDetailsStatsTable stat={0} matchups={matchups} onRetry={retryMatchups} linkHeroes />
           </Panel>
           <Panel>
-            <PanelHeader title={`${heroName} against Enemies`} />
+            <PanelHeader title={`${heroName} against Enemies`} description="Win rate change as opponents" />
             <HeroMatchupDetailsStatsTable stat={1} matchups={matchups} onRetry={retryMatchups} linkHeroes />
           </Panel>
         </div>
@@ -454,19 +493,15 @@ function HeroDetailPage() {
             title="Kill Heatmap"
             description={`Where ${heroName} gets kills and dies across the map.`}
           />
+          <HeroLinkCard
+            to="/analytics/heroes"
+            search={RANK_SEARCH}
+            icon={BarChart3}
+            title="All Heroes"
+            description="Win and pick rates of every hero, side by side."
+          />
         </nav>
       </Section>
-
-      <Stack gap={4}>
-        <Separator />
-        <nav aria-label="Related pages" className="flex flex-wrap gap-4 text-sm">
-          <Button asChild variant="link" className="h-auto p-0">
-            <Link to="/analytics/heroes" search={RANK_SEARCH} preload="intent">
-              All hero win rates
-            </Link>
-          </Button>
-        </nav>
-      </Stack>
     </PageShell>
   );
 }

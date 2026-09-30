@@ -19,6 +19,7 @@ import {
 import { TrendIntervalField } from "~/components/patterns/charts/TrendControls";
 import { type WeekEntry, WeeklyTrendChart } from "~/components/patterns/charts/WeeklyTrendChart";
 import { FilterBar } from "~/components/patterns/filter-bar/FilterBar";
+import { PanelBody } from "~/components/patterns/panel/Panel";
 import { Card } from "~/components/ui/card";
 import { Field } from "~/components/ui/field";
 import { OptionRow } from "~/components/ui/option-row";
@@ -231,9 +232,19 @@ export function ChartsMore() {
       <Specimen
         name="WeeklyTrendChart"
         source="patterns/charts/WeeklyTrendChart"
-        note="Win rate and a share (pick or purchase rate) by week, as two plots on one synced week axis: each measure keeps its own scale without a second y-axis."
+        note='Win rate and a share (pick or purchase rate) by week, as two plots on one synced week axis: each measure keeps its own scale without a second y-axis. variant="flush" drops its own card to sit in a ChartCard.'
       >
         <WeeklyTrendChart weeks={WEEKS} shareLabel="Pick rate" label="Infernus win rate and pick rate by week" />
+        <ChartCard title="Win Rate Over Time" description='variant="flush" in a ChartCard'>
+          <PanelBody size="sm">
+            <WeeklyTrendChart
+              variant="flush"
+              weeks={WEEKS}
+              shareLabel="Pick rate"
+              label="Infernus win rate and pick rate by week"
+            />
+          </PanelBody>
+        </ChartCard>
       </Specimen>
     </>
   );

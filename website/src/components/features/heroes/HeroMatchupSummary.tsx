@@ -11,9 +11,19 @@ const SUMMARY_COUNT = 3;
 /** Pairings seen in fewer matches than this swing too much to headline. */
 const MIN_MATCHES = 100;
 
-function MatchupCard({ title, caption, rows }: { title: string; caption: string; rows: MatchupRow[] }) {
+function MatchupCard({
+  title,
+  caption,
+  rows,
+  accent,
+}: {
+  title: string;
+  caption: string;
+  rows: MatchupRow[];
+  accent: string;
+}) {
   return (
-    <Card size="xs" className="gap-3 px-4 py-3">
+    <Card size="sm" accent={accent} className="px-4">
       <Stack gap={0.5}>
         <Heading as="h3" size="default">
           {title}
@@ -27,7 +37,7 @@ function MatchupCard({ title, caption, rows }: { title: string; caption: string;
             className="flex items-center gap-2"
             title={`${row.matches.toLocaleString("en-US")} matches`}
           >
-            <HeroImage heroId={row.heroId} className="size-7" />
+            <HeroImage heroId={row.heroId} shape="circle" ring="border" title="" className="size-8" />
             <HeroName heroId={row.heroId} linkToDetail className="min-w-0 text-sm" />
             <Delta value={row.relWinrate} className="ms-auto text-sm" />
           </li>
@@ -70,16 +80,19 @@ export function HeroMatchupSummary({
       title: "Best Teammates",
       caption: `How much better the pair wins than ${heroName} and the teammate do on average.`,
       rows: teammates,
+      accent: "var(--positive)",
     },
     {
       title: "Strong Against",
       caption: `How much more often ${heroName} wins with this hero on the enemy team.`,
       rows: strongAgainst,
+      accent: "var(--positive)",
     },
     {
       title: `Counters ${heroName}`,
       caption: `How much less often ${heroName} wins with this hero on the enemy team.`,
       rows: counteredBy,
+      accent: "var(--negative)",
     },
   ].filter((card) => card.rows.length > 0);
   if (cards.length === 0) return null;
