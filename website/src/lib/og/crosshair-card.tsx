@@ -3,10 +3,19 @@ import { OG } from "./palette";
 
 const PAD = 44;
 
-export interface CrosshairCardImage {
-  src: string;
-  width: number;
-  height: number;
+/** `length` pixels of one colour in a row of the crosshair, from (`x`, `y`) in its own pixels. */
+export interface PixelRun {
+  x: number;
+  y: number;
+  length: number;
+  color: string;
+}
+
+/** A crosshair of `size` pixels square, drawn `scale` times as large. */
+export interface CrosshairPixels {
+  size: number;
+  scale: number;
+  runs: PixelRun[];
 }
 
 /**
@@ -21,7 +30,7 @@ export function CrosshairCard({
 }: {
   background?: string;
   logo?: string;
-  crosshair?: CrosshairCardImage;
+  crosshair?: CrosshairPixels;
 }) {
   return (
     <div
@@ -60,17 +69,45 @@ export function CrosshairCard({
           <span style={{ fontSize: 30, fontWeight: 800, letterSpacing: -0.5 }}>Deadlock API</span>
         </div>
         <div style={{ display: "flex", flex: 1, alignItems: "center", justifyContent: "center" }}>
-          {crosshair ? (
-            <img src={crosshair.src} width={crosshair.width} height={crosshair.height} alt="" />
-          ) : (
-            <span style={{ fontSize: 64, fontWeight: 800, letterSpacing: -1 }}>Crosshair Editor</span>
-          )}
+          {!crosshair && <span style={{ fontSize: 64, fontWeight: 800, letterSpacing: -1 }}>Crosshair Editor</span>}
         </div>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <span style={{ fontSize: 24, fontWeight: 700 }}>Deadlock crosshair</span>
           <span style={{ fontSize: 22, fontWeight: 700 }}>deadlock-api.com/crosshair</span>
         </div>
       </div>
+      {crosshair && <Crosshair crosshair={crosshair} />}
+    </div>
+  );
+}
+
+/** The crosshair as rectangles on whole pixels, centred on the card, so its enlarged pixels stay crisp squares. */
+function Crosshair({ crosshair: { size, scale, runs } }: { crosshair: CrosshairPixels }) {
+  const width = size * scale;
+  return (
+    <div
+      style={{
+        display: "flex",
+        position: "absolute",
+        left: Math.floor((CARD_WIDTH - width) / 2),
+        top: Math.floor((CARD_HEIGHT - width) / 2),
+        width,
+        height: width,
+      }}
+    >
+      {runs.map(({ x, y, length, color }) => (
+        <div
+          key={`${x},${y}`}
+          style={{
+            position: "absolute",
+            left: x * scale,
+            top: y * scale,
+            width: length * scale,
+            height: scale,
+            backgroundColor: color,
+          }}
+        />
+      ))}
     </div>
   );
 }

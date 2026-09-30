@@ -1,16 +1,16 @@
 import { GoogleFont, ImageResponse } from "@cf-wasm/og";
 
 import { API_ORIGIN } from "~/lib/constants";
+import { type CrosshairRenderSettings, renderCrosshair } from "~/lib/crosshair-render";
 
-import { CARD_HEIGHT, CARD_WIDTH, LOGO } from "./card-kit";
-import { CrosshairCard, type CrosshairCardImage } from "./crosshair-card";
-import { fetchDataUri, inlineImage } from "./inline-image";
+// Bundled as data URIs: the Worker cannot fetch the site's own public files from its own domain.
+import logo from "../../../public/favicon.png?inline";
+import background from "../../../public/streamkit/deadlock-background.png?inline";
+import { CARD_HEIGHT, CARD_WIDTH } from "./card-kit";
+import { CrosshairCard, type CrosshairPixels, type PixelRun } from "./crosshair-card";
 
-/** The scene the editor previews crosshairs on by default. */
-const BACKGROUND = "https://deadlock-api.com/streamkit/deadlock-background.png";
-/** How tall the crosshair may be drawn on the card, in pixels. */
+/** How large the crosshair may be drawn on the card, in pixels. */
 const CROSSHAIR_SIZE = 360;
-/** The largest enlargement the API draws. */
 const MAX_SCALE = 16;
 const SCREEN_HEIGHTS = new Set(["1080", "1440", "2160"]);
 
@@ -20,26 +20,35 @@ const RETRY_AGE = 5 * 60;
 
 const FONTS = ([700, 800] as const).map((weight) => new GoogleFont("Inter", { weight }));
 
-function imageUrl(code: string, screenHeight: string, scale: number): string {
-  return `${API_ORIGIN}/v1/crosshair/code/image?${new URLSearchParams({ code, screen_height: screenHeight, scale: String(scale) })}`;
-}
-
-/** The width of a PNG, from its header. */
-function pngWidth(bytes: ArrayBuffer): number {
-  return new DataView(bytes).getUint32(16);
-}
-
 /**
- * The crosshair enlarged by the largest whole scale that fits the card, so every pixel stays a crisp square: satori
- * would smooth an image it has to scale itself.
+ * The crosshair of a code as rows of same-coloured pixel runs, enlarged by the largest whole scale that fits the card.
+ * It is drawn as rectangles rather than an image, since the card's renderer smooths every image it draws, which would
+ * blur the crosshair's square pixels. The pixels come from the site's renderer, the same as the API's.
  */
-async function loadCrosshair(code: string, screenHeight: string): Promise<CrosshairCardImage | undefined> {
-  const trueSize = await fetch(imageUrl(code, screenHeight, 1));
-  if (!trueSize.ok) return undefined;
-  const width = pngWidth(await trueSize.arrayBuffer());
-  const scale = Math.max(1, Math.min(MAX_SCALE, Math.floor(CROSSHAIR_SIZE / width)));
-  const src = await fetchDataUri(imageUrl(code, screenHeight, scale));
-  return { src, width: width * scale, height: width * scale };
+async function loadCrosshair(code: string, screenHeight: string): Promise<CrosshairPixels | undefined> {
+  const response = await fetch(`${API_ORIGIN}/v1/crosshair/code/settings?${new URLSearchParams({ code })}`);
+  if (!response.ok) return undefined;
+  const image = renderCrosshair((await response.json()) as CrosshairRenderSettings, Number(screenHeight));
+  if (!image) return undefined;
+  const scale = Math.max(1, Math.min(MAX_SCALE, Math.floor(CROSSHAIR_SIZE / image.size)));
+  const runs: PixelRun[] = [];
+  for (let y = 0; y < image.size; y++) {
+    let x = 0;
+    while (x < image.size) {
+      const at = (y * image.size + x) * 4;
+      const [r, g, b, a] = image.pixels.subarray(at, at + 4);
+      let length = 1;
+      while (
+        x + length < image.size &&
+        image.pixels.subarray(at + length * 4, at + length * 4 + 4).every((v, i) => v === [r, g, b, a][i])
+      ) {
+        length++;
+      }
+      if (a) runs.push({ x, y, length, color: `rgba(${r},${g},${b},${(a ?? 0) / 255})` });
+      x += length;
+    }
+  }
+  return { size: image.size, scale, runs };
 }
 
 /** The PNG share card of a crosshair code (`code`, `res`), or the editor's card when the code does not draw. */
@@ -47,11 +56,7 @@ export async function renderCrosshairCard(search: URLSearchParams): Promise<Resp
   const code = search.get("code")?.trim() ?? "";
   const res = search.get("res") ?? "";
   const screenHeight = SCREEN_HEIGHTS.has(res) ? res : "1080";
-  const [background, logo, crosshair] = await Promise.all([
-    inlineImage(BACKGROUND),
-    inlineImage(LOGO),
-    code ? loadCrosshair(code, screenHeight).catch(() => undefined) : undefined,
-  ]);
+  const crosshair = code ? await loadCrosshair(code, screenHeight).catch(() => undefined) : undefined;
   const maxAge = code && !crosshair ? RETRY_AGE : CARD_AGE;
   return ImageResponse.async(<CrosshairCard background={background} logo={logo} crosshair={crosshair} />, {
     width: CARD_WIDTH,
