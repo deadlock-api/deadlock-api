@@ -95,6 +95,9 @@ export default defineConfig({
           // They render their query string (a shared ?sql= query, the Steam sign-in return): a static copy without it
           // failed hydration (React #418) and re-rendered the whole page on the client.
           !/^\/(data-dumps|streamkit)(\/|$)/.test(path) &&
+          // A shared crosshair link previews that crosshair (its og:image comes from ?code=), which a static copy
+          // would replace with the generic page's.
+          path !== "/crosshair" &&
           // Tracker pages are patron-gated and per-user; prerendering them would bake gate HTML.
           path !== "/auth" &&
           path !== "/auth/patreon" &&
