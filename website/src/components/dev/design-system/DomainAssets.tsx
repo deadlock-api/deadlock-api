@@ -5,6 +5,7 @@ import { AbilityImage } from "~/components/domain/assets/AbilityImage";
 import { AbilityName } from "~/components/domain/assets/AbilityName";
 import { AssetImage } from "~/components/domain/assets/AssetImage";
 import { BadgeImage } from "~/components/domain/assets/BadgeImage";
+import { CorruptedItemImage } from "~/components/domain/assets/CorruptedItemImage";
 import { EntityName } from "~/components/domain/assets/EntityName";
 import { HeroImage } from "~/components/domain/assets/HeroImage";
 import { HeroName } from "~/components/domain/assets/HeroName";
@@ -17,6 +18,8 @@ import { ranksQueryOptions } from "~/queries/ranks-query";
 
 const HERO_IDS = [1, 2, 3, 4, 6, 7];
 const ITEM_IDS = [1548066885, 968099481, 2678489038];
+/** Ricochet, Hollow Point, Weighted Shots: tier 3 and 4 items the Broker can corrupt. */
+const CORRUPTIBLE_ITEM_IDS = [2480592370, 2678489038, 3791587546];
 /** Seven's three signature abilities and ultimate. */
 const ABILITY_IDS = [1065103387, 1074714947, 539192269, 2061574352];
 /** `tier * 10 + subtier`. */
@@ -86,6 +89,25 @@ export function DomainAssets() {
             <ItemName itemId={UNKNOWN_ID} />
           </span>
           <ItemImage item={undefined} loading />
+        </Variants>
+      </Specimen>
+
+      <Specimen
+        name="CorruptedItemImage"
+        source="domain/assets/CorruptedItemImage"
+        note="The corrupted version of a tier 3 or 4 item: its shop icon inside the Broker's frame, which is the game's own art and the same in every theme. The icon’s alt text is “Corrupted <item>” (ItemImage takes an `alt`); the frame is decorative. Before the frame art loads the plain icon holds the same box."
+      >
+        <Variants label="Sizes (className): size-6, default (size-8), size-12, size-16">
+          <CorruptedItemImage itemId={CORRUPTIBLE_ITEM_IDS[0]} className="size-6" />
+          <CorruptedItemImage itemId={CORRUPTIBLE_ITEM_IDS[0]} />
+          <CorruptedItemImage itemId={CORRUPTIBLE_ITEM_IDS[1]} className="size-12" />
+          <CorruptedItemImage itemId={CORRUPTIBLE_ITEM_IDS[2]} className="size-16" />
+        </Variants>
+        <Variants label="frame: frame, active · unknown id, loading">
+          <CorruptedItemImage itemId={CORRUPTIBLE_ITEM_IDS[1]} className="size-12" />
+          <CorruptedItemImage itemId={CORRUPTIBLE_ITEM_IDS[1]} frame="active" className="size-12" />
+          <CorruptedItemImage itemId={UNKNOWN_ID} className="size-12" />
+          <CorruptedItemImage item={undefined} loading className="size-12" />
         </Variants>
       </Specimen>
 

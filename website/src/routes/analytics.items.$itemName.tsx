@@ -5,6 +5,7 @@ import { lazy, Suspense, useMemo } from "react";
 
 import { NotFound } from "~/components/app/NotFound";
 import { ItemImage } from "~/components/domain/assets/ItemImage";
+import { ItemCorruption } from "~/components/features/items/ItemCorruption";
 import { ItemEffectCard } from "~/components/features/items/ItemEffectCard";
 import { ItemHeroBreakdown } from "~/components/features/items/ItemHeroBreakdown";
 import { ItemUpgradePath } from "~/components/features/items/ItemUpgradePath";
@@ -31,7 +32,13 @@ import { rankRangeLabel } from "~/lib/rank-utils";
 import { defaultPeriodLabel, defaultUnixRange, type SeasonInfo } from "~/lib/seasons";
 import { datasetJsonLd, pageTitle, seo } from "~/lib/seo";
 import { closestNameBySlug, findByIdSegment, slugify } from "~/lib/slug";
-import { filterShopableItems, itemQueryOptions, itemUpgradesQueryOptions, loadSeasons } from "~/queries/asset-queries";
+import {
+  corruptionQueryOptions,
+  filterShopableItems,
+  itemQueryOptions,
+  itemUpgradesQueryOptions,
+  loadSeasons,
+} from "~/queries/asset-queries";
 import { heroStatsQueryOptions } from "~/queries/hero-stats-query";
 import { itemStatsQueryOptions } from "~/queries/item-stats-query";
 import { ranksQueryOptions } from "~/queries/ranks-query";
@@ -138,7 +145,7 @@ export const Route = createFileRoute("/analytics/items/$itemName")({
       }
       throw notFound({ data: { suggestion: closestNameBySlug(shopable, params.itemName)?.name } });
     }
-    const [stats, heroStats, ranks, , bestHeroes] = await Promise.all([
+    const [stats, heroStats, ranks, , , bestHeroes] = await Promise.all([
       prefetchSafe(
         queryClient.query({
           ...itemStatsQueryOptions(currentItemStatsParams(seasons, preferences.dateFilter)),
@@ -153,6 +160,8 @@ export const Route = createFileRoute("/analytics/items/$itemName")({
       ),
       prefetchSafe(queryClient.query({ ...ranksQueryOptions, staleTime: "static" })),
       prefetchSafe(queryClient.query({ ...itemQueryOptions(item.id), staleTime: "static" })),
+      // The corrupted section's penalties and frame art; only items the Broker trades have one.
+      item.corrupted_info && prefetchSafe(queryClient.query({ ...corruptionQueryOptions, staleTime: "static" })),
       prefetchSafe(
         fetchItemBestHeroes({
           data: {
@@ -298,6 +307,10 @@ function ItemDetailPage() {
             <ItemEffectCard item={itemQuery.data} />
           </Card>
         </Section>
+      )}
+
+      {itemQuery.data?.corrupted_info && (
+        <ItemCorruption item={itemQuery.data} request={itemRequest} rankRange={rankRange} />
       )}
 
       <ItemUpgradePath itemId={itemId} itemName={itemName} request={itemRequest} rankRange={rankRange} />

@@ -12,6 +12,7 @@ import {
   type ItemStatsTableProps,
 } from "~/components/features/items/ItemStatsTable";
 import { PlayerHeroBuildsDialog } from "~/components/features/items/PlayerHeroBuildsDialog";
+import { corruptedItemsParam, useCorruptedItemMode } from "~/components/features/items/useCorruptedItemMode";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { Button } from "~/components/ui/button";
@@ -76,6 +77,8 @@ export function ItemStatsExplorer({
 }) {
   const [includeItems] = useQueryState("include_items", parseAsSetOf(parseAsInteger).withDefault(new Set()));
   const [excludeItems] = useQueryState("exclude_items", parseAsSetOf(parseAsInteger).withDefault(new Set()));
+  const [corruptedMode] = useCorruptedItemMode();
+  const corruptedItems = corruptedItemsParam(corruptedMode);
 
   const { minUnixTimestamp, maxUnixTimestamp } = useNormalizedTimeRange(minDate, maxDate);
   const { minUnixTimestamp: prevMinTimestamp, maxUnixTimestamp: prevMaxTimestamp } = useNormalizedTimeRange(
@@ -106,6 +109,7 @@ export function ItemStatsExplorer({
       maxBoughtAtS,
       gameMode,
       matchMode,
+      corruptedItems,
     }),
     [
       minMatches,
@@ -120,6 +124,7 @@ export function ItemStatsExplorer({
       maxBoughtAtS,
       gameMode,
       matchMode,
+      corruptedItems,
     ],
   );
 
@@ -163,9 +168,11 @@ export function ItemStatsExplorer({
     ],
   );
 
+  // Corrupted purchases began with the City Never Sleeps update: a period before it has none to compare with.
+  const comparesPrevious = hasPreviousInterval && corruptedMode !== "only";
   const { data: prevData } = useQuery({
     ...itemStatsQueryOptions(prevQueryStatOptions),
-    enabled: hasPreviousInterval,
+    enabled: comparesPrevious,
     placeholderData: keepPreviousData,
   });
 
@@ -234,7 +241,7 @@ export function ItemStatsExplorer({
   const minUsage = useMemo(() => Math.min(...filteredData.map((item) => item.matches)), [filteredData]);
   const maxUsage = useMemo(() => Math.max(...filteredData.map((item) => item.matches)), [filteredData]);
   const prevStatsMap = useMemo(() => {
-    if (!prevData) return undefined;
+    if (!prevData || !comparesPrevious) return undefined;
     const prevSumMatches = prevData.reduce((acc, row) => acc + row.matches, 0);
     // On the same base as this period's bars (shop items only), or the pick rate delta compares two scales.
     const prevMaxMatches = Math.max(
@@ -249,7 +256,7 @@ export function ItemStatsExplorer({
       });
     }
     return map;
-  }, [prevData, shopableItemIds]);
+  }, [prevData, comparesPrevious, shopableItemIds]);
 
   const sortedData = useMemo(
     () =>

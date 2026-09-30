@@ -13,6 +13,8 @@ type ItemImageLook = Omit<
 > & {
   /** Native hover title, the name by default; pass "" where a tooltip already names the image. */
   title?: string;
+  /** The alt text, the item's name by default; a variant of the item says which ("Corrupted Ricochet"). */
+  alt?: string;
 };
 
 /** Pass `item` to use already-loaded assets in tables instead of subscribing once per image. */
@@ -31,6 +33,7 @@ function ItemImageView({
   loading,
   className,
   title,
+  alt,
   ...props
 }: ItemImageLook & { item: SlimUpgrade | undefined; loading?: boolean }) {
   return (
@@ -41,7 +44,7 @@ function ItemImageView({
               webp: item.shop_image_webp,
               png: item.shop_image,
               fallbackSrc: item.shop_image_small,
-              alt: item.name ?? "Unknown Item",
+              alt: alt ?? item.name ?? "Unknown Item",
               title,
             }
           : undefined

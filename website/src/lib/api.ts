@@ -2,6 +2,7 @@ import type { AxiosInstance } from "axios";
 import {
   AnalyticsApi,
   AssetsBucketApi,
+  GenericDataApi,
   HeroesApi,
   ItemsApi,
   LeaderboardApi,
@@ -40,6 +41,7 @@ export class Api {
   public map_api: MapApi;
   public misc_entities_api: MiscEntitiesApi;
   public assets_bucket_api: AssetsBucketApi;
+  public generic_data_api: GenericDataApi;
   public client: AxiosInstance;
 
   constructor(config: ApiConfig = DEFAULT_API_CONFIG) {
@@ -58,6 +60,7 @@ export class Api {
     this.map_api = new MapApi(undefined, API_ORIGIN, axios_client);
     this.misc_entities_api = new MiscEntitiesApi(undefined, API_ORIGIN, axios_client);
     this.assets_bucket_api = new AssetsBucketApi(undefined, API_ORIGIN, axios_client);
+    this.generic_data_api = new GenericDataApi(undefined, API_ORIGIN, axios_client);
   }
 }
 

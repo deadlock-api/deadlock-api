@@ -4,6 +4,7 @@ import type { Ability, Hero, Upgrade } from "deadlock_api_client";
 import { CACHE_DURATIONS } from "~/constants/cache";
 import { api } from "~/lib/api";
 import { buffInfoByType } from "~/lib/buffs";
+import { toCorruptionData } from "~/lib/corrupted-items";
 import { prefetchSafe } from "~/lib/prefetch-safe";
 import { type SeasonInfo, toSeasons } from "~/lib/seasons";
 
@@ -115,6 +116,17 @@ export const buffInfoQueryOptions = queryOptions({
       }));
   },
   select: buffInfoByType,
+  staleTime: CACHE_DURATIONS.FOREVER,
+});
+
+/**
+ * What corrupting an item does besides its own bonuses: the penalties it can roll (localized), the Broker's frame art,
+ * the price by tier and the Street Brawl round. Only this slice of the generic data is kept, so a page that preloads
+ * it does not carry lanes and glitch settings into its HTML.
+ */
+export const corruptionQueryOptions = queryOptions({
+  queryKey: queryKeys.assets.corruption(),
+  queryFn: async () => toCorruptionData((await api.generic_data_api.getGenericData()).data),
   staleTime: CACHE_DURATIONS.FOREVER,
 });
 

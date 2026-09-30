@@ -1,5 +1,6 @@
 import type { Upgrade } from "deadlock_api_client";
 
+import { CorruptedItemImage } from "~/components/domain/assets/CorruptedItemImage";
 import { ItemImage, type ItemSource } from "~/components/domain/assets/ItemImage";
 import { ItemName } from "~/components/domain/assets/ItemName";
 import { useItemById } from "~/hooks/useAssetById";
@@ -8,6 +9,8 @@ import { cn } from "~/lib/utils";
 type ItemCellProps = Omit<React.ComponentProps<"span">, "children"> & {
   /** Links the name to the item's analytics page. */
   linkToDetail?: boolean;
+  /** `corrupted` draws the icon in the Broker's frame, for a row about the corrupted version of the item. */
+  variant?: "normal" | "corrupted";
 };
 
 /**
@@ -29,13 +32,23 @@ function ItemCellView({
   item,
   loading = false,
   linkToDetail = false,
+  variant = "normal",
   className,
   ...props
 }: ItemCellProps & { item: Upgrade | undefined; loading?: boolean }) {
   return (
-    <span data-slot="item-cell" className={cn("flex min-w-0 items-center gap-2", className)} {...props}>
-      {/* The name beside it already says what this is. */}
-      <ItemImage item={item} loading={loading} title="" className="size-8 shrink-0" />
+    <span
+      data-slot="item-cell"
+      data-variant={variant}
+      className={cn("flex min-w-0 items-center gap-2", className)}
+      {...props}
+    >
+      {/* The name beside it already says what this is; the corrupted frame says which version. */}
+      {variant === "corrupted" ? (
+        <CorruptedItemImage item={item} loading={loading} />
+      ) : (
+        <ItemImage item={item} loading={loading} title="" className="size-8 shrink-0" />
+      )}
       <ItemName item={item} loading={loading} linkToDetail={linkToDetail} />
     </span>
   );

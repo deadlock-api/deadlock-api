@@ -39,6 +39,11 @@ export function Round3DomainAssets() {
           <ItemCell itemId={ITEM_IDS[0]} />
           <ItemCell itemId={ITEM_IDS[1]} linkToDetail />
         </Variants>
+        <Variants label="ItemCell variant: normal, corrupted (a row about the corrupted version), corrupted loading">
+          <ItemCell itemId={ITEM_IDS[2]} linkToDetail />
+          <ItemCell itemId={ITEM_IDS[2]} linkToDetail variant="corrupted" />
+          <ItemCell item={undefined} loading variant="corrupted" />
+        </Variants>
         <Variants label='shape="circle", truncation (max-w-24 on the cell), unknown id, loading'>
           <HeroCell heroId={HERO_IDS[3]} shape="circle" />
           <HeroCell heroId={HERO_IDS[1]} linkToDetail className="max-w-24" />

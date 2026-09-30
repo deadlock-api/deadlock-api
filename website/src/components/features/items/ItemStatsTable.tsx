@@ -9,6 +9,7 @@ import { ItemSelector } from "~/components/domain/selectors/ItemSelector";
 import { ITEM_SLOTS, ItemSlotSelector } from "~/components/domain/selectors/ItemSlotSelector";
 import { ItemTierSelector } from "~/components/domain/selectors/ItemTierSelector";
 import { ItemStatTrend } from "~/components/features/items/ItemStatTrend";
+import { useCorruptedItemMode } from "~/components/features/items/useCorruptedItemMode";
 import type { StatTrendBucket } from "~/components/patterns/charts/StatTrendChart";
 import { ExpandableRow, ExpandableRowToggle } from "~/components/patterns/data-table/ExpandableRow";
 import { SortableHeader } from "~/components/patterns/data-table/SortableHeader";
@@ -19,9 +20,12 @@ import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { StaleOverlay } from "~/components/patterns/states/StaleOverlay";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
+import { Field } from "~/components/ui/field";
 import { SearchInput } from "~/components/ui/search-input";
+import { Segmented, SegmentedItem } from "~/components/ui/segmented";
 import { Stack } from "~/components/ui/stack";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
+import { Text } from "~/components/ui/text";
 import { Tooltip, TooltipHeader, TooltipStat, TooltipStats, TooltipTarget } from "~/components/ui/tooltip";
 import { useHydrated } from "~/hooks/useHydrated";
 import { formatPercent } from "~/lib/format";
@@ -104,6 +108,8 @@ export interface DisplayItemStats {
 
 interface ItemStatsTableRowProps {
   row: DisplayItemStats;
+  /** `corrupted` while the rows are the corrupted versions of the items. */
+  itemVariant: "normal" | "corrupted";
   index: number;
   columns: string[];
   hideIndex: boolean;
@@ -240,6 +246,7 @@ function ConfidenceTierBadge({ row }: { row: DisplayItemStats }) {
 
 const ItemStatsTableRow = memo(function ItemStatsTableRow({
   row,
+  itemVariant,
   index,
   columns,
   hideIndex,
@@ -282,7 +289,7 @@ const ItemStatsTableRow = memo(function ItemStatsTableRow({
       {!hideIndex && <TableCell className="hidden text-center font-semibold @md:table-cell">{index + 1}</TableCell>}
       <TableCell data-pinned>
         <Stack gap={1}>
-          <ItemCell item={row.item} linkToDetail className="max-w-44 sm:max-w-64" />
+          <ItemCell item={row.item} linkToDetail variant={itemVariant} className="max-w-44 sm:max-w-64" />
           <p className="text-xs text-muted-foreground tabular-nums">{row.matches.toLocaleString("en-US")} matches</p>
         </Stack>
       </TableCell>
@@ -450,6 +457,7 @@ export function ItemStatsTable({
     parseAsSetOf(parseAsInteger).withDefault(new Set()),
   );
   const [nameQuery, setNameQuery] = useState("");
+  const [corruptedMode, setCorruptedMode] = useCorruptedItemMode();
 
   // The toolbar's item filter holds both lists as one include / exclude map; the rows' toggles below edit the same
   // two URL lists.
@@ -589,12 +597,36 @@ export function ItemStatsTable({
             <ItemTierSelector orientation="horizontal" value={itemTiers} onValueChange={setItemTiers} />
           </>
         )}
+        <Field label="Purchases" orientation="horizontal">
+          <Segmented
+            width="hug"
+            value={corruptedMode}
+            onValueChange={(mode) => void setCorruptedMode(mode === "exclude" ? null : mode)}
+          >
+            <SegmentedItem value="exclude">Normal</SegmentedItem>
+            <SegmentedItem value="only">Corrupted</SegmentedItem>
+            <SegmentedItem value="include">Both</SegmentedItem>
+          </Segmented>
+        </Field>
         {actions}
         {/* NOTE: "Highlight overperforming items" toggle hidden for now — not very useful in its
             current form. May bring back later; if reviving, restore the Switch+Label toggle here
             plus the related `dim_low_confidence` useQueryState (see git history) and wire it
             through to `ItemStatsTableRow`'s `dimLowConfidence` prop. Delete this comment on revival. */}
       </FilterBar>
+      {corruptedMode === "only" && (
+        <Text as="p" variant="caption" tone="muted" className="max-w-3xl">
+          Each row is the corrupted version of a tier 3 or 4 item, traded with the Broker (or picked after round 5 in
+          Street Brawl). Corrupted items exist since the City Never Sleeps update on September 29, 2026, so samples are
+          small: read the matches under each item and the confidence column before the win rate. There is no earlier
+          period to compare with.
+        </Text>
+      )}
+      {corruptedMode === "include" && (
+        <Text as="p" variant="caption" tone="muted" className="max-w-3xl">
+          A corrupted purchase counts as the normal item it replaced.
+        </Text>
+      )}
       {isLoading ? (
         <LoadingState label="item statistics" align="center" />
       ) : (
@@ -668,6 +700,7 @@ export function ItemStatsTable({
                   <ItemStatsTableRow
                     key={row.item_id}
                     row={row}
+                    itemVariant={corruptedMode === "only" ? "corrupted" : "normal"}
                     index={hideIndex ? 0 : index}
                     columns={columns}
                     hideIndex={hideIndex}
