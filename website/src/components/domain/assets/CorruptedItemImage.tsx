@@ -12,8 +12,8 @@ type CorruptedItemImageProps = Omit<React.ComponentProps<"span">, "children"> & 
 };
 
 /**
- * The corrupted version of a shop item. The game has no art of its own for it: the item's icon inside the Broker's
- * frame, as the shop draws it. The frame is the game's own art and looks the same in every theme. The icon's alt text
+ * The corrupted version of a shop item. The game has no art of its own for it: the item's icon on the Broker's card,
+ * as the shop draws it, cropped to a square box. The frame is the game's own art and looks the same in every theme. The icon's alt text
  * is "Corrupted <item>" and the frame is decorative. Size it with a `size-*` class (32px by default).
  */
 export function CorruptedItemImage(props: CorruptedItemImageProps & ItemSource) {
@@ -40,15 +40,24 @@ function CorruptedItemImageView({
       data-slot="corrupted-item-image"
       data-frame={frame}
       title={label}
-      className={cn("inline-grid size-8 shrink-0 **:col-start-1 **:row-start-1", className)}
+      // One fixed cell (`minmax(0, 1fr)`), so both layers take the box's size rather than their own: the frame art is a
+      // tall card with far more pixels than any box it is drawn in, and in an auto-sized cell it overflowed the page.
+      className={cn(
+        "inline-grid size-8 shrink-0 grid-cols-1 grid-rows-1 place-items-center overflow-hidden rounded-sm **:col-start-1 **:row-start-1",
+        className,
+      )}
       {...props}
     >
-      <ItemImage item={item} loading={loading} alt={label} title="" className="size-full" />
-      {/* Both layers share the one grid cell (a <picture> is `display: contents`, so its <img> is the cell item). Until
-          the frame art has loaded the plain icon stands alone, the same size. */}
+      {/* The Broker's card behind, cropped to the square; the icon on top, inset so the card shows around it. Until
+          the art has loaded the plain icon stands alone at full size. (A <picture> is `display: contents`, so its
+          <img> is the cell item.) */}
       {art && (
-        <AssetImage asset={{ webp: art.webp, png: art.png, alt: "" }} className="pointer-events-none size-full" />
+        <AssetImage
+          asset={{ webp: art.webp, png: art.png, alt: "" }}
+          className="pointer-events-none size-full object-cover"
+        />
       )}
+      <ItemImage item={item} loading={loading} alt={label} title="" className={art ? "size-3/4" : "size-full"} />
     </span>
   );
 }
