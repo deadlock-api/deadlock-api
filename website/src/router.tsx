@@ -29,6 +29,10 @@ function isClientError(error: unknown): boolean {
   return status !== undefined && status >= 400 && status < 500;
 }
 
+function afterNextPaint(): Promise<void> {
+  return new Promise((resolve) => requestAnimationFrame(() => setTimeout(resolve, 0)));
+}
+
 export function getRouter() {
   const queryClient = new QueryClient({
     defaultOptions: {
@@ -60,6 +64,14 @@ export function getRouter() {
   });
 
   setupRouterSsrQueryIntegration({ router, queryClient });
+
+  // A `preload="intent"` link preloads synchronously in touchstart, which runs before the tap's first paint: route
+  // matching, loaders and the chunk import held that paint back 40-80 ms on a throttled phone. Starting the preload
+  // after the next paint lets the tap show first; it still starts well before the click that follows.
+  if (typeof window !== "undefined") {
+    const preloadRoute = router.preloadRoute;
+    router.preloadRoute = (options) => afterNextPaint().then(() => preloadRoute(options));
+  }
 
   return router;
 }
