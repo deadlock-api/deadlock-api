@@ -153,13 +153,12 @@ export function getSortedChildren(node: AbilityTrieNode): AbilityTrieNode[] {
 
 /** Ability order rows packed by column: each order is a string of base-36 indexes into `ids`. A hero's orders use
  * four ability ids 15 times over, so this is about a seventh of the row JSON, and it is what the server dehydrates
- * into the page (1.5k rows on /analytics/abilities). */
+ * into the page (1.5k rows on /analytics/abilities). `matches` is left out: the API computes it as wins + losses. */
 export interface PackedAbilityOrders {
   ids: number[];
   orders: string[];
   wins: number[];
   losses: number[];
-  matches: number[];
   players: number[];
   kills: number[];
   deaths: number[];
@@ -178,7 +177,6 @@ export function packAbilityOrders(
     orders: rows.map((row) => row.abilities.map((id) => index.get(id)).join("")),
     wins: rows.map((row) => row.wins),
     losses: rows.map((row) => row.losses),
-    matches: rows.map((row) => row.matches),
     players: rows.map((row) => row.players),
     kills: rows.map((row) => row.total_kills),
     deaths: rows.map((row) => row.total_deaths),
@@ -194,7 +192,7 @@ export function unpackAbilityOrders(
     abilities: Array.from(order, (digit) => packed.ids[Number.parseInt(digit, 36)]),
     wins: packed.wins[i],
     losses: packed.losses[i],
-    matches: packed.matches[i],
+    matches: packed.wins[i] + packed.losses[i],
     players: packed.players[i],
     total_kills: packed.kills[i],
     total_deaths: packed.deaths[i],
