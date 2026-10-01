@@ -7,11 +7,14 @@ type StatKey = keyof AnalyticsGameStats;
 export interface SoulSourceGroup {
   key: string;
   label: string;
+  /** Distinct from its neighbours in the stacked charts; the residual "Passive & other" is neutral. */
   color: (typeof SERIES_COLORS)[number];
   /** Souls confirmed directly (last-hit / secured without an orb drop). */
   baseKey: StatKey;
   /** Souls picked up from the secured soul orb, if the source drops one. */
   orbKey?: StatKey;
+  /** Souls the API counts inside `baseKey` that another group shows on its own. */
+  minusKey?: StatKey;
 }
 
 export const SOUL_SOURCE_GROUPS: SoulSourceGroup[] = [
@@ -21,6 +24,14 @@ export const SOUL_SOURCE_GROUPS: SoulSourceGroup[] = [
     color: SERIES_COLORS[0],
     baseKey: "avg_gold_player",
     orbKey: "avg_gold_player_orbs",
+    // The API's hero kill souls include assist souls, shown as their own source.
+    minusKey: "avg_gold_assists",
+  },
+  {
+    key: "assists",
+    label: "Assists",
+    color: SERIES_COLORS[5],
+    baseKey: "avg_gold_assists",
   },
   {
     key: "lane_creeps",
@@ -49,11 +60,25 @@ export const SOUL_SOURCE_GROUPS: SoulSourceGroup[] = [
     color: SERIES_COLORS[4],
     baseKey: "avg_gold_treasure",
   },
+  {
+    key: "breakables",
+    label: "Breakables",
+    color: SERIES_COLORS[7],
+    baseKey: "avg_gold_breakable",
+  },
 ];
 
+/** A group's souls, split into what was confirmed directly and what came from its orb. */
+export function groupSoulParts(stats: AnalyticsGameStats, group: SoulSourceGroup): { base: number; orb: number } {
+  const minus = group.minusKey ? (stats[group.minusKey] ?? 0) : 0;
+  return {
+    base: Math.max(0, (stats[group.baseKey] ?? 0) - minus),
+    orb: group.orbKey ? (stats[group.orbKey] ?? 0) : 0,
+  };
+}
+
 export function groupSouls(stats: AnalyticsGameStats, group: SoulSourceGroup): number {
-  const base = stats[group.baseKey] ?? 0;
-  const orb = group.orbKey ? (stats[group.orbKey] ?? 0) : 0;
+  const { base, orb } = groupSoulParts(stats, group);
   return base + orb;
 }
 

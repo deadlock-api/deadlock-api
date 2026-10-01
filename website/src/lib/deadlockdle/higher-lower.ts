@@ -348,6 +348,8 @@ const SOUL_SOURCES: { name: string; phrase: string; keys: (keyof AnalyticsGameSt
   { name: "Jungle neutrals", phrase: "jungle camps", keys: ["avg_gold_neutral_creep", "avg_gold_neutral_creep_orbs"] },
   { name: "Objectives", phrase: "objectives", keys: ["avg_gold_boss", "avg_gold_boss_orb"] },
   { name: "Urn", phrase: "the Urn", keys: ["avg_gold_treasure"] },
+  { name: "Breakables", phrase: "breakables", keys: ["avg_gold_breakable"] },
+  { name: "Team bonus", phrase: "the team bonus", keys: ["avg_gold_team_bonus"] },
 ];
 
 /** A source's name inside a sentence. */

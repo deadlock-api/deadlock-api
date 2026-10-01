@@ -46,12 +46,15 @@ interface CurvePoint {
   [source: string]: number;
 }
 
-const CURVE_FIELDS: Record<string, { base: CurveKey; orb?: CurveKey }> = {
-  hero_kills: { base: "gold_player_avg", orb: "gold_player_orbs_avg" },
+/** The curve's fields per soul source group; same split as `SOUL_SOURCE_GROUPS`. */
+const CURVE_FIELDS: Record<string, { base: CurveKey; orb?: CurveKey; minus?: CurveKey }> = {
+  hero_kills: { base: "gold_player_avg", orb: "gold_player_orbs_avg", minus: "gold_assists_avg" },
+  assists: { base: "gold_assists_avg" },
   lane_creeps: { base: "gold_lane_creep_avg", orb: "gold_lane_creep_orbs_avg" },
   jungle: { base: "gold_neutral_creep_avg", orb: "gold_neutral_creep_orbs_avg" },
   objectives: { base: "gold_boss_avg", orb: "gold_boss_orb_avg" },
   urn: { base: "gold_treasure_avg" },
+  breakables: { base: "gold_breakable_avg" },
 };
 
 export default function EconomyGrowthCurve({ params }: EconomyGrowthCurveProps) {
@@ -77,7 +80,8 @@ export default function EconomyGrowthCurve({ params }: EconomyGrowthCurveProps) 
         };
         for (const group of SOUL_SOURCE_GROUPS) {
           const fields = CURVE_FIELDS[group.key];
-          const base = point[fields.base] ?? 0;
+          const minus = fields.minus ? (point[fields.minus] ?? 0) : 0;
+          const base = Math.max(0, (point[fields.base] ?? 0) - minus);
           const orb = fields.orb ? (point[fields.orb] ?? 0) : 0;
           curvePoint[group.key] = base + orb;
         }

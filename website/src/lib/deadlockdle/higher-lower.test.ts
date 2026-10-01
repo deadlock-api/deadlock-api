@@ -85,6 +85,8 @@ function data(date: string): HigherLowerData {
       avg_gold_boss: 3000,
       avg_gold_boss_orb: 400,
       avg_gold_treasure: 2100,
+      avg_gold_breakable: 1800,
+      avg_gold_team_bonus: 1300,
     } as HigherLowerData["gameStats"],
     abilityOrders: abilityHeroes.map((heroId) => {
       const [a, b, c, d] = [1, 2, 3, 4].map((slot) => heroId * 10 + slot);

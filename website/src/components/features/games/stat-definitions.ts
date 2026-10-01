@@ -125,6 +125,13 @@ export const GAME_STAT_CATEGORIES: StatCategory[] = [
       { key: "avg_gold_treasure", label: "Avg Souls (Urn)", format: "integer" },
       { key: "avg_gold_denied", label: "Avg Souls (Denied)", format: "integer" },
       { key: "avg_gold_death_loss", label: "Avg Souls (Death Loss)", format: "integer" },
+      { key: "avg_gold_assists", label: "Avg Souls (Assists)", format: "integer" },
+      { key: "avg_gold_breakable", label: "Avg Souls (Breakables)", format: "integer" },
+      { key: "avg_gold_team_bonus", label: "Avg Souls (Team Bonus)", format: "integer" },
+      { key: "avg_gold_item_trophy_collector", label: "Avg Souls (Trophy Collector)", format: "integer" },
+      { key: "avg_gold_item_cultist_sacrifice", label: "Avg Souls (Cultist Sacrifice)", format: "integer" },
+      { key: "avg_gold_item_goose_egg", label: "Avg Souls (Golden Goose Egg)", format: "integer" },
+      { key: "avg_gold_ability_assassinate", label: "Avg Souls (Assassinate)", format: "integer" },
     ],
   },
 ];

@@ -5,17 +5,19 @@ import { Pie, PieChart } from "recharts";
 
 import { ChartSwatch } from "~/components/patterns/charts/ChartLegend";
 import { ChartSurface } from "~/components/patterns/charts/ChartSurface";
-import { SERIES_COLORS } from "~/components/patterns/charts/theme";
+import { CHART_COLOR } from "~/components/patterns/charts/theme";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { ProgressBar } from "~/components/ui/progress-bar";
 import { Stat, StatGroup } from "~/components/ui/stat";
 import { gameStatsQueryOptions } from "~/queries/games-query";
+import type { Color } from "~/types/general";
 
-import { formatPercent, formatSouls, SOUL_SOURCE_GROUPS } from "./economy-definitions";
+import { formatPercent, formatSouls, groupSoulParts, SOUL_SOURCE_GROUPS } from "./economy-definitions";
 
-const OTHER_COLOR = SERIES_COLORS[5];
+// Neutral: the remainder is not one source, and the series hues are taken by the ones that are.
+const OTHER_COLOR = CHART_COLOR.neutral;
 import { formatStatValue } from "./stat-definitions";
 
 interface EconomySoulSourcesProps {
@@ -32,21 +34,20 @@ export default function EconomySoulSources({ params }: EconomySoulSourcesProps) 
   const breakdown = useMemo(() => {
     if (!stats) return [];
     const rows = SOUL_SOURCE_GROUPS.map((group) => {
-      const base = stats[group.baseKey] ?? 0;
-      const orb = group.orbKey ? (stats[group.orbKey] ?? 0) : 0;
+      const { base, orb } = groupSoulParts(stats, group);
       const value = base + orb;
       return {
         key: group.key,
         label: group.label,
-        color: group.color,
+        color: group.color as Color,
         value,
         orbShare: value > 0 ? orb / value : 0,
         share: 0,
       };
     });
     const tracked = rows.reduce((sum, r) => sum + r.value, 0);
-    // The five sources leave out passive income and anything the match data does not break out: about a ninth of
-    // net worth. Without the remainder, every share read too high ("Lane Creeps 50.1%").
+    // The sources leave out passive income, the team bonus and item / ability souls (Trophy Collector, Cultist
+    // Sacrifice, Golden Goose Egg, Assassinate). Without the remainder, every share read too high.
     const other = Math.max(0, (stats.avg_net_worth ?? 0) - tracked);
     rows.sort((a, b) => b.value - a.value);
     if (other > 0) {
