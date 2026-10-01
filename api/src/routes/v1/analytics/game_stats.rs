@@ -182,6 +182,20 @@ pub struct AnalyticsGameStats {
     pub avg_gold_treasure: f64,
     pub avg_gold_denied: f64,
     pub avg_gold_death_loss: f64,
+    /// Average souls per player per match from assists (part of the hero kill souls)
+    pub avg_gold_assists: f64,
+    /// Average souls per player per match from the team bonus
+    pub avg_gold_team_bonus: f64,
+    /// Average souls per player per match from breakables (crates, statues)
+    pub avg_gold_breakable: f64,
+    /// Average souls per player per match from the Assassinate ability
+    pub avg_gold_ability_assassinate: f64,
+    /// Average souls per player per match from the Trophy Collector item
+    pub avg_gold_item_trophy_collector: f64,
+    /// Average souls per player per match from the Cultist Sacrifice item
+    pub avg_gold_item_cultist_sacrifice: f64,
+    /// Average souls per player per match from the Golden Goose Egg item
+    pub avg_gold_item_goose_egg: f64,
     pub avg_creep_damage: f64,
     pub avg_neutral_damage: f64,
     pub avg_self_healing: f64,
@@ -271,6 +285,13 @@ fn build_query(query: &GameStatsQuery) -> String {
         assumeNotNull(coalesce(avg(max_gold_treasure), 0)) AS avg_gold_treasure,
         assumeNotNull(coalesce(avg(max_gold_denied), 0)) AS avg_gold_denied,
         assumeNotNull(coalesce(avg(max_gold_death_loss), 0)) AS avg_gold_death_loss,
+        assumeNotNull(coalesce(avg(max_gold_assists), 0)) AS avg_gold_assists,
+        assumeNotNull(coalesce(avg(max_gold_team_bonus), 0)) AS avg_gold_team_bonus,
+        assumeNotNull(coalesce(avg(max_gold_breakable), 0)) AS avg_gold_breakable,
+        assumeNotNull(coalesce(avg(max_gold_ability_assassinate), 0)) AS avg_gold_ability_assassinate,
+        assumeNotNull(coalesce(avg(max_gold_item_trophy_collector), 0)) AS avg_gold_item_trophy_collector,
+        assumeNotNull(coalesce(avg(max_gold_item_cultist_sacrifice), 0)) AS avg_gold_item_cultist_sacrifice,
+        assumeNotNull(coalesce(avg(max_gold_item_goose_egg), 0)) AS avg_gold_item_goose_egg,
         assumeNotNull(coalesce(avg(max_creep_damage), 0)) AS avg_creep_damage,
         assumeNotNull(coalesce(avg(max_neutral_damage), 0)) AS avg_neutral_damage,
         assumeNotNull(coalesce(avg(max_self_healing), 0)) AS avg_self_healing,
