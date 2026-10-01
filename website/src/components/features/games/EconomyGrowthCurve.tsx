@@ -10,6 +10,7 @@ import { ChartSurface } from "~/components/patterns/charts/ChartSurface";
 import {
   CHART_CURSOR_LINE,
   CHART_GRID,
+  CHART_SPREAD_BAND,
   CHART_TICK,
   CHART_X_AXIS,
   CHART_X_LABEL,
@@ -175,15 +176,7 @@ export default function EconomyGrowthCurve({ params }: EconomyGrowthCurveProps) 
                 isAnimationActive={false}
                 activeDot={false}
               />
-              <Area
-                dataKey="band"
-                stackId="band"
-                stroke="none"
-                fill="var(--color-primary)"
-                fillOpacity={0.12}
-                isAnimationActive={false}
-                activeDot={false}
-              />
+              <Area dataKey="band" stackId="band" fill="var(--color-primary)" {...CHART_SPREAD_BAND} />
               <Line
                 type="monotone"
                 dataKey="avg"

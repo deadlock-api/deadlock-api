@@ -2,17 +2,19 @@ import { keepPreviousData, useQueries, useQuery } from "@tanstack/react-query";
 import type { PlayerPerformanceCurvePoint } from "deadlock_api_client";
 import { Hourglass } from "lucide-react";
 import { useState } from "react";
-import { CartesianGrid, Line, LineChart, ReferenceLine, Tooltip, XAxis, YAxis } from "recharts";
+import { Area, CartesianGrid, ComposedChart, Line, ReferenceLine, Tooltip, XAxis, YAxis } from "recharts";
 
 import { ChartLegend, ChartLegendItem } from "~/components/patterns/charts/ChartLegend";
 import { ChartReading, ChartReadings } from "~/components/patterns/charts/ChartReadings";
 import { ChartEmpty, ChartError, ChartLoading } from "~/components/patterns/charts/ChartStates";
 import { ChartSurface } from "~/components/patterns/charts/ChartSurface";
 import {
+  CHART_COLOR,
   CHART_CURSOR_LINE,
   CHART_GRID,
   CHART_MARGIN,
   CHART_MEDIAN_LINE,
+  CHART_SPREAD_BAND,
   CHART_X_AXIS,
   CHART_Y_AXIS,
 } from "~/components/patterns/charts/theme";
@@ -36,12 +38,15 @@ const LABEL = "match timeline";
  */
 const LAST_MINUTE = 45;
 const METRICS = {
-  souls: { label: "Souls", key: "net_worth_avg", digits: 0 },
-  kills: { label: "Kills", key: "kills_avg", digits: 1 },
-  deaths: { label: "Deaths", key: "deaths_avg", digits: 1 },
+  souls: { label: "Souls", key: "net_worth_avg", std: "net_worth_std", digits: 0 },
+  kills: { label: "Kills", key: "kills_avg", std: "kills_std", digits: 1 },
+  deaths: { label: "Deaths", key: "deaths_avg", std: "deaths_std", digits: 1 },
   // Permanent buff pickups so far. Only matches since the City Never Sleeps update record when they happen.
-  buffs: { label: "Buffs", key: "permanent_buffs_avg", digits: 1 },
-} as const satisfies Record<string, { label: string; key: keyof PlayerPerformanceCurvePoint; digits: number }>;
+  buffs: { label: "Buffs", key: "permanent_buffs_avg", std: "permanent_buffs_std", digits: 1 },
+} as const satisfies Record<
+  string,
+  { label: string; key: keyof PlayerPerformanceCurvePoint; std: keyof PlayerPerformanceCurvePoint; digits: number }
+>;
 type TimelineMetric = keyof typeof METRICS;
 
 interface Row {
@@ -51,6 +56,8 @@ interface Row {
   lead: Record<string, number | null>;
   /** Each player's own average, and the average player's under `field`. */
   value: Record<string, number | null>;
+  /** The spread between players on the same filters (one standard deviation); null without the field's curve. */
+  spread: number | null;
 }
 
 const FIELD = "field";
@@ -123,9 +130,13 @@ export function TimelinePanel({
   for (const query of own) {
     for (const point of query.data ?? []) if (point.game_time <= LAST_MINUTE * 60) times.add(point.game_time);
   }
-  const valueAt = (points: PlayerPerformanceCurvePoint[] | undefined, time: number) => {
+  const valueAt = (
+    points: PlayerPerformanceCurvePoint[] | undefined,
+    time: number,
+    key: keyof PlayerPerformanceCurvePoint = selected.key,
+  ) => {
     const point = points?.find((entry) => entry.game_time === time);
-    return point?.[selected.key] ?? null;
+    return point?.[key] ?? null;
   };
   const rows: Row[] = [...times]
     .sort((a, b) => a - b)
@@ -138,14 +149,16 @@ export function TimelinePanel({
       const lead = Object.fromEntries(
         keys.map((key) => [key, value[key] != null && average != null ? value[key] - average : null]),
       );
-      return { time, lead, value };
+      return { time, lead, value, spread: valueAt(field.data, time, selected.std) };
     });
   const plotted = (row: Row, key: string) => (relative ? row.lead[key] : row.value[key]);
-  const leads = rows.flatMap((row) => keys.flatMap((key) => plotted(row, key) ?? []));
+  // The ±1σ band around the zero line: how far the field itself spreads, so a lead can be read as big or small.
+  const band = (row: Row) => (relative && row.spread != null ? [-row.spread, row.spread] : null);
+  const leads = rows.flatMap((row) => [...keys.flatMap((key) => plotted(row, key) ?? []), ...(band(row) ?? [])]);
   const ticks = niceTicks(Math.min(0, ...leads), Math.max(0, ...leads, selected.digits === 0 ? 1 : 0.1));
   const step = ticks.length > 1 ? ticks[1] - ticks[0] : 1;
   const tenMinutes = rows.find((row) => row.time === 720) ?? rows.find((row) => row.time >= 600);
-  const summary = `${selected.label} by game minute${relative ? ", as the lead over the average player on the same filters" : ""}.${
+  const summary = `${selected.label} by game minute${relative ? ", as the lead over the average player on the same filters, with the spread between players (one standard deviation) shaded" : ""}.${
     tenMinutes
       ? ` At ${minuteLabel(tenMinutes.time)}: ${players
           .map((player, index) => {
@@ -186,7 +199,7 @@ export function TimelinePanel({
             />
           ) : (
             <ChartSurface label={summary} announce="label" size="grow" variant="flush">
-              <LineChart data={rows} margin={CHART_MARGIN} accessibilityLayer={false}>
+              <ComposedChart data={rows} margin={CHART_MARGIN} accessibilityLayer={false}>
                 <CartesianGrid {...CHART_GRID} />
                 <XAxis
                   {...CHART_X_AXIS}
@@ -208,6 +221,7 @@ export function TimelinePanel({
                     (relative && value > 0 ? "+" : "") + formatCompactAxisTick(value, step)
                   }
                 />
+                {relative && <Area type="monotone" dataKey={band} fill={CHART_COLOR.neutral} {...CHART_SPREAD_BAND} />}
                 {relative && <ReferenceLine y={0} {...CHART_MEDIAN_LINE} />}
                 <Tooltip
                   cursor={CHART_CURSOR_LINE}
@@ -257,6 +271,11 @@ export function TimelinePanel({
                             ±0
                           </ChartReading>
                         )}
+                        {relative && row.spread != null && (
+                          <ChartReading label="Spread (1σ)" color={CHART_COLOR.neutral}>
+                            ±{formatValue(row.spread, selected.digits)}
+                          </ChartReading>
+                        )}
                       </ChartReadings>
                     );
                   }}
@@ -274,7 +293,7 @@ export function TimelinePanel({
                     isAnimationActive={false}
                   />
                 ))}
-              </LineChart>
+              </ComposedChart>
             </ChartSurface>
           )}
           <ChartLegend label="Players">
@@ -286,6 +305,11 @@ export function TimelinePanel({
             {relative && (
               <ChartLegendItem color="var(--chart-axis)" shape="dashed">
                 Average player
+              </ChartLegendItem>
+            )}
+            {relative && (
+              <ChartLegendItem color={CHART_COLOR.neutral} shape="square">
+                Spread (±1σ)
               </ChartLegendItem>
             )}
           </ChartLegend>

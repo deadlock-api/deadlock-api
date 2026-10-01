@@ -6,7 +6,7 @@ import type {
 } from "deadlock_api_client";
 import { Hourglass, ListOrdered, Sparkles } from "lucide-react";
 import { Fragment } from "react";
-import { CartesianGrid, Line, LineChart, Tooltip, XAxis, YAxis } from "recharts";
+import { Area, CartesianGrid, ComposedChart, Line, Tooltip, XAxis, YAxis } from "recharts";
 
 import { ChartSwatch } from "~/components/patterns/charts/ChartLegend";
 import { ChartReading, ChartReadings } from "~/components/patterns/charts/ChartReadings";
@@ -17,6 +17,7 @@ import {
   CHART_CURSOR_LINE,
   CHART_GRID,
   CHART_MARGIN,
+  CHART_SPREAD_BAND,
   CHART_X_AXIS,
   CHART_X_LABEL,
   CHART_Y_AXIS,
@@ -174,7 +175,7 @@ export default function BuffsTab({ params }: BuffsTabProps) {
           <PanelHeader
             title="Buffs Over the Match"
             icon={Hourglass}
-            description="Average permanent buffs collected by each game minute"
+            description="Average permanent buffs collected by each game minute, ±1 std dev shaded"
           />
           <PanelBody className="flex flex-1 flex-col justify-center">
             <BuffCurve params={params} />
@@ -273,7 +274,10 @@ function BuffLevelTable({
   );
 }
 
-/** Average permanent buffs collected by each game minute; only players with recorded pickup times count. */
+/**
+ * Average permanent buffs collected by each game minute, with the ±1σ spread between players; only players with
+ * recorded pickup times count.
+ */
 function BuffCurve({ params }: { params: AnalyticsApiGameStatsRequest }) {
   const { data, isPending, isError, isFetching, refetch } = useQuery(
     playerPerformanceCurveQueryOptions({
@@ -292,7 +296,11 @@ function BuffCurve({ params }: { params: AnalyticsApiGameStatsRequest }) {
   const points = (data ?? [])
     .filter((point) => point.game_time <= LAST_MINUTE * 60 && point.permanent_buffs_avg != null)
     .sort((a, b) => a.game_time - b.game_time)
-    .map((point) => ({ time: point.game_time, buffs: point.permanent_buffs_avg as number }));
+    .map((point) => {
+      const buffs = point.permanent_buffs_avg as number;
+      const std = point.permanent_buffs_std ?? 0;
+      return { time: point.game_time, buffs, std, band: [Math.max(0, buffs - std), buffs + std] };
+    });
   const label = "buffs over the match";
 
   if (isPending) return <ChartLoading label={label} />;
@@ -300,8 +308,11 @@ function BuffCurve({ params }: { params: AnalyticsApiGameStatsRequest }) {
   if (points.length === 0) return <ChartEmpty label={label} description={BUFF_TIMINGS_NOTE} />;
 
   return (
-    <ChartSurface label="Average permanent buffs collected by game minute" variant="bare">
-      <LineChart data={points} margin={{ ...CHART_MARGIN, top: 16, right: 16 }}>
+    <ChartSurface
+      label="Average permanent buffs collected by game minute, with the spread between players"
+      variant="bare"
+    >
+      <ComposedChart data={points} margin={{ ...CHART_MARGIN, top: 16, right: 16 }}>
         <CartesianGrid {...CHART_GRID} />
         <XAxis
           {...CHART_X_AXIS}
@@ -321,10 +332,12 @@ function BuffCurve({ params }: { params: AnalyticsApiGameStatsRequest }) {
             return (
               <ChartReadings title={`At ${minuteLabel(point.time)}`}>
                 <ChartReading label="Buffs collected">{point.buffs.toFixed(1)}</ChartReading>
+                <ChartReading label="Std dev">± {point.std.toFixed(1)}</ChartReading>
               </ChartReadings>
             );
           }}
         />
+        <Area type="monotone" dataKey="band" fill={CHART_COLOR.primary} {...CHART_SPREAD_BAND} />
         <Line
           type="monotone"
           dataKey="buffs"
@@ -334,7 +347,7 @@ function BuffCurve({ params }: { params: AnalyticsApiGameStatsRequest }) {
           activeDot={{ r: 4 }}
           isAnimationActive={false}
         />
-      </LineChart>
+      </ComposedChart>
     </ChartSurface>
   );
 }

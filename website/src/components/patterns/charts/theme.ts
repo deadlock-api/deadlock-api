@@ -108,6 +108,17 @@ export const CHART_CUSTOM_TICK_DY = 14;
 /** The median of a population, drawn on its distribution: finer than the baseline dash. */
 export const CHART_MEDIAN_LINE = { stroke: "var(--chart-axis)", strokeDasharray: "2 2", strokeWidth: 1 } as const;
 
+/**
+ * The ±1 standard deviation band around an average line: a faint fill, no edge. Draw it as a range `Area` (a dataKey
+ * returning `[low, high]`) under the line, in the line's color.
+ */
+export const CHART_SPREAD_BAND = {
+  stroke: "none",
+  fillOpacity: 0.12,
+  isAnimationActive: false,
+  activeDot: false,
+} as const;
+
 /** A population's distribution under the players drawn on it: a faint neutral area with a thin edge. */
 export const CHART_AREA_NEUTRAL = {
   stroke: CHART_COLOR.neutral,
