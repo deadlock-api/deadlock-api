@@ -21,6 +21,9 @@ interface PlacedMarker {
   x: number;
   left?: number;
   row?: number;
+  /** Where the text is drawn from: its start on the right of the line, its end on the left so it meets the line. */
+  textX?: number;
+  textAnchor?: "start" | "end";
 }
 
 /**
@@ -32,6 +35,7 @@ function placeLabels(markers: PlacedMarker[], minX: number, maxX: number, maxRow
   for (const placed of [...markers].sort((a, b) => a.x - b.x)) {
     const width = placed.marker.label.length * CHAR_WIDTH;
     const onRight = placed.x + LABEL_INSET + width <= maxX;
+    const clamped = !onRight && placed.x - LABEL_INSET - width < minX;
     const left = onRight ? placed.x + LABEL_INSET : Math.max(minX, placed.x - LABEL_INSET - width);
     const right = left + width;
     let row = rows.findIndex((taken) => !taken.some(([l, r]) => left < r + LABEL_GAP && right + LABEL_GAP > l));
@@ -40,6 +44,10 @@ function placeLabels(markers: PlacedMarker[], minX: number, maxX: number, maxRow
     rows[row].push([left, right]);
     placed.left = left;
     placed.row = row;
+    // The width is an upper bound, so a label left of its line ends at the line rather than starting at the estimate.
+    const endAnchored = !onRight && !clamped;
+    placed.textX = endAnchored ? placed.x - LABEL_INSET : left;
+    placed.textAnchor = endAnchored ? "end" : "start";
   }
   return markers;
 }
@@ -73,9 +81,15 @@ export function ChartMarkers({ markers, labels = true }: { markers: readonly Cha
       {/* Above the series and their dots, so a label in a lower row stays readable on its halo. */}
       <ZIndexLayer zIndex={DefaultZIndexes.scatter + 1}>
         <g data-slot="chart-marker-labels" pointerEvents="none">
-          {placed.map(({ marker, left, row }) =>
-            left == null || row == null ? null : (
-              <text key={marker.at} x={left} y={plot.y - 6 + row * ROW_HEIGHT} {...CHART_MARKER_LABEL}>
+          {placed.map(({ marker, textX, textAnchor, row }) =>
+            textX == null || row == null ? null : (
+              <text
+                key={marker.at}
+                x={textX}
+                y={plot.y - 6 + row * ROW_HEIGHT}
+                {...CHART_MARKER_LABEL}
+                textAnchor={textAnchor}
+              >
                 {marker.label}
               </text>
             ),
