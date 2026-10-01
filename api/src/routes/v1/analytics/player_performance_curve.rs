@@ -26,7 +26,7 @@ fn default_resolution() -> Option<u8> {
 
 /// Per-tick soul sources as (response name, `match_player` column), averaged per time bucket.
 /// Sources without a flat `stats.gold_*` column read their `stats.gold_source_*_gold` column.
-/// Order must match the `gold_*_avg` field order in [`PlayerPerformanceCurvePoint`].
+/// Order must match the `gold_*_avg`/`gold_*_std` field order in [`PlayerPerformanceCurvePoint`].
 const GOLD_SOURCES: [(&str, &str); 18] = [
     ("gold_player", "stats.gold_player"),
     ("gold_player_orbs", "stats.gold_player_orbs"),
@@ -183,44 +183,83 @@ pub struct PlayerPerformanceCurvePoint {
     /// Average souls earned from hero kills at this time point, including assist souls
     /// (see `gold_assists_avg`)
     pub gold_player_avg: f64,
+    /// Standard deviation of `gold_player_avg` at this time point
+    pub gold_player_std: f64,
     /// Average souls earned from secured hero-kill orbs at this time point
     pub gold_player_orbs_avg: f64,
+    /// Standard deviation of `gold_player_orbs_avg` at this time point
+    pub gold_player_orbs_std: f64,
     /// Average souls earned from lane creeps at this time point
     pub gold_lane_creep_avg: f64,
+    /// Standard deviation of `gold_lane_creep_avg` at this time point
+    pub gold_lane_creep_std: f64,
     /// Average souls earned from secured lane-creep orbs at this time point
     pub gold_lane_creep_orbs_avg: f64,
+    /// Standard deviation of `gold_lane_creep_orbs_avg` at this time point
+    pub gold_lane_creep_orbs_std: f64,
     /// Average souls earned from neutral (jungle) creeps at this time point
     pub gold_neutral_creep_avg: f64,
+    /// Standard deviation of `gold_neutral_creep_avg` at this time point
+    pub gold_neutral_creep_std: f64,
     /// Average souls earned from secured neutral-creep orbs at this time point
     pub gold_neutral_creep_orbs_avg: f64,
+    /// Standard deviation of `gold_neutral_creep_orbs_avg` at this time point
+    pub gold_neutral_creep_orbs_std: f64,
     /// Average souls earned from objectives at this time point
     pub gold_boss_avg: f64,
+    /// Standard deviation of `gold_boss_avg` at this time point
+    pub gold_boss_std: f64,
     /// Average souls earned from secured objective orbs at this time point
     pub gold_boss_orb_avg: f64,
+    /// Standard deviation of `gold_boss_orb_avg` at this time point
+    pub gold_boss_orb_std: f64,
     /// Average souls earned from the urn at this time point
     pub gold_treasure_avg: f64,
+    /// Standard deviation of `gold_treasure_avg` at this time point
+    pub gold_treasure_std: f64,
     /// Average souls denied to enemies at this time point
     pub gold_denied_avg: f64,
+    /// Standard deviation of `gold_denied_avg` at this time point
+    pub gold_denied_std: f64,
     /// Average souls lost on death at this time point
     pub gold_death_loss_avg: f64,
+    /// Standard deviation of `gold_death_loss_avg` at this time point
+    pub gold_death_loss_std: f64,
     /// Average souls earned from assists at this time point (part of `gold_player_avg`)
     pub gold_assists_avg: f64,
+    /// Standard deviation of `gold_assists_avg` at this time point
+    pub gold_assists_std: f64,
     /// Average souls earned from the team bonus at this time point
     pub gold_team_bonus_avg: f64,
+    /// Standard deviation of `gold_team_bonus_avg` at this time point
+    pub gold_team_bonus_std: f64,
     /// Average souls earned from breakables (crates, statues) at this time point
     pub gold_breakable_avg: f64,
+    /// Standard deviation of `gold_breakable_avg` at this time point
+    pub gold_breakable_std: f64,
     /// Average souls earned from the Assassinate ability at this time point
     pub gold_ability_assassinate_avg: f64,
+    /// Standard deviation of `gold_ability_assassinate_avg` at this time point
+    pub gold_ability_assassinate_std: f64,
     /// Average souls earned from the Trophy Collector item at this time point
     pub gold_item_trophy_collector_avg: f64,
+    /// Standard deviation of `gold_item_trophy_collector_avg` at this time point
+    pub gold_item_trophy_collector_std: f64,
     /// Average souls earned from the Cultist Sacrifice item at this time point
     pub gold_item_cultist_sacrifice_avg: f64,
+    /// Standard deviation of `gold_item_cultist_sacrifice_avg` at this time point
+    pub gold_item_cultist_sacrifice_std: f64,
     /// Average souls earned from the Golden Goose Egg item at this time point
     pub gold_item_goose_egg_avg: f64,
+    /// Standard deviation of `gold_item_goose_egg_avg` at this time point
+    pub gold_item_goose_egg_std: f64,
     /// Average permanent buff (power-up) pickups collected up to this time point. Only
     /// matches since build 6712 (2026-09-29) record pickup times, so only players with at
     /// least one timed permanent pickup count; `null` when there are none.
     pub permanent_buffs_avg: Option<f64>,
+    /// Standard deviation of `permanent_buffs_avg` at this time point; `null` when there are
+    /// no players with timed permanent pickups.
+    pub permanent_buffs_std: Option<f64>,
 }
 
 fn build_query(query: &PlayerPerformanceCurveQuery) -> String {
@@ -273,7 +312,10 @@ fn build_query(query: &PlayerPerformanceCurveQuery) -> String {
         let _ = write!(players_gold, ", {column} as {s}_arr");
         let _ = write!(data_gold, ", {s}_arr as {s}");
         let _ = write!(array_join_gold, ", {s}_arr");
-        let _ = write!(select_gold, ",\n        avg({s}) AS {s}_avg");
+        let _ = write!(
+            select_gold,
+            ",\n        avg({s}) AS {s}_avg,\n        std({s}) AS {s}_std"
+        );
     }
 
     let game_mode_filter = GameMode::sql_filter(query.game_mode);
@@ -311,7 +353,8 @@ fn build_query(query: &PlayerPerformanceCurveQuery) -> String {
         std(deaths) AS deaths_std,
         avg(assists) AS assists_avg,
         std(assists) AS assists_std{select_gold},
-        avgOrNullIf(permanent_buffs, has_buff_timings) AS permanent_buffs_avg
+        avgOrNullIf(permanent_buffs, has_buff_timings) AS permanent_buffs_avg,
+        stddevPopOrNullIf(permanent_buffs, has_buff_timings) AS permanent_buffs_std
     FROM t_data
     {additional_filter}
     GROUP BY game_time
