@@ -24,6 +24,8 @@ const GamesByRankChart = lazy(() => import("~/components/features/games/GamesByR
 const EconomyTab = lazy(() => import("~/components/features/games/EconomyTab"));
 const BuffsTab = lazy(() => import("~/components/features/games/BuffsTab"));
 
+const STREET_BRAWL_ONLY = ["street_brawl"] as const;
+
 export function Games() {
   const [tab, setTab] = useAnalyticsTab("games");
   const { mode, setMode, gameMode, matchMode } = useModeState();
@@ -87,6 +89,8 @@ export function Games() {
 
       <Filter.Root>
         <Filter.ModeWithRank
+          // Street Brawl has no soul economy (fixed soul grants per round), so the Economy tab cannot select it.
+          disabledModes={tab === "economy" ? STREET_BRAWL_ONLY : undefined}
           value={{ mode, rank: [minRankId, maxRankId] }}
           onValueChange={(next) => {
             if (next.mode !== mode) setMode(next.mode);

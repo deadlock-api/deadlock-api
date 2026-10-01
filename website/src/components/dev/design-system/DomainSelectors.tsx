@@ -286,10 +286,11 @@ export function DomainSelectors() {
       <Specimen
         name="ModeSelector"
         source="domain/selectors/ModeSelector"
-        note="Game mode and match mode as one choice, so only pairs that return data are offered. MODE_CONFIG maps the value to the API's game_mode and match_mode. With a rank range beside it, use Filter.ModeWithRank."
+        note="Game mode and match mode as one choice, so only pairs that return data are offered. MODE_CONFIG maps the value to the API's game_mode and match_mode. With a rank range beside it, use Filter.ModeWithRank. disabledModes keeps a mode visible but unselectable on a view without data in it (Brawl on the Economy tab)."
       >
         <Variants>
           <ModeSelector value={mode} onValueChange={setMode} />
+          <ModeSelector defaultValue="normal_all" disabledModes={["street_brawl"]} />
         </Variants>
       </Specimen>
 

@@ -1,16 +1,19 @@
 import type { AnalyticsGameStats } from "deadlock_api_client";
 
-import { SERIES_COLORS } from "~/components/patterns/charts/theme";
+import { CHART_COLOR, SERIES_COLORS } from "~/components/patterns/charts/theme";
+import type { Color } from "~/types/general";
 
 type StatKey = keyof AnalyticsGameStats;
 
 export interface SoulSourceGroup {
   key: string;
   label: string;
-  /** Distinct from its neighbours in the stacked charts; the residual "Passive & other" is neutral. */
-  color: (typeof SERIES_COLORS)[number];
+  /** Distinct from its neighbours in the stacked charts. */
+  color: Color;
   /** Souls confirmed directly (last-hit / secured without an orb drop). */
   baseKey: StatKey;
+  /** Further sources summed into this group, for groups that bundle several small ones. */
+  extraKeys?: StatKey[];
   /** Souls picked up from the secured soul orb, if the source drops one. */
   orbKey?: StatKey;
   /** Souls the API counts inside `baseKey` that another group shows on its own. */
@@ -66,13 +69,27 @@ export const SOUL_SOURCE_GROUPS: SoulSourceGroup[] = [
     color: SERIES_COLORS[7],
     baseKey: "avg_gold_breakable",
   },
+  {
+    // Income a player barely steers: neutral, so the series hues stay with the sources they farm.
+    key: "team_bonus_items",
+    label: "Team Bonus & Items",
+    color: CHART_COLOR.neutral,
+    baseKey: "avg_gold_team_bonus",
+    extraKeys: [
+      "avg_gold_item_trophy_collector",
+      "avg_gold_item_cultist_sacrifice",
+      "avg_gold_item_goose_egg",
+      "avg_gold_ability_assassinate",
+    ],
+  },
 ];
 
 /** A group's souls, split into what was confirmed directly and what came from its orb. */
 export function groupSoulParts(stats: AnalyticsGameStats, group: SoulSourceGroup): { base: number; orb: number } {
   const minus = group.minusKey ? (stats[group.minusKey] ?? 0) : 0;
+  const extra = (group.extraKeys ?? []).reduce((sum, key) => sum + (stats[key] ?? 0), 0);
   return {
-    base: Math.max(0, (stats[group.baseKey] ?? 0) - minus),
+    base: Math.max(0, (stats[group.baseKey] ?? 0) + extra - minus),
     orb: group.orbKey ? (stats[group.orbKey] ?? 0) : 0,
   };
 }

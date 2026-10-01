@@ -8,6 +8,7 @@ export function ModeSelector({
   value,
   defaultValue = DEFAULT_MODE,
   onValueChange,
+  disabledModes,
   ...props
 }: Omit<
   React.ComponentProps<typeof FilterToggleCell<Mode>>,
@@ -17,11 +18,13 @@ export function ModeSelector({
   /** The mode it starts in when uncontrolled, and the one the reset returns to. */
   defaultValue?: Mode;
   onValueChange?: (mode: Mode) => void;
+  /** Modes shown but not selectable, for views that have no data in them (no soul economy in Street Brawl). */
+  disabledModes?: readonly Mode[];
 }) {
   return (
     <FilterToggleCell label="Mode" value={value} defaultValue={defaultValue} onValueChange={onValueChange} {...props}>
       {MODES.map((mode) => (
-        <SegmentedItem key={mode} value={mode}>
+        <SegmentedItem key={mode} value={mode} disabled={disabledModes?.includes(mode)}>
           {MODE_CONFIG[mode].label}
         </SegmentedItem>
       ))}

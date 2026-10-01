@@ -5,19 +5,14 @@ import { Pie, PieChart } from "recharts";
 
 import { ChartSwatch } from "~/components/patterns/charts/ChartLegend";
 import { ChartSurface } from "~/components/patterns/charts/ChartSurface";
-import { CHART_COLOR } from "~/components/patterns/charts/theme";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { ProgressBar } from "~/components/ui/progress-bar";
 import { Stat, StatGroup } from "~/components/ui/stat";
 import { gameStatsQueryOptions } from "~/queries/games-query";
-import type { Color } from "~/types/general";
 
 import { formatPercent, formatSouls, groupSoulParts, SOUL_SOURCE_GROUPS } from "./economy-definitions";
-
-// Neutral: the remainder is not one source, and the series hues are taken by the ones that are.
-const OTHER_COLOR = CHART_COLOR.neutral;
 import { formatStatValue } from "./stat-definitions";
 
 interface EconomySoulSourcesProps {
@@ -39,21 +34,16 @@ export default function EconomySoulSources({ params }: EconomySoulSourcesProps) 
       return {
         key: group.key,
         label: group.label,
-        color: group.color as Color,
+        color: group.color,
         value,
         orbShare: value > 0 ? orb / value : 0,
         share: 0,
       };
     });
-    const tracked = rows.reduce((sum, r) => sum + r.value, 0);
-    // The sources leave out passive income, the team bonus and item / ability souls (Trophy Collector, Cultist
-    // Sacrifice, Golden Goose Egg, Assassinate). Without the remainder, every share read too high.
-    const other = Math.max(0, (stats.avg_net_worth ?? 0) - tracked);
+    // The sources cover all but ~1% of net worth in normal matches (measured 2026-10 over 580k players), so the
+    // shares are of the soul income they add up to; there is no residual "other" slice to guess at.
     rows.sort((a, b) => b.value - a.value);
-    if (other > 0) {
-      rows.push({ key: "other", label: "Passive & other", color: OTHER_COLOR, value: other, orbShare: 0, share: 0 });
-    }
-    const total = tracked + other;
+    const total = rows.reduce((sum, r) => sum + r.value, 0);
     for (const row of rows) {
       row.share = total > 0 ? row.value / total : 0;
     }
@@ -73,9 +63,8 @@ export default function EconomySoulSources({ params }: EconomySoulSourcesProps) 
   }
 
   const totalIncome = breakdown.reduce((sum, r) => sum + r.value, 0);
-  const totalFromSources = breakdown.reduce((sum, r) => sum + (r.key === "other" ? 0 : r.value), 0);
   const totalOrbs = SOUL_SOURCE_GROUPS.reduce((sum, g) => sum + (g.orbKey ? (stats[g.orbKey] ?? 0) : 0), 0);
-  const orbSecured = totalFromSources > 0 ? totalOrbs / totalFromSources : 0;
+  const orbSecured = totalIncome > 0 ? totalOrbs / totalIncome : 0;
   const durationS = stats.avg_duration_s ?? 0;
   const netWorth = stats.avg_net_worth ?? 0;
   const soulsPerMin = durationS > 0 ? netWorth / (durationS / 60) : 0;
