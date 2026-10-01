@@ -731,7 +731,10 @@ mod tests {
         let fail = || vec![(1, Err(anyhow::anyhow!("502 Bad Gateway")))];
 
         for _ in 1..MAX_ATTEMPTS {
-            assert!(handle_results(&state, &batch, fail()).failed.is_empty());
+            assert_eq!(
+                handle_results(&state, &batch, fail()).failed,
+                Vec::<MatchSalts>::new()
+            );
         }
         let verdicts = handle_results(&state, &batch, fail());
 
@@ -753,7 +756,7 @@ mod tests {
         let verdicts = handle_results(&state, &batch, vec![(1, Ok(Some(candidate(1, 390))))]);
 
         assert_eq!(verdicts.verified, vec![candidate(1, 390)]);
-        assert!(verdicts.failed.is_empty());
+        assert_eq!(verdicts.failed, Vec::<MatchSalts>::new());
     }
 
     #[test]

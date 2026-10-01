@@ -697,7 +697,7 @@ mod tests {
                 assert_eq!(e.buff_type_value_unit.as_deref(), Some(unit));
                 assert!(e.buff_type_loc_string.is_some());
                 assert!(e.buff_type_graph_color.is_some());
-                assert!(!script_values(e).is_empty());
+                assert_ne!(script_values(e), Vec::<(String, f64)>::new());
             }
         }
         assert_eq!(

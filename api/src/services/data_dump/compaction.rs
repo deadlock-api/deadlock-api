@@ -275,7 +275,10 @@ mod tests {
             file(FileKind::Base, Some(2), 0, 100, 1_000),
         ]);
         let actual = BTreeMap::from([(1, 1_000_100), (2, 1_000)]);
-        assert!(plan_rebuilds(&t, 1, &actual, &BTreeSet::new(), 200, &params()).is_empty());
+        assert_eq!(
+            plan_rebuilds(&t, 1, &actual, &BTreeSet::new(), 200, &params()),
+            Vec::<Rebuild>::new()
+        );
 
         let drifted = BTreeMap::from([(1, 1_200_000), (2, 1_000)]);
         let plan = plan_rebuilds(&t, 1, &drifted, &BTreeSet::new(), 200, &params());

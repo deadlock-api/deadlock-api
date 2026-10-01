@@ -61,6 +61,8 @@ impl BrokerStock {
 mod tests {
     use super::*;
 
+    const NO_LEVELS: [i32; 0] = [];
+
     fn levels(range: Range<i32>) -> Vec<i32> {
         range.collect()
     }
@@ -68,28 +70,34 @@ mod tests {
     #[test]
     fn test_game_rules_then_announcement() {
         let mut broker = BrokerStock::default();
-        assert!(levels(broker.on_limit(1, 0)).is_empty());
+        assert_eq!(levels(broker.on_limit(1, 0)), NO_LEVELS);
         assert_eq!(levels(broker.on_limit(120_300, 1)), [1]);
-        assert!(levels(broker.on_announcement(120_300, SPAWN_ANNOUNCEMENT)).is_empty());
+        assert_eq!(
+            levels(broker.on_announcement(120_300, SPAWN_ANNOUNCEMENT)),
+            NO_LEVELS
+        );
         assert_eq!(levels(broker.on_limit(166_396, 2)), [2]);
-        assert!(levels(broker.on_announcement(166_396, RESTOCK_ANNOUNCEMENT)).is_empty());
-        assert!(levels(broker.on_limit(166_400, 2)).is_empty());
+        assert_eq!(
+            levels(broker.on_announcement(166_396, RESTOCK_ANNOUNCEMENT)),
+            NO_LEVELS
+        );
+        assert_eq!(levels(broker.on_limit(166_400, 2)), NO_LEVELS);
     }
 
     #[test]
     fn test_announcement_then_game_rules() {
         let mut broker = BrokerStock::default();
-        assert!(levels(broker.on_limit(1, 0)).is_empty());
+        assert_eq!(levels(broker.on_limit(1, 0)), NO_LEVELS);
         assert_eq!(
             levels(broker.on_announcement(120_300, SPAWN_ANNOUNCEMENT)),
             [1]
         );
-        assert!(levels(broker.on_limit(120_300, 1)).is_empty());
+        assert_eq!(levels(broker.on_limit(120_300, 1)), NO_LEVELS);
         assert_eq!(
             levels(broker.on_announcement(166_396, RESTOCK_ANNOUNCEMENT)),
             [2]
         );
-        assert!(levels(broker.on_limit(166_396, 2)).is_empty());
+        assert_eq!(levels(broker.on_limit(166_396, 2)), NO_LEVELS);
         // A later restock announced without a game rules change.
         assert_eq!(
             levels(broker.on_announcement(210_000, RESTOCK_ANNOUNCEMENT)),
@@ -101,21 +109,24 @@ mod tests {
     fn test_joined_mid_match() {
         let mut broker = BrokerStock::default();
         // The Broker already spawned before the stream was joined: no spawn is replayed.
-        assert!(levels(broker.on_limit(130_000, 1)).is_empty());
+        assert_eq!(levels(broker.on_limit(130_000, 1)), NO_LEVELS);
         assert_eq!(levels(broker.on_limit(166_396, 2)), [2]);
     }
 
     #[test]
     fn test_missed_update_reports_every_level() {
         let mut broker = BrokerStock::default();
-        assert!(levels(broker.on_limit(1, 0)).is_empty());
+        assert_eq!(levels(broker.on_limit(1, 0)), NO_LEVELS);
         assert_eq!(levels(broker.on_limit(170_000, 2)), [1, 2]);
     }
 
     #[test]
     fn test_other_announcements_are_ignored() {
         let mut broker = BrokerStock::default();
-        assert!(levels(broker.on_limit(1, 0)).is_empty());
-        assert!(levels(broker.on_announcement(43_772, "#Citadel_HUD_Koth_Warning")).is_empty());
+        assert_eq!(levels(broker.on_limit(1, 0)), NO_LEVELS);
+        assert_eq!(
+            levels(broker.on_announcement(43_772, "#Citadel_HUD_Koth_Warning")),
+            NO_LEVELS
+        );
     }
 }
