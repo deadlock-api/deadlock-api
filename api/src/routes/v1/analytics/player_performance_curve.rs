@@ -24,20 +24,40 @@ fn default_resolution() -> Option<u8> {
     10.into()
 }
 
-/// Per-tick soul source columns from `match_player.stats`, averaged per time bucket.
+/// Per-tick soul sources as (response name, `match_player` column), averaged per time bucket.
+/// Sources without a flat `stats.gold_*` column read their `stats.gold_source_*_gold` column.
 /// Order must match the `gold_*_avg` field order in [`PlayerPerformanceCurvePoint`].
-const GOLD_SOURCES: [&str; 11] = [
-    "gold_player",
-    "gold_player_orbs",
-    "gold_lane_creep",
-    "gold_lane_creep_orbs",
-    "gold_neutral_creep",
-    "gold_neutral_creep_orbs",
-    "gold_boss",
-    "gold_boss_orb",
-    "gold_treasure",
-    "gold_denied",
-    "gold_death_loss",
+const GOLD_SOURCES: [(&str, &str); 18] = [
+    ("gold_player", "stats.gold_player"),
+    ("gold_player_orbs", "stats.gold_player_orbs"),
+    ("gold_lane_creep", "stats.gold_lane_creep"),
+    ("gold_lane_creep_orbs", "stats.gold_lane_creep_orbs"),
+    ("gold_neutral_creep", "stats.gold_neutral_creep"),
+    ("gold_neutral_creep_orbs", "stats.gold_neutral_creep_orbs"),
+    ("gold_boss", "stats.gold_boss"),
+    ("gold_boss_orb", "stats.gold_boss_orb"),
+    ("gold_treasure", "stats.gold_treasure"),
+    ("gold_denied", "stats.gold_denied"),
+    ("gold_death_loss", "stats.gold_death_loss"),
+    ("gold_assists", "stats.gold_source_assists_gold"),
+    ("gold_team_bonus", "stats.gold_source_team_bonus_gold"),
+    ("gold_breakable", "stats.gold_source_breakable_gold"),
+    (
+        "gold_ability_assassinate",
+        "stats.gold_source_ability_assassinate_gold",
+    ),
+    (
+        "gold_item_trophy_collector",
+        "stats.gold_source_item_trophy_collector_gold",
+    ),
+    (
+        "gold_item_cultist_sacrifice",
+        "stats.gold_source_item_cultist_sacrifice_gold",
+    ),
+    (
+        "gold_item_goose_egg",
+        "stats.gold_source_item_goose_egg_gold",
+    ),
 ];
 
 #[derive(Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash, Default)]
@@ -160,7 +180,8 @@ pub struct PlayerPerformanceCurvePoint {
     pub assists_avg: f64,
     /// Standard deviation of assists at this time point
     pub assists_std: f64,
-    /// Average souls earned from hero kills at this time point
+    /// Average souls earned from hero kills at this time point, including assist souls
+    /// (see `gold_assists_avg`)
     pub gold_player_avg: f64,
     /// Average souls earned from secured hero-kill orbs at this time point
     pub gold_player_orbs_avg: f64,
@@ -182,6 +203,20 @@ pub struct PlayerPerformanceCurvePoint {
     pub gold_denied_avg: f64,
     /// Average souls lost on death at this time point
     pub gold_death_loss_avg: f64,
+    /// Average souls earned from assists at this time point (part of `gold_player_avg`)
+    pub gold_assists_avg: f64,
+    /// Average souls earned from the team bonus at this time point
+    pub gold_team_bonus_avg: f64,
+    /// Average souls earned from breakables (crates, statues) at this time point
+    pub gold_breakable_avg: f64,
+    /// Average souls earned from the Assassinate ability at this time point
+    pub gold_ability_assassinate_avg: f64,
+    /// Average souls earned from the Trophy Collector item at this time point
+    pub gold_item_trophy_collector_avg: f64,
+    /// Average souls earned from the Cultist Sacrifice item at this time point
+    pub gold_item_cultist_sacrifice_avg: f64,
+    /// Average souls earned from the Golden Goose Egg item at this time point
+    pub gold_item_goose_egg_avg: f64,
     /// Average permanent buff (power-up) pickups collected up to this time point. Only
     /// matches since build 6712 (2026-09-29) record pickup times, so only players with at
     /// least one timed permanent pickup count; `null` when there are none.
@@ -234,8 +269,8 @@ fn build_query(query: &PlayerPerformanceCurveQuery) -> String {
     let mut data_gold = String::new();
     let mut array_join_gold = String::new();
     let mut select_gold = String::new();
-    for s in GOLD_SOURCES {
-        let _ = write!(players_gold, ", stats.{s} as {s}_arr");
+    for (s, column) in GOLD_SOURCES {
+        let _ = write!(players_gold, ", {column} as {s}_arr");
         let _ = write!(data_gold, ", {s}_arr as {s}");
         let _ = write!(array_join_gold, ", {s}_arr");
         let _ = write!(select_gold, ",\n        avg({s}) AS {s}_avg");
@@ -322,7 +357,7 @@ async fn get_player_performance_curve(
     tags = ["Analytics"],
     summary = "Player Performance Curve",
     description = "
-Retrieves player performance statistics (net worth, kills, deaths, assists) over time throughout matches.
+Retrieves player performance statistics (net worth, kills, deaths, assists, souls per source) over time throughout matches.
 
 Results are cached for **1 hour** based on the unique combination of query parameters provided.
 
