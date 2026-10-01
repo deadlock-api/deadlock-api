@@ -24,6 +24,7 @@ import {
   TooltipStats,
 } from "~/components/ui/tooltip";
 import { day } from "~/dayjs";
+import { type GameMode, hasSoulEconomy } from "~/lib/game-mode";
 import { computePerformanceTrend, performanceWindow } from "~/lib/tracker/compute";
 
 const metrics = {
@@ -49,12 +50,21 @@ const windows = ["auto", "5", "10", "20", "50"] as const;
 
 export function PerformanceTrendPanel({
   entries,
+  gameMode,
   className,
 }: {
   entries: PlayerMatchHistoryEntry[];
+  /** Street Brawl's fixed soul grants leave souls per minute out. */
+  gameMode: GameMode;
   className?: string;
 }) {
-  const [metric, setMetric] = useQueryState("trend_metric", parseAsStringLiteral(metricKeys).withDefault("winrate"));
+  const [chosenMetric, setMetric] = useQueryState(
+    "trend_metric",
+    parseAsStringLiteral(metricKeys).withDefault("winrate"),
+  );
+  // Souls per minute is not offered for Street Brawl; the URL keeps the choice for when the mode changes back.
+  const offeredMetrics = hasSoulEconomy(gameMode) ? metricKeys : metricKeys.filter((key) => key !== "soulsPerMin");
+  const metric = offeredMetrics.includes(chosenMetric) ? chosenMetric : "winrate";
   const [windowChoice, setWindowChoice] = useQueryState(
     "trend_window",
     parseAsStringLiteral(windows).withDefault("auto"),
@@ -75,7 +85,7 @@ export function PerformanceTrendPanel({
       <PanelBody size="sm" className="flex flex-col gap-1.5">
         <div className="flex flex-wrap items-center justify-between gap-1">
           <Segmented size="sm" width="hug" value={metric} onValueChange={setMetric} aria-label="Performance metric">
-            {metricKeys.map((key) => (
+            {offeredMetrics.map((key) => (
               <SegmentedItem key={key} value={key}>
                 {metrics[key].label}
               </SegmentedItem>

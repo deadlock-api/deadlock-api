@@ -21,6 +21,7 @@ import { NoValue } from "~/components/ui/no-value";
 import { ProgressBar } from "~/components/ui/progress-bar";
 import { SwitchField } from "~/components/ui/switch-field";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
+import { type GameMode, hasSoulEconomy } from "~/lib/game-mode";
 import { benchmarkRankRange } from "~/lib/tracker/benchmarks";
 import { recentFormByHero, type ResultFilter } from "~/lib/tracker/compute";
 import { type HeroRow, type HeroSortKey, sortHeroRows, toHeroRow } from "~/lib/tracker/hero-performance";
@@ -118,7 +119,8 @@ export function HeroesTab({
   initialSortDir = "desc",
 }: {
   accountId: number;
-  gameMode: string;
+  /** Street Brawl's fixed soul grants leave the souls per minute column out. */
+  gameMode: GameMode;
   matchMode: string;
   heroId: number | null;
   minUnixTimestamp?: number | null;
@@ -133,12 +135,15 @@ export function HeroesTab({
   initialSortKey?: HeroSortKey;
   initialSortDir?: "desc" | "asc";
 }) {
-  const [sortKey, setSortKey] = useState(initialSortKey);
+  const [chosenSortKey, setSortKey] = useState(initialSortKey);
   const [sortDir, setSortDir] = useState(initialSortDir);
   const [showAllStats, setShowAllStats] = useState(false);
   const allStatsId = useId();
   const { fromNow } = useTrackerTime();
-  const sortColumn = COLUMNS.find((column) => column.key === sortKey);
+  const columns = hasSoulEconomy(gameMode) ? COLUMNS : COLUMNS.filter((column) => column.key !== "soulsPerMin");
+  // A souls per minute sort (also handed over by the overview preview) falls back to matches in Street Brawl.
+  const sortKey = columns.some((column) => column.key === chosenSortKey) ? chosenSortKey : "matches";
+  const sortColumn = columns.find((column) => column.key === sortKey);
 
   const params = useMemo(
     (): PlayersApiPlayerHeroStatsRequest => ({
@@ -282,7 +287,7 @@ export function HeroesTab({
                 <TableHeader tone="muted">
                   <TableRow>
                     <TableHead data-pinned={showAllStats ? "" : undefined}>Hero</TableHead>
-                    {COLUMNS.map((column) => (
+                    {columns.map((column) => (
                       <SortableHeader
                         key={column.key}
                         label={column.label}
@@ -321,7 +326,7 @@ export function HeroesTab({
                           </Button>
                         </div>
                       </TableCell>
-                      {COLUMNS.map((column) => {
+                      {columns.map((column) => {
                         const average = averages?.get(row.heroId);
                         return (
                           <TableCell
@@ -368,7 +373,7 @@ export function HeroesTab({
                     </TableRow>
                   ))}
                   {rows.length === 0 && (
-                    <TableEmptyRow colSpan={COLUMNS.length + 1}>
+                    <TableEmptyRow colSpan={columns.length + 1}>
                       {minimumMatches > 0
                         ? `No heroes with ${minimumMatches}+ games in the selected range`
                         : "No hero stats in the selected range"}

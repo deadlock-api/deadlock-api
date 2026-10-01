@@ -5,7 +5,7 @@ import { useDateRangeState } from "~/hooks/useDateRangeState";
 import { useModeState } from "~/hooks/useModeState";
 import type { AnalyticsTab } from "~/lib/analytics-tabs";
 import { getEffectiveRankRange } from "~/lib/game-mode";
-import { BY_RANK_STATS } from "~/types/api_hero_stats";
+import { BY_RANK_STATS, heroStatIn } from "~/types/api_hero_stats";
 import { HERO_STATS_WITH_BAN_RATE } from "~/types/api_hero_stats";
 
 export const STATS_TABS: readonly HeroTab[] = [
@@ -32,7 +32,7 @@ export function useHeroFilters() {
   const { startDate, endDate, prevStartDate, prevEndDate, handleDateChange, defaultRange } = useDateRangeState();
   const [tab, setTab] = useAnalyticsTab("heroes");
   const [heroId, setHeroId] = useQueryState("hero_id", parseAsInteger.withDefault(2));
-  const [heroStat, setHeroStat] = useQueryState(
+  const [chosenHeroStat, setHeroStat] = useQueryState(
     "hero_stat",
     parseAsStringLiteral(HERO_STATS_WITH_BAN_RATE).withDefault("winrate"),
   );
@@ -42,8 +42,19 @@ export function useHeroFilters() {
       "start_time_day",
     ),
   );
-  const [byRankX, setByRankX] = useQueryState("by_rank_x", parseAsStringLiteral(BY_RANK_STATS).withDefault("pickrate"));
-  const [byRankY, setByRankY] = useQueryState("by_rank_y", parseAsStringLiteral(BY_RANK_STATS).withDefault("winrate"));
+  const [chosenByRankX, setByRankX] = useQueryState(
+    "by_rank_x",
+    parseAsStringLiteral(BY_RANK_STATS).withDefault("pickrate"),
+  );
+  const [chosenByRankY, setByRankY] = useQueryState(
+    "by_rank_y",
+    parseAsStringLiteral(BY_RANK_STATS).withDefault("winrate"),
+  );
+  // Street Brawl has no soul economy, so its pickers leave out net worth: one picked in another mode falls back here
+  // instead of plotting under a picker that does not list it. The URL keeps the choice for when the mode changes back.
+  const heroStat = heroStatIn(chosenHeroStat, gameMode, "winrate");
+  const byRankX = heroStatIn(chosenByRankX, gameMode, "pickrate");
+  const byRankY = heroStatIn(chosenByRankY, gameMode, "winrate");
 
   const { effectiveMinRankId, effectiveMaxRankId } = getEffectiveRankRange(mode, minRankId, maxRankId);
 

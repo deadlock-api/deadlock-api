@@ -1,5 +1,6 @@
 import type { PlayerMatchHistoryEntry } from "deadlock_api_client";
 
+import { type GameMode, hasSoulEconomy } from "~/lib/game-mode";
 import { isWin } from "~/lib/tracker/compute";
 
 const DAY = 86_400;
@@ -12,6 +13,11 @@ export const MIN_WEEK_MATCHES = 5;
 
 export const TREND_METRICS = ["winRate", "kda", "kills", "deaths", "soulsPerMin", "lastHitsPerMin"] as const;
 export type TrendMetric = (typeof TREND_METRICS)[number];
+
+/** The trend metrics of one game mode: Street Brawl hands out souls evenly each round, so it has no souls trend. */
+export function trendMetricsFor(gameMode: GameMode = "normal"): readonly TrendMetric[] {
+  return hasSoulEconomy(gameMode) ? TREND_METRICS : TREND_METRICS.filter((metric) => metric !== "soulsPerMin");
+}
 
 /**
  * Start of the UTC week (Monday 00:00 UTC) a moment falls in, in unix seconds; with `weeks`, of the block of that many

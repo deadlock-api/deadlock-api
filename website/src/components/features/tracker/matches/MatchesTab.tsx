@@ -10,11 +10,13 @@ import { Card } from "~/components/ui/card";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
 import { Separator } from "~/components/ui/separator";
 import { useSavedMatches } from "~/hooks/useSavedMatches";
+import type { GameMode } from "~/lib/game-mode";
 import { TONE_TEXT } from "~/lib/tone";
 import {
   computeRecords,
   computeSessions,
   MATCH_SORT_KEYS,
+  matchSortKeysFor,
   type MatchSortKey,
   type PlaySession,
   recordsByMatchId,
@@ -47,6 +49,7 @@ export function MatchesTab({
   sessionContext,
   ranks,
   accountId,
+  gameMode,
   heroId,
   onHeroChange,
   hiddenLinkedMatch,
@@ -57,6 +60,8 @@ export function MatchesTab({
   sessionContext: PlayerMatchHistoryEntry[];
   ranks: Rank[];
   accountId: number;
+  /** The mode filter's game mode; Street Brawl has no soul sorts or soul records. */
+  gameMode: GameMode;
   /** The active hero filter, which an empty list offers to clear. */
   heroId: number | null;
   onHeroChange: (heroId: number | null) => void;
@@ -68,10 +73,13 @@ export function MatchesTab({
   overview: ReactNode;
 }) {
   const [selectedMatchId, setSelectedMatchId] = useQueryState("match", parseAsInteger);
-  const [{ sort: sortKey, dir: sortDir }, setSort] = useQueryStates({
+  const [{ sort: chosenSortKey, dir: sortDir }, setSort] = useQueryStates({
     sort: parseAsStringLiteral(MATCH_SORT_KEYS).withDefault("played"),
     dir: parseAsStringLiteral(SORT_DIRS).withDefault("desc"),
   });
+  // A soul sort chosen in a normal mode is not offered for Street Brawl; the URL keeps it for when the mode changes back.
+  const sortKeys = matchSortKeysFor(gameMode);
+  const sortKey = sortKeys.includes(chosenSortKey) ? chosenSortKey : "played";
   const { savedIds } = useSavedMatches(accountId);
   const savedMatchIds = useMemo(() => new Set(savedIds), [savedIds]);
   const [savedOnly, setSavedOnly] = useState(false);
@@ -253,8 +261,8 @@ export function MatchesTab({
   );
   const summary = useMemo(() => summarize(listedEntries), [listedEntries]);
   const heldRecords = useMemo(
-    () => (entries.length >= MIN_MATCHES_FOR_RECORDS ? recordsByMatchId(computeRecords(entries)) : null),
-    [entries],
+    () => (entries.length >= MIN_MATCHES_FOR_RECORDS ? recordsByMatchId(computeRecords(entries), gameMode) : null),
+    [entries, gameMode],
   );
 
   return (
@@ -404,7 +412,7 @@ export function MatchesTab({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectGroup>
-                    {MATCH_SORT_KEYS.map((key) => (
+                    {sortKeys.map((key) => (
                       <SelectItem key={key} value={key}>
                         {SORT_LABELS[key]}
                       </SelectItem>

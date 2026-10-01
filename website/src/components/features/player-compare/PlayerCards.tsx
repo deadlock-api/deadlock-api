@@ -22,6 +22,7 @@ import { Stat, StatGroup } from "~/components/ui/stat";
 import { Text } from "~/components/ui/text";
 import { Tooltip, TooltipStat, TooltipStats, TooltipTarget } from "~/components/ui/tooltip";
 import { formatPercent } from "~/lib/format";
+import { hasSoulEconomy } from "~/lib/game-mode";
 import { MAX_COMPARE_PLAYERS, scoreComparison } from "~/lib/player-compare";
 import { formatPlayerMetricValue } from "~/lib/player-metrics";
 import { badgeLabel } from "~/lib/rank-utils";
@@ -78,7 +79,12 @@ export function PlayerCards({
     axis: "horizontal",
     itemLabel: (index) => players[index]?.name ?? `Player ${index + 1}`,
   });
-  const { scored, tally, leaders, settled } = scoreComparison(players.map((player) => player.aggregate));
+  const { scored, tally, leaders, settled } = scoreComparison(
+    players.map((player) => player.aggregate),
+    filters.gameMode,
+  );
+  // Street Brawl hands every player the same souls each round: a souls rate there compares nothing.
+  const showSouls = hasSoulEconomy(filters.gameMode);
   const hasSlot = players.length < MAX_COMPARE_PLAYERS;
   // Two players with matches make a contest; until then a card shows its matches instead of stats won.
   const contest = players.filter((player) => player.aggregate !== null).length >= 2;
@@ -274,17 +280,19 @@ export function PlayerCards({
                                 }
                               />
                               {/* A wide card (a big screen) has room for the farm and the MVPs too. */}
-                              <Stat
-                                className="hidden @md:flex"
-                                label="Souls/min"
-                                value={
-                                  aggregate ? (
-                                    formatPlayerMetricValue(aggregate.netWorthPerMin, "integer")
-                                  ) : (
-                                    <Skeleton className="h-6 w-12" />
-                                  )
-                                }
-                              />
+                              {showSouls && (
+                                <Stat
+                                  className="hidden @md:flex"
+                                  label="Souls/min"
+                                  value={
+                                    aggregate ? (
+                                      formatPlayerMetricValue(aggregate.netWorthPerMin, "integer")
+                                    ) : (
+                                      <Skeleton className="h-6 w-12" />
+                                    )
+                                  }
+                                />
+                              )}
                               <Stat
                                 className="hidden @md:flex"
                                 label="MVP rate"

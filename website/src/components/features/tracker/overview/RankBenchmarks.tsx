@@ -15,7 +15,12 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectVa
 import { Skeleton } from "~/components/ui/skeleton";
 import { TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
 import { MODE_CONFIG } from "~/lib/game-mode";
-import { formatPlayerMetricValue, PLAYER_METRICS, type PlayerMetricDefinition } from "~/lib/player-metrics";
+import {
+  formatPlayerMetricValue,
+  PLAYER_METRICS,
+  type PlayerMetricDefinition,
+  playerMetricsFor,
+} from "~/lib/player-metrics";
 import { benchmarkRankRange, compareBenchmark } from "~/lib/tracker/benchmarks";
 import type { TrackerFilterValues } from "~/lib/tracker/compute";
 import { cn } from "~/lib/utils";
@@ -98,9 +103,9 @@ export function RankBenchmarks({
   const loading = enabled && (player.isPending || cohort.isPending);
   const failed = enabled && (player.isError || cohort.isError);
   const renderContent = (expanded: boolean) => {
-    const metrics = expanded
-      ? PLAYER_METRICS
-      : PRIMARY_METRICS.flatMap((key) => PLAYER_METRICS.filter((m) => m.key === key));
+    // Street Brawl's fixed soul grants make the net worth metrics meaningless, so they are left out there.
+    const offered = playerMetricsFor(PLAYER_METRICS, mode.gameMode);
+    const metrics = expanded ? offered : PRIMARY_METRICS.flatMap((key) => offered.filter((m) => m.key === key));
     const hasData = metrics.some((m) => compareBenchmark(player.data?.[m.key]?.avg, cohort.data?.[m.key]?.avg));
     const gridClassName = cn(
       "grid gap-2",

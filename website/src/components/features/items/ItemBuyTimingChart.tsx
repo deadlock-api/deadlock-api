@@ -35,6 +35,7 @@ import {
   TooltipStats,
 } from "~/components/ui/tooltip";
 import { TooltipProvider } from "~/components/ui/tooltip";
+import { hasSoulEconomy } from "~/lib/game-mode";
 import { itemUpgradesQueryOptions } from "~/queries/asset-queries";
 import { itemStatsQueryOptions } from "~/queries/item-stats-query";
 
@@ -202,10 +203,17 @@ export function ItemBuyTimingChart({ itemIds, baseQueryOptions, rowTotalMatches 
     parseAsBoolean.withDefault(false),
   );
   const [useWilsonInterval, setUseWilsonInterval] = useQueryState("buy_wilson", parseAsBoolean.withDefault(true));
-  const [bucketType, setBucketType] = useQueryState(
+  const [chosenBucketType, setBucketType] = useQueryState(
     "buy_bucket",
     parseAsStringLiteral(Object.keys(BUCKET_CONFIG) as (keyof typeof BUCKET_CONFIG)[]).withDefault("net_worth_by_1000"),
   );
+  // Street Brawl hands out fixed souls per round, so net worth at purchase says nothing there: it views by time, and the
+  // URL keeps the choice for when the mode changes back.
+  const showEconomy = hasSoulEconomy(baseQueryOptions.gameMode);
+  const bucketType = showEconomy || chosenBucketType !== "net_worth_by_1000" ? chosenBucketType : "game_time_min";
+  const viewOptions = showEconomy
+    ? VIEW_OPTIONS
+    : VIEW_OPTIONS.filter((option) => option.value !== "net_worth_by_1000");
 
   const baseMinAvgThreshold = rowTotalMatches && rowTotalMatches > 200 ? MIN_AVG_THRESHOLD : MIN_AVG_THRESHOLD * 1.5;
   const minAvgThreshold = showFineGrainedIntervals ? baseMinAvgThreshold / 2 : baseMinAvgThreshold;
@@ -274,7 +282,7 @@ export function ItemBuyTimingChart({ itemIds, baseQueryOptions, rowTotalMatches 
           <Inline className="gap-x-4 gap-y-2">
             <Field label="View by" orientation="horizontal">
               <Segmented value={bucketType} onValueChange={setBucketType} width="hug">
-                {VIEW_OPTIONS.map((option) => (
+                {viewOptions.map((option) => (
                   <SegmentedItem key={option.value} value={option.value}>
                     {option.label}
                   </SegmentedItem>

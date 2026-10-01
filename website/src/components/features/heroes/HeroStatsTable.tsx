@@ -933,6 +933,7 @@ export function HeroStatsTable({
             heroName={heroNameMap.get(row.hero_id)}
             sumMatches={sumMatches}
             pickrateMultiplier={pickrateMultiplier}
+            gameMode={gameMode}
           />
         </TableCell>
       )}

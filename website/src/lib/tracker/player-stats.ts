@@ -1,3 +1,4 @@
+import { type GameMode, hasSoulEconomy } from "~/lib/game-mode";
 import type { TrackerMatchMetadata, TrackerMatchPlayer } from "~/queries/tracker-queries";
 import type { Color } from "~/types/general";
 
@@ -103,6 +104,13 @@ export const PLAYER_STAT_COLUMNS: PlayerStatColumn[] = [
     reveal: "lg",
   },
 ];
+
+/** The columns a match's mode shows: Street Brawl grants fixed souls each round, so it has no souls column. */
+export function playerStatColumnsFor(gameMode: GameMode): PlayerStatColumn[] {
+  return hasSoulEconomy(gameMode)
+    ? PLAYER_STAT_COLUMNS
+    : PLAYER_STAT_COLUMNS.filter((column) => column.key !== "souls");
+}
 
 /** Sort one team's scoreboard without reordering cached match data. */
 export function sortScoreboardPlayers(

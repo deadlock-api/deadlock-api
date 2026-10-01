@@ -75,3 +75,11 @@ export function getEffectiveRankRange(
     effectiveMaxRankId: maxRankId ?? undefined,
   };
 }
+
+/**
+ * Street Brawl hands out fixed souls each round instead of a soul economy, so net worth, souls per minute and soul
+ * sources say nothing about a player there. Pages hide those metrics for it; normal mode shows them.
+ */
+export function hasSoulEconomy(gameMode: GameMode | (string & {}) | null | undefined): boolean {
+  return gameMode !== "street_brawl";
+}

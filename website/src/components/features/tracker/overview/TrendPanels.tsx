@@ -25,6 +25,7 @@ import {
   TooltipStats,
 } from "~/components/ui/tooltip";
 import { day } from "~/dayjs";
+import type { GameMode } from "~/lib/game-mode";
 import { extractBadgeMap } from "~/lib/leaderboard";
 import type { Activity as MatchActivity, RankHistoryPoint, ResultFilter } from "~/lib/tracker/compute";
 import { ranksQueryOptions } from "~/queries/ranks-query";
@@ -37,6 +38,7 @@ const RANK_COLOR = SERIES_COLORS[3];
 
 export function TrendPanels({
   entries,
+  gameMode,
   ranks,
   activity,
   result,
@@ -44,6 +46,7 @@ export function TrendPanels({
   onSelectPeriod,
 }: {
   entries: PlayerMatchHistoryEntry[];
+  gameMode: GameMode;
   ranks: RankHistoryPoint[];
   activity: MatchActivity;
   result: ResultFilter;
@@ -61,7 +64,11 @@ export function TrendPanels({
   const [activityOpen, setActivityOpen] = useState(false);
   return (
     <div className="grid gap-2 @xl/overview:grid-cols-2 @3xl/overview:grid-cols-3">
-      <PerformanceTrendPanel entries={entries} className="@xl/overview:col-span-2 @3xl/overview:col-span-1" />
+      <PerformanceTrendPanel
+        entries={entries}
+        gameMode={gameMode}
+        className="@xl/overview:col-span-2 @3xl/overview:col-span-1"
+      />
       <PanelWithDetails
         title="Rank history"
         icon={Medal}

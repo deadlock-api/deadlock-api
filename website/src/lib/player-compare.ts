@@ -1,5 +1,6 @@
 import type { HeroStats } from "deadlock_api_client";
 
+import { type GameMode, hasSoulEconomy } from "~/lib/game-mode";
 import type { PlayerMetricFormat } from "~/lib/player-metrics";
 
 /** How many players one comparison holds. */
@@ -207,6 +208,14 @@ export const COMPARE_STATS: readonly CompareStat[] = [
   },
 ];
 
+/** The stats that measure souls: meaningless in Street Brawl, where every player gets the same grant each round. */
+const SOUL_STATS: ReadonlySet<CompareStatKey> = new Set(["netWorthPerMin", "damagePerSoul"]);
+
+/** The stats a comparison on one game mode shows and scores: Street Brawl has no soul economy to compare. */
+export function compareStatsFor(gameMode: GameMode = "normal"): readonly CompareStat[] {
+  return hasSoulEconomy(gameMode) ? COMPARE_STATS : COMPARE_STATS.filter((stat) => !SOUL_STATS.has(stat.key));
+}
+
 /** The stats a comparison can be won on; a row drops out when no player has it, so copy says "up to". */
 export const SCORED_STAT_COUNT = COMPARE_STATS.filter((stat) => stat.polarity !== "none").length;
 
@@ -342,8 +351,11 @@ export function rankShareLabel(atOrBelow: number, lowerIsBetter = false): string
  * player's line: undefined while it loads, null without matches. A stat nobody has a value for is left out and not
  * scored; `settled` is false while a value that could change the winners is still loading.
  */
-export function scoreComparison(aggregates: readonly (PlayerAggregate | null | undefined)[]) {
-  const stats = COMPARE_STATS.filter((stat) =>
+export function scoreComparison(
+  aggregates: readonly (PlayerAggregate | null | undefined)[],
+  gameMode: GameMode = "normal",
+) {
+  const stats = compareStatsFor(gameMode).filter((stat) =>
     aggregates.some((aggregate) => aggregate === undefined || (aggregate !== null && aggregate[stat.key] !== null)),
   );
   const scored = stats.filter((stat) => stat.polarity !== "none");
@@ -400,8 +412,9 @@ export function settledAggregates(
 export function comparisonVerdict(
   names: readonly string[],
   aggregates: readonly (PlayerAggregate | null)[],
+  gameMode: GameMode = "normal",
 ): string | null {
-  const { scored, tally, leaders } = scoreComparison(aggregates);
+  const { scored, tally, leaders } = scoreComparison(aggregates, gameMode);
   if (leaders.length === 0) return null;
   const listed = (items: string[]) =>
     items.length <= 1 ? (items[0] ?? "") : `${items.slice(0, -1).join(", ")} and ${items.at(-1)}`;

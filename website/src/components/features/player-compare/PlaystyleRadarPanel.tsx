@@ -11,12 +11,14 @@ import { NoValue } from "~/components/ui/no-value";
 import { Skeleton } from "~/components/ui/skeleton";
 import { Stack } from "~/components/ui/stack";
 import { Text } from "~/components/ui/text";
+import type { GameMode } from "~/lib/game-mode";
 import { rankShareLabel } from "~/lib/player-compare";
 import { formatPlayerMetricValue, PLAYER_METRICS } from "~/lib/player-metrics";
 import {
   PLAYSTYLE_AXES,
   type Playstyle,
   playstyleLabel,
+  playstyleAxesFor,
   type PlaystylePercentiles,
   playstylePercentiles,
 } from "~/lib/playstyle";
@@ -85,10 +87,13 @@ function AxisReadings({ entry, players }: { entry?: AxisRow; players: RadarPlaye
 export function PlaystyleRadarPanel({
   players,
   metrics,
+  gameMode,
   className,
 }: {
   players: ComparedPlayer[];
   metrics: CompareMetrics;
+  /** Street Brawl has no soul economy: no Farming axis. */
+  gameMode: GameMode;
   /** Layout from the parent (grid placement). */
   className?: string;
 }) {
@@ -100,15 +105,16 @@ export function PlaystyleRadarPanel({
   // Drawn once the field and one player are in; a player still loading joins when their numbers arrive.
   const loading = metrics.populationPending || metrics.pending.every(Boolean);
 
+  const axes = playstyleAxesFor(gameMode);
   const ranked: RadarPlayer[] = players.flatMap((player, index) => {
     const data = metrics.own[index];
-    const percentiles = playstylePercentiles(metrics.population, data);
+    const percentiles = playstylePercentiles(metrics.population, data, gameMode);
     if (!data || Object.keys(percentiles).length === 0) return [];
     return [
       { player, key: `p${player.accountId}` as const, percentiles, playstyle: playstyleLabel(percentiles), own: data },
     ];
   });
-  const rows: AxisRow[] = PLAYSTYLE_AXES.map(({ axis, label, metricKey }) => ({
+  const rows: AxisRow[] = axes.map(({ axis, label, metricKey }) => ({
     axis: label,
     metricKey,
     ...Object.fromEntries(ranked.map(({ key, percentiles }) => [key, percentiles[axis]])),
@@ -119,10 +125,12 @@ export function PlaystyleRadarPanel({
       .map(
         (entry) =>
           `${entry.player.name}${entry.playstyle ? `, ${entry.playstyle.label}` : ""}: ` +
-          PLAYSTYLE_AXES.map(({ axis, label }) => {
-            const value = entry.percentiles[axis];
-            return `${label} ${value == null ? "no data" : rankShareLabel(value)}`;
-          }).join(", "),
+          axes
+            .map(({ axis, label }) => {
+              const value = entry.percentiles[axis];
+              return `${label} ${value == null ? "no data" : rankShareLabel(value)}`;
+            })
+            .join(", "),
       )
       .join(". ");
 

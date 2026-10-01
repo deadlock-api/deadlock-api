@@ -4,6 +4,7 @@ import { FilterCell } from "~/components/patterns/filter-bar/FilterCell";
 import { useControllableState } from "~/components/ui/hooks/use-controllable-state";
 import { OptionRow } from "~/components/ui/option-row";
 import { Segmented, SegmentedItem } from "~/components/ui/segmented";
+import type { GameMode } from "~/lib/game-mode";
 
 import {
   buildSortByValue,
@@ -24,6 +25,8 @@ interface SortBySelectorProps extends Omit<
   onValueChange?: (value: string) => void;
   /** `heroes` leaves out the sorts only the player scoreboard supports (rank). */
   scope?: ScoreboardScope;
+  /** `street_brawl` leaves out the sorts that measure the soul economy (net worth), which that mode does not have. */
+  gameMode?: GameMode;
 }
 
 const VARIANT_OPTIONS: { value: SortVariant; label: string }[] = [
@@ -37,9 +40,10 @@ export function SortBySelector({
   defaultValue = "kills",
   onValueChange,
   scope = "players",
+  gameMode,
   ...props
 }: SortBySelectorProps) {
-  const categories = sortCategoriesFor(scope);
+  const categories = sortCategoriesFor(scope, gameMode);
   const [value, onChange] = useControllableState({
     value: valueProp,
     defaultValue,

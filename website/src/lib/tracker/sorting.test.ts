@@ -3,7 +3,15 @@ import { test } from "node:test";
 
 import type { PlayerMatchHistoryEntry } from "deadlock_api_client";
 
-import { filterMatches, MATCH_SORT_KEYS, SORT_DIRS, sortMatches } from "./compute";
+import {
+  filterMatches,
+  MATCH_SORT_KEYS,
+  matchSortKeysFor,
+  RECORD_KINDS,
+  recordKindsFor,
+  SORT_DIRS,
+  sortMatches,
+} from "./compute";
 
 function match(matchId: number, overrides: Partial<PlayerMatchHistoryEntry> = {}): PlayerMatchHistoryEntry {
   return {
@@ -69,5 +77,15 @@ test("filtered history orders equal timestamps consistently with the default dat
   assert.deepEqual(
     filtered.map((entry) => entry.match_id),
     [2, 3, 1],
+  );
+});
+
+test("Street Brawl offers no soul sorts or soul records", () => {
+  assert.deepEqual(matchSortKeysFor("normal"), MATCH_SORT_KEYS);
+  assert.deepEqual(matchSortKeysFor("street_brawl"), ["kda", "lastHits", "duration", "rankDelta", "played"]);
+  assert.deepEqual(recordKindsFor("normal"), RECORD_KINDS);
+  assert.deepEqual(
+    recordKindsFor("street_brawl").map((kind) => kind.key),
+    ["kills", "assists", "kda", "rankGain"],
   );
 });

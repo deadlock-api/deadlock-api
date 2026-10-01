@@ -12,6 +12,7 @@ import { ProgressBar } from "~/components/ui/progress-bar";
 import { Segmented, SegmentedItem } from "~/components/ui/segmented";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { Tooltip } from "~/components/ui/tooltip";
+import { type GameMode, hasSoulEconomy } from "~/lib/game-mode";
 import type { TrackerHeroRow } from "~/lib/tracker/compute";
 import { cn } from "~/lib/utils";
 
@@ -29,10 +30,13 @@ const MINIMUM_GAMES = [0, 5, 10] as const;
 
 export function HeroStatsTable({
   rows,
+  gameMode,
   onSelectHero,
   details,
 }: {
   rows: TrackerHeroRow[];
+  /** Street Brawl's fixed soul grants leave the souls per minute column out. */
+  gameMode: GameMode;
   onSelectHero: (heroId: number) => void;
   details: (options: {
     minimumMatches: number;
@@ -41,7 +45,11 @@ export function HeroStatsTable({
     close: () => void;
   }) => ReactNode;
 }) {
-  const [sort, setSort] = useState<Sort>("matches");
+  const [chosenSort, setSort] = useState<Sort>("matches");
+  const soulEconomy = hasSoulEconomy(gameMode);
+  const shownColumns = soulEconomy ? columns : columns.filter((column) => column.key !== "soulsPerMin");
+  // A souls per minute sort picked before switching to Street Brawl falls back to games played.
+  const sort = shownColumns.some((column) => column.key === chosenSort) ? chosenSort : "matches";
   const [direction, setDirection] = useState<"ascending" | "descending">("descending");
   const [minimumMatches, setMinimumMatches] = useState(0);
   const [open, setOpen] = useState(false);
@@ -108,7 +116,7 @@ export function HeroStatsTable({
                 <TableHead className="ps-0">
                   <span className="text-xs text-muted-foreground">Hero</span>
                 </TableHead>
-                {columns.map(({ key, label, name, className }) => (
+                {shownColumns.map(({ key, label, name, className }) => (
                   <SortableHeader
                     key={key}
                     label={label}
@@ -160,9 +168,13 @@ export function HeroStatsTable({
                   <TableCell className="text-end">
                     <span className="text-xs tabular-nums">{row.kdaRatio.toFixed(2)}</span>
                   </TableCell>
-                  <TableCell className={cn("text-end", NARROW_HIDDEN)}>
-                    <span className="text-xs tabular-nums">{Math.round(row.soulsPerMin).toLocaleString("en-US")}</span>
-                  </TableCell>
+                  {soulEconomy && (
+                    <TableCell className={cn("text-end", NARROW_HIDDEN)}>
+                      <span className="text-xs tabular-nums">
+                        {Math.round(row.soulsPerMin).toLocaleString("en-US")}
+                      </span>
+                    </TableCell>
+                  )}
                 </TableRow>
               ))}
             </TableBody>

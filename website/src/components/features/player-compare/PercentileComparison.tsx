@@ -6,8 +6,9 @@ import { Panel, PanelBody, PanelHeader, PanelShowMore } from "~/components/patte
 import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { Button } from "~/components/ui/button";
 import { Inline } from "~/components/ui/stack";
+import type { GameMode } from "~/lib/game-mode";
 
-import { DistributionMarkers, METRIC_COUNT } from "./DistributionMarkers";
+import { DistributionMarkers, distributionMetricsFor } from "./DistributionMarkers";
 import type { ComparedPlayer } from "./types";
 import type { CompareMetrics } from "./useCompareMetrics";
 
@@ -18,7 +19,16 @@ const COLLAPSED_METRICS = 10;
  * Where each player sits among all players on the same filters: the population's curve for every stat, each
  * player's average marked on it.
  */
-export function PercentileComparison({ players, metrics }: { players: ComparedPlayer[]; metrics: CompareMetrics }) {
+export function PercentileComparison({
+  players,
+  metrics,
+  gameMode,
+}: {
+  players: ComparedPlayer[];
+  metrics: CompareMetrics;
+  /** Street Brawl has no soul economy: its souls curves are left out. */
+  gameMode: GameMode;
+}) {
   const [zoom, setZoom] = useState(true);
   const [expanded, setExpanded] = useState(false);
   const failed = metrics.populationFailed || metrics.failed.some(Boolean);
@@ -68,13 +78,14 @@ export function PercentileComparison({ players, metrics }: { players: ComparedPl
       )}
       <DistributionMarkers
         players={players}
+        gameMode={gameMode}
         population={metrics.population}
         averages={metrics.own}
         loading={loading}
         zoom={zoom}
         limit={expanded ? undefined : COLLAPSED_METRICS}
       />
-      <PanelShowMore open={expanded} onOpenChange={setExpanded} total={METRIC_COUNT} />
+      <PanelShowMore open={expanded} onOpenChange={setExpanded} total={distributionMetricsFor(gameMode).length} />
     </Panel>
   );
 }

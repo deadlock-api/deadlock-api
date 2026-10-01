@@ -16,6 +16,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~
 import { TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
 import { Tooltip } from "~/components/ui/tooltip";
 import type { Dayjs } from "~/dayjs";
+import { type GameMode, hasSoulEconomy } from "~/lib/game-mode";
 import { TONE_TEXT } from "~/lib/tone";
 import { formatMatchDuration, isWin, type TrackerSummary } from "~/lib/tracker/compute";
 import {
@@ -36,7 +37,7 @@ const comparisonMetrics = [
   { key: "avgKills", label: "Kills / match", format: decimal, precision: 1 },
   { key: "avgDeaths", label: "Deaths / match", format: decimal, precision: 1, lowerIsBetter: true },
   { key: "avgAssists", label: "Assists / match", format: decimal, precision: 1 },
-  { key: "soulsPerMin", label: "Souls / min", format: integer, precision: 0 },
+  { key: "soulsPerMin", label: "Souls / min", format: integer, precision: 0, economy: true },
   { key: "lastHitsPerMin", label: "Last hits / min", format: ratio, precision: 2 },
 ] as const;
 
@@ -68,8 +69,17 @@ function dateRange(entries: PlayerMatchHistoryEntry[], toTime: (unix: number) =>
   return `${toTime(entries[entries.length - 1].start_time).format("MMM D, YYYY")} – ${toTime(entries[0].start_time).format("MMM D, YYYY")}`;
 }
 
-function ComparisonMetrics({ recent, previous }: { recent: TrackerSummary; previous: TrackerSummary }) {
-  const rows = comparisonMetrics.map((metric) => ({
+function ComparisonMetrics({
+  recent,
+  previous,
+  soulEconomy,
+}: {
+  recent: TrackerSummary;
+  previous: TrackerSummary;
+  soulEconomy: boolean;
+}) {
+  const metrics = soulEconomy ? comparisonMetrics : comparisonMetrics.filter((metric) => !("economy" in metric));
+  const rows = metrics.map((metric) => ({
     label: metric.label,
     latest: metric.format(recent[metric.key]),
     previous: metric.format(previous[metric.key]),
@@ -206,10 +216,13 @@ function ResultGrid({
 
 export function RecentFormPanel({
   comparison,
+  gameMode,
   onWindowChange,
   onOpenMatch,
 }: {
   comparison: RecentMatchComparison;
+  /** Street Brawl's fixed soul grants leave souls per minute out. */
+  gameMode: GameMode;
   onWindowChange: (window: RecentMatchWindow) => void;
   onOpenMatch: (matchId: number) => void;
 }) {
@@ -218,6 +231,7 @@ export function RecentFormPanel({
   const meta = `Last ${recent.matches} ${recent.matches === 1 ? "match" : "matches"}`;
   const [open, setOpen] = useState(false);
   const { toTime } = useTrackerTime();
+  const soulEconomy = hasSoulEconomy(gameMode);
 
   return (
     <PanelWithDetails
@@ -272,7 +286,7 @@ export function RecentFormPanel({
                   </p>
                 </Card>
               </div>
-              <ComparisonMetrics recent={recent} previous={previous} />
+              <ComparisonMetrics recent={recent} previous={previous} soulEconomy={soulEconomy} />
               {previous.matches < window && (
                 <p className="text-xs text-muted-foreground">
                   The previous window has only {previous.matches} of {window} matches.
@@ -321,9 +335,11 @@ export function RecentFormPanel({
           <span>
             KDA <strong className="text-foreground tabular-nums">{ratio(recent.kdaRatio)}</strong>
           </span>
-          <span>
-            Souls / min <strong className="text-foreground tabular-nums">{integer(recent.soulsPerMin)}</strong>
-          </span>
+          {soulEconomy && (
+            <span>
+              Souls / min <strong className="text-foreground tabular-nums">{integer(recent.soulsPerMin)}</strong>
+            </span>
+          )}
         </div>
         <p className="pt-1 text-xs text-muted-foreground">
           {previous ? (

@@ -7,6 +7,7 @@ import { Separator } from "~/components/ui/separator";
 import { Stack } from "~/components/ui/stack";
 import { TooltipStat, TooltipStats } from "~/components/ui/tooltip";
 import { BUFF_TIMINGS_NOTE } from "~/lib/buffs";
+import { type GameMode, hasSoulEconomy } from "~/lib/game-mode";
 import { formatStatValue } from "~/lib/stat-format";
 
 interface HeroDetailsRow {
@@ -49,6 +50,7 @@ export function HeroDetailsTooltip({
   pickrateLabel,
   pickrateMultiplier,
   heroName,
+  gameMode,
 }: {
   row: HeroDetailsRow;
   /** Names the button: a table of them all read "Show hero details". */
@@ -56,7 +58,10 @@ export function HeroDetailsTooltip({
   sumMatches: number;
   pickrateLabel?: string;
   pickrateMultiplier?: number;
+  /** Street Brawl has no soul economy, so its details leave out net worth. */
+  gameMode?: GameMode;
 }) {
+  const showEconomy = hasSoulEconomy(gameMode);
   const avgKills = row.total_kills / row.matches;
   const avgDeaths = row.total_deaths / row.matches;
   const avgAssists = row.total_assists / row.matches;
@@ -115,8 +120,8 @@ export function HeroDetailsTooltip({
             />
           </DetailGroup>
           <Separator />
-          <DetailGroup title="Economy (avg per match)">
-            <TooltipStat label="Net Worth" value={Math.round(avgNetWorth).toLocaleString("en-US")} />
+          <DetailGroup title={showEconomy ? "Economy (avg per match)" : "Farming (avg per match)"}>
+            {showEconomy && <TooltipStat label="Net Worth" value={Math.round(avgNetWorth).toLocaleString("en-US")} />}
             <TooltipStat label="Last Hits" value={avgLastHits.toFixed(1)} />
             <TooltipStat label="Denies" value={avgDenies.toFixed(1)} />
           </DetailGroup>

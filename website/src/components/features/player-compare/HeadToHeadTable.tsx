@@ -9,6 +9,7 @@ import { Skeleton } from "~/components/ui/skeleton";
 import { Inline } from "~/components/ui/stack";
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { Text } from "~/components/ui/text";
+import type { GameMode } from "~/lib/game-mode";
 import { COMPARE_STAT_GROUPS, type CompareStat, compareStatWinners, scoreComparison } from "~/lib/player-compare";
 import { formatPlayerMetricValue } from "~/lib/player-metrics";
 import { badgeLabel } from "~/lib/rank-utils";
@@ -38,13 +39,16 @@ function StatValue({ stat, value, ranks }: { stat: CompareStat; value: number | 
  */
 export function HeadToHeadTable({
   players,
+  gameMode,
   ...props
 }: {
   players: ComparedPlayer[];
+  /** Street Brawl has no soul economy: its souls rows are left out. */
+  gameMode: GameMode;
 } & React.ComponentProps<typeof Panel>) {
   const { data: ranks = [] } = useQuery(ranksQueryOptions);
   const aggregates = players.map((player) => player.aggregate);
-  const { stats, scored, tally, leaders, settled } = scoreComparison(aggregates);
+  const { stats, scored, tally, leaders, settled } = scoreComparison(aggregates, gameMode);
   // "Heroes played: 1" for everyone with matches (one hero's filter) says nothing; kept while anyone loads.
   const shown = stats.filter(
     (stat) =>

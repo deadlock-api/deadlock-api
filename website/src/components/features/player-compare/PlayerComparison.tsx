@@ -109,7 +109,7 @@ export function PlayerComparison({ filters }: { filters: CompareFilters }) {
       avatar: profile?.avatarfull || profile?.avatar,
       profileLoading: (profileQueries[index]?.isPending ?? true) && !profile,
       color: SERIES_COLORS[colorIndexes[index] % SERIES_COLORS.length],
-      playstyle: playstyleLabel(playstylePercentiles(metrics.population, metrics.own[index]))?.label,
+      playstyle: playstyleLabel(playstylePercentiles(metrics.population, metrics.own[index], filters.gameMode))?.label,
       rankBadge: badge === undefined ? undefined : badge || null,
       aggregate: aggregate && {
         ...aggregate,
@@ -164,18 +164,23 @@ export function PlayerComparison({ filters }: { filters: CompareFilters }) {
             <Stack gap={4} className={layout.left}>
               {/* Tall enough for the card to read; it scales to the panel's width and height. */}
               <ShareComparison filters={filters} className="min-h-56" />
-              <HeadToHeadTable players={players} className="flex-1" />
+              <HeadToHeadTable players={players} gameMode={filters.gameMode} className="flex-1" />
             </Stack>
             <Stack gap={4} className={layout.right}>
-              <RecordsPanel players={players} histories={histories} heroFiltered={filters.heroId != null} />
-              <PlaystyleRadarPanel players={players} metrics={metrics} />
+              <RecordsPanel
+                players={players}
+                histories={histories}
+                heroFiltered={filters.heroId != null}
+                gameMode={filters.gameMode}
+              />
+              <PlaystyleRadarPanel players={players} metrics={metrics} gameMode={filters.gameMode} />
               <MatchLengthPanel players={players} histories={histories} className="flex-1" />
             </Stack>
-            <PerformanceTrendPanel players={players} histories={histories} />
+            <PerformanceTrendPanel players={players} histories={histories} gameMode={filters.gameMode} />
             <RankHistoryPanel players={players} filters={filters} histories={histories} />
             <TimelinePanel players={players} filters={filters} className={layout.timeline} />
           </Grid>
-          <PercentileComparison players={players} metrics={metrics} />
+          <PercentileComparison players={players} metrics={metrics} gameMode={filters.gameMode} />
           {/* When they play: the hours beside the weekdays, at one height. */}
           <Grid gap={4} className="@4xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
             <ActivityPanel players={players} histories={histories} by="hour" />
@@ -190,7 +195,14 @@ export function PlayerComparison({ filters }: { filters: CompareFilters }) {
               players.length >= 4 ? undefined : threeUp ? "@xl:grid-cols-2 @8xl:grid-cols-3" : "@xl:grid-cols-2"
             }
           >
-            {showSharedHeroes && <SharedHeroesTable players={players} rows={rows} loading={heroStats.isPending} />}
+            {showSharedHeroes && (
+              <SharedHeroesTable
+                players={players}
+                rows={rows}
+                loading={heroStats.isPending}
+                gameMode={filters.gameMode}
+              />
+            )}
             <ItemPreferencesPanel
               players={players}
               filters={filters}
@@ -205,6 +217,7 @@ export function PlayerComparison({ filters }: { filters: CompareFilters }) {
               <SharedMatchesPanel
                 players={players}
                 histories={histories}
+                gameMode={filters.gameMode}
                 className={
                   threeUp
                     ? "@xl:col-span-2 @8xl:col-span-1"

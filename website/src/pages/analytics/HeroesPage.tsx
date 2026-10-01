@@ -4,7 +4,7 @@ import { ChartNoAxesCombined, GraduationCap, Swords, Table2, Trophy, UsersRound 
 import { parseAsBoolean, parseAsString, parseAsStringLiteral, useQueryState } from "nuqs";
 import { lazy, Suspense, useId } from "react";
 
-import { HERO_SORT_BY_VALUES } from "~/components/domain/player-scoreboard/sort-options";
+import { HERO_SORT_BY_VALUES, sortByIn } from "~/components/domain/player-scoreboard/sort-options";
 import { SortBySelector } from "~/components/domain/player-scoreboard/SortBySelector";
 import { HeroCombFilters } from "~/components/features/heroes/HeroCombFilters";
 import { HeroFiltersSection } from "~/components/features/heroes/HeroFiltersSection";
@@ -33,8 +33,7 @@ import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { ANALYTICS_VIEWS } from "~/lib/analytics-tabs";
 import { MODE_CONFIG } from "~/lib/game-mode";
 import { heroScoreboardQueryOptions } from "~/queries/hero-scoreboard-query";
-import { BY_RANK_STATS } from "~/types/api_hero_stats";
-import { HERO_STATS } from "~/types/api_hero_stats";
+import { BY_RANK_STATS, HERO_STATS, heroStatsFor } from "~/types/api_hero_stats";
 
 const HeroStatsOverTimeChart = lazy(() =>
   import("~/components/features/heroes/HeroStatsOverTimeChart").then((m) => ({
@@ -82,11 +81,13 @@ export function HeroesPage() {
     parseAsString.withDefault("").withOptions({ history: "replace" }),
   );
 
-  const [scoreboardSortBy, setScoreboardSortBy] = useQueryState(
+  const [chosenScoreboardSortBy, setScoreboardSortBy] = useQueryState(
     "scoreboard_sort_by",
     // Heroes only: a link or a stale URL with a player-only sort (rank) falls back to the default instead of a 400.
     parseAsStringLiteral(HERO_SORT_BY_VALUES as [string, ...string[]]).withDefault("winrate"),
   );
+  // Street Brawl has no soul economy: a net worth sort chosen in another mode falls back, the URL keeps it.
+  const scoreboardSortBy = sortByIn(chosenScoreboardSortBy, filters.gameMode, "winrate");
   const [scoreboardSortDirection, setScoreboardSortDirection] = useQueryState(
     "scoreboard_sort_dir",
     parseAsStringLiteral(["desc", "asc"] as const).withDefault("desc"),
@@ -181,6 +182,7 @@ export function HeroesPage() {
             <HeroTrendControls
               stat={filters.heroStat}
               interval={filters.heroTimeInterval}
+              gameMode={filters.gameMode}
               onStatChange={(value) => filters.setHeroStat(value)}
               onIntervalChange={(value) => filters.setHeroTimeInterval(value as typeof filters.heroTimeInterval)}
             />
@@ -216,7 +218,7 @@ export function HeroesPage() {
                   label="Stat"
                   value={filters.heroStat === "ban_rate" ? "winrate" : filters.heroStat}
                   onChange={(val) => filters.setHeroStat(val)}
-                  options={HERO_STATS}
+                  options={heroStatsFor(HERO_STATS, filters.gameMode)}
                 />
               </Field>
             </FilterBar>
@@ -253,7 +255,7 @@ export function HeroesPage() {
                       label="X Axis"
                       value={filters.byRankX}
                       onChange={(val) => filters.setByRankX(val)}
-                      options={BY_RANK_STATS}
+                      options={heroStatsFor(BY_RANK_STATS, filters.gameMode)}
                     />
                   </Field>
                   <Field label="Y Axis" orientation="horizontal" className="w-full sm:w-auto">
@@ -261,7 +263,7 @@ export function HeroesPage() {
                       label="Y Axis"
                       value={filters.byRankY}
                       onChange={(val) => filters.setByRankY(val)}
-                      options={BY_RANK_STATS}
+                      options={heroStatsFor(BY_RANK_STATS, filters.gameMode)}
                     />
                   </Field>
                 </FilterBar>
@@ -310,7 +312,7 @@ export function HeroesPage() {
                   label="Stat"
                   value={filters.heroStat === "ban_rate" ? "winrate" : filters.heroStat}
                   onChange={(val) => filters.setHeroStat(val)}
-                  options={HERO_STATS}
+                  options={heroStatsFor(HERO_STATS, filters.gameMode)}
                 />
               </Field>
             </FilterBar>
@@ -410,6 +412,7 @@ export function HeroesPage() {
             <FilterBar variant="toolbar" title="Scoreboard" icon={Trophy} aria-label="Scoreboard controls">
               <SortBySelector
                 scope="heroes"
+                gameMode={filters.gameMode}
                 size="sm"
                 value={scoreboardSortBy}
                 defaultValue="winrate"

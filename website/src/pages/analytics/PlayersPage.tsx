@@ -6,7 +6,7 @@ import { type ComponentType, lazy, Suspense, useState } from "react";
 
 import { Filter } from "~/components/domain/filters";
 import { ScoreboardTable } from "~/components/domain/player-scoreboard/ScoreboardTable";
-import { ALL_SORT_BY_VALUES } from "~/components/domain/player-scoreboard/sort-options";
+import { ALL_SORT_BY_VALUES, sortByIn } from "~/components/domain/player-scoreboard/sort-options";
 import { SortBySelector } from "~/components/domain/player-scoreboard/SortBySelector";
 import { ScoreboardCompareButton } from "~/components/features/player-compare/ScoreboardCompareButton";
 import { FilterBar } from "~/components/patterns/filter-bar/FilterBar";
@@ -59,7 +59,7 @@ export function PlayersPage({
   const [tab, setTab] = useAnalyticsTab("players");
   // Players picked on the scoreboard for a comparison; they stay picked across sorts and pages.
   const [picked, setPicked] = useState<number[]>([]);
-  const [sortBy, setSortBy] = useQueryState(
+  const [chosenSortBy, setSortBy] = useQueryState(
     "sort_by",
     parseAsStringLiteral(ALL_SORT_BY_VALUES as [string, ...string[]]).withDefault("kills"),
   );
@@ -68,6 +68,8 @@ export function PlayersPage({
     parseAsStringLiteral(["desc", "asc"] as const).withDefault("desc"),
   );
   const { mode, setMode, gameMode, matchMode } = useModeState();
+  // Street Brawl has no soul economy: a net worth sort chosen in another mode falls back, the URL keeps it.
+  const sortBy = sortByIn(chosenSortBy, gameMode, "kills");
   const [heroId, setHeroId] = useQueryState("hero", parseAsInteger);
   const [minMatches, setMinMatches] = useQueryState("min_matches", parseAsInteger.withDefault(DEFAULT_MIN_MATCHES));
   const [minRankId, setMinRankId] = useQueryState("min_rank", parseAsInteger.withDefault(0));
@@ -167,6 +169,7 @@ export function PlayersPage({
             <FilterBar variant="toolbar" title="Player scoreboard" icon={Trophy} aria-label="Scoreboard controls">
               <SortBySelector
                 size="sm"
+                gameMode={gameMode}
                 value={sortBy}
                 defaultValue="kills"
                 onValueChange={(next) => {

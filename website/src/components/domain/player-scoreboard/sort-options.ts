@@ -1,3 +1,5 @@
+import { type GameMode, hasSoulEconomy } from "~/lib/game-mode";
+
 export type SortVariant = "avg" | "max" | "total";
 
 interface SortCategory {
@@ -6,6 +8,8 @@ interface SortCategory {
   variants?: SortVariant[];
   /** Only the player scoreboard can sort by it; the hero scoreboard API answers 400. */
   playersOnly?: boolean;
+  /** Measures the soul economy, which Street Brawl does not have. */
+  economy?: boolean;
 }
 
 /** Which scoreboard a sort is for: the hero one has no player rank. */
@@ -50,7 +54,7 @@ export const SORT_CATEGORIES: SortCategory[] = [
   { label: "Kills", key: "kills", variants: ALL_VARIANTS },
   { label: "Deaths", key: "deaths", variants: ALL_VARIANTS },
   { label: "Assists", key: "assists", variants: ALL_VARIANTS },
-  { label: "Net Worth", key: "net_worth", variants: ALL_VARIANTS },
+  { label: "Net Worth", key: "net_worth", variants: ALL_VARIANTS, economy: true },
   { label: "Last Hits", key: "last_hits", variants: ALL_VARIANTS },
   { label: "Denies", key: "denies", variants: ALL_VARIANTS },
   { label: "Player Damage", key: "player_damage", variants: ALL_VARIANTS },
@@ -70,8 +74,20 @@ export const SORT_CATEGORIES: SortCategory[] = [
   { label: "Hero Crit Hits", key: "hero_bullets_hit_crit", variants: ALL_VARIANTS },
 ];
 
-export function sortCategoriesFor(scope: ScoreboardScope): SortCategory[] {
-  return scope === "players" ? SORT_CATEGORIES : SORT_CATEGORIES.filter((cat) => !cat.playersOnly);
+/** The sorts a scoreboard offers; in Street Brawl (no soul economy) that leaves out net worth. */
+export function sortCategoriesFor(scope: ScoreboardScope, gameMode?: GameMode): SortCategory[] {
+  const economy = hasSoulEconomy(gameMode);
+  return SORT_CATEGORIES.filter((cat) => (scope === "players" || !cat.playersOnly) && (economy || !cat.economy));
+}
+
+/**
+ * The sort a scoreboard uses in a game mode: one Street Brawl does not offer (net worth) falls back, while the URL
+ * keeps the choice for when the mode changes back.
+ */
+export function sortByIn(sortBy: string, gameMode: GameMode | undefined, fallback: string): string {
+  if (hasSoulEconomy(gameMode)) return sortBy;
+  const { key } = parseSortByValue(sortBy);
+  return SORT_CATEGORIES.some((cat) => cat.key === key && cat.economy) ? fallback : sortBy;
 }
 
 export function sortByValuesFor(scope: ScoreboardScope): string[] {

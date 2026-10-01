@@ -13,6 +13,7 @@ import { Text } from "~/components/ui/text";
 import { TextLink } from "~/components/ui/text-link";
 import { Tooltip, TooltipHeader, TooltipStat, TooltipStats, TooltipTarget } from "~/components/ui/tooltip";
 import { formatPercent, formatRelativeTime } from "~/lib/format";
+import { type GameMode, hasSoulEconomy } from "~/lib/game-mode";
 import { sharedHeroes } from "~/lib/player-compare";
 import { formatStatValue } from "~/lib/stat-format";
 import { toneOf } from "~/lib/tone";
@@ -26,11 +27,14 @@ export function SharedHeroesTable({
   players,
   rows,
   loading,
+  gameMode,
   className,
 }: {
   players: ComparedPlayer[];
   rows: readonly HeroStats[];
   loading: boolean;
+  /** Street Brawl has no soul economy: the tooltips leave out souls per minute. */
+  gameMode: GameMode;
   /** Layout from the parent (grid placement). */
   className?: string;
 }) {
@@ -98,10 +102,12 @@ export function SharedHeroesTable({
                                     .map((v) => formatStatValue(v, "decimal1"))
                                     .join(" / ")}
                                 />
-                                <TooltipStat
-                                  label="Souls / min"
-                                  value={formatStatValue(stats.netWorthPerMin, "integer")}
-                                />
+                                {hasSoulEconomy(gameMode) && (
+                                  <TooltipStat
+                                    label="Souls / min"
+                                    value={formatStatValue(stats.netWorthPerMin, "integer")}
+                                  />
+                                )}
                                 <TooltipStat
                                   label="Damage / min"
                                   value={formatStatValue(stats.damagePerMin, "integer")}

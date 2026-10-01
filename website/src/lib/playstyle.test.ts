@@ -3,7 +3,7 @@ import { test } from "node:test";
 
 import type { HashMapValue } from "deadlock_api_client";
 
-import { type PlaystylePercentiles, playstyleLabel, playstylePercentiles } from "./playstyle";
+import { playstyleAxesFor, type PlaystylePercentiles, playstyleLabel, playstylePercentiles } from "./playstyle";
 
 const flat = (value: number): PlaystylePercentiles => ({
   fighting: value,
@@ -90,4 +90,15 @@ test("playstylePercentiles: turns deaths around so fewer ranks higher", () => {
 test("playstylePercentiles: nothing without data", () => {
   assert.deepEqual(playstylePercentiles(undefined, {}), {});
   assert.deepEqual(playstylePercentiles({ kills: summary(6, 5) }, undefined), {});
+});
+
+test("playstylePercentiles: Street Brawl has no farming axis", () => {
+  const population = { kills: summary(6, 5), net_worth_per_min: summary(1000, 200) };
+  const own = { kills: { ...summary(0, 0), avg: 8.5 }, net_worth_per_min: { ...summary(0, 0), avg: 1100 } };
+  assert.equal(playstylePercentiles(population, own).farming, 75);
+  const brawl = playstylePercentiles(population, own, "street_brawl");
+  assert.equal(brawl.farming, undefined);
+  assert.equal(brawl.kills, 75);
+  assert.ok(!playstyleAxesFor("street_brawl").some(({ axis }) => axis === "farming"));
+  assert.equal(playstyleAxesFor("normal").length, 8);
 });

@@ -1,7 +1,14 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { COMPARE_STATS, type PlayerAggregate, SCORED_STAT_COUNT, scoreComparison, statWinners } from "./player-compare";
+import {
+  COMPARE_STATS,
+  comparisonVerdict,
+  type PlayerAggregate,
+  SCORED_STAT_COUNT,
+  scoreComparison,
+  statWinners,
+} from "./player-compare";
 
 /** A player whose every stat equals the default, so only the overrides decide a stat. */
 function aggregate(overrides: Partial<PlayerAggregate> = {}): PlayerAggregate {
@@ -122,4 +129,19 @@ test("scoreComparison: wins are judged on the printed value", () => {
   // Both print as a 2.00 KDA, so neither wins it.
   const result = scoreComparison([aggregate({ kda: 2.001 }), aggregate({ kda: 2.004 })]);
   assert.deepEqual(result.tally, [0, 0]);
+});
+
+test("scoreComparison: Street Brawl neither shows nor scores the soul stats", () => {
+  const players = [aggregate({ netWorthPerMin: 2000, damagePerSoul: 2 }), aggregate()];
+  const normal = scoreComparison(players);
+  assert.ok(keys(normal.scored).includes("netWorthPerMin"));
+  assert.deepEqual(normal.tally, [2, 0]);
+
+  const brawl = scoreComparison(players, "street_brawl");
+  assert.ok(!keys(brawl.stats).includes("netWorthPerMin"));
+  assert.ok(!keys(brawl.stats).includes("damagePerSoul"));
+  assert.ok(keys(brawl.stats).includes("lastHitsPerMin"));
+  assert.equal(brawl.scored.length, SCORED_STAT_COUNT - 2);
+  assert.deepEqual(brawl.tally, [0, 0]);
+  assert.equal(comparisonVerdict(["A", "B"], players, "street_brawl"), null);
 });

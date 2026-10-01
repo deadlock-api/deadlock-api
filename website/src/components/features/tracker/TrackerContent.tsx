@@ -255,6 +255,7 @@ export function TrackerContent({
                   sessionContext={sessionContext}
                   ranks={ranks}
                   accountId={accountId}
+                  gameMode={gameMode}
                   heroId={heroId}
                   onHeroChange={setHeroId}
                   hiddenLinkedMatch={hiddenLinkedMatch}

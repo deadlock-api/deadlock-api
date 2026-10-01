@@ -3,7 +3,7 @@ import { isAxiosError } from "axios";
 
 import { day } from "~/dayjs";
 import { compareFilterSearch } from "~/lib/compare-share";
-import { MODE_CONFIG } from "~/lib/game-mode";
+import { hasSoulEconomy, MODE_CONFIG } from "~/lib/game-mode";
 import { extractBadgeMap } from "~/lib/leaderboard";
 import {
   COMPARE_STATS,
@@ -36,6 +36,13 @@ const HIGHLIGHTS: { key: CompareStatKey; short: string }[] = [
   { key: "winRate", short: "Win rate" },
   { key: "kda", short: "KDA" },
   { key: "netWorthPerMin", short: "Souls/min" },
+];
+
+/** Street Brawl hands every player the same souls each round: its card quotes the damage instead of the farm. */
+const BRAWL_HIGHLIGHTS: { key: CompareStatKey; short: string }[] = [
+  { key: "winRate", short: "Win rate" },
+  { key: "kda", short: "KDA" },
+  { key: "damagePerMin", short: "Dmg/min" },
 ];
 
 export interface CompareCardPlayer {
@@ -132,7 +139,8 @@ export async function loadCompareCardData(search: URLSearchParams): Promise<Comp
     rows,
     accountIds.map((_, index) => ({ badge: badges[index], metrics: metrics[index] })),
   );
-  const { scored, tally, leaders } = scoreComparison(aggregates);
+  const { scored, tally, leaders } = scoreComparison(aggregates, filters.gameMode);
+  const highlights = hasSoulEconomy(filters.gameMode) ? HIGHLIGHTS : BRAWL_HIGHLIGHTS;
 
   // The page's colors: each player's by account id, not by column.
   const colorIndexes = compareColorIndexes(accountIds);
@@ -154,7 +162,7 @@ export async function loadCompareCardData(search: URLSearchParams): Promise<Comp
       scored: aggregate != null && aggregates.filter((entry) => entry !== null).length >= 2,
       statsWon: tally[index],
       leader: leaders.includes(index),
-      highlights: HIGHLIGHTS.map(({ key, short }) => {
+      highlights: highlights.map(({ key, short }) => {
         const stat = COMPARE_STATS.find((entry) => entry.key === key)!;
         const value = aggregate?.[key];
         return {

@@ -18,7 +18,7 @@ import { KeyValue, KeyValueList } from "~/components/ui/key-value";
 import { ProgressBar } from "~/components/ui/progress-bar";
 import { Stat, StatGroup } from "~/components/ui/stat";
 import { Tooltip, TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
-import { MODE_CONFIG } from "~/lib/game-mode";
+import { hasSoulEconomy, MODE_CONFIG } from "~/lib/game-mode";
 import {
   computeActivity,
   computeOutcomeSplits,
@@ -30,13 +30,14 @@ import {
   formatPlaytime,
   perHeroRows,
   rankHistoryPoints,
-  RECORD_KINDS,
+  recordKindsFor,
   summarize,
   type OutcomeSplit,
   type TrackerFilterValues,
 } from "~/lib/tracker/compute";
 import { computeInsights } from "~/lib/tracker/insights";
 import { compareRecentMatches, RECENT_MATCH_WINDOWS } from "~/lib/tracker/overview";
+import { cn } from "~/lib/utils";
 
 import { CompanionsPanel } from "./CompanionsPanel";
 import { HeroStatsTable } from "./HeroStatsTable";
@@ -73,6 +74,9 @@ export function OverviewTab({
   onFilterChange: (filters: TrackerFilterValues) => void;
 }) {
   const { utc, toTime } = useTrackerTime();
+  const gameMode = MODE_CONFIG[filters.mode].gameMode;
+  // Street Brawl grants fixed souls each round, so soul totals and rates say nothing about the player there.
+  const soulEconomy = hasSoulEconomy(gameMode);
   const data = useMemo(() => {
     const sorted = [...entries].sort((a, b) => b.start_time - a.start_time || b.match_id - a.match_id);
     return {
@@ -126,7 +130,9 @@ export function OverviewTab({
       accent: true,
     },
     { label: "KDA ratio", value: s.kdaRatio.toFixed(2), detail: "(kills + assists) / deaths" },
-    { label: "Souls / min", value: integer(s.soulsPerMin), detail: `${integer(s.avgSouls)} avg. souls` },
+    ...(soulEconomy
+      ? [{ label: "Souls / min", value: integer(s.soulsPerMin), detail: `${integer(s.avgSouls)} avg. souls` }]
+      : []),
     {
       label: "Playtime",
       value: formatPlaytime(s.totalTimeS),
@@ -170,7 +176,14 @@ export function OverviewTab({
         </div>
       </div>
 
-      <StatGroup variant="joined" size="sm" className="grid-cols-2 @md/overview:grid-cols-3 @3xl/overview:grid-cols-6">
+      <StatGroup
+        variant="joined"
+        size="sm"
+        className={cn(
+          "grid-cols-2 @md/overview:grid-cols-3",
+          soulEconomy ? "@3xl/overview:grid-cols-6" : "@3xl/overview:grid-cols-5",
+        )}
+      >
         {headline.map(({ label, value, detail, accent }) => (
           <Stat key={label} label={label} value={value} sub={detail} tone={accent ? "positive" : undefined} />
         ))}
@@ -214,19 +227,24 @@ export function OverviewTab({
           </PanelBody>
         </Panel>
         <Panel>
-          <PanelHeader title="Economy" description="Per match" icon={Coins} size="sm" />
+          <PanelHeader title={soulEconomy ? "Economy" : "Farming"} description="Per match" icon={Coins} size="sm" />
           <PanelBody size="sm">
             <KeyValueList>
-              <KeyValue label="Souls earned" value={integer(s.avgSouls)} />
-              <KeyValue label="Souls / minute" value={integer(s.soulsPerMin)} />
+              {soulEconomy && <KeyValue label="Souls earned" value={integer(s.avgSouls)} />}
+              {soulEconomy && <KeyValue label="Souls / minute" value={integer(s.soulsPerMin)} />}
               <KeyValue label="Last hits" value={decimal(s.avgLastHits)} />
               <KeyValue label="Last hits / minute" value={s.lastHitsPerMin.toFixed(2)} />
               <KeyValue label="Denies" value={decimal(s.avgDenies)} />
-              <KeyValue label="Total souls" value={integer(s.avgSouls * s.matches)} />
+              {soulEconomy && <KeyValue label="Total souls" value={integer(s.avgSouls * s.matches)} />}
             </KeyValueList>
           </PanelBody>
         </Panel>
-        <RecentFormPanel comparison={recent} onWindowChange={setRecentWindow} onOpenMatch={onOpenMatch} />
+        <RecentFormPanel
+          comparison={recent}
+          gameMode={gameMode}
+          onWindowChange={setRecentWindow}
+          onOpenMatch={onOpenMatch}
+        />
       </div>
 
       <PerformanceInsights
@@ -240,6 +258,7 @@ export function OverviewTab({
 
       <TrendPanels
         entries={sorted}
+        gameMode={gameMode}
         ranks={data.ranks}
         activity={data.activity}
         result={filters.result}
@@ -252,6 +271,7 @@ export function OverviewTab({
       <div className="grid items-start gap-2 @2xl/overview:grid-cols-2">
         <HeroStatsTable
           rows={data.heroes}
+          gameMode={gameMode}
           onSelectHero={onSelectHero}
           details={({ minimumMatches, close, sort, direction }) => (
             <div className="flex flex-col gap-2">
@@ -261,7 +281,7 @@ export function OverviewTab({
                 initialSortKey={sort === "kdaRatio" ? "kda" : sort}
                 initialSortDir={direction === "descending" ? "desc" : "asc"}
                 accountId={accountId}
-                gameMode={MODE_CONFIG[filters.mode].gameMode}
+                gameMode={gameMode}
                 matchMode={MODE_CONFIG[filters.mode].matchMode}
                 heroId={filters.heroId}
                 minUnixTimestamp={filters.minUnixTimestamp}
@@ -312,7 +332,7 @@ export function OverviewTab({
           <PanelHeader title="Personal bests" icon={Trophy} size="sm" />
           <PanelBody size="sm" className="flex flex-col gap-2">
             <div className="grid grid-cols-2 gap-1.5 @xs/records:grid-cols-3">
-              {RECORD_KINDS.map(({ key, label, format }) => {
+              {recordKindsFor(gameMode).map(({ key, label, format }) => {
                 const record = data.records[key];
                 return (
                   <Button

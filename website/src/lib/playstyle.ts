@@ -1,6 +1,7 @@
 import type { HashMapValue } from "deadlock_api_client";
 
 import { approxPercentile } from "~/lib/distribution-percentile";
+import { type GameMode, hasSoulEconomy } from "~/lib/game-mode";
 import { LOWER_IS_BETTER_METRICS } from "~/lib/player-compare";
 
 /** One side of a player's game, each measured by one stat of the player metrics endpoint. */
@@ -35,6 +36,14 @@ export const PLAYSTYLE_AXES: readonly PlaystyleAxisDefinition[] = [
 ];
 
 /**
+ * The axes of one game mode. Farming is read from souls per minute, which Street Brawl hands out evenly each round, so
+ * there it would rank nobody: the radar leaves it out.
+ */
+export function playstyleAxesFor(gameMode: GameMode = "normal"): readonly PlaystyleAxisDefinition[] {
+  return hasSoulEconomy(gameMode) ? PLAYSTYLE_AXES : PLAYSTYLE_AXES.filter(({ axis }) => axis !== "farming");
+}
+
+/**
  * Where a player stands on each axis among all players on the same filters, 0-100 with 50 the median, turned so
  * that higher is always better (fewer deaths ranks high on Survival). An axis without data on either side is left
  * out.
@@ -44,10 +53,11 @@ export type PlaystylePercentiles = Partial<Record<PlaystyleAxis, number>>;
 export function playstylePercentiles(
   population: Record<string, HashMapValue> | undefined,
   own: Record<string, HashMapValue> | undefined,
+  gameMode: GameMode = "normal",
 ): PlaystylePercentiles {
   const result: PlaystylePercentiles = {};
   if (!population || !own) return result;
-  for (const { axis, metricKey } of PLAYSTYLE_AXES) {
+  for (const { axis, metricKey } of playstyleAxesFor(gameMode)) {
     const values = population[metricKey];
     const avg = own[metricKey]?.avg;
     if (!values || avg == null || !Number.isFinite(avg)) continue;

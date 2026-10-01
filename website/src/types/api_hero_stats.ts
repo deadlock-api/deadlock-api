@@ -1,5 +1,7 @@
 import type { AnalyticsHeroStats } from "deadlock_api_client";
 
+import { type GameMode, hasSoulEconomy } from "~/lib/game-mode";
+
 export const HERO_STATS = [
   "winrate",
   "wins",
@@ -15,6 +17,19 @@ export const HERO_STATS = [
 ] as const;
 
 export const HERO_STATS_WITH_BAN_RATE = [...HERO_STATS, "ban_rate"] as const;
+
+/** The hero stats that measure the soul economy, which Street Brawl does not have. */
+const ECONOMY_HERO_STATS: ReadonlySet<string> = new Set(["net_worth_per_match"]);
+
+/** The stats worth offering in a game mode: Street Brawl leaves out the economy ones. */
+export function heroStatsFor<T extends string>(stats: readonly T[], gameMode: GameMode | undefined): T[] {
+  return hasSoulEconomy(gameMode) ? [...stats] : stats.filter((stat) => !ECONOMY_HERO_STATS.has(stat));
+}
+
+/** The stat to show in a game mode: an economy one picked elsewhere falls back, while the URL keeps the choice. */
+export function heroStatIn<T extends string>(stat: T, gameMode: GameMode | undefined, fallback: T): T {
+  return hasSoulEconomy(gameMode) || !ECONOMY_HERO_STATS.has(stat) ? stat : fallback;
+}
 
 export function hero_stats_transform(heroStats: AnalyticsHeroStats, heroStat: (typeof HERO_STATS)[number]) {
   switch (heroStat) {

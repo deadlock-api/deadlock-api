@@ -1,14 +1,17 @@
 import { TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
 import { formatShare } from "~/lib/format";
-import { PLAYER_STAT_COLUMNS } from "~/lib/tracker/player-stats";
+import type { PlayerStatColumn } from "~/lib/tracker/player-stats";
 import type { TrackerMatchPlayer } from "~/queries/tracker-queries";
 
 export function TeamStatsDetails({
   name,
   players,
   lobbyPlayers,
+  columns,
 }: {
   name: string;
+  /** The scoreboard's columns for the match's mode. */
+  columns: PlayerStatColumn[];
   players: TrackerMatchPlayer[];
   lobbyPlayers: TrackerMatchPlayer[];
 }) {
@@ -20,7 +23,7 @@ export function TeamStatsDetails({
       <TooltipHeader title={name} subtitle={`${players.length} players · % of match totals`} />
       <TooltipStats>
         <TooltipStat label="Kills / deaths / assists" value={`${kills} / ${deaths} / ${assists}`} />
-        {PLAYER_STAT_COLUMNS.map((column) => {
+        {columns.map((column) => {
           const total = players.reduce((sum, player) => sum + column.value(player), 0);
           const lobbyTotal = lobbyPlayers.reduce((sum, player) => sum + column.value(player), 0);
           return (

@@ -10,6 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~
 import { Text } from "~/components/ui/text";
 import { day } from "~/dayjs";
 import { useHydrated } from "~/hooks/useHydrated";
+import { type GameMode, hasSoulEconomy } from "~/lib/game-mode";
 import { recentSharedMatches, type SharedMatch } from "~/lib/player-compare-pairs";
 import { formatStatValue } from "~/lib/stat-format";
 
@@ -50,17 +51,20 @@ function HistoryError({ player, history }: { player: ComparedPlayer; history: Co
 
 /**
  * The matches two or more of the players shared, one line each: when, then a column per player (in
- * the page's order) with their result, hero, K/D/A and souls, so every value lines up down the column. A player who
+ * the page's order) with their result, hero, K/D/A and souls (not in Street Brawl), so every value lines up down the column. A player who
  * was not in the match leaves the cell empty; the W and L tell who was on which side.
  */
 function SharedMatchesTable({
   matches,
   players,
   dateLabel,
+  showSouls,
 }: {
   matches: readonly SharedMatch[];
   players: ComparedPlayer[];
   dateLabel: (unix: number) => string;
+  /** Off in Street Brawl, where every player gets the same souls each round. */
+  showSouls: boolean;
 }) {
   // Only the players who appear in these matches get a column.
   const inAny = new Set(
@@ -111,10 +115,12 @@ function SharedMatchesTable({
                       <Text className="w-16 shrink-0 text-end whitespace-nowrap">
                         {entry.kills}/{entry.deaths}/{entry.assists}
                       </Text>
-                      <Text tone="muted" className="w-12 shrink-0 text-end whitespace-nowrap">
-                        {compactSouls(entry.netWorth)}
-                        <span className="sr-only"> souls</span>
-                      </Text>
+                      {showSouls && (
+                        <Text tone="muted" className="w-12 shrink-0 text-end whitespace-nowrap">
+                          {compactSouls(entry.netWorth)}
+                          <span className="sr-only"> souls</span>
+                        </Text>
+                      )}
                     </Inline>
                   ) : (
                     <NoValue label="Not in this match" />
@@ -138,11 +144,14 @@ const COLLAPSED_ROWS = 9;
 export function SharedMatchesPanel({
   players,
   histories,
+  gameMode,
   className,
 }: {
   players: ComparedPlayer[];
   /** The players' match histories on the filters, in the players' order (`useCompareMatchHistories`). */
   histories: readonly CompareMatchHistory[];
+  /** Street Brawl has no soul economy: the lines leave out each player's souls. */
+  gameMode: GameMode;
   /** Layout from the parent (grid placement). */
   className?: string;
 }) {
@@ -169,7 +178,12 @@ export function SharedMatchesPanel({
         </Stack>
       ) : matches.length > 0 ? (
         <>
-          <SharedMatchesTable matches={shown} players={players} dateLabel={dateLabel} />
+          <SharedMatchesTable
+            matches={shown}
+            players={players}
+            dateLabel={dateLabel}
+            showSouls={hasSoulEconomy(gameMode)}
+          />
           {matches.length > COLLAPSED_ROWS && (
             <PanelShowMore open={expanded} onOpenChange={setExpanded} total={matches.length} />
           )}

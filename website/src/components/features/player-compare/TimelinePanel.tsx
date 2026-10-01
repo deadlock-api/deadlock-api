@@ -22,6 +22,7 @@ import { Segmented, SegmentedItem } from "~/components/ui/segmented";
 import { Stack } from "~/components/ui/stack";
 import { BUFF_TIMINGS_NOTE } from "~/lib/buffs";
 import { formatCompactAxisTick, niceTicks } from "~/lib/chart-axis";
+import { hasSoulEconomy } from "~/lib/game-mode";
 import { formatStatValue } from "~/lib/stat-format";
 import { type CompareFilters } from "~/queries/player-compare-queries";
 import { playerPerformanceCurveQueryOptions } from "~/queries/player-performance-curve-query";
@@ -80,7 +81,8 @@ function curveParams(filters: CompareFilters, accountId?: number) {
 const minuteLabel = (seconds: number) => `${Math.round(seconds / 60)}m`;
 
 /**
- * Where each compared player stands at each point of a match: their average souls, kills or deaths by game minute,
+ * Where each compared player stands at each point of a match: their average souls (not in Street Brawl), kills or
+ * deaths by game minute,
  * drawn as the lead over the average player on the same filters (the dashed zero line). Who wins the lane, who scales.
  */
 export function TimelinePanel({
@@ -93,7 +95,13 @@ export function TimelinePanel({
   /** Layout from the parent (grid placement). */
   className?: string;
 }) {
-  const [metric, setMetric] = useState<TimelineMetric>("souls");
+  const [chosenMetric, setMetric] = useState<TimelineMetric>("souls");
+  // Street Brawl hands every player the same souls each round: no souls line there, and kills stand in for it until
+  // the mode changes back.
+  const metrics = (Object.keys(METRICS) as TimelineMetric[]).filter(
+    (key) => key !== "souls" || hasSoulEconomy(filters.gameMode),
+  );
+  const metric = metrics.includes(chosenMetric) ? chosenMetric : "kills";
   const own = useQueries({
     queries: players.map((player) => ({
       ...playerPerformanceCurveQueryOptions(curveParams(filters, player.accountId)),
@@ -152,7 +160,7 @@ export function TimelinePanel({
     <Panel className={className}>
       <PanelHeader size="sm" title="Match timeline" icon={Hourglass}>
         <Segmented size="sm" width="hug" aria-label="Timeline metric" value={metric} onValueChange={setMetric}>
-          {(Object.keys(METRICS) as TimelineMetric[]).map((key) => (
+          {metrics.map((key) => (
             <SegmentedItem key={key} value={key}>
               {METRICS[key].label}
             </SegmentedItem>

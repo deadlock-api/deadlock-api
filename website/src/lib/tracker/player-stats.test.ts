@@ -3,7 +3,7 @@ import { test } from "node:test";
 
 import type { TrackerMatchPlayer } from "~/queries/tracker-queries";
 
-import { PLAYER_STAT_COLUMNS, sortScoreboardPlayers } from "./player-stats";
+import { PLAYER_STAT_COLUMNS, playerStatColumnsFor, sortScoreboardPlayers } from "./player-stats";
 
 function player(accountId: number, value: number, overrides: Partial<TrackerMatchPlayer> = {}): TrackerMatchPlayer {
   return {
@@ -64,4 +64,10 @@ test("scoreboard ties are deterministic and default ordering leaves cached team 
   assert.deepEqual(sortScoreboardPlayers(players, null, "desc"), players);
   assert.deepEqual(sortScoreboardPlayers(players, "unknown", "desc"), players);
   assert.deepEqual(players, original);
+});
+
+test("a Street Brawl scoreboard has no souls column", () => {
+  assert.deepEqual(playerStatColumnsFor("normal"), PLAYER_STAT_COLUMNS);
+  assert.ok(!playerStatColumnsFor("street_brawl").some((column) => column.key === "souls"));
+  assert.equal(playerStatColumnsFor("street_brawl").length, PLAYER_STAT_COLUMNS.length - 1);
 });

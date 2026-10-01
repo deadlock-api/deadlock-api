@@ -1,3 +1,4 @@
+import { type GameMode, hasSoulEconomy } from "~/lib/game-mode";
 import { formatStatValue, type StatFormat } from "~/lib/stat-format";
 
 export type PlayerMetricFormat = StatFormat;
@@ -62,6 +63,14 @@ export const PLAYER_BUFF_METRICS: PlayerMetricDefinition[] = [
   { key: "permanent_buffs_per_min", label: "Buff Pickups / Min", format: "decimal2", category: "Permanent Buffs" },
   { key: "first_permanent_buff_time_s", label: "First Buff Pickup", format: "duration", category: "Permanent Buffs" },
 ];
+
+/** The metrics worth showing in a game mode: Street Brawl has no soul economy, so it leaves out the Economy ones. */
+export function playerMetricsFor<T extends { category: PlayerMetricCategory }>(
+  metrics: readonly T[],
+  gameMode: GameMode | null | undefined,
+): T[] {
+  return hasSoulEconomy(gameMode) ? [...metrics] : metrics.filter((metric) => metric.category !== "Economy");
+}
 
 /** A player metric in its format; the same formats, and output, as every other stat on the site. */
 export function formatPlayerMetricValue(value: number | undefined | null, format: PlayerMetricFormat): string {

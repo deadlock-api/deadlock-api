@@ -6,8 +6,9 @@ import { FilterBar } from "~/components/patterns/filter-bar/FilterBar";
 import { Field } from "~/components/ui/field";
 import { SegmentedItem } from "~/components/ui/segmented";
 import { SelectGroup, SelectItem, SelectLabel } from "~/components/ui/select";
+import type { GameMode } from "~/lib/game-mode";
 import { HERO_TREND_LABELS, type HeroTrendStat } from "~/lib/hero-trends";
-import { TIME_INTERVALS } from "~/types/api_hero_stats";
+import { heroStatsFor, TIME_INTERVALS } from "~/types/api_hero_stats";
 
 const METRIC_GROUPS = [
   { label: "Performance", stats: ["winrate", "ban_rate"] },
@@ -31,11 +32,14 @@ const intervals = TIME_INTERVALS.map((interval) => ({ value: interval.query, lab
 export function HeroTrendControls({
   stat,
   interval,
+  gameMode,
   onStatChange,
   onIntervalChange,
 }: {
   stat: HeroTrendStat;
   interval: string;
+  /** Street Brawl has no soul economy, so its list leaves out net worth. */
+  gameMode?: GameMode;
   onStatChange: (stat: HeroTrendStat) => void;
   onIntervalChange: (interval: string) => void;
 }) {
@@ -50,7 +54,7 @@ export function HeroTrendControls({
           {METRIC_GROUPS.map((group) => (
             <SelectGroup key={group.label}>
               <SelectLabel>{group.label}</SelectLabel>
-              {group.stats.map((value) => (
+              {heroStatsFor(group.stats, gameMode).map((value) => (
                 <SelectItem key={value} value={value}>
                   {HERO_TREND_LABELS[value]}
                 </SelectItem>

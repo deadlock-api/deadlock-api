@@ -1,7 +1,7 @@
 import type { PlayerMatchHistoryEntry } from "deadlock_api_client";
 
 import { day } from "~/dayjs";
-import type { Mode } from "~/lib/game-mode";
+import { type GameMode, hasSoulEconomy, type Mode } from "~/lib/game-mode";
 
 import { TEAMS } from "./teams";
 
@@ -51,6 +51,11 @@ export function unscoredOutcome(entry: PlayerMatchHistoryEntry): UnscoredOutcome
 /** Street Brawl reports lane ids too, but its map has no lanes to speak of. */
 export function hasLanes(entry: PlayerMatchHistoryEntry): boolean {
   return entry.game_mode === GAME_MODE_NORMAL;
+}
+
+/** The mode a history entry was played in, for the views that read one match on its own. */
+export function entryGameMode(entry: PlayerMatchHistoryEntry): GameMode {
+  return entry.game_mode === GAME_MODE_STREET_BRAWL ? "street_brawl" : "normal";
 }
 
 export interface BrawlRounds {
@@ -147,6 +152,14 @@ export function soulsPerMinute(entry: PlayerMatchHistoryEntry): number {
 
 export const MATCH_SORT_KEYS = ["kda", "souls", "soulsPerMin", "lastHits", "duration", "rankDelta", "played"] as const;
 export type MatchSortKey = (typeof MATCH_SORT_KEYS)[number];
+const ECONOMY_MATCH_SORT_KEYS: ReadonlySet<MatchSortKey> = new Set(["souls", "soulsPerMin"]);
+
+/** The sorts a mode offers: Street Brawl has no soul economy, so it drops the soul sorts. */
+export function matchSortKeysFor(gameMode: GameMode): readonly MatchSortKey[] {
+  return hasSoulEconomy(gameMode)
+    ? MATCH_SORT_KEYS
+    : MATCH_SORT_KEYS.filter((key) => !ECONOMY_MATCH_SORT_KEYS.has(key));
+}
 export const SORT_DIRS = ["asc", "desc"] as const;
 export type SortDir = (typeof SORT_DIRS)[number];
 
@@ -664,16 +677,28 @@ export interface RecordKind {
   key: keyof PersonalRecords;
   label: string;
   format: (value: number) => string;
+  /** A soul record, which Street Brawl's fixed soul grants make meaningless. */
+  economy?: boolean;
 }
 
 export const RECORD_KINDS: RecordKind[] = [
   { key: "kills", label: "Most kills", format: (value) => value.toLocaleString("en-US") },
   { key: "assists", label: "Most assists", format: (value) => value.toLocaleString("en-US") },
   { key: "kda", label: "Best KDA", format: (value) => value.toFixed(2) },
-  { key: "netWorth", label: "Most souls", format: (value) => value.toLocaleString("en-US") },
-  { key: "soulsPerMin", label: "Best souls/min", format: (value) => Math.round(value).toLocaleString("en-US") },
+  { key: "netWorth", label: "Most souls", format: (value) => value.toLocaleString("en-US"), economy: true },
+  {
+    key: "soulsPerMin",
+    label: "Best souls/min",
+    format: (value) => Math.round(value).toLocaleString("en-US"),
+    economy: true,
+  },
   { key: "rankGain", label: "Biggest rank gain", format: (value) => `+${value.toLocaleString("en-US")}` },
 ];
+
+/** The personal bests worth showing in a mode: no soul records in Street Brawl. */
+export function recordKindsFor(gameMode: GameMode): RecordKind[] {
+  return hasSoulEconomy(gameMode) ? RECORD_KINDS : RECORD_KINDS.filter((kind) => !kind.economy);
+}
 
 export interface HeldRecord {
   label: string;
@@ -681,9 +706,9 @@ export interface HeldRecord {
 }
 
 /** The personal bests each match holds, formatted for display; matches holding none are absent. */
-export function recordsByMatchId(records: PersonalRecords): Map<number, HeldRecord[]> {
+export function recordsByMatchId(records: PersonalRecords, gameMode: GameMode): Map<number, HeldRecord[]> {
   const held = new Map<number, HeldRecord[]>();
-  for (const { key, label, format } of RECORD_KINDS) {
+  for (const { key, label, format } of recordKindsFor(gameMode)) {
     const record = records[key];
     if (!record) continue;
     const list = held.get(record.entry.match_id) ?? [];

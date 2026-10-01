@@ -3,7 +3,16 @@ import { test } from "node:test";
 
 import type { PlayerMatchHistoryEntry } from "deadlock_api_client";
 
-import { MIN_WEEK_MATCHES, mergeWeeklyTrend, utcWeek, weeklyTotals, weekTicks, weekValue } from "./compare-trends";
+import {
+  MIN_WEEK_MATCHES,
+  mergeWeeklyTrend,
+  TREND_METRICS,
+  trendMetricsFor,
+  utcWeek,
+  weeklyTotals,
+  weekTicks,
+  weekValue,
+} from "./compare-trends";
 
 const DAY = 86_400;
 const WEEK = 7 * DAY;
@@ -143,4 +152,10 @@ test("weeklyTotals sums blocks of weeks", () => {
   );
   assert.ok(weeks.length <= 2);
   assert.equal(new Date(weeks[0].week * 1000).getUTCDay(), 1);
+});
+
+test("trendMetricsFor: Street Brawl has no souls trend", () => {
+  assert.deepEqual(trendMetricsFor("normal"), TREND_METRICS);
+  assert.ok(!trendMetricsFor("street_brawl").includes("soulsPerMin"));
+  assert.ok(trendMetricsFor("street_brawl").includes("lastHitsPerMin"));
 });

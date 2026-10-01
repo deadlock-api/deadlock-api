@@ -19,7 +19,7 @@ import type { Dayjs } from "~/dayjs";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { api } from "~/lib/api";
 import { formatSignedPercent } from "~/lib/format";
-import type { GameMode, MatchMode } from "~/lib/game-mode";
+import { type GameMode, hasSoulEconomy, type MatchMode } from "~/lib/game-mode";
 import { TONE_TEXT, toneOf } from "~/lib/tone";
 import { heroesQueryOptions } from "~/queries/asset-queries";
 import { queryKeys } from "~/queries/query-keys";
@@ -247,7 +247,12 @@ export function HeroStatsByExperienceTable({
           // eslint-disable-next-line react/no-array-index-key -- key is EXPERIENCE_BUCKETS[i].label, not raw index
           <TableCell key={EXPERIENCE_BUCKETS[i].label} className="text-center tabular-nums">
             <div className="flex flex-col items-center gap-1">
-              <BucketTooltip entry={row.bucketEntries[i]} heroStat={heroStat} bucketLabel={EXPERIENCE_BUCKETS[i].label}>
+              <BucketTooltip
+                entry={row.bucketEntries[i]}
+                heroStat={heroStat}
+                bucketLabel={EXPERIENCE_BUCKETS[i].label}
+                gameMode={gameMode}
+              >
                 <span className="font-medium">{formatValue(val)}</span>
               </BucketTooltip>
               {i !== BASELINE_BUCKET && (
@@ -417,11 +422,13 @@ function BucketTooltip({
   entry,
   heroStat,
   bucketLabel,
+  gameMode,
   children,
 }: {
   entry: AnalyticsHeroStats | null;
   heroStat: (typeof HERO_STATS)[number];
   bucketLabel: string;
+  gameMode?: GameMode;
   children: React.ReactNode;
 }) {
   if (!entry) return <>{children}</>;
@@ -445,7 +452,9 @@ function BucketTooltip({
             <TooltipRow label="Kills/match" value={kills} highlight={heroStat === "kills_per_match"} />
             <TooltipRow label="Deaths/match" value={deaths} highlight={heroStat === "deaths_per_match"} />
             <TooltipRow label="Assists/match" value={assists} highlight={heroStat === "assists_per_match"} />
-            <TooltipRow label="Net worth/match" value={netWorth} highlight={heroStat === "net_worth_per_match"} />
+            {hasSoulEconomy(gameMode) && (
+              <TooltipRow label="Net worth/match" value={netWorth} highlight={heroStat === "net_worth_per_match"} />
+            )}
           </TooltipStats>
         </>
       }

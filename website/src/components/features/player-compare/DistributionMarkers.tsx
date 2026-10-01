@@ -18,8 +18,9 @@ import { Grid } from "~/components/ui/grid";
 import { Stack } from "~/components/ui/stack";
 import { Text } from "~/components/ui/text";
 import { approxPercentile, buildDistributionCurve } from "~/lib/distribution-percentile";
+import type { GameMode } from "~/lib/game-mode";
 import { LOWER_IS_BETTER_METRICS, rankShareLabel } from "~/lib/player-compare";
-import { formatPlayerMetricValue, PLAYER_METRICS } from "~/lib/player-metrics";
+import { formatPlayerMetricValue, PLAYER_METRICS, playerMetricsFor } from "~/lib/player-metrics";
 
 import type { ComparedPlayer } from "./types";
 
@@ -64,7 +65,10 @@ const METRICS = [
   ...PLAYER_METRICS.filter((metric) => !LEAD_KEYS.includes(metric.key)),
 ].map((metric) => ({ ...metric, label: COMPARE_LABELS[metric.key] ?? metric.label }));
 
-export const METRIC_COUNT = METRICS.length;
+/** The stats with a curve in one game mode: Street Brawl has no souls to rank players on. */
+export function distributionMetricsFor(gameMode: GameMode) {
+  return playerMetricsFor(METRICS, gameMode);
+}
 /** How many stats a collapsed panel shows when it is one column wide. */
 const NARROW_METRICS = 6;
 
@@ -112,6 +116,7 @@ function MetricTile({
  */
 export function DistributionMarkers({
   players,
+  gameMode,
   population,
   averages,
   loading,
@@ -119,6 +124,8 @@ export function DistributionMarkers({
   limit,
 }: {
   players: ComparedPlayer[];
+  /** Street Brawl leaves out the souls curves. */
+  gameMode: GameMode;
   population: Record<string, HashMapValue> | undefined;
   /** Each player's own metrics, in the players' order. */
   averages: (Record<string, HashMapValue> | undefined)[];
@@ -131,19 +138,21 @@ export function DistributionMarkers({
   return (
     <PanelBody size="sm">
       <Grid columns={{ base: 1, sm: 2, md: 3, lg: 4, xl: 5 }} gap={3}>
-        {METRICS.slice(0, limit).map((metric, index) => (
-          <MetricTile
-            key={metric.key}
-            // Collapsed on a phone (one column), the first six; "Show all" opens the rest.
-            className={limit !== undefined && index >= NARROW_METRICS ? "hidden @sm/percentiles:flex" : undefined}
-            metric={metric}
-            values={population?.[metric.key]}
-            players={players}
-            averages={averages}
-            loading={loading}
-            zoom={zoom}
-          />
-        ))}
+        {distributionMetricsFor(gameMode)
+          .slice(0, limit)
+          .map((metric, index) => (
+            <MetricTile
+              key={metric.key}
+              // Collapsed on a phone (one column), the first six; "Show all" opens the rest.
+              className={limit !== undefined && index >= NARROW_METRICS ? "hidden @sm/percentiles:flex" : undefined}
+              metric={metric}
+              values={population?.[metric.key]}
+              players={players}
+              averages={averages}
+              loading={loading}
+              zoom={zoom}
+            />
+          ))}
       </Grid>
     </PanelBody>
   );

@@ -6,6 +6,7 @@ import { Inline } from "~/components/ui/stack";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { day } from "~/dayjs";
 import { BEST_HERO_MIN_MATCHES, type PlayerRecords, playerRecords, type RecordMatch } from "~/lib/compare-records";
+import { type GameMode, hasSoulEconomy } from "~/lib/game-mode";
 import { statWinners } from "~/lib/player-compare";
 import { formatStatValue } from "~/lib/stat-format";
 
@@ -26,6 +27,8 @@ interface RecordRow {
   /** The number the row is judged on; null when the player has none. */
   value: (records: PlayerRecords) => number | null;
   format: (value: number, records: PlayerRecords) => string;
+  /** A record of souls: Street Brawl hands them out evenly each round, so there it is left out. */
+  souls?: true;
   /** The match that set the record, shown as its hero and date. */
   match?: (records: PlayerRecords) => RecordMatch | null;
   /** The hero the row is about, shown beside the value at any width. */
@@ -61,6 +64,7 @@ const ROWS: RecordRow[] = [
   {
     key: "mostSouls",
     label: "Most souls",
+    souls: true,
     value: (records) => records.mostSouls?.value ?? null,
     format: integer,
     match: (records) => records.mostSouls,
@@ -68,6 +72,7 @@ const ROWS: RecordRow[] = [
   {
     key: "bestSoulsPerMin",
     label: "Best souls / min",
+    souls: true,
     value: (records) => (records.bestSoulsPerMin ? Math.round(records.bestSoulsPerMin.value) : null),
     format: integer,
     match: (records) => records.bestSoulsPerMin,
@@ -172,13 +177,14 @@ function RecordValue({
 }
 
 /**
- * Each player's best single match (kills, assists, souls, farm), their streaks and how much they played, on the
+ * Each player's best single match (kills, assists, souls outside Street Brawl, farm), their streaks and how much they played, on the
  * page's mode and dates. The best of each row gets the crown, as in the head-to-head.
  */
 export function RecordsPanel({
   players,
   histories,
   heroFiltered = false,
+  gameMode,
   className,
 }: {
   players: ComparedPlayer[];
@@ -186,6 +192,8 @@ export function RecordsPanel({
   histories: readonly CompareMatchHistory[];
   /** The page is on one hero: a best hero would only name that hero. */
   heroFiltered?: boolean;
+  /** Street Brawl has no soul economy: its souls records are left out. */
+  gameMode: GameMode;
   /** Layout from the parent (grid placement). */
   className?: string;
 }) {
@@ -193,6 +201,8 @@ export function RecordsPanel({
     history.heroMatches && history.heroMatches.length > 0 ? playerRecords(history.heroMatches) : null,
   );
   const settled = histories.every((history) => !history.isPending);
+  const showSouls = hasSoulEconomy(gameMode);
+  const rows = ROWS.filter((row) => (!heroFiltered || row.key !== "bestHero") && (showSouls || !row.souls));
   // Nothing to show once loaded: nobody has a match on the filters (failures show in together & against).
   if (settled && records.every((record) => record === null)) return null;
 
@@ -209,7 +219,7 @@ export function RecordsPanel({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {ROWS.filter((row) => !heroFiltered || row.key !== "bestHero").map((row) => {
+          {rows.map((row) => {
             const values = records.map((record) => (record ? row.value(record) : null));
             const winners = statWinners(values, "higher");
             return (

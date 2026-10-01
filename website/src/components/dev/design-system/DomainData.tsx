@@ -137,7 +137,7 @@ export function DomainData() {
       <Specimen
         name="SortBySelector"
         source="domain/player-scoreboard/SortBySelector"
-        note="Picks the stat a scoreboard ranks by. Stats that have them also offer AVG / MAX / TOTAL; the value is the API's sort_by string."
+        note="Picks the stat a scoreboard ranks by. Stats that have them also offer AVG / MAX / TOTAL; the value is the API's sort_by string. scope heroes leaves out the player-only sorts (rank), gameMode street_brawl the soul economy ones (net worth); the parent maps a stored sort the list no longer offers through sortByIn."
       >
         <Variants>
           <SortBySelector value={selectorSort} defaultValue="winrate" onValueChange={setSelectorSort} />

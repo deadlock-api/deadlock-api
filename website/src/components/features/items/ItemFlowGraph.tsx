@@ -1065,10 +1065,12 @@ export function ItemFlowGraph({
                         value={`${pathStats.avgKills.toFixed(1)} / ${pathStats.avgDeaths.toFixed(1)} / ${pathStats.avgAssists.toFixed(1)}`}
                       />
                       <KeyValue label="KDA Ratio" value={pathStats.kdaRatio.toFixed(2)} />
-                      <KeyValue
-                        label="Avg net worth"
-                        value={Math.round(pathStats.avgNetWorth).toLocaleString("en-US")}
-                      />
+                      {!isStreetBrawl && (
+                        <KeyValue
+                          label="Avg net worth"
+                          value={Math.round(pathStats.avgNetWorth).toLocaleString("en-US")}
+                        />
+                      )}
                       <KeyValue
                         label="Avg game length"
                         value={`${Math.floor(Math.round(pathStats.avgDurationS) / 60)}:${String(Math.round(pathStats.avgDurationS) % 60).padStart(2, "0")}`}

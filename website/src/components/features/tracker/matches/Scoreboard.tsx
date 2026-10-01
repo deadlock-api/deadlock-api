@@ -25,6 +25,7 @@ import { TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/toolti
 import { Tooltip } from "~/components/ui/tooltip";
 import { IS_DEV } from "~/lib/constants";
 import { formatShare } from "~/lib/format";
+import { type GameMode, hasSoulEconomy } from "~/lib/game-mode";
 import { LANES } from "~/lib/team-builder/lanes";
 import { TONE_TEXT } from "~/lib/tone";
 import { type BuildAbility, type BuildItem, playerBuild } from "~/lib/tracker/build";
@@ -33,7 +34,8 @@ import { isDemoAccount } from "~/lib/tracker/demo";
 import {
   type PlayerContext,
   playerContext,
-  PLAYER_STAT_COLUMNS,
+  type PlayerStatColumn,
+  playerStatColumnsFor,
   REVEAL,
   sortScoreboardPlayers,
   statMaxima,
@@ -184,20 +186,19 @@ const Divider = () => (
   </Box>
 );
 
-/** Player, portrait, K/D/A, and one cell per stat column. */
-const COLUMN_COUNT = 3 + PLAYER_STAT_COLUMNS.length;
-
 /**
  * The stats the table dropped at this width, spelled out under the player. A phone shows the whole set here,
  * since there is no pointer to open the hover card with, and a wide panel shows only what no column carries.
  */
 function PlayerStatStrip({
   player,
+  columns,
   context,
   ranks,
   pregameHeroName,
 }: {
   player: TrackerMatchPlayer;
+  columns: PlayerStatColumn[];
   context: PlayerContext;
   ranks: Rank[];
   pregameHeroName?: string;
@@ -214,7 +215,7 @@ function PlayerStatStrip({
           {player.rank_badge != null && <BadgeImage badge={player.rank_badge} ranks={ranks} size="inline" />}
         </span>
       )}
-      {PLAYER_STAT_COLUMNS.map((column) => (
+      {columns.map((column) => (
         <span key={column.key} className={cn("whitespace-nowrap", REVEAL[column.reveal].strip)}>
           <span className="text-foreground">{column.format(column.value(player))}</span> {column.label.toLowerCase()}
         </span>
@@ -239,12 +240,14 @@ function PlayerStatsDetails({
   heroName,
   lane,
   context,
+  soulEconomy,
 }: {
   player: TrackerMatchPlayer;
   name: string;
   heroName?: string;
   lane: (typeof LANES)[number] | undefined;
   context: PlayerContext;
+  soulEconomy: boolean;
 }) {
   const whole = (value: number) => value.toLocaleString("en-US");
   return (
@@ -262,8 +265,8 @@ function PlayerStatsDetails({
           value={`${player.kills} / ${player.deaths} / ${player.assists}`}
         />
         <TooltipStat label="Kill share" value={formatShare(context.killShare)} />
-        <TooltipStat label="Souls" value={whole(player.net_worth)} />
-        <TooltipStat label="Souls per minute" value={whole(Math.round(context.soulsPerMin))} />
+        {soulEconomy && <TooltipStat label="Souls" value={whole(player.net_worth)} />}
+        {soulEconomy && <TooltipStat label="Souls per minute" value={whole(Math.round(context.soulsPerMin))} />}
         <TooltipStat label="Last hits" value={whole(player.last_hits)} />
         <TooltipStat label="Denies" value={whole(player.denies)} />
         <TooltipStat
@@ -285,6 +288,7 @@ export function Scoreboard({
   accountId,
   ranks,
   laned,
+  gameMode,
   durationS,
   itemsById,
   abilitiesById,
@@ -296,6 +300,8 @@ export function Scoreboard({
   accountId: number;
   ranks: Rank[];
   laned: boolean;
+  /** The match's own mode: Street Brawl grants fixed souls each round, so its scoreboard has no soul stats. */
+  gameMode: GameMode;
   durationS: number;
   itemsById: Map<number, SlimUpgrade> | undefined;
   abilitiesById: Map<number, TrackerAbility> | undefined;
@@ -304,9 +310,15 @@ export function Scoreboard({
   viewedAccountId: number | null;
   onViewPlayer: (accountId: number) => void;
 }) {
-  const [sortKey, setSortKey] = useState<string | null>(null);
+  const soulEconomy = hasSoulEconomy(gameMode);
+  const columns = playerStatColumnsFor(gameMode);
+  /** Player, portrait, K/D/A, and one cell per stat column. */
+  const columnCount = 3 + columns.length;
+  const [chosenSortKey, setSortKey] = useState<string | null>(null);
+  const sortKey =
+    chosenSortKey === "kda" || columns.some((column) => column.key === chosenSortKey) ? chosenSortKey : null;
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
-  const sortLabel = sortKey === "kda" ? "KDA" : PLAYER_STAT_COLUMNS.find((column) => column.key === sortKey)?.short;
+  const sortLabel = sortKey === "kda" ? "KDA" : columns.find((column) => column.key === sortKey)?.short;
   const changeSort = (key: string) => {
     setSortDirection(sortKey === key && sortDirection === "desc" ? "asc" : "desc");
     setSortKey(key);
@@ -336,7 +348,14 @@ export function Scoreboard({
                 size="sm"
                 underline="dotted"
                 className="h-6 px-1.5 text-sm font-semibold"
-                details={<TeamStatsDetails name={team.name} players={teamPlayers} lobbyPlayers={match.players} />}
+                details={
+                  <TeamStatsDetails
+                    name={team.name}
+                    players={teamPlayers}
+                    lobbyPlayers={match.players}
+                    columns={columns}
+                  />
+                }
               >
                 {team.name}
               </DetailPopover>
@@ -349,8 +368,13 @@ export function Scoreboard({
                 <BadgeImage badge={averageBadge} ranks={ranks} className="size-5" />
               )}
               <span className="ms-auto text-xs whitespace-nowrap text-muted-foreground tabular-nums">
-                <span className="font-semibold text-foreground">{teamKills}</span> kills ·{" "}
-                <span className="font-semibold text-foreground">{teamSouls.toLocaleString("en-US")}</span> souls
+                <span className="font-semibold text-foreground">{teamKills}</span> kills
+                {soulEconomy && (
+                  <>
+                    {" "}
+                    · <span className="font-semibold text-foreground">{teamSouls.toLocaleString("en-US")}</span> souls
+                  </>
+                )}
               </span>
             </div>
             <Table>
@@ -399,7 +423,7 @@ export function Scoreboard({
                           <SelectGroup>
                             <SelectItem value="default">{laned ? "Lane" : "Team"} order</SelectItem>
                             <SelectItem value="kda">KDA ratio</SelectItem>
-                            {PLAYER_STAT_COLUMNS.map((column) => (
+                            {columns.map((column) => (
                               <SelectItem key={column.key} value={column.key}>
                                 {column.label}
                               </SelectItem>
@@ -432,7 +456,7 @@ export function Scoreboard({
                       onClick={() => changeSort("kda")}
                     />
                   </TableHead>
-                  {PLAYER_STAT_COLUMNS.map((column) => (
+                  {columns.map((column) => (
                     <TableHead
                       key={column.key}
                       className={cn("h-auto px-1.5 py-1 text-end font-normal", REVEAL[column.reveal].cell)}
@@ -490,6 +514,7 @@ export function Scoreboard({
                               heroName={heroesById?.get(player.hero_id)?.name}
                               lane={lane}
                               context={context}
+                              soulEconomy={soulEconomy}
                             />
                           }
                         >
@@ -560,7 +585,7 @@ export function Scoreboard({
                       <TableCell className="px-1.5 py-1 text-end text-muted-foreground tabular-nums">
                         {player.kills} / {player.deaths} / {player.assists}
                       </TableCell>
-                      {PLAYER_STAT_COLUMNS.map((column) => (
+                      {columns.map((column) => (
                         <StatCell
                           key={column.key}
                           value={column.value(player)}
@@ -572,9 +597,10 @@ export function Scoreboard({
                       ))}
                     </TableRow>
                     <TableRow data-plain="">
-                      <TableCell colSpan={COLUMN_COUNT} className="py-0 ps-10 whitespace-normal">
+                      <TableCell colSpan={columnCount} className="py-0 ps-10 whitespace-normal">
                         <PlayerStatStrip
                           player={player}
+                          columns={columns}
                           context={context}
                           ranks={ranks}
                           pregameHeroName={heroesById?.get(player.pregame_hero_id ?? 0)?.name}
@@ -583,7 +609,7 @@ export function Scoreboard({
                     </TableRow>
                     {build && (
                       <TableRow data-plain="">
-                        <TableCell colSpan={COLUMN_COUNT} className="ps-10 pt-0 pb-1.5 whitespace-normal">
+                        <TableCell colSpan={columnCount} className="ps-10 pt-0 pb-1.5 whitespace-normal">
                           <div className="flex flex-wrap items-center gap-1">
                             {build.abilities.map((entry) => (
                               <AbilityChip key={entry.ability.id} entry={entry} />

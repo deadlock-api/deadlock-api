@@ -18,9 +18,11 @@ import { CopyButton } from "~/components/ui/copy-button";
 import { Spinner } from "~/components/ui/spinner";
 import { TextLink } from "~/components/ui/text-link";
 import { useSteamProfiles } from "~/hooks/useSteamProfiles";
+import { hasSoulEconomy } from "~/lib/game-mode";
 import { TONE_TEXT } from "~/lib/tone";
 import {
   brawlRounds,
+  entryGameMode,
   formatMatchDuration,
   hasLanes,
   type HeldRecord,
@@ -171,7 +173,9 @@ function MatchHeader({
           <HeaderStat label="K / D / A">
             {entry.player_kills} / {entry.player_deaths} / {entry.player_assists}
           </HeaderStat>
-          <HeaderStat label="Souls">{entry.net_worth.toLocaleString("en-US")}</HeaderStat>
+          {hasSoulEconomy(entryGameMode(entry)) && (
+            <HeaderStat label="Souls">{entry.net_worth.toLocaleString("en-US")}</HeaderStat>
+          )}
           {(ranked || (entry.ranked_delta != null && entry.ranked_delta !== 0)) && (
             <HeaderStat label="Rank">
               {ranked && <BadgeImage badge={entry.ranked_display_badge as number} ranks={ranks} size="inline" />}
@@ -188,6 +192,9 @@ function MatchBody({ entry, accountId, ranks }: { entry: PlayerMatchHistoryEntry
   const matchId = entry.match_id;
   // Street Brawl reports lane ids too, but its map has no lanes to speak of.
   const laned = hasLanes(entry);
+  // Street Brawl grants fixed souls each round: no soul lead, no soul columns.
+  const gameMode = entryGameMode(entry);
+  const soulEconomy = hasSoulEconomy(gameMode);
   const {
     data: match,
     isPending,
@@ -217,7 +224,10 @@ function MatchBody({ entry, accountId, ranks }: { entry: PlayerMatchHistoryEntry
   // would invert the soul lead and the objectives for a player on the other side.
   const ownTeam = tracked?.team ?? TEAMS[entry.player_team === 1 ? 1 : 0].key;
 
-  const soulLead = useMemo(() => (match ? computeSoulLead(match.players, ownTeam) : null), [match, ownTeam]);
+  const soulLead = useMemo(
+    () => (match && soulEconomy ? computeSoulLead(match.players, ownTeam) : null),
+    [match, ownTeam, soulEconomy],
+  );
   const objectiveEvents = useMemo(() => (match ? computeObjectiveEvents(match, ownTeam) : []), [match, ownTeam]);
 
   const laneMatchups = useMemo(
@@ -323,6 +333,7 @@ function MatchBody({ entry, accountId, ranks }: { entry: PlayerMatchHistoryEntry
         accountId={accountId}
         ranks={ranks}
         laned={laned}
+        gameMode={gameMode}
         durationS={entry.match_duration_s}
         itemsById={itemsQuery.data}
         abilitiesById={abilitiesQuery.data}

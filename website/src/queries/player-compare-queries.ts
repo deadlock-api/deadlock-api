@@ -3,7 +3,6 @@ import type {
   AnalyticsApiItemStatsRequest,
   AnalyticsApiPlayerScoreboardRequest,
   AnalyticsApiPlayerStatsMetricsRequest,
-  PlayerHeroStatsGameModeEnum,
   PlayersApiEnemyStatsRequest,
   PlayersApiPlayerHeroStatsRequest,
 } from "deadlock_api_client";
@@ -15,6 +14,7 @@ import { FAVORITE_MIN_MATCHES } from "~/lib/compare-items";
 import type { CompareFilterSearch } from "~/lib/compare-share";
 import {
   DEFAULT_MATCH_MODE,
+  type GameMode,
   type Mode,
   MODE_CONFIG,
   modeFromParams,
@@ -28,7 +28,7 @@ import { queryKeys } from "./query-keys";
 
 /** The filters every section of a comparison shares, as the page's filter bar sets them; a comparison has no rank filter. */
 export interface CompareFilters {
-  gameMode: PlayerHeroStatsGameModeEnum;
+  gameMode: GameMode;
   matchMode: string;
   heroId: number | null;
   minUnixTimestamp: number | undefined;

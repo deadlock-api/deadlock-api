@@ -174,6 +174,7 @@ export const comparePageOptions = {
               metrics: metrics[index],
             })),
           ),
+          filters.gameMode,
         )
       : null;
 

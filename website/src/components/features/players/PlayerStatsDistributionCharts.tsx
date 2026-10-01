@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import type { HashMapValue } from "deadlock_api_client";
 import { ChartArea, Coins, Flame, HeartPulse, Sparkles, Swords, type LucideIcon, Wheat } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 
 import { ChartLegend, ChartLegendItem } from "~/components/patterns/charts/ChartLegend";
 import { CHART_COLOR } from "~/components/patterns/charts/theme";
@@ -20,6 +20,7 @@ import {
   PLAYER_METRICS,
   type PlayerMetricCategory,
   type PlayerMetricDefinition,
+  playerMetricsFor,
 } from "~/lib/player-metrics";
 import { playerStatsMetricsQueryOptions } from "~/queries/player-stats-metrics-query";
 
@@ -79,7 +80,9 @@ export function PlayerStatsDistributionCharts({
     maxUnixTimestamp,
   };
   const { data, isLoading, isError, refetch } = useQuery(playerStatsMetricsQueryOptions(params));
-  const selectedMetric = selectedIndex != null ? ALL_METRICS[selectedIndex] : null;
+  // Street Brawl has no soul economy: its net worth distributions would describe fixed round grants.
+  const metricsShown = playerMetricsFor(ALL_METRICS, gameMode);
+  const selectedMetric = selectedIndex != null ? (metricsShown[selectedIndex] ?? null) : null;
   // The buff metrics cost a second, heavier request, made once their section or one of their charts is open.
   const buffsShown =
     openCategories.has("Permanent Buffs") || (selectedMetric != null && BUFF_KEYS.has(selectedMetric.key));
@@ -93,14 +96,10 @@ export function PlayerStatsDistributionCharts({
     return values?.avg == null ? undefined : values;
   };
 
-  const groupedMetrics = useMemo(
-    () =>
-      PLAYER_METRIC_CATEGORIES.map((category) => ({
-        category,
-        metrics: ALL_METRICS.filter((m) => m.category === category),
-      })),
-    [],
-  );
+  const groupedMetrics = PLAYER_METRIC_CATEGORIES.map((category) => ({
+    category,
+    metrics: metricsShown.filter((m) => m.category === category),
+  })).filter((group) => group.metrics.length > 0);
 
   if (isLoading) {
     return <LoadingState label="player stat distributions" align="center" />;
@@ -111,7 +110,7 @@ export function PlayerStatsDistributionCharts({
   }
 
   const step = (delta: number) =>
-    setSelectedIndex((i) => (i == null ? i : (i + delta + ALL_METRICS.length) % ALL_METRICS.length));
+    setSelectedIndex((i) => (i == null ? i : (i + delta + metricsShown.length) % metricsShown.length));
 
   return (
     <div className="flex flex-col gap-6">
@@ -166,7 +165,7 @@ export function PlayerStatsDistributionCharts({
                         key={def.key}
                         def={def}
                         values={valuesOf(def)}
-                        onExpand={() => setSelectedIndex(ALL_METRICS.indexOf(def))}
+                        onExpand={() => setSelectedIndex(metricsShown.indexOf(def))}
                       />
                     ))}
                   </div>

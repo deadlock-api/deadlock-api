@@ -25,7 +25,7 @@ import { formatCompactAxisTick, niceTicks, percentTicks, winRateDomain } from "~
 import {
   MIN_WEEK_MATCHES,
   mergeWeeklyTrend,
-  TREND_METRICS,
+  trendMetricsFor,
   type TrendMetric,
   type TrendRow,
   weeklyTotals,
@@ -33,6 +33,7 @@ import {
   weekTicks,
 } from "~/lib/compare-trends";
 import { formatPercent } from "~/lib/format";
+import type { GameMode } from "~/lib/game-mode";
 import { formatStatValue } from "~/lib/stat-format";
 
 import type { ComparedPlayer } from "./types";
@@ -59,15 +60,22 @@ const METRICS: Record<TrendMetric, { short: string; label: string; format: (valu
 export function PerformanceTrendPanel({
   players,
   histories,
+  gameMode,
   className,
 }: {
   players: ComparedPlayer[];
+  /** Street Brawl has no soul economy: no souls trend. */
+  gameMode: GameMode;
   /** The players' match histories on the filters, in the players' order (`useCompareMatchHistories`). */
   histories: readonly CompareMatchHistory[];
   /** Layout from the parent (grid placement). */
   className?: string;
 }) {
-  const [metric, setMetric] = useState<TrendMetric>("winRate");
+  const [chosenMetric, setMetric] = useState<TrendMetric>("winRate");
+  const metrics = trendMetricsFor(gameMode);
+  // Souls per minute, chosen before switching to Street Brawl, falls back to the win rate; the choice comes back with
+  // the mode.
+  const metric = metrics.includes(chosenMetric) ? chosenMetric : "winRate";
   // Hidden once loaded when no player has a week with enough matches to plot.
   const settled = !histories.some((history) => history.isPending);
   const allFailed = histories.length > 0 && histories.every((history) => history.isError);
@@ -104,7 +112,7 @@ export function PerformanceTrendPanel({
           label="Trend metric"
           className="w-auto @sm:min-w-40"
         >
-          {TREND_METRICS.map((key) => (
+          {metrics.map((key) => (
             <SelectItem key={key} value={key}>
               {METRICS[key].label}
             </SelectItem>
