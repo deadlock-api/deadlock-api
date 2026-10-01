@@ -6,7 +6,8 @@ set -euo pipefail
 #   1. Download DepotDownloader + Source2Viewer-CLI tooling.
 #   2. Download the Deadlock game files from Steam.
 #   3. Extract the required VPK contents.
-#   4. Build the versions/<build>/ folder (vdata/css/steam.inf/localization,
+#   4. Build the versions/<build>/ folder (vdata/css/steam.inf/localization and
+#      the map entities extracted from the dl_midtown entity lump,
 #      zstd-compressed) from the extracted files.
 #   5. Extract + process the media assets (images/icons/fonts/sounds).
 #   6. Upload the media assets to R2.
@@ -167,6 +168,7 @@ if [ -z "${STEAM_USERNAME:-}" ] || [ -z "${STEAM_PASSWORD:-}" ]; then
     exit 1
 fi
 # pak01 holds the vdata/css/media we extract; steam.inf is the build manifest;
+# maps/dl_midtown.vpk holds the map entity lump (crates, bounce pads, shops, ...);
 # the localization .txt files are LOOSE in the depot (not inside pak01), so they
 # must be listed explicitly or the versions/ folder ships without localization.
 # The panorama/fonts/*.(otf,ttf) files are ALSO loose now -- Valve moved them out of
@@ -174,6 +176,7 @@ fi
 cat > filelist.txt <<'EOF'
 regex:citadel/pak01_.*\.vpk$
 regex:citadel/steam\.inf$
+regex:citadel/maps/dl_midtown\.vpk$
 regex:citadel/resource/localization/.*\.txt$
 regex:citadel/panorama/fonts/.*\.otf$
 regex:citadel/panorama/fonts/.*\.ttf$
@@ -209,6 +212,14 @@ for filter in scripts resource panorama materials/minimap sounds; do
     echo "Extracting $filter from pak01_dir.vpk..."
     ./Source2Viewer-CLI -i "$citadel_folder"/pak01_dir.vpk -d --threads 8 -o "$citadel_folder" -f "$filter" > /dev/null
 done
+
+# The map entity lump (positions of crates, bounce pads, shops, ...).
+MAP_VPK="$citadel_folder/maps/dl_midtown.vpk"
+if [ -f "$MAP_VPK" ]; then
+    echo "Extracting dl_midtown entity lump..."
+    ./Source2Viewer-CLI -i "$MAP_VPK" -d -f maps/dl_midtown/entities/ -e vents_c \
+        -o "$citadel_folder" > /dev/null
+fi
 
 # 4. Build the versions/<build>/ folder structure
 if [ ! -f "$citadel_folder/steam.inf" ]; then
@@ -248,6 +259,16 @@ for f in "${KEEP_CSS[@]}"; do
     fi
 done
 
+# Map entities (/v1/assets/map `entities`)
+MAP_ENTS="$citadel_folder/maps/dl_midtown/entities/default_ents.vents"
+if [ -f "$MAP_ENTS" ]; then
+    mkdir -p "$VERSION_DIR/map"
+    python3 "$SCRIPT_DIR/extract_map_entities.py" "$MAP_ENTS" > "$VERSION_DIR/map/entities.json" \
+        || { echo "Warning: map entity extraction failed, skipping."; rm -rf "$VERSION_DIR/map"; }
+else
+    echo "Warning: maps/dl_midtown entity lump missing, skipping map entities."
+fi
+
 # Localization (raw per-language KeyValues .txt files)
 for d in "${LOCALIZATION_DIRS[@]}"; do
     if [ -d "$citadel_folder/resource/localization/$d" ]; then
@@ -259,10 +280,10 @@ done
 echo "Merging localization for build $BUILD..."
 uv run --with zstandard python "$SCRIPT_DIR/merge_localization.py" "$VERSION_DIR/localization"
 
-# zstd-compress the remaining scripts/styles/steam.inf files (level 19)
-echo "Compressing vdata/css/steam.inf..."
+# zstd-compress the remaining scripts/styles/steam.inf/map files (level 19)
+echo "Compressing vdata/css/steam.inf/map entities..."
 find "$VERSION_DIR" -type f \
-    \( -name '*.vdata' -o -name '*.css' -o -name 'steam.inf' \) \
+    \( -name '*.vdata' -o -name '*.css' -o -name 'steam.inf' -o -path '*/map/*.json' \) \
     -print0 | xargs -0 -r -P 8 -n 1 zstd -19 -q --rm
 
 leftover=$(find "$VERSION_DIR" -type f ! -name '*.zst' | wc -l)
@@ -391,6 +412,7 @@ fi
 # Media sanity: warn (don't abort) if a core asset type came out empty. Valve
 # moves these between pak01 and loose depot files and occasionally drops them
 # entirely; a missing type shouldn't block the build or the other uploads.
+[ -s "$VERSION_DIR/map/entities.json.zst" ] || warn "missing map/entities.json.zst (map entities)"
 [ -n "$(find images -type f -name '*.webp' -print -quit 2>/dev/null)" ] || warn "no images/*.webp produced"
 [ -n "$(find sounds -type f -name '*.mp3'  -print -quit 2>/dev/null)" ] || warn "no sounds/*.mp3 produced"
 [ -n "$(find icons  -type f -name '*.svg'  -print -quit 2>/dev/null)" ] || warn "no icons/*.svg produced"

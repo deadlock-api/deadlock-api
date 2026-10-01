@@ -6,7 +6,10 @@
 //! layered midtown minimap from build 6711 on), zip-line lane splines and (6711+)
 //! neutral camps are fixed constants extracted from the map entity lump: the
 //! pre-6711 map in [`geometry`], the "City Never Sleeps" map (6711+) in
-//! [`city_never_sleeps`].
+//! [`city_never_sleeps`]. The interactable map entities (crates, bounce pads,
+//! shops, ...) come from the per-version `map/entities.json`, which the assets
+//! pipeline extracts from the map entity lump on every build
+//! (`scripts/extract_map_entities.py`).
 
 mod city_never_sleeps;
 mod geometry;
@@ -17,7 +20,7 @@ use std::sync::Arc;
 use cached::macros::cached;
 use indexmap::IndexMap;
 use object_store::aws::AmazonS3;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use strum::{Display, EnumIter, EnumString, IntoEnumIterator};
 use utoipa::ToSchema;
 
@@ -29,6 +32,7 @@ use geometry::NeutralCampKind;
 
 const MAP_RADIUS: u32 = 10752;
 const CSS_PATH: &str = "styles/objectives_map.css";
+const ENTITIES_PATH: &str = "map/entities.json";
 /// First build of the "City Never Sleeps" map (layered midtown minimap with
 /// tunnel overlays).
 const CITY_NEVER_SLEEPS_BUILD: u32 = 6711;
@@ -168,6 +172,68 @@ pub(crate) struct NeutralCamp {
     icon: String,
 }
 
+/// An interactable map entity (crate, bounce pad, shop, ...). Deserialized from
+/// `map/entities.json`, which has no minimap position; that is filled in after.
+#[derive(Debug, Clone, Deserialize, Serialize, ToSchema)]
+pub(crate) struct MapEntity {
+    /// World position `[x, y, z]`, same space as the zip-line splines. Brush
+    /// triggers (ropes, pads, veils, ...) are placed at their entity origin.
+    position: [f64; 3],
+    /// Position on the minimap, as fractions of its width/height.
+    #[serde(default)]
+    left_relative: f64,
+    #[serde(default)]
+    top_relative: f64,
+    /// Owning team (0 or 1); absent for neutral entities.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    team: Option<u8>,
+    /// Variant within the category, e.g. `wooden_crate` or `secret` (shops).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    kind: Option<String>,
+    /// World position `[x, y, z]` the entity sends you to: the teleporter exit
+    /// or the bounce pad landing spot.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    target: Option<[f64; 3]>,
+}
+
+/// Interactable map entities by category, extracted from the map entity lump.
+#[derive(Debug, Clone, Default, Deserialize, Serialize, ToSchema)]
+#[serde(default)]
+pub(crate) struct MapEntities {
+    /// Breakable wooden crates (`citadel_breakable_prop_wooden_crate` and variants).
+    crates: Vec<MapEntity>,
+    /// Breakable tough crates (`citadel_breakable_prop_tough_crate`).
+    tough_crates: Vec<MapEntity>,
+    /// Golden statues (`citadel_breakable_item_container`, `citadel_breakable_lion_statue`).
+    golden_statues: Vec<MapEntity>,
+    /// Chinatown bells (`citadel_breakable_bell_chinatown`).
+    bells: Vec<MapEntity>,
+    /// Healing snack spawners (`citadel_pickup_spawner`).
+    healing_snacks: Vec<MapEntity>,
+    /// Bridge buff spawners (`citadel_item_powerup_spawner`).
+    bridge_buffs: Vec<MapEntity>,
+    /// Climbable ropes (`citadel_trigger_climb_rope`).
+    climb_ropes: Vec<MapEntity>,
+    /// Teleporters (`citadel_trigger_teleport`); `target` is the exit.
+    teleporters: Vec<MapEntity>,
+    /// Item shops (`trigger_item_shop`); `kind` is `base`, `lane` or `secret`.
+    shops: Vec<MapEntity>,
+    /// Soul urn spawn points (`item_crate_spawn`).
+    soul_urn_spawns: Vec<MapEntity>,
+    /// Soul urn delivery pads (`citadel_trigger_idol_return`).
+    soul_urn_pads: Vec<MapEntity>,
+    /// Base defense sentries (`npc_base_defense_sentry`).
+    base_sentries: Vec<MapEntity>,
+    /// Bounce pads (`trigger_catapult`); `target` is the landing spot.
+    bounce_pads: Vec<MapEntity>,
+    /// Vision-obscuring steam vents (`citadel_obscured_volume`).
+    steam_vents: Vec<MapEntity>,
+    /// Cosmic veils (`citadel_invis_volume`).
+    cosmic_veils: Vec<MapEntity>,
+    /// Unstable rift spawn points (`info_koth_spawn_location`).
+    unstable_rifts: Vec<MapEntity>,
+}
+
 /// The `/v1/assets/map` response.
 #[derive(Debug, Clone, Serialize, ToSchema)]
 pub(crate) struct MapData {
@@ -179,6 +245,10 @@ pub(crate) struct MapData {
     /// Neutral camps (build 6711+).
     #[serde(skip_serializing_if = "Option::is_none")]
     neutral_camps: Option<Vec<NeutralCamp>>,
+    /// Interactable map entities; only for builds whose assets were built with
+    /// the map entity extraction.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    entities: Option<MapEntities>,
 }
 
 /// Image layers for `version`. Images aren't versioned in the bucket and
@@ -250,23 +320,62 @@ const fn neutral_camp_icon(kind: NeutralCampKind) -> &'static str {
     }
 }
 
+/// Position on the minimap, as `(left, top)` fractions of its width/height.
+fn minimap_relative([x, y, _]: [f64; 3]) -> (f64, f64) {
+    let radius = f64::from(MAP_RADIUS);
+    ((x + radius) / (2.0 * radius), (radius - y) / (2.0 * radius))
+}
+
+impl MapEntities {
+    fn lists_mut(&mut self) -> [&mut Vec<MapEntity>; 16] {
+        [
+            &mut self.crates,
+            &mut self.tough_crates,
+            &mut self.golden_statues,
+            &mut self.bells,
+            &mut self.healing_snacks,
+            &mut self.bridge_buffs,
+            &mut self.climb_ropes,
+            &mut self.teleporters,
+            &mut self.shops,
+            &mut self.soul_urn_spawns,
+            &mut self.soul_urn_pads,
+            &mut self.base_sentries,
+            &mut self.bounce_pads,
+            &mut self.steam_vents,
+            &mut self.cosmic_veils,
+            &mut self.unstable_rifts,
+        ]
+    }
+}
+
+/// Parse `map/entities.json` and place every entity on the minimap.
+fn build_entities(json: &str) -> Result<MapEntities, AssetsError> {
+    let mut entities: MapEntities = serde_json::from_str(json)?;
+    for entity in entities.lists_mut().into_iter().flatten() {
+        let (left, top) = minimap_relative(entity.position);
+        entity.left_relative = round4(left);
+        entity.top_relative = round4(top);
+    }
+    Ok(entities)
+}
+
 /// Neutral camps for `version`; `None` before 6711 (not extracted for the old map).
 fn neutral_camps(version: u32) -> Option<Vec<NeutralCamp>> {
     if version < CITY_NEVER_SLEEPS_BUILD {
         return None;
     }
-    let radius = f64::from(MAP_RADIUS);
     Some(
         city_never_sleeps::NEUTRAL_CAMPS
             .iter()
             .map(|camp| {
-                let [x, y, _] = camp.position;
+                let (left_relative, top_relative) = minimap_relative(camp.position);
                 NeutralCamp {
                     name: camp.name.to_owned(),
                     kind: camp.kind,
                     position: camp.position,
-                    left_relative: (x + radius) / (2.0 * radius),
-                    top_relative: (radius - y) / (2.0 * radius),
+                    left_relative,
+                    top_relative,
                     icon: format!(
                         "{SVGS_BASE_URL}/minimap/{}.png",
                         neutral_camp_icon(camp.kind)
@@ -359,7 +468,12 @@ fn city_never_sleeps_objective_positions()
 
 /// Build the full map response. Pre-6711 the objective positions come from
 /// `css` (the version's `objectives_map.css`); from 6711 on `css` is unused.
-pub(crate) fn build_map(css: &str, version: u32) -> Result<MapData, AssetsError> {
+/// `entities_json` is the version's `map/entities.json`, if it has one.
+pub(crate) fn build_map(
+    css: &str,
+    entities_json: Option<&str>,
+    version: u32,
+) -> Result<MapData, AssetsError> {
     let objective_positions = if version >= CITY_NEVER_SLEEPS_BUILD {
         city_never_sleeps_objective_positions()?
     } else {
@@ -371,6 +485,7 @@ pub(crate) fn build_map(css: &str, version: u32) -> Result<MapData, AssetsError>
         objective_positions,
         zipline_paths: zipline_paths(version),
         neutral_camps: neutral_camps(version),
+        entities: entities_json.map(build_entities).transpose()?,
     })
 }
 
@@ -388,7 +503,16 @@ pub(crate) async fn fetch_map(r2: &AmazonS3, version: u32) -> Result<Arc<MapData
     } else {
         store::fetch_text(r2, version, CSS_PATH).await?
     };
-    Ok(Arc::new(build_map(&css_src, version)?))
+    let entities_json = match store::fetch_text(r2, version, ENTITIES_PATH).await {
+        Ok(json) => Some(json),
+        Err(store::VersionStoreError::ObjectStore(object_store::Error::NotFound { .. })) => None,
+        Err(e) => return Err(e.into()),
+    };
+    Ok(Arc::new(build_map(
+        &css_src,
+        entities_json.as_deref(),
+        version,
+    )?))
 }
 
 #[cfg(test)]
@@ -396,10 +520,11 @@ mod tests {
     use super::*;
 
     const FIXTURE: &str = include_str!("map_fixtures/objectives_map.css");
+    const ENTITIES_FIXTURE: &str = include_str!("map_fixtures/entities.json");
 
     #[test]
     fn snapshot_map() {
-        let map = build_map(FIXTURE, 6701).expect("builds");
+        let map = build_map(FIXTURE, None, 6701).expect("builds");
         insta::with_settings!(
             { snapshot_path => "map_snapshots", prepend_module_to_snapshot => false },
             { insta::assert_json_snapshot!("map", map); }
@@ -410,7 +535,7 @@ mod tests {
     /// bases), so the fixture is only passed through; positions come from the lump.
     #[test]
     fn snapshot_map_city_never_sleeps() {
-        let map = build_map(FIXTURE, CITY_NEVER_SLEEPS_BUILD).expect("builds");
+        let map = build_map(FIXTURE, None, CITY_NEVER_SLEEPS_BUILD).expect("builds");
         insta::with_settings!(
             { snapshot_path => "map_snapshots", prepend_module_to_snapshot => false },
             { insta::assert_json_snapshot!("map_city_never_sleeps", map); }
@@ -419,7 +544,7 @@ mod tests {
 
     #[test]
     fn city_never_sleeps_geometry() {
-        let old = build_map(FIXTURE, CITY_NEVER_SLEEPS_BUILD - 1).expect("builds");
+        let old = build_map(FIXTURE, None, CITY_NEVER_SLEEPS_BUILD - 1).expect("builds");
         assert!(old.neutral_camps.is_none());
         let bits = |v: [f64; 3]| v.map(f64::to_bits);
         assert_eq!(
@@ -427,7 +552,7 @@ mod tests {
             bits(geometry::LANE_ORIGINS[0])
         );
 
-        let new = build_map(FIXTURE, CITY_NEVER_SLEEPS_BUILD).expect("builds");
+        let new = build_map(FIXTURE, None, CITY_NEVER_SLEEPS_BUILD).expect("builds");
         assert_eq!(new.zipline_paths.len(), 3);
         assert_eq!(
             bits(new.zipline_paths[0].origin),
@@ -502,8 +627,8 @@ mod tests {
 
     #[test]
     fn city_never_sleeps_objectives_follow_the_lump() {
-        let old = build_map(FIXTURE, CITY_NEVER_SLEEPS_BUILD - 1).expect("builds");
-        let new = build_map(FIXTURE, CITY_NEVER_SLEEPS_BUILD).expect("builds");
+        let old = build_map(FIXTURE, None, CITY_NEVER_SLEEPS_BUILD - 1).expect("builds");
+        let new = build_map(FIXTURE, None, CITY_NEVER_SLEEPS_BUILD).expect("builds");
         assert!(
             old.objective_positions
                 .keys()
@@ -514,5 +639,32 @@ mod tests {
         assert!(new.objective_positions["team1_titan"].left_relative > 0.45);
         // Legacy path is untouched: it still reads the CSS.
         assert!((old.objective_positions["team0_titan"].left_relative - 0.45).abs() < 1e-9);
+    }
+
+    #[test]
+    fn map_entities_from_lump_extract() {
+        let map =
+            build_map(FIXTURE, Some(ENTITIES_FIXTURE), CITY_NEVER_SLEEPS_BUILD).expect("builds");
+        let entities = map.entities.expect("entities");
+        for (name, list) in [
+            ("crates", &entities.crates),
+            ("tough_crates", &entities.tough_crates),
+            ("golden_statues", &entities.golden_statues),
+            ("healing_snacks", &entities.healing_snacks),
+            ("climb_ropes", &entities.climb_ropes),
+            ("teleporters", &entities.teleporters),
+            ("shops", &entities.shops),
+            ("base_sentries", &entities.base_sentries),
+            ("bounce_pads", &entities.bounce_pads),
+        ] {
+            assert!(!list.is_empty(), "{name}");
+            for e in list {
+                assert!((0.0..=1.0).contains(&e.left_relative), "{name}");
+                assert!((0.0..=1.0).contains(&e.top_relative), "{name}");
+            }
+        }
+        assert!(entities.teleporters.iter().all(|t| t.target.is_some()));
+        assert!(entities.bounce_pads.iter().all(|t| t.target.is_some()));
+        assert!(entities.base_sentries.iter().all(|s| s.team.is_some()));
     }
 }
