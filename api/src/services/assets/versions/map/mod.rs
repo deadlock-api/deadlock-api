@@ -226,9 +226,10 @@ pub(crate) struct MapEntities {
     base_sentries: Vec<MapEntity>,
     /// Bounce pads (`trigger_catapult`); `target` is the landing spot.
     bounce_pads: Vec<MapEntity>,
-    /// Vision-obscuring steam vents (`citadel_obscured_volume`).
+    /// Steam vents (`citadel_invis_volume`, plus `citadel_obscured_volume` with
+    /// `kind` `obscured`).
     steam_vents: Vec<MapEntity>,
-    /// Cosmic veils (`citadel_invis_volume`).
+    /// Cosmic veils (`citadel_passthrough_fake_wall`).
     cosmic_veils: Vec<MapEntity>,
     /// Unstable rift spawn points (`info_koth_spawn_location`).
     unstable_rifts: Vec<MapEntity>,
@@ -656,6 +657,8 @@ mod tests {
             ("shops", &entities.shops),
             ("base_sentries", &entities.base_sentries),
             ("bounce_pads", &entities.bounce_pads),
+            ("steam_vents", &entities.steam_vents),
+            ("cosmic_veils", &entities.cosmic_veils),
         ] {
             assert!(!list.is_empty(), "{name}");
             for e in list {

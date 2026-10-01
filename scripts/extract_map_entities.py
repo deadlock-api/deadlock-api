@@ -51,8 +51,10 @@ SIMPLE = {
     "soul_urn_spawns": "item_crate_spawn",
     "soul_urn_pads": "citadel_trigger_idol_return",
     "base_sentries": "npc_base_defense_sentry",
-    "steam_vents": "citadel_obscured_volume",
-    "cosmic_veils": "citadel_invis_volume",
+    # Every street steam vent (`street_steam_02` particle) has an invisibility
+    # volume; the one `citadel_obscured_volume` is a steam cloud too.
+    "steam_vents": "citadel_invis_volume",
+    "cosmic_veils": "citadel_passthrough_fake_wall",
     "unstable_rifts": "info_koth_spawn_location",
 }
 # Response key order.
@@ -114,6 +116,8 @@ def extract(ents: list[dict[str, str]]) -> dict[str, list[dict[str, object]]]:
             out["shops"].append(entry(e, kind=shop_kind(e)))
         elif cls == "trigger_catapult":
             out["bounce_pads"].append(entry(e, target=target(e.get("target"))))
+        elif cls == "citadel_obscured_volume":
+            out["steam_vents"].append(entry(e, kind="obscured"))
         else:
             for cat, want in SIMPLE.items():
                 if cls == want:
