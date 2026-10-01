@@ -6,8 +6,9 @@ use prost::Message;
 use tracing::warn;
 use valveprotos::deadlock::c_msg_match_hero_release_votes::HeroVote;
 use valveprotos::deadlock::c_msg_match_meta_data_contents::{
-    BookReward, Deaths, Items, MatchInfo, MidBoss, Objective as ProtoObjective, PlayerAccolade,
-    PlayerStats, Players, PowerUpBuff, StreetBrawlRound,
+    BookReward, Deaths, EGoldSource, GoldSource, Items, MatchInfo, MidBoss,
+    Objective as ProtoObjective, PlayerAccolade, PlayerStats, Players, PowerUpBuff,
+    StreetBrawlRound,
 };
 use valveprotos::deadlock::{
     CMsgHeroXpGrant, CMsgMatchHeroReleaseVotes, EMatchMetadataExtraMessage,
@@ -19,6 +20,10 @@ use crate::models::enums::{
 };
 
 #[derive(Row, Debug, Clone, Serialize)]
+#[expect(
+    clippy::struct_excessive_bools,
+    reason = "flat ClickHouse row, one field per column"
+)]
 pub(crate) struct ClickhouseMatchPlayer {
     pub match_id: u64,
     pub start_time: u32,
@@ -222,6 +227,111 @@ pub(crate) struct ClickhouseMatchPlayer {
     pub stats_headshot_kills: Vec<u32>,
     #[serde(rename = "stats.custom_user_stats")]
     pub stats_custom_user_stats: Vec<Vec<(String, u32)>>,
+    #[serde(rename = "stats.gold_source_players_kills")]
+    pub stats_gold_source_players_kills: Vec<u32>,
+    #[serde(rename = "stats.gold_source_players_damage")]
+    pub stats_gold_source_players_damage: Vec<u32>,
+    #[serde(rename = "stats.gold_source_players_gold")]
+    pub stats_gold_source_players_gold: Vec<u32>,
+    #[serde(rename = "stats.gold_source_players_gold_orbs")]
+    pub stats_gold_source_players_gold_orbs: Vec<u32>,
+    #[serde(rename = "stats.gold_source_lane_creeps_kills")]
+    pub stats_gold_source_lane_creeps_kills: Vec<u32>,
+    #[serde(rename = "stats.gold_source_lane_creeps_damage")]
+    pub stats_gold_source_lane_creeps_damage: Vec<u32>,
+    #[serde(rename = "stats.gold_source_lane_creeps_gold")]
+    pub stats_gold_source_lane_creeps_gold: Vec<u32>,
+    #[serde(rename = "stats.gold_source_lane_creeps_gold_orbs")]
+    pub stats_gold_source_lane_creeps_gold_orbs: Vec<u32>,
+    #[serde(rename = "stats.gold_source_neutrals_kills")]
+    pub stats_gold_source_neutrals_kills: Vec<u32>,
+    #[serde(rename = "stats.gold_source_neutrals_damage")]
+    pub stats_gold_source_neutrals_damage: Vec<u32>,
+    #[serde(rename = "stats.gold_source_neutrals_gold")]
+    pub stats_gold_source_neutrals_gold: Vec<u32>,
+    #[serde(rename = "stats.gold_source_neutrals_gold_orbs")]
+    pub stats_gold_source_neutrals_gold_orbs: Vec<u32>,
+    #[serde(rename = "stats.gold_source_bosses_kills")]
+    pub stats_gold_source_bosses_kills: Vec<u32>,
+    #[serde(rename = "stats.gold_source_bosses_damage")]
+    pub stats_gold_source_bosses_damage: Vec<u32>,
+    #[serde(rename = "stats.gold_source_bosses_gold")]
+    pub stats_gold_source_bosses_gold: Vec<u32>,
+    #[serde(rename = "stats.gold_source_bosses_gold_orbs")]
+    pub stats_gold_source_bosses_gold_orbs: Vec<u32>,
+    #[serde(rename = "stats.gold_source_treasure_kills")]
+    pub stats_gold_source_treasure_kills: Vec<u32>,
+    #[serde(rename = "stats.gold_source_treasure_damage")]
+    pub stats_gold_source_treasure_damage: Vec<u32>,
+    #[serde(rename = "stats.gold_source_treasure_gold")]
+    pub stats_gold_source_treasure_gold: Vec<u32>,
+    #[serde(rename = "stats.gold_source_treasure_gold_orbs")]
+    pub stats_gold_source_treasure_gold_orbs: Vec<u32>,
+    #[serde(rename = "stats.gold_source_assists_kills")]
+    pub stats_gold_source_assists_kills: Vec<u32>,
+    #[serde(rename = "stats.gold_source_assists_damage")]
+    pub stats_gold_source_assists_damage: Vec<u32>,
+    #[serde(rename = "stats.gold_source_assists_gold")]
+    pub stats_gold_source_assists_gold: Vec<u32>,
+    #[serde(rename = "stats.gold_source_assists_gold_orbs")]
+    pub stats_gold_source_assists_gold_orbs: Vec<u32>,
+    #[serde(rename = "stats.gold_source_denies_kills")]
+    pub stats_gold_source_denies_kills: Vec<u32>,
+    #[serde(rename = "stats.gold_source_denies_damage")]
+    pub stats_gold_source_denies_damage: Vec<u32>,
+    #[serde(rename = "stats.gold_source_denies_gold")]
+    pub stats_gold_source_denies_gold: Vec<u32>,
+    #[serde(rename = "stats.gold_source_denies_gold_orbs")]
+    pub stats_gold_source_denies_gold_orbs: Vec<u32>,
+    #[serde(rename = "stats.gold_source_team_bonus_kills")]
+    pub stats_gold_source_team_bonus_kills: Vec<u32>,
+    #[serde(rename = "stats.gold_source_team_bonus_damage")]
+    pub stats_gold_source_team_bonus_damage: Vec<u32>,
+    #[serde(rename = "stats.gold_source_team_bonus_gold")]
+    pub stats_gold_source_team_bonus_gold: Vec<u32>,
+    #[serde(rename = "stats.gold_source_team_bonus_gold_orbs")]
+    pub stats_gold_source_team_bonus_gold_orbs: Vec<u32>,
+    #[serde(rename = "stats.gold_source_ability_assassinate_kills")]
+    pub stats_gold_source_ability_assassinate_kills: Vec<u32>,
+    #[serde(rename = "stats.gold_source_ability_assassinate_damage")]
+    pub stats_gold_source_ability_assassinate_damage: Vec<u32>,
+    #[serde(rename = "stats.gold_source_ability_assassinate_gold")]
+    pub stats_gold_source_ability_assassinate_gold: Vec<u32>,
+    #[serde(rename = "stats.gold_source_ability_assassinate_gold_orbs")]
+    pub stats_gold_source_ability_assassinate_gold_orbs: Vec<u32>,
+    #[serde(rename = "stats.gold_source_item_trophy_collector_kills")]
+    pub stats_gold_source_item_trophy_collector_kills: Vec<u32>,
+    #[serde(rename = "stats.gold_source_item_trophy_collector_damage")]
+    pub stats_gold_source_item_trophy_collector_damage: Vec<u32>,
+    #[serde(rename = "stats.gold_source_item_trophy_collector_gold")]
+    pub stats_gold_source_item_trophy_collector_gold: Vec<u32>,
+    #[serde(rename = "stats.gold_source_item_trophy_collector_gold_orbs")]
+    pub stats_gold_source_item_trophy_collector_gold_orbs: Vec<u32>,
+    #[serde(rename = "stats.gold_source_item_cultist_sacrifice_kills")]
+    pub stats_gold_source_item_cultist_sacrifice_kills: Vec<u32>,
+    #[serde(rename = "stats.gold_source_item_cultist_sacrifice_damage")]
+    pub stats_gold_source_item_cultist_sacrifice_damage: Vec<u32>,
+    #[serde(rename = "stats.gold_source_item_cultist_sacrifice_gold")]
+    pub stats_gold_source_item_cultist_sacrifice_gold: Vec<u32>,
+    #[serde(rename = "stats.gold_source_item_cultist_sacrifice_gold_orbs")]
+    pub stats_gold_source_item_cultist_sacrifice_gold_orbs: Vec<u32>,
+    #[serde(rename = "stats.gold_source_breakable_kills")]
+    pub stats_gold_source_breakable_kills: Vec<u32>,
+    #[serde(rename = "stats.gold_source_breakable_damage")]
+    pub stats_gold_source_breakable_damage: Vec<u32>,
+    #[serde(rename = "stats.gold_source_breakable_gold")]
+    pub stats_gold_source_breakable_gold: Vec<u32>,
+    #[serde(rename = "stats.gold_source_breakable_gold_orbs")]
+    pub stats_gold_source_breakable_gold_orbs: Vec<u32>,
+    #[serde(rename = "stats.gold_source_item_goose_egg_kills")]
+    pub stats_gold_source_item_goose_egg_kills: Vec<u32>,
+    #[serde(rename = "stats.gold_source_item_goose_egg_damage")]
+    pub stats_gold_source_item_goose_egg_damage: Vec<u32>,
+    #[serde(rename = "stats.gold_source_item_goose_egg_gold")]
+    pub stats_gold_source_item_goose_egg_gold: Vec<u32>,
+    #[serde(rename = "stats.gold_source_item_goose_egg_gold_orbs")]
+    pub stats_gold_source_item_goose_egg_gold_orbs: Vec<u32>,
+    pub has_gold_sources: bool,
     #[serde(rename = "power_up_buffs.type")]
     pub power_up_buffs_type: Vec<String>,
     #[serde(rename = "power_up_buffs.value")]
@@ -679,6 +789,267 @@ impl From<(&MatchInfo, bool, Players)> for ClickhouseMatchPlayer {
                         .collect()
                 })
                 .collect(),
+            stats_gold_source_players_kills: gold_source_values(
+                &value.stats,
+                EGoldSource::KEPlayers,
+                GoldSource::kills,
+            ),
+            stats_gold_source_players_damage: gold_source_values(
+                &value.stats,
+                EGoldSource::KEPlayers,
+                GoldSource::damage,
+            ),
+            stats_gold_source_players_gold: gold_source_values(
+                &value.stats,
+                EGoldSource::KEPlayers,
+                GoldSource::gold,
+            ),
+            stats_gold_source_players_gold_orbs: gold_source_values(
+                &value.stats,
+                EGoldSource::KEPlayers,
+                GoldSource::gold_orbs,
+            ),
+            stats_gold_source_lane_creeps_kills: gold_source_values(
+                &value.stats,
+                EGoldSource::KELaneCreeps,
+                GoldSource::kills,
+            ),
+            stats_gold_source_lane_creeps_damage: gold_source_values(
+                &value.stats,
+                EGoldSource::KELaneCreeps,
+                GoldSource::damage,
+            ),
+            stats_gold_source_lane_creeps_gold: gold_source_values(
+                &value.stats,
+                EGoldSource::KELaneCreeps,
+                GoldSource::gold,
+            ),
+            stats_gold_source_lane_creeps_gold_orbs: gold_source_values(
+                &value.stats,
+                EGoldSource::KELaneCreeps,
+                GoldSource::gold_orbs,
+            ),
+            stats_gold_source_neutrals_kills: gold_source_values(
+                &value.stats,
+                EGoldSource::KENeutrals,
+                GoldSource::kills,
+            ),
+            stats_gold_source_neutrals_damage: gold_source_values(
+                &value.stats,
+                EGoldSource::KENeutrals,
+                GoldSource::damage,
+            ),
+            stats_gold_source_neutrals_gold: gold_source_values(
+                &value.stats,
+                EGoldSource::KENeutrals,
+                GoldSource::gold,
+            ),
+            stats_gold_source_neutrals_gold_orbs: gold_source_values(
+                &value.stats,
+                EGoldSource::KENeutrals,
+                GoldSource::gold_orbs,
+            ),
+            stats_gold_source_bosses_kills: gold_source_values(
+                &value.stats,
+                EGoldSource::KEBosses,
+                GoldSource::kills,
+            ),
+            stats_gold_source_bosses_damage: gold_source_values(
+                &value.stats,
+                EGoldSource::KEBosses,
+                GoldSource::damage,
+            ),
+            stats_gold_source_bosses_gold: gold_source_values(
+                &value.stats,
+                EGoldSource::KEBosses,
+                GoldSource::gold,
+            ),
+            stats_gold_source_bosses_gold_orbs: gold_source_values(
+                &value.stats,
+                EGoldSource::KEBosses,
+                GoldSource::gold_orbs,
+            ),
+            stats_gold_source_treasure_kills: gold_source_values(
+                &value.stats,
+                EGoldSource::KETreasure,
+                GoldSource::kills,
+            ),
+            stats_gold_source_treasure_damage: gold_source_values(
+                &value.stats,
+                EGoldSource::KETreasure,
+                GoldSource::damage,
+            ),
+            stats_gold_source_treasure_gold: gold_source_values(
+                &value.stats,
+                EGoldSource::KETreasure,
+                GoldSource::gold,
+            ),
+            stats_gold_source_treasure_gold_orbs: gold_source_values(
+                &value.stats,
+                EGoldSource::KETreasure,
+                GoldSource::gold_orbs,
+            ),
+            stats_gold_source_assists_kills: gold_source_values(
+                &value.stats,
+                EGoldSource::KEAssists,
+                GoldSource::kills,
+            ),
+            stats_gold_source_assists_damage: gold_source_values(
+                &value.stats,
+                EGoldSource::KEAssists,
+                GoldSource::damage,
+            ),
+            stats_gold_source_assists_gold: gold_source_values(
+                &value.stats,
+                EGoldSource::KEAssists,
+                GoldSource::gold,
+            ),
+            stats_gold_source_assists_gold_orbs: gold_source_values(
+                &value.stats,
+                EGoldSource::KEAssists,
+                GoldSource::gold_orbs,
+            ),
+            stats_gold_source_denies_kills: gold_source_values(
+                &value.stats,
+                EGoldSource::KEDenies,
+                GoldSource::kills,
+            ),
+            stats_gold_source_denies_damage: gold_source_values(
+                &value.stats,
+                EGoldSource::KEDenies,
+                GoldSource::damage,
+            ),
+            stats_gold_source_denies_gold: gold_source_values(
+                &value.stats,
+                EGoldSource::KEDenies,
+                GoldSource::gold,
+            ),
+            stats_gold_source_denies_gold_orbs: gold_source_values(
+                &value.stats,
+                EGoldSource::KEDenies,
+                GoldSource::gold_orbs,
+            ),
+            stats_gold_source_team_bonus_kills: gold_source_values(
+                &value.stats,
+                EGoldSource::KETeamBonus,
+                GoldSource::kills,
+            ),
+            stats_gold_source_team_bonus_damage: gold_source_values(
+                &value.stats,
+                EGoldSource::KETeamBonus,
+                GoldSource::damage,
+            ),
+            stats_gold_source_team_bonus_gold: gold_source_values(
+                &value.stats,
+                EGoldSource::KETeamBonus,
+                GoldSource::gold,
+            ),
+            stats_gold_source_team_bonus_gold_orbs: gold_source_values(
+                &value.stats,
+                EGoldSource::KETeamBonus,
+                GoldSource::gold_orbs,
+            ),
+            stats_gold_source_ability_assassinate_kills: gold_source_values(
+                &value.stats,
+                EGoldSource::KEAbilityAssassinate,
+                GoldSource::kills,
+            ),
+            stats_gold_source_ability_assassinate_damage: gold_source_values(
+                &value.stats,
+                EGoldSource::KEAbilityAssassinate,
+                GoldSource::damage,
+            ),
+            stats_gold_source_ability_assassinate_gold: gold_source_values(
+                &value.stats,
+                EGoldSource::KEAbilityAssassinate,
+                GoldSource::gold,
+            ),
+            stats_gold_source_ability_assassinate_gold_orbs: gold_source_values(
+                &value.stats,
+                EGoldSource::KEAbilityAssassinate,
+                GoldSource::gold_orbs,
+            ),
+            stats_gold_source_item_trophy_collector_kills: gold_source_values(
+                &value.stats,
+                EGoldSource::KEItemTrophyCollector,
+                GoldSource::kills,
+            ),
+            stats_gold_source_item_trophy_collector_damage: gold_source_values(
+                &value.stats,
+                EGoldSource::KEItemTrophyCollector,
+                GoldSource::damage,
+            ),
+            stats_gold_source_item_trophy_collector_gold: gold_source_values(
+                &value.stats,
+                EGoldSource::KEItemTrophyCollector,
+                GoldSource::gold,
+            ),
+            stats_gold_source_item_trophy_collector_gold_orbs: gold_source_values(
+                &value.stats,
+                EGoldSource::KEItemTrophyCollector,
+                GoldSource::gold_orbs,
+            ),
+            stats_gold_source_item_cultist_sacrifice_kills: gold_source_values(
+                &value.stats,
+                EGoldSource::KEItemCultistSacrifice,
+                GoldSource::kills,
+            ),
+            stats_gold_source_item_cultist_sacrifice_damage: gold_source_values(
+                &value.stats,
+                EGoldSource::KEItemCultistSacrifice,
+                GoldSource::damage,
+            ),
+            stats_gold_source_item_cultist_sacrifice_gold: gold_source_values(
+                &value.stats,
+                EGoldSource::KEItemCultistSacrifice,
+                GoldSource::gold,
+            ),
+            stats_gold_source_item_cultist_sacrifice_gold_orbs: gold_source_values(
+                &value.stats,
+                EGoldSource::KEItemCultistSacrifice,
+                GoldSource::gold_orbs,
+            ),
+            stats_gold_source_breakable_kills: gold_source_values(
+                &value.stats,
+                EGoldSource::KEBreakable,
+                GoldSource::kills,
+            ),
+            stats_gold_source_breakable_damage: gold_source_values(
+                &value.stats,
+                EGoldSource::KEBreakable,
+                GoldSource::damage,
+            ),
+            stats_gold_source_breakable_gold: gold_source_values(
+                &value.stats,
+                EGoldSource::KEBreakable,
+                GoldSource::gold,
+            ),
+            stats_gold_source_breakable_gold_orbs: gold_source_values(
+                &value.stats,
+                EGoldSource::KEBreakable,
+                GoldSource::gold_orbs,
+            ),
+            stats_gold_source_item_goose_egg_kills: gold_source_values(
+                &value.stats,
+                EGoldSource::KEItemGooseEgg,
+                GoldSource::kills,
+            ),
+            stats_gold_source_item_goose_egg_damage: gold_source_values(
+                &value.stats,
+                EGoldSource::KEItemGooseEgg,
+                GoldSource::damage,
+            ),
+            stats_gold_source_item_goose_egg_gold: gold_source_values(
+                &value.stats,
+                EGoldSource::KEItemGooseEgg,
+                GoldSource::gold,
+            ),
+            stats_gold_source_item_goose_egg_gold_orbs: gold_source_values(
+                &value.stats,
+                EGoldSource::KEItemGooseEgg,
+                GoldSource::gold_orbs,
+            ),
+            has_gold_sources: value.stats.iter().any(|s| !s.gold_sources.is_empty()),
             power_up_buffs_type: value
                 .power_up_buffs
                 .iter()
@@ -828,6 +1199,23 @@ impl From<(&MatchInfo, bool, Players)> for ClickhouseMatchPlayer {
     }
 }
 
+/// One value per stats tick for `source`, 0 on ticks without an entry for it.
+fn gold_source_values(
+    stats: &[PlayerStats],
+    source: EGoldSource,
+    field: fn(&GoldSource) -> u32,
+) -> Vec<u32> {
+    stats
+        .iter()
+        .map(|s| {
+            s.gold_sources
+                .iter()
+                .find(|g| g.source() == source)
+                .map_or(0, field)
+        })
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use valveprotos::deadlock::CMsgMatchPlayerRankData;
@@ -918,6 +1306,38 @@ mod tests {
                 );
             }
         }
+    }
+
+    #[test]
+    fn gold_sources_map_per_tick_with_zero_for_missing_entries() {
+        let tick = |sources: &[(EGoldSource, u32, u32)]| PlayerStats {
+            gold_sources: sources
+                .iter()
+                .map(|&(source, gold, gold_orbs)| GoldSource {
+                    source: Some(source as i32),
+                    gold: Some(gold),
+                    gold_orbs: Some(gold_orbs),
+                    ..Default::default()
+                })
+                .collect(),
+            ..Default::default()
+        };
+        let stats = [
+            tick(&[(EGoldSource::KEBreakable, 50, 0)]),
+            tick(&[
+                (EGoldSource::KELaneCreeps, 300, 120),
+                (EGoldSource::KEBreakable, 90, 0),
+            ]),
+            tick(&[]),
+        ];
+        assert_eq!(
+            gold_source_values(&stats, EGoldSource::KEBreakable, GoldSource::gold),
+            [50, 90, 0]
+        );
+        assert_eq!(
+            gold_source_values(&stats, EGoldSource::KELaneCreeps, GoldSource::gold_orbs),
+            [0, 120, 0]
+        );
     }
 
     #[test]
