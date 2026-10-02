@@ -104,14 +104,14 @@ export const itemsPageOptions = {
         combos.itemPermutationStatsQueryOptions({ ...combosQuery, ...range }),
         async (rows) => combos.trimItemCombosForView(rows, await shopable, { count: ITEM_COMBS_TO_SHOW[0] }),
       );
-      await Promise.all([
-        current,
-        prefetchSeed(
-          queryClient,
-          combos.itemPermutationStatsQueryOptions({ ...combosQuery, ...prevRange }),
-          async (rows) => combos.trimItemCombosForView(rows, await shopable, { combos: (await current) ?? [] }),
-        ),
-      ]);
+      const previous = prefetchSeed(
+        queryClient,
+        combos.itemPermutationStatsQueryOptions({ ...combosQuery, ...prevRange }),
+        async (rows) => combos.trimItemCombosForView(rows, await shopable, { combos: (await current) ?? [] }),
+      );
+      // The previous period spans many months and took 39 s on a cold API: the page does not wait that long for its
+      // deltas, which the browser then loads as it did before.
+      await Promise.all([current, Promise.race([previous, new Promise((resolve) => setTimeout(resolve, 3000))])]);
       return { leader: null, coverage };
     }
     if (tab === "item-purchase-analysis") {
