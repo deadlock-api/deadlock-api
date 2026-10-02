@@ -31,7 +31,23 @@ export function heroStatIn<T extends string>(stat: T, gameMode: GameMode | undef
   return hasSoulEconomy(gameMode) || !ECONOMY_HERO_STATS.has(stat) ? stat : fallback;
 }
 
-export function hero_stats_transform(heroStats: AnalyticsHeroStats, heroStat: (typeof HERO_STATS)[number]) {
+/** The totals `hero_stats_transform` reads. */
+export type HeroStatTotals = Pick<
+  AnalyticsHeroStats,
+  | "wins"
+  | "losses"
+  | "matches"
+  | "total_kills"
+  | "total_deaths"
+  | "total_assists"
+  | "total_net_worth"
+  | "total_last_hits"
+  | "total_denies"
+  | "total_permanent_buffs"
+  | "permanent_buff_matches"
+>;
+
+export function hero_stats_transform(heroStats: HeroStatTotals, heroStat: (typeof HERO_STATS)[number]) {
   switch (heroStat) {
     case "winrate":
       return (100 * heroStats.wins) / heroStats.matches;

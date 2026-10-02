@@ -59,6 +59,14 @@ export const queryKeys = {
     heroStatsOverTime: (params: AnalyticsApiHeroStatsRequest) => ["api-hero-stats-over-time", params] as const,
     heroStatsByDuration: (params: AnalyticsApiHeroStatsRequest) => ["api-hero-stats-by-duration", params] as const,
     heroStatsByExperience: (params: AnalyticsApiHeroStatsRequest) => ["api-hero-stats-by-experience", params] as const,
+    /** The heroes analytics views' own, packed copies of /hero-stats: other pages cache the same requests as rows. */
+    heroChartStats: (
+      view: "over-time" | "by-duration" | "by-rank" | "by-experience",
+      params: AnalyticsApiHeroStatsRequest,
+    ) => ["api-hero-chart-stats", view, params] as const,
+    /** Packed hero pair win records: the matchup views read nothing else of the synergy and counter responses. */
+    heroSynergyWins: (params: AnalyticsApiHeroSynergiesStatsRequest) => ["api-hero-synergy-wins", params] as const,
+    heroCounterWins: (params: AnalyticsApiHeroCountersStatsRequest) => ["api-hero-counter-wins", params] as const,
     gameStats: (params: AnalyticsApiGameStatsRequest) => ["api-game-stats", params] as const,
     buffStats: (params: AnalyticsApiBuffStatsRequest) => ["api-buff-stats", params] as const,
     playerPerformanceCurve: (params: AnalyticsApiPlayerPerformanceCurveRequest) =>

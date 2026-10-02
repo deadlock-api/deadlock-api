@@ -12,10 +12,10 @@ import { Tooltip, TooltipStat, TooltipStats, TooltipTarget } from "~/components/
 import { CACHE_DURATIONS } from "~/constants/cache";
 import type { Dayjs } from "~/dayjs";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
-import { api } from "~/lib/api";
 import type { GameMode, MatchMode } from "~/lib/game-mode";
 import { heroMatchups, type HeroMatchups } from "~/lib/matchup-stats";
-import { queryKeys } from "~/queries/query-keys";
+import { heroCounterWinsQueryOptions, heroSynergyWinsQueryOptions } from "~/queries/hero-matchup-query";
+import { heroStatsQueryOptions } from "~/queries/hero-stats-query";
 
 export type { MatchupRow } from "~/lib/matchup-stats";
 
@@ -76,11 +76,7 @@ export function useHeroMatchupRows({
     isError: isHeroError,
     refetch: refetchHero,
   } = useQuery({
-    queryKey: queryKeys.analytics.heroStats(heroStatsQuery),
-    queryFn: async () => {
-      const response = await api.analytics_api.heroStats(heroStatsQuery);
-      return response.data;
-    },
+    ...heroStatsQueryOptions(heroStatsQuery),
     staleTime: CACHE_DURATIONS.ONE_DAY,
   });
 
@@ -99,14 +95,7 @@ export function useHeroMatchupRows({
     isLoading: isLoadingSynergy,
     isError: isSynergyError,
     refetch: refetchSynergy,
-  } = useQuery({
-    queryKey: queryKeys.analytics.heroSynergyStats(synergyStatsQuery),
-    queryFn: async () => {
-      const response = await api.analytics_api.heroSynergiesStats(synergyStatsQuery);
-      return response.data;
-    },
-    staleTime: CACHE_DURATIONS.ONE_HOUR,
-  });
+  } = useQuery(heroSynergyWinsQueryOptions(synergyStatsQuery));
 
   const counterStatsQuery = {
     sameLaneFilter: sameLaneFilter,
@@ -123,14 +112,7 @@ export function useHeroMatchupRows({
     isLoading: isLoadingCounter,
     isError: isCounterError,
     refetch: refetchCounter,
-  } = useQuery({
-    queryKey: queryKeys.analytics.heroCounterStats(counterStatsQuery),
-    queryFn: async () => {
-      const response = await api.analytics_api.heroCountersStats(counterStatsQuery);
-      return response.data;
-    },
-    staleTime: CACHE_DURATIONS.ONE_HOUR,
-  });
+  } = useQuery(heroCounterWinsQueryOptions(counterStatsQuery));
 
   const hasPreviousInterval = prevMinDate != null && prevMaxDate != null;
 
@@ -144,11 +126,7 @@ export function useHeroMatchupRows({
     matchMode,
   };
   const { data: prevHeroData } = useQuery({
-    queryKey: queryKeys.analytics.heroStats(prevHeroStatsQuery),
-    queryFn: async () => {
-      const response = await api.analytics_api.heroStats(prevHeroStatsQuery);
-      return response.data;
-    },
+    ...heroStatsQueryOptions(prevHeroStatsQuery),
     staleTime: CACHE_DURATIONS.ONE_DAY,
     enabled: hasPreviousInterval,
   });
@@ -164,12 +142,7 @@ export function useHeroMatchupRows({
     matchMode,
   };
   const { data: prevSynergyData } = useQuery({
-    queryKey: queryKeys.analytics.heroSynergyStats(prevSynergyStatsQuery),
-    queryFn: async () => {
-      const response = await api.analytics_api.heroSynergiesStats(prevSynergyStatsQuery);
-      return response.data;
-    },
-    staleTime: CACHE_DURATIONS.ONE_HOUR,
+    ...heroSynergyWinsQueryOptions(prevSynergyStatsQuery),
     enabled: hasPreviousInterval,
   });
 
@@ -184,12 +157,7 @@ export function useHeroMatchupRows({
     matchMode,
   };
   const { data: prevCounterData } = useQuery({
-    queryKey: queryKeys.analytics.heroCounterStats(prevCounterStatsQuery),
-    queryFn: async () => {
-      const response = await api.analytics_api.heroCountersStats(prevCounterStatsQuery);
-      return response.data;
-    },
-    staleTime: CACHE_DURATIONS.ONE_HOUR,
+    ...heroCounterWinsQueryOptions(prevCounterStatsQuery),
     enabled: hasPreviousInterval,
   });
 

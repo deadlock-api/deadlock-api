@@ -12,16 +12,14 @@ import { ChartError, ChartLoading } from "~/components/patterns/charts/ChartStat
 import { ChartSurface } from "~/components/patterns/charts/ChartSurface";
 import { CHART_COLOR, CHART_GRID, CHART_X_AXIS, CHART_X_LABEL, CHART_Y_AXIS } from "~/components/patterns/charts/theme";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
-import { CACHE_DURATIONS } from "~/constants/cache";
 import type { Dayjs } from "~/dayjs";
 import { CHART_HEROES_QUERY_KEY, useChartHeroVisibility, useHeroColorMap } from "~/hooks/useChartHeroVisibility";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
-import { api } from "~/lib/api";
 import { formatCompactAxisTick, niceTicks } from "~/lib/chart-axis";
 import { DURATION_BUCKETS, MIN_MATCHES_PER_BUCKET } from "~/lib/constants";
 import type { GameMode, MatchMode } from "~/lib/game-mode";
 import { formatTrendValue, HERO_TREND_LABELS } from "~/lib/hero-trends";
-import { queryKeys } from "~/queries/query-keys";
+import { heroChartStatsQueryOptions } from "~/queries/hero-stats-query";
 import { type HERO_STATS, hero_stats_transform } from "~/types/api_hero_stats";
 
 interface HeroStatsByDurationChartProps {
@@ -77,14 +75,7 @@ export function HeroStatsByDurationChart({
         gameMode,
         matchMode,
       };
-      return {
-        queryKey: queryKeys.analytics.heroStatsByDuration(heroStatsByDurationQuery),
-        queryFn: async () => {
-          const response = await api.analytics_api.heroStats(heroStatsByDurationQuery);
-          return response.data;
-        },
-        staleTime: CACHE_DURATIONS.ONE_DAY,
-      };
+      return heroChartStatsQueryOptions("by-duration", heroStatsByDurationQuery);
     }),
   });
 

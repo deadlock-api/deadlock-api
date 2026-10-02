@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import type { AnalyticsHeroStats, HeroCounterStats, HeroSynergyStats } from "deadlock_api_client";
+import type { AnalyticsHeroStats } from "deadlock_api_client";
 import { parseAsStringLiteral, useQueryState } from "nuqs";
 import { useMemo } from "react";
 
@@ -19,18 +19,23 @@ import { Tooltip, TooltipHeader, TooltipStat, TooltipStats, TooltipTarget } from
 import { CACHE_DURATIONS } from "~/constants/cache";
 import type { Dayjs } from "~/dayjs";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
-import { api } from "~/lib/api";
 import { formatSignedPercent } from "~/lib/format";
 import type { GameMode, MatchMode } from "~/lib/game-mode";
 import { heroesQueryOptions } from "~/queries/asset-queries";
-import { queryKeys } from "~/queries/query-keys";
+import {
+  type HeroCounterWins,
+  heroCounterWinsQueryOptions,
+  type HeroSynergyWins,
+  heroSynergyWinsQueryOptions,
+} from "~/queries/hero-matchup-query";
+import { heroStatsQueryOptions } from "~/queries/hero-stats-query";
 import type { Color } from "~/types/general";
 
-type SynergyEntry = Pick<HeroSynergyStats, "hero_id1" | "hero_id2" | "wins" | "matches_played"> & {
+type SynergyEntry = HeroSynergyWins & {
   rel_winrate: number;
 };
 
-type CounterEntry = HeroCounterStats & { rel_winrate: number };
+type CounterEntry = HeroCounterWins & { rel_winrate: number };
 
 function buildHeroStatsMap(data: AnalyticsHeroStats[] | undefined): Record<number, AnalyticsHeroStats> {
   const map: Record<number, AnalyticsHeroStats> = {};
@@ -42,7 +47,7 @@ function buildHeroStatsMap(data: AnalyticsHeroStats[] | undefined): Record<numbe
 }
 
 function buildSynergyMap(
-  synergyData: HeroSynergyStats[] | undefined,
+  synergyData: HeroSynergyWins[] | undefined,
   heroStatsMap: Record<number, AnalyticsHeroStats>,
 ): Record<number, SynergyEntry[]> {
   const synergyMap: Record<number, SynergyEntry[]> = {};
@@ -84,7 +89,7 @@ function pickTopFromMap<T extends { rel_winrate: number }>(
 }
 
 function buildCounterMap(
-  counterData: HeroCounterStats[] | undefined,
+  counterData: HeroCounterWins[] | undefined,
   heroStatsMap: Record<number, AnalyticsHeroStats>,
 ): Record<number, CounterEntry[]> {
   const counterMap: Record<number, CounterEntry[]> = {};
@@ -273,11 +278,7 @@ export function HeroMatchupStatsTable({
     isError: isHeroError,
     refetch: refetchHero,
   } = useQuery({
-    queryKey: queryKeys.analytics.heroStats(heroStatsQuery),
-    queryFn: async () => {
-      const response = await api.analytics_api.heroStats(heroStatsQuery);
-      return response.data;
-    },
+    ...heroStatsQueryOptions(heroStatsQuery),
     staleTime: CACHE_DURATIONS.ONE_DAY,
   });
 
@@ -296,14 +297,7 @@ export function HeroMatchupStatsTable({
     isLoading: isLoadingSynergy,
     isError: isSynergyError,
     refetch: refetchSynergy,
-  } = useQuery({
-    queryKey: queryKeys.analytics.heroSynergyStats(synergyStatsQuery),
-    queryFn: async () => {
-      const response = await api.analytics_api.heroSynergiesStats(synergyStatsQuery);
-      return response.data;
-    },
-    staleTime: CACHE_DURATIONS.ONE_HOUR,
-  });
+  } = useQuery(heroSynergyWinsQueryOptions(synergyStatsQuery));
 
   const counterStatsQuery = {
     sameLaneFilter: sameLaneFilter,
@@ -320,14 +314,7 @@ export function HeroMatchupStatsTable({
     isLoading: isLoadingCounter,
     isError: isCounterError,
     refetch: refetchCounter,
-  } = useQuery({
-    queryKey: queryKeys.analytics.heroCounterStats(counterStatsQuery),
-    queryFn: async () => {
-      const response = await api.analytics_api.heroCountersStats(counterStatsQuery);
-      return response.data;
-    },
-    staleTime: CACHE_DURATIONS.ONE_HOUR,
-  });
+  } = useQuery(heroCounterWinsQueryOptions(counterStatsQuery));
 
   const hasPreviousInterval = prevMinDate != null && prevMaxDate != null;
 
@@ -341,11 +328,7 @@ export function HeroMatchupStatsTable({
     matchMode,
   };
   const { data: prevHeroData } = useQuery({
-    queryKey: queryKeys.analytics.heroStats(prevHeroStatsQuery),
-    queryFn: async () => {
-      const response = await api.analytics_api.heroStats(prevHeroStatsQuery);
-      return response.data;
-    },
+    ...heroStatsQueryOptions(prevHeroStatsQuery),
     staleTime: CACHE_DURATIONS.ONE_DAY,
     enabled: hasPreviousInterval,
   });
@@ -361,12 +344,7 @@ export function HeroMatchupStatsTable({
     matchMode,
   };
   const { data: prevSynergyData } = useQuery({
-    queryKey: queryKeys.analytics.heroSynergyStats(prevSynergyStatsQuery),
-    queryFn: async () => {
-      const response = await api.analytics_api.heroSynergiesStats(prevSynergyStatsQuery);
-      return response.data;
-    },
-    staleTime: CACHE_DURATIONS.ONE_HOUR,
+    ...heroSynergyWinsQueryOptions(prevSynergyStatsQuery),
     enabled: hasPreviousInterval,
   });
 
@@ -381,12 +359,7 @@ export function HeroMatchupStatsTable({
     matchMode,
   };
   const { data: prevCounterData } = useQuery({
-    queryKey: queryKeys.analytics.heroCounterStats(prevCounterStatsQuery),
-    queryFn: async () => {
-      const response = await api.analytics_api.heroCountersStats(prevCounterStatsQuery);
-      return response.data;
-    },
-    staleTime: CACHE_DURATIONS.ONE_HOUR,
+    ...heroCounterWinsQueryOptions(prevCounterStatsQuery),
     enabled: hasPreviousInterval,
   });
 

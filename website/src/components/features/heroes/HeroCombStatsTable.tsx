@@ -11,14 +11,12 @@ import { ProgressBarWithLabel } from "~/components/ui/progress-bar";
 import { Inline } from "~/components/ui/stack";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { Tooltip, TooltipStat, TooltipStats, TooltipTarget } from "~/components/ui/tooltip";
-import { CACHE_DURATIONS } from "~/constants/cache";
 import type { Dayjs } from "~/dayjs";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
-import { api } from "~/lib/api";
 import { fineShareDigits, formatFineShare } from "~/lib/format";
 import type { GameMode, MatchMode } from "~/lib/game-mode";
 import { shrunkWinRate } from "~/lib/shrinkage";
-import { queryKeys } from "~/queries/query-keys";
+import { heroCombStatsQueryOptions } from "~/queries/hero-comb-stats-query";
 
 import { useHeroCombFilters } from "./useHeroCombFilters";
 
@@ -98,19 +96,7 @@ export function HeroCombStatsTable({
     gameMode: gameMode,
     matchMode,
   };
-  const {
-    data: heroData,
-    isLoading,
-    isError,
-    refetch,
-  } = useQuery({
-    queryKey: queryKeys.analytics.heroCombStats(combStatsQuery),
-    queryFn: async () => {
-      const response = await api.analytics_api.heroCombStats(combStatsQuery);
-      return response.data;
-    },
-    staleTime: CACHE_DURATIONS.ONE_DAY,
-  });
+  const { data: heroData, isLoading, isError, refetch } = useQuery(heroCombStatsQueryOptions(combStatsQuery));
 
   const prevCombStatsQuery = {
     combSize: combSizeFilter,
@@ -125,12 +111,7 @@ export function HeroCombStatsTable({
     matchMode,
   };
   const { data: prevHeroData } = useQuery({
-    queryKey: queryKeys.analytics.heroCombStats(prevCombStatsQuery),
-    queryFn: async () => {
-      const response = await api.analytics_api.heroCombStats(prevCombStatsQuery);
-      return response.data;
-    },
-    staleTime: CACHE_DURATIONS.ONE_DAY,
+    ...heroCombStatsQueryOptions(prevCombStatsQuery),
     enabled: hasPreviousInterval,
   });
 

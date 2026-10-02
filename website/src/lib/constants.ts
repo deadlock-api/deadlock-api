@@ -167,4 +167,11 @@ export const DURATION_BUCKETS = [
   { label: "50m+", minS: 3000, maxS: 7000 },
 ] as const;
 
+// The API counts both ends in, so the buckets must not share one; the last is open, or players past it are dropped.
+export const EXPERIENCE_BUCKETS: readonly { label: string; sublabel: string; min: number; max?: number }[] = [
+  { label: "Beginner", sublabel: "1-24 matches", min: 1, max: 24 },
+  { label: "Intermediate", sublabel: "25-99 matches", min: 25, max: 99 },
+  { label: "Experienced", sublabel: "100+ matches", min: 100 },
+];
+
 export const MIN_MATCHES_PER_BUCKET = 10;

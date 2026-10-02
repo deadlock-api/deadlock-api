@@ -1,5 +1,4 @@
 import { useQueries, useQuery } from "@tanstack/react-query";
-import type { AnalyticsHeroStats } from "deadlock_api_client";
 import { ArrowDown, ArrowUp, Minus, TrendingDown, TrendingUp } from "lucide-react";
 import { parseAsBoolean, parseAsStringLiteral, useQueryState } from "nuqs";
 import { useMemo } from "react";
@@ -14,23 +13,15 @@ import { SortButton, ariaSort } from "~/components/ui/sort-button";
 import { Stack } from "~/components/ui/stack";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { Tooltip, TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
-import { CACHE_DURATIONS } from "~/constants/cache";
 import type { Dayjs } from "~/dayjs";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
-import { api } from "~/lib/api";
+import { EXPERIENCE_BUCKETS } from "~/lib/constants";
 import { formatSignedPercent } from "~/lib/format";
 import { type GameMode, hasSoulEconomy, type MatchMode } from "~/lib/game-mode";
 import { TONE_TEXT, toneOf } from "~/lib/tone";
 import { heroesQueryOptions } from "~/queries/asset-queries";
-import { queryKeys } from "~/queries/query-keys";
+import { heroChartStatsQueryOptions, type HeroChartStats } from "~/queries/hero-stats-query";
 import { type HERO_STATS, hero_stats_transform } from "~/types/api_hero_stats";
-
-// The API counts both ends in, so the buckets must not share one; the last is open, or players past it are dropped.
-const EXPERIENCE_BUCKETS: { label: string; sublabel: string; min: number; max?: number }[] = [
-  { label: "Beginner", sublabel: "1-24 matches", min: 1, max: 24 },
-  { label: "Intermediate", sublabel: "25-99 matches", min: 25, max: 99 },
-  { label: "Experienced", sublabel: "100+ matches", min: 100 },
-];
 
 const MIN_MATCHES_PER_BUCKET = 10;
 
@@ -48,7 +39,7 @@ const SORT_KEYS: SortKey[] = [
 interface HeroRow {
   heroId: number;
   bucketValues: (number | null)[];
-  bucketEntries: (AnalyticsHeroStats | null)[];
+  bucketEntries: (HeroChartStats | null)[];
   bucketDeltas: (number | null)[];
   // Relative change from baseline to the last loaded bucket, used to sort the trend column.
   trend: number | null;
@@ -100,14 +91,7 @@ export function HeroStatsByExperienceTable({
         gameMode,
         matchMode,
       };
-      return {
-        queryKey: queryKeys.analytics.heroStatsByExperience(heroStatsByExperienceQuery),
-        queryFn: async () => {
-          const response = await api.analytics_api.heroStats(heroStatsByExperienceQuery);
-          return response.data;
-        },
-        staleTime: CACHE_DURATIONS.ONE_DAY,
-      };
+      return heroChartStatsQueryOptions("by-experience", heroStatsByExperienceQuery);
     }),
   });
 
@@ -425,7 +409,7 @@ function BucketTooltip({
   gameMode,
   children,
 }: {
-  entry: AnalyticsHeroStats | null;
+  entry: HeroChartStats | null;
   heroStat: (typeof HERO_STATS)[number];
   bucketLabel: string;
   gameMode?: GameMode;
@@ -471,8 +455,8 @@ function DeltaTooltip({
   heroStat,
   children,
 }: {
-  baselineEntry: AnalyticsHeroStats | null;
-  bucketEntry: AnalyticsHeroStats | null;
+  baselineEntry: HeroChartStats | null;
+  bucketEntry: HeroChartStats | null;
   bucketLabel: string;
   heroStat: (typeof HERO_STATS)[number];
   children: React.ReactNode;

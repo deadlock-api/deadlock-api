@@ -57,6 +57,7 @@ import { MIN_MATCHES_PER_BUCKET } from "~/lib/constants";
 import type { GameMode, MatchMode } from "~/lib/game-mode";
 import { buildHeroTrendPoints, HERO_TREND_LABELS, isPercentageTrend, type HeroTrendBuckets } from "~/lib/hero-trends";
 import { wholeTimeBuckets } from "~/lib/time-buckets";
+import { heroChartStatsQueryOptions } from "~/queries/hero-stats-query";
 import { queryKeys } from "~/queries/query-keys";
 import { type HERO_STATS_WITH_BAN_RATE, hero_stats_transform } from "~/types/api_hero_stats";
 
@@ -168,12 +169,7 @@ export function HeroStatsOverTimeChart({
     matchMode,
   };
   const heroQuery = useQuery({
-    queryKey: queryKeys.analytics.heroStatsOverTime(heroStatsOverTimeQuery),
-    queryFn: async () => {
-      const response = await api.analytics_api.heroStats(heroStatsOverTimeQuery);
-      return response.data;
-    },
-    staleTime: CACHE_DURATIONS.ONE_DAY,
+    ...heroChartStatsQueryOptions("over-time", heroStatsOverTimeQuery),
     enabled: !isBanRate,
   });
 

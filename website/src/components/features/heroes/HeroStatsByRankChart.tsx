@@ -1,5 +1,4 @@
 import { useQuery } from "@tanstack/react-query";
-import type { AnalyticsHeroStats } from "deadlock_api_client";
 import { parseAsArrayOf, parseAsInteger, useQueryState } from "nuqs";
 import { useMemo } from "react";
 import { CartesianGrid, Scatter, ScatterChart, type ScatterProps, Tooltip, XAxis, YAxis } from "recharts";
@@ -30,6 +29,7 @@ import { niceTicks } from "~/lib/chart-axis";
 import { getPickrateMultiplier } from "~/lib/constants";
 import type { GameMode, MatchMode } from "~/lib/game-mode";
 import { getRankImageUrl } from "~/lib/rank-utils";
+import { type HeroRankStats, heroRankStatsQueryOptions } from "~/queries/hero-stats-query";
 import { queryKeys } from "~/queries/query-keys";
 import { ranksQueryOptions } from "~/queries/ranks-query";
 import { type HERO_STATS, hero_stats_transform } from "~/types/api_hero_stats";
@@ -126,7 +126,7 @@ function computeStatValue(stat: ByRankStat, agg: AggregatedTier, gameMode?: Game
   if (stat === "pickrate") {
     return (agg.matches / agg.matchesPerBucket) * 100 * getPickrateMultiplier(gameMode);
   }
-  return hero_stats_transform(agg as unknown as AnalyticsHeroStats, stat as (typeof HERO_STATS)[number]);
+  return hero_stats_transform(agg, stat as (typeof HERO_STATS)[number]);
 }
 
 function getStatValue(
@@ -177,7 +177,7 @@ function newAggregatedTier(): AggregatedTier {
   };
 }
 
-function addToAggregatedTier(agg: AggregatedTier, entry: AnalyticsHeroStats): void {
+function addToAggregatedTier(agg: AggregatedTier, entry: HeroRankStats): void {
   agg.wins += entry.wins;
   agg.losses += entry.losses;
   agg.matches += entry.matches;
@@ -221,14 +221,7 @@ export function HeroStatsByRankChart({
     isError: isErrorHeroStats,
     isFetching: isFetchingHeroStats,
     refetch: refetchHeroStats,
-  } = useQuery({
-    queryKey: queryKeys.analytics.heroStatsByRank(heroStatsByRankQuery),
-    queryFn: async () => {
-      const response = await api.analytics_api.heroStats(heroStatsByRankQuery);
-      return response.data;
-    },
-    staleTime: CACHE_DURATIONS.ONE_DAY,
-  });
+  } = useQuery(heroRankStatsQueryOptions(heroStatsByRankQuery));
 
   const banStatsByRankQuery = {
     bucket: "avg_badge" as const,
