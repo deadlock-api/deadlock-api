@@ -39,7 +39,7 @@ import { TONE_COLOR, TONE_TEXT, toneOf } from "~/lib/tone";
 import { cn } from "~/lib/utils";
 import { wilsonScoreInterval } from "~/lib/wilson";
 import { itemUpgradesQueryOptions } from "~/queries/asset-queries";
-import { itemFlowQueryOptions } from "~/queries/item-flow-query";
+import { ITEM_FLOW_DEFAULT_PER_COLUMN, itemFlowQueryOptions } from "~/queries/item-flow-query";
 
 const SLOT_ACCENTS = ["weapon", "vitality", "spirit"] as const;
 
@@ -139,7 +139,8 @@ interface PlacedNode {
   key: string;
   itemId: number;
   column: number;
-  x: number;
+  /** Position among the shown stages, which sets the card's horizontal place. */
+  colIndex: number;
   y: number;
   wins: number;
   losses: number;
@@ -172,7 +173,7 @@ interface Candidate {
 
 interface ColumnMeta {
   column: number;
-  x: number;
+  colIndex: number;
   candidates: Candidate[];
   /** Item tiers present in this stage's data (for the per-stage tier filter buttons). */
   availableTiers: number[];
@@ -210,6 +211,22 @@ function useContainerWidth() {
     return () => ro.disconnect();
   }, []);
   return [ref, width] as const;
+}
+
+/**
+ * Where stage `colIndex` of `n` sits, in CSS against the graph's width, so the server places the cards the browser
+ * keeps: cards grow from CARD_W_MIN to CARD_W_MAX with the room there is, the first stage at the left edge and the last
+ * at the right. The graph is at least wide enough for every stage at CARD_W_MIN with COL_GAP between them.
+ */
+function stageBox(colIndex: number, n: number): { left: string; width: string } {
+  const width = `clamp(${CARD_W_MIN}px, (100% - ${COL_GAP * (n - 1)}px) / ${n}, ${CARD_W_MAX}px)`;
+  return { left: n > 1 ? `calc((100% - ${width}) * ${colIndex / (n - 1)})` : "0px", width };
+}
+
+/** `stageBox` in pixels for a measured graph width, for the links drawn between the cards. */
+function stageGeometry(graphWidth: number, n: number): { cardWidth: number; colSpacing: number } {
+  const cardWidth = Math.min(CARD_W_MAX, Math.max(CARD_W_MIN, (graphWidth - COL_GAP * (n - 1)) / n));
+  return { cardWidth, colSpacing: n > 1 ? (graphWidth - cardWidth) / (n - 1) : 0 };
 }
 
 /** The stage's candidates as a single-choice item picker: slot tabs, tiers, and each item's win rate under its name. */
@@ -307,7 +324,7 @@ const StageLockPicker = memo(function StageLockPicker({
 
 const ItemFlowCard = memo(function ItemFlowCard({
   node,
-  width,
+  stageCount,
   meta,
   dimmed,
   showRaw,
@@ -316,7 +333,7 @@ const ItemFlowCard = memo(function ItemFlowCard({
   onLock,
 }: {
   node: PlacedNode;
-  width: number;
+  stageCount: number;
   meta?: { slot?: string; cost: number; tier: number };
   dimmed: boolean;
   showRaw: boolean;
@@ -392,7 +409,7 @@ const ItemFlowCard = memo(function ItemFlowCard({
     >
       <GraphNodeCard
         className="absolute"
-        style={{ left: node.x, top: node.y, width, height: CARD_H }}
+        style={{ ...stageBox(node.colIndex, stageCount), top: node.y, height: CARD_H }}
         accent={accent}
         selected={node.locked}
         dimmed={dimmed}
@@ -442,7 +459,7 @@ export function ItemFlowGraph({
   // Only the offered sizes: `flow_top=-2` sliced the last two items off each stage, `0` showed none.
   const [perColumn, setPerColumn] = useQueryState(
     "flow_top",
-    parseAsNumberLiteral([4, 6, 8, 12] as const).withDefault(6),
+    parseAsNumberLiteral([4, 6, 8, 12] as const).withDefault(ITEM_FLOW_DEFAULT_PER_COLUMN),
   );
   const [sortBy, setSortBy] = useQueryState(
     "flow_sort",
@@ -503,7 +520,7 @@ export function ItemFlowGraph({
     return { lockedItemIds: ids, lockedItemColumns: cols };
   }, [locked]);
 
-  const { data, isLoading, isFetching, isError, refetch } = useQuery(
+  const { data, isLoading, isFetching, isPlaceholderData, isError, refetch } = useQuery(
     itemFlowQueryOptions({
       heroIds: heroId != null ? String(heroId) : undefined,
       gameMode,
@@ -567,11 +584,7 @@ export function ItemFlowGraph({
     const columns = [...byColumn.keys()].sort((a, b) => a - b);
     if (columns.length === 0) return null;
 
-    const W = containerWidth || 1000;
     const n = columns.length;
-    const cardWidth = Math.min(CARD_W_MAX, Math.max(CARD_W_MIN, (W - COL_GAP * (n - 1)) / n));
-    const colSpacing = n > 1 ? Math.max(cardWidth + COL_GAP, (W - cardWidth) / (n - 1)) : 0;
-    const graphWidth = n > 1 ? colSpacing * (n - 1) + cardWidth : cardWidth;
 
     type Node = (typeof data.nodes)[number];
     const rawWr = (n: Node) => (n.matches > 0 ? n.wins / n.matches : 0);
@@ -641,7 +654,6 @@ export function ItemFlowGraph({
       const rest = sorted.filter((n) => !lockedItemSet.has(n.item_id)).slice(0, perColumn);
       const list = [...lockedNodes, ...rest];
       maxRows = Math.max(maxRows, list.length);
-      const x = colIndex * colSpacing;
       const denom = lockedColumns.has(column) ? baseMatches : popMatches;
       // Per-stage normalization ranges so the bars use the full width within a stage.
       const colMaxMatches = Math.max(1, ...list.map((n) => n.matches));
@@ -657,7 +669,7 @@ export function ItemFlowGraph({
           key,
           itemId: node.item_id,
           column,
-          x,
+          colIndex,
           y: headerH + rowIndex * (CARD_H + ROW_GAP),
           wins: node.wins,
           losses: node.losses,
@@ -691,7 +703,7 @@ export function ItemFlowGraph({
           winRate: n.adjusted_win_rate,
           pickRate: n.matches / denom,
         }));
-      columnMeta.push({ column, x, candidates, availableTiers: tiersByColumn.get(column) ?? [] });
+      columnMeta.push({ column, colIndex, candidates, availableTiers: tiersByColumn.get(column) ?? [] });
     });
     const maxBottom = headerH + maxRows * (CARD_H + ROW_GAP);
 
@@ -715,9 +727,9 @@ export function ItemFlowGraph({
           id: `${e.from_column}:${e.from_item_id}->${e.to_item_id}`,
           fromKey: from.key,
           toKey: to.key,
-          x1: from.x + cardWidth,
+          fromIndex: from.colIndex,
+          toIndex: to.colIndex,
           y1: from.y + CARD_H / 2,
-          x2: to.x,
           y2: to.y + CARD_H / 2,
           width: 1.5 + (e.matches / maxEdge) * 6,
           winRate: e.matches > 0 ? e.wins / e.matches : 0,
@@ -728,15 +740,32 @@ export function ItemFlowGraph({
 
     return {
       columns,
-      colSpacing,
-      cardWidth,
       placed: [...placed.values()],
       columnMeta,
       edges,
-      width: graphWidth,
+      minWidth: n * CARD_W_MIN + (n - 1) * COL_GAP,
       height: maxBottom,
     };
-  }, [data, perColumn, cardSort, minConfidence, excludedTiers, itemMeta, containerWidth, lockedSet, lockedColumns]);
+  }, [data, perColumn, cardSort, minConfidence, excludedTiers, itemMeta, lockedSet, lockedColumns]);
+
+  // The links need pixel coordinates, so they are drawn once the graph's width is measured; the cards are placed by
+  // CSS and stay where the server put them.
+  const links = useMemo(() => {
+    if (!layout || containerWidth === 0) return null;
+    const width = Math.max(containerWidth, layout.minWidth);
+    const { cardWidth, colSpacing } = stageGeometry(width, layout.columns.length);
+    return {
+      width,
+      paths: layout.edges.map((e) => {
+        const x1 = e.fromIndex * colSpacing + cardWidth;
+        const x2 = e.toIndex * colSpacing;
+        const mx = (x1 + x2) / 2;
+        return { ...e, d: `M ${x1} ${e.y1} C ${mx} ${e.y1}, ${mx} ${e.y2}, ${x2} ${e.y2}` };
+      }),
+    };
+  }, [layout, containerWidth]);
+  // Dim the graph only while another view's answer loads; a refresh of the shown view keeps it as it is.
+  const switching = isFetching && isPlaceholderData;
 
   const highlight = useMemo(() => {
     if (!hoveredKey || !layout) return null;
@@ -864,14 +893,14 @@ export function ItemFlowGraph({
               />
             ) : (
               <div className="relative">
-                {isFetching && (
+                {switching && (
                   <LoadingState
                     label="item flow"
                     className="pointer-events-none absolute inset-0 z-10 flex items-start justify-center pt-24"
                   />
                 )}
                 <DragScroll className="pb-4">
-                  <div className="relative" style={{ width: layout.width, height: layout.height }}>
+                  <div className="relative" style={{ width: `max(100%, ${layout.minWidth}px)`, height: layout.height }}>
                     {/* Column headers: phase + reached% + lock picker */}
                     {layout.columnMeta.map((meta) => {
                       const title = phaseLabel(meta.column, isStreetBrawl);
@@ -883,7 +912,7 @@ export function ItemFlowGraph({
                           key={meta.column}
                           gap={1.5}
                           className="absolute"
-                          style={{ left: meta.x, top: 0, width: layout.cardWidth }}
+                          style={{ ...stageBox(meta.colIndex, layout.columns.length), top: 0 }}
                         >
                           <div>
                             <Heading as="h3" size="sm" className="text-center">
@@ -930,27 +959,28 @@ export function ItemFlowGraph({
                     })}
 
                     {/* Links */}
-                    <svg
-                      className="pointer-events-none absolute inset-0"
-                      width={layout.width}
-                      height={layout.height}
-                      aria-hidden="true"
-                    >
-                      {layout.edges.map((e) => {
-                        const mx = (e.x1 + e.x2) / 2;
-                        const active = !isFetching && (!highlight || highlight.edges.has(e.id));
-                        return (
-                          <path
-                            key={e.id}
-                            d={`M ${e.x1} ${e.y1} C ${mx} ${e.y1}, ${mx} ${e.y2}, ${e.x2} ${e.y2}`}
-                            fill="none"
-                            stroke={TONE_COLOR[e.winRate >= 0.5 ? "positive" : "negative"]}
-                            strokeWidth={e.width}
-                            strokeOpacity={active ? (highlight ? 0.65 : 0.22) : 0.05}
-                          />
-                        );
-                      })}
-                    </svg>
+                    {links && (
+                      <svg
+                        className="pointer-events-none absolute inset-0"
+                        width={links.width}
+                        height={layout.height}
+                        aria-hidden="true"
+                      >
+                        {links.paths.map((e) => {
+                          const active = !switching && (!highlight || highlight.edges.has(e.id));
+                          return (
+                            <path
+                              key={e.id}
+                              d={e.d}
+                              fill="none"
+                              stroke={TONE_COLOR[e.winRate >= 0.5 ? "positive" : "negative"]}
+                              strokeWidth={e.width}
+                              strokeOpacity={active ? (highlight ? 0.65 : 0.22) : 0.05}
+                            />
+                          );
+                        })}
+                      </svg>
+                    )}
 
                     {/* Nodes */}
                     <TooltipProvider delayDuration={150}>
@@ -958,9 +988,9 @@ export function ItemFlowGraph({
                         <ItemFlowCard
                           key={node.key}
                           node={node}
-                          width={layout.cardWidth}
+                          stageCount={layout.columns.length}
                           meta={itemMeta.get(node.itemId)}
-                          dimmed={isFetching || (highlight != null && !highlight.nodes.has(node.key))}
+                          dimmed={switching || (highlight != null && !highlight.nodes.has(node.key))}
                           showRaw={wrMode === "raw" || isStreetBrawl}
                           isStreetBrawl={isStreetBrawl}
                           onHover={setHoveredKey}

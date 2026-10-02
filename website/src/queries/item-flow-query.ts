@@ -45,3 +45,6 @@ export function itemFlowQueryOptions(params: AnalyticsApiItemFlowStatsRequest) {
     placeholderData: keepPreviousData,
   });
 }
+
+/** Items per stage the build flow shows until the reader picks another count. */
+export const ITEM_FLOW_DEFAULT_PER_COLUMN = 6;
