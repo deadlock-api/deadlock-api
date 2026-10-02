@@ -873,7 +873,7 @@ When player info is included, each player object contains `hero_build_id` and `p
 | ---- | ----- |
 | IP | 30req/min |
 | Key | 30req/10s |
-| Global | 300req/min |
+| Global | 600req/min |
     "
 )]
 pub(super) async fn bulk_metadata(
@@ -911,7 +911,7 @@ pub(super) async fn bulk_metadata(
             &[
                 Quota::ip_limit(30, Duration::from_mins(1)),
                 Quota::key_limit(30, Duration::from_secs(10)),
-                Quota::global_limit(300, Duration::from_mins(1)),
+                Quota::global_limit(600, Duration::from_mins(1)),
             ],
         )
         .await?;
