@@ -52,7 +52,7 @@ export const Route = createFileRoute("/games_/flashcards/item-upgrades")({
   component: ItemUpgradePathFlashcards,
   head: () => {
     const s = seo({
-      title: pageTitle("Item SlimUpgrade Flashcards - Learn Components"),
+      title: pageTitle("Item Upgrade Flashcards - Learn Components"),
       description: "Study Deadlock item upgrade paths by matching upgraded items to their component items.",
       path: "/games/flashcards/item-upgrades",
     });
@@ -230,7 +230,7 @@ function ItemUpgradePathFlashcards() {
   return <ItemUpgradePathFlashcardsReady pool={pool} />;
 }
 
-const TITLE = "Item SlimUpgrade Paths";
+const TITLE = "Item Upgrade Paths";
 const SUBTITLE = "Match each upgraded item to its direct component path.";
 
 function ItemUpgradePathFlashcardsReady({ pool }: { pool: UpgradePathEntry[] }) {
