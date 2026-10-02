@@ -14,8 +14,10 @@ import { CHART_GRID, CHART_MARGIN_MARKED, CHART_X_AXIS, CHART_Y_AXIS } from "~/c
 import { TrendIntervalField } from "~/components/patterns/charts/TrendControls";
 import { FilterBar } from "~/components/patterns/filter-bar/FilterBar";
 import { Field } from "~/components/ui/field";
+import { NoValue } from "~/components/ui/no-value";
 import { SegmentedItem } from "~/components/ui/segmented";
 import { SelectGroup, SelectItem, SelectLabel } from "~/components/ui/select";
+import { Stat, StatGroup } from "~/components/ui/stat";
 import { day } from "~/dayjs";
 import { BUFF_TIMINGS_NOTE } from "~/lib/buffs";
 import { wholeTimeBuckets } from "~/lib/time-buckets";
@@ -70,9 +72,22 @@ export default function GamesOverTimeChart({
       }));
   }, [data, stat, timeBucket, params]);
   const span = valueSpan(chartData);
+  const readings = chartData.filter((entry): entry is typeof entry & { value: number } => entry.value != null);
+  const latest = readings.at(-1);
+  const lowest = readings.reduce<(typeof readings)[number] | undefined>(
+    (low, entry) => (low == null || entry.value < low.value ? entry : low),
+    undefined,
+  );
+  const highest = readings.reduce<(typeof readings)[number] | undefined>(
+    (high, entry) => (high == null || entry.value > high.value ? entry : high),
+    undefined,
+  );
+  const matches = chartData.reduce((sum, entry) => sum + (entry.matches ?? 0), 0);
+  const formatValue = (value: number) => (statDef ? formatStatValue(value, statDef.format) : String(value));
+  const formatDate = (date: number) => day.utc(date).format("MMM D, YYYY");
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="@container flex flex-col gap-3">
       <FilterBar variant="toolbar" title="Game trends" icon={ChartNoAxesCombined} aria-label="Trend controls">
         <Field label="Metric" orientation="horizontal" className="w-full @sm:w-auto">
           <MetricSelect value={stat} valueLabel={statDef?.label} onValueChange={onStatChange}>
@@ -99,6 +114,36 @@ export default function GamesOverTimeChart({
           ))}
         </TrendIntervalField>
       </FilterBar>
+
+      {/* The plot's numbers as text; it stays while a new interval loads, so the plot below it does not move. */}
+      <StatGroup variant="joined" size="sm" className="grid-cols-2 @2xl:grid-cols-4">
+        <Stat
+          label="Latest"
+          value={latest && formatValue(latest.value)}
+          sub={latest ? formatDate(latest.date) : <NoValue />}
+        />
+        <Stat
+          label="Lowest"
+          value={lowest && formatValue(lowest.value)}
+          sub={lowest ? formatDate(lowest.date) : <NoValue />}
+        />
+        <Stat
+          label="Highest"
+          value={highest && formatValue(highest.value)}
+          sub={highest ? formatDate(highest.date) : <NoValue />}
+        />
+        <Stat
+          label="Matches"
+          value={isPending ? undefined : matches.toLocaleString("en-US")}
+          sub={
+            isPending ? (
+              <NoValue />
+            ) : (
+              `${chartData.length.toLocaleString("en-US")} ${TIME_BUCKETS.find((b) => b.value === timeBucket)?.label.toLowerCase()}s`
+            )
+          }
+        />
+      </StatGroup>
 
       <div aria-live="polite" aria-busy={isPending}>
         {isPending ? (
