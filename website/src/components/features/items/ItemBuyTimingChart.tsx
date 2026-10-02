@@ -322,17 +322,18 @@ export function ItemBuyTimingChart({ itemIds, baseQueryOptions, rowTotalMatches 
           </Inline>
         </PanelBody>
         <Separator />
-        <div aria-live="polite" aria-busy={isLoading}>
-          {isLoading ? (
-            <div className="p-2">
-              <ChartLoading label="purchase analysis" size="lg" />
-            </div>
-          ) : itemIds.length === 0 ? (
+        {/* Nothing picked needs no data: the server, which never fetches it here, shows the same prompt. */}
+        <div aria-live="polite" aria-busy={isLoading && itemIds.length > 0}>
+          {itemIds.length === 0 ? (
             <EmptyState
               variant="plain"
               title="Pick one or more items above"
               description="to compare how their win rate changes with when they are bought."
             />
+          ) : isLoading ? (
+            <div className="p-2">
+              <ChartLoading label="purchase analysis" size="lg" />
+            </div>
           ) : !hasValidData ? (
             <EmptyState variant="plain" title="No data available" />
           ) : (
