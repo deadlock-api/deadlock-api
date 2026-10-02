@@ -20,10 +20,6 @@ use crate::models::enums::{
 };
 
 #[derive(Row, Debug, Clone, Serialize)]
-#[expect(
-    clippy::struct_excessive_bools,
-    reason = "flat ClickHouse row, one field per column"
-)]
 pub(crate) struct ClickhouseMatchPlayer {
     pub match_id: u64,
     pub start_time: u32,
@@ -331,7 +327,6 @@ pub(crate) struct ClickhouseMatchPlayer {
     pub stats_gold_source_item_goose_egg_gold: Vec<u32>,
     #[serde(rename = "stats.gold_source_item_goose_egg_gold_orbs")]
     pub stats_gold_source_item_goose_egg_gold_orbs: Vec<u32>,
-    pub has_gold_sources: bool,
     #[serde(rename = "power_up_buffs.type")]
     pub power_up_buffs_type: Vec<String>,
     #[serde(rename = "power_up_buffs.value")]
@@ -1049,7 +1044,6 @@ impl From<(&MatchInfo, bool, Players)> for ClickhouseMatchPlayer {
                 EGoldSource::KEItemGooseEgg,
                 GoldSource::gold_orbs,
             ),
-            has_gold_sources: value.stats.iter().any(|s| !s.gold_sources.is_empty()),
             power_up_buffs_type: value
                 .power_up_buffs
                 .iter()
