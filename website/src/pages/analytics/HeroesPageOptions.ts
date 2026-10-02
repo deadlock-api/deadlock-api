@@ -1,7 +1,8 @@
+import type { QueryExecuteOptions, QueryKey } from "@tanstack/react-query";
 import { lazyRouteComponent } from "@tanstack/react-router";
 import type { AnalyticsHeroStats } from "deadlock_api_client";
 
-import { analyticsTabFromPath, ANALYTICS_VIEWS, redirectAnalyticsTab } from "~/lib/analytics-tabs";
+import { type AnalyticsTab, analyticsTabFromPath, ANALYTICS_VIEWS, redirectAnalyticsTab } from "~/lib/analytics-tabs";
 import type { DateFilterPreference } from "~/lib/date-filter-preference";
 import { DEFAULT_MATCH_MODE } from "~/lib/game-mode";
 import { prefetchSafe } from "~/lib/prefetch-safe";
@@ -19,6 +20,7 @@ import type { RouterContext } from "~/router";
 
 const DEFAULT_MIN_RANK = 91;
 const DEFAULT_MAX_RANK = 116;
+const DEFAULT_MIN_MATCHES = 10;
 
 function defaultHeroStatsRanges(seasons: readonly SeasonInfo[], preference: DateFilterPreference = "season") {
   const prev = defaultPrevUnixRange(seasons, preference);
@@ -48,13 +50,143 @@ function findWinRateLeader(
   return best;
 }
 
+type HeroStatsRanges = ReturnType<typeof defaultHeroStatsRanges>;
+
+/**
+ * Prefetches what a view other than the overall table renders with no search params: the defaults of `useHeroFilters`
+ * and of the view itself, in the exact query keys its components ask for.
+ */
+async function prefetchHeroView(
+  queryClient: RouterContext["queryClient"],
+  tab: Exclude<AnalyticsTab<"heroes">, "stats">,
+  r: HeroStatsRanges,
+) {
+  const range = { minUnixTimestamp: r.minUnixTimestamp, maxUnixTimestamp: r.maxUnixTimestamp };
+  const prevRange = { minUnixTimestamp: r.prevMinUnixTimestamp, maxUnixTimestamp: r.prevMaxUnixTimestamp };
+  const ranks = { minAverageBadge: DEFAULT_MIN_RANK, maxAverageBadge: DEFAULT_MAX_RANK };
+  const mode = { gameMode: "normal" as const, matchMode: DEFAULT_MATCH_MODE };
+  const prefetch = <TQueryFnData, TError, TData, TQueryKey extends QueryKey>(
+    options: QueryExecuteOptions<TQueryFnData, TError, TData, TQueryFnData, TQueryKey>,
+  ) => prefetchSafe(queryClient.query({ ...options, staleTime: "static" }));
+
+  switch (tab) {
+    case "stats-over-time":
+    case "stats-by-duration":
+    case "stats-by-rank":
+    case "stats-by-experience": {
+      const [
+        { heroChartStatsQueryOptions, heroRankStatsQueryOptions },
+        { DURATION_BUCKETS, EXPERIENCE_BUCKETS },
+        { ranksQueryOptions },
+      ] = await Promise.all([
+        import("~/queries/hero-stats-query"),
+        import("~/lib/constants"),
+        import("~/queries/ranks-query"),
+      ]);
+      const base = { minHeroMatches: 0, minHeroMatchesTotal: 0, ...ranks, ...range, ...mode };
+      if (tab === "stats-over-time") {
+        return prefetch(heroChartStatsQueryOptions("over-time", { ...base, bucket: "start_time_day" }));
+      }
+      if (tab === "stats-by-duration") {
+        return Promise.all(
+          DURATION_BUCKETS.map((bucket) =>
+            prefetch(
+              heroChartStatsQueryOptions("by-duration", {
+                ...base,
+                minDurationS: bucket.minS,
+                maxDurationS: bucket.maxS,
+                bucket: "no_bucket",
+              }),
+            ),
+          ),
+        );
+      }
+      if (tab === "stats-by-rank") {
+        // Every rank, so no rank filter.
+        return Promise.all([
+          prefetch(
+            heroRankStatsQueryOptions({
+              minHeroMatches: 0,
+              minHeroMatchesTotal: 0,
+              ...range,
+              ...mode,
+              bucket: "avg_badge",
+            }),
+          ),
+          prefetch(ranksQueryOptions),
+        ]);
+      }
+      return Promise.all(
+        EXPERIENCE_BUCKETS.map((bucket) =>
+          prefetch(
+            heroChartStatsQueryOptions("by-experience", {
+              ...base,
+              minHeroMatchesTotal: bucket.min,
+              maxHeroMatchesTotal: bucket.max,
+              bucket: "no_bucket",
+            }),
+          ),
+        ),
+      );
+    }
+    case "hero-combs": {
+      const { heroCombStatsQueryOptions } = await import("~/queries/hero-comb-stats-query");
+      const comb = { combSize: 2, minMatches: DEFAULT_MIN_MATCHES, ...ranks, ...mode };
+      return Promise.all([
+        prefetch(heroCombStatsQueryOptions({ ...comb, ...range })),
+        prefetch(heroCombStatsQueryOptions({ ...comb, ...prevRange })),
+      ]);
+    }
+    case "matchups":
+    case "hero-matchup-details": {
+      const [{ heroStatsQueryOptions }, { heroCounterWinsQueryOptions, heroSynergyWinsQueryOptions }] =
+        await Promise.all([import("~/queries/hero-stats-query"), import("~/queries/hero-matchup-query")]);
+      const pairs = { sameLaneFilter: true, minMatches: DEFAULT_MIN_MATCHES, ...ranks, ...mode };
+      const stats = { minHeroMatches: DEFAULT_MIN_MATCHES, ...ranks, ...mode };
+      return Promise.all([
+        // The explorer states the total floor in its current-period key; the matchup table does not.
+        prefetch(
+          heroStatsQueryOptions(
+            tab === "matchups" ? { ...stats, ...range } : { ...stats, minHeroMatchesTotal: 0, ...range },
+          ),
+        ),
+        prefetch(heroStatsQueryOptions({ ...stats, ...prevRange })),
+        prefetch(heroSynergyWinsQueryOptions({ ...pairs, ...range })),
+        prefetch(heroSynergyWinsQueryOptions({ ...pairs, ...prevRange })),
+        prefetch(heroCounterWinsQueryOptions({ ...pairs, ...range })),
+        prefetch(heroCounterWinsQueryOptions({ ...pairs, ...prevRange })),
+      ]);
+    }
+    case "hero-scoreboard": {
+      const { heroScoreboardQueryOptions } = await import("~/queries/hero-scoreboard-query");
+      return prefetch(
+        heroScoreboardQueryOptions({
+          sortBy: "winrate",
+          sortDirection: "desc",
+          minMatches: DEFAULT_MIN_MATCHES,
+          ...ranks,
+          ...mode,
+          ...range,
+        }),
+      );
+    }
+  }
+}
+
 export const heroesPageOptions = {
   beforeLoad: async (options: { location: { href: string }; context: RouterContext }) => {
     await redirectLegacyHeroId(options);
     redirectAnalyticsTab(options);
   },
   component: lazyRouteComponent(() => import("./HeroesPage"), "HeroesPage"),
-  loader: async ({ context: { queryClient, preferences } }: { context: RouterContext }) => {
+  loader: async ({
+    context: { queryClient, preferences },
+    location,
+  }: {
+    context: RouterContext;
+    location: { pathname: string };
+  }) => {
+    const tab = analyticsTabFromPath("heroes", location.pathname);
     // Shared route options are not automatically split by the router plugin.
     // Import query code only when this loader runs, rather than on every page.
     const [{ heroesQueryOptions, loadSeasons }, { heroBanStatsQueryOptions }, { heroStatsQueryOptions }] =
@@ -65,6 +197,14 @@ export const heroesPageOptions = {
       ]);
     const seasons = await loadSeasons(queryClient);
     const r = defaultHeroStatsRanges(seasons, preferences.dateFilter);
+    const period = defaultPeriodLabel(seasons, preferences.dateFilter);
+    const coverage = defaultTemporalCoverage(seasons, preferences.dateFilter);
+    const heroes = prefetchSafe(queryClient.query({ ...heroesQueryOptions, staleTime: "static" }));
+    if (tab !== "stats") {
+      // Every other view fetches its own data; the server waits for the default render's, so its HTML carries it.
+      await Promise.all([heroes, prefetchHeroView(queryClient, tab, r)]);
+      return { leader: null, period, coverage };
+    }
     const common = {
       minHeroMatches: 0,
       minHeroMatchesTotal: 0,
@@ -73,7 +213,7 @@ export const heroesPageOptions = {
       gameMode: "normal" as const,
       matchMode: DEFAULT_MATCH_MODE,
     };
-    const [stats, heroes] = await Promise.all([
+    const [stats, heroList] = await Promise.all([
       prefetchSafe(
         queryClient.query({
           ...heroStatsQueryOptions({
@@ -84,7 +224,7 @@ export const heroesPageOptions = {
           staleTime: "static",
         }),
       ),
-      prefetchSafe(queryClient.query({ ...heroesQueryOptions, staleTime: "static" })),
+      heroes,
       prefetchSafe(
         queryClient.query({
           ...heroStatsQueryOptions({
@@ -121,11 +261,7 @@ export const heroesPageOptions = {
       ),
     ]);
     // The leader is measured over the default range, which is this season unless the visitor prefers patches.
-    return {
-      leader: findWinRateLeader(stats, heroes),
-      period: defaultPeriodLabel(seasons, preferences.dateFilter),
-      coverage: defaultTemporalCoverage(seasons, preferences.dateFilter),
-    };
+    return { leader: findWinRateLeader(stats, heroList), period, coverage };
   },
   head: ({
     loaderData,
