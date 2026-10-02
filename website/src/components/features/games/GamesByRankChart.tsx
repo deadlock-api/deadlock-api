@@ -99,6 +99,9 @@ export default function GamesByRankChart({ params, stat, onStatChange, isStreetB
    */
   const tierReadings = useMemo(() => {
     const isTotal = stat.startsWith("total_");
+    // Players are counted distinct per badge (`uniq(account_id)`): one player sits in several badges, so a sum over
+    // badges would count them more than once. Every tile spans several badges, so the count has no reading here.
+    const isDistinctCount = stat === "total_players";
     const tiers = new Map<number, { weight: number; sum: number }>();
     const all = { weight: 0, sum: 0 };
     for (const entry of data ?? []) {
@@ -116,7 +119,7 @@ export default function GamesByRankChart({ params, stat, onStatChange, isStreetB
       tiers.set(tier, acc);
     }
     const valueOf = (acc: { weight: number; sum: number } | undefined) =>
-      acc && acc.weight > 0 ? (isTotal ? acc.sum : acc.sum / acc.weight) : null;
+      acc && acc.weight > 0 && !isDistinctCount ? (isTotal ? acc.sum : acc.sum / acc.weight) : null;
     const byTier = (ranksData ?? [])
       .filter((rank) => rank.tier > 0)
       .sort((a, b) => a.tier - b.tier)
