@@ -4,7 +4,7 @@ import type { AnalyticsApiGameStatsRequest } from "deadlock_api_client";
 import { analyticsTabFromPath, ANALYTICS_VIEWS, redirectAnalyticsTab } from "~/lib/analytics-tabs";
 import { DEFAULT_MATCH_MODE } from "~/lib/game-mode";
 import { prefetchSafe } from "~/lib/prefetch-safe";
-import { defaultPrevUnixRange, defaultUnixRange } from "~/lib/seasons";
+import { defaultPrevUnixRange, defaultTemporalCoverage, defaultUnixRange } from "~/lib/seasons";
 import { datasetJsonLd, pageTitle, seo } from "~/lib/seo";
 import type { RouterContext } from "~/router";
 
@@ -43,8 +43,9 @@ export const gamesPageOptions = {
         }),
       ),
     ]);
+    return { coverage: defaultTemporalCoverage(seasons, preferences.dateFilter) };
   },
-  head: ({ match }: { match: { pathname: string } }) => {
+  head: ({ loaderData, match }: { loaderData?: { coverage?: string }; match: { pathname: string } }) => {
     const tab = analyticsTabFromPath("games", match.pathname);
     const view = ANALYTICS_VIEWS.games[tab];
     const dataset = datasetJsonLd({
@@ -54,6 +55,8 @@ export const gamesPageOptions = {
       keywords: ["Deadlock", "match stats", "average kills", "souls", "game length"],
       variableMeasured: ["match length", "kills", "deaths", "souls", "net worth"],
       apiPath: "/v1/analytics/game-stats",
+      // The loader's default range feeds the overview only; the other views pick their own windows.
+      temporalCoverage: tab === "overview" ? loaderData?.coverage : undefined,
     });
     // The match-length question belongs to the overview; repeating it on every view makes them duplicates.
     const faq = {

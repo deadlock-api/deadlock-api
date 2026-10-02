@@ -22,7 +22,7 @@ import { SegmentedItem } from "~/components/ui/segmented";
 import { useDateRangeState } from "~/hooks/useDateRangeState";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { prefetchSafe } from "~/lib/prefetch-safe";
-import { defaultUnixRange } from "~/lib/seasons";
+import { defaultTemporalCoverage, defaultUnixRange } from "~/lib/seasons";
 import { datasetJsonLd, pageTitle, seo } from "~/lib/seo";
 import { loadSeasons } from "~/queries/asset-queries";
 import { badgeDistributionQueryOptions } from "~/queries/badge-distribution-queries";
@@ -51,7 +51,8 @@ function findMedianRankName(
 export const Route = createFileRoute("/community/badge-distribution")({
   component: BadgeDistributionPage,
   loader: async ({ context: { queryClient, preferences } }) => {
-    const range = defaultUnixRange(await loadSeasons(queryClient), preferences.dateFilter);
+    const seasons = await loadSeasons(queryClient);
+    const range = defaultUnixRange(seasons, preferences.dateFilter);
     const [distribution, ranks] = await Promise.all([
       prefetchSafe(
         queryClient.query({
@@ -63,7 +64,10 @@ export const Route = createFileRoute("/community/badge-distribution")({
       ),
       prefetchSafe(queryClient.query({ ...ranksQueryOptions, staleTime: "static" })),
     ]);
-    return { medianRank: findMedianRankName(distribution, ranks) };
+    return {
+      medianRank: findMedianRankName(distribution, ranks),
+      coverage: defaultTemporalCoverage(seasons, preferences.dateFilter),
+    };
   },
   head: ({ loaderData }) => {
     const year = new Date().getFullYear();
@@ -79,6 +83,7 @@ export const Route = createFileRoute("/community/badge-distribution")({
         path: "/community/badge-distribution",
         keywords: ["Deadlock", "rank distribution", "badge distribution", "rank percentiles", "MMR"],
         variableMeasured: ["share of players per rank", "rank percentile"],
+        temporalCoverage: loaderData?.coverage,
         apiPath: "/v1/analytics/badge-distribution",
       }),
     });

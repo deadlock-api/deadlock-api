@@ -5,7 +5,13 @@ import { analyticsTabFromPath, ANALYTICS_VIEWS, redirectAnalyticsTab } from "~/l
 import type { DateFilterPreference } from "~/lib/date-filter-preference";
 import { DEFAULT_MATCH_MODE } from "~/lib/game-mode";
 import { prefetchSafe } from "~/lib/prefetch-safe";
-import { defaultPeriodLabel, defaultPrevUnixRange, defaultUnixRange, type SeasonInfo } from "~/lib/seasons";
+import {
+  defaultPeriodLabel,
+  defaultPrevUnixRange,
+  defaultTemporalCoverage,
+  defaultUnixRange,
+  type SeasonInfo,
+} from "~/lib/seasons";
 import { datasetJsonLd, pageTitle, seo } from "~/lib/seo";
 import { redirectLegacyHeroId } from "~/lib/site-route-migration";
 import type { SlimHero } from "~/queries/asset-queries";
@@ -115,13 +121,17 @@ export const heroesPageOptions = {
       ),
     ]);
     // The leader is measured over the default range, which is this season unless the visitor prefers patches.
-    return { leader: findWinRateLeader(stats, heroes), period: defaultPeriodLabel(seasons, preferences.dateFilter) };
+    return {
+      leader: findWinRateLeader(stats, heroes),
+      period: defaultPeriodLabel(seasons, preferences.dateFilter),
+      coverage: defaultTemporalCoverage(seasons, preferences.dateFilter),
+    };
   },
   head: ({
     loaderData,
     match,
   }: {
-    loaderData?: { leader: { name: string; winRate: number } | null; period: string };
+    loaderData?: { leader: { name: string; winRate: number } | null; period: string; coverage?: string };
     match: { pathname: string };
   }) => {
     const tab = analyticsTabFromPath("heroes", match.pathname);
@@ -140,6 +150,8 @@ export const heroesPageOptions = {
         keywords: ["Deadlock", "hero win rates", "pick rates", "ban rates", "matchups", "hero meta"],
         variableMeasured: ["win rate", "pick rate", "ban rate", "matches played"],
         apiPath: "/v1/analytics/hero-stats",
+        // The loader's default range feeds the overall table only; the other views pick their own windows.
+        temporalCoverage: tab === "stats" ? loaderData?.coverage : undefined,
       }),
     });
   },

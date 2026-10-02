@@ -3,7 +3,7 @@ import { lazyRouteComponent } from "@tanstack/react-router";
 import { analyticsTabFromPath, ANALYTICS_VIEWS, redirectAnalyticsTab } from "~/lib/analytics-tabs";
 import { DEFAULT_MATCH_MODE } from "~/lib/game-mode";
 import { prefetchSafe } from "~/lib/prefetch-safe";
-import { defaultPrevUnixRange, defaultUnixRange } from "~/lib/seasons";
+import { defaultPrevUnixRange, defaultTemporalCoverage, defaultUnixRange } from "~/lib/seasons";
 import { datasetJsonLd, pageTitle, seo } from "~/lib/seo";
 import { wilsonScoreInterval } from "~/lib/wilson";
 import type { RouterContext } from "~/router";
@@ -78,13 +78,16 @@ export const itemsPageOptions = {
       prefetchSafe(queryClient.query({ ...itemUpgradesQueryOptions, staleTime: "static" })),
     ]);
     // The description names the patch-wide leader, which a hero-filtered table would misrepresent.
-    return { leader: deps.heroId === null ? findWinRateLeader(stats, items) : null };
+    return {
+      leader: deps.heroId === null ? findWinRateLeader(stats, items) : null,
+      coverage: defaultTemporalCoverage(seasons, preferences.dateFilter),
+    };
   },
   head: ({
     loaderData,
     match,
   }: {
-    loaderData?: { leader: { name: string; winRate: number } | null };
+    loaderData?: { leader: { name: string; winRate: number } | null; coverage?: string };
     match: { pathname: string };
   }) => {
     const tab = analyticsTabFromPath("items", match.pathname);
@@ -103,6 +106,8 @@ export const itemsPageOptions = {
         keywords: ["Deadlock", "item win rates", "build stats", "item combos"],
         variableMeasured: ["win rate", "pick rate", "matches played"],
         apiPath: "/v1/analytics/item-stats",
+        // The loader's default range feeds the win-rate table only; the other views pick their own windows.
+        temporalCoverage: tab === "item-stats" ? loaderData?.coverage : undefined,
       }),
     });
   },

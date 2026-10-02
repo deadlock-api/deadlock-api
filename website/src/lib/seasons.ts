@@ -72,6 +72,16 @@ export function defaultDateRange(
   return season ? [season.startDate, season.endDate] : [PATCHES[0].startDate, PATCHES[0].endDate];
 }
 
+/** `defaultDateRange` as an ISO 8601 interval for Dataset `temporalCoverage`, open-ended ("2026-08-21/..") while it runs. */
+export function defaultTemporalCoverage(
+  seasons: readonly SeasonInfo[],
+  preference: DateFilterPreference = "season",
+): string | undefined {
+  const [start, end] = defaultDateRange(seasons, preference);
+  if (!start) return undefined;
+  return `${start.utc().format("YYYY-MM-DD")}/${end ? end.utc().format("YYYY-MM-DD") : ".."}`;
+}
+
 /** How copy names `defaultDateRange`: "this season", or "the current patch" (also the fallback without a season). */
 export function defaultPeriodLabel(
   seasons: readonly SeasonInfo[],

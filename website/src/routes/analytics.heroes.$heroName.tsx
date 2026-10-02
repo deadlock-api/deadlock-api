@@ -33,7 +33,13 @@ import { findHeroBySlug, heroSlug } from "~/lib/hero-slug";
 import { catchPrefetch, prefetchSafe } from "~/lib/prefetch-safe";
 import { rankOf } from "~/lib/rank-of";
 import { rankRangeLabel } from "~/lib/rank-utils";
-import { defaultPeriodLabel, defaultPrevUnixRange, defaultUnixRange, type SeasonInfo } from "~/lib/seasons";
+import {
+  defaultPeriodLabel,
+  defaultPrevUnixRange,
+  defaultTemporalCoverage,
+  defaultUnixRange,
+  type SeasonInfo,
+} from "~/lib/seasons";
 import { datasetJsonLd, pageTitle, seo } from "~/lib/seo";
 import { closestNameBySlug, findByIdSegment, slugify } from "~/lib/slug";
 import { toneOf } from "~/lib/tone";
@@ -220,6 +226,7 @@ export const Route = createFileRoute("/analytics/heroes/$heroName")({
       breadcrumb: hero.name,
       matchups,
       rankRange: rankRangeLabel(ranks, DEFAULT_MIN_RANK, DEFAULT_MAX_RANK),
+      coverage: defaultTemporalCoverage(seasons, preferences.dateFilter),
       summary: summary && {
         winRate: summary.winRate,
         pickRate: summary.pickRate,
@@ -232,7 +239,7 @@ export const Route = createFileRoute("/analytics/heroes/$heroName")({
   head: ({ loaderData }) => {
     // The not-found page sets its own title and noindex; a second title and a canonical to the section came first.
     if (!loaderData) return {};
-    const { heroName, slug, cardImage, rankRange, summary } = loaderData;
+    const { heroName, slug, cardImage, rankRange, coverage, summary } = loaderData;
     const description = summary
       ? `${heroName} holds a ${formatPercent(summary.winRate)} win rate (#${summary.rank} of ${summary.heroCount} heroes) and a ${formatPercent(summary.pickRate)} pick rate in ${rankRange} Deadlock matches. Live matchups, synergies, and counters, updated daily.`
       : `${heroName} win rate, pick rate, best items, and matchups in Deadlock. Live stats from tracked matches, updated daily.`;
@@ -248,6 +255,7 @@ export const Route = createFileRoute("/analytics/heroes/$heroName")({
         path: `/analytics/heroes/${slug}`,
         keywords: ["Deadlock", heroName, "win rate", "pick rate", "matchups"],
         variableMeasured: ["win rate", "pick rate", "ban rate", "matchup win rate"],
+        temporalCoverage: coverage,
         apiPath: "/v1/analytics/hero-stats",
       }),
     });

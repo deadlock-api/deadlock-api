@@ -29,7 +29,7 @@ import { findItemBySlug, itemSlug } from "~/lib/item-slug";
 import { catchPrefetch, prefetchSafe } from "~/lib/prefetch-safe";
 import { rankOf } from "~/lib/rank-of";
 import { rankRangeLabel } from "~/lib/rank-utils";
-import { defaultPeriodLabel, defaultUnixRange, type SeasonInfo } from "~/lib/seasons";
+import { defaultPeriodLabel, defaultTemporalCoverage, defaultUnixRange, type SeasonInfo } from "~/lib/seasons";
 import { datasetJsonLd, pageTitle, seo } from "~/lib/seo";
 import { closestNameBySlug, findByIdSegment, slugify } from "~/lib/slug";
 import { toneOf } from "~/lib/tone";
@@ -190,6 +190,7 @@ export const Route = createFileRoute("/analytics/items/$itemName")({
       breadcrumb: item.name,
       bestHeroes,
       rankRange: rankRangeLabel(ranks, DEFAULT_MIN_RANK, DEFAULT_MAX_RANK),
+      coverage: defaultTemporalCoverage(seasons, preferences.dateFilter),
       summary: summary && {
         winRate: summary.winRate,
         rank: summary.winRateRank,
@@ -202,7 +203,7 @@ export const Route = createFileRoute("/analytics/items/$itemName")({
   head: ({ loaderData }) => {
     // The not-found page sets its own title and noindex; a second title and a canonical to the section came first.
     if (!loaderData) return {};
-    const { itemName, slug, image, tier, slot, rankRange, summary } = loaderData;
+    const { itemName, slug, image, tier, slot, rankRange, coverage, summary } = loaderData;
     const usage = summary?.usage !== undefined ? ` and shows up in ${formatPercent(summary.usage)} of builds` : "";
     const description = summary
       ? `${itemName} wins ${formatPercent(summary.winRate)} of ${rankRange} Deadlock matches (#${summary.rank} of ${summary.itemCount} items)${usage}. Best heroes, common pairings, and buy timing, updated daily.`
@@ -219,6 +220,7 @@ export const Route = createFileRoute("/analytics/items/$itemName")({
         path: `/analytics/items/${slug}`,
         keywords: ["Deadlock", itemName, "item", "win rate", "build"],
         variableMeasured: ["win rate", "purchase rate", "buy time"],
+        temporalCoverage: coverage,
         apiPath: "/v1/analytics/item-stats",
       }),
     });

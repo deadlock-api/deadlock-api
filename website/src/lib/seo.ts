@@ -138,6 +138,8 @@ interface DatasetOptions {
   keywords: string[];
   /** What the numbers are, such as "win rate" or "pick rate". */
   variableMeasured: string[];
+  /** The period the numbers cover, an ISO 8601 interval such as "2026-08-21/..". */
+  temporalCoverage?: string;
 }
 
 interface DataDownload {
@@ -158,6 +160,7 @@ export function datasetJsonLd({
   path,
   keywords,
   variableMeasured,
+  temporalCoverage,
   apiPath,
   downloads,
 }: DatasetOptions & DatasetSource): Record<string, unknown> {
@@ -169,6 +172,7 @@ export function datasetJsonLd({
     url: `${SITE_URL}${path}`,
     keywords,
     variableMeasured,
+    temporalCoverage,
     // The stats are recomputed from new matches all the time, so the day the page is served is the day of its data.
     dateModified: new Date().toISOString().slice(0, 10),
     creator: ORGANIZATION,
