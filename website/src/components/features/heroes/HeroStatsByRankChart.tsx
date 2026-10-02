@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { CartesianGrid, Scatter, ScatterChart, type ScatterProps, Tooltip, XAxis, YAxis } from "recharts";
 
 import { ChartHeroSelector } from "~/components/domain/selectors/ChartHeroSelector";
+import { type HeroBucketRow, HeroBucketTable } from "~/components/features/heroes/HeroBucketTable";
 import { ChartCard } from "~/components/patterns/charts/ChartCard";
 import { ChartLegend, ChartLegendItem, ChartSwatch } from "~/components/patterns/charts/ChartLegend";
 import { ChartSidebarLayout } from "~/components/patterns/charts/ChartSidebarLayout";
@@ -28,6 +29,7 @@ import { BANS_PER_MATCH } from "~/lib/ban-rate";
 import { niceTicks } from "~/lib/chart-axis";
 import { getPickrateMultiplier } from "~/lib/constants";
 import type { GameMode, MatchMode } from "~/lib/game-mode";
+import { HERO_TREND_LABELS } from "~/lib/hero-trends";
 import { getRankImageUrl } from "~/lib/rank-utils";
 import { type HeroRankStats, heroRankStatsQueryOptions } from "~/queries/hero-stats-query";
 import { queryKeys } from "~/queries/query-keys";
@@ -60,9 +62,10 @@ interface DataPoint {
 
 function formatStatValue(stat: ByRankStat, value: number): string {
   if (stat === "winrate" || stat === "pickrate" || stat === "ban_rate") return `${value.toFixed(2)}%`;
-  if (stat === "net_worth_per_match") return value.toLocaleString(undefined, { maximumFractionDigits: 0 });
+  // One locale, so the server renders the same digits the browser hydrates.
+  if (stat === "net_worth_per_match") return value.toLocaleString("en-US", { maximumFractionDigits: 0 });
   if (stat === "wins" || stat === "losses" || stat === "matches")
-    return value.toLocaleString(undefined, { maximumFractionDigits: 0 });
+    return value.toLocaleString("en-US", { maximumFractionDigits: 0 });
   return value.toFixed(1);
 }
 
@@ -342,6 +345,26 @@ export function HeroStatsByRankChart({
     .map(([id, hero]) => ({ id: Number(id), name: hero.name }))
     .sort((a, b) => a.name.localeCompare(b.name));
 
+  // Every hero's y reading per rank, for the table under the chart.
+  const tableTiers = useMemo(
+    () =>
+      [...new Set(Object.values(heroDataByHero).flatMap((points) => points.map((point) => point.badge)))]
+        .sort((a, b) => a - b)
+        .map((badge) => ({ badge, name: ranksData?.find((rank) => rank.tier === Math.floor(badge / 10))?.name })),
+    [heroDataByHero, ranksData],
+  );
+  const tableRows = useMemo<HeroBucketRow[]>(
+    () =>
+      allHeroIds.map((heroId) => ({
+        heroId,
+        name: heroIdMap[heroId]?.name ?? `Hero ${heroId}`,
+        values: tableTiers.map(
+          ({ badge }) => heroDataByHero[heroId]?.find((point) => point.badge === badge)?.yValue ?? null,
+        ),
+      })),
+    [allHeroIds, heroIdMap, heroDataByHero, tableTiers],
+  );
+
   const [xTicks, yTicks] = useMemo(() => {
     const points = allHeroIds.filter((id) => effectiveVisibleSet.has(id)).flatMap((id) => heroDataByHero[id] ?? []);
     const xs = points.map((point) => point.xValue);
@@ -372,82 +395,92 @@ export function HeroStatsByRankChart({
           }}
         />
       ) : (
-        <ChartSidebarLayout
-          sidebar={
-            <ChartHeroSelector
-              heroes={pickerHeroes}
-              availableHeroIds={allHeroIds}
-              value={selectedIds}
-              onValueChange={setVisibleHeroes}
-            />
-          }
-        >
-          <ChartCard aria-label="Rank comparison chart" title="Hero performance by rank">
-            {selectedIds.length > 0 && (
-              <ChartLegend label="Selected heroes" className="px-3 pt-2 select-none">
-                {selectedIds.map((heroId) => (
-                  <ChartLegendItem key={heroId} color={heroIdMap[heroId]?.color ?? CHART_COLOR.fallback} shape="line">
-                    {heroIdMap[heroId]?.name ?? `Hero ${heroId}`}
-                  </ChartLegendItem>
-                ))}
-              </ChartLegend>
-            )}
-            {selectedIds.length === 0 ? (
-              <EmptyState
-                variant="plain"
-                title={allHeroIds.length ? "Choose heroes to compare" : "No rank data for these filters"}
-                description={
-                  allHeroIds.length
-                    ? "Select heroes in the picker or use Show all."
-                    : "Try a wider date range or fewer filters."
-                }
+        <div className="flex flex-col gap-3">
+          <ChartSidebarLayout
+            sidebar={
+              <ChartHeroSelector
+                heroes={pickerHeroes}
+                availableHeroIds={allHeroIds}
+                value={selectedIds}
+                onValueChange={setVisibleHeroes}
               />
-            ) : (
-              <ChartSurface
-                variant="flush"
-                size="xl"
-                label={`Hero ${formatStatLabel(xStat)} vs ${formatStatLabel(yStat)} by rank chart`}
-              >
-                <ScatterChart margin={{ top: 20, right: 30, bottom: 8, left: 0 }}>
-                  <CartesianGrid {...CHART_GRID} vertical />
-                  <XAxis
-                    {...CHART_X_AXIS}
-                    type="number"
-                    dataKey="xValue"
-                    name={formatStatLabel(xStat)}
-                    domain={[xTicks[0], xTicks[xTicks.length - 1]]}
-                    ticks={xTicks}
-                    label={{ ...CHART_X_LABEL, value: formatStatLabel(xStat) }}
-                    tickFormatter={tickFormatter(xStat)}
-                  />
-                  <YAxis
-                    {...CHART_Y_AXIS}
-                    type="number"
-                    dataKey="yValue"
-                    name={formatStatLabel(yStat)}
-                    label={{ ...CHART_Y_LABEL, value: formatStatLabel(yStat) }}
-                    domain={[yTicks[0], yTicks[yTicks.length - 1]]}
-                    ticks={yTicks}
-                    tickFormatter={tickFormatter(yStat)}
-                  />
-                  <Tooltip isAnimationActive={false} content={<CustomTooltip xStat={xStat} yStat={yStat} />} />
+            }
+          >
+            <ChartCard aria-label="Rank comparison chart" title="Hero performance by rank">
+              {selectedIds.length > 0 && (
+                <ChartLegend label="Selected heroes" className="px-3 pt-2 select-none">
                   {selectedIds.map((heroId) => (
-                    <Scatter
-                      key={heroId}
-                      name={heroIdMap[heroId]?.name ?? `Hero ${heroId}`}
-                      dataKey={heroId}
-                      data={heroDataByHero[heroId]}
-                      fill={heroIdMap[heroId]?.color ?? CHART_COLOR.fallback}
-                      line={{ stroke: heroIdMap[heroId]?.color ?? CHART_COLOR.fallback, strokeWidth: 2 }}
-                      shape={<BadgePoint />}
-                      isAnimationActive={false}
-                    />
+                    <ChartLegendItem key={heroId} color={heroIdMap[heroId]?.color ?? CHART_COLOR.fallback} shape="line">
+                      {heroIdMap[heroId]?.name ?? `Hero ${heroId}`}
+                    </ChartLegendItem>
                   ))}
-                </ScatterChart>
-              </ChartSurface>
-            )}
-          </ChartCard>
-        </ChartSidebarLayout>
+                </ChartLegend>
+              )}
+              {selectedIds.length === 0 ? (
+                <EmptyState
+                  variant="plain"
+                  title={allHeroIds.length ? "Choose heroes to compare" : "No rank data for these filters"}
+                  description={
+                    allHeroIds.length
+                      ? "Select heroes in the picker or use Show all."
+                      : "Try a wider date range or fewer filters."
+                  }
+                />
+              ) : (
+                <ChartSurface
+                  variant="flush"
+                  size="xl"
+                  label={`Hero ${formatStatLabel(xStat)} vs ${formatStatLabel(yStat)} by rank chart`}
+                >
+                  <ScatterChart margin={{ top: 20, right: 30, bottom: 8, left: 0 }}>
+                    <CartesianGrid {...CHART_GRID} vertical />
+                    <XAxis
+                      {...CHART_X_AXIS}
+                      type="number"
+                      dataKey="xValue"
+                      name={formatStatLabel(xStat)}
+                      domain={[xTicks[0], xTicks[xTicks.length - 1]]}
+                      ticks={xTicks}
+                      label={{ ...CHART_X_LABEL, value: formatStatLabel(xStat) }}
+                      tickFormatter={tickFormatter(xStat)}
+                    />
+                    <YAxis
+                      {...CHART_Y_AXIS}
+                      type="number"
+                      dataKey="yValue"
+                      name={formatStatLabel(yStat)}
+                      label={{ ...CHART_Y_LABEL, value: formatStatLabel(yStat) }}
+                      domain={[yTicks[0], yTicks[yTicks.length - 1]]}
+                      ticks={yTicks}
+                      tickFormatter={tickFormatter(yStat)}
+                    />
+                    <Tooltip isAnimationActive={false} content={<CustomTooltip xStat={xStat} yStat={yStat} />} />
+                    {selectedIds.map((heroId) => (
+                      <Scatter
+                        key={heroId}
+                        name={heroIdMap[heroId]?.name ?? `Hero ${heroId}`}
+                        dataKey={heroId}
+                        data={heroDataByHero[heroId]}
+                        fill={heroIdMap[heroId]?.color ?? CHART_COLOR.fallback}
+                        line={{ stroke: heroIdMap[heroId]?.color ?? CHART_COLOR.fallback, strokeWidth: 2 }}
+                        shape={<BadgePoint />}
+                        isAnimationActive={false}
+                      />
+                    ))}
+                  </ScatterChart>
+                </ChartSurface>
+              )}
+            </ChartCard>
+          </ChartSidebarLayout>
+          {tableRows.length > 0 && (
+            <HeroBucketTable
+              title={`${yStat === "pickrate" ? "Pick rate" : HERO_TREND_LABELS[yStat]} by rank · all heroes`}
+              buckets={tableTiers.map(({ badge, name }) => name ?? `Rank ${Math.floor(badge / 10)}`)}
+              rows={tableRows}
+              format={(value) => formatStatValue(yStat, value)}
+            />
+          )}
+        </div>
       )}
     </div>
   );
