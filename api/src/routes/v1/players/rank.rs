@@ -1,3 +1,5 @@
+use core::time::Duration;
+
 use axum::Json;
 use axum::extract::{Path, State};
 use axum::http::{StatusCode, header};
@@ -11,9 +13,9 @@ use utoipa::ToSchema;
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
-use crate::routes::v1::players::mmr::apply_mmr_rate_limits;
 use crate::services::clickhouse_batcher::{BatchQuery, ClickhouseBatcher, in_clause};
 use crate::services::rank_image::{self, RankImageFormat, RankImageQuery};
+use crate::services::rate_limiter::Quota;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::utils::parse::comma_separated_deserialize;
 use crate::utils::types::AccountIdQuery;
@@ -366,7 +368,19 @@ pub(super) async fn rank_batch(
             format!("Too many account IDs (max {MAX_BATCH_ACCOUNT_IDS})."),
         ));
     }
-    apply_mmr_rate_limits(&state, &rate_limit_key).await?;
+    state
+        .rate_limit_client
+        .apply_limits(
+            &rate_limit_key,
+            "rank",
+            &[
+                Quota::ip_limit(20, Duration::from_mins(1)),
+                Quota::key_limit(100, Duration::from_mins(1)),
+                Quota::key_limit(2_000, Duration::from_hours(1)),
+                Quota::global_limit(200, Duration::from_mins(1)),
+            ],
+        )
+        .await?;
 
     let protected_users = state
         .steam_client
