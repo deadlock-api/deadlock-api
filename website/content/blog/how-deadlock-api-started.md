@@ -2,7 +2,7 @@
 title: "How Deadlock API started: from frustrated meetings to 20 million daily requests"
 description: How Deadlock API grew from one developer's frustration with endless meetings into an open API serving 20 million requests a day to half a million users.
 date: 2026-03-16
-author: Manuel - Deadlock API Team
+author: Manuel Raimann
 tags:
   - community
   - announcement

@@ -2,7 +2,7 @@
 title: Valve rebuilt Deadlock's Urn three times in six weeks
 description: Deadlock's Urn became a King of the Hill point, then a courier job and the Unstable Rift. Its souls barely moved; who collects them changed completely.
 date: 2026-07-23
-author: Manuel - Deadlock API Team
+author: Manuel Raimann
 tags:
   - data
   - meta

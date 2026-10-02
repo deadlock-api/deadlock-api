@@ -190,14 +190,14 @@ Now write the actual blog post. You have two options:
 
 Create a file at `content/blog/<slug>.md` with proper frontmatter.
 
-**Author:** Get the git user name with `git config user.name` and format as `<name> - Deadlock API Team`. For example: `Manuel - Deadlock API Team`.
+**Author:** `Manuel Raimann` (full name, matches the BlogPosting Person in the JSON-LD).
 
 ```markdown
 ---
 title: Your Post Title Here
 description: A one or two sentence summary for the blog index listing.
 date: YYYY-MM-DD
-author: Manuel - Deadlock API Team
+author: Manuel Raimann
 tags:
   - tag1
   - tag2
@@ -271,7 +271,7 @@ const jsxPosts: JsxBlogPost[] = [
     title: "Your Post Title",
     description: "Description for listing.",
     date: "YYYY-MM-DD",
-    author: "Manuel - Deadlock API Team",
+    author: "Manuel Raimann",
     tags: ["data", "interactive"],
     component: lazy(() => import("~/components/blog/your-post-slug")),
   },
@@ -368,7 +368,7 @@ After the humanizer finishes, apply its changes to the blog post file.
 
 After the humanizer pass, do a final check:
 
-1. **Frontmatter is correct**: title, description, date (use today's date: check with `date +%Y-%m-%d`), author (first name only + "- Deadlock API Team", no last names), tags
+1. **Frontmatter is correct**: title, description, date (use today's date: check with `date +%Y-%m-%d`), author (full name, e.g. "Manuel Raimann"), tags
 2. **Links work**: all internal links point to valid routes (`/heroes`, `/items`, `/leaderboard`, `/badge-distribution`, `/blog`)
 3. **No dashes as punctuation**: search the file for `--` (in prose, not code) and the em dash character. Both are AI writing tells. Replace with commas, periods, or restructured sentences
 4. **Images exist**: if images are referenced, verify the files exist in `public/blog/images/`

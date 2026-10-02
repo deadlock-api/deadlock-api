@@ -2,7 +2,7 @@
 title: Four months of Valve balancing Deadlock, told in 2.9 million matches
 description: Five Deadlock patches from January to April 2026 reshuffled heroes, stretched matches and killed the bullet carry build. 2.9M matches show what moved.
 date: 2026-04-18
-author: Manuel - Deadlock API Team
+author: Manuel Raimann
 tags:
   - data
   - meta
