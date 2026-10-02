@@ -11,36 +11,72 @@ import type { RouterContext } from "~/router";
 export const gamesPageOptions = {
   beforeLoad: redirectAnalyticsTab,
   component: lazyRouteComponent(() => import("./GamesPage"), "Games"),
-  loader: async ({ context: { queryClient, preferences } }: { context: RouterContext }) => {
-    const [{ loadSeasons }, { gameStatsQueryOptions }] = await Promise.all([
+  loader: async ({
+    context: { queryClient, preferences },
+    location,
+  }: {
+    context: RouterContext;
+    location: { pathname: string };
+  }) => {
+    const tab = analyticsTabFromPath("games", location.pathname);
+    const [{ buffInfoQueryOptions, loadSeasons }, { gameStatsQueryOptions }] = await Promise.all([
       import("~/queries/asset-queries"),
       import("~/queries/games-query"),
     ]);
     const seasons = await loadSeasons(queryClient);
     const range = defaultUnixRange(seasons, preferences.dateFilter);
-    const prevRange = defaultPrevUnixRange(seasons, preferences.dateFilter);
-    const baseParams: AnalyticsApiGameStatsRequest = {
+    // The filters every view passes on, to the game stats and to the buff stats and performance curve alike.
+    const filters = {
       gameMode: "normal",
       matchMode: DEFAULT_MATCH_MODE,
       ...range,
       minAverageBadge: 0,
       maxAverageBadge: 116,
-    };
-    await Promise.all([
-      prefetchSafe(
-        queryClient.query({ ...gameStatsQueryOptions({ ...baseParams, bucket: "no_bucket" }), staleTime: "static" }),
-      ),
-      prefetchSafe(
-        queryClient.query({
-          ...gameStatsQueryOptions({
-            ...baseParams,
-            ...prevRange,
-            bucket: "no_bucket",
-          }),
-          staleTime: "static",
-        }),
-      ),
-    ]);
+    } as const;
+    const baseParams: AnalyticsApiGameStatsRequest = filters;
+    const gameStats = (params: AnalyticsApiGameStatsRequest) =>
+      prefetchSafe(queryClient.query({ ...gameStatsQueryOptions(params), staleTime: "static" }));
+    // What each view's first render reads, on its default filters (the page's own defaults: this metric, this
+    // interval), so the server HTML carries the numbers rather than the views' loading states.
+    const prefetches: Promise<unknown>[] = [];
+    if (tab === "overview") {
+      const prevRange = defaultPrevUnixRange(seasons, preferences.dateFilter);
+      prefetches.push(
+        gameStats({ ...baseParams, bucket: "no_bucket" }),
+        gameStats({ ...baseParams, ...prevRange, bucket: "no_bucket" }),
+      );
+    } else if (tab === "over-time") {
+      prefetches.push(gameStats({ ...baseParams, bucket: "start_time_day" }));
+    } else if (tab === "by-rank") {
+      prefetches.push(gameStats({ ...baseParams, bucket: "avg_badge" }));
+    } else {
+      const { playerPerformanceCurveQueryOptions } = await import("~/queries/player-performance-curve-query");
+      prefetches.push(gameStats({ ...baseParams, bucket: "no_bucket" }));
+      if (tab === "economy") {
+        prefetches.push(
+          gameStats({ ...baseParams, bucket: "avg_badge" }),
+          prefetchSafe(
+            queryClient.query({
+              ...playerPerformanceCurveQueryOptions({ ...filters, resolution: 5 }),
+              staleTime: "static",
+            }),
+          ),
+        );
+      } else {
+        const { buffStatsQueryOptions } = await import("~/queries/buff-stats-query");
+        prefetches.push(
+          prefetchSafe(queryClient.query({ ...buffStatsQueryOptions(filters), staleTime: "static" })),
+          prefetchSafe(queryClient.query({ ...buffInfoQueryOptions, staleTime: "static" })),
+          prefetchSafe(
+            queryClient.query({
+              ...playerPerformanceCurveQueryOptions({ ...filters, resolution: 0 }),
+              staleTime: "static",
+            }),
+          ),
+        );
+      }
+    }
+    await Promise.all(prefetches);
     return { coverage: defaultTemporalCoverage(seasons, preferences.dateFilter) };
   },
   head: ({ loaderData, match }: { loaderData?: { coverage?: string }; match: { pathname: string } }) => {

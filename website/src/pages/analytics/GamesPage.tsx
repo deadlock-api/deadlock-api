@@ -1,6 +1,6 @@
 import type { AnalyticsApiGameStatsRequest } from "deadlock_api_client";
 import { parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
-import { lazy, Suspense } from "react";
+import { type ComponentType, lazy, Suspense } from "react";
 
 import { Filter } from "~/components/domain/filters";
 import GamesOverview from "~/components/features/games/GamesOverview";
@@ -26,7 +26,24 @@ const BuffsTab = lazy(() => import("~/components/features/games/BuffsTab"));
 
 const STREET_BRAWL_ONLY = ["street_brawl"] as const;
 
-export function Games() {
+type ViewProps<T> = T extends ComponentType<infer P> ? P : never;
+
+/**
+ * The games analytics page with its five views. The views other than the overview are lazy by default, so no view
+ * carries the others; each view's route passes its own in statically (`GamesOverTimePage` and its siblings), since a lazy view suspends
+ * while the server renders, which streamed its loading state into the HTML ahead of the numbers.
+ */
+export function Games({
+  OverTime = GamesOverTimeChart,
+  ByRank = GamesByRankChart,
+  Economy = EconomyTab,
+  Buffs = BuffsTab,
+}: {
+  OverTime?: ComponentType<ViewProps<typeof GamesOverTimeChart>>;
+  ByRank?: ComponentType<ViewProps<typeof GamesByRankChart>>;
+  Economy?: ComponentType<ViewProps<typeof EconomyTab>>;
+  Buffs?: ComponentType<ViewProps<typeof BuffsTab>>;
+} = {}) {
   const [tab, setTab] = useAnalyticsTab("games");
   const { mode, setMode, gameMode, matchMode } = useModeState();
   const isStreetBrawl = mode === "street_brawl";
@@ -157,7 +174,7 @@ export function Games() {
           <Section titleDisplay="hidden" title="Match Trends Over Time">
             <ChunkErrorBoundary>
               <Suspense fallback={<LoadingState />}>
-                <GamesOverTimeChart
+                <OverTime
                   params={baseParams}
                   stat={stat}
                   onStatChange={setStat}
@@ -174,12 +191,7 @@ export function Games() {
           <Section titleDisplay="hidden" title="Match Stats by Rank">
             <ChunkErrorBoundary>
               <Suspense fallback={<LoadingState />}>
-                <GamesByRankChart
-                  params={baseParams}
-                  stat={stat}
-                  onStatChange={setStat}
-                  isStreetBrawl={isStreetBrawl}
-                />
+                <ByRank params={baseParams} stat={stat} onStatChange={setStat} isStreetBrawl={isStreetBrawl} />
               </Suspense>
             </ChunkErrorBoundary>
           </Section>
@@ -189,7 +201,7 @@ export function Games() {
           <Section titleDisplay="hidden" title="Soul Economy">
             <ChunkErrorBoundary>
               <Suspense fallback={<LoadingState />}>
-                <EconomyTab params={baseParams} isStreetBrawl={isStreetBrawl} />
+                <Economy params={baseParams} isStreetBrawl={isStreetBrawl} />
               </Suspense>
             </ChunkErrorBoundary>
           </Section>
@@ -199,7 +211,7 @@ export function Games() {
           <Section titleDisplay="hidden" title="Permanent Buffs">
             <ChunkErrorBoundary>
               <Suspense fallback={<LoadingState />}>
-                <BuffsTab params={baseParams} />
+                <Buffs params={baseParams} />
               </Suspense>
             </ChunkErrorBoundary>
           </Section>
