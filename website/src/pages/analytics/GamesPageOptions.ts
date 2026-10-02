@@ -8,8 +8,6 @@ import { defaultPrevUnixRange, defaultTemporalCoverage, defaultUnixRange } from 
 import { datasetJsonLd, pageTitle, seo } from "~/lib/seo";
 import type { RouterContext } from "~/router";
 
-const MATCH_LENGTH_ANSWER = "A typical Deadlock match lasts around 30-40 minutes, varying by game mode and skill.";
-
 export const gamesPageOptions = {
   beforeLoad: redirectAnalyticsTab,
   component: lazyRouteComponent(() => import("./GamesPage"), "Games"),
@@ -58,23 +56,11 @@ export const gamesPageOptions = {
       // The loader's default range feeds the overview only; the other views pick their own windows.
       temporalCoverage: tab === "overview" ? loaderData?.coverage : undefined,
     });
-    // The match-length question belongs to the overview; repeating it on every view makes them duplicates.
-    const faq = {
-      "@context": "https://schema.org",
-      "@type": "FAQPage",
-      mainEntity: [
-        {
-          "@type": "Question",
-          name: "How long is a Deadlock match?",
-          acceptedAnswer: { "@type": "Answer", text: MATCH_LENGTH_ANSWER },
-        },
-      ],
-    };
     return seo({
       title: pageTitle(view.title),
       description: view.description,
       path: match.pathname.replace(/\/$/, ""),
-      jsonLd: tab === "overview" ? [dataset, faq] : dataset,
+      jsonLd: dataset,
     });
   },
 };
