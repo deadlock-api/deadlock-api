@@ -6,15 +6,17 @@ import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { ProgressBarWithLabel } from "~/components/ui/progress-bar";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { Tooltip, TooltipHeader, TooltipStat, TooltipStats, TooltipTarget } from "~/components/ui/tooltip";
-import { CACHE_DURATIONS } from "~/constants/cache";
 import type { Dayjs } from "~/dayjs";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
-import { api } from "~/lib/api";
 import { fineShareDigits, formatFineShare } from "~/lib/format";
 import type { GameMode, MatchMode } from "~/lib/game-mode";
-import { shrunkWinRate } from "~/lib/shrinkage";
 import { itemUpgradesQueryOptions } from "~/queries/asset-queries";
-import { queryKeys } from "~/queries/query-keys";
+import {
+  itemPermutationStatsQueryOptions,
+  listableItemCombos,
+  rankItemCombos,
+  shopableItemIds,
+} from "~/queries/item-permutation-query";
 
 import { useItemCombFilters } from "./useItemCombFilters";
 
@@ -76,10 +78,7 @@ export function ItemCombStatsTable({
   const hasPreviousInterval = prevMinDate != null && prevMaxDate != null;
 
   const { data: assetsItems } = useQuery(itemUpgradesQueryOptions);
-  const shopableItemIds = useMemo(
-    () => new Set((assetsItems || []).filter((i) => !i.disabled && i.shopable && i.shop_image_webp).map((i) => i.id)),
-    [assetsItems],
-  );
+  const shopableIds = useMemo(() => shopableItemIds(assetsItems), [assetsItems]);
 
   const combStatsQuery = {
     combSize: combSizeFilter,
@@ -92,14 +91,7 @@ export function ItemCombStatsTable({
     gameMode: gameMode,
     matchMode,
   };
-  const { data: itemCombData, isLoading } = useQuery({
-    queryKey: queryKeys.analytics.itemPermutationStats(combStatsQuery),
-    queryFn: async () => {
-      const response = await api.analytics_api.itemPermutationStats(combStatsQuery);
-      return response.data;
-    },
-    staleTime: CACHE_DURATIONS.ONE_DAY,
-  });
+  const { data: itemCombData, isLoading } = useQuery(itemPermutationStatsQueryOptions(combStatsQuery));
 
   const prevCombStatsQuery = {
     combSize: combSizeFilter,
@@ -113,30 +105,12 @@ export function ItemCombStatsTable({
     matchMode,
   };
   const { data: prevItemCombData } = useQuery({
-    queryKey: queryKeys.analytics.itemPermutationStats(prevCombStatsQuery),
-    queryFn: async () => {
-      const response = await api.analytics_api.itemPermutationStats(prevCombStatsQuery);
-      return response.data;
-    },
-    staleTime: CACHE_DURATIONS.ONE_DAY,
+    ...itemPermutationStatsQueryOptions(prevCombStatsQuery),
     enabled: hasPreviousInterval,
   });
 
-  const filteredData = useMemo(
-    () => (itemCombData || []).filter((row) => row.item_ids.every((id) => shopableItemIds.has(id))),
-    [itemCombData, shopableItemIds],
-  );
-
-  // A raw win-rate sort would put every 100% combination with a dozen matches above the ones
-  // proven over thousands.
-  const sortedData = useMemo(
-    () =>
-      filteredData
-        .map((row) => ({ row, score: shrunkWinRate(row.wins, row.matches) }))
-        .sort((a, b) => b.score - a.score)
-        .map(({ row }) => row),
-    [filteredData],
-  );
+  const filteredData = useMemo(() => listableItemCombos(itemCombData ?? [], shopableIds), [itemCombData, shopableIds]);
+  const sortedData = useMemo(() => rankItemCombos(filteredData), [filteredData]);
   const limitedData = useMemo(() => sortedData.slice(0, combsToShow), [combsToShow, sortedData]);
 
   // A combination's share is its matches out of the matches of every listable combination, not only the rows shown,
@@ -160,7 +134,7 @@ export function ItemCombStatsTable({
   // so intervals of different length compare fairly.
   const prevStatsMap = useMemo(() => {
     if (!prevItemCombData) return undefined;
-    const prevRows = prevItemCombData.filter((row) => row.item_ids.every((id) => shopableItemIds.has(id)));
+    const prevRows = listableItemCombos(prevItemCombData, shopableIds);
     const prevSumMatches = prevRows.reduce((acc, row) => acc + row.matches, 0);
     const map = new Map<string, { winrate: number; share: number }>();
     for (const row of prevRows) {
@@ -170,7 +144,7 @@ export function ItemCombStatsTable({
       });
     }
     return map;
-  }, [prevItemCombData, shopableItemIds]);
+  }, [prevItemCombData, shopableIds]);
 
   return (
     <>
