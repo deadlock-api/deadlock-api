@@ -1,3 +1,5 @@
+import type { QueryClient, QueryExecuteOptions, QueryKey } from "@tanstack/react-query";
+
 // Wrap a prefetch promise so a failing API call doesn't abort the route loader.
 // Prerender runs every loader at build time — if the API is down or has no data
 // for a freshly shipped patch, the build would otherwise fail entirely.
@@ -17,4 +19,25 @@ export function prefetchSafe<T>(p: Promise<T>): Promise<T | undefined> {
   const caught = catchPrefetch(p);
   if (typeof window === "undefined") return caught;
   return Promise.race([caught, new Promise<undefined>((resolve) => setTimeout(resolve, CLIENT_WAIT_MS))]);
+}
+
+/**
+ * Prefetch for a query whose full answer is too large to embed in the page (megabytes of rows behind a top-50 view).
+ * On the server the cache keeps only `trim(data)`, which must render the view's default state exactly as the full
+ * answer would, and the entry is marked invalidated, so the browser refetches the full answer right after hydration
+ * while showing the same rows. In the browser it is a plain `prefetchSafe`.
+ */
+export async function prefetchSeed<T, TKey extends QueryKey>(
+  queryClient: QueryClient,
+  options: QueryExecuteOptions<T, Error, T, T, TKey>,
+  trim: (data: T) => T | Promise<T>,
+): Promise<T | undefined> {
+  const full = queryClient.query({ ...options, staleTime: "static" });
+  if (typeof window !== "undefined") return prefetchSafe(full);
+  const data = await catchPrefetch(full);
+  if (data === undefined) return undefined;
+  const seed = await trim(data);
+  queryClient.setQueryData<T>(options.queryKey, seed);
+  void queryClient.invalidateQueries({ queryKey: options.queryKey, exact: true, refetchType: "none" });
+  return seed;
 }

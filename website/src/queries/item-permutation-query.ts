@@ -45,3 +45,33 @@ export function rankItemCombos(rows: readonly ItemPermutationStats[]): ItemPermu
     .sort((a, b) => b.score - a.score)
     .map(({ row }) => row);
 }
+
+const comboKey = (itemIds: readonly number[]) => [...itemIds].sort((a, b) => a - b).join("-");
+
+/**
+ * The part of a combination answer the table's default view reads: the listable rows it shows (`count`, or those of
+ * `shown` for the previous interval) in their original order, plus one row without items carrying the matches of all
+ * other listable rows, so each row's share of combo matches stays exact. Megabytes shrink to a few kilobytes.
+ */
+export function trimItemCombosForView(
+  rows: readonly ItemPermutationStats[],
+  shopableItemIds: ReadonlySet<number>,
+  shown: { count: number } | { combos: readonly ItemPermutationStats[] },
+): ItemPermutationStats[] {
+  const listable = listableItemCombos(rows, shopableItemIds);
+  const keys = new Set(
+    ("count" in shown ? rankItemCombos(listable).slice(0, shown.count) : shown.combos).map((row) =>
+      comboKey(row.item_ids),
+    ),
+  );
+  const kept = listable.filter((row) => keys.has(comboKey(row.item_ids)));
+  const rest = listable.filter((row) => !keys.has(comboKey(row.item_ids)));
+  if (rest.length === 0) return kept;
+  const remainder: ItemPermutationStats = { item_ids: [], wins: 0, losses: 0, matches: 0 };
+  for (const row of rest) {
+    remainder.wins += row.wins;
+    remainder.losses += row.losses;
+    remainder.matches += row.matches;
+  }
+  return [...kept, remainder];
+}

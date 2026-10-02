@@ -1,8 +1,9 @@
 import { lazyRouteComponent } from "@tanstack/react-router";
 
+import { ITEM_COMBS_TO_SHOW } from "~/components/features/items/useItemCombFilters";
 import { analyticsTabFromPath, ANALYTICS_VIEWS, redirectAnalyticsTab } from "~/lib/analytics-tabs";
 import { DEFAULT_MATCH_MODE } from "~/lib/game-mode";
-import { prefetchSafe } from "~/lib/prefetch-safe";
+import { prefetchSafe, prefetchSeed } from "~/lib/prefetch-safe";
 import { defaultPrevUnixRange, defaultTemporalCoverage, defaultUnixRange } from "~/lib/seasons";
 import { datasetJsonLd, pageTitle, seo } from "~/lib/seo";
 import { wilsonScoreInterval } from "~/lib/wilson";
@@ -43,44 +44,101 @@ export const itemsPageOptions = {
   loader: async ({
     context: { queryClient, preferences },
     deps,
+    location,
   }: {
     context: RouterContext;
     deps: { heroId: number | null };
+    location: { pathname: string };
   }) => {
-    const [{ itemUpgradesQueryOptions, loadSeasons }, { itemStatsQueryOptions }] = await Promise.all([
+    const tab = analyticsTabFromPath("items", location.pathname);
+    const [{ itemUpgradesQueryOptions, loadSeasons }, { itemStatsQueryOptions }, flow, combos] = await Promise.all([
       import("~/queries/asset-queries"),
       import("~/queries/item-stats-query"),
+      import("~/queries/item-flow-query"),
+      import("~/queries/item-permutation-query"),
     ]);
     const seasons = await loadSeasons(queryClient);
     const range = defaultUnixRange(seasons, preferences.dateFilter);
     const prevRange = defaultPrevUnixRange(seasons, preferences.dateFilter);
+    // The page's defaults, as the views put them into their query keys.
     const common = {
       minMatches: 10,
       heroId: deps.heroId,
       minAverageBadge: 91,
       maxAverageBadge: 116,
-      minBoughtAtS: undefined,
-      maxBoughtAtS: undefined,
       gameMode: "normal" as const,
       matchMode: DEFAULT_MATCH_MODE,
     };
-    const [stats, , items] = await Promise.all([
-      prefetchSafe(queryClient.query({ ...itemStatsQueryOptions({ ...common, ...range }), staleTime: "static" })),
+    // Every view names items, and the build flow and combos trim their answers by the item list.
+    const items = prefetchSafe(queryClient.query({ ...itemUpgradesQueryOptions, staleTime: "static" }));
+    const coverage = defaultTemporalCoverage(seasons, preferences.dateFilter);
+
+    if (tab === "build-flow") {
+      await prefetchSeed(
+        queryClient,
+        flow.itemFlowQueryOptions({
+          heroIds: deps.heroId !== null ? String(deps.heroId) : undefined,
+          gameMode: common.gameMode,
+          matchMode: common.matchMode,
+          minAverageBadge: common.minAverageBadge,
+          maxAverageBadge: common.maxAverageBadge,
+          ...range,
+          minMatches: common.minMatches,
+          phaseIntervalS: 600,
+          phaseCount: 4,
+          lockedItemIds: [],
+          lockedColumns: [],
+        }),
+        async (data) => {
+          const tiers = new Map((await items)?.map((item) => [item.id, item.item_tier ?? 0]));
+          return flow.trimItemFlowForDefaultView(data, (itemId) => tiers.get(itemId) ?? 0);
+        },
+      );
+      return { leader: null, coverage };
+    }
+    if (tab === "item-combos") {
+      const combosQuery = { ...common, combSize: 2 };
+      const shopable = items.then(combos.shopableItemIds);
+      const current = prefetchSeed(
+        queryClient,
+        combos.itemPermutationStatsQueryOptions({ ...combosQuery, ...range }),
+        async (rows) => combos.trimItemCombosForView(rows, await shopable, { count: ITEM_COMBS_TO_SHOW[0] }),
+      );
+      await Promise.all([
+        current,
+        prefetchSeed(
+          queryClient,
+          combos.itemPermutationStatsQueryOptions({ ...combosQuery, ...prevRange }),
+          async (rows) => combos.trimItemCombosForView(rows, await shopable, { combos: (await current) ?? [] }),
+        ),
+      ]);
+      return { leader: null, coverage };
+    }
+    if (tab === "item-purchase-analysis") {
+      // With no item picked the view shows its prompt and reads nothing but the item list.
+      await items;
+      return { leader: null, coverage };
+    }
+
+    const itemStatsQuery = { ...common, minBoughtAtS: undefined, maxBoughtAtS: undefined };
+    const [stats] = await Promise.all([
+      prefetchSafe(
+        queryClient.query({ ...itemStatsQueryOptions({ ...itemStatsQuery, ...range }), staleTime: "static" }),
+      ),
       prefetchSafe(
         queryClient.query({
           ...itemStatsQueryOptions({
-            ...common,
+            ...itemStatsQuery,
             ...prevRange,
           }),
           staleTime: "static",
         }),
       ),
-      prefetchSafe(queryClient.query({ ...itemUpgradesQueryOptions, staleTime: "static" })),
     ]);
     // The description names the patch-wide leader, which a hero-filtered table would misrepresent.
     return {
-      leader: deps.heroId === null ? findWinRateLeader(stats, items) : null,
-      coverage: defaultTemporalCoverage(seasons, preferences.dateFilter),
+      leader: deps.heroId === null ? findWinRateLeader(stats, await items) : null,
+      coverage,
     };
   },
   head: ({
