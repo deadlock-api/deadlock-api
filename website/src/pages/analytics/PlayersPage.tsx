@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import type { PlayerScoreboardSortByEnum } from "deadlock_api_client";
 import { Trophy } from "lucide-react";
 import { parseAsInteger, parseAsStringLiteral, throttle, useQueryState } from "nuqs";
-import { type ComponentType, lazy, Suspense, useState } from "react";
+import { type ComponentProps, type ComponentType, lazy, Suspense, useState } from "react";
 
 import { Filter } from "~/components/domain/filters";
 import { ScoreboardTable } from "~/components/domain/player-scoreboard/ScoreboardTable";
@@ -47,14 +47,17 @@ const PlayerStatsDistributionCharts = lazy(() =>
 );
 
 /**
- * The players analytics page with its three tabs. `Comparison` is the compare tab's content: lazy by default, so the
- * scoreboard does not carry it; the compare route passes it in statically (`PlayersComparePage`), since a lazy
- * component that suspends while the page hydrates would flash its fallback over the server's HTML.
+ * The players analytics page with its three tabs. `Comparison` is the compare tab's content and `Distributions` the
+ * stats metrics tab's: lazy by default, so the scoreboard does not carry them; their routes pass them in statically
+ * (`PlayersComparePage`, `PlayersStatsMetricsPage`), since a lazy component that suspends while the page hydrates would
+ * flash its fallback over the server's HTML, and on the server streams that fallback ahead of the content.
  */
 export function PlayersPage({
   Comparison = LazyPlayerComparison,
+  Distributions = PlayerStatsDistributionCharts,
 }: {
   Comparison?: ComponentType<{ filters: CompareFilters }>;
+  Distributions?: ComponentType<ComponentProps<typeof PlayerStatsDistributionCharts>>;
 } = {}) {
   const [tab, setTab] = useAnalyticsTab("players");
   // Players picked on the scoreboard for a comparison; they stay picked across sorts and pages.
@@ -220,7 +223,7 @@ export function PlayersPage({
           <Section titleDisplay="hidden" title="Player Stats Metrics">
             <ChunkErrorBoundary>
               <Suspense fallback={<LoadingState />}>
-                <PlayerStatsDistributionCharts
+                <Distributions
                   heroId={heroId}
                   gameMode={gameMode}
                   matchMode={matchMode}

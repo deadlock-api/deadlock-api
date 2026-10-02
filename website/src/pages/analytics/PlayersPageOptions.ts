@@ -70,6 +70,41 @@ export const playersPageOptions = {
   },
 };
 
+/**
+ * The stats metrics tab warms the distributions its first render shows (the open Combat section reads them), on the
+ * URL's hero, instead of the scoreboard it never draws.
+ */
+export const statsMetricsPageOptions = {
+  ...playersPageOptions,
+  component: lazyRouteComponent(() => import("./PlayersStatsMetricsPage"), "PlayersStatsMetricsPage"),
+  loader: async ({
+    context: { queryClient, preferences },
+    deps,
+  }: {
+    context: RouterContext;
+    deps: { heroId: number | undefined };
+  }) => {
+    const [{ loadSeasons }, { playerStatsMetricsQueryOptions }] = await Promise.all([
+      import("~/queries/asset-queries"),
+      import("~/queries/player-stats-metrics-query"),
+    ]);
+    const range = defaultUnixRange(await loadSeasons(queryClient), preferences.dateFilter);
+    await prefetchSafe(
+      queryClient.query({
+        ...playerStatsMetricsQueryOptions({
+          heroIds: deps.heroId != null ? String(deps.heroId) : undefined,
+          gameMode: "normal",
+          matchMode: DEFAULT_MATCH_MODE,
+          minAverageBadge: 0,
+          maxAverageBadge: 116,
+          ...range,
+        }),
+        staleTime: "static",
+      }),
+    );
+  },
+};
+
 /** The URL's `players` as TanStack reads it: one id parses as a number, a list stays the comma string nuqs wrote. */
 function searchAccountIds(value: unknown): number[] {
   if (typeof value === "number") return [value];
