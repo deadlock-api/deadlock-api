@@ -23,7 +23,7 @@ import { useAnalyticsTab } from "~/hooks/useAnalyticsTab";
 import { useDateRangeState } from "~/hooks/useDateRangeState";
 import { useModeState } from "~/hooks/useModeState";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
-import { ANALYTICS_VIEWS } from "~/lib/analytics-tabs";
+import { analyticsTabPath, ANALYTICS_VIEWS } from "~/lib/analytics-tabs";
 import { getEffectiveRankRange } from "~/lib/game-mode";
 import { MAX_COMPARE_PLAYERS } from "~/lib/player-compare";
 import type { CompareFilters } from "~/queries/player-compare-queries";
@@ -159,9 +159,15 @@ export function PlayersPage({
           value={tab ?? undefined}
           onValueChange={(value) => setTab(value as typeof tab)}
         >
-          <ResponsiveTab value="scoreboard">Scoreboard</ResponsiveTab>
-          <ResponsiveTab value="stats-metrics">Stats Metrics</ResponsiveTab>
-          <ResponsiveTab value="compare">Compare</ResponsiveTab>
+          <ResponsiveTab value="scoreboard" href={analyticsTabPath("players", "scoreboard")}>
+            Scoreboard
+          </ResponsiveTab>
+          <ResponsiveTab value="stats-metrics" href={analyticsTabPath("players", "stats-metrics")}>
+            Stats Metrics
+          </ResponsiveTab>
+          <ResponsiveTab value="compare" href={analyticsTabPath("players", "compare")}>
+            Compare
+          </ResponsiveTab>
         </ResponsiveTabsList>
 
         <TabsContent value="scoreboard">

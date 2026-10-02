@@ -30,7 +30,7 @@ import { Switch } from "~/components/ui/switch";
 import { Tabs, TabsContent } from "~/components/ui/tabs";
 import { type HeroTab, useHeroFilters } from "~/hooks/useHeroFilters";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
-import { ANALYTICS_VIEWS } from "~/lib/analytics-tabs";
+import { analyticsTabPath, ANALYTICS_VIEWS } from "~/lib/analytics-tabs";
 import { MODE_CONFIG } from "~/lib/game-mode";
 import { heroScoreboardQueryOptions } from "~/queries/hero-scoreboard-query";
 import { BY_RANK_STATS, HERO_STATS, heroStatsFor } from "~/types/api_hero_stats";
@@ -127,15 +127,33 @@ export function HeroesPage() {
           value={filters.tab ?? undefined}
           onValueChange={(value) => filters.setTab(value as HeroTab)}
         >
-          <ResponsiveTab value="stats">Overall Stats</ResponsiveTab>
-          <ResponsiveTab value="stats-over-time">Over Time</ResponsiveTab>
-          <ResponsiveTab value="stats-by-duration">By Duration</ResponsiveTab>
-          <ResponsiveTab value="stats-by-rank">By Rank</ResponsiveTab>
-          <ResponsiveTab value="stats-by-experience">By Experience</ResponsiveTab>
-          <ResponsiveTab value="hero-combs">Combos</ResponsiveTab>
-          <ResponsiveTab value="matchups">Matchups</ResponsiveTab>
-          <ResponsiveTab value="hero-matchup-details">Matchup Details</ResponsiveTab>
-          <ResponsiveTab value="hero-scoreboard">Scoreboard</ResponsiveTab>
+          <ResponsiveTab value="stats" href={analyticsTabPath("heroes", "stats")}>
+            Overall Stats
+          </ResponsiveTab>
+          <ResponsiveTab value="stats-over-time" href={analyticsTabPath("heroes", "stats-over-time")}>
+            Over Time
+          </ResponsiveTab>
+          <ResponsiveTab value="stats-by-duration" href={analyticsTabPath("heroes", "stats-by-duration")}>
+            By Duration
+          </ResponsiveTab>
+          <ResponsiveTab value="stats-by-rank" href={analyticsTabPath("heroes", "stats-by-rank")}>
+            By Rank
+          </ResponsiveTab>
+          <ResponsiveTab value="stats-by-experience" href={analyticsTabPath("heroes", "stats-by-experience")}>
+            By Experience
+          </ResponsiveTab>
+          <ResponsiveTab value="hero-combs" href={analyticsTabPath("heroes", "hero-combs")}>
+            Combos
+          </ResponsiveTab>
+          <ResponsiveTab value="matchups" href={analyticsTabPath("heroes", "matchups")}>
+            Matchups
+          </ResponsiveTab>
+          <ResponsiveTab value="hero-matchup-details" href={analyticsTabPath("heroes", "hero-matchup-details")}>
+            Matchup Details
+          </ResponsiveTab>
+          <ResponsiveTab value="hero-scoreboard" href={analyticsTabPath("heroes", "hero-scoreboard")}>
+            Scoreboard
+          </ResponsiveTab>
         </ResponsiveTabsList>
 
         <TabsContent value="stats">

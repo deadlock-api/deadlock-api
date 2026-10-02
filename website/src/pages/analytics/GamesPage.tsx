@@ -16,7 +16,7 @@ import { useAnalyticsTab } from "~/hooks/useAnalyticsTab";
 import { useDateRangeState } from "~/hooks/useDateRangeState";
 import { useModeState } from "~/hooks/useModeState";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
-import { ANALYTICS_VIEWS } from "~/lib/analytics-tabs";
+import { analyticsTabPath, ANALYTICS_VIEWS } from "~/lib/analytics-tabs";
 import { getEffectiveRankRange } from "~/lib/game-mode";
 
 const GamesOverTimeChart = lazy(() => import("~/components/features/games/GamesOverTimeChart"));
@@ -120,11 +120,21 @@ export function Games() {
           value={tab ?? undefined}
           onValueChange={(value) => setTab(value as typeof tab)}
         >
-          <ResponsiveTab value="overview">Overview</ResponsiveTab>
-          <ResponsiveTab value="over-time">Over Time</ResponsiveTab>
-          <ResponsiveTab value="by-rank">By Rank</ResponsiveTab>
-          <ResponsiveTab value="economy">Economy</ResponsiveTab>
-          <ResponsiveTab value="buffs">Buffs</ResponsiveTab>
+          <ResponsiveTab value="overview" href={analyticsTabPath("games", "overview")}>
+            Overview
+          </ResponsiveTab>
+          <ResponsiveTab value="over-time" href={analyticsTabPath("games", "over-time")}>
+            Over Time
+          </ResponsiveTab>
+          <ResponsiveTab value="by-rank" href={analyticsTabPath("games", "by-rank")}>
+            By Rank
+          </ResponsiveTab>
+          <ResponsiveTab value="economy" href={analyticsTabPath("games", "economy")}>
+            Economy
+          </ResponsiveTab>
+          <ResponsiveTab value="buffs" href={analyticsTabPath("games", "buffs")}>
+            Buffs
+          </ResponsiveTab>
         </ResponsiveTabsList>
 
         <TabsContent value="overview">

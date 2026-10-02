@@ -9,12 +9,24 @@ const DisplayContext = createContext<"tabs" | "measure" | "select">("tabs");
 
 interface ResponsiveTabProps extends Omit<React.ComponentProps<"button">, "value"> {
   value: string;
+  /**
+   * The tab's own URL, when each tab is a page. The tab renders as a link to it, so crawlers find the page and a
+   * modified click opens it in a new tab; a plain click still selects through `onValueChange`.
+   */
+  href?: string;
   disabled?: boolean;
   children: React.ReactNode;
 }
 
+/** A plain primary click selects the tab through Radix (on mouse down or key); the link only serves the other clicks. */
+function keepPlainClick(event: React.MouseEvent<HTMLAnchorElement>) {
+  if (event.button === 0 && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey) {
+    event.preventDefault();
+  }
+}
+
 /** One tab of a `ResponsiveTabsList`: a tab trigger, or an entry of the select the list collapses to. */
-export function ResponsiveTab({ value, disabled = false, className, children, ...props }: ResponsiveTabProps) {
+export function ResponsiveTab({ value, href, disabled = false, className, children, ...props }: ResponsiveTabProps) {
   const display = use(DisplayContext);
   if (display === "select") {
     return (
@@ -32,6 +44,17 @@ export function ResponsiveTab({ value, disabled = false, className, children, ..
   // The hidden measuring copy must not repeat the real tab's id (Radix derives it from the value) or its
   // aria-controls, or the panel would be labelled by an inert duplicate.
   const measure = display === "measure" ? { id: undefined, "aria-controls": undefined, tabIndex: -1 } : {};
+  // The measuring copy stays a button: one link per tab, not two.
+  if (href && !disabled && display === "tabs") {
+    return (
+      <TabsTrigger value={value} className={className} {...props} asChild>
+        {/* `type` would carry the trigger's "button" onto the link, where it means a MIME type. */}
+        <a href={href} type={undefined} onClick={keepPlainClick}>
+          {children}
+        </a>
+      </TabsTrigger>
+    );
+  }
   return (
     <TabsTrigger value={value} disabled={disabled} className={className} {...props} {...measure}>
       {children}

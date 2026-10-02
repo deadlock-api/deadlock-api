@@ -14,7 +14,7 @@ import { useAnalyticsTab } from "~/hooks/useAnalyticsTab";
 import { useKnownHeroId } from "~/hooks/useAssetById";
 import { useDateRangeState } from "~/hooks/useDateRangeState";
 import { useModeState } from "~/hooks/useModeState";
-import { ANALYTICS_VIEWS } from "~/lib/analytics-tabs";
+import { analyticsTabPath, ANALYTICS_VIEWS } from "~/lib/analytics-tabs";
 import { DEFAULT_MODE, getEffectiveRankRange } from "~/lib/game-mode";
 
 const ItemPurchaseAnalysis = lazy(() =>
@@ -93,10 +93,18 @@ export function ItemsPage() {
           value={tab ?? undefined}
           onValueChange={(value) => setTab(value as typeof tab)}
         >
-          <ResponsiveTab value="item-stats">Overall Stats</ResponsiveTab>
-          <ResponsiveTab value="item-purchase-analysis">Purchase Analysis</ResponsiveTab>
-          <ResponsiveTab value="build-flow">Build Flow</ResponsiveTab>
-          <ResponsiveTab value="item-combos">Item Combos</ResponsiveTab>
+          <ResponsiveTab value="item-stats" href={analyticsTabPath("items", "item-stats")}>
+            Overall Stats
+          </ResponsiveTab>
+          <ResponsiveTab value="item-purchase-analysis" href={analyticsTabPath("items", "item-purchase-analysis")}>
+            Purchase Analysis
+          </ResponsiveTab>
+          <ResponsiveTab value="build-flow" href={analyticsTabPath("items", "build-flow")}>
+            Build Flow
+          </ResponsiveTab>
+          <ResponsiveTab value="item-combos" href={analyticsTabPath("items", "item-combos")}>
+            Item Combos
+          </ResponsiveTab>
         </ResponsiveTabsList>
         <TabsContent value="item-stats">
           <Section titleDisplay="hidden" title="Overall Item Stats">
