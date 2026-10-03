@@ -156,6 +156,12 @@ export function HeroStatsTable({
     });
   };
 
+  // A radio ignores taps on its checked option, but visitors tap it again to flip the order (PostHog dead clicks), so
+  // the checked metric acts as the column's sort button.
+  const handlePickRateModeClick = (mode: PickRateMode) => {
+    if (mode === pickRateMode) handleSort("pickRate");
+  };
+
   const { minUnixTimestamp, maxUnixTimestamp } = useNormalizedTimeRange(minDate, maxDate);
   const { minUnixTimestamp: prevMinTimestamp, maxUnixTimestamp: prevMaxTimestamp } = useNormalizedTimeRange(
     prevMinDate,
@@ -674,11 +680,15 @@ export function HeroStatsTable({
                   value={showPresence ? "presence" : showBanRate ? "banRate" : "pickRate"}
                   onValueChange={handlePickRateModeChange}
                 >
-                  <SegmentedItem value="pickRate">
+                  <SegmentedItem value="pickRate" onClick={() => handlePickRateModeClick("pickRate")}>
                     {minHeroMatchesTotal || minHeroMatches ? "Pick Rate (Norm.)" : "Pick Rate"}
                   </SegmentedItem>
-                  <SegmentedItem value="banRate">Ban Rate</SegmentedItem>
-                  <SegmentedItem value="presence">Presence</SegmentedItem>
+                  <SegmentedItem value="banRate" onClick={() => handlePickRateModeClick("banRate")}>
+                    Ban Rate
+                  </SegmentedItem>
+                  <SegmentedItem value="presence" onClick={() => handlePickRateModeClick("presence")}>
+                    Presence
+                  </SegmentedItem>
                 </Segmented>
               ) : (
                 <span>{minHeroMatchesTotal || minHeroMatches ? "Pick Rate (Normalized)" : "Pick Rate"}</span>
