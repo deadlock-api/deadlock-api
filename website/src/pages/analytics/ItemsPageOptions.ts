@@ -72,9 +72,12 @@ export const itemsPageOptions = {
     // Every view names items, and the build flow and combos trim their answers by the item list.
     const items = prefetchSafe(queryClient.query({ ...itemUpgradesQueryOptions, staleTime: "static" }));
     const coverage = defaultTemporalCoverage(seasons, preferences.dateFilter);
+    // The server waits for the view's data, so its HTML carries it. In the browser a tab click or a hero pick does not:
+    // the view shows its own loading state instead of the navigation waiting on the API.
+    const isServer = typeof window === "undefined";
 
     if (tab === "build-flow") {
-      await prefetchSeed(
+      const flowSeed = prefetchSeed(
         queryClient,
         flow.itemFlowQueryOptions({
           heroIds: deps.heroId !== null ? String(deps.heroId) : undefined,
@@ -94,6 +97,7 @@ export const itemsPageOptions = {
           return flow.trimItemFlowForDefaultView(data, (itemId) => tiers.get(itemId) ?? 0);
         },
       );
+      if (isServer) await flowSeed;
       return { leader: null, coverage };
     }
     if (tab === "item-combos") {
@@ -111,7 +115,9 @@ export const itemsPageOptions = {
       );
       // The previous period spans many months and took 39 s on a cold API: the page does not wait that long for its
       // deltas, which the browser then loads as it did before.
-      await Promise.all([current, Promise.race([previous, new Promise((resolve) => setTimeout(resolve, 3000))])]);
+      if (isServer) {
+        await Promise.all([current, Promise.race([previous, new Promise((resolve) => setTimeout(resolve, 3000))])]);
+      }
       return { leader: null, coverage };
     }
     if (tab === "item-purchase-analysis") {
@@ -121,7 +127,7 @@ export const itemsPageOptions = {
     }
 
     const itemStatsQuery = { ...common, minBoughtAtS: undefined, maxBoughtAtS: undefined };
-    const [stats] = await Promise.all([
+    const overall = Promise.all([
       prefetchSafe(
         queryClient.query({ ...itemStatsQueryOptions({ ...itemStatsQuery, ...range }), staleTime: "static" }),
       ),
@@ -135,6 +141,8 @@ export const itemsPageOptions = {
         }),
       ),
     ]);
+    if (!isServer) return { leader: null, coverage };
+    const [stats] = await overall;
     // The description names the patch-wide leader, which a hero-filtered table would misrepresent.
     return {
       leader: deps.heroId === null ? findWinRateLeader(stats, await items) : null,
