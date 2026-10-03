@@ -200,9 +200,12 @@ export const heroesPageOptions = {
     const period = defaultPeriodLabel(seasons, preferences.dateFilter);
     const coverage = defaultTemporalCoverage(seasons, preferences.dateFilter);
     const heroes = prefetchSafe(queryClient.query({ ...heroesQueryOptions, staleTime: "static" }));
+    // The server waits for the view's data, so its HTML carries it. In the browser a tab click does not: the view shows
+    // its own loading state, where waiting kept the navigation pending and washed out the whole page (PendingNavigation).
+    const isServer = typeof window === "undefined";
     if (tab !== "stats") {
-      // Every other view fetches its own data; the server waits for the default render's, so its HTML carries it.
-      await Promise.all([heroes, prefetchHeroView(queryClient, tab, r)]);
+      const view = Promise.all([heroes, prefetchHeroView(queryClient, tab, r)]);
+      if (isServer) await view;
       return { leader: null, period, coverage };
     }
     const common = {
@@ -213,7 +216,7 @@ export const heroesPageOptions = {
       gameMode: "normal" as const,
       matchMode: DEFAULT_MATCH_MODE,
     };
-    const [stats, heroList] = await Promise.all([
+    const overall = Promise.all([
       prefetchSafe(
         queryClient.query({
           ...heroStatsQueryOptions({
@@ -260,6 +263,8 @@ export const heroesPageOptions = {
         }),
       ),
     ]);
+    if (!isServer) return { leader: null, period, coverage };
+    const [stats, heroList] = await overall;
     // The leader is measured over the default range, which is this season unless the visitor prefers patches.
     return { leader: findWinRateLeader(stats, heroList), period, coverage };
   },
