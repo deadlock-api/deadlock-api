@@ -1,6 +1,6 @@
 import type { AnalyticsApiGameStatsRequest } from "deadlock_api_client";
 import { parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
-import { type ComponentType, lazy, Suspense } from "react";
+import { Suspense } from "react";
 
 import { Filter } from "~/components/domain/filters";
 import GamesOverview from "~/components/features/games/GamesOverview";
@@ -19,31 +19,16 @@ import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { analyticsTabPath, ANALYTICS_VIEWS } from "~/lib/analytics-tabs";
 import { getEffectiveRankRange } from "~/lib/game-mode";
 
-const GamesOverTimeChart = lazy(() => import("~/components/features/games/GamesOverTimeChart"));
-const GamesByRankChart = lazy(() => import("~/components/features/games/GamesByRankChart"));
-const EconomyTab = lazy(() => import("~/components/features/games/EconomyTab"));
-const BuffsTab = lazy(() => import("~/components/features/games/BuffsTab"));
+import { BuffsTab, EconomyTab, GamesByRankChart, GamesOverTimeChart } from "./games-views";
 
 const STREET_BRAWL_ONLY = ["street_brawl"] as const;
 
-type ViewProps<T> = T extends ComponentType<infer P> ? P : never;
-
 /**
- * The games analytics page with its five views. The views other than the overview are lazy by default, so no view
- * carries the others; each view's route passes its own in statically (`GamesOverTimePage` and its siblings), since a lazy view suspends
- * while the server renders, which streamed its loading state into the HTML ahead of the numbers.
+ * The games analytics page with its five views, one component for all of their routes, so a tab click keeps the page
+ * mounted. The views other than the overview are lazy; the route loader preloads the requested one on the server, so
+ * the HTML carries its numbers rather than its loading state.
  */
-export function Games({
-  OverTime = GamesOverTimeChart,
-  ByRank = GamesByRankChart,
-  Economy = EconomyTab,
-  Buffs = BuffsTab,
-}: {
-  OverTime?: ComponentType<ViewProps<typeof GamesOverTimeChart>>;
-  ByRank?: ComponentType<ViewProps<typeof GamesByRankChart>>;
-  Economy?: ComponentType<ViewProps<typeof EconomyTab>>;
-  Buffs?: ComponentType<ViewProps<typeof BuffsTab>>;
-} = {}) {
+export function Games() {
   const [tab, setTab] = useAnalyticsTab("games");
   const { mode, setMode, gameMode, matchMode } = useModeState();
   const isStreetBrawl = mode === "street_brawl";
@@ -174,7 +159,7 @@ export function Games({
           <Section titleDisplay="hidden" title="Match Trends Over Time">
             <ChunkErrorBoundary>
               <Suspense fallback={<LoadingState />}>
-                <OverTime
+                <GamesOverTimeChart
                   params={baseParams}
                   stat={stat}
                   onStatChange={setStat}
@@ -191,7 +176,12 @@ export function Games({
           <Section titleDisplay="hidden" title="Match Stats by Rank">
             <ChunkErrorBoundary>
               <Suspense fallback={<LoadingState />}>
-                <ByRank params={baseParams} stat={stat} onStatChange={setStat} isStreetBrawl={isStreetBrawl} />
+                <GamesByRankChart
+                  params={baseParams}
+                  stat={stat}
+                  onStatChange={setStat}
+                  isStreetBrawl={isStreetBrawl}
+                />
               </Suspense>
             </ChunkErrorBoundary>
           </Section>
@@ -201,7 +191,7 @@ export function Games({
           <Section titleDisplay="hidden" title="Soul Economy">
             <ChunkErrorBoundary>
               <Suspense fallback={<LoadingState />}>
-                <Economy params={baseParams} isStreetBrawl={isStreetBrawl} />
+                <EconomyTab params={baseParams} isStreetBrawl={isStreetBrawl} />
               </Suspense>
             </ChunkErrorBoundary>
           </Section>
@@ -211,7 +201,7 @@ export function Games({
           <Section titleDisplay="hidden" title="Permanent Buffs">
             <ChunkErrorBoundary>
               <Suspense fallback={<LoadingState />}>
-                <Buffs params={baseParams} />
+                <BuffsTab params={baseParams} />
               </Suspense>
             </ChunkErrorBoundary>
           </Section>
