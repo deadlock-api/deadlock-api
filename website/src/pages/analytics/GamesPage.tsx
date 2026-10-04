@@ -19,12 +19,12 @@ import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { analyticsTabPath, ANALYTICS_VIEWS } from "~/lib/analytics-tabs";
 import { getEffectiveRankRange } from "~/lib/game-mode";
 
-import { BuffsTab, EconomyTab, GamesByRankChart, GamesOverTimeChart } from "./games-views";
+import { BuffsTab, CombatTab, EconomyTab, GamesByRankChart, GamesOverTimeChart } from "./games-views";
 
 const STREET_BRAWL_ONLY = ["street_brawl"] as const;
 
 /**
- * The games analytics page with its five views, one component for all of their routes, so a tab click keeps the page
+ * The games analytics page with its six views, one component for all of their routes, so a tab click keeps the page
  * mounted. The views other than the overview are lazy; the route loader preloads the requested one on the server, so
  * the HTML carries its numbers rather than its loading state.
  */
@@ -134,6 +134,9 @@ export function Games() {
           <ResponsiveTab value="economy" href={analyticsTabPath("games", "economy")}>
             Economy
           </ResponsiveTab>
+          <ResponsiveTab value="combat" href={analyticsTabPath("games", "combat")}>
+            Combat
+          </ResponsiveTab>
           <ResponsiveTab value="buffs" href={analyticsTabPath("games", "buffs")}>
             Buffs
           </ResponsiveTab>
@@ -192,6 +195,16 @@ export function Games() {
             <ChunkErrorBoundary>
               <Suspense fallback={<LoadingState />}>
                 <EconomyTab params={baseParams} isStreetBrawl={isStreetBrawl} />
+              </Suspense>
+            </ChunkErrorBoundary>
+          </Section>
+        </TabsContent>
+
+        <TabsContent value="combat">
+          <Section titleDisplay="hidden" title="Damage and Kills">
+            <ChunkErrorBoundary>
+              <Suspense fallback={<LoadingState />}>
+                <CombatTab params={baseParams} />
               </Suspense>
             </ChunkErrorBoundary>
           </Section>

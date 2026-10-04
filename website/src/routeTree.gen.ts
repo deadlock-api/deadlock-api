@@ -72,6 +72,7 @@ import { Route as TrackerDemoRouteImport } from './routes/tracker_.demo'
 import { Route as AnalyticsGamesIndexRouteImport } from './routes/analytics.games.index'
 import { Route as AnalyticsGamesBuffsRouteImport } from './routes/analytics.games.buffs'
 import { Route as AnalyticsGamesByRankRouteImport } from './routes/analytics.games.by-rank'
+import { Route as AnalyticsGamesCombatRouteImport } from './routes/analytics.games.combat'
 import { Route as AnalyticsGamesEconomyRouteImport } from './routes/analytics.games.economy'
 import { Route as AnalyticsGamesOverTimeRouteImport } from './routes/analytics.games.over-time'
 import { Route as AnalyticsHeroesIndexRouteImport } from './routes/analytics.heroes.index'
@@ -426,6 +427,11 @@ const AnalyticsGamesByRankRoute = AnalyticsGamesByRankRouteImport.update({
   path: '/by-rank',
   getParentRoute: () => AnalyticsGamesRoute,
 } as any)
+const AnalyticsGamesCombatRoute = AnalyticsGamesCombatRouteImport.update({
+  id: '/combat',
+  path: '/combat',
+  getParentRoute: () => AnalyticsGamesRoute,
+} as any)
 const AnalyticsGamesEconomyRoute = AnalyticsGamesEconomyRouteImport.update({
   id: '/economy',
   path: '/economy',
@@ -690,6 +696,7 @@ export interface FileRoutesByFullPath {
   '/streamkit/': typeof StreamkitIndexRoute
   '/analytics/games/buffs': typeof AnalyticsGamesBuffsRoute
   '/analytics/games/by-rank': typeof AnalyticsGamesByRankRoute
+  '/analytics/games/combat': typeof AnalyticsGamesCombatRoute
   '/analytics/games/economy': typeof AnalyticsGamesEconomyRoute
   '/analytics/games/over-time': typeof AnalyticsGamesOverTimeRoute
   '/analytics/heroes/$heroName': typeof AnalyticsHeroesHeroNameRoute
@@ -782,6 +789,7 @@ export interface FileRoutesByTo {
   '/streamkit': typeof StreamkitIndexRoute
   '/analytics/games/buffs': typeof AnalyticsGamesBuffsRoute
   '/analytics/games/by-rank': typeof AnalyticsGamesByRankRoute
+  '/analytics/games/combat': typeof AnalyticsGamesCombatRoute
   '/analytics/games/economy': typeof AnalyticsGamesEconomyRoute
   '/analytics/games/over-time': typeof AnalyticsGamesOverTimeRoute
   '/analytics/heroes/$heroName': typeof AnalyticsHeroesHeroNameRoute
@@ -885,6 +893,7 @@ export interface FileRoutesById {
   '/streamkit/': typeof StreamkitIndexRoute
   '/analytics/games/buffs': typeof AnalyticsGamesBuffsRoute
   '/analytics/games/by-rank': typeof AnalyticsGamesByRankRoute
+  '/analytics/games/combat': typeof AnalyticsGamesCombatRoute
   '/analytics/games/economy': typeof AnalyticsGamesEconomyRoute
   '/analytics/games/over-time': typeof AnalyticsGamesOverTimeRoute
   '/analytics/heroes/$heroName': typeof AnalyticsHeroesHeroNameRoute
@@ -989,6 +998,7 @@ export interface FileRouteTypes {
     | '/streamkit/'
     | '/analytics/games/buffs'
     | '/analytics/games/by-rank'
+    | '/analytics/games/combat'
     | '/analytics/games/economy'
     | '/analytics/games/over-time'
     | '/analytics/heroes/$heroName'
@@ -1081,6 +1091,7 @@ export interface FileRouteTypes {
     | '/streamkit'
     | '/analytics/games/buffs'
     | '/analytics/games/by-rank'
+    | '/analytics/games/combat'
     | '/analytics/games/economy'
     | '/analytics/games/over-time'
     | '/analytics/heroes/$heroName'
@@ -1183,6 +1194,7 @@ export interface FileRouteTypes {
     | '/streamkit/'
     | '/analytics/games/buffs'
     | '/analytics/games/by-rank'
+    | '/analytics/games/combat'
     | '/analytics/games/economy'
     | '/analytics/games/over-time'
     | '/analytics/heroes/$heroName'
@@ -1717,6 +1729,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AnalyticsGamesByRankRouteImport
       parentRoute: typeof AnalyticsGamesRoute
     }
+    '/analytics/games/combat': {
+      id: '/analytics/games/combat'
+      path: '/combat'
+      fullPath: '/analytics/games/combat'
+      preLoaderRoute: typeof AnalyticsGamesCombatRouteImport
+      parentRoute: typeof AnalyticsGamesRoute
+    }
     '/analytics/games/economy': {
       id: '/analytics/games/economy'
       path: '/economy'
@@ -2051,6 +2070,7 @@ const ItemsRouteWithChildren = ItemsRoute._addFileChildren(ItemsRouteChildren)
 interface AnalyticsGamesRouteChildren {
   AnalyticsGamesBuffsRoute: typeof AnalyticsGamesBuffsRoute
   AnalyticsGamesByRankRoute: typeof AnalyticsGamesByRankRoute
+  AnalyticsGamesCombatRoute: typeof AnalyticsGamesCombatRoute
   AnalyticsGamesEconomyRoute: typeof AnalyticsGamesEconomyRoute
   AnalyticsGamesOverTimeRoute: typeof AnalyticsGamesOverTimeRoute
   AnalyticsGamesIndexRoute: typeof AnalyticsGamesIndexRoute
@@ -2059,6 +2079,7 @@ interface AnalyticsGamesRouteChildren {
 const AnalyticsGamesRouteChildren: AnalyticsGamesRouteChildren = {
   AnalyticsGamesBuffsRoute: AnalyticsGamesBuffsRoute,
   AnalyticsGamesByRankRoute: AnalyticsGamesByRankRoute,
+  AnalyticsGamesCombatRoute: AnalyticsGamesCombatRoute,
   AnalyticsGamesEconomyRoute: AnalyticsGamesEconomyRoute,
   AnalyticsGamesOverTimeRoute: AnalyticsGamesOverTimeRoute,
   AnalyticsGamesIndexRoute: AnalyticsGamesIndexRoute,

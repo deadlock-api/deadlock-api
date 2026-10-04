@@ -19,7 +19,14 @@ export const ANALYTICS_TABS = {
     "build-flow": "build-flow",
     "item-combos": "combos",
   },
-  games: { overview: "", "over-time": "over-time", "by-rank": "by-rank", economy: "economy", buffs: "buffs" },
+  games: {
+    overview: "",
+    "over-time": "over-time",
+    "by-rank": "by-rank",
+    economy: "economy",
+    combat: "combat",
+    buffs: "buffs",
+  },
   players: { scoreboard: "", "stats-metrics": "stats-metrics", compare: "compare" },
 } as const;
 
@@ -196,6 +203,13 @@ export const ANALYTICS_VIEWS: { [S in AnalyticsSection]: Record<AnalyticsTab<S>,
       summary: "Where souls come from and how net worth grows.",
       description:
         "Deadlock souls per minute, where souls come from, how the sources shift by rank and how net worth grows.",
+    },
+    combat: {
+      title: "Deadlock Damage & Kills by Game Minute",
+      heading: "Deadlock Damage and Kills Over the Match",
+      summary: "How much damage players deal to heroes, objectives and creeps, and what they kill, minute by minute.",
+      description:
+        "Deadlock damage to heroes, objectives, jungle and lane creeps by game minute, with kills, last hits and denies.",
     },
     buffs: {
       title: "Deadlock Golden Statue Buffs & Pickups",

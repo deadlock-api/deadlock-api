@@ -62,6 +62,15 @@ export const gamesPageOptions = {
             }),
           ),
         );
+      } else if (tab === "combat") {
+        prefetches.push(
+          prefetchSafe(
+            queryClient.query({
+              ...playerPerformanceCurveQueryOptions({ ...filters, resolution: 0 }),
+              staleTime: "static",
+            }),
+          ),
+        );
       } else {
         const { buffStatsQueryOptions } = await import("~/queries/buff-stats-query");
         prefetches.push(

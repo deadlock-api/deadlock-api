@@ -5,12 +5,14 @@ import { preloadableLazy } from "~/lib/preloadable-lazy";
 export const GamesOverTimeChart = preloadableLazy(() => import("~/components/features/games/GamesOverTimeChart"));
 export const GamesByRankChart = preloadableLazy(() => import("~/components/features/games/GamesByRankChart"));
 export const EconomyTab = preloadableLazy(() => import("~/components/features/games/EconomyTab"));
+export const CombatTab = preloadableLazy(() => import("~/components/features/games/CombatTab"));
 export const BuffsTab = preloadableLazy(() => import("~/components/features/games/BuffsTab"));
 
 const VIEWS: Partial<Record<AnalyticsTab<"games">, { preload: () => Promise<void> }>> = {
   "over-time": GamesOverTimeChart,
   "by-rank": GamesByRankChart,
   economy: EconomyTab,
+  combat: CombatTab,
   buffs: BuffsTab,
 };
 
