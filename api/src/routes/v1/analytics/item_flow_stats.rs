@@ -549,8 +549,8 @@ fn build_edges_query(query: &ItemFlowStatsQuery) -> String {
 }
 
 #[cached(
-    max_size = 1_000,
-    ttl_secs = 3600,
+    max_size = 5_000,
+    ttl_secs = 21600,
     convert = "{ query_str.to_string() }",
     key = "String"
 )]
@@ -562,8 +562,8 @@ async fn run_nodes_query(
 }
 
 #[cached(
-    max_size = 1_000,
-    ttl_secs = 3600,
+    max_size = 5_000,
+    ttl_secs = 21600,
     convert = "{ query_str.to_string() }",
     key = "String"
 )]
@@ -599,8 +599,8 @@ struct ItemFlowTotalsRow {
 }
 
 #[cached(
-    max_size = 1_000,
-    ttl_secs = 3600,
+    max_size = 5_000,
+    ttl_secs = 21600,
     convert = "{ query_str.to_string() }",
     key = "String"
 )]
@@ -694,7 +694,7 @@ survivorship-selected (e.g. long-game-only) a late stage is.
 Corrupted items (build 6712+, same item id as the normal item) are not counted as purchases; the
 normal item they replaced still is.
 
-Results are cached for **1 hour** based on the unique combination of query parameters provided.
+Results are cached for **6 hours** based on the unique combination of query parameters provided.
 
 ### Rate Limits:
 > The rate limits below are **shared across all analytics endpoints**.

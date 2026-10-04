@@ -265,8 +265,8 @@ fn build_query(query: &HeroCounterStatsQuery) -> String {
 }
 
 #[cached(
-    max_size = 1_000,
-    ttl_secs = 3600,
+    max_size = 5_000,
+    ttl_secs = 21600,
     convert = "{ query_str.to_string() }",
     key = "String"
 )]
@@ -303,7 +303,7 @@ Retrieves hero-versus-hero matchup statistics based on historical match data.
 
 This endpoint analyzes completed matches to calculate how often a specific hero (`hero_id`) wins against an enemy hero (`enemy_hero_id`) and the total number of times they have faced each other under the specified filter conditions.
 
-Results are cached for **1 hour** based on the combination of query parameters provided. Subsequent identical requests within this timeframe will receive the cached response.
+Results are cached for **6 hours** based on the combination of query parameters provided. Subsequent identical requests within this timeframe will receive the cached response.
 
 ### Rate Limits:
 > The rate limits below are **shared across all analytics endpoints**.

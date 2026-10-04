@@ -636,8 +636,8 @@ fn build_query(query: &PlayerStatsMetricsQuery) -> String {
 }
 
 #[cached(
-    max_size = 1_000,
-    ttl_secs = 3600,
+    max_size = 5_000,
+    ttl_secs = 21600,
     convert = "{ query_str.to_string() }",
     key = "String"
 )]
@@ -672,7 +672,7 @@ async fn get_player_stats_metrics(
     description = "
 Returns comprehensive statistical analysis of player performance.
 
-Results are cached for **1 hour** based on the unique combination of query parameters provided. Subsequent identical requests within this timeframe will receive the cached response.
+Results are cached for **6 hours** based on the unique combination of query parameters provided. Subsequent identical requests within this timeframe will receive the cached response.
 
 > Note: Quantiles are calculated using the [DDSketch](https://www.vldb.org/pvldb/vol12/p2195-masson.pdf) algorithm, so they are not exact but have a maximum relative error of 0.01.
 

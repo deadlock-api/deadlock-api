@@ -278,8 +278,8 @@ fn build_query(query: &HeroSynergyStatsQuery) -> String {
 }
 
 #[cached(
-    max_size = 1_000,
-    ttl_secs = 3600,
+    max_size = 5_000,
+    ttl_secs = 21600,
     convert = "{ query_str.to_string() }",
     key = "String"
 )]
@@ -316,7 +316,7 @@ Retrieves hero pair synergy statistics based on historical match data.
 
 This endpoint analyzes completed matches to calculate how often a specific pair of heroes (`hero_id1` and `hero_id2`) won when playing *together on the same team*, and the total number of times they have played together under the specified filter conditions.
 
-Results are cached for **1 hour** based on the combination of query parameters provided. Subsequent identical requests within this timeframe will receive the cached response.
+Results are cached for **6 hours** based on the combination of query parameters provided. Subsequent identical requests within this timeframe will receive the cached response.
 
 ### Rate Limits:
 > The rate limits below are **shared across all analytics endpoints**.

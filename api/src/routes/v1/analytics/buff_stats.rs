@@ -224,8 +224,8 @@ fn into_response(rows: Vec<BuffStatsRow>) -> Vec<AnalyticsBuffStats> {
 }
 
 #[cached(
-    max_size = 1_000,
-    ttl_secs = 3600,
+    max_size = 5_000,
+    ttl_secs = 21600,
     convert = "{ query_str.to_string() }",
     key = "String"
 )]
@@ -268,7 +268,7 @@ those matches. Temporary power-ups have no timings.
 
 Buff display names, value units and graph colors: <https://api.deadlock-api.com/v1/assets/misc-entities>
 
-Results are cached for **1 hour** based on the unique combination of query parameters provided.
+Results are cached for **6 hours** based on the unique combination of query parameters provided.
 
 ### Rate Limits:
 > The rate limits below are **shared across all analytics endpoints**.

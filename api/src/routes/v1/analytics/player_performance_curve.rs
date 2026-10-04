@@ -365,8 +365,8 @@ fn build_query(query: &PlayerPerformanceCurveQuery) -> String {
 }
 
 #[cached(
-    max_size = 1_000,
-    ttl_secs = 3600,
+    max_size = 5_000,
+    ttl_secs = 43200,
     convert = "{ query_str.to_string() }",
     key = "String"
 )]
@@ -402,7 +402,7 @@ async fn get_player_performance_curve(
     description = "
 Retrieves player performance statistics (net worth, kills, deaths, assists, souls per source) over time throughout matches.
 
-Results are cached for **1 hour** based on the unique combination of query parameters provided.
+Results are cached for **12 hours** based on the unique combination of query parameters provided.
 
 ### Rate Limits:
 > The rate limits below are **shared across all analytics endpoints**.

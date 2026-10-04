@@ -125,8 +125,8 @@ fn build_query(query: &HeroBanStatsQuery) -> String {
 }
 
 #[cached(
-    max_size = 1_000,
-    ttl_secs = 3600,
+    max_size = 5_000,
+    ttl_secs = 21600,
     convert = "{ query_str.to_string() }",
     key = "String"
 )]
@@ -169,7 +169,7 @@ Retrieves ban statistics for each hero based on historical match data from demo 
 
 Only matches with successfully extracted ban data are included. Matches where ban extraction failed (empty `banned_hero_ids`) are excluded entirely.
 
-Results are cached for **1 hour** based on the combination of query parameters provided.
+Results are cached for **6 hours** based on the combination of query parameters provided.
 
 ### Rate Limits:
 > The rate limits below are **shared across all analytics endpoints**.

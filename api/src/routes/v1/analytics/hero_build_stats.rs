@@ -187,8 +187,8 @@ async fn fetch_valid_build_ids(pg_client: &Pool<Postgres>, hero_id: u32) -> sqlx
 }
 
 #[cached(
-    max_size = 1_000,
-    ttl_secs = 3600,
+    max_size = 5_000,
+    ttl_secs = 21600,
     convert = "{ query_str.to_string() }",
     key = "String"
 )]
@@ -257,7 +257,7 @@ Only includes builds that exist in the hero builds database.
 
 The `hero_build_id` is the first build the player had selected when the game started. It does not reflect any build changes made during the match.
 
-Results are cached for **1 hour** based on the combination of query parameters provided.
+Results are cached for **6 hours** based on the combination of query parameters provided.
 
 ### Rate Limits:
 > The rate limits below are **shared across all analytics endpoints**.
