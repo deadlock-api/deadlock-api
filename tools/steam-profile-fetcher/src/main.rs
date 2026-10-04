@@ -12,7 +12,7 @@
 #![expect(clippy::cast_possible_truncation)]
 
 use core::time::Duration;
-use std::collections::{HashMap, HashSet};
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::time::Instant;
 
 use anyhow::Result;
@@ -24,6 +24,14 @@ use models::{SteamFriend, SteamPlayerSummary};
 use tracing::{error, info, instrument, warn};
 
 const FRIENDS_FETCH_CONCURRENCY: usize = 10;
+
+/// Matches the `GetPlayerSummaries` upstream batch size.
+const BATCH_SIZE: usize = 100;
+
+// Picking the next accounts aggregates all of accounts_to_update (~5M rows, ~1.3 CPU-seconds)
+// whether it returns 100 rows or 2000, so a queue of 20 batches is fetched at once and drained
+// one batch per tick. Accounts that become due in the meantime wait at most 20 ticks.
+const QUEUE_SIZE: usize = 2000;
 
 mod models;
 mod steam_api;
@@ -61,13 +69,19 @@ async fn main() -> Result<()> {
     let pg_client = common::get_pg_client().await?;
 
     let mut interval = tokio::time::interval(*FETCH_INTERVAL);
+    let mut queue = VecDeque::new();
     let mut pending_deletions = HashSet::new();
     let mut last_deletion = Instant::now();
     loop {
         interval.tick().await;
-        if let Err(e) =
-            fetch_and_update_profiles(&http_client, &ch_client, &pg_client, &mut pending_deletions)
-                .await
+        if let Err(e) = fetch_and_update_profiles(
+            &http_client,
+            &ch_client,
+            &pg_client,
+            &mut queue,
+            &mut pending_deletions,
+        )
+        .await
         {
             error!("Error updating Steam profiles: {e}");
         }
@@ -83,37 +97,41 @@ async fn fetch_and_update_profiles(
     http_client: &reqwest::Client,
     ch_client: &clickhouse::Client,
     pg_client: &sqlx::Pool<sqlx::Postgres>,
+    queue: &mut VecDeque<u32>,
     pending_deletions: &mut HashSet<u32>,
 ) -> Result<()> {
-    let protected_users = get_protected_users_cached(pg_client).await?;
-    let limited_account_ids = get_account_ids_to_update(ch_client, Some(100)).await?;
-    let limited_count = limited_account_ids.len();
-    let mut account_ids = filter_protected_users(limited_account_ids, &protected_users)
-        .into_iter()
-        .take(100)
-        .collect_vec();
-
-    if account_ids.is_empty() && limited_count == 100 {
-        info!("First update batch only contained protected users, fetching full update list");
-        account_ids = filter_protected_users(
-            get_account_ids_to_update(ch_client, None).await?,
+    if queue.is_empty() {
+        let protected_users = get_protected_users_cached(pg_client).await?;
+        let limited_account_ids = get_account_ids_to_update(ch_client, Some(QUEUE_SIZE)).await?;
+        let limited_count = limited_account_ids.len();
+        queue.extend(filter_protected_users(
+            limited_account_ids,
             &protected_users,
-        )
-        .into_iter()
-        .take(100)
-        .collect_vec();
+        ));
+
+        if queue.is_empty() && limited_count == QUEUE_SIZE {
+            info!("First update batch only contained protected users, fetching full update list");
+            queue.extend(
+                filter_protected_users(
+                    get_account_ids_to_update(ch_client, None).await?,
+                    &protected_users,
+                )
+                .into_iter()
+                .take(QUEUE_SIZE),
+            );
+        }
     }
 
-    gauge!("steam_profile_fetcher.account_ids_to_update").set(account_ids.len() as f64);
+    gauge!("steam_profile_fetcher.account_ids_to_update").set(queue.len() as f64);
 
-    if account_ids.is_empty() {
+    if queue.is_empty() {
         info!("No account IDs to update");
         return Ok(());
     }
-    info!("Found {} account IDs to update", account_ids.len());
+    info!("Found {} account IDs to update", queue.len());
 
-    let batch = account_ids.iter().take(100).collect_vec();
-    let batch_ids: Vec<u32> = batch.iter().map(|&&id| id).collect();
+    let batch_ids: Vec<u32> = queue.drain(..queue.len().min(BATCH_SIZE)).collect();
+    let batch = batch_ids.iter().collect_vec();
 
     let (profiles_result, mut friends_by_account) = tokio::join!(
         steam_api::fetch_steam_profiles(http_client, &batch),
@@ -144,9 +162,9 @@ async fn fetch_and_update_profiles(
             info!(
                 "Saved {} Steam profiles, {} account IDs remaining to update",
                 profiles.len(),
-                account_ids.len() - profiles.len()
+                queue.len()
             );
-            gauge!("steam_profile_fetcher.account_ids_to_update").decrement(profiles.len() as f64);
+            gauge!("steam_profile_fetcher.account_ids_to_update").set(queue.len() as f64);
             counter!("steam_profile_fetcher.saved_profiles.success")
                 .increment(profiles.len() as u64);
         }
