@@ -588,6 +588,11 @@ fn build_query(
         " SETTINGS log_comment = 'bulk_metadata' "
     };
     let has_explicit_match_ids = query.match_ids.as_ref().is_some_and(|ids| !ids.is_empty());
+    // A lower bound on time or match_id lets match_player prune partitions; without one it
+    // is a costlier read than the narrow player_match_history.
+    let has_lower_bound = has_explicit_match_ids
+        || query.min_unix_timestamp.is_some()
+        || query.min_match_id.is_some_and(|id| id > 0);
 
     let mut info_filters = vec![];
     info_filters.push(MatchMode::sql_filter(query.match_mode.as_deref()));
@@ -705,7 +710,11 @@ fn build_query(
     // DelayedCreatingSets step with sets").
     let player_filter_subquery = if player_filters.is_empty() {
         None
-    } else if advanced_player_filters {
+    } else if advanced_player_filters || (account_filter.is_none() && has_lower_bound) {
+        // Without an account player_match_history has no key to prune on and is read whole
+        // (~494M rows for a hero filter); bounded match_player reads ~6M (measured
+        // -69% CPU). Matches whose match_player rows lack the hero's player are no longer
+        // returned, matching the `players` array.
         let mut match_player_filters = info_filters.clone();
         match_player_filters.extend(player_filters);
         Some(format!(
@@ -1132,6 +1141,33 @@ mod proptests {
             None,
         );
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn bounded_hero_filter_without_account_reads_match_player() {
+        let build = |min_unix_timestamp| {
+            build_query(
+                BulkMatchMetadataQuery {
+                    include_info: true,
+                    hero_ids: Some(vec![13]),
+                    min_unix_timestamp,
+                    limit: 50,
+                    ..BulkMatchMetadataQuery::default()
+                },
+                None,
+            )
+            .expect("query should build")
+        };
+        let bounded = build(Some(1_780_256_805));
+        assert_valid_sql(&bounded);
+        assert!(bounded.contains(
+            "SELECT match_id FROM match_player WHERE match_mode IN ('Ranked', 'Unranked') AND 1=1 AND start_time >= 1780256805 AND hero_id IN (13)"
+        ));
+        assert!(!bounded.contains("player_match_history"));
+        let unbounded = build(None);
+        assert!(
+            unbounded.contains("SELECT match_id FROM player_match_history WHERE hero_id IN (13)")
+        );
     }
 
     #[test]
