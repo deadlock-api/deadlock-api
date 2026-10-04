@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use axum::Json;
 use axum::extract::State;
 use axum::response::IntoResponse;
+use cached::macros::cached;
 use clickhouse::Row;
 use futures::future::join;
 use serde::{Deserialize, Serialize};
@@ -92,14 +93,23 @@ pub struct APIInfo {
     user_ingested_matches_last24h: Option<u64>,
 }
 
+/// Counting a day of fetched matches scans ~29M rows; a 10 minute old count is as good as live.
+#[cached(ttl_secs = 600, convert = "{}", key = "()")]
+async fn fetch_fetched_matches_last_24h(
+    ch_client: &clickhouse::Client,
+) -> clickhouse::error::Result<u64> {
+    ch_client
+        .query(FETCHED_MATCHES_LAST_24H_QUERY)
+        .fetch_one::<u64>()
+        .await
+}
+
 async fn fetch_ch_info(ch_client: &clickhouse::Client) -> APIInfo {
     let (table_sizes, fetched_matches_per_day) = join(
         ch_client
             .query(TABLE_SIZES_QUERY)
             .fetch_all::<TableSizeRow>(),
-        ch_client
-            .query(FETCHED_MATCHES_LAST_24H_QUERY)
-            .fetch_one::<u64>(),
+        fetch_fetched_matches_last_24h(ch_client),
     )
     .await;
     let fetched_matches_per_day = fetched_matches_per_day
