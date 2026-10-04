@@ -1265,12 +1265,28 @@ SETTINGS {settings_clause}
 }
 
 #[cached(
-    max_size = 1_000,
+    max_size = 5_000,
     ttl_secs = 21600,
     convert = "{ query_str.to_string() }",
     key = "String"
 )]
 async fn run_query(
+    ch_client: &clickhouse::Client,
+    query_str: &str,
+) -> clickhouse::error::Result<Vec<ItemStats>> {
+    ch_client.query(query_str).fetch_all().await
+}
+
+/// Separate cache for per-account base-table queries: ~100k a day, cheap (~30ms) and
+/// almost never repeated, they evicted the shared cache every ~15 minutes and made
+/// the expensive global queries (10s+) rerun several times per TTL.
+#[cached(
+    max_size = 1_000,
+    ttl_secs = 21600,
+    convert = "{ query_str.to_string() }",
+    key = "String"
+)]
+async fn run_account_query(
     ch_client: &clickhouse::Client,
     query_str: &str,
 ) -> clickhouse::error::Result<Vec<ItemStats>> {
@@ -1336,7 +1352,14 @@ async fn get_item_stats(
     }
     let base_query = build_query(&query);
     debug!(?base_query);
-    Ok(run_query(ch_client, &base_query).await?)
+    #[expect(deprecated)]
+    let per_account =
+        query.account_id.is_some() || query.account_ids.as_ref().is_some_and(|v| !v.is_empty());
+    if per_account {
+        Ok(run_account_query(ch_client, &base_query).await?)
+    } else {
+        Ok(run_query(ch_client, &base_query).await?)
+    }
 }
 
 #[utoipa::path(
