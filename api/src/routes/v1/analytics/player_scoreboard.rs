@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use axum::Json;
 use axum::extract::State;
 use axum::http::StatusCode;
@@ -275,11 +277,18 @@ SETTINGS log_comment = 'player_scoreboard', apply_patch_parts = 0, do_not_merge_
     )
 }
 
+/// Pages past the first are cut out of cached blocks of this many ranks. Every page re-runs the
+/// full aggregation, so a client walking the unscoped scoreboard used to cost one 2s full scan
+/// per page and timed out when it fetched dozens in parallel. First pages keep their exact
+/// `LIMIT`: widening them to a block costs 10-35% more wall time (measured on 2026-10-04).
+const PAGE_BLOCK_SIZE: u32 = 10_000;
+
 #[cached(
     max_size = 1_000,
     ttl_secs = 3600,
     convert = "{ query_str.to_string() }",
-    key = "String"
+    key = "String",
+    sync_writes = "by_key"
 )]
 async fn run_query(
     ch_client: &clickhouse::Client,
@@ -288,14 +297,62 @@ async fn run_query(
     ch_client.query(query_str).fetch_all().await
 }
 
+#[cached(
+    max_size = 100,
+    ttl_secs = 3600,
+    convert = "{ query_str.to_string() }",
+    key = "String",
+    sync_writes = "by_key"
+)]
+async fn run_block_query(
+    ch_client: &clickhouse::Client,
+    query_str: &str,
+) -> clickhouse::error::Result<Arc<Vec<PlayerEntry>>> {
+    ch_client.query(query_str).fetch_all().await.map(Arc::new)
+}
+
+/// The block-aligned queries covering ranks `offset..offset + limit`: at most two, as
+/// `limit <= PAGE_BLOCK_SIZE`.
+fn build_block_queries(query: &PlayerScoreboardQuery, offset: u32, limit: u32) -> Vec<String> {
+    let first_block = offset / PAGE_BLOCK_SIZE;
+    let last_block = (offset.saturating_add(limit) - 1) / PAGE_BLOCK_SIZE;
+    (first_block..=last_block)
+        .map(|block| {
+            build_query(&PlayerScoreboardQuery {
+                start: Some(block * PAGE_BLOCK_SIZE + 1),
+                limit: Some(PAGE_BLOCK_SIZE),
+                ..query.clone()
+            })
+        })
+        .collect()
+}
+
 async fn get_player_scoreboard(
     ch_client: &clickhouse::Client,
     mut query: PlayerScoreboardQuery,
 ) -> APIResult<Vec<PlayerEntry>> {
     round_timestamps(&mut query.min_unix_timestamp, &mut query.max_unix_timestamp);
-    let query = build_query(&query);
-    debug!(?query);
-    Ok(run_query(ch_client, &query).await?)
+    let offset = query.start.unwrap_or(1).max(1) - 1;
+    let limit = query.limit.unwrap_or_default();
+    // `limit` is unbounded, so a page wider than a block reads directly instead of walking
+    // up to every block of the scoreboard.
+    if offset == 0 || limit == 0 || limit > PAGE_BLOCK_SIZE {
+        let query = build_query(&query);
+        debug!(?query);
+        return Ok(run_query(ch_client, &query).await?);
+    }
+
+    let wanted = u64::from(offset)..u64::from(offset) + u64::from(limit);
+    let mut entries = Vec::with_capacity(limit as usize);
+    for block_query in build_block_queries(&query, offset, limit) {
+        debug!(?block_query);
+        let block = run_block_query(ch_client, &block_query).await?;
+        entries.extend(block.iter().filter(|e| wanted.contains(&e.rank)).cloned());
+        if block.len() < PAGE_BLOCK_SIZE as usize {
+            break;
+        }
+    }
+    Ok(entries)
 }
 
 #[utoipa::path(
@@ -353,6 +410,39 @@ pub(crate) async fn player_scoreboard(
 mod tests {
     use super::*;
     use crate::utils::proptest_utils::assert_valid_sql;
+
+    #[test]
+    fn pages_map_onto_block_aligned_queries() {
+        let query = PlayerScoreboardQuery {
+            sort_by: ScoreboardQuerySortBy::Matches,
+            ..Default::default()
+        };
+        let inside = build_block_queries(&query, 7_699, 100);
+        assert_eq!(
+            inside,
+            vec![build_query(&PlayerScoreboardQuery {
+                start: Some(1),
+                limit: Some(PAGE_BLOCK_SIZE),
+                ..query.clone()
+            })]
+        );
+        assert!(inside[0].contains("rowNumberInAllBlocks() + 0 as rank"));
+        assert!(inside[0].contains("LIMIT 10000 OFFSET 0"));
+
+        let straddling = build_block_queries(&query, 9_950, 100);
+        assert_eq!(straddling.len(), 2);
+        assert!(straddling[1].contains("rowNumberInAllBlocks() + 10000 as rank"));
+        assert!(straddling[1].contains("LIMIT 10000 OFFSET 10000"));
+
+        assert_eq!(
+            build_block_queries(&query, 10_000, PAGE_BLOCK_SIZE).len(),
+            1
+        );
+        assert_eq!(
+            build_block_queries(&query, u32::MAX - 1, PAGE_BLOCK_SIZE).len(),
+            1
+        );
+    }
 
     #[test]
     fn buff_sorts_read_match_player_and_carry_the_buff_column_through_the_dedup() {
