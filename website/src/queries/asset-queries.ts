@@ -1,8 +1,9 @@
 import { type QueryClient, queryOptions } from "@tanstack/react-query";
-import type { Ability, Hero, HeroImages, Upgrade } from "deadlock_api_client";
+import type { Ability, Hero, Upgrade } from "deadlock_api_client";
 
 import { CACHE_DURATIONS } from "~/constants/cache";
 import { api } from "~/lib/api";
+import { fetchSlimHeroes, fetchSlimItemUpgrades, type SlimHero, type SlimUpgrade } from "~/lib/asset-fns";
 import { buffInfoByType } from "~/lib/buffs";
 import { toCorruptionData } from "~/lib/corrupted-items";
 import { isPlayableHero } from "~/lib/hero-roster";
@@ -11,76 +12,7 @@ import { type SeasonInfo, toSeasons } from "~/lib/seasons";
 
 import { queryKeys } from "./query-keys";
 
-// Game-data routes preload heroes and item upgrades into their HTML.
-// The keys below carry ~2.7 MB of balance tables, tooltips and lore that only
-// the Deadlockdle and flashcard pages read, so the shared queries drop them and
-// those pages fetch the *Full variants on demand. `popular_items` (~300 KB of
-// per-hero item pick rates) is read by nothing and would otherwise be dehydrated
-// into every hero page, and of the 15 hero images only the portrait, minimap
-// and card art are shown (~40 KB). Of the 15 `items` slots (weapons, movement,
-// innates) only the four signature abilities are read (~18 KB). Upgrades
-// likewise drop fields nothing reads (the PNG images duplicate the WebP ones),
-// ~90 KB on every hero and item page.
-const HEAVY_HERO_KEYS = [
-  "cost_bonuses",
-  "description",
-  "gender",
-  "hero_stats_ui",
-  "hideout_rich_presence",
-  "item_draft_bucketing",
-  "item_draft_weights",
-  "item_slot_info",
-  "level_info",
-  "physics",
-  "popular_items",
-  "purchase_bonuses",
-  "scaling_stats",
-  "shop_stat_display",
-  "skin",
-  "standard_level_up_upgrades",
-  "starting_stats",
-  "stats_display",
-  "tags",
-] as const;
-const HERO_IMAGE_KEYS = [
-  "hero_card_critical_webp",
-  "icon_hero_card",
-  "icon_hero_card_webp",
-  "icon_image_small",
-  "icon_image_small_webp",
-  "minimap_image",
-  "minimap_image_webp",
-] as const;
-const HERO_ITEM_SLOTS = new Set(["signature1", "signature2", "signature3", "signature4"]);
-const HEAVY_UPGRADE_KEYS = [
-  "activation",
-  "description",
-  "disabled_shop_filters",
-  "image",
-  "properties",
-  "shop_filters",
-  "shop_image",
-  "shop_version",
-  "start_trained",
-  "tooltip_sections",
-  "update_time",
-  "upgrades",
-  "weapon_info",
-] as const;
-
-export type SlimHero = Omit<Hero, (typeof HEAVY_HERO_KEYS)[number] | "images"> & {
-  images: Pick<HeroImages, (typeof HERO_IMAGE_KEYS)[number]>;
-};
-export type SlimUpgrade = Omit<Upgrade, (typeof HEAVY_UPGRADE_KEYS)[number]>;
-
-function omitKeys<T extends object, K extends keyof T>(obj: T, keys: readonly K[]): Omit<T, K> {
-  const dropped = new Set<PropertyKey>(keys);
-  return Object.fromEntries(Object.entries(obj).filter(([key]) => !dropped.has(key))) as Omit<T, K>;
-}
-
-function pickKeys<T extends object, K extends keyof T>(obj: T, keys: readonly K[]): Pick<T, K> {
-  return Object.fromEntries(keys.filter((key) => key in obj).map((key) => [key, obj[key]])) as Pick<T, K>;
-}
+export type { SlimHero, SlimUpgrade };
 
 async function fetchHeroes(): Promise<Hero[]> {
   const response = await api.heroes_api.listHeroes({ onlyActive: true });
@@ -94,13 +26,7 @@ async function fetchItemUpgrades(): Promise<Upgrade[]> {
 
 export const heroesQueryOptions = queryOptions({
   queryKey: queryKeys.assets.heroes(),
-  queryFn: async (): Promise<SlimHero[]> =>
-    (await fetchHeroes()).map((hero) =>
-      Object.assign(omitKeys(hero, HEAVY_HERO_KEYS), {
-        images: pickKeys(hero.images, HERO_IMAGE_KEYS),
-        items: Object.fromEntries(Object.entries(hero.items).filter(([slot]) => HERO_ITEM_SLOTS.has(slot))),
-      }),
-    ),
+  queryFn: () => fetchSlimHeroes(),
   staleTime: CACHE_DURATIONS.FOREVER,
 });
 
@@ -112,8 +38,7 @@ export const heroesFullQueryOptions = queryOptions({
 
 export const itemUpgradesQueryOptions = queryOptions({
   queryKey: queryKeys.assets.itemUpgrades(),
-  queryFn: async (): Promise<SlimUpgrade[]> =>
-    (await fetchItemUpgrades()).map((item) => omitKeys(item, HEAVY_UPGRADE_KEYS)),
+  queryFn: () => fetchSlimItemUpgrades(),
   staleTime: CACHE_DURATIONS.FOREVER,
 });
 

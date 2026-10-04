@@ -8,7 +8,10 @@ import { demoEnemyStats, demoHeroStats, demoMatchHistory, demoMatchMetadata, dem
 
 const HERO_IDS = Array.from({ length: 20 }, (_, i) => i + 1);
 const NOW_S = 1_790_000_000;
-const heroes = HERO_IDS.map((id) => ({ id, development_state: "release", disabled: false, items: {} }) as SlimHero);
+// Only the fields the demo reads.
+const heroes = HERO_IDS.map(
+  (id) => ({ id, name: `Hero ${id}`, development_state: "release", disabled: false, items: {} }) as unknown as SlimHero,
+);
 const assets = { heroes, items: [], abilities: [] };
 
 test("the demo history is deterministic, newest first and made of demo ids only", () => {
