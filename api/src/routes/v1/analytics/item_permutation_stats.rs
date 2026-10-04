@@ -193,12 +193,11 @@ fn build_query(query: &ItemPermutationStatsQuery) -> String {
     let include_corrupted = query.include_corrupted_items == Some(true);
     // Both shapes read `items.*` (and `items.upgrade_info`), which the hero-led
     // `item_stats_by_hero_mode_badge_v2` projection stores, so ClickHouse also picks it
-    // without a hero filter. The projection has no `start_time` index, so it then reads the
-    // whole projection of every surviving partition, whatever the window. Measured on a 1-day
-    // window, default filters: combinations read 42.4M rows vs 0.31M on the base table.
-    // Intersect read 42.4M rows / 7.72 GiB / 47 s CPU vs 0.31M rows / 62 MiB / 2.6 s CPU.
-    // This grows to ~350M rows once v2 covers every partition (migration 43). Same rule as
-    // item_stats: only hero-filtered queries may use the projection.
+    // without a hero filter. With skip indexes evaluated at planning time
+    // (`use_skip_indexes_on_data_read = 0` on the clients) start_time prunes it too: the
+    // combinations query reads 36% of the bytes with it (identical results), so it may use the
+    // projection. The hero-less intersect query still keeps it off: 32% fewer bytes but p50
+    // 2.2 s -> 3.4 s.
     let projection_setting = if hero_ids.is_empty() {
         ", optimize_use_projections = 0"
     } else {
@@ -275,7 +274,7 @@ fn build_query(query: &ItemPermutationStatsQuery) -> String {
         GROUP BY {intersect_array}
         {having_clause}
         ORDER BY matches DESC
-        SETTINGS log_comment = 'item_permutation_stats_combinations', apply_patch_parts = 0{projection_setting}
+        SETTINGS log_comment = 'item_permutation_stats_combinations', apply_patch_parts = 0
         "
         )
     }
@@ -425,7 +424,7 @@ mod tests {
     }
 
     #[test]
-    fn projections_are_disabled_without_a_hero_filter() {
+    fn projections_are_disabled_only_for_the_hero_less_intersect() {
         for item_ids in [None, Some(vec![1, 2])] {
             for include_corrupted_items in [None, Some(true)] {
                 let no_hero = build_query(&ItemPermutationStatsQuery {
@@ -434,8 +433,10 @@ mod tests {
                     account_ids: Some(vec![5]),
                     ..Default::default()
                 });
-                assert!(
+                // `item_ids` selects the intersect query; without it, combinations.
+                assert_eq!(
                     no_hero.contains("apply_patch_parts = 0, optimize_use_projections = 0\n"),
+                    item_ids.is_some(),
                     "{no_hero}"
                 );
                 let hero = build_query(&ItemPermutationStatsQuery {

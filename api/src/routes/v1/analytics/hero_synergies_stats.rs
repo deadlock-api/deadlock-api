@@ -235,6 +235,10 @@ fn build_query(query: &HeroSynergyStatsQuery) -> String {
     } else {
         format!("HAVING {}", having_filters.join(" AND "))
     };
+    // No `optimize_use_projections = 0`: with skip indexes evaluated at planning time
+    // (`use_skip_indexes_on_data_read = 0` on the clients) the planner picks the hero-led
+    // projection only when it prunes better. Measured on production shapes: identical results,
+    // 37% of the bytes, 71% of the CPU, 75% of the wall time.
     format!(
         "
     SELECT (pair.1).1 AS hero_id1,
@@ -273,7 +277,7 @@ fn build_query(query: &HeroSynergyStatsQuery) -> String {
         ) AS pair
     GROUP BY hero_id1, hero_id2
     {having_clause}
-    SETTINGS log_comment = 'hero_synergies_stats', apply_patch_parts = 0, optimize_use_projections = 0
+    SETTINGS log_comment = 'hero_synergies_stats', apply_patch_parts = 0
     "
     )
 }

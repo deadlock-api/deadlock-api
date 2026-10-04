@@ -145,6 +145,10 @@ fn build_query(query: &HeroScoreboardQuery) -> String {
     } else {
         format!(" HAVING {} ", player_having.join(" AND "))
     };
+    // No `optimize_use_projections = 0`: with skip indexes evaluated at planning time
+    // (`use_skip_indexes_on_data_read = 0` on the clients) the planner picks the hero-led
+    // projection only when it prunes better. Measured on production shapes: identical results,
+    // 55% of the CPU and 57% of the wall time.
     format!(
         "
 SELECT rowNumberInAllBlocks() + 1 as rank, hero_id, toFloat64({}) as value, uniq(match_id) as matches
@@ -153,7 +157,7 @@ FROM match_player
 GROUP BY hero_id
 {player_having}
 ORDER BY value {}
-SETTINGS log_comment = 'hero_scoreboard', apply_patch_parts = 0, max_threads = 32, optimize_use_projections = 0
+SETTINGS log_comment = 'hero_scoreboard', apply_patch_parts = 0, max_threads = 32
     ",
         query.sort_by.get_select_clause(),
         query.sort_direction,
@@ -249,7 +253,7 @@ mod tests {
         });
         assert_valid_sql(&sql);
         assert!(sql.contains("toFloat64(avg(permanent_buffs)) as value"));
-        assert!(sql.contains("optimize_use_projections = 0"));
+        assert!(!sql.contains("optimize_use_projections"));
     }
 }
 

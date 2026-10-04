@@ -582,15 +582,6 @@ fn build_query(query: &PlayerStatsMetricsQuery) -> String {
                 max_heal_prevented,
                 greatest(1, duration_s) / 60 AS duration_m{buff_columns}"
     );
-    // Without a hero filter the planner may still pick a hero-led projection, which cannot
-    // prune by start_time and reads the table's full history (measured on a 7-day window:
-    // 346M rows / 2.24 GiB / 369 ms with it, 3.4M rows / 288 MiB / 182 ms without).
-    let has_hero_filter = query.hero_ids.as_ref().is_some_and(|ids| !ids.is_empty());
-    let projection_setting = if has_hero_filter {
-        ""
-    } else {
-        ", optimize_use_projections = 0"
-    };
     // When `max_matches` is set we must restrict to the most recent N matches
     // first. That selection is hero-agnostic (it mirrors the old `t_matches`
     // CTE), and is cheap because `ORDER BY match_id DESC LIMIT n` rides the
@@ -626,11 +617,15 @@ fn build_query(query: &PlayerStatsMetricsQuery) -> String {
             )"
         )
     };
+    // No `optimize_use_projections = 0` here: with skip indexes evaluated at planning time
+    // (`use_skip_indexes_on_data_read = 0` on the clients) the hero-led projection is pruned
+    // by start_time, so the planner may pick it even without a hero filter. Measured on
+    // production shapes: identical results, 20% of the bytes and 32% of the CPU.
     format!(
         "
     SELECT {selects}
     FROM {t_data}
-    SETTINGS log_comment = 'player_stats_metrics', apply_patch_parts = 0, max_threads = 32{projection_setting}
+    SETTINGS log_comment = 'player_stats_metrics', apply_patch_parts = 0, max_threads = 32
     "
     )
 }
@@ -747,9 +742,9 @@ mod tests {
     }
 
     #[test]
-    fn projections_are_disabled_only_without_a_hero_filter() {
+    fn projections_are_allowed_with_and_without_a_hero_filter() {
         let unscoped = build_query(&PlayerStatsMetricsQuery::default());
-        assert!(unscoped.contains("optimize_use_projections = 0"));
+        assert!(!unscoped.contains("optimize_use_projections"));
         let hero_scoped = build_query(&PlayerStatsMetricsQuery {
             hero_ids: Some(vec![15]),
             ..Default::default()
