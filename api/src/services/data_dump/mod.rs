@@ -40,6 +40,8 @@ mod sweep;
 const TICK: Duration = Duration::from_secs(3600);
 const HOUR: i64 = 3600;
 const SWEEP_GRACE: Duration = Duration::from_hours(24);
+/// A snapshot is replaced every tick, so a day of grace would keep ~24 full copies of it.
+const SNAPSHOT_SWEEP_GRACE: Duration = Duration::from_hours(2);
 const CATALOG_RETENTION: Duration = Duration::from_hours(7 * 24);
 const FOLD_EVERY: chrono::Duration = chrono::Duration::hours(20);
 const LEASE_KEY: &str = "data_dump:leader";
@@ -301,9 +303,22 @@ impl DataDump {
         first_error.map_or(Ok(()), Err)
     }
 
-    /// Deletes data files a day after they left the manifest, and superseded catalogs.
+    /// Deletes data files a day (snapshots: two hours) after they left the manifest, and
+    /// superseded catalogs.
     async fn sweep(&self, manifest: &Manifest) -> Result<(), DumpError> {
         let referenced: HashSet<String> = manifest.referenced_keys().map(str::to_owned).collect();
+        for table in TABLES {
+            if matches!(table.policy, Policy::Snapshot) {
+                sweep::sweep(
+                    &self.store,
+                    &self.key(&format!("tables/{}/snapshot/", table.name)),
+                    &referenced,
+                    &manifest.retired,
+                    SNAPSHOT_SWEEP_GRACE,
+                )
+                .await?;
+            }
+        }
         sweep::sweep(
             &self.store,
             &self.key("tables/"),
