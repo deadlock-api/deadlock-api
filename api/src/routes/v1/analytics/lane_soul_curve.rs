@@ -9,7 +9,7 @@ use cached::macros::cached;
 use clickhouse::Row;
 use itertools::{Itertools, izip};
 use serde::{Deserialize, Serialize};
-use tracing::debug;
+use tracing::{debug, warn};
 use utoipa::{IntoParams, ToSchema};
 
 use super::common_filters::{
@@ -17,8 +17,8 @@ use super::common_filters::{
     filter_protected_accounts, round_timestamps,
 };
 use super::lane_common::{
-    LaneGroupBy, LaneGrouping, LaneScanFilters, LaneStat, LaneStats, SAMPLE_GRID_FILTER,
-    matches_having_clause, stat_array,
+    LaneGroupBy, LaneGrouping, LaneScanFilters, LaneStat, LaneStats, LaneTableFilters,
+    SAMPLE_GRID_FILTER, matches_having_clause, stat_array,
 };
 use crate::context::AppState;
 use crate::error::APIResult;
@@ -347,6 +347,19 @@ kept_matches AS (
     }
 }
 
+fn info_filters(query: &LaneSoulCurveQuery) -> MatchInfoFilters {
+    MatchInfoFilters {
+        min_unix_timestamp: query.min_unix_timestamp,
+        max_unix_timestamp: query.max_unix_timestamp,
+        min_match_id: query.min_match_id,
+        max_match_id: query.max_match_id,
+        min_average_badge: query.min_average_badge,
+        max_average_badge: query.max_average_badge,
+        min_duration_s: query.min_duration_s,
+        max_duration_s: query.max_duration_s,
+    }
+}
+
 fn scan_filters(
     query: &LaneSoulCurveQuery,
     accounts: &str,
@@ -356,16 +369,7 @@ fn scan_filters(
     LaneScanFilters {
         game_mode: query.game_mode,
         match_mode: query.match_mode.as_deref(),
-        info: MatchInfoFilters {
-            min_unix_timestamp: query.min_unix_timestamp,
-            max_unix_timestamp: query.max_unix_timestamp,
-            min_match_id: query.min_match_id,
-            max_match_id: query.max_match_id,
-            min_average_badge: query.min_average_badge,
-            max_average_badge: query.max_average_badge,
-            min_duration_s: query.min_duration_s,
-            max_duration_s: query.max_duration_s,
-        },
+        info: info_filters(query),
         assigned_lanes: query.assigned_lanes.as_deref(),
         accounts,
         heroes,
@@ -374,37 +378,34 @@ fn scan_filters(
     .build()
 }
 
-fn build_query(query: &LaneSoulCurveQuery, stats: &LaneStats) -> String {
-    let mut time_bounds = String::new();
+fn time_bounds(query: &LaneSoulCurveQuery, column: &str) -> String {
+    let mut bounds = String::new();
     if let Some(v) = query.min_time_s {
-        let _ = write!(time_bounds, " AND time_stamp_s >= {v}");
+        let _ = write!(bounds, " AND {column} >= {v}");
     }
     if let Some(v) = query.max_time_s {
-        let _ = write!(time_bounds, " AND time_stamp_s <= {v}");
+        let _ = write!(bounds, " AND {column} <= {v}");
     }
+    bounds
+}
 
-    let LaneDuoFilterSql {
-        account_prefilter,
-        hero_prefilter,
-        required_heroes,
-        duo_filters,
-    } = LaneDuoFilters {
+fn duo_filters(query: &LaneSoulCurveQuery) -> LaneDuoFilters<'_> {
+    LaneDuoFilters {
         accounts: query.account_ids.as_deref(),
         heroes: query.hero_ids.as_deref(),
         enemy_heroes: query.enemy_hero_ids.as_deref(),
     }
-    .build();
-    let scan_filters = scan_filters(query, &account_prefilter, &hero_prefilter, &required_heroes);
+}
 
+/// `per_time` and the final curve `SELECT`, reading a `lane_samples` CTE with one row per lane and
+/// sample: `assigned_lane`, `t`, `team0`, `team1` and each stat's `<stat>_t0` / `<stat>_t1` totals.
+fn curve_select(query: &LaneSoulCurveQuery, stats: &LaneStats, duo_filters: &str) -> String {
     let grouping = LaneGrouping::new(query.group_by.as_deref());
     let grouped_select = grouping.select_grouped();
     let outer_dims = grouping.select_all_by_name();
     let per_time_group_by = grouping.group_by_clause(&["t"]);
     let outer_group_by = grouping.group_by_clause(&[]);
 
-    let player_tuple = player_tuple(stats);
-    let side_totals = side_totals(stats);
-    let sample_array_join = sample_array_join(stats);
     let side_swap = stats.side_swap();
     let sample_aggregates = sample_aggregates(stats);
     let sample_tuple = sample_tuple(stats);
@@ -414,8 +415,100 @@ fn build_query(query: &LaneSoulCurveQuery, stats: &LaneStats) -> String {
     let stat_values_std = curve_columns(stats, 1);
     let stat_diffs = curve_columns(stats, 2);
     let stat_diffs_std = curve_columns(stats, 3);
-
     let having_clause = matches_having_clause(query.min_matches, query.max_matches);
+
+    format!(
+        "per_time AS (
+    SELECT
+    {grouped_select}
+        t,
+        COUNT() AS sample_matchups{sample_aggregates}
+    FROM lane_samples
+    ARRAY JOIN
+    [team0, team1] AS duo,
+    [team1, team0] AS enemy_duo{side_swap}
+    WHERE true{duo_filters}
+    {per_time_group_by}
+)
+SELECT
+    {outer_dims},
+    arrayMap(x -> x.1, arraySort(groupArray(({sample_tuple}))) AS curve) AS sample_times_s,
+    arrayMap(x -> x.2, curve) AS sample_matches,
+    max(sample_matchups) AS matches_played,
+    arrayMap(x -> x.{net_worth_diff}, curve) AS net_worth_diff,
+    arrayMap(x -> x.{net_worth_diff_std}, curve) AS net_worth_diff_std,
+    {stat_values} AS stat_values,
+    {stat_values_std} AS stat_values_std,
+    {stat_diffs} AS stat_diffs,
+    {stat_diffs_std} AS stat_diffs_std
+FROM per_time
+{outer_group_by}
+{having_clause}
+ORDER BY matches_played DESC"
+    )
+}
+
+/// Reads `lane_matchups` (migration 51) instead of `match_player`: each 2v2 lane's net worth
+/// totals at every grid sample all four players reached, kept current by a materialized view.
+/// Re-aggregating the per-tick `stats` arrays of every lane in the window is what makes the
+/// base query cost ~6-10 CPU-s for 30 days. The table holds net worth only and no per-player
+/// rows, so extra `stats` and `account_ids` use the base query.
+fn build_table_query(query: &LaneSoulCurveQuery, stats: &LaneStats) -> Option<String> {
+    if !stats.requested.is_empty() || query.account_ids.is_some() {
+        return None;
+    }
+    let duo_filters = duo_filters(query);
+    let table_filters = LaneTableFilters {
+        game_mode: query.game_mode,
+        match_mode: query.match_mode.as_deref(),
+        info: info_filters(query),
+        assigned_lanes: query.assigned_lanes.as_deref(),
+        duos: &duo_filters,
+    }
+    .build();
+    let time_bounds = time_bounds(query, "t");
+    let curve_select = curve_select(query, stats, &duo_filters.side_filters("duo", "enemy_duo"));
+    Some(format!(
+        "
+WITH
+lane_samples AS (
+    SELECT
+        assigned_lane,
+        t,
+        team0,
+        team1,
+        toFloat64(net_worth_sample_t0) AS net_worth_t0,
+        toFloat64(net_worth_sample_t1) AS net_worth_t1
+    FROM lane_matchups FINAL
+    ARRAY JOIN
+        sample_times_s AS t,
+        net_worth_team0 AS net_worth_sample_t0,
+        net_worth_team1 AS net_worth_sample_t1
+    WHERE {table_filters}{time_bounds}
+),
+{curve_select}
+SETTINGS log_comment = 'lane_soul_curve_table', do_not_merge_across_partitions_select_final = 1
+    "
+    ))
+}
+
+fn build_query(query: &LaneSoulCurveQuery, stats: &LaneStats) -> String {
+    let time_bounds = time_bounds(query, "time_stamp_s");
+
+    let LaneDuoFilterSql {
+        account_prefilter,
+        hero_prefilter,
+        required_heroes,
+        duo_filters,
+    } = duo_filters(query).build();
+    let scan_filters = scan_filters(query, &account_prefilter, &hero_prefilter, &required_heroes);
+
+    let grouping = LaneGrouping::new(query.group_by.as_deref());
+    let player_tuple = player_tuple(stats);
+    let side_totals = side_totals(stats);
+    let sample_array_join = sample_array_join(stats);
+    let curve_select = curve_select(query, stats, &duo_filters);
+
     let MinMatchesPushdown {
         cte: prune_cte,
         filter: prune_filter,
@@ -457,33 +550,7 @@ lane_samples AS (
     HAVING count() = 4
 ),
 -- `lanes` already proved the lane is two a side, so four players at `t` means all four were still in.
-per_time AS (
-    SELECT
-    {grouped_select}
-        t,
-        COUNT() AS sample_matchups{sample_aggregates}
-    FROM lane_samples
-    ARRAY JOIN
-    [team0, team1] AS duo,
-    [team1, team0] AS enemy_duo{side_swap}
-    WHERE true{duo_filters}
-    {per_time_group_by}
-)
-SELECT
-    {outer_dims},
-    arrayMap(x -> x.1, arraySort(groupArray(({sample_tuple}))) AS curve) AS sample_times_s,
-    arrayMap(x -> x.2, curve) AS sample_matches,
-    max(sample_matchups) AS matches_played,
-    arrayMap(x -> x.{net_worth_diff}, curve) AS net_worth_diff,
-    arrayMap(x -> x.{net_worth_diff_std}, curve) AS net_worth_diff_std,
-    {stat_values} AS stat_values,
-    {stat_values_std} AS stat_values_std,
-    {stat_diffs} AS stat_diffs,
-    {stat_diffs_std} AS stat_diffs_std
-FROM per_time
-{outer_group_by}
-{having_clause}
-ORDER BY matches_played DESC
+{curve_select}
 SETTINGS log_comment = 'lane_soul_curve', apply_patch_parts = 0
     "
     )
@@ -541,10 +608,24 @@ async fn get_lane_soul_curve(
 ) -> APIResult<Vec<LaneSoulCurve>> {
     round_timestamps(&mut query.min_unix_timestamp, &mut query.max_unix_timestamp);
     let stats = LaneStats::new(query.stats.as_deref())?;
-    let ch_query = build_query(&query, &stats);
-    debug!(?ch_query);
-    Ok(run_query(ch_client, &ch_query)
-        .await?
+    let table_rows = if let Some(table_query) = build_table_query(&query, &stats) {
+        debug!(?table_query);
+        // A missing or broken table must never take the endpoint down with it.
+        run_query(ch_client, &table_query)
+            .await
+            .inspect_err(|e| warn!("lane_soul_curve table query failed, using match_player: {e}"))
+            .ok()
+    } else {
+        None
+    };
+    let rows = if let Some(rows) = table_rows {
+        rows
+    } else {
+        let ch_query = build_query(&query, &stats);
+        debug!(?ch_query);
+        run_query(ch_client, &ch_query).await?
+    };
+    Ok(rows
         .into_iter()
         .map(|row| to_response(row, &stats.requested))
         .collect())
@@ -612,6 +693,9 @@ mod proptests {
         fn lane_soul_curve_build_query_is_valid_sql(query: LaneSoulCurveQuery) {
             let stats = LaneStats::new(query.stats.as_deref()).unwrap();
             assert_valid_sql(&build_query(&query, &stats));
+            if let Some(table_query) = build_table_query(&query, &stats) {
+                assert_valid_sql(&table_query);
+            }
         }
     }
 }

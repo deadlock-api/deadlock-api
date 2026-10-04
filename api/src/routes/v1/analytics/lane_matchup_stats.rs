@@ -8,7 +8,7 @@ use cached::macros::cached;
 use clickhouse::Row;
 use itertools::izip;
 use serde::{Deserialize, Serialize};
-use tracing::debug;
+use tracing::{debug, warn};
 use utoipa::{IntoParams, ToSchema};
 
 use super::common_filters::{
@@ -16,8 +16,8 @@ use super::common_filters::{
     filter_protected_accounts, round_timestamps,
 };
 use super::lane_common::{
-    LaneGroupBy, LaneGrouping, LaneScanFilters, LaneStat, LaneStats, matches_having_clause,
-    stat_array,
+    LaneGroupBy, LaneGrouping, LaneScanFilters, LaneStat, LaneStats, LaneTableFilters,
+    is_grid_sample, matches_having_clause, stat_array,
 };
 use crate::context::AppState;
 use crate::error::APIResult;
@@ -205,6 +205,19 @@ fn stat_columns(stats: &LaneStats, aggregate: &str, measure: &str) -> String {
     })
 }
 
+fn info_filters(query: &LaneMatchupStatsQuery) -> MatchInfoFilters {
+    MatchInfoFilters {
+        min_unix_timestamp: query.min_unix_timestamp,
+        max_unix_timestamp: query.max_unix_timestamp,
+        min_match_id: query.min_match_id,
+        max_match_id: query.max_match_id,
+        min_average_badge: query.min_average_badge,
+        max_average_badge: query.max_average_badge,
+        min_duration_s: query.min_duration_s,
+        max_duration_s: query.max_duration_s,
+    }
+}
+
 fn scan_filters(
     query: &LaneMatchupStatsQuery,
     accounts: &str,
@@ -214,16 +227,7 @@ fn scan_filters(
     LaneScanFilters {
         game_mode: query.game_mode,
         match_mode: query.match_mode.as_deref(),
-        info: MatchInfoFilters {
-            min_unix_timestamp: query.min_unix_timestamp,
-            max_unix_timestamp: query.max_unix_timestamp,
-            min_match_id: query.min_match_id,
-            max_match_id: query.max_match_id,
-            min_average_badge: query.min_average_badge,
-            max_average_badge: query.max_average_badge,
-            min_duration_s: query.min_duration_s,
-            max_duration_s: query.max_duration_s,
-        },
+        info: info_filters(query),
         assigned_lanes: query.assigned_lanes.as_deref(),
         accounts,
         heroes,
@@ -232,27 +236,23 @@ fn scan_filters(
     .build()
 }
 
-fn build_query(query: &LaneMatchupStatsQuery, stats: &LaneStats) -> String {
-    let LaneDuoFilterSql {
-        account_prefilter,
-        hero_prefilter,
-        required_heroes,
-        duo_filters,
-    } = LaneDuoFilters {
+fn duo_filters(query: &LaneMatchupStatsQuery) -> LaneDuoFilters<'_> {
+    LaneDuoFilters {
         accounts: query.account_ids.as_deref(),
         heroes: query.hero_ids.as_deref(),
         enemy_heroes: query.enemy_hero_ids.as_deref(),
     }
-    .build();
-    let scan_filters = scan_filters(query, &account_prefilter, &hero_prefilter, &required_heroes);
+}
 
+/// The per-side `SELECT`, reading a `lane_duos` CTE with one row per lane: `assigned_lane`,
+/// `team0`, `team1`, `team0_won`, `team1_won`, `both_sampled` and each stat's `<stat>_t0` /
+/// `<stat>_t1` totals at the sample.
+fn matchup_select(query: &LaneMatchupStatsQuery, stats: &LaneStats, duo_filters: &str) -> String {
     let grouping = LaneGrouping::new(query.group_by.as_deref());
     let dims = grouping.select_all_defined();
     let group_by_clause = grouping.group_by_clause(&[]);
 
     let sample_time_s = query.sample_time_s.unwrap_or(DEFAULT_SAMPLE_S);
-    let sample_bindings = stats.sample_bindings(sample_time_s);
-    let side_totals = stats.side_totals();
     let side_swap = stats.side_swap();
     let net_worth_diff = stat_agg(LaneStat::NetWorth, "avg", "diff");
     let stat_values = stat_columns(stats, "avg", "value");
@@ -261,6 +261,91 @@ fn build_query(query: &LaneMatchupStatsQuery, stats: &LaneStats) -> String {
     let stat_diffs_std = stat_columns(stats, "stddevPop", "diff");
 
     let having_clause = matches_having_clause(query.min_matches, query.max_matches);
+
+    format!(
+        "SELECT
+    {dims},
+    countIf(won) AS wins,
+    COUNT() AS matches_played,
+    toUInt32({sample_time_s}) AS sample_time_s,
+    {net_worth_diff} AS net_worth_diff,
+    countIf(both_sampled) AS sample_matches,
+    {stat_values} AS stat_values,
+    {stat_values_std} AS stat_values_std,
+    {stat_diffs} AS stat_diffs,
+    {stat_diffs_std} AS stat_diffs_std
+FROM lane_duos
+ARRAY JOIN
+    [team0, team1] AS duo,
+    [team1, team0] AS enemy_duo,
+    [team0_won, team1_won] AS won{side_swap}
+WHERE true{duo_filters}
+{group_by_clause}
+{having_clause}
+ORDER BY matches_played DESC"
+    )
+}
+
+/// Reads `lane_matchups` (migration 51) instead of `match_player`: each 2v2 lane's winner and net
+/// worth totals at every grid sample all four players reached, kept current by a materialized
+/// view. Only grid samples are stored, so an off-grid `sample_time_s` (first tick at or after it
+/// may be a match's final, off-grid tick), extra `stats` and `account_ids` use the base query.
+///
+/// Equivalent on grid samples because a player still in the match at a grid time has a tick
+/// exactly there, so the base query's "first tick at or after" lands on it for all four.
+fn build_table_query(query: &LaneMatchupStatsQuery, stats: &LaneStats) -> Option<String> {
+    let sample_time_s = query.sample_time_s.unwrap_or(DEFAULT_SAMPLE_S);
+    if !stats.requested.is_empty() || query.account_ids.is_some() || !is_grid_sample(sample_time_s)
+    {
+        return None;
+    }
+    let duo_filters = duo_filters(query);
+    let table_filters = LaneTableFilters {
+        game_mode: query.game_mode,
+        match_mode: query.match_mode.as_deref(),
+        info: info_filters(query),
+        assigned_lanes: query.assigned_lanes.as_deref(),
+        duos: &duo_filters,
+    }
+    .build();
+    let matchup_select =
+        matchup_select(query, stats, &duo_filters.side_filters("duo", "enemy_duo"));
+    // An index of 0 (no such sample) reads 0, which `both_sampled` gates out like the base query.
+    Some(format!(
+        "
+WITH lane_duos AS (
+    SELECT
+        assigned_lane,
+        team0,
+        team1,
+        team0_won,
+        team1_won,
+        indexOf(sample_times_s, {sample_time_s}) AS sample_index,
+        sample_index > 0 AS both_sampled,
+        toFloat64(net_worth_team0[sample_index]) AS net_worth_t0,
+        toFloat64(net_worth_team1[sample_index]) AS net_worth_t1
+    FROM lane_matchups FINAL
+    WHERE {table_filters}
+)
+{matchup_select}
+SETTINGS log_comment = 'lane_matchup_stats_table', do_not_merge_across_partitions_select_final = 1
+    "
+    ))
+}
+
+fn build_query(query: &LaneMatchupStatsQuery, stats: &LaneStats) -> String {
+    let LaneDuoFilterSql {
+        account_prefilter,
+        hero_prefilter,
+        required_heroes,
+        duo_filters,
+    } = duo_filters(query).build();
+    let scan_filters = scan_filters(query, &account_prefilter, &hero_prefilter, &required_heroes);
+
+    let sample_time_s = query.sample_time_s.unwrap_or(DEFAULT_SAMPLE_S);
+    let sample_bindings = stats.sample_bindings(sample_time_s);
+    let side_totals = stats.side_totals();
+    let matchup_select = matchup_select(query, stats, &duo_filters);
 
     // `groupUniqArrayIf` rather than `groupArrayIf`: without FINAL an unmerged replica row
     // would duplicate a hero and push the duo past the `length = 2` check.
@@ -281,26 +366,7 @@ WITH lane_duos AS (
     GROUP BY match_id, assigned_lane
     HAVING length(team0) = 2 AND length(team1) = 2
 )
-SELECT
-    {dims},
-    countIf(won) AS wins,
-    COUNT() AS matches_played,
-    toUInt32({sample_time_s}) AS sample_time_s,
-    {net_worth_diff} AS net_worth_diff,
-    countIf(both_sampled) AS sample_matches,
-    {stat_values} AS stat_values,
-    {stat_values_std} AS stat_values_std,
-    {stat_diffs} AS stat_diffs,
-    {stat_diffs_std} AS stat_diffs_std
-FROM lane_duos
-ARRAY JOIN
-    [team0, team1] AS duo,
-    [team1, team0] AS enemy_duo,
-    [team0_won, team1_won] AS won{side_swap}
-WHERE true{duo_filters}
-{group_by_clause}
-{having_clause}
-ORDER BY matches_played DESC
+{matchup_select}
 SETTINGS log_comment = 'lane_matchup_stats', apply_patch_parts = 0, max_threads = 32
     "
     )
@@ -358,10 +424,26 @@ async fn get_lane_matchup_stats(
 ) -> APIResult<Vec<LaneMatchupStats>> {
     round_timestamps(&mut query.min_unix_timestamp, &mut query.max_unix_timestamp);
     let stats = LaneStats::new(query.stats.as_deref())?;
-    let ch_query = build_query(&query, &stats);
-    debug!(?ch_query);
-    Ok(run_query(ch_client, &ch_query)
-        .await?
+    let table_rows = if let Some(table_query) = build_table_query(&query, &stats) {
+        debug!(?table_query);
+        // A missing or broken table must never take the endpoint down with it.
+        run_query(ch_client, &table_query)
+            .await
+            .inspect_err(|e| {
+                warn!("lane_matchup_stats table query failed, using match_player: {e}");
+            })
+            .ok()
+    } else {
+        None
+    };
+    let rows = if let Some(rows) = table_rows {
+        rows
+    } else {
+        let ch_query = build_query(&query, &stats);
+        debug!(?ch_query);
+        run_query(ch_client, &ch_query).await?
+    };
+    Ok(rows
         .into_iter()
         .map(|row| to_response(row, &stats.requested))
         .collect())
@@ -498,6 +580,9 @@ mod proptests {
         fn lane_matchup_stats_build_query_is_valid_sql(query: LaneMatchupStatsQuery) {
             let stats = LaneStats::new(query.stats.as_deref()).unwrap();
             assert_valid_sql(&build_query(&query, &stats));
+            if let Some(table_query) = build_table_query(&query, &stats) {
+                assert_valid_sql(&table_query);
+            }
         }
     }
 }

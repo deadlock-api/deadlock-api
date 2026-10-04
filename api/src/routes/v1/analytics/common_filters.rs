@@ -287,17 +287,22 @@ impl LaneDuoFilters<'_> {
             vec![]
         };
 
-        let duo_filters = [(self.heroes, "duo"), (self.enemy_heroes, "enemy_duo")]
-            .into_iter()
-            .filter_map(|(hero_ids, duo)| hero_ids.map(|ids| duo_filter(ids, duo)))
-            .collect_vec();
-
         LaneDuoFilterSql {
             account_prefilter,
             hero_prefilter,
             required_heroes,
-            duo_filters: join_filters(&duo_filters),
+            duo_filters: self.side_filters("duo", "enemy_duo"),
         }
+    }
+
+    /// ` AND ...` on two hero-pair array columns: `duo` must match `heroes`, `enemy_duo`
+    /// `enemy_heroes`.
+    pub(super) fn side_filters(&self, duo: &str, enemy_duo: &str) -> String {
+        let filters = [(self.heroes, duo), (self.enemy_heroes, enemy_duo)]
+            .into_iter()
+            .filter_map(|(hero_ids, duo)| hero_ids.map(|ids| duo_filter(ids, duo)))
+            .collect_vec();
+        join_filters(&filters)
     }
 }
 

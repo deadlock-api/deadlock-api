@@ -6,13 +6,20 @@ use serde::{Deserialize, Serialize};
 use strum::{Display, EnumString};
 use utoipa::ToSchema;
 
-use super::common_filters::{MatchInfoFilters, id_list};
+use super::common_filters::{LaneDuoFilters, MatchInfoFilters, id_list};
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::matches::types::{GameMode, MatchMode};
 
 /// Every 180s up to 900, every 300s after. A match's final tick lands off that grid and is dropped:
 /// it is not comparable across matches.
 pub(super) const SAMPLE_GRID_FILTER: &str = "((time_stamp_s <= 900 AND time_stamp_s % 180 = 0) OR (time_stamp_s > 900 AND time_stamp_s % 300 = 0))";
+
+/// Whether `time_s` is a sample [`SAMPLE_GRID_FILTER`] keeps, i.e. one `lane_matchups` stores.
+pub(super) fn is_grid_sample(time_s: u32) -> bool {
+    time_s > 0
+        && ((time_s <= 900 && time_s.is_multiple_of(180))
+            || (time_s > 900 && time_s.is_multiple_of(300)))
+}
 
 const MAX_STATS: usize = 8;
 
@@ -337,5 +344,39 @@ impl LaneScanFilters<'_> {
              0{lanes}{}{}{matches}",
             self.accounts, self.heroes,
         )
+    }
+}
+
+/// The predicate a `lane_matchups` read (migration 51) is scanned with. The table only holds lanes
+/// that were two a side, so the team and lane checks of [`LaneScanFilters`] are built in.
+pub(super) struct LaneTableFilters<'a> {
+    pub game_mode: Option<GameMode>,
+    pub match_mode: Option<&'a [MatchMode]>,
+    pub info: MatchInfoFilters,
+    pub assigned_lanes: Option<&'a [u32]>,
+    pub duos: &'a LaneDuoFilters<'a>,
+}
+
+impl LaneTableFilters<'_> {
+    pub(super) fn build(&self) -> String {
+        let lanes = self
+            .assigned_lanes
+            .filter(|lanes| !lanes.is_empty())
+            .map_or_else(String::new, |lanes| {
+                format!(" AND assigned_lane IN ({})", id_list(lanes))
+            });
+        let match_mode = MatchMode::sql_filter(self.match_mode);
+        let game_mode = GameMode::sql_filter(self.game_mode);
+        let info = self.info.build();
+        // Either side of the lane may turn out to be the requested duo; the per-side `ARRAY JOIN`
+        // settles which. Dropping lanes neither side can match first keeps that unroll small.
+        let sides = self.duos.side_filters("team0", "team1");
+        let duos = if sides.is_empty() {
+            String::new()
+        } else {
+            let swapped = self.duos.side_filters("team1", "team0");
+            format!(" AND ((true{sides}) OR (true{swapped}))")
+        };
+        format!("{match_mode} AND {game_mode}{info}{lanes}{duos}")
     }
 }
