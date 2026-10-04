@@ -1,7 +1,17 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link, type NotFoundRouteProps, createFileRoute, notFound, redirect, useRouter } from "@tanstack/react-router";
 import type { AnalyticsHeroStats } from "deadlock_api_client";
-import { BarChart3, ListOrdered, type LucideIcon, Map, ShoppingBag, Trophy, Users } from "lucide-react";
+import {
+  BarChart3,
+  ListOrdered,
+  type LucideIcon,
+  Map,
+  ShoppingBag,
+  Swords,
+  Trophy,
+  Users,
+  UsersRound,
+} from "lucide-react";
 import { lazy, Suspense, useMemo } from "react";
 
 import { NotFound } from "~/components/app/NotFound";
@@ -271,6 +281,8 @@ function HeroLinkCard({
 }: {
   to:
     | "/analytics/heroes"
+    | "/analytics/heroes/matchup-details"
+    | "/analytics/heroes/combos"
     | "/analytics/items"
     | "/analytics/abilities"
     | "/community/leaderboard"
@@ -465,49 +477,65 @@ function HeroDetailPage() {
       </Section>
 
       <Section title={`More ${heroName} Stats`}>
-        <nav aria-label={`More ${heroName} stats`} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          <HeroLinkCard
-            to="/analytics/items"
-            search={{ hero: heroId, ...RANK_SEARCH }}
-            icon={ShoppingBag}
-            title="Item Builds"
-            description={`Win rates, buy timings, and combos for every item on ${heroName}.`}
-          />
-          <HeroLinkCard
-            to="/analytics/abilities"
-            search={{ hero_id: heroId, ...RANK_SEARCH }}
-            icon={ListOrdered}
-            title="Ability Builds"
-            description={`The most common ${heroName} skill orders and how often they win.`}
-          />
-          <HeroLinkCard
-            to="/community/leaderboard"
-            search={{ hero_id: heroId }}
-            icon={Trophy}
-            title="Top Players"
-            description={`The highest ranked ${heroName} players in each region.`}
-          />
-          <HeroLinkCard
-            to="/analytics/players"
-            search={{ hero: heroId, ...RANK_SEARCH }}
-            icon={Users}
-            title="Player Scoreboard"
-            description={`Who racks up the most kills, souls, and damage on ${heroName}.`}
-          />
-          <HeroLinkCard
-            to="/community/heatmap"
-            search={{ hero_id: heroId, ...RANK_SEARCH }}
-            icon={Map}
-            title="Kill Heatmap"
-            description={`Where ${heroName} gets kills and dies across the map.`}
-          />
-          <HeroLinkCard
-            to="/analytics/heroes"
-            search={RANK_SEARCH}
-            icon={BarChart3}
-            title="All Heroes"
-            description="Win and pick rates of every hero, side by side."
-          />
+        <nav aria-label={`More ${heroName} stats`} className="@container">
+          <div className="grid gap-3 @xl:grid-cols-2 @4xl:grid-cols-4">
+            <HeroLinkCard
+              to="/analytics/heroes/matchup-details"
+              search={{ hero_id: heroId, ...RANK_SEARCH }}
+              icon={Swords}
+              title="Counters"
+              description={`Every hero ${heroName} beats or loses to, with the win rate swing.`}
+            />
+            <HeroLinkCard
+              to="/analytics/heroes/combos"
+              search={{ comb_include_heroes: heroId, ...RANK_SEARCH }}
+              icon={UsersRound}
+              title="Best Duos"
+              description={`The teammates that win most often next to ${heroName}.`}
+            />
+            <HeroLinkCard
+              to="/analytics/items"
+              search={{ hero: heroId, ...RANK_SEARCH }}
+              icon={ShoppingBag}
+              title="Item Builds"
+              description={`Win rates, buy timings, and combos for every item on ${heroName}.`}
+            />
+            <HeroLinkCard
+              to="/analytics/abilities"
+              search={{ hero_id: heroId, ...RANK_SEARCH }}
+              icon={ListOrdered}
+              title="Ability Builds"
+              description={`The most common ${heroName} skill orders and how often they win.`}
+            />
+            <HeroLinkCard
+              to="/community/leaderboard"
+              search={{ hero_id: heroId }}
+              icon={Trophy}
+              title="Top Players"
+              description={`The highest ranked ${heroName} players in each region.`}
+            />
+            <HeroLinkCard
+              to="/analytics/players"
+              search={{ hero: heroId, ...RANK_SEARCH }}
+              icon={Users}
+              title="Player Scoreboard"
+              description={`Who racks up the most kills, souls, and damage on ${heroName}.`}
+            />
+            <HeroLinkCard
+              to="/community/heatmap"
+              search={{ hero_id: heroId, ...RANK_SEARCH }}
+              icon={Map}
+              title="Kill Heatmap"
+              description={`Where ${heroName} gets kills and dies across the map.`}
+            />
+            <HeroLinkCard
+              to="/analytics/heroes"
+              search={RANK_SEARCH}
+              icon={BarChart3}
+              title="All Heroes"
+              description="Win and pick rates of every hero, side by side."
+            />
+          </div>
         </nav>
       </Section>
     </PageShell>
