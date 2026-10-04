@@ -21,7 +21,7 @@
 ## Data
 - Over 18 million matches tracked from August 2024 to March 2026; about 60,000 new matches ingested per day (September 2026)
 - The API serves about 20 million requests a day to around 550,000 weekly users (March 2026)
-- Match data ingested continuously; open database dumps refreshed hourly
+- Match data ingested continuously; aggregate statistics updated daily; open database dumps refreshed hourly
 - Open database dumps available at https://files.deadlock-api.com/Default/buckets/db-snapshot/public/
 - Statistics filterable by rank, patch, game mode, and date range
 - Includes win rates, pick rates, matchup matrices, confidence intervals, and purchase timing data
