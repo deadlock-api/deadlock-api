@@ -188,6 +188,9 @@ impl AppState {
             .with_setting("max_execution_time", "20")
             .with_setting("enable_named_columns_in_function_tuple", "1")
             .with_setting("do_not_merge_across_partitions_select_final", "1")
+            // Keep `ifNull(average_badge, 0)` comparisons matchable against the projection key
+            // (see `utils::sql::average_badge_filter`).
+            .with_setting("allow_key_condition_coalesce_rewrite", "0")
             // Cap per-query memory below the server profile default (40 GiB) so a single
             // heavy analytics query cannot, when several overlap, push total RSS into the
             // ~85 GiB server ceiling and trigger overcommit kills of unrelated queries.
@@ -226,6 +229,9 @@ impl AppState {
             .with_setting("max_execution_time", "20")
             .with_setting("enable_named_columns_in_function_tuple", "1")
             .with_setting("do_not_merge_across_partitions_select_final", "1")
+            // Keep `ifNull(average_badge, 0)` comparisons matchable against the projection key
+            // (see `utils::sql::average_badge_filter`).
+            .with_setting("allow_key_condition_coalesce_rewrite", "0")
             .with_setting("max_memory_usage", "26843545600")
             .with_setting("readonly", "2")
             .with_setting("allow_ddl", "0")

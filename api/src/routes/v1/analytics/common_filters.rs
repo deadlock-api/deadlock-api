@@ -1,3 +1,4 @@
+use crate::utils::sql::average_badge_filter;
 use itertools::Itertools;
 
 /// Bit of `items.upgrade_info` marking a corrupted item (build 6712+): the Broker swaps
@@ -66,12 +67,20 @@ impl MatchInfoFilters {
         if let Some(v) = self.min_average_badge
             && v > 11
         {
-            filters.push(format!("{prefix}average_badge >= {v}"));
+            filters.push(average_badge_filter(
+                &format!("{prefix}average_badge"),
+                ">=",
+                v,
+            ));
         }
         if let Some(v) = self.max_average_badge
             && v < 116
         {
-            filters.push(format!("{prefix}average_badge <= {v}"));
+            filters.push(average_badge_filter(
+                &format!("{prefix}average_badge"),
+                "<=",
+                v,
+            ));
         }
         if let Some(v) = self.min_duration_s {
             filters.push(format!("{prefix}duration_s >= {v}"));

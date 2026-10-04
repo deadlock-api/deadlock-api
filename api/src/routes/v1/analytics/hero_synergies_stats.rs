@@ -1,3 +1,4 @@
+use crate::utils::sql::average_badge_filter;
 use axum::Json;
 use axum::extract::State;
 use axum::response::IntoResponse;
@@ -170,12 +171,12 @@ fn build_query(query: &HeroSynergyStatsQuery) -> String {
     if let Some(v) = query.min_average_badge
         && v > 11
     {
-        where_filters.push(format!("average_badge >= {v}"));
+        where_filters.push(average_badge_filter("average_badge", ">=", v));
     }
     if let Some(v) = query.max_average_badge
         && v < 116
     {
-        where_filters.push(format!("average_badge <= {v}"));
+        where_filters.push(average_badge_filter("average_badge", "<=", v));
     }
     if let Some(v) = query.min_duration_s {
         where_filters.push(format!("duration_s >= {v}"));

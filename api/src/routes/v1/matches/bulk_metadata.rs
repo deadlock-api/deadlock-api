@@ -1,5 +1,6 @@
 #![expect(clippy::struct_excessive_bools)]
 
+use crate::utils::sql::average_badge_filter;
 use core::fmt::Write;
 use core::time::Duration;
 use std::collections::HashSet;
@@ -630,12 +631,12 @@ fn build_query(
     if let Some(min_badge_level) = query.min_average_badge
         && min_badge_level > 11
     {
-        info_filters.push(format!("average_badge >= {min_badge_level}"));
+        info_filters.push(average_badge_filter("average_badge", ">=", min_badge_level));
     }
     if let Some(max_badge_level) = query.max_average_badge
         && max_badge_level < 116
     {
-        info_filters.push(format!("average_badge <= {max_badge_level}"));
+        info_filters.push(average_badge_filter("average_badge", "<=", max_badge_level));
     }
     // Pool flags exist only on match_player, not on player_match_stats.
     let mut wide_only_filter = false;
@@ -1193,7 +1194,7 @@ mod proptests {
         .expect("query should build");
 
         assert!(sql.contains(
-            "SELECT match_id FROM match_player WHERE match_mode IN ('Ranked', 'Unranked') AND game_mode = 1 AND start_time >= 1780256805 AND start_time <= 1780270000 AND average_badge >= 101 AND hero_id IN (7) AND hero_id = 7 AND hasAll(items.item_id, [1282141666])"
+            "SELECT match_id FROM match_player WHERE match_mode IN ('Ranked', 'Unranked') AND game_mode = 1 AND start_time >= 1780256805 AND start_time <= 1780270000 AND average_badge >= 101 AND ifNull(average_badge, 0) >= 101 AND hero_id IN (7) AND hero_id = 7 AND hasAll(items.item_id, [1282141666])"
         ));
     }
 }

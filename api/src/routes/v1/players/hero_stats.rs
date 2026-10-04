@@ -1,3 +1,4 @@
+use crate::utils::sql::average_badge_filter;
 use axum::Json;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
@@ -181,12 +182,12 @@ fn build_query(query: &HeroStatsQuery) -> String {
     if let Some(min_badge_level) = query.min_average_badge
         && min_badge_level > 11
     {
-        outer_filters.push(format!("average_badge >= {min_badge_level}"));
+        outer_filters.push(average_badge_filter("average_badge", ">=", min_badge_level));
     }
     if let Some(max_badge_level) = query.max_average_badge
         && max_badge_level < 116
     {
-        outer_filters.push(format!("average_badge <= {max_badge_level}"));
+        outer_filters.push(average_badge_filter("average_badge", "<=", max_badge_level));
     }
     let outer_where = if outer_filters.is_empty() {
         String::new()
