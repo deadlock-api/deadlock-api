@@ -286,16 +286,33 @@ ORDER BY matches_played DESC"
     )
 }
 
-/// Reads `lane_matchups` (migration 51) instead of `match_player`: each 2v2 lane's winner and net
-/// worth totals at every grid sample all four players reached, kept current by a materialized
+/// Matches from here on record a tick exactly on every grid time a player is still in for. Before,
+/// ~0.3% of players' first tick at or after a grid time was off the grid (the last such match is
+/// `47_056_361`, 2025-11-12), so the table would drop those readings.
+const GRID_TICKS_EXACT_SINCE_UNIX_TIMESTAMP: i64 = 1_762_992_000;
+const GRID_TICKS_EXACT_SINCE_MATCH_ID: u64 = 47_056_362;
+
+/// Reads `lane_matchups` (migrations 51/52) instead of `match_player`: each 2v2 lane's winner and
+/// net worth totals at every grid sample all four players reached, kept current by a materialized
 /// view. Only grid samples are stored, so an off-grid `sample_time_s` (first tick at or after it
 /// may be a match's final, off-grid tick), extra `stats` and `account_ids` use the base query.
 ///
 /// Equivalent on grid samples because a player still in the match at a grid time has a tick
-/// exactly there, so the base query's "first tick at or after" lands on it for all four.
+/// exactly there, so the base query's "first tick at or after" lands on it for all four. That only
+/// holds since [`GRID_TICKS_EXACT_SINCE_UNIX_TIMESTAMP`]; windows reaching further back use the
+/// base query.
 fn build_table_query(query: &LaneMatchupStatsQuery, stats: &LaneStats) -> Option<String> {
     let sample_time_s = query.sample_time_s.unwrap_or(DEFAULT_SAMPLE_S);
-    if !stats.requested.is_empty() || query.account_ids.is_some() || !is_grid_sample(sample_time_s)
+    let grid_ticks_exact = query
+        .min_unix_timestamp
+        .is_some_and(|ts| ts >= GRID_TICKS_EXACT_SINCE_UNIX_TIMESTAMP)
+        || query
+            .min_match_id
+            .is_some_and(|id| id >= GRID_TICKS_EXACT_SINCE_MATCH_ID);
+    if !stats.requested.is_empty()
+        || query.account_ids.is_some()
+        || !is_grid_sample(sample_time_s)
+        || !grid_ticks_exact
     {
         return None;
     }
