@@ -14,6 +14,7 @@ use utoipa::{IntoParams, ToSchema};
 use super::common_filters::{
     MatchInfoFilters, PlayerFilters, filter_protected_accounts, join_filters, round_timestamps,
 };
+use super::player_performance_curve_agg;
 use super::power_up_buffs::PERMANENT_BUFF_TIMES;
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
@@ -80,6 +81,20 @@ const KILL_SOURCES: [(&str, &str); 4] = [
     ("denies", "stats.denies"),
 ];
 
+/// Every metric of a curve point as (response name, `match_player` column), in field order.
+pub(super) fn curve_metrics() -> impl Iterator<Item = (&'static str, &'static str)> {
+    [
+        ("net_worth", "stats.net_worth"),
+        ("kills", "stats.kills"),
+        ("deaths", "stats.deaths"),
+        ("assists", "stats.assists"),
+    ]
+    .into_iter()
+    .chain(GOLD_SOURCES)
+    .chain(DAMAGE_SOURCES)
+    .chain(KILL_SOURCES)
+}
+
 #[derive(Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash, Default)]
 #[cfg_attr(test, derive(proptest_derive::Arbitrary))]
 pub(crate) struct PlayerPerformanceCurveQuery {
@@ -88,14 +103,14 @@ pub(crate) struct PlayerPerformanceCurveQuery {
     /// Set to **0** to use absolute game time (seconds).
     #[param(minimum = 0, maximum = 100, default = 10)]
     #[serde(default = "default_resolution")]
-    resolution: Option<u8>,
+    pub(super) resolution: Option<u8>,
     /// Filter matches based on their game mode. Valid values: `normal`, `street_brawl`. **Default:** `normal`.
     #[serde(
         default = "GameMode::default_option",
         deserialize_with = "GameMode::deserialize_option"
     )]
     #[param(inline, default = "normal")]
-    game_mode: Option<GameMode>,
+    pub(super) game_mode: Option<GameMode>,
     /// Filter matches based on the match mode. Valid values: `unranked`, `private_lobby`, `coop_bot`, `ranked`, `server_test`, `tutorial`, `hero_labs`. **Default:** `ranked,unranked`.
     #[param(value_type = Option<String>)]
     #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
@@ -105,33 +120,33 @@ pub(crate) struct PlayerPerformanceCurveQuery {
             strategy = "proptest::option::of(proptest::collection::vec(proptest::prelude::any::<crate::routes::v1::matches::types::MatchMode>(), 0..=4))"
         )
     )]
-    match_mode: Option<Vec<MatchMode>>,
+    pub(super) match_mode: Option<Vec<MatchMode>>,
     /// Filter matches based on their start time (Unix timestamp). **Default:** 30 days ago.
     #[serde(default = "default_last_month_timestamp")]
     #[param(default = default_last_month_timestamp)]
-    min_unix_timestamp: Option<i64>,
+    pub(super) min_unix_timestamp: Option<i64>,
     /// Filter matches based on their start time (Unix timestamp).
-    max_unix_timestamp: Option<i64>,
+    pub(super) max_unix_timestamp: Option<i64>,
     /// Filter matches based on their duration in seconds (up to 7000s).
     #[param(maximum = 7000)]
-    min_duration_s: Option<u64>,
+    pub(super) min_duration_s: Option<u64>,
     /// Filter matches based on their duration in seconds (up to 7000s).
     #[param(maximum = 7000)]
-    max_duration_s: Option<u64>,
+    pub(super) max_duration_s: Option<u64>,
     /// Filter players based on their final net worth.
-    min_networth: Option<u64>,
+    pub(super) min_networth: Option<u64>,
     /// Filter players based on their final net worth.
-    max_networth: Option<u64>,
+    pub(super) max_networth: Option<u64>,
     /// Filter matches based on the average badge level (tier = first digits, subtier = last digit) of *both* teams involved. See more: <https://api.deadlock-api.com/v1/assets/ranks>
     #[param(minimum = 0, maximum = 116)]
-    min_average_badge: Option<u8>,
+    pub(super) min_average_badge: Option<u8>,
     /// Filter matches based on the average badge level (tier = first digits, subtier = last digit) of *both* teams involved. See more: <https://api.deadlock-api.com/v1/assets/ranks>
     #[param(minimum = 0, maximum = 116)]
-    max_average_badge: Option<u8>,
+    pub(super) max_average_badge: Option<u8>,
     /// Filter matches based on their ID.
-    min_match_id: Option<u64>,
+    pub(super) min_match_id: Option<u64>,
     /// Filter matches based on their ID.
-    max_match_id: Option<u64>,
+    pub(super) max_match_id: Option<u64>,
     /// Filter matches based on the hero IDs. See more: <https://api.deadlock-api.com/v1/assets/heroes>
     #[param(value_type = Option<String>)]
     #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
@@ -139,35 +154,35 @@ pub(crate) struct PlayerPerformanceCurveQuery {
         test,
         proptest(strategy = "crate::utils::proptest_utils::arb_small_u32_list()")
     )]
-    hero_ids: Option<Vec<u32>>,
+    pub(super) hero_ids: Option<Vec<u32>>,
     /// Comma separated list of item ids to include (only players who have purchased these items). See more: <https://api.deadlock-api.com/v1/assets/items>
     #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
     #[cfg_attr(
         test,
         proptest(strategy = "crate::utils::proptest_utils::arb_small_u32_list()")
     )]
-    include_item_ids: Option<Vec<u32>>,
+    pub(super) include_item_ids: Option<Vec<u32>>,
     /// Comma separated list of item ids to exclude (only players who have not purchased these items). See more: <https://api.deadlock-api.com/v1/assets/items>
     #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
     #[cfg_attr(
         test,
         proptest(strategy = "crate::utils::proptest_utils::arb_small_u32_list()")
     )]
-    exclude_item_ids: Option<Vec<u32>>,
+    pub(super) exclude_item_ids: Option<Vec<u32>>,
     /// Comma separated list of ability ids: only players whose ability upgrade order starts with exactly this sequence (one entry per ability point spent, unlocks included; see `ability_unlock_order_prefix` to match only the unlock order). See more: <https://api.deadlock-api.com/v1/analytics/ability-order-stats>
     #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
     #[cfg_attr(
         test,
         proptest(strategy = "crate::utils::proptest_utils::arb_small_u32_list()")
     )]
-    ability_order_prefix: Option<Vec<u32>>,
+    pub(super) ability_order_prefix: Option<Vec<u32>>,
     /// Comma separated list of ability ids: only players who unlocked (put their first point into) their abilities in exactly this order, e.g. `a,b` for players who unlocked `a` first and `b` second. See more: <https://api.deadlock-api.com/v1/assets/heroes>
     #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
     #[cfg_attr(
         test,
         proptest(strategy = "crate::utils::proptest_utils::arb_small_u32_list()")
     )]
-    ability_unlock_order_prefix: Option<Vec<u32>>,
+    pub(super) ability_unlock_order_prefix: Option<Vec<u32>>,
     /// Comma separated list of account ids to include
     #[param(inline, min_items = 1, max_items = 1_000)]
     #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
@@ -175,7 +190,7 @@ pub(crate) struct PlayerPerformanceCurveQuery {
         test,
         proptest(strategy = "crate::utils::proptest_utils::arb_small_u32_list()")
     )]
-    account_ids: Option<Vec<u32>>,
+    pub(super) account_ids: Option<Vec<u32>>,
 }
 
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
@@ -433,6 +448,29 @@ fn build_query(query: &PlayerPerformanceCurveQuery) -> String {
     )
 }
 
+/// Whether the agg table holds every day in `[from, to)`. Days are built once and only
+/// rebuilt in place, so a positive answer stays true; a negative one is rechecked soon.
+#[cached(
+    max_size = 1_000,
+    ttl_secs = 600,
+    convert = "{ days }",
+    key = "(i64, i64)"
+)]
+async fn agg_days_built(
+    ch_client: &clickhouse::Client,
+    days: (i64, i64),
+) -> clickhouse::error::Result<bool> {
+    let (from, to) = days;
+    if to <= from {
+        return Ok(true);
+    }
+    let built: u64 = ch_client
+        .query(&player_performance_curve_agg::built_days_query(from, to))
+        .fetch_one()
+        .await?;
+    Ok(i64::try_from(built).is_ok_and(|built| built == (to - from) / 86_400))
+}
+
 #[cached(
     max_size = 5_000,
     ttl_secs = 43200,
@@ -451,7 +489,15 @@ async fn get_player_performance_curve(
     mut query: PlayerPerformanceCurveQuery,
 ) -> APIResult<Vec<PlayerPerformanceCurvePoint>> {
     round_timestamps(&mut query.min_unix_timestamp, &mut query.max_unix_timestamp);
-    let query_str = build_query(&query);
+    let now = chrono::Utc::now().timestamp();
+    let agg_plan = match player_performance_curve_agg::plan(&query, now) {
+        Some(plan) if agg_days_built(ch_client, plan.required_days(now)).await? => Some(plan),
+        _ => None,
+    };
+    let query_str = match agg_plan {
+        Some(plan) => player_performance_curve_agg::build_agg_query(&query, &plan),
+        None => build_query(&query),
+    };
     debug!(?query_str);
     let rows = run_query(ch_client, &query_str).await?;
     Ok(rows)

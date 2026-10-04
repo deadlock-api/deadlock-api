@@ -6,6 +6,8 @@ use serde::Deserialize;
 use tokio::time::interval;
 use tracing::{error, info};
 
+use crate::routes::v1::analytics::player_performance_curve_agg;
+
 const REFRESH_INTERVAL_SECS: u64 = 30 * 60;
 const HORIZON_DAYS: u32 = 65;
 const GROUP_BY_SPILL_BYTES: u64 = 8_000_000_000;
@@ -34,12 +36,14 @@ fn rebuild_threshold(day_matches: u64) -> u64 {
 /// from: `max(created_at)` and the match count at build time. A day is rebuilt only
 /// once its source match count has grown by more than `MIN_NEW_MATCHES`, so we do
 /// targeted incremental work and never a blind 65-day full rebuild.
-const STATE_TABLE: &str = "default.cohort_agg_refresh_state";
+pub(crate) const STATE_TABLE: &str = "default.cohort_agg_refresh_state";
 
 struct CohortSpec {
     table: &'static str,
     staging: &'static str,
     source: Source,
+    /// Days kept; older day partitions are dropped.
+    horizon_days: u32,
 }
 
 enum Source {
@@ -51,12 +55,14 @@ enum Source {
     },
     /// Fans each purchase out once per hero on the opposing team (`enemy_hero_id`).
     EnemyHero,
+    /// Sums every stats tick's metrics per time key (`player_performance_curve_agg`).
+    PerformanceCurve,
 }
 
 // The _v2 tables carry uniqCombined(14) player states (migration 40); the plain uniq states
 // of the v1 tables were ~90% of item_stats_cohort_mv's CPU. Pointing the job here builds them
 // from scratch while the API keeps reading v1 until they cover the horizon.
-fn cohort_specs() -> [CohortSpec; 3] {
+fn cohort_specs() -> [CohortSpec; 4] {
     [
         CohortSpec {
             table: "default.item_cohort_stats_time_agg_v2",
@@ -66,6 +72,7 @@ fn cohort_specs() -> [CohortSpec; 3] {
                 bucket_col: "bucket_minute",
                 extra_array_join: "",
             },
+            horizon_days: HORIZON_DAYS,
         },
         CohortSpec {
             table: "default.item_cohort_stats_net_worth_agg_v2",
@@ -75,11 +82,20 @@ fn cohort_specs() -> [CohortSpec; 3] {
                 bucket_col: "bucket_net_worth",
                 extra_array_join: ",\n    `upgrades.net_worth_at_buy` AS net_worth_at_buy",
             },
+            horizon_days: HORIZON_DAYS,
         },
         CohortSpec {
             table: "default.item_enemy_stats_agg",
             staging: "default.item_enemy_stats_agg_staging",
             source: Source::EnemyHero,
+            horizon_days: HORIZON_DAYS,
+        },
+        // Seasons run past the 65-day horizon, and the curve's default window is the season.
+        CohortSpec {
+            table: player_performance_curve_agg::AGG_TABLE,
+            staging: player_performance_curve_agg::AGG_STAGING,
+            source: Source::PerformanceCurve,
+            horizon_days: player_performance_curve_agg::AGG_HORIZON_DAYS,
         },
     ]
 }
@@ -88,13 +104,16 @@ fn cohort_specs() -> [CohortSpec; 3] {
 /// the cohort side keeps the raw `items.item_id` so it matches the `hasAll(items.item_id, ...)`
 /// presence filter of the base query.
 fn select_body(spec: &CohortSpec, since_clause: &str) -> String {
-    let Source::Cohort {
-        bucket_select,
-        bucket_col,
-        extra_array_join,
-    } = spec.source
-    else {
-        return enemy_hero_select_body(since_clause);
+    let (bucket_select, bucket_col, extra_array_join) = match spec.source {
+        Source::Cohort {
+            bucket_select,
+            bucket_col,
+            extra_array_join,
+        } => (bucket_select, bucket_col, extra_array_join),
+        Source::EnemyHero => return enemy_hero_select_body(since_clause),
+        Source::PerformanceCurve => {
+            return player_performance_curve_agg::agg_select_body(since_clause);
+        }
     };
     format!(
         "SELECT
@@ -240,13 +259,14 @@ ORDER BY (table_name, day)"
 /// for a day rebuild).
 async fn source_watermarks(
     ch_client: &clickhouse::Client,
+    horizon_days: u32,
 ) -> Result<Vec<WatermarkRow>, clickhouse::error::Error> {
     ch_client
         .query(&format!(
             "SELECT toString(toDate(start_time)) AS day, toUnixTimestamp(max(created_at)) AS max_created, uniqExact(match_id) AS n_matches
 FROM default.match_player
 WHERE {SOURCE_FILTER}
-    AND start_time >= toStartOfDay(now()) - INTERVAL {HORIZON_DAYS} DAY
+    AND start_time >= toStartOfDay(now()) - INTERVAL {horizon_days} DAY
 GROUP BY day"
         ))
         .fetch_all::<WatermarkRow>()
@@ -329,7 +349,7 @@ async fn refresh(
     spec: &CohortSpec,
 ) -> Result<(), clickhouse::error::Error> {
     let log_comment = format!("{}_refresh", spec.table);
-    let source = source_watermarks(ch_client).await?;
+    let source = source_watermarks(ch_client, spec.horizon_days).await?;
     let stored = stored_match_counts(ch_client, spec.table).await?;
 
     let stale: Vec<(String, u32, u64)> = source

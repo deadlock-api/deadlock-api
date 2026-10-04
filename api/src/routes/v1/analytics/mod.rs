@@ -19,6 +19,7 @@ mod lane_common;
 pub mod lane_matchup_stats;
 pub mod lane_soul_curve;
 pub mod player_performance_curve;
+pub(crate) mod player_performance_curve_agg;
 pub mod player_scoreboard;
 mod player_stats_metrics;
 mod power_up_buffs;
