@@ -11,6 +11,7 @@ const EXPORT_SETTINGS: &str = "s3_truncate_on_insert = 1, \
     s3_min_upload_part_size = 67108864, \
     s3_upload_part_size_multiply_parts_count_threshold = 100000, \
     output_format_parquet_compression_method = 'zstd', \
+    output_format_compression_level = 9, \
     output_format_parquet_write_page_index = 1, \
     output_format_parquet_write_bloom_filter = 1, \
     output_format_parquet_string_as_string = 1";

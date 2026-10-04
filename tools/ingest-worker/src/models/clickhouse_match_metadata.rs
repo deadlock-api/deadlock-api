@@ -6,7 +6,7 @@ use prost::Message;
 use tracing::warn;
 use valveprotos::deadlock::c_msg_match_hero_release_votes::HeroVote;
 use valveprotos::deadlock::c_msg_match_meta_data_contents::{
-    BookReward, Deaths, EGoldSource, GoldSource, Items, MatchInfo, MidBoss,
+    BookReward, CustomUserStat, Deaths, EGoldSource, GoldSource, Items, MatchInfo, MidBoss,
     Objective as ProtoObjective, PlayerAccolade, PlayerStats, Players, PowerUpBuff,
     StreetBrawlRound,
 };
@@ -221,8 +221,9 @@ pub(crate) struct ClickhouseMatchPlayer {
     pub stats_ability_kills: Vec<u32>,
     #[serde(rename = "stats.headshot_kills")]
     pub stats_headshot_kills: Vec<u32>,
-    #[serde(rename = "stats.custom_user_stats")]
-    pub stats_custom_user_stats: Vec<Vec<(String, u32)>>,
+    /// Per custom stat, its value at every stats tick as deltas: the first element is the
+    /// value itself, each later one the change since the previous tick.
+    pub custom_user_stats_deltas: Vec<(String, Vec<i32>)>,
     #[serde(rename = "stats.gold_source_players_kills")]
     pub stats_gold_source_players_kills: Vec<u32>,
     #[serde(rename = "stats.gold_source_players_damage")]
@@ -767,23 +768,7 @@ impl From<(&MatchInfo, bool, Players)> for ClickhouseMatchPlayer {
                 .iter()
                 .map(PlayerStats::headshot_kills)
                 .collect(),
-            stats_custom_user_stats: value
-                .stats
-                .iter()
-                .map(|s| {
-                    s.custom_user_stats
-                        .iter()
-                        .map(|v| {
-                            let name = match_info
-                                .custom_user_stats
-                                .iter()
-                                .find(|n| n.id == v.id)
-                                .map_or_else(|| v.id().to_string(), |n| n.name().to_owned());
-                            (name, v.value())
-                        })
-                        .collect()
-                })
-                .collect(),
+            custom_user_stats_deltas: custom_user_stats_deltas(match_info, &value.stats),
             stats_gold_source_players_kills: gold_source_values(
                 &value.stats,
                 EGoldSource::KEPlayers,
@@ -1193,6 +1178,46 @@ impl From<(&MatchInfo, bool, Players)> for ClickhouseMatchPlayer {
     }
 }
 
+/// Custom stats keyed by name (the id when the match has no name for it), in order of first
+/// appearance, each with one delta-encoded value per stats tick, 0 on ticks without an entry.
+/// Deltas wrap at 32 bits, so a cumulative sum truncated to `UInt32` restores every value.
+fn custom_user_stats_deltas(
+    match_info: &MatchInfo,
+    stats: &[PlayerStats],
+) -> Vec<(String, Vec<i32>)> {
+    let mut ids: Vec<u32> = Vec::new();
+    for v in stats.iter().flat_map(|s| &s.custom_user_stats) {
+        if !ids.contains(&v.id()) {
+            ids.push(v.id());
+        }
+    }
+    ids.into_iter()
+        .map(|id| {
+            let name = match_info
+                .custom_user_stats
+                .iter()
+                .find(|n| n.id() == id)
+                .map_or_else(|| id.to_string(), |n| n.name().to_owned());
+            let mut prev = 0u32;
+            let deltas = stats
+                .iter()
+                .map(|s| {
+                    let value = s
+                        .custom_user_stats
+                        .iter()
+                        .find(|v| v.id() == id)
+                        .map_or(0, CustomUserStat::value);
+                    #[allow(clippy::cast_possible_wrap)]
+                    let delta = value.wrapping_sub(prev) as i32;
+                    prev = value;
+                    delta
+                })
+                .collect();
+            (name, deltas)
+        })
+        .collect()
+}
+
 /// One value per stats tick for `source`, 0 on ticks without an entry for it.
 fn gold_source_values(
     stats: &[PlayerStats],
@@ -1232,6 +1257,53 @@ mod tests {
                 .collect(),
             ..Default::default()
         }
+    }
+
+    #[test]
+    fn custom_user_stats_are_delta_encoded_per_stat() {
+        use valveprotos::deadlock::c_msg_match_meta_data_contents::CustomUserStatInfo;
+
+        let stat = |id, value| CustomUserStat {
+            id: Some(id),
+            value: Some(value),
+        };
+        let tick = |stats| PlayerStats {
+            custom_user_stats: stats,
+            ..Default::default()
+        };
+        let info = MatchInfo {
+            custom_user_stats: vec![CustomUserStatInfo {
+                id: Some(1),
+                name: Some("Shots".to_owned()),
+            }],
+            ..Default::default()
+        };
+        let stats = [
+            tick(vec![stat(1, 10), stat(2, u32::MAX)]),
+            tick(vec![stat(1, 25), stat(2, 3)]),
+            tick(vec![stat(1, 20), stat(3, 7)]),
+        ];
+        let deltas = custom_user_stats_deltas(&info, &stats);
+        assert_eq!(
+            deltas,
+            vec![
+                ("Shots".to_owned(), vec![10, 15, -5]),
+                ("2".to_owned(), vec![-1, 4, -3]),
+                ("3".to_owned(), vec![0, 0, 7]),
+            ]
+        );
+        // A cumulative sum truncated to 32 bits restores the values (ClickHouse:
+        // toUInt32(arrayCumSum(deltas))).
+        let restored: Vec<u32> = deltas[1]
+            .1
+            .iter()
+            .scan(0i64, |sum, d| {
+                *sum += i64::from(*d);
+                #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+                Some(*sum as u32)
+            })
+            .collect();
+        assert_eq!(restored, vec![u32::MAX, 3, 0]);
     }
 
     #[test]
