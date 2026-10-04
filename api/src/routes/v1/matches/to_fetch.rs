@@ -70,14 +70,16 @@ async fn pending_pool(
         "player_rank_final_flat_progress",
         "player_rank_initial_display_rank",
     );
+    // CTEs are inlined per reference, so without MATERIALIZED the pending_matches FINAL scan ran
+    // three times and the ~77M-row player_match_by_match lookup twice.
     let query = format!(
         "WITH prio AS ({prio}),
-         pool AS (
+         pool AS MATERIALIZED (
              SELECT match_id, match_id IN prio AS is_prio FROM pending_matches FINAL
              WHERE state = 'pending' AND match_id >= {MIN_MATCH_ID}
              ORDER BY is_prio DESC, match_id DESC LIMIT {POOL_LIMIT}
          ),
-         players AS (
+         players AS MATERIALIZED (
              SELECT match_id, account_id, match_mode, game_mode FROM player_match_by_match
              WHERE match_id IN (SELECT match_id FROM pool)
          ),
@@ -100,7 +102,7 @@ async fn pending_pool(
                                          4)),
                   avgIf(badge, badge > 0 AND match_mode = 'Ranked') DESC,
                   match_id DESC
-         SETTINGS log_comment = 'matches_to_fetch_pool'"
+         SETTINGS log_comment = 'matches_to_fetch_pool', enable_materialized_cte = 1"
     );
     let ids: Vec<u64> = ch_client.query(&query).fetch_all().await?;
     Ok(Arc::new(ids))
