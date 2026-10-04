@@ -327,6 +327,10 @@ fn build_table_query(query: &LaneMatchupStatsQuery, stats: &LaneStats) -> Option
     .build();
     let matchup_select =
         matchup_select(query, stats, &duo_filters.side_filters("duo", "enemy_duo"));
+    // PREWHERE: under FINAL, ClickHouse only moves sorting-key conditions there itself, so the
+    // other filters would run after reading every column. Duplicate versions of a row never
+    // differ in the filtered columns (checked 2026-10-04), so filtering before FINAL keeps the
+    // same rows.
     // An index of 0 (no such sample) reads 0, which `both_sampled` gates out like the base query.
     Some(format!(
         "
@@ -342,7 +346,7 @@ WITH lane_duos AS (
         toFloat64(net_worth_team0[sample_index]) AS net_worth_t0,
         toFloat64(net_worth_team1[sample_index]) AS net_worth_t1
     FROM lane_matchups FINAL
-    WHERE {table_filters}
+    PREWHERE {table_filters}
 )
 {matchup_select}
 SETTINGS log_comment = 'lane_matchup_stats_table', do_not_merge_across_partitions_select_final = 1

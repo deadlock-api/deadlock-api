@@ -171,6 +171,10 @@ fn build_query(query: &HeroStatsQuery) -> String {
         mp_filters.push(format!("net_worth <= {max_networth}"));
     }
     let mp_where = mp_filters.join(" AND ");
+    // PREWHERE: under FINAL, ClickHouse only moves sorting-key conditions there itself, so the
+    // other filters would run after reading every column. Duplicate versions of a row never
+    // differ in the filtered columns (checked 2026-10-04), so filtering before FINAL keeps the
+    // same rows.
 
     let mut outer_filters: Vec<String> = vec![];
     if let Some(min_duration_s) = query.min_duration_s {
@@ -206,7 +210,7 @@ fn build_query(query: &HeroStatsQuery) -> String {
                duration_s, start_time, average_badge, mvp_rank,
                permanent_buffs AS pb, first_permanent_buff_time_s AS first_pb_time_s
         FROM player_match_stats FINAL
-        WHERE {mp_where}
+        PREWHERE {mp_where}
     )
     SELECT
         account_id,

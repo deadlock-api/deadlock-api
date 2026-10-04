@@ -78,6 +78,10 @@ fn build_query(account_id: u32, query: &EnemyStatsQuery) -> String {
         filters.push(format!("match_duration_s <= {max_duration_s}"));
     }
     let where_clause = filters.join(" AND ");
+    // PREWHERE: under FINAL, ClickHouse only moves sorting-key conditions there itself, so the
+    // other filters would run after reading every column. Duplicate versions of a row never
+    // differ in the filtered columns (checked 2026-10-04), so filtering before FINAL keeps the
+    // same rows.
     let mut having_filters = vec![];
     if let Some(min_matches_played) = query.min_matches_played {
         having_filters.push(format!("matches_played >= {min_matches_played}"));
@@ -101,7 +105,7 @@ fn build_query(account_id: u32, query: &EnemyStatsQuery) -> String {
         groupArray(match_id) as matches
     FROM player_match_roster FINAL
     ARRAY JOIN enemy_ids AS enemy_id
-    WHERE {where_clause}
+    PREWHERE {where_clause}
     GROUP BY enemy_id
     {having_clause}
     ORDER BY matches_played DESC

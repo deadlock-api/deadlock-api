@@ -468,6 +468,10 @@ fn build_table_query(query: &LaneSoulCurveQuery, stats: &LaneStats) -> Option<St
     .build();
     let time_bounds = time_bounds(query, "t");
     let curve_select = curve_select(query, stats, &duo_filters.side_filters("duo", "enemy_duo"));
+    // PREWHERE: under FINAL, ClickHouse only moves sorting-key conditions there itself, so the
+    // other filters would run after reading every column. Duplicate versions of a row never
+    // differ in the filtered columns (checked 2026-10-04), so filtering before FINAL keeps the
+    // same rows.
     Some(format!(
         "
 WITH
@@ -484,7 +488,8 @@ lane_samples AS (
         sample_times_s AS t,
         net_worth_team0 AS net_worth_sample_t0,
         net_worth_team1 AS net_worth_sample_t1
-    WHERE {table_filters}{time_bounds}
+    PREWHERE {table_filters}
+    WHERE true{time_bounds}
 ),
 {curve_select}
 SETTINGS log_comment = 'lane_soul_curve_table', do_not_merge_across_partitions_select_final = 1

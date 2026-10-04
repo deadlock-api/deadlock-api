@@ -85,11 +85,16 @@ fn build_query(account_id: u32, query: &MateStatsQuery, friend_ids: Option<&[u32
     if let Some(max_duration_s) = query.max_duration_s {
         filters.push(format!("match_duration_s <= {max_duration_s}"));
     }
-    // The same-party filter restricts mates to the account's Steam friends.
-    if let Some(ids) = friend_ids {
-        filters.push(format!("mate_id IN ({})", in_clause(ids)));
-    }
-    let where_clause = filters.join(" AND ");
+    let prewhere_clause = filters.join(" AND ");
+    // PREWHERE: under FINAL, ClickHouse only moves sorting-key conditions there itself, so the
+    // other filters would run after reading every column. Duplicate versions of a row never
+    // differ in the filtered columns (checked 2026-10-04), so filtering before FINAL keeps the
+    // same rows.
+    // The same-party filter restricts mates to the account's Steam friends. `mate_id` comes from
+    // the ARRAY JOIN, so it stays in WHERE.
+    let where_clause = friend_ids.map_or_else(String::new, |ids| {
+        format!("WHERE mate_id IN ({})", in_clause(ids))
+    });
 
     let mut having_filters = vec![];
     if let Some(min_matches_played) = query.min_matches_played {
@@ -115,7 +120,8 @@ fn build_query(account_id: u32, query: &MateStatsQuery, friend_ids: Option<&[u32
             groupArray(match_id) as matches
         FROM player_match_roster FINAL
         ARRAY JOIN mate_ids AS mate_id
-        WHERE {where_clause}
+        PREWHERE {prewhere_clause}
+        {where_clause}
         GROUP BY mate_id
         {having_clause}
         ORDER BY matches_played DESC
@@ -202,6 +208,24 @@ pub(super) async fn mate_stats(
     )
     .await
     .map(Json)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn roster_filters_are_prewhere_and_friend_filter_stays_in_where() {
+        let sql = build_query(7, &MateStatsQuery::default(), Some(&[1, 2]));
+        let (_, after_prewhere) = sql.split_once("PREWHERE").expect("has PREWHERE");
+        let (prewhere, where_clause) = after_prewhere.split_once("WHERE").expect("has WHERE");
+        assert!(prewhere.contains("account_id = 7"));
+        assert!(!prewhere.contains("mate_id"));
+        assert!(where_clause.contains("mate_id IN"));
+
+        let sql = build_query(7, &MateStatsQuery::default(), None);
+        assert!(!sql.replace("PREWHERE", "").contains("WHERE"));
+    }
 }
 
 #[cfg(test)]
