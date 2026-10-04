@@ -31,6 +31,9 @@ const FIRST_SAMPLE_S: u32 = 180;
 /// `t` and `sample_matchups` lead every sample tuple; each stat then contributes four aggregates.
 const CURVE_TUPLE_LEADING: usize = 2;
 
+/// The team flag and sample times lead every player tuple; each stat then contributes its samples.
+const PLAYER_TUPLE_LEADING: usize = 2;
+
 #[expect(clippy::unnecessary_wraps)]
 fn default_min_time_s() -> Option<u32> {
     Some(FIRST_SAMPLE_S)
@@ -221,6 +224,40 @@ fn curve_columns(stats: &LaneStats, slot: usize) -> String {
     })
 }
 
+/// One player's on-grid samples: `(is_team0, times, <one array per stat>)`.
+fn player_tuple(stats: &LaneStats) -> String {
+    stats.computed.iter().fold(
+        "team = 'Team0', arrayFilter((v, k) -> k, stats.time_stamp_s, on_grid)".to_string(),
+        |mut acc, stat| {
+            let _ = write!(acc, ", arrayFilter((v, k) -> k, stats.{stat}, on_grid)");
+            acc
+        },
+    )
+}
+
+/// Each side's total of every stat at sample `t`, one player-sample row at a time.
+fn side_totals(stats: &LaneStats) -> String {
+    stats.computed.iter().fold(String::new(), |mut acc, stat| {
+        let _ = write!(
+            acc,
+            ",\n        toFloat64(sumIf({stat}_sample, p.1)) AS {stat}_t0,\n        toFloat64(sumIf({stat}_sample, NOT p.1)) AS {stat}_t1"
+        );
+        acc
+    })
+}
+
+/// Unrolls a player tuple's sample arrays alongside its times.
+fn sample_array_join(stats: &LaneStats) -> String {
+    stats
+        .computed
+        .iter()
+        .enumerate()
+        .fold(String::new(), |mut acc, (i, stat)| {
+            let _ = write!(acc, ", p.{} AS {stat}_sample", PLAYER_TUPLE_LEADING + 1 + i);
+            acc
+        })
+}
+
 fn sample_aggregates(stats: &LaneStats) -> String {
     stats.computed.iter().fold(String::new(), |mut acc, stat| {
         let _ = write!(
@@ -250,7 +287,7 @@ fn sample_tuple(stats: &LaneStats) -> String {
 /// keep rows the final `HAVING` would keep anyway.
 #[derive(Default)]
 struct MinMatchesPushdown {
-    /// CTEs to splice in after `lane_duos`.
+    /// CTEs to splice in ahead of `lanes`.
     cte: String,
     /// ` AND ...` narrowing the per-sample pass.
     filter: String,
@@ -259,6 +296,7 @@ struct MinMatchesPushdown {
 fn min_matches_pushdown(
     grouping: &LaneGrouping,
     min_matches: Option<u64>,
+    scan_filters: &str,
     duo_filters: &str,
 ) -> MinMatchesPushdown {
     let dims = grouping.dims();
@@ -275,8 +313,20 @@ fn min_matches_pushdown(
             LaneGroupBy::EnemyHeroIds => "enemy_duo",
         })
         .join(", ");
+    // Only the hero columns: reading `stats` here would double the scan this pruning pays for.
     let cte = format!(
         "
+lane_duos AS (
+    SELECT
+        match_id,
+        assigned_lane AS duo_lane,
+        arraySort(groupUniqArrayIf(hero_id, team = 'Team0')) AS team0,
+        arraySort(groupUniqArrayIf(hero_id, team = 'Team1')) AS team1
+    FROM match_player
+    WHERE {scan_filters}
+    GROUP BY match_id, assigned_lane
+    HAVING length(team0) = 2 AND length(team1) = 2
+),
 lane_pairs AS (
     SELECT match_id, duo_lane, duo, enemy_duo
     FROM lane_duos
@@ -352,8 +402,9 @@ fn build_query(query: &LaneSoulCurveQuery, stats: &LaneStats) -> String {
     let per_time_group_by = grouping.group_by_clause(&["t"]);
     let outer_group_by = grouping.group_by_clause(&[]);
 
-    let tick_array_join = stats.tick_array_join();
-    let side_totals = stats.side_totals();
+    let player_tuple = player_tuple(stats);
+    let side_totals = side_totals(stats);
+    let sample_array_join = sample_array_join(stats);
     let side_swap = stats.side_swap();
     let sample_aggregates = sample_aggregates(stats);
     let sample_tuple = sample_tuple(stats);
@@ -368,48 +419,53 @@ fn build_query(query: &LaneSoulCurveQuery, stats: &LaneStats) -> String {
     let MinMatchesPushdown {
         cte: prune_cte,
         filter: prune_filter,
-    } = min_matches_pushdown(&grouping, query.min_matches, &duo_filters);
+    } = min_matches_pushdown(&grouping, query.min_matches, &scan_filters, &duo_filters);
 
-    // The duo is resolved once per lane, not once per lane *and sample*: repeating the hash-set
-    // aggregate across a grouping this size is what made the full-length curve slow.
+    // One pass over `match_player`: each lane keeps its duos and its players' on-grid samples, which
+    // are then unrolled into per-sample totals. Resolving the duos in a second scan and joining it
+    // back read the table, and the hero prefilter, twice.
     //
     // `groupUniqArrayIf` rather than `groupArrayIf`: without FINAL an unmerged replica row would
-    // duplicate a hero and push the duo past the `length = 2` check.
+    // duplicate a hero and push the duo past the `length = 2` check. The same row would make the
+    // sample's player count 5, so it is dropped there as well.
     format!(
         "
-WITH lane_duos AS (
-    SELECT
-        match_id,
-        assigned_lane AS duo_lane,
-        arraySort(groupUniqArrayIf(hero_id, team = 'Team0')) AS team0,
-        arraySort(groupUniqArrayIf(hero_id, team = 'Team1')) AS team1
-    FROM match_player
-    WHERE {scan_filters}
-    GROUP BY match_id, assigned_lane
-    HAVING length(team0) = 2 AND length(team1) = 2
-),{prune_cte}
-lane_samples AS (
+WITH{prune_cte}
+lanes AS (
+    WITH arrayMap(time_stamp_s -> {SAMPLE_GRID_FILTER}{time_bounds}, stats.time_stamp_s) AS on_grid
     SELECT
         match_id,
         assigned_lane,
-        time_stamp_s AS t{side_totals}
+        arraySort(groupUniqArrayIf(hero_id, team = 'Team0')) AS team0,
+        arraySort(groupUniqArrayIf(hero_id, team = 'Team1')) AS team1,
+        groupArray(({player_tuple})) AS players
     FROM match_player
-    ARRAY JOIN stats.time_stamp_s AS time_stamp_s{tick_array_join}
-    WHERE {scan_filters} AND {SAMPLE_GRID_FILTER}{time_bounds}{prune_filter}
-    GROUP BY match_id, assigned_lane, time_stamp_s
+    WHERE {scan_filters}{prune_filter}
+    GROUP BY match_id, assigned_lane
+    HAVING length(team0) = 2 AND length(team1) = 2
+),
+lane_samples AS (
+    SELECT
+        assigned_lane,
+        t,
+        any(team0) AS team0,
+        any(team1) AS team1{side_totals}
+    FROM lanes
+    ARRAY JOIN players AS p
+    ARRAY JOIN p.2 AS t{sample_array_join}
+    GROUP BY match_id, assigned_lane, t
     HAVING count() = 4
 ),
--- `lane_duos` already proved the lane is two a side, so `count() = 4` means all four were still in.
+-- `lanes` already proved the lane is two a side, so four players at `t` means all four were still in.
 per_time AS (
     SELECT
     {grouped_select}
         t,
         COUNT() AS sample_matchups{sample_aggregates}
-    FROM lane_samples AS s
-    INNER JOIN lane_duos AS d ON s.match_id = d.match_id AND s.assigned_lane = d.duo_lane
+    FROM lane_samples
     ARRAY JOIN
-    [d.team0, d.team1] AS duo,
-    [d.team1, d.team0] AS enemy_duo{side_swap}
+    [team0, team1] AS duo,
+    [team1, team0] AS enemy_duo{side_swap}
     WHERE true{duo_filters}
     {per_time_group_by}
 )

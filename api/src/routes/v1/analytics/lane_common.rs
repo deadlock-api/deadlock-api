@@ -112,13 +112,6 @@ impl LaneStats {
         })
     }
 
-    pub(super) fn tick_array_join(&self) -> String {
-        self.computed.iter().fold(String::new(), |mut acc, stat| {
-            let _ = write!(acc, ", stats.{stat} AS {stat}_sample");
-            acc
-        })
-    }
-
     /// `WITH` bindings reading every stat at the first tick from `at_time_s` on. The index is
     /// resolved once rather than per stat, and `has_sample` is derived from it rather than from a
     /// value, because `0` kills is a real reading. Out-of-range indexing yields `0`, so players
