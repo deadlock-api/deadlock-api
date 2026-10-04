@@ -191,6 +191,11 @@ impl AppState {
             // Keep `ifNull(average_badge, 0)` comparisons matchable against the projection key
             // (see `utils::sql::average_badge_filter`).
             .with_setting("allow_key_condition_coalesce_rewrite", "0")
+            // Evaluate skip indexes (e.g. idx_start_time) at planning time: when deferred to read
+            // time (the default), projection selection sees unpruned parts and a chosen
+            // projection reads every part. Measured on 41 production query shapes: identical
+            // results, -17% bytes and -15% CPU volume-weighted, up to 66x on projection reads.
+            .with_setting("use_skip_indexes_on_data_read", "0")
             // Cap per-query memory below the server profile default (40 GiB) so a single
             // heavy analytics query cannot, when several overlap, push total RSS into the
             // ~85 GiB server ceiling and trigger overcommit kills of unrelated queries.
@@ -232,6 +237,11 @@ impl AppState {
             // Keep `ifNull(average_badge, 0)` comparisons matchable against the projection key
             // (see `utils::sql::average_badge_filter`).
             .with_setting("allow_key_condition_coalesce_rewrite", "0")
+            // Evaluate skip indexes (e.g. idx_start_time) at planning time: when deferred to read
+            // time (the default), projection selection sees unpruned parts and a chosen
+            // projection reads every part. Measured on 41 production query shapes: identical
+            // results, -17% bytes and -15% CPU volume-weighted, up to 66x on projection reads.
+            .with_setting("use_skip_indexes_on_data_read", "0")
             .with_setting("max_memory_usage", "26843545600")
             .with_setting("readonly", "2")
             .with_setting("allow_ddl", "0")

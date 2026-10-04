@@ -77,8 +77,11 @@ impl BatchQueryMulti for MatchHistoryReadQuery {
         // Within Eternus, replace the GC's extrapolated after-match badge with the badge the
         // player entered the match with (see ETERNUS_MIN_BADGE). The join reads
         // player_match_stats, whose (account_id, match_id) key makes the account filter a
-        // primary-key range, and is pruned to the Eternus entries (measured -31% wall, -40%
-        // read_rows vs. the match_player bloom-filter read on a 7-account Eternus batch).
+        // primary-key range (measured -31% wall, -40% read_rows vs. the match_player
+        // bloom-filter read on a 7-account Eternus batch). It is not pruned to the Eternus
+        // entries: the outer `if` only uses `initial_display_rank` for them anyway, and the
+        // pruning subquery read player_match_history a second time (measured on 50 production
+        // batches without it: identical results, -38% read_rows, p50 45 -> 34 ms).
         //
         // use_statistics/join-order-limit are off: since 26.8 the planner loads per-part
         // column statistics and reorders joins at plan time, ~200ms per query here for a
@@ -111,10 +114,7 @@ impl BatchQueryMulti for MatchHistoryReadQuery {
                  SELECT account_id, match_id, \
                         max(assumeNotNull(player_rank_initial_display_rank)) AS initial_display_rank \
                  FROM player_match_stats \
-                 WHERE account_id IN ({ids}) AND match_mode = 'Ranked' AND (account_id, match_id) IN ( \
-                     SELECT account_id, match_id FROM player_match_history \
-                     WHERE account_id IN ({ids}) AND ranked_display_badge >= {ETERNUS_MIN_BADGE} \
-                 ) \
+                 WHERE account_id IN ({ids}) AND match_mode = 'Ranked' \
                  GROUP BY account_id, match_id \
              ) AS ranks USING (account_id, match_id) \
              ORDER BY match_id DESC \
@@ -625,6 +625,8 @@ mod tests {
         let query = MatchHistoryReadQuery::build_query(&[1]);
         assert!(query.contains("AS initial_display_rank FROM player_match_stats WHERE"));
         assert!(!query.contains("FROM match_player"));
+        // player_match_history is read once, by the history subquery only.
+        assert_eq!(query.matches("FROM player_match_history").count(), 1);
     }
 
     /// The projection is generated from `COLUMN_NAMES`, so every column must reach
