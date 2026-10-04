@@ -37,6 +37,12 @@ const ZSTD_MAGIC: [u8; 4] = [0x28, 0xb5, 0x2f, 0xfd];
 /// later than that, and matches whose update failed, are picked up by the next full scan.
 const FULL_SCAN_INTERVAL: Duration = Duration::from_mins(30);
 const INCREMENTAL_WINDOW: &str = "2 HOUR";
+/// `created_at` is not in the `match_salts` key, so even a 2-hour window scans the whole table
+/// (~27M rows), and the old matches whose salts arrive late spread its match ids over ~80
+/// `match_player` partitions. Incremental polls therefore only look at matches started within
+/// this age, a `match_id` bound both tables prune on (60M rows read → 2M); older matches are
+/// left to the full scan, which also refreshes the bound.
+const INCREMENTAL_MAX_MATCH_AGE: &str = "7 DAY";
 
 use models::{
     DemoPlayer, MatchUpdate, MatchWithReplay, ObservedSteamName, ObservedSteamNameChange,
@@ -72,10 +78,15 @@ async fn main() -> anyhow::Result<()> {
 
     let mut failed_matches: HashSet<u64> = HashSet::new();
     let mut last_full_scan: Option<Instant> = None;
+    let mut incremental_min_match_id = 0;
 
     loop {
         let full_scan = last_full_scan.is_none_or(|t| t.elapsed() >= FULL_SCAN_INTERVAL);
-        let mut matches = fetch_pending_matches(&ch_client, full_scan).await?;
+        if full_scan {
+            incremental_min_match_id = fetch_incremental_min_match_id(&ch_client).await?;
+        }
+        let mut matches =
+            fetch_pending_matches(&ch_client, full_scan, incremental_min_match_id).await?;
         if full_scan {
             last_full_scan = Some(Instant::now());
             // Prune failed_matches for ids that have aged out of the 30-day SQL window,
@@ -156,20 +167,48 @@ async fn main() -> anyhow::Result<()> {
     }
 }
 
+/// Read in key order, so it stops at the first granule that matches instead of scanning a week
+/// of `start_time`.
+async fn fetch_incremental_min_match_id(ch_client: &clickhouse::Client) -> anyhow::Result<u64> {
+    let min_match_id = ch_client
+        .query(&format!(
+            "SELECT match_id FROM match_player \
+             WHERE start_time > now() - INTERVAL {INCREMENTAL_MAX_MATCH_AGE} \
+             ORDER BY match_id LIMIT 1 \
+             SETTINGS log_comment = 'demo_analyzer_fetch_incremental_min_match_id'"
+        ))
+        .fetch_optional::<u64>()
+        .await?;
+    Ok(min_match_id.unwrap_or_default())
+}
+
 async fn fetch_pending_matches(
     ch_client: &clickhouse::Client,
     full_scan: bool,
+    incremental_min_match_id: u64,
 ) -> anyhow::Result<Vec<MatchWithReplay>> {
-    let window = if full_scan {
-        "30 DAY"
+    let (window, min_match_id) = if full_scan {
+        ("30 DAY", 0)
     } else {
-        INCREMENTAL_WINDOW
+        (INCREMENTAL_WINDOW, incremental_min_match_id)
     };
     // The salts side folds each key group by hand rather than with FINAL (~9x faster): a
     // merge keeps the last inserted value, and insert order is the part's max block number.
+    //
+    // Only a match with a replay salt can qualify, and most matches touched in the window have
+    // none (or no `match_player` rows at all), so `replayable` narrows `recent` before either
+    // side reads by it: the `match_player` side would otherwise read every granule of every
+    // match whose salts changed in the window (~1.9M matches over 30 days, 1 GiB of memory).
     let matches = ch_client
         .query(&format!(
-            "WITH recent AS (SELECT match_id FROM match_salts WHERE created_at > now() - INTERVAL {window}) \
+            "WITH recent AS ( \
+                 SELECT match_id FROM match_salts \
+                 WHERE match_id >= {min_match_id} AND created_at > now() - INTERVAL {window} \
+             ), \
+             replayable AS ( \
+                 SELECT match_id FROM match_salts \
+                 WHERE match_id IN recent AND cluster_id > 0 AND replay_salt > 0 \
+             ) \
              SELECT ms.match_id, mp.start_time, ms.cluster_id, ms.replay_salt \
              FROM ( \
                  SELECT match_id, cluster_id, replay_salt \
@@ -180,7 +219,7 @@ async fn fetch_pending_matches(
                          max(verified_at) AS verified_at, \
                          max(failed_at) AS failed_at \
                      FROM match_salts \
-                     WHERE match_id IN recent AND cluster_id > 0 \
+                     WHERE match_id IN replayable AND cluster_id > 0 \
                      GROUP BY match_id, cluster_id, metadata_salt \
                  ) \
                  WHERE created_at > now() - INTERVAL {window} \
@@ -192,7 +231,7 @@ async fn fetch_pending_matches(
              INNER JOIN ( \
                  SELECT match_id, any(start_time) AS start_time, max(demo_processed) AS demo_processed \
                  FROM match_player \
-                 WHERE match_id IN recent \
+                 WHERE match_id IN replayable \
                  AND game_mode = 'Normal' \
                  GROUP BY match_id \
              ) mp ON mp.match_id = ms.match_id \
