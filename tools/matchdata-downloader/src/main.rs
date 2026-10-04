@@ -39,11 +39,18 @@ const BATCH_LIMIT: usize = 5_000;
 /// iteration would run the full 5 000 and stretch well past [`POLL_INTERVAL`],
 /// delaying the fresh salts that arrive in the meantime.
 const RETRY_BATCH_LIMIT: usize = 500;
-/// Each iteration opens with [`pending_salts_query`], which scans all of `match_salts` for
-/// several CPU-seconds regardless of how little it finds. New
-/// candidates arrive at ~27/min against a [`BATCH_LIMIT`] of 5 000, so polling faster than
-/// this only re-pays that fixed cost to discover a few dozen matches.
+/// Each iteration opens with [`pending_salts_query`], which costs a fixed amount however little
+/// it finds. New candidates arrive at ~27/min against a [`BATCH_LIMIT`] of 5 000, so polling
+/// faster than this only re-pays that fixed cost to discover a few dozen matches.
 const POLL_INTERVAL: Duration = Duration::from_secs(120);
+/// The verdict columns are not in the `match_salts` key, so finding the open candidates scans
+/// the whole table (~27M rows, ~1 CPU-second) even though fresh salts almost always belong to
+/// recent matches. Between full scans, polls only look at matches started within
+/// [`INCREMENTAL_MAX_MATCH_AGE`], a `match_id` bound the key prunes on (~1M rows, ~0.1
+/// CPU-seconds). Older matches, which are mostly the retry backlog, wait for the next full
+/// scan; of their retry cooldowns only the first is shorter than this interval.
+const FULL_SCAN_INTERVAL: Duration = Duration::from_mins(10);
+const INCREMENTAL_MAX_MATCH_AGE: &str = "7 DAY";
 const ITERATION_BACKOFF: Duration = Duration::from_secs(5);
 /// Cooldown before the first re-attempt of a failed match; doubles per attempt
 /// up to [`RETRY_MAX_INTERVAL`].
@@ -115,13 +122,16 @@ GROUP BY match_id, cluster_id, metadata_salt";
 /// filter so the grouping (and its hash table of one group per match) only runs over that
 /// slice instead of the whole table; the `HAVING` still hides a candidate whose verdict sits
 /// in an unmerged row.
-fn pending_salts_query() -> String {
+///
+/// `min_match_id` is 0 for a full scan.
+fn pending_salts_query(min_match_id: u64) -> String {
     format!(
         "
 WITH open_matches AS (
     SELECT match_id
     FROM match_salts
-    WHERE {VALID_SALTS} AND verified_at IS NULL AND failed_at IS NULL
+    WHERE match_id >= {min_match_id} AND {VALID_SALTS}
+        AND verified_at IS NULL AND failed_at IS NULL
 )
 SELECT {SALT_COLUMNS}
 FROM match_salts
@@ -196,10 +206,11 @@ async fn main() -> anyhow::Result<()> {
     }
 
     let state = State::new();
+    let mut scan = Scan::default();
     let mut last_gc = tokio::time::Instant::now();
     loop {
         let started = tokio::time::Instant::now();
-        if let Err(e) = run_iteration(&ch_client, &store, &cache_store, &state).await {
+        if let Err(e) = run_iteration(&ch_client, &store, &cache_store, &state, &mut scan).await {
             counter!("matchdata_downloader.iteration.failure").increment(1);
             error!("Iteration failed: {e:#}");
             sleep(ITERATION_BACKOFF).await;
@@ -272,24 +283,63 @@ async fn download_from_file(
     Ok(())
 }
 
+/// Tracks when the last full scan of the pending set ran and the `match_id` bound polls use
+/// in between, see [`FULL_SCAN_INTERVAL`].
+#[derive(Default)]
+struct Scan {
+    last_full: Option<tokio::time::Instant>,
+    incremental_min_match_id: u64,
+}
+
+/// Read in key order, so it stops at the first granule that matches instead of scanning a week
+/// of `start_time`. Only a scan bound: if nothing qualifies, polls scan the whole table.
+async fn fetch_incremental_min_match_id(ch_client: &Client) -> anyhow::Result<u64> {
+    let min_match_id = ch_client
+        .query(&format!(
+            "SELECT match_id FROM match_player \
+             WHERE start_time > now() - INTERVAL {INCREMENTAL_MAX_MATCH_AGE} \
+             ORDER BY match_id LIMIT 1 \
+             SETTINGS log_comment = 'matchdata_downloader_fetch_incremental_min_match_id'"
+        ))
+        .fetch_optional::<u64>()
+        .await?;
+    Ok(min_match_id.unwrap_or_default())
+}
+
 async fn run_iteration(
     ch_client: &Client,
     store: &Arc<dyn ObjectStore>,
     cache_store: &Arc<dyn ObjectStore>,
     state: &State,
+    scan: &mut Scan,
 ) -> anyhow::Result<()> {
-    info!("Fetching match ids to download");
+    let full_scan = scan
+        .last_full
+        .is_none_or(|t| t.elapsed() >= FULL_SCAN_INTERVAL);
+    let min_match_id = if full_scan {
+        scan.incremental_min_match_id = fetch_incremental_min_match_id(ch_client)
+            .await
+            .context("fetching the incremental match id bound")?;
+        0
+    } else {
+        scan.incremental_min_match_id
+    };
+    info!(full_scan, min_match_id, "Fetching match ids to download");
     let pending = group_by_match(
         ch_client
-            .query(&pending_salts_query())
+            .query(&pending_salts_query(min_match_id))
             .fetch_all::<MatchSalts>()
             .await
             .context("fetching pending match salts")?,
     );
 
-    gauge!("matchdata_downloader.matches_to_download").set(pending.len() as f64);
-
-    state.prune(&pending.iter().map(|s| s.match_id).collect());
+    // Only a full scan sees the whole pending set: an incremental one would report too few
+    // matches and drop the retry state of every match below its bound.
+    if full_scan {
+        scan.last_full = Some(tokio::time::Instant::now());
+        gauge!("matchdata_downloader.matches_to_download").set(pending.len() as f64);
+        state.prune(&pending.iter().map(|s| s.match_id).collect());
+    }
     let (mut to_fetch, retries) = state.select_eligible(pending);
     let eligible = to_fetch.len() + retries.len();
     gauge!("matchdata_downloader.matches_eligible_now").set(eligible as f64);
