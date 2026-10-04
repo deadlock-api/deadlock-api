@@ -12,6 +12,7 @@
 
 use core::time::Duration;
 use std::collections::HashMap;
+use std::time::Instant;
 
 use itertools::Itertools;
 use metrics::counter;
@@ -36,6 +37,9 @@ const ASCII_LOWER: [char; 26] = [
     'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's',
     't', 'u', 'v', 'w', 'x', 'y', 'z',
 ];
+/// The seen-builds lookup scans a week of `match_player`; new demo builds trickle in
+/// slowly, so running it before every search prefix (~once a minute) was wasted work.
+const MISSING_BUILDS_INTERVAL: Duration = Duration::from_mins(30);
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -87,12 +91,16 @@ async fn run_update_loop(
     //     }
     // }
 
+    let mut last_missing_fetch: Option<Instant> = None;
     for ((a, b), c) in ASCII_LOWER
         .iter()
         .cartesian_product(ASCII_LOWER.iter())
         .cartesian_product(ASCII_LOWER.iter())
     {
-        fetch_missing_builds(http_client, pg_client, ch_client).await;
+        if last_missing_fetch.is_none_or(|t| t.elapsed() >= MISSING_BUILDS_INTERVAL) {
+            fetch_missing_builds(http_client, pg_client, ch_client).await;
+            last_missing_fetch = Some(Instant::now());
+        }
         for &hero_id in &heroes {
             let search = format!("{a}{b}{c}");
             update_builds(http_client, pg_client, hero_id, &[0], Some(search)).await;
