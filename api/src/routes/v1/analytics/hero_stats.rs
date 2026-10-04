@@ -469,6 +469,16 @@ fn build_query(query: &HeroStatsQuery) -> String {
     } else {
         ("", "LIMIT 1 BY match_id, account_id")
     };
+    // Under FINAL, ClickHouse only moves sorting-key conditions to PREWHERE, so the match-level
+    // filters would otherwise be applied after reading every column of every row. Duplicate
+    // (match_id, account_id) versions are re-ingests that never differ in these match-level
+    // columns (checked on partitions >= 100: 1,540 duplicate pairs, none differing), so
+    // filtering before FINAL keeps the same rows, the same semantics as the `LIMIT 1 BY` path.
+    let (prewhere_clause, where_match_filters) = if use_final {
+        (format!("PREWHERE TRUE {match_filters}"), String::new())
+    } else {
+        (String::new(), match_filters.clone())
+    };
     let mut ctes: Vec<String> = vec![];
     if has_player_hero_cte {
         ctes.push(format!(
@@ -514,9 +524,10 @@ fn build_query(query: &HeroStatsQuery) -> String {
             max_neutral_damage, max_max_health, max_shots_hit, max_shots_missed,
             start_time, average_badge, permanent_buffs, first_permanent_buff_time_s
         FROM {source_table}{final_clause}
+        {prewhere_clause}
         WHERE TRUE
             {player_filters}
-            {match_filters}
+            {where_match_filters}
             {hero_matches_join}
             {hero_total_join}
         {dedup_clause}
@@ -648,6 +659,26 @@ mod tests {
         assert!(sql.contains("FROM match_player FINAL"));
         assert!(!sql.contains("LIMIT 1 BY"));
         assert!(!sql.contains("optimize_use_projections"));
+        // Match-level filters are PREWHERE under FINAL, not WHERE.
+        let prewhere = sql
+            .split("PREWHERE")
+            .nth(1)
+            .expect("FINAL read has a PREWHERE");
+        let (prewhere, where_clause) = prewhere.split_once("WHERE").expect("PREWHERE then WHERE");
+        assert!(prewhere.contains("start_time >= 1786147200"));
+        assert!(!where_clause.contains("start_time"));
+    }
+
+    #[test]
+    fn dedup_by_limit_keeps_match_filters_in_where() {
+        let sql = build_query(&HeroStatsQuery {
+            min_unix_timestamp: Some(1_786_147_200),
+            min_hero_matches: Some(5),
+            ..Default::default()
+        });
+        assert_valid_sql(&sql);
+        assert!(!sql.contains("PREWHERE"));
+        assert!(sql.contains("LIMIT 1 BY"));
     }
 
     #[test]

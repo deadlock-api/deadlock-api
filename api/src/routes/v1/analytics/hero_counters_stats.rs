@@ -159,9 +159,12 @@ fn build_query(query: &HeroCounterStatsQuery) -> String {
     .build();
     let game_mode_filter = GameMode::sql_filter(query.game_mode);
     let match_mode_filter = MatchMode::sql_filter(query.match_mode.as_deref());
+    // Applied as PREWHERE: under FINAL, ClickHouse only moves sorting-key conditions there itself.
+    // Duplicate (match_id, account_id) versions never differ in these match-level columns, so
+    // filtering before FINAL keeps the same rows.
     let match_filters = format!("{match_mode_filter} AND {game_mode_filter}{info_filters}");
-    let mut p1_filters = vec![match_filters.clone()];
-    let mut p2_filters = vec![match_filters];
+    let mut p1_filters = vec!["team IN ('Team0', 'Team1')".to_owned()];
+    let mut p2_filters = vec!["team IN ('Team0', 'Team1')".to_owned()];
     #[expect(deprecated)]
     if let Some(account_id) = query.account_id {
         p1_filters.push(format!("account_id = {account_id}"));
@@ -254,8 +257,8 @@ fn build_query(query: &HeroCounterStatsQuery) -> String {
            SUM(enemy_creeps) AS enemy_creeps
     FROM (
         SELECT {pair_select}
-        FROM (SELECT {p1_cols} FROM match_player FINAL WHERE team IN ('Team0', 'Team1') AND {p1_where}) p1
-        INNER JOIN (SELECT {p2_cols} FROM match_player FINAL WHERE team IN ('Team0', 'Team1') AND {p2_where}) p2 {join_keys}
+        FROM (SELECT {p1_cols} FROM match_player FINAL PREWHERE {match_filters} WHERE {p1_where}) p1
+        INNER JOIN (SELECT {p2_cols} FROM match_player FINAL PREWHERE {match_filters} WHERE {p2_where}) p2 {join_keys}
     )
     GROUP BY hero_id, enemy_hero_id
     {having_clause}
@@ -328,6 +331,28 @@ pub(super) async fn hero_counters_stats(
     get_hero_counter_stats(&state.ch_client_ro, query)
         .await
         .map(Json)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::utils::proptest_utils::assert_valid_sql;
+
+    #[test]
+    fn match_filters_are_prewhere_under_final() {
+        let sql = build_query(&HeroCounterStatsQuery {
+            min_unix_timestamp: Some(1_786_147_200),
+            min_networth: Some(1000),
+            ..Default::default()
+        });
+        assert_valid_sql(&sql);
+        assert_eq!(sql.matches("FINAL PREWHERE").count(), 2);
+        for side in sql.split("FINAL PREWHERE").skip(1) {
+            let (prewhere, where_clause) = side.split_once(" WHERE ").expect("PREWHERE then WHERE");
+            assert!(prewhere.contains("start_time >= 1786147200"));
+            assert!(where_clause.starts_with("team IN ('Team0', 'Team1')"));
+        }
+    }
 }
 
 #[cfg(test)]
