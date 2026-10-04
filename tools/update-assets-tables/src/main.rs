@@ -105,15 +105,10 @@ async fn update_heroes(
     let fetched = heroes.len();
     info!("Fetched {fetched} heroes from upstream");
 
-    // Truncate table
-    ch_client
-        .query(
-            "TRUNCATE TABLE heroes SETTINGS log_comment = 'update_assets_tables_truncate_heroes'",
-        )
-        .execute()
+    let staging = create_staging(ch_client, "heroes").await?;
+    let mut insert = sync_insert_client(ch_client)
+        .insert::<ChHero>(&staging)
         .await?;
-
-    let mut insert = ch_client.insert::<ChHero>("heroes").await?;
     let mut inserted: u32 = 0;
     let mut skipped_disabled: u32 = 0;
     let mut skipped_in_dev: u32 = 0;
@@ -137,15 +132,16 @@ async fn update_heroes(
     insert.end().await?;
     if inserted == 0 {
         warn!(
-            "Heroes table truncated but 0 rows inserted (fetched={fetched}, \
+            "0 heroes to insert, keeping the current table (fetched={fetched}, \
              skipped_disabled={skipped_disabled}, skipped_in_dev={skipped_in_dev})"
         );
-    } else {
-        info!(
-            "Updated heroes: inserted={inserted}, skipped_disabled={skipped_disabled}, \
-             skipped_in_dev={skipped_in_dev}, fetched={fetched}"
-        );
+        return Ok(());
     }
+    swap_in(ch_client, "heroes", &staging, inserted).await?;
+    info!(
+        "Updated heroes: inserted={inserted}, skipped_disabled={skipped_disabled}, \
+         skipped_in_dev={skipped_in_dev}, fetched={fetched}"
+    );
     Ok(())
 }
 
@@ -182,13 +178,10 @@ async fn update_items(
         })
         .collect();
 
-    // Truncate table
-    ch_client
-        .query("TRUNCATE TABLE items SETTINGS log_comment = 'update_assets_tables_truncate_items'")
-        .execute()
+    let staging = create_staging(ch_client, "items").await?;
+    let mut insert = sync_insert_client(ch_client)
+        .insert::<ChItem>(&staging)
         .await?;
-
-    let mut insert = ch_client.insert::<ChItem>("items").await?;
     let mut inserted: u32 = 0;
     for item in items {
         debug!("Inserting item {} (id={})", item.name, item.id);
@@ -199,15 +192,64 @@ async fn update_items(
     insert.end().await?;
     if inserted == 0 {
         warn!(
-            "Items table truncated but 0 rows inserted (fetched={fetched}, \
+            "0 items to insert, keeping the current table (fetched={fetched}, \
              skipped_not_shopable={skipped_not_shopable}, \
              skipped_unknown_type={skipped_unknown_type})"
         );
-    } else {
-        info!(
-            "Updated items: inserted={inserted}, skipped_not_shopable={skipped_not_shopable}, \
-             skipped_unknown_type={skipped_unknown_type}, fetched={fetched}"
-        );
+        return Ok(());
     }
+    swap_in(ch_client, "items", &staging, inserted).await?;
+    info!(
+        "Updated items: inserted={inserted}, skipped_not_shopable={skipped_not_shopable}, \
+         skipped_unknown_type={skipped_unknown_type}, fetched={fetched}"
+    );
+    Ok(())
+}
+
+// The tables used to be refreshed with TRUNCATE + INSERT. The server runs inserts
+// asynchronously by default, so the table stayed empty for ~10 s until the insert flushed,
+// and queries in that window (e.g. the item stats upgrade filter, cached for hours) saw no
+// rows. Now the new rows go into a staging table that is swapped in atomically: readers see
+// either the old or the new rows, never an empty table.
+
+/// Recreates `{table}_staging` from the live table, so its schema always matches and a swap
+/// can never bring back an outdated one. The previous run's rows are dropped with it.
+async fn create_staging(ch_client: &clickhouse::Client, table: &str) -> anyhow::Result<String> {
+    let staging = format!("{table}_staging");
+    ch_client
+        .query(&format!("DROP TABLE IF EXISTS {staging} SYNC"))
+        .execute()
+        .await?;
+    ch_client
+        .query(&format!("CREATE TABLE {staging} AS {table}"))
+        .execute()
+        .await?;
+    Ok(staging)
+}
+
+/// A client whose inserts are synchronous, so the rows are in the table once `end()` returns.
+fn sync_insert_client(ch_client: &clickhouse::Client) -> clickhouse::Client {
+    ch_client.clone().with_setting("async_insert", "0")
+}
+
+/// Swaps the filled staging table in after checking it holds every inserted row.
+async fn swap_in(
+    ch_client: &clickhouse::Client,
+    table: &str,
+    staging: &str,
+    inserted: u32,
+) -> anyhow::Result<()> {
+    let staged: u64 = ch_client
+        .query(&format!("SELECT count() FROM {staging}"))
+        .fetch_one()
+        .await?;
+    anyhow::ensure!(
+        staged == u64::from(inserted),
+        "{staging} holds {staged} rows, expected {inserted}; keeping the current {table}"
+    );
+    ch_client
+        .query(&format!("EXCHANGE TABLES {table} AND {staging}"))
+        .execute()
+        .await?;
     Ok(())
 }
