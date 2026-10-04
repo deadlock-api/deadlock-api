@@ -179,6 +179,24 @@ impl HeroStatsQuery {
                 .as_ref()
                 .is_some_and(|v| !v.is_empty())
     }
+
+    /// The hero-match bounds that actually filter. Every player in the window has played the
+    /// hero at least once, so a minimum of 0 or 1 is no filter (the website sends 0); a maximum
+    /// always filters.
+    fn hero_matches_bounds(&self) -> (Option<u64>, Option<u64>) {
+        (
+            self.min_hero_matches.filter(|&v| v > 1),
+            self.max_hero_matches,
+        )
+    }
+
+    /// Same as [`Self::hero_matches_bounds`], for the entire-history counts.
+    fn hero_matches_total_bounds(&self) -> (Option<u64>, Option<u64>) {
+        (
+            self.min_hero_matches_total.filter(|&v| v > 1),
+            self.max_hero_matches_total,
+        )
+    }
 }
 
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
@@ -264,10 +282,8 @@ fn build_mv_query(query: &HeroStatsQuery) -> Option<String> {
         || query.max_duration_s.is_some()
         || query.min_match_id.is_some()
         || query.max_match_id.is_some()
-        || query.min_hero_matches.is_some()
-        || query.max_hero_matches.is_some()
-        || query.min_hero_matches_total.is_some()
-        || query.max_hero_matches_total.is_some()
+        || query.hero_matches_bounds() != (None, None)
+        || query.hero_matches_total_bounds() != (None, None)
         || query.has_ability_order_filter();
     // The rollups only ingest Ranked/Unranked, so any other mode would read zero rows.
     let unsupported_match_mode = !MatchMode::is_agg_servable(query.match_mode.as_deref());
@@ -385,11 +401,13 @@ fn build_query(query: &HeroStatsQuery) -> String {
     }
     .build();
     let player_filters = join_filters(&player_filters);
+    let (min_hero_matches, max_hero_matches) = query.hero_matches_bounds();
+    let (min_hero_matches_total, max_hero_matches_total) = query.hero_matches_total_bounds();
     let mut player_hero_filters = vec![];
-    if let Some(min_hero_matches) = query.min_hero_matches {
+    if let Some(min_hero_matches) = min_hero_matches {
         player_hero_filters.push(format!("uniq(match_id) >= {min_hero_matches}"));
     }
-    if let Some(max_hero_matches) = query.max_hero_matches {
+    if let Some(max_hero_matches) = max_hero_matches {
         player_hero_filters.push(format!("uniq(match_id) <= {max_hero_matches}"));
     }
     let player_hero_filters = if player_hero_filters.is_empty() {
@@ -398,10 +416,10 @@ fn build_query(query: &HeroStatsQuery) -> String {
         player_hero_filters.join(" AND ")
     };
     let mut player_hero_total_filters = vec![];
-    if let Some(min_hero_matches) = query.min_hero_matches_total {
+    if let Some(min_hero_matches) = min_hero_matches_total {
         player_hero_total_filters.push(format!("count() >= {min_hero_matches}"));
     }
-    if let Some(max_hero_matches) = query.max_hero_matches_total {
+    if let Some(max_hero_matches) = max_hero_matches_total {
         player_hero_total_filters.push(format!("count() <= {max_hero_matches}"));
     }
     let player_hero_total_filters = if player_hero_total_filters.is_empty() {
@@ -413,14 +431,9 @@ fn build_query(query: &HeroStatsQuery) -> String {
     let game_mode_filter = GameMode::sql_filter(query.game_mode);
     let match_mode_filter = MatchMode::sql_filter(query.match_mode.as_deref());
     let match_filters = format!("AND {match_mode_filter} AND {game_mode_filter} {info_filters}");
-    let has_player_hero_cte = query
-        .min_hero_matches
-        .or(query.max_hero_matches)
-        .is_some_and(|v| v > 1);
-    let has_player_hero_total_cte = query
-        .min_hero_matches_total
-        .or(query.max_hero_matches_total)
-        .is_some_and(|v| v > 1);
+    let has_player_hero_cte = min_hero_matches.is_some() || max_hero_matches.is_some();
+    let has_player_hero_total_cte =
+        min_hero_matches_total.is_some() || max_hero_matches_total.is_some();
     #[expect(deprecated)]
     let has_account_filter = query.account_id.is_some()
         || query
@@ -660,6 +673,40 @@ mod tests {
         assert_valid_sql(&mv);
         assert!(mv.contains("FROM hero_stats_agg_all_v2"));
         assert!(mv.contains("sum(n_matches) AS permanent_buff_matches"));
+    }
+
+    #[test]
+    fn trivial_hero_match_minimums_still_route_to_a_rollup() {
+        for min in [0, 1] {
+            let query = HeroStatsQuery {
+                min_unix_timestamp: Some(0),
+                min_hero_matches: Some(min),
+                min_hero_matches_total: Some(min),
+                ..Default::default()
+            };
+            assert!(build_mv_query(&query).is_some());
+            let sql = build_query(&query);
+            assert!(!sql.contains("t_players"));
+            assert!(sql.contains("FINAL"));
+        }
+    }
+
+    #[test]
+    fn hero_match_maximum_applies_alongside_a_trivial_minimum() {
+        let query = HeroStatsQuery {
+            min_hero_matches: Some(0),
+            max_hero_matches: Some(5),
+            min_hero_matches_total: Some(1),
+            max_hero_matches_total: Some(24),
+            ..Default::default()
+        };
+        assert!(build_mv_query(&query).is_none());
+        let sql = build_query(&query);
+        assert_valid_sql(&sql);
+        assert!(sql.contains("HAVING uniq(match_id) <= 5\n"));
+        assert!(sql.contains("HAVING count() <= 24\n"));
+        assert!(sql.contains("IN t_players\n"));
+        assert!(sql.contains("IN t_players2\n"));
     }
 
     #[test]
