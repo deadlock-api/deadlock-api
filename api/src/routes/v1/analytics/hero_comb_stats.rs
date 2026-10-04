@@ -312,9 +312,13 @@ SETTINGS log_comment = 'hero_comb_stats', apply_patch_parts = 0, query_plan_exec
     )
 }
 
+// Concurrent misses of one query share a single run. by_key holds a hashed bucket lock (hits
+// included) for the whole query; this endpoint runs few queries at once, so collisions are rare.
 #[cached(
     max_size = 5_000,
     ttl_secs = 21600,
+    sync_writes = "by_key",
+    sync_writes_buckets = 1024,
     convert = "{ query_str.to_string() }",
     key = "String"
 )]
