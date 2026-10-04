@@ -64,9 +64,9 @@ export const Route = createFileRoute("/analytics/team-builder")({
   component: TeamBuilderPage,
   head: () =>
     seo({
-      title: pageTitle("Deadlock Team Builder & Draft Win Predictor"),
+      title: pageTitle("Deadlock Team Builder: Team Comp & Draft Tool"),
       description:
-        "Draft a full Deadlock 6v6 with its three lanes, or a 4v4 Street Brawl, and see the predicted win rate broken down into lane matchups, pair synergy, counter picks and solo hero strength.",
+        "Build a Deadlock team comp and analyze the draft: predicted win rate for a 6v6 with lanes or a 4v4 Street Brawl, from lane matchups, synergy and counters.",
       path: "/analytics/team-builder",
     }),
 });
@@ -355,7 +355,7 @@ function TeamBuilderPage() {
   return (
     <PageShell>
       <PageHeader
-        title="Team Builder"
+        title="Deadlock Team Builder"
         description={
           hasLanes
             ? "Draft a full 6v6, set the three lanes, and read the predicted win rate."

@@ -62,7 +62,7 @@ export const Route = createFileRoute("/crosshair")({
         "Import a Deadlock crosshair share code or design your own with sliders, see it at its true size over a game scene, and copy the code to use in game.",
       path: "/crosshair",
     };
-    if (!isCrosshairCode(code)) return seo({ ...base, title: pageTitle("Crosshair Editor") });
+    if (!isCrosshairCode(code)) return seo({ ...base, title: pageTitle("Deadlock Crosshair Codes & Generator") });
     const screenHeight = loaderData?.screenHeight ?? "1080";
     const query = new URLSearchParams({ code, res: screenHeight });
     return seo({
@@ -267,7 +267,7 @@ function CrosshairEditor() {
     <PageShell density="content" width="wide">
       <PageHeader
         size="lg"
-        title="Crosshair Editor"
+        title="Deadlock Crosshair Generator"
         description="Import a crosshair code or design your own with sliders"
       >
         <p>
