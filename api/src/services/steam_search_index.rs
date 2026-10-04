@@ -31,7 +31,10 @@ use tokio::time::interval;
 use tracing::{error, info, warn};
 
 const INCREMENTAL_INTERVAL_SECS: u64 = 2 * 60;
-const FULL_REBUILD_INTERVAL_SECS: u64 = 60 * 60;
+/// Incrementals already pick up profile changes; a full rebuild only refreshes the
+/// 30-day match counts used for ranking and drops inactive accounts. It reads ~3 GiB, on
+/// every replica, so hourly was more freshness than ranking needs.
+const FULL_REBUILD_INTERVAL_SECS: u64 = 6 * 60 * 60;
 const WRITER_HEAP_MB: usize = 200;
 const MAX_PROFILES_PER_REBUILD: usize = 10_000_000;
 /// Minimum candidate pool size handed to the JW reranker — large enough that
