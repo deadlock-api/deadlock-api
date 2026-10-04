@@ -154,43 +154,46 @@ fn build_query(query: &BuffStatsQuery) -> String {
     );
     let game_mode_filter = GameMode::sql_filter(query.game_mode);
     let match_mode_filter = MatchMode::sql_filter(query.match_mode.as_deref());
-    // One scan: every player row gets a sentinel buff entry prepended before the ARRAY JOIN,
-    // so the sentinel group counts all player-matches (and those with timings) while the real
-    // buff types aggregate alongside. The Nested arrays have one entry per buff type the player
-    // picked up, so `count()` per type is the number of player-matches with a pickup.
+    let filters =
+        format!("{match_mode_filter} AND {game_mode_filter} {info_filters} {player_filters}");
+    // The sentinel row carries the denominators (all player-matches, and those with timings)
+    // from a scan of only the filter columns. Prepending a sentinel entry to every row's buff
+    // arrays instead would copy all five arrays per row and cost more CPU than the second scan.
+    // The Nested arrays have one entry per buff type the player picked up, so `count()` per
+    // type is the number of player-matches with a pickup.
     format!(
         "
-    WITH t_players AS (
-        SELECT
-            power_up_buffs.type AS types,
-            power_up_buffs.value AS vals,
-            power_up_buffs.is_permanent AS perms,
-            power_up_buffs.pickup_times_s AS times,
-            power_up_buffs.pickup_stat_values AS stat_vals,
-            first_permanent_buff_time_s IS NOT NULL AS has_timings
-        FROM match_player
-        WHERE {match_mode_filter}
-            AND {game_mode_filter}
-            {info_filters}
-            {player_filters}
-    )
+    SELECT
+        '{ALL_BUFFS_SENTINEL}' AS buff_type,
+        false AS is_permanent,
+        count() AS matches_with_pickup,
+        countIf(first_permanent_buff_time_s IS NOT NULL) AS timed_matches_with_pickup,
+        toUInt64(0) AS pickups,
+        toUInt64(0) AS timed_pickups,
+        toFloat64(0) AS total_stat_value,
+        CAST(NULL, 'Nullable(Float64)') AS avg_pickup_time_s,
+        CAST(NULL, 'Nullable(Float64)') AS avg_first_pickup_time_s
+    FROM match_player
+    WHERE {filters}
+    UNION ALL
     SELECT
         buff_type,
-        any(is_permanent) AS is_permanent,
+        any(perm) AS is_permanent,
         count() AS matches_with_pickup,
-        countIf(has_timings) AS timed_matches_with_pickup,
+        countIf(first_permanent_buff_time_s IS NOT NULL) AS timed_matches_with_pickup,
         sum(value) AS pickups,
         sum(length(ptimes)) AS timed_pickups,
         sum(arraySum(pstats)) AS total_stat_value,
         if(timed_pickups = 0, NULL, sum(arraySum(ptimes)) / timed_pickups) AS avg_pickup_time_s,
         avgOrNullIf(arrayMin(ptimes), notEmpty(ptimes)) AS avg_first_pickup_time_s
-    FROM t_players
+    FROM match_player
     ARRAY JOIN
-        arrayConcat(['{ALL_BUFFS_SENTINEL}'], types) AS buff_type,
-        arrayConcat([toUInt32(0)], vals) AS value,
-        arrayConcat([false], perms) AS is_permanent,
-        arrayConcat([emptyArrayUInt32()], times) AS ptimes,
-        arrayConcat([emptyArrayFloat32()], stat_vals) AS pstats
+        power_up_buffs.type AS buff_type,
+        power_up_buffs.value AS value,
+        power_up_buffs.is_permanent AS perm,
+        power_up_buffs.pickup_times_s AS ptimes,
+        power_up_buffs.pickup_stat_values AS pstats
+    WHERE {filters}
     GROUP BY buff_type
     ORDER BY buff_type
     SETTINGS log_comment = 'buff_stats', apply_patch_parts = 0, optimize_use_projections = 0
@@ -333,16 +336,16 @@ mod tests {
     }
 
     #[test]
-    fn query_reads_the_nested_buff_columns_in_one_scan() {
+    fn query_counts_the_sentinel_totals_in_a_separate_scan() {
         let sql = build_query(&BuffStatsQuery {
             min_unix_timestamp: Some(1_790_121_600),
             hero_ids: Some(vec![15]),
             ..Default::default()
         });
         assert_valid_sql(&sql);
-        assert_eq!(sql.matches("FROM match_player").count(), 1);
-        assert!(sql.contains("arrayConcat(['__all__'], types) AS buff_type"));
-        assert!(sql.contains("hero_id IN (15)"));
+        assert_eq!(sql.matches("FROM match_player").count(), 2);
+        assert!(sql.contains("'__all__' AS buff_type"));
+        assert_eq!(sql.matches("hero_id IN (15)").count(), 2);
     }
 }
 
