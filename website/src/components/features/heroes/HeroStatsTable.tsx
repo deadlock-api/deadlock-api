@@ -763,13 +763,13 @@ export function HeroStatsTable({
           )}
           {showMatchCounts && (
             // In a narrow table the sample size stays, shortened ("19K"): without it a phone lost how much a win
-            // rate rests on.
-            <p className="text-xs text-muted-foreground tabular-nums">
-              <span className="@md/table:hidden">
-                {COMPACT_MATCHES.format(row.matches)}
-                <span className="sr-only"> matches</span>
-              </span>
-              <span className="hidden @md/table:inline">{row.matches.toLocaleString("en-US")} matches</span>
+            // rate rests on. The short form is generated content with empty alt text, so the page text (crawlers,
+            // screen readers, copy) holds the count once.
+            <p
+              data-compact={COMPACT_MATCHES.format(row.matches)}
+              className="text-xs text-muted-foreground tabular-nums before:content-[attr(data-compact)_/_''] @md/table:before:content-none"
+            >
+              <span className="@max-md/table:sr-only">{row.matches.toLocaleString("en-US")} matches</span>
             </p>
           )}
         </Stack>
