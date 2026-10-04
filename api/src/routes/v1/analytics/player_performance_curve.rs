@@ -60,6 +60,26 @@ const GOLD_SOURCES: [(&str, &str); 18] = [
     ),
 ];
 
+/// Per-tick cumulative damage dealt per target as (response name, `match_player` column),
+/// averaged per time bucket. Order must match the `*_damage_avg`/`*_damage_std` field order in
+/// [`PlayerPerformanceCurvePoint`].
+const DAMAGE_SOURCES: [(&str, &str); 4] = [
+    ("player_damage", "stats.player_damage"),
+    ("boss_damage", "stats.boss_damage"),
+    ("neutral_damage", "stats.neutral_damage"),
+    ("creep_damage", "stats.creep_damage"),
+];
+
+/// Per-tick cumulative kills per target (besides hero kills, see `kills_avg`) as (response
+/// name, `match_player` column), averaged per time bucket. Order must match the
+/// `*_kills_avg`/`*_kills_std` field order in [`PlayerPerformanceCurvePoint`].
+const KILL_SOURCES: [(&str, &str); 4] = [
+    ("boss_kills", "stats.gold_source_bosses_kills"),
+    ("neutral_kills", "stats.neutral_kills"),
+    ("creep_kills", "stats.creep_kills"),
+    ("denies", "stats.denies"),
+];
+
 #[derive(Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash, Default)]
 #[cfg_attr(test, derive(proptest_derive::Arbitrary))]
 pub(crate) struct PlayerPerformanceCurveQuery {
@@ -253,6 +273,38 @@ pub struct PlayerPerformanceCurvePoint {
     pub gold_item_goose_egg_avg: f64,
     /// Standard deviation of `gold_item_goose_egg_avg` at this time point
     pub gold_item_goose_egg_std: f64,
+    /// Average damage dealt to enemy heroes at this time point
+    pub player_damage_avg: f64,
+    /// Standard deviation of `player_damage_avg` at this time point
+    pub player_damage_std: f64,
+    /// Average damage dealt to objectives at this time point
+    pub boss_damage_avg: f64,
+    /// Standard deviation of `boss_damage_avg` at this time point
+    pub boss_damage_std: f64,
+    /// Average damage dealt to neutral (jungle) creeps at this time point
+    pub neutral_damage_avg: f64,
+    /// Standard deviation of `neutral_damage_avg` at this time point
+    pub neutral_damage_std: f64,
+    /// Average damage dealt to lane creeps at this time point
+    pub creep_damage_avg: f64,
+    /// Standard deviation of `creep_damage_avg` at this time point
+    pub creep_damage_std: f64,
+    /// Average objectives killed (last hits) at this time point
+    pub boss_kills_avg: f64,
+    /// Standard deviation of `boss_kills_avg` at this time point
+    pub boss_kills_std: f64,
+    /// Average neutral (jungle) creeps killed at this time point
+    pub neutral_kills_avg: f64,
+    /// Standard deviation of `neutral_kills_avg` at this time point
+    pub neutral_kills_std: f64,
+    /// Average lane creeps killed (last hits) at this time point
+    pub creep_kills_avg: f64,
+    /// Standard deviation of `creep_kills_avg` at this time point
+    pub creep_kills_std: f64,
+    /// Average lane creeps denied at this time point
+    pub denies_avg: f64,
+    /// Standard deviation of `denies_avg` at this time point
+    pub denies_std: f64,
     /// Average permanent buff (power-up) pickups collected up to this time point. Only
     /// matches since build 6712 (2026-09-29) record pickup times, so only players with at
     /// least one timed permanent pickup count; `null` when there are none.
@@ -260,6 +312,18 @@ pub struct PlayerPerformanceCurvePoint {
     /// Standard deviation of `permanent_buffs_avg` at this time point; `null` when there are
     /// no players with timed permanent pickups.
     pub permanent_buffs_std: Option<f64>,
+}
+
+/// Hero-filtered requests read the hero-led `player_performance_curve_by_hero` projection
+/// (sorted by `hero_id, game_mode, start_time`) instead of every granule of the base table.
+/// Without a hero filter the planner would still pick a hero-led projection and read all of it,
+/// so those keep the base table.
+fn projection_setting(query: &PlayerPerformanceCurveQuery) -> &'static str {
+    if query.hero_ids.as_ref().is_some_and(|h| !h.is_empty()) {
+        ""
+    } else {
+        ", optimize_use_projections = 0"
+    }
 }
 
 fn build_query(query: &PlayerPerformanceCurveQuery) -> String {
@@ -304,16 +368,20 @@ fn build_query(query: &PlayerPerformanceCurveQuery) -> String {
         )
     };
 
-    let mut players_gold = String::new();
-    let mut data_gold = String::new();
-    let mut array_join_gold = String::new();
-    let mut select_gold = String::new();
-    for (s, column) in GOLD_SOURCES {
-        let _ = write!(players_gold, ", {column} as {s}_arr");
-        let _ = write!(data_gold, ", {s}_arr as {s}");
-        let _ = write!(array_join_gold, ", {s}_arr");
+    let mut players_sources = String::new();
+    let mut data_sources = String::new();
+    let mut array_join_sources = String::new();
+    let mut select_sources = String::new();
+    for (s, column) in GOLD_SOURCES
+        .into_iter()
+        .chain(DAMAGE_SOURCES)
+        .chain(KILL_SOURCES)
+    {
+        let _ = write!(players_sources, ", {column} as {s}_arr");
+        let _ = write!(data_sources, ", {s}_arr as {s}");
+        let _ = write!(array_join_sources, ", {s}_arr");
         let _ = write!(
-            select_gold,
+            select_sources,
             ",\n        avg({s}) AS {s}_avg,\n        std({s}) AS {s}_std"
         );
     }
@@ -328,10 +396,11 @@ fn build_query(query: &PlayerPerformanceCurveQuery) -> String {
          arrayMap(ts -> toUInt32(arrayCount(t -> t <= ts, buff_times)), stats.time_stamp_s) AS \
          permanent_buffs_arr, notEmpty(buff_times) AS has_buff_timings"
     );
+    let projection_setting = projection_setting(query);
     format!(
         "
     WITH t_players AS (
-            SELECT stats.time_stamp_s as timestamp_s, stats.net_worth as net_worths, stats.kills as kills_arr, stats.deaths as deaths_arr, stats.assists as assists_arr{players_gold}{players_buffs}, duration_s
+            SELECT stats.time_stamp_s as timestamp_s, stats.net_worth as net_worths, stats.kills as kills_arr, stats.deaths as deaths_arr, stats.assists as assists_arr{players_sources}{players_buffs}, duration_s
             FROM match_player
             WHERE {match_mode_filter}
                 AND {game_mode_filter}
@@ -339,9 +408,9 @@ fn build_query(query: &PlayerPerformanceCurveQuery) -> String {
                 {player_filters}
         ),
         t_data AS (
-            SELECT timestamp_s, net_worths as net_worth, kills_arr as kills, deaths_arr as deaths, assists_arr as assists{data_gold}, permanent_buffs_arr as permanent_buffs, has_buff_timings, duration_s
+            SELECT timestamp_s, net_worths as net_worth, kills_arr as kills, deaths_arr as deaths, assists_arr as assists{data_sources}, permanent_buffs_arr as permanent_buffs, has_buff_timings, duration_s
             FROM t_players
-            ARRAY JOIN timestamp_s, net_worths, kills_arr, deaths_arr, assists_arr{array_join_gold}, permanent_buffs_arr
+            ARRAY JOIN timestamp_s, net_worths, kills_arr, deaths_arr, assists_arr{array_join_sources}, permanent_buffs_arr
         )
     SELECT
         {game_time_selection} AS game_time,
@@ -352,14 +421,14 @@ fn build_query(query: &PlayerPerformanceCurveQuery) -> String {
         avg(deaths) AS deaths_avg,
         std(deaths) AS deaths_std,
         avg(assists) AS assists_avg,
-        std(assists) AS assists_std{select_gold},
+        std(assists) AS assists_std{select_sources},
         avgOrNullIf(permanent_buffs, has_buff_timings) AS permanent_buffs_avg,
         stddevPopOrNullIf(permanent_buffs, has_buff_timings) AS permanent_buffs_std
     FROM t_data
     {additional_filter}
     GROUP BY game_time
     ORDER BY game_time
-    SETTINGS log_comment = 'player_performance_curve', apply_patch_parts = 0, optimize_use_projections = 0
+    SETTINGS log_comment = 'player_performance_curve', apply_patch_parts = 0{projection_setting}
     "
     )
 }
@@ -400,7 +469,7 @@ async fn get_player_performance_curve(
     tags = ["Analytics"],
     summary = "Player Performance Curve",
     description = "
-Retrieves player performance statistics (net worth, kills, deaths, assists, souls per source) over time throughout matches.
+Retrieves player performance statistics (net worth, kills, deaths, assists, souls per source, damage and kills per target) over time throughout matches.
 
 Results are cached for **12 hours** based on the unique combination of query parameters provided.
 
