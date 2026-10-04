@@ -8,6 +8,7 @@ import { ChartLegend, ChartLegendItem } from "~/components/patterns/charts/Chart
 import { ChartReading, ChartReadings } from "~/components/patterns/charts/ChartReadings";
 import { ChartEmpty, ChartError, ChartLoading } from "~/components/patterns/charts/ChartStates";
 import { ChartSurface } from "~/components/patterns/charts/ChartSurface";
+import { MetricSelect } from "~/components/patterns/charts/MetricSelect";
 import {
   CHART_COLOR,
   CHART_CURSOR_LINE,
@@ -20,7 +21,7 @@ import {
 } from "~/components/patterns/charts/theme";
 import { Panel, PanelBody, PanelHeader } from "~/components/patterns/panel/Panel";
 import { NoValue } from "~/components/ui/no-value";
-import { Segmented, SegmentedItem } from "~/components/ui/segmented";
+import { SelectGroup, SelectItem, SelectLabel } from "~/components/ui/select";
 import { Stack } from "~/components/ui/stack";
 import { BUFF_TIMINGS_NOTE } from "~/lib/buffs";
 import { formatCompactAxisTick, niceTicks } from "~/lib/chart-axis";
@@ -39,8 +40,13 @@ const LABEL = "match timeline";
 const LAST_MINUTE = 45;
 const METRICS = {
   souls: { label: "Souls", key: "net_worth_avg", std: "net_worth_std", digits: 0 },
+  lastHits: { label: "Last hits", key: "creep_kills_avg", std: "creep_kills_std", digits: 0 },
+  denies: { label: "Denies", key: "denies_avg", std: "denies_std", digits: 1 },
   kills: { label: "Kills", key: "kills_avg", std: "kills_std", digits: 1 },
   deaths: { label: "Deaths", key: "deaths_avg", std: "deaths_std", digits: 1 },
+  assists: { label: "Assists", key: "assists_avg", std: "assists_std", digits: 1 },
+  heroDamage: { label: "Hero damage", key: "player_damage_avg", std: "player_damage_std", digits: 0 },
+  objectiveDamage: { label: "Objective damage", key: "boss_damage_avg", std: "boss_damage_std", digits: 0 },
   // Permanent buff pickups so far. Only matches since the City Never Sleeps update record when they happen.
   buffs: { label: "Buffs", key: "permanent_buffs_avg", std: "permanent_buffs_std", digits: 1 },
 } as const satisfies Record<
@@ -48,6 +54,11 @@ const METRICS = {
   { label: string; key: keyof PlayerPerformanceCurvePoint; std: keyof PlayerPerformanceCurvePoint; digits: number }
 >;
 type TimelineMetric = keyof typeof METRICS;
+const METRIC_GROUPS: { label: string; metrics: TimelineMetric[] }[] = [
+  { label: "Economy", metrics: ["souls", "lastHits", "denies"] },
+  { label: "Combat", metrics: ["kills", "deaths", "assists", "heroDamage"] },
+  { label: "Objectives", metrics: ["objectiveDamage", "buffs"] },
+];
 
 interface Row {
   /** Seconds into the match. */
@@ -88,9 +99,9 @@ function curveParams(filters: CompareFilters, accountId?: number) {
 const minuteLabel = (seconds: number) => `${Math.round(seconds / 60)}m`;
 
 /**
- * Where each compared player stands at each point of a match: their average souls (not in Street Brawl), kills or
- * deaths by game minute,
- * drawn as the lead over the average player on the same filters (the dashed zero line). Who wins the lane, who scales.
+ * Where each compared player stands at each point of a match: their average souls (not in Street Brawl), last hits,
+ * kills, damage and more by game minute, drawn as the lead over the average player on the same filters (the dashed
+ * zero line). Who wins the lane, who scales.
  */
 export function TimelinePanel({
   players,
@@ -172,13 +183,26 @@ export function TimelinePanel({
   return (
     <Panel className={className}>
       <PanelHeader size="sm" title="Match timeline" icon={Hourglass}>
-        <Segmented size="sm" width="hug" aria-label="Timeline metric" value={metric} onValueChange={setMetric}>
-          {metrics.map((key) => (
-            <SegmentedItem key={key} value={key}>
-              {METRICS[key].label}
-            </SegmentedItem>
+        <MetricSelect
+          value={metric}
+          valueLabel={selected.label}
+          onValueChange={(next) => setMetric(next as TimelineMetric)}
+          label="Timeline metric"
+          className="w-auto @sm:min-w-40"
+        >
+          {METRIC_GROUPS.map((group) => (
+            <SelectGroup key={group.label}>
+              <SelectLabel>{group.label}</SelectLabel>
+              {group.metrics
+                .filter((key) => metrics.includes(key))
+                .map((key) => (
+                  <SelectItem key={key} value={key}>
+                    {METRICS[key].label}
+                  </SelectItem>
+                ))}
+            </SelectGroup>
           ))}
-        </Segmented>
+        </MetricSelect>
       </PanelHeader>
       <PanelBody size="sm" className="flex flex-1 flex-col">
         <Stack gap={2} className="flex-1">
