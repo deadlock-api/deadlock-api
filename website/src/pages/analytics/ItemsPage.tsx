@@ -1,5 +1,5 @@
-import { parseAsInteger, useQueryState } from "nuqs";
-import { lazy, Suspense } from "react";
+import { parseAsInteger, throttle, useQueryState } from "nuqs";
+import { lazy, startTransition, Suspense } from "react";
 
 import { Filter } from "~/components/domain/filters";
 import { ItemCombFilters } from "~/components/features/items/ItemCombFilters";
@@ -30,6 +30,13 @@ const ItemCombStatsTable = lazy(() =>
   import("~/components/features/items/ItemCombStatsTable").then((m) => ({ default: m.ItemCombStatsTable })),
 );
 
+/**
+ * A filter choice re-renders the open view in a transition, so the tap paints first (a synchronous rank choice cost ~280 ms
+ * on a 4x-throttled phone). The URL update is throttled, not debounced (the app default): nuqs keeps debounced values
+ * in a sync external store, which defeats the transition. Two bounds changed by one choice land in one history entry.
+ */
+const together = { limitUrlUpdates: throttle(50) };
+
 export function ItemsPage() {
   const { mode, setMode, gameMode, matchMode } = useModeState();
   const [minRankId, setMinRankId] = useQueryState("min_rank", parseAsInteger.withDefault(91));
@@ -54,16 +61,26 @@ export function ItemsPage() {
         </p>
       </PageHeader>
       <Filter.Root>
-        <Filter.Hero value={hero} onValueChange={setHero} allowNull />
-        <Filter.MinMatches value={minMatches} onValueChange={setMinMatches} defaultValue={10} />
+        <Filter.Hero
+          value={hero}
+          onValueChange={(next) => startTransition(() => void setHero(next, together))}
+          allowNull
+        />
+        <Filter.MinMatches
+          value={minMatches}
+          onValueChange={(next) => startTransition(() => void setMinMatches(next, together))}
+          defaultValue={10}
+        />
         <Filter.ModeWithRank
           value={{ mode, rank: [minRankId, maxRankId] }}
           defaultValue={{ mode: DEFAULT_MODE, rank: [91, 116] }}
           onValueChange={(next) => {
             if (next.mode !== mode) setMode(next.mode);
             if (next.rank[0] !== minRankId || next.rank[1] !== maxRankId) {
-              void setMinRankId(next.rank[0]);
-              void setMaxRankId(next.rank[1]);
+              startTransition(() => {
+                void setMinRankId(next.rank[0], together);
+                void setMaxRankId(next.rank[1], together);
+              });
             }
           }}
         />
@@ -71,10 +88,12 @@ export function ItemsPage() {
         {(tab === "item-stats" || tab === "item-purchase-analysis") && (
           <Filter.TimeRange
             value={[minBoughtAtS ?? undefined, maxBoughtAtS ?? undefined]}
-            onValueChange={([min, max]) => {
-              void setMinBoughtAtS(min ?? null);
-              void setMaxBoughtAtS(max ?? null);
-            }}
+            onValueChange={([min, max]) =>
+              startTransition(() => {
+                void setMinBoughtAtS(min ?? null, together);
+                void setMaxBoughtAtS(max ?? null, together);
+              })
+            }
             label="Time"
             title="Purchase Time Window"
           />
