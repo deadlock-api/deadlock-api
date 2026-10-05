@@ -81,6 +81,15 @@ const KILL_SOURCES: [(&str, &str); 4] = [
     ("denies", "stats.denies"),
 ];
 
+/// Per-tick cumulative healing, barriers and self-inflicted damage as (response name,
+/// `match_player` column), averaged per time bucket. Order must match the `*_avg`/`*_std` field
+/// order in [`PlayerPerformanceCurvePoint`].
+const HEALTH_SOURCES: [(&str, &str); 3] = [
+    ("player_healing", "stats.player_healing"),
+    ("player_barriering", "stats.player_barriering"),
+    ("self_damage", "stats.self_damage"),
+];
+
 /// Every metric of a curve point as (response name, `match_player` column), in field order.
 pub(super) fn curve_metrics() -> impl Iterator<Item = (&'static str, &'static str)> {
     [
@@ -93,6 +102,7 @@ pub(super) fn curve_metrics() -> impl Iterator<Item = (&'static str, &'static st
     .chain(GOLD_SOURCES)
     .chain(DAMAGE_SOURCES)
     .chain(KILL_SOURCES)
+    .chain(HEALTH_SOURCES)
 }
 
 #[derive(Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash, Default)]
@@ -320,6 +330,18 @@ pub struct PlayerPerformanceCurvePoint {
     pub denies_avg: f64,
     /// Standard deviation of `denies_avg` at this time point
     pub denies_std: f64,
+    /// Average healing done at this time point
+    pub player_healing_avg: f64,
+    /// Standard deviation of `player_healing_avg` at this time point
+    pub player_healing_std: f64,
+    /// Average barrier (shield) provided at this time point
+    pub player_barriering_avg: f64,
+    /// Standard deviation of `player_barriering_avg` at this time point
+    pub player_barriering_std: f64,
+    /// Average self-inflicted damage at this time point
+    pub self_damage_avg: f64,
+    /// Standard deviation of `self_damage_avg` at this time point
+    pub self_damage_std: f64,
     /// Average permanent buff (power-up) pickups collected up to this time point. Only
     /// matches since build 6712 (2026-09-29) record pickup times, so only players with at
     /// least one timed permanent pickup count; `null` when there are none.
@@ -391,6 +413,7 @@ fn build_query(query: &PlayerPerformanceCurveQuery) -> String {
         .into_iter()
         .chain(DAMAGE_SOURCES)
         .chain(KILL_SOURCES)
+        .chain(HEALTH_SOURCES)
     {
         let _ = write!(players_sources, ", {column} as {s}_arr");
         let _ = write!(data_sources, ", {s}_arr as {s}");
@@ -515,7 +538,7 @@ async fn get_player_performance_curve(
     tags = ["Analytics"],
     summary = "Player Performance Curve",
     description = "
-Retrieves player performance statistics (net worth, kills, deaths, assists, souls per source, damage and kills per target) over time throughout matches.
+Retrieves player performance statistics (net worth, kills, deaths, assists, souls per source, damage and kills per target, healing, barriers and self damage) over time throughout matches.
 
 Results are cached for **12 hours** based on the unique combination of query parameters provided.
 

@@ -55,7 +55,7 @@ enum Source {
     },
     /// Fans each purchase out once per hero on the opposing team (`enemy_hero_id`).
     EnemyHero,
-    /// Sums every stats tick's metrics per time key (`player_performance_curve_agg`).
+    /// Sums every stats tick's metrics per time key (`player_performance_curve_agg_v2`).
     PerformanceCurve,
 }
 

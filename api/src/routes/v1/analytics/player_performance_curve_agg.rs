@@ -1,8 +1,8 @@
 //! Pre-aggregated player performance curves for requests without player-level filters.
 //!
 //! A hero-less curve over a season reads every player row in the window (42.8M rows / ~62 GiB
-//! for 67 days) and timed out at 20 s. `player_performance_curve_agg` (migration 53) holds, per
-//! day, game mode, match mode, badge, 5-minute duration bucket and time key, the exact integer
+//! for 67 days) and timed out at 20 s. `player_performance_curve_agg_v2` holds, per day, game
+//! mode, match mode, badge, 5-minute duration bucket and time key, the exact integer
 //! sum, sum of squares and count of every metric, so avg and std come out identical to the base
 //! query (up to float rounding). Full days are read from it; the partial days at the edges of
 //! the requested window are aggregated from `match_player` on the fly.
@@ -16,8 +16,8 @@ use super::player_performance_curve::{PlayerPerformanceCurveQuery, curve_metrics
 use super::power_up_buffs::PERMANENT_BUFF_TIMES;
 use crate::routes::v1::matches::types::{GameMode, MatchMode};
 
-pub(crate) const AGG_TABLE: &str = "default.player_performance_curve_agg";
-pub(crate) const AGG_STAGING: &str = "default.player_performance_curve_agg_staging";
+pub(crate) const AGG_TABLE: &str = "default.player_performance_curve_agg_v2";
+pub(crate) const AGG_STAGING: &str = "default.player_performance_curve_agg_v2_staging";
 /// Days the refresh job keeps; older days are dropped from the table.
 pub(crate) const AGG_HORIZON_DAYS: u32 = 180;
 
