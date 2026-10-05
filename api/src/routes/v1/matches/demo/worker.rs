@@ -23,12 +23,13 @@ use crate::error::APIResult;
 use crate::utils::compression::is_zstd;
 
 /// Max jobs waiting in the channel before submits get a 429.
-const MAX_QUEUE_DEPTH: usize = 32;
+const MAX_QUEUE_DEPTH: usize = 128;
 /// Concurrent jobs. Each one uses all cores via rayon and holds the full demo in
-/// memory, so keep this tiny. Bump only after measuring headroom.
-pub(super) const MAX_CONCURRENT: usize = 2;
+/// memory (~350 MB decompressed), so keep this small. Jobs spend most of their time
+/// downloading from Valve, so a few more slots add throughput without contending for CPU.
+pub(super) const MAX_CONCURRENT: usize = 4;
 /// Rough per-job duration used purely for the status endpoint's wait estimate.
-pub(super) const AVG_JOB_SECONDS: u64 = 55;
+pub(super) const AVG_JOB_SECONDS: u64 = 20;
 /// Multipart part size. A whole-artifact `put` cannot finish inside the `object_store`
 /// 30s request timeout once an extract reaches a few hundred MB (NDJSON routinely does),
 /// so parts are sized to upload well inside that budget and to be retried individually.

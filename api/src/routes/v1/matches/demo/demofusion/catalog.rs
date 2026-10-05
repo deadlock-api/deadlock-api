@@ -4,11 +4,16 @@
 //! table names, column names, and column types — for both the entity tables
 //! discovered from a demo's send-tables and the event tables common to every demo.
 
+use std::sync::Arc;
+
 use bytes::Bytes;
 use datafusion::arrow::datatypes::SchemaRef;
+use datafusion::datasource::MemTable;
+use datafusion::prelude::SessionContext;
 
 use super::error::Result;
 use super::events::{EventType, event_schema};
+use super::table_extractor::extract_table_names;
 use super::visitor::{SyncDemoStream, discover_all_schemas_from_demo};
 
 /// Which kind of table a [`TableSchema`] describes.
@@ -74,4 +79,27 @@ pub(crate) fn schema(demo: Bytes) -> Result<Vec<TableSchema>> {
     }
 
     Ok(tables)
+}
+
+/// Plan and optimize `query` against empty tables shaped like `tables` (as returned by
+/// [`schema`]), without parsing any game data. A query that passes fails in
+/// [`query`](super::query) only at execution time; one that fails here (unknown table or
+/// column, type mismatch, unparsable SQL) would fail there too.
+///
+/// # Errors
+///
+/// Returns the `DataFusion` error the query fails to plan with.
+pub(crate) async fn validate(query: &str, tables: &[TableSchema]) -> Result<()> {
+    extract_table_names(query)?;
+
+    let ctx = SessionContext::new();
+    for table in tables {
+        let mem = MemTable::try_new(table.schema.clone(), vec![vec![]])?;
+        ctx.register_table(&*table.name, Arc::new(mem))?;
+    }
+
+    let state = ctx.state();
+    let logical = state.create_logical_plan(query).await?;
+    state.optimize(&logical)?;
+    Ok(())
 }

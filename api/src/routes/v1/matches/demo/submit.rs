@@ -8,7 +8,10 @@ use axum::response::IntoResponse;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
+use super::demofusion;
+use super::format::map_demofusion_err;
 use super::job::{self, JobRecord, JobStatus};
+use super::schema::fetch_demo_schema;
 use super::worker::QueryJob;
 use super::{OutputFormat, job_id};
 use crate::context::AppState;
@@ -42,8 +45,9 @@ pub(super) struct DemoQueryJobResponse {
     responses(
         (status = ACCEPTED, body = DemoQueryJobResponse, description = "Job queued"),
         (status = OK, body = DemoQueryJobResponse, description = "Job already exists (deduplicated)"),
-        (status = BAD_REQUEST, description = "Provided parameters are invalid."),
+        (status = BAD_REQUEST, description = "Provided parameters are invalid, or the query does not plan against the demo's schema."),
         (status = NOT_FOUND, description = "No demo / salts available for the match"),
+        (status = BAD_GATEWAY, description = "Valve's replay server failed to serve the demo"),
         (status = TOO_MANY_REQUESTS, description = "Rate limit exceeded or queue full"),
         (status = INTERNAL_SERVER_ERROR, description = "Failed to queue the job")
     ),
@@ -55,6 +59,9 @@ query) takes ~55s, so this is asynchronous: the endpoint returns a `job_id` you 
 `/demo/query/{job_id}`. Once done, the status response carries a public URL to the result
 artifact (Parquet or NDJSON).
 
+The query is planned against the demo's schema (see `/demo/schema`) before it is queued, so an
+unknown table or column is rejected right away with a `400`.
+
 Identical `(match_id, query, format)` submissions are deduplicated and reuse a cached result.
 
 **Joining controllers and pawns:** while a hero is dead, `CCitadelPlayerController.m_hPawn` points
@@ -64,9 +71,9 @@ hero id or pawn entity index rather than through `m_hPawn`.
 ### Rate Limits:
 | Type | Limit |
 | ---- | ----- |
-| IP | 20req/h |
-| Key | 200req/h |
-| Global | 400req/h |
+| IP | 200req/h |
+| Key | 400req/h |
+| Global | 600req/h |
 "
 )]
 pub(super) async fn submit(
@@ -87,9 +94,9 @@ pub(super) async fn submit(
             &rate_limit_key,
             "demo_query",
             &[
-                Quota::ip_limit(20, Duration::from_hours(1)),
-                Quota::key_limit(200, Duration::from_hours(1)),
-                Quota::global_limit(400, Duration::from_hours(1)),
+                Quota::ip_limit(200, Duration::from_hours(1)),
+                Quota::key_limit(400, Duration::from_hours(1)),
+                Quota::global_limit(600, Duration::from_hours(1)),
             ],
         )
         .await?;
@@ -122,6 +129,13 @@ pub(super) async fn submit(
         "http://replay{cluster_id}.valve.net/1422450/{}_{replay_salt}.dem.bz2",
         req.match_id
     );
+
+    // Plan the query against the demo's schema, read from just the demo's prefix, so an
+    // invalid query is rejected here instead of after the worker downloaded the whole demo.
+    let tables = fetch_demo_schema(&demo_url).await?;
+    demofusion::validate(&req.query, &tables)
+        .await
+        .map_err(|e| map_demofusion_err(&e))?;
 
     let slot = state.demo_query_queue.reserve().ok_or_else(|| {
         APIError::status_msg(

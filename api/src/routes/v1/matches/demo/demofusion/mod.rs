@@ -19,7 +19,7 @@ mod schema;
 mod table_extractor;
 mod visitor;
 
-pub(crate) use catalog::{TableKind, TableSchema, schema};
+pub(crate) use catalog::{TableKind, TableSchema, schema, validate};
 pub(crate) use error::Error;
 pub(crate) use live::query_live;
 pub(crate) use query::query;
