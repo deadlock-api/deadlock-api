@@ -137,7 +137,7 @@ export const NAV: readonly NavChapter[] = [
         ],
       },
       { title: "Feedback", items: ["Alert", "Skeleton", "Spinner"] },
-      { title: "Media", items: ["ImgWithSkeleton"] },
+      { title: "Media", items: ["ImgWithSkeleton", "SoundButton"] },
     ],
   },
   {
@@ -175,12 +175,14 @@ export const NAV: readonly NavChapter[] = [
         ],
       },
       { title: "Picker", items: ["PickerGrid"] },
+      { title: "Sound", items: ["SoundList"] },
       {
         title: "Data table",
         items: [
           "Data table",
           "PaginationControls",
           "PaginationStatus",
+          "LoadMore",
           "ExpandableRow",
           "ResultGrid",
           "HeatGrid",

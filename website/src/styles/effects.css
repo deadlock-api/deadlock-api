@@ -96,3 +96,23 @@ html:has(.mobile-navigation[open]) {
     transform: translateX(0);
   }
 }
+
+/* The fill of a playing SoundButton: it runs once over the clip's length (--sound-duration, set from the decoded
+   clip), from the inline start. */
+@keyframes sound-progress {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+[data-slot="sound-button-progress"] {
+  transform-origin: left;
+  animation: sound-progress var(--sound-duration, 1s) linear forwards;
+}
+
+[data-slot="sound-button-progress"]:dir(rtl) {
+  transform-origin: right;
+}

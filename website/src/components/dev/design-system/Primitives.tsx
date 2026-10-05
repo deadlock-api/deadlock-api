@@ -21,6 +21,7 @@ import { Round3PrimitivesMore } from "~/components/dev/design-system/Round3Primi
 import { Round4Requests } from "~/components/dev/design-system/Round4Requests";
 import { Round4Requests2 } from "~/components/dev/design-system/Round4Requests2";
 import { Round4States } from "~/components/dev/design-system/Round4States";
+import { SoundSpecimens } from "~/components/dev/design-system/Sound";
 import { Chapter, Specimen, Variants } from "~/components/dev/design-system/Specimen";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import {
@@ -739,6 +740,7 @@ export function Primitives() {
       <Round4States />
       <Round4Requests />
       <Round4Requests2 />
+      <SoundSpecimens />
     </Chapter>
   );
 }
