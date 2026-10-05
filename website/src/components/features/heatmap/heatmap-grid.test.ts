@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { buildHeatGrids, summarizeHeatmap } from "./heatmap-grid";
+import { buildHeatGrids, GRID_RES, normalizeHeatGrids, summarizeHeatmap } from "./heatmap-grid";
 
 const RADIUS = 1000;
 const point = (x: number, y: number, kills: number, deaths: number) =>
@@ -22,4 +22,17 @@ test("summarizeHeatmap counts the events and names the hottest ninth of the map"
 test("summarizeHeatmap without events only counts", () => {
   const grids = buildHeatGrids([], RADIUS);
   assert.equal(summarizeHeatmap([], grids, "kills"), "0 kills and 0 deaths plotted.");
+});
+
+test("normalizeHeatGrids leaves cells with fewer events than the minimum empty", () => {
+  // A lone spot with two kills and a death next to a busy one with an even K/D.
+  const data = [point(-500, 0, 2, 1), point(500, 0, 20, 20)];
+  const grids = buildHeatGrids(data, RADIUS);
+  const lit = (grid: Float32Array, from: number, to: number) => grid.slice(from, to).some((value) => value > 0);
+  const row = 127 * GRID_RES;
+  const all = normalizeHeatGrids(grids, "kd", 1).grid;
+  assert.ok(lit(all, row, row + GRID_RES / 2));
+  const filtered = normalizeHeatGrids(grids, "kd", 1, 5).grid;
+  assert.ok(!lit(filtered, row, row + GRID_RES / 2));
+  assert.ok(lit(filtered, row + GRID_RES / 2, row + GRID_RES));
 });

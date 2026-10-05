@@ -33,6 +33,8 @@ interface Heatmap3DProps {
   art?: MapArt;
   viewMode: ViewMode;
   sensitivity: number;
+  /** Cells with fewer events than this stay empty. */
+  minEvents?: number;
   onSensitivityChange: (value: number) => void;
   /** The filters the events are drawn from, in words, for the map's accessible name: "The Hidden King, Haze". */
   scope?: string;
@@ -212,6 +214,7 @@ export default function Heatmap3D({
   art = "painted",
   viewMode,
   sensitivity,
+  minEvents = 0,
   onSensitivityChange,
   scope,
 }: Heatmap3DProps) {
@@ -224,9 +227,9 @@ export default function Heatmap3D({
 
   const { grid, legendMax } = useMemo(() => {
     if (!rawGrids) return { grid: new Float32Array(GRID_RES * GRID_RES), legendMax: 0 };
-    const result = normalizeHeatGrids(rawGrids, viewMode, sensitivity);
+    const result = normalizeHeatGrids(rawGrids, viewMode, sensitivity, minEvents);
     return { grid: result.grid, legendMax: result.maxValue };
-  }, [rawGrids, viewMode, sensitivity]);
+  }, [rawGrids, viewMode, sensitivity, minEvents]);
   const summary = useMemo(
     () => (rawGrids ? summarizeHeatmap(data, rawGrids, viewMode) : "Nothing to plot."),
     [data, rawGrids, viewMode],

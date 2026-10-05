@@ -86,6 +86,7 @@ function HeatmapPage() {
   const [maxRankId, setMaxRankId] = useQueryState("max_rank", parseAsInteger.withDefault(116));
   const [minGameTime, setMinGameTime] = useQueryState("min_game_time", parseAsInteger.withDefault(0));
   const [maxGameTime, setMaxGameTime] = useQueryState("max_game_time", parseAsInteger.withDefault(3600));
+  const [minEvents, setMinEvents] = useQueryState("min_events", parseAsInteger.withDefault(0));
   const [outlier, setOutlierSensitivity] = useQueryState("outlier", parseAsInteger.withDefault(9900));
   // The slider's range (80-100%): an edited `?outlier=5000` saturated half the map with the thumb stuck at its minimum.
   const sensitivity = Math.min(10000, Math.max(8000, outlier));
@@ -185,6 +186,14 @@ function HeatmapPage() {
           label="Match Time"
           title="Kill/Death Time Window"
         />
+        <Filter.MinMatches
+          label="Min Events"
+          value={minEvents}
+          onValueChange={setMinEvents}
+          min={0}
+          step={5}
+          defaultValue={0}
+        />
       </Filter.Root>
 
       {spansRework && (
@@ -235,6 +244,7 @@ function HeatmapPage() {
                       art={MAP_ART[era]}
                       viewMode={viewMode}
                       sensitivity={sensitivity / 10000}
+                      minEvents={minEvents}
                       onSensitivityChange={(v) => setOutlierSensitivity(Math.round(v * 10000))}
                       scope={scope}
                     />
@@ -248,6 +258,7 @@ function HeatmapPage() {
                 art={MAP_ART[era]}
                 viewMode={viewMode}
                 sensitivity={sensitivity / 10000}
+                minEvents={minEvents}
                 onSensitivityChange={(v) => setOutlierSensitivity(Math.round(v * 10000))}
                 scope={scope}
               />

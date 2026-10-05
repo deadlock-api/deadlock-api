@@ -39,6 +39,8 @@ interface HeatmapCanvasProps {
   art?: MapArt;
   viewMode: ViewMode;
   sensitivity: number;
+  /** Cells with fewer events than this stay empty. */
+  minEvents?: number;
   onSensitivityChange: (value: number) => void;
   /** The filters the events are drawn from, in words, for the map's accessible name: "The Hidden King, Haze". */
   scope?: string;
@@ -50,6 +52,7 @@ export default function HeatmapCanvas({
   art = "painted",
   viewMode,
   sensitivity,
+  minEvents = 0,
   onSensitivityChange,
   scope,
 }: HeatmapCanvasProps) {
@@ -67,8 +70,8 @@ export default function HeatmapCanvas({
 
   const rawGrids = useMemo(() => (data.length > 0 ? buildHeatGrids(data, radius) : null), [data, radius]);
   const heatGrid = useMemo(
-    () => (rawGrids ? normalizeHeatGrids(rawGrids, viewMode, sensitivity) : null),
-    [rawGrids, viewMode, sensitivity],
+    () => (rawGrids ? normalizeHeatGrids(rawGrids, viewMode, sensitivity, minEvents) : null),
+    [rawGrids, viewMode, sensitivity, minEvents],
   );
   const legendMax = heatGrid?.maxValue ?? 0;
   const summary = useMemo(

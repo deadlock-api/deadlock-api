@@ -75,16 +75,20 @@ function clampAndNormalize(grid: Float32Array, percentile = 0.99): { grid: Float
   return { grid, maxValue: gridMax };
 }
 
-/** Normalize a copy so cached raw counts remain usable by tooltips and other views. */
+/**
+ * Normalize a copy so cached raw counts remain usable by tooltips and other views. A cell with fewer than `minEvents`
+ * events (kills and deaths together for K/D) stays empty, so a spot with two kills and a death does not top the K/D map.
+ */
 export function normalizeHeatGrids(
   { killsRaw, deathsRaw }: ReturnType<typeof buildHeatGrids>,
   viewMode: "kills" | "deaths" | "kd",
   sensitivity = 0.99,
+  minEvents = 0,
 ): { grid: Float32Array; maxValue: number } {
   if (viewMode === "kd") {
     const grid = new Float32Array(GRID_RES * GRID_RES);
 
-    const minActivity = 1;
+    const minActivity = Math.max(1, minEvents);
     for (let i = 0; i < grid.length; i++) {
       if (killsRaw[i] + deathsRaw[i] >= minActivity) {
         grid[i] = deathsRaw[i] > 0.5 ? killsRaw[i] / deathsRaw[i] : killsRaw[i];
@@ -95,6 +99,11 @@ export function normalizeHeatGrids(
   }
 
   const grid = (viewMode === "kills" ? killsRaw : deathsRaw).slice();
+  if (minEvents > 0) {
+    for (let i = 0; i < grid.length; i++) {
+      if (grid[i] < minEvents) grid[i] = 0;
+    }
+  }
   return clampAndNormalize(grid, sensitivity);
 }
 
