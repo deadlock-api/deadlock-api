@@ -201,7 +201,7 @@ export function Games() {
         </TabsContent>
 
         <TabsContent value="combat">
-          <Section titleDisplay="hidden" title="Damage and Kills">
+          <Section titleDisplay="hidden" title="Damage, Kills and Healing">
             <ChunkErrorBoundary>
               <Suspense fallback={<LoadingState />}>
                 <CombatTab params={baseParams} />

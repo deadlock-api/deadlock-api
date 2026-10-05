@@ -205,11 +205,12 @@ export const ANALYTICS_VIEWS: { [S in AnalyticsSection]: Record<AnalyticsTab<S>,
         "Deadlock souls per minute, where souls come from, how the sources shift by rank and how net worth grows.",
     },
     combat: {
-      title: "Deadlock Damage & Kills by Game Minute",
-      heading: "Deadlock Damage and Kills Over the Match",
-      summary: "How much damage players deal to heroes, objectives and creeps, and what they kill, minute by minute.",
+      title: "Deadlock Damage, Kills & Healing per Minute",
+      heading: "Deadlock Damage, Kills and Healing Over the Match",
+      summary:
+        "How much damage players deal to heroes, objectives and creeps, what they kill, and how much they heal, minute by minute.",
       description:
-        "Deadlock damage to heroes, objectives, jungle and lane creeps by game minute, with kills, last hits and denies.",
+        "Deadlock damage to heroes, objectives and creeps by game minute, with kills, last hits, denies and healing.",
     },
     buffs: {
       title: "Deadlock Golden Statue Buffs & Pickups",
