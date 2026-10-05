@@ -3,8 +3,6 @@ syntax = "proto2";
 import "networkbasetypes.proto";
 import "google/protobuf/descriptor.proto";
 
-option additional_includes = "basetypes.h";
-option additional_includes = "entityhandle.h";
 
 enum EBaseUserMessages {
 	UM_AchievementEvent = 101;
@@ -137,7 +135,7 @@ message CUserMessageCloseCaptionPlaceholder {
 	optional string string = 1;
 	optional float duration = 2;
 	optional bool from_player = 3;
-	optional int32 ent_index = 4 [default = -1, boxed_type = "CEntityIndex", synthetic_default = "-1"];
+	optional int32 ent_index = 4 [default = -1];
 }
 
 message CUserMessageCurrentTimescale {
@@ -186,14 +184,14 @@ message CUserMessageScreenTilt {
 }
 
 message CUserMessageSayText {
-	optional int32 playerindex = 1 [default = -1, boxed_type = "CEntityIndex", synthetic_default = "-1"];
+	optional int32 playerindex = 1 [default = -1];
 	optional string text = 2;
 	optional bool chat = 3;
 	optional bool textallchat = 4;
 }
 
 message CUserMessageSayText2 {
-	optional int32 entityindex = 1 [default = -1, boxed_type = "CEntityIndex", synthetic_default = "-1"];
+	optional int32 entityindex = 1 [default = -1];
 	optional bool chat = 2;
 	optional string messagename = 3;
 	optional string param1 = 4;
@@ -234,8 +232,8 @@ message CUserMessageSendAudio {
 }
 
 message CUserMessageAudioParameter {
-	optional uint32 parameter_type = 1 [boxed_type = "CUtlStringToken"];
-	optional uint32 name_hash_code = 2 [boxed_type = "CUtlStringToken"];
+	optional uint32 parameter_type = 1;
+	optional uint32 name_hash_code = 2;
 	optional float value = 3;
 	optional uint32 int_value = 4;
 }
@@ -265,7 +263,7 @@ message CUserMessageColoredText {
 	optional uint32 color = 1;
 	optional string text = 2;
 	optional bool reset = 3;
-	optional int32 context_player_slot = 4 [default = -1, boxed_type = "CPlayerSlot", synthetic_default = "-1"];
+	optional int32 context_player_slot = 4 [default = -1];
 	optional int32 context_value = 5;
 	optional int32 context_team_id = 6;
 }
@@ -306,7 +304,7 @@ message CEntityMessagePropagateForce {
 
 message CEntityMessageDoSpark {
 	optional .CMsgVector origin = 1;
-	optional int32 entityindex = 2 [default = -1, boxed_type = "CEntityIndex", synthetic_default = "-1"];
+	optional int32 entityindex = 2 [default = -1];
 	optional float radius = 3;
 	optional fixed32 color = 4;
 	optional uint32 beams = 5;
@@ -324,7 +322,7 @@ message CEntityMessageFixAngle {
 message CUserMessageCameraTransition {
 	message Transition_DataDriven {
 		optional string filename = 1;
-		optional int32 attach_ent_index = 2 [default = -1, boxed_type = "CEntityIndex", synthetic_default = "-1"];
+		optional int32 attach_ent_index = 2 [default = -1];
 		optional float duration = 3;
 	}
 
@@ -342,8 +340,8 @@ message CUserMsg_ParticleManager {
 	message CreateParticle {
 		optional fixed64 particle_name_index = 1;
 		optional int32 attach_type = 2;
-		optional uint32 entity_handle = 3 [default = 16777215, boxed_type = "CEHandleNetworkableInt", synthetic_default = "16777215"];
-		optional uint32 entity_handle_for_modifiers = 4 [default = 16777215, boxed_type = "CEHandleNetworkableInt", synthetic_default = "16777215"];
+		optional uint32 entity_handle = 3 [default = 16777215];
+		optional uint32 entity_handle_for_modifiers = 4 [default = 16777215];
 		optional bool apply_voice_ban_rules = 5;
 		optional int32 team_behavior = 6;
 		optional string control_point_configuration = 7;
@@ -358,12 +356,12 @@ message CUserMsg_ParticleManager {
 
 	message DestroyParticleInvolving {
 		optional bool destroy_immediately = 1;
-		optional uint32 entity_handle = 3 [default = 16777215, boxed_type = "CEHandleNetworkableInt", synthetic_default = "16777215"];
+		optional uint32 entity_handle = 3 [default = 16777215];
 	}
 
 	message DestroyParticleNamed {
 		optional fixed64 particle_name_index = 1;
-		optional uint32 entity_handle = 2 [default = 16777215, boxed_type = "CEHandleNetworkableInt", synthetic_default = "16777215"];
+		optional uint32 entity_handle = 2 [default = 16777215];
 		optional bool destroy_immediately = 3;
 		optional bool play_endcap = 4;
 	}
@@ -406,7 +404,7 @@ message CUserMsg_ParticleManager {
 
 	message UpdateParticleEnt {
 		optional int32 control_point = 1;
-		optional uint32 entity_handle = 2 [default = 16777215, boxed_type = "CEHandleNetworkableInt", synthetic_default = "16777215"];
+		optional uint32 entity_handle = 2 [default = 16777215];
 		optional int32 attach_type = 3;
 		optional int32 attachment = 4;
 		optional .CMsgVector fallback_position = 5;
@@ -427,11 +425,11 @@ message CUserMsg_ParticleManager {
 	message ChangeControlPointAttachment {
 		optional int32 attachment_old = 1;
 		optional int32 attachment_new = 2;
-		optional uint32 entity_handle = 3 [default = 16777215, boxed_type = "CEHandleNetworkableInt", synthetic_default = "16777215"];
+		optional uint32 entity_handle = 3 [default = 16777215];
 	}
 
 	message UpdateEntityPosition {
-		optional uint32 entity_handle = 1 [default = 16777215, boxed_type = "CEHandleNetworkableInt", synthetic_default = "16777215"];
+		optional uint32 entity_handle = 1 [default = 16777215];
 		optional .CMsgVector position = 2;
 	}
 
@@ -493,7 +491,7 @@ message CUserMsg_ParticleManager {
 	message FreezeParticleInvolving {
 		optional bool set_frozen = 1;
 		optional float transition_duration = 2;
-		optional uint32 entity_handle = 3 [default = 16777215, boxed_type = "CEHandleNetworkableInt", synthetic_default = "16777215"];
+		optional uint32 entity_handle = 3 [default = 16777215];
 	}
 
 	message AddModellistOverrideElement {
@@ -525,7 +523,7 @@ message CUserMsg_ParticleManager {
 
 		message EHandleContext {
 			optional uint32 value_name_hash = 1;
-			optional uint32 ent_index = 2 [default = 16777215, boxed_type = "CEHandleNetworkableInt", synthetic_default = "16777215"];
+			optional uint32 ent_index = 2 [default = 16777215];
 		}
 
 		repeated .CUserMsg_ParticleManager.SetParticleNamedValueContext.FloatContextValue float_values = 1;
@@ -573,7 +571,7 @@ message CUserMsg_ParticleManager {
 		optional float cone_start_radius = 14;
 		optional float cone_end_radius = 15;
 		optional float cone_length = 16;
-		optional uint32 entity_handle = 17 [default = 16777215, boxed_type = "CEHandleNetworkableInt", synthetic_default = "16777215"];
+		optional uint32 entity_handle = 17 [default = 16777215];
 		optional string attachment_name = 18;
 	}
 
@@ -660,7 +658,7 @@ message CUserMessageHapticsManagerPulse {
 
 message CUserMessageHapticsManagerEffect {
 	optional int32 hand_id = 1;
-	optional uint32 effect_name_hash_code = 2 [boxed_type = "CUtlStringToken"];
+	optional uint32 effect_name_hash_code = 2;
 	optional float effect_scale = 3;
 }
 
@@ -839,7 +837,7 @@ message CUserMessage_NotifyResponseFound {
 		optional string value = 2;
 	}
 
-	optional int32 ent_index = 1 [default = -1, boxed_type = "CEntityIndex", synthetic_default = "-1"];
+	optional int32 ent_index = 1 [default = -1];
 	optional string rule_name = 2;
 	optional string response_value = 3;
 	optional string response_concept = 4;
@@ -854,8 +852,8 @@ message CUserMessage_NotifyResponseFound {
 }
 
 message CUserMessage_PlayResponseConditional {
-	optional int32 ent_index = 1 [default = -1, boxed_type = "CEntityIndex", synthetic_default = "-1"];
-	repeated int32 player_slots = 2 [boxed_type = "CPlayerSlot"];
+	optional int32 ent_index = 1 [default = -1];
+	repeated int32 player_slots = 2;
 	optional string response = 3;
 	optional .CMsgVector ent_origin = 4;
 	optional float pre_delay = 5;
