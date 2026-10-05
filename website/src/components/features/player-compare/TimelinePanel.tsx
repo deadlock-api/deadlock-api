@@ -47,6 +47,9 @@ const METRICS = {
   assists: { label: "Assists", key: "assists_avg", std: "assists_std", digits: 1 },
   heroDamage: { label: "Hero damage", key: "player_damage_avg", std: "player_damage_std", digits: 0 },
   objectiveDamage: { label: "Objective damage", key: "boss_damage_avg", std: "boss_damage_std", digits: 0 },
+  healing: { label: "Healing", key: "player_healing_avg", std: "player_healing_std", digits: 0 },
+  barriers: { label: "Barriers", key: "player_barriering_avg", std: "player_barriering_std", digits: 0 },
+  selfDamage: { label: "Self damage", key: "self_damage_avg", std: "self_damage_std", digits: 0 },
   // Permanent buff pickups so far. Only matches since the City Never Sleeps update record when they happen.
   buffs: { label: "Buffs", key: "permanent_buffs_avg", std: "permanent_buffs_std", digits: 1 },
 } as const satisfies Record<
@@ -58,6 +61,7 @@ const METRIC_GROUPS: { label: string; metrics: TimelineMetric[] }[] = [
   { label: "Economy", metrics: ["souls", "lastHits", "denies"] },
   { label: "Combat", metrics: ["kills", "deaths", "assists", "heroDamage"] },
   { label: "Objectives", metrics: ["objectiveDamage", "buffs"] },
+  { label: "Sustain", metrics: ["healing", "barriers", "selfDamage"] },
 ];
 
 interface Row {

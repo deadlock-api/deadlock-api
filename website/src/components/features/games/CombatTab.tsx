@@ -4,7 +4,7 @@ import type {
   AnalyticsApiPlayerPerformanceCurveRequest,
   PlayerPerformanceCurvePoint,
 } from "deadlock_api_client";
-import { Crosshair, Swords } from "lucide-react";
+import { Crosshair, HeartPulse, Swords } from "lucide-react";
 import { useState } from "react";
 import { Area, CartesianGrid, ComposedChart, Line, LineChart, Tooltip, XAxis, YAxis } from "recharts";
 
@@ -37,6 +37,9 @@ const minuteLabel = (seconds: number) => `${Math.round(seconds / 60)}m`;
 
 type CurveKey = keyof PlayerPerformanceCurvePoint;
 
+const formatValue = (value: number, digits: number) =>
+  digits === 0 ? formatStatValue(value, "integer") : value.toFixed(digits);
+
 /** Damage by target, in the colors the soul sources of the same targets have on the economy tab. */
 const DAMAGE_TARGETS = [
   { key: "heroes", label: "Heroes", field: "player_damage_avg", color: SERIES_COLORS[0] },
@@ -44,6 +47,17 @@ const DAMAGE_TARGETS = [
   { key: "jungle", label: "Jungle", field: "neutral_damage_avg", color: SERIES_COLORS[2] },
   { key: "laneCreeps", label: "Lane creeps", field: "creep_damage_avg", color: SERIES_COLORS[1] },
 ] as const satisfies { key: string; label: string; field: CurveKey; color: string }[];
+
+/** Fields every curve point has (the buff counts can be null). */
+type NumberKey = { [K in CurveKey]: PlayerPerformanceCurvePoint[K] extends number ? K : never }[CurveKey];
+
+interface CurveMetric {
+  label: string;
+  reading: string;
+  avg: NumberKey;
+  std: NumberKey;
+  digits: number;
+}
 
 const KILL_TARGETS = {
   heroes: { label: "Heroes", reading: "Hero kills", avg: "kills_avg", std: "kills_std", digits: 1 },
@@ -63,8 +77,32 @@ const KILL_TARGETS = {
   },
   laneCreeps: { label: "Lane creeps", reading: "Last hits", avg: "creep_kills_avg", std: "creep_kills_std", digits: 1 },
   denies: { label: "Denies", reading: "Denies", avg: "denies_avg", std: "denies_std", digits: 1 },
-} as const satisfies Record<string, { label: string; reading: string; avg: CurveKey; std: CurveKey; digits: number }>;
-type KillTarget = keyof typeof KILL_TARGETS;
+} as const satisfies Record<string, CurveMetric>;
+
+/** Healing and barriers one player has given (self included), and the damage they have dealt to themselves. */
+const SUSTAIN_METRICS = {
+  healing: {
+    label: "Healing",
+    reading: "Healing",
+    avg: "player_healing_avg",
+    std: "player_healing_std",
+    digits: 0,
+  },
+  barriers: {
+    label: "Barriers",
+    reading: "Barriers",
+    avg: "player_barriering_avg",
+    std: "player_barriering_std",
+    digits: 0,
+  },
+  selfDamage: {
+    label: "Self damage",
+    reading: "Self damage",
+    avg: "self_damage_avg",
+    std: "self_damage_std",
+    digits: 0,
+  },
+} as const satisfies Record<string, CurveMetric>;
 
 interface CombatTabProps {
   params: AnalyticsApiGameStatsRequest;
@@ -108,7 +146,31 @@ export default function CombatTab({ params }: CombatTabProps) {
           description="Average kills one player has by each game minute"
         />
         <PanelBody className="flex flex-1 flex-col gap-3">
-          <KillCurve points={points} query={query} />
+          <SpreadCurve
+            metrics={KILL_TARGETS}
+            initial="heroes"
+            label="kills over the match"
+            pickerLabel="Kill target"
+            points={points}
+            query={query}
+          />
+        </PanelBody>
+      </Panel>
+      <Panel className="h-full lg:col-span-2">
+        <PanelHeader
+          title="Healing & Self Damage"
+          icon={HeartPulse}
+          description="Average healing, barriers and self-inflicted damage one player has by each game minute"
+        />
+        <PanelBody className="flex flex-1 flex-col gap-3">
+          <SpreadCurve
+            metrics={SUSTAIN_METRICS}
+            initial="healing"
+            label="healing over the match"
+            pickerLabel="Sustain metric"
+            points={points}
+            query={query}
+          />
         </PanelBody>
       </Panel>
     </div>
@@ -197,10 +259,19 @@ function DamageCurve({ points, query }: CurveProps) {
   );
 }
 
-function KillCurve({ points, query }: CurveProps) {
-  const [target, setTarget] = useState<KillTarget>("heroes");
-  const selected = KILL_TARGETS[target];
-  const label = "kills over the match";
+interface SpreadCurveProps<K extends string> extends CurveProps {
+  metrics: Record<K, CurveMetric>;
+  initial: K;
+  /** What the chart shows, for its loading, empty and error states. */
+  label: string;
+  /** Accessible name of the metric picker. */
+  pickerLabel: string;
+}
+
+/** One metric by game minute, picked with a segmented control, with the spread between players shaded. */
+function SpreadCurve<K extends string>({ metrics, initial, label, pickerLabel, points, query }: SpreadCurveProps<K>) {
+  const [metric, setMetric] = useState<K>(initial);
+  const selected = metrics[metric];
   const rows = points.map((point) => {
     const value = point[selected.avg];
     const std = point[selected.std];
@@ -213,14 +284,14 @@ function KillCurve({ points, query }: CurveProps) {
       <Segmented
         size="sm"
         width="hug"
-        aria-label="Kill target"
+        aria-label={pickerLabel}
         className="self-end"
-        value={target}
-        onValueChange={setTarget}
+        value={metric}
+        onValueChange={setMetric}
       >
-        {(Object.keys(KILL_TARGETS) as KillTarget[]).map((key) => (
+        {(Object.keys(metrics) as K[]).map((key) => (
           <SegmentedItem key={key} value={key}>
-            {KILL_TARGETS[key].label}
+            {metrics[key].label}
           </SegmentedItem>
         ))}
       </Segmented>
@@ -233,7 +304,7 @@ function KillCurve({ points, query }: CurveProps) {
       ) : (
         <ChartSurface
           label={`${selected.reading} by game minute, with the spread between players.${
-            last ? ` At ${minuteLabel(last.time)}: ${last.value.toFixed(selected.digits)}.` : ""
+            last ? ` At ${minuteLabel(last.time)}: ${formatValue(last.value, selected.digits)}.` : ""
           }`}
           variant="bare"
         >
@@ -247,7 +318,11 @@ function KillCurve({ points, query }: CurveProps) {
               tickFormatter={minuteLabel}
               label={{ ...CHART_X_LABEL, value: "Game Time" }}
             />
-            <YAxis {...CHART_Y_AXIS} label={{ ...CHART_Y_LABEL, value: `Avg ${selected.label}` }} />
+            <YAxis
+              {...CHART_Y_AXIS}
+              tickFormatter={selected.digits === 0 ? (value: number) => formatCompactAxisTick(value, 1000) : undefined}
+              label={{ ...CHART_Y_LABEL, value: `Avg ${selected.label}` }}
+            />
             <Tooltip
               cursor={CHART_CURSOR_LINE}
               isAnimationActive={false}
@@ -256,8 +331,8 @@ function KillCurve({ points, query }: CurveProps) {
                 if (!active || !row) return null;
                 return (
                   <ChartReadings title={`At ${minuteLabel(row.time)}`}>
-                    <ChartReading label={selected.reading}>{row.value.toFixed(selected.digits)}</ChartReading>
-                    <ChartReading label="Std dev">± {row.std.toFixed(selected.digits)}</ChartReading>
+                    <ChartReading label={selected.reading}>{formatValue(row.value, selected.digits)}</ChartReading>
+                    <ChartReading label="Std dev">± {formatValue(row.std, selected.digits)}</ChartReading>
                   </ChartReadings>
                 );
               }}
