@@ -6,16 +6,21 @@ import { PageShell } from "~/components/patterns/page/PageShell";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent } from "~/components/ui/card";
 import { Inline } from "~/components/ui/stack";
+import { isChunkLoadError } from "~/lib/chunk-reload";
 
 export function RouteError({ error, reset }: { error: unknown; reset: () => void }) {
   const router = useRouter();
   const message = error instanceof Error ? error.message : String(error);
   const stack = error instanceof Error ? error.stack : undefined;
+  // A chunk that failed to load says nothing about the page: Googlebot renders against chunks of builds no longer
+  // served, and a noindex in its rendered DOM dropped /analytics/games/combat from the index. Only the browser loads
+  // chunks, so the server never renders this branch and hydration is unaffected.
+  const chunkFailed = isChunkLoadError(error);
 
   return (
     <>
-      <title>Something went wrong | Deadlock API</title>
-      <meta name="robots" content="noindex, nofollow" />
+      {!chunkFailed && <title>Something went wrong | Deadlock API</title>}
+      {!chunkFailed && <meta name="robots" content="noindex, nofollow" />}
       <PageShell align="center" height="fill" density="content">
         <PageHeader
           size="lg"
