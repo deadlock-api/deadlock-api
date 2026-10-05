@@ -29,6 +29,7 @@ import { Route as PatronRouteImport } from './routes/patron'
 import { Route as PlayersRouteImport } from './routes/players'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as Sitemap_indexDotxmlRouteImport } from './routes/sitemap_index[.]xml'
+import { Route as SoundsRouteImport } from './routes/sounds'
 import { Route as TeamBuilderRouteImport } from './routes/team-builder'
 import { Route as TrackerRouteImport } from './routes/tracker'
 import { Route as DotwellKnownApiCatalogRouteImport } from './routes/[.]well-known.api-catalog'
@@ -209,6 +210,11 @@ const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
 const Sitemap_indexDotxmlRoute = Sitemap_indexDotxmlRouteImport.update({
   id: '/sitemap_index.xml',
   path: '/sitemap_index.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SoundsRoute = SoundsRouteImport.update({
+  id: '/sounds',
+  path: '/sounds',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TeamBuilderRoute = TeamBuilderRouteImport.update({
@@ -654,6 +660,7 @@ export interface FileRoutesByFullPath {
   '/players': typeof PlayersRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/sitemap_index.xml': typeof Sitemap_indexDotxmlRoute
+  '/sounds': typeof SoundsRoute
   '/team-builder': typeof TeamBuilderRoute
   '/tracker': typeof TrackerRoute
   '/.well-known/api-catalog': typeof DotwellKnownApiCatalogRoute
@@ -753,6 +760,7 @@ export interface FileRoutesByTo {
   '/players': typeof PlayersRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/sitemap_index.xml': typeof Sitemap_indexDotxmlRoute
+  '/sounds': typeof SoundsRoute
   '/team-builder': typeof TeamBuilderRoute
   '/tracker': typeof TrackerRoute
   '/.well-known/api-catalog': typeof DotwellKnownApiCatalogRoute
@@ -851,6 +859,7 @@ export interface FileRoutesById {
   '/players': typeof PlayersRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/sitemap_index.xml': typeof Sitemap_indexDotxmlRoute
+  '/sounds': typeof SoundsRoute
   '/team-builder': typeof TeamBuilderRoute
   '/tracker': typeof TrackerRoute
   '/.well-known/api-catalog': typeof DotwellKnownApiCatalogRoute
@@ -956,6 +965,7 @@ export interface FileRouteTypes {
     | '/players'
     | '/sitemap.xml'
     | '/sitemap_index.xml'
+    | '/sounds'
     | '/team-builder'
     | '/tracker'
     | '/.well-known/api-catalog'
@@ -1055,6 +1065,7 @@ export interface FileRouteTypes {
     | '/players'
     | '/sitemap.xml'
     | '/sitemap_index.xml'
+    | '/sounds'
     | '/team-builder'
     | '/tracker'
     | '/.well-known/api-catalog'
@@ -1152,6 +1163,7 @@ export interface FileRouteTypes {
     | '/players'
     | '/sitemap.xml'
     | '/sitemap_index.xml'
+    | '/sounds'
     | '/team-builder'
     | '/tracker'
     | '/.well-known/api-catalog'
@@ -1256,6 +1268,7 @@ export interface RootRouteChildren {
   PlayersRoute: typeof PlayersRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   Sitemap_indexDotxmlRoute: typeof Sitemap_indexDotxmlRoute
+  SoundsRoute: typeof SoundsRoute
   TeamBuilderRoute: typeof TeamBuilderRoute
   TrackerRoute: typeof TrackerRoute
   DotwellKnownApiCatalogRoute: typeof DotwellKnownApiCatalogRoute
@@ -1426,6 +1439,13 @@ declare module '@tanstack/react-router' {
       path: '/sitemap_index.xml'
       fullPath: '/sitemap_index.xml'
       preLoaderRoute: typeof Sitemap_indexDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sounds': {
+      id: '/sounds'
+      path: '/sounds'
+      fullPath: '/sounds'
+      preLoaderRoute: typeof SoundsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/team-builder': {
@@ -2221,6 +2241,7 @@ const rootRouteChildren: RootRouteChildren = {
   PlayersRoute: PlayersRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   Sitemap_indexDotxmlRoute: Sitemap_indexDotxmlRoute,
+  SoundsRoute: SoundsRoute,
   TeamBuilderRoute: TeamBuilderRoute,
   TrackerRoute: TrackerRoute,
   DotwellKnownApiCatalogRoute: DotwellKnownApiCatalogRoute,
