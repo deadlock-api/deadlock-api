@@ -13,11 +13,12 @@ import { Slider } from "~/components/ui/slider";
 import {
   buildHeatGrids,
   GRID_RES,
+  heatLUT,
   heatmapName,
   type HeatmapViewMode,
-  interpolateColor,
+  type NormalizedHeatGrid,
   normalizeHeatGrids,
-  sampleBilinear,
+  sampleHeat,
   summarizeHeatmap,
 } from "./heatmap-grid";
 import { HeatmapLegend } from "./HeatmapLegend";
@@ -93,8 +94,9 @@ function HeatBarBand({
   );
 }
 
-function HeatBars({ grid, gamma, opacity }: { grid: Float32Array; gamma: number; opacity: number }) {
+function HeatBars({ heat, opacity }: { heat: NormalizedHeatGrid; opacity: number }) {
   const bands = useMemo(() => {
+    const lut = heatLUT(heat.scale);
     const heightScale = 1.8;
     const barW = 4 / BAR_RES;
     const gap = 0.88;
@@ -113,11 +115,9 @@ function HeatBars({ grid, gamma, opacity }: { grid: Float32Array; gamma: number;
       for (let ix = 0; ix < BAR_RES; ix++) {
         const gx = (ix / (BAR_RES - 1)) * (GRID_RES - 1);
         const gy = (iy / (BAR_RES - 1)) * (GRID_RES - 1);
-        const raw = sampleBilinear(grid, GRID_RES, GRID_RES, gx, gy);
+        const t = sampleHeat(heat, gx, gy, HEAT_THRESHOLD);
+        if (t < 0) continue;
 
-        if (raw < HEAT_THRESHOLD) continue;
-
-        const t = raw ** gamma;
         const height = Math.max(t * heightScale, 0.01);
 
         const x = (ix / (BAR_RES - 1)) * 4 - 2;
@@ -132,13 +132,13 @@ function HeatBars({ grid, gamma, opacity }: { grid: Float32Array; gamma: number;
         const bandIdx = Math.min(OPACITY_BANDS - 1, Math.floor(t * OPACITY_BANDS));
         bandGroups[bandIdx].matrices.push(matrix);
 
-        const [r, g, b] = interpolateColor(t);
-        bandGroups[bandIdx].colorData.push(r / 255, g / 255, b / 255);
+        const lutIdx = Math.min(255, Math.round(t * 255)) * 4;
+        bandGroups[bandIdx].colorData.push(lut[lutIdx] / 255, lut[lutIdx + 1] / 255, lut[lutIdx + 2] / 255);
       }
     }
 
     return bandGroups.filter((b) => b.matrices.length > 0);
-  }, [grid, gamma]);
+  }, [heat]);
 
   return (
     <>
@@ -233,21 +233,23 @@ export default function Heatmap3D({
     [viewMode, baseline, radius],
   );
 
-  const { grid, gamma, legendMax } = useMemo(() => {
-    if (!rawGrids) return { grid: new Float32Array(GRID_RES * GRID_RES), gamma: 1, legendMax: 0 };
-    const result = normalizeHeatGrids(rawGrids, viewMode, sensitivity, minEvents, baselineGrids);
-    return { grid: result.grid, gamma: result.gamma, legendMax: result.maxValue };
-  }, [rawGrids, viewMode, sensitivity, minEvents, baselineGrids]);
+  const heat = useMemo<NormalizedHeatGrid>(
+    () =>
+      rawGrids
+        ? normalizeHeatGrids(rawGrids, viewMode, sensitivity, minEvents, baselineGrids)
+        : { grid: new Float32Array(GRID_RES * GRID_RES), maxValue: 0, scale: "density" },
+    [rawGrids, viewMode, sensitivity, minEvents, baselineGrids],
+  );
   const summary = useMemo(
-    () => (rawGrids ? summarizeHeatmap(data, rawGrids, viewMode, grid) : "Nothing to plot."),
-    [data, rawGrids, viewMode, grid],
+    () => (rawGrids ? summarizeHeatmap(data, rawGrids, viewMode, heat.grid) : "Nothing to plot."),
+    [data, rawGrids, viewMode, heat],
   );
 
   return (
     // On a phone the map fills the width, so the legend and the sliders leave it instead of covering it.
     <ChartStageFrame>
       <ChartOverlay position="top-end" narrow="outside">
-        <HeatmapLegend viewMode={viewMode} maxValue={legendMax} />
+        <HeatmapLegend viewMode={viewMode} maxValue={heat.maxValue} />
       </ChartOverlay>
       <ChartStage>
         {/* The WebGL scene stands for the whole map: named, and described by the sentence under it. */}
@@ -269,7 +271,7 @@ export default function Heatmap3D({
           <BasePlane />
           {/* A retry remounts the plane, which loads the images again. */}
           <MapPlane key={mapAttempt} mapImages={mapData.images} art={art} onStatusChange={setMapStatus} />
-          <HeatBars grid={grid} gamma={gamma} opacity={opacity} />
+          <HeatBars heat={heat} opacity={opacity} />
 
           <OrbitControls
             enablePan
@@ -316,7 +318,7 @@ export default function Heatmap3D({
             <span className="w-9 text-xs text-muted-foreground tabular-nums">{Math.round(opacity * 100)}%</span>
           </Field>
         </ChartOverlayItem>
-        <SensitivitySlider value={sensitivity} onChange={onSensitivityChange} />
+        {viewMode !== "share" && <SensitivitySlider value={sensitivity} onChange={onSensitivityChange} />}
       </ChartOverlay>
     </ChartStageFrame>
   );

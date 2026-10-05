@@ -21,8 +21,8 @@ export function HeatmapLegend({ viewMode, maxValue }: HeatmapLegendProps) {
         <ChartGradientLegend
           stops={LEGEND_STOPS}
           label="Share of the kills against the hero's overall share"
-          min={ratio(maxValue > 0 ? 1 / maxValue : 1)}
-          max={ratio(maxValue || 1)}
+          min={ratio(1 / maxValue)}
+          max={ratio(maxValue)}
         />
       </ChartOverlayItem>
     );

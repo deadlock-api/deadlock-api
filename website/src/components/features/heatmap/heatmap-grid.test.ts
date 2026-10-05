@@ -41,12 +41,12 @@ test("normalizeHeatGrids share puts the hero's even share mid-ramp and a lopside
   // Everyone kills 40 at each spot; the hero takes 30 of the left one (1.5x their half overall), 10 of the right (0.5x).
   const all = buildHeatGrids([point(-500, 0, 40, 0), point(500, 0, 40, 0)], RADIUS);
   const hero = buildHeatGrids([point(-500, 0, 30, 0), point(500, 0, 10, 0)], RADIUS);
-  const { grid, maxValue, gamma } = normalizeHeatGrids(hero, "share", 1, 0, all);
+  const { grid, maxValue, scale } = normalizeHeatGrids(hero, "share", 1, 0, all);
   const row = 127 * GRID_RES;
   const left = Math.max(...grid.slice(row, row + GRID_RES / 2));
   const right = Math.min(...grid.slice(row, row + GRID_RES).filter((value) => value > 0));
-  assert.equal(gamma, 1);
-  assert.ok(maxValue > 1);
+  assert.equal(scale, "ratio");
+  assert.equal(maxValue, 2);
   assert.ok(left > 0.75, `left ${left}`);
   assert.ok(right < 0.1, `right ${right}`);
   assert.equal(

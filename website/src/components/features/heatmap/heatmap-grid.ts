@@ -7,17 +7,25 @@ export type HeatmapViewMode = "kills" | "deaths" | "kd" | "share";
 
 type HeatGrids = ReturnType<typeof buildHeatGrids>;
 
-/** A normalized grid in 0..1, the raw value its top stands for, and the gamma that maps a cell to its color. */
+/**
+ * How a grid reads. `density`: 0 is nothing and 1 the top of the scale. `ratio`: a log scale with 1x in the middle,
+ * where 0 marks a cell too thin to draw.
+ */
+export type HeatScale = "density" | "ratio";
+
+/** A normalized grid in 0..1, the raw value its top stands for, and how it reads. */
 export interface NormalizedHeatGrid {
   grid: Float32Array;
   maxValue: number;
-  gamma: number;
+  scale: HeatScale;
 }
 
 /** Density gamma: lifts the faint tail of a skewed count so sparse spots stay visible. */
 const DENSITY_GAMMA = 0.45;
-/** Kills a cell borrows at the hero's overall share, so a spot with a single kill does not read as 100% or 0%. */
-const SHARE_PRIOR = 5;
+/** The share view's scale ends: half and twice the hero's overall share. */
+const SHARE_RANGE = 2;
+/** A cell where the hero would expect fewer kills than this (at their overall share) is mostly luck, so it stays empty. */
+const SHARE_MIN_EXPECTED = 5;
 
 export const GRADIENT_STOPS: { stop: number; r: number; g: number; b: number }[] = [
   { stop: 0, r: 0, g: 0, b: 20 },
@@ -29,24 +37,6 @@ export const GRADIENT_STOPS: { stop: number; r: number; g: number; b: number }[]
   { stop: 0.88, r: 255, g: 130, b: 0 },
   { stop: 1, r: 255, g: 0, b: 0 },
 ];
-
-export function interpolateColor(t: number): [number, number, number] {
-  const clamped = Math.max(0, Math.min(1, t));
-  for (let i = 0; i < GRADIENT_STOPS.length - 1; i++) {
-    const c0 = GRADIENT_STOPS[i];
-    const c1 = GRADIENT_STOPS[i + 1];
-    if (clamped >= c0.stop && clamped <= c1.stop) {
-      const ratio = (clamped - c0.stop) / (c1.stop - c0.stop);
-      return [
-        Math.round(c0.r + (c1.r - c0.r) * ratio),
-        Math.round(c0.g + (c1.g - c0.g) * ratio),
-        Math.round(c0.b + (c1.b - c0.b) * ratio),
-      ];
-    }
-  }
-  const last = GRADIENT_STOPS[GRADIENT_STOPS.length - 1];
-  return [last.r, last.g, last.b];
-}
 
 function buildRawGrid(data: KillDeathStats[], viewMode: "kills" | "deaths", radius: number): Float32Array {
   const grid = new Float32Array(GRID_RES * GRID_RES);
@@ -89,15 +79,16 @@ function clampAndNormalize(grid: Float32Array, percentile = 0.99): NormalizedHea
       grid[i] = Math.min(grid[i], gridMax) / gridMax;
     }
   }
-  return { grid, maxValue: gridMax, gamma: DENSITY_GAMMA };
+  return { grid, maxValue: gridMax, scale: "density" };
 }
 
 /**
- * A hero's kills over all heroes' kills per cell, against the hero's share of all kills: 1 is the same share as
- * everywhere, 2 twice it. Drawn on a log scale around the middle of the ramp, so "more" and "less" sit symmetrically;
- * `maxValue` is the ratio the top of the ramp stands for (its bottom is the inverse).
+ * A hero's kills per cell against what they would have there at their share of all kills: 1 is their usual share, 2
+ * twice it. Drawn on a log scale clipped to 0.5x-2x with 1x in the middle, so "more" and "less" weigh the same. Cells
+ * are filtered on the expected kills, never on the hero's own: hiding the cells the hero scored little in would only
+ * hide the "less" side.
  */
-function normalizeShare(hero: Float32Array, all: Float32Array, percentile: number, minEvents: number) {
+function normalizeShare(hero: Float32Array, all: Float32Array, minEvents: number): NormalizedHeatGrid {
   const grid = new Float32Array(GRID_RES * GRID_RES);
   let heroTotal = 0;
   let allTotal = 0;
@@ -105,35 +96,27 @@ function normalizeShare(hero: Float32Array, all: Float32Array, percentile: numbe
     heroTotal += hero[i];
     allTotal += all[i];
   }
-  if (heroTotal <= 0 || allTotal <= 0) return { grid, maxValue: 0, gamma: 1 };
+  const result = { grid, maxValue: SHARE_RANGE, scale: "ratio" } as const;
+  if (heroTotal <= 0 || allTotal <= 0) return result;
 
   const share = heroTotal / allTotal;
-  const minActivity = Math.max(1, minEvents);
-  const logs = new Float32Array(grid.length);
-  const magnitudes: number[] = [];
+  const minExpected = Math.max(SHARE_MIN_EXPECTED, minEvents);
+  const span = Math.log2(SHARE_RANGE);
   for (let i = 0; i < grid.length; i++) {
-    if (all[i] < minActivity) continue;
-    logs[i] = Math.log((hero[i] + SHARE_PRIOR * share) / (all[i] + SHARE_PRIOR) / share);
-    magnitudes.push(Math.abs(logs[i]));
+    const expected = all[i] * share;
+    if (expected < minExpected) continue;
+    const ratio = Math.min(SHARE_RANGE, Math.max(1 / SHARE_RANGE, hero[i] / expected));
+    // Never exactly 0, which marks a cell too thin to draw.
+    grid[i] = Math.max(0.001, 0.5 + (0.5 * Math.log2(ratio)) / span);
   }
-  magnitudes.sort((a, b) => a - b);
-  // At least ±25%, so an even map does not stretch noise across the whole ramp.
-  const bound = Math.max(
-    Math.log(1.25),
-    magnitudes[Math.floor(magnitudes.length * percentile)] ?? magnitudes.at(-1) ?? 0,
-  );
-  for (let i = 0; i < grid.length; i++) {
-    if (all[i] < minActivity) continue;
-    // Never exactly 0, which draws as no data.
-    grid[i] = Math.max(0.01, 0.5 + 0.5 * Math.max(-1, Math.min(1, logs[i] / bound)));
-  }
-  return { grid, maxValue: Math.exp(bound), gamma: 1 };
+  return result;
 }
 
 /**
  * Normalize a copy so cached raw counts remain usable by tooltips and other views. A cell with fewer than `minEvents`
  * events (kills and deaths together for K/D, all heroes' kills for the share) stays empty, so a spot with two kills and
- * a death does not top the K/D map. The share view compares against `baseline`, the same filters for all heroes.
+ * a death does not top the K/D map. The share view compares against `baseline`, the same filters for all heroes, on a
+ * fixed scale that `sensitivity` does not stretch.
  */
 export function normalizeHeatGrids(
   { killsRaw, deathsRaw }: HeatGrids,
@@ -143,8 +126,8 @@ export function normalizeHeatGrids(
   baseline?: HeatGrids,
 ): NormalizedHeatGrid {
   if (viewMode === "share") {
-    if (!baseline) return { grid: new Float32Array(GRID_RES * GRID_RES), maxValue: 0, gamma: 1 };
-    return normalizeShare(killsRaw, baseline.killsRaw, sensitivity, minEvents);
+    if (!baseline) return { grid: new Float32Array(GRID_RES * GRID_RES), maxValue: SHARE_RANGE, scale: "ratio" };
+    return normalizeShare(killsRaw, baseline.killsRaw, minEvents);
   }
 
   if (viewMode === "kd") {
@@ -234,6 +217,65 @@ export function buildColorLUT(): Uint8Array {
 }
 
 export const COLOR_LUT = buildColorLUT();
+
+/**
+ * The ratio ramp: the legend's colors (the density ramp without its near-black floor) evenly spaced, so 1x lands on
+ * the green middle stop, at one opacity, so "less" reads as clearly as "more".
+ */
+function buildRatioLUT(): Uint8Array {
+  const stops = GRADIENT_STOPS.slice(1);
+  const lut = new Uint8Array(256 * 4);
+  for (let i = 0; i < 256; i++) {
+    const position = (i / 255) * (stops.length - 1);
+    const s = Math.min(stops.length - 2, Math.floor(position));
+    const ratio = position - s;
+    lut[i * 4] = Math.round(stops[s].r + (stops[s + 1].r - stops[s].r) * ratio);
+    lut[i * 4 + 1] = Math.round(stops[s].g + (stops[s + 1].g - stops[s].g) * ratio);
+    lut[i * 4 + 2] = Math.round(stops[s].b + (stops[s + 1].b - stops[s].b) * ratio);
+    lut[i * 4 + 3] = 166;
+  }
+  return lut;
+}
+
+const RATIO_LUT = buildRatioLUT();
+
+/** The colors (RGBA per 0..255 step) a grid's scale is drawn in. */
+export function heatLUT(scale: HeatScale): Uint8Array {
+  return scale === "ratio" ? RATIO_LUT : COLOR_LUT;
+}
+
+/**
+ * Where on its ramp (0..1) a grid point falls, or -1 where nothing is drawn. A ratio grid blends only the cells it
+ * draws, so the edge of the drawn area does not fade through the "less" end of the ramp into the empty cells.
+ */
+export function sampleHeat({ grid, scale }: NormalizedHeatGrid, gx: number, gy: number, threshold = 0.001): number {
+  if (scale === "density") {
+    const raw = sampleBilinear(grid, GRID_RES, GRID_RES, gx, gy);
+    return raw < threshold ? -1 : raw ** DENSITY_GAMMA;
+  }
+  const max = GRID_RES - 1;
+  if (grid[Math.min(max, Math.round(gy)) * GRID_RES + Math.min(max, Math.round(gx))] <= 0) return -1;
+  const x0 = Math.min(max, Math.floor(gx));
+  const y0 = Math.min(max, Math.floor(gy));
+  const x1 = Math.min(x0 + 1, max);
+  const y1 = Math.min(y0 + 1, max);
+  const fx = gx - x0;
+  const fy = gy - y0;
+  let sum = 0;
+  let weights = 0;
+  for (const [index, weight] of [
+    [y0 * GRID_RES + x0, (1 - fx) * (1 - fy)],
+    [y0 * GRID_RES + x1, fx * (1 - fy)],
+    [y1 * GRID_RES + x0, (1 - fx) * fy],
+    [y1 * GRID_RES + x1, fx * fy],
+  ] as const) {
+    if (grid[index] > 0) {
+      sum += grid[index] * weight;
+      weights += weight;
+    }
+  }
+  return weights > 0 ? sum / weights : -1;
+}
 
 const ROWS = ["top", "middle", "bottom"] as const;
 const COLUMNS = ["left", "center", "right"] as const;

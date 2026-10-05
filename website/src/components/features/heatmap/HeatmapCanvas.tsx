@@ -9,12 +9,13 @@ import { TooltipCard, TooltipStat, TooltipStats } from "~/components/ui/tooltip"
 
 import {
   buildHeatGrids,
-  COLOR_LUT,
   GRID_RES,
+  heatLUT,
   heatmapName,
   type HeatmapViewMode,
   normalizeHeatGrids,
   sampleBilinear,
+  sampleHeat,
   summarizeHeatmap,
 } from "./heatmap-grid";
 import { HeatmapLegend } from "./HeatmapLegend";
@@ -160,7 +161,7 @@ export default function HeatmapCanvas({
 
     if (!heatGrid) return;
 
-    const { grid, gamma } = heatGrid;
+    const lut = heatLUT(heatGrid.scale);
 
     const imageData = heatCtx.createImageData(canvasWidth, canvasHeight);
     const pixels = imageData.data;
@@ -170,17 +171,16 @@ export default function HeatmapCanvas({
       for (let px = 0; px < canvasWidth; px++) {
         const gx = (px / canvasWidth) * (GRID_RES - 1);
 
-        const raw = sampleBilinear(grid, GRID_RES, GRID_RES, gx, gy);
-        if (raw < 0.001) continue;
+        const t = sampleHeat(heatGrid, gx, gy);
+        if (t < 0) continue;
 
-        const t = raw ** gamma;
         const lutIdx = Math.min(255, Math.round(t * 255)) * 4;
 
         const off = (py * canvasWidth + px) * 4;
-        pixels[off] = COLOR_LUT[lutIdx];
-        pixels[off + 1] = COLOR_LUT[lutIdx + 1];
-        pixels[off + 2] = COLOR_LUT[lutIdx + 2];
-        pixels[off + 3] = COLOR_LUT[lutIdx + 3];
+        pixels[off] = lut[lutIdx];
+        pixels[off + 1] = lut[lutIdx + 1];
+        pixels[off + 2] = lut[lutIdx + 2];
+        pixels[off + 3] = lut[lutIdx + 3];
       }
     }
 
@@ -311,7 +311,8 @@ export default function HeatmapCanvas({
         )}
       </div>
       <ChartOverlay position="bottom-start" narrow="outside">
-        <SensitivitySlider value={sensitivity} onChange={onSensitivityChange} />
+        {/* The share view's scale is fixed, so there is nothing to clip. */}
+        {viewMode !== "share" && <SensitivitySlider value={sensitivity} onChange={onSensitivityChange} />}
       </ChartOverlay>
     </ChartStageFrame>
   );
