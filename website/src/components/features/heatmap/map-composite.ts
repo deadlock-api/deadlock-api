@@ -9,7 +9,7 @@ const SILHOUETTE_BASE = "#4b5058";
 // ds-allow color-literal: canvas palette, the painted map's street grey
 const SILHOUETTE_STREET = "#83868a";
 
-function loadImage(src: string): Promise<HTMLImageElement> {
+function decodeImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.crossOrigin = "anonymous";
@@ -17,6 +17,25 @@ function loadImage(src: string): Promise<HTMLImageElement> {
     img.onerror = () => reject(new Error(`Failed to load ${src}`));
     img.src = src;
   });
+}
+
+/**
+ * The bucket sends `Access-Control-Allow-Origin` only to requests with an `Origin`, without `Vary: Origin`, so a copy
+ * cached by a plain request (the image opened in a tab) fails the canvas's CORS load. The retry bypasses the cache.
+ */
+async function loadImage(src: string): Promise<HTMLImageElement> {
+  try {
+    return await decodeImage(src);
+  } catch {
+    const response = await fetch(src, { mode: "cors", cache: "reload" });
+    if (!response.ok) throw new Error(`Failed to load ${src}`);
+    const url = URL.createObjectURL(await response.blob());
+    try {
+      return await decodeImage(url);
+    } finally {
+      URL.revokeObjectURL(url);
+    }
+  }
 }
 
 /**
