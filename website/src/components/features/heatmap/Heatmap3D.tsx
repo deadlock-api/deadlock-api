@@ -14,6 +14,7 @@ import {
   buildHeatGrids,
   GRID_RES,
   heatmapName,
+  type HeatmapViewMode,
   interpolateColor,
   normalizeHeatGrids,
   sampleBilinear,
@@ -24,7 +25,7 @@ import { composeMap } from "./map-composite";
 import type { MapArt } from "./map-era";
 import { SensitivitySlider } from "./SensitivitySlider";
 
-type ViewMode = "kills" | "deaths" | "kd";
+type ViewMode = HeatmapViewMode;
 
 interface Heatmap3DProps {
   data: KillDeathStats[];
@@ -35,6 +36,8 @@ interface Heatmap3DProps {
   sensitivity: number;
   /** Cells with fewer events than this stay empty. */
   minEvents?: number;
+  /** The same filters for all heroes, which the share view compares `data` against. */
+  baseline?: KillDeathStats[];
   onSensitivityChange: (value: number) => void;
   /** The filters the events are drawn from, in words, for the map's accessible name: "The Hidden King, Haze". */
   scope?: string;
@@ -90,7 +93,7 @@ function HeatBarBand({
   );
 }
 
-function HeatBars({ grid, opacity }: { grid: Float32Array; opacity: number }) {
+function HeatBars({ grid, gamma, opacity }: { grid: Float32Array; gamma: number; opacity: number }) {
   const bands = useMemo(() => {
     const heightScale = 1.8;
     const barW = 4 / BAR_RES;
@@ -114,7 +117,7 @@ function HeatBars({ grid, opacity }: { grid: Float32Array; opacity: number }) {
 
         if (raw < HEAT_THRESHOLD) continue;
 
-        const t = raw ** 0.45;
+        const t = raw ** gamma;
         const height = Math.max(t * heightScale, 0.01);
 
         const x = (ix / (BAR_RES - 1)) * 4 - 2;
@@ -135,7 +138,7 @@ function HeatBars({ grid, opacity }: { grid: Float32Array; opacity: number }) {
     }
 
     return bandGroups.filter((b) => b.matrices.length > 0);
-  }, [grid]);
+  }, [grid, gamma]);
 
   return (
     <>
@@ -215,6 +218,7 @@ export default function Heatmap3D({
   viewMode,
   sensitivity,
   minEvents = 0,
+  baseline,
   onSensitivityChange,
   scope,
 }: Heatmap3DProps) {
@@ -224,15 +228,19 @@ export default function Heatmap3D({
   const [mapStatus, setMapStatus] = useState<"loading" | "ready" | "error">("loading");
   const [mapAttempt, setMapAttempt] = useState(0);
   const rawGrids = useMemo(() => (data.length > 0 ? buildHeatGrids(data, radius) : null), [data, radius]);
+  const baselineGrids = useMemo(
+    () => (viewMode === "share" && baseline && baseline.length > 0 ? buildHeatGrids(baseline, radius) : undefined),
+    [viewMode, baseline, radius],
+  );
 
-  const { grid, legendMax } = useMemo(() => {
-    if (!rawGrids) return { grid: new Float32Array(GRID_RES * GRID_RES), legendMax: 0 };
-    const result = normalizeHeatGrids(rawGrids, viewMode, sensitivity, minEvents);
-    return { grid: result.grid, legendMax: result.maxValue };
-  }, [rawGrids, viewMode, sensitivity, minEvents]);
+  const { grid, gamma, legendMax } = useMemo(() => {
+    if (!rawGrids) return { grid: new Float32Array(GRID_RES * GRID_RES), gamma: 1, legendMax: 0 };
+    const result = normalizeHeatGrids(rawGrids, viewMode, sensitivity, minEvents, baselineGrids);
+    return { grid: result.grid, gamma: result.gamma, legendMax: result.maxValue };
+  }, [rawGrids, viewMode, sensitivity, minEvents, baselineGrids]);
   const summary = useMemo(
-    () => (rawGrids ? summarizeHeatmap(data, rawGrids, viewMode) : "Nothing to plot."),
-    [data, rawGrids, viewMode],
+    () => (rawGrids ? summarizeHeatmap(data, rawGrids, viewMode, grid) : "Nothing to plot."),
+    [data, rawGrids, viewMode, grid],
   );
 
   return (
@@ -261,7 +269,7 @@ export default function Heatmap3D({
           <BasePlane />
           {/* A retry remounts the plane, which loads the images again. */}
           <MapPlane key={mapAttempt} mapImages={mapData.images} art={art} onStatusChange={setMapStatus} />
-          <HeatBars grid={grid} opacity={opacity} />
+          <HeatBars grid={grid} gamma={gamma} opacity={opacity} />
 
           <OrbitControls
             enablePan

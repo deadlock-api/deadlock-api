@@ -2,6 +2,23 @@ import type { KillDeathStats } from "deadlock_api_client";
 
 export const GRID_RES = 256;
 
+/** What the map shows: kill or death density, K/D, or a hero's share of the kills against all heroes. */
+export type HeatmapViewMode = "kills" | "deaths" | "kd" | "share";
+
+type HeatGrids = ReturnType<typeof buildHeatGrids>;
+
+/** A normalized grid in 0..1, the raw value its top stands for, and the gamma that maps a cell to its color. */
+export interface NormalizedHeatGrid {
+  grid: Float32Array;
+  maxValue: number;
+  gamma: number;
+}
+
+/** Density gamma: lifts the faint tail of a skewed count so sparse spots stay visible. */
+const DENSITY_GAMMA = 0.45;
+/** Kills a cell borrows at the hero's overall share, so a spot with a single kill does not read as 100% or 0%. */
+const SHARE_PRIOR = 5;
+
 export const GRADIENT_STOPS: { stop: number; r: number; g: number; b: number }[] = [
   { stop: 0, r: 0, g: 0, b: 20 },
   { stop: 0.15, r: 20, g: 0, b: 200 },
@@ -64,7 +81,7 @@ function buildRawGrid(data: KillDeathStats[], viewMode: "kills" | "deaths", radi
   return grid;
 }
 
-function clampAndNormalize(grid: Float32Array, percentile = 0.99): { grid: Float32Array; maxValue: number } {
+function clampAndNormalize(grid: Float32Array, percentile = 0.99): NormalizedHeatGrid {
   const nonZero = grid.filter((value) => value > 0).sort();
   const gridMax = nonZero[Math.floor(nonZero.length * percentile)] ?? nonZero.at(-1) ?? 0;
   if (gridMax > 0) {
@@ -72,19 +89,64 @@ function clampAndNormalize(grid: Float32Array, percentile = 0.99): { grid: Float
       grid[i] = Math.min(grid[i], gridMax) / gridMax;
     }
   }
-  return { grid, maxValue: gridMax };
+  return { grid, maxValue: gridMax, gamma: DENSITY_GAMMA };
+}
+
+/**
+ * A hero's kills over all heroes' kills per cell, against the hero's share of all kills: 1 is the same share as
+ * everywhere, 2 twice it. Drawn on a log scale around the middle of the ramp, so "more" and "less" sit symmetrically;
+ * `maxValue` is the ratio the top of the ramp stands for (its bottom is the inverse).
+ */
+function normalizeShare(hero: Float32Array, all: Float32Array, percentile: number, minEvents: number) {
+  const grid = new Float32Array(GRID_RES * GRID_RES);
+  let heroTotal = 0;
+  let allTotal = 0;
+  for (let i = 0; i < grid.length; i++) {
+    heroTotal += hero[i];
+    allTotal += all[i];
+  }
+  if (heroTotal <= 0 || allTotal <= 0) return { grid, maxValue: 0, gamma: 1 };
+
+  const share = heroTotal / allTotal;
+  const minActivity = Math.max(1, minEvents);
+  const logs = new Float32Array(grid.length);
+  const magnitudes: number[] = [];
+  for (let i = 0; i < grid.length; i++) {
+    if (all[i] < minActivity) continue;
+    logs[i] = Math.log((hero[i] + SHARE_PRIOR * share) / (all[i] + SHARE_PRIOR) / share);
+    magnitudes.push(Math.abs(logs[i]));
+  }
+  magnitudes.sort((a, b) => a - b);
+  // At least ±25%, so an even map does not stretch noise across the whole ramp.
+  const bound = Math.max(
+    Math.log(1.25),
+    magnitudes[Math.floor(magnitudes.length * percentile)] ?? magnitudes.at(-1) ?? 0,
+  );
+  for (let i = 0; i < grid.length; i++) {
+    if (all[i] < minActivity) continue;
+    // Never exactly 0, which draws as no data.
+    grid[i] = Math.max(0.01, 0.5 + 0.5 * Math.max(-1, Math.min(1, logs[i] / bound)));
+  }
+  return { grid, maxValue: Math.exp(bound), gamma: 1 };
 }
 
 /**
  * Normalize a copy so cached raw counts remain usable by tooltips and other views. A cell with fewer than `minEvents`
- * events (kills and deaths together for K/D) stays empty, so a spot with two kills and a death does not top the K/D map.
+ * events (kills and deaths together for K/D, all heroes' kills for the share) stays empty, so a spot with two kills and
+ * a death does not top the K/D map. The share view compares against `baseline`, the same filters for all heroes.
  */
 export function normalizeHeatGrids(
-  { killsRaw, deathsRaw }: ReturnType<typeof buildHeatGrids>,
-  viewMode: "kills" | "deaths" | "kd",
+  { killsRaw, deathsRaw }: HeatGrids,
+  viewMode: HeatmapViewMode,
   sensitivity = 0.99,
   minEvents = 0,
-): { grid: Float32Array; maxValue: number } {
+  baseline?: HeatGrids,
+): NormalizedHeatGrid {
+  if (viewMode === "share") {
+    if (!baseline) return { grid: new Float32Array(GRID_RES * GRID_RES), maxValue: 0, gamma: 1 };
+    return normalizeShare(killsRaw, baseline.killsRaw, sensitivity, minEvents);
+  }
+
   if (viewMode === "kd") {
     const grid = new Float32Array(GRID_RES * GRID_RES);
 
@@ -110,7 +172,10 @@ export function normalizeHeatGrids(
 export function buildHeatGrids(
   data: KillDeathStats[],
   radius: number,
-): { killsRaw: Float32Array; deathsRaw: Float32Array } {
+): {
+  killsRaw: Float32Array;
+  deathsRaw: Float32Array;
+} {
   return {
     killsRaw: buildRawGrid(data, "kills", radius),
     deathsRaw: buildRawGrid(data, "deaths", radius),
@@ -187,8 +252,10 @@ function regionOf(index: number): string {
  */
 export function summarizeHeatmap(
   data: KillDeathStats[],
-  { killsRaw, deathsRaw }: ReturnType<typeof buildHeatGrids>,
-  viewMode: "kills" | "deaths" | "kd",
+  { killsRaw, deathsRaw }: HeatGrids,
+  viewMode: HeatmapViewMode,
+  /** The share view's normalized grid, whose top is where the hero takes the largest share of the kills. */
+  shareGrid?: Float32Array,
 ): string {
   let kills = 0;
   let deaths = 0;
@@ -200,7 +267,13 @@ export function summarizeHeatmap(
   let hottestValue = 0;
   for (let i = 0; i < killsRaw.length; i++) {
     const value =
-      viewMode === "kills" ? killsRaw[i] : viewMode === "deaths" ? deathsRaw[i] : killsRaw[i] + deathsRaw[i];
+      viewMode === "share"
+        ? (shareGrid?.[i] ?? 0)
+        : viewMode === "kills"
+          ? killsRaw[i]
+          : viewMode === "deaths"
+            ? deathsRaw[i]
+            : killsRaw[i] + deathsRaw[i];
     if (value > hottestValue) {
       hottestValue = value;
       hottest = i;
@@ -208,13 +281,15 @@ export function summarizeHeatmap(
   }
   const plotted = `${kills.toLocaleString("en-US")} kills and ${deaths.toLocaleString("en-US")} deaths plotted`;
   if (hottest < 0) return `${plotted}.`;
+  if (viewMode === "share")
+    return `${plotted}; the hero's share of the kills is largest near the ${regionOf(hottest)} of the map.`;
   const what = viewMode === "kills" ? "kills" : viewMode === "deaths" ? "deaths" : "fighting";
   return `${plotted}; the most ${what} ${what === "fighting" ? "happens" : "happen"} near the ${regionOf(hottest)} of the map.`;
 }
 
-const VIEW_NAMES = { kills: "Kill", deaths: "Death", kd: "K/D" } as const;
+const VIEW_NAMES = { kills: "Kill", deaths: "Death", kd: "K/D", share: "Kill share" } as const;
 
 /** The accessible name of a heatmap view: "Kill heatmap, The Hidden King, Haze". */
-export function heatmapName(viewMode: "kills" | "deaths" | "kd", scope?: string): string {
+export function heatmapName(viewMode: HeatmapViewMode, scope?: string): string {
   return `${VIEW_NAMES[viewMode]} heatmap of the map${scope ? `, ${scope}` : ""}`;
 }

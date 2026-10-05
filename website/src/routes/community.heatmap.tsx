@@ -47,13 +47,14 @@ registerExactBoundaries([MAP_REWORK_START.unix()]);
 
 const Heatmap3D = lazy(() => import("~/components/features/heatmap/Heatmap3D"));
 
-const VIEW_MODES = ["kills", "deaths", "kd"] as const;
+const VIEW_MODES = ["kills", "deaths", "kd", "share"] as const;
 const TEAM_NAMES = ["The Hidden King", "The Archmother"] as const;
 
 const VIEW_MODE_LABELS: Record<(typeof VIEW_MODES)[number], string> = {
   kills: "Kills",
   deaths: "Deaths",
   kd: "K/D",
+  share: "Kill Share",
 };
 
 export const Route = createFileRoute("/community/heatmap")({
@@ -128,7 +129,19 @@ function HeatmapPage() {
   // `useQuery`, not `useQueries`: the latter starts a new observer for the new key, which has no previous data.
   const killDeathQuery = useQuery({ ...killDeathStatsQueryOptions(requestParams), placeholderData: keepPreviousData });
 
-  const { isPending, isError, error } = combineQueryStates(mapQuery, killDeathQuery);
+  // The share view divides the hero's kills by everyone's under the same filters.
+  const comparesShare = viewMode === "share" && heroId != null;
+  const baselineQuery = useQuery({
+    ...killDeathStatsQueryOptions({ ...requestParams, heroIds: undefined }),
+    enabled: comparesShare,
+    placeholderData: keepPreviousData,
+  });
+
+  const { isPending, isError, error } = combineQueryStates(
+    mapQuery,
+    killDeathQuery,
+    ...(comparesShare ? [baselineQuery] : []),
+  );
 
   const handleModeWithRankChange = ({ mode: nextMode, rank: [min, max] }: ModeWithRank) => {
     setMode(nextMode);
@@ -220,19 +233,26 @@ function HeatmapPage() {
           <ErrorState
             title="Failed to load heatmap data"
             description={error?.message}
-            retrying={mapQuery.isFetching || killDeathQuery.isFetching}
+            retrying={mapQuery.isFetching || killDeathQuery.isFetching || baselineQuery.isFetching}
             onRetry={() => {
               if (mapQuery.isError) void mapQuery.refetch();
               if (killDeathQuery.isError) void killDeathQuery.refetch();
+              if (baselineQuery.isError) void baselineQuery.refetch();
             }}
           />
+        ) : viewMode === "share" && heroId == null ? (
+          <EmptyState title="Pick a hero to see their share of the kills" />
         ) : killDeathQuery.data?.length === 0 ? (
           <EmptyState
             title="No kills or deaths for these filters"
             description="Kill positions cover matches from the last two months only. Try a more recent date range or wider filters."
           />
         ) : mapQuery.data && killDeathQuery.data ? (
-          <StaleOverlay active={killDeathQuery.isPlaceholderData} label="heatmap" className="size-full">
+          <StaleOverlay
+            active={killDeathQuery.isPlaceholderData || (comparesShare && baselineQuery.isPlaceholderData)}
+            label="heatmap"
+            className="size-full"
+          >
             {is3D ? (
               <ChunkErrorBoundary>
                 {/* Browser only: the server build stubs it (plugins/client-only-modules.mjs). */}
@@ -245,6 +265,7 @@ function HeatmapPage() {
                       viewMode={viewMode}
                       sensitivity={sensitivity / 10000}
                       minEvents={minEvents}
+                      baseline={baselineQuery.data}
                       onSensitivityChange={(v) => setOutlierSensitivity(Math.round(v * 10000))}
                       scope={scope}
                     />
@@ -259,6 +280,7 @@ function HeatmapPage() {
                 viewMode={viewMode}
                 sensitivity={sensitivity / 10000}
                 minEvents={minEvents}
+                baseline={baselineQuery.data}
                 onSensitivityChange={(v) => setOutlierSensitivity(Math.round(v * 10000))}
                 scope={scope}
               />

@@ -12,6 +12,7 @@ import {
   COLOR_LUT,
   GRID_RES,
   heatmapName,
+  type HeatmapViewMode,
   normalizeHeatGrids,
   sampleBilinear,
   summarizeHeatmap,
@@ -23,13 +24,15 @@ import { SensitivitySlider } from "./SensitivitySlider";
 
 const UNSIZED = { width: 0, height: 0 };
 
-type ViewMode = "kills" | "deaths" | "kd";
+type ViewMode = HeatmapViewMode;
 
 interface TooltipState {
   x: number;
   y: number;
   kills: number;
   deaths: number;
+  /** All heroes' kills under the cursor, in the share view. */
+  allKills?: number;
 }
 
 interface HeatmapCanvasProps {
@@ -41,6 +44,8 @@ interface HeatmapCanvasProps {
   sensitivity: number;
   /** Cells with fewer events than this stay empty. */
   minEvents?: number;
+  /** The same filters for all heroes, which the share view compares `data` against. */
+  baseline?: KillDeathStats[];
   onSensitivityChange: (value: number) => void;
   /** The filters the events are drawn from, in words, for the map's accessible name: "The Hidden King, Haze". */
   scope?: string;
@@ -53,6 +58,7 @@ export default function HeatmapCanvas({
   viewMode,
   sensitivity,
   minEvents = 0,
+  baseline,
   onSensitivityChange,
   scope,
 }: HeatmapCanvasProps) {
@@ -69,14 +75,18 @@ export default function HeatmapCanvas({
   const radius = mapData.radius ?? 10752;
 
   const rawGrids = useMemo(() => (data.length > 0 ? buildHeatGrids(data, radius) : null), [data, radius]);
+  const baselineGrids = useMemo(
+    () => (viewMode === "share" && baseline && baseline.length > 0 ? buildHeatGrids(baseline, radius) : undefined),
+    [viewMode, baseline, radius],
+  );
   const heatGrid = useMemo(
-    () => (rawGrids ? normalizeHeatGrids(rawGrids, viewMode, sensitivity, minEvents) : null),
-    [rawGrids, viewMode, sensitivity, minEvents],
+    () => (rawGrids ? normalizeHeatGrids(rawGrids, viewMode, sensitivity, minEvents, baselineGrids) : null),
+    [rawGrids, viewMode, sensitivity, minEvents, baselineGrids],
   );
   const legendMax = heatGrid?.maxValue ?? 0;
   const summary = useMemo(
-    () => (rawGrids ? summarizeHeatmap(data, rawGrids, viewMode) : "Nothing to plot."),
-    [data, rawGrids, viewMode],
+    () => (rawGrids ? summarizeHeatmap(data, rawGrids, viewMode, heatGrid?.grid) : "Nothing to plot."),
+    [data, rawGrids, viewMode, heatGrid],
   );
 
   useEffect(() => {
@@ -150,7 +160,7 @@ export default function HeatmapCanvas({
 
     if (!heatGrid) return;
 
-    const { grid } = heatGrid;
+    const { grid, gamma } = heatGrid;
 
     const imageData = heatCtx.createImageData(canvasWidth, canvasHeight);
     const pixels = imageData.data;
@@ -163,7 +173,7 @@ export default function HeatmapCanvas({
         const raw = sampleBilinear(grid, GRID_RES, GRID_RES, gx, gy);
         if (raw < 0.001) continue;
 
-        const t = raw ** 0.45;
+        const t = raw ** gamma;
         const lutIdx = Math.min(255, Math.round(t * 255)) * 4;
 
         const off = (py * canvasWidth + px) * 4;
@@ -208,7 +218,9 @@ export default function HeatmapCanvas({
       const kills = sampleBilinear(rawGrids.killsRaw, GRID_RES, GRID_RES, gx, gy);
       const deaths = sampleBilinear(rawGrids.deathsRaw, GRID_RES, GRID_RES, gx, gy);
 
-      if (kills < 0.5 && deaths < 0.5) {
+      const allKills = baselineGrids ? sampleBilinear(baselineGrids.killsRaw, GRID_RES, GRID_RES, gx, gy) : undefined;
+
+      if (kills < 0.5 && deaths < 0.5 && (allKills ?? 0) < 0.5) {
         setTooltip(null);
         return;
       }
@@ -218,9 +230,10 @@ export default function HeatmapCanvas({
         y: e.clientY - containerRect.top - 10,
         kills: Math.round(kills),
         deaths: Math.round(deaths),
+        allKills: allKills === undefined ? undefined : Math.round(allKills),
       });
     },
-    [rawGrids],
+    [rawGrids, baselineGrids],
   );
 
   const handleMouseLeave = useCallback(() => setTooltip(null), []);
@@ -280,7 +293,19 @@ export default function HeatmapCanvas({
             <TooltipStats variant="plain">
               <TooltipStat label="Kills" value={tooltip.kills.toLocaleString("en-US")} className="text-negative" />
               <TooltipStat label="Deaths" value={tooltip.deaths.toLocaleString("en-US")} className="text-info" />
-              {tooltip.deaths > 0 && <TooltipStat label="K/D" value={(tooltip.kills / tooltip.deaths).toFixed(2)} />}
+              {tooltip.allKills === undefined ? (
+                tooltip.deaths > 0 && <TooltipStat label="K/D" value={(tooltip.kills / tooltip.deaths).toFixed(2)} />
+              ) : (
+                <>
+                  <TooltipStat label="All heroes" value={tooltip.allKills.toLocaleString("en-US")} />
+                  {tooltip.allKills > 0 && (
+                    <TooltipStat
+                      label="Share"
+                      value={`${((Math.min(tooltip.kills, tooltip.allKills) / tooltip.allKills) * 100).toFixed(1)}%`}
+                    />
+                  )}
+                </>
+              )}
             </TooltipStats>
           </TooltipCard>
         )}
