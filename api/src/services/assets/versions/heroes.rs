@@ -424,6 +424,21 @@ pub(crate) struct Hero {
     pub item_draft_bucketing: Option<IndexMap<String, Option<DraftBucketing>>>,
 }
 
+impl Hero {
+    /// Whether `only_active` keeps the hero. A development state means a
+    /// 6711+ build, where `player_selectable` was derived from it.
+    pub(crate) fn is_active(&self) -> bool {
+        is_active(
+            self.development_state
+                .is_none()
+                .then_some(self.player_selectable),
+            self.development_state,
+            self.disabled,
+            self.in_development,
+        )
+    }
+}
+
 #[ComplexObject(rename_fields = "snake_case")]
 impl Hero {
     async fn item_draft_weights(&self) -> Json<Option<IndexMap<String, f64>>> {

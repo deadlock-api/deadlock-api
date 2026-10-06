@@ -46,11 +46,7 @@ pub(super) async fn list_heroes(
     // Filter at request time so the underlying cache entry is shared between
     // `only_active=true` and `only_active=false` callers.
     if q.only_active.unwrap_or(false) {
-        let filtered: Vec<Hero> = heroes
-            .iter()
-            .filter(|h| h.player_selectable && !h.disabled && !h.in_development)
-            .cloned()
-            .collect();
+        let filtered: Vec<Hero> = heroes.iter().filter(|h| h.is_active()).cloned().collect();
         Ok(Json(filtered).into_response())
     } else {
         Ok(Json(heroes).into_response())
