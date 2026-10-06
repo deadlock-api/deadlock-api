@@ -770,7 +770,14 @@ fn transform_root(
                 continue;
             }
         };
-        if only_active && (!is_player_selectable(&raw) || raw.disabled || raw.in_development) {
+        if only_active
+            && !is_active(
+                raw.player_selectable,
+                parse_development_state(&raw),
+                raw.disabled,
+                raw.in_development,
+            )
+        {
             continue;
         }
         out.push(transform(
@@ -794,6 +801,22 @@ fn parse_development_state(r: &RawHero) -> Option<HeroDevelopmentState> {
 fn is_player_selectable(r: &RawHero) -> bool {
     r.player_selectable
         .unwrap_or_else(|| parse_development_state(r) == Some(HeroDevelopmentState::Release))
+}
+
+/// Whether `only_active` keeps the hero. Builds before 6711 mark hero-labs and
+/// test heroes only with `m_bInDevelopment`; from 6711 the development state
+/// decides, and `m_bInDevelopment` no longer means unreleased (Baba shipped in
+/// 6757 as `EHeroDevState_Release` with it still set).
+fn is_active(
+    player_selectable: Option<bool>,
+    development_state: Option<HeroDevelopmentState>,
+    disabled: bool,
+    in_development: bool,
+) -> bool {
+    match player_selectable {
+        Some(selectable) => selectable && !disabled && !in_development,
+        None => development_state == Some(HeroDevelopmentState::Release) && !disabled,
+    }
 }
 
 #[expect(clippy::too_many_lines)]
@@ -1372,4 +1395,32 @@ fn build_from_sources(s: &ParsedSources, localization: &HashMap<String, String>)
         s.known_assets.as_deref(),
         false,
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::HeroDevelopmentState::{PreRelease, Release};
+    use super::*;
+
+    #[test]
+    fn released_hero_is_active_despite_in_development() {
+        // Build 6757: Baba shipped as released with `m_bInDevelopment` still set.
+        assert!(is_active(None, Some(Release), false, true));
+        assert!(is_active(None, Some(Release), false, false));
+    }
+
+    #[test]
+    fn pre_release_or_disabled_hero_is_inactive() {
+        assert!(!is_active(None, Some(PreRelease), false, false));
+        assert!(!is_active(None, None, false, false));
+        assert!(!is_active(None, Some(Release), true, false));
+    }
+
+    #[test]
+    fn legacy_hero_labs_hero_is_inactive() {
+        // Before 6711, hero-labs heroes were selectable but flagged in development.
+        assert!(!is_active(Some(true), None, false, true));
+        assert!(!is_active(Some(false), None, false, false));
+        assert!(is_active(Some(true), None, false, false));
+    }
 }
