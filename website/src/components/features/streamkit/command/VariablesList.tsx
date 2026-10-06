@@ -13,11 +13,12 @@ interface VariablesListProps {
 const CATEGORY_SORT: Record<string, number> = {
   General: 0,
   Daily: 1,
-  Leaderboard: 2,
-  Overall: 3,
-  Hero: 4,
-  Item: 5,
-  Miscellaneous: 6,
+  Season: 2,
+  Leaderboard: 3,
+  Overall: 4,
+  Hero: 5,
+  Item: 6,
+  Miscellaneous: 7,
 };
 
 function sort_weight(category: string): number {

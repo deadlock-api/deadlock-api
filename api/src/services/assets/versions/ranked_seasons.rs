@@ -142,6 +142,20 @@ pub(crate) fn interval_at(seasons: &[RankedSeason], now: i64) -> Option<u32> {
         .map(|i| i.interval)
 }
 
+/// The season running at `now` (unix seconds) with the `(start, end)` span of
+/// all its intervals. At a shared boundary the later-starting season wins, as
+/// in [`interval_at`].
+pub(crate) fn season_at(seasons: &[RankedSeason], now: i64) -> Option<(&RankedSeason, i64, i64)> {
+    seasons
+        .iter()
+        .filter_map(|s| {
+            let start = s.intervals.iter().map(|i| i.start_timestamp).min()?;
+            let end = s.intervals.iter().map(|i| i.end_timestamp).max()?;
+            (start..=end).contains(&now).then_some((s, start, end))
+        })
+        .max_by_key(|(_, start, _)| *start)
+}
+
 // ----- Cached fetch -----
 
 #[cached(
@@ -224,6 +238,13 @@ mod tests {
         assert_eq!(interval_at(&out, 1_791_493_199), Some(1));
         assert_eq!(interval_at(&out, 1_791_493_200), Some(2));
         assert_eq!(interval_at(&out, 1_800_000_000), Some(2));
+        // The season spans both intervals.
+        let (current, start, end) = season_at(&out, 1_800_000_000).expect("season running");
+        assert_eq!(
+            (current.class_name.as_str(), start, end),
+            ("season_1", 1_785_430_800, 1_830_326_400)
+        );
+        assert!(season_at(&out, 1_785_430_799).is_none());
         insta::with_settings!(
             { snapshot_path => "ranked_seasons_snapshots", prepend_module_to_snapshot => false },
             { insta::assert_json_snapshot!("ranked_seasons_6712", out); }
