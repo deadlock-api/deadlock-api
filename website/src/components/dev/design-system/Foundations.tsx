@@ -46,6 +46,11 @@ const COLOR_GROUPS: { name: string; note: string; tokens: string[] }[] = [
     ],
   },
   {
+    name: "Tiers",
+    note: "S to D of a tier list, warm to cool. The letter names the tier; the color only repeats it.",
+    tokens: ["tier-s", "tier-a", "tier-b", "tier-c", "tier-d"],
+  },
+  {
     name: "Game and third-party",
     note: "Item categories as colored in the client; the backdrops that stand in for the game world behind a crosshair; brand colors of services we link to.",
     tokens: [

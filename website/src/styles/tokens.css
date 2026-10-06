@@ -114,6 +114,12 @@
   --lane-yellow: #facc15;
   --lane-blue: #22d3ee;
   --lane-purple: #a78bfa;
+  /* Tier lists: S to D, warm to cool. The letter names the tier; the color only repeats it. */
+  --tier-s: var(--amber-400);
+  --tier-a: var(--series-orange);
+  --tier-b: var(--sky-400);
+  --tier-c: var(--series-violet);
+  --tier-d: var(--ink-400);
   /* Game identity: backdrops that stand in for the game world behind a HUD element (a crosshair). Mid grey is the
      default, so both a light and a dark element stay visible; light and dark test one against its worst case. */
   --stage-neutral: var(--grey-500);
@@ -218,6 +224,11 @@
   --color-item-weapon: var(--item-weapon);
   --color-item-vitality: var(--item-vitality);
   --color-item-spirit: var(--item-spirit);
+  --color-tier-s: var(--tier-s);
+  --color-tier-a: var(--tier-a);
+  --color-tier-b: var(--tier-b);
+  --color-tier-c: var(--tier-c);
+  --color-tier-d: var(--tier-d);
   --color-lane-yellow: var(--lane-yellow);
   --color-lane-blue: var(--lane-blue);
   --color-lane-purple: var(--lane-purple);

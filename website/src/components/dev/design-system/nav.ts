@@ -19,7 +19,15 @@ export const NAV: readonly NavChapter[] = [
     groups: [
       {
         title: "Color",
-        items: ["Surfaces", "Translucent layers", "Ink and brand", "Status", "Chart series", "Game and third-party"],
+        items: [
+          "Surfaces",
+          "Translucent layers",
+          "Ink and brand",
+          "Status",
+          "Chart series",
+          "Tiers",
+          "Game and third-party",
+        ],
       },
       { title: "Scales", items: ["Type scale", "Radius", "Shadow", "Control height"] },
     ],
@@ -190,6 +198,7 @@ export const NAV: readonly NavChapter[] = [
           "Table states",
         ],
       },
+      { title: "Tier list", items: ["TierList", "TierList grouped"] },
       { title: "Panel", items: ["Panel", "PanelWithDetails", "PanelSection", "PanelSection tone"] },
       {
         title: "States",

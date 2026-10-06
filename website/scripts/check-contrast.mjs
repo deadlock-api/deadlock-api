@@ -208,6 +208,13 @@ for (const [token, fill] of [
 ]) {
   variant(token, fill, UI_MIN);
 }
+// Tier list rows: the letter in ink on its tier's tint, and the tier's edge against the card as non-text UI.
+for (const tier of ["s", "a", "b", "c", "d"]) {
+  variant("foreground", `tier-${tier}/15 over card`);
+  variant(`tier-${tier}`, "card", UI_MIN);
+}
+// A highlighted tier list tile: its reading stays readable on the brand tint.
+variant("muted-foreground", "primary/15 over card");
 variant("muted-foreground", "secondary");
 variant("foreground", "primary/15 over secondary");
 variant("foreground", "primary/10 over card");
