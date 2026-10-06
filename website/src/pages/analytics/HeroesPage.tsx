@@ -374,13 +374,15 @@ export function HeroesPage() {
               </>
             ) : (
               <EmptyState
-                title="Rank breakdown is unavailable for Brawl"
-                description="Brawl does not use ranks. Explore its overall stats or switch to a normal game mode to compare ranks."
+                title={`Rank breakdown is unavailable for ${MODE_CONFIG[filters.mode].label}`}
+                description={`${MODE_CONFIG[filters.mode].label} matches have no rank. Explore their overall stats or switch to all normal matches to compare ranks.`}
                 action={
                   <>
-                    <Button onClick={() => filters.setTab("stats")}>View Brawl stats</Button>
+                    <Button onClick={() => filters.setTab("stats")}>
+                      View {MODE_CONFIG[filters.mode].label} stats
+                    </Button>
                     <Button variant="outline" onClick={() => filters.setMode("normal_all")}>
-                      Switch to normal mode
+                      Switch to all normal matches
                     </Button>
                   </>
                 }

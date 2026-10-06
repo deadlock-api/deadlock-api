@@ -13,6 +13,10 @@ test("modes without ranks drop the range", () => {
     effectiveMinRankId: undefined,
     effectiveMaxRankId: undefined,
   });
+  assert.deepEqual(getEffectiveRankRange("normal_unranked", 91, 116), {
+    effectiveMinRankId: undefined,
+    effectiveMaxRankId: undefined,
+  });
 });
 
 test("only Street Brawl lacks a soul economy", () => {

@@ -81,7 +81,9 @@ export function RankBenchmarks({
     ? `${rank?.name ?? `Tier ${range.tier}`} 1–6`
     : mode.supportsRank
       ? "All ranks"
-      : "Street Brawl";
+      : mode.gameMode === "street_brawl"
+        ? "Street Brawl"
+        : mode.label;
   const enabled = !needsRank && filters.result === "all";
   const sharedParams = {
     gameMode: mode.gameMode,

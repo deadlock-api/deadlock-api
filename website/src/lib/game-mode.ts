@@ -14,7 +14,8 @@ export const parseAsMatchMode = parseAsStringLiteral(MATCH_MODES).withDefault(DE
 
 /**
  * Game mode and match mode as one choice: Street Brawl is never played ranked, so the pairs
- * offered here are exactly the ones that can return data.
+ * offered here are exactly the ones that can return data. `supportsRank` says whether a rank range
+ * can narrow the mode; where it cannot, the rank filter is hidden and dropped from requests.
  */
 export const MODE_CONFIG = {
   normal_all: {
@@ -33,7 +34,8 @@ export const MODE_CONFIG = {
     label: "Unranked",
     gameMode: "normal",
     matchMode: "unranked",
-    supportsRank: true,
+    // Unranked lobbies carry no average badge, so any rank bound filters every match out.
+    supportsRank: false,
   },
   street_brawl: {
     label: "Brawl",

@@ -162,14 +162,13 @@ export function HeroesTab({
 
   const rankQuery = useQuery(trackerRankQueryOptions(accountId));
   const rank = rankQuery.data;
+  // Unranked and Brawl lobbies have no average badge, so they compare against all players.
+  const ranked = gameMode === "normal" && matchMode !== "unranked";
   // A successful unranked lookup can compare all players; an unavailable rank cannot choose a cohort.
-  const needsRank = gameMode === "normal";
+  const needsRank = ranked;
   const rankReady = !needsRank || rank !== undefined;
   const { data: ranks = [] } = useQuery(ranksQueryOptions);
-  const rankRange = useMemo(
-    () => (gameMode === "normal" ? benchmarkRankRange(rank?.badge) : null),
-    [gameMode, rank?.badge],
-  );
+  const rankRange = useMemo(() => (ranked ? benchmarkRankRange(rank?.badge) : null), [ranked, rank?.badge]);
   const tierName = ranks.find((rank) => rank.tier === rankRange?.tier)?.name;
 
   const averageParams = useMemo(
