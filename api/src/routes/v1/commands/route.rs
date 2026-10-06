@@ -172,14 +172,7 @@ pub(super) async fn command_resolve(
         .filter(|v| query.template.contains(&format!("{{{}}}", v.get_name())))
         .collect();
 
-    let context = ResolverContext::new(
-        &variables_needed,
-        &state.batchers.match_history_read,
-        &state.steam_client,
-        &state.batchers.match_history_insert,
-        query.account_id,
-    )
-    .await;
+    let context = ResolverContext::new(&variables_needed, &state, query.account_id).await;
 
     let mut resolved_template = query.template.clone();
     let results = futures::future::join_all(variables_needed.iter().map(|v| {
@@ -285,14 +278,7 @@ pub(super) async fn variables_resolve(
         .filter(|v| variables_to_resolve.contains(&v.get_name()))
         .collect();
 
-    let context = ResolverContext::new(
-        &variables_needed,
-        &state.batchers.match_history_read,
-        &state.steam_client,
-        &state.batchers.match_history_insert,
-        query.account_id,
-    )
-    .await;
+    let context = ResolverContext::new(&variables_needed, &state, query.account_id).await;
 
     let results = futures::future::join_all(variables_needed.iter().map(|v| async {
         match v

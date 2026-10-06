@@ -12,6 +12,7 @@ use valveprotos::deadlock::{CMsgClientToGcGetLeaderboardResponse, ECitadelMatchM
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
+use crate::routes::v1::assets::common::{Language, resolve_version};
 use crate::routes::v1::leaderboard::route::fetch_leaderboard_raw;
 use crate::routes::v1::leaderboard::types::{Leaderboard, LeaderboardEntry, LeaderboardRegion};
 use crate::routes::v1::players::match_history::{
@@ -20,6 +21,8 @@ use crate::routes::v1::players::match_history::{
 };
 use crate::routes::v1::players::rank::fetch_last_ranked_match;
 use crate::services::assets::client::AssetsClient;
+use crate::services::assets::versions::error::AssetsError;
+use crate::services::assets::versions::ranked_seasons::{fetch_ranked_seasons, season_at};
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::steam::client::SteamClient;
 use crate::services::steam::types::SteamProxyResponse;
@@ -36,6 +39,8 @@ pub(super) enum VariableResolveError {
     Request(#[from] reqwest::Error),
     #[error(transparent)]
     Api(#[from] APIError),
+    #[error(transparent)]
+    Assets(#[from] AssetsError),
 }
 
 #[derive(Debug, Serialize, Clone, Copy, ToSchema)]
@@ -45,6 +50,7 @@ pub(super) enum VariableCategory {
     Hero,
     Item,
     Leaderboard,
+    Season,
     Overall,
 }
 
@@ -99,6 +105,16 @@ pub(super) enum Variable {
     RankAndProgress,
     RankImg,
     RankProgress,
+    SeasonHoursPlayed,
+    SeasonKd,
+    SeasonKills,
+    SeasonLosses,
+    SeasonMatches,
+    SeasonMostPlayedHero,
+    SeasonName,
+    SeasonWinrate,
+    SeasonWins,
+    SeasonWinsLosses,
     TotalKd,
     TotalKills,
     TotalMatches,
@@ -117,23 +133,26 @@ pub(super) enum Variable {
 pub(super) struct ResolverContext {
     all_matches: Result<Vec<PlayerMatchHistoryEntry>, String>,
     todays_matches: Result<Vec<PlayerMatchHistoryEntry>, String>,
+    season: Result<CurrentSeason, String>,
+}
+
+/// The ranked season running now, spanning all of its intervals.
+struct CurrentSeason {
+    name: String,
+    start_timestamp: i64,
+    end_timestamp: i64,
 }
 
 impl ResolverContext {
-    pub(super) async fn new(
-        variables: &[&Variable],
-        match_history_read_batcher: &MatchHistoryReadBatcher,
-        steam_client: &SteamClient,
-        match_history_insert_batcher: &MatchHistoryInsertBatcher,
-        steam_id: u32,
-    ) -> Self {
+    pub(super) async fn new(variables: &[&Variable], state: &AppState, steam_id: u32) -> Self {
         let needs_all = variables.iter().any(|v| v.needs_all_matches());
         let needs_today = variables.iter().any(|v| v.needs_todays_matches());
+        let needs_season = variables.iter().any(|v| v.needs_season());
 
-        let (all_matches, todays_matches) = join(
+        let (all_matches, todays_matches, season) = tokio::join!(
             async {
                 if needs_all {
-                    Variable::get_all_matches(match_history_read_batcher, steam_id)
+                    Variable::get_all_matches(&state.batchers.match_history_read, steam_id)
                         .await
                         .map(core::iter::Iterator::collect)
                         .map_err(|e| e.to_string())
@@ -144,9 +163,9 @@ impl ResolverContext {
             async {
                 if needs_today {
                     Variable::get_todays_matches(
-                        match_history_read_batcher,
-                        steam_client,
-                        match_history_insert_batcher,
+                        &state.batchers.match_history_read,
+                        &state.steam_client,
+                        &state.batchers.match_history_insert,
                         steam_id,
                     )
                     .await
@@ -155,12 +174,21 @@ impl ResolverContext {
                     Ok(Vec::new())
                 }
             },
-        )
-        .await;
+            async {
+                if needs_season {
+                    Variable::get_current_season(state)
+                        .await
+                        .map_err(|e| e.to_string())
+                } else {
+                    Err("season not requested".to_owned())
+                }
+            },
+        );
 
         Self {
             all_matches,
             todays_matches,
+            season,
         }
     }
 
@@ -184,6 +212,23 @@ impl ResolverContext {
             .all_matches()?
             .iter()
             .filter(move |m| u32::from(m.hero_id) == hero_id))
+    }
+
+    fn season(&self) -> Result<&CurrentSeason, VariableResolveError> {
+        self.season
+            .as_ref()
+            .map_err(|_| VariableResolveError::NoData("current season"))
+    }
+
+    fn season_matches(
+        &self,
+    ) -> Result<impl Iterator<Item = &PlayerMatchHistoryEntry>, VariableResolveError> {
+        let season = self.season()?;
+        let range = season.start_timestamp..=season.end_timestamp;
+        Ok(self
+            .all_matches()?
+            .iter()
+            .filter(move |m| range.contains(&i64::from(m.start_time))))
     }
 }
 
@@ -229,6 +274,31 @@ impl Variable {
                 | Self::HeroLosses
                 | Self::HeroWinrate
                 | Self::HeroWins
+                | Self::SeasonHoursPlayed
+                | Self::SeasonKd
+                | Self::SeasonKills
+                | Self::SeasonLosses
+                | Self::SeasonMatches
+                | Self::SeasonMostPlayedHero
+                | Self::SeasonWinrate
+                | Self::SeasonWins
+                | Self::SeasonWinsLosses
+        )
+    }
+
+    fn needs_season(self) -> bool {
+        matches!(
+            self,
+            Self::SeasonName
+                | Self::SeasonHoursPlayed
+                | Self::SeasonKd
+                | Self::SeasonKills
+                | Self::SeasonLosses
+                | Self::SeasonMatches
+                | Self::SeasonMostPlayedHero
+                | Self::SeasonWinrate
+                | Self::SeasonWins
+                | Self::SeasonWinsLosses
         )
     }
 
@@ -265,6 +335,17 @@ impl Variable {
             | Self::WinsToday => VariableCategory::Daily,
 
             Self::LeaderboardPlace => VariableCategory::Leaderboard,
+
+            Self::SeasonHoursPlayed
+            | Self::SeasonKd
+            | Self::SeasonKills
+            | Self::SeasonLosses
+            | Self::SeasonMatches
+            | Self::SeasonMostPlayedHero
+            | Self::SeasonName
+            | Self::SeasonWinrate
+            | Self::SeasonWins
+            | Self::SeasonWinsLosses => VariableCategory::Season,
 
             Self::HighestDenies
             | Self::HighestKillCount
@@ -338,6 +419,16 @@ impl Variable {
             Self::MostPlayedHero => "Get the most played hero",
             Self::MostPlayedHeroCount => "Get the most played hero count",
             Self::SteamAccountName => "Get the steam account name",
+            Self::SeasonHoursPlayed => "Get the total hours played this season",
+            Self::SeasonKd => "Get the KD ratio this season",
+            Self::SeasonKills => "Get the total kills this season",
+            Self::SeasonLosses => "Get the number of losses this season",
+            Self::SeasonMatches => "Get the number of matches played this season",
+            Self::SeasonMostPlayedHero => "Get the most played hero this season",
+            Self::SeasonName => "Get the name of the current ranked season",
+            Self::SeasonWinrate => "Get the winrate this season",
+            Self::SeasonWins => "Get the number of wins this season",
+            Self::SeasonWinsLosses => "Get the number of wins and losses this season",
             Self::TotalKd => "Get the KD ratio",
             Self::TotalKills => "Get the total kills in all matches",
             Self::TotalMatches => "Get the total number of matches played",
@@ -367,6 +458,8 @@ impl Variable {
             Self::HeroWinrate => Some("{hero_name} Winrate"),
             Self::HeroWins => Some("{hero_name} Wins"),
             Self::WinsLossesToday => Some("Daily W-L"),
+            Self::SeasonWinsLosses => Some("Season W-L"),
+            Self::SeasonWinrate => Some("Season Winrate"),
             Self::LeaderboardPlace => Some("Place"),
             Self::MMRHistoryRank | Self::RankAndProgress => Some("Rank"),
             Self::RankProgress => Some("Progress"),
@@ -669,6 +762,74 @@ impl Variable {
                         });
                 Ok(format!("{wins}-{losses}"))
             }
+            Self::SeasonName => Ok(context.season()?.name.clone()),
+            Self::SeasonHoursPlayed => {
+                let seconds_playtime: u32 =
+                    context.season_matches()?.map(|m| m.match_duration_s).sum();
+                Ok(format!("{}h", seconds_playtime / 3600))
+            }
+            Self::SeasonKd => {
+                let (kills, deaths) = context
+                    .season_matches()?
+                    .fold((0, 0), |(kills, deaths), m| {
+                        (kills + m.player_kills, deaths + m.player_deaths)
+                    });
+                Ok(format!(
+                    "{:.2}",
+                    f64::from(kills) / f64::from(deaths.max(1))
+                ))
+            }
+            Self::SeasonKills => Ok(context
+                .season_matches()?
+                .map(|m| m.player_kills)
+                .sum::<u32>()
+                .to_string()),
+            Self::SeasonMatches => Ok(context.season_matches()?.count().to_string()),
+            Self::SeasonWins => Ok(context
+                .season_matches()?
+                .filter(|m| m.won())
+                .count()
+                .to_string()),
+            Self::SeasonLosses => Ok(context
+                .season_matches()?
+                .filter(|m| !m.won())
+                .count()
+                .to_string()),
+            Self::SeasonWinsLosses => {
+                let (wins, losses) = context.season_matches()?.fold((0, 0), |(wins, losses), m| {
+                    if m.won() {
+                        (wins + 1, losses)
+                    } else {
+                        (wins, losses + 1)
+                    }
+                });
+                Ok(format!("{wins}-{losses}"))
+            }
+            Self::SeasonWinrate => {
+                let (wins, total) = context.season_matches()?.fold((0, 0), |(wins, total), m| {
+                    (wins + i32::from(m.won()), total + 1)
+                });
+                Ok(format!(
+                    "{:.2}%",
+                    f64::from(wins) / f64::from(total.max(1)) * 100.0
+                ))
+            }
+            Self::SeasonMostPlayedHero => {
+                let most_played_hero = context
+                    .season_matches()?
+                    .counts_by(|m| m.hero_id)
+                    .into_iter()
+                    .max_by_key(|(_, count)| *count)
+                    .map(|(hero_id, _)| hero_id)
+                    .ok_or(VariableResolveError::NoData("season most played hero"))?;
+                state
+                    .assets_client
+                    .fetch_hero_name_from_id(u32::from(most_played_hero))
+                    .await
+                    .ok()
+                    .flatten()
+                    .ok_or(VariableResolveError::NoData("season most played hero name"))
+            }
             Self::LatestPatchnotesTitle => state
                 .steam_client
                 .fetch_patch_notes()
@@ -840,6 +1001,20 @@ impl Variable {
             .sorted_by_key(|e| e.match_id)
             .rev()
             .unique_by(|e| e.match_id))
+    }
+
+    async fn get_current_season(state: &AppState) -> Result<CurrentSeason, VariableResolveError> {
+        let version = resolve_version(state, None).await?;
+        let seasons =
+            fetch_ranked_seasons(&state.r2_client, version, Language::default().as_str()).await?;
+        let (season, start_timestamp, end_timestamp) =
+            season_at(&seasons, chrono::Utc::now().timestamp())
+                .ok_or(VariableResolveError::NoData("current season"))?;
+        Ok(CurrentSeason {
+            name: season.name.clone(),
+            start_timestamp,
+            end_timestamp,
+        })
     }
 
     async fn resolve_hero_id(
