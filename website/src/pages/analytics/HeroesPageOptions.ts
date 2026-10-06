@@ -63,7 +63,7 @@ function findTierList(
   if (!stats || !heroes) return [];
   const names = new Map(heroes.map((hero) => [hero.id, hero.name]));
   return rankHeroes(
-    stats.map((row) => ({ heroId: row.hero_id, wins: row.wins, matches: row.matches })),
+    stats.map((row) => ({ ...row, heroId: row.hero_id })),
     getPickrateMultiplier("normal"),
     bans ? computeBanRates([...bans]) : undefined,
   )

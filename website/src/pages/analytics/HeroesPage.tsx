@@ -26,12 +26,22 @@ import { QueryRenderer } from "~/components/patterns/states/QueryRenderer";
 import { Button } from "~/components/ui/button";
 import { Field } from "~/components/ui/field";
 import { SearchInput } from "~/components/ui/search-input";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "~/components/ui/select";
 import { Switch } from "~/components/ui/switch";
 import { Tabs, TabsContent } from "~/components/ui/tabs";
 import { type HeroTab, useHeroFilters } from "~/hooks/useHeroFilters";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { analyticsTabPath, ANALYTICS_VIEWS } from "~/lib/analytics-tabs";
-import { MODE_CONFIG } from "~/lib/game-mode";
+import { hasSoulEconomy, MODE_CONFIG } from "~/lib/game-mode";
+import { TIER_METRIC_DEFINITIONS, TIER_METRICS, type TierMetric, type TierMetricDefinition } from "~/lib/hero-tiers";
 import { heroScoreboardQueryOptions } from "~/queries/hero-scoreboard-query";
 import { BY_RANK_STATS, HERO_STATS, heroStatsFor } from "~/types/api_hero_stats";
 
@@ -82,6 +92,18 @@ export function HeroesPage() {
   const groupByTypeId = useId();
   // The tier list has its own switch for the same setting; an id is unique to one element.
   const tierGroupByTypeId = useId();
+  const tierMetricId = useId();
+  const [tierMetric, setTierMetric] = useQueryState(
+    "tier_metric",
+    parseAsStringLiteral(TIER_METRICS).withDefault("score"),
+  );
+  // Street Brawl has neither bans nor a soul economy: those metrics leave the list, and one chosen in another mode
+  // falls back to the tier score while the URL keeps it.
+  const tierMetrics = TIER_METRICS.filter((metric) => {
+    const definition: TierMetricDefinition = TIER_METRIC_DEFINITIONS[metric];
+    return hasSoulEconomy(filters.gameMode) || (!definition.bans && !definition.economy);
+  });
+  const shownTierMetric = tierMetrics.includes(tierMetric) ? tierMetric : "score";
   // In the URL like the table's other controls; replace, so each keystroke is not a history entry.
   const [heroNameQuery, setHeroNameQuery] = useQueryState(
     "hero_q",
@@ -208,6 +230,27 @@ export function HeroesPage() {
         <TabsContent value="tier-list">
           <Section titleDisplay="hidden" title="Hero Tier List">
             <FilterBar variant="toolbar" title="Tier list" icon={ListOrdered} aria-label="Tier list controls">
+              <Field label="Rank by" orientation="horizontal" htmlFor={tierMetricId}>
+                <Select value={shownTierMetric} onValueChange={(value) => void setTierMetric(value as TierMetric)}>
+                  <SelectTrigger id={tierMetricId} size="sm" className="w-40">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(["Draft", "Combat", "Economy"] as const).map((group) => (
+                      <SelectGroup key={group}>
+                        <SelectLabel>{group}</SelectLabel>
+                        {tierMetrics
+                          .filter((metric) => TIER_METRIC_DEFINITIONS[metric].group === group)
+                          .map((metric) => (
+                            <SelectItem key={metric} value={metric}>
+                              {TIER_METRIC_DEFINITIONS[metric].label}
+                            </SelectItem>
+                          ))}
+                      </SelectGroup>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </Field>
               <Field label="Group by Type" orientation="horizontal" htmlFor={tierGroupByTypeId}>
                 <Switch
                   id={tierGroupByTypeId}
@@ -220,6 +263,7 @@ export function HeroesPage() {
               <Suspense fallback={<LoadingState />}>
                 <HeroTierList
                   groupByType={groupByType}
+                  metric={shownTierMetric}
                   minRankId={filters.effectiveMinRankId}
                   maxRankId={filters.effectiveMaxRankId}
                   minHeroMatches={filters.minHeroMatches}

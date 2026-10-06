@@ -18,11 +18,31 @@ import { getPickrateMultiplier } from "~/lib/constants";
 import { formatPercent } from "~/lib/format";
 import type { GameMode, MatchMode } from "~/lib/game-mode";
 import { heroSlug } from "~/lib/hero-slug";
-import { rankHeroes, type RankedHero, TIERS } from "~/lib/hero-tiers";
+import { rankHeroes, type RankedHero, TIER_METRIC_DEFINITIONS, type TierMetric, TIERS } from "~/lib/hero-tiers";
 import { heroesQueryOptions, type SlimHero } from "~/queries/asset-queries";
 import { heroTierInputsQueryOptions } from "~/queries/hero-tier-query";
 
-function HeroTile({ hero, ranked, banRate }: { hero: SlimHero; ranked: RankedHero; banRate?: number }) {
+/** "win rate", "deaths per match (fewest first)". */
+function metricNote(metric: TierMetric): string {
+  const definition: { label: string; group: string; lowerIsBetter?: boolean } = TIER_METRIC_DEFINITIONS[metric];
+  const name = definition.label === "KDA" ? "KDA" : definition.label.toLowerCase();
+  const perMatch = definition.group === "Draft" || metric === "kda" || metric === "accuracy" ? "" : " per match";
+  return `${name}${perMatch}${definition.lowerIsBetter ? " (fewest first)" : ""}`;
+}
+
+const COMPACT = new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 1 });
+
+/** A reading as the metric prints it: 52.4%, 6.3, 31.2K. */
+function formatReading(metric: TierMetric, value: number): string {
+  const { format } = TIER_METRIC_DEFINITIONS[metric];
+  if (format === "percent") return formatPercent(value);
+  if (format === "integer") return COMPACT.format(value);
+  if (metric === "score") return `${value > 0 ? "+" : ""}${value.toFixed(2)}`;
+  return value.toFixed(1);
+}
+
+function HeroTile({ hero, ranked, metric }: { hero: SlimHero; ranked: RankedHero; metric: TierMetric }) {
+  const draft = TIER_METRIC_DEFINITIONS[metric].group === "Draft";
   return (
     <Tooltip
       content={
@@ -35,9 +55,15 @@ function HeroTile({ hero, ranked, banRate }: { hero: SlimHero; ranked: RankedHer
           <TooltipStats>
             <TooltipStat label="Win rate" value={formatPercent(ranked.winRate)} />
             <TooltipStat label="Pick rate" value={formatPercent(ranked.pickRate)} />
-            {banRate != null && <TooltipStat label="Ban rate" value={formatPercent(banRate)} />}
+            {ranked.banRate != null && <TooltipStat label="Ban rate" value={formatPercent(ranked.banRate)} />}
             <TooltipStat label="Matches" value={ranked.matches.toLocaleString("en-US")} />
             <TooltipStat label="Tier score" value={ranked.score.toFixed(2)} />
+            {!draft && (
+              <TooltipStat
+                label={`${TIER_METRIC_DEFINITIONS[metric].label} per match`}
+                value={formatReading(metric, ranked.reading)}
+              />
+            )}
           </TooltipStats>
         </>
       }
@@ -48,8 +74,8 @@ function HeroTile({ hero, ranked, banRate }: { hero: SlimHero; ranked: RankedHer
         media={<HeroImage hero={hero} shape="rounded" title="" className="size-10" />}
         meta={
           <>
-            {formatPercent(ranked.winRate)}
-            <span className="sr-only"> win rate</span>
+            {formatReading(metric, ranked.reading)}
+            <span className="sr-only"> {TIER_METRIC_DEFINITIONS[metric].label.toLowerCase()}</span>
           </>
         }
       >
@@ -67,6 +93,7 @@ const capitalize = (text: string) => text.charAt(0).toUpperCase() + text.slice(1
  */
 export function HeroTierList({
   groupByType = false,
+  metric = "score",
   minRankId,
   maxRankId,
   minHeroMatches,
@@ -77,6 +104,8 @@ export function HeroTierList({
   matchMode,
 }: {
   groupByType?: boolean;
+  /** What the tiers rank by; the combined tier score by default. */
+  metric?: TierMetric;
   minRankId?: number;
   maxRankId?: number;
   minHeroMatches?: number;
@@ -109,11 +138,12 @@ export function HeroTierList({
   const ranked = useMemo(
     () =>
       rankHeroes(
-        (inputsQuery.data?.stats ?? []).map((row) => ({ heroId: row.hero_id, wins: row.wins, matches: row.matches })),
+        (inputsQuery.data?.stats ?? []).map((row) => ({ ...row, heroId: row.hero_id })),
         getPickrateMultiplier(gameMode),
         banRates,
+        metric,
       ),
-    [inputsQuery.data, banRates, gameMode],
+    [inputsQuery.data, banRates, gameMode, metric],
   );
   const heroById = useMemo(() => new Map((heroesQuery.data ?? []).map((hero) => [hero.id, hero])), [heroesQuery.data]);
 
@@ -143,12 +173,7 @@ export function HeroTierList({
     : [];
   const columnCount = Math.min(4, Math.max(2, types.length)) as 2 | 3 | 4;
   const tile = (entry: RankedHero) => (
-    <HeroTile
-      key={entry.heroId}
-      hero={heroById.get(entry.heroId)!}
-      ranked={entry}
-      banRate={banRates?.get(entry.heroId)}
-    />
+    <HeroTile key={entry.heroId} hero={heroById.get(entry.heroId)!} ranked={entry} metric={metric} />
   );
   const scoreParts = banData ? "60% win rate, 25% pick rate and 15% ban rate" : "71% win rate and 29% pick rate";
 
@@ -185,8 +210,9 @@ export function HeroTierList({
         </TierList>
       </StaleOverlay>
       <Text as="p" variant="caption" tone="muted">
-        Sorted by tier score: {scoreParts}, each measured against the average hero. Within a tier, the highest score
-        comes first.
+        {metric === "score" || (metric === "banRate" && !banRates)
+          ? `Sorted by tier score: ${scoreParts}, each measured against the average hero. Within a tier, the highest score comes first.`
+          : `Ranked by ${metricNote(metric)}: tiers mark how far a hero sits from the average hero. Within a tier, the best comes first.`}
       </Text>
     </Stack>
   );
