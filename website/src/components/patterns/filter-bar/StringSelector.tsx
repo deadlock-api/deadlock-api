@@ -60,13 +60,39 @@ export function StringOption({ value, disabled = false, className, onClick, chil
   );
 }
 
+interface StringOptionGroupProps extends Omit<React.ComponentProps<"fieldset">, "children"> {
+  /** Names the group, above its options. */
+  label: string;
+  /** `StringOption`s. */
+  children?: ReactNode;
+}
+
+/** Options of a long `StringSelector` under a heading ("Combat", "Economy"). Groups always show the list. */
+export function StringOptionGroup({ label, className, children, ...props }: StringOptionGroupProps) {
+  return (
+    <fieldset data-slot="string-option-group" className={cn("flex min-w-0 flex-col", className)} {...props}>
+      <legend className="px-2 pt-2 pb-1 type-caption font-semibold text-muted-foreground">{label}</legend>
+      {children}
+    </fieldset>
+  );
+}
+
+/** The options among the children, those inside groups included. */
+function optionsOf(children: ReactNode): React.ReactElement<StringOptionProps>[] {
+  return Children.toArray(children).flatMap((child) => {
+    if (!isValidElement<StringOptionProps | StringOptionGroupProps>(child)) return [];
+    if (child.type === StringOptionGroup) return optionsOf(child.props.children);
+    return [child as React.ReactElement<StringOptionProps>];
+  });
+}
+
 interface StringSelectorProps extends FilterCellPassthroughProps {
   label?: string;
   value?: string | null;
   /** The value the filter starts from and resets to. Without it (and without an empty option) there is no reset. */
   defaultValue?: string;
   onValueChange?: (value: string) => void;
-  /** `StringOption`s, as direct children. */
+  /** `StringOption`s, as direct children or inside `StringOptionGroup`s. */
   children?: ReactNode;
 }
 
@@ -85,9 +111,10 @@ export function StringSelector({
     onValueChange,
   });
 
-  const optionElements = Children.toArray(children).filter((child) => isValidElement<StringOptionProps>(child));
+  const optionElements = optionsOf(children);
+  const grouped = Children.toArray(children).some((child) => isValidElement(child) && child.type === StringOptionGroup);
   const hasEmptyOption = optionElements.some((child) => child.props.value === "");
-  const display = optionElements.length <= SEGMENTED_MAX_OPTIONS ? "segmented" : "list";
+  const display = !grouped && optionElements.length <= SEGMENTED_MAX_OPTIONS ? "segmented" : "list";
 
   const displayValue = current
     ? optionElements.find((child) => child.props.value === current)?.props.children
@@ -116,7 +143,8 @@ export function StringSelector({
           {items}
         </Segmented>
       ) : (
-        <div className="flex flex-col">{items}</div>
+        // A long list scrolls inside the popover instead of running off the screen.
+        <div className="flex max-h-80 flex-col overflow-y-auto">{items}</div>
       )}
     </FilterCell>
   );

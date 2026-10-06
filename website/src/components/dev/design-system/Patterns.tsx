@@ -21,7 +21,7 @@ import { DateRangePicker } from "~/components/patterns/filter-bar/DateRangePicke
 import { FilterBar } from "~/components/patterns/filter-bar/FilterBar";
 import { FilterCell, FilterToggleCell } from "~/components/patterns/filter-bar/FilterCell";
 import { NumberSelector } from "~/components/patterns/filter-bar/NumberSelector";
-import { StringOption, StringSelector } from "~/components/patterns/filter-bar/StringSelector";
+import { StringOption, StringOptionGroup, StringSelector } from "~/components/patterns/filter-bar/StringSelector";
 import { type TriState, TriStateItem, TriStateSelector } from "~/components/patterns/filter-bar/TriStateSelector";
 import { ResponsiveTab, ResponsiveTabsList } from "~/components/patterns/navigation/ResponsiveTabsList";
 import { PageHeader } from "~/components/patterns/page/PageHeader";
@@ -234,7 +234,7 @@ export function Patterns() {
       <Specimen
         name="FilterBar cells"
         source="patterns/filter-bar/FilterBar · FilterCell · StringSelector · NumberSelector · TriStateSelector · DateRangePicker"
-        note="The filters of a page: two across on a phone, three on a tablet, one row on a desktop. A changed filter is underlined and gets a reset."
+        note="The filters of a page: two across on a phone, three on a tablet, one row on a desktop. A changed filter is underlined and gets a reset. StringSelector shows up to five options as segments, more as a list; StringOptionGroups put headings over a long list (Rank by)."
       >
         <Variants className="block">
           <FilterBar>
@@ -249,6 +249,16 @@ export function Patterns() {
                   {value}
                 </StringOption>
               ))}
+            </StringSelector>
+            <StringSelector label="Rank by" defaultValue="score">
+              <StringOptionGroup label="Draft">
+                <StringOption value="score">Tier score</StringOption>
+                <StringOption value="winRate">Win rate</StringOption>
+              </StringOptionGroup>
+              <StringOptionGroup label="Combat">
+                <StringOption value="kills">Kills</StringOption>
+                <StringOption value="deaths">Deaths</StringOption>
+              </StringOptionGroup>
             </StringSelector>
             <NumberSelector
               label="Min matches"
