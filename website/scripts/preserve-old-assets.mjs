@@ -25,7 +25,9 @@ const ROOT = resolve(scriptDir, "..");
 const CLIENT = join(ROOT, "dist", "client");
 const DIST_ASSETS = join(CLIENT, "assets");
 const HISTORY_FILE = "asset-history.json";
-const RETENTION_MS = 3 * 24 * 60 * 60 * 1000;
+// Googlebot renders pages days after fetching them: at 3 days it got a 404 for ~9% of its chunk requests, all from
+// builds already dropped. With a dozen deploys a day, MAX_ASSETS is what usually ends the window.
+const RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
 // Workers Static Assets allows 20,000 files per version on the Free plan.
 const MAX_ASSETS = 15_000;
 const CONCURRENCY = 16;
