@@ -82,15 +82,26 @@ jobs:
         run: |
           curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
           echo "$HOME/.cargo/bin" >> $GITHUB_PATH
-      - name: Cache Rust dependencies
-        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+      # Sticky disks instead of rust-cache, see the lint job in rust-ci-checks.yml.
+      - name: Mount cargo registry
+        uses: useblacksmith/stickydisk@3f6be1451e3cad893b778bc93495c80452a5da26 # v1.7.2
         with:
-          # Dedicated key: the test profile's artifacts differ from the clippy
-          # job's, so they must not share a (immutable) cache key.
-          shared-key: "api-test-cache-${{ runner.os }}-${{ runner.arch }}"
-          # PR runs restore master's cache but don't save their own copy, so
-          # ref-scoped duplicates don't evict master's entries from the quota.
-          save-if: ${{ github.ref == 'refs/heads/master' }}
+          key: ${{ github.repository }}-cargo-registry
+          path: ~/.cargo/registry
+          commit: ${{ github.ref == 'refs/heads/master' && 'on-change' || 'false' }}
+      - name: Mount cargo git
+        uses: useblacksmith/stickydisk@3f6be1451e3cad893b778bc93495c80452a5da26 # v1.7.2
+        with:
+          key: ${{ github.repository }}-cargo-git
+          path: ~/.cargo/git
+          commit: ${{ github.ref == 'refs/heads/master' && 'on-change' || 'false' }}
+      - name: Mount target
+        uses: useblacksmith/stickydisk@3f6be1451e3cad893b778bc93495c80452a5da26 # v1.7.2
+        with:
+          # Dedicated disk: the test profile's artifacts differ from the clippy job's.
+          key: ${{ github.repository }}-api-test-target
+          path: target
+          commit: ${{ github.ref == 'refs/heads/master' && 'on-change' || 'false' }}
       - name: Tests
         run: cargo test --locked -p deadlock-api-rust
         env:
@@ -102,6 +113,14 @@ jobs:
           R2_BUCKET: ${{ secrets.R2_BUCKET }}
           R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
           R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          CARGO_INCREMENTAL: "0"
+      - uses: taiki-e/cache-cargo-install-action@9ee83daaa7b96a6fab930949ecf1122bba04a389 # v3.0.8
+        if: github.ref == 'refs/heads/master'
+        with:
+          tool: cargo-sweep
+      - name: Prune target
+        if: github.ref == 'refs/heads/master'
+        run: cargo sweep --time 7
 
   ###############################
   ##  Stage 2b: Build Image    ##

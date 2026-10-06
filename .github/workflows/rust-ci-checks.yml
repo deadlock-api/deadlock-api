@@ -41,7 +41,7 @@ on:
         type: boolean
         default: false
       rust-cache-shared-key:
-        description: "Shared key prefix for Swatinem/rust-cache."
+        description: "Shared key prefix for Swatinem/rust-cache, or for the sticky disks on Blacksmith runners."
         required: true
         type: string
 
@@ -92,6 +92,7 @@ jobs:
     runs-on: ${{ inputs.lint-runs-on }}
     env:
       SQLX_OFFLINE: "true"
+      CARGO_INCREMENTAL: "0"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Install system dependencies
@@ -101,7 +102,32 @@ jobs:
         run: |
           curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
           echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+      # Blacksmith serves rust-cache from GitHub's backend at ~3.5 MB/s (4 min for
+      # 1 GB); sticky disks mount in seconds. Only master commits them, like
+      # rust-cache's save-if, so PR runs read master's disks without writing.
+      - name: Mount cargo registry
+        if: startsWith(inputs.lint-runs-on, 'blacksmith')
+        uses: useblacksmith/stickydisk@3f6be1451e3cad893b778bc93495c80452a5da26 # v1.7.2
+        with:
+          key: ${{ github.repository }}-cargo-registry
+          path: ~/.cargo/registry
+          commit: ${{ github.ref == 'refs/heads/master' && 'on-change' || 'false' }}
+      - name: Mount cargo git
+        if: startsWith(inputs.lint-runs-on, 'blacksmith')
+        uses: useblacksmith/stickydisk@3f6be1451e3cad893b778bc93495c80452a5da26 # v1.7.2
+        with:
+          key: ${{ github.repository }}-cargo-git
+          path: ~/.cargo/git
+          commit: ${{ github.ref == 'refs/heads/master' && 'on-change' || 'false' }}
+      - name: Mount target
+        if: startsWith(inputs.lint-runs-on, 'blacksmith')
+        uses: useblacksmith/stickydisk@3f6be1451e3cad893b778bc93495c80452a5da26 # v1.7.2
+        with:
+          key: ${{ github.repository }}-${{ inputs.rust-cache-shared-key }}-target
+          path: target
+          commit: ${{ github.ref == 'refs/heads/master' && 'on-change' || 'false' }}
       - name: Cache Rust dependencies
+        if: ${{ !startsWith(inputs.lint-runs-on, 'blacksmith') }}
         uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
           shared-key: "${{ inputs.rust-cache-shared-key }}-${{ runner.os }}-${{ runner.arch }}"
@@ -111,3 +137,13 @@ jobs:
       - run: rustup component add clippy
       - name: Cargo Clippy
         run: cargo clippy $(printf -- '-p %s ' ${{ inputs.packages }}) --all-targets --locked ${{ inputs.clippy-args }} -- -D warnings
+      # A sticky target dir is never pruned by rust-cache, so artifacts of old
+      # dependency versions pile up. Atime-based: relatime updates atime about
+      # daily, so anything a build used within the week survives.
+      - uses: taiki-e/cache-cargo-install-action@9ee83daaa7b96a6fab930949ecf1122bba04a389 # v3.0.8
+        if: startsWith(inputs.lint-runs-on, 'blacksmith') && github.ref == 'refs/heads/master'
+        with:
+          tool: cargo-sweep
+      - name: Prune target
+        if: startsWith(inputs.lint-runs-on, 'blacksmith') && github.ref == 'refs/heads/master'
+        run: cargo sweep --time 7
