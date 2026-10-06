@@ -23,11 +23,12 @@ Read-only SQL access to hourly parquet snapshots of the Deadlock API database (h
 
 - Database `deadlock`, schema `main`; unqualified table names resolve there.
 - Engine: DuckDB (DuckDB SQL dialect). The database is attached read-only: CREATE, INSERT, UPDATE, DELETE, DROP, SET and extension loading fail.
-- Results are capped at 1,024 rows and 50 KB per query; queries time out after 300 seconds.
+- Results are capped at 1,024 rows and 50 KB per query; queries time out after 45 seconds.
 - Column comments carry the original ClickHouse type. Table comments say how the table is exported.
 - Only read queries run: SELECT, WITH, FROM, DESCRIBE, SHOW, SUMMARIZE.
 - `match_player` holds hundreds of gigabytes in parquet files split by `match_id` range. Filters on `match_id` or `start_time` skip whole files and are fast; a filter on `account_id` alone has to scan everything and is slow, so combine it with a `start_time` range. Select only needed columns and use LIMIT.
-- `match_player` is exported incrementally, so up to ~2% of rows can appear twice with different `created_at`. `match_player_latest` keeps only the newest row per (`match_id`, `account_id`); prefer it when counts matter.
+- Only `match_id` and `start_time` skip files. Filters on other columns (`match_mode`, `game_mode`, `hero_id`, ...) still read every file, so always add a `start_time` range (e.g. the last 7 days) to queries over `match_player` or `match_player_latest`, even for a plain `min`/`max`.
+- `match_player` is exported incrementally, so up to ~2% of rows can appear twice with different `created_at`. `match_player_latest` keeps only the newest row per (`match_id`, `account_id`), which costs extra work; prefer it when counts matter, and `match_player` for ranges and rough aggregates.
 - Schema exploration: `SHOW TABLES`, `DESCRIBE match_player`, `SUMMARIZE match_salts`, `duckdb_columns()`.
 - DuckDB extras: `SELECT * EXCLUDE (col)`, `GROUP BY ALL`, `QUALIFY`, `arg_max(x, y)`, list/struct literals, `strftime`/`date_trunc`.
 - Heroes and items (abilities, weapons, shop upgrades) are stored as numeric ids. `list_heroes` and `list_items` map them to names; pass an `id` to get the full details of one hero or item.";
@@ -396,6 +397,7 @@ fn describe_query_error(error: &QueryError) -> (String, String) {
         let error_type = match error {
             QueryError::NotReady => "NotReadyError",
             QueryError::Timeout => "TimeoutError",
+            QueryError::Busy => "BusyError",
             QueryError::Cancelled => "CancelledError",
             QueryError::NotReadOnly => "PermissionError",
             QueryError::DuckDb(_) => "DuckDBError",

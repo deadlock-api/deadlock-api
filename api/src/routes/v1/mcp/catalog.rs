@@ -17,9 +17,13 @@ use crate::services::data_dump::manifest::{Manifest, PolicyKind, TableStatus};
 pub(crate) const DATABASE: &str = "deadlock";
 pub(crate) const SCHEMA: &str = "main";
 pub(crate) const MAX_ROWS: usize = 1024;
-pub(crate) const QUERY_TIMEOUT: Duration = Duration::from_secs(300);
+/// Below the tool-call timeouts of MCP clients (about a minute): a query that outlives the
+/// client only holds a query slot nobody is waiting on.
+pub(crate) const QUERY_TIMEOUT: Duration = Duration::from_secs(45);
+/// How long a query waits for a free slot before it is turned away as busy.
+const QUEUE_TIMEOUT: Duration = Duration::from_secs(10);
 const REFRESH_INTERVAL: Duration = Duration::from_secs(300);
-const MAX_CONCURRENT_QUERIES: usize = 4;
+const MAX_CONCURRENT_QUERIES: usize = 16;
 const MEMORY_LIMIT: &str = "6GB";
 /// Remote parquet scans wait on R2, not the CPU: more threads mean more requests in flight.
 const THREADS: i64 = 16;
@@ -54,8 +58,13 @@ pub enum CatalogError {
 pub(crate) enum QueryError {
     #[error("The snapshot catalog is still loading, retry in a few seconds")]
     NotReady,
-    #[error("Query timed out after {} seconds", QUERY_TIMEOUT.as_secs())]
+    #[error(
+        "Query timed out after {} seconds; filter `match_player` on `match_id` or `start_time` and select fewer columns",
+        QUERY_TIMEOUT.as_secs()
+    )]
     Timeout,
+    #[error("All query slots are busy with other queries, retry in a few seconds")]
+    Busy,
     #[error("Query execution was cancelled")]
     Cancelled,
     #[error("Only read queries are allowed: SELECT, WITH, FROM, DESCRIBE, SHOW or SUMMARIZE")]
@@ -116,7 +125,7 @@ pub(crate) struct SnapshotCatalog {
     manifest_url: String,
     work_dir: PathBuf,
     snapshot: ArcSwapOption<Snapshot>,
-    query_permits: Semaphore,
+    query_permits: Arc<Semaphore>,
 }
 
 impl SnapshotCatalog {
@@ -131,7 +140,7 @@ impl SnapshotCatalog {
             manifest_url: config.manifest_url.clone(),
             work_dir,
             snapshot: ArcSwapOption::empty(),
-            query_permits: Semaphore::new(MAX_CONCURRENT_QUERIES),
+            query_permits: Arc::new(Semaphore::new(MAX_CONCURRENT_QUERIES)),
         })
     }
 
@@ -154,11 +163,14 @@ impl SnapshotCatalog {
 
     pub(crate) async fn query(&self, sql: String) -> Result<QueryOutput, QueryError> {
         let snapshot = self.snapshot().ok_or(QueryError::NotReady)?;
+        let permit = tokio::time::timeout(
+            QUEUE_TIMEOUT,
+            Arc::clone(&self.query_permits).acquire_owned(),
+        )
+        .await
+        .map_err(|_| QueryError::Busy)?
+        .map_err(|_| QueryError::Cancelled)?;
         let deadline = tokio::time::Instant::now() + QUERY_TIMEOUT;
-        let _permit = tokio::time::timeout_at(deadline, self.query_permits.acquire())
-            .await
-            .map_err(|_| QueryError::Timeout)?
-            .map_err(|_| QueryError::Cancelled)?;
         let conn = snapshot
             .conn
             .lock()
@@ -166,8 +178,10 @@ impl SnapshotCatalog {
             .try_clone()?;
         let interrupt = conn.interrupt_handle();
         let task = tokio::task::spawn_blocking(move || {
-            // Keeps the database alive while the cloned connection runs.
+            // Keeps the database alive while the cloned connection runs, and the slot taken
+            // until an interrupted query has actually stopped.
             let _snapshot = snapshot;
+            let _permit = permit;
             run_query(&conn, &sql)
         });
         let Ok(joined) = tokio::time::timeout_at(deadline, task).await else {

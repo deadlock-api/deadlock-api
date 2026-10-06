@@ -340,6 +340,7 @@ dependencies = [
  "arrow-data 58.4.0",
  "arrow-schema 58.4.0",
  "chrono",
+ "chrono-tz",
  "half",
  "hashbrown 0.17.1",
  "num-complex",
