@@ -50,6 +50,8 @@ export const queryKeys = {
       ["api-item-permutation-stats", params] as const,
     heroStats: (params: AnalyticsApiHeroStatsRequest) => ["api-hero-stats", params] as const,
     heroBanStats: (params: AnalyticsApiHeroBanStatsRequest) => ["api-hero-ban-stats", params] as const,
+    heroTierInputs: (stats: AnalyticsApiHeroStatsRequest, bans: AnalyticsApiHeroBanStatsRequest | null) =>
+      ["hero-tier-inputs", stats, bans] as const,
     heroSynergyStats: (params: AnalyticsApiHeroSynergiesStatsRequest) => ["api-hero-synergy-stats", params] as const,
     heroCounterStats: (params: AnalyticsApiHeroCountersStatsRequest) => ["api-hero-counter-stats", params] as const,
     heroCombStats: (params: AnalyticsApiHeroCombStatsRequest) => ["api-hero-comb-stats", params] as const,

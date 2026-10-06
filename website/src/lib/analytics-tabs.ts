@@ -4,6 +4,7 @@ import { redirect } from "@tanstack/react-router";
 export const ANALYTICS_TABS = {
   heroes: {
     stats: "",
+    "tier-list": "tier-list",
     "stats-over-time": "over-time",
     "stats-by-duration": "by-duration",
     "stats-by-rank": "by-rank",
@@ -92,6 +93,12 @@ export const ANALYTICS_VIEWS: { [S in AnalyticsSection]: Record<AnalyticsTab<S>,
       summary: "Compare hero performance across ranks, patches, and game modes.",
       description:
         "Win, pick and ban rates for every Deadlock hero. Filter by rank, patch and game mode, updated daily.",
+    },
+    "tier-list": {
+      title: "Deadlock Tier List: Best Heroes by Win Rate",
+      heading: "Deadlock Hero Tier List",
+      summary: "Every hero ranked S to D by win, pick and ban rate.",
+      description: "Deadlock hero tier list from live matches: every hero ranked S to D, by hero type, rank and patch.",
     },
     "stats-over-time": {
       title: "Deadlock Hero Win Rate Trends Over Time",

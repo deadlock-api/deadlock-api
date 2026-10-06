@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import type { HeroScoreboardSortByEnum } from "deadlock_api_client";
-import { ChartNoAxesCombined, GraduationCap, Swords, Table2, Trophy, UsersRound } from "lucide-react";
+import { ChartNoAxesCombined, GraduationCap, ListOrdered, Swords, Table2, Trophy, UsersRound } from "lucide-react";
 import { parseAsBoolean, parseAsString, parseAsStringLiteral, useQueryState } from "nuqs";
 import { lazy, Suspense, useId } from "react";
 
@@ -65,6 +65,11 @@ const HeroCombStatsTable = lazy(() =>
     default: m.HeroCombStatsTable,
   })),
 );
+const HeroTierList = lazy(() =>
+  import("~/components/features/heroes/HeroTierList").then((m) => ({
+    default: m.HeroTierList,
+  })),
+);
 const HeroMatchupExplorer = lazy(() =>
   import("~/components/features/heroes/HeroMatchupExplorer").then((m) => ({
     default: m.HeroMatchupExplorer,
@@ -75,6 +80,8 @@ export function HeroesPage() {
   const filters = useHeroFilters();
   const [groupByType, setGroupByType] = useQueryState("group_by_type", parseAsBoolean.withDefault(false));
   const groupByTypeId = useId();
+  // The tier list has its own switch for the same setting; an id is unique to one element.
+  const tierGroupByTypeId = useId();
   // In the URL like the table's other controls; replace, so each keystroke is not a history entry.
   const [heroNameQuery, setHeroNameQuery] = useQueryState(
     "hero_q",
@@ -129,6 +136,9 @@ export function HeroesPage() {
         >
           <ResponsiveTab value="stats" href={analyticsTabPath("heroes", "stats")}>
             Overall Stats
+          </ResponsiveTab>
+          <ResponsiveTab value="tier-list" href={analyticsTabPath("heroes", "tier-list")}>
+            Tier List
           </ResponsiveTab>
           <ResponsiveTab value="stats-over-time" href={analyticsTabPath("heroes", "stats-over-time")}>
             Over Time
@@ -192,6 +202,35 @@ export function HeroesPage() {
               gameMode={filters.gameMode}
               matchMode={filters.matchMode}
             />
+          </Section>
+        </TabsContent>
+
+        <TabsContent value="tier-list">
+          <Section titleDisplay="hidden" title="Hero Tier List">
+            <FilterBar variant="toolbar" title="Tier list" icon={ListOrdered} aria-label="Tier list controls">
+              <Field label="Group by Type" orientation="horizontal" htmlFor={tierGroupByTypeId}>
+                <Switch
+                  id={tierGroupByTypeId}
+                  checked={groupByType}
+                  onCheckedChange={(checked) => setGroupByType(checked)}
+                />
+              </Field>
+            </FilterBar>
+            <ChunkErrorBoundary>
+              <Suspense fallback={<LoadingState />}>
+                <HeroTierList
+                  groupByType={groupByType}
+                  minRankId={filters.effectiveMinRankId}
+                  maxRankId={filters.effectiveMaxRankId}
+                  minHeroMatches={filters.minHeroMatches}
+                  minHeroMatchesTotal={filters.minHeroMatchesTotal}
+                  minDate={filters.startDate || undefined}
+                  maxDate={filters.endDate || undefined}
+                  gameMode={filters.gameMode}
+                  matchMode={filters.matchMode}
+                />
+              </Suspense>
+            </ChunkErrorBoundary>
           </Section>
         </TabsContent>
 

@@ -1,10 +1,14 @@
 import type { QueryExecuteOptions, QueryKey } from "@tanstack/react-query";
 import { lazyRouteComponent } from "@tanstack/react-router";
-import type { AnalyticsHeroStats } from "deadlock_api_client";
+import type { AnalyticsHeroStats, HeroBanStats } from "deadlock_api_client";
 
 import { type AnalyticsTab, analyticsTabFromPath, ANALYTICS_VIEWS, redirectAnalyticsTab } from "~/lib/analytics-tabs";
+import { computeBanRates } from "~/lib/ban-rate";
+import { getPickrateMultiplier } from "~/lib/constants";
 import type { DateFilterPreference } from "~/lib/date-filter-preference";
 import { DEFAULT_MATCH_MODE } from "~/lib/game-mode";
+import { heroSlug } from "~/lib/hero-slug";
+import { rankHeroes, type Tier } from "~/lib/hero-tiers";
 import { prefetchSafe } from "~/lib/prefetch-safe";
 import {
   defaultPeriodLabel,
@@ -13,7 +17,7 @@ import {
   defaultUnixRange,
   type SeasonInfo,
 } from "~/lib/seasons";
-import { datasetJsonLd, pageTitle, seo } from "~/lib/seo";
+import { datasetJsonLd, pageTitle, seo, SITE_URL } from "~/lib/seo";
 import { redirectLegacyHeroId } from "~/lib/site-route-migration";
 import type { SlimHero } from "~/queries/asset-queries";
 import type { RouterContext } from "~/router";
@@ -50,6 +54,45 @@ function findWinRateLeader(
   return best;
 }
 
+/** Every hero the tier list shows with no filters set, best first, with its tier letter. */
+function findTierList(
+  stats: readonly AnalyticsHeroStats[] | undefined,
+  bans: readonly HeroBanStats[] | undefined,
+  heroes: readonly SlimHero[] | undefined,
+): TieredHero[] {
+  if (!stats || !heroes) return [];
+  const names = new Map(heroes.map((hero) => [hero.id, hero.name]));
+  return rankHeroes(
+    stats.map((row) => ({ heroId: row.hero_id, wins: row.wins, matches: row.matches })),
+    getPickrateMultiplier("normal"),
+    bans ? computeBanRates([...bans]) : undefined,
+  )
+    .filter((hero) => names.has(hero.heroId))
+    .map((hero) => ({ name: names.get(hero.heroId)!, tier: hero.tier }));
+}
+
+interface TieredHero {
+  name: string;
+  tier: Tier;
+}
+
+/** The tier list as schema.org's ItemList, in the order and with the tiers the page shows. */
+function tierListJsonLd(name: string, heroes: readonly TieredHero[]): Record<string, unknown> {
+  return {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    name,
+    itemListOrder: "https://schema.org/ItemListOrderDescending",
+    numberOfItems: heroes.length,
+    itemListElement: heroes.map((hero, i) => ({
+      "@type": "ListItem",
+      position: i + 1,
+      name: `${hero.name} (${hero.tier.toUpperCase()} tier)`,
+      url: `${SITE_URL}/analytics/heroes/${heroSlug(hero.name)}`,
+    })),
+  };
+}
+
 type HeroStatsRanges = ReturnType<typeof defaultHeroStatsRanges>;
 
 /**
@@ -58,7 +101,7 @@ type HeroStatsRanges = ReturnType<typeof defaultHeroStatsRanges>;
  */
 async function prefetchHeroView(
   queryClient: RouterContext["queryClient"],
-  tab: Exclude<AnalyticsTab<"heroes">, "stats">,
+  tab: Exclude<AnalyticsTab<"heroes">, "stats" | "tier-list">,
   r: HeroStatsRanges,
 ) {
   const range = { minUnixTimestamp: r.minUnixTimestamp, maxUnixTimestamp: r.maxUnixTimestamp };
@@ -203,10 +246,10 @@ export const heroesPageOptions = {
     // The server waits for the view's data, so its HTML carries it. In the browser a tab click does not: the view shows
     // its own loading state, where waiting kept the navigation pending and washed out the whole page (PendingNavigation).
     const isServer = typeof window === "undefined";
-    if (tab !== "stats") {
+    if (tab !== "stats" && tab !== "tier-list") {
       const view = Promise.all([heroes, prefetchHeroView(queryClient, tab, r)]);
       if (isServer) await view;
-      return { leader: null, period, coverage };
+      return { leader: null, tierList: [], period, coverage };
     }
     const common = {
       minHeroMatches: 0,
@@ -216,84 +259,91 @@ export const heroesPageOptions = {
       gameMode: "normal" as const,
       matchMode: DEFAULT_MATCH_MODE,
     };
-    const overall = Promise.all([
+    const statsFor = (minUnixTimestamp: number | undefined, maxUnixTimestamp: number | undefined) =>
       prefetchSafe(
         queryClient.query({
-          ...heroStatsQueryOptions({
-            ...common,
-            minUnixTimestamp: r.minUnixTimestamp,
-            maxUnixTimestamp: r.maxUnixTimestamp,
+          ...heroStatsQueryOptions({ ...common, minUnixTimestamp, maxUnixTimestamp }),
+          staleTime: "static",
+        }),
+      );
+    const bansFor = (minUnixTimestamp: number | undefined, maxUnixTimestamp: number | undefined) =>
+      prefetchSafe(
+        queryClient.query({
+          ...heroBanStatsQueryOptions({
+            matchMode: DEFAULT_MATCH_MODE,
+            minAverageBadge: DEFAULT_MIN_RANK,
+            maxAverageBadge: DEFAULT_MAX_RANK,
+            minUnixTimestamp,
+            maxUnixTimestamp,
           }),
           staleTime: "static",
         }),
-      ),
+      );
+    const current = Promise.all([
+      statsFor(r.minUnixTimestamp, r.maxUnixTimestamp),
       heroes,
-      prefetchSafe(
-        queryClient.query({
-          ...heroStatsQueryOptions({
-            ...common,
-            minUnixTimestamp: r.prevMinUnixTimestamp,
-            maxUnixTimestamp: r.prevMaxUnixTimestamp,
-          }),
-          staleTime: "static",
-        }),
-      ),
-      prefetchSafe(
-        queryClient.query({
-          ...heroBanStatsQueryOptions({
-            matchMode: DEFAULT_MATCH_MODE,
-            minAverageBadge: DEFAULT_MIN_RANK,
-            maxAverageBadge: DEFAULT_MAX_RANK,
-            minUnixTimestamp: r.minUnixTimestamp,
-            maxUnixTimestamp: r.maxUnixTimestamp,
-          }),
-          staleTime: "static",
-        }),
-      ),
-      prefetchSafe(
-        queryClient.query({
-          ...heroBanStatsQueryOptions({
-            matchMode: DEFAULT_MATCH_MODE,
-            minAverageBadge: DEFAULT_MIN_RANK,
-            maxAverageBadge: DEFAULT_MAX_RANK,
-            minUnixTimestamp: r.prevMinUnixTimestamp,
-            maxUnixTimestamp: r.prevMaxUnixTimestamp,
-          }),
-          staleTime: "static",
-        }),
-      ),
+      bansFor(r.minUnixTimestamp, r.maxUnixTimestamp),
     ]);
-    if (!isServer) return { leader: null, period, coverage };
-    const [stats, heroList] = await overall;
+    // Only the overall table compares with the previous period; the tier list would carry it in its HTML for nothing.
+    const previous =
+      tab === "stats"
+        ? Promise.all([
+            statsFor(r.prevMinUnixTimestamp, r.prevMaxUnixTimestamp),
+            bansFor(r.prevMinUnixTimestamp, r.prevMaxUnixTimestamp),
+          ])
+        : undefined;
+    if (!isServer) return { leader: null, tierList: [], period, coverage };
+    const [[stats, heroList, bans]] = await Promise.all([current, previous]);
+    if (tab === "tier-list") return { leader: null, tierList: findTierList(stats, bans, heroList), period, coverage };
     // The leader is measured over the default range, which is this season unless the visitor prefers patches.
-    return { leader: findWinRateLeader(stats, heroList), period, coverage };
+    return { leader: findWinRateLeader(stats, heroList), tierList: [], period, coverage };
   },
   head: ({
     loaderData,
     match,
   }: {
-    loaderData?: { leader: { name: string; winRate: number } | null; period: string; coverage?: string };
+    loaderData?: {
+      leader: { name: string; winRate: number } | null;
+      tierList: TieredHero[];
+      period: string;
+      coverage?: string;
+    };
     match: { pathname: string };
   }) => {
     const tab = analyticsTabFromPath("heroes", match.pathname);
     const view = ANALYTICS_VIEWS.heroes[tab];
     // The leader is the overall table's headline; the other views are about something else.
     const leader = tab === "stats" ? loaderData?.leader : null;
-    const lead = leader ? ` ${leader.name} leads ${loaderData?.period} at ${(leader.winRate * 100).toFixed(1)}%.` : "";
+    const tierList = tab === "tier-list" ? (loaderData?.tierList ?? []) : [];
+    const sTier = tierList.filter((hero) => hero.tier === "s").map((hero) => hero.name);
+    const lead = leader
+      ? ` ${leader.name} leads ${loaderData?.period} at ${(leader.winRate * 100).toFixed(1)}%.`
+      : sTier.length > 0
+        ? ` S tier: ${sTier.slice(0, 4).join(", ")}${sTier.length > 4 ? " and more" : ""}.`
+        : "";
+    const dataset = datasetJsonLd({
+      name: view.title,
+      description: view.description,
+      path: match.pathname.replace(/\/$/, ""),
+      keywords: [
+        "Deadlock",
+        ...(tab === "tier-list" ? ["tier list", "hero tier list"] : []),
+        "hero win rates",
+        "pick rates",
+        "ban rates",
+        "matchups",
+        "hero meta",
+      ],
+      variableMeasured: ["win rate", "pick rate", "ban rate", "matches played"],
+      apiPath: "/v1/analytics/hero-stats",
+      // The loader's default range feeds the overall table and the tier list; the other views pick their own windows.
+      temporalCoverage: tab === "stats" || tab === "tier-list" ? loaderData?.coverage : undefined,
+    });
     return seo({
       title: pageTitle(view.title),
       description: view.description + lead,
       path: match.pathname.replace(/\/$/, ""),
-      jsonLd: datasetJsonLd({
-        name: view.title,
-        description: view.description,
-        path: match.pathname.replace(/\/$/, ""),
-        keywords: ["Deadlock", "hero win rates", "pick rates", "ban rates", "matchups", "hero meta"],
-        variableMeasured: ["win rate", "pick rate", "ban rate", "matches played"],
-        apiPath: "/v1/analytics/hero-stats",
-        // The loader's default range feeds the overall table only; the other views pick their own windows.
-        temporalCoverage: tab === "stats" ? loaderData?.coverage : undefined,
-      }),
+      jsonLd: tierList.length > 0 ? [dataset, tierListJsonLd(view.heading, tierList)] : dataset,
     });
   },
 };
