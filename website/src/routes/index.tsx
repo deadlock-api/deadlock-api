@@ -140,6 +140,12 @@ const analyticsLinks = [
     icon: Swords,
   },
   {
+    title: "Hero Tier List",
+    description: "Every hero ranked S to D from live matches, by rank, patch and hero type.",
+    href: "/analytics/heroes/tier-list",
+    icon: Medal,
+  },
+  {
     title: "Item Analytics",
     description: "Item win rates with confidence intervals, purchase timing analysis, and item combos.",
     href: "/analytics/items",
