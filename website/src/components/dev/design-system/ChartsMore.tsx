@@ -157,7 +157,7 @@ export function ChartsMore() {
       <Specimen
         name="ChartSidebarLayout"
         source="patterns/charts/ChartSidebarLayout"
-        note="A chart beside an entity picker. From lg up the chart sets the height and the 18rem sidebar scrolls inside it; below lg the sidebar stacks under the chart."
+        note="A chart beside an entity picker. From lg up the chart sets the height and the 22rem sidebar scrolls inside it; below lg the sidebar stacks under the chart."
       >
         <ChartSidebarLayout
           sidebar={

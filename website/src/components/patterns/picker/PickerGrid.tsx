@@ -199,7 +199,9 @@ const mediaVariants = cva("flex shrink-0 items-center justify-center transition-
 });
 
 const nameVariants = cva("w-full text-center text-xs leading-tight text-muted-foreground", {
-  variants: { size: { default: "truncate", sm: "truncate", lg: "line-clamp-2 break-words hyphens-auto" } },
+  variants: {
+    size: { default: "truncate", sm: "line-clamp-2 break-words", lg: "line-clamp-2 break-words hyphens-auto" },
+  },
   defaultVariants: { size: "default" },
 });
 

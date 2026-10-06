@@ -9,7 +9,7 @@ Rules for analytics and other data-heavy pages, on top of `docs/design-system.md
 | Large metric option sets  | `patterns/charts/MetricSelect`             | Grouped options, explicit accessible label, and a stable label during SSR.                     |
 | Historical chart controls | `patterns/charts/TrendControls`            | `MetricSelect` in a `Field` and `TrendIntervalField`; route components own URL state.          |
 | Plot surface              | `patterns/charts/ChartSurface`             | 280px mobile / 320px desktop; semantic card colors. Override height for dense scatter plots.   |
-| Chart and entity picker   | `patterns/charts/ChartSidebarLayout`       | 18rem sidebar at large widths, matching the chart panel's height; stacked on mobile.           |
+| Chart and entity picker   | `patterns/charts/ChartSidebarLayout`       | 22rem sidebar at large widths, matching the chart panel's height; stacked on mobile.           |
 | Hero selection            | `domain/selectors/ChartHeroSelector`       | Portrait grid, selected count, Show all/Clear, unavailable heroes disabled, scrollable roster. |
 | Chart readings            | `patterns/charts/ChartReadings`            | Aligned values, bounded and keyboard-scrollable when many series are present.                  |
 | Query feedback            | `patterns/charts/ChartStates`              | Loading skeleton, actionable retry, and distinct empty results.                                |
