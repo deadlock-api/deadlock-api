@@ -285,7 +285,7 @@ const PAGE_BLOCK_SIZE: u32 = 10_000;
 
 #[cached(
     max_size = 1_000,
-    ttl_secs = 3600,
+    ttl_secs = 21600,
     convert = "{ query_str.to_string() }",
     key = "String",
     sync_writes = "by_key"
@@ -299,7 +299,7 @@ async fn run_query(
 
 #[cached(
     max_size = 100,
-    ttl_secs = 3600,
+    ttl_secs = 21600,
     convert = "{ query_str.to_string() }",
     key = "String",
     sync_writes = "by_key"
