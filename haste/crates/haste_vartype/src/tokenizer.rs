@@ -35,7 +35,7 @@ fn is_ident_start(ch: char) -> bool {
 }
 
 fn is_ident_continue(ch: char) -> bool {
-    ch.is_ascii_alphanumeric() || ch == '_'
+    ch.is_ascii_alphanumeric() || matches!(ch, '_' | ':')
 }
 
 impl<'a> Tokenizer<'a> {
