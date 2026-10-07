@@ -190,6 +190,7 @@ async fn run_sql(
 ) -> Result<Body, SQLQueryError> {
     let lines = ch_client
         .query(query)
+        .with_setting("log_comment", "sql")
         .fetch_bytes("JSONEachRow")
         .map(AsyncBufReadExt::lines)?;
     Ok(match stream_rows(lines, format).await? {
