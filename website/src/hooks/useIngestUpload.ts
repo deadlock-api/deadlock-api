@@ -5,8 +5,7 @@ import type { Salts } from "~/lib/ingest-cache-scanner";
 import { scanDirHandle, scanEntry, scanFileList } from "~/lib/ingest-cache-scanner";
 import { type BatchResult, dedupeSalts, type UploadSummary, uploadInBatches } from "~/lib/ingest-salts";
 
-interface DialogState {
-  open: boolean;
+export interface IngestResult {
   title: string;
   description: string;
   /** `partial`: some batches were sent, some failed. `empty`: the folder held no match data, nothing was sent. */
@@ -20,8 +19,8 @@ interface IngestState {
   /** Matches to send after removing duplicates, and how many of them are sent or failed so far. */
   uploadTotal: number;
   uploadHandled: number;
-  isDragging: boolean;
-  dialog: DialogState;
+  /** The outcome of the last scan, shown until the next one starts. */
+  result: IngestResult | null;
 }
 
 type IngestAction =
@@ -30,14 +29,21 @@ type IngestAction =
   | { type: "UPLOAD_START"; total: number }
   | { type: "UPLOAD_PROGRESS"; handled: number }
   | { type: "SCAN_DONE" }
-  | { type: "SET_DRAGGING"; value: boolean }
-  | { type: "SHOW_DIALOG"; dialog: Omit<DialogState, "open"> }
-  | { type: "CLOSE_DIALOG" };
+  | { type: "SHOW_RESULT"; result: IngestResult }
+  | { type: "CLEAR_RESULT" };
 
 function ingestReducer(state: IngestState, action: IngestAction): IngestState {
   switch (action.type) {
     case "SCAN_START":
-      return { ...state, isLoading: true, phase: "scanning", saltsFound: 0, uploadTotal: 0, uploadHandled: 0 };
+      return {
+        ...state,
+        isLoading: true,
+        phase: "scanning",
+        saltsFound: 0,
+        uploadTotal: 0,
+        uploadHandled: 0,
+        result: null,
+      };
     case "SCAN_PROGRESS":
       return { ...state, saltsFound: state.saltsFound + 1 };
     case "UPLOAD_START":
@@ -46,12 +52,10 @@ function ingestReducer(state: IngestState, action: IngestAction): IngestState {
       return { ...state, uploadHandled: action.handled };
     case "SCAN_DONE":
       return { ...state, isLoading: false };
-    case "SET_DRAGGING":
-      return { ...state, isDragging: action.value };
-    case "SHOW_DIALOG":
-      return { ...state, dialog: { ...action.dialog, open: true } };
-    case "CLOSE_DIALOG":
-      return { ...state, dialog: { ...state.dialog, open: false } };
+    case "SHOW_RESULT":
+      return { ...state, result: action.result };
+    case "CLEAR_RESULT":
+      return { ...state, result: null };
     default:
       return state;
   }
@@ -63,8 +67,7 @@ const initialState: IngestState = {
   saltsFound: 0,
   uploadTotal: 0,
   uploadHandled: 0,
-  isDragging: false,
-  dialog: { open: false, title: "", description: "", type: "success" },
+  result: null,
 };
 
 const count = new Intl.NumberFormat("en-US");
@@ -86,13 +89,13 @@ async function sendBatch(batch: Salts[]): Promise<BatchResult> {
   return { ok: true, ingested: typeof body.salts_ingested === "number" ? body.salts_ingested : null };
 }
 
-function resultDialog(summary: UploadSummary): Omit<DialogState, "open"> {
+function uploadResult(summary: UploadSummary): IngestResult {
   const total = summary.sent + summary.failed;
   const newOnes = `${matches(summary.ingested)} ${summary.ingested === 1 ? "was" : "were"} new to the database.`;
   if (summary.failed === 0) {
     return {
-      title: "Success!",
-      description: `Uploaded ${matches(summary.sent)}. ${newOnes}`,
+      title: `Sent ${matches(summary.sent)}`,
+      description: newOnes,
       type: "success",
     };
   }
@@ -105,7 +108,7 @@ function resultDialog(summary: UploadSummary): Omit<DialogState, "open"> {
   }
   return {
     title: "Partly uploaded",
-    description: `Uploaded ${count.format(summary.sent)} of ${matches(total)}; ${newOnes} The other ${count.format(summary.failed)} failed (${summary.error}). Select the folder again to retry them.`,
+    description: `Uploaded ${count.format(summary.sent)} of ${matches(total)}; ${newOnes} The other ${count.format(summary.failed)} failed (${summary.error}). Choose the folder again to retry them.`,
     type: "partial",
   };
 }
@@ -116,7 +119,7 @@ export function useIngestUpload() {
   const isLoadingRef = useRef(false);
 
   const showError = (title: string, description: string) => {
-    dispatch({ type: "SHOW_DIALOG", dialog: { title, description, type: "error" } });
+    dispatch({ type: "SHOW_RESULT", result: { title, description, type: "error" } });
   };
 
   const incrementSalts = () => dispatch({ type: "SCAN_PROGRESS" });
@@ -129,11 +132,10 @@ export function useIngestUpload() {
 
       if (salts.length === 0) {
         dispatch({
-          type: "SHOW_DIALOG",
-          dialog: {
+          type: "SHOW_RESULT",
+          result: {
             title: "No match data found",
-            description:
-              "No Deadlock match data found in this folder — did you pick the right one? It is Steam's appcache/httpcache folder; the guide below shows where it is. Nothing was uploaded.",
+            description: "Nothing was sent. Choose the httpcache folder inside Steam's appcache folder.",
             type: "empty",
           },
         });
@@ -142,11 +144,11 @@ export function useIngestUpload() {
         const summary = await uploadInBatches(salts, sendBatch, (handled) =>
           dispatch({ type: "UPLOAD_PROGRESS", handled }),
         );
-        dispatch({ type: "SHOW_DIALOG", dialog: resultDialog(summary) });
+        dispatch({ type: "SHOW_RESULT", result: uploadResult(summary) });
       }
     } catch (error) {
       showError(
-        "Error",
+        "Something went wrong",
         error instanceof Error
           ? `Failed to scan or upload: ${error.message}`
           : "Failed to scan directory or upload salts. Please try again.",
@@ -165,7 +167,7 @@ export function useIngestUpload() {
       } catch (error) {
         if (error instanceof DOMException && error.name === "AbortError") return;
         showError(
-          "Error",
+          "Something went wrong",
           error instanceof Error
             ? `Failed to open directory picker: ${error.message}`
             : "Failed to open directory picker. Please try again.",
@@ -183,11 +185,8 @@ export function useIngestUpload() {
     }
   };
 
+  /** For `useDropZone`'s `onDrop`: scans the dropped folder. */
   const handleDrop = async (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    dispatch({ type: "SET_DRAGGING", value: false });
-
     if (isLoadingRef.current) return;
 
     if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
@@ -198,19 +197,19 @@ export function useIngestUpload() {
           if (handle && handle.kind === "directory") {
             await runScanAndUpload(() => scanDirHandle(handle as FileSystemDirectoryHandle, incrementSalts));
           } else {
-            showError("Invalid Drop", "Please drop a directory, not a file.");
+            showError("That is a file", "Drop the httpcache folder itself, not a file from inside it.");
           }
         } else {
           const entry = item.webkitGetAsEntry();
           if (entry?.isDirectory) {
             await runScanAndUpload(() => scanEntry(entry, incrementSalts));
           } else {
-            showError("Invalid Drop", "Please drop a directory, not a file.");
+            showError("That is a file", "Drop the httpcache folder itself, not a file from inside it.");
           }
         }
       } catch (error) {
         showError(
-          "Error",
+          "Something went wrong",
           error instanceof Error
             ? `Failed to process dropped item: ${error.message}`
             : "Failed to process the dropped item. Please ensure you're dropping a directory.",
@@ -220,34 +219,14 @@ export function useIngestUpload() {
     }
   };
 
-  const closeDialog = () => dispatch({ type: "CLOSE_DIALOG" });
-
-  const dragHandlers = {
-    onDragEnter: (e: React.DragEvent) => {
-      e.preventDefault();
-      e.stopPropagation();
-      if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
-        dispatch({ type: "SET_DRAGGING", value: true });
-      }
-    },
-    onDragLeave: (e: React.DragEvent) => {
-      e.preventDefault();
-      e.stopPropagation();
-      dispatch({ type: "SET_DRAGGING", value: false });
-    },
-    onDragOver: (e: React.DragEvent) => {
-      e.preventDefault();
-      e.stopPropagation();
-    },
-    onDrop: handleDrop,
-  };
+  const clearResult = () => dispatch({ type: "CLEAR_RESULT" });
 
   return {
     state,
-    closeDialog,
+    clearResult,
     fileInputRef,
     openDirectoryPicker,
     handleFileInput,
-    dragHandlers,
+    handleDrop,
   };
 }
