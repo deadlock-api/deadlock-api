@@ -70,7 +70,7 @@ export function ComparisonColumn({ className, ...props }: React.ComponentProps<t
       data-highlighted={highlighted || undefined}
       scope="col"
       className={cn(
-        "w-24 @md:w-36",
+        "w-24 leading-tight whitespace-normal @md:w-36",
         columnClass(highlighted),
         highlighted ? "font-semibold text-primary" : "text-muted-foreground",
         className,
