@@ -161,39 +161,73 @@ fn build_query(query: &BuffStatsQuery) -> String {
     // arrays instead would copy all five arrays per row and cost more CPU than the second scan.
     // The Nested arrays have one entry per buff type the player picked up, so `count()` per
     // type is the number of player-matches with a pickup.
+    //
+    // Pickup counts and timings are aggregated in separate scans, merged per buff type by the
+    // outer GROUP BY. Only player-matches with a non-NULL `first_permanent_buff_time_s` have any
+    // timings (temporary buffs never do), so the timing scan reads the wide timing arrays for
+    // those rows only instead of every row in the window (default query: 12.7 -> 6.7 GiB read).
     format!(
         "
     SELECT
-        '{ALL_BUFFS_SENTINEL}' AS buff_type,
-        false AS is_permanent,
-        count() AS matches_with_pickup,
-        countIf(first_permanent_buff_time_s IS NOT NULL) AS timed_matches_with_pickup,
-        toUInt64(0) AS pickups,
-        toUInt64(0) AS timed_pickups,
-        toFloat64(0) AS total_stat_value,
-        CAST(NULL, 'Nullable(Float64)') AS avg_pickup_time_s,
-        CAST(NULL, 'Nullable(Float64)') AS avg_first_pickup_time_s
-    FROM match_player
-    WHERE {filters}
-    UNION ALL
-    SELECT
         buff_type,
-        any(perm) AS is_permanent,
-        count() AS matches_with_pickup,
-        countIf(first_permanent_buff_time_s IS NOT NULL) AS timed_matches_with_pickup,
-        sum(value) AS pickups,
-        sum(length(ptimes)) AS timed_pickups,
-        sum(arraySum(pstats)) AS total_stat_value,
-        if(timed_pickups = 0, NULL, sum(arraySum(ptimes)) / timed_pickups) AS avg_pickup_time_s,
-        avgOrNullIf(arrayMin(ptimes), notEmpty(ptimes)) AS avg_first_pickup_time_s
-    FROM match_player
-    ARRAY JOIN
-        power_up_buffs.type AS buff_type,
-        power_up_buffs.value AS value,
-        power_up_buffs.is_permanent AS perm,
-        power_up_buffs.pickup_times_s AS ptimes,
-        power_up_buffs.pickup_stat_values AS pstats
-    WHERE {filters}
+        max(is_permanent) AS is_permanent,
+        sum(matches_with_pickup) AS matches_with_pickup,
+        sum(timed_matches_with_pickup) AS timed_matches_with_pickup,
+        sum(pickups) AS pickups,
+        sum(timed_pickups) AS timed_pickups,
+        sum(total_stat_value) AS total_stat_value,
+        max(avg_pickup_time_s) AS avg_pickup_time_s,
+        max(avg_first_pickup_time_s) AS avg_first_pickup_time_s
+    FROM (
+        SELECT
+            '{ALL_BUFFS_SENTINEL}' AS buff_type,
+            false AS is_permanent,
+            count() AS matches_with_pickup,
+            countIf(first_permanent_buff_time_s IS NOT NULL) AS timed_matches_with_pickup,
+            toUInt64(0) AS pickups,
+            toUInt64(0) AS timed_pickups,
+            toFloat64(0) AS total_stat_value,
+            CAST(NULL, 'Nullable(Float64)') AS avg_pickup_time_s,
+            CAST(NULL, 'Nullable(Float64)') AS avg_first_pickup_time_s
+        FROM match_player
+        WHERE {filters}
+        UNION ALL
+        SELECT
+            buff_type,
+            any(perm),
+            count(),
+            toUInt64(0),
+            sum(value),
+            toUInt64(0),
+            toFloat64(0),
+            CAST(NULL, 'Nullable(Float64)'),
+            CAST(NULL, 'Nullable(Float64)')
+        FROM match_player
+        ARRAY JOIN
+            power_up_buffs.type AS buff_type,
+            power_up_buffs.value AS value,
+            power_up_buffs.is_permanent AS perm
+        WHERE {filters}
+        GROUP BY buff_type
+        UNION ALL
+        SELECT
+            buff_type,
+            false,
+            toUInt64(0),
+            count(),
+            toUInt64(0),
+            sum(length(ptimes)) AS timed_pickups_,
+            sum(arraySum(pstats)),
+            if(timed_pickups_ = 0, NULL, sum(arraySum(ptimes)) / timed_pickups_),
+            avgOrNullIf(arrayMin(ptimes), notEmpty(ptimes))
+        FROM match_player
+        ARRAY JOIN
+            power_up_buffs.type AS buff_type,
+            power_up_buffs.pickup_times_s AS ptimes,
+            power_up_buffs.pickup_stat_values AS pstats
+        WHERE {filters} AND first_permanent_buff_time_s IS NOT NULL
+        GROUP BY buff_type
+    )
     GROUP BY buff_type
     ORDER BY buff_type
     SETTINGS log_comment = 'buff_stats', apply_patch_parts = 0, optimize_use_projections = 0
@@ -336,16 +370,17 @@ mod tests {
     }
 
     #[test]
-    fn query_counts_the_sentinel_totals_in_a_separate_scan() {
+    fn query_scans_totals_counts_and_timings_separately() {
         let sql = build_query(&BuffStatsQuery {
             min_unix_timestamp: Some(1_790_121_600),
             hero_ids: Some(vec![15]),
             ..Default::default()
         });
         assert_valid_sql(&sql);
-        assert_eq!(sql.matches("FROM match_player").count(), 2);
+        assert_eq!(sql.matches("FROM match_player").count(), 3);
         assert!(sql.contains("'__all__' AS buff_type"));
-        assert_eq!(sql.matches("hero_id IN (15)").count(), 2);
+        assert_eq!(sql.matches("hero_id IN (15)").count(), 3);
+        assert!(sql.contains("AND first_permanent_buff_time_s IS NOT NULL"));
     }
 }
 
