@@ -22,7 +22,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { Textarea } from "~/components/ui/textarea";
 
-const TILE_TONES = ["muted", "primary", "positive", "negative"] as const;
+const TILE_TONES = ["muted", "primary", "positive", "negative", "warning"] as const;
 const TILE_SIZES = ["xs", "sm", "default", "lg"] as const;
 const SCOREBOARD = [
   { hero: "Infernus", damage: 41_200, souls: 38_400 },

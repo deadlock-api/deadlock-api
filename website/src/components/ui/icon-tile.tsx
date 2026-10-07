@@ -10,6 +10,7 @@ const iconTileVariants = cva("inline-flex shrink-0 items-center justify-center b
       primary: "border-primary/30 bg-primary/10 text-primary",
       positive: TONE_SOFT.positive,
       negative: TONE_SOFT.negative,
+      warning: "border-warning/30 bg-warning/10 text-warning",
     },
     size: {
       xs: "size-6 [&_svg:not([class*='size-'])]:size-3",

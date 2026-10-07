@@ -1,4 +1,4 @@
-import { Volume2 } from "lucide-react";
+import { FolderOpen, Volume2 } from "lucide-react";
 import { useState } from "react";
 
 import { Specimen, Variants } from "~/components/dev/design-system/Specimen";
@@ -15,7 +15,10 @@ import { StaleOverlay } from "~/components/patterns/states/StaleOverlay";
 import { Button } from "~/components/ui/button";
 import { DetailPopover } from "~/components/ui/detail-popover";
 import { DragScroll } from "~/components/ui/drag-scroll";
+import { DropZone } from "~/components/ui/drop-zone";
 import { HeatCell } from "~/components/ui/heat-cell";
+import { useDropZone } from "~/components/ui/hooks/use-drop-zone";
+import { IconTile } from "~/components/ui/icon-tile";
 import { MaskedIcon } from "~/components/ui/masked-icon";
 import { StatusDot } from "~/components/ui/status-dot";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
@@ -182,10 +185,43 @@ function StaleTable() {
   );
 }
 
+function DropZoneDemo() {
+  const [dropped, setDropped] = useState<string | null>(null);
+  const { over, dropZoneProps } = useDropZone({
+    onDrop: (event) => setDropped(event.dataTransfer.items[0]?.getAsFile()?.name ?? "a folder"),
+  });
+  return (
+    <DropZone state={over ? "over" : "idle"} size="sm" className="w-full max-w-md" {...dropZoneProps}>
+      <IconTile tone={over ? "primary" : "muted"} shape="circle">
+        <FolderOpen />
+      </IconTile>
+      <span className="text-sm">{dropped ? `Dropped ${dropped}` : "Drop a file here"}</span>
+      <Button size="sm">Choose file</Button>
+    </DropZone>
+  );
+}
+
 /** Round 4, second batch: the props and primitives the feature migration asked for. */
 export function Round4Requests2() {
   return (
     <>
+      <Specimen
+        name="DropZone"
+        source="ui/drop-zone"
+        note="A target to drop files or a folder onto, at a fixed height so its states (idle, busy, a result) never move the page. `useDropZone` (`ui/hooks/use-drop-zone`) holds the behavior: spread its `dropZoneProps` on the zone and pass `over` as `state`; crossing children does not flicker it, and `disabled` refuses drops while busy. Always put a Button that opens the picker inside, for keyboard and touch."
+      >
+        <Variants label="interactive">
+          <DropZoneDemo />
+        </Variants>
+        <Variants label="state">
+          <DropZone state="idle" size="sm" className="w-56">
+            <span className="text-sm">idle</span>
+          </DropZone>
+          <DropZone state="over" size="sm" className="w-56">
+            <span className="text-sm">over</span>
+          </DropZone>
+        </Variants>
+      </Specimen>
       <Specimen
         name="TableBody group states"
         source="ui/table"
