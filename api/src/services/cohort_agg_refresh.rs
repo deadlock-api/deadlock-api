@@ -4,11 +4,20 @@ use std::collections::HashMap;
 use clickhouse::Row;
 use serde::Deserialize;
 use tokio::time::interval;
-use tracing::{error, info};
+use tracing::{debug, error, info};
 
 use crate::routes::v1::analytics::player_performance_curve_agg;
+use crate::services::lease::Lease;
 
 const REFRESH_INTERVAL_SECS: u64 = 30 * 60;
+
+/// Every API replica runs this loop; the lease lets one of them refresh per interval.
+/// Both used to rebuild the same days and truncate each other's staging tables.
+const LEASE_KEY: &str = "cohort_agg_refresh:leader";
+const LEASE_TTL: Duration = Duration::from_mins(10);
+/// The lease outlives the run until shortly before the leader's next tick, so the other
+/// replicas skip the rest of this interval.
+const LEASE_HOLD_MARGIN: Duration = Duration::from_mins(1);
 const HORIZON_DAYS: u32 = 65;
 const GROUP_BY_SPILL_BYTES: u64 = 8_000_000_000;
 const PER_DAY_MAX_MEMORY_BYTES: u64 = 15_032_385_536;
@@ -392,8 +401,14 @@ async fn refresh(
     Ok(())
 }
 
-pub(crate) fn spawn_cohort_agg_refresh(ch_client: clickhouse::Client) {
-    let ch_client = ch_client.with_setting("max_execution_time", "600");
+pub(crate) fn spawn_cohort_agg_refresh(
+    ch_client: clickhouse::Client,
+    redis: redis::aio::MultiplexedConnection,
+) {
+    // Each per-day insert sets its own log_comment, overriding this one.
+    let ch_client = ch_client
+        .with_setting("max_execution_time", "600")
+        .with_setting("log_comment", "cohort_agg_refresh");
     tokio::spawn(async move {
         let specs = cohort_specs();
         info!(
@@ -403,14 +418,31 @@ pub(crate) fn spawn_cohort_agg_refresh(ch_client: clickhouse::Client) {
         if let Err(e) = ensure_state_table(&ch_client).await {
             error!("cohort agg state table init failed: {e}");
         }
+        let token = uuid::Uuid::new_v4().simple().to_string();
         let mut tick = interval(Duration::from_secs(REFRESH_INTERVAL_SECS));
         loop {
             tick.tick().await;
+            let started = std::time::Instant::now();
+            let lease = match Lease::acquire(redis.clone(), LEASE_KEY, &token, LEASE_TTL).await {
+                Ok(Some(lease)) => lease,
+                Ok(None) => {
+                    debug!("cohort agg refresh: another replica holds the lease; skipping tick");
+                    continue;
+                }
+                Err(e) => {
+                    error!("cohort agg refresh: lease acquisition failed: {e}");
+                    continue;
+                }
+            };
             for spec in &specs {
                 if let Err(e) = refresh(&ch_client, spec).await {
                     error!("cohort agg refresh for {} failed: {e}", spec.table);
                 }
             }
+            let hold = Duration::from_secs(REFRESH_INTERVAL_SECS)
+                .saturating_sub(started.elapsed())
+                .saturating_sub(LEASE_HOLD_MARGIN);
+            lease.hold_for(hold).await;
         }
     });
 }

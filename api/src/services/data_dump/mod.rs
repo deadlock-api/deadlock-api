@@ -21,17 +21,16 @@ use tracing::{error, info, warn};
 
 use self::compaction::{Params, Reason};
 use self::export::Exporter;
-use self::lease::Lease;
 use self::manifest::{Column, FileEntry, FileKind, Manifest, PolicyKind, TableState, TableStatus};
 use self::policy::{Policy, TABLES, TablePolicy};
 use crate::SHUTDOWN_TOKEN;
 use crate::context::DataDumpConfig;
 use crate::routes::v1::data_privacy::update_row_policy;
+use crate::services::lease::Lease;
 
 pub(crate) mod catalog;
 mod compaction;
 mod export;
-mod lease;
 pub(crate) mod manifest;
 mod policy;
 mod sql;

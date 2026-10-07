@@ -352,7 +352,10 @@ impl AppState {
 
         if !cfg!(debug_assertions) && std::env::var_os("COHORT_AGG_REFRESH_DISABLED").is_none() {
             debug!("Starting cohort agg refresh");
-            crate::services::cohort_agg_refresh::spawn_cohort_agg_refresh(ch_client.clone());
+            crate::services::cohort_agg_refresh::spawn_cohort_agg_refresh(
+                ch_client.clone(),
+                redis_client.clone(),
+            );
         }
 
         // Build the versioned-assets store (R2-backed). Best-effort initial

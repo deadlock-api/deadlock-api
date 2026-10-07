@@ -4,6 +4,7 @@ pub(crate) mod clickhouse_insert_batcher;
 pub(crate) mod cohort_agg_refresh;
 pub(crate) mod crosshair;
 pub(crate) mod data_dump;
+pub(crate) mod lease;
 pub(crate) mod patreon;
 pub(crate) mod rank_image;
 pub(super) mod rate_limiter;

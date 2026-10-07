@@ -1,5 +1,4 @@
-//! Redis lease so only one API replica runs the dump at a time. The lease is an efficiency:
-//! correctness against a stale leader comes from the conditional manifest write.
+//! Redis lease so only one API replica runs a background job at a time.
 
 use core::time::Duration;
 
@@ -7,8 +6,6 @@ use redis::AsyncCommands;
 use redis::aio::MultiplexedConnection;
 use tokio::task::JoinHandle;
 use tracing::warn;
-
-use super::DumpError;
 
 const RENEW_IF_OWNED: &str = r"
 if redis.call('get', KEYS[1]) == ARGV[1] then
@@ -36,7 +33,7 @@ impl Lease {
         key: &str,
         token: &str,
         ttl: Duration,
-    ) -> Result<Option<Self>, DumpError> {
+    ) -> redis::RedisResult<Option<Self>> {
         let acquired: Option<String> = redis
             .set_options(
                 key,
@@ -71,10 +68,8 @@ impl Lease {
                         .await
                     {
                         Ok(1) => {}
-                        Ok(_) => warn!(
-                            "data dump lease {key} was lost; the manifest write will refuse a stale publish"
-                        ),
-                        Err(e) => warn!("data dump lease renewal failed: {e}"),
+                        Ok(_) => warn!("lease {key} was lost"),
+                        Err(e) => warn!("lease {key} renewal failed: {e}"),
                     }
                 }
             }
@@ -97,7 +92,27 @@ impl Lease {
             .query_async::<i64>(&mut self.redis)
             .await
         {
-            warn!("data dump lease release failed: {e}");
+            warn!("lease {} release failed: {e}", self.key);
+        }
+    }
+
+    /// Keeps the lease for `hold` more, without renewal, so other replicas skip their ticks
+    /// until then. Releases it at once when `hold` is zero.
+    pub(crate) async fn hold_for(mut self, hold: Duration) {
+        if hold.is_zero() {
+            return self.release().await;
+        }
+        self.heartbeat.abort();
+        if let Err(e) = redis::cmd("EVAL")
+            .arg(RENEW_IF_OWNED)
+            .arg(1)
+            .arg(&self.key)
+            .arg(&self.token)
+            .arg(i64::try_from(hold.as_millis()).unwrap_or(i64::MAX))
+            .query_async::<i64>(&mut self.redis)
+            .await
+        {
+            warn!("lease {} hold failed: {e}", self.key);
         }
     }
 }
