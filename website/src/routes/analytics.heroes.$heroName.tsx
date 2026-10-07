@@ -1,17 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link, type NotFoundRouteProps, createFileRoute, notFound, redirect, useRouter } from "@tanstack/react-router";
 import type { AnalyticsHeroStats } from "deadlock_api_client";
-import {
-  BarChart3,
-  ListOrdered,
-  type LucideIcon,
-  Map,
-  ShoppingBag,
-  Swords,
-  Trophy,
-  Users,
-  UsersRound,
-} from "lucide-react";
+import { ListOrdered, type LucideIcon, Map, Medal, ShoppingBag, Swords, Trophy, Users, UsersRound } from "lucide-react";
 import { lazy, Suspense, useMemo } from "react";
 
 import { NotFound } from "~/components/app/NotFound";
@@ -280,7 +270,7 @@ function HeroLinkCard({
   description,
 }: {
   to:
-    | "/analytics/heroes"
+    | "/analytics/heroes/tier-list"
     | "/analytics/heroes/matchup-details"
     | "/analytics/heroes/combos"
     | "/analytics/items"
@@ -529,11 +519,11 @@ function HeroDetailPage() {
               description={`Where ${heroName} gets kills and dies across the map.`}
             />
             <HeroLinkCard
-              to="/analytics/heroes"
-              search={RANK_SEARCH}
-              icon={BarChart3}
-              title="All Heroes"
-              description="Win and pick rates of every hero, side by side."
+              to="/analytics/heroes/tier-list"
+              search={{}}
+              icon={Medal}
+              title="Tier List"
+              description={`Where ${heroName} ranks among every hero, from S to D tier.`}
             />
           </div>
         </nav>
