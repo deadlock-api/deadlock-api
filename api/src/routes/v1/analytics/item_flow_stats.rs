@@ -10,7 +10,8 @@ use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
 
 use super::common_filters::{
-    MatchInfoFilters, PlayerFilters, filter_protected_accounts, join_filters, round_timestamps,
+    MatchInfoFilters, PlayerFilters, filter_protected_accounts, join_filters, not_corrupted_sql,
+    round_timestamps,
 };
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
@@ -225,6 +226,45 @@ const TIME_PHASE_BOUNDARIES: &[u32] = &[540, 1200, 1800];
 /// Number of normal-mode columns (`TIME_PHASE_BOUNDARIES.len() + 1`).
 const TIME_PHASE_COLUMNS: u8 = 4;
 
+/// `WITH` aliases for the upgrade purchases (upgrade-only, `buy_time > 0`, corrupted purchases
+/// excluded; migration 42) and the settings that go with them.
+///
+/// Hero-filtered queries rebuild them from `items.*`/`stats.*`, which the
+/// `item_stats_by_hero_mode_badge_v2` projection holds; the materialized `upgrades.*` columns rule
+/// the projection out. Measured on one hero, 7 days: 1/3-1/10 the bytes and 1/3-1/6 the CPU. They
+/// also count the few rows whose `upgrades.*` were materialized empty. Without a hero filter the
+/// projection can't prune and the rebuild is 25-40% dearer, and street brawl never uses it
+/// (`street_brawl_rounds.*` isn't in it), so those read `upgrades.*` from the base table.
+fn upgrades_source(query: &ItemFlowStatsQuery, is_brawl: bool) -> (String, &'static str) {
+    let has_hero = query.hero_ids.as_ref().is_some_and(|h| !h.is_empty());
+    if is_brawl || !has_hero {
+        return (
+            "WITH
+        upgrades.item_id AS upgrade_item_ids,
+        upgrades.game_time_s AS upgrade_buy_times,
+        upgrades.net_worth_at_buy AS upgrade_net_worths"
+                .to_owned(),
+            ", optimize_use_projections = 0",
+        );
+    }
+    let keep = format!(
+        "dictHas('default.upgrade_items_dict', toUInt64(x)) AND t > 0 AND {}",
+        not_corrupted_sql("u")
+    );
+    (
+        format!(
+            "WITH
+        arrayFilter((x, t, u) -> {keep}, items.item_id, items.game_time_s, items.upgrade_info) AS upgrade_item_ids,
+        arrayFilter((t, x, u) -> {keep}, items.game_time_s, items.item_id, items.upgrade_info) AS upgrade_buy_times,
+        arrayMap(
+            bt -> coalesce(arrayElementOrNull(stats.net_worth, arrayFirstIndex(ts -> ts >= bt, stats.time_stamp_s) - 1), net_worth),
+            upgrade_buy_times
+        ) AS upgrade_net_worths"
+        ),
+        "",
+    )
+}
+
 struct QueryParts {
     match_filters: String,
     /// Player filters including the locked build path.
@@ -239,6 +279,10 @@ struct QueryParts {
     extra_select: String,
     /// `[uniqIf(...), ...] AS reached_per_column` over the baseline population for the totals query.
     reached_select: String,
+    /// See [`upgrades_source`]; goes right before the `SELECT` that reads `match_player`.
+    upgrades_with: String,
+    /// Appended to the `SETTINGS` of every query.
+    extra_settings: &'static str,
 }
 
 /// SQL fragment computing the 0-based street brawl round a purchase at `buy_time_expr` falls into.
@@ -308,7 +352,7 @@ fn query_parts(query: &ItemFlowStatsQuery) -> QueryParts {
         for (id, col) in ids.iter().zip(cols.iter()) {
             let purchase_col = column_of("gt", "`street_brawl_rounds.round_duration_s`");
             locked_clauses.push(format!(
-                "arrayExists((iid, gt) -> iid = {id} AND gt > 0 AND {purchase_col} = {col}, upgrades.item_id, upgrades.game_time_s)"
+                "arrayExists((iid, gt) -> iid = {id} AND gt > 0 AND {purchase_col} = {col}, upgrade_item_ids, upgrade_buy_times)"
             ));
         }
     }
@@ -338,12 +382,13 @@ fn query_parts(query: &ItemFlowStatsQuery) -> QueryParts {
         .map(|c| {
             let purchase_col = column_of("gt", "`street_brawl_rounds.round_duration_s`");
             format!(
-                "uniqIf(cityHash64(match_id, account_id), arrayExists(gt -> gt > 0 AND {purchase_col} = {c}, upgrades.game_time_s))"
+                "uniqIf(cityHash64(match_id, account_id), arrayExists(gt -> gt > 0 AND {purchase_col} = {c}, upgrade_buy_times))"
             )
         })
         .collect::<Vec<_>>()
         .join(", ");
     let reached_select = format!("[{reached_cols}] AS reached_per_column");
+    let (upgrades_with, extra_settings) = upgrades_source(query, is_brawl);
 
     QueryParts {
         match_filters,
@@ -353,6 +398,8 @@ fn query_parts(query: &ItemFlowStatsQuery) -> QueryParts {
         column_expr,
         extra_select,
         reached_select,
+        upgrades_with,
+        extra_settings,
     }
 }
 
@@ -365,10 +412,13 @@ fn build_totals_query(parts: &QueryParts) -> String {
         base_player_filters,
         locked_predicate: lp,
         reached_select,
+        upgrades_with,
+        extra_settings,
         ..
     } = parts;
     format!(
         "
+    {upgrades_with}
     SELECT
         countIf(won AND ({lp}))      AS s_wins,
         countIf((not won) AND ({lp})) AS s_losses,
@@ -391,20 +441,20 @@ fn build_totals_query(parts: &QueryParts) -> String {
         {reached_select}
     FROM match_player
     WHERE {match_filters} {base_player_filters}
-    SETTINGS log_comment = 'item_flow_stats_totals', apply_patch_parts = 0, optimize_use_projections = 0
+    SETTINGS log_comment = 'item_flow_stats_totals', apply_patch_parts = 0{extra_settings}
     "
     )
 }
 
 /// Per-purchase rows: one row per (player, upgrade purchased) with its phase column assigned.
-/// Reads the materialized `upgrades.*` arrays, which are upgrade-only with `buy_time > 0` and
-/// exclude corrupted purchases (migration 42).
+/// Reads the upgrade purchases from [`upgrades_source`].
 fn purchases_subquery(parts: &QueryParts) -> String {
     let QueryParts {
         match_filters,
         player_filters,
         column_expr,
         extra_select,
+        upgrades_with,
         ..
     } = parts;
     format!(
@@ -419,9 +469,10 @@ fn purchases_subquery(parts: &QueryParts) -> String {
             item_id,
             toUInt8(assumeNotNull({column_expr})) AS column
         FROM (
+            {upgrades_with}
             SELECT match_id, account_id, won, kills, deaths, assists, item_id, buy_time{extra_select}
             FROM match_player
-            ARRAY JOIN upgrades.item_id AS item_id, upgrades.game_time_s AS buy_time
+            ARRAY JOIN upgrade_item_ids AS item_id, upgrade_buy_times AS buy_time
             WHERE {match_filters} {player_filters}
                 AND buy_time > 0
         ) e
@@ -436,6 +487,8 @@ fn build_nodes_query(query: &ItemFlowStatsQuery) -> String {
         player_filters,
         column_expr,
         extra_select,
+        upgrades_with,
+        extra_settings,
         ..
     } = &parts;
     let min_matches = query.min_matches.unwrap_or(20);
@@ -476,12 +529,13 @@ fn build_nodes_query(query: &ItemFlowStatsQuery) -> String {
                 nw,
                 toUInt8(assumeNotNull({column_expr})) AS column
             FROM (
+                {upgrades_with}
                 SELECT match_id, account_id, won, kills, deaths, assists, item_id, buy_time, nw{extra_select}
                 FROM match_player
                 ARRAY JOIN
-                    upgrades.item_id AS item_id,
-                    upgrades.game_time_s AS buy_time,
-                    upgrades.net_worth_at_buy AS nw
+                    upgrade_item_ids AS item_id,
+                    upgrade_buy_times AS buy_time,
+                    upgrade_net_worths AS nw
                 WHERE {match_filters} {player_filters}
                     AND buy_time > 0 AND nw > 0
             ) e
@@ -505,7 +559,7 @@ fn build_nodes_query(query: &ItemFlowStatsQuery) -> String {
     GROUP BY column, item_id
     HAVING matches >= {min_matches}
     ORDER BY column ASC, matches DESC
-    SETTINGS log_comment = 'item_flow_stats_nodes', apply_patch_parts = 0, optimize_use_projections = 0
+    SETTINGS log_comment = 'item_flow_stats_nodes', apply_patch_parts = 0{extra_settings}
     "
     )
 }
@@ -513,6 +567,7 @@ fn build_nodes_query(query: &ItemFlowStatsQuery) -> String {
 fn build_edges_query(query: &ItemFlowStatsQuery) -> String {
     let parts = query_parts(query);
     let purchases = purchases_subquery(&parts);
+    let extra_settings = parts.extra_settings;
     let min_matches = query.min_matches.unwrap_or(20);
     // Per player, collect (column, item_id) pairs, then emit one transition per
     // distinct (item in column c) -> (item in column c+1). arrayDistinct dedups
@@ -543,7 +598,7 @@ fn build_edges_query(query: &ItemFlowStatsQuery) -> String {
     GROUP BY from_column, from_item_id, to_item_id
     HAVING matches >= {min_matches}
     ORDER BY matches DESC
-    SETTINGS log_comment = 'item_flow_stats_edges', apply_patch_parts = 0, optimize_use_projections = 0
+    SETTINGS log_comment = 'item_flow_stats_edges', apply_patch_parts = 0{extra_settings}
     "
     )
 }
