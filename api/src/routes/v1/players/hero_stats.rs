@@ -1,7 +1,4 @@
-use crate::utils::sql::{
-    DURATION_COLUMN, MAX_FILTERING_AVERAGE_BADGE, MIN_FILTERING_AVERAGE_BADGE, MatchInfoFilters,
-    average_badge_filter, id_list,
-};
+use crate::utils::sql::{DURATION_COLUMN, MatchInfoFilters, id_list, impl_match_info};
 use axum::Json;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
@@ -76,6 +73,8 @@ pub(crate) struct HeroStatsQuery {
     /// Filter matches based on their ID.
     max_match_id: Option<u64>,
 }
+
+impl_match_info!(HeroStatsQuery);
 
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
 pub struct HeroStats {
@@ -153,16 +152,14 @@ fn build_query(query: &HeroStatsQuery) -> String {
         mp_filters.push(format!("hero_id IN ({ids})"));
     }
     // Time and id bounds go on the inner read; duration and badge on the outer one below.
+    let match_info = query.match_info();
     mp_filters.extend(
         MatchInfoFilters {
-            min_unix_timestamp: query.min_unix_timestamp,
-            max_unix_timestamp: query.max_unix_timestamp,
-            min_match_id: query.min_match_id,
-            max_match_id: query.max_match_id,
             min_average_badge: None,
             max_average_badge: None,
             min_duration_s: None,
             max_duration_s: None,
+            ..match_info
         }
         .predicates("", DURATION_COLUMN),
     );
@@ -178,23 +175,14 @@ fn build_query(query: &HeroStatsQuery) -> String {
     // differ in the filtered columns (checked 2026-10-04), so filtering before FINAL keeps the
     // same rows.
 
-    let mut outer_filters: Vec<String> = vec![];
-    if let Some(min_duration_s) = query.min_duration_s {
-        outer_filters.push(format!("duration_s >= {min_duration_s}"));
+    let outer_filters = MatchInfoFilters {
+        min_unix_timestamp: None,
+        max_unix_timestamp: None,
+        min_match_id: None,
+        max_match_id: None,
+        ..match_info
     }
-    if let Some(max_duration_s) = query.max_duration_s {
-        outer_filters.push(format!("duration_s <= {max_duration_s}"));
-    }
-    if let Some(min_badge_level) = query.min_average_badge
-        && min_badge_level > MIN_FILTERING_AVERAGE_BADGE
-    {
-        outer_filters.push(average_badge_filter("average_badge", ">=", min_badge_level));
-    }
-    if let Some(max_badge_level) = query.max_average_badge
-        && max_badge_level < MAX_FILTERING_AVERAGE_BADGE
-    {
-        outer_filters.push(average_badge_filter("average_badge", "<=", max_badge_level));
-    }
+    .predicates("", DURATION_COLUMN);
     let outer_where = if outer_filters.is_empty() {
         String::new()
     } else {
