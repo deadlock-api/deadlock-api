@@ -20,12 +20,13 @@ pub(crate) struct DemoEvent {
     pub(super) event: DemoEventPayload,
 }
 
-impl TryInto<Event> for DemoEvent {
+impl TryFrom<DemoEvent> for Event {
     type Error = axum::Error;
 
-    fn try_into(self) -> Result<Event, Self::Error> {
-        let event = self.event.to_string();
-        Event::default().event(event).json_data(self)
+    fn try_from(event: DemoEvent) -> Result<Self, Self::Error> {
+        Event::default()
+            .event(event.event.to_string())
+            .json_data(event)
     }
 }
 

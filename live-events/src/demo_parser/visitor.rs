@@ -143,15 +143,15 @@ impl SendingVisitor {
         delta_header: DeltaHeader,
         entity: &Entity,
     ) -> Result<(), DemoParseError> {
-        self.handle_corrupted_item(ctx, delta_header.into(), entity)?;
+        let delta = delta_header.into();
+        self.handle_corrupted_item(ctx, delta, entity)?;
 
         let Some(entity_type) = EntityType::from_opt(entity) else {
             return Ok(());
         };
 
         if entity_type == EntityType::GameRulesProxy
-            && let Some(rules) =
-                GameRulesProxyEvent::from_entity_update(ctx, delta_header.into(), entity)
+            && let Some(rules) = GameRulesProxyEvent::from_entity_update(ctx, delta, entity)
         {
             debug!("Updating game rules");
             self.rules = rules;
@@ -166,25 +166,20 @@ impl SendingVisitor {
             return Ok(());
         }
 
-        let Some(entity_update) =
-            EntityUpdateEvents::from_update(ctx, delta_header.into(), entity_type, entity)
+        let Some(entity_update) = EntityUpdateEvents::from_update(ctx, delta, entity_type, entity)
         else {
             return Ok(());
         };
 
-        let demo_event = DemoEvent {
-            tick: ctx.tick(),
-            game_time: self.game_time,
-            event: DemoEventPayload::EntityUpdate {
-                delta: delta_header.into(),
+        self.send(
+            ctx,
+            DemoEventPayload::EntityUpdate {
+                delta,
                 entity_index: entity.index(),
                 entity_type,
                 entity_update,
             },
-        };
-        let sse_event = demo_event.try_into()?;
-        self.outbox.push(sse_event);
-        Ok(())
+        )
     }
 
     /// Bans and Broker stock from the game rules (build 6711+).
@@ -299,33 +294,23 @@ impl SendingVisitor {
             let user_info = table.get_item(&player_slot);
             let user_data = user_info.and_then(StringTableItem::get_user_data);
             let user_info = user_data.and_then(|d| CMsgPlayerInfo::decode(d).ok());
-            let demo_event = DemoEvent {
-                tick: ctx.tick(),
-                game_time: self.game_time,
-                event: DemoEventPayload::ChatMessage {
-                    steam_name: user_info.as_ref().and_then(|u| u.name.clone()),
-                    steam_id: user_info
-                        .and_then(|u| u.steamid)
-                        .and_then(|s| steamid64_to_steamid3(s).ok()),
+            let (steam_name, steam_id) = user_info.map_or((None, None), |u| (u.name, u.steamid));
+            self.send(
+                ctx,
+                DemoEventPayload::ChatMessage {
+                    steam_name,
+                    steam_id: steam_id.and_then(|s| steamid64_to_steamid3(s).ok()),
                     text: msg.text,
                     all_chat: msg.all_chat,
                     lane_color: msg.lane_color,
                 },
-            };
-            let sse_event = demo_event.try_into()?;
-            self.outbox.push(sse_event);
+            )?;
         }
 
         if packet_type == CitadelUserMessageIds::KEUserMsgHeroKilled as u32
             && let Ok(msg) = CCitadelUserMsgHeroKilled::decode(data)
         {
-            let demo_event = DemoEvent {
-                tick: ctx.tick(),
-                game_time: self.game_time,
-                event: DemoEventPayload::HeroKilled(msg),
-            };
-            let sse_event = demo_event.try_into()?;
-            self.outbox.push(sse_event);
+            self.send(ctx, DemoEventPayload::HeroKilled(msg))?;
         }
 
         // Builds before 6711 send the bans in this message; newer ones in the game rules.
@@ -344,12 +329,7 @@ impl SendingVisitor {
         }
 
         if let Some(event) = self.decode_user_message(packet_type, data) {
-            let demo_event = DemoEvent {
-                tick: ctx.tick(),
-                game_time: self.game_time,
-                event,
-            };
-            self.outbox.push(demo_event.try_into()?);
+            self.send(ctx, event)?;
         }
 
         Ok(())
@@ -421,13 +401,7 @@ impl SendingVisitor {
             self.game_time = total_time - self.rules.game_start_time.unwrap_or_default();
         }
 
-        let demo_event = DemoEvent {
-            tick: ctx.tick(),
-            game_time: self.game_time,
-            event: DemoEventPayload::TickEnd,
-        };
-        self.outbox.push(demo_event.try_into()?);
-        Ok(())
+        self.send(ctx, DemoEventPayload::TickEnd)
     }
 }
 

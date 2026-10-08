@@ -94,6 +94,18 @@ impl EntityUpdateEvent for GameRulesProxyEvent {
     }
 }
 
+/// Key of element `i` of the dynamic array field `array`.
+fn array_element_key(array: u64, i: u64) -> u64 {
+    add_u64_to_hash(array, add_u64_to_hash(0, i))
+}
+
+/// The elements of the dynamic array field `array` that are set.
+fn array_values(entity: &Entity, array: u64) -> Vec<u64> {
+    (0..entity.get_value(&array).unwrap_or_default())
+        .filter_map(|i| entity.get_value(&array_element_key(array, i)))
+        .collect()
+}
+
 /// Banned heroes from the game rules entity's `m_vecBannedHeroes` (build 6711+; older builds send
 /// the `BannedHeroes` user message instead). `None` until the length and every element are set.
 pub(super) fn banned_heroes_from_game_rules(entity: &Entity) -> Option<Vec<u32>> {
@@ -101,7 +113,7 @@ pub(super) fn banned_heroes_from_game_rules(entity: &Entity) -> Option<Vec<u32>>
     (0..len)
         .map(|i| {
             entity
-                .get_value::<u64>(&add_u64_to_hash(BANNED_HEROES_HASH, add_u64_to_hash(0, i)))
+                .get_value::<u64>(&array_element_key(BANNED_HEROES_HASH, i))
                 .and_then(|id| u32::try_from(id).ok())
         })
         .collect()
@@ -176,7 +188,7 @@ impl AbilityUpgrade {
         let count: u64 = entity.get_value(&ABILITY_UPGRADES_HASH)?;
         (0..count)
             .map(|i| {
-                let key = add_u64_to_hash(ABILITY_UPGRADES_HASH, add_u64_to_hash(0, i));
+                let key = array_element_key(ABILITY_UPGRADES_HASH, i);
                 Some(Self::new(
                     entity.get_value(&add_u64_to_hash(key, ABILITY_ID_HASH))?,
                     entity.get_value(&add_u64_to_hash(key, UPGRADE_INFO_HASH))?,
@@ -215,10 +227,7 @@ impl EntityUpdateEvent for PlayerControllerEvent {
             objective_damage: entity.get_value(&OBJECTIVE_DAMAGE_HASH),
             ultimate_cooldown_end: entity.get_value(&ULTIMATE_COOLDOWN_END_HASH),
             ability_upgrades: AbilityUpgrade::from_entity(entity),
-            upgrades: (0..entity.get_value(&UPGRADES_HASH).unwrap_or_default())
-                .map(|i| add_u64_to_hash(UPGRADES_HASH, add_u64_to_hash(0, i)))
-                .filter_map(|h| entity.get_value(&h))
-                .collect(),
+            upgrades: array_values(entity, UPGRADES_HASH),
         }
         .into()
     }
@@ -254,10 +263,7 @@ impl EntityUpdateEvent for PlayerPawnEvent {
             position: utils::get_entity_position(ctx, entity),
             quickbuy_auto_purchase: entity.get_value(&QUICKBUY_AUTO_PURCHASE_HASH),
             quickbuy_auto_queue_build: entity.get_value(&QUICKBUY_AUTO_QUUE_BUILD_HASH),
-            quickbuy_queue: (0..entity.get_value(&QUICKBUY_HASH).unwrap_or_default())
-                .map(|i| add_u64_to_hash(QUICKBUY_HASH, add_u64_to_hash(0, i)))
-                .filter_map(|h| entity.get_value(&h))
-                .collect(),
+            quickbuy_queue: array_values(entity, QUICKBUY_HASH),
         }
         .into()
     }
@@ -429,81 +435,42 @@ impl EntityUpdateEvents {
         entity_type: EntityType,
         entity: &Entity,
     ) -> Option<Self> {
+        fn boxed<E: EntityUpdateEvent>(
+            ctx: &Context,
+            delta: Delta,
+            entity: &Entity,
+            variant: fn(Box<E>) -> EntityUpdateEvents,
+        ) -> Option<EntityUpdateEvents> {
+            E::from_entity_update(ctx, delta, entity)
+                .map(Box::new)
+                .map(variant)
+        }
+
         match entity_type {
-            EntityType::GameRulesProxy => {
-                GameRulesProxyEvent::from_entity_update(ctx, delta, entity)
-                    .map(Box::new)
-                    .map(Self::GameRulesProxy)
-            }
-            EntityType::PlayerController => {
-                PlayerControllerEvent::from_entity_update(ctx, delta, entity)
-                    .map(Box::new)
-                    .map(Self::PlayerController)
-            }
-            EntityType::PlayerPawn => PlayerPawnEvent::from_entity_update(ctx, delta, entity)
-                .map(Box::new)
-                .map(Self::PlayerPawn),
-            EntityType::Team => TeamEvent::from_entity_update(ctx, delta, entity)
-                .map(Box::new)
-                .map(Self::Team),
-            EntityType::MidBoss => NPCEvent::from_entity_update(ctx, delta, entity)
-                .map(Box::new)
-                .map(Self::MidBoss),
-            EntityType::TrooperNeutral => NPCEvent::from_entity_update(ctx, delta, entity)
-                .map(Box::new)
-                .map(Self::TrooperNeutral),
-            EntityType::Trooper => NPCEvent::from_entity_update(ctx, delta, entity)
-                .map(Box::new)
-                .map(Self::Trooper),
-            EntityType::TrooperBoss => NPCEvent::from_entity_update(ctx, delta, entity)
-                .map(Box::new)
-                .map(Self::TrooperBoss),
-            EntityType::ShieldedSentry => NPCEvent::from_entity_update(ctx, delta, entity)
-                .map(Box::new)
-                .map(Self::ShieldedSentry),
-            EntityType::BaseDefenseSentry => NPCEvent::from_entity_update(ctx, delta, entity)
-                .map(Box::new)
-                .map(Self::BaseDefenseSentry),
-            EntityType::TrooperBarrackBoss => NPCEvent::from_entity_update(ctx, delta, entity)
-                .map(Box::new)
-                .map(Self::TrooperBarrackBoss),
-            EntityType::BossTier2 => NPCEvent::from_entity_update(ctx, delta, entity)
-                .map(Box::new)
-                .map(Self::BossTier2),
-            EntityType::BossTier3 => NPCEvent::from_entity_update(ctx, delta, entity)
-                .map(Box::new)
-                .map(Self::BossTier3),
-            EntityType::BreakableProp => PositionEntity::from_entity_update(ctx, delta, entity)
-                .map(Box::new)
-                .map(Self::BreakableProp),
+            EntityType::GameRulesProxy => boxed(ctx, delta, entity, Self::GameRulesProxy),
+            EntityType::PlayerController => boxed(ctx, delta, entity, Self::PlayerController),
+            EntityType::PlayerPawn => boxed(ctx, delta, entity, Self::PlayerPawn),
+            EntityType::Team => boxed(ctx, delta, entity, Self::Team),
+            EntityType::MidBoss => boxed(ctx, delta, entity, Self::MidBoss),
+            EntityType::TrooperNeutral => boxed(ctx, delta, entity, Self::TrooperNeutral),
+            EntityType::Trooper => boxed(ctx, delta, entity, Self::Trooper),
+            EntityType::TrooperBoss => boxed(ctx, delta, entity, Self::TrooperBoss),
+            EntityType::ShieldedSentry => boxed(ctx, delta, entity, Self::ShieldedSentry),
+            EntityType::BaseDefenseSentry => boxed(ctx, delta, entity, Self::BaseDefenseSentry),
+            EntityType::TrooperBarrackBoss => boxed(ctx, delta, entity, Self::TrooperBarrackBoss),
+            EntityType::BossTier2 => boxed(ctx, delta, entity, Self::BossTier2),
+            EntityType::BossTier3 => boxed(ctx, delta, entity, Self::BossTier3),
+            EntityType::BreakableProp => boxed(ctx, delta, entity, Self::BreakableProp),
             EntityType::BreakablePropGoldPickup => {
-                PositionActiveEntity::from_entity_update(ctx, delta, entity)
-                    .map(Box::new)
-                    .map(Self::BreakablePropGoldPickup)
+                boxed(ctx, delta, entity, Self::BreakablePropGoldPickup)
             }
             EntityType::BreakablePropModifierPickup => {
-                PositionActiveEntity::from_entity_update(ctx, delta, entity)
-                    .map(Box::new)
-                    .map(Self::BreakablePropModifierPickup)
+                boxed(ctx, delta, entity, Self::BreakablePropModifierPickup)
             }
-            EntityType::PunchablePowerup => PositionEntity::from_entity_update(ctx, delta, entity)
-                .map(Box::new)
-                .map(Self::PunchablePowerup),
-            EntityType::DestroyableBuilding => {
-                DestroyableBuilding::from_entity_update(ctx, delta, entity)
-                    .map(Box::new)
-                    .map(Self::DestroyableBuilding)
-            }
-            EntityType::SinnersSacrifice => {
-                SinnersSacrifice::from_entity_update(ctx, delta, entity)
-                    .map(Box::new)
-                    .map(Self::SinnersSacrifice)
-            }
-            EntityType::AbilityMeleeParry => {
-                AbilityMeleeParry::from_entity_update(ctx, delta, entity)
-                    .map(Box::new)
-                    .map(Self::AbilityMeleeParry)
-            }
+            EntityType::PunchablePowerup => boxed(ctx, delta, entity, Self::PunchablePowerup),
+            EntityType::DestroyableBuilding => boxed(ctx, delta, entity, Self::DestroyableBuilding),
+            EntityType::SinnersSacrifice => boxed(ctx, delta, entity, Self::SinnersSacrifice),
+            EntityType::AbilityMeleeParry => boxed(ctx, delta, entity, Self::AbilityMeleeParry),
         }
     }
 }
