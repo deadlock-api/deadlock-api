@@ -217,16 +217,11 @@ impl DeltaHeader {
     }
 }
 
-#[derive(Debug, Clone)]
-struct EntityField {
-    value: FieldValue,
-}
-
 // TODO: do not publicly expose Entity's fields
 #[derive(Debug, Clone)]
 pub struct Entity {
     index: i32,
-    fields: HashMap<u64, EntityField, BuildHasherDefault<NoHashHasher<u64>>>,
+    fields: HashMap<u64, FieldValue, BuildHasherDefault<NoHashHasher<u64>>>,
     serializer: Arc<FlattenedSerializer>,
 }
 
@@ -293,14 +288,7 @@ impl Entity {
 
             // eprintln!(" -> {:?}", &field_value);
 
-            match self.fields.entry(field_key) {
-                Entry::Occupied(mut oe) => {
-                    oe.get_mut().value = field_value;
-                }
-                Entry::Vacant(ve) => {
-                    ve.insert(EntityField { value: field_value });
-                }
-            }
+            self.fields.insert(field_key, field_value);
 
             // dbg!(&self.field_values);
             // panic!();
@@ -313,12 +301,12 @@ impl Entity {
     // ----------
 
     pub fn iter(&self) -> impl Iterator<Item = (&u64, &FieldValue)> {
-        self.fields.iter().map(|(key, ef)| (key, &ef.value))
+        self.fields.iter()
     }
 
     #[must_use]
     pub fn get_field_value(&self, key: &u64) -> Option<&FieldValue> {
-        self.fields.get(key).map(|ef| &ef.value)
+        self.fields.get(key)
     }
 
     /// get the value of the field with the provided key, and attempt to convert it.
@@ -332,7 +320,7 @@ impl Entity {
     {
         self.fields
             .get(key)
-            .and_then(|entity_field| T::try_from(&entity_field.value).ok())
+            .and_then(|value| T::try_from(value).ok())
     }
 
     /// get the value of the field with the provided key, and attempt to convert it.
@@ -344,10 +332,8 @@ impl Entity {
     where
         T: for<'a> TryFrom<&'a FieldValue, Error = FieldValueConversionError>,
     {
-        self.fields.get(key).map_or_else(
-            || Err(GetValueError::FieldNotExist),
-            |entity_field| T::try_from(&entity_field.value).map_err(GetValueError::from),
-        )
+        let value = self.fields.get(key).ok_or(GetValueError::FieldNotExist)?;
+        Ok(T::try_from(value)?)
     }
 
     #[must_use]
@@ -376,7 +362,6 @@ impl Entity {
 
 fn skip_entity_fields(
     serializer: &FlattenedSerializer,
-    _field_decode_ctx: &mut FieldDecodeContext,
     br: &mut BitReader,
     fps: &mut [FieldPath],
 ) -> Result<(), EntityParseError> {
@@ -459,8 +444,8 @@ impl EntityContainer {
         F: Fn(u64) -> bool,
     {
         let class_id = br.read_ubit64(entity_classes.bits)?.try_into()?;
-        let _serial = br.read_ubit64(NUM_SERIAL_NUM_BITS as usize);
-        let _unknown = br.read_uvarint32();
+        let _serial = br.read_ubit64(NUM_SERIAL_NUM_BITS as usize)?;
+        let _unknown = br.read_uvarint32()?;
 
         let class_info = entity_classes
             .by_id(class_id)
@@ -472,7 +457,7 @@ impl EntityContainer {
         let serializer_hash = serializer.serializer_name.hash;
 
         if !should_track(serializer_hash) {
-            skip_entity_fields(&serializer, field_decode_ctx, br, &mut self.field_paths)?;
+            skip_entity_fields(&serializer, br, &mut self.field_paths)?;
             self.skipped_serializers.insert(index, serializer);
             return Ok(None);
         }
@@ -540,7 +525,7 @@ impl EntityContainer {
     ) -> Result<Option<&Entity>, EntityParseError> {
         // First check if this entity was skipped - if so, skip the update data
         if let Some(serializer) = self.skipped_serializers.get(&index) {
-            skip_entity_fields(serializer, field_decode_ctx, br, &mut self.field_paths)?;
+            skip_entity_fields(serializer, br, &mut self.field_paths)?;
             return Ok(None);
         }
 

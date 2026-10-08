@@ -412,8 +412,6 @@ impl<'client, C: HttpClient + 'client> BroadcastHttp<'client, C> {
             Ok(packet) => {
                 match self.stream_buffer {
                     StreamBuffer::Last(ref mut value) => {
-                        use bytes::Buf;
-
                         *value = Some(packet
                                 // NOTE: clone is not cloning underlying bytes, but just increases
                                 // ref count.
@@ -500,8 +498,6 @@ impl<'client, C: HttpClient + 'client> DemoStream for BroadcastHttp<'client, C> 
             StreamBuffer::Last(None) => no_packet_panic!(),
 
             StreamBuffer::Last(Some(ref mut r)) => {
-                use bytes::Buf;
-
                 let size = cmd_header.body_size as usize;
                 let bytes = r.get_mut();
 
@@ -521,7 +517,8 @@ impl<'client, C: HttpClient + 'client> DemoStream for BroadcastHttp<'client, C> 
 
                 // it probably could be possible that body of the response was not transferred /
                 // read correctly?
-                let remaining = c.get_ref().len() - pos;
+                // NOTE: a cursor can be seeked past the end of its buffer.
+                let remaining = c.get_ref().len().saturating_sub(pos);
                 if remaining < size {
                     return Err(io::Error::from(io::ErrorKind::UnexpectedEof).into());
                 }
@@ -537,7 +534,6 @@ impl<'client, C: HttpClient + 'client> DemoStream for BroadcastHttp<'client, C> 
         match self.stream_buffer {
             StreamBuffer::Last(None) => no_packet_panic!(),
             StreamBuffer::Last(Some(ref mut r)) => {
-                use bytes::Buf;
                 let size = cmd_header.body_size as usize;
                 let bytes = r.get_mut();
                 if bytes.remaining() < size {

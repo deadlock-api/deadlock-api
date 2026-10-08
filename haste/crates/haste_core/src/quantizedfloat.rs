@@ -169,6 +169,15 @@ impl QuantizedFloat {
         low_value: f32,
         high_value: f32,
     ) -> Result<Self, QuantizedFloatError> {
+        // NOTE(blukai): quantized float decoder wouldn't be able to decode non-quantized float
+        // correctly.
+        //
+        // NOTE: the bit count comes from the (untrusted) demo, so a bad one is an error, not a
+        // panic.
+        if !(1..32).contains(&bit_count) {
+            return Err(InvalidRangeError.into());
+        }
+
         let mut qf = Self {
             bit_count,
             encode_flags,
@@ -177,10 +186,6 @@ impl QuantizedFloat {
             high_low_mul: 0.0,
             decode_mul: 0.0,
         };
-
-        // NOTE(blukai): quantized float decoder wouldn't be able to decode non-quantized float
-        // correctly.
-        assert!(bit_count > 0 && bit_count < 32);
 
         qf.encode_flags = compute_encode_flags(qf.encode_flags, qf.low_value, qf.high_value)?;
         let mut steps = 1 << qf.bit_count;

@@ -198,20 +198,14 @@ impl FlattenedSerializerField {
         //   `fkey_from_path` does.
         let send_node = match field.send_node_sym.and_then(resolve_sym) {
             Some(send_node) if !send_node.is_empty() => {
-                let mut parts = send_node.split('.');
-                let Some(first_part) = parts.next() else {
-                    // NOTE(blukai): send_node is not empty.
-                    //   even if it contains no `.` at least one part (the original) value is
-                    //   there.
-                    return Err(FieldMetadataError::FieldNotFound);
-                };
                 // NOTE(blukai): this needs to match what `fkey_from_path` does.
-                let seed = fxhash::hash_bytes(first_part.as_bytes());
-                let mut hash = seed;
-                for part in parts {
-                    let part_hash = fxhash::hash_bytes(part.as_bytes());
-                    hash = fxhash::add_u64_to_hash(hash, part_hash);
-                }
+                //
+                // NOTE: split always yields at least one part, so the reduce never comes up empty.
+                let hash = send_node
+                    .split('.')
+                    .map(|part| fxhash::hash_bytes(part.as_bytes()))
+                    .reduce(fxhash::add_u64_to_hash)
+                    .ok_or(FieldMetadataError::FieldNotFound)?;
 
                 key = fxhash::add_u64_to_hash(hash, var_name_symbol.hash);
 
@@ -290,7 +284,7 @@ impl FlattenedSerializerField {
         self.metadata
             .special_descriptor
             .as_ref()
-            .is_some_and(super::fieldmetadata::FieldSpecialDescriptor::is_dynamic_array)
+            .is_some_and(FieldSpecialDescriptor::is_dynamic_array)
     }
 
     /// Returns true if this field is a fixed-size array (e.g. `int32[6]`). Its element fields are
@@ -301,7 +295,7 @@ impl FlattenedSerializerField {
         self.metadata
             .special_descriptor
             .as_ref()
-            .is_some_and(super::fieldmetadata::FieldSpecialDescriptor::is_fixed_array)
+            .is_some_and(FieldSpecialDescriptor::is_fixed_array)
     }
 
     /// Returns true if this field is a Pointer type (like `CBodyComponent`).
@@ -312,7 +306,7 @@ impl FlattenedSerializerField {
         self.metadata
             .special_descriptor
             .as_ref()
-            .is_some_and(super::fieldmetadata::FieldSpecialDescriptor::is_pointer)
+            .is_some_and(FieldSpecialDescriptor::is_pointer)
     }
 }
 
@@ -350,8 +344,6 @@ impl FlattenedSerializer {
         })
     }
 
-    // NOTE: using this method can hurt performance when used in critical code
-    // paths. use the unsafe [`Self::get_child_unchecked`] instead.
     #[must_use]
     pub fn get_child(&self, index: usize) -> Option<&FlattenedSerializerField> {
         self.fields.get(index).map(core::convert::AsRef::as_ref)
@@ -360,6 +352,15 @@ impl FlattenedSerializer {
 
 type FieldMap = HashMap<i32, Arc<FlattenedSerializerField>, BuildHasherDefault<NoHashHasher<i32>>>;
 type SerializerMap = HashMap<u64, Arc<FlattenedSerializer>, BuildHasherDefault<NoHashHasher<u64>>>;
+
+/// the already parsed serializer that `field` refers to by name, if any.
+fn field_serializer(
+    serializer_map: &SerializerMap,
+    field: &FlattenedSerializerField,
+) -> Option<Arc<FlattenedSerializer>> {
+    let name = field.field_serializer_name.as_ref()?;
+    serializer_map.get(&name.hash).cloned()
+}
 
 pub struct FlattenedSerializerContainer {
     serializer_map: SerializerMap,
@@ -413,9 +414,13 @@ impl FlattenedSerializerContainer {
                     continue;
                 }
 
+                let proto_field = usize::try_from(*field_index)
+                    .ok()
+                    .and_then(|i| msg.fields.get(i))
+                    .ok_or(FieldMetadataError::FieldNotFound)?;
                 let mut field = FlattenedSerializerField::new(
                     &msg,
-                    &msg.fields[*field_index as usize],
+                    proto_field,
                     coord_size_params,
                     quantized_float_encoder_aliases,
                 )?;
@@ -423,16 +428,11 @@ impl FlattenedSerializerContainer {
                 field.field_serializer = match field.metadata.special_descriptor {
                     Some(FieldSpecialDescriptor::FixedArray { length }) => {
                         let mut field = field.clone();
-                        field.field_serializer = field
-                            .field_serializer_name
-                            .as_ref()
-                            .and_then(|symbol| serializer_map.get(&symbol.hash).cloned());
+                        field.field_serializer = field_serializer(&serializer_map, &field);
+                        // NOTE: the elements are identical, so they share one allocation.
+                        let field = Arc::new(field);
                         Some(Arc::new(FlattenedSerializer {
-                            fields: {
-                                let mut fields = Vec::with_capacity(length);
-                                fields.resize(length, Arc::new(field));
-                                fields
-                            },
+                            fields: vec![field; length],
                             ..Default::default()
                         }))
                     }
@@ -451,10 +451,7 @@ impl FlattenedSerializerContainer {
                     }
                     Some(FieldSpecialDescriptor::DynamicSerializerArray) => {
                         let field = FlattenedSerializerField {
-                            field_serializer: field
-                                .field_serializer_name
-                                .as_ref()
-                                .and_then(|symbol| serializer_map.get(&symbol.hash).cloned()),
+                            field_serializer: field_serializer(&serializer_map, &field),
                             ..Default::default()
                         };
                         Some(Arc::new(FlattenedSerializer {
@@ -462,10 +459,7 @@ impl FlattenedSerializerContainer {
                             ..Default::default()
                         }))
                     }
-                    _ => field
-                        .field_serializer_name
-                        .as_ref()
-                        .and_then(|symbol| serializer_map.get(&symbol.hash).cloned()),
+                    _ => field_serializer(&serializer_map, &field),
                 };
 
                 let field = Arc::new(field);
