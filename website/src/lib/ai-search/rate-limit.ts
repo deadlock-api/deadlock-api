@@ -1,9 +1,9 @@
-import { workerEnv } from "~/lib/worker-env";
+import type { RateLimiter } from "~/lib/worker-env";
 
 import { QUESTIONS_PER_MINUTE } from "./limits";
 
-// How many questions one visitor may ask the model: 10 a minute per IP address, the same as `AI_SEARCH_RATE_LIMITER`
-// in wrangler.jsonc. The Worker counts with that binding; the Vite dev server, which has none, counts here.
+// How many questions one visitor may ask the model: `QUESTIONS_PER_MINUTE` per IP address. The Worker counts with its
+// `AI_SEARCH_RATE_LIMITER` binding; the Vite dev server, which has none, counts here.
 
 const WINDOW_MS = 60_000;
 
@@ -18,8 +18,7 @@ function allowInMemory(key: string, now: number): boolean {
 }
 
 /** Whether the visitor at `ip` may ask another question now; asking counts against the limit. */
-export async function allowQuestion(ip: string, now = Date.now()): Promise<boolean> {
-  const limiter = workerEnv().AI_SEARCH_RATE_LIMITER;
+export async function allowQuestion(ip: string, limiter: RateLimiter | undefined, now = Date.now()): Promise<boolean> {
   if (limiter) return (await limiter.limit({ key: ip })).success;
   return allowInMemory(ip, now);
 }

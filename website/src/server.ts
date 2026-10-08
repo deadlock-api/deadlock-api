@@ -1,10 +1,9 @@
-import type { Register } from "@tanstack/react-router";
-import { createStartHandler, defaultStreamHandler, type RequestHandler } from "@tanstack/react-start/server";
+import { createStartHandler, defaultStreamHandler } from "@tanstack/react-start/server";
 
 import headersFile from "../public/_headers?raw";
 import { isCacheableRequest, serveCachedHtml } from "./lib/html-cache";
 import { headersFor, parseHeadersFile } from "./lib/static-headers";
-import { setWorkerEnv, type WorkerEnv } from "./lib/worker-env";
+import type { AssetsBinding, WorkerEnv } from "./lib/worker-env";
 
 const handler = createStartHandler(defaultStreamHandler);
 const HEADER_RULES = parseHeadersFile(headersFile);
@@ -12,11 +11,6 @@ const HEADER_RULES = parseHeadersFile(headersFile);
 function isHtmlResponse(res: Response): boolean {
   const ct = res.headers.get("content-type");
   return !!ct && ct.toLowerCase().includes("text/html");
-}
-
-/** The Workers Static Assets binding (`assets.binding` in wrangler.jsonc). */
-interface AssetsBinding {
-  fetch(url: string): Promise<Response>;
 }
 
 /** The builds whose assets this deploy serves (scripts/preserve-old-assets.mjs); read once per isolate. */
@@ -58,9 +52,8 @@ function finalize(url: URL, res: Response): Response {
 }
 
 export default {
-  async fetch(request: Request, env: Parameters<RequestHandler<Register>>[1], ctx?: WorkerContext) {
-    // Undefined under the Vite dev server, which runs this entry without a Worker around it.
-    setWorkerEnv((env as WorkerEnv | undefined) ?? {});
+  // `env` is missing under the Vite dev server, which runs this entry without a Worker around it.
+  async fetch(request: Request, env: WorkerEnv | undefined, ctx?: WorkerContext) {
     const url = new URL(request.url);
     let changed = false;
     if (url.hostname === "www.deadlock-api.com") {
@@ -75,7 +68,8 @@ export default {
 
     const render = (req: Request) =>
       handler(req, {
-        ...env,
+        // Server functions read the bindings as `context.env`.
+        context: { env },
         // Cloudflare creates 103 responses from Link headers. Keep hints limited
         // to public CSS/fonts; never replay route data or private resources.
         responseLinkHeader: {
@@ -91,7 +85,7 @@ export default {
         finalize: (res) => finalize(url, res),
         waitUntil: (promise) => ctx.waitUntil(promise),
         buildId: import.meta.env.VITE_BUILD_ID,
-        servedBuilds: () => readServedBuilds((env as { ASSETS?: AssetsBinding }).ASSETS, url.origin),
+        servedBuilds: () => readServedBuilds(env?.ASSETS, url.origin),
       });
     }
     return finalize(url, await render(request));
