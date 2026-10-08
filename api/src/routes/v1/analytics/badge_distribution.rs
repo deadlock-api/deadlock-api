@@ -14,7 +14,9 @@ use crate::error::APIResult;
 use crate::routes::v1::matches::types::{GameMode, MatchMode};
 use crate::routes::v1::players::rank::badge_from_flat_progress_sql;
 use crate::utils::parse::{comma_separated_deserialize_option, default_last_month_timestamp};
-use crate::utils::sql::{DURATION_COLUMN, MatchInfoFilters, MatchPoolFilters, cached_ch_query};
+use crate::utils::sql::{
+    DURATION_COLUMN, MatchInfoFilters, MatchPoolFilters, cached_ch_query, join_filters,
+};
 
 #[derive(Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash)]
 #[cfg_attr(test, derive(proptest_derive::Arbitrary))]
@@ -110,7 +112,7 @@ fn build_query(query: &BadgeDistributionQuery) -> String {
         }
         .predicates(),
     );
-    let filters = format!(" AND {}", info_filters.join(" AND "));
+    let filters = join_filters(&info_filters);
     let game_mode_filter = GameMode::sql_filter(query.game_mode);
     let match_mode_filter = MatchMode::sql_filter(query.match_mode.as_deref());
     let player_badge = badge_from_flat_progress_sql(
