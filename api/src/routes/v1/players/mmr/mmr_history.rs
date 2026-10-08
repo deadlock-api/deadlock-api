@@ -1,3 +1,4 @@
+use crate::routes::v1::players::ensure_not_protected;
 use axum::Json;
 use axum::extract::{Path, State};
 use axum::response::IntoResponse;
@@ -7,7 +8,7 @@ use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
 
 use crate::context::AppState;
-use crate::error::{APIError, APIResult};
+use crate::error::APIResult;
 use crate::routes::v1::players::mmr::apply_mmr_rate_limits;
 use crate::routes::v1::players::rank::badge_from_flat_progress_sql;
 use crate::services::rate_limiter::extractor::RateLimitKey;
@@ -133,13 +134,7 @@ pub(super) async fn mmr_history(
     rate_limit_key: RateLimitKey,
 ) -> APIResult<impl IntoResponse> {
     apply_mmr_rate_limits(&state, &rate_limit_key).await?;
-    if state
-        .steam_client
-        .is_user_protected(&state.pg_client, account_id)
-        .await?
-    {
-        return Err(APIError::protected_user());
-    }
+    ensure_not_protected(&state, &[account_id]).await?;
     get_mmr_history(&state.ch_client_ro, account_id)
         .await
         .map(Json)
@@ -174,13 +169,7 @@ pub(super) async fn hero_mmr_history(
     rate_limit_key: RateLimitKey,
 ) -> APIResult<impl IntoResponse> {
     apply_mmr_rate_limits(&state, &rate_limit_key).await?;
-    if state
-        .steam_client
-        .is_user_protected(&state.pg_client, account_id)
-        .await?
-    {
-        return Err(APIError::protected_user());
-    }
+    ensure_not_protected(&state, &[account_id]).await?;
     get_hero_mmr_history(&state.ch_client_ro, account_id, hero_id)
         .await
         .map(Json)

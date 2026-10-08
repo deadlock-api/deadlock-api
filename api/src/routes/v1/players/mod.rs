@@ -32,12 +32,17 @@ struct ApiDoc;
 
 const INVITE_LINK_PREFIX: &str = "invite_link:";
 
-async fn check_account_not_protected(state: &AppState, account_id: u32) -> APIResult<()> {
-    if state
+/// Fails with [`APIError::protected_user`] if any of `account_ids` is a protected account. The
+/// protected set is fetched (from its cache) once for all of them.
+pub(crate) async fn ensure_not_protected(state: &AppState, account_ids: &[u32]) -> APIResult<()> {
+    if account_ids.is_empty() {
+        return Ok(());
+    }
+    let protected_users = state
         .steam_client
-        .is_user_protected(&state.pg_client, account_id)
-        .await?
-    {
+        .get_protected_users(&state.pg_client)
+        .await?;
+    if account_ids.iter().any(|id| protected_users.contains(id)) {
         return Err(APIError::protected_user());
     }
     Ok(())
@@ -162,7 +167,7 @@ pub(super) async fn resolve_bot_for_account(
     account_id: u32,
     endpoint_name: &str,
 ) -> APIResult<String> {
-    check_account_not_protected(state, account_id).await?;
+    ensure_not_protected(state, &[account_id]).await?;
     check_patreon_access(&state.pg_client, rate_limit_key, account_id).await?;
     apply_bot_rate_limits(state, rate_limit_key, endpoint_name).await?;
 

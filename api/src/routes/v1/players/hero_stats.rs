@@ -1,3 +1,4 @@
+use crate::routes::v1::players::ensure_not_protected;
 use crate::utils::sql::{
     DURATION_COLUMN, MAX_FILTERING_AVERAGE_BADGE, MIN_FILTERING_AVERAGE_BADGE, MatchInfoFilters,
     average_badge_filter,
@@ -386,13 +387,7 @@ pub(crate) async fn hero_stats_single(
     Query(query): Query<HeroStatsQueryOld>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
-    if state
-        .steam_client
-        .is_user_protected(&state.pg_client, account_id)
-        .await?
-    {
-        return Err(APIError::protected_user());
-    }
+    ensure_not_protected(&state, &[account_id]).await?;
     let query = HeroStatsQuery {
         account_ids: vec![account_id],
         min_unix_timestamp: query.min_unix_timestamp,

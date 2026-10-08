@@ -1,3 +1,4 @@
+use crate::routes::v1::players::ensure_not_protected;
 use std::collections::{HashMap, HashSet};
 
 use axum::Json;
@@ -279,13 +280,7 @@ pub(crate) async fn steam_single(
     Path(AccountIdQuery { account_id }): Path<AccountIdQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
-    if state
-        .steam_client
-        .is_user_protected(&state.pg_client, account_id)
-        .await?
-    {
-        return Err(APIError::protected_user());
-    }
+    ensure_not_protected(&state, &[account_id]).await?;
     state
         .batchers
         .steam_profile

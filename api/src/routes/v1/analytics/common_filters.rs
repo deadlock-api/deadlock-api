@@ -294,11 +294,14 @@ pub(super) async fn filter_protected_accounts(
     account_ids: &mut Option<Vec<u32>>,
     account_id: Option<u32>,
 ) -> crate::error::APIResult<()> {
+    if account_ids.is_none() && account_id.is_none() {
+        return Ok(());
+    }
+    let protected_users = state
+        .steam_client
+        .get_protected_users(&state.pg_client)
+        .await?;
     if let Some(ids) = account_ids.take() {
-        let protected_users = state
-            .steam_client
-            .get_protected_users(&state.pg_client)
-            .await?;
         let filtered: Vec<_> = ids
             .into_iter()
             .filter(|id| !protected_users.contains(id))
@@ -309,10 +312,7 @@ pub(super) async fn filter_protected_accounts(
         *account_ids = Some(filtered);
     }
     if let Some(id) = account_id
-        && state
-            .steam_client
-            .is_user_protected(&state.pg_client, id)
-            .await?
+        && protected_users.contains(&id)
     {
         return Err(crate::error::APIError::protected_user());
     }

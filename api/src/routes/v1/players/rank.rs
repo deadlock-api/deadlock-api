@@ -1,3 +1,4 @@
+use crate::routes::v1::players::ensure_not_protected;
 use core::time::Duration;
 
 use axum::Json;
@@ -302,13 +303,7 @@ pub(super) async fn rank(
     Path(AccountIdQuery { account_id }): Path<AccountIdQuery>,
     State(state): State<AppState>,
 ) -> APIResult<Json<RankResponse>> {
-    if state
-        .steam_client
-        .is_user_protected(&state.pg_client, account_id)
-        .await?
-    {
-        return Err(APIError::protected_user());
-    }
+    ensure_not_protected(&state, &[account_id]).await?;
 
     let last_match = fetch_last_ranked_match(&state.batchers.player_rank, account_id).await?;
     Ok(Json(RankResponse::from_last_match(last_match)))
@@ -428,13 +423,7 @@ pub(super) async fn rank_image(
     Query(query): Query<RankImageQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
-    if state
-        .steam_client
-        .is_user_protected(&state.pg_client, account_id)
-        .await?
-    {
-        return Err(APIError::protected_user());
-    }
+    ensure_not_protected(&state, &[account_id]).await?;
 
     let badge = fetch_last_ranked_match(&state.batchers.player_rank, account_id)
         .await?
@@ -523,15 +512,7 @@ pub(super) async fn rank_avg_image(
 
     let unique_ids: Vec<u32> = account_ids.into_iter().unique().collect();
 
-    for &account_id in &unique_ids {
-        if state
-            .steam_client
-            .is_user_protected(&state.pg_client, account_id)
-            .await?
-        {
-            return Err(APIError::protected_user());
-        }
-    }
+    ensure_not_protected(&state, &unique_ids).await?;
 
     let badges: Vec<u32> = futures::future::try_join_all(
         unique_ids

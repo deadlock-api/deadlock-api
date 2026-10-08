@@ -1,3 +1,4 @@
+use crate::routes::v1::players::ensure_not_protected;
 use crate::utils::sql::impl_match_info;
 use axum::Json;
 use axum::extract::{Path, State};
@@ -9,7 +10,7 @@ use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
 
 use crate::context::AppState;
-use crate::error::{APIError, APIResult};
+use crate::error::APIResult;
 use crate::routes::v1::matches::types::GameMode;
 use crate::utils::sql::ROSTER_DURATION_COLUMN;
 use crate::utils::types::AccountIdQuery;
@@ -138,13 +139,7 @@ pub(super) async fn enemy_stats(
     Query(query): Query<EnemyStatsQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
-    if state
-        .steam_client
-        .is_user_protected(&state.pg_client, account_id)
-        .await?
-    {
-        return Err(APIError::protected_user());
-    }
+    ensure_not_protected(&state, &[account_id]).await?;
     get_enemy_stats(&state.ch_client_ro, account_id, query)
         .await
         .map(Json)

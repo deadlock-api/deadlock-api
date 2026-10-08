@@ -1,5 +1,6 @@
 use core::time::Duration;
 use std::collections::HashSet;
+use std::sync::Arc;
 
 use base64::Engine;
 use base64::prelude::BASE64_STANDARD;
@@ -182,7 +183,7 @@ impl SteamClient {
     pub(crate) async fn get_protected_users(
         &self,
         pg_client: &sqlx::Pool<sqlx::Postgres>,
-    ) -> sqlx::Result<HashSet<u32>> {
+    ) -> sqlx::Result<Arc<HashSet<u32>>> {
         get_protected_users_cached(pg_client).await
     }
 
@@ -379,7 +380,7 @@ async fn fetch_combined_patch_feed(http_client: &wreq::Client) -> Result<Vec<Fee
 )]
 pub(crate) async fn get_protected_users_cached(
     ph_client: &sqlx::Pool<sqlx::Postgres>,
-) -> sqlx::Result<HashSet<u32>> {
+) -> sqlx::Result<Arc<HashSet<u32>>> {
     let protected_users = sqlx::query!("SELECT steam_id FROM protected_user_accounts")
         .fetch_all(ph_client)
         .await?
@@ -387,7 +388,7 @@ pub(crate) async fn get_protected_users_cached(
         .map(|r| r.steam_id)
         .map(i32::cast_unsigned)
         .collect();
-    Ok(protected_users)
+    Ok(Arc::new(protected_users))
 }
 
 #[derive(serde::Deserialize)]
