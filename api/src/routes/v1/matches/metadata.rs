@@ -119,8 +119,40 @@ pub(super) struct MetadataQuery {
     disable_steam: Option<bool>,
 }
 
-async fn fetch_from_s3<T: Into<S3Path>>(s3: &AmazonS3, key: T) -> object_store::Result<Vec<u8>> {
-    s3.get(&key.into()).await?.bytes().await.map(|b| b.to_vec())
+async fn fetch_from_s3<T: Into<S3Path>>(s3: &AmazonS3, key: T) -> object_store::Result<Bytes> {
+    s3.get(&key.into()).await?.bytes().await
+}
+
+/// Fetches the salt-based `{prefix}{match_id}.meta.bz2`, else its `.meta_hltv.bz2` counterpart (both
+/// are requested concurrently), counting the hit under `store`. `None` when neither exists.
+async fn fetch_salt_or_hltv<T, F: Future<Output = object_store::Result<T>>>(
+    match_id: u64,
+    prefix: &str,
+    store: &'static str,
+    fetch: impl Fn(String) -> F,
+) -> Option<T> {
+    let (source, data) = match join(
+        fetch(format!("{prefix}{match_id}.meta.bz2")),
+        fetch(format!("{prefix}{match_id}.meta_hltv.bz2")),
+    )
+    .await
+    {
+        (Ok(data), _) => ("salt", data),
+        (_, Ok(data)) => ("hltv", data),
+        (Err(salt_err), Err(hltv_err)) => {
+            debug!(
+                match_id,
+                store,
+                salt_err = %salt_err,
+                hltv_err = %hltv_err,
+                "Match metadata not found"
+            );
+            return None;
+        }
+    };
+    debug!(match_id, store, source, "Match metadata found");
+    counter!("metadata.fetch", "s3" => store, "source" => source).increment(1);
+    Some(data)
 }
 
 async fn fetch_match_metadata_raw(
@@ -131,7 +163,7 @@ async fn fetch_match_metadata_raw(
     match_id: u64,
     is_custom: bool,
     disable_steam: bool,
-) -> APIResult<Vec<u8>> {
+) -> APIResult<Bytes> {
     if METADATA_FETCH_FAILURES
         .lock()
         .await
@@ -147,32 +179,10 @@ async fn fetch_match_metadata_raw(
     // Try to fetch from the cache first
     if match_id >= *min_cache_match_id(&state.ch_client).await
         && let Some(s3_cache) = s3_cache
+        && let Some(data) =
+            fetch_salt_or_hltv(match_id, "", "s3-cache", |key| fetch_from_s3(s3_cache, key)).await
     {
-        let results = join(
-            fetch_from_s3(s3_cache, format!("{match_id}.meta.bz2")),
-            fetch_from_s3(s3_cache, format!("{match_id}.meta_hltv.bz2")),
-        )
-        .await;
-        match results {
-            (Ok(data), _) => {
-                debug!(match_id, "Match metadata found in s3 cache (salt)");
-                counter!("metadata.fetch", "s3" => "s3-cache", "source" => "salt").increment(1);
-                return Ok(data);
-            }
-            (_, Ok(data)) => {
-                debug!(match_id, "Match metadata found in s3 cache (hltv)");
-                counter!("metadata.fetch", "s3" => "s3-cache", "source" => "hltv").increment(1);
-                return Ok(data);
-            }
-            (Err(salt_err), Err(hltv_err)) => {
-                debug!(
-                    match_id,
-                    salt_err = %salt_err,
-                    hltv_err = %hltv_err,
-                    "Match metadata not found in s3 cache, falling back to s3"
-                );
-            }
-        }
+        return Ok(data);
     }
 
     state
@@ -189,48 +199,28 @@ async fn fetch_match_metadata_raw(
         .await?;
 
     // If not in cache, fetch from S3
-    let results = join(
-        fetch_from_s3(s3, format!("processed/metadata/{match_id}.meta.bz2")),
-        fetch_from_s3(s3, format!("processed/metadata/{match_id}.meta_hltv.bz2")),
-    )
-    .await;
-    match results {
-        (Ok(data), _) => {
-            debug!(match_id, "Match metadata found on s3 (salt)");
-            counter!("metadata.fetch", "s3" => "hetzner", "source" => "salt").increment(1);
-            return Ok(data);
-        }
-        (_, Ok(data)) => {
-            debug!(match_id, "Match metadata found on s3 (hltv)");
-            counter!("metadata.fetch", "s3" => "hetzner", "source" => "hltv").increment(1);
-            return Ok(data);
-        }
-        (Err(salt_err), Err(hltv_err)) => {
-            debug!(
-                match_id,
-                salt_err = %salt_err,
-                hltv_err = %hltv_err,
-                "Match metadata not found on s3, falling back to steam"
-            );
-        }
+    if let Some(data) = fetch_salt_or_hltv(match_id, "processed/metadata/", "hetzner", |key| {
+        fetch_from_s3(s3, key)
+    })
+    .await
+    {
+        return Ok(data);
     }
 
     // If not in S3, fetch from Steam
     let salts =
         fetch_match_salts(state, rate_limit_key, match_id, is_custom, disable_steam).await?;
-    let metadata = match state
+    match state
         .steam_client
         .fetch_metadata_file(match_id, salts)
         .await
     {
-        Ok(metadata) => metadata,
+        Ok(metadata) => Ok(metadata.into()),
         Err(e) => {
             METADATA_FETCH_FAILURES.lock().await.cache_set(match_id, ());
-            return Err(e.into());
+            Err(e.into())
         }
-    };
-
-    Ok(metadata)
+    }
 }
 
 /// Decompress a `.meta.bz2` payload, sniffing the container from its magic bytes.
@@ -256,24 +246,12 @@ async fn parse_match_metadata_raw(raw_data: &[u8]) -> APIResult<CMsgMatchMetaDat
         return Ok(data);
     }
 
-    match CMsgMatchMetaDataContentsPatched::decode(match_data.as_slice())
+    let patched = CMsgMatchMetaDataContentsPatched::decode(match_data.as_slice())
         .or_else(|_| CMsgMatchMetaDataContentsPatched::decode(buf.as_slice()))
-    {
-        Ok(patched) => {
-            let encoded = patched.encode_to_vec();
-            match CMsgMatchMetaDataContents::decode(encoded.as_slice()) {
-                Ok(data) => Ok(data),
-                Err(e) => {
-                    error!("Failed to decode metadata after patch: {e}");
-                    Err(e.into())
-                }
-            }
-        }
-        Err(e) => {
-            debug!("Failed to decode patched metadata: {e}");
-            Err(e.into())
-        }
-    }
+        .inspect_err(|e| debug!("Failed to decode patched metadata: {e}"))?;
+    CMsgMatchMetaDataContents::decode(patched.encode_to_vec().as_slice())
+        .inspect_err(|e| error!("Failed to decode metadata after patch: {e}"))
+        .map_err(Into::into)
 }
 
 #[utoipa::path(
@@ -324,32 +302,13 @@ pub(super) async fn metadata_raw(
         s3.get(&key.into()).await.map(GetResult::into_stream)
     }
 
-    if match_id >= *min_cache_match_id(&state.ch_client).await {
-        let results = join(
-            fetch_from_s3_stream(&state.s3_cache_client, format!("{match_id}.meta.bz2")),
-            fetch_from_s3_stream(&state.s3_cache_client, format!("{match_id}.meta_hltv.bz2")),
-        )
-        .await;
-        match results {
-            (Ok(data), _) => {
-                debug!(match_id, "Match metadata found in s3 cache (salt)");
-                counter!("metadata.fetch", "s3" => "s3-cache", "source" => "salt").increment(1);
-                return Ok(Body::from_stream(data));
-            }
-            (_, Ok(data)) => {
-                debug!(match_id, "Match metadata found in s3 cache (hltv)");
-                counter!("metadata.fetch", "s3" => "s3-cache", "source" => "hltv").increment(1);
-                return Ok(Body::from_stream(data));
-            }
-            (Err(salt_err), Err(hltv_err)) => {
-                debug!(
-                    match_id,
-                    salt_err = %salt_err,
-                    hltv_err = %hltv_err,
-                    "Match metadata not found in s3 cache, falling back to s3"
-                );
-            }
-        }
+    if match_id >= *min_cache_match_id(&state.ch_client).await
+        && let Some(data) = fetch_salt_or_hltv(match_id, "", "s3-cache", |key| {
+            fetch_from_s3_stream(&state.s3_cache_client, key)
+        })
+        .await
+    {
+        return Ok(Body::from_stream(data));
     }
 
     fetch_match_metadata_raw(
@@ -429,17 +388,18 @@ pub(super) async fn metadata(
             .unwrap_or_default()
     });
 
-    let banned_hero_ids = demo_rows
-        .first()
-        .map_or_default(|r| r.banned_hero_ids.clone());
     let pregame_hero_ids = demo_rows
         .iter()
         .filter_map(|r| r.pregame_hero_id.map(|h| (r.account_id, h)))
         .collect();
     let hero_build_ids = demo_rows
-        .into_iter()
+        .iter()
         .filter_map(|r| r.hero_build_id.map(|b| (r.account_id, b)))
         .collect();
+    let banned_hero_ids = demo_rows
+        .into_iter()
+        .next()
+        .map_or_default(|r| r.banned_hero_ids);
 
     Ok(Json(MatchMetadataResponse {
         metadata: metadata?,
