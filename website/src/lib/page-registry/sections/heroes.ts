@@ -1,9 +1,11 @@
+import { buildSortByValue, SORT_CATEGORIES, type ScoreboardStat, type SortVariant } from "~/lib/scoreboard-sorts";
+
 import { comboSize, heroId, heroIds, heroSlugParam, sortParam } from "../readers";
 import type { RegisteredPage, SortKey } from "../types";
 
 const ALL = ["mode", "rank", "time"] as const;
 
-/** The scoreboards' own stat keys (sort-options.ts), by the shared sort keys: every stat both tables sort by. */
+/** The scoreboards' stats by the shared sort keys; a stat the scoreboards do not have fails to typecheck. */
 const SCOREBOARD_STATS = {
   kills: "kills",
   deaths: "deaths",
@@ -25,19 +27,21 @@ const SCOREBOARD_STATS = {
   shots_missed: "shots_missed",
   hero_hits: "hero_bullets_hit",
   crits: "hero_bullets_hit_crit",
-} as const satisfies Partial<Record<SortKey, string>>;
+} as const satisfies Partial<Record<SortKey, ScoreboardStat>>;
 
 /**
  * A scoreboard's `sort_by` for each shared sort key. Heroes are compared by their average per match; players by
  * their totals, as a leaderboard of "the most kills".
  */
-export function scoreboardSort(variant: "avg" | "total"): Partial<Record<SortKey, string>> {
-  const stats = Object.entries(SCOREBOARD_STATS).map(([key, stat]) => [
-    key,
-    variant === "avg" ? `avg_${stat}_per_match` : stat,
-  ]);
+export function scoreboardSort(variant: SortVariant): Partial<Record<SortKey, string>> {
+  const stats = Object.entries(SCOREBOARD_STATS).map(([key, stat]) => [key, buildSortByValue(stat, variant)]);
   return { winrate: "winrate", matches: "matches", wins: "wins", losses: "losses", ...Object.fromEntries(stats) };
 }
+
+/** The stats both scoreboards sort by, as their tables name them: "kills, deaths, …, hero crit hits". */
+export const SCOREBOARD_STAT_NAMES = Object.values(SCOREBOARD_STATS)
+  .map((stat) => SORT_CATEGORIES.find((category) => category.key === stat)?.label.toLowerCase() ?? stat)
+  .join(", ");
 
 export const HERO_PAGES: RegisteredPage[] = [
   {

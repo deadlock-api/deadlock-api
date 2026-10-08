@@ -2,10 +2,10 @@ import type { HeroEntry } from "deadlock_api_client";
 
 import { HeroCell } from "~/components/domain/assets/HeroCell";
 import type { ScoreboardSort } from "~/components/domain/player-scoreboard/ScoreboardTable";
-import { formatStatValue, sortByLabel } from "~/components/domain/player-scoreboard/sort-options";
 import { SortableHeader } from "~/components/patterns/data-table/SortableHeader";
 import { TableEmptyRow } from "~/components/patterns/data-table/TableEmptyRow";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
+import { formatStatValue, sortByLabel } from "~/lib/scoreboard-sorts";
 
 export interface HeroScoreboardTableProps {
   entries: HeroEntry[];

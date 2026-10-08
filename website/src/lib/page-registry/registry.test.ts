@@ -3,7 +3,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { test } from "node:test";
 
-import { HERO_SORT_BY_VALUES, ALL_SORT_BY_VALUES } from "../../components/domain/player-scoreboard/sort-options";
+import { HERO_SORT_BY_VALUES, ALL_SORT_BY_VALUES } from "~/lib/scoreboard-sorts";
+
 import { ANALYTICS_TABS, analyticsTabPath, type AnalyticsSection, type AnalyticsTab } from "../analytics-tabs";
 import { ALL_STAT_KEYS } from "../game-stat-definitions";
 import { PAGE_REGISTRY, resolvePage, UNSEARCHABLE_PAGES } from "./index";

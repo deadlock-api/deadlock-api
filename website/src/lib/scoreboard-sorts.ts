@@ -5,7 +5,7 @@ export type SortVariant = "avg" | "max" | "total";
 interface SortCategory {
   label: string;
   key: string;
-  variants?: SortVariant[];
+  variants?: readonly SortVariant[];
   /** Only the player scoreboard can sort by it; the hero scoreboard API answers 400. */
   playersOnly?: boolean;
   /** Measures the soul economy, which Street Brawl does not have. */
@@ -41,9 +41,9 @@ export function parseSortByValue(sortBy: string): { key: string; variant?: SortV
   return { key: sortBy };
 }
 
-const ALL_VARIANTS: SortVariant[] = ["avg", "max", "total"];
+const ALL_VARIANTS: readonly SortVariant[] = ["avg", "max", "total"];
 
-export const SORT_CATEGORIES: SortCategory[] = [
+const CATEGORIES = [
   { label: "Matches", key: "matches" },
   // `rank` is the badge of the latest ranked match in range, `peak_rank` the highest one.
   { label: "Current Rank", key: "rank", playersOnly: true },
@@ -72,7 +72,12 @@ export const SORT_CATEGORIES: SortCategory[] = [
   { label: "Shots Missed", key: "shots_missed", variants: ALL_VARIANTS },
   { label: "Hero Bullets Hit", key: "hero_bullets_hit", variants: ALL_VARIANTS },
   { label: "Hero Crit Hits", key: "hero_bullets_hit_crit", variants: ALL_VARIANTS },
-];
+] as const satisfies readonly SortCategory[];
+
+/** A stat a scoreboard sorts by. */
+export type ScoreboardStat = (typeof CATEGORIES)[number]["key"];
+
+export const SORT_CATEGORIES: readonly SortCategory[] = CATEGORIES;
 
 /** The sorts a scoreboard offers; in Street Brawl (no soul economy) that leaves out net worth. */
 export function sortCategoriesFor(scope: ScoreboardScope, gameMode?: GameMode): SortCategory[] {

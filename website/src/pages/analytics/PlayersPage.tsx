@@ -6,7 +6,6 @@ import { type ComponentProps, type ComponentType, lazy, Suspense, useState } fro
 
 import { Filter } from "~/components/domain/filters";
 import { ScoreboardTable } from "~/components/domain/player-scoreboard/ScoreboardTable";
-import { ALL_SORT_BY_VALUES, sortByIn } from "~/components/domain/player-scoreboard/sort-options";
 import { SortBySelector } from "~/components/domain/player-scoreboard/SortBySelector";
 import { ScoreboardCompareButton } from "~/components/features/player-compare/ScoreboardCompareButton";
 import { FilterBar } from "~/components/patterns/filter-bar/FilterBar";
@@ -26,6 +25,7 @@ import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { analyticsTabPath, ANALYTICS_VIEWS } from "~/lib/analytics-tabs";
 import { getEffectiveRankRange } from "~/lib/game-mode";
 import { MAX_COMPARE_PLAYERS } from "~/lib/player-compare";
+import { ALL_SORT_BY_VALUES, sortByIn } from "~/lib/scoreboard-sorts";
 import type { CompareFilters } from "~/queries/player-compare-queries";
 import { playerScoreboardQueryOptions } from "~/queries/player-scoreboard-query";
 

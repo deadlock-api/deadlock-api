@@ -5,7 +5,6 @@ import { useControllableState } from "~/components/ui/hooks/use-controllable-sta
 import { OptionRow } from "~/components/ui/option-row";
 import { Segmented, SegmentedItem } from "~/components/ui/segmented";
 import type { GameMode } from "~/lib/game-mode";
-
 import {
   buildSortByValue,
   sortByLabel,
@@ -13,7 +12,7 @@ import {
   type ScoreboardScope,
   sortCategoriesFor,
   type SortVariant,
-} from "./sort-options";
+} from "~/lib/scoreboard-sorts";
 
 interface SortBySelectorProps extends Omit<
   React.ComponentProps<typeof FilterCell>,

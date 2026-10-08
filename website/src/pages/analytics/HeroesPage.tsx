@@ -4,7 +4,6 @@ import { ChartNoAxesCombined, GraduationCap, ListOrdered, Swords, Table2, Trophy
 import { parseAsBoolean, parseAsString, parseAsStringLiteral, useQueryState } from "nuqs";
 import { lazy, Suspense, useId } from "react";
 
-import { HERO_SORT_BY_VALUES, sortByIn } from "~/components/domain/player-scoreboard/sort-options";
 import { SortBySelector } from "~/components/domain/player-scoreboard/SortBySelector";
 import { HeroCombFilters } from "~/components/features/heroes/HeroCombFilters";
 import { HeroFiltersSection } from "~/components/features/heroes/HeroFiltersSection";
@@ -34,6 +33,7 @@ import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { analyticsTabPath, ANALYTICS_VIEWS } from "~/lib/analytics-tabs";
 import { hasSoulEconomy, MODE_CONFIG } from "~/lib/game-mode";
 import { TIER_METRIC_DEFINITIONS, TIER_METRICS, type TierMetric, type TierMetricDefinition } from "~/lib/hero-tiers";
+import { HERO_SORT_BY_VALUES, sortByIn } from "~/lib/scoreboard-sorts";
 import { heroScoreboardQueryOptions } from "~/queries/hero-scoreboard-query";
 import { BY_RANK_STATS, HERO_STATS, heroStatsFor } from "~/types/api_hero_stats";
 

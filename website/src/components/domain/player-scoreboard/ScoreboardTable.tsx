@@ -15,10 +15,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~
 import { usePaginationQueryState } from "~/hooks/usePaginationQueryState";
 import { useSteamProfiles } from "~/hooks/useSteamProfiles";
 import { extractBadgeMap } from "~/lib/leaderboard";
+import { formatStatValue, sortByLabel } from "~/lib/scoreboard-sorts";
 import { parseSteamIdInput } from "~/lib/steam";
 import { ranksQueryOptions } from "~/queries/ranks-query";
-
-import { formatStatValue, sortByLabel } from "./sort-options";
 
 /** A row's add-to-comparison toggle: a plus to add, a check once added. */
 function PickToggle({

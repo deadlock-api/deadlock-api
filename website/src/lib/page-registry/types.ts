@@ -12,42 +12,44 @@ export interface Entity {
 }
 
 /**
- * The stats a page can be ordered or switched by, in one shared vocabulary. Each page maps the keys it supports to its
- * own parameter value; a key it does not support leaves the page's default.
+ * The stats a page can be ordered or switched by, in one shared vocabulary, with what each means to the model. Each
+ * page maps the keys it supports to its own parameter value; a key it does not support leaves the page's default.
  */
-export const SORT_KEYS = [
-  "winrate",
-  "pickrate",
-  "banrate",
-  "matches",
-  "wins",
-  "losses",
-  "kills",
-  "deaths",
-  "assists",
-  "kda",
-  "souls",
-  "damage",
-  "damage_taken",
-  "boss_damage",
-  "creep_damage",
-  "neutral_damage",
-  "healing",
-  "last_hits",
-  "denies",
-  "creep_kills",
-  "neutral_kills",
-  "max_health",
-  "level",
-  "permanent_buffs",
-  "accuracy",
-  "shots_hit",
-  "shots_missed",
-  "hero_hits",
-  "crits",
-  "duration",
-] as const;
-export type SortKey = (typeof SORT_KEYS)[number];
+export const SORT_DESCRIPTIONS = {
+  winrate: "win rate, winning, best",
+  pickrate: "pick rate, popularity, most played",
+  banrate: "ban rate, most banned",
+  matches: "number of matches or games",
+  wins: "number of wins",
+  losses: "number of losses",
+  kills: "kills",
+  deaths: "deaths, dying",
+  assists: "assists",
+  kda: "KDA, kill death assist ratio",
+  souls: "souls, net worth, farm, gold",
+  damage: "damage dealt to players",
+  damage_taken: "damage taken, tankiness",
+  boss_damage: "damage to bosses and objectives",
+  creep_damage: "damage to troopers and creeps",
+  neutral_damage: "damage to neutral camps",
+  healing: "healing",
+  last_hits: "last hits, creep score",
+  denies: "denies",
+  creep_kills: "troopers or creeps killed",
+  neutral_kills: "neutral camps or jungle creeps killed",
+  max_health: "max health, hp",
+  level: "player level",
+  permanent_buffs: "golden statue buffs picked up",
+  accuracy: "accuracy, aim",
+  shots_hit: "shots hit",
+  shots_missed: "shots missed",
+  hero_hits: "bullets hit on heroes",
+  crits: "crits, headshots",
+  duration: "match length, game duration",
+} as const;
+export type SortKey = keyof typeof SORT_DESCRIPTIONS;
+/** The stats a page can be ordered or switched by, in one shared vocabulary; `SORT_DESCRIPTIONS` says what each means. */
+export const SORT_KEYS = Object.keys(SORT_DESCRIPTIONS) as SortKey[];
 
 export const MODES = ["ranked", "unranked", "street_brawl"] as const;
 export type SelectionMode = (typeof MODES)[number];

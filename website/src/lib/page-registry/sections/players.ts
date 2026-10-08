@@ -1,6 +1,6 @@
 import { heroId, region, sortParam, teamSlots } from "../readers";
 import type { RegisteredPage } from "../types";
-import { scoreboardSort } from "./heroes";
+import { SCOREBOARD_STAT_NAMES, scoreboardSort } from "./heroes";
 
 const ALL = ["mode", "rank", "time"] as const;
 
@@ -8,7 +8,8 @@ export const PLAYER_PAGES: RegisteredPage[] = [
   {
     id: "player_scoreboard",
     description:
-      "the players with the most kills, wins, damage or souls, optionally on one hero; best players of a hero",
+      "players ranked by their totals, optionally on one hero: the best players of a hero, who has the most of any " +
+      `stat: wins, ${SCOREBOARD_STAT_NAMES}`,
     path: "/analytics/players",
     search: { hero: heroId(), sort_by: sortParam(scoreboardSort("total")) },
     filters: ALL,
