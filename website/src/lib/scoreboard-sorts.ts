@@ -1,3 +1,4 @@
+import { formatPercent } from "~/lib/format";
 import { type GameMode, hasSoulEconomy } from "~/lib/game-mode";
 
 export type SortVariant = "avg" | "max" | "total";
@@ -108,7 +109,7 @@ const PERCENTAGE_STATS = new Set(["winrate"]);
 
 export function formatScoreboardValue(value: number, sortBy: string): string {
   if (PERCENTAGE_STATS.has(sortBy)) {
-    return `${(value * 100).toFixed(1)}%`;
+    return formatPercent(value);
   }
   if (Number.isInteger(value)) {
     return value.toLocaleString("en-US");

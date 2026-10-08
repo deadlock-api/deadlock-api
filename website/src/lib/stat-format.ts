@@ -1,3 +1,5 @@
+import { formatPercent } from "~/lib/format";
+
 /** `duration` is seconds as m:ss (a match); `hours` is seconds as hours played. */
 export type StatFormat = "integer" | "duration" | "hours" | "percent" | "decimal1" | "decimal2";
 
@@ -45,7 +47,7 @@ export function formatStatValue(value: number | undefined | null, format: StatFo
       return hours < 10 ? `${hours.toFixed(1)} h` : `${Math.round(hours).toLocaleString("en-US")} h`;
     }
     case "percent":
-      return `${(value * 100).toFixed(1)}%`;
+      return formatPercent(value);
     case "decimal1":
       return value.toFixed(1);
     case "decimal2":

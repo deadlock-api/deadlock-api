@@ -1,3 +1,4 @@
+import { formatPercent } from "~/lib/format";
 import { TONE_COLOR, TONE_TEXT, toneOf } from "~/lib/tone";
 
 /** What every Team Builder number prints when it has nothing to report. */
@@ -20,7 +21,7 @@ export function compactNumber(value: number): string {
 /** A rate in `[0,1]` as a percentage, e.g. `52.6%`. */
 export function formatRate(value: number | undefined): string {
   if (value === undefined || !Number.isFinite(value)) return NO_DATA;
-  return `${(value * 100).toFixed(1)}%`;
+  return formatPercent(value);
 }
 
 /**

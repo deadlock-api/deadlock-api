@@ -16,7 +16,7 @@ export const LANES: readonly LaneInfo[] = [
   { id: 6, name: "Purple", color: "var(--lane-purple)", textClass: "text-lane-purple" },
 ];
 
-export const SLOTS_PER_LANE = 2;
+const SLOTS_PER_LANE = 2;
 
 /** Street Brawl is four a side on a map without lanes, so its slots carry no lane assignment. */
 export const TEAM_SIZE: Record<GameMode, number> = {

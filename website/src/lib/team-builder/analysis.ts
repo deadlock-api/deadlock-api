@@ -104,7 +104,7 @@ const MODELS: Record<GameMode, DraftModel> = {
 const POINTS_PER_LOG_ODDS = 25;
 
 /** A rate in `[0,1]` as win-rate points either side of an even match. */
-export const toPoints = (value: number | undefined) => (value === undefined ? undefined : (value - 0.5) * 100);
+const toPoints = (value: number | undefined) => (value === undefined ? undefined : (value - 0.5) * 100);
 
 /**
  * A duo-vs-duo lane sample thinner than this is noise; the lane edge is estimated from the four
@@ -603,8 +603,7 @@ export function analyzeDraft(draft: Draft, index: StatsIndex): DraftAnalysis {
   // Read off a fixed slope rather than the draft's own, so the four rows stay on one scale
   // instead of shrinking together as the prediction gets lopsided.
   const points = (value: number, i: number) => POINTS_PER_LOG_ODDS * model.weights[i] * value;
-  const half = (value: number | undefined, i: number) =>
-    value === undefined ? undefined : POINTS_PER_LOG_ODDS * model.weights[i] * value;
+  const half = (value: number | undefined, i: number) => (value === undefined ? undefined : points(value, i));
 
   const contributions: Contribution[] = [
     {
