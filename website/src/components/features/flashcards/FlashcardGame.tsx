@@ -1,8 +1,8 @@
 import { AnimatePresence, motion } from "framer-motion";
 import type { ReactNode } from "react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { createContext, use } from "react";
 
-import { AnswerOption, revealedState } from "~/components/domain/minigames/AnswerOption";
+import { AnswerOption } from "~/components/domain/minigames/AnswerOption";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
@@ -18,25 +18,16 @@ import {
   PromptFrame,
   ResultMark,
 } from "./FlashcardChrome";
-import { useAnswerKeys } from "./use-answer-keys";
-import { useFlashcardProgress } from "./use-flashcard-progress";
-import { useNextCardFocus } from "./use-next-card-focus";
+import { type FlashcardCard, type FlashcardDeck, useFlashcardDeck } from "./use-flashcard-deck";
 
 const OPTION_COUNT = 4;
-const CORRECT_FEEDBACK_MS = 500;
-const WRONG_FEEDBACK_MS = 1500;
 
 export interface FlashcardEntry {
   id: number;
   name: string;
 }
 
-interface Card<T extends FlashcardEntry> {
-  answer: T;
-  options: T[];
-}
-
-function pickCard<T extends FlashcardEntry>(pool: T[], excludeIds: Set<number>): Card<T> | null {
+function pickCard<T extends FlashcardEntry>(pool: T[], excludeIds: Set<number>): FlashcardCard<T, T> | null {
   const answerPool = pool.filter((h) => !excludeIds.has(h.id));
   if (answerPool.length === 0) return null;
   const answer = answerPool[Math.floor(Math.random() * answerPool.length)];
@@ -60,13 +51,30 @@ function pickCard<T extends FlashcardEntry>(pool: T[], excludeIds: Set<number>):
   return { answer, options };
 }
 
+const entryId = (entry: FlashcardEntry) => entry.id;
+
+const DeckContext = createContext<FlashcardDeck<FlashcardEntry, FlashcardEntry> | null>(null);
+const EntryContext = createContext<FlashcardEntry | null>(null);
+
+function useDeck() {
+  const deck = use(DeckContext);
+  if (!deck?.card) throw new Error("FlashcardPrompt and FlashcardOptions must be children of a FlashcardGame");
+  return { ...deck, card: deck.card };
+}
+
+/** The entry of the card part it is rendered in: the answer inside `FlashcardPrompt`, an option inside `FlashcardOptions`. */
+export function useFlashcardEntry<T extends FlashcardEntry>(): T {
+  const entry = use(EntryContext);
+  if (!entry) throw new Error("useFlashcardEntry must be used inside FlashcardPrompt or FlashcardOptions");
+  return entry as T;
+}
+
 export interface FlashcardGameProps<T extends FlashcardEntry> {
   title: string;
   subtitle: string;
   pool: T[];
-  renderPrompt: (entry: T) => ReactNode;
-  renderOption?: (entry: T) => ReactNode;
-  promptClassName?: string;
+  /** The card: a `FlashcardPrompt` and `FlashcardOptions`, whose children read their entry with `useFlashcardEntry`. */
+  children: ReactNode;
   controls?: ReactNode;
   /** Changing this value draws a fresh card (stats and progress are kept). */
   reshuffleKey?: string;
@@ -80,10 +88,7 @@ export interface FlashcardGameProps<T extends FlashcardEntry> {
   masteredLabel: string;
 }
 
-function renderNameOption(entry: FlashcardEntry): ReactNode {
-  return <span className="truncate tracking-wide uppercase">{entry.name}</span>;
-}
-
+/** A multiple-choice deck over `pool`. Its behaviour is `useFlashcardDeck`; the card is the children. */
 export function FlashcardGame<T extends FlashcardEntry>(props: FlashcardGameProps<T>) {
   // The first card is drawn at random, so the server and client would disagree on it.
   const hydrated = useHydrated();
@@ -108,122 +113,44 @@ function FlashcardGameReady<T extends FlashcardEntry>({
   title,
   subtitle,
   pool,
-  renderPrompt,
-  renderOption = renderNameOption,
-  promptClassName = "size-40 sm:size-52",
+  children,
   controls,
   reshuffleKey,
-  deck,
+  deck: deckName,
   masteredLabel,
 }: FlashcardGameProps<T>) {
-  const { noRepeats, setNoRepeats, stats, seenIds, recordAnswer, resetProgress, loaded } = useFlashcardProgress(deck);
-  const [card, setCard] = useState<Card<T> | null>(null);
-  const [dealt, setDealt] = useState(false);
-  const [selected, setSelected] = useState<number | null>(null);
-  const advanceTimer = useRef<number | null>(null);
-  const prevReshuffleKey = useRef(reshuffleKey);
-
-  // The first card waits for the saved progress, so "No repeats" never opens on a card already mastered.
-  if (loaded && !dealt) {
-    setDealt(true);
-    setCard(pickCard(pool, noRepeats ? seenIds : new Set()));
-  }
-
-  const updateNoRepeats = useCallback(
-    (value: boolean) => {
-      setNoRepeats(value);
-      // Allowing repeats again after the pool was mastered: deal a card rather than stay on "mastered".
-      if (!value && card === null && pool.length > 0) setCard(pickCard(pool, new Set()));
-    },
-    [setNoRepeats, card, pool],
-  );
-
-  useEffect(() => {
-    return () => {
-      if (advanceTimer.current !== null) window.clearTimeout(advanceTimer.current);
-    };
-  }, []);
-
-  const { markAnswered, focusFirstOption } = useNextCardFocus();
-
-  const handleChoice = useCallback(
-    (id: number) => {
-      if (!card || selected !== null) return;
-      setSelected(id);
-      markAnswered();
-      const correct = id === card.answer.id;
-      const nextSeen = recordAnswer(card.answer.id, correct);
-      advanceTimer.current = window.setTimeout(
-        () => {
-          setSelected(null);
-          // Without no-repeats only the card just seen is skipped, unless it is the only one.
-          const exclude = noRepeats ? nextSeen : new Set<number>(pool.length > 1 ? [card.answer.id] : []);
-          setCard(pickCard(pool, exclude));
-        },
-        correct ? CORRECT_FEEDBACK_MS : WRONG_FEEDBACK_MS,
-      );
-    },
-    [card, selected, pool, noRepeats, recordAnswer, markAnswered],
-  );
-
-  const pickByKey = useCallback(
-    (index: number) => {
-      const option = card?.options[index];
-      if (option) handleChoice(option.id);
-    },
-    [card, handleChoice],
-  );
-  useAnswerKeys(card?.options.length ?? 0, pickByKey, selected === null);
-
-  const redraw = useCallback(() => {
-    if (advanceTimer.current !== null) window.clearTimeout(advanceTimer.current);
-    setSelected(null);
-    const exclude = noRepeats ? seenIds : new Set<number>(card && pool.length > 1 ? [card.answer.id] : []);
-    setCard(pickCard(pool, exclude));
-  }, [pool, noRepeats, seenIds, card]);
-
-  useEffect(() => {
-    if (prevReshuffleKey.current === reshuffleKey) return;
-    prevReshuffleKey.current = reshuffleKey;
-    redraw();
-  }, [reshuffleKey, redraw]);
-
-  const resetStats = useCallback(() => {
-    if (advanceTimer.current !== null) window.clearTimeout(advanceTimer.current);
-    resetProgress();
-    setSelected(null);
-    setCard(pickCard(pool, new Set()));
-  }, [pool, resetProgress]);
-
-  const empty = pool.length === 0;
-  // A filter can shrink the pool below cards already mastered; only the ones still in it count.
-  const masteredInPool = pool.reduce((count, entry) => count + Number(seenIds.has(entry.id)), 0);
-  // The last card keeps its verdict on screen before "mastered" replaces it.
-  const exhausted = noRepeats && pool.length > 0 && masteredInPool >= pool.length && selected === null;
-  const verdict = card === null || selected === null ? null : selected === card.answer.id ? "correct" : "wrong";
+  const deck = useFlashcardDeck<FlashcardEntry, FlashcardEntry>({
+    pool,
+    deck: deckName,
+    draw: pickCard,
+    optionKey: entryId,
+    answerKey: entryId,
+    reshuffleKey,
+  });
+  const { card } = deck;
 
   return (
     <FlashcardPage title={title} subtitle={subtitle}>
-      <FlashcardStatStrip stats={stats} onReset={resetStats} />
-      <AnswerAnnouncement verdict={verdict} answer={card?.answer.name ?? ""} />
+      <FlashcardStatStrip stats={deck.stats} onReset={deck.reset} />
+      <AnswerAnnouncement verdict={deck.verdict} answer={card?.answer.name ?? ""} />
 
       <div className="flex flex-wrap items-center justify-between gap-3 font-mono text-xs tracking-wider uppercase">
         <NoRepeatsToggle
           id="flashcard-no-repeats"
-          checked={noRepeats}
-          onCheckedChange={updateNoRepeats}
-          mastered={masteredInPool}
+          checked={deck.noRepeats}
+          onCheckedChange={deck.setNoRepeats}
+          mastered={deck.masteredInPool}
           total={pool.length}
         />
         {controls}
       </div>
 
-      {!dealt ? (
+      {!deck.dealt ? (
         <LoadingState label="flashcards" />
-      ) : empty ? (
+      ) : deck.empty ? (
         <EmptyState title="No cards available." />
-      ) : exhausted || !card ? (
-        <FlashcardMastered label={masteredLabel} stats={stats} onReset={resetStats} />
+      ) : deck.finished || !card ? (
+        <FlashcardMastered label={masteredLabel} stats={deck.stats} onReset={deck.reset} />
       ) : (
         <AnimatePresence mode="wait">
           <motion.div
@@ -234,44 +161,71 @@ function FlashcardGameReady<T extends FlashcardEntry>({
             transition={{ duration: 0.18, ease: "easeOut" }}
             className="flex flex-col items-center gap-6"
           >
-            <div className={cn("relative", promptClassName)}>
-              <PromptFrame verdict={verdict} className="size-full">
-                {renderPrompt(card.answer)}
-              </PromptFrame>
-              <AnimatePresence>
-                {selected !== null && (
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.6 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.18, ease: "easeOut" }}
-                    className="absolute inset-e-2 top-2"
-                  >
-                    <ResultMark correct={verdict === "correct"} />
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-
-            <div className="grid w-full grid-cols-1 gap-2 sm:grid-cols-2">
-              {card.options.map((option, index) => (
-                <AnswerOption
-                  key={option.id}
-                  ref={index === 0 ? focusFirstOption : undefined}
-                  state={
-                    selected === null ? "idle" : revealedState(option.id === card.answer.id, option.id === selected)
-                  }
-                  onClick={() => handleChoice(option.id)}
-                  shortcut={String(index + 1)}
-                  aria-disabled={selected !== null || undefined}
-                >
-                  {renderOption(option)}
-                </AnswerOption>
-              ))}
-            </div>
+            <DeckContext value={deck}>{children}</DeckContext>
           </motion.div>
         </AnimatePresence>
       )}
     </FlashcardPage>
+  );
+}
+
+const PROMPT_SIZE = {
+  /** A square for an icon or portrait. */
+  icon: "size-40 sm:size-52",
+  /** A text card as wide as the options. */
+  wide: "w-full max-w-xl",
+};
+
+/** What the card asks about: the answer, in a frame tinted by the verdict with the verdict's mark in its corner. */
+export function FlashcardPrompt({ size = "icon", children }: { size?: keyof typeof PROMPT_SIZE; children: ReactNode }) {
+  const { card, verdict, revealed } = useDeck();
+  return (
+    <div className={cn("relative", PROMPT_SIZE[size])}>
+      <PromptFrame verdict={verdict} className="size-full">
+        <EntryContext value={card.answer}>{children}</EntryContext>
+      </PromptFrame>
+      <AnimatePresence>
+        {revealed && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.6 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.18, ease: "easeOut" }}
+            className="absolute inset-e-2 top-2"
+          >
+            <ResultMark correct={verdict === "correct"} />
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+/** The entry's name, the default face of an option. */
+export function FlashcardName() {
+  const entry = useFlashcardEntry();
+  return <span className="truncate tracking-wide uppercase">{entry.name}</span>;
+}
+
+const NAME_FACE = <FlashcardName />;
+
+/** The answers to pick from, by click or number key; `children` is the face of each (its name by default). */
+export function FlashcardOptions({ children = NAME_FACE }: { children?: ReactNode }) {
+  const { card, stateOf, choose, revealed, focusFirstOption } = useDeck();
+  return (
+    <div className="grid w-full grid-cols-1 gap-2 sm:grid-cols-2">
+      {card.options.map((option, index) => (
+        <AnswerOption
+          key={option.id}
+          ref={index === 0 ? focusFirstOption : undefined}
+          state={stateOf(option)}
+          onClick={() => choose(option)}
+          shortcut={String(index + 1)}
+          aria-disabled={revealed || undefined}
+        >
+          <EntryContext value={option}>{children}</EntryContext>
+        </AnswerOption>
+      ))}
+    </div>
   );
 }

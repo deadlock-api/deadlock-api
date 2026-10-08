@@ -3,7 +3,12 @@ import { createFileRoute } from "@tanstack/react-router";
 import type { Upgrade } from "deadlock_api_client";
 import { useMemo, useState } from "react";
 
-import { FlashcardGame } from "~/components/features/flashcards/FlashcardGame";
+import {
+  FlashcardGame,
+  FlashcardOptions,
+  FlashcardPrompt,
+  useFlashcardEntry,
+} from "~/components/features/flashcards/FlashcardGame";
 import { ItemEffectCard } from "~/components/features/items/ItemEffectCard";
 import { CheckboxField } from "~/components/ui/checkbox-field";
 import { Segmented, SegmentedItem } from "~/components/ui/segmented";
@@ -25,13 +30,36 @@ export const Route = createFileRoute("/games_/flashcards/item-effects")({
     }),
 });
 
-function ItemNameOption({ item }: { item: Upgrade }) {
+/** The prompt: the item's effects to name it from, or its name to find its effects for. */
+function ItemPrompt({ direction }: { direction: Direction }) {
+  const item = useFlashcardEntry<Upgrade>();
+  if (direction === "effects-to-name") return <ItemEffectCard item={item} className="p-5" hideName />;
+  return (
+    <div className="flex items-center gap-4 p-5">
+      <img
+        src={item.shop_image_webp ?? ""}
+        alt={item.name}
+        className="size-16 shrink-0 object-contain"
+        draggable={false}
+      />
+      <span className="font-game text-2xl tracking-tight uppercase">{item.name}</span>
+    </div>
+  );
+}
+
+function ItemNameOption() {
+  const item = useFlashcardEntry<Upgrade>();
   return (
     <span className="flex min-w-0 items-center gap-3">
       <img src={item.shop_image_webp ?? ""} alt="" className="size-8 shrink-0 object-contain" draggable={false} />
       <span className="truncate tracking-wide uppercase">{item.name}</span>
     </span>
   );
+}
+
+function ItemEffectsOption() {
+  const item = useFlashcardEntry<Upgrade>();
+  return <ItemEffectCard item={item} className="w-full py-1 font-normal" hideName />;
 }
 
 function ItemEffectFlashcards() {
@@ -57,28 +85,7 @@ function ItemEffectFlashcards() {
           : "Pick the stats and effects that belong to the named item."
       }
       pool={pool}
-      promptClassName="w-full max-w-xl"
       reshuffleKey={`${direction}:${excludeLegendary}`}
-      renderPrompt={(item) =>
-        effectsToName ? (
-          <ItemEffectCard item={item} className="p-5" hideName />
-        ) : (
-          <div className="flex items-center gap-4 p-5">
-            <img
-              src={item.shop_image_webp ?? ""}
-              alt={item.name}
-              className="size-16 shrink-0 object-contain"
-              draggable={false}
-            />
-            <span className="font-game text-2xl tracking-tight uppercase">{item.name}</span>
-          </div>
-        )
-      }
-      renderOption={
-        effectsToName
-          ? (item) => <ItemNameOption item={item} />
-          : (item) => <ItemEffectCard item={item} className="w-full py-1 font-normal" hideName />
-      }
       controls={
         <div className="flex flex-wrap items-center gap-4">
           <CheckboxField
@@ -101,6 +108,11 @@ function ItemEffectFlashcards() {
       retrying={isFetching}
       deck="item-effects"
       masteredLabel="All item effects mastered"
-    />
+    >
+      <FlashcardPrompt size="wide">
+        <ItemPrompt direction={direction} />
+      </FlashcardPrompt>
+      <FlashcardOptions>{effectsToName ? <ItemNameOption /> : <ItemEffectsOption />}</FlashcardOptions>
+    </FlashcardGame>
   );
 }

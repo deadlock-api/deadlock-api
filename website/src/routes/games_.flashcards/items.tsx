@@ -2,7 +2,12 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo } from "react";
 
-import { FlashcardGame } from "~/components/features/flashcards/FlashcardGame";
+import {
+  FlashcardGame,
+  FlashcardOptions,
+  FlashcardPrompt,
+  useFlashcardEntry,
+} from "~/components/features/flashcards/FlashcardGame";
 import { pageTitle, seo } from "~/lib/seo";
 import { filterShopableItems, itemUpgradesQueryOptions, type SlimUpgrade } from "~/queries/asset-queries";
 
@@ -20,6 +25,11 @@ function itemIconSrc(item: SlimUpgrade): string {
   return item.shop_image_webp ?? "";
 }
 
+function PromptIcon() {
+  const entry = useFlashcardEntry<SlimUpgrade>();
+  return <img src={itemIconSrc(entry)} alt="Mystery item" className="size-full object-contain" draggable={false} />;
+}
+
 function ItemFlashcards() {
   const { data: items, isLoading, isError, isFetching, refetch } = useQuery(itemUpgradesQueryOptions);
 
@@ -33,15 +43,17 @@ function ItemFlashcards() {
       title="Item Flashcards"
       subtitle="Identify the shop item from its icon. Pick the correct name."
       pool={pool}
-      renderPrompt={(entry) => (
-        <img src={itemIconSrc(entry)} alt="Mystery item" className="size-full object-contain" draggable={false} />
-      )}
       isLoading={isLoading}
       isError={isError}
       onRetry={() => void refetch()}
       retrying={isFetching}
       deck="items"
       masteredLabel="All items mastered"
-    />
+    >
+      <FlashcardPrompt>
+        <PromptIcon />
+      </FlashcardPrompt>
+      <FlashcardOptions />
+    </FlashcardGame>
   );
 }
