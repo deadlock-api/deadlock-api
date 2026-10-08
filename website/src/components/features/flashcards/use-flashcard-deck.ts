@@ -30,6 +30,8 @@ export interface FlashcardDeckOptions<Entry extends { id: number }, Option> {
   /** Deals a card whose answer is not in `excludeIds`, or null when every entry is excluded. */
   draw: (pool: Entry[], excludeIds: Set<number>) => FlashcardCard<Entry, Option> | null;
   optionKey: (option: Option) => OptionKey;
+  /** What an option is called: the face `FlashcardOptions` gives it without children. */
+  optionName: (option: Option) => string;
   /** The key of the option that answers `answer`. */
   answerKey: (answer: Entry) => OptionKey;
   /** What the answer is called, for the verdict a screen reader hears ("Wrong. The answer was Haze."). */
@@ -52,6 +54,7 @@ export function useFlashcardDeck<Entry extends { id: number }, Option>({
   deck,
   draw,
   optionKey,
+  optionName,
   answerKey,
   answerName,
   feedbackMs = DEFAULT_FEEDBACK_MS,
@@ -149,6 +152,7 @@ export function useFlashcardDeck<Entry extends { id: number }, Option>({
 
   return {
     optionKey,
+    optionName,
     /** The answer of the card on the table, named; empty without one. */
     answerText: card ? answerName(card.answer) : "",
     /** False until the saved progress loaded and the first card is dealt. */

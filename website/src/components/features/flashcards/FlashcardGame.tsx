@@ -131,6 +131,7 @@ function FlashcardGameReady<T extends FlashcardEntry>({
     deck: deckName,
     draw: pickCard,
     optionKey: entryId,
+    optionName: entryName,
     answerKey: entryId,
     answerName: entryName,
     reshuffleKey,
@@ -269,10 +270,11 @@ export function FlashcardPrompt({
   );
 }
 
-/** The entry's name, the default face of an option. */
+/** The option's name (the deck's `optionName`), the default face of an option. */
 export function FlashcardName() {
-  const entry = useFlashcardEntry<FlashcardEntry>();
-  return <span className="truncate tracking-wide uppercase">{entry.name}</span>;
+  const { optionName } = useDeck();
+  const option = useFlashcardEntry<unknown>();
+  return <span className="truncate tracking-wide uppercase">{optionName(option)}</span>;
 }
 
 const NAME_FACE = <FlashcardName />;

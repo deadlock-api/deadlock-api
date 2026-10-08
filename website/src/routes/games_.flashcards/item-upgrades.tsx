@@ -226,6 +226,7 @@ const TITLE = "Item Upgrade Paths";
 const SUBTITLE = "Match each upgraded item to its direct component path.";
 
 const optionKey = (option: UpgradePathOption) => option.key;
+const optionName = (option: UpgradePathOption) => option.label;
 const answerKey = (answer: UpgradePathEntry) => answer.answerKey;
 const answerName = (answer: UpgradePathEntry) => answer.answerLabel;
 
@@ -235,6 +236,7 @@ function ItemUpgradePathFlashcardsReady({ pool }: { pool: UpgradePathEntry[] }) 
     deck: "item-upgrades",
     draw: pickCard,
     optionKey,
+    optionName,
     answerKey,
     answerName,
     feedbackMs: FEEDBACK_MS,
