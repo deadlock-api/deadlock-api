@@ -1,11 +1,9 @@
 import type { QueryClient } from "@tanstack/react-query";
 import { redirect } from "@tanstack/react-router";
 
-import { ensureCached } from "~/lib/prefetch-safe";
-
 import { ANALYTICS_TABS, canonicalAnalyticsHref } from "./analytics-tabs";
 import { heroSlug } from "./hero-slug";
-import { catchPrefetch } from "./prefetch-safe";
+import { catchPrefetch, ensureCached } from "./prefetch-safe";
 
 export const LEGACY_PAGE_PATHS = {
   "/games": "/analytics/games",

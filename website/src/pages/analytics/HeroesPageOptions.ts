@@ -1,4 +1,3 @@
-import type { QueryExecuteOptions, QueryKey } from "@tanstack/react-query";
 import { lazyRouteComponent } from "@tanstack/react-router";
 import type { AnalyticsHeroStats, HeroBanStats } from "deadlock_api_client";
 
@@ -107,9 +106,6 @@ async function prefetchHeroView(
   const prevRange = { minUnixTimestamp: r.prevMinUnixTimestamp, maxUnixTimestamp: r.prevMaxUnixTimestamp };
   const ranks = { minAverageBadge: DEFAULT_RANK_RANGE.min, maxAverageBadge: DEFAULT_RANK_RANGE.max };
   const mode = { gameMode: "normal" as const, matchMode: DEFAULT_MATCH_MODE };
-  const prefetch = <TQueryFnData, TError, TData, TQueryKey extends QueryKey>(
-    options: QueryExecuteOptions<TQueryFnData, TError, TData, TQueryFnData, TQueryKey>,
-  ) => prefetchCached(queryClient, options);
 
   switch (tab) {
     case "stats-over-time":
@@ -127,12 +123,16 @@ async function prefetchHeroView(
       ]);
       const base = { minHeroMatches: 0, minHeroMatchesTotal: 0, ...ranks, ...range, ...mode };
       if (tab === "stats-over-time") {
-        return prefetch(heroChartStatsQueryOptions("over-time", { ...base, bucket: "start_time_day" }));
+        return prefetchCached(
+          queryClient,
+          heroChartStatsQueryOptions("over-time", { ...base, bucket: "start_time_day" }),
+        );
       }
       if (tab === "stats-by-duration") {
         return Promise.all(
           DURATION_BUCKETS.map((bucket) =>
-            prefetch(
+            prefetchCached(
+              queryClient,
               heroChartStatsQueryOptions("by-duration", {
                 ...base,
                 minDurationS: bucket.minS,
@@ -146,7 +146,8 @@ async function prefetchHeroView(
       if (tab === "stats-by-rank") {
         // Every rank, so no rank filter.
         return Promise.all([
-          prefetch(
+          prefetchCached(
+            queryClient,
             heroRankStatsQueryOptions({
               minHeroMatches: 0,
               minHeroMatchesTotal: 0,
@@ -155,12 +156,13 @@ async function prefetchHeroView(
               bucket: "avg_badge",
             }),
           ),
-          prefetch(ranksQueryOptions),
+          prefetchCached(queryClient, ranksQueryOptions),
         ]);
       }
       return Promise.all(
         EXPERIENCE_BUCKETS.map((bucket) =>
-          prefetch(
+          prefetchCached(
+            queryClient,
             heroChartStatsQueryOptions("by-experience", {
               ...base,
               minHeroMatchesTotal: bucket.min,
@@ -175,8 +177,8 @@ async function prefetchHeroView(
       const { heroCombStatsQueryOptions } = await import("~/queries/hero-comb-stats-query");
       const comb = { combSize: 2, minMatches: DEFAULT_MIN_MATCHES, ...ranks, ...mode };
       return Promise.all([
-        prefetch(heroCombStatsQueryOptions({ ...comb, ...range })),
-        prefetch(heroCombStatsQueryOptions({ ...comb, ...prevRange })),
+        prefetchCached(queryClient, heroCombStatsQueryOptions({ ...comb, ...range })),
+        prefetchCached(queryClient, heroCombStatsQueryOptions({ ...comb, ...prevRange })),
       ]);
     }
     case "matchups":
@@ -187,21 +189,23 @@ async function prefetchHeroView(
       const stats = { minHeroMatches: DEFAULT_MIN_MATCHES, ...ranks, ...mode };
       return Promise.all([
         // The explorer states the total floor in its current-period key; the matchup table does not.
-        prefetch(
+        prefetchCached(
+          queryClient,
           heroStatsQueryOptions(
             tab === "matchups" ? { ...stats, ...range } : { ...stats, minHeroMatchesTotal: 0, ...range },
           ),
         ),
-        prefetch(heroStatsQueryOptions({ ...stats, ...prevRange })),
-        prefetch(heroSynergyWinsQueryOptions({ ...pairs, ...range })),
-        prefetch(heroSynergyWinsQueryOptions({ ...pairs, ...prevRange })),
-        prefetch(heroCounterWinsQueryOptions({ ...pairs, ...range })),
-        prefetch(heroCounterWinsQueryOptions({ ...pairs, ...prevRange })),
+        prefetchCached(queryClient, heroStatsQueryOptions({ ...stats, ...prevRange })),
+        prefetchCached(queryClient, heroSynergyWinsQueryOptions({ ...pairs, ...range })),
+        prefetchCached(queryClient, heroSynergyWinsQueryOptions({ ...pairs, ...prevRange })),
+        prefetchCached(queryClient, heroCounterWinsQueryOptions({ ...pairs, ...range })),
+        prefetchCached(queryClient, heroCounterWinsQueryOptions({ ...pairs, ...prevRange })),
       ]);
     }
     case "hero-scoreboard": {
       const { heroScoreboardQueryOptions } = await import("~/queries/hero-scoreboard-query");
-      return prefetch(
+      return prefetchCached(
+        queryClient,
         heroScoreboardQueryOptions({
           sortBy: "winrate",
           sortDirection: "desc",
