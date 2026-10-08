@@ -19,6 +19,7 @@ import {
 
 import { OptimizedImage } from "~/components/domain/assets/OptimizedImage";
 import { SmartLink } from "~/components/domain/navigation/SmartLink";
+import { AiSearch } from "~/components/features/ai-search/AiSearch";
 import { LinkCard } from "~/components/patterns/content/LinkCard";
 import { LogoWallItem } from "~/components/patterns/content/LogoWall";
 import { Prose } from "~/components/patterns/content/Prose";
@@ -254,6 +255,8 @@ function IndexRoute() {
             </a>
           </Card>
         </Stack>
+
+        <AiSearch />
 
         <HeroActions>
           {valueProps.map((prop) => (

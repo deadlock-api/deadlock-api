@@ -19,6 +19,7 @@ import { SkipLink } from "~/components/ui/skip-link";
 import { Toaster } from "~/components/ui/sonner";
 import { Stack } from "~/components/ui/stack";
 import { TooltipProvider } from "~/components/ui/tooltip";
+import { PROMPT_API_FLAG_SCRIPT } from "~/lib/ai-search/prompt-api";
 import { getAnalytics } from "~/lib/analytics";
 import { ANALYTICS_TABS } from "~/lib/analytics-tabs";
 import { installChunkReloadHandlers, isChunkLoadError, reloadOnceForStaleChunk } from "~/lib/chunk-reload";
@@ -276,6 +277,8 @@ function RootDocument({ children, bare = false }: { children: React.ReactNode; b
     <html lang="en" suppressHydrationWarning>
       <head>
         <HeadContent />
+        {/* Before first paint: the AI search on the home page takes room only where the browser can run it. */}
+        <script dangerouslySetInnerHTML={{ __html: PROMPT_API_FLAG_SCRIPT }} />
       </head>
       <AppBody variant={bare ? "bare" : "page"} backgroundSrc="/background.svg">
         {children}
