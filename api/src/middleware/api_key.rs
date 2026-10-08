@@ -6,48 +6,35 @@ use axum::response::Response;
 use crate::utils::parse;
 
 pub(crate) async fn write_api_key_to_header(mut request: Request, next: Next) -> Response {
-    // Check if API-Key is already set
-    if request.headers().contains_key("x-api-key") {
-        return next.run(request).await;
-    }
-
-    if let Some(api_key) = extract_api_key(&request) {
+    // An explicit X-API-Key header wins; otherwise copy a query or bearer key into it
+    if !request.headers().contains_key("x-api-key")
+        && let Some(api_key) = extract_api_key(&request)
+    {
         request.headers_mut().insert("x-api-key", api_key);
-        return next.run(request).await;
     }
-
     next.run(request).await
 }
 
+/// The API key from the `api_key` query parameter, falling back to a `Bearer` token.
 fn extract_api_key(request: &Request) -> Option<HeaderValue> {
-    // Check if API-Key is in header x-api-key
-    if let Some(api_key) = request.headers().get("x-api-key") {
-        return Some(api_key.clone());
-    }
-
-    // Check if API-Key is in query parameters
     let query_api_key = request.uri().query().and_then(|query| {
         parse::querify(query)
             .into_iter()
-            .find(|(key, _)| *key == "api_key")
-            .map(|(_, value)| value.to_owned())
+            .find_map(|(key, value)| (key == "api_key").then_some(value))
     });
     if let Some(api_key) = query_api_key
-        && let Ok(api_key) = api_key.parse::<HeaderValue>()
+        && let Ok(api_key) = HeaderValue::from_str(api_key)
     {
         return Some(api_key);
     }
 
-    // Check if API-Key is set as a bearer token
-    if let Some(api_key) = request.headers().get("authorization")
-        && let Ok(auth_str) = api_key.to_str()
-        && let Some(api_key) = auth_str.strip_prefix("Bearer ")
-        && let Ok(api_key) = api_key.parse::<HeaderValue>()
-    {
-        return Some(api_key);
-    }
-
-    None
+    request
+        .headers()
+        .get("authorization")?
+        .to_str()
+        .ok()?
+        .strip_prefix("Bearer ")
+        .and_then(|api_key| HeaderValue::from_str(api_key).ok())
 }
 
 #[cfg(test)]

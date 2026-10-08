@@ -12,14 +12,8 @@ pub(crate) async fn feature_flags(
     request: Request,
     next: Next,
 ) -> Response {
-    let matched_path = matched_path.as_str().to_owned();
-
-    let route_enabled = state
-        .feature_flags
-        .routes
-        .get(&matched_path)
-        .unwrap_or(&true);
-    if !route_enabled {
+    let matched_path = matched_path.as_str();
+    if state.feature_flags.routes.get(matched_path) == Some(&false) {
         return APIError::status_msg(
             StatusCode::SERVICE_UNAVAILABLE,
             format!("Route {matched_path} is disabled"),
