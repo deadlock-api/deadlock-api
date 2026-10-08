@@ -1,6 +1,6 @@
 use core::future::{Future, ready};
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, MutexGuard};
 
 use haste::entities::{DeltaHeader, Entity, ehandle_to_index};
 use haste::fxhash;
@@ -135,15 +135,18 @@ impl AsyncVisitor for DemoAnalyzerVisitor {
 }
 
 impl DemoAnalyzerVisitor {
+    fn lock_state(&self) -> Result<MutexGuard<'_, SharedState>, VisitorError> {
+        self.state
+            .lock()
+            .map_err(|e| VisitorError::LockPoisoned(e.to_string()))
+    }
+
     fn handle_entity(&mut self, ctx: &Context, entity: &Entity) -> Result<(), VisitorError> {
         let hash = entity.serializer().serializer_name.hash;
 
         if hash == PLAYER_CONTROLLER_HASH {
             let idx = entity.index();
-            let mut state = self
-                .state
-                .lock()
-                .map_err(|e| VisitorError::LockPoisoned(e.to_string()))?;
+            let mut state = self.lock_state()?;
             let entry = state.controllers.entry(idx).or_default();
             let was_complete = entry.is_complete();
             if let Some(v) = entity.get_value::<u64>(&STEAM_ID_HASH) {
@@ -181,10 +184,7 @@ impl DemoAnalyzerVisitor {
             return self.handle_game_rules(ctx, entity);
         } else if hash == PLAYER_PAWN_HASH {
             let idx = entity.index();
-            let mut state = self
-                .state
-                .lock()
-                .map_err(|e| VisitorError::LockPoisoned(e.to_string()))?;
+            let mut state = self.lock_state()?;
             let entry = state.pawns.entry(idx).or_default();
             let was_complete = entry.is_complete();
             if let Some(v) = entity.get_value::<u32>(&CONTROLLER_HASH) {
@@ -238,10 +238,7 @@ impl DemoAnalyzerVisitor {
         else {
             return Ok(());
         };
-        let mut state = self
-            .state
-            .lock()
-            .map_err(|e| VisitorError::LockPoisoned(e.to_string()))?;
+        let mut state = self.lock_state()?;
         if state.bans_received && state.banned_hero_ids == banned_hero_ids {
             return Ok(());
         }
@@ -264,10 +261,7 @@ impl DemoAnalyzerVisitor {
     ) -> Result<(), VisitorError> {
         if packet_type == CitadelUserMessageIds::KEUserMsgBannedHeroes as u32 {
             let msg = CCitadelUserMsgBannedHeroes::decode(data)?;
-            let mut state = self
-                .state
-                .lock()
-                .map_err(|e| VisitorError::LockPoisoned(e.to_string()))?;
+            let mut state = self.lock_state()?;
             state.banned_hero_ids = msg.banned_hero_ids;
             state.bans_received = true;
             let tick = ctx.tick();

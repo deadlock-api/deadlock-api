@@ -116,7 +116,12 @@ async fn main() -> anyhow::Result<()> {
             // A failed query must not end the process: log it and poll again later.
             let pending = async {
                 if full_scan {
-                    incremental_min_match_id = fetch_incremental_min_match_id(&ch_client).await?;
+                    incremental_min_match_id = common::fetch_min_match_id_started_within(
+                        &ch_client,
+                        INCREMENTAL_MAX_MATCH_AGE,
+                        "demo_analyzer_fetch_incremental_min_match_id",
+                    )
+                    .await?;
                 }
                 fetch_pending_matches(&ch_client, full_scan, incremental_min_match_id).await
             };
@@ -193,20 +198,17 @@ async fn process_matches(
     let mut failed = Vec::new();
     let mut pending_updates: Vec<MatchUpdate> = Vec::new();
     let mut stream = futures::stream::iter(matches)
-        .map(|m| {
-            let http = http_client;
-            async move {
-                let match_id = m.match_id;
-                match process_demo(http, &m).await {
-                    Ok(update) => {
-                        counter!("demo_analyzer.demo_processed.success").increment(1);
-                        Ok(update)
-                    }
-                    Err(e) => {
-                        counter!("demo_analyzer.demo_processed.failure").increment(1);
-                        warn!("Failed to process match {match_id}: {e}");
-                        Err(match_id)
-                    }
+        .map(|m| async move {
+            let match_id = m.match_id;
+            match process_demo(http_client, &m).await {
+                Ok(update) => {
+                    counter!("demo_analyzer.demo_processed.success").increment(1);
+                    Ok(update)
+                }
+                Err(e) => {
+                    counter!("demo_analyzer.demo_processed.failure").increment(1);
+                    warn!("Failed to process match {match_id}: {e}");
+                    Err(match_id)
                 }
             }
         })
@@ -235,21 +237,6 @@ async fn process_matches(
         apply_updates(ch_client, &pending_updates).await;
     }
     failed
-}
-
-/// Read in key order, so it stops at the first granule that matches instead of scanning a week
-/// of `start_time`.
-async fn fetch_incremental_min_match_id(ch_client: &clickhouse::Client) -> anyhow::Result<u64> {
-    let min_match_id = ch_client
-        .query(&format!(
-            "SELECT match_id FROM match_player \
-             WHERE start_time > now() - INTERVAL {INCREMENTAL_MAX_MATCH_AGE} \
-             ORDER BY match_id LIMIT 1 \
-             SETTINGS log_comment = 'demo_analyzer_fetch_incremental_min_match_id'"
-        ))
-        .fetch_optional::<u64>()
-        .await?;
-    Ok(min_match_id.unwrap_or_default())
 }
 
 async fn fetch_pending_matches(
@@ -449,11 +436,7 @@ async fn apply_update(ch_client: &clickhouse::Client, update: &MatchUpdate) -> a
     );
 
     common::retry_with_backoff("apply_update", common::Backoff::SHORT, || {
-        let q = query.clone();
-        async move {
-            ch_client.query(&q).execute().await?;
-            Ok::<_, clickhouse::error::Error>(())
-        }
+        ch_client.query(&query).execute()
     })
     .await?;
 
@@ -522,13 +505,7 @@ async fn insert_observed_name_changes(
         return Ok(());
     }
 
-    let mut inserter = ch_client
-        .insert::<ObservedSteamNameChange>("steam_profile_observed_names")
-        .await?;
-    for name_change in &name_changes {
-        inserter.write(name_change).await?;
-    }
-    inserter.end().await?;
+    common::insert_rows(ch_client, "steam_profile_observed_names", &name_changes).await?;
 
     counter!("demo_analyzer.observed_name_change_insert.success")
         .increment(name_changes.len() as u64);
@@ -541,14 +518,14 @@ fn normalize_observed_name(name: &str) -> Option<String> {
 }
 
 fn format_array<T: core::fmt::Display>(values: impl IntoIterator<Item = T>) -> String {
+    use core::fmt::Write;
+
     let mut out = String::from("[");
-    let mut first = true;
-    for v in values {
-        if !first {
+    for (i, v) in values.into_iter().enumerate() {
+        if i > 0 {
             out.push(',');
         }
-        first = false;
-        out.push_str(&v.to_string());
+        let _ = write!(out, "{v}");
     }
     out.push(']');
     out
