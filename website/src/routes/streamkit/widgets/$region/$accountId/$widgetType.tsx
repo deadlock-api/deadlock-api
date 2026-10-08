@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 
 import { BoxWidget } from "~/components/features/streamkit/widgets/box";
 import { RawWidget } from "~/components/features/streamkit/widgets/raw";
+import { Text } from "~/components/ui/text";
 import { splitWidgetList, withoutEmptyVariables } from "~/lib/streamkit-list";
 import { readWidgetFlag, readWidgetInt, readWidgetSearch } from "~/lib/streamkit-widget-search";
 import { snakeToPretty } from "~/lib/utils";
@@ -62,7 +63,11 @@ function Widget() {
   }, []);
 
   if (!region || !accountId) {
-    return <div className="text-red-500">Region and Account ID are required</div>;
+    return (
+      <Text as="div" tone="destructive">
+        Region and Account ID are required
+      </Text>
+    );
   }
 
   switch (widgetType) {
@@ -130,7 +135,12 @@ function Widget() {
       // Display settings of the widget itself; everything else is an argument of the variable.
       const reserved = new Set(["variable", "fontColor", "prefix", "suffix"]);
       const extraArgs = Object.fromEntries(Object.entries(search).filter(([key]) => !reserved.has(key)));
-      if (!variable) return <div className="text-red-500">Variable is required</div>;
+      if (!variable)
+        return (
+          <Text as="div" tone="destructive">
+            Variable is required
+          </Text>
+        );
       return (
         <RawWidget
           region={region as Region}
@@ -144,6 +154,10 @@ function Widget() {
       );
     }
     default:
-      return <div className="text-red-500">Invalid widget type</div>;
+      return (
+        <Text as="div" tone="destructive">
+          Invalid widget type
+        </Text>
+      );
   }
 }
