@@ -5,7 +5,7 @@ use prost::Message;
 use std::io;
 use std::io::SeekFrom;
 use valveprotos::common::{
-    CDemoFullPacket, CDemoPacket, CDemoStringTables, CsvcMsgCreateStringTable,
+    CDemoClassInfo, CDemoFullPacket, CDemoSendTables, CDemoStringTables, CsvcMsgCreateStringTable,
     CsvcMsgPacketEntities, CsvcMsgServerInfo, CsvcMsgUpdateStringTable, EDemoCommands,
     QuantizedFloatEncoderAliasT, SvcMessages,
 };
@@ -51,6 +51,9 @@ fn full_packet_interval(tick_interval: f32) -> i32 {
 // public; attempts to put parser into arguments of Visitor's method did not
 // result in anything satisfyable.
 //
+// it also hosts the message handlers that the sync [`Parser`] and the async
+// [`AsyncStreamingParser`] share; the parsers only own the loops that call into the visitor.
+//
 // TODO: consider turing Context into an enum with Initialized and Uninitialized variants. though
 // there also must be an intermediary variant (or maybe stuff can be piled into Uninitialized
 // variant) for incremental initialization. this may improve public api because string_tables,
@@ -69,6 +72,54 @@ pub struct Context {
     max_coord: Option<f32>,
     /// `CSVCMsg_GameSessionConfiguration.quantized_float_encoder_aliases` (deadlock build 6712+).
     quantized_float_encoder_aliases: Vec<QuantizedFloatEncoderAliasT>,
+
+    // NOTE(blukai): is this the place for this? can it be moved "closer" to entities somewhere?
+    field_decode_ctx: FieldDecodeContext,
+    /// scratch space for decompressing string table data.
+    string_table_buf: Vec<u8>,
+    /// When set, `SvcPacketEntities` messages are not decoded. Used to fast-forward state without
+    /// paying for entity decode in a warm-up region whose rows are discarded anyway.
+    skip_entity_packets: bool,
+}
+
+/// reads one `(command, body)` message of a `CDemoPacket`'s data into `buf`.
+fn read_packet_message<'b>(
+    br: &mut BitReader,
+    buf: &'b mut [u8],
+) -> anyhow::Result<(u32, &'b [u8])> {
+    let command = br.read_ubitvar()?;
+    let size = br.read_uvarint32()? as usize;
+
+    let buf = &mut buf[..size];
+    br.read_bytes(buf)?;
+    Ok((command, buf))
+}
+
+/// cursor over the entity deltas of a `CSVCMsg_PacketEntities` message.
+struct EntityDeltaReader<'a> {
+    br: BitReader<'a>,
+    remaining: i32,
+    entity_index: i32,
+}
+
+impl<'a> EntityDeltaReader<'a> {
+    fn new(msg: &'a CsvcMsgPacketEntities) -> Self {
+        Self {
+            br: BitReader::new(msg.entity_data()),
+            remaining: msg.updated_entries(),
+            entity_index: -1,
+        }
+    }
+}
+
+/// result of applying a single entity delta, see [`Context::read_entity_delta`].
+enum EntityDelta {
+    /// nothing to report to the visitor (untracked or unknown entity).
+    Silent,
+    /// the entity at this index was created or updated.
+    Live(i32),
+    /// the entity was removed (left pvs or deleted).
+    Removed(Entity),
 }
 
 impl Context {
@@ -85,15 +136,24 @@ impl Context {
             prev_tick: -1,
             max_coord: None,
             quantized_float_encoder_aliases: Vec::new(),
+            field_decode_ctx: FieldDecodeContext::default(),
+            string_table_buf: Vec::new(),
+            skip_entity_packets: false,
         }
     }
 
+    /// clears per-playback state (entities, string tables, baselines, ticks). serializers and
+    /// entity classes never change within a demo, so they are kept.
+    fn reset(&mut self) {
+        self.entities.clear();
+        self.string_tables.clear();
+        self.instance_baseline.clear();
+        self.tick = -1;
+        self.prev_tick = -1;
+    }
+
     /// picks up the bits of `CSVCMsg_ServerInfo` that the parser cares about.
-    fn handle_server_info(
-        &mut self,
-        msg: &CsvcMsgServerInfo,
-        field_decode_ctx: &mut FieldDecodeContext,
-    ) {
+    fn handle_server_info(&mut self, msg: &CsvcMsgServerInfo) {
         if let Some(tick_interval) = msg.tick_interval {
             self.tick_interval = tick_interval;
 
@@ -101,7 +161,7 @@ impl Context {
 
             // NOTE(blukai): field decoder context needs tick interval to be able to
             // decode simulation time floats.
-            field_decode_ctx.tick_interval = tick_interval;
+            self.field_decode_ctx.tick_interval = tick_interval;
         }
 
         if let Some(game_session_config) = msg.game_session_config.as_ref() {
@@ -111,15 +171,222 @@ impl Context {
         }
     }
 
-    fn parse_serializers(
-        &self,
-        cmd: valveprotos::common::CDemoSendTables,
-    ) -> Result<FlattenedSerializerContainer, crate::flattenedserializers::FlattenedSerializersError>
+    // important initialization messages:
+    // 1. DemSignonPacket (SvcCreateStringTable)
+    // 2. DemSendTables (flattened serializers; never update)
+    // 3. DemClassInfo (never update)
+
+    fn handle_cmd_send_tables(&mut self, cmd: CDemoSendTables) -> anyhow::Result<()> {
+        self.serializers = Some(
+            FlattenedSerializerContainer::parse_with_quantized_float_encoder_aliases(
+                cmd,
+                &self.quantized_float_encoder_aliases,
+            )?,
+        );
+        Ok(())
+    }
+
+    fn handle_cmd_class_info(&mut self, cmd: &CDemoClassInfo) -> anyhow::Result<()> {
+        let entity_classes = EntityClasses::parse(cmd);
+
+        // NOTE: DemClassInfo message becomes available after
+        // SvcCreateStringTable(which has instancebaselines). to know
+        // how long vec that will contain instancebaseline values needs
+        // to be (to allocate precicely how much we need) we need to
+        // wait for DemClassInfos.
+        if let Some(string_table) = self.string_tables.find_table(INSTANCE_BASELINE_TABLE_NAME) {
+            self.instance_baseline
+                .update(string_table, entity_classes.classes)?;
+        }
+
+        self.entity_classes = Some(entity_classes);
+        Ok(())
+    }
+
+    fn handle_cmd_string_tables(&mut self, cmd: &CDemoStringTables) -> anyhow::Result<()> {
+        self.string_tables.do_full_update(cmd);
+
+        let Some(entity_classes) = self.entity_classes.as_ref() else {
+            bail!("entity classes are not available")
+        };
+        if let Some(string_table) = self.string_tables.find_table(INSTANCE_BASELINE_TABLE_NAME) {
+            self.instance_baseline
+                .update(string_table, entity_classes.classes)?;
+        }
+
+        Ok(())
+    }
+
+    /// handles a single message of a `CDemoPacket`. `SvcPacketEntities` is handed back to the
+    /// parser, because entity callbacks go through its visitor.
+    fn handle_packet_message(
+        &mut self,
+        command: u32,
+        buf: &[u8],
+    ) -> anyhow::Result<Option<CsvcMsgPacketEntities>> {
+        match command {
+            c if c == SvcMessages::SvcCreateStringTable as u32 => {
+                let msg = CsvcMsgCreateStringTable::decode(buf)?;
+                self.handle_svc_create_string_table(&msg)?;
+            }
+
+            c if c == SvcMessages::SvcUpdateStringTable as u32 => {
+                let msg = CsvcMsgUpdateStringTable::decode(buf)?;
+                self.handle_svc_update_string_table(&msg)?;
+            }
+
+            c if c == SvcMessages::SvcPacketEntities as u32 && !self.skip_entity_packets => {
+                let msg = CsvcMsgPacketEntities::decode(buf)?;
+                return Ok(Some(msg));
+            }
+
+            c if c == SvcMessages::SvcServerInfo as u32 => {
+                let msg = CsvcMsgServerInfo::decode(buf)?;
+                self.handle_server_info(&msg);
+            }
+
+            _ => {
+                // ignore
+            }
+        }
+        Ok(None)
+    }
+
+    fn handle_svc_create_string_table(
+        &mut self,
+        msg: &CsvcMsgCreateStringTable,
+    ) -> anyhow::Result<()> {
+        let string_table = self.string_tables.create_string_table_mut(
+            msg.name(),
+            msg.user_data_fixed_size(),
+            msg.user_data_size(),
+            msg.user_data_size_bits(),
+            msg.flags(),
+            msg.using_varint_bitcounts(),
+        );
+
+        let string_data = if msg.data_compressed() {
+            let sd = msg.string_data();
+            let decompress_len = snap::raw::decompress_len(sd)?;
+            self.string_table_buf.resize(decompress_len, 0);
+            snap::raw::Decoder::new().decompress(sd, &mut self.string_table_buf)?;
+            &self.string_table_buf[..decompress_len]
+        } else {
+            msg.string_data()
+        };
+
+        let mut br = BitReader::new(string_data);
+        string_table.parse_update(&mut br, msg.num_entries())?;
+        br.is_overflowed()?;
+
+        if string_table.name().eq(INSTANCE_BASELINE_TABLE_NAME)
+            && let Some(entity_classes) = self.entity_classes.as_ref()
+        {
+            self.instance_baseline
+                .update(string_table, entity_classes.classes)?;
+        }
+
+        Ok(())
+    }
+
+    fn handle_svc_update_string_table(
+        &mut self,
+        msg: &CsvcMsgUpdateStringTable,
+    ) -> anyhow::Result<()> {
+        debug_assert!(msg.table_id.is_some(), "invalid table id");
+        let table_id = msg.table_id() as usize;
+
+        debug_assert!(
+            self.string_tables.has_table(table_id),
+            "trying to update non-existent table"
+        );
+        let Some(string_table) = self.string_tables.get_table_mut(table_id) else {
+            bail!("string table not found")
+        };
+
+        let mut br = BitReader::new(msg.string_data());
+        string_table.parse_update(&mut br, msg.num_changed_entries())?;
+        br.is_overflowed()?;
+
+        if string_table.name().eq(INSTANCE_BASELINE_TABLE_NAME)
+            && let Some(entity_classes) = self.entity_classes.as_ref()
+        {
+            self.instance_baseline
+                .update(string_table, entity_classes.classes)?;
+        }
+
+        Ok(())
+    }
+
+    // NOTE: read_entity_delta is partially based on
+    // ReadPacketEntities in engine/client.cpp
+
+    /// applies the next entity delta of a `SvcPacketEntities` message; returns `None` once all
+    /// deltas have been read.
+    fn read_entity_delta<F>(
+        &mut self,
+        rdr: &mut EntityDeltaReader,
+        should_track: F,
+    ) -> anyhow::Result<Option<(DeltaHeader, EntityDelta)>>
+    where
+        F: Fn(u64) -> bool,
     {
-        FlattenedSerializerContainer::parse_with_quantized_float_encoder_aliases(
-            cmd,
-            &self.quantized_float_encoder_aliases,
-        )
+        if rdr.remaining <= 0 {
+            rdr.br.is_overflowed()?;
+            return Ok(None);
+        }
+        rdr.remaining -= 1;
+
+        let Some(entity_classes) = self.entity_classes.as_ref() else {
+            bail!("entity classes are not available");
+        };
+        let Some(serializers) = self.serializers.as_ref() else {
+            bail!("serializers are not available");
+        };
+
+        let br = &mut rdr.br;
+        rdr.entity_index += br.read_ubitvar()? as i32 + 1;
+        let entity_index = rdr.entity_index;
+
+        let delta_header = DeltaHeader::from_bit_reader(br)?;
+        let delta = match delta_header {
+            DeltaHeader::CREATE => self
+                .entities
+                .handle_create_with_filter(
+                    entity_index,
+                    &mut self.field_decode_ctx,
+                    br,
+                    entity_classes,
+                    &self.instance_baseline,
+                    serializers,
+                    should_track,
+                )?
+                .map_or(EntityDelta::Silent, EntityDelta::Live),
+            DeltaHeader::DELETE => self
+                .entities
+                .handle_delete(entity_index)
+                .map_or(EntityDelta::Silent, EntityDelta::Removed),
+            DeltaHeader::LEAVE => self
+                .entities
+                .handle_leave(entity_index)
+                .map_or(EntityDelta::Silent, EntityDelta::Removed),
+            DeltaHeader::UPDATE => self
+                .entities
+                .handle_update(entity_index, &mut self.field_decode_ctx, br)?
+                .map_or(EntityDelta::Silent, |_| EntityDelta::Live(entity_index)),
+            _ => EntityDelta::Silent,
+        };
+
+        Ok(Some((delta_header, delta)))
+    }
+
+    /// the entity a delta reports on, if any.
+    fn delta_entity<'e>(&'e self, delta: &'e EntityDelta) -> Option<&'e Entity> {
+        match delta {
+            EntityDelta::Silent => None,
+            EntityDelta::Live(index) => self.entities.get(index),
+            EntityDelta::Removed(entity) => Some(entity),
+        }
     }
 
     // NOTE: following methods are public-facing api; do not use them internally
@@ -330,11 +597,6 @@ pub struct Parser<D: DemoStream, V: Visitor> {
     buf: Vec<u8>,
     visitor: V,
     ctx: Context,
-    // NOTE(blukai): is this the place for this? can it be moved "closer" to entities somewhere?
-    field_decode_ctx: FieldDecodeContext,
-    /// When set, `SvcPacketEntities` messages are not decoded. Used to fast-forward state without
-    /// paying for entity decode in a warm-up region whose rows are discarded anyway.
-    skip_entity_packets: bool,
 }
 
 impl<D: DemoStream, V: Visitor> Parser<D, V> {
@@ -344,8 +606,6 @@ impl<D: DemoStream, V: Visitor> Parser<D, V> {
             buf: vec![0; DEMO_RECORD_BUFFER_SIZE],
             visitor,
             ctx: Context::new(),
-            field_decode_ctx: FieldDecodeContext::default(),
-            skip_entity_packets: false,
         })
     }
 
@@ -398,10 +658,18 @@ impl<D: DemoStream, V: Visitor> Parser<D, V> {
         self.run(|_notnotself, _cmd_header| Ok(ControlFlow::Handle))
     }
 
-    // important initialization messages:
-    // 1. DemSignonPacket (SvcCreateStringTable)
-    // 2. DemSendTables (flattened serializers; never update)
-    // 3. DemClassInfo (never update)
+    /// like [`run_to_end`](Self::run_to_end), but entities are cleared whenever a full packet
+    /// arrives, so that the entity state is rebuilt from each snapshot (entities that the snapshot
+    /// does not restate do not linger).
+    pub fn run_to_end_final_state(&mut self) -> anyhow::Result<()> {
+        self.run(|notnotself, cmd_header| {
+            if cmd_header.cmd == EDemoCommands::DemFullPacket {
+                notnotself.ctx.entities.clear();
+            }
+            Ok(ControlFlow::Handle)
+        })
+    }
+
     fn handle_cmd(&mut self, cmd_header: &CmdHeader) -> anyhow::Result<()> {
         // TODO: consider introducing CmdInstance thing that would allow to decode body once and
         // not read it, but skip, if unconsumed. note that to work temporary ownership of
@@ -412,48 +680,18 @@ impl<D: DemoStream, V: Visitor> Parser<D, V> {
         match cmd_header.cmd {
             EDemoCommands::DemPacket | EDemoCommands::DemSignonPacket => {
                 let cmd = D::decode_cmd_packet(cmd_body)?;
-                self.handle_cmd_packet(cmd)?;
+                self.handle_cmd_packet(cmd.data())?;
             }
 
-            EDemoCommands::DemSendTables => {
-                // NOTE: this check exists because seeking exists, there's no
-                // need to re-parse flattened serializers
-                if self.ctx.serializers.is_some() {
-                    return Ok(());
-                }
-
+            // NOTE: these checks exist because seeking exists, there's no need to re-parse
+            // flattened serializers / entity classes.
+            EDemoCommands::DemSendTables if self.ctx.serializers.is_none() => {
                 let cmd = D::decode_cmd_send_tables(cmd_body)?;
-                self.ctx.serializers = Some(self.ctx.parse_serializers(cmd)?);
+                self.ctx.handle_cmd_send_tables(cmd)?;
             }
-
-            EDemoCommands::DemClassInfo => {
-                // NOTE: this check exists because seeking exists, there's no
-                // need to re-parse entity classes
-                if self.ctx.entity_classes.is_some() {
-                    return Ok(());
-                }
-
+            EDemoCommands::DemClassInfo if self.ctx.entity_classes.is_none() => {
                 let cmd = D::decode_cmd_class_info(cmd_body)?;
-                self.ctx.entity_classes = Some(EntityClasses::parse(&cmd));
-
-                // NOTE: DemClassInfo message becomes available after
-                // SvcCreateStringTable(which has instancebaselines). to know
-                // how long vec that will contain instancebaseline values needs
-                // to be (to allocate precicely how much we need) we need to
-                // wait for DemClassInfos.
-                if let Some(string_table) = self
-                    .ctx
-                    .string_tables
-                    .find_table(INSTANCE_BASELINE_TABLE_NAME)
-                {
-                    // SAFETY: entity_classes value was assigned above ^.
-                    let Some(entity_classes) = self.ctx.entity_classes.as_ref() else {
-                        bail!("entity not found")
-                    };
-                    self.ctx
-                        .instance_baseline
-                        .update(string_table, entity_classes.classes)?;
-                }
+                self.ctx.handle_cmd_class_info(&cmd)?;
             }
 
             EDemoCommands::DemFullPacket => {
@@ -469,213 +707,39 @@ impl<D: DemoStream, V: Visitor> Parser<D, V> {
         Ok(())
     }
 
-    fn handle_cmd_packet(&mut self, cmd: CDemoPacket) -> anyhow::Result<()> {
-        let data = cmd.data.unwrap_or_default();
-        let mut br = BitReader::new(&data);
-
+    fn handle_cmd_packet(&mut self, data: &[u8]) -> anyhow::Result<()> {
+        let mut br = BitReader::new(data);
         while br.num_bits_left() > 8 {
-            let command = br.read_ubitvar()?;
-            let size = br.read_uvarint32()? as usize;
-
-            let buf = &mut self.buf[..size];
-            br.read_bytes(buf)?;
-            let buf: &_ = buf;
-
+            let (command, buf) = read_packet_message(&mut br, &mut self.buf)?;
             self.visitor.on_packet(&self.ctx, command, buf)?;
-
-            match command {
-                c if c == SvcMessages::SvcCreateStringTable as u32 => {
-                    let msg = CsvcMsgCreateStringTable::decode(buf)?;
-                    self.handle_svc_create_string_table(&msg)?;
-                }
-
-                c if c == SvcMessages::SvcUpdateStringTable as u32 => {
-                    let msg = CsvcMsgUpdateStringTable::decode(buf)?;
-                    self.handle_svc_update_string_table(&msg)?;
-                }
-
-                c if c == SvcMessages::SvcPacketEntities as u32 && !self.skip_entity_packets => {
-                    let msg = CsvcMsgPacketEntities::decode(buf)?;
-                    self.handle_svc_packet_entities(&msg)?;
-                }
-
-                c if c == SvcMessages::SvcServerInfo as u32 => {
-                    let msg = CsvcMsgServerInfo::decode(buf)?;
-                    self.ctx
-                        .handle_server_info(&msg, &mut self.field_decode_ctx);
-                }
-
-                _ => {
-                    // ignore
-                }
+            if let Some(msg) = self.ctx.handle_packet_message(command, buf)? {
+                self.handle_svc_packet_entities(&msg)?;
             }
         }
-
         br.is_overflowed()?;
         Ok(())
     }
 
-    fn handle_svc_create_string_table(
-        &mut self,
-        msg: &CsvcMsgCreateStringTable,
-    ) -> anyhow::Result<()> {
-        let string_table = self.ctx.string_tables.create_string_table_mut(
-            msg.name(),
-            msg.user_data_fixed_size(),
-            msg.user_data_size(),
-            msg.user_data_size_bits(),
-            msg.flags(),
-            msg.using_varint_bitcounts(),
-        );
-
-        let string_data = if msg.data_compressed() {
-            let sd = msg.string_data();
-            let decompress_len = snap::raw::decompress_len(sd)?;
-            snap::raw::Decoder::new().decompress(sd, &mut self.buf)?;
-            &self.buf[..decompress_len]
-        } else {
-            msg.string_data()
-        };
-
-        let mut br = BitReader::new(string_data);
-        string_table.parse_update(&mut br, msg.num_entries())?;
-        br.is_overflowed()?;
-
-        if string_table.name().eq(INSTANCE_BASELINE_TABLE_NAME)
-            && let Some(entity_classes) = self.ctx.entity_classes.as_ref()
-        {
-            self.ctx
-                .instance_baseline
-                .update(string_table, entity_classes.classes)?;
-        }
-
-        Ok(())
-    }
-
-    fn handle_svc_update_string_table(
-        &mut self,
-        msg: &CsvcMsgUpdateStringTable,
-    ) -> anyhow::Result<()> {
-        debug_assert!(msg.table_id.is_some(), "invalid table id");
-        let table_id = msg.table_id() as usize;
-
-        debug_assert!(
-            self.ctx.string_tables.has_table(table_id),
-            "trying to update non-existent table"
-        );
-        let Some(string_table) = self.ctx.string_tables.get_table_mut(table_id) else {
-            bail!("string table not found")
-        };
-
-        let mut br = BitReader::new(msg.string_data());
-        string_table.parse_update(&mut br, msg.num_changed_entries())?;
-        br.is_overflowed()?;
-
-        if string_table.name().eq(INSTANCE_BASELINE_TABLE_NAME)
-            && let Some(entity_classes) = self.ctx.entity_classes.as_ref()
-        {
-            self.ctx
-                .instance_baseline
-                .update(string_table, entity_classes.classes)?;
-        }
-
-        Ok(())
-    }
-
-    // NOTE: handle_msg_packet_entities is partially based on
-    // ReadPacketEntities in engine/client.cpp
     fn handle_svc_packet_entities(&mut self, msg: &CsvcMsgPacketEntities) -> anyhow::Result<()> {
-        let Some(entity_classes) = self.ctx.entity_classes.as_ref() else {
-            bail!("entity classes are not available");
-        };
-        let Some(serializers) = self.ctx.serializers.as_ref() else {
-            bail!("serializers are not available");
-        };
-        let instance_baseline = &self.ctx.instance_baseline;
-
-        let entity_data = msg.entity_data();
-        let mut br = BitReader::new(entity_data);
-
-        let mut entity_index: i32 = -1;
-        for _ in (0..msg.updated_entries()).rev() {
-            entity_index += br.read_ubitvar()? as i32 + 1;
-
-            let delta_header = DeltaHeader::from_bit_reader(&mut br)?;
-            match delta_header {
-                DeltaHeader::CREATE => {
-                    let maybe_index = self.ctx.entities.handle_create_with_filter(
-                        entity_index,
-                        &mut self.field_decode_ctx,
-                        &mut br,
-                        entity_classes,
-                        instance_baseline,
-                        serializers,
-                        |hash| self.visitor.should_track_entity(hash),
-                    )?;
-                    if let Some(index) = maybe_index {
-                        let Some(entity) = self.ctx.entities.get(&index) else {
-                            bail!("entity not found")
-                        };
-                        self.visitor.on_entity(&self.ctx, delta_header, entity)?;
-                    }
-                }
-                DeltaHeader::DELETE => {
-                    let entity = self.ctx.entities.handle_delete(entity_index);
-                    if let Some(entity) = entity {
-                        self.visitor.on_entity(&self.ctx, delta_header, &entity)?;
-                    }
-                }
-                DeltaHeader::LEAVE => {
-                    let entity = self.ctx.entities.handle_leave(entity_index);
-                    if let Some(entity) = entity {
-                        self.visitor.on_entity(&self.ctx, delta_header, &entity)?;
-                    }
-                }
-                DeltaHeader::UPDATE => {
-                    self.ctx.entities.handle_update(
-                        entity_index,
-                        &mut self.field_decode_ctx,
-                        &mut br,
-                    )?;
-                    let Some(entity) = self.ctx.entities.get(&entity_index) else {
-                        continue;
-                    };
-                    self.visitor.on_entity(&self.ctx, delta_header, entity)?;
-                }
-                _ => {}
+        let mut rdr = EntityDeltaReader::new(msg);
+        while let Some((delta_header, delta)) = self
+            .ctx
+            .read_entity_delta(&mut rdr, |hash| self.visitor.should_track_entity(hash))?
+        {
+            if let Some(entity) = self.ctx.delta_entity(&delta) {
+                self.visitor.on_entity(&self.ctx, delta_header, entity)?;
             }
         }
-
-        br.is_overflowed()?;
-        Ok(())
-    }
-
-    fn handle_cmd_string_tables(&mut self, cmd: &CDemoStringTables) -> anyhow::Result<()> {
-        self.ctx.string_tables.do_full_update(cmd);
-
-        let Some(entity_classes) = self.ctx.entity_classes.as_ref() else {
-            bail!("entity classes are not available")
-        };
-        if let Some(string_table) = self
-            .ctx
-            .string_tables
-            .find_table(INSTANCE_BASELINE_TABLE_NAME)
-        {
-            self.ctx
-                .instance_baseline
-                .update(string_table, entity_classes.classes)?;
-        }
-
         Ok(())
     }
 
     fn handle_cmd_full_packet(&mut self, cmd: CDemoFullPacket) -> anyhow::Result<()> {
         if let Some(string_table) = cmd.string_table.as_ref() {
-            self.handle_cmd_string_tables(string_table)?;
+            self.ctx.handle_cmd_string_tables(string_table)?;
         }
 
         if let Some(packet) = cmd.packet {
-            self.handle_cmd_packet(packet)?;
+            self.handle_cmd_packet(packet.data())?;
         }
 
         Ok(())
@@ -738,13 +802,7 @@ impl<D: SeekableDemoStream, V: Visitor> Parser<D, V> {
     fn reset(&mut self) -> Result<(), io::Error> {
         self.demo_stream
             .seek(SeekFrom::Start(self.demo_stream.start_position()))?;
-
-        self.ctx.entities.clear();
-        self.ctx.string_tables.clear();
-        self.ctx.instance_baseline.clear();
-        self.ctx.tick = -1;
-        self.ctx.prev_tick = -1;
-
+        self.ctx.reset();
         Ok(())
     }
 
@@ -867,7 +925,7 @@ impl<D: SeekableDemoStream, V: Visitor> Parser<D, V> {
         // refreshing the baselines its creates depend on).
         if !collecting {
             self.visitor.set_collecting(false);
-            self.skip_entity_packets = true;
+            self.ctx.skip_entity_packets = true;
         }
 
         let result = self.run_seekable(|s: &mut Parser<D, V>, cmd_header: &CmdHeader| {
@@ -882,7 +940,7 @@ impl<D: SeekableDemoStream, V: Visitor> Parser<D, V> {
                     // Our full packet: start collecting and apply it.
                     collecting = true;
                     s.visitor.set_collecting(true);
-                    s.skip_entity_packets = false;
+                    s.ctx.skip_entity_packets = false;
                     return Ok(Some(ControlFlow::Handle));
                 }
                 // The next full packet begins the following segment — stop here.
@@ -903,7 +961,7 @@ impl<D: SeekableDemoStream, V: Visitor> Parser<D, V> {
             }
         });
 
-        self.skip_entity_packets = false;
+        self.ctx.skip_entity_packets = false;
         result
     }
 }
@@ -917,7 +975,6 @@ pub struct AsyncStreamingParser<D: AsyncDemoStream, V: AsyncVisitor> {
     buf: Vec<u8>,
     visitor: V,
     ctx: Context,
-    field_decode_ctx: FieldDecodeContext,
 }
 
 #[cfg(feature = "async")]
@@ -928,7 +985,6 @@ impl<D: AsyncDemoStream, V: AsyncVisitor> AsyncStreamingParser<D, V> {
             buf: vec![0; DEMO_RECORD_BUFFER_SIZE],
             visitor,
             ctx: Context::new(),
-            field_decode_ctx: FieldDecodeContext::default(),
         })
     }
 
@@ -944,6 +1000,8 @@ impl<D: AsyncDemoStream, V: AsyncVisitor> AsyncStreamingParser<D, V> {
         self.run_internal(false).await
     }
 
+    /// like [`run_to_end`](Self::run_to_end), but entities are cleared whenever a full packet
+    /// arrives, so that the entity state is rebuilt from each snapshot.
     pub async fn run_to_end_final_state(&mut self) -> anyhow::Result<()> {
         self.run_internal(true).await
     }
@@ -962,7 +1020,6 @@ impl<D: AsyncDemoStream, V: AsyncVisitor> AsyncStreamingParser<D, V> {
                     self.handle_cmd(&cmd_header).await?;
                     if self.ctx.prev_tick != self.ctx.tick {
                         self.visitor.on_tick_end(&self.ctx).await?;
-                        // tokio::task::yield_now(); // TEMP
                     }
                 }
                 Err(err) => {
@@ -991,43 +1048,26 @@ impl<D: AsyncDemoStream, V: AsyncVisitor> AsyncStreamingParser<D, V> {
         match cmd_header.cmd {
             EDemoCommands::DemPacket | EDemoCommands::DemSignonPacket => {
                 let cmd = D::decode_cmd_packet(cmd_body)?;
-                self.handle_cmd_packet(cmd).await?;
+                self.handle_cmd_packet(cmd.data()).await?;
             }
 
-            EDemoCommands::DemSendTables => {
-                if self.ctx.serializers.is_some() {
-                    return Ok(());
-                }
-
+            EDemoCommands::DemSendTables if self.ctx.serializers.is_none() => {
                 let cmd = D::decode_cmd_send_tables(cmd_body)?;
-                self.ctx.serializers = Some(self.ctx.parse_serializers(cmd)?);
+                self.ctx.handle_cmd_send_tables(cmd)?;
             }
-
-            EDemoCommands::DemClassInfo => {
-                if self.ctx.entity_classes.is_some() {
-                    return Ok(());
-                }
-
+            EDemoCommands::DemClassInfo if self.ctx.entity_classes.is_none() => {
                 let cmd = D::decode_cmd_class_info(cmd_body)?;
-                self.ctx.entity_classes = Some(EntityClasses::parse(&cmd));
-
-                if let Some(string_table) = self
-                    .ctx
-                    .string_tables
-                    .find_table(INSTANCE_BASELINE_TABLE_NAME)
-                {
-                    let Some(entity_classes) = self.ctx.entity_classes.as_ref() else {
-                        bail!("entity not found")
-                    };
-                    self.ctx
-                        .instance_baseline
-                        .update(string_table, entity_classes.classes)?;
-                }
+                self.ctx.handle_cmd_class_info(&cmd)?;
             }
 
             EDemoCommands::DemFullPacket => {
                 let cmd = D::decode_cmd_full_packet(cmd_body)?;
-                self.handle_cmd_full_packet(cmd).await?;
+                if let Some(string_table) = cmd.string_table.as_ref() {
+                    self.ctx.handle_cmd_string_tables(string_table)?;
+                }
+                if let Some(packet) = cmd.packet {
+                    self.handle_cmd_packet(packet.data()).await?;
+                }
             }
 
             _ => {}
@@ -1036,222 +1076,34 @@ impl<D: AsyncDemoStream, V: AsyncVisitor> AsyncStreamingParser<D, V> {
         Ok(())
     }
 
-    async fn handle_cmd_packet(&mut self, cmd: CDemoPacket) -> anyhow::Result<()> {
-        let data = cmd.data.unwrap_or_default();
-        let mut br = BitReader::new(&data);
-
+    async fn handle_cmd_packet(&mut self, data: &[u8]) -> anyhow::Result<()> {
+        let mut br = BitReader::new(data);
         while br.num_bits_left() > 8 {
-            let command = br.read_ubitvar()?;
-            let size = br.read_uvarint32()? as usize;
-
-            let buf = &mut self.buf[..size];
-            br.read_bytes(buf)?;
-            let buf: &_ = buf;
-
+            let (command, buf) = read_packet_message(&mut br, &mut self.buf)?;
             self.visitor.on_packet(&self.ctx, command, buf).await?;
-
-            match command {
-                c if c == SvcMessages::SvcCreateStringTable as u32 => {
-                    let msg = CsvcMsgCreateStringTable::decode(buf)?;
-                    self.handle_svc_create_string_table(&msg)?;
-                }
-
-                c if c == SvcMessages::SvcUpdateStringTable as u32 => {
-                    let msg = CsvcMsgUpdateStringTable::decode(buf)?;
-                    self.handle_svc_update_string_table(&msg)?;
-                }
-
-                c if c == SvcMessages::SvcPacketEntities as u32 => {
-                    let msg = CsvcMsgPacketEntities::decode(buf)?;
-                    self.handle_svc_packet_entities(msg).await?;
-                }
-
-                c if c == SvcMessages::SvcServerInfo as u32 => {
-                    let msg = CsvcMsgServerInfo::decode(buf)?;
-                    self.ctx
-                        .handle_server_info(&msg, &mut self.field_decode_ctx);
-                }
-
-                _ => {}
+            if let Some(msg) = self.ctx.handle_packet_message(command, buf)? {
+                self.handle_svc_packet_entities(&msg).await?;
             }
         }
-
         br.is_overflowed()?;
-        Ok(())
-    }
-
-    fn handle_svc_create_string_table(
-        &mut self,
-        msg: &CsvcMsgCreateStringTable,
-    ) -> anyhow::Result<()> {
-        let string_table = self.ctx.string_tables.create_string_table_mut(
-            msg.name(),
-            msg.user_data_fixed_size(),
-            msg.user_data_size(),
-            msg.user_data_size_bits(),
-            msg.flags(),
-            msg.using_varint_bitcounts(),
-        );
-
-        let string_data = if msg.data_compressed() {
-            let sd = msg.string_data();
-            let decompress_len = snap::raw::decompress_len(sd)?;
-            snap::raw::Decoder::new().decompress(sd, &mut self.buf)?;
-            &self.buf[..decompress_len]
-        } else {
-            msg.string_data()
-        };
-
-        let mut br = BitReader::new(string_data);
-        string_table.parse_update(&mut br, msg.num_entries())?;
-        br.is_overflowed()?;
-
-        if string_table.name().eq(INSTANCE_BASELINE_TABLE_NAME)
-            && let Some(entity_classes) = self.ctx.entity_classes.as_ref()
-        {
-            self.ctx
-                .instance_baseline
-                .update(string_table, entity_classes.classes)?;
-        }
-
-        Ok(())
-    }
-
-    fn handle_svc_update_string_table(
-        &mut self,
-        msg: &CsvcMsgUpdateStringTable,
-    ) -> anyhow::Result<()> {
-        debug_assert!(msg.table_id.is_some(), "invalid table id");
-        let table_id = msg.table_id() as usize;
-
-        debug_assert!(
-            self.ctx.string_tables.has_table(table_id),
-            "trying to update non-existent table"
-        );
-        let Some(string_table) = self.ctx.string_tables.get_table_mut(table_id) else {
-            bail!("string table not found")
-        };
-
-        let mut br = BitReader::new(msg.string_data());
-        string_table.parse_update(&mut br, msg.num_changed_entries())?;
-        br.is_overflowed()?;
-
-        if string_table.name().eq(INSTANCE_BASELINE_TABLE_NAME)
-            && let Some(entity_classes) = self.ctx.entity_classes.as_ref()
-        {
-            self.ctx
-                .instance_baseline
-                .update(string_table, entity_classes.classes)?;
-        }
-
         Ok(())
     }
 
     async fn handle_svc_packet_entities(
         &mut self,
-        msg: CsvcMsgPacketEntities,
+        msg: &CsvcMsgPacketEntities,
     ) -> anyhow::Result<()> {
-        let Some(entity_classes) = self.ctx.entity_classes.as_ref() else {
-            bail!("entity classes are not available");
-        };
-        let Some(serializers) = self.ctx.serializers.as_ref() else {
-            bail!("serializers are not available");
-        };
-        let instance_baseline = &self.ctx.instance_baseline;
-
-        let entity_data = msg.entity_data();
-        let mut br = BitReader::new(entity_data);
-
-        let mut entity_index: i32 = -1;
-        for _ in (0..msg.updated_entries()).rev() {
-            entity_index += br.read_ubitvar()? as i32 + 1;
-
-            let delta_header = DeltaHeader::from_bit_reader(&mut br)?;
-            match delta_header {
-                DeltaHeader::CREATE => {
-                    let maybe_index = self.ctx.entities.handle_create_with_filter(
-                        entity_index,
-                        &mut self.field_decode_ctx,
-                        &mut br,
-                        entity_classes,
-                        instance_baseline,
-                        serializers,
-                        |hash| self.visitor.should_track_entity(hash),
-                    )?;
-                    if let Some(index) = maybe_index {
-                        let Some(entity) = self.ctx.entities.get(&index) else {
-                            bail!("entity not found")
-                        };
-                        self.visitor
-                            .on_entity(&self.ctx, delta_header, entity)
-                            .await?;
-                    }
-                }
-                DeltaHeader::DELETE => {
-                    let entity = self.ctx.entities.handle_delete(entity_index);
-                    if let Some(entity) = entity {
-                        self.visitor
-                            .on_entity(&self.ctx, delta_header, &entity)
-                            .await?;
-                    }
-                }
-                DeltaHeader::LEAVE => {
-                    let entity = self.ctx.entities.handle_leave(entity_index);
-                    if let Some(entity) = entity {
-                        self.visitor
-                            .on_entity(&self.ctx, delta_header, &entity)
-                            .await?;
-                    }
-                }
-                DeltaHeader::UPDATE => {
-                    self.ctx.entities.handle_update(
-                        entity_index,
-                        &mut self.field_decode_ctx,
-                        &mut br,
-                    )?;
-                    let Some(entity) = self.ctx.entities.get(&entity_index) else {
-                        continue;
-                    };
-                    self.visitor
-                        .on_entity(&self.ctx, delta_header, entity)
-                        .await?;
-                }
-                _ => {}
+        let mut rdr = EntityDeltaReader::new(msg);
+        while let Some((delta_header, delta)) = self
+            .ctx
+            .read_entity_delta(&mut rdr, |hash| self.visitor.should_track_entity(hash))?
+        {
+            if let Some(entity) = self.ctx.delta_entity(&delta) {
+                self.visitor
+                    .on_entity(&self.ctx, delta_header, entity)
+                    .await?;
             }
         }
-
-        br.is_overflowed()?;
-        Ok(())
-    }
-
-    fn handle_cmd_string_tables(&mut self, cmd: &CDemoStringTables) -> anyhow::Result<()> {
-        self.ctx.string_tables.do_full_update(cmd);
-
-        let Some(entity_classes) = self.ctx.entity_classes.as_ref() else {
-            bail!("entity classes are not available")
-        };
-        if let Some(string_table) = self
-            .ctx
-            .string_tables
-            .find_table(INSTANCE_BASELINE_TABLE_NAME)
-        {
-            self.ctx
-                .instance_baseline
-                .update(string_table, entity_classes.classes)?;
-        }
-
-        Ok(())
-    }
-
-    async fn handle_cmd_full_packet(&mut self, cmd: CDemoFullPacket) -> anyhow::Result<()> {
-        if let Some(string_table) = cmd.string_table.as_ref() {
-            self.handle_cmd_string_tables(string_table)?;
-        }
-
-        if let Some(packet) = cmd.packet {
-            self.handle_cmd_packet(packet).await?;
-        }
-
         Ok(())
     }
 
