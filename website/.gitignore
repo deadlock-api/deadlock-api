@@ -7,6 +7,9 @@ dist
 *.tsbuildinfo
 .env
 .env.local
+# Secrets for `wrangler dev`, like .env for the Vite dev server.
+.dev.vars
+.dev.vars.*
 
 # Blog plotting scripts are scratch tooling, never shipped
 public/blog/scripts/
