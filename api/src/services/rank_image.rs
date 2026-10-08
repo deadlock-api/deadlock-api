@@ -136,10 +136,18 @@ pub(crate) async fn render(
         ));
     };
 
-    let mut image = badge_image(state, badge).await?;
-    let font = font(state).await?;
-    draw_numeral(&mut image, &font, spec, numeral);
-    encode(&image, format)
+    let (png, font) = tokio::try_join!(
+        fetch_tier_image(state, badge, RankImageFormat::Png),
+        font(state)
+    )?;
+    // Decoding, drawing and encoding are CPU bound, so keep them off the async workers.
+    tokio::task::spawn_blocking(move || {
+        let mut image = decode_badge(&png)?;
+        draw_numeral(&mut image, &font, spec, numeral);
+        encode(&image, format)
+    })
+    .await
+    .map_err(|e| APIError::internal(format!("Rank image task failed: {e}")))?
 }
 
 pub(crate) async fn fetch_tier_image(
@@ -195,10 +203,9 @@ async fn download_tier_image(
         .map_err(|e| APIError::internal(format!("Failed to read rank image bytes: {e}")))
 }
 
-async fn badge_image(state: &AppState, badge: u32) -> APIResult<RgbaImage> {
-    let png = fetch_tier_image(state, badge, RankImageFormat::Png).await?;
+fn decode_badge(png: &[u8]) -> APIResult<RgbaImage> {
     Ok(
-        image::load_from_memory_with_format(&png, image::ImageFormat::Png)
+        image::load_from_memory_with_format(png, image::ImageFormat::Png)
             .map_err(|e| APIError::internal(format!("Failed to decode rank badge: {e}")))?
             .to_rgba8(),
     )
@@ -342,7 +349,7 @@ async fn font(state: &AppState) -> Result<Arc<FontVec>, APIError> {
         .bytes()
         .await
         .map_err(|e| APIError::internal(format!("Failed to read rank font: {e}")))?;
-    FontVec::try_from_vec(bytes.to_vec())
+    FontVec::try_from_vec(Vec::from(bytes))
         .map(Arc::new)
         .map_err(|e| APIError::internal(format!("Failed to parse rank font: {e}")))
 }
