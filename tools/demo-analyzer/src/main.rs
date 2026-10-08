@@ -43,6 +43,36 @@ const INCREMENTAL_WINDOW: &str = "2 HOUR";
 /// this age, a `match_id` bound both tables prune on (60M rows read → 2M); older matches are
 /// left to the full scan, which also refreshes the bound.
 const INCREMENTAL_MAX_MATCH_AGE: &str = "7 DAY";
+/// A failed match is retried after this, doubling per failure up to [`MAX_RETRY_DELAY`]:
+/// most failures (demo not uploaded yet, relay hiccup) are transient.
+const BASE_RETRY_DELAY: Duration = Duration::from_mins(10);
+const MAX_RETRY_DELAY: Duration = Duration::from_hours(12);
+/// Concurrent `UPDATE`s when applying a batch.
+const UPDATE_CONCURRENCY: usize = 4;
+
+/// Matches whose processing failed, with when to try them again.
+#[derive(Default)]
+struct FailedMatches(HashMap<u64, (u32, Instant)>);
+
+impl FailedMatches {
+    fn record_failure(&mut self, match_id: u64, now: Instant) {
+        let attempts = self.0.get(&match_id).map_or(1, |(a, _)| a + 1);
+        let delay = BASE_RETRY_DELAY
+            .saturating_mul(1 << (attempts - 1).min(16))
+            .min(MAX_RETRY_DELAY);
+        self.0.insert(match_id, (attempts, now + delay));
+    }
+
+    fn is_backing_off(&self, match_id: u64, now: Instant) -> bool {
+        self.0
+            .get(&match_id)
+            .is_some_and(|(_, retry_at)| now < *retry_at)
+    }
+
+    fn len(&self) -> usize {
+        self.0.len()
+    }
+}
 
 use models::{
     DemoPlayer, MatchUpdate, MatchWithReplay, ObservedSteamName, ObservedSteamNameChange,
@@ -76,7 +106,7 @@ async fn main() -> anyhow::Result<()> {
         .timeout(Duration::from_mins(2))
         .build()?;
 
-    let mut failed_matches: HashSet<u64> = HashSet::new();
+    let mut failed_matches = FailedMatches::default();
     let mut last_full_scan: Option<Instant> = None;
     let mut incremental_min_match_id = 0;
 
@@ -107,9 +137,10 @@ async fn main() -> anyhow::Result<()> {
                 // Prune failed_matches for ids that have aged out of the 30-day SQL window,
                 // otherwise the set grows unboundedly over the process lifetime.
                 let valid_ids: HashSet<u64> = matches.iter().map(|m| m.match_id).collect();
-                failed_matches.retain(|id| valid_ids.contains(id));
+                failed_matches.0.retain(|id, _| valid_ids.contains(id));
             }
-            matches.retain(|m| !failed_matches.contains(&m.match_id));
+            let now = Instant::now();
+            matches.retain(|m| !failed_matches.is_backing_off(m.match_id, now));
 
             if matches.is_empty() {
                 info!("No pending matches to process");
@@ -121,7 +152,7 @@ async fn main() -> anyhow::Result<()> {
             }
 
             info!(
-                "Processing {} matches ({} previously failed, skipped)",
+                "Processing {} matches ({} have failed before)",
                 matches.len(),
                 failed_matches.len()
             );
@@ -136,7 +167,10 @@ async fn main() -> anyhow::Result<()> {
                 cli.batch_size,
             )
             .await;
-            failed_matches.extend(failed);
+            let now = Instant::now();
+            for match_id in failed {
+                failed_matches.record_failure(match_id, now);
+            }
 
             if cli.once {
                 return Ok(());
@@ -381,14 +415,16 @@ fn correlate(match_info: &MatchWithReplay, state: &SharedState) -> MatchUpdate {
 }
 
 async fn apply_updates(ch_client: &clickhouse::Client, updates: &[MatchUpdate]) {
-    for update in updates {
-        if let Err(e) = apply_update(ch_client, update).await {
-            error!("Failed to apply update for match {}: {e}", update.match_id);
-            counter!("demo_analyzer.update.failure").increment(1);
-        } else {
-            counter!("demo_analyzer.update.success").increment(1);
-        }
-    }
+    futures::stream::iter(updates)
+        .for_each_concurrent(UPDATE_CONCURRENCY, |update| async move {
+            if let Err(e) = apply_update(ch_client, update).await {
+                error!("Failed to apply update for match {}: {e}", update.match_id);
+                counter!("demo_analyzer.update.failure").increment(1);
+            } else {
+                counter!("demo_analyzer.update.success").increment(1);
+            }
+        })
+        .await;
 }
 
 async fn apply_update(ch_client: &clickhouse::Client, update: &MatchUpdate) -> anyhow::Result<()> {
@@ -516,4 +552,28 @@ fn format_array<T: core::fmt::Display>(values: impl IntoIterator<Item = T>) -> S
     }
     out.push(']');
     out
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn failed_matches_back_off_exponentially_up_to_the_cap() {
+        let mut failed = FailedMatches::default();
+        let start = Instant::now();
+        failed.record_failure(1, start);
+        assert!(failed.is_backing_off(1, start + BASE_RETRY_DELAY / 2));
+        assert!(!failed.is_backing_off(1, start + BASE_RETRY_DELAY));
+
+        failed.record_failure(1, start);
+        assert!(failed.is_backing_off(1, start + BASE_RETRY_DELAY));
+        assert!(!failed.is_backing_off(1, start + BASE_RETRY_DELAY * 2));
+
+        for _ in 0..40 {
+            failed.record_failure(1, start);
+        }
+        assert!(!failed.is_backing_off(1, start + MAX_RETRY_DELAY));
+        assert!(!failed.is_backing_off(2, start));
+    }
 }

@@ -99,6 +99,15 @@ impl DemoAnalyzerVisitor {
 impl AsyncVisitor for DemoAnalyzerVisitor {
     type Error = VisitorError;
 
+    /// Only these entities are read (nothing looks entities up through the context), so
+    /// the parser skip-decodes all others instead of materializing them.
+    fn should_track_entity(&self, serializer_name_hash: u64) -> bool {
+        matches!(
+            serializer_name_hash,
+            PLAYER_CONTROLLER_HASH | PLAYER_PAWN_HASH | GAME_RULES_PROXY_HASH
+        )
+    }
+
     fn on_entity(
         &mut self,
         ctx: &Context,
