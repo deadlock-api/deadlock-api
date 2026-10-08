@@ -93,7 +93,7 @@ test("a page reads only the filters it lists", () => {
 test("a path segment without its entity falls back to the list page", () => {
   const heroPage = PAGE_REGISTRY.find((page) => page.id === "hero_page")!;
   assert.equal(resolvePage(heroPage, empty, context).path, "/analytics/heroes");
-  const withHero = { ...empty, heroes: [{ id: 35, name: "Grey Talon" }] };
+  const withHero = { ...empty, heroes: [{ id: 35, name: "Grey Talon", codename: "orion" }] };
   assert.equal(resolvePage(heroPage, withHero, context).path, "/analytics/heroes/grey-talon");
   const patchNotes = PAGE_REGISTRY.find((page) => page.id === "patch_notes")!;
   assert.equal(resolvePage(patchNotes, { ...empty, time: "previous_patch" }, context).path, "/patches/2026-09-16");
@@ -101,7 +101,8 @@ test("a path segment without its entity falls back to the list page", () => {
 
 test("a combination holds every hero named", () => {
   const combos = PAGE_REGISTRY.find((page) => page.id === "hero_synergy")!;
-  const heroes = (n: number) => Array.from({ length: n }, (_, i) => ({ id: i + 1, name: `Hero ${i + 1}` }));
+  const heroes = (n: number) =>
+    Array.from({ length: n }, (_, i) => ({ id: i + 1, name: `Hero ${i + 1}`, codename: `hero${i + 1}` }));
   assert.deepEqual(resolvePage(combos, { ...empty, heroes: heroes(2) }, context).search, {
     comb_include_heroes: "1,2",
   });
@@ -114,7 +115,7 @@ test("a combination holds every hero named", () => {
 
 test("a page with tabs opens on its tab", () => {
   const conversations = PAGE_REGISTRY.find((page) => page.id === "hero_conversations")!;
-  const bebop = { ...empty, heroes: [{ id: 15, name: "Bebop" }] };
+  const bebop = { ...empty, heroes: [{ id: 15, name: "Bebop", codename: "bebop" }] };
   assert.deepEqual(resolvePage(conversations, bebop, context).search, { tab: "conversations", heroes: 15 });
 });
 

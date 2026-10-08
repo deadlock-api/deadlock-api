@@ -22,6 +22,7 @@ import { useAbilities, useHeroes, useSounds, puzzleLoadError } from "~/lib/deadl
 import { getModeSeed, seededPick, seededRandom, validatePuzzleDateSearch } from "~/lib/deadlockdle/seed";
 import { hasDisplayName } from "~/lib/deadlockdle/trivia-questions";
 import { useDailyGame } from "~/lib/deadlockdle/use-daily-game";
+import { heroCodename } from "~/lib/hero-roster";
 import { pageTitle, seo } from "~/lib/seo";
 import { useStoredState } from "~/lib/use-stored-state";
 import { filterPlayableHeroes } from "~/queries/asset-queries";
@@ -161,7 +162,7 @@ function buildCodenameMap(
 ): Map<string, { id: number; name: string }> {
   const map = new Map<string, { id: number; name: string }>();
   for (const hero of heroes) {
-    const codename = hero.class_name.replace(/^hero_/, "");
+    const codename = heroCodename(hero.class_name);
     map.set(codename, { id: hero.id, name: hero.name });
   }
   for (const hero of heroes) {

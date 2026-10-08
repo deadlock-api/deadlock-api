@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { PAGE_IDS } from "~/lib/page-registry";
+import { PAGE_REGISTRY } from "~/lib/page-registry";
 
 import { decideRequestBody, intentFromDecision, questionEntities } from "./decide";
 import { findMentions } from "./entities";
@@ -11,15 +11,15 @@ import { validateDecideInput } from "./search-fns";
 
 const catalog: Catalog = {
   heroes: [
-    { id: 15, name: "Bebop" },
-    { id: 13, name: "Haze" },
-    { id: 2, name: "Seven" },
-    { id: 7, name: "Wraith" },
-    { id: 6, name: "Abrams" },
-    { id: 11, name: "Dynamo" },
-    { id: 35, name: "Grey Talon" },
-    { id: 18, name: "Mo & Krill" },
-    { id: 50, name: "The Doorman" },
+    { id: 15, name: "Bebop", codename: "bebop" },
+    { id: 13, name: "Haze", codename: "haze" },
+    { id: 2, name: "Seven", codename: "gigawatt" },
+    { id: 7, name: "Wraith", codename: "wraith" },
+    { id: 6, name: "Abrams", codename: "atlas" },
+    { id: 11, name: "Dynamo", codename: "dynamo" },
+    { id: 35, name: "Grey Talon", codename: "orion" },
+    { id: 18, name: "Mo & Krill", codename: "krill" },
+    { id: 50, name: "The Doorman", codename: "doorman" },
   ],
   items: [
     { id: 100, name: "Toxic Bullets" },
@@ -81,7 +81,7 @@ test("the request asks for every registered page, and offers none for the page a
     questionEntities("bebop", vocabulary),
     vocabulary.rankNames,
   );
-  assert.deepEqual(Object.keys(body.questions.page.criteria), ["none", ...PAGE_IDS]);
+  assert.deepEqual(Object.keys(body.questions.page.criteria), ["none", ...PAGE_REGISTRY.map((page) => page.id)]);
   for (const name of ["rank_min", "rank_max", "mode", "time", "region", "sort"]) {
     assert.ok("none" in body.questions[name].criteria, name);
   }

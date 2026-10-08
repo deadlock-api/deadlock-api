@@ -1,5 +1,6 @@
 import {
   type Entity,
+  type HeroEntity,
   type PageTarget,
   registeredPage,
   type ResolveContext,
@@ -17,12 +18,12 @@ export interface RankTier {
 
 /** What the intent's names are looked up in. */
 export interface Catalog {
-  heroes: readonly Entity[];
+  heroes: readonly HeroEntity[];
   items: readonly Entity[];
   ranks: readonly RankTier[];
 }
 
-function lookUp(names: readonly string[], entities: readonly Entity[]): Entity[] {
+function lookUp<T extends Entity>(names: readonly string[], entities: readonly T[]): T[] {
   return names.flatMap((name) => entities.find((entity) => entity.name === name) ?? []);
 }
 

@@ -3,6 +3,7 @@ import type { Hero } from "deadlock_api_client";
 import { useMemo } from "react";
 
 import { combineQueryStates } from "~/components/patterns/states/QueryRenderer";
+import { heroCodename } from "~/lib/hero-roster";
 import { countSounds, heroMentionFinder, humanizeSoundName, isSoundTree, type SoundTree } from "~/lib/sounds";
 import { soundHeroesQueryOptions, soundIndexQueryOptions } from "~/queries/sound-queries";
 
@@ -50,7 +51,7 @@ export function useSoundCatalog() {
     const heroes = new Map<string, Hero>();
     const names = new Map<string, string>();
     for (const hero of heroesQuery.data) {
-      const codename = hero.class_name.replace(/^hero_/, "");
+      const codename = heroCodename(hero.class_name);
       heroes.set(codename, hero);
       names.set(codename, hero.name);
     }

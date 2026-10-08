@@ -9,8 +9,11 @@ export type SearchValue = string | number | boolean;
 export interface Entity {
   id: number;
   name: string;
-  /** A hero's internal name (`atlas` for Abrams), which the sounds page names its voice lines by. */
-  codename?: string;
+}
+
+export interface HeroEntity extends Entity {
+  /** The hero's internal name (`atlas` for Abrams), which the sounds page names its voice lines by. */
+  codename: string;
 }
 
 /**
@@ -74,9 +77,9 @@ export type Region = (typeof REGIONS)[number];
  * "the page's own default".
  */
 export interface Selection {
-  heroes: Entity[];
+  heroes: HeroEntity[];
   /** The other team, for a page that compares two teams. */
-  enemyHeroes: Entity[];
+  enemyHeroes: HeroEntity[];
   items: Entity[];
   /** Badge range, already a valid pair. */
   rank?: { min: number; max: number };

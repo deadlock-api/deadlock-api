@@ -1,8 +1,8 @@
 import type { Hero, Upgrade } from "deadlock_api_client";
 
-import { isPlayableHero } from "~/lib/hero-roster";
+import { heroCodename, isPlayableHero } from "~/lib/hero-roster";
 import { isShopableItem } from "~/lib/item-roster";
-import type { Entity } from "~/lib/page-registry";
+import type { Entity, HeroEntity } from "~/lib/page-registry";
 
 import type { IntentVocabulary } from "./intent";
 import type { Catalog, RankTier } from "./resolve";
@@ -25,7 +25,7 @@ export function buildSearchCatalog(
 ): SearchCatalog {
   const playable = heroes
     .filter(isPlayableHero)
-    .map((hero) => ({ id: hero.id, name: hero.name, codename: hero.class_name.replace(/^hero_/, "") }));
+    .map((hero): HeroEntity => ({ id: hero.id, name: hero.name, codename: heroCodename(hero.class_name) }));
   const shopable = items.filter(isShopableItem);
   return {
     vocabulary: {
