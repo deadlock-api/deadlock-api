@@ -23,8 +23,12 @@ mod easy_poll;
 mod hltv;
 
 #[tokio::main]
-async fn main() {
+async fn main() -> anyhow::Result<()> {
     let _otel_guard = common::init_tracing(env!("CARGO_PKG_NAME"));
     tracing::info!("Starting processing!");
-    run_cli().await;
+    let result = run_cli().await;
+    if let Err(e) = &result {
+        tracing::error!("Command failed: {e:#}");
+    }
+    result
 }

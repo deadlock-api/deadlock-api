@@ -83,11 +83,25 @@ async fn main() -> anyhow::Result<()> {
     common::run_until_shutdown(async move {
         loop {
             let full_scan = last_full_scan.is_none_or(|t| t.elapsed() >= FULL_SCAN_INTERVAL);
-            if full_scan {
-                incremental_min_match_id = fetch_incremental_min_match_id(&ch_client).await?;
-            }
-            let mut matches =
-                fetch_pending_matches(&ch_client, full_scan, incremental_min_match_id).await?;
+            // A failed query must not end the process: log it and poll again later.
+            let pending = async {
+                if full_scan {
+                    incremental_min_match_id = fetch_incremental_min_match_id(&ch_client).await?;
+                }
+                fetch_pending_matches(&ch_client, full_scan, incremental_min_match_id).await
+            };
+            let mut matches = match pending.await {
+                Ok(matches) => matches,
+                Err(e) => {
+                    counter!("demo_analyzer.fetch_pending_matches.failure").increment(1);
+                    error!("Failed to fetch pending matches: {e:#}");
+                    if cli.once {
+                        return Err(e);
+                    }
+                    tokio::time::sleep(Duration::from_mins(1)).await;
+                    continue;
+                }
+            };
             if full_scan {
                 last_full_scan = Some(Instant::now());
                 // Prune failed_matches for ids that have aged out of the 30-day SQL window,
@@ -114,51 +128,15 @@ async fn main() -> anyhow::Result<()> {
             gauge!("demo_analyzer.pending_matches").set(matches.len() as f64);
             gauge!("demo_analyzer.failed_matches").set(failed_matches.len() as f64);
 
-            let mut pending_updates: Vec<MatchUpdate> = Vec::new();
-            let mut stream = futures::stream::iter(matches)
-                .map(|m| {
-                    let http = &http_client;
-                    async move {
-                        let match_id = m.match_id;
-                        match process_demo(http, &m).await {
-                            Ok(update) => {
-                                counter!("demo_analyzer.demo_processed.success").increment(1);
-                                Ok(update)
-                            }
-                            Err(e) => {
-                                counter!("demo_analyzer.demo_processed.failure").increment(1);
-                                warn!("Failed to process match {match_id}: {e}");
-                                Err(match_id)
-                            }
-                        }
-                    }
-                })
-                .buffer_unordered(cli.parallelism);
-
-            while let Some(result) = stream.next().await {
-                match result {
-                    Ok(update) => pending_updates.push(update),
-                    Err(match_id) => {
-                        failed_matches.insert(match_id);
-                    }
-                }
-                if pending_updates.len() >= cli.batch_size {
-                    info!(
-                        "Applying {} match updates to ClickHouse",
-                        pending_updates.len()
-                    );
-                    apply_updates(&ch_client, &pending_updates).await;
-                    pending_updates.clear();
-                }
-            }
-
-            if !pending_updates.is_empty() {
-                info!(
-                    "Applying {} remaining match updates to ClickHouse",
-                    pending_updates.len()
-                );
-                apply_updates(&ch_client, &pending_updates).await;
-            }
+            let failed = process_matches(
+                &http_client,
+                &ch_client,
+                matches,
+                cli.parallelism,
+                cli.batch_size,
+            )
+            .await;
+            failed_matches.extend(failed);
 
             if cli.once {
                 return Ok(());
@@ -168,6 +146,61 @@ async fn main() -> anyhow::Result<()> {
         }
     })
     .await
+}
+
+/// Processes `matches` and applies their updates in batches; returns the failed match ids.
+async fn process_matches(
+    http_client: &reqwest::Client,
+    ch_client: &clickhouse::Client,
+    matches: Vec<MatchWithReplay>,
+    parallelism: usize,
+    batch_size: usize,
+) -> Vec<u64> {
+    let mut failed = Vec::new();
+    let mut pending_updates: Vec<MatchUpdate> = Vec::new();
+    let mut stream = futures::stream::iter(matches)
+        .map(|m| {
+            let http = http_client;
+            async move {
+                let match_id = m.match_id;
+                match process_demo(http, &m).await {
+                    Ok(update) => {
+                        counter!("demo_analyzer.demo_processed.success").increment(1);
+                        Ok(update)
+                    }
+                    Err(e) => {
+                        counter!("demo_analyzer.demo_processed.failure").increment(1);
+                        warn!("Failed to process match {match_id}: {e}");
+                        Err(match_id)
+                    }
+                }
+            }
+        })
+        .buffer_unordered(parallelism);
+
+    while let Some(result) = stream.next().await {
+        match result {
+            Ok(update) => pending_updates.push(update),
+            Err(match_id) => failed.push(match_id),
+        }
+        if pending_updates.len() >= batch_size {
+            info!(
+                "Applying {} match updates to ClickHouse",
+                pending_updates.len()
+            );
+            apply_updates(ch_client, &pending_updates).await;
+            pending_updates.clear();
+        }
+    }
+
+    if !pending_updates.is_empty() {
+        info!(
+            "Applying {} remaining match updates to ClickHouse",
+            pending_updates.len()
+        );
+        apply_updates(ch_client, &pending_updates).await;
+    }
+    failed
 }
 
 /// Read in key order, so it stops at the first granule that matches instead of scanning a week

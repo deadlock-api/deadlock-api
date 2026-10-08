@@ -402,6 +402,8 @@ impl SpectatorBot {
             "https://raw.githubusercontent.com/SteamDatabase/GameTracking-Deadlock/refs/heads/master/game/citadel/steam.inf".to_string(),
             Duration::from_mins(5),
         ).await?;
+        // Stops the poller however this run ends, including the early `?` returns.
+        let _poller = AbortOnDrop(abort_handle);
 
         while start_time.elapsed() < Duration::from_secs(BOT_RUNTIME_HOURS * 3600) {
             let s = steam_inf.read().await.clone();
@@ -510,12 +512,20 @@ impl SpectatorBot {
             }
         }
 
-        abort_handle.abort();
         info!("Bot runtime exceeded, restarting in 30s...");
         sleep(Duration::from_secs(30)).await;
         Ok(())
     }
 }
+/// Aborts the task when dropped.
+struct AbortOnDrop(tokio::task::AbortHandle);
+
+impl Drop for AbortOnDrop {
+    fn drop(&mut self) {
+        self.0.abort();
+    }
+}
+
 async fn run_server(bot: Arc<SpectatorBot>) -> Result<()> {
     let shared_state = bot;
 
@@ -589,12 +599,31 @@ pub(crate) async fn run_bot(
     max_spectating_matches: Option<usize>,
 ) -> Result<()> {
     let bot = Arc::new(SpectatorBot::new(proxy_url, proxy_api_token).await?);
-    let _server = tokio::spawn(run_server(bot.clone()));
+    let mut server = tokio::spawn(run_server(bot.clone()));
+    let shutdown = common::shutdown_token();
 
-    loop {
-        if let Err(e) = bot.run(max_spectating_matches).await {
-            error!("Bot error, restarting in 2 minutes: {:?}", e);
-            sleep(Duration::from_mins(2)).await;
+    let bot_loop = async {
+        loop {
+            if let Err(e) = bot.run(max_spectating_matches).await {
+                error!("Bot error, restarting in 2 minutes: {:?}", e);
+                sleep(Duration::from_mins(2)).await;
+            }
+        }
+    };
+
+    // The scrapers depend on the HTTP server, so if it stops the process exits with an
+    // error (and gets restarted) instead of spectating matches nobody downloads.
+    tokio::select! {
+        () = bot_loop => Ok(()),
+        result = &mut server => match result {
+            Ok(Ok(())) => Err(anyhow!("Spectate bot server stopped")),
+            Ok(Err(e)) => Err(e.context("Spectate bot server failed")),
+            Err(e) => Err(anyhow!(e).context("Spectate bot server task failed")),
+        },
+        () = shutdown.cancelled() => {
+            info!("Shutting down spectate bot");
+            server.abort();
+            Ok(())
         }
     }
 }

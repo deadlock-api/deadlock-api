@@ -41,18 +41,20 @@ pub(crate) async fn run(spectate_server_url: String) -> anyhow::Result<()> {
     let aws_cache_store = common::get_cache_store()?;
     let cache_store = Arc::new(aws_cache_store);
 
+    let matches_url = base_url.join("matches")?;
     loop {
         let current_count = currently_downloading.len();
 
-        let matches_res = match spec_client.get(base_url.join("matches")?).send().await {
-            Ok(matches_res) => matches_res,
+        // A spectate-bot hiccup (unreachable, restarting, garbled body) must not end the
+        // scraper: log it and ask again shortly.
+        let matches = match fetch_spectated_matches(&spec_client, &matches_url).await {
+            Ok(matches) => matches,
             Err(e) => {
-                error!("Failed to get matches to check against: {:#?}", e);
+                error!("Failed to get matches to check against: {e:#}");
                 sleep(Duration::from_secs(5)).await;
                 continue;
             }
         };
-        let matches = matches_res.json::<Vec<SpectatedMatchInfo>>().await?;
         let spectated_match_ids: HashSet<u64> = matches.iter().map(|x| x.match_id).collect();
 
         let total_available_matches = matches.len();
@@ -103,6 +105,19 @@ pub(crate) async fn run(spectate_server_url: String) -> anyhow::Result<()> {
 
         sleep(Duration::from_millis(200)).await;
     }
+}
+
+async fn fetch_spectated_matches(
+    client: &reqwest::Client,
+    url: &Url,
+) -> reqwest::Result<Vec<SpectatedMatchInfo>> {
+    client
+        .get(url.clone())
+        .send()
+        .await?
+        .error_for_status()?
+        .json()
+        .await
 }
 
 fn download_task(

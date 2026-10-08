@@ -1,5 +1,5 @@
+use anyhow::Context;
 use clap::{Parser, Subcommand};
-use tracing::error;
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -29,35 +29,27 @@ pub(crate) enum Commands {
     },
 }
 
-pub(crate) async fn run_cli() {
+pub(crate) async fn run_cli() -> anyhow::Result<()> {
     let cli = Cli::parse();
 
     match cli.command {
         Commands::ScrapeHltvMatches {
             spectate_bot_url: spectate_server_url,
         } => {
-            if let Err(e) = common::init_metrics() {
-                error!("Failed to initialize metrics server: {:#?}", e);
-                return;
-            }
-            if let Err(e) = crate::cmd::scrape_hltv::run(spectate_server_url).await {
-                error!("Command failed: {:#?}", e);
-            }
+            common::init_metrics().context("Failed to initialize metrics server")?;
+            common::run_until_shutdown(crate::cmd::scrape_hltv::run(spectate_server_url)).await
         }
         Commands::RunSpectateBot {
             proxy_url,
             proxy_api_token,
             max_spectating_matches,
         } => {
-            if let Err(e) = crate::cmd::run_spectate_bot::run_bot(
+            crate::cmd::run_spectate_bot::run_bot(
                 proxy_url,
                 proxy_api_token,
                 max_spectating_matches,
             )
             .await
-            {
-                error!("Command failed: {:#?}", e);
-            }
         }
     }
 }
