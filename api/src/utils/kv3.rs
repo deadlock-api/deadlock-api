@@ -492,16 +492,13 @@ impl<'a> Parser<'a> {
         if self.peek() == Some(b'\n') {
             self.idx += 1;
         }
-        let bytes = self.bytes();
         let start = self.idx;
-        while self.idx < bytes.len() && !bytes[self.idx..].starts_with(b"\n\"\"\"") {
-            self.idx += 1;
-        }
-        if self.idx >= bytes.len() {
+        let Some(len) = memchr::memmem::find(&self.bytes()[start..], b"\n\"\"\"") else {
+            self.idx = self.src.len();
             return Err(self.err("unterminated multi-line string"));
-        }
-        let s = &self.src[start..self.idx];
-        self.idx += 4;
+        };
+        let s = &self.src[start..start + len];
+        self.idx = start + len + 4;
         Ok(Cow::Borrowed(s))
     }
 
