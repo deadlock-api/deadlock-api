@@ -48,7 +48,8 @@ pub(crate) async fn fetch_active_matches_cached() -> anyhow::Result<Vec<ActiveMa
     let res = common::http_client()
         .get("https://api.deadlock-api.com/v1/matches/active")
         .send()
-        .await?;
+        .await?
+        .error_for_status()?;
 
     let active_matches: Vec<ActiveMatch> = res.json().await?;
     info!("Fetched new active matches, size: {}", active_matches.len());
