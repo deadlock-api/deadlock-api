@@ -203,7 +203,7 @@ export function HeroStatsByExperienceTable({
   const formatValue = (val: number | null) => {
     if (val === null) return <NoValue label="No reading" />;
     if (isPercentStat) return `${val.toFixed(1)}%`;
-    return val.toLocaleString(undefined, { maximumFractionDigits: 1 });
+    return val.toLocaleString("en-US", { maximumFractionDigits: 1 });
   };
 
   if (allLoading) {
