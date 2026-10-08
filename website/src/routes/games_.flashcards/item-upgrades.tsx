@@ -42,14 +42,12 @@ interface UpgradePathCard {
 
 export const Route = createFileRoute("/games_/flashcards/item-upgrades")({
   component: ItemUpgradePathFlashcards,
-  head: () => {
-    const s = seo({
+  head: () =>
+    seo({
       title: pageTitle("Item Upgrade Flashcards - Learn Components"),
       description: "Study Deadlock item upgrade paths by matching upgraded items to their component items.",
       path: "/games/flashcards/item-upgrades",
-    });
-    return s;
-  },
+    }),
 });
 
 function itemImageSrc(item: SlimUpgrade): string {

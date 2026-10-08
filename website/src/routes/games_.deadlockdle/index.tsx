@@ -39,8 +39,8 @@ import { ORGANIZATION, pageTitle, seo } from "~/lib/seo";
 export const Route = createFileRoute("/games_/deadlockdle/")({
   component: DeadlockdleHub,
   validateSearch: validatePuzzleDateSearch,
-  head: () => {
-    const s = seo({
+  head: () =>
+    seo({
       title: pageTitle("Deadlockdle (Deadlockle): Daily Deadlock Guessing Game"),
       description:
         "Deadlockdle, the daily Deadlock guessing game: guess the hero, item, ability and sound, then play trivia and Higher or Lower. New puzzles every day.",
@@ -57,9 +57,7 @@ export const Route = createFileRoute("/games_/deadlockdle/")({
         offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
         creator: ORGANIZATION,
       },
-    });
-    return s;
-  },
+    }),
 });
 
 const GAMES: {

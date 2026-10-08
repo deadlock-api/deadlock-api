@@ -12,15 +12,13 @@ import { pageTitle, seo } from "~/lib/seo";
 
 export const Route = createFileRoute("/games_/flashcards/")({
   component: FlashcardsHub,
-  head: () => {
-    const s = seo({
+  head: () =>
+    seo({
       title: pageTitle("Flashcards - Learn Deadlock Heroes and Items"),
       description:
         "Practice identifying Deadlock heroes, items, and item upgrade paths with multiple-choice flashcards.",
       path: "/games/flashcards",
-    });
-    return s;
-  },
+    }),
 });
 
 const GAMES: {

@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AnimatePresence, motion } from "framer-motion";
-import { useCallback, useMemo, useRef, type RefCallback } from "react";
+import { useCallback, useMemo, useRef } from "react";
 
 import { ItemImage } from "~/components/domain/assets/ItemImage";
 import { AnswerOption, type AnswerOptionState, revealedState } from "~/components/domain/minigames/AnswerOption";
@@ -26,6 +26,8 @@ import {
 } from "~/lib/deadlockdle/seed";
 import { gameStorageKey, legacyGameStorageKey } from "~/lib/deadlockdle/storage";
 import { useCountdown } from "~/lib/deadlockdle/use-countdown";
+import { useResultsRef } from "~/lib/deadlockdle/use-results-ref";
+import { capitalize } from "~/lib/format";
 import { pageTitle, seo } from "~/lib/seo";
 import { useStoredDailyState } from "~/lib/use-stored-state";
 import { filterShopableItems } from "~/queries/asset-queries";
@@ -74,10 +76,6 @@ const DEFAULT_STATE: ItemStatsState = {
 
 function freshState(date: string): ItemStatsState {
   return { ...DEFAULT_STATE, date };
-}
-
-function formatSlotLabel(slot: string): string {
-  return slot.charAt(0).toUpperCase() + slot.slice(1);
 }
 
 const SLOT_TONE: Record<SlotType, React.ComponentProps<typeof AnswerOption>["tone"]> = {
@@ -170,12 +168,7 @@ function ItemStatsQuiz() {
   // Submitting unmounts the Submit All button, which dropped focus to <body>; the score takes it instead (only right
   // after submitting, not when a finished day is reopened).
   const justSubmitted = useRef(false);
-  const scoreScrollRef = useCallback<RefCallback<HTMLDivElement>>((node) => {
-    if (node) {
-      if (justSubmitted.current) node.focus({ preventScroll: true });
-      setTimeout(() => node.scrollIntoView({ behavior: "smooth", block: "nearest" }), 150);
-    }
-  }, []);
+  const scoreScrollRef = useResultsRef<HTMLDivElement>(justSubmitted);
 
   // A failed query leaves no puzzle to build, so without this the loader would spin forever.
   const loadError = puzzleLoadError(itemsQuery);
@@ -301,13 +294,13 @@ function ItemStatsQuiz() {
                               disabled={state.submitted}
                               tone={SLOT_TONE[slot]}
                             >
-                              {formatSlotLabel(slot)}
+                              {capitalize(slot)}
                             </AnswerOption>
                           );
                         })}
                       </div>
                       {result && !result.slot && (
-                        <p className="text-xs text-negative">Correct: {formatSlotLabel(item.item_slot_type)}</p>
+                        <p className="text-xs text-negative">Correct: {capitalize(item.item_slot_type)}</p>
                       )}
                     </Field>
                   </div>

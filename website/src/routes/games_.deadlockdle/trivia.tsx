@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AnimatePresence, motion } from "framer-motion";
-import { useCallback, useMemo, useRef, useState, type RefCallback } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 
 import { AnswerOption, revealedState } from "~/components/domain/minigames/AnswerOption";
 import { TerminalBadge } from "~/components/domain/minigames/TerminalBadge";
@@ -32,6 +32,7 @@ import {
   type TriviaQuestion,
 } from "~/lib/deadlockdle/trivia-questions";
 import { useCountdown } from "~/lib/deadlockdle/use-countdown";
+import { useResultsRef } from "~/lib/deadlockdle/use-results-ref";
 import { pageTitle, seo } from "~/lib/seo";
 import { useStoredDailyState } from "~/lib/use-stored-state";
 import { filterPlayableHeroes } from "~/queries/asset-queries";
@@ -162,13 +163,8 @@ function Trivia() {
     return `Deadlockdle #${dayNum} - Trivia ${state.score}/${QUESTION_COUNT}\n${puzzleShareUrl(date)}`;
   }, [date, state.score]);
 
-  const resultsScrollRef = useCallback<RefCallback<HTMLDivElement>>((node) => {
-    if (node) {
-      // Reached by answering the last question, whose options unmount: the results take focus instead of <body>.
-      if (answered.current) node.focus({ preventScroll: true });
-      setTimeout(() => node.scrollIntoView({ behavior: "smooth", block: "nearest" }), 150);
-    }
-  }, []);
+  // Reached by answering the last question, whose options unmount: the results take focus instead of <body>.
+  const resultsScrollRef = useResultsRef<HTMLDivElement>(answered);
   // The last answer is saved as completed at once; its reveal still plays before the results replace it.
   const showResults = state.completed && !isRevealed;
 

@@ -22,6 +22,7 @@ import { useAbilities, useHeroes, useSounds, puzzleLoadError } from "~/lib/deadl
 import { getModeSeed, seededPick, seededRandom, validatePuzzleDateSearch } from "~/lib/deadlockdle/seed";
 import { hasDisplayName } from "~/lib/deadlockdle/trivia-questions";
 import { useDailyGame } from "~/lib/deadlockdle/use-daily-game";
+import { capitalize } from "~/lib/format";
 import { heroCodename } from "~/lib/hero-roster";
 import { pageTitle, seo } from "~/lib/seo";
 import { useStoredState } from "~/lib/use-stored-state";
@@ -383,20 +384,10 @@ function GuessSound() {
 
   const playableHeroes = useMemo(() => (heroes ? filterPlayableHeroes(heroes) : []), [heroes]);
 
-  const codenameMap = useMemo(
-    () =>
-      buildCodenameMap(
-        playableHeroes.map((h) => ({
-          id: h.id,
-          name: h.name,
-          class_name: h.class_name,
-        })),
-      ),
-    [playableHeroes],
-  );
+  const codenameMap = useMemo(() => buildCodenameMap(playableHeroes), [playableHeroes]);
 
   const abilitiesByHero = useMemo(
-    () => (rawAbilities ? buildAbilitiesByHero(rawAbilities as Ability[]) : new Map<number, Ability[]>()),
+    () => (rawAbilities ? buildAbilitiesByHero(rawAbilities) : new Map<number, Ability[]>()),
     [rawAbilities],
   );
 
@@ -430,9 +421,7 @@ function GuessSound() {
     if (!dailySound) return [];
 
     const heroData = playableHeroes.find((h) => h.id === dailySound.heroId);
-    const heroType = heroData?.hero_type
-      ? heroData.hero_type.charAt(0).toUpperCase() + heroData.hero_type.slice(1)
-      : "Unknown";
+    const heroType = heroData?.hero_type ? capitalize(heroData.hero_type) : "Unknown";
 
     return [
       { label: "HERO TYPE", value: `${heroType} hero` },
@@ -451,7 +440,7 @@ function GuessSound() {
       names.push({ id: names.length, name: sound.abilityName });
     }
     if (rawAbilities) {
-      for (const ability of rawAbilities as Ability[]) {
+      for (const ability of rawAbilities) {
         if (!ability.ability_type || !VALID_ABILITY_TYPES.has(ability.ability_type)) continue;
         if (!hasDisplayName(ability) || !ability.hero) continue;
         const heroInfo = playableHeroes.find((h) => h.id === ability.hero);

@@ -23,6 +23,7 @@ import { TooltipProvider } from "~/components/ui/tooltip";
 import { getAnalytics } from "~/lib/analytics";
 import { ANALYTICS_TABS } from "~/lib/analytics-tabs";
 import { installChunkReloadHandlers, isChunkLoadError, reloadOnceForStaleChunk } from "~/lib/chunk-reload";
+import { runWhenIdle } from "~/lib/idle";
 import { readPreferences } from "~/lib/preferences.isomorphic";
 import { catchPrefetch, ensureCached } from "~/lib/prefetch-safe";
 import { seo } from "~/lib/seo";
@@ -188,14 +189,7 @@ function RootComponent() {
     if (isWidgetEmbed) return;
     // PostHog is ~90 KB gzip; started right after hydration it competed with the route's chunks and API calls. Idle
     // time, at most 2s later, still records a quick visit. An experiment that needs its flags starts it at once.
-    const start = () => void getAnalytics();
-    // Safari has no requestIdleCallback.
-    if (typeof window.requestIdleCallback === "function") {
-      const id = window.requestIdleCallback(start, { timeout: 2000 });
-      return () => window.cancelIdleCallback(id);
-    }
-    const id = setTimeout(start, 1000);
-    return () => clearTimeout(id);
+    return runWhenIdle(() => void getAnalytics(), 2000, 1000);
   }, [isWidgetEmbed]);
 
   const { queryClient } = Route.useRouteContext();
@@ -212,12 +206,7 @@ function RootComponent() {
             catchPrefetch(ensureCached(queryClient, ranksQueryOptions)),
           ]),
       );
-    if (typeof window.requestIdleCallback === "function") {
-      const id = window.requestIdleCallback(warm, { timeout: 3000 });
-      return () => window.cancelIdleCallback(id);
-    }
-    const id = setTimeout(warm, 1500);
-    return () => clearTimeout(id);
+    return runWhenIdle(warm, 3000, 1500);
   }, [isWidgetEmbed, queryClient]);
 
   if (isWidgetEmbed) {

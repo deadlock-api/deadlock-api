@@ -1,5 +1,4 @@
 import { createFileRoute } from "@tanstack/react-router";
-import type { Ability } from "deadlock_api_client";
 import { motion } from "framer-motion";
 import { useMemo } from "react";
 
@@ -37,7 +36,7 @@ function GuessAbility() {
   const { data: abilities, isLoading: abilitiesLoading } = abilitiesQuery;
   const { date: dateParam } = Route.useSearch();
   const guessableAbilities = useMemo(
-    () => (abilities && heroes ? buildGuessableAbilities(abilities as Ability[], filterPlayableHeroes(heroes)) : []),
+    () => (abilities && heroes ? buildGuessableAbilities(abilities, filterPlayableHeroes(heroes)) : []),
     [abilities, heroes],
   );
   const {

@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { AnimatePresence, motion } from "framer-motion";
 import { ArrowDown, ArrowUp, type LucideIcon } from "lucide-react";
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type RefCallback } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { AbilityImage } from "~/components/domain/assets/AbilityImage";
 import { AssetImage } from "~/components/domain/assets/AssetImage";
@@ -59,6 +59,7 @@ import {
 } from "~/lib/deadlockdle/seed";
 import { gameStorageKey } from "~/lib/deadlockdle/storage";
 import { useCountdown } from "~/lib/deadlockdle/use-countdown";
+import { useResultsRef } from "~/lib/deadlockdle/use-results-ref";
 import { isTyping } from "~/lib/keyboard";
 import { pageTitle, seo } from "~/lib/seo";
 import { useStoredDailyState } from "~/lib/use-stored-state";
@@ -317,16 +318,8 @@ function HigherLower() {
     [date, rounds, state.score, state.answers, best],
   );
 
-  const resultsScrollRef = useCallback<RefCallback<HTMLDivElement>>((node) => {
-    if (node) {
-      // Reached by answering the last round, whose choices unmount: the results take focus instead of <body>.
-      if (answered.current) node.focus({ preventScroll: true });
-      setTimeout(() => {
-        const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-        node.scrollIntoView({ behavior: reduced ? "auto" : "smooth", block: "nearest" });
-      }, 150);
-    }
-  }, []);
+  // Reached by answering the last round, whose choices unmount: the results take focus instead of <body>.
+  const resultsScrollRef = useResultsRef<HTMLDivElement>(answered);
   // The last answer is saved as completed at once; its reveal still plays before the results replace it.
   const showResults = state.completed && !isRevealed;
 
