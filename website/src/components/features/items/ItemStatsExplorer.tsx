@@ -53,6 +53,7 @@ export function ItemStatsExplorer({
   prevMaxDate,
   sortBy,
   hero,
+  enemy,
   minMatches,
   limit,
   minBoughtAtS,
@@ -67,6 +68,8 @@ export function ItemStatsExplorer({
   prevMinDate?: Dayjs;
   prevMaxDate?: Dayjs;
   hero?: number | null;
+  /** Only matches with this hero on the other team: which items win against it. */
+  enemy?: number | null;
   sortBy?: keyof ItemStats | "winrate";
   minMatches?: number | null;
   limit?: number;
@@ -99,6 +102,7 @@ export function ItemStatsExplorer({
     () => ({
       minMatches,
       heroId: hero,
+      enemyHeroIds: enemy != null ? String(enemy) : undefined,
       minAverageBadge: minRankId,
       maxAverageBadge: maxRankId,
       minUnixTimestamp: minUnixTimestamp ?? 0,
@@ -114,6 +118,7 @@ export function ItemStatsExplorer({
     [
       minMatches,
       hero,
+      enemy,
       minRankId,
       maxRankId,
       minUnixTimestamp,
@@ -155,6 +160,7 @@ export function ItemStatsExplorer({
     () => ({
       minMatches,
       heroId: hero,
+      enemyHeroIds: enemy != null ? String(enemy) : undefined,
       minAverageBadge: minRankId,
       maxAverageBadge: maxRankId,
       minUnixTimestamp: prevMinTimestamp ?? 0,
@@ -169,6 +175,7 @@ export function ItemStatsExplorer({
     [
       minMatches,
       hero,
+      enemy,
       minRankId,
       maxRankId,
       prevMinTimestamp,

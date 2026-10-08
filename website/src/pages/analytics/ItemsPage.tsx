@@ -45,6 +45,8 @@ export function ItemsPage() {
   const [maxBoughtAtS, setMaxBoughtAtS] = useQueryState("max_bought_at", parseAsInteger);
   const [heroParam, setHero] = useQueryState("hero", parseAsInteger);
   const hero = useKnownHeroId(heroParam);
+  const [enemyParam, setEnemy] = useQueryState("enemy", parseAsInteger);
+  const enemy = useKnownHeroId(enemyParam);
   const [minMatches, setMinMatches] = useQueryState("min_matches", parseAsInteger.withDefault(10));
   const { startDate, endDate, prevStartDate, prevEndDate, handleDateChange, defaultRange } = useDateRangeState();
   const { effectiveMinRankId, effectiveMaxRankId } = getEffectiveRankRange(mode, minRankId, maxRankId);
@@ -66,6 +68,15 @@ export function ItemsPage() {
           onValueChange={(next) => startTransition(() => void setHero(next, together))}
           allowNull
         />
+        {/* Only these two views read the item win rates the enemy filter narrows; elsewhere it would do nothing. */}
+        {(tab === "item-stats" || tab === "item-purchase-analysis") && (
+          <Filter.Hero
+            label="Against"
+            value={enemy}
+            onValueChange={(next) => startTransition(() => void setEnemy(next, together))}
+            allowNull
+          />
+        )}
         <Filter.MinMatches
           value={minMatches}
           onValueChange={(next) => startTransition(() => void setMinMatches(next, together))}
@@ -138,6 +149,7 @@ export function ItemsPage() {
                   prevMinDate={prevStartDate}
                   prevMaxDate={prevEndDate}
                   hero={hero}
+                  enemy={enemy}
                   minMatches={minMatches}
                   minBoughtAtS={minBoughtAtS ?? undefined}
                   maxBoughtAtS={maxBoughtAtS ?? undefined}
@@ -158,6 +170,7 @@ export function ItemsPage() {
                   minDate={startDate || undefined}
                   maxDate={endDate || undefined}
                   hero={hero}
+                  enemy={enemy}
                   minMatches={minMatches}
                   minBoughtAtS={minBoughtAtS ?? undefined}
                   maxBoughtAtS={maxBoughtAtS ?? undefined}

@@ -38,8 +38,9 @@ export const itemsPageOptions = {
   component: lazyRouteComponent(() => import("./ItemsPage"), "ItemsPage"),
   // The hero filter lives in the URL under nuqs; read it here so the loader warms the hero the page will show.
   loaderDeps: ({ search }: { search: Record<string, unknown> }) => {
-    const hero = (search as { hero?: unknown }).hero;
-    return { heroId: typeof hero === "number" && Number.isInteger(hero) ? hero : null };
+    const { hero, enemy } = search as { hero?: unknown; enemy?: unknown };
+    const id = (value: unknown) => (typeof value === "number" && Number.isInteger(value) ? value : null);
+    return { heroId: id(hero), enemyId: id(enemy) };
   },
   loader: async ({
     context: { queryClient, preferences },
@@ -47,7 +48,7 @@ export const itemsPageOptions = {
     location,
   }: {
     context: RouterContext;
-    deps: { heroId: number | null };
+    deps: { heroId: number | null; enemyId: number | null };
     location: { pathname: string };
   }) => {
     const tab = analyticsTabFromPath("items", location.pathname);
@@ -126,7 +127,12 @@ export const itemsPageOptions = {
       return { leader: null, coverage };
     }
 
-    const itemStatsQuery = { ...common, minBoughtAtS: undefined, maxBoughtAtS: undefined };
+    const itemStatsQuery = {
+      ...common,
+      enemyHeroIds: deps.enemyId !== null ? String(deps.enemyId) : undefined,
+      minBoughtAtS: undefined,
+      maxBoughtAtS: undefined,
+    };
     const overall = Promise.all([
       prefetchSafe(
         queryClient.query({ ...itemStatsQueryOptions({ ...itemStatsQuery, ...range }), staleTime: "static" }),
@@ -145,7 +151,7 @@ export const itemsPageOptions = {
     const [stats] = await overall;
     // The description names the patch-wide leader, which a hero-filtered table would misrepresent.
     return {
-      leader: deps.heroId === null ? findWinRateLeader(stats, await items) : null,
+      leader: deps.heroId === null && deps.enemyId === null ? findWinRateLeader(stats, await items) : null,
       coverage,
     };
   },

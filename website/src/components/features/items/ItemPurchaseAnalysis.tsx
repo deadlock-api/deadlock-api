@@ -17,6 +17,7 @@ export function ItemPurchaseAnalysis({
   minDate,
   maxDate,
   hero,
+  enemy,
   minMatches,
   minBoughtAtS,
   maxBoughtAtS,
@@ -28,6 +29,8 @@ export function ItemPurchaseAnalysis({
   minDate?: Dayjs;
   maxDate?: Dayjs;
   hero?: number | null;
+  /** Only matches with this hero on the other team. */
+  enemy?: number | null;
   minMatches?: number | null;
   minBoughtAtS?: number;
   maxBoughtAtS?: number;
@@ -41,6 +44,7 @@ export function ItemPurchaseAnalysis({
     () => ({
       minMatches,
       heroId: hero,
+      enemyHeroIds: enemy != null ? String(enemy) : undefined,
       minAverageBadge: minRankId,
       maxAverageBadge: maxRankId,
       minUnixTimestamp: minUnixTimestamp ?? 0,
@@ -53,6 +57,7 @@ export function ItemPurchaseAnalysis({
     [
       minMatches,
       hero,
+      enemy,
       minRankId,
       maxRankId,
       minUnixTimestamp,
