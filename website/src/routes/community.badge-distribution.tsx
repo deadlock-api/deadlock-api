@@ -21,7 +21,7 @@ import { combineQueryStates } from "~/components/patterns/states/QueryRenderer";
 import { SegmentedItem } from "~/components/ui/segmented";
 import { useDateRangeState } from "~/hooks/useDateRangeState";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
-import { prefetchSafe } from "~/lib/prefetch-safe";
+import { prefetchCached } from "~/lib/prefetch-safe";
 import { defaultTemporalCoverage, defaultUnixRange } from "~/lib/seasons";
 import { datasetJsonLd, pageTitle, seo } from "~/lib/seo";
 import { loadSeasons } from "~/queries/asset-queries";
@@ -54,15 +54,13 @@ export const Route = createFileRoute("/community/badge-distribution")({
     const seasons = await loadSeasons(queryClient);
     const range = defaultUnixRange(seasons, preferences.dateFilter);
     const [distribution, ranks] = await Promise.all([
-      prefetchSafe(
-        queryClient.query({
-          ...badgeDistributionQueryOptions({
-            ...range,
-          }),
-          staleTime: "static",
+      prefetchCached(
+        queryClient,
+        badgeDistributionQueryOptions({
+          ...range,
         }),
       ),
-      prefetchSafe(queryClient.query({ ...ranksQueryOptions, staleTime: "static" })),
+      prefetchCached(queryClient, ranksQueryOptions),
     ]);
     return {
       medianRank: findMedianRankName(distribution, ranks),

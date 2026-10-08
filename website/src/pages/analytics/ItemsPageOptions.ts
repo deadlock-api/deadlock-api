@@ -4,7 +4,7 @@ import { ITEM_COMBS_TO_SHOW } from "~/components/features/items/useItemCombFilte
 import { analyticsTabFromPath, ANALYTICS_VIEWS, redirectAnalyticsTab } from "~/lib/analytics-tabs";
 import { enemyHeroFilter, parseEnemyParam } from "~/lib/enemy-heroes";
 import { DEFAULT_MATCH_MODE } from "~/lib/game-mode";
-import { prefetchSafe, prefetchSeed } from "~/lib/prefetch-safe";
+import { prefetchCached, prefetchSeed } from "~/lib/prefetch-safe";
 import { DEFAULT_RANK_RANGE } from "~/lib/rank-utils";
 import { defaultPrevUnixRange, defaultTemporalCoverage, defaultUnixRange } from "~/lib/seasons";
 import { datasetJsonLd, pageTitle, seo } from "~/lib/seo";
@@ -75,7 +75,7 @@ export const itemsPageOptions = {
       matchMode: DEFAULT_MATCH_MODE,
     };
     // Every view names items, and the build flow and combos trim their answers by the item list.
-    const items = prefetchSafe(queryClient.query({ ...itemUpgradesQueryOptions, staleTime: "static" }));
+    const items = prefetchCached(queryClient, itemUpgradesQueryOptions);
     const coverage = defaultTemporalCoverage(seasons, preferences.dateFilter);
     // The server waits for the view's data, so its HTML carries it. In the browser a tab click or a hero pick does not:
     // the view shows its own loading state instead of the navigation waiting on the API.
@@ -138,16 +138,12 @@ export const itemsPageOptions = {
       maxBoughtAtS: undefined,
     };
     const overall = Promise.all([
-      prefetchSafe(
-        queryClient.query({ ...itemStatsQueryOptions({ ...itemStatsQuery, ...range }), staleTime: "static" }),
-      ),
-      prefetchSafe(
-        queryClient.query({
-          ...itemStatsQueryOptions({
-            ...itemStatsQuery,
-            ...prevRange,
-          }),
-          staleTime: "static",
+      prefetchCached(queryClient, itemStatsQueryOptions({ ...itemStatsQuery, ...range })),
+      prefetchCached(
+        queryClient,
+        itemStatsQueryOptions({
+          ...itemStatsQuery,
+          ...prevRange,
         }),
       ),
     ]);

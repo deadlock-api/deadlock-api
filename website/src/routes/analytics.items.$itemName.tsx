@@ -27,7 +27,7 @@ import { formatPercent } from "~/lib/format";
 import { DEFAULT_MATCH_MODE } from "~/lib/game-mode";
 import { fetchItemBestHeroes } from "~/lib/item-hero-fns";
 import { findItemBySlug, itemSlug } from "~/lib/item-slug";
-import { catchPrefetch, prefetchSafe } from "~/lib/prefetch-safe";
+import { catchPrefetch, ensureCached, prefetchCached } from "~/lib/prefetch-safe";
 import { rankOf } from "~/lib/rank-of";
 import { DEFAULT_RANK_RANGE, rankRangeLabel } from "~/lib/rank-utils";
 import { defaultPeriodLabel, defaultTemporalCoverage, defaultUnixRange, type SeasonInfo } from "~/lib/seasons";
@@ -128,7 +128,7 @@ export const Route = createFileRoute("/analytics/items/$itemName")({
   component: ItemDetailPage,
   loader: async ({ context: { queryClient, preferences }, params }) => {
     const [items, seasons] = await Promise.all([
-      queryClient.query({ ...itemUpgradesQueryOptions, staleTime: "static" }),
+      ensureCached(queryClient, itemUpgradesQueryOptions),
       loadSeasons(queryClient),
     ]);
     const shopable = filterShopableItems(items);
@@ -147,22 +147,12 @@ export const Route = createFileRoute("/analytics/items/$itemName")({
       throw notFound({ data: { suggestion: closestNameBySlug(shopable, params.itemName)?.name } });
     }
     const [stats, heroStats, ranks, , , bestHeroes] = await Promise.all([
-      prefetchSafe(
-        queryClient.query({
-          ...itemStatsQueryOptions(currentItemStatsParams(seasons, preferences.dateFilter)),
-          staleTime: "static",
-        }),
-      ),
-      prefetchSafe(
-        queryClient.query({
-          ...heroStatsQueryOptions(currentHeroStatsParams(seasons, preferences.dateFilter)),
-          staleTime: "static",
-        }),
-      ),
-      prefetchSafe(queryClient.query({ ...ranksQueryOptions, staleTime: "static" })),
-      prefetchSafe(queryClient.query({ ...itemQueryOptions(item.id), staleTime: "static" })),
+      prefetchCached(queryClient, itemStatsQueryOptions(currentItemStatsParams(seasons, preferences.dateFilter))),
+      prefetchCached(queryClient, heroStatsQueryOptions(currentHeroStatsParams(seasons, preferences.dateFilter))),
+      prefetchCached(queryClient, ranksQueryOptions),
+      prefetchCached(queryClient, itemQueryOptions(item.id)),
       // The corrupted section's penalties and frame art; only items the Broker trades have one.
-      item.corrupted_info && prefetchSafe(queryClient.query({ ...corruptionQueryOptions, staleTime: "static" })),
+      item.corrupted_info && prefetchCached(queryClient, corruptionQueryOptions),
       catchPrefetch(
         fetchItemBestHeroes({
           data: {

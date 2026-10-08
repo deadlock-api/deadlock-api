@@ -8,7 +8,7 @@ import { buffInfoByType } from "~/lib/buffs";
 import { toCorruptionData } from "~/lib/corrupted-items";
 import { isPlayableHero } from "~/lib/hero-roster";
 import { isShopableItem } from "~/lib/item-roster";
-import { catchPrefetch } from "~/lib/prefetch-safe";
+import { catchPrefetch, ensureCached } from "~/lib/prefetch-safe";
 import { type SeasonInfo, toSeasons } from "~/lib/seasons";
 
 import { queryKeys } from "./query-keys";
@@ -132,7 +132,7 @@ export const rankedSeasonsQueryOptions = queryOptions({
 /** Loader-side counterpart of `useSeasons`. Falls back to no seasons if the endpoint is unavailable. */
 export async function loadSeasons(queryClient: QueryClient): Promise<SeasonInfo[]> {
   // `query()` applies `select`, so this already is `toSeasons` of the cached response.
-  const seasons = await catchPrefetch(queryClient.query({ ...rankedSeasonsQueryOptions, staleTime: "static" }));
+  const seasons = await catchPrefetch(ensureCached(queryClient, rankedSeasonsQueryOptions));
   return seasons ?? [];
 }
 

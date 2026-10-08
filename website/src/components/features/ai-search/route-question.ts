@@ -9,6 +9,7 @@ import { decideSearch } from "~/lib/ai-search/search-fns";
 import { PATCHES } from "~/lib/constants";
 import type { SeasonRef } from "~/lib/page-registry";
 import { toPatchEntry } from "~/lib/patches";
+import { ensureCached } from "~/lib/prefetch-safe";
 import { stringifySearch } from "~/lib/search-params";
 import { heroesQueryOptions, itemUpgradesQueryOptions, loadSeasons } from "~/queries/asset-queries";
 import { ranksQueryOptions } from "~/queries/ranks-query";
@@ -20,9 +21,9 @@ const PATCH_ENTRIES = PATCHES.map(toPatchEntry);
 /** The names and time windows a question is read against, from the asset caches every page warms. */
 async function loadSearchCatalog(queryClient: QueryClient): Promise<SearchCatalog & { seasons: SeasonRef[] }> {
   const [heroes, items, ranks, seasons] = await Promise.all([
-    queryClient.query({ ...heroesQueryOptions, staleTime: "static" }),
-    queryClient.query({ ...itemUpgradesQueryOptions, staleTime: "static" }),
-    queryClient.query({ ...ranksQueryOptions, staleTime: "static" }),
+    ensureCached(queryClient, heroesQueryOptions),
+    ensureCached(queryClient, itemUpgradesQueryOptions),
+    ensureCached(queryClient, ranksQueryOptions),
     loadSeasons(queryClient),
   ]);
   return {

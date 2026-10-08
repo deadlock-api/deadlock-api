@@ -9,7 +9,7 @@ import type { DateFilterPreference } from "~/lib/date-filter-preference";
 import { DEFAULT_MATCH_MODE } from "~/lib/game-mode";
 import { heroSlug } from "~/lib/hero-slug";
 import { rankHeroes, type Tier } from "~/lib/hero-tiers";
-import { prefetchSafe } from "~/lib/prefetch-safe";
+import { prefetchCached } from "~/lib/prefetch-safe";
 import { DEFAULT_RANK_RANGE } from "~/lib/rank-utils";
 import {
   defaultPeriodLabel,
@@ -109,7 +109,7 @@ async function prefetchHeroView(
   const mode = { gameMode: "normal" as const, matchMode: DEFAULT_MATCH_MODE };
   const prefetch = <TQueryFnData, TError, TData, TQueryKey extends QueryKey>(
     options: QueryExecuteOptions<TQueryFnData, TError, TData, TQueryFnData, TQueryKey>,
-  ) => prefetchSafe(queryClient.query({ ...options, staleTime: "static" }));
+  ) => prefetchCached(queryClient, options);
 
   switch (tab) {
     case "stats-over-time":
@@ -241,7 +241,7 @@ export const heroesPageOptions = {
     const r = defaultHeroStatsRanges(seasons, preferences.dateFilter);
     const period = defaultPeriodLabel(seasons, preferences.dateFilter);
     const coverage = defaultTemporalCoverage(seasons, preferences.dateFilter);
-    const heroes = prefetchSafe(queryClient.query({ ...heroesQueryOptions, staleTime: "static" }));
+    const heroes = prefetchCached(queryClient, heroesQueryOptions);
     // The server waits for the view's data, so its HTML carries it. In the browser a tab click does not: the view shows
     // its own loading state, where waiting kept the navigation pending and washed out the whole page (PendingNavigation).
     const isServer = typeof window === "undefined";
@@ -259,23 +259,16 @@ export const heroesPageOptions = {
       matchMode: DEFAULT_MATCH_MODE,
     };
     const statsFor = (minUnixTimestamp: number | undefined, maxUnixTimestamp: number | undefined) =>
-      prefetchSafe(
-        queryClient.query({
-          ...heroStatsQueryOptions({ ...common, minUnixTimestamp, maxUnixTimestamp }),
-          staleTime: "static",
-        }),
-      );
+      prefetchCached(queryClient, heroStatsQueryOptions({ ...common, minUnixTimestamp, maxUnixTimestamp }));
     const bansFor = (minUnixTimestamp: number | undefined, maxUnixTimestamp: number | undefined) =>
-      prefetchSafe(
-        queryClient.query({
-          ...heroBanStatsQueryOptions({
-            matchMode: DEFAULT_MATCH_MODE,
-            minAverageBadge: DEFAULT_RANK_RANGE.min,
-            maxAverageBadge: DEFAULT_RANK_RANGE.max,
-            minUnixTimestamp,
-            maxUnixTimestamp,
-          }),
-          staleTime: "static",
+      prefetchCached(
+        queryClient,
+        heroBanStatsQueryOptions({
+          matchMode: DEFAULT_MATCH_MODE,
+          minAverageBadge: DEFAULT_RANK_RANGE.min,
+          maxAverageBadge: DEFAULT_RANK_RANGE.max,
+          minUnixTimestamp,
+          maxUnixTimestamp,
         }),
       );
     const current = Promise.all([

@@ -4,7 +4,7 @@ import { analyticsView, redirectAnalyticsTab } from "~/lib/analytics-tabs";
 import { compareCardUrl, compareFilterSearch, type CompareFilterSearch, compareShareParams } from "~/lib/compare-share";
 import { DEFAULT_MATCH_MODE } from "~/lib/game-mode";
 import { comparisonVerdict, parseCompareIds, SCORED_STAT_COUNT, settledAggregates } from "~/lib/player-compare";
-import { prefetchSafe } from "~/lib/prefetch-safe";
+import { prefetchCached } from "~/lib/prefetch-safe";
 import { MAX_BADGE } from "~/lib/rank-utils";
 import { defaultUnixRange } from "~/lib/seasons";
 import { pageTitle, seo, SITE_URL } from "~/lib/seo";
@@ -36,29 +36,25 @@ export const playersPageOptions = {
         import("~/queries/steam-queries"),
       ]);
     const range = defaultUnixRange(await loadSeasons(queryClient), preferences.dateFilter);
-    const scoreboard = await prefetchSafe(
-      queryClient.query({
-        ...playerScoreboardQueryOptions({
-          sortBy: "kills",
-          sortDirection: "desc",
-          gameMode: "normal",
-          matchMode: DEFAULT_MATCH_MODE,
-          heroId: deps.heroId,
-          minMatches: DEFAULT_MIN_MATCHES,
-          minAverageBadge: 0,
-          maxAverageBadge: MAX_BADGE,
-          ...range,
-          start: 0,
-          limit: MAX_ENTRIES,
-        }),
-        staleTime: "static",
+    const scoreboard = await prefetchCached(
+      queryClient,
+      playerScoreboardQueryOptions({
+        sortBy: "kills",
+        sortDirection: "desc",
+        gameMode: "normal",
+        matchMode: DEFAULT_MATCH_MODE,
+        heroId: deps.heroId,
+        minMatches: DEFAULT_MIN_MATCHES,
+        minAverageBadge: 0,
+        maxAverageBadge: MAX_BADGE,
+        ...range,
+        start: 0,
+        limit: MAX_ENTRIES,
       }),
     );
     const accountIds = (scoreboard ?? []).map((e) => e.account_id).filter((id): id is number => id != null);
     await Promise.all(
-      steamProfileBatches(accountIds).map((batch) =>
-        prefetchSafe(queryClient.query({ ...steamProfilesQueryOptions(batch), staleTime: "static" })),
-      ),
+      steamProfileBatches(accountIds).map((batch) => prefetchCached(queryClient, steamProfilesQueryOptions(batch))),
     );
   },
   head: ({ match }: { match: { pathname: string } }) => {
@@ -90,17 +86,15 @@ export const statsMetricsPageOptions = {
       import("~/queries/player-stats-metrics-query"),
     ]);
     const range = defaultUnixRange(await loadSeasons(queryClient), preferences.dateFilter);
-    await prefetchSafe(
-      queryClient.query({
-        ...playerStatsMetricsQueryOptions({
-          heroIds: deps.heroId != null ? String(deps.heroId) : undefined,
-          gameMode: "normal",
-          matchMode: DEFAULT_MATCH_MODE,
-          minAverageBadge: 0,
-          maxAverageBadge: MAX_BADGE,
-          ...range,
-        }),
-        staleTime: "static",
+    await prefetchCached(
+      queryClient,
+      playerStatsMetricsQueryOptions({
+        heroIds: deps.heroId != null ? String(deps.heroId) : undefined,
+        gameMode: "normal",
+        matchMode: DEFAULT_MATCH_MODE,
+        minAverageBadge: 0,
+        maxAverageBadge: MAX_BADGE,
+        ...range,
       }),
     );
   },
@@ -156,38 +150,25 @@ export const comparePageOptions = {
     const accountIds = parseCompareIds(deps.accountIds);
     if (accountIds.length === 0) {
       // The "Add top player" button's pick.
-      await prefetchSafe(
-        queryClient.query({
-          ...playerScoreboardQueryOptions(compareQueries.compareSuggestionsParams(filters)),
-          staleTime: "static",
-        }),
-      );
+      await prefetchCached(queryClient, playerScoreboardQueryOptions(compareQueries.compareSuggestionsParams(filters)));
       return { names: [], range: undefined, verdict: null };
     }
     // One profile query a player, as the page reads them; the metrics too, which the head's verdict scores on.
     const [profileList, ranks, rows, metrics] = await Promise.all([
-      Promise.all(
-        accountIds.map((id) =>
-          prefetchSafe(queryClient.query({ ...steamProfileQueryOptions(id), staleTime: "static" })),
-        ),
-      ),
-      prefetchSafe(queryClient.query({ ...compareQueries.playerRanksQueryOptions(accountIds), staleTime: "static" })),
-      prefetchSafe(
-        queryClient.query({
-          ...trackerHeroStatsQueryOptions(compareQueries.compareHeroStatsParams(accountIds, filters)),
-          staleTime: "static",
-        }),
+      Promise.all(accountIds.map((id) => prefetchCached(queryClient, steamProfileQueryOptions(id)))),
+      prefetchCached(queryClient, compareQueries.playerRanksQueryOptions(accountIds)),
+      prefetchCached(
+        queryClient,
+        trackerHeroStatsQueryOptions(compareQueries.compareHeroStatsParams(accountIds, filters)),
       ),
       // The link preview's verdict needs them, and only a crawler reads the server's head: in the browser a navigation
       // (a player added, a filter changed) does not wait on them, and the page shows its placeholders instead.
       typeof window === "undefined"
         ? Promise.all(
             accountIds.map((id) =>
-              prefetchSafe(
-                queryClient.query({
-                  ...playerStatsMetricsQueryOptions(compareQueries.compareMetricsParams(filters, id)),
-                  staleTime: "static",
-                }),
+              prefetchCached(
+                queryClient,
+                playerStatsMetricsQueryOptions(compareQueries.compareMetricsParams(filters, id)),
               ),
             ),
           )

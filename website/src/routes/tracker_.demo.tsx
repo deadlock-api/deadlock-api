@@ -4,7 +4,7 @@ import { DemoNotice } from "~/components/features/tracker/shared/DemoNotice";
 import { TrackerContent } from "~/components/features/tracker/TrackerContent";
 import { PatronAuthProvider } from "~/contexts/PatronAuthContext";
 import type { DateRange } from "~/lib/date-filter-preference";
-import { prefetchSafe } from "~/lib/prefetch-safe";
+import { prefetchCached } from "~/lib/prefetch-safe";
 import { pageTitle, seo } from "~/lib/seo";
 import { DEMO_ACCOUNT_ID } from "~/lib/tracker/demo";
 import { heroesQueryOptions } from "~/queries/asset-queries";
@@ -17,11 +17,11 @@ export const Route = createFileRoute("/tracker_/demo")({
   // The whole overview is prefetched so the server-rendered page carries the tracker itself, not a skeleton.
   loader: async ({ context: { queryClient } }) => {
     await Promise.all([
-      prefetchSafe(queryClient.query({ ...trackerMatchHistoryQueryOptions(DEMO_ACCOUNT_ID), staleTime: "static" })),
-      prefetchSafe(queryClient.query({ ...trackerRankQueryOptions(DEMO_ACCOUNT_ID), staleTime: "static" })),
-      prefetchSafe(queryClient.query({ ...steamProfileQueryOptions(DEMO_ACCOUNT_ID), staleTime: "static" })),
-      prefetchSafe(queryClient.query({ ...heroesQueryOptions, staleTime: "static" })),
-      prefetchSafe(queryClient.query({ ...ranksQueryOptions, staleTime: "static" })),
+      prefetchCached(queryClient, trackerMatchHistoryQueryOptions(DEMO_ACCOUNT_ID)),
+      prefetchCached(queryClient, trackerRankQueryOptions(DEMO_ACCOUNT_ID)),
+      prefetchCached(queryClient, steamProfileQueryOptions(DEMO_ACCOUNT_ID)),
+      prefetchCached(queryClient, heroesQueryOptions),
+      prefetchCached(queryClient, ranksQueryOptions),
     ]);
     return { breadcrumb: "Demo profile" };
   },

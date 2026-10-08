@@ -13,7 +13,7 @@ import {
   windowDays,
   type PatchEntry,
 } from "~/lib/patches";
-import { catchPrefetch } from "~/lib/prefetch-safe";
+import { catchPrefetch, ensureCached } from "~/lib/prefetch-safe";
 import { pageTitle, seo } from "~/lib/seo";
 import { heroesQueryOptions } from "~/queries/asset-queries";
 import { patchListQueryOptions } from "~/queries/patch-list-query";
@@ -28,7 +28,7 @@ function points(delta: number): string {
 
 /** The patch list, cached for the whole session: the sidebar and every patch view read it. */
 export function loadPatchList(queryClient: QueryClient): Promise<PatchEntry[]> {
-  return queryClient.query({ ...patchListQueryOptions, staleTime: "static" });
+  return ensureCached(queryClient, patchListQueryOptions);
 }
 
 /** One patch's view: `patchId`, or the newest patch when there is none. */
@@ -39,7 +39,7 @@ export async function loadPatchView(queryClient: QueryClient, patchId?: string) 
   const windows = patchWindows(patch, previousPatch(patches, patch.id));
   const [report, heroes, notes] = await Promise.all([
     catchPrefetch(fetchPatchReport({ data: windows })),
-    catchPrefetch(queryClient.query({ ...heroesQueryOptions, staleTime: "static" })),
+    catchPrefetch(ensureCached(queryClient, heroesQueryOptions)),
     catchPrefetch(fetchPatchNotes({ data: patch.id })),
   ]);
   const hasData = !!report && (report.matches.after ?? 0) >= MIN_MATCHES;

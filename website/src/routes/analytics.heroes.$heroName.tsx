@@ -31,7 +31,7 @@ import { formatPercent } from "~/lib/format";
 import { DEFAULT_MATCH_MODE } from "~/lib/game-mode";
 import { fetchHeroMatchups, type HeroMatchupsRequest } from "~/lib/hero-matchup-fns";
 import { findHeroBySlug, heroSlug } from "~/lib/hero-slug";
-import { catchPrefetch, prefetchSafe } from "~/lib/prefetch-safe";
+import { catchPrefetch, ensureCached, prefetchCached } from "~/lib/prefetch-safe";
 import { rankOf } from "~/lib/rank-of";
 import { DEFAULT_RANK_RANGE, rankRangeLabel } from "~/lib/rank-utils";
 import {
@@ -169,7 +169,7 @@ export const Route = createFileRoute("/analytics/heroes/$heroName")({
   component: HeroDetailPage,
   loader: async ({ context: { queryClient, preferences }, params }) => {
     const [heroes, seasons] = await Promise.all([
-      queryClient.query({ ...heroesQueryOptions, staleTime: "static" }),
+      ensureCached(queryClient, heroesQueryOptions),
       loadSeasons(queryClient),
     ]);
     const playable = filterPlayableHeroes(heroes);
@@ -188,26 +188,14 @@ export const Route = createFileRoute("/analytics/heroes/$heroName")({
       throw notFound({ data: { suggestion: closestNameBySlug(playable, params.heroName)?.name } });
     }
     const [stats, ranks, , , , matchups] = await Promise.all([
-      prefetchSafe(
-        queryClient.query({
-          ...heroStatsQueryOptions(currentStatsParams(seasons, preferences.dateFilter)),
-          staleTime: "static",
-        }),
+      prefetchCached(queryClient, heroStatsQueryOptions(currentStatsParams(seasons, preferences.dateFilter))),
+      prefetchCached(queryClient, ranksQueryOptions),
+      prefetchCached(queryClient, heroBanStatsQueryOptions(currentBanParams(seasons, preferences.dateFilter))),
+      prefetchCached(
+        queryClient,
+        itemStatsQueryOptions({ ...currentItemStatsParams(seasons, preferences.dateFilter), heroId: hero.id }),
       ),
-      prefetchSafe(queryClient.query({ ...ranksQueryOptions, staleTime: "static" })),
-      prefetchSafe(
-        queryClient.query({
-          ...heroBanStatsQueryOptions(currentBanParams(seasons, preferences.dateFilter)),
-          staleTime: "static",
-        }),
-      ),
-      prefetchSafe(
-        queryClient.query({
-          ...itemStatsQueryOptions({ ...currentItemStatsParams(seasons, preferences.dateFilter), heroId: hero.id }),
-          staleTime: "static",
-        }),
-      ),
-      prefetchSafe(queryClient.query({ ...itemUpgradesQueryOptions, staleTime: "static" })),
+      prefetchCached(queryClient, itemUpgradesQueryOptions),
       catchPrefetch(fetchHeroMatchups({ data: matchupsRequest(hero.id, seasons, preferences.dateFilter) })),
     ]);
     const cardImage = hero.images.hero_card_critical_webp ?? hero.images.icon_hero_card_webp ?? null;

@@ -3,7 +3,7 @@ import type { AnalyticsApiGameStatsRequest } from "deadlock_api_client";
 
 import { analyticsTabFromPath, ANALYTICS_VIEWS, redirectAnalyticsTab } from "~/lib/analytics-tabs";
 import { DEFAULT_MATCH_MODE } from "~/lib/game-mode";
-import { prefetchSafe } from "~/lib/prefetch-safe";
+import { prefetchCached } from "~/lib/prefetch-safe";
 import { MAX_BADGE } from "~/lib/rank-utils";
 import { defaultPrevUnixRange, defaultTemporalCoverage, defaultUnixRange } from "~/lib/seasons";
 import { datasetJsonLd, pageTitle, seo } from "~/lib/seo";
@@ -36,7 +36,7 @@ export const gamesPageOptions = {
     } as const;
     const baseParams: AnalyticsApiGameStatsRequest = filters;
     const gameStats = (params: AnalyticsApiGameStatsRequest) =>
-      prefetchSafe(queryClient.query({ ...gameStatsQueryOptions(params), staleTime: "static" }));
+      prefetchCached(queryClient, gameStatsQueryOptions(params));
     // What each view's first render reads, on its default filters (the page's own defaults: this metric, this
     // interval), so the server HTML carries the numbers rather than the views' loading states.
     const prefetches: Promise<unknown>[] = [];
@@ -56,33 +56,16 @@ export const gamesPageOptions = {
       if (tab === "economy") {
         prefetches.push(
           gameStats({ ...baseParams, bucket: "avg_badge" }),
-          prefetchSafe(
-            queryClient.query({
-              ...playerPerformanceCurveQueryOptions({ ...filters, resolution: 5 }),
-              staleTime: "static",
-            }),
-          ),
+          prefetchCached(queryClient, playerPerformanceCurveQueryOptions({ ...filters, resolution: 5 })),
         );
       } else if (tab === "combat") {
-        prefetches.push(
-          prefetchSafe(
-            queryClient.query({
-              ...playerPerformanceCurveQueryOptions({ ...filters, resolution: 0 }),
-              staleTime: "static",
-            }),
-          ),
-        );
+        prefetches.push(prefetchCached(queryClient, playerPerformanceCurveQueryOptions({ ...filters, resolution: 0 })));
       } else {
         const { buffStatsQueryOptions } = await import("~/queries/buff-stats-query");
         prefetches.push(
-          prefetchSafe(queryClient.query({ ...buffStatsQueryOptions(filters), staleTime: "static" })),
-          prefetchSafe(queryClient.query({ ...buffInfoQueryOptions, staleTime: "static" })),
-          prefetchSafe(
-            queryClient.query({
-              ...playerPerformanceCurveQueryOptions({ ...filters, resolution: 0 }),
-              staleTime: "static",
-            }),
-          ),
+          prefetchCached(queryClient, buffStatsQueryOptions(filters)),
+          prefetchCached(queryClient, buffInfoQueryOptions),
+          prefetchCached(queryClient, playerPerformanceCurveQueryOptions({ ...filters, resolution: 0 })),
         );
       }
     }

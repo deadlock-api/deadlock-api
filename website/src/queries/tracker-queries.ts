@@ -8,6 +8,7 @@ import type {
 import { CACHE_DURATIONS } from "~/constants/cache";
 import { api } from "~/lib/api";
 import { graphql, isGraphqlRateLimited } from "~/lib/graphql";
+import { ensureCached } from "~/lib/prefetch-safe";
 import { combatStats, type CombatStats, resolveCustomStats } from "~/lib/tracker/combat-stats";
 import { DEMO_ACCOUNT_ID, isDemoAccount, isDemoMatch } from "~/lib/tracker/demo";
 
@@ -20,8 +21,7 @@ export { trackerMatchHistoryQueryOptions };
 /** The demo profile is generated instead of fetched; the generator only loads once a demo id asks for it. */
 const loadDemoData = () => import("~/lib/tracker/demo-data");
 
-const demoHistory = (client: QueryClient) =>
-  client.query({ ...trackerMatchHistoryQueryOptions(DEMO_ACCOUNT_ID), staleTime: "static" });
+const demoHistory = (client: QueryClient) => ensureCached(client, trackerMatchHistoryQueryOptions(DEMO_ACCOUNT_ID));
 
 export function trackerRankQueryOptions(accountId: number) {
   return queryOptions({
@@ -440,9 +440,9 @@ export function trackerMatchMetadataQueryOptions(matchId: number) {
         const [{ demoMatchMetadata }, history, heroes, items, abilities] = await Promise.all([
           loadDemoData(),
           demoHistory(client),
-          client.query({ ...heroesQueryOptions, staleTime: "static" }),
-          client.query({ ...itemUpgradesQueryOptions, staleTime: "static" }),
-          client.query({ ...trackerAbilitiesQueryOptions, staleTime: "static" }),
+          ensureCached(client, heroesQueryOptions),
+          ensureCached(client, itemUpgradesQueryOptions),
+          ensureCached(client, trackerAbilitiesQueryOptions),
         ]);
         return demoMatchMetadata(matchId, history, { heroes, items, abilities });
       }
@@ -578,7 +578,7 @@ export const trackerAbilitiesQueryOptions = queryOptions({
         },
       }),
     );
-    const items = result?.items ?? (await client.query({ ...abilitiesQueryOptions, staleTime: "static" }));
+    const items = result?.items ?? (await ensureCached(client, abilitiesQueryOptions));
     // Only the ability variant is selected, so every other item comes back null, whatever the generated type says.
     return items.flatMap((item: (typeof items)[number] | null) =>
       item && "class_name" in item

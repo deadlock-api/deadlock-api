@@ -5,6 +5,7 @@ import type { PlayerMatchHistoryEntry } from "deadlock_api_client";
 import { CACHE_DURATIONS } from "~/constants/cache";
 import { api } from "~/lib/api";
 import { API_ORIGIN } from "~/lib/constants";
+import { ensureCached } from "~/lib/prefetch-safe";
 import { isDemoAccount } from "~/lib/tracker/demo";
 
 import { filterPlayableHeroes, heroesQueryOptions } from "./asset-queries";
@@ -39,7 +40,7 @@ export function trackerMatchHistoryQueryOptions(accountId: number) {
       if (isDemoAccount(accountId)) {
         const [{ demoMatchHistory }, heroes] = await Promise.all([
           import("~/lib/tracker/demo-data"),
-          client.query({ ...heroesQueryOptions, staleTime: "static" }),
+          ensureCached(client, heroesQueryOptions),
         ]);
         return demoMatchHistory(
           filterPlayableHeroes(heroes).map((hero) => hero.id),

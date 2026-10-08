@@ -24,7 +24,7 @@ import { getAnalytics } from "~/lib/analytics";
 import { ANALYTICS_TABS } from "~/lib/analytics-tabs";
 import { installChunkReloadHandlers, isChunkLoadError, reloadOnceForStaleChunk } from "~/lib/chunk-reload";
 import { readPreferences } from "~/lib/preferences.isomorphic";
-import { catchPrefetch } from "~/lib/prefetch-safe";
+import { catchPrefetch, ensureCached } from "~/lib/prefetch-safe";
 import { seo } from "~/lib/seo";
 import type { RouterContext } from "~/router";
 
@@ -60,7 +60,7 @@ export const Route = createRootRouteWithContext<RouterContext>()({
     ) {
       preloads.push(
         import("~/queries/asset-queries").then(({ heroesQueryOptions }) =>
-          catchPrefetch(queryClient.query({ ...heroesQueryOptions, staleTime: "static" })),
+          catchPrefetch(ensureCached(queryClient, heroesQueryOptions)),
         ),
       );
     }
@@ -73,7 +73,7 @@ export const Route = createRootRouteWithContext<RouterContext>()({
     ) {
       preloads.push(
         import("~/queries/ranks-query").then(({ ranksQueryOptions }) =>
-          catchPrefetch(queryClient.query({ ...ranksQueryOptions, staleTime: "static" })),
+          catchPrefetch(ensureCached(queryClient, ranksQueryOptions)),
         ),
       );
     }
@@ -90,7 +90,7 @@ export const Route = createRootRouteWithContext<RouterContext>()({
     ) {
       preloads.push(
         import("~/queries/asset-queries").then(({ itemUpgradesQueryOptions }) =>
-          catchPrefetch(queryClient.query({ ...itemUpgradesQueryOptions, staleTime: "static" })),
+          catchPrefetch(ensureCached(queryClient, itemUpgradesQueryOptions)),
         ),
       );
     }
@@ -207,9 +207,9 @@ function RootComponent() {
       void Promise.all([import("~/queries/asset-queries"), import("~/queries/ranks-query")]).then(
         ([{ heroesQueryOptions, rankedSeasonsQueryOptions }, { ranksQueryOptions }]) =>
           Promise.all([
-            catchPrefetch(queryClient.query({ ...rankedSeasonsQueryOptions, staleTime: "static" })),
-            catchPrefetch(queryClient.query({ ...heroesQueryOptions, staleTime: "static" })),
-            catchPrefetch(queryClient.query({ ...ranksQueryOptions, staleTime: "static" })),
+            catchPrefetch(ensureCached(queryClient, rankedSeasonsQueryOptions)),
+            catchPrefetch(ensureCached(queryClient, heroesQueryOptions)),
+            catchPrefetch(ensureCached(queryClient, ranksQueryOptions)),
           ]),
       );
     if (typeof window.requestIdleCallback === "function") {

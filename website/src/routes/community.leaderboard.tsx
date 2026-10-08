@@ -13,7 +13,7 @@ import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { StaleOverlay } from "~/components/patterns/states/StaleOverlay";
 import { SegmentedItem } from "~/components/ui/segmented";
-import { prefetchSafe } from "~/lib/prefetch-safe";
+import { prefetchCached } from "~/lib/prefetch-safe";
 import { getDefaultRegion, REGION_LABELS } from "~/lib/region";
 import { fetchDefaultRegion } from "~/lib/region-fns";
 import { datasetJsonLd, pageTitle, seo } from "~/lib/seo";
@@ -29,9 +29,7 @@ export const Route = createFileRoute("/community/leaderboard")({
   loader: async ({ context: { queryClient }, deps }) => {
     // Resolve the default on the server so the client hydrates with the same region.
     const defaultRegion = typeof window === "undefined" ? await fetchDefaultRegion() : getDefaultRegion();
-    await prefetchSafe(
-      queryClient.query({ ...leaderboardQueryOptions(defaultRegion, deps.heroId), staleTime: "static" }),
-    );
+    await prefetchCached(queryClient, leaderboardQueryOptions(defaultRegion, deps.heroId));
     return { defaultRegion };
   },
   head: () =>

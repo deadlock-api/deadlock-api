@@ -35,7 +35,7 @@ import { useModeState } from "~/hooks/useModeState";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { useSeasons } from "~/hooks/useSeasons";
 import { getEffectiveRankRange } from "~/lib/game-mode";
-import { prefetchSafe } from "~/lib/prefetch-safe";
+import { prefetchCached } from "~/lib/prefetch-safe";
 import { MAX_BADGE } from "~/lib/rank-utils";
 import { defaultDateRange } from "~/lib/seasons";
 import { pageTitle, seo } from "~/lib/seo";
@@ -65,7 +65,7 @@ export const Route = createFileRoute("/community/heatmap")({
   loader: async ({ context: { queryClient } }) => {
     await Promise.all([
       // The default range is on the current layout, whose map is the latest build's.
-      prefetchSafe(queryClient.query({ ...mapQueryOptions(), staleTime: "static" })),
+      prefetchCached(queryClient, mapQueryOptions()),
       loadSeasons(queryClient),
     ]);
   },

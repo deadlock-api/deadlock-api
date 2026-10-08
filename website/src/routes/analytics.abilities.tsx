@@ -13,7 +13,7 @@ import { useKnownHeroId } from "~/hooks/useAssetById";
 import { useDateRangeState } from "~/hooks/useDateRangeState";
 import { useModeState } from "~/hooks/useModeState";
 import { DEFAULT_MATCH_MODE, getEffectiveRankRange } from "~/lib/game-mode";
-import { prefetchSafe } from "~/lib/prefetch-safe";
+import { prefetchCached } from "~/lib/prefetch-safe";
 import { MAX_BADGE } from "~/lib/rank-utils";
 import { defaultUnixRange } from "~/lib/seasons";
 import { pageTitle, seo } from "~/lib/seo";
@@ -31,18 +31,16 @@ export const Route = createFileRoute("/analytics/abilities")({
   },
   loader: async ({ context: { queryClient, preferences }, deps }) => {
     const range = defaultUnixRange(await loadSeasons(queryClient), preferences.dateFilter);
-    await prefetchSafe(
-      queryClient.query({
-        ...abilityOrderQueryOptions({
-          heroId: deps.heroId,
-          gameMode: "normal",
-          matchMode: DEFAULT_MATCH_MODE,
-          minAverageBadge: 0,
-          maxAverageBadge: MAX_BADGE,
-          ...range,
-          minMatches: 20,
-        }),
-        staleTime: "static",
+    await prefetchCached(
+      queryClient,
+      abilityOrderQueryOptions({
+        heroId: deps.heroId,
+        gameMode: "normal",
+        matchMode: DEFAULT_MATCH_MODE,
+        minAverageBadge: 0,
+        maxAverageBadge: MAX_BADGE,
+        ...range,
+        minMatches: 20,
       }),
     );
   },

@@ -4,7 +4,7 @@ import { FeedbackNoticeDialog } from "~/components/features/tracker/shared/Feedb
 import { TrackerGate } from "~/components/features/tracker/shared/TrackerGate";
 import { TrackerContent } from "~/components/features/tracker/TrackerContent";
 import { PatronAuthProvider } from "~/contexts/PatronAuthContext";
-import { prefetchSafe } from "~/lib/prefetch-safe";
+import { prefetchCached } from "~/lib/prefetch-safe";
 import { pageTitle, seo } from "~/lib/seo";
 import { parseSteamIdToId3 } from "~/lib/steam";
 import { isDemoAccount } from "~/lib/tracker/demo";
@@ -26,9 +26,9 @@ export const Route = createFileRoute("/tracker_/players/$accountId")({
       throw redirect({ to: "/tracker/players/$accountId", params: { accountId: String(accountId) }, search: true });
     }
     const [profile] = await Promise.all([
-      prefetchSafe(queryClient.query({ ...steamProfileQueryOptions(accountId), staleTime: "static" })),
-      prefetchSafe(queryClient.query({ ...heroesQueryOptions, staleTime: "static" })),
-      prefetchSafe(queryClient.query({ ...ranksQueryOptions, staleTime: "static" })),
+      prefetchCached(queryClient, steamProfileQueryOptions(accountId)),
+      prefetchCached(queryClient, heroesQueryOptions),
+      prefetchCached(queryClient, ranksQueryOptions),
     ]);
     return { accountId, personaname: profile?.personaname, breadcrumb: profile?.personaname ?? String(accountId) };
   },
