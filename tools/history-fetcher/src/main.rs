@@ -15,7 +15,7 @@ use core::time::Duration;
 use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, LazyLock};
 
-use common::{BatchInserter, BatchInserterConfig};
+use common::{BatchInserter, BatchInserterConfig, InsertAck};
 use futures::StreamExt;
 use metrics::{counter, gauge};
 use sqlx::{Pool, Postgres};
@@ -49,8 +49,8 @@ static PRIORITIZATION_WINDOW_SECS: LazyLock<u64> =
     LazyLock::new(|| common::env_or("PRIORITIZATION_WINDOW_SECS", 1800));
 
 /// Maximum number of retry attempts for prioritized account fetches.
-/// Uses exponential backoff: 1s, 2s, 4s, 8s, 16s, etc.
-/// Default: 10 retries.
+/// Uses exponential backoff: 1s, 2s, 4s, 8s, 16s, then 30s each (see
+/// `common::retry_with_backoff_configurable`). Default: 10 retries.
 static PRIORITIZATION_MAX_RETRIES: LazyLock<u32> =
     LazyLock::new(|| common::env_or("PRIORITIZATION_MAX_RETRIES", 10));
 
@@ -184,8 +184,10 @@ fn spawn_rank_interval_refresh_task(http_client: reqwest::Client) {
 }
 
 /// Updates a prioritized account's match history with retry logic.
-/// Uses exponential backoff for retries. On success, updates `last_fetched_at`.
-/// If all retries fail, sets `last_fetched_at` to 30 minutes ago to re-queue for next cycle.
+/// Uses exponential backoff for retries of the fetch. Once the entries are queued for
+/// insertion, `last_fetched_at` is set and the account's slot is freed; the flush ack is
+/// awaited in the background and re-queues the account if the insert failed. If all fetch
+/// retries fail, sets `last_fetched_at` to one window ago to re-queue for next cycle.
 #[instrument(skip(http_client, inserter, prioritized_accounts))]
 async fn update_prioritized_account(
     inserter: &BatchInserter<PlayerMatchHistoryEntry>,
@@ -209,11 +211,9 @@ async fn update_prioritized_account(
             counter!("history_fetcher.prioritized_fetch.retry").increment(1);
         }
         async {
-            if update_account(inserter, http_client, account, Some(bot_id)).await {
-                Ok(())
-            } else {
-                Err(format!("Failed to fetch prioritized account {account}"))
-            }
+            update_account(inserter, http_client, account, Some(bot_id))
+                .await
+                .ok_or_else(|| format!("Failed to fetch prioritized account {account}"))
         }
     })
     .await;
@@ -221,10 +221,22 @@ async fn update_prioritized_account(
     let mut map = prioritized_accounts.write().await;
     let steam_id3 = i64::from(account);
 
-    if result.is_ok() {
+    if let Ok(ack) = result {
         counter!("history_fetcher.prioritized_fetch.success").increment(1);
         if let Some(entry) = map.get_mut(&steam_id3) {
             entry.1 = Some(Instant::now());
+        }
+        if let Some(ack) = ack {
+            let prioritized_accounts = Arc::clone(prioritized_accounts);
+            tokio::spawn(async move {
+                if confirm_insert(ack, account).await {
+                    return;
+                }
+                let window = Duration::from_secs(*PRIORITIZATION_WINDOW_SECS);
+                if let Some(entry) = prioritized_accounts.write().await.get_mut(&steam_id3) {
+                    entry.1 = Some(Instant::now() - window);
+                }
+            });
         }
     } else {
         counter!("history_fetcher.prioritized_fetch.failure").increment(1);
@@ -239,13 +251,15 @@ async fn update_prioritized_account(
     }
 }
 
+/// Fetches an account's match history and queues its entries for insertion. `None` if the
+/// fetch failed; otherwise the ack of the queued insert, if there was anything to insert.
 #[instrument(skip(http_client, inserter))]
 async fn update_account(
     inserter: &BatchInserter<PlayerMatchHistoryEntry>,
     http_client: &reqwest::Client,
     account: u32,
     bot_username: Option<&str>,
-) -> bool {
+) -> Option<Option<InsertAck>> {
     let rank_interval = *RANK_INTERVAL.read().await;
     let match_history = match fetch_account_match_history(http_client, account, bot_username, None)
         .await
@@ -254,7 +268,7 @@ async fn update_account(
         Err(e) => {
             counter!("history_fetcher.fetch_match_history.failure").increment(1);
             warn!("Failed to fetch match history for account {account}, error: {e:?}, skipping",);
-            return false;
+            return None;
         }
     };
     counter!("history_fetcher.fetch_match_history.status", "status" => match_history.result.unwrap_or_default().to_string()).increment(1);
@@ -267,7 +281,7 @@ async fn update_account(
             "Failed to fetch match history, result: {:?}, skipping",
             match_history.result
         );
-        return false;
+        return None;
     }
     // Ranked entries first: they are a field-wise superset, so the dedup below keeps
     // their ranked_* values. Failing here only costs those fields.
@@ -285,7 +299,7 @@ async fn update_account(
     matches.extend(match_history.matches);
     if matches.is_empty() {
         debug!("No new matches {account}");
-        return true;
+        return Some(None);
     }
     let mut seen = HashSet::new();
     let entries: Vec<PlayerMatchHistoryEntry> = matches
@@ -294,22 +308,32 @@ async fn update_account(
         .filter_map(|r| PlayerMatchHistoryEntry::from_protobuf(account, r))
         .collect();
     if entries.is_empty() {
-        return true;
+        return Some(None);
     }
 
     let n_entries = entries.len();
     let Some(ack) = inserter.insert(entries).await else {
         counter!("history_fetcher.insert_match_history.failure").increment(1);
         error!("Batch inserter shut down; cannot insert history for account {account}");
-        return false;
+        return None;
     };
+    debug!(
+        account,
+        count = n_entries,
+        "Queued new matches for insertion"
+    );
+    Some(Some(ack))
+}
+
+/// Waits for a queued insert's flush and records the outcome.
+async fn confirm_insert(ack: InsertAck, account: u32) -> bool {
     if ack.flushed().await {
         counter!("history_fetcher.insert_match_history.success").increment(1);
-        info!(account, count = n_entries, "Inserted new matches via batch");
+        info!(account, "Inserted new matches via batch");
         true
     } else {
         counter!("history_fetcher.insert_match_history.failure").increment(1);
-        error!("Batch insert reported failure for account {account}");
+        error!("Batch insert failed for account {account}, re-queuing it for next cycle");
         false
     }
 }

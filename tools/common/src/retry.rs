@@ -27,9 +27,12 @@ where
     retry_with_backoff_configurable(5, operation).await
 }
 
+/// Longest wait between two attempts of [`retry_with_backoff_configurable`].
+const MAX_RETRY_DELAY: Duration = Duration::from_secs(30);
+
 /// Retries an async operation with exponential backoff and configurable max retries.
 ///
-/// Retry delays follow exponential pattern: 1s, 2s, 4s, 8s, 16s, etc.
+/// Retry delays follow exponential pattern: 1s, 2s, 4s, 8s, 16s, then 30s each.
 /// Logs each retry attempt and final failure.
 pub async fn retry_with_backoff_configurable<F, Fut, T, E>(
     max_retries: u32,
@@ -43,8 +46,9 @@ where
     tryhard::retry_fn(operation)
         .retries(max_retries)
         .exponential_backoff(Duration::from_secs(1))
-        .on_retry(|attempt, _, error: &E| {
-            let next_delay_secs = 1u64 << attempt;
+        .max_delay(MAX_RETRY_DELAY)
+        .on_retry(|attempt, next_delay, error: &E| {
+            let next_delay_secs = next_delay.map_or(0, |d| d.as_secs());
             tracing::warn!(
                 attempt = attempt,
                 max_retries = max_retries,
