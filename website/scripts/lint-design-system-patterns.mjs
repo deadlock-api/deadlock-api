@@ -18,3 +18,18 @@ export function hasRawNoValue(line) {
   RAW_NO_VALUE.lastIndex = 0;
   return RAW_NO_VALUE.test(line);
 }
+
+/**
+ * A CSS variable handed over as a color: a string that is one variable, named outright (`"var(--primary)"`), built
+ * from a template (`` `var(--${tone})` ``, `` `var(--chart-${i})` ``) or concatenated (`"var(--chart-" + i + ")"`). A
+ * template type (`` `var(--${string})` ``), a class's arbitrary value (`max-w-[var(--x)]`) and a variable with a
+ * fallback computed from data (`` `var(--hero-opacity-${id}, 1)` ``) are not this.
+ */
+export const RAW_COLOR_VAR =
+  /(["'`])var\(--[\w-]+\)\1|`var\(--[\w-]*\$\{(?!string\})[^}`]*\}[\w-]*\)`|(["'`])var\(--[\w-]*\2\s*\+/g;
+
+/** Whether `line` hands over a CSS variable as a color. */
+export function hasRawColorVar(line) {
+  RAW_COLOR_VAR.lastIndex = 0;
+  return RAW_COLOR_VAR.test(line);
+}

@@ -7,7 +7,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { RAW_NO_VALUE } from "./lint-design-system-patterns.mjs";
+import { RAW_COLOR_VAR, RAW_NO_VALUE } from "./lint-design-system-patterns.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const SRC = path.join(ROOT, "src");
@@ -224,10 +224,8 @@ const RULES = [
     id: "raw-color-var",
     message:
       "a CSS variable as a color prop; use CHART_COLOR, SERIES_COLORS or CHART_ACTIVE_DOT from patterns/charts/theme, or TONE_COLOR from ~/lib/tone",
-    // The whole string is one variable, named outright or built from a template (`var(--${tone})`): a color handed to
-    // a chart or a component prop. A class's arbitrary value (`max-w-[var(--x)]`) and a value computed from data
-    // (`var(--hero-opacity-${id}, 1)`, a color-mix) are not this.
-    pattern: /(["'`])var\(--[\w-]+\)\1|`var\(--\$\{[^}`]*\}\)`/g,
+    // What counts (named, templated or concatenated) and what does not: see RAW_COLOR_VAR and its tests.
+    pattern: RAW_COLOR_VAR,
     skip: (rel) => !COMPOSED(rel),
   },
   {

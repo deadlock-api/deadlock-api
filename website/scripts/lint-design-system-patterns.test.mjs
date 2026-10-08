@@ -1,7 +1,29 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { hasRawNoValue } from "./lint-design-system-patterns.mjs";
+import { hasRawColorVar, hasRawNoValue } from "./lint-design-system-patterns.mjs";
+
+test("raw-color-var flags a CSS variable handed over as a color, however it is built", () => {
+  for (const line of [
+    'color="var(--primary)"',
+    "accent={`var(--${tone})`}",
+    "fill={`var(--chart-${index + 1})`}",
+    'stroke={"var(--chart-" + index + ")"}',
+  ]) {
+    assert.ok(hasRawColorVar(line), line);
+  }
+});
+
+test("raw-color-var leaves types, class values and data-driven variables alone", () => {
+  for (const line of [
+    "export const TONE_COLOR: Record<Tone, `var(--${string})`> = {",
+    'className="max-w-[var(--radix-select-content-available-width)]"',
+    "opacity={`var(--hero-opacity-${heroId}, 1)`}",
+    '"drop-shadow(0 0 4px color-mix(in srgb, var(--primary) 80%, transparent))"',
+  ]) {
+    assert.ok(!hasRawColorVar(line), line);
+  }
+});
 
 test("raw-no-value flags a dash standing in for a missing value", () => {
   for (const line of [
