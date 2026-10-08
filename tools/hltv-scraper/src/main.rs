@@ -12,7 +12,6 @@
 #![expect(clippy::cast_sign_loss)]
 #![expect(clippy::cast_possible_truncation)]
 #![expect(clippy::too_many_lines)]
-#![expect(clippy::unreadable_literal)]
 
 use crate::cli::run_cli;
 

@@ -1,7 +1,7 @@
 use std::io::Cursor;
-use std::sync::Arc;
 
 use anyhow::bail;
+use bytes::Bytes;
 use haste::broadcast::BroadcastFile;
 use haste::demostream::DemoStream;
 use prost::Message;
@@ -24,15 +24,14 @@ pub(crate) struct FragmentAnalysis {
     pub has_end_command: bool,
 }
 
-pub(crate) async fn analyze_fragment(fragment_buf: Arc<[u8]>) -> anyhow::Result<FragmentAnalysis> {
+pub(crate) async fn analyze_fragment(fragment_buf: Bytes) -> anyhow::Result<FragmentAnalysis> {
     tokio::task::spawn_blocking(move || analyze_fragment_sync(fragment_buf)).await?
 }
 
-fn analyze_fragment_sync(fragment_buf: Arc<[u8]>) -> anyhow::Result<FragmentAnalysis> {
+fn analyze_fragment_sync(fragment_buf: Bytes) -> anyhow::Result<FragmentAnalysis> {
     let cursor = Cursor::new(fragment_buf);
     let mut demo_file = BroadcastFile::start_reading(cursor);
     let mut has_end_command = false;
-    let mut shared_msg_vec: Vec<u8> = vec![0u8; 2097152];
 
     // let mut demo_file = haste::demofile::DemoFile::from_reader(cursor);
     loop {
@@ -60,15 +59,19 @@ fn analyze_fragment_sync(fragment_buf: Arc<[u8]>) -> anyhow::Result<FragmentAnal
                         continue;
                     }
 
-                    let msg_buf = &mut shared_msg_vec[..size];
-                    br.read_bytes(msg_buf)?;
-                    if msg_type == CitadelUserMessageIds::KEUserMsgPostMatchDetails as u32 {
-                        let meta_content = process_post_match(msg_buf)?;
-                        return Ok(FragmentAnalysis {
-                            meta: Some(meta_content),
-                            has_end_command,
-                        });
+                    // Only the post-match details are read; every other message is skipped,
+                    // whatever its size.
+                    if msg_type != CitadelUserMessageIds::KEUserMsgPostMatchDetails as u32 {
+                        br.skip_bits(size * 8)?;
+                        continue;
                     }
+                    let mut msg_buf = vec![0u8; size];
+                    br.read_bytes(&mut msg_buf)?;
+                    let meta_content = process_post_match(&msg_buf)?;
+                    return Ok(FragmentAnalysis {
+                        meta: Some(meta_content),
+                        has_end_command,
+                    });
                 }
             }
             Err(err) => {

@@ -249,6 +249,9 @@ async fn store_meta_to_local_store(
         match_id
     );
     let p = PathBuf::from(p_str.clone());
+    if let Some(dir) = p.parent() {
+        tokio::fs::create_dir_all(dir).await?;
+    }
     tokio::fs::write(&p, output).await?;
 
     info!("[{label} {match_id}] Wrote meta to {p_str}!");

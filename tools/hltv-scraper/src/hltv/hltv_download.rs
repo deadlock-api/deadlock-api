@@ -1,7 +1,7 @@
 use core::time::Duration;
-use std::sync::Arc;
 use std::time::Instant;
 
+use bytes::Bytes;
 use metrics::counter;
 use reqwest::Client;
 use serde::Deserialize;
@@ -18,7 +18,7 @@ use crate::hltv::hltv_extract_meta::analyze_fragment;
 pub(crate) struct HltvFragment {
     pub match_id: u64,
     pub fragment_n: u64,
-    pub fragment_contents: Arc<[u8]>,
+    pub fragment_contents: Bytes,
     pub fragment_type: FragmentType,
     pub is_last: bool,
     pub match_meta: Option<Vec<u8>>,
@@ -169,18 +169,15 @@ async fn fragment_fetching_loop(
 
     let mut fragment_n = first_fragment_n;
 
+    // `/sync` is only consulted when a fragment keeps 404ing (below), not before every
+    // fragment: a fragment that downloads proves the broadcast is still alive.
     let mut hard_retry = false;
     while sync_available {
         if hard_retry {
+            hard_retry = false;
             let sync_response: SyncResponse = get_initial_sync(client, &broadcast_url).await?;
             if sync_response.fragment > fragment_n {
                 fragment_n = sync_response.fragment;
-            }
-        } else {
-            // Check if /sync is still available
-            sync_available = check_sync_availability(client, &broadcast_url).await;
-            if !sync_available {
-                break;
             }
         }
 
@@ -198,8 +195,7 @@ async fn fragment_fetching_loop(
                 match download_match_fragment(client, &broadcast_url, fragment_n, fragment_type)
                     .await
                 {
-                    Ok(fragment_contents) => {
-                        let contents: Arc<[u8]> = fragment_contents.into();
+                    Ok(contents) => {
                         counter!("hltv.fragment.success").increment(1);
 
                         let analysis = analyze_fragment(contents.clone()).await.unwrap_or(
@@ -322,7 +318,7 @@ pub(crate) async fn download_match_fragment(
     broadcast_url: &str,
     fragment_n: u64,
     fragment_type: FragmentType,
-) -> Result<Vec<u8>, DownloadError> {
+) -> Result<Bytes, DownloadError> {
     let fragment_url = format!("{broadcast_url}/{fragment_n}/{fragment_type}");
 
     trace!("Downloading match fragment: {fragment_url}");
@@ -330,8 +326,7 @@ pub(crate) async fn download_match_fragment(
 
     if resp.status().is_success() {
         counter!("hltv.fragment.http.2xx").increment(1);
-        let bytes = resp.bytes().await?;
-        Ok(bytes.to_vec())
+        Ok(resp.bytes().await?)
     } else if resp.status() == reqwest::StatusCode::NOT_FOUND {
         counter!("hltv.fragment.http.404").increment(1);
         Err(DownloadError::FragmentNotFound)
