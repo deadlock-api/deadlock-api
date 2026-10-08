@@ -222,9 +222,6 @@ function clock(seconds: number): string {
   return `${Math.floor(whole / 60)}:${String(whole % 60).padStart(2, "0")}`;
 }
 
-/** The shop category's color tints the header, as the shop tints its columns. */
-const SLOT_ACCENT = ITEM_SLOT_COLOR;
-
 function ItemDetailPage() {
   const { preferences } = Route.useRouteContext();
   const { itemId, itemName, tier, slot, slotType, cost, rankRange, bestHeroes } = Route.useLoaderData();
@@ -246,7 +243,8 @@ function ItemDetailPage() {
   return (
     <PageShell density="content">
       <ProfileHeader
-        accent={SLOT_ACCENT[slotType]}
+        // The shop category's color tints the header, as the shop tints its columns.
+        accent={ITEM_SLOT_COLOR[slotType]}
         media={
           <ProfileHeaderMedia shape="square">
             <ItemImage itemId={itemId} title="" className="size-full" />

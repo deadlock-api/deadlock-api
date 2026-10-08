@@ -92,19 +92,19 @@ Components use semantic utilities only. **No raw palette classes (`text-green-40
 code, no `white/[0.06]` alphas, no `text-[11px]` (all linted).** If a token is missing, add it to `tokens.css` in all
 three tiers and to the dev page; do not inline the value.
 
-| Need                                                              | Token utilities                                                                                            |
-| ----------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| Page, raised surface, popover                                     | `bg-background`, `bg-card`, `bg-popover`, `bg-muted`, `bg-accent` (hover)                                  |
-| Translucent panel on imagery                                      | `border-hairline`, `bg-subtle`, `bg-subtle-hover`, `bg-subtle-active`                                      |
-| Text                                                              | `text-foreground`, `text-muted-foreground`, `text-primary`                                                 |
-| Brand, selection, focus                                           | `primary` (+ `/15` fill, `/40` ring for selected), `ring`                                                  |
-| Good / bad (win rate vs 50%, deltas, win / loss, correct / wrong) | `positive`, `negative` via `toneOf()` + `TONE_TEXT` from `~/lib/tone`, or `<Delta>`                        |
-| Caution, archive, personal best                                   | `warning`                                                                                                  |
-| Neutral information                                               | `info`                                                                                                     |
-| Irreversible action, request failure                              | `destructive`                                                                                              |
-| Item categories, lanes                                            | `item-weapon`, `item-vitality`, `item-spirit`; `lane-yellow`, `lane-blue`, `lane-purple`                   |
-| Chart series                                                      | `chart-1` ... `chart-8` in order, never cycled; `chart-win-rate`, `chart-share` for those two fixed series |
-| Third-party brands                                                | `steam-*`, `discord`                                                                                       |
+| Need                                                              | Token utilities                                                                                                                                                              |
+| ----------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Page, raised surface, popover                                     | `bg-background`, `bg-card`, `bg-popover`, `bg-muted`, `bg-accent` (hover)                                                                                                    |
+| Translucent panel on imagery                                      | `border-hairline`, `bg-subtle`, `bg-subtle-hover`, `bg-subtle-active`                                                                                                        |
+| Text                                                              | `text-foreground`, `text-muted-foreground`, `text-primary`                                                                                                                   |
+| Brand, selection, focus                                           | `primary` (+ `/15` fill, `/40` ring for selected), `ring`                                                                                                                    |
+| Good / bad (win rate vs 50%, deltas, win / loss, correct / wrong) | `positive`, `negative` via `toneOf()` + `TONE_TEXT` from `~/lib/tone`, or `<Delta>`                                                                                          |
+| Caution, archive, personal best                                   | `warning`                                                                                                                                                                    |
+| Neutral information                                               | `info`                                                                                                                                                                       |
+| Irreversible action, request failure                              | `destructive`                                                                                                                                                                |
+| Item categories, lanes                                            | `item-weapon`, `item-vitality`, `item-spirit`; `lane-yellow`, `lane-blue`, `lane-purple` (a prop that takes a color: `ITEM_SLOT_COLOR` from `domain/assets/item-slot-color`) |
+| Chart series                                                      | `chart-1` ... `chart-8` in order, never cycled; `chart-win-rate`, `chart-share` for those two fixed series                                                                   |
+| Third-party brands                                                | `steam-*`, `discord`                                                                                                                                                         |
 
 Positive is teal, not green, so the positive/negative pair survives red-green colorblindness. The categorical chart
 order is validated for colorblind separation between neighbours; do not reorder it or insert hues.
@@ -257,7 +257,9 @@ reference). Missing observations are gaps, not zeros. See `docs/compact-data-ui.
 - Components that live in panels of varying width use container queries (`@container` + `@md:`), not viewport
   breakpoints. Page-level layout uses viewport breakpoints.
 - A layout computed in code from the room it has (a graph, a plot, a grid of tiles) measures its container with
-  `useElementSize(ref, { round, box, enabled })` from `ui/hooks/use-element-size`, never `window.innerWidth`.
+  `useElementSize(ref, { round, box, enabled, initial })` from `ui/hooks/use-element-size`, never `window.innerWidth`.
+  `initial` is the size of the server render and the first client render (a sensible default layout) until the
+  first measurement.
 - Tables scroll horizontally inside `Table`'s own container and drop secondary columns with
   `hidden @md:table-cell`; the identity column is pinned with `data-pinned`. The edge with more columns past it fades
   out, and a pinned cell sheds its minimum width and secondary lines below `@md/table`, so a phone swipe shows more
