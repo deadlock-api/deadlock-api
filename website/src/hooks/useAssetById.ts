@@ -10,13 +10,31 @@ import {
   type SlimUpgrade,
 } from "~/queries/asset-queries";
 
+/**
+ * Each cached asset list's index by id, built once per list: dozens of hero and item images on a page each select
+ * their asset from the same list, and a linear scan per subscriber per render added up. Keyed weakly on the cached
+ * array, so a refetched list gets a new index and the old one is collected with it.
+ */
+const indexes = new WeakMap<readonly { id: number }[], Map<number, { id: number }>>();
+
+function findById<T extends { id: number }>(items: readonly T[], id: number): T | undefined {
+  let index = indexes.get(items) as Map<number, T> | undefined;
+  if (!index) {
+    index = new Map();
+    // The first entry of an id wins, as `find` did.
+    for (const item of items) if (!index.has(item.id)) index.set(item.id, item);
+    indexes.set(items, index);
+  }
+  return index.get(id);
+}
+
 function useAssetById<T extends { id: number }, TKey extends readonly unknown[]>(
   queryOpts: UseQueryOptions<T[], Error, T[], TKey>,
   id: number,
 ): { data: T | undefined; isLoading: boolean } {
   const { data, isLoading } = useQuery({
     ...queryOpts,
-    select: (items: T[]) => items.find((item) => item.id === id),
+    select: (items: T[]) => findById(items, id),
   });
   return { data, isLoading };
 }
