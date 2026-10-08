@@ -1,5 +1,3 @@
-use std::sync::LazyLock;
-
 use axum::Json;
 use axum::extract::State;
 use axum::http::StatusCode;
@@ -17,12 +15,10 @@ use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::matches::demo::demofusion;
 use crate::routes::v1::matches::demo::demofusion::{TableKind, TableSchema};
+use crate::routes::v1::matches::demo::download::HTTP_CLIENT;
 use crate::routes::v1::matches::salts::{fetch_match_salts, replay_file_url};
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::utils::compression::ZSTD_MAGIC;
-
-/// Shared HTTP client for streaming demo prefixes off Valve's replay servers.
-static HTTP_CLIENT: LazyLock<reqwest::Client> = LazyLock::new(reqwest::Client::new);
 
 /// Decompressed bytes to pull per growth step while hunting for the send-tables.
 /// One pull is normally enough — the send-tables sit within the first bzip2 block.

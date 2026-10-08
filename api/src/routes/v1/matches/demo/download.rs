@@ -4,6 +4,7 @@
 //! when the server does not honor byte ranges. The compressed bytes are returned
 //! whole; decompression happens elsewhere.
 
+use core::time::Duration;
 use std::sync::LazyLock;
 
 use bytes::{Bytes, BytesMut};
@@ -13,8 +14,17 @@ use reqwest::header::{CONTENT_RANGE, RANGE};
 
 use crate::error::{APIError, APIResult};
 
-/// Shared HTTP client for pulling demos off Valve's replay servers.
-static HTTP_CLIENT: LazyLock<reqwest::Client> = LazyLock::new(reqwest::Client::new);
+/// Shared HTTP client for pulling demos (and demo prefixes, see `schema`) off Valve's replay
+/// servers. The read timeout resets per chunk, so it bounds a stalled server without capping
+/// large downloads; there is deliberately no total timeout.
+pub(super) static HTTP_CLIENT: LazyLock<reqwest::Client> = LazyLock::new(|| {
+    reqwest::Client::builder()
+        .connect_timeout(Duration::from_secs(5))
+        .read_timeout(Duration::from_secs(30))
+        .build()
+        // Same failure mode as `reqwest::Client::new()`, which panics on TLS backend init errors.
+        .expect("failed to build replay HTTP client")
+});
 
 const WORKERS: usize = 8;
 /// Below this size the probe overhead isn't worth it — just stream sequentially.
