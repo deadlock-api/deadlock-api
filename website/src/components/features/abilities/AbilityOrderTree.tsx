@@ -120,51 +120,27 @@ export default function AbilityOrderTree({
     [trie],
   );
 
-  const onToggleExpand = useCallback((path: string) => {
+  const onToggleExpand = (path: string) => {
     setExpandedPaths((prev) => {
       const next = new Set(prev);
-      if (next.has(path)) {
-        next.delete(path);
-      } else {
-        next.add(path);
-      }
+      if (!next.delete(path)) next.add(path);
       return next;
     });
-  }, []);
+  };
 
-  const onToggleFocus = useCallback((path: string) => {
-    setFocusedPaths((prev) => {
-      const next = new Set(prev);
-      if (next.has(path)) {
-        // Unfocus: remove this path and all descendant focused/expanded paths
-        const prefix = `${path}/`;
-        for (const p of prev) {
-          if (p === path || p.startsWith(prefix)) {
-            next.delete(p);
-          }
-        }
-        setExpandedPaths((prevExpanded) => {
-          const nextExpanded = new Set(prevExpanded);
-          nextExpanded.delete(path);
-          for (const p of prevExpanded) {
-            if (p.startsWith(prefix)) {
-              nextExpanded.delete(p);
-            }
-          }
-          return nextExpanded;
-        });
-      } else {
-        next.add(path);
-        // Auto-expand the focused node so its children are visible
-        setExpandedPaths((prevExpanded) => {
-          const nextExpanded = new Set(prevExpanded);
-          nextExpanded.add(path);
-          return nextExpanded;
-        });
-      }
-      return next;
-    });
-  }, []);
+  // Focusing a node expands it, so its children show; unfocusing it drops it and every path below it from both sets.
+  const onToggleFocus = (path: string) => {
+    if (focusedPaths.has(path)) {
+      const prefix = `${path}/`;
+      const outsideSubtree = (paths: Set<string>) =>
+        new Set([...paths].filter((p) => p !== path && !p.startsWith(prefix)));
+      setFocusedPaths(outsideSubtree);
+      setExpandedPaths(outsideSubtree);
+    } else {
+      setFocusedPaths((prev) => new Set(prev).add(path));
+      setExpandedPaths((prev) => new Set(prev).add(path));
+    }
+  };
 
   if (isLoadingOrder) {
     return <LoadingState label="ability orders" className="flex w-full items-center justify-center py-24" />;

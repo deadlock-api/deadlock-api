@@ -7,7 +7,7 @@ import { SelectionBox } from "~/components/ui/selection-box";
 import { Inline } from "~/components/ui/stack";
 import { annotatedAncestor, resolveSource } from "~/lib/annotation-source";
 
-export const MAX_TARGETS = 20;
+const MAX_TARGETS = 20;
 
 // Below this a press is a click, above it a marquee drag.
 const DRAG_THRESHOLD = 6;
@@ -67,6 +67,15 @@ function highlightFor(element: HTMLElement): Highlight {
     label: labelFor(element),
     key: keyFor(element),
   };
+}
+
+// The picker's own overlay and the feedback panel are never picked, and presses on them reach them as usual.
+function inFeedbackUi(target: EventTarget | null): boolean {
+  return target instanceof Element && target.closest("[data-feedback-ui]") !== null;
+}
+
+function boxStyle(box: Box) {
+  return { top: box.top, insetInlineStart: box.left, width: box.width, height: box.height };
 }
 
 function boxBetween(a: Point, b: Point): Box {
@@ -137,8 +146,8 @@ export function ElementPicker({ onPick, onCancel }: ElementPickerProps) {
     // Falls back to the raw element so picking still works on nodes that carry
     // no source id (portals, third-party markup, an uninstrumented dev server).
     const candidate = (event: Event): HTMLElement | null => {
-      const target = event.target as Element | null;
-      if (!target || target.closest("[data-feedback-ui]")) return null;
+      const target = event.target;
+      if (!(target instanceof Element) || inFeedbackUi(target)) return null;
       return annotatedAncestor(target) ?? (target instanceof HTMLElement ? target : null);
     };
 
@@ -155,7 +164,7 @@ export function ElementPicker({ onPick, onCancel }: ElementPickerProps) {
     };
 
     const onMouseDown = (event: MouseEvent) => {
-      if ((event.target as Element | null)?.closest("[data-feedback-ui]")) return;
+      if (inFeedbackUi(event.target)) return;
       // The press starts a pick, not a page action: no focus move, no menu opening on mousedown.
       event.preventDefault();
       event.stopPropagation();
@@ -211,14 +220,14 @@ export function ElementPicker({ onPick, onCancel }: ElementPickerProps) {
 
     // Whatever the press turned out to be, the page must not react to it.
     const swallow = (event: MouseEvent) => {
-      if ((event.target as Element | null)?.closest("[data-feedback-ui]")) return;
+      if (inFeedbackUi(event.target)) return;
       event.preventDefault();
       event.stopPropagation();
     };
     // Radix menus and selects open on pointerdown. Only stopped, not prevented: preventing it would cancel the
     // mousedown and mouseup the pick itself is made of.
     const stopPointerDown = (event: PointerEvent) => {
-      if ((event.target as Element | null)?.closest("[data-feedback-ui]")) return;
+      if (inFeedbackUi(event.target)) return;
       event.stopPropagation();
     };
 
@@ -277,7 +286,7 @@ export function ElementPicker({ onPick, onCancel }: ElementPickerProps) {
           state="selected"
           label={box.label}
           labelPosition={box.top < 28 ? "below" : "above"}
-          style={{ top: box.top, insetInlineStart: box.left, width: box.width, height: box.height }}
+          style={boxStyle(box)}
         />
       ))}
 
@@ -286,16 +295,11 @@ export function ElementPicker({ onPick, onCancel }: ElementPickerProps) {
           state="hovered"
           label={hovered.label}
           labelPosition={hovered.top < 28 ? "below" : "above"}
-          style={{ top: hovered.top, insetInlineStart: hovered.left, width: hovered.width, height: hovered.height }}
+          style={boxStyle(hovered)}
         />
       )}
 
-      {marquee && (
-        <SelectionBox
-          state="marquee"
-          style={{ top: marquee.top, insetInlineStart: marquee.left, width: marquee.width, height: marquee.height }}
-        />
-      )}
+      {marquee && <SelectionBox state="marquee" style={boxStyle(marquee)} />}
 
       <Card tone="floating" size="xs" className="fixed inset-s-1/2 top-4 -translate-x-1/2 items-center gap-1 px-4 py-2">
         <Inline gap={2} wrap="nowrap" className="text-sm">

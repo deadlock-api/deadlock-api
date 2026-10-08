@@ -67,15 +67,17 @@ export default function BadgeDistributionChart({
     return map;
   }, [badgeDistributionData, metric]);
 
-  const chartData = useMemo(() => {
+  // Every tier from the lowest to the highest badge in the data, gaps included.
+  const tiers = useMemo(() => {
     const badges = badgeDistributionData.map((item) => item.badge_level);
     if (badges.length === 0) return [];
-    const [minBadge, maxBadge] = [Math.min(...badges), Math.max(...badges)];
-    const minTier = Math.floor(minBadge / 10);
-    const maxTier = Math.floor(maxBadge / 10);
+    return range(Math.floor(Math.min(...badges) / 10), Math.floor(Math.max(...badges) / 10) + 1);
+  }, [badgeDistributionData]);
+
+  const chartData = useMemo(() => {
     const result: ChartEntry[] = [];
-    for (let tier = minTier; tier <= maxTier; tier++) {
-      if (tier > minTier) {
+    for (const tier of tiers) {
+      if (tier > tiers[0]) {
         result.push({ badge: tier * 10, tier, value: 0, fill: "transparent", isSpacer: true });
       }
       const fill = tierData.get(tier)?.color ?? CHART_COLOR.fallback;
@@ -85,7 +87,7 @@ export default function BadgeDistributionChart({
       }
     }
     return result;
-  }, [badgeDistributionData, valuePerBadge, tierData]);
+  }, [tiers, valuePerBadge, tierData]);
 
   const shares = useMemo(() => {
     const total = chartData.reduce((sum, entry) => sum + entry.value, 0);
@@ -108,13 +110,7 @@ export default function BadgeDistributionChart({
     return undefined;
   }, [chartData, shares.total]);
 
-  const ticks = useMemo(() => {
-    const badges = badgeDistributionData.map((item) => item.badge_level);
-    if (badges.length === 0) return [];
-    const minTier = Math.floor(Math.min(...badges) / 10);
-    const maxTier = Math.floor(Math.max(...badges) / 10);
-    return range(minTier, maxTier + 1).map((tier) => tier * 10 + 3);
-  }, [badgeDistributionData]);
+  const ticks = tiers.map((tier) => tier * 10 + 3);
 
   const valueTicks = useMemo(() => niceTicks(0, Math.max(0, ...chartData.map((entry) => entry.value))), [chartData]);
 
@@ -124,17 +120,7 @@ export default function BadgeDistributionChart({
   const showNames = ticks.length > 0 && chartWidth / ticks.length >= 64;
   const xAxisTickFormatter = (badge: number) => (showNames ? (tierData.get(Math.floor(badge / 10))?.name ?? "") : "");
 
-  const tierCenters = useMemo(() => {
-    const badges = badgeDistributionData.map((item) => item.badge_level);
-    if (badges.length === 0) return [];
-    const minTier = Math.floor(Math.min(...badges) / 10);
-    const maxTier = Math.floor(Math.max(...badges) / 10);
-    return range(minTier, maxTier + 1).map((tier) => ({
-      tier,
-      firstBadge: tier * 10 + 1,
-      lastBadge: tier * 10 + 6,
-    }));
-  }, [badgeDistributionData]);
+  const tierCenters = tiers.map((tier) => ({ tier, firstBadge: tier * 10 + 1, lastBadge: tier * 10 + 6 }));
 
   return (
     <div className="flex h-full w-full flex-col">

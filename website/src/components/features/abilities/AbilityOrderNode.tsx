@@ -1,6 +1,5 @@
 import { motion } from "framer-motion";
 import { ChevronDown } from "lucide-react";
-import { useRef } from "react";
 
 import { AbilityImage } from "~/components/domain/assets/AbilityImage";
 import { AbilityName } from "~/components/domain/assets/AbilityName";
@@ -105,8 +104,6 @@ export default function AbilityOrderNode({
   const avgDeaths = node.matches > 0 ? (node.totalDeaths / node.matches).toFixed(1) : "0";
   const avgAssists = node.matches > 0 ? (node.totalAssists / node.matches).toFixed(1) : "0";
 
-  const childrenRowRef = useRef<HTMLDivElement>(null);
-
   const details = (
     <>
       <TooltipHeader title={`T${abilityLevel} · ${cumulativePoints} ability points spent`} />
@@ -195,13 +192,7 @@ export default function AbilityOrderNode({
           </div>
 
           {/* Children row */}
-          <motion.div
-            ref={childrenRowRef}
-            className="flex items-start"
-            variants={childStagger}
-            initial="hidden"
-            animate="show"
-          >
+          <motion.div className="flex items-start" variants={childStagger} initial="hidden" animate="show">
             {displayedChildren.map((child, i) => {
               const childPath = `${currentPath}/${child.abilityId}`;
               const isFirst = i === 0;

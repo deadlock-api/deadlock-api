@@ -32,11 +32,14 @@ const ASK = "Ask anything";
 const TRY = "Try asking about a hero, an item or a stat.";
 const FINDING = "Finding the page";
 
+/** Where a question was asked: the home page's bar, the sidebar's field, or one of the example questions. */
+type Source = "home" | "sidebar" | "example";
+
 /** One `ai_search` event per question, with the question itself: what visitors ask, how often, and where it led. */
 function trackQuestion(event: {
   question: string;
-  source: "home" | "sidebar" | "example";
-  outcome: "opened" | "not_understood" | "player_lookup" | "match_lookup" | "rate_limited" | "error";
+  source: Source;
+  outcome: "opened" | Notice;
   page?: string;
   direct?: boolean;
   duration_ms?: number;
@@ -126,7 +129,7 @@ export function AiSearch({ size = "default", className }: AiSearchProps) {
 
   const question = last && last.version !== draft.version ? last.question : draft.text;
 
-  const ask = (text: string, source: "home" | "sidebar" | "example" = home ? "home" : "sidebar") => {
+  const ask = (text: string, source: Source = home ? "home" : "sidebar") => {
     const trimmed = text.trim();
     if (!trimmed) return;
     const asked = ++latest.current;

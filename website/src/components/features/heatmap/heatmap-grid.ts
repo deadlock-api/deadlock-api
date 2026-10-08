@@ -184,7 +184,7 @@ export function sampleBilinear(grid: Float32Array, gridW: number, gridH: number,
   return v00 * (1 - fx) * (1 - fy) + v10 * fx * (1 - fy) + v01 * (1 - fx) * fy + v11 * fx * fy;
 }
 
-export function buildColorLUT(): Uint8Array {
+function buildColorLUT(): Uint8Array {
   const lut = new Uint8Array(256 * 4);
   for (let i = 0; i < 256; i++) {
     const t = i / 255;
@@ -216,7 +216,7 @@ export function buildColorLUT(): Uint8Array {
   return lut;
 }
 
-export const COLOR_LUT = buildColorLUT();
+const COLOR_LUT = buildColorLUT();
 
 /**
  * The ratio ramp: the legend's colors (the density ramp without its near-black floor) evenly spaced, so 1x lands on

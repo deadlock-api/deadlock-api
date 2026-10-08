@@ -7,18 +7,18 @@ import { CHART_COLOR, CHART_CURSOR_LINE, CHART_X_AXIS_SM, CHART_MEDIAN_LINE } fr
 import { approxPercentile, type CurvePoint, formatPercentile } from "~/lib/distribution-percentile";
 
 function DistributionTooltip({
-  payload,
+  point,
   label,
   values,
   fmt,
 }: {
-  payload?: { payload: CurvePoint }[];
+  point: CurvePoint | undefined;
   label: string;
   values: HashMapValue;
   fmt: (v: number) => string;
 }) {
-  if (!payload?.length) return null;
-  const { x } = payload[0].payload;
+  if (!point) return null;
+  const { x } = point;
   return (
     <ChartReadings title={label}>
       <ChartReading label="Value">{fmt(x)}</ChartReading>
@@ -73,7 +73,7 @@ export function DistributionChart({
             cursor={CHART_CURSOR_LINE}
             content={(props) => (
               <DistributionTooltip
-                payload={props.payload as unknown as { payload: CurvePoint }[]}
+                point={props.payload?.[0]?.payload as CurvePoint | undefined}
                 label={label}
                 values={values}
                 fmt={fmt}
