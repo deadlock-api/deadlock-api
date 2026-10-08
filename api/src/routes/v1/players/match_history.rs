@@ -3,7 +3,7 @@ use std::collections::HashMap;
 
 use axum::Json;
 use axum::extract::{Path, State};
-use axum::http::{HeaderMap, StatusCode};
+use axum::http::{HeaderMap, HeaderValue, StatusCode};
 use axum_extra::extract::Query;
 use cached::macros::cached;
 use chrono::Utc;
@@ -216,21 +216,6 @@ async fn current_rank_interval(state: &AppState) -> Option<u32> {
     interval_at(&seasons, Utc::now().timestamp())
 }
 
-async fn fetch_bot_username(
-    pg_client: &sqlx::Pool<sqlx::Postgres>,
-    account_id: u32,
-) -> Option<String> {
-    sqlx::query!(
-        "SELECT bot_id FROM bot_friends WHERE friend_id = $1",
-        i32::try_from(account_id).unwrap_or(-1)
-    )
-    .fetch_optional(pg_client)
-    .await
-    .ok()
-    .flatten()
-    .map(|r| r.bot_id)
-}
-
 /// With `rank_interval` set the GC returns only that interval's ranked matches, but
 /// each entry then carries the ranked_* fields.
 async fn fetch_match_history_raw(
@@ -313,7 +298,7 @@ pub(crate) async fn fetch_steam_match_history(
     let mut iterations = 0;
     loop {
         iterations += 1;
-        let result = fetch_match_history_raw(
+        let (matches, next_cursor) = fetch_match_history_raw(
             steam_client,
             account_id,
             continue_cursor,
@@ -323,11 +308,11 @@ pub(crate) async fn fetch_steam_match_history(
         .await?;
 
         // Check if the result is empty, in which case we can stop
-        if result.0.is_empty() {
+        if matches.is_empty() {
             break;
         }
         // Add the new matches to the list
-        all_matches.extend(result.0);
+        all_matches.extend(matches);
 
         // If force_refetch is false, then we stop fetching more matches
         if !force_refetch {
@@ -335,13 +320,13 @@ pub(crate) async fn fetch_steam_match_history(
         }
 
         // Check if the new continue cursor is None or 0, in which case we stop fetching more matches
-        if result.1.is_none_or(|c| c == 0) {
+        if next_cursor.is_none_or(|c| c == 0) {
             break;
         }
 
         // Check if the new continue cursor is bigger than the previous one, in which case we stop fetching more matches
         if let Some(prev_cursor) = continue_cursor
-            && let Some(new_cursor) = result.1
+            && let Some(new_cursor) = next_cursor
             && new_cursor >= prev_cursor
         {
             break;
@@ -353,7 +338,7 @@ pub(crate) async fn fetch_steam_match_history(
         }
 
         // Update the continue cursor
-        continue_cursor = result.1;
+        continue_cursor = next_cursor;
     }
 
     // Returns the whole interval's ranked history in one response, no cursor. Its
@@ -431,54 +416,49 @@ pub(super) async fn match_history(
         fetch_ch_match_history(&state.batchers.match_history_read, account_id).await?;
 
     // Look up bot friend username for this account
-    let bot_username = fetch_bot_username(&state.pg_client, account_id).await;
+    let bot_username = super::lookup_bot_for_friend(&state.pg_client, account_id)
+        .await
+        .ok()
+        .flatten();
 
     // If the account is not friends with a bot, return only stored history from ClickHouse
     if bot_username.is_none() {
-        let mut headers = HeaderMap::new();
-        headers.insert("Called-Steam", "false".parse().unwrap());
-        return Ok((StatusCode::OK, headers, Json(ch_match_history)));
+        return Ok((StatusCode::OK, called_steam(false), Json(ch_match_history)));
     }
 
     // Apply rate limits based on the query parameters
-    let res = if query.force_refetch {
-        state
-            .rate_limit_client
-            .apply_limits(
-                &rate_limit_key,
-                "match_history_refetch",
-                &[
-                    Quota::ip_limit(1, Duration::from_hours(1)),
-                    Quota::key_limit(5, Duration::from_hours(1)),
-                    Quota::global_limit(10, Duration::from_hours(1)),
-                ],
-            )
-            .await
+    let (endpoint, quotas) = if query.force_refetch {
+        (
+            "match_history_refetch",
+            [
+                Quota::ip_limit(1, Duration::from_hours(1)),
+                Quota::key_limit(5, Duration::from_hours(1)),
+                Quota::global_limit(10, Duration::from_hours(1)),
+            ],
+        )
     } else {
-        state
-            .rate_limit_client
-            .apply_limits(
-                &rate_limit_key,
-                "match_history",
-                &[
-                    Quota::ip_limit(10, Duration::from_hours(1)),
-                    Quota::key_limit(300, Duration::from_hours(1)),
-                    Quota::global_limit(1500, Duration::from_hours(1)),
-                ],
-            )
-            .await
+        (
+            "match_history",
+            [
+                Quota::ip_limit(10, Duration::from_hours(1)),
+                Quota::key_limit(300, Duration::from_hours(1)),
+                Quota::global_limit(1500, Duration::from_hours(1)),
+            ],
+        )
     };
+    let res = state
+        .rate_limit_client
+        .apply_limits(&rate_limit_key, endpoint, &quotas)
+        .await;
     if let Err(e) = res {
         warn!("Reached rate limits: {e:?}");
         if query.force_refetch {
             return Err(e);
         }
         // Fallback to stored history with 429 status for normal requests
-        let mut headers = HeaderMap::new();
-        headers.insert("Called-Steam", "false".parse().unwrap());
         return Ok((
             StatusCode::TOO_MANY_REQUESTS,
-            headers,
+            called_steam(false),
             Json(ch_match_history),
         ));
     }
@@ -502,9 +482,21 @@ pub(super) async fn match_history(
 
     let combined_match_history =
         merge_and_store(&state, ch_match_history, steam_match_history).await;
+    Ok((
+        StatusCode::OK,
+        called_steam(true),
+        Json(combined_match_history),
+    ))
+}
+
+/// The `Called-Steam` header, telling whether the response includes a fresh Steam fetch.
+fn called_steam(called: bool) -> HeaderMap {
     let mut headers = HeaderMap::new();
-    headers.insert("Called-Steam", "true".parse().unwrap());
-    Ok((StatusCode::OK, headers, Json(combined_match_history)))
+    headers.insert(
+        "Called-Steam",
+        HeaderValue::from_static(if called { "true" } else { "false" }),
+    );
+    headers
 }
 
 #[cfg(test)]
