@@ -46,7 +46,8 @@ fn validate_url(url: &Url) -> Result<(), &'static str> {
 /// same allow-list, so a relay cannot bounce the server to another host.
 pub(crate) fn redirect_policy() -> Policy {
     Policy::custom(|attempt| {
-        if attempt.previous().len() >= MAX_REDIRECTS {
+        // `previous()` includes the initial URL: one entry more than redirects followed so far.
+        if attempt.previous().len() > MAX_REDIRECTS {
             attempt.error("too many redirects")
         } else if validate_url(attempt.url()).is_ok() {
             attempt.follow()
