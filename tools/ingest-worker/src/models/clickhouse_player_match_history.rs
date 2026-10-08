@@ -6,6 +6,9 @@ use valveprotos::deadlock::c_msg_match_meta_data_contents::{MatchInfo, Players};
 
 use crate::models::enums::{PlayerMatchOutcome, Team};
 
+/// Mirrors `player_match_history.source Enum8('history_fetcher' = 1, 'match_player' = 2)`;
+/// `HistoryFetcher` is the column default, so it stays even though this crate only writes
+/// `MatchPlayer`.
 #[derive(Serialize_repr, Deserialize_repr, Copy, Clone, PartialEq, Debug, Default)]
 #[repr(i8)]
 pub(crate) enum Source {
