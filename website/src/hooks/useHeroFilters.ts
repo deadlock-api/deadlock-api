@@ -6,8 +6,7 @@ import { useModeState } from "~/hooks/useModeState";
 import type { AnalyticsTab } from "~/lib/analytics-tabs";
 import { getEffectiveRankRange } from "~/lib/game-mode";
 import { DEFAULT_RANK_RANGE } from "~/lib/rank-utils";
-import { BY_RANK_STATS, heroStatIn } from "~/types/api_hero_stats";
-import { HERO_STATS_WITH_BAN_RATE } from "~/types/api_hero_stats";
+import { BY_RANK_STATS, HERO_STATS_WITH_BAN_RATE, heroStatIn, TIME_INTERVALS } from "~/types/api_hero_stats";
 
 export const STATS_TABS: readonly HeroTab[] = [
   "stats",
@@ -40,9 +39,7 @@ export function useHeroFilters() {
   );
   const [heroTimeInterval, setHeroTimeInterval] = useQueryState(
     "time_interval",
-    parseAsStringLiteral(["start_time_hour", "start_time_day", "start_time_week"] as const).withDefault(
-      "start_time_day",
-    ),
+    parseAsStringLiteral(TIME_INTERVALS.map((interval) => interval.query)).withDefault("start_time_day"),
   );
   const [chosenByRankX, setByRankX] = useQueryState(
     "by_rank_x",

@@ -94,25 +94,11 @@ function byRankStatsParams(seasons: readonly SeasonInfo[], preference: DateFilte
 }
 
 function currentItemStatsParams(seasons: readonly SeasonInfo[], preference: DateFilterPreference = "season") {
-  return {
-    minMatches: 10,
-    minAverageBadge: DEFAULT_RANK_RANGE.min,
-    maxAverageBadge: DEFAULT_RANK_RANGE.max,
-    gameMode: GAME_MODE,
-    matchMode: DEFAULT_MATCH_MODE,
-    ...defaultUnixRange(seasons, preference),
-  };
+  return { minMatches: 10, ...currentStatsParams(seasons, preference) };
 }
 
 function currentAbilityOrderParams(seasons: readonly SeasonInfo[], preference: DateFilterPreference = "season") {
-  return {
-    minMatches: 20,
-    minAverageBadge: DEFAULT_RANK_RANGE.min,
-    maxAverageBadge: DEFAULT_RANK_RANGE.max,
-    gameMode: GAME_MODE,
-    matchMode: DEFAULT_MATCH_MODE,
-    ...defaultUnixRange(seasons, preference),
-  };
+  return { minMatches: 20, ...currentStatsParams(seasons, preference) };
 }
 
 function currentBanParams(seasons: readonly SeasonInfo[], preference: DateFilterPreference = "season") {

@@ -34,6 +34,7 @@ import { DEFAULT_RANK_RANGE, rankRangeLabel } from "~/lib/rank-utils";
 import { defaultPeriodLabel, defaultTemporalCoverage, defaultUnixRange, type SeasonInfo } from "~/lib/seasons";
 import { datasetJsonLd, pageTitle, seo } from "~/lib/seo";
 import { closestNameBySlug, findByIdSegment, slugify } from "~/lib/slug";
+import { formatStatValue } from "~/lib/stat-format";
 import { toneOf } from "~/lib/tone";
 import {
   corruptionQueryOptions,
@@ -217,11 +218,6 @@ export const Route = createFileRoute("/analytics/items/$itemName")({
   },
 });
 
-function clock(seconds: number): string {
-  const whole = Math.round(seconds);
-  return `${Math.floor(whole / 60)}:${String(whole % 60).padStart(2, "0")}`;
-}
-
 function ItemDetailPage() {
   const { preferences } = Route.useRouteContext();
   const { itemId, itemName, tier, slot, slotType, cost, rankRange, bestHeroes } = Route.useLoaderData();
@@ -301,7 +297,7 @@ function ItemDetailPage() {
             <Stat
               data-find={findKey.stat("avg_buy_time")}
               label="Avg Buy Time"
-              value={clock(summary.avgBuyTimeS)}
+              value={formatStatValue(summary.avgBuyTimeS, "duration")}
               sub="into the match"
             />
             <Stat

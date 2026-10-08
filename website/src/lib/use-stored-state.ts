@@ -1,22 +1,7 @@
 import { useCallback, useState } from "react";
 
 import { useHydrated } from "~/hooks/useHydrated";
-import { readLocalStorage, writeLocalStorage } from "~/lib/local-storage";
-
-/** A stored JSON value, or `fallback` when storage is unavailable, empty or holds something unparsable */
-export function readStoredJson<T>(key: string, fallback: T): T {
-  const raw = readLocalStorage(key);
-  if (!raw) return fallback;
-  try {
-    return JSON.parse(raw) as T;
-  } catch {
-    return fallback;
-  }
-}
-
-export function writeStoredJson(key: string, value: unknown): void {
-  writeLocalStorage(key, JSON.stringify(value));
-}
+import { readStoredJson, writeLocalStorage } from "~/lib/local-storage";
 
 interface StoredStateOptions<T> {
   /** Reloads from storage when it changes, e.g. the puzzle date. */
@@ -54,7 +39,7 @@ export function useStoredState<T>(
   const save = useCallback(
     (next: T) => {
       setState(next);
-      writeStoredJson(key, next);
+      writeLocalStorage(key, JSON.stringify(next));
     },
     [key],
   );

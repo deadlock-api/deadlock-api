@@ -81,10 +81,11 @@ export const gamesPageOptions = {
   head: ({ loaderData, match }: { loaderData?: { coverage?: string }; match: { pathname: string } }) => {
     const tab = analyticsTabFromPath("games", match.pathname);
     const view = ANALYTICS_VIEWS.games[tab];
+    const path = match.pathname.replace(/\/$/, "");
     const dataset = datasetJsonLd({
       name: view.title,
       description: view.description,
-      path: match.pathname.replace(/\/$/, ""),
+      path,
       keywords: ["Deadlock", "match stats", "average kills", "souls", "game length"],
       variableMeasured: ["match length", "kills", "deaths", "souls", "net worth"],
       apiPath: "/v1/analytics/game-stats",
@@ -94,7 +95,7 @@ export const gamesPageOptions = {
     return seo({
       title: pageTitle(view.title),
       description: view.description,
-      path: match.pathname.replace(/\/$/, ""),
+      path,
       jsonLd: dataset,
     });
   },

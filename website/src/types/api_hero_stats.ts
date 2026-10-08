@@ -82,7 +82,7 @@ export type TimeInterval = {
   query: string;
 };
 
-export const TIME_INTERVALS: TimeInterval[] = [
+export const TIME_INTERVALS = [
   {
     label: "Hour",
     query: "start_time_hour",
@@ -95,7 +95,7 @@ export const TIME_INTERVALS: TimeInterval[] = [
     label: "Week",
     query: "start_time_week",
   },
-];
+] as const satisfies readonly TimeInterval[];
 
 export const BY_RANK_STATS = [...HERO_STATS_WITH_BAN_RATE, "pickrate"] as const;
 export type ByRankStat = (typeof BY_RANK_STATS)[number];

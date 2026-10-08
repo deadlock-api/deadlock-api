@@ -5,6 +5,7 @@ import { type AnalyticsTab, analyticsTabFromPath, ANALYTICS_VIEWS, redirectAnaly
 import { computeBanRates } from "~/lib/ban-rate";
 import { getPickrateMultiplier } from "~/lib/constants";
 import type { DateFilterPreference } from "~/lib/date-filter-preference";
+import { formatPercent } from "~/lib/format";
 import { DEFAULT_MATCH_MODE } from "~/lib/game-mode";
 import { heroSlug } from "~/lib/hero-slug";
 import { rankHeroes, type Tier } from "~/lib/hero-tiers";
@@ -25,12 +26,7 @@ import type { RouterContext } from "~/router";
 const DEFAULT_MIN_MATCHES = 10;
 
 function defaultHeroStatsRanges(seasons: readonly SeasonInfo[], preference: DateFilterPreference = "season") {
-  const prev = defaultPrevUnixRange(seasons, preference);
-  return {
-    ...defaultUnixRange(seasons, preference),
-    prevMinUnixTimestamp: prev.minUnixTimestamp,
-    prevMaxUnixTimestamp: prev.maxUnixTimestamp,
-  };
+  return { range: defaultUnixRange(seasons, preference), prevRange: defaultPrevUnixRange(seasons, preference) };
 }
 
 /** Highest win rate among heroes with enough matches for the number to mean something. */
@@ -92,6 +88,7 @@ function tierListJsonLd(name: string, heroes: readonly TieredHero[]): Record<str
 }
 
 type HeroStatsRanges = ReturnType<typeof defaultHeroStatsRanges>;
+type UnixRange = HeroStatsRanges["range"];
 
 /**
  * Prefetches what a view other than the overall table renders with no search params: the defaults of `useHeroFilters`
@@ -100,10 +97,8 @@ type HeroStatsRanges = ReturnType<typeof defaultHeroStatsRanges>;
 async function prefetchHeroView(
   queryClient: RouterContext["queryClient"],
   tab: Exclude<AnalyticsTab<"heroes">, "stats" | "tier-list">,
-  r: HeroStatsRanges,
+  { range, prevRange }: HeroStatsRanges,
 ) {
-  const range = { minUnixTimestamp: r.minUnixTimestamp, maxUnixTimestamp: r.maxUnixTimestamp };
-  const prevRange = { minUnixTimestamp: r.prevMinUnixTimestamp, maxUnixTimestamp: r.prevMaxUnixTimestamp };
   const ranks = { minAverageBadge: DEFAULT_RANK_RANGE.min, maxAverageBadge: DEFAULT_RANK_RANGE.max };
   const mode = { gameMode: "normal" as const, matchMode: DEFAULT_MATCH_MODE };
 
@@ -262,32 +257,21 @@ export const heroesPageOptions = {
       gameMode: "normal" as const,
       matchMode: DEFAULT_MATCH_MODE,
     };
-    const statsFor = (minUnixTimestamp: number | undefined, maxUnixTimestamp: number | undefined) =>
-      prefetchCached(queryClient, heroStatsQueryOptions({ ...common, minUnixTimestamp, maxUnixTimestamp }));
-    const bansFor = (minUnixTimestamp: number | undefined, maxUnixTimestamp: number | undefined) =>
+    const statsFor = (window: UnixRange) =>
+      prefetchCached(queryClient, heroStatsQueryOptions({ ...common, ...window }));
+    const bansFor = (window: UnixRange) =>
       prefetchCached(
         queryClient,
         heroBanStatsQueryOptions({
           matchMode: DEFAULT_MATCH_MODE,
           minAverageBadge: DEFAULT_RANK_RANGE.min,
           maxAverageBadge: DEFAULT_RANK_RANGE.max,
-          minUnixTimestamp,
-          maxUnixTimestamp,
+          ...window,
         }),
       );
-    const current = Promise.all([
-      statsFor(r.minUnixTimestamp, r.maxUnixTimestamp),
-      heroes,
-      bansFor(r.minUnixTimestamp, r.maxUnixTimestamp),
-    ]);
+    const current = Promise.all([statsFor(r.range), heroes, bansFor(r.range)]);
     // Only the overall table compares with the previous period; the tier list would carry it in its HTML for nothing.
-    const previous =
-      tab === "stats"
-        ? Promise.all([
-            statsFor(r.prevMinUnixTimestamp, r.prevMaxUnixTimestamp),
-            bansFor(r.prevMinUnixTimestamp, r.prevMaxUnixTimestamp),
-          ])
-        : undefined;
+    const previous = tab === "stats" ? Promise.all([statsFor(r.prevRange), bansFor(r.prevRange)]) : undefined;
     if (!isServer) return { leader: null, tierList: [], period, coverage };
     const [[stats, heroList, bans]] = await Promise.all([current, previous]);
     if (tab === "tier-list") return { leader: null, tierList: findTierList(stats, bans, heroList), period, coverage };
@@ -313,14 +297,15 @@ export const heroesPageOptions = {
     const tierList = tab === "tier-list" ? (loaderData?.tierList ?? []) : [];
     const sTier = tierList.filter((hero) => hero.tier === "s").map((hero) => hero.name);
     const lead = leader
-      ? ` ${leader.name} leads ${loaderData?.period} at ${(leader.winRate * 100).toFixed(1)}%.`
+      ? ` ${leader.name} leads ${loaderData?.period} at ${formatPercent(leader.winRate)}.`
       : sTier.length > 0
         ? ` S tier: ${sTier.slice(0, 4).join(", ")}${sTier.length > 4 ? " and more" : ""}.`
         : "";
+    const path = match.pathname.replace(/\/$/, "");
     const dataset = datasetJsonLd({
       name: view.title,
       description: view.description,
-      path: match.pathname.replace(/\/$/, ""),
+      path,
       keywords: [
         "Deadlock",
         ...(tab === "tier-list" ? ["tier list", "hero tier list"] : []),
@@ -338,7 +323,7 @@ export const heroesPageOptions = {
     return seo({
       title: pageTitle(view.title),
       description: view.description + lead,
-      path: match.pathname.replace(/\/$/, ""),
+      path,
       jsonLd: tierList.length > 0 ? [dataset, tierListJsonLd(view.heading, tierList)] : dataset,
     });
   },

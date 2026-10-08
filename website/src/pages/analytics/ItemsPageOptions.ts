@@ -3,6 +3,7 @@ import { lazyRouteComponent } from "@tanstack/react-router";
 import { ITEM_COMBS_TO_SHOW } from "~/components/features/items/useItemCombFilters";
 import { analyticsTabFromPath, ANALYTICS_VIEWS, redirectAnalyticsTab } from "~/lib/analytics-tabs";
 import { enemyHeroFilter, parseEnemyParam } from "~/lib/enemy-heroes";
+import { formatPercent } from "~/lib/format";
 import { DEFAULT_MATCH_MODE } from "~/lib/game-mode";
 import { prefetchCached, prefetchSeed } from "~/lib/prefetch-safe";
 import { DEFAULT_RANK_RANGE } from "~/lib/rank-utils";
@@ -166,15 +167,16 @@ export const itemsPageOptions = {
     const view = ANALYTICS_VIEWS.items[tab];
     // The leader is the win-rate table's headline; the other views are about something else.
     const leader = tab === "item-stats" ? loaderData?.leader : null;
-    const lead = leader ? ` Most reliable this patch: ${leader.name}, ${(leader.winRate * 100).toFixed(1)}%.` : "";
+    const lead = leader ? ` Most reliable this patch: ${leader.name}, ${formatPercent(leader.winRate)}.` : "";
+    const path = match.pathname.replace(/\/$/, "");
     return seo({
       title: pageTitle(view.title),
       description: view.description + lead,
-      path: match.pathname.replace(/\/$/, ""),
+      path,
       jsonLd: datasetJsonLd({
         name: view.title,
         description: view.description,
-        path: match.pathname.replace(/\/$/, ""),
+        path,
         keywords: ["Deadlock", "item win rates", "build stats", "item combos"],
         variableMeasured: ["win rate", "pick rate", "matches played"],
         apiPath: "/v1/analytics/item-stats",

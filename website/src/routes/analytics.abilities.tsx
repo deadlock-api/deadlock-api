@@ -21,6 +21,7 @@ import { abilityOrderQueryOptions } from "~/queries/ability-order-query";
 import { loadSeasons } from "~/queries/asset-queries";
 
 const DEFAULT_HERO_ID = 2;
+const DEFAULT_MIN_MATCHES = 20;
 
 export const Route = createFileRoute("/analytics/abilities")({
   component: AbilitiesPage,
@@ -40,7 +41,7 @@ export const Route = createFileRoute("/analytics/abilities")({
         minAverageBadge: 0,
         maxAverageBadge: MAX_BADGE,
         ...range,
-        minMatches: 20,
+        minMatches: DEFAULT_MIN_MATCHES,
       }),
     );
   },
@@ -60,7 +61,7 @@ function AbilitiesPage() {
   const [maxRankId, setMaxRankId] = useQueryState("max_rank", parseAsInteger.withDefault(MAX_BADGE));
   const { mode, setMode, gameMode, matchMode } = useModeState();
   const { startDate, endDate, handleDateChange, defaultRange } = useDateRangeState();
-  const [minMatches, setMinMatches] = useQueryState("min_matches", parseAsInteger.withDefault(20));
+  const [minMatches, setMinMatches] = useQueryState("min_matches", parseAsInteger.withDefault(DEFAULT_MIN_MATCHES));
   // In the URL like every other filter, so a shared or reloaded link and Back keep them. One update sets both lists.
   const [items, setItems] = useQueryStates({
     include_items: parseAsArrayOf(parseAsInteger).withDefault([]),
@@ -75,11 +76,11 @@ function AbilitiesPage() {
     [items],
   );
   const setItemSelections = (next: Map<number, TriState>) => {
-    const ids = (state: TriState) => [...next].filter(([, s]) => s === state).map(([id]) => id);
-    void setItems({
-      include_items: ids("included").length > 0 ? ids("included") : null,
-      exclude_items: ids("excluded").length > 0 ? ids("excluded") : null,
-    });
+    const ids = (state: TriState) => {
+      const matching = [...next].filter(([, s]) => s === state).map(([id]) => id);
+      return matching.length > 0 ? matching : null;
+    };
+    void setItems({ include_items: ids("included"), exclude_items: ids("excluded") });
   };
 
   const { effectiveMinRankId, effectiveMaxRankId } = getEffectiveRankRange(mode, minRankId, maxRankId);
@@ -114,7 +115,12 @@ function AbilitiesPage() {
             }
           }}
         />
-        <Filter.MinMatches value={minMatches} onValueChange={setMinMatches} min={0} defaultValue={20} />
+        <Filter.MinMatches
+          value={minMatches}
+          onValueChange={setMinMatches}
+          min={0}
+          defaultValue={DEFAULT_MIN_MATCHES}
+        />
         <Filter.Item selection="tri-state" value={itemSelections} onValueChange={setItemSelections} />
         <Filter.SeasonPatchDate
           value={{ startDate, endDate }}
