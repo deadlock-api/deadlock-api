@@ -68,8 +68,6 @@ impl<'a> BitWriter<'a> {
         let block1_idx = self.cur_bit >> 6;
         let bit_offset = self.cur_bit & 63;
 
-        // SAFETY: assert and check above ensure that we'll not go out of bounds.
-
         let mut block1 = *self.data.get(block1_idx).ok_or(BitError::Overflow)?;
         block1 &= BIT_WRITE_MASKS[bit_offset][n];
         block1 |= data << bit_offset;

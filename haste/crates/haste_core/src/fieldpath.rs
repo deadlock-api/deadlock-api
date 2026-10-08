@@ -86,8 +86,6 @@ impl FieldPath {
 
     // public api
 
-    // NOTE: using this method can hurt performance when used in critical code paths. use the
-    // unsafe [`Self::get_unchecked`] instead.
     #[must_use]
     pub fn get(&self, index: usize) -> Option<usize> {
         self.data.get(index).map(|component| *component as usize)

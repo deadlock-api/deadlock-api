@@ -129,15 +129,15 @@ where
 
     // NOTE: small values are more common then large ones, this is a performance win.
     rdr.read_exact(&mut buf)?;
-    let byte = buf.first().ok_or(VarintError::MalformedVarint)?;
+    let [byte] = buf;
     if (byte & CONTINUE_BIT) == 0 {
-        return Ok((T::from(*byte), 1));
+        return Ok((T::from(byte), 1));
     }
 
     let mut value = T::from(byte & PAYLOAD_BITS);
     for count in 1..max_varint_size::<T>() {
         rdr.read_exact(&mut buf)?;
-        let byte = buf.first().ok_or(VarintError::MalformedVarint)?;
+        let [byte] = buf;
         value |= (T::from(byte & PAYLOAD_BITS)) << (count * 7);
         if (byte & CONTINUE_BIT) == 0 {
             return Ok((value, count + 1));

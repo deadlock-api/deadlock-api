@@ -18,23 +18,9 @@ const HISTORY_BITMASK: usize = HISTORY_SIZE - 1;
 const MAX_STRING_BITS: usize = 5;
 const MAX_STRING_SIZE: usize = 1 << MAX_STRING_BITS;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 struct StringHistoryEntry {
     string: [u8; MAX_STRING_SIZE],
-}
-
-impl StringHistoryEntry {
-    fn new() -> Self {
-        Self {
-            string: [0; MAX_STRING_SIZE],
-        }
-    }
-}
-
-impl Default for StringHistoryEntry {
-    fn default() -> Self {
-        Self::new()
-    }
 }
 
 const MAX_USERDATA_BITS: usize = 17;
@@ -195,10 +181,9 @@ impl StringTable {
                     size += br.read_string(string_buf, false)?;
                 }
 
-                let mut she = StringHistoryEntry::default();
-                she.string.copy_from_slice(&string_buf[..MAX_STRING_SIZE]);
-
-                history[history_delta_index & HISTORY_BITMASK] = she;
+                history[history_delta_index & HISTORY_BITMASK]
+                    .string
+                    .copy_from_slice(&string_buf[..MAX_STRING_SIZE]);
                 history_delta_index += 1;
 
                 Some(&string_buf[..size])
@@ -237,9 +222,8 @@ impl StringTable {
                     br.read_bytes(user_data_buf)?;
 
                     if is_compressed {
-                        snap::raw::Decoder::new()
+                        let size = snap::raw::Decoder::new()
                             .decompress(user_data_buf, user_data_uncompressed_buf)?;
-                        let size = snap::raw::decompress_len(user_data_buf)?;
                         Some(&user_data_uncompressed_buf[..size])
                     } else {
                         Some(&*user_data_buf)
@@ -258,11 +242,7 @@ impl StringTable {
                     }
                 })
                 .or_insert_with(|| StringTableItem {
-                    string: string.map(|src| {
-                        let mut dst = Vec::with_capacity(src.len());
-                        dst.extend_from_slice(src);
-                        dst
-                    }),
+                    string: string.map(<[u8]>::to_vec),
                     user_data: user_data.map(Arc::from),
                 });
         }

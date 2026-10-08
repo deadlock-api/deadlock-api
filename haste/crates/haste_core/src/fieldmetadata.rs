@@ -97,6 +97,12 @@ impl Default for FieldMetadata {
     }
 }
 
+/// metadata of pointer fields: a bool that tells whether the pointee is present.
+const POINTER: FieldMetadata = FieldMetadata {
+    special_descriptor: Some(FieldSpecialDescriptor::Pointer),
+    decoder: FieldDecoder::Bool,
+};
+
 fn visit_ident(
     ident: &str,
     field: &FlattenedSerializerField,
@@ -110,44 +116,31 @@ fn visit_ident(
         };
     }
 
-    macro_rules! pointer {
-        () => {
-            Ok(FieldMetadata {
-                special_descriptor: Some(FieldSpecialDescriptor::Pointer),
-                decoder: FieldDecoder::Bool,
-            })
-        };
-    }
-
     #[allow(clippy::match_same_arms)]
     match ident {
         // primitives
-        "int8" | "int16" | "int32" | "int64" => Ok(FieldMetadata {
-            special_descriptor: None,
-            decoder: FieldDecoder::new_i64(field),
-        }),
+        "int8" | "int16" | "int32" | "int64" => non_special!(FieldDecoder::new_i64(field)),
         "bool" => non_special!(FieldDecoder::Bool),
         "float32" => non_special!(FieldDecoder::new_f32(field)?),
 
         // pointers (?)
         // https://github.com/SteamDatabase/GameTracking-Deadlock/blob/master/game/core/tools/demoinfo2/demoinfo2.txt#L130
-        "CBodyComponentDCGBaseAnimating" => pointer!(),
-        "CBodyComponentBaseAnimating" => pointer!(),
-        "CBodyComponentBaseAnimatingOverlay" => pointer!(),
-        "CBodyComponentBaseModelEntity" => pointer!(),
-        "CBodyComponent" => pointer!(),
-        "CBodyComponentSkeletonInstance" => pointer!(),
-        "CBodyComponentPoint" => pointer!(),
-        "CLightComponent" => pointer!(),
-        "CRenderComponent" => pointer!(),
+        "CBodyComponentDCGBaseAnimating"
+        | "CBodyComponentBaseAnimating"
+        | "CBodyComponentBaseAnimatingOverlay"
+        | "CBodyComponentBaseModelEntity"
+        | "CBodyComponent"
+        | "CBodyComponentSkeletonInstance"
+        | "CBodyComponentPoint"
+        | "CLightComponent"
+        | "CRenderComponent"
         // https://github.com/SteamDatabase/GameTracking-Deadlock/blob/1e09d0e1289914e776b8d5783834478782a67468/game/core/pak01_dir/scripts/replay_compatability_settings.txt#L56
-        "C_BodyComponentBaseAnimating" => pointer!(),
-        "C_BodyComponentBaseAnimatingOverlay" => pointer!(),
-        "CPhysicsComponent" => pointer!(),
+        | "C_BodyComponentBaseAnimating"
+        | "C_BodyComponentBaseAnimatingOverlay"
+        | "CPhysicsComponent" => Ok(POINTER),
 
         // other custom types
-        "CUtlSymbolLarge" => non_special!(FieldDecoder::String),
-        "CUtlString" => non_special!(FieldDecoder::String),
+        "CUtlSymbolLarge" | "CUtlString" => non_special!(FieldDecoder::String),
         "CUtlBinaryBlock" => non_special!(FieldDecoder::BinaryBlock),
         // public/mathlib/vector.h
         "QAngle" => non_special!(FieldDecoder::new_qangle(field)?),
@@ -176,16 +169,10 @@ fn visit_ident(
         }),
 
         // enums that are flagged as signed (see `proto_enum_info_t`).
-        _ if field.is_signed_enum => Ok(FieldMetadata {
-            special_descriptor: None,
-            decoder: FieldDecoder::new_i64(field),
-        }),
+        _ if field.is_signed_enum => non_special!(FieldDecoder::new_i64(field)),
 
         // default
-        _ => Ok(FieldMetadata {
-            special_descriptor: None,
-            decoder: FieldDecoder::new_u64(field),
-        }),
+        _ => non_special!(FieldDecoder::new_u64(field)),
     }
 }
 
@@ -254,14 +241,6 @@ fn visit_array(
     })
 }
 
-#[allow(clippy::unnecessary_wraps)]
-fn visit_pointer() -> Result<FieldMetadata, FieldMetadataError> {
-    Ok(FieldMetadata {
-        special_descriptor: Some(FieldSpecialDescriptor::Pointer),
-        decoder: FieldDecoder::Bool,
-    })
-}
-
 fn visit_any(
     expr: Expr,
     field: &FlattenedSerializerField,
@@ -270,7 +249,7 @@ fn visit_any(
         Expr::Ident(ident) => visit_ident(ident, field),
         Expr::Template { expr, arg } => visit_template(&expr, *arg, field),
         Expr::Array { expr, len } => visit_array(*expr, &len, field),
-        Expr::Pointer(_) => visit_pointer(),
+        Expr::Pointer(_) => Ok(POINTER),
         _ => unreachable!(),
     }
 }
