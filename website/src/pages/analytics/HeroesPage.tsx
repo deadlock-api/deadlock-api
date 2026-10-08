@@ -199,11 +199,9 @@ export function HeroesPage() {
               </Field>
             </FilterBar>
             <HeroStatsTable
-              columns={["winRate", "pickRate", "zScore", "residual", "details"]}
               groupByType={groupByType}
               nameQuery={heroNameQuery}
               onClearNameQuery={() => void setHeroNameQuery(null)}
-              showMatchCounts
               minRankId={filters.effectiveMinRankId}
               maxRankId={filters.effectiveMaxRankId}
               minHeroMatches={filters.minHeroMatches}
