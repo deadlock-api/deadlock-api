@@ -6,12 +6,12 @@
  * - a dash that is an element's whole content: `<span>—</span>` (not a separator between elements);
  * - an em dash as a whole string value: `"—"`, except a prop set to one (`nullLabel="—"`, the prop's API);
  * - a hyphen or en dash as the fallback of `??`, `||`, `&&`, `return` or `=>`: `value ?? "-"`, `{a && "–"}`;
- * - a hyphen or en dash as the else branch of a ternary, unless the then branch is a one-character string too (a
- *   sign: `delta >= 0 ? "+" : "-"`).
+ * - a hyphen or en dash as the else branch of a ternary, on its line or on a line of its own (`  : "-"`,
+ *   `) : "–"}`), unless the then branch is a sign (`delta >= 0 ? "+" : "-"`, also "±" and "−").
  * Separators (`join("-")`), object and type literals (`{ sep: "-" }`, `"-" | "+"`) and signs are not placeholders.
  */
 export const RAW_NO_VALUE =
-  />\s*[—–-]\s*<\/|(?<![=\w])(["'`])—\1|(?:\?\?|\|\||&&|\breturn|=>)\s*(["'`])[–-]\2|\?(?!\s*(["'`])[^"'`\n]?\3\s*:)\s*[^?:\n]+:\s*(["'`])[–-]\4/g;
+  />\s*[—–-]\s*<\/|(?<![=\w])(["'`])—\1|(?:\?\?|\|\||&&|\breturn|=>)\s*(["'`])[–-]\2|\?(?!\s*(["'`])[+±−]\3\s*:)\s*[^?:\n]+:\s*(["'`])[–-]\4|^\s*\)?\s*:\s*(["'`])[–-]\5/gm;
 
 /** Whether `line` has a hand-typed dash placeholder. */
 export function hasRawNoValue(line) {

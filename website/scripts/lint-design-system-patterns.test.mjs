@@ -36,6 +36,10 @@ test("raw-no-value flags a dash standing in for a missing value", () => {
     'const show = (v) => "-";',
     '{values ? fmt(values.avg) : "-"}',
     'value={avgDeaths > 0 ? ratio.toFixed(2) : "-"}',
+    '        : "-"',
+    '      : "–"}',
+    '          ) : "-"}',
+    '{isWin ? "W" : "-"}',
   ]) {
     assert.ok(hasRawNoValue(line), line);
   }
@@ -45,6 +49,8 @@ test("raw-no-value leaves signs, separators and literals alone", () => {
   for (const line of [
     'const sign = d < 0 ? "-" : "+";',
     'const sign = d >= 0 ? "+" : "-";',
+    'const sign = d >= 0 ? "±" : "–";',
+    '  sep: "-",',
     '`${neg ? "-" : ""}${value}`',
     'const options = { sep: "-" };',
     'type Sign = (x: "-" | "+") => void;',
