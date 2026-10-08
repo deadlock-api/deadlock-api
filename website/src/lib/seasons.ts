@@ -3,7 +3,7 @@ import type { RankedSeason } from "deadlock_api_client";
 import { type Dayjs, day } from "~/dayjs";
 import { PATCHES, type PatchInfo } from "~/lib/constants";
 import type { DateFilterPreference, DateRange } from "~/lib/date-filter-preference";
-import { normalizeUnixCeil, normalizeUnixFloor, registerExactBoundaries } from "~/lib/time-normalize";
+import { normalizeUnixRange, registerExactBoundaries } from "~/lib/time-normalize";
 
 export interface SeasonInfo {
   id: string;
@@ -101,13 +101,11 @@ export function defaultPrevDateRange(
 
 /** Exact bounds shared by server prefetching and the hydrated UI. */
 export function defaultUnixRange(seasons: readonly SeasonInfo[], preference: DateFilterPreference = "season") {
-  const [start, end] = defaultDateRange(seasons, preference);
-  return { minUnixTimestamp: normalizeUnixFloor(start) ?? 0, maxUnixTimestamp: normalizeUnixCeil(end) };
+  return normalizeUnixRange(defaultDateRange(seasons, preference));
 }
 
 export function defaultPrevUnixRange(seasons: readonly SeasonInfo[], preference: DateFilterPreference = "season") {
-  const [start, end] = defaultPrevDateRange(seasons, preference);
-  return { minUnixTimestamp: normalizeUnixFloor(start) ?? 0, maxUnixTimestamp: normalizeUnixCeil(end) };
+  return normalizeUnixRange(defaultPrevDateRange(seasons, preference));
 }
 
 export function patchMatches(patch: PatchInfo, startDate: Dayjs, endDate?: Dayjs): boolean {

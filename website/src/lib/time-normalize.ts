@@ -35,3 +35,8 @@ export function normalizeUnixCeil(d: Dayjs | undefined, granularity: Granularity
   if (isExactBoundary(d)) return d.unix();
   return d.utc().endOf(granularity).unix();
 }
+
+/** A date range as the analytics requests' bounds; an open start reads from 0, an open end stays open. */
+export function normalizeUnixRange([start, end]: readonly [Dayjs | undefined, Dayjs | undefined]) {
+  return { minUnixTimestamp: normalizeUnixFloor(start) ?? 0, maxUnixTimestamp: normalizeUnixCeil(end) };
+}

@@ -22,7 +22,7 @@ import {
   parseAsMatchMode,
 } from "~/lib/game-mode";
 import { parseAsDayjsRange } from "~/lib/nuqs-parsers";
-import { normalizeUnixCeil, normalizeUnixFloor } from "~/lib/time-normalize";
+import { normalizeUnixRange } from "~/lib/time-normalize";
 
 import { queryKeys } from "./query-keys";
 
@@ -49,9 +49,7 @@ export async function resolveCompareFilters(
   );
   const hero = Number(search.hero);
   const range = parseAsDayjsRange.parse(search.date_range ?? "");
-  const time = range
-    ? { minUnixTimestamp: normalizeUnixFloor(range[0]) ?? 0, maxUnixTimestamp: normalizeUnixCeil(range[1]) }
-    : await defaultRange();
+  const time = range ? normalizeUnixRange(range) : await defaultRange();
   return {
     filters: {
       gameMode: MODE_CONFIG[mode].gameMode,
