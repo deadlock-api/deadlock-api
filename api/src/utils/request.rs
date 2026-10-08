@@ -20,16 +20,25 @@ pub(crate) fn parse_api_key(headers: &HeaderMap) -> Option<Uuid> {
     header_str(headers, "x-api-key").and_then(parse_api_key_str)
 }
 
-/// The client's IP address as reported by the proxies in front of the API.
-///
-/// Order: `CF-Connecting-IP` (set by Cloudflare), then `X-Real-IP` (set by the reverse proxy),
-/// then the first `X-Forwarded-For` entry (client supplied, so least trustworthy).
-pub(crate) fn client_ip(headers: &HeaderMap) -> Option<&str> {
+/// The client's IP address from proxy-set headers only: `CF-Connecting-IP` (set by Cloudflare),
+/// then `X-Real-IP` (set by the reverse proxy). Use this where the client must not pick its own
+/// identity, e.g. rate limiting.
+pub(crate) fn trusted_client_ip(headers: &HeaderMap) -> Option<&str> {
     header_str(headers, "cf-connecting-ip")
         .or_else(|| header_str(headers, "x-real-ip"))
-        .or_else(|| header_str(headers, "x-forwarded-for").and_then(|s| s.split(',').next()))
         .map(str::trim)
         .filter(|s| !s.is_empty())
+}
+
+/// The client's IP address for logs and spans: [`trusted_client_ip`], falling back to the first
+/// `X-Forwarded-For` entry (client supplied, so least trustworthy).
+pub(crate) fn client_ip(headers: &HeaderMap) -> Option<&str> {
+    trusted_client_ip(headers).or_else(|| {
+        header_str(headers, "x-forwarded-for")
+            .and_then(|s| s.split(',').next())
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+    })
 }
 
 #[cfg(test)]
@@ -65,5 +74,14 @@ mod tests {
             map.insert(*name, value.parse().unwrap());
         }
         assert_eq!(client_ip(&map), expected);
+    }
+
+    #[test]
+    fn test_trusted_client_ip_ignores_forwarded_for() {
+        let mut map = HeaderMap::new();
+        map.insert("x-forwarded-for", "3.3.3.3".parse().unwrap());
+        assert_eq!(trusted_client_ip(&map), None);
+        map.insert("x-real-ip", "2.2.2.2".parse().unwrap());
+        assert_eq!(trusted_client_ip(&map), Some("2.2.2.2"));
     }
 }

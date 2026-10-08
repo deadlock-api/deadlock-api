@@ -7,7 +7,7 @@ use strum::Display;
 use uuid::Uuid;
 
 use crate::error::APIError;
-use crate::utils::request::{client_ip, parse_api_key};
+use crate::utils::request::{parse_api_key, trusted_client_ip};
 
 #[derive(Debug, Clone, PartialEq, Eq, Display)]
 pub(super) enum Client {
@@ -40,13 +40,14 @@ where
             .filter(|s| !s.is_empty());
         let client = match worker {
             Some(zone) => Client::Worker(zone.to_owned()),
-            // Buckets are keyed by IPv4: prefer Cloudflare's pseudo IPv4 for IPv6 clients.
+            // Buckets are keyed by IPv4: prefer Cloudflare's pseudo IPv4 for IPv6 clients. Never
+            // fall back to X-Forwarded-For, or a client could pick a fresh bucket per request.
             None => Client::Ip(
                 parts
                     .headers
                     .get("Cf-Pseudo-IPv4")
                     .and_then(|v| v.to_str().ok()?.parse().ok())
-                    .or_else(|| client_ip(&parts.headers)?.parse().ok())
+                    .or_else(|| trusted_client_ip(&parts.headers)?.parse().ok())
                     .unwrap_or(Ipv4Addr::UNSPECIFIED),
             ),
         };
