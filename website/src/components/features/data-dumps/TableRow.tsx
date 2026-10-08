@@ -143,7 +143,7 @@ export function LakeTableRow({ table, matchedColumns }: { table: LakeTable; matc
         {building ? <NoValue /> : formatBytes(table.totalBytes)}
       </TableCell>
       <TableCell className="hidden text-muted-foreground tabular-nums lg:table-cell">
-        {formatUnix(table.watermark_hi)}
+        {table.watermark_hi ? formatUnix(table.watermark_hi) : <NoValue />}
       </TableCell>
       <TableCell className="text-end">{single && <FileActions url={single.url} />}</TableCell>
     </ExpandableRow>

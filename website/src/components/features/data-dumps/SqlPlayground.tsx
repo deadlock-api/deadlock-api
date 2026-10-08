@@ -137,11 +137,8 @@ export function SqlPlayground({ open, onOpenChange, tables, schemaByTable, query
     setStatus(null);
     const start = performance.now();
     try {
-      const created = await ensureViews(handle, tableMap, findTableNames(query, tableMap.keys()));
-      if (created.length > 0) {
-        setStatus(`Registered ${created.length} table${created.length === 1 ? "" : "s"}…`);
-      }
       setStatus("Running query…");
+      await ensureViews(handle, tableMap, findTableNames(query, tableMap.keys()));
       const { columns, rows, truncated } = await runDuckDbQuery(handle, query, {
         maxRows: RESULT_ROW_LIMIT,
         signal: controller.signal,

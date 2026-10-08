@@ -14,11 +14,9 @@ export function ExtraArguments({ extraArgs, extraValues, onChange }: ExtraArgume
   const baseId = useId();
   if (!extraArgs || extraArgs.length === 0) return null;
 
-  extraArgs = [...new Set(extraArgs)];
-
   return (
     <div className="ms-8 mt-2 space-y-2">
-      {extraArgs.map((arg) => (
+      {[...new Set(extraArgs)].map((arg) => (
         <div key={arg} className="flex items-center gap-2">
           <Label htmlFor={`${baseId}-${arg}`} className="text-sm text-muted-foreground">
             {snakeToPretty(arg)}:

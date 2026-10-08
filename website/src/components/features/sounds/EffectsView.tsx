@@ -35,7 +35,7 @@ const CATEGORY_LABELS: Record<string, string> = {
   ui: "UI",
 };
 
-export function categoryLabel(id: string): string {
+function categoryLabel(id: string): string {
   return CATEGORY_LABELS[id] ?? humanizeSoundName(id);
 }
 

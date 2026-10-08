@@ -39,21 +39,18 @@ export function PatchStatChanges({ changes }: { changes: readonly StatChange<key
         {changes.map(({ key, before, after, delta }) => {
           const stat = getStatDefinition(key);
           if (!stat) return null;
+          const beforeText = formatStatValue(before, stat.format) ?? <NoValue label="No data" />;
+          const afterText = formatStatValue(after, stat.format) ?? <NoValue label="No data" />;
           return (
             <TableRow key={key}>
               <TableCell data-pinned className="whitespace-normal">
                 {stat.label}
                 <span className="block type-caption text-muted-foreground tabular-nums @md/table:hidden">
-                  {formatStatValue(before, stat.format) ?? <NoValue label="No data" />} →{" "}
-                  {formatStatValue(after, stat.format) ?? <NoValue label="No data" />}
+                  {beforeText} → {afterText}
                 </span>
               </TableCell>
-              <TableCell className="hidden text-end tabular-nums @md/table:table-cell">
-                {formatStatValue(before, stat.format) ?? <NoValue label="No data" />}
-              </TableCell>
-              <TableCell className="hidden text-end tabular-nums @md/table:table-cell">
-                {formatStatValue(after, stat.format) ?? <NoValue label="No data" />}
-              </TableCell>
+              <TableCell className="hidden text-end tabular-nums @md/table:table-cell">{beforeText}</TableCell>
+              <TableCell className="hidden text-end tabular-nums @md/table:table-cell">{afterText}</TableCell>
               <TableCell className="text-end">
                 <Delta
                   value={delta}

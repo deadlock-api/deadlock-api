@@ -16,13 +16,13 @@ const EMPTY_SUBTEXTS: string[] = [];
 
 const TEMPLATE_PLACEHOLDER = /\{(\w+)}/g;
 
-export const templateVariables = (templates: string[]): string[] =>
+const templateVariables = (templates: string[]): string[] =>
   templates.flatMap((template) => [...template.matchAll(TEMPLATE_PLACEHOLDER)].map(([, name]) => name));
 
 const resolveTemplate = (template: string, stats: Record<string, string>): string =>
   template.replaceAll(TEMPLATE_PLACEHOLDER, (_, name: string) => stats[name] ?? "");
 
-export const createStatDisplays = (
+const createStatDisplays = (
   stats: Record<string, string> | null,
   variables: string[],
   displayLabels: string[],
@@ -40,7 +40,7 @@ export const createStatDisplays = (
   }));
 };
 
-export const calculateMatchesToShow = (
+const calculateMatchesToShow = (
   numMatches: number,
   matchHistoryShowsToday: boolean,
   stats: Record<string, string> | null,

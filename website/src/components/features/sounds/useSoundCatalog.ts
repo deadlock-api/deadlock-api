@@ -60,7 +60,7 @@ export function useSoundCatalog() {
       .filter((entry): entry is [string, SoundTree] => isSoundTree(entry[1]))
       .map(([id, tree]) => ({
         id,
-        name: names.get(id) ?? VOICE_NAMES[id] ?? humanizeSoundName(id),
+        name: nameOf({ names }, id),
         hero: heroes.get(id),
         count: countSounds(tree),
       }))

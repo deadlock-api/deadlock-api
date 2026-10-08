@@ -18,6 +18,10 @@ import { groupTopics, humanizeSoundName, isSoundTree, matchesSoundQuery, voiceSe
 
 const SECTION_LABELS: Record<string, string> = { lines: "Lines", ping: "Pings", emote: "Emotes" };
 
+function sectionLabel(id: string): string {
+  return SECTION_LABELS[id] ?? humanizeSoundName(id);
+}
+
 interface VoiceLinesViewProps {
   catalog: SoundCatalog;
   character: string;
@@ -113,7 +117,7 @@ function CharacterLines({
               <SegmentedItem value="all">All</SegmentedItem>
               {sections.map((s) => (
                 <SegmentedItem key={s.id} value={s.id}>
-                  {SECTION_LABELS[s.id] ?? humanizeSoundName(s.id)}
+                  {sectionLabel(s.id)}
                 </SegmentedItem>
               ))}
             </Segmented>
@@ -133,9 +137,7 @@ function CharacterLines({
       ) : (
         paged.items.map((topic) => {
           const title =
-            section === "all" && topic.folder
-              ? `${SECTION_LABELS[topic.folder] ?? humanizeSoundName(topic.folder)} · ${topic.label}`
-              : topic.label;
+            section === "all" && topic.folder ? `${sectionLabel(topic.folder)} · ${topic.label}` : topic.label;
           return (
             <section key={topic.id} aria-label={title}>
               <PanelSection title={title}>{topic.rows.length.toLocaleString("en-US")}</PanelSection>

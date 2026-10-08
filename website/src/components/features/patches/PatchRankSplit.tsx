@@ -25,21 +25,21 @@ export function PatchRankSplit({ rows }: { rows: readonly BandRow[] }) {
           <TableHead scope="col" data-pinned>
             Hero
           </TableHead>
-          {RANK_BANDS.map((band, index) => (
-            <TableHead
-              key={band.label}
-              scope="col"
-              className={cn("text-end", index === 1 && "hidden @md/table:table-cell")}
-            >
-              {/* The ranks a band holds, once their names are in. */}
-              <Tooltip
-                content={ranks && rankRangeLabel(ranks, bandBadges(band).min, bandBadges(band).max)}
-                side="bottom"
+          {RANK_BANDS.map((band, index) => {
+            const { min, max } = bandBadges(band);
+            return (
+              <TableHead
+                key={band.label}
+                scope="col"
+                className={cn("text-end", index === 1 && "hidden @md/table:table-cell")}
               >
-                <TooltipTarget>{band.label}</TooltipTarget>
-              </Tooltip>
-            </TableHead>
-          ))}
+                {/* The ranks a band holds, once their names are in. */}
+                <Tooltip content={ranks && rankRangeLabel(ranks, min, max)} side="bottom">
+                  <TooltipTarget>{band.label}</TooltipTarget>
+                </Tooltip>
+              </TableHead>
+            );
+          })}
         </TableRow>
       </TableHeader>
       <TableBody>

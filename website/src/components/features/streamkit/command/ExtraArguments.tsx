@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { useId } from "react";
 
 import { HeroSelector } from "~/components/domain/selectors/HeroSelector";
 import { Section } from "~/components/patterns/page/Section";
@@ -18,6 +19,7 @@ interface ExtraArgumentsProps {
 const NO_ERRORS: { [key: string]: string } = {};
 
 export function ExtraArguments({ extraArgs, usedArgs, onExtraArgChange, errors = NO_ERRORS }: ExtraArgumentsProps) {
+  const baseId = useId();
   if (usedArgs.length === 0) return null;
 
   return (
@@ -32,9 +34,9 @@ export function ExtraArguments({ extraArgs, usedArgs, onExtraArgChange, errors =
               error={errors[arg]}
             />
           ) : (
-            <Field key={arg} label={snakeToPretty(arg)} htmlFor={`extra-arg-${arg}`} error={errors[arg]}>
+            <Field key={arg} label={snakeToPretty(arg)} htmlFor={`${baseId}-${arg}`} error={errors[arg]}>
               <Input
-                id={`extra-arg-${arg}`}
+                id={`${baseId}-${arg}`}
                 type="text"
                 value={extraArgs[arg] ?? ""}
                 onChange={(e) => onExtraArgChange(arg, e.target.value)}

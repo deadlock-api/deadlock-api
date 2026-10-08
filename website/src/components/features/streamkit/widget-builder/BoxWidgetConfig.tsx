@@ -116,7 +116,6 @@ export function BoxWidgetConfig({ config, updateConfig, availableVariables }: Bo
         {/* A container, so each row stacks when the builder is narrow instead of pushing Remove out of view. */}
         <Stack gap={3} className="@container">
           {config.variables.map((variable, index) => (
-            // biome-ignore lint/suspicious/noArrayIndexKey: variables can be duplicated so there's no natural unique key; list is only appended/removed from end
             // eslint-disable-next-line react/no-array-index-key -- variables can be duplicated
             <div key={index} className="flex flex-col gap-2 @md:flex-row @md:gap-3">
               <div className="flex min-w-0 grow flex-col gap-2">
