@@ -357,7 +357,7 @@ const ItemStatsTableRow = memo(function ItemStatsTableRow({
                       <span className="sr-only">corrupted </span>
                       {formatPercent(corruptedWinRate)}
                     </span>
-                    <span className="text-xs">({corrupted!.matches.toLocaleString()})</span>
+                    <span className="text-xs">({corrupted!.matches.toLocaleString("en-US")})</span>
                   </span>
                 )
               }
