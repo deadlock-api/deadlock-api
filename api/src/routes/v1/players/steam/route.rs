@@ -459,13 +459,17 @@ async fn search_steam(
     matches_played_weight: f64,
 ) -> APIResult<Vec<SteamProfile>> {
     let t0 = std::time::Instant::now();
-    let hits = match state.steam_search_index.search(
-        search_query,
-        u64::from(min_matches_played_last_30d),
-        min_last_team_avg_badge,
-        limit as usize,
-        matches_played_weight,
-    ) {
+    let hits = match state
+        .steam_search_index
+        .search(
+            search_query,
+            u64::from(min_matches_played_last_30d),
+            min_last_team_avg_badge,
+            limit as usize,
+            matches_played_weight,
+        )
+        .await
+    {
         Ok(Some(hits)) => hits,
         Ok(None) => {
             return Err(APIError::status_msg(

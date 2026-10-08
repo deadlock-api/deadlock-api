@@ -37,6 +37,9 @@ const INCREMENTAL_INTERVAL_SECS: u64 = 2 * 60;
 const FULL_REBUILD_INTERVAL_SECS: u64 = 6 * 60 * 60;
 const WRITER_HEAP_MB: usize = 200;
 const MAX_PROFILES_PER_REBUILD: usize = 10_000_000;
+/// Rows buffered between the `ClickHouse` stream and the blocking index writer during a full
+/// rebuild, so the fetch never holds more than this many profiles in memory.
+const ROW_CHANNEL_CAPACITY: usize = 4096;
 /// Minimum candidate pool size handed to the JW reranker — large enough that
 /// weight=0 (pure-similarity ranking) finds low-activity profiles, and that
 /// space-variant matches ("Average Jonas" vs "`AverageJonas`") survive the
@@ -184,20 +187,15 @@ impl SteamSearchIndex {
     }
 
     /// Full rebuild into a fresh `v_<ts>/` dir, atomic swap, GC old dirs.
+    ///
+    /// Rows are streamed from `ClickHouse` through a bounded channel into a blocking task that
+    /// owns the Tantivy writer, so neither the fetch nor the indexing/commit/filesystem work runs
+    /// on (or blocks) an async worker thread.
     pub(crate) async fn rebuild_full(
         &self,
         ch_client: &clickhouse::Client,
     ) -> Result<usize, RebuildError> {
         let started = std::time::Instant::now();
-        // Eagerly remove any incompatible-format dirs (legacy prefix or
-        // half-written v2_ dirs from a previous failed run) before building.
-        // The currently-live dir, if any, is preserved so existing readers
-        // keep serving until we swap.
-        let current = self.inner.current_dir.load_full();
-        cleanup_old_dirs(
-            &self.inner.base_path,
-            current.as_deref().map(PathBuf::as_path),
-        );
 
         let query = format!(
             "{SELECT_PROFILES_COMMON}
@@ -210,38 +208,74 @@ impl SteamSearchIndex {
                 do_not_merge_across_partitions_select_final = 1,
                 max_execution_time = 180"
         );
-        let rows = ch_client
+        let mut cursor = ch_client
             .query(&query)
             .bind(MAX_PROFILES_PER_REBUILD as u64)
-            .fetch_all::<ProfileRow>()
-            .await?;
-        let fetched = rows.len();
+            .fetch::<ProfileRow>()?;
 
         let ts = unix_now();
         let new_dir = self.inner.base_path.join(format!("{VERSION_PREFIX}{ts}"));
-        std::fs::create_dir_all(&new_dir)?;
+        let (tx, mut rx) = tokio::sync::mpsc::channel::<clickhouse::error::Result<ProfileRow>>(
+            ROW_CHANNEL_CAPACITY,
+        );
+        let builder = {
+            let inner = Arc::clone(&self.inner);
+            let new_dir = new_dir.clone();
+            tokio::task::spawn_blocking(
+                move || -> Result<(IndexReader, u32, usize), RebuildError> {
+                    // Eagerly remove any incompatible-format dirs (legacy prefix or
+                    // half-written v2_ dirs from a previous failed run) before building.
+                    // The currently-live dir, if any, is preserved so existing readers
+                    // keep serving until we swap.
+                    let current = inner.current_dir.load_full();
+                    cleanup_old_dirs(&inner.base_path, current.as_deref().map(PathBuf::as_path));
+                    std::fs::create_dir_all(&new_dir)?;
 
-        let index = open_index_at(&new_dir, true)?;
-        let mut writer = index
-            .writer(WRITER_HEAP_MB * 1024 * 1024)
-            .map_err(tantivy_err)?;
-        let max_ts = write_rows(&mut writer, self.inner.fields, &rows)?;
-        writer.commit().map_err(tantivy_err)?;
-        let reader = index
-            .reader_builder()
-            .reload_policy(ReloadPolicy::Manual)
-            .try_into()
-            .map_err(tantivy_err)?;
+                    let index = open_index_at(&new_dir, true)?;
+                    let mut writer = index
+                        .writer(WRITER_HEAP_MB * 1024 * 1024)
+                        .map_err(tantivy_err)?;
+                    let mut max_ts: u32 = 0;
+                    let mut fetched = 0;
+                    // A stream error arrives as an `Err` row: bail out before committing, so a
+                    // partial index is never swapped in (its dir is GC'd by the next rebuild).
+                    while let Some(row) = rx.blocking_recv() {
+                        max_ts = max_ts.max(add_row(&writer, inner.fields, &row?)?);
+                        fetched += 1;
+                    }
+                    writer.commit().map_err(tantivy_err)?;
+                    let reader = index
+                        .reader_builder()
+                        .reload_policy(ReloadPolicy::Manual)
+                        .try_into()
+                        .map_err(tantivy_err)?;
+                    // Persist watermark before swapping reader so on-crash recovery never
+                    // sees a reader at a newer state than the persisted watermark.
+                    write_watermark(&new_dir, max_ts);
+                    Ok((reader, max_ts, fetched))
+                },
+            )
+        };
 
-        // Persist watermark before swapping reader so on-crash recovery never
-        // sees a reader at a newer state than the persisted watermark.
-        write_watermark(&new_dir, max_ts);
+        loop {
+            let row = cursor.next().await.transpose();
+            let Some(row) = row else { break };
+            let failed = row.is_err();
+            // A send error means the writer gave up; its error surfaces from `builder` below.
+            if tx.send(row).await.is_err() || failed {
+                break;
+            }
+        }
+        drop(tx);
+        let (reader, max_ts, fetched) = builder.await??;
+
         self.inner.watermark.store(max_ts, Ordering::Relaxed);
         self.inner.reader.store(Some(Arc::new(reader)));
         self.inner
             .current_dir
             .store(Some(Arc::new(new_dir.clone())));
-        cleanup_old_dirs(&self.inner.base_path, Some(&new_dir));
+        let base_path = self.inner.base_path.clone();
+        tokio::task::spawn_blocking(move || cleanup_old_dirs(&base_path, Some(&new_dir))).await?;
 
         info!(
             "steam search index full rebuild: {fetched} docs, watermark={max_ts}, took {:?}",
@@ -304,24 +338,33 @@ impl SteamSearchIndex {
         }
         let fetched = rows.len();
 
-        let index = open_index_at(&current_dir, false)?;
-        let mut writer = index
-            .writer(WRITER_HEAP_MB * 1024 * 1024)
-            .map_err(tantivy_err)?;
+        // Tantivy indexing, the commit and the watermark write are blocking work.
         let f = self.inner.fields;
-        for row in &rows {
-            let term = Term::from_field_u64(f.account_id, u64::from(row.account_id));
-            writer.delete_term(term);
-        }
-        let max_ts = write_rows(&mut writer, f, &rows)?;
-        writer.commit().map_err(tantivy_err)?;
+        let (reader, max_ts) =
+            tokio::task::spawn_blocking(move || -> Result<(IndexReader, u32), RebuildError> {
+                let index = open_index_at(&current_dir, false)?;
+                let mut writer = index
+                    .writer(WRITER_HEAP_MB * 1024 * 1024)
+                    .map_err(tantivy_err)?;
+                for row in &rows {
+                    let term = Term::from_field_u64(f.account_id, u64::from(row.account_id));
+                    writer.delete_term(term);
+                }
+                let mut max_ts: u32 = 0;
+                for row in &rows {
+                    max_ts = max_ts.max(add_row(&writer, f, row)?);
+                }
+                writer.commit().map_err(tantivy_err)?;
 
-        let reader = index
-            .reader_builder()
-            .reload_policy(ReloadPolicy::Manual)
-            .try_into()
-            .map_err(tantivy_err)?;
-        write_watermark(&current_dir, max_ts);
+                let reader = index
+                    .reader_builder()
+                    .reload_policy(ReloadPolicy::Manual)
+                    .try_into()
+                    .map_err(tantivy_err)?;
+                write_watermark(&current_dir, max_ts);
+                Ok((reader, max_ts))
+            })
+            .await??;
         self.inner.watermark.store(max_ts, Ordering::Relaxed);
         self.inner.reader.store(Some(Arc::new(reader)));
 
@@ -334,8 +377,27 @@ impl SteamSearchIndex {
 
     /// Search the index. Returns up to `limit` profiles ranked by
     /// `jaro_winkler(personaname_lc, query) + matches_played_weight * log1p(matches)`.
+    ///
+    /// The Tantivy search and the jaro-winkler rerank over the oversampled candidate pool are
+    /// CPU-bound, so they run on the blocking pool.
+    pub(crate) async fn search(
+        &self,
+        query: &str,
+        min_matches: u64,
+        min_badge: u32,
+        limit: usize,
+        matches_played_weight: f64,
+    ) -> Result<Option<Vec<IndexedProfile>>, SearchError> {
+        let this = self.clone();
+        let query = query.to_owned();
+        tokio::task::spawn_blocking(move || {
+            this.search_blocking(&query, min_matches, min_badge, limit, matches_played_weight)
+        })
+        .await?
+    }
+
     #[expect(clippy::too_many_lines)]
-    pub(crate) fn search(
+    fn search_blocking(
         &self,
         query: &str,
         min_matches: u64,
@@ -547,7 +609,7 @@ impl SteamSearchIndex {
             if !loaded && let Err(e) = this.rebuild_full(&ch_client).await {
                 warn!("steam search index initial full build failed: {e}");
             }
-            gc_stale_instance_dirs(&this.inner.root_path, &this.inner.base_path);
+            this.gc_stale_instance_dirs().await;
             let mut inc = interval(Duration::from_secs(INCREMENTAL_INTERVAL_SECS));
             let mut full = interval(Duration::from_secs(FULL_REBUILD_INTERVAL_SECS));
             inc.tick().await;
@@ -563,11 +625,24 @@ impl SteamSearchIndex {
                         if let Err(e) = this.rebuild_full(&ch_client).await {
                             error!("steam search index periodic full rebuild failed: {e}");
                         }
-                        gc_stale_instance_dirs(&this.inner.root_path, &this.inner.base_path);
+                        this.gc_stale_instance_dirs().await;
                     }
                 }
             }
         });
+    }
+}
+
+impl SteamSearchIndex {
+    async fn gc_stale_instance_dirs(&self) {
+        let inner = Arc::clone(&self.inner);
+        if let Err(e) = tokio::task::spawn_blocking(move || {
+            gc_stale_instance_dirs(&inner.root_path, &inner.base_path);
+        })
+        .await
+        {
+            warn!("steam search index: stale instance dir GC task failed: {e}");
+        }
     }
 }
 
@@ -828,41 +903,38 @@ fn register_default_tokenizer(index: &Index) {
     index.tokenizers().register("default", analyzer);
 }
 
-fn write_rows(
-    writer: &mut tantivy::IndexWriter,
+/// Adds one profile document and returns its `last_updated` timestamp (for the watermark).
+fn add_row(
+    writer: &tantivy::IndexWriter,
     f: SearchFields,
-    rows: &[ProfileRow],
+    row: &ProfileRow,
 ) -> Result<u32, RebuildError> {
-    let mut max_ts: u32 = 0;
-    for row in rows {
-        let mut doc = TantivyDocument::default();
-        doc.add_u64(f.account_id, u64::from(row.account_id));
-        doc.add_text(f.personaname_search, &row.personaname_lc);
-        doc.add_text(f.personaname_exact, &row.personaname_lc);
-        let personaname_nospace = strip_whitespace(&row.personaname_lc);
-        if !personaname_nospace.is_empty() {
-            doc.add_text(f.personaname_nospace, &personaname_nospace);
-        }
-        doc.add_text(f.personaname, &row.personaname);
-        doc.add_text(f.profileurl, &row.profileurl);
-        doc.add_text(f.avatar, &row.avatar);
-        doc.add_text(f.avatarmedium, &row.avatarmedium);
-        doc.add_text(f.avatarfull, &row.avatarfull);
-        if let Some(name) = row.realname.as_deref().filter(|s| !s.is_empty()) {
-            doc.add_text(f.realname, name);
-        }
-        if let Some(cc) = row.countrycode.as_deref().filter(|s| !s.is_empty()) {
-            doc.add_text(f.countrycode, cc);
-        }
-        doc.add_u64(f.last_updated, u64::from(row.last_updated_ts));
-        doc.add_u64(f.matches_played, row.matches_played);
-        doc.add_u64(f.last_team_avg_badge, u64::from(row.last_team_avg_badge));
-        let friends_buf = encode_friends(&row.friends_account_id, &row.friends_friend_since);
-        doc.add_bytes(f.friends_blob, &friends_buf);
-        writer.add_document(doc).map_err(tantivy_err)?;
-        max_ts = max_ts.max(row.last_updated_ts);
+    let mut doc = TantivyDocument::default();
+    doc.add_u64(f.account_id, u64::from(row.account_id));
+    doc.add_text(f.personaname_search, &row.personaname_lc);
+    doc.add_text(f.personaname_exact, &row.personaname_lc);
+    let personaname_nospace = strip_whitespace(&row.personaname_lc);
+    if !personaname_nospace.is_empty() {
+        doc.add_text(f.personaname_nospace, &personaname_nospace);
     }
-    Ok(max_ts)
+    doc.add_text(f.personaname, &row.personaname);
+    doc.add_text(f.profileurl, &row.profileurl);
+    doc.add_text(f.avatar, &row.avatar);
+    doc.add_text(f.avatarmedium, &row.avatarmedium);
+    doc.add_text(f.avatarfull, &row.avatarfull);
+    if let Some(name) = row.realname.as_deref().filter(|s| !s.is_empty()) {
+        doc.add_text(f.realname, name);
+    }
+    if let Some(cc) = row.countrycode.as_deref().filter(|s| !s.is_empty()) {
+        doc.add_text(f.countrycode, cc);
+    }
+    doc.add_u64(f.last_updated, u64::from(row.last_updated_ts));
+    doc.add_u64(f.matches_played, row.matches_played);
+    doc.add_u64(f.last_team_avg_badge, u64::from(row.last_team_avg_badge));
+    let friends_buf = encode_friends(&row.friends_account_id, &row.friends_friend_since);
+    doc.add_bytes(f.friends_blob, &friends_buf);
+    writer.add_document(doc).map_err(tantivy_err)?;
+    Ok(row.last_updated_ts)
 }
 
 fn unix_now() -> u64 {
@@ -985,12 +1057,16 @@ pub(crate) enum RebuildError {
     Io(#[from] std::io::Error),
     #[error("tantivy: {0}")]
     Tantivy(String),
+    #[error("blocking task: {0}")]
+    Join(#[from] tokio::task::JoinError),
 }
 
 #[derive(Debug, thiserror::Error)]
 pub(crate) enum SearchError {
     #[error("tantivy: {0}")]
     Tantivy(String),
+    #[error("blocking task: {0}")]
+    Join(#[from] tokio::task::JoinError),
 }
 
 #[cfg(test)]
