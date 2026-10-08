@@ -103,6 +103,8 @@ export function PlayerComparison({ filters }: { filters: CompareFilters }) {
       ranks.isError && !ranks.data
         ? null
         : (ranks.data?.find((rank) => rank.account_id === accountId)?.badge ?? (ranksSettled ? null : undefined));
+    // Unranked (badge 0) has no rank to compare.
+    const rankBadge = badge === undefined ? undefined : badge || null;
     const aggregate = known ? aggregateHeroStats(rows, accountId) : undefined;
     return {
       accountId,
@@ -111,11 +113,10 @@ export function PlayerComparison({ filters }: { filters: CompareFilters }) {
       profileLoading: (profileQueries[index]?.isPending ?? true) && !profile,
       color: SERIES_COLORS[colorIndexes[index] % SERIES_COLORS.length],
       playstyle: playstyleLabel(playstylePercentiles(metrics.population, metrics.own[index], filters.gameMode))?.label,
-      rankBadge: badge === undefined ? undefined : badge || null,
+      rankBadge,
       aggregate: aggregate && {
         ...aggregate,
-        // Unranked (badge 0) has no rank to compare.
-        rankBadge: badge === undefined ? undefined : badge || null,
+        rankBadge,
         healingPerMin: metricAverage(index, "healing_per_min"),
         healPreventedPerMatch: metricAverage(index, "heal_prevented"),
       },

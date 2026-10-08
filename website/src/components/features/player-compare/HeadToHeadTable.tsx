@@ -1,6 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
 import type { Rank } from "deadlock_api_client";
-import { CrownIcon } from "lucide-react";
 
 import { BadgeImage } from "~/components/domain/assets/BadgeImage";
 import { Panel, PanelHeader } from "~/components/patterns/panel/Panel";
@@ -15,7 +14,7 @@ import { formatPlayerMetricValue } from "~/lib/player-metrics";
 import { badgeLabel } from "~/lib/rank-utils";
 import { ranksQueryOptions } from "~/queries/ranks-query";
 
-import { PlayerColumnHead, RowValue } from "./CompareTableParts";
+import { CrownSlot, PlayerColumnHead, RowValue } from "./CompareTableParts";
 import type { ComparedPlayer } from "./types";
 
 /** One value as the table shows it: a number in its format, or a rank as its badge and name. */
@@ -55,7 +54,6 @@ export function HeadToHeadTable({
       stat.key !== "heroesPlayed" ||
       aggregates.some((aggregate) => aggregate === undefined || (aggregate !== null && aggregate.heroesPlayed !== 1)),
   );
-  const winnersOf = (stat: CompareStat) => compareStatWinners(aggregates, stat);
   // Two players with matches make a contest; a player without any is shown but not scored.
   const contest = aggregates.filter((aggregate) => aggregate !== null).length >= 2;
 
@@ -79,7 +77,7 @@ export function HeadToHeadTable({
             <TableBody key={group}>
               {groupStats.map((stat) => {
                 const values = aggregates.map((aggregate) => aggregate?.[stat.key]);
-                const winners = winnersOf(stat);
+                const winners = compareStatWinners(aggregates, stat);
                 return (
                   <TableRow key={stat.key}>
                     <TableCell data-pinned className="text-muted-foreground">
@@ -133,19 +131,13 @@ export function HeadToHeadTable({
                   <TableCell key={player.accountId} className="text-end">
                     {!settled ? (
                       <Skeleton className="ms-auto h-4 w-12" />
-                    ) : players.length < 2 ? (
-                      <NoValue label="Add an opponent to score" />
                     ) : (
                       // The crown after the count, in the slot the values above keep for theirs.
                       <Inline gap={1} wrap="nowrap" justify="end">
                         <Text className={leads ? "font-bold" : undefined}>
                           {tally[index]} of {scored.length}
                         </Text>
-                        {leads ? (
-                          <CrownIcon aria-hidden="true" className="hidden size-3.5 shrink-0 @xl/table:block" />
-                        ) : (
-                          <span aria-hidden="true" className="hidden size-3.5 shrink-0 @xl/table:block" />
-                        )}
+                        <CrownSlot crowned={leads} />
                         {leads && <span className="sr-only">, the most</span>}
                       </Inline>
                     )}

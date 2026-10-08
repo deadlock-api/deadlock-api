@@ -136,42 +136,27 @@ function RecordValue({
   won: boolean;
   children: React.ReactNode;
 }) {
-  if (heroId != null) {
-    return (
-      <Inline gap={1.5} wrap="nowrap" justify="end" title={detail}>
-        {/* The hero right before a value of fixed width: heroes and numbers each line up down the column. */}
-        <HeroImage
-          heroId={heroId}
-          shape="circle"
-          className={crowded ? "hidden size-5 shrink-0 @2xl/table:block" : "hidden size-5 shrink-0 @xl/table:block"}
-        />
-        <RowValue won={won} width={crowded ? "fixed-wide" : "fixed"}>
-          {children}
-        </RowValue>
-        {detail && <span className="sr-only">{detail}</span>}
-      </Inline>
-    );
-  }
-  if (!match)
-    return (
-      <RowValue won={won} width={crowded ? "fixed-wide" : "fixed"}>
-        {children}
-      </RowValue>
-    );
-  const date = day.unix(match.startTime).utc().format("MMM D, YYYY");
+  const value = (
+    <RowValue won={won} width={crowded ? "fixed-wide" : "fixed"}>
+      {children}
+    </RowValue>
+  );
+  const shownHeroId = heroId ?? match?.heroId;
+  if (shownHeroId == null) return value;
+  // One match's record carries its date; a hero the value is about carries its detail instead.
+  const date = heroId == null && match ? day.unix(match.startTime).utc().format("MMM D, YYYY") : undefined;
   return (
-    <Inline gap={1.5} wrap="nowrap" justify="end" title={date}>
-      {/* The image's alt and title name the hero. */}
-      {/* A narrow table keeps the numbers and gives the hero's room to the other players' columns. */}
+    <Inline gap={1.5} wrap="nowrap" justify="end" title={date ?? detail}>
+      {/* The image's alt and title name the hero. A narrow table keeps the numbers and gives the hero's room to the
+          other players' columns; the hero sits right before a value of fixed width, so heroes and numbers each line
+          up down the column. */}
       <HeroImage
-        heroId={match.heroId}
+        heroId={shownHeroId}
         shape="circle"
         className={crowded ? "hidden size-5 shrink-0 @2xl/table:block" : "hidden size-5 shrink-0 @xl/table:block"}
       />
-      <RowValue won={won} width={crowded ? "fixed-wide" : "fixed"}>
-        {children}
-      </RowValue>
-      <span className="sr-only">on {date}</span>
+      {value}
+      {date ? <span className="sr-only">on {date}</span> : detail && <span className="sr-only">{detail}</span>}
     </Inline>
   );
 }

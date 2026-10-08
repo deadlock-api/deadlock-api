@@ -39,7 +39,7 @@ export function PlayerColumnHead({
           </span>
         )}
         {/* The crown's slot every value keeps (RowValue), so the name ends where the values do. */}
-        {crownSlot && <span aria-hidden="true" className="hidden size-3.5 shrink-0 @xl/table:block" />}
+        {crownSlot && <CrownSlot />}
       </Inline>
     </TableHead>
   );
@@ -77,12 +77,20 @@ export function RowValue({
       >
         {children}
       </Text>
-      {won ? (
-        <CrownIcon aria-hidden="true" className="hidden size-3.5 shrink-0 @xl/table:block" />
-      ) : (
-        <span aria-hidden="true" className="hidden size-3.5 shrink-0 @xl/table:block" />
-      )}
+      <CrownSlot crowned={won} />
       {won && <span className="sr-only">, best</span>}
     </Inline>
+  );
+}
+
+/**
+ * The slot after a value that holds the best one's crown, kept empty by the rest, so the values of a column end on one
+ * edge. A phone-narrow table drops it.
+ */
+export function CrownSlot({ crowned = false }: { crowned?: boolean }) {
+  return crowned ? (
+    <CrownIcon aria-hidden="true" className="hidden size-3.5 shrink-0 @xl/table:block" />
+  ) : (
+    <span aria-hidden="true" className="hidden size-3.5 shrink-0 @xl/table:block" />
   );
 }

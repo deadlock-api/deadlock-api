@@ -1,7 +1,7 @@
 import { CalendarDays, Clock } from "lucide-react";
 import { CartesianGrid, Line, LineChart, Tooltip, XAxis, YAxis } from "recharts";
 
-import { ChartLegend, ChartLegendItem } from "~/components/patterns/charts/ChartLegend";
+import { ChartLegend } from "~/components/patterns/charts/ChartLegend";
 import { ChartReading, ChartReadings } from "~/components/patterns/charts/ChartReadings";
 import { ChartError, ChartLoading } from "~/components/patterns/charts/ChartStates";
 import { ChartSurface } from "~/components/patterns/charts/ChartSurface";
@@ -21,6 +21,7 @@ import { useHydrated } from "~/hooks/useHydrated";
 import { matchesByHour, matchesByWeekday } from "~/lib/compare-records";
 import { formatPercent } from "~/lib/format";
 
+import { PlayerLegendItems } from "./PlayerLegendItems";
 import type { ComparedPlayer } from "./types";
 import type { CompareMatchHistory } from "./useCompareMatchHistories";
 
@@ -58,9 +59,9 @@ export function ActivityPanel({
   className?: string;
 }) {
   const hydrated = useHydrated();
-  const pending = !hydrated || histories.some((history) => history.isPending);
-  const allFailed = histories.length > 0 && histories.every((history) => history.isError);
   const settled = !histories.some((history) => history.isPending);
+  const pending = !hydrated || !settled;
+  const allFailed = histories.length > 0 && histories.every((history) => history.isError);
   if (settled && !allFailed && histories.every((history) => (history.heroMatches?.length ?? 0) === 0)) return null;
 
   const keys = players.map((player) => String(player.accountId));
@@ -74,34 +75,32 @@ export function ActivityPanel({
     matches: Object.fromEntries(keys.map((key, index) => [key, counts[index].matches])),
     wins: Object.fromEntries(keys.map((key, index) => [key, counts[index].wins])),
   });
+  const hourPoints = () => {
+    const byHour = histories.map((history) =>
+      matchesByHour(history.heroMatches ?? [], (unix) => day.unix(unix).hour()),
+    );
+    return Array.from({ length: 24 }, (_, hour) =>
+      point(
+        hourLabel(hour),
+        `${hourLabel(hour)} – ${hourLabel((hour + 1) % 24)}`,
+        byHour.map((buckets) => buckets[hour]),
+      ),
+    );
+  };
+  const weekdayPoints = () => {
+    const byWeekday = histories.map((history) =>
+      matchesByWeekday(history.heroMatches ?? [], (unix) => (day.unix(unix).day() + 6) % 7),
+    );
+    return WEEKDAYS.map((label, weekday) =>
+      point(
+        label,
+        label,
+        byWeekday.map((buckets) => buckets[weekday]),
+      ),
+    );
+  };
   // Local hours or weekdays: only read once hydrated.
-  const points = pending
-    ? []
-    : by === "hour"
-      ? (() => {
-          const byHour = histories.map((history) =>
-            matchesByHour(history.heroMatches ?? [], (unix) => day.unix(unix).hour()),
-          );
-          return Array.from({ length: 24 }, (_, hour) =>
-            point(
-              hourLabel(hour),
-              `${hourLabel(hour)} – ${hourLabel((hour + 1) % 24)}`,
-              byHour.map((buckets) => buckets[hour]),
-            ),
-          );
-        })()
-      : (() => {
-          const byWeekday = histories.map((history) =>
-            matchesByWeekday(history.heroMatches ?? [], (unix) => (day.unix(unix).day() + 6) % 7),
-          );
-          return WEEKDAYS.map((label, weekday) =>
-            point(
-              label,
-              label,
-              byWeekday.map((buckets) => buckets[weekday]),
-            ),
-          );
-        })();
+  const points = pending ? [] : by === "hour" ? hourPoints() : weekdayPoints();
   const title = by === "hour" ? "Time of day" : "Day of week";
 
   return (
@@ -128,11 +127,7 @@ export function ActivityPanel({
             />
           )}
           <ChartLegend label="Players">
-            {players.map((player) => (
-              <ChartLegendItem key={player.accountId} color={player.color} shape="line" title={player.name}>
-                <span className="max-w-full truncate">{player.name}</span>
-              </ChartLegendItem>
-            ))}
+            <PlayerLegendItems players={players} shape="line" />
           </ChartLegend>
         </Stack>
       </PanelBody>

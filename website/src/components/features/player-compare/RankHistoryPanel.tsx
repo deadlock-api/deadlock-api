@@ -16,7 +16,6 @@ import {
   CHART_X_AXIS,
   CHART_Y_AXIS,
   CHART_ACTIVE_DOT,
-  CHART_COLOR,
 } from "~/components/patterns/charts/theme";
 import { Panel, PanelBody, PanelHeader } from "~/components/patterns/panel/Panel";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
@@ -43,6 +42,7 @@ import { rankHistoryPoints } from "~/lib/tracker/compute";
 import type { CompareFilters } from "~/queries/player-compare-queries";
 import { ranksQueryOptions } from "~/queries/ranks-query";
 
+import { LoneDot } from "./LoneDot";
 import type { ComparedPlayer } from "./types";
 import type { CompareMatchHistory } from "./useCompareMatchHistories";
 
@@ -101,14 +101,14 @@ export function RankHistoryPanel({
       <PanelBody size="sm" className="flex flex-1 flex-col">
         {/* The legend under the plot, as on the weekly trend beside it, so the pair lines up. */}
         <Stack gap={2} className="flex-1">
-          {histories.length > 0 && histories.every((history) => history.isError) ? (
+          {allFailed ? (
             <ChartError
               label={LABEL}
               onRetry={() => {
                 for (const history of histories) if (history.isError) history.refetch();
               }}
             />
-          ) : histories.some((history) => history.isPending) ? (
+          ) : !settled ? (
             <ChartLoading label={LABEL} size="grow" />
           ) : axisBy === "date" ? (
             <RankHistoryChart players={players} ranks={ranks} filters={filters} daysByPlayer={daysByPlayer} />
@@ -230,21 +230,9 @@ function RankHistoryChart({
                 strokeWidth={2}
                 isAnimationActive={false}
                 activeDot={CHART_ACTIVE_DOT}
-                dot={({ cx, cy, index, payload }: { cx?: number; cy?: number; index?: number; payload?: RankRow }) =>
-                  payload?.lone[key] && cx != null && cy != null ? (
-                    <circle
-                      key={index}
-                      cx={cx}
-                      cy={cy}
-                      r={4}
-                      fill={player.color}
-                      stroke={CHART_COLOR.surface}
-                      strokeWidth={2}
-                    />
-                  ) : (
-                    <g key={index} />
-                  )
-                }
+                dot={({ cx, cy, index, payload }: { cx?: number; cy?: number; index?: number; payload?: RankRow }) => (
+                  <LoneDot key={index} cx={cx} cy={cy} color={player.color} lone={!!payload?.lone[key]} />
+                )}
               />
             );
           })}
@@ -352,20 +340,9 @@ function RankByMatchChart({
                 strokeWidth={2}
                 dot={
                   lone
-                    ? ({ cx, cy, index: at }: { cx?: number; cy?: number; index?: number }) =>
-                        at === 0 && cx != null && cy != null ? (
-                          <circle
-                            key={at}
-                            cx={cx}
-                            cy={cy}
-                            r={4}
-                            fill={player.color}
-                            stroke={CHART_COLOR.surface}
-                            strokeWidth={2}
-                          />
-                        ) : (
-                          <g key={at} />
-                        )
+                    ? ({ cx, cy, index: at }: { cx?: number; cy?: number; index?: number }) => (
+                        <LoneDot key={at} cx={cx} cy={cy} color={player.color} lone={at === 0} />
+                      )
                     : false
                 }
                 isAnimationActive={false}

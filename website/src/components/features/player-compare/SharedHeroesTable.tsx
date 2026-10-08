@@ -22,13 +22,13 @@ import type { ComparedPlayer } from "./types";
 
 const COLLAPSED_ROWS = 6;
 
-/** The heroes at least two of the players have played, with each one's matches, win rate and KDA on them. */
 /** "9.1 / 4.0 / 12.3", or null when any of the three is missing. */
 function kdaText(values: (number | null | undefined)[]): string | null {
   const parts = values.map((value) => formatStatValue(value, "decimal1"));
   return parts.every((part) => part != null) ? parts.join(" / ") : null;
 }
 
+/** The heroes at least two of the players have played, with each one's matches, win rate and KDA on them. */
 export function SharedHeroesTable({
   players,
   rows,

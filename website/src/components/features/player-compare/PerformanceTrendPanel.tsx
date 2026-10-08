@@ -2,7 +2,7 @@ import { ChartNoAxesCombined } from "lucide-react";
 import { useState } from "react";
 import { CartesianGrid, Line, LineChart, ReferenceLine, Tooltip, XAxis, YAxis } from "recharts";
 
-import { ChartLegend, ChartLegendItem } from "~/components/patterns/charts/ChartLegend";
+import { ChartLegend } from "~/components/patterns/charts/ChartLegend";
 import { ChartReading, ChartReadings } from "~/components/patterns/charts/ChartReadings";
 import { ChartError, ChartLoading } from "~/components/patterns/charts/ChartStates";
 import { ChartSurface } from "~/components/patterns/charts/ChartSurface";
@@ -15,7 +15,6 @@ import {
   CHART_X_AXIS,
   CHART_Y_AXIS,
   CHART_ACTIVE_DOT,
-  CHART_COLOR,
 } from "~/components/patterns/charts/theme";
 import { Panel, PanelBody, PanelHeader } from "~/components/patterns/panel/Panel";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
@@ -38,6 +37,8 @@ import { formatPercent } from "~/lib/format";
 import type { GameMode } from "~/lib/game-mode";
 import { formatStatValue } from "~/lib/stat-format";
 
+import { LoneDot } from "./LoneDot";
+import { PlayerLegendItems } from "./PlayerLegendItems";
 import type { ComparedPlayer } from "./types";
 import type { CompareMatchHistory } from "./useCompareMatchHistories";
 
@@ -124,24 +125,20 @@ export function PerformanceTrendPanel({
       {/* The plot takes whatever height its grid row gives the panel, from a compact minimum. */}
       <PanelBody size="sm" className="flex flex-1 flex-col">
         <Stack gap={2} className="flex-1">
-          {histories.length > 0 && histories.every((history) => history.isError) ? (
+          {allFailed ? (
             <ChartError
               label={LABEL}
               onRetry={() => {
                 for (const history of histories) if (history.isError) history.refetch();
               }}
             />
-          ) : histories.some((history) => history.isPending) ? (
+          ) : !settled ? (
             <ChartLoading label={LABEL} size="grow" />
           ) : (
             <PerformanceTrendChart players={players} metric={metric} weeksByPlayer={weeksByPlayer} bucket={bucket} />
           )}
           <ChartLegend label="Players">
-            {players.map((player) => (
-              <ChartLegendItem key={player.accountId} color={player.color} shape="line" title={player.name}>
-                <span className="max-w-full truncate">{player.name}</span>
-              </ChartLegendItem>
-            ))}
+            <PlayerLegendItems players={players} shape="line" />
           </ChartLegend>
         </Stack>
       </PanelBody>
@@ -275,21 +272,7 @@ function PerformanceTrendChart({
                 cy?: number;
                 index?: number;
                 payload?: TrendRow;
-              }) =>
-                payload?.lone[key] && cx != null && cy != null ? (
-                  <circle
-                    key={at}
-                    cx={cx}
-                    cy={cy}
-                    r={4}
-                    fill={player.color}
-                    stroke={CHART_COLOR.surface}
-                    strokeWidth={2}
-                  />
-                ) : (
-                  <g key={at} />
-                )
-              }
+              }) => <LoneDot key={at} cx={cx} cy={cy} color={player.color} lone={!!payload?.lone[key]} />}
             />
           );
         })}

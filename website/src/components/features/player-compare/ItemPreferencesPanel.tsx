@@ -28,7 +28,6 @@ const NARROW_ITEM_COUNT = 5;
 const EXPANDED_ITEM_COUNT = 16;
 
 /** Columns by the panel's width: one per player once each has room for an item name. */
-
 const COLUMNS = {
   2: { base: 1, sm: 2 },
   3: { base: 1, sm: 3 },
@@ -236,7 +235,7 @@ function ItemRow({
                 {/* Short, so the win rate survives a narrow column; the tooltip spells it out. */}
                 {formatShare(entry.share)}
                 <span className="sr-only"> bought</span> ·{" "}
-                <Text variant="caption" tone={tone === "muted" ? "muted" : tone}>
+                <Text variant="caption" tone={tone}>
                   {formatPercent(entry.winRate, 0)} WR
                 </Text>
               </Text>

@@ -46,18 +46,18 @@ function topHeroes(rows: readonly HeroStats[], accountId: number) {
     .slice(0, TOP_HEROES);
 }
 
-/**
- * The players side by side as the page's headline, one card each in the player's color: who they are, their rank,
- * how many stats they win, their headline numbers, the heroes they play and how their last matches went. The card
- * holds the player's controls too: the name moves them (drag, or the arrow keys), the cross removes them. While there
- * is room, the last slot adds a player.
- */
 /** "9.1 / 4.0 / 12.3 K/D/A", or a plain note when any of the three is missing. */
 function kdaLine(values: (number | null | undefined)[]): string {
   const parts = values.map((value) => formatPlayerMetricValue(value, "decimal1"));
   return parts.every((part) => part != null) ? `${parts.join(" / ")} K/D/A` : "K/D/A not recorded";
 }
 
+/**
+ * The players side by side as the page's headline, one card each in the player's color: who they are, their rank,
+ * how many stats they win, their headline numbers, the heroes they play and how their last matches went. The card
+ * holds the player's controls too: the name moves them (drag, or the arrow keys), the cross removes them. While there
+ * is room, the last slot adds a player.
+ */
 export function PlayerCards({
   players,
   rows,
@@ -248,8 +248,6 @@ export function PlayerCards({
                                   value={
                                     !settled || aggregate === undefined ? (
                                       <Skeleton className="h-6 w-10" />
-                                    ) : players.length < 2 ? (
-                                      <NoValue label="Add an opponent to score" />
                                     ) : (
                                       <Inline gap={1} wrap="nowrap" asChild>
                                         <span>
@@ -336,8 +334,6 @@ export function PlayerCards({
                                   <Inline gap={1} wrap="nowrap">
                                     {aggregate === undefined ? (
                                       <Skeleton className="h-7 w-24" />
-                                    ) : aggregate === null ? (
-                                      <NoValue />
                                     ) : (
                                       topHeroes(rows, player.accountId).map((row, heroIndex) => (
                                         <MostPlayedHero

@@ -10,6 +10,7 @@ import { Inline } from "~/components/ui/stack";
 import type { GameMode } from "~/lib/game-mode";
 
 import { DistributionMarkers, distributionMetricsFor } from "./DistributionMarkers";
+import { PlayerLegendItems } from "./PlayerLegendItems";
 import type { ComparedPlayer } from "./types";
 import type { CompareMetrics } from "./useCompareMetrics";
 
@@ -44,13 +45,7 @@ export function PercentileComparison({
         {/* The legend, then the zoom toggle on the far right. */}
         <Inline gap={3} wrap="nowrap">
           <ChartLegend label="Players">
-            {players.map((player) => (
-              <ChartLegendItem key={player.accountId} color={player.color} shape="line" title={player.name}>
-                <span className="max-w-full truncate" title={player.name}>
-                  {player.name}
-                </span>
-              </ChartLegendItem>
-            ))}
+            <PlayerLegendItems players={players} shape="line" />
             <ChartLegendItem color={CHART_COLOR.reference} shape="dashed">
               Median player
             </ChartLegendItem>

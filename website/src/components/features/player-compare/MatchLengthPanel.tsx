@@ -1,7 +1,7 @@
 import { Timer } from "lucide-react";
 import { Bar, BarChart, CartesianGrid, ReferenceLine, Tooltip, XAxis, YAxis } from "recharts";
 
-import { ChartLegend, ChartLegendItem } from "~/components/patterns/charts/ChartLegend";
+import { ChartLegend } from "~/components/patterns/charts/ChartLegend";
 import { ChartReading, ChartReadings } from "~/components/patterns/charts/ChartReadings";
 import { ChartError, ChartLoading } from "~/components/patterns/charts/ChartStates";
 import { ChartSurface } from "~/components/patterns/charts/ChartSurface";
@@ -19,6 +19,7 @@ import { Stack } from "~/components/ui/stack";
 import { type BracketResult, DURATION_BRACKETS, MIN_BRACKET_MATCHES, winRateByDuration } from "~/lib/compare-records";
 import { formatPercent } from "~/lib/format";
 
+import { PlayerLegendItems } from "./PlayerLegendItems";
 import type { ComparedPlayer } from "./types";
 import type { CompareMatchHistory } from "./useCompareMatchHistories";
 
@@ -161,11 +162,7 @@ export function MatchLengthPanel({
             </ChartSurface>
           )}
           <ChartLegend label="Players">
-            {players.map((player) => (
-              <ChartLegendItem key={player.accountId} color={player.color} title={player.name}>
-                <span className="max-w-full truncate">{player.name}</span>
-              </ChartLegendItem>
-            ))}
+            <PlayerLegendItems players={players} />
           </ChartLegend>
         </Stack>
       </PanelBody>

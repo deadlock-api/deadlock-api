@@ -31,6 +31,7 @@ import { formatStatValue } from "~/lib/stat-format";
 import { type CompareFilters } from "~/queries/player-compare-queries";
 import { playerPerformanceCurveQueryOptions } from "~/queries/player-performance-curve-query";
 
+import { PlayerLegendItems } from "./PlayerLegendItems";
 import type { ComparedPlayer } from "./types";
 
 const LABEL = "match timeline";
@@ -326,11 +327,7 @@ export function TimelinePanel({
             </ChartSurface>
           )}
           <ChartLegend label="Players">
-            {players.map((player) => (
-              <ChartLegendItem key={player.accountId} color={player.color} shape="line" title={player.name}>
-                <span className="max-w-full truncate">{player.name}</span>
-              </ChartLegendItem>
-            ))}
+            <PlayerLegendItems players={players} shape="line" />
             {relative && (
               <ChartLegendItem color={CHART_COLOR.reference} shape="dashed">
                 Average player
