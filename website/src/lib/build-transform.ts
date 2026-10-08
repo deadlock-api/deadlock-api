@@ -253,9 +253,10 @@ export function buildPlayerBuildCards(
       // of another item the player bought.
       if (sold && upgradeChainLookup) {
         const className = upgradeChainLookup.classNameById.get(i.item_id);
+        // Scans the player's few purchases rather than every item in the game.
         if (className) {
-          for (const [otherId, components] of upgradeChainLookup.componentsByItemId) {
-            if (components.includes(className) && boughtItemIds.has(otherId)) {
+          for (const otherId of boughtItemIds) {
+            if (upgradeChainLookup.componentsByItemId.get(otherId)?.includes(className)) {
               sold = false;
               upgraded = true;
               break;
