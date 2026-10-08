@@ -3,6 +3,7 @@ import type { QueryClient } from "@tanstack/react-query";
 import { buildSearchCatalog, type SearchCatalog } from "~/lib/ai-search/catalog";
 import { intentFromDecision, questionEntities } from "~/lib/ai-search/decide";
 import { directIntent } from "~/lib/ai-search/intent";
+import { lookupOf } from "~/lib/ai-search/lookup";
 import { resolveIntent } from "~/lib/ai-search/resolve";
 import { decideSearch } from "~/lib/ai-search/search-fns";
 import { PATCHES } from "~/lib/constants";
@@ -31,10 +32,15 @@ async function loadSearchCatalog(queryClient: QueryClient): Promise<SearchCatalo
 }
 
 /**
- * What a question came to: the page to open, a question no page answers, or a visitor who asked too much. A failed
- * model call throws, like any other failed request.
+ * What a question came to: the page to open, a question no page answers, a question after one player or one match
+ * (no page holds either), or a visitor who asked too much. A failed model call throws, like any other failed request.
  */
-type Routed = { kind: "opened"; id: string; href: string } | { kind: "not_understood" } | { kind: "rate_limited" };
+type Routed =
+  | { kind: "opened"; id: string; href: string }
+  | { kind: "not_understood" }
+  | { kind: "player_lookup" }
+  | { kind: "match_lookup" }
+  | { kind: "rate_limited" };
 
 /** `direct`: a bare hero or item name, answered without the model. `durationMs`: catalogs and model together. */
 export async function routeQuestion(
@@ -47,6 +53,8 @@ export async function routeQuestion(
   const direct = intent !== undefined;
   const done = (routed: Routed) => ({ ...routed, direct, durationMs: performance.now() - startedAt });
   if (!intent) {
+    const lookup = lookupOf(question);
+    if (lookup) return done({ kind: lookup === "player" ? "player_lookup" : "match_lookup" });
     const entities = questionEntities(question, vocabulary);
     const decided = await decideSearch({ data: { question, entities, rankNames: [...vocabulary.rankNames] } });
     if (!decided.ok && decided.reason === "rate_limited") return done({ kind: "rate_limited" });

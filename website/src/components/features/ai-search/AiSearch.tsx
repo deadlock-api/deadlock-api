@@ -30,7 +30,7 @@ const FINDING = "Finding the page";
 function trackQuestion(event: {
   question: string;
   source: "home" | "sidebar";
-  outcome: "opened" | "not_understood" | "rate_limited" | "error";
+  outcome: "opened" | "not_understood" | "player_lookup" | "match_lookup" | "rate_limited" | "error";
   page?: string;
   direct?: boolean;
   duration_ms?: number;
@@ -108,6 +108,16 @@ export function AiSearch({ size = "default", className }: AiSearchProps) {
           });
           if (routed.kind === "rate_limited") {
             toast(`That's a lot of questions. You can ask ${QUESTIONS_PER_MINUTE} a minute; try again shortly.`);
+            return undefined;
+          }
+          if (routed.kind === "player_lookup") {
+            setUnmatched(true);
+            toast("We don't have player stats. Try asking about a hero, an item or a stat.");
+            return undefined;
+          }
+          if (routed.kind === "match_lookup") {
+            setUnmatched(true);
+            toast("We don't have stats for single matches. Try asking about a hero, an item or a stat.");
             return undefined;
           }
           if (routed.kind === "not_understood") {
