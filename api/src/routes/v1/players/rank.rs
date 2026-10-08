@@ -13,7 +13,7 @@ use utoipa::ToSchema;
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
-use crate::routes::v1::players::ensure_not_protected;
+use crate::routes::v1::players::{ensure_not_protected, without_protected};
 use crate::services::clickhouse_batcher::{BatchQuery, ClickhouseBatcher, in_clause};
 use crate::services::rank_image::{self, RankImageFormat, RankImageQuery};
 use crate::services::rate_limiter::Quota;
@@ -377,15 +377,7 @@ pub(super) async fn rank_batch(
         )
         .await?;
 
-    let protected_users = state
-        .steam_client
-        .get_protected_users(&state.pg_client)
-        .await?;
-    let account_ids: Vec<u32> = account_ids
-        .into_iter()
-        .unique()
-        .filter(|id| !protected_users.contains(id))
-        .collect();
+    let account_ids = without_protected(&state, account_ids.into_iter().unique()).await?;
 
     let batcher = &state.batchers.player_rank;
     let ranks = futures::future::try_join_all(account_ids.iter().map(|&account_id| async move {

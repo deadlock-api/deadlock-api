@@ -24,6 +24,7 @@ use utoipa::{IntoParams, ToSchema};
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::matches::types::{GameMode, MatchMode, reject_brawl_badge_filter};
+use crate::routes::v1::players::without_protected;
 use crate::services::rate_limiter::Quota;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::utils::json_stream::{ResponseFormat, stream_rows};
@@ -883,14 +884,7 @@ pub(super) async fn bulk_metadata(
         query.max_average_badge,
     )?;
     if let Some(account_ids) = query.account_ids {
-        let protected_users = state
-            .steam_client
-            .get_protected_users(&state.pg_client)
-            .await?;
-        let filtered_account_ids = account_ids
-            .into_iter()
-            .filter(|id| !protected_users.contains(id))
-            .collect::<Vec<_>>();
+        let filtered_account_ids = without_protected(&state, account_ids).await?;
         if filtered_account_ids.is_empty() {
             return Err(APIError::protected_user());
         }

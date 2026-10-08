@@ -13,10 +13,10 @@ use utoipa::{IntoParams, ToSchema};
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
-use crate::routes::v1::players::ensure_not_protected;
 use crate::routes::v1::players::steam::update::{
     MAX_REFRESH_ACCOUNT_IDS, SteamProfileInsertRow, refresh_steam_profiles,
 };
+use crate::routes::v1::players::{ensure_not_protected, without_protected};
 use crate::services::clickhouse_batcher::{BatchQuery, ClickhouseBatcher, in_clause};
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::steam_search_index::IndexedProfile;
@@ -356,14 +356,7 @@ pub(super) async fn steam(
             ),
         ));
     }
-    let protected_users = state
-        .steam_client
-        .get_protected_users(&state.pg_client)
-        .await?;
-    let account_ids = account_ids
-        .into_iter()
-        .filter(|id| !protected_users.contains(id))
-        .collect::<Vec<_>>();
+    let account_ids = without_protected(&state, account_ids).await?;
 
     if !refresh {
         let profiles = state
@@ -378,10 +371,9 @@ pub(super) async fn steam(
     }
 
     let refreshed = refresh_steam_profiles(&state, &rate_limit_key, &account_ids).await?;
-    let fetched_ids: HashSet<u32> = refreshed.iter().map(|r| r.account_id).collect();
+    let refreshed_ids: Vec<u32> = refreshed.iter().map(|r| r.account_id).collect();
     let mut profiles: Vec<SteamProfile> = refreshed.into_iter().map(SteamProfile::from).collect();
 
-    let refreshed_ids: Vec<u32> = profiles.iter().map(|p| p.account_id).collect();
     if !refreshed_ids.is_empty() {
         let matches_map =
             fetch_matches_played_last_30d(&state.ch_client_ro, &refreshed_ids).await?;
@@ -393,6 +385,7 @@ pub(super) async fn steam(
         }
     }
 
+    let fetched_ids: HashSet<u32> = refreshed_ids.into_iter().collect();
     let missing: Vec<u32> = account_ids
         .into_iter()
         .filter(|id| !fetched_ids.contains(id))

@@ -15,9 +15,7 @@ use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::steam::client::SteamClient;
-use crate::services::steam::types::{
-    SteamProxyError, SteamProxyQuery, SteamProxyRawResponse, SteamProxyResponse,
-};
+use crate::services::steam::types::{SteamProxyError, SteamProxyRawResponse, SteamProxyResponse};
 use crate::utils::types::AccountIdQuery;
 
 #[derive(Debug, Clone, Serialize, ToSchema)]
@@ -75,16 +73,11 @@ pub(crate) async fn fetch_player_account_stats_raw(
         friend_access_hint: true.into(),
     };
     steam_client
-        .call_steam_proxy_raw(SteamProxyQuery {
-            msg_type: EgcCitadelClientMessages::KEMsgClientToGcGetAccountStats,
+        .call_steam_proxy_raw(super::bot_proxy_query(
+            EgcCitadelClientMessages::KEMsgClientToGcGetAccountStats,
             msg,
-            in_all_groups: None,
-            in_any_groups: None,
-            cooldown_time: Duration::from_secs(10),
-            request_timeout: Duration::from_secs(2),
-            username: bot_username.into(),
-            soft_cooldown_millis: None,
-        })
+            bot_username,
+        ))
         .await
 }
 

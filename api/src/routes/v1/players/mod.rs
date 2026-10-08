@@ -19,6 +19,7 @@ use serde_json::json;
 use utoipa::OpenApi;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
+use valveprotos::deadlock::EgcCitadelClientMessages;
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
@@ -26,6 +27,7 @@ use crate::middleware::cache::CacheControlMiddleware;
 use crate::services::patreon;
 use crate::services::rate_limiter::Quota;
 use crate::services::rate_limiter::extractor::RateLimitKey;
+use crate::services::steam::types::SteamProxyQuery;
 
 #[derive(OpenApi)]
 #[openapi(tags((name = "Players", description = "Player related endpoints")))]
@@ -47,6 +49,40 @@ pub(crate) async fn ensure_not_protected(state: &AppState, account_ids: &[u32]) 
         return Err(APIError::protected_user());
     }
     Ok(())
+}
+
+/// `account_ids` without the protected accounts, in their original order. The protected set is
+/// fetched (from its cache) once for all of them.
+pub(crate) async fn without_protected(
+    state: &AppState,
+    account_ids: impl IntoIterator<Item = u32>,
+) -> APIResult<Vec<u32>> {
+    let protected_users = state
+        .steam_client
+        .get_protected_users(&state.pg_client)
+        .await?;
+    Ok(account_ids
+        .into_iter()
+        .filter(|id| !protected_users.contains(id))
+        .collect())
+}
+
+/// A Steam proxy query run on `bot_username`, the bot the queried account is friends with.
+fn bot_proxy_query<M: prost::Message>(
+    msg_type: EgcCitadelClientMessages,
+    msg: M,
+    bot_username: String,
+) -> SteamProxyQuery<M> {
+    SteamProxyQuery {
+        msg_type,
+        msg,
+        in_all_groups: None,
+        in_any_groups: None,
+        cooldown_time: Duration::from_secs(10),
+        request_timeout: Duration::from_secs(2),
+        username: Some(bot_username),
+        soft_cooldown_millis: None,
+    }
 }
 
 async fn check_patreon_access(
