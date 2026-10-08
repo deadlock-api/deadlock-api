@@ -15,6 +15,22 @@ import type { Region, Theme } from "~/types/streamkit/widget";
 // Only these are known; anything else in the URL is not a theme, and the overlay on stream must not crash on it.
 const THEMES: readonly Theme[] = ["dark", "glass", "light"];
 
+// The search params that set up a widget itself; every other one is an argument of its variables.
+const BOX_SETTINGS = new Set([
+  "vars",
+  "labels",
+  "subtexts",
+  "theme",
+  "showHeader",
+  "showBranding",
+  "showOutline",
+  "numMatches",
+  "matchHistoryShowsToday",
+  "showMatchHistory",
+  "opacity",
+]);
+const RAW_SETTINGS = new Set(["variable", "fontColor", "prefix", "suffix"]);
+
 export const Route = createFileRoute("/streamkit/widgets/$region/$accountId/$widgetType")({
   head: () => ({
     meta: [
@@ -85,7 +101,7 @@ function Widget() {
       const labels = columns?.labels ?? variables?.map(snakeToPretty);
       const subtexts = columns?.subtexts;
       // An edited URL ("?theme=Dark") must not crash the overlay on stream: unknown themes fall back to dark.
-      const theme: Theme = THEMES.includes(search.theme as Theme) ? (search.theme as Theme) : "dark";
+      const theme = THEMES.find((known) => known === search.theme) ?? "dark";
       const showHeader = readWidgetFlag(search.showHeader, true);
       const showBranding = readWidgetFlag(search.showBranding, true);
       const showOutline = readWidgetFlag(search.showOutline, true);
@@ -93,20 +109,7 @@ function Widget() {
       const matchHistoryShowsToday = readWidgetFlag(search.matchHistoryShowsToday, true);
       const numMatches = readWidgetInt(search.numMatches, 10, 1, 20);
       const opacity = readWidgetInt(search.opacity, 100, 0, 100);
-      const reserved = new Set([
-        "vars",
-        "labels",
-        "subtexts",
-        "theme",
-        "showHeader",
-        "showBranding",
-        "showOutline",
-        "numMatches",
-        "matchHistoryShowsToday",
-        "showMatchHistory",
-        "opacity",
-      ]);
-      const extraArgs = Object.fromEntries(Object.entries(search).filter(([key]) => !reserved.has(key)));
+      const extraArgs = Object.fromEntries(Object.entries(search).filter(([key]) => !BOX_SETTINGS.has(key)));
 
       return (
         <BoxWidget
@@ -132,9 +135,7 @@ function Widget() {
       const prefix = search.prefix ?? "";
       const suffix = search.suffix ?? "";
       const fontColor = (search.fontColor as Color) ?? "#FFFFFF";
-      // Display settings of the widget itself; everything else is an argument of the variable.
-      const reserved = new Set(["variable", "fontColor", "prefix", "suffix"]);
-      const extraArgs = Object.fromEntries(Object.entries(search).filter(([key]) => !reserved.has(key)));
+      const extraArgs = Object.fromEntries(Object.entries(search).filter(([key]) => !RAW_SETTINGS.has(key)));
       if (!variable)
         return (
           <Text as="div" tone="destructive">
