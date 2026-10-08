@@ -23,33 +23,33 @@ const PLACEHOLDER_QUESTIONS = [
   "top players in europe",
 ];
 
-type Outcome = "opened" | "not_understood" | "rate_limited" | "error";
+const ASK = "Ask anything";
+const FINDING = "Finding the page";
 
-/** One event per question, with the question itself: what visitors ask, how often, and where it took them. */
-function trackQuestion(properties: {
+/** One `ai_search` event per question, with the question itself: what visitors ask, how often, and where it led. */
+function trackQuestion(event: {
   question: string;
   source: "home" | "sidebar";
-  outcome: Outcome;
+  outcome: "opened" | "not_understood" | "rate_limited" | "error";
   page?: string;
   direct?: boolean;
-  durationMs?: number;
+  duration_ms?: number;
 }) {
   void getAnalytics().then((posthog) =>
     posthog?.capture("ai_search", {
-      question: properties.question,
-      source: properties.source,
-      outcome: properties.outcome,
-      page: properties.page ?? null,
-      direct: properties.direct ?? false,
-      duration_ms: properties.durationMs === undefined ? null : Math.round(properties.durationMs),
+      page: null,
+      direct: false,
+      ...event,
+      duration_ms: event.duration_ms === undefined ? null : Math.round(event.duration_ms),
     }),
   );
 }
 
 interface AiSearchProps {
   /**
-   * `default` is the home page's search bar, its button inside it. `sm` is the sidebar's: it submits on Enter and shows
-   * its progress in the field. `/` or Ctrl+K focus the bar where there is one, the sidebar's field elsewhere.
+   * `default` is the home page's search bar, its button inside it and example questions rolling through its
+   * placeholder. `sm` is the sidebar's field, which shows its progress inside. `/` or Ctrl+K focus the bar where there
+   * is one, the sidebar's field elsewhere.
    */
   size?: "default" | "sm";
   className?: string;
@@ -80,10 +80,10 @@ export function AiSearch({ size = "default", className }: AiSearchProps) {
     [],
   );
 
-  useSearchShortcut(input, size === "default" ? 2 : 1);
+  const home = size === "default";
+  useSearchShortcut(input, home);
 
   const question = last && last.version !== draft.version ? last.question : draft.text;
-  const source = size === "sm" ? "sidebar" : "home";
 
   const ask = (text: string) => {
     const trimmed = text.trim();
@@ -98,19 +98,23 @@ export function AiSearch({ size = "default", className }: AiSearchProps) {
         (routed) => {
           if (asked !== latest.current) return undefined;
           setSearching(false);
-          const { direct, durationMs } = routed;
+          trackQuestion({
+            question: trimmed,
+            source: home ? "home" : "sidebar",
+            outcome: routed.kind,
+            page: routed.kind === "opened" ? routed.id : undefined,
+            direct: routed.direct,
+            duration_ms: routed.durationMs,
+          });
           if (routed.kind === "rate_limited") {
-            trackQuestion({ question: trimmed, source, outcome: "rate_limited", direct, durationMs });
             toast(`That's a lot of questions. You can ask ${QUESTIONS_PER_MINUTE} a minute; try again shortly.`);
             return undefined;
           }
           if (routed.kind === "not_understood") {
-            trackQuestion({ question: trimmed, source, outcome: "not_understood", direct, durationMs });
             setUnmatched(true);
             toast("Sorry, I didn't understand that. Try asking about a hero, an item or a stat.");
             return undefined;
           }
-          trackQuestion({ question: trimmed, source, outcome: "opened", page: routed.id, direct, durationMs });
           setLastSearch(trimmed);
           closeDrawer();
           return navigate({ href: routed.href });
@@ -118,14 +122,14 @@ export function AiSearch({ size = "default", className }: AiSearchProps) {
         () => {
           if (asked !== latest.current) return;
           setSearching(false);
-          trackQuestion({ question: trimmed, source, outcome: "error" });
+          trackQuestion({ question: trimmed, source: home ? "home" : "sidebar", outcome: "error" });
           toast("The search is unavailable right now", { action: { label: "Try again", onClick: () => ask(trimmed) } });
         },
       );
   };
 
   return (
-    <search aria-label="Find a stat" className={cn("w-full", size === "default" && "max-w-2xl", className)}>
+    <search aria-label="Find a stat" className={cn("w-full", home && "max-w-2xl", className)}>
       <form
         onSubmit={(event) => {
           event.preventDefault();
@@ -135,18 +139,18 @@ export function AiSearch({ size = "default", className }: AiSearchProps) {
         <SearchInput
           ref={input}
           name="q"
-          variant={size === "sm" ? "default" : "bar"}
+          variant={home ? "bar" : "default"}
           size={size}
-          loading={size === "sm" && searching}
-          loadingLabel="Finding the page"
+          loading={!home && searching}
+          loadingLabel={FINDING}
           shortcut="/"
           aria-label="Ask for a stat"
           aria-invalid={unmatched || undefined}
-          placeholder={size === "sm" ? "Ask for a stat" : "Ask anything"}
+          placeholder={home ? ASK : "Ask for a stat"}
           placeholderContent={
-            size === "default" ? (
+            home ? (
               <>
-                Ask anything:&nbsp;
+                {ASK}:&nbsp;
                 <RollingText>
                   {PLACEHOLDER_QUESTIONS.map((example) => (
                     <span key={example}>{example}</span>
@@ -172,8 +176,8 @@ export function AiSearch({ size = "default", className }: AiSearchProps) {
             }
           }}
           action={
-            size === "default" && (
-              <Button type="submit" shape="pill" loading={searching} loadingLabel="Finding the page">
+            home && (
+              <Button type="submit" shape="pill" loading={searching} loadingLabel={FINDING}>
                 Search
               </Button>
             )

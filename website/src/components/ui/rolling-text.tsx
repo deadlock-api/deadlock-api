@@ -15,15 +15,14 @@ interface RollingTextProps extends React.ComponentProps<"span"> {
 export function RollingText({ interval = 3500, className, children, ...props }: RollingTextProps) {
   const items = Children.toArray(children);
   const count = items.length;
-  const [{ index, previous }, setRoll] = useState<{ index: number; previous: number | null }>({
-    index: 0,
-    previous: null,
-  });
+  /** `rolling` while the item before `index` is still leaving. */
+  const [{ index, rolling }, setRoll] = useState({ index: 0, rolling: false });
+  const previous = (index - 1 + count) % Math.max(count, 1);
 
   useEffect(() => {
     if (count < 2 || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return undefined;
     const id = window.setInterval(
-      () => setRoll((roll) => ({ index: (roll.index + 1) % count, previous: roll.index })),
+      () => setRoll((roll) => ({ index: (roll.index + 1) % count, rolling: true })),
       interval,
     );
     return () => window.clearInterval(id);
@@ -37,23 +36,20 @@ export function RollingText({ interval = 3500, className, children, ...props }: 
       className={cn("inline-grid overflow-hidden align-bottom", className)}
       {...props}
     >
-      {previous !== null && (
+      {rolling && (
         <span
-          key={`out-${previous}-${index}`}
+          key={`out-${index}`}
           className="col-start-1 row-start-1 animate-out duration-slow fill-mode-forwards fade-out slide-out-to-top"
-          onAnimationEnd={() => setRoll((roll) => ({ ...roll, previous: null }))}
+          onAnimationEnd={() => setRoll((roll) => ({ ...roll, rolling: false }))}
         >
           {items[previous]}
         </span>
       )}
       <span
         key={`in-${index}`}
-        className={cn(
-          "col-start-1 row-start-1",
-          previous !== null && "animate-in duration-slow fade-in slide-in-from-bottom",
-        )}
+        className={cn("col-start-1 row-start-1", rolling && "animate-in duration-slow fade-in slide-in-from-bottom")}
       >
-        {items[index % Math.max(count, 1)]}
+        {items[index]}
       </span>
     </span>
   );

@@ -16,9 +16,6 @@ import { ranksQueryOptions } from "~/queries/ranks-query";
 
 const PATCH_ENTRIES = PATCHES.map(toPatchEntry);
 
-/** The catalog of the cached hero list, kept while that list is: the name matcher caches its work per name list. */
-const catalogs = new WeakMap<object, SearchCatalog>();
-
 /** The names and time windows a question is read against, from the asset caches every page warms. */
 async function loadSearchCatalog(queryClient: QueryClient): Promise<SearchCatalog & { seasons: SeasonRef[] }> {
   const [heroes, items, ranks, seasons] = await Promise.all([
@@ -27,13 +24,8 @@ async function loadSearchCatalog(queryClient: QueryClient): Promise<SearchCatalo
     queryClient.query({ ...ranksQueryOptions, staleTime: "static" }),
     loadSeasons(queryClient),
   ]);
-  let built = catalogs.get(heroes);
-  if (!built || built.catalog.ranks !== ranks) {
-    built = buildSearchCatalog(heroes, items, ranks);
-    catalogs.set(heroes, built);
-  }
   return {
-    ...built,
+    ...buildSearchCatalog(heroes, items, ranks),
     seasons: seasons.map((season) => ({ startUnix: season.startDate.unix(), endUnix: season.endDate?.unix() })),
   };
 }

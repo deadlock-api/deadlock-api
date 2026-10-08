@@ -16,13 +16,15 @@ import { parseArgs } from "node:util";
 
 import { buildSearchCatalog } from "../../src/lib/ai-search/catalog";
 import {
+  type DecideAnswers,
+  type DecideRequestBody,
   decideRequestBody,
   intentFromDecision,
   questionEntities,
   requestDecision,
 } from "../../src/lib/ai-search/decide";
 import { directIntent, type SearchIntent } from "../../src/lib/ai-search/intent";
-import { pageSlots, registeredPage } from "../../src/lib/page-registry";
+import { readsEnemyTeam, registeredPage } from "../../src/lib/page-registry";
 
 interface Expected {
   q: string;
@@ -76,12 +78,12 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
  * Mercury's decision, retried through its rate limit and outages. The wait honours `Retry-After` and is jittered, so
  * the concurrent askers do not all come back at once.
  */
-async function decide(body: Parameters<typeof requestDecision>[1]) {
+async function decide(body: DecideRequestBody): Promise<{ answers: DecideAnswers }> {
   for (let attempt = 1; ; attempt++) {
     let response: Response | undefined;
     try {
       response = await requestDecision(key!, body, 60_000);
-      if (response.ok) return (await response.json()) as { answers: Parameters<typeof intentFromDecision>[0] };
+      if (response.ok) return (await response.json()) as { answers: DecideAnswers };
     } catch (error) {
       if (attempt === MAX_ATTEMPTS) throw error;
     }
@@ -99,7 +101,7 @@ const same = (a: readonly string[], b: readonly string[]) => a.length === b.leng
 /** Which of the asked-for parts the search got right. Sides count only where the page reads two teams. */
 function grade(expected: Expected, got: SearchIntent) {
   const page = expected.page === null ? undefined : registeredPage(expected.page);
-  const twoTeams = page !== undefined && pageSlots(page).has("enemyHeroes");
+  const twoTeams = page !== undefined && readsEnemyTeam(page);
   const fields = {
     heroes: twoTeams
       ? same(expected.heroes, got.heroes) && same(expected.enemies, got.enemy_heroes)

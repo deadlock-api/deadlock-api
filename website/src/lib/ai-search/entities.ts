@@ -51,15 +51,11 @@ interface Form {
   typos: number;
 }
 
-const formsCache = new WeakMap<readonly string[], Form[]>();
-
 /**
  * Every name a question might use for each entity: the name itself, without "the", and its nicknames (exact only).
- * Built once per name list, longest first: "grey talon" before "talon".
+ * Longest first: "grey talon" before "talon".
  */
 function formsOf(names: readonly string[]): Form[] {
-  const cached = formsCache.get(names);
-  if (cached) return cached;
   const form = (name: string, own: string[], exact: boolean): Form => {
     const target = own.join(" ");
     return { name, words: own, target, typos: exact ? 0 : allowedTypos(target.length) };
@@ -74,9 +70,7 @@ function formsOf(names: readonly string[]): Form[] {
   for (const [name, aliases] of Object.entries(ALIASES)) {
     if (known.has(name)) for (const alias of aliases) forms.push(form(name, words(alias), true));
   }
-  forms.sort((a, b) => b.target.length - a.target.length);
-  formsCache.set(names, forms);
-  return forms;
+  return forms.sort((a, b) => b.target.length - a.target.length);
 }
 
 /** The entities of `names` a question mentions, each once, in the order mentioned. */

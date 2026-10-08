@@ -49,9 +49,7 @@ export function validateDecideInput(input: unknown): DecideSearchInput {
  * What the browser hears when there is no decision: the visitor asked too much, or the model failed (an outage, an
  * empty balance, a missing key). The cause of a failure goes to the Worker's logs, not to the visitor.
  */
-export type DecideSearchResult =
-  | { ok: true; answers: DecideAnswers }
-  | { ok: false; reason: "rate_limited" | "unavailable" };
+type DecideSearchResult = { ok: true; answers: DecideAnswers } | { ok: false; reason: "rate_limited" | "unavailable" };
 
 const unavailable = (...why: unknown[]): DecideSearchResult => {
   console.error("ai-search:", ...why);

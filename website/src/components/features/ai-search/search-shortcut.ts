@@ -7,7 +7,7 @@ import { isTyping } from "~/lib/keyboard";
 
 interface Target {
   input: RefObject<HTMLInputElement | null>;
-  priority: number;
+  primary: boolean;
 }
 
 const targets = new Set<Target>();
@@ -17,24 +17,23 @@ function onKeyDown(event: KeyboardEvent) {
   const commandK = event.key.toLowerCase() === "k" && (event.ctrlKey || event.metaKey) && !event.altKey;
   if (!slash && !commandK) return;
   // A hidden one (the sidebar on a phone, where its search lives in the closed menu) cannot take the focus.
-  const input = [...targets]
-    .filter((target) => target.input.current?.checkVisibility())
-    .sort((a, b) => b.priority - a.priority)[0]?.input.current;
+  const visible = [...targets].filter((target) => target.input.current?.checkVisibility());
+  const input = (visible.find((target) => target.primary) ?? visible[0])?.input.current;
   if (!input) return;
   event.preventDefault();
   input.focus();
   input.select();
 }
 
-/** Lets the shortcut focus this search's field; a higher `priority` wins over other searches on the page. */
-export function useSearchShortcut(input: RefObject<HTMLInputElement | null>, priority: number): void {
+/** Lets the shortcut focus this search's field; a `primary` one (the page's own search bar) wins over the others. */
+export function useSearchShortcut(input: RefObject<HTMLInputElement | null>, primary: boolean): void {
   useEffect(() => {
-    const target = { input, priority };
+    const target = { input, primary };
     if (targets.size === 0) document.addEventListener("keydown", onKeyDown);
     targets.add(target);
     return () => {
       targets.delete(target);
       if (targets.size === 0) document.removeEventListener("keydown", onKeyDown);
     };
-  }, [input, priority]);
+  }, [input, primary]);
 }

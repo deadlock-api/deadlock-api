@@ -1,7 +1,7 @@
 import {
   MODES,
   PAGE_REGISTRY,
-  pageSlots,
+  readsEnemyTeam,
   registeredPage,
   REGIONS,
   type SelectionMode,
@@ -109,7 +109,7 @@ const PAGE_CRITERIA = withNone(
   "no page of the site shows this: the question is not about Deadlock stats, or is not a question",
 );
 
-interface DecideRequestBody {
+export interface DecideRequestBody {
   model: string;
   state: unknown;
   questions: Record<string, { type: "choice"; instructions: string; criteria: Criteria }>;
@@ -203,7 +203,7 @@ export function intentFromDecision(
   const rankMin = chosen(answers.rank_min, rankNames);
   const rankMax = chosen(answers.rank_max, rankNames);
   // A page that reads an enemy keeps the two sides of "haze vs bebop"; everywhere else both are heroes of the question.
-  const twoTeams = page !== undefined && pageSlots(page).has("enemyHeroes");
+  const twoTeams = page !== undefined && readsEnemyTeam(page);
   return {
     ...NO_FILTERS,
     page: page?.id ?? null,
