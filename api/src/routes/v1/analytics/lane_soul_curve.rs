@@ -22,6 +22,7 @@ use super::lane_common::{
 };
 use crate::context::AppState;
 use crate::error::APIResult;
+use crate::routes::v1::matches::types::reject_brawl_badge_filter;
 use crate::routes::v1::matches::types::{GameMode, MatchMode};
 use crate::utils::parse::{comma_separated_deserialize_option, default_last_month_timestamp};
 
@@ -678,6 +679,11 @@ pub(super) async fn lane_soul_curve(
     Query(mut query): Query<LaneSoulCurveQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
+    reject_brawl_badge_filter(
+        query.game_mode,
+        query.min_average_badge,
+        query.max_average_badge,
+    )?;
     filter_protected_accounts(&state, &mut query.account_ids, None).await?;
     get_lane_soul_curve(&state.ch_client_ro, query)
         .await

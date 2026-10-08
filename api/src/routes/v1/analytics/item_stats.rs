@@ -18,6 +18,7 @@ use super::common_filters::{
 };
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
+use crate::routes::v1::matches::types::reject_brawl_badge_filter;
 use crate::routes::v1::matches::types::{GameMode, MatchMode};
 use crate::utils::parse::{
     comma_separated_chains_deserialize_option, comma_separated_deserialize_option,
@@ -925,10 +926,7 @@ fn validate_item_order(chains: Option<&[Vec<u32>]>) -> APIResult<()> {
     let Some(chains) = chains else {
         return Ok(());
     };
-    let bad_request = |message: &str| APIError::StatusMsg {
-        status: StatusCode::BAD_REQUEST,
-        message: message.to_string(),
-    };
+    let bad_request = |message: &str| APIError::status_msg(StatusCode::BAD_REQUEST, message);
     if chains.len() > MAX_ITEM_ORDER_CHAINS {
         return Err(bad_request("Too many item_order constraints"));
     }
@@ -1392,14 +1390,11 @@ pub(crate) async fn item_stats(
     Query(mut query): Query<ItemStatsQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
-    if query.game_mode.is_some_and(|g| g == GameMode::StreetBrawl)
-        && (query.min_average_badge.is_some() || query.max_average_badge.is_some())
-    {
-        return Err(APIError::StatusMsg {
-            status: StatusCode::BAD_REQUEST,
-            message: "Cannot filter by average badge for street brawl game mode".to_string(),
-        });
-    }
+    reject_brawl_badge_filter(
+        query.game_mode,
+        query.min_average_badge,
+        query.max_average_badge,
+    )?;
     validate_item_order(query.item_order.as_deref())?;
     #[expect(deprecated)]
     filter_protected_accounts(&state, &mut query.account_ids, query.account_id).await?;

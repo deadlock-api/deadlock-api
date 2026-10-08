@@ -13,6 +13,7 @@ use utoipa::{IntoParams, ToSchema};
 use super::common_filters::{default_min_matches_u64, filter_protected_accounts, round_timestamps};
 use crate::context::AppState;
 use crate::error::APIResult;
+use crate::routes::v1::matches::types::reject_brawl_badge_filter;
 use crate::routes::v1::matches::types::{GameMode, MatchMode};
 use crate::utils::parse::{
     comma_separated_deserialize_option, default_last_month_timestamp, default_true_option,
@@ -341,6 +342,11 @@ pub(super) async fn hero_synergies_stats(
     Query(mut query): Query<HeroSynergyStatsQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
+    reject_brawl_badge_filter(
+        query.game_mode,
+        query.min_average_badge,
+        query.max_average_badge,
+    )?;
     #[expect(deprecated)]
     filter_protected_accounts(&state, &mut query.account_ids, query.account_id).await?;
     get_hero_synergy_stats(&state.ch_client_ro, query)

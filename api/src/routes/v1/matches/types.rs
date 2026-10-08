@@ -348,6 +348,24 @@ impl GameMode {
     }
 }
 
+/// Street brawl matches carry no average badge, so a badge filter on them can only ever match
+/// nothing; reject the combination instead of returning an empty result.
+pub(crate) fn reject_brawl_badge_filter(
+    game_mode: Option<GameMode>,
+    min_average_badge: Option<u8>,
+    max_average_badge: Option<u8>,
+) -> crate::error::APIResult<()> {
+    if game_mode == Some(GameMode::StreetBrawl)
+        && (min_average_badge.is_some() || max_average_badge.is_some())
+    {
+        return Err(crate::error::APIError::status_msg(
+            axum::http::StatusCode::BAD_REQUEST,
+            "Cannot filter by average badge for street brawl game mode",
+        ));
+    }
+    Ok(())
+}
+
 impl From<GameMode> for i32 {
     fn from(val: GameMode) -> Self {
         val as i32

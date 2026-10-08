@@ -103,10 +103,10 @@ impl LaneStats {
     pub(super) fn new(requested: Option<&[LaneStat]>) -> APIResult<Self> {
         let requested = requested.map_or_default(<[LaneStat]>::to_vec);
         if requested.len() > MAX_STATS {
-            return Err(APIError::StatusMsg {
-                status: StatusCode::BAD_REQUEST,
-                message: format!("At most {MAX_STATS} stats can be requested at once"),
-            });
+            return Err(APIError::status_msg(
+                StatusCode::BAD_REQUEST,
+                format!("At most {MAX_STATS} stats can be requested at once"),
+            ));
         }
         let computed = [LaneStat::NetWorth]
             .into_iter()

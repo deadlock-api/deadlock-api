@@ -14,6 +14,7 @@ use utoipa::{IntoParams, ToSchema};
 use super::common_filters::{filter_protected_accounts, round_timestamps};
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
+use crate::routes::v1::matches::types::reject_brawl_badge_filter;
 use crate::routes::v1::matches::types::{GameMode, MatchMode};
 use crate::utils::parse::{comma_separated_deserialize_option, default_last_month_timestamp};
 
@@ -328,14 +329,11 @@ pub(crate) async fn kill_death_stats(
             "team must be 0 or 1",
         ));
     }
-    if query.game_mode.is_some_and(|g| g == GameMode::StreetBrawl)
-        && (query.min_average_badge.is_some() || query.max_average_badge.is_some())
-    {
-        return Err(APIError::StatusMsg {
-            status: StatusCode::BAD_REQUEST,
-            message: "Cannot filter by average badge for street brawl game mode".to_string(),
-        });
-    }
+    reject_brawl_badge_filter(
+        query.game_mode,
+        query.min_average_badge,
+        query.max_average_badge,
+    )?;
     filter_protected_accounts(&state, &mut query.account_ids, None).await?;
     get_kill_death_stats(&state.ch_client_ro, query)
         .await

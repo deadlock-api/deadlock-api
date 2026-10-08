@@ -20,6 +20,7 @@ use utoipa::{IntoParams, ToSchema};
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
+use crate::routes::v1::matches::types::reject_brawl_badge_filter;
 use crate::routes::v1::matches::types::{GameMode, MatchMode};
 use crate::services::rate_limiter::Quota;
 use crate::services::rate_limiter::extractor::RateLimitKey;
@@ -891,14 +892,11 @@ pub(super) async fn bulk_metadata(
     rate_limit_key: RateLimitKey,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
-    if query.game_mode.is_some_and(|g| g == GameMode::StreetBrawl)
-        && (query.min_average_badge.is_some() || query.max_average_badge.is_some())
-    {
-        return Err(APIError::StatusMsg {
-            status: StatusCode::BAD_REQUEST,
-            message: "Cannot filter by average badge for street brawl game mode".to_string(),
-        });
-    }
+    reject_brawl_badge_filter(
+        query.game_mode,
+        query.min_average_badge,
+        query.max_average_badge,
+    )?;
     if let Some(account_ids) = query.account_ids {
         let protected_users = state
             .steam_client
