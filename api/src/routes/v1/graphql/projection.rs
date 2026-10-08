@@ -14,6 +14,11 @@ const fn mp(gql: &'static str, ch_expr: &'static str) -> Column {
     Column { gql, ch_expr }
 }
 
+/// A column exposed under its `ClickHouse` name.
+const fn col(name: &'static str) -> Column {
+    mp(name, name)
+}
+
 /// Shared SQL expressions referenced by both the projection registries and the
 /// filter builder so a rename in one place can't drift from the other.
 pub(super) const SQL_START_TIME_UNIX: &str = "toUnixTimestamp(start_time)";
@@ -23,211 +28,172 @@ pub(super) const SQL_AVG_BADGE: &str = "average_badge";
 
 /// Match-level columns. All live on `match_player` (denormalized).
 pub(super) const MATCH_COLUMNS: &[Column] = &[
-    mp("match_id", "match_id"),
+    col("match_id"),
     mp("start_time", SQL_START_TIME_UNIX),
-    mp("duration_s", "duration_s"),
-    mp("match_mode", "match_mode"),
-    mp("game_mode", "game_mode"),
-    mp("game_mode_version", "game_mode_version"),
-    mp("bot_difficulty", "bot_difficulty"),
-    mp("winning_team", "winning_team"),
-    mp("match_outcome", "match_outcome"),
+    col("duration_s"),
+    col("match_mode"),
+    col("game_mode"),
+    col("game_mode_version"),
+    col("bot_difficulty"),
+    col("winning_team"),
+    col("match_outcome"),
     mp("average_badge_team_0", SQL_AVG_BADGE_T0),
     mp("average_badge_team_1", SQL_AVG_BADGE_T1),
     mp("average_badge", SQL_AVG_BADGE),
-    mp("is_high_skill_range_parties", "is_high_skill_range_parties"),
-    mp("low_pri_pool", "low_pri_pool"),
-    mp("new_player_pool", "new_player_pool"),
-    mp("not_scored", "not_scored"),
-    mp("ranked_type", "ranked_type"),
-    mp("rank_interval", "rank_interval"),
-    mp("corrupted_penalty_seed", "corrupted_penalty_seed"),
-    mp("rewards_eligible", "rewards_eligible"),
-    mp("earned_holiday_award_2025", "earned_holiday_award_2025"),
+    col("is_high_skill_range_parties"),
+    col("low_pri_pool"),
+    col("new_player_pool"),
+    col("not_scored"),
+    col("ranked_type"),
+    col("rank_interval"),
+    col("corrupted_penalty_seed"),
+    col("rewards_eligible"),
+    col("earned_holiday_award_2025"),
     mp("objectives_mask_team_0", "objectives_mask_team0"),
     mp("objectives_mask_team_1", "objectives_mask_team1"),
-    mp("team_score", "team_score"),
-    mp("match_tracked_stats", "match_tracked_stats"),
+    col("team_score"),
+    col("match_tracked_stats"),
     mp("team_0_tracked_stats", "team0_tracked_stats"),
     mp("team_1_tracked_stats", "team1_tracked_stats"),
-    mp("objectives", "objectives"),
-    mp("mid_boss", "mid_boss"),
-    mp("street_brawl_rounds", "street_brawl_rounds"),
-    mp("first_mid_boss_time_s", "first_mid_boss_time_s"),
-    mp(
-        "first_objective_destroyed_time_s",
-        "first_objective_destroyed_time_s",
-    ),
-    mp("banned_hero_ids", "banned_hero_ids"),
+    col("objectives"),
+    col("mid_boss"),
+    col("street_brawl_rounds"),
+    col("first_mid_boss_time_s"),
+    col("first_objective_destroyed_time_s"),
+    col("banned_hero_ids"),
 ];
 
 /// Player-level columns. All live on `match_player`.
 pub(super) const PLAYER_COLUMNS: &[Column] = &[
     mp("match_id", "match_player.match_id"),
-    mp("account_id", "account_id"),
-    mp("player_slot", "player_slot"),
-    mp("team", "team"),
-    mp("hero_id", "hero_id"),
-    mp("party", "party"),
-    mp("assigned_lane", "assigned_lane"),
+    col("account_id"),
+    col("player_slot"),
+    col("team"),
+    col("hero_id"),
+    col("party"),
+    col("assigned_lane"),
     mp("start_time", SQL_START_TIME_UNIX),
-    mp("duration_s", "duration_s"),
-    mp("match_mode", "match_mode"),
-    mp("game_mode", "game_mode"),
-    mp("winning_team", "winning_team"),
-    mp("match_outcome", "match_outcome"),
+    col("duration_s"),
+    col("match_mode"),
+    col("game_mode"),
+    col("winning_team"),
+    col("match_outcome"),
     mp("average_badge_team_0", SQL_AVG_BADGE_T0),
     mp("average_badge_team_1", SQL_AVG_BADGE_T1),
     mp("average_badge", SQL_AVG_BADGE),
-    mp("kills", "kills"),
-    mp("deaths", "deaths"),
-    mp("assists", "assists"),
-    mp("net_worth", "net_worth"),
-    mp("last_hits", "last_hits"),
-    mp("denies", "denies"),
-    mp("ability_points", "ability_points"),
-    mp("player_level", "player_level"),
-    mp("abandon_match_time_s", "abandon_match_time_s"),
-    mp("mvp_rank", "mvp_rank"),
-    mp("max_level", "max_level"),
-    mp("max_player_damage", "max_player_damage"),
-    mp("max_player_damage_taken", "max_player_damage_taken"),
-    mp("max_boss_damage", "max_boss_damage"),
-    mp("max_creep_damage", "max_creep_damage"),
-    mp("max_creep_kills", "max_creep_kills"),
-    mp("max_neutral_kills", "max_neutral_kills"),
-    mp("max_neutral_damage", "max_neutral_damage"),
-    mp("max_max_health", "max_max_health"),
-    mp("max_hero_bullets_hit", "max_hero_bullets_hit"),
-    mp("max_hero_bullets_hit_crit", "max_hero_bullets_hit_crit"),
-    mp("max_shots_hit", "max_shots_hit"),
-    mp("max_shots_missed", "max_shots_missed"),
-    mp("max_self_healing", "max_self_healing"),
-    mp("max_player_healing", "max_player_healing"),
-    mp("max_gold_player", "max_gold_player"),
-    mp("max_gold_player_orbs", "max_gold_player_orbs"),
-    mp("max_gold_lane_creep", "max_gold_lane_creep"),
-    mp("max_gold_lane_creep_orbs", "max_gold_lane_creep_orbs"),
-    mp("max_gold_neutral_creep", "max_gold_neutral_creep"),
-    mp("max_gold_neutral_creep_orbs", "max_gold_neutral_creep_orbs"),
-    mp("max_gold_boss", "max_gold_boss"),
-    mp("max_gold_boss_orb", "max_gold_boss_orb"),
-    mp("max_gold_treasure", "max_gold_treasure"),
-    mp("max_gold_denied", "max_gold_denied"),
-    mp("max_gold_death_loss", "max_gold_death_loss"),
-    mp("max_gold_assists", "max_gold_assists"),
-    mp("max_gold_team_bonus", "max_gold_team_bonus"),
-    mp("max_gold_breakable", "max_gold_breakable"),
-    mp(
-        "max_gold_ability_assassinate",
-        "max_gold_ability_assassinate",
-    ),
-    mp(
-        "max_gold_item_trophy_collector",
-        "max_gold_item_trophy_collector",
-    ),
-    mp(
-        "max_gold_item_cultist_sacrifice",
-        "max_gold_item_cultist_sacrifice",
-    ),
-    mp("max_gold_item_goose_egg", "max_gold_item_goose_egg"),
-    mp("max_damage_mitigated", "max_damage_mitigated"),
-    mp("max_absorption_provided", "max_absorption_provided"),
-    mp("max_heal_prevented", "max_heal_prevented"),
-    mp("max_possible_creeps", "max_possible_creeps"),
-    mp("max_weapon_power", "max_weapon_power"),
-    mp("max_tech_power", "max_tech_power"),
-    mp("max_teammate_healing", "max_teammate_healing"),
-    mp("max_teammate_barriering", "max_teammate_barriering"),
-    mp("final_stats", "final_stats"),
-    mp("won", "won"),
-    mp("hero_xp", "hero_xp"),
-    mp("hero_equips", "hero_equips"),
-    mp("abilities", "abilities"),
+    col("kills"),
+    col("deaths"),
+    col("assists"),
+    col("net_worth"),
+    col("last_hits"),
+    col("denies"),
+    col("ability_points"),
+    col("player_level"),
+    col("abandon_match_time_s"),
+    col("mvp_rank"),
+    col("max_level"),
+    col("max_player_damage"),
+    col("max_player_damage_taken"),
+    col("max_boss_damage"),
+    col("max_creep_damage"),
+    col("max_creep_kills"),
+    col("max_neutral_kills"),
+    col("max_neutral_damage"),
+    col("max_max_health"),
+    col("max_hero_bullets_hit"),
+    col("max_hero_bullets_hit_crit"),
+    col("max_shots_hit"),
+    col("max_shots_missed"),
+    col("max_self_healing"),
+    col("max_player_healing"),
+    col("max_gold_player"),
+    col("max_gold_player_orbs"),
+    col("max_gold_lane_creep"),
+    col("max_gold_lane_creep_orbs"),
+    col("max_gold_neutral_creep"),
+    col("max_gold_neutral_creep_orbs"),
+    col("max_gold_boss"),
+    col("max_gold_boss_orb"),
+    col("max_gold_treasure"),
+    col("max_gold_denied"),
+    col("max_gold_death_loss"),
+    col("max_gold_assists"),
+    col("max_gold_team_bonus"),
+    col("max_gold_breakable"),
+    col("max_gold_ability_assassinate"),
+    col("max_gold_item_trophy_collector"),
+    col("max_gold_item_cultist_sacrifice"),
+    col("max_gold_item_goose_egg"),
+    col("max_damage_mitigated"),
+    col("max_absorption_provided"),
+    col("max_heal_prevented"),
+    col("max_possible_creeps"),
+    col("max_weapon_power"),
+    col("max_tech_power"),
+    col("max_teammate_healing"),
+    col("max_teammate_barriering"),
+    col("final_stats"),
+    col("won"),
+    col("hero_xp"),
+    col("hero_equips"),
+    col("abilities"),
     mp("created_at", "toUnixTimestamp(created_at)"),
-    mp("rewards_eligible", "rewards_eligible"),
-    mp("earned_holiday_award_2025", "earned_holiday_award_2025"),
-    mp("death_details", "death_details"),
-    mp("accolades", "accolades"),
-    mp("book_reward", "book_reward"),
-    mp("power_up_buffs", "power_up_buffs"),
-    mp("ability_stats", "ability_stats"),
-    mp("player_tracked_stats", "player_tracked_stats"),
-    mp("stats_type_stat", "stats_type_stat"),
-    mp("hero_build_id", "hero_build_id"),
-    mp("pregame_hero_id", "pregame_hero_id"),
-    mp("hero_xp_rewards", "hero_xp_rewards"),
-    mp("hero_release_votes", "hero_release_votes"),
-    mp("player_match_outcome", "player_match_outcome"),
-    mp(
-        "player_rank_initial_display_rank",
-        "player_rank_initial_display_rank",
-    ),
-    mp(
-        "player_rank_initial_flat_progress",
-        "player_rank_initial_flat_progress",
-    ),
-    mp(
-        "player_rank_final_flat_progress",
-        "player_rank_final_flat_progress",
-    ),
-    mp(
-        "player_rank_desired_progress_change",
-        "player_rank_desired_progress_change",
-    ),
-    mp(
-        "player_rank_initial_calibration_games",
-        "player_rank_initial_calibration_games",
-    ),
-    mp(
-        "player_rank_initial_demotion_protection_games",
-        "player_rank_initial_demotion_protection_games",
-    ),
-    mp(
-        "player_rank_consumed_demotion_protection",
-        "player_rank_consumed_demotion_protection",
-    ),
-    mp(
-        "player_rank_initial_win_streak",
-        "player_rank_initial_win_streak",
-    ),
+    col("rewards_eligible"),
+    col("earned_holiday_award_2025"),
+    col("death_details"),
+    col("accolades"),
+    col("book_reward"),
+    col("power_up_buffs"),
+    col("ability_stats"),
+    col("player_tracked_stats"),
+    col("stats_type_stat"),
+    col("hero_build_id"),
+    col("pregame_hero_id"),
+    col("hero_xp_rewards"),
+    col("hero_release_votes"),
+    col("player_match_outcome"),
+    col("player_rank_initial_display_rank"),
+    col("player_rank_initial_flat_progress"),
+    col("player_rank_final_flat_progress"),
+    col("player_rank_desired_progress_change"),
+    col("player_rank_initial_calibration_games"),
+    col("player_rank_initial_demotion_protection_games"),
+    col("player_rank_consumed_demotion_protection"),
+    col("player_rank_initial_win_streak"),
 ];
 
 /// Columns of the `player_match_history` table. `account_id` and `match_id`
 /// are the merge keys and always projected.
 pub(super) const MATCH_HISTORY_COLUMNS: &[Column] = &[
-    mp("account_id", "account_id"),
-    mp("match_id", "match_id"),
-    mp("hero_id", "hero_id"),
-    mp("hero_level", "hero_level"),
+    col("account_id"),
+    col("match_id"),
+    col("hero_id"),
+    col("hero_level"),
     mp("start_time", SQL_START_TIME_UNIX),
-    mp("game_mode", "game_mode"),
-    mp("match_mode", "match_mode"),
-    mp("player_team", "player_team"),
-    mp("player_kills", "player_kills"),
-    mp("player_deaths", "player_deaths"),
-    mp("player_assists", "player_assists"),
-    mp("denies", "denies"),
-    mp("net_worth", "net_worth"),
-    mp("last_hits", "last_hits"),
-    mp("team_abandoned", "team_abandoned"),
-    mp("abandoned_time_s", "abandoned_time_s"),
-    mp("match_duration_s", "match_duration_s"),
-    mp("match_result", "match_result"),
+    col("game_mode"),
+    col("match_mode"),
+    col("player_team"),
+    col("player_kills"),
+    col("player_deaths"),
+    col("player_assists"),
+    col("denies"),
+    col("net_worth"),
+    col("last_hits"),
+    col("team_abandoned"),
+    col("abandoned_time_s"),
+    col("match_duration_s"),
+    col("match_result"),
     mp("objectives_mask_team_0", "objectives_mask_team0"),
     mp("objectives_mask_team_1", "objectives_mask_team1"),
     mp("brawl_score_team_0", "brawl_score_team0"),
     mp("brawl_score_team_1", "brawl_score_team1"),
-    mp("brawl_avg_round_time_s", "brawl_avg_round_time_s"),
-    mp("won", "won"),
-    mp("player_match_outcome", "player_match_outcome"),
-    mp("ranked_display_badge", "ranked_display_badge"),
-    mp("ranked_delta", "ranked_delta"),
-    mp("ranked_calibration_match", "ranked_calibration_match"),
-    mp(
-        "ranked_used_demotion_protection",
-        "ranked_used_demotion_protection",
-    ),
+    col("brawl_avg_round_time_s"),
+    col("won"),
+    col("player_match_outcome"),
+    col("ranked_display_badge"),
+    col("ranked_delta"),
+    col("ranked_calibration_match"),
+    col("ranked_used_demotion_protection"),
 ];
 
 /// Sub-fields of the `items` Nested column. All `UInt32`.
@@ -381,37 +347,19 @@ pub(super) fn project_matches(look: &Lookahead<'_>) -> Projection {
     }
     let players_field = look.field("players");
     if players_field.exists() {
-        for col in PLAYER_COLUMNS {
-            if players_field.field(col.gql).exists() {
-                projection.player_columns.push(*col);
-            }
-        }
-        ensure_player_identity(&mut projection.player_columns);
-        ensure_hero_build_keys(&players_field, &mut projection.player_columns);
-        collect_subfields(
-            &players_field,
-            "items",
-            ITEM_SUBFIELDS,
-            &mut projection.items_subfields,
-        );
-        collect_subfields(
-            &players_field,
-            "upgrades",
-            UPGRADE_SUBFIELDS,
-            &mut projection.upgrades_subfields,
-        );
-        collect_subfields(
-            &players_field,
-            "stats",
-            STAT_SUBFIELDS,
-            &mut projection.stats_subfields,
-        );
+        project_players(&players_field, &mut projection);
     }
     projection
 }
 
 pub(super) fn project_match_players(look: &Lookahead<'_>) -> Projection {
     let mut projection = Projection::default();
+    project_players(look, &mut projection);
+    projection
+}
+
+/// Projects the player-level selection `look` (a `MatchPlayer` object).
+fn project_players(look: &Lookahead<'_>, projection: &mut Projection) {
     for col in PLAYER_COLUMNS {
         if look.field(col.gql).exists() {
             projection.player_columns.push(*col);
@@ -437,7 +385,6 @@ pub(super) fn project_match_players(look: &Lookahead<'_>) -> Projection {
         STAT_SUBFIELDS,
         &mut projection.stats_subfields,
     );
-    projection
 }
 
 pub(super) fn project_match_history(look: &Lookahead<'_>) -> Vec<Column> {
@@ -500,40 +447,16 @@ mod tests {
     use super::*;
 
     #[test]
-    fn no_duplicate_gql_names_in_match_columns() {
-        for (i, a) in MATCH_COLUMNS.iter().enumerate() {
-            for b in &MATCH_COLUMNS[i + 1..] {
-                assert_ne!(
-                    a.gql, b.gql,
-                    "duplicate GQL name in MATCH_COLUMNS: {}",
-                    a.gql
-                );
-            }
-        }
-    }
-
-    #[test]
-    fn no_duplicate_gql_names_in_player_columns() {
-        for (i, a) in PLAYER_COLUMNS.iter().enumerate() {
-            for b in &PLAYER_COLUMNS[i + 1..] {
-                assert_ne!(
-                    a.gql, b.gql,
-                    "duplicate GQL name in PLAYER_COLUMNS: {}",
-                    a.gql
-                );
-            }
-        }
-    }
-
-    #[test]
-    fn no_duplicate_gql_names_in_match_history_columns() {
-        for (i, a) in MATCH_HISTORY_COLUMNS.iter().enumerate() {
-            for b in &MATCH_HISTORY_COLUMNS[i + 1..] {
-                assert_ne!(
-                    a.gql, b.gql,
-                    "duplicate GQL name in MATCH_HISTORY_COLUMNS: {}",
-                    a.gql
-                );
+    fn no_duplicate_gql_names() {
+        for (name, columns) in [
+            ("MATCH_COLUMNS", MATCH_COLUMNS),
+            ("PLAYER_COLUMNS", PLAYER_COLUMNS),
+            ("MATCH_HISTORY_COLUMNS", MATCH_HISTORY_COLUMNS),
+        ] {
+            for (i, a) in columns.iter().enumerate() {
+                for b in &columns[i + 1..] {
+                    assert_ne!(a.gql, b.gql, "duplicate GQL name in {name}: {}", a.gql);
+                }
             }
         }
     }

@@ -205,25 +205,6 @@ pub(super) fn build_match_players_query(args: &BuildArgs<'_>) -> Result<String, 
     };
     let dir = args.order_dir.as_sql();
 
-    let mut parts: Vec<String> = args
-        .projection
-        .player_columns
-        .iter()
-        .map(|c| column_expr(c, false))
-        .collect();
-    if !args.projection.items_subfields.is_empty() {
-        parts.push(nested_array_expr("items", &args.projection.items_subfields));
-    }
-    if !args.projection.upgrades_subfields.is_empty() {
-        parts.push(nested_array_expr(
-            "upgrades",
-            &args.projection.upgrades_subfields,
-        ));
-    }
-    if !args.projection.stats_subfields.is_empty() {
-        parts.push(nested_array_expr("stats", &args.projection.stats_subfields));
-    }
-
     let mut sql = String::new();
     if args.via_player_match_stats {
         write!(
@@ -234,7 +215,7 @@ pub(super) fn build_match_players_query(args: &BuildArgs<'_>) -> Result<String, 
         )?;
     }
     sql.push_str("SELECT ");
-    sql.push_str(&parts.join(", "));
+    sql.push_str(&player_select_list(args.projection));
     sql.push_str(" FROM match_player ");
     if args.via_player_match_stats {
         write!(
@@ -352,6 +333,14 @@ pub(super) fn build_match_history_query(
 }
 
 fn build_players_aggregate(projection: &Projection) -> String {
+    format!(
+        "groupArray(tuple({})::JSON) AS players",
+        player_select_list(projection)
+    )
+}
+
+/// The projected player columns and `Nested` subfields as a SELECT list.
+fn player_select_list(projection: &Projection) -> String {
     let mut parts: Vec<String> = projection
         .player_columns
         .iter()
@@ -369,8 +358,7 @@ fn build_players_aggregate(projection: &Projection) -> String {
     if !projection.stats_subfields.is_empty() {
         parts.push(nested_array_expr("stats", &projection.stats_subfields));
     }
-    let inner = parts.join(", ");
-    format!("groupArray(tuple({inner})::JSON) AS players")
+    parts.join(", ")
 }
 
 #[cfg(test)]

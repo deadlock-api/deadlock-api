@@ -186,6 +186,9 @@ impl MatchPlayerWhere {
     pub(super) fn to_sql_filters(&self) -> Vec<String> {
         let mut out: Vec<String> = Vec::new();
         macro_rules! push {
+            ($field:ident) => {
+                push!($field, stringify!($field))
+            };
             ($field:ident, $col:expr) => {
                 if let Some(f) = &self.$field
                     && let Some(s) = f.to_sql($col)
@@ -195,67 +198,43 @@ impl MatchPlayerWhere {
             };
         }
         // Match-level (identifying)
-        push!(match_id, "match_id");
+        push!(match_id);
         push!(start_time, SQL_START_TIME_UNIX);
-        push!(duration_s, "duration_s");
-        push!(match_mode, "match_mode");
-        push!(game_mode, "game_mode");
-        push!(winning_team, "winning_team");
-        push!(match_outcome, "match_outcome");
+        push!(duration_s);
+        push!(match_mode);
+        push!(game_mode);
+        push!(winning_team);
+        push!(match_outcome);
         push!(average_badge_team_0, SQL_AVG_BADGE_T0);
         push!(average_badge_team_1, SQL_AVG_BADGE_T1);
         push!(average_badge, SQL_AVG_BADGE);
-        push!(is_high_skill_range_parties, "is_high_skill_range_parties");
-        push!(low_pri_pool, "low_pri_pool");
-        push!(new_player_pool, "new_player_pool");
-        push!(not_scored, "not_scored");
-        push!(rewards_eligible, "rewards_eligible");
+        push!(is_high_skill_range_parties);
+        push!(low_pri_pool);
+        push!(new_player_pool);
+        push!(not_scored);
+        push!(rewards_eligible);
         // Player-level
-        push!(account_id, "account_id");
-        push!(hero_id, "hero_id");
-        push!(player_slot, "player_slot");
-        push!(team, "team");
-        push!(kills, "kills");
-        push!(deaths, "deaths");
-        push!(assists, "assists");
-        push!(net_worth, "net_worth");
-        push!(player_level, "player_level");
-        push!(assigned_lane, "assigned_lane");
-        push!(last_hits, "last_hits");
-        push!(denies, "denies");
-        push!(mvp_rank, "mvp_rank");
-        push!(
-            player_rank_initial_display_rank,
-            "player_rank_initial_display_rank"
-        );
-        push!(
-            player_rank_initial_flat_progress,
-            "player_rank_initial_flat_progress"
-        );
-        push!(
-            player_rank_final_flat_progress,
-            "player_rank_final_flat_progress"
-        );
-        push!(
-            player_rank_desired_progress_change,
-            "player_rank_desired_progress_change"
-        );
-        push!(
-            player_rank_initial_calibration_games,
-            "player_rank_initial_calibration_games"
-        );
-        push!(
-            player_rank_initial_demotion_protection_games,
-            "player_rank_initial_demotion_protection_games"
-        );
-        push!(
-            player_rank_consumed_demotion_protection,
-            "player_rank_consumed_demotion_protection"
-        );
-        push!(
-            player_rank_initial_win_streak,
-            "player_rank_initial_win_streak"
-        );
+        push!(account_id);
+        push!(hero_id);
+        push!(player_slot);
+        push!(team);
+        push!(kills);
+        push!(deaths);
+        push!(assists);
+        push!(net_worth);
+        push!(player_level);
+        push!(assigned_lane);
+        push!(last_hits);
+        push!(denies);
+        push!(mvp_rank);
+        push!(player_rank_initial_display_rank);
+        push!(player_rank_initial_flat_progress);
+        push!(player_rank_final_flat_progress);
+        push!(player_rank_desired_progress_change);
+        push!(player_rank_initial_calibration_games);
+        push!(player_rank_initial_demotion_protection_games);
+        push!(player_rank_consumed_demotion_protection);
+        push!(player_rank_initial_win_streak);
         out
     }
 
@@ -367,6 +346,9 @@ impl MatchHistoryWhere {
     pub(super) fn to_sql_filters(&self) -> MatchHistorySqlFilters {
         let mut out = MatchHistorySqlFilters::default();
         macro_rules! push {
+            ($field:ident) => {
+                push!($field, stringify!($field))
+            };
             ($field:ident, $col:expr) => {
                 if let Some(f) = &self.$field
                     && let Some(s) = f.to_sql($col)
@@ -376,41 +358,40 @@ impl MatchHistoryWhere {
             };
         }
         macro_rules! push_having {
-            ($field:ident, $col:expr) => {
+            ($field:ident) => {
                 if let Some(f) = &self.$field
-                    && let Some(col) = MATCH_HISTORY_COLUMNS.iter().find(|c| c.gql == $col)
+                    && let Some(col) = MATCH_HISTORY_COLUMNS
+                        .iter()
+                        .find(|c| c.gql == stringify!($field))
                     && let Some(s) = f.to_sql(&match_history_merge_expr(col))
                 {
                     out.having.push(s);
                 }
             };
         }
-        push!(account_id, "account_id");
-        push!(match_id, "match_id");
-        push!(hero_id, "hero_id");
-        push!(hero_level, "hero_level");
+        push!(account_id);
+        push!(match_id);
+        push!(hero_id);
+        push!(hero_level);
         push!(start_time, SQL_START_TIME_UNIX);
-        push!(game_mode, "game_mode");
-        push!(match_mode, "match_mode");
-        push!(player_team, "player_team");
-        push!(player_kills, "player_kills");
-        push!(player_deaths, "player_deaths");
-        push!(player_assists, "player_assists");
-        push!(denies, "denies");
-        push!(net_worth, "net_worth");
-        push!(last_hits, "last_hits");
-        push!(team_abandoned, "team_abandoned");
-        push!(match_duration_s, "match_duration_s");
-        push!(match_result, "match_result");
-        push!(won, "won");
-        push!(player_match_outcome, "player_match_outcome");
-        push_having!(ranked_display_badge, "ranked_display_badge");
-        push_having!(ranked_delta, "ranked_delta");
-        push_having!(ranked_calibration_match, "ranked_calibration_match");
-        push_having!(
-            ranked_used_demotion_protection,
-            "ranked_used_demotion_protection"
-        );
+        push!(game_mode);
+        push!(match_mode);
+        push!(player_team);
+        push!(player_kills);
+        push!(player_deaths);
+        push!(player_assists);
+        push!(denies);
+        push!(net_worth);
+        push!(last_hits);
+        push!(team_abandoned);
+        push!(match_duration_s);
+        push!(match_result);
+        push!(won);
+        push!(player_match_outcome);
+        push_having!(ranked_display_badge);
+        push_having!(ranked_delta);
+        push_having!(ranked_calibration_match);
+        push_having!(ranked_used_demotion_protection);
         out
     }
 }
