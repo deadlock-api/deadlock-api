@@ -100,10 +100,11 @@ export function useFlashcardDeck<Entry extends { id: number }, Option>({
     const nextSeen = recordAnswer(card.answer.id, correct);
     const exclude = excludeAfter(card, nextSeen);
     advanceTimer.current = window.setTimeout(
-      () =>
-        setDeal((d) =>
-          d.serial === serial ? { ...d, card: draw(pool, exclude), selected: null, serial: serial + 1 } : d,
-        ),
+      () => {
+        // Drawn here, not in the updater: an updater must be pure (StrictMode runs it twice).
+        const next = draw(pool, exclude);
+        setDeal((d) => (d.serial === serial ? { ...d, card: next, selected: null, serial: serial + 1 } : d));
+      },
       correct ? feedbackMs.correct : feedbackMs.wrong,
     );
   };
