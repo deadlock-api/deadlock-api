@@ -3,20 +3,42 @@ import { ArrowRight } from "lucide-react";
 
 import { RankedEntityList, RankedEntityMetric, RankedEntityRow } from "~/components/domain/assets/RankedEntityList";
 import { PageHeader } from "~/components/patterns/page/PageHeader";
-import { Section } from "~/components/patterns/page/Section";
 import { Panel, PanelBody, PanelHeader } from "~/components/patterns/panel/Panel";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { Button } from "~/components/ui/button";
 import { formatPercent } from "~/lib/format";
+import type { PatchNotes as Notes } from "~/lib/patch-notes";
 import type { PatchReport } from "~/lib/patch-report-fns";
 import { PATCH_MIN_BADGE, type PatchEntry, patchDate, patchDateRange, patchLabel } from "~/lib/patches";
 import { MAX_BADGE } from "~/lib/rank-utils";
 import { cn } from "~/lib/utils";
 
-import { PatchHeadline, PatchStatChanges } from "./PatchGameStats";
+import { PatchStatChanges } from "./PatchGameStats";
 import { PatchMoverPanel } from "./PatchMovers";
+import { PatchNotes } from "./PatchNotes";
 import { PatchRankSplit } from "./PatchRankSplit";
+
+type Filters = { date_range: string; min_rank: number; max_rank: number };
+
+/** A panel's way into the full analytics view. */
+function ViewAll({
+  to,
+  search,
+  label,
+}: {
+  to: "/analytics/heroes" | "/analytics/items" | "/analytics/games";
+  search: Filters;
+  label: string;
+}) {
+  return (
+    <Button asChild variant="ghost" size="xs">
+      <Link to={to} search={search} preload="intent">
+        <ViewAllLabel>{label}</ViewAllLabel>
+      </Link>
+    </Button>
+  );
+}
 
 /** A section's way into the full analytics view. */
 function ViewAllLabel({ children }: { children: React.ReactNode }) {
@@ -35,12 +57,15 @@ function ViewAllLabel({ children }: { children: React.ReactNode }) {
 export function PatchPage({
   patch,
   report,
+  notes,
   hasData,
   days,
 }: {
   patch: PatchEntry;
   /** Undefined when the stats failed to load. */
   report: PatchReport | undefined;
+  /** The announcement or changelog, when the feed has a post for the patch's day. */
+  notes?: Notes;
   /** Whether the window after the patch has enough matches to compare. */
   hasData: boolean;
   /** Days of data on each side of the patch. */
@@ -57,9 +82,11 @@ export function PatchPage({
   const items = report && (report.itemMovers.gains.length > 0 || report.itemMovers.drops.length > 0);
   const ranks = report && report.rankGaps.length > 0;
   const stats = report && report.statChanges.length > 0;
-  // A side with nothing significant is left out, and the other takes the whole width.
-  const bothHeroSides = report && report.heroMovers.gains.length > 0 && report.heroMovers.drops.length > 0;
-  const bothItemSides = report && report.itemMovers.gains.length > 0 && report.itemMovers.drops.length > 0;
+
+  const ready = !!report && hasData;
+  // The statistics need the report; the notes are shown without it.
+  const statChanges = ready && stats;
+  const movers = ready && (heroes || items) ? report : undefined;
 
   return (
     <>
@@ -75,46 +102,68 @@ export function PatchPage({
       />
 
       {!report ? (
-        <ErrorState title={`${label} stats did not load`} />
+        <>
+          {notes && <PatchNotes notes={notes} layout="fit" />}
+          <ErrorState title={`${label} stats did not load`} />
+        </>
       ) : !hasData ? (
-        <EmptyState title={`Not enough matches since the ${label} yet`} />
+        <>
+          {notes && <PatchNotes notes={notes} layout="fit" />}
+          <EmptyState title={`Not enough matches since the ${label} yet`} />
+        </>
       ) : (
         <>
-          <PatchHeadline headline={report.headline} />
-
           {!heroes && !newHeroes && !items && !ranks && !stats && (
             <EmptyState title={`No significant changes since the ${label}`} />
           )}
 
-          {/* Two sections side by side on a wide page; each lays its own panels out by the room it gets. */}
-          <div className="@container grid items-start gap-6 @7xl:grid-cols-2">
-            {(heroes || newHeroes) && (
-              <Section
-                className="@container"
-                title="Hero Win Rate Changes"
-                action={
-                  <Button asChild variant="ghost" size="sm">
-                    <Link to="/analytics/heroes" search={filters} preload="intent">
-                      <ViewAllLabel>All heroes</ViewAllLabel>
-                    </Link>
-                  </Button>
-                }
-              >
-                {heroes && (
-                  <div className={cn("grid items-stretch gap-4", bothHeroSides && "@2xl:grid-cols-2")}>
-                    {report.heroMovers.gains.length > 0 && (
-                      <PatchMoverPanel title="Biggest Gains" movers={report.heroMovers.gains} metric="winRate" />
-                    )}
-                    {report.heroMovers.drops.length > 0 && (
-                      <PatchMoverPanel title="Biggest Drops" movers={report.heroMovers.drops} metric="winRate" />
-                    )}
-                  </div>
+          {/* The notes beside the game stats that changed, the same height; then what moved most, four across. */}
+          {(notes || statChanges) && (
+            <div className="@container">
+              <div className={cn("grid items-stretch gap-6", notes && statChanges && "@5xl:grid-cols-2")}>
+                {notes && <PatchNotes notes={notes} layout={statChanges ? "fill" : "fit"} />}
+                {statChanges && (
+                  <Panel>
+                    <PanelHeader title="Game Stat Changes" size="sm">
+                      <ViewAll to="/analytics/games" search={filters} label="All game stats" />
+                    </PanelHeader>
+                    <PanelBody>
+                      <PatchStatChanges changes={report.statChanges} />
+                    </PanelBody>
+                  </Panel>
                 )}
+              </div>
+            </div>
+          )}
+
+          {/* Every panel of what moved in one grid, two across, so a list on its own sits beside the next panel. */}
+          {(movers || newHeroes || ranks) && (
+            <div className="@container">
+              <div className="grid items-stretch gap-6 @3xl:grid-cols-2">
+                {movers && heroes && (
+                  <PatchMoverPanel
+                    title="Hero Win Rate Changes"
+                    gains={movers.heroMovers.gains}
+                    drops={movers.heroMovers.drops}
+                    metric="winRate"
+                    action={<ViewAll to="/analytics/heroes" search={filters} label="All heroes" />}
+                  />
+                )}
+                {movers && items && (
+                  <PatchMoverPanel
+                    title="Item Build Changes"
+                    gains={movers.itemMovers.gains}
+                    drops={movers.itemMovers.drops}
+                    metric="pickRate"
+                    action={<ViewAll to="/analytics/items" search={filters} label="All items" />}
+                  />
+                )}
+
                 {newHeroes && (
                   <Panel>
                     <PanelHeader title="New Heroes" size="sm" />
                     <PanelBody>
-                      <RankedEntityList density="compact">
+                      <RankedEntityList density="compact" columns="single">
                         {report.newHeroes.map((hero, index) => (
                           <RankedEntityRow
                             key={hero.id}
@@ -122,14 +171,10 @@ export function PatchPage({
                             entity={{ heroId: hero.id }}
                             meta={`${hero.matches.toLocaleString("en-US")} matches`}
                           >
-                            <RankedEntityMetric
-                              label="Win rate"
-                              labelDisplay={index === 0 ? "visible" : "hidden"}
-                              value={formatPercent(hero.winRate)}
-                            />
+                            <RankedEntityMetric label="Win rate" className="w-16" value={formatPercent(hero.winRate)} />
                             <RankedEntityMetric
                               label="Pick rate"
-                              labelDisplay={index === 0 ? "visible" : "hidden"}
+                              className="w-16"
                               value={formatPercent(hero.pickRate)}
                             />
                           </RankedEntityRow>
@@ -138,70 +183,28 @@ export function PatchPage({
                     </PanelBody>
                   </Panel>
                 )}
-              </Section>
-            )}
 
-            {items && (
-              <Section
-                className="@container"
-                title="Item Build Changes"
-                action={
-                  <Button asChild variant="ghost" size="sm">
-                    <Link to="/analytics/items" search={filters} preload="intent">
-                      <ViewAllLabel>All items</ViewAllLabel>
-                    </Link>
-                  </Button>
-                }
-              >
-                <div className={cn("grid items-stretch gap-4", bothItemSides && "@2xl:grid-cols-2")}>
-                  {report.itemMovers.gains.length > 0 && (
-                    <PatchMoverPanel title="Bought More" movers={report.itemMovers.gains} metric="pickRate" />
-                  )}
-                  {report.itemMovers.drops.length > 0 && (
-                    <PatchMoverPanel title="Bought Less" movers={report.itemMovers.drops} metric="pickRate" />
-                  )}
-                </div>
-              </Section>
-            )}
-
-            {ranks && (
-              <Section
-                title="Low vs High Ranks"
-                action={
-                  <Button asChild variant="ghost" size="sm">
-                    <Link to="/analytics/heroes/by-rank" search={{ date_range: filters.date_range }} preload="intent">
-                      <ViewAllLabel>Heroes by rank</ViewAllLabel>
-                    </Link>
-                  </Button>
-                }
-              >
-                <Panel>
-                  <PanelBody>
-                    <PatchRankSplit rows={report.rankGaps} />
-                  </PanelBody>
-                </Panel>
-              </Section>
-            )}
-
-            {stats && (
-              <Section
-                title="Game Stat Changes"
-                action={
-                  <Button asChild variant="ghost" size="sm">
-                    <Link to="/analytics/games" search={filters} preload="intent">
-                      <ViewAllLabel>All game stats</ViewAllLabel>
-                    </Link>
-                  </Button>
-                }
-              >
-                <Panel>
-                  <PanelBody>
-                    <PatchStatChanges changes={report.statChanges} />
-                  </PanelBody>
-                </Panel>
-              </Section>
-            )}
-          </div>
+                {ranks && (
+                  <Panel>
+                    <PanelHeader title="Low vs High Ranks" size="sm">
+                      <Button asChild variant="ghost" size="xs">
+                        <Link
+                          to="/analytics/heroes/by-rank"
+                          search={{ date_range: filters.date_range }}
+                          preload="intent"
+                        >
+                          <ViewAllLabel>Heroes by rank</ViewAllLabel>
+                        </Link>
+                      </Button>
+                    </PanelHeader>
+                    <PanelBody>
+                      <PatchRankSplit rows={report.rankGaps} />
+                    </PanelBody>
+                  </Panel>
+                )}
+              </div>
+            </div>
+          )}
         </>
       )}
     </>

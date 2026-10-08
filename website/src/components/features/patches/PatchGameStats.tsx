@@ -1,56 +1,18 @@
 import type { AnalyticsGameStats } from "deadlock_api_client";
 
 import { Delta } from "~/components/ui/delta";
-import { Stat, StatGroup } from "~/components/ui/stat";
+import { DivergingBar } from "~/components/ui/rate-bar";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
-import { formatStatValue, getStatDefinition, type StatFormat } from "~/lib/game-stat-definitions";
-import { type StatChange, statDelta } from "~/lib/patch-deltas";
-import type { HeadlineStat, PatchReport } from "~/lib/patch-report-fns";
-
-const HEADLINE: {
-  key: keyof PatchReport["headline"];
-  label: string;
-  format: StatFormat;
-  polarity?: "higher-is-better";
-}[] = [
-  { key: "matchesPerDay", label: "Matches per day", format: "integer", polarity: "higher-is-better" },
-  { key: "gameLength", label: "Game length", format: "duration" },
-  { key: "soulsPerMinute", label: "Souls per minute", format: "integer" },
-  { key: "kills", label: "Kills per player", format: "decimal1" },
-  { key: "firstMidBoss", label: "First mid boss", format: "duration" },
-];
-
-/** A headline's change, or nothing when it stayed within its day-to-day swing. */
-function headlineDelta(stat: HeadlineStat, format: StatFormat): number | null {
-  return stat.significant ? statDelta(format, stat.after, stat.before) : null;
-}
+import { formatStatValue, getStatDefinition } from "~/lib/game-stat-definitions";
+import type { StatChange } from "~/lib/patch-deltas";
 
 /**
- * The headline numbers of a patch: match volume, game length and pace after it. An arrow marks only a change beyond
- * the number's day-to-day swing.
+ * The game stats the patch moved beyond their day-to-day swing, before and after. Beside a wide table the change is
+ * drawn as a signed bar, on one scale per column of units; on a phone before and after sit under the stat's name so the
+ * change keeps its column.
  */
-export function PatchHeadline({ headline }: { headline: PatchReport["headline"] }) {
-  return (
-    <div className="@container">
-      <StatGroup variant="joined" size="sm" className="grid-cols-2 @md:grid-cols-3 @2xl:grid-cols-5">
-        {HEADLINE.map(({ key, label, format, polarity }) => {
-          const delta = headlineDelta(headline[key], format);
-          return (
-            <Stat
-              key={key}
-              label={label}
-              value={formatStatValue(headline[key].after, format)}
-              sub={delta === null ? undefined : <Delta value={delta} polarity={polarity ?? "neutral"} sign="arrow" />}
-            />
-          );
-        })}
-      </StatGroup>
-    </div>
-  );
-}
-
-/** The game stats the patch moved beyond their day-to-day swing, before and after. */
 export function PatchStatChanges({ changes }: { changes: readonly StatChange<keyof AnalyticsGameStats>[] }) {
+  const scale = Math.max(...changes.map(({ delta }) => Math.abs(delta)), 1);
   return (
     <Table aria-label="Game stat changes" density="compact">
       <TableHeader>
@@ -58,14 +20,17 @@ export function PatchStatChanges({ changes }: { changes: readonly StatChange<key
           <TableHead scope="col" data-pinned>
             Stat
           </TableHead>
-          <TableHead scope="col" className="text-end">
+          <TableHead scope="col" className="hidden text-end @md/table:table-cell">
             Before
           </TableHead>
-          <TableHead scope="col" className="text-end">
+          <TableHead scope="col" className="hidden text-end @md/table:table-cell">
             After
           </TableHead>
           <TableHead scope="col" className="text-end">
             Change
+          </TableHead>
+          <TableHead scope="col" className="hidden w-40 @xl/table:table-cell">
+            <span className="sr-only">Change as a bar</span>
           </TableHead>
         </TableRow>
       </TableHeader>
@@ -75,15 +40,27 @@ export function PatchStatChanges({ changes }: { changes: readonly StatChange<key
           if (!stat) return null;
           return (
             <TableRow key={key}>
-              <TableCell data-pinned>{stat.label}</TableCell>
-              <TableCell className="text-end tabular-nums">{formatStatValue(before, stat.format)}</TableCell>
-              <TableCell className="text-end tabular-nums">{formatStatValue(after, stat.format)}</TableCell>
+              <TableCell data-pinned className="whitespace-normal">
+                {stat.label}
+                <span className="block type-caption text-muted-foreground tabular-nums @md/table:hidden">
+                  {formatStatValue(before, stat.format)} → {formatStatValue(after, stat.format)}
+                </span>
+              </TableCell>
+              <TableCell className="hidden text-end tabular-nums @md/table:table-cell">
+                {formatStatValue(before, stat.format)}
+              </TableCell>
+              <TableCell className="hidden text-end tabular-nums @md/table:table-cell">
+                {formatStatValue(after, stat.format)}
+              </TableCell>
               <TableCell className="text-end">
                 <Delta
                   value={delta}
                   unit={stat.format === "percent" ? " pp" : undefined}
                   polarity={stat.polarity ?? "neutral"}
                 />
+              </TableCell>
+              <TableCell className="hidden @xl/table:table-cell">
+                <DivergingBar value={delta} scale={scale} />
               </TableCell>
             </TableRow>
           );
