@@ -17,6 +17,7 @@ import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { Button } from "~/components/ui/button";
 import { DivergingBar } from "~/components/ui/rate-bar";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
+import { findKey } from "~/lib/find-keys";
 import { formatPercent, formatSignedPercent } from "~/lib/format";
 import { TONE_TEXT, toneOf } from "~/lib/tone";
 import { cn } from "~/lib/utils";
@@ -71,7 +72,7 @@ function MatchupRanking({
               const hero = heroes.get(row.heroId);
               const delta = row.prevRelWinrate === undefined ? undefined : row.relWinrate - row.prevRelWinrate;
               return (
-                <TableRow key={row.heroId}>
+                <TableRow key={row.heroId} data-find={findKey.hero(row.heroId)}>
                   <TableCell className="ps-1">
                     <Button
                       variant="ghost"

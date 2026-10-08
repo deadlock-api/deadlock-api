@@ -16,6 +16,7 @@ import { Tooltip, TooltipHeader, TooltipStat, TooltipStats } from "~/components/
 import type { Dayjs } from "~/dayjs";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { EXPERIENCE_BUCKETS } from "~/lib/constants";
+import { findKey } from "~/lib/find-keys";
 import { formatSignedPercent } from "~/lib/format";
 import { type GameMode, hasSoulEconomy, type MatchMode } from "~/lib/game-mode";
 import { TONE_TEXT, toneOf } from "~/lib/tone";
@@ -329,7 +330,7 @@ export function HeroStatsByExperienceTable({
             <TableEmptyRow colSpan={EXPERIENCE_BUCKETS.length + 3}>No hero stats for these filters.</TableEmptyRow>
           ) : (
             sortedRows.map((row, index) => (
-              <TableRow key={row.heroId}>
+              <TableRow key={row.heroId} data-find={findKey.hero(row.heroId)}>
                 <TableCell className="text-center font-semibold text-muted-foreground">{index + 1}</TableCell>
                 {heroCells.get(row.heroId)}
               </TableRow>

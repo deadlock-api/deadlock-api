@@ -32,6 +32,7 @@ import { api } from "~/lib/api";
 import { BANS_PER_MATCH, computeBanRates } from "~/lib/ban-rate";
 import { getPickrateMultiplier } from "~/lib/constants";
 import { useExperiment } from "~/lib/experiments";
+import { findKey } from "~/lib/find-keys";
 import { formatPercent } from "~/lib/format";
 import type { GameMode, MatchMode } from "~/lib/game-mode";
 import {
@@ -953,7 +954,7 @@ export function HeroStatsTable({
   // Cell contents depend on the data, not the row's position in the sorted table.
   const heroCells = new Map(heroData?.map((row) => [row.hero_id, renderHeroCells(row)]));
   const renderHeroRow = (row: AnalyticsHeroStats, index: number, showIndex: boolean) => (
-    <TableRow key={row.hero_id}>
+    <TableRow key={row.hero_id} data-find={findKey.hero(row.hero_id)}>
       {showIndex && <TableCell className="text-center font-semibold">{index + 1}</TableCell>}
       {heroCells.get(row.hero_id)}
     </TableRow>

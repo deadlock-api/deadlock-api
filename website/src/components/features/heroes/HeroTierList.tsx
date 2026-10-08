@@ -15,6 +15,7 @@ import type { Dayjs } from "~/dayjs";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { computeBanRates } from "~/lib/ban-rate";
 import { getPickrateMultiplier } from "~/lib/constants";
+import { findKey } from "~/lib/find-keys";
 import { formatPercent } from "~/lib/format";
 import type { GameMode, MatchMode } from "~/lib/game-mode";
 import { heroSlug } from "~/lib/hero-slug";
@@ -70,6 +71,7 @@ function HeroTile({ hero, ranked, metric }: { hero: SlimHero; ranked: RankedHero
     >
       <TierItem
         asChild
+        data-find={findKey.hero(hero.id)}
         name={hero.name}
         media={<HeroImage hero={hero} shape="rounded" title="" className="size-10" />}
         meta={

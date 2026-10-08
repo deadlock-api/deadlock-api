@@ -16,6 +16,7 @@ import { Inline } from "~/components/ui/stack";
 import { Text } from "~/components/ui/text";
 import { Tooltip } from "~/components/ui/tooltip";
 import { BUFF_TIMINGS_NOTE } from "~/lib/buffs";
+import { findKey } from "~/lib/find-keys";
 import { CATEGORY_ICONS, formatStatValue, getFilteredCategories } from "~/lib/game-stat-definitions";
 import { statDelta } from "~/lib/patch-deltas";
 import { cn } from "~/lib/utils";
@@ -154,6 +155,7 @@ export default function GamesOverview({ params, prevParams, onStatClick, isStree
                       <Button
                         variant="row"
                         className="justify-between px-4 py-2.5"
+                        data-find={findKey.stat(stat.key)}
                         onClick={() => onStatClick?.(stat.key)}
                       >
                         <span className="text-start text-sm text-muted-foreground">{stat.label}</span>

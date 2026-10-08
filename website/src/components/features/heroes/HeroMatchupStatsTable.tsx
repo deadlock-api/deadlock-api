@@ -19,6 +19,7 @@ import { Tooltip, TooltipHeader, TooltipStat, TooltipStats, TooltipTarget } from
 import { CACHE_DURATIONS } from "~/constants/cache";
 import type { Dayjs } from "~/dayjs";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
+import { findKey } from "~/lib/find-keys";
 import { formatSignedPercent } from "~/lib/format";
 import type { GameMode, MatchMode } from "~/lib/game-mode";
 import { heroesQueryOptions } from "~/queries/asset-queries";
@@ -552,7 +553,7 @@ export function HeroMatchupStatsTable({
           <TableEmptyRow colSpan={6}>No matchups with enough matches for these filters</TableEmptyRow>
         )}
         {sortedHeroIds.map((heroId, index) => (
-          <TableRow key={heroId}>
+          <TableRow key={heroId} data-find={findKey.hero(heroId)}>
             <TableCell className="font-semibold">{index + 1}</TableCell>
             <TableCell data-pinned>
               <HeroCell heroId={heroId} />

@@ -38,6 +38,7 @@ import { Stack } from "~/components/ui/stack";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { Tooltip, TooltipHeader, TooltipStat, TooltipStats, TooltipTarget } from "~/components/ui/tooltip";
 import { useHydrated } from "~/hooks/useHydrated";
+import { findKey } from "~/lib/find-keys";
 import { formatPercent } from "~/lib/format";
 import { parseAsSetOf } from "~/lib/nuqs-parsers";
 import { cn } from "~/lib/utils";
@@ -491,10 +492,18 @@ const ItemStatsTableRow = memo(function ItemStatsTableRow({
     </>
   );
 
-  if (!customDropdownContent) return <TableRow data-dimmed={shouldDim || undefined}>{cells}</TableRow>;
+  const find = findKey.item(row.item_id);
+  if (!customDropdownContent) {
+    return (
+      <TableRow data-find={find} data-dimmed={shouldDim || undefined}>
+        {cells}
+      </TableRow>
+    );
+  }
 
   return (
     <ExpandableRow
+      data-find={find}
       data-dimmed={shouldDim || undefined}
       colSpan={totalColumns}
       details={

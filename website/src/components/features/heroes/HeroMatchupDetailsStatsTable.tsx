@@ -12,6 +12,7 @@ import { Tooltip, TooltipStat, TooltipStats, TooltipTarget } from "~/components/
 import { CACHE_DURATIONS } from "~/constants/cache";
 import type { Dayjs } from "~/dayjs";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
+import { findKey } from "~/lib/find-keys";
 import type { GameMode, MatchMode } from "~/lib/game-mode";
 import { heroMatchups, type HeroMatchups } from "~/lib/matchup-stats";
 import { heroCounterWinsQueryOptions, heroSynergyWinsQueryOptions } from "~/queries/hero-matchup-query";
@@ -227,7 +228,7 @@ export function HeroMatchupDetailsStatsTable({
             <TableEmptyRow colSpan={3}>No matchups with enough matches for these filters</TableEmptyRow>
           )}
           {visibleRows.map((row, index) => (
-            <TableRow key={row.heroId}>
+            <TableRow key={row.heroId} data-find={findKey.hero(row.heroId)}>
               <TableCell>{index + 1}</TableCell>
               <TableCell data-pinned>
                 <HeroCell heroId={row.heroId} linkToDetail={linkHeroes} />

@@ -26,6 +26,7 @@ import { useSeasons } from "~/hooks/useSeasons";
 import { computeBanRates } from "~/lib/ban-rate";
 import { getPickrateMultiplier } from "~/lib/constants";
 import type { DateFilterPreference } from "~/lib/date-filter-preference";
+import { findKey } from "~/lib/find-keys";
 import { formatPercent } from "~/lib/format";
 import { DEFAULT_MATCH_MODE } from "~/lib/game-mode";
 import { fetchHeroMatchups, type HeroMatchupsRequest } from "~/lib/hero-matchup-fns";
@@ -363,18 +364,30 @@ function HeroDetailPage() {
         {summary ? (
           <StatGroup variant="plain" className="grid-cols-2 @lg:grid-cols-4">
             <Stat
+              data-find={findKey.stat("win_rate")}
               label="Win Rate"
               value={formatPercent(summary.winRate)}
               tone={toneOf(summary.winRate, 0.5)}
               sub={rankLabel(summary.winRateRank)}
             />
-            <Stat label="Pick Rate" value={formatPercent(summary.pickRate)} sub={rankLabel(summary.pickRateRank)} />
             <Stat
+              data-find={findKey.stat("pick_rate")}
+              label="Pick Rate"
+              value={formatPercent(summary.pickRate)}
+              sub={rankLabel(summary.pickRateRank)}
+            />
+            <Stat
+              data-find={findKey.stat("ban_rate")}
               label="Ban Rate"
               value={summary.banRate !== undefined ? formatPercent(summary.banRate) : undefined}
               sub={rankLabel(summary.banRateRank, summary.banHeroCount)}
             />
-            <Stat label="Matches" value={summary.matches.toLocaleString("en-US")} sub="tracked" />
+            <Stat
+              data-find={findKey.stat("matches")}
+              label="Matches"
+              value={summary.matches.toLocaleString("en-US")}
+              sub="tracked"
+            />
           </StatGroup>
         ) : (
           statsQuery.isError && (

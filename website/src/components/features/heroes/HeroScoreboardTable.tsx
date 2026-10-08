@@ -5,6 +5,7 @@ import type { ScoreboardSort } from "~/components/domain/player-scoreboard/Score
 import { SortableHeader } from "~/components/patterns/data-table/SortableHeader";
 import { TableEmptyRow } from "~/components/patterns/data-table/TableEmptyRow";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
+import { findKey } from "~/lib/find-keys";
 import { formatStatValue, sortByLabel } from "~/lib/scoreboard-sorts";
 
 export interface HeroScoreboardTableProps {
@@ -31,6 +32,7 @@ export function HeroScoreboardTable({ entries, sortBy, sortDirection, onSortChan
           <TableHead data-pinned>Hero</TableHead>
           {sortBy !== "matches" && (
             <SortableHeader
+              data-find={findKey.stat("matches")}
               label="Matches"
               sortKey="matches"
               activeSortKey={sortBy}
@@ -42,6 +44,7 @@ export function HeroScoreboardTable({ entries, sortBy, sortDirection, onSortChan
           )}
           {/* The stat is picked in the scoreboard's toolbar; its column header flips the direction. */}
           <SortableHeader
+            data-find={findKey.stat(sortBy)}
             label={sortByLabel(sortBy)}
             sortKey={sortBy}
             activeSortKey={sortBy}
@@ -53,7 +56,7 @@ export function HeroScoreboardTable({ entries, sortBy, sortDirection, onSortChan
       </TableHeader>
       <TableBody>
         {entries.map((entry) => (
-          <TableRow key={entry.hero_id}>
+          <TableRow key={entry.hero_id} data-find={findKey.hero(entry.hero_id)}>
             <TableCell className="text-end">{entry.rank}</TableCell>
             <TableCell data-pinned className="max-w-60">
               <HeroCell heroId={entry.hero_id} size="sm" linkToDetail />

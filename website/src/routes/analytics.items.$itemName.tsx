@@ -22,6 +22,7 @@ import { Badge } from "~/components/ui/badge";
 import { Stat, StatGroup } from "~/components/ui/stat";
 import { useSeasons } from "~/hooks/useSeasons";
 import type { DateFilterPreference } from "~/lib/date-filter-preference";
+import { findKey } from "~/lib/find-keys";
 import { formatPercent } from "~/lib/format";
 import { DEFAULT_MATCH_MODE } from "~/lib/game-mode";
 import { fetchItemBestHeroes } from "~/lib/item-hero-fns";
@@ -302,18 +303,30 @@ function ItemDetailPage() {
         {summary ? (
           <StatGroup variant="plain" className="grid-cols-2 @lg:grid-cols-4">
             <Stat
+              data-find={findKey.stat("win_rate")}
               label="Win Rate"
               value={formatPercent(summary.winRate)}
               tone={toneOf(summary.winRate, 0.5)}
               sub={`#${summary.winRateRank} of ${summary.itemCount}`}
             />
             <Stat
+              data-find={findKey.stat("bought")}
               label="Bought"
               value={summary.usage !== undefined ? formatPercent(summary.usage) : undefined}
               sub={`by ${summary.players.toLocaleString("en-US")} players`}
             />
-            <Stat label="Avg Buy Time" value={clock(summary.avgBuyTimeS)} sub="into the match" />
-            <Stat label="Matches" value={summary.matches.toLocaleString("en-US")} sub="tracked" />
+            <Stat
+              data-find={findKey.stat("avg_buy_time")}
+              label="Avg Buy Time"
+              value={clock(summary.avgBuyTimeS)}
+              sub="into the match"
+            />
+            <Stat
+              data-find={findKey.stat("matches")}
+              label="Matches"
+              value={summary.matches.toLocaleString("en-US")}
+              sub="tracked"
+            />
           </StatGroup>
         ) : (
           (statsQuery.isError || heroStatsQuery.isError) && (

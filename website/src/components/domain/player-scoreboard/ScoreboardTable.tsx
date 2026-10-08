@@ -14,6 +14,7 @@ import { SearchInput } from "~/components/ui/search-input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { usePaginationQueryState } from "~/hooks/usePaginationQueryState";
 import { useSteamProfiles } from "~/hooks/useSteamProfiles";
+import { findKey } from "~/lib/find-keys";
 import { extractBadgeMap } from "~/lib/leaderboard";
 import { formatStatValue, sortByLabel } from "~/lib/scoreboard-sorts";
 import { parseSteamIdInput } from "~/lib/steam";
@@ -217,6 +218,7 @@ export function ScoreboardTable({
             <TableHead>Player</TableHead>
             {sortBy !== "matches" && (
               <SortableHeader
+                data-find={findKey.stat("matches")}
                 label="Matches"
                 sortKey="matches"
                 activeSortKey={sortBy}
@@ -234,6 +236,7 @@ export function ScoreboardTable({
             )}
             {/* The stat is picked in the scoreboard's toolbar; its column header flips the direction. */}
             <SortableHeader
+              data-find={findKey.stat(sortBy)}
               label={sortByLabel(sortBy)}
               sortKey={sortBy}
               activeSortKey={sortBy}
