@@ -1,5 +1,6 @@
+use axum::body::Body;
 use axum::extract::{Query, State};
-use axum::http::header::{COOKIE, SET_COOKIE};
+use axum::http::header::{COOKIE, LOCATION, SET_COOKIE};
 use axum::http::{HeaderMap, HeaderValue, StatusCode};
 use axum::response::{IntoResponse, Response};
 use chrono::{Duration, Utc};
@@ -56,11 +57,7 @@ pub(crate) async fn login(State(state): State<AppState>) -> impl IntoResponse {
     let cookie_header = HeaderValue::from_str(&cookie_value)
         .expect("hex-encoded oauth state is always a valid header value");
 
-    let mut response = Response::builder()
-        .status(StatusCode::FOUND)
-        .header("Location", auth_url)
-        .body(axum::body::Body::empty())
-        .expect("Failed to build redirect response");
+    let mut response = redirect(&auth_url);
 
     response.headers_mut().insert(SET_COOKIE, cookie_header);
 
@@ -114,10 +111,7 @@ pub(crate) async fn logout(State(state): State<AppState>) -> impl IntoResponse {
         }
     }
 
-    let mut response = Response::builder()
-        .status(StatusCode::OK)
-        .body(axum::body::Body::empty())
-        .expect("Failed to build response");
+    let mut response = StatusCode::OK.into_response();
 
     for header in clear_cookie_headers {
         response.headers_mut().append(SET_COOKIE, header);
@@ -144,33 +138,20 @@ pub(crate) async fn callback(
     // If the user cancelled the OAuth flow, Patreon redirects back without a code.
     // Redirect them back to the frontend gracefully.
     let Some(code) = params.code else {
-        return Response::builder()
-            .status(StatusCode::FOUND)
-            .header("Location", &app_state.config.patreon.frontend_redirect_url)
-            .body(axum::body::Body::empty())
-            .expect("Failed to build redirect response");
+        return redirect(&app_state.config.patreon.frontend_redirect_url);
     };
 
     // Step 1: Validate state parameter matches cookie (CSRF protection)
     let Some(stored_state) = extract_state_from_cookie(&headers) else {
-        return Response::builder()
-            .status(StatusCode::BAD_REQUEST)
-            .body(axum::body::Body::from("Missing OAuth state cookie"))
-            .expect("Failed to build error response");
+        return plain_response(StatusCode::BAD_REQUEST, "Missing OAuth state cookie");
     };
 
     let Some(ref state_param) = params.state else {
-        return Response::builder()
-            .status(StatusCode::BAD_REQUEST)
-            .body(axum::body::Body::from("Missing OAuth state parameter"))
-            .expect("Failed to build error response");
+        return plain_response(StatusCode::BAD_REQUEST, "Missing OAuth state parameter");
     };
 
     if *state_param != stored_state {
-        return Response::builder()
-            .status(StatusCode::BAD_REQUEST)
-            .body(axum::body::Body::from("Invalid OAuth state"))
-            .expect("Failed to build error response");
+        return plain_response(StatusCode::BAD_REQUEST, "Invalid OAuth state");
     }
 
     // Create Patreon client
@@ -186,12 +167,10 @@ pub(crate) async fn callback(
         Ok(response) => response,
         Err(e) => {
             tracing::error!("Failed to exchange code: {e}");
-            return Response::builder()
-                .status(StatusCode::BAD_GATEWAY)
-                .body(axum::body::Body::from(
-                    "Failed to authenticate with Patreon",
-                ))
-                .expect("Failed to build error response");
+            return plain_response(
+                StatusCode::BAD_GATEWAY,
+                "Failed to authenticate with Patreon",
+            );
         }
     };
 
@@ -203,10 +182,7 @@ pub(crate) async fn callback(
         Ok(identity) => identity,
         Err(e) => {
             tracing::error!("Failed to get identity: {e}");
-            return Response::builder()
-                .status(StatusCode::BAD_GATEWAY)
-                .body(axum::body::Body::from("Failed to fetch Patreon identity"))
-                .expect("Failed to build error response");
+            return plain_response(StatusCode::BAD_GATEWAY, "Failed to fetch Patreon identity");
         }
     };
 
@@ -218,10 +194,10 @@ pub(crate) async fn callback(
         Ok(membership) => membership,
         Err(e) => {
             tracing::error!("Failed to get membership: {e}");
-            return Response::builder()
-                .status(StatusCode::BAD_GATEWAY)
-                .body(axum::body::Body::from("Failed to fetch Patreon membership"))
-                .expect("Failed to build error response");
+            return plain_response(
+                StatusCode::BAD_GATEWAY,
+                "Failed to fetch Patreon membership",
+            );
         }
     };
 
@@ -262,10 +238,10 @@ pub(crate) async fn callback(
         Ok(patron) => patron,
         Err(e) => {
             tracing::error!("Failed to save patron: {e}");
-            return Response::builder()
-                .status(StatusCode::INTERNAL_SERVER_ERROR)
-                .body(axum::body::Body::from("Failed to save patron data"))
-                .expect("Failed to build error response");
+            return plain_response(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Failed to save patron data",
+            );
         }
     };
 
@@ -274,10 +250,10 @@ pub(crate) async fn callback(
         Ok(token) => token,
         Err(e) => {
             tracing::error!("Failed to create session token: {e}");
-            return Response::builder()
-                .status(StatusCode::INTERNAL_SERVER_ERROR)
-                .body(axum::body::Body::from("Failed to create session"))
-                .expect("Failed to build error response");
+            return plain_response(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Failed to create session",
+            );
         }
     };
 
@@ -290,30 +266,24 @@ pub(crate) async fn callback(
     let base_cookie = format!(
         "patron_session={session_token}; HttpOnly; Secure; SameSite=None; Path=/; Max-Age=604800"
     );
-    let session_cookie_headers: Vec<HeaderValue> =
-        if app_state.config.patreon.cookie_domains.is_empty() {
-            vec![HeaderValue::from_str(&base_cookie).expect("valid cookie")]
-        } else {
-            let mut headers = Vec::with_capacity(app_state.config.patreon.cookie_domains.len());
-            for domain in &app_state.config.patreon.cookie_domains {
-                let cookie = format!("{base_cookie}; Domain={domain}");
-                let header = match HeaderValue::from_str(&cookie) {
-                    Ok(v) => v,
-                    Err(e) => {
-                        tracing::error!("Failed to encode session cookie as header value: {e}");
-                        return APIError::internal("Failed to create session").into_response();
-                    }
-                };
-                headers.push(header);
-            }
-            headers
-        };
+    let domains = &app_state.config.patreon.cookie_domains;
+    let session_cookie_headers: Result<Vec<HeaderValue>, _> = if domains.is_empty() {
+        HeaderValue::from_str(&base_cookie).map(|header| vec![header])
+    } else {
+        domains
+            .iter()
+            .map(|domain| HeaderValue::from_str(&format!("{base_cookie}; Domain={domain}")))
+            .collect()
+    };
+    let session_cookie_headers = match session_cookie_headers {
+        Ok(headers) => headers,
+        Err(e) => {
+            tracing::error!("Failed to encode session cookie as header value: {e}");
+            return APIError::internal("Failed to create session").into_response();
+        }
+    };
 
-    let mut response = Response::builder()
-        .status(StatusCode::FOUND)
-        .header("Location", &app_state.config.patreon.frontend_redirect_url)
-        .body(axum::body::Body::empty())
-        .expect("Failed to build redirect response");
+    let mut response = redirect(&app_state.config.patreon.frontend_redirect_url);
 
     for header in session_cookie_headers {
         response.headers_mut().append(SET_COOKIE, header);
@@ -326,6 +296,16 @@ pub(crate) async fn callback(
     );
 
     response
+}
+
+/// A `302 Found` redirect to `location`.
+fn redirect(location: &str) -> Response {
+    (StatusCode::FOUND, [(LOCATION, location)]).into_response()
+}
+
+/// A plain-text error response.
+fn plain_response(status: StatusCode, message: &'static str) -> Response {
+    (status, Body::from(message)).into_response()
 }
 
 #[cfg(test)]
