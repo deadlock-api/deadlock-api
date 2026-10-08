@@ -1,6 +1,7 @@
 import type { AnalyticsGameStats } from "deadlock_api_client";
 
 import { Delta } from "~/components/ui/delta";
+import { NoValue } from "~/components/ui/no-value";
 import { DivergingBar } from "~/components/ui/rate-bar";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { formatStatValue, getStatDefinition } from "~/lib/game-stat-definitions";
@@ -43,14 +44,15 @@ export function PatchStatChanges({ changes }: { changes: readonly StatChange<key
               <TableCell data-pinned className="whitespace-normal">
                 {stat.label}
                 <span className="block type-caption text-muted-foreground tabular-nums @md/table:hidden">
-                  {formatStatValue(before, stat.format)} → {formatStatValue(after, stat.format)}
+                  {formatStatValue(before, stat.format) ?? <NoValue label="No data" />} →{" "}
+                  {formatStatValue(after, stat.format) ?? <NoValue label="No data" />}
                 </span>
               </TableCell>
               <TableCell className="hidden text-end tabular-nums @md/table:table-cell">
-                {formatStatValue(before, stat.format)}
+                {formatStatValue(before, stat.format) ?? <NoValue label="No data" />}
               </TableCell>
               <TableCell className="hidden text-end tabular-nums @md/table:table-cell">
-                {formatStatValue(after, stat.format)}
+                {formatStatValue(after, stat.format) ?? <NoValue label="No data" />}
               </TableCell>
               <TableCell className="text-end">
                 <Delta

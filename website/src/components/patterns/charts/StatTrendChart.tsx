@@ -13,6 +13,7 @@ import {
   CHART_X_AXIS,
   CHART_Y_AXIS,
 } from "~/components/patterns/charts/theme";
+import { NoValue } from "~/components/ui/no-value";
 import { Segmented, SegmentedItem } from "~/components/ui/segmented";
 import { day } from "~/dayjs";
 import { formatAxisTick, formatStatValue, type StatFormat, type StatTrendPoint, valueSpan } from "~/lib/stat-format";
@@ -137,21 +138,23 @@ export default function StatTrendChart({
                           color={CHART_COLOR.primary}
                           extra={entry.matches?.toLocaleString("en-US")}
                         >
-                          {formatStatValue(entry.value, stat.format)}
+                          {formatStatValue(entry.value, stat.format) ?? <NoValue />}
                         </ChartReading>
                         <ChartReading
                           label={comparisonLabel}
                           color={CHART_COLOR.comparison}
                           extra={entry.comparisonMatches?.toLocaleString("en-US")}
                         >
-                          {formatStatValue(entry.comparison ?? null, stat.format)}
+                          {formatStatValue(entry.comparison ?? null, stat.format) ?? <NoValue />}
                         </ChartReading>
                       </ChartReadings>
                     );
                   }
                   return (
                     <ChartReadings title={title}>
-                      <ChartReading label={stat.label}>{formatStatValue(entry.value, stat.format)}</ChartReading>
+                      <ChartReading label={stat.label}>
+                        {formatStatValue(entry.value, stat.format) ?? <NoValue />}
+                      </ChartReading>
                       {entry.matches != null && (
                         <ChartReading label="Matches">{entry.matches.toLocaleString("en-US")}</ChartReading>
                       )}

@@ -105,12 +105,12 @@ export function SharedHeroesTable({
                                 {hasSoulEconomy(gameMode) && (
                                   <TooltipStat
                                     label="Souls / min"
-                                    value={formatStatValue(stats.netWorthPerMin, "integer")}
+                                    value={formatStatValue(stats.netWorthPerMin, "integer") ?? <NoValue />}
                                   />
                                 )}
                                 <TooltipStat
                                   label="Damage / min"
-                                  value={formatStatValue(stats.damagePerMin, "integer")}
+                                  value={formatStatValue(stats.damagePerMin, "integer") ?? <NoValue />}
                                 />
                                 <TooltipStat
                                   label="Last played"
@@ -125,7 +125,7 @@ export function SharedHeroesTable({
                               <span>
                                 {/* A narrow table keeps the count and drops the word, so every player's column fits. */}
                                 <Text>
-                                  {formatStatValue(stats.matches, "integer")}
+                                  {formatStatValue(stats.matches, "integer") ?? <NoValue />}
                                   <span className="sr-only @xl/table:not-sr-only">
                                     {" "}
                                     {stats.matches === 1 ? "match" : "matches"}
@@ -147,7 +147,7 @@ export function SharedHeroesTable({
                                       tone="muted"
                                       className="hidden whitespace-nowrap @xl/table:inline @xl/table:w-18 @xl/table:shrink-0 @xl/table:text-end"
                                     >
-                                      {formatStatValue(stats.kda, "decimal2")} KDA
+                                      {formatStatValue(stats.kda, "decimal2") ?? <NoValue />} KDA
                                     </Text>
                                   </span>
                                 </Inline>

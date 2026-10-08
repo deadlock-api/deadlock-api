@@ -135,7 +135,7 @@ export function HeroDetailsTooltip({
           </DetailGroup>
           <Separator />
           <DetailGroup title="Permanent Buffs">
-            <TooltipStat label="Pickups per Match" value={formatStatValue(avgBuffs, "decimal1")} />
+            <TooltipStat label="Pickups per Match" value={formatStatValue(avgBuffs, "decimal1") ?? <NoValue />} />
             <TooltipStat
               label="First Pickup"
               value={

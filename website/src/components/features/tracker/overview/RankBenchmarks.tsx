@@ -320,7 +320,7 @@ function BenchmarkMetric({
           player={player}
           cohort={cohort}
           label={def.label}
-          format={(value) => formatPlayerMetricValue(value, def.format)}
+          format={(value) => formatPlayerMetricValue(value, def.format) ?? ""}
           bounded={def.format === "percent"}
         />
       )}

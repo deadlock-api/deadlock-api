@@ -53,7 +53,7 @@ const METRICS: Record<TrendMetric, { short: string; label: string; format: (valu
   soulsPerMin: {
     short: "Souls/min",
     label: "Souls per minute",
-    format: (value) => formatStatValue(value, "integer"),
+    format: (value) => formatStatValue(value, "integer") ?? "",
   },
   lastHitsPerMin: { short: "Last hits/min", label: "Last hits per minute", format: (value) => value.toFixed(1) },
 };

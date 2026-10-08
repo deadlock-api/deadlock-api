@@ -99,8 +99,9 @@ export function groupSouls(stats: AnalyticsGameStats, group: SoulSourceGroup): n
   return base + orb;
 }
 
-export function formatSouls(value: number | null | undefined): string {
-  if (value == null || Number.isNaN(value)) return "-";
+/** Souls as a whole number; null for a missing reading, which the caller shows as `NoValue`. */
+export function formatSouls(value: number | null | undefined): string | null {
+  if (value == null || Number.isNaN(value)) return null;
   return Math.round(value).toLocaleString("en-US");
 }
 

@@ -79,7 +79,7 @@ interface Row {
 const FIELD = "field";
 
 function formatValue(value: number, digits: number): string {
-  return digits === 0 ? formatStatValue(value, "integer") : value.toFixed(digits);
+  return digits === 0 ? (formatStatValue(value, "integer") ?? "") : value.toFixed(digits);
 }
 
 function formatLead(value: number, digits: number): string {

@@ -5,6 +5,7 @@ import { ItemImage } from "~/components/domain/assets/ItemImage";
 import { Panel, PanelBody, PanelHeader, PanelShowMore } from "~/components/patterns/panel/Panel";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { Grid } from "~/components/ui/grid";
+import { NoValue } from "~/components/ui/no-value";
 import { Skeleton } from "~/components/ui/skeleton";
 import { Inline, Stack } from "~/components/ui/stack";
 import { StatusDot } from "~/components/ui/status-dot";
@@ -196,9 +197,15 @@ function ItemRow({
               />
               <TooltipStat label="Record" value={`${entry.wins}W ${entry.matches - entry.wins}L`} />
               <TooltipStat label="Win rate" value={formatPercent(entry.winRate)} />
-              <TooltipStat label="Avg. bought at" value={formatStatValue(entry.avgBuyTimeS, "duration")} />
+              <TooltipStat
+                label="Avg. bought at"
+                value={formatStatValue(entry.avgBuyTimeS, "duration") ?? <NoValue />}
+              />
               {entry.avgSellTimeS != null && (
-                <TooltipStat label="Avg. sold at" value={formatStatValue(entry.avgSellTimeS, "duration")} />
+                <TooltipStat
+                  label="Avg. sold at"
+                  value={formatStatValue(entry.avgSellTimeS, "duration") ?? <NoValue />}
+                />
               )}
             </TooltipStats>
           </>

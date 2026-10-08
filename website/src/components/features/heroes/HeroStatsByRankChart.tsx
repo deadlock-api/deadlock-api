@@ -19,6 +19,7 @@ import {
   CHART_Y_LABEL,
 } from "~/components/patterns/charts/theme";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
+import { NoValue } from "~/components/ui/no-value";
 import { TooltipCard, TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
 import type { Dayjs } from "~/dayjs";
 import { CHART_HEROES_QUERY_KEY, useChartHeroVisibility, useHeroColorMap } from "~/hooks/useChartHeroVisibility";
@@ -115,8 +116,8 @@ function CustomTooltip({
         subtitle={data.rankName}
       />
       <TooltipStats>
-        <TooltipStat label={formatStatLabel(xStat)} value={formatStatValue(xStat, data.xValue)} />
-        <TooltipStat label={formatStatLabel(yStat)} value={formatStatValue(yStat, data.yValue)} />
+        <TooltipStat label={formatStatLabel(xStat)} value={formatStatValue(xStat, data.xValue) ?? <NoValue />} />
+        <TooltipStat label={formatStatLabel(yStat)} value={formatStatValue(yStat, data.yValue) ?? <NoValue />} />
         <TooltipStat label="Matches" value={data.matches.toLocaleString("en-US")} />
       </TooltipStats>
     </TooltipCard>

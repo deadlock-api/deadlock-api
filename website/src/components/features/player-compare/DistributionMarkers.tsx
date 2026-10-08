@@ -92,7 +92,7 @@ function MetricTile({
   /** Layout from the parent. */
   className?: string;
 }) {
-  const fmt = (value: number) => formatPlayerMetricValue(value, metric.format);
+  const fmt = (value: number) => formatPlayerMetricValue(value, metric.format) ?? "";
   const marks = players.flatMap((player, index) => {
     const avg = averages[index]?.[metric.key]?.avg;
     return avg == null || !Number.isFinite(avg) ? [] : [{ player, avg }];

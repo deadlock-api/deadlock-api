@@ -296,7 +296,7 @@ function RankByMatchChart({
             // A lone ranked match still gets an axis to sit on.
             domain={[1, Math.max(2, last.match)]}
             ticks={niceTicks(1, Math.max(2, last.match)).filter((tick) => tick >= 1 && tick <= Math.max(2, last.match))}
-            tickFormatter={(match: number) => formatStatValue(match, "integer")}
+            tickFormatter={(match: number) => formatStatValue(match, "integer") ?? ""}
             minTickGap={24}
           />
           <YAxis

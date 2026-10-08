@@ -56,7 +56,11 @@ const LAST_MINUTE = 45;
 const minuteLabel = (seconds: number) => `${Math.round(seconds / 60)}m`;
 
 function Timing({ seconds }: { seconds: number | null | undefined }) {
-  return seconds == null ? <NoValue label={BUFF_TIMINGS_NOTE} /> : <>{formatStatValue(seconds, "duration")}</>;
+  return seconds == null ? (
+    <NoValue label={BUFF_TIMINGS_NOTE} />
+  ) : (
+    <>{formatStatValue(seconds, "duration") ?? <NoValue />}</>
+  );
 }
 
 interface BuffsTabProps {
@@ -204,7 +208,7 @@ function BuffLevelRow({ row, info }: { row: AnalyticsBuffStats; info: Map<string
       <TableCell data-pinned>{levelLabel(row, info)}</TableCell>
       <TableCell className="text-end tabular-nums">{perMatch.toFixed(2)}</TableCell>
       <TableCell className="hidden text-end tabular-nums @md/table:table-cell">
-        {formatStatValue(share, "percent")}
+        {formatStatValue(share, "percent") ?? <NoValue />}
       </TableCell>
       <TableCell className="text-end tabular-nums">
         {row.is_permanent ? <Timing seconds={row.avg_pickup_time_s} /> : <NoValue label="Not recorded" />}

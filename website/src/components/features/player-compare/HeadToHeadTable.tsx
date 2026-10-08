@@ -21,7 +21,7 @@ import type { ComparedPlayer } from "./types";
 /** One value as the table shows it: a number in its format, or a rank as its badge and name. */
 function StatValue({ stat, value, ranks }: { stat: CompareStat; value: number | null; ranks: Rank[] }) {
   if (value == null) return <NoValue />;
-  if (stat.format !== "rank") return <>{formatPlayerMetricValue(value, stat.format)}</>;
+  if (stat.format !== "rank") return <>{formatPlayerMetricValue(value, stat.format) ?? <NoValue />}</>;
   return (
     <Inline gap={1} wrap="nowrap" justify="end" asChild>
       <span>

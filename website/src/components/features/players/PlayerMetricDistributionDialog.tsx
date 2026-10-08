@@ -25,7 +25,7 @@ export function PlayerMetricDistributionDialog({
   onPrev: () => void;
   onNext: () => void;
 }) {
-  const fmt = (v: number) => (metric ? formatPlayerMetricValue(v, metric.format) : String(v));
+  const fmt = (v: number) => (metric ? (formatPlayerMetricValue(v, metric.format) ?? "") : String(v));
   const curve = useMemo(() => (values ? buildDistributionCurve(values) : []), [values]);
 
   return (

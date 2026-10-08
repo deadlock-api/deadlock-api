@@ -72,7 +72,7 @@ export function playerMetricsFor<T extends { category: PlayerMetricCategory }>(
   return hasSoulEconomy(gameMode) ? [...metrics] : metrics.filter((metric) => metric.category !== "Economy");
 }
 
-/** A player metric in its format; the same formats, and output, as every other stat on the site. */
-export function formatPlayerMetricValue(value: number | undefined | null, format: PlayerMetricFormat): string {
+/** A player metric in its format, as every other stat on the site; null for a missing reading (render NoValue). */
+export function formatPlayerMetricValue(value: number | undefined | null, format: PlayerMetricFormat): string | null {
   return formatStatValue(value, format);
 }

@@ -15,7 +15,7 @@
     "typecheck": "tsc --noEmit",
     "test:tracker": "tsx --test src/lib/steam.test.ts src/lib/steam-profile-batches.test.ts src/lib/tracker/*.test.ts src/lib/local-storage.test.ts",
     "test:tracker:browser": "playwright test",
-    "test:unit": "tsx --test 'src/**/*.test.ts' 'src/**/*.test.tsx'",
+    "test:unit": "tsx --test 'src/**/*.test.ts' 'src/**/*.test.tsx' 'scripts/*.test.mjs'",
     "eval:search": "tsx scripts/ai-search-eval/run.mts",
     "check": "pnpm typecheck && pnpm lint && pnpm test:unit",
     "bench:avg": "tsx scripts/playground/bench-average-build.ts",

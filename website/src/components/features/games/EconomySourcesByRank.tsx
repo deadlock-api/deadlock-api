@@ -8,6 +8,7 @@ import { ChartLegend, ChartLegendItem, ChartSwatch } from "~/components/patterns
 import { ChartEmpty, ChartError, ChartLoading } from "~/components/patterns/charts/ChartStates";
 import { ChartSurface } from "~/components/patterns/charts/ChartSurface";
 import { CHART_CURSOR_BAND, CHART_GRID, CHART_X_AXIS, CHART_Y_AXIS } from "~/components/patterns/charts/theme";
+import { NoValue } from "~/components/ui/no-value";
 import { Segmented, SegmentedItem } from "~/components/ui/segmented";
 import { TooltipCard, TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
 import { gameStatsQueryOptions } from "~/queries/games-query";
@@ -151,7 +152,7 @@ export default function EconomySourcesByRank({ params }: EconomySourcesByRankPro
                               }
                               value={
                                 <span className="inline-flex items-baseline gap-1.5">
-                                  {formatSouls(row.souls[group.key])}
+                                  {formatSouls(row.souls[group.key]) ?? <NoValue />}
                                   <span className="font-normal text-muted-foreground">
                                     {formatPercent(row.share[group.key] / 100)}
                                   </span>

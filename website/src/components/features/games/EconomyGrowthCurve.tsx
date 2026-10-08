@@ -18,6 +18,7 @@ import {
   CHART_Y_LABEL,
   CHART_COLOR,
 } from "~/components/patterns/charts/theme";
+import { NoValue } from "~/components/ui/no-value";
 import { Segmented, SegmentedItem } from "~/components/ui/segmented";
 import { TooltipCard, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
 import { playerPerformanceCurveQueryOptions } from "~/queries/player-performance-curve-query";
@@ -163,8 +164,10 @@ export default function EconomyGrowthCurve({ params }: EconomyGrowthCurveProps) 
                   const p = payload[0].payload as (typeof chartData)[number];
                   return (
                     <ChartReadings title={`${label}% into the match`}>
-                      <ChartReading label="Net worth">{formatSouls(p.avg)}</ChartReading>
-                      <ChartReading label="Std dev">± {formatSouls(p.std)}</ChartReading>
+                      <ChartReading label="Net worth">{formatSouls(p.avg) ?? <NoValue label="No data" />}</ChartReading>
+                      <ChartReading label="Std dev">
+                        {p.std == null ? <NoValue label="No data" /> : `± ${formatSouls(p.std)}`}
+                      </ChartReading>
                     </ChartReadings>
                   );
                 }}
@@ -220,7 +223,7 @@ export default function EconomyGrowthCurve({ params }: EconomyGrowthCurveProps) 
                                   {group.label}
                                 </span>
                               }
-                              value={formatSouls(row[group.key])}
+                              value={formatSouls(row[group.key]) ?? <NoValue />}
                             />
                           ))}
                       </TooltipStats>

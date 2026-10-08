@@ -20,7 +20,7 @@ import type { CompareMatchHistory } from "./useCompareMatchHistories";
 
 /** Souls as a match line reads them: "32.4k". */
 function compactSouls(value: number): string {
-  return value >= 1000 ? `${(value / 1000).toFixed(1)}k` : formatStatValue(value, "integer");
+  return value >= 1000 ? `${(value / 1000).toFixed(1)}k` : (formatStatValue(value, "integer") ?? "");
 }
 
 /** Up to a week back a match reads "3 days ago"; older ones read as their date, which says more than "a month ago". */

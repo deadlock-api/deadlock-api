@@ -19,7 +19,7 @@ export function valueSpan(data: { value: number | null }[]): number {
  * intervals across it, so the estimated step decides the precision.
  */
 export function formatAxisTick(value: number, format: StatFormat, span: number): string {
-  if (format === "duration" || format === "hours") return formatStatValue(value, format);
+  if (format === "duration" || format === "hours") return formatStatValue(value, format) ?? "";
   const scale = format === "percent" ? 100 : 1;
   const step = (span * scale) / 4;
   const decimals = Math.min(4, Math.max(BASE_DECIMALS[format], step > 0 ? Math.ceil(-Math.log10(step)) : 0));
@@ -27,8 +27,9 @@ export function formatAxisTick(value: number, format: StatFormat, span: number):
   return format === "percent" ? `${text}%` : text;
 }
 
-export function formatStatValue(value: number | undefined | null, format: StatFormat): string {
-  if (value == null || Number.isNaN(value)) return "-";
+/** A stat as its format prints it; null for a missing reading, which the caller shows as `NoValue`. */
+export function formatStatValue(value: number | undefined | null, format: StatFormat): string | null {
+  if (value == null || Number.isNaN(value)) return null;
   switch (format) {
     case "integer":
       return Math.round(value).toLocaleString("en-US");

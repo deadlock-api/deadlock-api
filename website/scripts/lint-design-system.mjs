@@ -7,6 +7,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { RAW_NO_VALUE } from "./lint-design-system-patterns.mjs";
+
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const SRC = path.join(ROOT, "src");
 
@@ -214,10 +216,8 @@ const RULES = [
     id: "raw-no-value",
     message:
       'hand-typed dash placeholder ("—", "–", "-"); use NoValue (it names the gap for screen readers), or pass no value to Stat, InlineStat or KeyValue',
-    // A dash as a JSX text child, an em dash as a whole string value, or a hyphen or en dash as the whole value of a
-    // branch (`?? "-"`, `: "–"`, `return "-"`); a prop set to one (`nullLabel="—"`) is the prop's API, and `join("-")`
-    // is a separator.
-    pattern: />\s*[—–-]\s*<|(?<![=\w])(["'`])—\1|(?:\?\?|[?:]|\breturn|=>)\s*(["'`])[–-]\2/g,
+    // What counts as a placeholder (and what is a sign or a separator): see RAW_NO_VALUE and its tests.
+    pattern: RAW_NO_VALUE,
     skip: (rel) => !COMPOSED(rel) || !rel.endsWith(".tsx"),
   },
   {

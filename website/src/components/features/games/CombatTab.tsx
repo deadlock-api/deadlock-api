@@ -26,6 +26,7 @@ import {
   CHART_ACTIVE_DOT,
 } from "~/components/patterns/charts/theme";
 import { Panel, PanelBody, PanelHeader } from "~/components/patterns/panel/Panel";
+import { NoValue } from "~/components/ui/no-value";
 import { Segmented, SegmentedItem } from "~/components/ui/segmented";
 import { formatCompactAxisTick } from "~/lib/chart-axis";
 import { formatStatValue } from "~/lib/stat-format";
@@ -227,7 +228,7 @@ function DamageCurve({ points, query }: CurveProps) {
                 <ChartReadings title={`At ${minuteLabel(point.game_time)}`} valueLabel="Damage">
                   {DAMAGE_TARGETS.map((target) => (
                     <ChartReading key={target.key} label={target.label} color={target.color}>
-                      {formatStatValue(point[target.field], "integer")}
+                      {formatStatValue(point[target.field], "integer") ?? <NoValue />}
                     </ChartReading>
                   ))}
                 </ChartReadings>

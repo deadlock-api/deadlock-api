@@ -8,6 +8,7 @@ import { ChartSurface } from "~/components/patterns/charts/ChartSurface";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
+import { NoValue } from "~/components/ui/no-value";
 import { ProgressBar } from "~/components/ui/progress-bar";
 import { Stat, StatGroup } from "~/components/ui/stat";
 import { formatStatValue } from "~/lib/game-stat-definitions";
@@ -113,7 +114,7 @@ export default function EconomySoulSources({ params }: EconomySoulSourcesProps) 
             </PieChart>
           </ChartSurface>
           <StatGroup variant="plain" className="pointer-events-none absolute inset-0 place-content-center">
-            <Stat align="center" label="Soul Income" value={formatSouls(totalIncome)} sub="per player" />
+            <Stat align="center" label="Soul Income" value={formatSouls(totalIncome) ?? <NoValue />} sub="per player" />
           </StatGroup>
         </div>
 
@@ -123,7 +124,7 @@ export default function EconomySoulSources({ params }: EconomySoulSourcesProps) 
               <div className="flex items-center gap-2">
                 <ChartSwatch color={row.color} />
                 <span className="flex-1 text-sm">{row.label}</span>
-                <span className="text-sm font-semibold tabular-nums">{formatSouls(row.value)}</span>
+                <span className="text-sm font-semibold tabular-nums">{formatSouls(row.value) ?? <NoValue />}</span>
                 <span className="w-12 text-end text-xs text-muted-foreground tabular-nums">
                   {formatPercent(row.share)}
                 </span>

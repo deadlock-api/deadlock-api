@@ -20,7 +20,7 @@ export function PlayerMetricDistributionCard({
   values: HashMapValue | undefined;
   onExpand: () => void;
 }) {
-  const fmt = (v: number) => formatPlayerMetricValue(v, def.format);
+  const fmt = (v: number) => formatPlayerMetricValue(v, def.format) ?? "";
   const curve = useMemo(() => (values ? buildDistributionCurve(values) : []), [values]);
   const hasData = values != null && curve.length >= 3;
 

@@ -167,7 +167,7 @@ export async function loadCompareCardData(search: URLSearchParams): Promise<Comp
         const value = aggregate?.[key];
         return {
           label: short,
-          value: value == null || stat.format === "rank" ? "–" : formatPlayerMetricValue(value, stat.format),
+          value: (stat.format === "rank" ? null : formatPlayerMetricValue(value, stat.format)) ?? "–",
           best: compareStatWinners(aggregates, stat).includes(index),
         };
       }),
