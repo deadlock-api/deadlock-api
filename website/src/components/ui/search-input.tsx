@@ -98,7 +98,7 @@ export function SearchInput({
           CONTROL_SURFACE,
           // The frame draws the field's focus, for the input only: the action inside has a ring of its own.
           "has-[input:focus-visible]:border-ring has-[input:focus-visible]:ring-3 has-[input:focus-visible]:ring-ring/50",
-          "flex h-12 min-w-0 items-center gap-2 rounded-full ps-4 pe-1.5 hover:border-muted-foreground has-disabled:opacity-50 has-aria-invalid:border-destructive has-aria-invalid:ring-3 has-aria-invalid:ring-destructive/40",
+          "group flex h-12 min-w-0 items-center gap-2 rounded-full ps-4 pe-1.5 hover:border-muted-foreground has-disabled:opacity-50 has-aria-invalid:border-destructive has-aria-invalid:ring-3 has-aria-invalid:ring-destructive/40",
           className,
         )}
       >
@@ -111,7 +111,17 @@ export function SearchInput({
           )}
           {...fieldProps}
         />
-        {loading ? <Spinner size="sm" label={loadingLabel} /> : value !== "" && editable && clearButton()}
+        {loading ? (
+          <Spinner size="sm" label={loadingLabel} />
+        ) : value !== "" && editable ? (
+          clearButton()
+        ) : (
+          shortcut && (
+            <Kbd aria-hidden="true" className="pointer-events-none group-focus-within:hidden">
+              {shortcut}
+            </Kbd>
+          )
+        )}
         {action}
       </div>
     );
