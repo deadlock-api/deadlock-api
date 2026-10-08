@@ -64,7 +64,7 @@ async fn main() -> Result<()> {
 
     info!("Starting Steam Profile Fetcher");
 
-    let http_client = reqwest::Client::new();
+    let http_client = common::http_client();
     let ch_client = common::get_ch_client()?;
     let pg_client = common::get_pg_client().await?;
 

@@ -51,7 +51,7 @@ fn calibration_matches() -> Option<u32> {
 /// Seasons turn over on the order of months; the first tick fires immediately.
 fn spawn_season_refresh_task() {
     tokio::spawn(async move {
-        let http_client = reqwest::Client::new();
+        let http_client = common::http_client();
         let mut interval = tokio::time::interval(Duration::from_hours(1));
         loop {
             interval.tick().await;

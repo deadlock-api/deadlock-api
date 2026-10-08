@@ -15,9 +15,9 @@ use crate::state::AppState;
 use crate::utils::{spectate_match, validate_broadcast_url, wait_for_live_demo};
 
 fn demo_stream(
+    client: reqwest::Client,
     broadcast_url: impl Into<String>,
 ) -> impl Stream<Item = Result<Bytes, BroadcastHttpClientError<reqwest::Error>>> {
-    let client = reqwest::Client::new();
     try_stream! {
         let mut demofile = BroadcastHttp::start_streaming(
             client,
@@ -48,7 +48,10 @@ pub(super) async fn demo(
 
     wait_for_live_demo(&state.http_client, &response.broadcast_url).await?;
 
-    Ok(Body::from_stream(demo_stream(response.broadcast_url)))
+    Ok(Body::from_stream(demo_stream(
+        state.http_client.clone(),
+        response.broadcast_url,
+    )))
 }
 
 #[derive(Deserialize)]
@@ -64,5 +67,8 @@ pub(super) async fn demo_by_broadcast_url(
     info!("Connecting to broadcast URL: {}", query.broadcast_url);
     wait_for_live_demo(&state.http_client, &query.broadcast_url).await?;
 
-    Ok(Body::from_stream(demo_stream(query.broadcast_url)))
+    Ok(Body::from_stream(demo_stream(
+        state.http_client.clone(),
+        query.broadcast_url,
+    )))
 }

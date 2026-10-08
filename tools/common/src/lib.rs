@@ -15,6 +15,7 @@
 mod assets;
 mod batch_inserter;
 mod clients;
+mod http;
 mod prioritization;
 mod retry;
 mod shutdown;
@@ -25,6 +26,7 @@ mod utils;
 pub use assets::*;
 pub use batch_inserter::*;
 pub use clients::*;
+pub use http::*;
 pub use prioritization::*;
 pub use retry::*;
 pub use shutdown::*;

@@ -125,7 +125,7 @@ impl SpectatorBot {
         let redis = common::get_redis_client().await?;
 
         Ok(Self {
-            client: Client::new(),
+            client: common::http_client(),
             redis,
             api_token,
             proxy_url: proxy_api_url,

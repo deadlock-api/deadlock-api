@@ -1,7 +1,6 @@
 use std::sync::Arc;
 
 use anyhow::Context;
-use reqwest::Client;
 use tokio::sync::RwLock;
 use tokio::task::AbortHandle;
 use tokio::time::{Duration, interval};
@@ -14,7 +13,7 @@ pub(crate) async fn start_polling_text(
     url: String,
     interval_duration: Duration,
 ) -> anyhow::Result<(AbortHandle, Arc<RwLock<String>>)> {
-    let client = Client::new();
+    let client = common::http_client();
 
     let initial = client
         .get(&url)

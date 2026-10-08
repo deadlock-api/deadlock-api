@@ -77,7 +77,7 @@ async fn main() -> anyhow::Result<()> {
     let _otel_guard = common::init_tracing(env!("CARGO_PKG_NAME"));
     common::init_metrics()?;
 
-    let http_client = reqwest::Client::new();
+    let http_client = common::http_client();
     let ch_client = common::get_ch_client()?;
 
     // Initialize PostgreSQL connection pool for prioritization queries

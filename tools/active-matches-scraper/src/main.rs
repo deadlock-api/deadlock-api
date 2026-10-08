@@ -30,7 +30,7 @@ static ACTIVE_MATCHES_URL: LazyLock<String> = LazyLock::new(|| {
 async fn main() -> anyhow::Result<()> {
     let _otel_guard = common::init_tracing(env!("CARGO_PKG_NAME"));
     common::init_metrics()?;
-    let http_client = reqwest::Client::new();
+    let http_client = common::http_client();
     let ch_client = common::get_ch_client()?;
 
     // Snapshots inserted on the previous tick. Ticks are ~2 min apart, so this

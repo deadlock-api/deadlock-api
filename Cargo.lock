@@ -4414,7 +4414,6 @@ dependencies = [
  "metrics",
  "object_store 0.14.2",
  "prost",
- "reqwest",
  "serde",
  "serde_repr",
  "tokio",

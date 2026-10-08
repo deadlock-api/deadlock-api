@@ -2,7 +2,6 @@ use std::time::Instant;
 
 use anyhow::Context;
 use metrics::{counter, histogram};
-use reqwest::Client;
 use tracing::{debug, info, warn};
 use valveprotos::deadlock::CMsgMatchMetaData;
 
@@ -17,7 +16,8 @@ pub(crate) async fn download_single_hltv_meta(
     let start = Instant::now();
     let label = match_type.label();
 
-    let client = Client::new();
+    // Fragments are fetched for as long as the match runs; bound each read, not the total.
+    let client = common::streaming_http_client();
     let mut recv = hltv_download::download_match_mpsc(client, match_id, broadcast_url)
         .await
         .context("Error downloading match initialization")?;

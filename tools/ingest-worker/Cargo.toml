@@ -15,7 +15,6 @@ futures = { workspace = true }
 metrics = { workspace = true }
 object_store = { workspace = true }
 prost = { workspace = true }
-reqwest = { workspace = true }
 serde = { workspace = true }
 serde_repr = { workspace = true }
 tokio = { workspace = true }

@@ -24,7 +24,7 @@ use crate::cmd::download_single_hltv::download_single_hltv_meta;
 use crate::cmd::run_spectate_bot::{SpectatedMatchInfo, SpectatedMatchType};
 
 pub(crate) async fn run(spectate_server_url: String) -> anyhow::Result<()> {
-    let spec_client = Arc::new(reqwest::Client::new());
+    let spec_client = Arc::new(common::http_client());
     let base_url =
         Url::parse(&spectate_server_url).context("Parsing base url for spectate server")?;
 
