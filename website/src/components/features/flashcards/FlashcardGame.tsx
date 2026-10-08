@@ -1,6 +1,6 @@
 import { AnimatePresence, motion } from "framer-motion";
 import type { ReactNode } from "react";
-import { createContext, use } from "react";
+import { createContext, use, useId } from "react";
 
 import { AnswerOption } from "~/components/domain/minigames/AnswerOption";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
@@ -52,20 +52,27 @@ function pickCard<T extends FlashcardEntry>(pool: T[], excludeIds: Set<number>):
 }
 
 const entryId = (entry: FlashcardEntry) => entry.id;
+const entryName = (entry: FlashcardEntry) => entry.name;
 
-const DeckContext = createContext<FlashcardDeck<FlashcardEntry, FlashcardEntry> | null>(null);
-const EntryContext = createContext<FlashcardEntry | null>(null);
+// The card parts read the deck and their entry from context; what an entry or an option is depends on the deck.
+type AnyDeck = FlashcardDeck<{ id: number }, unknown>;
+const DeckContext = createContext<AnyDeck | null>(null);
+const NO_ENTRY = Symbol("no flashcard entry");
+const EntryContext = createContext<unknown>(NO_ENTRY);
 
 function useDeck() {
   const deck = use(DeckContext);
-  if (!deck?.card) throw new Error("FlashcardPrompt and FlashcardOptions must be children of a FlashcardGame");
+  if (!deck?.card) throw new Error("FlashcardPrompt and FlashcardOptions must be children of a FlashcardBoard");
   return { ...deck, card: deck.card };
 }
 
-/** The entry of the card part it is rendered in: the answer inside `FlashcardPrompt`, an option inside `FlashcardOptions`. */
-export function useFlashcardEntry<T extends FlashcardEntry>(): T {
+/**
+ * The entry of the card part it is rendered in: the answer inside `FlashcardPrompt`, an option inside
+ * `FlashcardOptions` (for most decks both are entries of the pool; a deck may deal options of its own kind).
+ */
+export function useFlashcardEntry<T>(): T {
   const entry = use(EntryContext);
-  if (!entry) throw new Error("useFlashcardEntry must be used inside FlashcardPrompt or FlashcardOptions");
+  if (entry === NO_ENTRY) throw new Error("useFlashcardEntry must be used inside FlashcardPrompt or FlashcardOptions");
   return entry as T;
 }
 
@@ -88,7 +95,7 @@ export interface FlashcardGameProps<T extends FlashcardEntry> {
   masteredLabel: string;
 }
 
-/** A multiple-choice deck over `pool`. Its behaviour is `useFlashcardDeck`; the card is the children. */
+/** A multiple-choice deck over `pool`, an option per entry. Its behaviour is `useFlashcardDeck`; the card is the children. */
 export function FlashcardGame<T extends FlashcardEntry>(props: FlashcardGameProps<T>) {
   // The first card is drawn at random, so the server and client would disagree on it.
   const hydrated = useHydrated();
@@ -125,22 +132,61 @@ function FlashcardGameReady<T extends FlashcardEntry>({
     draw: pickCard,
     optionKey: entryId,
     answerKey: entryId,
+    answerName: entryName,
     reshuffleKey,
   });
-  const { card } = deck;
+  return (
+    <FlashcardBoard
+      deck={deck}
+      title={title}
+      subtitle={subtitle}
+      total={pool.length}
+      controls={controls}
+      masteredLabel={masteredLabel}
+    >
+      {children}
+    </FlashcardBoard>
+  );
+}
 
+/**
+ * A deck on the table: stats, the "No repeats" toggle beside `controls`, then the card (the children: a
+ * `FlashcardPrompt` and `FlashcardOptions`), or the empty and mastered states. Takes any `useFlashcardDeck`.
+ */
+export function FlashcardBoard<Entry extends { id: number }, Option>({
+  deck,
+  title,
+  subtitle,
+  total,
+  controls,
+  masteredLabel,
+  emptyTitle = "No cards available.",
+  children,
+}: {
+  deck: FlashcardDeck<Entry, Option>;
+  title: string;
+  subtitle: string;
+  /** Cards in the deck, for "n/total mastered". */
+  total: number;
+  controls?: ReactNode;
+  masteredLabel: string;
+  emptyTitle?: string;
+  children: ReactNode;
+}) {
+  const noRepeatsId = useId();
+  const { card } = deck;
   return (
     <FlashcardPage title={title} subtitle={subtitle}>
       <FlashcardStatStrip stats={deck.stats} onReset={deck.reset} />
-      <AnswerAnnouncement verdict={deck.verdict} answer={card?.answer.name ?? ""} />
+      <AnswerAnnouncement verdict={deck.verdict} answer={deck.answerText} />
 
       <div className="flex flex-wrap items-center justify-between gap-3 font-mono text-xs tracking-wider uppercase">
         <NoRepeatsToggle
-          id="flashcard-no-repeats"
+          id={noRepeatsId}
           checked={deck.noRepeats}
           onCheckedChange={deck.setNoRepeats}
           mastered={deck.masteredInPool}
-          total={pool.length}
+          total={total}
         />
         {controls}
       </div>
@@ -148,7 +194,7 @@ function FlashcardGameReady<T extends FlashcardEntry>({
       {!deck.dealt ? (
         <LoadingState label="flashcards" />
       ) : deck.empty ? (
-        <EmptyState title="No cards available." />
+        <EmptyState title={emptyTitle} />
       ) : deck.finished || !card ? (
         <FlashcardMastered label={masteredLabel} stats={deck.stats} onReset={deck.reset} />
       ) : (
@@ -161,7 +207,7 @@ function FlashcardGameReady<T extends FlashcardEntry>({
             transition={{ duration: 0.18, ease: "easeOut" }}
             className="flex flex-col items-center gap-6"
           >
-            <DeckContext value={deck}>{children}</DeckContext>
+            <DeckContext value={deck as unknown as AnyDeck}>{children}</DeckContext>
           </motion.div>
         </AnimatePresence>
       )}
@@ -176,52 +222,85 @@ const PROMPT_SIZE = {
   wide: "w-full max-w-xl",
 };
 
-/** What the card asks about: the answer, in a frame tinted by the verdict with the verdict's mark in its corner. */
-export function FlashcardPrompt({ size = "icon", children }: { size?: keyof typeof PROMPT_SIZE; children: ReactNode }) {
+function PromptMark({ correct, className }: { correct: boolean; className?: string }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.6 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.18, ease: "easeOut" }}
+      className={className}
+    >
+      <ResultMark correct={correct} />
+    </motion.div>
+  );
+}
+
+/**
+ * What the card asks about: the answer, in a frame tinted by the verdict. The verdict's mark sits in the frame's
+ * corner, or (`mark="inline"`) at the end of a row the children lay out, beside a picture and its caption.
+ */
+export function FlashcardPrompt({
+  size = "icon",
+  mark = "corner",
+  children,
+}: {
+  size?: keyof typeof PROMPT_SIZE;
+  mark?: "corner" | "inline";
+  children: ReactNode;
+}) {
   const { card, verdict, revealed } = useDeck();
+  const correct = verdict === "correct";
   return (
     <div className={cn("relative", PROMPT_SIZE[size])}>
-      <PromptFrame verdict={verdict} className="size-full">
+      <PromptFrame
+        verdict={verdict}
+        className={cn("size-full", mark === "inline" && "flex-row items-center gap-4 p-4")}
+      >
         <EntryContext value={card.answer}>{children}</EntryContext>
+        {mark === "inline" && <AnimatePresence>{revealed && <PromptMark correct={correct} />}</AnimatePresence>}
       </PromptFrame>
-      <AnimatePresence>
-        {revealed && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.6 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.18, ease: "easeOut" }}
-            className="absolute inset-e-2 top-2"
-          >
-            <ResultMark correct={verdict === "correct"} />
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {mark === "corner" && (
+        <AnimatePresence>
+          {revealed && <PromptMark correct={correct} className="absolute inset-e-2 top-2" />}
+        </AnimatePresence>
+      )}
     </div>
   );
 }
 
 /** The entry's name, the default face of an option. */
 export function FlashcardName() {
-  const entry = useFlashcardEntry();
+  const entry = useFlashcardEntry<FlashcardEntry>();
   return <span className="truncate tracking-wide uppercase">{entry.name}</span>;
 }
 
 const NAME_FACE = <FlashcardName />;
+const OPTION_SIZE = { default: "", lg: "min-h-20 px-3" };
 
-/** The answers to pick from, by click or number key; `children` is the face of each (its name by default). */
-export function FlashcardOptions({ children = NAME_FACE }: { children?: ReactNode }) {
-  const { card, stateOf, choose, revealed, focusFirstOption } = useDeck();
+/**
+ * The answers to pick from, by click or number key; `children` is the face of each (its name by default), keyed by the
+ * deck's `optionKey`. `size="lg"` gives a face with pictures (a component path) room for them.
+ */
+export function FlashcardOptions({
+  size = "default",
+  children = NAME_FACE,
+}: {
+  size?: keyof typeof OPTION_SIZE;
+  children?: ReactNode;
+}) {
+  const { card, stateOf, choose, revealed, focusFirstOption, optionKey } = useDeck();
   return (
     <div className="grid w-full grid-cols-1 gap-2 sm:grid-cols-2">
       {card.options.map((option, index) => (
         <AnswerOption
-          key={option.id}
+          key={optionKey(option)}
           ref={index === 0 ? focusFirstOption : undefined}
           state={stateOf(option)}
           onClick={() => choose(option)}
           shortcut={String(index + 1)}
           aria-disabled={revealed || undefined}
+          className={OPTION_SIZE[size]}
         >
           <EntryContext value={option}>{children}</EntryContext>
         </AnswerOption>

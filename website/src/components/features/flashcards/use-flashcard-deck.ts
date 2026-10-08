@@ -11,7 +11,7 @@ export interface FlashcardCard<Entry, Option> {
   options: Option[];
 }
 
-type OptionKey = string | number;
+export type OptionKey = string | number;
 
 interface Deal<Entry, Option> {
   card: FlashcardCard<Entry, Option> | null;
@@ -32,6 +32,8 @@ export interface FlashcardDeckOptions<Entry extends { id: number }, Option> {
   optionKey: (option: Option) => OptionKey;
   /** The key of the option that answers `answer`. */
   answerKey: (answer: Entry) => OptionKey;
+  /** What the answer is called, for the verdict a screen reader hears ("Wrong. The answer was Haze."). */
+  answerName: (answer: Entry) => string;
   /** How long a verdict shows before the next card, in ms. */
   feedbackMs?: { correct: number; wrong: number };
   /** Changing this value draws a fresh card (stats and progress are kept). */
@@ -51,6 +53,7 @@ export function useFlashcardDeck<Entry extends { id: number }, Option>({
   draw,
   optionKey,
   answerKey,
+  answerName,
   feedbackMs = DEFAULT_FEEDBACK_MS,
   reshuffleKey = "",
 }: FlashcardDeckOptions<Entry, Option>) {
@@ -145,6 +148,9 @@ export function useFlashcardDeck<Entry extends { id: number }, Option>({
   };
 
   return {
+    optionKey,
+    /** The answer of the card on the table, named; empty without one. */
+    answerText: card ? answerName(card.answer) : "",
     /** False until the saved progress loaded and the first card is dealt. */
     dealt: deal.dealtFor !== null,
     card,

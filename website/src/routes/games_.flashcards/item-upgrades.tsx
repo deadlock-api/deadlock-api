@@ -1,20 +1,15 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { AnimatePresence, motion } from "framer-motion";
 import { useMemo } from "react";
 
-import { AnswerOption } from "~/components/domain/minigames/AnswerOption";
+import { FlashcardPage } from "~/components/features/flashcards/FlashcardChrome";
 import {
-  AnswerAnnouncement,
-  FlashcardMastered,
-  FlashcardPage,
-  FlashcardStatStrip,
-  NoRepeatsToggle,
-  PromptFrame,
-  ResultMark,
-} from "~/components/features/flashcards/FlashcardChrome";
+  FlashcardBoard,
+  FlashcardOptions,
+  FlashcardPrompt,
+  useFlashcardEntry,
+} from "~/components/features/flashcards/FlashcardGame";
 import { useFlashcardDeck } from "~/components/features/flashcards/use-flashcard-deck";
-import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { Inline, Stack } from "~/components/ui/stack";
@@ -232,6 +227,7 @@ const SUBTITLE = "Match each upgraded item to its direct component path.";
 
 const optionKey = (option: UpgradePathOption) => option.key;
 const answerKey = (answer: UpgradePathEntry) => answer.answerKey;
+const answerName = (answer: UpgradePathEntry) => answer.answerLabel;
 
 function ItemUpgradePathFlashcardsReady({ pool }: { pool: UpgradePathEntry[] }) {
   const deck = useFlashcardDeck({
@@ -240,104 +236,66 @@ function ItemUpgradePathFlashcardsReady({ pool }: { pool: UpgradePathEntry[] }) 
     draw: pickCard,
     optionKey,
     answerKey,
+    answerName,
     feedbackMs: FEEDBACK_MS,
   });
-  const { card, verdict } = deck;
 
   return (
-    <FlashcardPage title={TITLE} subtitle={SUBTITLE}>
-      <FlashcardStatStrip stats={deck.stats} onReset={deck.reset} />
-      <AnswerAnnouncement verdict={verdict} answer={card?.answer.answerLabel ?? ""} />
-
-      <div className="flex flex-wrap items-center justify-between gap-3 font-mono text-xs tracking-wider uppercase">
-        <NoRepeatsToggle
-          id="flashcard-upgrade-no-repeats"
-          checked={deck.noRepeats}
-          onCheckedChange={deck.setNoRepeats}
-          mastered={deck.masteredInPool}
-          total={pool.length}
-        />
-      </div>
-
-      {!deck.dealt ? (
-        <LoadingState label="flashcards" />
-      ) : deck.empty ? (
-        <EmptyState title="No upgrade paths found." />
-      ) : deck.finished || !card ? (
-        <FlashcardMastered label="All upgrade paths mastered" stats={deck.stats} onReset={deck.reset} />
-      ) : (
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={card.answer.id}
-            initial={{ opacity: 0, scale: 0.96 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 1.02 }}
-            transition={{ duration: 0.18, ease: "easeOut" }}
-            className="flex flex-col items-center gap-6"
-          >
-            <PromptFrame verdict={verdict} className="w-full max-w-xl flex-row items-center gap-4 p-4">
-              <img
-                src={itemImageSrc(card.answer.target)}
-                alt={card.answer.target.name}
-                className="size-20 shrink-0 object-contain sm:size-24"
-                draggable={false}
-              />
-              <Stack gap={1} className="flex-1">
-                <div>
-                  <Text as="div" variant="eyebrow" className="font-mono">
-                    Upgraded item
-                  </Text>
-                  <div className="truncate text-lg font-semibold text-foreground">{card.answer.target.name}</div>
-                </div>
-                <div className="flex flex-wrap items-center gap-2 font-mono text-xs tracking-wider text-muted-foreground uppercase">
-                  <span>{card.answer.target.item_slot_type}</span>
-                  <span className="text-muted-foreground">|</span>
-                  <span>Tier {card.answer.target.item_tier}</span>
-                  {card.answer.target.cost != null && (
-                    <>
-                      <span className="text-muted-foreground">|</span>
-                      <span>{card.answer.target.cost.toLocaleString("en-US")} souls</span>
-                    </>
-                  )}
-                </div>
-              </Stack>
-              <AnimatePresence>
-                {deck.revealed && (
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.6 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.18, ease: "easeOut" }}
-                  >
-                    <ResultMark correct={verdict === "correct"} />
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </PromptFrame>
-
-            <div className="grid w-full grid-cols-1 gap-2 sm:grid-cols-2">
-              {card.options.map((option, index) => (
-                <AnswerOption
-                  key={option.key}
-                  ref={index === 0 ? deck.focusFirstOption : undefined}
-                  state={deck.stateOf(option)}
-                  onClick={() => deck.choose(option)}
-                  shortcut={String(index + 1)}
-                  aria-disabled={deck.revealed || undefined}
-                  className="min-h-20 px-3"
-                >
-                  <ComponentPath option={option} />
-                </AnswerOption>
-              ))}
-            </div>
-          </motion.div>
-        </AnimatePresence>
-      )}
-    </FlashcardPage>
+    <FlashcardBoard
+      deck={deck}
+      title={TITLE}
+      subtitle={SUBTITLE}
+      total={pool.length}
+      masteredLabel="All upgrade paths mastered"
+      emptyTitle="No upgrade paths found."
+    >
+      <FlashcardPrompt size="wide" mark="inline">
+        <UpgradedItem />
+      </FlashcardPrompt>
+      <FlashcardOptions size="lg">
+        <ComponentPath />
+      </FlashcardOptions>
+    </FlashcardBoard>
   );
 }
 
-function ComponentPath({ option }: { option: UpgradePathOption }) {
+/** The prompt: the upgraded item, its slot, tier and cost. */
+function UpgradedItem() {
+  const { target } = useFlashcardEntry<UpgradePathEntry>();
+  return (
+    <>
+      <img
+        src={itemImageSrc(target)}
+        alt={target.name}
+        className="size-20 shrink-0 object-contain sm:size-24"
+        draggable={false}
+      />
+      <Stack gap={1} className="flex-1">
+        <div>
+          <Text as="div" variant="eyebrow" className="font-mono">
+            Upgraded item
+          </Text>
+          <div className="truncate text-lg font-semibold text-foreground">{target.name}</div>
+        </div>
+        <div className="flex flex-wrap items-center gap-2 font-mono text-xs tracking-wider text-muted-foreground uppercase">
+          <span>{target.item_slot_type}</span>
+          <span className="text-muted-foreground">|</span>
+          <span>Tier {target.item_tier}</span>
+          {target.cost != null && (
+            <>
+              <span className="text-muted-foreground">|</span>
+              <span>{target.cost.toLocaleString("en-US")} souls</span>
+            </>
+          )}
+        </div>
+      </Stack>
+    </>
+  );
+}
+
+/** An option: the component items and their names. */
+function ComponentPath() {
+  const option = useFlashcardEntry<UpgradePathOption>();
   return (
     <div className="flex min-w-0 items-center gap-3">
       <Inline gap={1} wrap="nowrap" className="shrink-0">
