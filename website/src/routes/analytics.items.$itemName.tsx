@@ -29,7 +29,7 @@ import { fetchItemBestHeroes } from "~/lib/item-hero-fns";
 import { findItemBySlug, itemSlug } from "~/lib/item-slug";
 import { catchPrefetch, prefetchSafe } from "~/lib/prefetch-safe";
 import { rankOf } from "~/lib/rank-of";
-import { rankRangeLabel } from "~/lib/rank-utils";
+import { DEFAULT_RANK_RANGE, rankRangeLabel } from "~/lib/rank-utils";
 import { defaultPeriodLabel, defaultTemporalCoverage, defaultUnixRange, type SeasonInfo } from "~/lib/seasons";
 import { datasetJsonLd, pageTitle, seo } from "~/lib/seo";
 import { closestNameBySlug, findByIdSegment, slugify } from "~/lib/slug";
@@ -57,11 +57,9 @@ const ItemWinRateByBuyTime = lazy(() =>
   import("~/components/features/items/ItemWinRateByBuyTime").then((m) => ({ default: m.ItemWinRateByBuyTime })),
 );
 
-const DEFAULT_MIN_RANK = 91;
-const DEFAULT_MAX_RANK = 116;
 const GAME_MODE = "normal" as const;
 /** The rank range as the items page reads it from the URL, so a link lands on the numbers this page quotes. */
-const RANK_SEARCH = { min_rank: DEFAULT_MIN_RANK, max_rank: DEFAULT_MAX_RANK };
+const RANK_SEARCH = { min_rank: DEFAULT_RANK_RANGE.min, max_rank: DEFAULT_RANK_RANGE.max };
 
 const SLOT_LABEL = { weapon: "Weapon", spirit: "Spirit", vitality: "Vitality" } as const;
 
@@ -70,8 +68,8 @@ function currentItemStatsParams(seasons: readonly SeasonInfo[], preference: Date
   return {
     minMatches: 10,
     heroId: null,
-    minAverageBadge: DEFAULT_MIN_RANK,
-    maxAverageBadge: DEFAULT_MAX_RANK,
+    minAverageBadge: DEFAULT_RANK_RANGE.min,
+    maxAverageBadge: DEFAULT_RANK_RANGE.max,
     minBoughtAtS: undefined,
     maxBoughtAtS: undefined,
     gameMode: GAME_MODE,
@@ -94,8 +92,8 @@ function byRankItemStatsParams(seasons: readonly SeasonInfo[], preference: DateF
 // mid-day patch the shares passed 100%. Without them both come from the rollups over the same days.
 function currentHeroStatsParams(seasons: readonly SeasonInfo[], preference: DateFilterPreference = "season") {
   return {
-    minAverageBadge: DEFAULT_MIN_RANK,
-    maxAverageBadge: DEFAULT_MAX_RANK,
+    minAverageBadge: DEFAULT_RANK_RANGE.min,
+    maxAverageBadge: DEFAULT_RANK_RANGE.max,
     gameMode: GAME_MODE,
     matchMode: DEFAULT_MATCH_MODE,
     ...defaultUnixRange(seasons, preference),
@@ -169,8 +167,8 @@ export const Route = createFileRoute("/analytics/items/$itemName")({
         fetchItemBestHeroes({
           data: {
             itemId: item.id,
-            minAverageBadge: DEFAULT_MIN_RANK,
-            maxAverageBadge: DEFAULT_MAX_RANK,
+            minAverageBadge: DEFAULT_RANK_RANGE.min,
+            maxAverageBadge: DEFAULT_RANK_RANGE.max,
             gameMode: GAME_MODE,
             matchMode: DEFAULT_MATCH_MODE,
             ...defaultUnixRange(seasons, preferences.dateFilter),
@@ -190,7 +188,7 @@ export const Route = createFileRoute("/analytics/items/$itemName")({
       cost: item.cost ?? null,
       breadcrumb: item.name,
       bestHeroes,
-      rankRange: rankRangeLabel(ranks, DEFAULT_MIN_RANK, DEFAULT_MAX_RANK),
+      rankRange: rankRangeLabel(ranks, DEFAULT_RANK_RANGE.min, DEFAULT_RANK_RANGE.max),
       coverage: defaultTemporalCoverage(seasons, preferences.dateFilter),
       summary: summary && {
         winRate: summary.winRate,

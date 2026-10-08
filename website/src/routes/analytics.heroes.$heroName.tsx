@@ -33,7 +33,7 @@ import { fetchHeroMatchups, type HeroMatchupsRequest } from "~/lib/hero-matchup-
 import { findHeroBySlug, heroSlug } from "~/lib/hero-slug";
 import { catchPrefetch, prefetchSafe } from "~/lib/prefetch-safe";
 import { rankOf } from "~/lib/rank-of";
-import { rankRangeLabel } from "~/lib/rank-utils";
+import { DEFAULT_RANK_RANGE, rankRangeLabel } from "~/lib/rank-utils";
 import {
   defaultPeriodLabel,
   defaultPrevUnixRange,
@@ -67,11 +67,9 @@ const HeroWinRateByRank = lazy(() =>
   import("~/components/features/heroes/HeroWinRateByRank").then((m) => ({ default: m.HeroWinRateByRank })),
 );
 
-const DEFAULT_MIN_RANK = 91;
-const DEFAULT_MAX_RANK = 116;
 const GAME_MODE = "normal" as const;
 /** The rank range as the analytics pages read it from the URL, so a link lands on the numbers this page quotes. */
-const RANK_SEARCH = { min_rank: DEFAULT_MIN_RANK, max_rank: DEFAULT_MAX_RANK };
+const RANK_SEARCH = { min_rank: DEFAULT_RANK_RANGE.min, max_rank: DEFAULT_RANK_RANGE.max };
 
 // No `minHeroMatches` / `minHeroMatchesTotal`, not even 0: either one sends the request to the exact-timestamp base
 // table, while item stats come from day-grained rollups that start at midnight. Right after a mid-day patch the item
@@ -79,8 +77,8 @@ const RANK_SEARCH = { min_rank: DEFAULT_MIN_RANK, max_rank: DEFAULT_MAX_RANK };
 // from the rollups over the same days.
 function currentStatsParams(seasons: readonly SeasonInfo[], preference: DateFilterPreference = "season") {
   return {
-    minAverageBadge: DEFAULT_MIN_RANK,
-    maxAverageBadge: DEFAULT_MAX_RANK,
+    minAverageBadge: DEFAULT_RANK_RANGE.min,
+    maxAverageBadge: DEFAULT_RANK_RANGE.max,
     gameMode: GAME_MODE,
     matchMode: DEFAULT_MATCH_MODE,
     ...defaultUnixRange(seasons, preference),
@@ -98,8 +96,8 @@ function byRankStatsParams(seasons: readonly SeasonInfo[], preference: DateFilte
 function currentItemStatsParams(seasons: readonly SeasonInfo[], preference: DateFilterPreference = "season") {
   return {
     minMatches: 10,
-    minAverageBadge: DEFAULT_MIN_RANK,
-    maxAverageBadge: DEFAULT_MAX_RANK,
+    minAverageBadge: DEFAULT_RANK_RANGE.min,
+    maxAverageBadge: DEFAULT_RANK_RANGE.max,
     gameMode: GAME_MODE,
     matchMode: DEFAULT_MATCH_MODE,
     ...defaultUnixRange(seasons, preference),
@@ -109,8 +107,8 @@ function currentItemStatsParams(seasons: readonly SeasonInfo[], preference: Date
 function currentAbilityOrderParams(seasons: readonly SeasonInfo[], preference: DateFilterPreference = "season") {
   return {
     minMatches: 20,
-    minAverageBadge: DEFAULT_MIN_RANK,
-    maxAverageBadge: DEFAULT_MAX_RANK,
+    minAverageBadge: DEFAULT_RANK_RANGE.min,
+    maxAverageBadge: DEFAULT_RANK_RANGE.max,
     gameMode: GAME_MODE,
     matchMode: DEFAULT_MATCH_MODE,
     ...defaultUnixRange(seasons, preference),
@@ -120,8 +118,8 @@ function currentAbilityOrderParams(seasons: readonly SeasonInfo[], preference: D
 function currentBanParams(seasons: readonly SeasonInfo[], preference: DateFilterPreference = "season") {
   return {
     matchMode: DEFAULT_MATCH_MODE,
-    minAverageBadge: DEFAULT_MIN_RANK,
-    maxAverageBadge: DEFAULT_MAX_RANK,
+    minAverageBadge: DEFAULT_RANK_RANGE.min,
+    maxAverageBadge: DEFAULT_RANK_RANGE.max,
     ...defaultUnixRange(seasons, preference),
   };
 }
@@ -134,8 +132,8 @@ function matchupsRequest(
   const prev = defaultPrevUnixRange(seasons, preference);
   return {
     heroId,
-    minAverageBadge: DEFAULT_MIN_RANK,
-    maxAverageBadge: DEFAULT_MAX_RANK,
+    minAverageBadge: DEFAULT_RANK_RANGE.min,
+    maxAverageBadge: DEFAULT_RANK_RANGE.max,
     ...defaultUnixRange(seasons, preference),
     prevMinUnixTimestamp: prev.minUnixTimestamp,
     prevMaxUnixTimestamp: prev.maxUnixTimestamp,
@@ -226,7 +224,7 @@ export const Route = createFileRoute("/analytics/heroes/$heroName")({
       cardImage,
       breadcrumb: hero.name,
       matchups,
-      rankRange: rankRangeLabel(ranks, DEFAULT_MIN_RANK, DEFAULT_MAX_RANK),
+      rankRange: rankRangeLabel(ranks, DEFAULT_RANK_RANGE.min, DEFAULT_RANK_RANGE.max),
       coverage: defaultTemporalCoverage(seasons, preferences.dateFilter),
       summary: summary && {
         winRate: summary.winRate,

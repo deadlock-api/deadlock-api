@@ -5,6 +5,7 @@ import { useDateRangeState } from "~/hooks/useDateRangeState";
 import { useModeState } from "~/hooks/useModeState";
 import type { AnalyticsTab } from "~/lib/analytics-tabs";
 import { getEffectiveRankRange } from "~/lib/game-mode";
+import { DEFAULT_RANK_RANGE } from "~/lib/rank-utils";
 import { BY_RANK_STATS, heroStatIn } from "~/types/api_hero_stats";
 import { HERO_STATS_WITH_BAN_RATE } from "~/types/api_hero_stats";
 
@@ -27,8 +28,8 @@ export function useHeroFilters() {
     "min_hero_matches_total",
     parseAsInteger.withDefault(0),
   );
-  const [minRankId, setMinRankId] = useQueryState("min_rank", parseAsInteger.withDefault(91));
-  const [maxRankId, setMaxRankId] = useQueryState("max_rank", parseAsInteger.withDefault(116));
+  const [minRankId, setMinRankId] = useQueryState("min_rank", parseAsInteger.withDefault(DEFAULT_RANK_RANGE.min));
+  const [maxRankId, setMaxRankId] = useQueryState("max_rank", parseAsInteger.withDefault(DEFAULT_RANK_RANGE.max));
   const [sameLaneFilter, setSameLaneFilter] = useQueryState("same_lane", parseAsBoolean.withDefault(true));
   const { startDate, endDate, prevStartDate, prevEndDate, handleDateChange, defaultRange } = useDateRangeState();
   const [tab, setTab] = useAnalyticsTab("heroes");

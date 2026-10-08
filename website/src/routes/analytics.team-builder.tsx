@@ -29,6 +29,7 @@ import { useDraft, DRAFT_URL_UPDATES } from "~/hooks/useDraft";
 import { useModeState } from "~/hooks/useModeState";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { type Mode, MODE_CONFIG } from "~/lib/game-mode";
+import { MAX_BADGE } from "~/lib/rank-utils";
 import { pageTitle, seo } from "~/lib/seo";
 import {
   analyzeDraft,
@@ -58,7 +59,7 @@ import {
 import { draftCounterStatsQueryOptions, draftSynergyStatsQueryOptions } from "~/queries/team-builder-queries";
 
 const DEFAULT_MIN_RANK = 0;
-const DEFAULT_MAX_RANK = 116;
+const DEFAULT_MAX_RANK = MAX_BADGE;
 
 export const Route = createFileRoute("/analytics/team-builder")({
   component: TeamBuilderPage,

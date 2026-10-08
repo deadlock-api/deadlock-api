@@ -36,6 +36,7 @@ import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { useSeasons } from "~/hooks/useSeasons";
 import { getEffectiveRankRange } from "~/lib/game-mode";
 import { prefetchSafe } from "~/lib/prefetch-safe";
+import { MAX_BADGE } from "~/lib/rank-utils";
 import { defaultDateRange } from "~/lib/seasons";
 import { pageTitle, seo } from "~/lib/seo";
 import { registerExactBoundaries } from "~/lib/time-normalize";
@@ -84,7 +85,7 @@ function HeatmapPage() {
   const [heroId, setHeroId] = useQueryState("hero_id", parseAsInteger);
   const { mode, setMode, gameMode, matchMode } = useModeState();
   const [minRankId, setMinRankId] = useQueryState("min_rank", parseAsInteger.withDefault(0));
-  const [maxRankId, setMaxRankId] = useQueryState("max_rank", parseAsInteger.withDefault(116));
+  const [maxRankId, setMaxRankId] = useQueryState("max_rank", parseAsInteger.withDefault(MAX_BADGE));
   const [minGameTime, setMinGameTime] = useQueryState("min_game_time", parseAsInteger.withDefault(0));
   const [maxGameTime, setMaxGameTime] = useQueryState("max_game_time", parseAsInteger.withDefault(3600));
   const [minEvents, setMinEvents] = useQueryState("min_events", parseAsInteger.withDefault(0));
@@ -111,7 +112,7 @@ function HeatmapPage() {
     gameMode,
     matchMode,
     minAverageBadge: effectiveMinRankId || undefined,
-    maxAverageBadge: effectiveMaxRankId != null && effectiveMaxRankId < 116 ? effectiveMaxRankId : undefined,
+    maxAverageBadge: effectiveMaxRankId != null && effectiveMaxRankId < MAX_BADGE ? effectiveMaxRankId : undefined,
     minUnixTimestamp: minUnixTimestamp ?? 0,
     maxUnixTimestamp,
     minGameTimeS: minGameTime || undefined,

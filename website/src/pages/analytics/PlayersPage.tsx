@@ -25,6 +25,7 @@ import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { analyticsTabPath, ANALYTICS_VIEWS } from "~/lib/analytics-tabs";
 import { getEffectiveRankRange } from "~/lib/game-mode";
 import { MAX_COMPARE_PLAYERS } from "~/lib/player-compare";
+import { MAX_BADGE } from "~/lib/rank-utils";
 import { ALL_SORT_BY_VALUES, sortByIn } from "~/lib/scoreboard-sorts";
 import type { CompareFilters } from "~/queries/player-compare-queries";
 import { playerScoreboardQueryOptions } from "~/queries/player-scoreboard-query";
@@ -76,7 +77,7 @@ export function PlayersPage({
   const [heroId, setHeroId] = useQueryState("hero", parseAsInteger);
   const [minMatches, setMinMatches] = useQueryState("min_matches", parseAsInteger.withDefault(DEFAULT_MIN_MATCHES));
   const [minRankId, setMinRankId] = useQueryState("min_rank", parseAsInteger.withDefault(0));
-  const [maxRankId, setMaxRankId] = useQueryState("max_rank", parseAsInteger.withDefault(116));
+  const [maxRankId, setMaxRankId] = useQueryState("max_rank", parseAsInteger.withDefault(MAX_BADGE));
   const { startDate, endDate, handleDateChange, defaultRange } = useDateRangeState();
   // Another board starts on its first page: a kept `page=5` opened a new sort at rank 101.
   const [, setPage] = useQueryState("page", parseAsInteger);

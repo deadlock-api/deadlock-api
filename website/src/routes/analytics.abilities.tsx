@@ -14,6 +14,7 @@ import { useDateRangeState } from "~/hooks/useDateRangeState";
 import { useModeState } from "~/hooks/useModeState";
 import { DEFAULT_MATCH_MODE, getEffectiveRankRange } from "~/lib/game-mode";
 import { prefetchSafe } from "~/lib/prefetch-safe";
+import { MAX_BADGE } from "~/lib/rank-utils";
 import { defaultUnixRange } from "~/lib/seasons";
 import { pageTitle, seo } from "~/lib/seo";
 import { abilityOrderQueryOptions } from "~/queries/ability-order-query";
@@ -37,7 +38,7 @@ export const Route = createFileRoute("/analytics/abilities")({
           gameMode: "normal",
           matchMode: DEFAULT_MATCH_MODE,
           minAverageBadge: 0,
-          maxAverageBadge: 116,
+          maxAverageBadge: MAX_BADGE,
           ...range,
           minMatches: 20,
         }),
@@ -58,7 +59,7 @@ function AbilitiesPage() {
   const [heroIdParam, setHeroId] = useQueryState("hero_id", parseAsInteger.withDefault(DEFAULT_HERO_ID));
   const heroId = useKnownHeroId(heroIdParam) ?? DEFAULT_HERO_ID;
   const [minRankId, setMinRankId] = useQueryState("min_rank", parseAsInteger.withDefault(0));
-  const [maxRankId, setMaxRankId] = useQueryState("max_rank", parseAsInteger.withDefault(116));
+  const [maxRankId, setMaxRankId] = useQueryState("max_rank", parseAsInteger.withDefault(MAX_BADGE));
   const { mode, setMode, gameMode, matchMode } = useModeState();
   const { startDate, endDate, handleDateChange, defaultRange } = useDateRangeState();
   const [minMatches, setMinMatches] = useQueryState("min_matches", parseAsInteger.withDefault(20));

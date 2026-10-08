@@ -18,6 +18,7 @@ import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { analyticsTabPath, ANALYTICS_VIEWS } from "~/lib/analytics-tabs";
 import { getEffectiveRankRange } from "~/lib/game-mode";
 import { ALL_STAT_KEYS, getFilteredCategories } from "~/lib/game-stat-definitions";
+import { MAX_BADGE } from "~/lib/rank-utils";
 
 import { BuffsTab, CombatTab, EconomyTab, GamesByRankChart, GamesOverTimeChart } from "./games-views";
 
@@ -33,7 +34,7 @@ export function Games() {
   const { mode, setMode, gameMode, matchMode } = useModeState();
   const isStreetBrawl = mode === "street_brawl";
   const [minRankId, setMinRankId] = useQueryState("min_rank", parseAsInteger.withDefault(0));
-  const [maxRankId, setMaxRankId] = useQueryState("max_rank", parseAsInteger.withDefault(116));
+  const [maxRankId, setMaxRankId] = useQueryState("max_rank", parseAsInteger.withDefault(MAX_BADGE));
   const { startDate, endDate, prevStartDate, prevEndDate, handleDateChange, defaultRange } = useDateRangeState();
   const [minDurationS, setMinDurationS] = useQueryState("min_duration_s", parseAsInteger);
   const [maxDurationS, setMaxDurationS] = useQueryState("max_duration_s", parseAsInteger);

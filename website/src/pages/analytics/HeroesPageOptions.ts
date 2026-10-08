@@ -10,6 +10,7 @@ import { DEFAULT_MATCH_MODE } from "~/lib/game-mode";
 import { heroSlug } from "~/lib/hero-slug";
 import { rankHeroes, type Tier } from "~/lib/hero-tiers";
 import { prefetchSafe } from "~/lib/prefetch-safe";
+import { DEFAULT_RANK_RANGE } from "~/lib/rank-utils";
 import {
   defaultPeriodLabel,
   defaultPrevUnixRange,
@@ -22,8 +23,6 @@ import { redirectLegacyHeroId } from "~/lib/site-route-migration";
 import type { SlimHero } from "~/queries/asset-queries";
 import type { RouterContext } from "~/router";
 
-const DEFAULT_MIN_RANK = 91;
-const DEFAULT_MAX_RANK = 116;
 const DEFAULT_MIN_MATCHES = 10;
 
 function defaultHeroStatsRanges(seasons: readonly SeasonInfo[], preference: DateFilterPreference = "season") {
@@ -106,7 +105,7 @@ async function prefetchHeroView(
 ) {
   const range = { minUnixTimestamp: r.minUnixTimestamp, maxUnixTimestamp: r.maxUnixTimestamp };
   const prevRange = { minUnixTimestamp: r.prevMinUnixTimestamp, maxUnixTimestamp: r.prevMaxUnixTimestamp };
-  const ranks = { minAverageBadge: DEFAULT_MIN_RANK, maxAverageBadge: DEFAULT_MAX_RANK };
+  const ranks = { minAverageBadge: DEFAULT_RANK_RANGE.min, maxAverageBadge: DEFAULT_RANK_RANGE.max };
   const mode = { gameMode: "normal" as const, matchMode: DEFAULT_MATCH_MODE };
   const prefetch = <TQueryFnData, TError, TData, TQueryKey extends QueryKey>(
     options: QueryExecuteOptions<TQueryFnData, TError, TData, TQueryFnData, TQueryKey>,
@@ -254,8 +253,8 @@ export const heroesPageOptions = {
     const common = {
       minHeroMatches: 0,
       minHeroMatchesTotal: 0,
-      minAverageBadge: DEFAULT_MIN_RANK,
-      maxAverageBadge: DEFAULT_MAX_RANK,
+      minAverageBadge: DEFAULT_RANK_RANGE.min,
+      maxAverageBadge: DEFAULT_RANK_RANGE.max,
       gameMode: "normal" as const,
       matchMode: DEFAULT_MATCH_MODE,
     };
@@ -271,8 +270,8 @@ export const heroesPageOptions = {
         queryClient.query({
           ...heroBanStatsQueryOptions({
             matchMode: DEFAULT_MATCH_MODE,
-            minAverageBadge: DEFAULT_MIN_RANK,
-            maxAverageBadge: DEFAULT_MAX_RANK,
+            minAverageBadge: DEFAULT_RANK_RANGE.min,
+            maxAverageBadge: DEFAULT_RANK_RANGE.max,
             minUnixTimestamp,
             maxUnixTimestamp,
           }),

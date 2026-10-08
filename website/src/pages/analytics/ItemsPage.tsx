@@ -16,6 +16,7 @@ import { useDateRangeState } from "~/hooks/useDateRangeState";
 import { useModeState } from "~/hooks/useModeState";
 import { analyticsTabPath, ANALYTICS_VIEWS } from "~/lib/analytics-tabs";
 import { DEFAULT_MODE, getEffectiveRankRange } from "~/lib/game-mode";
+import { DEFAULT_RANK_RANGE } from "~/lib/rank-utils";
 
 const ItemPurchaseAnalysis = lazy(() =>
   import("~/components/features/items/ItemPurchaseAnalysis").then((m) => ({ default: m.ItemPurchaseAnalysis })),
@@ -39,8 +40,8 @@ const together = { limitUrlUpdates: throttle(50) };
 
 export function ItemsPage() {
   const { mode, setMode, gameMode, matchMode } = useModeState();
-  const [minRankId, setMinRankId] = useQueryState("min_rank", parseAsInteger.withDefault(91));
-  const [maxRankId, setMaxRankId] = useQueryState("max_rank", parseAsInteger.withDefault(116));
+  const [minRankId, setMinRankId] = useQueryState("min_rank", parseAsInteger.withDefault(DEFAULT_RANK_RANGE.min));
+  const [maxRankId, setMaxRankId] = useQueryState("max_rank", parseAsInteger.withDefault(DEFAULT_RANK_RANGE.max));
   const [minBoughtAtS, setMinBoughtAtS] = useQueryState("min_bought_at", parseAsInteger);
   const [maxBoughtAtS, setMaxBoughtAtS] = useQueryState("max_bought_at", parseAsInteger);
   const [heroParam, setHero] = useQueryState("hero", parseAsInteger);
@@ -84,7 +85,7 @@ export function ItemsPage() {
         />
         <Filter.ModeWithRank
           value={{ mode, rank: [minRankId, maxRankId] }}
-          defaultValue={{ mode: DEFAULT_MODE, rank: [91, 116] }}
+          defaultValue={{ mode: DEFAULT_MODE, rank: [DEFAULT_RANK_RANGE.min, DEFAULT_RANK_RANGE.max] }}
           onValueChange={(next) => {
             if (next.mode !== mode) setMode(next.mode);
             if (next.rank[0] !== minRankId || next.rank[1] !== maxRankId) {

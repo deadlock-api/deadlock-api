@@ -5,6 +5,7 @@ import { compareCardUrl, compareFilterSearch, type CompareFilterSearch, compareS
 import { DEFAULT_MATCH_MODE } from "~/lib/game-mode";
 import { comparisonVerdict, parseCompareIds, SCORED_STAT_COUNT, settledAggregates } from "~/lib/player-compare";
 import { prefetchSafe } from "~/lib/prefetch-safe";
+import { MAX_BADGE } from "~/lib/rank-utils";
 import { defaultUnixRange } from "~/lib/seasons";
 import { pageTitle, seo, SITE_URL } from "~/lib/seo";
 import type { RouterContext } from "~/router";
@@ -45,7 +46,7 @@ export const playersPageOptions = {
           heroId: deps.heroId,
           minMatches: DEFAULT_MIN_MATCHES,
           minAverageBadge: 0,
-          maxAverageBadge: 116,
+          maxAverageBadge: MAX_BADGE,
           ...range,
           start: 0,
           limit: MAX_ENTRIES,
@@ -96,7 +97,7 @@ export const statsMetricsPageOptions = {
           gameMode: "normal",
           matchMode: DEFAULT_MATCH_MODE,
           minAverageBadge: 0,
-          maxAverageBadge: 116,
+          maxAverageBadge: MAX_BADGE,
           ...range,
         }),
         staleTime: "static",

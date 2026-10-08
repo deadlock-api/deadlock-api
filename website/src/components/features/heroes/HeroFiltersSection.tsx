@@ -4,6 +4,7 @@ import { startTransition } from "react";
 import { Filter } from "~/components/domain/filters";
 import { STATS_TABS, type useHeroFilters } from "~/hooks/useHeroFilters";
 import { DEFAULT_MODE } from "~/lib/game-mode";
+import { DEFAULT_RANK_RANGE } from "~/lib/rank-utils";
 
 type HeroFiltersProps = Pick<
   ReturnType<typeof useHeroFilters>,
@@ -78,7 +79,7 @@ export function HeroFiltersSection({
       )}
       <Filter.ModeWithRank
         value={{ mode, rank: [minRankId, maxRankId] }}
-        defaultValue={{ mode: DEFAULT_MODE, rank: [91, 116] }}
+        defaultValue={{ mode: DEFAULT_MODE, rank: [DEFAULT_RANK_RANGE.min, DEFAULT_RANK_RANGE.max] }}
         onValueChange={(next) => {
           if (next.mode !== mode) setMode(next.mode);
           if (next.rank[0] !== minRankId || next.rank[1] !== maxRankId) {

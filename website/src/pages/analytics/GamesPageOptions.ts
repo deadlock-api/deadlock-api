@@ -4,6 +4,7 @@ import type { AnalyticsApiGameStatsRequest } from "deadlock_api_client";
 import { analyticsTabFromPath, ANALYTICS_VIEWS, redirectAnalyticsTab } from "~/lib/analytics-tabs";
 import { DEFAULT_MATCH_MODE } from "~/lib/game-mode";
 import { prefetchSafe } from "~/lib/prefetch-safe";
+import { MAX_BADGE } from "~/lib/rank-utils";
 import { defaultPrevUnixRange, defaultTemporalCoverage, defaultUnixRange } from "~/lib/seasons";
 import { datasetJsonLd, pageTitle, seo } from "~/lib/seo";
 import type { RouterContext } from "~/router";
@@ -31,7 +32,7 @@ export const gamesPageOptions = {
       matchMode: DEFAULT_MATCH_MODE,
       ...range,
       minAverageBadge: 0,
-      maxAverageBadge: 116,
+      maxAverageBadge: MAX_BADGE,
     } as const;
     const baseParams: AnalyticsApiGameStatsRequest = filters;
     const gameStats = (params: AnalyticsApiGameStatsRequest) =>

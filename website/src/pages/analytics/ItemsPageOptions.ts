@@ -5,6 +5,7 @@ import { analyticsTabFromPath, ANALYTICS_VIEWS, redirectAnalyticsTab } from "~/l
 import { enemyHeroFilter, parseEnemyParam } from "~/lib/enemy-heroes";
 import { DEFAULT_MATCH_MODE } from "~/lib/game-mode";
 import { prefetchSafe, prefetchSeed } from "~/lib/prefetch-safe";
+import { DEFAULT_RANK_RANGE } from "~/lib/rank-utils";
 import { defaultPrevUnixRange, defaultTemporalCoverage, defaultUnixRange } from "~/lib/seasons";
 import { datasetJsonLd, pageTitle, seo } from "~/lib/seo";
 import { wilsonScoreInterval } from "~/lib/wilson";
@@ -68,8 +69,8 @@ export const itemsPageOptions = {
     const common = {
       minMatches: 10,
       heroId: deps.heroId,
-      minAverageBadge: 91,
-      maxAverageBadge: 116,
+      minAverageBadge: DEFAULT_RANK_RANGE.min,
+      maxAverageBadge: DEFAULT_RANK_RANGE.max,
       gameMode: "normal" as const,
       matchMode: DEFAULT_MATCH_MODE,
     };

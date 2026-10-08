@@ -22,6 +22,9 @@ export function getRankLabel(rank: Rank, subrank: number): string {
 /** The highest badge there is (Eternus 6): a rank range that ends there has no upper bound. */
 export const MAX_BADGE = 116;
 
+/** The rank filter's default on the hero and item stats: Phantom 1 (badge 91) and up. */
+export const DEFAULT_RANK_RANGE = { min: 91, max: MAX_BADGE } as const;
+
 /** Tier bands behind the rank presets; each spans the first subrank of `from` to the last of `to`. */
 export const RANK_BANDS = [
   { label: "Low", from: 1, to: 4 },
