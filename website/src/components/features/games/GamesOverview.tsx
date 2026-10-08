@@ -165,7 +165,7 @@ export default function GamesOverview({ params, prevParams, onStatClick, isStree
                             {value == null && stat.recordedSince ? (
                               <NoValue label={BUFF_TIMINGS_NOTE} />
                             ) : (
-                              formatStatValue(value, stat.format)
+                              (formatStatValue(value, stat.format) ?? <NoValue label="No data" />)
                             )}
                           </span>
                           {delta != null && (

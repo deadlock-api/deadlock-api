@@ -11,6 +11,7 @@ import { SortableHeader } from "~/components/patterns/data-table/SortableHeader"
 import { TableEmptyRow } from "~/components/patterns/data-table/TableEmptyRow";
 import { Button } from "~/components/ui/button";
 import { useSort } from "~/components/ui/hooks/use-sort";
+import { NoValue } from "~/components/ui/no-value";
 import { SearchInput } from "~/components/ui/search-input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { usePaginationQueryState } from "~/hooks/usePaginationQueryState";
@@ -121,7 +122,7 @@ export function ScoreboardTable({
   const badgeMap = useMemo(() => extractBadgeMap(ranks ?? []), [ranks]);
 
   const renderValue = (entry: PlayerEntry) => {
-    if (!isRankSort) return formatStatValue(entry.value, sortBy);
+    if (!isRankSort) return formatStatValue(entry.value, sortBy) ?? <NoValue label="No data" />;
     const badge = entry.badge ? badgeMap.get(entry.badge) : undefined;
     if (!entry.badge || !badge) return <span className="text-muted-foreground">Unranked</span>;
     return (

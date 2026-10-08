@@ -318,7 +318,11 @@ function RankByMatchChart({
               if (!active || !row) return null;
               return (
                 <ChartReadings
-                  title={`After ranked match ${formatStatValue(row.match, "integer")}`}
+                  title={
+                    formatStatValue(row.match, "integer") == null
+                      ? "After a ranked match"
+                      : `After ranked match ${formatStatValue(row.match, "integer")}`
+                  }
                   valueLabel="Rank"
                   label="Ranks after this many ranked matches"
                 >

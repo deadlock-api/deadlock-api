@@ -188,12 +188,24 @@ function ItemRow({
             <TooltipHeader
               leading={<ItemImage item={item} title="" />}
               title={name}
-              subtitle={item ? `Tier ${item.item_tier} · ${formatStatValue(item.cost, "integer")} souls` : undefined}
+              subtitle={
+                item
+                  ? formatStatValue(item.cost, "integer") == null
+                    ? `Tier ${item.item_tier}`
+                    : `Tier ${item.item_tier} · ${formatStatValue(item.cost, "integer")} souls`
+                  : undefined
+              }
             />
             <TooltipStats>
               <TooltipStat
                 label="Bought in"
-                value={`${formatStatValue(entry.matches, "integer")} matches (${formatShare(entry.share)})`}
+                value={
+                  formatStatValue(entry.matches, "integer") == null ? (
+                    <NoValue label="No data" />
+                  ) : (
+                    `${formatStatValue(entry.matches, "integer")} matches (${formatShare(entry.share)})`
+                  )
+                }
               />
               <TooltipStat label="Record" value={`${entry.wins}W ${entry.matches - entry.wins}L`} />
               <TooltipStat label="Win rate" value={formatPercent(entry.winRate)} />

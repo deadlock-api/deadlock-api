@@ -140,7 +140,7 @@ export function HeroDetailsTooltip({
               label="First Pickup"
               value={
                 avgFirstBuff !== undefined ? (
-                  formatStatValue(avgFirstBuff, "duration")
+                  (formatStatValue(avgFirstBuff, "duration") ?? <NoValue label={BUFF_TIMINGS_NOTE} />)
                 ) : (
                   <NoValue label={BUFF_TIMINGS_NOTE} />
                 )

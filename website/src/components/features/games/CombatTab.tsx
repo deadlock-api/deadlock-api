@@ -194,9 +194,10 @@ function DamageCurve({ points, query }: CurveProps) {
   const last = points.at(-1);
   const summary = `Average damage dealt by game minute, per target.${
     last
-      ? ` At ${minuteLabel(last.game_time)}: ${DAMAGE_TARGETS.map(
-          (target) => `${target.label} ${formatStatValue(last[target.field], "integer")}`,
-        ).join(", ")}.`
+      ? ` At ${minuteLabel(last.game_time)}: ${DAMAGE_TARGETS.flatMap((target) => {
+          const value = formatStatValue(last[target.field], "integer");
+          return value == null ? [] : [`${target.label} ${value}`];
+        }).join(", ")}.`
       : ""
   }`;
 
@@ -306,7 +307,9 @@ function SpreadCurve<K extends string>({ metrics, initial, label, pickerLabel, p
       ) : (
         <ChartSurface
           label={`${selected.reading} by game minute, with the spread between players.${
-            last ? ` At ${minuteLabel(last.time)}: ${formatValue(last.value, selected.digits)}.` : ""
+            last && formatValue(last.value, selected.digits) != null
+              ? ` At ${minuteLabel(last.time)}: ${formatValue(last.value, selected.digits)}.`
+              : ""
           }`}
           variant="bare"
         >
@@ -333,8 +336,16 @@ function SpreadCurve<K extends string>({ metrics, initial, label, pickerLabel, p
                 if (!active || !row) return null;
                 return (
                   <ChartReadings title={`At ${minuteLabel(row.time)}`}>
-                    <ChartReading label={selected.reading}>{formatValue(row.value, selected.digits)}</ChartReading>
-                    <ChartReading label="Std dev">± {formatValue(row.std, selected.digits)}</ChartReading>
+                    <ChartReading label={selected.reading}>
+                      {formatValue(row.value, selected.digits) ?? <NoValue label="No data" />}
+                    </ChartReading>
+                    <ChartReading label="Std dev">
+                      {formatValue(row.std, selected.digits) == null ? (
+                        <NoValue label="No data" />
+                      ) : (
+                        `± ${formatValue(row.std, selected.digits)}`
+                      )}
+                    </ChartReading>
                   </ChartReadings>
                 );
               }}

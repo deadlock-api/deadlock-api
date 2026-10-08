@@ -23,6 +23,12 @@ import type { ComparedPlayer } from "./types";
 const COLLAPSED_ROWS = 6;
 
 /** The heroes at least two of the players have played, with each one's matches, win rate and KDA on them. */
+/** "9.1 / 4.0 / 12.3", or null when any of the three is missing. */
+function kdaText(values: (number | null | undefined)[]): string | null {
+  const parts = values.map((value) => formatStatValue(value, "decimal1"));
+  return parts.every((part) => part != null) ? parts.join(" / ") : null;
+}
+
 export function SharedHeroesTable({
   players,
   rows,
@@ -98,9 +104,9 @@ export function SharedHeroesTable({
                                 <TooltipStat label="Record" value={`${stats.wins}W ${stats.matches - stats.wins}L`} />
                                 <TooltipStat
                                   label="K / D / A"
-                                  value={[stats.kills, stats.deaths, stats.assists]
-                                    .map((v) => formatStatValue(v, "decimal1"))
-                                    .join(" / ")}
+                                  value={
+                                    kdaText([stats.kills, stats.deaths, stats.assists]) ?? <NoValue label="No data" />
+                                  }
                                 />
                                 {hasSoulEconomy(gameMode) && (
                                   <TooltipStat

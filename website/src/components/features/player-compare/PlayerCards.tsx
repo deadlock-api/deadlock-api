@@ -52,6 +52,12 @@ function topHeroes(rows: readonly HeroStats[], accountId: number) {
  * holds the player's controls too: the name moves them (drag, or the arrow keys), the cross removes them. While there
  * is room, the last slot adds a player.
  */
+/** "9.1 / 4.0 / 12.3 K/D/A", or a plain note when any of the three is missing. */
+function kdaLine(values: (number | null | undefined)[]): string {
+  const parts = values.map((value) => formatPlayerMetricValue(value, "decimal1"));
+  return parts.every((part) => part != null) ? `${parts.join(" / ")} K/D/A` : "K/D/A not recorded";
+}
+
 export function PlayerCards({
   players,
   rows,
@@ -311,11 +317,10 @@ export function PlayerCards({
                           {aggregate && (
                             <Text variant="caption" tone="muted" numeric="tabular" wrap="truncate">
                               {/* Alone, the matches are a stat of their own above. */}
-                              {contest && `${formatPlayerMetricValue(aggregate.matches, "integer")} matches · `}
-                              {[aggregate.kills, aggregate.deaths, aggregate.assists]
-                                .map((value) => formatPlayerMetricValue(value, "decimal1"))
-                                .join(" / ")}{" "}
-                              K/D/A
+                              {contest &&
+                                formatPlayerMetricValue(aggregate.matches, "integer") != null &&
+                                `${formatPlayerMetricValue(aggregate.matches, "integer")} matches · `}
+                              {kdaLine([aggregate.kills, aggregate.deaths, aggregate.assists])}
                             </Text>
                           )}
 

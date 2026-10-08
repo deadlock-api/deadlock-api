@@ -166,7 +166,7 @@ export default function EconomyGrowthCurve({ params }: EconomyGrowthCurveProps) 
                     <ChartReadings title={`${label}% into the match`}>
                       <ChartReading label="Net worth">{formatSouls(p.avg) ?? <NoValue label="No data" />}</ChartReading>
                       <ChartReading label="Std dev">
-                        {p.std == null ? <NoValue label="No data" /> : `± ${formatSouls(p.std)}`}
+                        {formatSouls(p.std) == null ? <NoValue label="No data" /> : `± ${formatSouls(p.std)}`}
                       </ChartReading>
                     </ChartReadings>
                   );

@@ -14,7 +14,7 @@ import { PlayerColumnHead, RowValue } from "./CompareTableParts";
 import type { ComparedPlayer } from "./types";
 import type { CompareMatchHistory } from "./useCompareMatchHistories";
 
-const integer = (value: number) => formatStatValue(value, "integer");
+const integer = (value: number) => formatStatValue(value, "integer") ?? <NoValue label="No record" />;
 
 function formatStreak(streak: number): React.ReactNode {
   if (streak === 0) return <NoValue label="No streak" />;

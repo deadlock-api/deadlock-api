@@ -189,7 +189,9 @@ export default function GamesOverTimeChart({
                     return (
                       <ChartReadings title={day.utc(Number(label)).format("MMM D, YYYY [UTC]")}>
                         <ChartReading label={statDef?.label ?? stat}>
-                          {statDef ? formatStatValue(entry.value, statDef.format) : entry.value}
+                          {statDef
+                            ? (formatStatValue(entry.value, statDef.format) ?? <NoValue label="No data" />)
+                            : entry.value}
                         </ChartReading>
                         {stat !== "total_matches" && (
                           <ChartReading label="Matches">{entry.matches.toLocaleString("en-US")}</ChartReading>

@@ -8,6 +8,7 @@ import { RANK_ICON_AXIS_HEIGHT, RankTierIcons } from "~/components/domain/rank/R
 import { ChartLoading, ChartError, ChartEmpty } from "~/components/patterns/charts/ChartStates";
 import { ChartSurface } from "~/components/patterns/charts/ChartSurface";
 import { CHART_GRID, CHART_X_AXIS, CHART_Y_AXIS, CHART_Y_LABEL, CHART_COLOR } from "~/components/patterns/charts/theme";
+import { NoValue } from "~/components/ui/no-value";
 import { Stat, StatGroup } from "~/components/ui/stat";
 import { TooltipCard, TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
 import { BUFF_TIMINGS_NOTE } from "~/lib/buffs";
@@ -188,7 +189,11 @@ export default function GamesByRankChart({ params, stat, onStatChange, isStreetB
                       <TooltipStats>
                         <TooltipStat
                           label={statDef?.label ?? stat}
-                          value={statDef ? formatStatValue(entry.value, statDef.format) : entry.value}
+                          value={
+                            statDef
+                              ? (formatStatValue(entry.value, statDef.format) ?? <NoValue label="No data" />)
+                              : entry.value
+                          }
                         />
                       </TooltipStats>
                     </TooltipCard>

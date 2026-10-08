@@ -136,7 +136,7 @@ export default function EconomySourcesByRank({ params }: EconomySourcesByRankPro
                       <TooltipHeader
                         leading={row.image && <img src={row.image} alt="" className="size-5" />}
                         title={row.name}
-                        subtitle={`Total ${formatSouls(row.total)}`}
+                        subtitle={formatSouls(row.total) == null ? undefined : `Total ${formatSouls(row.total)}`}
                       />
                       <TooltipStats>
                         {[...SOUL_SOURCE_GROUPS]
