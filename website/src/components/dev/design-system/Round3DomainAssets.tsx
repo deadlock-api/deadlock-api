@@ -133,9 +133,9 @@ export function Round3DomainAssets() {
       <Specimen
         name="RankedEntityList"
         source="domain/assets/RankedEntityList"
-        note="A short leaderboard of heroes or items (best items of a hero, best heroes for an item): one RankedEntityRow per place with the rank, the art, the name linked to its page and a meta line, and RankedEntityMetric children for the numbers. A metric with share draws a bar under its value; tone colors a value that has a pivot. One column in a narrow container, two (filled top to bottom) from @3xl."
+        note="A short leaderboard of heroes or items (best items of a hero, best heroes for an item): one RankedEntityRow per place with the rank, the art, the name linked to its page and a meta line, and RankedEntityMetric children for the numbers. A metric with share draws a bar under its value; tone colors a value that has a pivot; labelDisplay hidden leaves the label to screen readers, so a list can label only its first row. density compact (the item list here) draws smaller art and tighter rows. One column in a narrow container, two (filled top to bottom) from @3xl."
       >
-        <RankedEntityList>
+        <RankedEntityList density="compact">
           {RANKED_HEROES.map(({ heroId, winRate, usage }, index) => (
             <RankedEntityRow key={heroId} rank={index + 1} entity={{ heroId }} meta="12,345 matches">
               <RankedEntityMetric
@@ -150,8 +150,19 @@ export function Round3DomainAssets() {
         <RankedEntityList className="max-w-sm">
           {ITEM_IDS.map((itemId, index) => (
             <RankedEntityRow key={itemId} rank={index + 1} entity={{ itemId }}>
-              <RankedEntityMetric label="Win rate" value="48.0%" tone="negative" />
-              <RankedEntityMetric label="Together" value="23%" share={0.23} />
+              {/* labelDisplay: the first row labels the columns, the rest stay one line tall. */}
+              <RankedEntityMetric
+                label="Win rate"
+                labelDisplay={index === 0 ? "visible" : "hidden"}
+                value="48.0%"
+                tone="negative"
+              />
+              <RankedEntityMetric
+                label="Together"
+                labelDisplay={index === 0 ? "visible" : "hidden"}
+                value="23%"
+                share={0.23}
+              />
             </RankedEntityRow>
           ))}
         </RankedEntityList>

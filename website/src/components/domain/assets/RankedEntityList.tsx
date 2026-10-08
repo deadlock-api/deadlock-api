@@ -1,4 +1,4 @@
-import { Children } from "react";
+import { Children, cloneElement, isValidElement } from "react";
 
 import { HeroImage } from "~/components/domain/assets/HeroImage";
 import { HeroName } from "~/components/domain/assets/HeroName";
@@ -8,22 +8,39 @@ import { NoValue } from "~/components/ui/no-value";
 import { ProgressBar } from "~/components/ui/progress-bar";
 import { TONE_TEXT, type Tone } from "~/lib/tone";
 import { cn } from "~/lib/utils";
+import type { SlimUpgrade } from "~/queries/asset-queries";
 
 /**
  * A short leaderboard of heroes or items (the best items of a hero, the best heroes for an item): one row per place,
  * in one column in a narrow container and two in a wide one. Rows are `RankedEntityRow`.
  */
-export function RankedEntityList({ className, style, children, ...props }: React.ComponentProps<"div">) {
+export function RankedEntityList({
+  density = "default",
+  className,
+  style,
+  children,
+  ...props
+}: React.ComponentProps<"div"> & {
+  /** `compact`: smaller art and tighter rows, for several lists side by side on a dense page. */
+  density?: "default" | "compact";
+}) {
   // Two columns fill down, not across, so the ranks read 1-4 then 5-8 like a printed table.
   const rows = Math.ceil(Children.count(children) / 2);
+  // The last row of the first column, which ends its column in the two-column layout and so drops its rule.
+  const items = Children.map(children, (child, index) =>
+    index === rows - 1 && isValidElement<{ "data-column-end"?: boolean }>(child)
+      ? cloneElement(child, { "data-column-end": true })
+      : child,
+  );
   return (
     <div
       data-slot="ranked-entity-list"
-      className={cn("@container", className)}
+      data-density={density}
+      className={cn("group/ranked @container", className)}
       style={{ "--ranked-rows": `repeat(${rows}, auto)`, ...style } as React.CSSProperties}
       {...props}
     >
-      <ol className="grid gap-x-8 @3xl:grid-flow-col @3xl:grid-cols-2 @3xl:grid-rows-(--ranked-rows)">{children}</ol>
+      <ol className="grid gap-x-8 @3xl:grid-flow-col @3xl:grid-cols-2 @3xl:grid-rows-(--ranked-rows)">{items}</ol>
     </div>
   );
 }
@@ -45,14 +62,19 @@ export function RankedEntityRow({
 }: React.ComponentProps<"li"> & {
   /** 1-based. */
   rank: number;
-  entity: { heroId: number } | { itemId: number };
+  /** An item the parent already holds (`item`) renders without the item list. */
+  entity: { heroId: number } | { itemId: number } | { item: SlimUpgrade };
   /** A quiet line under the name: "1,204 matches". */
   meta?: React.ReactNode;
 }) {
   return (
     <li
       data-slot="ranked-entity-row"
-      className={cn("flex min-w-0 items-center gap-3 border-b border-hairline py-2.5", className)}
+      className={cn(
+        // No rule under the last row of a column: the panel's edge ends it.
+        "flex min-w-0 items-center gap-3 border-b border-hairline py-2.5 group-data-[density=compact]/ranked:gap-2 group-data-[density=compact]/ranked:py-1.5 last:border-b-0 @3xl:data-column-end:border-b-0",
+        className,
+      )}
       {...props}
     >
       <span
@@ -65,13 +87,23 @@ export function RankedEntityRow({
         {rank}
       </span>
       {"heroId" in entity ? (
-        <HeroImage heroId={entity.heroId} shape="circle" ring="border" title="" className="size-10 shrink-0" />
+        <HeroImage
+          heroId={entity.heroId}
+          shape="circle"
+          ring="border"
+          title=""
+          className="size-10 shrink-0 group-data-[density=compact]/ranked:size-8"
+        />
+      ) : "item" in entity ? (
+        <ItemImage item={entity.item} className="size-10 shrink-0 group-data-[density=compact]/ranked:size-8" />
       ) : (
-        <ItemImage itemId={entity.itemId} className="size-10 shrink-0" />
+        <ItemImage itemId={entity.itemId} className="size-10 shrink-0 group-data-[density=compact]/ranked:size-8" />
       )}
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
         {"heroId" in entity ? (
           <HeroName heroId={entity.heroId} linkToDetail className={NAME} />
+        ) : "item" in entity ? (
+          <ItemName item={entity.item} linkToDetail className={NAME} />
         ) : (
           <ItemName itemId={entity.itemId} linkToDetail className={NAME} />
         )}
@@ -89,6 +121,7 @@ export function RankedEntityRow({
  */
 export function RankedEntityMetric({
   label,
+  labelDisplay = "visible",
   value,
   share,
   tone,
@@ -96,6 +129,11 @@ export function RankedEntityMetric({
   ...props
 }: Omit<React.ComponentProps<"div">, "children"> & {
   label: React.ReactNode;
+  /**
+   * `hidden` keeps the label for screen readers only: a list that labels its first row, so the rest stay one line
+   * tall.
+   */
+  labelDisplay?: "visible" | "hidden";
   value: React.ReactNode;
   /** 0 to 1: draws the value as a bar as well. */
   share?: number;
@@ -107,14 +145,16 @@ export function RankedEntityMetric({
       className={cn("flex w-12 flex-col items-end gap-1 @md:w-16", className)}
       {...props}
     >
-      <dt className="order-2 type-caption text-muted-foreground">{label}</dt>
+      <dt className={cn("order-2 type-caption text-muted-foreground", labelDisplay === "hidden" && "sr-only")}>
+        {label}
+      </dt>
       <dd className="order-1 flex w-full flex-col items-end gap-1">
         <span className={cn("type-label tabular-nums", tone && TONE_TEXT[tone])}>{value ?? <NoValue />}</span>
         {/* Every metric keeps the bar's row, so the labels of a row line up whether or not a value has a bar. */}
         {share !== undefined ? (
           <ProgressBar variant="thin" value={share} color="var(--chart-share)" className="w-full" />
         ) : (
-          <span aria-hidden="true" className="h-1.5" />
+          <span aria-hidden="true" className="h-1.5 group-data-[density=compact]/ranked:hidden" />
         )}
       </dd>
     </div>

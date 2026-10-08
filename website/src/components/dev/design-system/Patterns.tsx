@@ -1,6 +1,7 @@
 import { Inbox, Swords } from "lucide-react";
 import { useState } from "react";
 
+import { PatternsListDetail } from "~/components/dev/design-system/PatternsListDetail";
 import {
   ChunkErrorBoundarySpecimen,
   FilteredSelectPopoverSpecimen,
@@ -583,6 +584,7 @@ export function Patterns() {
       <Round3Patterns />
       <Round3PatternsMore />
       <PatternsTierList />
+      <PatternsListDetail />
     </Chapter>
   );
 }
