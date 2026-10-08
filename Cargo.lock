@@ -31,7 +31,6 @@ dependencies = [
  "anyhow",
  "clickhouse",
  "common",
- "delay_map",
  "metrics",
  "reqwest",
  "serde",
@@ -2975,17 +2974,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "10d60334b3b2e7c9d91ef8150abfb6fa4c1c39ebbcf4a81c2e346aad939fee3e"
 dependencies = [
  "thiserror",
-]
-
-[[package]]
-name = "delay_map"
-version = "0.4.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "88e365f083a5cb5972d50ce8b1b2c9f125dc5ec0f50c0248cfb568ae59efcf0b"
-dependencies = [
- "futures",
- "tokio",
- "tokio-util",
 ]
 
 [[package]]
@@ -7926,7 +7914,6 @@ dependencies = [
  "futures-sink",
  "libc",
  "pin-project-lite",
- "slab",
  "tokio",
 ]
 

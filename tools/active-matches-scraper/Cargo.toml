@@ -7,7 +7,6 @@ edition = "2024"
 anyhow = { workspace = true }
 clickhouse = { workspace = true, features = ["time"] }
 common = { workspace = true }
-delay_map = "0.4.1"
 metrics = { workspace = true }
 reqwest = { workspace = true, features = ["json"] }
 serde = { workspace = true }

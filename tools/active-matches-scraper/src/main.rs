@@ -13,9 +13,9 @@
 mod models;
 
 use core::time::Duration;
+use std::collections::HashSet;
 use std::sync::LazyLock;
 
-use delay_map::HashSetDelay;
 use metrics::{counter, gauge};
 use tracing::{debug, error, info, instrument};
 
@@ -33,21 +33,29 @@ async fn main() -> anyhow::Result<()> {
     let http_client = reqwest::Client::new();
     let ch_client = common::get_ch_client()?;
 
-    let mut delay_set = HashSetDelay::new(Duration::from_mins(4));
+    // Snapshots inserted on the previous tick. Ticks are ~2 min apart, so this
+    // suppresses a snapshot that is unchanged for one tick and re-inserts it on the
+    // one after, the same ~4 min dedup window as before, without keeping any key
+    // longer than one tick.
+    let mut previous_tick = HashSet::new();
     let mut interval = tokio::time::interval(Duration::from_secs(2 * 60 + 1));
 
     loop {
         interval.tick().await;
-        fetch_insert_active_matches(&http_client, &ch_client, &mut delay_set).await;
+        previous_tick = fetch_insert_active_matches(&http_client, &ch_client, &previous_tick).await;
     }
 }
 
-#[instrument(skip(http_client, ch_client, delay_set))]
+type SnapshotKey = (u64, u32, u32, u16, u16, u16, u16);
+
+/// Returns the snapshot keys inserted on this tick.
+#[instrument(skip(http_client, ch_client, previous_tick))]
 async fn fetch_insert_active_matches(
     http_client: &reqwest::Client,
     ch_client: &clickhouse::Client,
-    delay_set: &mut HashSetDelay<(u64, u32, u32, u16, u16, u16, u16)>,
-) {
+    previous_tick: &HashSet<SnapshotKey>,
+) -> HashSet<SnapshotKey> {
+    let mut this_tick = HashSet::new();
     let active_matches = match fetch_active_matches(http_client).await {
         Ok(value) => {
             gauge!("active_matches_scraper.fetched_active_matches").set(value.len() as f64);
@@ -59,7 +67,7 @@ async fn fetch_insert_active_matches(
             gauge!("active_matches_scraper.fetched_active_matches").set(0);
             counter!("active_matches_scraper.fetch_active_matches.failure").increment(1);
             error!("Failed to fetch active matches: {e:?}");
-            return;
+            return this_tick;
         }
     };
     let ch_active_matches = active_matches
@@ -74,17 +82,13 @@ async fn fetch_insert_active_matches(
                 am.spectators,
                 am.open_spectator_slots,
             );
-            let is_new = !delay_set.contains_key(&key);
-            if is_new {
-                delay_set.insert(key);
-            }
-            is_new
+            !previous_tick.contains(&key) && this_tick.insert(key)
         })
         .map(ClickHouseActiveMatch::from)
         .collect::<Vec<_>>();
     if ch_active_matches.is_empty() {
         info!("No new active matches found");
-        return;
+        return this_tick;
     }
     match insert_active_matches(ch_client, &ch_active_matches).await {
         Ok(()) => {
@@ -99,6 +103,7 @@ async fn fetch_insert_active_matches(
             error!("Failed to insert active matches: {e:?}");
         }
     }
+    this_tick
 }
 
 #[instrument(skip(ch_client))]
