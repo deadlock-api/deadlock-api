@@ -81,13 +81,11 @@ pub async fn call_steam_proxy<T: Message + Default>(
         .await;
     let result = match result {
         Ok(result) => {
-            counter!("steam_proxy.call.success", "msg_type" => msg_type.as_str_name().to_string())
-                .increment(1);
+            counter!("steam_proxy.call.success", "msg_type" => msg_type.as_str_name()).increment(1);
             result
         }
         Err(e) => {
-            counter!("steam_proxy.call.failure", "msg_type" => msg_type.as_str_name().to_string())
-                .increment(1);
+            counter!("steam_proxy.call.failure", "msg_type" => msg_type.as_str_name()).increment(1);
             return Err(e.into());
         }
     };
