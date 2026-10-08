@@ -17,6 +17,7 @@ import {
 } from "~/components/patterns/charts/theme";
 import { PanelWithDetails } from "~/components/patterns/panel/PanelWithDetails";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
+import { InlineStat } from "~/components/ui/inline-stat";
 import {
   Tooltip as HoverTooltip,
   TooltipCard,
@@ -156,12 +157,11 @@ export function TrendPanels({
           </div>
         }
       >
-        <div className="flex items-baseline gap-2">
-          <span className="text-lg font-semibold tabular-nums">
-            {activity.buckets.reduce((sum, b) => sum + b.wins + b.losses, 0).toLocaleString("en-US")}
-          </span>
-          <span className="text-xs text-muted-foreground">matches played</span>
-        </div>
+        <InlineStat
+          size="lg"
+          value={activity.buckets.reduce((sum, b) => sum + b.wins + b.losses, 0).toLocaleString("en-US")}
+          label="matches played"
+        />
         <ChartSurface label="Wins and losses by activity period" size="sm" variant="bare">
           <BarChart
             data={activity.buckets}

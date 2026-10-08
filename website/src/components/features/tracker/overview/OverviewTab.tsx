@@ -313,18 +313,11 @@ export function OverviewTab({
         <Panel>
           <PanelHeader title="Play habits" icon={Clock3} size="sm" />
           <PanelBody size="sm">
-            <div className="grid grid-cols-3 gap-2 pb-2">
-              {[
-                { label: "Sessions", value: integer(sessions.sessions) },
-                { label: "Games / session", value: decimal(sessions.avgMatchesPerSession) },
-                { label: "Playtime / session", value: formatPlaytime(sessions.avgSessionTimeS) },
-              ].map(({ label, value }) => (
-                <div key={label}>
-                  <div className="text-base font-semibold tabular-nums">{value}</div>
-                  <div className="text-xs text-muted-foreground">{label}</div>
-                </div>
-              ))}
-            </div>
+            <StatGroup variant="plain" size="xs" className="grid-cols-3 gap-2 pb-2">
+              <Stat label="Sessions" value={integer(sessions.sessions)} />
+              <Stat label="Games / session" value={decimal(sessions.avgMatchesPerSession)} />
+              <Stat label="Playtime / session" value={formatPlaytime(sessions.avgSessionTimeS)} />
+            </StatGroup>
             <PlaytimeHeatmap habits={habits} />
           </PanelBody>
         </Panel>

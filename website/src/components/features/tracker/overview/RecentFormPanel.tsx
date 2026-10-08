@@ -11,6 +11,7 @@ import { Button } from "~/components/ui/button";
 import { Card } from "~/components/ui/card";
 import { Delta } from "~/components/ui/delta";
 import { Heading } from "~/components/ui/heading";
+import { InlineStat } from "~/components/ui/inline-stat";
 import { Segmented, SegmentedItem } from "~/components/ui/segmented";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
@@ -316,12 +317,16 @@ export function RecentFormPanel({
     >
       <div>
         <div className="flex flex-wrap items-baseline justify-between gap-2 pb-2">
-          <div className="flex items-baseline gap-2">
-            <span className="text-lg font-semibold text-positive tabular-nums">{percent(recent.winrate)}</span>
-            <span className="text-xs text-muted-foreground tabular-nums">
-              {recent.wins}W / {recent.losses}L
-            </span>
-          </div>
+          <InlineStat
+            size="lg"
+            tone="positive"
+            value={percent(recent.winrate)}
+            label={
+              <span className="tabular-nums">
+                {recent.wins}W / {recent.losses}L
+              </span>
+            }
+          />
           <span className="text-xs text-muted-foreground">
             Current streak{" "}
             <strong className={TONE_TEXT[streaks.current > 0 ? "positive" : "negative"]}>

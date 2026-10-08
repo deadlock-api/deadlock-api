@@ -112,11 +112,9 @@ export default function EconomySoulSources({ params }: EconomySoulSourcesProps) 
               />
             </PieChart>
           </ChartSurface>
-          <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-            <span className="eyebrow">Soul Income</span>
-            <span className="text-2xl font-bold tabular-nums">{formatSouls(totalIncome)}</span>
-            <span className="text-xs text-muted-foreground">per player</span>
-          </div>
+          <StatGroup variant="plain" className="pointer-events-none absolute inset-0 place-content-center">
+            <Stat align="center" label="Soul Income" value={formatSouls(totalIncome)} sub="per player" />
+          </StatGroup>
         </div>
 
         <ul className="flex w-full min-w-0 flex-1 flex-col gap-3">

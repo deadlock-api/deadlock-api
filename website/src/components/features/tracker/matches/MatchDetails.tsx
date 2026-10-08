@@ -16,6 +16,7 @@ import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { Button } from "~/components/ui/button";
 import { CopyButton } from "~/components/ui/copy-button";
 import { Spinner } from "~/components/ui/spinner";
+import { Stat, StatGroup } from "~/components/ui/stat";
 import { TextLink } from "~/components/ui/text-link";
 import { useSteamProfiles } from "~/hooks/useSteamProfiles";
 import { hasSoulEconomy } from "~/lib/game-mode";
@@ -61,15 +62,6 @@ function Note({ icon: Icon, className, children }: { icon: typeof Gavel; classNa
       <Icon className="size-3.5 shrink-0" />
       {children}
     </span>
-  );
-}
-
-function HeaderStat({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <div className="leading-tight">
-      <div className="text-xs text-muted-foreground">{label}</div>
-      <div className="flex items-center justify-end gap-1.5 text-base font-semibold tabular-nums">{children}</div>
-    </div>
   );
 }
 
@@ -169,20 +161,28 @@ function MatchHeader({
             </div>
           </div>
         </div>
-        <div className="ms-auto flex items-end gap-4 text-end @sm:gap-6">
-          <HeaderStat label="K / D / A">
-            {entry.player_kills} / {entry.player_deaths} / {entry.player_assists}
-          </HeaderStat>
+        <StatGroup variant="plain" size="xs" className="ms-auto auto-cols-max grid-flow-col gap-4 @sm:gap-6">
+          <Stat
+            align="end"
+            label="K / D / A"
+            value={`${entry.player_kills} / ${entry.player_deaths} / ${entry.player_assists}`}
+          />
           {hasSoulEconomy(entryGameMode(entry)) && (
-            <HeaderStat label="Souls">{entry.net_worth.toLocaleString("en-US")}</HeaderStat>
+            <Stat align="end" label="Souls" value={entry.net_worth.toLocaleString("en-US")} />
           )}
           {(ranked || (entry.ranked_delta != null && entry.ranked_delta !== 0)) && (
-            <HeaderStat label="Rank">
-              {ranked && <BadgeImage badge={entry.ranked_display_badge as number} ranks={ranks} size="inline" />}
-              <RankDelta value={entry.ranked_delta} className="text-sm" />
-            </HeaderStat>
+            <Stat
+              align="end"
+              label="Rank"
+              value={
+                <span className="inline-flex items-center gap-1.5">
+                  {ranked && <BadgeImage badge={entry.ranked_display_badge as number} ranks={ranks} size="inline" />}
+                  <RankDelta value={entry.ranked_delta} className="text-sm" />
+                </span>
+              }
+            />
           )}
-        </div>
+        </StatGroup>
       </div>
     </div>
   );

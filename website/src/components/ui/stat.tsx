@@ -20,7 +20,7 @@ const statGroupVariants = cva("grid min-w-0", {
 });
 
 type StatGroupVariant = NonNullable<VariantProps<typeof statGroupVariants>["variant"]>;
-type StatGroupSize = "sm" | "default";
+type StatGroupSize = "xs" | "sm" | "default";
 
 // Each Stat resolves the group's variant and size into plain classes of its own. A child selector on the group
 // (`*:data-[slot=stat]:px-4`) would outrank the one class a caller passes to a Stat.
@@ -34,9 +34,14 @@ const STAT_SURFACE: Record<StatGroupVariant, string> = {
   joined: "bg-card",
   plain: "",
 };
-const STAT_PADDING: Record<StatGroupSize, string> = { sm: "px-3 py-2", default: "px-4 py-3" };
+const STAT_PADDING: Record<StatGroupSize, string> = { xs: "px-2 py-1.5", sm: "px-3 py-2", default: "px-4 py-3" };
+const STAT_VALUE: Record<StatGroupSize, string> = { xs: "type-value-sm", sm: "type-value", default: "type-value-lg" };
+const STAT_ALIGN = { start: "", center: "items-center text-center", end: "items-end text-end" };
 
-/** A group of headline numbers. Set the columns with grid classes: `className="grid-cols-2 @md:grid-cols-4"`. */
+/**
+ * A group of headline numbers. Set the columns with grid classes: `className="grid-cols-2 @md:grid-cols-4"`. `size`:
+ * default for a page's headline, sm for a panel, xs for a dense header or a small panel (values at body size).
+ */
 function StatGroup({
   variant = "tiles",
   size = "default",
@@ -63,7 +68,8 @@ interface StatProps extends Omit<React.ComponentProps<"div">, "children"> {
   /** A supporting line under the value: a sample size, a comparison, a Delta. */
   sub?: React.ReactNode;
   tone?: Tone;
-  align?: "start" | "center";
+  /** `end` for a stat at the end of a header row, its value lined up with the edge. */
+  align?: keyof typeof STAT_ALIGN;
 }
 
 /** One headline number with its label. Must sit inside a StatGroup, which supplies the `<dl>`. */
@@ -76,19 +82,13 @@ function Stat({ label, value, sub, tone, align = "start", className, ...props }:
         "flex min-w-0 flex-col gap-1",
         STAT_SURFACE[variant],
         variant !== "plain" && STAT_PADDING[size],
-        align === "center" && "items-center text-center",
+        STAT_ALIGN[align],
         className,
       )}
       {...props}
     >
       <dt className="max-w-full truncate type-caption font-medium text-muted-foreground">{label}</dt>
-      <dd
-        className={cn(
-          "max-w-full min-w-0 truncate",
-          size === "sm" ? "type-value" : "type-value-lg",
-          tone && TONE_TEXT[tone],
-        )}
-      >
+      <dd className={cn("max-w-full min-w-0 truncate", STAT_VALUE[size], tone && TONE_TEXT[tone])}>
         {value ?? <NoValue />}
       </dd>
       {sub && <dd className="max-w-full min-w-0 text-xs text-muted-foreground">{sub}</dd>}

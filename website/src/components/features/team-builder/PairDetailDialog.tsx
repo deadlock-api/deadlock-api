@@ -4,6 +4,7 @@ import { Card } from "~/components/ui/card";
 import { DialogContent, DialogDescription, DialogHeader, DialogTitle } from "~/components/ui/dialog";
 import { DivergingBar } from "~/components/ui/rate-bar";
 import { Stack } from "~/components/ui/stack";
+import { Stat, StatGroup } from "~/components/ui/stat";
 import { type DraftAnalysis, type PairRow, pairVsEnemyRows, type StatsIndex } from "~/lib/team-builder/analysis";
 import { deltaClass, formatCount, formatPoints, formatRate, NO_DATA } from "~/lib/team-builder/format";
 import { SIDE_RING } from "~/lib/team-builder/lanes";
@@ -45,12 +46,18 @@ export function PairDetailBody({
               filter scope is read off the filter bar behind the dialog. */}
           <DialogDescription className="sr-only">Same team · {filterSummary}</DialogDescription>
         </div>
-        <div className="pe-6 text-end">
-          <div className="text-2xl font-bold tabular-nums">{formatRate(pair.winRate)}</div>
-          <div className={cn("text-sm font-semibold tabular-nums", deltaClass(pair.delta))}>
-            {formatPoints(pair.delta)} vs. expected
-          </div>
-        </div>
+        <StatGroup variant="plain" className="pe-6">
+          <Stat
+            align="end"
+            label="Win rate"
+            value={formatRate(pair.winRate)}
+            sub={
+              <span className={cn("font-semibold tabular-nums", deltaClass(pair.delta))}>
+                {formatPoints(pair.delta)} vs. expected
+              </span>
+            }
+          />
+        </StatGroup>
       </DialogHeader>
 
       <StatTiles

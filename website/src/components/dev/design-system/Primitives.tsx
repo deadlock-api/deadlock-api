@@ -409,6 +409,13 @@ export function Primitives() {
             </CardContent>
           </Card>
         </Variants>
+        <Variants label='variant="plain" size="xs", align="end" (a dense header)' className="block">
+          <StatGroup variant="plain" size="xs" className="auto-cols-max grid-flow-col justify-end gap-6">
+            <Stat align="end" label="K / D / A" value="9 / 4 / 12" />
+            <Stat align="end" label="Souls" value="31,240" />
+            <Stat align="end" label="Rank" value={<Delta value={14} format="number" />} />
+          </StatGroup>
+        </Variants>
       </Specimen>
 
       <Specimen

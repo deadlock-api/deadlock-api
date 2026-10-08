@@ -464,12 +464,17 @@ export function Round3Primitives() {
       <Specimen
         name="InlineStat"
         source="ui/inline-stat"
-        note="A value and its unit on one line of text; the value is in ink."
+        note='A value and its unit on one line of text; the value is in ink. size="lg" is the lead number of a panel with its caption on the same baseline; tone colors the value by its verdict, beside a sign or a word.'
       >
         <Variants className="gap-4 text-sm">
           <InlineStat value="412" label="matches" />
           <InlineStat value="54.1%" label="win rate" />
           <InlineStat value="3.2" label="KDA" className="text-xs" />
+        </Variants>
+        <Variants label='size="lg", tone' className="gap-6">
+          <InlineStat size="lg" value="1,204" label="matches played" />
+          <InlineStat size="lg" tone="positive" value="57%" label="12W / 9L" />
+          <InlineStat size="lg" value={null} label="KDA · latest 20 selected matches" />
         </Variants>
       </Specimen>
 

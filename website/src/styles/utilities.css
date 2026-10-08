@@ -140,6 +140,13 @@
   letter-spacing: -0.025em;
   font-variant-numeric: tabular-nums;
 }
+/* A number in a dense header or a small panel, at body size. */
+@utility type-value-sm {
+  font-size: var(--text-base);
+  line-height: 1.5;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
 
 /* A game scene behind a HUD element (a crosshair), the same screenshot the Stream Kit preview uses. */
 @utility bg-stage-game {

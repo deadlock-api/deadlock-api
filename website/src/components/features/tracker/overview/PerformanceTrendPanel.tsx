@@ -15,6 +15,7 @@ import {
 } from "~/components/patterns/charts/theme";
 import { Panel, PanelBody, PanelHeader } from "~/components/patterns/panel/Panel";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
+import { InlineStat } from "~/components/ui/inline-stat";
 import { Segmented, SegmentedItem } from "~/components/ui/segmented";
 import {
   Tooltip as HoverTooltip,
@@ -113,12 +114,13 @@ export function PerformanceTrendPanel({
             )}
           </Segmented>
         </div>
-        <div className="flex flex-wrap items-baseline gap-2" aria-live="polite" aria-atomic="true">
-          <span className="text-lg font-semibold tabular-nums">{latest ? selected.format(latest[metric]) : "—"}</span>
-          <span className="text-xs text-muted-foreground">
-            {selected.label} · latest {window} selected matches
-          </span>
-        </div>
+        <InlineStat
+          size="lg"
+          aria-live="polite"
+          aria-atomic="true"
+          value={latest ? selected.format(latest[metric]) : null}
+          label={`${selected.label} · latest ${window} selected matches`}
+        />
         {points.length === 0 ? (
           <EmptyState
             variant="inline"
