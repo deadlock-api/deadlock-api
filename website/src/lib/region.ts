@@ -1,8 +1,8 @@
 import { LeaderboardRegionEnum } from "deadlock_api_client";
 
-const SA_COUNTRIES = ["br", "ar", "cl", "co", "pe", "ve", "uy", "py", "bo", "ec", "gf", "sr", "gy"];
+const SA_COUNTRIES = new Set(["br", "ar", "cl", "co", "pe", "ve", "uy", "py", "bo", "ec", "gf", "sr", "gy"]);
 
-const NA_COUNTRIES = [
+const NA_COUNTRIES = new Set([
   "us",
   "ca",
   "mx",
@@ -21,11 +21,28 @@ const NA_COUNTRIES = [
   "bb",
   "bs",
   "ht",
-];
+]);
 
-const OC_COUNTRIES = ["au", "nz", "fj", "pg", "sb", "vu", "to", "ws", "ki", "nr", "tv", "ck", "nu", "tk", "pf", "nc"];
+const OC_COUNTRIES = new Set([
+  "au",
+  "nz",
+  "fj",
+  "pg",
+  "sb",
+  "vu",
+  "to",
+  "ws",
+  "ki",
+  "nr",
+  "tv",
+  "ck",
+  "nu",
+  "tk",
+  "pf",
+  "nc",
+]);
 
-const ASIA_COUNTRIES = [
+const ASIA_COUNTRIES = new Set([
   "jp",
   "kr",
   "kp",
@@ -56,9 +73,9 @@ const ASIA_COUNTRIES = [
   "tj",
   "tm",
   "af",
-];
+]);
 
-const ASIA_LANGS = [
+const ASIA_LANGS = new Set([
   "ja",
   "ko",
   "zh",
@@ -86,16 +103,16 @@ const ASIA_LANGS = [
   "mn",
   "bo",
   "dz",
-];
+]);
 
 /** Maps an ISO 3166-1 alpha-2 country code to a leaderboard region; undefined when the country is not listed. */
 export function regionForCountry(country: string | undefined): LeaderboardRegionEnum | undefined {
   const code = country?.toLowerCase();
   if (!code) return undefined;
-  if (SA_COUNTRIES.includes(code)) return LeaderboardRegionEnum.SAmerica;
-  if (NA_COUNTRIES.includes(code)) return LeaderboardRegionEnum.NAmerica;
-  if (OC_COUNTRIES.includes(code)) return LeaderboardRegionEnum.Oceania;
-  if (ASIA_COUNTRIES.includes(code)) return LeaderboardRegionEnum.Asia;
+  if (SA_COUNTRIES.has(code)) return LeaderboardRegionEnum.SAmerica;
+  if (NA_COUNTRIES.has(code)) return LeaderboardRegionEnum.NAmerica;
+  if (OC_COUNTRIES.has(code)) return LeaderboardRegionEnum.Oceania;
+  if (ASIA_COUNTRIES.has(code)) return LeaderboardRegionEnum.Asia;
   return undefined;
 }
 
@@ -104,7 +121,7 @@ export function regionForLanguage(lang: string): LeaderboardRegionEnum {
   const [langPrefix, country] = lang.toLowerCase().split("-");
   const byCountry = regionForCountry(country);
   if (byCountry) return byCountry;
-  if (ASIA_LANGS.includes(langPrefix)) return LeaderboardRegionEnum.Asia;
+  if (ASIA_LANGS.has(langPrefix)) return LeaderboardRegionEnum.Asia;
   if (langPrefix === "pt") return LeaderboardRegionEnum.SAmerica;
   return LeaderboardRegionEnum.Europe;
 }

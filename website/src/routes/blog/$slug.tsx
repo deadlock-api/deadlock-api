@@ -26,11 +26,12 @@ export const Route = createFileRoute("/blog/$slug")({
   head: ({ loaderData }) => {
     // The not-found page sets its own title and noindex; a second title and a canonical to the section came first.
     if (!loaderData) return {};
+    const ogImage = `${SITE_URL}${getBlogOGImage(loaderData.slug)}`;
     return seo({
       title: pageTitle(loaderData.title),
       description: loaderData.description,
       path: `/blog/${loaderData.slug}`,
-      ogImage: `${SITE_URL}${getBlogOGImage(loaderData.slug)}`,
+      ogImage,
       ogType: "article",
       publishedTime: loaderData.date,
       jsonLd: [
@@ -39,7 +40,7 @@ export const Route = createFileRoute("/blog/$slug")({
           "@type": "BlogPosting",
           headline: loaderData.title,
           description: loaderData.description,
-          image: `${SITE_URL}${getBlogOGImage(loaderData.slug)}`,
+          image: ogImage,
           datePublished: loaderData.date,
           dateModified: loaderData.date,
           author: {

@@ -99,7 +99,8 @@ function loadPosts(): BlogPost[] {
       content,
     });
   }
-  cache = posts;
+  // Newest first, once: every post page asks for the list again.
+  cache = posts.sort((a, b) => b.date.localeCompare(a.date));
   return cache;
 }
 
@@ -108,8 +109,8 @@ export function getBlogPost(slug: string): BlogPost | undefined {
 }
 
 export function getRecentPosts(count?: number): BlogPost[] {
-  const sorted = [...loadPosts()].sort((a, b) => b.date.localeCompare(a.date));
-  return count ? sorted.slice(0, count) : sorted;
+  const posts = loadPosts();
+  return count ? posts.slice(0, count) : [...posts];
 }
 
 // A paragraph holding only an image becomes a full-width figure; the image title is the visible caption, the alt
