@@ -34,6 +34,8 @@ export interface PatchFeedItem {
   source: "forum" | "steam";
   title: string;
   pub_date: string;
+  /** The post's HTML. Left off the patch list, which would otherwise carry every post's notes. */
+  content?: string;
 }
 
 export interface UnixWindow {
@@ -63,6 +65,18 @@ export function toPatchEntry(patch: PatchInfo): PatchEntry {
 function titleDay(title: string): string | undefined {
   const match = /(\d{2})-(\d{2})-(\d{4})/.exec(title);
   return match ? `${match[3]}-${match[1]}-${match[2]}` : undefined;
+}
+
+/**
+ * The announcement of a patch: Steam's post of its release day, by the date in its title or the day it went up. A
+ * day with several posts (a hero spotlight beside the update) gives the longest, which is the changelog.
+ */
+export function patchNotesContent(feed: readonly PatchFeedItem[], id: string): string | undefined {
+  const posts = feed.filter((item) => item.source === "steam" && item.content);
+  const dated = posts.filter((item) => titleDay(item.title) === id);
+  const published = posts.filter((item) => !titleDay(item.title) && day.utc(item.pub_date).format("YYYY-MM-DD") === id);
+  const pool = dated.length > 0 ? dated : published;
+  return pool.toSorted((a, b) => (b.content?.length ?? 0) - (a.content?.length ?? 0))[0]?.content;
 }
 
 /** A post's time counts as the release only when it went up within two days of the release day. */

@@ -2,6 +2,7 @@ import type { QueryClient } from "@tanstack/react-query";
 import { notFound } from "@tanstack/react-router";
 
 import { formatPercent } from "~/lib/format";
+import { fetchPatchNotes } from "~/lib/patch-list-fns";
 import { fetchPatchReport } from "~/lib/patch-report-fns";
 import {
   getPatch,
@@ -36,9 +37,10 @@ export async function loadPatchView(queryClient: QueryClient, patchId?: string) 
   const patch = patchId === undefined ? patches[0] : getPatch(patches, patchId);
   if (!patch) throw notFound();
   const windows = patchWindows(patch, previousPatch(patches, patch.id));
-  const [report, heroes] = await Promise.all([
+  const [report, heroes, notes] = await Promise.all([
     catchPrefetch(fetchPatchReport({ data: windows })),
     catchPrefetch(queryClient.query({ ...heroesQueryOptions, staleTime: "static" })),
+    catchPrefetch(fetchPatchNotes({ data: patch.id })),
   ]);
   const hasData = !!report && (report.matches.after ?? 0) >= MIN_MATCHES;
   // The title and description quote the same movers the page lists first.
@@ -52,6 +54,7 @@ export async function loadPatchView(queryClient: QueryClient, patchId?: string) 
     isLatest: patch.id === patches[0]?.id,
     breadcrumb: patchLabel(patch),
     report: report ?? undefined,
+    notes,
     hasData,
     days: { before: windowDays(windows.before, Infinity), after: windowDays(windows.after, Date.now() / 1000) },
     indexable: hasData && isIndexedPatch(patches, patch.id),

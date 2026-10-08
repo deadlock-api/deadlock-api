@@ -8,6 +8,7 @@ import {
   mergePatchFeed,
   patchDateRange,
   patchLabel,
+  patchNotesContent,
   type PatchEntry,
   type PatchFeedItem,
   patchWindows,
@@ -114,4 +115,22 @@ test("labels name the patch, or its date for a plain update", () => {
 test("date range: exact instants, open while the patch runs", () => {
   assert.equal(patchDateRange(getPatch(PATCHES, "2026-09-29")!), "2026-09-29T20:25:11.000Z_2026-10-05T23:05:32.000Z");
   assert.equal(patchDateRange(getPatch(PATCHES, "2026-10-05")!), "2026-10-05T23:05:32.000Z_");
+});
+
+test("a patch's notes are the longest Steam post of its day", () => {
+  const post = (source: "forum" | "steam", title: string, pub_date: string, content: string) => ({
+    source,
+    title,
+    pub_date,
+    content,
+  });
+  const feed = [
+    post("forum", "09-29-2026", "2026-10-05T23:00:12Z", "<p>forum unfurl</p>"),
+    post("steam", "City Never Sleeps", "2026-09-29T20:25:11Z", "<p>the announcement, long enough</p>"),
+    post("steam", "A hero spotlight", "2026-09-29T21:00:00Z", "<p>short</p>"),
+    post("steam", "Minor Update - 10-05-2026", "2026-10-05T23:05:32Z", "<p>10-05 notes</p>"),
+  ];
+  assert.equal(patchNotesContent(feed, "2026-09-29"), "<p>the announcement, long enough</p>");
+  assert.equal(patchNotesContent(feed, "2026-10-05"), "<p>10-05 notes</p>");
+  assert.equal(patchNotesContent(feed, "2025-02-25"), undefined);
 });
