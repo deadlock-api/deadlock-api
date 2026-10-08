@@ -13,7 +13,7 @@ use valveprotos::common::{
 
 use crate::bitreader::BitReader;
 use crate::demofile::{DEMO_RECORD_BUFFER_SIZE, DemoHeaderError};
-use crate::demostream::CmdHeader;
+use crate::demostream::{CmdFormat, CmdHeader};
 use crate::demostream::{DemoStream, SeekableDemoStream};
 use crate::entities::{
     DeltaHeader, Entity, EntityContainer, deadlock_coord_from_cell_with_max_coord,
@@ -22,7 +22,7 @@ use crate::entityclasses::EntityClasses;
 use crate::fielddecoder::FieldDecodeContext;
 use crate::flattenedserializers::FlattenedSerializerContainer;
 use crate::instancebaseline::{INSTANCE_BASELINE_TABLE_NAME, InstanceBaseline};
-use crate::protowire::{PacketEntities, decode_packet_entities};
+use crate::protowire::{PacketEntities, decode_full_packet_string_tables, decode_packet_entities};
 use crate::stringtables::StringTableContainer;
 
 // as can be observed when dumping commands. also as specified in clarity
@@ -982,8 +982,10 @@ impl<D: SeekableDemoStream, V: Visitor> Parser<D, V> {
     /// Full packet 0 additionally covers the pre-first-full-packet signon region. For later
     /// ordinals the parser fast-forwards through the file handling only the init/signon commands —
     /// skipping entity decode — to populate serializers, entity classes and instance baselines,
-    /// then applies the full packet (which re-creates all live entities and refreshes the string
-    /// tables / baselines) before collecting forward. Because every command belongs to exactly one
+    /// and applies the string tables (only) of every earlier full packet: a full packet restates
+    /// just the tables that changed since the previous one, so the string table state at our full
+    /// packet is the sum of all earlier snapshots. Then it applies our full packet (which
+    /// re-creates all live entities and brings its own table changes) before collecting forward. Because every command belongs to exactly one
     /// full packet's segment and boundaries fall on the full-packet command itself, concatenating
     /// the per-ordinal outputs in order reproduces a single end-to-end parse exactly.
     pub fn run_full_packet(&mut self, ordinal: usize) -> anyhow::Result<()> {
@@ -995,8 +997,8 @@ impl<D: SeekableDemoStream, V: Visitor> Parser<D, V> {
         // For a later segment, build parser state but suppress output until our full packet. The
         // signon commands are handled (not skipped) so serializers, entity classes and instance
         // baselines are populated; entity decode is skipped (the rows are discarded anyway and the
-        // full packet restates all entity state from scratch, with its own string-table snapshot
-        // refreshing the baselines its creates depend on).
+        // full packet restates all entity state from scratch). Earlier full packets contribute
+        // their string tables, which together with ours give the baselines its creates need.
         if !collecting {
             self.visitor.set_collecting(false);
             self.ctx.skip_entity_packets = true;
@@ -1011,10 +1013,15 @@ impl<D: SeekableDemoStream, V: Visitor> Parser<D, V> {
                     // string tables are not: a full packet only restates the tables that changed
                     // since the previous one (e.g. instancebaseline is often absent), so the
                     // string table state at our full packet is the sum of all earlier snapshots.
+                    // Only the string_table field is decoded; the entity packet (the bulk of the
+                    // body) is skipped, keeping later segments from paying for every earlier one.
+                    if D::CMD_FORMAT == CmdFormat::Broadcast {
+                        // broadcast full packets carry no string tables.
+                        return Ok(Some(ControlFlow::Skip));
+                    }
                     let cmd_body = s.demo_stream.read_cmd(cmd_header)?;
-                    let cmd = D::decode_cmd_full_packet(cmd_body)?;
-                    if let Some(string_table) = cmd.string_table.as_ref() {
-                        s.ctx.handle_cmd_string_tables(string_table)?;
+                    if let Some(string_table) = decode_full_packet_string_tables(cmd_body)? {
+                        s.ctx.handle_cmd_string_tables(&string_table)?;
                     }
                     return Ok(Some(ControlFlow::Ignore));
                 }

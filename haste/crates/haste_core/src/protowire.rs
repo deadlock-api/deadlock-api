@@ -1,13 +1,16 @@
 //! minimal borrowing protobuf decoding for the few hot messages whose `bytes` fields would
 //! otherwise be copied by prost on every decode (`CDemoPacket.data`,
-//! `CSVCMsg_PacketEntities.entity_data`).
+//! `CSVCMsg_PacketEntities.entity_data`), or that are only partially needed
+//! (`CDemoFullPacket.string_table`).
 //!
-//! semantics match prost's generated decoders: unknown fields are skipped, and for a field that
-//! appears more than once the last occurrence wins.
+//! semantics match prost's generated decoders: unknown fields are skipped, and for a scalar or
+//! bytes field that appears more than once the last occurrence wins (message fields merge).
 
+use prost::Message;
 use prost::encoding::{
     DecodeContext, WireType, check_wire_type, decode_key, decode_varint, skip_field,
 };
+use valveprotos::common::CDemoStringTables;
 
 use crate::demostream::DecodeCmdError;
 
@@ -61,6 +64,24 @@ pub(crate) fn decode_cmd_packet_data(data: &[u8]) -> Result<&[u8], DecodeCmdErro
     while let Some((tag, wire_type)) = rdr.next_key()? {
         if tag == 3 {
             out = rdr.read_bytes(wire_type)?;
+        } else {
+            rdr.skip(tag, wire_type)?;
+        }
+    }
+    Ok(out)
+}
+
+/// `CDemoFullPacket.string_table` (field 1) alone, without decoding (and copying) the packet.
+pub(crate) fn decode_full_packet_string_tables(
+    data: &[u8],
+) -> Result<Option<CDemoStringTables>, DecodeCmdError> {
+    let mut rdr = FieldReader::new(data);
+    let mut out: Option<CDemoStringTables> = None;
+    while let Some((tag, wire_type)) = rdr.next_key()? {
+        if tag == 1 {
+            // NOTE: repeated occurrences of a message field merge, as in prost.
+            out.get_or_insert_default()
+                .merge(rdr.read_bytes(wire_type)?)?;
         } else {
             rdr.skip(tag, wire_type)?;
         }
@@ -124,6 +145,42 @@ mod tests {
         let decoded = decode_packet_entities(&buf).unwrap();
         assert_eq!(decoded.updated_entries, -3);
         assert_eq!(decoded.entity_data, &[9, 8, 7]);
+    }
+
+    #[test]
+    fn test_full_packet_string_tables_matches_prost() {
+        use valveprotos::common::CDemoFullPacket;
+        use valveprotos::common::c_demo_string_tables::{ItemsT, TableT};
+
+        let msg = CDemoFullPacket {
+            string_table: Some(CDemoStringTables {
+                tables: vec![TableT {
+                    table_name: Some("instancebaseline".to_owned()),
+                    items: vec![ItemsT {
+                        str: Some("3".to_owned()),
+                        data: Some(vec![1, 2, 3]),
+                    }],
+                    ..Default::default()
+                }],
+            }),
+            packet: Some(CDemoPacket {
+                data: Some(vec![0xaa; 64]),
+            }),
+        };
+        let buf = msg.encode_to_vec();
+        assert_eq!(
+            decode_full_packet_string_tables(&buf).unwrap(),
+            CDemoFullPacket::decode(buf.as_slice())
+                .unwrap()
+                .string_table
+        );
+
+        let no_tables = CDemoFullPacket {
+            string_table: None,
+            packet: msg.packet,
+        }
+        .encode_to_vec();
+        assert_eq!(decode_full_packet_string_tables(&no_tables).unwrap(), None);
     }
 
     #[test]
