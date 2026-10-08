@@ -252,6 +252,8 @@ export function HeroStatsByExperienceTable({
                     unit={isPercentStat ? "%" : undefined}
                     sign="arrow"
                     display="badge"
+                    size="sm"
+                    fraction={isPercentStat ? "fixed" : "trim"}
                   />
                 </DeltaTooltip>
               )}

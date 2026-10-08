@@ -5,6 +5,21 @@ import { NoValue } from "~/components/ui/no-value";
 import { TONE_TEXT, toneOf } from "~/lib/tone";
 import { cn } from "~/lib/utils";
 
+// A fixed locale, so the server and the browser print the same digits; thousands are grouped ("1,234").
+const NUMBER_FORMATS = new Map<string, Intl.NumberFormat>();
+function numberFormat(digits: number, fraction: "fixed" | "trim"): Intl.NumberFormat {
+  const key = `${digits}:${fraction}`;
+  let format = NUMBER_FORMATS.get(key);
+  if (!format) {
+    format = new Intl.NumberFormat("en-US", {
+      minimumFractionDigits: fraction === "trim" ? 0 : digits,
+      maximumFractionDigits: digits,
+    });
+    NUMBER_FORMATS.set(key, format);
+  }
+  return format;
+}
+
 interface DeltaProps extends Omit<React.ComponentProps<"span">, "children"> {
   /** The signed change. With `format="percent"` this is a fraction: 0.031 renders as +3.1%. */
   value: number | null | undefined;
@@ -21,6 +36,10 @@ interface DeltaProps extends Omit<React.ComponentProps<"span">, "children"> {
   sign?: "glyph" | "arrow";
   /** `badge` draws it as a square Badge in the tone's color, for table cells and stat rows. */
   display?: "text" | "badge";
+  /** `fixed` always prints `digits` decimals (+3.0%); `trim` drops trailing zeros (+1,234, +12.5). */
+  fraction?: "fixed" | "trim";
+  /** The badge's size, with `display="badge"`. */
+  size?: "sm" | "default";
 }
 
 /** A signed change, colored by direction. Zero at the displayed precision renders nothing. */
@@ -32,6 +51,8 @@ export function Delta({
   polarity = "higher-is-better",
   sign = "glyph",
   display = "text",
+  fraction = "fixed",
+  size = "default",
   className,
   ...props
 }: DeltaProps) {
@@ -47,13 +68,13 @@ export function Delta({
     <>
       {arrow ? <Arrow aria-hidden="true" className="size-3 shrink-0" /> : rounded > 0 ? "+" : "\u2212"}
       {arrow && <span className="sr-only">{rounded > 0 ? "up" : "down"} </span>}
-      {Math.abs(rounded).toFixed(digits)}
+      {numberFormat(digits, fraction).format(Math.abs(rounded))}
       {unit ?? (format === "percent" ? "%" : "")}
     </>
   );
   if (display === "badge") {
     return (
-      <Badge data-slot="delta" variant={tone} shape="square" className={className} {...props}>
+      <Badge data-slot="delta" variant={tone} shape="square" size={size} className={className} {...props}>
         {content}
       </Badge>
     );

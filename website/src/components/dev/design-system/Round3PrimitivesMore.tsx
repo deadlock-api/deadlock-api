@@ -535,7 +535,7 @@ export function Round3PrimitivesMore() {
       <Specimen
         name="Delta unit, icon, badge"
         source="ui/delta"
-        note='unit replaces the percent sign or follows a number; sign="arrow" swaps the sign glyph for an arrow; display="badge" draws it as a square Badge for table cells.'
+        note='unit replaces the percent sign or follows a number; sign="arrow" swaps the sign glyph for an arrow; display="badge" draws it as a square Badge for table cells (size sm or default). Thousands are grouped; fraction="trim" drops trailing zeros.'
       >
         <Variants label="unit" className="gap-4 text-sm">
           <Delta value={0.031} unit=" pp" />
@@ -550,6 +550,13 @@ export function Round3PrimitivesMore() {
           <Delta value={0.031} display="badge" />
           <Delta value={-0.012} display="badge" />
           <Delta value={0.02} display="badge" sign="arrow" unit=" pp" />
+          <Delta value={0.02} display="badge" sign="arrow" unit=" pp" size="sm" />
+        </Variants>
+        <Variants label='fraction="trim", grouped thousands' className="gap-4 text-sm">
+          <Delta value={1234} format="number" fraction="trim" />
+          <Delta value={12.5} format="number" fraction="trim" />
+          <Delta value={-3} format="number" fraction="trim" sign="arrow" display="badge" size="sm" />
+          <Delta value={1234} format="number" />
         </Variants>
       </Specimen>
 
