@@ -1,6 +1,7 @@
 use core::fmt::Debug;
 use core::str::Utf8Error;
 use dungers::bitbuf::BitError;
+use std::sync::Arc;
 
 use crate::bitreader::BitReader;
 use crate::fieldvalue::FieldValue;
@@ -321,15 +322,15 @@ impl FieldDecoder {
                 // NOTE: string_buf must be cleared after use.
                 assert_eq!(ctx.string_buf, [] as [u8; 0]);
                 let n = br.read_string_to_end(&mut ctx.string_buf, false)?;
-                let ret = FieldValue::String(Box::from(&ctx.string_buf[..n]));
+                let ret = FieldValue::String(Arc::from(&ctx.string_buf[..n]));
                 ctx.string_buf.clear();
                 ret
             }
             Self::BinaryBlock => {
                 let len = br.read_uvarint32()? as usize;
-                let mut buf = vec![0u8; len].into_boxed_slice();
+                let mut buf = vec![0u8; len];
                 br.read_bytes(&mut buf)?;
-                FieldValue::String(buf)
+                FieldValue::String(Arc::from(buf))
             }
 
             Self::F32(d) => FieldValue::F32(d.decode(ctx, br)?),

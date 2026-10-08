@@ -331,11 +331,11 @@ impl Entity {
     #[must_use]
     pub fn get_value<T>(&self, key: &u64) -> Option<T>
     where
-        FieldValue: TryInto<T, Error = FieldValueConversionError>,
+        T: for<'a> TryFrom<&'a FieldValue, Error = FieldValueConversionError>,
     {
         self.fields
             .get(key)
-            .and_then(|entity_field| entity_field.value.clone().try_into().ok())
+            .and_then(|entity_field| T::try_from(&entity_field.value).ok())
     }
 
     /// get the value of the field with the provided key, and attempt to convert it.
@@ -345,17 +345,11 @@ impl Entity {
     ///   [`GetValueError::FieldValueConversionError`]
     pub fn try_get_value<T>(&self, key: &u64) -> Result<T, GetValueError>
     where
-        FieldValue: TryInto<T, Error = FieldValueConversionError>,
+        T: for<'a> TryFrom<&'a FieldValue, Error = FieldValueConversionError>,
     {
         self.fields.get(key).map_or_else(
             || Err(GetValueError::FieldNotExist),
-            |entity_field| {
-                entity_field
-                    .value
-                    .clone()
-                    .try_into()
-                    .map_err(GetValueError::from)
-            },
+            |entity_field| T::try_from(&entity_field.value).map_err(GetValueError::from),
         )
     }
 

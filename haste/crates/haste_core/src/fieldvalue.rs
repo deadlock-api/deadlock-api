@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 // NOTE: looking into public/dt_common.h might help to get more ideas about field value thing.
 
 // NOTE: don't bother creating variants for ints that are smaller then 64 bits. that will not make
@@ -5,7 +7,9 @@
 // cause those won't branch, but that ain't worth it really).
 //
 // NOTE: Clone derive is needed here because Entity in entities.rs needs to be
-// clonable which means that all members of it also should be clonable.
+// clonable which means that all members of it also should be clonable. strings are reference
+// counted so that cloning an entity (every create clones its class's cached baseline) does not
+// copy them.
 #[derive(Clone)]
 pub enum FieldValue {
     I64(i64),
@@ -33,7 +37,7 @@ pub enum FieldValue {
     ///
     /// use `String::from_utf8_lossy` in your code to convert this to an actual string, and handle
     /// conversion errors.
-    String(Box<[u8]>),
+    String(Arc<[u8]>),
 }
 
 // TODO(blukai): when you'll be unfucking errors - rename this one to FieldValueInvalidConversion
@@ -47,24 +51,41 @@ pub enum FieldValueConversionError {
     FromUtf8Error(#[from] std::string::FromUtf8Error),
 }
 
-macro_rules! impl_try_into_numeric {
+// conversions are implemented for `&FieldValue` (so that getters do not have to clone the value
+// first); the owned `FieldValue` conversions delegate to them.
+
+macro_rules! impl_try_from_ref {
+    ($ty:ty, $value:ident => $body:expr) => {
+        impl TryFrom<&FieldValue> for $ty {
+            type Error = FieldValueConversionError;
+
+            fn try_from($value: &FieldValue) -> Result<$ty, Self::Error> {
+                $body
+            }
+        }
+
+        impl TryInto<$ty> for FieldValue {
+            type Error = FieldValueConversionError;
+
+            fn try_into(self) -> Result<$ty, Self::Error> {
+                <$ty>::try_from(&self)
+            }
+        }
+    };
+}
+
+macro_rules! impl_try_from_numeric {
     ($($variant:ident => $ty:ty),+) => {
         $(
-            impl TryInto<$ty> for FieldValue {
-                type Error = FieldValueConversionError;
-
-                fn try_into(self) -> Result<$ty, Self::Error> {
-                    match self {
-                        FieldValue::$variant(value) => value.try_into().map_err(|_| FieldValueConversionError::IncompatibleTypeOrOutOfRangeInteger),
-                        _ => Err(FieldValueConversionError::IncompatibleTypeOrOutOfRangeInteger),
-                    }
-                }
-            }
+            impl_try_from_ref!($ty, value => match value {
+                FieldValue::$variant(value) => (*value).try_into().map_err(|_| FieldValueConversionError::IncompatibleTypeOrOutOfRangeInteger),
+                _ => Err(FieldValueConversionError::IncompatibleTypeOrOutOfRangeInteger),
+            });
         )+
     }
 }
 
-impl_try_into_numeric! {
+impl_try_from_numeric! {
     I64 => i8,
     I64 => i16,
     I64 => i32,
@@ -76,24 +97,18 @@ impl_try_into_numeric! {
     F32 => f32
 }
 
-macro_rules! impl_try_into_inner {
+macro_rules! impl_try_from_inner {
     ($($variant:ident => $ty:ty),+) => {
         $(
-            impl TryInto<$ty> for FieldValue {
-                type Error = FieldValueConversionError;
-
-                fn try_into(self) -> Result<$ty, Self::Error> {
-                    match self {
-                        FieldValue::$variant(value) => Ok(value),
-                        _ => Err(FieldValueConversionError::IncompatibleTypeOrOutOfRangeInteger),
-                    }
-                }
-            }
+            impl_try_from_ref!($ty, value => match value {
+                FieldValue::$variant(value) => Ok(*value),
+                _ => Err(FieldValueConversionError::IncompatibleTypeOrOutOfRangeInteger),
+            });
         )+
     }
 }
 
-impl_try_into_inner! {
+impl_try_from_inner! {
     Bool => bool,
     Vector2 => [f32; 2],
     Vector4 => [f32; 4]
@@ -101,39 +116,26 @@ impl_try_into_inner! {
 
 // and some specials...
 
-impl TryInto<[f32; 3]> for FieldValue {
-    type Error = FieldValueConversionError;
+impl_try_from_ref!([f32; 3], value => match value {
+    FieldValue::Vector3(value) | FieldValue::QAngle(value) => Ok(*value),
+    _ => Err(FieldValueConversionError::IncompatibleTypeOrOutOfRangeInteger),
+});
 
-    fn try_into(self) -> Result<[f32; 3], Self::Error> {
-        match self {
-            FieldValue::Vector3(value) | FieldValue::QAngle(value) => Ok(value),
-            _ => Err(FieldValueConversionError::IncompatibleTypeOrOutOfRangeInteger),
-        }
-    }
-}
+impl_try_from_ref!(String, value => match value {
+    FieldValue::String(value) => String::from_utf8(value.to_vec())
+        .map_err(FieldValueConversionError::FromUtf8Error),
+    _ => Err(FieldValueConversionError::IncompatibleTypeOrOutOfRangeInteger),
+});
 
-impl TryInto<String> for FieldValue {
-    type Error = FieldValueConversionError;
+impl_try_from_ref!(Box<[u8]>, value => match value {
+    FieldValue::String(value) => Ok(Box::from(&**value)),
+    _ => Err(FieldValueConversionError::IncompatibleTypeOrOutOfRangeInteger),
+});
 
-    fn try_into(self) -> Result<String, Self::Error> {
-        match self {
-            FieldValue::String(value) => String::from_utf8(value.into_vec())
-                .map_err(FieldValueConversionError::FromUtf8Error),
-            _ => Err(FieldValueConversionError::IncompatibleTypeOrOutOfRangeInteger),
-        }
-    }
-}
-
-impl TryInto<Box<[u8]>> for FieldValue {
-    type Error = FieldValueConversionError;
-
-    fn try_into(self) -> Result<Box<[u8]>, Self::Error> {
-        match self {
-            FieldValue::String(value) => Ok(value),
-            _ => Err(FieldValueConversionError::IncompatibleTypeOrOutOfRangeInteger),
-        }
-    }
-}
+impl_try_from_ref!(Arc<[u8]>, value => match value {
+    FieldValue::String(value) => Ok(Arc::clone(value)),
+    _ => Err(FieldValueConversionError::IncompatibleTypeOrOutOfRangeInteger),
+});
 
 // debug and display...
 
