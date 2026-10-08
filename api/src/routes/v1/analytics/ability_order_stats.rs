@@ -81,7 +81,7 @@ pub(super) struct AbilityOrderStatsQuery {
     max_match_id: Option<u64>,
     /// The minimum number of matches played for an ability order to be included in the response.
     #[serde(default = "default_min_matches")]
-    #[param(minimum = 1, default = 20)]
+    #[param(minimum = 1, default = 10)]
     min_matches: Option<u32>,
     /// Filter for matches with a specific player account ID.
     #[serde(default, deserialize_with = "parse_steam_id_option")]
