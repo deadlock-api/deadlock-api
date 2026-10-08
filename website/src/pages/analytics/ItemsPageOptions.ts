@@ -2,6 +2,7 @@ import { lazyRouteComponent } from "@tanstack/react-router";
 
 import { ITEM_COMBS_TO_SHOW } from "~/components/features/items/useItemCombFilters";
 import { analyticsTabFromPath, ANALYTICS_VIEWS, redirectAnalyticsTab } from "~/lib/analytics-tabs";
+import { enemyHeroFilter, parseEnemyParam } from "~/lib/enemy-heroes";
 import { DEFAULT_MATCH_MODE } from "~/lib/game-mode";
 import { prefetchSafe, prefetchSeed } from "~/lib/prefetch-safe";
 import { defaultPrevUnixRange, defaultTemporalCoverage, defaultUnixRange } from "~/lib/seasons";
@@ -39,8 +40,10 @@ export const itemsPageOptions = {
   // The hero filter lives in the URL under nuqs; read it here so the loader warms the hero the page will show.
   loaderDeps: ({ search }: { search: Record<string, unknown> }) => {
     const { hero, enemy } = search as { hero?: unknown; enemy?: unknown };
-    const id = (value: unknown) => (typeof value === "number" && Number.isInteger(value) ? value : null);
-    return { heroId: id(hero), enemyId: id(enemy) };
+    return {
+      heroId: typeof hero === "number" && Number.isInteger(hero) ? hero : null,
+      enemyIds: parseEnemyParam(enemy),
+    };
   },
   loader: async ({
     context: { queryClient, preferences },
@@ -48,7 +51,7 @@ export const itemsPageOptions = {
     location,
   }: {
     context: RouterContext;
-    deps: { heroId: number | null; enemyId: number | null };
+    deps: { heroId: number | null; enemyIds: number[] };
     location: { pathname: string };
   }) => {
     const tab = analyticsTabFromPath("items", location.pathname);
@@ -129,7 +132,7 @@ export const itemsPageOptions = {
 
     const itemStatsQuery = {
       ...common,
-      enemyHeroIds: deps.enemyId !== null ? String(deps.enemyId) : undefined,
+      ...enemyHeroFilter(deps.enemyIds),
       minBoughtAtS: undefined,
       maxBoughtAtS: undefined,
     };
@@ -151,7 +154,7 @@ export const itemsPageOptions = {
     const [stats] = await overall;
     // The description names the patch-wide leader, which a hero-filtered table would misrepresent.
     return {
-      leader: deps.heroId === null && deps.enemyId === null ? findWinRateLeader(stats, await items) : null,
+      leader: deps.heroId === null && deps.enemyIds.length === 0 ? findWinRateLeader(stats, await items) : null,
       coverage,
     };
   },

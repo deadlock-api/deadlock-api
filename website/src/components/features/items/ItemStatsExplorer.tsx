@@ -29,6 +29,7 @@ import {
   buildUpgradeChainLookup,
   getHeroAbilityMetadata,
 } from "~/lib/build-transform";
+import { enemyHeroFilter } from "~/lib/enemy-heroes";
 import type { GameMode, MatchMode } from "~/lib/game-mode";
 import { parseAsSetOf } from "~/lib/nuqs-parsers";
 import { cn } from "~/lib/utils";
@@ -36,6 +37,8 @@ import { abilitiesQueryOptions, heroesQueryOptions, itemUpgradesQueryOptions } f
 import { itemStatsQueryOptions } from "~/queries/item-stats-query";
 import { queryKeys } from "~/queries/query-keys";
 import { ranksQueryOptions } from "~/queries/ranks-query";
+
+const NO_ENEMIES: readonly number[] = [];
 
 // Recharts (~90 KB gzip) is only needed once a row is opened.
 const ItemBuyTimingChart = lazy(() =>
@@ -53,7 +56,7 @@ export function ItemStatsExplorer({
   prevMaxDate,
   sortBy,
   hero,
-  enemy,
+  enemies = NO_ENEMIES,
   minMatches,
   limit,
   minBoughtAtS,
@@ -68,8 +71,8 @@ export function ItemStatsExplorer({
   prevMinDate?: Dayjs;
   prevMaxDate?: Dayjs;
   hero?: number | null;
-  /** Only matches with this hero on the other team: which items win against it. */
-  enemy?: number | null;
+  /** Only matches with these heroes on the other team: which items win against them. */
+  enemies?: readonly number[];
   sortBy?: keyof ItemStats | "winrate";
   minMatches?: number | null;
   limit?: number;
@@ -102,7 +105,7 @@ export function ItemStatsExplorer({
     () => ({
       minMatches,
       heroId: hero,
-      enemyHeroIds: enemy != null ? String(enemy) : undefined,
+      ...enemyHeroFilter(enemies),
       minAverageBadge: minRankId,
       maxAverageBadge: maxRankId,
       minUnixTimestamp: minUnixTimestamp ?? 0,
@@ -118,7 +121,7 @@ export function ItemStatsExplorer({
     [
       minMatches,
       hero,
-      enemy,
+      enemies,
       minRankId,
       maxRankId,
       minUnixTimestamp,
@@ -160,7 +163,7 @@ export function ItemStatsExplorer({
     () => ({
       minMatches,
       heroId: hero,
-      enemyHeroIds: enemy != null ? String(enemy) : undefined,
+      ...enemyHeroFilter(enemies),
       minAverageBadge: minRankId,
       maxAverageBadge: maxRankId,
       minUnixTimestamp: prevMinTimestamp ?? 0,
@@ -175,7 +178,7 @@ export function ItemStatsExplorer({
     [
       minMatches,
       hero,
-      enemy,
+      enemies,
       minRankId,
       maxRankId,
       prevMinTimestamp,

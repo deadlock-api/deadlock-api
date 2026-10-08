@@ -8,8 +8,11 @@ import { ItemBuyTimingChart } from "~/components/features/items/ItemBuyTimingCha
 import { FilterBar } from "~/components/patterns/filter-bar/FilterBar";
 import type { Dayjs } from "~/dayjs";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
+import { enemyHeroFilter } from "~/lib/enemy-heroes";
 import type { GameMode, MatchMode } from "~/lib/game-mode";
 import { parseAsSetOf } from "~/lib/nuqs-parsers";
+
+const NO_ENEMIES: readonly number[] = [];
 
 export function ItemPurchaseAnalysis({
   minRankId,
@@ -17,7 +20,7 @@ export function ItemPurchaseAnalysis({
   minDate,
   maxDate,
   hero,
-  enemy,
+  enemies = NO_ENEMIES,
   minMatches,
   minBoughtAtS,
   maxBoughtAtS,
@@ -29,8 +32,8 @@ export function ItemPurchaseAnalysis({
   minDate?: Dayjs;
   maxDate?: Dayjs;
   hero?: number | null;
-  /** Only matches with this hero on the other team. */
-  enemy?: number | null;
+  /** Only matches with these heroes on the other team: which items win against them. */
+  enemies?: readonly number[];
   minMatches?: number | null;
   minBoughtAtS?: number;
   maxBoughtAtS?: number;
@@ -44,7 +47,7 @@ export function ItemPurchaseAnalysis({
     () => ({
       minMatches,
       heroId: hero,
-      enemyHeroIds: enemy != null ? String(enemy) : undefined,
+      ...enemyHeroFilter(enemies),
       minAverageBadge: minRankId,
       maxAverageBadge: maxRankId,
       minUnixTimestamp: minUnixTimestamp ?? 0,
@@ -57,7 +60,7 @@ export function ItemPurchaseAnalysis({
     [
       minMatches,
       hero,
-      enemy,
+      enemies,
       minRankId,
       maxRankId,
       minUnixTimestamp,
