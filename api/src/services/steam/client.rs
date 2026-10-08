@@ -80,20 +80,14 @@ impl SteamClient {
             "data": encoded_message,
             "bot_username": query.username,
         });
-        match self.call_proxy(&query, &body).await {
-            Ok(r) => {
-                debug!(
-                    "Successfully called Steam proxy for {}",
-                    query.msg_type.as_str_name()
-                );
-                counter!("steam.proxy.call", "msg_type" => query.msg_type.as_str_name(), "error" => "false").increment(1);
-                Ok(r)
-            }
-            Err(e) => {
-                counter!("steam.proxy.call", "msg_type" => query.msg_type.as_str_name(), "error" => "true").increment(1);
-                Err(e)
-            }
+        let msg_type = query.msg_type.as_str_name();
+        let result = self.call_proxy(&query, &body).await;
+        if result.is_ok() {
+            debug!("Successfully called Steam proxy for {msg_type}");
         }
+        let error = if result.is_ok() { "false" } else { "true" };
+        counter!("steam.proxy.call", "msg_type" => msg_type, "error" => error).increment(1);
+        result
     }
 
     async fn call_proxy<M: Message, T: serde::Serialize + ?Sized>(
@@ -101,20 +95,16 @@ impl SteamClient {
         query: &SteamProxyQuery<M>,
         body: &T,
     ) -> SteamProxyResult<SteamProxyRawResponse> {
-        let url = if self.steam_proxy_urls.len() == 1 {
-            #[expect(clippy::indexing_slicing, reason = "We checked the length")]
-            &self.steam_proxy_urls[0]
-        } else {
-            self.steam_proxy_urls
-                .choose(&mut rand::rng())
-                .ok_or(SteamProxyError::NoBaseUrl)?
-        };
+        let url = self
+            .steam_proxy_urls
+            .choose(&mut rand::rng())
+            .ok_or(SteamProxyError::NoBaseUrl)?;
 
         self.http_client
             .post(url)
             .bearer_auth(&self.steam_proxy_api_key)
             .timeout(query.request_timeout)
-            .json(&body)
+            .json(body)
             .send()
             .await?
             .error_for_status()?
@@ -153,8 +143,12 @@ impl SteamClient {
         steam_id: u64,
     ) -> Result<(), SteamAccountVerifyError> {
         // make a request to the OpenID provider to verify the parameters
-        let mut params = open_id_params.clone();
-        params.insert("openid.mode".to_owned(), "check_authentication".to_owned());
+        let params: Vec<(&str, &str)> = open_id_params
+            .iter()
+            .filter(|(key, _)| *key != "openid.mode")
+            .map(|(key, value)| (key.as_str(), value.as_str()))
+            .chain([("openid.mode", "check_authentication")])
+            .collect();
         let response = self
             .http_client
             .post("https://steamcommunity.com/openid/login")
@@ -172,7 +166,7 @@ impl SteamClient {
             .get("openid.claimed_id")
             .and_then(|url| url.rsplit('/').next())
             .and_then(|id_str| id_str.parse::<u64>().ok())
-            .ok_or_else(|| SteamAccountVerifyError::VerificationFailed)?;
+            .ok_or(SteamAccountVerifyError::VerificationFailed)?;
         if claimed_steam_id != steam_id {
             return Err(SteamAccountVerifyError::VerificationFailed);
         }
@@ -238,7 +232,7 @@ impl SteamClient {
             .and_then(Response::error_for_status)?
             .bytes()
             .await
-            .map(|r| r.to_vec())
+            .map(Vec::from)
     }
 }
 
@@ -261,14 +255,16 @@ fn build_forum_client() -> wreq::Client {
 #[cached(ttl_secs = 1800, convert = "{ 0 }", key = "u8", result_fallback = true)]
 async fn fetch_patch_notes(http_client: &wreq::Client) -> Result<Vec<Patch>, APIError> {
     let rss = fetch_rss_text(http_client, RSS_ENDPOINT).await?;
-    quick_xml::de::from_str::<Rss>(&rss)
-        .map(|rss| rss.channel.patch_notes)
-        .map_err(|e| {
-            APIError::status_msg(
-                reqwest::StatusCode::INTERNAL_SERVER_ERROR,
-                format!("Failed to parse patch notes: {e}"),
-            )
-        })
+    parse_rss::<Rss>(&rss, "patch notes").map(|rss| rss.channel.patch_notes)
+}
+
+fn parse_rss<T: serde::de::DeserializeOwned>(rss: &str, what: &str) -> APIResult<T> {
+    quick_xml::de::from_str(rss).map_err(|e| {
+        APIError::status_msg(
+            reqwest::StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Failed to parse {what}: {e}"),
+        )
+    })
 }
 
 /// Number of attempts for a forum/steam RSS fetch. The forum sits behind a bot challenge that
@@ -346,22 +342,12 @@ async fn fetch_combined_patch_feed(http_client: &wreq::Client) -> Result<Vec<Fee
         fetch_rss_text(http_client, STEAM_NEWS_ENDPOINT),
     )?;
 
-    let forum_items = quick_xml::de::from_str::<ForumRssV2>(&forum_rss)
-        .map(|rss| rss.channel.patch_notes)
-        .map_err(|e| {
-            APIError::status_msg(
-                reqwest::StatusCode::INTERNAL_SERVER_ERROR,
-                format!("Failed to parse forum patch notes: {e}"),
-            )
-        })?;
-    let steam_items = quick_xml::de::from_str::<SteamRss>(&steam_rss)
-        .map(|rss| rss.channel.patch_notes)
-        .map_err(|e| {
-            APIError::status_msg(
-                reqwest::StatusCode::INTERNAL_SERVER_ERROR,
-                format!("Failed to parse steam patch notes: {e}"),
-            )
-        })?;
+    let forum_items = parse_rss::<ForumRssV2>(&forum_rss, "forum patch notes")?
+        .channel
+        .patch_notes;
+    let steam_items = parse_rss::<SteamRss>(&steam_rss, "steam patch notes")?
+        .channel
+        .patch_notes;
 
     let mut items: Vec<FeedItem> = forum_items
         .into_iter()
@@ -431,14 +417,13 @@ async fn get_client_version_from_steam_api(http_client: &reqwest::Client) -> API
         .map_err(|e| APIError::internal(format!("Failed to parse Steam API response: {e}")))?;
 
     if !response.result.success {
-        return Err(APIError::internal(
-            "Steam API returned success=false".to_owned(),
-        ));
+        return Err(APIError::internal("Steam API returned success=false"));
     }
 
-    response.result.min_allowed_version.ok_or_else(|| {
-        APIError::internal("Steam API response missing min_allowed_version".to_owned())
-    })
+    response
+        .result
+        .min_allowed_version
+        .ok_or_else(|| APIError::internal("Steam API response missing min_allowed_version"))
 }
 
 async fn get_client_version_from_github(http_client: &reqwest::Client) -> APIResult<u32> {
@@ -448,20 +433,13 @@ async fn get_client_version_from_github(http_client: &reqwest::Client) -> APIRes
         .await
         .and_then(Response::error_for_status)?
         .text().await?;
-    for line in steam_info.lines() {
-        if line.starts_with("ClientVersion=") {
-            return line
-                .split('=')
-                .nth(1)
-                .and_then(|v| v.parse().ok())
-                .ok_or(APIError::internal(
-                    "Failed to parse client version".to_owned(),
-                ));
-        }
-    }
-    Err(APIError::internal(
-        "Failed to fetch client version".to_owned(),
-    ))
+    let version = steam_info
+        .lines()
+        .find_map(|line| line.strip_prefix("ClientVersion="))
+        .ok_or_else(|| APIError::internal("Failed to fetch client version"))?;
+    version
+        .parse()
+        .map_err(|_| APIError::internal("Failed to parse client version"))
 }
 
 #[cached(
@@ -507,8 +485,9 @@ async fn fetch_steam_account_name_cached(
     player_summaries
         .response
         .players
-        .first()
-        .and_then(|player| player.personaname.clone())
+        .into_iter()
+        .next()
+        .and_then(|player| player.personaname)
         .ok_or(SteamAccountNameError::ParseError)
 }
 
