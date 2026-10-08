@@ -12,6 +12,7 @@ members = [
     "tools/hltv-scraper",
     "tools/ingest-worker",
     "tools/matchdata-downloader",
+    "tools/player-match-history",
     "tools/salt-scraper",
     "tools/steam-profile-fetcher",
     "tools/update-assets-tables",
@@ -25,6 +26,7 @@ edition = "2024"
 [workspace.dependencies]
 # Shared in-repo crates
 common = { version = "0.1.0", path = "tools/common" }
+player-match-history = { path = "tools/player-match-history" }
 valveprotos = { path = "valveprotos" }
 haste = { path = "haste" }
 haste_broadcast = { path = "haste/crates/haste_broadcast" }

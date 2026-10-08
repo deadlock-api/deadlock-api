@@ -6,6 +6,7 @@ on:
       - master
     paths:
       - 'api/**'
+      - 'tools/player-match-history/**'
       - '.sqlx/**'
       - '.github/workflows/api-ci.yml'
       - 'Cargo.toml'
@@ -20,6 +21,7 @@ on:
       - master
     paths:
       - 'api/**'
+      - 'tools/player-match-history/**'
       - '.sqlx/**'
       - '.github/workflows/api-ci.yml'
       - 'Cargo.toml'

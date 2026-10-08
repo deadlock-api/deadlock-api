@@ -9,8 +9,8 @@ clickhouse = { workspace = true }
 common = { workspace = true }
 futures = { workspace = true }
 metrics = { workspace = true }
+player-match-history = { workspace = true }
 reqwest = { workspace = true }
-serde = { workspace = true }
 sqlx = { workspace = true, features = ["postgres", "runtime-tokio"] }
 tokio = { workspace = true }
 tracing = { workspace = true }

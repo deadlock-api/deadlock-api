@@ -11,8 +11,6 @@
 #![expect(clippy::cast_precision_loss)]
 #![expect(clippy::cast_possible_truncation)]
 
-mod types;
-
 use core::time::Duration;
 use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, LazyLock};
@@ -29,7 +27,7 @@ use valveprotos::deadlock::{
     ECitadelMatchMode, EgcCitadelClientMessages,
 };
 
-use crate::types::PlayerMatchHistoryEntry;
+use player_match_history::PlayerMatchHistoryEntry;
 
 static HISTORY_COOLDOWN_MILLIS: LazyLock<u64> =
     LazyLock::new(|| common::env_or("HISTORY_COOLDOWN_MILLIS", 24 * 60 * 60 * 1000 / 50));

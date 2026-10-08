@@ -2877,6 +2877,7 @@ dependencies = [
  "opentelemetry-appender-tracing",
  "opentelemetry-otlp",
  "opentelemetry_sdk",
+ "player-match-history",
  "proptest",
  "proptest-derive",
  "prost",
@@ -4005,8 +4006,8 @@ dependencies = [
  "common",
  "futures",
  "metrics",
+ "player-match-history",
  "reqwest",
- "serde",
  "sqlx",
  "tokio",
  "tracing",
@@ -5777,6 +5778,16 @@ name = "pkg-config"
 version = "0.3.34"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f6b464fbc74e149a392436b17d523f769e057cb6877f6a5c4618bc6f11800548"
+
+[[package]]
+name = "player-match-history"
+version = "0.1.0"
+dependencies = [
+ "clickhouse",
+ "serde",
+ "utoipa",
+ "valveprotos",
+]
 
 [[package]]
 name = "png"
