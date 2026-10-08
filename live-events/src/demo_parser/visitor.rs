@@ -129,11 +129,11 @@ impl SendingVisitor {
         let events = core::mem::take(&mut self.outbox);
         let sender = self.sender.clone();
         async move {
-            result?;
+            // Events queued before a handler error still go out, then the error ends the parse.
             for event in events {
                 sender.send_timeout(event, CLIENT_SEND_TIMEOUT).await?;
             }
-            Ok(())
+            result
         }
     }
 
