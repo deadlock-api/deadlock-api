@@ -1,10 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
-import { Link, type NotFoundRouteProps, createFileRoute, notFound, redirect, useRouter } from "@tanstack/react-router";
+import { Link, createFileRoute, notFound, redirect, useRouter } from "@tanstack/react-router";
 import type { AnalyticsHeroStats } from "deadlock_api_client";
 import { ListOrdered, type LucideIcon, Map, Medal, ShoppingBag, Swords, Trophy, Users, UsersRound } from "lucide-react";
 import { lazy, Suspense, useMemo } from "react";
 
-import { NotFound } from "~/components/app/NotFound";
+import { EntityNotFound } from "~/components/app/EntityNotFound";
 import { HeroImage } from "~/components/domain/assets/HeroImage";
 import { HeroMatchupDetailsStatsTable } from "~/components/features/heroes/HeroMatchupDetailsStatsTable";
 import { HeroMatchupSummary } from "~/components/features/heroes/HeroMatchupSummary";
@@ -222,7 +222,7 @@ export const Route = createFileRoute("/analytics/heroes/$heroName")({
       },
     };
   },
-  notFoundComponent: HeroNotFound,
+  notFoundComponent: ({ data }) => <EntityNotFound entity="hero" data={data} />,
   head: ({ loaderData }) => {
     // The not-found page sets its own title and noindex; a second title and a canonical to the section came first.
     if (!loaderData) return {};
@@ -528,20 +528,5 @@ function HeroDetailPage() {
         </nav>
       </Section>
     </PageShell>
-  );
-}
-
-function HeroNotFound({ data }: NotFoundRouteProps) {
-  const suggestion = (data as { suggestion?: string } | undefined)?.suggestion;
-  return (
-    <NotFound
-      didYouMean={
-        suggestion && (
-          <Link to="/analytics/heroes/$heroName" params={{ heroName: heroSlug(suggestion) }}>
-            {suggestion}
-          </Link>
-        )
-      }
-    />
   );
 }

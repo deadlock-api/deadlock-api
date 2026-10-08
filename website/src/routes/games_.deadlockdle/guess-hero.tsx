@@ -1,22 +1,20 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { motion } from "framer-motion";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 
 import { SilhouetteFrame } from "~/components/domain/minigames/SilhouetteFrame";
 import { GameShell, GameShellError, GameShellLoading } from "~/components/features/deadlockdle/GameShell";
-import { GuessFeedback, wrongGuessMessage } from "~/components/features/deadlockdle/GuessFeedback";
+import { GuessFeedback } from "~/components/features/deadlockdle/GuessFeedback";
 import { GuessInput } from "~/components/features/deadlockdle/GuessInput";
 import { HintReveal } from "~/components/features/deadlockdle/HintReveal";
 import { PreviousGuesses } from "~/components/features/deadlockdle/PreviousGuesses";
 import { ResultModal } from "~/components/features/deadlockdle/ResultModal";
-import { useGuessFeedback } from "~/components/features/deadlockdle/use-guess-feedback";
+import { useDailyGuess } from "~/components/features/deadlockdle/use-daily-guess";
 import { Stack } from "~/components/ui/stack";
+import { heroHints } from "~/lib/deadlockdle/hints";
 import { useHeroes, puzzleLoadError } from "~/lib/deadlockdle/queries";
-import { redactName } from "~/lib/deadlockdle/redact";
-import { getModeSeed, seededPick, seededRandom, validatePuzzleDateSearch } from "~/lib/deadlockdle/seed";
-import { useDailyGame } from "~/lib/deadlockdle/use-daily-game";
+import { validatePuzzleDateSearch } from "~/lib/deadlockdle/seed";
 import { pageTitle, seo } from "~/lib/seo";
-import { snakeToPretty } from "~/lib/utils";
 import { filterPlayableHeroes } from "~/queries/asset-queries";
 
 export const Route = createFileRoute("/games_/deadlockdle/guess-hero")({
@@ -72,90 +70,30 @@ function GuessHero() {
   const heroesQuery = useHeroes();
   const { data: heroes, isLoading } = heroesQuery;
   const { date: dateParam } = Route.useSearch();
-  const { gameState, streakState, isFinished, submitGuess, date, isArchive } = useDailyGame(
-    "guess-hero",
-    MAX_ATTEMPTS,
-    dateParam,
-  );
-
-  const [shakeKey, setShakeKey] = useState(0);
-  const [feedbackType, showFeedback] = useGuessFeedback();
-
   const playableHeroes = useMemo(
     () => (heroes ? filterPlayableHeroes(heroes).filter((h) => h.hero_type) : []),
     [heroes],
   );
-
-  const dailyHero = useMemo(() => {
-    if (playableHeroes.length === 0) return null;
-    const seed = getModeSeed(date, "guess-hero");
-    const rng = seededRandom(seed);
-    return seededPick(playableHeroes, rng);
-  }, [playableHeroes, date]);
-
-  const hints = useMemo(() => {
-    if (!dailyHero) return [];
-
-    const heroType = dailyHero.hero_type
-      ? dailyHero.hero_type.charAt(0).toUpperCase() + dailyHero.hero_type.slice(1)
-      : "Unknown";
-
-    const startingStatEntries = Object.entries(dailyHero.starting_stats) as [
-      string,
-      { value: number; display_stat_name: string },
-    ][];
-    const statEntry = startingStatEntries.find(([key]) => key === "max_health");
-    const statHint = statEntry
-      ? `Base ${snakeToPretty(statEntry[0])}: ${statEntry[1].value}`
-      : startingStatEntries.length > 0
-        ? `Base ${snakeToPretty(startingStatEntries[0][0])}: ${startingStatEntries[0][1].value}`
-        : "No stats available";
-
-    const stripHtml = (text: string) => text.replace(/<[^>]*>/g, "");
-    const redact = (text: string) => redactName(stripHtml(text), dailyHero.name);
-
-    const lore = dailyHero.description?.lore;
-    const loreRedacted = lore ? redact(lore) : null;
-    const loreTruncated = loreRedacted
-      ? loreRedacted.length > 100
-        ? `${loreRedacted.slice(0, 100)}...`
-        : loreRedacted
-      : "No lore available";
-
-    const playstyle = dailyHero.description?.playstyle;
-    const role = dailyHero.description?.role;
-    const secondStat = startingStatEntries.find(([key]) => key === "weapon_power" || key === "sprint_speed");
-    const lastHint = playstyle
-      ? { label: "PLAYSTYLE", value: redact(playstyle) }
-      : role
-        ? { label: "ROLE", value: redact(role) }
-        : secondStat
-          ? { label: "STAT 2", value: `Base ${snakeToPretty(secondStat[0])}: ${secondStat[1].value}` }
-          : { label: "COMPLEXITY", value: `Complexity: ${dailyHero.complexity}` };
-
-    return [
-      { label: "TYPE", value: heroType },
-      { label: "STAT", value: statHint },
-      { label: "LORE", value: loreTruncated },
-      { label: "WEAPON", value: dailyHero.gun_tag ?? "Unknown" },
-      lastHint,
-    ];
-  }, [dailyHero]);
-
-  const guessOptions = useMemo(() => {
-    const guessedSet = new Set(gameState.guesses.map((g) => g.toLowerCase()));
-    return playableHeroes.filter((h) => !guessedSet.has(h.name.toLowerCase())).map((h) => ({ id: h.id, name: h.name }));
-  }, [playableHeroes, gameState.guesses]);
-
-  function handleGuess(_id: string | number, name: string) {
-    if (!dailyHero || isFinished) return;
-    const correct = name.toLowerCase() === dailyHero.name.toLowerCase();
-    submitGuess(name, correct);
-    showFeedback(correct ? "correct" : "wrong");
-    if (!correct) {
-      setShakeKey((k) => k + 1);
-    }
-  }
+  const {
+    gameState,
+    streakState,
+    isFinished,
+    date,
+    isArchive,
+    answer: dailyHero,
+    hints,
+    guessOptions,
+    guess,
+    shakeKey,
+    feedbackType,
+    feedbackMessage,
+  } = useDailyGuess({
+    mode: "guess-hero",
+    pool: playableHeroes,
+    maxAttempts: MAX_ATTEMPTS,
+    date: dateParam,
+    hintsOf: heroHints,
+  });
 
   // A failed query leaves no puzzle to build, so without this the loader would spin forever.
   const loadError = puzzleLoadError(heroesQuery);
@@ -186,15 +124,7 @@ function GuessHero() {
       status={gameState.status}
       date={date}
     >
-      <GuessFeedback
-        type={feedbackType}
-        triggerKey={shakeKey}
-        message={
-          feedbackType === "wrong"
-            ? wrongGuessMessage(MAX_ATTEMPTS - gameState.guesses.length, hints[gameState.hintsRevealed - 1])
-            : undefined
-        }
-      />
+      <GuessFeedback type={feedbackType} triggerKey={shakeKey} message={feedbackMessage} />
       <WarpFilters />
 
       <motion.div
@@ -234,12 +164,7 @@ function GuessHero() {
       {hints.length > 0 && <HintReveal hints={hints} revealedCount={gameState.hintsRevealed} />}
 
       <div className="flex justify-center">
-        <GuessInput
-          options={guessOptions}
-          onSubmit={handleGuess}
-          disabled={isFinished}
-          placeholder="GUESS THE HERO..."
-        />
+        <GuessInput options={guessOptions} onSubmit={guess} disabled={isFinished} placeholder="GUESS THE HERO..." />
       </div>
 
       <PreviousGuesses guesses={gameState.guesses} answer={dailyHero.name} />

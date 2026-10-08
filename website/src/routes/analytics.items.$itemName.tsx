@@ -1,10 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
-import { Link, type NotFoundRouteProps, createFileRoute, notFound, redirect, useRouter } from "@tanstack/react-router";
+import { Link, createFileRoute, notFound, redirect, useRouter } from "@tanstack/react-router";
 import type { AnalyticsHeroStats, ItemStats } from "deadlock_api_client";
 import { BarChart3, Layers } from "lucide-react";
 import { lazy, Suspense, useMemo } from "react";
 
-import { NotFound } from "~/components/app/NotFound";
+import { EntityNotFound } from "~/components/app/EntityNotFound";
 import { ITEM_SLOT_COLOR } from "~/components/domain/assets/item-slot-color";
 import { ItemImage } from "~/components/domain/assets/ItemImage";
 import { ItemCorruption } from "~/components/features/items/ItemCorruption";
@@ -189,7 +189,7 @@ export const Route = createFileRoute("/analytics/items/$itemName")({
       },
     };
   },
-  notFoundComponent: ItemNotFound,
+  notFoundComponent: ({ data }) => <EntityNotFound entity="item" data={data} />,
   head: ({ loaderData }) => {
     // The not-found page sets its own title and noindex; a second title and a canonical to the section came first.
     if (!loaderData) return {};
@@ -414,20 +414,5 @@ function ItemDetailPage() {
         </nav>
       </Section>
     </PageShell>
-  );
-}
-
-function ItemNotFound({ data }: NotFoundRouteProps) {
-  const suggestion = (data as { suggestion?: string } | undefined)?.suggestion;
-  return (
-    <NotFound
-      didYouMean={
-        suggestion && (
-          <Link to="/analytics/items/$itemName" params={{ itemName: itemSlug(suggestion) }}>
-            {suggestion}
-          </Link>
-        )
-      }
-    />
   );
 }

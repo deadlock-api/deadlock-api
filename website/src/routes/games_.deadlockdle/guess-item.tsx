@@ -1,19 +1,19 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { motion } from "framer-motion";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 
 import { SilhouetteFrame } from "~/components/domain/minigames/SilhouetteFrame";
 import { GameShell, GameShellError, GameShellLoading } from "~/components/features/deadlockdle/GameShell";
-import { GuessFeedback, wrongGuessMessage } from "~/components/features/deadlockdle/GuessFeedback";
+import { GuessFeedback } from "~/components/features/deadlockdle/GuessFeedback";
 import { GuessInput } from "~/components/features/deadlockdle/GuessInput";
 import { HintReveal } from "~/components/features/deadlockdle/HintReveal";
 import { PreviousGuesses } from "~/components/features/deadlockdle/PreviousGuesses";
 import { ResultModal } from "~/components/features/deadlockdle/ResultModal";
-import { useGuessFeedback } from "~/components/features/deadlockdle/use-guess-feedback";
+import { useDailyGuess } from "~/components/features/deadlockdle/use-daily-guess";
 import { Stack } from "~/components/ui/stack";
+import { itemHints } from "~/lib/deadlockdle/hints";
 import { useItems, puzzleLoadError } from "~/lib/deadlockdle/queries";
-import { getModeSeed, seededPick, seededRandom, validatePuzzleDateSearch } from "~/lib/deadlockdle/seed";
-import { useDailyGame } from "~/lib/deadlockdle/use-daily-game";
+import { validatePuzzleDateSearch } from "~/lib/deadlockdle/seed";
 import { pageTitle, seo } from "~/lib/seo";
 import { filterShopableItems } from "~/queries/asset-queries";
 
@@ -38,91 +38,31 @@ function getBlurFilter(hintsRevealed: number, isFinished: boolean): string {
   return `blur(${blur}px)`;
 }
 
-function formatSlotType(slot: string): string {
-  return slot.charAt(0).toUpperCase() + slot.slice(1);
-}
-
-function getPropertyHint(
-  properties: Record<string, { value?: unknown; label?: string | null; postfix?: string | null }> | null | undefined,
-): string {
-  if (!properties) return "No properties available";
-
-  // The unit ("s", "m", "%") comes separately; without it "Cooldown: 23" reads as a bare number.
-  const withUnit = (prop: { value?: unknown; postfix?: string | null }) => {
-    const value = String(prop.value);
-    const postfix = (prop.postfix ?? "").trim();
-    return value.endsWith(postfix) ? value : value + postfix;
-  };
-
-  for (const [, prop] of Object.entries(properties)) {
-    if (prop.label && prop.value != null && typeof prop.value === "number") {
-      return `${prop.label}: ${withUnit(prop)}`;
-    }
-  }
-
-  for (const [, prop] of Object.entries(properties)) {
-    if (prop.label && prop.value != null) {
-      return `${prop.label}: ${withUnit(prop)}`;
-    }
-  }
-
-  return "No properties available";
-}
-
 function GuessItem() {
   const itemsQuery = useItems();
   const { data: items, isLoading } = itemsQuery;
   const { date: dateParam } = Route.useSearch();
-  const { gameState, streakState, isFinished, submitGuess, date, isArchive } = useDailyGame(
-    "guess-item",
-    MAX_ATTEMPTS,
-    dateParam,
-  );
-
-  const [shakeKey, setShakeKey] = useState(0);
-  const [feedbackType, showFeedback] = useGuessFeedback();
-
   const shopableItems = useMemo(() => (items ? filterShopableItems(items) : []), [items]);
-
-  const dailyItem = useMemo(() => {
-    if (shopableItems.length === 0) return null;
-    const seed = getModeSeed(date, "guess-item");
-    const rng = seededRandom(seed);
-    return seededPick(shopableItems, rng);
-  }, [shopableItems, date]);
-
-  const hints = useMemo(() => {
-    if (!dailyItem) return [];
-
-    const slot = formatSlotType(dailyItem.item_slot_type);
-    const activation = dailyItem.is_active_item ? "Active" : "Passive";
-
-    const propertyHint = getPropertyHint(dailyItem.properties);
-
-    return [
-      { label: "SLOT", value: slot },
-      { label: "ACTIVATION", value: activation },
-      { label: "PROPERTY", value: propertyHint },
-      { label: "TIER", value: `Tier ${dailyItem.item_tier}` },
-    ];
-  }, [dailyItem]);
-
-  const guessOptions = useMemo(() => {
-    const guessedSet = new Set(gameState.guesses.map((g) => g.toLowerCase()));
-    return shopableItems
-      .filter((item) => !guessedSet.has(item.name.toLowerCase()))
-      .map((item) => ({ id: item.id, name: item.name }));
-  }, [shopableItems, gameState.guesses]);
-
-  function handleGuess(_id: string | number, name: string) {
-    if (!dailyItem || isFinished) return;
-    const correct = name.toLowerCase() === dailyItem.name.toLowerCase();
-    submitGuess(name, correct);
-    showFeedback(correct ? "correct" : "wrong");
-    if (!correct) {
-      setShakeKey((k) => k + 1);
-    }
-  }
+  const {
+    gameState,
+    streakState,
+    isFinished,
+    date,
+    isArchive,
+    answer: dailyItem,
+    hints,
+    guessOptions,
+    guess,
+    shakeKey,
+    feedbackType,
+    feedbackMessage,
+  } = useDailyGuess({
+    mode: "guess-item",
+    pool: shopableItems,
+    maxAttempts: MAX_ATTEMPTS,
+    date: dateParam,
+    hintsOf: itemHints,
+  });
 
   // A failed query leaves no puzzle to build, so without this the loader would spin forever.
   const loadError = puzzleLoadError(itemsQuery);
@@ -155,15 +95,7 @@ function GuessItem() {
       status={gameState.status}
       date={date}
     >
-      <GuessFeedback
-        type={feedbackType}
-        triggerKey={shakeKey}
-        message={
-          feedbackType === "wrong"
-            ? wrongGuessMessage(MAX_ATTEMPTS - gameState.guesses.length, hints[gameState.hintsRevealed - 1])
-            : undefined
-        }
-      />
+      <GuessFeedback type={feedbackType} triggerKey={shakeKey} message={feedbackMessage} />
 
       <motion.div
         key={shakeKey}
@@ -207,12 +139,7 @@ function GuessItem() {
       {hints.length > 0 && <HintReveal hints={hints} revealedCount={gameState.hintsRevealed} />}
 
       <div className="flex justify-center">
-        <GuessInput
-          options={guessOptions}
-          onSubmit={handleGuess}
-          disabled={isFinished}
-          placeholder="GUESS THE ITEM..."
-        />
+        <GuessInput options={guessOptions} onSubmit={guess} disabled={isFinished} placeholder="GUESS THE ITEM..." />
       </div>
 
       <PreviousGuesses guesses={gameState.guesses} answer={dailyItem.name} />
