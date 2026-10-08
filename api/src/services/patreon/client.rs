@@ -40,17 +40,7 @@ impl PatreonClient {
             ("redirect_uri", &self.redirect_uri),
         ];
 
-        let response = self
-            .http_client
-            .post(TOKEN_ENDPOINT)
-            .form(&params)
-            .send()
-            .await?
-            .error_for_status()?
-            .json::<TokenResponse>()
-            .await?;
-
-        Ok(response)
+        self.request_token(&params).await
     }
 
     /// Refresh an expired access token using a refresh token
@@ -62,30 +52,45 @@ impl PatreonClient {
             ("client_secret", &self.client_secret),
         ];
 
-        let response = self
+        self.request_token(&params).await
+    }
+
+    async fn request_token(&self, params: &[(&str, &str)]) -> PatreonResult<TokenResponse> {
+        Ok(self
             .http_client
             .post(TOKEN_ENDPOINT)
-            .form(&params)
+            .form(params)
             .send()
             .await?
             .error_for_status()?
-            .json::<TokenResponse>()
-            .await?;
-
-        Ok(response)
+            .json()
+            .await?)
     }
 
-    /// Fetch patron identity including email from Patreon API
-    pub(crate) async fn get_identity(&self, access_token: &str) -> PatreonResult<PatronIdentity> {
-        let url = format!("{IDENTITY_ENDPOINT}?fields[user]=email");
-        let response = self
+    /// GET a Patreon API endpoint as the patron owning `access_token`.
+    async fn get_as_patron<T: serde::de::DeserializeOwned>(
+        &self,
+        url: &str,
+        access_token: &str,
+    ) -> PatreonResult<T> {
+        Ok(self
             .http_client
-            .get(&url)
+            .get(url)
             .bearer_auth(access_token)
             .send()
             .await?
             .error_for_status()?
-            .json::<IdentityResponse>()
+            .json()
+            .await?)
+    }
+
+    /// Fetch patron identity including email from Patreon API
+    pub(crate) async fn get_identity(&self, access_token: &str) -> PatreonResult<PatronIdentity> {
+        let response: IdentityResponse = self
+            .get_as_patron(
+                &format!("{IDENTITY_ENDPOINT}?fields[user]=email"),
+                access_token,
+            )
             .await?;
 
         Ok(PatronIdentity {
@@ -109,15 +114,8 @@ impl PatreonClient {
             "{IDENTITY_ENDPOINT}?include=memberships&fields[member]=currently_entitled_amount_cents,patron_status,pledge_cadence"
         );
 
-        let response = self
-            .http_client
-            .get(&url)
-            .bearer_auth(access_token)
-            .send()
-            .await?
-            .error_for_status()?
-            .json::<IdentityWithMembershipsResponse>()
-            .await?;
+        let response: IdentityWithMembershipsResponse =
+            self.get_as_patron(&url, access_token).await?;
 
         // Without identity.memberships scope, only our campaign's membership is returned
         for resource in response.included {
@@ -126,8 +124,9 @@ impl PatreonClient {
                     .relationships
                     .currently_entitled_tiers
                     .data
-                    .first()
-                    .map(|tier| tier.id.clone());
+                    .into_iter()
+                    .next()
+                    .map(|tier| tier.id);
 
                 let cadence = member.attributes.pledge_cadence.unwrap_or(1).max(1);
                 let entitled_cents = member
