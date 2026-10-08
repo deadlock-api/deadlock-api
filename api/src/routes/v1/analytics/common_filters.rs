@@ -333,13 +333,27 @@ pub(super) fn join_filters(filters: &[String]) -> String {
     }
 }
 
-/// Rounds timestamps to hourly boundaries for cache-friendliness.
+/// Granularity [`round_timestamps`] widens a time range to.
+pub(super) const TIMESTAMP_ALIGNMENT_S: i64 = 3600;
+
+/// Widens a time range to whole hours for cache-friendliness: clients mostly send "now minus
+/// 30 days" to the second, which would otherwise make every query string distinct. The minimum is
+/// floored and the maximum ceiled; an already aligned bound stays where it is.
 pub(super) fn round_timestamps(
     min_unix_timestamp: &mut Option<i64>,
     max_unix_timestamp: &mut Option<i64>,
 ) {
-    *min_unix_timestamp = min_unix_timestamp.map(|v| v - v % 3600);
-    *max_unix_timestamp = max_unix_timestamp.map(|v| v + 3600 - v % 3600);
+    *min_unix_timestamp = min_unix_timestamp.map(floor_to_hour);
+    *max_unix_timestamp = max_unix_timestamp.map(ceil_to_hour);
+}
+
+pub(super) fn floor_to_hour(v: i64) -> i64 {
+    v.div_euclid(TIMESTAMP_ALIGNMENT_S)
+        .saturating_mul(TIMESTAMP_ALIGNMENT_S)
+}
+
+pub(super) fn ceil_to_hour(v: i64) -> i64 {
+    floor_to_hour(v.saturating_add(TIMESTAMP_ALIGNMENT_S - 1))
 }
 
 pub(super) const DEFAULT_MIN_MATCHES: u64 = 20;
@@ -442,6 +456,25 @@ mod tests {
         round_timestamps(&mut min, &mut max);
         assert_eq!(min, Some(1_672_531_200)); // floored
         assert_eq!(max, Some(1_672_534_800)); // ceiled to next hour
+
+        // Aligned bounds stay put.
+        let mut min = Some(1_672_531_200_i64);
+        let mut max = Some(1_672_534_800_i64);
+        round_timestamps(&mut min, &mut max);
+        assert_eq!(min, Some(1_672_531_200));
+        assert_eq!(max, Some(1_672_534_800));
+
+        // Extremes neither overflow nor round the wrong way.
+        let mut min = Some(-1_i64);
+        let mut max = Some(i64::MAX);
+        round_timestamps(&mut min, &mut max);
+        assert_eq!(min, Some(-3600));
+        assert_eq!(max, Some(i64::MAX.div_euclid(3600) * 3600));
+        let mut min = Some(i64::MIN);
+        let mut max = Some(i64::MIN);
+        round_timestamps(&mut min, &mut max);
+        assert_eq!(min, Some(i64::MIN));
+        assert_eq!(max, Some((i64::MIN.div_euclid(3600) + 1) * 3600));
 
         let mut min_none: Option<i64> = None;
         let mut max_none: Option<i64> = None;
