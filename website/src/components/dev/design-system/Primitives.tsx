@@ -38,6 +38,7 @@ import {
 import { Avatar, AvatarFallback } from "~/components/ui/avatar";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
+import { Callout, CalloutAnchor, CalloutContent, CalloutDescription, CalloutTitle } from "~/components/ui/callout";
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
 import { CheckboxField } from "~/components/ui/checkbox-field";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "~/components/ui/collapsible";
@@ -59,6 +60,7 @@ import { OptionRow } from "~/components/ui/option-row";
 import { Popover, PopoverContent, PopoverTrigger } from "~/components/ui/popover";
 import { ProgressBarWithLabel } from "~/components/ui/progress-bar";
 import { DivergingBar } from "~/components/ui/rate-bar";
+import { SearchInput } from "~/components/ui/search-input";
 import { Segmented, SegmentedItem } from "~/components/ui/segmented";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
 import { Skeleton } from "~/components/ui/skeleton";
@@ -108,6 +110,43 @@ const INTERVALS = (
     <SegmentedItem value="month">Month</SegmentedItem>
   </>
 );
+
+/** A field that answers with a callout under it: Enter opens it, typing or Escape closes it. */
+function CalloutDemo() {
+  const [variant, setVariant] = useState<"info" | "warning" | "destructive">("info");
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="flex w-full max-w-md flex-col gap-3">
+      <Segmented aria-label="Callout variant" value={variant} onValueChange={setVariant}>
+        <SegmentedItem value="info">info</SegmentedItem>
+        <SegmentedItem value="warning">warning</SegmentedItem>
+        <SegmentedItem value="destructive">destructive</SegmentedItem>
+      </Segmented>
+      <Callout open={open} onOpenChange={setOpen}>
+        <CalloutAnchor asChild>
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              setOpen(true);
+            }}
+          >
+            <SearchInput
+              aria-label="Ask for a stat"
+              placeholder="Press Enter"
+              aria-describedby={open ? "callout-demo" : undefined}
+              onValueChange={() => setOpen(false)}
+            />
+          </form>
+        </CalloutAnchor>
+        <CalloutContent id="callout-demo" variant={variant}>
+          <Info />
+          <CalloutTitle>We don't have player stats</CalloutTitle>
+          <CalloutDescription>Try asking about a hero, an item or a stat.</CalloutDescription>
+        </CalloutContent>
+      </Callout>
+    </div>
+  );
+}
 
 export function Primitives() {
   const [interval, setInterval] = useState<"day" | "week" | "month">("week");
@@ -675,6 +714,14 @@ export function Primitives() {
             </Alert>
           ))}
         </Variants>
+      </Specimen>
+
+      <Specimen
+        name="Callout"
+        source="ui/callout"
+        note="A message pinned under the control it is about, over the page: nothing moves and the field keeps focus. Escape, a click elsewhere or typing closes it."
+      >
+        <CalloutDemo />
       </Specimen>
 
       <Specimen

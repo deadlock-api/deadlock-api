@@ -146,7 +146,7 @@ export const NAV: readonly NavChapter[] = [
           "Sonner",
         ],
       },
-      { title: "Feedback", items: ["Alert", "Skeleton", "Spinner"] },
+      { title: "Feedback", items: ["Alert", "Callout", "Skeleton", "Spinner"] },
       { title: "Media", items: ["ImgWithSkeleton", "SoundButton"] },
     ],
   },
