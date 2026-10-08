@@ -85,15 +85,12 @@ pub(crate) async fn track_requests(
         .and_then(|s| s.parse::<u64>().ok())
         .unwrap_or(0);
 
-    // Create metrics labels
+    // Create metrics labels. Keep these bounded: a raw user agent label would create a new
+    // series per distinct client string.
     let labels = [
         ("method", method.to_string()),
         ("endpoint", matched_path.as_str().to_owned()),
         ("status", status_code.to_string()),
-        (
-            "user_agent",
-            user_agent.clone().unwrap_or("unknown".to_owned()),
-        ),
     ];
     metrics::counter!("api_requests", &labels).increment(1);
     metrics::histogram!("api_request_duration_seconds", &labels).record(duration.as_secs_f64());
