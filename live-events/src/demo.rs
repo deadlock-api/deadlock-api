@@ -1,5 +1,3 @@
-use core::time::Duration;
-
 use async_stream::try_stream;
 use axum::body::Body;
 use axum::extract::{Path, Query, State};
@@ -12,9 +10,7 @@ use tracing::{info, trace};
 
 use crate::error::APIResult;
 use crate::state::AppState;
-use crate::utils::{
-    spectate_match, validate_broadcast_url, validate_upstream_broadcast_url, wait_for_live_demo,
-};
+use crate::utils::{match_broadcast_url, validate_broadcast_url, wait_for_live_demo};
 
 fn demo_stream(
     client: reqwest::Client,
@@ -36,24 +32,10 @@ pub(super) async fn demo(
     Path(match_id): Path<u64>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
-    info!("Spectating match {match_id}");
-    let response = tryhard::retry_fn(|| {
-        spectate_match(
-            &state.http_client,
-            match_id,
-            state.config.deadlock_api_key.as_ref().map(AsRef::as_ref),
-        )
-    })
-    .retries(3)
-    .fixed_backoff(Duration::from_millis(200))
-    .await?;
-
-    validate_upstream_broadcast_url(&response.broadcast_url)?;
-    wait_for_live_demo(&state.http_client, &response.broadcast_url).await?;
-
+    let broadcast_url = match_broadcast_url(&state, match_id).await?;
     Ok(Body::from_stream(demo_stream(
         state.http_client.clone(),
-        response.broadcast_url,
+        broadcast_url,
     )))
 }
 

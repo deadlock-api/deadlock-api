@@ -4,8 +4,10 @@ use core::time::Duration;
 
 use reqwest::{Response, StatusCode, Url};
 use serde::{Deserialize, Deserializer};
+use tracing::info;
 
-use crate::error::APIError;
+use crate::error::{APIError, APIResult};
+use crate::state::AppState;
 
 // Query Parameter Parsing
 #[derive(Debug, Deserialize)]
@@ -40,14 +42,12 @@ where
         CommaSeparated::List(vec) => Some(vec),
         CommaSeparated::Single(val) => Some(vec![val]),
         CommaSeparated::StringList(val) => {
-            let mut out = vec![];
-            for s in val {
-                let parsed = s
-                    .parse()
-                    .map_err(|_| serde::de::Error::custom("Failed to parse list item"))?;
-                out.push(parsed);
-            }
-            if out.is_empty() { None } else { Some(out) }
+            let out = val
+                .iter()
+                .map(|s| s.parse())
+                .collect::<Result<Vec<_>, _>>()
+                .map_err(|_| serde::de::Error::custom("Failed to parse list item"))?;
+            (!out.is_empty()).then_some(out)
         }
         CommaSeparated::CommaStringList(str) => {
             let str = str.replace(['[', ']'], "");
@@ -57,14 +57,15 @@ where
                 return Ok(None);
             }
 
-            let mut out = vec![];
-            for s in str.split(',') {
-                let parsed = s.trim().parse().map_err(|_| {
-                    serde::de::Error::custom("Failed to parse comma separated list")
-                })?;
-                out.push(parsed);
-            }
-            if out.is_empty() { None } else { Some(out) }
+            // `split` yields at least one item, so the list is never empty.
+            Some(
+                str.split(',')
+                    .map(|s| s.trim().parse())
+                    .collect::<Result<Vec<_>, _>>()
+                    .map_err(|_| {
+                        serde::de::Error::custom("Failed to parse comma separated list")
+                    })?,
+            )
         }
     })
 }
@@ -73,11 +74,7 @@ const STEAM_ID_64_IDENT: u64 = 76561197960265728;
 
 pub(crate) fn steamid64_to_steamid3(steam_id: u64) -> Result<u32, TryFromIntError> {
     // If steam id is smaller than the Steam ID 64 identifier, it's a Steam ID 3
-    if steam_id < STEAM_ID_64_IDENT {
-        return u32::try_from(steam_id);
-    }
-    // (steam_id - STEAM_ID_64_IDENT) as u32
-    u32::try_from(steam_id - STEAM_ID_64_IDENT)
+    u32::try_from(steam_id.checked_sub(STEAM_ID_64_IDENT).unwrap_or(steam_id))
 }
 
 #[derive(Deserialize, Debug)]
@@ -113,6 +110,26 @@ pub(crate) async fn live_demo_exists(
         .await
         .and_then(Response::error_for_status)
         .map(drop)
+}
+
+/// Resolves a match's broadcast URL through the API, checks it and waits for its demo to
+/// go live.
+pub(crate) async fn match_broadcast_url(state: &AppState, match_id: u64) -> APIResult<String> {
+    info!("Spectating match {match_id}");
+    let response = tryhard::retry_fn(|| {
+        spectate_match(
+            &state.http_client,
+            match_id,
+            state.config.deadlock_api_key.as_deref(),
+        )
+    })
+    .retries(3)
+    .fixed_backoff(Duration::from_millis(200))
+    .await?;
+
+    validate_upstream_broadcast_url(&response.broadcast_url)?;
+    wait_for_live_demo(&state.http_client, &response.broadcast_url).await?;
+    Ok(response.broadcast_url)
 }
 
 pub(crate) async fn wait_for_live_demo(

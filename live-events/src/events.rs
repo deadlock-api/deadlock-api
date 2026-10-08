@@ -127,8 +127,7 @@ async fn demo_event_stream(
         let error = match parser.run_to_end().await {
             Err(e) => Some(e.to_string()),
             Ok(()) => match pump.await {
-                Ok(Ok(())) => None,
-                Ok(Err(e)) => Some(e.to_string()),
+                Ok(result) => result.err().map(|e| e.to_string()),
                 Err(e) => Some(e.to_string()),
             },
         };
@@ -159,9 +158,17 @@ async fn demo_event_stream(
     })
 }
 
-fn events_response(
-    stream: impl Stream<Item = Result<Event, DemoParseError>> + Send + 'static,
-) -> impl IntoResponse {
+/// Starts the event stream for a live broadcast and wraps it in an SSE response.
+async fn events_response(
+    http_client: reqwest::Client,
+    broadcast_url: String,
+    query: DemoEventsQuery,
+) -> APIResult<impl IntoResponse> {
+    let stream = demo_event_stream(http_client, broadcast_url, query)
+        .await
+        .map_err(|e| APIError::internal(e.to_string()))?
+        .inspect_err(|e| error!("Error in demo event stream: {e}"));
+
     let headers = HeaderMap::from_iter([
         (
             header::CONTENT_TYPE,
@@ -170,8 +177,7 @@ fn events_response(
         (header::CACHE_CONTROL, HeaderValue::from_static("no-cache")),
         (header::CONNECTION, HeaderValue::from_static("keep-alive")),
     ]);
-
-    (headers, Sse::new(stream).keep_alive(KeepAlive::default()))
+    Ok((headers, Sse::new(stream).keep_alive(KeepAlive::default())))
 }
 
 pub(super) async fn events(
@@ -179,28 +185,9 @@ pub(super) async fn events(
     Query(body): Query<DemoEventsQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
-    info!("Spectating match {match_id}");
-    let response = tryhard::retry_fn(|| {
-        utils::spectate_match(
-            &state.http_client,
-            match_id,
-            state.config.deadlock_api_key.as_ref().map(AsRef::as_ref),
-        )
-    })
-    .retries(3)
-    .fixed_backoff(Duration::from_millis(200))
-    .await?;
-
-    utils::validate_upstream_broadcast_url(&response.broadcast_url)?;
-    utils::wait_for_live_demo(&state.http_client, &response.broadcast_url).await?;
-
+    let broadcast_url = utils::match_broadcast_url(&state, match_id).await?;
     info!("Demo available for match {match_id}");
-    let stream = demo_event_stream(state.http_client.clone(), response.broadcast_url, body)
-        .await
-        .map_err(|e| APIError::internal(e.to_string()))?
-        .inspect_err(|e| error!("Error in demo event stream: {e}"));
-
-    Ok(events_response(stream))
+    events_response(state.http_client.clone(), broadcast_url, body).await
 }
 
 #[derive(Deserialize)]
@@ -217,11 +204,5 @@ pub(super) async fn events_by_broadcast_url(
     utils::validate_broadcast_url(&query.broadcast_url)?;
     info!("Connecting to broadcast URL: {}", query.broadcast_url);
     utils::wait_for_live_demo(&state.http_client, &query.broadcast_url).await?;
-
-    let stream = demo_event_stream(state.http_client.clone(), query.broadcast_url, query.query)
-        .await
-        .map_err(|e| APIError::internal(e.to_string()))?
-        .inspect_err(|e| error!("Error in demo event stream: {e}"));
-
-    Ok(events_response(stream))
+    events_response(state.http_client.clone(), query.broadcast_url, query.query).await
 }
