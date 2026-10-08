@@ -153,7 +153,10 @@ async fn fetch_and_update_profiles(
         }
     };
 
-    attach_friends(&mut profiles, &mut friends_by_account);
+    let missing_friends = attach_friends(&mut profiles, &mut friends_by_account);
+    if !missing_friends.is_empty() {
+        keep_stored_friends(ch_client, &mut profiles, &missing_friends).await;
+    }
 
     queue_unavailable_profiles(ch_client, &batch_ids, &profiles, pending_deletions).await;
 
@@ -285,12 +288,15 @@ async fn fetch_friends_for_accounts(
         .collect()
 }
 
+/// Returns the accounts whose friends list could not be fetched.
 fn attach_friends(
     profiles: &mut [SteamPlayerSummary],
     friends_by_account: &mut HashMap<u32, Vec<SteamFriend>>,
-) {
+) -> HashSet<u32> {
+    let mut missing = HashSet::new();
     for profile in profiles.iter_mut() {
         let Some(friends) = friends_by_account.remove(&profile.account_id) else {
+            missing.insert(profile.account_id);
             continue;
         };
         let (ids, since): (Vec<_>, Vec<_>) = friends
@@ -300,6 +306,65 @@ fn attach_friends(
         profile.friends_account_id = ids;
         profile.friends_friend_since = since;
     }
+    missing
+}
+
+/// `steam_profiles` is a `ReplacingMergeTree` without a version column, so a new row
+/// replaces the stored one whole. For accounts whose friends fetch failed, carry the
+/// stored friends list over instead of overwriting it with an empty one; if even that
+/// lookup fails, skip saving those profiles this cycle.
+#[instrument(skip_all, fields(accounts = missing.len()))]
+async fn keep_stored_friends(
+    ch_client: &clickhouse::Client,
+    profiles: &mut Vec<SteamPlayerSummary>,
+    missing: &HashSet<u32>,
+) {
+    let account_ids = missing.iter().copied().collect_vec();
+    match stored_friends(ch_client, &account_ids).await {
+        Ok(stored) => {
+            let mut stored: HashMap<u32, StoredFriends> =
+                stored.into_iter().map(|f| (f.account_id, f)).collect();
+            for profile in profiles.iter_mut() {
+                if let Some(f) = stored.remove(&profile.account_id) {
+                    profile.friends_account_id = f.friends_account_id;
+                    profile.friends_friend_since = f.friends_friend_since;
+                }
+            }
+        }
+        Err(e) => {
+            warn!(
+                "Failed to look up stored friends, not saving {} profiles: {e}",
+                missing.len()
+            );
+            profiles.retain(|p| !missing.contains(&p.account_id));
+        }
+    }
+}
+
+#[derive(clickhouse::Row, serde::Deserialize)]
+struct StoredFriends {
+    account_id: u32,
+    #[serde(rename = "friends.account_id")]
+    friends_account_id: Vec<u32>,
+    #[serde(rename = "friends.friend_since")]
+    friends_friend_since: Vec<u32>,
+}
+
+async fn stored_friends(
+    ch_client: &clickhouse::Client,
+    account_ids: &[u32],
+) -> clickhouse::error::Result<Vec<StoredFriends>> {
+    ch_client
+        .query(
+            "SELECT account_id, \
+                 argMax(friends.account_id, last_updated) AS `friends.account_id`, \
+                 argMax(friends.friend_since, last_updated) AS `friends.friend_since` \
+             FROM steam_profiles WHERE account_id IN ? GROUP BY account_id \
+             SETTINGS log_comment = 'steam_profile_fetcher_stored_friends'",
+        )
+        .bind(account_ids)
+        .fetch_all()
+        .await
 }
 
 /// Folds the table's `max` states with a `GROUP BY` rather than `FINAL`: the views feeding
@@ -343,7 +408,7 @@ SETTINGS log_comment = 'steam_profile_fetcher_get_account_ids_to_update'
     ch_client.query(&query).fetch_all().await
 }
 
-fn filter_protected_users(account_ids: Vec<u32>, protected_users: &[u32]) -> Vec<u32> {
+fn filter_protected_users(account_ids: Vec<u32>, protected_users: &HashSet<u32>) -> Vec<u32> {
     account_ids
         .into_iter()
         .filter(|id| !protected_users.contains(id))
@@ -384,13 +449,13 @@ async fn delete_profiles(
 )]
 async fn get_protected_users_cached(
     ph_client: &sqlx::Pool<sqlx::Postgres>,
-) -> sqlx::Result<Vec<u32>> {
+) -> sqlx::Result<HashSet<u32>> {
     let protected_users = sqlx::query!("SELECT steam_id FROM protected_user_accounts")
         .fetch_all(ph_client)
         .await?
         .into_iter()
         .map(|r| r.steam_id)
         .map(i32::cast_unsigned)
-        .collect_vec();
+        .collect();
     Ok(protected_users)
 }

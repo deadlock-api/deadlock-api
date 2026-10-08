@@ -48,14 +48,18 @@ pub(crate) async fn fetch_steam_profiles(
         "https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key={api_key}&steamids={steam_ids}"
     );
 
-    // Make the API call
-    let player_summaries: SteamPlayerSummaryResponse = http_client
-        .get(&url)
-        .send()
-        .await
-        .and_then(reqwest::Response::error_for_status)?
-        .json()
-        .await?;
+    // Make the API call. Errors drop the URL: it carries the API key and they get logged.
+    let player_summaries: SteamPlayerSummaryResponse = async {
+        http_client
+            .get(&url)
+            .send()
+            .await?
+            .error_for_status()?
+            .json()
+            .await
+    }
+    .await
+    .map_err(reqwest::Error::without_url)?;
     let player_summaries = player_summaries.response.players;
     Ok(player_summaries.into_iter().map_into().collect_vec())
 }
@@ -72,13 +76,18 @@ pub(crate) async fn fetch_steam_friends(
         "https://api.steampowered.com/ISteamUser/GetFriendList/v1/?key={api_key}&steamid={steam_id64}&relationship=friend"
     );
 
-    let response = http_client.get(&url).send().await?;
-    if matches!(
-        response.status(),
-        reqwest::StatusCode::UNAUTHORIZED | reqwest::StatusCode::FORBIDDEN
-    ) {
-        return Ok(Vec::new());
+    // Errors drop the URL: it carries the API key and they get logged.
+    async {
+        let response = http_client.get(&url).send().await?;
+        if matches!(
+            response.status(),
+            reqwest::StatusCode::UNAUTHORIZED | reqwest::StatusCode::FORBIDDEN
+        ) {
+            return Ok(Vec::new());
+        }
+        let friends: SteamFriendListResponse = response.error_for_status()?.json().await?;
+        Ok(friends.friendslist.friends)
     }
-    let friends: SteamFriendListResponse = response.error_for_status()?.json().await?;
-    Ok(friends.friendslist.friends)
+    .await
+    .map_err(|e: reqwest::Error| e.without_url().into())
 }
