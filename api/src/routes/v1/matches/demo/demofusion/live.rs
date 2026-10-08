@@ -8,7 +8,7 @@
 use core::time::Duration;
 use std::collections::{HashMap, HashSet};
 use std::io::{self, Read};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, LazyLock, Mutex};
 
 use bytes::Bytes;
 use datafusion::arrow::datatypes::SchemaRef;
@@ -186,13 +186,23 @@ async fn connect_with_retry(
     }
 }
 
+/// Broadcast fetch client. Redirects are only followed to hosts that pass the broadcast URL
+/// allow-list, so a relay cannot bounce the server elsewhere.
+static BROADCAST_CLIENT: LazyLock<reqwest::Client> = LazyLock::new(|| {
+    reqwest::Client::builder()
+        .redirect(crate::utils::broadcast_url::redirect_policy())
+        .build()
+        // Same failure mode as `reqwest::Client::new()`, which panics on TLS backend init errors.
+        .expect("failed to build broadcast HTTP client")
+});
+
 async fn try_connect(
     base_url: &str,
 ) -> core::result::Result<
     (BroadcastHttp<'static, reqwest::Client>, Bytes),
     BroadcastHttpClientError<reqwest::Error>,
 > {
-    let client = reqwest::Client::new();
+    let client = BROADCAST_CLIENT.clone();
     let mut http = BroadcastHttp::start_streaming(client, base_url.to_string()).await?;
     match http.next_packet().await {
         Some(Ok(bytes)) => Ok((http, bytes)),

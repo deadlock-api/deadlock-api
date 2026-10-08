@@ -26,6 +26,7 @@ use crate::error::{APIError, APIResult};
 use crate::routes::v1::matches::live_url::resolve_broadcast_url;
 use crate::services::rate_limiter::Quota;
 use crate::services::rate_limiter::extractor::RateLimitKey;
+use crate::utils::broadcast_url::validate_broadcast_url;
 
 #[derive(Deserialize, IntoParams)]
 pub(super) struct LiveQueryParams {
@@ -110,6 +111,11 @@ pub(super) async fn live_query(
             ));
         }
     };
+
+    // Both a caller-supplied URL and a resolved one (the cache also holds ingested URLs) must
+    // point at a Valve broadcast host before the server fetches it.
+    validate_broadcast_url(&broadcast_url)
+        .map_err(|reason| APIError::status_msg(StatusCode::BAD_REQUEST, reason))?;
 
     // The response head is returned immediately; the (fallible, potentially slow) broadcast setup
     // runs lazily inside the stream so a stale/unavailable relay surfaces as a terminal `error`
