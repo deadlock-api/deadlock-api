@@ -97,6 +97,17 @@ impl PlayerMatchHistoryEntry {
             .and_then(|r| r.initial_calibration_games)
             .unwrap_or_default();
         let in_calibration = calibration_left > 0;
+        let rounds = &match_info.street_brawl_rounds;
+        let brawl_score = |team: Team| {
+            let team = team as u8;
+            (!rounds.is_empty()).then(|| {
+                rounds
+                    .iter()
+                    .filter_map(|r| r.winning_team)
+                    .filter(|&r| r as u8 == team)
+                    .count() as u32
+            })
+        };
         Some(Self {
             account_id: player.account_id?,
             match_id: match_info.match_id?,
@@ -118,29 +129,14 @@ impl PlayerMatchHistoryEntry {
             match_result: match_info.winning_team? as u32,
             objectives_mask_team0: match_info.objectives_mask_team0? as u32,
             objectives_mask_team1: match_info.objectives_mask_team1? as u32,
-            brawl_score_team0: (!match_info.street_brawl_rounds.is_empty()).then(|| {
-                match_info
-                    .street_brawl_rounds
+            brawl_score_team0: brawl_score(Team::Team0),
+            brawl_score_team1: brawl_score(Team::Team1),
+            brawl_avg_round_time_s: (!rounds.is_empty()).then(|| {
+                rounds
                     .iter()
-                    .filter_map(|r| r.winning_team)
-                    .filter(|&r| r as u8 == Team::Team0 as u8)
-                    .count() as u32
-            }),
-            brawl_score_team1: (!match_info.street_brawl_rounds.is_empty()).then(|| {
-                match_info
-                    .street_brawl_rounds
-                    .iter()
-                    .filter_map(|r| r.winning_team)
-                    .filter(|&r| r as u8 == Team::Team1 as u8)
-                    .count() as u32
-            }),
-            brawl_avg_round_time_s: (!match_info.street_brawl_rounds.is_empty()).then(|| {
-                match_info
-                    .street_brawl_rounds
-                    .iter()
-                    .filter_map(|&r| r.round_duration_s)
+                    .filter_map(|r| r.round_duration_s)
                     .sum::<u32>()
-                    / match_info.street_brawl_rounds.len() as u32
+                    / rounds.len() as u32
             }),
             player_match_outcome: PlayerMatchOutcome::from(player.player_match_outcome()),
             ranked_display_badge: rank.as_ref().and_then(derived_badge),

@@ -14,6 +14,7 @@
 
 use core::sync::atomic::{AtomicU32, AtomicUsize, Ordering};
 use core::time::Duration;
+use std::borrow::Cow;
 use std::collections::HashSet;
 use std::sync::{Arc, Mutex};
 
@@ -327,29 +328,29 @@ async fn ingest_key<S: ObjectStore + 'static>(
     inserters: &Inserters,
     key: Path,
 ) {
-    match timeout(
+    let stays_in_flight = match timeout(
         Duration::from_secs(30),
         fetch_parse_and_send(post_flush, inserters, &key),
     )
     .await
     {
-        Ok(Ok(true)) => {
+        Ok(Ok(stays_in_flight)) => {
             counter!("ingest_worker.fetch_parse.success").increment(1);
-        }
-        Ok(Ok(false)) => {
-            counter!("ingest_worker.fetch_parse.success").increment(1);
-            lock_inflight(&post_flush.inflight).remove(&key);
+            stays_in_flight
         }
         Ok(Err(e)) => {
             counter!("ingest_worker.fetch_parse.failure").increment(1);
             error!("Error fetching/parsing object {key}: {e:#}");
-            lock_inflight(&post_flush.inflight).remove(&key);
+            false
         }
         Err(_) => {
             counter!("ingest_worker.fetch_parse.timeout").increment(1);
             error!("Fetch+parse timed out for {key}");
-            lock_inflight(&post_flush.inflight).remove(&key);
+            false
         }
+    };
+    if !stays_in_flight {
+        lock_inflight(&post_flush.inflight).remove(&key);
     }
 }
 
@@ -447,11 +448,10 @@ async fn reingest_from_file(
     num_inserters: usize,
 ) -> anyhow::Result<()> {
     let content = tokio::fs::read_to_string(file_path).await?;
-    let match_ids: Vec<String> = content
+    let match_ids: Vec<&str> = content
         .lines()
         .map(str::trim)
         .filter(|l| !l.is_empty())
-        .map(String::from)
         .collect();
 
     let total = match_ids.len();
@@ -478,7 +478,7 @@ async fn reingest_from_file(
                 if inserters.has_failed() {
                     return;
                 }
-                match fetch_and_parse_match(store, &match_id).await {
+                match fetch_and_parse_match(store, match_id).await {
                     Ok(parsed) => {
                         if inserters.insert(parsed).await.is_none() {
                             warn!("Batch inserters have shut down — stopping producers");
@@ -523,7 +523,7 @@ async fn fetch_and_parse_match(
     store: &impl ObjectStore,
     match_id: &str,
 ) -> anyhow::Result<ParsedMatch> {
-    let (_, obj) = find_match_object(store, match_id).await?;
+    let obj = find_match_object(store, match_id).await?;
 
     let data = obj.bytes().await?;
     let match_info = decompress_and_parse(data).await??;
@@ -552,10 +552,7 @@ fn build_ch_players(match_info: &MatchInfo) -> Vec<ClickhouseMatchPlayer> {
         .map(|p| {
             (
                 &shared,
-                match_info
-                    .winning_team
-                    .and_then(|t| p.team.map(|pt| pt == t))
-                    .unwrap_or(false),
+                p.team.is_some_and(|t| match_info.winning_team == Some(t)),
                 p,
             )
                 .into()
@@ -564,16 +561,13 @@ fn build_ch_players(match_info: &MatchInfo) -> Vec<ClickhouseMatchPlayer> {
 }
 
 /// Try to find a match file in processed/ first, then failed/, across all known extensions.
-async fn find_match_object(
-    store: &impl ObjectStore,
-    match_id: &str,
-) -> anyhow::Result<(Path, GetResult)> {
-    for folder in &["processed/metadata", "failed/metadata"] {
+async fn find_match_object(store: &impl ObjectStore, match_id: &str) -> anyhow::Result<GetResult> {
+    for folder in [PROCESSED_PREFIX, FAILED_PREFIX] {
         for ext in MATCH_EXTENSIONS {
             let path = Path::from(format!("{folder}/{match_id}{ext}"));
             if let Ok(result) = store.get(&path).await {
                 debug!("Found match {match_id} at {path}");
-                return Ok((path, result));
+                return Ok(result);
             }
         }
     }
@@ -628,31 +622,33 @@ async fn decompress_and_parse(data: Bytes) -> std::io::Result<anyhow::Result<Mat
 /// The container is sniffed from the magic bytes rather than taken from the key's extension:
 /// Valve kept the `.meta.bz2` name but switched the actual compression to zstd for newer
 /// matches. Data matching neither magic is passed through as already-plain protobuf.
-fn decompress(data: &[u8]) -> std::io::Result<Vec<u8>> {
+fn decompress(data: &[u8]) -> std::io::Result<Cow<'_, [u8]>> {
     use std::io::Read;
 
     const ZSTD_MAGIC: [u8; 4] = [0x28, 0xb5, 0x2f, 0xfd];
     const BZIP2_MAGIC: [u8; 3] = *b"BZh";
 
-    let mut decompressed = vec![];
-    if data.starts_with(&ZSTD_MAGIC) {
-        zstd::stream::read::Decoder::new(data)?.read_to_end(&mut decompressed)?;
+    let decompressed = if data.starts_with(&ZSTD_MAGIC) {
+        let mut buf = vec![];
+        zstd::stream::read::Decoder::new(data)?.read_to_end(&mut buf)?;
+        Cow::Owned(buf)
     } else if data.starts_with(&BZIP2_MAGIC) {
-        bzip2::read::BzDecoder::new(data).read_to_end(&mut decompressed)?;
+        let mut buf = vec![];
+        bzip2::read::BzDecoder::new(data).read_to_end(&mut buf)?;
+        Cow::Owned(buf)
     } else {
-        decompressed = data.to_vec();
-    }
+        Cow::Borrowed(data)
+    };
     counter!("ingest_worker.decompress_object.success").increment(1);
     debug!("Decompressed object");
     Ok(decompressed)
 }
 
 fn parse_match_data(buf: &[u8]) -> anyhow::Result<MatchInfo> {
-    let data = match CMsgMatchMetaData::decode(buf) {
-        Ok(m) => m.match_details.unwrap_or_else(|| buf.to_owned()),
-        Err(_) => buf.to_owned(),
-    };
-    let data = data.as_slice();
+    let details = CMsgMatchMetaData::decode(buf)
+        .ok()
+        .and_then(|m| m.match_details);
+    let data = details.as_deref().unwrap_or(buf);
     let data = if let Ok(m) = CMsgMatchMetaDataContents::decode(data).or_else(|_| {
         CMsgMatchMetaDataContentsPatched::decode(data)
             .or_else(|_| CMsgMatchMetaDataContentsPatched::decode(buf))
