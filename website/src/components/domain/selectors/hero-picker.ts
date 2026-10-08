@@ -2,9 +2,6 @@ import {
   countSummary,
   filterByName,
   type Pickable,
-  PICKER_COLUMNS,
-  type PickerSelectionMode,
-  type PickerTileState,
   type PickerTriState,
   toggleInList,
 } from "~/components/patterns/picker/picker";
@@ -15,13 +12,8 @@ import {
  */
 export { cycleTriState, moveInGrid, toggleTriState, triStateSummary } from "~/components/patterns/picker/picker";
 
-export type HeroSelectionMode = PickerSelectionMode;
 export type HeroTriState = PickerTriState;
-export type HeroTileState = PickerTileState;
 export type PickableHero = Pickable;
-
-/** Five portraits a row, like every picker grid. */
-export const HERO_GRID_COLUMNS = PICKER_COLUMNS;
 
 /** The heroes whose name contains the query, ignoring case and surrounding space, in the order they came in. */
 export const filterHeroes = filterByName;
