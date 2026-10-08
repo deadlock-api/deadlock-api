@@ -462,40 +462,47 @@ fn hero_release_votes(match_info: &MatchInfo) -> Vec<CMsgMatchHeroReleaseVotes> 
         .collect()
 }
 
-#[expect(clippy::too_many_lines)]
-impl From<(&MatchInfo, bool, Players)> for ClickhouseMatchPlayer {
-    fn from((match_info, won, value): (&MatchInfo, bool, Players)) -> Self {
-        let player_votes: Vec<(HeroReleaseVoteCategory, HeroVote)> = hero_release_votes(match_info)
+/// Match-level values every player row of a match repeats, computed once per match
+/// rather than once per player (the hero release votes are zstd-decompressed).
+pub(crate) struct MatchShared<'a> {
+    match_info: &'a MatchInfo,
+    average_badge: Option<u32>,
+    hero_votes: Vec<(HeroReleaseVoteCategory, HeroVote)>,
+    objectives_destroyed_time_s: Vec<u32>,
+    objectives_creep_damage: Vec<u32>,
+    objectives_creep_damage_mitigated: Vec<u32>,
+    objectives_player_damage: Vec<u32>,
+    objectives_player_damage_mitigated: Vec<u32>,
+    objectives_first_damage_time_s: Vec<u32>,
+    objectives_team_objective: Vec<Objective>,
+    objectives_team: Vec<Team>,
+    objectives_player_spirit_damage: Vec<u32>,
+    mid_boss_team_killed: Vec<Team>,
+    mid_boss_team_claimed: Vec<Team>,
+    mid_boss_destroyed_time_s: Vec<u32>,
+    street_brawl_round_duration_s: Vec<u32>,
+    street_brawl_rounds_winning_team: Vec<Team>,
+    team_score: Vec<u32>,
+    match_tracked_stats: Vec<(u32, i32)>,
+    team0_tracked_stats: Vec<(u32, i32)>,
+    team1_tracked_stats: Vec<(u32, i32)>,
+}
+
+impl<'a> MatchShared<'a> {
+    #[expect(clippy::too_many_lines)]
+    pub(crate) fn new(match_info: &'a MatchInfo) -> Self {
+        let hero_votes = hero_release_votes(match_info)
             .into_iter()
             .flat_map(|votes| votes.categories)
             .flat_map(|c| {
                 let category = HeroReleaseVoteCategory::from(c.vote_category());
                 c.hero_votes.into_iter().map(move |v| (category.clone(), v))
             })
-            .filter(|(_, v)| v.vote_player_slot() == value.player_slot())
             .collect();
         Self {
-            match_id: match_info.match_id(),
-            start_time: match_info.start_time(),
-            duration_s: match_info.duration_s(),
-            match_mode: MatchMode::from(match_info.match_mode()),
-            game_mode: GameMode::from(match_info.game_mode()),
-            average_badge_team0: match_info.average_badge_team0,
-            average_badge_team1: match_info.average_badge_team1,
+            match_info,
             average_badge: average_badge(match_info),
-            winning_team: Team::from(match_info.winning_team()),
-            match_outcome: MatchOutcome::from(match_info.match_outcome()),
-            bot_difficulty: BotDifficulty::from(match_info.bot_difficulty()),
-            objectives_mask_team0: match_info.objectives_mask_team0() as u16,
-            objectives_mask_team1: match_info.objectives_mask_team1() as u16,
-            is_high_skill_range_parties: match_info.is_high_skill_range_parties,
-            low_pri_pool: match_info.low_pri_pool,
-            new_player_pool: match_info.new_player_pool,
-            not_scored: match_info.not_scored,
-            game_mode_version: match_info.game_mode_version,
-            ranked_type: RankedType::from(match_info.ranked_type()),
-            rank_interval: match_info.rank_interval,
-            corrupted_penalty_seed: match_info.corrupted_penalty_seed,
+            hero_votes,
             objectives_destroyed_time_s: match_info
                 .objectives
                 .iter()
@@ -589,6 +596,59 @@ impl From<(&MatchInfo, bool, Players)> for ClickhouseMatchPlayer {
                     .map(|x| (x.tracked_stat_id(), x.tracked_stat_value()))
                     .collect()
             }),
+        }
+    }
+}
+
+#[expect(clippy::too_many_lines)]
+impl From<(&MatchShared<'_>, bool, &Players)> for ClickhouseMatchPlayer {
+    fn from((shared, won, value): (&MatchShared<'_>, bool, &Players)) -> Self {
+        let match_info = shared.match_info;
+        let player_votes: Vec<&(HeroReleaseVoteCategory, HeroVote)> = shared
+            .hero_votes
+            .iter()
+            .filter(|(_, v)| v.vote_player_slot() == value.player_slot())
+            .collect();
+        Self {
+            match_id: match_info.match_id(),
+            start_time: match_info.start_time(),
+            duration_s: match_info.duration_s(),
+            match_mode: MatchMode::from(match_info.match_mode()),
+            game_mode: GameMode::from(match_info.game_mode()),
+            average_badge_team0: match_info.average_badge_team0,
+            average_badge_team1: match_info.average_badge_team1,
+            average_badge: shared.average_badge,
+            winning_team: Team::from(match_info.winning_team()),
+            match_outcome: MatchOutcome::from(match_info.match_outcome()),
+            bot_difficulty: BotDifficulty::from(match_info.bot_difficulty()),
+            objectives_mask_team0: match_info.objectives_mask_team0() as u16,
+            objectives_mask_team1: match_info.objectives_mask_team1() as u16,
+            is_high_skill_range_parties: match_info.is_high_skill_range_parties,
+            low_pri_pool: match_info.low_pri_pool,
+            new_player_pool: match_info.new_player_pool,
+            not_scored: match_info.not_scored,
+            game_mode_version: match_info.game_mode_version,
+            ranked_type: RankedType::from(match_info.ranked_type()),
+            rank_interval: match_info.rank_interval,
+            corrupted_penalty_seed: match_info.corrupted_penalty_seed,
+            objectives_destroyed_time_s: shared.objectives_destroyed_time_s.clone(),
+            objectives_creep_damage: shared.objectives_creep_damage.clone(),
+            objectives_creep_damage_mitigated: shared.objectives_creep_damage_mitigated.clone(),
+            objectives_player_damage: shared.objectives_player_damage.clone(),
+            objectives_player_damage_mitigated: shared.objectives_player_damage_mitigated.clone(),
+            objectives_first_damage_time_s: shared.objectives_first_damage_time_s.clone(),
+            objectives_team_objective: shared.objectives_team_objective.clone(),
+            objectives_team: shared.objectives_team.clone(),
+            objectives_player_spirit_damage: shared.objectives_player_spirit_damage.clone(),
+            mid_boss_team_killed: shared.mid_boss_team_killed.clone(),
+            mid_boss_team_claimed: shared.mid_boss_team_claimed.clone(),
+            mid_boss_destroyed_time_s: shared.mid_boss_destroyed_time_s.clone(),
+            street_brawl_round_duration_s: shared.street_brawl_round_duration_s.clone(),
+            street_brawl_rounds_winning_team: shared.street_brawl_rounds_winning_team.clone(),
+            team_score: shared.team_score.clone(),
+            match_tracked_stats: shared.match_tracked_stats.clone(),
+            team0_tracked_stats: shared.team0_tracked_stats.clone(),
+            team1_tracked_stats: shared.team1_tracked_stats.clone(),
             account_id: value.account_id(),
             won,
             player_slot: value.player_slot(),

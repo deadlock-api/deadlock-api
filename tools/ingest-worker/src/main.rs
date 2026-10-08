@@ -34,7 +34,7 @@ use valveprotos::deadlock::{
     CMsgMatchMetaData, CMsgMatchMetaDataContents, CMsgMatchMetaDataContentsPatched,
 };
 
-use crate::models::clickhouse_match_metadata::ClickhouseMatchPlayer;
+use crate::models::clickhouse_match_metadata::{ClickhouseMatchPlayer, MatchShared};
 use crate::models::clickhouse_player_match_history::PlayerMatchHistoryEntry;
 
 mod models;
@@ -437,14 +437,14 @@ async fn fetch_parse_and_send<S: ObjectStore>(
     };
 
     let data = obj.bytes().await?;
-    let data = decompress(data).await?;
+    let parsed = decompress_and_parse(data).await?;
 
     let filename = key
         .filename()
         .with_context(|| format!("Missing filename for key {key}"))?
         .to_owned();
 
-    let match_info = match parse_match_data(&data) {
+    let match_info = match parsed {
         Ok(m)
             if m.match_outcome
                 .is_some_and(|o| o == EMatchOutcome::KEOutcomeError as i32) =>
@@ -726,9 +726,7 @@ async fn fetch_and_parse_match(
     let (_, obj) = find_match_object(store, match_id).await?;
 
     let data = obj.bytes().await?;
-    let data = decompress(data).await?;
-
-    let match_info = parse_match_data(&data)?;
+    let match_info = decompress_and_parse(data).await??;
 
     let players = build_ch_players(&match_info);
     let history: Vec<PlayerMatchHistoryEntry> = match_info
@@ -744,14 +742,14 @@ async fn fetch_and_parse_match(
 
 /// Build the per-player Clickhouse rows for a parsed match.
 fn build_ch_players(match_info: &MatchInfo) -> Vec<ClickhouseMatchPlayer> {
+    let shared = MatchShared::new(match_info);
     match_info
         .players
         .iter()
         .filter(|p| p.hero_id.is_some_and(|h| h > 0))
-        .cloned()
         .map(|p| {
             (
-                match_info,
+                &shared,
                 match_info
                     .winning_team
                     .and_then(|t| p.team.map(|pt| pt == t))
@@ -815,36 +813,41 @@ async fn get_object(store: &impl ObjectStore, key: &Path) -> object_store::Resul
     }
 }
 
-/// Decompress an object on a blocking thread to avoid starving the async runtime.
+/// Decompress and parse an object on a blocking thread to avoid starving the async runtime.
 ///
+/// The outer error is a decompression (or join) failure; the inner one is a protobuf
+/// parse failure, which callers treat differently.
+async fn decompress_and_parse(data: Bytes) -> std::io::Result<anyhow::Result<MatchInfo>> {
+    tokio::task::spawn_blocking(move || decompress(&data).map(|d| parse_match_data(&d)))
+        .await
+        .map_err(std::io::Error::other)?
+}
+
 /// The container is sniffed from the magic bytes rather than taken from the key's extension:
 /// Valve kept the `.meta.bz2` name but switched the actual compression to zstd for newer
 /// matches. Data matching neither magic is passed through as already-plain protobuf.
-async fn decompress(data: Bytes) -> std::io::Result<Vec<u8>> {
+fn decompress(data: &[u8]) -> std::io::Result<Vec<u8>> {
+    use std::io::Read;
+
     const ZSTD_MAGIC: [u8; 4] = [0x28, 0xb5, 0x2f, 0xfd];
     const BZIP2_MAGIC: [u8; 3] = *b"BZh";
 
-    tokio::task::spawn_blocking(move || {
-        use std::io::Read;
-        let mut decompressed = vec![];
-        if data.starts_with(&ZSTD_MAGIC) {
-            zstd::stream::read::Decoder::new(data.as_ref())?.read_to_end(&mut decompressed)?;
-        } else if data.starts_with(&BZIP2_MAGIC) {
-            bzip2::read::BzDecoder::new(data.as_ref()).read_to_end(&mut decompressed)?;
-        } else {
-            decompressed = data.to_vec();
-        }
-        counter!("ingest_worker.decompress_object.success").increment(1);
-        debug!("Decompressed object");
-        Ok(decompressed)
-    })
-    .await
-    .map_err(std::io::Error::other)?
+    let mut decompressed = vec![];
+    if data.starts_with(&ZSTD_MAGIC) {
+        zstd::stream::read::Decoder::new(data)?.read_to_end(&mut decompressed)?;
+    } else if data.starts_with(&BZIP2_MAGIC) {
+        bzip2::read::BzDecoder::new(data).read_to_end(&mut decompressed)?;
+    } else {
+        decompressed = data.to_vec();
+    }
+    counter!("ingest_worker.decompress_object.success").increment(1);
+    debug!("Decompressed object");
+    Ok(decompressed)
 }
 
 fn parse_match_data(buf: &[u8]) -> anyhow::Result<MatchInfo> {
     let data = match CMsgMatchMetaData::decode(buf) {
-        Ok(m) => m.match_details.map_or(buf.to_owned(), |m| m.clone()),
+        Ok(m) => m.match_details.unwrap_or_else(|| buf.to_owned()),
         Err(_) => buf.to_owned(),
     };
     let data = data.as_slice();
