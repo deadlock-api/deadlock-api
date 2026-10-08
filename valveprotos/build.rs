@@ -38,24 +38,31 @@ fn required_protos() -> Vec<&'static str> {
 
 fn collect_protos(dir: &str) -> io::Result<Vec<PathBuf>> {
     let protos = required_protos();
-    fs::read_dir(dir)?
-        .map(|dir_entry| {
-            let path = dir_entry?.path();
-            assert!(path.is_file());
-            assert!(path.extension().is_some_and(|ext| ext == "proto"));
-            Ok(path)
-        })
-        .filter(|p| {
-            p.as_ref().is_ok_and(|p| {
-                protos.contains(
-                    &p.file_name()
-                        .unwrap_or_default()
-                        .to_str()
-                        .unwrap_or_default(),
-                )
-            })
-        })
-        .collect::<io::Result<Vec<_>>>()
+    let mut paths = vec![];
+    for dir_entry in fs::read_dir(dir)? {
+        let path = dir_entry?.path();
+        assert!(path.is_file());
+        assert!(path.extension().is_some_and(|ext| ext == "proto"));
+        if path
+            .file_name()
+            .and_then(|name| name.to_str())
+            .is_some_and(|name| protos.contains(&name))
+        {
+            paths.push(path);
+        }
+    }
+    Ok(paths)
+}
+
+/// a prost config that writes messages without a package into `{package}.rs`.
+fn new_config(package: &str) -> Config {
+    let mut config = Config::default();
+    config.default_package_filename(package);
+    #[cfg(feature = "serde")]
+    {
+        config.type_attribute(".", "#[derive(serde::Serialize, serde::Deserialize)]");
+    }
+    config
 }
 
 type ExternDefs<'a> = (&'a Option<FileDescriptorSet>, &'static str);
@@ -70,7 +77,7 @@ fn decl_externs(externs: &[ExternDefs], config: &mut Config) {
     // see https://github.com/tokio-rs/prost/blob/9ed944eb633480079037dfceeee61aac6cd0c94f/prost-build/src/ident.rs#L30
     use heck::ToUpperCamelCase;
 
-    let mut declared: HashSet<String> = Default::default();
+    let mut declared: HashSet<&str> = HashSet::new();
     for (fds, rust_path) in externs {
         let Some(fds) = fds else {
             continue;
@@ -85,52 +92,30 @@ fn decl_externs(externs: &[ExternDefs], config: &mut Config) {
                         .map(|message_type| message_type.name()),
                 )
                 .for_each(|name| {
-                    if declared.contains(name) {
-                        return;
+                    if declared.insert(name) {
+                        config.extern_path(
+                            format!(".{name}"),
+                            format!("{}::{}", rust_path, name.to_upper_camel_case()),
+                        );
                     }
-                    config.extern_path(
-                        format!(".{name}"),
-                        format!("{}::{}", rust_path, name.to_upper_camel_case()),
-                    );
-                    declared.insert(name.to_string());
                 });
         }
     }
 }
 
-fn load_common_protos() -> io::Result<Option<FileDescriptorSet>> {
-    let mut config = Config::default();
-    config.default_package_filename("common");
+/// compiles the required protos of `protos/{package}` into `{package}.rs`; returns their
+/// descriptors, or `None` if none of them are required.
+fn load_protos(package: &str) -> io::Result<Option<FileDescriptorSet>> {
+    let mut config = new_config(package);
 
-    #[cfg(feature = "serde")]
-    {
-        config.type_attribute(".", "#[derive(serde::Serialize, serde::Deserialize)]");
-    }
-
-    let protos = collect_protos("protos/common")?;
+    let dir = format!("protos/{package}");
+    let protos = collect_protos(&dir)?;
     if protos.is_empty() {
         return Ok(None);
     }
-    let common_fds = config.load_fds(&protos, &["protos/common"])?;
-    config.compile_fds(common_fds.clone())?;
-    Ok(Some(common_fds))
-}
-
-fn load_gcsdk_protos() -> io::Result<Option<FileDescriptorSet>> {
-    let mut config = Config::default();
-    config.default_package_filename("gcsdk");
-    #[cfg(feature = "serde")]
-    {
-        config.type_attribute(".", "#[derive(serde::Serialize, serde::Deserialize)]");
-    }
-
-    let protos = collect_protos("protos/gcsdk")?;
-    if protos.is_empty() {
-        return Ok(None);
-    }
-    let gcsdk_fds = config.load_fds(&protos, &["protos/gcsdk"])?;
-    config.compile_fds(gcsdk_fds.clone())?;
-    Ok(Some(gcsdk_fds))
+    let fds = config.load_fds(&protos, &[&dir])?;
+    config.compile_fds(fds.clone())?;
+    Ok(Some(fds))
 }
 
 fn compile_deadlock_protos(externs: &[ExternDefs]) -> io::Result<()> {
@@ -139,13 +124,7 @@ fn compile_deadlock_protos(externs: &[ExternDefs]) -> io::Result<()> {
     #[allow(unused)]
     let descriptor_file = out.join("descriptors.bin");
 
-    let mut config = Config::default();
-    config.default_package_filename("deadlock");
-
-    #[cfg(feature = "serde")]
-    {
-        config.type_attribute(".", "#[derive(serde::Serialize, serde::Deserialize)]");
-    }
+    let mut config = new_config("deadlock");
 
     // reflect (prost-reflect) needs the descriptor set on disk.
     #[cfg(feature = "reflect")]
@@ -182,8 +161,8 @@ fn main() -> io::Result<()> {
     // tell cargo that if the given file changes, to rerun this build script.
     println!("cargo::rerun-if-changed=protos");
 
-    let common_fds = load_common_protos()?;
-    let gcsdk_fds = load_gcsdk_protos()?;
+    let common_fds = load_protos("common")?;
+    let gcsdk_fds = load_protos("gcsdk")?;
 
     compile_deadlock_protos(&[(&common_fds, "crate::common"), (&gcsdk_fds, "crate::gcsdk")])?;
 
