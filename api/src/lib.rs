@@ -26,7 +26,7 @@ pub mod utils;
 use core::time::Duration;
 
 use axum::extract::{Request, State};
-use axum::http::{HeaderMap, HeaderValue, StatusCode, header};
+use axum::http::{HeaderValue, StatusCode, header};
 use axum::middleware::{Next, from_fn, from_fn_with_state};
 use axum::response::{IntoResponse, Redirect, Response};
 use axum::routing::get;
@@ -115,12 +115,10 @@ async fn no_store_on_error(req: Request, next: Next) -> Response {
 }
 
 async fn favicon() -> impl IntoResponse {
-    let favicon = include_bytes!("../public/favicon.ico");
-    let mut headers = HeaderMap::new();
-    if let Ok(content_type) = "image/x-icon".parse() {
-        headers.insert(header::CONTENT_TYPE, content_type);
-    }
-    (headers, favicon)
+    (
+        [(header::CONTENT_TYPE, "image/x-icon")],
+        include_bytes!("../public/favicon.ico"),
+    )
 }
 
 pub async fn router(port: u16) -> Result<NormalizePath<Router>, StartupError> {
@@ -164,11 +162,7 @@ pub async fn router(port: u16) -> Result<NormalizePath<Router>, StartupError> {
                     "API key is required for this endpoint",
                 ));
             }
-            let mut headers = HeaderMap::new();
-            if let Ok(value) = "no-cache".parse() {
-                headers.append(header::CACHE_CONTROL, value);
-            }
-            Ok((headers, metric_handle.render()))
+            Ok(([(header::CACHE_CONTROL, "no-cache")], metric_handle.render()))
         }))
         // robots.txt
         .route("/robots.txt", get(async || ROBOTS_TXT))
