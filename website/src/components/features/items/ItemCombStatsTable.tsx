@@ -3,6 +3,7 @@ import { Fragment, memo, useMemo } from "react";
 
 import { ItemCell } from "~/components/domain/assets/ItemCell";
 import { CHART_COLOR } from "~/components/patterns/charts/theme";
+import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { ProgressBarWithLabel } from "~/components/ui/progress-bar";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
@@ -94,7 +95,12 @@ export function ItemCombStatsTable({
     gameMode,
     matchMode,
   };
-  const { data: itemCombData, isLoading } = useQuery(
+  const {
+    data: itemCombData,
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery(
     itemPermutationStatsQueryOptions({ ...baseQuery, minUnixTimestamp: minUnixTimestamp ?? 0, maxUnixTimestamp }),
   );
   const { data: prevItemCombData } = useQuery({
@@ -147,6 +153,8 @@ export function ItemCombStatsTable({
     <>
       {isLoading ? (
         <LoadingState label="item combinations" align="center" />
+      ) : isError && !itemCombData ? (
+        <ErrorState title="Item combinations did not load" onRetry={() => void refetch()} />
       ) : (
         <Table>
           {!hideHeader && (
