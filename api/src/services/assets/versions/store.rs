@@ -5,16 +5,15 @@
 //! memory. Listing the version directory yields the set of known patches.
 
 use core::time::Duration;
+use std::io::Read;
 use std::sync::Arc;
 
 use arc_swap::ArcSwap;
-use async_compression::tokio::bufread::ZstdDecoder;
 use bytes::Bytes;
 use cached::macros::cached;
 use object_store::aws::AmazonS3;
 use object_store::{ObjectStore, ObjectStoreExt, path::Path as ObjectPath};
 use thiserror::Error;
-use tokio::io::AsyncReadExt;
 use tokio::sync::Mutex;
 use tracing::debug;
 
@@ -153,9 +152,19 @@ pub(crate) async fn fetch_zst(r2: &AmazonS3, key: &str) -> Result<Bytes, Version
     debug!("Fetching asset: {key}");
     let res = r2.get(&ObjectPath::from(key.to_owned())).await?;
     let compressed = res.bytes().await?;
-    let mut decoder = ZstdDecoder::new(std::io::Cursor::new(compressed.as_ref()));
+    // Decompressing a multi-MB vdata/localization file is CPU work; keep it off the async workers.
+    tokio::task::spawn_blocking(move || decompress_zst(&compressed))
+        .await
+        .map_err(std::io::Error::other)?
+        .map_err(Into::into)
+}
+
+/// Decompresses the first zstd frame of `compressed`.
+fn decompress_zst(compressed: &[u8]) -> std::io::Result<Bytes> {
     let mut out = Vec::with_capacity(compressed.len() * 4);
-    decoder.read_to_end(&mut out).await?;
+    zstd::stream::read::Decoder::new(compressed)?
+        .single_frame()
+        .read_to_end(&mut out)?;
     Ok(Bytes::from(out))
 }
 
