@@ -105,10 +105,8 @@ pub(super) async fn ingest_salts(
     let new_salts: Vec<ClickhouseSalts> = match_salts
         .into_iter()
         .filter(|salt| {
-            let (has_metadata, has_replay) = existing
-                .get(&salt.match_id)
-                .copied()
-                .unwrap_or((false, false));
+            let (has_metadata, has_replay) =
+                existing.get(&salt.match_id).copied().unwrap_or_default();
             let metadata_new = salt.metadata_salt.is_some() && !has_metadata;
             let replay_new = salt.replay_salt.is_some() && !has_replay;
             metadata_new || replay_new

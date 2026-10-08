@@ -268,20 +268,11 @@ impl MatchMode {
     /// also has a `match_mode` column.
     pub(crate) fn sql_filter_with_prefix(match_modes: Option<&[Self]>, prefix: &str) -> String {
         match match_modes {
-            Some(modes) if !modes.is_empty() => {
-                if modes.len() == 1 {
-                    format!("{prefix}match_mode = '{}'", modes[0])
-                } else {
-                    format!(
-                        "{prefix}match_mode IN ({})",
-                        modes
-                            .iter()
-                            .map(|m| format!("'{m}'"))
-                            .collect::<Vec<_>>()
-                            .join(", ")
-                    )
-                }
-            }
+            Some([mode]) => format!("{prefix}match_mode = '{mode}'"),
+            Some(modes) if !modes.is_empty() => format!(
+                "{prefix}match_mode IN ({})",
+                modes.iter().map(|m| format!("'{m}'")).join(", ")
+            ),
             _ => format!(
                 "{prefix}match_mode IN ('{}', '{}')",
                 Self::Ranked,
@@ -501,11 +492,8 @@ impl From<(u64, CMsgClientToGcGetMatchMetaDataResponse, String)> for ClickhouseS
         (match_id, salts, username): (u64, CMsgClientToGcGetMatchMetaDataResponse, String),
     ) -> Self {
         Self {
-            match_id,
-            metadata_salt: salts.metadata_salt,
-            replay_salt: salts.replay_salt,
-            cluster_id: salts.replay_group_id,
             username: Some(username),
+            ..(match_id, salts).into()
         }
     }
 }
