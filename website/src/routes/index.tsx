@@ -256,8 +256,6 @@ function IndexRoute() {
           </Card>
         </Stack>
 
-        <AiSearch />
-
         <HeroActions>
           {valueProps.map((prop) => (
             <Button key={prop.label} asChild variant="outline" shape="pill">
@@ -275,6 +273,9 @@ function IndexRoute() {
           data, match history, player statistics, hero analytics, and more.
         </HeroLead>
       </Hero>
+
+      {/* Directly in the shell, not in a wrapper: where the browser cannot run it, it leaves no gap behind. */}
+      <AiSearch className="self-center" />
 
       <Section
         size="lg"
