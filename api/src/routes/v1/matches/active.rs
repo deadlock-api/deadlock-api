@@ -6,6 +6,7 @@ use axum::response::IntoResponse;
 use axum_extra::extract::Query;
 use base64::Engine;
 use base64::prelude::BASE64_STANDARD;
+use bytes::Bytes;
 use cached::macros::cached;
 use itertools::Itertools;
 use prost::Message;
@@ -35,7 +36,7 @@ pub(super) struct ActiveMatchesQuery {
 }
 
 #[cached(ttl_secs = 60, convert = "{ 0 }", key = "u8", sync_writes = "default")]
-async fn fetch_active_matches_raw(state: &AppState) -> Result<Vec<u8>, APIError> {
+async fn fetch_active_matches_raw(state: &AppState) -> Result<Bytes, APIError> {
     let steam_response = state
         .steam_client
         .call_steam_proxy_raw(SteamProxyQuery {
@@ -49,7 +50,7 @@ async fn fetch_active_matches_raw(state: &AppState) -> Result<Vec<u8>, APIError>
             soft_cooldown_millis: None,
         })
         .await?;
-    Ok(BASE64_STANDARD.decode(&steam_response.data)?)
+    Ok(BASE64_STANDARD.decode(&steam_response.data)?.into())
 }
 
 fn parse_active_matches_raw(raw_data: &[u8]) -> APIResult<Vec<ActiveMatch>> {
@@ -136,11 +137,7 @@ pub(super) async fn active_matches(
     // Filter by account id if provided
     #[expect(deprecated)]
     if let Some(account_id) = query.account_id {
-        active_matches.retain(|m| {
-            m.players
-                .iter()
-                .any(|p| p.account_id.is_some_and(|a| a == account_id))
-        });
+        active_matches.retain(|m| m.players.iter().any(|p| p.account_id == Some(account_id)));
     }
     if let Some(account_ids) = query.account_ids {
         active_matches.retain(|m| {

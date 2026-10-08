@@ -4,10 +4,10 @@ use axum::Json;
 use axum::extract::State;
 use axum::http::HeaderValue;
 use axum::http::header::CACHE_CONTROL;
-use axum::response::IntoResponse;
+use axum::response::{IntoResponse, Response};
 use axum_extra::extract::Query;
 use cached::macros::cached;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use sqlx::{Pool, Postgres};
 use tracing::debug;
 
@@ -23,11 +23,12 @@ const POOL_LIMIT: usize = 200_000;
 const MIN_MATCH_ID: u64 = 31_247_321;
 const CLAIM_PREFIX: &str = "matches_to_fetch:claimed:";
 
-fn worklist(ids: Vec<u64>) -> impl IntoResponse {
+fn worklist(ids: impl Serialize) -> Response {
     (
         [(CACHE_CONTROL, HeaderValue::from_static("no-store"))],
         Json(ids),
     )
+        .into_response()
 }
 
 #[cached(ttl_secs = 300, convert = "{ 0 }", key = "u8", sync_writes = "default")]
@@ -144,7 +145,7 @@ pub(super) async fn matches_to_fetch(
 
     if let Some(account_id) = account_id {
         let ids = pending_pool_for_account(&state.ch_client_ro, account_id).await?;
-        return Ok(worklist(ids.as_ref().clone()));
+        return Ok(worklist(ids));
     }
 
     let prioritized = prioritized_account_ids(&state.pg_client)
@@ -153,7 +154,7 @@ pub(super) async fn matches_to_fetch(
     let pool = pending_pool(&state.ch_client_ro, prioritized.as_slice()).await?;
     let n = pool.len();
     if n == 0 {
-        return Ok(worklist(Vec::new()));
+        return Ok(worklist(Vec::<u64>::new()));
     }
 
     // Walk the pool in priority order, skipping matches another worker has claimed.

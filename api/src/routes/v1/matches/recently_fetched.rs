@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use axum::Json;
 use axum::extract::State;
 use axum::response::IntoResponse;
@@ -69,7 +71,7 @@ impl From<ClickhouseMatchInfoRow> for ClickhouseMatchInfo {
 #[cached(ttl_secs = 60, convert = "{ 0 }", key = "u8", sync_writes = "default")]
 async fn get_recently_fetched_match_ids(
     ch_client: &clickhouse::Client,
-) -> clickhouse::error::Result<Vec<ClickhouseMatchInfo>> {
+) -> clickhouse::error::Result<Arc<Vec<ClickhouseMatchInfo>>> {
     // optimize_aggregation_in_order: the GROUP BY match_id matches the sort key, so
     // in-order aggregation replaces the hash aggregation (benchmarked 221ms -> 119ms,
     // -75% CPU). Only right for this query's shape; it times out on unsorted GROUP BYs.
@@ -90,7 +92,7 @@ async fn get_recently_fetched_match_ids(
     SETTINGS log_comment = 'recently_fetched', apply_patch_parts = 0, optimize_aggregation_in_order = 1
     ";
     let rows: Vec<ClickhouseMatchInfoRow> = ch_client.query(query).fetch_all().await?;
-    Ok(rows.into_iter().map(Into::into).collect())
+    Ok(Arc::new(rows.into_iter().map(Into::into).collect()))
 }
 
 #[utoipa::path(
