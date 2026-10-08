@@ -36,13 +36,14 @@ export function FindOnPage() {
         const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
         found.scrollIntoView({ block: "center", behavior: reduce ? "auto" : "smooth" });
         for (const type of DISMISS_EVENTS) window.addEventListener(type, finish, { once: true, passive: true });
+        window.clearTimeout(stop);
         stop = window.setTimeout(finish, OUTLINE_MS);
       }
     };
 
     // Watches until the outline is dismissed: the element may render late, or be rendered again without the mark.
     const observer = new MutationObserver(mark);
-    let stop = window.setTimeout(() => !scrolled && finish(), WAIT_MS);
+    let stop = window.setTimeout(finish, WAIT_MS);
 
     function finish() {
       done = true;

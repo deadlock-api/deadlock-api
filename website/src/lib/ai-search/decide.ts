@@ -55,7 +55,7 @@ export function requestDecision(
   return fetcher(provider.url, {
     method: "POST",
     headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ ...body, model: provider.model }),
+    body: JSON.stringify({ model: provider.model, ...body }),
     signal: AbortSignal.timeout(timeoutMs),
   });
 }
@@ -168,8 +168,8 @@ const PAGE_CRITERIA = withNone(
   "no page of the site shows this: the question is not about Deadlock stats, or is not a question",
 );
 
+/** The request without its model, which each provider names differently (`requestDecision` adds it). */
 export interface DecideRequestBody {
-  model: string;
   state: unknown;
   questions: Record<string, { type: "choice"; instructions: string; criteria: Criteria }>;
 }
@@ -182,7 +182,6 @@ export function decideRequestBody(
 ): DecideRequestBody {
   const ranks = Object.fromEntries(rankNames.map((name, i) => [name, `${name}, rank ${i + 1} of ${rankNames.length}`]));
   return {
-    model: DECISION_PROVIDERS[0].model,
     state: {
       site: "deadlock-api.com, a stats website for Valve's game Deadlock",
       game: glossary(rankNames),

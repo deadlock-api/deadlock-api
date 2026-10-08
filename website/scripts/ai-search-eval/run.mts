@@ -56,8 +56,9 @@ const { values: args } = parseArgs({
 });
 
 process.loadEnvFile(path.join(HERE, "../../.env"));
-const key = process.env.INCEPTION_API_KEY;
-if (!key) throw new Error("INCEPTION_API_KEY is not set (website/.env)");
+const provider = DECISION_PROVIDERS[0];
+const key = process.env[provider.keyVar];
+if (!key) throw new Error(`${provider.keyVar} is not set (website/.env)`);
 
 async function getJson<T>(url: string): Promise<T> {
   const response = await fetch(url, { headers: { "User-Agent": "deadlock-api-website-eval" } });
@@ -83,7 +84,7 @@ async function decide(body: DecideRequestBody): Promise<{ answers: DecideAnswers
   for (let attempt = 1; ; attempt++) {
     let response: Response | undefined;
     try {
-      response = await requestDecision(DECISION_PROVIDERS[0], key!, body, 60_000);
+      response = await requestDecision(provider, key!, body, 60_000);
       if (response.ok) return (await response.json()) as { answers: DecideAnswers };
     } catch (error) {
       if (attempt === MAX_ATTEMPTS) throw error;
