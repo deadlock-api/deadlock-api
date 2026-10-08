@@ -21,13 +21,36 @@ pub(crate) struct DataPrivacyRequest {
     open_id_params: HashMap<String, String>,
 }
 
-async fn protect_account(pg_client: &sqlx::Pool<sqlx::Postgres>, steam_id: u32) -> APIResult<()> {
-    let Ok(steam_id_i32) = i32::try_from(steam_id) else {
-        return Err(APIError::status_msg(
+fn steam_id_i32(steam_id: u32) -> APIResult<i32> {
+    i32::try_from(steam_id).map_err(|_| {
+        APIError::status_msg(
             axum::http::StatusCode::BAD_REQUEST,
             "SteamID3 is out of range".to_string(),
-        ));
-    };
+        )
+    })
+}
+
+/// Checks the `OpenID` login proves the requester owns `steam_id`.
+async fn verify_ownership(
+    state: &AppState,
+    open_id_params: &HashMap<String, String>,
+    steam_id: u32,
+) -> APIResult<()> {
+    let steamid64 = utils::parse::steamid3_to_steamid64(steam_id);
+    state
+        .steam_client
+        .verify_user_owns_steam_id(open_id_params, steamid64)
+        .await
+        .map_err(|e| {
+            APIError::status_msg(
+                axum::http::StatusCode::BAD_REQUEST,
+                format!("Failed to verify OpenID parameters: {e}"),
+            )
+        })
+}
+
+async fn protect_account(pg_client: &sqlx::Pool<sqlx::Postgres>, steam_id: u32) -> APIResult<()> {
+    let steam_id_i32 = steam_id_i32(steam_id)?;
     sqlx::query!(
         r#"
         INSERT INTO protected_user_accounts (steam_id)
@@ -45,12 +68,7 @@ async fn protect_account(pg_client: &sqlx::Pool<sqlx::Postgres>, steam_id: u32) 
 }
 
 async fn unprotect_account(pg_client: &sqlx::Pool<sqlx::Postgres>, steam_id: u32) -> APIResult<()> {
-    let Ok(steam_id_i32) = i32::try_from(steam_id) else {
-        return Err(APIError::status_msg(
-            axum::http::StatusCode::BAD_REQUEST,
-            "SteamID3 is out of range".to_string(),
-        ));
-    };
+    let steam_id_i32 = steam_id_i32(steam_id)?;
     sqlx::query!(
         r#"
         DELETE FROM protected_user_accounts
@@ -66,6 +84,13 @@ async fn unprotect_account(pg_client: &sqlx::Pool<sqlx::Postgres>, steam_id: u32
     Ok(())
 }
 
+/// Row policies hiding protected accounts, by the table they guard.
+const GDPR_ROW_POLICIES: [(&str, &str); 3] = [
+    ("gdpr_protection_mp", "match_player"),
+    ("gdpr_protection_sp", "steam_profiles"),
+    ("gdpr_protection_spon", "steam_profile_observed_names"),
+];
+
 pub(crate) async fn update_row_policy(
     pg_client: &sqlx::Pool<sqlx::Postgres>,
     ch_client: &clickhouse::Client,
@@ -78,31 +103,23 @@ pub(crate) async fn update_row_policy(
         .collect();
 
     if protected_accounts.is_empty() {
-        let drop_queries = [
-            "DROP ROW POLICY IF EXISTS gdpr_protection_mp ON match_player",
-            "DROP ROW POLICY IF EXISTS gdpr_protection_sp ON steam_profiles",
-            "DROP ROW POLICY IF EXISTS gdpr_protection_spon ON steam_profile_observed_names",
-        ];
-        for query in drop_queries {
-            ch_client.query(query).execute().await?;
+        for (policy, table) in GDPR_ROW_POLICIES {
+            ch_client
+                .query(&format!("DROP ROW POLICY IF EXISTS {policy} ON {table}"))
+                .execute()
+                .await?;
         }
         return Ok(());
     }
 
     let protected_accounts_list = id_list(&protected_accounts);
-    let policy_queries = [
-        format!(
-            "CREATE ROW POLICY OR REPLACE gdpr_protection_mp ON match_player AS RESTRICTIVE FOR SELECT USING (account_id NOT IN ({protected_accounts_list})) TO api_readonly_user, dump_user"
-        ),
-        format!(
-            "CREATE ROW POLICY OR REPLACE gdpr_protection_sp ON steam_profiles AS RESTRICTIVE FOR SELECT USING (account_id NOT IN ({protected_accounts_list})) TO api_readonly_user, dump_user"
-        ),
-        format!(
-            "CREATE ROW POLICY OR REPLACE gdpr_protection_spon ON steam_profile_observed_names AS RESTRICTIVE FOR SELECT USING (account_id NOT IN ({protected_accounts_list})) TO api_readonly_user, dump_user"
-        ),
-    ];
-    for policy_query in &policy_queries {
-        ch_client.query(policy_query).execute().await?;
+    for (policy, table) in GDPR_ROW_POLICIES {
+        ch_client
+            .query(&format!(
+                "CREATE ROW POLICY OR REPLACE {policy} ON {table} AS RESTRICTIVE FOR SELECT USING (account_id NOT IN ({protected_accounts_list})) TO api_readonly_user, dump_user"
+            ))
+            .execute()
+            .await?;
     }
 
     Ok(())
@@ -115,17 +132,7 @@ pub(crate) async fn request_deletion(
         steam_id,
     }): Json<DataPrivacyRequest>,
 ) -> APIResult<impl IntoResponse> {
-    let steamid64 = utils::parse::steamid3_to_steamid64(steam_id);
-    if let Err(e) = state
-        .steam_client
-        .verify_user_owns_steam_id(&open_id_params, steamid64)
-        .await
-    {
-        return Err(APIError::status_msg(
-            axum::http::StatusCode::BAD_REQUEST,
-            format!("Failed to verify OpenID parameters: {e}"),
-        ));
-    }
+    verify_ownership(&state, &open_id_params, steam_id).await?;
     protect_account(&state.pg_client, steam_id).await?;
     update_row_policy(&state.pg_client, &state.ch_client).await?;
     tokio::spawn(crate::services::data_dump::queue_account_scrub(
@@ -143,17 +150,7 @@ pub(crate) async fn request_tracking(
         steam_id,
     }): Json<DataPrivacyRequest>,
 ) -> APIResult<impl IntoResponse> {
-    let steamid64 = utils::parse::steamid3_to_steamid64(steam_id);
-    if let Err(e) = state
-        .steam_client
-        .verify_user_owns_steam_id(&open_id_params, steamid64)
-        .await
-    {
-        return Err(APIError::status_msg(
-            axum::http::StatusCode::BAD_REQUEST,
-            format!("Failed to verify OpenID parameters: {e}"),
-        ));
-    }
+    verify_ownership(&state, &open_id_params, steam_id).await?;
     unprotect_account(&state.pg_client, steam_id).await?;
     update_row_policy(&state.pg_client, &state.ch_client).await?;
     Ok(())
