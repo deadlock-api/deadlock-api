@@ -471,33 +471,23 @@ impl SteamSearchIndex {
             ));
         }
         if !q_nospace.is_empty() {
-            let distance: u8 = match q_nospace.chars().count() {
-                0..=2 => 0,
-                3..=5 => 1,
-                _ => 2,
-            };
             clauses.push((
                 Occur::Should,
                 Box::new(FuzzyTermQuery::new(
                     Term::from_field_text(f.personaname_nospace, &q_nospace),
-                    distance,
+                    fuzzy_distance(&q_nospace),
                     true,
                 )),
             ));
         }
         for token in q_lc.split_whitespace() {
-            if token.is_empty() {
-                continue;
-            }
-            let term = Term::from_field_text(f.personaname_search, token);
-            let distance: u8 = match token.chars().count() {
-                0..=2 => 0,
-                3..=5 => 1,
-                _ => 2,
-            };
             clauses.push((
                 Occur::Should,
-                Box::new(FuzzyTermQuery::new(term, distance, true)),
+                Box::new(FuzzyTermQuery::new(
+                    Term::from_field_text(f.personaname_search, token),
+                    fuzzy_distance(token),
+                    true,
+                )),
             ));
         }
 
@@ -543,6 +533,7 @@ impl SteamSearchIndex {
 
         let mut scored: Vec<(f64, DocAddress, u64)> = Vec::with_capacity(top.len());
         let mut name = String::new();
+        let mut name_nospace = String::new();
         for (matches_played, doc_address) in top {
             name.clear();
             if let Some(col) = name_cols
@@ -560,7 +551,8 @@ impl SteamSearchIndex {
             let sim_nospace = if q_nospace.is_empty() {
                 0.0
             } else {
-                let name_nospace = strip_whitespace(&name);
+                name_nospace.clear();
+                name_nospace.extend(name.chars().filter(|c| !c.is_whitespace()));
                 if name_nospace.is_empty() {
                     0.0
                 } else {
@@ -681,13 +673,10 @@ fn parse_id_query(q: &str) -> Option<u32> {
     if let Ok(account_id) = q.parse::<u32>() {
         return Some(account_id);
     }
-    if let Ok(sid64) = q.parse::<u64>()
-        && let Some(account_id) = sid64.checked_sub(STEAM_ID64_OFFSET)
-        && let Ok(account_id) = u32::try_from(account_id)
-    {
-        return Some(account_id);
-    }
-    None
+    q.parse::<u64>()
+        .ok()?
+        .checked_sub(STEAM_ID64_OFFSET)
+        .and_then(|account_id| u32::try_from(account_id).ok())
 }
 
 fn profile_from_doc(doc: &TantivyDocument, f: SearchFields, matches_played: u64) -> IndexedProfile {
@@ -795,6 +784,15 @@ fn decode_friends(bytes: &[u8]) -> Vec<(u32, u32)> {
         out.push((aid, ts));
     }
     out
+}
+
+/// Edit distance a fuzzy term query allows for `term`: none for very short terms.
+fn fuzzy_distance(term: &str) -> u8 {
+    match term.chars().count() {
+        0..=2 => 0,
+        3..=5 => 1,
+        _ => 2,
+    }
 }
 
 fn strip_whitespace(s: &str) -> String {
