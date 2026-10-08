@@ -137,6 +137,23 @@ async fn fetch_and_store_builds(
     Ok(results)
 }
 
+/// Rate limits of the endpoints that hit the Game Coordinator.
+async fn apply_live_limits(state: &AppState, rate_limit_key: &RateLimitKey) -> APIResult<()> {
+    state
+        .rate_limit_client
+        .apply_limits(
+            rate_limit_key,
+            "builds_live",
+            &[
+                Quota::ip_limit(20, Duration::from_mins(1)),
+                Quota::key_limit(100, Duration::from_mins(1)),
+                Quota::global_limit(500, Duration::from_mins(1)),
+            ],
+        )
+        .await?;
+    Ok(())
+}
+
 fn to_build(result: &HeroBuildResult) -> APIResult<Build> {
     Ok(serde_json::from_value(serde_json::to_value(result)?)?)
 }
@@ -188,18 +205,7 @@ pub(super) async fn fetch_build_live(
         return Ok(Json(build));
     }
 
-    state
-        .rate_limit_client
-        .apply_limits(
-            &rate_limit_key,
-            "builds_live",
-            &[
-                Quota::ip_limit(20, Duration::from_mins(1)),
-                Quota::key_limit(100, Duration::from_mins(1)),
-                Quota::global_limit(500, Duration::from_mins(1)),
-            ],
-        )
-        .await?;
+    apply_live_limits(&state, &rate_limit_key).await?;
 
     let msg = CMsgClientToGcFindHeroBuilds {
         hero_id: Some(hero_id),
@@ -253,18 +259,7 @@ pub(super) async fn fetch_builds_by_author_live(
     rate_limit_key: RateLimitKey,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
-    state
-        .rate_limit_client
-        .apply_limits(
-            &rate_limit_key,
-            "builds_live",
-            &[
-                Quota::ip_limit(20, Duration::from_mins(1)),
-                Quota::key_limit(100, Duration::from_mins(1)),
-                Quota::global_limit(500, Duration::from_mins(1)),
-            ],
-        )
-        .await?;
+    apply_live_limits(&state, &rate_limit_key).await?;
 
     let msg = CMsgClientToGcFindHeroBuilds {
         author_account_id: Some(account_id),
