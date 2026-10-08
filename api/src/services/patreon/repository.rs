@@ -1,6 +1,7 @@
 use chrono::{DateTime, Utc};
 use sqlx::{Pool, Postgres};
 use thiserror::Error;
+use uuid::Uuid;
 
 use super::types::{Patron, TokenCryptoError, decrypt_token, encrypt_token};
 
@@ -20,6 +21,46 @@ pub(crate) type PatronRepositoryResult<T> = Result<T, PatronRepositoryError>;
 pub(crate) struct PatronRepository {
     pg_client: Pool<Postgres>,
     encryption_key: String,
+}
+
+/// A `patrons` row as stored, with encrypted tokens.
+struct PatronRow {
+    id: Uuid,
+    patreon_user_id: String,
+    email: Option<String>,
+    tier_id: Option<String>,
+    pledge_amount_cents: Option<i32>,
+    slot_override: Option<i32>,
+    is_active: bool,
+    access_token: Option<String>,
+    refresh_token: Option<String>,
+    token_expires_at: Option<DateTime<Utc>>,
+    last_verified_at: Option<DateTime<Utc>>,
+    created_at: DateTime<Utc>,
+    updated_at: DateTime<Utc>,
+}
+
+impl PatronRow {
+    /// Decrypts the stored tokens into a [`Patron`].
+    fn decrypt(self, encryption_key: &str) -> PatronRepositoryResult<Patron> {
+        let decrypt =
+            |token: Option<String>| token.map(|t| decrypt_token(&t, encryption_key)).transpose();
+        Ok(Patron {
+            id: self.id,
+            patreon_user_id: self.patreon_user_id,
+            email: self.email,
+            tier_id: self.tier_id,
+            pledge_amount_cents: self.pledge_amount_cents,
+            slot_override: self.slot_override,
+            is_active: self.is_active,
+            access_token: decrypt(self.access_token)?,
+            refresh_token: decrypt(self.refresh_token)?,
+            token_expires_at: self.token_expires_at,
+            last_verified_at: self.last_verified_at,
+            created_at: self.created_at,
+            updated_at: self.updated_at,
+        })
+    }
 }
 
 /// Parameters for creating or updating a patron
@@ -63,7 +104,8 @@ impl PatronRepository {
 
         let now = Utc::now();
 
-        let row = sqlx::query!(
+        let row = sqlx::query_as!(
+            PatronRow,
             r#"
             INSERT INTO patrons (
                 patreon_user_id,
@@ -117,34 +159,7 @@ impl PatronRepository {
         .fetch_one(&self.pg_client)
         .await?;
 
-        // Decrypt tokens for the returned Patron struct
-        let decrypted_access_token = row
-            .access_token
-            .as_ref()
-            .map(|t| decrypt_token(t, &self.encryption_key))
-            .transpose()?;
-
-        let decrypted_refresh_token = row
-            .refresh_token
-            .as_ref()
-            .map(|t| decrypt_token(t, &self.encryption_key))
-            .transpose()?;
-
-        Ok(Patron {
-            id: row.id,
-            patreon_user_id: row.patreon_user_id,
-            email: row.email,
-            tier_id: row.tier_id,
-            pledge_amount_cents: row.pledge_amount_cents,
-            slot_override: row.slot_override,
-            is_active: row.is_active,
-            access_token: decrypted_access_token,
-            refresh_token: decrypted_refresh_token,
-            token_expires_at: row.token_expires_at,
-            last_verified_at: row.last_verified_at,
-            created_at: row.created_at,
-            updated_at: row.updated_at,
-        })
+        row.decrypt(&self.encryption_key)
     }
 
     /// Gets a patron by their internal UUID.
@@ -153,7 +168,8 @@ impl PatronRepository {
         &self,
         patron_id: uuid::Uuid,
     ) -> PatronRepositoryResult<Option<Patron>> {
-        let row = sqlx::query!(
+        let row = sqlx::query_as!(
+            PatronRow,
             r#"
             SELECT
                 id,
@@ -177,38 +193,7 @@ impl PatronRepository {
         .fetch_optional(&self.pg_client)
         .await?;
 
-        match row {
-            Some(row) => {
-                let decrypted_access_token = row
-                    .access_token
-                    .as_ref()
-                    .map(|t| decrypt_token(t, &self.encryption_key))
-                    .transpose()?;
-
-                let decrypted_refresh_token = row
-                    .refresh_token
-                    .as_ref()
-                    .map(|t| decrypt_token(t, &self.encryption_key))
-                    .transpose()?;
-
-                Ok(Some(Patron {
-                    id: row.id,
-                    patreon_user_id: row.patreon_user_id,
-                    email: row.email,
-                    tier_id: row.tier_id,
-                    pledge_amount_cents: row.pledge_amount_cents,
-                    slot_override: row.slot_override,
-                    is_active: row.is_active,
-                    access_token: decrypted_access_token,
-                    refresh_token: decrypted_refresh_token,
-                    token_expires_at: row.token_expires_at,
-                    last_verified_at: row.last_verified_at,
-                    created_at: row.created_at,
-                    updated_at: row.updated_at,
-                }))
-            }
-            None => Ok(None),
-        }
+        row.map(|row| row.decrypt(&self.encryption_key)).transpose()
     }
 
     /// Gets a patron by their Patreon user ID.
@@ -217,7 +202,8 @@ impl PatronRepository {
         &self,
         patreon_user_id: &str,
     ) -> PatronRepositoryResult<Option<Patron>> {
-        let row = sqlx::query!(
+        let row = sqlx::query_as!(
+            PatronRow,
             r#"
             SELECT
                 id,
@@ -241,38 +227,7 @@ impl PatronRepository {
         .fetch_optional(&self.pg_client)
         .await?;
 
-        match row {
-            Some(row) => {
-                let decrypted_access_token = row
-                    .access_token
-                    .as_ref()
-                    .map(|t| decrypt_token(t, &self.encryption_key))
-                    .transpose()?;
-
-                let decrypted_refresh_token = row
-                    .refresh_token
-                    .as_ref()
-                    .map(|t| decrypt_token(t, &self.encryption_key))
-                    .transpose()?;
-
-                Ok(Some(Patron {
-                    id: row.id,
-                    patreon_user_id: row.patreon_user_id,
-                    email: row.email,
-                    tier_id: row.tier_id,
-                    pledge_amount_cents: row.pledge_amount_cents,
-                    slot_override: row.slot_override,
-                    is_active: row.is_active,
-                    access_token: decrypted_access_token,
-                    refresh_token: decrypted_refresh_token,
-                    token_expires_at: row.token_expires_at,
-                    last_verified_at: row.last_verified_at,
-                    created_at: row.created_at,
-                    updated_at: row.updated_at,
-                }))
-            }
-            None => Ok(None),
-        }
+        row.map(|row| row.decrypt(&self.encryption_key)).transpose()
     }
 
     /// Updates the tokens for a patron after a successful refresh.
@@ -345,7 +300,8 @@ impl PatronRepository {
     /// Only returns patrons where both `access_token` and `refresh_token` are not null.
     /// Decrypts tokens when reading.
     pub(crate) async fn get_all_patrons_with_tokens(&self) -> PatronRepositoryResult<Vec<Patron>> {
-        let rows = sqlx::query!(
+        let rows = sqlx::query_as!(
+            PatronRow,
             r#"
             SELECT
                 id,
@@ -369,37 +325,8 @@ impl PatronRepository {
         .fetch_all(&self.pg_client)
         .await?;
 
-        let mut patrons = Vec::with_capacity(rows.len());
-        for row in rows {
-            let decrypted_access_token = row
-                .access_token
-                .as_ref()
-                .map(|t| decrypt_token(t, &self.encryption_key))
-                .transpose()?;
-
-            let decrypted_refresh_token = row
-                .refresh_token
-                .as_ref()
-                .map(|t| decrypt_token(t, &self.encryption_key))
-                .transpose()?;
-
-            patrons.push(Patron {
-                id: row.id,
-                patreon_user_id: row.patreon_user_id,
-                email: row.email,
-                tier_id: row.tier_id,
-                pledge_amount_cents: row.pledge_amount_cents,
-                slot_override: row.slot_override,
-                is_active: row.is_active,
-                access_token: decrypted_access_token,
-                refresh_token: decrypted_refresh_token,
-                token_expires_at: row.token_expires_at,
-                last_verified_at: row.last_verified_at,
-                created_at: row.created_at,
-                updated_at: row.updated_at,
-            });
-        }
-
-        Ok(patrons)
+        rows.into_iter()
+            .map(|row| row.decrypt(&self.encryption_key))
+            .collect()
     }
 }

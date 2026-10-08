@@ -240,21 +240,20 @@ pub(crate) enum TokenCryptoError {
     InvalidFormat,
 }
 
+/// The AES-256-GCM cipher for a hex-encoded 32-byte key.
+fn token_cipher(key_hex: &str) -> Result<Aes256Gcm, TokenCryptoError> {
+    let key_bytes = hex::decode(key_hex)
+        .map_err(|e| TokenCryptoError::InvalidKey(format!("Invalid hex key: {e}")))?;
+    let key = Key::<Aes256Gcm>::try_from(key_bytes.as_slice()).map_err(|_| {
+        TokenCryptoError::InvalidKey(format!("Key must be 32 bytes, got {}", key_bytes.len()))
+    })?;
+    Ok(Aes256Gcm::new(&key))
+}
+
 /// Encrypts a token using AES-256-GCM
 /// Returns base64-encoded nonce + ciphertext
 pub(crate) fn encrypt_token(plaintext: &str, key_hex: &str) -> Result<String, TokenCryptoError> {
-    let key_bytes = hex::decode(key_hex)
-        .map_err(|e| TokenCryptoError::InvalidKey(format!("Invalid hex key: {e}")))?;
-
-    if key_bytes.len() != 32 {
-        return Err(TokenCryptoError::InvalidKey(format!(
-            "Key must be 32 bytes, got {}",
-            key_bytes.len()
-        )));
-    }
-
-    let key = Key::<Aes256Gcm>::try_from(key_bytes.as_slice()).expect("key length checked above");
-    let cipher = Aes256Gcm::new(&key);
+    let cipher = token_cipher(key_hex)?;
 
     let nonce = Nonce::<Aes256Gcm>::generate();
 
@@ -274,15 +273,7 @@ pub(crate) fn encrypt_token(plaintext: &str, key_hex: &str) -> Result<String, To
 
 /// Decrypts a token encrypted with `encrypt_token`
 pub(crate) fn decrypt_token(encrypted: &str, key_hex: &str) -> Result<String, TokenCryptoError> {
-    let key_bytes = hex::decode(key_hex)
-        .map_err(|e| TokenCryptoError::InvalidKey(format!("Invalid hex key: {e}")))?;
-
-    if key_bytes.len() != 32 {
-        return Err(TokenCryptoError::InvalidKey(format!(
-            "Key must be 32 bytes, got {}",
-            key_bytes.len()
-        )));
-    }
+    let cipher = token_cipher(key_hex)?;
 
     let combined = base64::Engine::decode(&base64::engine::general_purpose::STANDARD, encrypted)
         .map_err(|_| TokenCryptoError::InvalidFormat)?;
@@ -293,9 +284,6 @@ pub(crate) fn decrypt_token(encrypted: &str, key_hex: &str) -> Result<String, To
 
     let (nonce_bytes, ciphertext) = combined.split_at(12);
     let nonce = Nonce::<Aes256Gcm>::try_from(nonce_bytes).expect("split at 12 bytes");
-
-    let key = Key::<Aes256Gcm>::try_from(key_bytes.as_slice()).expect("key length checked above");
-    let cipher = Aes256Gcm::new(&key);
 
     let plaintext = cipher
         .decrypt(&nonce, ciphertext)
