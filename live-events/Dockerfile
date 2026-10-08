@@ -30,7 +30,6 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry \
 FROM debian:trixie-slim AS runtime
 ARG EXE_NAME
 ENV exe_name=$EXE_NAME
-# TLS is rustls (nothing links OpenSSL); curl stays for container health checks.
 RUN apt-get update \
     && apt-get install -y --no-install-recommends ca-certificates curl \
     && rm -rf /var/lib/apt/lists/*
