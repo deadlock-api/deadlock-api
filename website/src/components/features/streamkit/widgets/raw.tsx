@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { type FC } from "react";
 
+import { Spinner } from "~/components/ui/spinner";
 import { UPDATE_INTERVAL_MS } from "~/constants/streamkit/widget";
 import { streamkitStatsQueryOptions } from "~/queries/streamkit-queries";
 import type { RawWidgetProps } from "~/types/streamkit/widget";
@@ -28,10 +29,7 @@ export const RawWidget: FC<RawWidgetProps> = ({
     <div>
       {statsLoading ? (
         <div className="flex items-center justify-center py-4">
-          <div className="relative h-8 w-8">
-            <div className="absolute inset-0 animate-ping rounded-full border-2 border-blue-500/20" />
-            <div className="absolute inset-0.5 animate-spin rounded-full border-2 border-transparent border-t-blue-500" />
-          </div>
+          <Spinner size="lg" style={{ color: fontColor }} />
         </div>
       ) : stat ? (
         <div className="flex w-fit items-center gap-2">
