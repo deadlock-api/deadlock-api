@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
 use std::time::Instant;
 
 use async_graphql::ServerResult;
@@ -7,7 +7,6 @@ use async_graphql::extensions::{
 };
 use async_graphql::parser::types::ExecutableDocument;
 use async_graphql::{Response, ServerError, ValidationResult, Variables};
-use tokio::sync::Mutex;
 use tracing::Instrument as _;
 
 /// Emits Prometheus metrics and a tracing span for every GraphQL request.
@@ -27,7 +26,7 @@ impl ExtensionFactory for MetricsExtension {
 
 #[derive(Default)]
 struct MetricsExtensionInner {
-    validation_result: Mutex<Option<ValidationResult>>,
+    validation_result: OnceLock<ValidationResult>,
 }
 
 #[async_trait::async_trait]
@@ -42,7 +41,7 @@ impl Extension for MetricsExtensionInner {
         metrics::counter!("graphql_requests_total", "status" => status).increment(1);
         metrics::histogram!("graphql_request_duration_seconds").record(elapsed);
 
-        if let Some(vr) = self.validation_result.lock().await.take() {
+        if let Some(vr) = self.validation_result.get() {
             #[expect(clippy::cast_precision_loss)]
             metrics::histogram!("graphql_query_complexity").record(vr.complexity as f64);
             #[expect(clippy::cast_precision_loss)]
@@ -69,7 +68,7 @@ impl Extension for MetricsExtensionInner {
         next: NextValidation<'_>,
     ) -> Result<ValidationResult, Vec<ServerError>> {
         let result = next.run(ctx).await?;
-        *self.validation_result.lock().await = Some(result);
+        let _ = self.validation_result.set(result);
         Ok(result)
     }
 }
