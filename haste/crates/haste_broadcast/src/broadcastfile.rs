@@ -3,6 +3,7 @@ use std::io::{self, Read, Seek, SeekFrom};
 use haste_core::demofile::DEMO_RECORD_BUFFER_SIZE;
 use haste_core::demostream::{
     CmdFormat, CmdHeader, DemoStream, ReadCmdError, ReadCmdHeaderError, SeekableDemoStream,
+    split_cmd_buf,
 };
 
 use crate::demostream::{read_cmd_header, scan_for_last_tick};
@@ -65,17 +66,7 @@ impl<R: Read + Seek> DemoStream for BroadcastFile<R> {
     fn read_cmd(&mut self, cmd_header: &CmdHeader) -> Result<&[u8], ReadCmdError> {
         assert!(!cmd_header.body_compressed);
 
-        let body_size = cmd_header.body_size as usize;
-        if body_size > self.buf.len() {
-            return Err(ReadCmdError::IoError(io::Error::new(
-                io::ErrorKind::InvalidData,
-                format!(
-                    "cmd body of {body_size} bytes exceeds the {} byte buffer",
-                    self.buf.len()
-                ),
-            )));
-        }
-        let data = &mut self.buf[..body_size];
+        let (data, _) = split_cmd_buf(&mut self.buf, cmd_header)?;
         self.rdr.read_exact(data)?;
         Ok(data)
     }

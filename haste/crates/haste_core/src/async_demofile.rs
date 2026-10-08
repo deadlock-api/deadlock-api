@@ -1,11 +1,12 @@
 use tokio::io::{AsyncRead, AsyncReadExt};
 
 use crate::async_demostream::{AsyncDemoStream, read_cmd_header_async};
-use crate::demofile::{DEMO_RECORD_BUFFER_SIZE, DemoHeader, DemoHeaderError};
-use crate::demostream::{CmdHeader, ReadCmdError, ReadCmdHeaderError};
-
-const DEMO_HEADER_ID_SIZE: usize = 8;
-const DEMO_HEADER_ID: [u8; DEMO_HEADER_ID_SIZE] = *b"PBDEMS2\0";
+use crate::demofile::{
+    DEMO_HEADER_ID, DEMO_HEADER_ID_SIZE, DEMO_RECORD_BUFFER_SIZE, DemoHeader, DemoHeaderError,
+};
+use crate::demostream::{
+    CmdHeader, ReadCmdError, ReadCmdHeaderError, decompress_cmd_body, split_cmd_buf,
+};
 
 async fn read_demo_header_async<R: AsyncRead + Unpin>(
     mut rdr: R,
@@ -58,26 +59,9 @@ impl<R: AsyncRead + Unpin + Send> AsyncDemoStream for AsyncDemoFile<R> {
     }
 
     async fn read_cmd(&mut self, cmd_header: &CmdHeader) -> Result<&[u8], ReadCmdError> {
-        let body_size = cmd_header.body_size as usize;
-        if body_size > self.buf.len() {
-            return Err(ReadCmdError::IoError(std::io::Error::new(
-                std::io::ErrorKind::InvalidData,
-                format!(
-                    "cmd body of {body_size} bytes exceeds the {} byte buffer",
-                    self.buf.len()
-                ),
-            )));
-        }
-        let (left, right) = self.buf.split_at_mut(body_size);
-        self.rdr.read_exact(left).await?;
-
-        if cmd_header.body_compressed {
-            let decompress_len = snap::raw::decompress_len(left)?;
-            snap::raw::Decoder::new().decompress(left, right)?;
-            Ok(&right[..decompress_len])
-        } else {
-            Ok(left)
-        }
+        let (body, scratch) = split_cmd_buf(&mut self.buf, cmd_header)?;
+        self.rdr.read_exact(body).await?;
+        decompress_cmd_body(cmd_header, body, scratch)
     }
 
     fn start_position(&self) -> u64 {

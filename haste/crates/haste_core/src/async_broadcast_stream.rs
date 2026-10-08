@@ -10,12 +10,12 @@
 use std::io::Cursor;
 
 use tokio::io::{AsyncRead, AsyncReadExt};
-use valveprotos::common::EDemoCommands;
 
 use crate::async_demostream::AsyncDemoStream;
-use crate::demostream::{CmdFormat, CmdHeader, ReadCmdError, ReadCmdHeaderError};
-
-const BROADCAST_CMD_HEADER_SIZE: u8 = 10; // 1 + 4 + 1 + 4
+use crate::demostream::{
+    BROADCAST_CMD_HEADER_SIZE, CmdFormat, CmdHeader, ReadCmdError, ReadCmdHeaderError,
+    parse_broadcast_cmd_header,
+};
 
 pub struct AsyncBroadcastStream<R: AsyncRead + Unpin + Send> {
     reader: R,
@@ -42,28 +42,9 @@ impl<R: AsyncRead + Unpin + Send> AsyncDemoStream for AsyncBroadcastStream<R> {
     const CMD_FORMAT: CmdFormat = CmdFormat::Broadcast;
 
     async fn read_cmd_header(&mut self) -> Result<CmdHeader, ReadCmdHeaderError> {
-        let mut buf = [0u8; BROADCAST_CMD_HEADER_SIZE as usize];
+        let mut buf = [0u8; BROADCAST_CMD_HEADER_SIZE];
         self.reader.read_exact(&mut buf).await?;
-
-        let cmd_byte = buf[0];
-        let cmd = EDemoCommands::try_from(i32::from(cmd_byte)).map_err(|_| {
-            ReadCmdHeaderError::UnknownCmd {
-                raw: u32::from(cmd_byte),
-                uncompressed: u32::from(cmd_byte),
-            }
-        })?;
-
-        let tick = i32::from_le_bytes([buf[1], buf[2], buf[3], buf[4]]);
-        // buf[5] is unknown/unused
-        let body_size = u32::from_le_bytes([buf[6], buf[7], buf[8], buf[9]]);
-
-        Ok(CmdHeader {
-            cmd,
-            body_compressed: false, // Broadcast packets are not compressed
-            tick,
-            body_size,
-            size: BROADCAST_CMD_HEADER_SIZE,
-        })
+        parse_broadcast_cmd_header(buf)
     }
 
     async fn read_cmd(&mut self, cmd_header: &CmdHeader) -> Result<&[u8], ReadCmdError> {

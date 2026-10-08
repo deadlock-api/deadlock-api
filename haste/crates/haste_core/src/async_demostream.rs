@@ -1,10 +1,10 @@
 use core::future::Future;
 use dungers::varint::{CONTINUE_BIT, PAYLOAD_BITS, VarintError, max_varint_size};
 use tokio::io::{AsyncRead, AsyncReadExt};
-use valveprotos::common::{CDemoClassInfo, CDemoFullPacket, CDemoSendTables, EDemoCommands};
+use valveprotos::common::{CDemoClassInfo, CDemoFullPacket, CDemoSendTables};
 
 use crate::demostream::{
-    self, CmdFormat, CmdHeader, DecodeCmdError, ReadCmdError, ReadCmdHeaderError,
+    self, CmdFormat, CmdHeader, DecodeCmdError, ReadCmdError, ReadCmdHeaderError, decode_demo_cmd,
 };
 
 async fn read_uvarint_async<R>(rdr: &mut R) -> Result<(u32, usize), VarintError>
@@ -69,41 +69,15 @@ pub(crate) async fn read_cmd_header_async<R>(rdr: &mut R) -> Result<CmdHeader, R
 where
     R: AsyncRead + Unpin,
 {
-    const DEM_IS_COMPRESSED: u32 = EDemoCommands::DemIsCompressed as u32;
-
-    let (cmd, cmd_n, body_compressed) = {
-        let (cmd_raw, n) = read_uvarint_async(rdr).await?;
-
-        let body_compressed = cmd_raw & DEM_IS_COMPRESSED == DEM_IS_COMPRESSED;
-
-        let cmd = if body_compressed {
-            cmd_raw & !DEM_IS_COMPRESSED
-        } else {
-            cmd_raw
-        };
-
-        (
-            EDemoCommands::try_from(cmd as i32).map_err(|_| ReadCmdHeaderError::UnknownCmd {
-                raw: cmd_raw,
-                uncompressed: cmd,
-            })?,
-            n,
-            body_compressed,
-        )
-    };
-
-    let (tick, tick_n) = {
-        let (tick, n) = read_uvarint_async(rdr).await?;
-        let tick = tick as i32;
-        (tick, n)
-    };
-
+    let (cmd_raw, cmd_n) = read_uvarint_async(rdr).await?;
+    let (cmd, body_compressed) = decode_demo_cmd(cmd_raw)?;
+    let (tick, tick_n) = read_uvarint_async(rdr).await?;
     let (body_size, body_size_n) = read_uvarint_async(rdr).await?;
 
     Ok(CmdHeader {
         cmd,
         body_compressed,
-        tick,
+        tick: tick as i32,
         body_size,
         size: (cmd_n + tick_n + body_size_n) as u8,
     })

@@ -1,57 +1,14 @@
 use std::io::{Read, SeekFrom};
 
-use haste_core::demostream::{CmdHeader, ReadCmdHeaderError, SeekableDemoStream};
-use valveprotos::common::EDemoCommands;
-
-// cmd header
-// ----
-//
-// cmd headers are broadcasts are similar to demo file cmd headers, but encoding is different.
-//
-// thanks to saul for figuring it out. see
-// https://github.com/saul/demofile-net/blob/7d3d59e478dbd2b000f4efa2dac70ed1bf2e2b7f/src/DemoFile/HttpBroadcastReader.cs#L150
+use haste_core::demostream::{
+    BROADCAST_CMD_HEADER_SIZE, CmdHeader, ReadCmdHeaderError, SeekableDemoStream,
+    parse_broadcast_cmd_header,
+};
 
 pub(crate) fn read_cmd_header<R: Read>(mut rdr: R) -> Result<CmdHeader, ReadCmdHeaderError> {
-    // TODO: bytereader (bitreader-like) + migrate read_exact and similar instalces across the code
-    // base to it (valve have CUtlBuffer for reference to make api similar).
-    let mut buf = [0u8; size_of::<u32>()];
-
-    let (cmd, cmd_n) = {
-        rdr.read_exact(&mut buf[..1])?;
-        let cmd = buf[0];
-        (
-            EDemoCommands::try_from(i32::from(cmd)).map_err(|_| {
-                ReadCmdHeaderError::UnknownCmd {
-                    raw: u32::from(cmd),
-                    uncompressed: u32::from(cmd),
-                }
-            })?,
-            size_of::<u8>(),
-        )
-    };
-
-    let (tick, tick_n) = {
-        rdr.read_exact(&mut buf)?;
-        (u32::from_le_bytes(buf) as i32, size_of::<u32>())
-    };
-
-    let (_unknown, unknown_n) = {
-        rdr.read_exact(&mut buf[..1])?;
-        (buf[0], size_of::<u8>())
-    };
-
-    let (body_size, body_size_n) = {
-        rdr.read_exact(&mut buf)?;
-        (u32::from_le_bytes(buf), size_of::<u32>())
-    };
-
-    Ok(CmdHeader {
-        cmd,
-        body_compressed: false,
-        tick,
-        body_size,
-        size: (cmd_n + tick_n + body_size_n + unknown_n) as u8,
-    })
+    let mut buf = [0u8; BROADCAST_CMD_HEADER_SIZE];
+    rdr.read_exact(&mut buf)?;
+    parse_broadcast_cmd_header(buf)
 }
 
 // other

@@ -10,13 +10,14 @@ use std::io;
 
 use bytes::Bytes;
 use snap::raw::Decoder as SnapDecoder;
-use valveprotos::common::EDemoCommands;
 
 use crate::async_demostream::AsyncDemoStream;
-use crate::demostream::{CmdHeader, ReadCmdError, ReadCmdHeaderError};
+use crate::demofile::DemoHeader;
+use crate::demostream::{CmdHeader, ReadCmdError, ReadCmdHeaderError, decode_demo_cmd};
 use crate::packet_source::PacketSource;
 
-const DEM_IS_COMPRESSED: u32 = EDemoCommands::DemIsCompressed as u32;
+/// stamp (8 bytes) + `fileinfo_offset` (4 bytes) + `spawngroups_offset` (4 bytes).
+const DEMO_HEADER_SIZE: usize = size_of::<DemoHeader>();
 
 /// Demo file stream that receives packets from a `PacketSource`.
 ///
@@ -30,8 +31,6 @@ pub struct PacketChannelDemoStream<P: PacketSource> {
     offset: usize,
     /// Decompression buffer for compressed command bodies.
     decompress_buf: Vec<u8>,
-    /// Buffer for command body data.
-    body_buf: Vec<u8>,
     /// Whether we've skipped the demo header (16 bytes).
     header_skipped: bool,
 }
@@ -44,7 +43,6 @@ impl<P: PacketSource> PacketChannelDemoStream<P> {
             current: Bytes::new(),
             offset: 0,
             decompress_buf: Vec::with_capacity(256 * 1024),
-            body_buf: Vec::with_capacity(256 * 1024),
             header_skipped: false,
         }
     }
@@ -93,11 +91,6 @@ impl<P: PacketSource> PacketChannelDemoStream<P> {
         slice
     }
 
-    #[allow(dead_code)]
-    fn peek_bytes(&self, n: usize) -> &[u8] {
-        &self.current[self.offset..self.offset + n]
-    }
-
     /// Read a varint from the current position.
     fn read_varint(&mut self) -> Result<(u32, usize), ReadCmdHeaderError> {
         const CONTINUE_BIT: u8 = 0x80;
@@ -136,9 +129,6 @@ impl<P: PacketSource> PacketChannelDemoStream<P> {
 
     /// Skip the demo file header if we haven't already.
     async fn skip_header_if_needed(&mut self) -> Result<(), ReadCmdHeaderError> {
-        // DemoHeader = 8 bytes (stamp) + 4 bytes (fileinfo_offset) + 4 bytes (spawngroups_offset) = 16 bytes
-        const DEMO_HEADER_SIZE: usize = 16;
-
         if !self.header_skipped {
             self.ensure_bytes(DEMO_HEADER_SIZE).await?;
             self.offset += DEMO_HEADER_SIZE;
@@ -160,19 +150,7 @@ impl<P: PacketSource> AsyncDemoStream for PacketChannelDemoStream<P> {
 
         // Read command type (varint)
         let (cmd_raw, _) = self.read_varint()?;
-        let body_compressed = (cmd_raw & DEM_IS_COMPRESSED) == DEM_IS_COMPRESSED;
-        let cmd_value = if body_compressed {
-            cmd_raw & !DEM_IS_COMPRESSED
-        } else {
-            cmd_raw
-        };
-
-        let cmd = EDemoCommands::try_from(cmd_value as i32).map_err(|_| {
-            ReadCmdHeaderError::UnknownCmd {
-                raw: cmd_raw,
-                uncompressed: cmd_value,
-            }
-        })?;
+        let (cmd, body_compressed) = decode_demo_cmd(cmd_raw)?;
 
         // Read tick (varint, signed stored as unsigned)
         let (tick_raw, _) = self.read_varint()?;
@@ -200,34 +178,27 @@ impl<P: PacketSource> AsyncDemoStream for PacketChannelDemoStream<P> {
             _ => ReadCmdError::IoError(io::Error::other("ensure bytes failed")),
         })?;
 
-        // Copy data to body_buf first to avoid borrow issues
-        self.body_buf.clear();
-        self.body_buf
-            .extend_from_slice(&self.current[self.offset..self.offset + size]);
+        // the body is borrowed straight from the current packet; only a compressed body needs a
+        // buffer of its own.
+        let body = &self.current[self.offset..self.offset + size];
         self.offset += size;
-
-        if cmd_header.body_compressed {
-            // Decompress with snappy
-            let uncompressed_size = snap::raw::decompress_len(&self.body_buf).map_err(|e| {
-                ReadCmdError::IoError(io::Error::new(io::ErrorKind::InvalidData, e))
-            })?;
-
-            self.decompress_buf.resize(uncompressed_size, 0);
-            let mut decoder = SnapDecoder::new();
-            decoder
-                .decompress(&self.body_buf, &mut self.decompress_buf)
-                .map_err(|e| {
-                    ReadCmdError::IoError(io::Error::new(io::ErrorKind::InvalidData, e))
-                })?;
-
-            // Swap buffers so decompress_buf becomes body_buf
-            core::mem::swap(&mut self.body_buf, &mut self.decompress_buf);
+        if !cmd_header.body_compressed {
+            return Ok(body);
         }
 
-        Ok(&self.body_buf)
+        // Decompress with snappy
+        let uncompressed_size = snap::raw::decompress_len(body)
+            .map_err(|e| ReadCmdError::IoError(io::Error::new(io::ErrorKind::InvalidData, e)))?;
+
+        self.decompress_buf.resize(uncompressed_size, 0);
+        SnapDecoder::new()
+            .decompress(body, &mut self.decompress_buf)
+            .map_err(|e| ReadCmdError::IoError(io::Error::new(io::ErrorKind::InvalidData, e)))?;
+
+        Ok(&self.decompress_buf)
     }
 
     fn start_position(&self) -> u64 {
-        16 // DemoHeader size: 8 (stamp) + 4 (fileinfo_offset) + 4 (spawngroups_offset)
+        DEMO_HEADER_SIZE as u64
     }
 }

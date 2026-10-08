@@ -1,12 +1,12 @@
 use anyhow::Context;
 use dungers::varint;
-use prost;
 use prost::Message;
 use std::io::{self, Read, Seek, SeekFrom};
-use valveprotos::common::{CDemoFileInfo, EDemoCommands};
+use valveprotos::common::CDemoFileInfo;
 
 use crate::demostream::{
-    CmdHeader, DemoStream, ReadCmdError, ReadCmdHeaderError, SeekableDemoStream,
+    CmdHeader, DemoStream, ReadCmdError, ReadCmdHeaderError, SeekableDemoStream, decode_demo_cmd,
+    decompress_cmd_body, split_cmd_buf,
 };
 
 // #define DEMO_RECORD_BUFFER_SIZE 2*1024*1024
@@ -19,8 +19,8 @@ pub const DEMO_RECORD_BUFFER_SIZE: usize = 2 * 1024 * 1024;
 // #define DEMO_HEADER_ID "HL2DEMO"
 //
 // NOTE: strings in c/cpp are null terminated.
-const DEMO_HEADER_ID_SIZE: usize = 8;
-const DEMO_HEADER_ID: [u8; DEMO_HEADER_ID_SIZE] = *b"PBDEMS2\0";
+pub(crate) const DEMO_HEADER_ID_SIZE: usize = 8;
+pub(crate) const DEMO_HEADER_ID: [u8; DEMO_HEADER_ID_SIZE] = *b"PBDEMS2\0";
 
 // NOTE: naming is based on stuff from demofile.h of valve's demoinfo2 thing.
 #[derive(Debug, Clone)]
@@ -122,46 +122,19 @@ impl<R: Read + Seek> DemoStream for DemoFile<R> {
     // ----
 
     fn read_cmd_header(&mut self) -> Result<CmdHeader, ReadCmdHeaderError> {
-        const DEM_IS_COMPRESSED: u32 = EDemoCommands::DemIsCompressed as u32;
-        let (cmd, cmd_n, body_compressed) = {
-            let (cmd_raw, n) = varint::read_uvarint32(&mut self.rdr)?;
-
-            let body_compressed = cmd_raw & DEM_IS_COMPRESSED == DEM_IS_COMPRESSED;
-
-            let cmd = if body_compressed {
-                cmd_raw & !DEM_IS_COMPRESSED
-            } else {
-                cmd_raw
-            };
-
-            (
-                EDemoCommands::try_from(cmd as i32).map_err(|_| {
-                    ReadCmdHeaderError::UnknownCmd {
-                        raw: cmd_raw,
-                        uncompressed: cmd,
-                    }
-                })?,
-                n,
-                body_compressed,
-            )
-        };
-
-        let (tick, tick_n) = {
-            let (tick, n) = varint::read_uvarint32(&mut self.rdr)?;
-            // NOTE: tick is set to u32::MAX before before all pre-game initialization messages are
-            // sent.
-            // ticks everywhere are represented as i32, casting u32::MAX to i32 is okay because
-            // bits in u32::MAX == bits in -1 i32.
-            let tick = tick as i32;
-            (tick, n)
-        };
-
+        let (cmd_raw, cmd_n) = varint::read_uvarint32(&mut self.rdr)?;
+        let (cmd, body_compressed) = decode_demo_cmd(cmd_raw)?;
+        let (tick, tick_n) = varint::read_uvarint32(&mut self.rdr)?;
         let (body_size, body_size_n) = varint::read_uvarint32(&mut self.rdr)?;
 
         Ok(CmdHeader {
             cmd,
             body_compressed,
-            tick,
+            // NOTE: tick is set to u32::MAX before before all pre-game initialization messages are
+            // sent.
+            // ticks everywhere are represented as i32, casting u32::MAX to i32 is okay because
+            // bits in u32::MAX == bits in -1 i32.
+            tick: tick as i32,
             body_size,
             size: (cmd_n + tick_n + body_size_n) as u8,
         })
@@ -171,28 +144,9 @@ impl<R: Read + Seek> DemoStream for DemoFile<R> {
     // ----
 
     fn read_cmd(&mut self, cmd_header: &CmdHeader) -> Result<&[u8], ReadCmdError> {
-        let body_size = cmd_header.body_size as usize;
-        if body_size > self.buf.len() {
-            return Err(ReadCmdError::IoError(io::Error::new(
-                io::ErrorKind::InvalidData,
-                format!(
-                    "cmd body of {body_size} bytes exceeds the {} byte buffer",
-                    self.buf.len()
-                ),
-            )));
-        }
-        let (left, right) = self.buf.split_at_mut(body_size);
-        self.rdr.read_exact(left)?;
-
-        if cmd_header.body_compressed {
-            let decompress_len = snap::raw::decompress_len(left)?;
-            snap::raw::Decoder::new().decompress(left, right)?;
-            // NOTE: we need to slice stuff up, because prost's decode can't
-            // determine when to stop.
-            Ok(&right[..decompress_len])
-        } else {
-            Ok(left)
-        }
+        let (body, scratch) = split_cmd_buf(&mut self.buf, cmd_header)?;
+        self.rdr.read_exact(body)?;
+        decompress_cmd_body(cmd_header, body, scratch)
     }
 
     fn skip_cmd(&mut self, cmd_header: &CmdHeader) -> Result<(), io::Error> {

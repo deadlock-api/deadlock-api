@@ -15,13 +15,13 @@ use core::future::Future;
 use std::io;
 
 use bytes::Bytes;
-use valveprotos::common::EDemoCommands;
 
 use crate::async_demostream::AsyncDemoStream;
-use crate::demostream::{CmdFormat, CmdHeader, ReadCmdError, ReadCmdHeaderError};
+use crate::demostream::{
+    BROADCAST_CMD_HEADER_SIZE, CmdFormat, CmdHeader, ReadCmdError, ReadCmdHeaderError,
+    parse_broadcast_cmd_header,
+};
 use crate::packet_source::PacketSource;
-
-const BROADCAST_CMD_HEADER_SIZE: usize = 10; // 1 + 4 + 1 + 4
 
 /// Broadcast stream that receives packets from a `PacketSource`.
 ///
@@ -105,44 +105,14 @@ impl<P: PacketSource> AsyncDemoStream for PacketChannelBroadcastStream<P> {
     async fn read_cmd_header(&mut self) -> Result<CmdHeader, ReadCmdHeaderError> {
         self.ensure_data().await?;
 
-        if !self.has_bytes(BROADCAST_CMD_HEADER_SIZE) {
+        let Some(&header) = self.current[self.offset..].first_chunk() else {
             return Err(ReadCmdHeaderError::IoError(io::Error::new(
                 io::ErrorKind::UnexpectedEof,
                 "incomplete command header in packet",
             )));
-        }
-
-        let header_bytes = self.read_bytes(BROADCAST_CMD_HEADER_SIZE);
-
-        let cmd_byte = header_bytes[0];
-        let cmd = EDemoCommands::try_from(i32::from(cmd_byte)).map_err(|_| {
-            ReadCmdHeaderError::UnknownCmd {
-                raw: u32::from(cmd_byte),
-                uncompressed: u32::from(cmd_byte),
-            }
-        })?;
-
-        let tick = i32::from_le_bytes([
-            header_bytes[1],
-            header_bytes[2],
-            header_bytes[3],
-            header_bytes[4],
-        ]);
-        // header_bytes[5] is unknown/unused
-        let body_size = u32::from_le_bytes([
-            header_bytes[6],
-            header_bytes[7],
-            header_bytes[8],
-            header_bytes[9],
-        ]);
-
-        Ok(CmdHeader {
-            cmd,
-            body_compressed: false, // Broadcast packets are not compressed
-            tick,
-            body_size,
-            size: BROADCAST_CMD_HEADER_SIZE as u8,
-        })
+        };
+        self.offset += BROADCAST_CMD_HEADER_SIZE;
+        parse_broadcast_cmd_header(header)
     }
 
     fn read_cmd(
