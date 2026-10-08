@@ -6,12 +6,11 @@ import { toast } from "sonner";
 import { useCloseSideNavDrawer } from "~/components/patterns/navigation/SideNavShell";
 import { Button } from "~/components/ui/button";
 import { SearchInput } from "~/components/ui/search-input";
-import { MAX_QUESTION_LENGTH } from "~/lib/ai-search/search-fns";
+import { MAX_QUESTION_LENGTH } from "~/lib/ai-search/limits";
 import { getAnalytics } from "~/lib/analytics";
 import { cn } from "~/lib/utils";
 
 import { setLastSearch, useLastSearch } from "./last-search";
-import { routeQuestion } from "./route-question";
 import { useSearchShortcut } from "./search-shortcut";
 
 /** Questions the home page's field cycles through as its placeholder, to show what it can be asked. */
@@ -32,7 +31,6 @@ function trackQuestion(properties: {
   source: "home" | "sidebar";
   outcome: Outcome;
   page?: string;
-  alternatives?: string[];
   direct?: boolean;
   durationMs?: number;
 }) {
@@ -42,7 +40,6 @@ function trackQuestion(properties: {
       source: properties.source,
       outcome: properties.outcome,
       page: properties.page ?? null,
-      alternatives: properties.alternatives ?? [],
       direct: properties.direct ?? false,
       duration_ms: properties.durationMs === undefined ? null : Math.round(properties.durationMs),
     }),
@@ -109,37 +106,31 @@ export function AiSearch({ size = "default", className }: AiSearchProps) {
     const asked = ++latest.current;
     setSearching(true);
     setUnmatched(false);
-    routeQuestion(queryClient, trimmed).then(
-      ({ results, direct, durationMs }) => {
-        if (asked !== latest.current) return undefined;
-        setSearching(false);
-        if (results.length === 0) {
-          trackQuestion({ question: trimmed, source, outcome: "not_understood", direct, durationMs });
-          setUnmatched(true);
-          toast("Sorry, I didn't understand that. Try asking about a hero, an item or a stat.");
-          return undefined;
-        }
-        const [best, ...alternatives] = results;
-        trackQuestion({
-          question: trimmed,
-          source,
-          outcome: "opened",
-          page: best.id,
-          alternatives: alternatives.map((result) => result.id),
-          direct,
-          durationMs,
-        });
-        setLastSearch(trimmed);
-        closeDrawer();
-        return navigate({ href: best.href });
-      },
-      () => {
-        if (asked !== latest.current) return;
-        setSearching(false);
-        trackQuestion({ question: trimmed, source, outcome: "error" });
-        toast("The search could not answer", { action: { label: "Try again", onClick: () => ask(trimmed) } });
-      },
-    );
+    // The search's code (the page registry, the name matcher, the catalogs) loads with the first question.
+    import("./route-question")
+      .then(({ routeQuestion }) => routeQuestion(queryClient, trimmed))
+      .then(
+        ({ result, direct, durationMs }) => {
+          if (asked !== latest.current) return undefined;
+          setSearching(false);
+          if (!result) {
+            trackQuestion({ question: trimmed, source, outcome: "not_understood", direct, durationMs });
+            setUnmatched(true);
+            toast("Sorry, I didn't understand that. Try asking about a hero, an item or a stat.");
+            return undefined;
+          }
+          trackQuestion({ question: trimmed, source, outcome: "opened", page: result.id, direct, durationMs });
+          setLastSearch(trimmed);
+          closeDrawer();
+          return navigate({ href: result.href });
+        },
+        () => {
+          if (asked !== latest.current) return;
+          setSearching(false);
+          trackQuestion({ question: trimmed, source, outcome: "error" });
+          toast("The search could not answer", { action: { label: "Try again", onClick: () => ask(trimmed) } });
+        },
+      );
   };
 
   return (

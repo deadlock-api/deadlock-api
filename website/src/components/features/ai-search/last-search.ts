@@ -3,7 +3,7 @@ import { useSyncExternalStore } from "react";
 // The last question the search answered, shared by every search on the page: the home page's search redirects, and
 // the sidebar's then holds the question, ready to be changed and asked again.
 
-export interface LastSearch {
+interface LastSearch {
   question: string;
   /** Changes with every answer, so a search shows the new question over what was typed before it. */
   version: number;

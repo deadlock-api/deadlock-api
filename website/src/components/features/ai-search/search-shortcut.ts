@@ -1,5 +1,7 @@
 import { type RefObject, useEffect } from "react";
 
+import { isTyping } from "~/lib/keyboard";
+
 // `/` and Ctrl+K (Cmd+K) focus a search from anywhere on the page. With several on the page, the most prominent visible
 // one takes it: the home page's search bar before the sidebar's field.
 
@@ -9,13 +11,6 @@ interface Target {
 }
 
 const targets = new Set<Target>();
-
-/** Whether a key press belongs to a field the visitor is typing in, which a shortcut must not take over. */
-function isTyping(target: EventTarget | null): boolean {
-  return (
-    target instanceof HTMLElement && (target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName))
-  );
-}
 
 function onKeyDown(event: KeyboardEvent) {
   const slash = event.key === "/" && !event.ctrlKey && !event.metaKey && !event.altKey && !isTyping(event.target);

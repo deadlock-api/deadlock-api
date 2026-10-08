@@ -13,21 +13,22 @@ import {
   filterShopableItems,
   heroesQueryOptions,
   itemUpgradesQueryOptions,
-  rankedSeasonsQueryOptions,
+  loadSeasons,
 } from "~/queries/asset-queries";
 import { ranksQueryOptions } from "~/queries/ranks-query";
 
-/** A page that answers the question, and where it opens with the question's heroes and filters. */
-export interface SearchResult {
-  id: string;
-  href: string;
-}
+// The search's work, loaded on its first question so the field in every page's sidebar costs no more than a field.
 
 interface SearchCatalog {
   vocabulary: IntentVocabulary;
   catalog: Catalog;
-  context: ResolveContext;
+  context: Omit<ResolveContext, "now">;
 }
+
+const PATCH_ENTRIES = PATCHES.map(toPatchEntry);
+
+/** The catalog of the cached hero list, kept while that list is: the name matcher caches its work per name list. */
+const catalogs = new WeakMap<object, SearchCatalog>();
 
 /** The names and time windows a question is read against, from the asset caches every page warms. */
 async function loadSearchCatalog(queryClient: QueryClient): Promise<SearchCatalog> {
@@ -35,11 +36,13 @@ async function loadSearchCatalog(queryClient: QueryClient): Promise<SearchCatalo
     queryClient.query({ ...heroesQueryOptions, staleTime: "static" }),
     queryClient.query({ ...itemUpgradesQueryOptions, staleTime: "static" }),
     queryClient.query({ ...ranksQueryOptions, staleTime: "static" }),
-    queryClient.query({ ...rankedSeasonsQueryOptions, staleTime: "static" }),
+    loadSeasons(queryClient),
   ]);
+  const cached = catalogs.get(heroes);
+  if (cached && cached.catalog.ranks === ranks) return cached;
   const playable = filterPlayableHeroes(heroes);
   const shopable = filterShopableItems(items);
-  return {
+  const built: SearchCatalog = {
     vocabulary: {
       heroNames: playable.map((hero) => hero.name),
       itemNames: shopable.map((item) => item.name),
@@ -47,16 +50,17 @@ async function loadSearchCatalog(queryClient: QueryClient): Promise<SearchCatalo
     },
     catalog: { heroes: playable, items: shopable, ranks },
     context: {
-      patches: PATCHES.map(toPatchEntry),
+      patches: PATCH_ENTRIES,
       seasons: seasons.map((season) => ({ startUnix: season.startDate.unix(), endUnix: season.endDate?.unix() })),
-      now: Date.now() / 1000,
     },
   };
+  catalogs.set(heroes, built);
+  return built;
 }
 
-export interface RoutedQuestion {
-  /** The pages that answer the question, best first: the search opens the first. */
-  results: SearchResult[];
+interface RoutedQuestion {
+  /** The page that answers the question, opened with its heroes and filters; missing when nothing does. */
+  result?: { id: string; href: string };
   /** The question was a bare hero or item name, answered without the model. */
   direct: boolean;
   /** How long the answer took, catalogs and model together. */
@@ -73,9 +77,10 @@ export async function routeQuestion(queryClient: QueryClient, question: string):
     const answers = await decideSearch({ data: { question, entities, rankNames: [...vocabulary.rankNames] } });
     intent = intentFromDecision(answers, question, entities, vocabulary.rankNames);
   }
-  const results = resolveIntent(intent, catalog, context).map((target) => ({
-    id: target.page.id,
-    href: target.path + stringifySearch(target.search),
-  }));
-  return { results, direct, durationMs: performance.now() - startedAt };
+  const target = resolveIntent(intent, catalog, { ...context, now: Date.now() / 1000 });
+  return {
+    result: target && { id: target.page.id, href: target.path + stringifySearch(target.search) },
+    direct,
+    durationMs: performance.now() - startedAt,
+  };
 }

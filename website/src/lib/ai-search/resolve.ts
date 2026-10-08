@@ -6,11 +6,11 @@ import {
   resolvePage,
   type Selection,
 } from "~/lib/page-registry";
-import { MAX_BADGE } from "~/lib/rank-utils";
+import { bandBadges, MAX_BADGE } from "~/lib/rank-utils";
 
 import type { SearchIntent } from "./intent";
 
-export interface RankTier {
+interface RankTier {
   tier: number;
   name: string;
 }
@@ -39,14 +39,13 @@ function rankRange(intent: SearchIntent, ranks: readonly RankTier[]): Selection[
   let max = tierOf(intent.rank_max, ranks);
   if (min === undefined && max === undefined) return undefined;
   if (min !== undefined && max !== undefined && min > max) [min, max] = [max, min];
-  return {
-    min: min === undefined || min === 0 ? 0 : min * 10 + 1,
-    max: max === undefined ? MAX_BADGE : max === 0 ? 0 : max * 10 + 6,
-  };
+  const band = bandBadges({ from: min ?? 0, to: max ?? 0 });
+  // Obscurus (tier 0) is one badge, 0, with no subranks.
+  return { min: min ? band.min : 0, max: max === undefined ? MAX_BADGE : max === 0 ? 0 : band.max };
 }
 
 /** The intent's names and words as a registry selection. */
-export function selectionOf(intent: SearchIntent, catalog: Catalog): Selection {
+function selectionOf(intent: SearchIntent, catalog: Catalog): Selection {
   return {
     heroes: lookUp(intent.heroes, catalog.heroes),
     enemyHeroes: lookUp(intent.enemy_heroes, catalog.heroes),
@@ -59,17 +58,8 @@ export function selectionOf(intent: SearchIntent, catalog: Catalog): Selection {
   };
 }
 
-/** The pages the intent names, best first, each with its URL; two picks that land on the same URL count once. */
-export function resolveIntent(intent: SearchIntent, catalog: Catalog, context: ResolveContext): PageTarget[] {
-  const selection = selectionOf(intent, catalog);
-  const seen = new Set<string>();
-  return intent.pages.flatMap((id) => {
-    const page = registeredPage(id);
-    if (!page) return [];
-    const target = resolvePage(page, selection, context);
-    const key = target.path + JSON.stringify(target.search);
-    if (seen.has(key)) return [];
-    seen.add(key);
-    return [target];
-  });
+/** Where the intent leads: its page, opened with its heroes and filters; undefined when it names no page. */
+export function resolveIntent(intent: SearchIntent, catalog: Catalog, context: ResolveContext): PageTarget | undefined {
+  const page = intent.page === null ? undefined : registeredPage(intent.page);
+  return page && resolvePage(page, selectionOf(intent, catalog), context);
 }

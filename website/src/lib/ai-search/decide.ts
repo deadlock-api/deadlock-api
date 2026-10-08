@@ -1,4 +1,5 @@
 import {
+  MODES,
   PAGE_REGISTRY,
   pageSlots,
   registeredPage,
@@ -11,18 +12,15 @@ import {
 } from "~/lib/page-registry";
 
 import { findMentions, heroTeams } from "./entities";
-import { type IntentVocabulary, MAX_PAGES, NO_FILTERS, type SearchIntent } from "./intent";
+import { type IntentVocabulary, NO_FILTERS, type SearchIntent } from "./intent";
 
 // The search asks Mercury Decide, a classifier, where a question's answer lives. Each part of the routing is one
-// multiple-choice question about the visitor's question, answered with a probability per choice, so the three most
-// likely pages come with the answer. Heroes and items are found in code (`entities.ts`), which is certain and instant,
+// multiple-choice question about the visitor's question, answered with a probability per choice, which also says how
+// sure the model is. Heroes and items are found in code (`entities.ts`), which is certain and instant,
 // and handed to the model as context.
 
 export const DECIDE_URL = "https://api.inceptionlabs.ai/v1/decisions";
 export const DECIDE_MODEL = "mercury-decide";
-
-/** A page is offered after the first only when the model gives it at least this much. */
-const MIN_ALTERNATIVE_PROBABILITY = 0.05;
 
 /**
  * The search opens a page only when the model gives its best page at least this much and does not pick "none". On
@@ -77,8 +75,6 @@ const REGION_CRITERIA: Record<(typeof REGIONS)[number], string> = {
   Oceania: "Oceania, OCE, Australia",
 };
 
-const MODES = ["ranked", "unranked", "street_brawl"] as const satisfies readonly SelectionMode[];
-
 /**
  * Words that must be in the question for a mode to count. The model reads "in eternus" as ranked play, but the rank
  * filter already narrows to ranked lobbies, and a mode the asker did not name would only hide matches.
@@ -111,7 +107,15 @@ function withNone(criteria: Criteria, none: string): Criteria {
   return { [NONE]: none, ...criteria };
 }
 
-export interface DecideRequestBody {
+/** One choice per registered page, and "none" for a question no page answers. The same for every question. */
+const PAGE_CRITERIA = withNone(
+  Object.fromEntries(
+    PAGE_REGISTRY.map((page) => [page.id, `${page.description}.${page.context ? ` ${page.context}` : ""}`]),
+  ),
+  "no page of the site shows this: the question is not about Deadlock stats, or is not a question",
+);
+
+interface DecideRequestBody {
   model: string;
   state: unknown;
   questions: Record<string, { type: "choice"; instructions: string; criteria: Criteria }>;
@@ -137,12 +141,7 @@ export function decideRequestBody(
       page: {
         type: "choice",
         instructions: "Which page of the site shows the answer to the question?",
-        criteria: withNone(
-          Object.fromEntries(
-            PAGE_REGISTRY.map((page) => [page.id, `${page.description}.${page.context ? ` ${page.context}` : ""}`]),
-          ),
-          "no page of the site shows this: the question is not about Deadlock stats, or is not a question",
-        ),
+        criteria: PAGE_CRITERIA,
       },
       rank_min: {
         type: "choice",
@@ -181,7 +180,7 @@ export function decideRequestBody(
   };
 }
 
-export interface ChoiceAnswer {
+interface ChoiceAnswer {
   choice: string;
   probabilities: Record<string, number>;
 }
@@ -193,33 +192,27 @@ function chosen<T extends string>(answer: ChoiceAnswer | undefined, values: read
   return answer && values.includes(answer.choice as T) ? (answer.choice as T) : null;
 }
 
-/** The decision as an intent: the likeliest pages, best first, and the filters the question set; no pages for a question the model could not place. */
+/** The decision as an intent: the likeliest page and the filters the question set; no page for a question the model could not place. */
 export function intentFromDecision(
   answers: DecideAnswers,
   question: string,
   entities: QuestionEntities,
   rankNames: readonly string[],
 ): SearchIntent {
-  const ranked = Object.entries(answers.page?.probabilities ?? {})
+  const [best] = Object.entries(answers.page?.probabilities ?? {})
     .filter(([id]) => registeredPage(id) !== undefined)
     .sort((a, b) => b[1] - a[1]);
   // "test", a question about another game: no page at all, rather than the least wrong one.
-  const understood = answers.page?.choice !== NONE && (ranked[0]?.[1] ?? 0) >= MIN_PAGE_PROBABILITY;
-  const pages = understood
-    ? ranked
-        .filter(([, probability], i) => i === 0 || probability >= MIN_ALTERNATIVE_PROBABILITY)
-        .slice(0, MAX_PAGES)
-        .map(([id]) => id)
-    : [];
+  const page =
+    answers.page?.choice !== NONE && best && best[1] >= MIN_PAGE_PROBABILITY ? registeredPage(best[0]) : undefined;
   const mode = chosen(answers.mode, MODES);
   const rankMin = chosen(answers.rank_min, rankNames);
   const rankMax = chosen(answers.rank_max, rankNames);
   // A page that reads an enemy keeps the two sides of "haze vs bebop"; everywhere else both are heroes of the question.
-  const first = pages[0] ? registeredPage(pages[0]) : undefined;
-  const twoTeams = first !== undefined && pageSlots(first).has("enemyHeroes");
+  const twoTeams = page !== undefined && pageSlots(page).has("enemyHeroes");
   return {
     ...NO_FILTERS,
-    pages,
+    page: page?.id ?? null,
     heroes: twoTeams ? entities.heroes : [...entities.heroes, ...entities.enemies],
     enemy_heroes: twoTeams ? entities.enemies : [],
     items: entities.items,

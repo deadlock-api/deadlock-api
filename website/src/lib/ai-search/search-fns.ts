@@ -1,17 +1,16 @@
 import { createServerFn } from "@tanstack/react-start";
 
 import { type DecideAnswers, decideRequestBody, DECIDE_URL, type QuestionEntities } from "./decide";
+import { MAX_QUESTION_LENGTH } from "./limits";
 
 // The one call that needs the Mercury API key, so it runs in the Worker and the key never reaches a browser. The
 // browser sends the question and the names it found in it; the Worker adds the routing questions and the key.
 
-/** Longer than any real question; it also bounds what one request can cost. */
-export const MAX_QUESTION_LENGTH = 200;
 const MAX_NAMES = 12;
 const MAX_NAME_LENGTH = 40;
 const MAX_RANKS = 16;
 
-export interface DecideSearchInput {
+interface DecideSearchInput {
   question: string;
   entities: QuestionEntities;
   rankNames: string[];
