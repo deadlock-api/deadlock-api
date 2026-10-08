@@ -2,6 +2,7 @@ import { CircleMinus, CirclePlus } from "lucide-react";
 import { createContext, type ReactNode, use } from "react";
 
 import { FilterCell, type FilterCellPassthroughProps } from "~/components/patterns/filter-bar/FilterCell";
+import { triStateSummary } from "~/components/patterns/picker/picker";
 import { Button } from "~/components/ui/button";
 import { useControllableState } from "~/components/ui/hooks/use-controllable-state";
 import { cn } from "~/lib/utils";
@@ -129,14 +130,6 @@ interface TriStateSelectorProps extends FilterCellPassthroughProps {
   children?: ReactNode;
 }
 
-function countLabel(value: TriStateValue) {
-  let included = 0;
-  for (const state of value.values()) if (state === "included") included++;
-  const excluded = value.size - included;
-  if (value.size === 0) return "Any";
-  return [included > 0 && `+${included}`, excluded > 0 && `-${excluded}`].filter(Boolean).join(" / ");
-}
-
 /** A filter of many entries, each included, excluded or left alone. */
 export function TriStateSelector({
   label = "Items",
@@ -165,7 +158,7 @@ export function TriStateSelector({
   return (
     <FilterCell
       label={label}
-      value={countLabel(value)}
+      value={triStateSummary(value)}
       active={value.size > 0}
       onReset={() => setValue(new Map())}
       icon={icon}

@@ -1,7 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import type { Rank } from "deadlock_api_client";
 import { ShieldIcon } from "lucide-react";
-import { useMemo } from "react";
 
 import { FilterCell } from "~/components/patterns/filter-bar/FilterCell";
 import { useControllableState } from "~/components/ui/hooks/use-controllable-state";
@@ -9,7 +8,7 @@ import { ImgWithSkeleton } from "~/components/ui/img-with-skeleton";
 import { Segmented, SegmentedItem } from "~/components/ui/segmented";
 import { Slider } from "~/components/ui/slider";
 import { useDraftValue } from "~/hooks/useDraftValue";
-import { getRankImageUrl, getRankLabel, RANK_BANDS } from "~/lib/rank-utils";
+import { bandBadges, getRankImageUrl, getRankLabel, MAX_BADGE, RANK_BANDS } from "~/lib/rank-utils";
 import { cn } from "~/lib/utils";
 import { ranksQueryOptions } from "~/queries/ranks-query";
 
@@ -47,7 +46,7 @@ function RankIcon({ option, className }: { option: RankOption; className?: strin
 /** `[lowest, highest]` badge, as `tier * 10 + subtier`. */
 export type RankRange = readonly [number, number];
 
-const ANY_RANK: RankRange = [0, 116];
+const ANY_RANK: RankRange = [0, MAX_BADGE];
 
 interface RankRangeSelectorProps extends Omit<
   React.ComponentProps<typeof FilterCell>,
@@ -74,31 +73,17 @@ export function RankRangeSelector({
   });
   const { data: ranksData, isLoading } = useQuery(ranksQueryOptions);
 
-  const sortedRanks = useMemo(() => [...(ranksData ?? [])].sort((a: Rank, b: Rank) => a.tier - b.tier), [ranksData]);
-
-  const options: RankOption[] = useMemo(() => {
-    const opts: RankOption[] = [];
-    for (const rank of sortedRanks) {
-      const subRanksToShow = rank.tier === 0 ? [1] : [1, 2, 3, 4, 5, 6];
-      for (const subrank of subRanksToShow) {
-        opts.push({
-          rankId: getRankId(rank.tier, subrank),
-          rank,
-          subrank,
-          label: getRankLabel(rank, subrank),
-        });
-      }
-    }
-    return opts;
-  }, [sortedRanks]);
-
-  const rankIdToIndex = useMemo(() => {
-    const map = new Map<number, number>();
-    for (let i = 0; i < options.length; i++) {
-      map.set(options[i].rankId, i);
-    }
-    return map;
-  }, [options]);
+  const options: RankOption[] = [...(ranksData ?? [])]
+    .sort((a, b) => a.tier - b.tier)
+    .flatMap((rank) =>
+      (rank.tier === 0 ? [1] : [1, 2, 3, 4, 5, 6]).map((subrank) => ({
+        rankId: getRankId(rank.tier, subrank),
+        rank,
+        subrank,
+        label: getRankLabel(rank, subrank),
+      })),
+    );
+  const rankIdToIndex = new Map(options.map((option, index) => [option.rankId, index]));
 
   const minIndex = rankIdToIndex.get(minRank) ?? 0;
   const maxIndex = rankIdToIndex.get(maxRank) ?? options.length - 1;
@@ -123,15 +108,14 @@ export function RankRangeSelector({
   const isMinAtStart = minIndex === 0;
   const isMaxAtEnd = maxIndex === options.length - 1;
 
-  const presets = useMemo(() => {
-    if (options.length === 0) return [];
-    const first = options[0].rankId;
-    const last = options[options.length - 1].rankId;
-    const bands = RANK_BANDS.filter(
-      (band) => rankIdToIndex.has(getRankId(band.from, 1)) && rankIdToIndex.has(getRankId(band.to, 6)),
-    ).map((band) => ({ label: band.label, min: getRankId(band.from, 1), max: getRankId(band.to, 6) }));
-    return [{ label: "Any", min: first, max: last }, ...bands];
-  }, [options, rankIdToIndex]);
+  const bandPresets = RANK_BANDS.map((band) => {
+    const { min, max } = bandBadges(band);
+    return { label: band.label, min, max };
+  }).filter((band) => rankIdToIndex.has(band.min) && rankIdToIndex.has(band.max));
+  const presets =
+    options.length === 0
+      ? []
+      : [{ label: "Any", min: options[0].rankId, max: options[options.length - 1].rankId }, ...bandPresets];
 
   const activePreset = presets.find((p) => p.min === minRank && p.max === maxRank)?.label ?? "";
 
