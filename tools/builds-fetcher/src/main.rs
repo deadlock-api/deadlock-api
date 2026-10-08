@@ -104,9 +104,9 @@ async fn run_update_loop(
             fetch_missing_builds(http_client, pg_client, ch_client).await;
             last_missing_fetch = Some(Instant::now());
         }
+        let search = format!("{a}{b}{c}");
         for &hero_id in &heroes {
-            let search = format!("{a}{b}{c}");
-            update_builds(http_client, pg_client, hero_id, &[0], Some(search)).await;
+            update_builds(http_client, pg_client, hero_id, &[0], Some(&search)).await;
         }
     }
 }
@@ -177,7 +177,6 @@ async fn fetch_missing_builds(
             Some(build_id.cast_unsigned()),
         )
         .await
-        .map(|(_, b)| b.results)
         {
             Ok(builds) => {
                 counter!("builds_fetcher.fetch_missing_build.success").increment(1);
@@ -217,12 +216,9 @@ async fn update_builds(
     pg_client: &Pool<Postgres>,
     hero_id: u32,
     langs: &[i32],
-    search: Option<String>,
+    search: Option<&str>,
 ) {
-    let builds = match fetch_builds(http_client, hero_id, langs, search.as_ref(), None)
-        .await
-        .map(|(_, b)| b.results)
-    {
+    let builds = match fetch_builds(http_client, hero_id, langs, search, None).await {
         Ok(builds) => {
             counter!("builds_fetcher.fetch_builds.success", "hero_id" => hero_id.to_string())
                 .increment(1);
@@ -268,9 +264,9 @@ async fn insert_builds(
 ) -> sqlx::Result<PgQueryResult> {
     let rows: Vec<_> = builds
         .into_iter()
-        .filter_map(|build| {
+        .filter_map(|mut build| {
             let data = serde_json::to_value(&build).ok()?;
-            let hero_build = build.hero_build.clone()?;
+            let hero_build = build.hero_build.take()?;
             Some((build, hero_build, data))
         })
         .collect();
@@ -310,17 +306,17 @@ async fn fetch_builds(
     http_client: &reqwest::Client,
     hero_id: u32,
     langs: &[i32],
-    search: Option<&String>,
+    search: Option<&str>,
     hero_build_id: Option<u32>,
-) -> anyhow::Result<(String, CMsgClientToGcFindHeroBuildsResponse)> {
+) -> anyhow::Result<Vec<HeroBuildResult>> {
     let msg = CMsgClientToGcFindHeroBuilds {
         hero_id: hero_id.into(),
         language: langs.to_vec(),
-        search_text: search.cloned(),
+        search_text: search.map(str::to_owned),
         hero_build_id,
         ..Default::default()
     };
-    common::call_steam_proxy(
+    let (_, response): (_, CMsgClientToGcFindHeroBuildsResponse) = common::call_steam_proxy(
         http_client,
         EgcCitadelClientMessages::KEMsgClientToGcFindHeroBuilds,
         &msg,
@@ -333,5 +329,6 @@ async fn fetch_builds(
         Duration::from_secs(5),
         None,
     )
-    .await
+    .await?;
+    Ok(response.results)
 }
