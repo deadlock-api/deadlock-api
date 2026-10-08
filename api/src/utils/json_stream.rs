@@ -22,6 +22,15 @@ impl ResponseFormat {
     }
 }
 
+/// `line` wrapped in an optional one-byte prefix and suffix, in a single allocation.
+fn chunk(prefix: Option<u8>, line: &str, suffix: Option<u8>) -> Bytes {
+    let mut buf = Vec::with_capacity(line.len() + 2);
+    buf.extend(prefix);
+    buf.extend_from_slice(line.as_bytes());
+    buf.extend(suffix);
+    Bytes::from(buf)
+}
+
 pub(crate) async fn stream_rows(
     mut lines: Lines<BytesCursor>,
     format: ResponseFormat,
@@ -43,24 +52,19 @@ pub(crate) async fn stream_rows(
                         None => return Ok(None),
                     },
                 };
-                let mut buf = Vec::with_capacity(line.len() + 1);
-                buf.extend_from_slice(line.as_bytes());
-                buf.push(b'\n');
-                return Ok(Some((Bytes::from(buf), (lines, None, false))));
+                return Ok(Some((
+                    chunk(None, &line, Some(b'\n')),
+                    (lines, None, false),
+                )));
             }
             if let Some(first) = first {
-                let mut buf = Vec::with_capacity(first.len() + 1);
-                buf.push(b'[');
-                buf.extend_from_slice(first.as_bytes());
-                return Ok(Some((Bytes::from(buf), (lines, None, false))));
+                return Ok(Some((
+                    chunk(Some(b'['), &first, None),
+                    (lines, None, false),
+                )));
             }
             match lines.next_line().await? {
-                Some(line) => {
-                    let mut buf = Vec::with_capacity(line.len() + 1);
-                    buf.push(b',');
-                    buf.extend_from_slice(line.as_bytes());
-                    Ok(Some((Bytes::from(buf), (lines, None, false))))
-                }
+                Some(line) => Ok(Some((chunk(Some(b','), &line, None), (lines, None, false)))),
                 None => Ok(Some((Bytes::from_static(b"]"), (lines, None, true)))),
             }
         },
