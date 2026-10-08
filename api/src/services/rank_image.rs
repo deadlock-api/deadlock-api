@@ -166,7 +166,12 @@ pub(crate) async fn fetch_tier_image(
 }
 
 /// Tier artwork only changes with a new asset build, and the URL changes with it.
-#[cached(ttl_secs = 86400, key = "String", convert = "{ image_url.to_owned() }")]
+#[cached(
+    ttl_secs = 86400,
+    key = "String",
+    convert = "{ image_url.to_owned() }",
+    result_fallback = true
+)]
 async fn download_tier_image(
     http_client: &reqwest::Client,
     image_url: &str,
