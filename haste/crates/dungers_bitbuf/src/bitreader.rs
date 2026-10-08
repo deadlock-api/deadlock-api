@@ -9,8 +9,8 @@ use crate::{BitError, EXTRA_MASKS};
 // the opposite happened. numbers were degraded.
 
 pub struct BitReader<'a> {
+    data: &'a [u8],
     num_bits: usize,
-    data: &'a [u64],
     cur_bit: usize,
 }
 
@@ -18,21 +18,23 @@ impl<'a> BitReader<'a> {
     #[must_use]
     pub fn new(data: &'a [u8]) -> Self {
         Self {
+            data,
             num_bits: data.len() << 3,
-            #[allow(unsafe_code, clippy::transmute_ptr_to_ptr)]
-            data: unsafe {
-                // SAFETY: it is okay to transmute u8s into u64s here, even if slice of slice does
-                // not contain enough (8 / size_of::<u64>()).
-                //
-                // that is because all "safe" methods carefully keep track of where the reading is
-                // taking place and any out of bound read will result in an error.
-                //
-                // BUT! "unsafe" `unchecked` methods may allow out of bounds reads - that is ub. in
-                // debug builds assertions will yell at you loudly if something is not right, but
-                // those assertions will not be present in release builds.
-                core::mem::transmute::<&[u8], &[u64]>(data)
-            },
             cur_bit: 0,
+        }
+    }
+
+    /// loads 8 little-endian bytes starting at `byte_idx`. bytes past the end of the buffer read
+    /// as zero, so a load near the tail never goes out of bounds.
+    #[inline]
+    fn load_u64_le(&self, byte_idx: usize) -> u64 {
+        let rest = self.data.get(byte_idx..).unwrap_or_default();
+        if let Some(chunk) = rest.first_chunk::<8>() {
+            u64::from_le_bytes(*chunk)
+        } else {
+            let mut buf = [0u8; 8];
+            buf[..rest.len()].copy_from_slice(rest);
+            u64::from_le_bytes(buf)
         }
     }
 
@@ -74,45 +76,33 @@ impl<'a> BitReader<'a> {
 
     /// `read_ubit64` reads the specified number of bits into a `u64`. the function can read up to a
     /// maximum of 64 bits at a time. if the `num_bits` exceeds the number of remaining bits, the
-    /// function returns an [`Error::Overflow`] error.
+    /// function returns an [`BitError::Overflow`] error.
     pub fn read_ubit64(&mut self, num_bits: usize) -> Result<u64, BitError> {
         if num_bits > 64 || self.num_bits_left() < num_bits {
             return Err(BitError::Overflow);
         }
 
-        let block1_idx = self.cur_bit >> 6;
+        let byte_idx = self.cur_bit >> 3;
+        let shift = self.cur_bit & 7;
 
-        let mut block1 = *self.data.get(block1_idx).ok_or(BitError::Overflow)?;
-        // get the bits we're interested in
-        block1 >>= self.cur_bit & 63;
-
-        self.cur_bit += num_bits;
-        let mut ret = block1;
-
-        // does it span this block?
-        if (self.cur_bit - 1) >> 6 == block1_idx {
-            ret &= EXTRA_MASKS[num_bits];
-        } else {
-            let extra_bits = self.cur_bit & 63;
-
-            let mut block2 = *self.data.get(block1_idx + 1).ok_or(BitError::Overflow)?;
-            block2 &= EXTRA_MASKS[extra_bits];
-
-            // no need to mask since we hit the end of the block. shift the second block's part
-            // into the high bits.
-            ret |= block2 << (num_bits - extra_bits);
+        // a single unaligned load yields at least 57 (64 - 7) usable bits.
+        let mut ret = self.load_u64_le(byte_idx) >> shift;
+        if num_bits + shift > 64 {
+            // the remaining (at most 7) bits live in the 9th byte, which exists because of the
+            // bounds check above.
+            let next = self.data.get(byte_idx + 8).copied().unwrap_or_default();
+            ret |= u64::from(next) << (64 - shift);
         }
 
-        Ok(ret)
+        self.cur_bit += num_bits;
+        Ok(ret & EXTRA_MASKS[num_bits])
     }
 
     pub fn read_bool(&mut self) -> Result<bool, BitError> {
-        if self.num_bits_left() < 1 {
+        let Some(&byte) = self.data.get(self.cur_bit >> 3) else {
             return Err(BitError::Overflow);
-        }
-
-        let block1 = *self.data.get(self.cur_bit >> 6).ok_or(BitError::Overflow)?;
-        let one_bit = block1 >> (self.cur_bit & 63) & 1;
+        };
+        let one_bit = (byte >> (self.cur_bit & 7)) & 1;
         self.cur_bit += 1;
         Ok(one_bit == 1)
     }
@@ -127,12 +117,29 @@ impl<'a> BitReader<'a> {
             return Err(BitError::Overflow);
         }
 
+        // byte-aligned fast path: a plain copy.
+        if self.cur_bit.is_multiple_of(8) {
+            let start = self.cur_bit >> 3;
+            let num_bytes = num_bits >> 3;
+            let src = self
+                .data
+                .get(start..start + num_bytes)
+                .ok_or(BitError::Overflow)?;
+            buf[..num_bytes].copy_from_slice(src);
+            self.cur_bit += num_bytes << 3;
+            let rem_bits = num_bits & 7;
+            if rem_bits > 0 {
+                buf[num_bytes] = self.read_ubit64(rem_bits)?.try_into()?;
+            }
+            return Ok(());
+        }
+
         let mut bits_left = num_bits;
         let mut bytes_written = 0;
 
         while bits_left >= 64 {
             let value = self.read_ubit64(64)?;
-            let bytes = value.to_ne_bytes();
+            let bytes = value.to_le_bytes();
 
             let dest_range = bytes_written..bytes_written + 8;
             buf[dest_range].copy_from_slice(&bytes);
@@ -185,7 +192,7 @@ impl<'a> BitReader<'a> {
         }
 
         let mut value = T::from(byte & 0x7f);
-        for count in 1..=max_varint_size::<T>() {
+        for count in 1..max_varint_size::<T>() {
             let byte = self.read_byte()?;
             value |= (T::from(byte & PAYLOAD_BITS)) << (count * 7);
             if (byte & CONTINUE_BIT) == 0 {

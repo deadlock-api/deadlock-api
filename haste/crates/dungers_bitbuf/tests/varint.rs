@@ -62,3 +62,17 @@ fn test_varint64() {
         assert_eq!(got, *want);
     }
 }
+
+#[test]
+fn test_uvarint32_rejects_overlong() {
+    // 5 bytes is the max for a u32; a continuation bit on the 5th byte is malformed and the
+    // reader must not consume a 6th byte.
+    let buf = [0xff, 0xff, 0xff, 0xff, 0xff, 0x01];
+    let mut br = BitReader::new(&buf);
+    assert!(br.read_uvarint32().is_err());
+    assert_eq!(br.num_bits_read(), 5 * 8);
+
+    let buf = [0xff, 0xff, 0xff, 0xff, 0x0f];
+    let mut br = BitReader::new(&buf);
+    assert_eq!(br.read_uvarint32().unwrap(), u32::MAX);
+}

@@ -89,3 +89,64 @@ fn test_read_bytes() {
     // try to read when no more bytes are available
     assert!(br.read_bytes(&mut out[0..1]).is_err());
 }
+
+/// reference implementation: reads bits one at a time.
+fn naive_read(buf: &[u8], bit: usize, num_bits: usize) -> u64 {
+    (0..num_bits).fold(0u64, |acc, i| {
+        let b = bit + i;
+        acc | (u64::from((buf[b >> 3] >> (b & 7)) & 1) << i)
+    })
+}
+
+#[test]
+fn test_read_ubit64_matches_reference_at_every_offset() {
+    // odd-sized buffers make sure that reads near the tail do not touch bytes past the end.
+    for len in [1usize, 3, 7, 8, 9, 13, 17] {
+        let buf: Vec<u8> = (0..len)
+            .map(|i| (i as u8).wrapping_mul(0x9d).wrapping_add(0x5b))
+            .collect();
+        let total_bits = len * 8;
+        for start in 0..total_bits {
+            for num_bits in 0..=64.min(total_bits - start) {
+                let mut br = BitReader::new(&buf);
+                br.seek(start).unwrap();
+                assert_eq!(
+                    br.read_ubit64(num_bits).unwrap(),
+                    naive_read(&buf, start, num_bits),
+                    "len={len} start={start} num_bits={num_bits}"
+                );
+                assert_eq!(br.num_bits_read(), start + num_bits);
+            }
+            let mut br = BitReader::new(&buf);
+            br.seek(start).unwrap();
+            assert!(br.read_ubit64(total_bits - start + 1).is_err());
+        }
+    }
+}
+
+#[test]
+fn test_read_bool_at_end() {
+    let buf = [0b1000_0000u8];
+    let mut br = BitReader::new(&buf);
+    br.seek(7).unwrap();
+    assert!(br.read_bool().unwrap());
+    assert!(br.read_bool().is_err());
+}
+
+#[test]
+fn test_read_bits_matches_reference() {
+    let buf: Vec<u8> = (0..23u8).map(|i| i.wrapping_mul(0x3b) ^ 0xa5).collect();
+    for start in 0..16 {
+        for num_bits in 0..(buf.len() * 8 - start) {
+            let mut br = BitReader::new(&buf);
+            br.seek(start).unwrap();
+            let mut out = vec![0u8; num_bits.div_ceil(8)];
+            br.read_bits(&mut out, num_bits).unwrap();
+            for (i, byte) in out.iter().enumerate() {
+                let n = 8.min(num_bits - i * 8);
+                assert_eq!(u64::from(*byte), naive_read(&buf, start + i * 8, n));
+            }
+            assert_eq!(br.num_bits_read(), start + num_bits);
+        }
+    }
+}
