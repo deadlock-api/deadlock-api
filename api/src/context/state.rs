@@ -161,10 +161,7 @@ impl AppState {
         // The main client never uses the query cache: it backs writes and freshness
         // sensitive background/work-queue reads, which must never serve stale results.
         let ch_client = clickhouse::Client::default()
-            .with_url(format!(
-                "http://{}:{}",
-                config.clickhouse.host, config.clickhouse.http_port
-            ))
+            .with_url(config.clickhouse.url())
             .with_user(&config.clickhouse.username)
             .with_password(&config.clickhouse.password)
             .with_database(&config.clickhouse.dbname)
@@ -196,13 +193,11 @@ impl AppState {
             // 25 GiB clears the largest legitimate refresh (~19 GiB) with headroom; spilling
             // is already enabled server-side (max_bytes_before_external_group_by/sort = 20 GiB).
             .with_setting("max_memory_usage", "26843545600");
-        if let Err(e) = ch_client
-            .query("SELECT 1 SETTINGS log_comment = 'startup_health_check'")
-            .fetch_one::<u8>()
-            .await
-        {
-            return Err(AppStateError::Clickhouse(e));
-        }
+        ch_health_check(
+            &ch_client,
+            "SELECT 1 SETTINGS log_comment = 'startup_health_check'",
+        )
+        .await?;
 
         // Create a Clickhouse readonly connection pool
         debug!("Creating readonly Clickhouse client");
@@ -212,21 +207,16 @@ impl AppState {
             .with_setting("readonly", "2")
             .with_setting("allow_ddl", "0")
             .with_setting("allow_introspection_functions", "0");
-        if let Err(e) = ch_client_ro
-            .query("SELECT 1 SETTINGS log_comment = 'startup_health_check'")
-            .fetch_one::<u8>()
-            .await
-        {
-            return Err(AppStateError::Clickhouse(e));
-        }
+        ch_health_check(
+            &ch_client_ro,
+            "SELECT 1 SETTINGS log_comment = 'startup_health_check'",
+        )
+        .await?;
 
         // Create a Clickhouse restricted connection pool
         debug!("Creating restricted Clickhouse client");
         let ch_client_restricted = clickhouse::Client::default()
-            .with_url(format!(
-                "http://{}:{}",
-                config.clickhouse.host, config.clickhouse.http_port
-            ))
+            .with_url(config.clickhouse.url())
             .with_user(&config.clickhouse.restricted_username)
             .with_password(&config.clickhouse.restricted_password)
             .with_database(&config.clickhouse.dbname)
@@ -234,13 +224,7 @@ impl AppState {
             .with_setting("allow_statistics_optimize", "0")
             .with_setting("max_memory_usage", "26843545600")
             .with_setting("use_query_cache", "0");
-        if let Err(e) = ch_client_restricted
-            .query("SELECT 1")
-            .fetch_one::<u8>()
-            .await
-        {
-            return Err(AppStateError::Clickhouse(e));
-        }
+        ch_health_check(&ch_client_restricted, "SELECT 1").await?;
 
         // Create a Postgres connection pool
         debug!("Creating PostgreSQL client");
@@ -363,10 +347,7 @@ impl AppState {
                 retry_config(Duration::from_mins(3)),
             )?;
             let ch_client_dump = clickhouse::Client::default()
-                .with_url(format!(
-                    "http://{}:{}",
-                    config.clickhouse.host, config.clickhouse.http_port
-                ))
+                .with_url(config.clickhouse.url())
                 .with_user(&config.data_dump.username)
                 .with_password(&config.data_dump.password)
                 .with_database("dump")
@@ -410,6 +391,14 @@ impl AppState {
             mcp_catalog,
         })))
     }
+}
+
+/// Runs a trivial query so a misconfigured `ClickHouse` client fails startup.
+async fn ch_health_check(
+    client: &clickhouse::Client,
+    query: &str,
+) -> Result<(), clickhouse::error::Error> {
+    client.query(query).fetch_one::<u8>().await.map(drop)
 }
 
 /// Exponential backoff (200ms..3s, 3 retries) giving up after `retry_timeout`.

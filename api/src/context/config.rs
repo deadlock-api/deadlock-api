@@ -111,6 +111,13 @@ pub(crate) struct ClickhouseConfig {
     pub(crate) allow_custom_queries: bool,
 }
 
+impl ClickhouseConfig {
+    /// HTTP URL of the `ClickHouse` server.
+    pub(super) fn url(&self) -> String {
+        format!("http://{}:{}", self.host, self.http_port)
+    }
+}
+
 fn default_postgres_host() -> String {
     "localhost".to_owned()
 }
