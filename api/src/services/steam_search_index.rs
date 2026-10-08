@@ -166,7 +166,7 @@ impl SteamSearchIndex {
         }
     }
 
-    /// Load the newest persisted `v_*` index, if any. Returns whether one was loaded.
+    /// Load the newest complete persisted `v_*` index, if any. Returns whether one was loaded.
     pub(crate) fn try_load_persisted(&self) -> bool {
         let Ok(entries) = std::fs::read_dir(&self.inner.base_path) else {
             return false;
@@ -182,9 +182,16 @@ impl SteamSearchIndex {
             .collect();
         subdirs.sort_by_key(|(ts, _)| *ts);
         for (_, path) in subdirs.iter().rev() {
+            // The watermark is written only after a successful commit, so it marks a complete
+            // index. A dir without one is a rebuild that was cancelled or failed after
+            // `open_or_create` wrote an empty index; loading it would serve empty results (and
+            // the cleanup below would delete the last good index). It is GC'd below instead.
+            let Some(watermark) = read_watermark(path) else {
+                warn!("steam search index: skipping incomplete {path:?} (no watermark)");
+                continue;
+            };
             match open_persisted_reader(path) {
                 Ok(reader) => {
-                    let watermark = read_watermark(path).unwrap_or(0);
                     info!("steam search index loaded {path:?} (watermark={watermark})");
                     self.inner.reader.store(Some(Arc::new(reader)));
                     self.inner.current_dir.store(Some(Arc::new(path.clone())));
@@ -1136,5 +1143,50 @@ mod tests {
     fn rejects_non_numeric() {
         assert_eq!(parse_id_query("raimann"), None);
         assert_eq!(parse_id_query("123abc"), None);
+    }
+
+    #[test]
+    fn try_load_persisted_skips_incomplete_dirs() {
+        use super::{SteamSearchIndex, VERSION_PREFIX, open_index_at, write_watermark};
+
+        let root = std::env::temp_dir().join(format!(
+            "steam_search_index_test_{}_{}",
+            std::process::id(),
+            super::unix_now()
+        ));
+        let index = SteamSearchIndex::new(root.clone());
+        let base = index.inner.base_path.clone();
+
+        // Older, complete index: committed and watermarked.
+        let complete = base.join(format!("{VERSION_PREFIX}100"));
+        std::fs::create_dir_all(&complete).unwrap();
+        let mut writer: tantivy::IndexWriter = open_index_at(&complete, true)
+            .unwrap()
+            .writer(15_000_000)
+            .unwrap();
+        writer.commit().unwrap();
+        write_watermark(&complete, 42);
+
+        // Newer rebuild that was cancelled: empty index, no watermark.
+        let incomplete = base.join(format!("{VERSION_PREFIX}200"));
+        std::fs::create_dir_all(&incomplete).unwrap();
+        open_index_at(&incomplete, true).unwrap();
+
+        assert!(index.try_load_persisted());
+        assert_eq!(
+            index.inner.current_dir.load_full().as_deref(),
+            Some(&complete)
+        );
+        assert_eq!(
+            index
+                .inner
+                .watermark
+                .load(core::sync::atomic::Ordering::Relaxed),
+            42
+        );
+        assert!(complete.exists());
+        assert!(!incomplete.exists());
+
+        std::fs::remove_dir_all(&root).unwrap();
     }
 }
