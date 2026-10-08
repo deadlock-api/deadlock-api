@@ -4,7 +4,6 @@ use crate::utils::sql::{
     MAX_FILTERING_AVERAGE_BADGE, MIN_FILTERING_AVERAGE_BADGE, MatchPoolFilters,
     average_badge_filter, id_list,
 };
-use core::fmt::Write;
 use core::time::Duration;
 use std::collections::HashSet;
 
@@ -312,10 +311,10 @@ fn player_columns(query: &BulkMatchMetadataQuery) -> Vec<(String, String)> {
         "pregame_hero_id",
     ];
     if query.include_player_info || query.include_player_kda {
-        names.extend(vec!["kills", "deaths", "assists"]);
+        names.extend(["kills", "deaths", "assists"]);
     }
     if query.include_player_info {
-        names.extend(vec![
+        names.extend([
             "net_worth",
             "last_hits",
             "denies",
@@ -721,9 +720,9 @@ fn build_query(
 
     // Inner CTE groups by match_id — non-key columns must be aggregated.
     let inner_order_expr = match query.order_by {
-        SortKey::MatchId => "match_id".to_owned(),
-        SortKey::StartTime => "any(start_time)".to_owned(),
-        SortKey::AverageBadge => "coalesce(any(average_badge), 0)".to_owned(),
+        SortKey::MatchId => "match_id",
+        SortKey::StartTime => "any(start_time)",
+        SortKey::AverageBadge => "coalesce(any(average_badge), 0)",
     };
     let order = format!(" ORDER BY {} {} ", inner_order_expr, query.order_direction);
     // Outer query has GROUP BY match_id, so non-group columns must be aggregated.
@@ -748,8 +747,12 @@ fn build_query(
 
     select_fields.push("any(banned_hero_ids) as banned_hero_ids".to_owned());
 
-    let mut query = String::new();
-    if has_explicit_match_ids {
+    let select = format!(
+        "SELECT match_player.match_id as match_id, {}",
+        select_fields.join(", ")
+    );
+    let tail = format!(" GROUP BY match_player.match_id {outer_order}{limit}{settings}");
+    let query = if has_explicit_match_ids {
         // Flat single-scan path: when match_ids are explicit, skip the CTE.
         // The literal IN list lets ClickHouse apply primary-key granule pruning
         // (−85% parts, −63% read_rows, −15% peak memory vs the CTE path).
@@ -767,17 +770,7 @@ fn build_query(
         } else {
             format!(" WHERE {} ", qualified.join(" AND "))
         };
-        query.push_str("SELECT match_player.match_id as match_id");
-        if !select_fields.is_empty() {
-            query.push_str(", ");
-            query.push_str(&select_fields.join(", "));
-        }
-        query.push_str(" FROM match_player");
-        query.push_str(&outer_where);
-        query.push_str(" GROUP BY match_player.match_id ");
-        query.push_str(&outer_order);
-        query.push_str(&limit);
-        query.push_str(settings);
+        format!("{select} FROM match_player{outer_where}{tail}")
     } else {
         // CTE path: materialize qualifying match_ids first, then aggregate.
         // Required when there are no explicit match_ids because ORDER+LIMIT must
@@ -808,29 +801,12 @@ fn build_query(
                 info_filters.join(" AND ")
             ),
         };
-        query.push_str("WITH ");
-        write!(
-            &mut query,
-            "t_matches AS (SELECT match_id FROM {t_matches_source} GROUP BY match_id {order} {limit})"
-        )?;
-        query.push_str("SELECT ");
-        query.push_str("match_player.match_id as match_id");
-        if !select_fields.is_empty() {
-            query.push_str(", ");
-            query.push_str(&select_fields.join(", "));
-        }
-        query.push_str(
-            " FROM match_player \
-             WHERE match_player.match_id IN t_matches ",
-        );
-        if let Some(players_filter) = &players_filter {
-            write!(&mut query, " AND {players_filter} ")?;
-        }
-        query.push_str(" GROUP BY match_player.match_id ");
-        query.push_str(&outer_order);
-        query.push_str(&limit);
-        query.push_str(settings);
-    }
+        let players_filter = players_filter.map_or_default(|f| format!(" AND {f} "));
+        format!(
+            "WITH t_matches AS (SELECT match_id FROM {t_matches_source} GROUP BY match_id {order} {limit})\
+             {select} FROM match_player WHERE match_player.match_id IN t_matches {players_filter}{tail}"
+        )
+    };
     debug!(?query);
     Ok(query)
 }
