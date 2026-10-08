@@ -3,9 +3,11 @@ import fs from "node:fs";
 import path from "node:path";
 import { test } from "node:test";
 
+import { HERO_SORT_BY_VALUES, ALL_SORT_BY_VALUES } from "../../components/domain/player-scoreboard/sort-options";
 import { ANALYTICS_TABS, analyticsTabPath, type AnalyticsSection, type AnalyticsTab } from "../analytics-tabs";
+import { ALL_STAT_KEYS } from "../game-stat-definitions";
 import { PAGE_REGISTRY, resolvePage, UNSEARCHABLE_PAGES } from "./index";
-import type { Selection } from "./types";
+import { SORT_KEYS, type Selection } from "./types";
 
 const ROUTES = path.join(import.meta.dirname, "../../routes");
 
@@ -113,4 +115,27 @@ test("a page with tabs opens on its tab", () => {
   const conversations = PAGE_REGISTRY.find((page) => page.id === "hero_conversations")!;
   const bebop = { ...empty, heroes: [{ id: 15, name: "Bebop" }] };
   assert.deepEqual(resolvePage(conversations, bebop, context).search, { tab: "conversations", heroes: 15 });
+});
+
+test("every sort a page is sent is one the page offers", () => {
+  const offered: Record<string, readonly string[]> = {
+    hero_scoreboard: HERO_SORT_BY_VALUES,
+    player_scoreboard: ALL_SORT_BY_VALUES,
+    games_over_time: ALL_STAT_KEYS,
+  };
+  for (const [id, values] of Object.entries(offered)) {
+    const page = PAGE_REGISTRY.find((p) => p.id === id)!;
+    for (const sort of SORT_KEYS) {
+      for (const [param, reader] of Object.entries(page.search ?? {})) {
+        if (reader.uses !== "sort") continue;
+        const value = reader.read({ ...empty, sort }, context);
+        if (value !== undefined) assert.ok(values.includes(String(value)), `${id} ${param}=${value} for ${sort}`);
+      }
+    }
+  }
+  const heroes = PAGE_REGISTRY.find((p) => p.id === "hero_scoreboard")!;
+  assert.equal(
+    resolvePage(heroes, { ...empty, sort: "max_health" }, context).search.scoreboard_sort_by,
+    "avg_max_health_per_match",
+  );
 });

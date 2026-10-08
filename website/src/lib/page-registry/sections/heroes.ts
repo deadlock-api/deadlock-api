@@ -1,19 +1,43 @@
 import { comboSize, heroId, heroIds, heroSlugParam, sortParam } from "../readers";
-import type { RegisteredPage } from "../types";
+import type { RegisteredPage, SortKey } from "../types";
 
 const ALL = ["mode", "rank", "time"] as const;
 
-/** The scoreboard sorts of the hero and player tables, by the shared sort keys. */
-export const SCOREBOARD_SORT = {
-  winrate: "winrate",
-  matches: "matches",
+/** The scoreboards' own stat keys (sort-options.ts), by the shared sort keys: every stat both tables sort by. */
+const SCOREBOARD_STATS = {
   kills: "kills",
   deaths: "deaths",
   assists: "assists",
   souls: "net_worth",
   damage: "player_damage",
+  damage_taken: "damage_taken",
+  boss_damage: "boss_damage",
+  creep_damage: "creep_damage",
+  neutral_damage: "neutral_damage",
   last_hits: "last_hits",
-} as const;
+  denies: "denies",
+  creep_kills: "creep_kills",
+  neutral_kills: "neutral_kills",
+  max_health: "max_health",
+  level: "player_level",
+  permanent_buffs: "permanent_buffs",
+  shots_hit: "shots_hit",
+  shots_missed: "shots_missed",
+  hero_hits: "hero_bullets_hit",
+  crits: "hero_bullets_hit_crit",
+} as const satisfies Partial<Record<SortKey, string>>;
+
+/**
+ * A scoreboard's `sort_by` for each shared sort key. Heroes are compared by their average per match; players by
+ * their totals, as a leaderboard of "the most kills".
+ */
+export function scoreboardSort(variant: "avg" | "total"): Partial<Record<SortKey, string>> {
+  const stats = Object.entries(SCOREBOARD_STATS).map(([key, stat]) => [
+    key,
+    variant === "avg" ? `avg_${stat}_per_match` : stat,
+  ]);
+  return { winrate: "winrate", matches: "matches", wins: "wins", losses: "losses", ...Object.fromEntries(stats) };
+}
 
 export const HERO_PAGES: RegisteredPage[] = [
   {
@@ -119,10 +143,14 @@ export const HERO_PAGES: RegisteredPage[] = [
   },
   {
     id: "hero_scoreboard",
-    description: "every hero's average kills, deaths, assists, souls, damage and last hits per match",
-    context: "For a hero's per-match numbers; which hero is best is tier_list, and players are player_scoreboard.",
+    description:
+      "every hero's averages per match: kills, deaths, assists, souls, damage dealt and taken, last hits, denies, " +
+      "max health, level, buffs, shots and crits; heroes by any of these stats",
+    context:
+      'Heroes only, never players: a question about players or people ("players with the most kills", "who has ' +
+      'the most denies") is player_scoreboard. Which hero is best overall is tier_list.',
     path: "/analytics/heroes/scoreboard",
-    search: { scoreboard_sort_by: sortParam(SCOREBOARD_SORT) },
+    search: { scoreboard_sort_by: sortParam(scoreboardSort("avg")) },
     filters: ALL,
   },
 ];
