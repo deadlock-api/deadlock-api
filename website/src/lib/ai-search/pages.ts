@@ -35,6 +35,8 @@ export interface ResolvedEntities {
 export type SharedFilter = "mode" | "rank" | "time";
 
 interface PageDefinition {
+  /** What the search shows while the model is still answering: "Hero counters". */
+  label: string;
   meaning: string;
   filters: readonly SharedFilter[];
   build: (entities: ResolvedEntities) => PageTarget;
@@ -59,6 +61,7 @@ function slots(team: Entity[], size: number): string {
 
 export const PAGES = {
   hero_stats: {
+    label: "Hero stats",
     meaning: "win rate, pick rate and ban rate of every hero; best or most played heroes",
     filters: ALL_FILTERS,
     build: ({ metric }) => ({
@@ -69,6 +72,7 @@ export const PAGES = {
     }),
   },
   tier_list: {
+    label: "Tier list",
     meaning: "hero tier list, S to D, meta heroes",
     filters: ALL_FILTERS,
     build: ({ metric }) => ({
@@ -91,6 +95,7 @@ export const PAGES = {
     }),
   },
   hero_page: {
+    label: "Hero page",
     meaning: "overview of one hero: how good it is, its stats, builds and matchups in one place",
     filters: [],
     build: ({ heroes }): PageTarget =>
@@ -99,6 +104,7 @@ export const PAGES = {
         : { path: "/analytics/heroes", search: {} },
   },
   hero_counters: {
+    label: "Hero counters",
     meaning: "one hero against every other hero: its counters, who it beats, who it loses to, hero A vs hero B",
     filters: ALL_FILTERS,
     build: ({ heroes }): PageTarget =>
@@ -107,11 +113,13 @@ export const PAGES = {
         : { path: "/analytics/heroes/matchups", search: {} },
   },
   hero_matchups: {
+    label: "Matchups",
     meaning: "the matchup table of all heroes: best and worst opponents and teammates for every hero",
     filters: ALL_FILTERS,
     build: () => ({ path: "/analytics/heroes/matchups", search: {} }),
   },
   hero_synergy: {
+    label: "Hero combos",
     meaning: "hero combos and duos: which heroes win together on the same team",
     filters: ALL_FILTERS,
     build: ({ heroes }) => ({
@@ -120,6 +128,7 @@ export const PAGES = {
     }),
   },
   heroes_over_time: {
+    label: "Heroes over time",
     meaning: "how heroes' win rate or pick rate changed over time, trends, nerfs and buffs",
     filters: ALL_FILTERS,
     build: ({ heroes, metric }) => ({
@@ -141,11 +150,13 @@ export const PAGES = {
     }),
   },
   heroes_by_rank: {
+    label: "Heroes by rank",
     meaning: "hero win rates and pick rates compared across ranks, which heroes are strong at low or high rank",
     filters: ["mode", "time"],
     build: () => ({ path: "/analytics/heroes/by-rank", search: {} }),
   },
   hero_items: {
+    label: "Item stats",
     meaning: "item win rates and best items, optionally for one hero: what to build, best items on a hero",
     filters: ALL_FILTERS,
     build: ({ heroes, items }) => ({
@@ -154,6 +165,7 @@ export const PAGES = {
     }),
   },
   item_page: {
+    label: "Item page",
     meaning: "overview of one item: its win rate, who buys it and when",
     filters: [],
     build: ({ items }): PageTarget =>
@@ -162,6 +174,7 @@ export const PAGES = {
         : { path: "/analytics/items", search: {} },
   },
   item_timing: {
+    label: "Item timing",
     meaning: "when to buy an item: win rate by purchase time or souls",
     filters: ALL_FILTERS,
     build: ({ heroes, items }) => ({
@@ -170,21 +183,25 @@ export const PAGES = {
     }),
   },
   build_flow: {
+    label: "Build order",
     meaning: "build order of a hero: which items are bought first, second and later",
     filters: ALL_FILTERS,
     build: ({ heroes }) => ({ path: "/analytics/items/build-flow", search: only({ hero: heroes[0]?.id }) }),
   },
   abilities: {
+    label: "Ability order",
     meaning: "ability and skill order of a hero: which abilities to level first",
     filters: ALL_FILTERS,
     build: ({ heroes }) => ({ path: "/analytics/abilities", search: only({ hero_id: heroes[0]?.id }) }),
   },
   team_sides: {
+    label: "Game stats",
     meaning: "game overview: Hidden King vs Archmother (team side) win rates, match length, objectives",
     filters: ALL_FILTERS,
     build: () => ({ path: "/analytics/games", search: {} }),
   },
   games_over_time: {
+    label: "Games over time",
     meaning: "how average game stats changed over time: match duration, kills, souls per game",
     filters: ALL_FILTERS,
     build: ({ metric }) => ({
@@ -204,6 +221,7 @@ export const PAGES = {
     }),
   },
   team_builder: {
+    label: "Team builder",
     meaning: "draft two teams and predict which wins: my team of heroes against an enemy team",
     filters: ALL_FILTERS,
     build: ({ heroes, enemyHeroes, teamSize }) => ({
@@ -215,6 +233,7 @@ export const PAGES = {
     }),
   },
   player_scoreboard: {
+    label: "Player stats",
     meaning: "players with the most kills, wins or damage, optionally on one hero; best players of a hero",
     filters: ALL_FILTERS,
     build: ({ heroes, metric }) => ({
@@ -235,6 +254,7 @@ export const PAGES = {
     }),
   },
   leaderboard: {
+    label: "Leaderboard",
     meaning: "ranked leaderboard of the top players by region, optionally on one hero",
     filters: [],
     build: ({ heroes, region }) => ({
@@ -243,16 +263,19 @@ export const PAGES = {
     }),
   },
   rank_distribution: {
+    label: "Rank distribution",
     meaning: "how many players are in each rank, rank distribution, what rank am I compared to others",
     filters: ["time"],
     build: () => ({ path: "/community/badge-distribution", search: {} }),
   },
   heatmap: {
+    label: "Kill heatmap",
     meaning: "map heatmap of where kills and deaths happen, optionally for one hero",
     filters: ALL_FILTERS,
     build: ({ heroes }) => ({ path: "/community/heatmap", search: only({ hero_id: heroes[0]?.id }) }),
   },
   patch_notes: {
+    label: "Patch notes",
     meaning: "patch notes, what changed in a patch, the latest update",
     filters: [],
     build: ({ patchId }) => ({ path: patchId ? `/patches/${patchId}` : "/patches", search: {} }),

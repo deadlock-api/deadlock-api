@@ -3,6 +3,7 @@ import { test } from "node:test";
 
 import { buildIntentSchema, directIntent, NO_FILTERS, parseIntent, type SearchIntent } from "./intent";
 import { PAGE_IDS } from "./pages";
+import { describePartialAnswer } from "./preview";
 import { initialPrompts } from "./prompt";
 import { type ResolveContext, resolveIntent } from "./resolve";
 
@@ -138,4 +139,21 @@ test("a bare hero or item name skips the model", () => {
   });
   assert.deepEqual(directIntent("Healbane", vocabulary), { ...NO_FILTERS, page: "item_page", items: ["Healbane"] });
   assert.equal(directIntent("best counter against bebop", vocabulary), undefined);
+});
+
+test("a streaming answer reads as it forms, complete values only", () => {
+  assert.deepEqual(describePartialAnswer('{"page":"hero_cou'), []);
+  assert.deepEqual(describePartialAnswer('{"page":"hero_counters","heroes":["Bebop","Ha'), ["Hero counters", "Bebop"]);
+  assert.deepEqual(
+    describePartialAnswer(
+      JSON.stringify({
+        ...NO_FILTERS,
+        page: "leaderboard",
+        rank_min: "Phantom",
+        time: "current_patch",
+        region: "NAmerica",
+      }),
+    ),
+    ["Leaderboard", "Phantom+", "this patch", "North America"],
+  );
 });

@@ -11,6 +11,7 @@ import { Inline, Stack } from "~/components/ui/stack";
 import { Text } from "~/components/ui/text";
 import { usePromptApiStatus } from "~/hooks/usePromptApiStatus";
 import { warmUpModel } from "~/lib/ai-search/language-model";
+import { describePartialAnswer } from "~/lib/ai-search/preview";
 import { getAnalytics } from "~/lib/analytics";
 import { cn } from "~/lib/utils";
 
@@ -18,8 +19,11 @@ import { routeQuestion } from "./route-question";
 
 type Phase =
   | { kind: "idle" }
-  /** `loaded` is set while the question waits for the model download, 0 to 1. */
-  | { kind: "searching"; loaded?: number }
+  /**
+   * `loaded` is set while the question waits for the model download, 0 to 1; `reading` is what the streaming answer
+   * has decided so far ("Hero counters", "Bebop"), and stays up while the page it chose loads.
+   */
+  | { kind: "searching"; loaded?: number; reading?: string[] }
   | { kind: "no-match" }
   | { kind: "failed" };
 
@@ -57,6 +61,9 @@ export function AiSearch({ className }: { className?: string }) {
       onProgress: (loaded) => {
         if (!controller.signal.aborted) setPhase({ kind: "searching", loaded });
       },
+      onText: (answerSoFar) => {
+        if (!controller.signal.aborted) setPhase({ kind: "searching", reading: describePartialAnswer(answerSoFar) });
+      },
     }).then(
       (href) => {
         if (controller.signal.aborted) return undefined;
@@ -65,7 +72,6 @@ export function AiSearch({ className }: { className?: string }) {
           setPhase({ kind: "no-match" });
           return undefined;
         }
-        setPhase({ kind: "idle" });
         return navigate({ href });
       },
       () => {
@@ -82,6 +88,7 @@ export function AiSearch({ className }: { className?: string }) {
   const searching = phase.kind === "searching";
   const loaded = phase.kind === "searching" ? phase.loaded : undefined;
   const downloading = loaded !== undefined && loaded < 1;
+  const reading = phase.kind === "searching" ? phase.reading : undefined;
 
   return (
     <search aria-label="Find a stat" className={cn("prompt-api-only w-full max-w-xl", className)}>
@@ -137,12 +144,19 @@ export function AiSearch({ className }: { className?: string }) {
           </Inline>
         </form>
 
-        {/* One line, held open while idle, so nothing moves when a question fails or waits for the model download. */}
+        {/* One line, held open while idle, so nothing moves when a question streams in, fails or waits for the model
+          download. */}
         <div className="min-h-4">
           {downloading ? (
             <output>
-              <Text variant="caption" tone="muted" align="center" as="p">
+              <Text variant="caption" tone="muted" as="p">
                 Downloading Chrome's on-device model, once: {Math.round((loaded ?? 0) * 100)}%
+              </Text>
+            </output>
+          ) : searching ? (
+            <output>
+              <Text variant="caption" tone="muted" wrap="truncate" as="p">
+                {reading && reading.length > 0 ? reading.join(" · ") : "Reading your question…"}
               </Text>
             </output>
           ) : phase.kind === "no-match" ? (

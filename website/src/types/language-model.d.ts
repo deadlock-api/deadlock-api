@@ -32,6 +32,8 @@ interface LanguageModelPromptOptions {
 
 interface LanguageModel extends EventTarget {
   prompt(input: string, options?: LanguageModelPromptOptions): Promise<string>;
+  /** The answer in pieces as it is generated: each chunk is the text added since the last one. */
+  promptStreaming(input: string, options?: LanguageModelPromptOptions): ReadableStream<string>;
   clone(options?: { signal?: AbortSignal }): Promise<LanguageModel>;
   destroy(): void;
 }

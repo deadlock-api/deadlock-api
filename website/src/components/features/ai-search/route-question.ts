@@ -19,7 +19,7 @@ import { ranksQueryOptions } from "~/queries/ranks-query";
 export async function routeQuestion(
   queryClient: QueryClient,
   question: string,
-  options: { signal: AbortSignal; onProgress: (loaded: number) => void },
+  options: { signal: AbortSignal; onProgress: (loaded: number) => void; onText: (answerSoFar: string) => void },
 ): Promise<string | undefined> {
   const [heroes, items, ranks, seasons] = await Promise.all([
     queryClient.query({ ...heroesQueryOptions, staleTime: "static" }),
