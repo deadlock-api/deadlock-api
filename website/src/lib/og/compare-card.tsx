@@ -1,10 +1,10 @@
-import { breakAtWidth, CARD_HEIGHT, CARD_WIDTH, fitText, LOGO, SITE_LABEL } from "./card-kit";
+import { breakAtWidth, CARD_HEIGHT, CARD_WIDTH, fitText, graphemes, LOGO, SITE_LABEL } from "./card-kit";
 import type { CompareCardData, CompareCardPlayer } from "./compare-card-data";
 import { OG } from "./palette";
 
 /** The first grapheme of a name, for a portrait without a picture (an emoji stays whole). */
 function initial(name: string): string {
-  const first = Array.from(new Intl.Segmenter().segment(name.trim()), (part) => part.segment)[0];
+  const first = graphemes(name.trim())[0];
   return (first ?? "?").toUpperCase();
 }
 

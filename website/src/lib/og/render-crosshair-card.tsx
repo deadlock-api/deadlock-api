@@ -6,7 +6,7 @@ import { type CrosshairRenderSettings, renderCrosshair } from "~/lib/crosshair-r
 // Bundled as data URIs: the Worker cannot fetch the site's own public files from its own domain.
 import logo from "../../../public/favicon.png?inline";
 import background from "../../../public/streamkit/deadlock-background.png?inline";
-import { CARD_HEIGHT, CARD_WIDTH } from "./card-kit";
+import { CARD_HEIGHT, CARD_WIDTH, cardHeaders } from "./card-kit";
 import { CrosshairCard, type CrosshairPixels, type PixelRun } from "./crosshair-card";
 
 /** How large the crosshair may be drawn on the card, in pixels. */
@@ -31,20 +31,21 @@ async function loadCrosshair(code: string, screenHeight: string): Promise<Crossh
   const image = renderCrosshair((await response.json()) as CrosshairRenderSettings, Number(screenHeight));
   if (!image) return undefined;
   const scale = Math.max(1, Math.min(MAX_SCALE, Math.floor(CROSSHAIR_SIZE / image.size)));
+  const { pixels } = image;
+  const samePixel = (i: number, j: number) =>
+    pixels[i] === pixels[j] &&
+    pixels[i + 1] === pixels[j + 1] &&
+    pixels[i + 2] === pixels[j + 2] &&
+    pixels[i + 3] === pixels[j + 3];
   const runs: PixelRun[] = [];
   for (let y = 0; y < image.size; y++) {
     let x = 0;
     while (x < image.size) {
       const at = (y * image.size + x) * 4;
-      const [r, g, b, a] = image.pixels.subarray(at, at + 4);
       let length = 1;
-      while (
-        x + length < image.size &&
-        image.pixels.subarray(at + length * 4, at + length * 4 + 4).every((v, i) => v === [r, g, b, a][i])
-      ) {
-        length++;
-      }
-      if (a) runs.push({ x, y, length, color: `rgba(${r},${g},${b},${(a ?? 0) / 255})` });
+      while (x + length < image.size && samePixel(at + length * 4, at)) length++;
+      const [r, g, b, a] = pixels.subarray(at, at + 4);
+      if (a) runs.push({ x, y, length, color: `rgba(${r},${g},${b},${a / 255})` });
       x += length;
     }
   }
@@ -62,9 +63,6 @@ export async function renderCrosshairCard(search: URLSearchParams): Promise<Resp
     width: CARD_WIDTH,
     height: CARD_HEIGHT,
     fonts: FONTS,
-    headers: {
-      "Content-Type": "image/png",
-      "Cache-Control": import.meta.env.DEV ? "no-store" : `public, max-age=${maxAge}, s-maxage=${maxAge}`,
-    },
+    headers: cardHeaders(maxAge),
   });
 }

@@ -9,6 +9,25 @@ export const SITE_LABEL = "deadlock-api.com/compare";
  */
 export const CROSSHAIR_CARD_VERSION = "2";
 
+/**
+ * The response headers of a drawn card, kept `maxAge` seconds by browsers and the edge; never cached in dev.
+ */
+export function cardHeaders(maxAge: number): Record<string, string> {
+  return {
+    "Content-Type": "image/png",
+    "Cache-Control": import.meta.env.DEV ? "no-store" : `public, max-age=${maxAge}, s-maxage=${maxAge}`,
+  };
+}
+
+// Made on first use, not on import: the crosshair page imports this module for `CROSSHAIR_CARD_VERSION` alone.
+let segmenter: Intl.Segmenter | undefined;
+
+/** `text` split into graphemes, so an emoji or an accented letter stays whole. */
+export function graphemes(text: string): string[] {
+  segmenter ??= new Intl.Segmenter();
+  return Array.from(segmenter.segment(text), (part) => part.segment);
+}
+
 /** Relative advance of one grapheme in Inter bold, in em: wide capitals, emoji and CJK count for more. */
 function glyphWidth(glyph: string): number {
   if (/\p{Extended_Pictographic}/u.test(glyph)) return 1.2;
@@ -25,7 +44,7 @@ function glyphWidth(glyph: string): number {
  * whole; a row of W or emoji is cut as surely as plain lowercase). Satori's own ellipsis clips unreliably.
  */
 export function fitText(text: string, widthPx: number, fontSize: number): string {
-  const glyphs = Array.from(new Intl.Segmenter().segment(text), (part) => part.segment);
+  const glyphs = graphemes(text);
   const widths = glyphs.map((glyph) => glyphWidth(glyph) * fontSize);
   if (widths.reduce((sum, width) => sum + width, 0) <= widthPx) return text;
   let used = fontSize * 0.9;
@@ -39,11 +58,13 @@ export function fitText(text: string, widthPx: number, fontSize: number): string
  * on the next. For a name with no space where it could break ("xXDeadlockGodXx"), rather than losing its end.
  */
 export function breakAtWidth(text: string, widthPx: number, fontSize: number): [string, string] {
-  const glyphs = Array.from(new Intl.Segmenter().segment(text), (part) => part.segment);
+  const glyphs = graphemes(text);
   let used = 0;
   let count = 0;
-  while (count < glyphs.length && used + glyphWidth(glyphs[count]) * fontSize <= widthPx) {
-    used += glyphWidth(glyphs[count]) * fontSize;
+  while (count < glyphs.length) {
+    const width = glyphWidth(glyphs[count]) * fontSize;
+    if (used + width > widthPx) break;
+    used += width;
     count += 1;
   }
   const head = Math.max(1, count);

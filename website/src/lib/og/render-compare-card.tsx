@@ -1,6 +1,6 @@
 import { GoogleFont, ImageResponse, type ImageResponseOptions } from "@cf-wasm/og";
 
-import { CARD_HEIGHT, CARD_WIDTH, LOGO } from "./card-kit";
+import { CARD_HEIGHT, CARD_WIDTH, cardHeaders, LOGO } from "./card-kit";
 import { CompareCard } from "./compare-card";
 import { type CompareCardData, loadCompareCardData } from "./compare-card-data";
 import { inlineImage } from "./inline-image";
@@ -32,7 +32,6 @@ const CARD_AGE = 7 * 24 * 60 * 60;
 const RETRY_AGE = 5 * 60;
 
 /** Inter in the weights the card uses; names in other scripts and emoji load their own fonts on demand. */
-
 const FONTS = ([400, 600, 700, 800, 900] as const).map((weight) => new GoogleFont("Inter", { weight }));
 
 /**
@@ -53,10 +52,7 @@ export async function renderCompareCard(search: URLSearchParams): Promise<Respon
       width: CARD_WIDTH,
       height: CARD_HEIGHT,
       fonts: FONTS,
-      headers: {
-        "Content-Type": "image/png",
-        "Cache-Control": import.meta.env.DEV ? "no-store" : `public, max-age=${maxAge}, s-maxage=${maxAge}`,
-      },
+      headers: cardHeaders(maxAge),
       // Without extra fonts, a script satori cannot shape (Arabic fails in its font parser) draws nothing instead of
       // failing the whole image. Emoji still load.
       ...(extraFonts

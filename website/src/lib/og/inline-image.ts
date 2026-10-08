@@ -6,7 +6,7 @@
 const IMAGE_CACHE = new Map<string, Promise<string | undefined>>();
 const IMAGE_CACHE_SIZE = 300;
 
-export async function fetchDataUri(url: string): Promise<string> {
+async function fetchDataUri(url: string): Promise<string> {
   const response = await fetch(url);
   if (!response.ok) throw new Error(String(response.status));
   const type = response.headers.get("content-type") ?? "image/png";

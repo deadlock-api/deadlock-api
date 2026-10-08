@@ -140,7 +140,11 @@ export async function loadCompareCardData(search: URLSearchParams): Promise<Comp
     accountIds.map((_, index) => ({ badge: badges[index], metrics: metrics[index] })),
   );
   const { scored, tally, leaders } = scoreComparison(aggregates, filters.gameMode);
-  const highlights = hasSoulEconomy(filters.gameMode) ? HIGHLIGHTS : BRAWL_HIGHLIGHTS;
+  const highlights = (hasSoulEconomy(filters.gameMode) ? HIGHLIGHTS : BRAWL_HIGHLIGHTS).map(({ key, short }) => {
+    const stat = COMPARE_STATS.find((entry) => entry.key === key)!;
+    return { key, short, stat, winners: compareStatWinners(aggregates, stat) };
+  });
+  const withMatches = aggregates.filter((entry) => entry !== null).length;
 
   // The page's colors: each player's by account id, not by column.
   const colorIndexes = compareColorIndexes(accountIds);
@@ -159,18 +163,14 @@ export async function loadCompareCardData(search: URLSearchParams): Promise<Comp
         ? (ranks?.find((entry) => entry.tier === Math.floor(badge / 10))?.images.large ?? undefined)
         : undefined,
       hasMatches: aggregate != null,
-      scored: aggregate != null && aggregates.filter((entry) => entry !== null).length >= 2,
+      scored: aggregate != null && withMatches >= 2,
       statsWon: tally[index],
       leader: leaders.includes(index),
-      highlights: highlights.map(({ key, short }) => {
-        const stat = COMPARE_STATS.find((entry) => entry.key === key)!;
-        const value = aggregate?.[key];
-        return {
-          label: short,
-          value: (stat.format === "rank" ? null : formatPlayerMetricValue(value, stat.format)) ?? "–",
-          best: compareStatWinners(aggregates, stat).includes(index),
-        };
-      }),
+      highlights: highlights.map(({ key, short, stat, winners }) => ({
+        label: short,
+        value: (stat.format === "rank" ? null : formatPlayerMetricValue(aggregate?.[key], stat.format)) ?? "–",
+        best: winners.includes(index),
+      })),
     };
   });
 
