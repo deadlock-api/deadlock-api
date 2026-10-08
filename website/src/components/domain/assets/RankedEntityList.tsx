@@ -6,6 +6,8 @@ import { ItemImage } from "~/components/domain/assets/ItemImage";
 import { ItemName } from "~/components/domain/assets/ItemName";
 import { NoValue } from "~/components/ui/no-value";
 import { ProgressBar } from "~/components/ui/progress-bar";
+import { DivergingBar } from "~/components/ui/rate-bar";
+import { Tooltip, TooltipTarget } from "~/components/ui/tooltip";
 import { TONE_TEXT, type Tone } from "~/lib/tone";
 import { cn } from "~/lib/utils";
 import type { SlimUpgrade } from "~/queries/asset-queries";
@@ -16,6 +18,7 @@ import type { SlimUpgrade } from "~/queries/asset-queries";
  */
 export function RankedEntityList({
   density = "default",
+  columns = "auto",
   className,
   style,
   children,
@@ -23,9 +26,11 @@ export function RankedEntityList({
 }: React.ComponentProps<"div"> & {
   /** `compact`: smaller art and tighter rows, for several lists side by side on a dense page. */
   density?: "default" | "compact";
+  /** `auto`: two columns in a wide container. `single`: always one, for a list in a panel that is not the page's width. */
+  columns?: "auto" | "single";
 }) {
   // Two columns fill down, not across, so the ranks read 1-4 then 5-8 like a printed table.
-  const rows = Math.ceil(Children.count(children) / 2);
+  const rows = columns === "single" ? Children.count(children) : Math.ceil(Children.count(children) / 2);
   // The last row of the first column, which ends its column in the two-column layout and so drops its rule.
   const items = Children.map(children, (child, index) =>
     index === rows - 1 && isValidElement<{ "data-column-end"?: boolean }>(child)
@@ -40,7 +45,14 @@ export function RankedEntityList({
       style={{ "--ranked-rows": `repeat(${rows}, auto)`, ...style } as React.CSSProperties}
       {...props}
     >
-      <ol className="grid gap-x-8 @3xl:grid-flow-col @3xl:grid-cols-2 @3xl:grid-rows-(--ranked-rows)">{items}</ol>
+      <ol
+        className={cn(
+          "grid gap-x-8",
+          columns === "auto" && "@3xl:grid-flow-col @3xl:grid-cols-2 @3xl:grid-rows-(--ranked-rows)",
+        )}
+      >
+        {items}
+      </ol>
     </div>
   );
 }
@@ -117,13 +129,16 @@ export function RankedEntityRow({
 /**
  * One number of a RankedEntityRow: the value over its label, and with `share` a thin bar under the value for a
  * number that is a part of a whole (how often it is bought). `tone` colors the value; the number itself still says
- * which side of the pivot it is on.
+ * which side of the pivot it is on. With `change` the bar is signed: a gain right, a loss left. With `details` the value
+ * opens a hover card.
  */
 export function RankedEntityMetric({
   label,
   labelDisplay = "visible",
   value,
   share,
+  change,
+  details,
   tone,
   className,
   ...props
@@ -137,8 +152,25 @@ export function RankedEntityMetric({
   value: React.ReactNode;
   /** 0 to 1: draws the value as a bar as well. */
   share?: number;
+  /** A signed value drawn from the middle of a thin track instead of a share: `scale` is where it reaches the edge. */
+  change?: { value: number | null; scale: number; interval?: readonly [number, number] };
+  /** What stands behind the number (the numbers before and after, the sample): a hover card on the value, reachable by keyboard. */
+  details?: React.ReactNode;
   tone?: Tone;
 }) {
+  const body = (
+    <>
+      <span className={cn("type-label tabular-nums", tone && TONE_TEXT[tone])}>{value ?? <NoValue />}</span>
+      {/* Every metric keeps the bar's row, so the labels of a row line up whether or not a value has a bar. */}
+      {change ? (
+        <DivergingBar value={change.value} scale={change.scale} interval={change.interval} className="w-full" />
+      ) : share !== undefined ? (
+        <ProgressBar variant="thin" value={share} color="var(--chart-share)" className="w-full" />
+      ) : (
+        <span aria-hidden="true" className="h-1.5 group-data-[density=compact]/ranked:hidden" />
+      )}
+    </>
+  );
   return (
     <div
       data-slot="ranked-entity-metric"
@@ -149,12 +181,14 @@ export function RankedEntityMetric({
         {label}
       </dt>
       <dd className="order-1 flex w-full flex-col items-end gap-1">
-        <span className={cn("type-label tabular-nums", tone && TONE_TEXT[tone])}>{value ?? <NoValue />}</span>
-        {/* Every metric keeps the bar's row, so the labels of a row line up whether or not a value has a bar. */}
-        {share !== undefined ? (
-          <ProgressBar variant="thin" value={share} color="var(--chart-share)" className="w-full" />
+        {details ? (
+          <Tooltip content={details}>
+            <TooltipTarget display="block" className="flex w-full flex-col items-end gap-1">
+              {body}
+            </TooltipTarget>
+          </Tooltip>
         ) : (
-          <span aria-hidden="true" className="h-1.5 group-data-[density=compact]/ranked:hidden" />
+          body
         )}
       </dd>
     </div>
