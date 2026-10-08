@@ -14,7 +14,7 @@ use crate::services::assets::versions::common::{
     Color, Subclass, WrapSubclass, build_from_kv3, entity_id, enum_str_serde,
 };
 use crate::services::assets::versions::error::AssetsError;
-use crate::services::assets::versions::{localization, store};
+use crate::services::assets::versions::localization;
 
 // ----- Raw KV3 shape -----
 
@@ -590,14 +590,8 @@ pub(crate) async fn fetch_misc_entities(
     version: u32,
     language: &str,
 ) -> Result<Arc<Vec<MiscEntity>>, AssetsError> {
-    let (vdata, loc) = tokio::try_join!(
-        async {
-            store::fetch_text(r2, version, "scripts/misc.vdata")
-                .await
-                .map_err(AssetsError::from)
-        },
-        localization::fetch_localization(r2, version, language),
-    )?;
+    let (vdata, loc) =
+        localization::fetch_with_localization(r2, version, "scripts/misc.vdata", language).await?;
     let entities = build_misc_entities(&vdata, &loc)?;
     Ok(Arc::new(entities))
 }

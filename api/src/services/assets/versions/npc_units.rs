@@ -13,7 +13,7 @@ use crate::services::assets::versions::common::{
     Color, HeroItemType, IMAGE_BASE_URL, Subclass, WrapSubclass, build_from_kv3, entity_id,
 };
 use crate::services::assets::versions::error::AssetsError;
-use crate::services::assets::versions::{localization, store};
+use crate::services::assets::versions::localization;
 
 // ===================================================== Raw KV3 shape
 
@@ -1239,14 +1239,9 @@ pub(crate) async fn fetch_npc_units(
     version: u32,
     language: &str,
 ) -> Result<Arc<Vec<NpcUnit>>, AssetsError> {
-    let (vdata, loc) = tokio::try_join!(
-        async {
-            store::fetch_text(r2, version, "scripts/npc_units.vdata")
-                .await
-                .map_err(AssetsError::from)
-        },
-        localization::fetch_localization(r2, version, language),
-    )?;
+    let (vdata, loc) =
+        localization::fetch_with_localization(r2, version, "scripts/npc_units.vdata", language)
+            .await?;
     let units = build_npc_units(&vdata, &loc)?;
     Ok(Arc::new(units))
 }

@@ -32,6 +32,16 @@ pub(crate) enum VersionStoreError {
     Utf8(#[from] std::string::FromUtf8Error),
 }
 
+impl VersionStoreError {
+    /// Whether the requested object doesn't exist in the bucket.
+    pub(crate) fn is_not_found(&self) -> bool {
+        matches!(
+            self,
+            Self::ObjectStore(object_store::Error::NotFound { .. })
+        )
+    }
+}
+
 /// Cached listing of versions plus the latest one. Refreshed in the background.
 #[derive(Clone, Default)]
 pub(crate) struct VersionStore {

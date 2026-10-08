@@ -778,7 +778,7 @@ fn transform_root(
         {
             continue;
         }
-        let raw: RawHero = match serde_json::from_value(value.clone()) {
+        let raw = match RawHero::deserialize(value) {
             Ok(r) => r,
             Err(e) => {
                 tracing::warn!("Skipping {class_name}: {e}");
@@ -892,8 +892,11 @@ fn transform(
     let development_state = parse_development_state(&r);
     let player_selectable = is_player_selectable(&r);
 
-    let bg_raw = backgrounds.get(class_name).cloned();
-    let images = build_images(&r, bg_raw.as_deref(), known_assets);
+    let images = build_images(
+        &r,
+        backgrounds.get(class_name).map(String::as_str),
+        known_assets,
+    );
 
     let physics = HeroPhysics {
         stealth_speed_meters_per_second: r.stealth_speed_meters_per_second,
@@ -1374,7 +1377,7 @@ async fn fetch_optional_text(
 ) -> Result<Option<String>, store::VersionStoreError> {
     match store::fetch_text(r2, version, rel_path).await {
         Ok(s) => Ok(Some(s)),
-        Err(store::VersionStoreError::ObjectStore(object_store::Error::NotFound { .. })) => {
+        Err(e) if e.is_not_found() => {
             tracing::debug!("v{version}: optional asset {rel_path} not found, skipping");
             Ok(None)
         }

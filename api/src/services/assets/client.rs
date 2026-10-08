@@ -71,11 +71,13 @@ impl AssetsClient {
     /// Find a hero ID by name.
     pub(crate) async fn fetch_hero_id_from_name(&self, hero_name: &str) -> APIResult<Option<u32>> {
         debug!("Finding hero ID for name: {hero_name}");
+        let needle = hero_name.to_lowercase();
+        let prefixed = format!("hero_{needle}");
         Ok(self
             .heroes()
             .await?
             .iter()
-            .find(|h| matches_hero_name(h, hero_name))
+            .find(|h| matches_hero_name(h, &needle, &prefixed))
             .map(|h| h.id))
     }
 
@@ -130,10 +132,9 @@ impl AssetsClient {
 }
 
 /// Matches a hero by display `name` or `class_name`, case-insensitively, also
-/// accepting the bare form against a `hero_`-prefixed class name.
-fn matches_hero_name(hero: &Hero, needle: &str) -> bool {
-    let needle = needle.to_lowercase();
-    let prefixed = format!("hero_{needle}");
+/// accepting the bare form against a `hero_`-prefixed class name. `needle` is
+/// the lowercased search name and `prefixed` is `hero_{needle}`.
+fn matches_hero_name(hero: &Hero, needle: &str, prefixed: &str) -> bool {
     let eq = |s: &str| {
         let s = s.to_lowercase();
         s == needle || s == prefixed

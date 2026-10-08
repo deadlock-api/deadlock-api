@@ -76,9 +76,7 @@ pub(crate) async fn fetch_localization(
 ) -> Result<Arc<HashMap<String, String>>, AssetsError> {
     match store::fetch_text(r2, version, &format!("localization/{language}.json")).await {
         Ok(json) => Ok(Arc::new(serde_json::from_str(&json)?)),
-        Err(store::VersionStoreError::ObjectStore(object_store::Error::NotFound { .. }))
-            if language != "english" =>
-        {
+        Err(e) if e.is_not_found() && language != "english" => {
             tracing::warn!(
                 "localization/{language}.json missing for v{version}; falling back to english"
             );
@@ -87,4 +85,17 @@ pub(crate) async fn fetch_localization(
         }
         Err(e) => Err(e.into()),
     }
+}
+
+/// Fetches the source file at `rel_path` together with the localization for `language`.
+pub(crate) async fn fetch_with_localization(
+    r2: &AmazonS3,
+    version: u32,
+    rel_path: &str,
+    language: &str,
+) -> Result<(String, Arc<HashMap<String, String>>), AssetsError> {
+    tokio::try_join!(
+        async { Ok(store::fetch_text(r2, version, rel_path).await?) },
+        fetch_localization(r2, version, language),
+    )
 }

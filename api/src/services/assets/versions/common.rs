@@ -50,18 +50,9 @@ pub(crate) fn build_from_kv3<Raw, Out>(
 where
     Raw: serde::de::DeserializeOwned,
 {
-    let root: IndexMap<String, serde_json::Value> = kv3::from_str(vdata)?;
-    let mut out = Vec::with_capacity(root.len());
-    for (class_name, value) in root {
-        if !keep(&class_name, &value) {
-            continue;
-        }
-        match serde_json::from_value::<Raw>(value) {
-            Ok(raw) => out.push(transform(class_name, raw)),
-            Err(e) => tracing::warn!("Skipping {label} {class_name}: {e}"),
-        }
-    }
-    Ok(out)
+    Ok(kv3_entries(vdata, label, keep)?
+        .map(|(class_name, raw)| transform(class_name, raw))
+        .collect())
 }
 
 /// Like [`build_from_kv3`], but collects into an [`IndexMap`] keyed by
@@ -75,21 +66,37 @@ pub(crate) fn build_map_from_kv3<Raw, Out>(
 where
     Raw: serde::de::DeserializeOwned,
 {
+    Ok(kv3_entries(vdata, label, keep)?
+        .map(|(class_name, raw)| {
+            let v = transform(&class_name, raw);
+            (class_name, v)
+        })
+        .collect())
+}
+
+/// The top-level entries of a KV3 source file that pass `keep` and deserialize
+/// into `Raw`; the others are skipped (with a `warn!` for the malformed ones).
+fn kv3_entries<Raw>(
+    vdata: &str,
+    label: &'static str,
+    keep: impl Fn(&str, &serde_json::Value) -> bool,
+) -> Result<impl Iterator<Item = (String, Raw)>, AssetsError>
+where
+    Raw: serde::de::DeserializeOwned,
+{
     let root: IndexMap<String, serde_json::Value> = kv3::from_str(vdata)?;
-    let mut out = IndexMap::with_capacity(root.len());
-    for (class_name, value) in root {
+    Ok(root.into_iter().filter_map(move |(class_name, value)| {
         if !keep(&class_name, &value) {
-            continue;
+            return None;
         }
         match serde_json::from_value::<Raw>(value) {
-            Ok(raw) => {
-                let v = transform(&class_name, raw);
-                out.insert(class_name, v);
+            Ok(raw) => Some((class_name, raw)),
+            Err(e) => {
+                tracing::warn!("Skipping {label} {class_name}: {e}");
+                None
             }
-            Err(e) => tracing::warn!("Skipping {label} {class_name}: {e}"),
         }
-    }
-    Ok(out)
+    }))
 }
 
 /// Derives `Serialize`/`Deserialize` for an enum that already implements

@@ -11,7 +11,6 @@ use utoipa::ToSchema;
 use crate::services::assets::versions::common::build_from_kv3;
 use crate::services::assets::versions::error::AssetsError;
 use crate::services::assets::versions::localization;
-use crate::services::assets::versions::store;
 
 // ----- Raw KV3 shape -----
 
@@ -91,12 +90,9 @@ pub(crate) async fn fetch_accolades(
     version: u32,
     language: &str,
 ) -> Result<Arc<Vec<Accolade>>, AssetsError> {
-    let (vdata, loc) = tokio::try_join!(
-        async {
-            Ok::<_, AssetsError>(store::fetch_text(r2, version, "scripts/accolades.vdata").await?)
-        },
-        localization::fetch_localization(r2, version, language),
-    )?;
+    let (vdata, loc) =
+        localization::fetch_with_localization(r2, version, "scripts/accolades.vdata", language)
+            .await?;
     Ok(Arc::new(build_accolades(&vdata, &loc)?))
 }
 

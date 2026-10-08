@@ -1,6 +1,7 @@
 //! End-to-end build pipeline: KV3 → raw → public item shape.
 
 use indexmap::IndexMap;
+use serde::Deserialize;
 use serde_json::Value;
 
 use crate::services::assets::versions::common::entity_id;
@@ -104,9 +105,8 @@ fn parse_heroes_lite(root: &IndexMap<String, Value>) -> Vec<RawHeroLite> {
         {
             continue;
         }
-        let mut obj = match v.as_object() {
-            Some(o) => o.clone(),
-            None => continue,
+        let Some(obj) = v.as_object() else {
+            continue;
         };
         // Pre-release vote stubs (build 6711+) bind placeholder abilities
         // shared with released heroes; don't link them to those items.
@@ -117,10 +117,11 @@ fn parse_heroes_lite(root: &IndexMap<String, Value>) -> Vec<RawHeroLite> {
         {
             continue;
         }
-        // Inject class_name so the struct deserializer picks it up.
-        obj.insert("class_name".to_owned(), Value::String(k.clone()));
-        match serde_json::from_value::<RawHeroLite>(Value::Object(obj)) {
-            Ok(h) => out.push(h),
+        match RawHeroLite::deserialize(v) {
+            Ok(mut h) => {
+                h.class_name.clone_from(k);
+                out.push(h);
+            }
             Err(e) => tracing::debug!("skip hero {k}: {e}"),
         }
     }
@@ -140,21 +141,16 @@ async fn build_one(
     let name = ctx
         .localization
         .get(&class_name)
-        .cloned()
-        .unwrap_or_else(|| class_name.clone())
+        .unwrap_or(&class_name)
         .trim()
         .to_owned();
-    let hero = ctx
-        .heroes
-        .iter()
-        .find(|h| h.items.values().any(|n| *n == class_name))
-        .map(|h| h.id);
     let heroes: Vec<u32> = ctx
         .heroes
         .iter()
         .filter(|h| h.items.values().any(|n| *n == class_name))
         .map(|h| h.id)
         .collect();
+    let hero = heroes.first().copied();
 
     match kind {
         ItemKind::Ability => {

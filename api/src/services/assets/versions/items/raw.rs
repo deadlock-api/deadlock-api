@@ -836,6 +836,8 @@ impl RawWeapon {
 pub(crate) struct RawHeroLite {
     #[serde(rename = "m_HeroID")]
     pub(crate) id: u32,
+    /// Not part of the source entry; filled in from its key after deserializing.
+    #[serde(skip)]
     pub(crate) class_name: String,
     /// Stored as raw strings to tolerate new/unknown slot keys; we only need
     /// the values (item `class_name`s) for linkage.
