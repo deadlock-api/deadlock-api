@@ -68,6 +68,29 @@ pub static SHUTTING_DOWN: core::sync::atomic::AtomicBool =
 pub static SHUTDOWN_TOKEN: std::sync::LazyLock<tokio_util::sync::CancellationToken> =
     std::sync::LazyLock::new(tokio_util::sync::CancellationToken::new);
 
+/// Cancelled by [`shutdown_background_tasks`] once the server has stopped serving requests, so
+/// background insert batchers run their final flush and exit. Separate from [`SHUTDOWN_TOKEN`],
+/// which fires before the drain while requests (and their log rows) are still arriving.
+pub(crate) static BACKGROUND_SHUTDOWN: std::sync::LazyLock<tokio_util::sync::CancellationToken> =
+    std::sync::LazyLock::new(tokio_util::sync::CancellationToken::new);
+
+/// Background tasks that must finish (final flushes) before the process exits.
+pub(crate) static BACKGROUND_TASKS: std::sync::LazyLock<tokio_util::task::TaskTracker> =
+    std::sync::LazyLock::new(tokio_util::task::TaskTracker::new);
+
+/// Signals background tasks to stop and waits up to `timeout` for their final flushes.
+/// Call after the server stopped serving requests.
+pub async fn shutdown_background_tasks(timeout: Duration) {
+    BACKGROUND_SHUTDOWN.cancel();
+    BACKGROUND_TASKS.close();
+    if tokio::time::timeout(timeout, BACKGROUND_TASKS.wait())
+        .await
+        .is_err()
+    {
+        tracing::warn!("Background tasks did not finish within {timeout:?}, exiting anyway");
+    }
+}
+
 const ROBOTS_TXT: &str = r"
 User-agent: *
 Disallow: /

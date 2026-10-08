@@ -30,6 +30,9 @@ static GLOBAL: MiMalloc = MiMalloc;
 const PORT: u16 = 3000;
 const SERVICE_NAME: &str = "deadlock-api";
 const DRAIN_DELAY: core::time::Duration = core::time::Duration::from_secs(8);
+/// Upper bound for the final background flushes (request logs, insert batchers) after the server
+/// stopped. Drain + flush stay well within the container's 60s stop grace period.
+const FINAL_FLUSH_TIMEOUT: core::time::Duration = core::time::Duration::from_secs(20);
 
 struct OtelGuard {
     tracer_provider: SdkTracerProvider,
@@ -178,5 +181,8 @@ async fn main() -> Result<(), StartupError> {
     axum::serve(listener, make_service)
         .with_graceful_shutdown(shutdown_signal())
         .await?;
+
+    info!("Server stopped, flushing background batchers");
+    deadlock_api_rust::shutdown_background_tasks(FINAL_FLUSH_TIMEOUT).await;
     Ok(())
 }

@@ -1,4 +1,3 @@
-use core::sync::atomic::{AtomicBool, Ordering};
 use core::time::Duration;
 use std::sync::Arc;
 
@@ -43,7 +42,6 @@ pub(crate) struct PatreonVerificationJob {
     patron_repository: PatronRepository,
     steam_accounts_repository: SteamAccountsRepository,
     patreon_client: PatreonClient,
-    shutdown: Arc<AtomicBool>,
     /// Patrons that need retry due to API errors
     retry_queue: Arc<Mutex<Vec<RetryPatron>>>,
 }
@@ -69,7 +67,6 @@ impl PatreonVerificationJob {
             patron_repository,
             steam_accounts_repository,
             patreon_client,
-            shutdown: Arc::new(AtomicBool::new(false)),
             retry_queue: Arc::new(Mutex::new(Vec::new())),
         }
     }
@@ -83,14 +80,13 @@ impl PatreonVerificationJob {
             info!("Patreon verification job started (runs every hour)");
 
             loop {
-                interval.tick().await;
-
-                if job.shutdown.load(Ordering::Relaxed) {
-                    info!("Patreon verification job shutting down");
-                    break;
+                tokio::select! {
+                    _ = interval.tick() => job.run_verification().await,
+                    () = crate::SHUTDOWN_TOKEN.cancelled() => {
+                        info!("Patreon verification job shutting down");
+                        break;
+                    }
                 }
-
-                job.run_verification().await;
             }
 
             info!("Patreon verification job stopped");
@@ -103,21 +99,12 @@ impl PatreonVerificationJob {
             info!("Patreon retry job started (checks every 30 minutes)");
 
             loop {
-                interval.tick().await;
-
-                if job.shutdown.load(Ordering::Relaxed) {
-                    break;
+                tokio::select! {
+                    _ = interval.tick() => job.process_retry_queue().await,
+                    () = crate::SHUTDOWN_TOKEN.cancelled() => break,
                 }
-
-                job.process_retry_queue().await;
             }
         });
-    }
-
-    /// Signal shutdown
-    #[expect(dead_code)]
-    pub(crate) fn signal_shutdown(&self) {
-        self.shutdown.store(true, Ordering::Relaxed);
     }
 
     /// Run the verification process for all patrons

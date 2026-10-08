@@ -1,4 +1,3 @@
-use core::sync::atomic::{AtomicBool, Ordering};
 use core::time::Duration;
 use std::sync::Arc;
 
@@ -25,7 +24,6 @@ pub(crate) trait BatchInsert: Send + Sync + 'static {
 pub(crate) struct ClickhouseInsertBatcher<T: BatchInsert> {
     buffer: Arc<Mutex<Vec<T::Row>>>,
     ch_client: clickhouse::Client,
-    shutdown: Arc<AtomicBool>,
 }
 
 impl<T: BatchInsert> ClickhouseInsertBatcher<T> {
@@ -33,7 +31,6 @@ impl<T: BatchInsert> ClickhouseInsertBatcher<T> {
         Self {
             buffer: Arc::new(Mutex::new(Vec::with_capacity(1000))),
             ch_client,
-            shutdown: Arc::new(AtomicBool::new(false)),
         }
     }
 
@@ -56,35 +53,30 @@ impl<T: BatchInsert> ClickhouseInsertBatcher<T> {
         buffer.extend(rows);
     }
 
-    /// Start the background flush task.
-    pub(crate) fn start_background_flush(self: Arc<Self>) -> tokio::task::JoinHandle<()> {
-        let batcher = Arc::clone(&self);
-        tokio::spawn(async move {
+    /// Start the background flush task. It flushes every `flush_interval_secs` until
+    /// [`crate::BACKGROUND_SHUTDOWN`] is cancelled (after the server stopped serving), then runs a
+    /// final flush. The task is tracked by [`crate::BACKGROUND_TASKS`] so shutdown can await it.
+    pub(crate) fn start_background_flush(self: Arc<Self>) {
+        crate::BACKGROUND_TASKS.spawn(async move {
             let mut tick = interval(Duration::from_secs(T::flush_interval_secs()));
             info!("{} insert batcher started", T::table_name());
 
             loop {
-                tick.tick().await;
-
-                if batcher.shutdown.load(Ordering::Relaxed) {
-                    info!(
-                        "{} insert batcher shutting down, performing final flush",
-                        T::table_name()
-                    );
-                    batcher.flush().await;
-                    break;
+                tokio::select! {
+                    _ = tick.tick() => self.flush().await,
+                    () = crate::BACKGROUND_SHUTDOWN.cancelled() => {
+                        info!(
+                            "{} insert batcher shutting down, performing final flush",
+                            T::table_name()
+                        );
+                        self.flush().await;
+                        break;
+                    }
                 }
-
-                batcher.flush().await;
             }
 
             info!("{} insert batcher stopped", T::table_name());
-        })
-    }
-
-    #[expect(dead_code)]
-    pub(crate) fn signal_shutdown(&self) {
-        self.shutdown.store(true, Ordering::Relaxed);
+        });
     }
 
     #[expect(clippy::cast_precision_loss)]

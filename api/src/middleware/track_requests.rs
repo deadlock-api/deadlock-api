@@ -124,7 +124,7 @@ pub(crate) async fn track_requests(
             rate_limit_remaining,
             rate_limit_reset,
         };
-        state.request_logger.log(log).await;
+        state.request_logger.insert(vec![log]).await;
     }
 
     response
