@@ -134,6 +134,7 @@ pub async fn router(port: u16) -> Result<NormalizePath<Router>, StartupError> {
     // Start the daily Patreon verification job for token refresh and membership sync
     if !cfg!(debug_assertions) {
         let patreon_verification_job = std::sync::Arc::new(PatreonVerificationJob::new(
+            state.http_client.clone(),
             state.pg_client.clone(),
             state.config.patron_encryption_key.clone(),
             state.config.patreon.client_id.clone(),

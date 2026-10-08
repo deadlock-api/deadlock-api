@@ -39,6 +39,8 @@ pub enum AppStateError {
     ParsingJson(#[from] serde_json::Error),
     #[error("IO error: {0}")]
     Io(#[from] io::Error),
+    #[error("HTTP client error: {0}")]
+    Http(#[from] reqwest::Error),
     #[error("MCP catalog error: {0}")]
     McpCatalog(#[from] CatalogError),
 }
@@ -63,6 +65,9 @@ impl core::ops::Deref for AppState {
 
 pub(crate) struct AppStateInner {
     pub(crate) config: Config,
+    /// Shared outbound HTTP client with connect and total timeouts. Requests that need a
+    /// different deadline override it per request with `RequestBuilder::timeout`.
+    pub(crate) http_client: reqwest::Client,
     pub(crate) s3_client: AmazonS3,
     pub(crate) s3_cache_client: AmazonS3,
     pub(crate) r2_client: AmazonS3,
@@ -90,7 +95,10 @@ impl AppState {
 
         // Create an HTTP client
         debug!("Creating HTTP client");
-        let http_client = reqwest::Client::new();
+        let http_client = reqwest::Client::builder()
+            .connect_timeout(Duration::from_secs(5))
+            .timeout(Duration::from_secs(30))
+            .build()?;
 
         // Create an S3 client
         debug!("Creating S3 client");
@@ -443,6 +451,7 @@ impl AppState {
 
         Ok(Self(Arc::new(AppStateInner {
             config,
+            http_client,
             s3_client,
             s3_cache_client,
             r2_client,

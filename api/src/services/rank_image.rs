@@ -162,7 +162,18 @@ pub(crate) async fn fetch_tier_image(
             APIError::status_msg(StatusCode::NOT_FOUND, "No image available for the rank.")
         })?;
 
-    let response = reqwest::get(&image_url)
+    download_tier_image(&state.http_client, &image_url).await
+}
+
+/// Tier artwork only changes with a new asset build, and the URL changes with it.
+#[cached(ttl_secs = 86400, key = "String", convert = "{ image_url.to_owned() }")]
+async fn download_tier_image(
+    http_client: &reqwest::Client,
+    image_url: &str,
+) -> Result<Bytes, APIError> {
+    let response = http_client
+        .get(image_url)
+        .send()
         .await
         .map_err(|e| APIError::internal(format!("Failed to fetch rank image: {e}")))?;
 

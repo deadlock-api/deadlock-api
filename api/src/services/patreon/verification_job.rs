@@ -48,6 +48,7 @@ pub(crate) struct PatreonVerificationJob {
 
 impl PatreonVerificationJob {
     pub(crate) fn new(
+        http_client: reqwest::Client,
         pg_client: Pool<Postgres>,
         encryption_key: String,
         patreon_client_id: String,
@@ -57,7 +58,7 @@ impl PatreonVerificationJob {
         let patron_repository = PatronRepository::new(pg_client.clone(), encryption_key);
         let steam_accounts_repository = SteamAccountsRepository::new(pg_client);
         let patreon_client = PatreonClient::new(
-            reqwest::Client::new(),
+            http_client,
             patreon_client_id,
             patreon_client_secret,
             patreon_redirect_uri,

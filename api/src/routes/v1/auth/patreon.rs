@@ -175,7 +175,7 @@ pub(crate) async fn callback(
 
     // Create Patreon client
     let patreon_client = PatreonClient::new(
-        reqwest::Client::new(),
+        app_state.http_client.clone(),
         app_state.config.patreon.client_id.clone(),
         app_state.config.patreon.client_secret.clone(),
         app_state.config.patreon.redirect_uri.clone(),
