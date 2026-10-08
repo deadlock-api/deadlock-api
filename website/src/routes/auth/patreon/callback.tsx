@@ -54,7 +54,6 @@ function PatreonCallbackPage() {
 
   useEffect(() => {
     if (errorMessage) return;
-    if (typeof window === "undefined") return;
 
     const storedRedirectPath = takeRedirectPath();
 
@@ -66,10 +65,6 @@ function PatreonCallbackPage() {
   }, [errorMessage, navigate]);
 
   const handleGoBack = () => {
-    if (typeof window === "undefined") {
-      void navigate({ to: "/patron" });
-      return;
-    }
     void navigate({ to: takeRedirectPath() });
   };
 

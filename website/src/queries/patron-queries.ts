@@ -82,49 +82,34 @@ export function usePlayerCard(steamId3: number, enabled = true) {
 // Mutation Hooks
 // ============================================================================
 
-export function useAddSteamAccount() {
+/** A mutation of the patron's accounts: every patron query is refetched once it lands. */
+function usePatronMutation<TVariables, TData>(mutationFn: (variables: TVariables) => Promise<TData>) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: addSteamAccount,
+    mutationFn,
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.patron.all });
     },
   });
+}
+
+export function useAddSteamAccount() {
+  return usePatronMutation(addSteamAccount);
 }
 
 export function useDeleteSteamAccount() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: deleteSteamAccount,
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: queryKeys.patron.all });
-    },
-  });
+  return usePatronMutation(deleteSteamAccount);
 }
 
 export function useReplaceSteamAccount() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: ({ accountId, steamId3 }: { accountId: string; steamId3: number }) =>
-      replaceSteamAccount(accountId, steamId3),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: queryKeys.patron.all });
-    },
-  });
+  return usePatronMutation(({ accountId, steamId3 }: { accountId: string; steamId3: number }) =>
+    replaceSteamAccount(accountId, steamId3),
+  );
 }
 
 export function useReactivateSteamAccount() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: reactivateSteamAccount,
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: queryKeys.patron.all });
-    },
-  });
+  return usePatronMutation(reactivateSteamAccount);
 }
 
 export function useRefetchMatchHistory() {
