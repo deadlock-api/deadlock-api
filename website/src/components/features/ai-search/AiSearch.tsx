@@ -8,6 +8,7 @@ import { Button } from "~/components/ui/button";
 import { Callout, CalloutAnchor, CalloutContent, CalloutDescription, CalloutTitle } from "~/components/ui/callout";
 import { RollingText } from "~/components/ui/rolling-text";
 import { SearchInput } from "~/components/ui/search-input";
+import { Inline } from "~/components/ui/stack";
 import { MAX_QUESTION_LENGTH, QUESTIONS_PER_MINUTE } from "~/lib/ai-search/limits";
 import { getAnalytics } from "~/lib/analytics";
 import { cn } from "~/lib/utils";
@@ -24,6 +25,9 @@ const PLACEHOLDER_QUESTIONS = [
   "top players in europe",
 ];
 
+/** Questions under the home page's bar, one click each, so it is plain what the search is for. */
+const EXAMPLE_QUESTIONS = ["Who counters Abrams", "Best items on Bebop", "Haze win rate in Seeker"];
+
 const ASK = "Ask anything";
 const TRY = "Try asking about a hero, an item or a stat.";
 const FINDING = "Finding the page";
@@ -31,7 +35,7 @@ const FINDING = "Finding the page";
 /** One `ai_search` event per question, with the question itself: what visitors ask, how often, and where it led. */
 function trackQuestion(event: {
   question: string;
-  source: "home" | "sidebar";
+  source: "home" | "sidebar" | "example";
   outcome: "opened" | "not_understood" | "player_lookup" | "match_lookup" | "rate_limited" | "error";
   page?: string;
   direct?: boolean;
@@ -122,7 +126,7 @@ export function AiSearch({ size = "default", className }: AiSearchProps) {
 
   const question = last && last.version !== draft.version ? last.question : draft.text;
 
-  const ask = (text: string) => {
+  const ask = (text: string, source: "home" | "sidebar" | "example" = home ? "home" : "sidebar") => {
     const trimmed = text.trim();
     if (!trimmed) return;
     const asked = ++latest.current;
@@ -137,7 +141,7 @@ export function AiSearch({ size = "default", className }: AiSearchProps) {
           setSearching(false);
           trackQuestion({
             question: trimmed,
-            source: home ? "home" : "sidebar",
+            source,
             outcome: routed.kind,
             page: routed.kind === "opened" ? routed.id : undefined,
             direct: routed.direct,
@@ -154,14 +158,14 @@ export function AiSearch({ size = "default", className }: AiSearchProps) {
         () => {
           if (asked !== latest.current) return;
           setSearching(false);
-          trackQuestion({ question: trimmed, source: home ? "home" : "sidebar", outcome: "error" });
+          trackQuestion({ question: trimmed, source, outcome: "error" });
           setNotice("error");
         },
       );
   };
 
   return (
-    <search aria-label="Find a stat" className={cn("w-full", home && "max-w-2xl", className)}>
+    <search aria-label="Find a stat" className={cn("flex w-full flex-col gap-3", home && "max-w-2xl", className)}>
       <Callout open={notice !== null} onOpenChange={(open) => !open && setNotice(null)}>
         <CalloutAnchor asChild>
           <form
@@ -228,6 +232,25 @@ export function AiSearch({ size = "default", className }: AiSearchProps) {
           </CalloutContent>
         )}
       </Callout>
+      {home && (
+        <Inline justify="center">
+          {EXAMPLE_QUESTIONS.map((example) => (
+            <Button
+              key={example}
+              type="button"
+              variant="subtle"
+              size="sm"
+              shape="pill"
+              onClick={() => {
+                setDraft({ text: example, version: last?.version ?? 0 });
+                ask(example, "example");
+              }}
+            >
+              {example}
+            </Button>
+          ))}
+        </Inline>
+      )}
     </search>
   );
 }
