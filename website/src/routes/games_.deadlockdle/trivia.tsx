@@ -1,5 +1,4 @@
 import { createFileRoute } from "@tanstack/react-router";
-import type { Ability } from "deadlock_api_client";
 import { AnimatePresence, motion } from "framer-motion";
 import { useCallback, useMemo, useRef, useState, type RefCallback } from "react";
 
@@ -99,7 +98,7 @@ function Trivia() {
 
   const abilitiesWithHeroes = useMemo(() => {
     if (!rawAbilities || !heroes) return [];
-    return buildAbilitiesWithHeroes(rawAbilities as Ability[], filterPlayableHeroes(heroes));
+    return buildAbilitiesWithHeroes(rawAbilities, filterPlayableHeroes(heroes));
   }, [rawAbilities, heroes]);
 
   const questions: TriviaQuestion[] = useMemo(() => {

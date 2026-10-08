@@ -72,6 +72,16 @@ export const abilitiesQueryOptions = queryOptions({
   staleTime: CACHE_DURATIONS.FOREVER,
 });
 
+/** Every NPC unit (troopers, guardians, walkers, bosses) with its stats. */
+export const npcUnitsQueryOptions = queryOptions({
+  queryKey: queryKeys.assets.npcUnits(),
+  queryFn: async () => {
+    const response = await api.npc_units_api.listNpcUnits();
+    return response.data;
+  },
+  staleTime: CACHE_DURATIONS.FOREVER,
+});
+
 /**
  * Pickup entities (power-ups, permanent buffs) by class name, for the names, units and graph colors of the buff
  * analytics. Everything else the misc entities carry (spawners, shop triggers) is dropped.

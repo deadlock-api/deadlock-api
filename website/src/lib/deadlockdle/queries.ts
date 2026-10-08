@@ -1,12 +1,17 @@
 import { type UseQueryResult, useQueries, useQuery } from "@tanstack/react-query";
-import type { Ability } from "deadlock_api_client";
 import { useMemo } from "react";
 
-import { api } from "~/lib/api";
 import { abilityOrderQueryOptions } from "~/queries/ability-order-query";
-import { filterPlayableHeroes, heroesFullQueryOptions, itemUpgradesFullQueryOptions } from "~/queries/asset-queries";
+import {
+  abilitiesQueryOptions,
+  filterPlayableHeroes,
+  heroesFullQueryOptions,
+  itemUpgradesFullQueryOptions,
+  npcUnitsQueryOptions,
+} from "~/queries/asset-queries";
 import { gameStatsQueryOptions } from "~/queries/games-query";
 import { heroStatsQueryOptions } from "~/queries/hero-stats-query";
+import { soundIndexQueryOptions } from "~/queries/sound-queries";
 import { draftCounterStatsQueryOptions } from "~/queries/team-builder-queries";
 
 import { buildRounds, pickAbilityHeroes, STATS_RANKS, statsWindow } from "./higher-lower";
@@ -21,38 +26,15 @@ export function useItems() {
 }
 
 export function useAbilities() {
-  return useQuery({
-    queryKey: ["assets-items-abilities"],
-    queryFn: async () => {
-      const res = await api.items_api.getItemsByType({
-        type: "ability",
-      });
-      return res.data;
-    },
-    staleTime: Number.POSITIVE_INFINITY,
-  });
+  return useQuery(abilitiesQueryOptions);
 }
 
 export function useSounds() {
-  return useQuery({
-    queryKey: ["assets-sounds"],
-    queryFn: async () => {
-      const res = await api.assets_bucket_api.sounds();
-      return res.data as Record<string, unknown>;
-    },
-    staleTime: Number.POSITIVE_INFINITY,
-  });
+  return useQuery(soundIndexQueryOptions);
 }
 
 export function useNpcUnits() {
-  return useQuery({
-    queryKey: ["assets-npc-units"],
-    queryFn: async () => {
-      const res = await api.npc_units_api.listNpcUnits();
-      return res.data;
-    },
-    staleTime: Number.POSITIVE_INFINITY,
-  });
+  return useQuery(npcUnitsQueryOptions);
 }
 
 /** Whether a puzzle's queries failed. A puzzle needs every one of them, so any query that failed with no data
@@ -112,7 +94,7 @@ export function useHigherLowerRounds(date: string) {
     if (heroes.length === 0 || !rawAbilities || !heroStats || !counters || !gameStats || !abilityOrdersReady) return [];
 
     const abilities = new Map<number, { name: string; hero: number }>();
-    for (const ability of rawAbilities as Ability[]) {
+    for (const ability of rawAbilities) {
       if (ability.ability_type !== "signature" && ability.ability_type !== "ultimate") continue;
       if (!hasDisplayName(ability) || ability.hero == null) continue;
       abilities.set(ability.id, { name: ability.name, hero: ability.hero });

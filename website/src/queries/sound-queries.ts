@@ -5,12 +5,14 @@ import { CACHE_DURATIONS } from "~/constants/cache";
 import { api } from "~/lib/api";
 import { isSoundTree, type SoundTree } from "~/lib/sounds";
 
+import { queryKeys } from "./query-keys";
+
 /**
  * The whole sound index: about 1 MB on the wire, 17 MB of JSON. It is only read in the browser (the sound browser
  * renders its list after hydration), never dehydrated into the HTML.
  */
 export const soundIndexQueryOptions = queryOptions({
-  queryKey: ["assets-sounds"],
+  queryKey: queryKeys.assets.sounds(),
   queryFn: async (): Promise<SoundTree> => {
     const res = await api.assets_bucket_api.sounds();
     if (!isSoundTree(res.data)) throw new Error("Unexpected sound index");
