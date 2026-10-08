@@ -117,9 +117,29 @@ html:has(.mobile-navigation[open]) {
   transform-origin: right;
 }
 
-/* The element a visitor was sent to (`FindOnPage`, from an AI search answer): an accent bar on its leading edge and a
-   tint that fades across it, both drawn inside it so no panel edge clips them. It lands with one short glow and then
-   stays calm; with reduced motion it simply appears. */
+/* The element a visitor was sent to (`FindOnPage`, from an AI search answer). It lands with one short glow and then
+   stays calm; with reduced motion it simply appears.
+   A tile, a header or anything else that hugs its content gets a halo around it: a tinted margin and a thin ring
+   10px out, so the content keeps its room and nothing moves. */
+@keyframes find-halo {
+  from {
+    box-shadow:
+      0 0 0 10px color-mix(in srgb, var(--primary) 20%, transparent),
+      0 0 32px 14px color-mix(in srgb, var(--primary) 30%, transparent);
+  }
+}
+
+[data-found] {
+  border-radius: var(--radius-md);
+  background-color: color-mix(in srgb, var(--primary) 7%, transparent);
+  box-shadow: 0 0 0 10px color-mix(in srgb, var(--primary) 7%, transparent);
+  outline: 1.5px solid color-mix(in srgb, var(--primary) 55%, transparent);
+  outline-offset: 10px;
+  animation: find-halo 1.4s ease-out;
+}
+
+/* A row or a column header runs edge to edge in its table or panel, which would cut a halo off: it lights up inside instead, with an
+   accent bar on its leading edge and a tint fading across it. */
 @keyframes find-arrive {
   from {
     box-shadow:
@@ -129,9 +149,10 @@ html:has(.mobile-navigation[open]) {
   }
 }
 
-[data-found] {
+:is(tr, th, [data-variant="row"])[data-found] {
   --find-bar: inset 3px 0 0 var(--primary);
-  border-radius: var(--radius-md);
+  outline: none;
+  background-color: transparent;
   background-image: linear-gradient(
     to right,
     color-mix(in srgb, var(--primary) 16%, transparent),
@@ -140,10 +161,10 @@ html:has(.mobile-navigation[open]) {
   box-shadow:
     var(--find-bar),
     inset 0 0 0 1px color-mix(in srgb, var(--primary) 30%, transparent);
-  animation: find-arrive 1.4s ease-out;
+  animation-name: find-arrive;
 }
 
-[data-found]:dir(rtl) {
+:is(tr, th, [data-variant="row"])[data-found]:dir(rtl) {
   --find-bar: inset -3px 0 0 var(--primary);
   background-image: linear-gradient(
     to left,
