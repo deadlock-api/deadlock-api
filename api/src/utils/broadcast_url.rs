@@ -52,7 +52,9 @@ pub(crate) fn redirect_policy() -> Policy {
         } else if validate_url(attempt.url()).is_ok() {
             attempt.follow()
         } else {
-            attempt.stop()
+            // Not `stop()`: the 3xx itself would pass the broadcast client's status check and be
+            // read as fragment data.
+            attempt.error("redirect outside Valve broadcast hosts")
         }
     })
 }
