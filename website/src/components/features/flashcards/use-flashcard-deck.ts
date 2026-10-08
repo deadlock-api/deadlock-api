@@ -26,13 +26,13 @@ function hashString(text: string): number {
   return hash >>> 0;
 }
 
-/** The random numbers of one deal. */
 /**
  * The last deal serial of each deck in this page load. A deck mounted again (the visitor left and came back without a
  * reload) continues from it, so it deals a new sequence instead of replaying the one it began with.
  */
 const LAST_SERIAL = new Map<string, number>();
 
+/** The random numbers of one deal. */
 function dealRandom(deck: string, reshuffleKey: string, serial: number): () => number {
   return seededRandom(
     (SESSION_SEED ^ hashString(deck) ^ hashString(reshuffleKey) ^ Math.imul(serial, 0x9e3779b1)) >>> 0,
