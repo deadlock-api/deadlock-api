@@ -1,6 +1,7 @@
 import { CheckIcon } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 
+import { useLoadedImageRef } from "~/components/ui/hooks/use-loaded-image-ref";
 import { FOCUS_RING } from "~/components/ui/recipes";
 import { Skeleton } from "~/components/ui/skeleton";
 import { cn } from "~/lib/utils";
@@ -38,14 +39,11 @@ export function SharePreview({
   confirmation?: string;
 }) {
   const confirmed = state === "confirmed";
-  const image = useRef<HTMLImageElement>(null);
   // The src that has finished loading (or failed); anything else is still on its way.
   const [settledSrc, setSettledSrc] = useState<string>();
   const loading = settledSrc !== src;
   // An image served with the page can finish before hydration attaches onLoad; it is complete by then.
-  useEffect(() => {
-    if (image.current?.complete) setSettledSrc(src);
-  }, [src]);
+  const imageRef = useLoadedImageRef(undefined, () => setSettledSrc(src));
   return (
     <button
       type="button"
@@ -65,7 +63,7 @@ export function SharePreview({
       {...props}
     >
       <img
-        ref={image}
+        ref={imageRef}
         src={src}
         width={width}
         height={height}
