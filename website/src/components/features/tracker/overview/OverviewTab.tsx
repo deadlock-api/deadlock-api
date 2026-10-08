@@ -19,6 +19,7 @@ import { NoValue } from "~/components/ui/no-value";
 import { ProgressBar } from "~/components/ui/progress-bar";
 import { Stat, StatGroup } from "~/components/ui/stat";
 import { Tooltip, TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
+import { formatPercent } from "~/lib/format";
 import { hasSoulEconomy, MODE_CONFIG } from "~/lib/game-mode";
 import {
   computeActivity,
@@ -50,7 +51,6 @@ import { TrendPanels } from "./TrendPanels";
 
 const integer = (n: number) => Math.round(n).toLocaleString("en-US");
 const decimal = (n: number) => n.toFixed(1);
-const percent = (n: number) => `${(n * 100).toFixed(1)}%`;
 const signed = (n: number) => `${n > 0 ? "+" : ""}${integer(n)}`;
 
 export function OverviewTab({
@@ -126,7 +126,7 @@ export function OverviewTab({
     { label: "Matches", value: integer(s.matches), detail: `${integer(s.wins)}W / ${integer(s.losses)}L` },
     {
       label: "Win rate",
-      value: percent(s.winrate),
+      value: formatPercent(s.winrate),
       detail: `${signed(s.wins - s.losses)} win / loss balance`,
       accent: true,
     },

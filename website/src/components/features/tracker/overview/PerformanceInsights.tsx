@@ -6,6 +6,7 @@ import { Panel, PanelBody, PanelHeader } from "~/components/patterns/panel/Panel
 import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { Button } from "~/components/ui/button";
 import { Card } from "~/components/ui/card";
+import { formatPercent } from "~/lib/format";
 import { TONE_TEXT } from "~/lib/tone";
 import { type Insight, MIN_DELTA_POINTS, MIN_HERO_MATCHES, MIN_SPLIT_MATCHES } from "~/lib/tracker/insights";
 import { cn } from "~/lib/utils";
@@ -25,9 +26,7 @@ export function PerformanceInsights({
     <Panel>
       <PanelHeader
         title="Performance insights"
-        description={
-          resultFiltered ? "Win-rate comparisons paused" : `${(baseline * 100).toFixed(1)}% overall win rate`
-        }
+        description={resultFiltered ? "Win-rate comparisons paused" : `${formatPercent(baseline)} overall win rate`}
         icon={Lightbulb}
         size="sm"
       />
@@ -44,49 +43,47 @@ export function PerformanceInsights({
             }
           />
         ) : (
-          <>
-            <ul className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,14rem),1fr))] gap-2">
-              {insights.map((insight) => {
-                const TrendIcon = insight.tone === "good" ? ArrowUpRight : ArrowDownRight;
-                const heroId = insight.heroId;
-                return (
-                  <Card key={insight.id} asChild tone="outline" size="xs" radius="md" className="p-3">
-                    <li>
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-xl font-semibold tabular-nums">{insight.value}</span>
-                        <span
-                          className={cn(
-                            "flex items-center gap-1 text-xs font-medium tabular-nums",
-                            TONE_TEXT[insight.tone === "good" ? "positive" : "negative"],
-                          )}
-                        >
-                          <TrendIcon className="size-3.5" aria-hidden="true" />
-                          <span aria-hidden="true">{insight.delta} pp</span>
-                          <span className="sr-only">
-                            {insight.delta} percentage points compared with overall win rate
-                          </span>
-                        </span>
-                      </div>
-                      <p className="text-xs font-medium">{insight.headline}</p>
-                      <div className="mt-auto flex flex-wrap items-center justify-between gap-2">
-                        <span className="text-xs text-muted-foreground tabular-nums">{insight.detail}</span>
-                        {heroId != null && (
-                          <Button variant="ghost" size="xs" onClick={() => onSelectHero(heroId)}>
-                            <span className="sr-only">Filter matches to </span>
-                            <span aria-hidden="true">
-                              <HeroImage heroId={heroId} className="size-4" title="" />
-                            </span>
-                            <HeroName heroId={heroId} className="max-w-28" />
-                            <ArrowUpRight data-icon="inline-end" aria-hidden="true" />
-                          </Button>
+          <ul className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,14rem),1fr))] gap-2">
+            {insights.map((insight) => {
+              const TrendIcon = insight.tone === "good" ? ArrowUpRight : ArrowDownRight;
+              const heroId = insight.heroId;
+              return (
+                <Card key={insight.id} asChild tone="outline" size="xs" radius="md" className="p-3">
+                  <li>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-xl font-semibold tabular-nums">{insight.value}</span>
+                      <span
+                        className={cn(
+                          "flex items-center gap-1 text-xs font-medium tabular-nums",
+                          TONE_TEXT[insight.tone === "good" ? "positive" : "negative"],
                         )}
-                      </div>
-                    </li>
-                  </Card>
-                );
-              })}
-            </ul>
-          </>
+                      >
+                        <TrendIcon className="size-3.5" aria-hidden="true" />
+                        <span aria-hidden="true">{insight.delta} pp</span>
+                        <span className="sr-only">
+                          {insight.delta} percentage points compared with overall win rate
+                        </span>
+                      </span>
+                    </div>
+                    <p className="text-xs font-medium">{insight.headline}</p>
+                    <div className="mt-auto flex flex-wrap items-center justify-between gap-2">
+                      <span className="text-xs text-muted-foreground tabular-nums">{insight.detail}</span>
+                      {heroId != null && (
+                        <Button variant="ghost" size="xs" onClick={() => onSelectHero(heroId)}>
+                          <span className="sr-only">Filter matches to </span>
+                          <span aria-hidden="true">
+                            <HeroImage heroId={heroId} className="size-4" title="" />
+                          </span>
+                          <HeroName heroId={heroId} className="max-w-28" />
+                          <ArrowUpRight data-icon="inline-end" aria-hidden="true" />
+                        </Button>
+                      )}
+                    </div>
+                  </li>
+                </Card>
+              );
+            })}
+          </ul>
         )}
       </PanelBody>
     </Panel>

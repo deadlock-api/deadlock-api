@@ -22,7 +22,6 @@ import {
   type PlaySession,
   recordsByMatchId,
   SORT_DIRS,
-  type SortDir,
   sortMatches,
   summarize,
 } from "~/lib/tracker/compute";
@@ -230,9 +229,6 @@ export function MatchesTab({
     void setSelectedMatchId(next.match_id);
   };
 
-  const changeSort = (next: { sort?: MatchSortKey; dir?: SortDir }) => {
-    void setSort(next);
-  };
   const reverseSortLabel =
     sortKey === "played"
       ? sortDir === "desc"
@@ -399,7 +395,7 @@ export function MatchesTab({
               </div>
               <Select
                 value={sortKey}
-                onValueChange={(value) => changeSort({ sort: value as MatchSortKey, dir: "desc" })}
+                onValueChange={(value) => void setSort({ sort: value as MatchSortKey, dir: "desc" })}
               >
                 <SelectTrigger size="sm" className="ms-auto gap-1 px-2 text-xs" aria-label="Sort matches by">
                   <SelectValue />
@@ -417,7 +413,7 @@ export function MatchesTab({
               <Button
                 variant="outline"
                 size="icon-sm"
-                onClick={() => changeSort({ dir: sortDir === "desc" ? "asc" : "desc" })}
+                onClick={() => void setSort({ dir: sortDir === "desc" ? "asc" : "desc" })}
                 aria-label={reverseSortLabel}
                 title={reverseSortLabel}
               >

@@ -2,6 +2,7 @@ import { Delta } from "~/components/ui/delta";
 import { DetailPopover } from "~/components/ui/detail-popover";
 import { TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
 import { useHeroById } from "~/hooks/useAssetById";
+import { formatPercent } from "~/lib/format";
 import { cn } from "~/lib/utils";
 
 /** Compact comparison with the same explanation on hover, tap, and keyboard activation. */
@@ -27,7 +28,7 @@ export function HeroComparison({
   if (!Number.isFinite(value) || Math.abs(value) < 0.5 * 10 ** -digits) return null;
   const metricLabel = isWinrate ? "Win rate" : "KDA";
   const difference = <Delta value={value} format="number" digits={digits} unit={isWinrate ? " pp" : ""} />;
-  const format = (number: number) => (isWinrate ? `${(number * 100).toFixed(1)}%` : number.toFixed(2));
+  const format = (number: number) => (isWinrate ? formatPercent(number) : number.toFixed(2));
 
   return (
     <DetailPopover

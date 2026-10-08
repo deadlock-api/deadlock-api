@@ -22,6 +22,7 @@ import { NoValue } from "~/components/ui/no-value";
 import { ProgressBar } from "~/components/ui/progress-bar";
 import { SwitchField } from "~/components/ui/switch-field";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
+import { formatPercent } from "~/lib/format";
 import { type GameMode, hasSoulEconomy } from "~/lib/game-mode";
 import { benchmarkRankRange } from "~/lib/tracker/benchmarks";
 import { recentFormByHero, type ResultFilter } from "~/lib/tracker/compute";
@@ -52,7 +53,7 @@ const COLUMNS: {
   className?: string;
 }[] = [
   { key: "matches", label: "Matches", format: (row) => row.matches.toLocaleString("en-US") },
-  { key: "winrate", label: "Win rate", format: (row) => `${(row.winrate * 100).toFixed(1)}%` },
+  { key: "winrate", label: "Win rate", format: (row) => formatPercent(row.winrate) },
   { key: "kda", label: "KDA", format: (row) => row.kda.toFixed(2) },
   { key: "kills", label: "Kills", format: (row) => row.kills.toFixed(1), className: "hidden @3xl:table-cell" },
   { key: "deaths", label: "Deaths", format: (row) => row.deaths.toFixed(1), className: "hidden @3xl:table-cell" },
@@ -330,36 +331,24 @@ export function HeroesTab({
                             key={column.key}
                             className={cn("text-end tabular-nums", !showAllStats && column.className)}
                           >
-                            {column.key === "winrate" ? (
-                              <div className="flex items-center justify-end gap-2">
-                                {average && (
-                                  <HeroComparison
-                                    heroId={row.heroId}
-                                    metric="winrate"
-                                    playerValue={row.winrate}
-                                    averageValue={average.winrate}
-                                    bracketLabel={bracketLabel}
-                                    showAlways={showAllStats}
-                                  />
-                                )}
-                                <span>{column.format(row, fromNow)}</span>
-                                <ProgressBar variant="thin" value={row.winrate} className="hidden w-16 @md:block" />
-                              </div>
-                            ) : column.key === "recentWinrate" ? (
+                            {column.key === "recentWinrate" ? (
                               <FormDots form={formByHero.get(row.heroId) ?? []} className="justify-end" />
-                            ) : column.key === "kda" ? (
+                            ) : column.key === "winrate" || column.key === "kda" ? (
                               <div className="flex items-center justify-end gap-2">
                                 {average && (
                                   <HeroComparison
                                     heroId={row.heroId}
-                                    metric="kda"
-                                    playerValue={row.kda}
-                                    averageValue={average.kda}
+                                    metric={column.key}
+                                    playerValue={row[column.key]}
+                                    averageValue={average[column.key]}
                                     bracketLabel={bracketLabel}
                                     showAlways={showAllStats}
                                   />
                                 )}
                                 <span>{column.format(row, fromNow)}</span>
+                                {column.key === "winrate" && (
+                                  <ProgressBar variant="thin" value={row.winrate} className="hidden w-16 @md:block" />
+                                )}
                               </div>
                             ) : (
                               column.format(row, fromNow)

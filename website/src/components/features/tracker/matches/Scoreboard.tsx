@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import type { Rank } from "deadlock_api_client";
 import { ArrowDown, ArrowUp, Crown, ExternalLink, ShieldCheck } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 
 import { AbilityImage } from "~/components/domain/assets/AbilityImage";
 import { BadgeImage } from "~/components/domain/assets/BadgeImage";
@@ -14,17 +14,16 @@ import { Box } from "~/components/ui/box";
 import { Button } from "~/components/ui/button";
 import { CornerBadge } from "~/components/ui/corner-badge";
 import { DetailPopover } from "~/components/ui/detail-popover";
-import { nextSort } from "~/components/ui/hooks/use-sort";
+import { useSort } from "~/components/ui/hooks/use-sort";
 import { Pips } from "~/components/ui/pips";
 import { ProgressBar } from "~/components/ui/progress-bar";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
 import { Separator } from "~/components/ui/separator";
-import { ariaSort, SortButton } from "~/components/ui/sort-button";
+import { SortButton } from "~/components/ui/sort-button";
 import { Stack } from "~/components/ui/stack";
 import { StatusDot } from "~/components/ui/status-dot";
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
-import { TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
-import { Tooltip } from "~/components/ui/tooltip";
+import { Tooltip, TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
 import { IS_DEV } from "~/lib/constants";
 import { formatShare } from "~/lib/format";
 import { type GameMode, hasSoulEconomy } from "~/lib/game-mode";
@@ -107,6 +106,10 @@ const laneIndex = (player: TrackerMatchPlayer) => {
   const index = LANES.findIndex((lane) => lane.id === player.assigned_lane);
   return index === -1 ? LANES.length : index;
 };
+
+/** Whether the player has a rank change, a demotion save or a badge to show beside their name. */
+const showsRank = (player: TrackerMatchPlayer) =>
+  Boolean(player.rank_delta || player.demotion_protected || player.rank_badge != null);
 
 /** Lane by lane so opponents line up across the two team tables; unassigned players sink to the bottom. */
 function byLane(players: TrackerMatchPlayer[]): TrackerMatchPlayer[] {
@@ -207,7 +210,7 @@ function PlayerStatStrip({
 }) {
   return (
     <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 pb-1 text-xs text-muted-foreground tabular-nums">
-      {(player.rank_delta || player.demotion_protected || player.rank_badge != null) && (
+      {showsRank(player) && (
         // The name row hands the rank down here at phone width, where the name needs the room more.
         <span className="flex items-center gap-1 @sm:hidden">
           {player.demotion_protected && (
@@ -316,17 +319,15 @@ export function Scoreboard({
   const columns = playerStatColumnsFor(gameMode);
   /** Player, portrait, K/D/A, and one cell per stat column. */
   const columnCount = 3 + columns.length;
-  const [chosenSortKey, setSortKey] = useState<string | null>(null);
-  const sortKey =
-    chosenSortKey === "kda" || columns.some((column) => column.key === chosenSortKey) ? chosenSortKey : null;
-  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
+  /** Without a sort (the empty key) the order is the default; the first press on a column sorts it from the highest. */
+  const sort = useSort<string>({ defaultValue: { key: "", dir: "desc" } });
+  const sortKey = sort.sortKey === "kda" || columns.some((column) => column.key === sort.sortKey) ? sort.sortKey : null;
+  const sortDirection = sort.dir;
   const sortLabel = sortKey === "kda" ? "KDA" : columns.find((column) => column.key === sortKey)?.short;
-  /** Without a sort the order is the default; the first press on a column sorts it from the highest. */
-  const changeSort = (key: string) => {
-    const next = nextSort({ key: sortKey ?? "", dir: sortDirection }, key);
-    setSortDirection(next.dir);
-    setSortKey(next.key);
-  };
+  const changeSort = sort.toggle;
+  const clearSort = () => sort.setSort({ key: "", dir: sortDirection });
+  const orderLabel =
+    sortKey == null ? `Players in ${laned ? "lane" : "team"} order` : `Restore ${laned ? "lane" : "team"} order`;
   const { data: heroesById } = useQuery({
     ...heroesQueryOptions,
     select: (heroes) => new Map(heroes.map((hero) => [hero.id, hero])),
@@ -390,17 +391,9 @@ export function Scoreboard({
                       variant="ghost"
                       size="xs"
                       aria-disabled={sortKey == null}
-                      aria-label={
-                        sortKey == null
-                          ? `Players in ${laned ? "lane" : "team"} order`
-                          : `Restore ${laned ? "lane" : "team"} order`
-                      }
-                      title={
-                        sortKey == null
-                          ? `Players in ${laned ? "lane" : "team"} order`
-                          : `Restore ${laned ? "lane" : "team"} order`
-                      }
-                      onClick={sortKey ? () => setSortKey(null) : undefined}
+                      aria-label={orderLabel}
+                      title={orderLabel}
+                      onClick={sortKey ? clearSort : undefined}
                       className="hidden font-normal @lg:inline-flex"
                     >
                       Player
@@ -414,7 +407,7 @@ export function Scoreboard({
                     <div className="flex items-center gap-0.5 @lg:hidden">
                       <Select
                         value={sortKey ?? "default"}
-                        onValueChange={(value) => (value === "default" ? setSortKey(null) : changeSort(value))}
+                        onValueChange={(value) => (value === "default" ? clearSort() : changeSort(value))}
                       >
                         <SelectTrigger
                           size="sm"
@@ -448,10 +441,7 @@ export function Scoreboard({
                       )}
                     </div>
                   </TableHead>
-                  <TableHead
-                    className="h-auto px-1.5 py-1 text-end font-normal"
-                    aria-sort={ariaSort(sortKey === "kda", sortDirection)}
-                  >
+                  <TableHead className="h-auto px-1.5 py-1 text-end font-normal" aria-sort={sort.ariaSort("kda")}>
                     <ColumnSortButton
                       label="KDA ratio"
                       short="K / D / A"
@@ -465,7 +455,7 @@ export function Scoreboard({
                       key={column.key}
                       className={cn("h-auto px-1.5 py-1 text-end font-normal", REVEAL[column.reveal].cell)}
                       title={column.label}
-                      aria-sort={ariaSort(sortKey === column.key, sortDirection)}
+                      aria-sort={sort.ariaSort(column.key)}
                     >
                       <ColumnSortButton
                         label={column.label}
@@ -570,7 +560,7 @@ export function Scoreboard({
                               <Crown className="size-3.5 shrink-0 text-warning" aria-label="Match MVP" />
                             </Tooltip>
                           )}
-                          {(player.rank_delta || player.demotion_protected || player.rank_badge != null) && (
+                          {showsRank(player) && (
                             <span className="ms-auto hidden shrink-0 items-center gap-1 ps-1 text-xs font-normal @sm:flex">
                               {player.demotion_protected && (
                                 <ShieldCheck

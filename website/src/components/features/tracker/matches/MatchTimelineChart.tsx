@@ -22,8 +22,13 @@ import {
   CHART_ACTIVE_DOT,
 } from "~/components/patterns/charts/theme";
 import { IconTile } from "~/components/ui/icon-tile";
-import { TooltipCard, TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
-import { Tooltip as HoverTooltip } from "~/components/ui/tooltip";
+import {
+  Tooltip as HoverTooltip,
+  TooltipCard,
+  TooltipHeader,
+  TooltipStat,
+  TooltipStats,
+} from "~/components/ui/tooltip";
 import { niceTicks } from "~/lib/chart-axis";
 import { TONE_TEXT } from "~/lib/tone";
 import { formatMatchDuration } from "~/lib/tracker/compute";
@@ -373,10 +378,11 @@ export function MatchTimelineChart({
   const domain: [number, number] = [lo - roomBelowPx * valuePerPx, hi + roomAbovePx * valuePerPx];
   // The gradient spans the area's own bounding box, which runs from the lowest to the highest lead with zero included.
   const zeroOffset = max === min ? 0 : max / (max - min);
+  const label = lead ? "Team soul lead and match events over time" : "Match events over time";
 
   return (
     <ChartSurface
-      label={lead ? "Team soul lead and match events over time" : "Match events over time"}
+      label={label}
       size="fill"
       variant="bare"
       style={{ height: plotPx + 2 * EDGE_PX + X_AXIS_PX }}
@@ -384,11 +390,7 @@ export function MatchTimelineChart({
       // A marker's exact event tooltip takes precedence over the nearest soul sample.
       className="[&:has([data-state$=open])_.recharts-tooltip-wrapper]:invisible!"
     >
-      <AreaChart
-        aria-label={lead ? "Team soul lead and match events over time" : "Match events over time"}
-        data={data}
-        margin={{ top: EDGE_PX, right: PLOT_END_PX, bottom: EDGE_PX, left: 0 }}
-      >
+      <AreaChart aria-label={label} data={data} margin={{ top: EDGE_PX, right: PLOT_END_PX, bottom: EDGE_PX, left: 0 }}>
         <defs>
           <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
             <stop offset={zeroOffset} stopColor={CHART_COLOR.positive} />

@@ -50,7 +50,8 @@ export function TrackerFilterBar({
   return (
     <Collapsible
       open={expanded}
-      onOpenChange={setExpanded} // Full width, never shrink-to-fit: the bar inside is a query container, which has no intrinsic width of its own
+      onOpenChange={setExpanded}
+      // Full width, never shrink-to-fit: the bar inside is a query container, which has no intrinsic width of its own
       // and centres itself once it has room for one row.
       className="flex w-full flex-col gap-1"
     >

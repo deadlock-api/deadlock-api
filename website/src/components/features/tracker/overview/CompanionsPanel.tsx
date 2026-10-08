@@ -1,11 +1,11 @@
-import { useQuery } from "@tanstack/react-query";
 import type { PlayerMatchHistoryEntry } from "deadlock_api_client";
 import { UsersRound } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 
 import { PlayerCell } from "~/components/domain/player/PlayerCell";
 import { CompanionMatchesDialog } from "~/components/features/tracker/breakdown/CompanionMatchesDialog";
 import { EnemiesTab, MatesTab } from "~/components/features/tracker/breakdown/PlayerStatsTable";
+import { useEnemyRows, useMateRows } from "~/components/features/tracker/breakdown/useCompanionRows";
 import { PanelWithDetails } from "~/components/patterns/panel/PanelWithDetails";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
@@ -14,10 +14,9 @@ import { Button } from "~/components/ui/button";
 import { Heading } from "~/components/ui/heading";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { useSteamProfiles } from "~/hooks/useSteamProfiles";
-import { MODE_CONFIG } from "~/lib/game-mode";
-import { type CompanionRow, intersectCompanionRows } from "~/lib/tracker/companions";
+import { formatPercent } from "~/lib/format";
+import type { CompanionRow } from "~/lib/tracker/companions";
 import type { TrackerFilterValues } from "~/lib/tracker/compute";
-import { trackerEnemyStatsQueryOptions, trackerMateStatsQueryOptions } from "~/queries/tracker-queries";
 
 export function CompanionsPanel({
   accountId,
@@ -30,33 +29,13 @@ export function CompanionsPanel({
   entries: PlayerMatchHistoryEntry[];
   onOpenMatch: (matchId: number) => void;
 }) {
-  const params = {
-    accountId,
-    gameMode: MODE_CONFIG[filters.mode].gameMode,
-    minUnixTimestamp: filters.minUnixTimestamp ?? undefined,
-    maxUnixTimestamp: filters.maxUnixTimestamp ?? undefined,
-  };
-  const mates = useQuery(trackerMateStatsQueryOptions(params));
-  const enemies = useQuery(trackerEnemyStatsQueryOptions(params));
-  const mateRows = useMemo(
-    () =>
-      intersectCompanionRows(
-        mates.data
-          ?.filter((mate) => mate.mate_id !== accountId)
-          .map((mate) => ({ id: mate.mate_id, matches: mate.matches })),
-        entries,
-      ),
-    [mates.data, accountId, entries],
-  );
-  const enemyRows = useMemo(
-    () =>
-      intersectCompanionRows(
-        enemies.data?.map((enemy) => ({ id: enemy.enemy_id, matches: enemy.matches })),
-        entries,
-      ),
-    [enemies.data, entries],
-  );
+  const { query: mates, rows: mateRows } = useMateRows({ accountId, filters, entries });
+  const { query: enemies, rows: enemyRows } = useEnemyRows({ accountId, filters, entries });
   const [open, setOpen] = useState(false);
+  const openMatchFromDialog = (matchId: number) => {
+    setOpen(false);
+    onOpenMatch(matchId);
+  };
 
   return (
     <PanelWithDetails
@@ -70,29 +49,13 @@ export function CompanionsPanel({
             <Heading as="h4" size="xs">
               Teammates
             </Heading>
-            <MatesTab
-              accountId={accountId}
-              filters={filters}
-              entries={entries}
-              onOpenMatch={(id) => {
-                setOpen(false);
-                onOpenMatch(id);
-              }}
-            />
+            <MatesTab accountId={accountId} filters={filters} entries={entries} onOpenMatch={openMatchFromDialog} />
           </div>
           <div className="flex min-w-0 flex-col gap-2">
             <Heading as="h4" size="xs">
               Opponents
             </Heading>
-            <EnemiesTab
-              accountId={accountId}
-              filters={filters}
-              entries={entries}
-              onOpenMatch={(id) => {
-                setOpen(false);
-                onOpenMatch(id);
-              }}
-            />
+            <EnemiesTab accountId={accountId} filters={filters} entries={entries} onOpenMatch={openMatchFromDialog} />
           </div>
         </div>
       }
@@ -206,7 +169,7 @@ function CompanionPreview({
                     />
                   </TableCell>
                   <TableCell className="pe-0 text-end tabular-nums">
-                    {((row.wins / row.matches) * 100).toFixed(0)}%
+                    {formatPercent(row.wins / row.matches, 0)}
                   </TableCell>
                 </TableRow>
               );

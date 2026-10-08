@@ -84,8 +84,9 @@ function MatchHeader({
   const win = isWin(entry);
   const rounds = brawlRounds(entry);
   const unscored = unscoredOutcome(entry);
-  const abandoned = entry.abandoned_time_s != null && entry.abandoned_time_s > 0;
-  const ranked = entry.ranked_display_badge != null && entry.ranked_display_badge > 0;
+  const abandonedAtS = entry.abandoned_time_s ?? 0;
+  const badge = entry.ranked_display_badge ?? 0;
+  const ranked = badge > 0;
   const calibration = entry.ranked_calibration_match != null && entry.ranked_calibration_match !== 0;
   const demotionProtected = entry.ranked_used_demotion_protection === true;
 
@@ -111,9 +112,7 @@ function MatchHeader({
                     Personal best: {records.map((record) => `${record.label} ${record.value}`).join(" · ")}
                   </Note>
                 )}
-                {abandoned && (
-                  <Note icon={LogOut}>Abandoned at {formatMatchDuration(entry.abandoned_time_s as number)}</Note>
-                )}
+                {abandonedAtS > 0 && <Note icon={LogOut}>Abandoned at {formatMatchDuration(abandonedAtS)}</Note>}
                 {unscored && (
                   <Note icon={UNSCORED_OUTCOME_NOTES[unscored].icon}>{UNSCORED_OUTCOME_NOTES[unscored].text}</Note>
                 )}
@@ -176,7 +175,7 @@ function MatchHeader({
               label="Rank"
               value={
                 <span className="inline-flex items-center gap-1.5">
-                  {ranked && <BadgeImage badge={entry.ranked_display_badge as number} ranks={ranks} size="inline" />}
+                  {ranked && <BadgeImage badge={badge} ranks={ranks} size="inline" />}
                   <RankDelta value={entry.ranked_delta} className="text-sm" />
                 </span>
               }
@@ -259,17 +258,18 @@ function MatchBody({ entry, accountId, ranks }: { entry: PlayerMatchHistoryEntry
   }
   if (isPending) return <LoadingState label="match details" />;
 
+  const checkAgain = (
+    <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching}>
+      {isFetching ? <Spinner label="Checking" /> : <RefreshCw data-icon="inline-start" />}
+      {isFetching ? "Checking…" : "Check again"}
+    </Button>
+  );
   if (isError && !match) {
     return (
       <EmptyState
         title="Match details are still being processed"
         description="We are collecting the data for this account. It can take up to 30 minutes for all matches to appear."
-        action={
-          <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching}>
-            {isFetching ? <Spinner label="Checking" /> : <RefreshCw data-icon="inline-start" />}
-            {isFetching ? "Checking…" : "Check again"}
-          </Button>
-        }
+        action={checkAgain}
       />
     );
   }
@@ -279,12 +279,7 @@ function MatchBody({ entry, accountId, ranks }: { entry: PlayerMatchHistoryEntry
       <EmptyState
         title="Match details unavailable"
         description="These details may not have been collected yet. You can check again."
-        action={
-          <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching}>
-            {isFetching ? <Spinner label="Checking" /> : <RefreshCw data-icon="inline-start" />}
-            {isFetching ? "Checking…" : "Check again"}
-          </Button>
-        }
+        action={checkAgain}
       />
     );
   }

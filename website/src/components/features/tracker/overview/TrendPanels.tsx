@@ -4,7 +4,7 @@ import { Activity, Medal } from "lucide-react";
 import { useState } from "react";
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, Tooltip, XAxis, YAxis } from "recharts";
 
-import { RankDelta } from "~/components/features/tracker/shared/RankDelta";
+import { RankProgress } from "~/components/features/tracker/shared/RankDelta";
 import { ChartLegend, ChartLegendItem } from "~/components/patterns/charts/ChartLegend";
 import { ChartSurface } from "~/components/patterns/charts/ChartSurface";
 import {
@@ -62,6 +62,7 @@ export function TrendPanels({
     return info ? `${info.name} ${info.subtier}` : `Badge ${badge}`;
   };
   const latestRank = ranks.at(-1);
+  const latestRankName = latestRank ? rankName(latestRank.badge) : "No recorded rank";
   const [rankHistoryOpen, setRankHistoryOpen] = useState(false);
   const [activityOpen, setActivityOpen] = useState(false);
   return (
@@ -88,17 +89,8 @@ export function TrendPanels({
           />
         }
       >
-        <HoverTooltip
-          content={
-            <TooltipHeader
-              title={latestRank ? rankName(latestRank.badge) : "No recorded rank"}
-              subtitle="Latest recorded rank"
-            />
-          }
-        >
-          <div className="truncate text-lg font-semibold">
-            {latestRank ? rankName(latestRank.badge) : "No recorded rank"}
-          </div>
+        <HoverTooltip content={<TooltipHeader title={latestRankName} subtitle="Latest recorded rank" />}>
+          <div className="truncate text-lg font-semibold">{latestRankName}</div>
         </HoverTooltip>
         {ranks.length < 2 ? (
           <EmptyState
@@ -216,18 +208,7 @@ function RankTooltip({
       <TooltipHeader title={rankName(point.badge)} subtitle={day.unix(point.time).format("MMM D, YYYY · HH:mm")} />
       <TooltipStats>
         <TooltipStat label="Match" value={point.matchId} />
-        <TooltipStat
-          label="Rank progress"
-          value={
-            point.delta == null ? (
-              <NoValue label="Not recorded" />
-            ) : point.delta === 0 ? (
-              "0"
-            ) : (
-              <RankDelta value={point.delta} />
-            )
-          }
-        />
+        <TooltipStat label="Rank progress" value={<RankProgress value={point.delta} />} />
       </TooltipStats>
     </TooltipCard>
   );

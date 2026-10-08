@@ -14,9 +14,9 @@ import { Heading } from "~/components/ui/heading";
 import { InlineStat } from "~/components/ui/inline-stat";
 import { Segmented, SegmentedItem } from "~/components/ui/segmented";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
-import { TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
-import { Tooltip } from "~/components/ui/tooltip";
+import { Tooltip, TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
 import type { Dayjs } from "~/dayjs";
+import { formatPercent } from "~/lib/format";
 import { type GameMode, hasSoulEconomy } from "~/lib/game-mode";
 import { TONE_TEXT } from "~/lib/tone";
 import { formatMatchDuration, isWin, type TrackerSummary } from "~/lib/tracker/compute";
@@ -28,12 +28,11 @@ import {
 } from "~/lib/tracker/overview";
 
 const integer = (value: number) => Math.round(value).toLocaleString("en-US");
-const percent = (value: number) => `${(value * 100).toFixed(1)}%`;
 const decimal = (value: number) => value.toFixed(1);
 const ratio = (value: number) => value.toFixed(2);
 
 const comparisonMetrics = [
-  { key: "winrate", label: "Win rate", format: percent, precision: 1, scale: 100, unit: " pp" },
+  { key: "winrate", label: "Win rate", format: formatPercent, precision: 1, scale: 100, unit: " pp" },
   { key: "kdaRatio", label: "KDA ratio", format: ratio, precision: 2 },
   { key: "avgKills", label: "Kills / match", format: decimal, precision: 1 },
   { key: "avgDeaths", label: "Deaths / match", format: decimal, precision: 1, lowerIsBetter: true },
@@ -68,6 +67,30 @@ function Change({
 function dateRange(entries: PlayerMatchHistoryEntry[], toTime: (unix: number) => Dayjs) {
   if (entries.length === 0) return "No matches";
   return `${toTime(entries[entries.length - 1].start_time).format("MMM D, YYYY")} – ${toTime(entries[0].start_time).format("MMM D, YYYY")}`;
+}
+
+/** One side of the comparison: which matches it covers and how they went. */
+function WindowSummary({
+  title,
+  summary,
+  entries,
+}: {
+  title: string;
+  summary: TrackerSummary;
+  entries: PlayerMatchHistoryEntry[];
+}) {
+  const { toTime } = useTrackerTime();
+  return (
+    <Card tone="inset" size="xs" className="gap-0 px-2">
+      <Heading as="h3" size="xs">
+        {title} {summary.matches} matches
+      </Heading>
+      <p className="text-xs text-muted-foreground">{dateRange(entries, toTime)}</p>
+      <p className="pt-1 text-xs tabular-nums">
+        {summary.wins} wins / {summary.losses} losses
+      </p>
+    </Card>
+  );
 }
 
 function ComparisonMetrics({
@@ -231,7 +254,6 @@ export function RecentFormPanel({
   const missing = window + MIN_COMPARISON_MATCHES - entries.length - previousEntries.length;
   const meta = `Last ${recent.matches} ${recent.matches === 1 ? "match" : "matches"}`;
   const [open, setOpen] = useState(false);
-  const { toTime } = useTrackerTime();
   const soulEconomy = hasSoulEconomy(gameMode);
 
   return (
@@ -268,24 +290,8 @@ export function RecentFormPanel({
           {previous ? (
             <>
               <div className="grid grid-cols-2 gap-2">
-                <Card tone="inset" size="xs" className="gap-0 px-2">
-                  <Heading as="h3" size="xs">
-                    Latest {recent.matches} matches
-                  </Heading>
-                  <p className="text-xs text-muted-foreground">{dateRange(entries, toTime)}</p>
-                  <p className="pt-1 text-xs tabular-nums">
-                    {recent.wins} wins / {recent.losses} losses
-                  </p>
-                </Card>
-                <Card tone="inset" size="xs" className="gap-0 px-2">
-                  <Heading as="h3" size="xs">
-                    Previous {previous.matches} matches
-                  </Heading>
-                  <p className="text-xs text-muted-foreground">{dateRange(previousEntries, toTime)}</p>
-                  <p className="pt-1 text-xs tabular-nums">
-                    {previous.wins} wins / {previous.losses} losses
-                  </p>
-                </Card>
+                <WindowSummary title="Latest" summary={recent} entries={entries} />
+                <WindowSummary title="Previous" summary={previous} entries={previousEntries} />
               </div>
               <ComparisonMetrics recent={recent} previous={previous} soulEconomy={soulEconomy} />
               {previous.matches < window && (
@@ -320,7 +326,7 @@ export function RecentFormPanel({
           <InlineStat
             size="lg"
             tone="positive"
-            value={percent(recent.winrate)}
+            value={formatPercent(recent.winrate)}
             label={
               <span className="tabular-nums">
                 {recent.wins}W / {recent.losses}L

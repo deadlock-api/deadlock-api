@@ -14,6 +14,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "~/components/ui/dialog";
+import { formatPercent } from "~/lib/format";
 import type { CompanionRow } from "~/lib/tracker/companions";
 import { sortMatches } from "~/lib/tracker/compute";
 import { cn } from "~/lib/utils";
@@ -160,7 +161,7 @@ export function CompanionMatchesDialog({
           </DialogTitle>
           <DialogDescription>
             Your results in the current filters: {row.wins} wins · {row.matches - row.wins} losses ·{" "}
-            {((row.wins / row.matches) * 100).toFixed(1)}% win rate. Select a match to open its details.
+            {formatPercent(row.wins / row.matches)} win rate. Select a match to open its details.
           </DialogDescription>
         </DialogHeader>
         <SharedMatches

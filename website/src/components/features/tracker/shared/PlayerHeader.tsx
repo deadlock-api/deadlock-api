@@ -10,6 +10,7 @@ import { PageHeader } from "~/components/patterns/page/PageHeader";
 import { Button } from "~/components/ui/button";
 import { InlineStat } from "~/components/ui/inline-stat";
 import { TextLink } from "~/components/ui/text-link";
+import { formatPercent } from "~/lib/format";
 import { extractBadgeMap } from "~/lib/leaderboard";
 import { formatPlaytime, peakRank, summarize } from "~/lib/tracker/compute";
 import { isDemoAccount } from "~/lib/tracker/demo";
@@ -36,19 +37,16 @@ export function PlayerHeader({
   const { data: rank } = useQuery(trackerRankQueryOptions(accountId));
   const { toTime, fromNow } = useTrackerTime();
 
-  const badgeInfo = useMemo(() => {
-    if (!rank || rank.badge <= 0 || ranks.length === 0) return null;
-    return extractBadgeMap(ranks).get(rank.badge) ?? null;
-  }, [rank, ranks]);
+  const badgeMap = useMemo(() => extractBadgeMap(ranks), [ranks]);
+  const badgeInfo = rank && rank.badge > 0 ? badgeMap.get(rank.badge) : undefined;
 
   const summary = useMemo(() => (entries && entries.length > 0 ? summarize(entries) : null), [entries]);
 
   const peak = useMemo(() => {
     const found = entries ? peakRank(entries) : null;
-    if (!found || ranks.length === 0) return null;
-    const info = extractBadgeMap(ranks).get(found.badge);
-    return info ? { ...found, name: `${info.name} ${info.subtier}` } : null;
-  }, [entries, ranks]);
+    const info = found && badgeMap.get(found.badge);
+    return found && info ? { ...found, name: `${info.name} ${info.subtier}` } : null;
+  }, [entries, badgeMap]);
 
   return (
     // The filters take the column that is left over. It has to be a sized column, not `auto`: the filter bar is a
@@ -103,7 +101,7 @@ export function PlayerHeader({
           {summary && (
             <section className="flex flex-wrap gap-x-3 gap-y-1 text-xs" aria-label="Across all loaded match history">
               <InlineStat value={summary.matches.toLocaleString("en-US")} label="recorded matches" />
-              <InlineStat value={`${(summary.winrate * 100).toFixed(1)}%`} label="win rate" />
+              <InlineStat value={formatPercent(summary.winrate)} label="win rate" />
               <InlineStat value={formatPlaytime(summary.totalTimeS)} label="played" />
               {/* Visible, not only in the label: the filtered overview below shows different totals. */}
               <span className="text-muted-foreground">· all time</span>

@@ -55,7 +55,6 @@ export function FeedbackNoticeDialog() {
         </DialogHeader>
         <DialogFooter className="items-center gap-3 sm:justify-between">
           <CheckboxField
-            id="tracker-feedback-dont-show-again"
             label="Don't show again"
             checked={dontShowAgain}
             onCheckedChange={(checked) => setDontShowAgain(checked === true)}

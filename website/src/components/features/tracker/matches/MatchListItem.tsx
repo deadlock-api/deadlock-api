@@ -61,6 +61,7 @@ export function MatchListItem({
   const { toTime, now } = useTrackerTime();
   const played = toTime(entry.start_time);
   const sortValue = sortValueLabel(entry, sortKey);
+  const modeAndDuration = `${matchModeLabel(entry)} · ${formatMatchDuration(entry.match_duration_s)}`;
 
   const queryClient = useQueryClient();
   const prefetchTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -119,11 +120,8 @@ export function MatchListItem({
             {win ? "W" : "L"}
             {rounds && ` ${rounds.own}–${rounds.enemy}`}
           </span>
-          <span
-            className="truncate"
-            title={`${matchModeLabel(entry)} · ${formatMatchDuration(entry.match_duration_s)}`}
-          >
-            · {sortValue ?? `${matchModeLabel(entry)} · ${formatMatchDuration(entry.match_duration_s)}`}
+          <span className="truncate" title={modeAndDuration}>
+            · {sortValue ?? modeAndDuration}
           </span>
           <span className="ms-auto flex shrink-0 items-center gap-1.5 ps-2">
             <RankDelta value={entry.ranked_delta} />

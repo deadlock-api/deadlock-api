@@ -1,5 +1,5 @@
 import { Flag, Skull } from "lucide-react";
-import { type Ref, useState } from "react";
+import { type ReactNode, type Ref, useState } from "react";
 
 import { HeroImage } from "~/components/domain/assets/HeroImage";
 import { ChartSwatch } from "~/components/patterns/charts/ChartLegend";
@@ -28,6 +28,20 @@ import type { TrackerMatchPlayer } from "~/queries/tracker-queries";
 
 import { MatchEventList } from "./MatchEventList";
 import { formatLead, MatchTimelineChart, type TimelineEvent } from "./MatchTimelineChart";
+
+/** One layer of the chart the reader can hide; `layer` names it in the plural ("kills", "time dead"). */
+function LayerToggle({ value, layer, children }: { value: string; layer: string; children: ReactNode }) {
+  return (
+    <ToggleGroupItem
+      value={value}
+      aria-label={`Show ${layer} on timeline`}
+      title={`Show or hide ${layer}`}
+      className="h-6 gap-1 px-1.5 text-xs data-[state=off]:line-through"
+    >
+      {children}
+    </ToggleGroupItem>
+  );
+}
 
 /** The team soul lead and one player's kills and deaths in one chart over the match. */
 export function MatchTimeline({
@@ -196,45 +210,25 @@ export function MatchTimeline({
               aria-label="Match timeline layers"
               spacing={1}
             >
-              <ToggleGroupItem
-                value="kill"
-                aria-label="Show kills on timeline"
-                title="Show or hide kills"
-                className="h-6 gap-1 px-1.5 text-xs data-[state=off]:line-through"
-              >
+              <LayerToggle value="kill" layer="kills">
                 <ChartSwatch color={killColor} shape="ring" />
                 Kill
-              </ToggleGroupItem>
-              <ToggleGroupItem
-                value="death"
-                aria-label="Show deaths on timeline"
-                title="Show or hide deaths"
-                className="h-6 gap-1 px-1.5 text-xs data-[state=off]:line-through"
-              >
+              </LayerToggle>
+              <LayerToggle value="death" layer="deaths">
                 <ChartSwatch color={deathColor} shape="ring" />
                 Death
-              </ToggleGroupItem>
+              </LayerToggle>
               {deadWindows.length > 0 && (
-                <ToggleGroupItem
-                  value="dead"
-                  aria-label="Show time dead on timeline"
-                  title="Show or hide time dead"
-                  className="h-6 gap-1 px-1.5 text-xs data-[state=off]:line-through"
-                >
+                <LayerToggle value="dead" layer="time dead">
                   <ChartSwatch color={`color-mix(in srgb, ${deathColor} 20%, transparent)`} />
                   Dead
-                </ToggleGroupItem>
+                </LayerToggle>
               )}
               {objectives.length > 0 && (
-                <ToggleGroupItem
-                  value="objective"
-                  aria-label="Show objectives on timeline"
-                  title="Show or hide objectives"
-                  className="h-6 gap-1 px-1.5 text-xs data-[state=off]:line-through"
-                >
+                <LayerToggle value="objective" layer="objectives">
                   <Flag className="size-3" />
                   Obj
-                </ToggleGroupItem>
+                </LayerToggle>
               )}
             </ToggleGroup>
           </div>

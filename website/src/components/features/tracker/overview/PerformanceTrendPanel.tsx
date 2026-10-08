@@ -25,6 +25,7 @@ import {
   TooltipStats,
 } from "~/components/ui/tooltip";
 import { day } from "~/dayjs";
+import { formatPercent } from "~/lib/format";
 import { type GameMode, hasSoulEconomy } from "~/lib/game-mode";
 import { computePerformanceTrend, performanceWindow } from "~/lib/tracker/compute";
 
@@ -32,7 +33,7 @@ const metrics = {
   winrate: {
     label: "Win rate",
     color: CHART_COLOR.positive,
-    format: (value: number) => `${(value * 100).toFixed(1)}%`,
+    format: (value: number) => formatPercent(value),
   },
   kdaRatio: {
     label: "KDA",
@@ -74,6 +75,7 @@ export function PerformanceTrendPanel({
   const points = useMemo(() => computePerformanceTrend(entries, window), [entries, window]);
   const selected = metrics[metric];
   const latest = points.at(-1);
+  const chartLabel = `Rolling ${window}-match ${selected.label.toLowerCase()} over selected matches`;
 
   return (
     <Panel className={className}>
@@ -128,16 +130,12 @@ export function PerformanceTrendPanel({
             title={`${entries.length} of ${window} matches available. Choose a smaller window or broaden your filters.`}
           />
         ) : (
-          <ChartSurface
-            label={`Rolling ${window}-match ${selected.label.toLowerCase()} over selected matches`}
-            size="sm"
-            variant="bare"
-          >
+          <ChartSurface label={chartLabel} size="sm" variant="bare">
             <AreaChart
               data={points}
               margin={{ top: 4, right: 2, left: 2, bottom: 0 }}
               accessibilityLayer
-              aria-label={`Rolling ${window}-match ${selected.label.toLowerCase()} over selected matches`}
+              aria-label={chartLabel}
             >
               <CartesianGrid {...CHART_GRID} />
               <XAxis

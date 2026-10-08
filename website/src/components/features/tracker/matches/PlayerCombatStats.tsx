@@ -1,6 +1,7 @@
 import { Badge } from "~/components/ui/badge";
 import { DetailPopover } from "~/components/ui/detail-popover";
 import { TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
+import { formatPercent } from "~/lib/format";
 import { formatMatchDuration } from "~/lib/tracker/compute";
 import type { TrackerMatchPlayer } from "~/queries/tracker-queries";
 
@@ -24,26 +25,29 @@ export function PlayerCombatStats({
   if (!stats && !swapped) return null;
   return (
     <>
-      {stats?.metrics.map((metric) => (
-        <DetailPopover
-          key={metric.label}
-          label={`${metric.label}: ${(metric.share * 100).toFixed(1)}%`}
-          size="xs"
-          className="px-1"
-          details={
-            <>
-              <TooltipHeader title={metric.label} subtitle={metric.detail} />
-              <TooltipStats>
-                <TooltipStat label="Rate" value={`${(metric.share * 100).toFixed(1)}%`} />
-                <TooltipStat label="Through" value={formatMatchDuration(stats.sampledAt)} />
-              </TooltipStats>
-            </>
-          }
-        >
-          <span className="font-semibold tabular-nums">{(metric.share * 100).toFixed(1)}%</span>
-          <span className="text-muted-foreground">{SHORT_LABELS[metric.label] ?? metric.label}</span>
-        </DetailPopover>
-      ))}
+      {stats?.metrics.map((metric) => {
+        const rate = formatPercent(metric.share);
+        return (
+          <DetailPopover
+            key={metric.label}
+            label={`${metric.label}: ${rate}`}
+            size="xs"
+            className="px-1"
+            details={
+              <>
+                <TooltipHeader title={metric.label} subtitle={metric.detail} />
+                <TooltipStats>
+                  <TooltipStat label="Rate" value={rate} />
+                  <TooltipStat label="Through" value={formatMatchDuration(stats.sampledAt)} />
+                </TooltipStats>
+              </>
+            }
+          >
+            <span className="font-semibold tabular-nums">{rate}</span>
+            <span className="text-muted-foreground">{SHORT_LABELS[metric.label] ?? metric.label}</span>
+          </DetailPopover>
+        );
+      })}
       {swapped && <Badge variant="outline">Swapped from {pregameHeroName ?? `Hero ${player.pregame_hero_id}`}</Badge>}
     </>
   );

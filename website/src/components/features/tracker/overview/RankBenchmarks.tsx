@@ -77,9 +77,9 @@ export function RankBenchmarks({
         : benchmarkRankRange(Number(selection) * 10 + 1)
       : null;
   const needsRank = mode.supportsRank && selection === "auto" && !autoRange;
-  const rank = ranks.find((r) => r.tier === range?.tier);
+  const tierName = (tier: number) => ranks.find((r) => r.tier === tier)?.name ?? `Tier ${tier}`;
   const cohortLabel = range
-    ? `${rank?.name ?? `Tier ${range.tier}`} 1–6`
+    ? `${tierName(range.tier)} 1–6`
     : mode.supportsRank
       ? "All ranks"
       : mode.gameMode === "street_brawl"
@@ -214,9 +214,7 @@ export function RankBenchmarks({
             <SelectContent>
               <SelectGroup>
                 <SelectItem value="auto">
-                  {autoRange
-                    ? `Auto · ${ranks.find((r) => r.tier === autoRange.tier)?.name ?? `Tier ${autoRange.tier}`} 1–6`
-                    : "Auto · no recorded rank"}
+                  {autoRange ? `Auto · ${tierName(autoRange.tier)} 1–6` : "Auto · no recorded rank"}
                 </SelectItem>
                 <SelectItem value="all">All ranks</SelectItem>
                 {ranks

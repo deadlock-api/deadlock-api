@@ -1,13 +1,14 @@
 import { ArrowUpRight } from "lucide-react";
 import { type KeyboardEvent, useEffect, useId, useRef, useState } from "react";
 
-import { RankDelta } from "~/components/features/tracker/shared/RankDelta";
+import { RankProgress } from "~/components/features/tracker/shared/RankDelta";
 import { useTrackerTime } from "~/components/features/tracker/shared/useTrackerTime";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { Button } from "~/components/ui/button";
 import { NoValue } from "~/components/ui/no-value";
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { Tooltip } from "~/components/ui/tooltip";
+import { formatPercent } from "~/lib/format";
 import type { Activity, RankHistoryPoint } from "~/lib/tracker/compute";
 
 const PAGE_SIZE = 50;
@@ -109,13 +110,7 @@ export function RankHistoryTable({
               </TableHead>
               <TableCell className="whitespace-normal">{rankName(point.badge)}</TableCell>
               <TableCell className="text-end tabular-nums">
-                {point.delta == null ? (
-                  <NoValue label="Not recorded" />
-                ) : point.delta === 0 ? (
-                  "0"
-                ) : (
-                  <RankDelta value={point.delta} />
-                )}
+                <RankProgress value={point.delta} />
               </TableCell>
             </TableRow>
           ))}
@@ -199,7 +194,7 @@ export function ActivityTable({
                 {bucket.wins}W / {bucket.losses}L
               </TableCell>
               <TableCell className="text-end tabular-nums">
-                {matches ? `${((bucket.wins / matches) * 100).toFixed(1)}%` : <NoValue label="No matches" />}
+                {matches ? formatPercent(bucket.wins / matches) : <NoValue label="No matches" />}
               </TableCell>
             </TableRow>
           );

@@ -1,4 +1,3 @@
-import { useQuery } from "@tanstack/react-query";
 import type { PlayerMatchHistoryEntry } from "deadlock_api_client";
 import { useId, useMemo, useState } from "react";
 
@@ -18,17 +17,12 @@ import { SearchInput } from "~/components/ui/search-input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { Tooltip } from "~/components/ui/tooltip";
 import { useSteamProfiles } from "~/hooks/useSteamProfiles";
-import { MODE_CONFIG } from "~/lib/game-mode";
-import {
-  type CompanionRow,
-  type CompanionSort,
-  intersectCompanionRows,
-  sortCompanionRows,
-} from "~/lib/tracker/companions";
+import { formatPercent } from "~/lib/format";
+import { type CompanionRow, type CompanionSort, sortCompanionRows } from "~/lib/tracker/companions";
 import type { TrackerFilterValues } from "~/lib/tracker/compute";
-import { trackerEnemyStatsQueryOptions, trackerMateStatsQueryOptions } from "~/queries/tracker-queries";
 
 import { CompanionMatchesDialog } from "./CompanionMatchesDialog";
+import { useEnemyRows, useMateRows } from "./useCompanionRows";
 
 interface CompanionTableProps {
   paginationKey: string;
@@ -216,7 +210,7 @@ function CompanionTable({
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center justify-end gap-2">
-                    <span className="tabular-nums">{(winrate * 100).toFixed(1)}%</span>
+                    <span className="tabular-nums">{formatPercent(winrate)}</span>
                     <ProgressBar variant="thin" value={winrate} className="hidden w-16 @md:block" />
                   </div>
                 </TableCell>
@@ -244,23 +238,7 @@ interface BreakdownTabProps {
 }
 
 export function MatesTab({ accountId, filters, entries, onOpenMatch }: BreakdownTabProps) {
-  const params = {
-    accountId,
-    gameMode: MODE_CONFIG[filters.mode].gameMode,
-    minUnixTimestamp: filters.minUnixTimestamp ?? undefined,
-    maxUnixTimestamp: filters.maxUnixTimestamp ?? undefined,
-  };
-  const query = useQuery(trackerMateStatsQueryOptions(params));
-  const rows = useMemo(
-    () =>
-      intersectCompanionRows(
-        query.data
-          ?.filter((mate) => mate.mate_id !== accountId)
-          .map((mate) => ({ id: mate.mate_id, matches: mate.matches })),
-        entries,
-      ),
-    [query.data, accountId, entries],
-  );
+  const { query, rows } = useMateRows({ accountId, filters, entries });
   return (
     <CompanionTable
       paginationKey={JSON.stringify([accountId, filters])}
@@ -280,21 +258,7 @@ export function MatesTab({ accountId, filters, entries, onOpenMatch }: Breakdown
 }
 
 export function EnemiesTab({ accountId, filters, entries, onOpenMatch }: BreakdownTabProps) {
-  const params = {
-    accountId,
-    gameMode: MODE_CONFIG[filters.mode].gameMode,
-    minUnixTimestamp: filters.minUnixTimestamp ?? undefined,
-    maxUnixTimestamp: filters.maxUnixTimestamp ?? undefined,
-  };
-  const query = useQuery(trackerEnemyStatsQueryOptions(params));
-  const rows = useMemo(
-    () =>
-      intersectCompanionRows(
-        query.data?.map((enemy) => ({ id: enemy.enemy_id, matches: enemy.matches })),
-        entries,
-      ),
-    [query.data, entries],
-  );
+  const { query, rows } = useEnemyRows({ accountId, filters, entries });
   return (
     <CompanionTable
       paginationKey={JSON.stringify([accountId, filters])}
