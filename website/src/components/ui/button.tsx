@@ -65,15 +65,17 @@ const buttonVariants = cva(
         none: "",
         dark: "relative isolate before:absolute before:inset-0 before:-z-10 before:rounded-[inherit] before:bg-scrim before:backdrop-blur-xs hover:before:bg-scrim-hover",
       },
+      // A loading button's spinner sits in an `<output>`, not a bare svg: it gets the icon inset too, so starting an
+      // action never widens the button and moves what is beside it.
       size: {
-        default: "h-9 px-4 py-2 text-sm has-[>svg]:px-3",
-        xs: "h-6 gap-1 px-2 text-xs has-[>svg]:px-1.5 [&_svg:not([class*='size-'])]:size-3",
-        sm: "h-8 gap-1.5 px-3 text-sm has-[>svg]:px-2.5",
+        default: "h-9 px-4 py-2 text-sm has-data-[slot=spinner]:px-3 has-[>svg]:px-3",
+        xs: "h-6 gap-1 px-2 text-xs has-data-[slot=spinner]:px-1.5 has-[>svg]:px-1.5 [&_svg:not([class*='size-'])]:size-3",
+        sm: "h-8 gap-1.5 px-3 text-sm has-data-[slot=spinner]:px-2.5 has-[>svg]:px-2.5",
         /** `sm` with the inset of its icon: for a list of rows whose content (an avatar, a name) brings its own edge. */
         "sm-tight": "h-8 gap-1.5 px-1.5 text-sm",
-        lg: "h-10 px-6 text-sm has-[>svg]:px-4",
+        lg: "h-10 px-6 text-sm has-data-[slot=spinner]:px-4 has-[>svg]:px-4",
         /** The primary action of a screen used by thumb: 44px high, the touch target a main action needs. */
-        touch: "h-11 px-6 text-sm has-[>svg]:px-4",
+        touch: "h-11 px-6 text-sm has-data-[slot=spinner]:px-4 has-[>svg]:px-4",
         icon: "size-9 text-sm",
         "icon-xs": "size-6 text-sm [&_svg:not([class*='size-'])]:size-3",
         "icon-sm": "size-8 text-sm",
