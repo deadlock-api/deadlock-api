@@ -11,6 +11,7 @@ import { TableEmptyRow } from "~/components/patterns/data-table/TableEmptyRow";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { Delta } from "~/components/ui/delta";
+import { sortParams, useSort } from "~/components/ui/hooks/use-sort";
 import { ProgressBarWithLabel } from "~/components/ui/progress-bar";
 import type { SortDir } from "~/components/ui/sort-button";
 import { Inline } from "~/components/ui/stack";
@@ -367,14 +368,10 @@ export function HeroMatchupStatsTable({
     parseAsSortKey.withDefault("bestCombination"),
   );
   const [sortDir, setSortDir] = useQueryState("matchup_sort_dir", parseAsSortDir.withDefault("desc"));
-  const handleSort = (key: SortKey) => {
-    if (key === activeSortKey) {
-      void setSortDir((d) => (d === "desc" ? "asc" : "desc"));
-    } else {
-      void setActiveSortKey(key);
-      void setSortDir(FIRST_DIR[key]);
-    }
-  };
+  const { toggle: handleSort } = useSort({
+    ...sortParams([activeSortKey, setActiveSortKey], [sortDir, setSortDir]),
+    firstDir: (key) => FIRST_DIR[key],
+  });
 
   const isLoading = isLoadingSynergy || isLoadingCounter || isLoadingHero;
 

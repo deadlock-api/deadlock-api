@@ -7,6 +7,7 @@ import { SortableHeader } from "~/components/patterns/data-table/SortableHeader"
 import { TableEmptyRow } from "~/components/patterns/data-table/TableEmptyRow";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
+import { sortParams, useSort } from "~/components/ui/hooks/use-sort";
 import { ProgressBarWithLabel } from "~/components/ui/progress-bar";
 import { Inline } from "~/components/ui/stack";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
@@ -133,14 +134,7 @@ export function HeroCombStatsTable({
 
   const [sortKey, setSortKey] = useQueryState("combo_sort", parseAsSortKey.withDefault("winRate"));
   const [sortDir, setSortDir] = useQueryState("combo_sort_dir", parseAsSortDir.withDefault("desc"));
-  const handleSort = (key: SortKey) => {
-    if (key === sortKey) {
-      void setSortDir((dir) => (dir === "desc" ? "asc" : "desc"));
-    } else {
-      void setSortKey(key);
-      void setSortDir("desc");
-    }
-  };
+  const { toggle: handleSort } = useSort<SortKey>(sortParams([sortKey, setSortKey], [sortDir, setSortDir]));
 
   // Sorted before the "Show" cut, so sorting by matches shows the most played combinations, not a reordered top 50.
   const sortedData = useMemo(

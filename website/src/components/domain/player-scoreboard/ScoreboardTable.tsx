@@ -10,6 +10,7 @@ import { PaginationControls, PaginationStatus } from "~/components/patterns/data
 import { SortableHeader } from "~/components/patterns/data-table/SortableHeader";
 import { TableEmptyRow } from "~/components/patterns/data-table/TableEmptyRow";
 import { Button } from "~/components/ui/button";
+import { useSort } from "~/components/ui/hooks/use-sort";
 import { SearchInput } from "~/components/ui/search-input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { usePaginationQueryState } from "~/hooks/usePaginationQueryState";
@@ -90,13 +91,15 @@ export function ScoreboardTable({
   className,
   ...props
 }: ScoreboardTableProps) {
-  const sort = (next: ScoreboardSort) => onSortChange?.(next);
+  const sort = useSort<string>({
+    value: { key: sortBy, dir: sortDirection },
+    onValueChange: ({ key, dir }) => onSortChange?.({ sortBy: key, sortDirection: dir }),
+  });
   const selectable = selectedAccountIds !== undefined;
   const togglePick = (accountId: number) => {
     const picked = selectedAccountIds ?? [];
     onValueChange?.(picked.includes(accountId) ? picked.filter((id) => id !== accountId) : [...picked, accountId]);
   };
-  const flip = (): "desc" | "asc" => (sortDirection === "desc" ? "asc" : "desc");
   const {
     searchQuery,
     setSearchQuery,
@@ -225,13 +228,7 @@ export function ScoreboardTable({
                 sortDir={sortDirection}
                 align="end"
                 className="hidden sm:table-cell"
-                onSortChange={() =>
-                  sort(
-                    sortBy === "matches"
-                      ? { sortBy, sortDirection: flip() }
-                      : { sortBy: "matches", sortDirection: "desc" },
-                  )
-                }
+                onSortChange={sort.toggle}
               />
             )}
             {/* The stat is picked in the scoreboard's toolbar; its column header flips the direction. */}
@@ -242,7 +239,7 @@ export function ScoreboardTable({
               activeSortKey={sortBy}
               sortDir={sortDirection}
               align="end"
-              onSortChange={() => sort({ sortBy, sortDirection: flip() })}
+              onSortChange={sort.toggle}
             />
             {selectable && <TableHead className="w-28 text-center">{pickHeader}</TableHead>}
           </TableRow>

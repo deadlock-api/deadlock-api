@@ -11,6 +11,7 @@ import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { Button } from "~/components/ui/button";
 import { Field } from "~/components/ui/field";
+import { useSort } from "~/components/ui/hooks/use-sort";
 import { Input } from "~/components/ui/input";
 import { ProgressBar } from "~/components/ui/progress-bar";
 import { SearchInput } from "~/components/ui/search-input";
@@ -68,8 +69,13 @@ function CompanionTable({
   const currentPage = pagination.key === paginationKey ? pagination.page : 0;
   const setCurrentPage = (page: number) => setPagination({ key: paginationKey, page });
   const [itemsPerPage, setItemsPerPage] = useState(10);
-  const [sortKey, setSortKey] = useState<CompanionSort>("matches");
-  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+  const {
+    sortKey,
+    dir: sortDir,
+    toggle: toggleSort,
+  } = useSort<CompanionSort>({
+    defaultValue: { key: "matches", dir: "desc" },
+  });
 
   const eligibleRows = useMemo(() => (rows ?? []).filter((row) => row.matches >= minMatches), [rows, minMatches]);
 
@@ -174,8 +180,7 @@ function CompanionTable({
                 title={column.key === "matches" ? matchesLabel : undefined}
                 sortLabel={`Sort by ${column.label.toLowerCase()}, ${sortKey === column.key && sortDir === "desc" ? "ascending" : "descending"}`}
                 onSortChange={(key) => {
-                  setSortDir(sortKey === key && sortDir === "desc" ? "asc" : "desc");
-                  setSortKey(key);
+                  toggleSort(key);
                   setCurrentPage(0);
                 }}
               />

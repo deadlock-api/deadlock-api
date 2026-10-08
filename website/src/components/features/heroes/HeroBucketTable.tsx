@@ -1,10 +1,10 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 
 import { HeroName } from "~/components/domain/assets/HeroName";
 import { SortableHeader } from "~/components/patterns/data-table/SortableHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { Heading } from "~/components/ui/heading";
-import type { SortDir } from "~/components/ui/sort-button";
+import { useSort } from "~/components/ui/hooks/use-sort";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "~/components/ui/table";
 
 type SortKey = "hero" | `bucket-${number}`;
@@ -31,10 +31,18 @@ export function HeroBucketTable({
   rows: readonly HeroBucketRow[];
   format: (value: number) => string;
 }) {
-  const [sort, setSort] = useState<{ key: SortKey; dir: SortDir }>({ key: "hero", dir: "asc" });
+  // Names read A to Z, numbers from the largest.
+  const {
+    sortKey,
+    dir,
+    toggle: onSort,
+  } = useSort<SortKey>({
+    defaultValue: { key: "hero", dir: "asc" },
+    firstDir: (key) => (key === "hero" ? "asc" : "desc"),
+  });
   const sorted = useMemo(() => {
-    const direction = sort.dir === "asc" ? 1 : -1;
-    const index = sort.key === "hero" ? -1 : Number(sort.key.slice("bucket-".length));
+    const direction = dir === "asc" ? 1 : -1;
+    const index = sortKey === "hero" ? -1 : Number(sortKey.slice("bucket-".length));
     return rows.toSorted((a, b) => {
       if (index < 0) return a.name.localeCompare(b.name) * direction;
       const aValue = a.values[index];
@@ -44,12 +52,7 @@ export function HeroBucketTable({
       if (bValue == null) return -1;
       return (aValue - bValue) * direction || a.name.localeCompare(b.name);
     });
-  }, [rows, sort]);
-  const onSort = (key: SortKey) =>
-    setSort((current) => ({
-      key,
-      dir: current.key === key ? (current.dir === "asc" ? "desc" : "asc") : key === "hero" ? "asc" : "desc",
-    }));
+  }, [rows, sortKey, dir]);
 
   return (
     <Card size="sm">
@@ -65,8 +68,8 @@ export function HeroBucketTable({
               <SortableHeader
                 label="Hero"
                 sortKey="hero"
-                activeSortKey={sort.key}
-                sortDir={sort.dir}
+                activeSortKey={sortKey}
+                sortDir={dir}
                 onSortChange={onSort}
                 align="start"
                 data-pinned
@@ -76,8 +79,8 @@ export function HeroBucketTable({
                   key={bucket}
                   label={bucket}
                   sortKey={`bucket-${i}`}
-                  activeSortKey={sort.key}
-                  sortDir={sort.dir}
+                  activeSortKey={sortKey}
+                  sortDir={dir}
                   onSortChange={onSort}
                   align="end"
                 />

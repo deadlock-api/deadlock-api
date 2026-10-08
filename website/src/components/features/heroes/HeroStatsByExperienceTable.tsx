@@ -9,6 +9,7 @@ import { TableEmptyRow } from "~/components/patterns/data-table/TableEmptyRow";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { Badge } from "~/components/ui/badge";
+import { useSort } from "~/components/ui/hooks/use-sort";
 import { SortButton, ariaSort } from "~/components/ui/sort-button";
 import { Stack } from "~/components/ui/stack";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
@@ -189,23 +190,20 @@ export function HeroStatsByExperienceTable({
       return sortAsc ? aVal - bVal : bVal - aVal;
     });
   }, [heroRows, sortKey, sortAsc, heroIdMap]);
-
-  const handleSort = (key: SortKey) => {
-    if (sortKey === key) {
-      void setSortAsc((prev) => !prev);
-    } else {
+  const sortDir = sortAsc ? "asc" : "desc";
+  const { toggle: handleSort } = useSort<SortKey>({
+    value: { key: sortKey, dir: sortDir },
+    onValueChange: ({ key, dir }) => {
       void setSortKey(key);
-      void setSortAsc(false);
-    }
-  };
+      void setSortAsc(dir === "asc");
+    },
+  });
 
   const formatValue = (val: number | null) => {
     if (val === null) return <span className="text-muted-foreground">-</span>;
     if (isPercentStat) return `${val.toFixed(1)}%`;
     return val.toLocaleString(undefined, { maximumFractionDigits: 1 });
   };
-
-  const sortDir = sortAsc ? "asc" : "desc";
 
   if (allLoading) {
     return <LoadingState label="hero stats by experience" align="center" />;

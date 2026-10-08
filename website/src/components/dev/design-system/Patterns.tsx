@@ -38,10 +38,10 @@ import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { Delta } from "~/components/ui/delta";
 import { Field } from "~/components/ui/field";
+import { useSort } from "~/components/ui/hooks/use-sort";
 import { SearchInput } from "~/components/ui/search-input";
 import { Segmented, SegmentedItem } from "~/components/ui/segmented";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
-import { type SortDir } from "~/components/ui/sort-button";
 import { Inline } from "~/components/ui/stack";
 import { Stat, StatGroup } from "~/components/ui/stat";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
@@ -71,8 +71,7 @@ const TAB_OPTIONS = [
 const pct = (n: number) => `${(n * 100).toFixed(1)}%`;
 
 export function Patterns() {
-  const [sortKey, setSortKey] = useState<Key>("winRate");
-  const [sortDir, setSortDir] = useState<SortDir>("desc");
+  const { sortKey, dir: sortDir, toggle: onSort } = useSort<Key>({ defaultValue: { key: "winRate", dir: "desc" } });
   const [density, setDensity] = useState<"default" | "compact" | "dense">("compact");
   const [tableWidth, setTableWidth] = useState<"full" | "narrow">("full");
   const [page, setPage] = useState(1);
@@ -86,13 +85,6 @@ export function Patterns() {
   const [tab, setTab] = useState("overview");
   const [expanded, setExpanded] = useState(false);
 
-  const onSort = (key: Key) => {
-    if (key === sortKey) setSortDir(sortDir === "desc" ? "asc" : "desc");
-    else {
-      setSortKey(key);
-      setSortDir("desc");
-    }
-  };
   const sorted = ROWS.toSorted((a, b) => {
     const order = a[sortKey] < b[sortKey] ? -1 : a[sortKey] > b[sortKey] ? 1 : 0;
     return sortDir === "desc" ? -order : order;
@@ -322,7 +314,7 @@ export function Patterns() {
       <Specimen
         name="Data table"
         source="ui/table · patterns/data-table/*"
-        note='SortableHeader carries aria-sort; size="sm" drops the idle arrows for dense tables, sortLabel names the button when the visible label is not enough, label takes a node, and description explains the column behind a focusable info button ("About Win rate"). data-pinned pins the identity column while the rest scrolls; a table wider than its container fades the edge with more columns past it (only the end edge with a pinned column), and a pinned table is the "table" container, so its pinned cell can shrink with @md/table: variants. Tones come from toneOf().'
+        note='SortableHeader carries aria-sort; size="sm" drops the idle arrows for dense tables, sortLabel names the button when the visible label is not enough, label takes a node, and description explains the column behind a focusable info button ("About Win rate"). data-pinned pins the identity column while the rest scrolls; a table wider than its container fades the edge with more columns past it (only the end edge with a pinned column), and a pinned table is the "table" container, so its pinned cell can shrink with @md/table: variants. Tones come from toneOf(). The sort is useSort: a press on the active column flips it, another column starts in its first direction.'
       >
         <Inline gap={2}>
           <Segmented size="sm" width="hug" aria-label="Density" value={density} onValueChange={setDensity}>

@@ -4,6 +4,7 @@ import { HeroCell } from "~/components/domain/assets/HeroCell";
 import type { ScoreboardSort } from "~/components/domain/player-scoreboard/ScoreboardTable";
 import { SortableHeader } from "~/components/patterns/data-table/SortableHeader";
 import { TableEmptyRow } from "~/components/patterns/data-table/TableEmptyRow";
+import { useSort } from "~/components/ui/hooks/use-sort";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { findKey } from "~/lib/find-keys";
 import { formatStatValue, sortByLabel } from "~/lib/scoreboard-sorts";
@@ -17,12 +18,10 @@ export interface HeroScoreboardTableProps {
 }
 
 export function HeroScoreboardTable({ entries, sortBy, sortDirection, onSortChange }: HeroScoreboardTableProps) {
-  const flip = (): "desc" | "asc" => (sortDirection === "desc" ? "asc" : "desc");
-  const handleMatchesClick = () => {
-    onSortChange(
-      sortBy === "matches" ? { sortBy, sortDirection: flip() } : { sortBy: "matches", sortDirection: "desc" },
-    );
-  };
+  const sort = useSort<string>({
+    value: { key: sortBy, dir: sortDirection },
+    onValueChange: ({ key, dir }) => onSortChange({ sortBy: key, sortDirection: dir }),
+  });
 
   return (
     <Table>
@@ -39,7 +38,7 @@ export function HeroScoreboardTable({ entries, sortBy, sortDirection, onSortChan
               sortDir={sortDirection}
               align="end"
               className="hidden sm:table-cell"
-              onSortChange={handleMatchesClick}
+              onSortChange={sort.toggle}
             />
           )}
           {/* The stat is picked in the scoreboard's toolbar; its column header flips the direction. */}
@@ -50,7 +49,7 @@ export function HeroScoreboardTable({ entries, sortBy, sortDirection, onSortChan
             activeSortKey={sortBy}
             sortDir={sortDirection}
             align="end"
-            onSortChange={() => onSortChange({ sortBy, sortDirection: flip() })}
+            onSortChange={sort.toggle}
           />
         </TableRow>
       </TableHeader>

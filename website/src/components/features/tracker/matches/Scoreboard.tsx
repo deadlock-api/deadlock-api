@@ -13,6 +13,7 @@ import { Box } from "~/components/ui/box";
 import { Button } from "~/components/ui/button";
 import { CornerBadge } from "~/components/ui/corner-badge";
 import { DetailPopover } from "~/components/ui/detail-popover";
+import { nextSort } from "~/components/ui/hooks/use-sort";
 import { Pips } from "~/components/ui/pips";
 import { ProgressBar } from "~/components/ui/progress-bar";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
@@ -319,9 +320,11 @@ export function Scoreboard({
     chosenSortKey === "kda" || columns.some((column) => column.key === chosenSortKey) ? chosenSortKey : null;
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   const sortLabel = sortKey === "kda" ? "KDA" : columns.find((column) => column.key === sortKey)?.short;
+  /** Without a sort the order is the default; the first press on a column sorts it from the highest. */
   const changeSort = (key: string) => {
-    setSortDirection(sortKey === key && sortDirection === "desc" ? "asc" : "desc");
-    setSortKey(key);
+    const next = nextSort({ key: sortKey ?? "", dir: sortDirection }, key);
+    setSortDirection(next.dir);
+    setSortKey(next.key);
   };
   const { data: heroesById } = useQuery({
     ...heroesQueryOptions,
@@ -437,7 +440,7 @@ export function Scoreboard({
                           size="icon-xs"
                           aria-label={`Sort ${team.name} scoreboard ${sortDirection === "desc" ? "lowest" : "highest"} first`}
                           title={sortDirection === "desc" ? "Sort lowest first" : "Sort highest first"}
-                          onClick={() => setSortDirection((direction) => (direction === "desc" ? "asc" : "desc"))}
+                          onClick={() => changeSort(sortKey)}
                         >
                           {sortDirection === "desc" ? <ArrowDown /> : <ArrowUp />}
                         </Button>

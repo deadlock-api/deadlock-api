@@ -1,5 +1,5 @@
 import { ArrowDownRight, ArrowUpRight, Download, Minus } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 
 import { HeroImage } from "~/components/domain/assets/HeroImage";
 import { ChartSwatch } from "~/components/patterns/charts/ChartLegend";
@@ -7,6 +7,7 @@ import { SortableHeader } from "~/components/patterns/data-table/SortableHeader"
 import { Button } from "~/components/ui/button";
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
 import { Heading } from "~/components/ui/heading";
+import { useSort } from "~/components/ui/hooks/use-sort";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "~/components/ui/table";
 import { day } from "~/dayjs";
 import {
@@ -32,9 +33,14 @@ export function HeroTrendSummary({
   stat: HeroTrendStat;
   interval: string;
 }) {
-  const [sort, setSort] = useState<{ key: SummarySortKey; direction: "asc" | "desc" }>({
-    key: "hero",
-    direction: "asc",
+  // Names read A to Z, numbers from the largest.
+  const {
+    sortKey,
+    dir,
+    toggle: onSort,
+  } = useSort<SummarySortKey>({
+    defaultValue: { key: "hero", dir: "asc" },
+    firstDir: (key) => (key === "hero" ? "asc" : "desc"),
   });
   const summaries = useMemo(
     () =>
@@ -46,20 +52,15 @@ export function HeroTrendSummary({
   );
   const rows = useMemo(() => {
     return summaries.toSorted((a, b) => {
-      const direction = sort.direction === "asc" ? 1 : -1;
-      if (sort.key === "hero") return a.hero.name.localeCompare(b.hero.name) * direction;
-      const aValue = a.summary[sort.key];
-      const bValue = b.summary[sort.key];
+      const direction = dir === "asc" ? 1 : -1;
+      if (sortKey === "hero") return a.hero.name.localeCompare(b.hero.name) * direction;
+      const aValue = a.summary[sortKey];
+      const bValue = b.summary[sortKey];
       if (aValue == null) return bValue == null ? a.hero.name.localeCompare(b.hero.name) : 1;
       if (bValue == null) return -1;
       return (aValue - bValue) * direction || a.hero.name.localeCompare(b.hero.name);
     });
-  }, [summaries, sort]);
-  const onSort = (key: SummarySortKey) =>
-    setSort((current) => ({
-      key,
-      direction: current.key === key ? (current.direction === "asc" ? "desc" : "asc") : key === "hero" ? "asc" : "desc",
-    }));
+  }, [summaries, sortKey, dir]);
   const dateFormat = interval === "start_time_hour" ? "MMM D, HH:mm" : "MMM D, YYYY";
 
   function exportCsv() {
@@ -112,8 +113,8 @@ export function HeroTrendSummary({
                   key={key}
                   label={label}
                   sortKey={key}
-                  activeSortKey={sort.key}
-                  sortDir={sort.direction}
+                  activeSortKey={sortKey}
+                  sortDir={dir}
                   onSortChange={onSort}
                   align="start"
                   data-pinned={key === "hero" || undefined}

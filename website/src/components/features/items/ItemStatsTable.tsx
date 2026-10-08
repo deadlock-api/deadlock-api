@@ -33,6 +33,7 @@ import { StaleOverlay } from "~/components/patterns/states/StaleOverlay";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { Field } from "~/components/ui/field";
+import { sortParams, useSort } from "~/components/ui/hooks/use-sort";
 import { ProgressBarMarker, ProgressBarSegment } from "~/components/ui/progress-bar";
 import { SearchInput } from "~/components/ui/search-input";
 import { Segmented, SegmentedItem } from "~/components/ui/segmented";
@@ -509,12 +510,12 @@ export function ItemStatsTable({
   );
 
   const sort: SortState = useMemo(() => ({ field: sortField, direction: sortDirection }), [sortField, sortDirection]);
-  const setSort = (newSort: SortState) => {
-    startTransition(() => {
-      void setSortField(newSort.field, together);
-      void setSortDirection(newSort.direction, together);
-    });
-  };
+  const { toggle } = useSort<SortField>({
+    ...sortParams([sortField, setSortField], [sortDirection, setSortDirection], together),
+    // Names and tiers read from the top down (A first, tier 1 first); numbers from the largest.
+    firstDir: (field) => (field === "name" || field === "tier" ? "asc" : "desc"),
+  });
+  const toggleSort = (field: SortField) => startTransition(() => toggle(field));
 
   const [itemTiers, setItemTiers] = useQueryState(
     "item_tiers",
@@ -647,20 +648,6 @@ export function ItemStatsTable({
     if (document.activeElement !== document.body) return;
     itemFilterRef.current?.querySelector<HTMLElement>('[data-slot="popover-trigger"]')?.focus();
   });
-
-  const toggleSort = (field: SortField) => {
-    let newSort: SortState;
-    if (sort.field === field) {
-      newSort = {
-        ...sort,
-        direction: sort.direction === "asc" ? "desc" : "asc",
-      };
-    } else {
-      // Names and tiers read from the top down (A first, tier 1 first); numbers from the largest.
-      newSort = { field, direction: field === "name" || field === "tier" ? "asc" : "desc" };
-    }
-    setSort(newSort);
-  };
 
   return (
     // Not a live region: it holds the whole table, which a screen reader would then read out on every sort.

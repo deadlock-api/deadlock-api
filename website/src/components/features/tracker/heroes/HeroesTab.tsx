@@ -17,6 +17,7 @@ import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { QueryRenderer } from "~/components/patterns/states/QueryRenderer";
 import { Button } from "~/components/ui/button";
+import { nextSort } from "~/components/ui/hooks/use-sort";
 import { NoValue } from "~/components/ui/no-value";
 import { ProgressBar } from "~/components/ui/progress-bar";
 import { SwitchField } from "~/components/ui/switch-field";
@@ -207,12 +208,9 @@ export function HeroesTab({
   const bracketLabel = rankRange ? `${tierName ?? `Tier ${rankRange.tier}`} players` : "all players";
 
   const handleSort = (key: HeroSortKey) => {
-    if (sortKey === key) {
-      setSortDir(sortDir === "desc" ? "asc" : "desc");
-    } else {
-      setSortKey(key);
-      setSortDir("desc");
-    }
+    const next = nextSort({ key: sortKey, dir: sortDir }, key);
+    setSortKey(next.key);
+    setSortDir(next.dir);
   };
 
   return (

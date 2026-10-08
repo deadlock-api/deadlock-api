@@ -4,6 +4,7 @@ import { parseAsStringLiteral, throttle, useQueryState } from "nuqs";
 import { startTransition, useMemo, useState } from "react";
 
 import type { StatTrendBucket } from "~/components/patterns/charts/StatTrendChart";
+import { sortParams, useSort } from "~/components/ui/hooks/use-sort";
 import type { Dayjs } from "~/dayjs";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { BANS_PER_MATCH, computeBanRates } from "~/lib/ban-rate";
@@ -142,17 +143,9 @@ export function useHeroStatsTable({
     parseAsStringLiteral(PICK_RATE_MODES).withDefault("presence"),
   );
 
+  const sort = useSort(sortParams([sortKey, setSortKey], [sortDir, setSortDir], together));
   // Sorting re-renders every row: in a transition with a throttled (not debounced) URL update, the tap paints first.
-  const onSort = (key: HeroStatsSortKey) => {
-    startTransition(() => {
-      if (key === sortKey) {
-        void setSortDir((d) => (d === "desc" ? "asc" : "desc"), together);
-      } else {
-        void setSortKey(key, together);
-        void setSortDir("desc", together);
-      }
-    });
-  };
+  const onSort = (key: HeroStatsSortKey) => startTransition(() => sort.toggle(key));
 
   // Picking the column's metric is asking to rank heroes by it, so the table sorts by that column right away.
   const onPickRateModeChange = (mode: PickRateMode) => {
