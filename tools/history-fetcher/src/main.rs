@@ -12,6 +12,7 @@
 #![expect(clippy::cast_possible_truncation)]
 
 use core::time::Duration;
+use std::collections::hash_map::Entry;
 use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, LazyLock};
 
@@ -81,16 +82,10 @@ async fn main() -> anyhow::Result<()> {
     let ch_client = common::get_ch_client()?;
 
     // Initialize PostgreSQL connection pool for prioritization queries
-    let pg_pool = match common::get_pg_client().await {
-        Ok(pool) => {
-            info!("PostgreSQL connection pool initialized successfully");
-            pool
-        }
-        Err(e) => {
-            error!("Failed to initialize PostgreSQL connection pool: {e:?}");
-            return Err(e);
-        }
-    };
+    let pg_pool = common::get_pg_client()
+        .await
+        .inspect_err(|e| error!("Failed to initialize PostgreSQL connection pool: {e:?}"))?;
+    info!("PostgreSQL connection pool initialized successfully");
 
     // Initialize prioritized accounts tracking from database
     let prioritized_accounts = initialize_prioritized_accounts(&pg_pool).await;
@@ -136,16 +131,15 @@ async fn main() -> anyhow::Result<()> {
 
         let fetch_due = futures::stream::iter(due)
             .map(|(account, bot_id)| {
-                let inserter = &inserter;
-                let http_client = http_client.clone();
-                let prioritized_accounts = prioritized_accounts.clone();
+                let (inserter, http_client, prioritized_accounts) =
+                    (&inserter, &http_client, &prioritized_accounts);
                 async move {
                     update_prioritized_account(
                         inserter,
-                        &http_client,
+                        http_client,
                         account,
                         &bot_id,
-                        &prioritized_accounts,
+                        prioritized_accounts,
                     )
                     .await;
                 }
@@ -202,17 +196,15 @@ async fn update_prioritized_account(
         "Fetching prioritized account match history"
     );
 
-    let max_retries = *PRIORITIZATION_MAX_RETRIES;
-    let attempt = core::sync::atomic::AtomicU32::new(0);
-
+    let mut attempts = 0u32;
     let result = common::retry_with_backoff(
         "prioritized history fetch",
-        common::Backoff::long(max_retries),
+        common::Backoff::long(*PRIORITIZATION_MAX_RETRIES),
         || {
-            let current = attempt.fetch_add(1, core::sync::atomic::Ordering::Relaxed);
-            if current > 0 {
+            if attempts > 0 {
                 counter!("history_fetcher.prioritized_fetch.retry").increment(1);
             }
+            attempts += 1;
             async {
                 update_account(inserter, http_client, account, Some(bot_id))
                     .await
@@ -268,7 +260,7 @@ async fn update_account(
     let match_history = match fetch_account_match_history(http_client, account, bot_username, None)
         .await
     {
-        Ok((_, r)) => r,
+        Ok(r) => r,
         Err(e) => {
             counter!("history_fetcher.fetch_match_history.failure").increment(1);
             warn!("Failed to fetch match history for account {account}, error: {e:?}, skipping",);
@@ -293,10 +285,10 @@ async fn update_account(
     if let Some(interval) = rank_interval {
         match fetch_account_match_history(http_client, account, bot_username, Some(interval)).await
         {
-            Ok((_, r)) if r.result == Some(EResult::KEResultSuccess as i32) => {
+            Ok(r) if r.result == Some(EResult::KEResultSuccess as i32) => {
                 matches = r.matches;
             }
-            Ok((_, r)) => warn!("Ranked match history for {account} failed: {:?}", r.result),
+            Ok(r) => warn!("Ranked match history for {account} failed: {:?}", r.result),
             Err(e) => warn!("Failed to fetch ranked match history for {account}: {e:?}"),
         }
     }
@@ -350,7 +342,7 @@ async fn fetch_account_match_history(
     account: u32,
     bot_username: Option<&str>,
     rank_interval: Option<u32>,
-) -> anyhow::Result<(String, CMsgClientToGcGetMatchHistoryResponse)> {
+) -> anyhow::Result<CMsgClientToGcGetMatchHistoryResponse> {
     let msg = CMsgClientToGcGetMatchHistory {
         account_id: account.into(),
         game_mode: rank_interval
@@ -375,6 +367,7 @@ async fn fetch_account_match_history(
         bot_username,
     )
     .await
+    .map(|(_, response)| response)
 }
 
 /// Initializes the prioritized accounts map by fetching all prioritized accounts
@@ -436,29 +429,21 @@ async fn get_due_prioritized_accounts(accounts: &PrioritizedAccountsMap) -> Vec<
 
     map.iter()
         .filter_map(|(&steam_id3, (bot_id, last_fetched))| {
-            let is_due = match last_fetched {
-                None => true,
-                Some(last) => now.duration_since(*last) > window,
-            };
-            if is_due {
-                if let Some(last) = last_fetched {
-                    let overdue_secs = now
-                        .duration_since(*last)
-                        .as_secs()
-                        .saturating_sub(window.as_secs());
-                    warn!(
-                        steam_id3 = steam_id3,
-                        overdue_secs = overdue_secs,
-                        window_secs = window.as_secs(),
-                        "SLA breach: prioritized account hasn't been fetched within the guaranteed window"
-                    );
-                    counter!("history_fetcher.prioritized_fetch.sla_breach").increment(1);
+            if let Some(last) = last_fetched {
+                let since = now.duration_since(*last);
+                if since <= window {
+                    return None;
                 }
-                #[expect(clippy::cast_sign_loss)]
-                Some((steam_id3 as u32, bot_id.clone()))
-            } else {
-                None
+                warn!(
+                    steam_id3 = steam_id3,
+                    overdue_secs = since.as_secs().saturating_sub(window.as_secs()),
+                    window_secs = window.as_secs(),
+                    "SLA breach: prioritized account hasn't been fetched within the guaranteed window"
+                );
+                counter!("history_fetcher.prioritized_fetch.sla_breach").increment(1);
             }
+            #[expect(clippy::cast_sign_loss)]
+            Some((steam_id3 as u32, bot_id.clone()))
         })
         .collect()
 }
@@ -480,34 +465,34 @@ async fn refresh_prioritized_accounts(pg_pool: &Pool<Postgres>, accounts: &Prior
     let mut map = accounts.write().await;
 
     // Remove accounts that are no longer prioritized or lost their bot friend
-    let to_remove: Vec<i64> = map
-        .keys()
-        .filter(|id| !current_map.contains_key(id))
-        .copied()
-        .collect();
-    for id in &to_remove {
-        map.remove(id);
-        debug!(steam_id3 = id, "Removed account from prioritized tracking");
-    }
+    let before = map.len();
+    map.retain(|id, _| {
+        let keep = current_map.contains_key(id);
+        if !keep {
+            debug!(steam_id3 = id, "Removed account from prioritized tracking");
+        }
+        keep
+    });
+    let removed_count = before - map.len();
 
     // Add new accounts and update bot_id for existing ones
     let mut added_count = 0;
-    for (id, bot_id) in &current_map {
-        match map.entry(*id) {
-            std::collections::hash_map::Entry::Vacant(e) => {
-                e.insert((bot_id.clone(), None));
+    for (id, bot_id) in current_map {
+        match map.entry(id) {
+            Entry::Vacant(e) => {
+                e.insert((bot_id, None));
                 added_count += 1;
                 debug!(steam_id3 = id, "Added new account to prioritized tracking");
             }
-            std::collections::hash_map::Entry::Occupied(mut e) => {
+            Entry::Occupied(mut e) => {
                 // Update bot_id if it changed, preserve last_fetched_at
-                if e.get().0 != *bot_id {
-                    e.get_mut().0.clone_from(bot_id);
+                if e.get().0 != bot_id {
                     debug!(
                         steam_id3 = id,
                         bot_id = bot_id,
                         "Updated bot_id for prioritized account"
                     );
+                    e.get_mut().0 = bot_id;
                 }
             }
         }
@@ -517,7 +502,7 @@ async fn refresh_prioritized_accounts(pg_pool: &Pool<Postgres>, accounts: &Prior
     info!(
         total = map.len(),
         added = added_count,
-        removed = to_remove.len(),
+        removed = removed_count,
         "Refreshed prioritized accounts"
     );
 }
