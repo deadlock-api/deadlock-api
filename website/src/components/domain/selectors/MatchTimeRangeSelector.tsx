@@ -61,13 +61,11 @@ export function MatchTimeRangeSelector({
   const [draftValue, setDraftValue] = useDraftValue(committedValue);
 
   const getLabel = () => {
-    const isStartZero = (minTime ?? 0) === 0;
-    const isEndMax = (maxTime ?? max) === max;
-
-    if (isStartZero && isEndMax) return "Any";
-    if (isStartZero) return `First ${formatTime(maxTime!)}`;
-    if (isEndMax) return `After ${formatTime(minTime!)}`;
-    return `${formatTime(minTime!)} - ${formatTime(maxTime!)}`;
+    const [start, end] = committedValue;
+    if (start === 0 && end === max) return "Any";
+    if (start === 0) return `First ${formatTime(end)}`;
+    if (end === max) return `After ${formatTime(start)}`;
+    return `${formatTime(start)} - ${formatTime(end)}`;
   };
 
   const handleValueCommit = (newValue: number[]) => {

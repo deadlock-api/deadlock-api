@@ -10,6 +10,8 @@ const SLOT_CELL = [
   "border-chart-5/70 bg-chart-5/25",
 ] as const;
 
+const formatPercent = (rate: number) => `${Math.round(rate * 100)}%`;
+
 export interface AbilityOrderStep {
   abilityId: number;
   /** Share of the players at the previous step who took this upgrade next. */
@@ -24,9 +26,8 @@ export interface AbilityOrderStep {
 export function AbilityOrderGrid({
   abilityIds,
   steps,
-  formatRate = (rate) => `${Math.round(rate * 100)}%`,
+  formatRate = formatPercent,
   className,
-  style,
   ...props
 }: Omit<React.ComponentProps<"div">, "children"> & {
   /** The hero's abilities in slot order: the rows. */
@@ -37,7 +38,7 @@ export function AbilityOrderGrid({
 }) {
   const hasRates = steps.some((step) => step.pickRate !== undefined);
   return (
-    <div data-slot="ability-order-grid" className={cn("@container min-w-0", className)} style={style} {...props}>
+    <div data-slot="ability-order-grid" className={cn("@container min-w-0", className)} {...props}>
       <ol className="sr-only">
         {steps.map((step, index) => (
           <li key={index}>

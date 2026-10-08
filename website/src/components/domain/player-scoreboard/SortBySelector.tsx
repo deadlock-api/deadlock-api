@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 
 import { FilterCell } from "~/components/patterns/filter-bar/FilterCell";
 import { useControllableState } from "~/components/ui/hooks/use-controllable-state";
@@ -48,10 +48,9 @@ export function SortBySelector({
     defaultValue,
     onValueChange,
   });
-  const { key, variant } = useMemo(() => parseSortByValue(value), [value]);
+  const { key, variant } = parseSortByValue(value);
 
-  const currentCategory = useMemo(() => categories.find((c) => c.key === key), [categories, key]);
-  const hasVariants = currentCategory?.variants != null;
+  const hasVariants = categories.find((c) => c.key === key)?.variants != null;
 
   // A stat without variants is the whole choice, so the editor closes and hands focus back to its trigger; one with
   // AVG / MAX / TOTAL stays open for that second pick.

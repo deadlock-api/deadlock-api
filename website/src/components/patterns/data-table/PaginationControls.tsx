@@ -1,6 +1,6 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import type React from "react";
-import { useCallback, useState } from "react";
+import { useState } from "react";
 
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
@@ -34,26 +34,16 @@ export function PaginationControls({
   ...props
 }: PaginationControlsProps) {
   const compact = size === "sm";
-  const handlePageSizeChange = useCallback(
-    (value: string) => {
-      onPageSizeChange(Number(value));
-    },
-    [onPageSizeChange],
-  );
-
   // What is typed, while it is typed: an empty field or a number on its way to a valid one ("2" on the way to "25"
   // of 30 pages) must not snap back to the current page under the cursor. The draft belongs to the page it left the
   // table on, so a page change from elsewhere (a filter reset, the back button) shows the new page instead.
   const [draft, setDraft] = useState<{ text: string; page: number } | null>(null);
-  const handlePageInputChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const pageNumber = parseInt(e.target.value, 10);
-      const valid = !Number.isNaN(pageNumber) && pageNumber > 0 && pageNumber <= totalPages;
-      setDraft({ text: e.target.value, page: valid ? pageNumber - 1 : page });
-      if (valid) onPageChange(pageNumber - 1);
-    },
-    [onPageChange, totalPages, page],
-  );
+  function handlePageInputChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const pageNumber = parseInt(e.target.value, 10);
+    const valid = !Number.isNaN(pageNumber) && pageNumber > 0 && pageNumber <= totalPages;
+    setDraft({ text: e.target.value, page: valid ? pageNumber - 1 : page });
+    if (valid) onPageChange(pageNumber - 1);
+  }
 
   return (
     <div
@@ -81,7 +71,7 @@ export function PaginationControls({
             </>
           )}
         </span>
-        <Select value={String(pageSize)} onValueChange={handlePageSizeChange}>
+        <Select value={String(pageSize)} onValueChange={(value) => onPageSizeChange(Number(value))}>
           <SelectTrigger size="sm" className={compact ? "w-16 gap-1 px-2" : "w-20"} aria-label="Rows per page">
             <SelectValue placeholder={pageSize} />
           </SelectTrigger>

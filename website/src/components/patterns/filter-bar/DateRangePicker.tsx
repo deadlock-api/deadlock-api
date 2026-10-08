@@ -1,5 +1,5 @@
 import { CalendarIcon, XIcon } from "lucide-react";
-import { lazy, Suspense, useCallback, useMemo } from "react";
+import { lazy, Suspense } from "react";
 import type { DateRange } from "react-day-picker";
 
 import { Button } from "~/components/ui/button";
@@ -42,52 +42,27 @@ export function DateRangePicker({
     onValueChange,
   });
 
-  // Convert dayjs dates to Date objects for react-day-picker
-  const dateRange: DateRange | undefined = useMemo(() => {
-    if (!startDate && !endDate) return undefined;
+  // react-day-picker works in Date objects.
+  const dateRange: DateRange | undefined =
+    startDate || endDate ? { from: startDate?.toDate(), to: endDate?.toDate() } : undefined;
 
-    return {
-      from: startDate?.toDate(),
-      to: endDate?.toDate(),
-    };
-  }, [startDate, endDate]);
+  // A picked range covers whole days: from the start of its first to the end of its last.
+  function handleDateRangeSelect(range?: DateRange) {
+    onDateRangeChange({
+      ...(range?.from && { startDate: day(range.from).startOf("day") }),
+      ...(range?.to && { endDate: day(range.to).endOf("day") }),
+    });
+  }
 
-  // Handle date selection from the calendar
-  const handleDateRangeSelect = useCallback(
-    (range?: DateRange) => {
-      if (!range) {
-        onDateRangeChange({});
-        return;
-      }
-
-      // Convert Date objects to dayjs with appropriate time adjustments
-      if (range.from && range.to) {
-        onDateRangeChange({
-          startDate: day(range.from).startOf("day"),
-          endDate: day(range.to).endOf("day"),
-        });
-      } else if (range.from) {
-        onDateRangeChange({ startDate: day(range.from).startOf("day") });
-      } else if (range.to) {
-        onDateRangeChange({ endDate: day(range.to).endOf("day") });
-      }
-    },
-    [onDateRangeChange],
-  );
-
-  const displayText = useMemo(() => {
-    if (startDate && endDate) return `${startDate.format("MMM DD, YYYY")} - ${endDate.format("MMM DD, YYYY")}`;
-    if (startDate) return `since ${startDate.format("MMM DD, YYYY")}`;
-    if (endDate) return `until ${endDate.format("MMM DD, YYYY")}`;
-    return "Select a date range";
-  }, [startDate, endDate]);
+  let displayText = "Select a date range";
+  if (startDate && endDate) displayText = `${startDate.format("MMM DD, YYYY")} - ${endDate.format("MMM DD, YYYY")}`;
+  else if (startDate) displayText = `since ${startDate.format("MMM DD, YYYY")}`;
+  else if (endDate) displayText = `until ${endDate.format("MMM DD, YYYY")}`;
 
   function selectLastDays(days: number) {
     // Ends with today, like a range picked on the calendar; midnight would drop today's matches east of UTC.
     onDateRangeChange({ startDate: day().subtract(days, "day").startOf("day"), endDate: day().endOf("day") });
   }
-
-  const presets = DAY_PRESETS.map((n) => ({ value: String(n), label: `Last ${n} days` }));
 
   return (
     <div data-slot="date-range-picker" className={cn("flex flex-col gap-2", className)} {...props}>
@@ -120,9 +95,9 @@ export function DateRangePicker({
         />
       </Suspense>
       <Segmented value="" onValueChange={(v) => selectLastDays(Number(v))} aria-label="Presets" className="flex-nowrap">
-        {presets.map((preset) => (
-          <SegmentedItem key={preset.value} value={preset.value}>
-            {preset.label}
+        {DAY_PRESETS.map((days) => (
+          <SegmentedItem key={days} value={String(days)}>
+            Last {days} days
           </SegmentedItem>
         ))}
       </Segmented>
