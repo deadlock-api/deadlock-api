@@ -23,12 +23,11 @@ import { Spinner } from "~/components/ui/spinner";
 import { Inline, Stack } from "~/components/ui/stack";
 import { Text } from "~/components/ui/text";
 import { useSteamAuthCallback } from "~/hooks/useSteamAuthCallback";
-import { API_ORIGIN } from "~/lib/constants";
 import { REGION_LABELS } from "~/lib/region";
 import { pageTitle, seo } from "~/lib/seo";
 import { parseSteamIdToId3, steamId64ToSteamId3 } from "~/lib/steam";
 import { generateSteamAuthUrl } from "~/lib/steam-auth";
-import { queryKeys } from "~/queries/query-keys";
+import { streamkitSteamNameQueryOptions } from "~/queries/streamkit-queries";
 
 const regions = ["Europe", "Asia", "NAmerica", "SAmerica", "Oceania"] as const;
 
@@ -61,26 +60,11 @@ function StreamKit() {
     void navigate({ to: "/streamkit", search: Object.fromEntries(newParams), replace: true });
   }, [steamId64, setSteamId, region, navigate]);
 
-  const fetchSteamName = async (r: string, id: string) => {
-    if (!id) return null;
-    if (!r) return null;
-    const url = new URL(`${API_ORIGIN}/v1/commands/variables/resolve`);
-    url.searchParams.append("region", r);
-    url.searchParams.append("account_id", id);
-    url.searchParams.append("variables", "steam_account_name");
-    const res = await fetch(url);
-    if (!res.ok) throw new Error(`Failed to fetch steam name: ${res.status}`);
-    return (await res.json()).steam_account_name;
-  };
-
   const {
     data: steamAccountName,
     isLoading: steamAccountLoading,
     error: steamAccountError,
-  } = useQuery<string>({
-    queryKey: queryKeys.steam.name(region, parseSteamIdToId3(steamId)),
-    queryFn: () => fetchSteamName(region, parseSteamIdToId3(steamId)),
-  });
+  } = useQuery(streamkitSteamNameQueryOptions(region, parseSteamIdToId3(steamId)));
 
   const isAccountConnected = steamAccountName && !steamAccountLoading && !steamAccountError;
 

@@ -2,32 +2,10 @@ import { useQuery } from "@tanstack/react-query";
 import { type FC } from "react";
 
 import { UPDATE_INTERVAL_MS } from "~/constants/streamkit/widget";
-import { API_ORIGIN } from "~/lib/constants";
-import { queryKeys } from "~/queries/query-keys";
-import type { RawWidgetProps, Region } from "~/types/streamkit/widget";
+import { streamkitStatsQueryOptions } from "~/queries/streamkit-queries";
+import type { RawWidgetProps } from "~/types/streamkit/widget";
 
 const EMPTY_EXTRA_ARGS: Record<string, string> = {};
-
-const fetchStats = async (r: Region, id: string, v: string, args: Record<string, string>) => {
-  const url = new URL(`${API_ORIGIN}/v1/commands/variables/resolve`);
-  url.searchParams.append("region", r);
-  url.searchParams.append("account_id", id);
-  url.searchParams.append("variables", [v].join(","));
-
-  for (const [key, value] of Object.entries(args)) {
-    if (value) url.searchParams.append(key, value);
-  }
-  try {
-    const res = await fetch(url);
-    if (!res.ok) {
-      throw new Error(`Failed to fetch stats: ${res.status} ${res.statusText}`);
-    }
-    return await res.json();
-  } catch (error) {
-    console.error("Failed to fetch stats:", error);
-    throw error;
-  }
-};
 
 export const RawWidget: FC<RawWidgetProps> = ({
   region,
@@ -39,13 +17,9 @@ export const RawWidget: FC<RawWidgetProps> = ({
   fontColor,
   refreshInterval = UPDATE_INTERVAL_MS,
 }) => {
-  const { data, isLoading: statsLoading } = useQuery<Record<string, string>>({
-    queryKey: queryKeys.streamkit.stats(region, accountId, variable, extraArgs),
-    queryFn: () => fetchStats(region, accountId, variable, extraArgs),
-    staleTime: refreshInterval - 10000,
-    refetchInterval: refreshInterval,
-    refetchIntervalInBackground: true,
-  });
+  const { data, isLoading: statsLoading } = useQuery(
+    streamkitStatsQueryOptions({ region, accountId, variables: [variable], extraArgs, refreshInterval }),
+  );
 
   // A failed background refetch keeps the last value on stream; only a widget that never loaded shows nothing.
   const stat = data?.[variable] ?? null;

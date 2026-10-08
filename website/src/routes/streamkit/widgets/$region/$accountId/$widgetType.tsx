@@ -4,12 +4,10 @@ import { useEffect, useRef } from "react";
 
 import { BoxWidget } from "~/components/features/streamkit/widgets/box";
 import { RawWidget } from "~/components/features/streamkit/widgets/raw";
-import { CACHE_DURATIONS } from "~/constants/cache";
-import { API_ORIGIN } from "~/lib/constants";
 import { splitWidgetList, withoutEmptyVariables } from "~/lib/streamkit-list";
 import { readWidgetFlag, readWidgetInt, readWidgetSearch } from "~/lib/streamkit-widget-search";
 import { snakeToPretty } from "~/lib/utils";
-import { queryKeys } from "~/queries/query-keys";
+import { widgetVersionsQueryOptions } from "~/queries/streamkit-queries";
 import type { Color } from "~/types/general";
 import type { Region, Theme } from "~/types/streamkit/widget";
 
@@ -36,15 +34,9 @@ function Widget() {
   const search = readWidgetSearch(rawSearch);
   const initialVersionRef = useRef<number | null>(null);
 
-  const { data: fetchedVersion, error: versionError } = useQuery<number>({
-    queryKey: queryKeys.streamkit.version(widgetType),
-    queryFn: () =>
-      fetch(`${API_ORIGIN}/v1/commands/widgets/versions`)
-        .then((res) => res.json())
-        .then((data) => (widgetType ? data[widgetType] : data)),
-    staleTime: (5 * 60 - 10) * 1000,
-    refetchInterval: CACHE_DURATIONS.FIVE_MINUTES,
-    refetchIntervalInBackground: true,
+  const { data: fetchedVersion, error: versionError } = useQuery({
+    ...widgetVersionsQueryOptions,
+    select: (versions) => versions[widgetType],
   });
 
   useEffect(() => {

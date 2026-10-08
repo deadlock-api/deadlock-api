@@ -94,9 +94,14 @@ export const queryKeys = {
   streamkit: {
     availableVariables: () => ["streamkit-available-variables"] as const,
     preview: (url: string) => ["streamkit-preview", url] as const,
-    stats: (...parts: unknown[]) => ["streamkit-stats", ...parts] as const,
+    stats: (
+      region: string,
+      accountId: string,
+      variables: readonly string[],
+      extraArgs: Readonly<Record<string, string>>,
+    ) => ["streamkit-stats", region, accountId, variables, extraArgs] as const,
     matchHistory: (accountId: string) => ["streamkit-match-history", accountId] as const,
-    version: (widgetType: string | undefined) => ["streamkit-version", widgetType] as const,
+    versions: () => ["streamkit-widget-versions"] as const,
   },
   crosshair: {
     codeSettings: (code: string) => ["api-crosshair-code-settings", code] as const,

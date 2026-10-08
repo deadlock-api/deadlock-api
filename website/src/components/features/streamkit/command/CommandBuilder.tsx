@@ -3,7 +3,6 @@ import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 
-import { CACHE_DURATIONS } from "~/constants/cache";
 import { API_ORIGIN } from "~/lib/constants";
 import {
   checkCommandTemplate,
@@ -12,8 +11,8 @@ import {
   isCommandTemplateValid,
 } from "~/lib/streamkit-command";
 import { snakeToPretty, useDebouncedState } from "~/lib/utils";
-import { queryKeys } from "~/queries/query-keys";
-import type { CommandBuilderProps, Variable } from "~/types/streamkit/command";
+import { availableVariablesQueryOptions, commandPreviewQueryOptions } from "~/queries/streamkit-queries";
+import type { CommandBuilderProps } from "~/types/streamkit/command";
 
 import { ChatBotInstructions } from "./ChatBotInstructions";
 import { CommandPreview } from "./CommandPreview";
@@ -21,33 +20,6 @@ import { ExtraArguments } from "./ExtraArguments";
 import { TemplateInput } from "./TemplateInput";
 import { UrlDisplay } from "./UrlDisplay";
 import { VariablesList } from "./VariablesList";
-
-async function fetchVariables(): Promise<Variable[]> {
-  try {
-    const res = await fetch(`${API_ORIGIN}/v1/commands/variables/available`);
-    if (!res.ok) {
-      throw new Error(`Failed to fetch variables: ${res.status} ${res.statusText}`);
-    }
-    return await res.json();
-  } catch (error) {
-    console.error("Failed to fetch variables:", error);
-    throw error;
-  }
-}
-
-async function fetchPreview(url: string): Promise<string> {
-  try {
-    if (!url) return "";
-    const res = await fetch(url);
-    if (!res.ok) {
-      throw new Error(`Failed to fetch preview: ${res.status} ${res.statusText}`);
-    }
-    return await res.text();
-  } catch (error) {
-    console.error("Failed to fetch preview:", error);
-    throw error;
-  }
-}
 
 const TEMPLATE_URL_SYNC_MS = 500;
 
@@ -69,11 +41,7 @@ export function CommandBuilder({ region, accountId }: CommandBuilderProps) {
   const [extraArgs, setExtraArgs] = useState<{ [key: string]: string }>({});
   const templateRef = useRef<HTMLTextAreaElement>(null);
 
-  const { data, error } = useQuery<Variable[]>({
-    queryKey: queryKeys.streamkit.availableVariables(),
-    queryFn: fetchVariables,
-    staleTime: CACHE_DURATIONS.FOREVER,
-  });
+  const { data, error } = useQuery(availableVariablesQueryOptions);
 
   const allVariables = error ? [] : data;
   const variables = allVariables?.filter((v) => !v.name.endsWith("_img")) ?? [];
@@ -150,12 +118,7 @@ export function CommandBuilder({ region, accountId }: CommandBuilderProps) {
     data: previewData,
     error: previewRequestError,
     isLoading: previewLoading,
-  } = useQuery<string>({
-    queryKey: queryKeys.streamkit.preview(debouncedGeneratedUrl),
-    queryFn: () => fetchPreview(debouncedGeneratedUrl),
-    enabled: debouncedGeneratedUrl !== "",
-    staleTime: 60 * 1000,
-  });
+  } = useQuery(commandPreviewQueryOptions(debouncedGeneratedUrl));
 
   const previewError = previewData
     ? null

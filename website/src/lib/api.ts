@@ -2,6 +2,7 @@ import { type AxiosInstance, type AxiosResponse, isAxiosError, type RawAxiosRequ
 import {
   AnalyticsApi,
   AssetsBucketApi,
+  CommandsApi,
   CrosshairApi,
   GenericDataApi,
   HeroesApi,
@@ -46,6 +47,7 @@ export class Api {
   public assets_bucket_api: AssetsBucketApi;
   public generic_data_api: GenericDataApi;
   public crosshair_api: CrosshairApi;
+  public commands_api: CommandsApi;
   public patches_api: PatchesApi;
   public client: AxiosInstance;
 
@@ -67,6 +69,7 @@ export class Api {
     this.assets_bucket_api = new AssetsBucketApi(undefined, API_ORIGIN, axios_client);
     this.generic_data_api = new GenericDataApi(undefined, API_ORIGIN, axios_client);
     this.crosshair_api = new CrosshairApi(undefined, API_ORIGIN, axios_client);
+    this.commands_api = new CommandsApi(undefined, API_ORIGIN, axios_client);
     this.patches_api = new PatchesApi(undefined, API_ORIGIN, axios_client);
   }
 }

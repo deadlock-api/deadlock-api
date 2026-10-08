@@ -12,11 +12,8 @@ import { Field } from "~/components/ui/field";
 import { Input } from "~/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
 import { Inline, Stack } from "~/components/ui/stack";
-import { CACHE_DURATIONS } from "~/constants/cache";
 import { DEFAULT_LABELS, DEFAULT_SUBTEXTS, DEFAULT_VARIABLES } from "~/constants/streamkit/widget";
-import { API_ORIGIN } from "~/lib/constants";
-import { queryKeys } from "~/queries/query-keys";
-import type { Variable } from "~/types/streamkit/command";
+import { availableVariablesQueryOptions } from "~/queries/streamkit-queries";
 import type { Theme } from "~/types/streamkit/widget";
 
 import { BoxWidgetConfig } from "./BoxWidgetConfig";
@@ -59,11 +56,7 @@ export function WidgetBuilder({ region, accountId }: WidgetBuilderProps) {
     previewBackgroundColor: "#f3f4f6",
   });
 
-  const { data: availableVariables = [] } = useQuery<Variable[]>({
-    queryKey: queryKeys.streamkit.availableVariables(),
-    queryFn: () => fetch(`${API_ORIGIN}/v1/commands/variables/available`).then((res) => res.json()),
-    staleTime: CACHE_DURATIONS.FOREVER,
-  });
+  const { data: availableVariables = [] } = useQuery(availableVariablesQueryOptions);
 
   // Only the arguments the chosen variables take: a `hero_name` left from a removed variable stayed in the URL.
   const shownVariables = config.widgetType === "raw" ? [config.variable] : config.variables;
