@@ -13,10 +13,8 @@ use tracing::{error, trace};
 use crate::hltv::FragmentType;
 use crate::hltv::hltv_extract_meta::analyze_fragment;
 
-#[expect(unused)]
 #[derive(Debug)]
 pub(crate) struct HltvFragment {
-    pub match_id: u64,
     pub fragment_n: u64,
     pub fragment_contents: Bytes,
     pub fragment_type: FragmentType,
@@ -42,20 +40,10 @@ pub(crate) enum DownloadError {
     ReceiverDropped,
 }
 
-#[expect(unused)]
+/// The part of a `/sync` response the downloader uses; the other fields are ignored.
 #[derive(Deserialize)]
 struct SyncResponse {
-    tick: u64,
-    endtick: u64,
-    maxtick: u64,
-    rtdelay: f64,
-    rcvage: f64,
     fragment: u64,
-    signup_fragment: u64,
-    tps: u64,
-    keyframe_interval: u64,
-    map: String,
-    protocol: u64,
 }
 
 /// Downloads a match id, starting at the first `/full` fragment that the first `/sync` call says,
@@ -209,7 +197,6 @@ async fn fragment_fetching_loop(
                         let is_last = analysis.has_end_command;
 
                         let hltv_fragment = HltvFragment {
-                            match_id,
                             fragment_n,
                             fragment_contents: contents,
                             fragment_type,

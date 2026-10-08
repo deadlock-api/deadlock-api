@@ -50,7 +50,7 @@ static PRIORITIZATION_WINDOW_SECS: LazyLock<u64> =
 
 /// Maximum number of retry attempts for prioritized account fetches.
 /// Uses exponential backoff: 1s, 2s, 4s, 8s, 16s, then 30s each (see
-/// `common::retry_with_backoff_configurable`). Default: 10 retries.
+/// `common::Backoff::long`). Default: 10 retries.
 static PRIORITIZATION_MAX_RETRIES: LazyLock<u32> =
     LazyLock::new(|| common::env_or("PRIORITIZATION_MAX_RETRIES", 10));
 
@@ -205,17 +205,21 @@ async fn update_prioritized_account(
     let max_retries = *PRIORITIZATION_MAX_RETRIES;
     let attempt = core::sync::atomic::AtomicU32::new(0);
 
-    let result = common::retry_with_backoff_configurable(max_retries, || {
-        let current = attempt.fetch_add(1, core::sync::atomic::Ordering::Relaxed);
-        if current > 0 {
-            counter!("history_fetcher.prioritized_fetch.retry").increment(1);
-        }
-        async {
-            update_account(inserter, http_client, account, Some(bot_id))
-                .await
-                .ok_or_else(|| format!("Failed to fetch prioritized account {account}"))
-        }
-    })
+    let result = common::retry_with_backoff(
+        "prioritized history fetch",
+        common::Backoff::long(max_retries),
+        || {
+            let current = attempt.fetch_add(1, core::sync::atomic::Ordering::Relaxed);
+            if current > 0 {
+                counter!("history_fetcher.prioritized_fetch.retry").increment(1);
+            }
+            async {
+                update_account(inserter, http_client, account, Some(bot_id))
+                    .await
+                    .ok_or_else(|| format!("Failed to fetch prioritized account {account}"))
+            }
+        },
+    )
     .await;
 
     let mut map = prioritized_accounts.write().await;

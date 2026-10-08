@@ -10,7 +10,7 @@ use tokio::task::JoinHandle;
 use tokio_util::sync::CancellationToken;
 use tracing::{error, info};
 
-use crate::retry_fn_with_backoff;
+use crate::{Backoff, retry_with_backoff};
 
 /// How a [`BatchInserter`] groups rows into inserts.
 #[derive(Debug, Clone)]
@@ -234,7 +234,8 @@ impl Worker {
         let table = self.config.table.as_str();
         let prefix = self.config.metrics_prefix.as_str();
         let rows: usize = pending.iter().map(|r| r.rows.len()).sum();
-        let result = retry_fn_with_backoff(&format!("{table} batch flush"), || async {
+        let label = format!("{table} batch flush");
+        let result = retry_with_backoff(&label, Backoff::SHORT, || async {
             let mut insert = self.client.insert::<T>(table).await?;
             for row in pending.iter().flat_map(|r| &r.rows) {
                 insert.write(row).await?;

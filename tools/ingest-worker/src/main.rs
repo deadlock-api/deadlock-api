@@ -678,7 +678,11 @@ async fn move_object(
     if old_key == new_key {
         return Ok(());
     }
-    match common::retry_fn_with_backoff("move_object", || store.rename(old_key, new_key)).await {
+    match common::retry_with_backoff("move_object", common::Backoff::SHORT, || {
+        store.rename(old_key, new_key)
+    })
+    .await
+    {
         Ok(()) => {
             counter!("ingest_worker.move_object.success").increment(1);
             debug!("Moved object");

@@ -191,13 +191,17 @@ async fn fetch_prioritized_match(ch_client: &Client, match_id: u64) -> anyhow::R
     let max_retries = *PRIORITIZATION_MAX_RETRIES;
     let attempt = core::sync::atomic::AtomicU32::new(0);
 
-    common::retry_with_backoff_configurable(max_retries, || {
-        let current = attempt.fetch_add(1, core::sync::atomic::Ordering::Relaxed);
-        if current > 0 {
-            counter!("salt_scraper.prioritized_fetch.retry").increment(1);
-        }
-        async { fetch_match_internal(ch_client, match_id).await }
-    })
+    common::retry_with_backoff(
+        "prioritized salt fetch",
+        common::Backoff::long(max_retries),
+        || {
+            let current = attempt.fetch_add(1, core::sync::atomic::Ordering::Relaxed);
+            if current > 0 {
+                counter!("salt_scraper.prioritized_fetch.retry").increment(1);
+            }
+            async { fetch_match_internal(ch_client, match_id).await }
+        },
+    )
     .await
 }
 

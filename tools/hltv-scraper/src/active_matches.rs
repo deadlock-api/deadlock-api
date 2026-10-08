@@ -14,16 +14,7 @@ pub(crate) struct ActiveMatch {
     pub match_score: Option<u32>,
 }
 
-#[expect(unused)]
 impl ActiveMatch {
-    pub(crate) fn is_core_exposed(&self) -> bool {
-        use ECitadelTeamObjective::KECitadelTeamObjectiveTitan;
-        let t0 = self.objectives_mask_team0;
-        let t1 = self.objectives_mask_team1;
-
-        !has_objective(t0, KECitadelTeamObjectiveTitan)
-            || !has_objective(t1, KECitadelTeamObjectiveTitan)
-    }
     pub(crate) fn is_titan_exposed(&self) -> bool {
         use ECitadelTeamObjective::{
             KECitadelTeamObjectiveTitanShieldGenerator1,

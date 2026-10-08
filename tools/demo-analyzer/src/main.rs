@@ -448,7 +448,7 @@ async fn apply_update(ch_client: &clickhouse::Client, update: &MatchUpdate) -> a
          WHERE match_id = {match_id}"
     );
 
-    common::retry_fn_with_backoff("apply_update", || {
+    common::retry_with_backoff("apply_update", common::Backoff::SHORT, || {
         let q = query.clone();
         async move {
             ch_client.query(&q).execute().await?;

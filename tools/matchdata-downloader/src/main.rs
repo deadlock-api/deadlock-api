@@ -71,9 +71,7 @@ const CONNECT_TIMEOUT: Duration = Duration::from_secs(10);
 const REQUEST_TIMEOUT: Duration = Duration::from_mins(1);
 
 static CONCURRENCY: LazyLock<usize> = LazyLock::new(|| {
-    std::env::var("MATCHDATA_DOWNLOADER_CONCURRENCY")
-        .ok()
-        .and_then(|v| v.trim().parse().ok())
+    Some(common::env_or("MATCHDATA_DOWNLOADER_CONCURRENCY", 10))
         .filter(|c| *c > 0)
         .unwrap_or(10)
 });
