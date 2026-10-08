@@ -64,7 +64,7 @@ fn build_filters(query: &MMRDistributionQuery) -> Vec<String> {
             max_match_id: query.max_match_id,
             min_average_badge: None,
             max_average_badge: None,
-            min_duration_s: None,
+            min_duration_s: query.min_duration_s,
             max_duration_s: query.max_duration_s,
         }
         .predicates("", DURATION_COLUMN),
