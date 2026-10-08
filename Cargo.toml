@@ -67,7 +67,6 @@ tryhard = "0.5.2"
 # haste, dungers
 bytemuck = "1.23.1"
 bytes = "1.11.1"
-dyn-clone = "1.0.20"
 expect-test = "1.5.1"
 hashbrown = { version = "0.17.1", default-features = false }
 http = "1.4.0"

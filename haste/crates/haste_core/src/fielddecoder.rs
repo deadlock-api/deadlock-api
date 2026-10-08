@@ -1,7 +1,6 @@
 use core::fmt::Debug;
 use core::str::Utf8Error;
 use dungers::bitbuf::BitError;
-use dyn_clone::DynClone;
 
 use crate::bitreader::BitReader;
 use crate::fieldvalue::FieldValue;
@@ -22,6 +21,8 @@ pub enum DecoderError {
     UTF8(#[from] Utf8Error),
     #[error("unsupported var encoder (hash {0})")]
     UnsupportedVarEncoder(u64),
+    #[error("field has no decoder")]
+    NoDecoder,
 }
 
 // ----
@@ -59,461 +60,42 @@ impl Default for FieldDecodeContext {
 
 // ----
 
-// TODO: get rid of trait objects; find a better, more efficient, way to
-// "attach" decoders to fields; but note that having separate decoding functions
-// and attaching function "pointers" to fields is even worse.
-
-// TODO(blukai): try to not box internal decoders (for example u64).
-
-pub(crate) trait FieldDecode: DynClone + Debug + Send + Sync {
-    fn decode(
-        &self,
-        ctx: &mut FieldDecodeContext,
-        br: &mut BitReader,
-    ) -> Result<FieldValue, DecoderError>;
-
-    #[allow(dead_code)]
-    fn skip(&self, ctx: &mut FieldDecodeContext, br: &mut BitReader) -> Result<(), DecoderError> {
-        let _ = self.decode(ctx, br)?;
-        Ok(())
-    }
-
-    fn skip_bits(&self, br: &mut BitReader) -> Result<usize, DecoderError>;
-}
-
-dyn_clone::clone_trait_object!(FieldDecode);
-
-/// used during multi-phase initialization. never called.
-#[derive(Debug, Clone, Default)]
-pub(crate) struct InvalidDecoder;
-
-impl FieldDecode for InvalidDecoder {
-    #[cold]
-    fn decode(
-        &self,
-        _ctx: &mut FieldDecodeContext,
-        _br: &mut BitReader,
-    ) -> Result<FieldValue, DecoderError> {
-        unreachable!()
-    }
-
-    #[cold]
-    fn skip_bits(&self, _br: &mut BitReader) -> Result<usize, DecoderError> {
-        unreachable!()
-    }
-}
-
-// ----
-
-trait InternalFieldDecode<T>: DynClone + Debug + Send + Sync {
-    fn decode(&self, ctx: &mut FieldDecodeContext, br: &mut BitReader) -> Result<T, BitError>;
-
-    #[allow(dead_code)]
-    fn skip(&self, ctx: &mut FieldDecodeContext, br: &mut BitReader) -> Result<(), BitError> {
-        let _ = self.decode(ctx, br)?;
-        Ok(())
-    }
-
-    fn skip_bits(&self, br: &mut BitReader) -> Result<usize, BitError>;
-}
-
-dyn_clone::clone_trait_object!(<T> InternalFieldDecode<T>);
-
-// ----
-
-#[derive(Debug, Clone, Default)]
-pub(crate) struct I64Decoder;
-
-impl FieldDecode for I64Decoder {
-    fn decode(
-        &self,
-        _ctx: &mut FieldDecodeContext,
-        br: &mut BitReader,
-    ) -> Result<FieldValue, DecoderError> {
-        Ok(FieldValue::I64(br.read_varint64()?))
-    }
-
-    fn skip_bits(&self, br: &mut BitReader) -> Result<usize, DecoderError> {
-        let start = br.num_bits_read();
-        let _ = br.read_varint64()?;
-        Ok(br.num_bits_read() - start)
-    }
-}
-
-/// decodes values of fields that have the `fixed8` var encoder: 8 raw bits, sign-extended.
-///
-/// deadlock started to use this encoder for small integer fields (int8) in build 6712; previously
-/// such fields were sent as varints.
-#[derive(Debug, Clone, Default)]
-struct InternalI64Fixed8Decoder;
-
-impl FieldDecode for InternalI64Fixed8Decoder {
-    fn decode(
-        &self,
-        _ctx: &mut FieldDecodeContext,
-        br: &mut BitReader,
-    ) -> Result<FieldValue, DecoderError> {
-        Ok(FieldValue::I64(i64::from(br.read_byte()? as i8)))
-    }
-
-    fn skip_bits(&self, br: &mut BitReader) -> Result<usize, DecoderError> {
-        br.skip_bits(8)?;
-        Ok(8)
-    }
-}
-
-/// returns a decoder for a signed integer field, honoring its var encoder.
-pub(crate) fn new_i64_decoder(field: &FlattenedSerializerField) -> Box<dyn FieldDecode> {
-    if field.var_encoder_heq(fxhash::hash_bytes(b"fixed8")) {
-        Box::<InternalI64Fixed8Decoder>::default()
-    } else {
-        Box::<I64Decoder>::default()
-    }
-}
-
-// ----
-
-#[derive(Debug, Clone, Default)]
-struct InternalU64Decoder;
-
-impl FieldDecode for InternalU64Decoder {
-    fn decode(
-        &self,
-        _ctx: &mut FieldDecodeContext,
-        br: &mut BitReader,
-    ) -> Result<FieldValue, DecoderError> {
-        Ok(FieldValue::U64(br.read_uvarint64()?))
-    }
-
-    fn skip_bits(&self, br: &mut BitReader) -> Result<usize, DecoderError> {
-        let start = br.num_bits_read();
-        let _ = br.read_uvarint64()?;
-        Ok(br.num_bits_read() - start)
-    }
-}
-
-#[derive(Debug, Clone, Default)]
-struct InternalU64Fixed64Decoder;
-
-impl FieldDecode for InternalU64Fixed64Decoder {
-    fn decode(
-        &self,
-        _ctx: &mut FieldDecodeContext,
-        br: &mut BitReader,
-    ) -> Result<FieldValue, DecoderError> {
-        let mut buf = [0u8; 8];
-        br.read_bytes(&mut buf)?;
-        Ok(FieldValue::U64(u64::from_le_bytes(buf)))
-    }
-
-    fn skip_bits(&self, br: &mut BitReader) -> Result<usize, DecoderError> {
-        br.skip_bits(64)?;
-        Ok(64)
-    }
-}
-
-/// decodes values of fields that have the `fixed8` var encoder: 8 raw bits.
-///
-/// deadlock started to use this encoder for uint8 fields and 8 bit enums (e.g. `MoveType_t`) in
-/// build 6712; previously such fields were sent as varints.
-#[derive(Debug, Clone, Default)]
-struct InternalU64Fixed8Decoder;
-
-impl FieldDecode for InternalU64Fixed8Decoder {
-    fn decode(
-        &self,
-        _ctx: &mut FieldDecodeContext,
-        br: &mut BitReader,
-    ) -> Result<FieldValue, DecoderError> {
-        Ok(FieldValue::U64(u64::from(br.read_byte()?)))
-    }
-
-    fn skip_bits(&self, br: &mut BitReader) -> Result<usize, DecoderError> {
-        br.skip_bits(8)?;
-        Ok(8)
-    }
-}
-
+/// decoder for a single f32 component (of a float field or of a vector).
 #[derive(Debug, Clone)]
-pub(crate) struct U64Decoder {
-    decoder: Box<dyn FieldDecode>,
+pub(crate) enum F32Decoder {
+    /// `m_flSimulationTime` / `m_flAnimTime`: a tick count (uvarint) scaled by the tick interval.
+    SimulationTime,
+    Coord {
+        integer_bits: usize,
+        fractional_bits: usize,
+    },
+    Normal {
+        fractional_bits: usize,
+    },
+    /// raw 32 bit float.
+    NoScale,
+    Quantized(QuantizedFloat),
 }
 
-// NOTE: default should only be used to decode dynamic array lengths. for everything else decoder
-// must be constructed using U64Decoder's new method.
-impl Default for U64Decoder {
-    fn default() -> Self {
-        Self {
-            decoder: Box::<InternalU64Decoder>::default(),
-        }
-    }
-}
-
-impl U64Decoder {
-    pub(crate) fn new(field: &FlattenedSerializerField) -> Self {
-        if field.var_encoder_heq(fxhash::hash_bytes(b"fixed64")) {
-            Self {
-                decoder: Box::<InternalU64Fixed64Decoder>::default(),
-            }
-        } else if field.var_encoder_heq(fxhash::hash_bytes(b"fixed8")) {
-            Self {
-                decoder: Box::<InternalU64Fixed8Decoder>::default(),
-            }
-        } else {
-            Self::default()
-        }
-    }
-}
-
-impl FieldDecode for U64Decoder {
-    fn decode(
-        &self,
-        ctx: &mut FieldDecodeContext,
-        br: &mut BitReader,
-    ) -> Result<FieldValue, DecoderError> {
-        self.decoder.decode(ctx, br)
-    }
-
-    fn skip(&self, ctx: &mut FieldDecodeContext, br: &mut BitReader) -> Result<(), DecoderError> {
-        self.decoder.skip(ctx, br)
-    }
-
-    fn skip_bits(&self, br: &mut BitReader) -> Result<usize, DecoderError> {
-        self.decoder.skip_bits(br)
-    }
-}
-
-// ----
-
-#[derive(Debug, Clone, Default)]
-pub(crate) struct BoolDecoder;
-
-impl FieldDecode for BoolDecoder {
-    fn decode(
-        &self,
-        _ctx: &mut FieldDecodeContext,
-        br: &mut BitReader,
-    ) -> Result<FieldValue, DecoderError> {
-        Ok(FieldValue::Bool(br.read_bool()?))
-    }
-
-    fn skip_bits(&self, br: &mut BitReader) -> Result<usize, DecoderError> {
-        br.skip_bits(1)?;
-        Ok(1)
-    }
-}
-
-// ----
-
-#[derive(Debug, Clone, Default)]
-pub(crate) struct StringDecoder;
-
-impl FieldDecode for StringDecoder {
-    fn decode(
-        &self,
-        ctx: &mut FieldDecodeContext,
-        br: &mut BitReader,
-    ) -> Result<FieldValue, DecoderError> {
-        // NOTE: string_buf must be cleared after use.
-        assert_eq!(ctx.string_buf, [] as [u8; 0]);
-        let n = br.read_string_to_end(&mut ctx.string_buf, false)?;
-        let ret = FieldValue::String(Box::from(&ctx.string_buf[..n]));
-        ctx.string_buf.clear();
-        Ok(ret)
-    }
-
-    fn skip(&self, _ctx: &mut FieldDecodeContext, br: &mut BitReader) -> Result<(), DecoderError> {
-        loop {
-            let val = br.read_byte()?;
-            if val == 0 {
-                break;
-            }
-        }
-        Ok(())
-    }
-
-    fn skip_bits(&self, br: &mut BitReader) -> Result<usize, DecoderError> {
-        let start = br.num_bits_read();
-        loop {
-            let val = br.read_byte()?;
-            if val == 0 {
-                break;
-            }
-        }
-        Ok(br.num_bits_read() - start)
-    }
-}
-
-// ----
-
-/// decodes `CUtlBinaryBlock` values: a varint byte length followed by that many raw bytes.
-///
-/// deadlock networks such fields as of build 6712 (e.g.
-/// `AnimGraph2SerializedPoseRecipeSlot_t.m_topology`).
-#[derive(Debug, Clone, Default)]
-pub(crate) struct BinaryBlockDecoder;
-
-impl FieldDecode for BinaryBlockDecoder {
-    fn decode(
-        &self,
-        _ctx: &mut FieldDecodeContext,
-        br: &mut BitReader,
-    ) -> Result<FieldValue, DecoderError> {
-        let len = br.read_uvarint32()? as usize;
-        let mut buf = vec![0u8; len].into_boxed_slice();
-        br.read_bytes(&mut buf)?;
-        Ok(FieldValue::String(buf))
-    }
-
-    fn skip_bits(&self, br: &mut BitReader) -> Result<usize, DecoderError> {
-        let start = br.num_bits_read();
-        let len = br.read_uvarint32()? as usize;
-        br.skip_bits(len * 8)?;
-        Ok(br.num_bits_read() - start)
-    }
-}
-
-// ----
-
-#[derive(Debug, Clone, Default)]
-struct InternalF32SimulationTimeDecoder;
-
-impl InternalFieldDecode<f32> for InternalF32SimulationTimeDecoder {
-    fn decode(&self, ctx: &mut FieldDecodeContext, br: &mut BitReader) -> Result<f32, BitError> {
-        Ok(br.read_uvarint32()? as f32 * ctx.tick_interval)
-    }
-
-    fn skip_bits(&self, br: &mut BitReader) -> Result<usize, BitError> {
-        let start = br.num_bits_read();
-        let _ = br.read_uvarint32()?;
-        Ok(br.num_bits_read() - start)
-    }
-}
-
-#[derive(Debug, Clone)]
-struct InternalF32CoordDecoder {
-    integer_bits: usize,
-    fractional_bits: usize,
-}
-
-impl InternalF32CoordDecoder {
-    fn new(field: &FlattenedSerializerField) -> Self {
-        Self {
-            integer_bits: field.coord_size_params.coord_integer_bits,
-            fractional_bits: field.coord_size_params.coord_fractional_bits,
-        }
-    }
-}
-
-impl InternalFieldDecode<f32> for InternalF32CoordDecoder {
-    fn decode(&self, _ctx: &mut FieldDecodeContext, br: &mut BitReader) -> Result<f32, BitError> {
-        br.read_bitcoord_with(self.integer_bits, self.fractional_bits)
-    }
-
-    fn skip_bits(&self, br: &mut BitReader) -> Result<usize, BitError> {
-        let start = br.num_bits_read();
-        let _ = br.read_bitcoord_with(self.integer_bits, self.fractional_bits)?;
-        Ok(br.num_bits_read() - start)
-    }
-}
-
-#[derive(Debug, Clone)]
-struct InternalF32NormalDecoder {
-    fractional_bits: usize,
-}
-
-impl InternalFieldDecode<f32> for InternalF32NormalDecoder {
-    fn decode(&self, _ctx: &mut FieldDecodeContext, br: &mut BitReader) -> Result<f32, BitError> {
-        br.read_bitnormal_with(self.fractional_bits)
-    }
-
-    fn skip_bits(&self, br: &mut BitReader) -> Result<usize, BitError> {
-        // sign bit + fractional part
-        let bits = 1 + self.fractional_bits;
-        br.skip_bits(bits)?;
-        Ok(bits)
-    }
-}
-
-#[derive(Debug, Clone, Default)]
-struct InternalF32NoScaleDecoder;
-
-impl InternalFieldDecode<f32> for InternalF32NoScaleDecoder {
-    fn decode(&self, _ctx: &mut FieldDecodeContext, br: &mut BitReader) -> Result<f32, BitError> {
-        br.read_bitfloat()
-    }
-
-    fn skip_bits(&self, br: &mut BitReader) -> Result<usize, BitError> {
-        br.skip_bits(32)?;
-        Ok(32)
-    }
-}
-
-#[derive(Debug, Clone)]
-struct InternalQuantizedFloatDecoder {
-    quantized_float: QuantizedFloat,
-}
-
-impl InternalQuantizedFloatDecoder {
-    pub(crate) fn new(field: &FlattenedSerializerField) -> Result<Self, DecoderError> {
-        Ok(Self {
-            quantized_float: QuantizedFloat::new(
-                field.bit_count.unwrap_or_default(),
-                field.encode_flags.unwrap_or_default(),
-                field.low_value.unwrap_or_default(),
-                field.high_value.unwrap_or_default(),
-            )?,
-        })
-    }
-}
-
-impl InternalFieldDecode<f32> for InternalQuantizedFloatDecoder {
-    fn decode(&self, _ctx: &mut FieldDecodeContext, br: &mut BitReader) -> Result<f32, BitError> {
-        self.quantized_float.decode(br)
-    }
-
-    fn skip(&self, _ctx: &mut FieldDecodeContext, br: &mut BitReader) -> Result<(), BitError> {
-        self.quantized_float.skip(br)
-    }
-
-    fn skip_bits(&self, br: &mut BitReader) -> Result<usize, BitError> {
-        self.quantized_float.skip_bits(br)
-    }
-}
-
-// ----
-
-#[derive(Debug, Clone)]
-pub(crate) struct InternalF32Decoder {
-    decoder: Box<dyn InternalFieldDecode<f32>>,
-}
-
-impl InternalF32Decoder {
+impl F32Decoder {
     pub(crate) fn new(field: &FlattenedSerializerField) -> Result<Self, DecoderError> {
         if field.var_name.hash == fxhash::hash_bytes(b"m_flSimulationTime")
             || field.var_name.hash == fxhash::hash_bytes(b"m_flAnimTime")
         {
-            return Ok(Self {
-                decoder: Box::<InternalF32SimulationTimeDecoder>::default(),
-            });
+            return Ok(Self::SimulationTime);
         }
 
         if let Some(var_encoder) = field.var_encoder.as_ref() {
-            match var_encoder.hash {
-                hash if hash == fxhash::hash_bytes(b"coord") => {
-                    return Ok(Self {
-                        decoder: Box::new(InternalF32CoordDecoder::new(field)),
-                    });
-                }
-                hash if hash == fxhash::hash_bytes(b"normal") => {
-                    return Ok(Self {
-                        decoder: Box::new(InternalF32NormalDecoder {
-                            fractional_bits: field.coord_size_params.normal_fractional_bits,
-                        }),
-                    });
-                }
-                hash => return Err(DecoderError::UnsupportedVarEncoder(hash)),
-            }
+            return match var_encoder.hash {
+                hash if hash == fxhash::hash_bytes(b"coord") => Ok(Self::Coord {
+                    integer_bits: field.coord_size_params.coord_integer_bits,
+                    fractional_bits: field.coord_size_params.coord_fractional_bits,
+                }),
+                hash if hash == fxhash::hash_bytes(b"normal") => Ok(Self::Normal {
+                    fractional_bits: field.coord_size_params.normal_fractional_bits,
+                }),
+                hash => Err(DecoderError::UnsupportedVarEncoder(hash)),
+            };
         }
 
         let bit_count = field.bit_count.unwrap_or_default();
@@ -521,428 +103,177 @@ impl InternalF32Decoder {
         // loudly.
         debug_assert!((0..=32).contains(&bit_count));
         if bit_count == 0 || bit_count == 32 {
-            return Ok(Self {
-                decoder: Box::<InternalF32NoScaleDecoder>::default(),
-            });
+            return Ok(Self::NoScale);
         }
 
-        Ok(Self {
-            decoder: Box::new(InternalQuantizedFloatDecoder::new(field)?),
-        })
-    }
-}
-
-impl InternalFieldDecode<f32> for InternalF32Decoder {
-    fn decode(&self, ctx: &mut FieldDecodeContext, br: &mut BitReader) -> Result<f32, BitError> {
-        self.decoder.decode(ctx, br)
-    }
-
-    fn skip(&self, ctx: &mut FieldDecodeContext, br: &mut BitReader) -> Result<(), BitError> {
-        self.decoder.skip(ctx, br)
-    }
-
-    fn skip_bits(&self, br: &mut BitReader) -> Result<usize, BitError> {
-        self.decoder.skip_bits(br)
-    }
-}
-
-#[derive(Debug, Clone)]
-pub(crate) struct F32Decoder {
-    decoder: Box<dyn InternalFieldDecode<f32>>,
-}
-
-impl F32Decoder {
-    pub(crate) fn new(field: &FlattenedSerializerField) -> Result<Self, DecoderError> {
-        Ok(Self {
-            decoder: Box::new(InternalF32Decoder::new(field)?),
-        })
-    }
-}
-
-impl FieldDecode for F32Decoder {
-    fn decode(
-        &self,
-        ctx: &mut FieldDecodeContext,
-        br: &mut BitReader,
-    ) -> Result<FieldValue, DecoderError> {
-        Ok(FieldValue::F32(self.decoder.decode(ctx, br)?))
-    }
-
-    fn skip(&self, ctx: &mut FieldDecodeContext, br: &mut BitReader) -> Result<(), DecoderError> {
-        self.decoder.skip(ctx, br)?;
-        Ok(())
-    }
-
-    fn skip_bits(&self, br: &mut BitReader) -> Result<usize, DecoderError> {
-        Ok(self.decoder.skip_bits(br)?)
-    }
-}
-
-// ----
-
-#[derive(Debug, Clone)]
-struct InternalVector3DefaultDecoder {
-    decoder: Box<dyn InternalFieldDecode<f32>>,
-}
-
-impl FieldDecode for InternalVector3DefaultDecoder {
-    fn decode(
-        &self,
-        ctx: &mut FieldDecodeContext,
-        br: &mut BitReader,
-    ) -> Result<FieldValue, DecoderError> {
-        let vec3 = [
-            self.decoder.decode(ctx, br)?,
-            self.decoder.decode(ctx, br)?,
-            self.decoder.decode(ctx, br)?,
-        ];
-        Ok(FieldValue::Vector3(vec3))
-    }
-
-    fn skip(&self, ctx: &mut FieldDecodeContext, br: &mut BitReader) -> Result<(), DecoderError> {
-        self.decoder.skip(ctx, br)?;
-        self.decoder.skip(ctx, br)?;
-        self.decoder.skip(ctx, br)?;
-        Ok(())
-    }
-
-    fn skip_bits(&self, br: &mut BitReader) -> Result<usize, DecoderError> {
-        let mut total = 0;
-        total += self.decoder.skip_bits(br)?;
-        total += self.decoder.skip_bits(br)?;
-        total += self.decoder.skip_bits(br)?;
-        Ok(total)
-    }
-}
-
-#[derive(Debug, Clone)]
-struct InternalVector3NormalDecoder {
-    fractional_bits: usize,
-}
-
-impl FieldDecode for InternalVector3NormalDecoder {
-    fn decode(
-        &self,
-        _ctx: &mut FieldDecodeContext,
-        br: &mut BitReader,
-    ) -> Result<FieldValue, DecoderError> {
-        Ok(FieldValue::Vector3(
-            br.read_bitvec3normal_with(self.fractional_bits)?,
-        ))
-    }
-
-    fn skip_bits(&self, br: &mut BitReader) -> Result<usize, DecoderError> {
-        let start = br.num_bits_read();
-        let _ = br.read_bitvec3normal_with(self.fractional_bits)?;
-        Ok(br.num_bits_read() - start)
-    }
-}
-
-#[derive(Debug, Clone)]
-pub(crate) struct Vector3Decoder {
-    decoder: Box<dyn FieldDecode>,
-}
-
-impl Vector3Decoder {
-    pub(crate) fn new(field: &FlattenedSerializerField) -> Result<Self, DecoderError> {
-        if field.var_encoder_heq(fxhash::hash_bytes(b"normal")) {
-            Ok(Self {
-                decoder: Box::new(InternalVector3NormalDecoder {
-                    fractional_bits: field.coord_size_params.normal_fractional_bits,
-                }),
-            })
-        } else {
-            Ok(Self {
-                decoder: Box::new(InternalVector3DefaultDecoder {
-                    decoder: Box::new(InternalF32Decoder::new(field)?),
-                }),
-            })
-        }
-    }
-}
-
-impl FieldDecode for Vector3Decoder {
-    fn decode(
-        &self,
-        ctx: &mut FieldDecodeContext,
-        br: &mut BitReader,
-    ) -> Result<FieldValue, DecoderError> {
-        self.decoder.decode(ctx, br)
-    }
-
-    fn skip(&self, ctx: &mut FieldDecodeContext, br: &mut BitReader) -> Result<(), DecoderError> {
-        self.decoder.skip(ctx, br)
-    }
-
-    fn skip_bits(&self, br: &mut BitReader) -> Result<usize, DecoderError> {
-        self.decoder.skip_bits(br)
-    }
-}
-
-// ----
-
-#[derive(Debug, Clone)]
-pub(crate) struct Vector2Decoder {
-    decoder: Box<dyn InternalFieldDecode<f32>>,
-}
-
-impl Vector2Decoder {
-    pub(crate) fn new(field: &FlattenedSerializerField) -> Result<Self, DecoderError> {
-        Ok(Self {
-            decoder: Box::new(InternalF32Decoder::new(field)?),
-        })
-    }
-}
-
-impl FieldDecode for Vector2Decoder {
-    fn decode(
-        &self,
-        ctx: &mut FieldDecodeContext,
-        br: &mut BitReader,
-    ) -> Result<FieldValue, DecoderError> {
-        let vec2 = [self.decoder.decode(ctx, br)?, self.decoder.decode(ctx, br)?];
-        Ok(FieldValue::Vector2(vec2))
-    }
-
-    fn skip(&self, ctx: &mut FieldDecodeContext, br: &mut BitReader) -> Result<(), DecoderError> {
-        self.decoder.skip(ctx, br)?;
-        self.decoder.skip(ctx, br)?;
-        Ok(())
-    }
-
-    fn skip_bits(&self, br: &mut BitReader) -> Result<usize, DecoderError> {
-        let mut total = 0;
-        total += self.decoder.skip_bits(br)?;
-        total += self.decoder.skip_bits(br)?;
-        Ok(total)
-    }
-}
-
-// ----
-
-#[derive(Debug, Clone)]
-pub(crate) struct Vector4Decoder {
-    decoder: Box<dyn InternalFieldDecode<f32>>,
-}
-
-impl Vector4Decoder {
-    pub(crate) fn new(field: &FlattenedSerializerField) -> Result<Self, DecoderError> {
-        Ok(Self {
-            decoder: Box::new(InternalF32Decoder::new(field)?),
-        })
-    }
-}
-
-impl FieldDecode for Vector4Decoder {
-    fn decode(
-        &self,
-        ctx: &mut FieldDecodeContext,
-        br: &mut BitReader,
-    ) -> Result<FieldValue, DecoderError> {
-        let vec4 = [
-            self.decoder.decode(ctx, br)?,
-            self.decoder.decode(ctx, br)?,
-            self.decoder.decode(ctx, br)?,
-            self.decoder.decode(ctx, br)?,
-        ];
-        Ok(FieldValue::Vector4(vec4))
-    }
-
-    fn skip(&self, ctx: &mut FieldDecodeContext, br: &mut BitReader) -> Result<(), DecoderError> {
-        self.decoder.skip(ctx, br)?;
-        self.decoder.skip(ctx, br)?;
-        self.decoder.skip(ctx, br)?;
-        self.decoder.skip(ctx, br)?;
-        Ok(())
-    }
-
-    fn skip_bits(&self, br: &mut BitReader) -> Result<usize, DecoderError> {
-        let mut total = 0;
-        total += self.decoder.skip_bits(br)?;
-        total += self.decoder.skip_bits(br)?;
-        total += self.decoder.skip_bits(br)?;
-        total += self.decoder.skip_bits(br)?;
-        Ok(total)
-    }
-}
-
-// ----
-
-#[derive(Debug, Clone)]
-struct InternalQAnglePitchYawDecoder {
-    bit_count: usize,
-}
-
-impl FieldDecode for InternalQAnglePitchYawDecoder {
-    fn decode(
-        &self,
-        _ctx: &mut FieldDecodeContext,
-        br: &mut BitReader,
-    ) -> Result<FieldValue, DecoderError> {
-        let vec3 = [
-            br.read_bitangle(self.bit_count)?,
-            br.read_bitangle(self.bit_count)?,
-            0.0,
-        ];
-        Ok(FieldValue::QAngle(vec3))
-    }
-
-    fn skip(&self, _ctx: &mut FieldDecodeContext, br: &mut BitReader) -> Result<(), DecoderError> {
-        let _ = br.read_ubit64(self.bit_count)?;
-        let _ = br.read_ubit64(self.bit_count)?;
-        Ok(())
-    }
-
-    fn skip_bits(&self, br: &mut BitReader) -> Result<usize, DecoderError> {
-        let bits = self.bit_count * 2;
-        br.skip_bits(bits)?;
-        Ok(bits)
-    }
-}
-
-#[derive(Debug, Clone)]
-struct InternalQAngleNoBitCountDecoder {
-    integer_bits: usize,
-    fractional_bits: usize,
-}
-
-impl FieldDecode for InternalQAngleNoBitCountDecoder {
-    fn decode(
-        &self,
-        _ctx: &mut FieldDecodeContext,
-        br: &mut BitReader,
-    ) -> Result<FieldValue, DecoderError> {
-        Ok(FieldValue::QAngle(br.read_bitvec3coord_with(
-            self.integer_bits,
-            self.fractional_bits,
+        Ok(Self::Quantized(QuantizedFloat::new(
+            bit_count,
+            field.encode_flags.unwrap_or_default(),
+            field.low_value.unwrap_or_default(),
+            field.high_value.unwrap_or_default(),
         )?))
     }
 
-    fn skip(&self, _ctx: &mut FieldDecodeContext, br: &mut BitReader) -> Result<(), DecoderError> {
-        let _ = br.read_bitvec3coord_with(self.integer_bits, self.fractional_bits)?;
-        Ok(())
+    #[inline]
+    fn decode(&self, ctx: &FieldDecodeContext, br: &mut BitReader) -> Result<f32, BitError> {
+        match self {
+            Self::SimulationTime => Ok(br.read_uvarint32()? as f32 * ctx.tick_interval),
+            Self::Coord {
+                integer_bits,
+                fractional_bits,
+            } => br.read_bitcoord_with(*integer_bits, *fractional_bits),
+            Self::Normal { fractional_bits } => br.read_bitnormal_with(*fractional_bits),
+            Self::NoScale => br.read_bitfloat(),
+            Self::Quantized(qf) => qf.decode(br),
+        }
     }
 
-    fn skip_bits(&self, br: &mut BitReader) -> Result<usize, DecoderError> {
-        let start = br.num_bits_read();
-        let _ = br.read_bitvec3coord_with(self.integer_bits, self.fractional_bits)?;
-        Ok(br.num_bits_read() - start)
+    fn skip_bits(&self, br: &mut BitReader) -> Result<usize, BitError> {
+        match self {
+            Self::SimulationTime => {
+                let start = br.num_bits_read();
+                br.read_uvarint32()?;
+                Ok(br.num_bits_read() - start)
+            }
+            Self::Coord {
+                integer_bits,
+                fractional_bits,
+            } => {
+                let start = br.num_bits_read();
+                br.read_bitcoord_with(*integer_bits, *fractional_bits)?;
+                Ok(br.num_bits_read() - start)
+            }
+            Self::Normal { fractional_bits } => {
+                // sign bit + fractional part
+                let bits = 1 + fractional_bits;
+                br.skip_bits(bits)?;
+                Ok(bits)
+            }
+            Self::NoScale => {
+                br.skip_bits(32)?;
+                Ok(32)
+            }
+            Self::Quantized(qf) => qf.skip_bits(br),
+        }
     }
 }
 
+// ----
+
+/// decoder of a field value; one flat enum so that decoding is a single match (no dynamic
+/// dispatch, no boxed decoder chains).
 #[derive(Debug, Clone)]
-struct InternalQAnglePreciseDecoder {
-    angle_bits: usize,
+pub(crate) enum FieldDecoder {
+    /// placeholder for fields that carry no value of their own (used during multi-phase
+    /// initialization and for dynamic serializer array elements).
+    None,
+
+    /// zigzag varint.
+    I64,
+    /// `fixed8` var encoder: 8 raw bits, sign-extended.
+    ///
+    /// deadlock started to use this encoder for small integer fields (int8) in build 6712;
+    /// previously such fields were sent as varints.
+    I64Fixed8,
+
+    /// varint.
+    U64,
+    /// `fixed64` var encoder: 8 raw little-endian bytes.
+    U64Fixed64,
+    /// `fixed8` var encoder: 8 raw bits.
+    ///
+    /// deadlock started to use this encoder for uint8 fields and 8 bit enums (e.g. `MoveType_t`)
+    /// in build 6712; previously such fields were sent as varints.
+    U64Fixed8,
+
+    Bool,
+    /// null-terminated string.
+    String,
+    /// `CUtlBinaryBlock` values: a varint byte length followed by that many raw bytes.
+    ///
+    /// deadlock networks such fields as of build 6712 (e.g.
+    /// `AnimGraph2SerializedPoseRecipeSlot_t.m_topology`).
+    BinaryBlock,
+
+    F32(F32Decoder),
+    Vector2(F32Decoder),
+    Vector3(F32Decoder),
+    Vector3Normal {
+        fractional_bits: usize,
+    },
+    Vector4(F32Decoder),
+
+    QAnglePitchYaw {
+        bit_count: usize,
+    },
+    QAngleNoBitCount {
+        integer_bits: usize,
+        fractional_bits: usize,
+    },
+    QAnglePrecise {
+        angle_bits: usize,
+    },
+    QAngleBitCount {
+        bit_count: usize,
+    },
 }
 
-impl FieldDecode for InternalQAnglePreciseDecoder {
-    fn decode(
-        &self,
-        _ctx: &mut FieldDecodeContext,
-        br: &mut BitReader,
-    ) -> Result<FieldValue, DecoderError> {
-        let mut vec3 = [0f32; 3];
-
-        let rx = br.read_bool()?;
-        let ry = br.read_bool()?;
-        let rz = br.read_bool()?;
-
-        if rx {
-            vec3[0] = br.read_bitangle(self.angle_bits)?;
+impl FieldDecoder {
+    /// returns a decoder for a signed integer field, honoring its var encoder.
+    pub(crate) fn new_i64(field: &FlattenedSerializerField) -> Self {
+        if field.var_encoder_heq(fxhash::hash_bytes(b"fixed8")) {
+            Self::I64Fixed8
+        } else {
+            Self::I64
         }
-        if ry {
-            vec3[1] = br.read_bitangle(self.angle_bits)?;
-        }
-        if rz {
-            vec3[2] = br.read_bitangle(self.angle_bits)?;
-        }
-
-        Ok(FieldValue::QAngle(vec3))
     }
 
-    fn skip(&self, _ctx: &mut FieldDecodeContext, br: &mut BitReader) -> Result<(), DecoderError> {
-        let rx = br.read_bool()?;
-        let ry = br.read_bool()?;
-        let rz = br.read_bool()?;
-
-        if rx {
-            let _ = br.read_ubit64(self.angle_bits)?;
+    /// returns a decoder for an unsigned integer field, honoring its var encoder.
+    ///
+    /// NOTE: [`FieldDecoder::U64`] alone should only be used to decode dynamic array lengths.
+    pub(crate) fn new_u64(field: &FlattenedSerializerField) -> Self {
+        if field.var_encoder_heq(fxhash::hash_bytes(b"fixed64")) {
+            Self::U64Fixed64
+        } else if field.var_encoder_heq(fxhash::hash_bytes(b"fixed8")) {
+            Self::U64Fixed8
+        } else {
+            Self::U64
         }
-        if ry {
-            let _ = br.read_ubit64(self.angle_bits)?;
+    }
+
+    pub(crate) fn new_f32(field: &FlattenedSerializerField) -> Result<Self, DecoderError> {
+        F32Decoder::new(field).map(Self::F32)
+    }
+
+    pub(crate) fn new_vector2(field: &FlattenedSerializerField) -> Result<Self, DecoderError> {
+        F32Decoder::new(field).map(Self::Vector2)
+    }
+
+    pub(crate) fn new_vector3(field: &FlattenedSerializerField) -> Result<Self, DecoderError> {
+        if field.var_encoder_heq(fxhash::hash_bytes(b"normal")) {
+            Ok(Self::Vector3Normal {
+                fractional_bits: field.coord_size_params.normal_fractional_bits,
+            })
+        } else {
+            F32Decoder::new(field).map(Self::Vector3)
         }
-        if rz {
-            let _ = br.read_ubit64(self.angle_bits)?;
-        }
-
-        Ok(())
     }
 
-    fn skip_bits(&self, br: &mut BitReader) -> Result<usize, DecoderError> {
-        let rx = br.read_bool()?;
-        let ry = br.read_bool()?;
-        let rz = br.read_bool()?;
-
-        let value_bits = self.angle_bits * (usize::from(rx) + usize::from(ry) + usize::from(rz));
-        br.skip_bits(value_bits)?;
-        Ok(3 + value_bits)
-    }
-}
-
-#[derive(Debug, Clone)]
-struct InternalQAngleBitCountDecoder {
-    bit_count: usize,
-}
-
-impl FieldDecode for InternalQAngleBitCountDecoder {
-    fn decode(
-        &self,
-        _ctx: &mut FieldDecodeContext,
-        br: &mut BitReader,
-    ) -> Result<FieldValue, DecoderError> {
-        let vec3 = [
-            br.read_bitangle(self.bit_count)?,
-            br.read_bitangle(self.bit_count)?,
-            br.read_bitangle(self.bit_count)?,
-        ];
-        Ok(FieldValue::QAngle(vec3))
+    pub(crate) fn new_vector4(field: &FlattenedSerializerField) -> Result<Self, DecoderError> {
+        F32Decoder::new(field).map(Self::Vector4)
     }
 
-    fn skip(&self, _ctx: &mut FieldDecodeContext, br: &mut BitReader) -> Result<(), DecoderError> {
-        let _ = br.read_ubit64(self.bit_count)?;
-        let _ = br.read_ubit64(self.bit_count)?;
-        let _ = br.read_ubit64(self.bit_count)?;
-        Ok(())
-    }
-
-    fn skip_bits(&self, br: &mut BitReader) -> Result<usize, DecoderError> {
-        let bits = self.bit_count * 3;
-        br.skip_bits(bits)?;
-        Ok(bits)
-    }
-}
-
-#[derive(Debug, Clone)]
-pub(crate) struct QAngleDecoder {
-    decoder: Box<dyn FieldDecode>,
-}
-
-impl QAngleDecoder {
-    pub(crate) fn new(field: &FlattenedSerializerField) -> Result<Self, DecoderError> {
+    pub(crate) fn new_qangle(field: &FlattenedSerializerField) -> Result<Self, DecoderError> {
         let bit_count = field.bit_count.unwrap_or_default() as usize;
 
         if let Some(var_encoder) = field.var_encoder.as_ref() {
             match var_encoder.hash {
                 hash if hash == fxhash::hash_bytes(b"qangle_pitch_yaw") => {
-                    return Ok(Self {
-                        decoder: Box::new(InternalQAnglePitchYawDecoder { bit_count }),
-                    });
+                    return Ok(Self::QAnglePitchYaw { bit_count });
                 }
                 hash if hash == fxhash::hash_bytes(b"qangle_precise") => {
-                    return Ok(Self {
-                        decoder: Box::new(InternalQAnglePreciseDecoder {
-                            angle_bits: field.coord_size_params.angle_bits,
-                        }),
+                    return Ok(Self::QAnglePrecise {
+                        angle_bits: field.coord_size_params.angle_bits,
                     });
                 }
 
@@ -956,35 +287,162 @@ impl QAngleDecoder {
         }
 
         if bit_count == 0 {
-            return Ok(Self {
-                decoder: Box::new(InternalQAngleNoBitCountDecoder {
-                    integer_bits: field.coord_size_params.coord_integer_bits,
-                    fractional_bits: field.coord_size_params.coord_fractional_bits,
-                }),
+            return Ok(Self::QAngleNoBitCount {
+                integer_bits: field.coord_size_params.coord_integer_bits,
+                fractional_bits: field.coord_size_params.coord_fractional_bits,
             });
         }
 
-        Ok(Self {
-            decoder: Box::new(InternalQAngleBitCountDecoder { bit_count }),
-        })
+        Ok(Self::QAngleBitCount { bit_count })
     }
-}
 
-impl FieldDecode for QAngleDecoder {
-    fn decode(
+    #[inline]
+    pub(crate) fn decode(
         &self,
         ctx: &mut FieldDecodeContext,
         br: &mut BitReader,
     ) -> Result<FieldValue, DecoderError> {
-        self.decoder.decode(ctx, br)
+        Ok(match self {
+            Self::None => return Err(DecoderError::NoDecoder),
+
+            Self::I64 => FieldValue::I64(br.read_varint64()?),
+            Self::I64Fixed8 => FieldValue::I64(i64::from(br.read_byte()? as i8)),
+
+            Self::U64 => FieldValue::U64(br.read_uvarint64()?),
+            Self::U64Fixed64 => {
+                let mut buf = [0u8; 8];
+                br.read_bytes(&mut buf)?;
+                FieldValue::U64(u64::from_le_bytes(buf))
+            }
+            Self::U64Fixed8 => FieldValue::U64(u64::from(br.read_byte()?)),
+
+            Self::Bool => FieldValue::Bool(br.read_bool()?),
+            Self::String => {
+                // NOTE: string_buf must be cleared after use.
+                assert_eq!(ctx.string_buf, [] as [u8; 0]);
+                let n = br.read_string_to_end(&mut ctx.string_buf, false)?;
+                let ret = FieldValue::String(Box::from(&ctx.string_buf[..n]));
+                ctx.string_buf.clear();
+                ret
+            }
+            Self::BinaryBlock => {
+                let len = br.read_uvarint32()? as usize;
+                let mut buf = vec![0u8; len].into_boxed_slice();
+                br.read_bytes(&mut buf)?;
+                FieldValue::String(buf)
+            }
+
+            Self::F32(d) => FieldValue::F32(d.decode(ctx, br)?),
+            Self::Vector2(d) => FieldValue::Vector2([d.decode(ctx, br)?, d.decode(ctx, br)?]),
+            Self::Vector3(d) => {
+                FieldValue::Vector3([d.decode(ctx, br)?, d.decode(ctx, br)?, d.decode(ctx, br)?])
+            }
+            Self::Vector3Normal { fractional_bits } => {
+                FieldValue::Vector3(br.read_bitvec3normal_with(*fractional_bits)?)
+            }
+            Self::Vector4(d) => FieldValue::Vector4([
+                d.decode(ctx, br)?,
+                d.decode(ctx, br)?,
+                d.decode(ctx, br)?,
+                d.decode(ctx, br)?,
+            ]),
+
+            Self::QAnglePitchYaw { bit_count } => FieldValue::QAngle([
+                br.read_bitangle(*bit_count)?,
+                br.read_bitangle(*bit_count)?,
+                0.0,
+            ]),
+            Self::QAngleNoBitCount {
+                integer_bits,
+                fractional_bits,
+            } => FieldValue::QAngle(br.read_bitvec3coord_with(*integer_bits, *fractional_bits)?),
+            Self::QAnglePrecise { angle_bits } => {
+                let mut vec3 = [0f32; 3];
+
+                let rx = br.read_bool()?;
+                let ry = br.read_bool()?;
+                let rz = br.read_bool()?;
+
+                if rx {
+                    vec3[0] = br.read_bitangle(*angle_bits)?;
+                }
+                if ry {
+                    vec3[1] = br.read_bitangle(*angle_bits)?;
+                }
+                if rz {
+                    vec3[2] = br.read_bitangle(*angle_bits)?;
+                }
+
+                FieldValue::QAngle(vec3)
+            }
+            Self::QAngleBitCount { bit_count } => FieldValue::QAngle([
+                br.read_bitangle(*bit_count)?,
+                br.read_bitangle(*bit_count)?,
+                br.read_bitangle(*bit_count)?,
+            ]),
+        })
     }
 
-    fn skip(&self, ctx: &mut FieldDecodeContext, br: &mut BitReader) -> Result<(), DecoderError> {
-        self.decoder.skip(ctx, br)
-    }
+    /// advances the reader past a value without materializing it; returns the number of bits
+    /// skipped.
+    pub(crate) fn skip_bits(&self, br: &mut BitReader) -> Result<usize, DecoderError> {
+        let fixed = |br: &mut BitReader, bits: usize| -> Result<usize, DecoderError> {
+            br.skip_bits(bits)?;
+            Ok(bits)
+        };
+        let start = br.num_bits_read();
+        match self {
+            Self::None => return Err(DecoderError::NoDecoder),
 
-    fn skip_bits(&self, br: &mut BitReader) -> Result<usize, DecoderError> {
-        self.decoder.skip_bits(br)
+            Self::I64 => {
+                br.read_varint64()?;
+            }
+            Self::I64Fixed8 | Self::U64Fixed8 => return fixed(br, 8),
+
+            Self::U64 => {
+                br.read_uvarint64()?;
+            }
+            Self::U64Fixed64 => return fixed(br, 64),
+
+            Self::Bool => return fixed(br, 1),
+            Self::String => while br.read_byte()? != 0 {},
+            Self::BinaryBlock => {
+                let len = br.read_uvarint32()? as usize;
+                br.skip_bits(len * 8)?;
+            }
+
+            Self::F32(d) => return Ok(d.skip_bits(br)?),
+            Self::Vector2(d) => return Ok(d.skip_bits(br)? + d.skip_bits(br)?),
+            Self::Vector3(d) => {
+                return Ok(d.skip_bits(br)? + d.skip_bits(br)? + d.skip_bits(br)?);
+            }
+            Self::Vector3Normal { fractional_bits } => {
+                br.read_bitvec3normal_with(*fractional_bits)?;
+            }
+            Self::Vector4(d) => {
+                return Ok(d.skip_bits(br)?
+                    + d.skip_bits(br)?
+                    + d.skip_bits(br)?
+                    + d.skip_bits(br)?);
+            }
+
+            Self::QAnglePitchYaw { bit_count } => return fixed(br, bit_count * 2),
+            Self::QAngleNoBitCount {
+                integer_bits,
+                fractional_bits,
+            } => {
+                br.read_bitvec3coord_with(*integer_bits, *fractional_bits)?;
+            }
+            Self::QAnglePrecise { angle_bits } => {
+                let rx = br.read_bool()?;
+                let ry = br.read_bool()?;
+                let rz = br.read_bool()?;
+                let value_bits = angle_bits * (usize::from(rx) + usize::from(ry) + usize::from(rz));
+                br.skip_bits(value_bits)?;
+            }
+            Self::QAngleBitCount { bit_count } => return fixed(br, bit_count * 3),
+        }
+        Ok(br.num_bits_read() - start)
     }
 }
 
@@ -1002,13 +460,14 @@ mod tests {
         }
     }
 
-    fn decode(decoder: &dyn FieldDecode, buf: &[u8]) -> (FieldValue, usize) {
+    fn decode(decoder: &FieldDecoder, buf: &[u8]) -> (FieldValue, usize) {
         let mut ctx = FieldDecodeContext::default();
         let mut br = BitReader::new(buf);
         let value = decoder.decode(&mut ctx, &mut br).unwrap();
         let mut br_skip = BitReader::new(buf);
         let skipped = decoder.skip_bits(&mut br_skip).unwrap();
         assert_eq!(skipped, br.num_bits_read());
+        assert_eq!(skipped, br_skip.num_bits_read());
         (value, skipped)
     }
 
@@ -1016,7 +475,7 @@ mod tests {
     fn test_fixed8_unsigned() {
         let field = field_with_encoder(b"fixed8");
         // NOTE: 0xfe as a varint would be an incomplete (multi byte) varint.
-        let (value, bits) = decode(&U64Decoder::new(&field), &[0xfe, 0x01, 0, 0]);
+        let (value, bits) = decode(&FieldDecoder::new_u64(&field), &[0xfe, 0x01, 0, 0]);
         assert!(matches!(value, FieldValue::U64(254)));
         assert_eq!(bits, 8);
     }
@@ -1024,20 +483,20 @@ mod tests {
     #[test]
     fn test_fixed8_signed() {
         let field = field_with_encoder(b"fixed8");
-        let (value, bits) = decode(new_i64_decoder(&field).as_ref(), &[0xfe, 0, 0, 0]);
+        let (value, bits) = decode(&FieldDecoder::new_i64(&field), &[0xfe, 0, 0, 0]);
         assert!(matches!(value, FieldValue::I64(-2)));
         assert_eq!(bits, 8);
 
         // without the encoder int8 is still a zigzag varint.
         let field = FlattenedSerializerField::default();
-        let (value, bits) = decode(new_i64_decoder(&field).as_ref(), &[0x03, 0, 0, 0]);
+        let (value, bits) = decode(&FieldDecoder::new_i64(&field), &[0x03, 0, 0, 0]);
         assert!(matches!(value, FieldValue::I64(-2)));
         assert_eq!(bits, 8);
     }
 
     #[test]
     fn test_binary_block() {
-        let (value, bits) = decode(&BinaryBlockDecoder, &[3, 0xaa, 0x00, 0xbb, 0xff]);
+        let (value, bits) = decode(&FieldDecoder::BinaryBlock, &[3, 0xaa, 0x00, 0xbb, 0xff]);
         let FieldValue::String(bytes) = value else {
             panic!("unexpected value type");
         };
@@ -1046,14 +505,24 @@ mod tests {
     }
 
     #[test]
+    fn test_string() {
+        let (value, bits) = decode(&FieldDecoder::String, b"abc\0zz");
+        let FieldValue::String(bytes) = value else {
+            panic!("unexpected value type");
+        };
+        assert_eq!(&bytes[..], b"abc");
+        assert_eq!(bits, 32);
+    }
+
+    #[test]
     fn test_unsupported_var_encoder_is_an_error() {
         let field = field_with_encoder(b"definitely_not_an_encoder");
         assert!(matches!(
-            F32Decoder::new(&field),
+            FieldDecoder::new_f32(&field),
             Err(DecoderError::UnsupportedVarEncoder(_))
         ));
         assert!(matches!(
-            QAngleDecoder::new(&field),
+            FieldDecoder::new_qangle(&field),
             Err(DecoderError::UnsupportedVarEncoder(_))
         ));
     }

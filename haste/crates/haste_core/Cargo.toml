@@ -11,7 +11,6 @@ async = ["dep:tokio", "dep:bytes"]
 [dependencies]
 anyhow.workspace = true
 dungers = { workspace = true, features = ["varint", "bitbuf"] }
-dyn-clone.workspace = true
 hashbrown = { workspace = true, features = ["inline-more"] }
 haste_vartype.workspace = true
 sync-unsafe-cell.workspace = true
