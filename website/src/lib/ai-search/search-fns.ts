@@ -1,7 +1,9 @@
 import { createServerFn } from "@tanstack/react-start";
+import { getRequestHeader } from "@tanstack/react-start/server";
 
 import { type DecideAnswers, decideRequestBody, DECIDE_URL, type QuestionEntities } from "./decide";
 import { MAX_QUESTION_LENGTH } from "./limits";
+import { allowQuestion } from "./rate-limit";
 
 // The one call that needs the Mercury API key, so it runs in the Worker and the key never reaches a browser. The
 // browser sends the question and the names it found in it; the Worker adds the routing questions and the key.
@@ -43,19 +45,46 @@ export function validateDecideInput(input: unknown): DecideSearchInput {
   };
 }
 
-/** Mercury Decide's answers for a question: a choice with probabilities for the page and for each filter. */
+/** Why the search has no answer: too many questions from this visitor, the model failed, or no key is set. */
+export type DecideFailure = "rate_limited" | "unavailable" | "not_configured";
+
+export type DecideSearchResult = { ok: true; answers: DecideAnswers } | { ok: false; reason: DecideFailure };
+
+/** The asker's address as Cloudflare saw it; the dev server has no such header and counts everyone as one. */
+function clientIp(): string {
+  return getRequestHeader("cf-connecting-ip") ?? getRequestHeader("x-forwarded-for")?.split(",")[0]?.trim() ?? "local";
+}
+
+/**
+ * Mercury Decide's answers for a question: a choice with probabilities for the page and for each filter. A failure is
+ * an answer too, so the browser can tell the asker which kind it was; each is logged for the Worker's logs.
+ */
 export const decideSearch = createServerFn({ method: "POST" })
   .validator(validateDecideInput)
-  .handler(async ({ data }): Promise<DecideAnswers> => {
+  .handler(async ({ data }): Promise<DecideSearchResult> => {
+    if (!(await allowQuestion(clientIp()))) return { ok: false, reason: "rate_limited" };
     const key = process.env.INCEPTION_API_KEY;
-    if (!key) throw new Error("The search is not configured");
-    const response = await fetch(DECIDE_URL, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-      body: JSON.stringify(decideRequestBody(data.question, data.entities, data.rankNames)),
-      signal: AbortSignal.timeout(15_000),
-    });
-    if (!response.ok) throw new Error(`The search model answered ${response.status}`);
+    if (!key) {
+      console.error("ai-search: INCEPTION_API_KEY is not set");
+      return { ok: false, reason: "not_configured" };
+    }
+    let response: Response;
+    try {
+      response = await fetch(DECIDE_URL, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+        body: JSON.stringify(decideRequestBody(data.question, data.entities, data.rankNames)),
+        signal: AbortSignal.timeout(15_000),
+      });
+    } catch (error) {
+      console.error("ai-search: Mercury did not answer", error);
+      return { ok: false, reason: "unavailable" };
+    }
+    if (!response.ok) {
+      // 402 is an empty balance, 429 Mercury's own rate limit, 5xx an outage.
+      console.error(`ai-search: Mercury answered ${response.status}`, (await response.text()).slice(0, 300));
+      return { ok: false, reason: "unavailable" };
+    }
     const decision = (await response.json()) as { answers: DecideAnswers };
-    return decision.answers;
+    return { ok: true, answers: decision.answers };
   });

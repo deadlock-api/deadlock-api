@@ -3,7 +3,7 @@ import type { QueryClient } from "@tanstack/react-query";
 import { intentFromDecision, questionEntities } from "~/lib/ai-search/decide";
 import { directIntent, type IntentVocabulary } from "~/lib/ai-search/intent";
 import { type Catalog, resolveIntent } from "~/lib/ai-search/resolve";
-import { decideSearch } from "~/lib/ai-search/search-fns";
+import { type DecideFailure, decideSearch } from "~/lib/ai-search/search-fns";
 import { PATCHES } from "~/lib/constants";
 import type { ResolveContext } from "~/lib/page-registry";
 import { toPatchEntry } from "~/lib/patches";
@@ -61,6 +61,8 @@ async function loadSearchCatalog(queryClient: QueryClient): Promise<SearchCatalo
 interface RoutedQuestion {
   /** The page that answers the question, opened with its heroes and filters; missing when nothing does. */
   result?: { id: string; href: string };
+  /** Why there is no answer at all, as opposed to a question no page answers. */
+  failure?: DecideFailure;
   /** The question was a bare hero or item name, answered without the model. */
   direct: boolean;
   /** How long the answer took, catalogs and model together. */
@@ -74,8 +76,9 @@ export async function routeQuestion(queryClient: QueryClient, question: string):
   const direct = intent !== undefined;
   if (!intent) {
     const entities = questionEntities(question, vocabulary);
-    const answers = await decideSearch({ data: { question, entities, rankNames: [...vocabulary.rankNames] } });
-    intent = intentFromDecision(answers, question, entities, vocabulary.rankNames);
+    const decided = await decideSearch({ data: { question, entities, rankNames: [...vocabulary.rankNames] } });
+    if (!decided.ok) return { failure: decided.reason, direct, durationMs: performance.now() - startedAt };
+    intent = intentFromDecision(decided.answers, question, entities, vocabulary.rankNames);
   }
   const target = resolveIntent(intent, catalog, { ...context, now: Date.now() / 1000 });
   return {

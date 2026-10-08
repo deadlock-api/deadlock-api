@@ -6,7 +6,8 @@ import { toast } from "sonner";
 import { useCloseSideNavDrawer } from "~/components/patterns/navigation/SideNavShell";
 import { Button } from "~/components/ui/button";
 import { SearchInput } from "~/components/ui/search-input";
-import { MAX_QUESTION_LENGTH } from "~/lib/ai-search/limits";
+import { MAX_QUESTION_LENGTH, QUESTIONS_PER_MINUTE } from "~/lib/ai-search/limits";
+import type { DecideFailure } from "~/lib/ai-search/search-fns";
 import { getAnalytics } from "~/lib/analytics";
 import { cn } from "~/lib/utils";
 
@@ -23,7 +24,7 @@ const PLACEHOLDER_QUESTIONS = [
 ];
 const PLACEHOLDER_INTERVAL_MS = 3500;
 
-type Outcome = "opened" | "not_understood" | "error";
+type Outcome = "opened" | "not_understood" | DecideFailure | "error";
 
 /** One event per question, with the question itself: what visitors ask, how often, and where it took them. */
 function trackQuestion(properties: {
@@ -110,9 +111,22 @@ export function AiSearch({ size = "default", className }: AiSearchProps) {
     import("./route-question")
       .then(({ routeQuestion }) => routeQuestion(queryClient, trimmed))
       .then(
-        ({ result, direct, durationMs }) => {
+        ({ result, failure, direct, durationMs }) => {
           if (asked !== latest.current) return undefined;
           setSearching(false);
+          if (failure) {
+            trackQuestion({ question: trimmed, source, outcome: failure, direct, durationMs });
+            if (failure === "rate_limited") {
+              toast(`That's a lot of questions. You can ask ${QUESTIONS_PER_MINUTE} a minute; try again shortly.`);
+            } else if (failure === "unavailable") {
+              toast("The search is unavailable right now", {
+                action: { label: "Try again", onClick: () => ask(trimmed) },
+              });
+            } else {
+              toast("The search is unavailable right now");
+            }
+            return undefined;
+          }
           if (!result) {
             trackQuestion({ question: trimmed, source, outcome: "not_understood", direct, durationMs });
             setUnmatched(true);
