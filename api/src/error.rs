@@ -107,6 +107,25 @@ fn build_error_response(status: StatusCode, error: impl serde::Serialize) -> Res
         .unwrap_or_else(|_| "Internal server error".to_owned().into_response())
 }
 
+/// Whether a `ClickHouse` error means the query ran into a timeout (client side, or the server's
+/// `max_execution_time`), which is reported as `504` rather than a generic internal error.
+fn is_query_timeout(e: &clickhouse::error::Error) -> bool {
+    match e {
+        clickhouse::error::Error::TimedOut => true,
+        clickhouse::error::Error::BadResponse(msg) => {
+            msg.contains("TIMEOUT_EXCEEDED") || msg.contains("timed out")
+        }
+        _ => false,
+    }
+}
+
+fn query_timeout_response() -> Response<Body> {
+    build_error_response(
+        StatusCode::GATEWAY_TIMEOUT,
+        "Query timed out. Try narrowing your filters or reducing the limit.",
+    )
+}
+
 impl IntoResponse for APIError {
     #[expect(clippy::too_many_lines)]
     fn into_response(self) -> Response<Body> {
@@ -224,20 +243,32 @@ impl IntoResponse for APIError {
                     "A needed request failed. Retry your request later.",
                 )
             }
-            Self::Clickhouse(_) | Self::PostgreSQL(_) | Self::Redis(_) => {
+            Self::Clickhouse(e) => {
+                if is_query_timeout(&e) {
+                    warn!("Database query timed out: {e}");
+                    query_timeout_response()
+                } else {
+                    error!("Clickhouse error: {e}");
+                    Self::internal("Database error.").into_response()
+                }
+            }
+            Self::PostgreSQL(e) => {
+                error!("PostgreSQL error: {e}");
                 Self::internal("Database error.").into_response()
             }
-            Self::ObjectStore(_) => Self::internal("Object storage error.").into_response(),
+            Self::Redis(e) => {
+                error!("Redis error: {e}");
+                Self::internal("Database error.").into_response()
+            }
+            Self::ObjectStore(e) => {
+                error!("Object store error: {e}");
+                Self::internal("Object storage error.").into_response()
+            }
             Self::Io(e) => {
                 let ch_err = clickhouse::error::Error::from(e);
-                let is_timeout = matches!(ch_err, clickhouse::error::Error::TimedOut)
-                    || matches!(&ch_err, clickhouse::error::Error::BadResponse(msg) if msg.contains("TIMEOUT_EXCEEDED"));
-                if is_timeout {
+                if is_query_timeout(&ch_err) {
                     warn!("Database query timed out: {ch_err}");
-                    build_error_response(
-                        StatusCode::GATEWAY_TIMEOUT,
-                        "Query timed out. Try narrowing your filters or reducing the limit.",
-                    )
+                    query_timeout_response()
                 } else {
                     error!("IO Error: {ch_err}");
                     build_error_response(
@@ -246,7 +277,16 @@ impl IntoResponse for APIError {
                     )
                 }
             }
-            Self::Json(_) | Self::Snappy(_) | Self::Fmt(_) => {
+            Self::Json(e) => {
+                error!("JSON error: {e}");
+                Self::internal("Serialization error.").into_response()
+            }
+            Self::Snappy(e) => {
+                error!("Snappy error: {e}");
+                Self::internal("Serialization error.").into_response()
+            }
+            Self::Fmt(e) => {
+                error!("Format error: {e}");
                 Self::internal("Serialization error.").into_response()
             }
         }
@@ -311,6 +351,27 @@ mod tests {
         assert_eq!(
             response.headers().get(header::CONTENT_TYPE).unwrap(),
             "application/json"
+        );
+    }
+
+    #[test]
+    fn test_api_error_clickhouse_timeout_is_gateway_timeout() {
+        let error = APIError::Clickhouse(clickhouse::error::Error::BadResponse(
+            "Code: 159. DB::Exception: Timeout exceeded: elapsed 20.1 seconds, maximum: 20. \
+             (TIMEOUT_EXCEEDED)"
+                .to_owned(),
+        ));
+        assert_eq!(error.into_response().status(), StatusCode::GATEWAY_TIMEOUT);
+
+        let error = APIError::Clickhouse(clickhouse::error::Error::TimedOut);
+        assert_eq!(error.into_response().status(), StatusCode::GATEWAY_TIMEOUT);
+
+        let error = APIError::Clickhouse(clickhouse::error::Error::BadResponse(
+            "Code: 60. DB::Exception: Unknown table (UNKNOWN_TABLE)".to_owned(),
+        ));
+        assert_eq!(
+            error.into_response().status(),
+            StatusCode::INTERNAL_SERVER_ERROR
         );
     }
 
