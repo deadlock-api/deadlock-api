@@ -1,8 +1,17 @@
 import { day } from "~/dayjs";
 import { MODE_CONFIG, type Mode } from "~/lib/game-mode";
 import { parseAsDayjsRange } from "~/lib/nuqs-parsers";
+import { patchDateRange } from "~/lib/patches";
 
-import type { ResolveContext, SearchValue, Selection, SelectionMode, SelectionTime, SharedFilter } from "./types";
+import type {
+  ResolveContext,
+  SearchValue,
+  SeasonRef,
+  Selection,
+  SelectionMode,
+  SelectionTime,
+  SharedFilter,
+} from "./types";
 
 // The filters most analytics pages share, written once: a page lists the ones it reads, and they all take the same
 // URL parameters.
@@ -13,7 +22,7 @@ const MODE_BY_SELECTION: Record<SelectionMode, Mode> = {
   street_brawl: "street_brawl",
 };
 
-function range(startUnix: number, endUnix?: number): string {
+function seasonRange({ startUnix, endUnix }: SeasonRef): string {
   return parseAsDayjsRange.serialize([day.unix(startUnix), endUnix === undefined ? undefined : day.unix(endUnix)]);
 }
 
@@ -23,17 +32,15 @@ function lastDays(now: number, days: number): string {
 
 /** The `date_range` a time window stands for, or `undefined` where the site knows no such window yet. */
 function dateRange(time: SelectionTime, { patches, seasons, now }: ResolveContext): string | undefined {
-  const at = (list: readonly { startUnix: number; endUnix?: number }[], i: number) =>
-    list[i] && range(list[i].startUnix, list[i].endUnix);
   switch (time) {
     case "current_patch":
-      return at(patches, 0);
+      return patches[0] && patchDateRange(patches[0]);
     case "previous_patch":
-      return at(patches, 1);
+      return patches[1] && patchDateRange(patches[1]);
     case "current_season":
-      return at(seasons, 0);
+      return seasons[0] && seasonRange(seasons[0]);
     case "previous_season":
-      return at(seasons, 1);
+      return seasons[1] && seasonRange(seasons[1]);
     case "last_7_days":
       return lastDays(now, 7);
     case "last_30_days":

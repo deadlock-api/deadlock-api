@@ -1,3 +1,5 @@
+import type { PatchEntry } from "~/lib/patches";
+
 // The page registry: every page and tab of the site that can show an answer, with the URL parameters it reads. The AI
 // search reads it to know what exists and builds its URLs from it; nothing about a page is written twice.
 
@@ -66,12 +68,6 @@ export interface Selection {
 /** The parts of a selection a page can use. */
 export type Slot = "hero" | "heroes" | "enemyHeroes" | "item" | "items" | "region" | "sort" | "patch";
 
-export interface PatchRef {
-  id: string;
-  startUnix: number;
-  endUnix?: number;
-}
-
 export interface SeasonRef {
   startUnix: number;
   endUnix?: number;
@@ -79,7 +75,7 @@ export interface SeasonRef {
 
 /** What the site knows when a selection becomes a URL. Lists are newest first. */
 export interface ResolveContext {
-  patches: readonly PatchRef[];
+  patches: readonly PatchEntry[];
   seasons: readonly SeasonRef[];
   /** Unix seconds. */
   now: number;
@@ -97,8 +93,6 @@ export type SharedFilter = "mode" | "rank" | "time";
 export interface RegisteredPage {
   /** Stable and readable: the model answers with it. */
   id: string;
-  /** What the search shows for it: "Hero counters". */
-  label: string;
   /** For the model: what the page shows, in the words a visitor would use. */
   description: string;
   /** For the model, when the description is not enough: game terms that point here, cases it is easily mixed up with. */
@@ -109,6 +103,8 @@ export interface RegisteredPage {
   /** Where to go instead when a path segment has nothing to fill it with (a hero page without a hero). */
   fallbackPath?: string;
   search?: Record<string, ParamReader>;
+  /** Parameters the page always opens with, whatever was asked: the tab of a page that has several. */
+  fixed?: Record<string, SearchValue>;
   filters?: readonly SharedFilter[];
 }
 

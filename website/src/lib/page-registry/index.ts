@@ -65,7 +65,7 @@ export function resolvePage(page: RegisteredPage, selection: Selection, context:
     if (value === undefined) return { page, path: page.fallbackPath ?? "/", search: {} };
     path = path.replace(`$${name}`, encodeURIComponent(String(value)));
   }
-  const search: Record<string, SearchValue> = {};
+  const search: Record<string, SearchValue> = { ...page.fixed };
   for (const [param, reader] of Object.entries(page.search ?? {})) {
     const value = reader.read(selection, context);
     if (value !== undefined) search[param] = value;

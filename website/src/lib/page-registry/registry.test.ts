@@ -55,7 +55,7 @@ test("page ids are unique and every page says what it shows", () => {
   assert.equal(new Set(ids).size, ids.length);
   for (const page of PAGE_REGISTRY) {
     assert.match(page.id, /^[a-z][a-z_]*$/, page.id);
-    assert.ok(page.label && page.description.length > 20, page.id);
+    assert.ok(page.description.length > 20, page.id);
     for (const name of page.path.match(/\$(\w+)/g) ?? []) {
       assert.ok(page.pathParams?.[name.slice(1)], `${page.id} has no reader for ${name}`);
       assert.ok(page.fallbackPath, `${page.id} needs a fallbackPath for when ${name} is missing`);
@@ -65,8 +65,8 @@ test("page ids are unique and every page says what it shows", () => {
 
 const context = {
   patches: [
-    { id: "2026-09-29", startUnix: 1_790_000_000 },
-    { id: "2026-09-16", startUnix: 1_789_000_000, endUnix: 1_790_000_000 },
+    { id: "2026-09-29", name: "City Never Sleeps", shortName: "City Never Sleeps", startUnix: 1_790_000_000 },
+    { id: "2026-09-16", name: "Minor Update", shortName: "Patch", startUnix: 1_789_000_000, endUnix: 1_790_000_000 },
   ],
   seasons: [],
   now: 1_791_000_000,
@@ -107,4 +107,10 @@ test("a combination holds every hero named", () => {
     comb_size: 3,
   });
   assert.equal(resolvePage(combos, { ...empty, heroes: heroes(7) }, context).search.comb_size, 6);
+});
+
+test("a page with tabs opens on its tab", () => {
+  const conversations = PAGE_REGISTRY.find((page) => page.id === "hero_conversations")!;
+  const bebop = { ...empty, heroes: [{ id: 15, name: "Bebop" }] };
+  assert.deepEqual(resolvePage(conversations, bebop, context).search, { tab: "conversations", heroes: 15 });
 });

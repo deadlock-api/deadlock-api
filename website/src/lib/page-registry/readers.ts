@@ -6,7 +6,14 @@ import type { Entity, ParamReader, Selection, SortKey } from "./types";
 // The building blocks a registered page describes its parameters with: each reads one part of a selection and
 // formats it the way the page's URL expects.
 
-const ids = (entities: Entity[]) => (entities.length > 0 ? entities.map((entity) => entity.id).join(",") : undefined);
+/**
+ * Ids as a comma separated list. One id stays a number: the router would quote the string "15" (it reads as JSON),
+ * and the page's list parser would not read it back.
+ */
+const ids = (entities: Entity[]) => {
+  if (entities.length <= 1) return entities[0]?.id;
+  return entities.map((entity) => entity.id).join(",");
+};
 
 /** The first hero's id. */
 export const heroId = (): ParamReader => ({ uses: "hero", read: (s) => s.heroes[0]?.id });
@@ -29,8 +36,8 @@ export const heroSlugParam = (): ParamReader => ({
   read: (s) => (s.heroes[0] ? heroSlug(s.heroes[0].name) : undefined),
 });
 
-/** The first hero of the other team: the one a "vs" question asks about. */
-export const enemyHeroId = (): ParamReader => ({ uses: "enemyHeroes", read: (s) => s.enemyHeroes[0]?.id });
+/** The other team's heroes, comma separated: the ones a "vs" or "against" question asks about. */
+export const enemyHeroIds = (): ParamReader => ({ uses: "enemyHeroes", read: (s) => ids(s.enemyHeroes) });
 
 /** The first item's id. */
 export const itemId = (): ParamReader => ({ uses: "item", read: (s) => s.items[0]?.id });

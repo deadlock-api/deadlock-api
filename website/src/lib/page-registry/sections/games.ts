@@ -6,7 +6,6 @@ const ALL = ["mode", "rank", "time"] as const;
 export const GAME_PAGES: RegisteredPage[] = [
   {
     id: "games_overview",
-    label: "Game stats",
     description: "overall match stats: Hidden King vs Archmother side win rates, average match length, objectives",
     context: "Hidden King and Archmother are the two team sides, not heroes.",
     path: "/analytics/games",
@@ -14,7 +13,6 @@ export const GAME_PAGES: RegisteredPage[] = [
   },
   {
     id: "games_over_time",
-    label: "Games over time",
     description: "how average match stats changed day by day: match duration, kills, souls, damage per game",
     path: "/analytics/games/over-time",
     search: {
@@ -33,7 +31,6 @@ export const GAME_PAGES: RegisteredPage[] = [
   },
   {
     id: "games_by_rank",
-    label: "Games by rank",
     description: "how matches differ between ranks: length, kills and souls in low versus high elo",
     context:
       "Only for comparing ranks with each other; game stats of one rank range are games_overview with that rank.",
@@ -42,7 +39,6 @@ export const GAME_PAGES: RegisteredPage[] = [
   },
   {
     id: "games_economy",
-    label: "Soul economy",
     description:
       "where souls come from: troopers, neutral camps, player kills and orbs; farm and soul income per minute",
     context:
@@ -53,14 +49,12 @@ export const GAME_PAGES: RegisteredPage[] = [
   },
   {
     id: "games_combat",
-    label: "Combat stats",
     description: "fighting across all matches: damage, healing, accuracy, crits, kills and deaths per game",
     path: "/analytics/games/combat",
     filters: ALL,
   },
   {
     id: "games_buffs",
-    label: "Golden statue buffs",
     description: "golden statue buffs: how many players pick up each stat buff per match, at which level and when",
     path: "/analytics/games/buffs",
     filters: ALL,
