@@ -18,7 +18,6 @@ use clickhouse::Client;
 use futures::StreamExt;
 use metrics::{counter, gauge};
 use models::{MatchSalt, PendingMatch};
-use tokio::sync::Mutex;
 use tracing::{debug, error, info, instrument, warn};
 use valveprotos::deadlock::c_msg_client_to_gc_get_match_meta_data_response::EResult::KEResultRateLimited;
 use valveprotos::deadlock::{
@@ -41,6 +40,9 @@ static HTTP_CLIENT: LazyLock<reqwest::Client> = LazyLock::new(|| {
         .build()
         .unwrap_or_default()
 });
+/// Shortest time between the starts of two cycles. Each cycle runs a full-history anti-join,
+/// so a cycle that found matches must not immediately start the next one.
+const MIN_CYCLE_INTERVAL: Duration = Duration::from_mins(1);
 /// Maximum retry attempts for prioritized match salt fetches (default: 5).
 static PRIORITIZATION_MAX_RETRIES: LazyLock<u32> =
     LazyLock::new(|| common::env_or("PRIORITIZATION_MAX_RETRIES", 5));
@@ -67,6 +69,7 @@ async fn main() -> anyhow::Result<()> {
 
     common::run_until_shutdown(async move {
         loop {
+            let cycle_start = tokio::time::Instant::now();
             // Fetch all prioritized account IDs from PostgreSQL
             let prioritized_account_ids = common::get_all_prioritized_accounts(&pg_pool)
                 .await
@@ -139,41 +142,38 @@ async fn main() -> anyhow::Result<()> {
             );
             gauge!("salt_scraper.prioritized_matches_pending").set(pending_matches.len() as f64);
 
-            // Track failed matches for re-queueing
-            let failed_matches: std::sync::Arc<Mutex<Vec<u64>>> =
-                std::sync::Arc::new(Mutex::new(Vec::new()));
-
-            futures::stream::iter(pending_matches)
+            // Failed matches stay uncovered, so the next cycle's query picks them up again.
+            let failed: Vec<u64> = futures::stream::iter(pending_matches)
                 .map(|m| {
                     let ch_client = ch_client.clone();
-                    let failed_matches = std::sync::Arc::clone(&failed_matches);
                     async move {
                         let match_id = m.match_id;
                         match fetch_prioritized_match(&ch_client, match_id).await {
                             Ok(()) => {
                                 counter!("salt_scraper.prioritized_fetch.success").increment(1);
                                 info!("Fetched prioritized match {match_id}");
+                                None
                             }
                             Err(e) => {
                                 counter!("salt_scraper.prioritized_fetch.failure").increment(1);
                                 warn!("Failed to fetch prioritized match {match_id} after all retries: {e:?}");
-                                failed_matches.lock().await.push(match_id);
+                                Some(match_id)
                             }
                         }
                     }
                 })
                 .buffer_unordered(2)
-                .collect::<Vec<_>>()
+                .filter_map(core::future::ready)
+                .collect()
                 .await;
 
-            let failed = failed_matches.lock().await;
             if !failed.is_empty() {
                 info!(
-                    "Re-queueing {} failed matches for next cycle: {:?}",
+                    "Re-queueing {} failed matches for next cycle: {failed:?}",
                     failed.len(),
-                    *failed
                 );
             }
+            tokio::time::sleep_until(cycle_start + MIN_CYCLE_INTERVAL).await;
         }
     })
     .await
