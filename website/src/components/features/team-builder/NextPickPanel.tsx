@@ -87,62 +87,9 @@ export function NextPickPanel({
   const top = sideRecommendations.slice(0, expanded ? MAX_ROWS : COLLAPSED_ROWS);
   const topSwaps = sideSwaps.slice(0, expanded ? MAX_ROWS : COLLAPSED_ROWS);
 
-  // With every slot filled there is nothing to pick *into*, so the panel switches to swaps: each
-  // row names the hero it would replace and applies that exact change.
-  if (!hasOpenSlot && view === "list") {
-    return (
-      <Panel>
-        <PanelHeader title="Best replacement">
-          <SideToggle value={side} onValueChange={setSide} />
-          <Segmented size="sm" width="hug" aria-label="View" value={view} onValueChange={setView}>
-            <SegmentedItem value="list" aria-label="Ranked list" title="Ranked list">
-              <ListIcon />
-            </SegmentedItem>
-            <SegmentedItem value="plot" aria-label="Synergy against counter plot" title="Synergy against counter plot">
-              <ChartScatterIcon />
-            </SegmentedItem>
-          </Segmented>
-        </PanelHeader>
-        {loading ? (
-          <PanelBody>
-            <SkeletonRows rows={COLLAPSED_ROWS} />
-          </PanelBody>
-        ) : topSwaps.length === 0 ? (
-          <EmptyState
-            variant="inline"
-            className="px-4 py-6"
-            title="No replacement improves this draft. Every slot is already the best fit found."
-          />
-        ) : (
-          <>
-            <div className={cn(SWAP_COLUMNS, HEADER)}>
-              <span>#</span>
-              <span>Bring in</span>
-              <span>Replaces</span>
-              <span className="text-end">Gain</span>
-            </div>
-            <Separator />
-            {topSwaps.map((swap, index) => (
-              <Fragment key={`${swap.slot}-${swap.in}`}>
-                <SwapTooltip swap={swap} gameMode={gameMode}>
-                  <Button variant="row" onClick={() => onApplySwap(side, swap)} className={cn(ROW, SWAP_COLUMNS)}>
-                    <span className="text-muted-foreground tabular-nums">{index + 1}</span>
-                    <HeroCell heroId={swap.in} shape="circle" size="sm" />
-                    <HeroCell heroId={swap.out} shape="circle" size="sm" className="text-muted-foreground" />
-                    <Points value={swap.gain} align="end" className="font-semibold" />
-                  </Button>
-                </SwapTooltip>
-                <Separator />
-              </Fragment>
-            ))}
-            {sideSwaps.length > COLLAPSED_ROWS && (
-              <PanelShowMore open={expanded} total={Math.min(sideSwaps.length, MAX_ROWS)} onOpenChange={setExpanded} />
-            )}
-          </>
-        )}
-      </Panel>
-    );
-  }
+  // With every slot filled there is nothing to pick *into*, so the list switches to swaps: each row names the hero it
+  // would replace and applies that exact change.
+  const showSwaps = !hasOpenSlot && view === "list";
 
   return (
     <Panel>
@@ -162,6 +109,38 @@ export function NextPickPanel({
         <PanelBody>
           <SkeletonRows rows={COLLAPSED_ROWS} />
         </PanelBody>
+      ) : showSwaps && topSwaps.length === 0 ? (
+        <EmptyState
+          variant="inline"
+          className="px-4 py-6"
+          title="No replacement improves this draft. Every slot is already the best fit found."
+        />
+      ) : showSwaps ? (
+        <>
+          <div className={cn(SWAP_COLUMNS, HEADER)}>
+            <span>#</span>
+            <span>Bring in</span>
+            <span>Replaces</span>
+            <span className="text-end">Gain</span>
+          </div>
+          <Separator />
+          {topSwaps.map((swap, index) => (
+            <Fragment key={`${swap.slot}-${swap.in}`}>
+              <SwapTooltip swap={swap} gameMode={gameMode}>
+                <Button variant="row" onClick={() => onApplySwap(side, swap)} className={cn(ROW, SWAP_COLUMNS)}>
+                  <span className="text-muted-foreground tabular-nums">{index + 1}</span>
+                  <HeroCell heroId={swap.in} shape="circle" size="sm" />
+                  <HeroCell heroId={swap.out} shape="circle" size="sm" className="text-muted-foreground" />
+                  <Points value={swap.gain} align="end" className="font-semibold" />
+                </Button>
+              </SwapTooltip>
+              <Separator />
+            </Fragment>
+          ))}
+          {sideSwaps.length > COLLAPSED_ROWS && (
+            <PanelShowMore open={expanded} total={Math.min(sideSwaps.length, MAX_ROWS)} onOpenChange={setExpanded} />
+          )}
+        </>
       ) : view === "plot" ? (
         <PickExplorer recommendations={sideRecommendations} onPick={(heroId) => onPick(side, heroId)} />
       ) : top.length === 0 ? (

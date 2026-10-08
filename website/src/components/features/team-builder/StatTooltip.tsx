@@ -1,7 +1,6 @@
 import { HeroImage } from "~/components/domain/assets/HeroImage";
 import { HeroName } from "~/components/domain/assets/HeroName";
-import { TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
-import { Tooltip } from "~/components/ui/tooltip";
+import { Tooltip, TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
 import type { StatsIndex } from "~/lib/team-builder/analysis";
 import { deltaClass, formatCount, formatPoints, formatRate } from "~/lib/team-builder/format";
 

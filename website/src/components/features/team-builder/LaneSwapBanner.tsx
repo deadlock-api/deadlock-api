@@ -7,7 +7,6 @@ import { useHeroById } from "~/hooks/useAssetById";
 import type { LaneReassignment, Side } from "~/lib/team-builder/analysis";
 import { formatPoints } from "~/lib/team-builder/format";
 import { laneOfSlot } from "~/lib/team-builder/lanes";
-import { TONE_TEXT } from "~/lib/tone";
 import { cn } from "~/lib/utils";
 
 function LaneName({ slot }: { slot: number }) {
@@ -39,28 +38,27 @@ interface LaneSwapBannerProps {
  * banner signed against the reader showed "−1.0" in red beside enemy chips reading "+14.7" in green.
  */
 export function LaneSwapBanner({ suggestion, side, onApply }: LaneSwapBannerProps) {
-  const ally = side === "ally";
-  const tone = "positive";
-  const label = ally
-    ? "Re-lane your picks: same six heroes, better lane split"
-    : "Re-lane their picks: same six heroes, better lane split for them";
+  const label =
+    side === "ally"
+      ? "Re-lane your picks: same six heroes, better lane split"
+      : "Re-lane their picks: same six heroes, better lane split for them";
 
   return (
     <Button
-      variant={`${tone}-soft`}
+      variant="positive-soft"
       size="tile"
       onClick={onApply}
       title={label}
       className="group w-full flex-wrap gap-x-2 gap-y-1 font-normal text-foreground"
     >
-      <span className={cn("flex shrink-0 items-center gap-1 text-xs font-semibold", TONE_TEXT[tone])}>
+      <span className={"flex shrink-0 items-center gap-1 text-xs font-semibold text-positive"}>
         <ArrowLeftRightIcon className="size-3" />
         {formatPoints(suggestion.gain)}
       </span>
       {suggestion.moves.map((move) => (
         <Move key={move.heroId} {...move} />
       ))}
-      <span className={cn("ms-auto shrink-0 text-xs text-muted-foreground", "group-hover:text-positive")}>Apply</span>
+      <span className="ms-auto shrink-0 text-xs text-muted-foreground group-hover:text-positive">Apply</span>
     </Button>
   );
 }
