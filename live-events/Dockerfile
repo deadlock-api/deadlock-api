@@ -30,9 +30,11 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry \
 FROM debian:trixie-slim AS runtime
 ARG EXE_NAME
 ENV exe_name=$EXE_NAME
+# TLS is rustls (nothing links OpenSSL); curl stays for container health checks.
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends ca-certificates libssl-dev openssl libc6 curl \
+    && apt-get install -y --no-install-recommends ca-certificates curl \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY --from=builder /app/target/release/${EXE_NAME} /usr/local/bin
-ENTRYPOINT "/usr/local/bin/${exe_name}"
+# exec replaces the shell, so the binary runs as PID 1 and receives SIGTERM.
+ENTRYPOINT ["/bin/sh", "-c", "exec \"/usr/local/bin/${exe_name}\""]

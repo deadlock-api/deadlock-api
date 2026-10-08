@@ -3,8 +3,7 @@ services:
     build:
       context: ..
       dockerfile: tools/Dockerfile
-      args:
-        EXE_NAME: active-matches-scraper
+    command: ["active-matches-scraper"]
     restart: always
     env_file: .env
 
@@ -12,8 +11,7 @@ services:
     build:
       context: ..
       dockerfile: tools/Dockerfile
-      args:
-        EXE_NAME: ingest-worker
+    command: ["ingest-worker"]
     restart: always
     env_file: .env
     stop_grace_period: 30s
@@ -22,8 +20,7 @@ services:
     build:
       context: ..
       dockerfile: tools/Dockerfile
-      args:
-        EXE_NAME: matchdata-downloader
+    command: ["matchdata-downloader"]
     restart: always
     env_file: .env
     stop_grace_period: 30s
@@ -32,8 +29,7 @@ services:
     build:
       context: ..
       dockerfile: tools/Dockerfile
-      args:
-        EXE_NAME: salt-scraper
+    command: ["salt-scraper"]
     restart: always
     environment:
       RUST_LOG: debug
@@ -43,8 +39,7 @@ services:
     build:
       context: ..
       dockerfile: tools/Dockerfile
-      args:
-        EXE_NAME: history-fetcher
+    command: ["history-fetcher"]
     restart: always
     env_file: .env
     environment:
@@ -54,8 +49,7 @@ services:
     build:
       context: ..
       dockerfile: tools/Dockerfile
-      args:
-        EXE_NAME: steam-profile-fetcher
+    command: ["steam-profile-fetcher"]
     restart: always
     env_file: .env
 
@@ -63,8 +57,7 @@ services:
     build:
       context: ..
       dockerfile: tools/Dockerfile
-      args:
-        EXE_NAME: builds-fetcher
+    command: ["builds-fetcher"]
     restart: always
     env_file: .env
     environment:
@@ -74,8 +67,7 @@ services:
     build:
       context: ..
       dockerfile: tools/Dockerfile
-      args:
-        EXE_NAME: update-assets-tables
+    command: ["update-assets-tables"]
     restart: always
     env_file: .env
     environment:
@@ -85,8 +77,7 @@ services:
     build:
       context: ..
       dockerfile: tools/Dockerfile
-      args:
-        EXE_NAME: demo-analyzer
+    command: ["demo-analyzer"]
     restart: always
     env_file: .env
 
@@ -94,8 +85,7 @@ services:
     build:
       context: ..
       dockerfile: tools/Dockerfile
-      args:
-        EXE_NAME: hltv-scraper
+    command: ["hltv-scraper", "run-spectate-bot"]
     restart: always
     env_file: .env
 
@@ -103,8 +93,7 @@ services:
     build:
       context: ..
       dockerfile: tools/Dockerfile
-      args:
-        EXE_NAME: hltv-scraper
+    command: ["hltv-scraper", "scrape-hltv-matches"]
     restart: always
     env_file: .env
     volumes:

@@ -1,6 +1,6 @@
 services:
   api:
-    image: ghcr.io/deadlock-api/deadlock-live-events:latest
+    image: ghcr.io/deadlock-api/deadlock-api/live-events:latest
     build:
       context: ..
       dockerfile: live-events/Dockerfile
