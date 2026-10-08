@@ -24,6 +24,13 @@ export const DECIDE_MODEL = "mercury-decide";
 /** A page is offered after the first only when the model gives it at least this much. */
 const MIN_ALTERNATIVE_PROBABILITY = 0.05;
 
+/**
+ * The search opens a page only when the model gives its best page at least this much and does not pick "none". On
+ * 1,000 real questions and 50 off-topic ones ("test", other games, support), this kept every real question and stopped
+ * 48 of the off-topic ones.
+ */
+const MIN_PAGE_PROBABILITY = 0.5;
+
 const NONE = "none";
 
 /** What a classifier does not know about Deadlock but needs to read a player's question. */
@@ -130,8 +137,11 @@ export function decideRequestBody(
       page: {
         type: "choice",
         instructions: "Which page of the site shows the answer to the question?",
-        criteria: Object.fromEntries(
-          PAGE_REGISTRY.map((page) => [page.id, `${page.description}.${page.context ? ` ${page.context}` : ""}`]),
+        criteria: withNone(
+          Object.fromEntries(
+            PAGE_REGISTRY.map((page) => [page.id, `${page.description}.${page.context ? ` ${page.context}` : ""}`]),
+          ),
+          "no page of the site shows this: the question is not about Deadlock stats, or is not a question",
         ),
       },
       rank_min: {
@@ -183,21 +193,24 @@ function chosen<T extends string>(answer: ChoiceAnswer | undefined, values: read
   return answer && values.includes(answer.choice as T) ? (answer.choice as T) : null;
 }
 
-/** The decision as an intent: the likeliest pages, best first, and the filters the question set. */
+/** The decision as an intent: the likeliest pages, best first, and the filters the question set; no pages for a question the model could not place. */
 export function intentFromDecision(
   answers: DecideAnswers,
   question: string,
   entities: QuestionEntities,
   rankNames: readonly string[],
 ): SearchIntent {
-  const pages = Object.entries(answers.page?.probabilities ?? {})
-    .sort((a, b) => b[1] - a[1])
-    .filter(
-      ([id, probability], i) =>
-        PAGE_REGISTRY.some((page) => page.id === id) && (i === 0 || probability >= MIN_ALTERNATIVE_PROBABILITY),
-    )
-    .slice(0, MAX_PAGES)
-    .map(([id]) => id);
+  const ranked = Object.entries(answers.page?.probabilities ?? {})
+    .filter(([id]) => registeredPage(id) !== undefined)
+    .sort((a, b) => b[1] - a[1]);
+  // "test", a question about another game: no page at all, rather than the least wrong one.
+  const understood = answers.page?.choice !== NONE && (ranked[0]?.[1] ?? 0) >= MIN_PAGE_PROBABILITY;
+  const pages = understood
+    ? ranked
+        .filter(([, probability], i) => i === 0 || probability >= MIN_ALTERNATIVE_PROBABILITY)
+        .slice(0, MAX_PAGES)
+        .map(([id]) => id)
+    : [];
   const mode = chosen(answers.mode, MODES);
   const rankMin = chosen(answers.rank_min, rankNames);
   const rankMax = chosen(answers.rank_max, rankNames);

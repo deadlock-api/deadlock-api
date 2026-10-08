@@ -24,7 +24,7 @@ const PLACEHOLDER_QUESTIONS = [
 ];
 const PLACEHOLDER_INTERVAL_MS = 3500;
 
-type Outcome = "opened" | "no_match" | "error";
+type Outcome = "opened" | "not_understood" | "error";
 
 /** One event per question, with the question itself: what visitors ask, how often, and where it took them. */
 function trackQuestion(properties: {
@@ -114,9 +114,9 @@ export function AiSearch({ size = "default", className }: AiSearchProps) {
         if (asked !== latest.current) return undefined;
         setSearching(false);
         if (results.length === 0) {
-          trackQuestion({ question: trimmed, source, outcome: "no_match", direct, durationMs });
+          trackQuestion({ question: trimmed, source, outcome: "not_understood", direct, durationMs });
           setUnmatched(true);
-          toast("No page matches that question");
+          toast("Sorry, I didn't understand that. Try asking about a hero, an item or a stat.");
           return undefined;
         }
         const [best, ...alternatives] = results;

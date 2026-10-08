@@ -71,13 +71,13 @@ test("a vs splits the heroes into two teams", () => {
   });
 });
 
-test("the request asks for every registered page and offers none for each filter", () => {
+test("the request asks for every registered page, and offers none for the page and each filter", () => {
   const body = decideRequestBody(
     "best counter against bebop",
     questionEntities("bebop", vocabulary),
     vocabulary.rankNames,
   );
-  assert.deepEqual(Object.keys(body.questions.page.criteria), PAGE_IDS);
+  assert.deepEqual(Object.keys(body.questions.page.criteria), ["none", ...PAGE_IDS]);
   for (const name of ["rank_min", "rank_max", "mode", "time", "region", "sort"]) {
     assert.ok("none" in body.questions[name].criteria, name);
   }
@@ -126,6 +126,16 @@ test("an item question with a vs keeps both sides: what to buy as one hero again
   );
   assert.deepEqual([decided.heroes, decided.enemy_heroes], [["Haze"], ["Bebop"]]);
   assert.deepEqual(urls(decided)[0], '/analytics/items{"hero":13,"enemy":15}');
+});
+
+test("a question the model cannot place opens nothing", () => {
+  const entities = questionEntities("test", vocabulary);
+  const decide = (page: Record<string, number>) =>
+    intentFromDecision({ page: choice(page) }, "test", entities, vocabulary.rankNames).pages;
+  assert.deepEqual(decide({ none: 0.94, tier_list: 0.04, hero_stats: 0.02 }), []);
+  // Not "none", but no page it would stand behind either.
+  assert.deepEqual(decide({ tier_list: 0.45, hero_stats: 0.35, none: 0.2 }), []);
+  assert.deepEqual(decide({ tier_list: 0.6, none: 0.4 }), ["tier_list"]);
 });
 
 test("a mode the question does not name is dropped", () => {
