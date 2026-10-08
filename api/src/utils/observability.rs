@@ -1,8 +1,9 @@
 use core::fmt;
+use core::fmt::Write as _;
 use core::time::Duration;
 
 use axum::extract::MatchedPath;
-use axum::http::{HeaderMap, Request, Response};
+use axum::http::{Request, Response};
 use tower_http::classify::ServerErrorsFailureClass;
 use tracing::field::{Empty, Field, Visit};
 use tracing::{Level, Span};
@@ -11,11 +12,7 @@ use tracing_subscriber::fmt::FormatFields;
 use tracing_subscriber::fmt::format::{DefaultFields, Writer};
 
 use crate::utils::parse;
-use crate::utils::request::{client_ip, parse_api_key};
-
-fn header_str<'a>(headers: &'a HeaderMap, name: &str) -> Option<&'a str> {
-    headers.get(name).and_then(|v| v.to_str().ok())
-}
+use crate::utils::request::{client_ip, header_str, parse_api_key};
 
 /// Builds a richly-attributed tracing span for an incoming HTTP request.
 ///
@@ -47,14 +44,13 @@ pub(crate) fn make_request_span<B>(request: &Request<B>) -> Span {
         .unwrap_or("");
 
     // Sanitised query string (api_key stripped) for both `url.query` and `url.full`.
-    let raw_query = uri.query().unwrap_or_default();
-    let mut query_pairs = parse::querify(raw_query);
-    query_pairs.retain(|(k, _)| *k != "api_key");
-    let query = query_pairs
-        .iter()
-        .map(|(k, v)| format!("{k}={v}"))
-        .collect::<Vec<_>>()
-        .join("&");
+    let mut query = String::new();
+    for (k, v) in parse::querify(uri.query().unwrap_or_default()) {
+        if k != "api_key" {
+            let sep = if query.is_empty() { "" } else { "&" };
+            let _ = write!(query, "{sep}{k}={v}");
+        }
+    }
 
     // Full URL, e.g. `https://api.deadlock-api.com/v1/players/123/steam?foo=bar`.
     let url_full = if query.is_empty() {

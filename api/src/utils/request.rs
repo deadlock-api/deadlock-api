@@ -1,9 +1,11 @@
 //! Request header helpers shared by middleware, extractors and the request span.
 
 use axum::http::HeaderMap;
+use axum::http::header::AsHeaderName;
 use uuid::Uuid;
 
-fn header_str<'a>(headers: &'a HeaderMap, name: &str) -> Option<&'a str> {
+/// A header's value, if present and valid visible ASCII.
+pub(crate) fn header_str(headers: &HeaderMap, name: impl AsHeaderName) -> Option<&str> {
     headers.get(name).and_then(|v| v.to_str().ok())
 }
 
