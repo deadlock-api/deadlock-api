@@ -76,13 +76,18 @@ fn send_info_event() -> Result<Event, axum::Error> {
     }))
 }
 
+/// Events buffered per client. The parser follows the live broadcast and cannot wait for a
+/// slow reader, so a client that falls this far behind is disconnected rather than buffered
+/// without bound. Large enough for the entity burst when a stream starts.
+const CLIENT_EVENT_BUFFER: usize = 32 * 1024;
+
 async fn demo_event_stream(
     http_client: reqwest::Client,
     broadcast_url: impl Into<String>,
     query: DemoEventsQuery,
 ) -> Result<impl Stream<Item = Result<Event, DemoParseError>>, DemoParseError> {
     let mut broadcast = BroadcastHttp::start_streaming(http_client, broadcast_url).await?;
-    let (sender, mut receiver) = tokio::sync::mpsc::unbounded_channel();
+    let (sender, mut receiver) = tokio::sync::mpsc::channel(CLIENT_EVENT_BUFFER);
     let visitor = SendingVisitor::new(
         sender.clone(),
         query.subscribed_chat_messages.unwrap_or_default(),
@@ -139,7 +144,7 @@ async fn demo_event_stream(
                 Event::default().event("error").data(message)
             }
         };
-        if let Err(e) = sender.send(event) {
+        if let Err(e) = sender.try_send(event) {
             warn!("Failed to send final event: {e}");
         }
     });

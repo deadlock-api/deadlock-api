@@ -8,7 +8,7 @@ use haste::entities::{DeltaHeader, Entity};
 use haste::parser::{AsyncVisitor, Context};
 use haste::stringtables::StringTableItem;
 use prost::Message;
-use tokio::sync::mpsc::UnboundedSender;
+use tokio::sync::mpsc::Sender;
 use tracing::debug;
 use valveprotos::common::{CMsgPlayerInfo, EDemoCommands};
 use valveprotos::deadlock::{
@@ -34,7 +34,7 @@ use crate::demo_parser::utils::{get_entity_handle_index, handle_to_entity_index}
 use crate::utils::steamid64_to_steamid3;
 
 pub(crate) struct SendingVisitor {
-    sender: UnboundedSender<Event>,
+    sender: Sender<Event>,
     subscribed_chat_messages: bool,
     subscribed_entities: Option<HashSet<EntityType>>,
     game_time: f32,
@@ -49,7 +49,7 @@ pub(crate) struct SendingVisitor {
 
 impl SendingVisitor {
     pub(crate) fn new(
-        sender: UnboundedSender<Event>,
+        sender: Sender<Event>,
         subscribed_chat_messages: bool,
         subscribed_entities: Option<impl IntoIterator<Item = EntityType>>,
     ) -> Self {
@@ -153,7 +153,7 @@ impl SendingVisitor {
             },
         };
         let sse_event = demo_event.try_into()?;
-        self.sender.send(sse_event)?;
+        self.sender.try_send(sse_event)?;
         Ok(())
     }
 
@@ -238,7 +238,7 @@ impl SendingVisitor {
             game_time: self.game_time,
             event,
         };
-        self.sender.send(demo_event.try_into()?)?;
+        self.sender.try_send(demo_event.try_into()?)?;
         Ok(())
     }
 
@@ -279,7 +279,7 @@ impl SendingVisitor {
                 },
             };
             let sse_event = demo_event.try_into()?;
-            self.sender.send(sse_event)?;
+            self.sender.try_send(sse_event)?;
         }
 
         if packet_type == CitadelUserMessageIds::KEUserMsgHeroKilled as u32
@@ -291,7 +291,7 @@ impl SendingVisitor {
                 event: DemoEventPayload::HeroKilled(msg),
             };
             let sse_event = demo_event.try_into()?;
-            self.sender.send(sse_event)?;
+            self.sender.try_send(sse_event)?;
         }
 
         // Builds before 6711 send the bans in this message; newer ones in the game rules.
@@ -315,7 +315,7 @@ impl SendingVisitor {
                 game_time: self.game_time,
                 event,
             };
-            self.sender.send(demo_event.try_into()?)?;
+            self.sender.try_send(demo_event.try_into()?)?;
         }
 
         Ok(())
@@ -392,7 +392,7 @@ impl SendingVisitor {
             game_time: self.game_time,
             event: DemoEventPayload::TickEnd,
         };
-        self.sender.send(demo_event.try_into()?)?;
+        self.sender.try_send(demo_event.try_into()?)?;
         Ok(())
     }
 }
@@ -428,7 +428,8 @@ mod tests {
         let path = std::env::var("LIVE_EVENTS_TEST_DEMO").expect("LIVE_EVENTS_TEST_DEMO not set");
         let data = std::fs::read(path).expect("failed to read replay");
 
-        let (sender, mut receiver) = tokio::sync::mpsc::unbounded_channel();
+        // Drained only after parsing, so the buffer has to hold the whole replay.
+        let (sender, mut receiver) = tokio::sync::mpsc::channel(1 << 24);
         let visitor = SendingVisitor::new(sender, true, None::<Vec<EntityType>>);
         let demo_file = AsyncDemoFile::start_reading(data.as_slice()).await.unwrap();
         let mut parser =

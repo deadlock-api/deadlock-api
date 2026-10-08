@@ -8,7 +8,7 @@ use bytes::Bytes;
 use futures::Stream;
 use haste::broadcast::{BroadcastHttp, BroadcastHttpClientError};
 use serde::Deserialize;
-use tracing::info;
+use tracing::{info, trace};
 
 use crate::error::APIResult;
 use crate::state::AppState;
@@ -24,7 +24,7 @@ fn demo_stream(
             broadcast_url,
         ).await?;
         while let Some(chunk) = demofile.next_packet().await {
-            info!("Received chunk");
+            trace!("Received chunk");
             yield chunk?;
         }
     }

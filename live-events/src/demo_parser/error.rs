@@ -3,12 +3,14 @@ use haste::broadcast::BroadcastHttpClientError;
 use haste::demofile::DemoHeaderError;
 use haste::demostream::{DecodeCmdError, ReadCmdError, ReadCmdHeaderError};
 use haste::flattenedserializers::FlattenedSerializersError;
-use tokio::sync::mpsc::error::SendError;
+use tokio::sync::mpsc::error::TrySendError;
 
 #[derive(thiserror::Error, Debug)]
 pub(crate) enum DemoParseError {
-    #[error(transparent)]
-    Send(#[from] SendError<Event>),
+    /// The client's event buffer is full (it reads slower than the match produces events)
+    /// or it disconnected; either way its stream ends.
+    #[error("client event stream: {0}")]
+    Send(#[from] TrySendError<Event>),
     #[error(transparent)]
     Broadcast(#[from] BroadcastHttpClientError<reqwest::Error>),
     #[error(transparent)]
