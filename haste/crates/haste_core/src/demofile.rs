@@ -3,12 +3,10 @@ use dungers::varint;
 use prost;
 use prost::Message;
 use std::io::{self, Read, Seek, SeekFrom};
-use valveprotos::common::{
-    CDemoClassInfo, CDemoFileInfo, CDemoFullPacket, CDemoPacket, CDemoSendTables, EDemoCommands,
-};
+use valveprotos::common::{CDemoFileInfo, EDemoCommands};
 
 use crate::demostream::{
-    CmdHeader, DecodeCmdError, DemoStream, ReadCmdError, ReadCmdHeaderError, SeekableDemoStream,
+    CmdHeader, DemoStream, ReadCmdError, ReadCmdHeaderError, SeekableDemoStream,
 };
 
 // #define DEMO_RECORD_BUFFER_SIZE 2*1024*1024
@@ -185,22 +183,6 @@ impl<R: Read + Seek> DemoStream for DemoFile<R> {
         } else {
             Ok(left)
         }
-    }
-
-    fn decode_cmd_send_tables(data: &[u8]) -> Result<CDemoSendTables, DecodeCmdError> {
-        CDemoSendTables::decode(data).map_err(DecodeCmdError::DecodeProtobufError)
-    }
-
-    fn decode_cmd_class_info(data: &[u8]) -> Result<CDemoClassInfo, DecodeCmdError> {
-        CDemoClassInfo::decode(data).map_err(DecodeCmdError::DecodeProtobufError)
-    }
-
-    fn decode_cmd_packet(data: &[u8]) -> Result<CDemoPacket, DecodeCmdError> {
-        CDemoPacket::decode(data).map_err(DecodeCmdError::DecodeProtobufError)
-    }
-
-    fn decode_cmd_full_packet(data: &[u8]) -> Result<CDemoFullPacket, DecodeCmdError> {
-        CDemoFullPacket::decode(data).map_err(DecodeCmdError::DecodeProtobufError)
     }
 
     fn skip_cmd(&mut self, cmd_header: &CmdHeader) -> Result<(), io::Error> {

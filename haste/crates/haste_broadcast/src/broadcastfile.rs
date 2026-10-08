@@ -2,14 +2,10 @@ use std::io::{self, Read, Seek, SeekFrom};
 
 use haste_core::demofile::DEMO_RECORD_BUFFER_SIZE;
 use haste_core::demostream::{
-    CmdHeader, DecodeCmdError, DemoStream, ReadCmdError, ReadCmdHeaderError, SeekableDemoStream,
+    CmdFormat, CmdHeader, DemoStream, ReadCmdError, ReadCmdHeaderError, SeekableDemoStream,
 };
-use valveprotos::common::{CDemoClassInfo, CDemoFullPacket, CDemoPacket, CDemoSendTables};
 
-use crate::demostream::{
-    decode_cmd_class_info, decode_cmd_full_packet, decode_cmd_packet, decode_cmd_send_tables,
-    read_cmd_header, scan_for_last_tick,
-};
+use crate::demostream::{read_cmd_header, scan_for_last_tick};
 
 /// allows to read recorded broadcasts.
 ///
@@ -42,6 +38,8 @@ impl<R: Read + Seek> BroadcastFile<R> {
 }
 
 impl<R: Read + Seek> DemoStream for BroadcastFile<R> {
+    const CMD_FORMAT: CmdFormat = CmdFormat::Broadcast;
+
     // stream ops
     // ----
 
@@ -70,22 +68,6 @@ impl<R: Read + Seek> DemoStream for BroadcastFile<R> {
         let data = &mut self.buf[..cmd_header.body_size as usize];
         self.rdr.read_exact(data)?;
         Ok(data)
-    }
-
-    fn decode_cmd_send_tables(data: &[u8]) -> Result<CDemoSendTables, DecodeCmdError> {
-        Ok(decode_cmd_send_tables(data))
-    }
-
-    fn decode_cmd_class_info(data: &[u8]) -> Result<CDemoClassInfo, DecodeCmdError> {
-        decode_cmd_class_info(data)
-    }
-
-    fn decode_cmd_packet(data: &[u8]) -> Result<CDemoPacket, DecodeCmdError> {
-        Ok(decode_cmd_packet(data))
-    }
-
-    fn decode_cmd_full_packet(data: &[u8]) -> Result<CDemoFullPacket, DecodeCmdError> {
-        decode_cmd_full_packet(data)
     }
 
     fn skip_cmd(&mut self, cmd_header: &CmdHeader) -> Result<(), io::Error> {

@@ -9,14 +9,11 @@
 
 use std::io::Cursor;
 
-use prost::Message;
 use tokio::io::{AsyncRead, AsyncReadExt};
-use valveprotos::common::{
-    CDemoClassInfo, CDemoFullPacket, CDemoPacket, CDemoSendTables, EDemoCommands,
-};
+use valveprotos::common::EDemoCommands;
 
 use crate::async_demostream::AsyncDemoStream;
-use crate::demostream::{CmdHeader, DecodeCmdError, ReadCmdError, ReadCmdHeaderError};
+use crate::demostream::{CmdFormat, CmdHeader, ReadCmdError, ReadCmdHeaderError};
 
 const BROADCAST_CMD_HEADER_SIZE: u8 = 10; // 1 + 4 + 1 + 4
 
@@ -42,6 +39,8 @@ impl AsyncBroadcastStream<Cursor<Vec<u8>>> {
 }
 
 impl<R: AsyncRead + Unpin + Send> AsyncDemoStream for AsyncBroadcastStream<R> {
+    const CMD_FORMAT: CmdFormat = CmdFormat::Broadcast;
+
     async fn read_cmd_header(&mut self) -> Result<CmdHeader, ReadCmdHeaderError> {
         let mut buf = [0u8; BROADCAST_CMD_HEADER_SIZE as usize];
         self.reader.read_exact(&mut buf).await?;
@@ -72,34 +71,6 @@ impl<R: AsyncRead + Unpin + Send> AsyncDemoStream for AsyncBroadcastStream<R> {
         self.buffer.resize(size, 0);
         self.reader.read_exact(&mut self.buffer).await?;
         Ok(&self.buffer)
-    }
-
-    fn decode_cmd_send_tables(data: &[u8]) -> Result<CDemoSendTables, DecodeCmdError> {
-        // Broadcast format: skip first 4 bytes, then rest is the data
-        Ok(CDemoSendTables {
-            data: Some(data[4..].to_vec()),
-        })
-    }
-
-    fn decode_cmd_class_info(data: &[u8]) -> Result<CDemoClassInfo, DecodeCmdError> {
-        CDemoClassInfo::decode(data).map_err(DecodeCmdError::DecodeProtobufError)
-    }
-
-    fn decode_cmd_packet(data: &[u8]) -> Result<CDemoPacket, DecodeCmdError> {
-        Ok(CDemoPacket {
-            data: Some(data.to_vec()),
-        })
-    }
-
-    fn decode_cmd_full_packet(data: &[u8]) -> Result<CDemoFullPacket, DecodeCmdError> {
-        // Broadcast /full packets contain CDemoFullPacket
-        // The data format appears to be raw packet data, similar to CDemoPacket
-        Ok(CDemoFullPacket {
-            string_table: None,
-            packet: Some(CDemoPacket {
-                data: Some(data.to_vec()),
-            }),
-        })
     }
 
     fn start_position(&self) -> u64 {

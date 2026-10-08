@@ -1,11 +1,11 @@
 use core::future::Future;
 use dungers::varint::{CONTINUE_BIT, PAYLOAD_BITS, VarintError, max_varint_size};
 use tokio::io::{AsyncRead, AsyncReadExt};
-use valveprotos::common::{
-    CDemoClassInfo, CDemoFullPacket, CDemoPacket, CDemoSendTables, EDemoCommands,
-};
+use valveprotos::common::{CDemoClassInfo, CDemoFullPacket, CDemoSendTables, EDemoCommands};
 
-use crate::demostream::{CmdHeader, DecodeCmdError, ReadCmdError, ReadCmdHeaderError};
+use crate::demostream::{
+    self, CmdFormat, CmdHeader, DecodeCmdError, ReadCmdError, ReadCmdHeaderError,
+};
 
 async fn read_uvarint_async<R>(rdr: &mut R) -> Result<(u32, usize), VarintError>
 where
@@ -33,6 +33,9 @@ where
 }
 
 pub trait AsyncDemoStream {
+    /// encoding of command bodies; drives the default `decode_cmd_*` implementations.
+    const CMD_FORMAT: CmdFormat = CmdFormat::Demo;
+
     fn read_cmd_header(
         &mut self,
     ) -> impl Future<Output = Result<CmdHeader, ReadCmdHeaderError>> + Send;
@@ -42,10 +45,22 @@ pub trait AsyncDemoStream {
         cmd_header: &CmdHeader,
     ) -> impl Future<Output = Result<&[u8], ReadCmdError>> + Send;
 
-    fn decode_cmd_send_tables(data: &[u8]) -> Result<CDemoSendTables, DecodeCmdError>;
-    fn decode_cmd_class_info(data: &[u8]) -> Result<CDemoClassInfo, DecodeCmdError>;
-    fn decode_cmd_packet(data: &[u8]) -> Result<CDemoPacket, DecodeCmdError>;
-    fn decode_cmd_full_packet(data: &[u8]) -> Result<CDemoFullPacket, DecodeCmdError>;
+    fn decode_cmd_send_tables(data: &[u8]) -> Result<CDemoSendTables, DecodeCmdError> {
+        demostream::decode_cmd_send_tables(Self::CMD_FORMAT, data)
+    }
+
+    fn decode_cmd_class_info(data: &[u8]) -> Result<CDemoClassInfo, DecodeCmdError> {
+        demostream::decode_cmd_class_info(data)
+    }
+
+    /// the packet data of a `DemPacket` / `DemSignonPacket` command body, without copying it.
+    fn cmd_packet_data(data: &[u8]) -> Result<&[u8], DecodeCmdError> {
+        demostream::cmd_packet_data(Self::CMD_FORMAT, data)
+    }
+
+    fn decode_cmd_full_packet(data: &[u8]) -> Result<CDemoFullPacket, DecodeCmdError> {
+        demostream::decode_cmd_full_packet(Self::CMD_FORMAT, data)
+    }
 
     fn start_position(&self) -> u64;
 }

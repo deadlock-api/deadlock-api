@@ -1,10 +1,8 @@
-use prost::Message;
 use tokio::io::{AsyncRead, AsyncReadExt};
-use valveprotos::common::{CDemoClassInfo, CDemoFullPacket, CDemoPacket, CDemoSendTables};
 
 use crate::async_demostream::{AsyncDemoStream, read_cmd_header_async};
 use crate::demofile::{DEMO_RECORD_BUFFER_SIZE, DemoHeader, DemoHeaderError};
-use crate::demostream::{CmdHeader, DecodeCmdError, ReadCmdError, ReadCmdHeaderError};
+use crate::demostream::{CmdHeader, ReadCmdError, ReadCmdHeaderError};
 
 const DEMO_HEADER_ID_SIZE: usize = 8;
 const DEMO_HEADER_ID: [u8; DEMO_HEADER_ID_SIZE] = *b"PBDEMS2\0";
@@ -70,22 +68,6 @@ impl<R: AsyncRead + Unpin + Send> AsyncDemoStream for AsyncDemoFile<R> {
         } else {
             Ok(left)
         }
-    }
-
-    fn decode_cmd_send_tables(data: &[u8]) -> Result<CDemoSendTables, DecodeCmdError> {
-        CDemoSendTables::decode(data).map_err(DecodeCmdError::DecodeProtobufError)
-    }
-
-    fn decode_cmd_class_info(data: &[u8]) -> Result<CDemoClassInfo, DecodeCmdError> {
-        CDemoClassInfo::decode(data).map_err(DecodeCmdError::DecodeProtobufError)
-    }
-
-    fn decode_cmd_packet(data: &[u8]) -> Result<CDemoPacket, DecodeCmdError> {
-        CDemoPacket::decode(data).map_err(DecodeCmdError::DecodeProtobufError)
-    }
-
-    fn decode_cmd_full_packet(data: &[u8]) -> Result<CDemoFullPacket, DecodeCmdError> {
-        CDemoFullPacket::decode(data).map_err(DecodeCmdError::DecodeProtobufError)
     }
 
     fn start_position(&self) -> u64 {

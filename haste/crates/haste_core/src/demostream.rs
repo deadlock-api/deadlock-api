@@ -1,6 +1,7 @@
 use std::io::{self, SeekFrom};
 
 use dungers::varint;
+use prost::Message;
 use valveprotos::common::{
     CDemoClassInfo, CDemoFullPacket, CDemoPacket, CDemoSendTables, EDemoCommands,
 };
@@ -40,10 +41,68 @@ pub enum ReadCmdError {
 pub enum DecodeCmdError {
     #[error(transparent)]
     DecodeProtobufError(#[from] prost::DecodeError),
+    #[error("malformed command body")]
+    Malformed,
+}
+
+/// encoding of command bodies.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CmdFormat {
+    /// `.dem` files: every body is a protobuf message (`CDemoPacket`, `CDemoSendTables`, ...).
+    Demo,
+    /// broadcasts (`/full` and `/delta` fragments): packet bodies are the raw packet data, send
+    /// tables are prefixed with 4 bytes, and full packets carry only raw packet data.
+    Broadcast,
+}
+
+/// decodes a `DemSendTables` command body.
+pub fn decode_cmd_send_tables(
+    format: CmdFormat,
+    data: &[u8],
+) -> Result<CDemoSendTables, DecodeCmdError> {
+    match format {
+        CmdFormat::Demo => CDemoSendTables::decode(data).map_err(DecodeCmdError::from),
+        CmdFormat::Broadcast => Ok(CDemoSendTables {
+            // TODO: no-copy for send tables cmd.
+            data: Some(data.get(4..).ok_or(DecodeCmdError::Malformed)?.to_vec()),
+        }),
+    }
+}
+
+/// decodes a `DemClassInfo` command body (same in both formats).
+pub fn decode_cmd_class_info(data: &[u8]) -> Result<CDemoClassInfo, DecodeCmdError> {
+    CDemoClassInfo::decode(data).map_err(DecodeCmdError::from)
+}
+
+/// the packet data of a `DemPacket` / `DemSignonPacket` command body, borrowed from `data`.
+pub fn cmd_packet_data(format: CmdFormat, data: &[u8]) -> Result<&[u8], DecodeCmdError> {
+    match format {
+        CmdFormat::Demo => crate::protowire::decode_cmd_packet_data(data),
+        CmdFormat::Broadcast => Ok(data),
+    }
+}
+
+/// decodes a `DemFullPacket` command body.
+pub fn decode_cmd_full_packet(
+    format: CmdFormat,
+    data: &[u8],
+) -> Result<CDemoFullPacket, DecodeCmdError> {
+    match format {
+        CmdFormat::Demo => CDemoFullPacket::decode(data).map_err(DecodeCmdError::from),
+        CmdFormat::Broadcast => Ok(CDemoFullPacket {
+            string_table: None,
+            packet: Some(CDemoPacket {
+                data: Some(data.to_vec()),
+            }),
+        }),
+    }
 }
 
 /// forward-only demo stream that does not require seeking.
 pub trait DemoStream {
+    /// encoding of command bodies; drives the default `decode_cmd_*` implementations.
+    const CMD_FORMAT: CmdFormat = CmdFormat::Demo;
+
     // stream ops
     // ----
 
@@ -59,10 +118,22 @@ pub trait DemoStream {
 
     fn read_cmd(&mut self, cmd_header: &CmdHeader) -> Result<&[u8], ReadCmdError>;
 
-    fn decode_cmd_send_tables(data: &[u8]) -> Result<CDemoSendTables, DecodeCmdError>;
-    fn decode_cmd_class_info(data: &[u8]) -> Result<CDemoClassInfo, DecodeCmdError>;
-    fn decode_cmd_packet(data: &[u8]) -> Result<CDemoPacket, DecodeCmdError>;
-    fn decode_cmd_full_packet(data: &[u8]) -> Result<CDemoFullPacket, DecodeCmdError>;
+    fn decode_cmd_send_tables(data: &[u8]) -> Result<CDemoSendTables, DecodeCmdError> {
+        decode_cmd_send_tables(Self::CMD_FORMAT, data)
+    }
+
+    fn decode_cmd_class_info(data: &[u8]) -> Result<CDemoClassInfo, DecodeCmdError> {
+        decode_cmd_class_info(data)
+    }
+
+    /// the packet data of a `DemPacket` / `DemSignonPacket` command body, without copying it.
+    fn cmd_packet_data(data: &[u8]) -> Result<&[u8], DecodeCmdError> {
+        cmd_packet_data(Self::CMD_FORMAT, data)
+    }
+
+    fn decode_cmd_full_packet(data: &[u8]) -> Result<CDemoFullPacket, DecodeCmdError> {
+        decode_cmd_full_packet(Self::CMD_FORMAT, data)
+    }
 
     fn skip_cmd(&mut self, cmd_header: &CmdHeader) -> Result<(), io::Error>;
 }

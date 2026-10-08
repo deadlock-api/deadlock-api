@@ -42,6 +42,7 @@ pub mod packet_channel_demo_stream;
 #[cfg(feature = "async")]
 pub mod packet_source;
 pub mod parser;
+pub(crate) mod protowire;
 pub(crate) mod quantizedfloat;
 pub mod stringtables;
 

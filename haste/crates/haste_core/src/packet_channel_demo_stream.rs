@@ -9,14 +9,11 @@
 use std::io;
 
 use bytes::Bytes;
-use prost::Message;
 use snap::raw::Decoder as SnapDecoder;
-use valveprotos::common::{
-    CDemoClassInfo, CDemoFullPacket, CDemoPacket, CDemoSendTables, EDemoCommands,
-};
+use valveprotos::common::EDemoCommands;
 
 use crate::async_demostream::AsyncDemoStream;
-use crate::demostream::{CmdHeader, DecodeCmdError, ReadCmdError, ReadCmdHeaderError};
+use crate::demostream::{CmdHeader, ReadCmdError, ReadCmdHeaderError};
 use crate::packet_source::PacketSource;
 
 const DEM_IS_COMPRESSED: u32 = EDemoCommands::DemIsCompressed as u32;
@@ -228,22 +225,6 @@ impl<P: PacketSource> AsyncDemoStream for PacketChannelDemoStream<P> {
         }
 
         Ok(&self.body_buf)
-    }
-
-    fn decode_cmd_send_tables(data: &[u8]) -> Result<CDemoSendTables, DecodeCmdError> {
-        CDemoSendTables::decode(data).map_err(DecodeCmdError::DecodeProtobufError)
-    }
-
-    fn decode_cmd_class_info(data: &[u8]) -> Result<CDemoClassInfo, DecodeCmdError> {
-        CDemoClassInfo::decode(data).map_err(DecodeCmdError::DecodeProtobufError)
-    }
-
-    fn decode_cmd_packet(data: &[u8]) -> Result<CDemoPacket, DecodeCmdError> {
-        CDemoPacket::decode(data).map_err(DecodeCmdError::DecodeProtobufError)
-    }
-
-    fn decode_cmd_full_packet(data: &[u8]) -> Result<CDemoFullPacket, DecodeCmdError> {
-        CDemoFullPacket::decode(data).map_err(DecodeCmdError::DecodeProtobufError)
     }
 
     fn start_position(&self) -> u64 {

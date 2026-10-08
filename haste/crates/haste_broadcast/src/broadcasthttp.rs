@@ -7,15 +7,11 @@ use std::time::Instant;
 use bytes::buf::Reader;
 use bytes::{Buf, Bytes};
 use haste_core::demostream::{
-    CmdHeader, DecodeCmdError, DemoStream, ReadCmdError, ReadCmdHeaderError, SeekableDemoStream,
+    CmdFormat, CmdHeader, DemoStream, ReadCmdError, ReadCmdHeaderError, SeekableDemoStream,
 };
 use serde::Deserialize;
-use valveprotos::common::{CDemoClassInfo, CDemoFullPacket, CDemoPacket, CDemoSendTables};
 
-use crate::demostream::{
-    decode_cmd_class_info, decode_cmd_full_packet, decode_cmd_packet, decode_cmd_send_tables,
-    read_cmd_header, scan_for_last_tick,
-};
+use crate::demostream::{read_cmd_header, scan_for_last_tick};
 use crate::httpclient::HttpClient;
 
 // thanks to Bulbasaur (/ johnpyp) for bringing up tv broadcasts in discord, see
@@ -465,6 +461,8 @@ macro_rules! not_seekable_panic {
 }
 
 impl<'client, C: HttpClient + 'client> DemoStream for BroadcastHttp<'client, C> {
+    const CMD_FORMAT: CmdFormat = CmdFormat::Broadcast;
+
     // stream ops
     // ----
 
@@ -539,22 +537,6 @@ impl<'client, C: HttpClient + 'client> DemoStream for BroadcastHttp<'client, C> 
                 Ok(&c.get_ref()[pos..pos + size])
             }
         }
-    }
-
-    fn decode_cmd_send_tables(data: &[u8]) -> Result<CDemoSendTables, DecodeCmdError> {
-        Ok(decode_cmd_send_tables(data))
-    }
-
-    fn decode_cmd_class_info(data: &[u8]) -> Result<CDemoClassInfo, DecodeCmdError> {
-        decode_cmd_class_info(data)
-    }
-
-    fn decode_cmd_packet(data: &[u8]) -> Result<CDemoPacket, DecodeCmdError> {
-        Ok(decode_cmd_packet(data))
-    }
-
-    fn decode_cmd_full_packet(data: &[u8]) -> Result<CDemoFullPacket, DecodeCmdError> {
-        decode_cmd_full_packet(data)
     }
 
     fn skip_cmd(&mut self, cmd_header: &CmdHeader) -> Result<(), io::Error> {

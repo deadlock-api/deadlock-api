@@ -15,13 +15,10 @@ use core::future::Future;
 use std::io;
 
 use bytes::Bytes;
-use prost::Message;
-use valveprotos::common::{
-    CDemoClassInfo, CDemoFullPacket, CDemoPacket, CDemoSendTables, EDemoCommands,
-};
+use valveprotos::common::EDemoCommands;
 
 use crate::async_demostream::AsyncDemoStream;
-use crate::demostream::{CmdHeader, DecodeCmdError, ReadCmdError, ReadCmdHeaderError};
+use crate::demostream::{CmdFormat, CmdHeader, ReadCmdError, ReadCmdHeaderError};
 use crate::packet_source::PacketSource;
 
 const BROADCAST_CMD_HEADER_SIZE: usize = 10; // 1 + 4 + 1 + 4
@@ -103,6 +100,8 @@ impl<P: PacketSource> PacketChannelBroadcastStream<P> {
 }
 
 impl<P: PacketSource> AsyncDemoStream for PacketChannelBroadcastStream<P> {
+    const CMD_FORMAT: CmdFormat = CmdFormat::Broadcast;
+
     async fn read_cmd_header(&mut self) -> Result<CmdHeader, ReadCmdHeaderError> {
         self.ensure_data().await?;
 
@@ -158,33 +157,6 @@ impl<P: PacketSource> AsyncDemoStream for PacketChannelBroadcastStream<P> {
                 io::ErrorKind::UnexpectedEof,
                 "incomplete command body in packet",
             )))
-        })
-    }
-
-    fn decode_cmd_send_tables(data: &[u8]) -> Result<CDemoSendTables, DecodeCmdError> {
-        // Broadcast format: skip first 4 bytes, then rest is the data
-        Ok(CDemoSendTables {
-            data: Some(data[4..].to_vec()),
-        })
-    }
-
-    fn decode_cmd_class_info(data: &[u8]) -> Result<CDemoClassInfo, DecodeCmdError> {
-        CDemoClassInfo::decode(data).map_err(DecodeCmdError::DecodeProtobufError)
-    }
-
-    fn decode_cmd_packet(data: &[u8]) -> Result<CDemoPacket, DecodeCmdError> {
-        Ok(CDemoPacket {
-            data: Some(data.to_vec()),
-        })
-    }
-
-    fn decode_cmd_full_packet(data: &[u8]) -> Result<CDemoFullPacket, DecodeCmdError> {
-        // Broadcast /full packets contain raw packet data
-        Ok(CDemoFullPacket {
-            string_table: None,
-            packet: Some(CDemoPacket {
-                data: Some(data.to_vec()),
-            }),
         })
     }
 

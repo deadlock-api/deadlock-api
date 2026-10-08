@@ -6,8 +6,8 @@ use std::io;
 use std::io::SeekFrom;
 use valveprotos::common::{
     CDemoClassInfo, CDemoFullPacket, CDemoSendTables, CDemoStringTables, CsvcMsgCreateStringTable,
-    CsvcMsgPacketEntities, CsvcMsgServerInfo, CsvcMsgUpdateStringTable, EDemoCommands,
-    QuantizedFloatEncoderAliasT, SvcMessages,
+    CsvcMsgServerInfo, CsvcMsgUpdateStringTable, EDemoCommands, QuantizedFloatEncoderAliasT,
+    SvcMessages,
 };
 
 use crate::bitreader::BitReader;
@@ -21,6 +21,7 @@ use crate::entityclasses::EntityClasses;
 use crate::fielddecoder::FieldDecodeContext;
 use crate::flattenedserializers::FlattenedSerializerContainer;
 use crate::instancebaseline::{INSTANCE_BASELINE_TABLE_NAME, InstanceBaseline};
+use crate::protowire::{PacketEntities, decode_packet_entities};
 use crate::stringtables::StringTableContainer;
 
 // as can be observed when dumping commands. also as specified in clarity
@@ -103,10 +104,10 @@ struct EntityDeltaReader<'a> {
 }
 
 impl<'a> EntityDeltaReader<'a> {
-    fn new(msg: &'a CsvcMsgPacketEntities) -> Self {
+    fn new(msg: &PacketEntities<'a>) -> Self {
         Self {
-            br: BitReader::new(msg.entity_data()),
-            remaining: msg.updated_entries(),
+            br: BitReader::new(msg.entity_data),
+            remaining: msg.updated_entries,
             entity_index: -1,
         }
     }
@@ -219,11 +220,11 @@ impl Context {
 
     /// handles a single message of a `CDemoPacket`. `SvcPacketEntities` is handed back to the
     /// parser, because entity callbacks go through its visitor.
-    fn handle_packet_message(
+    fn handle_packet_message<'b>(
         &mut self,
         command: u32,
-        buf: &[u8],
-    ) -> anyhow::Result<Option<CsvcMsgPacketEntities>> {
+        buf: &'b [u8],
+    ) -> anyhow::Result<Option<PacketEntities<'b>>> {
         match command {
             c if c == SvcMessages::SvcCreateStringTable as u32 => {
                 let msg = CsvcMsgCreateStringTable::decode(buf)?;
@@ -236,8 +237,7 @@ impl Context {
             }
 
             c if c == SvcMessages::SvcPacketEntities as u32 && !self.skip_entity_packets => {
-                let msg = CsvcMsgPacketEntities::decode(buf)?;
-                return Ok(Some(msg));
+                return Ok(Some(decode_packet_entities(buf)?));
             }
 
             c if c == SvcMessages::SvcServerInfo as u32 => {
@@ -679,8 +679,8 @@ impl<D: DemoStream, V: Visitor> Parser<D, V> {
 
         match cmd_header.cmd {
             EDemoCommands::DemPacket | EDemoCommands::DemSignonPacket => {
-                let cmd = D::decode_cmd_packet(cmd_body)?;
-                self.handle_cmd_packet(cmd.data())?;
+                let data = D::cmd_packet_data(cmd_body)?;
+                Self::handle_cmd_packet(&mut self.ctx, &mut self.visitor, &mut self.buf, data)?;
             }
 
             // NOTE: these checks exist because seeking exists, there's no need to re-parse
@@ -707,29 +707,29 @@ impl<D: DemoStream, V: Visitor> Parser<D, V> {
         Ok(())
     }
 
-    fn handle_cmd_packet(&mut self, data: &[u8]) -> anyhow::Result<()> {
+    /// takes the parser apart into fields because `data` usually borrows from the demo stream.
+    fn handle_cmd_packet(
+        ctx: &mut Context,
+        visitor: &mut V,
+        buf: &mut [u8],
+        data: &[u8],
+    ) -> anyhow::Result<()> {
         let mut br = BitReader::new(data);
         while br.num_bits_left() > 8 {
-            let (command, buf) = read_packet_message(&mut br, &mut self.buf)?;
-            self.visitor.on_packet(&self.ctx, command, buf)?;
-            if let Some(msg) = self.ctx.handle_packet_message(command, buf)? {
-                self.handle_svc_packet_entities(&msg)?;
+            let (command, buf) = read_packet_message(&mut br, buf)?;
+            visitor.on_packet(ctx, command, buf)?;
+            if let Some(msg) = ctx.handle_packet_message(command, buf)? {
+                let mut rdr = EntityDeltaReader::new(&msg);
+                while let Some((delta_header, delta)) =
+                    ctx.read_entity_delta(&mut rdr, |hash| visitor.should_track_entity(hash))?
+                {
+                    if let Some(entity) = ctx.delta_entity(&delta) {
+                        visitor.on_entity(ctx, delta_header, entity)?;
+                    }
+                }
             }
         }
         br.is_overflowed()?;
-        Ok(())
-    }
-
-    fn handle_svc_packet_entities(&mut self, msg: &CsvcMsgPacketEntities) -> anyhow::Result<()> {
-        let mut rdr = EntityDeltaReader::new(msg);
-        while let Some((delta_header, delta)) = self
-            .ctx
-            .read_entity_delta(&mut rdr, |hash| self.visitor.should_track_entity(hash))?
-        {
-            if let Some(entity) = self.ctx.delta_entity(&delta) {
-                self.visitor.on_entity(&self.ctx, delta_header, entity)?;
-            }
-        }
         Ok(())
     }
 
@@ -739,7 +739,12 @@ impl<D: DemoStream, V: Visitor> Parser<D, V> {
         }
 
         if let Some(packet) = cmd.packet {
-            self.handle_cmd_packet(packet.data())?;
+            Self::handle_cmd_packet(
+                &mut self.ctx,
+                &mut self.visitor,
+                &mut self.buf,
+                packet.data(),
+            )?;
         }
 
         Ok(())
@@ -1047,8 +1052,9 @@ impl<D: AsyncDemoStream, V: AsyncVisitor> AsyncStreamingParser<D, V> {
 
         match cmd_header.cmd {
             EDemoCommands::DemPacket | EDemoCommands::DemSignonPacket => {
-                let cmd = D::decode_cmd_packet(cmd_body)?;
-                self.handle_cmd_packet(cmd.data()).await?;
+                let data = D::cmd_packet_data(cmd_body)?;
+                Self::handle_cmd_packet(&mut self.ctx, &mut self.visitor, &mut self.buf, data)
+                    .await?;
             }
 
             EDemoCommands::DemSendTables if self.ctx.serializers.is_none() => {
@@ -1066,7 +1072,13 @@ impl<D: AsyncDemoStream, V: AsyncVisitor> AsyncStreamingParser<D, V> {
                     self.ctx.handle_cmd_string_tables(string_table)?;
                 }
                 if let Some(packet) = cmd.packet {
-                    self.handle_cmd_packet(packet.data()).await?;
+                    Self::handle_cmd_packet(
+                        &mut self.ctx,
+                        &mut self.visitor,
+                        &mut self.buf,
+                        packet.data(),
+                    )
+                    .await?;
                 }
             }
 
@@ -1076,34 +1088,29 @@ impl<D: AsyncDemoStream, V: AsyncVisitor> AsyncStreamingParser<D, V> {
         Ok(())
     }
 
-    async fn handle_cmd_packet(&mut self, data: &[u8]) -> anyhow::Result<()> {
+    /// takes the parser apart into fields because `data` usually borrows from the demo stream.
+    async fn handle_cmd_packet(
+        ctx: &mut Context,
+        visitor: &mut V,
+        buf: &mut [u8],
+        data: &[u8],
+    ) -> anyhow::Result<()> {
         let mut br = BitReader::new(data);
         while br.num_bits_left() > 8 {
-            let (command, buf) = read_packet_message(&mut br, &mut self.buf)?;
-            self.visitor.on_packet(&self.ctx, command, buf).await?;
-            if let Some(msg) = self.ctx.handle_packet_message(command, buf)? {
-                self.handle_svc_packet_entities(&msg).await?;
+            let (command, buf) = read_packet_message(&mut br, buf)?;
+            visitor.on_packet(ctx, command, buf).await?;
+            if let Some(msg) = ctx.handle_packet_message(command, buf)? {
+                let mut rdr = EntityDeltaReader::new(&msg);
+                while let Some((delta_header, delta)) =
+                    ctx.read_entity_delta(&mut rdr, |hash| visitor.should_track_entity(hash))?
+                {
+                    if let Some(entity) = ctx.delta_entity(&delta) {
+                        visitor.on_entity(ctx, delta_header, entity).await?;
+                    }
+                }
             }
         }
         br.is_overflowed()?;
-        Ok(())
-    }
-
-    async fn handle_svc_packet_entities(
-        &mut self,
-        msg: &CsvcMsgPacketEntities,
-    ) -> anyhow::Result<()> {
-        let mut rdr = EntityDeltaReader::new(msg);
-        while let Some((delta_header, delta)) = self
-            .ctx
-            .read_entity_delta(&mut rdr, |hash| self.visitor.should_track_entity(hash))?
-        {
-            if let Some(entity) = self.ctx.delta_entity(&delta) {
-                self.visitor
-                    .on_entity(&self.ctx, delta_header, entity)
-                    .await?;
-            }
-        }
         Ok(())
     }
 

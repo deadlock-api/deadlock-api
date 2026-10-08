@@ -1,10 +1,7 @@
 use std::io::{Read, SeekFrom};
 
-use haste_core::demostream::{CmdHeader, DecodeCmdError, ReadCmdHeaderError, SeekableDemoStream};
-use prost::Message;
-use valveprotos::common::{
-    CDemoClassInfo, CDemoFullPacket, CDemoPacket, CDemoSendTables, EDemoCommands,
-};
+use haste_core::demostream::{CmdHeader, ReadCmdHeaderError, SeekableDemoStream};
+use valveprotos::common::EDemoCommands;
 
 // cmd header
 // ----
@@ -55,34 +52,6 @@ pub(crate) fn read_cmd_header<R: Read>(mut rdr: R) -> Result<CmdHeader, ReadCmdH
         body_size,
         size: (cmd_n + tick_n + body_size_n + unknown_n) as u8,
     })
-}
-
-// cmd
-// ----
-
-pub(crate) fn decode_cmd_send_tables(data: &[u8]) -> CDemoSendTables {
-    CDemoSendTables {
-        // TODO: no-copy for send tables cmd
-        // also think about how to do no-copy when decoding protobuf.
-        data: Some(data[4..].to_vec()),
-    }
-}
-
-pub(crate) fn decode_cmd_class_info(data: &[u8]) -> Result<CDemoClassInfo, DecodeCmdError> {
-    CDemoClassInfo::decode(data).map_err(DecodeCmdError::DecodeProtobufError)
-}
-
-pub(crate) fn decode_cmd_packet(data: &[u8]) -> CDemoPacket {
-    CDemoPacket {
-        // TODO: no-copy for packet cmd.
-        // also think about how to do no-copy when decoding protobuf.
-        data: Some(data.to_vec()),
-    }
-}
-
-pub(crate) fn decode_cmd_full_packet(_data: &[u8]) -> Result<CDemoFullPacket, DecodeCmdError> {
-    // NOTE: broadcasts don't seem to contain full packets
-    unreachable!()
 }
 
 // other

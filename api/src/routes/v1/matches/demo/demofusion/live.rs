@@ -20,14 +20,10 @@ use datafusion::physical_plan::stream::RecordBatchStreamAdapter;
 use datafusion::physical_plan::streaming::PartitionStream;
 use datafusion::prelude::{SessionConfig, SessionContext};
 use haste_broadcast::{BroadcastHttp, BroadcastHttpClientError};
-use haste_core::demostream::{
-    CmdHeader, DecodeCmdError, DemoStream, ReadCmdError, ReadCmdHeaderError,
-};
+use haste_core::demostream::{CmdFormat, CmdHeader, DemoStream, ReadCmdError, ReadCmdHeaderError};
 use haste_core::entities::{DeltaHeader, Entity};
 use haste_core::parser::{Context, Parser, Visitor};
-use haste_core::valveprotos::common::{
-    CDemoClassInfo, CDemoFullPacket, CDemoPacket, CDemoSendTables, EDemoCommands,
-};
+use haste_core::valveprotos::common::EDemoCommands;
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender, unbounded_channel};
 
 use super::entity_batch_builder::EntityBatchBuilder;
@@ -352,7 +348,7 @@ impl Read for ChannelReader {
 /// A synchronous [`DemoStream`] over the broadcast wire format, fed by a blocking byte channel.
 ///
 /// Not seekable — it supports only a single forward [`Parser::run_to_end`] pass, which is all a live
-/// broadcast allows. Command-body decoders delegate to `BroadcastFile`'s so both agree on the format.
+/// broadcast allows. Command bodies use the broadcast format (the same one `BroadcastFile` reads).
 struct LiveBroadcastStream {
     reader: ChannelReader,
     buf: Vec<u8>,
@@ -374,6 +370,8 @@ impl LiveBroadcastStream {
 }
 
 impl DemoStream for LiveBroadcastStream {
+    const CMD_FORMAT: CmdFormat = CmdFormat::Broadcast;
+
     fn is_at_eof(&mut self) -> core::result::Result<bool, io::Error> {
         Ok(self.eof)
     }
@@ -405,26 +403,6 @@ impl DemoStream for LiveBroadcastStream {
         self.buf.resize(cmd_header.body_size as usize, 0);
         self.reader.read_exact(&mut self.buf)?;
         Ok(&self.buf)
-    }
-
-    fn decode_cmd_send_tables(
-        data: &[u8],
-    ) -> core::result::Result<CDemoSendTables, DecodeCmdError> {
-        <BroadcastDemoStream as DemoStream>::decode_cmd_send_tables(data)
-    }
-
-    fn decode_cmd_class_info(data: &[u8]) -> core::result::Result<CDemoClassInfo, DecodeCmdError> {
-        <BroadcastDemoStream as DemoStream>::decode_cmd_class_info(data)
-    }
-
-    fn decode_cmd_packet(data: &[u8]) -> core::result::Result<CDemoPacket, DecodeCmdError> {
-        <BroadcastDemoStream as DemoStream>::decode_cmd_packet(data)
-    }
-
-    fn decode_cmd_full_packet(
-        data: &[u8],
-    ) -> core::result::Result<CDemoFullPacket, DecodeCmdError> {
-        <BroadcastDemoStream as DemoStream>::decode_cmd_full_packet(data)
     }
 
     fn skip_cmd(&mut self, cmd_header: &CmdHeader) -> core::result::Result<(), io::Error> {
