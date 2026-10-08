@@ -101,6 +101,9 @@ Allow: /openapi.json
 Allow: /cdn-cgi/
 ";
 
+/// Marks every non-2xx response `no-store`, overriding any `Cache-Control` set further in
+/// (including by [`CacheControlMiddleware`]). Applied outside of every other layer that can
+/// produce an error response.
 async fn no_store_on_error(req: Request, next: Next) -> Response {
     let mut response = next.run(req).await;
     if !response.status().is_success() {

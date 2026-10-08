@@ -11,7 +11,10 @@ use axum::response::Response;
 use reqwest::header::InvalidHeaderValue;
 use tower_service::Service;
 
-/// A layer that adds a `Cache-Control` header to the response.
+/// A layer that adds a `Cache-Control` header to successful responses that don't set one.
+///
+/// Non-2xx responses are marked `no-store` by the global `no_store_on_error` middleware (the
+/// outermost layer in `lib.rs`), which overrides whatever this layer set.
 #[derive(Debug, Clone)]
 pub(crate) struct CacheControlMiddleware {
     max_age: Duration,
@@ -79,7 +82,8 @@ impl CacheControlMiddleware {
 #[derive(Clone, Debug)]
 pub(crate) struct CacheControlLayer<S> {
     inner: S,
-    layer: CacheControlMiddleware,
+    /// Rendered once when the layer is applied instead of on every response.
+    header: Option<HeaderValue>,
 }
 
 impl<S> tower_layer::Layer<S> for CacheControlMiddleware {
@@ -88,7 +92,7 @@ impl<S> tower_layer::Layer<S> for CacheControlMiddleware {
     fn layer(&self, inner: S) -> Self::Service {
         CacheControlLayer {
             inner,
-            layer: self.clone(),
+            header: self.header_value().ok(),
         }
     }
 }
@@ -108,26 +112,18 @@ where
 
     fn call(&mut self, req: Request) -> Self::Future {
         let future = self.inner.call(req);
-        let header = self.layer.header_value();
+        let header = self.header.clone();
         Box::pin(async move {
             let mut response: Response = future.await?;
 
-            // Do not cache non-success responses
-            if !response.status().is_success() {
+            // Only successful responses are cacheable, and existing headers win
+            if response.status().is_success()
+                && let Some(header) = header
+            {
                 response
                     .headers_mut()
-                    .insert(CACHE_CONTROL, HeaderValue::from_static("no-store"));
-                return Ok(response);
-            }
-
-            // Do not override existing cache control headers
-            if response.headers().contains_key(CACHE_CONTROL) {
-                return Ok(response);
-            }
-
-            // Add cache control header
-            if let Ok(header) = header {
-                response.headers_mut().insert(CACHE_CONTROL, header);
+                    .entry(CACHE_CONTROL)
+                    .or_insert(header);
             }
             Ok(response)
         })
