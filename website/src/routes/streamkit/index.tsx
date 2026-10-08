@@ -22,11 +22,10 @@ import { Separator } from "~/components/ui/separator";
 import { Spinner } from "~/components/ui/spinner";
 import { Inline, Stack } from "~/components/ui/stack";
 import { Text } from "~/components/ui/text";
-import { useSteamAuthCallback } from "~/hooks/useSteamAuthCallback";
 import { REGION_LABELS } from "~/lib/region";
 import { pageTitle, seo } from "~/lib/seo";
 import { parseSteamIdToId3, steamId64ToSteamId3 } from "~/lib/steam";
-import { generateSteamAuthUrl } from "~/lib/steam-auth";
+import { generateSteamAuthUrl, readSteamAuthCallback } from "~/lib/steam-auth";
 import { streamkitSteamNameQueryOptions } from "~/queries/streamkit-queries";
 
 const regions = ["Europe", "Asia", "NAmerica", "SAmerica", "Oceania"] as const;
@@ -45,10 +44,10 @@ export const Route = createFileRoute("/streamkit/")({
 function StreamKit() {
   const [steamId, setSteamId] = useQueryState("steamid", parseAsString.withDefault(""));
   const [region, setRegion] = useQueryState("region", parseAsString.withDefault(""));
-  const { steamId64 } = useSteamAuthCallback();
   const navigate = useNavigate();
 
   useEffect(() => {
+    const steamId64 = readSteamAuthCallback(window.location.search)?.steamId64;
     if (!steamId64) return;
 
     const id3 = steamId64ToSteamId3(steamId64);
@@ -58,7 +57,7 @@ function StreamKit() {
     newParams.set("steamid", id3.toString());
     if (region) newParams.set("region", region);
     void navigate({ to: "/streamkit", search: Object.fromEntries(newParams), replace: true });
-  }, [steamId64, setSteamId, region, navigate]);
+  }, [setSteamId, region, navigate]);
 
   const {
     data: steamAccountName,

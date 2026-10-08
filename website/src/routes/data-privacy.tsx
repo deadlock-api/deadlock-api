@@ -23,10 +23,9 @@ import { Heading } from "~/components/ui/heading";
 import { Stack } from "~/components/ui/stack";
 import { Text } from "~/components/ui/text";
 import { TextLink } from "~/components/ui/text-link";
-import { useSteamAuthCallback } from "~/hooks/useSteamAuthCallback";
 import { sendDataPrivacyRequest } from "~/lib/data-privacy-api";
 import { pageTitle, seo } from "~/lib/seo";
-import { cleanupCallbackUrl, redirectToSteamAuth } from "~/lib/steam-auth";
+import { cleanupCallbackUrl, readSteamAuthCallback, redirectToSteamAuth } from "~/lib/steam-auth";
 
 export const Route = createFileRoute("/data-privacy")({
   head: () =>
@@ -142,11 +141,12 @@ function DataPrivacy() {
     type: "success" | "error";
     text: string;
   } | null>(null);
-  const { steamId64, openIdParams } = useSteamAuthCallback();
   const hasProcessedCallback = useRef(false);
 
   useEffect(() => {
-    if (!steamId64 || hasProcessedCallback.current) return;
+    if (hasProcessedCallback.current) return;
+    const callback = readSteamAuthCallback(window.location.search);
+    if (!callback) return;
 
     const urlParams = new URLSearchParams(window.location.search);
     const action = urlParams.get("action") as "deletion" | "tracking" | null;
@@ -160,8 +160,8 @@ function DataPrivacy() {
 
       try {
         await sendDataPrivacyRequest(action, {
-          steam_id: steamId64,
-          open_id_params: openIdParams,
+          steam_id: callback.steamId64,
+          open_id_params: callback.openIdParams,
         });
 
         const actionText = action === "deletion" ? "Data deletion request" : "Tracking re-enablement";
@@ -181,7 +181,7 @@ function DataPrivacy() {
     };
 
     void processCallback();
-  }, [steamId64, openIdParams]);
+  }, []);
 
   const handleSteamAuth = (action: "deletion" | "tracking") => {
     try {

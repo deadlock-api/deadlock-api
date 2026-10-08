@@ -94,6 +94,24 @@ export function validateSteamResponse(params: URLSearchParams): boolean {
 }
 
 /**
+ * The Steam OpenID callback in a URL's query string: the signed-in SteamID64 and every `openid.*` parameter, or null
+ * when the query is not a valid callback. Read it in an effect: the server never sees the callback.
+ */
+export function readSteamAuthCallback(
+  search: string,
+): { steamId64: string; openIdParams: Record<string, string> } | null {
+  const searchParams = new URLSearchParams(search);
+  if (!validateSteamResponse(searchParams)) return null;
+  const steamId64 = extractSteamId(searchParams.get("openid.claimed_id") ?? "");
+  if (!steamId64) return null;
+  const openIdParams: Record<string, string> = {};
+  searchParams.forEach((value, key) => {
+    if (key.startsWith("openid.")) openIdParams[key] = value;
+  });
+  return { steamId64, openIdParams };
+}
+
+/**
  * Redirect to Steam authentication
  * @param action - The action to perform after authentication
  */

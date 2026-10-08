@@ -12,9 +12,22 @@ export interface DataPrivacyRequest {
 
 const PRIVACY_TIMEOUT = 30_000;
 
-async function sendPrivacyRequest(path: string, requestData: DataPrivacyRequest): Promise<void> {
+const PRIVACY_PATHS = {
+  deletion: "/v1/data-privacy/request-deletion",
+  tracking: "/v1/data-privacy/request-tracking",
+} as const;
+
+/**
+ * Send a data privacy request to the backend: data deletion, or tracking re-enablement
+ * @param action - The type of request (deletion or tracking)
+ * @param requestData - Steam ID and OpenID parameters for verification
+ */
+export async function sendDataPrivacyRequest(
+  action: keyof typeof PRIVACY_PATHS,
+  requestData: DataPrivacyRequest,
+): Promise<void> {
   try {
-    await fetchApi(path, {
+    await fetchApi(PRIVACY_PATHS[action], {
       method: "POST",
       body: requestData,
       timeout: PRIVACY_TIMEOUT,
@@ -29,35 +42,4 @@ async function sendPrivacyRequest(path: string, requestData: DataPrivacyRequest)
     }
     throw new ApiError(0, error instanceof Error ? error.message : "Failed to connect to server");
   }
-}
-
-/**
- * Send data deletion request to the backend
- * @param requestData - Steam ID and OpenID parameters for verification
- */
-export async function requestDataDeletion(requestData: DataPrivacyRequest): Promise<void> {
-  return sendPrivacyRequest("/v1/data-privacy/request-deletion", requestData);
-}
-
-/**
- * Send tracking re-enablement request to the backend
- * @param requestData - Steam ID and OpenID parameters for verification
- */
-export async function requestTrackingReEnable(requestData: DataPrivacyRequest): Promise<void> {
-  return sendPrivacyRequest("/v1/data-privacy/request-tracking", requestData);
-}
-
-/**
- * Send data privacy request based on action type
- * @param action - The type of request (deletion or tracking)
- * @param requestData - Steam ID and OpenID parameters for verification
- */
-export async function sendDataPrivacyRequest(
-  action: "deletion" | "tracking",
-  requestData: DataPrivacyRequest,
-): Promise<void> {
-  if (action === "deletion") {
-    return requestDataDeletion(requestData);
-  }
-  return requestTrackingReEnable(requestData);
 }
