@@ -1,3 +1,23 @@
+/** Where Steam keeps its cache, most common first. The FAQ answers below name the most common ones. */
+export const STEAM_CACHE_PATHS = {
+  windows: "C:\\Program Files (x86)\\Steam\\appcache\\httpcache",
+  macos: "~/Library/Application Support/Steam/appcache/httpcache",
+  linux: [
+    "~/.local/share/Steam/appcache/httpcache",
+    "~/.steam/steam/appcache/httpcache",
+    "~/.var/app/com.valvesoftware.Steam/.local/share/Steam/appcache/httpcache",
+  ],
+  linuxMore: [
+    "~/.var/app/com.valvesoftware.Steam/.steam/steam/appcache/httpcache",
+    "~/.var/app/com.valvesoftware.Steam/.steam/root/appcache/httpcache",
+    "~/.steam/root/appcache/httpcache",
+    "~/.steam/debian-installation/appcache/httpcache",
+    "~/snap/steam/common/.local/share/Steam/appcache/httpcache",
+    "~/snap/steam/common/.steam/steam/appcache/httpcache",
+    "~/snap/steam/common/.steam/root/appcache/httpcache",
+  ],
+} as const;
+
 /**
  * The questions on /ingest-cache. The page renders them and its head turns the same list into FAQPage JSON-LD, so
  * what search engines read is what visitors see.
@@ -25,8 +45,7 @@ export const INGEST_FAQ: readonly IngestFaqEntry[] = [
   },
   {
     question: "Where is Steam's httpcache folder?",
-    answer:
-      "It is the httpcache folder inside Steam's appcache folder. On Windows that is C:\\Program Files (x86)\\Steam\\appcache\\httpcache, on macOS ~/Library/Application Support/Steam/appcache/httpcache, and on Linux usually ~/.local/share/Steam/appcache/httpcache or ~/.steam/steam/appcache/httpcache.",
+    answer: `It is the httpcache folder inside Steam's appcache folder. On Windows that is ${STEAM_CACHE_PATHS.windows}, on macOS ${STEAM_CACHE_PATHS.macos}, and on Linux usually ${STEAM_CACHE_PATHS.linux[0]} or ${STEAM_CACHE_PATHS.linux[1]}.`,
   },
   {
     question: "What does it send, and is it safe?",
@@ -35,8 +54,7 @@ export const INGEST_FAQ: readonly IngestFaqEntry[] = [
   },
   {
     question: "Does it work on macOS?",
-    answer:
-      "The cache upload does: choose ~/Library/Application Support/Steam/appcache/httpcache and the matches are sent. The background tool runs on Windows and Linux, and in Docker.",
+    answer: `The cache upload does: choose ${STEAM_CACHE_PATHS.macos} and the matches are sent. The background tool runs on Windows and Linux, and in Docker.`,
   },
 ];
 

@@ -16,25 +16,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { Text } from "~/components/ui/text";
 import { type IngestResult, useIngestUpload } from "~/hooks/useIngestUpload";
 
-/** Where Steam keeps its cache, most common first. The FAQ answer lists the same defaults. */
-export const STEAM_CACHE_PATHS = {
-  windows: "C:\\Program Files (x86)\\Steam\\appcache\\httpcache",
-  macos: "~/Library/Application Support/Steam/appcache/httpcache",
-  linux: [
-    "~/.local/share/Steam/appcache/httpcache",
-    "~/.steam/steam/appcache/httpcache",
-    "~/.var/app/com.valvesoftware.Steam/.local/share/Steam/appcache/httpcache",
-  ],
-  linuxMore: [
-    "~/.var/app/com.valvesoftware.Steam/.steam/steam/appcache/httpcache",
-    "~/.var/app/com.valvesoftware.Steam/.steam/root/appcache/httpcache",
-    "~/.steam/root/appcache/httpcache",
-    "~/.steam/debian-installation/appcache/httpcache",
-    "~/snap/steam/common/.local/share/Steam/appcache/httpcache",
-    "~/snap/steam/common/.steam/steam/appcache/httpcache",
-    "~/snap/steam/common/.steam/root/appcache/httpcache",
-  ],
-} as const;
+import { STEAM_CACHE_PATHS } from "./faq";
 
 function CachePath({ path }: { path: string }) {
   return <CopyableCode size="sm" code={path} copyLabel={`Copy ${path}`} />;
