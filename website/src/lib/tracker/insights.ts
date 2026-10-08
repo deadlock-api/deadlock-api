@@ -1,3 +1,5 @@
+import { formatPercent } from "~/lib/format";
+
 import type {
   OutcomeSplit,
   OutcomeSplits,
@@ -40,14 +42,14 @@ function fromSplit(
   heroId?: number,
 ): Insight | null {
   if (split.matches < minMatches) return null;
-  const percent = (split.wins / split.matches) * 100;
-  const delta = percent - baseline * 100;
+  const winrate = split.wins / split.matches;
+  const delta = winrate * 100 - baseline * 100;
   if (Math.abs(delta) < MIN_DELTA_POINTS) return null;
   const tone = delta > 0 ? "good" : "bad";
   return {
     id,
     tone,
-    value: `${percent.toFixed(1)}%`,
+    value: formatPercent(winrate),
     headline: headline(tone, split.label),
     heroId,
     detail: `${split.matches.toLocaleString("en-US")} matches`,

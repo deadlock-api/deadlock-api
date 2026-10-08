@@ -22,6 +22,7 @@ import type {
 } from "~/queries/tracker-queries";
 
 import { combatStats } from "./combat-stats";
+import { badgeToLinear, isWin, linearToBadge } from "./compute";
 import { DEMO_ACCOUNT_ID, demoMatchId, demoMatchIndex } from "./demo";
 import { TEAMS } from "./teams";
 
@@ -129,8 +130,7 @@ function weightedIndex(rng: Rng, weights: readonly number[]): number {
 }
 
 function badgeAfter(points: number): number {
-  const linear = (Math.floor(START_BADGE / 10) - 1) * 6 + (START_BADGE % 10) + Math.floor(points / POINTS_PER_SUBTIER);
-  return (Math.floor((linear - 1) / 6) + 1) * 10 + ((linear - 1) % 6) + 1;
+  return linearToBadge(badgeToLinear(START_BADGE) + Math.floor(points / POINTS_PER_SUBTIER));
 }
 
 /**
@@ -260,13 +260,13 @@ function matchesFilter(entry: PlayerMatchHistoryEntry, filter: HistoryFilter): b
   return true;
 }
 
-const won = (entry: PlayerMatchHistoryEntry) => entry.match_result === entry.player_team;
-
 export function demoHeroStats(history: readonly PlayerMatchHistoryEntry[], filter: HistoryFilter): HeroStats[] {
   const byHero = new Map<number, PlayerMatchHistoryEntry[]>();
   for (const entry of history) {
     if (!matchesFilter(entry, filter)) continue;
-    byHero.set(entry.hero_id, [...(byHero.get(entry.hero_id) ?? []), entry]);
+    const entries = byHero.get(entry.hero_id);
+    if (entries) entries.push(entry);
+    else byHero.set(entry.hero_id, [entry]);
   }
   return [...byHero].map(([heroId, entries]) => {
     const rng = mulberry32(heroId);
@@ -282,7 +282,7 @@ export function demoHeroStats(history: readonly PlayerMatchHistoryEntry[], filte
       hero_id: heroId,
       matches: entries.map((entry) => entry.match_id),
       matches_played: entries.length,
-      wins: entries.filter(won).length,
+      wins: entries.filter(isWin).length,
       last_played: Math.max(...entries.map((entry) => entry.start_time)),
       time_played: sum((entry) => entry.match_duration_s),
       ending_level: sum((entry) => entry.hero_level) / entries.length,
@@ -352,7 +352,7 @@ function companionStats(history: readonly PlayerMatchHistoryEntry[], filter: His
     for (const accountId of matchRoster(entry.match_id)[side]) {
       const stats = byCompanion.get(accountId) ?? { matches: [], wins: 0 };
       stats.matches.push(entry.match_id);
-      if (won(entry)) stats.wins++;
+      if (isWin(entry)) stats.wins++;
       byCompanion.set(accountId, stats);
     }
   }

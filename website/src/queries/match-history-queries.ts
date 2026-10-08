@@ -15,7 +15,7 @@ import { queryKeys } from "./query-keys";
  * A player's match history. Bot-friend accounts hit a strict rate limit on the live endpoint; a 429 falls back to the
  * stored ClickHouse history, which is not rate limited.
  */
-export async function fetchPlayerMatchHistory(accountId: number): Promise<PlayerMatchHistoryEntry[]> {
+async function fetchPlayerMatchHistory(accountId: number): Promise<PlayerMatchHistoryEntry[]> {
   try {
     const response = await api.players_api.matchHistory({ accountId });
     return response.data;

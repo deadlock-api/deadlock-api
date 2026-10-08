@@ -1,6 +1,6 @@
 import type { PlayerMatchHistoryEntry } from "deadlock_api_client";
 
-import { filterMatches, type TrackerFilterValues } from "./compute";
+import { matchesFilters, type TrackerFilterValues } from "./compute";
 
 export interface FilterRecovery {
   label: string;
@@ -34,7 +34,10 @@ export function filterRecoveryOptions(
 
   const withCounts = (options: typeof candidates) =>
     options
-      .map((option) => ({ ...option, matches: filterMatches(entries, option.filters).length }))
+      .map((option) => ({
+        ...option,
+        matches: entries.filter((entry) => matchesFilters(entry, option.filters)).length,
+      }))
       .filter((option) => option.matches > 0);
   const singleChanges = withCounts(candidates);
   if (singleChanges.length > 0) return singleChanges.slice(0, 3);

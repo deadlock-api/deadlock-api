@@ -2,7 +2,7 @@ import { type LaneInfo, LANES } from "~/lib/team-builder/lanes";
 import type { TrackerMatchPlayer, TrackerMatchStat } from "~/queries/tracker-queries";
 
 /** The laning phase has no fixed end in game; nine minutes is where this compares lanes. */
-export const LANE_PHASE_END_S = 540;
+const LANE_PHASE_END_S = 540;
 
 export interface LanePlayer {
   player: TrackerMatchPlayer;

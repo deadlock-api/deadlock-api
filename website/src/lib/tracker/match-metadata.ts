@@ -2,6 +2,7 @@ import { api } from "~/lib/api";
 import { combatStats, resolveCustomStats } from "~/lib/tracker/combat-stats";
 import type {
   TrackerMatchDeath,
+  TrackerMatchItem,
   TrackerMatchMetadata,
   TrackerMatchStat,
   TrackerMidBoss,
@@ -128,6 +129,16 @@ export function toTrackerStat(stat: { [key in keyof TrackerMatchStat]?: number |
   };
 }
 
+export function toTrackerItem(item: { [key in keyof TrackerMatchItem]?: number | null }): TrackerMatchItem {
+  return {
+    item_id: item.item_id ?? 0,
+    game_time_s: item.game_time_s ?? 0,
+    sold_time_s: item.sold_time_s ?? 0,
+    upgrade_id: item.upgrade_id ?? 0,
+    imbued_ability_id: item.imbued_ability_id ?? 0,
+  };
+}
+
 /** The progress a match applied, which demotion protection can hold at zero against the change the result asked for. */
 export function rankDelta(initial: number | null | undefined, final: number | null | undefined): number | null {
   if (initial == null || final == null || (initial === 0 && final === 0)) return null;
@@ -201,8 +212,8 @@ export function trackerMatchFromRawMetadata(metadata: RawMatchMetadata): Tracker
       kind: REST_OBJECTIVE_KINDS[objective.team_objective_id ?? -1],
     })),
     mid_boss: claimedMidBosses(info.mid_boss, (boss) => restTeam(boss.team_claimed)),
-    deaths: (info.players ?? []).map(playerDeaths),
-    players: (info.players ?? []).map((player) => ({
+    deaths: info.players.map(playerDeaths),
+    players: info.players.map((player) => ({
       account_id: player.account_id ?? 0,
       team: restTeam(player.team),
       hero_id: player.hero_id ?? 0,
@@ -235,13 +246,7 @@ export function trackerMatchFromRawMetadata(metadata: RawMatchMetadata): Tracker
       ability_stacks: Object.fromEntries(
         (player.ability_stats ?? []).map((stat) => [stat.ability_id ?? 0, stat.ability_value ?? 0]),
       ),
-      items: (player.items ?? []).map((item) => ({
-        item_id: item.item_id ?? 0,
-        game_time_s: item.game_time_s ?? 0,
-        sold_time_s: item.sold_time_s ?? 0,
-        upgrade_id: item.upgrade_id ?? 0,
-        imbued_ability_id: item.imbued_ability_id ?? 0,
-      })),
+      items: (player.items ?? []).map(toTrackerItem),
       stats: (player.stats ?? []).map(toTrackerStat),
       personaname: undefined,
     })),

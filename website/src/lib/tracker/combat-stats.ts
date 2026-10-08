@@ -29,9 +29,14 @@ export function resolveCustomStats(raw: unknown, names: Map<number, string>): Re
 /** Ratios can fall during a match, so use one latest snapshot, never maxima or summed samples. */
 export function combatStats(samples: readonly StatSample[] | null | undefined): CombatStats | null {
   let latest: StatSample | undefined;
+  let latestTime = 0;
   for (const sample of samples ?? []) {
-    if (sample.time_stamp_s == null || !Number.isFinite(sample.time_stamp_s) || sample.time_stamp_s < 0) continue;
-    if (!latest || sample.time_stamp_s >= latest.time_stamp_s!) latest = sample;
+    const time = sample.time_stamp_s;
+    if (time == null || !Number.isFinite(time) || time < 0) continue;
+    if (!latest || time >= latestTime) {
+      latest = sample;
+      latestTime = time;
+    }
   }
   const raw = latest?.custom_user_stats;
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
@@ -71,5 +76,5 @@ export function combatStats(samples: readonly StatSample[] | null | undefined): 
     count("Enemy Hero Accuracy - Incoming##Shots"),
     "incoming shots hit",
   );
-  return metrics.length > 0 ? { sampledAt: latest!.time_stamp_s!, metrics } : null;
+  return metrics.length > 0 ? { sampledAt: latestTime, metrics } : null;
 }

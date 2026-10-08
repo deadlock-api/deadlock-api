@@ -21,6 +21,7 @@ import {
   maxStat,
   playerDeaths,
   rankDelta,
+  toTrackerItem,
   toTrackerStat,
   trackerMatchFromRawMetadata,
 } from "~/lib/tracker/match-metadata";
@@ -278,8 +279,8 @@ export function trackerMatchMetadataQueryOptions(matchId: number) {
           kind: graphqlObjectiveKind(objective.team_objective ?? ""),
         })),
         mid_boss: claimedMidBosses(match.mid_boss as GraphqlMidBoss[] | null, (boss) => boss.team_claimed ?? ""),
-        deaths: (match.players ?? []).map(playerDeaths),
-        players: (match.players ?? []).map((player) => ({
+        deaths: match.players.map(playerDeaths),
+        players: match.players.map((player) => ({
           account_id: player.account_id ?? 0,
           team: player.team ?? "",
           hero_id: player.hero_id ?? 0,
@@ -308,13 +309,7 @@ export function trackerMatchMetadataQueryOptions(matchId: number) {
               value,
             ]),
           ),
-          items: (player.items ?? []).map((item) => ({
-            item_id: item.item_id ?? 0,
-            game_time_s: item.game_time_s ?? 0,
-            sold_time_s: item.sold_time_s ?? 0,
-            upgrade_id: item.upgrade_id ?? 0,
-            imbued_ability_id: item.imbued_ability_id ?? 0,
-          })),
+          items: (player.items ?? []).map(toTrackerItem),
           stats: (player.stats ?? []).map(toTrackerStat),
           personaname: player.steam?.personaname,
         })),

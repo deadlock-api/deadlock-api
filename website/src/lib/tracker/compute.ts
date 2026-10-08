@@ -31,7 +31,7 @@ export function isWin(entry: PlayerMatchHistoryEntry): boolean {
   return entry.match_result === entry.player_team;
 }
 
-export function isLoss(entry: PlayerMatchHistoryEntry): boolean {
+function isLoss(entry: PlayerMatchHistoryEntry): boolean {
   return !isWin(entry);
 }
 
@@ -99,21 +99,24 @@ function matchesMode(entry: PlayerMatchHistoryEntry, mode: Mode): boolean {
   }
 }
 
+/** Whether every filter lets `entry` through. */
+export function matchesFilters(entry: PlayerMatchHistoryEntry, filters: TrackerFilterValues): boolean {
+  if (!matchesMode(entry, filters.mode)) return false;
+  if (filters.heroId != null && entry.hero_id !== filters.heroId) return false;
+  if (filters.minUnixTimestamp != null && entry.start_time < filters.minUnixTimestamp) return false;
+  if (filters.maxUnixTimestamp != null && entry.start_time > filters.maxUnixTimestamp) return false;
+  if (filters.result === "win" && !isWin(entry)) return false;
+  if (filters.result === "loss" && !isLoss(entry)) return false;
+  return true;
+}
+
 /** Returns the matching entries sorted newest first. */
 export function filterMatches(
   entries: PlayerMatchHistoryEntry[],
   filters: TrackerFilterValues,
 ): PlayerMatchHistoryEntry[] {
   return entries
-    .filter((entry) => {
-      if (!matchesMode(entry, filters.mode)) return false;
-      if (filters.heroId != null && entry.hero_id !== filters.heroId) return false;
-      if (filters.minUnixTimestamp != null && entry.start_time < filters.minUnixTimestamp) return false;
-      if (filters.maxUnixTimestamp != null && entry.start_time > filters.maxUnixTimestamp) return false;
-      if (filters.result === "win" && !isWin(entry)) return false;
-      if (filters.result === "loss" && !isLoss(entry)) return false;
-      return true;
-    })
+    .filter((entry) => matchesFilters(entry, filters))
     .sort((a, b) => b.start_time - a.start_time || b.match_id - a.match_id);
 }
 
@@ -297,7 +300,7 @@ export interface TrackerHeroRow {
   lastPlayedUnix: number;
 }
 
-export function summarizeByHero(entries: PlayerMatchHistoryEntry[]): Map<number, TrackerSummary> {
+function summarizeByHero(entries: PlayerMatchHistoryEntry[]): Map<number, TrackerSummary> {
   const byHero = new Map<number, PlayerMatchHistoryEntry[]>();
   for (const entry of entries) {
     const list = byHero.get(entry.hero_id);
@@ -601,10 +604,18 @@ export function computeSessions(
   contextEntries: PlayerMatchHistoryEntry[] = entries,
 ): Map<number, PlaySession> {
   const selectedIds = new Set(entries.map((entry) => entry.match_id));
+  return sessionsOf(orderedSessionHistory(entries, contextEntries), (matchId) => selectedIds.has(matchId));
+}
+
+/** `computeSessions` over a history already deduplicated and sorted newest first. */
+function sessionsOf(
+  ordered: PlayerMatchHistoryEntry[],
+  isSelected: (matchId: number) => boolean,
+): Map<number, PlaySession> {
   const sessionByMatchId = new Map<number, PlaySession>();
   let session: PlaySession | null = null;
   let previous: PlayerMatchHistoryEntry | null = null;
-  for (const entry of orderedSessionHistory(entries, contextEntries)) {
+  for (const entry of ordered) {
     const endUnix = entry.start_time + entry.match_duration_s;
     if (session === null || previous === null || previous.start_time - endUnix > SESSION_GAP_S) {
       session = {
@@ -619,7 +630,7 @@ export function computeSessions(
       };
     }
     session.startUnix = entry.start_time;
-    if (selectedIds.has(entry.match_id)) {
+    if (isSelected(entry.match_id)) {
       session.matches += 1;
       if (isWin(entry)) session.wins += 1;
       else session.losses += 1;
@@ -874,7 +885,7 @@ export function computeSessionMomentum(
 
   const selectedIds = new Set(entries.map((entry) => entry.match_id));
   const context = orderedSessionHistory(entries, contextEntries);
-  const sessions = computeSessions(context);
+  const sessions = sessionsOf(context, () => true);
   const sessionEntries = new Map<PlaySession, PlayerMatchHistoryEntry[]>();
   for (const entry of context) {
     const session = sessions.get(entry.match_id) as PlaySession;
