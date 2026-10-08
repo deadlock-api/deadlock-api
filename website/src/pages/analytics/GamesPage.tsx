@@ -17,7 +17,7 @@ import { useModeState } from "~/hooks/useModeState";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { analyticsTabPath, ANALYTICS_VIEWS } from "~/lib/analytics-tabs";
 import { getEffectiveRankRange } from "~/lib/game-mode";
-import { ALL_STAT_KEYS, getFilteredCategories } from "~/lib/game-stat-definitions";
+import { ALL_STAT_KEYS, getFilteredCategories, isGameStatKey } from "~/lib/game-stat-definitions";
 import { MAX_BADGE } from "~/lib/rank-utils";
 
 import { BuffsTab, CombatTab, EconomyTab, GamesByRankChart, GamesOverTimeChart } from "./games-views";
@@ -38,12 +38,12 @@ export function Games() {
   const { startDate, endDate, prevStartDate, prevEndDate, handleDateChange, defaultRange } = useDateRangeState();
   const [minDurationS, setMinDurationS] = useQueryState("min_duration_s", parseAsInteger);
   const [maxDurationS, setMaxDurationS] = useQueryState("max_duration_s", parseAsInteger);
-  const [chosenStat, setStat] = useQueryState(
-    "stat",
-    parseAsStringLiteral(ALL_STAT_KEYS as unknown as readonly string[]).withDefault("avg_kills"),
-  );
+  const [chosenStat, setStat] = useQueryState("stat", parseAsStringLiteral(ALL_STAT_KEYS).withDefault("avg_kills"));
   // Street Brawl hides some metrics (no mid boss, no economy breakdown): one chosen in another mode would plot a flat
   // zero line under a picker that does not list it. The URL keeps the choice for when the mode changes back.
+  const chooseStat = async (next: string) => {
+    if (isGameStatKey(next)) await setStat(next);
+  };
   const stat = getFilteredCategories(isStreetBrawl).some((category) => category.stats.some((s) => s.key === chosenStat))
     ? chosenStat
     : "avg_kills";
@@ -151,7 +151,7 @@ export function Games() {
                 prevParams={prevParams}
                 isStreetBrawl={isStreetBrawl}
                 onStatClick={async (key) => {
-                  await setStat(key);
+                  await chooseStat(key);
                   await setTab("over-time");
                 }}
               />
@@ -166,7 +166,7 @@ export function Games() {
                 <GamesOverTimeChart
                   params={baseParams}
                   stat={stat}
-                  onStatChange={setStat}
+                  onStatChange={chooseStat}
                   timeBucket={timeBucket}
                   onTimeBucketChange={(b) => setTimeBucket(b as typeof timeBucket)}
                   isStreetBrawl={isStreetBrawl}
@@ -183,7 +183,7 @@ export function Games() {
                 <GamesByRankChart
                   params={baseParams}
                   stat={stat}
-                  onStatChange={setStat}
+                  onStatChange={chooseStat}
                   isStreetBrawl={isStreetBrawl}
                 />
               </Suspense>

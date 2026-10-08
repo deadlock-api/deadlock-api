@@ -4,6 +4,7 @@ import { toast } from "sonner";
 
 import { PatronAuthContext, type PatronAuthContextValue, type PatronAuthState } from "~/contexts/patron-auth-context";
 import { API_ORIGIN } from "~/lib/constants";
+import { fetchApi } from "~/lib/http";
 import type { PatronStatus } from "~/lib/patron-api";
 import { usePatronStatus } from "~/queries/patron-queries";
 import { queryKeys } from "~/queries/query-keys";
@@ -67,11 +68,8 @@ export function PatronAuthProvider({ children }: PatronAuthProviderProps) {
     setIsLoggingOut(true);
     // Only a confirmed logout clears the page: otherwise the session cookie survives and the next status check would
     // sign the patron back in, so they are told instead.
-    const loggedOut = await fetch(`${API_ORIGIN}/v1/auth/patreon/logout`, {
-      method: "POST",
-      credentials: "include",
-    }).then(
-      (res) => res.ok,
+    const loggedOut = await fetchApi("/v1/auth/patreon/logout", { method: "POST" }).then(
+      () => true,
       () => false,
     );
     setIsLoggingOut(false);

@@ -160,7 +160,16 @@ export function getFilteredCategories(isStreetBrawl: boolean): StatCategory[] {
     .filter((c) => c.stats.length > 0);
 }
 
-export const ALL_STAT_KEYS = GAME_STAT_CATEGORIES.flatMap((c) => c.stats.map((s) => s.key));
+export type GameStatKey = StatDefinition["key"];
+
+export const ALL_STAT_KEYS: readonly GameStatKey[] = GAME_STAT_CATEGORIES.flatMap((c) => c.stats.map((s) => s.key));
+
+const STAT_KEYS = new Set<string>(ALL_STAT_KEYS);
+
+/** Whether `value` names a game stat: the charts' selectors hand back plain strings. */
+export function isGameStatKey(value: string): value is GameStatKey {
+  return STAT_KEYS.has(value);
+}
 
 export function getStatDefinition(key: string): StatDefinition | undefined {
   for (const category of GAME_STAT_CATEGORIES) {
