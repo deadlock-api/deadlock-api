@@ -90,6 +90,38 @@ where
     List(Vec<T>),
 }
 
+impl<T> CommaSeparated<T>
+where
+    T: core::fmt::Debug + FromStr,
+{
+    fn into_vec<E: serde::de::Error>(self) -> Result<Vec<T>, E> {
+        match self {
+            Self::List(vec) => Ok(vec),
+            Self::Single(val) => Ok(vec![val]),
+            Self::StringList(val) => val
+                .iter()
+                .map(|s| {
+                    s.parse()
+                        .map_err(|_| E::custom("Failed to parse list item"))
+                })
+                .collect(),
+            Self::CommaStringList(str) => {
+                let str = str.replace(['[', ']'], "");
+                if str.is_empty() {
+                    return Ok(vec![]);
+                }
+                str.split(',')
+                    .map(|s| {
+                        s.trim()
+                            .parse()
+                            .map_err(|_| E::custom("Failed to parse comma separated list"))
+                    })
+                    .collect()
+            }
+        }
+    }
+}
+
 pub(crate) fn comma_separated_deserialize_option<'de, D, T>(
     deserializer: D,
 ) -> Result<Option<Vec<T>>, D::Error>
@@ -97,42 +129,11 @@ where
     D: Deserializer<'de>,
     T: FromStr + Deserialize<'de> + core::fmt::Debug,
 {
-    let parsed: CommaSeparated<T> = match Option::deserialize(deserializer)? {
-        Some(v) => v,
-        None => return Ok(None),
+    let Some(parsed) = Option::<CommaSeparated<T>>::deserialize(deserializer)? else {
+        return Ok(None);
     };
-
-    Ok(match parsed {
-        CommaSeparated::List(vec) => Some(vec),
-        CommaSeparated::Single(val) => Some(vec![val]),
-        CommaSeparated::StringList(val) => {
-            let mut out = vec![];
-            for s in val {
-                let parsed = s
-                    .parse()
-                    .map_err(|_| serde::de::Error::custom("Failed to parse list item"))?;
-                out.push(parsed);
-            }
-            if out.is_empty() { None } else { Some(out) }
-        }
-        CommaSeparated::CommaStringList(str) => {
-            let str = str.replace(['[', ']'], "");
-
-            // If the string is empty, return None
-            if str.is_empty() {
-                return Ok(None);
-            }
-
-            let mut out = vec![];
-            for s in str.split(',') {
-                let parsed = s.trim().parse().map_err(|_| {
-                    serde::de::Error::custom("Failed to parse comma separated list")
-                })?;
-                out.push(parsed);
-            }
-            if out.is_empty() { None } else { Some(out) }
-        }
-    })
+    let out = parsed.into_vec()?;
+    Ok((!out.is_empty()).then_some(out))
 }
 
 pub(crate) fn comma_separated_deserialize<'de, D, T>(deserializer: D) -> Result<Vec<T>, D::Error>
@@ -140,39 +141,7 @@ where
     D: Deserializer<'de>,
     T: FromStr + Deserialize<'de> + core::fmt::Debug,
 {
-    let parsed = CommaSeparated::deserialize(deserializer)?;
-
-    Ok(match parsed {
-        CommaSeparated::List(vec) => vec,
-        CommaSeparated::Single(val) => vec![val],
-        CommaSeparated::StringList(val) => {
-            let mut out = vec![];
-            for s in val {
-                let parsed = s
-                    .parse()
-                    .map_err(|_| serde::de::Error::custom("Failed to parse list item"))?;
-                out.push(parsed);
-            }
-            if out.is_empty() { vec![] } else { out }
-        }
-        CommaSeparated::CommaStringList(str) => {
-            let str = str.replace(['[', ']'], "");
-
-            // If the string is empty, return None
-            if str.is_empty() {
-                return Ok(vec![]);
-            }
-
-            let mut out = vec![];
-            for s in str.split(',') {
-                let parsed = s.trim().parse().map_err(|_| {
-                    serde::de::Error::custom("Failed to parse comma separated list")
-                })?;
-                out.push(parsed);
-            }
-            if out.is_empty() { vec![] } else { out }
-        }
-    })
+    CommaSeparated::deserialize(deserializer)?.into_vec()
 }
 
 /// Deserializes a repeatable, comma-separated list query parameter into a list of
