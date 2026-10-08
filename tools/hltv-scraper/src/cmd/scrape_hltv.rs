@@ -1,8 +1,7 @@
 use core::num::NonZeroUsize;
 use core::time::Duration;
 use std::collections::HashSet;
-use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::sync::Arc;
 
 use anyhow::Context;
@@ -24,6 +23,9 @@ use valveprotos::deadlock::CMsgMatchMetaData;
 use crate::cmd::download_single_hltv::download_single_hltv_meta;
 use crate::cmd::run_spectate_bot::{SpectatedMatchInfo, SpectatedMatchType};
 
+/// Fallback for metadata the object store rejected; docker-compose mounts `./local-store` here.
+const LOCAL_STORE_ROOT: &str = "/matches";
+
 pub(crate) async fn run(spectate_server_url: String) -> anyhow::Result<()> {
     let spec_client = common::http_client();
     let base_url =
@@ -33,9 +35,6 @@ pub(crate) async fn run(spectate_server_url: String) -> anyhow::Result<()> {
 
     let mut already_downloaded: LruCache<u64, bool> =
         LruCache::new(NonZeroUsize::new(100).unwrap_or(NonZeroUsize::MIN));
-
-    let root_path = PathBuf::from("./localstore");
-    fs::create_dir_all(&root_path)?;
 
     let aws_store = common::get_store()?;
     let store = Arc::new(aws_store);
@@ -174,9 +173,13 @@ fn download_task(
                 "[{label} {match_id}] Got error writing meta to object store: {:?}",
                 e
             );
-            let root_path = PathBuf::from("/matches");
-            match store_meta_to_local_store(&root_path, &match_metadata, &smi.match_type, match_id)
-                .await
+            match store_meta_to_local_store(
+                Path::new(LOCAL_STORE_ROOT),
+                &match_metadata,
+                &smi.match_type,
+                match_id,
+            )
+            .await
             {
                 Ok(()) => info!("[{label} {match_id}] Wrote meta to local store instead"),
                 Err(e) => error!(
