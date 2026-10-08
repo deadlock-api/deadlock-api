@@ -29,6 +29,11 @@
     { "pattern": "deadlock-api.com", "custom_domain": true },
     { "pattern": "www.deadlock-api.com", "custom_domain": true }
   ],
+  // The AI search's questions per visitor (src/lib/ai-search/rate-limit.ts): each costs a model call. Counted per
+  // Cloudflare location, so the limit is approximate. The namespace id is any number unique in the account.
+  "ratelimits": [
+    { "name": "AI_SEARCH_RATE_LIMITER", "namespace_id": "1001", "simple": { "limit": 10, "period": 60 } }
+  ],
   "observability": {
     "enabled": true
   },

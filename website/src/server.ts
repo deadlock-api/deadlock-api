@@ -4,6 +4,7 @@ import { createStartHandler, defaultStreamHandler, type RequestHandler } from "@
 import headersFile from "../public/_headers?raw";
 import { isCacheableRequest, serveCachedHtml } from "./lib/html-cache";
 import { headersFor, parseHeadersFile } from "./lib/static-headers";
+import { setWorkerEnv, type WorkerEnv } from "./lib/worker-env";
 
 const handler = createStartHandler(defaultStreamHandler);
 const HEADER_RULES = parseHeadersFile(headersFile);
@@ -58,6 +59,8 @@ function finalize(url: URL, res: Response): Response {
 
 export default {
   async fetch(request: Request, env: Parameters<RequestHandler<Register>>[1], ctx?: WorkerContext) {
+    // Undefined under the Vite dev server, which runs this entry without a Worker around it.
+    setWorkerEnv((env as WorkerEnv | undefined) ?? {});
     const url = new URL(request.url);
     let changed = false;
     if (url.hostname === "www.deadlock-api.com") {
