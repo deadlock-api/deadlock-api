@@ -9,7 +9,7 @@ use std::sync::Arc;
 use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
 
-use super::common_filters::{filter_protected_accounts, round_timestamps};
+use super::common_filters::{PlayerFilters, filter_protected_accounts, round_timestamps};
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::analytics::scoreboard_types::ScoreboardQuerySortBy;
@@ -17,7 +17,7 @@ use crate::routes::v1::matches::types::{GameMode, MatchMode, reject_brawl_badge_
 use crate::utils::parse::{
     comma_separated_deserialize_option, default_last_month_timestamp, parse_steam_id_option,
 };
-use crate::utils::sql::{cached_ch_query, id_list, impl_match_info};
+use crate::utils::sql::{cached_ch_query, impl_match_info};
 use crate::utils::types::SortDirectionDesc;
 
 #[derive(Eq, Hash, PartialEq, Debug, Clone, Deserialize, IntoParams, Default)]
@@ -108,32 +108,20 @@ fn build_query(query: &HeroScoreboardQuery) -> String {
         "{match_mode_filter} AND {game_mode_filter} {match_info_filters}"
     )];
     #[expect(deprecated)]
-    if let Some(account_id) = query.account_id {
-        player_filters.push(format!("account_id = {account_id}"));
-    }
-    if let Some(account_ids) = &query.account_ids {
-        player_filters.push(format!("account_id IN ({})", id_list(account_ids)));
-    }
-    if let Some(min_networth) = query.min_networth {
-        player_filters.push(format!("net_worth >= {min_networth}"));
-    }
-    if let Some(max_networth) = query.max_networth {
-        player_filters.push(format!("net_worth <= {max_networth}"));
-    }
-    let player_filters = if player_filters.is_empty() {
-        String::new()
-    } else {
-        format!(" WHERE {} ", player_filters.join(" AND "))
-    };
-    let mut player_having = vec![];
-    if let Some(min_matches) = query.min_matches {
-        player_having.push(format!("uniq(match_id) >= {min_matches}"));
-    }
-    let player_having = if player_having.is_empty() {
-        String::new()
-    } else {
-        format!(" HAVING {} ", player_having.join(" AND "))
-    };
+    player_filters.extend(
+        PlayerFilters {
+            account_id: query.account_id,
+            account_ids: query.account_ids.as_deref(),
+            min_networth: query.min_networth,
+            max_networth: query.max_networth,
+            ..Default::default()
+        }
+        .build(),
+    );
+    let player_filters = player_filters.join(" AND ");
+    let player_having = query.min_matches.map_or_else(String::new, |min_matches| {
+        format!("HAVING uniq(match_id) >= {min_matches}")
+    });
     // No `optimize_use_projections = 0`: with skip indexes evaluated at planning time
     // (`use_skip_indexes_on_data_read = 0` on the clients) the planner picks the hero-led
     // projection only when it prunes better. Measured on production shapes: identical results,
@@ -142,7 +130,7 @@ fn build_query(query: &HeroScoreboardQuery) -> String {
         "
 SELECT rowNumberInAllBlocks() + 1 as rank, hero_id, toFloat64({}) as value, uniq(match_id) as matches
 FROM match_player
-{player_filters}
+WHERE {player_filters}
 GROUP BY hero_id
 {player_having}
 ORDER BY value {}
