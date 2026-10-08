@@ -6,7 +6,7 @@
 //! flushing, so each table ends up as one contiguous batch with no intermediate
 //! copies. Nothing is emitted until the whole demo has been parsed.
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::sync::Arc;
 
 use datafusion::arrow::record_batch::RecordBatch;
@@ -38,7 +38,6 @@ struct EventCollector {
 pub(crate) struct CollectingVisitor {
     entities: HashMap<u64, EntityCollector>,
     events: HashMap<u32, EventCollector>,
-    tracked_hashes: HashSet<u64>,
     /// When false, callbacks update no builders. Set during the warm-up fast-forward that
     /// establishes parser state for a later segment without emitting its rows.
     collecting: bool,
@@ -54,9 +53,7 @@ impl CollectingVisitor {
         event_types: &[EventType],
     ) -> Self {
         let mut entity_map = HashMap::with_capacity(entities.len());
-        let mut tracked_hashes = HashSet::with_capacity(entities.len());
         for (schema, projection) in entities {
-            tracked_hashes.insert(schema.serializer_hash);
             entity_map.insert(
                 schema.serializer_hash,
                 EntityCollector {
@@ -80,7 +77,6 @@ impl CollectingVisitor {
         Self {
             entities: entity_map,
             events,
-            tracked_hashes,
             collecting: true,
         }
     }
@@ -108,7 +104,7 @@ impl Visitor for CollectingVisitor {
     type Error = Error;
 
     fn should_track_entity(&self, serializer_name_hash: u64) -> bool {
-        self.tracked_hashes.contains(&serializer_name_hash)
+        self.entities.contains_key(&serializer_name_hash)
     }
 
     fn set_collecting(&mut self, collecting: bool) {

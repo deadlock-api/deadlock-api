@@ -61,11 +61,8 @@ impl Visitor for ScanVisitor {
 pub(super) fn scan_full_packet_ticks<D: BuildStream>(
     bytes: Bytes,
 ) -> super::error::Result<Vec<i32>> {
-    let mut parser = sync_parser::<D, _>(bytes, ScanVisitor)
-        .map_err(|e| super::error::Error::Schema(e.to_string()))?;
-    parser
-        .scan_full_packet_ticks()
-        .map_err(|e| super::error::Error::Schema(e.to_string()))
+    let mut parser = sync_parser::<D, _>(bytes, ScanVisitor).map_err(schema_err)?;
+    parser.scan_full_packet_ticks().map_err(schema_err)
 }
 
 /// Parse the demo's serializers and entity classes once, so that the parallel segment parsers can
@@ -73,9 +70,10 @@ pub(super) fn scan_full_packet_ticks<D: BuildStream>(
 pub(super) fn parse_shared_state<D: BuildStream>(
     bytes: Bytes,
 ) -> super::error::Result<Option<SharedState>> {
-    let mut parser = sync_parser::<D, _>(bytes, ScanVisitor)
-        .map_err(|e| super::error::Error::Schema(e.to_string()))?;
-    parser
-        .parse_shared_state()
-        .map_err(|e| super::error::Error::Schema(e.to_string()))
+    let mut parser = sync_parser::<D, _>(bytes, ScanVisitor).map_err(schema_err)?;
+    parser.parse_shared_state().map_err(schema_err)
+}
+
+fn schema_err(e: impl core::fmt::Display) -> super::error::Error {
+    super::error::Error::Schema(e.to_string())
 }

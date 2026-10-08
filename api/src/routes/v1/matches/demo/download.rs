@@ -7,7 +7,7 @@
 use std::sync::LazyLock;
 
 use bytes::{Bytes, BytesMut};
-use futures::stream::{self, StreamExt, TryStreamExt};
+use futures::stream::{self, StreamExt};
 use reqwest::StatusCode;
 use reqwest::header::{CONTENT_RANGE, RANGE};
 
@@ -100,20 +100,14 @@ async fn download_ranged(url: &str, len: u64) -> APIResult<Bytes> {
 }
 
 async fn download_sequential(url: &str) -> APIResult<Bytes> {
-    let body = HTTP_CLIENT
+    Ok(HTTP_CLIENT
         .get(url)
         .send()
         .await?
         .error_for_status()
         .map_err(|e| not_found(&e))?
-        .bytes_stream()
-        .map_err(std::io::Error::other)
-        .try_fold(BytesMut::new(), |mut acc, b| async move {
-            acc.extend_from_slice(&b);
-            Ok(acc)
-        })
-        .await?;
-    Ok(body.freeze())
+        .bytes()
+        .await?)
 }
 
 fn not_found(e: &reqwest::Error) -> APIError {

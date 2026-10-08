@@ -129,17 +129,16 @@ pub(crate) fn build_entity_specs(
     referenced_entities: &[EntitySchema],
     projections: &HashMap<Arc<str>, EntityProjection>,
 ) -> Vec<(EntitySchema, Option<Arc<[usize]>>)> {
-    let mut entity_specs = Vec::with_capacity(referenced_entities.len());
-    for schema in referenced_entities {
-        match projections.get(schema.serializer_name.as_ref()) {
-            Some(EntityProjection::All) => entity_specs.push((schema.clone(), None)),
-            Some(EntityProjection::Columns(cols)) => {
-                entity_specs.push((schema.clone(), Some(cols.iter().copied().collect())));
-            }
-            None => {}
-        }
-    }
-    entity_specs
+    referenced_entities
+        .iter()
+        .filter_map(|schema| {
+            let projection = match projections.get(schema.serializer_name.as_ref())? {
+                EntityProjection::All => None,
+                EntityProjection::Columns(cols) => Some(cols.iter().copied().collect()),
+            };
+            Some((schema.clone(), projection))
+        })
+        .collect()
 }
 
 /// The Arrow schema an entity table is registered with: the projected columns when the planner
@@ -203,6 +202,7 @@ pub(crate) async fn discover_entity_projections(
 }
 
 /// Per-table collected batches, one `Vec` entry per parsed segment (in tick order).
+#[derive(Default)]
 struct CollectedTables {
     entities: HashMap<Arc<str>, Vec<RecordBatch>>,
     events: HashMap<&'static str, Vec<RecordBatch>>,
@@ -220,10 +220,7 @@ fn parse_and_collect<D: BuildStream>(
     event_types: &[EventType],
 ) -> Result<CollectedTables> {
     if entity_specs.is_empty() && event_types.is_empty() {
-        return Ok(CollectedTables {
-            entities: HashMap::new(),
-            events: HashMap::new(),
-        });
+        return Ok(CollectedTables::default());
     }
 
     let num_full_packets = scan_full_packet_ticks::<D>(demo_bytes.clone())?.len();

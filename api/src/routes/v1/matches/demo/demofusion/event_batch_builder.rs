@@ -4,7 +4,7 @@ use datafusion::arrow::array::{
     NullBuilder, RecordBatch, StringBuilder, StructBuilder, UInt8Builder, UInt16Builder,
     UInt32Builder, UInt64Builder,
 };
-use datafusion::arrow::datatypes::{DataType, Schema, SchemaRef};
+use datafusion::arrow::datatypes::{DataType, Fields, Schema, SchemaRef};
 use std::sync::Arc;
 
 use super::events::{DecodedEvent, EventType, append_event_to_builders, event_schema};
@@ -102,14 +102,7 @@ fn create_builder_for_type(data_type: &DataType, capacity: usize) -> Box<dyn Arr
             | DataType::LargeBinary
             | DataType::BinaryView => Box::new(ListBuilder::new(BinaryBuilder::new())),
             DataType::Struct(fields) => {
-                let child_builders: Vec<Box<dyn ArrayBuilder>> = fields
-                    .iter()
-                    .map(|f| create_builder_for_type(f.data_type(), capacity))
-                    .collect();
-                Box::new(ListBuilder::new(StructBuilder::new(
-                    fields.clone(),
-                    child_builders,
-                )))
+                Box::new(ListBuilder::new(struct_builder(fields, capacity)))
             }
             DataType::Null
             | DataType::Union(_, _)
@@ -117,15 +110,17 @@ fn create_builder_for_type(data_type: &DataType, capacity: usize) -> Box<dyn Arr
             | DataType::Map(_, _)
             | DataType::RunEndEncoded(_, _) => Box::new(ListBuilder::new(NullBuilder::new())),
         },
-        DataType::Struct(fields) => {
-            let child_builders: Vec<Box<dyn ArrayBuilder>> = fields
-                .iter()
-                .map(|f| create_builder_for_type(f.data_type(), capacity))
-                .collect();
-            Box::new(StructBuilder::new(fields.clone(), child_builders))
-        }
+        DataType::Struct(fields) => Box::new(struct_builder(fields, capacity)),
         _ => Box::new(Int32Builder::with_capacity(capacity)),
     }
+}
+
+fn struct_builder(fields: &Fields, capacity: usize) -> StructBuilder {
+    let child_builders = fields
+        .iter()
+        .map(|f| create_builder_for_type(f.data_type(), capacity))
+        .collect();
+    StructBuilder::new(fields.clone(), child_builders)
 }
 
 #[cfg(test)]
