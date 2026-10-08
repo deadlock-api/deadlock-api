@@ -8,7 +8,9 @@ import { clientOnlyModules } from "./plugins/client-only-modules.mjs";
 
 // Server-only secrets from `.env` for the dev server, which renders in this Node process; the Worker gets them as
 // Wrangler secrets. Without the `VITE_` prefix they never enter a bundle.
-process.env.INCEPTION_API_KEY ??= loadEnv("development", process.cwd(), "INCEPTION_").INCEPTION_API_KEY;
+const serverEnv = loadEnv("development", process.cwd(), ["INCEPTION_", "OPENROUTER_"]);
+process.env.INCEPTION_API_KEY ??= serverEnv.INCEPTION_API_KEY;
+process.env.OPENROUTER_API_KEY ??= serverEnv.OPENROUTER_API_KEY;
 
 const annotation = annotateSource();
 

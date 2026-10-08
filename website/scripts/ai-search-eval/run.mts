@@ -18,6 +18,7 @@ import { buildSearchCatalog } from "../../src/lib/ai-search/catalog";
 import {
   type DecideAnswers,
   type DecideRequestBody,
+  DECISION_PROVIDERS,
   decideRequestBody,
   intentFromDecision,
   questionEntities,
@@ -82,7 +83,7 @@ async function decide(body: DecideRequestBody): Promise<{ answers: DecideAnswers
   for (let attempt = 1; ; attempt++) {
     let response: Response | undefined;
     try {
-      response = await requestDecision(key!, body, 60_000);
+      response = await requestDecision(DECISION_PROVIDERS[0], key!, body, 60_000);
       if (response.ok) return (await response.json()) as { answers: DecideAnswers };
     } catch (error) {
       if (attempt === MAX_ATTEMPTS) throw error;

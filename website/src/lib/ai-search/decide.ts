@@ -19,17 +19,76 @@ import { type IntentVocabulary, NO_FILTERS, type SearchIntent } from "./intent";
 // sure the model is. Heroes and items are found in code (`entities.ts`), which is certain and instant,
 // and handed to the model as context.
 
-const DECIDE_URL = "https://api.inceptionlabs.ai/v1/decisions";
-const DECIDE_MODEL = "mercury-decide";
+/** Where Mercury Decide can be asked: the same request and answer, at another address and under another name. */
+export interface DecisionProvider {
+  name: string;
+  url: string;
+  model: string;
+  /** The environment variable that holds its API key. */
+  keyVar: string;
+}
 
-/** Asks Mercury Decide; the caller reads the answer and handles its failures (the site and the eval differ there). */
-export function requestDecision(key: string, body: DecideRequestBody, timeoutMs: number): Promise<Response> {
-  return fetch(DECIDE_URL, {
+/** In the order they are asked: Inception's own API, then OpenRouter's free endpoint when that fails. */
+export const DECISION_PROVIDERS: readonly DecisionProvider[] = [
+  {
+    name: "Inception",
+    url: "https://api.inceptionlabs.ai/v1/decisions",
+    model: "mercury-decide",
+    keyVar: "INCEPTION_API_KEY",
+  },
+  {
+    name: "OpenRouter",
+    url: "https://openrouter.ai/api/alpha/decisions",
+    model: "inception/mercury-decide:free",
+    keyVar: "OPENROUTER_API_KEY",
+  },
+];
+
+/** Asks one provider; the caller reads the answer and handles its failures (the site and the eval differ there). */
+export function requestDecision(
+  provider: DecisionProvider,
+  key: string,
+  body: DecideRequestBody,
+  timeoutMs: number,
+  fetcher: typeof fetch = fetch,
+): Promise<Response> {
+  return fetcher(provider.url, {
     method: "POST",
     headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-    body: JSON.stringify(body),
+    body: JSON.stringify({ ...body, model: provider.model }),
     signal: AbortSignal.timeout(timeoutMs),
   });
+}
+
+/**
+ * The first answer of the providers that have a key, asked in order: one that fails (no answer, an error status such
+ * as an empty balance or an outage) hands the question to the next. `onFailure` hears why each one failed.
+ */
+export async function decideWithFallback(
+  body: DecideRequestBody,
+  keys: Readonly<Record<string, string | undefined>>,
+  {
+    timeoutMs,
+    onFailure,
+    fetcher = fetch,
+  }: { timeoutMs: number; onFailure: (provider: string, why: string) => void; fetcher?: typeof fetch },
+): Promise<DecideAnswers | undefined> {
+  for (const provider of DECISION_PROVIDERS) {
+    const key = keys[provider.keyVar];
+    if (!key) {
+      onFailure(provider.name, `${provider.keyVar} is not set`);
+      continue;
+    }
+    try {
+      const response = await requestDecision(provider, key, body, timeoutMs, fetcher);
+      if (response.ok) return ((await response.json()) as { answers: DecideAnswers }).answers;
+      // 402 is an empty balance, 429 the provider's own rate limit, 5xx an outage.
+      onFailure(provider.name, `answered ${response.status}: ${(await response.text()).slice(0, 300)}`);
+    } catch (error) {
+      onFailure(provider.name, `did not answer: ${String(error)}`);
+    }
+  }
+  return undefined;
 }
 
 /**
@@ -123,7 +182,7 @@ export function decideRequestBody(
 ): DecideRequestBody {
   const ranks = Object.fromEntries(rankNames.map((name, i) => [name, `${name}, rank ${i + 1} of ${rankNames.length}`]));
   return {
-    model: DECIDE_MODEL,
+    model: DECISION_PROVIDERS[0].model,
     state: {
       site: "deadlock-api.com, a stats website for Valve's game Deadlock",
       game: glossary(rankNames),

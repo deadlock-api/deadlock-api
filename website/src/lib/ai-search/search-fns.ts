@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { getRequestHeader } from "@tanstack/react-start/server";
 
-import { type DecideAnswers, decideRequestBody, type QuestionEntities, requestDecision } from "./decide";
+import { type DecideAnswers, decideRequestBody, decideWithFallback, type QuestionEntities } from "./decide";
 import { MAX_QUESTION_LENGTH } from "./limits";
 import { allowQuestion } from "./rate-limit";
 
@@ -51,28 +51,20 @@ export function validateDecideInput(input: unknown): DecideSearchInput {
  */
 type DecideSearchResult = { ok: true; answers: DecideAnswers } | { ok: false; reason: "rate_limited" | "unavailable" };
 
-const unavailable = (...why: unknown[]): DecideSearchResult => {
-  console.error("ai-search:", ...why);
-  return { ok: false, reason: "unavailable" };
-};
-
-/** Mercury Decide's answers for a question: a choice with probabilities for the page and for each filter. */
+/**
+ * Mercury Decide's answers for a question: a choice with probabilities for the page and for each filter. Inception's
+ * API answers first; OpenRouter's free endpoint answers when it fails.
+ */
 export const decideSearch = createServerFn({ method: "POST" })
   .validator(validateDecideInput)
   .handler(async ({ data, context }): Promise<DecideSearchResult> => {
     // The dev server has no Cloudflare in front, and counts everyone as one visitor.
     const ip = getRequestHeader("cf-connecting-ip") ?? "local";
     if (!(await allowQuestion(ip, context.env?.AI_SEARCH_RATE_LIMITER))) return { ok: false, reason: "rate_limited" };
-    const key = process.env.INCEPTION_API_KEY;
-    if (!key) return unavailable("INCEPTION_API_KEY is not set");
-    let response: Response;
-    try {
-      response = await requestDecision(key, decideRequestBody(data.question, data.entities, data.rankNames), 15_000);
-    } catch (error) {
-      return unavailable("Mercury did not answer", error);
-    }
-    // 402 is an empty balance, 429 Mercury's own rate limit, 5xx an outage.
-    if (!response.ok) return unavailable(`Mercury answered ${response.status}`, (await response.text()).slice(0, 300));
-    const decision = (await response.json()) as { answers: DecideAnswers };
-    return { ok: true, answers: decision.answers };
+    const answers = await decideWithFallback(
+      decideRequestBody(data.question, data.entities, data.rankNames),
+      process.env,
+      { timeoutMs: 8_000, onFailure: (provider, why) => console.error(`ai-search: ${provider} ${why}`) },
+    );
+    return answers ? { ok: true, answers } : { ok: false, reason: "unavailable" };
   });
