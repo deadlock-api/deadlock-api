@@ -350,12 +350,10 @@ impl<T: BatchQuery> ClickhouseBatcher<T> {
         let mut results = Vec::with_capacity(receivers.len());
         let mut not_found: u64 = 0;
         for rx in receivers {
-            if let Ok(rows) = await_response(rx).await {
-                if let Some(row) = rows.into_iter().next() {
-                    results.push(row);
-                } else {
-                    not_found += 1;
-                }
+            if let Some(row) = await_response(rx).await?.into_iter().next() {
+                results.push(row);
+            } else {
+                not_found += 1;
             }
         }
         if not_found > 0 {
