@@ -156,12 +156,14 @@ async fn fetch_and_update_profiles(
         }
     };
 
+    // Before keep_stored_friends, which may hold back profiles Steam did return: those
+    // must not look like unavailable accounts.
+    queue_unavailable_profiles(ch_client, &batch_ids, &profiles, pending_deletions).await;
+
     let missing_friends = attach_friends(&mut profiles, &mut friends_by_account);
     if !missing_friends.is_empty() {
         keep_stored_friends(ch_client, &mut profiles, &missing_friends).await;
     }
-
-    queue_unavailable_profiles(ch_client, &batch_ids, &profiles, pending_deletions).await;
 
     match save_profiles(ch_client, &profiles).await {
         Ok(()) => {
@@ -359,10 +361,17 @@ async fn stored_friends(
 ) -> clickhouse::error::Result<Vec<StoredFriends>> {
     ch_client
         .query(
+            // One argMax over both arrays, so they always come from the same row: two
+            // separate ones can pick different rows on a last_updated tie, and Nested
+            // arrays of different lengths make the whole insert fail.
             "SELECT account_id, \
-                 argMax(friends.account_id, last_updated) AS `friends.account_id`, \
-                 argMax(friends.friend_since, last_updated) AS `friends.friend_since` \
-             FROM steam_profiles WHERE account_id IN ? GROUP BY account_id \
+                 tupleElement(latest_friends, 1) AS `friends.account_id`, \
+                 tupleElement(latest_friends, 2) AS `friends.friend_since` \
+             FROM ( \
+                 SELECT account_id, \
+                     argMax((friends.account_id, friends.friend_since), last_updated) AS latest_friends \
+                 FROM steam_profiles WHERE account_id IN ? GROUP BY account_id \
+             ) \
              SETTINGS log_comment = 'steam_profile_fetcher_stored_friends'",
         )
         .bind(account_ids)
