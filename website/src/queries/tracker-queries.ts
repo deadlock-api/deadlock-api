@@ -1,7 +1,5 @@
 import { type QueryClient, queryOptions } from "@tanstack/react-query";
-import { isAxiosError } from "axios";
 import type {
-  PlayerMatchHistoryEntry,
   PlayersApiEnemyStatsRequest,
   PlayersApiMateStatsRequest,
   PlayersApiPlayerHeroStatsRequest,
@@ -9,58 +7,21 @@ import type {
 
 import { CACHE_DURATIONS } from "~/constants/cache";
 import { api } from "~/lib/api";
-import { API_ORIGIN } from "~/lib/constants";
 import { graphql, isGraphqlRateLimited } from "~/lib/graphql";
 import { combatStats, type CombatStats, resolveCustomStats } from "~/lib/tracker/combat-stats";
 import { DEMO_ACCOUNT_ID, isDemoAccount, isDemoMatch } from "~/lib/tracker/demo";
 
-import {
-  abilitiesQueryOptions,
-  filterPlayableHeroes,
-  heroesQueryOptions,
-  itemUpgradesQueryOptions,
-} from "./asset-queries";
+import { abilitiesQueryOptions, heroesQueryOptions, itemUpgradesQueryOptions } from "./asset-queries";
+import { trackerMatchHistoryQueryOptions } from "./match-history-queries";
 import { queryKeys } from "./query-keys";
+
+export { trackerMatchHistoryQueryOptions };
 
 /** The demo profile is generated instead of fetched; the generator only loads once a demo id asks for it. */
 const loadDemoData = () => import("~/lib/tracker/demo-data");
 
 const demoHistory = (client: QueryClient) =>
   client.query({ ...trackerMatchHistoryQueryOptions(DEMO_ACCOUNT_ID), staleTime: "static" });
-
-export function trackerMatchHistoryQueryOptions(accountId: number) {
-  return queryOptions({
-    queryKey: queryKeys.players.matchHistory(accountId),
-    queryFn: async ({ client }) => {
-      if (isDemoAccount(accountId)) {
-        const [{ demoMatchHistory }, heroes] = await Promise.all([
-          loadDemoData(),
-          client.query({ ...heroesQueryOptions, staleTime: "static" }),
-        ]);
-        return demoMatchHistory(
-          filterPlayableHeroes(heroes).map((hero) => hero.id),
-          Date.now() / 1000,
-        );
-      }
-      try {
-        const response = await api.players_api.matchHistory({ accountId });
-        return response.data;
-      } catch (error) {
-        // Bot-friend accounts hit a strict rate limit on the live endpoint; fall
-        // back to the stored ClickHouse history, which is not rate limited.
-        if (isAxiosError(error) && error.response?.status === 429) {
-          const fallback = await api.client.get<PlayerMatchHistoryEntry[]>(
-            `${API_ORIGIN}/v1/players/${accountId}/match-history`,
-            { params: { only_stored_history: true } },
-          );
-          return fallback.data;
-        }
-        throw error;
-      }
-    },
-    staleTime: CACHE_DURATIONS.FIVE_MINUTES,
-  });
-}
 
 export function trackerRankQueryOptions(accountId: number) {
   return queryOptions({

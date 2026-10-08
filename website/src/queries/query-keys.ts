@@ -100,7 +100,6 @@ export const queryKeys = {
       variables: readonly string[],
       extraArgs: Readonly<Record<string, string>>,
     ) => ["streamkit-stats", region, accountId, variables, extraArgs] as const,
-    matchHistory: (accountId: string) => ["streamkit-match-history", accountId] as const,
     versions: () => ["streamkit-widget-versions"] as const,
   },
   crosshair: {

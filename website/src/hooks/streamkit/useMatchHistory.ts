@@ -1,8 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 
+import { UPDATE_INTERVAL_MS } from "~/constants/streamkit/widget";
 import { heroesQueryOptions } from "~/queries/asset-queries";
-import { matchHistoryQueryOptions } from "~/queries/match-history-queries";
+import { trackerMatchHistoryQueryOptions } from "~/queries/match-history-queries";
 
 export interface Match {
   match_id: number;
@@ -37,7 +38,12 @@ export const useMatchHistory = ({ accountId, numMatches = 10 }: UseMatchHistoryP
       ),
   });
 
-  const { data: matchesData, isLoading: loadingMatches } = useQuery(matchHistoryQueryOptions(accountId));
+  // The tracker's cache entry, polled while the overlay is on stream.
+  const { data: matchesData, isLoading: loadingMatches } = useQuery({
+    ...trackerMatchHistoryQueryOptions(Number(accountId)),
+    refetchInterval: UPDATE_INTERVAL_MS,
+    refetchIntervalInBackground: true,
+  });
 
   const matches = useMemo(() => matchesData?.slice(0, numMatches) ?? [], [matchesData, numMatches]);
 
