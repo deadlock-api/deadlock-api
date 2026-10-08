@@ -5,6 +5,7 @@ import { toast } from "sonner";
 
 import { useCloseSideNavDrawer } from "~/components/patterns/navigation/SideNavShell";
 import { Button } from "~/components/ui/button";
+import { RollingText } from "~/components/ui/rolling-text";
 import { SearchInput } from "~/components/ui/search-input";
 import { MAX_QUESTION_LENGTH, QUESTIONS_PER_MINUTE } from "~/lib/ai-search/limits";
 import { getAnalytics } from "~/lib/analytics";
@@ -13,7 +14,7 @@ import { cn } from "~/lib/utils";
 import { setLastSearch, useLastSearch } from "./last-search";
 import { useSearchShortcut } from "./search-shortcut";
 
-/** Questions the home page's field cycles through as its placeholder, to show what it can be asked. */
+/** Questions the home page's field rolls through as its placeholder, to show what it can be asked. */
 const PLACEHOLDER_QUESTIONS = [
   "who counters abrams",
   "best heroes in eternus this patch",
@@ -21,7 +22,6 @@ const PLACEHOLDER_QUESTIONS = [
   "how long are games in phantom+",
   "top players in europe",
 ];
-const PLACEHOLDER_INTERVAL_MS = 3500;
 
 type Outcome = "opened" | "not_understood" | "rate_limited" | "error";
 
@@ -44,20 +44,6 @@ function trackQuestion(properties: {
       duration_ms: properties.durationMs === undefined ? null : Math.round(properties.durationMs),
     }),
   );
-}
-
-/** The placeholder question shown now: it moves on every few seconds, and stays put for reduced motion. */
-function useRotatingPlaceholder(enabled: boolean): string {
-  const [index, setIndex] = useState(0);
-  useEffect(() => {
-    if (!enabled || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return undefined;
-    const id = window.setInterval(
-      () => setIndex((i) => (i + 1) % PLACEHOLDER_QUESTIONS.length),
-      PLACEHOLDER_INTERVAL_MS,
-    );
-    return () => window.clearInterval(id);
-  }, [enabled]);
-  return PLACEHOLDER_QUESTIONS[index];
 }
 
 interface AiSearchProps {
@@ -83,7 +69,6 @@ export function AiSearch({ size = "default", className }: AiSearchProps) {
   const [draft, setDraft] = useState({ text: "", version: 0 });
   const [searching, setSearching] = useState(false);
   const [unmatched, setUnmatched] = useState(false);
-  const example = useRotatingPlaceholder(size === "default");
   /** The question asked last: an answer to an earlier one that arrives late is dropped. */
   const latest = useRef(0);
   const input = useRef<HTMLInputElement>(null);
@@ -157,7 +142,19 @@ export function AiSearch({ size = "default", className }: AiSearchProps) {
           shortcut="/"
           aria-label="Ask for a stat"
           aria-invalid={unmatched || undefined}
-          placeholder={size === "sm" ? "Ask for a stat" : `Ask anything: ${example}`}
+          placeholder={size === "sm" ? "Ask for a stat" : "Ask anything"}
+          placeholderContent={
+            size === "default" ? (
+              <>
+                Ask anything:&nbsp;
+                <RollingText>
+                  {PLACEHOLDER_QUESTIONS.map((example) => (
+                    <span key={example}>{example}</span>
+                  ))}
+                </RollingText>
+              </>
+            ) : undefined
+          }
           autoComplete="off"
           enterKeyHint="search"
           maxLength={MAX_QUESTION_LENGTH}

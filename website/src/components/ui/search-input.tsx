@@ -21,6 +21,11 @@ interface SearchInputProps extends Omit<React.ComponentProps<"input">, "value" |
   variant?: "default" | "ghost" | "bar";
   /** The submit button of a `bar`, drawn inside the field at its end. */
   action?: React.ReactNode;
+  /**
+   * What a `bar` shows while empty, in place of the placeholder text: something richer than a string, such as a
+   * `RollingText` of examples. `placeholder` stays the field's accessible hint, drawn invisible.
+   */
+  placeholderContent?: React.ReactNode;
   /** A key that focuses the field from anywhere ("/"), shown at its end while it is empty and not focused. */
   shortcut?: string;
   /**
@@ -46,6 +51,7 @@ export function SearchInput({
   loading = false,
   loadingLabel = "Searching",
   action,
+  placeholderContent,
   shortcut,
   className,
   ref,
@@ -115,14 +121,25 @@ export function SearchInput({
         )}
       >
         <SearchIcon aria-hidden="true" className="size-5 shrink-0 text-muted-foreground" />
-        <input
-          data-slot="input"
-          className={cn(
-            hideNativeClear,
-            "h-full min-w-0 flex-1 bg-transparent text-base placeholder:text-muted-foreground focus-visible:outline-none disabled:pointer-events-none",
+        <span className="relative flex h-full min-w-0 flex-1 items-center">
+          <input
+            data-slot="input"
+            className={cn(
+              hideNativeClear,
+              "h-full w-full min-w-0 bg-transparent text-base placeholder:text-muted-foreground focus-visible:outline-none disabled:pointer-events-none",
+              placeholderContent !== undefined && "placeholder:text-transparent",
+            )}
+            {...fieldProps}
+          />
+          {placeholderContent !== undefined && value === "" && (
+            <span
+              data-slot="search-input-placeholder"
+              className="pointer-events-none absolute inset-0 flex items-center truncate text-base text-muted-foreground"
+            >
+              {placeholderContent}
+            </span>
           )}
-          {...fieldProps}
-        />
+        </span>
         {trailing}
         {action}
       </div>

@@ -16,6 +16,7 @@ import { KeyValue, KeyValueList } from "~/components/ui/key-value";
 import { NoValue } from "~/components/ui/no-value";
 import { Pips } from "~/components/ui/pips";
 import { SplitBar } from "~/components/ui/rate-bar";
+import { RollingText } from "~/components/ui/rolling-text";
 import { SearchInput } from "~/components/ui/search-input";
 import { Separator } from "~/components/ui/separator";
 import { SkipLink } from "~/components/ui/skip-link";
@@ -23,6 +24,7 @@ import { StatusDot } from "~/components/ui/status-dot";
 import { StepMeter, StepMeterStep, type StepState } from "~/components/ui/step-meter";
 import { SwitchField } from "~/components/ui/switch-field";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
+import { Text } from "~/components/ui/text";
 import { TextLink } from "~/components/ui/text-link";
 import { TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
 
@@ -88,6 +90,29 @@ function SearchInputExamples() {
           aria-label="Loading bar search"
           action={
             <Button size="sm" shape="pill" loading>
+              Search
+            </Button>
+          }
+          className="w-full sm:w-96"
+        />
+      </Variants>
+      <Variants label="placeholderContent with a RollingText" className="items-start">
+        <SearchInput
+          variant="bar"
+          placeholder="Ask anything"
+          placeholderContent={
+            <>
+              Ask anything:&nbsp;
+              <RollingText>
+                <span>who counters abrams</span>
+                <span>best heroes in eternus</span>
+                <span>when to buy toxic bullets</span>
+              </RollingText>
+            </>
+          }
+          aria-label="Ask with rolling examples"
+          action={
+            <Button size="sm" shape="pill">
               Search
             </Button>
           }
@@ -333,6 +358,23 @@ export function Round3Primitives() {
         note="A text field that filters what is below it: leading icon, a clear button once it has text, a spinner in its place while loading, a shortcut key while empty. The bar variant is the main search of a page, its action inside. value / defaultValue / onValueChange; ref and input props reach the input, className sizes the row."
       >
         <SearchInputExamples />
+      </Specimen>
+
+      <Specimen
+        name="RollingText"
+        source="ui/rolling-text"
+        note="Text that cycles through items, each rolling up into place as the last rolls out above: examples in a search placeholder. Each child is one item. Decorative (aria-hidden); stays on the first item with reduced motion. interval sets how long each shows."
+      >
+        <Variants label="children, interval">
+          <Text>
+            Find&nbsp;
+            <RollingText interval={2000}>
+              <span>the best heroes</span>
+              <span>your counters</span>
+              <span>item timings</span>
+            </RollingText>
+          </Text>
+        </Variants>
       </Specimen>
 
       <Specimen

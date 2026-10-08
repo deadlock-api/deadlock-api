@@ -79,6 +79,7 @@ export const NAV: readonly NavChapter[] = [
           "Input",
           "DropZone",
           "SearchInput",
+          "RollingText",
           "Textarea",
           "Select",
           "Checkbox and Switch",
