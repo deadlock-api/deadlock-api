@@ -9,7 +9,7 @@ import { ImgWithSkeleton } from "~/components/ui/img-with-skeleton";
 import { Segmented, SegmentedItem } from "~/components/ui/segmented";
 import { Slider } from "~/components/ui/slider";
 import { useDraftValue } from "~/hooks/useDraftValue";
-import { getRankImageUrl, getRankLabel } from "~/lib/rank-utils";
+import { getRankImageUrl, getRankLabel, RANK_BANDS } from "~/lib/rank-utils";
 import { cn } from "~/lib/utils";
 import { ranksQueryOptions } from "~/queries/ranks-query";
 
@@ -17,14 +17,6 @@ function getRankId(tier: number, subrank: number): number {
   if (tier === 0) return 0;
   return tier * 10 + subrank;
 }
-
-/** Tier bands behind the preset buttons; each spans the first subrank of `from` to the last of `to`. */
-const PRESET_BANDS = [
-  { label: "Low", from: 1, to: 4 },
-  { label: "Mid", from: 5, to: 8 },
-  { label: "High", from: 9, to: 10 },
-  { label: "Top", from: 11, to: 11 },
-] as const;
 
 interface RankOption {
   rankId: number;
@@ -135,7 +127,7 @@ export function RankRangeSelector({
     if (options.length === 0) return [];
     const first = options[0].rankId;
     const last = options[options.length - 1].rankId;
-    const bands = PRESET_BANDS.filter(
+    const bands = RANK_BANDS.filter(
       (band) => rankIdToIndex.has(getRankId(band.from, 1)) && rankIdToIndex.has(getRankId(band.to, 6)),
     ).map((band) => ({ label: band.label, min: getRankId(band.from, 1), max: getRankId(band.to, 6) }));
     return [{ label: "Any", min: first, max: last }, ...bands];

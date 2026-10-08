@@ -22,6 +22,21 @@ export function getRankLabel(rank: Rank, subrank: number): string {
 /** The highest badge there is (Eternus 6): a rank range that ends there has no upper bound. */
 export const MAX_BADGE = 116;
 
+/** Tier bands behind the rank presets; each spans the first subrank of `from` to the last of `to`. */
+export const RANK_BANDS = [
+  { label: "Low", from: 1, to: 4 },
+  { label: "Mid", from: 5, to: 8 },
+  { label: "High", from: 9, to: 10 },
+  { label: "Top", from: 11, to: 11 },
+] as const;
+
+export type RankBand = (typeof RANK_BANDS)[number];
+
+/** The badge range of a band: Low is 11 (Initiate 1) to 46 (Arcanist 6). */
+export function bandBadges(band: RankBand): { min: number; max: number } {
+  return { min: band.from * 10 + 1, max: band.to * 10 + 6 };
+}
+
 /** "Phantom 1" for badge 91, named from the ranks asset (tier = badge / 10, subrank = badge % 10). */
 export function badgeLabel(ranks: readonly Rank[] | undefined, badge: number): string {
   const tier = Math.floor(badge / 10);

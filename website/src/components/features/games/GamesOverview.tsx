@@ -16,6 +16,7 @@ import { Inline } from "~/components/ui/stack";
 import { Text } from "~/components/ui/text";
 import { Tooltip } from "~/components/ui/tooltip";
 import { BUFF_TIMINGS_NOTE } from "~/lib/buffs";
+import { statDelta } from "~/lib/patch-deltas";
 import { cn } from "~/lib/utils";
 import { gameStatsQueryOptions } from "~/queries/games-query";
 
@@ -129,17 +130,8 @@ export default function GamesOverview({ params, prevParams, onStatClick, isStree
               {stats.map((stat) => {
                 const value = current[stat.key];
                 const prevValue = TOTAL_STATS.has(stat.key) && !compareTotals ? undefined : prev?.[stat.key];
-                // Rounded to the displayed tenth of a percent so the arrow and colour agree with the printed value.
-                // A rate changes in points (2% to 3% is +1.0 pp); a relative change of it (+50%) read as the new rate.
                 const inPoints = stat.format === "percent";
-                const delta =
-                  prevValue == null || value == null
-                    ? null
-                    : inPoints
-                      ? Math.round((value - prevValue) * 1000) / 1000
-                      : prevValue !== 0
-                        ? Math.round(((value - prevValue) / Math.abs(prevValue)) * 1000) / 1000
-                        : null;
+                const delta = statDelta(stat.format, value, prevValue);
 
                 return (
                   <Fragment key={stat.key}>
