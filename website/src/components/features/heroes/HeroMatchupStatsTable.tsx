@@ -16,7 +16,6 @@ import type { SortDir } from "~/components/ui/sort-button";
 import { Inline } from "~/components/ui/stack";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { Tooltip, TooltipHeader, TooltipStat, TooltipStats, TooltipTarget } from "~/components/ui/tooltip";
-import { CACHE_DURATIONS } from "~/constants/cache";
 import type { Dayjs } from "~/dayjs";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { findKey } from "~/lib/find-keys";
@@ -278,10 +277,7 @@ export function HeroMatchupStatsTable({
     isLoading: isLoadingHero,
     isError: isHeroError,
     refetch: refetchHero,
-  } = useQuery({
-    ...heroStatsQueryOptions(heroStatsQuery),
-    staleTime: CACHE_DURATIONS.ONE_DAY,
-  });
+  } = useQuery(heroStatsQueryOptions(heroStatsQuery));
 
   const synergyStatsQuery = {
     sameLaneFilter: sameLaneFilter,
@@ -330,7 +326,6 @@ export function HeroMatchupStatsTable({
   };
   const { data: prevHeroData } = useQuery({
     ...heroStatsQueryOptions(prevHeroStatsQuery),
-    staleTime: CACHE_DURATIONS.ONE_DAY,
     enabled: hasPreviousInterval,
   });
 

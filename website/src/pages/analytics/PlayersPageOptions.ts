@@ -133,15 +133,17 @@ export const comparePageOptions = {
     const [
       { loadSeasons },
       compareQueries,
-      { steamProfileQueryOptions, trackerHeroStatsQueryOptions },
+      { trackerHeroStatsQueryOptions },
       { playerScoreboardQueryOptions },
       { playerStatsMetricsQueryOptions },
+      { steamProfileQueryOptions },
     ] = await Promise.all([
       import("~/queries/asset-queries"),
       import("~/queries/player-compare-queries"),
       import("~/queries/tracker-queries"),
       import("~/queries/player-scoreboard-query"),
       import("~/queries/player-stats-metrics-query"),
+      import("~/queries/steam-queries"),
     ]);
     // Loaded even when the URL names its dates: the seasons register the exact patch boundaries, without which a pinned
     // season start (a patch instant) rounds down to midnight, and the server would ask for other data (another query

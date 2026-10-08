@@ -9,11 +9,8 @@ import { pageTitle, seo } from "~/lib/seo";
 import { DEMO_ACCOUNT_ID } from "~/lib/tracker/demo";
 import { heroesQueryOptions } from "~/queries/asset-queries";
 import { ranksQueryOptions } from "~/queries/ranks-query";
-import {
-  steamProfileQueryOptions,
-  trackerMatchHistoryQueryOptions,
-  trackerRankQueryOptions,
-} from "~/queries/tracker-queries";
+import { steamProfileQueryOptions } from "~/queries/steam-queries";
+import { trackerMatchHistoryQueryOptions, trackerRankQueryOptions } from "~/queries/tracker-queries";
 
 export const Route = createFileRoute("/tracker_/demo")({
   component: TrackerDemoRoute,

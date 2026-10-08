@@ -20,19 +20,17 @@ import {
 } from "~/components/patterns/charts/theme";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { TooltipCard, TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
-import { CACHE_DURATIONS } from "~/constants/cache";
 import type { Dayjs } from "~/dayjs";
 import { CHART_HEROES_QUERY_KEY, useChartHeroVisibility, useHeroColorMap } from "~/hooks/useChartHeroVisibility";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
-import { api } from "~/lib/api";
 import { BANS_PER_MATCH } from "~/lib/ban-rate";
 import { niceTicks } from "~/lib/chart-axis";
 import { getPickrateMultiplier } from "~/lib/constants";
 import type { GameMode, MatchMode } from "~/lib/game-mode";
 import { HERO_TREND_LABELS } from "~/lib/hero-trends";
 import { getRankImageUrl } from "~/lib/rank-utils";
+import { heroBanStatsQueryOptions } from "~/queries/hero-ban-stats-query";
 import { type HeroRankStats, heroRankStatsQueryOptions } from "~/queries/hero-stats-query";
-import { queryKeys } from "~/queries/query-keys";
 import { ranksQueryOptions } from "~/queries/ranks-query";
 import { type HERO_STATS, hero_stats_transform } from "~/types/api_hero_stats";
 import type { ByRankStat } from "~/types/api_hero_stats";
@@ -240,15 +238,7 @@ export function HeroStatsByRankChart({
     isError: isErrorBanStats,
     isFetching: isFetchingBanStats,
     refetch: refetchBanStats,
-  } = useQuery({
-    queryKey: queryKeys.analytics.heroBanStats(banStatsByRankQuery),
-    queryFn: async () => {
-      const response = await api.analytics_api.heroBanStats(banStatsByRankQuery);
-      return response.data;
-    },
-    staleTime: CACHE_DURATIONS.ONE_DAY,
-    enabled: needsBanData,
-  });
+  } = useQuery({ ...heroBanStatsQueryOptions(banStatsByRankQuery), enabled: needsBanData });
 
   const banRateByTier = useMemo(() => {
     if (!banData) return undefined;

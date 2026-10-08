@@ -4,13 +4,11 @@ import { useMemo } from "react";
 
 import { PATCH_MARKERS_SHORT } from "~/components/domain/charts/PatchMarkers";
 import StatTrendChart, { type StatTrendBucket } from "~/components/patterns/charts/StatTrendChart";
-import { CACHE_DURATIONS } from "~/constants/cache";
-import { api } from "~/lib/api";
 import { MIN_MATCHES_PER_BUCKET } from "~/lib/constants";
 import { ITEM_TABLE_TRENDS, type ItemTableTrend } from "~/lib/item-table-trends";
 import type { StatTrendPoint } from "~/lib/stat-format";
 import { completeTimeBuckets } from "~/lib/time-buckets";
-import { queryKeys } from "~/queries/query-keys";
+import { itemStatsQueryOptions } from "~/queries/item-stats-query";
 
 export interface ItemStatTrendChartProps {
   params: AnalyticsApiItemStatsRequest;
@@ -26,17 +24,8 @@ export default function ItemStatTrendChart({ params, itemId, stat, bucket, onBuc
   // With both kinds of purchase counted, the corrupted purchases are charted beside the normal ones.
   const splitCorrupted = params.corruptedItems === "include";
   const corruptedParams = { ...itemParams, corruptedItems: "only" as const };
-  const itemQuery = useQuery({
-    queryKey: queryKeys.analytics.itemStats(itemParams),
-    queryFn: async () => (await api.analytics_api.itemStats(itemParams)).data,
-    staleTime: CACHE_DURATIONS.ONE_DAY,
-  });
-  const corruptedQuery = useQuery({
-    queryKey: queryKeys.analytics.itemStats(corruptedParams),
-    queryFn: async () => (await api.analytics_api.itemStats(corruptedParams)).data,
-    staleTime: CACHE_DURATIONS.ONE_DAY,
-    enabled: splitCorrupted,
-  });
+  const itemQuery = useQuery(itemStatsQueryOptions(itemParams));
+  const corruptedQuery = useQuery({ ...itemStatsQueryOptions(corruptedParams), enabled: splitCorrupted });
   const itemData = itemQuery.data;
   const corruptedData = corruptedQuery.data;
   const chartData = useMemo(() => {

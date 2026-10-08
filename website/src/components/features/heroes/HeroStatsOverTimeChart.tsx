@@ -46,19 +46,17 @@ import {
 } from "~/components/patterns/charts/theme";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { Badge } from "~/components/ui/badge";
-import { CACHE_DURATIONS } from "~/constants/cache";
 import { type Dayjs, day } from "~/dayjs";
 import { CHART_HEROES_QUERY_KEY, useChartHeroVisibility, useHeroColorMap } from "~/hooks/useChartHeroVisibility";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
-import { api } from "~/lib/api";
 import { BANS_PER_MATCH, computeBanRatesByBucket } from "~/lib/ban-rate";
 import { formatCompactAxisTick, niceTicks } from "~/lib/chart-axis";
 import { MIN_MATCHES_PER_BUCKET } from "~/lib/constants";
 import type { GameMode, MatchMode } from "~/lib/game-mode";
 import { buildHeroTrendPoints, HERO_TREND_LABELS, isPercentageTrend, type HeroTrendBuckets } from "~/lib/hero-trends";
 import { wholeTimeBuckets } from "~/lib/time-buckets";
+import { heroBanStatsQueryOptions } from "~/queries/hero-ban-stats-query";
 import { heroChartStatsQueryOptions } from "~/queries/hero-stats-query";
-import { queryKeys } from "~/queries/query-keys";
 import { type HERO_STATS_WITH_BAN_RATE, hero_stats_transform } from "~/types/api_hero_stats";
 
 // Recharts still measures every x-axis label for vertical grid coordinates when vertical lines are disabled.
@@ -182,12 +180,7 @@ export function HeroStatsOverTimeChart({
     matchMode,
   };
   const banQuery = useQuery({
-    queryKey: queryKeys.analytics.heroBanStats(banStatsOverTimeQuery),
-    queryFn: async () => {
-      const response = await api.analytics_api.heroBanStats(banStatsOverTimeQuery);
-      return response.data;
-    },
-    staleTime: CACHE_DURATIONS.ONE_DAY,
+    ...heroBanStatsQueryOptions(banStatsOverTimeQuery),
     enabled: isBanRate && !unsupportedBanRate,
   });
 

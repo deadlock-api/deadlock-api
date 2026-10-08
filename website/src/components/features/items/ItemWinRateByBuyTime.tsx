@@ -7,10 +7,8 @@ import { ChartEmpty, ChartError, ChartLoading } from "~/components/patterns/char
 import { WinRateBarChart } from "~/components/patterns/charts/WinRateBarChart";
 import { PanelBody } from "~/components/patterns/panel/Panel";
 import { TooltipCard, TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
-import { CACHE_DURATIONS } from "~/constants/cache";
-import { api } from "~/lib/api";
 import { formatPercent } from "~/lib/format";
-import { queryKeys } from "~/queries/query-keys";
+import { itemStatsQueryOptions } from "~/queries/item-stats-query";
 
 /** Widest first: tier 4 items spread over half an hour, while starter items are all bought in the first few minutes. */
 const BIN_WIDTHS_MIN = [5, 2, 1];
@@ -82,11 +80,7 @@ export function ItemWinRateByBuyTime({
 }) {
   // No per-minute minimum: the API applies it to each minute, so rare minutes dropped out of the shares and the peak.
   const params = { ...request, bucket: "game_time_min" as const, minMatches: undefined };
-  const { data, isPending, isError, isFetching, refetch } = useQuery({
-    queryKey: queryKeys.analytics.itemStats(params),
-    queryFn: async () => (await api.analytics_api.itemStats(params)).data,
-    staleTime: CACHE_DURATIONS.ONE_DAY,
-  });
+  const { data, isPending, isError, isFetching, refetch } = useQuery(itemStatsQueryOptions(params));
 
   const entries = useMemo(() => binByBuyMinute(data?.filter((row) => row.item_id === itemId) ?? []), [data, itemId]);
 

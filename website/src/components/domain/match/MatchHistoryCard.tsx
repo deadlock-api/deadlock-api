@@ -10,12 +10,10 @@ import { Card } from "~/components/ui/card";
 import { CornerBadge } from "~/components/ui/corner-badge";
 import { FOCUS_RING } from "~/components/ui/recipes";
 import { Tooltip } from "~/components/ui/tooltip";
-import { CACHE_DURATIONS } from "~/constants/cache";
-import { api } from "~/lib/api";
 import type { FullBuildItem } from "~/lib/build-transform";
 import { TONE_BORDER, TONE_TEXT } from "~/lib/tone";
 import { cn } from "~/lib/utils";
-import { queryKeys } from "~/queries/query-keys";
+import { steamProfileQueryOptions } from "~/queries/steam-queries";
 
 interface BuildData {
   items: FullBuildItem[];
@@ -135,16 +133,7 @@ export default function MatchHistoryCard({
   const midItems = buildData.items.filter((i) => i.gameTimeS >= EARLY_MAX_S && i.gameTimeS < MID_MAX_S);
   const lateItems = buildData.items.filter((i) => i.gameTimeS >= MID_MAX_S);
 
-  const { data: steamProfile } = useQuery({
-    queryKey: queryKeys.steam.profile(accountId),
-    queryFn: async () => {
-      if (accountId == null) return null;
-      const res = await api.steam_api.steam({ accountIds: [accountId] });
-      return res.data[0] ?? null;
-    },
-    enabled: accountId != null,
-    staleTime: CACHE_DURATIONS.FOREVER,
-  });
+  const { data: steamProfile } = useQuery({ ...steamProfileQueryOptions(accountId ?? 0), enabled: accountId != null });
 
   return (
     <Card

@@ -9,7 +9,6 @@ import { Delta } from "~/components/ui/delta";
 import { DivergingBar } from "~/components/ui/rate-bar";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { Tooltip, TooltipStat, TooltipStats, TooltipTarget } from "~/components/ui/tooltip";
-import { CACHE_DURATIONS } from "~/constants/cache";
 import type { Dayjs } from "~/dayjs";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { findKey } from "~/lib/find-keys";
@@ -76,10 +75,7 @@ export function useHeroMatchupRows({
     isLoading: isLoadingHero,
     isError: isHeroError,
     refetch: refetchHero,
-  } = useQuery({
-    ...heroStatsQueryOptions(heroStatsQuery),
-    staleTime: CACHE_DURATIONS.ONE_DAY,
-  });
+  } = useQuery(heroStatsQueryOptions(heroStatsQuery));
 
   const synergyStatsQuery = {
     sameLaneFilter: sameLaneFilter,
@@ -128,7 +124,6 @@ export function useHeroMatchupRows({
   };
   const { data: prevHeroData } = useQuery({
     ...heroStatsQueryOptions(prevHeroStatsQuery),
-    staleTime: CACHE_DURATIONS.ONE_DAY,
     enabled: hasPreviousInterval,
   });
 

@@ -10,6 +10,7 @@ import { getPickrateMultiplier, MIN_MATCHES_PER_BUCKET } from "~/lib/constants";
 import type { GameMode } from "~/lib/game-mode";
 import { buildHeroTableTrend, HERO_TABLE_TRENDS, type HeroTableTrend } from "~/lib/hero-table-trends";
 import { completeTimeBuckets } from "~/lib/time-buckets";
+import { heroBanStatsQueryOptions } from "~/queries/hero-ban-stats-query";
 import { queryKeys } from "~/queries/query-keys";
 
 export interface HeroStatTrendChartProps {
@@ -38,12 +39,7 @@ export default function HeroStatTrendChart({ params, heroId, stat, bucket, onBuc
     maxUnixTimestamp: params.maxUnixTimestamp,
     matchMode: params.matchMode,
   };
-  const banQuery = useQuery({
-    queryKey: queryKeys.analytics.heroBanStats(banParams),
-    queryFn: async () => (await api.analytics_api.heroBanStats(banParams)).data,
-    staleTime: CACHE_DURATIONS.ONE_DAY,
-    enabled: needsBans,
-  });
+  const banQuery = useQuery({ ...heroBanStatsQueryOptions(banParams), enabled: needsBans });
   const normalizedPickrate = Boolean(params.minHeroMatches || params.minHeroMatchesTotal);
   const chartData = useMemo(() => {
     const range = { minUnixTimestamp: params.minUnixTimestamp, maxUnixTimestamp: params.maxUnixTimestamp };

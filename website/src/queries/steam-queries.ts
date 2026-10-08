@@ -44,6 +44,19 @@ export function steamProfilesQueryOptions(batch: number[]) {
   });
 }
 
+/** One Steam profile, `null` when Steam does not know the account. Demo accounts get their generated profile. */
+export function steamProfileQueryOptions(accountId: number) {
+  return queryOptions({
+    queryKey: queryKeys.steam.profile(accountId),
+    queryFn: async () => {
+      if (isDemoAccount(accountId)) return (await import("~/lib/tracker/demo-data")).demoSteamProfile(accountId);
+      const response = await api.steam_api.steam({ accountIds: [accountId] });
+      return response.data[0] ?? null;
+    },
+    staleTime: CACHE_DURATIONS.ONE_DAY,
+  });
+}
+
 /** Steam profiles whose name (or account id) matches `query`. */
 export function steamSearchQueryOptions(query: string) {
   return queryOptions({

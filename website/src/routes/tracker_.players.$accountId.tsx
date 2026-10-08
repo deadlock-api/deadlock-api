@@ -10,7 +10,7 @@ import { parseSteamIdToId3 } from "~/lib/steam";
 import { isDemoAccount } from "~/lib/tracker/demo";
 import { heroesQueryOptions } from "~/queries/asset-queries";
 import { ranksQueryOptions } from "~/queries/ranks-query";
-import { steamProfileQueryOptions } from "~/queries/tracker-queries";
+import { steamProfileQueryOptions } from "~/queries/steam-queries";
 
 export const Route = createFileRoute("/tracker_/players/$accountId")({
   component: TrackerRoute,

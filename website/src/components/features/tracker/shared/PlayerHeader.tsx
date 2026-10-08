@@ -13,7 +13,8 @@ import { TextLink } from "~/components/ui/text-link";
 import { extractBadgeMap } from "~/lib/leaderboard";
 import { formatPlaytime, peakRank, summarize } from "~/lib/tracker/compute";
 import { isDemoAccount } from "~/lib/tracker/demo";
-import { steamProfileQueryOptions, trackerRankQueryOptions } from "~/queries/tracker-queries";
+import { steamProfileQueryOptions } from "~/queries/steam-queries";
+import { trackerRankQueryOptions } from "~/queries/tracker-queries";
 
 import { RefreshControl } from "./RefreshControl";
 import { useTrackerTime } from "./useTrackerTime";

@@ -14,6 +14,7 @@ import { useDefaultPeriodLabel } from "~/hooks/useDefaultPeriodLabel";
 import { api } from "~/lib/api";
 import { formatPercent, possessive } from "~/lib/format";
 import { withoutOpenTimeBucket } from "~/lib/time-buckets";
+import { itemStatsQueryOptions } from "~/queries/item-stats-query";
 import { queryKeys } from "~/queries/query-keys";
 
 const MIN_WEEK_MATCHES = 200;
@@ -37,11 +38,7 @@ export function ItemWinRateOverTime({
   const period = useDefaultPeriodLabel();
   const weeklyItemRequest = { ...itemRequest, bucket: "start_time_week" as const };
   const weeklyHeroRequest = { ...heroRequest, bucket: "start_time_week" as const };
-  const itemQuery = useQuery({
-    queryKey: queryKeys.analytics.itemStats(weeklyItemRequest),
-    queryFn: async () => (await api.analytics_api.itemStats(weeklyItemRequest)).data,
-    staleTime: CACHE_DURATIONS.ONE_DAY,
-  });
+  const itemQuery = useQuery(itemStatsQueryOptions(weeklyItemRequest));
   // Same request as the hero page's weekly chart, so the two share one cache entry.
   const heroQuery = useQuery({
     queryKey: queryKeys.analytics.heroStatsOverTime(weeklyHeroRequest),

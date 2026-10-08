@@ -28,18 +28,6 @@ const loadDemoData = () => import("~/lib/tracker/demo-data");
 const demoHistory = (client: QueryClient) =>
   client.query({ ...trackerMatchHistoryQueryOptions(DEMO_ACCOUNT_ID), staleTime: "static" });
 
-export function steamProfileQueryOptions(accountId: number) {
-  return queryOptions({
-    queryKey: queryKeys.steam.profile(accountId),
-    queryFn: async () => {
-      if (isDemoAccount(accountId)) return (await loadDemoData()).demoSteamProfile(accountId);
-      const response = await api.steam_api.steam({ accountIds: [accountId] });
-      return response.data[0] ?? null;
-    },
-    staleTime: CACHE_DURATIONS.ONE_DAY,
-  });
-}
-
 export function trackerMatchHistoryQueryOptions(accountId: number) {
   return queryOptions({
     queryKey: queryKeys.players.matchHistory(accountId),

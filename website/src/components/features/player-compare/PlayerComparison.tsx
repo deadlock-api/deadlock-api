@@ -10,7 +10,8 @@ import { aggregateHeroStats, compareColorIndexes } from "~/lib/player-compare";
 import { playerPairs, splitPairs } from "~/lib/player-compare-pairs";
 import { playstyleLabel, playstylePercentiles } from "~/lib/playstyle";
 import { type CompareFilters, compareHeroStatsParams, playerRanksQueryOptions } from "~/queries/player-compare-queries";
-import { steamProfileQueryOptions, trackerHeroStatsQueryOptions } from "~/queries/tracker-queries";
+import { steamProfileQueryOptions } from "~/queries/steam-queries";
+import { trackerHeroStatsQueryOptions } from "~/queries/tracker-queries";
 
 import { ActivityPanel } from "./ActivityPanel";
 import { AddPlayerControls } from "./AddPlayerControls";
