@@ -20,14 +20,15 @@ use std::sync::{Arc, Mutex};
 use anyhow::{Context, bail};
 use bytes::Bytes;
 use clap::Parser;
+use common::{BatchInserter, BatchInserterConfig};
 use futures::StreamExt;
 use metrics::{counter, gauge};
 use object_store::path::Path;
 use object_store::{GetResult, ObjectStore, ObjectStoreExt};
 use prost::Message;
-use tokio::sync::mpsc;
+use tokio::sync::Semaphore;
 use tokio::time::timeout;
-use tokio_util::sync::CancellationToken;
+use tokio_util::task::TaskTracker;
 use tracing::{debug, error, info, warn};
 use valveprotos::deadlock::c_msg_match_meta_data_contents::{EMatchOutcome, MatchInfo};
 use valveprotos::deadlock::{
@@ -114,24 +115,67 @@ struct ParsedMatch {
 
 type InflightSet = Arc<Mutex<HashSet<Path>>>;
 
-/// Shared handles used by every live-loop inserter task.
-struct InserterCtx<S> {
-    client: clickhouse::Client,
-    store: Arc<S>,
-    inflight: InflightSet,
-    total_ingested: Arc<AtomicUsize>,
+/// Rough number of players per match, to size row batches from the match-count settings.
+const ROWS_PER_MATCH: usize = 12;
+
+/// Batch inserters for the two tables every match is written to.
+struct Inserters {
+    players: BatchInserter<ClickhouseMatchPlayer>,
+    history: BatchInserter<PlayerMatchHistoryEntry>,
 }
 
-// Manual impl avoids a spurious `S: Clone` bound from `derive(Clone)`.
-impl<S> Clone for InserterCtx<S> {
-    fn clone(&self) -> Self {
+impl Inserters {
+    fn spawn(
+        client: &clickhouse::Client,
+        matches_per_batch: usize,
+        flush_interval: Option<Duration>,
+        workers: usize,
+    ) -> Self {
+        let config = |table: &str| BatchInserterConfig {
+            table: table.to_owned(),
+            metrics_prefix: "ingest_worker".to_owned(),
+            max_rows: matches_per_batch.saturating_mul(ROWS_PER_MATCH),
+            flush_interval,
+            workers,
+            queue_capacity: matches_per_batch.max(1).saturating_mul(2),
+        };
         Self {
-            client: self.client.clone(),
-            store: Arc::clone(&self.store),
-            inflight: Arc::clone(&self.inflight),
-            total_ingested: Arc::clone(&self.total_ingested),
+            players: BatchInserter::spawn(client, config("match_player")),
+            history: BatchInserter::spawn(client, config("player_match_history")),
         }
     }
+
+    /// Queues one match's rows. The returned future resolves to whether both tables
+    /// got them; `None` if the inserters are shut down.
+    async fn insert(
+        &self,
+        parsed: ParsedMatch,
+    ) -> Option<impl Future<Output = bool> + Send + 'static> {
+        let players = self.players.insert(parsed.players).await?;
+        let history = self.history.insert(parsed.history).await?;
+        Some(async move {
+            let (players, history) = tokio::join!(players.flushed(), history.flushed());
+            players && history
+        })
+    }
+
+    fn has_failed(&self) -> bool {
+        self.players.has_failed() || self.history.has_failed()
+    }
+
+    /// Flushes everything queued and stops the inserters.
+    async fn shutdown(&self) {
+        tokio::join!(self.players.shutdown(), self.history.shutdown());
+    }
+}
+
+/// Shared handles for moving objects once their rows are flushed.
+struct PostFlush<S> {
+    store: Arc<S>,
+    inflight: InflightSet,
+    total_ingested: AtomicUsize,
+    move_permits: Semaphore,
+    tasks: TaskTracker,
 }
 
 fn lock_inflight(inflight: &InflightSet) -> std::sync::MutexGuard<'_, HashSet<Path>> {
@@ -192,24 +236,14 @@ where
         flush_interval.as_millis()
     );
 
-    let (tx, rx) = mpsc::channel::<(Path, ParsedMatch)>(batch_size.max(1).saturating_mul(2));
-    let rx = Arc::new(tokio::sync::Mutex::new(rx));
-    let inflight: InflightSet = Arc::new(Mutex::new(HashSet::new()));
-    let total_ingested = Arc::new(AtomicUsize::new(0));
-    let ctx = InserterCtx {
-        client: ch_client.clone(),
+    let inserters = Inserters::spawn(ch_client, batch_size, Some(flush_interval), num_inserters);
+    let post_flush = Arc::new(PostFlush {
         store: Arc::clone(&store),
-        inflight: Arc::clone(&inflight),
-        total_ingested: Arc::clone(&total_ingested),
-    };
-
-    for i in 0..num_inserters {
-        let ctx = ctx.clone();
-        let rx = Arc::clone(&rx);
-        tokio::spawn(async move {
-            live_batch_inserter(ctx, rx, batch_size, flush_interval, i).await;
-        });
-    }
+        inflight: Arc::new(Mutex::new(HashSet::new())),
+        total_ingested: AtomicUsize::new(0),
+        move_permits: Semaphore::new(POST_FLUSH_MOVE_CONCURRENCY),
+        tasks: TaskTracker::new(),
+    });
 
     let mut interval = tokio::time::interval(Duration::from_secs(10));
 
@@ -232,7 +266,7 @@ where
         info!(
             "Queue: {} objects to ingest, {} matches ingested so far",
             objs_to_ingest.len(),
-            total_ingested.load(Ordering::Relaxed)
+            post_flush.total_ingested.load(Ordering::Relaxed)
         );
 
         if objs_to_ingest.is_empty() {
@@ -242,7 +276,7 @@ where
         }
 
         let new_keys: Vec<Path> = {
-            let mut guard = lock_inflight(&inflight);
+            let mut guard = lock_inflight(&post_flush.inflight);
             objs_to_ingest
                 .into_iter()
                 .filter(|k| guard.insert(k.clone()))
@@ -256,13 +290,12 @@ where
 
         futures::stream::iter(new_keys)
             .map(|key| {
-                let store = Arc::clone(&store);
-                let tx = tx.clone();
-                let inflight = Arc::clone(&inflight);
+                let inserters = &inserters;
+                let post_flush = Arc::clone(&post_flush);
                 async move {
                     match timeout(
                         Duration::from_secs(30),
-                        fetch_parse_and_send(&*store, &key, &tx),
+                        fetch_parse_and_send(&post_flush, inserters, &key),
                     )
                     .await
                     {
@@ -271,17 +304,17 @@ where
                         }
                         Ok(Ok(false)) => {
                             counter!("ingest_worker.fetch_parse.success").increment(1);
-                            lock_inflight(&inflight).remove(&key);
+                            lock_inflight(&post_flush.inflight).remove(&key);
                         }
                         Ok(Err(e)) => {
                             counter!("ingest_worker.fetch_parse.failure").increment(1);
                             error!("Error fetching/parsing object {key}: {e:#}");
-                            lock_inflight(&inflight).remove(&key);
+                            lock_inflight(&post_flush.inflight).remove(&key);
                         }
                         Err(_) => {
                             counter!("ingest_worker.fetch_parse.timeout").increment(1);
                             error!("Fetch+parse timed out for {key}");
-                            lock_inflight(&inflight).remove(&key);
+                            lock_inflight(&post_flush.inflight).remove(&key);
                         }
                     }
                 }
@@ -293,141 +326,18 @@ where
     }
 }
 
-/// Long-running batch inserter for the live ingest loop.
-///
-/// Pulls `(key, ParsedMatch)` items off the shared receiver, accumulates up to
-/// `batch_size` items (or until `flush_interval` elapses with a non-empty batch),
-/// and flushes them in a single `ClickHouse` insert per table. On flush success,
-/// the corresponding S3 keys are moved to `processed/`. On persistent failure,
-/// the batch is dropped (objects stay in `ingest/` and will be re-listed next tick).
-async fn live_batch_inserter<S>(
-    ctx: InserterCtx<S>,
-    rx: Arc<tokio::sync::Mutex<mpsc::Receiver<(Path, ParsedMatch)>>>,
-    batch_size: usize,
-    flush_interval: Duration,
-    inserter_id: usize,
-) where
-    S: ObjectStore + 'static,
-{
-    let mut batch: Vec<(Path, ParsedMatch)> = Vec::with_capacity(batch_size);
-    let mut flush_timer = tokio::time::interval(flush_interval);
-    flush_timer.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
-    flush_timer.tick().await;
-
-    loop {
-        let recv_fut = async {
-            let mut guard = rx.lock().await;
-            guard.recv().await
-        };
-
-        tokio::select! {
-            biased;
-            _ = flush_timer.tick(), if !batch.is_empty() => {
-                flush_live_batch(&ctx, &mut batch, inserter_id).await;
-            }
-            opt = recv_fut => {
-                let Some(item) = opt else {
-                    if !batch.is_empty() {
-                        flush_live_batch(&ctx, &mut batch, inserter_id).await;
-                    }
-                    return;
-                };
-                batch.push(item);
-                {
-                    let mut guard = rx.lock().await;
-                    while batch.len() < batch_size {
-                        match guard.try_recv() {
-                            Ok(item) => batch.push(item),
-                            Err(_) => break,
-                        }
-                    }
-                }
-                if batch.len() >= batch_size {
-                    flush_live_batch(&ctx, &mut batch, inserter_id).await;
-                }
-            }
-        }
-    }
-}
-
-/// Flush a live-loop batch to ``ClickHouse`` (with retry); on success move
-/// the underlying S3 keys to `processed/`. On persistent failure, drop the
-/// batch — objects remain in `ingest/` and will be re-listed next tick.
-async fn flush_live_batch<S: ObjectStore>(
-    ctx: &InserterCtx<S>,
-    batch: &mut Vec<(Path, ParsedMatch)>,
-    inserter_id: usize,
-) {
-    if batch.is_empty() {
-        return;
-    }
-    let InserterCtx {
-        client,
-        store,
-        inflight,
-        total_ingested,
-    } = ctx;
-    let n = batch.len();
-    let parsed: Vec<&ParsedMatch> = batch.iter().map(|(_, p)| p).collect();
-    let result =
-        common::retry_fn_with_backoff("Live batch flush", || write_parsed_refs(client, &parsed))
-            .await;
-
-    match result {
-        Ok(()) => {
-            counter!("ingest_worker.batch_flush.success").increment(1);
-            counter!("ingest_worker.batch_flush.matches").increment(n as u64);
-            let ingested = total_ingested.fetch_add(n, Ordering::Relaxed) + n;
-            info!(
-                "[inserter {inserter_id}] Flushed batch of {n} matches ({ingested} ingested total)"
-            );
-            let keys: Vec<Path> = batch.drain(..).map(|(k, _)| k).collect();
-            futures::stream::iter(keys)
-                .map(|key| {
-                    let inflight = Arc::clone(inflight);
-                    async move {
-                        let Some(filename) = key.filename().map(str::to_owned) else {
-                            warn!("Missing filename for key {key}, leaving in ingest/");
-                            lock_inflight(&inflight).remove(&key);
-                            return;
-                        };
-                        let new_path = Path::from(format!("{PROCESSED_PREFIX}/{filename}"));
-                        if let Err(e) = move_object(store.as_ref(), &key, &new_path).await {
-                            error!("Failed to move {key} to processed/: {e}");
-                        } else {
-                            gauge!("ingest_worker.objs_to_ingest").decrement(1);
-                        }
-                        lock_inflight(&inflight).remove(&key);
-                    }
-                })
-                .buffer_unordered(POST_FLUSH_MOVE_CONCURRENCY)
-                .collect::<Vec<_>>()
-                .await;
-        }
-        Err(e) => {
-            counter!("ingest_worker.batch_flush.failure").increment(1);
-            error!(
-                "[inserter {inserter_id}] Batch flush of {n} matches failed permanently, \
-                 leaving objects in ingest/ for retry: {e:#}"
-            );
-            {
-                let mut guard = lock_inflight(inflight);
-                for (k, _) in batch.drain(..) {
-                    guard.remove(&k);
-                }
-            }
-        }
-    }
-}
-
 /// Fetch + decompress + parse a single object, then either:
 /// - move it to `failed/` if it can't be parsed or has an error outcome, or
-/// - send the parsed result through `tx` for batched insertion downstream.
-async fn fetch_parse_and_send<S: ObjectStore>(
-    store: &S,
+/// - queue its rows for batched insertion; once they are flushed the object is moved to
+///   `processed/` (on a failed flush it stays in `ingest/` and is re-listed later).
+///
+/// Returns `true` if the key stays in flight until its rows are flushed.
+async fn fetch_parse_and_send<S: ObjectStore + 'static>(
+    post_flush: &Arc<PostFlush<S>>,
+    inserters: &Inserters,
     key: &Path,
-    tx: &mpsc::Sender<(Path, ParsedMatch)>,
 ) -> anyhow::Result<bool> {
+    let store = &*post_flush.store;
     let obj = match get_object(store, key).await {
         Ok(obj) => obj,
         // Another worker already processed and moved this object between our
@@ -469,19 +379,26 @@ async fn fetch_parse_and_send<S: ObjectStore>(
         Ok(m) => m,
     };
 
-    let players = build_ch_players(&match_info);
-    let history: Vec<PlayerMatchHistoryEntry> = match_info
-        .players
-        .iter()
-        .filter_map(|p| {
-            PlayerMatchHistoryEntry::from_info_and_player(&match_info, p, calibration_matches())
-        })
-        .collect();
-
-    let parsed = ParsedMatch { players, history };
-    if tx.send((key.clone(), parsed)).await.is_err() {
-        bail!("Insert channel closed; inserter tasks have exited");
-    }
+    let Some(flushed) = inserters.insert(build_parsed_match(&match_info)).await else {
+        bail!("Batch inserters have shut down");
+    };
+    let post_flush = Arc::clone(post_flush);
+    let key = key.clone();
+    post_flush.tasks.clone().spawn(async move {
+        if flushed.await {
+            counter!("ingest_worker.batch_flush.matches").increment(1);
+            post_flush.total_ingested.fetch_add(1, Ordering::Relaxed);
+            let new_path = Path::from(format!("{PROCESSED_PREFIX}/{filename}"));
+            let _permit = post_flush.move_permits.acquire().await;
+            match move_object(&*post_flush.store, &key, &new_path).await {
+                Ok(()) => gauge!("ingest_worker.objs_to_ingest").decrement(1),
+                Err(e) => error!("Failed to move {key} to processed/: {e}"),
+            }
+        } else {
+            warn!("Rows of {key} were not flushed, leaving it in ingest/ for retry");
+        }
+        lock_inflight(&post_flush.inflight).remove(&key);
+    });
     Ok(true)
 }
 
@@ -519,41 +436,23 @@ async fn reingest_from_file(
     let success_count = AtomicUsize::new(0);
     let failure_count = AtomicUsize::new(0);
 
-    let (tx, rx) = mpsc::channel::<ParsedMatch>(parallelism * 2);
-    let rx = Arc::new(tokio::sync::Mutex::new(rx));
-    let cancel = CancellationToken::new();
-
-    // Spawn N concurrent inserter tasks
-    let mut insert_handles = Vec::with_capacity(num_inserters);
-    for i in 0..num_inserters {
-        let client = ch_client.clone();
-        let rx = Arc::clone(&rx);
-        let cancel = cancel.clone();
-        insert_handles.push(tokio::spawn(async move {
-            let result = batch_inserter(client, rx, batch_size, cancel).await;
-            (i, result)
-        }));
-    }
+    // Flushes only on size and at the end; a permanently failed flush stops the producers.
+    let inserters = Inserters::spawn(ch_client, batch_size, None, num_inserters);
 
     // Fetch, decompress, parse concurrently — send results to inserters
     futures::stream::iter(match_ids)
         .map(|match_id| {
-            let tx = tx.clone();
-            let cancel = cancel.clone();
+            let inserters = &inserters;
             let success_count = &success_count;
             let failure_count = &failure_count;
             async move {
-                if cancel.is_cancelled() {
+                if inserters.has_failed() {
                     return;
                 }
                 match fetch_and_parse_match(store, &match_id).await {
                     Ok(parsed) => {
-                        if tx.send(parsed).await.is_err() {
-                            // All inserters have exited — stop producing.
-                            // The actual error will be reported from insert_handles.
-                            warn!(
-                                "Insert channel closed, inserters likely failed — stopping producers"
-                            );
+                        if inserters.insert(parsed).await.is_none() {
+                            warn!("Batch inserters have shut down — stopping producers");
                             return;
                         }
                         let done = success_count.fetch_add(1, Ordering::Relaxed) + 1;
@@ -572,150 +471,22 @@ async fn reingest_from_file(
         .collect::<Vec<_>>()
         .await;
 
-    // Drop sender to signal inserters to flush and finish
-    drop(tx);
-
-    // Wait for all inserters to complete
-    let mut total_inserted = 0usize;
-    for handle in insert_handles {
-        match handle.await {
-            Ok((i, Ok(inserted))) => {
-                total_inserted += inserted;
-                info!("Inserter {i} finished: {inserted} matches inserted");
-            }
-            Ok((i, Err(e))) => error!("Inserter {i} failed: {e:#}"),
-            Err(e) => error!("Inserter task panicked: {e}"),
-        }
+    // Flush what is left and wait for the inserters.
+    inserters.shutdown().await;
+    if inserters.has_failed() {
+        error!("A batch flush failed permanently; re-ingestion stopped early");
     }
-    info!("All inserters finished: {total_inserted} matches inserted total");
+    info!(
+        "All inserters finished: {} match_player and {} player_match_history rows inserted",
+        inserters.players.flushed_rows(),
+        inserters.history.flushed_rows()
+    );
 
     let ok = success_count.load(Ordering::Relaxed);
     let fail = failure_count.load(Ordering::Relaxed);
     info!("Re-ingestion complete: {ok} parsed, {fail} failed out of {total}");
 
     Ok(())
-}
-
-/// Open fresh insert handles for both tables.
-async fn open_inserters(
-    client: &clickhouse::Client,
-) -> anyhow::Result<(
-    clickhouse::insert::Insert<ClickhouseMatchPlayer>,
-    clickhouse::insert::Insert<PlayerMatchHistoryEntry>,
-)> {
-    Ok((
-        client
-            .insert::<ClickhouseMatchPlayer>("match_player")
-            .await?,
-        client
-            .insert::<PlayerMatchHistoryEntry>("player_match_history")
-            .await?,
-    ))
-}
-
-/// Write all batch data into fresh inserters and flush them.
-async fn write_and_flush_batch(
-    client: &clickhouse::Client,
-    batch: &[ParsedMatch],
-) -> anyhow::Result<()> {
-    let refs: Vec<&ParsedMatch> = batch.iter().collect();
-    write_parsed_refs(client, &refs).await
-}
-
-/// Open fresh inserters, write each parsed match, and flush.
-async fn write_parsed_refs(
-    client: &clickhouse::Client,
-    parsed: &[&ParsedMatch],
-) -> anyhow::Result<()> {
-    let (mut mp, mut hi) = open_inserters(client).await?;
-    for p in parsed {
-        for player in &p.players {
-            mp.write(player).await?;
-        }
-        for entry in &p.history {
-            hi.write(entry).await?;
-        }
-    }
-    mp.end().await?;
-    hi.end().await?;
-    Ok(())
-}
-
-/// Batch-inserts parsed matches from the channel into ``ClickHouse``.
-///
-/// Multiple instances run concurrently, each competing to receive from the
-/// shared channel. On unrecoverable failure the cancellation token is triggered
-/// so producers stop fetching new matches.
-async fn batch_inserter(
-    client: clickhouse::Client,
-    rx: Arc<tokio::sync::Mutex<mpsc::Receiver<ParsedMatch>>>,
-    batch_size: usize,
-    cancel: CancellationToken,
-) -> anyhow::Result<usize> {
-    let mut total_inserted: usize = 0;
-    let mut batch: Vec<ParsedMatch> = Vec::with_capacity(batch_size);
-
-    loop {
-        // Hold the lock and drain as many items as available up to batch_size
-        {
-            let mut rx_guard = rx.lock().await;
-            let remaining = batch_size - batch.len();
-            // Block on at least one item (or channel close)
-            let Some(parsed) = rx_guard.recv().await else {
-                break;
-            };
-            batch.push(parsed);
-            // Then drain any already-buffered items without blocking
-            for _ in 1..remaining {
-                match rx_guard.try_recv() {
-                    Ok(parsed) => batch.push(parsed),
-                    Err(_) => break,
-                }
-            }
-        }
-
-        if batch.len() >= batch_size {
-            match flush_batch(&client, &batch).await {
-                Ok(()) => {
-                    total_inserted += batch.len();
-                    info!(
-                        "Flushed batch of {} matches ({total_inserted} total on this inserter)",
-                        batch.len()
-                    );
-                }
-                Err(e) => {
-                    error!("Batch flush failed permanently, cancelling: {e:#}");
-                    cancel.cancel();
-                    return Err(e);
-                }
-            }
-            batch.clear();
-        }
-    }
-
-    // Flush remaining
-    if !batch.is_empty() {
-        match flush_batch(&client, &batch).await {
-            Ok(()) => {
-                total_inserted += batch.len();
-                info!(
-                    "Flushed final batch of {} matches ({total_inserted} total on this inserter)",
-                    batch.len()
-                );
-            }
-            Err(e) => {
-                error!("Final batch flush failed permanently: {e:#}");
-                return Err(e);
-            }
-        }
-    }
-
-    Ok(total_inserted)
-}
-
-/// Flush a batch with retries and exponential backoff using `tryhard`.
-async fn flush_batch(client: &clickhouse::Client, batch: &[ParsedMatch]) -> anyhow::Result<()> {
-    common::retry_fn_with_backoff("Batch flush", || write_and_flush_batch(client, batch)).await
 }
 
 /// Fetch a match from S3, decompress, parse, and convert to ``ClickHouse`` types.
@@ -727,17 +498,19 @@ async fn fetch_and_parse_match(
 
     let data = obj.bytes().await?;
     let match_info = decompress_and_parse(data).await??;
+    Ok(build_parsed_match(&match_info))
+}
 
-    let players = build_ch_players(&match_info);
+fn build_parsed_match(match_info: &MatchInfo) -> ParsedMatch {
+    let players = build_ch_players(match_info);
     let history: Vec<PlayerMatchHistoryEntry> = match_info
         .players
         .iter()
         .filter_map(|p| {
-            PlayerMatchHistoryEntry::from_info_and_player(&match_info, p, calibration_matches())
+            PlayerMatchHistoryEntry::from_info_and_player(match_info, p, calibration_matches())
         })
         .collect();
-
-    Ok(ParsedMatch { players, history })
+    ParsedMatch { players, history }
 }
 
 /// Build the per-player Clickhouse rows for a parsed match.

@@ -13,6 +13,7 @@
 #![expect(clippy::unreadable_literal)]
 
 mod assets;
+mod batch_inserter;
 mod clients;
 mod prioritization;
 mod retry;
@@ -21,6 +22,7 @@ mod telemetry;
 mod utils;
 
 pub use assets::*;
+pub use batch_inserter::*;
 pub use clients::*;
 pub use prioritization::*;
 pub use retry::*;

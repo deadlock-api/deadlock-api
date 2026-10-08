@@ -5,7 +5,6 @@ edition = "2024"
 
 [dependencies]
 anyhow = { workspace = true }
-clickhouse = { workspace = true }
 common = { workspace = true }
 futures = { workspace = true }
 metrics = { workspace = true }

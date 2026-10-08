@@ -19,6 +19,6 @@ reqwest = { workspace = true }
 serde = { workspace = true }
 serde_repr = { workspace = true }
 tokio = { workspace = true }
-tokio-util = { workspace = true }
+tokio-util = { workspace = true, features = ["rt"] }
 tracing = { workspace = true }
 valveprotos = { workspace = true, features = ["gc-client"] }
