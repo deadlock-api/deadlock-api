@@ -280,7 +280,7 @@ export const NAV: readonly NavChapter[] = [
           "AbilityOrderGrid",
         ],
       },
-      { title: "Rank", items: ["RankTierIcons", "RankTierTick", "RankBadgeTick"] },
+      { title: "Rank", items: ["RankTierIcons", "RankTierTick", "RankTierWinRateChart", "RankBadgeTick"] },
       {
         title: "Selectors",
         items: [

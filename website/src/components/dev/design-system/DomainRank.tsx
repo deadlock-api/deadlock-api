@@ -9,6 +9,7 @@ import {
 } from "~/components/domain/rank/RankBadgeTick";
 import { RANK_ICON_AXIS_HEIGHT, RankTierIcons } from "~/components/domain/rank/RankTierIcons";
 import { RankTierTick } from "~/components/domain/rank/RankTierTick";
+import { rankTierLook, RankTierWinRateChart } from "~/components/domain/rank/RankTierWinRateChart";
 import { ChartSurface } from "~/components/patterns/charts/ChartSurface";
 import {
   CHART_BASELINE,
@@ -67,6 +68,13 @@ export function DomainRank() {
   const namedTiers = tiers
     .slice(0, 5)
     .map(({ tier, winRate, name, color, fill }) => ({ tier, winRate, name, color, fill }));
+  const winRateTiers = WIN_RATE_BY_TIER.map(({ tier, winRate }) =>
+    Object.assign(rankTierLook(tier, rankByTier.get(tier)), {
+      winRate,
+      pickRate: 0.02 + (tier % 4) * 0.004,
+      matches: 4000 - tier * 250,
+    }),
+  );
   const playersByBadge = PLAYERS_BY_BADGE.map(({ badge, tier, players }) => ({
     badge,
     tier,
@@ -200,6 +208,50 @@ export function DomainRank() {
             />
           </BarChart>
         </ChartSurface>
+      </Specimen>
+
+      <Specimen
+        name="RankTierWinRateChart"
+        source="domain/rank/RankTierWinRateChart"
+        note="Win Rate by Rank for one hero or item: a bar per tier in the rank's color, badges on the axis, the best and worst tier named in the footer. The feature builds the tiers (rankTierLook gives name, color and badge) and passes its query's status. Pick rate joins the tooltip when the tiers carry it; minTiers is the fewest tiers worth a chart."
+        className="grid gap-3 lg:grid-cols-2"
+      >
+        <RankTierWinRateChart
+          description="All ranks · last 30 days"
+          tiers={winRateTiers}
+          subject="Haze wins"
+          label="Haze win rate by rank tier"
+        />
+        <RankTierWinRateChart
+          description="Fewer than minTiers"
+          tiers={winRateTiers.slice(0, 1).map(({ tier, name, color, image, winRate, matches }) => ({
+            tier,
+            name,
+            color,
+            image,
+            winRate,
+            matches,
+          }))}
+          minTiers={2}
+          subject="Buyers win"
+          label="Item win rate by rank tier"
+          emptyLabel="rank tiers with enough purchases"
+        />
+        <RankTierWinRateChart
+          description="status pending"
+          tiers={[]}
+          status="pending"
+          subject="Haze wins"
+          label="Haze win rate by rank tier"
+        />
+        <RankTierWinRateChart
+          description="status error"
+          tiers={[]}
+          status="error"
+          onRetry={() => {}}
+          subject="Haze wins"
+          label="Haze win rate by rank tier"
+        />
       </Specimen>
     </>
   );
