@@ -16,9 +16,9 @@ use crate::routes::v1::builds::route::fetch_builds;
 use crate::routes::v1::builds::structs::{
     Build, BuildHero, BuildHeroDetailsAbilityOrderCurrencyChange, BuildHeroDetailsCategoryAbility,
 };
-use crate::routes::v1::graphql::assets::{load_heroes, load_items, load_steam_profile};
+use crate::routes::v1::graphql::assets::{find_hero, find_item, load_steam_profile};
 use crate::routes::v1::graphql::cost::MAX_LIMIT;
-use crate::routes::v1::graphql::schema::{OrderDirection, app_state};
+use crate::routes::v1::graphql::schema::{OrderDirection, app_state, record_rows_returned};
 use crate::routes::v1::graphql::types::SteamProfile;
 use crate::services::assets::versions::heroes::Hero;
 use crate::services::assets::versions::items::Item as AssetItem;
@@ -96,9 +96,7 @@ pub(super) async fn load_hero_builds(
         .instrument(info_span!("graphql.postgres", operation = "hero_builds"))
         .await
         .map_err(|e| async_graphql::Error::new(format!("Postgres error: {e}")))?;
-    #[expect(clippy::cast_precision_loss)]
-    metrics::histogram!("graphql_rows_returned", "operation" => "hero_builds")
-        .record(rows.len() as f64);
+    record_rows_returned("hero_builds", rows.len());
     Ok(rows)
 }
 
@@ -158,8 +156,7 @@ pub(super) async fn load_hero_build(
 impl BuildHero {
     /// Hero asset metadata for this build's `hero_id` (latest version, English).
     async fn hero(&self, ctx: &Context<'_>) -> GqlResult<Option<Hero>> {
-        let heroes = load_heroes(app_state(ctx)?, None, None).await?;
-        Ok(heroes.iter().find(|h| h.id == self.hero_id).cloned())
+        find_hero(ctx, self.hero_id).await
     }
 
     /// Stored Steam profile of the build author (no live Steam fetch). `null`
@@ -173,8 +170,7 @@ impl BuildHero {
 impl BuildHeroDetailsCategoryAbility {
     /// Catalog asset for this build slot's `ability_id`.
     async fn asset(&self, ctx: &Context<'_>) -> GqlResult<Option<AssetItem>> {
-        let items = load_items(app_state(ctx)?, None, None).await?;
-        Ok(items.iter().find(|i| i.id() == self.ability_id).cloned())
+        find_item(ctx, self.ability_id).await
     }
 }
 
@@ -182,7 +178,6 @@ impl BuildHeroDetailsCategoryAbility {
 impl BuildHeroDetailsAbilityOrderCurrencyChange {
     /// Catalog asset for this currency change's `ability_id`.
     async fn asset(&self, ctx: &Context<'_>) -> GqlResult<Option<AssetItem>> {
-        let items = load_items(app_state(ctx)?, None, None).await?;
-        Ok(items.iter().find(|i| i.id() == self.ability_id).cloned())
+        find_item(ctx, self.ability_id).await
     }
 }

@@ -9,7 +9,7 @@ use axum::http::StatusCode;
 use object_store::aws::AmazonS3;
 
 use crate::context::AppState;
-use crate::error::APIError;
+use crate::error::{APIError, APIResult};
 use crate::routes::v1::assets::common::{AssetsQuery, Language, load_localized};
 use crate::routes::v1::builds::structs::Build;
 use crate::routes::v1::graphql::builds::load_hero_build;
@@ -65,6 +65,32 @@ pub(super) async fn load_ranks(
     load_asset(state, client_version, language, "ranks", fetch_ranks).await
 }
 
+/// Hero asset with this id (latest version, English) for the nested `hero`
+/// resolvers.
+pub(super) async fn find_hero(ctx: &Context<'_>, hero_id: u32) -> GqlResult<Option<Hero>> {
+    let heroes = load_heroes(app_state(ctx)?, None, None).await?;
+    Ok(heroes.iter().find(|h| h.id == hero_id).cloned())
+}
+
+/// Item asset with this id (latest version, English) for the nested `asset`
+/// resolvers.
+pub(super) async fn find_item(ctx: &Context<'_>, item_id: u32) -> GqlResult<Option<AssetItem>> {
+    let items = load_items(app_state(ctx)?, None, None).await?;
+    Ok(items.iter().find(|i| i.id() == item_id).cloned())
+}
+
+/// A batcher lookup for the nested resolvers: a 404 is `None`.
+pub(super) fn found<T>(result: APIResult<T>) -> GqlResult<Option<T>> {
+    match result {
+        Ok(value) => Ok(Some(value)),
+        Err(APIError::StatusMsg {
+            status: StatusCode::NOT_FOUND,
+            ..
+        }) => Ok(None),
+        Err(e) => Err(async_graphql::Error::new(e.to_string())),
+    }
+}
+
 #[ComplexObject(rename_fields = "snake_case")]
 impl Match {
     /// Stored salts of this match (no on-demand Steam fetch). `null` when none
@@ -84,8 +110,7 @@ impl MatchPlayer {
         let Some(id) = self.hero_id else {
             return Ok(None);
         };
-        let heroes = load_heroes(app_state(ctx)?, None, None).await?;
-        Ok(heroes.iter().find(|h| h.id == id).cloned())
+        find_hero(ctx, id).await
     }
 
     /// Stored Steam profile for this player's `account_id` (no live Steam
@@ -132,14 +157,7 @@ pub(super) async fn load_steam_profile(
     {
         return Ok(None);
     }
-    match state.batchers.steam_profile_graphql.load(account_id).await {
-        Ok(row) => Ok(Some(row.into())),
-        Err(APIError::StatusMsg {
-            status: StatusCode::NOT_FOUND,
-            ..
-        }) => Ok(None),
-        Err(e) => Err(async_graphql::Error::new(e.to_string())),
-    }
+    Ok(found(state.batchers.steam_profile_graphql.load(account_id).await)?.map(Into::into))
 }
 
 #[ComplexObject(rename_fields = "snake_case")]
@@ -149,8 +167,7 @@ impl MatchHistoryEntry {
         let Some(id) = self.hero_id else {
             return Ok(None);
         };
-        let heroes = load_heroes(app_state(ctx)?, None, None).await?;
-        Ok(heroes.iter().find(|h| h.id == id).cloned())
+        find_hero(ctx, id).await
     }
 }
 
@@ -161,7 +178,6 @@ impl GameplayItem {
         let Some(id) = self.item_id.or(self.upgrade_id) else {
             return Ok(None);
         };
-        let items = load_items(app_state(ctx)?, None, None).await?;
-        Ok(items.iter().find(|i| i.id() == id).cloned())
+        find_item(ctx, id).await
     }
 }

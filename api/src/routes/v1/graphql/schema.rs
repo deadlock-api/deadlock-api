@@ -182,16 +182,8 @@ pub(super) async fn load_matches(
         limit: page.limit.clamp(1, MAX_LIMIT),
         offset: page.offset,
         via_player_match_stats,
-    })
-    .map_err(|e| async_graphql::Error::new(format!("SQL build error: {e}")))?;
-    debug!(?sql, "graphql.matches built sql");
-    let rows = run_query::<Match>(&state.ch_client_ro, &sql)
-        .instrument(info_span!("graphql.clickhouse", operation = "matches", sql = %sql))
-        .await?;
-    #[expect(clippy::cast_precision_loss)]
-    metrics::histogram!("graphql_rows_returned", "operation" => "matches")
-        .record(rows.len() as f64);
-    Ok(rows)
+    });
+    run_built_query(state, "matches", sql).await
 }
 
 /// `scope` is an extra SQL predicate AND-ed to the `where_` filters.
@@ -214,16 +206,8 @@ pub(super) async fn load_match_players(
         limit: page.limit.clamp(1, MAX_LIMIT),
         offset: page.offset,
         via_player_match_stats,
-    })
-    .map_err(|e| async_graphql::Error::new(format!("SQL build error: {e}")))?;
-    debug!(?sql, "graphql.match_players built sql");
-    let rows = run_query::<MatchPlayer>(&state.ch_client_ro, &sql)
-        .instrument(info_span!("graphql.clickhouse", operation = "match_players", sql = %sql))
-        .await?;
-    #[expect(clippy::cast_precision_loss)]
-    metrics::histogram!("graphql_rows_returned", "operation" => "match_players")
-        .record(rows.len() as f64);
-    Ok(rows)
+    });
+    run_built_query(state, "match_players", sql).await
 }
 
 /// `scope` is an extra SQL predicate AND-ed to the `where_` filters.
@@ -244,16 +228,8 @@ pub(super) async fn load_match_history(
         order_dir: page.order_direction.unwrap_or_default().into(),
         limit: page.limit.clamp(1, MAX_LIMIT),
         offset: page.offset,
-    })
-    .map_err(|e| async_graphql::Error::new(format!("SQL build error: {e}")))?;
-    debug!(?sql, "graphql.match_history built sql");
-    let rows = run_query::<MatchHistoryEntry>(&state.ch_client_ro, &sql)
-        .instrument(info_span!("graphql.clickhouse", operation = "match_history", sql = %sql))
-        .await?;
-    #[expect(clippy::cast_precision_loss)]
-    metrics::histogram!("graphql_rows_returned", "operation" => "match_history")
-        .record(rows.len() as f64);
-    Ok(rows)
+    });
+    run_built_query(state, "match_history", sql).await
 }
 
 pub(crate) struct QueryRoot;
@@ -442,7 +418,31 @@ async fn via_player_match_stats(
     Ok(!account_ids.iter().any(|id| protected.contains(id)))
 }
 
-pub(super) async fn run_query<T>(ch_client: &clickhouse::Client, sql: &str) -> GqlResult<Vec<T>>
+/// Runs the SQL a GraphQL query built, traced and its row count recorded
+/// under `operation`.
+pub(super) async fn run_built_query<T>(
+    state: &AppState,
+    operation: &'static str,
+    sql: Result<String, core::fmt::Error>,
+) -> GqlResult<Vec<T>>
+where
+    T: serde::de::DeserializeOwned,
+{
+    let sql = sql.map_err(|e| async_graphql::Error::new(format!("SQL build error: {e}")))?;
+    debug!(?sql, operation, "graphql built sql");
+    let rows = run_query::<T>(&state.ch_client_ro, &sql)
+        .instrument(info_span!("graphql.clickhouse", operation, sql = %sql))
+        .await?;
+    record_rows_returned(operation, rows.len());
+    Ok(rows)
+}
+
+pub(super) fn record_rows_returned(operation: &'static str, rows: usize) {
+    #[expect(clippy::cast_precision_loss)]
+    metrics::histogram!("graphql_rows_returned", "operation" => operation).record(rows as f64);
+}
+
+async fn run_query<T>(ch_client: &clickhouse::Client, sql: &str) -> GqlResult<Vec<T>>
 where
     T: serde::de::DeserializeOwned,
 {

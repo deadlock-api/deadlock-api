@@ -4,15 +4,13 @@
 use core::fmt::Write;
 
 use async_graphql::{ComplexObject, InputObject, Result as GqlResult, SimpleObject};
-use axum::http::StatusCode;
 use clickhouse::Row;
 use serde::Deserialize;
-use tracing::{Instrument as _, debug, info_span};
 
 use crate::context::AppState;
-use crate::error::APIError;
+use crate::routes::v1::graphql::assets::found;
 use crate::routes::v1::graphql::filters::{U32Filter, U64Filter};
-use crate::routes::v1::graphql::schema::run_query;
+use crate::routes::v1::graphql::schema::run_built_query;
 use crate::routes::v1::graphql::sql::OrderDir;
 use crate::services::clickhouse_batcher::{BatchQuery, ClickhouseBatcher, in_clause};
 
@@ -128,16 +126,8 @@ pub(super) async fn load_match_salts_page(
     offset: u32,
 ) -> GqlResult<Vec<MatchSalts>> {
     let filters = where_.map_or_default(|w| w.to_sql_filters());
-    let sql = build_match_salts_query(&filters, order_dir, limit, offset)
-        .map_err(|e| async_graphql::Error::new(format!("SQL build error: {e}")))?;
-    debug!(?sql, "graphql.match_salts built sql");
-    let rows = run_query::<MatchSalts>(&state.ch_client_ro, &sql)
-        .instrument(info_span!("graphql.clickhouse", operation = "match_salts", sql = %sql))
-        .await?;
-    #[expect(clippy::cast_precision_loss)]
-    metrics::histogram!("graphql_rows_returned", "operation" => "match_salts")
-        .record(rows.len() as f64);
-    Ok(rows)
+    let sql = build_match_salts_query(&filters, order_dir, limit, offset);
+    run_built_query(state, "match_salts", sql).await
 }
 
 pub(crate) struct MatchSaltsGraphQlQuery;
@@ -168,14 +158,7 @@ pub(super) async fn load_match_salts(
     state: &AppState,
     match_id: u64,
 ) -> GqlResult<Option<MatchSalts>> {
-    match state.batchers.match_salts_graphql.load(match_id).await {
-        Ok(salts) => Ok(Some(salts)),
-        Err(APIError::StatusMsg {
-            status: StatusCode::NOT_FOUND,
-            ..
-        }) => Ok(None),
-        Err(e) => Err(async_graphql::Error::new(e.to_string())),
-    }
+    found(state.batchers.match_salts_graphql.load(match_id).await)
 }
 
 #[cfg(test)]
