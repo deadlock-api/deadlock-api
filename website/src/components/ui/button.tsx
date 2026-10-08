@@ -86,7 +86,7 @@ const buttonVariants = cva(
          * A button that holds a small card of content (a record, a suggestion, a filter summary): the content sets
          * its height and wraps, from the start edge. Any variant gives the surface; flex classes lay out the content.
          */
-        tile: "h-auto justify-start gap-1.5 px-2 py-1.5 text-start whitespace-normal",
+        tile: "h-auto justify-start gap-1.5 px-2 py-1.5 text-start text-sm whitespace-normal",
         /**
          * For `variant="link"` inside a sentence: no box of its own. It is the one size without a type size, so it
          * takes the size of the text around it; that is why the sizes, not the base, carry `text-sm`.
