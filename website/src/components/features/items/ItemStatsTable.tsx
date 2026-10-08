@@ -61,12 +61,6 @@ const together = { limitUrlUpdates: throttle(50) };
 
 // Infer types from parsers
 type SortField = "winRate" | "matches" | "name" | "tier";
-type SortDirection = "asc" | "desc";
-
-interface SortState {
-  field: SortField;
-  direction: SortDirection;
-}
 
 const NO_CORRUPTED: CorruptedStats = { wins: 0, matches: 0 };
 
@@ -104,8 +98,6 @@ function toggled(set: Set<number>, id: number) {
 /** The counts of the row a `details` slot is rendered in. */
 export interface ItemStatsRow {
   itemId: number;
-  wins: number;
-  losses: number;
   matches: number;
 }
 
@@ -118,7 +110,7 @@ export function useItemStatsRow(): ItemStatsRow {
   return row;
 }
 
-export interface ItemStatsTableProps {
+interface ItemStatsTableProps {
   data: DisplayItemStats[] | undefined;
   isLoading: boolean;
   isRefetching?: boolean;
@@ -314,10 +306,7 @@ const ItemStatsTableRow = memo(function ItemStatsTableRow({
   details,
 }: ItemStatsTableRowProps) {
   const itemName = row.item?.name ?? "Unknown Item";
-  const rowContext = useMemo(
-    (): ItemStatsRow => ({ itemId: row.item_id, wins: row.wins, losses: row.losses, matches: row.matches }),
-    [row],
-  );
+  const rowContext = useMemo((): ItemStatsRow => ({ itemId: row.item_id, matches: row.matches }), [row]);
 
   const cells = (
     <>
@@ -510,13 +499,12 @@ export function ItemStatsTable({
     parseAsSortDirection.withDefault("desc"),
   );
 
-  const sort: SortState = useMemo(() => ({ field: sortField, direction: sortDirection }), [sortField, sortDirection]);
-  const { toggle } = useSort<SortField>({
+  const sort = useSort<SortField>({
     ...sortParams([sortField, setSortField], [sortDirection, setSortDirection], together),
     // Names and tiers read from the top down (A first, tier 1 first); numbers from the largest.
     firstDir: (field) => (field === "name" || field === "tier" ? "asc" : "desc"),
   });
-  const toggleSort = (field: SortField) => startTransition(() => toggle(field));
+  const toggleSort = (field: SortField) => startTransition(() => sort.toggle(field));
 
   const [itemTiers, setItemTiers] = useQueryState(
     "item_tiers",
@@ -593,10 +581,12 @@ export function ItemStatsTable({
 
   // The header and filters answer a click at once; the ~150 rows (a few hundred ms of style and layout on a phone)
   // follow in a deferred render, marked busy until they catch up.
-  const rowSort = useDeferredValue(sort);
+  const rowSortKey = useDeferredValue(sort.sortKey);
+  const rowSortDir = useDeferredValue(sort.dir);
   const rowTiers = useDeferredValue(itemTiers);
   const rowSlots = useDeferredValue(itemSlots);
-  const rowsCatchingUp = rowSort !== sort || rowTiers !== itemTiers || rowSlots !== itemSlots;
+  const rowsCatchingUp =
+    rowSortKey !== sort.sortKey || rowSortDir !== sort.dir || rowTiers !== itemTiers || rowSlots !== itemSlots;
 
   const processedData = useMemo(() => {
     if (!data) return [];
@@ -604,28 +594,28 @@ export function ItemStatsTable({
       let aValue: number;
       let bValue: number;
 
-      if (rowSort.field === "name") {
+      if (rowSortKey === "name") {
         const byName = (a.item?.name ?? "").localeCompare(b.item?.name ?? "");
-        return rowSort.direction === "asc" ? byName : -byName;
+        return rowSortDir === "asc" ? byName : -byName;
       }
-      if (rowSort.field === "tier") {
+      if (rowSortKey === "tier") {
         // Within a tier, the stronger item first, whichever way the tiers run.
-        const byTier = rowSort.direction === "asc" ? a.itemTier - b.itemTier : b.itemTier - a.itemTier;
+        const byTier = rowSortDir === "asc" ? a.itemTier - b.itemTier : b.itemTier - a.itemTier;
         return byTier || b.wins / b.matches - a.wins / a.matches;
       }
-      if (rowSort.field === "winRate") {
+      if (rowSortKey === "winRate") {
         aValue = a.wins / a.matches;
         bValue = b.wins / b.matches;
-      } else if (rowSort.field === "matches") {
+      } else if (rowSortKey === "matches") {
         aValue = a.matches;
         bValue = b.matches;
       } else {
         return 0;
       }
 
-      return rowSort.direction === "asc" ? aValue - bValue : bValue - aValue;
+      return rowSortDir === "asc" ? aValue - bValue : bValue - aValue;
     });
-  }, [data, rowSort]);
+  }, [data, rowSortKey, rowSortDir]);
 
   // Echo keystrokes before filtering and rendering the rows.
   const nameTerm = useDeferredValue(nameQuery).trim().toLowerCase();
@@ -713,8 +703,8 @@ export function ItemStatsTable({
                   <SortableHeader
                     label="Item"
                     sortKey="name"
-                    activeSortKey={sort.field}
-                    sortDir={sort.direction}
+                    activeSortKey={sort.sortKey}
+                    sortDir={sort.dir}
                     onSortChange={toggleSort}
                     className="text-start"
                     data-pinned
@@ -722,8 +712,8 @@ export function ItemStatsTable({
                   <SortableHeader
                     label="Tier"
                     sortKey="tier"
-                    activeSortKey={sort.field}
-                    sortDir={sort.direction}
+                    activeSortKey={sort.sortKey}
+                    sortDir={sort.dir}
                     onSortChange={toggleSort}
                     className="hidden text-start @md:table-cell"
                   />
@@ -742,8 +732,8 @@ export function ItemStatsTable({
                         : undefined
                     }
                     sortKey="winRate"
-                    activeSortKey={sort.field}
-                    sortDir={sort.direction}
+                    activeSortKey={sort.sortKey}
+                    sortDir={sort.dir}
                     onSortChange={toggleSort}
                     className="text-start"
                   />
@@ -764,8 +754,8 @@ export function ItemStatsTable({
                         : undefined
                     }
                     sortKey="matches"
-                    activeSortKey={sort.field}
-                    sortDir={sort.direction}
+                    activeSortKey={sort.sortKey}
+                    sortDir={sort.dir}
                     onSortChange={toggleSort}
                     className="text-start"
                   />

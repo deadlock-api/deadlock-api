@@ -326,7 +326,6 @@ export function ItemStatsExplorer({
             prevStatsMap={prevStatsMap}
             corruptedStatsMap={corruptedStatsMap}
             details={rowDetails}
-
             actions={
               topBuildsEnabled && (
                 <Button
