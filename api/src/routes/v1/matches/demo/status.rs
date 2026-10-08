@@ -48,9 +48,9 @@ includes `error`.
 )]
 pub(super) async fn status(
     Path(job_id): Path<String>,
-    State(mut state): State<AppState>,
+    State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
-    let record = job::load(&mut state.redis_client, &job_id)
+    let record = job::load(&mut state.redis_client.clone(), &job_id)
         .await?
         .ok_or_else(|| APIError::status_msg(StatusCode::NOT_FOUND, "Job not found or expired"))?;
 

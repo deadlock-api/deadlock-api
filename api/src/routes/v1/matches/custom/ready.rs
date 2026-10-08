@@ -45,7 +45,7 @@ This endpoint allows you to ready up for a custom match.
 pub(super) async fn ready_up(
     Path(LobbyIdQuery { lobby_id }): Path<LobbyIdQuery>,
     rate_limit_key: RateLimitKey,
-    State(mut state): State<AppState>,
+    State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
     state
         .rate_limit_client
@@ -62,7 +62,8 @@ pub(super) async fn ready_up(
     let lobby_id = lobby_id.parse().map_err(|_| {
         APIError::status_msg(StatusCode::BAD_REQUEST, "Invalid lobby id".to_owned())
     })?;
-    let party_code = utils::get_party_info_with_retries(&mut state.redis_client, lobby_id).await?;
+    let party_code =
+        utils::get_party_info_with_retries(&mut state.redis_client.clone(), lobby_id).await?;
     let Some(party_code) = party_code else {
         error!("Failed to retrieve party info");
         return Err(APIError::internal("Failed to retrieve party info"));
@@ -101,7 +102,7 @@ This endpoint allows you to unready for a custom match.
 pub(super) async fn unready(
     Path(LobbyIdQuery { lobby_id }): Path<LobbyIdQuery>,
     rate_limit_key: RateLimitKey,
-    State(mut state): State<AppState>,
+    State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
     state
         .rate_limit_client
@@ -118,7 +119,8 @@ pub(super) async fn unready(
     let lobby_id = lobby_id.parse().map_err(|_| {
         APIError::status_msg(StatusCode::BAD_REQUEST, "Invalid lobby id".to_owned())
     })?;
-    let party_code = utils::get_party_info_with_retries(&mut state.redis_client, lobby_id).await?;
+    let party_code =
+        utils::get_party_info_with_retries(&mut state.redis_client.clone(), lobby_id).await?;
     let Some(party_code) = party_code else {
         error!("Failed to retrieve party info");
         return Err(APIError::internal("Failed to retrieve party info"));

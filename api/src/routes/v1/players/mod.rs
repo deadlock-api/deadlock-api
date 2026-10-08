@@ -157,7 +157,7 @@ async fn collect_invite_links(
 }
 
 pub(super) async fn resolve_bot_for_account(
-    state: &mut AppState,
+    state: &AppState,
     rate_limit_key: &RateLimitKey,
     account_id: u32,
     endpoint_name: &str,
@@ -170,7 +170,7 @@ pub(super) async fn resolve_bot_for_account(
         return Ok(bot_username);
     }
 
-    let invites = collect_invite_links(&state.pg_client, &mut state.redis_client).await?;
+    let invites = collect_invite_links(&state.pg_client, &mut state.redis_client.clone()).await?;
     Err(APIError::StatusMsgJson {
         status: StatusCode::BAD_REQUEST,
         message: json!({

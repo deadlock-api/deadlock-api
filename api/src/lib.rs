@@ -128,8 +128,8 @@ pub async fn router(port: u16) -> Result<NormalizePath<Router>, StartupError> {
         // Serve favicon
         .route("/favicon.ico", get(favicon))
         // Prometheus metrics route
-        .route("/metrics", get(|rk: RateLimitKey, State(AppState{config, ..}): State<AppState>| async move {
-            let internal_key = config.internal_api_key.strip_prefix("HEXE-").unwrap_or(&config.internal_api_key);
+        .route("/metrics", get(|rk: RateLimitKey, State(state): State<AppState>| async move {
+            let internal_key = state.config.internal_api_key.strip_prefix("HEXE-").unwrap_or(&state.config.internal_api_key);
             if rk.api_key.is_none_or(|k| k.to_string() != internal_key) {
                 return Err(APIError::status_msg(
                     StatusCode::FORBIDDEN,

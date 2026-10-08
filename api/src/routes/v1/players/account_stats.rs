@@ -153,10 +153,10 @@ Relevant Protobuf Messages:
 pub(super) async fn account_stats(
     Path(AccountIdQuery { account_id }): Path<AccountIdQuery>,
     rate_limit_key: RateLimitKey,
-    State(mut state): State<AppState>,
+    State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
     let bot_username =
-        super::resolve_bot_for_account(&mut state, &rate_limit_key, account_id, "account_stats")
+        super::resolve_bot_for_account(&state, &rate_limit_key, account_id, "account_stats")
             .await?;
 
     let player_account_stats =

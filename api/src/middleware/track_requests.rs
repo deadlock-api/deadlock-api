@@ -21,7 +21,7 @@ fn get_header(req: &Request, name: &str) -> Option<String> {
 }
 
 pub(crate) async fn track_requests(
-    State(AppState { request_logger, .. }): State<AppState>,
+    State(state): State<AppState>,
     matched_path: MatchedPath,
     req: Request,
     next: Next,
@@ -127,7 +127,7 @@ pub(crate) async fn track_requests(
             rate_limit_remaining,
             rate_limit_reset,
         };
-        request_logger.log(log).await;
+        state.request_logger.log(log).await;
     }
 
     response

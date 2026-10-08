@@ -78,7 +78,7 @@ hero id or pawn entity index rather than through `m_hPawn`.
 )]
 pub(super) async fn submit(
     rate_limit_key: RateLimitKey,
-    State(mut state): State<AppState>,
+    State(state): State<AppState>,
     payload: Result<Json<DemoQueryRequest>, JsonRejection>,
 ) -> APIResult<impl IntoResponse> {
     let Json(req) = payload.map_err(|rejection| {
@@ -105,7 +105,7 @@ pub(super) async fn submit(
 
     // Dedup / cache: a queued/running/done job short-circuits. A failed job does not —
     // re-submitting the same triple re-runs it.
-    if let Some(existing) = job::load(&mut state.redis_client, &id).await?
+    if let Some(existing) = job::load(&mut state.redis_client.clone(), &id).await?
         && existing.status != JobStatus::Failed
     {
         return Ok((
@@ -159,7 +159,7 @@ pub(super) async fn submit(
         result_url: None,
         error: None,
     };
-    job::store(&mut state.redis_client, &id, &record).await?;
+    job::store(&mut state.redis_client.clone(), &id, &record).await?;
 
     slot.send(QueryJob {
         job_id: id.clone(),

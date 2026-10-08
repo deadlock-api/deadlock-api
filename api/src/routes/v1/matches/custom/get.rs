@@ -62,9 +62,9 @@ This endpoint allows you to get the match id of a custom match.
 )]
 pub(super) async fn get_custom(
     Path(PartyIdQuery { party_id }): Path<PartyIdQuery>,
-    State(mut state): State<AppState>,
+    State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
-    get_party_match_id(&mut state.redis_client, party_id)
+    get_party_match_id(&mut state.redis_client.clone(), party_id)
         .await
         .map(|match_id| GetCustomMatchIdResponse { match_id })
         .map(Json)

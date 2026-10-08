@@ -48,8 +48,20 @@ pub(crate) struct FeatureFlags {
     pub(crate) routes: HashMap<String, bool>,
 }
 
+/// Shared application state. Cheap to clone: every `State<AppState>` extraction clones it, so
+/// the actual state lives behind a single `Arc`.
 #[derive(Clone)]
-pub(crate) struct AppState {
+pub(crate) struct AppState(Arc<AppStateInner>);
+
+impl core::ops::Deref for AppState {
+    type Target = AppStateInner;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+pub(crate) struct AppStateInner {
     pub(crate) config: Config,
     pub(crate) s3_client: AmazonS3,
     pub(crate) s3_cache_client: AmazonS3,
@@ -429,7 +441,7 @@ impl AppState {
             .spawn();
         }
 
-        Ok(Self {
+        Ok(Self(Arc::new(AppStateInner {
             config,
             s3_client,
             s3_cache_client,
@@ -449,6 +461,6 @@ impl AppState {
             version_store,
             demo_query_queue,
             mcp_catalog,
-        })
+        })))
     }
 }

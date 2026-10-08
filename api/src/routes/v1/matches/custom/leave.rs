@@ -40,7 +40,7 @@ By default the bot leaves automatically after 15 minutes, but this endpoint allo
 pub(super) async fn leave(
     Path(LobbyIdQuery { lobby_id }): Path<LobbyIdQuery>,
     rate_limit_key: RateLimitKey,
-    State(mut state): State<AppState>,
+    State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
     state
         .rate_limit_client
@@ -57,7 +57,7 @@ pub(super) async fn leave(
     let lobby_id = lobby_id.parse().map_err(|_| {
         APIError::status_msg(StatusCode::BAD_REQUEST, "Invalid lobby id".to_owned())
     })?;
-    let party_info = utils::get_party_info(&mut state.redis_client, lobby_id).await?;
+    let party_info = utils::get_party_info(&mut state.redis_client.clone(), lobby_id).await?;
     let Some(party_info) = party_info else {
         error!("Failed to retrieve party info");
         return Err(APIError::internal("Failed to retrieve party info"));

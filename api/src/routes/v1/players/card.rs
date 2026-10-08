@@ -261,10 +261,10 @@ Relevant Protobuf Messages:
 pub(super) async fn card(
     Path(AccountIdQuery { account_id }): Path<AccountIdQuery>,
     rate_limit_key: RateLimitKey,
-    State(mut state): State<AppState>,
+    State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
     let bot_username =
-        super::resolve_bot_for_account(&mut state, &rate_limit_key, account_id, "card").await?;
+        super::resolve_bot_for_account(&state, &rate_limit_key, account_id, "card").await?;
 
     let player_card = get_player_card(&state, account_id, bot_username).await?;
     Ok(Json(player_card))

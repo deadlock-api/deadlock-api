@@ -81,7 +81,7 @@ hero id or pawn entity index rather than through `m_hPawn`.
 )]
 pub(super) async fn live_query(
     rate_limit_key: RateLimitKey,
-    State(mut state): State<AppState>,
+    State(state): State<AppState>,
     Query(params): Query<LiveQueryParams>,
 ) -> APIResult<impl IntoResponse> {
     state
@@ -99,7 +99,7 @@ pub(super) async fn live_query(
     let broadcast_url = match (params.broadcast_url, params.match_id) {
         (Some(url), _) => url,
         (None, Some(match_id)) => {
-            resolve_broadcast_url(&mut state, &rate_limit_key, match_id)
+            resolve_broadcast_url(&state, &rate_limit_key, match_id)
                 .await?
                 .0
         }

@@ -88,14 +88,18 @@ Checks the health of the services.
 | Global | - |
     "
 )]
-pub(super) async fn health_check(State(mut state): State<AppState>) -> APIResult<Json<Status>> {
+pub(super) async fn health_check(State(state): State<AppState>) -> APIResult<Json<Status>> {
     if crate::SHUTTING_DOWN.load(core::sync::atomic::Ordering::Relaxed) {
         return Err(APIError::status_msg(
             StatusCode::SERVICE_UNAVAILABLE,
             "Service is shutting down",
         ));
     }
-    check_health(state.ch_client_ro, state.pg_client, &mut state.redis_client)
-        .await
-        .map(Json)
+    check_health(
+        state.ch_client_ro.clone(),
+        state.pg_client.clone(),
+        &mut state.redis_client.clone(),
+    )
+    .await
+    .map(Json)
 }

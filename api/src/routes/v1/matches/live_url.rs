@@ -167,10 +167,10 @@ Example Parsers:
 pub(super) async fn url(
     Path(MatchIdQuery { match_id }): Path<MatchIdQuery>,
     rate_limit_key: RateLimitKey,
-    State(mut state): State<AppState>,
+    State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
     let (broadcast_url, lobby_id) =
-        resolve_broadcast_url(&mut state, &rate_limit_key, match_id).await?;
+        resolve_broadcast_url(&state, &rate_limit_key, match_id).await?;
     Ok(Json(MatchSpectateResponse {
         broadcast_url,
         lobby_id,
@@ -206,7 +206,7 @@ async fn oldest_possibly_live_match_id(
 /// Returns `BAD_REQUEST` if the match is too old to be live, `TOO_MANY_REQUESTS` if the spectate
 /// rate limit is hit, or an internal error if spectating fails.
 pub(super) async fn resolve_broadcast_url(
-    state: &mut AppState,
+    state: &AppState,
     rate_limit_key: &RateLimitKey,
     match_id: u64,
 ) -> APIResult<(String, Option<u64>)> {
@@ -222,6 +222,7 @@ pub(super) async fn resolve_broadcast_url(
     // Check Redis for a cached broadcast URL
     let cached: Option<String> = state
         .redis_client
+        .clone()
         .hget(SPECTATED_MATCHES_KEY, match_id.to_string())
         .await?;
 
@@ -272,6 +273,7 @@ pub(super) async fn resolve_broadcast_url(
     });
     state
         .redis_client
+        .clone()
         .hset(
             SPECTATED_MATCHES_KEY,
             match_id.to_string(),
@@ -280,6 +282,7 @@ pub(super) async fn resolve_broadcast_url(
         .await?;
     state
         .redis_client
+        .clone()
         .hexpire(
             SPECTATED_MATCHES_KEY,
             LIVE_URL_TTL_SECS,
@@ -315,8 +318,12 @@ These can be used in any demofile broadcast parser:
 | Global | - |
     "
 )]
-pub(super) async fn urls(State(mut state): State<AppState>) -> APIResult<impl IntoResponse> {
-    let values: Vec<String> = state.redis_client.hvals(SPECTATED_MATCHES_KEY).await?;
+pub(super) async fn urls(State(state): State<AppState>) -> APIResult<impl IntoResponse> {
+    let values: Vec<String> = state
+        .redis_client
+        .clone()
+        .hvals(SPECTATED_MATCHES_KEY)
+        .await?;
     let urls: Vec<LiveUrl> = values
         .iter()
         .filter_map(|v| serde_json::from_str(v).ok())
@@ -356,7 +363,7 @@ These URLs can be used in any demofile broadcast parser:
 )]
 pub(super) async fn ingest_urls(
     rate_limit_key: RateLimitKey,
-    State(mut state): State<AppState>,
+    State(state): State<AppState>,
     Json(broadcast_urls): Json<Vec<IngestLiveUrl>>,
 ) -> APIResult<impl IntoResponse> {
     state
@@ -409,6 +416,7 @@ pub(super) async fn ingest_urls(
         let field = broadcast.match_id.to_string();
         state
             .redis_client
+            .clone()
             .hset(
                 SPECTATED_MATCHES_KEY,
                 &field,
@@ -417,6 +425,7 @@ pub(super) async fn ingest_urls(
             .await?;
         state
             .redis_client
+            .clone()
             .hexpire(
                 SPECTATED_MATCHES_KEY,
                 LIVE_URL_TTL_SECS,

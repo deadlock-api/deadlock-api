@@ -237,7 +237,7 @@ The bot will leave the match 15 minutes after creation, regardless of match stat
 #[expect(clippy::too_many_lines)]
 pub(super) async fn create_custom(
     rate_limit_key: RateLimitKey,
-    State(mut state): State<AppState>,
+    State(state): State<AppState>,
     payload: Result<Json<CreateCustomRequest>, JsonRejection>,
 ) -> APIResult<impl IntoResponse> {
     state
@@ -297,7 +297,7 @@ pub(super) async fn create_custom(
                     &callback_secret,
                     20 * 60,
                 )
-                .exec_async(&mut state.redis_client) // Execute the pipeline
+                .exec_async(&mut state.redis_client.clone()) // Execute the pipeline
                 .await?;
             Some(callback_secret)
         }
@@ -323,7 +323,8 @@ pub(super) async fn create_custom(
         }
     });
 
-    let party_code = utils::get_party_info_with_retries(&mut state.redis_client, party_id).await?;
+    let party_code =
+        utils::get_party_info_with_retries(&mut state.redis_client.clone(), party_id).await?;
     let Some(party_code) = party_code else {
         error!("Failed to retrieve party code");
         return Err(APIError::internal("Failed to retrieve party code"));
