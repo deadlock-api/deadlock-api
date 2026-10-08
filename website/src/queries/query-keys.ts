@@ -59,8 +59,6 @@ export const queryKeys = {
     heroCombStats: (params: AnalyticsApiHeroCombStatsRequest) => ["api-hero-comb-stats", params] as const,
     laneMatchupStats: (params: AnalyticsApiLaneMatchupStatsRequest) => ["api-lane-matchup-stats", params] as const,
     laneSoulCurve: (params: AnalyticsApiLaneSoulCurveRequest) => ["api-lane-soul-curve", params] as const,
-    /** Only HeroWinRateByRank reads it; it caches the same raw /hero-stats as `heroStats` and should move to it. */
-    heroStatsByRank: (params: AnalyticsApiHeroStatsRequest) => ["api-hero-stats-by-rank", params] as const,
     /** The heroes analytics views' own, packed copies of /hero-stats: other pages cache the same requests as rows. */
     heroChartStats: (
       view: "over-time" | "by-duration" | "by-rank" | "by-experience",
