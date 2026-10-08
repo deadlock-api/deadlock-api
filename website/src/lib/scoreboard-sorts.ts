@@ -106,7 +106,7 @@ export const HERO_SORT_BY_VALUES: string[] = sortByValuesFor("heroes");
 
 const PERCENTAGE_STATS = new Set(["winrate"]);
 
-export function formatStatValue(value: number, sortBy: string): string {
+export function formatScoreboardValue(value: number, sortBy: string): string {
   if (PERCENTAGE_STATS.has(sortBy)) {
     return `${(value * 100).toFixed(1)}%`;
   }

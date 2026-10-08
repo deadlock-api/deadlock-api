@@ -19,7 +19,6 @@ import {
   CHART_Y_LABEL,
 } from "~/components/patterns/charts/theme";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
-import { NoValue } from "~/components/ui/no-value";
 import { TooltipCard, TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
 import type { Dayjs } from "~/dayjs";
 import { CHART_HEROES_QUERY_KEY, useChartHeroVisibility, useHeroColorMap } from "~/hooks/useChartHeroVisibility";
@@ -59,7 +58,7 @@ interface DataPoint {
   heroColor: string;
 }
 
-function formatStatValue(stat: ByRankStat, value: number): string {
+function formatByRankValue(stat: ByRankStat, value: number): string {
   if (stat === "winrate" || stat === "pickrate" || stat === "ban_rate") return `${value.toFixed(2)}%`;
   // One locale, so the server renders the same digits the browser hydrates.
   if (stat === "net_worth_per_match") return value.toLocaleString("en-US", { maximumFractionDigits: 0 });
@@ -116,8 +115,8 @@ function CustomTooltip({
         subtitle={data.rankName}
       />
       <TooltipStats>
-        <TooltipStat label={formatStatLabel(xStat)} value={formatStatValue(xStat, data.xValue) ?? <NoValue />} />
-        <TooltipStat label={formatStatLabel(yStat)} value={formatStatValue(yStat, data.yValue) ?? <NoValue />} />
+        <TooltipStat label={formatStatLabel(xStat)} value={formatByRankValue(xStat, data.xValue)} />
+        <TooltipStat label={formatStatLabel(yStat)} value={formatByRankValue(yStat, data.yValue)} />
         <TooltipStat label="Matches" value={data.matches.toLocaleString("en-US")} />
       </TooltipStats>
     </TooltipCard>
@@ -468,7 +467,7 @@ export function HeroStatsByRankChart({
               title={`${yStat === "pickrate" ? "Pick rate" : HERO_TREND_LABELS[yStat]} by rank · all heroes`}
               buckets={tableTiers.map(({ badge, name }) => name ?? `Rank ${Math.floor(badge / 10)}`)}
               rows={tableRows}
-              format={(value) => formatStatValue(yStat, value)}
+              format={(value) => formatByRankValue(yStat, value)}
             />
           )}
         </div>

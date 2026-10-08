@@ -11,14 +11,13 @@ import { SortableHeader } from "~/components/patterns/data-table/SortableHeader"
 import { TableEmptyRow } from "~/components/patterns/data-table/TableEmptyRow";
 import { Button } from "~/components/ui/button";
 import { useSort } from "~/components/ui/hooks/use-sort";
-import { NoValue } from "~/components/ui/no-value";
 import { SearchInput } from "~/components/ui/search-input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { usePaginationQueryState } from "~/hooks/usePaginationQueryState";
 import { useSteamProfiles } from "~/hooks/useSteamProfiles";
 import { findKey } from "~/lib/find-keys";
 import { extractBadgeMap } from "~/lib/leaderboard";
-import { formatStatValue, sortByLabel } from "~/lib/scoreboard-sorts";
+import { formatScoreboardValue, sortByLabel } from "~/lib/scoreboard-sorts";
 import { parseSteamIdInput } from "~/lib/steam";
 import { ranksQueryOptions } from "~/queries/ranks-query";
 
@@ -122,7 +121,7 @@ export function ScoreboardTable({
   const badgeMap = useMemo(() => extractBadgeMap(ranks ?? []), [ranks]);
 
   const renderValue = (entry: PlayerEntry) => {
-    if (!isRankSort) return formatStatValue(entry.value, sortBy) ?? <NoValue label="No data" />;
+    if (!isRankSort) return formatScoreboardValue(entry.value, sortBy);
     const badge = entry.badge ? badgeMap.get(entry.badge) : undefined;
     if (!entry.badge || !badge) return <span className="text-muted-foreground">Unranked</span>;
     return (

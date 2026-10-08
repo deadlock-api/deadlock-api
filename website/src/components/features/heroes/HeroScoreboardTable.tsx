@@ -5,10 +5,9 @@ import type { ScoreboardSort } from "~/components/domain/player-scoreboard/Score
 import { SortableHeader } from "~/components/patterns/data-table/SortableHeader";
 import { TableEmptyRow } from "~/components/patterns/data-table/TableEmptyRow";
 import { useSort } from "~/components/ui/hooks/use-sort";
-import { NoValue } from "~/components/ui/no-value";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { findKey } from "~/lib/find-keys";
-import { formatStatValue, sortByLabel } from "~/lib/scoreboard-sorts";
+import { formatScoreboardValue, sortByLabel } from "~/lib/scoreboard-sorts";
 
 export interface HeroScoreboardTableProps {
   entries: HeroEntry[];
@@ -64,7 +63,7 @@ export function HeroScoreboardTable({ entries, sortBy, sortDirection, onSortChan
             {sortBy !== "matches" && (
               <TableCell className="hidden text-end sm:table-cell">{entry.matches.toLocaleString("en-US")}</TableCell>
             )}
-            <TableCell className="text-end">{formatStatValue(entry.value, sortBy) ?? <NoValue />}</TableCell>
+            <TableCell className="text-end">{formatScoreboardValue(entry.value, sortBy)}</TableCell>
           </TableRow>
         ))}
         {entries.length === 0 && <TableEmptyRow colSpan={sortBy === "matches" ? 3 : 4} />}
