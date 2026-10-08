@@ -6,9 +6,10 @@ use serde::{Deserialize, Serialize};
 use strum::{Display, EnumString};
 use utoipa::ToSchema;
 
-use super::common_filters::{LaneDuoFilters, MatchInfoFilters, id_list};
+use super::common_filters::{LaneDuoFilters, MatchInfoFilters, id_list, range_filters};
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::matches::types::{GameMode, MatchMode};
+use crate::utils::sql::having_clause;
 
 /// Every 180s up to 900, every 300s after. A match's final tick lands off that grid and is dropped:
 /// it is not comparable across matches.
@@ -275,16 +276,16 @@ impl LaneGrouping {
 }
 
 pub(super) fn matches_having_clause(min_matches: Option<u64>, max_matches: Option<u64>) -> String {
-    let filters = min_matches
-        .map(|v| format!("matches_played >= {v}"))
-        .into_iter()
-        .chain(max_matches.map(|v| format!("matches_played <= {v}")))
-        .join(" AND ");
-    if filters.is_empty() {
-        String::new()
-    } else {
-        format!("HAVING {filters}")
-    }
+    having_clause(&range_filters("matches_played", min_matches, max_matches))
+}
+
+/// ` AND assigned_lane IN (...)`, or empty without a lane filter.
+fn lanes_filter(assigned_lanes: Option<&[u32]>) -> String {
+    assigned_lanes
+        .filter(|lanes| !lanes.is_empty())
+        .map_or_else(String::new, |lanes| {
+            format!(" AND assigned_lane IN ({})", id_list(lanes))
+        })
 }
 
 /// One element per requested stat, in request order — the ordering the response mapping relies on.
@@ -315,12 +316,7 @@ pub(super) struct LaneScanFilters<'a> {
 
 impl LaneScanFilters<'_> {
     pub(super) fn build(&self) -> String {
-        let lanes = self
-            .assigned_lanes
-            .filter(|lanes| !lanes.is_empty())
-            .map_or_else(String::new, |lanes| {
-                format!(" AND assigned_lane IN ({})", id_list(lanes))
-            });
+        let lanes = lanes_filter(self.assigned_lanes);
         let match_mode = MatchMode::sql_filter(self.match_mode);
         let game_mode = GameMode::sql_filter(self.game_mode);
         let info = self.info.build();
@@ -359,12 +355,7 @@ pub(super) struct LaneTableFilters<'a> {
 
 impl LaneTableFilters<'_> {
     pub(super) fn build(&self) -> String {
-        let lanes = self
-            .assigned_lanes
-            .filter(|lanes| !lanes.is_empty())
-            .map_or_else(String::new, |lanes| {
-                format!(" AND assigned_lane IN ({})", id_list(lanes))
-            });
+        let lanes = lanes_filter(self.assigned_lanes);
         let match_mode = MatchMode::sql_filter(self.match_mode);
         let game_mode = GameMode::sql_filter(self.game_mode);
         let info = self.info.build();

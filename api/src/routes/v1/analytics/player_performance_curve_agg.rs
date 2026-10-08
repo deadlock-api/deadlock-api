@@ -9,10 +9,9 @@
 //!
 //! The table is rebuilt day by day by [`crate::services::cohort_agg_refresh`].
 
-use crate::utils::sql::{MAX_FILTERING_AVERAGE_BADGE, MIN_FILTERING_AVERAGE_BADGE};
 use core::fmt::Write as _;
 
-use super::common_filters::MatchInfoFilters;
+use super::common_filters::{MatchInfoFilters, is_non_empty, join_filters, rollup_badge_filters};
 use super::player_performance_curve::{PlayerPerformanceCurveQuery, curve_metrics};
 use super::power_up_buffs::PERMANENT_BUFF_TIMES;
 use crate::routes::v1::matches::types::{GameMode, MatchMode};
@@ -144,24 +143,12 @@ impl AggPlan {
 /// outside Ranked/Unranked, duration filters off the bucket grid, a window older than the
 /// horizon, or no full day in the window. Expects rounded timestamps.
 pub(super) fn plan(query: &PlayerPerformanceCurveQuery, now: i64) -> Option<AggPlan> {
-    let has_player_filters = query.hero_ids.as_ref().is_some_and(|v| !v.is_empty())
-        || query.account_ids.as_ref().is_some_and(|v| !v.is_empty())
-        || query
-            .include_item_ids
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
-        || query
-            .exclude_item_ids
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
-        || query
-            .ability_order_prefix
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
-        || query
-            .ability_unlock_order_prefix
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+    let has_player_filters = is_non_empty(query.hero_ids.as_deref())
+        || is_non_empty(query.account_ids.as_deref())
+        || is_non_empty(query.include_item_ids.as_deref())
+        || is_non_empty(query.exclude_item_ids.as_deref())
+        || is_non_empty(query.ability_order_prefix.as_deref())
+        || is_non_empty(query.ability_unlock_order_prefix.as_deref())
         || query.min_networth.is_some()
         || query.max_networth.is_some()
         || query.min_match_id.is_some()
@@ -204,18 +191,10 @@ pub(super) fn plan(query: &PlayerPerformanceCurveQuery, now: i64) -> Option<AggP
 
 /// The base query's badge and duration filters, rewritten for the agg table's columns.
 fn agg_filters(query: &PlayerPerformanceCurveQuery) -> String {
-    let mut filters = String::new();
-    // Mirrors `MatchInfoFilters`: a bound at the end of the scale filters nothing.
-    if let Some(v) = query.min_average_badge
-        && v > MIN_FILTERING_AVERAGE_BADGE
-    {
-        let _ = write!(filters, " AND least_badge >= {v}");
-    }
-    if let Some(v) = query.max_average_badge
-        && v < MAX_FILTERING_AVERAGE_BADGE
-    {
-        let _ = write!(filters, " AND greatest_badge <= {v}");
-    }
+    let mut filters = join_filters(&rollup_badge_filters(
+        query.min_average_badge,
+        query.max_average_badge,
+    ));
     if let Some(min) = query.min_duration_s {
         let _ = write!(
             filters,

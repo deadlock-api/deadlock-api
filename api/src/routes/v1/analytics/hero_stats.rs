@@ -10,7 +10,8 @@ use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
 
 use super::common_filters::{
-    PlayerFilters, filter_protected_accounts, join_filters, round_timestamps,
+    PlayerFilters, filter_protected_accounts, is_non_empty, join_filters, range_filters,
+    rollup_badge_filters, rollup_day_filters, rollup_oldest_servable, round_timestamps,
 };
 use crate::context::AppState;
 use crate::error::APIResult;
@@ -18,9 +19,7 @@ use crate::routes::v1::matches::types::{GameMode, MatchMode, reject_brawl_badge_
 use crate::utils::parse::{
     comma_separated_deserialize_option, default_last_month_timestamp, parse_steam_id_option,
 };
-use crate::utils::sql::{
-    MAX_FILTERING_AVERAGE_BADGE, MIN_FILTERING_AVERAGE_BADGE, cached_ch_query, impl_match_info,
-};
+use crate::utils::sql::{cached_ch_query, impl_match_info};
 
 #[derive(Debug, Clone, Copy, Deserialize, ToSchema, Default, Display, PartialEq, Eq, Hash)]
 #[cfg_attr(test, derive(proptest_derive::Arbitrary))]
@@ -175,13 +174,8 @@ impl_match_info!(HeroStatsQuery);
 
 impl HeroStatsQuery {
     fn has_ability_order_filter(&self) -> bool {
-        self.ability_order_prefix
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
-            || self
-                .ability_unlock_order_prefix
-                .as_ref()
-                .is_some_and(|v| !v.is_empty())
+        is_non_empty(self.ability_order_prefix.as_deref())
+            || is_non_empty(self.ability_unlock_order_prefix.as_deref())
     }
 
     /// The hero-match bounds that actually filter. Every player in the window has played the
@@ -246,10 +240,6 @@ pub struct AnalyticsHeroStats {
 /// Horizon of the `hero_stats_agg_v2` materialized view, in days. Keep in sync with
 /// the `INTERVAL ... DAY` in the view's refresh `SELECT`.
 const MV_HORIZON_DAYS: i64 = 65;
-/// Safety margin below the horizon: only route windows whose start sits
-/// comfortably inside the materialized range, so a just-refreshed edge (the view
-/// drops the oldest day as time advances) never under-serves a request.
-const MV_ROUTING_MARGIN_DAYS: i64 = 5;
 
 /// Builds a query against a pre-aggregated hero-stats rollup when the request falls
 /// within the "global meta" subset they materialize, else `None` (the caller then
@@ -271,15 +261,9 @@ fn build_mv_query(query: &HeroStatsQuery) -> Option<String> {
     // Per-player / per-row filters the grain cannot express → base table.
     #[expect(deprecated)]
     let personalized = query.account_id.is_some()
-        || query.account_ids.as_ref().is_some_and(|v| !v.is_empty())
-        || query
-            .include_item_ids
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
-        || query
-            .exclude_item_ids
-            .as_ref()
-            .is_some_and(|v| !v.is_empty());
+        || is_non_empty(query.account_ids.as_deref())
+        || is_non_empty(query.include_item_ids.as_deref())
+        || is_non_empty(query.exclude_item_ids.as_deref());
     let unsupported_filter = query.min_networth.is_some()
         || query.max_networth.is_some()
         || query.min_duration_s.is_some()
@@ -298,12 +282,7 @@ fn build_mv_query(query: &HeroStatsQuery) -> Option<String> {
     // Pick the rollup: the hourly 65-day `hero_stats_agg` for windows that start
     // comfortably inside its horizon (freshest data), else the 6-hourly full-history
     // `hero_stats_agg_all` (covers all-time / old windows the hot view can't).
-    let now = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .ok()?
-        .as_secs()
-        .cast_signed();
-    let oldest_servable = now - (MV_HORIZON_DAYS - MV_ROUTING_MARGIN_DAYS) * 86_400;
+    let oldest_servable = rollup_oldest_servable(MV_HORIZON_DAYS)?;
     let (mv_table, mv_log_comment) = if query
         .min_unix_timestamp
         .is_some_and(|min_ts| min_ts >= oldest_servable)
@@ -315,31 +294,20 @@ fn build_mv_query(query: &HeroStatsQuery) -> Option<String> {
 
     let mut filters = vec![GameMode::sql_filter(query.game_mode)];
     filters.extend(MatchMode::agg_sql_filter(query.match_mode.as_deref()));
-    if let Some(v) = query.min_unix_timestamp {
-        filters.push(format!("day >= toDate({v})"));
-    }
-    if let Some(v) = query.max_unix_timestamp {
-        filters.push(format!("day <= toDate({v})"));
-    }
-    // Badge: least/greatest mirror the base table's both-teams semantics, with the
-    // same badge guards as MatchInfoFilters. Null badges are stored as
-    // 0 / 65535, so any active filter excludes them just like the base table.
-    if let Some(v) = query.min_average_badge
-        && v > MIN_FILTERING_AVERAGE_BADGE
-    {
-        filters.push(format!("least_badge >= {v}"));
-    }
-    if let Some(v) = query.max_average_badge
-        && v < MAX_FILTERING_AVERAGE_BADGE
-    {
-        filters.push(format!("greatest_badge <= {v}"));
-    }
+    filters.extend(rollup_day_filters(
+        query.min_unix_timestamp,
+        query.max_unix_timestamp,
+    ));
+    filters.extend(rollup_badge_filters(
+        query.min_average_badge,
+        query.max_average_badge,
+    ));
     let where_clause = filters.join(" AND ");
 
     let matches_per_bucket = if query.bucket == BucketQuery::NoBucket {
-        "matches".to_owned()
+        "matches"
     } else {
-        "sum(sum(n_matches)) OVER (PARTITION BY bucket)".to_owned()
+        "sum(sum(n_matches)) OVER (PARTITION BY bucket)"
     };
 
     Some(format!(
@@ -397,30 +365,11 @@ fn build_query(query: &HeroStatsQuery) -> String {
     let player_filters = join_filters(&player_filters);
     let (min_hero_matches, max_hero_matches) = query.hero_matches_bounds();
     let (min_hero_matches_total, max_hero_matches_total) = query.hero_matches_total_bounds();
-    let mut player_hero_filters = vec![];
-    if let Some(min_hero_matches) = min_hero_matches {
-        player_hero_filters.push(format!("uniq(match_id) >= {min_hero_matches}"));
-    }
-    if let Some(max_hero_matches) = max_hero_matches {
-        player_hero_filters.push(format!("uniq(match_id) <= {max_hero_matches}"));
-    }
-    let player_hero_filters = if player_hero_filters.is_empty() {
-        "TRUE".to_owned()
-    } else {
-        player_hero_filters.join(" AND ")
-    };
-    let mut player_hero_total_filters = vec![];
-    if let Some(min_hero_matches) = min_hero_matches_total {
-        player_hero_total_filters.push(format!("count() >= {min_hero_matches}"));
-    }
-    if let Some(max_hero_matches) = max_hero_matches_total {
-        player_hero_total_filters.push(format!("count() <= {max_hero_matches}"));
-    }
-    let player_hero_total_filters = if player_hero_total_filters.is_empty() {
-        "TRUE".to_owned()
-    } else {
-        player_hero_total_filters.join(" AND ")
-    };
+    // Only used by the CTEs below, which exist only when a bound is set.
+    let player_hero_filters =
+        range_filters("uniq(match_id)", min_hero_matches, max_hero_matches).join(" AND ");
+    let player_hero_total_filters =
+        range_filters("count()", min_hero_matches_total, max_hero_matches_total).join(" AND ");
     let bucket = query.bucket.get_select_clause();
     let game_mode_filter = GameMode::sql_filter(query.game_mode);
     let match_mode_filter = MatchMode::sql_filter(query.match_mode.as_deref());
@@ -429,19 +378,10 @@ fn build_query(query: &HeroStatsQuery) -> String {
     let has_player_hero_total_cte =
         min_hero_matches_total.is_some() || max_hero_matches_total.is_some();
     #[expect(deprecated)]
-    let has_account_filter = query.account_id.is_some()
-        || query
-            .account_ids
-            .as_ref()
-            .is_some_and(|ids| !ids.is_empty());
-    let has_item_filter = query
-        .include_item_ids
-        .as_ref()
-        .is_some_and(|ids| !ids.is_empty())
-        || query
-            .exclude_item_ids
-            .as_ref()
-            .is_some_and(|ids| !ids.is_empty())
+    let has_account_filter =
+        query.account_id.is_some() || is_non_empty(query.account_ids.as_deref());
+    let has_item_filter = is_non_empty(query.include_item_ids.as_deref())
+        || is_non_empty(query.exclude_item_ids.as_deref())
         || query.has_ability_order_filter();
     // An account-scoped read is a primary-key range on player_match_stats but opens every part
     // of match_player; only the item and ability arrays, which player_match_stats does not
@@ -470,9 +410,9 @@ fn build_query(query: &HeroStatsQuery) -> String {
     // columns (checked on partitions >= 100: 1,540 duplicate pairs, none differing), so
     // filtering before FINAL keeps the same rows, the same semantics as the `LIMIT 1 BY` path.
     let (prewhere_clause, where_match_filters) = if use_final {
-        (format!("PREWHERE TRUE {match_filters}"), String::new())
+        (format!("PREWHERE TRUE {match_filters}"), "")
     } else {
-        (String::new(), match_filters.clone())
+        (String::new(), match_filters.as_str())
     };
     let mut ctes: Vec<String> = vec![];
     if has_player_hero_cte {

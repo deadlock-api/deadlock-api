@@ -11,15 +11,18 @@ use serde::{Deserialize, Serialize};
 use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
 
-use super::common_filters::{default_min_matches_u32, filter_protected_accounts, round_timestamps};
+use super::common_filters::{
+    default_min_matches_u32, filter_protected_accounts, is_non_empty, range_filters,
+    round_timestamps,
+};
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::analytics::scoreboard_types::ScoreboardQuerySortBy;
 use crate::routes::v1::matches::types::{GameMode, MatchMode, reject_brawl_badge_filter};
 use crate::utils::parse::comma_separated_deserialize_option;
 use crate::utils::sql::{
-    MAX_FILTERING_AVERAGE_BADGE, MIN_FILTERING_AVERAGE_BADGE, cached_ch_query, id_list,
-    impl_match_info,
+    MAX_FILTERING_AVERAGE_BADGE, MIN_FILTERING_AVERAGE_BADGE, cached_ch_query, having_clause,
+    id_list, impl_match_info,
 };
 use crate::utils::types::SortDirectionDesc;
 
@@ -186,10 +189,7 @@ fn build_query(query: &PlayerScoreboardQuery) -> String {
     // match_player, and an all-time scan aggregates there in sort order instead of hashing
     // every account (~15 GiB peak). Time and hero filters stay on match_player, whose
     // partitions and projections prune them while player_match_stats cannot.
-    let has_account_filter = query
-        .account_ids
-        .as_ref()
-        .is_some_and(|ids| !ids.is_empty());
+    let has_account_filter = is_non_empty(query.account_ids.as_deref());
     // Buff sorts read match_player.permanent_buffs: player_match_stats only has it for rows
     // ingested since it was added. The handler requires a time or match-id lower bound for
     // them so this never scans the full history.
@@ -211,12 +211,11 @@ fn build_query(query: &PlayerScoreboardQuery) -> String {
     if let Some(hero_id) = query.hero_id {
         inner_filters.push(format!("hero_id = {hero_id}"));
     }
-    if let Some(min_networth) = query.min_networth {
-        inner_filters.push(format!("net_worth >= {min_networth}"));
-    }
-    if let Some(max_networth) = query.max_networth {
-        inner_filters.push(format!("net_worth <= {max_networth}"));
-    }
+    inner_filters.extend(range_filters(
+        "net_worth",
+        query.min_networth,
+        query.max_networth,
+    ));
     if let Some(account_ids) = &query.account_ids {
         inner_filters.push(format!("has([{}], account_id)", id_list(account_ids)));
     }
@@ -230,18 +229,11 @@ fn build_query(query: &PlayerScoreboardQuery) -> String {
         ""
     };
 
-    let mut having_filters = vec![];
-    if let Some(min_matches) = query.min_matches {
-        having_filters.push(format!("{matches_expr} >= {min_matches}"));
-    }
-    if let Some(max_matches) = query.max_matches {
-        having_filters.push(format!("{matches_expr} <= {max_matches}"));
-    }
-    let having_clause = if having_filters.is_empty() {
-        String::new()
-    } else {
-        format!(" HAVING {} ", having_filters.join(" AND "))
-    };
+    let having_clause = having_clause(&range_filters(
+        matches_expr,
+        query.min_matches,
+        query.max_matches,
+    ));
     let offset = query.start.unwrap_or(1).max(1) - 1;
     let select_clause = if query.sort_by.dedup_free() {
         matches_expr.to_owned()

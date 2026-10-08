@@ -14,8 +14,8 @@ use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
 
 use super::common_filters::{
-    PlayerFilters, default_min_matches_u32, filter_protected_accounts, join_filters,
-    round_timestamps,
+    DEFAULT_MIN_MATCHES, PlayerFilters, default_min_matches_u32, filter_protected_accounts,
+    join_filters, round_timestamps, with_legacy_id,
 };
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
@@ -176,14 +176,8 @@ fn build_query(query: &HeroCombStatsQuery) -> String {
         }
         .build(),
     );
-    let mut account_filter_values: Vec<u32> = Vec::new();
     #[expect(deprecated)]
-    if let Some(account_id) = query.account_id {
-        account_filter_values.push(account_id);
-    }
-    if let Some(account_ids) = &query.account_ids {
-        account_filter_values.extend(account_ids.iter().copied());
-    }
+    let account_filter_values = with_legacy_id(query.account_ids.as_deref(), query.account_id);
     let has_account_filter = !account_filter_values.is_empty();
     let account_list = id_list(&account_filter_values);
     let account_prefilter = if has_account_filter {
@@ -233,15 +227,14 @@ fn build_query(query: &HeroCombStatsQuery) -> String {
     let game_mode_filter = GameMode::sql_filter(query.game_mode);
     let match_mode_filter = MatchMode::sql_filter(query.match_mode.as_deref());
 
-    let mut required_hero_ids: Vec<u32> = Vec::new();
-    if let Some(include_hero_ids) = &query.include_hero_ids {
-        required_hero_ids.extend(include_hero_ids.iter().copied());
-    }
-    if let Some(include_enemy_hero_ids) = &query.include_enemy_hero_ids {
-        required_hero_ids.extend(include_enemy_hero_ids.iter().copied());
-    }
-    required_hero_ids.sort_unstable();
-    required_hero_ids.dedup();
+    let required_hero_ids = [&query.include_hero_ids, &query.include_enemy_hero_ids]
+        .into_iter()
+        .flatten()
+        .flatten()
+        .copied()
+        .sorted_unstable()
+        .dedup()
+        .collect_vec();
     let hero_prefilter = if required_hero_ids.is_empty() {
         String::new()
     } else {
@@ -312,6 +305,8 @@ async fn get_comb_stats(
         Some(6) | None => return Ok(comb_stats),
         Some(x) => x,
     };
+    let min_matches = query.min_matches.map_or(DEFAULT_MIN_MATCHES, u64::from);
+    let max_matches = query.max_matches.map_or(u64::from(u32::MAX), u64::from);
     let mut comb_stats_agg = HashMap::new();
     for comb_stat in comb_stats.iter() {
         for comb_hero_ids in comb_stat.hero_ids.iter().combinations(comb_size as usize) {
@@ -328,16 +323,7 @@ async fn get_comb_stats(
     Ok(Arc::new(
         comb_stats_agg
             .into_values()
-            .filter(|c| {
-                c.matches
-                    >= u64::from(
-                        query
-                            .min_matches
-                            .or(default_min_matches_u32())
-                            .unwrap_or_default(),
-                    )
-                    && c.matches <= u64::from(query.max_matches.unwrap_or(u32::MAX))
-            })
+            .filter(|c| (min_matches..=max_matches).contains(&c.matches))
             .sorted_by(|a, b| {
                 win_rate(b)
                     .total_cmp(&win_rate(a))

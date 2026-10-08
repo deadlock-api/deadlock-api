@@ -8,7 +8,10 @@ use std::sync::Arc;
 use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
 
-use super::common_filters::{default_min_matches_u64, filter_protected_accounts, round_timestamps};
+use super::common_filters::{
+    PlayerFilters, default_min_matches_u64, filter_protected_accounts, join_filters, range_filters,
+    round_timestamps,
+};
 use crate::context::AppState;
 use crate::error::APIResult;
 use crate::routes::v1::matches::types::{GameMode, MatchMode, reject_brawl_badge_filter};
@@ -16,11 +19,7 @@ use crate::utils::parse::{
     comma_separated_deserialize_option, default_last_month_timestamp, default_true_option,
     parse_steam_id_option,
 };
-use crate::utils::sql::{cached_ch_query, having_clause, id_list, impl_match_info};
-
-fn default_min_matches() -> Option<u64> {
-    default_min_matches_u64()
-}
+use crate::utils::sql::{cached_ch_query, having_clause, impl_match_info};
 
 #[derive(Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash, Default)]
 #[cfg_attr(test, derive(proptest_derive::Arbitrary))]
@@ -77,7 +76,7 @@ pub(super) struct HeroCounterStatsQuery {
     #[param(default = true)]
     same_lane_filter: Option<bool>,
     /// The minimum number of matches played for a hero combination to be included in the response.
-    #[serde(default = "default_min_matches")]
+    #[serde(default = "default_min_matches_u64")]
     #[param(minimum = 1, default = 20)]
     min_matches: Option<u64>,
     /// The maximum number of matches played for a hero combination to be included in the response.
@@ -152,37 +151,30 @@ fn build_query(query: &HeroCounterStatsQuery) -> String {
     // Duplicate (match_id, account_id) versions never differ in these match-level columns, so
     // filtering before FINAL keeps the same rows.
     let match_filters = format!("{match_mode_filter} AND {game_mode_filter}{info_filters}");
-    let mut p1_filters = vec!["team IN ('Team0', 'Team1')".to_owned()];
-    let mut p2_filters = vec!["team IN ('Team0', 'Team1')".to_owned()];
+    let side_where = |filters: PlayerFilters<'_>| {
+        format!(
+            "team IN ('Team0', 'Team1'){}",
+            join_filters(&filters.build())
+        )
+    };
     #[expect(deprecated)]
-    if let Some(account_id) = query.account_id {
-        p1_filters.push(format!("account_id = {account_id}"));
-    }
-    if let Some(account_ids) = &query.account_ids {
-        p1_filters.push(format!("account_id IN ({})", id_list(account_ids)));
-    }
-    if let Some(min_networth) = query.min_networth {
-        p1_filters.push(format!("net_worth >= {min_networth}"));
-    }
-    if let Some(max_networth) = query.max_networth {
-        p1_filters.push(format!("net_worth <= {max_networth}"));
-    }
-    if let Some(min_enemy_networth) = query.min_enemy_networth {
-        p2_filters.push(format!("net_worth >= {min_enemy_networth}"));
-    }
-    if let Some(max_enemy_networth) = query.max_enemy_networth {
-        p2_filters.push(format!("net_worth <= {max_enemy_networth}"));
-    }
-    let p1_where = p1_filters.join(" AND ");
-    let p2_where = p2_filters.join(" AND ");
-    let mut having_filters = vec![];
-    if let Some(min_matches) = query.min_matches {
-        having_filters.push(format!("matches_played >= {min_matches}"));
-    }
-    if let Some(max_matches) = query.max_matches {
-        having_filters.push(format!("matches_played <= {max_matches}"));
-    }
-    let having_clause = having_clause(&having_filters);
+    let p1_where = side_where(PlayerFilters {
+        account_id: query.account_id,
+        account_ids: query.account_ids.as_deref(),
+        min_networth: query.min_networth,
+        max_networth: query.max_networth,
+        ..Default::default()
+    });
+    let p2_where = side_where(PlayerFilters {
+        min_networth: query.min_enemy_networth,
+        max_networth: query.max_enemy_networth,
+        ..Default::default()
+    });
+    let having_clause = having_clause(&range_filters(
+        "matches_played",
+        query.min_matches,
+        query.max_matches,
+    ));
     let join_keys = if query.same_lane_filter.unwrap_or(true) {
         "ON p1.match_id = p2.match_id AND p1.team != p2.team AND p1.assigned_lane = p2.assigned_lane"
     } else {

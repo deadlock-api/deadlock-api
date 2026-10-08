@@ -1,3 +1,6 @@
+use core::fmt::Display;
+
+use crate::utils::sql::{MAX_FILTERING_AVERAGE_BADGE, MIN_FILTERING_AVERAGE_BADGE};
 pub(super) use crate::utils::sql::{MatchInfoFilters, id_list, join_filters};
 use itertools::Itertools;
 
@@ -62,12 +65,11 @@ impl PlayerFilters<'_> {
         if let Some(account_ids) = self.account_ids {
             filters.push(format!("account_id IN ({})", id_list(account_ids)));
         }
-        if let Some(v) = self.min_networth {
-            filters.push(format!("net_worth >= {v}"));
-        }
-        if let Some(v) = self.max_networth {
-            filters.push(format!("net_worth <= {v}"));
-        }
+        filters.extend(range_filters(
+            "net_worth",
+            self.min_networth,
+            self.max_networth,
+        ));
         if let Some(ids) = self.include_item_ids {
             filters.push(format!("hasAll(items.item_id, [{}])", id_list(ids)));
         }
@@ -86,6 +88,81 @@ impl PlayerFilters<'_> {
         }
         filters
     }
+}
+
+/// `{column} >= {min}` and `{column} <= {max}`, for the bounds that are set.
+pub(super) fn range_filters(
+    column: &str,
+    min: Option<impl Display>,
+    max: Option<impl Display>,
+) -> Vec<String> {
+    let mut filters = Vec::with_capacity(2);
+    if let Some(v) = min {
+        filters.push(format!("{column} >= {v}"));
+    }
+    if let Some(v) = max {
+        filters.push(format!("{column} <= {v}"));
+    }
+    filters
+}
+
+/// Whether an optional id list is set and non-empty.
+pub(super) fn is_non_empty<T>(ids: Option<&[T]>) -> bool {
+    ids.is_some_and(|ids| !ids.is_empty())
+}
+
+/// Folds a deprecated single-id parameter into its list counterpart.
+pub(super) fn with_legacy_id(ids: Option<&[u32]>, legacy_id: Option<u32>) -> Vec<u32> {
+    ids.unwrap_or_default()
+        .iter()
+        .copied()
+        .chain(legacy_id)
+        .collect()
+}
+
+/// Safety margin below a day-grained rollup's horizon: only route windows whose start sits
+/// comfortably inside the materialized range, so a just-refreshed edge (the rollup drops the
+/// oldest day as time advances) never under-serves a request.
+const ROLLUP_ROUTING_MARGIN_DAYS: i64 = 5;
+
+/// The earliest `min_unix_timestamp` a rollup holding the last `horizon_days` days serves, or
+/// `None` when the clock is before the Unix epoch.
+pub(super) fn rollup_oldest_servable(horizon_days: i64) -> Option<i64> {
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .ok()?
+        .as_secs()
+        .cast_signed();
+    Some(now - (horizon_days - ROLLUP_ROUTING_MARGIN_DAYS) * 86_400)
+}
+
+/// Time-window filters on the `day` column of a day-grained rollup.
+pub(super) fn rollup_day_filters(
+    min_unix_timestamp: Option<i64>,
+    max_unix_timestamp: Option<i64>,
+) -> Vec<String> {
+    range_filters(
+        "day",
+        min_unix_timestamp.map(|v| format!("toDate({v})")),
+        max_unix_timestamp.map(|v| format!("toDate({v})")),
+    )
+}
+
+/// Badge filters on a rollup's per-match `least_badge`/`greatest_badge` columns. They mirror the
+/// base table's both-teams semantics, with the same no-op guards as [`MatchInfoFilters`]. NULL
+/// badges are stored as 0 / 65535, so any active filter excludes them just like the base table.
+pub(super) fn rollup_badge_filters(
+    min_average_badge: Option<u8>,
+    max_average_badge: Option<u8>,
+) -> Vec<String> {
+    let mut filters = Vec::new();
+    if let Some(v) = min_average_badge.filter(|&v| v > MIN_FILTERING_AVERAGE_BADGE) {
+        filters.push(format!("least_badge >= {v}"));
+    }
+    if let Some(v) = max_average_badge.filter(|&v| v < MAX_FILTERING_AVERAGE_BADGE) {
+        filters.push(format!("greatest_badge <= {v}"));
+    }
+    filters
 }
 
 /// `match_id IN (SELECT ... FROM player_match_stats ...)` for account-scoped reads of

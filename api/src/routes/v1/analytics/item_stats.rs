@@ -14,7 +14,9 @@ use utoipa::{IntoParams, ToSchema};
 use super::common_filters::{
     CORRUPTED_ITEMS_MIN_MATCH_ID, CORRUPTED_ITEMS_MIN_UNIX_TIMESTAMP, MatchInfoFilters,
     PlayerFilters, account_match_prefilter, corrupted_sql, default_min_matches_u32,
-    filter_protected_accounts, join_filters, not_corrupted_sql, round_timestamps,
+    filter_protected_accounts, is_non_empty, join_filters, not_corrupted_sql, range_filters,
+    rollup_badge_filters, rollup_day_filters, rollup_oldest_servable, round_timestamps,
+    with_legacy_id,
 };
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
@@ -32,10 +34,6 @@ use crate::utils::sql::{
 const MAX_ITEM_ORDER_CHAINS: usize = 10;
 /// Maximum number of item ids in a single `item_order` chain.
 const MAX_ITEM_ORDER_LEN: usize = 10;
-
-fn default_min_matches() -> Option<u32> {
-    default_min_matches_u32()
-}
 
 #[derive(Debug, Clone, Copy, Deserialize, ToSchema, Default, Display, PartialEq, Eq, Hash)]
 #[cfg_attr(test, derive(proptest_derive::Arbitrary))]
@@ -90,6 +88,11 @@ pub enum BucketQuery {
 // `arrayFirstIndex` search, which was ~44% of a net-worth-bucket query's cost.
 const NET_WORTH_AT_BUY_EXPR: &str = "net_worth_at_buy";
 
+/// `expr` floored to a multiple of `step`.
+fn net_worth_bucket(expr: &str, step: u32) -> String {
+    format!("toUInt32(floor(({expr}) / {step}) * {step})")
+}
+
 impl BucketQuery {
     fn get_select_clause(self) -> String {
         match self {
@@ -104,21 +107,11 @@ impl BucketQuery {
             Self::GameTimeNormalizedPercentage => {
                 "toUInt32(floor((buy_time - 1) / duration_s * 100))".to_owned()
             }
-            Self::NetWorthBy1000 => {
-                format!("toUInt32(floor(({NET_WORTH_AT_BUY_EXPR}) / 1000) * 1000)")
-            }
-            Self::NetWorthBy2000 => {
-                format!("toUInt32(floor(({NET_WORTH_AT_BUY_EXPR}) / 2000) * 2000)")
-            }
-            Self::NetWorthBy3000 => {
-                format!("toUInt32(floor(({NET_WORTH_AT_BUY_EXPR}) / 3000) * 3000)")
-            }
-            Self::NetWorthBy5000 => {
-                format!("toUInt32(floor(({NET_WORTH_AT_BUY_EXPR}) / 5000) * 5000)")
-            }
-            Self::NetWorthBy10000 => {
-                format!("toUInt32(floor(({NET_WORTH_AT_BUY_EXPR}) / 10000) * 10000)")
-            }
+            Self::NetWorthBy1000 => net_worth_bucket(NET_WORTH_AT_BUY_EXPR, 1000),
+            Self::NetWorthBy2000 => net_worth_bucket(NET_WORTH_AT_BUY_EXPR, 2000),
+            Self::NetWorthBy3000 => net_worth_bucket(NET_WORTH_AT_BUY_EXPR, 3000),
+            Self::NetWorthBy5000 => net_worth_bucket(NET_WORTH_AT_BUY_EXPR, 5000),
+            Self::NetWorthBy10000 => net_worth_bucket(NET_WORTH_AT_BUY_EXPR, 10000),
         }
     }
 
@@ -281,7 +274,7 @@ pub(crate) struct ItemStatsQuery {
     )]
     ability_unlock_order_prefix: Option<Vec<u32>>,
     /// The minimum number of matches played for an item to be included in the response.
-    #[serde(default = "default_min_matches")]
+    #[serde(default = "default_min_matches_u32")]
     #[param(minimum = 1, default = 20)]
     min_matches: Option<u32>,
     /// The maximum number of matches played for a hero combination to be included in the response.
@@ -363,13 +356,23 @@ impl ItemStatsQuery {
     }
 
     fn has_ability_order_filter(&self) -> bool {
-        self.ability_order_prefix
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
-            || self
-                .ability_unlock_order_prefix
-                .as_ref()
-                .is_some_and(|v| !v.is_empty())
+        is_non_empty(self.ability_order_prefix.as_deref())
+            || is_non_empty(self.ability_unlock_order_prefix.as_deref())
+    }
+
+    /// `hero_ids` with the deprecated single `hero_id` folded in.
+    fn all_hero_ids(&self) -> Vec<u32> {
+        #[expect(deprecated)]
+        with_legacy_id(self.hero_ids.as_deref(), self.hero_id)
+    }
+
+    /// `min_matches`/`max_matches` as `HAVING` predicates on `matches`.
+    fn matches_having_clause(&self) -> String {
+        having_clause(&range_filters(
+            "matches",
+            self.min_matches,
+            self.max_matches,
+        ))
     }
 }
 
@@ -408,112 +411,21 @@ const MV_HORIZON_DAYS: i64 = 65;
 /// and the backfill range in
 /// `tools/migrations/clickhouse/32_cohort_agg_incremental.sql`.
 const COHORT_MV_HORIZON_DAYS: i64 = 65;
-/// Safety margin below the horizon: only route windows whose start sits
-/// comfortably inside the materialized range, so a just-refreshed edge (the view
-/// drops the oldest day as time advances) never under-serves a request.
-const MV_ROUTING_MARGIN_DAYS: i64 = 5;
 
-/// Builds a query against the pre-aggregated `item_stats_agg` view when the
-/// request falls within the "global meta" subset it materializes, else `None`
-/// (the caller then uses the base-table query). See `clickhouse/item_stats_agg.sql`
-/// for the grain and the list of what is and isn't covered.
-fn build_mv_query(query: &ItemStatsQuery) -> Option<String> {
-    let bucket_expr = query.bucket.mv_bucket_expr()?;
-
-    // Fold the deprecated single hero_id into hero_ids.
-    let mut hero_ids = query.hero_ids.clone().unwrap_or_default();
-    #[expect(deprecated)]
-    if let Some(hero_id) = query.hero_id {
-        hero_ids.push(hero_id);
-    }
-
-    // The view only covers the shared, non-personalized subset. Anything needing
-    // per-purchase data, item-set membership, per-account/enemy context, or a
-    // dimension not in the grain (sub-day time, match_id, duration, final net
-    // worth, buy time), or a match mode the view does not ingest, must use the base table.
-    #[expect(deprecated)]
-    let personalized = query.account_id.is_some()
-        || query.account_ids.as_ref().is_some_and(|v| !v.is_empty())
-        || query.enemy_hero_ids.as_ref().is_some_and(|v| !v.is_empty())
-        || query
-            .include_item_ids
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
-        || query
-            .exclude_item_ids
-            .as_ref()
-            .is_some_and(|v| !v.is_empty());
-    let unsupported_filter = query.min_networth.is_some()
-        || query.max_networth.is_some()
-        || query.min_duration_s.is_some()
-        || query.max_duration_s.is_some()
-        || query.min_bought_at_s.is_some()
-        || query.max_bought_at_s.is_some()
-        || query.item_order.as_ref().is_some_and(|v| !v.is_empty())
-        || query.has_ability_order_filter()
-        || query.min_match_id.is_some()
-        || query.max_match_id.is_some()
-        || query.reads_corrupted()
-        || !MatchMode::is_agg_servable(query.match_mode.as_deref());
-    if personalized || unsupported_filter {
-        return None;
-    }
-
-    // The view only holds the last MV_HORIZON_DAYS days; older windows use base.
-    let now = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .ok()?
-        .as_secs()
-        .cast_signed();
-    let oldest_servable = now - (MV_HORIZON_DAYS - MV_ROUTING_MARGIN_DAYS) * 86_400;
-    if query
-        .min_unix_timestamp
-        .is_none_or(|min_ts| min_ts < oldest_servable)
-    {
-        return None;
-    }
-
-    /* ---------- filters (all on item_stats_agg columns) ---------- */
-    let mut filters = vec![GameMode::sql_filter(query.game_mode)];
-    filters.extend(MatchMode::agg_sql_filter(query.match_mode.as_deref()));
-    if let Some(v) = query.min_unix_timestamp {
-        filters.push(format!("day >= toDate({v})"));
-    }
-    if let Some(v) = query.max_unix_timestamp {
-        filters.push(format!("day <= toDate({v})"));
-    }
-    // Badge: least/greatest mirror the base table's both-teams semantics, with the
-    // same badge guards as MatchInfoFilters. NULL badges are stored as
-    // 0 / 65535, so any active filter excludes them just like the base table.
-    if let Some(v) = query.min_average_badge
-        && v > MIN_FILTERING_AVERAGE_BADGE
-    {
-        filters.push(format!("least_badge >= {v}"));
-    }
-    if let Some(v) = query.max_average_badge
-        && v < MAX_FILTERING_AVERAGE_BADGE
-    {
-        filters.push(format!("greatest_badge <= {v}"));
-    }
-    if !hero_ids.is_empty() {
-        filters.push(format!("hero_id IN ({})", id_list(&hero_ids)));
-    }
+/// The `SELECT` over an item rollup (`item_stats_agg`, `item_cohort_stats_*_agg_v2` and
+/// `item_enemy_stats_agg` share their columns). The per-row averages equal the base query's
+/// `avg()`/`avgIf()`: the denominators (`matches`, `n_sold`) are the same counts. `players_state` is
+/// a `uniqCombined(14)` state (migration 39): merging plain uniq states was ~99% of this query's
+/// CPU.
+fn rollup_query(
+    table: &str,
+    bucket_expr: &str,
+    filters: &[String],
+    having_clause: &str,
+    log_comment: &str,
+) -> String {
     let where_clause = filters.join(" AND ");
-
-    /* ---------- HAVING (identical to base) ---------- */
-    let mut having_filters = vec![];
-    if let Some(min_matches) = query.min_matches {
-        having_filters.push(format!("matches >= {min_matches}"));
-    }
-    if let Some(max_matches) = query.max_matches {
-        having_filters.push(format!("matches <= {max_matches}"));
-    }
-    let having_clause = having_clause(&having_filters);
-
-    // The per-row averages equal the base query's avg()/avgIf(): the denominators
-    // (matches, n_sold) are the same counts. players_state is a uniqCombined(14) state
-    // (migration 39): merging plain uniq states was ~99% of this query's CPU.
-    Some(format!(
+    format!(
         "
 SELECT
     item_id,
@@ -526,13 +438,80 @@ SELECT
     if(sum(n_sold) = 0, 0, sum(sum_sold_time) / sum(n_sold)) AS avg_sell_time_s,
     sum(sum_buy_rel) / sum(n_matches)                        AS avg_buy_time_relative,
     if(sum(n_sold) = 0, 0, sum(sum_sold_rel) / sum(n_sold))  AS avg_sell_time_relative
-FROM item_stats_agg
+FROM {table}
 WHERE {where_clause}
 GROUP BY item_id, bucket
 {having_clause}
 ORDER BY item_id, bucket
-SETTINGS log_comment = 'item_stats_mv'
+SETTINGS log_comment = '{log_comment}'
         "
+    )
+}
+
+/// Builds a query against the pre-aggregated `item_stats_agg` view when the
+/// request falls within the "global meta" subset it materializes, else `None`
+/// (the caller then uses the base-table query). See `clickhouse/item_stats_agg.sql`
+/// for the grain and the list of what is and isn't covered.
+fn build_mv_query(query: &ItemStatsQuery) -> Option<String> {
+    let bucket_expr = query.bucket.mv_bucket_expr()?;
+
+    // The view only covers the shared, non-personalized subset. Anything needing
+    // per-purchase data, item-set membership, per-account/enemy context, or a
+    // dimension not in the grain (sub-day time, match_id, duration, final net
+    // worth, buy time), or a match mode the view does not ingest, must use the base table.
+    #[expect(deprecated)]
+    let personalized = query.account_id.is_some()
+        || is_non_empty(query.account_ids.as_deref())
+        || is_non_empty(query.enemy_hero_ids.as_deref())
+        || is_non_empty(query.include_item_ids.as_deref())
+        || is_non_empty(query.exclude_item_ids.as_deref());
+    let unsupported_filter = query.min_networth.is_some()
+        || query.max_networth.is_some()
+        || query.min_duration_s.is_some()
+        || query.max_duration_s.is_some()
+        || query.min_bought_at_s.is_some()
+        || query.max_bought_at_s.is_some()
+        || is_non_empty(query.item_order.as_deref())
+        || query.has_ability_order_filter()
+        || query.min_match_id.is_some()
+        || query.max_match_id.is_some()
+        || query.reads_corrupted()
+        || !MatchMode::is_agg_servable(query.match_mode.as_deref());
+    if personalized || unsupported_filter {
+        return None;
+    }
+
+    // The view only holds the last MV_HORIZON_DAYS days; older windows use base.
+    let oldest_servable = rollup_oldest_servable(MV_HORIZON_DAYS)?;
+    if query
+        .min_unix_timestamp
+        .is_none_or(|min_ts| min_ts < oldest_servable)
+    {
+        return None;
+    }
+
+    /* ---------- filters (all on item_stats_agg columns) ---------- */
+    let mut filters = vec![GameMode::sql_filter(query.game_mode)];
+    filters.extend(MatchMode::agg_sql_filter(query.match_mode.as_deref()));
+    filters.extend(rollup_day_filters(
+        query.min_unix_timestamp,
+        query.max_unix_timestamp,
+    ));
+    filters.extend(rollup_badge_filters(
+        query.min_average_badge,
+        query.max_average_badge,
+    ));
+    let hero_ids = query.all_hero_ids();
+    if !hero_ids.is_empty() {
+        filters.push(format!("hero_id IN ({})", id_list(&hero_ids)));
+    }
+
+    Some(rollup_query(
+        "item_stats_agg",
+        bucket_expr,
+        &filters,
+        &query.matches_having_clause(),
+        "item_stats_mv",
     ))
 }
 
@@ -553,22 +532,10 @@ fn cohort_mv_bucket(bucket: BucketQuery) -> Option<(&'static str, String)> {
         }
         BucketQuery::GameTimeMin => Some((TIME_AGG, "bucket_minute".to_owned())),
         BucketQuery::NetWorthBy1000 => Some((NW_AGG, "bucket_net_worth".to_owned())),
-        BucketQuery::NetWorthBy2000 => Some((
-            NW_AGG,
-            "toUInt32(floor(bucket_net_worth / 2000) * 2000)".to_owned(),
-        )),
-        BucketQuery::NetWorthBy3000 => Some((
-            NW_AGG,
-            "toUInt32(floor(bucket_net_worth / 3000) * 3000)".to_owned(),
-        )),
-        BucketQuery::NetWorthBy5000 => Some((
-            NW_AGG,
-            "toUInt32(floor(bucket_net_worth / 5000) * 5000)".to_owned(),
-        )),
-        BucketQuery::NetWorthBy10000 => Some((
-            NW_AGG,
-            "toUInt32(floor(bucket_net_worth / 10000) * 10000)".to_owned(),
-        )),
+        BucketQuery::NetWorthBy2000 => Some((NW_AGG, net_worth_bucket("bucket_net_worth", 2000))),
+        BucketQuery::NetWorthBy3000 => Some((NW_AGG, net_worth_bucket("bucket_net_worth", 3000))),
+        BucketQuery::NetWorthBy5000 => Some((NW_AGG, net_worth_bucket("bucket_net_worth", 5000))),
+        BucketQuery::NetWorthBy10000 => Some((NW_AGG, net_worth_bucket("bucket_net_worth", 10000))),
         // Hero/team need dimensions the cohort grain dropped; the normalized
         // game-time bucket needs per-match duration; sub-day windows need
         // sub-day resolution.
@@ -596,21 +563,18 @@ fn build_cohort_mv_query(query: &ItemStatsQuery) -> Option<String> {
     // excluded: they are served fast by the base-table projection.
     #[expect(deprecated)]
     let unsupported = query.hero_id.is_some()
-        || query.hero_ids.as_ref().is_some_and(|v| !v.is_empty())
+        || is_non_empty(query.hero_ids.as_deref())
         || query.account_id.is_some()
-        || query.account_ids.as_ref().is_some_and(|v| !v.is_empty())
-        || query.enemy_hero_ids.as_ref().is_some_and(|v| !v.is_empty())
-        || query
-            .exclude_item_ids
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        || is_non_empty(query.account_ids.as_deref())
+        || is_non_empty(query.enemy_hero_ids.as_deref())
+        || is_non_empty(query.exclude_item_ids.as_deref())
         || query.min_networth.is_some()
         || query.max_networth.is_some()
         || query.min_duration_s.is_some()
         || query.max_duration_s.is_some()
         || query.min_bought_at_s.is_some()
         || query.max_bought_at_s.is_some()
-        || query.item_order.as_ref().is_some_and(|v| !v.is_empty())
+        || is_non_empty(query.item_order.as_deref())
         || query.has_ability_order_filter()
         || query.min_match_id.is_some()
         || query.max_match_id.is_some()
@@ -628,12 +592,7 @@ fn build_cohort_mv_query(query: &ItemStatsQuery) -> Option<String> {
 
     // The views only hold the last COHORT_MV_HORIZON_DAYS days; older windows
     // use the base table.
-    let now = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .ok()?
-        .as_secs()
-        .cast_signed();
-    let oldest_servable = now - (COHORT_MV_HORIZON_DAYS - MV_ROUTING_MARGIN_DAYS) * 86_400;
+    let oldest_servable = rollup_oldest_servable(COHORT_MV_HORIZON_DAYS)?;
     if query
         .min_unix_timestamp
         .is_none_or(|min_ts| min_ts < oldest_servable)
@@ -646,43 +605,17 @@ fn build_cohort_mv_query(query: &ItemStatsQuery) -> Option<String> {
         format!("cohort_item_id = {cohort_item_id}"),
     ];
     filters.extend(MatchMode::agg_sql_filter(query.match_mode.as_deref()));
-    if let Some(v) = query.min_unix_timestamp {
-        filters.push(format!("day >= toDate({v})"));
-    }
-    if let Some(v) = query.max_unix_timestamp {
-        filters.push(format!("day <= toDate({v})"));
-    }
-    let where_clause = filters.join(" AND ");
+    filters.extend(rollup_day_filters(
+        query.min_unix_timestamp,
+        query.max_unix_timestamp,
+    ));
 
-    let mut having_filters = vec![];
-    if let Some(min_matches) = query.min_matches {
-        having_filters.push(format!("matches >= {min_matches}"));
-    }
-    if let Some(max_matches) = query.max_matches {
-        having_filters.push(format!("matches <= {max_matches}"));
-    }
-    let having_clause = having_clause(&having_filters);
-
-    Some(format!(
-        "
-SELECT
-    item_id,
-    {bucket_expr}    AS bucket,
-    sum(n_wins)                            AS wins,
-    toUInt64(sum(n_matches) - sum(n_wins)) AS losses,
-    sum(n_matches)                         AS matches,
-    uniqCombinedMerge(14)(players_state)   AS players,
-    sum(sum_buy_time) / sum(n_matches)                       AS avg_buy_time_s,
-    if(sum(n_sold) = 0, 0, sum(sum_sold_time) / sum(n_sold)) AS avg_sell_time_s,
-    sum(sum_buy_rel) / sum(n_matches)                        AS avg_buy_time_relative,
-    if(sum(n_sold) = 0, 0, sum(sum_sold_rel) / sum(n_sold))  AS avg_sell_time_relative
-FROM {table}
-WHERE {where_clause}
-GROUP BY item_id, bucket
-{having_clause}
-ORDER BY item_id, bucket
-SETTINGS log_comment = 'item_stats_cohort_mv'
-        "
+    Some(rollup_query(
+        table,
+        &bucket_expr,
+        &filters,
+        &query.matches_having_clause(),
+        "item_stats_cohort_mv",
     ))
 }
 
@@ -690,7 +623,6 @@ SETTINGS log_comment = 'item_stats_cohort_mv'
 /// beats hero X" shape (exactly one enemy hero, no granular filters), else `None`.
 /// On the base table this shape decompresses the item arrays of the whole window:
 /// the enemy hero is in ~20% of matches, spread evenly, so no granule is skipped.
-#[expect(clippy::too_many_lines)]
 fn build_enemy_mv_query(query: &ItemStatsQuery) -> Option<String> {
     let enemy_hero_id = match query.enemy_hero_ids.as_deref() {
         Some(ids) if !ids.is_empty() && ids.iter().all_equal() => ids[0],
@@ -705,27 +637,21 @@ fn build_enemy_mv_query(query: &ItemStatsQuery) -> Option<String> {
 
     #[expect(deprecated)]
     let unsupported = query.hero_id.is_some()
-        || query.hero_ids.as_ref().is_some_and(|v| !v.is_empty())
+        || is_non_empty(query.hero_ids.as_deref())
         || query.account_id.is_some()
-        || query.account_ids.as_ref().is_some_and(|v| !v.is_empty())
+        || is_non_empty(query.account_ids.as_deref())
         || query.min_enemy_networth.is_some()
         || query.max_enemy_networth.is_some()
         || query.same_lane_filter == Some(true)
-        || query
-            .include_item_ids
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
-        || query
-            .exclude_item_ids
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        || is_non_empty(query.include_item_ids.as_deref())
+        || is_non_empty(query.exclude_item_ids.as_deref())
         || query.min_networth.is_some()
         || query.max_networth.is_some()
         || query.min_duration_s.is_some()
         || query.max_duration_s.is_some()
         || query.min_bought_at_s.is_some()
         || query.max_bought_at_s.is_some()
-        || query.item_order.as_ref().is_some_and(|v| !v.is_empty())
+        || is_non_empty(query.item_order.as_deref())
         || query.has_ability_order_filter()
         || query.min_match_id.is_some()
         || query.max_match_id.is_some()
@@ -735,12 +661,7 @@ fn build_enemy_mv_query(query: &ItemStatsQuery) -> Option<String> {
         return None;
     }
 
-    let now = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .ok()?
-        .as_secs()
-        .cast_signed();
-    let oldest_servable = now - (COHORT_MV_HORIZON_DAYS - MV_ROUTING_MARGIN_DAYS) * 86_400;
+    let oldest_servable = rollup_oldest_servable(COHORT_MV_HORIZON_DAYS)?;
     if query
         .min_unix_timestamp
         .is_none_or(|min_ts| min_ts < oldest_servable)
@@ -753,54 +674,21 @@ fn build_enemy_mv_query(query: &ItemStatsQuery) -> Option<String> {
         format!("enemy_hero_id = {enemy_hero_id}"),
     ];
     filters.extend(MatchMode::agg_sql_filter(query.match_mode.as_deref()));
-    if let Some(v) = query.min_unix_timestamp {
-        filters.push(format!("day >= toDate({v})"));
-    }
-    if let Some(v) = query.max_unix_timestamp {
-        filters.push(format!("day <= toDate({v})"));
-    }
-    // Same badge semantics and no-op guards as build_mv_query.
-    if let Some(v) = query.min_average_badge
-        && v > MIN_FILTERING_AVERAGE_BADGE
-    {
-        filters.push(format!("least_badge >= {v}"));
-    }
-    if let Some(v) = query.max_average_badge
-        && v < MAX_FILTERING_AVERAGE_BADGE
-    {
-        filters.push(format!("greatest_badge <= {v}"));
-    }
-    let where_clause = filters.join(" AND ");
+    filters.extend(rollup_day_filters(
+        query.min_unix_timestamp,
+        query.max_unix_timestamp,
+    ));
+    filters.extend(rollup_badge_filters(
+        query.min_average_badge,
+        query.max_average_badge,
+    ));
 
-    let mut having_filters = vec![];
-    if let Some(min_matches) = query.min_matches {
-        having_filters.push(format!("matches >= {min_matches}"));
-    }
-    if let Some(max_matches) = query.max_matches {
-        having_filters.push(format!("matches <= {max_matches}"));
-    }
-    let having_clause = having_clause(&having_filters);
-
-    Some(format!(
-        "
-SELECT
-    item_id,
-    {bucket_expr}    AS bucket,
-    sum(n_wins)                            AS wins,
-    toUInt64(sum(n_matches) - sum(n_wins)) AS losses,
-    sum(n_matches)                         AS matches,
-    uniqCombinedMerge(14)(players_state)   AS players,
-    sum(sum_buy_time) / sum(n_matches)                       AS avg_buy_time_s,
-    if(sum(n_sold) = 0, 0, sum(sum_sold_time) / sum(n_sold)) AS avg_sell_time_s,
-    sum(sum_buy_rel) / sum(n_matches)                        AS avg_buy_time_relative,
-    if(sum(n_sold) = 0, 0, sum(sum_sold_rel) / sum(n_sold))  AS avg_sell_time_relative
-FROM item_enemy_stats_agg
-WHERE {where_clause}
-GROUP BY item_id, bucket
-{having_clause}
-ORDER BY item_id, bucket
-SETTINGS log_comment = 'item_stats_enemy_mv'
-        "
+    Some(rollup_query(
+        "item_enemy_stats_agg",
+        bucket_expr,
+        &filters,
+        &query.matches_having_clause(),
+        "item_stats_enemy_mv",
     ))
 }
 
@@ -811,13 +699,8 @@ SETTINGS log_comment = 'item_stats_enemy_mv'
 /// `build_cohort_mv_query`'s `None` branches; diagnostic only, no effect on results.
 #[expect(deprecated)]
 fn cohort_mv_skip_reason(query: &ItemStatsQuery) -> &'static str {
-    fn nonempty<T>(v: Option<&[T]>) -> bool {
-        v.is_some_and(|v| !v.is_empty())
-    }
-    let now = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map_or(0, |d| d.as_secs().cast_signed());
-    let oldest_servable = now - (COHORT_MV_HORIZON_DAYS - MV_ROUTING_MARGIN_DAYS) * 86_400;
+    // A clock before the epoch makes the rollup decline every window.
+    let oldest_servable = rollup_oldest_servable(COHORT_MV_HORIZON_DAYS).unwrap_or(i64::MAX);
 
     let reasons = [
         (
@@ -826,15 +709,18 @@ fn cohort_mv_skip_reason(query: &ItemStatsQuery) -> &'static str {
         ),
         (cohort_mv_bucket(query.bucket).is_none(), "bucket"),
         (
-            query.hero_id.is_some() || nonempty(query.hero_ids.as_deref()),
+            query.hero_id.is_some() || is_non_empty(query.hero_ids.as_deref()),
             "hero",
         ),
         (
-            query.account_id.is_some() || nonempty(query.account_ids.as_deref()),
+            query.account_id.is_some() || is_non_empty(query.account_ids.as_deref()),
             "account",
         ),
-        (nonempty(query.enemy_hero_ids.as_deref()), "enemy"),
-        (nonempty(query.exclude_item_ids.as_deref()), "exclude_items"),
+        (is_non_empty(query.enemy_hero_ids.as_deref()), "enemy"),
+        (
+            is_non_empty(query.exclude_item_ids.as_deref()),
+            "exclude_items",
+        ),
         (
             query.min_networth.is_some() || query.max_networth.is_some(),
             "networth",
@@ -847,7 +733,7 @@ fn cohort_mv_skip_reason(query: &ItemStatsQuery) -> &'static str {
             query.min_bought_at_s.is_some() || query.max_bought_at_s.is_some(),
             "bought_at",
         ),
-        (nonempty(query.item_order.as_deref()), "item_order"),
+        (is_non_empty(query.item_order.as_deref()), "item_order"),
         (query.has_ability_order_filter(), "ability_order"),
         (
             query.min_match_id.is_some() || query.max_match_id.is_some(),
@@ -990,19 +876,11 @@ fn build_query(query: &ItemStatsQuery) -> String {
     let match_mode_filter = MatchMode::sql_filter(query.match_mode.as_deref());
 
     /* ---------- match_player filters ---------- */
-    let mut hero_ids = query.hero_ids.clone().unwrap_or_default();
-    #[expect(deprecated)]
-    if let Some(hero_id) = query.hero_id {
-        hero_ids.push(hero_id);
-    }
+    let hero_ids = query.all_hero_ids();
     let has_buyer_hero_filter = !hero_ids.is_empty();
     #[expect(deprecated)]
     let player_filter_inputs = PlayerFilters {
-        hero_ids: if hero_ids.is_empty() {
-            None
-        } else {
-            Some(&hero_ids)
-        },
+        hero_ids: Some(&hero_ids),
         account_id: query.account_id,
         account_ids: query.account_ids.as_deref(),
         min_networth: query.min_networth,
@@ -1021,12 +899,11 @@ fn build_query(query: &ItemStatsQuery) -> String {
         &game_mode_filter,
     ));
     let info_filters = info_filters.build();
-    if let Some(min_bought_at_s) = query.min_bought_at_s {
-        player_filters.push(format!("buy_time >= {min_bought_at_s}"));
-    }
-    if let Some(max_bought_at_s) = query.max_bought_at_s {
-        player_filters.push(format!("buy_time <= {max_bought_at_s}"));
-    }
+    player_filters.extend(range_filters(
+        "buy_time",
+        query.min_bought_at_s,
+        query.max_bought_at_s,
+    ));
     if let Some(chains) = &query.item_order {
         player_filters.extend(chains.iter().filter_map(|c| item_order_predicate(c)));
     }
@@ -1034,15 +911,7 @@ fn build_query(query: &ItemStatsQuery) -> String {
 
     /* ---------- misc ---------- */
     let bucket_expr = query.bucket.get_select_clause();
-
-    let mut having_filters = vec![];
-    if let Some(min_matches) = query.min_matches {
-        having_filters.push(format!("matches >= {min_matches}"));
-    }
-    if let Some(max_matches) = query.max_matches {
-        having_filters.push(format!("matches <= {max_matches}"));
-    }
-    let having_clause = having_clause(&having_filters);
+    let having_clause = query.matches_having_clause();
 
     /* ---------- enemy-team filter (optional) ---------- */
     let enemy_hero_ids = query
@@ -1318,8 +1187,7 @@ async fn get_item_stats(
     let base_query = build_query(&query);
     debug!(?base_query);
     #[expect(deprecated)]
-    let per_account =
-        query.account_id.is_some() || query.account_ids.as_ref().is_some_and(|v| !v.is_empty());
+    let per_account = query.account_id.is_some() || is_non_empty(query.account_ids.as_deref());
     if per_account {
         Ok(run_account_query(ch_client, &base_query).await?)
     } else {

@@ -10,7 +10,7 @@ use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
 
 use super::common_filters::{
-    PlayerFilters, account_match_prefilter, filter_protected_accounts, join_filters,
+    PlayerFilters, account_match_prefilter, filter_protected_accounts, join_filters, range_filters,
     round_timestamps,
 };
 use crate::context::AppState;
@@ -165,12 +165,11 @@ fn build_query(query: &AbilityOrderStatsQuery) -> String {
         &game_mode_filter,
     ));
     let info_filters = info_filters.build();
-    if let Some(min_ability_upgrades) = query.min_ability_upgrades {
-        player_filters.push(format!("length(abilities) >= {min_ability_upgrades}"));
-    }
-    if let Some(max_ability_upgrades) = query.max_ability_upgrades {
-        player_filters.push(format!("length(abilities) <= {max_ability_upgrades}"));
-    }
+    player_filters.extend(range_filters(
+        "length(abilities)",
+        query.min_ability_upgrades,
+        query.max_ability_upgrades,
+    ));
     let player_filters = join_filters(&player_filters);
     format!(
         "

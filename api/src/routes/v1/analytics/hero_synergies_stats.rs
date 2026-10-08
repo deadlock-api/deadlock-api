@@ -8,7 +8,9 @@ use std::sync::Arc;
 use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
 
-use super::common_filters::{default_min_matches_u64, filter_protected_accounts, round_timestamps};
+use super::common_filters::{
+    default_min_matches_u64, filter_protected_accounts, range_filters, round_timestamps,
+};
 use crate::context::AppState;
 use crate::error::APIResult;
 use crate::routes::v1::matches::types::{GameMode, MatchMode, reject_brawl_badge_filter};
@@ -19,10 +21,6 @@ use crate::utils::parse::{
 use crate::utils::sql::{
     DURATION_COLUMN, cached_ch_query, having_clause, id_list, impl_match_info,
 };
-
-fn default_min_matches() -> Option<u64> {
-    default_min_matches_u64()
-}
 
 #[derive(Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash, Default)]
 #[cfg_attr(test, derive(proptest_derive::Arbitrary))]
@@ -75,7 +73,7 @@ pub(super) struct HeroSynergyStatsQuery {
     #[param(default = true)]
     same_lane_filter: Option<bool>,
     /// The minimum number of matches played for a hero combination to be included in the response.
-    #[serde(default = "default_min_matches")]
+    #[serde(default = "default_min_matches_u64")]
     #[param(minimum = 1, default = 20)]
     min_matches: Option<u64>,
     /// The maximum number of matches played for a hero combination to be included in the response.
@@ -161,12 +159,11 @@ fn build_query(query: &HeroSynergyStatsQuery) -> String {
     where_filters.extend(query.match_info().predicates("", DURATION_COLUMN));
     // net_worth is per-player; pre-filtering before the group has the same effect
     // as the original symmetric (p1 AND p2) join filter.
-    if let Some(min_networth) = query.min_networth {
-        where_filters.push(format!("net_worth >= {min_networth}"));
-    }
-    if let Some(max_networth) = query.max_networth {
-        where_filters.push(format!("net_worth <= {max_networth}"));
-    }
+    where_filters.extend(range_filters(
+        "net_worth",
+        query.min_networth,
+        query.max_networth,
+    ));
     let where_clause = where_filters.join(" AND ");
 
     // The original query applied account filters only to p1 (the lower-hero-id
@@ -195,14 +192,11 @@ fn build_query(query: &HeroSynergyStatsQuery) -> String {
         "match_id, team"
     };
 
-    let mut having_filters = vec![];
-    if let Some(min_matches) = query.min_matches {
-        having_filters.push(format!("matches_played >= {min_matches}"));
-    }
-    if let Some(max_matches) = query.max_matches {
-        having_filters.push(format!("matches_played <= {max_matches}"));
-    }
-    let having_clause = having_clause(&having_filters);
+    let having_clause = having_clause(&range_filters(
+        "matches_played",
+        query.min_matches,
+        query.max_matches,
+    ));
     // No `optimize_use_projections = 0`: with skip indexes evaluated at planning time
     // (`use_skip_indexes_on_data_read = 0` on the clients) the planner picks the hero-led
     // projection only when it prunes better. Measured on production shapes: identical results,

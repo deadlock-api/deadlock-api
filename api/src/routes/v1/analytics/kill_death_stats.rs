@@ -9,13 +9,15 @@ use std::sync::Arc;
 use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
 
-use super::common_filters::{filter_protected_accounts, round_timestamps};
+use super::common_filters::{
+    PlayerFilters, filter_protected_accounts, range_filters, round_timestamps,
+};
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::matches::types::{GameMode, MatchMode, reject_brawl_badge_filter};
 use crate::utils::parse::{comma_separated_deserialize_option, default_last_month_timestamp};
 use crate::utils::sql::{
-    DURATION_COLUMN, MatchPoolFilters, cached_ch_query, id_list, impl_match_info, join_filters,
+    DURATION_COLUMN, MatchPoolFilters, cached_ch_query, impl_match_info, join_filters,
 };
 
 #[derive(Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash)]
@@ -116,10 +118,8 @@ pub(crate) struct KillDeathStats {
     kills: u64,
 }
 
-#[expect(clippy::too_many_lines)]
 fn build_query(query: &KillDeathStatsQuery) -> String {
-    let mut info_filters = vec![];
-    info_filters.extend(query.match_info().predicates("", DURATION_COLUMN));
+    let mut info_filters = query.match_info().predicates("", DURATION_COLUMN);
     info_filters.extend(
         MatchPoolFilters {
             is_high_skill_range_parties: query.is_high_skill_range_parties,
@@ -129,35 +129,24 @@ fn build_query(query: &KillDeathStatsQuery) -> String {
         .predicates(),
     );
     let info_filters = join_filters(&info_filters);
-    let mut player_filters = vec![];
-    if let Some(account_ids) = &query.account_ids {
-        player_filters.push(format!("account_id IN ({})", id_list(account_ids)));
+    let mut player_filters = PlayerFilters {
+        account_ids: query.account_ids.as_deref(),
+        hero_ids: query.hero_ids.as_deref(),
+        min_networth: query.min_networth,
+        max_networth: query.max_networth,
+        ..Default::default()
     }
-    if let Some(hero_ids) = query.hero_ids.as_ref() {
-        player_filters.push(format!("hero_id IN ({})", id_list(hero_ids)));
-    }
-    if let Some(min_networth) = query.min_networth {
-        player_filters.push(format!("net_worth >= {min_networth}"));
-    }
-    if let Some(max_networth) = query.max_networth {
-        player_filters.push(format!("net_worth <= {max_networth}"));
-    }
-    if let Some(team) = query.team {
-        if team == 0 {
-            player_filters.push("team = 'Team0'".to_owned());
-        } else if team == 1 {
-            player_filters.push("team = 'Team1'".to_owned());
-        }
+    .build();
+    // The handler rejects any other team.
+    if let Some(team) = query.team.filter(|&team| team <= 1) {
+        player_filters.push(format!("team = 'Team{team}'"));
     }
     let player_filters = join_filters(&player_filters);
-    let mut game_time_filters = vec![];
-    if let Some(min_game_time_s) = query.min_game_time_s {
-        game_time_filters.push(format!("g_time >= {min_game_time_s}"));
-    }
-    if let Some(max_game_time_s) = query.max_game_time_s {
-        game_time_filters.push(format!("g_time <= {max_game_time_s}"));
-    }
-    let game_time_filters = join_filters(&game_time_filters);
+    let game_time_filters = join_filters(&range_filters(
+        "g_time",
+        query.min_game_time_s,
+        query.max_game_time_s,
+    ));
     let mut death_join_cols = vec!["death_details.death_pos AS dpos"];
     if !game_time_filters.is_empty() {
         death_join_cols.push("death_details.game_time_s AS g_time");
@@ -183,18 +172,17 @@ fn build_query(query: &KillDeathStatsQuery) -> String {
             "AND (match_id, killer_player_slot) IN (SELECT match_id, player_slot FROM match_player WHERE {match_filters} {player_filters})"
         )
     };
-    let min_kills_per_raster = query
-        .min_kills_per_raster
-        .map_or(String::new(), |v| format!(" AND kills >= {v}"));
-    let min_deaths_per_raster = query
-        .min_deaths_per_raster
-        .map_or(String::new(), |v| format!(" AND deaths >= {v}"));
-    let max_kills_per_raster = query
-        .max_kills_per_raster
-        .map_or(String::new(), |v| format!(" AND kills <= {v}"));
-    let max_deaths_per_raster = query
-        .max_deaths_per_raster
-        .map_or(String::new(), |v| format!(" AND deaths <= {v}"));
+    let mut raster_filters = range_filters(
+        "deaths",
+        query.min_deaths_per_raster,
+        query.max_deaths_per_raster,
+    );
+    raster_filters.extend(range_filters(
+        "kills",
+        query.min_kills_per_raster,
+        query.max_kills_per_raster,
+    ));
+    let raster_filters = join_filters(&raster_filters);
     format!(
         "
     SELECT position_x, position_y, killer_team, sum(deaths) AS deaths, sum(kills) AS kills
@@ -220,7 +208,7 @@ fn build_query(query: &KillDeathStatsQuery) -> String {
         GROUP BY position_x, position_y, killer_team
     )
     GROUP BY position_x, position_y, killer_team
-    HAVING TRUE {min_deaths_per_raster} {min_kills_per_raster} {max_deaths_per_raster} {max_kills_per_raster}
+    HAVING TRUE{raster_filters}
     SETTINGS log_comment = 'kill_death_stats', apply_patch_parts = 0
     "
     )

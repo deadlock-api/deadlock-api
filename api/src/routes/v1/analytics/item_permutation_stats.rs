@@ -6,13 +6,12 @@ use axum_extra::extract::Query;
 use clickhouse::Row;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
 use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
 
 use super::common_filters::{
     PlayerFilters, default_min_matches_u32, filter_protected_accounts, join_filters,
-    not_corrupted_sql, round_timestamps,
+    not_corrupted_sql, round_timestamps, with_legacy_id,
 };
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
@@ -147,19 +146,12 @@ struct ItemPermutationStats {
 #[expect(clippy::too_many_lines)]
 fn build_query(query: &ItemPermutationStatsQuery) -> String {
     let info_filters = query.match_info().build();
-    let mut hero_ids = query.hero_ids.clone().unwrap_or_default();
     #[expect(deprecated)]
-    if let Some(hero_id) = query.hero_id {
-        hero_ids.push(hero_id);
-    }
+    let hero_ids = with_legacy_id(query.hero_ids.as_deref(), query.hero_id);
     #[expect(deprecated)]
     let player_filters = join_filters(
         &PlayerFilters {
-            hero_ids: if hero_ids.is_empty() {
-                None
-            } else {
-                Some(&hero_ids)
-            },
+            hero_ids: Some(&hero_ids),
             account_id: query.account_id,
             account_ids: query.account_ids.as_deref(),
             min_networth: query.min_networth,
@@ -284,12 +276,15 @@ async fn get_item_permutation_stats(
     round_timestamps(&mut query.min_unix_timestamp, &mut query.max_unix_timestamp);
     let query_str = build_query(&query);
     debug!(?query_str);
-    let mut stats = Arc::unwrap_or_clone(run_query(ch_client, &query_str).await?);
-    stats.retain(|s| {
-        query.min_matches.is_none_or(|m| s.matches >= u64::from(m))
-            && query.max_matches.is_none_or(|m| s.matches <= u64::from(m))
-    });
-    Ok(stats)
+    let stats = run_query(ch_client, &query_str).await?;
+    Ok(stats
+        .iter()
+        .filter(|s| {
+            query.min_matches.is_none_or(|m| s.matches >= u64::from(m))
+                && query.max_matches.is_none_or(|m| s.matches <= u64::from(m))
+        })
+        .cloned()
+        .collect())
 }
 
 #[utoipa::path(

@@ -14,7 +14,7 @@ use utoipa::{IntoParams, ToSchema};
 
 use super::common_filters::{
     LaneDuoFilterSql, LaneDuoFilters, default_min_matches_u64, filter_protected_accounts,
-    round_timestamps,
+    join_filters, range_filters, round_timestamps,
 };
 use super::lane_common::{
     LaneGroupBy, LaneGrouping, LaneScanFilters, LaneStat, LaneStats, LaneTableFilters,
@@ -369,14 +369,7 @@ fn scan_filters(
 }
 
 fn time_bounds(query: &LaneSoulCurveQuery, column: &str) -> String {
-    let mut bounds = String::new();
-    if let Some(v) = query.min_time_s {
-        let _ = write!(bounds, " AND {column} >= {v}");
-    }
-    if let Some(v) = query.max_time_s {
-        let _ = write!(bounds, " AND {column} <= {v}");
-    }
-    bounds
+    join_filters(&range_filters(column, query.min_time_s, query.max_time_s))
 }
 
 fn duo_filters(query: &LaneSoulCurveQuery) -> LaneDuoFilters<'_> {
