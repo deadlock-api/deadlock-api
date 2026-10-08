@@ -134,10 +134,9 @@ async fn fetch_and_update_profiles(
     info!("Found {} account IDs to update", queue.len());
 
     let batch_ids: Vec<u32> = queue.drain(..queue.len().min(BATCH_SIZE)).collect();
-    let batch = batch_ids.iter().collect_vec();
 
     let (profiles_result, mut friends_by_account) = tokio::join!(
-        steam_api::fetch_steam_profiles(http_client, &batch),
+        steam_api::fetch_steam_profiles(http_client, &batch_ids),
         fetch_friends_for_accounts(http_client, &batch_ids),
     );
 
@@ -151,7 +150,7 @@ async fn fetch_and_update_profiles(
         Err(e) => {
             error!("Failed to fetch Steam profiles: {e}");
             counter!("steam_profile_fetcher.fetched_profiles.failure")
-                .increment(batch.len() as u64);
+                .increment(batch_ids.len() as u64);
             return Err(e);
         }
     };
@@ -432,13 +431,7 @@ async fn save_profiles(
     ch_client: &clickhouse::Client,
     profiles: &[SteamPlayerSummary],
 ) -> clickhouse::error::Result<()> {
-    let mut inserter = ch_client
-        .insert::<SteamPlayerSummary>("steam_profiles")
-        .await?;
-    for profile in profiles {
-        inserter.write(profile).await?;
-    }
-    inserter.end().await
+    common::insert_rows(ch_client, "steam_profiles", profiles).await
 }
 
 #[instrument(skip_all)]

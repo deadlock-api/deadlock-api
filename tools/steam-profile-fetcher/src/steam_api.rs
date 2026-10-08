@@ -28,22 +28,20 @@ fn pick_api_key() -> Result<&'static String> {
 #[instrument(skip(http_client), fields(account_ids = account_ids.len()))]
 pub(crate) async fn fetch_steam_profiles(
     http_client: &reqwest::Client,
-    account_ids: &[&u32],
+    account_ids: &[u32],
 ) -> Result<Vec<SteamPlayerSummary>> {
     if account_ids.is_empty() {
         return Ok(Vec::new());
     }
 
-    // Convert account IDs to Steam ID3 format
-    let steam_id64s: Vec<String> = account_ids
+    // Convert account IDs to Steam ID64 format
+    let steam_ids = account_ids
         .iter()
-        .map(|id| common::account_id_to_steam_id64(**id))
-        .map(|i| i.to_string())
-        .collect();
+        .map(|&id| common::account_id_to_steam_id64(id))
+        .join(",");
 
     // Build the API URL
     let api_key = pick_api_key()?;
-    let steam_ids = steam_id64s.join(",");
     let url = format!(
         "https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key={api_key}&steamids={steam_ids}"
     );
@@ -60,8 +58,7 @@ pub(crate) async fn fetch_steam_profiles(
     }
     .await
     .map_err(reqwest::Error::without_url)?;
-    let player_summaries = player_summaries.response.players;
-    Ok(player_summaries.into_iter().map_into().collect_vec())
+    Ok(player_summaries.response.players)
 }
 
 /// Returns an empty list for private profiles (Steam responds 401/403).
