@@ -23,10 +23,18 @@ import { queryKeys } from "./query-keys";
 // Query Options Factories
 // ============================================================================
 
+/**
+ * The patron status and accounts are read by the auth provider and again by each page and gate below it; a short
+ * freshness window keeps one navigation to one request. Logins, logouts and mutations update the cache themselves,
+ * and a window focus still refetches once the window has passed.
+ */
+const PATRON_STALE_TIME = 30 * 1000;
+
 export function patronStatusQueryOptions() {
   return queryOptions({
     queryKey: queryKeys.patron.status(),
     queryFn: getPatronStatus,
+    staleTime: PATRON_STALE_TIME,
     refetchOnWindowFocus: true,
     // Avoids isLoading: true → false transition on every mount (which re-renders the
     // entire PatronAuthProvider subtree). The fetch still fires; once resolved the
@@ -40,6 +48,7 @@ export function steamAccountsQueryOptions() {
   return queryOptions({
     queryKey: queryKeys.patron.steamAccounts(),
     queryFn: listSteamAccounts,
+    staleTime: PATRON_STALE_TIME,
     refetchOnWindowFocus: true,
   });
 }
