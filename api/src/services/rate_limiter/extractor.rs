@@ -7,6 +7,7 @@ use strum::Display;
 use uuid::Uuid;
 
 use crate::error::APIError;
+use crate::utils::request::{client_ip, parse_api_key};
 
 #[derive(Debug, Clone, PartialEq, Eq, Display)]
 pub(super) enum Client {
@@ -39,22 +40,18 @@ where
             .filter(|s| !s.is_empty());
         let client = match worker {
             Some(zone) => Client::Worker(zone.to_owned()),
+            // Buckets are keyed by IPv4: prefer Cloudflare's pseudo IPv4 for IPv6 clients.
             None => Client::Ip(
                 parts
                     .headers
                     .get("Cf-Pseudo-IPv4")
-                    .or(parts.headers.get("CF-Connecting-IP"))
-                    .or(parts.headers.get("X-Real-IP"))
-                    .and_then(|v| v.to_str().ok().and_then(|s| s.parse().ok()))
+                    .and_then(|v| v.to_str().ok()?.parse().ok())
+                    .or_else(|| client_ip(&parts.headers)?.parse().ok())
                     .unwrap_or(Ipv4Addr::UNSPECIFIED),
             ),
         };
 
-        let api_key = parts
-            .headers
-            .get("X-API-Key")
-            .and_then(|v| v.to_str().ok())
-            .and_then(|s| Uuid::parse_str(s.strip_prefix("HEXE-").unwrap_or(s)).ok());
+        let api_key = parse_api_key(&parts.headers);
         ready(Ok(Self { api_key, client }))
     }
 }

@@ -1,4 +1,3 @@
-use core::str::FromStr;
 use std::borrow::ToOwned;
 use std::collections::HashMap;
 use std::time::Instant;
@@ -7,11 +6,10 @@ use axum::extract::{MatchedPath, Request, State};
 use axum::http::header;
 use axum::middleware::Next;
 use axum::response::IntoResponse;
-use uuid::Uuid;
 
 use crate::context::AppState;
-use crate::middleware::api_key::extract_api_key;
 use crate::services::request_logger::RequestLog;
+use crate::utils::request::{client_ip, parse_api_key};
 
 fn get_header(req: &Request, name: &str) -> Option<String> {
     req.headers()
@@ -43,18 +41,12 @@ pub(crate) async fn track_requests(
             .collect()
     });
     let user_agent = get_header(&req, "user-agent");
-    let api_key = extract_api_key(&req).and_then(|s| s.to_str().ok().map(ToOwned::to_owned));
+    let api_key = parse_api_key(req.headers());
     let referer = get_header(&req, "referer");
     let accept = get_header(&req, "accept");
     let accept_encoding = get_header(&req, "accept-encoding");
 
-    // Get client IP from various headers (prefer CF-Connecting-IP for Cloudflare)
-    let client_ip = get_header(&req, "cf-connecting-ip")
-        .or_else(|| {
-            get_header(&req, "x-forwarded-for")
-                .map(|s| s.split(',').next().unwrap_or("").trim().to_owned())
-        })
-        .or_else(|| get_header(&req, "x-real-ip"));
+    let client_ip = client_ip(req.headers()).map(ToOwned::to_owned);
 
     let start = Instant::now();
     let response = next.run(req).await;
@@ -101,10 +93,6 @@ pub(crate) async fn track_requests(
         path_str,
         "/" | "/docs" | "/favicon.ico" | "/robots.txt" | "/metrics" | "/openapi.json"
     ) {
-        let api_key_uuid = api_key.and_then(|k| {
-            let stripped = k.strip_prefix("HEXE-").unwrap_or(&k);
-            Uuid::from_str(stripped).ok()
-        });
         let log = RequestLog {
             timestamp: chrono::Utc::now().timestamp_millis(),
             method: method.to_string(),
@@ -114,7 +102,7 @@ pub(crate) async fn track_requests(
             status_code,
             duration_ms: u64::try_from(duration.as_millis()).unwrap_or(u64::MAX),
             user_agent,
-            api_key: api_key_uuid,
+            api_key,
             client_ip,
             response_size,
             content_type,

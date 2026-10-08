@@ -9,9 +9,9 @@ use tracing::{Level, Span};
 use tracing_subscriber::field::RecordFields;
 use tracing_subscriber::fmt::FormatFields;
 use tracing_subscriber::fmt::format::{DefaultFields, Writer};
-use uuid::Uuid;
 
 use crate::utils::parse;
+use crate::utils::request::{client_ip, parse_api_key};
 
 fn header_str<'a>(headers: &'a HeaderMap, name: &str) -> Option<&'a str> {
     headers.get(name).and_then(|v| v.to_str().ok())
@@ -65,13 +65,9 @@ pub(crate) fn make_request_span<B>(request: &Request<B>) -> Span {
 
     let user_agent = header_str(headers, "user-agent").unwrap_or_default();
 
-    let client_ip = header_str(headers, "cf-connecting-ip")
-        .or_else(|| header_str(headers, "x-forwarded-for").and_then(|s| s.split(',').next()))
-        .or_else(|| header_str(headers, "x-real-ip"))
-        .map_or_default(str::trim);
+    let client_ip = client_ip(headers).unwrap_or_default();
 
-    let api_key = header_str(headers, "x-api-key")
-        .and_then(|s| Uuid::parse_str(s.strip_prefix("HEXE-").unwrap_or(s)).ok());
+    let api_key = parse_api_key(headers);
 
     // Correlation id provided by the reverse proxy (Cloudflare Ray id / request id).
     let request_id = header_str(headers, "x-request-id")

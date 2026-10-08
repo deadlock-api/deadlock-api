@@ -57,6 +57,7 @@ use crate::middleware::track_requests::track_requests;
 use crate::services::patreon::verification_job::PatreonVerificationJob;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::utils::observability;
+use crate::utils::request::parse_api_key_str;
 
 const DEFAULT_CACHE_TIME: u64 = 2 * 60; // Cloudflare Free Tier Minimal Cache Time
 
@@ -152,8 +153,8 @@ pub async fn router(port: u16) -> Result<NormalizePath<Router>, StartupError> {
         .route("/favicon.ico", get(favicon))
         // Prometheus metrics route
         .route("/metrics", get(|rk: RateLimitKey, State(state): State<AppState>| async move {
-            let internal_key = state.config.internal_api_key.strip_prefix("HEXE-").unwrap_or(&state.config.internal_api_key);
-            if rk.api_key.is_none_or(|k| k.to_string() != internal_key) {
+            let internal_key = parse_api_key_str(&state.config.internal_api_key);
+            if rk.api_key.is_none() || rk.api_key != internal_key {
                 return Err(APIError::status_msg(
                     StatusCode::FORBIDDEN,
                     "API key is required for this endpoint",
@@ -176,7 +177,6 @@ pub async fn router(port: u16) -> Result<NormalizePath<Router>, StartupError> {
         .layer(prometheus_layer)
         // Add Middlewares
         .layer(from_fn_with_state(state.clone(), feature_flags))
-        .layer(from_fn(write_api_key_to_header))
         .layer(from_fn(reject_cache_busts))
         .layer(from_fn_with_state(state.clone(), track_requests))
         .layer(
@@ -193,6 +193,9 @@ pub async fn router(port: u16) -> Result<NormalizePath<Router>, StartupError> {
                 .on_response(observability::on_response)
                 .on_failure(observability::on_failure),
         )
+        // Outermost: normalize `?api_key=` / `Bearer` into `X-API-Key` before anything (the
+        // request span, request tracking, rate limiting) reads the key.
+        .layer(from_fn(write_api_key_to_header))
         .split_for_parts();
 
     let server_url = if cfg!(debug_assertions) {

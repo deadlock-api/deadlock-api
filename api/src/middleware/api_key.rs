@@ -19,7 +19,7 @@ pub(crate) async fn write_api_key_to_header(mut request: Request, next: Next) ->
     next.run(request).await
 }
 
-pub(super) fn extract_api_key(request: &Request) -> Option<HeaderValue> {
+fn extract_api_key(request: &Request) -> Option<HeaderValue> {
     // Check if API-Key is in header x-api-key
     if let Some(api_key) = request.headers().get("x-api-key") {
         return Some(api_key.clone());

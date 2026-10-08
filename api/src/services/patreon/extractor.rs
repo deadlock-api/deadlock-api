@@ -8,6 +8,7 @@ use uuid::Uuid;
 use crate::context::AppState;
 use crate::error::APIError;
 use crate::services::patreon::jwt::validate_session_token;
+use crate::utils::request::parse_api_key;
 
 /// Authenticated patron session extracted from request
 ///
@@ -42,11 +43,7 @@ impl FromRequestParts<AppState> for PatronSession {
         }
 
         // Fallback: check if an API key is present and linked to a patron
-        let api_key = parts
-            .headers
-            .get("X-API-Key")
-            .and_then(|v| v.to_str().ok())
-            .and_then(|s| Uuid::parse_str(s.strip_prefix("HEXE-").unwrap_or(s)).ok());
+        let api_key = parse_api_key(&parts.headers);
 
         if let Some(api_key) = api_key
             && let Some(patron_id) = get_patron_id_for_api_key(&state.pg_client, api_key).await
