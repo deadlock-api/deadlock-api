@@ -1,5 +1,4 @@
 use std::collections::HashSet;
-use std::sync::Arc;
 
 use axum::Json;
 use axum::extract::{Path, State};
@@ -23,10 +22,6 @@ use crate::utils::parse::{
     parse_steam_id_option,
 };
 use crate::utils::sql::{cached_ch_query, id_list, impl_match_info, join_filters};
-
-fn default_min_matches() -> Option<u64> {
-    default_min_matches_u64()
-}
 
 #[derive(Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash)]
 pub(super) struct HeroBuildStatsPath {
@@ -72,7 +67,7 @@ pub(super) struct HeroBuildStatsQuery {
     /// Filter results for a specific hero build.
     hero_build_id: Option<u64>,
     /// The minimum number of matches played for a build to be included in the response.
-    #[serde(default = "default_min_matches")]
+    #[serde(default = "default_min_matches_u64")]
     #[param(minimum = 1, default = 20)]
     min_matches: Option<u64>,
     /// Filter for matches with a specific player account ID.
@@ -199,26 +194,24 @@ async fn get_hero_build_stats(
         "running hero build stats query"
     );
     let stats = run_query(ch_client, &query_str).await?;
-    Ok(retain_valid_builds(
-        Arc::unwrap_or_clone(stats),
-        valid_build_ids,
-    ))
+    Ok(retain_valid_builds(&stats, valid_build_ids))
 }
 
 /// Popular heroes have tens of thousands of builds, more than fit in a query as an `IN` list
 /// before `max_query_size` rejects the statement, so the query returns every build and the
 /// set is applied here. An empty set applies no filter, as the `IN` list never did.
-fn retain_valid_builds(stats: Vec<HeroBuildStats>, valid_build_ids: &[i32]) -> Vec<HeroBuildStats> {
+fn retain_valid_builds(stats: &[HeroBuildStats], valid_build_ids: &[i32]) -> Vec<HeroBuildStats> {
     if valid_build_ids.is_empty() {
-        return stats;
+        return stats.to_vec();
     }
     let valid: HashSet<u64> = valid_build_ids
         .iter()
         .filter_map(|id| u64::try_from(*id).ok())
         .collect();
     stats
-        .into_iter()
+        .iter()
         .filter(|s| valid.contains(&s.hero_build_id))
+        .cloned()
         .collect()
 }
 
@@ -302,7 +295,7 @@ mod tests {
 
     #[test]
     fn unknown_builds_are_dropped_in_place() {
-        let kept: Vec<_> = retain_valid_builds(vec![stats(3), stats(1), stats(2)], &[1, 3, -3])
+        let kept: Vec<_> = retain_valid_builds(&[stats(3), stats(1), stats(2)], &[1, 3, -3])
             .into_iter()
             .map(|s| s.hero_build_id)
             .collect();
@@ -311,6 +304,6 @@ mod tests {
 
     #[test]
     fn no_known_builds_means_no_filter() {
-        assert_eq!(retain_valid_builds(vec![stats(1), stats(2)], &[]).len(), 2);
+        assert_eq!(retain_valid_builds(&[stats(1), stats(2)], &[]).len(), 2);
     }
 }

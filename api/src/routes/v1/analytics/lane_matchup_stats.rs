@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::sync::Arc;
 
 use axum::Json;
 use axum::extract::State;
@@ -387,7 +386,7 @@ cached_ch_query! {
     fn run_query(5_000, 21600) -> Vec<LaneMatchupStatsRow>;
 }
 
-fn to_response(row: LaneMatchupStatsRow, requested: &[LaneStat]) -> LaneMatchupStats {
+fn to_response(row: &LaneMatchupStatsRow, requested: &[LaneStat]) -> LaneMatchupStats {
     let stats = izip!(
         requested,
         &row.stat_values,
@@ -409,8 +408,8 @@ fn to_response(row: LaneMatchupStatsRow, requested: &[LaneStat]) -> LaneMatchupS
     .collect();
     LaneMatchupStats {
         assigned_lane: row.assigned_lane,
-        hero_ids: row.hero_ids,
-        enemy_hero_ids: row.enemy_hero_ids,
+        hero_ids: row.hero_ids.clone(),
+        enemy_hero_ids: row.enemy_hero_ids.clone(),
         wins: row.wins,
         matches_played: row.matches_played,
         sample_time_s: row.sample_time_s,
@@ -445,8 +444,8 @@ async fn get_lane_matchup_stats(
         debug!(?ch_query);
         run_query(ch_client, &ch_query).await?
     };
-    Ok(Arc::unwrap_or_clone(rows)
-        .into_iter()
+    Ok(rows
+        .iter()
         .map(|row| to_response(row, &stats.requested))
         .collect())
 }
