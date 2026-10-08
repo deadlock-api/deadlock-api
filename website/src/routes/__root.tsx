@@ -11,6 +11,7 @@ import { Component, type ErrorInfo, type ReactNode } from "react";
 import { ApiErrorFallback } from "~/components/app/ApiErrorFallback";
 import { AppSidebar, MobileMenuButton } from "~/components/app/AppSidebar";
 import { Breadcrumbs } from "~/components/app/Breadcrumbs";
+import { FindOnPage } from "~/components/app/FindOnPage";
 import { PendingNavigation } from "~/components/app/PendingNavigation";
 import { ThemeProvider } from "~/components/app/ThemeProvider";
 import { FeedbackWidget } from "~/components/features/annotate/FeedbackWidget";
@@ -263,6 +264,7 @@ function RootComponent() {
             </div>
             {/* Keep notification actions clear of the fixed feedback launcher. */}
             <Toaster offset={{ bottom: 80 }} mobileOffset={{ bottom: 80 }} />
+            <FindOnPage />
             {import.meta.env.DEV ? <Agentation /> : <FeedbackWidget />}
           </TooltipProvider>
         </NuqsAdapter>
