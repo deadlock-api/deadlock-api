@@ -1278,6 +1278,8 @@ SETTINGS {settings_clause}
 #[cached(
     max_size = 5_000,
     ttl_secs = 21600,
+    sync_writes = "by_key",
+    sync_writes_buckets = 1024,
     convert = "{ query_str.to_string() }",
     key = "String"
 )]
@@ -1294,6 +1296,8 @@ async fn run_query(
 #[cached(
     max_size = 1_000,
     ttl_secs = 21600,
+    sync_writes = "by_key",
+    sync_writes_buckets = 1024,
     convert = "{ query_str.to_string() }",
     key = "String"
 )]
@@ -1311,6 +1315,8 @@ async fn run_account_query(
 #[cached(
     max_size = 5_000,
     ttl_secs = 21600,
+    sync_writes = "by_key",
+    sync_writes_buckets = 1024,
     convert = "{ query_str.to_string() }",
     key = "String"
 )]

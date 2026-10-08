@@ -201,6 +201,8 @@ fn build_query(query: &AbilityOrderStatsQuery) -> String {
 #[cached(
     max_size = 5_000,
     ttl_secs = 21600,
+    sync_writes = "by_key",
+    sync_writes_buckets = 1024,
     convert = "{ query_str.to_string() }",
     key = "String"
 )]

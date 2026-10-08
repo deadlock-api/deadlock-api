@@ -283,9 +283,10 @@ const PAGE_BLOCK_SIZE: u32 = 10_000;
 #[cached(
     max_size = 1_000,
     ttl_secs = 21600,
+    sync_writes = "by_key",
+    sync_writes_buckets = 1024,
     convert = "{ query_str.to_string() }",
-    key = "String",
-    sync_writes = "by_key"
+    key = "String"
 )]
 async fn run_query(
     ch_client: &clickhouse::Client,
@@ -297,9 +298,10 @@ async fn run_query(
 #[cached(
     max_size = 100,
     ttl_secs = 21600,
+    sync_writes = "by_key",
+    sync_writes_buckets = 1024,
     convert = "{ query_str.to_string() }",
-    key = "String",
-    sync_writes = "by_key"
+    key = "String"
 )]
 async fn run_block_query(
     ch_client: &clickhouse::Client,

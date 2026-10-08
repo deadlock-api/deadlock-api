@@ -157,6 +157,8 @@ fn build_query(query: &BadgeDistributionQuery) -> String {
 #[cached(
     max_size = 1_000,
     ttl_secs = 1800,
+    sync_writes = "by_key",
+    sync_writes_buckets = 1024,
     convert = "{ query_str.to_string() }",
     key = "String"
 )]
