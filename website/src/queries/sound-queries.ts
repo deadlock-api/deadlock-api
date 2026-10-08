@@ -23,7 +23,7 @@ export const soundIndexQueryOptions = queryOptions({
 
 /** Every hero, retired and unreleased ones too: voice folders exist for heroes the roster no longer lists. */
 export const soundHeroesQueryOptions = queryOptions({
-  queryKey: ["assets-heroes-all"],
+  queryKey: queryKeys.assets.heroesAll(),
   queryFn: async (): Promise<Hero[]> => {
     const res = await api.heroes_api.listHeroes({ onlyActive: false });
     return res.data;

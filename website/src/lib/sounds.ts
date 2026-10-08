@@ -4,6 +4,8 @@
  * and the match-start conversations stitched back together from the speakers' folders.
  */
 
+import { capitalize } from "~/lib/format";
+
 export type SoundTree = { [name: string]: string | SoundTree };
 
 export interface SoundTake {
@@ -38,10 +40,15 @@ export function isSoundTree(value: unknown): value is SoundTree {
 /** Every file below `tree`, with the folders leading to it. */
 export function flattenSounds(tree: SoundTree, path: string[] = []): { path: string[]; take: SoundTake }[] {
   const out: { path: string[]; take: SoundTake }[] = [];
-  for (const [name, value] of Object.entries(tree)) {
-    if (typeof value === "string") out.push({ path, take: { name, url: value } });
-    else if (isSoundTree(value)) out.push(...flattenSounds(value, [...path, name]));
-  }
+  // One list filled in place: spreading each folder's files into its parent's copied them once per level, and a
+  // spread of tens of thousands of arguments can overflow the stack.
+  const visit = (folder: SoundTree, at: string[]) => {
+    for (const [name, value] of Object.entries(folder)) {
+      if (typeof value === "string") out.push({ path: at, take: { name, url: value } });
+      else if (isSoundTree(value)) visit(value, [...at, name]);
+    }
+  };
+  visit(tree, path);
   return out;
 }
 
@@ -69,8 +76,7 @@ export function humanizeSoundName(name: string, names?: ReadonlyMap<string, stri
     .split(/[_\-\s]+/)
     .filter(Boolean)
     .map((word) => names?.get(word.toLowerCase()) ?? word.toLowerCase());
-  const text = words.join(" ");
-  return text.charAt(0).toUpperCase() + text.slice(1);
+  return capitalize(words.join(" "));
 }
 
 /**

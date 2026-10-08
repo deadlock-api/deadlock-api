@@ -1,16 +1,12 @@
+const CURRENCY = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
+const DATE_TIME = new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeStyle: "short" });
+
 export function formatCurrency(cents: number): string {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-  }).format(cents / 100);
+  return CURRENCY.format(cents / 100);
 }
 
 export function formatDate(dateString: string): string {
-  const date = new Date(dateString);
-  return new Intl.DateTimeFormat("en-US", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(date);
+  return DATE_TIME.format(new Date(dateString));
 }
 
 export function formatRelativeTime(dateString: string): string {
@@ -107,4 +103,9 @@ export function formatSignedPercent(ratio: number, digits = 1): string {
 /** "Toxic Bullets'" rather than "Toxic Bullets's"; item names ending in s are mostly plurals. */
 export function possessive(name: string): string {
   return name.endsWith("s") ? `${name}'` : `${name}'s`;
+}
+
+/** "Tank" from "tank": the first letter upper-cased, the rest left as it is. */
+export function capitalize(text: string): string {
+  return text.charAt(0).toUpperCase() + text.slice(1);
 }

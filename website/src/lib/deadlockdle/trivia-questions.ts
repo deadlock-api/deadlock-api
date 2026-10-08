@@ -1,6 +1,8 @@
 import type { Ability, Hero, Upgrade } from "deadlock_api_client";
 
-import { filterPlayableHeroes, filterShopableItems } from "~/queries/asset-queries";
+import { capitalize } from "~/lib/format";
+import { isPlayableHero } from "~/lib/hero-roster";
+import { isShopableItem } from "~/lib/item-roster";
 
 import { seededPick, seededShuffle } from "./seed";
 
@@ -80,10 +82,6 @@ function namedNpcs(npcs: NpcUnit[]): (NpcUnit & { displayName: string })[] {
     const displayName = NPC_NAMES[npc.class_name];
     return displayName ? [{ ...npc, displayName }] : [];
   });
-}
-
-function capitalize(s: string): string {
-  return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
 function getHeroStat(hero: Hero, key: string): number | null {
@@ -605,9 +603,9 @@ export function generateDailyQuestions(
   abilitiesWithHeroes: AbilityWithHero[],
   rng: () => number,
 ): TriviaQuestion[] {
-  const heroes = filterPlayableHeroes(rawHeroes);
+  const heroes = rawHeroes.filter(isPlayableHero);
   // Legendary (tier 5) items are flagged shopable with a placeholder cost of 9999
-  const items = filterShopableItems(rawItems).filter((i) => i.item_tier >= 1 && i.item_tier <= 4);
+  const items = rawItems.filter(isShopableItem).filter((i) => i.item_tier >= 1 && i.item_tier <= 4);
 
   const questions: TriviaQuestion[] = [];
   const generatorUsage = new Map<number, number>();

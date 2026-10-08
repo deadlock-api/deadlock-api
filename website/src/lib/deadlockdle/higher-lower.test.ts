@@ -3,6 +3,8 @@ import { test } from "node:test";
 
 import type { AnalyticsHeroStats, HeroCounterStats } from "deadlock_api_client";
 
+import { possessive } from "~/lib/format";
+
 import {
   bestStreak,
   buildRounds,
@@ -12,7 +14,6 @@ import {
   type HigherLowerData,
   type HigherLowerRound,
   pickAbilityHeroes,
-  possessive,
   resultGrid,
   revealSentence,
   ROUND_COUNT,

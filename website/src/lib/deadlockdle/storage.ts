@@ -1,5 +1,5 @@
 import { day } from "~/dayjs";
-import { readLocalStorage } from "~/lib/local-storage";
+import { readStoredJson } from "~/lib/local-storage";
 
 import { getTodayDate } from "./seed";
 import type { GameMode, StreakState } from "./types";
@@ -20,14 +20,9 @@ export function legacyGameStorageKey(mode: GameMode): string {
 /** A day's saved game as parsed JSON, from its own slot or the legacy one; null when that day was never played. */
 export function readStoredGame(mode: GameMode, date: string): Record<string, unknown> | null {
   for (const key of [gameStorageKey(mode, date), legacyGameStorageKey(mode)]) {
-    const raw = readLocalStorage(key);
-    if (!raw) continue;
-    try {
-      const state = JSON.parse(raw) as Record<string, unknown> | null;
-      if (state?.date === date) return state;
-    } catch {
-      // A corrupt slot reads as unplayed.
-    }
+    // A corrupt slot reads as unplayed.
+    const state = readStoredJson<Record<string, unknown> | null>(key, null);
+    if (state?.date === date) return state;
   }
   return null;
 }
@@ -51,11 +46,5 @@ export function liveStreak(state: Partial<StreakState> | null, today: string): n
 
 /** The mode's live streak from storage; 0 during SSR, for modes without one and when storage is unreadable. */
 export function readCurrentStreak(mode: GameMode, today: string = getTodayDate()): number {
-  const raw = readLocalStorage(streakStorageKey(mode));
-  if (!raw) return 0;
-  try {
-    return liveStreak(JSON.parse(raw) as Partial<StreakState> | null, today);
-  } catch {
-    return 0;
-  }
+  return liveStreak(readStoredJson<Partial<StreakState> | null>(streakStorageKey(mode), null), today);
 }

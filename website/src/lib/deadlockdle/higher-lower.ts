@@ -6,6 +6,7 @@ import type {
 } from "deadlock_api_client";
 
 import { day } from "~/dayjs";
+import { formatPercent, possessive } from "~/lib/format";
 
 import { getModeSeed, seededRandom, seededShuffle } from "./seed";
 
@@ -85,7 +86,7 @@ export function correctGuess(round: HigherLowerRound): Guess {
 }
 
 export function formatValue(value: number, format: ValueFormat): string {
-  if (format === "percent") return `${(value * 100).toFixed(1)}%`;
+  if (format === "percent") return formatPercent(value);
   if (format === "decimal") return value.toFixed(2);
   return Math.round(value).toLocaleString("en-US");
 }
@@ -168,11 +169,6 @@ function bandFor(position: number): readonly [number, number] {
     [MIN_GAP, 0.05],
   ] as const;
   return bands[bandIndex(position)];
-}
-
-/** "Abrams'" for a name ending in s, "Mo & Krill's" otherwise. */
-export function possessive(name: string): string {
-  return /s$/i.test(name) ? `${name}'` : `${name}'s`;
 }
 
 function relativeGap(a: number, b: number): number {

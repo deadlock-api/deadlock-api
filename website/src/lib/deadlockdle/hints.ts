@@ -1,5 +1,6 @@
 import type { Ability, Hero, Upgrade } from "deadlock_api_client";
 
+import { capitalize } from "~/lib/format";
 import { snakeToPretty } from "~/lib/utils";
 
 import { redactName } from "./redact";
@@ -8,10 +9,6 @@ import { redactName } from "./redact";
 export interface Hint {
   label: string;
   value: string;
-}
-
-function capitalize(text: string): string {
-  return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
 function stripHtml(text: string): string {

@@ -19,3 +19,14 @@ export function writeLocalStorage(key: string, value: string): boolean {
     return false;
   }
 }
+
+/** A stored JSON value, or `fallback` when storage is unavailable, empty or holds something unparsable */
+export function readStoredJson<T>(key: string, fallback: T): T {
+  const raw = readLocalStorage(key);
+  if (!raw) return fallback;
+  try {
+    return JSON.parse(raw) as T;
+  } catch {
+    return fallback;
+  }
+}
