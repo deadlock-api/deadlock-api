@@ -687,7 +687,8 @@ impl DataDump {
         .await?;
         let result = async {
             let built = built?;
-            let bytes = tokio::fs::read(&built.path).await?;
+            // Shared by both uploads without copying the file.
+            let bytes = bytes::Bytes::from(tokio::fs::read(&built.path).await?);
             let versioned = self.key(&format!("catalog/{version}.ducklake"));
             let current = self.key("catalog.ducklake");
             for (key, cache_control) in [

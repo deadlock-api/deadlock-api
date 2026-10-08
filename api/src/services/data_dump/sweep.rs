@@ -43,7 +43,7 @@ pub(crate) async fn sweep(
         return Ok(0);
     }
     let deleted = store
-        .delete_stream(futures::stream::iter(stale.clone()).map(Ok).boxed())
+        .delete_stream(futures::stream::iter(stale).map(Ok).boxed())
         .try_collect::<Vec<_>>()
         .await?
         .len();
