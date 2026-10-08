@@ -224,9 +224,10 @@ const RULES = [
     id: "raw-color-var",
     message:
       "a CSS variable as a color prop; use CHART_COLOR, SERIES_COLORS or CHART_ACTIVE_DOT from patterns/charts/theme, or TONE_COLOR from ~/lib/tone",
-    // The whole string is one variable: a color handed to a chart or a component prop. A class's arbitrary value
-    // (`max-w-[var(--x)]`) and a value computed from data are not this.
-    pattern: /(["'`])var\(--[\w-]+\)\1/g,
+    // The whole string is one variable, named outright or built from a template (`var(--${tone})`): a color handed to
+    // a chart or a component prop. A class's arbitrary value (`max-w-[var(--x)]`) and a value computed from data
+    // (`var(--hero-opacity-${id}, 1)`, a color-mix) are not this.
+    pattern: /(["'`])var\(--[\w-]+\)\1|`var\(--\$\{[^}`]*\}\)`/g,
     skip: (rel) => !COMPOSED(rel),
   },
   {
