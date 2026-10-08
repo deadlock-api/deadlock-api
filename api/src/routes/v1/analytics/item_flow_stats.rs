@@ -10,17 +10,14 @@ use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
 
 use super::common_filters::{
-    PlayerFilters, filter_protected_accounts, join_filters, not_corrupted_sql, round_timestamps,
+    PlayerFilters, default_min_matches_u32, filter_protected_accounts, join_filters,
+    not_corrupted_sql, round_timestamps,
 };
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::matches::types::{GameMode, MatchMode, reject_brawl_badge_filter};
 use crate::utils::parse::{comma_separated_deserialize_option, default_last_month_timestamp};
 use crate::utils::sql::{cached_ch_query, id_list, impl_match_info};
-
-fn default_min_matches() -> Option<u32> {
-    20.into()
-}
 
 fn default_phase_interval_s() -> Option<u32> {
     600.into()
@@ -95,7 +92,7 @@ pub(super) struct ItemFlowStatsQuery {
     /// Filter matches based on their ID.
     max_match_id: Option<u64>,
     /// The minimum number of matches for a node or edge to be included in the response.
-    #[serde(default = "default_min_matches")]
+    #[serde(default = "default_min_matches_u32")]
     #[param(minimum = 1, default = 20)]
     min_matches: Option<u32>,
     /// Comma separated list of account ids to include
@@ -329,13 +326,13 @@ fn query_parts(query: &ItemFlowStatsQuery) -> QueryParts {
 
     // Locked build path: each item must have been bought *in* its locked stage column (not merely
     // by that point), so the population matches exactly where the item is shown in the graph.
+    let purchase_col = column_of("gt", "`street_brawl_rounds.round_duration_s`");
     let mut locked_clauses = vec![];
     if let (Some(ids), Some(cols)) = (
         query.locked_item_ids.as_ref(),
         query.locked_columns.as_ref(),
     ) {
         for (id, col) in ids.iter().zip(cols.iter()) {
-            let purchase_col = column_of("gt", "`street_brawl_rounds.round_duration_s`");
             locked_clauses.push(format!(
                 "arrayExists((iid, gt) -> iid = {id} AND gt > 0 AND {purchase_col} = {col}, upgrade_item_ids, upgrade_buy_times)"
             ));
@@ -365,7 +362,6 @@ fn query_parts(query: &ItemFlowStatsQuery) -> QueryParts {
     // Distinct baseline games that bought any upgrade in each stage column, as one Array(UInt64).
     let reached_cols = (0..count)
         .map(|c| {
-            let purchase_col = column_of("gt", "`street_brawl_rounds.round_duration_s`");
             format!(
                 "uniqIf(cityHash64(match_id, account_id), arrayExists(gt -> gt > 0 AND {purchase_col} = {c}, upgrade_buy_times))"
             )
@@ -465,8 +461,7 @@ fn purchases_subquery(parts: &QueryParts) -> String {
     )
 }
 
-fn build_nodes_query(query: &ItemFlowStatsQuery) -> String {
-    let parts = query_parts(query);
+fn build_nodes_query(query: &ItemFlowStatsQuery, parts: &QueryParts) -> String {
     let QueryParts {
         match_filters,
         player_filters,
@@ -475,7 +470,7 @@ fn build_nodes_query(query: &ItemFlowStatsQuery) -> String {
         upgrades_with,
         extra_settings,
         ..
-    } = &parts;
+    } = parts;
     let min_matches = query.min_matches.unwrap_or(20);
     // Net worth resets each round in street brawl, so net-worth-at-buy is not a meaningful
     // "ahead-ness" measure there — fall back to the raw win rate for the adjusted field.
@@ -549,9 +544,8 @@ fn build_nodes_query(query: &ItemFlowStatsQuery) -> String {
     )
 }
 
-fn build_edges_query(query: &ItemFlowStatsQuery) -> String {
-    let parts = query_parts(query);
-    let purchases = purchases_subquery(&parts);
+fn build_edges_query(query: &ItemFlowStatsQuery, parts: &QueryParts) -> String {
+    let purchases = purchases_subquery(parts);
     let extra_settings = parts.extra_settings;
     let min_matches = query.min_matches.unwrap_or(20);
     // Per player, collect (column, item_id) pairs, then emit one transition per
@@ -643,8 +637,8 @@ async fn get_item_flow_stats(
 ) -> APIResult<ItemFlowStats> {
     round_timestamps(&mut query.min_unix_timestamp, &mut query.max_unix_timestamp);
     let parts = query_parts(&query);
-    let nodes_query = build_nodes_query(&query);
-    let edges_query = build_edges_query(&query);
+    let nodes_query = build_nodes_query(&query, &parts);
+    let edges_query = build_edges_query(&query, &parts);
     let totals_query = build_totals_query(&parts);
     debug!(?nodes_query, ?edges_query, ?totals_query);
     let (nodes, edges, totals) = tokio::try_join!(
@@ -761,12 +755,12 @@ mod proptests {
 
         #[test]
         fn item_flow_stats_build_nodes_query_is_valid_sql(query: ItemFlowStatsQuery) {
-            assert_valid_sql(&build_nodes_query(&query));
+            assert_valid_sql(&build_nodes_query(&query, &query_parts(&query)));
         }
 
         #[test]
         fn item_flow_stats_build_edges_query_is_valid_sql(query: ItemFlowStatsQuery) {
-            assert_valid_sql(&build_edges_query(&query));
+            assert_valid_sql(&build_edges_query(&query, &query_parts(&query)));
         }
 
         #[test]
