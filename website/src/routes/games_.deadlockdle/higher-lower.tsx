@@ -59,6 +59,7 @@ import {
 } from "~/lib/deadlockdle/seed";
 import { gameStorageKey } from "~/lib/deadlockdle/storage";
 import { useCountdown } from "~/lib/deadlockdle/use-countdown";
+import { isTyping } from "~/lib/keyboard";
 import { pageTitle, seo } from "~/lib/seo";
 import { useStoredDailyState } from "~/lib/use-stored-state";
 import { cn } from "~/lib/utils";
@@ -130,12 +131,6 @@ const SOURCE_ICON: Record<string, string> = {
   Objectives: `${GAME_ICONS}/minimap/objective_icon_t2.svg`,
   Urn: `${GAME_ICONS}/minimap/soul_jar_marker_psd.png`,
 };
-
-/** Whether a key press belongs to a text field, where letters are typed rather than used as shortcuts. */
-function isTyping(target: EventTarget | null): boolean {
-  if (!(target instanceof HTMLElement)) return false;
-  return target.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName);
-}
 
 function ContenderArt({ contender }: { contender: Contender }) {
   if (contender.kind === "hero") {

@@ -32,8 +32,8 @@ export const RANK_BANDS = [
 
 export type RankBand = (typeof RANK_BANDS)[number];
 
-/** The badge range of a band: Low is 11 (Initiate 1) to 46 (Arcanist 6). */
-export function bandBadges(band: RankBand): { min: number; max: number } {
+/** The badge range of a band of tiers: Low is 11 (Initiate 1) to 46 (Arcanist 6). */
+export function bandBadges(band: { from: number; to: number }): { min: number; max: number } {
   return { min: band.from * 10 + 1, max: band.to * 10 + 6 };
 }
 

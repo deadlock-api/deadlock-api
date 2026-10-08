@@ -12,13 +12,19 @@ export function findByIdSegment<T extends { id: number }>(candidates: readonly T
   return candidates.find((candidate) => candidate.id === Number(segment));
 }
 
-function editDistance(a: string, b: string): number {
+/** Edits between two strings, a swap of two neighbouring letters ("bebpo") counting as one: the commonest typo. */
+export function editDistance(a: string, b: string): number {
+  // Three rows: the one before the previous is what a swap reads.
+  let before: number[] = [];
   let prev = Array.from({ length: b.length + 1 }, (_, j) => j);
   for (let i = 1; i <= a.length; i += 1) {
     const row = [i];
     for (let j = 1; j <= b.length; j += 1) {
       row[j] = Math.min(prev[j] + 1, row[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+      if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1])
+        row[j] = Math.min(row[j], before[j - 2] + 1);
     }
+    before = prev;
     prev = row;
   }
   return prev[b.length];
