@@ -3,19 +3,21 @@ use std::collections::HashMap;
 use std::time::Instant;
 
 use axum::extract::{MatchedPath, Request, State};
-use axum::http::header;
+use axum::http::HeaderMap;
+use axum::http::header::{self, AsHeaderName};
 use axum::middleware::Next;
 use axum::response::IntoResponse;
 
 use crate::context::AppState;
 use crate::services::request_logger::RequestLog;
-use crate::utils::request::{client_ip, parse_api_key};
+use crate::utils::request::{client_ip, header_str, parse_api_key};
 
-fn get_header(req: &Request, name: &str) -> Option<String> {
-    req.headers()
-        .get(name)
-        .and_then(|v| v.to_str().ok())
-        .map(ToOwned::to_owned)
+fn get_header(headers: &HeaderMap, name: impl AsHeaderName) -> Option<String> {
+    header_str(headers, name).map(ToOwned::to_owned)
+}
+
+fn get_header_u64(headers: &HeaderMap, name: impl AsHeaderName) -> Option<u64> {
+    header_str(headers, name)?.parse().ok()
 }
 
 pub(crate) async fn track_requests(
@@ -25,9 +27,8 @@ pub(crate) async fn track_requests(
     next: Next,
 ) -> impl IntoResponse {
     let method = req.method().clone();
-    let uri = req.uri().clone();
-    let uri_string = uri.to_string();
-    let query_params: HashMap<String, String> = uri.query().map_or_default(|q| {
+    let uri = req.uri().to_string();
+    let query_params: HashMap<String, String> = req.uri().query().map_or_default(|q| {
         q.split('&')
             .filter_map(|pair| {
                 let mut parts = pair.splitn(2, '=');
@@ -40,42 +41,27 @@ pub(crate) async fn track_requests(
             })
             .collect()
     });
-    let user_agent = get_header(&req, "user-agent");
-    let api_key = parse_api_key(req.headers());
-    let referer = get_header(&req, "referer");
-    let accept = get_header(&req, "accept");
-    let accept_encoding = get_header(&req, "accept-encoding");
+    let headers = req.headers();
+    let user_agent = get_header(headers, header::USER_AGENT);
+    let api_key = parse_api_key(headers);
+    let referer = get_header(headers, header::REFERER);
+    let accept = get_header(headers, header::ACCEPT);
+    let accept_encoding = get_header(headers, header::ACCEPT_ENCODING);
 
-    let client_ip = client_ip(req.headers()).map(ToOwned::to_owned);
+    let client_ip = client_ip(headers).map(ToOwned::to_owned);
 
     let start = Instant::now();
     let response = next.run(req).await;
     let duration = start.elapsed();
 
     let status_code = response.status().as_u16();
-    let content_type = response
-        .headers()
-        .get(header::CONTENT_TYPE)
-        .and_then(|v| v.to_str().ok())
-        .map(ToOwned::to_owned);
-    let rate_limit_remaining = response
-        .headers()
-        .get("ratelimit-remaining")
-        .and_then(|v| v.to_str().ok())
-        .and_then(|s| s.parse::<u64>().ok());
-    let rate_limit_reset = response
-        .headers()
-        .get("ratelimit-reset")
-        .and_then(|v| v.to_str().ok())
-        .and_then(|s| s.parse::<u64>().ok());
+    let headers = response.headers();
+    let content_type = get_header(headers, header::CONTENT_TYPE);
+    let rate_limit_remaining = get_header_u64(headers, "ratelimit-remaining");
+    let rate_limit_reset = get_header_u64(headers, "ratelimit-reset");
 
     // Use Content-Length header for response size instead of buffering the entire body
-    let response_size = response
-        .headers()
-        .get(header::CONTENT_LENGTH)
-        .and_then(|v| v.to_str().ok())
-        .and_then(|s| s.parse::<u64>().ok())
-        .unwrap_or(0);
+    let response_size = get_header_u64(headers, header::CONTENT_LENGTH).unwrap_or(0);
 
     // Create metrics labels. Keep these bounded: a raw user agent label would create a new
     // series per distinct client string.
@@ -97,7 +83,7 @@ pub(crate) async fn track_requests(
             timestamp: chrono::Utc::now().timestamp_millis(),
             method: method.to_string(),
             path: path_str.to_owned(),
-            uri: uri_string,
+            uri,
             query_params,
             status_code,
             duration_ms: u64::try_from(duration.as_millis()).unwrap_or(u64::MAX),
@@ -112,7 +98,7 @@ pub(crate) async fn track_requests(
             rate_limit_remaining,
             rate_limit_reset,
         };
-        state.request_logger.insert(vec![log]).await;
+        state.request_logger.insert_one(log).await;
     }
 
     response

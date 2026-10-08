@@ -22,16 +22,21 @@ pub(crate) trait BatchInsert: Send + Sync + 'static {
 }
 
 pub(crate) struct ClickhouseInsertBatcher<T: BatchInsert> {
-    buffer: Arc<Mutex<Vec<T::Row>>>,
+    buffer: Mutex<Vec<T::Row>>,
     ch_client: clickhouse::Client,
 }
 
 impl<T: BatchInsert> ClickhouseInsertBatcher<T> {
     pub(crate) fn new(ch_client: clickhouse::Client) -> Self {
         Self {
-            buffer: Arc::new(Mutex::new(Vec::with_capacity(1000))),
+            buffer: Mutex::new(Vec::with_capacity(1000)),
             ch_client,
         }
+    }
+
+    /// Queue a single row, see [`Self::insert`].
+    pub(crate) async fn insert_one(&self, row: T::Row) {
+        self.push(1, [row]).await;
     }
 
     /// Queue rows for batch insertion. Non-blocking beyond the mutex lock.
@@ -39,14 +44,19 @@ impl<T: BatchInsert> ClickhouseInsertBatcher<T> {
         if rows.is_empty() {
             return;
         }
+        self.push(rows.len(), rows).await;
+    }
+
+    /// Appends `count` rows, dropping the oldest buffered rows past the max buffer size.
+    async fn push(&self, count: usize, rows: impl IntoIterator<Item = T::Row>) {
         let max = T::max_buffer_size();
         let mut buffer = self.buffer.lock().await;
-        if buffer.len() + rows.len() > max {
+        if buffer.len() + count > max {
             warn!(
                 "Insert batcher buffer full for {}, dropping oldest entries",
                 T::table_name()
             );
-            let to_drain = (buffer.len() + rows.len()).saturating_sub(max);
+            let to_drain = (buffer.len() + count).saturating_sub(max);
             let drain_count = to_drain.min(buffer.len());
             buffer.drain(0..drain_count);
         }
