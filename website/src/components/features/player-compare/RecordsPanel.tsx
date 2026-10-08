@@ -16,8 +16,8 @@ import type { CompareMatchHistory } from "./useCompareMatchHistories";
 
 const integer = (value: number) => formatStatValue(value, "integer");
 
-function formatStreak(streak: number): string {
-  if (streak === 0) return "–";
+function formatStreak(streak: number): React.ReactNode {
+  if (streak === 0) return <NoValue label="No streak" />;
   return streak > 0 ? `${streak}W` : `${-streak}L`;
 }
 
@@ -26,7 +26,7 @@ interface RecordRow {
   label: string;
   /** The number the row is judged on; null when the player has none. */
   value: (records: PlayerRecords) => number | null;
-  format: (value: number, records: PlayerRecords) => string;
+  format: (value: number, records: PlayerRecords) => React.ReactNode;
   /** A record of souls: Street Brawl hands them out evenly each round, so there it is left out. */
   souls?: true;
   /** The match that set the record, shown as its hero and date. */
@@ -134,7 +134,7 @@ function RecordValue({
   heroId?: number | null;
   detail?: string;
   won: boolean;
-  children: string;
+  children: React.ReactNode;
 }) {
   if (heroId != null) {
     return (

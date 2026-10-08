@@ -213,9 +213,11 @@ const RULES = [
   {
     id: "raw-no-value",
     message:
-      'hand-typed "—" placeholder; use NoValue (it names the gap for screen readers), or pass no value to Stat, InlineStat or KeyValue',
-    // A dash as a JSX text child or as a whole string value; a prop set to one (`nullLabel="—"`) is the prop's API.
-    pattern: />\s*—\s*<|(?<![=\w])(["'`])—\1/g,
+      'hand-typed dash placeholder ("—", "–", "-"); use NoValue (it names the gap for screen readers), or pass no value to Stat, InlineStat or KeyValue',
+    // A dash as a JSX text child, an em dash as a whole string value, or a hyphen or en dash as the whole value of a
+    // branch (`?? "-"`, `: "–"`, `return "-"`); a prop set to one (`nullLabel="—"`) is the prop's API, and `join("-")`
+    // is a separator.
+    pattern: />\s*[—–-]\s*<|(?<![=\w])(["'`])—\1|(?:\?\?|[?:]|\breturn|=>)\s*(["'`])[–-]\2/g,
     skip: (rel) => !COMPOSED(rel) || !rel.endsWith(".tsx"),
   },
   {

@@ -217,10 +217,10 @@ function answerCaption(round: HigherLowerRound, guess: Guess | null): string {
   const correct = correctGuess(round);
   if (round.kind === "head-to-head") {
     const name = (g: Guess) => (g === "higher" ? round.right.name : round.left.name);
-    return `You: ${guess ? name(guess) : "-"} · Winner: ${name(correct)}`;
+    return `You: ${guess ? name(guess) : "no answer"} · Winner: ${name(correct)}`;
   }
   const word = (g: Guess) => (g === "higher" ? "Higher" : "Lower");
-  return `You: ${guess ? word(guess) : "-"} · Answer: ${word(correct)}`;
+  return `You: ${guess ? word(guess) : "no answer"} · Answer: ${word(correct)}`;
 }
 
 function scoreLabel(score: number): string {

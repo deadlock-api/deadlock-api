@@ -116,7 +116,7 @@ export function HeroDetailsTooltip({
             <TooltipStat label="Assists" value={avgAssists.toFixed(1)} />
             <TooltipStat
               label="KDA Ratio"
-              value={avgDeaths > 0 ? ((avgKills + avgAssists) / avgDeaths).toFixed(2) : "-"}
+              value={avgDeaths > 0 ? ((avgKills + avgAssists) / avgDeaths).toFixed(2) : <NoValue label="No deaths" />}
             />
           </DetailGroup>
           <Separator />

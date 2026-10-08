@@ -23,6 +23,7 @@ import {
 import { PanelBody } from "~/components/patterns/panel/Panel";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { Field } from "~/components/ui/field";
+import { NoValue } from "~/components/ui/no-value";
 import { Segmented, SegmentedItem } from "~/components/ui/segmented";
 import { Separator } from "~/components/ui/separator";
 import { Inline } from "~/components/ui/stack";
@@ -384,12 +385,20 @@ export function ItemBuyTimingChart({ itemIds, baseQueryOptions, rowTotalMatches 
                                 <TooltipStats>
                                   <TooltipStat
                                     label={useWilsonInterval ? "Conservative Estimate" : "True Win Rate"}
-                                    value={`${d.winrate === null ? "-" : d.winrate.toFixed(1)}%`}
+                                    value={
+                                      d.winrate === null ? <NoValue label="No matches" /> : `${d.winrate.toFixed(1)}%`
+                                    }
                                   />
                                   {useWilsonInterval && (
                                     <TooltipStat
                                       label="True Win Rate"
-                                      value={`${d.trueWinrate === null ? "-" : d.trueWinrate.toFixed(1)}%`}
+                                      value={
+                                        d.trueWinrate === null ? (
+                                          <NoValue label="No matches" />
+                                        ) : (
+                                          `${d.trueWinrate.toFixed(1)}%`
+                                        )
+                                      }
                                     />
                                   )}
                                   <TooltipStat label="Matches" value={d.matches.toLocaleString("en-US")} />

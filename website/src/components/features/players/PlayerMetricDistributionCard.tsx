@@ -5,6 +5,7 @@ import { useMemo } from "react";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { Button } from "~/components/ui/button";
 import { Card } from "~/components/ui/card";
+import { NoValue } from "~/components/ui/no-value";
 import { buildDistributionCurve } from "~/lib/distribution-percentile";
 import { formatPlayerMetricValue, type PlayerMetricDefinition } from "~/lib/player-metrics";
 
@@ -29,7 +30,9 @@ export function PlayerMetricDistributionCard({
       <div className="flex flex-col gap-0.5 @[12rem]:flex-row @[12rem]:items-center @[12rem]:justify-between @[12rem]:gap-2">
         <span className="min-w-0 text-sm text-foreground @[12rem]:truncate">{def.label}</span>
         <div className="flex shrink-0 items-center justify-between gap-1.5">
-          <span className="text-sm font-semibold text-foreground">{values ? fmt(values.avg) : "-"}</span>
+          <span className="text-sm font-semibold text-foreground">
+            {values ? fmt(values.avg) : <NoValue label="No data" />}
+          </span>
           {hasData && (
             <Button
               variant="ghost"
