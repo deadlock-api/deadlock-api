@@ -104,6 +104,7 @@ async fn main() -> anyhow::Result<()> {
     let ch_client = common::get_ch_client()?;
     let http_client = reqwest::Client::builder()
         .timeout(Duration::from_mins(2))
+        .connect_timeout(Duration::from_secs(5))
         .build()?;
 
     let mut failed_matches = FailedMatches::default();
