@@ -339,12 +339,6 @@ async fn get_comb_stats(
     let comb_stats: Vec<HeroCombStats> = run_query(ch_client, &ch_query).await?;
     let comb_size = match query.comb_size {
         Some(6) | None => return Ok(comb_stats),
-        Some(x) if !(2..=6).contains(&x) => {
-            return Err(APIError::status_msg(
-                StatusCode::BAD_REQUEST,
-                "Combination size must be between 2 and 6".to_owned(),
-            ));
-        }
         Some(x) => x,
     };
     let mut comb_stats_agg = HashMap::new();
@@ -372,9 +366,27 @@ async fn get_comb_stats(
                 )
                 && c.matches <= u64::from(query.max_matches.unwrap_or(u32::MAX))
         })
-        .sorted_by_key(|c| c.wins / c.matches)
-        .rev()
+        .sorted_by(|a, b| {
+            win_rate(b)
+                .total_cmp(&win_rate(a))
+                .then_with(|| a.hero_ids.cmp(&b.hero_ids))
+        })
         .collect())
+}
+
+#[expect(clippy::cast_precision_loss)]
+fn win_rate(stats: &HeroCombStats) -> f64 {
+    stats.wins as f64 / stats.matches.max(1) as f64
+}
+
+fn validate_comb_size(comb_size: Option<u8>) -> APIResult<()> {
+    if comb_size.is_some_and(|x| !(2..=6).contains(&x)) {
+        return Err(APIError::status_msg(
+            StatusCode::BAD_REQUEST,
+            "Combination size must be between 2 and 6".to_owned(),
+        ));
+    }
+    Ok(())
 }
 
 #[utoipa::path(
@@ -407,6 +419,7 @@ pub(crate) async fn hero_comb_stats(
     Query(mut query): Query<HeroCombStatsQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
+    validate_comb_size(query.comb_size)?;
     #[expect(deprecated)]
     filter_protected_accounts(&state, &mut query.account_ids, query.account_id).await?;
     get_comb_stats(&state.ch_client_ro, query).await.map(Json)
@@ -418,6 +431,27 @@ mod proptests {
 
     use super::*;
     use crate::utils::proptest_utils::assert_valid_sql;
+
+    #[test]
+    fn comb_size_validation() {
+        assert!(validate_comb_size(None).is_ok());
+        assert!(validate_comb_size(Some(2)).is_ok());
+        assert!(validate_comb_size(Some(6)).is_ok());
+        assert!(validate_comb_size(Some(1)).is_err());
+        assert!(validate_comb_size(Some(7)).is_err());
+    }
+
+    #[test]
+    fn win_rate_orders_fractions() {
+        let stats = |wins, matches| HeroCombStats {
+            hero_ids: vec![],
+            wins,
+            losses: matches - wins,
+            matches,
+        };
+        assert!(win_rate(&stats(3, 4)) > win_rate(&stats(2, 4)));
+        assert!(win_rate(&stats(0, 0)).abs() < f64::EPSILON);
+    }
 
     proptest! {
         #![proptest_config(ProptestConfig { cases: 32, max_shrink_iters: 16, failure_persistence: None, .. ProptestConfig::default() })]
