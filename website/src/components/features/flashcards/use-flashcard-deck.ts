@@ -27,6 +27,12 @@ function hashString(text: string): number {
 }
 
 /** The random numbers of one deal. */
+/**
+ * The last deal serial of each deck in this page load. A deck mounted again (the visitor left and came back without a
+ * reload) continues from it, so it deals a new sequence instead of replaying the one it began with.
+ */
+const LAST_SERIAL = new Map<string, number>();
+
 function dealRandom(deck: string, reshuffleKey: string, serial: number): () => number {
   return seededRandom(
     (SESSION_SEED ^ hashString(deck) ^ hashString(reshuffleKey) ^ Math.imul(serial, 0x9e3779b1)) >>> 0,
@@ -91,7 +97,16 @@ export function useFlashcardDeck<Entry extends { id: number }, Option>({
   reshuffleKey = "",
 }: FlashcardDeckOptions<Entry, Option>) {
   const { noRepeats, setNoRepeats, stats, seenIds, recordAnswer, resetProgress, loaded } = useFlashcardProgress(deck);
-  const [deal, setDeal] = useState<Deal<Entry, Option>>({ card: null, selected: null, serial: 0, dealtFor: null });
+  const [deal, setDeal] = useState<Deal<Entry, Option>>(() => ({
+    card: null,
+    selected: null,
+    serial: LAST_SERIAL.get(deck) ?? 0,
+    dealtFor: null,
+  }));
+  // Remembered for the next mount of this deck; module state outside React, so it is written after the commit.
+  useEffect(() => {
+    LAST_SERIAL.set(deck, Math.max(LAST_SERIAL.get(deck) ?? 0, deal.serial));
+  }, [deck, deal.serial]);
   const { card, selected } = deal;
   const advanceTimer = useRef<number | null>(null);
   const { markAnswered, focusFirstOption } = useNextCardFocus();
