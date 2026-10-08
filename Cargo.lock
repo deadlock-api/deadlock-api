@@ -3940,7 +3940,6 @@ dependencies = [
  "serde_json",
  "thiserror",
  "tokio",
- "valveprotos",
 ]
 
 [[package]]
