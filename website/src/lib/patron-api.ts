@@ -9,6 +9,8 @@ import type { PlayerCard as GeneratedPlayerCard, PlayerCardSlot as GeneratedPlay
 import { api } from "~/lib/api";
 import { ApiError, fetchApi } from "~/lib/http";
 
+export { steamId3ToSteamId64 } from "~/lib/steam";
+
 // ============================================================================
 // Types
 // ============================================================================
@@ -131,31 +133,6 @@ export async function reactivateSteamAccount(accountId: string): Promise<SteamAc
   return fetchApi<SteamAccount>(`/v1/patron/steam-accounts/${accountId}/reactivate`, {
     method: "POST",
   });
-}
-
-// ============================================================================
-// Steam ID Conversion Utilities
-// ============================================================================
-
-const STEAM_ID_64_BASE = 76561197960265728n;
-
-/**
- * Convert a SteamID64 to SteamID3
- * @param steamId64 - The 17-digit SteamID64
- * @returns The SteamID3 (32-bit integer)
- */
-export function steamId64ToSteamId3(steamId64: string): number {
-  const id3 = BigInt(steamId64) - STEAM_ID_64_BASE;
-  return Number(id3);
-}
-
-/**
- * Convert a SteamID3 to SteamID64
- * @param steamId3 - The SteamID3 (32-bit integer)
- * @returns The SteamID64 as a string
- */
-export function steamId3ToSteamId64(steamId3: number): string {
-  return (STEAM_ID_64_BASE + BigInt(steamId3)).toString();
 }
 
 /**

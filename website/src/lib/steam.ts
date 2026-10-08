@@ -52,3 +52,8 @@ export function steamId64ToSteamId3(steamId64: string): number {
   const id3 = BigInt(steamId64) - STEAM_ID_64_BASE;
   return Number(id3);
 }
+
+/** Convert a SteamID3 to SteamID64. */
+export function steamId3ToSteamId64(steamId3: number): string {
+  return (STEAM_ID_64_BASE + BigInt(steamId3)).toString();
+}
