@@ -49,8 +49,9 @@ import { cn } from "~/lib/utils";
 import { wilsonScoreInterval } from "~/lib/wilson";
 import type { SlimUpgrade } from "~/queries/asset-queries";
 
-// Parsers for sort field and direction using nuqs string literal parser
-const parseAsSortField = parseAsStringLiteral(["winRate", "matches", "name", "tier"] as const);
+const SORT_FIELDS = ["winRate", "matches", "name", "tier"] as const;
+type SortField = (typeof SORT_FIELDS)[number];
+const parseAsSortField = parseAsStringLiteral(SORT_FIELDS);
 const parseAsSortDirection = parseAsStringLiteral(["asc", "desc"] as const);
 /**
  * Filter and sort choices re-render the table in a transition, so the tap paints first. The URL update is throttled,
@@ -58,9 +59,6 @@ const parseAsSortDirection = parseAsStringLiteral(["asc", "desc"] as const);
  * Two lists changed by one tap also land in one history entry.
  */
 const together = { limitUrlUpdates: throttle(50) };
-
-// Infer types from parsers
-type SortField = "winRate" | "matches" | "name" | "tier";
 
 const NO_CORRUPTED: CorruptedStats = { wins: 0, matches: 0 };
 
@@ -92,6 +90,14 @@ const SERVER_ROWS = 30;
 function toggled(set: Set<number>, id: number) {
   const next = new Set(set);
   if (!next.delete(id)) next.add(id);
+  return next;
+}
+
+/** The set without the id: the same set when it does not hold it, so an unchanged list keeps its identity. */
+function without(set: Set<number>, id: number) {
+  if (!set.has(id)) return set;
+  const next = new Set(set);
+  next.delete(id);
   return next;
 }
 
@@ -307,6 +313,7 @@ const ItemStatsTableRow = memo(function ItemStatsTableRow({
 }: ItemStatsTableRowProps) {
   const itemName = row.item?.name ?? "Unknown Item";
   const rowContext = useMemo((): ItemStatsRow => ({ itemId: row.item_id, matches: row.matches }), [row]);
+  const prev = prevStatsMap?.get(row.item_id);
 
   const cells = (
     <>
@@ -364,8 +371,8 @@ const ItemStatsTableRow = memo(function ItemStatsTableRow({
               delta={
                 corruptedWinRate !== undefined
                   ? corruptedWinRate - winRate
-                  : prevStatsMap?.get(row.item_id) !== undefined
-                    ? winRate - prevStatsMap.get(row.item_id)!.winrate
+                  : prev !== undefined
+                    ? winRate - prev.winrate
                     : undefined
               }
             >
@@ -402,11 +409,7 @@ const ItemStatsTableRow = memo(function ItemStatsTableRow({
                   </span>
                 )
               }
-              delta={
-                prevStatsMap?.get(row.item_id) !== undefined
-                  ? row.matches / maxUsage - prevStatsMap.get(row.item_id)!.normalizedPickrate
-                  : undefined
-              }
+              delta={prev !== undefined ? row.matches / maxUsage - prev.normalizedPickrate : undefined}
             >
               {/* An array, not a fragment: ProgressBar sums its direct segment children. */}
               {corruptedMatches !== undefined && [
@@ -557,10 +560,7 @@ export function ItemStatsTable({
       lastToggled.current = id;
       startTransition(() => {
         void setIncludeItems((prev) => toggled(prev, id), together);
-        void setExcludeItems(
-          (prev) => (prev.has(id) ? new Set([...prev].filter((other) => other !== id)) : prev),
-          together,
-        );
+        void setExcludeItems((prev) => without(prev, id), together);
       });
     },
     [setIncludeItems, setExcludeItems],
@@ -570,10 +570,7 @@ export function ItemStatsTable({
       lastToggled.current = id;
       startTransition(() => {
         void setExcludeItems((prev) => toggled(prev, id), together);
-        void setIncludeItems(
-          (prev) => (prev.has(id) ? new Set([...prev].filter((other) => other !== id)) : prev),
-          together,
-        );
+        void setIncludeItems((prev) => without(prev, id), together);
       });
     },
     [setIncludeItems, setExcludeItems],

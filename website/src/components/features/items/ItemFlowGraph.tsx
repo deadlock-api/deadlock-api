@@ -31,8 +31,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "~/components/ui/popover
 import { Segmented, SegmentedItem } from "~/components/ui/segmented";
 import { Separator } from "~/components/ui/separator";
 import { Stack } from "~/components/ui/stack";
-import { Tooltip, TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
-import { TooltipProvider } from "~/components/ui/tooltip";
+import { Tooltip, TooltipHeader, TooltipProvider, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
 import type { Dayjs } from "~/dayjs";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import type { GameMode, MatchMode } from "~/lib/game-mode";
@@ -651,6 +650,7 @@ export function ItemFlowGraph({
       const rawMax = Math.max(...rawWrs);
       list.forEach((node, rowIndex) => {
         const key = `${column}:${node.item_id}`;
+        const [wrLow, wrHigh] = wilsonScoreInterval(node.wins, node.matches);
         placed.set(key, {
           key,
           itemId: node.item_id,
@@ -664,8 +664,8 @@ export function ItemFlowGraph({
           winRate: node.matches > 0 ? node.wins / node.matches : 0,
           adjWinRate: node.adjusted_win_rate,
           avgNetWorth: node.avg_net_worth_at_buy,
-          wrLow: wilsonScoreInterval(node.wins, node.matches)[0],
-          wrHigh: wilsonScoreInterval(node.wins, node.matches)[1],
+          wrLow,
+          wrHigh,
           wrBar: adjMax > adjMin ? (node.adjusted_win_rate - adjMin) / (adjMax - adjMin) : 1,
           wrBarRaw: rawMax > rawMin ? (rawWr(node) - rawMin) / (rawMax - rawMin) : 1,
           // A locked stage's population is conditioned on its own items, which makes

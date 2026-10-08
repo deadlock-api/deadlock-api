@@ -27,7 +27,11 @@ const ComboItems = memo(function ComboItems({ itemIds }: { itemIds: number[] }) 
       <div className="flex items-center gap-2">
         {itemIds.map((itemId, i) => (
           <Fragment key={itemId}>
-            {i > 0 && <span className="text-2xl">+</span>}
+            {i > 0 && (
+              <span aria-hidden="true" className="text-2xl">
+                +
+              </span>
+            )}
             <ItemCell itemId={itemId} linkToDetail />
           </Fragment>
         ))}
@@ -81,32 +85,24 @@ export function ItemCombStatsTable({
   const { data: assetsItems } = useQuery(itemUpgradesQueryOptions);
   const shopableIds = useMemo(() => shopableItemIds(assetsItems), [assetsItems]);
 
-  const combStatsQuery = {
+  const baseQuery = {
     combSize: combSizeFilter,
     heroId: hero,
     minMatches: minMatches ?? undefined,
     minAverageBadge: minRankId,
     maxAverageBadge: maxRankId,
-    minUnixTimestamp: minUnixTimestamp ?? 0,
-    maxUnixTimestamp,
-    gameMode: gameMode,
+    gameMode,
     matchMode,
   };
-  const { data: itemCombData, isLoading } = useQuery(itemPermutationStatsQueryOptions(combStatsQuery));
-
-  const prevCombStatsQuery = {
-    combSize: combSizeFilter,
-    heroId: hero,
-    minMatches: minMatches ?? undefined,
-    minAverageBadge: minRankId,
-    maxAverageBadge: maxRankId,
-    minUnixTimestamp: prevMinTimestamp ?? 0,
-    maxUnixTimestamp: prevMaxTimestamp,
-    gameMode: gameMode,
-    matchMode,
-  };
+  const { data: itemCombData, isLoading } = useQuery(
+    itemPermutationStatsQueryOptions({ ...baseQuery, minUnixTimestamp: minUnixTimestamp ?? 0, maxUnixTimestamp }),
+  );
   const { data: prevItemCombData } = useQuery({
-    ...itemPermutationStatsQueryOptions(prevCombStatsQuery),
+    ...itemPermutationStatsQueryOptions({
+      ...baseQuery,
+      minUnixTimestamp: prevMinTimestamp ?? 0,
+      maxUnixTimestamp: prevMaxTimestamp,
+    }),
     enabled: hasPreviousInterval,
   });
 

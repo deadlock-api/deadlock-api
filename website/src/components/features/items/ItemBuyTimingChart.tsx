@@ -32,11 +32,12 @@ import {
   Tooltip as HoverTooltip,
   TooltipCard,
   TooltipHeader,
+  TooltipProvider,
   TooltipStat,
   TooltipStats,
 } from "~/components/ui/tooltip";
-import { TooltipProvider } from "~/components/ui/tooltip";
 import { hasSoulEconomy } from "~/lib/game-mode";
+import { wilsonScoreInterval } from "~/lib/wilson";
 import { itemUpgradesQueryOptions } from "~/queries/asset-queries";
 import { itemStatsQueryOptions } from "~/queries/item-stats-query";
 
@@ -47,7 +48,7 @@ const VIEW_OPTIONS = [
 ] as const;
 
 type BucketType = Exclude<AnalyticsApiItemStatsRequest["bucket"], undefined>;
-type ChartData = never[] | Record<string, ChartPoint[]>;
+type ChartData = Record<string, ChartPoint[]>;
 
 const MIN_AVG_THRESHOLD = 0.1; // 5 %
 const BUCKET_INCREMENTS = [1000, 2000, 3000, 5000, 7000, 10000] as const;
@@ -61,26 +62,16 @@ interface ChartPoint {
   matches: number;
 }
 
-function wilsonLowerBound(wins: number, total: number) {
-  if (total === 0) return 0;
-  const p = wins / total;
-  const n = total;
-  const z = 1.96;
-  const numerator = p + (z * z) / (2 * n) - z * Math.sqrt((p * (1 - p) + (z * z) / (4 * n)) / n);
-  const denominator = 1 + (z * z) / n;
-  return Math.max(0, numerator / denominator);
+/** The start of the interval of this width that holds the bucket (a bucket of `null` counts as 0). */
+function intervalStart(bucket: number | null, increment: number): number {
+  return Math.floor((bucket ?? 0) / increment) * increment;
 }
 
+/** The matches per interval of this width, over the intervals that have any rows. */
 function computeAverageMatchCount(itemData: { bucket: number | null; matches: number }[], increment: number): number {
-  const groups = new Map<number, { matches: number }>();
-  for (const p of itemData) {
-    const key = Math.floor((p.bucket as number) / increment) * increment;
-    const g = groups.get(key) || { matches: 0 };
-    g.matches += p.matches;
-    groups.set(key, g);
-  }
-  const totalMatches = Array.from(groups.values()).reduce((sum, g) => sum + g.matches, 0);
-  return totalMatches / groups.size;
+  const intervals = new Set(itemData.map((point) => intervalStart(point.bucket, increment)));
+  const totalMatches = itemData.reduce((sum, point) => sum + point.matches, 0);
+  return totalMatches / intervals.size;
 }
 
 const BUCKET_CONFIG = {
@@ -143,7 +134,7 @@ function buildChartData({
 
     const groups = new Map<number, { matches: number; wins: number }>();
     for (const point of itemData) {
-      const key = Math.floor((point.bucket as number) / increment) * increment;
+      const key = intervalStart(point.bucket, increment);
       const group = groups.get(key) || { matches: 0, wins: 0 };
       group.matches += point.matches;
       group.wins += point.wins;
@@ -174,7 +165,7 @@ function buildChartData({
       }
 
       const trueWR = (group.wins / group.matches) * 100;
-      const wilson = wilsonLowerBound(group.wins, group.matches) * 100;
+      const wilson = Math.max(0, wilsonScoreInterval(group.wins, group.matches)[0]) * 100;
       points.push({
         displayBucket,
         bucketStart,
@@ -221,15 +212,10 @@ export function ItemBuyTimingChart({ itemIds, baseQueryOptions, rowTotalMatches 
   const minMatches = rowTotalMatches && rowTotalMatches > 500 ? 20 : rowTotalMatches && rowTotalMatches > 250 ? 10 : 2;
 
   const { data: itemsData } = useQuery(itemUpgradesQueryOptions);
-  const itemNameMap = useMemo(() => {
-    return itemsData?.reduce(
-      (acc, item) => {
-        acc[item.id] = item.name;
-        return acc;
-      },
-      {} as Record<number, string>,
-    );
-  }, [itemsData]);
+  const itemNameMap = useMemo(
+    () => (itemsData ? new Map(itemsData.map((item) => [item.id, item.name])) : undefined),
+    [itemsData],
+  );
 
   const queryOptions = useMemo(
     () => ({ ...baseQueryOptions, bucket: bucketType, minMatches }),
@@ -343,7 +329,7 @@ export function ItemBuyTimingChart({ itemIds, baseQueryOptions, rowTotalMatches 
                 <ChartLegend className="px-3 pt-2">
                   {itemIds.map((itemId, index) => (
                     <ChartLegendItem key={itemId} color={seriesColor(index)} shape="line">
-                      {itemNameMap?.[itemId] ?? `Item ${itemId}`}
+                      {itemNameMap?.get(itemId) ?? `Item ${itemId}`}
                     </ChartLegendItem>
                   ))}
                 </ChartLegend>
@@ -414,13 +400,13 @@ export function ItemBuyTimingChart({ itemIds, baseQueryOptions, rowTotalMatches 
                     <Line
                       key={itemId}
                       dataKey="winrate"
-                      data={(chartData as unknown as Record<string, { winrate: number | null }[]>)[itemId] ?? []}
+                      data={chartData[itemId] ?? []}
                       type="monotone"
                       stroke={seriesColor(index)}
                       dot={{ r: 3, fill: seriesColor(index), strokeWidth: 0 }}
                       activeDot={{ r: 5 }}
                       strokeWidth={2}
-                      name={itemNameMap?.[itemId]}
+                      name={itemNameMap?.get(itemId)}
                     />
                   ))}
                 </LineChart>

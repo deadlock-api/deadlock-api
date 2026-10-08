@@ -1,6 +1,5 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import type { ItemStats } from "deadlock_api_client";
-import type { AnalyticsApiItemStatsRequest, MatchesApiBulkMetadataRequest } from "deadlock_api_client";
+import type { AnalyticsApiItemStatsRequest, ItemStats, MatchesApiBulkMetadataRequest } from "deadlock_api_client";
 import { PanelRightClose, PanelRightOpen } from "lucide-react";
 import { parseAsInteger, useQueryState } from "nuqs";
 import { lazy, Suspense, useDeferredValue, useMemo, useState } from "react";
@@ -30,11 +29,13 @@ import type { GameMode, MatchMode } from "~/lib/game-mode";
 import { parseAsSetOf } from "~/lib/nuqs-parsers";
 import { cn } from "~/lib/utils";
 import { abilitiesQueryOptions, heroesQueryOptions, itemUpgradesQueryOptions } from "~/queries/asset-queries";
+import { shopableItemIds } from "~/queries/item-permutation-query";
 import { itemStatsQueryOptions } from "~/queries/item-stats-query";
 import { queryKeys } from "~/queries/query-keys";
 import { ranksQueryOptions } from "~/queries/ranks-query";
 
 const NO_ENEMIES: readonly number[] = [];
+const TOP_BUILDS_PAGE_SIZE = 20;
 
 // Recharts (~90 KB gzip) is only needed once a row is opened.
 const ItemBuyTimingChart = lazy(() =>
@@ -163,38 +164,13 @@ export function ItemStatsExplorer({
     [corruptedMode, corruptedData],
   );
 
-  const prevQueryStatOptions: AnalyticsApiItemStatsRequest = useMemo(
-    () => ({
-      minMatches,
-      heroId: hero,
-      ...enemyHeroFilter(enemies),
-      minAverageBadge: minRankId,
-      maxAverageBadge: maxRankId,
-      minUnixTimestamp: prevMinTimestamp ?? 0,
-      maxUnixTimestamp: prevMaxTimestamp,
-      includeItemIds: includeItems.size > 0 ? Array.from(includeItems) : undefined,
-      excludeItemIds: excludeItems.size > 0 ? Array.from(excludeItems) : undefined,
-      minBoughtAtS,
-      maxBoughtAtS,
-      gameMode,
-      matchMode,
-    }),
-    [
-      minMatches,
-      hero,
-      enemies,
-      minRankId,
-      maxRankId,
-      prevMinTimestamp,
-      prevMaxTimestamp,
-      includeItems,
-      excludeItems,
-      minBoughtAtS,
-      maxBoughtAtS,
-      gameMode,
-      matchMode,
-    ],
-  );
+  // The previous period counts normal purchases only, which every period has.
+  const prevQueryStatOptions: AnalyticsApiItemStatsRequest = {
+    ...queryStatOptions,
+    minUnixTimestamp: prevMinTimestamp ?? 0,
+    maxUnixTimestamp: prevMaxTimestamp,
+    corruptedItems: undefined,
+  };
 
   // Corrupted purchases began with the City Never Sleeps update: a period before it has none to compare with.
   const comparesPrevious = hasPreviousInterval && corruptedMode !== "only";
@@ -209,7 +185,6 @@ export function ItemStatsExplorer({
 
   const [selectedPlayer, setSelectedPlayer] = useState<{ accountId: number; name?: string } | null>(null);
 
-  const TOP_BUILDS_PAGE_SIZE = 20;
   const [topBuildsLimit, setTopBuildsLimit] = useState(TOP_BUILDS_PAGE_SIZE);
   const [topBuildsOpen, setTopBuildsOpen] = useState(false);
 
@@ -255,14 +230,8 @@ export function ItemStatsExplorer({
     return buildPlayerBuildCards(topBuildsData, hero, heroAbilityMetadata, upgradeChainLookup);
   }, [topBuildsData, hero, upgradeChainLookup, heroesData, abilityItems]);
 
-  const shopableItemIds = useMemo(
-    () =>
-      new Set(
-        assetsItems?.filter((item) => !item.disabled && item.shopable && item.shop_image_webp).map((item) => item.id),
-      ),
-    [assetsItems],
-  );
-  const filteredData = useMemo(() => data.filter((item) => shopableItemIds.has(item.item_id)), [data, shopableItemIds]);
+  const shopableIds = useMemo(() => shopableItemIds(assetsItems), [assetsItems]);
+  const filteredData = useMemo(() => data.filter((item) => shopableIds.has(item.item_id)), [data, shopableIds]);
   // Scale the bars to the rows on screen: a hidden non-shop item with an extreme rate would squash every visible bar.
   const minWinRate = useMemo(() => Math.min(...filteredData.map((item) => item.wins / item.matches)), [filteredData]);
   const maxWinRate = useMemo(() => Math.max(...filteredData.map((item) => item.wins / item.matches)), [filteredData]);
@@ -273,7 +242,7 @@ export function ItemStatsExplorer({
     const prevSumMatches = prevData.reduce((acc, row) => acc + row.matches, 0);
     // On the same base as this period's bars (shop items only), or the pick rate delta compares two scales.
     const prevMaxMatches = Math.max(
-      ...prevData.filter((item) => shopableItemIds.has(item.item_id)).map((item) => item.matches),
+      ...prevData.filter((item) => shopableIds.has(item.item_id)).map((item) => item.matches),
     );
     const map = new Map<number, { winrate: number; pickrate: number; normalizedPickrate: number }>();
     for (const row of prevData) {
@@ -284,12 +253,12 @@ export function ItemStatsExplorer({
       });
     }
     return map;
-  }, [prevData, comparesPrevious, shopableItemIds]);
+  }, [prevData, comparesPrevious, shopableIds]);
 
   const sortedData = useMemo(
     () =>
       sortBy
-        ? [...(filteredData || [])].sort((a, b) => {
+        ? [...filteredData].sort((a, b) => {
             const a_score = sortBy !== "winrate" ? a[sortBy] : a.wins / a.matches;
             const b_score = sortBy !== "winrate" ? b[sortBy] : b.wins / b.matches;
             return (b_score || 0) - (a_score || 0);
@@ -298,7 +267,7 @@ export function ItemStatsExplorer({
     [filteredData, sortBy],
   );
 
-  const limitedData = useMemo(() => (limit ? sortedData?.slice(0, limit) : sortedData), [sortedData, limit]);
+  const limitedData = useMemo(() => (limit ? sortedData.slice(0, limit) : sortedData), [sortedData, limit]);
   const displayData = useMemo(() => getDisplayItemStats(limitedData, assetsItems || []), [limitedData, assetsItems]);
   // Every row takes these options, so a filter change re-renders the whole table. Deferred, that render is
   // interruptible and stays out of the interaction that changed the filter.

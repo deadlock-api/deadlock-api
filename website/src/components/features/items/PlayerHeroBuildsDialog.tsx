@@ -115,18 +115,18 @@ export function PlayerHeroBuildsDialog({
     staleTime: CACHE_DURATIONS.FIVE_MINUTES,
   });
 
+  const upgradeChainLookup = useMemo(() => buildUpgradeChainLookup(assetsItems), [assetsItems]);
   const cards = useMemo(() => {
     if (!matches || effectiveAccountId == null) return [];
     const heroData = heroesData?.find((h) => h.id === heroId);
     const heroAbilityMetadata = getHeroAbilityMetadata(heroData, abilityItems);
-    const upgradeChainLookup = buildUpgradeChainLookup(assetsItems);
     return buildPlayerBuildCards(matches, heroId, heroAbilityMetadata, upgradeChainLookup, {
       accountId: effectiveAccountId,
     }).sort((a, b) => b.startTime.localeCompare(a.startTime));
-  }, [matches, effectiveAccountId, heroId, heroesData, abilityItems, assetsItems]);
+  }, [matches, effectiveAccountId, heroId, heroesData, abilityItems, upgradeChainLookup]);
 
   const componentImplications = useMemo(() => buildComponentImplications(assetsItems), [assetsItems]);
-  const costById = useMemo(() => buildUpgradeChainLookup(assetsItems)?.costById, [assetsItems]);
+  const costById = upgradeChainLookup?.costById;
   const averageBuild = useMemo(
     () => computeAverageBuild(cards, componentImplications, costById),
     [cards, componentImplications, costById],
