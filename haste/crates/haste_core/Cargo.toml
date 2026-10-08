@@ -13,7 +13,6 @@ anyhow.workspace = true
 dungers = { workspace = true, features = ["varint", "bitbuf"] }
 hashbrown = { workspace = true, features = ["inline-more"] }
 haste_vartype.workspace = true
-sync-unsafe-cell.workspace = true
 nohash.workspace = true
 prost.workspace = true
 snap.workspace = true

@@ -4,7 +4,6 @@ use std::sync::Arc;
 use dungers::bitbuf::BitError;
 use hashbrown::HashMap;
 use nohash::NoHashHasher;
-use sync_unsafe_cell::SyncUnsafeCell;
 use thiserror::Error;
 use valveprotos::common::{CDemoStringTables, c_demo_string_tables};
 
@@ -51,7 +50,9 @@ pub enum StringTableError {
 
 pub struct StringTableItem {
     pub string: Option<Vec<u8>>,
-    pub user_data: Option<Arc<SyncUnsafeCell<Vec<u8>>>>,
+    /// replaced (never mutated in place) when an update brings new user data, so holders of an
+    /// older `Arc` keep seeing the data they took.
+    pub user_data: Option<Arc<[u8]>>,
 }
 
 impl StringTableItem {
@@ -61,21 +62,8 @@ impl StringTableItem {
     }
 
     #[must_use]
-    pub fn get_user_data(&self) -> Option<Vec<u8>> {
-        self.user_data.as_ref().map(|arc_cell| {
-            // This is an unsafe block because we are accessing the inner data
-            // through a raw pointer. We must ensure that this access is
-            // sound (e.g., no other thread is writing to it at the same time).
-            #[allow(unsafe_code)]
-            unsafe {
-                // Get the raw pointer to the inner Vec<u8>
-                let ptr = arc_cell.get();
-                // Dereference the pointer to get a reference to the Vec<u8>
-                let vec_ref = &*ptr;
-                // Clone the Vec<u8> to create a new, owned copy
-                vec_ref.clone()
-            }
-        })
+    pub fn get_user_data(&self) -> Option<&[u8]> {
+        self.user_data.as_deref()
     }
 }
 
@@ -264,16 +252,9 @@ impl StringTable {
             self.items
                 .entry(entry_index)
                 .and_modify(|entry| {
-                    if let Some(dst_container) = entry.user_data.as_ref() {
-                        if let Some(src) = user_data {
-                            #[allow(unsafe_code)]
-                            let dst = unsafe { dst_container.get().as_mut().unwrap_unchecked() };
-                            dst.resize(src.len(), 0);
-                            dst.clone_from_slice(src);
-                        }
-                    } else {
-                        entry.user_data =
-                            user_data.map(|v| Arc::new(SyncUnsafeCell::new(v.to_vec())));
+                    // NOTE: an update without user data keeps the existing user data.
+                    if let Some(src) = user_data {
+                        entry.user_data = Some(Arc::from(src));
                     }
                 })
                 .or_insert_with(|| StringTableItem {
@@ -282,7 +263,7 @@ impl StringTable {
                         dst.extend_from_slice(src);
                         dst
                     }),
-                    user_data: user_data.map(|v| Arc::new(SyncUnsafeCell::new(v.to_vec()))),
+                    user_data: user_data.map(Arc::from),
                 });
         }
 
@@ -305,17 +286,11 @@ impl StringTable {
             self.items
                 .entry(i as i32)
                 .and_modify(|existing| {
-                    existing.user_data = incoming
-                        .data
-                        .as_ref()
-                        .map(|data| Arc::new(SyncUnsafeCell::new(data.clone())));
+                    existing.user_data = incoming.data.as_deref().map(Arc::from);
                 })
                 .or_insert_with(|| StringTableItem {
                     string: incoming.str.as_ref().map(|v| v.as_bytes().to_vec()),
-                    user_data: incoming
-                        .data
-                        .as_ref()
-                        .map(|data| Arc::new(SyncUnsafeCell::new(data.clone()))),
+                    user_data: incoming.data.as_deref().map(Arc::from),
                 });
         }
     }

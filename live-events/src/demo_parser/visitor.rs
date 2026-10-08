@@ -264,7 +264,7 @@ impl SendingVisitor {
         {
             let user_info = table.get_item(&player_slot);
             let user_data = user_info.and_then(StringTableItem::get_user_data);
-            let user_info = user_data.and_then(|d| CMsgPlayerInfo::decode(d.as_ref()).ok());
+            let user_info = user_data.and_then(|d| CMsgPlayerInfo::decode(d).ok());
             let demo_event = DemoEvent {
                 tick: ctx.tick(),
                 game_time: self.game_time,

@@ -1,15 +1,13 @@
 use core::num::ParseIntError;
 use std::sync::Arc;
 
-use sync_unsafe_cell::SyncUnsafeCell;
-
 use crate::stringtables::StringTable;
 
 pub(crate) const INSTANCE_BASELINE_TABLE_NAME: &str = "instancebaseline";
 
 #[derive(Default)]
 pub(crate) struct InstanceBaseline {
-    data: Vec<Option<Arc<SyncUnsafeCell<Vec<u8>>>>>,
+    data: Vec<Option<Arc<[u8]>>>,
 }
 
 impl InstanceBaseline {
@@ -41,15 +39,12 @@ impl InstanceBaseline {
     /// follows restates every live field (as a full-packet snapshot does). This matters when a
     /// parse begins at a full packet whose class set was baselined at a different point than a
     /// from-the-start parse would have cached.
-    #[allow(unsafe_code)]
     #[inline]
     pub(crate) fn by_id(&self, class_id: i32) -> &[u8] {
-        match self.data.get(class_id as usize).and_then(Option::as_ref) {
-            // SAFETY: the cell is only mutated through `update`, which holds `&mut self`; no other
-            // reference can be live while we borrow it here.
-            Some(cell) => unsafe { &*cell.get() },
-            None => &[],
-        }
+        self.data
+            .get(class_id as usize)
+            .and_then(Option::as_deref)
+            .unwrap_or_default()
     }
 
     /// clear clears underlying storage, but this has no effect on the allocated capacity.
