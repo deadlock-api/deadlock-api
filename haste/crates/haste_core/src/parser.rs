@@ -999,8 +999,16 @@ impl<D: SeekableDemoStream, V: Visitor> Parser<D, V> {
                 let this_ordinal = fp_seen;
                 fp_seen += 1;
                 if this_ordinal < ordinal {
-                    // A full packet before ours: skip its snapshot, ours supersedes it.
-                    return Ok(Some(ControlFlow::Skip));
+                    // A full packet before ours. Its entity packet is superseded by ours, but its
+                    // string tables are not: a full packet only restates the tables that changed
+                    // since the previous one (e.g. instancebaseline is often absent), so the
+                    // string table state at our full packet is the sum of all earlier snapshots.
+                    let cmd_body = s.demo_stream.read_cmd(cmd_header)?;
+                    let cmd = D::decode_cmd_full_packet(cmd_body)?;
+                    if let Some(string_table) = cmd.string_table.as_ref() {
+                        s.ctx.handle_cmd_string_tables(string_table)?;
+                    }
+                    return Ok(Some(ControlFlow::Ignore));
                 }
                 if this_ordinal == ordinal {
                     // Our full packet: start collecting and apply it.
