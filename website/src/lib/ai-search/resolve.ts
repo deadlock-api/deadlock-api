@@ -10,7 +10,7 @@ import { bandBadges, MAX_BADGE } from "~/lib/rank-utils";
 
 import type { SearchIntent } from "./intent";
 
-interface RankTier {
+export interface RankTier {
   tier: number;
   name: string;
 }

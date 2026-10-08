@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { getRequestHeader } from "@tanstack/react-start/server";
 
-import { type DecideAnswers, decideRequestBody, DECIDE_URL, type QuestionEntities } from "./decide";
+import { type DecideAnswers, decideRequestBody, type QuestionEntities, requestDecision } from "./decide";
 import { MAX_QUESTION_LENGTH } from "./limits";
 import { allowQuestion } from "./rate-limit";
 
@@ -45,46 +45,36 @@ export function validateDecideInput(input: unknown): DecideSearchInput {
   };
 }
 
-/** Why the search has no answer: too many questions from this visitor, the model failed, or no key is set. */
-export type DecideFailure = "rate_limited" | "unavailable" | "not_configured";
-
-export type DecideSearchResult = { ok: true; answers: DecideAnswers } | { ok: false; reason: DecideFailure };
-
-/** The asker's address as Cloudflare saw it; the dev server has no such header and counts everyone as one. */
-function clientIp(): string {
-  return getRequestHeader("cf-connecting-ip") ?? getRequestHeader("x-forwarded-for")?.split(",")[0]?.trim() ?? "local";
-}
-
 /**
- * Mercury Decide's answers for a question: a choice with probabilities for the page and for each filter. A failure is
- * an answer too, so the browser can tell the asker which kind it was; each is logged for the Worker's logs.
+ * What the browser hears when there is no decision: the visitor asked too much, or the model failed (an outage, an
+ * empty balance, a missing key). The cause of a failure goes to the Worker's logs, not to the visitor.
  */
+export type DecideSearchResult =
+  | { ok: true; answers: DecideAnswers }
+  | { ok: false; reason: "rate_limited" | "unavailable" };
+
+const unavailable = (...why: unknown[]): DecideSearchResult => {
+  console.error("ai-search:", ...why);
+  return { ok: false, reason: "unavailable" };
+};
+
+/** Mercury Decide's answers for a question: a choice with probabilities for the page and for each filter. */
 export const decideSearch = createServerFn({ method: "POST" })
   .validator(validateDecideInput)
-  .handler(async ({ data }): Promise<DecideSearchResult> => {
-    if (!(await allowQuestion(clientIp()))) return { ok: false, reason: "rate_limited" };
+  .handler(async ({ data, context }): Promise<DecideSearchResult> => {
+    // The dev server has no Cloudflare in front, and counts everyone as one visitor.
+    const ip = getRequestHeader("cf-connecting-ip") ?? "local";
+    if (!(await allowQuestion(ip, context.env?.AI_SEARCH_RATE_LIMITER))) return { ok: false, reason: "rate_limited" };
     const key = process.env.INCEPTION_API_KEY;
-    if (!key) {
-      console.error("ai-search: INCEPTION_API_KEY is not set");
-      return { ok: false, reason: "not_configured" };
-    }
+    if (!key) return unavailable("INCEPTION_API_KEY is not set");
     let response: Response;
     try {
-      response = await fetch(DECIDE_URL, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-        body: JSON.stringify(decideRequestBody(data.question, data.entities, data.rankNames)),
-        signal: AbortSignal.timeout(15_000),
-      });
+      response = await requestDecision(key, decideRequestBody(data.question, data.entities, data.rankNames), 15_000);
     } catch (error) {
-      console.error("ai-search: Mercury did not answer", error);
-      return { ok: false, reason: "unavailable" };
+      return unavailable("Mercury did not answer", error);
     }
-    if (!response.ok) {
-      // 402 is an empty balance, 429 Mercury's own rate limit, 5xx an outage.
-      console.error(`ai-search: Mercury answered ${response.status}`, (await response.text()).slice(0, 300));
-      return { ok: false, reason: "unavailable" };
-    }
+    // 402 is an empty balance, 429 Mercury's own rate limit, 5xx an outage.
+    if (!response.ok) return unavailable(`Mercury answered ${response.status}`, (await response.text()).slice(0, 300));
     const decision = (await response.json()) as { answers: DecideAnswers };
     return { ok: true, answers: decision.answers };
   });

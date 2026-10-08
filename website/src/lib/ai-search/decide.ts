@@ -6,8 +6,8 @@ import {
   REGIONS,
   type SelectionMode,
   type SelectionTime,
+  SORT_DESCRIPTIONS,
   SORT_KEYS,
-  type SortKey,
   TIMES,
 } from "~/lib/page-registry";
 
@@ -19,8 +19,18 @@ import { type IntentVocabulary, NO_FILTERS, type SearchIntent } from "./intent";
 // sure the model is. Heroes and items are found in code (`entities.ts`), which is certain and instant,
 // and handed to the model as context.
 
-export const DECIDE_URL = "https://api.inceptionlabs.ai/v1/decisions";
-export const DECIDE_MODEL = "mercury-decide";
+const DECIDE_URL = "https://api.inceptionlabs.ai/v1/decisions";
+const DECIDE_MODEL = "mercury-decide";
+
+/** Asks Mercury Decide; the caller reads the answer and handles its failures (the site and the eval differ there). */
+export function requestDecision(key: string, body: DecideRequestBody, timeoutMs: number): Promise<Response> {
+  return fetch(DECIDE_URL, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(timeoutMs),
+  });
+}
 
 /**
  * The search opens a page only when the model gives its best page at least this much and does not pick "none". On
@@ -49,39 +59,6 @@ const TIME_CRITERIA: Record<SelectionTime, string> = {
   previous_season: "last season, the previous season",
   last_7_days: "the last week, past 7 days",
   last_30_days: "the last month, past 30 days",
-};
-
-const SORT_CRITERIA: Record<SortKey, string> = {
-  winrate: "win rate, winning, best",
-  pickrate: "pick rate, popularity, most played",
-  banrate: "ban rate, most banned",
-  matches: "number of matches or games",
-  wins: "number of wins",
-  losses: "number of losses",
-  kills: "kills",
-  deaths: "deaths, dying",
-  assists: "assists",
-  kda: "KDA, kill death assist ratio",
-  souls: "souls, net worth, farm, gold",
-  damage: "damage dealt to players",
-  damage_taken: "damage taken, tankiness",
-  boss_damage: "damage to bosses and objectives",
-  creep_damage: "damage to troopers and creeps",
-  neutral_damage: "damage to neutral camps",
-  healing: "healing",
-  last_hits: "last hits, creep score",
-  denies: "denies",
-  creep_kills: "troopers or creeps killed",
-  neutral_kills: "neutral camps or jungle creeps killed",
-  max_health: "max health, hp",
-  level: "player level",
-  permanent_buffs: "golden statue buffs picked up",
-  accuracy: "accuracy, aim",
-  shots_hit: "shots hit",
-  shots_missed: "shots missed",
-  hero_hits: "bullets hit on heroes",
-  crits: "crits, headshots",
-  duration: "match length, game duration",
 };
 
 const REGION_CRITERIA: Record<(typeof REGIONS)[number], string> = {
@@ -191,7 +168,7 @@ export function decideRequestBody(
       sort: {
         type: "choice",
         instructions: "The stat the question ranks or compares by.",
-        criteria: withNone(SORT_CRITERIA, "the question ranks by no particular stat"),
+        criteria: withNone(SORT_DESCRIPTIONS, "the question ranks by no particular stat"),
       },
     },
   };

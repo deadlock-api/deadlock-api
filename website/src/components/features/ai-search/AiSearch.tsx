@@ -7,7 +7,6 @@ import { useCloseSideNavDrawer } from "~/components/patterns/navigation/SideNavS
 import { Button } from "~/components/ui/button";
 import { SearchInput } from "~/components/ui/search-input";
 import { MAX_QUESTION_LENGTH, QUESTIONS_PER_MINUTE } from "~/lib/ai-search/limits";
-import type { DecideFailure } from "~/lib/ai-search/search-fns";
 import { getAnalytics } from "~/lib/analytics";
 import { cn } from "~/lib/utils";
 
@@ -24,7 +23,7 @@ const PLACEHOLDER_QUESTIONS = [
 ];
 const PLACEHOLDER_INTERVAL_MS = 3500;
 
-type Outcome = "opened" | "not_understood" | DecideFailure | "error";
+type Outcome = "opened" | "not_understood" | "rate_limited" | "error";
 
 /** One event per question, with the question itself: what visitors ask, how often, and where it took them. */
 function trackQuestion(properties: {
@@ -111,38 +110,31 @@ export function AiSearch({ size = "default", className }: AiSearchProps) {
     import("./route-question")
       .then(({ routeQuestion }) => routeQuestion(queryClient, trimmed))
       .then(
-        ({ result, failure, direct, durationMs }) => {
+        (routed) => {
           if (asked !== latest.current) return undefined;
           setSearching(false);
-          if (failure) {
-            trackQuestion({ question: trimmed, source, outcome: failure, direct, durationMs });
-            if (failure === "rate_limited") {
-              toast(`That's a lot of questions. You can ask ${QUESTIONS_PER_MINUTE} a minute; try again shortly.`);
-            } else if (failure === "unavailable") {
-              toast("The search is unavailable right now", {
-                action: { label: "Try again", onClick: () => ask(trimmed) },
-              });
-            } else {
-              toast("The search is unavailable right now");
-            }
+          const { direct, durationMs } = routed;
+          if (routed.kind === "rate_limited") {
+            trackQuestion({ question: trimmed, source, outcome: "rate_limited", direct, durationMs });
+            toast(`That's a lot of questions. You can ask ${QUESTIONS_PER_MINUTE} a minute; try again shortly.`);
             return undefined;
           }
-          if (!result) {
+          if (routed.kind === "not_understood") {
             trackQuestion({ question: trimmed, source, outcome: "not_understood", direct, durationMs });
             setUnmatched(true);
             toast("Sorry, I didn't understand that. Try asking about a hero, an item or a stat.");
             return undefined;
           }
-          trackQuestion({ question: trimmed, source, outcome: "opened", page: result.id, direct, durationMs });
+          trackQuestion({ question: trimmed, source, outcome: "opened", page: routed.id, direct, durationMs });
           setLastSearch(trimmed);
           closeDrawer();
-          return navigate({ href: result.href });
+          return navigate({ href: routed.href });
         },
         () => {
           if (asked !== latest.current) return;
           setSearching(false);
           trackQuestion({ question: trimmed, source, outcome: "error" });
-          toast("The search could not answer", { action: { label: "Try again", onClick: () => ask(trimmed) } });
+          toast("The search is unavailable right now", { action: { label: "Try again", onClick: () => ask(trimmed) } });
         },
       );
   };
