@@ -338,9 +338,10 @@ export function OverviewTab({
                   <Button
                     key={key}
                     variant="outline"
+                    size="tile"
                     disabled={!record}
                     onClick={() => record && onOpenMatch(record.entry.match_id)}
-                    className="h-auto min-w-0 flex-col items-stretch gap-0.5 px-2 py-1.5 text-start font-normal"
+                    className="min-w-0 flex-col items-stretch gap-0.5 font-normal"
                   >
                     <span className="flex items-center justify-between gap-1 text-xs text-muted-foreground">
                       {label}

@@ -48,9 +48,10 @@ export function LaneSwapBanner({ suggestion, side, onApply }: LaneSwapBannerProp
   return (
     <Button
       variant={`${tone}-soft`}
+      size="tile"
       onClick={onApply}
       title={label}
-      className="group h-auto w-full flex-wrap justify-start gap-x-2 gap-y-1 px-2 py-1 text-start font-normal whitespace-normal text-foreground"
+      className="group w-full flex-wrap gap-x-2 gap-y-1 font-normal text-foreground"
     >
       <span className={cn("flex shrink-0 items-center gap-1 text-xs font-semibold", TONE_TEXT[tone])}>
         <ArrowLeftRightIcon className="size-3" />

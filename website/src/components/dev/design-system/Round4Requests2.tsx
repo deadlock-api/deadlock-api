@@ -20,6 +20,7 @@ import { HeatCell } from "~/components/ui/heat-cell";
 import { useDropZone } from "~/components/ui/hooks/use-drop-zone";
 import { IconTile } from "~/components/ui/icon-tile";
 import { MaskedIcon } from "~/components/ui/masked-icon";
+import { NoValue } from "~/components/ui/no-value";
 import { StatusDot } from "~/components/ui/status-dot";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { TextLink } from "~/components/ui/text-link";
@@ -272,6 +273,50 @@ export function Round4Requests2() {
         <Variants label="disabled vs aria-disabled">
           <Button disabled>Disabled</Button>
           <Button aria-disabled="true">Unavailable, still focusable</Button>
+        </Variants>
+      </Specimen>
+
+      <Specimen
+        name="Button tile"
+        source="ui/button"
+        note='`size="tile"` is a button that holds a small card of content: a personal best, a suggestion, a filter summary. Its content sets the height and wraps from the start edge; any variant gives the surface, and flex classes lay the content out (a column of label and value, a wrapping row).'
+      >
+        <Variants label="outline, a column of label, value and detail">
+          <div className="grid w-80 grid-cols-2 gap-1.5">
+            <Button variant="outline" size="tile" className="min-w-0 flex-col items-stretch gap-0.5 font-normal">
+              <span className="text-xs text-muted-foreground">Most kills</span>
+              <span className="text-base font-semibold tabular-nums">24</span>
+              <span className="text-xs text-muted-foreground">Haze</span>
+            </Button>
+            <Button
+              variant="outline"
+              size="tile"
+              disabled
+              className="min-w-0 flex-col items-stretch gap-0.5 font-normal"
+            >
+              <span className="text-xs text-muted-foreground">Most souls</span>
+              <span className="text-base font-semibold tabular-nums">
+                <NoValue label="Not recorded" />
+              </span>
+              <span className="text-xs text-muted-foreground">Not recorded</span>
+            </Button>
+          </div>
+        </Variants>
+        <Variants label="positive-soft, a wrapping row">
+          <Button variant="positive-soft" size="tile" className="w-80 flex-wrap gap-x-2 gap-y-1 font-normal">
+            <span className="text-xs font-semibold">+3.2 pts</span>
+            <span>Haze to the yellow lane, Seven to the blue lane</span>
+            <span className="ms-auto text-xs text-muted-foreground">Apply</span>
+          </Button>
+        </Variants>
+        <Variants label="outline with icons, a summary that wraps">
+          <Button variant="outline" size="tile" className="min-h-10 w-64">
+            <FolderOpen data-icon="inline-start" />
+            <span className="min-w-0 flex-1 text-start">
+              <span className="block text-xs">Last 30 days</span>
+              <span className="block text-xs text-muted-foreground">Ranked, all heroes, at least 10 matches</span>
+            </span>
+          </Button>
         </Variants>
       </Specimen>
 

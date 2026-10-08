@@ -164,10 +164,10 @@ export default function MatchHistoryCard({
           {steamProfile?.personaname &&
             (onPlayerClick ? (
               <Button
-                variant="link"
-                size="xs"
+                variant="text"
+                size="inline"
                 onClick={() => onPlayerClick(steamProfile.personaname)}
-                className="h-auto max-w-28 justify-start p-0 text-foreground hover:text-primary"
+                className="max-w-28 justify-start text-xs text-foreground"
                 title={`View ${steamProfile.personaname}'s recent builds on this hero`}
               >
                 <span className="truncate">{steamProfile.personaname}</span>

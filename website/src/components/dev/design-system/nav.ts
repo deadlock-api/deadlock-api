@@ -52,6 +52,7 @@ export const NAV: readonly NavChapter[] = [
           "Button states",
           "Button elevation",
           "Button text and scrim",
+          "Button tile",
           "CopyButton",
           "CopyButton label",
           "TextLink",

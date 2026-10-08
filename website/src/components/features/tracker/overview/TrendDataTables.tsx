@@ -81,9 +81,9 @@ export function RankHistoryTable({
               <TableHead scope="row">
                 <Tooltip content={`Open match ${point.matchId}`}>
                   <Button
-                    size="sm"
-                    variant="ghost"
-                    className="h-auto justify-start px-0 py-1"
+                    variant="text"
+                    size="inline"
+                    className="justify-start py-1"
                     data-rank-match={point.matchId}
                     tabIndex={point.matchId === tabStop ? 0 : -1}
                     aria-describedby={keyboardHelpId}
@@ -170,9 +170,9 @@ export function ActivityTable({
             <TableRow key={bucket.bucketStartUnix}>
               <TableHead scope="row">
                 <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-auto justify-start px-0 py-1"
+                  variant="text"
+                  size="inline"
+                  className="justify-start py-1"
                   disabled={matches === 0}
                   onClick={() => onSelectPeriod(bucket.bucketStartUnix)}
                   aria-label={`Show matches from ${activity.granularity === "week" ? "week of " : ""}${toTime(bucket.bucketStartUnix).format(activity.granularity === "week" ? "MMM D, YYYY" : "MMMM YYYY")}`}

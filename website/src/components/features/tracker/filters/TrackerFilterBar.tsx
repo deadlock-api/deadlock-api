@@ -58,8 +58,8 @@ export function TrackerFilterBar({
         <CollapsibleTrigger asChild>
           <Button
             variant="outline"
-            size="sm"
-            className="group h-auto min-h-10 min-w-0 flex-1 justify-start py-1.5 whitespace-normal"
+            size="tile"
+            className="group min-h-10 min-w-0 flex-1"
             aria-label={`Filters: ${dateLabel}; ${summary}`}
           >
             <SlidersHorizontal data-icon="inline-start" />
