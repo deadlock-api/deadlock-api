@@ -1,3 +1,4 @@
+use crate::utils::sql::impl_match_info;
 use core::fmt::Write as _;
 
 use axum::Json;
@@ -11,7 +12,7 @@ use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
 
 use super::common_filters::{
-    MatchInfoFilters, PlayerFilters, filter_protected_accounts, join_filters, round_timestamps,
+    PlayerFilters, filter_protected_accounts, join_filters, round_timestamps,
 };
 use super::player_performance_curve_agg;
 use super::power_up_buffs::PERMANENT_BUFF_TIMES;
@@ -203,6 +204,8 @@ pub(crate) struct PlayerPerformanceCurveQuery {
     pub(super) account_ids: Option<Vec<u32>>,
 }
 
+impl_match_info!(PlayerPerformanceCurveQuery);
+
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
 pub struct PlayerPerformanceCurvePoint {
     /// The time point of the data.
@@ -364,17 +367,7 @@ fn projection_setting(query: &PlayerPerformanceCurveQuery) -> &'static str {
 }
 
 fn build_query(query: &PlayerPerformanceCurveQuery) -> String {
-    let info_filters = MatchInfoFilters {
-        min_unix_timestamp: query.min_unix_timestamp,
-        max_unix_timestamp: query.max_unix_timestamp,
-        min_match_id: query.min_match_id,
-        max_match_id: query.max_match_id,
-        min_average_badge: query.min_average_badge,
-        max_average_badge: query.max_average_badge,
-        min_duration_s: query.min_duration_s,
-        max_duration_s: query.max_duration_s,
-    }
-    .build();
+    let info_filters = query.match_info().build();
     let player_filters = join_filters(
         &PlayerFilters {
             hero_ids: query.hero_ids.as_deref(),

@@ -1,3 +1,4 @@
+use crate::utils::sql::impl_match_info;
 use std::collections::HashMap;
 
 use axum::Json;
@@ -12,8 +13,8 @@ use tracing::{debug, warn};
 use utoipa::{IntoParams, ToSchema};
 
 use super::common_filters::{
-    LaneDuoFilterSql, LaneDuoFilters, MatchInfoFilters, default_min_matches_u64,
-    filter_protected_accounts, round_timestamps,
+    LaneDuoFilterSql, LaneDuoFilters, default_min_matches_u64, filter_protected_accounts,
+    round_timestamps,
 };
 use super::lane_common::{
     LaneGroupBy, LaneGrouping, LaneScanFilters, LaneStat, LaneStats, LaneTableFilters,
@@ -141,6 +142,8 @@ pub(super) struct LaneMatchupStatsQuery {
     account_ids: Option<Vec<u32>>,
 }
 
+impl_match_info!(LaneMatchupStatsQuery);
+
 /// One requested stat, read at `sample_time_s` and averaged over the matchups that reached it.
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct LaneMatchupStat {
@@ -206,19 +209,6 @@ fn stat_columns(stats: &LaneStats, aggregate: &str, measure: &str) -> String {
     })
 }
 
-fn info_filters(query: &LaneMatchupStatsQuery) -> MatchInfoFilters {
-    MatchInfoFilters {
-        min_unix_timestamp: query.min_unix_timestamp,
-        max_unix_timestamp: query.max_unix_timestamp,
-        min_match_id: query.min_match_id,
-        max_match_id: query.max_match_id,
-        min_average_badge: query.min_average_badge,
-        max_average_badge: query.max_average_badge,
-        min_duration_s: query.min_duration_s,
-        max_duration_s: query.max_duration_s,
-    }
-}
-
 fn scan_filters(
     query: &LaneMatchupStatsQuery,
     accounts: &str,
@@ -228,7 +218,7 @@ fn scan_filters(
     LaneScanFilters {
         game_mode: query.game_mode,
         match_mode: query.match_mode.as_deref(),
-        info: info_filters(query),
+        info: query.match_info(),
         assigned_lanes: query.assigned_lanes.as_deref(),
         accounts,
         heroes,
@@ -321,7 +311,7 @@ fn build_table_query(query: &LaneMatchupStatsQuery, stats: &LaneStats) -> Option
     let table_filters = LaneTableFilters {
         game_mode: query.game_mode,
         match_mode: query.match_mode.as_deref(),
-        info: info_filters(query),
+        info: query.match_info(),
         assigned_lanes: query.assigned_lanes.as_deref(),
         duos: &duo_filters,
     }

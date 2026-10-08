@@ -1,3 +1,4 @@
+use crate::utils::sql::impl_match_info;
 use axum::Json;
 use axum::extract::State;
 use axum::http::StatusCode;
@@ -10,7 +11,7 @@ use serde::{Deserialize, Serialize};
 use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
 
-use super::common_filters::{MatchInfoFilters, filter_protected_accounts, round_timestamps};
+use super::common_filters::{filter_protected_accounts, round_timestamps};
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::analytics::scoreboard_types::ScoreboardQuerySortBy;
@@ -90,6 +91,8 @@ pub(super) struct HeroScoreboardQuery {
     account_ids: Option<Vec<u32>>,
 }
 
+impl_match_info!(HeroScoreboardQuery);
+
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
 pub struct HeroEntry {
     rank: u64,
@@ -100,17 +103,7 @@ pub struct HeroEntry {
 }
 
 fn build_query(query: &HeroScoreboardQuery) -> String {
-    let match_info_filters = MatchInfoFilters {
-        min_unix_timestamp: query.min_unix_timestamp,
-        max_unix_timestamp: query.max_unix_timestamp,
-        min_match_id: query.min_match_id,
-        max_match_id: query.max_match_id,
-        min_average_badge: query.min_average_badge,
-        max_average_badge: query.max_average_badge,
-        min_duration_s: query.min_duration_s,
-        max_duration_s: query.max_duration_s,
-    }
-    .build();
+    let match_info_filters = query.match_info().build();
     let game_mode_filter = GameMode::sql_filter(query.game_mode);
     let match_mode_filter = MatchMode::sql_filter(query.match_mode.as_deref());
     let mut player_filters = vec![format!(

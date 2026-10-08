@@ -1,3 +1,4 @@
+use crate::utils::sql::impl_match_info;
 use core::fmt::Write as _;
 use std::collections::HashMap;
 
@@ -13,8 +14,8 @@ use tracing::{debug, warn};
 use utoipa::{IntoParams, ToSchema};
 
 use super::common_filters::{
-    LaneDuoFilterSql, LaneDuoFilters, MatchInfoFilters, default_min_matches_u64,
-    filter_protected_accounts, round_timestamps,
+    LaneDuoFilterSql, LaneDuoFilters, default_min_matches_u64, filter_protected_accounts,
+    round_timestamps,
 };
 use super::lane_common::{
     LaneGroupBy, LaneGrouping, LaneScanFilters, LaneStat, LaneStats, LaneTableFilters,
@@ -148,6 +149,8 @@ pub(super) struct LaneSoulCurveQuery {
     )]
     account_ids: Option<Vec<u32>>,
 }
+
+impl_match_info!(LaneSoulCurveQuery);
 
 /// One requested stat's curve. All four arrays line up with `sample_times_s`.
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
@@ -348,19 +351,6 @@ kept_matches AS (
     }
 }
 
-fn info_filters(query: &LaneSoulCurveQuery) -> MatchInfoFilters {
-    MatchInfoFilters {
-        min_unix_timestamp: query.min_unix_timestamp,
-        max_unix_timestamp: query.max_unix_timestamp,
-        min_match_id: query.min_match_id,
-        max_match_id: query.max_match_id,
-        min_average_badge: query.min_average_badge,
-        max_average_badge: query.max_average_badge,
-        min_duration_s: query.min_duration_s,
-        max_duration_s: query.max_duration_s,
-    }
-}
-
 fn scan_filters(
     query: &LaneSoulCurveQuery,
     accounts: &str,
@@ -370,7 +360,7 @@ fn scan_filters(
     LaneScanFilters {
         game_mode: query.game_mode,
         match_mode: query.match_mode.as_deref(),
-        info: info_filters(query),
+        info: query.match_info(),
         assigned_lanes: query.assigned_lanes.as_deref(),
         accounts,
         heroes,
@@ -462,7 +452,7 @@ fn build_table_query(query: &LaneSoulCurveQuery, stats: &LaneStats) -> Option<St
     let table_filters = LaneTableFilters {
         game_mode: query.game_mode,
         match_mode: query.match_mode.as_deref(),
-        info: info_filters(query),
+        info: query.match_info(),
         assigned_lanes: query.assigned_lanes.as_deref(),
         duos: &duo_filters,
     }

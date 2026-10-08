@@ -1,3 +1,4 @@
+use crate::utils::sql::impl_match_info;
 use crate::utils::sql::{MAX_FILTERING_AVERAGE_BADGE, MIN_FILTERING_AVERAGE_BADGE};
 use axum::Json;
 use axum::extract::State;
@@ -11,7 +12,7 @@ use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
 
 use super::common_filters::{
-    MatchInfoFilters, PlayerFilters, filter_protected_accounts, join_filters, round_timestamps,
+    PlayerFilters, filter_protected_accounts, join_filters, round_timestamps,
 };
 use crate::context::AppState;
 use crate::error::APIResult;
@@ -169,6 +170,8 @@ pub(crate) struct HeroStatsQuery {
     )]
     account_ids: Option<Vec<u32>>,
 }
+
+impl_match_info!(HeroStatsQuery);
 
 impl HeroStatsQuery {
     fn has_ability_order_filter(&self) -> bool {
@@ -377,17 +380,7 @@ fn build_mv_query(query: &HeroStatsQuery) -> Option<String> {
 
 #[expect(clippy::too_many_lines)]
 fn build_query(query: &HeroStatsQuery) -> String {
-    let info_filters = MatchInfoFilters {
-        min_unix_timestamp: query.min_unix_timestamp,
-        max_unix_timestamp: query.max_unix_timestamp,
-        min_match_id: query.min_match_id,
-        max_match_id: query.max_match_id,
-        min_average_badge: query.min_average_badge,
-        max_average_badge: query.max_average_badge,
-        min_duration_s: query.min_duration_s,
-        max_duration_s: query.max_duration_s,
-    }
-    .build();
+    let info_filters = query.match_info().build();
     #[expect(deprecated)]
     let player_filters = PlayerFilters {
         account_id: query.account_id,

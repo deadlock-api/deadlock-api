@@ -298,12 +298,9 @@ pub(super) fn build_agg_query(query: &PlayerPerformanceCurveQuery, plan: &AggPla
         let info_filters = MatchInfoFilters {
             min_unix_timestamp: Some(from),
             max_unix_timestamp: Some(to),
-            min_average_badge: query.min_average_badge,
-            max_average_badge: query.max_average_badge,
-            min_duration_s: query.min_duration_s,
-            max_duration_s: query.max_duration_s,
             min_match_id: None,
             max_match_id: None,
+            ..query.match_info()
         }
         .build();
         parts.push(format!(

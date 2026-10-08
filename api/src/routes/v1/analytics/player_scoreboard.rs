@@ -1,3 +1,4 @@
+use crate::utils::sql::impl_match_info;
 use crate::utils::sql::{MAX_FILTERING_AVERAGE_BADGE, MIN_FILTERING_AVERAGE_BADGE};
 use std::sync::Arc;
 
@@ -13,9 +14,7 @@ use serde::{Deserialize, Serialize};
 use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
 
-use super::common_filters::{
-    MatchInfoFilters, default_min_matches_u32, filter_protected_accounts, round_timestamps,
-};
+use super::common_filters::{default_min_matches_u32, filter_protected_accounts, round_timestamps};
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::analytics::scoreboard_types::ScoreboardQuerySortBy;
@@ -105,6 +104,8 @@ pub(crate) struct PlayerScoreboardQuery {
     account_ids: Option<Vec<u32>>,
 }
 
+impl_match_info!(PlayerScoreboardQuery);
+
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
 pub struct PlayerEntry {
     rank: u64,
@@ -166,7 +167,6 @@ FROM (
     }
 }
 
-#[expect(clippy::too_many_lines)]
 fn build_query(query: &PlayerScoreboardQuery) -> String {
     let mut inner_filters = vec!["account_id > 0".to_owned()];
     let needs_match_info_filter = query.min_unix_timestamp.is_some()
@@ -201,17 +201,7 @@ fn build_query(query: &PlayerScoreboardQuery) -> String {
         "match_player"
     };
     if needs_match_info_filter {
-        let match_info_filters = MatchInfoFilters {
-            min_unix_timestamp: query.min_unix_timestamp,
-            max_unix_timestamp: query.max_unix_timestamp,
-            min_match_id: query.min_match_id,
-            max_match_id: query.max_match_id,
-            min_average_badge: query.min_average_badge,
-            max_average_badge: query.max_average_badge,
-            min_duration_s: query.min_duration_s,
-            max_duration_s: query.max_duration_s,
-        }
-        .build();
+        let match_info_filters = query.match_info().build();
         let game_mode_filter = GameMode::sql_filter(query.game_mode);
         let match_mode_filter = MatchMode::sql_filter(query.match_mode.as_deref());
         inner_filters.push(format!(

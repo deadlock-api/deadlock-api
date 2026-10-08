@@ -1,4 +1,5 @@
-use crate::utils::sql::{DURATION_COLUMN, MatchInfoFilters};
+use crate::utils::sql::DURATION_COLUMN;
+use crate::utils::sql::impl_match_info;
 use axum::Json;
 use axum::extract::State;
 use axum::response::IntoResponse;
@@ -96,6 +97,8 @@ pub(super) struct HeroSynergyStatsQuery {
     account_ids: Option<Vec<u32>>,
 }
 
+impl_match_info!(HeroSynergyStatsQuery);
+
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
 pub struct HeroSynergyStats {
     /// The ID of the first hero in the pair.
@@ -140,7 +143,6 @@ pub struct HeroSynergyStats {
     pub creeps2: u64,
 }
 
-#[expect(clippy::too_many_lines)]
 fn build_query(query: &HeroSynergyStatsQuery) -> String {
     // Single-pass strategy: read each filtered match_player row once, group all
     // teammates per (match_id, team[, assigned_lane]) into a tuple array, then
@@ -157,19 +159,7 @@ fn build_query(query: &HeroSynergyStatsQuery) -> String {
         MatchMode::sql_filter(query.match_mode.as_deref()),
         game_mode_filter,
     ];
-    where_filters.extend(
-        MatchInfoFilters {
-            min_unix_timestamp: query.min_unix_timestamp,
-            max_unix_timestamp: query.max_unix_timestamp,
-            min_match_id: query.min_match_id,
-            max_match_id: query.max_match_id,
-            min_average_badge: query.min_average_badge,
-            max_average_badge: query.max_average_badge,
-            min_duration_s: query.min_duration_s,
-            max_duration_s: query.max_duration_s,
-        }
-        .predicates("", DURATION_COLUMN),
-    );
+    where_filters.extend(query.match_info().predicates("", DURATION_COLUMN));
     // net_worth is per-player; pre-filtering before the group has the same effect
     // as the original symmetric (p1 AND p2) join filter.
     if let Some(min_networth) = query.min_networth {

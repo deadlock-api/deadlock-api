@@ -1,4 +1,5 @@
-use crate::utils::sql::{DURATION_COLUMN, MatchInfoFilters, MatchPoolFilters, join_filters};
+use crate::utils::sql::impl_match_info;
+use crate::utils::sql::{DURATION_COLUMN, MatchPoolFilters, join_filters};
 use axum::Json;
 use axum::extract::State;
 use axum::http::StatusCode;
@@ -105,6 +106,8 @@ pub(crate) struct KillDeathStatsQuery {
     max_game_time_s: Option<u32>,
 }
 
+impl_match_info!(KillDeathStatsQuery);
+
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
 pub(crate) struct KillDeathStats {
     position_x: i32,
@@ -117,19 +120,7 @@ pub(crate) struct KillDeathStats {
 #[expect(clippy::too_many_lines)]
 fn build_query(query: &KillDeathStatsQuery) -> String {
     let mut info_filters = vec![];
-    info_filters.extend(
-        MatchInfoFilters {
-            min_unix_timestamp: query.min_unix_timestamp,
-            max_unix_timestamp: query.max_unix_timestamp,
-            min_match_id: query.min_match_id,
-            max_match_id: query.max_match_id,
-            min_average_badge: query.min_average_badge,
-            max_average_badge: query.max_average_badge,
-            min_duration_s: query.min_duration_s,
-            max_duration_s: query.max_duration_s,
-        }
-        .predicates("", DURATION_COLUMN),
-    );
+    info_filters.extend(query.match_info().predicates("", DURATION_COLUMN));
     info_filters.extend(
         MatchPoolFilters {
             is_high_skill_range_parties: query.is_high_skill_range_parties,

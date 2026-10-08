@@ -1,3 +1,4 @@
+use crate::utils::sql::impl_match_info;
 use axum::Json;
 use axum::extract::State;
 use axum::response::IntoResponse;
@@ -9,7 +10,7 @@ use strum::Display;
 use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
 
-use super::common_filters::{MatchInfoFilters, round_timestamps};
+use super::common_filters::round_timestamps;
 use crate::context::AppState;
 use crate::error::APIResult;
 use crate::routes::v1::matches::types::MatchMode;
@@ -78,6 +79,8 @@ pub(super) struct HeroBanStatsQuery {
     max_match_id: Option<u64>,
 }
 
+impl_match_info!(HeroBanStatsQuery);
+
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
 pub struct HeroBanStats {
     /// The ID of the banned hero. See more: <https://api.deadlock-api.com/v1/assets/heroes>
@@ -89,17 +92,7 @@ pub struct HeroBanStats {
 }
 
 fn build_query(query: &HeroBanStatsQuery) -> String {
-    let info_filters = MatchInfoFilters {
-        min_unix_timestamp: query.min_unix_timestamp,
-        max_unix_timestamp: query.max_unix_timestamp,
-        min_match_id: query.min_match_id,
-        max_match_id: query.max_match_id,
-        min_average_badge: query.min_average_badge,
-        max_average_badge: query.max_average_badge,
-        min_duration_s: query.min_duration_s,
-        max_duration_s: query.max_duration_s,
-    }
-    .build();
+    let info_filters = query.match_info().build();
     let match_mode_filter = MatchMode::sql_filter(query.match_mode.as_deref());
     let bucket_expr = match query.bucket {
         BucketQuery::NoBucket => "toUInt32(0)",

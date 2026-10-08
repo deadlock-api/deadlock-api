@@ -1,3 +1,4 @@
+use crate::utils::sql::impl_match_info;
 use crate::utils::sql::{MAX_FILTERING_AVERAGE_BADGE, MIN_FILTERING_AVERAGE_BADGE};
 use axum::Json;
 use axum::extract::State;
@@ -328,6 +329,8 @@ pub(crate) struct ItemStatsQuery {
     #[deprecated(note = "Use corrupted_items=include instead")]
     include_corrupted_items: Option<bool>,
 }
+
+impl_match_info!(ItemStatsQuery);
 
 impl ItemStatsQuery {
     #[expect(deprecated)]
@@ -995,13 +998,8 @@ fn build_query(query: &ItemStatsQuery) -> String {
     };
     let info_filters = MatchInfoFilters {
         min_unix_timestamp,
-        max_unix_timestamp: query.max_unix_timestamp,
         min_match_id,
-        max_match_id: query.max_match_id,
-        min_average_badge: query.min_average_badge,
-        max_average_badge: query.max_average_badge,
-        min_duration_s: query.min_duration_s,
-        max_duration_s: query.max_duration_s,
+        ..query.match_info()
     };
     let game_mode_filter = GameMode::sql_filter(query.game_mode);
     let match_mode_filter = MatchMode::sql_filter(query.match_mode.as_deref());

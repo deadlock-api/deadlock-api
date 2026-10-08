@@ -1,3 +1,4 @@
+use crate::utils::sql::impl_match_info;
 use axum::Json;
 use axum::extract::State;
 use axum::response::IntoResponse;
@@ -9,9 +10,7 @@ use serde::{Deserialize, Serialize};
 use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
 
-use super::common_filters::{
-    MatchInfoFilters, default_min_matches_u64, filter_protected_accounts, round_timestamps,
-};
+use super::common_filters::{default_min_matches_u64, filter_protected_accounts, round_timestamps};
 use crate::context::AppState;
 use crate::error::APIResult;
 use crate::routes::v1::matches::types::reject_brawl_badge_filter;
@@ -101,6 +100,8 @@ pub(super) struct HeroCounterStatsQuery {
     account_ids: Option<Vec<u32>>,
 }
 
+impl_match_info!(HeroCounterStatsQuery);
+
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
 pub struct HeroCounterStats {
     /// The ID of the hero. See more: <https://api.deadlock-api.com/v1/assets/heroes>
@@ -147,17 +148,7 @@ pub struct HeroCounterStats {
 
 #[expect(clippy::too_many_lines)]
 fn build_query(query: &HeroCounterStatsQuery) -> String {
-    let info_filters = MatchInfoFilters {
-        min_unix_timestamp: query.min_unix_timestamp,
-        max_unix_timestamp: query.max_unix_timestamp,
-        min_match_id: query.min_match_id,
-        max_match_id: query.max_match_id,
-        min_average_badge: query.min_average_badge,
-        max_average_badge: query.max_average_badge,
-        min_duration_s: query.min_duration_s,
-        max_duration_s: query.max_duration_s,
-    }
-    .build();
+    let info_filters = query.match_info().build();
     let game_mode_filter = GameMode::sql_filter(query.game_mode);
     let match_mode_filter = MatchMode::sql_filter(query.match_mode.as_deref());
     // Applied as PREWHERE: under FINAL, ClickHouse only moves sorting-key conditions there itself.

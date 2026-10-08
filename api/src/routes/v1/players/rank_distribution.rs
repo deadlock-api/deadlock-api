@@ -1,3 +1,4 @@
+use crate::utils::sql::impl_match_info;
 use axum::Json;
 use axum::extract::State;
 use axum::response::IntoResponse;
@@ -14,7 +15,7 @@ use crate::routes::v1::players::mmr::apply_mmr_distribution_rate_limits;
 use crate::routes::v1::players::rank::badge_from_flat_progress_sql;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::utils::parse::default_last_month_timestamp;
-use crate::utils::sql::{DURATION_COLUMN, MatchInfoFilters, MatchPoolFilters};
+use crate::utils::sql::{DURATION_COLUMN, MatchPoolFilters};
 
 #[derive(Copy, Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash)]
 #[cfg_attr(test, derive(proptest_derive::Arbitrary))]
@@ -43,6 +44,8 @@ pub(crate) struct RankDistributionQuery {
     max_match_id: Option<u64>,
 }
 
+impl_match_info!(RankDistributionQuery, without_badge);
+
 #[derive(Debug, Clone, Copy, Row, Serialize, Deserialize, ToSchema)]
 pub(crate) struct RankDistributionEntry {
     /// Rank badge, `tier * 10 + subrank`. See more: <https://api.deadlock-api.com/v1/assets/ranks>
@@ -62,19 +65,7 @@ fn build_query(query: &RankDistributionQuery) -> String {
         "player_rank_initial_display_rank > 0".to_owned(),
         "player_rank_final_flat_progress IS NOT NULL".to_owned(),
     ];
-    filters.extend(
-        MatchInfoFilters {
-            min_unix_timestamp: query.min_unix_timestamp,
-            max_unix_timestamp: query.max_unix_timestamp,
-            min_match_id: query.min_match_id,
-            max_match_id: query.max_match_id,
-            min_average_badge: None,
-            max_average_badge: None,
-            min_duration_s: query.min_duration_s,
-            max_duration_s: query.max_duration_s,
-        }
-        .predicates("", DURATION_COLUMN),
-    );
+    filters.extend(query.match_info().predicates("", DURATION_COLUMN));
     filters.extend(
         MatchPoolFilters {
             is_high_skill_range_parties: query.is_high_skill_range_parties,

@@ -99,6 +99,46 @@ impl MatchInfoFilters {
     }
 }
 
+/// Implements `match_info()` for a query struct that declares the match-info filter fields
+/// (`min_unix_timestamp` .. `max_duration_s`) itself. The fields are kept on each struct rather
+/// than in a `#[serde(flatten)]`ed one because flattening breaks number parsing from query strings.
+/// `without_badge` is for structs without the `*_average_badge` fields.
+macro_rules! impl_match_info {
+    ($ty:ty) => {
+        impl $ty {
+            pub(crate) fn match_info(&self) -> $crate::utils::sql::MatchInfoFilters {
+                $crate::utils::sql::MatchInfoFilters {
+                    min_unix_timestamp: self.min_unix_timestamp,
+                    max_unix_timestamp: self.max_unix_timestamp,
+                    min_match_id: self.min_match_id,
+                    max_match_id: self.max_match_id,
+                    min_average_badge: self.min_average_badge,
+                    max_average_badge: self.max_average_badge,
+                    min_duration_s: self.min_duration_s,
+                    max_duration_s: self.max_duration_s,
+                }
+            }
+        }
+    };
+    ($ty:ty,without_badge) => {
+        impl $ty {
+            pub(crate) fn match_info(&self) -> $crate::utils::sql::MatchInfoFilters {
+                $crate::utils::sql::MatchInfoFilters {
+                    min_unix_timestamp: self.min_unix_timestamp,
+                    max_unix_timestamp: self.max_unix_timestamp,
+                    min_match_id: self.min_match_id,
+                    max_match_id: self.max_match_id,
+                    min_average_badge: None,
+                    max_average_badge: None,
+                    min_duration_s: self.min_duration_s,
+                    max_duration_s: self.max_duration_s,
+                }
+            }
+        }
+    };
+}
+pub(crate) use impl_match_info;
+
 /// Matchmaking pool flags of `match_player`/`match_info`.
 #[derive(Default, Clone, Copy)]
 #[cfg_attr(test, derive(Debug, proptest_derive::Arbitrary))]

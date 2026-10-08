@@ -1,3 +1,4 @@
+use crate::utils::sql::impl_match_info;
 use axum::Json;
 use axum::extract::State;
 use axum::response::IntoResponse;
@@ -9,7 +10,7 @@ use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
 
 use super::common_filters::{
-    MatchInfoFilters, PlayerFilters, filter_protected_accounts, join_filters, round_timestamps,
+    PlayerFilters, filter_protected_accounts, join_filters, round_timestamps,
 };
 use crate::context::AppState;
 use crate::error::APIResult;
@@ -85,6 +86,8 @@ pub(crate) struct BuffStatsQuery {
     account_ids: Option<Vec<u32>>,
 }
 
+impl_match_info!(BuffStatsQuery);
+
 /// Per-buff-type aggregate as `ClickHouse` returns it. The sentinel row carries the
 /// denominators in `matches_with_pickup` / `timed_matches_with_pickup`.
 #[derive(Debug, Clone, Row, Serialize, Deserialize)]
@@ -131,17 +134,7 @@ pub(super) struct AnalyticsBuffStats {
 }
 
 fn build_query(query: &BuffStatsQuery) -> String {
-    let info_filters = MatchInfoFilters {
-        min_unix_timestamp: query.min_unix_timestamp,
-        max_unix_timestamp: query.max_unix_timestamp,
-        min_match_id: query.min_match_id,
-        max_match_id: query.max_match_id,
-        min_average_badge: query.min_average_badge,
-        max_average_badge: query.max_average_badge,
-        min_duration_s: query.min_duration_s,
-        max_duration_s: query.max_duration_s,
-    }
-    .build();
+    let info_filters = query.match_info().build();
     let player_filters = join_filters(
         &PlayerFilters {
             account_ids: query.account_ids.as_deref(),
