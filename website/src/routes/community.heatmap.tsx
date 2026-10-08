@@ -50,6 +50,8 @@ const Heatmap3D = lazy(() => import("~/components/features/heatmap/Heatmap3D"));
 
 const VIEW_MODES = ["kills", "deaths", "kd", "share"] as const;
 const TEAM_NAMES = ["The Hidden King", "The Archmother"] as const;
+/** The match time filter's upper end; at it, the filter is off. */
+const MAX_GAME_TIME_S = 3600;
 
 const VIEW_MODE_LABELS: Record<(typeof VIEW_MODES)[number], string> = {
   kills: "Kills",
@@ -87,7 +89,7 @@ function HeatmapPage() {
   const [minRankId, setMinRankId] = useQueryState("min_rank", parseAsInteger.withDefault(0));
   const [maxRankId, setMaxRankId] = useQueryState("max_rank", parseAsInteger.withDefault(MAX_BADGE));
   const [minGameTime, setMinGameTime] = useQueryState("min_game_time", parseAsInteger.withDefault(0));
-  const [maxGameTime, setMaxGameTime] = useQueryState("max_game_time", parseAsInteger.withDefault(3600));
+  const [maxGameTime, setMaxGameTime] = useQueryState("max_game_time", parseAsInteger.withDefault(MAX_GAME_TIME_S));
   const [minEvents, setMinEvents] = useQueryState("min_events", parseAsInteger.withDefault(0));
   const [outlier, setOutlierSensitivity] = useQueryState("outlier", parseAsInteger.withDefault(9900));
   // The slider's range (80-100%): an edited `?outlier=5000` saturated half the map with the thumb stuck at its minimum.
@@ -107,7 +109,7 @@ function HeatmapPage() {
   const { era, spansRework } = mapEraOf(minUnixTimestamp, maxUnixTimestamp);
 
   const requestParams: AnalyticsApiKillDeathStatsRequest = {
-    team: team,
+    team,
     heroIds: heroId ? String(heroId) : undefined,
     gameMode,
     matchMode,
@@ -116,7 +118,7 @@ function HeatmapPage() {
     minUnixTimestamp: minUnixTimestamp ?? 0,
     maxUnixTimestamp,
     minGameTimeS: minGameTime || undefined,
-    maxGameTimeS: maxGameTime < 3600 ? maxGameTime : undefined,
+    maxGameTimeS: maxGameTime < MAX_GAME_TIME_S ? maxGameTime : undefined,
   };
 
   const { hero } = useHeroById(heroId ?? -1);
@@ -143,6 +145,22 @@ function HeatmapPage() {
     killDeathQuery,
     ...(comparesShare ? [baselineQuery] : []),
   );
+
+  // The 2D canvas and the 3D view draw the same data with the same controls.
+  const heatmapProps =
+    mapQuery.data && killDeathQuery.data
+      ? {
+          data: killDeathQuery.data,
+          mapData: mapQuery.data,
+          art: MAP_ART[era],
+          viewMode,
+          sensitivity: sensitivity / 10000,
+          minEvents,
+          baseline: baselineQuery.data,
+          onSensitivityChange: (v: number) => setOutlierSensitivity(Math.round(v * 10000)),
+          scope,
+        }
+      : null;
 
   const handleModeWithRankChange = ({ mode: nextMode, rank: [min, max] }: ModeWithRank) => {
     setMode(nextMode);
@@ -192,10 +210,10 @@ function HeatmapPage() {
           defaultValue={{ startDate: defaultRange[0], endDate: defaultRange[1] }}
         />
         <Filter.TimeRange
-          value={[minGameTime || undefined, maxGameTime < 3600 ? maxGameTime : undefined]}
+          value={[minGameTime || undefined, maxGameTime < MAX_GAME_TIME_S ? maxGameTime : undefined]}
           onValueChange={([min, max]) => {
             void setMinGameTime(min ?? 0);
-            void setMaxGameTime(max ?? 3600);
+            void setMaxGameTime(max ?? MAX_GAME_TIME_S);
           }}
           label="Match Time"
           title="Kill/Death Time Window"
@@ -248,7 +266,7 @@ function HeatmapPage() {
             title="No kills or deaths for these filters"
             description="Kill positions cover matches from the last two months only. Try a more recent date range or wider filters."
           />
-        ) : mapQuery.data && killDeathQuery.data ? (
+        ) : heatmapProps ? (
           <StaleOverlay
             active={killDeathQuery.isPlaceholderData || (comparesShare && baselineQuery.isPlaceholderData)}
             label="heatmap"
@@ -259,32 +277,12 @@ function HeatmapPage() {
                 {/* Browser only: the server build stubs it (plugins/client-only-modules.mjs). */}
                 <ClientOnly fallback={<LoadingState label="3D heatmap" />}>
                   <Suspense fallback={<LoadingState label="3D heatmap" />}>
-                    <Heatmap3D
-                      data={killDeathQuery.data}
-                      mapData={mapQuery.data}
-                      art={MAP_ART[era]}
-                      viewMode={viewMode}
-                      sensitivity={sensitivity / 10000}
-                      minEvents={minEvents}
-                      baseline={baselineQuery.data}
-                      onSensitivityChange={(v) => setOutlierSensitivity(Math.round(v * 10000))}
-                      scope={scope}
-                    />
+                    <Heatmap3D {...heatmapProps} />
                   </Suspense>
                 </ClientOnly>
               </ChunkErrorBoundary>
             ) : (
-              <HeatmapCanvas
-                data={killDeathQuery.data}
-                mapData={mapQuery.data}
-                art={MAP_ART[era]}
-                viewMode={viewMode}
-                sensitivity={sensitivity / 10000}
-                minEvents={minEvents}
-                baseline={baselineQuery.data}
-                onSensitivityChange={(v) => setOutlierSensitivity(Math.round(v * 10000))}
-                scope={scope}
-              />
+              <HeatmapCanvas {...heatmapProps} />
             )}
           </StaleOverlay>
         ) : null}

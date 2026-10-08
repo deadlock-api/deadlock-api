@@ -82,13 +82,6 @@ function LeaderboardPage() {
   const leaderboardQuery = useQuery({ ...leaderboardQueryOptions(region, heroId), placeholderData: keepPreviousData });
   const { isPending, isError, error } = leaderboardQuery;
 
-  const handleHeroClick = useCallback(
-    (id: number) => {
-      setHeroId(id);
-    },
-    [setHeroId],
-  );
-
   return (
     <PageShell>
       <PageHeader title="Deadlock Leaderboard" description="Ranked player standings across all regions">
@@ -120,7 +113,7 @@ function LeaderboardPage() {
           />
         ) : leaderboardQuery.data ? (
           <StaleOverlay active={leaderboardQuery.isPlaceholderData} label="leaderboard">
-            <LeaderboardTable leaderboard={leaderboardQuery.data} onHeroClick={handleHeroClick} />
+            <LeaderboardTable leaderboard={leaderboardQuery.data} onHeroClick={setHeroId} />
           </StaleOverlay>
         ) : null}
       </div>

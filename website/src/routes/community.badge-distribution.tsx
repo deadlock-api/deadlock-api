@@ -54,12 +54,7 @@ export const Route = createFileRoute("/community/badge-distribution")({
     const seasons = await loadSeasons(queryClient);
     const range = defaultUnixRange(seasons, preferences.dateFilter);
     const [distribution, ranks] = await Promise.all([
-      prefetchCached(
-        queryClient,
-        badgeDistributionQueryOptions({
-          ...range,
-        }),
-      ),
+      prefetchCached(queryClient, badgeDistributionQueryOptions(range)),
       prefetchCached(queryClient, ranksQueryOptions),
     ]);
     return {
