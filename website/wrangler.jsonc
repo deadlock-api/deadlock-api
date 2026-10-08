@@ -21,6 +21,7 @@
       "/team-builder", "/team-builder/*", "/leaderboard", "/leaderboard/*",
       "/badge-distribution", "/badge-distribution/*", "/heatmap", "/heatmap/*",
       "/deadlockdle", "/deadlockdle/*", "/flashcards", "/flashcards/*",
+      "/patches", "/patches/*",
       "/data-dumps", "/streamkit", "/crosshair", "/compare", "/og/compare.png", "/og/crosshair.png", "/.well-known/*"
     ]
   },

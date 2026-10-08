@@ -25,6 +25,7 @@ import { Route as HeroesRouteImport } from './routes/heroes'
 import { Route as IngestCacheRouteImport } from './routes/ingest-cache'
 import { Route as ItemsRouteImport } from './routes/items'
 import { Route as LeaderboardRouteImport } from './routes/leaderboard'
+import { Route as PatchesRouteImport } from './routes/patches'
 import { Route as PatronRouteImport } from './routes/patron'
 import { Route as PlayersRouteImport } from './routes/players'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
@@ -67,6 +68,8 @@ import { Route as ItemsIndexRouteImport } from './routes/items.index'
 import { Route as ItemsItemNameRouteImport } from './routes/items.$itemName'
 import { Route as OgCompareDotpngRouteImport } from './routes/og.compare[.]png'
 import { Route as OgCrosshairDotpngRouteImport } from './routes/og.crosshair[.]png'
+import { Route as PatchesIndexRouteImport } from './routes/patches.index'
+import { Route as PatchesPatchIdRouteImport } from './routes/patches.$patchId'
 import { Route as PlayersAccountIdRouteImport } from './routes/players_.$accountId'
 import { Route as StreamkitIndexRouteImport } from './routes/streamkit/index'
 import { Route as TrackerDemoRouteImport } from './routes/tracker_.demo'
@@ -191,6 +194,11 @@ const ItemsRoute = ItemsRouteImport.update({
 const LeaderboardRoute = LeaderboardRouteImport.update({
   id: '/leaderboard',
   path: '/leaderboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PatchesRoute = PatchesRouteImport.update({
+  id: '/patches',
+  path: '/patches',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PatronRoute = PatronRouteImport.update({
@@ -403,6 +411,16 @@ const OgCrosshairDotpngRoute = OgCrosshairDotpngRouteImport.update({
   id: '/og/crosshair.png',
   path: '/og/crosshair.png',
   getParentRoute: () => rootRouteImport,
+} as any)
+const PatchesIndexRoute = PatchesIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => PatchesRoute,
+} as any)
+const PatchesPatchIdRoute = PatchesPatchIdRouteImport.update({
+  id: '/$patchId',
+  path: '/$patchId',
+  getParentRoute: () => PatchesRoute,
 } as any)
 const PlayersAccountIdRoute = PlayersAccountIdRouteImport.update({
   id: '/players_/$accountId',
@@ -662,6 +680,7 @@ export interface FileRoutesByFullPath {
   '/ingest-cache': typeof IngestCacheRoute
   '/items': typeof ItemsRouteWithChildren
   '/leaderboard': typeof LeaderboardRoute
+  '/patches': typeof PatchesRouteWithChildren
   '/patron': typeof PatronRoute
   '/players': typeof PlayersRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -697,6 +716,7 @@ export interface FileRoutesByFullPath {
   '/items/$itemName': typeof ItemsItemNameRoute
   '/og/compare.png': typeof OgCompareDotpngRoute
   '/og/crosshair.png': typeof OgCrosshairDotpngRoute
+  '/patches/$patchId': typeof PatchesPatchIdRoute
   '/players/$accountId': typeof PlayersAccountIdRoute
   '/tracker/demo': typeof TrackerDemoRoute
   '/analytics/': typeof AnalyticsIndexRoute
@@ -706,6 +726,7 @@ export interface FileRoutesByFullPath {
   '/flashcards/': typeof FlashcardsIndexRoute
   '/heroes/': typeof HeroesIndexRoute
   '/items/': typeof ItemsIndexRoute
+  '/patches/': typeof PatchesIndexRoute
   '/streamkit/': typeof StreamkitIndexRoute
   '/analytics/games/buffs': typeof AnalyticsGamesBuffsRoute
   '/analytics/games/by-rank': typeof AnalyticsGamesByRankRoute
@@ -792,6 +813,7 @@ export interface FileRoutesByTo {
   '/items/$itemName': typeof ItemsItemNameRoute
   '/og/compare.png': typeof OgCompareDotpngRoute
   '/og/crosshair.png': typeof OgCrosshairDotpngRoute
+  '/patches/$patchId': typeof PatchesPatchIdRoute
   '/players/$accountId': typeof PlayersAccountIdRoute
   '/tracker/demo': typeof TrackerDemoRoute
   '/analytics': typeof AnalyticsIndexRoute
@@ -801,6 +823,7 @@ export interface FileRoutesByTo {
   '/flashcards': typeof FlashcardsIndexRoute
   '/heroes': typeof HeroesIndexRoute
   '/items': typeof ItemsIndexRoute
+  '/patches': typeof PatchesIndexRoute
   '/streamkit': typeof StreamkitIndexRoute
   '/analytics/games/buffs': typeof AnalyticsGamesBuffsRoute
   '/analytics/games/by-rank': typeof AnalyticsGamesByRankRoute
@@ -863,6 +886,7 @@ export interface FileRoutesById {
   '/ingest-cache': typeof IngestCacheRoute
   '/items': typeof ItemsRouteWithChildren
   '/leaderboard': typeof LeaderboardRoute
+  '/patches': typeof PatchesRouteWithChildren
   '/patron': typeof PatronRoute
   '/players': typeof PlayersRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -898,6 +922,7 @@ export interface FileRoutesById {
   '/items/$itemName': typeof ItemsItemNameRoute
   '/og/compare.png': typeof OgCompareDotpngRoute
   '/og/crosshair.png': typeof OgCrosshairDotpngRoute
+  '/patches/$patchId': typeof PatchesPatchIdRoute
   '/players_/$accountId': typeof PlayersAccountIdRoute
   '/tracker_/demo': typeof TrackerDemoRoute
   '/analytics/': typeof AnalyticsIndexRoute
@@ -907,6 +932,7 @@ export interface FileRoutesById {
   '/flashcards/': typeof FlashcardsIndexRoute
   '/heroes/': typeof HeroesIndexRoute
   '/items/': typeof ItemsIndexRoute
+  '/patches/': typeof PatchesIndexRoute
   '/streamkit/': typeof StreamkitIndexRoute
   '/analytics/games/buffs': typeof AnalyticsGamesBuffsRoute
   '/analytics/games/by-rank': typeof AnalyticsGamesByRankRoute
@@ -970,6 +996,7 @@ export interface FileRouteTypes {
     | '/ingest-cache'
     | '/items'
     | '/leaderboard'
+    | '/patches'
     | '/patron'
     | '/players'
     | '/sitemap.xml'
@@ -1005,6 +1032,7 @@ export interface FileRouteTypes {
     | '/items/$itemName'
     | '/og/compare.png'
     | '/og/crosshair.png'
+    | '/patches/$patchId'
     | '/players/$accountId'
     | '/tracker/demo'
     | '/analytics/'
@@ -1014,6 +1042,7 @@ export interface FileRouteTypes {
     | '/flashcards/'
     | '/heroes/'
     | '/items/'
+    | '/patches/'
     | '/streamkit/'
     | '/analytics/games/buffs'
     | '/analytics/games/by-rank'
@@ -1100,6 +1129,7 @@ export interface FileRouteTypes {
     | '/items/$itemName'
     | '/og/compare.png'
     | '/og/crosshair.png'
+    | '/patches/$patchId'
     | '/players/$accountId'
     | '/tracker/demo'
     | '/analytics'
@@ -1109,6 +1139,7 @@ export interface FileRouteTypes {
     | '/flashcards'
     | '/heroes'
     | '/items'
+    | '/patches'
     | '/streamkit'
     | '/analytics/games/buffs'
     | '/analytics/games/by-rank'
@@ -1170,6 +1201,7 @@ export interface FileRouteTypes {
     | '/ingest-cache'
     | '/items'
     | '/leaderboard'
+    | '/patches'
     | '/patron'
     | '/players'
     | '/sitemap.xml'
@@ -1205,6 +1237,7 @@ export interface FileRouteTypes {
     | '/items/$itemName'
     | '/og/compare.png'
     | '/og/crosshair.png'
+    | '/patches/$patchId'
     | '/players_/$accountId'
     | '/tracker_/demo'
     | '/analytics/'
@@ -1214,6 +1247,7 @@ export interface FileRouteTypes {
     | '/flashcards/'
     | '/heroes/'
     | '/items/'
+    | '/patches/'
     | '/streamkit/'
     | '/analytics/games/buffs'
     | '/analytics/games/by-rank'
@@ -1276,6 +1310,7 @@ export interface RootRouteChildren {
   IngestCacheRoute: typeof IngestCacheRoute
   ItemsRoute: typeof ItemsRouteWithChildren
   LeaderboardRoute: typeof LeaderboardRoute
+  PatchesRoute: typeof PatchesRouteWithChildren
   PatronRoute: typeof PatronRoute
   PlayersRoute: typeof PlayersRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
@@ -1423,6 +1458,13 @@ declare module '@tanstack/react-router' {
       path: '/leaderboard'
       fullPath: '/leaderboard'
       preLoaderRoute: typeof LeaderboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/patches': {
+      id: '/patches'
+      path: '/patches'
+      fullPath: '/patches'
+      preLoaderRoute: typeof PatchesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/patron': {
@@ -1718,6 +1760,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/og/crosshair.png'
       preLoaderRoute: typeof OgCrosshairDotpngRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/patches/': {
+      id: '/patches/'
+      path: '/'
+      fullPath: '/patches/'
+      preLoaderRoute: typeof PatchesIndexRouteImport
+      parentRoute: typeof PatchesRoute
+    }
+    '/patches/$patchId': {
+      id: '/patches/$patchId'
+      path: '/$patchId'
+      fullPath: '/patches/$patchId'
+      preLoaderRoute: typeof PatchesPatchIdRouteImport
+      parentRoute: typeof PatchesRoute
     }
     '/players_/$accountId': {
       id: '/players_/$accountId'
@@ -2106,6 +2162,19 @@ const ItemsRouteChildren: ItemsRouteChildren = {
 
 const ItemsRouteWithChildren = ItemsRoute._addFileChildren(ItemsRouteChildren)
 
+interface PatchesRouteChildren {
+  PatchesPatchIdRoute: typeof PatchesPatchIdRoute
+  PatchesIndexRoute: typeof PatchesIndexRoute
+}
+
+const PatchesRouteChildren: PatchesRouteChildren = {
+  PatchesPatchIdRoute: PatchesPatchIdRoute,
+  PatchesIndexRoute: PatchesIndexRoute,
+}
+
+const PatchesRouteWithChildren =
+  PatchesRoute._addFileChildren(PatchesRouteChildren)
+
 interface AnalyticsGamesRouteChildren {
   AnalyticsGamesBuffsRoute: typeof AnalyticsGamesBuffsRoute
   AnalyticsGamesByRankRoute: typeof AnalyticsGamesByRankRoute
@@ -2258,6 +2327,7 @@ const rootRouteChildren: RootRouteChildren = {
   IngestCacheRoute: IngestCacheRoute,
   ItemsRoute: ItemsRouteWithChildren,
   LeaderboardRoute: LeaderboardRoute,
+  PatchesRoute: PatchesRouteWithChildren,
   PatronRoute: PatronRoute,
   PlayersRoute: PlayersRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,

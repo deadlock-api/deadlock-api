@@ -1,7 +1,10 @@
 import type { Upgrade } from "deadlock_api_client";
 
+import { day } from "~/dayjs";
 import { ANALYTICS_TABS } from "~/lib/analytics-tabs";
 import { api } from "~/lib/api";
+import { fetchPatchList } from "~/lib/patch-list-fns";
+import { INDEXED_PATCHES, isSettled, patchWindows } from "~/lib/patches";
 import { filterPlayableHeroes, filterShopableItems } from "~/queries/asset-queries";
 
 import { heroSlug } from "./hero-slug";
@@ -145,6 +148,27 @@ async function loadItemEntries(): Promise<SitemapEntry[]> {
   }));
 }
 
+/**
+ * `/patches` shows the newest patch, and the next few have pages of their own; older ones are not indexed yet. A
+ * patch's numbers stop changing once its after window closes, which is its lastmod.
+ */
+async function loadPatchEntries(): Promise<SitemapEntry[]> {
+  const patches = await fetchPatchList();
+  const lastmod = (index: number) => {
+    const windows = patchWindows(patches[index], patches[index + 1]);
+    return isSettled(windows, Date.now() / 1000)
+      ? day.unix(windows.after.maxUnixTimestamp).utc().format("YYYY-MM-DD")
+      : undefined;
+  };
+  return [
+    { path: "/patches", lastmod: patches.length > 0 ? lastmod(0) : undefined },
+    ...patches.slice(1, INDEXED_PATCHES).map((patch, index) => ({
+      path: `/patches/${patch.id}`,
+      lastmod: lastmod(index + 1),
+    })),
+  ];
+}
+
 export async function buildSitemapXml(): Promise<string> {
   const blogEntries: SitemapEntry[] = loadBlogEntries().map((post) => ({
     path: `/blog/${post.slug}`,
@@ -157,8 +181,20 @@ export async function buildSitemapXml(): Promise<string> {
       .sort()
       .at(-1),
   };
-  const [heroEntries, itemEntries] = await Promise.all([loadHeroEntries(), loadItemEntries()]);
-  const all = [...STATIC_ENTRIES, ...ANALYTICS_VIEW_ENTRIES, blogIndex, ...blogEntries, ...heroEntries, ...itemEntries];
+  const [heroEntries, itemEntries, patchEntries] = await Promise.all([
+    loadHeroEntries(),
+    loadItemEntries(),
+    loadPatchEntries(),
+  ]);
+  const all = [
+    ...STATIC_ENTRIES,
+    ...ANALYTICS_VIEW_ENTRIES,
+    blogIndex,
+    ...blogEntries,
+    ...heroEntries,
+    ...itemEntries,
+    ...patchEntries,
+  ];
   const body = all.map(renderUrl).join("\n");
   return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${body}\n</urlset>\n`;
 }

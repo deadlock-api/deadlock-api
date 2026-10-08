@@ -32,6 +32,7 @@ const ROUTE_LABELS: Record<string, string> = {
   "/data-privacy": "Data Privacy",
   "/patron": "Prioritized Fetching",
   "/blog": "Blog",
+  "/patches": "Patches",
 };
 
 interface Crumb {

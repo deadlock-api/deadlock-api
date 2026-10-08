@@ -51,6 +51,7 @@ export const Route = createRootRouteWithContext<RouterContext>()({
       isPlayerTracker ||
       pathname === "/community/heatmap" ||
       pathname === "/community/leaderboard" ||
+      /^\/patches(\/|$)/.test(pathname) ||
       pathname === "/games/flashcards/heroes" ||
       pathname.startsWith("/streamkit/widgets/")
     ) {

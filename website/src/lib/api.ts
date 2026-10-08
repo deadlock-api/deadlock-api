@@ -11,6 +11,7 @@ import {
   MapApi,
   MiscEntitiesApi,
   NPCUnitsApi,
+  PatchesApi,
   PlayersApi,
   RankedSeasonsApi,
   RanksApi,
@@ -45,6 +46,7 @@ export class Api {
   public assets_bucket_api: AssetsBucketApi;
   public generic_data_api: GenericDataApi;
   public crosshair_api: CrosshairApi;
+  public patches_api: PatchesApi;
   public client: AxiosInstance;
 
   constructor(config: ApiConfig = DEFAULT_API_CONFIG) {
@@ -65,6 +67,7 @@ export class Api {
     this.assets_bucket_api = new AssetsBucketApi(undefined, API_ORIGIN, axios_client);
     this.generic_data_api = new GenericDataApi(undefined, API_ORIGIN, axios_client);
     this.crosshair_api = new CrosshairApi(undefined, API_ORIGIN, axios_client);
+    this.patches_api = new PatchesApi(undefined, API_ORIGIN, axios_client);
   }
 }
 

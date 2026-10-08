@@ -89,6 +89,8 @@ export default defineConfig({
           !/^\/dev(\/|$)/.test(path) &&
           // Filtered pages and their legacy redirects need request-specific server rendering.
           !/^\/(analytics|community|tracker)(\/|$)/.test(path) &&
+          // Patch pages compare live match data; a build-time copy would freeze the newest patch's numbers.
+          !/^\/patches(\/|$)/.test(path) &&
           !/^\/(games|heroes|items|abilities|players|team-builder|leaderboard|badge-distribution|heatmap)(\/|$)/.test(
             path,
           ) &&
