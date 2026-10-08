@@ -27,16 +27,20 @@ export interface FlashcardEntry {
   name: string;
 }
 
-function pickCard<T extends FlashcardEntry>(pool: T[], excludeIds: Set<number>): FlashcardCard<T, T> | null {
+function pickCard<T extends FlashcardEntry>(
+  pool: T[],
+  excludeIds: Set<number>,
+  random: () => number,
+): FlashcardCard<T, T> | null {
   const answerPool = pool.filter((h) => !excludeIds.has(h.id));
   if (answerPool.length === 0) return null;
-  const answer = answerPool[Math.floor(Math.random() * answerPool.length)];
+  const answer = answerPool[Math.floor(random() * answerPool.length)];
 
   const distractors: T[] = [];
   const used = new Set<number>([answer.id]);
   const optionTarget = Math.min(OPTION_COUNT, pool.length);
   while (distractors.length < optionTarget - 1) {
-    const candidate = pool[Math.floor(Math.random() * pool.length)];
+    const candidate = pool[Math.floor(random() * pool.length)];
     if (used.has(candidate.id)) continue;
     used.add(candidate.id);
     distractors.push(candidate);
@@ -44,7 +48,7 @@ function pickCard<T extends FlashcardEntry>(pool: T[], excludeIds: Set<number>):
 
   const options = [answer, ...distractors];
   for (let i = options.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
+    const j = Math.floor(random() * (i + 1));
     [options[i], options[j]] = [options[j], options[i]];
   }
 

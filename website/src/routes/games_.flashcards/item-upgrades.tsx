@@ -97,10 +97,10 @@ function buildUpgradePathPool(items: SlimUpgrade[]): UpgradePathEntry[] {
     .sort((a, b) => a.target.item_tier - b.target.item_tier || a.target.name.localeCompare(b.target.name));
 }
 
-function shuffle<T>(items: T[]): T[] {
+function shuffle<T>(items: T[], random: () => number): T[] {
   const result = [...items];
   for (let i = result.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
+    const j = Math.floor(random() * (i + 1));
     [result[i], result[j]] = [result[j], result[i]];
   }
   return result;
@@ -146,7 +146,11 @@ function distractorScore(answer: UpgradePathEntry, candidate: UpgradePathEntry):
   );
 }
 
-function rankedDistractors(answer: UpgradePathEntry, pool: UpgradePathEntry[]): UpgradePathOption[] {
+function rankedDistractors(
+  answer: UpgradePathEntry,
+  pool: UpgradePathEntry[],
+  random: () => number,
+): UpgradePathOption[] {
   const usedAnswerKeys = new Set<string>([answer.answerKey]);
   const distractors: UpgradePathOption[] = [];
 
@@ -175,20 +179,20 @@ function rankedDistractors(answer: UpgradePathEntry, pool: UpgradePathEntry[]): 
   addCandidates((entry) => sameComponentCount(entry));
   addCandidates(() => true);
 
-  return shuffle(distractors);
+  return shuffle(distractors, random);
 }
 
-function pickCard(pool: UpgradePathEntry[], excludeIds: Set<number>): UpgradePathCard | null {
+function pickCard(pool: UpgradePathEntry[], excludeIds: Set<number>, random: () => number): UpgradePathCard | null {
   const answerPool = pool.filter((entry) => !excludeIds.has(entry.id));
   if (answerPool.length === 0) return null;
 
-  const answer = answerPool[Math.floor(Math.random() * answerPool.length)];
+  const answer = answerPool[Math.floor(random() * answerPool.length)];
   const answerOption = entryToOption(answer);
-  const distractors = rankedDistractors(answer, pool);
+  const distractors = rankedDistractors(answer, pool, random);
 
   return {
     answer,
-    options: shuffle([answerOption, ...distractors]),
+    options: shuffle([answerOption, ...distractors], random),
   };
 }
 

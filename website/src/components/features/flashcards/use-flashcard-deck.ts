@@ -1,10 +1,37 @@
 import { useEffect, useRef, useState } from "react";
 
 import { type AnswerOptionState, revealedState } from "~/components/domain/minigames/AnswerOption";
+import { seededRandom } from "~/lib/deadlockdle/seed";
 
 import { useAnswerKeys } from "./use-answer-keys";
 import { useFlashcardProgress } from "./use-flashcard-progress";
 import { useNextCardFocus } from "./use-next-card-focus";
+
+/**
+ * A seed drawn once per page load, when the module is evaluated rather than during a render. Every deal is a pure
+ * function of it, the deck, the reshuffle key and the deal's serial, so a render (or StrictMode's second one) deals
+ * the same card, while a new visit deals a different deck order.
+ */
+const SESSION_SEED =
+  typeof crypto !== "undefined" && typeof crypto.getRandomValues === "function"
+    ? crypto.getRandomValues(new Uint32Array(1))[0]
+    : 0x9e3779b9;
+
+/** FNV-1a: a string folded into 32 bits. */
+function hashString(text: string): number {
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < text.length; i++) {
+    hash = Math.imul(hash ^ text.charCodeAt(i), 0x01000193);
+  }
+  return hash >>> 0;
+}
+
+/** The random numbers of one deal. */
+function dealRandom(deck: string, reshuffleKey: string, serial: number): () => number {
+  return seededRandom(
+    (SESSION_SEED ^ hashString(deck) ^ hashString(reshuffleKey) ^ Math.imul(serial, 0x9e3779b1)) >>> 0,
+  );
+}
 
 export interface FlashcardCard<Entry, Option> {
   answer: Entry;
@@ -27,8 +54,11 @@ export interface FlashcardDeckOptions<Entry extends { id: number }, Option> {
   pool: Entry[];
   /** Names the deck's saved settings and progress (`flashcards:<deck>:*` in storage). */
   deck: string;
-  /** Deals a card whose answer is not in `excludeIds`, or null when every entry is excluded. */
-  draw: (pool: Entry[], excludeIds: Set<number>) => FlashcardCard<Entry, Option> | null;
+  /**
+   * Deals a card whose answer is not in `excludeIds`, or null when every entry is excluded. Its randomness comes from
+   * `random` alone, so a deal is the same in every render.
+   */
+  draw: (pool: Entry[], excludeIds: Set<number>, random: () => number) => FlashcardCard<Entry, Option> | null;
   optionKey: (option: Option) => OptionKey;
   /** What an option is called: the face `FlashcardOptions` gives it without children. */
   optionName: (option: Option) => string;
@@ -73,9 +103,11 @@ export function useFlashcardDeck<Entry extends { id: number }, Option>({
   // The first card waits for the saved progress, so "No repeats" never opens on a card already mastered. A new
   // reshuffle key deals again, derived here rather than in an Effect: a reveal pending for the old card is dropped by
   // its serial.
+  const drawFor = (serial: number, exclude: Set<number>) => draw(pool, exclude, dealRandom(deck, reshuffleKey, serial));
+
   if (loaded && deal.dealtFor !== reshuffleKey) {
     setDeal({
-      card: draw(pool, excludeAfter(card, seenIds)),
+      card: drawFor(deal.serial + 1, excludeAfter(card, seenIds)),
       selected: null,
       serial: deal.serial + 1,
       dealtFor: reshuffleKey,
@@ -93,8 +125,12 @@ export function useFlashcardDeck<Entry extends { id: number }, Option>({
     [],
   );
 
-  const dealFresh = (next: FlashcardCard<Entry, Option> | null) =>
-    setDeal((d) => ({ ...d, card: next, selected: null, serial: d.serial + 1 }));
+  /** Deals the next card now (the reset, "No repeats" turned off), past any reveal still pending. */
+  const dealNext = (exclude: Set<number>) => {
+    const serial = deal.serial + 1;
+    const next = drawFor(serial, exclude);
+    setDeal((d) => ({ ...d, card: next, selected: null, serial }));
+  };
 
   const choose = (option: Option) => {
     if (!card || selected !== null) return;
@@ -108,7 +144,7 @@ export function useFlashcardDeck<Entry extends { id: number }, Option>({
     advanceTimer.current = window.setTimeout(
       () => {
         // Drawn here, not in the updater: an updater must be pure (StrictMode runs it twice).
-        const next = draw(pool, exclude);
+        const next = drawFor(serial + 1, exclude);
         setDeal((d) => (d.serial === serial ? { ...d, card: next, selected: null, serial: serial + 1 } : d));
       },
       correct ? feedbackMs.correct : feedbackMs.wrong,
@@ -127,13 +163,13 @@ export function useFlashcardDeck<Entry extends { id: number }, Option>({
   const updateNoRepeats = (value: boolean) => {
     setNoRepeats(value);
     // Allowing repeats again after the pool was mastered: deal a card rather than stay on "mastered".
-    if (!value && card === null && pool.length > 0) dealFresh(draw(pool, new Set()));
+    if (!value && card === null && pool.length > 0) dealNext(new Set());
   };
 
   const reset = () => {
     clearAdvanceTimer();
     resetProgress();
-    dealFresh(draw(pool, new Set()));
+    dealNext(new Set());
   };
 
   const empty = pool.length === 0;
