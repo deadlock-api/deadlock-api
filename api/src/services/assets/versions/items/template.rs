@@ -283,8 +283,8 @@ async fn resolve_inline_attribute(ctx: &TemplateCtx<'_>, css_class: &str) -> Str
                     .strip_prefix(SVGS_BASE_URL)
                     .map_or(bg_url, |p| p.trim_start_matches('/'))
             });
-            if let Some(svg) = fetch_svg(svg_name).await.as_ref().clone() {
-                add_fill_to_svg(&svg, wash.as_deref())
+            if let Some(svg) = fetch_svg(svg_name).await.as_deref() {
+                add_fill_to_svg(svg, wash.as_deref())
             } else if wash.is_some() {
                 format!(
                     "<img src=\"{bg_url}\" class=\"inline-attribute {css_class}\" alt=\"{label}\"/>"

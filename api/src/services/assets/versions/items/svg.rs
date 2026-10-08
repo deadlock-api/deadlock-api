@@ -4,6 +4,7 @@
 //! nested path under `panorama/images/`, e.g. `glyphs/mouse1.svg`) and
 //! cached in-process. Negative responses are cached too so we don't refetch.
 
+use core::time::Duration;
 use std::sync::{Arc, OnceLock};
 
 use cached::macros::cached;
@@ -11,9 +12,16 @@ use regex::Regex;
 
 const ICONS_BASE_URL: &str = "https://assets-bucket.deadlock-api.com/assets-api-res/icons";
 
+/// Timeouts match the shared API client, so a stalled bucket can't hang an item build.
 fn http() -> &'static reqwest::Client {
     static CLIENT: OnceLock<reqwest::Client> = OnceLock::new();
-    CLIENT.get_or_init(reqwest::Client::new)
+    CLIENT.get_or_init(|| {
+        reqwest::Client::builder()
+            .connect_timeout(Duration::from_secs(5))
+            .timeout(Duration::from_secs(30))
+            .build()
+            .unwrap_or_default()
+    })
 }
 
 #[cached(
