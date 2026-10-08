@@ -3935,7 +3935,6 @@ dependencies = [
  "haste_core",
  "http",
  "log",
- "prost",
  "reqwest",
  "serde",
  "serde_json",
