@@ -293,21 +293,6 @@ struct Scan {
     incremental_min_match_id: u64,
 }
 
-/// Read in key order, so it stops at the first granule that matches instead of scanning a week
-/// of `start_time`. Only a scan bound: if nothing qualifies, polls scan the whole table.
-async fn fetch_incremental_min_match_id(ch_client: &Client) -> anyhow::Result<u64> {
-    let min_match_id = ch_client
-        .query(&format!(
-            "SELECT match_id FROM match_player \
-             WHERE start_time > now() - INTERVAL {INCREMENTAL_MAX_MATCH_AGE} \
-             ORDER BY match_id LIMIT 1 \
-             SETTINGS log_comment = 'matchdata_downloader_fetch_incremental_min_match_id'"
-        ))
-        .fetch_optional::<u64>()
-        .await?;
-    Ok(min_match_id.unwrap_or_default())
-}
-
 async fn run_iteration(
     ch_client: &Client,
     store: &Arc<dyn ObjectStore>,
@@ -319,9 +304,14 @@ async fn run_iteration(
         .last_full
         .is_none_or(|t| t.elapsed() >= FULL_SCAN_INTERVAL);
     let min_match_id = if full_scan {
-        scan.incremental_min_match_id = fetch_incremental_min_match_id(ch_client)
-            .await
-            .context("fetching the incremental match id bound")?;
+        // Only a scan bound: if nothing qualifies, polls scan the whole table.
+        scan.incremental_min_match_id = common::fetch_min_match_id_started_within(
+            ch_client,
+            INCREMENTAL_MAX_MATCH_AGE,
+            "matchdata_downloader_fetch_incremental_min_match_id",
+        )
+        .await
+        .context("fetching the incremental match id bound")?;
         0
     } else {
         scan.incremental_min_match_id
@@ -438,10 +428,9 @@ where
     futures::stream::iter(salts.iter())
         .map(|s| async move {
             let r = download_match(bucket, cache_bucket, s).await;
-            if r.is_ok() {
-                gauge!("matchdata_downloader.matches_to_download").decrement(1);
-            } else if let Err(e) = &r {
-                error!("Failed to download match {}: {e:#}", s.match_id);
+            match &r {
+                Ok(_) => gauge!("matchdata_downloader.matches_to_download").decrement(1),
+                Err(e) => error!("Failed to download match {}: {e:#}", s.match_id),
             }
             (s.match_id, r)
         })
@@ -656,15 +645,16 @@ fn metadata_url(salts: &MatchSalts) -> String {
 
 async fn fetch_metadata(salts: &MatchSalts) -> reqwest::Result<Bytes> {
     let url = metadata_url(salts);
-    let result = HTTP_CLIENT
-        .get(&url)
-        .send()
-        .await
-        .and_then(reqwest::Response::error_for_status);
-    let bytes = match result {
-        Ok(resp) => resp.bytes().await,
-        Err(e) => Err(e),
-    };
+    let bytes = async {
+        HTTP_CLIENT
+            .get(&url)
+            .send()
+            .await?
+            .error_for_status()?
+            .bytes()
+            .await
+    }
+    .await;
     match bytes {
         Ok(b) => {
             counter!("matchdata_downloader.fetch_metadata.successful").increment(1);
