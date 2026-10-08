@@ -6,8 +6,8 @@ use serde::Serialize;
 
 use crate::context::AppState;
 use crate::error::APIError;
+use crate::routes::v1::patron::fetch_patron;
 use crate::services::patreon::extractor::PatronSession;
-use crate::services::patreon::repository::PatronRepository;
 use crate::services::patreon::steam_accounts_repository::SteamAccountsRepository;
 
 /// Summary of the patron's Steam accounts
@@ -36,26 +36,7 @@ pub(crate) async fn get_patron_status(
     State(app_state): State<AppState>,
     session: PatronSession,
 ) -> Result<impl IntoResponse, APIError> {
-    // Fetch patron record from database
-    let patron_repo = PatronRepository::new(
-        app_state.pg_client.clone(),
-        app_state.config.patron_encryption_key.clone(),
-    );
-
-    let patron = patron_repo
-        .get_patron_by_id(session.patron_id)
-        .await
-        .map_err(|e| {
-            tracing::error!("Failed to get patron: {e}");
-            APIError::internal("Failed to fetch patron data")
-        })?
-        .ok_or_else(|| {
-            tracing::error!(
-                "Patron not found for session patron_id: {}",
-                session.patron_id
-            );
-            APIError::internal("Patron record not found")
-        })?;
+    let patron = fetch_patron(&app_state, session.patron_id).await?;
 
     // Get Steam account counts
     let steam_repo = SteamAccountsRepository::new(app_state.pg_client.clone());
