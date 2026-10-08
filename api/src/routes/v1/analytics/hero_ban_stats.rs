@@ -1,5 +1,3 @@
-use crate::utils::sql::cached_ch_query;
-use crate::utils::sql::impl_match_info;
 use axum::Json;
 use axum::extract::State;
 use axum::response::IntoResponse;
@@ -18,6 +16,7 @@ use crate::routes::v1::matches::types::MatchMode;
 use crate::utils::parse::{
     MIN_DEMO_PLAYER_TIMESTAMP, comma_separated_deserialize_option, default_last_month_timestamp,
 };
+use crate::utils::sql::{cached_ch_query, impl_match_info};
 
 #[derive(Debug, Clone, Copy, Deserialize, ToSchema, Default, Display, PartialEq, Eq, Hash)]
 #[cfg_attr(test, derive(proptest_derive::Arbitrary))]

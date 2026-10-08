@@ -1,5 +1,3 @@
-use crate::utils::sql::cached_ch_query;
-use crate::utils::sql::impl_match_info;
 use axum::Json;
 use axum::extract::State;
 use axum::http::StatusCode;
@@ -18,11 +16,11 @@ use super::common_filters::{
 };
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
-use crate::routes::v1::matches::types::reject_brawl_badge_filter;
-use crate::routes::v1::matches::types::{GameMode, MatchMode};
+use crate::routes::v1::matches::types::{GameMode, MatchMode, reject_brawl_badge_filter};
 use crate::utils::parse::{
     comma_separated_deserialize_option, default_last_month_timestamp, parse_steam_id_option,
 };
+use crate::utils::sql::{cached_ch_query, id_list, impl_match_info};
 
 fn default_comb_size() -> Option<u8> {
     2.into()
@@ -202,7 +200,7 @@ fn build_query(query: &ItemPermutationStatsQuery) -> String {
         if item_ids.len() < 2 {
             return String::new();
         }
-        let items_list = format!("[{}]", item_ids.iter().map(ToString::to_string).join(", "));
+        let items_list = format!("[{}]", id_list(item_ids));
         // `hasAll(items.item_id, ...)` stays as-is so the bf_items_item_id skip index still
         // prunes; the corruption-aware check is an extra predicate on the surviving rows.
         let (owned_items, corrupted_filter) = if include_corrupted {

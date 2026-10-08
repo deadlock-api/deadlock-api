@@ -1,7 +1,6 @@
-use crate::routes::v1::players::ensure_not_protected;
 use crate::utils::sql::{
     DURATION_COLUMN, MAX_FILTERING_AVERAGE_BADGE, MIN_FILTERING_AVERAGE_BADGE, MatchInfoFilters,
-    average_badge_filter,
+    average_badge_filter, id_list,
 };
 use axum::Json;
 use axum::extract::{Path, State};
@@ -9,14 +8,13 @@ use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum_extra::extract::Query;
 use clickhouse::Row;
-use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
-use crate::routes::v1::matches::types::reject_brawl_badge_filter;
-use crate::routes::v1::matches::types::{GameMode, MatchMode};
+use crate::routes::v1::matches::types::{GameMode, MatchMode, reject_brawl_badge_filter};
+use crate::routes::v1::players::ensure_not_protected;
 use crate::services::clickhouse_batcher::{BatchQueryGrouped, ClickhouseBatcherGrouped};
 use crate::utils::parse::{comma_separated_deserialize, comma_separated_deserialize_option};
 use crate::utils::types::AccountIdQuery;
@@ -141,11 +139,8 @@ const MVP_RANK_SINCE_MATCH_ID: u64 = 50_367_982;
 
 #[expect(clippy::too_many_lines)]
 fn build_query(query: &HeroStatsQuery) -> String {
-    let account_ids = query.account_ids.iter().map(ToString::to_string).join(",");
-    let hero_ids_in = query
-        .hero_ids
-        .as_ref()
-        .map(|heroes| heroes.iter().map(ToString::to_string).join(","));
+    let account_ids = id_list(&query.account_ids);
+    let hero_ids_in = query.hero_ids.as_ref().map(|heroes| id_list(heroes));
 
     let mut mp_filters = vec![
         format!("account_id IN ({account_ids})"),

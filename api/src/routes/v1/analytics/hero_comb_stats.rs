@@ -1,5 +1,3 @@
-use crate::utils::sql::cached_ch_query;
-use crate::utils::sql::impl_match_info;
 use core::ops::AddAssign;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -21,11 +19,11 @@ use super::common_filters::{
 };
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
-use crate::routes::v1::matches::types::reject_brawl_badge_filter;
-use crate::routes::v1::matches::types::{GameMode, MatchMode};
+use crate::routes::v1::matches::types::{GameMode, MatchMode, reject_brawl_badge_filter};
 use crate::utils::parse::{
     comma_separated_deserialize_option, default_last_month_timestamp, parse_steam_id_option,
 };
+use crate::utils::sql::{cached_ch_query, having_clause, id_list, impl_match_info};
 
 fn default_comb_size() -> Option<u8> {
     6.into()
@@ -187,10 +185,7 @@ fn build_query(query: &HeroCombStatsQuery) -> String {
         account_filter_values.extend(account_ids.iter().copied());
     }
     let has_account_filter = !account_filter_values.is_empty();
-    let account_list = account_filter_values
-        .iter()
-        .map(ToString::to_string)
-        .join(", ");
+    let account_list = id_list(&account_filter_values);
     let account_prefilter = if has_account_filter {
         format!(
             " AND match_id IN (SELECT match_id FROM match_player WHERE account_id IN ({account_list}))"
@@ -223,11 +218,7 @@ fn build_query(query: &HeroCombStatsQuery) -> String {
             hero_id_mask(exclude_enemy_hero_ids)
         ));
     }
-    let grouped_filters = if grouped_filters.is_empty() {
-        String::new()
-    } else {
-        format!(" AND {}", grouped_filters.join(" AND "))
-    };
+    let grouped_filters = join_filters(&grouped_filters);
     let mut having_filters = vec![];
     if let Some(min_matches) = query.min_matches {
         having_filters.push(format!(
@@ -238,11 +229,7 @@ fn build_query(query: &HeroCombStatsQuery) -> String {
     if let Some(max_matches) = query.max_matches {
         having_filters.push(format!("matches <= {max_matches}"));
     }
-    let having_clause = if having_filters.is_empty() {
-        String::new()
-    } else {
-        format!("HAVING {}", having_filters.join(" AND "))
-    };
+    let having_clause = having_clause(&having_filters);
     let game_mode_filter = GameMode::sql_filter(query.game_mode);
     let match_mode_filter = MatchMode::sql_filter(query.match_mode.as_deref());
 
@@ -258,7 +245,7 @@ fn build_query(query: &HeroCombStatsQuery) -> String {
     let hero_prefilter = if required_hero_ids.is_empty() {
         String::new()
     } else {
-        let hero_list = required_hero_ids.iter().map(ToString::to_string).join(", ");
+        let hero_list = id_list(&required_hero_ids);
         let hero_mask = hero_id_mask(&required_hero_ids);
         format!(
             " AND match_id IN (SELECT match_id FROM match_player WHERE {match_mode_filter} AND \

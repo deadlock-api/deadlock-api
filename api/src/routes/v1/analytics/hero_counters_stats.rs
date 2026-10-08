@@ -1,11 +1,8 @@
-use crate::utils::sql::cached_ch_query;
-use crate::utils::sql::impl_match_info;
 use axum::Json;
 use axum::extract::State;
 use axum::response::IntoResponse;
 use axum_extra::extract::Query;
 use clickhouse::Row;
-use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tracing::debug;
@@ -14,12 +11,12 @@ use utoipa::{IntoParams, ToSchema};
 use super::common_filters::{default_min_matches_u64, filter_protected_accounts, round_timestamps};
 use crate::context::AppState;
 use crate::error::APIResult;
-use crate::routes::v1::matches::types::reject_brawl_badge_filter;
-use crate::routes::v1::matches::types::{GameMode, MatchMode};
+use crate::routes::v1::matches::types::{GameMode, MatchMode, reject_brawl_badge_filter};
 use crate::utils::parse::{
     comma_separated_deserialize_option, default_last_month_timestamp, default_true_option,
     parse_steam_id_option,
 };
+use crate::utils::sql::{cached_ch_query, having_clause, id_list, impl_match_info};
 
 fn default_min_matches() -> Option<u64> {
     default_min_matches_u64()
@@ -147,7 +144,6 @@ pub struct HeroCounterStats {
     enemy_creeps: u64,
 }
 
-#[expect(clippy::too_many_lines)]
 fn build_query(query: &HeroCounterStatsQuery) -> String {
     let info_filters = query.match_info().build();
     let game_mode_filter = GameMode::sql_filter(query.game_mode);
@@ -163,10 +159,7 @@ fn build_query(query: &HeroCounterStatsQuery) -> String {
         p1_filters.push(format!("account_id = {account_id}"));
     }
     if let Some(account_ids) = &query.account_ids {
-        p1_filters.push(format!(
-            "account_id IN ({})",
-            account_ids.iter().map(ToString::to_string).join(",")
-        ));
+        p1_filters.push(format!("account_id IN ({})", id_list(account_ids)));
     }
     if let Some(min_networth) = query.min_networth {
         p1_filters.push(format!("net_worth >= {min_networth}"));
@@ -189,11 +182,7 @@ fn build_query(query: &HeroCounterStatsQuery) -> String {
     if let Some(max_matches) = query.max_matches {
         having_filters.push(format!("matches_played <= {max_matches}"));
     }
-    let having_clause = if having_filters.is_empty() {
-        String::new()
-    } else {
-        format!("HAVING {}", having_filters.join(" AND "))
-    };
+    let having_clause = having_clause(&having_filters);
     let join_keys = if query.same_lane_filter.unwrap_or(true) {
         "ON p1.match_id = p2.match_id AND p1.team != p2.team AND p1.assigned_lane = p2.assigned_lane"
     } else {

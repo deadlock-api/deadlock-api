@@ -1,4 +1,3 @@
-use crate::routes::v1::players::ensure_not_protected;
 use std::collections::{HashMap, HashSet};
 
 use axum::Json;
@@ -14,6 +13,7 @@ use utoipa::{IntoParams, ToSchema};
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
+use crate::routes::v1::players::ensure_not_protected;
 use crate::routes::v1::players::steam::update::{
     MAX_REFRESH_ACCOUNT_IDS, SteamProfileInsertRow, refresh_steam_profiles,
 };

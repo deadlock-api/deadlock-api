@@ -1,6 +1,3 @@
-use crate::utils::sql::cached_ch_query;
-use crate::utils::sql::impl_match_info;
-use crate::utils::sql::{MAX_FILTERING_AVERAGE_BADGE, MIN_FILTERING_AVERAGE_BADGE};
 use axum::Json;
 use axum::extract::State;
 use axum::response::IntoResponse;
@@ -17,10 +14,12 @@ use super::common_filters::{
 };
 use crate::context::AppState;
 use crate::error::APIResult;
-use crate::routes::v1::matches::types::reject_brawl_badge_filter;
-use crate::routes::v1::matches::types::{GameMode, MatchMode};
+use crate::routes::v1::matches::types::{GameMode, MatchMode, reject_brawl_badge_filter};
 use crate::utils::parse::{
     comma_separated_deserialize_option, default_last_month_timestamp, parse_steam_id_option,
+};
+use crate::utils::sql::{
+    MAX_FILTERING_AVERAGE_BADGE, MIN_FILTERING_AVERAGE_BADGE, cached_ch_query, impl_match_info,
 };
 
 #[derive(Debug, Clone, Copy, Deserialize, ToSchema, Default, Display, PartialEq, Eq, Hash)]

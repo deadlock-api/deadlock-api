@@ -1,4 +1,3 @@
-use crate::routes::v1::players::ensure_not_protected;
 use core::time::Duration;
 
 use axum::Json;
@@ -14,6 +13,7 @@ use utoipa::ToSchema;
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
+use crate::routes::v1::players::ensure_not_protected;
 use crate::services::clickhouse_batcher::{BatchQuery, ClickhouseBatcher, in_clause};
 use crate::services::rank_image::{self, RankImageFormat, RankImageQuery};
 use crate::services::rate_limiter::Quota;

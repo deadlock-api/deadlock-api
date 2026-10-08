@@ -1,5 +1,3 @@
-use itertools::Itertools;
-
 /// SQL predicate `{column} {op} {value}` on a Nullable `average_badge` column.
 ///
 /// The comparison is combined with `AND` with the same comparison on `ifNull({column}, 0)`, which is the
@@ -231,7 +229,24 @@ impl MatchPoolFilters {
 
 /// Comma separated list of ids for an SQL `IN (...)` or array literal.
 pub(crate) fn id_list<T: core::fmt::Display>(ids: &[T]) -> String {
-    ids.iter().map(ToString::to_string).join(", ")
+    use core::fmt::Write;
+    let mut out = String::new();
+    for (i, id) in ids.iter().enumerate() {
+        if i > 0 {
+            out.push_str(", ");
+        }
+        let _ = write!(out, "{id}");
+    }
+    out
+}
+
+/// Formats `filters` as `HAVING ... AND ...`, or an empty string when there are none.
+pub(crate) fn having_clause(filters: &[String]) -> String {
+    if filters.is_empty() {
+        String::new()
+    } else {
+        format!("HAVING {}", filters.join(" AND "))
+    }
 }
 
 /// Formats a filter vec as ` AND ...` or empty string.
@@ -308,6 +323,12 @@ mod tests {
             filters.predicates("", ROSTER_DURATION_COLUMN),
             ["match_duration_s >= 1", "match_duration_s <= 2"]
         );
+    }
+
+    #[test]
+    fn test_id_list() {
+        assert_eq!(id_list::<u32>(&[]), "");
+        assert_eq!(id_list(&[1_u32, 2, 3]), "1, 2, 3");
     }
 
     #[test]

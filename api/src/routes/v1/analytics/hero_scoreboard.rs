@@ -1,12 +1,9 @@
-use crate::utils::sql::cached_ch_query;
-use crate::utils::sql::impl_match_info;
 use axum::Json;
 use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum_extra::extract::Query;
 use clickhouse::Row;
-use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tracing::debug;
@@ -16,11 +13,11 @@ use super::common_filters::{filter_protected_accounts, round_timestamps};
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::analytics::scoreboard_types::ScoreboardQuerySortBy;
-use crate::routes::v1::matches::types::reject_brawl_badge_filter;
-use crate::routes::v1::matches::types::{GameMode, MatchMode};
+use crate::routes::v1::matches::types::{GameMode, MatchMode, reject_brawl_badge_filter};
 use crate::utils::parse::{
     comma_separated_deserialize_option, default_last_month_timestamp, parse_steam_id_option,
 };
+use crate::utils::sql::{cached_ch_query, id_list, impl_match_info};
 use crate::utils::types::SortDirectionDesc;
 
 #[derive(Eq, Hash, PartialEq, Debug, Clone, Deserialize, IntoParams, Default)]
@@ -115,10 +112,7 @@ fn build_query(query: &HeroScoreboardQuery) -> String {
         player_filters.push(format!("account_id = {account_id}"));
     }
     if let Some(account_ids) = &query.account_ids {
-        player_filters.push(format!(
-            "account_id IN ({})",
-            account_ids.iter().map(ToString::to_string).join(",")
-        ));
+        player_filters.push(format!("account_id IN ({})", id_list(account_ids)));
     }
     if let Some(min_networth) = query.min_networth {
         player_filters.push(format!("net_worth >= {min_networth}"));

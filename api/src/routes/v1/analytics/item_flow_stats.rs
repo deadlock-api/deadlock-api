@@ -1,5 +1,3 @@
-use crate::utils::sql::cached_ch_query;
-use crate::utils::sql::impl_match_info;
 use axum::Json;
 use axum::extract::State;
 use axum::http::StatusCode;
@@ -16,9 +14,9 @@ use super::common_filters::{
 };
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
-use crate::routes::v1::matches::types::reject_brawl_badge_filter;
-use crate::routes::v1::matches::types::{GameMode, MatchMode};
+use crate::routes::v1::matches::types::{GameMode, MatchMode, reject_brawl_badge_filter};
 use crate::utils::parse::{comma_separated_deserialize_option, default_last_month_timestamp};
+use crate::utils::sql::{cached_ch_query, id_list, impl_match_info};
 
 fn default_min_matches() -> Option<u32> {
     20.into()
@@ -316,14 +314,7 @@ fn query_parts(query: &ItemFlowStatsQuery) -> QueryParts {
     } else {
         TIME_PHASE_COLUMNS
     };
-    let boundaries_literal = format!(
-        "[{}]",
-        TIME_PHASE_BOUNDARIES
-            .iter()
-            .map(ToString::to_string)
-            .collect::<Vec<_>>()
-            .join(", ")
-    );
+    let boundaries_literal = format!("[{}]", id_list(TIME_PHASE_BOUNDARIES));
     // The 0-based column (clamped) a purchase at `buy_time_expr` falls into, matching node placement.
     // `b <= buy_time` puts a boundary minute into the *later* phase (e.g. 9:00 → 9-20m), so a
     // 12-minute purchase lands in 9-20m, never in 0-9m.

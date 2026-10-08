@@ -1,7 +1,5 @@
 use std::sync::Arc;
 
-use crate::routes::v1::players::ensure_not_protected;
-use crate::utils::sql::impl_match_info;
 use axum::Json;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
@@ -15,9 +13,10 @@ use utoipa::{IntoParams, ToSchema};
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::matches::types::GameMode;
+use crate::routes::v1::players::ensure_not_protected;
 use crate::routes::v1::players::roster_stats::{RosterSide, RosterStatsQuery};
 use crate::routes::v1::players::steam::route::SteamProfileBatcher;
-use crate::utils::sql::cached_ch_query;
+use crate::utils::sql::{cached_ch_query, impl_match_info};
 use crate::utils::types::AccountIdQuery;
 
 #[derive(Copy, Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash, Default)]

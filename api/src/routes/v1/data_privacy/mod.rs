@@ -12,6 +12,7 @@ use crate::error::{APIError, APIResult};
 use crate::services::steam::client::GET_PROTECTED_USERS_CACHED;
 use crate::utils;
 use crate::utils::parse::parse_steam_id;
+use crate::utils::sql::id_list;
 
 #[derive(Clone, Deserialize, IntoParams, ToSchema)]
 pub(crate) struct DataPrivacyRequest {
@@ -88,11 +89,7 @@ pub(crate) async fn update_row_policy(
         return Ok(());
     }
 
-    let protected_accounts_list = protected_accounts
-        .iter()
-        .map(ToString::to_string)
-        .collect::<Vec<String>>()
-        .join(", ");
+    let protected_accounts_list = id_list(&protected_accounts);
     let policy_queries = [
         format!(
             "CREATE ROW POLICY OR REPLACE gdpr_protection_mp ON match_player AS RESTRICTIVE FOR SELECT USING (account_id NOT IN ({protected_accounts_list})) TO api_readonly_user, dump_user"

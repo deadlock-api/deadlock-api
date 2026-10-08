@@ -15,6 +15,7 @@ use crate::routes::v1::players::mmr::mmr_history::MMRHistory;
 use crate::routes::v1::players::rank::badge_from_flat_progress_sql;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::utils::parse::comma_separated_deserialize;
+use crate::utils::sql::id_list;
 
 #[derive(Deserialize, IntoParams, Clone)]
 pub(crate) struct MMRBatchQuery {
@@ -46,11 +47,7 @@ fn build_mmr_query_inner(
     max_match_id: Option<u64>,
     log_comment: &str,
 ) -> String {
-    let account_ids = account_ids
-        .iter()
-        .map(ToString::to_string)
-        .collect::<Vec<_>>()
-        .join(",");
+    let account_ids = id_list(account_ids);
     let match_id_filter = max_match_id.map_or_default(|m| format!("AND match_id <= {m}"));
     let hero_filter = hero_id.map_or_default(|id| format!("AND hero_id = {id}"));
     let badge = badge_from_flat_progress_sql(

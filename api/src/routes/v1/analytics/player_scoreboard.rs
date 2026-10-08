@@ -1,6 +1,3 @@
-use crate::utils::sql::cached_ch_query;
-use crate::utils::sql::impl_match_info;
-use crate::utils::sql::{MAX_FILTERING_AVERAGE_BADGE, MIN_FILTERING_AVERAGE_BADGE};
 use std::sync::Arc;
 
 use axum::Json;
@@ -18,9 +15,12 @@ use super::common_filters::{default_min_matches_u32, filter_protected_accounts, 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::analytics::scoreboard_types::ScoreboardQuerySortBy;
-use crate::routes::v1::matches::types::reject_brawl_badge_filter;
-use crate::routes::v1::matches::types::{GameMode, MatchMode};
+use crate::routes::v1::matches::types::{GameMode, MatchMode, reject_brawl_badge_filter};
 use crate::utils::parse::comma_separated_deserialize_option;
+use crate::utils::sql::{
+    MAX_FILTERING_AVERAGE_BADGE, MIN_FILTERING_AVERAGE_BADGE, cached_ch_query, id_list,
+    impl_match_info,
+};
 use crate::utils::types::SortDirectionDesc;
 
 fn default_limit() -> Option<u32> {
@@ -218,10 +218,7 @@ fn build_query(query: &PlayerScoreboardQuery) -> String {
         inner_filters.push(format!("net_worth <= {max_networth}"));
     }
     if let Some(account_ids) = &query.account_ids {
-        inner_filters.push(format!(
-            "has([{}], account_id)",
-            account_ids.iter().map(|i| (*i).to_string()).join(", ")
-        ));
+        inner_filters.push(format!("has([{}], account_id)", id_list(account_ids)));
     }
     let where_clause = format!(" WHERE {} ", inner_filters.join(" AND "));
 

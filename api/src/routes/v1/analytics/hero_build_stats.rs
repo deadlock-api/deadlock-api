@@ -1,5 +1,3 @@
-use crate::utils::sql::cached_ch_query;
-use crate::utils::sql::impl_match_info;
 use std::collections::HashSet;
 use std::sync::Arc;
 
@@ -8,7 +6,6 @@ use axum::extract::{Path, State};
 use axum::response::IntoResponse;
 use axum_extra::extract::Query;
 use clickhouse::Row;
-use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use sqlx::{Pool, Postgres};
 use tracing::debug;
@@ -25,6 +22,7 @@ use crate::utils::parse::{
     MIN_DEMO_PLAYER_TIMESTAMP, comma_separated_deserialize_option, default_last_month_timestamp,
     parse_steam_id_option,
 };
+use crate::utils::sql::{cached_ch_query, id_list, impl_match_info, join_filters};
 
 fn default_min_matches() -> Option<u64> {
     default_min_matches_u64()
@@ -132,10 +130,7 @@ fn build_query(hero_id: u32, query: &HeroBuildStatsQuery) -> String {
         player_filters.push(format!("mp.account_id = {account_id}"));
     }
     if let Some(account_ids) = &query.account_ids {
-        player_filters.push(format!(
-            "mp.account_id IN ({})",
-            account_ids.iter().map(ToString::to_string).join(",")
-        ));
+        player_filters.push(format!("mp.account_id IN ({})", id_list(account_ids)));
     }
     if let Some(hero_build_id) = query.hero_build_id {
         player_filters.push(format!("mp.hero_build_id = {hero_build_id}"));
@@ -150,7 +145,7 @@ fn build_query(hero_id: u32, query: &HeroBuildStatsQuery) -> String {
     {
         player_filters.push(ability_unlock_order_prefix_filter(ids));
     }
-    let player_filters = format!(" AND {}", player_filters.join(" AND "));
+    let player_filters = join_filters(&player_filters);
     let min_matches = query.min_matches.unwrap_or(20);
     format!(
         "

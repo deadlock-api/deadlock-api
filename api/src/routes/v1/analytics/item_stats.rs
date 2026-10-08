@@ -1,6 +1,3 @@
-use crate::utils::sql::cached_ch_query;
-use crate::utils::sql::impl_match_info;
-use crate::utils::sql::{MAX_FILTERING_AVERAGE_BADGE, MIN_FILTERING_AVERAGE_BADGE};
 use axum::Json;
 use axum::extract::State;
 use axum::http::StatusCode;
@@ -21,11 +18,14 @@ use super::common_filters::{
 };
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
-use crate::routes::v1::matches::types::reject_brawl_badge_filter;
-use crate::routes::v1::matches::types::{GameMode, MatchMode};
+use crate::routes::v1::matches::types::{GameMode, MatchMode, reject_brawl_badge_filter};
 use crate::utils::parse::{
     comma_separated_chains_deserialize_option, comma_separated_deserialize_option,
     default_last_month_timestamp, parse_steam_id_option,
+};
+use crate::utils::sql::{
+    MAX_FILTERING_AVERAGE_BADGE, MIN_FILTERING_AVERAGE_BADGE, cached_ch_query, having_clause,
+    id_list, impl_match_info,
 };
 
 /// Maximum number of independent `item_order` chains accepted per request.
@@ -417,7 +417,6 @@ const MV_ROUTING_MARGIN_DAYS: i64 = 5;
 /// request falls within the "global meta" subset it materializes, else `None`
 /// (the caller then uses the base-table query). See `clickhouse/item_stats_agg.sql`
 /// for the grain and the list of what is and isn't covered.
-#[expect(clippy::too_many_lines)]
 fn build_mv_query(query: &ItemStatsQuery) -> Option<String> {
     let bucket_expr = query.bucket.mv_bucket_expr()?;
 
@@ -497,10 +496,7 @@ fn build_mv_query(query: &ItemStatsQuery) -> Option<String> {
         filters.push(format!("greatest_badge <= {v}"));
     }
     if !hero_ids.is_empty() {
-        filters.push(format!(
-            "hero_id IN ({})",
-            hero_ids.iter().map(ToString::to_string).join(", ")
-        ));
+        filters.push(format!("hero_id IN ({})", id_list(&hero_ids)));
     }
     let where_clause = filters.join(" AND ");
 
@@ -512,11 +508,7 @@ fn build_mv_query(query: &ItemStatsQuery) -> Option<String> {
     if let Some(max_matches) = query.max_matches {
         having_filters.push(format!("matches <= {max_matches}"));
     }
-    let having_clause = if having_filters.is_empty() {
-        String::new()
-    } else {
-        format!("HAVING {}", having_filters.join(" AND "))
-    };
+    let having_clause = having_clause(&having_filters);
 
     // The per-row averages equal the base query's avg()/avgIf(): the denominators
     // (matches, n_sold) are the same counts. players_state is a uniqCombined(14) state
@@ -669,11 +661,7 @@ fn build_cohort_mv_query(query: &ItemStatsQuery) -> Option<String> {
     if let Some(max_matches) = query.max_matches {
         having_filters.push(format!("matches <= {max_matches}"));
     }
-    let having_clause = if having_filters.is_empty() {
-        String::new()
-    } else {
-        format!("HAVING {}", having_filters.join(" AND "))
-    };
+    let having_clause = having_clause(&having_filters);
 
     Some(format!(
         "
@@ -791,11 +779,7 @@ fn build_enemy_mv_query(query: &ItemStatsQuery) -> Option<String> {
     if let Some(max_matches) = query.max_matches {
         having_filters.push(format!("matches <= {max_matches}"));
     }
-    let having_clause = if having_filters.is_empty() {
-        String::new()
-    } else {
-        format!("HAVING {}", having_filters.join(" AND "))
-    };
+    let having_clause = having_clause(&having_filters);
 
     Some(format!(
         "
@@ -1058,11 +1042,7 @@ fn build_query(query: &ItemStatsQuery) -> String {
     if let Some(max_matches) = query.max_matches {
         having_filters.push(format!("matches <= {max_matches}"));
     }
-    let having_clause = if having_filters.is_empty() {
-        String::new()
-    } else {
-        format!("HAVING {}", having_filters.join(" AND "))
-    };
+    let having_clause = having_clause(&having_filters);
 
     /* ---------- enemy-team filter (optional) ---------- */
     let enemy_hero_ids = query
@@ -1103,7 +1083,7 @@ fn build_query(query: &ItemStatsQuery) -> String {
             AND hero_id IN ({})
         GROUP BY match_id, team{enemy_having_clause}
     )",
-            unique_ids.iter().map(ToString::to_string).join(", ")
+            id_list(&unique_ids)
         );
         // A semi-join on (match, opposing team[, lane]) instead of `INNER JOIN t_enemy_teams`:
         // the join hashed every row of the window before discarding the buyer's own team,

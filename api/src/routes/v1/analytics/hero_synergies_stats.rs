@@ -1,12 +1,8 @@
-use crate::utils::sql::DURATION_COLUMN;
-use crate::utils::sql::cached_ch_query;
-use crate::utils::sql::impl_match_info;
 use axum::Json;
 use axum::extract::State;
 use axum::response::IntoResponse;
 use axum_extra::extract::Query;
 use clickhouse::Row;
-use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tracing::debug;
@@ -15,11 +11,13 @@ use utoipa::{IntoParams, ToSchema};
 use super::common_filters::{default_min_matches_u64, filter_protected_accounts, round_timestamps};
 use crate::context::AppState;
 use crate::error::APIResult;
-use crate::routes::v1::matches::types::reject_brawl_badge_filter;
-use crate::routes::v1::matches::types::{GameMode, MatchMode};
+use crate::routes::v1::matches::types::{GameMode, MatchMode, reject_brawl_badge_filter};
 use crate::utils::parse::{
     comma_separated_deserialize_option, default_last_month_timestamp, default_true_option,
     parse_steam_id_option,
+};
+use crate::utils::sql::{
+    DURATION_COLUMN, cached_ch_query, having_clause, id_list, impl_match_info,
 };
 
 fn default_min_matches() -> Option<u64> {
@@ -187,10 +185,7 @@ fn build_query(query: &HeroSynergyStatsQuery) -> String {
         pair_filters.push(format!("(p.1).11 = {account_id}"));
     }
     if let Some(account_ids) = &query.account_ids {
-        pair_filters.push(format!(
-            "(p.1).11 IN ({})",
-            account_ids.iter().map(ToString::to_string).join(",")
-        ));
+        pair_filters.push(format!("(p.1).11 IN ({})", id_list(account_ids)));
     }
     let pair_predicate = pair_filters.join(" AND ");
 
@@ -207,11 +202,7 @@ fn build_query(query: &HeroSynergyStatsQuery) -> String {
     if let Some(max_matches) = query.max_matches {
         having_filters.push(format!("matches_played <= {max_matches}"));
     }
-    let having_clause = if having_filters.is_empty() {
-        String::new()
-    } else {
-        format!("HAVING {}", having_filters.join(" AND "))
-    };
+    let having_clause = having_clause(&having_filters);
     // No `optimize_use_projections = 0`: with skip indexes evaluated at planning time
     // (`use_skip_indexes_on_data_read = 0` on the clients) the planner picks the hero-led
     // projection only when it prunes better. Measured on production shapes: identical results,

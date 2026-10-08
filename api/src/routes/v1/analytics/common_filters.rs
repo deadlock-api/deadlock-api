@@ -54,19 +54,13 @@ impl PlayerFilters<'_> {
         if let Some(hero_ids) = self.hero_ids
             && !hero_ids.is_empty()
         {
-            filters.push(format!(
-                "hero_id IN ({})",
-                hero_ids.iter().map(ToString::to_string).join(", ")
-            ));
+            filters.push(format!("hero_id IN ({})", id_list(hero_ids)));
         }
         if let Some(account_id) = self.account_id {
             filters.push(format!("account_id = {account_id}"));
         }
         if let Some(account_ids) = self.account_ids {
-            filters.push(format!(
-                "account_id IN ({})",
-                account_ids.iter().map(ToString::to_string).join(", ")
-            ));
+            filters.push(format!("account_id IN ({})", id_list(account_ids)));
         }
         if let Some(v) = self.min_networth {
             filters.push(format!("net_worth >= {v}"));
@@ -75,16 +69,10 @@ impl PlayerFilters<'_> {
             filters.push(format!("net_worth <= {v}"));
         }
         if let Some(ids) = self.include_item_ids {
-            filters.push(format!(
-                "hasAll(items.item_id, [{}])",
-                ids.iter().map(ToString::to_string).join(", ")
-            ));
+            filters.push(format!("hasAll(items.item_id, [{}])", id_list(ids)));
         }
         if let Some(ids) = self.exclude_item_ids {
-            filters.push(format!(
-                "not hasAny(items.item_id, [{}])",
-                ids.iter().map(ToString::to_string).join(", ")
-            ));
+            filters.push(format!("not hasAny(items.item_id, [{}])", id_list(ids)));
         }
         if let Some(ids) = self.ability_order_prefix
             && !ids.is_empty()

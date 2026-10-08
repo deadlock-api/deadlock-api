@@ -2,8 +2,7 @@
 //! which result the account played against or with them, from `player_match_roster`.
 
 use crate::routes::v1::matches::types::GameMode;
-use crate::services::clickhouse_batcher::in_clause;
-use crate::utils::sql::{MatchInfoFilters, ROSTER_DURATION_COLUMN};
+use crate::utils::sql::{MatchInfoFilters, ROSTER_DURATION_COLUMN, having_clause, id_list};
 
 /// Which of the roster's player arrays to count.
 #[derive(Debug, Clone, Copy)]
@@ -67,7 +66,7 @@ impl RosterStatsQuery<'_> {
         let prewhere_clause = filters.join(" AND ");
         // The other player's id comes from the ARRAY JOIN, so its filter stays in WHERE.
         let where_clause = self.other_ids.map_or_else(String::new, |ids| {
-            format!("WHERE {id} IN ({})", in_clause(ids))
+            format!("WHERE {id} IN ({})", id_list(ids))
         });
         let mut having_filters = vec![];
         if let Some(min_matches_played) = self.min_matches_played {
@@ -76,11 +75,7 @@ impl RosterStatsQuery<'_> {
         if let Some(max_matches_played) = self.max_matches_played {
             having_filters.push(format!("matches_played <= {max_matches_played}"));
         }
-        let having_clause = if having_filters.is_empty() {
-            String::new()
-        } else {
-            format!("HAVING {}", having_filters.join(" AND "))
-        };
+        let having_clause = having_clause(&having_filters);
         format!(
             "
     SELECT

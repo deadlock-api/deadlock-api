@@ -1,4 +1,3 @@
-use crate::utils::sql::cached_ch_query;
 use axum::Json;
 use axum::extract::State;
 use axum::response::IntoResponse;
@@ -15,7 +14,7 @@ use crate::error::APIResult;
 use crate::routes::v1::matches::types::{GameMode, MatchMode};
 use crate::routes::v1::players::rank::badge_from_flat_progress_sql;
 use crate::utils::parse::{comma_separated_deserialize_option, default_last_month_timestamp};
-use crate::utils::sql::{DURATION_COLUMN, MatchInfoFilters, MatchPoolFilters};
+use crate::utils::sql::{DURATION_COLUMN, MatchInfoFilters, MatchPoolFilters, cached_ch_query};
 
 #[derive(Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash)]
 #[cfg_attr(test, derive(proptest_derive::Arbitrary))]

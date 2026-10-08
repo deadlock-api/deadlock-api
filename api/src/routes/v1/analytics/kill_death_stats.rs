@@ -1,13 +1,9 @@
-use crate::utils::sql::cached_ch_query;
-use crate::utils::sql::impl_match_info;
-use crate::utils::sql::{DURATION_COLUMN, MatchPoolFilters, join_filters};
 use axum::Json;
 use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum_extra::extract::Query;
 use clickhouse::Row;
-use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tracing::debug;
@@ -16,9 +12,11 @@ use utoipa::{IntoParams, ToSchema};
 use super::common_filters::{filter_protected_accounts, round_timestamps};
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
-use crate::routes::v1::matches::types::reject_brawl_badge_filter;
-use crate::routes::v1::matches::types::{GameMode, MatchMode};
+use crate::routes::v1::matches::types::{GameMode, MatchMode, reject_brawl_badge_filter};
 use crate::utils::parse::{comma_separated_deserialize_option, default_last_month_timestamp};
+use crate::utils::sql::{
+    DURATION_COLUMN, MatchPoolFilters, cached_ch_query, id_list, impl_match_info, join_filters,
+};
 
 #[derive(Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash)]
 #[cfg_attr(test, derive(proptest_derive::Arbitrary))]
@@ -133,16 +131,10 @@ fn build_query(query: &KillDeathStatsQuery) -> String {
     let info_filters = join_filters(&info_filters);
     let mut player_filters = vec![];
     if let Some(account_ids) = &query.account_ids {
-        player_filters.push(format!(
-            "account_id IN ({})",
-            account_ids.iter().map(ToString::to_string).join(",")
-        ));
+        player_filters.push(format!("account_id IN ({})", id_list(account_ids)));
     }
     if let Some(hero_ids) = query.hero_ids.as_ref() {
-        player_filters.push(format!(
-            "hero_id IN ({})",
-            hero_ids.iter().map(ToString::to_string).join(",")
-        ));
+        player_filters.push(format!("hero_id IN ({})", id_list(hero_ids)));
     }
     if let Some(min_networth) = query.min_networth {
         player_filters.push(format!("net_worth >= {min_networth}"));
@@ -157,11 +149,7 @@ fn build_query(query: &KillDeathStatsQuery) -> String {
             player_filters.push("team = 'Team1'".to_owned());
         }
     }
-    let player_filters = if player_filters.is_empty() {
-        String::new()
-    } else {
-        format!(" AND {}", player_filters.join(" AND "))
-    };
+    let player_filters = join_filters(&player_filters);
     let mut game_time_filters = vec![];
     if let Some(min_game_time_s) = query.min_game_time_s {
         game_time_filters.push(format!("g_time >= {min_game_time_s}"));
@@ -169,11 +157,7 @@ fn build_query(query: &KillDeathStatsQuery) -> String {
     if let Some(max_game_time_s) = query.max_game_time_s {
         game_time_filters.push(format!("g_time <= {max_game_time_s}"));
     }
-    let game_time_filters = if game_time_filters.is_empty() {
-        String::new()
-    } else {
-        format!(" AND {}", game_time_filters.join(" AND "))
-    };
+    let game_time_filters = join_filters(&game_time_filters);
     let mut death_join_cols = vec!["death_details.death_pos AS dpos"];
     if !game_time_filters.is_empty() {
         death_join_cols.push("death_details.game_time_s AS g_time");

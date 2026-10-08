@@ -1,6 +1,5 @@
 use std::sync::Arc;
 
-use crate::utils::parse::parse_steam_id_option;
 use axum::Json;
 use axum::extract::State;
 use axum::http::HeaderValue;
@@ -15,6 +14,8 @@ use tracing::debug;
 use crate::context::AppState;
 use crate::error::APIResult;
 use crate::routes::v1::players::rank::badge_from_flat_progress_sql;
+use crate::utils::parse::parse_steam_id_option;
+use crate::utils::sql::id_list;
 
 const BATCH_SIZE: usize = 100;
 const CLAIM_TTL_SECS: u64 = 15 * 60;
@@ -55,11 +56,7 @@ async fn pending_pool(
     let prio = if prioritized.is_empty() {
         "SELECT toUInt64(0) AS match_id WHERE 0".to_owned()
     } else {
-        let ids = prioritized
-            .iter()
-            .map(u32::to_string)
-            .collect::<Vec<_>>()
-            .join(",");
+        let ids = id_list(prioritized);
         format!(
             "SELECT match_id FROM player_match_history \
              WHERE account_id IN ({ids}) AND match_id >= {MIN_MATCH_ID}"

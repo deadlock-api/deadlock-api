@@ -2,7 +2,7 @@
 
 use crate::utils::sql::{
     MAX_FILTERING_AVERAGE_BADGE, MIN_FILTERING_AVERAGE_BADGE, MatchPoolFilters,
-    average_badge_filter,
+    average_badge_filter, id_list,
 };
 use core::fmt::Write;
 use core::time::Duration;
@@ -23,8 +23,7 @@ use utoipa::{IntoParams, ToSchema};
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
-use crate::routes::v1::matches::types::reject_brawl_badge_filter;
-use crate::routes::v1::matches::types::{GameMode, MatchMode};
+use crate::routes::v1::matches::types::{GameMode, MatchMode, reject_brawl_badge_filter};
 use crate::services::rate_limiter::Quota;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::utils::json_stream::{ResponseFormat, stream_rows};
@@ -619,10 +618,7 @@ fn build_query(
     if let Some(match_ids) = query.match_ids
         && !match_ids.is_empty()
     {
-        info_filters.push(format!(
-            "match_id IN ({})",
-            match_ids.iter().map(ToString::to_string).join(",")
-        ));
+        info_filters.push(format!("match_id IN ({})", id_list(&match_ids)));
     }
     if let Some(min_duration_s) = query.min_duration_s
         && min_duration_s > 0
@@ -658,10 +654,7 @@ fn build_query(
     if let Some(account_ids) = query.account_ids
         && !account_ids.is_empty()
     {
-        let filter = format!(
-            "account_id IN ({})",
-            account_ids.iter().map(ToString::to_string).join(",")
-        );
+        let filter = format!("account_id IN ({})", id_list(&account_ids));
         if query.only_filtered_players {
             players_filter = Some(format!("match_player.{filter}"));
         }
@@ -671,10 +664,7 @@ fn build_query(
     if let Some(hero_ids) = query.hero_ids
         && !hero_ids.is_empty()
     {
-        player_filters.push(format!(
-            "hero_id IN ({})",
-            hero_ids.iter().map(ToString::to_string).join(",")
-        ));
+        player_filters.push(format!("hero_id IN ({})", id_list(&hero_ids)));
     }
 
     if let Some(item_filter_hero_id) = query.item_filter_hero_id {
@@ -686,7 +676,7 @@ fn build_query(
     {
         player_filters.push(format!(
             "hasAll(items.item_id, [{}])",
-            include_item_ids.iter().map(u32::to_string).join(", ")
+            id_list(include_item_ids)
         ));
         advanced_player_filters = true;
     }
@@ -695,7 +685,7 @@ fn build_query(
     {
         player_filters.push(format!(
             "NOT hasAny(items.item_id, [{}])",
-            exclude_item_ids.iter().map(u32::to_string).join(", ")
+            id_list(exclude_item_ids)
         ));
         advanced_player_filters = true;
     }
