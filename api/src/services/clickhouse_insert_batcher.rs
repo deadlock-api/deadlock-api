@@ -36,7 +36,7 @@ impl<T: BatchInsert> ClickhouseInsertBatcher<T> {
 
     /// Queue a single row, see [`Self::insert`].
     pub(crate) async fn insert_one(&self, row: T::Row) {
-        self.push(1, [row]).await;
+        self.push([row]).await;
     }
 
     /// Queue rows for batch insertion. Non-blocking beyond the mutex lock.
@@ -44,23 +44,23 @@ impl<T: BatchInsert> ClickhouseInsertBatcher<T> {
         if rows.is_empty() {
             return;
         }
-        self.push(rows.len(), rows).await;
+        self.push(rows).await;
     }
 
-    /// Appends `count` rows, dropping the oldest buffered rows past the max buffer size.
-    async fn push(&self, count: usize, rows: impl IntoIterator<Item = T::Row>) {
+    /// Appends rows, then drops the oldest ones (buffered or incoming) past the max buffer size,
+    /// keeping the newest `max`.
+    async fn push(&self, rows: impl IntoIterator<Item = T::Row>) {
         let max = T::max_buffer_size();
         let mut buffer = self.buffer.lock().await;
-        if buffer.len() + count > max {
+        buffer.extend(rows);
+        if buffer.len() > max {
             warn!(
                 "Insert batcher buffer full for {}, dropping oldest entries",
                 T::table_name()
             );
-            let to_drain = (buffer.len() + count).saturating_sub(max);
-            let drain_count = to_drain.min(buffer.len());
-            buffer.drain(0..drain_count);
+            let excess = buffer.len() - max;
+            buffer.drain(0..excess);
         }
-        buffer.extend(rows);
     }
 
     /// Start the background flush task. It flushes every `flush_interval_secs` until
@@ -124,5 +124,48 @@ impl<T: BatchInsert> ClickhouseInsertBatcher<T> {
         }
         inserter.end().await?;
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use clickhouse::Row;
+    use serde::Deserialize;
+
+    use super::*;
+
+    #[derive(Row, Serialize, Deserialize, Clone)]
+    struct TestRow {
+        id: u32,
+    }
+
+    struct TestBatch;
+
+    impl BatchInsert for TestBatch {
+        type Row = TestRow;
+
+        fn table_name() -> &'static str {
+            "test"
+        }
+
+        fn max_buffer_size() -> usize {
+            3
+        }
+    }
+
+    async fn buffered_ids(batcher: &ClickhouseInsertBatcher<TestBatch>) -> Vec<u32> {
+        batcher.buffer.lock().await.iter().map(|r| r.id).collect()
+    }
+
+    #[tokio::test]
+    async fn oversized_insert_keeps_newest_max_rows() {
+        let batcher = ClickhouseInsertBatcher::<TestBatch>::new(clickhouse::Client::default());
+        batcher.insert_one(TestRow { id: 0 }).await;
+        batcher
+            .insert((1..=5).map(|id| TestRow { id }).collect())
+            .await;
+        assert_eq!(buffered_ids(&batcher).await, vec![3, 4, 5]);
+        batcher.insert_one(TestRow { id: 6 }).await;
+        assert_eq!(buffered_ids(&batcher).await, vec![4, 5, 6]);
     }
 }
