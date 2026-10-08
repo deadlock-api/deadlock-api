@@ -174,7 +174,8 @@ const MAX_REDIRECTS: usize = 5;
 #[derive(Debug, PartialEq, Eq)]
 enum RedirectDecision {
     Follow,
-    /// Hand back the redirect response itself instead of following it.
+    /// Fail the request: handing back the 3xx itself would pass `error_for_status` and
+    /// be read as broadcast data.
     Stop,
     TooMany,
 }
@@ -200,7 +201,7 @@ pub(crate) fn redirect_policy() -> reqwest::redirect::Policy {
     reqwest::redirect::Policy::custom(|attempt| {
         match redirect_decision(attempt.previous(), attempt.url()) {
             RedirectDecision::Follow => attempt.follow(),
-            RedirectDecision::Stop => attempt.stop(),
+            RedirectDecision::Stop => attempt.error("redirect outside Valve broadcast hosts"),
             RedirectDecision::TooMany => attempt.error("too many redirects"),
         }
     })
