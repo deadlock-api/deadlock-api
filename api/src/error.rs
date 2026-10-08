@@ -145,32 +145,21 @@ impl IntoResponse for APIError {
             }
             Self::RateLimitExceeded { status } => {
                 warn!(?status, "Rate limit exceeded");
-                let mut res = Response::builder();
-                for (key, value) in status.response_headers() {
-                    if let Some(key) = key {
-                        res = res.header(key, value);
-                    }
-                }
-                res.status(StatusCode::TOO_MANY_REQUESTS)
-                    .header(header::CONTENT_TYPE, "application/json")
-                    .body(
-                        serde_json::to_string(&json!({
-                            "status": StatusCode::TOO_MANY_REQUESTS.as_u16(),
-                            "error": {
-                                "type": status.limit_type(),
-                                "quota": {
-                                    "limit": status.quota.limit,
-                                    "period": status.quota.period.as_secs(),
-                                },
-                                "requests": status.requests,
-                                "remaining": status.remaining(),
-                                "next_request_in": status.next_request_in().as_secs(),
-                            }
-                        }))
-                        .unwrap_or_else(|_| "Internal server error".to_owned())
-                        .into(),
-                    )
-                    .unwrap_or_else(|_| "Internal server error".to_owned().into_response())
+                let mut res = build_error_response(
+                    StatusCode::TOO_MANY_REQUESTS,
+                    json!({
+                        "type": status.limit_type(),
+                        "quota": {
+                            "limit": status.quota.limit,
+                            "period": status.quota.period.as_secs(),
+                        },
+                        "requests": status.requests,
+                        "remaining": status.remaining(),
+                        "next_request_in": status.next_request_in().as_secs(),
+                    }),
+                );
+                res.headers_mut().extend(status.response_headers());
+                res
             }
             Self::Crosshair(e) => match e {
                 CrosshairError::Encode(_) => Self::internal(e.to_string()).into_response(),

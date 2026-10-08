@@ -45,11 +45,7 @@ pub(crate) async fn rate_limit(
 
     let mut response = next.run(request).await;
     if let Some(status) = status {
-        for (key, value) in status.response_headers() {
-            if let Some(key) = key {
-                response.headers_mut().insert(key, value);
-            }
-        }
+        response.headers_mut().extend(status.response_headers());
     }
     response
 }

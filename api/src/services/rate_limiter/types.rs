@@ -79,12 +79,14 @@ impl Status {
     }
 
     pub(crate) fn response_headers(&self) -> HeaderMap {
-        let mut headers = HeaderMap::new();
+        // Computed once so `RateLimit-Reset` and `Retry-After` always agree.
+        let next_request_in = self.next_request_in().as_secs();
+        let mut headers = HeaderMap::with_capacity(5);
         headers.append("RateLimit-Limit", self.quota.limit.into());
         headers.append("RateLimit-Period", self.quota.period.as_secs().into());
         headers.append("RateLimit-Remaining", self.remaining().into());
-        headers.append("RateLimit-Reset", self.next_request_in().as_secs().into());
-        headers.append("Retry-After", self.next_request_in().as_secs().into());
+        headers.append("RateLimit-Reset", next_request_in.into());
+        headers.append("Retry-After", next_request_in.into());
         headers
     }
 
