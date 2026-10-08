@@ -47,7 +47,8 @@ impl SteamAccountsRepository {
         account_id: Uuid,
         patron_id: Uuid,
     ) -> SteamAccountsRepositoryResult<Option<SteamAccount>> {
-        let row = sqlx::query!(
+        let row = sqlx::query_as!(
+            SteamAccount,
             r#"
             SELECT
                 id,
@@ -66,14 +67,7 @@ impl SteamAccountsRepository {
         .fetch_optional(&self.pg_client)
         .await?;
 
-        Ok(row.map(|row| SteamAccount {
-            id: row.id,
-            patron_id: row.patron_id,
-            steam_id3: row.steam_id3,
-            created_at: row.created_at,
-            deleted_at: row.deleted_at,
-            user_deleted: row.user_deleted,
-        }))
+        Ok(row)
     }
 
     /// Gets all Steam accounts for a patron, including soft-deleted ones.
@@ -81,7 +75,8 @@ impl SteamAccountsRepository {
         &self,
         patron_id: Uuid,
     ) -> SteamAccountsRepositoryResult<Vec<SteamAccount>> {
-        let rows = sqlx::query!(
+        let rows = sqlx::query_as!(
+            SteamAccount,
             r#"
             SELECT
                 id,
@@ -99,17 +94,7 @@ impl SteamAccountsRepository {
         .fetch_all(&self.pg_client)
         .await?;
 
-        Ok(rows
-            .into_iter()
-            .map(|row| SteamAccount {
-                id: row.id,
-                patron_id: row.patron_id,
-                steam_id3: row.steam_id3,
-                created_at: row.created_at,
-                deleted_at: row.deleted_at,
-                user_deleted: row.user_deleted,
-            })
-            .collect())
+        Ok(rows)
     }
 
     /// Counts active (non-deleted) Steam accounts for a patron.
@@ -167,7 +152,8 @@ impl SteamAccountsRepository {
         patron_id: Uuid,
         steam_id3: i64,
     ) -> SteamAccountsRepositoryResult<Option<SteamAccount>> {
-        let row = sqlx::query!(
+        let row = sqlx::query_as!(
+            SteamAccount,
             r#"
             SELECT id, patron_id, steam_id3, created_at, deleted_at, user_deleted
             FROM prioritized_steam_accounts
@@ -183,14 +169,7 @@ impl SteamAccountsRepository {
         .fetch_optional(&self.pg_client)
         .await?;
 
-        Ok(row.map(|row| SteamAccount {
-            id: row.id,
-            patron_id: row.patron_id,
-            steam_id3: row.steam_id3,
-            created_at: row.created_at,
-            deleted_at: row.deleted_at,
-            user_deleted: row.user_deleted,
-        }))
+        Ok(row)
     }
 
     /// Adds a new Steam account to a patron's prioritized list.
@@ -199,7 +178,8 @@ impl SteamAccountsRepository {
         patron_id: Uuid,
         steam_id3: i64,
     ) -> SteamAccountsRepositoryResult<SteamAccount> {
-        let row = sqlx::query!(
+        let row = sqlx::query_as!(
+            SteamAccount,
             r#"
             INSERT INTO prioritized_steam_accounts (id, patron_id, steam_id3, created_at)
             VALUES (gen_random_uuid(), $1, $2, NOW())
@@ -213,14 +193,7 @@ impl SteamAccountsRepository {
 
         IS_ACCOUNT_PRIORITIZED.write().await.remove(&steam_id3);
 
-        Ok(SteamAccount {
-            id: row.id,
-            patron_id: row.patron_id,
-            steam_id3: row.steam_id3,
-            created_at: row.created_at,
-            deleted_at: row.deleted_at,
-            user_deleted: row.user_deleted,
-        })
+        Ok(row)
     }
 
     /// Soft-deletes a Steam account by setting `deleted_at` to `NOW()`.
@@ -290,7 +263,8 @@ impl SteamAccountsRepository {
         account_id: Uuid,
         patron_id: Uuid,
     ) -> SteamAccountsRepositoryResult<SteamAccount> {
-        let row = sqlx::query!(
+        let row = sqlx::query_as!(
+            SteamAccount,
             r#"
             UPDATE prioritized_steam_accounts
             SET deleted_at = NULL, user_deleted = false
@@ -308,14 +282,7 @@ impl SteamAccountsRepository {
         match row {
             Some(row) => {
                 IS_ACCOUNT_PRIORITIZED.write().await.remove(&row.steam_id3);
-                Ok(SteamAccount {
-                    id: row.id,
-                    patron_id: row.patron_id,
-                    steam_id3: row.steam_id3,
-                    created_at: row.created_at,
-                    deleted_at: row.deleted_at,
-                    user_deleted: row.user_deleted,
-                })
+                Ok(row)
             }
             None => Err(SteamAccountsRepositoryError::AccountNotFound),
         }
@@ -327,7 +294,8 @@ impl SteamAccountsRepository {
         &self,
         patron_id: Uuid,
     ) -> SteamAccountsRepositoryResult<Vec<SteamAccount>> {
-        let rows = sqlx::query!(
+        let rows = sqlx::query_as!(
+            SteamAccount,
             r#"
             SELECT
                 id,
@@ -346,17 +314,7 @@ impl SteamAccountsRepository {
         .fetch_all(&self.pg_client)
         .await?;
 
-        Ok(rows
-            .into_iter()
-            .map(|row| SteamAccount {
-                id: row.id,
-                patron_id: row.patron_id,
-                steam_id3: row.steam_id3,
-                created_at: row.created_at,
-                deleted_at: row.deleted_at,
-                user_deleted: row.user_deleted,
-            })
-            .collect())
+        Ok(rows)
     }
 
     /// Gets soft-deleted Steam accounts for a patron, ordered by `created_at ASC`.
@@ -365,7 +323,8 @@ impl SteamAccountsRepository {
         &self,
         patron_id: Uuid,
     ) -> SteamAccountsRepositoryResult<Vec<SteamAccount>> {
-        let rows = sqlx::query!(
+        let rows = sqlx::query_as!(
+            SteamAccount,
             r#"
             SELECT
                 id,
@@ -385,17 +344,7 @@ impl SteamAccountsRepository {
         .fetch_all(&self.pg_client)
         .await?;
 
-        Ok(rows
-            .into_iter()
-            .map(|row| SteamAccount {
-                id: row.id,
-                patron_id: row.patron_id,
-                steam_id3: row.steam_id3,
-                created_at: row.created_at,
-                deleted_at: row.deleted_at,
-                user_deleted: row.user_deleted,
-            })
-            .collect())
+        Ok(rows)
     }
 
     /// Reactivates multiple soft-deleted Steam accounts by setting `deleted_at` to NULL.
@@ -424,8 +373,9 @@ impl SteamAccountsRepository {
         .fetch_all(&self.pg_client)
         .await?;
 
+        let mut prioritized_cache = IS_ACCOUNT_PRIORITIZED.write().await;
         for row in &result {
-            IS_ACCOUNT_PRIORITIZED.write().await.remove(&row.steam_id3);
+            prioritized_cache.remove(&row.steam_id3);
         }
 
         Ok(result.len() as u64)
@@ -445,8 +395,9 @@ impl SteamAccountsRepository {
         .fetch_all(&self.pg_client)
         .await?;
 
+        let mut prioritized_cache = IS_ACCOUNT_PRIORITIZED.write().await;
         for row in &result {
-            IS_ACCOUNT_PRIORITIZED.write().await.remove(&row.steam_id3);
+            prioritized_cache.remove(&row.steam_id3);
         }
 
         Ok(result.len() as u64)
@@ -479,8 +430,9 @@ impl SteamAccountsRepository {
         .fetch_all(&self.pg_client)
         .await?;
 
+        let mut prioritized_cache = IS_ACCOUNT_PRIORITIZED.write().await;
         for row in &result {
-            IS_ACCOUNT_PRIORITIZED.write().await.remove(&row.steam_id3);
+            prioritized_cache.remove(&row.steam_id3);
         }
 
         Ok(result.len() as u64)
