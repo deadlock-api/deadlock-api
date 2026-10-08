@@ -171,7 +171,17 @@ impl<R: Read + Seek> DemoStream for DemoFile<R> {
     // ----
 
     fn read_cmd(&mut self, cmd_header: &CmdHeader) -> Result<&[u8], ReadCmdError> {
-        let (left, right) = self.buf.split_at_mut(cmd_header.body_size as usize);
+        let body_size = cmd_header.body_size as usize;
+        if body_size > self.buf.len() {
+            return Err(ReadCmdError::IoError(io::Error::new(
+                io::ErrorKind::InvalidData,
+                format!(
+                    "cmd body of {body_size} bytes exceeds the {} byte buffer",
+                    self.buf.len()
+                ),
+            )));
+        }
+        let (left, right) = self.buf.split_at_mut(body_size);
         self.rdr.read_exact(left)?;
 
         if cmd_header.body_compressed {

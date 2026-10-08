@@ -11,7 +11,7 @@ use nohash::NoHashHasher;
 use crate::bitreader::BitReader;
 use crate::entityclasses::EntityClasses;
 use crate::fielddecoder::{DecoderError, FieldDecodeContext};
-use crate::fieldpath::{self, FieldPath};
+use crate::fieldpath::{self, FieldPath, FieldPathError};
 use crate::fieldvalue::{FieldValue, FieldValueConversionError};
 use crate::flattenedserializers::{
     FlattenedSerializer, FlattenedSerializerContainer, FlattenedSerializerField,
@@ -33,6 +33,8 @@ pub enum EntityParseError {
     BitError(#[from] BitError),
     #[error(transparent)]
     Decoder(#[from] DecoderError),
+    #[error(transparent)]
+    FieldPath(#[from] FieldPathError),
     #[error("field path not found")]
     FieldNotFound,
     #[error(transparent)]

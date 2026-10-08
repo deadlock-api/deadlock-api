@@ -65,7 +65,17 @@ impl<R: Read + Seek> DemoStream for BroadcastFile<R> {
     fn read_cmd(&mut self, cmd_header: &CmdHeader) -> Result<&[u8], ReadCmdError> {
         assert!(!cmd_header.body_compressed);
 
-        let data = &mut self.buf[..cmd_header.body_size as usize];
+        let body_size = cmd_header.body_size as usize;
+        if body_size > self.buf.len() {
+            return Err(ReadCmdError::IoError(io::Error::new(
+                io::ErrorKind::InvalidData,
+                format!(
+                    "cmd body of {body_size} bytes exceeds the {} byte buffer",
+                    self.buf.len()
+                ),
+            )));
+        }
+        let data = &mut self.buf[..body_size];
         self.rdr.read_exact(data)?;
         Ok(data)
     }

@@ -223,7 +223,11 @@ impl StringTable {
                 if self.user_data_fixed_size {
                     // Don't need to read length, it's fixed length and the length was networked down already.
                     br.read_bits(user_data_buf, self.user_data_size_bits as usize)?;
-                    Some(&user_data_buf[..self.user_data_size as usize])
+                    Some(
+                        user_data_buf
+                            .get(..self.user_data_size as usize)
+                            .ok_or(BitError::BufferTooSmall)?,
+                    )
                 } else {
                     let mut is_compressed = false;
                     if (self.flags & 0x1) != 0 {
@@ -239,15 +243,18 @@ impl StringTable {
                         br.read_ubit64(MAX_USERDATA_BITS)? as usize
                     };
 
-                    br.read_bytes(&mut user_data_buf[..size])?;
+                    let user_data_buf = user_data_buf
+                        .get_mut(..size)
+                        .ok_or(BitError::BufferTooSmall)?;
+                    br.read_bytes(user_data_buf)?;
 
                     if is_compressed {
                         snap::raw::Decoder::new()
-                            .decompress(&user_data_buf[..size], user_data_uncompressed_buf)?;
+                            .decompress(user_data_buf, user_data_uncompressed_buf)?;
                         let size = snap::raw::decompress_len(user_data_buf)?;
                         Some(&user_data_uncompressed_buf[..size])
                     } else {
-                        Some(&user_data_buf[..size])
+                        Some(&*user_data_buf)
                     }
                 }
             } else {

@@ -91,7 +91,10 @@ fn read_packet_message<'b>(
     let command = br.read_ubitvar()?;
     let size = br.read_uvarint32()? as usize;
 
-    let buf = &mut buf[..size];
+    let buf_len = buf.len();
+    let Some(buf) = buf.get_mut(..size) else {
+        bail!("packet message of {size} bytes exceeds the {buf_len} byte buffer");
+    };
     br.read_bytes(buf)?;
     Ok((command, buf))
 }
