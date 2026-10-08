@@ -45,6 +45,8 @@ export const Route = createRootRouteWithContext<RouterContext>()({
     const isAnalytics = pathname.startsWith("/analytics/");
     const isGameAnalytics = /^\/analytics\/games(?:\/|$)/.test(pathname);
     const isPlayerTracker = pathname.startsWith("/tracker/players/");
+    // Each catalog is caught on its own: an assets API outage leaves the pages to their loading and error states
+    // instead of failing every route. A chunk that fails to import still fails the loader.
     const preloads: Promise<unknown>[] = [];
 
     if (
@@ -58,7 +60,7 @@ export const Route = createRootRouteWithContext<RouterContext>()({
     ) {
       preloads.push(
         import("~/queries/asset-queries").then(({ heroesQueryOptions }) =>
-          queryClient.query({ ...heroesQueryOptions, staleTime: "static" }),
+          catchPrefetch(queryClient.query({ ...heroesQueryOptions, staleTime: "static" })),
         ),
       );
     }
@@ -71,7 +73,7 @@ export const Route = createRootRouteWithContext<RouterContext>()({
     ) {
       preloads.push(
         import("~/queries/ranks-query").then(({ ranksQueryOptions }) =>
-          queryClient.query({ ...ranksQueryOptions, staleTime: "static" }),
+          catchPrefetch(queryClient.query({ ...ranksQueryOptions, staleTime: "static" })),
         ),
       );
     }
@@ -88,7 +90,7 @@ export const Route = createRootRouteWithContext<RouterContext>()({
     ) {
       preloads.push(
         import("~/queries/asset-queries").then(({ itemUpgradesQueryOptions }) =>
-          queryClient.query({ ...itemUpgradesQueryOptions, staleTime: "static" }),
+          catchPrefetch(queryClient.query({ ...itemUpgradesQueryOptions, staleTime: "static" })),
         ),
       );
     }
