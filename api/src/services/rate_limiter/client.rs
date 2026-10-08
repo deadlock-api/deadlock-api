@@ -83,47 +83,46 @@ impl RateLimitClient {
             .api_key
             .map_or_else(|| rate_limit_key.client.to_string(), |k| k.to_string());
         let prefixed_key = format!("{prefix}:{key}");
+
+        let quotas = self.effective_quotas(rate_limit_key, key, quotas).await;
+
+        // Increment the per-user key and read every quota window in a single round trip.
+        // `ignore_errors` keeps per-command results, so a failing quota check only skips that
+        // quota, exactly like separate round trips did.
+        let current_time = Utc::now();
+        let mut pipe = redis::pipe();
+        pipe.ignore_errors();
+        add_increment_cmds(&mut pipe, &prefixed_key, current_time.timestamp_micros());
+        for quota in &quotas {
+            add_check_cmds(
+                &mut pipe,
+                quota_key(quota, key, &prefixed_key),
+                quota.period,
+                current_time,
+            );
+        }
+        let results: Vec<RedisResult<redis::Value>> =
+            match pipe.query_async(&mut self.redis_client.clone()).await {
+                Ok(results) => results,
+                Err(e) => {
+                    warn!("Failed to increment rate limit key: {e}, will not apply limits");
+                    return Ok(None);
+                }
+            };
+        let mut results = results.into_iter();
+
         // If incrementing the per-user key fails, we don't apply any limits
-        if let Err(e) = self.increment_key(&prefixed_key).await {
+        if let Some(e) = results.by_ref().take(INCREMENT_CMDS).find_map(Result::err) {
             warn!("Failed to increment rate limit key: {e}, will not apply limits");
             return Ok(None);
         }
 
-        // Check for custom quotas
-        let quotas = match rate_limit_key.api_key {
-            None => quotas.to_vec(),
-            Some(api_key) => {
-                let custom_quotas = match self.get_custom_quotas(api_key, key).await {
-                    Ok(quotas) => quotas,
-                    Err(e) => {
-                        warn!("Failed to fetch custom quotas due to DB error: {e}, using defaults");
-                        Vec::new()
-                    }
-                };
-                if custom_quotas.is_empty() {
-                    let has_api_key_limits = quotas.iter().any(|q| q.r#type.is_key());
-                    // Remove IP quotas if there are key quotas and api_key is present
-                    quotas
-                        .iter()
-                        .filter(|q| !has_api_key_limits || !q.r#type.is_ip())
-                        .copied()
-                        .collect()
-                } else {
-                    custom_quotas
-                }
-            }
-        };
-
         // Check all quotas
         let mut all_statuses = Vec::new();
         for quota in quotas {
-            let quota_key = if quota.r#type.is_global() {
-                key
-            } else {
-                &prefixed_key
-            };
-            let Ok((requests, oldest_request)) = self.check_requests(quota_key, quota.period).await
-            else {
+            let check = parse_check(results.next(), results.next(), current_time);
+            let Ok((requests, oldest_request)) = check else {
+                let quota_key = quota_key(&quota, key, &prefixed_key);
                 warn!("Failed to check rate limit key: {quota_key}, will not apply limits");
                 continue;
             };
@@ -145,6 +144,39 @@ impl RateLimitClient {
 
         // Return the status with the lowest remaining requests (most critical)
         Ok(all_statuses.into_iter().min_by_key(Status::remaining))
+    }
+
+    /// The quotas to enforce: the API key's custom quotas for this route if it has any,
+    /// otherwise the route defaults (minus IP quotas when a key is present and key quotas exist).
+    async fn effective_quotas(
+        &self,
+        rate_limit_key: &RateLimitKey,
+        key: &str,
+        quotas: &[Quota],
+    ) -> Vec<Quota> {
+        match rate_limit_key.api_key {
+            None => quotas.to_vec(),
+            Some(api_key) => {
+                let custom_quotas = match self.get_custom_quotas(api_key, key).await {
+                    Ok(quotas) => quotas,
+                    Err(e) => {
+                        warn!("Failed to fetch custom quotas due to DB error: {e}, using defaults");
+                        Vec::new()
+                    }
+                };
+                if custom_quotas.is_empty() {
+                    let has_api_key_limits = quotas.iter().any(|q| q.r#type.is_key());
+                    // Remove IP quotas if there are key quotas and api_key is present
+                    quotas
+                        .iter()
+                        .filter(|q| !has_api_key_limits || !q.r#type.is_ip())
+                        .copied()
+                        .collect()
+                } else {
+                    custom_quotas
+                }
+            }
+        }
     }
 
     #[cached(
@@ -195,39 +227,67 @@ impl RateLimitClient {
             .collect())
     }
 
-    async fn check_requests(
-        &self,
-        key: &str,
-        period: Duration,
-    ) -> RedisResult<(usize, DateTime<Utc>)> {
-        let current_time = Utc::now();
-        let period_start = current_time - period;
-        let start = period_start.timestamp_micros();
-        let end = current_time.timestamp_micros();
-        let (num_requests, oldest_timestamps): (usize, Vec<i64>) = redis::pipe()
-            .zcount(key, start, end)
-            .zrangebyscore_limit(key, start, end, 0, 1)
-            .query_async(&mut self.redis_client.clone())
-            .await?;
-        if num_requests == 0 {
-            return Ok((0, current_time));
-        }
-        let oldest_timestamp = oldest_timestamps
-            .first()
-            .copied()
-            .and_then(DateTime::from_timestamp_micros)
-            .unwrap_or_else(Utc::now);
-        // Subtract 1 to exclude the just-added entry from increment_key
-        Ok((num_requests - 1, oldest_timestamp))
-    }
-
     async fn increment_key(&self, key: &str) -> RedisResult<()> {
-        let current_time = Utc::now().timestamp_micros();
-        redis::pipe()
-            .zrembyscore(key, 0, current_time - MAX_TTL_MICROS)
-            .zadd(key, current_time, current_time)
-            .expire(key, MAX_TTL_MICROS / 1000 / 1000)
-            .exec_async(&mut self.redis_client.clone())
-            .await
+        let mut pipe = redis::pipe();
+        add_increment_cmds(&mut pipe, key, Utc::now().timestamp_micros());
+        pipe.exec_async(&mut self.redis_client.clone()).await
     }
+}
+
+/// Number of commands [`add_increment_cmds`] adds to a pipeline.
+const INCREMENT_CMDS: usize = 3;
+
+/// Records one request at `current_time` (micros) in the sorted set `key`, trimming entries
+/// older than the max TTL.
+fn add_increment_cmds(pipe: &mut redis::Pipeline, key: &str, current_time: i64) {
+    pipe.zrembyscore(key, 0, current_time - MAX_TTL_MICROS)
+        .zadd(key, current_time, current_time)
+        .expire(key, MAX_TTL_MICROS / 1000 / 1000);
+}
+
+fn quota_key<'a>(quota: &Quota, key: &'a str, prefixed_key: &'a str) -> &'a str {
+    if quota.r#type.is_global() {
+        key
+    } else {
+        prefixed_key
+    }
+}
+
+/// Adds the two commands that count requests in `key` within `period` before `current_time`
+/// and fetch the oldest of them; [`parse_check`] reads their replies.
+fn add_check_cmds(
+    pipe: &mut redis::Pipeline,
+    key: &str,
+    period: Duration,
+    current_time: DateTime<Utc>,
+) {
+    let start = (current_time - period).timestamp_micros();
+    let end = current_time.timestamp_micros();
+    pipe.zcount(key, start, end)
+        .zrangebyscore_limit(key, start, end, 0, 1);
+}
+
+fn parse_check(
+    count: Option<RedisResult<redis::Value>>,
+    oldest: Option<RedisResult<redis::Value>>,
+    current_time: DateTime<Utc>,
+) -> RedisResult<(usize, DateTime<Utc>)> {
+    let (Some(count), Some(oldest)) = (count, oldest) else {
+        return Err(redis::RedisError::from((
+            redis::ErrorKind::Client,
+            "missing rate limit check reply",
+        )));
+    };
+    let num_requests: usize = redis::from_redis_value(count?)?;
+    let oldest_timestamps: Vec<i64> = redis::from_redis_value(oldest?)?;
+    if num_requests == 0 {
+        return Ok((0, current_time));
+    }
+    let oldest_timestamp = oldest_timestamps
+        .first()
+        .copied()
+        .and_then(DateTime::from_timestamp_micros)
+        .unwrap_or_else(Utc::now);
+    // Subtract 1 to exclude the just-added entry from the increment
+    Ok((num_requests - 1, oldest_timestamp))
 }
