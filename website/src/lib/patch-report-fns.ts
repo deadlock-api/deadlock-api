@@ -6,6 +6,7 @@ import { fetchSlimItemUpgrades, type SlimUpgrade } from "~/lib/asset-fns";
 import { getPickrateMultiplier } from "~/lib/constants";
 import { DEFAULT_MATCH_MODE } from "~/lib/game-mode";
 import { GAME_STAT_CATEGORIES } from "~/lib/game-stat-definitions";
+import { isShopableItem } from "~/lib/item-roster";
 import {
   bandGap,
   compareTallies,
@@ -197,9 +198,7 @@ export const fetchPatchReport = createServerFn({ method: "GET" })
       .slice(0, MOVERS)
       .map(({ heroId, deltas }) => ({ heroId, deltas }));
 
-    const shop = new Map(
-      items.filter((item) => item.shopable && !item.disabled && item.shop_image_webp).map((item) => [item.id, item]),
-    );
+    const shop = new Map(items.filter(isShopableItem).map((item) => [item.id, item]));
     const itemChanges = compareTallies(
       tallyBy(itemBefore, (row) => row.item_id),
       tallyBy(itemAfter, (row) => row.item_id),

@@ -7,6 +7,7 @@ import { fetchSlimHeroes, fetchSlimItemUpgrades, type SlimHero, type SlimUpgrade
 import { buffInfoByType } from "~/lib/buffs";
 import { toCorruptionData } from "~/lib/corrupted-items";
 import { isPlayableHero } from "~/lib/hero-roster";
+import { isShopableItem } from "~/lib/item-roster";
 import { catchPrefetch } from "~/lib/prefetch-safe";
 import { type SeasonInfo, toSeasons } from "~/lib/seasons";
 
@@ -130,5 +131,5 @@ export function filterPlayableHeroes<T extends SlimHero>(heroes: T[]): T[] {
 }
 
 export function filterShopableItems<T extends SlimUpgrade>(items: T[]): T[] {
-  return items.filter((item) => item.shopable && !item.disabled && item.shop_image_webp);
+  return items.filter(isShopableItem);
 }
