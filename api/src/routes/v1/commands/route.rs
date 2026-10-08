@@ -1,3 +1,4 @@
+use core::time::Duration;
 use std::collections::HashMap;
 
 use axum::Json;
@@ -150,61 +151,24 @@ pub(super) async fn command_resolve(
             "Invalid account ID",
         ));
     }
-    state
-        .rate_limit_client
-        .apply_limits(
-            &rate_limit_key,
-            "command",
-            &[
-                Quota::ip_limit(60, core::time::Duration::from_mins(1)),
-                Quota::global_limit(300, core::time::Duration::from_mins(1)),
-            ],
-        )
-        .await?;
-
-    let mut extra_args = HashMap::new();
-    if let Some(hero_name) = query.hero_name {
-        extra_args.insert("hero_name".to_owned(), hero_name);
-    }
-
-    let variables_needed: Vec<&Variable> = Variable::VARIANTS
+    let variables_needed = Variable::VARIANTS
         .iter()
         .filter(|v| query.template.contains(&format!("{{{}}}", v.get_name())))
-        .collect();
+        .collect_vec();
+    let resolved = resolve_variables(
+        &rate_limit_key,
+        &state,
+        query.account_id,
+        query.region,
+        query.hero_name,
+        &variables_needed,
+    )
+    .await?;
 
-    let context = ResolverContext::new(&variables_needed, &state, query.account_id).await;
-
-    let mut resolved_template = query.template.clone();
-    let results = futures::future::join_all(variables_needed.iter().map(|v| {
-        let template_str = format!("{{{}}}", v.get_name());
-        async {
-            match v
-                .resolve(
-                    &rate_limit_key,
-                    &state,
-                    query.account_id,
-                    query.region,
-                    &extra_args,
-                    &context,
-                )
-                .await
-            {
-                Ok(resolved) => Ok((template_str, resolved)),
-                Err(e) => {
-                    warn!("Failed to resolve variable: {}, {e}", v.get_name());
-                    Err(format!("Failed to resolve variable: {}", v.get_name()))
-                }
-            }
-        }
-    }))
-    .await;
-
-    for result in results {
-        let Ok((template_str, resolved_variable)) = result else {
-            warn!("Failed to resolve variable: {:?}", result.err());
-            continue;
-        };
-        resolved_template = resolved_template.replace(&template_str, &resolved_variable);
+    let mut resolved_template = query.template;
+    for (variable, value) in resolved {
+        resolved_template =
+            resolved_template.replace(&format!("{{{}}}", variable.get_name()), &value);
     }
     Ok(resolved_template)
 }
@@ -256,53 +220,81 @@ pub(super) async fn variables_resolve(
             "Invalid account ID or no variables provided",
         ));
     }
+    let variables_to_resolve = query.variables.split(',').map(str::trim).collect_vec();
+    let variables_needed = Variable::VARIANTS
+        .iter()
+        .filter(|v| variables_to_resolve.contains(&v.get_name()))
+        .collect_vec();
+    let resolved = resolve_variables(
+        &rate_limit_key,
+        &state,
+        query.account_id,
+        query.region,
+        query.hero_name,
+        &variables_needed,
+    )
+    .await?;
+
+    Ok(Json(
+        resolved
+            .into_iter()
+            .map(|(variable, value)| (variable.get_name().to_owned(), value))
+            .collect(),
+    ))
+}
+
+/// Rate-limits the request, then resolves `variables` concurrently. A variable that fails to
+/// resolve is logged and left out.
+async fn resolve_variables(
+    rate_limit_key: &RateLimitKey,
+    state: &AppState,
+    account_id: u32,
+    region: LeaderboardRegion,
+    hero_name: Option<String>,
+    variables: &[&'static Variable],
+) -> APIResult<Vec<(&'static Variable, String)>> {
     state
         .rate_limit_client
         .apply_limits(
-            &rate_limit_key,
+            rate_limit_key,
             "command",
             &[
-                Quota::ip_limit(60, core::time::Duration::from_mins(1)),
-                Quota::global_limit(300, core::time::Duration::from_mins(1)),
+                Quota::ip_limit(60, Duration::from_mins(1)),
+                Quota::global_limit(300, Duration::from_mins(1)),
             ],
         )
         .await?;
 
-    let mut extra_args = HashMap::new();
-    if let Some(hero_name) = query.hero_name {
-        extra_args.insert("hero_name".to_owned(), hero_name);
-    }
-    let variables_to_resolve = query.variables.split(',').map(str::trim).collect_vec();
-    let variables_needed: Vec<&Variable> = Variable::VARIANTS
-        .iter()
-        .filter(|v| variables_to_resolve.contains(&v.get_name()))
+    let extra_args: HashMap<String, String> = hero_name
+        .map(|hero_name| ("hero_name".to_owned(), hero_name))
+        .into_iter()
         .collect();
+    let extra_args = &extra_args;
+    let context = &ResolverContext::new(variables, state, account_id).await;
 
-    let context = ResolverContext::new(&variables_needed, &state, query.account_id).await;
-
-    let results = futures::future::join_all(variables_needed.iter().map(|v| async {
-        match v
-            .resolve(
-                &rate_limit_key,
-                &state,
-                query.account_id,
-                query.region,
-                &extra_args,
-                &context,
-            )
-            .await
-        {
-            Ok(resolved) => Some((v.get_name().to_owned(), resolved)),
-            Err(e) => {
-                warn!("Failed to resolve variable: {}, {e}", v.get_name());
-                None
+    Ok(
+        futures::future::join_all(variables.iter().map(|&v| async move {
+            match v
+                .resolve(
+                    rate_limit_key,
+                    state,
+                    account_id,
+                    region,
+                    extra_args,
+                    context,
+                )
+                .await
+            {
+                Ok(resolved) => Some((v, resolved)),
+                Err(e) => {
+                    warn!("Failed to resolve variable: {}, {e}", v.get_name());
+                    None
+                }
             }
-        }
-    }))
-    .await
-    .into_iter()
-    .flatten()
-    .collect::<HashMap<_, _>>();
-
-    Ok(Json(results))
+        }))
+        .await
+        .into_iter()
+        .flatten()
+        .collect(),
+    )
 }
