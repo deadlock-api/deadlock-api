@@ -8,24 +8,47 @@ export interface DuckDbHandle {
 
 /** Per database, each view's name and the file list it was created from. */
 const registeredViews = new WeakMap<DuckDbHandle, Map<string, string>>();
-let dbPromise: Promise<DuckDbHandle> | null = null;
+
+/**
+ * `create` run once, its promise shared by every caller while it is pending or after it resolved. A rejection is
+ * forgotten, so the next call starts over instead of failing forever on a cached error.
+ */
+export function sharedUntilRejected<T>(create: () => Promise<T>): () => Promise<T> {
+  let pending: Promise<T> | null = null;
+  return () => {
+    if (pending) return pending;
+    const attempt = create();
+    pending = attempt;
+    attempt.catch(() => {
+      if (pending === attempt) pending = null;
+    });
+    return attempt;
+  };
+}
 
 export function prewarmDuckDb(): void {
-  void initDuckDb();
+  // A failed prewarm is retried by the next `initDuckDb` call; nothing waits on this one.
+  initDuckDb().catch(() => undefined);
 }
 
 export function initDuckDb(): Promise<DuckDbHandle> {
-  if (dbPromise) return dbPromise;
-  dbPromise = (async () => {
-    const duckdb = await import("@duckdb/duckdb-wasm");
-    const bundle = await duckdb.selectBundle(duckdb.getJsDelivrBundles());
-    const workerScript = `importScripts("${bundle.mainWorker}");`;
-    const workerBlob = new Blob([workerScript], { type: "text/javascript" });
-    const workerUrl = URL.createObjectURL(workerBlob);
-    const worker = new Worker(workerUrl);
-    const db = new duckdb.AsyncDuckDB(new duckdb.ConsoleLogger(), worker);
-    await db.instantiate(bundle.mainModule, bundle.pthreadWorker);
-    URL.revokeObjectURL(workerUrl);
+  return loadDuckDb();
+}
+
+const loadDuckDb = sharedUntilRejected(async (): Promise<DuckDbHandle> => {
+  const duckdb = await import("@duckdb/duckdb-wasm");
+  const bundle = await duckdb.selectBundle(duckdb.getJsDelivrBundles());
+  const workerScript = `importScripts("${bundle.mainWorker}");`;
+  const workerBlob = new Blob([workerScript], { type: "text/javascript" });
+  const workerUrl = URL.createObjectURL(workerBlob);
+  const worker = new Worker(workerUrl);
+  const db = new duckdb.AsyncDuckDB(new duckdb.ConsoleLogger(), worker);
+  try {
+    try {
+      await db.instantiate(bundle.mainModule, bundle.pthreadWorker);
+    } finally {
+      URL.revokeObjectURL(workerUrl);
+    }
     const conn = await db.connect();
     try {
       await conn.query(
@@ -34,12 +57,15 @@ export function initDuckDb(): Promise<DuckDbHandle> {
     } finally {
       await conn.close();
     }
-    const handle: DuckDbHandle = { db };
-    registeredViews.set(handle, new Map());
-    return handle;
-  })();
-  return dbPromise;
-}
+  } catch (e) {
+    // The next call starts a fresh worker; this one would otherwise linger.
+    await db.terminate().catch(() => undefined);
+    throw e;
+  }
+  const handle: DuckDbHandle = { db };
+  registeredViews.set(handle, new Map());
+  return handle;
+});
 
 /**
  * The known tables a query mentions anywhere, not only right after FROM or JOIN: `FROM a, b`, subqueries and CTEs
