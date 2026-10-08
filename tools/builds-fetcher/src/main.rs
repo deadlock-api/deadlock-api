@@ -270,6 +270,10 @@ async fn insert_builds(
             Some((build, hero_build, data))
         })
         .collect();
+    // `push_values` with no rows renders `INSERT ... ON CONFLICT` without a VALUES list.
+    if rows.is_empty() {
+        return Ok(PgQueryResult::default());
+    }
 
     let mut query = QueryBuilder::new(
         "INSERT INTO hero_builds(hero, build_id, version, author_id, weekly_favorites, favorites, \
@@ -331,4 +335,23 @@ async fn fetch_builds(
     )
     .await?;
     Ok(response.results)
+}
+
+#[cfg(test)]
+mod tests {
+    use sqlx::postgres::PgPoolOptions;
+
+    use super::*;
+
+    #[tokio::test]
+    async fn insert_builds_skips_builds_without_hero_build() {
+        // The lazy pool never connects: a query reaching it would fail.
+        let pool = PgPoolOptions::new()
+            .acquire_timeout(Duration::from_millis(100))
+            .connect_lazy("postgres://localhost:1/none")
+            .unwrap();
+        let builds = vec![HeroBuildResult::default()];
+        let result = insert_builds(&pool, builds).await.unwrap();
+        assert_eq!(result.rows_affected(), 0);
+    }
 }
