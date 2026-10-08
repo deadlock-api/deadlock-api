@@ -213,10 +213,7 @@ impl DeltaHeader {
     pub const DELETE: Self = Self(0b11);
 
     pub(crate) fn from_bit_reader(br: &mut BitReader) -> Result<Self, BitError> {
-        // TODO(blukai): also try merging two bits from read_bool. who's faster?
-        let mut buf = [0u8];
-        br.read_bits(&mut buf, 2)?;
-        Ok(Self(buf[0]))
+        Ok(Self(br.read_ubit64(2)? as u8))
     }
 }
 

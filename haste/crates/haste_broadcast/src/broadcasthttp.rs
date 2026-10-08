@@ -259,6 +259,9 @@ pub struct BroadcastHttp<'client, C: HttpClient + 'client> {
     sync_response: SyncResponse,
     stream_state: StreamState,
     stream_buffer: StreamBuffer,
+    /// body of the last cmd read from a [`StreamBuffer::Last`] packet; a cheap (ref-counted)
+    /// slice of the packet that keeps the returned bytes alive.
+    cmd_body: Bytes,
     total_ticks: Option<i32>,
 }
 
@@ -279,6 +282,7 @@ impl<'client, C: HttpClient + 'client> BroadcastHttp<'client, C> {
             sync_response,
             stream_state: StreamState::Start,
             stream_buffer: StreamBuffer::Last(None),
+            cmd_body: Bytes::new(),
             total_ticks: None,
         })
     }
@@ -507,18 +511,8 @@ impl<'client, C: HttpClient + 'client> DemoStream for BroadcastHttp<'client, C> 
                     return Err(io::Error::from(io::ErrorKind::UnexpectedEof).into());
                 }
 
-                #[allow(
-                    unsafe_code,
-                    reason = "this is safe because lifetime of the returned slice is tied to the lifetime of r (if i'm not missing anything, am i?)."
-                )]
-                let data = unsafe {
-                    // NOTE: start is 0 because Reader's advance will increase start position of
-                    // the underlying slice
-                    let ptr = bytes.as_ref()[0..size].as_ptr();
-                    core::slice::from_raw_parts(ptr, size)
-                };
-                bytes.advance(size);
-                Ok(data)
+                self.cmd_body = bytes.split_to(size);
+                Ok(&self.cmd_body)
             }
 
             StreamBuffer::Seekable(ref mut c) => {

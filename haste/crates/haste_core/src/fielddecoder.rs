@@ -319,12 +319,11 @@ impl FieldDecoder {
 
             Self::Bool => FieldValue::Bool(br.read_bool()?),
             Self::String => {
-                // NOTE: string_buf must be cleared after use.
-                assert_eq!(ctx.string_buf, [] as [u8; 0]);
-                let n = br.read_string_to_end(&mut ctx.string_buf, false)?;
-                let ret = FieldValue::String(Arc::from(&ctx.string_buf[..n]));
+                // NOTE: cleared up front, so that a read that failed halfway can not leak bytes
+                // into the next string.
                 ctx.string_buf.clear();
-                ret
+                let n = br.read_string_to_end(&mut ctx.string_buf, false)?;
+                FieldValue::String(Arc::from(&ctx.string_buf[..n]))
             }
             Self::BinaryBlock => {
                 let len = br.read_uvarint32()? as usize;
