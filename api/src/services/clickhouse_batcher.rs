@@ -10,20 +10,11 @@ use tokio::sync::{mpsc, oneshot};
 use tracing::warn;
 
 use crate::error::{APIError, APIResult};
+use crate::utils::sql::join_display;
 
 /// Render a comma-separated list of keys for use inside a SQL `IN (...)` clause.
 pub(crate) fn in_clause<K: core::fmt::Display>(keys: &[K]) -> String {
-    use core::fmt::Write;
-    let mut out = String::new();
-    let mut first = true;
-    for key in keys {
-        if !first {
-            out.push(',');
-        }
-        let _ = write!(out, "{key}");
-        first = false;
-    }
-    out
+    join_display(keys, ",")
 }
 
 pub(crate) trait BatchQuery: Send + Sync + 'static {

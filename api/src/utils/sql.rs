@@ -27,6 +27,7 @@ pub(crate) const DURATION_COLUMN: &str = "duration_s";
 pub(crate) const ROSTER_DURATION_COLUMN: &str = "match_duration_s";
 
 /// Match-level time, id, badge and duration filters shared by most match queries.
+#[derive(Default)]
 #[cfg_attr(test, derive(Debug, proptest_derive::Arbitrary))]
 pub(crate) struct MatchInfoFilters {
     pub min_unix_timestamp: Option<i64>,
@@ -229,13 +230,18 @@ impl MatchPoolFilters {
 
 /// Comma separated list of ids for an SQL `IN (...)` or array literal.
 pub(crate) fn id_list<T: core::fmt::Display>(ids: &[T]) -> String {
+    join_display(ids, ", ")
+}
+
+/// Formats every item with `Display`, joined by `sep`, without an intermediate `Vec<String>`.
+pub(crate) fn join_display<T: core::fmt::Display>(items: &[T], sep: &str) -> String {
     use core::fmt::Write;
     let mut out = String::new();
-    for (i, id) in ids.iter().enumerate() {
+    for (i, item) in items.iter().enumerate() {
         if i > 0 {
-            out.push_str(", ");
+            out.push_str(sep);
         }
-        let _ = write!(out, "{id}");
+        let _ = write!(out, "{item}");
     }
     out
 }
@@ -264,30 +270,15 @@ mod tests {
 
     #[test]
     fn test_empty_filters() {
-        let filters = MatchInfoFilters {
-            min_unix_timestamp: None,
-            max_unix_timestamp: None,
-            min_match_id: None,
-            max_match_id: None,
-            min_average_badge: None,
-            max_average_badge: None,
-            min_duration_s: None,
-            max_duration_s: None,
-        };
+        let filters = MatchInfoFilters::default();
         assert_eq!(filters.build(), "");
     }
 
     #[test]
     fn test_badge_boundary_min_ignored_at_11() {
         let filters = MatchInfoFilters {
-            min_unix_timestamp: None,
-            max_unix_timestamp: None,
-            min_match_id: None,
-            max_match_id: None,
             min_average_badge: Some(11),
-            max_average_badge: None,
-            min_duration_s: None,
-            max_duration_s: None,
+            ..Default::default()
         };
         assert_eq!(filters.build(), "");
     }
@@ -295,14 +286,8 @@ mod tests {
     #[test]
     fn test_badge_boundary_max_ignored_at_116() {
         let filters = MatchInfoFilters {
-            min_unix_timestamp: None,
-            max_unix_timestamp: None,
-            min_match_id: None,
-            max_match_id: None,
-            min_average_badge: None,
             max_average_badge: Some(116),
-            min_duration_s: None,
-            max_duration_s: None,
+            ..Default::default()
         };
         assert_eq!(filters.build(), "");
     }
@@ -310,14 +295,9 @@ mod tests {
     #[test]
     fn test_roster_duration_column() {
         let filters = MatchInfoFilters {
-            min_unix_timestamp: None,
-            max_unix_timestamp: None,
-            min_match_id: None,
-            max_match_id: None,
-            min_average_badge: None,
-            max_average_badge: None,
             min_duration_s: Some(1),
             max_duration_s: Some(2),
+            ..Default::default()
         };
         assert_eq!(
             filters.predicates("", ROSTER_DURATION_COLUMN),
