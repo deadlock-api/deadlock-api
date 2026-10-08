@@ -117,7 +117,7 @@ struct SpectatorBot {
     api_token: String,
     proxy_url: String,
     failed_spectates: Mutex<LruCache<u64, bool>>,
-    current_patch: Arc<Mutex<Option<u64>>>,
+    current_patch: Mutex<Option<u64>>,
 }
 
 impl SpectatorBot {
@@ -132,7 +132,7 @@ impl SpectatorBot {
             failed_spectates: Mutex::new(LruCache::new(
                 NonZeroUsize::new(1000).unwrap_or(NonZeroUsize::MIN),
             )),
-            current_patch: Arc::new(Mutex::new(None)),
+            current_patch: Mutex::new(None),
         })
     }
 
@@ -150,17 +150,15 @@ impl SpectatorBot {
     }
 
     async fn mark_spectated(&self, key: &str, smi: &SpectatedMatchInfo) -> Result<()> {
-        let payload = serde_json::to_string(&smi)?;
-        let _: () = self
-            .redis
-            .hset(key, [(smi.match_id.to_string(), payload)])
-            .await?;
-        let _: () = self
-            .redis
-            .hexpire(key, REDIS_EXPIRY, None, &smi.match_id.to_string())
-            .await?;
+        self.mark_spectated_many(key, core::slice::from_ref(smi), REDIS_EXPIRY)
+            .await
+    }
 
-        Ok(())
+    /// Remembers that spectating `match_id` failed, so it is not picked again soon.
+    fn mark_failed_locally(&self, match_id: u64) {
+        if let Ok(mut guard) = self.failed_spectates.lock() {
+            guard.put(match_id, true);
+        }
     }
     async fn mark_spectated_many(
         &self,
@@ -237,22 +235,14 @@ impl SpectatorBot {
 
     fn update_patch_version(&self, steam_inf: &str) -> Result<()> {
         let version = steam_inf
-            .find("ClientVersion=")
-            .and_then(|start| {
-                let version_start = start + "ClientVersion=".len();
-                steam_inf[version_start..]
-                    .find('\n')
-                    .map(|end| steam_inf[version_start..version_start + end].trim())
-            })
-            .and_then(|v| v.parse::<u64>().ok())
+            .split_once("ClientVersion=")
+            .and_then(|(_, rest)| rest.split_once('\n'))
+            .and_then(|(v, _)| v.trim().parse::<u64>().ok())
             .context("Failed to parse client version")?;
 
-        let v = self.current_patch.lock();
-        if let Ok(mut current) = v {
-            *current = env::var("CLIENT_VERSION")
-                .ok()
-                .and_then(|s| s.parse().ok())
-                .or(Some(version));
+        if let Ok(mut current) = self.current_patch.lock() {
+            let overridden = env::var("CLIENT_VERSION").ok().and_then(|s| s.parse().ok());
+            *current = Some(overridden.unwrap_or(version));
         }
         Ok(())
     }
@@ -310,17 +300,13 @@ impl SpectatorBot {
 
                 let Some(ref res) = spectate_response.result else {
                     warn!("[{label} {match_id}] No result in response");
-                    if let Ok(mut guard) = self.failed_spectates.lock() {
-                        guard.put(match_id, true);
-                    }
+                    self.mark_failed_locally(match_id);
                     sleep(SPECTATE_COOLDOWN).await;
                     return Ok(false);
                 };
                 let Some(broadcast_url) = res.client_broadcast_url.as_ref() else {
                     warn!("[{label} {match_id}] No broadcast URL");
-                    if let Ok(mut guard) = self.failed_spectates.lock() {
-                        guard.put(match_id, true);
-                    }
+                    self.mark_failed_locally(match_id);
                     sleep(SPECTATE_COOLDOWN).await;
                     return Ok(false);
                 };
@@ -386,9 +372,7 @@ impl SpectatorBot {
                     "[{label}] {match_id} Failed to spectate match: {:?}",
                     response.status()
                 );
-                if let Ok(mut guard) = self.failed_spectates.lock() {
-                    guard.put(match_id, true);
-                }
+                self.mark_failed_locally(match_id);
                 sleep(ERROR_COOLDOWN).await;
                 Ok(false)
             }
@@ -406,8 +390,7 @@ impl SpectatorBot {
         let _poller = AbortOnDrop(abort_handle);
 
         while start_time.elapsed() < Duration::from_secs(BOT_RUNTIME_HOURS * 3600) {
-            let s = steam_inf.read().await.clone();
-            self.update_patch_version(&s)?;
+            self.update_patch_version(&steam_inf.read().await)?;
 
             let recently_spectated = self.get_all_recently_spectated(REDIS_SPEC_KEY).await?;
             let n_spectated = recently_spectated.len();
@@ -436,7 +419,7 @@ impl SpectatorBot {
                         && !local_failed_spectates.contains(&x.match_id)
                 })
                 .filter(|x| x.is_titan_exposed())
-                .sorted_by_key(|x| {
+                .min_by_key(|x| {
                     (
                         core::cmp::Reverse(x.match_score.unwrap_or_default() / 100),
                         if x.is_titan_exposed() {
@@ -448,8 +431,7 @@ impl SpectatorBot {
                         },
                         x.start_time,
                     )
-                })
-                .next();
+                });
 
             if let Some(m) = next_match {
                 info!(
@@ -527,14 +509,12 @@ impl Drop for AbortOnDrop {
 }
 
 async fn run_server(bot: Arc<SpectatorBot>) -> Result<()> {
-    let shared_state = bot;
-
     let app = Router::new()
         .route("/matches", get(fetch_matches))
         .route("/matches-past-hour", get(count_extra_matches))
         .route("/match-ended", post(record_match_end))
         .route("/match-still-alive", post(record_match_still_alive))
-        .with_state(shared_state);
+        .with_state(bot);
 
     // run our app with hyper, listening globally on port 3000
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3929").await?;

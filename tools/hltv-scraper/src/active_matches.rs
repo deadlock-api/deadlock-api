@@ -15,33 +15,29 @@ pub(crate) struct ActiveMatch {
 }
 
 impl ActiveMatch {
+    /// Whether either team has lost both titan shield generators.
     pub(crate) fn is_titan_exposed(&self) -> bool {
-        use ECitadelTeamObjective::{
-            KECitadelTeamObjectiveTitanShieldGenerator1,
-            KECitadelTeamObjectiveTitanShieldGenerator2,
-        };
-        let t0 = self.objectives_mask_team0;
-        let t1 = self.objectives_mask_team1;
-
-        (!has_objective(t0, KECitadelTeamObjectiveTitanShieldGenerator1)
-            && !has_objective(t0, KECitadelTeamObjectiveTitanShieldGenerator2))
-            || (!has_objective(t1, KECitadelTeamObjectiveTitanShieldGenerator1)
-                && !has_objective(t1, KECitadelTeamObjectiveTitanShieldGenerator2))
+        self.team_masks()
+            .into_iter()
+            .any(|mask| SHIELD_GENERATORS.iter().all(|&o| !has_objective(mask, o)))
     }
-    pub(crate) fn is_shrine_exposed(&self) -> bool {
-        use ECitadelTeamObjective::{
-            KECitadelTeamObjectiveTitanShieldGenerator1,
-            KECitadelTeamObjectiveTitanShieldGenerator2,
-        };
-        let t0 = self.objectives_mask_team0;
-        let t1 = self.objectives_mask_team1;
 
-        !has_objective(t0, KECitadelTeamObjectiveTitanShieldGenerator1)
-            || !has_objective(t0, KECitadelTeamObjectiveTitanShieldGenerator2)
-            || !has_objective(t1, KECitadelTeamObjectiveTitanShieldGenerator1)
-            || !has_objective(t1, KECitadelTeamObjectiveTitanShieldGenerator2)
+    /// Whether either team has lost a titan shield generator.
+    pub(crate) fn is_shrine_exposed(&self) -> bool {
+        self.team_masks()
+            .into_iter()
+            .any(|mask| SHIELD_GENERATORS.iter().any(|&o| !has_objective(mask, o)))
+    }
+
+    fn team_masks(&self) -> [u32; 2] {
+        [self.objectives_mask_team0, self.objectives_mask_team1]
     }
 }
+
+const SHIELD_GENERATORS: [ECitadelTeamObjective; 2] = [
+    ECitadelTeamObjective::KECitadelTeamObjectiveTitanShieldGenerator1,
+    ECitadelTeamObjective::KECitadelTeamObjectiveTitanShieldGenerator2,
+];
 
 fn has_objective(mask: u32, objective: ECitadelTeamObjective) -> bool {
     mask & (1 << (objective as u32)) != 0

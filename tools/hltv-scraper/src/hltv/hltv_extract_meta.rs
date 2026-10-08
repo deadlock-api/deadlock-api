@@ -19,6 +19,7 @@ fn process_post_match(details_buf: &[u8]) -> anyhow::Result<Vec<u8>> {
     Ok(meta_content)
 }
 
+#[derive(Default)]
 pub(crate) struct FragmentAnalysis {
     pub meta: Option<Vec<u8>>,
     pub has_end_command: bool,
@@ -33,7 +34,6 @@ fn analyze_fragment_sync(fragment_buf: Bytes) -> anyhow::Result<FragmentAnalysis
     let mut demo_file = BroadcastFile::start_reading(cursor);
     let mut has_end_command = false;
 
-    // let mut demo_file = haste::demofile::DemoFile::from_reader(cursor);
     loop {
         match demo_file.read_cmd_header() {
             Ok(cmd_header) => {
@@ -75,10 +75,9 @@ fn analyze_fragment_sync(fragment_buf: Bytes) -> anyhow::Result<FragmentAnalysis
                 }
             }
             Err(err) => {
-                if demo_file.is_at_eof().unwrap_or_default() {
-                    break;
+                if !demo_file.is_at_eof().unwrap_or_default() {
+                    warn!("Got err: {err:?}");
                 }
-                warn!("Got err: {err:?}");
                 break;
             }
         }

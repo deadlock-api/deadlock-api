@@ -89,17 +89,9 @@ pub(crate) async fn download_match_mpsc(
 
     let fragment_start = sync_response.fragment;
 
-    let sender_clone = sender.clone();
-
     tokio::spawn(async move {
-        if let Err(e) = fragment_fetching_loop(
-            &client,
-            match_id,
-            fragment_start,
-            sender_clone,
-            broadcast_url,
-        )
-        .await
+        if let Err(e) =
+            fragment_fetching_loop(&client, match_id, fragment_start, sender, broadcast_url).await
         {
             error!("Error in fragment fetching loop: {:?}", e);
         }
@@ -171,13 +163,13 @@ async fn fragment_fetching_loop(
 
         let is_first_fragment = fragment_n == first_fragment_n;
 
-        let fragment_types = if is_first_fragment {
-            vec![FragmentType::Full, FragmentType::Delta]
+        let fragment_types: &[FragmentType] = if is_first_fragment {
+            &[FragmentType::Full, FragmentType::Delta]
         } else {
-            vec![FragmentType::Delta]
+            &[FragmentType::Delta]
         };
 
-        for fragment_type in fragment_types {
+        for &fragment_type in fragment_types {
             let mut retry_count = 0;
             loop {
                 match download_match_fragment(client, &broadcast_url, fragment_n, fragment_type)
@@ -186,12 +178,7 @@ async fn fragment_fetching_loop(
                     Ok(contents) => {
                         counter!("hltv.fragment.success").increment(1);
 
-                        let analysis = analyze_fragment(contents.clone()).await.unwrap_or(
-                            crate::hltv::hltv_extract_meta::FragmentAnalysis {
-                                meta: None,
-                                has_end_command: false,
-                            },
-                        );
+                        let analysis = analyze_fragment(contents.clone()).await.unwrap_or_default();
 
                         let has_meta = analysis.meta.is_some();
                         let is_last = analysis.has_end_command;

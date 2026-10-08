@@ -7,6 +7,7 @@ use std::sync::Arc;
 
 use anyhow::Context;
 use async_compression::tokio::write::BzEncoder;
+use bytes::Bytes;
 use dashmap::DashMap;
 use jiff::{Timestamp, ToSpan};
 use lru::LruCache;
@@ -24,7 +25,7 @@ use crate::cmd::download_single_hltv::download_single_hltv_meta;
 use crate::cmd::run_spectate_bot::{SpectatedMatchInfo, SpectatedMatchType};
 
 pub(crate) async fn run(spectate_server_url: String) -> anyhow::Result<()> {
-    let spec_client = Arc::new(common::http_client());
+    let spec_client = common::http_client();
     let base_url =
         Url::parse(&spectate_server_url).context("Parsing base url for spectate server")?;
 
@@ -58,15 +59,16 @@ pub(crate) async fn run(spectate_server_url: String) -> anyhow::Result<()> {
         let spectated_match_ids: HashSet<u64> = matches.iter().map(|x| x.match_id).collect();
 
         let total_available_matches = matches.len();
+        let now = Timestamp::now();
+        let started_before = now.saturating_sub(15.minutes()).unwrap();
+        let updated_before = now.saturating_sub(1.minutes()).unwrap();
         let chosen_match = matches
             .into_iter()
             .filter(|x| !already_downloaded.contains(&x.match_id))
             .filter(|x| !currently_downloading.contains_key(&x.match_id))
-            .filter(|x| {
-                if let Some(started) = x.started_at {
-                    return started < Timestamp::now().saturating_sub(15.minutes()).unwrap();
-                }
-                x.updated_at < Timestamp::now().saturating_sub(1.minutes()).unwrap()
+            .filter(|x| match x.started_at {
+                Some(started) => started < started_before,
+                None => x.updated_at < updated_before,
             })
             .min_by_key(|x| x.match_id);
 
@@ -122,7 +124,7 @@ async fn fetch_spectated_matches(
 
 fn download_task(
     base_url: Url,
-    http_client: Arc<reqwest::Client>,
+    http_client: reqwest::Client,
     store: Arc<impl ObjectStore>,
     cache_store: Arc<impl ObjectStore>,
     currently_downloading: Arc<DashMap<u64, bool>>,
@@ -211,12 +213,12 @@ async fn push_meta_to_object_store(
     match_id: u64,
 ) -> anyhow::Result<()> {
     let label = match_type.label();
-    let output = compress_match_metadata(match_metadata).await?;
+    let output = Bytes::from(compress_match_metadata(match_metadata).await?);
 
     let ingest_path =
         object_store::path::Path::from(format!("/ingest/metadata/{match_id}.meta_hltv.bz2"));
     let cache_path_str = format!("{match_id}.meta_hltv.bz2");
-    let cache_path = object_store::path::Path::from(cache_path_str.clone());
+    let cache_path = object_store::path::Path::from(cache_path_str.as_str());
 
     let (ingest_res, cache_res) = tokio::join!(
         store.put(&ingest_path, output.clone().into()),
@@ -243,17 +245,12 @@ async fn store_meta_to_local_store(
     let label = match_type.label();
     let output = compress_match_metadata(match_metadata).await?;
 
-    let p_str = format!(
-        "{}/metadata/{}.meta_hltv.bz2",
-        root_path.to_string_lossy(),
-        match_id
-    );
-    let p = PathBuf::from(p_str.clone());
+    let p = root_path.join(format!("metadata/{match_id}.meta_hltv.bz2"));
     if let Some(dir) = p.parent() {
         tokio::fs::create_dir_all(dir).await?;
     }
     tokio::fs::write(&p, output).await?;
 
-    info!("[{label} {match_id}] Wrote meta to {p_str}!");
+    info!("[{label} {match_id}] Wrote meta to {}!", p.display());
     Ok(())
 }
