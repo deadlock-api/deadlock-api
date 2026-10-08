@@ -265,34 +265,39 @@ pub(super) async fn resolve_broadcast_url(
             .fixed_backoff(Duration::from_millis(10))
             .await?;
 
-    let payload = &serde_json::json!({
+    let payload = serde_json::json!({
         "match_type": "GapMatch",
         "match_id": match_id,
         "broadcast_url": broadcast_url,
         "lobby_id": lobby_id,
         "updated_at": chrono::Utc::now().timestamp(),
     });
-    state
-        .redis_client
-        .clone()
-        .hset(
-            SPECTATED_MATCHES_KEY,
-            match_id.to_string(),
-            serde_json::to_string(payload)?,
-        )
-        .await?;
-    state
-        .redis_client
-        .clone()
-        .hexpire(
-            SPECTATED_MATCHES_KEY,
-            LIVE_URL_TTL_SECS,
-            ExpireOption::NONE,
-            match_id.to_string(),
-        )
-        .await?;
+    store_live_urls(state, [(match_id, payload)]).await?;
 
     Ok((broadcast_url, lobby_id))
+}
+
+/// Stores each `(match_id, entry)` in the spectated matches hash, expiring after
+/// [`LIVE_URL_TTL_SECS`], in one round trip.
+async fn store_live_urls(
+    state: &AppState,
+    entries: impl IntoIterator<Item = (u64, serde_json::Value)>,
+) -> APIResult<()> {
+    let mut pipe = redis::pipe();
+    for (match_id, entry) in entries {
+        let field = match_id.to_string();
+        pipe.hset(SPECTATED_MATCHES_KEY, &field, entry.to_string())
+            .ignore()
+            .hexpire(
+                SPECTATED_MATCHES_KEY,
+                LIVE_URL_TTL_SECS,
+                ExpireOption::NONE,
+                &field,
+            )
+            .ignore();
+    }
+    pipe.exec_async(&mut state.redis_client.clone()).await?;
+    Ok(())
 }
 
 #[utoipa::path(
@@ -415,36 +420,21 @@ pub(super) async fn ingest_urls(
     }
 
     let now = chrono::Utc::now().timestamp();
-    for broadcast in &broadcast_urls {
-        let payload = serde_json::json!({
-            "match_type": "IngestedMatch",
-            "match_id": broadcast.match_id,
-            "broadcast_url": broadcast.broadcast_url,
-            "lobby_id": broadcast.lobby_id,
-            "updated_at": now,
-            "started_at": broadcast.started_at,
-        });
-        let field = broadcast.match_id.to_string();
-        state
-            .redis_client
-            .clone()
-            .hset(
-                SPECTATED_MATCHES_KEY,
-                &field,
-                serde_json::to_string(&payload)?,
-            )
-            .await?;
-        state
-            .redis_client
-            .clone()
-            .hexpire(
-                SPECTATED_MATCHES_KEY,
-                LIVE_URL_TTL_SECS,
-                ExpireOption::NONE,
-                &field,
-            )
-            .await?;
-    }
+    store_live_urls(
+        &state,
+        broadcast_urls.iter().map(|broadcast| {
+            let payload = serde_json::json!({
+                "match_type": "IngestedMatch",
+                "match_id": broadcast.match_id,
+                "broadcast_url": broadcast.broadcast_url,
+                "lobby_id": broadcast.lobby_id,
+                "updated_at": now,
+                "started_at": broadcast.started_at,
+            });
+            (broadcast.match_id, payload)
+        }),
+    )
+    .await?;
 
     Ok(Json(serde_json::json!({
         "status": "success",
