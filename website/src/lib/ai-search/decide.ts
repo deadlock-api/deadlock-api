@@ -11,7 +11,7 @@ import {
   TIMES,
 } from "~/lib/page-registry";
 
-import { findMentions, heroTeams } from "./entities";
+import { findMentions, heroTeams, itemTiersOf } from "./entities";
 import { type IntentVocabulary, NO_FILTERS, type SearchIntent } from "./intent";
 
 // The search asks Mercury Decide, a classifier, where a question's answer lives. Each part of the routing is one
@@ -210,6 +210,7 @@ export function intentFromDecision(
     heroes: twoTeams ? entities.heroes : [...entities.heroes, ...entities.enemies],
     enemy_heroes: twoTeams ? entities.enemies : [],
     items: entities.items,
+    item_tiers: itemTiersOf(question),
     rank_min: rankMin,
     rank_max: rankMax === rankMin && OPEN_UPWARDS.test(question) ? null : rankMax,
     mode: mode && MODE_WORDS[mode].test(question) ? mode : null,

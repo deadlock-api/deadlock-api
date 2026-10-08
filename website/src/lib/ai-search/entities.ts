@@ -96,6 +96,31 @@ export function findMentions(question: string, names: readonly string[]): Mentio
   return [...found.values()].sort((a, b) => a.at - b.at);
 }
 
+const TIER_NUMBERS: Record<string, number> = { one: 1, two: 2, three: 3, four: 4 };
+
+/**
+ * The shop tiers a question names, ascending: "t1", "tier 2", "tier one", "t3/t4", "tier 1 and 2". "tier list" and
+ * "s tier" name no shop tier.
+ */
+export function itemTiersOf(question: string): number[] {
+  const tiers = new Set<number>();
+  const tokens = words(question);
+  const tierOf = (token: string | undefined) => (token ? (TIER_NUMBERS[token] ?? Number(token)) : NaN);
+  const isTier = (tier: number) => Number.isInteger(tier) && tier >= 1 && tier <= 4;
+  tokens.forEach((token, i) => {
+    const short = /^t([1-4])$/.exec(token);
+    if (short) tiers.add(Number(short[1]));
+    if (token !== "tier" && token !== "tiers") return;
+    // "tier 1", and the numbers that follow it: "tier 1 and 2", "tiers 3 4".
+    for (let at = i + 1; at < tokens.length; at++) {
+      const tier = tierOf(tokens[at]);
+      if (isTier(tier)) tiers.add(tier);
+      else if (tokens[at] !== "and" && tokens[at] !== "or") break;
+    }
+  });
+  return [...tiers].sort((a, b) => a - b);
+}
+
 const VERSUS = new Set(["vs", "versus", "against", "v"]);
 
 /**

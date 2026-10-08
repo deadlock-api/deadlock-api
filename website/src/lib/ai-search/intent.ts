@@ -13,6 +13,8 @@ export interface SearchIntent {
   /** Only a page with two sides reads it: the other team. */
   enemy_heroes: string[];
   items: string[];
+  /** Shop tiers, 1 to 4 ("t1 items"). */
+  item_tiers: number[];
   /** Rank tier names ("Phantom"), each end optional. */
   rank_min: string | null;
   rank_max: string | null;
@@ -27,6 +29,7 @@ export const NO_FILTERS: Omit<SearchIntent, "page"> = {
   heroes: [],
   enemy_heroes: [],
   items: [],
+  item_tiers: [],
   rank_min: null,
   rank_max: null,
   mode: null,

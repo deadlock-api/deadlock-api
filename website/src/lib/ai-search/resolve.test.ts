@@ -4,7 +4,7 @@ import { test } from "node:test";
 import { PAGE_REGISTRY } from "~/lib/page-registry";
 
 import { decideRequestBody, intentFromDecision, questionEntities } from "./decide";
-import { findMentions } from "./entities";
+import { findMentions, itemTiersOf } from "./entities";
 import { directIntent, NO_FILTERS, type SearchIntent } from "./intent";
 import { type Catalog, resolveIntent } from "./resolve";
 import { validateDecideInput } from "./search-fns";
@@ -130,6 +130,22 @@ test("an item question with a vs keeps both sides: what to buy as one hero again
   );
   assert.deepEqual([decided.heroes, decided.enemy_heroes], [["Haze"], ["Bebop"]]);
   assert.equal(url(decided), '/analytics/items{"hero":13,"enemy":15}');
+});
+
+test("shop tiers are read in code and narrow the item table", () => {
+  const question = "t1 items as bebop against haze";
+  const decided = intentFromDecision(
+    { page: choice({ item_stats: 0.9, none: 0.1 }) },
+    question,
+    questionEntities(question, vocabulary),
+    vocabulary.rankNames,
+  );
+  assert.equal(url(decided), '/analytics/items{"hero":15,"enemy":13,"item_tiers":1}');
+  assert.deepEqual(itemTiersOf("tier 3 and 4 items on haze"), [3, 4]);
+  assert.deepEqual(itemTiersOf("best T2/t1 items"), [1, 2]);
+  assert.deepEqual(itemTiersOf("tier one weapon items"), [1]);
+  assert.deepEqual(itemTiersOf("haze tier list"), []);
+  assert.deepEqual(itemTiersOf("is bebop s tier"), []);
 });
 
 test("a question the model cannot place opens nothing", () => {

@@ -51,6 +51,7 @@ function selectionOf(intent: SearchIntent, catalog: Catalog): Selection {
     heroes: lookUp(intent.heroes, catalog.heroes),
     enemyHeroes: lookUp(intent.enemy_heroes, catalog.heroes),
     items: lookUp(intent.items, catalog.items),
+    itemTiers: intent.item_tiers,
     rank: rankRange(intent, catalog.ranks),
     mode: intent.mode ?? undefined,
     time: intent.time ?? undefined,
