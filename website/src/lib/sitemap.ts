@@ -5,9 +5,10 @@ import { ANALYTICS_TABS } from "~/lib/analytics-tabs";
 import { api } from "~/lib/api";
 import { fetchPatchList } from "~/lib/patch-list-fns";
 import { INDEXED_PATCHES, isSettled, patchWindows } from "~/lib/patches";
-import { filterPlayableHeroes, filterShopableItems } from "~/queries/asset-queries";
 
+import { isPlayableHero } from "./hero-roster";
 import { heroSlug } from "./hero-slug";
+import { isShopableItem } from "./item-roster";
 import { itemSlug } from "./item-slug";
 import { SITE_URL } from "./seo";
 
@@ -136,14 +137,14 @@ async function withRetries<T>(what: string, load: () => Promise<T>, attempts = 3
 
 async function loadHeroEntries(): Promise<SitemapEntry[]> {
   const response = await withRetries("heroes", () => api.heroes_api.listHeroes({ onlyActive: true }));
-  return filterPlayableHeroes(response.data).map((hero) => ({
+  return response.data.filter(isPlayableHero).map((hero) => ({
     path: `/analytics/heroes/${heroSlug(hero.name)}`,
   }));
 }
 
 async function loadItemEntries(): Promise<SitemapEntry[]> {
   const response = await withRetries("items", () => api.items_api.getItemsByType({ type: "upgrade" }));
-  return filterShopableItems(response.data as Upgrade[]).map((item) => ({
+  return (response.data as Upgrade[]).filter(isShopableItem).map((item) => ({
     path: `/analytics/items/${itemSlug(item.name)}`,
   }));
 }

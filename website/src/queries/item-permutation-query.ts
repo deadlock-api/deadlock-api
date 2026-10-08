@@ -3,6 +3,7 @@ import type { AnalyticsApiItemPermutationStatsRequest, ItemPermutationStats, Upg
 
 import { CACHE_DURATIONS } from "~/constants/cache";
 import { api } from "~/lib/api";
+import { isShopableItem } from "~/lib/item-roster";
 import { shrunkWinRate } from "~/lib/shrinkage";
 
 import { queryKeys } from "./query-keys";
@@ -22,7 +23,7 @@ export function itemPermutationStatsQueryOptions(params: AnalyticsApiItemPermuta
 export function shopableItemIds(
   items: readonly Pick<Upgrade, "id" | "disabled" | "shopable" | "shop_image_webp">[] | undefined,
 ): Set<number> {
-  return new Set((items ?? []).filter((i) => !i.disabled && i.shopable && i.shop_image_webp).map((i) => i.id));
+  return new Set((items ?? []).filter(isShopableItem).map((i) => i.id));
 }
 
 /** Combinations the table lists: every item in them can still be bought. */
@@ -64,14 +65,16 @@ export function trimItemCombosForView(
       comboKey(row.item_ids),
     ),
   );
-  const kept = listable.filter((row) => keys.has(comboKey(row.item_ids)));
-  const rest = listable.filter((row) => !keys.has(comboKey(row.item_ids)));
-  if (rest.length === 0) return kept;
+  const kept: ItemPermutationStats[] = [];
   const remainder: ItemPermutationStats = { item_ids: [], wins: 0, losses: 0, matches: 0 };
-  for (const row of rest) {
-    remainder.wins += row.wins;
-    remainder.losses += row.losses;
-    remainder.matches += row.matches;
+  for (const row of listable) {
+    if (keys.has(comboKey(row.item_ids))) {
+      kept.push(row);
+    } else {
+      remainder.wins += row.wins;
+      remainder.losses += row.losses;
+      remainder.matches += row.matches;
+    }
   }
-  return [...kept, remainder];
+  return kept.length === listable.length ? kept : [...kept, remainder];
 }
