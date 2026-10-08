@@ -1,9 +1,8 @@
 use core::time::Duration;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use chrono::{TimeDelta, Utc};
 use sqlx::{Pool, Postgres};
-use tokio::sync::Mutex;
 use tokio::time::interval;
 use tracing::{error, info, warn};
 
@@ -43,7 +42,7 @@ pub(crate) struct PatreonVerificationJob {
     steam_accounts_repository: SteamAccountsRepository,
     patreon_client: PatreonClient,
     /// Patrons that need retry due to API errors
-    retry_queue: Arc<Mutex<Vec<RetryPatron>>>,
+    retry_queue: Mutex<Vec<RetryPatron>>,
 }
 
 impl PatreonVerificationJob {
@@ -68,7 +67,7 @@ impl PatreonVerificationJob {
             patron_repository,
             steam_accounts_repository,
             patreon_client,
-            retry_queue: Arc::new(Mutex::new(Vec::new())),
+            retry_queue: Mutex::new(Vec::new()),
         }
     }
 
@@ -195,13 +194,12 @@ impl PatreonVerificationJob {
                 }
             }
             MembershipSyncResult::ApiError => {
-                self.queue_for_retry(
-                    patron.id,
-                    &patron.patreon_user_id,
-                    &current_access_token,
-                    patron.slot_override,
-                )
-                .await;
+                self.queue_for_retry(RetryPatron {
+                    id: patron.id,
+                    patreon_user_id: patron.patreon_user_id.clone(),
+                    access_token: current_access_token,
+                    slot_override: patron.slot_override,
+                });
                 VerificationResult::ApiError
             }
             MembershipSyncResult::DbError => VerificationResult::Failed,
@@ -284,12 +282,7 @@ impl PatreonVerificationJob {
 
                 if let Err(e) = self
                     .patron_repository
-                    .update_patron_membership(
-                        patron_id,
-                        tier_id.clone(),
-                        pledge_amount_cents,
-                        is_active,
-                    )
+                    .update_patron_membership(patron_id, tier_id, pledge_amount_cents, is_active)
                     .await
                 {
                     error!("Failed to update membership for patron {patreon_user_id}: {e}");
@@ -355,28 +348,21 @@ impl PatreonVerificationJob {
     }
 
     /// Queue a patron for retry after Patreon API error
-    async fn queue_for_retry(
-        &self,
-        patron_id: uuid::Uuid,
-        patreon_user_id: &str,
-        access_token: &str,
-        slot_override: Option<i32>,
-    ) {
-        let mut queue = self.retry_queue.lock().await;
-        queue.push(RetryPatron {
-            id: patron_id,
-            patreon_user_id: patreon_user_id.to_string(),
-            access_token: access_token.to_string(),
-            slot_override,
-        });
+    fn queue_for_retry(&self, patron: RetryPatron) {
+        self.retry_queue
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .push(patron);
     }
 
     /// Process the retry queue for patrons that had API errors
     async fn process_retry_queue(&self) {
-        let patrons_to_retry = {
-            let mut queue = self.retry_queue.lock().await;
-            core::mem::take(&mut *queue)
-        };
+        let patrons_to_retry = core::mem::take(
+            &mut *self
+                .retry_queue
+                .lock()
+                .unwrap_or_else(std::sync::PoisonError::into_inner),
+        );
 
         if patrons_to_retry.is_empty() {
             return;
@@ -412,8 +398,7 @@ impl PatreonVerificationJob {
                         "Retry failed for patron {}, will try again",
                         retry_patron.patreon_user_id
                     );
-                    let mut queue = self.retry_queue.lock().await;
-                    queue.push(retry_patron);
+                    self.queue_for_retry(retry_patron);
                     requeued_count += 1;
                 }
                 MembershipSyncResult::DbError => {

@@ -8,7 +8,7 @@ use uuid::Uuid;
 use crate::context::AppState;
 use crate::error::APIError;
 use crate::services::patreon::jwt::validate_session_token;
-use crate::utils::request::parse_api_key;
+use crate::utils::request::{header_str, parse_api_key};
 
 /// Authenticated patron session extracted from request
 ///
@@ -34,7 +34,7 @@ impl FromRequestParts<AppState> for PatronSession {
         let token = extract_token_from_cookie(&parts.headers)
             .or_else(|| extract_token_from_auth_header(&parts.headers));
 
-        if let Some(token) = &token
+        if let Some(token) = token
             && let Ok(claims) = validate_session_token(token, &state.config.jwt_secret)
         {
             return Ok(PatronSession {
@@ -63,24 +63,15 @@ impl FromRequestParts<AppState> for PatronSession {
 }
 
 /// Extracts the JWT token from the `patron_session` cookie
-fn extract_token_from_cookie(headers: &axum::http::HeaderMap) -> Option<String> {
-    headers
-        .get(axum::http::header::COOKIE)
-        .and_then(|v| v.to_str().ok())
-        .and_then(|cookies| {
-            cookies.split(';').find_map(|cookie| {
-                let cookie = cookie.trim();
-                cookie.strip_prefix("patron_session=").map(str::to_string)
-            })
-        })
+fn extract_token_from_cookie(headers: &axum::http::HeaderMap) -> Option<&str> {
+    header_str(headers, axum::http::header::COOKIE)?
+        .split(';')
+        .find_map(|cookie| cookie.trim().strip_prefix("patron_session="))
 }
 
 /// Extracts the JWT token from the `Authorization: Bearer <token>` header
-fn extract_token_from_auth_header(headers: &axum::http::HeaderMap) -> Option<String> {
-    headers
-        .get(axum::http::header::AUTHORIZATION)
-        .and_then(|v| v.to_str().ok())
-        .and_then(|auth| auth.strip_prefix("Bearer ").map(String::from))
+fn extract_token_from_auth_header(headers: &axum::http::HeaderMap) -> Option<&str> {
+    header_str(headers, axum::http::header::AUTHORIZATION)?.strip_prefix("Bearer ")
 }
 
 /// Looks up the `patron_id` linked to an API key.
@@ -123,7 +114,7 @@ mod tests {
         );
 
         let token = extract_token_from_cookie(&headers);
-        assert_eq!(token, Some("test_token_123".to_string()));
+        assert_eq!(token, Some("test_token_123"));
     }
 
     #[test]
@@ -135,7 +126,7 @@ mod tests {
         );
 
         let token = extract_token_from_cookie(&headers);
-        assert_eq!(token, Some("test_token_456".to_string()));
+        assert_eq!(token, Some("test_token_456"));
     }
 
     #[test]
@@ -154,7 +145,7 @@ mod tests {
         );
 
         let token = extract_token_from_auth_header(&headers);
-        assert_eq!(token, Some("test_token_789".to_string()));
+        assert_eq!(token, Some("test_token_789"));
     }
 
     #[test]
