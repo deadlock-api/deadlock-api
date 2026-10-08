@@ -58,102 +58,50 @@ export function useHeroMatchupRows({
     prevMaxDate,
   );
 
-  const heroStatsQuery = {
-    minHeroMatches: minHeroMatches ?? 0,
-    // Stated although 0 is the default: the hero page asks for the same stats with it, and only an identical
-    // query key shares the cached response instead of fetching /hero-stats a second time.
-    minHeroMatchesTotal: 0,
-    minAverageBadge: minRankId,
-    maxAverageBadge: maxRankId,
-    minUnixTimestamp: minUnixTimestamp ?? 0,
-    maxUnixTimestamp,
-    gameMode: gameMode,
-    matchMode,
-  };
+  const hasPreviousInterval = prevMinDate != null && prevMaxDate != null;
+  const range = { minUnixTimestamp: minUnixTimestamp ?? 0, maxUnixTimestamp };
+  const prevRange = { minUnixTimestamp: prevMinTimestamp ?? 0, maxUnixTimestamp: prevMaxTimestamp };
+  const filters = { minAverageBadge: minRankId, maxAverageBadge: maxRankId, gameMode, matchMode };
+  const heroStatsQuery = { ...filters, minHeroMatches: minHeroMatches ?? 0 };
+  const matchupQuery = { ...filters, sameLaneFilter, minMatches: minHeroMatches ?? 0 };
+
   const {
     data: heroData,
     isLoading: isLoadingHero,
     isError: isHeroError,
     refetch: refetchHero,
-  } = useQuery(heroStatsQueryOptions(heroStatsQuery));
-
-  const synergyStatsQuery = {
-    sameLaneFilter: sameLaneFilter,
-    minMatches: minHeroMatches ?? 0,
-    minAverageBadge: minRankId,
-    maxAverageBadge: maxRankId,
-    minUnixTimestamp: minUnixTimestamp ?? 0,
-    maxUnixTimestamp,
-    gameMode: gameMode,
-    matchMode,
-  };
+  } = useQuery(
+    heroStatsQueryOptions({
+      ...heroStatsQuery,
+      ...range,
+      // Stated although 0 is the default: the hero page asks for the same stats with it, and only an identical
+      // query key shares the cached response instead of fetching /hero-stats a second time.
+      minHeroMatchesTotal: 0,
+    }),
+  );
   const {
     data: synergyData,
     isLoading: isLoadingSynergy,
     isError: isSynergyError,
     refetch: refetchSynergy,
-  } = useQuery(heroSynergyWinsQueryOptions(synergyStatsQuery));
-
-  const counterStatsQuery = {
-    sameLaneFilter: sameLaneFilter,
-    minMatches: minHeroMatches ?? 0,
-    minAverageBadge: minRankId,
-    maxAverageBadge: maxRankId,
-    minUnixTimestamp: minUnixTimestamp ?? 0,
-    maxUnixTimestamp,
-    gameMode: gameMode,
-    matchMode,
-  };
+  } = useQuery(heroSynergyWinsQueryOptions({ ...matchupQuery, ...range }));
   const {
     data: counterData,
     isLoading: isLoadingCounter,
     isError: isCounterError,
     refetch: refetchCounter,
-  } = useQuery(heroCounterWinsQueryOptions(counterStatsQuery));
+  } = useQuery(heroCounterWinsQueryOptions({ ...matchupQuery, ...range }));
 
-  const hasPreviousInterval = prevMinDate != null && prevMaxDate != null;
-
-  const prevHeroStatsQuery = {
-    minHeroMatches: minHeroMatches ?? 0,
-    minAverageBadge: minRankId,
-    maxAverageBadge: maxRankId,
-    minUnixTimestamp: prevMinTimestamp ?? 0,
-    maxUnixTimestamp: prevMaxTimestamp,
-    gameMode: gameMode,
-    matchMode,
-  };
   const { data: prevHeroData } = useQuery({
-    ...heroStatsQueryOptions(prevHeroStatsQuery),
+    ...heroStatsQueryOptions({ ...heroStatsQuery, ...prevRange }),
     enabled: hasPreviousInterval,
   });
-
-  const prevSynergyStatsQuery = {
-    sameLaneFilter: sameLaneFilter,
-    minMatches: minHeroMatches ?? 0,
-    minAverageBadge: minRankId,
-    maxAverageBadge: maxRankId,
-    minUnixTimestamp: prevMinTimestamp ?? 0,
-    maxUnixTimestamp: prevMaxTimestamp,
-    gameMode: gameMode,
-    matchMode,
-  };
   const { data: prevSynergyData } = useQuery({
-    ...heroSynergyWinsQueryOptions(prevSynergyStatsQuery),
+    ...heroSynergyWinsQueryOptions({ ...matchupQuery, ...prevRange }),
     enabled: hasPreviousInterval,
   });
-
-  const prevCounterStatsQuery = {
-    sameLaneFilter: sameLaneFilter,
-    minMatches: minHeroMatches ?? 0,
-    minAverageBadge: minRankId,
-    maxAverageBadge: maxRankId,
-    minUnixTimestamp: prevMinTimestamp ?? 0,
-    maxUnixTimestamp: prevMaxTimestamp,
-    gameMode: gameMode,
-    matchMode,
-  };
   const { data: prevCounterData } = useQuery({
-    ...heroCounterWinsQueryOptions(prevCounterStatsQuery),
+    ...heroCounterWinsQueryOptions({ ...matchupQuery, ...prevRange }),
     enabled: hasPreviousInterval,
   });
 

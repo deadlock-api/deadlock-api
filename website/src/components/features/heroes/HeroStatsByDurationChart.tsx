@@ -1,5 +1,4 @@
 import { useQueries } from "@tanstack/react-query";
-import { parseAsArrayOf, parseAsInteger, useQueryState } from "nuqs";
 import { useMemo } from "react";
 import { CartesianGrid, Line, LineChart, Tooltip, XAxis, YAxis } from "recharts";
 
@@ -14,7 +13,7 @@ import { ChartSurface } from "~/components/patterns/charts/ChartSurface";
 import { CHART_COLOR, CHART_GRID, CHART_X_AXIS, CHART_X_LABEL, CHART_Y_AXIS } from "~/components/patterns/charts/theme";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
 import type { Dayjs } from "~/dayjs";
-import { CHART_HEROES_QUERY_KEY, useChartHeroVisibility, useHeroColorMap } from "~/hooks/useChartHeroVisibility";
+import { useHeroColorMap } from "~/hooks/useChartHeroVisibility";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { formatCompactAxisTick, niceTicks } from "~/lib/chart-axis";
 import { DURATION_BUCKETS, MIN_MATCHES_PER_BUCKET } from "~/lib/constants";
@@ -22,6 +21,8 @@ import type { GameMode, MatchMode } from "~/lib/game-mode";
 import { formatTrendValue, HERO_TREND_LABELS } from "~/lib/hero-trends";
 import { heroChartStatsQueryOptions } from "~/queries/hero-stats-query";
 import { type HERO_STATS, hero_stats_transform } from "~/types/api_hero_stats";
+
+import { useHeroChartSelection } from "./useHeroChartSelection";
 
 interface HeroStatsByDurationChartProps {
   heroStat: (typeof HERO_STATS)[number];
@@ -116,36 +117,30 @@ export function HeroStatsByDurationChart({
     ],
     [formattedData],
   );
-  const [selectedHeroIds, setSelectedHeroIds] = useQueryState(CHART_HEROES_QUERY_KEY, parseAsArrayOf(parseAsInteger));
-  const { allHeroIds, effectiveVisibleSet, setVisibleHeroes } = useChartHeroVisibility(heroIdMap, {
-    heroIdFilter: heroIdsWithData,
-    value: selectedHeroIds,
-    onValueChange: (ids) => void setSelectedHeroIds(ids),
-  });
-  const selectedIds = allHeroIds.filter((id) => effectiveVisibleSet.has(id));
-  const pickerHeroes = Object.entries(heroIdMap)
-    .map(([id, hero]) => ({ id: Number(id), name: hero.name }))
-    .sort((a, b) => a.name.localeCompare(b.name));
+  const { allHeroIds, selectedIds, pickerHeroes, setVisibleHeroes } = useHeroChartSelection(heroIdMap, heroIdsWithData);
 
   const tableRows = useMemo<HeroBucketRow[]>(
     () =>
       allHeroIds.map((heroId) => ({
         heroId,
         name: heroIdMap[heroId]?.name ?? `Hero ${heroId}`,
-        values: formattedData.map((row) => (typeof row[heroId] === "number" ? (row[heroId] as number) : null)),
+        values: formattedData.map((row) => {
+          const value = row[heroId];
+          return typeof value === "number" ? value : null;
+        }),
       })),
     [allHeroIds, heroIdMap, formattedData],
   );
 
   const yTicks = useMemo(() => {
     const values = formattedData.flatMap((row) =>
-      allHeroIds.flatMap((heroId) => {
+      selectedIds.flatMap((heroId) => {
         const value = row[heroId];
-        return effectiveVisibleSet.has(heroId) && typeof value === "number" ? [value] : [];
+        return typeof value === "number" ? [value] : [];
       }),
     );
     return values.length > 0 ? niceTicks(Math.min(...values), Math.max(...values), 8) : [0, 1];
-  }, [formattedData, allHeroIds, effectiveVisibleSet]);
+  }, [formattedData, selectedIds]);
 
   return (
     <div aria-live="polite" aria-busy={isLoading}>

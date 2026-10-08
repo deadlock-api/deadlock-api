@@ -1,5 +1,4 @@
 import { useQuery } from "@tanstack/react-query";
-import { parseAsArrayOf, parseAsInteger, useQueryState } from "nuqs";
 import { useMemo } from "react";
 import { CartesianGrid, Scatter, ScatterChart, type ScatterProps, Tooltip, XAxis, YAxis } from "recharts";
 
@@ -21,7 +20,7 @@ import {
 import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { TooltipCard, TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
 import type { Dayjs } from "~/dayjs";
-import { CHART_HEROES_QUERY_KEY, useChartHeroVisibility, useHeroColorMap } from "~/hooks/useChartHeroVisibility";
+import { useHeroColorMap } from "~/hooks/useChartHeroVisibility";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { BANS_PER_MATCH } from "~/lib/ban-rate";
 import { niceTicks } from "~/lib/chart-axis";
@@ -32,8 +31,9 @@ import { getRankImageUrl } from "~/lib/rank-utils";
 import { heroBanStatsQueryOptions } from "~/queries/hero-ban-stats-query";
 import { type HeroRankStats, heroRankStatsQueryOptions } from "~/queries/hero-stats-query";
 import { ranksQueryOptions } from "~/queries/ranks-query";
-import { type HERO_STATS, hero_stats_transform } from "~/types/api_hero_stats";
-import type { ByRankStat } from "~/types/api_hero_stats";
+import { type ByRankStat, hero_stats_transform } from "~/types/api_hero_stats";
+
+import { useHeroChartSelection } from "./useHeroChartSelection";
 
 interface HeroStatsByRankChartProps {
   minHeroMatches?: number;
@@ -61,8 +61,7 @@ interface DataPoint {
 function formatByRankValue(stat: ByRankStat, value: number): string {
   if (stat === "winrate" || stat === "pickrate" || stat === "ban_rate") return `${value.toFixed(2)}%`;
   // One locale, so the server renders the same digits the browser hydrates.
-  if (stat === "net_worth_per_match") return value.toLocaleString("en-US", { maximumFractionDigits: 0 });
-  if (stat === "wins" || stat === "losses" || stat === "matches")
+  if (stat === "net_worth_per_match" || stat === "wins" || stat === "losses" || stat === "matches")
     return value.toLocaleString("en-US", { maximumFractionDigits: 0 });
   return value.toFixed(1);
 }
@@ -123,13 +122,6 @@ function CustomTooltip({
   );
 }
 
-function computeStatValue(stat: ByRankStat, agg: AggregatedTier, gameMode?: GameMode): number {
-  if (stat === "pickrate") {
-    return (agg.matches / agg.matchesPerBucket) * 100 * getPickrateMultiplier(gameMode);
-  }
-  return hero_stats_transform(agg, stat as (typeof HERO_STATS)[number]);
-}
-
 function getStatValue(
   stat: ByRankStat,
   agg: AggregatedTier,
@@ -138,10 +130,9 @@ function getStatValue(
   heroId: number,
   tier: number,
 ): number {
-  if (stat === "ban_rate") {
-    return banRateByTier?.get(tier)?.get(heroId) ?? 0;
-  }
-  return computeStatValue(stat, agg, gameMode);
+  if (stat === "ban_rate") return banRateByTier?.get(tier)?.get(heroId) ?? 0;
+  if (stat === "pickrate") return (agg.matches / agg.matchesPerBucket) * 100 * getPickrateMultiplier(gameMode);
+  return hero_stats_transform(agg, stat);
 }
 
 interface AggregatedTier {
@@ -208,12 +199,12 @@ export function HeroStatsByRankChart({
   const needsBanData = xStat === "ban_rate" || yStat === "ban_rate";
 
   const heroStatsByRankQuery = {
-    minHeroMatches: minHeroMatches,
-    minHeroMatchesTotal: minHeroMatchesTotal,
+    minHeroMatches,
+    minHeroMatchesTotal,
     minUnixTimestamp: minUnixTimestamp ?? 0,
     maxUnixTimestamp,
     bucket: "avg_badge" as const,
-    gameMode: gameMode,
+    gameMode,
     matchMode,
   };
   const {
@@ -323,17 +314,7 @@ export function HeroStatsByRankChart({
     [heroDataByHero],
   );
 
-  const [selectedHeroIds, setSelectedHeroIds] = useQueryState(CHART_HEROES_QUERY_KEY, parseAsArrayOf(parseAsInteger));
-  const { allHeroIds, effectiveVisibleSet, setVisibleHeroes } = useChartHeroVisibility(heroIdMap, {
-    heroIdFilter: heroIdsWithData,
-    value: selectedHeroIds,
-    onValueChange: (ids) => void setSelectedHeroIds(ids),
-  });
-
-  const selectedIds = allHeroIds.filter((id) => effectiveVisibleSet.has(id));
-  const pickerHeroes = Object.entries(heroIdMap)
-    .map(([id, hero]) => ({ id: Number(id), name: hero.name }))
-    .sort((a, b) => a.name.localeCompare(b.name));
+  const { allHeroIds, selectedIds, pickerHeroes, setVisibleHeroes } = useHeroChartSelection(heroIdMap, heroIdsWithData);
 
   // Every hero's y reading per rank, for the table under the chart.
   const tableTiers = useMemo(
@@ -356,7 +337,7 @@ export function HeroStatsByRankChart({
   );
 
   const [xTicks, yTicks] = useMemo(() => {
-    const points = allHeroIds.filter((id) => effectiveVisibleSet.has(id)).flatMap((id) => heroDataByHero[id] ?? []);
+    const points = selectedIds.flatMap((id) => heroDataByHero[id] ?? []);
     const xs = points.map((point) => point.xValue);
     const ys = points.map((point) => point.yValue);
     return points.length > 0
@@ -365,7 +346,7 @@ export function HeroStatsByRankChart({
           [0, 1],
           [0, 1],
         ];
-  }, [allHeroIds, effectiveVisibleSet, heroDataByHero]);
+  }, [selectedIds, heroDataByHero]);
 
   const isLoading = isLoadingHeroStats || isLoadingRanks || isLoadingHeroes || isLoadingBanStats;
 

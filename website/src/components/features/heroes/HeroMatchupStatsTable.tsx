@@ -75,19 +75,34 @@ function buildSynergyMap(
   return synergyMap;
 }
 
+/** Each hero's matchup with the highest (best) or lowest (worst) relative win rate; the first one listed on a tie. */
 function pickTopFromMap<T extends { rel_winrate: number }>(
   map: Record<number, T[]>,
   direction: "best" | "worst",
 ): Record<number, T> {
   const result: Record<number, T> = {};
-  for (const heroId of Object.keys(map)) {
-    const heroIdParsed = Number.parseInt(heroId, 10);
-    const sorted = map[heroIdParsed].sort((a, b) =>
-      direction === "best" ? b.rel_winrate - a.rel_winrate : a.rel_winrate - b.rel_winrate,
-    );
-    if (sorted[0]) result[heroIdParsed] = sorted[0];
+  for (const [heroId, entries] of Object.entries(map)) {
+    let top: T | undefined;
+    for (const entry of entries) {
+      if (!top || (direction === "best" ? entry.rel_winrate > top.rel_winrate : entry.rel_winrate < top.rel_winrate)) {
+        top = entry;
+      }
+    }
+    if (top) result[Number(heroId)] = top;
   }
   return result;
+}
+
+/** Each hero's relative win rate with or against each partner, from a synergy or counter map. */
+function relWinrateLookup<T extends { rel_winrate: number }>(
+  map: Record<number, T[]>,
+  partnerOf: (entry: T) => number,
+): Record<number, Record<number, number>> {
+  const lookup: Record<number, Record<number, number>> = {};
+  for (const [heroId, entries] of Object.entries(map)) {
+    lookup[Number(heroId)] = Object.fromEntries(entries.map((entry) => [partnerOf(entry), entry.rel_winrate]));
+  }
+  return lookup;
 }
 
 function buildCounterMap(
@@ -265,99 +280,42 @@ export function HeroMatchupStatsTable({
     prevMaxDate,
   );
 
-  const heroStatsQuery = {
-    minHeroMatches: minMatches,
-    minAverageBadge: minRankId,
-    maxAverageBadge: maxRankId,
-    minUnixTimestamp: minUnixTimestamp ?? 0,
-    maxUnixTimestamp,
-    gameMode: gameMode,
-    matchMode,
-  };
+  const hasPreviousInterval = prevMinDate != null && prevMaxDate != null;
+  const range = { minUnixTimestamp: minUnixTimestamp ?? 0, maxUnixTimestamp };
+  const prevRange = { minUnixTimestamp: prevMinTimestamp ?? 0, maxUnixTimestamp: prevMaxTimestamp };
+  const filters = { minAverageBadge: minRankId, maxAverageBadge: maxRankId, gameMode, matchMode };
+  const heroStatsQuery = { ...filters, minHeroMatches: minMatches };
+  const matchupQuery = { ...filters, sameLaneFilter, minMatches };
+
   const {
     data: heroData,
     isLoading: isLoadingHero,
     isError: isHeroError,
     refetch: refetchHero,
-  } = useQuery(heroStatsQueryOptions(heroStatsQuery));
-
-  const synergyStatsQuery = {
-    sameLaneFilter: sameLaneFilter,
-    minMatches: minMatches,
-    minAverageBadge: minRankId,
-    maxAverageBadge: maxRankId,
-    minUnixTimestamp: minUnixTimestamp ?? 0,
-    maxUnixTimestamp,
-    gameMode: gameMode,
-    matchMode,
-  };
+  } = useQuery(heroStatsQueryOptions({ ...heroStatsQuery, ...range }));
   const {
     data: synergyData,
     isLoading: isLoadingSynergy,
     isError: isSynergyError,
     refetch: refetchSynergy,
-  } = useQuery(heroSynergyWinsQueryOptions(synergyStatsQuery));
-
-  const counterStatsQuery = {
-    sameLaneFilter: sameLaneFilter,
-    minMatches: minMatches,
-    minAverageBadge: minRankId,
-    maxAverageBadge: maxRankId,
-    minUnixTimestamp: minUnixTimestamp ?? 0,
-    maxUnixTimestamp,
-    gameMode: gameMode,
-    matchMode,
-  };
+  } = useQuery(heroSynergyWinsQueryOptions({ ...matchupQuery, ...range }));
   const {
     data: counterData,
     isLoading: isLoadingCounter,
     isError: isCounterError,
     refetch: refetchCounter,
-  } = useQuery(heroCounterWinsQueryOptions(counterStatsQuery));
+  } = useQuery(heroCounterWinsQueryOptions({ ...matchupQuery, ...range }));
 
-  const hasPreviousInterval = prevMinDate != null && prevMaxDate != null;
-
-  const prevHeroStatsQuery = {
-    minHeroMatches: minMatches,
-    minAverageBadge: minRankId,
-    maxAverageBadge: maxRankId,
-    minUnixTimestamp: prevMinTimestamp ?? 0,
-    maxUnixTimestamp: prevMaxTimestamp,
-    gameMode: gameMode,
-    matchMode,
-  };
   const { data: prevHeroData } = useQuery({
-    ...heroStatsQueryOptions(prevHeroStatsQuery),
+    ...heroStatsQueryOptions({ ...heroStatsQuery, ...prevRange }),
     enabled: hasPreviousInterval,
   });
-
-  const prevSynergyStatsQuery = {
-    sameLaneFilter: sameLaneFilter,
-    minMatches: minMatches,
-    minAverageBadge: minRankId,
-    maxAverageBadge: maxRankId,
-    minUnixTimestamp: prevMinTimestamp ?? 0,
-    maxUnixTimestamp: prevMaxTimestamp,
-    gameMode: gameMode,
-    matchMode,
-  };
   const { data: prevSynergyData } = useQuery({
-    ...heroSynergyWinsQueryOptions(prevSynergyStatsQuery),
+    ...heroSynergyWinsQueryOptions({ ...matchupQuery, ...prevRange }),
     enabled: hasPreviousInterval,
   });
-
-  const prevCounterStatsQuery = {
-    sameLaneFilter: sameLaneFilter,
-    minMatches: minMatches,
-    minAverageBadge: minRankId,
-    maxAverageBadge: maxRankId,
-    minUnixTimestamp: prevMinTimestamp ?? 0,
-    maxUnixTimestamp: prevMaxTimestamp,
-    gameMode: gameMode,
-    matchMode,
-  };
   const { data: prevCounterData } = useQuery({
-    ...heroCounterWinsQueryOptions(prevCounterStatsQuery),
+    ...heroCounterWinsQueryOptions({ ...matchupQuery, ...prevRange }),
     enabled: hasPreviousInterval,
   });
 
@@ -379,37 +337,14 @@ export function HeroMatchupStatsTable({
   const heroStatsMap = useMemo(() => buildHeroStatsMap(heroData), [heroData]);
   const prevHeroStatsMap = useMemo(() => buildHeroStatsMap(prevHeroData), [prevHeroData]);
 
-  const prevSynergyRelWinrateMap = useMemo(() => {
-    const map: Record<number, Record<number, number>> = {};
-    for (const synergy of prevSynergyData || []) {
-      if (!synergy?.matches_played || synergy.wins == null) continue;
-      if (!prevHeroStatsMap[synergy.hero_id1]?.matches || !prevHeroStatsMap[synergy.hero_id2]?.matches) continue;
-      const relWinrate =
-        synergy.wins / synergy.matches_played -
-        (prevHeroStatsMap[synergy.hero_id1].wins / prevHeroStatsMap[synergy.hero_id1].matches +
-          prevHeroStatsMap[synergy.hero_id2].wins / prevHeroStatsMap[synergy.hero_id2].matches) /
-          2;
-      if (!map[synergy.hero_id1]) map[synergy.hero_id1] = {};
-      if (!map[synergy.hero_id2]) map[synergy.hero_id2] = {};
-      map[synergy.hero_id1][synergy.hero_id2] = relWinrate;
-      map[synergy.hero_id2][synergy.hero_id1] = relWinrate;
-    }
-    return map;
-  }, [prevSynergyData, prevHeroStatsMap]);
-
-  const prevCounterRelWinrateMap = useMemo(() => {
-    const map: Record<number, Record<number, number>> = {};
-    for (const counter of prevCounterData || []) {
-      if (!counter?.matches_played || counter.wins == null) continue;
-      if (!prevHeroStatsMap[counter.hero_id]?.matches) continue;
-      const relWinrate =
-        counter.wins / counter.matches_played -
-        prevHeroStatsMap[counter.hero_id].wins / prevHeroStatsMap[counter.hero_id].matches;
-      if (!map[counter.hero_id]) map[counter.hero_id] = {};
-      map[counter.hero_id][counter.enemy_hero_id] = relWinrate;
-    }
-    return map;
-  }, [prevCounterData, prevHeroStatsMap]);
+  const prevSynergyRelWinrateMap = useMemo(
+    () => relWinrateLookup(buildSynergyMap(prevSynergyData, prevHeroStatsMap), (synergy) => synergy.hero_id2),
+    [prevSynergyData, prevHeroStatsMap],
+  );
+  const prevCounterRelWinrateMap = useMemo(
+    () => relWinrateLookup(buildCounterMap(prevCounterData, prevHeroStatsMap), (counter) => counter.enemy_hero_id),
+    [prevCounterData, prevHeroStatsMap],
+  );
 
   const synergyMap = useMemo(() => buildSynergyMap(synergyData, heroStatsMap), [synergyData, heroStatsMap]);
   const counterMap = useMemo(() => buildCounterMap(counterData, heroStatsMap), [counterData, heroStatsMap]);

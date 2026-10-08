@@ -83,37 +83,28 @@ export function HeroCombStatsTable({
   );
   const hasPreviousInterval = prevMinDate != null && prevMaxDate != null;
 
-  const includeHeroIdsParam = includeHeroIds.length > 0 ? includeHeroIds : undefined;
-  const excludeHeroIdsParam = excludeHeroIds.length > 0 ? excludeHeroIds : undefined;
-
-  const combStatsQuery = {
+  const baseQuery = {
     combSize: combSizeFilter,
-    includeHeroIds: includeHeroIdsParam,
-    excludeHeroIds: excludeHeroIdsParam,
+    includeHeroIds: includeHeroIds.length > 0 ? includeHeroIds : undefined,
+    excludeHeroIds: excludeHeroIds.length > 0 ? excludeHeroIds : undefined,
     minMatches: minHeroMatches ?? 0,
     minAverageBadge: minRankId,
     maxAverageBadge: maxRankId,
-    minUnixTimestamp: minUnixTimestamp ?? 0,
-    maxUnixTimestamp,
-    gameMode: gameMode,
+    gameMode,
     matchMode,
   };
-  const { data: heroData, isLoading, isError, refetch } = useQuery(heroCombStatsQueryOptions(combStatsQuery));
-
-  const prevCombStatsQuery = {
-    combSize: combSizeFilter,
-    includeHeroIds: includeHeroIdsParam,
-    excludeHeroIds: excludeHeroIdsParam,
-    minMatches: minHeroMatches ?? 0,
-    minAverageBadge: minRankId,
-    maxAverageBadge: maxRankId,
-    minUnixTimestamp: prevMinTimestamp ?? 0,
-    maxUnixTimestamp: prevMaxTimestamp,
-    gameMode: gameMode,
-    matchMode,
-  };
+  const {
+    data: heroData,
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery(heroCombStatsQueryOptions({ ...baseQuery, minUnixTimestamp: minUnixTimestamp ?? 0, maxUnixTimestamp }));
   const { data: prevHeroData } = useQuery({
-    ...heroCombStatsQueryOptions(prevCombStatsQuery),
+    ...heroCombStatsQueryOptions({
+      ...baseQuery,
+      minUnixTimestamp: prevMinTimestamp ?? 0,
+      maxUnixTimestamp: prevMaxTimestamp,
+    }),
     enabled: hasPreviousInterval,
   });
 
@@ -231,110 +222,104 @@ export function HeroCombStatsTable({
                 No hero combinations with enough matches for these filters
               </TableEmptyRow>
             )}
-            {limitedData.map((row, index) => (
-              <TableRow key={row.hero_ids.join("-")}>
-                {!hideIndex && <TableCell className="text-center font-semibold">{index + 1}</TableCell>}
-                {/* On a narrow screen the heroes fold onto more lines, so the rates stay in view. */}
-                <TableCell className="whitespace-normal">
-                  <Inline gap={1.5}>
-                    {row.hero_ids.map((heroId, i) => (
-                      <Inline key={heroId} gap={1.5} wrap="nowrap">
-                        {i > 0 && (
-                          <span aria-hidden="true" className="text-lg text-muted-foreground">
-                            +
-                          </span>
-                        )}
-                        <HeroCell heroId={heroId} />
-                      </Inline>
-                    ))}
-                  </Inline>
-                </TableCell>
-                {columns.includes("winRate") && (
-                  <TableCell className="text-center">
-                    <Tooltip
-                      content={
-                        <>
-                          <TooltipStats variant="plain">
-                            <TooltipStat label="Matches" value={row.matches.toLocaleString("en-US")} />
-                            <TooltipStat label="Wins" value={row.wins.toLocaleString("en-US")} />
-                            <TooltipStat label="Win rate" value={`${((row.wins / row.matches) * 100).toFixed(2)}%`} />
-                          </TooltipStats>
-                          {(() => {
-                            const prev = prevStatsMap?.get(combKey(row.hero_ids));
-                            return prev !== undefined ? (
+            {limitedData.map((row, index) => {
+              const winRate = row.wins / row.matches;
+              const share = row.matches / sumMatches;
+              const prev = prevStatsMap?.get(combKey(row.hero_ids));
+              return (
+                <TableRow key={row.hero_ids.join("-")}>
+                  {!hideIndex && <TableCell className="text-center font-semibold">{index + 1}</TableCell>}
+                  {/* On a narrow screen the heroes fold onto more lines, so the rates stay in view. */}
+                  <TableCell className="whitespace-normal">
+                    <Inline gap={1.5}>
+                      {row.hero_ids.map((heroId, i) => (
+                        <Inline key={heroId} gap={1.5} wrap="nowrap">
+                          {i > 0 && (
+                            <span aria-hidden="true" className="text-lg text-muted-foreground">
+                              +
+                            </span>
+                          )}
+                          <HeroCell heroId={heroId} />
+                        </Inline>
+                      ))}
+                    </Inline>
+                  </TableCell>
+                  {columns.includes("winRate") && (
+                    <TableCell className="text-center">
+                      <Tooltip
+                        content={
+                          <>
+                            <TooltipStats variant="plain">
+                              <TooltipStat label="Matches" value={row.matches.toLocaleString("en-US")} />
+                              <TooltipStat label="Wins" value={row.wins.toLocaleString("en-US")} />
+                              <TooltipStat label="Win rate" value={`${(winRate * 100).toFixed(2)}%`} />
+                            </TooltipStats>
+                            {prev !== undefined && (
                               <TooltipStats>
                                 <TooltipStat label="Previous" value={`${(prev.winrate * 100).toFixed(2)}%`} />
                               </TooltipStats>
-                            ) : null;
-                          })()}
-                        </>
-                      }
-                    >
-                      <TooltipTarget display="block">
-                        <ProgressBarWithLabel
-                          min={minWinrate}
-                          max={maxWinrate}
-                          value={row.wins / row.matches}
-                          color={CHART_COLOR.primary}
-                          label={`${Math.round((row.wins / row.matches) * 100)}%`}
-                          delta={(() => {
-                            const prev = prevStatsMap?.get(combKey(row.hero_ids));
-                            return prev !== undefined ? row.wins / row.matches - prev.winrate : undefined;
-                          })()}
-                        />
-                      </TooltipTarget>
-                    </Tooltip>
-                  </TableCell>
-                )}
-                {/* The share (matches of this combination out of the matches of every listed combination) and the matches
+                            )}
+                          </>
+                        }
+                      >
+                        <TooltipTarget display="block">
+                          <ProgressBarWithLabel
+                            min={minWinrate}
+                            max={maxWinrate}
+                            value={winRate}
+                            color={CHART_COLOR.primary}
+                            label={`${Math.round(winRate * 100)}%`}
+                            delta={prev !== undefined ? winRate - prev.winrate : undefined}
+                          />
+                        </TooltipTarget>
+                      </Tooltip>
+                    </TableCell>
+                  )}
+                  {/* The share (matches of this combination out of the matches of every listed combination) and the matches
                     are secondary (the win rate tooltip has the matches): on a phone they give
                     their width to the heroes and the win rate. */}
-                {columns.includes("pickRate") &&
-                  (() => {
-                    const share = row.matches / sumMatches;
-                    const prev = prevStatsMap?.get(combKey(row.hero_ids));
-                    return (
-                      <TableCell className="hidden text-center sm:table-cell">
-                        <Tooltip
-                          content={
-                            <>
-                              <TooltipStats variant="plain">
-                                <TooltipStat
-                                  label="Matches"
-                                  value={`${row.matches.toLocaleString("en-US")} of ${sumMatches.toLocaleString("en-US")}`}
-                                />
-                                <TooltipStat label="Share" value={formatFineShare(share)} />
+                  {columns.includes("pickRate") && (
+                    <TableCell className="hidden text-center sm:table-cell">
+                      <Tooltip
+                        content={
+                          <>
+                            <TooltipStats variant="plain">
+                              <TooltipStat
+                                label="Matches"
+                                value={`${row.matches.toLocaleString("en-US")} of ${sumMatches.toLocaleString("en-US")}`}
+                              />
+                              <TooltipStat label="Share" value={formatFineShare(share)} />
+                            </TooltipStats>
+                            {prev !== undefined && (
+                              <TooltipStats>
+                                <TooltipStat label="Previous" value={formatFineShare(prev.share)} />
                               </TooltipStats>
-                              {prev !== undefined && (
-                                <TooltipStats>
-                                  <TooltipStat label="Previous" value={formatFineShare(prev.share)} />
-                                </TooltipStats>
-                              )}
-                            </>
-                          }
-                        >
-                          <TooltipTarget display="block">
-                            <ProgressBarWithLabel
-                              min={0}
-                              max={maxShare}
-                              value={share}
-                              color={CHART_COLOR.pickRate}
-                              label={formatFineShare(share)}
-                              delta={prev !== undefined ? share - prev.share : undefined}
-                              deltaDigits={fineShareDigits(share)}
-                            />
-                          </TooltipTarget>
-                        </Tooltip>
-                      </TableCell>
-                    );
-                  })()}
-                {columns.includes("totalMatches") && (
-                  <TableCell className="hidden text-center sm:table-cell">
-                    {row.matches.toLocaleString("en-US")}
-                  </TableCell>
-                )}
-              </TableRow>
-            ))}
+                            )}
+                          </>
+                        }
+                      >
+                        <TooltipTarget display="block">
+                          <ProgressBarWithLabel
+                            min={0}
+                            max={maxShare}
+                            value={share}
+                            color={CHART_COLOR.pickRate}
+                            label={formatFineShare(share)}
+                            delta={prev !== undefined ? share - prev.share : undefined}
+                            deltaDigits={fineShareDigits(share)}
+                          />
+                        </TooltipTarget>
+                      </Tooltip>
+                    </TableCell>
+                  )}
+                  {columns.includes("totalMatches") && (
+                    <TableCell className="hidden text-center sm:table-cell">
+                      {row.matches.toLocaleString("en-US")}
+                    </TableCell>
+                  )}
+                </TableRow>
+              );
+            })}
           </TableBody>
         </Table>
       )}

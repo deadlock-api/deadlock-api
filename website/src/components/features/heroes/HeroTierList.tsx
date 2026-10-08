@@ -140,7 +140,7 @@ export function HeroTierList({
   const ranked = useMemo(
     () =>
       rankHeroes(
-        (inputsQuery.data?.stats ?? []).map((row) => ({ ...row, heroId: row.hero_id })),
+        (inputsQuery.data?.stats ?? []).map((row) => Object.assign({}, row, { heroId: row.hero_id })),
         getPickrateMultiplier(gameMode),
         banRates,
         metric,

@@ -1,6 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
 import type { HeroStatsBucketEnum } from "deadlock_api_client";
-import { parseAsArrayOf, parseAsInteger, useQueryState } from "nuqs";
 import {
   type CSSProperties,
   type MouseEvent,
@@ -47,7 +46,7 @@ import {
 import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { Badge } from "~/components/ui/badge";
 import { type Dayjs, day } from "~/dayjs";
-import { CHART_HEROES_QUERY_KEY, useChartHeroVisibility, useHeroColorMap } from "~/hooks/useChartHeroVisibility";
+import { useHeroColorMap } from "~/hooks/useChartHeroVisibility";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { BANS_PER_MATCH, computeBanRatesByBucket } from "~/lib/ban-rate";
 import { formatCompactAxisTick, niceTicks } from "~/lib/chart-axis";
@@ -58,6 +57,8 @@ import { wholeTimeBuckets } from "~/lib/time-buckets";
 import { heroBanStatsQueryOptions } from "~/queries/hero-ban-stats-query";
 import { heroChartStatsQueryOptions } from "~/queries/hero-stats-query";
 import { type HERO_STATS_WITH_BAN_RATE, hero_stats_transform } from "~/types/api_hero_stats";
+
+import { useHeroChartSelection } from "./useHeroChartSelection";
 
 // Recharts still measures every x-axis label for vertical grid coordinates when vertical lines are disabled.
 const noVerticalGridCoordinates = () => [];
@@ -156,8 +157,8 @@ export function HeroStatsOverTimeChart({
   const unsupportedBanRate = isBanRate && gameMode === "street_brawl";
 
   const heroStatsOverTimeQuery = {
-    minHeroMatches: minHeroMatches,
-    minHeroMatchesTotal: minHeroMatchesTotal,
+    minHeroMatches,
+    minHeroMatchesTotal,
     minAverageBadge: minRankId,
     maxAverageBadge: maxRankId,
     minUnixTimestamp: minUnixTimestamp ?? 0,
@@ -246,16 +247,13 @@ export function HeroStatsOverTimeChart({
     () => [...new Set(Object.values(heroStatMap).flatMap((points) => points.map(([heroId]) => heroId)))],
     [heroStatMap],
   );
-  const [selectedHeroIds, setSelectedHeroIds] = useQueryState(CHART_HEROES_QUERY_KEY, parseAsArrayOf(parseAsInteger));
-  const { allHeroIds, effectiveVisibleSet, setVisibleHeroes } = useChartHeroVisibility(heroIdMap, {
-    heroIdFilter: heroIdsWithData,
-    value: selectedHeroIds,
-    onValueChange: (ids) => void setSelectedHeroIds(ids),
-  });
-  const visibleHeroIds = useMemo(
-    () => allHeroIds.filter((id) => effectiveVisibleSet.has(id)),
-    [allHeroIds, effectiveVisibleSet],
-  );
+  const {
+    allHeroIds,
+    effectiveVisibleSet,
+    selectedIds: visibleHeroIds,
+    pickerHeroes,
+    setVisibleHeroes,
+  } = useHeroChartSelection(heroIdMap, heroIdsWithData);
 
   const minDataDate = useMemo(
     () => Math.min(...Object.keys(heroStatMap).map((d) => Number.parseInt(d, 10))),
@@ -278,13 +276,6 @@ export function HeroStatsOverTimeChart({
         color: heroIdMap[id]?.color ?? CHART_COLOR.fallback,
       })),
     [visibleHeroIds, heroIdMap],
-  );
-  const pickerHeroes = useMemo(
-    () =>
-      Object.entries(heroIdMap)
-        .map(([id, hero]) => ({ id: Number(id), name: hero.name }))
-        .sort((a, b) => a.name.localeCompare(b.name)),
-    [heroIdMap],
   );
   const pickerSelectedIds = useMemo(() => [...effectiveVisibleSet], [effectiveVisibleSet]);
   const statLabel = HERO_TREND_LABELS[heroStat];
