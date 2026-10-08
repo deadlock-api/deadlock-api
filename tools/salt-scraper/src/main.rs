@@ -34,12 +34,6 @@ const MAX_VALID_MATCH_ID: &str = "4294967295";
 
 static SALTS_COOLDOWN_MILLIS: LazyLock<u64> =
     LazyLock::new(|| common::env_or("SALTS_COOLDOWN_MILLIS", 24 * 60 * 60 * 1000 / 50));
-static HTTP_CLIENT: LazyLock<reqwest::Client> = LazyLock::new(|| {
-    reqwest::Client::builder()
-        .timeout(Duration::from_secs(10))
-        .build()
-        .unwrap_or_default()
-});
 /// Shortest time between the starts of two cycles. Each cycle runs a full-history anti-join,
 /// so a cycle that found matches must not immediately start the next one.
 const MIN_CYCLE_INTERVAL: Duration = Duration::from_mins(1);
@@ -55,17 +49,13 @@ async fn main() -> anyhow::Result<()> {
 
     let ch_client = common::get_ch_client()?;
 
+    let http_client = common::http_client();
+
     // Initialize PostgreSQL connection pool for prioritization queries
-    let pg_pool = match common::get_pg_client().await {
-        Ok(pool) => {
-            info!("PostgreSQL connection pool initialized successfully");
-            pool
-        }
-        Err(e) => {
-            error!("Failed to initialize PostgreSQL connection pool: {e:?}");
-            return Err(e);
-        }
-    };
+    let pg_pool = common::get_pg_client()
+        .await
+        .inspect_err(|e| error!("Failed to initialize PostgreSQL connection pool: {e:?}"))?;
+    info!("PostgreSQL connection pool initialized successfully");
 
     common::run_until_shutdown(async move {
         loop {
@@ -145,10 +135,10 @@ async fn main() -> anyhow::Result<()> {
             // Failed matches stay uncovered, so the next cycle's query picks them up again.
             let failed: Vec<u64> = futures::stream::iter(pending_matches)
                 .map(|m| {
-                    let ch_client = ch_client.clone();
+                    let (http_client, ch_client) = (&http_client, &ch_client);
                     async move {
                         let match_id = m.match_id;
-                        match fetch_prioritized_match(&ch_client, match_id).await {
+                        match fetch_prioritized_match(http_client, ch_client, match_id).await {
                             Ok(()) => {
                                 counter!("salt_scraper.prioritized_fetch.success").increment(1);
                                 info!("Fetched prioritized match {match_id}");
@@ -183,32 +173,38 @@ async fn main() -> anyhow::Result<()> {
 ///
 /// Uses configurable max retries (default 5) with exponential backoff delays.
 /// Logs when fetching a prioritized match and tracks retry attempts.
-#[instrument(skip(ch_client))]
-async fn fetch_prioritized_match(ch_client: &Client, match_id: u64) -> anyhow::Result<()> {
+#[instrument(skip(http_client, ch_client))]
+async fn fetch_prioritized_match(
+    http_client: &reqwest::Client,
+    ch_client: &Client,
+    match_id: u64,
+) -> anyhow::Result<()> {
     info!("Fetching prioritized match {match_id}");
 
     // Use exponential backoff for prioritized matches
-    let max_retries = *PRIORITIZATION_MAX_RETRIES;
-    let attempt = core::sync::atomic::AtomicU32::new(0);
-
+    let mut attempts = 0u32;
     common::retry_with_backoff(
         "prioritized salt fetch",
-        common::Backoff::long(max_retries),
+        common::Backoff::long(*PRIORITIZATION_MAX_RETRIES),
         || {
-            let current = attempt.fetch_add(1, core::sync::atomic::Ordering::Relaxed);
-            if current > 0 {
+            if attempts > 0 {
                 counter!("salt_scraper.prioritized_fetch.retry").increment(1);
             }
-            async { fetch_match_internal(ch_client, match_id).await }
+            attempts += 1;
+            fetch_match_internal(http_client, ch_client, match_id)
         },
     )
     .await
 }
 
 /// Internal match fetch logic used by both regular and prioritized fetches.
-async fn fetch_match_internal(ch_client: &Client, match_id: u64) -> anyhow::Result<()> {
+async fn fetch_match_internal(
+    http_client: &reqwest::Client,
+    ch_client: &Client,
+    match_id: u64,
+) -> anyhow::Result<()> {
     // Fetch Salts
-    let salts = fetch_salts(match_id).await;
+    let salts = fetch_salts(http_client, match_id).await;
     let (username, salts) = match salts {
         Ok(r) => {
             counter!("salt_scraper.fetch_salts.success").increment(1);
@@ -223,9 +219,7 @@ async fn fetch_match_internal(ch_client: &Client, match_id: u64) -> anyhow::Resu
     };
 
     // Parse Salts
-    if let Some(result) = salts.result
-        && result == KEResultRateLimited as i32
-    {
+    if salts.result == Some(KEResultRateLimited as i32) {
         counter!("salt_scraper.parse_salt.failure").increment(1);
         bail!("Got a rate limited response: {salts:?}");
     }
@@ -233,7 +227,7 @@ async fn fetch_match_internal(ch_client: &Client, match_id: u64) -> anyhow::Resu
     debug!("Parsed salts");
 
     // Ingest Salts
-    match ingest_salts(ch_client, match_id, salts, username.into()).await {
+    match ingest_salts(ch_client, match_id, salts, &username).await {
         Ok(()) => {
             counter!("salt_scraper.ingest_salt.success").increment(1);
             debug!("Ingested salts");
@@ -248,6 +242,7 @@ async fn fetch_match_internal(ch_client: &Client, match_id: u64) -> anyhow::Resu
 }
 
 async fn fetch_salts(
+    http_client: &reqwest::Client,
     match_id: u64,
 ) -> anyhow::Result<(String, CMsgClientToGcGetMatchMetaDataResponse)> {
     let msg = CMsgClientToGcGetMatchMetaData {
@@ -261,7 +256,7 @@ async fn fetch_salts(
     // these bots up instead.
     let soft_cooldown = Some(job_cooldown);
     common::call_steam_proxy(
-        &HTTP_CLIENT,
+        http_client,
         EgcCitadelClientMessages::KEMsgClientToGcGetMatchMetaData,
         &msg,
         Some(&["GetMatchMetaData"]),
@@ -278,16 +273,14 @@ async fn ingest_salts(
     ch_client: &Client,
     match_id: u64,
     salts: CMsgClientToGcGetMatchMetaDataResponse,
-    username: Option<String>,
+    username: &str,
 ) -> clickhouse::error::Result<()> {
     let salts = MatchSalt {
         match_id,
         cluster_id: salts.replay_group_id,
         metadata_salt: salts.metadata_salt,
         replay_salt: salts.replay_salt,
-        username: Some(format!("salt-scraper:{}", username.unwrap_or_default())),
+        username: Some(format!("salt-scraper:{username}")),
     };
-    let mut inserter = ch_client.insert::<MatchSalt>("match_salts").await?;
-    inserter.write(&salts).await?;
-    inserter.end().await
+    common::insert_rows(ch_client, "match_salts", &[salts]).await
 }
