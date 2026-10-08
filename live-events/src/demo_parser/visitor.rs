@@ -1,5 +1,6 @@
-use core::future::{Future, ready};
+use core::future::Future;
 use core::ops::Range;
+use core::time::Duration;
 use std::collections::HashSet;
 
 use axum::response::sse::Event;
@@ -33,8 +34,15 @@ use crate::demo_parser::types::{Delta, DemoEvent, DemoEventPayload};
 use crate::demo_parser::utils::{get_entity_handle_index, handle_to_entity_index};
 use crate::utils::steamid64_to_steamid3;
 
+/// How long the parser waits for a client to make room in its event buffer before giving
+/// up on it. Sends wait (rather than fail on a full buffer) so a client that is merely
+/// slower during a burst holds the parser back instead of being dropped.
+const CLIENT_SEND_TIMEOUT: Duration = Duration::from_secs(30);
+
 pub(crate) struct SendingVisitor {
     sender: Sender<Event>,
+    /// Events produced by the current callback, sent when its future runs.
+    outbox: Vec<Event>,
     subscribed_chat_messages: bool,
     subscribed_entities: Option<HashSet<EntityType>>,
     game_time: f32,
@@ -55,6 +63,7 @@ impl SendingVisitor {
     ) -> Self {
         Self {
             sender,
+            outbox: Vec::new(),
             subscribed_chat_messages,
             subscribed_entities: subscribed_entities.map(|iter| iter.into_iter().collect()),
             game_time: 0.0,
@@ -76,7 +85,8 @@ impl AsyncVisitor for SendingVisitor {
         delta_header: DeltaHeader,
         entity: &Entity,
     ) -> impl Future<Output = Result<(), Self::Error>> + Send + Sync {
-        ready(self.handle_entity(ctx, delta_header, entity))
+        let result = self.handle_entity(ctx, delta_header, entity);
+        self.send_outbox(result)
     }
 
     fn on_cmd(
@@ -86,7 +96,7 @@ impl AsyncVisitor for SendingVisitor {
         _data: &[u8],
     ) -> impl Future<Output = Result<(), Self::Error>> + Send + Sync {
         self.handle_cmd(ctx, cmd_header);
-        ready(Ok(()))
+        self.send_outbox(Ok(()))
     }
 
     fn on_packet(
@@ -95,18 +105,38 @@ impl AsyncVisitor for SendingVisitor {
         packet_type: u32,
         data: &[u8],
     ) -> impl Future<Output = Result<(), Self::Error>> + Send + Sync {
-        ready(self.handle_packet(ctx, packet_type, data))
+        let result = self.handle_packet(ctx, packet_type, data);
+        self.send_outbox(result)
     }
 
     fn on_tick_end(
         &mut self,
         ctx: &Context,
     ) -> impl Future<Output = Result<(), Self::Error>> + Send + Sync {
-        ready(self.handle_tick_end(ctx))
+        let result = self.handle_tick_end(ctx);
+        self.send_outbox(result)
     }
 }
 
 impl SendingVisitor {
+    /// Sends the callback's events in order, waiting for buffer room up to
+    /// [`CLIENT_SEND_TIMEOUT`] each; a client that stays full that long, or disconnected,
+    /// ends the parse.
+    fn send_outbox(
+        &mut self,
+        result: Result<(), DemoParseError>,
+    ) -> impl Future<Output = Result<(), DemoParseError>> + Send + Sync + 'static {
+        let events = core::mem::take(&mut self.outbox);
+        let sender = self.sender.clone();
+        async move {
+            result?;
+            for event in events {
+                sender.send_timeout(event, CLIENT_SEND_TIMEOUT).await?;
+            }
+            Ok(())
+        }
+    }
+
     fn handle_entity(
         &mut self,
         ctx: &Context,
@@ -153,7 +183,7 @@ impl SendingVisitor {
             },
         };
         let sse_event = demo_event.try_into()?;
-        self.sender.try_send(sse_event)?;
+        self.outbox.push(sse_event);
         Ok(())
     }
 
@@ -185,7 +215,11 @@ impl SendingVisitor {
 
     /// Emits `corrupted_item_shop_spawn` (level 1) / `corrupted_item_shop_restock` (above 1) for
     /// each new Broker stock level.
-    fn emit_broker_stock(&self, ctx: &Context, levels: Range<i32>) -> Result<(), DemoParseError> {
+    fn emit_broker_stock(
+        &mut self,
+        ctx: &Context,
+        levels: Range<i32>,
+    ) -> Result<(), DemoParseError> {
         for corrupted_items_limit in levels {
             let event = if corrupted_items_limit == 1 {
                 DemoEventPayload::CorruptedItemShopSpawn {
@@ -232,13 +266,13 @@ impl SendingVisitor {
         )
     }
 
-    fn send(&self, ctx: &Context, event: DemoEventPayload) -> Result<(), DemoParseError> {
+    fn send(&mut self, ctx: &Context, event: DemoEventPayload) -> Result<(), DemoParseError> {
         let demo_event = DemoEvent {
             tick: ctx.tick(),
             game_time: self.game_time,
             event,
         };
-        self.sender.try_send(demo_event.try_into()?)?;
+        self.outbox.push(demo_event.try_into()?);
         Ok(())
     }
 
@@ -279,7 +313,7 @@ impl SendingVisitor {
                 },
             };
             let sse_event = demo_event.try_into()?;
-            self.sender.try_send(sse_event)?;
+            self.outbox.push(sse_event);
         }
 
         if packet_type == CitadelUserMessageIds::KEUserMsgHeroKilled as u32
@@ -291,7 +325,7 @@ impl SendingVisitor {
                 event: DemoEventPayload::HeroKilled(msg),
             };
             let sse_event = demo_event.try_into()?;
-            self.sender.try_send(sse_event)?;
+            self.outbox.push(sse_event);
         }
 
         // Builds before 6711 send the bans in this message; newer ones in the game rules.
@@ -315,7 +349,7 @@ impl SendingVisitor {
                 game_time: self.game_time,
                 event,
             };
-            self.sender.try_send(demo_event.try_into()?)?;
+            self.outbox.push(demo_event.try_into()?);
         }
 
         Ok(())
@@ -392,7 +426,7 @@ impl SendingVisitor {
             game_time: self.game_time,
             event: DemoEventPayload::TickEnd,
         };
-        self.sender.try_send(demo_event.try_into()?)?;
+        self.outbox.push(demo_event.try_into()?);
         Ok(())
     }
 }

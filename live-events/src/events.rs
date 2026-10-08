@@ -76,10 +76,12 @@ fn send_info_event() -> Result<Event, axum::Error> {
     }))
 }
 
-/// Events buffered per client. The parser follows the live broadcast and cannot wait for a
-/// slow reader, so a client that falls this far behind is disconnected rather than buffered
-/// without bound. Large enough for the entity burst when a stream starts.
-const CLIENT_EVENT_BUFFER: usize = 32 * 1024;
+/// Events buffered per client. When it is full the parser waits for the client (and the
+/// broadcast pump for the parser), up to a timeout after which the client is dropped.
+const CLIENT_EVENT_BUFFER: usize = 4 * 1024;
+/// How long the final `end`/`error` event may wait for buffer room. If it cannot be
+/// delivered, the sender is dropped and the client's stream still closes cleanly.
+const FINAL_EVENT_TIMEOUT: Duration = Duration::from_secs(10);
 
 async fn demo_event_stream(
     http_client: reqwest::Client,
@@ -144,7 +146,7 @@ async fn demo_event_stream(
                 Event::default().event("error").data(message)
             }
         };
-        if let Err(e) = sender.try_send(event) {
+        if let Err(e) = sender.send_timeout(event, FINAL_EVENT_TIMEOUT).await {
             warn!("Failed to send final event: {e}");
         }
     });
