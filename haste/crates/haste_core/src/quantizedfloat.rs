@@ -137,7 +137,7 @@ fn assign_range_multiplier(bit_count: i32, range: f64) -> Result<f32, InvalidRan
 }
 
 // public/dt_common.h
-fn num_bits_for_count(n_max_elements: i32) -> i32 {
+fn num_bits_for_count(n_max_elements: i64) -> i32 {
     let mut n_bits = 0;
     let mut n_max_elements = n_max_elements;
 
@@ -188,7 +188,8 @@ impl QuantizedFloat {
         };
 
         qf.encode_flags = compute_encode_flags(qf.encode_flags, qf.low_value, qf.high_value)?;
-        let mut steps = 1 << qf.bit_count;
+        // NOTE: i64, so that `steps - 1` can't overflow for a bit count of 31.
+        let mut steps: i64 = 1 << qf.bit_count;
 
         let range = qf.high_value - qf.low_value;
         let offset = range / steps as f32;
@@ -199,12 +200,18 @@ impl QuantizedFloat {
         }
 
         if qf.encode_flags & QFE_ENCODE_INTEGERS_EXACTLY != 0 {
-            let delta = (qf.low_value as i32 - qf.high_value as i32).max(1);
-            let range = 1 << num_bits_for_count(delta);
+            // NOTE: i64, so that untrusted low / high values can't overflow the subtraction or the
+            // shifts below.
+            let delta = (i64::from(qf.low_value as i32) - i64::from(qf.high_value as i32)).max(1);
+            let range: i64 = 1 << num_bits_for_count(delta);
 
             let mut bc = qf.bit_count;
-            while (1 << bc) < range {
+            while (1i64 << bc) < range {
                 bc += 1;
+            }
+            // a quantized float can't have more than 31 bits (see the bit count check above).
+            if bc >= 32 {
+                return Err(InvalidRangeError.into());
             }
             if bc > qf.bit_count {
                 qf.bit_count = bc;
@@ -293,5 +300,39 @@ impl QuantizedFloat {
 
         br.skip_bits(self.bit_count as usize)?;
         Ok(bits_read + self.bit_count as usize)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn encode_integers_exactly_with_huge_range_is_an_error() {
+        // `low - high` does not fit an i32 and needs more than 31 bits.
+        assert!(matches!(
+            QuantizedFloat::new(8, QFE_ENCODE_INTEGERS_EXACTLY, 2e9, -2e9),
+            Err(QuantizedFloatError::InvalidRange(_))
+        ));
+    }
+
+    #[test]
+    fn encode_integers_exactly_with_31_bit_range() {
+        // `1 << 31` used to wrap to a negative i32 range here.
+        let qf = QuantizedFloat::new(8, QFE_ENCODE_INTEGERS_EXACTLY, 2e9, -1e8).unwrap();
+        assert_eq!(qf.bit_count, 31);
+    }
+
+    #[test]
+    fn max_bit_count_does_not_overflow() {
+        let qf = QuantizedFloat::new(31, 0, 0.0, 1.0).unwrap();
+        assert_eq!(qf.bit_count, 31);
+    }
+
+    #[test]
+    fn encode_integers_exactly_widens_bit_count() {
+        // delta = 300 - 0 needs 9 bits.
+        let qf = QuantizedFloat::new(4, QFE_ENCODE_INTEGERS_EXACTLY, 300.0, 0.0).unwrap();
+        assert_eq!(qf.bit_count, 9);
     }
 }
