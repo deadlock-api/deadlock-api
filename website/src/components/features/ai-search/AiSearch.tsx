@@ -12,6 +12,7 @@ import { cn } from "~/lib/utils";
 
 import { setLastSearch, useLastSearch } from "./last-search";
 import { routeQuestion } from "./route-question";
+import { useSearchShortcut } from "./search-shortcut";
 
 /** Questions the home page's field cycles through as its placeholder, to show what it can be asked. */
 const PLACEHOLDER_QUESTIONS = [
@@ -48,13 +49,6 @@ function trackQuestion(properties: {
   );
 }
 
-/** Whether a key press belongs to a field the visitor is typing in, which a shortcut must not take over. */
-function isTyping(target: EventTarget | null): boolean {
-  return (
-    target instanceof HTMLElement && (target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName))
-  );
-}
-
 /** The placeholder question shown now: it moves on every few seconds, and stays put for reduced motion. */
 function useRotatingPlaceholder(enabled: boolean): string {
   const [index, setIndex] = useState(0);
@@ -71,8 +65,8 @@ function useRotatingPlaceholder(enabled: boolean): string {
 
 interface AiSearchProps {
   /**
-   * `default` is the home page's search bar, its button inside it. `sm` is the sidebar's: it submits on Enter, shows
-   * its progress in the field, and takes the focus on `/` or Ctrl+K from anywhere on the page.
+   * `default` is the home page's search bar, its button inside it. `sm` is the sidebar's: it submits on Enter and shows
+   * its progress in the field. `/` or Ctrl+K focus the bar where there is one, the sidebar's field elsewhere.
    */
   size?: "default" | "sm";
   className?: string;
@@ -104,21 +98,7 @@ export function AiSearch({ size = "default", className }: AiSearchProps) {
     [],
   );
 
-  useEffect(() => {
-    if (size !== "sm") return undefined;
-    const onKeyDown = (event: KeyboardEvent) => {
-      const slash = event.key === "/" && !event.ctrlKey && !event.metaKey && !event.altKey && !isTyping(event.target);
-      const commandK = event.key.toLowerCase() === "k" && (event.ctrlKey || event.metaKey);
-      if (!slash && !commandK) return;
-      // The sidebar is hidden on a phone, where its search lives in the menu instead.
-      if (!input.current?.checkVisibility()) return;
-      event.preventDefault();
-      input.current.focus();
-      input.current.select();
-    };
-    document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
-  }, [size]);
+  useSearchShortcut(input, size === "default" ? 2 : 1);
 
   const question = last && last.version !== draft.version ? last.question : draft.text;
   const source = size === "sm" ? "sidebar" : "home";
@@ -177,7 +157,7 @@ export function AiSearch({ size = "default", className }: AiSearchProps) {
           size={size}
           loading={size === "sm" && searching}
           loadingLabel="Finding the page"
-          shortcut={size === "sm" ? "/" : undefined}
+          shortcut="/"
           aria-label="Ask for a stat"
           aria-invalid={unmatched || undefined}
           placeholder={size === "sm" ? "Ask for a stat" : `Ask anything: ${example}`}
