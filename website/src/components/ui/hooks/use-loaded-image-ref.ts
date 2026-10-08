@@ -1,3 +1,5 @@
+import { assignRef } from "~/components/ui/hooks/assign-ref";
+
 /**
  * A ref for an `<img>` that calls `onLoaded` when the image has already finished by the time it is attached, then
  * forwards to `ref`. An SSR'd or cached image can finish loading before React attaches `onLoad`, so that event never
@@ -9,7 +11,6 @@ export function useLoadedImageRef(
 ) {
   return (img: HTMLImageElement | null) => {
     if (img?.complete) onLoaded(img);
-    if (typeof ref === "function") return ref(img);
-    if (ref) ref.current = img;
+    return assignRef(ref, img);
   };
 }

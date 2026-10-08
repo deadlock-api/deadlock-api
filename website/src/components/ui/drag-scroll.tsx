@@ -1,5 +1,6 @@
 import { useCallback, useRef } from "react";
 
+import { assignRef } from "~/components/ui/hooks/assign-ref";
 import { FOCUS_RING, SCROLLBAR_THIN } from "~/components/ui/recipes";
 import { cn } from "~/lib/utils";
 
@@ -25,8 +26,7 @@ export function DragScroll({
   const setRefs = useCallback(
     (element: HTMLDivElement | null) => {
       ref.current = element;
-      if (typeof forwardedRef === "function") return forwardedRef(element);
-      if (forwardedRef) forwardedRef.current = element;
+      return assignRef(forwardedRef, element);
     },
     [forwardedRef],
   );

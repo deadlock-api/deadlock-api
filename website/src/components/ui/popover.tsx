@@ -1,6 +1,7 @@
 import { Popover as PopoverPrimitive } from "radix-ui";
 import * as React from "react";
 
+import { assignRef } from "~/components/ui/hooks/assign-ref";
 import { FieldLabelContext } from "~/components/ui/hooks/use-field-control";
 import { FOCUS_RING, POPPER_MOTION, POPPER_SCROLLBAR } from "~/components/ui/recipes";
 import { cn } from "~/lib/utils";
@@ -29,15 +30,11 @@ function PopoverTrigger({ id, ref, ...props }: React.ComponentProps<typeof Popov
   // The id is read from the node: with `asChild` the child's own id wins over the one given here.
   const trackTrigger = React.useCallback(
     (node: HTMLButtonElement | null) => {
-      const forward = (value: HTMLButtonElement | null) => {
-        if (typeof ref === "function") ref(value);
-        else if (ref) ref.current = value;
-      };
-      forward(node);
+      assignRef(ref, node);
       setTriggerId?.(node?.id || undefined);
       // A ref callback that returns a cleanup is not called again with null, so the cleanup forwards it.
       return () => {
-        forward(null);
+        assignRef(ref, null);
         setTriggerId?.(undefined);
       };
     },

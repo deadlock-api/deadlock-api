@@ -2,6 +2,7 @@ import { SearchIcon, XIcon } from "lucide-react";
 import { useRef } from "react";
 
 import { Button } from "~/components/ui/button";
+import { assignRef } from "~/components/ui/hooks/assign-ref";
 import { useControllableState } from "~/components/ui/hooks/use-controllable-state";
 import { Input } from "~/components/ui/input";
 import { Kbd } from "~/components/ui/kbd";
@@ -61,8 +62,7 @@ export function SearchInput({
   const inputRef = useRef<HTMLInputElement>(null);
   const setRefs = (node: HTMLInputElement | null) => {
     inputRef.current = node;
-    if (typeof ref === "function") ref(node);
-    else if (ref) ref.current = node;
+    assignRef(ref, node);
   };
   const fieldProps = {
     ref: setRefs,

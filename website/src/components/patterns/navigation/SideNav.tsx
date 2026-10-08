@@ -2,6 +2,7 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { Slot } from "radix-ui";
 import { useCallback } from "react";
 
+import { assignRef } from "~/components/ui/hooks/assign-ref";
 import { FOCUS_RING } from "~/components/ui/recipes";
 import { cn } from "~/lib/utils";
 
@@ -37,14 +38,12 @@ function keepActiveItemInView(list: HTMLElement): () => void {
 export function SideNav({ className, ref, ...props }: React.ComponentProps<"nav">) {
   const composedRef = useCallback(
     (node: HTMLElement | null) => {
-      if (typeof ref === "function") ref(node);
-      else if (ref) ref.current = node;
+      assignRef(ref, node);
       if (!node) return;
       const stop = keepActiveItemInView(node);
       return () => {
         stop();
-        if (typeof ref === "function") ref(null);
-        else if (ref) ref.current = null;
+        assignRef(ref, null);
       };
     },
     [ref],

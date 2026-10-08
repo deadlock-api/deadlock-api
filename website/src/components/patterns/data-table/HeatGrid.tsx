@@ -1,6 +1,7 @@
 import { createContext, type KeyboardEvent, use, useId } from "react";
 
 import { HeatCell } from "~/components/ui/heat-cell";
+import { assignRef } from "~/components/ui/hooks/assign-ref";
 import { useControllableState } from "~/components/ui/hooks/use-controllable-state";
 import { useGridNavigation } from "~/components/ui/hooks/use-grid-navigation";
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
@@ -147,8 +148,7 @@ export function HeatGridCell({
       {...props}
       ref={(button) => {
         register(button);
-        if (typeof ref === "function") return ref(button);
-        if (ref) ref.current = button;
+        return assignRef(ref, button);
       }}
       tabIndex={grid.activeIndex === index ? 0 : -1}
       selected={grid.value === index}
