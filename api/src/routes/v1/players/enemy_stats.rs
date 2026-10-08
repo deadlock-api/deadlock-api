@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use crate::routes::v1::players::ensure_not_protected;
 use crate::utils::sql::impl_match_info;
 use axum::Json;
@@ -12,7 +14,8 @@ use utoipa::{IntoParams, ToSchema};
 use crate::context::AppState;
 use crate::error::APIResult;
 use crate::routes::v1::matches::types::GameMode;
-use crate::utils::sql::ROSTER_DURATION_COLUMN;
+use crate::routes::v1::players::roster_stats::{RosterSide, RosterStatsQuery};
+use crate::utils::sql::cached_ch_query;
 use crate::utils::types::AccountIdQuery;
 
 #[derive(Copy, Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash, Default)]
@@ -59,57 +62,31 @@ pub struct EnemyStats {
 }
 
 fn build_query(account_id: u32, query: &EnemyStatsQuery) -> String {
-    // The roster table only contains Ranked/Unranked matches, so no match_mode filter is needed.
-    let mut filters = vec![
-        format!("account_id = {account_id}"),
-        GameMode::sql_filter(query.game_mode),
-    ];
-    filters.extend(query.match_info().predicates("", ROSTER_DURATION_COLUMN));
-    let where_clause = filters.join(" AND ");
-    // PREWHERE: under FINAL, ClickHouse only moves sorting-key conditions there itself, so the
-    // other filters would run after reading every column. Duplicate versions of a row never
-    // differ in the filtered columns (checked 2026-10-04), so filtering before FINAL keeps the
-    // same rows.
-    let mut having_filters = vec![];
-    if let Some(min_matches_played) = query.min_matches_played {
-        having_filters.push(format!("matches_played >= {min_matches_played}"));
+    RosterStatsQuery {
+        side: RosterSide::Enemy,
+        account_id,
+        game_mode: query.game_mode,
+        match_info: query.match_info(),
+        min_matches_played: query.min_matches_played,
+        max_matches_played: query.max_matches_played,
+        other_ids: None,
     }
-    if let Some(max_matches_played) = query.max_matches_played {
-        having_filters.push(format!("matches_played <= {max_matches_played}"));
-    }
-    let having_clause = if having_filters.is_empty() {
-        String::new()
-    } else {
-        format!("HAVING {}", having_filters.join(" AND "))
-    };
-    // `won` is the queried account's own result. An enemy is on the opposite team, so the
-    // account winning is exactly the enemy losing -> countIf(won) = "matches won against the enemy".
-    format!(
-        "
-    SELECT
-        enemy_id,
-        countIf(won) as wins,
-        count() as matches_played,
-        groupArray(match_id) as matches
-    FROM player_match_roster FINAL
-    ARRAY JOIN enemy_ids AS enemy_id
-    PREWHERE {where_clause}
-    GROUP BY enemy_id
-    {having_clause}
-    ORDER BY matches_played DESC
-    SETTINGS log_comment = 'enemy_stats'
-    "
-    )
+    .build()
+}
+
+cached_ch_query! {
+    /// Short-lived: an account's roster changes with every new match.
+    fn run_query(1_000, 60) -> Vec<EnemyStats>;
 }
 
 async fn get_enemy_stats(
     ch_client: &clickhouse::Client,
     account_id: u32,
     query: EnemyStatsQuery,
-) -> APIResult<Vec<EnemyStats>> {
+) -> APIResult<Arc<Vec<EnemyStats>>> {
     let query = build_query(account_id, &query);
     debug!(?query);
-    Ok(ch_client.query(&query).fetch_all().await?)
+    Ok(run_query(ch_client, &query).await?)
 }
 
 #[utoipa::path(

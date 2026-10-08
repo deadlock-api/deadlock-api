@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use crate::routes::v1::players::ensure_not_protected;
 use crate::utils::sql::impl_match_info;
 use axum::Json;
@@ -13,9 +15,9 @@ use utoipa::{IntoParams, ToSchema};
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::matches::types::GameMode;
+use crate::routes::v1::players::roster_stats::{RosterSide, RosterStatsQuery};
 use crate::routes::v1::players::steam::route::SteamProfileBatcher;
-use crate::services::clickhouse_batcher::in_clause;
-use crate::utils::sql::ROSTER_DURATION_COLUMN;
+use crate::utils::sql::cached_ch_query;
 use crate::utils::types::AccountIdQuery;
 
 #[derive(Copy, Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash, Default)]
@@ -67,55 +69,22 @@ pub struct MateStats {
 }
 
 fn build_query(account_id: u32, query: &MateStatsQuery, friend_ids: Option<&[u32]>) -> String {
-    // The roster table only contains Ranked/Unranked matches, so no match_mode filter is needed.
-    let mut filters = vec![
-        format!("account_id = {account_id}"),
-        GameMode::sql_filter(query.game_mode),
-    ];
-    filters.extend(query.match_info().predicates("", ROSTER_DURATION_COLUMN));
-    let prewhere_clause = filters.join(" AND ");
-    // PREWHERE: under FINAL, ClickHouse only moves sorting-key conditions there itself, so the
-    // other filters would run after reading every column. Duplicate versions of a row never
-    // differ in the filtered columns (checked 2026-10-04), so filtering before FINAL keeps the
-    // same rows.
-    // The same-party filter restricts mates to the account's Steam friends. `mate_id` comes from
-    // the ARRAY JOIN, so it stays in WHERE.
-    let where_clause = friend_ids.map_or_else(String::new, |ids| {
-        format!("WHERE mate_id IN ({})", in_clause(ids))
-    });
-
-    let mut having_filters = vec![];
-    if let Some(min_matches_played) = query.min_matches_played {
-        having_filters.push(format!("matches_played >= {min_matches_played}"));
+    // The same-party filter restricts mates to the account's Steam friends.
+    RosterStatsQuery {
+        side: RosterSide::Mate,
+        account_id,
+        game_mode: query.game_mode,
+        match_info: query.match_info(),
+        min_matches_played: query.min_matches_played,
+        max_matches_played: query.max_matches_played,
+        other_ids: friend_ids,
     }
-    if let Some(max_matches_played) = query.max_matches_played {
-        having_filters.push(format!("matches_played <= {max_matches_played}"));
-    }
-    let having_clause = if having_filters.is_empty() {
-        String::new()
-    } else {
-        format!("HAVING {}", having_filters.join(" AND "))
-    };
+    .build()
+}
 
-    // `won` is the queried account's own result; a mate is on the same team, so it is also the
-    // mate's result -> countIf(won) is the number of matches won together.
-    format!(
-        "
-        SELECT
-            mate_id,
-            countIf(won) as wins,
-            count() as matches_played,
-            groupArray(match_id) as matches
-        FROM player_match_roster FINAL
-        ARRAY JOIN mate_ids AS mate_id
-        PREWHERE {prewhere_clause}
-        {where_clause}
-        GROUP BY mate_id
-        {having_clause}
-        ORDER BY matches_played DESC
-        SETTINGS log_comment = 'mate_stats'
-            "
-    )
+cached_ch_query! {
+    /// Short-lived: an account's roster changes with every new match.
+    fn run_query(1_000, 60) -> Vec<MateStats>;
 }
 
 async fn fetch_friend_account_ids(
@@ -139,11 +108,11 @@ async fn get_mate_stats(
     steam_profile_batcher: &SteamProfileBatcher,
     account_id: u32,
     query: MateStatsQuery,
-) -> APIResult<Vec<MateStats>> {
+) -> APIResult<Arc<Vec<MateStats>>> {
     let friend_ids = if query.same_party {
         let ids = fetch_friend_account_ids(steam_profile_batcher, account_id).await?;
         if ids.is_empty() {
-            return Ok(Vec::new());
+            return Ok(Arc::default());
         }
         Some(ids)
     } else {
@@ -151,7 +120,7 @@ async fn get_mate_stats(
     };
     let sql = build_query(account_id, &query, friend_ids.as_deref());
     debug!(?sql);
-    Ok(ch_client.query(&sql).fetch_all().await?)
+    Ok(run_query(ch_client, &sql).await?)
 }
 
 #[utoipa::path(

@@ -7,6 +7,7 @@ pub mod mate_stats;
 pub mod mmr;
 pub(crate) mod rank;
 mod rank_distribution;
+mod roster_stats;
 pub mod steam;
 
 use core::time::Duration;
