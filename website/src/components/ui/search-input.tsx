@@ -71,14 +71,21 @@ export function SearchInput({
     ...props,
   };
   const hideNativeClear = "[&::-webkit-search-cancel-button]:appearance-none";
-  const clearButton = (className?: string) => (
+  const editable = !props.disabled && !props.readOnly;
+  // The end of the field, one thing at a time: progress while loading, a clear button once there is text, else the
+  // shortcut key. The spinner takes the clear button's box, so it shows where the button was.
+  const trailing = loading ? (
+    <span className="flex size-6 items-center justify-center">
+      <Spinner size={size === "sm" && variant !== "bar" ? "xs" : "sm"} label={loadingLabel} />
+    </span>
+  ) : value !== "" && editable ? (
     <Button
       // Not the form's submit: Enter in a search inside a form would press it and clear the field instead.
       type="button"
       variant="ghost"
       size="icon-xs"
       aria-label="Clear search"
-      className={cn("text-muted-foreground", className)}
+      className="text-muted-foreground"
       onClick={() => {
         setValue("");
         inputRef.current?.focus();
@@ -86,8 +93,13 @@ export function SearchInput({
     >
       <XIcon />
     </Button>
+  ) : (
+    shortcut && (
+      <Kbd aria-hidden="true" className="pointer-events-none group-focus-within:hidden">
+        {shortcut}
+      </Kbd>
+    )
   );
-  const editable = !props.disabled && !props.readOnly;
 
   if (variant === "bar") {
     return (
@@ -111,17 +123,7 @@ export function SearchInput({
           )}
           {...fieldProps}
         />
-        {loading ? (
-          <Spinner size="sm" label={loadingLabel} />
-        ) : value !== "" && editable ? (
-          clearButton()
-        ) : (
-          shortcut && (
-            <Kbd aria-hidden="true" className="pointer-events-none group-focus-within:hidden">
-              {shortcut}
-            </Kbd>
-          )
-        )}
+        {trailing}
         {action}
       </div>
     );
@@ -154,25 +156,10 @@ export function SearchInput({
       ) : (
         <Input size={size} className={cn(hideNativeClear, size === "sm" ? "px-8" : "px-9")} {...fieldProps} />
       )}
-      {loading ? (
-        <Spinner
-          size={size === "sm" ? "xs" : "sm"}
-          label={loadingLabel}
-          className={cn("absolute top-1/2 -translate-y-1/2", variant === "ghost" ? "inset-e-0" : "inset-e-2.5")}
-        />
-      ) : value !== "" && editable ? (
-        // Centered with margins, not a translate: the button's pressed state moves it by its own transform, which would
-        // replace the centering and drop it out from under the pointer before the click lands.
-        clearButton("absolute inset-y-0 inset-e-1 my-auto")
-      ) : (
-        shortcut && (
-          <Kbd
-            aria-hidden="true"
-            className="pointer-events-none absolute inset-e-2 top-1/2 -translate-y-1/2 group-focus-within:hidden"
-          >
-            {shortcut}
-          </Kbd>
-        )
+      {trailing && (
+        <span className={cn("absolute inset-y-0 flex items-center", variant === "ghost" ? "inset-e-0" : "inset-e-1")}>
+          {trailing}
+        </span>
       )}
     </div>
   );
