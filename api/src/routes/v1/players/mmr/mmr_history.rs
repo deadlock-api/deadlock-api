@@ -41,15 +41,7 @@ pub struct MMRHistory {
     division_tier: u32,
 }
 
-fn build_mmr_history_query(account_id: u32) -> String {
-    build_mmr_history_query_inner(account_id, None)
-}
-
-fn build_hero_mmr_history_query(account_id: u32, hero_id: u8) -> String {
-    build_mmr_history_query_inner(account_id, Some(hero_id))
-}
-
-fn build_mmr_history_query_inner(account_id: u32, hero_id: Option<u8>) -> String {
+fn build_mmr_history_query(account_id: u32, hero_id: Option<u8>) -> String {
     let hero_filter = hero_id.map_or_default(|id| format!("AND hero_id = {id}"));
     let log_comment = if hero_id.is_some() {
         "mmr_history_hero"
@@ -92,18 +84,9 @@ fn build_mmr_history_query_inner(account_id: u32, hero_id: Option<u8>) -> String
 async fn get_mmr_history(
     ch_client: &clickhouse::Client,
     account_id: u32,
+    hero_id: Option<u8>,
 ) -> APIResult<Vec<MMRHistory>> {
-    let query = build_mmr_history_query(account_id);
-    debug!(?query);
-    Ok(ch_client.query(&query).fetch_all().await?)
-}
-
-async fn get_hero_mmr_history(
-    ch_client: &clickhouse::Client,
-    account_id: u32,
-    hero_id: u8,
-) -> APIResult<Vec<MMRHistory>> {
-    let query = build_hero_mmr_history_query(account_id, hero_id);
+    let query = build_mmr_history_query(account_id, hero_id);
     debug!(?query);
     Ok(ch_client.query(&query).fetch_all().await?)
 }
@@ -135,7 +118,7 @@ pub(super) async fn mmr_history(
 ) -> APIResult<impl IntoResponse> {
     apply_mmr_rate_limits(&state, &rate_limit_key).await?;
     ensure_not_protected(&state, &[account_id]).await?;
-    get_mmr_history(&state.ch_client_ro, account_id)
+    get_mmr_history(&state.ch_client_ro, account_id, None)
         .await
         .map(Json)
 }
@@ -170,7 +153,7 @@ pub(super) async fn hero_mmr_history(
 ) -> APIResult<impl IntoResponse> {
     apply_mmr_rate_limits(&state, &rate_limit_key).await?;
     ensure_not_protected(&state, &[account_id]).await?;
-    get_hero_mmr_history(&state.ch_client_ro, account_id, hero_id)
+    get_mmr_history(&state.ch_client_ro, account_id, Some(hero_id))
         .await
         .map(Json)
 }
@@ -187,7 +170,7 @@ mod proptests {
 
         #[test]
         fn mmr_history_build_query_is_valid_sql(account_id in any::<u32>()) {
-            assert_valid_sql(&build_mmr_history_query(account_id));
+            assert_valid_sql(&build_mmr_history_query(account_id, None));
         }
 
         #[test]
@@ -195,7 +178,7 @@ mod proptests {
             account_id in any::<u32>(),
             hero_id in any::<u8>(),
         ) {
-            assert_valid_sql(&build_hero_mmr_history_query(account_id, hero_id));
+            assert_valid_sql(&build_mmr_history_query(account_id, Some(hero_id)));
         }
     }
 }

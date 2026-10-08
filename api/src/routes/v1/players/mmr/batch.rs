@@ -3,7 +3,6 @@ use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum_extra::extract::Query;
-use cached::macros::cached;
 use serde::Deserialize;
 use tracing::debug;
 use utoipa::IntoParams;
@@ -13,9 +12,10 @@ use crate::error::{APIError, APIResult};
 use crate::routes::v1::players::mmr::apply_mmr_rate_limits;
 use crate::routes::v1::players::mmr::mmr_history::MMRHistory;
 use crate::routes::v1::players::rank::badge_from_flat_progress_sql;
+use crate::routes::v1::players::without_protected;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::utils::parse::comma_separated_deserialize;
-use crate::utils::sql::id_list;
+use crate::utils::sql::{cached_ch_query, id_list};
 
 #[derive(Deserialize, IntoParams, Clone)]
 pub(crate) struct MMRBatchQuery {
@@ -84,20 +84,25 @@ fn build_mmr_query_inner(
     )
 }
 
-#[cached(
-    max_size = 1_000,
-    ttl_secs = 60,
-    convert = r#"{ format!("{account_ids:?}-{max_match_id:?}") }"#,
-    key = "String"
-)]
-async fn get_mmr(
-    ch_client: &clickhouse::Client,
-    account_ids: &[u32],
-    max_match_id: Option<u64>,
-) -> clickhouse::error::Result<Vec<MMRHistory>> {
-    let query = build_mmr_query(account_ids, max_match_id);
-    debug!(?query);
-    ch_client.query(&query).fetch_all::<MMRHistory>().await
+cached_ch_query! {
+    fn run_mmr_query(1_000, 60) -> Vec<MMRHistory>;
+}
+
+/// Applies the MMR rate limits, then drops protected accounts and rejects an oversized batch.
+async fn checked_account_ids(
+    state: &AppState,
+    rate_limit_key: &RateLimitKey,
+    account_ids: Vec<u32>,
+) -> APIResult<Vec<u32>> {
+    apply_mmr_rate_limits(state, rate_limit_key).await?;
+    let account_ids = without_protected(state, account_ids).await?;
+    if account_ids.len() > 1_000 {
+        return Err(APIError::status_msg(
+            StatusCode::BAD_REQUEST,
+            "Too many account ids provided.",
+        ));
+    }
+    Ok(account_ids)
 }
 
 #[utoipa::path(
@@ -127,24 +132,10 @@ pub(super) async fn mmr(
     State(state): State<AppState>,
     rate_limit_key: RateLimitKey,
 ) -> APIResult<impl IntoResponse> {
-    apply_mmr_rate_limits(&state, &rate_limit_key).await?;
-    let protected_users = state
-        .steam_client
-        .get_protected_users(&state.pg_client)
-        .await?;
-    let account_ids = account_ids
-        .into_iter()
-        .filter(|id| !protected_users.contains(id))
-        .collect::<Vec<_>>();
-    if account_ids.len() > 1_000 {
-        return Err(APIError::status_msg(
-            StatusCode::BAD_REQUEST,
-            "Too many account ids provided.",
-        ));
-    }
-    Ok(get_mmr(&state.ch_client_ro, &account_ids, max_match_id)
-        .await
-        .map(Json)?)
+    let account_ids = checked_account_ids(&state, &rate_limit_key, account_ids).await?;
+    let query = build_mmr_query(&account_ids, max_match_id);
+    debug!(?query);
+    Ok(run_mmr_query(&state.ch_client_ro, &query).await.map(Json)?)
 }
 
 #[utoipa::path(
@@ -175,21 +166,7 @@ pub(super) async fn hero_mmr(
     State(state): State<AppState>,
     rate_limit_key: RateLimitKey,
 ) -> APIResult<impl IntoResponse> {
-    apply_mmr_rate_limits(&state, &rate_limit_key).await?;
-    let protected_users = state
-        .steam_client
-        .get_protected_users(&state.pg_client)
-        .await?;
-    let account_ids = account_ids
-        .into_iter()
-        .filter(|id| !protected_users.contains(id))
-        .collect::<Vec<_>>();
-    if account_ids.len() > 1_000 {
-        return Err(APIError::status_msg(
-            StatusCode::BAD_REQUEST,
-            "Too many account ids provided.",
-        ));
-    }
+    let account_ids = checked_account_ids(&state, &rate_limit_key, account_ids).await?;
     let query = build_hero_mmr_query(&account_ids, hero_id, max_match_id);
     debug!(?query);
     Ok(state

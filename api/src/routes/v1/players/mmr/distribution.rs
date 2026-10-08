@@ -14,7 +14,7 @@ use crate::routes::v1::players::mmr::batch::HeroMMRPath;
 use crate::routes::v1::players::rank::badge_from_flat_progress_sql;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::utils::parse::default_last_month_timestamp;
-use crate::utils::sql::{DURATION_COLUMN, MatchInfoFilters, MatchPoolFilters};
+use crate::utils::sql::{DURATION_COLUMN, MatchPoolFilters, impl_match_info};
 
 #[derive(Copy, Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash)]
 #[cfg_attr(test, derive(proptest_derive::Arbitrary))]
@@ -43,6 +43,8 @@ pub(crate) struct MMRDistributionQuery {
     max_match_id: Option<u64>,
 }
 
+impl_match_info!(MMRDistributionQuery, without_badge);
+
 #[derive(Debug, Clone, Copy, Row, Serialize, Deserialize, ToSchema)]
 pub(super) struct DistributionEntry {
     rank: u8,
@@ -56,19 +58,7 @@ fn build_filters(query: &MMRDistributionQuery) -> Vec<String> {
         "player_rank_initial_display_rank > 0".to_owned(),
         "player_rank_final_flat_progress IS NOT NULL".to_owned(),
     ];
-    filters.extend(
-        MatchInfoFilters {
-            min_unix_timestamp: query.min_unix_timestamp,
-            max_unix_timestamp: query.max_unix_timestamp,
-            min_match_id: query.min_match_id,
-            max_match_id: query.max_match_id,
-            min_average_badge: None,
-            max_average_badge: None,
-            min_duration_s: query.min_duration_s,
-            max_duration_s: query.max_duration_s,
-        }
-        .predicates("", DURATION_COLUMN),
-    );
+    filters.extend(query.match_info().predicates("", DURATION_COLUMN));
     filters.extend(
         MatchPoolFilters {
             is_high_skill_range_parties: query.is_high_skill_range_parties,
@@ -114,6 +104,18 @@ fn build_mmr_distribution_query(hero_id: Option<u8>, query: &MMRDistributionQuer
     )
 }
 
+async fn get_mmr_distribution(
+    state: &AppState,
+    rate_limit_key: &RateLimitKey,
+    hero_id: Option<u8>,
+    query: &MMRDistributionQuery,
+) -> APIResult<Vec<DistributionEntry>> {
+    apply_mmr_distribution_rate_limits(state, rate_limit_key).await?;
+    let query = build_mmr_distribution_query(hero_id, query);
+    debug!(?query);
+    Ok(state.ch_client_ro.query(&query).fetch_all().await?)
+}
+
 #[utoipa::path(
     get,
     path = "/mmr/distribution",
@@ -138,15 +140,9 @@ pub(super) async fn mmr_distribution(
     rate_limit_key: RateLimitKey,
     Query(query): Query<MMRDistributionQuery>,
 ) -> APIResult<impl IntoResponse> {
-    apply_mmr_distribution_rate_limits(&state, &rate_limit_key).await?;
-    let query = build_mmr_distribution_query(None, &query);
-    debug!(?query);
-    Ok(state
-        .ch_client_ro
-        .query(&query)
-        .fetch_all::<DistributionEntry>()
+    get_mmr_distribution(&state, &rate_limit_key, None, &query)
         .await
-        .map(Json)?)
+        .map(Json)
 }
 
 #[utoipa::path(
@@ -174,15 +170,9 @@ pub(super) async fn hero_mmr_distribution(
     State(state): State<AppState>,
     rate_limit_key: RateLimitKey,
 ) -> APIResult<impl IntoResponse> {
-    apply_mmr_distribution_rate_limits(&state, &rate_limit_key).await?;
-    let query = build_mmr_distribution_query(Some(hero_id), &query);
-    debug!(?query);
-    Ok(state
-        .ch_client_ro
-        .query(&query)
-        .fetch_all::<DistributionEntry>()
+    get_mmr_distribution(&state, &rate_limit_key, Some(hero_id), &query)
         .await
-        .map(Json)?)
+        .map(Json)
 }
 
 #[cfg(test)]
