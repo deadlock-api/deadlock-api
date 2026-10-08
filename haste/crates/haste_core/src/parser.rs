@@ -284,7 +284,6 @@ impl Context {
 
         let mut br = BitReader::new(string_data);
         string_table.parse_update(&mut br, msg.num_entries())?;
-        br.is_overflowed()?;
 
         if string_table.name().eq(INSTANCE_BASELINE_TABLE_NAME)
             && let Some(entity_classes) = self.entity_classes.as_ref()
@@ -315,7 +314,6 @@ impl Context {
 
         let mut br = BitReader::new(msg.string_data());
         string_table.parse_update(&mut br, msg.num_changed_entries())?;
-        br.is_overflowed()?;
 
         if string_table.name().eq(INSTANCE_BASELINE_TABLE_NAME)
             && let Some(entity_classes) = self.entity_classes.as_ref()
@@ -343,7 +341,6 @@ impl Context {
         F: Fn(u64) -> bool,
     {
         if rdr.remaining <= 0 {
-            rdr.br.is_overflowed()?;
             return Ok(None);
         }
         rdr.remaining -= 1;
@@ -740,7 +737,6 @@ impl<D: DemoStream, V: Visitor> Parser<D, V> {
                 }
             }
         }
-        br.is_overflowed()?;
         Ok(())
     }
 
@@ -1121,7 +1117,6 @@ impl<D: AsyncDemoStream, V: AsyncVisitor> AsyncStreamingParser<D, V> {
                 }
             }
         }
-        br.is_overflowed()?;
         Ok(())
     }
 

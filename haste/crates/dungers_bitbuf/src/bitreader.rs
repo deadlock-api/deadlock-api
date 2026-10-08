@@ -177,23 +177,6 @@ impl<'a> BitReader<'a> {
         self.read_bits(buf, buf.len() << 3)
     }
 
-    /// this can save your ass when you're using `_unchecked` methods. once you're done reading
-    /// from buf call this to see if any bits were read from kyokai no kanata.
-    ///
-    /// returns [`Error::Overflow`] if overflowed (which means you are skrewed).
-    ///
-    /// i figured that returning result would be more convenient than a bool because it can be
-    /// questionmarked; plus, in some cases, this would eliminate a need of coming up with a custom
-    /// error.
-    #[inline]
-    pub fn is_overflowed(&self) -> Result<(), BitError> {
-        if self.cur_bit > self.num_bits {
-            Err(BitError::Overflow)
-        } else {
-            Ok(())
-        }
-    }
-
     #[cfg(feature = "varint")]
     #[inline]
     pub fn read_uvarint<T>(&mut self) -> Result<T, BitError>

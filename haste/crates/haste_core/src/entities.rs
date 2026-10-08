@@ -453,60 +453,6 @@ impl EntityContainer {
         }
     }
 
-    #[allow(dead_code)]
-    pub(crate) fn handle_create(
-        &mut self,
-        index: i32,
-        field_decode_ctx: &mut FieldDecodeContext,
-        br: &mut BitReader,
-        entity_classes: &EntityClasses,
-        instance_baseline: &InstanceBaseline,
-        serializers: &FlattenedSerializerContainer,
-    ) -> Result<i32, EntityParseError> {
-        let class_id = br.read_ubit64(entity_classes.bits)?.try_into()?;
-        let _serial = br.read_ubit64(NUM_SERIAL_NUM_BITS as usize);
-        let _unknown = br.read_uvarint32();
-
-        let class_info = entity_classes
-            .by_id(class_id)
-            .ok_or(BitError::MalformedVarint)?;
-        let serializer = serializers
-            .by_name_hash(class_info.network_name_hash)
-            .ok_or(BitError::MalformedVarint)?;
-
-        let mut entity = match self.baseline_entities.entry(class_id) {
-            Entry::Occupied(oe) => {
-                let mut entity = oe.get().clone();
-                entity.index = index;
-                entity
-            }
-            Entry::Vacant(ve) => {
-                let mut entity = Entity {
-                    index,
-                    fields: HashMap::with_capacity_and_hasher(
-                        serializer.fields.len(),
-                        BuildHasherDefault::default(),
-                    ),
-                    serializer,
-                };
-
-                let baseline_data = instance_baseline.by_id(class_id);
-
-                let mut baseline_br = BitReader::new(baseline_data);
-                entity.parse(field_decode_ctx, &mut baseline_br, &mut self.field_paths)?;
-                baseline_br.is_overflowed()?;
-
-                ve.insert(entity).clone()
-            }
-        };
-
-        entity.parse(field_decode_ctx, br, &mut self.field_paths)?;
-
-        self.entities.insert(index, entity);
-        Ok(index)
-    }
-
-    #[cfg_attr(not(feature = "async"), allow(dead_code))]
     #[allow(clippy::too_many_arguments)]
     pub(crate) fn handle_create_with_filter<F>(
         &mut self,
@@ -560,7 +506,6 @@ impl EntityContainer {
 
                 let mut baseline_br = BitReader::new(baseline_data);
                 entity.parse(field_decode_ctx, &mut baseline_br, &mut self.field_paths)?;
-                baseline_br.is_overflowed()?;
 
                 ve.insert(entity).clone()
             }
@@ -588,7 +533,6 @@ impl EntityContainer {
 
     // SAFETY: Same as above... But we also have the risk of entities that leave and come back not
     // re-firing the CREATE event.  May need to handle this differently...
-    #[cfg_attr(not(feature = "async"), allow(dead_code))]
     pub(crate) fn handle_leave(&mut self, index: i32) -> Option<Entity> {
         self.skipped_serializers.remove(&index);
         self.entities.remove(&index)

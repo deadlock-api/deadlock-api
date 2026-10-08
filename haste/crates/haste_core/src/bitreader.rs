@@ -17,30 +17,16 @@ pub(crate) const ANGLE_BITS: usize = 20;
 // BitRead is a port of valve's CBitRead(or/and old_bf_read) from valve's tier1 lib.
 pub struct BitReader<'a> {
     inner: bitbuf::BitReader<'a>,
-    did_check_overflow: bool,
 }
 
-/// rationale for using "unsafe" `_unchecked` methods of the underlying
-/// [`dungers::bitbuf::BitReader`]:
-///
-/// what makes safe methods of [`dungers::bitbuf::BitReader`] safe is overflow checks.
-///
-/// bounds checking is not omitted, it is "deferred". custom [`Drop`] impl helps to ensure that it
-/// is performed.
-///
-/// [`BitReader`]'s methods are called very frequently, there's absolutely no value in performing
-/// bounds checking each time something is needed to be read because that is not going to help
-/// detect corrupt data.
-///
-/// deferred bounds checking allows to eliminate a very significant amount of branches which
-/// results in very noticable speed boost.
+/// every read is bounds checked by the underlying [`dungers::bitbuf::BitReader`] and returns
+/// [`BitError::Overflow`] instead of reading past the end of the buffer.
 impl<'a> BitReader<'a> {
     #[must_use]
     #[inline]
     pub fn new(data: &'a [u8]) -> Self {
         Self {
             inner: bitbuf::BitReader::new(data),
-            did_check_overflow: false,
         }
     }
 
@@ -79,12 +65,6 @@ impl<'a> BitReader<'a> {
     #[inline]
     pub fn read_bytes(&mut self, buf: &mut [u8]) -> Result<(), BitError> {
         self.inner.read_bytes(buf)
-    }
-
-    #[inline]
-    pub fn is_overflowed(&mut self) -> Result<(), BitError> {
-        self.did_check_overflow = true;
-        self.inner.is_overflowed()
     }
 
     #[inline]

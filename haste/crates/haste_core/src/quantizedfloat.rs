@@ -262,24 +262,6 @@ impl QuantizedFloat {
         Ok(self.low_value + range * (value as f32 * self.decode_mul))
     }
 
-    #[allow(dead_code)]
-    pub(crate) fn skip(&self, br: &mut BitReader) -> Result<(), BitError> {
-        if (self.encode_flags & QFE_ROUNDDOWN) != 0 && br.read_bool()? {
-            return Ok(());
-        }
-
-        if (self.encode_flags & QFE_ROUNDUP) != 0 && br.read_bool()? {
-            return Ok(());
-        }
-
-        if (self.encode_flags & QFE_ENCODE_ZERO_EXACTLY) != 0 && br.read_bool()? {
-            return Ok(());
-        }
-
-        let _ = br.read_ubit64(self.bit_count as usize)?;
-        Ok(())
-    }
-
     pub(crate) fn skip_bits(&self, br: &mut BitReader) -> Result<usize, BitError> {
         let mut bits_read = 0;
 
