@@ -16,7 +16,7 @@ COPY . .
 RUN --mount=type=cache,target=/usr/local/cargo/registry \
     --mount=type=cache,target=/usr/local/cargo/git \
     --mount=type=cache,target=/app/target,sharing=locked \
-    cargo build --release --locked $(for m in tools/*/Cargo.toml; do sed -n 's/^name = "\(.*\)"/-p \1/p' "$m"); done) \
+    cargo build --release --locked $(for m in tools/*/Cargo.toml; do sed -n 's/^name = "\(.*\)"/-p \1/p' "$m"; done) \
     && mkdir -p /tmp/release-bin \
     && for m in tools/*/Cargo.toml; do \
          name=$(sed -n 's/^name = "\(.*\)"/\1/p' "$m"); \
