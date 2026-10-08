@@ -240,11 +240,3 @@
     }
   }
 }
-
-/* Shown only where the document head found Chrome's Prompt API (lib/ai-search/language-model.ts), from the first paint
-   on, so a browser without it never lays the element out. */
-@utility prompt-api-only {
-  :root:not([data-prompt-api]) & {
-    display: none;
-  }
-}

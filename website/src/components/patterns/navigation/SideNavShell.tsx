@@ -26,6 +26,16 @@ export function SideNavShell({ className, ...props }: React.ComponentProps<"asid
 
 const SideNavDrawerContext = createContext<{ close: () => void } | null>(null);
 
+const noop = () => {};
+
+/**
+ * Closes the drawer the caller sits in, for a navigation that is not a link click (a search that redirects); outside
+ * a drawer it does nothing.
+ */
+export function useCloseSideNavDrawer(): () => void {
+  return useContext(SideNavDrawerContext)?.close ?? noop;
+}
+
 /** The native modal `<dialog>` behind `SideNavDrawer`: it supplies inertness, focus return and Escape. */
 function useModalDialog() {
   const ref = useRef<HTMLDialogElement>(null);

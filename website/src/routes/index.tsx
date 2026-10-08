@@ -3,7 +3,6 @@ import {
   BarChart3,
   Code,
   Database,
-  GitCompareArrows,
   HardDrive,
   Heart,
   ListOrdered,
@@ -177,12 +176,6 @@ const analyticsLinks = [
     icon: Trophy,
   },
   {
-    title: "Compare Players",
-    description: "Put yourself next to a friend or a top player and see who wins which stat.",
-    href: "/analytics/players/compare",
-    icon: GitCompareArrows,
-  },
-  {
     title: "Rank Distribution",
     description: "See how the player base is distributed across ranks over time.",
     href: "/community/badge-distribution",
@@ -237,45 +230,47 @@ const sponsors = [
 function IndexRoute() {
   return (
     <PageShell density="marketing">
-      <Hero size="sm">
-        <Stack gap={2} align="center">
-          <PageHeader size="display" title="Deadlock API" />
-          <Text variant="eyebrow">sponsored by</Text>
-          <Card asChild tone="primary" size="sm" interaction="pressable" className="px-4">
-            <a href={mainSponsor.href} title={mainSponsor.title} target="_blank" rel="sponsored noreferrer">
-              <OptimizedImage
-                src={mainSponsor.logo}
-                widths={[192, 240, 384, 480, 576, 720]}
-                sizes="(min-width: 1024px) 227px, 189px"
-                alt={`${mainSponsor.title} Logo`}
-                width={600}
-                height={127}
-                className="h-auto w-47 object-contain lg:w-57"
-              />
-            </a>
-          </Card>
-        </Stack>
+      {/* The search belongs to the hero: it sits right under it, not a section's distance away. */}
+      <Stack gap={4}>
+        <Hero size="sm">
+          <Stack gap={2} align="center">
+            <PageHeader size="display" title="Deadlock API" />
+            <Text variant="eyebrow">sponsored by</Text>
+            <Card asChild tone="primary" size="sm" interaction="pressable" className="px-4">
+              <a href={mainSponsor.href} title={mainSponsor.title} target="_blank" rel="sponsored noreferrer">
+                <OptimizedImage
+                  src={mainSponsor.logo}
+                  widths={[192, 240, 384, 480, 576, 720]}
+                  sizes="(min-width: 1024px) 227px, 189px"
+                  alt={`${mainSponsor.title} Logo`}
+                  width={600}
+                  height={127}
+                  className="h-auto w-47 object-contain lg:w-57"
+                />
+              </a>
+            </Card>
+          </Stack>
 
-        <HeroActions>
-          {valueProps.map((prop) => (
-            <Button key={prop.label} asChild variant="outline" shape="pill">
-              <SmartLink href={prop.href} external={prop.external} title={prop.title}>
-                <prop.icon className="size-3.5" />
-                {prop.label}
-              </SmartLink>
-            </Button>
-          ))}
-        </HeroActions>
+          <HeroActions>
+            {valueProps.map((prop) => (
+              <Button key={prop.label} asChild variant="outline" shape="pill">
+                <SmartLink href={prop.href} external={prop.external} title={prop.title}>
+                  <prop.icon className="size-3.5" />
+                  {prop.label}
+                </SmartLink>
+              </Button>
+            ))}
+          </HeroActions>
 
-        <HeroLead>
-          Track Deadlock stats: hero win rates, pick rates, item analytics, rank distribution, and leaderboards, updated
-          live from Valve's servers. A comprehensive set of endpoints also gives developers access to Deadlock game
-          data, match history, player statistics, hero analytics, and more.
-        </HeroLead>
-      </Hero>
+          <HeroLead>
+            Track Deadlock stats: hero win rates, pick rates, item analytics, rank distribution, and leaderboards,
+            updated live from Valve's servers. A comprehensive set of endpoints also gives developers access to Deadlock
+            game data, match history, player statistics, hero analytics, and more.
+          </HeroLead>
+        </Hero>
 
-      {/* Directly in the shell, not in a wrapper: where the browser cannot run it, it leaves no gap behind. */}
-      <AiSearch className="self-center" />
+        <AiSearch className="self-center" />
+      </Stack>
 
       <Section
         size="lg"

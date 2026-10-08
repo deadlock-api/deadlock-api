@@ -1,13 +1,15 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { buildIntentSchema, directIntent, NO_FILTERS, parseIntent, type SearchIntent } from "./intent";
-import { PAGE_IDS } from "./pages";
-import { describePartialAnswer } from "./preview";
-import { initialPrompts } from "./prompt";
-import { type ResolveContext, resolveIntent } from "./resolve";
+import { PAGE_IDS } from "~/lib/page-registry";
 
-const context: ResolveContext = {
+import { decideRequestBody, intentFromDecision, questionEntities } from "./decide";
+import { findMentions } from "./entities";
+import { directIntent, NO_FILTERS, type SearchIntent } from "./intent";
+import { type Catalog, resolveIntent } from "./resolve";
+import { validateDecideInput } from "./search-fns";
+
+const catalog: Catalog = {
   heroes: [
     { id: 15, name: "Bebop" },
     { id: 13, name: "Haze" },
@@ -16,6 +18,8 @@ const context: ResolveContext = {
     { id: 6, name: "Abrams" },
     { id: 11, name: "Dynamo" },
     { id: 35, name: "Grey Talon" },
+    { id: 18, name: "Mo & Krill" },
+    { id: 50, name: "The Doorman" },
   ],
   items: [
     { id: 100, name: "Toxic Bullets" },
@@ -26,134 +30,159 @@ const context: ResolveContext = {
     { tier: 9, name: "Phantom" },
     { tier: 11, name: "Eternus" },
   ],
+};
+
+const context = {
   patches: [
-    { id: "2026-09-29", name: "City Never Sleeps", shortName: "City Never Sleeps", startUnix: 1_790_000_000 },
-    { id: "2026-09-16", name: "Minor", shortName: "Patch", startUnix: 1_789_000_000, endUnix: 1_790_000_000 },
+    { id: "2026-09-29", startUnix: 1_790_000_000 },
+    { id: "2026-09-16", startUnix: 1_789_000_000, endUnix: 1_790_000_000 },
   ],
   seasons: [{ startUnix: 1_780_000_000 }],
   now: Date.UTC(2026, 9, 8, 12) / 1000,
 };
 
 const vocabulary = {
-  heroNames: context.heroes.map((hero) => hero.name),
-  itemNames: context.items.map((item) => item.name),
-  rankNames: context.ranks.map((rank) => rank.name),
+  heroNames: catalog.heroes.map((hero) => hero.name),
+  itemNames: catalog.items.map((item) => item.name),
+  rankNames: catalog.ranks.map((rank) => rank.name),
 };
 
-test("the two example questions land on their pages", () => {
-  assert.deepEqual(resolveIntent({ ...NO_FILTERS, page: "team_sides", time: "current_patch" }, context), {
-    path: "/analytics/games",
-    search: { date_range: "2026-09-21T14:13:20.000Z_" },
-  });
-  assert.deepEqual(resolveIntent({ ...NO_FILTERS, page: "hero_counters", heroes: ["Bebop"] }, context), {
-    path: "/analytics/heroes/matchup-details",
-    search: { hero_id: 15 },
+const intent = (pages: string[], rest: Partial<SearchIntent> = {}): SearchIntent => ({ ...NO_FILTERS, ...rest, pages });
+const urls = (i: SearchIntent) => resolveIntent(i, catalog, context).map((t) => t.path + JSON.stringify(t.search));
+
+test("names are found as players write them: nicknames, typos, any case", () => {
+  const names = (q: string) => findMentions(q, vocabulary.heroNames).map((m) => m.name);
+  assert.deepEqual(names("gt vs mo krill"), ["Grey Talon", "Mo & Krill"]);
+  assert.deepEqual(names("bebpo counters"), ["Bebop"]);
+  assert.deepEqual(names("is doorman op"), ["The Doorman"]);
+  // Short names take no typos: "have" is not "Haze".
+  assert.deepEqual(names("what items should i have"), []);
+  assert.deepEqual(
+    findMentions("toxic bullet timing", vocabulary.itemNames).map((m) => m.name),
+    ["Toxic Bullets"],
+  );
+});
+
+test("a vs splits the heroes into two teams", () => {
+  assert.deepEqual(questionEntities("seven wraith vs abrams", vocabulary), {
+    heroes: ["Seven", "Wraith"],
+    enemies: ["Abrams"],
+    items: [],
   });
 });
 
-test("a hero or item page is addressed by its slug", () => {
-  assert.equal(
-    resolveIntent({ ...NO_FILTERS, page: "hero_page", heroes: ["Grey Talon"] }, context).path,
-    "/analytics/heroes/grey-talon",
+test("the request asks for every registered page and offers none for each filter", () => {
+  const body = decideRequestBody(
+    "best counter against bebop",
+    questionEntities("bebop", vocabulary),
+    vocabulary.rankNames,
   );
-  assert.equal(
-    resolveIntent({ ...NO_FILTERS, page: "item_page", items: ["Toxic Bullets"] }, context).path,
-    "/analytics/items/toxic-bullets",
+  assert.deepEqual(Object.keys(body.questions.page.criteria), PAGE_IDS);
+  for (const name of ["rank_min", "rank_max", "mode", "time", "region", "sort"]) {
+    assert.ok("none" in body.questions[name].criteria, name);
+  }
+});
+
+const choice = (probabilities: Record<string, number>) => ({
+  choice: Object.entries(probabilities).sort((a, b) => b[1] - a[1])[0][0],
+  probabilities,
+});
+
+test("a decision becomes the likeliest pages and the filters the question set", () => {
+  const question = "phantom+ wraith vs haze ranked this patch";
+  const entities = questionEntities(question, vocabulary);
+  const decided = intentFromDecision(
+    {
+      page: choice({ hero_counters: 0.7, hero_matchups: 0.2, tier_list: 0.06, abilities: 0.04 }),
+      rank_min: choice({ Phantom: 0.9, none: 0.1 }),
+      rank_max: choice({ Phantom: 0.6, none: 0.4 }),
+      mode: choice({ ranked: 0.8, none: 0.2 }),
+      time: choice({ current_patch: 0.9, none: 0.1 }),
+    },
+    question,
+    entities,
+    vocabulary.rankNames,
   );
-  // Without the entity, the list it belongs to.
-  assert.equal(resolveIntent({ ...NO_FILTERS, page: "hero_page" }, context).path, "/analytics/heroes");
+  assert.deepEqual(decided, {
+    ...NO_FILTERS,
+    pages: ["hero_counters", "hero_matchups", "tier_list"],
+    // Not the team builder: both heroes belong to the one question.
+    heroes: ["Wraith", "Haze"],
+    rank_min: "Phantom",
+    // "phantom+" is open upwards, whatever the model picked as the top.
+    rank_max: null,
+    mode: "ranked",
+    time: "current_patch",
+  });
+});
+
+test("an item question with a vs keeps both sides: what to buy as one hero against the other", () => {
+  const question = "which item should i buy as haze versus a bebop?";
+  const decided = intentFromDecision(
+    { page: choice({ item_stats: 0.8, hero_counters: 0.2 }) },
+    question,
+    questionEntities(question, vocabulary),
+    vocabulary.rankNames,
+  );
+  assert.deepEqual([decided.heroes, decided.enemy_heroes], [["Haze"], ["Bebop"]]);
+  assert.deepEqual(urls(decided)[0], '/analytics/items{"hero":13,"enemy":15}');
+});
+
+test("a mode the question does not name is dropped", () => {
+  const question = "best heroes in eternus";
+  const decided = intentFromDecision(
+    { page: choice({ tier_list: 1 }), mode: choice({ ranked: 0.9, none: 0.1 }) },
+    question,
+    questionEntities(question, vocabulary),
+    vocabulary.rankNames,
+  );
+  assert.equal(decided.mode, null);
+});
+
+test("the example questions land on their pages", () => {
+  assert.deepEqual(urls(intent(["games_overview"], { time: "current_patch" })), [
+    '/analytics/games{"date_range":"2026-09-21T14:13:20.000Z_"}',
+  ]);
+  assert.deepEqual(urls(intent(["hero_counters", "hero_matchups"], { heroes: ["Bebop"] })), [
+    '/analytics/heroes/matchup-details{"hero_id":15}',
+    "/analytics/heroes/matchups{}",
+  ]);
 });
 
 test("rank tiers become a badge range, a one-sided one open at the other end", () => {
   const search = (rank_min: string | null, rank_max: string | null) =>
-    resolveIntent({ ...NO_FILTERS, page: "hero_stats", rank_min, rank_max }, context).search;
+    resolveIntent(intent(["hero_stats"], { rank_min, rank_max }), catalog, context)[0].search;
   assert.deepEqual(search("Phantom", null), { min_rank: 91, max_rank: 116 });
   assert.deepEqual(search(null, "Phantom"), { min_rank: 0, max_rank: 96 });
   assert.deepEqual(search("Eternus", "Phantom"), { min_rank: 91, max_rank: 116 });
   assert.deepEqual(search(null, null), {});
 });
 
-test("a mode without ranks drops the rank range", () => {
-  const { search } = resolveIntent(
-    { ...NO_FILTERS, page: "hero_stats", mode: "street_brawl", rank_min: "Phantom" },
-    context,
-  );
-  assert.deepEqual(search, { game_mode: "street_brawl", match_mode: "unranked" });
+test("the team builder fills each team's slots, four a side in Street Brawl", () => {
+  const draft = intent(["team_builder"], { heroes: ["Seven", "Wraith"], enemy_heroes: ["Abrams"] });
+  assert.deepEqual(resolveIntent(draft, catalog, context)[0].search, { ally: "2,7,0,0,0,0", enemy: "6,0,0,0,0,0" });
+  assert.equal(resolveIntent({ ...draft, mode: "street_brawl" }, catalog, context)[0].search.ally, "2,7,0,0");
 });
 
-test("time words become a date range", () => {
-  const range = (time: SearchIntent["time"]) =>
-    resolveIntent({ ...NO_FILTERS, page: "hero_stats", time }, context).search.date_range;
-  assert.equal(range("previous_patch"), "2026-09-10T00:26:40.000Z_2026-09-21T14:13:20.000Z");
-  assert.equal(range("last_7_days"), "2026-10-01_");
-  assert.equal(range("previous_season"), undefined);
-  assert.equal(range("default"), undefined);
-});
-
-test("pages that read no filters get none", () => {
-  const intent = { ...NO_FILTERS, rank_min: "Phantom", time: "current_patch", mode: "ranked" } as const;
-  assert.deepEqual(resolveIntent({ ...intent, page: "leaderboard", region: "Europe", heroes: ["Haze"] }, context), {
-    path: "/community/leaderboard",
-    search: { region: "Europe", hero_id: 13 },
-  });
-  assert.deepEqual(resolveIntent({ ...intent, page: "patch_notes", time: "previous_patch" }, context), {
-    path: "/patches/2026-09-16",
-    search: {},
-  });
-});
-
-test("the team builder fills the slots of each team", () => {
-  const { search } = resolveIntent(
-    { ...NO_FILTERS, page: "team_builder", heroes: ["Seven", "Wraith"], enemy_heroes: ["Abrams"] },
-    context,
-  );
-  assert.equal(search.ally, "2,7,0,0,0,0");
-  assert.equal(search.enemy, "6,0,0,0,0,0");
-});
-
-test("model output off the vocabulary is dropped, an unknown page refused", () => {
-  const raw = JSON.stringify({ page: "hero_counters", heroes: ["bebop", "Gandalf"], rank_min: "phantom", mode: "x" });
-  assert.deepEqual(parseIntent(raw, vocabulary), {
-    ...NO_FILTERS,
-    page: "hero_counters",
-    heroes: ["Bebop"],
-    rank_min: "Phantom",
-  });
-  assert.equal(parseIntent(JSON.stringify({ page: "answer" }), vocabulary), undefined);
-  assert.equal(parseIntent("Bebop is countered by Haze", vocabulary), undefined);
-});
-
-test("every few-shot answer matches the schema's pages and parses back to itself", () => {
-  const schema = buildIntentSchema(vocabulary);
-  assert.deepEqual(schema.properties.page.enum, PAGE_IDS);
-  for (const message of initialPrompts().filter((m) => m.role === "assistant")) {
-    assert.deepEqual(parseIntent(message.content, vocabulary), JSON.parse(message.content));
-  }
+test("two picks that open the same URL count once", () => {
+  assert.equal(urls(intent(["hero_page", "hero_stats"])).length, 1);
 });
 
 test("a bare hero or item name skips the model", () => {
-  assert.deepEqual(directIntent(" grey talon ", vocabulary), {
-    ...NO_FILTERS,
-    page: "hero_page",
-    heroes: ["Grey Talon"],
-  });
-  assert.deepEqual(directIntent("Healbane", vocabulary), { ...NO_FILTERS, page: "item_page", items: ["Healbane"] });
+  assert.deepEqual(directIntent(" grey talon ", vocabulary)?.heroes, ["Grey Talon"]);
+  assert.deepEqual(directIntent("Healbane", vocabulary)?.pages, ["item_page", "item_timing", "item_stats"]);
   assert.equal(directIntent("best counter against bebop", vocabulary), undefined);
 });
 
-test("a streaming answer reads as it forms, complete values only", () => {
-  assert.deepEqual(describePartialAnswer('{"page":"hero_cou'), []);
-  assert.deepEqual(describePartialAnswer('{"page":"hero_counters","heroes":["Bebop","Ha'), ["Hero counters", "Bebop"]);
-  assert.deepEqual(
-    describePartialAnswer(
-      JSON.stringify({
-        ...NO_FILTERS,
-        page: "leaderboard",
-        rank_min: "Phantom",
-        time: "current_patch",
-        region: "NAmerica",
-      }),
-    ),
-    ["Leaderboard", "Phantom+", "this patch", "North America"],
-  );
+test("the server takes only a short question and a few short names", () => {
+  const ok = {
+    question: "bebop counters",
+    entities: { heroes: ["Bebop"], enemies: [], items: [] },
+    rankNames: ["Phantom"],
+  };
+  assert.deepEqual(validateDecideInput(ok).entities.heroes, ["Bebop"]);
+  assert.throws(() => validateDecideInput({ ...ok, question: "x".repeat(201) }));
+  assert.throws(() => validateDecideInput({ ...ok, question: "  " }));
+  assert.throws(() => validateDecideInput({ ...ok, entities: { ...ok.entities, heroes: Array(13).fill("a") } }));
+  assert.throws(() => validateDecideInput({ ...ok, rankNames: ["x".repeat(41)] }));
 });

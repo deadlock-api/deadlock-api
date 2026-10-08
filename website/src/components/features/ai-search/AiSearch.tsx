@@ -1,176 +1,211 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { ArrowRight } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 
-import { ErrorState } from "~/components/patterns/states/ErrorState";
+import { useCloseSideNavDrawer } from "~/components/patterns/navigation/SideNavShell";
 import { Button } from "~/components/ui/button";
-import { ProgressBar } from "~/components/ui/progress-bar";
 import { SearchInput } from "~/components/ui/search-input";
-import { Inline, Stack } from "~/components/ui/stack";
-import { Text } from "~/components/ui/text";
-import { usePromptApiStatus } from "~/hooks/usePromptApiStatus";
-import { warmUpModel } from "~/lib/ai-search/language-model";
-import { describePartialAnswer } from "~/lib/ai-search/preview";
+import { MAX_QUESTION_LENGTH } from "~/lib/ai-search/search-fns";
 import { getAnalytics } from "~/lib/analytics";
 import { cn } from "~/lib/utils";
 
+import { setLastSearch, useLastSearch } from "./last-search";
 import { routeQuestion } from "./route-question";
 
-type Phase =
-  | { kind: "idle" }
-  /**
-   * `loaded` is set while the question waits for the model download, 0 to 1; `reading` is what the streaming answer
-   * has decided so far ("Hero counters", "Bebop"), and stays up while the page it chose loads.
-   */
-  | { kind: "searching"; loaded?: number; reading?: string[] }
-  | { kind: "no-match" }
-  | { kind: "failed" };
+/** Questions the home page's field cycles through as its placeholder, to show what it can be asked. */
+const PLACEHOLDER_QUESTIONS = [
+  "who counters abrams",
+  "best heroes in eternus this patch",
+  "when to buy toxic bullets on haze",
+  "how long are games in phantom+",
+  "top players in europe",
+];
+const PLACEHOLDER_INTERVAL_MS = 3500;
 
-function track(href: string | undefined) {
-  void getAnalytics().then((posthog) => posthog?.capture("ai_search", { page: href?.split("?")[0] ?? null }));
+type Outcome = "opened" | "no_match" | "error";
+
+/** One event per question, with the question itself: what visitors ask, how often, and where it took them. */
+function trackQuestion(properties: {
+  question: string;
+  source: "home" | "sidebar";
+  outcome: Outcome;
+  page?: string;
+  alternatives?: string[];
+  direct?: boolean;
+  durationMs?: number;
+}) {
+  void getAnalytics().then((posthog) =>
+    posthog?.capture("ai_search", {
+      question: properties.question,
+      source: properties.source,
+      outcome: properties.outcome,
+      page: properties.page ?? null,
+      alternatives: properties.alternatives ?? [],
+      direct: properties.direct ?? false,
+      duration_ms: properties.durationMs === undefined ? null : Math.round(properties.durationMs),
+    }),
+  );
+}
+
+/** Whether a key press belongs to a field the visitor is typing in, which a shortcut must not take over. */
+function isTyping(target: EventTarget | null): boolean {
+  return (
+    target instanceof HTMLElement && (target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName))
+  );
+}
+
+/** The placeholder question shown now: it moves on every few seconds, and stays put for reduced motion. */
+function useRotatingPlaceholder(enabled: boolean): string {
+  const [index, setIndex] = useState(0);
+  useEffect(() => {
+    if (!enabled || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return undefined;
+    const id = window.setInterval(
+      () => setIndex((i) => (i + 1) % PLACEHOLDER_QUESTIONS.length),
+      PLACEHOLDER_INTERVAL_MS,
+    );
+    return () => window.clearInterval(id);
+  }, [enabled]);
+  return PLACEHOLDER_QUESTIONS[index];
+}
+
+interface AiSearchProps {
+  /**
+   * `default` is the home page's search bar, its button inside it. `sm` is the sidebar's: it submits on Enter, shows
+   * its progress in the field, and takes the focus on `/` or Ctrl+K from anywhere on the page.
+   */
+  size?: "default" | "sm";
+  className?: string;
 }
 
 /**
- * A question in plain words, sent to the browser's own model (Chrome's Prompt API), which picks the page and filters
- * that answer it; the search then goes there. It never answers itself. Renders nothing where the browser cannot run
- * the model, and stays hidden before hydration unless the document head marked the browser as able
- * (`PROMPT_API_FLAG_SCRIPT`), so it takes no room it will not use.
+ * A question in plain words, read by Mercury Decide, which opens the page of the site that answers it, already
+ * filtered. It never answers itself. The field keeps the question after it opens the page, and a question it cannot
+ * place is said in a toast, so nothing around the field ever moves.
  */
-export function AiSearch({ className }: { className?: string }) {
-  const availability = usePromptApiStatus();
+export function AiSearch({ size = "default", className }: AiSearchProps) {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const [question, setQuestion] = useState("");
-  const [phase, setPhase] = useState<Phase>({ kind: "idle" });
-  const pending = useRef<AbortController | null>(null);
+  const closeDrawer = useCloseSideNavDrawer();
+  const last = useLastSearch();
+  /** What was typed here, and which answer it was typed after: a newer answer shows its question instead. */
+  const [draft, setDraft] = useState({ text: "", version: 0 });
+  const [searching, setSearching] = useState(false);
+  const [unmatched, setUnmatched] = useState(false);
+  const example = useRotatingPlaceholder(size === "default");
+  /** The question asked last: an answer to an earlier one that arrives late is dropped. */
+  const latest = useRef(0);
+  const input = useRef<HTMLInputElement>(null);
 
-  useEffect(() => () => pending.current?.abort(), []);
+  useEffect(
+    () => () => {
+      latest.current += 1;
+    },
+    [],
+  );
 
-  if (availability === "unsupported" || availability === "unavailable") return null;
+  useEffect(() => {
+    if (size !== "sm") return undefined;
+    const onKeyDown = (event: KeyboardEvent) => {
+      const slash = event.key === "/" && !event.ctrlKey && !event.metaKey && !event.altKey && !isTyping(event.target);
+      const commandK = event.key.toLowerCase() === "k" && (event.ctrlKey || event.metaKey);
+      if (!slash && !commandK) return;
+      // The sidebar is hidden on a phone, where its search lives in the menu instead.
+      if (!input.current?.checkVisibility()) return;
+      event.preventDefault();
+      input.current.focus();
+      input.current.select();
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [size]);
+
+  const question = last && last.version !== draft.version ? last.question : draft.text;
+  const source = size === "sm" ? "sidebar" : "home";
 
   const ask = (text: string) => {
     const trimmed = text.trim();
     if (!trimmed) return;
-    pending.current?.abort();
-    const controller = new AbortController();
-    pending.current = controller;
-    setPhase({ kind: "searching" });
-    routeQuestion(queryClient, trimmed, {
-      signal: controller.signal,
-      onProgress: (loaded) => {
-        if (!controller.signal.aborted) setPhase({ kind: "searching", loaded });
-      },
-      onText: (answerSoFar) => {
-        if (!controller.signal.aborted) setPhase({ kind: "searching", reading: describePartialAnswer(answerSoFar) });
-      },
-    }).then(
-      (href) => {
-        if (controller.signal.aborted) return undefined;
-        track(href);
-        if (!href) {
-          setPhase({ kind: "no-match" });
+    const asked = ++latest.current;
+    setSearching(true);
+    setUnmatched(false);
+    routeQuestion(queryClient, trimmed).then(
+      ({ results, direct, durationMs }) => {
+        if (asked !== latest.current) return undefined;
+        setSearching(false);
+        if (results.length === 0) {
+          trackQuestion({ question: trimmed, source, outcome: "no_match", direct, durationMs });
+          setUnmatched(true);
+          toast("No page matches that question");
           return undefined;
         }
-        return navigate({ href });
+        const [best, ...alternatives] = results;
+        trackQuestion({
+          question: trimmed,
+          source,
+          outcome: "opened",
+          page: best.id,
+          alternatives: alternatives.map((result) => result.id),
+          direct,
+          durationMs,
+        });
+        setLastSearch(trimmed);
+        closeDrawer();
+        return navigate({ href: best.href });
       },
       () => {
-        if (!controller.signal.aborted) setPhase({ kind: "failed" });
+        if (asked !== latest.current) return;
+        setSearching(false);
+        trackQuestion({ question: trimmed, source, outcome: "error" });
+        toast("The search could not answer", { action: { label: "Try again", onClick: () => ask(trimmed) } });
       },
     );
   };
 
-  const cancel = () => {
-    pending.current?.abort();
-    setPhase({ kind: "idle" });
-  };
-
-  const searching = phase.kind === "searching";
-  const loaded = phase.kind === "searching" ? phase.loaded : undefined;
-  const downloading = loaded !== undefined && loaded < 1;
-  const reading = phase.kind === "searching" ? phase.reading : undefined;
-
   return (
-    <search aria-label="Find a stat" className={cn("prompt-api-only w-full max-w-xl", className)}>
-      <Stack gap={1}>
-        <form
-          onSubmit={(event) => {
-            event.preventDefault();
-            ask(question);
+    <search aria-label="Find a stat" className={cn("w-full", size === "default" && "max-w-2xl", className)}>
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          ask(question);
+        }}
+      >
+        <SearchInput
+          ref={input}
+          name="q"
+          variant={size === "sm" ? "default" : "bar"}
+          size={size}
+          loading={size === "sm" && searching}
+          loadingLabel="Finding the page"
+          shortcut={size === "sm" ? "/" : undefined}
+          aria-label="Ask for a stat"
+          aria-invalid={unmatched || undefined}
+          placeholder={size === "sm" ? "Ask for a stat" : `Ask anything: ${example}`}
+          autoComplete="off"
+          enterKeyHint="search"
+          maxLength={MAX_QUESTION_LENGTH}
+          value={question}
+          onValueChange={(text) => {
+            setDraft({ text, version: last?.version ?? 0 });
+            setUnmatched(false);
           }}
-        >
-          <Inline gap={2} wrap="nowrap">
-            <div className="relative flex-1">
-              <SearchInput
-                name="q"
-                aria-label="Ask for a stat"
-                placeholder="Ask for a stat: best counter against bebop"
-                autoComplete="off"
-                enterKeyHint="search"
-                aria-invalid={phase.kind === "no-match" || undefined}
-                value={question}
-                onValueChange={(value) => {
-                  setQuestion(value);
-                  if (phase.kind === "no-match" || phase.kind === "failed") setPhase({ kind: "idle" });
-                }}
-                onFocus={warmUpModel}
-                onKeyDown={(event) => {
-                  if (event.key === "Escape" && searching) {
-                    event.preventDefault();
-                    cancel();
-                  }
-                }}
-              />
-              {downloading && (
-                <ProgressBar
-                  variant="thin"
-                  value={loaded}
-                  max={1}
-                  aria-label="Downloading the search model"
-                  className="absolute inset-x-2 bottom-0"
-                />
-              )}
-            </div>
-            <Button
-              type="submit"
-              loading={searching}
-              loadingLabel="Finding the page"
-              disabled={availability === "checking"}
-            >
-              Go
-              {/* The spinner takes the arrow's place, so the button keeps its width and the field does not move. */}
-              {!searching && <ArrowRight aria-hidden="true" />}
-            </Button>
-          </Inline>
-        </form>
-
-        {/* One line, held open while idle, so nothing moves when a question streams in, fails or waits for the model
-          download. */}
-        <div className="min-h-4">
-          {downloading ? (
-            <output>
-              <Text variant="caption" tone="muted" as="p">
-                Downloading Chrome's on-device model, once: {Math.round((loaded ?? 0) * 100)}%
-              </Text>
-            </output>
-          ) : searching ? (
-            <output>
-              <Text variant="caption" tone="muted" wrap="truncate" as="p">
-                {reading && reading.length > 0 ? reading.join(" · ") : "Reading your question…"}
-              </Text>
-            </output>
-          ) : phase.kind === "no-match" ? (
-            <ErrorState variant="inline" title="No page matches that question" className="py-0" />
-          ) : phase.kind === "failed" ? (
-            <ErrorState
-              variant="inline"
-              title="The on-device model could not answer"
-              onRetry={() => ask(question)}
-              className="py-0"
-            />
-          ) : null}
-        </div>
-      </Stack>
+          onKeyDown={(event) => {
+            if (event.key === "Escape" && searching) {
+              // Drops the running question instead of clearing the field.
+              event.preventDefault();
+              latest.current += 1;
+              setSearching(false);
+            }
+          }}
+          action={
+            size === "default" && (
+              <Button type="submit" shape="pill" loading={searching} loadingLabel="Finding the page">
+                Search
+              </Button>
+            )
+          }
+        />
+      </form>
     </search>
   );
 }

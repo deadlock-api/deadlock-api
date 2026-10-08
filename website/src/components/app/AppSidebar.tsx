@@ -3,6 +3,7 @@ import { Code } from "lucide-react";
 
 import { SocialLinks } from "~/components/domain/brand/BrandIcons";
 import { SmartLink } from "~/components/domain/navigation/SmartLink";
+import { AiSearch } from "~/components/features/ai-search/AiSearch";
 import { SideNav, SideNavFooter, SideNavGroup, SideNavItem } from "~/components/patterns/navigation/SideNav";
 import {
   SideNavBrand,
@@ -59,6 +60,8 @@ function SidebarContent() {
           </SmartLink>
         </SideNavBrand>
       </SideNavHeader>
+
+      <AiSearch size="sm" className="px-3 pt-3" />
 
       <SideNav aria-label="Main" className="flex-1 overflow-y-auto px-3 pt-3 pb-1">
         <SideNavGroup>

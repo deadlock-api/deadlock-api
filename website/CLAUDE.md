@@ -17,6 +17,10 @@ tanstack-start
 │   ├── components/features/    # 4. one folder per product area
 │   ├── components/app/         # 5. sidebar, breadcrumbs, error pages
 │   ├── components/dev/         # dev-only design system showcase (never bundled in production)
+│   ├── lib/page-registry/      # every page and tab with the URL params it reads; a new page or tab registers itself in
+│   │                           # sections/*.ts (registry.test.ts fails otherwise). The AI search routes on it
+│   ├── lib/ai-search/          # AI search: Mercury Decide picks the page (server fn, secret INCEPTION_API_KEY);
+│   │                           # hero and item names are matched in code
 │   └── lib/utils.ts            # cn() helper
 ├── docs/design-system.md       # the design system contract (read before any UI work)
 ├── scripts/lint-design-system.mjs  # enforces it, part of `pnpm lint`
