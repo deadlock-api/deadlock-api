@@ -117,22 +117,39 @@ html:has(.mobile-navigation[open]) {
   transform-origin: right;
 }
 
-/* The element a visitor was sent to (`FindOnPage`, from an AI search answer): outlined in the focus color, pulsing
-   a few times; with reduced motion it stays outlined without the pulse. */
-@keyframes find-pulse {
-  0%,
-  100% {
-    box-shadow: 0 0 0 2px var(--ring);
-  }
-  50% {
-    box-shadow: 0 0 0 5px color-mix(in srgb, var(--ring) 35%, transparent);
+/* The element a visitor was sent to (`FindOnPage`, from an AI search answer): an accent bar on its leading edge and a
+   tint that fades across it, both drawn inside it so no panel edge clips them. It lands with one short glow and then
+   stays calm; with reduced motion it simply appears. */
+@keyframes find-arrive {
+  from {
+    box-shadow:
+      var(--find-bar),
+      inset 0 0 0 1px var(--primary),
+      0 0 18px color-mix(in srgb, var(--primary) 45%, transparent);
   }
 }
 
 [data-found] {
-  background-color: color-mix(in srgb, var(--primary) 10%, transparent);
-  box-shadow: 0 0 0 2px var(--ring);
-  animation: find-pulse 1.2s ease-in-out 3;
+  --find-bar: inset 3px 0 0 var(--primary);
+  border-radius: var(--radius-md);
+  background-image: linear-gradient(
+    to right,
+    color-mix(in srgb, var(--primary) 16%, transparent),
+    color-mix(in srgb, var(--primary) 3%, transparent)
+  );
+  box-shadow:
+    var(--find-bar),
+    inset 0 0 0 1px color-mix(in srgb, var(--primary) 30%, transparent);
+  animation: find-arrive 1.4s ease-out;
+}
+
+[data-found]:dir(rtl) {
+  --find-bar: inset -3px 0 0 var(--primary);
+  background-image: linear-gradient(
+    to left,
+    color-mix(in srgb, var(--primary) 16%, transparent),
+    color-mix(in srgb, var(--primary) 3%, transparent)
+  );
 }
 
 @media (prefers-reduced-motion: reduce) {
