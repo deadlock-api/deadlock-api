@@ -161,7 +161,9 @@ export function SearchInput({
           className={cn("absolute top-1/2 -translate-y-1/2", variant === "ghost" ? "inset-e-0" : "inset-e-2.5")}
         />
       ) : value !== "" && editable ? (
-        clearButton("absolute inset-e-1 top-1/2 -translate-y-1/2")
+        // Centered with margins, not a translate: the button's pressed state moves it by its own transform, which would
+        // replace the centering and drop it out from under the pointer before the click lands.
+        clearButton("absolute inset-y-0 inset-e-1 my-auto")
       ) : (
         shortcut && (
           <Kbd

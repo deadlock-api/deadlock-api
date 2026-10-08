@@ -49,7 +49,7 @@ export function PlayerMetricDistributionDialog({
               shape="pill"
               onClick={onPrev}
               aria-label="Previous metric"
-              className="absolute inset-s-2 top-1/2 z-10 -translate-y-1/2"
+              className="absolute inset-y-0 inset-s-2 z-10 my-auto"
             >
               <ChevronLeft className="size-5" />
             </Button>
@@ -59,7 +59,7 @@ export function PlayerMetricDistributionDialog({
               shape="pill"
               onClick={onNext}
               aria-label="Next metric"
-              className="absolute inset-e-2 top-1/2 z-10 -translate-y-1/2"
+              className="absolute inset-y-0 inset-e-2 z-10 my-auto"
             >
               <ChevronRight className="size-5" />
             </Button>
