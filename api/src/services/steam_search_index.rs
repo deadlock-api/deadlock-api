@@ -121,6 +121,18 @@ struct ProfileRow {
     last_team_avg_badge: u32,
 }
 
+/// Message from the full-rebuild `ClickHouse` stream to the blocking index writer.
+#[expect(
+    clippy::large_enum_variant,
+    reason = "Done is sent once per rebuild; boxing would allocate per row"
+)]
+enum RebuildFeed {
+    Row(clickhouse::error::Result<ProfileRow>),
+    /// The stream finished cleanly; only now may the writer commit. A closed channel without
+    /// this marker means the rebuild was cancelled (e.g. its task dropped on shutdown).
+    Done,
+}
+
 #[derive(Debug, Clone)]
 pub(crate) struct IndexedProfile {
     pub account_id: u32,
@@ -206,7 +218,9 @@ impl SteamSearchIndex {
             SETTINGS
                 log_comment = 'steam_search_index_build_full',
                 do_not_merge_across_partitions_select_final = 1,
-                max_execution_time = 180"
+                -- Rows are streamed into the index writer with back-pressure, so the query
+                -- stays open for the whole indexing run, not just the read.
+                max_execution_time = 900"
         );
         let mut cursor = ch_client
             .query(&query)
@@ -215,9 +229,7 @@ impl SteamSearchIndex {
 
         let ts = unix_now();
         let new_dir = self.inner.base_path.join(format!("{VERSION_PREFIX}{ts}"));
-        let (tx, mut rx) = tokio::sync::mpsc::channel::<clickhouse::error::Result<ProfileRow>>(
-            ROW_CHANNEL_CAPACITY,
-        );
+        let (tx, mut rx) = tokio::sync::mpsc::channel::<RebuildFeed>(ROW_CHANNEL_CAPACITY);
         let builder = {
             let inner = Arc::clone(&self.inner);
             let new_dir = new_dir.clone();
@@ -237,11 +249,19 @@ impl SteamSearchIndex {
                         .map_err(tantivy_err)?;
                     let mut max_ts: u32 = 0;
                     let mut fetched = 0;
-                    // A stream error arrives as an `Err` row: bail out before committing, so a
-                    // partial index is never swapped in (its dir is GC'd by the next rebuild).
-                    while let Some(row) = rx.blocking_recv() {
-                        max_ts = max_ts.max(add_row(&writer, inner.fields, &row?)?);
-                        fetched += 1;
+                    // Commit only on the explicit end marker. A stream error (`Err` row) or a
+                    // closed channel (rebuild cancelled) bails out without committing or writing
+                    // a watermark, so a partial index is never persisted or swapped in (its dir
+                    // is GC'd by the next rebuild).
+                    loop {
+                        match rx.blocking_recv() {
+                            Some(RebuildFeed::Row(row)) => {
+                                max_ts = max_ts.max(add_row(&writer, inner.fields, &row?)?);
+                                fetched += 1;
+                            }
+                            Some(RebuildFeed::Done) => break,
+                            None => return Err(RebuildError::Cancelled),
+                        }
                     }
                     writer.commit().map_err(tantivy_err)?;
                     let reader = index
@@ -259,10 +279,13 @@ impl SteamSearchIndex {
 
         loop {
             let row = cursor.next().await.transpose();
-            let Some(row) = row else { break };
+            let Some(row) = row else {
+                // A send error means the writer gave up; its error surfaces from `builder`.
+                let _ = tx.send(RebuildFeed::Done).await;
+                break;
+            };
             let failed = row.is_err();
-            // A send error means the writer gave up; its error surfaces from `builder` below.
-            if tx.send(row).await.is_err() || failed {
+            if tx.send(RebuildFeed::Row(row)).await.is_err() || failed {
                 break;
             }
         }
@@ -1059,6 +1082,8 @@ pub(crate) enum RebuildError {
     Tantivy(String),
     #[error("blocking task: {0}")]
     Join(#[from] tokio::task::JoinError),
+    #[error("rebuild cancelled before the row stream finished")]
+    Cancelled,
 }
 
 #[derive(Debug, thiserror::Error)]
