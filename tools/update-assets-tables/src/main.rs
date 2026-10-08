@@ -20,8 +20,6 @@ use crate::models::{ChHero, ChItem, ItemType};
 mod models;
 
 const UPDATE_INTERVAL_S: u64 = 60 * 60; // Run every hour
-const REQUEST_TIMEOUT_S: u64 = 60;
-const CONNECT_TIMEOUT_S: u64 = 10;
 const MAX_FETCH_ATTEMPTS: u32 = 4;
 const CACHE_BUST_AFTER_ATTEMPTS: u32 = 2;
 
@@ -32,10 +30,7 @@ async fn main() -> anyhow::Result<()> {
 
     let mut interval = tokio::time::interval(Duration::from_secs(UPDATE_INTERVAL_S));
     let ch_client = common::get_ch_client()?;
-    let http_client = reqwest::Client::builder()
-        .timeout(Duration::from_secs(REQUEST_TIMEOUT_S))
-        .connect_timeout(Duration::from_secs(CONNECT_TIMEOUT_S))
-        .build()?;
+    let http_client = common::http_client();
     common::run_until_shutdown(async move {
         loop {
             interval.tick().await;
@@ -61,14 +56,14 @@ async fn fetch_with_retries<T: serde::de::DeserializeOwned>(
     http_client: &reqwest::Client,
     base_url: &str,
 ) -> anyhow::Result<T> {
-    let attempt = core::sync::atomic::AtomicU32::new(0);
+    let mut attempt = 0;
     let backoff = common::Backoff {
         retries: MAX_FETCH_ATTEMPTS - 1,
         initial_delay: Duration::from_secs(1),
         max_delay: Duration::from_secs(4),
     };
-    common::retry_with_backoff(&format!("Fetching {base_url}"), backoff, || async {
-        let attempt = attempt.fetch_add(1, core::sync::atomic::Ordering::Relaxed) + 1;
+    common::retry_with_backoff(&format!("Fetching {base_url}"), backoff, || {
+        attempt += 1;
         let url = if attempt > CACHE_BUST_AFTER_ATTEMPTS {
             let bust = std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
@@ -78,11 +73,18 @@ async fn fetch_with_retries<T: serde::de::DeserializeOwned>(
         } else {
             base_url.to_owned()
         };
-
-        let resp = http_client.get(&url).send().await?.error_for_status()?;
-        Ok(resp.json::<T>().await?)
+        async move {
+            http_client
+                .get(&url)
+                .send()
+                .await?
+                .error_for_status()?
+                .json::<T>()
+                .await
+        }
     })
     .await
+    .map_err(Into::into)
 }
 
 #[instrument(skip_all)]
