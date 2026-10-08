@@ -24,7 +24,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~
 import { TextLink } from "~/components/ui/text-link";
 import { Tooltip } from "~/components/ui/tooltip";
 import { formatCooldownRemaining, formatDate, formatRelativeTime } from "~/lib/format";
-import { type PlayerCard, type SteamAccount, steamId3ToSteamId64 } from "~/lib/patron-api";
+import { type SteamAccount, steamId3ToSteamId64 } from "~/lib/patron-api";
 import { getRankImageUrl, getRankLabel } from "~/lib/rank-utils";
 import {
   useDeleteSteamAccount,
@@ -61,6 +61,12 @@ function SteamAccountsListSkeleton() {
 
 type CardQuery = ReturnType<typeof usePlayerCard>;
 
+/** The friend invites a player card request fails with while the bot is not the player's Steam friend yet. */
+function botInvites(error: unknown): string[] | null {
+  if (typeof error !== "object" || error === null || !("invites" in error)) return null;
+  return Array.isArray(error.invites) ? (error.invites as string[]) : null;
+}
+
 function BotFriendCell({ cardQuery }: { cardQuery: CardQuery }) {
   const [dialogOpen, setDialogOpen] = useState(false);
 
@@ -69,9 +75,8 @@ function BotFriendCell({ cardQuery }: { cardQuery: CardQuery }) {
   }
 
   if (cardQuery.isError) {
-    const err = cardQuery.error;
-    const errObj = err as unknown as Record<string, unknown>;
-    if (Object.hasOwn(errObj, "invites") && Array.isArray(errObj.invites)) {
+    const invites = botInvites(cardQuery.error);
+    if (invites) {
       return (
         <>
           <Tooltip content="The bot needs to be your Steam friend to access your match history for priority ingestion">
@@ -83,7 +88,7 @@ function BotFriendCell({ cardQuery }: { cardQuery: CardQuery }) {
           <AddBotDialog
             open={dialogOpen}
             onOpenChange={setDialogOpen}
-            invites={errObj.invites as string[]}
+            invites={invites}
             isChecking={cardQuery.isFetching}
             onCheck={() => cardQuery.refetch()}
           />
@@ -104,19 +109,14 @@ function BotFriendCell({ cardQuery }: { cardQuery: CardQuery }) {
 function PlayerCardRankCell({ cardQuery }: { cardQuery: CardQuery }) {
   const ranksQuery = useQuery(ranksQueryOptions);
 
-  if (cardQuery.isLoading || cardQuery.isError) {
-    return <NoValue />;
-  }
-
-  const card = cardQuery.data as PlayerCard;
-
-  if (card.ranked_rank === null || card.ranked_badge_level === null) {
+  const card = cardQuery.data;
+  if (cardQuery.isError || !card || card.ranked_rank === null || card.ranked_badge_level === null) {
     return <NoValue />;
   }
 
   const rank = ranksQuery.data?.find((r) => r.tier === card.ranked_rank);
   // Obscurus (tier 0) has subrank 0 in the card — use 1 for image lookup fallback
-  const subrank = (card.ranked_subrank ?? 0) === 0 ? 1 : (card.ranked_subrank as number);
+  const subrank = card.ranked_subrank || 1;
   const imageUrl = getRankImageUrl(rank, "webp");
   const label = rank ? getRankLabel(rank, subrank) : `${card.ranked_rank}·${card.ranked_subrank}`;
 
@@ -196,6 +196,7 @@ function AccountRow({
   const cooldownRemaining = account.deleted_at ? formatCooldownRemaining(account.deleted_at) : null;
   const canReplace = account.deleted_at !== null && !account.is_in_cooldown;
   const isDeleted = account.deleted_at !== null;
+  const steamId64 = steamId3ToSteamId64(account.steam_id3);
 
   return (
     <TableRow>
@@ -211,12 +212,8 @@ function AccountRow({
         </TextLink>
       </TableCell>
       <TableCell className="font-mono text-muted-foreground">
-        <TextLink
-          tone="muted"
-          external
-          href={`https://steamcommunity.com/profiles/${steamId3ToSteamId64(account.steam_id3)}`}
-        >
-          {steamId3ToSteamId64(account.steam_id3)}
+        <TextLink tone="muted" external href={`https://steamcommunity.com/profiles/${steamId64}`}>
+          {steamId64}
         </TextLink>
       </TableCell>
       <TableCell>
@@ -281,10 +278,7 @@ export function SteamAccountsList() {
   const replaceSteamAccountMutation = useReplaceSteamAccount();
   const reactivateSteamAccountMutation = useReactivateSteamAccount();
 
-  const data = query.data;
-  const isLoading = query.isLoading;
-  const isError = query.isError;
-  const error = query.error;
+  const { data, isLoading, isError, error } = query;
 
   const handleDeleteAccount = (accountId: string) => {
     deleteSteamAccountMutation.mutate(accountId, {

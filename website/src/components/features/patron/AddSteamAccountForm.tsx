@@ -1,5 +1,5 @@
 import { HelpCircle, Plus } from "lucide-react";
-import { useId, useState } from "react";
+import { useId } from "react";
 import { toast } from "sonner";
 
 import { Disclosure } from "~/components/patterns/content/Disclosure";
@@ -11,8 +11,9 @@ import { Input } from "~/components/ui/input";
 import { Separator } from "~/components/ui/separator";
 import { Spinner } from "~/components/ui/spinner";
 import { Stack } from "~/components/ui/stack";
-import { parseSteamIdInput } from "~/lib/steam";
 import { useAddSteamAccount, usePatronStatus } from "~/queries/patron-queries";
+
+import { useSteamIdInput } from "./use-steam-id-input";
 
 function SteamIdFormatHelper() {
   return (
@@ -63,8 +64,7 @@ function SteamIdFormatHelper() {
 }
 
 export function AddSteamAccountForm() {
-  const [steamIdInput, setSteamIdInput] = useState("");
-  const [validationError, setValidationError] = useState<string | null>(null);
+  const steamId = useSteamIdInput();
   const inputId = useId();
   const query = usePatronStatus();
   const addSteamAccountMutation = useAddSteamAccount();
@@ -73,34 +73,15 @@ export function AddSteamAccountForm() {
   const availableSlots = status?.steam_accounts_summary.available_slots ?? 0;
   const hasAvailableSlots = availableSlots > 0;
 
-  const handleInputChange = (value: string) => {
-    setSteamIdInput(value);
-    if (!value.trim()) {
-      setValidationError(null);
-      return;
-    }
-    const result = parseSteamIdInput(value);
-    if ("error" in result) {
-      setValidationError(result.error);
-    } else {
-      setValidationError(null);
-    }
-  };
-
   const handleSubmit = (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
+    const steamId3 = steamId.parse();
+    if (steamId3 === null) return;
 
-    const result = parseSteamIdInput(steamIdInput);
-    if ("error" in result) {
-      setValidationError(result.error);
-      return;
-    }
-
-    addSteamAccountMutation.mutate(result.steamId3, {
+    addSteamAccountMutation.mutate(steamId3, {
       onSuccess: () => {
         toast.success("Steam account added successfully");
-        setSteamIdInput("");
-        setValidationError(null);
+        steamId.reset();
       },
       onError: (error) => {
         toast.error("Failed to add Steam account", { description: error.message });
@@ -108,8 +89,7 @@ export function AddSteamAccountForm() {
     });
   };
 
-  const isInputValid = steamIdInput.trim() !== "" && validationError === null;
-  const canSubmit = isInputValid && hasAvailableSlots && !addSteamAccountMutation.isPending;
+  const canSubmit = steamId.valid && hasAvailableSlots && !addSteamAccountMutation.isPending;
 
   return (
     <Card>
@@ -128,13 +108,13 @@ export function AddSteamAccountForm() {
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
         <form onSubmit={handleSubmit} className="flex items-start gap-3">
-          <Field label="Steam ID" labelDisplay="hidden" htmlFor={inputId} error={validationError} className="flex-1">
+          <Field label="Steam ID" labelDisplay="hidden" htmlFor={inputId} error={steamId.error} className="flex-1">
             <Input
               id={inputId}
               type="text"
               placeholder="SteamID64, account ID, or profile link"
-              value={steamIdInput}
-              onChange={(e) => handleInputChange(e.target.value)}
+              value={steamId.value}
+              onChange={(e) => steamId.change(e.target.value)}
               disabled={addSteamAccountMutation.isPending}
             />
           </Field>

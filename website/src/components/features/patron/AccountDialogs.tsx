@@ -18,7 +18,8 @@ import { Field } from "~/components/ui/field";
 import { Input } from "~/components/ui/input";
 import { Spinner } from "~/components/ui/spinner";
 import { Stack } from "~/components/ui/stack";
-import { parseSteamIdInput } from "~/lib/steam";
+
+import { useSteamIdInput } from "./use-steam-id-input";
 
 export function DeleteAccountDialog({
   steamId3,
@@ -73,47 +74,24 @@ export function ReplaceAccountDialog({
   onReplace: (steamId3: number) => Promise<void>;
   isReplacing: boolean;
 }) {
-  const [steamIdInput, setSteamIdInput] = useState("");
-  const [validationError, setValidationError] = useState<string | null>(null);
+  const steamId = useSteamIdInput();
   const [isOpen, setIsOpen] = useState(false);
   const inputId = useId();
 
-  const handleInputChange = (value: string) => {
-    setSteamIdInput(value);
-    if (!value.trim()) {
-      setValidationError(null);
-      return;
-    }
-    const result = parseSteamIdInput(value);
-    if ("error" in result) {
-      setValidationError(result.error);
-    } else {
-      setValidationError(null);
-    }
+  const handleOpenChange = (open: boolean) => {
+    setIsOpen(open);
+    if (!open) steamId.reset();
   };
 
   const handleReplace = (event: React.MouseEvent) => {
     // The action would close the dialog at once; it closes only when the replacement is saved.
     event.preventDefault();
-    const result = parseSteamIdInput(steamIdInput);
-    if ("error" in result) {
-      setValidationError(result.error);
-      return;
-    }
-    onReplace(result.steamId3).then(
+    const steamId3 = steamId.parse();
+    if (steamId3 === null) return;
+    onReplace(steamId3).then(
       () => handleOpenChange(false),
-      (error: unknown) => setValidationError(error instanceof Error ? error.message : "Could not replace the account"),
+      (error: unknown) => steamId.setError(error instanceof Error ? error.message : "Could not replace the account"),
     );
-  };
-
-  const isInputValid = steamIdInput.trim() !== "" && validationError === null;
-
-  const handleOpenChange = (open: boolean) => {
-    setIsOpen(open);
-    if (!open) {
-      setSteamIdInput("");
-      setValidationError(null);
-    }
   };
 
   return (
@@ -132,13 +110,13 @@ export function ReplaceAccountDialog({
                 Replace the removed account <span className="font-mono font-semibold">{oldSteamId3}</span> with a new
                 Steam ID.
               </p>
-              <Field label="New Steam ID" labelDisplay="hidden" htmlFor={inputId} error={validationError}>
+              <Field label="New Steam ID" labelDisplay="hidden" htmlFor={inputId} error={steamId.error}>
                 <Input
                   id={inputId}
                   type="text"
                   placeholder="SteamID64, account ID, or profile link"
-                  value={steamIdInput}
-                  onChange={(e) => handleInputChange(e.target.value)}
+                  value={steamId.value}
+                  onChange={(e) => steamId.change(e.target.value)}
                   disabled={isReplacing}
                 />
               </Field>
@@ -147,7 +125,7 @@ export function ReplaceAccountDialog({
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction onClick={handleReplace} disabled={!isInputValid || isReplacing}>
+          <AlertDialogAction onClick={handleReplace} disabled={!steamId.valid || isReplacing}>
             {isReplacing ? <Spinner /> : null}
             Replace Account
           </AlertDialogAction>
