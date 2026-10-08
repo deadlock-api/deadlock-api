@@ -31,6 +31,7 @@ impl AppState {
         let http_client = reqwest::Client::builder()
             .connect_timeout(Duration::from_secs(10))
             .read_timeout(Duration::from_secs(60))
+            .redirect(crate::utils::redirect_policy())
             .build()?;
         Ok(Self {
             config,

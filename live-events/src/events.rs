@@ -189,6 +189,7 @@ pub(super) async fn events(
     .fixed_backoff(Duration::from_millis(200))
     .await?;
 
+    utils::validate_upstream_broadcast_url(&response.broadcast_url)?;
     utils::wait_for_live_demo(&state.http_client, &response.broadcast_url).await?;
 
     info!("Demo available for match {match_id}");

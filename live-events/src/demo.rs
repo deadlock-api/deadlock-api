@@ -12,7 +12,9 @@ use tracing::{info, trace};
 
 use crate::error::APIResult;
 use crate::state::AppState;
-use crate::utils::{spectate_match, validate_broadcast_url, wait_for_live_demo};
+use crate::utils::{
+    spectate_match, validate_broadcast_url, validate_upstream_broadcast_url, wait_for_live_demo,
+};
 
 fn demo_stream(
     client: reqwest::Client,
@@ -46,6 +48,7 @@ pub(super) async fn demo(
     .fixed_backoff(Duration::from_millis(200))
     .await?;
 
+    validate_upstream_broadcast_url(&response.broadcast_url)?;
     wait_for_live_demo(&state.http_client, &response.broadcast_url).await?;
 
     Ok(Body::from_stream(demo_stream(

@@ -159,9 +159,81 @@ pub(crate) fn validate_broadcast_url(broadcast_url: &str) -> Result<(), APIError
     Ok(())
 }
 
+/// Checks a broadcast URL that came from the API's `/live/url` endpoint rather than from the
+/// caller. It is still checked, since the API's cached value is outside this service's control;
+/// a URL that fails is the upstream's fault, hence a 500 rather than a 400.
+pub(crate) fn validate_upstream_broadcast_url(broadcast_url: &str) -> Result<(), APIError> {
+    validate_broadcast_url(broadcast_url).map_err(|_| {
+        APIError::internal("The API returned a broadcast URL outside Valve's broadcast hosts")
+    })
+}
+
+/// Redirect hops a request may take.
+const MAX_REDIRECTS: usize = 5;
+
+#[derive(Debug, PartialEq, Eq)]
+enum RedirectDecision {
+    Follow,
+    /// Hand back the redirect response itself instead of following it.
+    Stop,
+    TooMany,
+}
+
+/// `previous` holds every URL requested so far, the initial one first. A request that
+/// started at a broadcast host may only be redirected to broadcast hosts, so a redirect
+/// cannot turn a validated `broadcast_url` into a request to an arbitrary host.
+fn redirect_decision(previous: &[Url], next: &Url) -> RedirectDecision {
+    if previous.len() > MAX_REDIRECTS {
+        return RedirectDecision::TooMany;
+    }
+    let started_at_broadcast_host = previous
+        .first()
+        .is_some_and(|initial| validate_broadcast_url(initial.as_str()).is_ok());
+    if started_at_broadcast_host && validate_broadcast_url(next.as_str()).is_err() {
+        return RedirectDecision::Stop;
+    }
+    RedirectDecision::Follow
+}
+
+/// Redirect policy for the shared HTTP client, see [`redirect_decision`].
+pub(crate) fn redirect_policy() -> reqwest::redirect::Policy {
+    reqwest::redirect::Policy::custom(|attempt| {
+        match redirect_decision(attempt.previous(), attempt.url()) {
+            RedirectDecision::Follow => attempt.follow(),
+            RedirectDecision::Stop => attempt.stop(),
+            RedirectDecision::TooMany => attempt.error("too many redirects"),
+        }
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn urls(urls: &[&str]) -> Vec<Url> {
+        urls.iter().map(|u| Url::parse(u).unwrap()).collect()
+    }
+
+    #[test]
+    fn broadcast_requests_only_redirect_to_broadcast_hosts() {
+        let start = urls(&["http://dist1-ord1.steamcontent.com/tv/1/sync"]);
+        let valve = Url::parse("http://dist1-fra1.steamcontent.com/tv/1/sync").unwrap();
+        let internal = Url::parse("http://169.254.169.254/latest/meta-data").unwrap();
+        assert_eq!(redirect_decision(&start, &valve), RedirectDecision::Follow);
+        assert_eq!(redirect_decision(&start, &internal), RedirectDecision::Stop);
+    }
+
+    #[test]
+    fn other_requests_follow_redirects_up_to_the_limit() {
+        let start = urls(&["https://api.deadlock-api.com/v1/matches/1/live/url"]);
+        let next = Url::parse("https://example.com/").unwrap();
+        assert_eq!(redirect_decision(&start, &next), RedirectDecision::Follow);
+
+        let hops = vec![start[0].clone(); MAX_REDIRECTS + 1];
+        assert_eq!(redirect_decision(&hops, &next), RedirectDecision::TooMany);
+        let hops = vec![start[0].clone(); MAX_REDIRECTS];
+        assert_eq!(redirect_decision(&hops, &next), RedirectDecision::Follow);
+    }
 
     #[test]
     fn accepts_valve_broadcast_hosts() {
