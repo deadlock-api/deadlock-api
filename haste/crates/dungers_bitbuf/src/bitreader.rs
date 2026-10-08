@@ -16,6 +16,7 @@ pub struct BitReader<'a> {
 
 impl<'a> BitReader<'a> {
     #[must_use]
+    #[inline]
     pub fn new(data: &'a [u8]) -> Self {
         Self {
             data,
@@ -39,26 +40,31 @@ impl<'a> BitReader<'a> {
     }
 
     #[must_use]
+    #[inline]
     pub fn num_bits_left(&self) -> usize {
         self.num_bits - self.cur_bit
     }
 
     #[must_use]
+    #[inline]
     pub fn num_bytes_left(&self) -> usize {
         self.num_bits_left() >> 3
     }
 
     #[must_use]
+    #[inline]
     pub fn num_bits_read(&self) -> usize {
         self.cur_bit
     }
 
     #[must_use]
+    #[inline]
     pub fn num_bytes_read(&self) -> usize {
         (self.cur_bit + 7) >> 3
     }
 
     /// seek to a specific bit.
+    #[inline]
     pub fn seek(&mut self, bit: usize) -> Result<(), BitError> {
         if bit > self.num_bits {
             return Err(BitError::Overflow);
@@ -68,6 +74,7 @@ impl<'a> BitReader<'a> {
     }
 
     /// seek to an offset from the current position.
+    #[inline]
     pub fn seek_relative(&mut self, bit_delta: isize) -> Result<usize, BitError> {
         let bit = isize::try_from(self.cur_bit)? + bit_delta;
         self.seek(bit.try_into()?)?;
@@ -77,6 +84,7 @@ impl<'a> BitReader<'a> {
     /// `read_ubit64` reads the specified number of bits into a `u64`. the function can read up to a
     /// maximum of 64 bits at a time. if the `num_bits` exceeds the number of remaining bits, the
     /// function returns an [`BitError::Overflow`] error.
+    #[inline]
     pub fn read_ubit64(&mut self, num_bits: usize) -> Result<u64, BitError> {
         if num_bits > 64 || self.num_bits_left() < num_bits {
             return Err(BitError::Overflow);
@@ -98,6 +106,7 @@ impl<'a> BitReader<'a> {
         Ok(ret & EXTRA_MASKS[num_bits])
     }
 
+    #[inline]
     pub fn read_bool(&mut self) -> Result<bool, BitError> {
         let Some(&byte) = self.data.get(self.cur_bit >> 3) else {
             return Err(BitError::Overflow);
@@ -107,11 +116,13 @@ impl<'a> BitReader<'a> {
         Ok(one_bit == 1)
     }
 
+    #[inline]
     pub fn read_byte(&mut self) -> Result<u8, BitError> {
         self.read_ubit64(8)
             .and_then(|b| b.try_into().map_err(BitError::TryFromIntError))
     }
 
+    #[inline]
     pub fn read_bits(&mut self, buf: &mut [u8], num_bits: usize) -> Result<(), BitError> {
         if buf.len() << 3 < num_bits || self.num_bits_left() < num_bits {
             return Err(BitError::Overflow);
@@ -161,6 +172,7 @@ impl<'a> BitReader<'a> {
         Ok(())
     }
 
+    #[inline]
     pub fn read_bytes(&mut self, buf: &mut [u8]) -> Result<(), BitError> {
         self.read_bits(buf, buf.len() << 3)
     }
@@ -173,6 +185,7 @@ impl<'a> BitReader<'a> {
     /// i figured that returning result would be more convenient than a bool because it can be
     /// questionmarked; plus, in some cases, this would eliminate a need of coming up with a custom
     /// error.
+    #[inline]
     pub fn is_overflowed(&self) -> Result<(), BitError> {
         if self.cur_bit > self.num_bits {
             Err(BitError::Overflow)
@@ -182,6 +195,7 @@ impl<'a> BitReader<'a> {
     }
 
     #[cfg(feature = "varint")]
+    #[inline]
     pub fn read_uvarint<T>(&mut self) -> Result<T, BitError>
     where
         T: From<u8> + core::ops::BitOrAssign + core::ops::Shl<usize, Output = T>,
@@ -204,16 +218,19 @@ impl<'a> BitReader<'a> {
     }
 
     #[cfg(feature = "varint")]
+    #[inline]
     pub fn read_varint64(&mut self) -> Result<i64, BitError> {
         self.read_uvarint().map(zigzag_decode64)
     }
 
     #[cfg(feature = "varint")]
+    #[inline]
     pub fn read_uvarint32(&mut self) -> Result<u32, BitError> {
         self.read_uvarint()
     }
 
     #[cfg(feature = "varint")]
+    #[inline]
     pub fn read_varint32(&mut self) -> Result<i32, BitError> {
         self.read_uvarint32().map(zigzag_decode32)
     }

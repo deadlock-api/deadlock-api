@@ -36,6 +36,7 @@ pub struct BitReader<'a> {
 /// results in very noticable speed boost.
 impl<'a> BitReader<'a> {
     #[must_use]
+    #[inline]
     pub fn new(data: &'a [u8]) -> Self {
         Self {
             inner: bitbuf::BitReader::new(data),
@@ -45,66 +46,79 @@ impl<'a> BitReader<'a> {
 
     /// delegated from [`dungers::bitbuf::BitReader`].
     #[must_use]
+    #[inline]
     pub fn num_bits_left(&self) -> usize {
         self.inner.num_bits_left()
     }
 
     /// delegated from [`dungers::bitbuf::BitReader`].
+    #[inline]
     pub fn read_ubit64(&mut self, num_bits: usize) -> Result<u64, BitError> {
         self.inner.read_ubit64(num_bits)
     }
 
     /// delegated from [`dungers::bitbuf::BitReader`].
+    #[inline]
     pub fn read_bool(&mut self) -> Result<bool, BitError> {
         self.inner.read_bool()
     }
 
     /// delegated from [`dungers::bitbuf::BitReader`].
+    #[inline]
     pub fn read_byte(&mut self) -> Result<u8, BitError> {
         self.inner.read_byte()
     }
 
     /// delegated from [`dungers::bitbuf::BitReader`].
+    #[inline]
     pub fn read_bits(&mut self, buf: &mut [u8], num_bits: usize) -> Result<(), BitError> {
         self.inner.read_bits(buf, num_bits)
     }
 
     /// delegated from [`dungers::bitbuf::BitReader`].
+    #[inline]
     pub fn read_bytes(&mut self, buf: &mut [u8]) -> Result<(), BitError> {
         self.inner.read_bytes(buf)
     }
 
+    #[inline]
     pub fn is_overflowed(&mut self) -> Result<(), BitError> {
         self.did_check_overflow = true;
         self.inner.is_overflowed()
     }
 
+    #[inline]
     pub fn skip_bits(&mut self, num_bits: usize) -> Result<(), BitError> {
         self.inner.seek_relative(num_bits as isize)?;
         Ok(())
     }
 
     #[must_use]
+    #[inline]
     pub fn num_bits_read(&self) -> usize {
         self.inner.num_bits_read()
     }
 
     /// delegated from [`dungers::bitbuf::BitReader`].
+    #[inline]
     pub fn read_uvarint32(&mut self) -> Result<u32, BitError> {
         self.inner.read_uvarint32()
     }
 
     /// delegated from [`dungers::bitbuf::BitReader`].
+    #[inline]
     pub fn read_uvarint64(&mut self) -> Result<u64, BitError> {
         self.inner.read_uvarint()
     }
 
     /// delegated from [`dungers::bitbuf::BitReader`].
+    #[inline]
     pub fn read_varint32(&mut self) -> Result<i32, BitError> {
         self.inner.read_varint32()
     }
 
     /// delegated from [`dungers::bitbuf::BitReader`].
+    #[inline]
     pub fn read_varint64(&mut self) -> Result<i64, BitError> {
         self.inner.read_varint64()
     }
@@ -125,6 +139,7 @@ impl<'a> BitReader<'a> {
     // X set -> read 8
     // X + Y set -> read 28
 
+    #[inline]
     pub fn read_ubitvar(&mut self) -> Result<u32, BitError> {
         let ret = self.read_ubit64(6)?;
         let ret = match ret & (16 | 32) {
@@ -136,16 +151,19 @@ impl<'a> BitReader<'a> {
         ret.try_into().map_err(BitError::TryFromIntError)
     }
 
+    #[inline]
     pub fn read_bitfloat(&mut self) -> Result<f32, BitError> {
         Ok(f32::from_bits(self.read_ubit64(32)?.try_into()?))
     }
 
+    #[inline]
     pub fn read_bitcoord(&mut self) -> Result<f32, BitError> {
         self.read_bitcoord_with(COORD_INTEGER_BITS, COORD_FRACTIONAL_BITS)
     }
 
     /// same as [`Self::read_bitcoord`], but with custom integer / fractional bit counts (see
     /// `ProtoCoordSizeParams_t`).
+    #[inline]
     pub fn read_bitcoord_with(
         &mut self,
         integer_bits: usize,
@@ -188,12 +206,14 @@ impl<'a> BitReader<'a> {
         Ok(value)
     }
 
+    #[inline]
     pub fn read_bitnormal(&mut self) -> Result<f32, BitError> {
         self.read_bitnormal_with(NORMAL_FRACTIONAL_BITS)
     }
 
     /// same as [`Self::read_bitnormal`], but with a custom fractional bit count (see
     /// `ProtoCoordSizeParams_t`).
+    #[inline]
     pub fn read_bitnormal_with(&mut self, fractional_bits: usize) -> Result<f32, BitError> {
         // read the sign bit
         let signbit = self.read_bool()?;
@@ -213,10 +233,12 @@ impl<'a> BitReader<'a> {
         Ok(value)
     }
 
+    #[inline]
     pub fn read_bitvec3coord(&mut self) -> Result<[f32; 3], BitError> {
         self.read_bitvec3coord_with(COORD_INTEGER_BITS, COORD_FRACTIONAL_BITS)
     }
 
+    #[inline]
     pub fn read_bitvec3coord_with(
         &mut self,
         integer_bits: usize,
@@ -241,10 +263,12 @@ impl<'a> BitReader<'a> {
         Ok(fa)
     }
 
+    #[inline]
     pub fn read_bitvec3normal(&mut self) -> Result<[f32; 3], BitError> {
         self.read_bitvec3normal_with(NORMAL_FRACTIONAL_BITS)
     }
 
+    #[inline]
     pub fn read_bitvec3normal_with(
         &mut self,
         fractional_bits: usize,
@@ -276,6 +300,7 @@ impl<'a> BitReader<'a> {
         Ok(fa)
     }
 
+    #[inline]
     pub fn read_bitangle(&mut self, num_bits: usize) -> Result<f32, BitError> {
         let shift = bitbuf::get_bit_for_bit_num(num_bits) as f32;
 
@@ -293,6 +318,7 @@ impl<'a> BitReader<'a> {
     //
     // Returns the number of characters left in out when the routine is complete (this will never
     // exceed buf.len()-1).
+    #[inline]
     pub fn read_string(&mut self, buf: &mut [u8], line: bool) -> Result<usize, BitError> {
         if buf.is_empty() {
             return Err(BitError::BufferTooSmall);
@@ -328,6 +354,7 @@ impl<'a> BitReader<'a> {
         Ok(num_chars)
     }
 
+    #[inline]
     pub fn read_string_to_end(&mut self, buf: &mut Vec<u8>, line: bool) -> Result<usize, BitError> {
         let mut num_chars = 0;
         loop {
@@ -341,6 +368,7 @@ impl<'a> BitReader<'a> {
         Ok(num_chars)
     }
 
+    #[inline]
     pub fn read_ubitvarfp(&mut self) -> Result<u32, BitError> {
         #[allow(clippy::same_functions_in_if_condition)]
         let ret = if self.read_bool()? {
