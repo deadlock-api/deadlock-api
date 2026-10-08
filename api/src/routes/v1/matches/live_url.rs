@@ -24,6 +24,7 @@ use crate::services::rate_limiter::Quota;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::steam::client::SteamClient;
 use crate::services::steam::types::SteamProxyQuery;
+use crate::utils::broadcast_url::validate_broadcast_url;
 use crate::utils::types::MatchIdQuery;
 
 const SPECTATED_MATCHES_KEY: &str = "spectated_matches";
@@ -401,6 +402,16 @@ pub(super) async fn ingest_urls(
             StatusCode::BAD_REQUEST,
             format!("Empty broadcast_url for match {}", invalid.match_id),
         ));
+    }
+    // Stored URLs are listed publicly and fetched server-side by `/demo/live/query`, so only
+    // Valve broadcast hosts are accepted.
+    for broadcast in &broadcast_urls {
+        if let Err(reason) = validate_broadcast_url(broadcast.broadcast_url.trim()) {
+            return Err(APIError::status_msg(
+                StatusCode::BAD_REQUEST,
+                format!("{reason} (match {})", broadcast.match_id),
+            ));
+        }
     }
 
     let now = chrono::Utc::now().timestamp();
