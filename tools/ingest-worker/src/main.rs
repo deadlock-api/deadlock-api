@@ -145,14 +145,18 @@ impl Inserters {
         }
     }
 
-    /// Queues one match's rows. The returned future resolves to whether both tables
-    /// got them; `None` if the inserters are shut down.
+    /// Queues one match's rows into both tables, or into neither: room in both queues is
+    /// reserved before anything is queued, so a cancellation (e.g. the fetch timeout)
+    /// cannot leave a match half queued. The returned future resolves to whether both
+    /// tables got the rows; `None` if the inserters are shut down.
     async fn insert(
         &self,
         parsed: ParsedMatch,
     ) -> Option<impl Future<Output = bool> + Send + 'static> {
-        let players = self.players.insert(parsed.players).await?;
-        let history = self.history.insert(parsed.history).await?;
+        let players = self.players.reserve().await?;
+        let history = self.history.reserve().await?;
+        let players = players.insert(parsed.players);
+        let history = history.insert(parsed.history);
         Some(async move {
             let (players, history) = tokio::join!(players.flushed(), history.flushed());
             players && history

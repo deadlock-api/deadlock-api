@@ -46,6 +46,19 @@ impl InsertAck {
     }
 }
 
+/// Room for one [`BatchInserter::insert`] call, from [`BatchInserter::reserve`].
+pub struct InsertPermit<'a, T>(mpsc::Permit<'a, Request<T>>);
+
+impl<T> InsertPermit<'_, T> {
+    /// Queues `rows` without waiting.
+    #[must_use]
+    pub fn insert(self, rows: Vec<T>) -> InsertAck {
+        let (ack, rx) = oneshot::channel();
+        self.0.send(Request { rows, ack });
+        InsertAck(rx)
+    }
+}
+
 #[derive(Default)]
 struct Stats {
     flushed_rows: AtomicUsize,
@@ -106,12 +119,18 @@ where
     /// Queues `rows` for the next batch, waiting while the queue is full. `None` once the
     /// inserter is shut down.
     pub async fn insert(&self, rows: Vec<T>) -> Option<InsertAck> {
-        let (ack, rx) = oneshot::channel();
+        Some(self.reserve().await?.insert(rows))
+    }
+
+    /// Waits for room in the queue without queueing anything yet. Dropping the permit
+    /// gives the room back, so reserving with several inserters before inserting into
+    /// any queues all or nothing, even if the caller is cancelled midway. `None` once the
+    /// inserter is shut down.
+    pub async fn reserve(&self) -> Option<InsertPermit<'_, T>> {
         if self.shutdown.is_cancelled() {
             return None;
         }
-        self.tx.send(Request { rows, ack }).await.ok()?;
-        Some(InsertAck(rx))
+        self.tx.reserve().await.ok().map(InsertPermit)
     }
 
     /// Whether any flush has failed permanently.
