@@ -13,7 +13,6 @@ export function Domain() {
   return (
     <Chapter
       id="domain"
-      title="Domain"
       intro="Deadlock-aware building blocks shared by features, in components/domain. They fetch their own assets, so a feature passes ids, not URLs."
     >
       <DomainAssets />

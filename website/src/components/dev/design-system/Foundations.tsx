@@ -116,7 +116,6 @@ export function Foundations() {
   return (
     <Chapter
       id="foundations"
-      title="Foundations"
       intro="Tokens live in src/styles/tokens.css in three tiers: primitives, semantic tokens, and the Tailwind theme that turns them into utilities. Components use the utilities only."
     >
       {COLOR_GROUPS.map((group) => (

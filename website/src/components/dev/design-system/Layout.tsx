@@ -24,7 +24,6 @@ export function Layout() {
   return (
     <Chapter
       id="layout"
-      title="Layout and type"
       intro="Law 4: layout belongs to the parent. Components set no margins; Stack, Inline and Grid space their children from the spacing scale, Box pads, and Text sets type from the named type scale. Reach for these before writing flex and gap classes."
     >
       <Specimen

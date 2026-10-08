@@ -39,14 +39,20 @@ function HeroRows() {
   ));
 }
 
-/** A row of names that reorder by drag or arrow keys, for the ReorderHandle specimen. */
-function ReorderDemo() {
+/** Four hero names in the order the reader dragged them into. */
+function useReorderedNames() {
   const [names, setNames] = useState(["Infernus", "Haze", "Seven", "Paradox"]);
   const reorder = useReorder({
     count: names.length,
     itemLabel: (index) => names[index],
     onMove: (from, to) => setNames((current) => moveItem(current, from, to)),
   });
+  return { names, reorder };
+}
+
+/** A row of names that reorder by drag or arrow keys, for the ReorderHandle specimen. */
+function ReorderDemo() {
+  const { names, reorder } = useReorderedNames();
   return (
     <div className="flex flex-wrap gap-3">
       {names.map((name, index) => (
@@ -63,12 +69,7 @@ function ReorderDemo() {
 
 /** Cards that reorder as boxes: `boxProps` on each ReorderItem previews the drop while dragging. */
 function ReorderBoxDemo() {
-  const [names, setNames] = useState(["Infernus", "Haze", "Seven", "Paradox"]);
-  const reorder = useReorder({
-    count: names.length,
-    itemLabel: (index) => names[index],
-    onMove: (from, to) => setNames((current) => moveItem(current, from, to)),
-  });
+  const { names, reorder } = useReorderedNames();
   return (
     <div className="grid grid-cols-2 gap-3 @md:grid-cols-4">
       {names.map((name, index) => (

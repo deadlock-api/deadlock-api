@@ -8,7 +8,7 @@ import { NAV, NAV_NAMES, slug } from "~/components/dev/design-system/nav";
 import { Patterns } from "~/components/dev/design-system/Patterns";
 import { Primitives } from "~/components/dev/design-system/Primitives";
 import { SideNavSection } from "~/components/dev/design-system/SideNavSection";
-import { SlotLayoutContext, slotStore } from "~/components/dev/design-system/slots";
+import { slotStore } from "~/components/dev/design-system/slots";
 import { SideNav, SideNavItem } from "~/components/patterns/navigation/SideNav";
 import { PageHeader } from "~/components/patterns/page/PageHeader";
 import { PageShell } from "~/components/patterns/page/PageShell";
@@ -298,16 +298,14 @@ export default function Showcase() {
           ))}
           {/* The chapter files render here. Every listed specimen leaves for its slot above; what stays visible is
               a specimen nav.ts does not know yet. */}
-          <SlotLayoutContext.Provider value={true}>
-            <Stack gap={4}>
-              <Foundations />
-              <Layout />
-              <Primitives />
-              <Patterns />
-              <Charts />
-              <Domain />
-            </Stack>
-          </SlotLayoutContext.Provider>
+          <Stack gap={4}>
+            <Foundations />
+            <Layout />
+            <Primitives />
+            <Patterns />
+            <Charts />
+            <Domain />
+          </Stack>
         </div>
       </div>
     </PageShell>

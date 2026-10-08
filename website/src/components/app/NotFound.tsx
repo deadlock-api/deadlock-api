@@ -48,12 +48,7 @@ export function NotFound({ didYouMean }: { didYouMean?: ReactNode } = {}) {
               Go Home
             </Link>
           </Button>
-          <Button
-            variant="outline"
-            onClick={() => {
-              if (typeof window !== "undefined") window.history.back();
-            }}
-          >
+          <Button variant="outline" onClick={() => window.history.back()}>
             <ArrowLeft />
             Go Back
           </Button>

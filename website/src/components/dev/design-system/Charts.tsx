@@ -15,6 +15,7 @@ import {
 import { ChartsMore } from "~/components/dev/design-system/ChartsMore";
 import { ChartsRadar } from "~/components/dev/design-system/ChartsRadar";
 import { Round3PatternsCharts } from "~/components/dev/design-system/Round3PatternsCharts";
+import { percent } from "~/components/dev/design-system/samples";
 import { Chapter, Specimen, Variants } from "~/components/dev/design-system/Specimen";
 import { ChartCard } from "~/components/patterns/charts/ChartCard";
 import { ChartLegend, ChartLegendItem } from "~/components/patterns/charts/ChartLegend";
@@ -48,13 +49,11 @@ const BY_RANK = ["Initiate", "Seeker", "Alchemist", "Arcanist", "Ritualist", "Em
     return { rank, winRate, fill: TONE_COLOR[toneOf(winRate, 0.5)] };
   },
 );
-const percent = (v: number) => `${Math.round(v * 100)}%`;
 
 export function Charts() {
   return (
     <Chapter
       id="charts"
-      title="Charts"
       intro="Every Recharts plot sits in a ChartSurface and takes its grid, axes, baseline, cursor and colors from patterns/charts/theme. One y-axis per chart; a legend for two or more series; text stays in ink."
     >
       <Specimen

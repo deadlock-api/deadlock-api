@@ -10,8 +10,8 @@ const MOST_FILES = 12;
 
 /** How often a specimen's module is used across the codebase, counted live from the source. Click to pin the list. */
 export function UsageBadge({ source }: { source: string }) {
-  const usage = usageOf(source);
   if (!/(^|·\s*)(ui|patterns|domain)\//.test(source)) return null;
+  const usage = usageOf(source);
 
   if (usage.files.length === 0) {
     return (

@@ -1,5 +1,3 @@
-import { createContext } from "react";
-
 /**
  * The page is laid out from nav.ts: one empty slot per specimen, in the order of the sidebar. Specimens are written
  * wherever their chapter file has them and portal themselves into their slot, so the page and the index can never
@@ -23,6 +21,3 @@ export const slotStore = {
     };
   },
 };
-
-/** True under the Showcase, where slots exist. A Specimen rendered anywhere else renders in place. */
-export const SlotLayoutContext = createContext(false);

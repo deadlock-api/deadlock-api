@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 
+import { SAMPLE_ABILITY_IDS, SAMPLE_ITEM_IDS, UNKNOWN_ID } from "~/components/dev/design-system/samples";
 import { Specimen, Variants } from "~/components/dev/design-system/Specimen";
 import { AbilityImage } from "~/components/domain/assets/AbilityImage";
 import { AbilityName } from "~/components/domain/assets/AbilityName";
@@ -17,14 +18,10 @@ import { heroesQueryOptions } from "~/queries/asset-queries";
 import { ranksQueryOptions } from "~/queries/ranks-query";
 
 const HERO_IDS = [1, 2, 3, 4, 6, 7];
-const ITEM_IDS = [1548066885, 968099481, 2678489038];
 /** Ricochet, Hollow Point, Weighted Shots: tier 3 and 4 items the Broker can corrupt. */
 const CORRUPTIBLE_ITEM_IDS = [2480592370, 2678489038, 3791587546];
-/** Seven's three signature abilities and ultimate. */
-const ABILITY_IDS = [1065103387, 1074714947, 539192269, 2061574352];
 /** `tier * 10 + subtier`. */
 const BADGES = [11, 36, 64, 91, 116];
-const UNKNOWN_ID = 0;
 
 export function DomainAssets() {
   const { data: heroes } = useQuery(heroesQueryOptions);
@@ -69,7 +66,7 @@ export function DomainAssets() {
         note="A shop item by id. In tables that already hold the item list, pass item instead of itemId to skip the per-image subscription."
       >
         <Variants label="Image + name">
-          {ITEM_IDS.map((id) => (
+          {SAMPLE_ITEM_IDS.map((id) => (
             <span key={id} className="flex items-center gap-2 text-sm">
               <ItemImage itemId={id} className="size-8" />
               <ItemName itemId={id} />
@@ -77,13 +74,13 @@ export function DomainAssets() {
           ))}
         </Variants>
         <Variants label="Sizes (className)">
-          <ItemImage itemId={ITEM_IDS[0]} className="size-4" />
-          <ItemImage itemId={ITEM_IDS[0]} className="size-6" />
-          <ItemImage itemId={ITEM_IDS[0]} />
-          <ItemImage itemId={ITEM_IDS[0]} className="size-12" />
+          <ItemImage itemId={SAMPLE_ITEM_IDS[0]} className="size-4" />
+          <ItemImage itemId={SAMPLE_ITEM_IDS[0]} className="size-6" />
+          <ItemImage itemId={SAMPLE_ITEM_IDS[0]} />
+          <ItemImage itemId={SAMPLE_ITEM_IDS[0]} className="size-12" />
         </Variants>
         <Variants label="linkToDetail, unknown id, loading">
-          <ItemName itemId={ITEM_IDS[1]} linkToDetail className="text-sm" />
+          <ItemName itemId={SAMPLE_ITEM_IDS[1]} linkToDetail className="text-sm" />
           <span className="flex items-center gap-2 text-sm">
             <ItemImage itemId={UNKNOWN_ID} />
             <ItemName itemId={UNKNOWN_ID} />
@@ -117,7 +114,7 @@ export function DomainAssets() {
         note="A hero ability by id, in skill orders and ability analytics. The icons are single-color art, inverted to ink in the dark theme."
       >
         <Variants label="Image + name">
-          {ABILITY_IDS.map((id) => (
+          {SAMPLE_ABILITY_IDS.map((id) => (
             <span key={id} className="flex items-center gap-2 text-sm">
               <AbilityImage abilityId={id} />
               <AbilityName abilityId={id} />
@@ -125,8 +122,8 @@ export function DomainAssets() {
           ))}
         </Variants>
         <Variants label="Sizes (className), unknown id">
-          <AbilityImage abilityId={ABILITY_IDS[0]} className="size-5" />
-          <AbilityImage abilityId={ABILITY_IDS[0]} className="size-10 rounded-lg" />
+          <AbilityImage abilityId={SAMPLE_ABILITY_IDS[0]} className="size-5" />
+          <AbilityImage abilityId={SAMPLE_ABILITY_IDS[0]} className="size-10 rounded-lg" />
           <span className="flex items-center gap-2 text-sm">
             <AbilityImage abilityId={UNKNOWN_ID} />
             <AbilityName abilityId={UNKNOWN_ID} />

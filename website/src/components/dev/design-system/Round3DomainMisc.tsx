@@ -1,6 +1,7 @@
 import { BrainIcon, ShieldCheckIcon } from "lucide-react";
 import { useState } from "react";
 
+import { SAMPLE_ABILITY_IDS } from "~/components/dev/design-system/samples";
 import { Specimen, Variants } from "~/components/dev/design-system/Specimen";
 import { AbilityImage } from "~/components/domain/assets/AbilityImage";
 import { AbilityName } from "~/components/domain/assets/AbilityName";
@@ -25,8 +26,6 @@ const ITEM_NODES = [
   { itemId: 968099481, accent: "vitality", winRate: 0.487, pickRate: 0.12 },
   { itemId: 2678489038, accent: "spirit", winRate: 0.5, pickRate: 0.06 },
 ] as const;
-/** Seven's three signature abilities and ultimate. */
-const ABILITY_IDS = [1065103387, 1074714947, 539192269, 2061574352];
 
 export function Round3DomainMisc() {
   const [locked, setLocked] = useState<number | null>(ITEM_NODES[0].itemId);
@@ -97,7 +96,7 @@ export function Round3DomainMisc() {
           ))}
         </Variants>
         <Variants label='accent: ability-1 ... ability-4, fill="accent" · static (interaction none) · emphasis by pick rate · dimmed · no media'>
-          {ABILITY_IDS.map((abilityId, index) => (
+          {SAMPLE_ABILITY_IDS.map((abilityId, index) => (
             <GraphNodeCard
               key={abilityId}
               className="w-40"

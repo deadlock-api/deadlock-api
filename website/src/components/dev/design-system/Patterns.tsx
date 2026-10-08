@@ -94,7 +94,6 @@ export function Patterns() {
   return (
     <Chapter
       id="patterns"
-      title="Patterns"
       intro="Compositions of primitives that any data site could use, in components/patterns. A route is a PageShell holding a PageHeader, a FilterBar and Sections."
     >
       <PageShellSpecimen />

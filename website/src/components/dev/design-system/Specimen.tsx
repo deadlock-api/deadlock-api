@@ -1,8 +1,8 @@
-import { type ReactNode, useContext, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { type ReactNode, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 
 import { NAV_NAMES, slug } from "~/components/dev/design-system/nav";
-import { SlotLayoutContext, slotStore } from "~/components/dev/design-system/slots";
+import { slotStore } from "~/components/dev/design-system/slots";
 import { UsageBadge } from "~/components/dev/design-system/UsageBadge";
 import { Heading } from "~/components/ui/heading";
 import { cn } from "~/lib/utils";
@@ -50,39 +50,15 @@ function LazyBody({ className, children }: { className?: string; children: React
 }
 
 /**
- * A chapter file: its intro and its specimens. On the showcase page the heading and the order come from nav.ts, so
- * this only hands the intro and the specimens to their slots.
+ * A chapter file: its intro and its specimens. The heading and the order come from nav.ts, so this only hands the
+ * intro to its slot.
  */
-export function Chapter({
-  id,
-  title,
-  intro,
-  children,
-}: {
-  id: string;
-  title: string;
-  intro?: ReactNode;
-  children: ReactNode;
-}) {
-  const slotted = useContext(SlotLayoutContext);
-  if (slotted) {
-    return (
-      <>
-        {intro && <InSlot id={`${id}-intro`}>{intro}</InSlot>}
-        {children}
-      </>
-    );
-  }
+export function Chapter({ id, intro, children }: { id: string; intro?: ReactNode; children: ReactNode }) {
   return (
-    <section id={id} aria-labelledby={`${id}-title`} className="flex flex-col gap-4">
-      <div className="flex flex-col gap-1 border-b pb-2">
-        <Heading as="h2" size="2xl" id={`${id}-title`}>
-          {title}
-        </Heading>
-        {intro && <p className="max-w-3xl text-sm text-muted-foreground">{intro}</p>}
-      </div>
+    <>
+      {intro && <InSlot id={`${id}-intro`}>{intro}</InSlot>}
       {children}
-    </section>
+    </>
   );
 }
 
@@ -101,10 +77,10 @@ export function Specimen({
   className?: string;
   children: ReactNode;
 }) {
-  const slotted = useContext(SlotLayoutContext);
-  const listed = NAV_NAMES.has(name);
-  if (!listed) console.warn(`Design system: add "${name}" to dev/design-system/nav.ts`);
-  const inSlot = slotted && listed;
+  const inSlot = NAV_NAMES.has(name);
+  useEffect(() => {
+    if (!inSlot) console.warn(`Design system: add "${name}" to dev/design-system/nav.ts`);
+  }, [inSlot, name]);
   const article = (
     <article
       // In a slot, the slot carries the id the index links to.

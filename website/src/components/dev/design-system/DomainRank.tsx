@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Bar, BarChart, CartesianGrid, Line, LineChart, ReferenceLine, XAxis, YAxis } from "recharts";
 
+import { percent } from "~/components/dev/design-system/samples";
 import { Specimen } from "~/components/dev/design-system/Specimen";
 import {
   RANK_BADGE_AXIS_WIDTH,
@@ -48,7 +49,6 @@ const RANK_LINES = [31, 32, 32, 33, 35, 34, 36, 37, 37, 38, 39, 40].map((a, i) =
   b: i < 3 || i > 8 ? 42 - Math.floor(i / 4) : null,
 }));
 const RANK_TICKS = [31, 37, 43];
-const percent = (v: number) => `${Math.round(v * 100)}%`;
 
 export function DomainRank() {
   const { data: ranks } = useQuery(ranksQueryOptions);

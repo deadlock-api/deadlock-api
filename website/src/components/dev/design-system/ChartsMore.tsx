@@ -2,6 +2,7 @@ import { ChartNoAxesCombined } from "lucide-react";
 import { useState } from "react";
 import { CartesianGrid, Line, LineChart, ReferenceLine, XAxis, YAxis } from "recharts";
 
+import { percent } from "~/components/dev/design-system/samples";
 import { Specimen, Variants } from "~/components/dev/design-system/Specimen";
 import { ChartCard } from "~/components/patterns/charts/ChartCard";
 import { type ChartMarker, ChartMarkers } from "~/components/patterns/charts/ChartMarkers";
@@ -102,7 +103,6 @@ const HERO_WEEKS = WEEKS.map((week, w) => ({
   label: week.label,
   ...Object.fromEntries(HEROES.map((hero, h) => [hero, 0.5 + Math.sin((w + h * 3) / 2.3) * 0.03 + (h % 4) * 0.004])),
 }));
-const percent = (value: number) => `${Math.round(value * 100)}%`;
 
 export function ChartsMore() {
   const [metric, setMetric] = useState("win_rate");

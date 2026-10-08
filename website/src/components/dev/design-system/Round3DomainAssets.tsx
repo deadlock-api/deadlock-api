@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 
+import { SAMPLE_ABILITY_IDS, SAMPLE_ITEM_IDS, UNKNOWN_ID } from "~/components/dev/design-system/samples";
 import { Specimen, Variants } from "~/components/dev/design-system/Specimen";
 import { AbilityOrderGrid } from "~/components/domain/assets/AbilityOrderGrid";
 import { BadgeImage } from "~/components/domain/assets/BadgeImage";
@@ -13,16 +14,12 @@ import { itemUpgradesQueryOptions } from "~/queries/asset-queries";
 import { ranksQueryOptions } from "~/queries/ranks-query";
 
 const HERO_IDS = [1, 2, 3, 4];
-const ITEM_IDS = [1548066885, 968099481, 2678489038];
-const UNKNOWN_ID = 0;
 const RANKED_HEROES = [
   { heroId: 1, winRate: 0.542, usage: 0.31 },
   { heroId: 2, winRate: 0.531, usage: 0.12 },
   { heroId: 3, winRate: 0.528, usage: 0.44 },
   { heroId: 4, winRate: 0.497, usage: 0.08 },
 ];
-/** Four ability ids, standing in for one hero's slots. */
-const ABILITY_IDS = [1065103387, 1074714947, 539192269, 2061574352];
 
 export function Round3DomainAssets() {
   const { data: ranks } = useQuery(ranksQueryOptions);
@@ -39,18 +36,18 @@ export function Round3DomainAssets() {
           <HeroCell heroId={HERO_IDS[0]} />
           <HeroCell heroId={HERO_IDS[1]} linkToDetail />
           <HeroCell heroId={HERO_IDS[2]} size="sm" className="text-xs" />
-          <ItemCell itemId={ITEM_IDS[0]} />
-          <ItemCell itemId={ITEM_IDS[1]} linkToDetail />
+          <ItemCell itemId={SAMPLE_ITEM_IDS[0]} />
+          <ItemCell itemId={SAMPLE_ITEM_IDS[1]} linkToDetail />
         </Variants>
         <Variants label="ItemCell variant: normal, corrupted (a row about the corrupted version), corrupted loading">
-          <ItemCell itemId={ITEM_IDS[2]} linkToDetail />
-          <ItemCell itemId={ITEM_IDS[2]} linkToDetail variant="corrupted" />
+          <ItemCell itemId={SAMPLE_ITEM_IDS[2]} linkToDetail />
+          <ItemCell itemId={SAMPLE_ITEM_IDS[2]} linkToDetail variant="corrupted" />
           <ItemCell item={undefined} loading variant="corrupted" />
         </Variants>
         <Variants label='shape="circle", truncation (max-w-24 on the cell), unknown id, loading'>
           <HeroCell heroId={HERO_IDS[3]} shape="circle" />
           <HeroCell heroId={HERO_IDS[1]} linkToDetail className="max-w-24" />
-          <ItemCell itemId={ITEM_IDS[0]} linkToDetail className="max-w-24" />
+          <ItemCell itemId={SAMPLE_ITEM_IDS[0]} linkToDetail className="max-w-24" />
           <HeroCell heroId={UNKNOWN_ID} />
           <ItemCell itemId={UNKNOWN_ID} />
           <ItemCell item={undefined} loading />
@@ -70,7 +67,7 @@ export function Round3DomainAssets() {
                 </TableCell>
                 <TableCell>
                   <ItemCell
-                    item={items?.find((item) => item.id === ITEM_IDS[i])}
+                    item={items?.find((item) => item.id === SAMPLE_ITEM_IDS[i])}
                     loading={isLoadingItems}
                     linkToDetail
                   />
@@ -166,7 +163,7 @@ export function Round3DomainAssets() {
           ))}
         </RankedEntityList>
         <RankedEntityList className="max-w-sm">
-          {ITEM_IDS.map((itemId, index) => (
+          {SAMPLE_ITEM_IDS.map((itemId, index) => (
             <RankedEntityRow key={itemId} rank={index + 1} entity={{ itemId }}>
               {/* labelDisplay: the first row labels the columns, the rest stay one line tall. */}
               <RankedEntityMetric
@@ -192,9 +189,9 @@ export function Round3DomainAssets() {
         note="A skill order: a row per ability in slot order, a column per upgrade, the upgrade's number in its slot color where the ability was taken. pickRate on the steps adds the row of how many players took each step, from @lg. Screen readers get a numbered list of the upgrades instead of the grid."
       >
         <AbilityOrderGrid
-          abilityIds={ABILITY_IDS}
+          abilityIds={SAMPLE_ABILITY_IDS}
           steps={[0, 1, 0, 2, 0, 3, 1, 1, 2, 2, 3, 0].map((slot, index) => ({
-            abilityId: ABILITY_IDS[slot],
+            abilityId: SAMPLE_ABILITY_IDS[slot],
             pickRate: 1 - index * 0.04,
           }))}
         />

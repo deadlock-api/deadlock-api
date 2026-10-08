@@ -157,7 +157,6 @@ export function Primitives() {
   return (
     <Chapter
       id="primitives"
-      title="Primitives"
       intro="One element or one Radix widget each, in components/ui. They know nothing about Deadlock. Variants are typed props; className is for layout only."
     >
       <HeadingSpecimen />
