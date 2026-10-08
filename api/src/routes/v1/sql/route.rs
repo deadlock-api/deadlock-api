@@ -141,31 +141,21 @@ pub(super) async fn sql(
     Query(query): Query<SQLQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
-    if !state.config.clickhouse.allow_custom_queries {
-        return Err(APIError::status_msg(
-            StatusCode::FORBIDDEN,
-            "Custom queries are disabled",
-        ));
-    }
-
-    state
-        .rate_limit_client
-        .apply_limits(
-            &rate_limit_key,
-            "sql",
-            &[
-                Quota::ip_limit(2, Duration::from_mins(1)),
-                Quota::ip_limit(20, Duration::from_hours(1)),
-                Quota::key_limit(10, Duration::from_mins(1)),
-                Quota::global_limit(30, Duration::from_mins(1)),
-            ],
-        )
-        .await?;
+    check_access(
+        &state,
+        &rate_limit_key,
+        "sql",
+        &[
+            Quota::ip_limit(2, Duration::from_mins(1)),
+            Quota::ip_limit(20, Duration::from_hours(1)),
+            Quota::key_limit(10, Duration::from_mins(1)),
+            Quota::global_limit(30, Duration::from_mins(1)),
+        ],
+    )
+    .await?;
 
     let format = query.format;
-    let query = query.query;
-    let query = query.trim().replace(';', "");
-    let query = normalize_query(&query);
+    let query = normalize_query(&query.query.replace(';', ""));
 
     validate_query(&query).map_err(|msg| APIError::status_msg(StatusCode::BAD_REQUEST, msg))?;
 
@@ -181,6 +171,26 @@ pub(super) async fn sql(
                 "Query execution failed. Check your SQL syntax and try again.",
             )
         })
+}
+
+/// Rejects the request unless custom queries are enabled, then applies `quotas`.
+async fn check_access(
+    state: &AppState,
+    rate_limit_key: &RateLimitKey,
+    bucket: &str,
+    quotas: &[Quota],
+) -> APIResult<()> {
+    if !state.config.clickhouse.allow_custom_queries {
+        return Err(APIError::status_msg(
+            StatusCode::FORBIDDEN,
+            "Custom queries are disabled",
+        ));
+    }
+    state
+        .rate_limit_client
+        .apply_limits(rate_limit_key, bucket, quotas)
+        .await?;
+    Ok(())
 }
 
 async fn run_sql(
@@ -231,24 +241,16 @@ pub(super) async fn list_tables(
     rate_limit_key: RateLimitKey,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
-    if !state.config.clickhouse.allow_custom_queries {
-        return Err(APIError::status_msg(
-            StatusCode::FORBIDDEN,
-            "Custom queries are disabled",
-        ));
-    }
-
-    state
-        .rate_limit_client
-        .apply_limits(
-            &rate_limit_key,
-            "sql_list_tables",
-            &[
-                Quota::ip_limit(10, Duration::from_mins(1)),
-                Quota::global_limit(60, Duration::from_mins(1)),
-            ],
-        )
-        .await?;
+    check_access(
+        &state,
+        &rate_limit_key,
+        "sql_list_tables",
+        &[
+            Quota::ip_limit(10, Duration::from_mins(1)),
+            Quota::global_limit(60, Duration::from_mins(1)),
+        ],
+    )
+    .await?;
 
     Ok(Json(fetch_list_tables(&state.ch_client_restricted).await?))
 }
@@ -309,24 +311,16 @@ pub(super) async fn table_schema(
     Path(TableQuery { table }): Path<TableQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
-    if !state.config.clickhouse.allow_custom_queries {
-        return Err(APIError::status_msg(
-            StatusCode::FORBIDDEN,
-            "Custom queries are disabled",
-        ));
-    }
-
-    state
-        .rate_limit_client
-        .apply_limits(
-            &rate_limit_key,
-            "sql_table_schema",
-            &[
-                Quota::ip_limit(10, Duration::from_mins(1)),
-                Quota::global_limit(60, Duration::from_mins(1)),
-            ],
-        )
-        .await?;
+    check_access(
+        &state,
+        &rate_limit_key,
+        "sql_table_schema",
+        &[
+            Quota::ip_limit(10, Duration::from_mins(1)),
+            Quota::global_limit(60, Duration::from_mins(1)),
+        ],
+    )
+    .await?;
 
     // Validate table name: only alphanumeric and underscores allowed
     if !table.chars().all(|c| c.is_alphanumeric() || c == '_') {
