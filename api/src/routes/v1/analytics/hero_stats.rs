@@ -1,12 +1,13 @@
+use crate::utils::sql::cached_ch_query;
 use crate::utils::sql::impl_match_info;
 use crate::utils::sql::{MAX_FILTERING_AVERAGE_BADGE, MIN_FILTERING_AVERAGE_BADGE};
 use axum::Json;
 use axum::extract::State;
 use axum::response::IntoResponse;
 use axum_extra::extract::Query;
-use cached::macros::cached;
 use clickhouse::Row;
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 use strum::Display;
 use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
@@ -583,25 +584,14 @@ fn build_query(query: &HeroStatsQuery) -> String {
 
 // Concurrent misses of one query share a single run. by_key holds a hashed bucket lock (hits
 // included) for the whole query; this endpoint runs few queries at once, so collisions are rare.
-#[cached(
-    max_size = 5_000,
-    ttl_secs = 21600,
-    sync_writes = "by_key",
-    sync_writes_buckets = 1024,
-    convert = "{ query_str.to_string() }",
-    key = "String"
-)]
-async fn run_query(
-    ch_client: &clickhouse::Client,
-    query_str: &str,
-) -> clickhouse::error::Result<Vec<AnalyticsHeroStats>> {
-    ch_client.query(query_str).fetch_all().await
+cached_ch_query! {
+    fn run_query(5_000, 21600) -> Vec<AnalyticsHeroStats>;
 }
 
 async fn get_hero_stats(
     ch_client: &clickhouse::Client,
     mut query: HeroStatsQuery,
-) -> APIResult<Vec<AnalyticsHeroStats>> {
+) -> APIResult<Arc<Vec<AnalyticsHeroStats>>> {
     round_timestamps(&mut query.min_unix_timestamp, &mut query.max_unix_timestamp);
     let query_str = build_mv_query(&query).unwrap_or_else(|| build_query(&query));
     debug!(?query_str);

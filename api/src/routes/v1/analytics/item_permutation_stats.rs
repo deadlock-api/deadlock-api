@@ -1,13 +1,14 @@
+use crate::utils::sql::cached_ch_query;
 use crate::utils::sql::impl_match_info;
 use axum::Json;
 use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum_extra::extract::Query;
-use cached::macros::cached;
 use clickhouse::Row;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
 
@@ -274,19 +275,8 @@ fn build_query(query: &ItemPermutationStatsQuery) -> String {
     }
 }
 
-#[cached(
-    max_size = 5_000,
-    ttl_secs = 21600,
-    sync_writes = "by_key",
-    sync_writes_buckets = 1024,
-    convert = "{ query_str.to_string() }",
-    key = "String"
-)]
-async fn run_query(
-    ch_client: &clickhouse::Client,
-    query_str: &str,
-) -> clickhouse::error::Result<Vec<ItemPermutationStats>> {
-    ch_client.query(query_str).fetch_all().await
+cached_ch_query! {
+    fn run_query(5_000, 21600) -> Vec<ItemPermutationStats>;
 }
 
 async fn get_item_permutation_stats(
@@ -296,7 +286,7 @@ async fn get_item_permutation_stats(
     round_timestamps(&mut query.min_unix_timestamp, &mut query.max_unix_timestamp);
     let query_str = build_query(&query);
     debug!(?query_str);
-    let mut stats = run_query(ch_client, &query_str).await?;
+    let mut stats = Arc::unwrap_or_clone(run_query(ch_client, &query_str).await?);
     stats.retain(|s| {
         query.min_matches.is_none_or(|m| s.matches >= u64::from(m))
             && query.max_matches.is_none_or(|m| s.matches <= u64::from(m))

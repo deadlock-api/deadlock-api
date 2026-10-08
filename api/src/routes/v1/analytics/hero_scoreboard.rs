@@ -1,13 +1,14 @@
+use crate::utils::sql::cached_ch_query;
 use crate::utils::sql::impl_match_info;
 use axum::Json;
 use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum_extra::extract::Query;
-use cached::macros::cached;
 use clickhouse::Row;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
 
@@ -158,25 +159,14 @@ SETTINGS log_comment = 'hero_scoreboard', apply_patch_parts = 0, max_threads = 3
     )
 }
 
-#[cached(
-    max_size = 5_000,
-    ttl_secs = 21600,
-    sync_writes = "by_key",
-    sync_writes_buckets = 1024,
-    convert = "{ query_str.to_string() }",
-    key = "String"
-)]
-async fn run_query(
-    ch_client: &clickhouse::Client,
-    query_str: &str,
-) -> clickhouse::error::Result<Vec<HeroEntry>> {
-    ch_client.query(query_str).fetch_all().await
+cached_ch_query! {
+    fn run_query(5_000, 21600) -> Vec<HeroEntry>;
 }
 
 async fn get_hero_scoreboard(
     ch_client: &clickhouse::Client,
     mut query: HeroScoreboardQuery,
-) -> APIResult<Vec<HeroEntry>> {
+) -> APIResult<Arc<Vec<HeroEntry>>> {
     round_timestamps(&mut query.min_unix_timestamp, &mut query.max_unix_timestamp);
     let query = build_query(&query);
     debug!(?query);

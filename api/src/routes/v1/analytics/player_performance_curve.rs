@@ -1,5 +1,7 @@
+use crate::utils::sql::cached_ch_query;
 use crate::utils::sql::impl_match_info;
 use core::fmt::Write as _;
+use std::sync::Arc;
 
 use axum::Json;
 use axum::extract::State;
@@ -487,25 +489,14 @@ async fn agg_days_built(
     Ok(i64::try_from(built).is_ok_and(|built| built == (to - from) / 86_400))
 }
 
-#[cached(
-    max_size = 5_000,
-    ttl_secs = 43200,
-    sync_writes = "by_key",
-    sync_writes_buckets = 1024,
-    convert = "{ query_str.to_string() }",
-    key = "String"
-)]
-async fn run_query(
-    ch_client: &clickhouse::Client,
-    query_str: &str,
-) -> clickhouse::error::Result<Vec<PlayerPerformanceCurvePoint>> {
-    ch_client.query(query_str).fetch_all().await
+cached_ch_query! {
+    fn run_query(5_000, 43200) -> Vec<PlayerPerformanceCurvePoint>;
 }
 
 async fn get_player_performance_curve(
     ch_client: &clickhouse::Client,
     mut query: PlayerPerformanceCurveQuery,
-) -> APIResult<Vec<PlayerPerformanceCurvePoint>> {
+) -> APIResult<Arc<Vec<PlayerPerformanceCurvePoint>>> {
     round_timestamps(&mut query.min_unix_timestamp, &mut query.max_unix_timestamp);
     let now = chrono::Utc::now().timestamp();
     let agg_plan = match player_performance_curve_agg::plan(&query, now) {
@@ -517,8 +508,7 @@ async fn get_player_performance_curve(
         None => build_query(&query),
     };
     debug!(?query_str);
-    let rows = run_query(ch_client, &query_str).await?;
-    Ok(rows)
+    Ok(run_query(ch_client, &query_str).await?)
 }
 
 #[utoipa::path(

@@ -1,12 +1,13 @@
+use crate::utils::sql::cached_ch_query;
 use crate::utils::sql::impl_match_info;
 use core::fmt::Write as _;
 use std::collections::HashMap;
+use std::sync::Arc;
 
 use axum::Json;
 use axum::extract::State;
 use axum::response::IntoResponse;
 use axum_extra::extract::Query;
-use cached::macros::cached;
 use clickhouse::Row;
 use itertools::{Itertools, izip};
 use serde::{Deserialize, Serialize};
@@ -552,19 +553,8 @@ SETTINGS log_comment = 'lane_soul_curve', apply_patch_parts = 0
     )
 }
 
-#[cached(
-    max_size = 5_000,
-    ttl_secs = 21600,
-    sync_writes = "by_key",
-    sync_writes_buckets = 1024,
-    convert = "{ query_str.to_string() }",
-    key = "String"
-)]
-async fn run_query(
-    ch_client: &clickhouse::Client,
-    query_str: &str,
-) -> clickhouse::error::Result<Vec<LaneSoulCurveRow>> {
-    ch_client.query(query_str).fetch_all().await
+cached_ch_query! {
+    fn run_query(5_000, 21600) -> Vec<LaneSoulCurveRow>;
 }
 
 fn to_response(row: LaneSoulCurveRow, requested: &[LaneStat]) -> LaneSoulCurve {
@@ -623,7 +613,7 @@ async fn get_lane_soul_curve(
         debug!(?ch_query);
         run_query(ch_client, &ch_query).await?
     };
-    Ok(rows
+    Ok(Arc::unwrap_or_clone(rows)
         .into_iter()
         .map(|row| to_response(row, &stats.requested))
         .collect())

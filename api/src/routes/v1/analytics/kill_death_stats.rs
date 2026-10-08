@@ -1,3 +1,4 @@
+use crate::utils::sql::cached_ch_query;
 use crate::utils::sql::impl_match_info;
 use crate::utils::sql::{DURATION_COLUMN, MatchPoolFilters, join_filters};
 use axum::Json;
@@ -5,10 +6,10 @@ use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum_extra::extract::Query;
-use cached::macros::cached;
 use clickhouse::Row;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
 
@@ -241,25 +242,14 @@ fn build_query(query: &KillDeathStatsQuery) -> String {
     )
 }
 
-#[cached(
-    max_size = 1_000,
-    ttl_secs = 1800,
-    sync_writes = "by_key",
-    sync_writes_buckets = 1024,
-    convert = "{ query_str.to_string() }",
-    key = "String"
-)]
-async fn run_query(
-    ch_client: &clickhouse::Client,
-    query_str: &str,
-) -> clickhouse::error::Result<Vec<KillDeathStats>> {
-    ch_client.query(query_str).fetch_all().await
+cached_ch_query! {
+    fn run_query(1_000, 1800) -> Vec<KillDeathStats>;
 }
 
 async fn get_kill_death_stats(
     ch_client: &clickhouse::Client,
     mut query: KillDeathStatsQuery,
-) -> APIResult<Vec<KillDeathStats>> {
+) -> APIResult<Arc<Vec<KillDeathStats>>> {
     round_timestamps(&mut query.min_unix_timestamp, &mut query.max_unix_timestamp);
     let query_str = build_query(&query);
     debug!(?query_str);

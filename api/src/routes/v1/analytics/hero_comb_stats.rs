@@ -1,13 +1,14 @@
+use crate::utils::sql::cached_ch_query;
 use crate::utils::sql::impl_match_info;
 use core::ops::AddAssign;
 use std::collections::HashMap;
+use std::sync::Arc;
 
 use axum::Json;
 use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum_extra::extract::Query;
-use cached::macros::cached;
 use clickhouse::Row;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
@@ -308,35 +309,24 @@ SETTINGS log_comment = 'hero_comb_stats', apply_patch_parts = 0, query_plan_exec
 
 // Concurrent misses of one query share a single run. by_key holds a hashed bucket lock (hits
 // included) for the whole query; this endpoint runs few queries at once, so collisions are rare.
-#[cached(
-    max_size = 5_000,
-    ttl_secs = 21600,
-    sync_writes = "by_key",
-    sync_writes_buckets = 1024,
-    convert = "{ query_str.to_string() }",
-    key = "String"
-)]
-async fn run_query(
-    ch_client: &clickhouse::Client,
-    query_str: &str,
-) -> clickhouse::error::Result<Vec<HeroCombStats>> {
-    ch_client.query(query_str).fetch_all().await
+cached_ch_query! {
+    fn run_query(5_000, 21600) -> Vec<HeroCombStats>;
 }
 
 async fn get_comb_stats(
     ch_client: &clickhouse::Client,
     mut query: HeroCombStatsQuery,
-) -> APIResult<Vec<HeroCombStats>> {
+) -> APIResult<Arc<Vec<HeroCombStats>>> {
     round_timestamps(&mut query.min_unix_timestamp, &mut query.max_unix_timestamp);
     let ch_query = build_query(&query);
     debug!(?ch_query);
-    let comb_stats: Vec<HeroCombStats> = run_query(ch_client, &ch_query).await?;
+    let comb_stats = run_query(ch_client, &ch_query).await?;
     let comb_size = match query.comb_size {
         Some(6) | None => return Ok(comb_stats),
         Some(x) => x,
     };
     let mut comb_stats_agg = HashMap::new();
-    for comb_stat in &comb_stats {
+    for comb_stat in comb_stats.iter() {
         for comb_hero_ids in comb_stat.hero_ids.iter().combinations(comb_size as usize) {
             *comb_stats_agg
                 .entry(comb_hero_ids.clone())
@@ -348,24 +338,26 @@ async fn get_comb_stats(
                 }) += comb_stat;
         }
     }
-    Ok(comb_stats_agg
-        .into_values()
-        .filter(|c| {
-            c.matches
-                >= u64::from(
-                    query
-                        .min_matches
-                        .or(default_min_matches_u32())
-                        .unwrap_or_default(),
-                )
-                && c.matches <= u64::from(query.max_matches.unwrap_or(u32::MAX))
-        })
-        .sorted_by(|a, b| {
-            win_rate(b)
-                .total_cmp(&win_rate(a))
-                .then_with(|| a.hero_ids.cmp(&b.hero_ids))
-        })
-        .collect())
+    Ok(Arc::new(
+        comb_stats_agg
+            .into_values()
+            .filter(|c| {
+                c.matches
+                    >= u64::from(
+                        query
+                            .min_matches
+                            .or(default_min_matches_u32())
+                            .unwrap_or_default(),
+                    )
+                    && c.matches <= u64::from(query.max_matches.unwrap_or(u32::MAX))
+            })
+            .sorted_by(|a, b| {
+                win_rate(b)
+                    .total_cmp(&win_rate(a))
+                    .then_with(|| a.hero_ids.cmp(&b.hero_ids))
+            })
+            .collect(),
+    ))
 }
 
 #[expect(clippy::cast_precision_loss)]

@@ -1,12 +1,13 @@
+use crate::utils::sql::cached_ch_query;
 use crate::utils::sql::impl_match_info;
 use axum::Json;
 use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum_extra::extract::Query;
-use cached::macros::cached;
 use clickhouse::Row;
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
 
@@ -596,34 +597,12 @@ fn build_edges_query(query: &ItemFlowStatsQuery) -> String {
     )
 }
 
-#[cached(
-    max_size = 5_000,
-    ttl_secs = 21600,
-    sync_writes = "by_key",
-    sync_writes_buckets = 1024,
-    convert = "{ query_str.to_string() }",
-    key = "String"
-)]
-async fn run_nodes_query(
-    ch_client: &clickhouse::Client,
-    query_str: &str,
-) -> clickhouse::error::Result<Vec<ItemFlowNode>> {
-    ch_client.query(query_str).fetch_all().await
+cached_ch_query! {
+    fn run_nodes_query(5_000, 21600) -> Vec<ItemFlowNode>;
 }
 
-#[cached(
-    max_size = 5_000,
-    ttl_secs = 21600,
-    sync_writes = "by_key",
-    sync_writes_buckets = 1024,
-    convert = "{ query_str.to_string() }",
-    key = "String"
-)]
-async fn run_edges_query(
-    ch_client: &clickhouse::Client,
-    query_str: &str,
-) -> clickhouse::error::Result<Vec<ItemFlowEdge>> {
-    ch_client.query(query_str).fetch_all().await
+cached_ch_query! {
+    fn run_edges_query(5_000, 21600) -> Vec<ItemFlowEdge>;
 }
 
 /// Combined locked-path + baseline totals, one row.
@@ -650,15 +629,11 @@ struct ItemFlowTotalsRow {
     reached_per_column: Vec<u64>,
 }
 
-#[cached(
-    max_size = 5_000,
-    ttl_secs = 21600,
-    sync_writes = "by_key",
-    sync_writes_buckets = 1024,
-    convert = "{ query_str.to_string() }",
-    key = "String"
-)]
-async fn run_totals_query(
+cached_ch_query! {
+    fn run_totals_query(5_000, 21600) -> ItemFlowTotalsRow = fetch_totals;
+}
+
+async fn fetch_totals(
     ch_client: &clickhouse::Client,
     query_str: &str,
 ) -> clickhouse::error::Result<ItemFlowTotalsRow> {
@@ -689,8 +664,8 @@ async fn get_item_flow_stats(
     // avgIf over an empty population yields NaN; JSON can't represent it, so coalesce to 0.
     let finite = |v: f64| if v.is_finite() { v } else { 0.0 };
     Ok(ItemFlowStats {
-        nodes,
-        edges,
+        nodes: Arc::unwrap_or_clone(nodes),
+        edges: Arc::unwrap_or_clone(edges),
         summary: ItemFlowSummary {
             wins: totals.s_wins,
             losses: totals.s_losses,

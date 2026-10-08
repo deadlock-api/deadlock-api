@@ -2919,6 +2919,7 @@ dependencies = [
  "valveprotos",
  "wreq",
  "wreq-util",
+ "xxhash-rust",
  "zstd 0.14.0",
 ]
 

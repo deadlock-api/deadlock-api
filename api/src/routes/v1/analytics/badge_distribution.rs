@@ -1,10 +1,11 @@
+use crate::utils::sql::cached_ch_query;
 use axum::Json;
 use axum::extract::State;
 use axum::response::IntoResponse;
 use axum_extra::extract::Query;
-use cached::macros::cached;
 use clickhouse::Row;
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
 
@@ -154,25 +155,14 @@ fn build_query(query: &BadgeDistributionQuery) -> String {
     )
 }
 
-#[cached(
-    max_size = 1_000,
-    ttl_secs = 1800,
-    sync_writes = "by_key",
-    sync_writes_buckets = 1024,
-    convert = "{ query_str.to_string() }",
-    key = "String"
-)]
-async fn run_query(
-    ch_client: &clickhouse::Client,
-    query_str: &str,
-) -> clickhouse::error::Result<Vec<BadgeDistribution>> {
-    ch_client.query(query_str).fetch_all().await
+cached_ch_query! {
+    fn run_query(1_000, 1800) -> Vec<BadgeDistribution>;
 }
 
 async fn get_badge_distribution(
     ch_client: &clickhouse::Client,
     query: BadgeDistributionQuery,
-) -> APIResult<Vec<BadgeDistribution>> {
+) -> APIResult<Arc<Vec<BadgeDistribution>>> {
     let query_str = build_query(&query);
     debug!(?query_str);
     Ok(run_query(ch_client, &query_str).await?)

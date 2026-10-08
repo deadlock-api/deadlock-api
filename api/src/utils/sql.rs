@@ -99,6 +99,64 @@ impl MatchInfoFilters {
     }
 }
 
+/// Cache key of a query string: its 128-bit xxh3 hash. Keeping the hash instead of the string
+/// bounds a cache entry's key at 16 bytes whatever the query length; a collision between two
+/// distinct queries at 128 bits is not a practical concern.
+pub(crate) fn query_cache_key(query_str: &str) -> u128 {
+    xxhash_rust::xxh3::xxh3_128(query_str.as_bytes())
+}
+
+/// Declares an async fn `name(ch_client, query_str)` that runs a `ClickHouse` query and caches
+/// the result per query string for `ttl_secs`, keeping at most `max_size` entries.
+///
+/// Concurrent misses of one query share a single run (`sync_writes = "by_key"`; the bucket lock
+/// is also held on hits, so 1024 buckets keep unrelated queries apart). Rows come back in an
+/// `Arc`, so a hit costs no deep clone. The key is [`query_cache_key`].
+///
+/// `fn name(max_size, ttl_secs) -> Vec<Row>;` fetches all rows. `fn name(max_size, ttl_secs) -> T
+/// = fetch;` caches whatever `fetch(ch_client, query_str)` returns.
+macro_rules! cached_ch_query {
+    ($(#[$meta:meta])* $vis:vis fn $name:ident($size:literal, $ttl:literal) -> Vec<$row:ty>;) => {
+        $(#[$meta])*
+        #[::cached::macros::cached(
+            max_size = $size,
+            ttl_secs = $ttl,
+            sync_writes = "by_key",
+            sync_writes_buckets = 1024,
+            convert = "{ crate::utils::sql::query_cache_key(query_str) }",
+            key = "u128"
+        )]
+        $vis async fn $name(
+            ch_client: &::clickhouse::Client,
+            query_str: &str,
+        ) -> ::clickhouse::error::Result<::std::sync::Arc<Vec<$row>>> {
+            ch_client
+                .query(query_str)
+                .fetch_all()
+                .await
+                .map(::std::sync::Arc::new)
+        }
+    };
+    ($(#[$meta:meta])* $vis:vis fn $name:ident($size:literal, $ttl:literal) -> $ret:ty = $fetch:path;) => {
+        $(#[$meta])*
+        #[::cached::macros::cached(
+            max_size = $size,
+            ttl_secs = $ttl,
+            sync_writes = "by_key",
+            sync_writes_buckets = 1024,
+            convert = "{ crate::utils::sql::query_cache_key(query_str) }",
+            key = "u128"
+        )]
+        $vis async fn $name(
+            ch_client: &::clickhouse::Client,
+            query_str: &str,
+        ) -> ::clickhouse::error::Result<$ret> {
+            $fetch(ch_client, query_str).await
+        }
+    };
+}
+pub(crate) use cached_ch_query;
+
 /// Implements `match_info()` for a query struct that declares the match-info filter fields
 /// (`min_unix_timestamp` .. `max_duration_s`) itself. The fields are kept on each struct rather
 /// than in a `#[serde(flatten)]`ed one because flattening breaks number parsing from query strings.
@@ -250,6 +308,12 @@ mod tests {
             filters.predicates("", ROSTER_DURATION_COLUMN),
             ["match_duration_s >= 1", "match_duration_s <= 2"]
         );
+    }
+
+    #[test]
+    fn test_query_cache_key() {
+        assert_eq!(query_cache_key("SELECT 1"), query_cache_key("SELECT 1"));
+        assert_ne!(query_cache_key("SELECT 1"), query_cache_key("SELECT 2"));
     }
 
     #[test]

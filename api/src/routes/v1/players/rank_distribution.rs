@@ -1,9 +1,9 @@
+use crate::utils::sql::cached_ch_query;
 use crate::utils::sql::impl_match_info;
 use axum::Json;
 use axum::extract::State;
 use axum::response::IntoResponse;
 use axum_extra::extract::Query;
-use cached::macros::cached;
 use clickhouse::Row;
 use serde::{Deserialize, Serialize};
 use tracing::debug;
@@ -101,19 +101,8 @@ fn build_query(query: &RankDistributionQuery) -> String {
     )
 }
 
-#[cached(
-    max_size = 1_000,
-    ttl_secs = 600,
-    sync_writes = "by_key",
-    sync_writes_buckets = 1024,
-    convert = "{ query_str.to_string() }",
-    key = "String"
-)]
-async fn run_query(
-    ch_client: &clickhouse::Client,
-    query_str: &str,
-) -> clickhouse::error::Result<Vec<RankDistributionEntry>> {
-    ch_client.query(query_str).fetch_all().await
+cached_ch_query! {
+    fn run_query(1_000, 600) -> Vec<RankDistributionEntry>;
 }
 
 #[utoipa::path(

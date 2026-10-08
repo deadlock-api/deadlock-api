@@ -1,11 +1,12 @@
+use crate::utils::sql::cached_ch_query;
 use crate::utils::sql::impl_match_info;
 use axum::Json;
 use axum::extract::State;
 use axum::response::IntoResponse;
 use axum_extra::extract::Query;
-use cached::macros::cached;
 use clickhouse::Row;
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
 
@@ -255,19 +256,8 @@ fn into_response(rows: Vec<BuffStatsRow>) -> Vec<AnalyticsBuffStats> {
 
 // Concurrent misses of one query share a single run. by_key holds a hashed bucket lock (hits
 // included) for the whole query; this endpoint runs few queries at once, so collisions are rare.
-#[cached(
-    max_size = 5_000,
-    ttl_secs = 21600,
-    sync_writes = "by_key",
-    sync_writes_buckets = 1024,
-    convert = "{ query_str.to_string() }",
-    key = "String"
-)]
-async fn run_query(
-    ch_client: &clickhouse::Client,
-    query_str: &str,
-) -> clickhouse::error::Result<Vec<BuffStatsRow>> {
-    ch_client.query(query_str).fetch_all().await
+cached_ch_query! {
+    fn run_query(5_000, 21600) -> Vec<BuffStatsRow>;
 }
 
 async fn get_buff_stats(
@@ -277,7 +267,9 @@ async fn get_buff_stats(
     round_timestamps(&mut query.min_unix_timestamp, &mut query.max_unix_timestamp);
     let query_str = build_query(&query);
     debug!(?query_str);
-    Ok(into_response(run_query(ch_client, &query_str).await?))
+    Ok(into_response(Arc::unwrap_or_clone(
+        run_query(ch_client, &query_str).await?,
+    )))
 }
 
 #[utoipa::path(

@@ -1,3 +1,4 @@
+use crate::utils::sql::cached_ch_query;
 use crate::utils::sql::impl_match_info;
 use crate::utils::sql::{MAX_FILTERING_AVERAGE_BADGE, MIN_FILTERING_AVERAGE_BADGE};
 use axum::Json;
@@ -5,10 +6,10 @@ use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum_extra::extract::Query;
-use cached::macros::cached;
 use clickhouse::Row;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 use strum::Display;
 use tracing::{debug, warn};
 use utoipa::{IntoParams, ToSchema};
@@ -1275,65 +1276,32 @@ SETTINGS {settings_clause}
     )
 }
 
-#[cached(
-    max_size = 5_000,
-    ttl_secs = 21600,
-    sync_writes = "by_key",
-    sync_writes_buckets = 1024,
-    convert = "{ query_str.to_string() }",
-    key = "String"
-)]
-async fn run_query(
-    ch_client: &clickhouse::Client,
-    query_str: &str,
-) -> clickhouse::error::Result<Vec<ItemStats>> {
-    ch_client.query(query_str).fetch_all().await
+cached_ch_query! {
+    fn run_query(5_000, 21600) -> Vec<ItemStats>;
 }
 
-/// Separate cache for per-account base-table queries: ~100k a day, cheap (~30ms) and
-/// almost never repeated, they evicted the shared cache every ~15 minutes and made
-/// the expensive global queries (10s+) rerun several times per TTL.
-#[cached(
-    max_size = 1_000,
-    ttl_secs = 21600,
-    sync_writes = "by_key",
-    sync_writes_buckets = 1024,
-    convert = "{ query_str.to_string() }",
-    key = "String"
-)]
-async fn run_account_query(
-    ch_client: &clickhouse::Client,
-    query_str: &str,
-) -> clickhouse::error::Result<Vec<ItemStats>> {
-    ch_client.query(query_str).fetch_all().await
+cached_ch_query! {
+    /// Separate cache for per-account base-table queries: ~100k a day, cheap (~30ms) and
+    /// almost never repeated, they evicted the shared cache every ~15 minutes and made
+    /// the expensive global queries (10s+) rerun several times per TTL.
+    fn run_account_query(1_000, 21600) -> Vec<ItemStats>;
 }
 
-/// Separate cache for the pre-aggregated rollup queries (`item_stats_agg`, cohort and
-/// enemy rollups): the long tail of per-account base-table queries would otherwise
-/// evict these few, heavily repeated entries from the shared cache long before
-/// their TTL.
-#[cached(
-    max_size = 5_000,
-    ttl_secs = 21600,
-    sync_writes = "by_key",
-    sync_writes_buckets = 1024,
-    convert = "{ query_str.to_string() }",
-    key = "String"
-)]
-async fn run_rollup_query(
-    ch_client: &clickhouse::Client,
-    query_str: &str,
-) -> clickhouse::error::Result<Vec<ItemStats>> {
-    ch_client.query(query_str).fetch_all().await
+cached_ch_query! {
+    /// Separate cache for the pre-aggregated rollup queries (`item_stats_agg`, cohort and
+    /// enemy rollups): the long tail of per-account base-table queries would otherwise
+    /// evict these few, heavily repeated entries from the shared cache long before
+    /// their TTL.
+    fn run_rollup_query(5_000, 21600) -> Vec<ItemStats>;
 }
 
 async fn get_item_stats(
     ch_client: &clickhouse::Client,
     mut query: ItemStatsQuery,
-) -> APIResult<Vec<ItemStats>> {
+) -> APIResult<Arc<Vec<ItemStats>>> {
     round_timestamps(&mut query.min_unix_timestamp, &mut query.max_unix_timestamp);
     if query.corrupted_only_range_is_empty() {
-        return Ok(vec![]);
+        return Ok(Arc::default());
     }
     // Prefer the pre-aggregated item_stats_agg view for the global-meta subset of
     // parameters; fall back to the base table for everything else, and on any MV

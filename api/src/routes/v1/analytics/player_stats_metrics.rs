@@ -1,3 +1,4 @@
+use crate::utils::sql::cached_ch_query;
 use crate::utils::sql::impl_match_info;
 use std::collections::HashMap;
 
@@ -5,7 +6,6 @@ use axum::Json;
 use axum::extract::State;
 use axum::response::IntoResponse;
 use axum_extra::extract::Query;
-use cached::macros::cached;
 use clickhouse::Row;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
@@ -625,15 +625,11 @@ fn build_query(query: &PlayerStatsMetricsQuery) -> String {
 
 // Concurrent misses of one query share a single run. by_key holds a hashed bucket lock (hits
 // included) for the whole query; this endpoint runs few queries at once, so collisions are rare.
-#[cached(
-    max_size = 5_000,
-    ttl_secs = 21600,
-    sync_writes = "by_key",
-    sync_writes_buckets = 1024,
-    convert = "{ query_str.to_string() }",
-    key = "String"
-)]
-async fn run_query(
+cached_ch_query! {
+    fn run_query(5_000, 21600) -> AnalyticsPlayerStatsMetricsRow = fetch_one;
+}
+
+async fn fetch_one(
     ch_client: &clickhouse::Client,
     query_str: &str,
 ) -> clickhouse::error::Result<AnalyticsPlayerStatsMetricsRow> {

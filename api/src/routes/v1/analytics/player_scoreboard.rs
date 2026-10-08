@@ -1,3 +1,4 @@
+use crate::utils::sql::cached_ch_query;
 use crate::utils::sql::impl_match_info;
 use crate::utils::sql::{MAX_FILTERING_AVERAGE_BADGE, MIN_FILTERING_AVERAGE_BADGE};
 use std::sync::Arc;
@@ -7,7 +8,6 @@ use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum_extra::extract::Query;
-use cached::macros::cached;
 use clickhouse::Row;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
@@ -280,34 +280,12 @@ SETTINGS log_comment = 'player_scoreboard', apply_patch_parts = 0, do_not_merge_
 /// `LIMIT`: widening them to a block costs 10-35% more wall time (measured on 2026-10-04).
 const PAGE_BLOCK_SIZE: u32 = 10_000;
 
-#[cached(
-    max_size = 1_000,
-    ttl_secs = 21600,
-    sync_writes = "by_key",
-    sync_writes_buckets = 1024,
-    convert = "{ query_str.to_string() }",
-    key = "String"
-)]
-async fn run_query(
-    ch_client: &clickhouse::Client,
-    query_str: &str,
-) -> clickhouse::error::Result<Vec<PlayerEntry>> {
-    ch_client.query(query_str).fetch_all().await
+cached_ch_query! {
+    fn run_query(1_000, 21600) -> Vec<PlayerEntry>;
 }
 
-#[cached(
-    max_size = 100,
-    ttl_secs = 21600,
-    sync_writes = "by_key",
-    sync_writes_buckets = 1024,
-    convert = "{ query_str.to_string() }",
-    key = "String"
-)]
-async fn run_block_query(
-    ch_client: &clickhouse::Client,
-    query_str: &str,
-) -> clickhouse::error::Result<Arc<Vec<PlayerEntry>>> {
-    ch_client.query(query_str).fetch_all().await.map(Arc::new)
+cached_ch_query! {
+    fn run_block_query(100, 21600) -> Vec<PlayerEntry>;
 }
 
 /// The block-aligned queries covering ranks `offset..offset + limit`: at most two, as
@@ -329,7 +307,7 @@ fn build_block_queries(query: &PlayerScoreboardQuery, offset: u32, limit: u32) -
 async fn get_player_scoreboard(
     ch_client: &clickhouse::Client,
     mut query: PlayerScoreboardQuery,
-) -> APIResult<Vec<PlayerEntry>> {
+) -> APIResult<Arc<Vec<PlayerEntry>>> {
     round_timestamps(&mut query.min_unix_timestamp, &mut query.max_unix_timestamp);
     let offset = query.start.unwrap_or(1).max(1) - 1;
     let limit = query.limit.unwrap_or_default();
@@ -351,7 +329,7 @@ async fn get_player_scoreboard(
             break;
         }
     }
-    Ok(entries)
+    Ok(Arc::new(entries))
 }
 
 #[utoipa::path(

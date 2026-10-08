@@ -1,11 +1,12 @@
+use crate::utils::sql::cached_ch_query;
 use crate::utils::sql::impl_match_info;
 use std::collections::HashMap;
+use std::sync::Arc;
 
 use axum::Json;
 use axum::extract::State;
 use axum::response::IntoResponse;
 use axum_extra::extract::Query;
-use cached::macros::cached;
 use clickhouse::Row;
 use itertools::izip;
 use serde::{Deserialize, Serialize};
@@ -384,19 +385,8 @@ SETTINGS log_comment = 'lane_matchup_stats', apply_patch_parts = 0, max_threads 
     )
 }
 
-#[cached(
-    max_size = 5_000,
-    ttl_secs = 21600,
-    sync_writes = "by_key",
-    sync_writes_buckets = 1024,
-    convert = "{ query_str.to_string() }",
-    key = "String"
-)]
-async fn run_query(
-    ch_client: &clickhouse::Client,
-    query_str: &str,
-) -> clickhouse::error::Result<Vec<LaneMatchupStatsRow>> {
-    ch_client.query(query_str).fetch_all().await
+cached_ch_query! {
+    fn run_query(5_000, 21600) -> Vec<LaneMatchupStatsRow>;
 }
 
 fn to_response(row: LaneMatchupStatsRow, requested: &[LaneStat]) -> LaneMatchupStats {
@@ -457,7 +447,7 @@ async fn get_lane_matchup_stats(
         debug!(?ch_query);
         run_query(ch_client, &ch_query).await?
     };
-    Ok(rows
+    Ok(Arc::unwrap_or_clone(rows)
         .into_iter()
         .map(|row| to_response(row, &stats.requested))
         .collect())
