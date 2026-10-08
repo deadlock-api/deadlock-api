@@ -1,5 +1,6 @@
 use core::time::Duration;
 use std::collections::HashMap;
+use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use axum::Json;
@@ -9,7 +10,7 @@ use axum::response::IntoResponse;
 use base64::Engine;
 use base64::prelude::BASE64_STANDARD;
 use cached::macros::cached;
-use clickhouse::Row;
+use clickhouse::{Row, RowOwned, RowWrite};
 use futures::join;
 use prost::Message;
 use serde::Deserialize;
@@ -94,7 +95,7 @@ pub(crate) async fn fetch_leaderboard_raw(
 )]
 async fn fetch_all_steam_names(
     ch_client: &clickhouse::Client,
-) -> clickhouse::error::Result<HashMap<String, Vec<u32>>> {
+) -> clickhouse::error::Result<Arc<HashMap<String, Vec<u32>>>> {
     #[derive(serde::Deserialize, Row)]
     struct CHResponse {
         name: String,
@@ -119,107 +120,167 @@ async fn fetch_all_steam_names(
             .or_insert_with(Vec::new)
             .push(row.account_id);
     }
-    Ok(out)
+    Ok(Arc::new(out))
 }
 
-async fn insert_leaderboard_to_ch(
-    ch_client: &clickhouse::Client,
+/// Snapshots the current leaderboard into `leaderboard`, or a hero's into `hero_leaderboard`, in
+/// the background. Failures are only logged.
+fn spawn_snapshot(
+    ch_client: clickhouse::Client,
     region: LeaderboardRegion,
-    entries: &[c_msg_client_to_gc_get_leaderboard_response::LeaderboardEntry],
+    hero_id: Option<u32>,
+    entries: Vec<c_msg_client_to_gc_get_leaderboard_response::LeaderboardEntry>,
 ) {
-    #[expect(clippy::cast_possible_truncation)]
-    let Ok(now) = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map(|d| d.as_secs() as u32)
-    else {
-        warn!("Failed to get current time");
+    tokio::spawn(async move {
+        #[expect(clippy::cast_possible_truncation)]
+        let Ok(now) = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map(|d| d.as_secs() as u32)
+        else {
+            warn!("Failed to get current time");
+            return;
+        };
+
+        // Positions count every entry, also those without a rank, which are not stored.
+        #[expect(clippy::cast_possible_truncation)]
+        let ranked = entries
+            .iter()
+            .enumerate()
+            .filter_map(|(i, entry)| Some(((i as u32) + 1, entry.rank?, entry)));
+        let top_hero_ids =
+            |entry: &c_msg_client_to_gc_get_leaderboard_response::LeaderboardEntry| {
+                entry
+                    .top_hero_ids
+                    .iter()
+                    .map(|&h| u8::try_from(h).unwrap_or_default())
+                    .collect()
+            };
+        match hero_id {
+            None => {
+                let rows =
+                    ranked.map(
+                        |(leaderboard_position, rank, entry)| LeaderboardClickhouse {
+                            fetched_at: now,
+                            region: region as i8,
+                            account_name: entry.account_name.clone(),
+                            rank,
+                            leaderboard_position,
+                            top_hero_ids: top_hero_ids(entry),
+                        },
+                    );
+                insert_rows(&ch_client, "leaderboard", rows).await;
+            }
+            Some(hero_id) => {
+                let rows =
+                    ranked.map(
+                        |(leaderboard_position, rank, entry)| HeroLeaderboardClickhouse {
+                            fetched_at: now,
+                            region: region as i8,
+                            hero_id: u8::try_from(hero_id).unwrap_or_default(),
+                            account_name: entry.account_name.clone(),
+                            rank,
+                            leaderboard_position,
+                            top_hero_ids: top_hero_ids(entry),
+                        },
+                    );
+                insert_rows(&ch_client, "hero_leaderboard", rows).await;
+            }
+        }
+    });
+}
+
+async fn insert_rows<R: RowOwned + RowWrite>(
+    ch_client: &clickhouse::Client,
+    table: &str,
+    rows: impl Iterator<Item = R>,
+) {
+    let Ok(mut inserter) = ch_client.insert::<R>(table).await else {
+        warn!("Failed to create inserter for {table}");
         return;
     };
-
-    let Ok(mut inserter) = ch_client
-        .insert::<LeaderboardClickhouse>("leaderboard")
-        .await
-    else {
-        warn!("Failed to create inserter for leaderboard");
-        return;
-    };
-
-    for (i, entry) in entries.iter().enumerate() {
-        let Some(rank) = entry.rank else {
-            continue;
-        };
-        let row = LeaderboardClickhouse {
-            fetched_at: now,
-            region: region as i8,
-            account_name: entry.account_name.clone(),
-            rank,
-            #[expect(clippy::cast_possible_truncation)]
-            leaderboard_position: (i as u32) + 1,
-            top_hero_ids: entry
-                .top_hero_ids
-                .iter()
-                .map(|&h| u8::try_from(h).unwrap_or_default())
-                .collect(),
-        };
+    for row in rows {
         if let Err(e) = inserter.write(&row).await {
-            warn!("Failed to write leaderboard entry to CH: {e}");
+            warn!("Failed to write {table} entry to CH: {e}");
             return;
         }
     }
     if let Err(e) = inserter.end().await {
-        warn!("Failed to insert leaderboard to CH: {e}");
+        warn!("Failed to insert {table} to CH: {e}");
     }
 }
 
-async fn insert_hero_leaderboard_to_ch(
-    ch_client: &clickhouse::Client,
+async fn ensure_valid_hero_id(state: &AppState, hero_id: u32) -> APIResult<()> {
+    if state.assets_client.validate_hero_id(hero_id).await {
+        Ok(())
+    } else {
+        Err(APIError::status_msg(
+            StatusCode::BAD_REQUEST,
+            format!("Invalid hero_id: {hero_id}"),
+        ))
+    }
+}
+
+/// The leaderboard as the raw protobuf message. The current leaderboard is also snapshotted.
+async fn fetch_leaderboard_proto(
+    state: &AppState,
     region: LeaderboardRegion,
-    hero_id: u32,
-    entries: &[c_msg_client_to_gc_get_leaderboard_response::LeaderboardEntry],
-) {
-    #[expect(clippy::cast_possible_truncation)]
-    let Ok(now) = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map(|d| d.as_secs() as u32)
-    else {
-        warn!("Failed to get current time");
-        return;
-    };
+    hero_id: Option<u32>,
+    leaderboard_id: Option<u32>,
+) -> APIResult<Vec<u8>> {
+    let steam_response = tryhard::retry_fn(|| {
+        fetch_leaderboard_raw(&state.steam_client, region, hero_id, leaderboard_id)
+    })
+    .retries(3)
+    .fixed_backoff(Duration::from_millis(10))
+    .await?;
+    let decoded = BASE64_STANDARD.decode(&steam_response.data)?;
+    // Snapshots track the current leaderboard only; other leaderboards would mix seasons.
+    if leaderboard_id.is_none()
+        && let Ok(proto) = CMsgClientToGcGetLeaderboardResponse::decode(decoded.as_slice())
+    {
+        spawn_snapshot(state.ch_client.clone(), region, hero_id, proto.entries);
+    }
+    Ok(decoded)
+}
 
-    let Ok(mut inserter) = ch_client
-        .insert::<HeroLeaderboardClickhouse>("hero_leaderboard")
-        .await
-    else {
-        warn!("Failed to create inserter for hero_leaderboard");
-        return;
-    };
-
-    for (i, entry) in entries.iter().enumerate() {
-        let Some(rank) = entry.rank else {
-            continue;
-        };
-        let row = HeroLeaderboardClickhouse {
-            fetched_at: now,
-            region: region as i8,
-            hero_id: u8::try_from(hero_id).unwrap_or_default(),
-            account_name: entry.account_name.clone(),
-            rank,
-            #[expect(clippy::cast_possible_truncation)]
-            leaderboard_position: (i as u32) + 1,
-            top_hero_ids: entry
-                .top_hero_ids
-                .iter()
-                .map(|&h| u8::try_from(h).unwrap_or_default())
-                .collect(),
-        };
-        if let Err(e) = inserter.write(&row).await {
-            warn!("Failed to write hero_leaderboard entry to CH: {e}");
-            return;
+/// The parsed leaderboard, with each entry's possible account ids looked up by its name. The
+/// current leaderboard is also snapshotted.
+async fn fetch_leaderboard(
+    state: &AppState,
+    region: LeaderboardRegion,
+    hero_id: Option<u32>,
+    leaderboard_id: Option<u32>,
+) -> APIResult<Leaderboard> {
+    let (raw_leaderboard, steam_names) = join!(
+        fetch_leaderboard_raw(&state.steam_client, region, hero_id, leaderboard_id),
+        fetch_all_steam_names(&state.ch_client_ro),
+    );
+    let proto_leaderboard: SteamProxyResponse<CMsgClientToGcGetLeaderboardResponse> =
+        raw_leaderboard?.try_into()?;
+    // Snapshots track the current leaderboard only; other leaderboards would mix seasons.
+    if leaderboard_id.is_none() {
+        spawn_snapshot(
+            state.ch_client.clone(),
+            region,
+            hero_id,
+            proto_leaderboard.msg.entries.clone(),
+        );
+    }
+    let mut leaderboard: Leaderboard = proto_leaderboard.msg.try_into()?;
+    match steam_names {
+        Ok(steam_names) => {
+            for entry in &mut leaderboard.entries {
+                if let Some(ref account_name) = entry.account_name {
+                    entry.possible_account_ids =
+                        steam_names.get(account_name).cloned().unwrap_or_default();
+                }
+            }
+        }
+        Err(e) => {
+            warn!("Failed to fetch steam names: {e}");
         }
     }
-    if let Err(e) = inserter.end().await {
-        warn!("Failed to insert hero_leaderboard to CH: {e}");
-    }
+    Ok(leaderboard)
 }
 
 #[utoipa::path(
@@ -260,23 +321,7 @@ pub(super) async fn leaderboard_raw(
     Path(LeaderboardQuery { region }): Path<LeaderboardQuery>,
     Query(LeaderboardIdQuery { leaderboard_id }): Query<LeaderboardIdQuery>,
 ) -> APIResult<impl IntoResponse> {
-    let steam_response = tryhard::retry_fn(|| {
-        fetch_leaderboard_raw(&state.steam_client, region, None, leaderboard_id)
-    })
-    .retries(3)
-    .fixed_backoff(Duration::from_millis(10))
-    .await?;
-    let decoded = BASE64_STANDARD.decode(&steam_response.data)?;
-    // Snapshots track the current leaderboard only; other leaderboards would mix seasons.
-    if leaderboard_id.is_none()
-        && let Ok(proto) = CMsgClientToGcGetLeaderboardResponse::decode(decoded.as_slice())
-    {
-        let ch_client = state.ch_client.clone();
-        tokio::spawn(async move {
-            insert_leaderboard_to_ch(&ch_client, region, &proto.entries).await;
-        });
-    }
-    Ok(decoded)
+    fetch_leaderboard_proto(&state, region, None, leaderboard_id).await
 }
 
 #[utoipa::path(
@@ -317,29 +362,8 @@ pub(super) async fn leaderboard_hero_raw(
     Path(LeaderboardHeroQuery { region, hero_id }): Path<LeaderboardHeroQuery>,
     Query(LeaderboardIdQuery { leaderboard_id }): Query<LeaderboardIdQuery>,
 ) -> APIResult<impl IntoResponse> {
-    if !state.assets_client.validate_hero_id(hero_id).await {
-        return Err(APIError::status_msg(
-            StatusCode::BAD_REQUEST,
-            format!("Invalid hero_id: {hero_id}"),
-        ));
-    }
-    let steam_response = tryhard::retry_fn(|| {
-        fetch_leaderboard_raw(&state.steam_client, region, Some(hero_id), leaderboard_id)
-    })
-    .retries(3)
-    .fixed_backoff(Duration::from_millis(10))
-    .await?;
-    let decoded = BASE64_STANDARD.decode(&steam_response.data)?;
-    // Snapshots track the current leaderboard only; other leaderboards would mix seasons.
-    if leaderboard_id.is_none()
-        && let Ok(proto) = CMsgClientToGcGetLeaderboardResponse::decode(decoded.as_slice())
-    {
-        let ch_client = state.ch_client.clone();
-        tokio::spawn(async move {
-            insert_hero_leaderboard_to_ch(&ch_client, region, hero_id, &proto.entries).await;
-        });
-    }
-    Ok(decoded)
+    ensure_valid_hero_id(&state, hero_id).await?;
+    fetch_leaderboard_proto(&state, region, Some(hero_id), leaderboard_id).await
 }
 
 #[utoipa::path(
@@ -373,37 +397,9 @@ pub(super) async fn leaderboard(
     Path(LeaderboardQuery { region }): Path<LeaderboardQuery>,
     Query(LeaderboardIdQuery { leaderboard_id }): Query<LeaderboardIdQuery>,
 ) -> APIResult<impl IntoResponse> {
-    let (raw_leaderboard, steam_names) = join!(
-        fetch_leaderboard_raw(&state.steam_client, region, None, leaderboard_id),
-        fetch_all_steam_names(&state.ch_client_ro),
-    );
-    let proto_leaderboard: SteamProxyResponse<CMsgClientToGcGetLeaderboardResponse> =
-        raw_leaderboard?.try_into()?;
-    // Snapshots track the current leaderboard only; other leaderboards would mix seasons.
-    if leaderboard_id.is_none() {
-        let ch_client = state.ch_client.clone();
-        let entries = proto_leaderboard.msg.entries.clone();
-        tokio::spawn(async move {
-            insert_leaderboard_to_ch(&ch_client, region, &entries).await;
-        });
-    }
-    let mut leaderboard: APIResult<Leaderboard> = proto_leaderboard.msg.try_into();
-    match steam_names {
-        Ok(steam_names) => {
-            if let Ok(leaderboard) = &mut leaderboard {
-                for entry in &mut leaderboard.entries {
-                    if let Some(ref account_name) = entry.account_name {
-                        entry.possible_account_ids =
-                            steam_names.get(account_name).cloned().unwrap_or_default();
-                    }
-                }
-            }
-        }
-        Err(e) => {
-            warn!("Failed to fetch steam names: {e}");
-        }
-    }
-    leaderboard.map(Json)
+    fetch_leaderboard(&state, region, None, leaderboard_id)
+        .await
+        .map(Json)
 }
 
 #[utoipa::path(
@@ -437,41 +433,8 @@ pub(super) async fn leaderboard_hero(
     Path(LeaderboardHeroQuery { region, hero_id }): Path<LeaderboardHeroQuery>,
     Query(LeaderboardIdQuery { leaderboard_id }): Query<LeaderboardIdQuery>,
 ) -> APIResult<impl IntoResponse> {
-    if !state.assets_client.validate_hero_id(hero_id).await {
-        return Err(APIError::status_msg(
-            StatusCode::BAD_REQUEST,
-            format!("Invalid hero_id: {hero_id}"),
-        ));
-    }
-    let (raw_leaderboard, steam_names) = join!(
-        fetch_leaderboard_raw(&state.steam_client, region, hero_id.into(), leaderboard_id),
-        fetch_all_steam_names(&state.ch_client_ro),
-    );
-    let proto_leaderboard: SteamProxyResponse<CMsgClientToGcGetLeaderboardResponse> =
-        raw_leaderboard?.try_into()?;
-    // Snapshots track the current leaderboard only; other leaderboards would mix seasons.
-    if leaderboard_id.is_none() {
-        let ch_client = state.ch_client.clone();
-        let entries = proto_leaderboard.msg.entries.clone();
-        tokio::spawn(async move {
-            insert_hero_leaderboard_to_ch(&ch_client, region, hero_id, &entries).await;
-        });
-    }
-    let mut leaderboard: APIResult<Leaderboard> = proto_leaderboard.msg.try_into();
-    match steam_names {
-        Ok(steam_names) => {
-            if let Ok(leaderboard) = &mut leaderboard {
-                for entry in &mut leaderboard.entries {
-                    if let Some(ref account_name) = entry.account_name {
-                        entry.possible_account_ids =
-                            steam_names.get(account_name).cloned().unwrap_or_default();
-                    }
-                }
-            }
-        }
-        Err(e) => {
-            warn!("Failed to fetch steam names: {e}");
-        }
-    }
-    leaderboard.map(Json)
+    ensure_valid_hero_id(&state, hero_id).await?;
+    fetch_leaderboard(&state, region, Some(hero_id), leaderboard_id)
+        .await
+        .map(Json)
 }
