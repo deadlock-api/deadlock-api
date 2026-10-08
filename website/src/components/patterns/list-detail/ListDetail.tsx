@@ -1,4 +1,4 @@
-import { cloneElement, isValidElement } from "react";
+import { cloneElement, isValidElement, useEffect, useRef } from "react";
 
 import { Button } from "~/components/ui/button";
 import { Card } from "~/components/ui/card";
@@ -28,13 +28,19 @@ function ListDetailMain({ className, ...props }: React.ComponentProps<"section">
   return <section data-slot="list-detail-main" className={cn("flex min-w-0 flex-col gap-4", className)} {...props} />;
 }
 
+/** How long the arrow keys rest before the entry they stopped on opens, so a held key walks past the ones between. */
+const FOLLOW_DELAY_MS = 150;
+
 /**
  * The list: a `nav` named by `label` on an inset card, with an optional `header` (a count, a sort) above its
- * `ListDetailItem`s. It scrolls on its own once it holds more than its height.
+ * `ListDetailItem`s. It scrolls on its own once it holds more than its height. Up and Down move between the entries,
+ * Home and End jump to the first and the last.
  */
 function ListDetailAside({
   label,
   header,
+  selection = "focus",
+  height = "content",
   className,
   children,
   ...props
@@ -42,14 +48,56 @@ function ListDetailAside({
   /** The list's accessible name: "Patches", "Match history". */
   label: string;
   header?: React.ReactNode;
+  /**
+   * `focus`: the arrow keys only move focus, Enter opens. `follow`: the entry the keys stop on opens too, so the
+   * details can be walked through.
+   */
+  selection?: "focus" | "follow";
+  /**
+   * `content`: beside the details the list takes their height. `viewport`: it keeps `--list-pane-height`, however
+   * long or short the details are, and sticks to the top as the page scrolls.
+   */
+  height?: "content" | "viewport";
 }) {
+  const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  useEffect(() => () => clearTimeout(timer.current), []);
+
+  const onKeyDown = (event: React.KeyboardEvent<HTMLElement>) => {
+    if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+    const items = [...event.currentTarget.querySelectorAll<HTMLElement>('[data-slot="list-detail-item"]')];
+    const from = items.findIndex((item) => item === document.activeElement);
+    if (from === -1) return;
+    const last = items.length - 1;
+    const to =
+      event.key === "ArrowDown"
+        ? Math.min(from + 1, last)
+        : event.key === "ArrowUp"
+          ? Math.max(from - 1, 0)
+          : event.key === "Home"
+            ? 0
+            : event.key === "End"
+              ? last
+              : -1;
+    if (to === -1) return;
+    event.preventDefault();
+    const target = items[to];
+    target.focus();
+    if (selection === "follow" && to !== from) {
+      clearTimeout(timer.current);
+      timer.current = setTimeout(() => target.click(), FOLLOW_DELAY_MS);
+    }
+  };
+
   return (
     <aside
       data-slot="list-detail-aside"
       className={cn(
         // The card is out of flow, so beside the details the list takes their height instead of setting it, and
         // scrolls inside it. Under them on a narrow container it is a short scrolling box.
-        "relative h-104 min-w-0 @3xl/list-detail:order-first @3xl/list-detail:h-auto @3xl/list-detail:min-h-96",
+        "relative h-104 min-w-0 @3xl/list-detail:order-first",
+        height === "viewport"
+          ? "@3xl/list-detail:sticky @3xl/list-detail:top-4 @3xl/list-detail:h-list-pane @3xl/list-detail:self-start"
+          : "@3xl/list-detail:h-auto @3xl/list-detail:min-h-96",
         className,
       )}
       {...props}
@@ -61,7 +109,12 @@ function ListDetailAside({
             <Separator />
           </>
         )}
-        <nav aria-label={label} className={cn(SCROLLBAR_THIN, "min-h-0 flex-1 overflow-y-auto overscroll-contain")}>
+        {/* oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- the keys move focus between the links inside */}
+        <nav
+          aria-label={label}
+          onKeyDown={onKeyDown}
+          className={cn(SCROLLBAR_THIN, "min-h-0 flex-1 overflow-y-auto overscroll-contain")}
+        >
           {/* Clear of the card's rounded corners, which would clip the first and last rows. */}
           <ol className="py-1.5">{children}</ol>
         </nav>

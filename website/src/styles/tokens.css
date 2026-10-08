@@ -150,6 +150,9 @@
   --app-bar-height: 3.25rem;
   --floating-control-clearance: 4rem;
 
+  /* A list beside its details that keeps one height, however long the details are (`h-list-pane`). */
+  --list-pane-height: 80vh;
+
   /* Overflow cue: how far the fade at the edge of a scrolling list or table reaches (`scroll-fade-*`). */
   --scroll-fade-size: 3rem;
 
@@ -263,6 +266,7 @@
   /* App chrome on phones: `h-app-bar`, `pb-floating-clearance` */
   --spacing-app-bar: var(--app-bar-height);
   --spacing-floating-clearance: var(--floating-control-clearance);
+  --spacing-list-pane: var(--list-pane-height);
   --ease-standard: var(--ease-standard);
   --default-transition-duration: var(--duration-fast);
   --default-transition-timing-function: var(--ease-standard);

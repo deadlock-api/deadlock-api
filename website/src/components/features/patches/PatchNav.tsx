@@ -6,7 +6,7 @@ import { type PatchEntry, patchDate } from "~/lib/patches";
 /** Every patch, newest first; the newest lives at `/patches`. */
 export function PatchNav({ patches, currentId }: { patches: readonly PatchEntry[]; currentId: string | undefined }) {
   return (
-    <ListDetailAside label="Patches">
+    <ListDetailAside label="Patches" selection="follow" height="viewport">
       {patches.map((patch, index) => {
         const named = patch.shortName !== "Patch";
         return (
