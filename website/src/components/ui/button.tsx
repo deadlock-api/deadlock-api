@@ -10,8 +10,10 @@ const buttonVariants = cva(
   [
     "inline-flex shrink-0 items-center justify-center gap-2 rounded-md font-medium whitespace-nowrap transition-[color,background-color,border-color,box-shadow,opacity,transform]",
     FOCUS_RING_BORDER,
-    // Pressed is a nudge rather than a color, so it reads the same on every variant and next to a color-blind eye.
-    "active:translate-y-px aria-disabled:active:translate-y-0",
+    // Pressed is a nudge rather than a color, so it reads the same on every variant and next to a color-blind eye. It
+    // moves through `transform`, not the `translate` property a caller centres the button with (`-translate-y-1/2`),
+    // which the nudge would otherwise replace, dropping the button from under the pointer mid-click.
+    "active:[transform:translateY(1px)] aria-disabled:active:[transform:none]",
     DISABLED_STATE,
     // `aria-disabled` is the unavailable action that must stay focusable, so it keeps its events and only stops
     // reacting to the pointer.
