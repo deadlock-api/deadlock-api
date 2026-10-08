@@ -604,6 +604,15 @@ impl<'a> MatchShared<'a> {
 impl From<(&MatchShared<'_>, bool, &Players)> for ClickhouseMatchPlayer {
     fn from((shared, won, value): (&MatchShared<'_>, bool, &Players)) -> Self {
         let match_info = shared.match_info;
+        // One value per stats tick (or per item) for a field.
+        let stat = |field: fn(&PlayerStats) -> u32| -> Vec<u32> {
+            value.stats.iter().map(field).collect()
+        };
+        let gold = |source: EGoldSource, field: fn(&GoldSource) -> u32| {
+            gold_source_values(&value.stats, source, field)
+        };
+        let item =
+            |field: fn(&Items) -> u32| -> Vec<u32> { value.items.iter().map(field).collect() };
         let player_votes: Vec<&(HeroReleaseVoteCategory, HeroVote)> = shared
             .hero_votes
             .iter()
@@ -688,404 +697,184 @@ impl From<(&MatchShared<'_>, bool, &Players)> for ClickhouseMatchPlayer {
                 .iter()
                 .map(Deaths::death_duration_s)
                 .collect(),
-            items_game_time_s: value.items.iter().map(Items::game_time_s).collect(),
-            items_item_id: value.items.iter().map(Items::item_id).collect(),
-            items_upgrade_id: value.items.iter().map(Items::upgrade_id).collect(),
-            items_sold_time_s: value.items.iter().map(Items::sold_time_s).collect(),
-            items_flags: value.items.iter().map(Items::flags).collect(),
-            items_imbued_ability_id: value.items.iter().map(Items::imbued_ability_id).collect(),
-            items_upgrade_info: value.items.iter().map(Items::upgrade_info).collect(),
-            stats_time_stamp_s: value.stats.iter().map(PlayerStats::time_stamp_s).collect(),
-            stats_net_worth: value.stats.iter().map(PlayerStats::net_worth).collect(),
-            stats_gold_player: value.stats.iter().map(PlayerStats::gold_player).collect(),
-            stats_gold_player_orbs: value
-                .stats
-                .iter()
-                .map(PlayerStats::gold_player_orbs)
-                .collect(),
-            stats_gold_lane_creep_orbs: value
-                .stats
-                .iter()
-                .map(PlayerStats::gold_lane_creep_orbs)
-                .collect(),
-            stats_gold_neutral_creep_orbs: value
-                .stats
-                .iter()
-                .map(PlayerStats::gold_neutral_creep_orbs)
-                .collect(),
-            stats_gold_boss: value.stats.iter().map(PlayerStats::gold_boss).collect(),
-            stats_gold_boss_orb: value.stats.iter().map(PlayerStats::gold_boss_orb).collect(),
-            stats_gold_treasure: value.stats.iter().map(PlayerStats::gold_treasure).collect(),
-            stats_gold_denied: value.stats.iter().map(PlayerStats::gold_denied).collect(),
-            stats_gold_death_loss: value
-                .stats
-                .iter()
-                .map(PlayerStats::gold_death_loss)
-                .collect(),
-            stats_gold_lane_creep: value
-                .stats
-                .iter()
-                .map(PlayerStats::gold_lane_creep)
-                .collect(),
-            stats_gold_neutral_creep: value
-                .stats
-                .iter()
-                .map(PlayerStats::gold_neutral_creep)
-                .collect(),
-            stats_kills: value.stats.iter().map(PlayerStats::kills).collect(),
-            stats_deaths: value.stats.iter().map(PlayerStats::deaths).collect(),
-            stats_assists: value.stats.iter().map(PlayerStats::assists).collect(),
-            stats_creep_kills: value.stats.iter().map(PlayerStats::creep_kills).collect(),
-            stats_neutral_kills: value.stats.iter().map(PlayerStats::neutral_kills).collect(),
-            stats_possible_creeps: value
-                .stats
-                .iter()
-                .map(PlayerStats::possible_creeps)
-                .collect(),
-            stats_creep_damage: value.stats.iter().map(PlayerStats::creep_damage).collect(),
-            stats_player_damage: value.stats.iter().map(PlayerStats::player_damage).collect(),
-            stats_neutral_damage: value
-                .stats
-                .iter()
-                .map(PlayerStats::neutral_damage)
-                .collect(),
-            stats_boss_damage: value.stats.iter().map(PlayerStats::boss_damage).collect(),
-            stats_denies: value.stats.iter().map(PlayerStats::denies).collect(),
-            stats_player_healing: value
-                .stats
-                .iter()
-                .map(PlayerStats::player_healing)
-                .collect(),
-            stats_ability_points: value
-                .stats
-                .iter()
-                .map(PlayerStats::ability_points)
-                .collect(),
-            stats_self_healing: value.stats.iter().map(PlayerStats::self_healing).collect(),
-            stats_player_damage_taken: value
-                .stats
-                .iter()
-                .map(PlayerStats::player_damage_taken)
-                .collect(),
-            stats_max_health: value.stats.iter().map(PlayerStats::max_health).collect(),
-            stats_weapon_power: value.stats.iter().map(PlayerStats::weapon_power).collect(),
-            stats_tech_power: value.stats.iter().map(PlayerStats::tech_power).collect(),
-            stats_shots_hit: value.stats.iter().map(PlayerStats::shots_hit).collect(),
-            stats_shots_missed: value.stats.iter().map(PlayerStats::shots_missed).collect(),
-            stats_damage_absorbed: value
-                .stats
-                .iter()
-                .map(PlayerStats::damage_absorbed)
-                .collect(),
-            stats_absorption_provided: value
-                .stats
-                .iter()
-                .map(PlayerStats::absorption_provided)
-                .collect(),
-            stats_hero_bullets_hit: value
-                .stats
-                .iter()
-                .map(PlayerStats::hero_bullets_hit)
-                .collect(),
-            stats_hero_bullets_hit_crit: value
-                .stats
-                .iter()
-                .map(PlayerStats::hero_bullets_hit_crit)
-                .collect(),
-            stats_heal_prevented: value
-                .stats
-                .iter()
-                .map(PlayerStats::heal_prevented)
-                .collect(),
-            stats_heal_lost: value.stats.iter().map(PlayerStats::heal_lost).collect(),
-            stats_damage_mitigated: value
-                .stats
-                .iter()
-                .map(PlayerStats::damage_mitigated)
-                .collect(),
-            stats_level: value.stats.iter().map(PlayerStats::level).collect(),
-            stats_player_barriering: value
-                .stats
-                .iter()
-                .map(PlayerStats::player_barriering)
-                .collect(),
-            stats_teammate_healing: value
-                .stats
-                .iter()
-                .map(PlayerStats::teammate_healing)
-                .collect(),
-            stats_teammate_barriering: value
-                .stats
-                .iter()
-                .map(PlayerStats::teammate_barriering)
-                .collect(),
-            stats_self_damage: value.stats.iter().map(PlayerStats::self_damage).collect(),
-            stats_bullet_kills: value.stats.iter().map(PlayerStats::bullet_kills).collect(),
-            stats_melee_kills: value.stats.iter().map(PlayerStats::melee_kills).collect(),
-            stats_ability_kills: value.stats.iter().map(PlayerStats::ability_kills).collect(),
-            stats_headshot_kills: value
-                .stats
-                .iter()
-                .map(PlayerStats::headshot_kills)
-                .collect(),
+            items_game_time_s: item(Items::game_time_s),
+            items_item_id: item(Items::item_id),
+            items_upgrade_id: item(Items::upgrade_id),
+            items_sold_time_s: item(Items::sold_time_s),
+            items_flags: item(Items::flags),
+            items_imbued_ability_id: item(Items::imbued_ability_id),
+            items_upgrade_info: item(Items::upgrade_info),
+            stats_time_stamp_s: stat(PlayerStats::time_stamp_s),
+            stats_net_worth: stat(PlayerStats::net_worth),
+            stats_gold_player: stat(PlayerStats::gold_player),
+            stats_gold_player_orbs: stat(PlayerStats::gold_player_orbs),
+            stats_gold_lane_creep_orbs: stat(PlayerStats::gold_lane_creep_orbs),
+            stats_gold_neutral_creep_orbs: stat(PlayerStats::gold_neutral_creep_orbs),
+            stats_gold_boss: stat(PlayerStats::gold_boss),
+            stats_gold_boss_orb: stat(PlayerStats::gold_boss_orb),
+            stats_gold_treasure: stat(PlayerStats::gold_treasure),
+            stats_gold_denied: stat(PlayerStats::gold_denied),
+            stats_gold_death_loss: stat(PlayerStats::gold_death_loss),
+            stats_gold_lane_creep: stat(PlayerStats::gold_lane_creep),
+            stats_gold_neutral_creep: stat(PlayerStats::gold_neutral_creep),
+            stats_kills: stat(PlayerStats::kills),
+            stats_deaths: stat(PlayerStats::deaths),
+            stats_assists: stat(PlayerStats::assists),
+            stats_creep_kills: stat(PlayerStats::creep_kills),
+            stats_neutral_kills: stat(PlayerStats::neutral_kills),
+            stats_possible_creeps: stat(PlayerStats::possible_creeps),
+            stats_creep_damage: stat(PlayerStats::creep_damage),
+            stats_player_damage: stat(PlayerStats::player_damage),
+            stats_neutral_damage: stat(PlayerStats::neutral_damage),
+            stats_boss_damage: stat(PlayerStats::boss_damage),
+            stats_denies: stat(PlayerStats::denies),
+            stats_player_healing: stat(PlayerStats::player_healing),
+            stats_ability_points: stat(PlayerStats::ability_points),
+            stats_self_healing: stat(PlayerStats::self_healing),
+            stats_player_damage_taken: stat(PlayerStats::player_damage_taken),
+            stats_max_health: stat(PlayerStats::max_health),
+            stats_weapon_power: stat(PlayerStats::weapon_power),
+            stats_tech_power: stat(PlayerStats::tech_power),
+            stats_shots_hit: stat(PlayerStats::shots_hit),
+            stats_shots_missed: stat(PlayerStats::shots_missed),
+            stats_damage_absorbed: stat(PlayerStats::damage_absorbed),
+            stats_absorption_provided: stat(PlayerStats::absorption_provided),
+            stats_hero_bullets_hit: stat(PlayerStats::hero_bullets_hit),
+            stats_hero_bullets_hit_crit: stat(PlayerStats::hero_bullets_hit_crit),
+            stats_heal_prevented: stat(PlayerStats::heal_prevented),
+            stats_heal_lost: stat(PlayerStats::heal_lost),
+            stats_damage_mitigated: stat(PlayerStats::damage_mitigated),
+            stats_level: stat(PlayerStats::level),
+            stats_player_barriering: stat(PlayerStats::player_barriering),
+            stats_teammate_healing: stat(PlayerStats::teammate_healing),
+            stats_teammate_barriering: stat(PlayerStats::teammate_barriering),
+            stats_self_damage: stat(PlayerStats::self_damage),
+            stats_bullet_kills: stat(PlayerStats::bullet_kills),
+            stats_melee_kills: stat(PlayerStats::melee_kills),
+            stats_ability_kills: stat(PlayerStats::ability_kills),
+            stats_headshot_kills: stat(PlayerStats::headshot_kills),
             custom_user_stats_deltas: custom_user_stats_deltas(match_info, &value.stats),
-            stats_gold_source_players_kills: gold_source_values(
-                &value.stats,
-                EGoldSource::KEPlayers,
-                GoldSource::kills,
-            ),
-            stats_gold_source_players_damage: gold_source_values(
-                &value.stats,
-                EGoldSource::KEPlayers,
-                GoldSource::damage,
-            ),
-            stats_gold_source_players_gold: gold_source_values(
-                &value.stats,
-                EGoldSource::KEPlayers,
-                GoldSource::gold,
-            ),
-            stats_gold_source_players_gold_orbs: gold_source_values(
-                &value.stats,
+            stats_gold_source_players_kills: gold(EGoldSource::KEPlayers, GoldSource::kills),
+            stats_gold_source_players_damage: gold(EGoldSource::KEPlayers, GoldSource::damage),
+            stats_gold_source_players_gold: gold(EGoldSource::KEPlayers, GoldSource::gold),
+            stats_gold_source_players_gold_orbs: gold(
                 EGoldSource::KEPlayers,
                 GoldSource::gold_orbs,
             ),
-            stats_gold_source_lane_creeps_kills: gold_source_values(
-                &value.stats,
-                EGoldSource::KELaneCreeps,
-                GoldSource::kills,
-            ),
-            stats_gold_source_lane_creeps_damage: gold_source_values(
-                &value.stats,
+            stats_gold_source_lane_creeps_kills: gold(EGoldSource::KELaneCreeps, GoldSource::kills),
+            stats_gold_source_lane_creeps_damage: gold(
                 EGoldSource::KELaneCreeps,
                 GoldSource::damage,
             ),
-            stats_gold_source_lane_creeps_gold: gold_source_values(
-                &value.stats,
-                EGoldSource::KELaneCreeps,
-                GoldSource::gold,
-            ),
-            stats_gold_source_lane_creeps_gold_orbs: gold_source_values(
-                &value.stats,
+            stats_gold_source_lane_creeps_gold: gold(EGoldSource::KELaneCreeps, GoldSource::gold),
+            stats_gold_source_lane_creeps_gold_orbs: gold(
                 EGoldSource::KELaneCreeps,
                 GoldSource::gold_orbs,
             ),
-            stats_gold_source_neutrals_kills: gold_source_values(
-                &value.stats,
-                EGoldSource::KENeutrals,
-                GoldSource::kills,
-            ),
-            stats_gold_source_neutrals_damage: gold_source_values(
-                &value.stats,
-                EGoldSource::KENeutrals,
-                GoldSource::damage,
-            ),
-            stats_gold_source_neutrals_gold: gold_source_values(
-                &value.stats,
-                EGoldSource::KENeutrals,
-                GoldSource::gold,
-            ),
-            stats_gold_source_neutrals_gold_orbs: gold_source_values(
-                &value.stats,
+            stats_gold_source_neutrals_kills: gold(EGoldSource::KENeutrals, GoldSource::kills),
+            stats_gold_source_neutrals_damage: gold(EGoldSource::KENeutrals, GoldSource::damage),
+            stats_gold_source_neutrals_gold: gold(EGoldSource::KENeutrals, GoldSource::gold),
+            stats_gold_source_neutrals_gold_orbs: gold(
                 EGoldSource::KENeutrals,
                 GoldSource::gold_orbs,
             ),
-            stats_gold_source_bosses_kills: gold_source_values(
-                &value.stats,
-                EGoldSource::KEBosses,
-                GoldSource::kills,
-            ),
-            stats_gold_source_bosses_damage: gold_source_values(
-                &value.stats,
-                EGoldSource::KEBosses,
-                GoldSource::damage,
-            ),
-            stats_gold_source_bosses_gold: gold_source_values(
-                &value.stats,
-                EGoldSource::KEBosses,
-                GoldSource::gold,
-            ),
-            stats_gold_source_bosses_gold_orbs: gold_source_values(
-                &value.stats,
-                EGoldSource::KEBosses,
-                GoldSource::gold_orbs,
-            ),
-            stats_gold_source_treasure_kills: gold_source_values(
-                &value.stats,
-                EGoldSource::KETreasure,
-                GoldSource::kills,
-            ),
-            stats_gold_source_treasure_damage: gold_source_values(
-                &value.stats,
-                EGoldSource::KETreasure,
-                GoldSource::damage,
-            ),
-            stats_gold_source_treasure_gold: gold_source_values(
-                &value.stats,
-                EGoldSource::KETreasure,
-                GoldSource::gold,
-            ),
-            stats_gold_source_treasure_gold_orbs: gold_source_values(
-                &value.stats,
+            stats_gold_source_bosses_kills: gold(EGoldSource::KEBosses, GoldSource::kills),
+            stats_gold_source_bosses_damage: gold(EGoldSource::KEBosses, GoldSource::damage),
+            stats_gold_source_bosses_gold: gold(EGoldSource::KEBosses, GoldSource::gold),
+            stats_gold_source_bosses_gold_orbs: gold(EGoldSource::KEBosses, GoldSource::gold_orbs),
+            stats_gold_source_treasure_kills: gold(EGoldSource::KETreasure, GoldSource::kills),
+            stats_gold_source_treasure_damage: gold(EGoldSource::KETreasure, GoldSource::damage),
+            stats_gold_source_treasure_gold: gold(EGoldSource::KETreasure, GoldSource::gold),
+            stats_gold_source_treasure_gold_orbs: gold(
                 EGoldSource::KETreasure,
                 GoldSource::gold_orbs,
             ),
-            stats_gold_source_assists_kills: gold_source_values(
-                &value.stats,
-                EGoldSource::KEAssists,
-                GoldSource::kills,
-            ),
-            stats_gold_source_assists_damage: gold_source_values(
-                &value.stats,
-                EGoldSource::KEAssists,
-                GoldSource::damage,
-            ),
-            stats_gold_source_assists_gold: gold_source_values(
-                &value.stats,
-                EGoldSource::KEAssists,
-                GoldSource::gold,
-            ),
-            stats_gold_source_assists_gold_orbs: gold_source_values(
-                &value.stats,
+            stats_gold_source_assists_kills: gold(EGoldSource::KEAssists, GoldSource::kills),
+            stats_gold_source_assists_damage: gold(EGoldSource::KEAssists, GoldSource::damage),
+            stats_gold_source_assists_gold: gold(EGoldSource::KEAssists, GoldSource::gold),
+            stats_gold_source_assists_gold_orbs: gold(
                 EGoldSource::KEAssists,
                 GoldSource::gold_orbs,
             ),
-            stats_gold_source_denies_kills: gold_source_values(
-                &value.stats,
-                EGoldSource::KEDenies,
-                GoldSource::kills,
-            ),
-            stats_gold_source_denies_damage: gold_source_values(
-                &value.stats,
-                EGoldSource::KEDenies,
-                GoldSource::damage,
-            ),
-            stats_gold_source_denies_gold: gold_source_values(
-                &value.stats,
-                EGoldSource::KEDenies,
-                GoldSource::gold,
-            ),
-            stats_gold_source_denies_gold_orbs: gold_source_values(
-                &value.stats,
-                EGoldSource::KEDenies,
-                GoldSource::gold_orbs,
-            ),
-            stats_gold_source_team_bonus_kills: gold_source_values(
-                &value.stats,
-                EGoldSource::KETeamBonus,
-                GoldSource::kills,
-            ),
-            stats_gold_source_team_bonus_damage: gold_source_values(
-                &value.stats,
-                EGoldSource::KETeamBonus,
-                GoldSource::damage,
-            ),
-            stats_gold_source_team_bonus_gold: gold_source_values(
-                &value.stats,
-                EGoldSource::KETeamBonus,
-                GoldSource::gold,
-            ),
-            stats_gold_source_team_bonus_gold_orbs: gold_source_values(
-                &value.stats,
+            stats_gold_source_denies_kills: gold(EGoldSource::KEDenies, GoldSource::kills),
+            stats_gold_source_denies_damage: gold(EGoldSource::KEDenies, GoldSource::damage),
+            stats_gold_source_denies_gold: gold(EGoldSource::KEDenies, GoldSource::gold),
+            stats_gold_source_denies_gold_orbs: gold(EGoldSource::KEDenies, GoldSource::gold_orbs),
+            stats_gold_source_team_bonus_kills: gold(EGoldSource::KETeamBonus, GoldSource::kills),
+            stats_gold_source_team_bonus_damage: gold(EGoldSource::KETeamBonus, GoldSource::damage),
+            stats_gold_source_team_bonus_gold: gold(EGoldSource::KETeamBonus, GoldSource::gold),
+            stats_gold_source_team_bonus_gold_orbs: gold(
                 EGoldSource::KETeamBonus,
                 GoldSource::gold_orbs,
             ),
-            stats_gold_source_ability_assassinate_kills: gold_source_values(
-                &value.stats,
+            stats_gold_source_ability_assassinate_kills: gold(
                 EGoldSource::KEAbilityAssassinate,
                 GoldSource::kills,
             ),
-            stats_gold_source_ability_assassinate_damage: gold_source_values(
-                &value.stats,
+            stats_gold_source_ability_assassinate_damage: gold(
                 EGoldSource::KEAbilityAssassinate,
                 GoldSource::damage,
             ),
-            stats_gold_source_ability_assassinate_gold: gold_source_values(
-                &value.stats,
+            stats_gold_source_ability_assassinate_gold: gold(
                 EGoldSource::KEAbilityAssassinate,
                 GoldSource::gold,
             ),
-            stats_gold_source_ability_assassinate_gold_orbs: gold_source_values(
-                &value.stats,
+            stats_gold_source_ability_assassinate_gold_orbs: gold(
                 EGoldSource::KEAbilityAssassinate,
                 GoldSource::gold_orbs,
             ),
-            stats_gold_source_item_trophy_collector_kills: gold_source_values(
-                &value.stats,
+            stats_gold_source_item_trophy_collector_kills: gold(
                 EGoldSource::KEItemTrophyCollector,
                 GoldSource::kills,
             ),
-            stats_gold_source_item_trophy_collector_damage: gold_source_values(
-                &value.stats,
+            stats_gold_source_item_trophy_collector_damage: gold(
                 EGoldSource::KEItemTrophyCollector,
                 GoldSource::damage,
             ),
-            stats_gold_source_item_trophy_collector_gold: gold_source_values(
-                &value.stats,
+            stats_gold_source_item_trophy_collector_gold: gold(
                 EGoldSource::KEItemTrophyCollector,
                 GoldSource::gold,
             ),
-            stats_gold_source_item_trophy_collector_gold_orbs: gold_source_values(
-                &value.stats,
+            stats_gold_source_item_trophy_collector_gold_orbs: gold(
                 EGoldSource::KEItemTrophyCollector,
                 GoldSource::gold_orbs,
             ),
-            stats_gold_source_item_cultist_sacrifice_kills: gold_source_values(
-                &value.stats,
+            stats_gold_source_item_cultist_sacrifice_kills: gold(
                 EGoldSource::KEItemCultistSacrifice,
                 GoldSource::kills,
             ),
-            stats_gold_source_item_cultist_sacrifice_damage: gold_source_values(
-                &value.stats,
+            stats_gold_source_item_cultist_sacrifice_damage: gold(
                 EGoldSource::KEItemCultistSacrifice,
                 GoldSource::damage,
             ),
-            stats_gold_source_item_cultist_sacrifice_gold: gold_source_values(
-                &value.stats,
+            stats_gold_source_item_cultist_sacrifice_gold: gold(
                 EGoldSource::KEItemCultistSacrifice,
                 GoldSource::gold,
             ),
-            stats_gold_source_item_cultist_sacrifice_gold_orbs: gold_source_values(
-                &value.stats,
+            stats_gold_source_item_cultist_sacrifice_gold_orbs: gold(
                 EGoldSource::KEItemCultistSacrifice,
                 GoldSource::gold_orbs,
             ),
-            stats_gold_source_breakable_kills: gold_source_values(
-                &value.stats,
-                EGoldSource::KEBreakable,
-                GoldSource::kills,
-            ),
-            stats_gold_source_breakable_damage: gold_source_values(
-                &value.stats,
-                EGoldSource::KEBreakable,
-                GoldSource::damage,
-            ),
-            stats_gold_source_breakable_gold: gold_source_values(
-                &value.stats,
-                EGoldSource::KEBreakable,
-                GoldSource::gold,
-            ),
-            stats_gold_source_breakable_gold_orbs: gold_source_values(
-                &value.stats,
+            stats_gold_source_breakable_kills: gold(EGoldSource::KEBreakable, GoldSource::kills),
+            stats_gold_source_breakable_damage: gold(EGoldSource::KEBreakable, GoldSource::damage),
+            stats_gold_source_breakable_gold: gold(EGoldSource::KEBreakable, GoldSource::gold),
+            stats_gold_source_breakable_gold_orbs: gold(
                 EGoldSource::KEBreakable,
                 GoldSource::gold_orbs,
             ),
-            stats_gold_source_item_goose_egg_kills: gold_source_values(
-                &value.stats,
+            stats_gold_source_item_goose_egg_kills: gold(
                 EGoldSource::KEItemGooseEgg,
                 GoldSource::kills,
             ),
-            stats_gold_source_item_goose_egg_damage: gold_source_values(
-                &value.stats,
+            stats_gold_source_item_goose_egg_damage: gold(
                 EGoldSource::KEItemGooseEgg,
                 GoldSource::damage,
             ),
-            stats_gold_source_item_goose_egg_gold: gold_source_values(
-                &value.stats,
+            stats_gold_source_item_goose_egg_gold: gold(
                 EGoldSource::KEItemGooseEgg,
                 GoldSource::gold,
             ),
-            stats_gold_source_item_goose_egg_gold_orbs: gold_source_values(
-                &value.stats,
+            stats_gold_source_item_goose_egg_gold_orbs: gold(
                 EGoldSource::KEItemGooseEgg,
                 GoldSource::gold_orbs,
             ),
