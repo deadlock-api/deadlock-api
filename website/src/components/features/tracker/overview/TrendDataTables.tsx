@@ -5,6 +5,7 @@ import { RankDelta } from "~/components/features/tracker/shared/RankDelta";
 import { useTrackerTime } from "~/components/features/tracker/shared/useTrackerTime";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { Button } from "~/components/ui/button";
+import { NoValue } from "~/components/ui/no-value";
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { Tooltip } from "~/components/ui/tooltip";
 import type { Activity, RankHistoryPoint } from "~/lib/tracker/compute";
@@ -109,7 +110,7 @@ export function RankHistoryTable({
               <TableCell className="whitespace-normal">{rankName(point.badge)}</TableCell>
               <TableCell className="text-end tabular-nums">
                 {point.delta == null ? (
-                  <span className="text-muted-foreground">—</span>
+                  <NoValue label="Not recorded" />
                 ) : point.delta === 0 ? (
                   "0"
                 ) : (
@@ -198,7 +199,7 @@ export function ActivityTable({
                 {bucket.wins}W / {bucket.losses}L
               </TableCell>
               <TableCell className="text-end tabular-nums">
-                {matches ? `${((bucket.wins / matches) * 100).toFixed(1)}%` : "—"}
+                {matches ? `${((bucket.wins / matches) * 100).toFixed(1)}%` : <NoValue label="No matches" />}
               </TableCell>
             </TableRow>
           );

@@ -18,6 +18,7 @@ import {
 import { PanelWithDetails } from "~/components/patterns/panel/PanelWithDetails";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { InlineStat } from "~/components/ui/inline-stat";
+import { NoValue } from "~/components/ui/no-value";
 import {
   Tooltip as HoverTooltip,
   TooltipCard,
@@ -217,7 +218,15 @@ function RankTooltip({
         <TooltipStat label="Match" value={point.matchId} />
         <TooltipStat
           label="Rank progress"
-          value={point.delta == null ? "—" : point.delta === 0 ? "0" : <RankDelta value={point.delta} />}
+          value={
+            point.delta == null ? (
+              <NoValue label="Not recorded" />
+            ) : point.delta === 0 ? (
+              "0"
+            ) : (
+              <RankDelta value={point.delta} />
+            )
+          }
         />
       </TooltipStats>
     </TooltipCard>
@@ -245,7 +254,10 @@ function ActivityTooltip({
       <TooltipStats>
         <TooltipStat label="Wins" value={point.wins} className="text-positive" />
         <TooltipStat label="Losses" value={point.losses} className="text-negative" />
-        <TooltipStat label="Win rate" value={total > 0 ? `${Math.round((point.wins / total) * 100)}%` : "—"} />
+        <TooltipStat
+          label="Win rate"
+          value={total > 0 ? `${Math.round((point.wins / total) * 100)}%` : <NoValue label="No matches" />}
+        />
       </TooltipStats>
     </TooltipCard>
   );

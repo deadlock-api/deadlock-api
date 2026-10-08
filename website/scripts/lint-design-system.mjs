@@ -211,6 +211,14 @@ const RULES = [
     skip: insideSystem,
   },
   {
+    id: "raw-no-value",
+    message:
+      'hand-typed "—" placeholder; use NoValue (it names the gap for screen readers), or pass no value to Stat, InlineStat or KeyValue',
+    // A dash as a JSX text child or as a whole string value; a prop set to one (`nullLabel="—"`) is the prop's API.
+    pattern: />\s*—\s*<|(?<![=\w])(["'`])—\1/g,
+    skip: (rel) => !COMPOSED(rel) || !rel.endsWith(".tsx"),
+  },
+  {
     id: "raw-loading",
     message: "hand-rolled loading indicator; use Spinner or LoadingState",
     pattern: /animate-spin/g,

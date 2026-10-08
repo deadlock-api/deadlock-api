@@ -1,3 +1,4 @@
+import { NoValue } from "~/components/ui/no-value";
 import { TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
 import { formatShare } from "~/lib/format";
 import type { PlayerStatColumn } from "~/lib/tracker/player-stats";
@@ -35,7 +36,7 @@ export function TeamStatsDetails({
                   {Math.round(total).toLocaleString("en-US")}
                   <span className="text-muted-foreground">
                     {" "}
-                    · {lobbyTotal > 0 ? formatShare(total / lobbyTotal) : "—"}
+                    · {lobbyTotal > 0 ? formatShare(total / lobbyTotal) : <NoValue label="No lobby total" />}
                   </span>
                 </>
               }

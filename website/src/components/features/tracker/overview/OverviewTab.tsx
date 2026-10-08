@@ -15,6 +15,7 @@ import { Card, CardContent } from "~/components/ui/card";
 import { Heading } from "~/components/ui/heading";
 import { IconTile } from "~/components/ui/icon-tile";
 import { KeyValue, KeyValueList } from "~/components/ui/key-value";
+import { NoValue } from "~/components/ui/no-value";
 import { ProgressBar } from "~/components/ui/progress-bar";
 import { Stat, StatGroup } from "~/components/ui/stat";
 import { Tooltip, TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
@@ -140,7 +141,7 @@ export function OverviewTab({
     },
     {
       label: "Rank progress",
-      value: s.rankDelta == null ? "—" : signed(s.rankDelta),
+      value: s.rankDelta == null ? null : signed(s.rankDelta),
       detail: s.rankDelta == null ? "No recorded rank changes" : "Recorded progress points",
     },
   ];
@@ -340,7 +341,9 @@ export function OverviewTab({
                       {label}
                       {record && <ArrowUpRight aria-hidden="true" className="size-3 shrink-0" />}
                     </span>
-                    <span className="text-base font-semibold tabular-nums">{record ? format(record.value) : "—"}</span>
+                    <span className="text-base font-semibold tabular-nums">
+                      {record ? format(record.value) : <NoValue label="Not recorded" />}
+                    </span>
                     {record ? (
                       <span className="flex min-w-0 items-center gap-1">
                         <span aria-hidden="true">
@@ -382,7 +385,7 @@ function SplitRows({ label, rows }: { label: string; rows: OutcomeSplit[] }) {
             <span className="min-w-0">{row.label}</span>
             <span className="min-w-6 text-end text-muted-foreground tabular-nums">{integer(row.matches)}</span>
             <span className="min-w-7 text-end font-medium tabular-nums">
-              {row.matches ? `${Math.round((row.wins / row.matches) * 100)}%` : "—"}
+              {row.matches ? `${Math.round((row.wins / row.matches) * 100)}%` : <NoValue label="No matches" />}
             </span>
             <ProgressBar
               variant="thin"

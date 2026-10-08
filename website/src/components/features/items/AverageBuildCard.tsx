@@ -6,6 +6,7 @@ import { ChartLegend, ChartLegendItem } from "~/components/patterns/charts/Chart
 import { Badge } from "~/components/ui/badge";
 import { Card } from "~/components/ui/card";
 import { CornerBadge } from "~/components/ui/corner-badge";
+import { NoValue } from "~/components/ui/no-value";
 import { Segmented, SegmentedItem } from "~/components/ui/segmented";
 import { Separator } from "~/components/ui/separator";
 import { Stack } from "~/components/ui/stack";
@@ -110,7 +111,7 @@ function PhaseRow({ label, entries }: { label: string; entries: TimelineEntry[] 
             />
           ))
         ) : (
-          <span className="text-xs text-muted-foreground italic">—</span>
+          <NoValue label="No items" className="text-xs" />
         )}
       </div>
     </div>

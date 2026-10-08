@@ -1,5 +1,5 @@
 import { useQueries, useQuery } from "@tanstack/react-query";
-import { ArrowDown, ArrowUp, Minus, TrendingDown, TrendingUp } from "lucide-react";
+import { Minus, TrendingDown, TrendingUp } from "lucide-react";
 import { parseAsBoolean, parseAsStringLiteral, useQueryState } from "nuqs";
 import { useMemo } from "react";
 
@@ -8,8 +8,9 @@ import { SortableHeader } from "~/components/patterns/data-table/SortableHeader"
 import { TableEmptyRow } from "~/components/patterns/data-table/TableEmptyRow";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
-import { Badge } from "~/components/ui/badge";
+import { Delta } from "~/components/ui/delta";
 import { useSort } from "~/components/ui/hooks/use-sort";
+import { NoValue } from "~/components/ui/no-value";
 import { SortButton, ariaSort } from "~/components/ui/sort-button";
 import { Stack } from "~/components/ui/stack";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
@@ -200,7 +201,7 @@ export function HeroStatsByExperienceTable({
   });
 
   const formatValue = (val: number | null) => {
-    if (val === null) return <span className="text-muted-foreground">-</span>;
+    if (val === null) return <NoValue label="No reading" />;
     if (isPercentStat) return `${val.toFixed(1)}%`;
     return val.toLocaleString(undefined, { maximumFractionDigits: 1 });
   };
@@ -245,7 +246,13 @@ export function HeroStatsByExperienceTable({
                   bucketLabel={EXPERIENCE_BUCKETS[i].label}
                   heroStat={heroStat}
                 >
-                  <DeltaBadge delta={row.bucketDeltas[i]} isPercent={isPercentStat} />
+                  <Delta
+                    value={row.bucketDeltas[i]}
+                    format="number"
+                    unit={isPercentStat ? "%" : undefined}
+                    sign="arrow"
+                    display="badge"
+                  />
                 </DeltaTooltip>
               )}
             </div>
@@ -340,32 +347,13 @@ export function HeroStatsByExperienceTable({
   );
 }
 
-function DeltaBadge({ delta, isPercent }: { delta: number | null; isPercent: boolean }) {
-  if (delta === null) return <span className="text-xs text-muted-foreground">—</span>;
-  // Rounded to the displayed precision so the arrow and sign agree with the printed value.
-  const rounded = Math.round(delta * 10) / 10;
-  const tone = toneOf(rounded);
-  const sign = rounded > 0 ? "+" : "";
-  const text = isPercent
-    ? `${sign}${rounded.toFixed(1)}%`
-    : `${sign}${rounded.toLocaleString(undefined, { maximumFractionDigits: 1 })}`;
-  return (
-    <Badge variant={tone} size="sm" shape="square">
-      {tone === "positive" && <ArrowUp />}
-      {tone === "negative" && <ArrowDown />}
-      {tone === "muted" && <Minus />}
-      {text}
-    </Badge>
-  );
-}
-
 // Inline trajectory of a hero's stat across the experience tiers. Direction is colored
 // to match the delta badges (increase = green, decrease = red), without judging good/bad.
 function Sparkline({ values, trend }: { values: (number | null)[]; trend: number | null }) {
   const points = values.map((v, i) => ({ v, i })).filter((p): p is { v: number; i: number } => p.v !== null);
 
   if (points.length < 2) {
-    return <span className="text-xs text-muted-foreground">—</span>;
+    return <NoValue label="Too few readings" className="text-xs" />;
   }
 
   const w = 84;

@@ -3,6 +3,7 @@ import { Fragment } from "react";
 import { HeroImage } from "~/components/domain/assets/HeroImage";
 import { HeroName } from "~/components/domain/assets/HeroName";
 import { HeatCell } from "~/components/ui/heat-cell";
+import { NoValue } from "~/components/ui/no-value";
 import { Separator } from "~/components/ui/separator";
 import { type MatchupCell, mean, type StatsIndex } from "~/lib/team-builder/analysis";
 import {
@@ -56,7 +57,7 @@ const gridDigits = (value: number | undefined) => (Math.abs(value ?? 0) >= 10 ? 
 const gridPoints = (value: number | undefined) => formatPoints(value, gridDigits(value));
 
 /** An unsampled matchup prints a dash: `0` would read as a measurement rather than the absence of one. */
-const compactCount = (matches: number) => (matches > 0 ? compactNumber(matches) : "—");
+const compactCount = (matches: number) => (matches > 0 ? compactNumber(matches) : <NoValue label="No matches" />);
 
 /** An unsampled cell has no fill of its own, so the cell falls back to its empty look. */
 const heatFill = (value: number | undefined, scale: number) =>

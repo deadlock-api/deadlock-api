@@ -11,6 +11,7 @@ import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { Card } from "~/components/ui/card";
 import { Delta } from "~/components/ui/delta";
 import { DetailPopover } from "~/components/ui/detail-popover";
+import { NoValue } from "~/components/ui/no-value";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
 import { Skeleton } from "~/components/ui/skeleton";
 import { TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
@@ -250,8 +251,9 @@ function BenchmarkMetric({
   cohort: HashMapValue | undefined;
 }) {
   const comparison = compareBenchmark(player?.avg, cohort?.avg);
+  const known = (value: number | null | undefined): value is number => value != null && Number.isFinite(value);
   const format = (value: number | null | undefined) =>
-    value != null && Number.isFinite(value) ? formatPlayerMetricValue(value, def.format) : "—";
+    known(value) ? formatPlayerMetricValue(value, def.format) : <NoValue label="No data" />;
   // Damage taken is contextual: a higher value alone is neither better nor worse.
   const neutral = def.key === "player_damage_taken_per_min";
   const relativePercent = comparison?.relativeDelta == null ? null : Math.round(comparison.relativeDelta * 100);
@@ -270,7 +272,13 @@ function BenchmarkMetric({
               <TooltipStat label="Lobby median" value={format(cohort?.percentile50)} />
               <TooltipStat
                 label="Lobby middle 50%"
-                value={`${format(cohort?.percentile25)}–${format(cohort?.percentile75)}`}
+                value={
+                  known(cohort?.percentile25) && known(cohort?.percentile75) ? (
+                    `${formatPlayerMetricValue(cohort.percentile25, def.format)}–${formatPlayerMetricValue(cohort.percentile75, def.format)}`
+                  ) : (
+                    <NoValue label="No data" />
+                  )
+                }
               />
             </TooltipStats>
             {def.key === "deaths" && <p className="text-xs text-muted-foreground">Fewer deaths is better.</p>}
@@ -312,7 +320,7 @@ function BenchmarkMetric({
           player={player}
           cohort={cohort}
           label={def.label}
-          format={format}
+          format={(value) => formatPlayerMetricValue(value, def.format)}
           bounded={def.format === "percent"}
         />
       )}

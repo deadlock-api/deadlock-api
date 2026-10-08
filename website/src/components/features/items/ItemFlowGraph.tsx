@@ -1108,7 +1108,9 @@ export function ItemFlowGraph({
                       {locked.length > 0 && (
                         <KeyValue
                           label="Total Cost"
-                          value={pathStats.totalCost > 0 ? `${pathStats.totalCost.toLocaleString("en-US")} souls` : "—"}
+                          value={
+                            pathStats.totalCost > 0 ? `${pathStats.totalCost.toLocaleString("en-US")} souls` : undefined
+                          }
                         />
                       )}
                     </KeyValueList>

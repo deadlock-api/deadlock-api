@@ -1,6 +1,7 @@
 import { HeroImage } from "~/components/domain/assets/HeroImage";
 import { Card } from "~/components/ui/card";
 import { DetailPopover } from "~/components/ui/detail-popover";
+import { NoValue } from "~/components/ui/no-value";
 import { StatusDot } from "~/components/ui/status-dot";
 import { TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
 import { TONE_TEXT, toneOf } from "~/lib/tone";
@@ -66,7 +67,7 @@ function Laner({
           {name}
         </span>
         <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
-          {stat?.net_worth.toLocaleString("en-US") ?? "—"}
+          {stat?.net_worth.toLocaleString("en-US") ?? <NoValue label="Souls unknown" />}
         </span>
       </span>
     </DetailPopover>
@@ -111,7 +112,13 @@ export function LanesCard({
                       : `Lane soul difference at ${formatMatchDuration(time)}`
                   }
                 >
-                  {diff == null ? "—" : diff > 0 ? `+${diff.toLocaleString("en-US")}` : diff.toLocaleString("en-US")}
+                  {diff == null ? (
+                    <NoValue label="Unavailable" />
+                  ) : diff > 0 ? (
+                    `+${diff.toLocaleString("en-US")}`
+                  ) : (
+                    diff.toLocaleString("en-US")
+                  )}
                 </span>
               </div>
               <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-1.5">

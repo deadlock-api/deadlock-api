@@ -110,7 +110,7 @@ export function PatronStatusCard() {
         <StatGroup variant="plain" size="sm" className="gap-4 md:grid-cols-3">
           <Stat
             label="Pledge"
-            value={pledge_amount_cents ? formatCurrency(pledge_amount_cents) : "—"}
+            value={pledge_amount_cents ? formatCurrency(pledge_amount_cents) : null}
             sub="per month"
           />
           <Stat label="Last Verified" value={formatDate(last_verified_at)} />

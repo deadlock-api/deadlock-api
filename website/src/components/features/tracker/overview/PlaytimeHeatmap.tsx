@@ -8,6 +8,7 @@ import {
   HeatGridHead,
   HeatGridRow,
 } from "~/components/patterns/data-table/HeatGrid";
+import { NoValue } from "~/components/ui/no-value";
 import { TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
 import {
   type PlaytimeCell,
@@ -65,7 +66,13 @@ export function PlaytimeHeatmap({ habits }: { habits: PlaytimeHabits }) {
                         <TooltipStat label="Wins / losses" value={`${cell.wins} / ${cell.matches - cell.wins}`} />
                         <TooltipStat
                           label="Win rate"
-                          value={cell.matches > 0 ? `${Math.round((cell.wins / cell.matches) * 100)}%` : "—"}
+                          value={
+                            cell.matches > 0 ? (
+                              `${Math.round((cell.wins / cell.matches) * 100)}%`
+                            ) : (
+                              <NoValue label="No matches" />
+                            )
+                          }
                         />
                       </TooltipStats>
                     </>

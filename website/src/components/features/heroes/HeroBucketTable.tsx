@@ -5,6 +5,7 @@ import { SortableHeader } from "~/components/patterns/data-table/SortableHeader"
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { Heading } from "~/components/ui/heading";
 import { useSort } from "~/components/ui/hooks/use-sort";
+import { NoValue } from "~/components/ui/no-value";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "~/components/ui/table";
 
 type SortKey = "hero" | `bucket-${number}`;
@@ -95,7 +96,7 @@ export function HeroBucketTable({
                 </TableCell>
                 {row.values.map((value, i) => (
                   <TableCell key={buckets[i]} className="text-end tabular-nums">
-                    {value == null ? <span className="text-muted-foreground">—</span> : format(value)}
+                    {value == null ? <NoValue label="No reading" /> : format(value)}
                   </TableCell>
                 ))}
               </TableRow>

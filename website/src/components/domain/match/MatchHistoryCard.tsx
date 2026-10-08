@@ -8,6 +8,7 @@ import { KdaLine } from "~/components/domain/match/KdaLine";
 import { Button } from "~/components/ui/button";
 import { Card } from "~/components/ui/card";
 import { CornerBadge } from "~/components/ui/corner-badge";
+import { NoValue } from "~/components/ui/no-value";
 import { FOCUS_RING } from "~/components/ui/recipes";
 import { Tooltip } from "~/components/ui/tooltip";
 import type { FullBuildItem } from "~/lib/build-transform";
@@ -71,7 +72,7 @@ function FullBuildPhase({ label, items }: { label: string; items: FullBuildItem[
             </div>
           ))
         ) : (
-          <span className="text-xs text-muted-foreground italic">—</span>
+          <NoValue label="No items" className="text-xs" />
         )}
       </div>
     </div>
