@@ -3,14 +3,10 @@ import type { ItemStats } from "deadlock_api_client";
 import type { AnalyticsApiItemStatsRequest, MatchesApiBulkMetadataRequest } from "deadlock_api_client";
 import { PanelRightClose, PanelRightOpen } from "lucide-react";
 import { parseAsInteger, useQueryState } from "nuqs";
-import { lazy, Suspense, useCallback, useDeferredValue, useMemo, useState } from "react";
+import { lazy, Suspense, useDeferredValue, useMemo, useState } from "react";
 
 import MatchHistoryCard from "~/components/domain/match/MatchHistoryCard";
-import {
-  getDisplayItemStats,
-  ItemStatsTable,
-  type ItemStatsTableProps,
-} from "~/components/features/items/ItemStatsTable";
+import { getDisplayItemStats, ItemStatsTable, useItemStatsRow } from "~/components/features/items/ItemStatsTable";
 import { PlayerHeroBuildsDialog } from "~/components/features/items/PlayerHeroBuildsDialog";
 import { corruptedItemsParam, useCorruptedItemMode } from "~/components/features/items/useCorruptedItemMode";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
@@ -45,7 +41,15 @@ const ItemBuyTimingChart = lazy(() =>
   import("~/components/features/items/ItemBuyTimingChart").then((m) => ({ default: m.ItemBuyTimingChart })),
 );
 
-const TABLE_COLUMNS = ["winRate", "matches", "itemsTier", "confidence"];
+/** The details of an item row: when in a match the item is bought, and how that moves its win rate. */
+function RowBuyTiming({ baseQueryOptions }: { baseQueryOptions: AnalyticsApiItemStatsRequest }) {
+  const row = useItemStatsRow();
+  return (
+    <Suspense fallback={<LoadingState label="buy timing" size="sm" align="center" />}>
+      <ItemBuyTimingChart itemIds={[row.itemId]} baseQueryOptions={baseQueryOptions} rowTotalMatches={row.matches} />
+    </Suspense>
+  );
+}
 
 export function ItemStatsExplorer({
   minRankId,
@@ -299,14 +303,8 @@ export function ItemStatsExplorer({
   // Every row takes these options, so a filter change re-renders the whole table. Deferred, that render is
   // interruptible and stays out of the interaction that changed the filter.
   const rowQueryOptions = useDeferredValue(queryStatOptions);
-  const renderBuyTiming = useCallback<NonNullable<ItemStatsTableProps["customDropdownContent"]>>(
-    ({ itemId, rowTotal }) => (
-      <Suspense fallback={<LoadingState label="buy timing" size="sm" align="center" />}>
-        <ItemBuyTimingChart itemIds={[itemId]} baseQueryOptions={rowQueryOptions} rowTotalMatches={rowTotal} />
-      </Suspense>
-    ),
-    [rowQueryOptions],
-  );
+  // One element for every row, so a re-render here leaves the memoized rows alone.
+  const rowDetails = useMemo(() => <RowBuyTiming baseQueryOptions={rowQueryOptions} />, [rowQueryOptions]);
 
   if (isLoadingItemAssets) {
     return <LoadingState label="item stats" align="center" />;
@@ -320,10 +318,6 @@ export function ItemStatsExplorer({
             data={displayData}
             isLoading={isLoadingItemStats || isLoadingItemAssets}
             isRefetching={isRefetchingItemStats}
-            columns={TABLE_COLUMNS}
-            hideHeader={false}
-            hideIndex={false}
-            hideItemTierFilter={false}
             minWinRate={minWinRate}
             maxWinRate={maxWinRate}
             minUsage={minUsage}
@@ -331,7 +325,8 @@ export function ItemStatsExplorer({
             trendParams={rowQueryOptions}
             prevStatsMap={prevStatsMap}
             corruptedStatsMap={corruptedStatsMap}
-            customDropdownContent={renderBuyTiming}
+            details={rowDetails}
+
             actions={
               topBuildsEnabled && (
                 <Button
