@@ -104,19 +104,26 @@ pub(crate) struct SteamProfileRow {
     pub(crate) last_team_avg_badge: Option<u32>,
 }
 
+/// Friends from `(account_id, friend_since)` pairs, dropping any with an out-of-range timestamp.
+fn steam_friends(friends: impl IntoIterator<Item = (u32, u32)>) -> Vec<SteamFriend> {
+    friends
+        .into_iter()
+        .filter_map(|(account_id, ts)| {
+            chrono::DateTime::from_timestamp(ts.into(), 0).map(|friend_since| SteamFriend {
+                account_id,
+                friend_since,
+            })
+        })
+        .collect()
+}
+
 impl From<SteamProfileRow> for SteamProfile {
     fn from(row: SteamProfileRow) -> Self {
-        let friends = row
-            .friends_account_id
-            .into_iter()
-            .zip(row.friends_friend_since)
-            .filter_map(|(account_id, ts)| {
-                chrono::DateTime::from_timestamp(ts.into(), 0).map(|friend_since| SteamFriend {
-                    account_id,
-                    friend_since,
-                })
-            })
-            .collect();
+        let friends = steam_friends(
+            row.friends_account_id
+                .into_iter()
+                .zip(row.friends_friend_since),
+        );
         Self {
             account_id: row.account_id,
             personaname: row.personaname,
@@ -136,16 +143,7 @@ impl From<SteamProfileRow> for SteamProfile {
 
 impl From<IndexedProfile> for SteamProfile {
     fn from(row: IndexedProfile) -> Self {
-        let friends = row
-            .friends
-            .into_iter()
-            .filter_map(|(account_id, ts)| {
-                chrono::DateTime::from_timestamp(ts.into(), 0).map(|friend_since| SteamFriend {
-                    account_id,
-                    friend_since,
-                })
-            })
-            .collect();
+        let friends = steam_friends(row.friends);
         Self {
             account_id: row.account_id,
             personaname: row.personaname,
@@ -165,17 +163,11 @@ impl From<IndexedProfile> for SteamProfile {
 
 impl From<SteamProfileInsertRow> for SteamProfile {
     fn from(row: SteamProfileInsertRow) -> Self {
-        let friends = row
-            .friends_account_id
-            .into_iter()
-            .zip(row.friends_friend_since)
-            .filter_map(|(account_id, ts)| {
-                chrono::DateTime::from_timestamp(ts.into(), 0).map(|friend_since| SteamFriend {
-                    account_id,
-                    friend_since,
-                })
-            })
-            .collect();
+        let friends = steam_friends(
+            row.friends_account_id
+                .into_iter()
+                .zip(row.friends_friend_since),
+        );
         Self {
             account_id: row.account_id,
             personaname: row.personaname,
