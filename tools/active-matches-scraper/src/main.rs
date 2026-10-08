@@ -40,10 +40,14 @@ async fn main() -> anyhow::Result<()> {
     let mut previous_tick = HashSet::new();
     let mut interval = tokio::time::interval(Duration::from_secs(2 * 60 + 1));
 
-    loop {
-        interval.tick().await;
-        previous_tick = fetch_insert_active_matches(&http_client, &ch_client, &previous_tick).await;
-    }
+    common::run_until_shutdown(async move {
+        loop {
+            interval.tick().await;
+            previous_tick =
+                fetch_insert_active_matches(&http_client, &ch_client, &previous_tick).await;
+        }
+    })
+    .await
 }
 
 type SnapshotKey = (u64, u32, u32, u16, u16, u16, u16);

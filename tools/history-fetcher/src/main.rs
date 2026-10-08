@@ -116,9 +116,13 @@ async fn main() -> anyhow::Result<()> {
     );
 
     let mut interval = tokio::time::interval(Duration::from_secs(20));
+    let shutdown = common::shutdown_token();
 
     loop {
-        interval.tick().await;
+        tokio::select! {
+            _ = interval.tick() => {}
+            () = shutdown.cancelled() => break,
+        }
 
         let due = get_due_prioritized_accounts(&prioritized_accounts).await;
         if due.is_empty() {
@@ -130,7 +134,7 @@ async fn main() -> anyhow::Result<()> {
             "Processing prioritized accounts due for fetching"
         );
 
-        futures::stream::iter(due)
+        let fetch_due = futures::stream::iter(due)
             .map(|(account, bot_id)| {
                 let inserter = &inserter;
                 let http_client = http_client.clone();
@@ -147,9 +151,17 @@ async fn main() -> anyhow::Result<()> {
                 }
             })
             .buffer_unordered(2)
-            .collect::<Vec<_>>()
-            .await;
+            .collect::<Vec<_>>();
+        // Queued entries are flushed below even if their accounts' futures are dropped.
+        tokio::select! {
+            _ = fetch_due => {}
+            () = shutdown.cancelled() => break,
+        }
     }
+
+    info!("Shutting down: flushing queued match history");
+    inserter.shutdown().await;
+    Ok(())
 }
 
 /// Keeps [`RANK_INTERVAL`] current. Seasons turn over on the order of months, so

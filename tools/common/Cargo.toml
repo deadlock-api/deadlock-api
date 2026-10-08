@@ -20,7 +20,7 @@ reqwest = { workspace = true, features = ["json"] }
 serde = { workspace = true }
 serde_json = { workspace = true }
 sqlx = { workspace = true, features = ["macros", "postgres", "runtime-tokio", "time"] }
-tokio = { workspace = true, features = ["sync", "time"] }
+tokio = { workspace = true, features = ["signal", "sync", "time"] }
 tokio-util = { workspace = true }
 tracing = { workspace = true }
 tracing-opentelemetry = { workspace = true }

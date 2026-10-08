@@ -49,9 +49,12 @@ async fn main() -> anyhow::Result<()> {
     let pg_client = common::get_pg_client().await?;
     let ch_client = common::get_ch_client()?;
 
-    loop {
-        run_update_loop(&http_client, &pg_client, &ch_client).await;
-    }
+    common::run_until_shutdown(async move {
+        loop {
+            run_update_loop(&http_client, &pg_client, &ch_client).await;
+        }
+    })
+    .await
 }
 
 async fn run_update_loop(

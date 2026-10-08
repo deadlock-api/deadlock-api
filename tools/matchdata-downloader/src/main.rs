@@ -208,24 +208,28 @@ async fn main() -> anyhow::Result<()> {
     let state = State::new();
     let mut scan = Scan::default();
     let mut last_gc = tokio::time::Instant::now();
-    loop {
-        let started = tokio::time::Instant::now();
-        if let Err(e) = run_iteration(&ch_client, &store, &cache_store, &state, &mut scan).await {
-            counter!("matchdata_downloader.iteration.failure").increment(1);
-            error!("Iteration failed: {e:#}");
-            sleep(ITERATION_BACKOFF).await;
-            continue;
-        }
-        if last_gc.elapsed() >= GC_INTERVAL {
-            last_gc = tokio::time::Instant::now();
-            if let Err(e) = collect_garbage(&ch_client).await {
-                warn!("Collecting superseded salt candidates failed: {e:#}");
+    common::run_until_shutdown(async move {
+        loop {
+            let started = tokio::time::Instant::now();
+            if let Err(e) = run_iteration(&ch_client, &store, &cache_store, &state, &mut scan).await
+            {
+                counter!("matchdata_downloader.iteration.failure").increment(1);
+                error!("Iteration failed: {e:#}");
+                sleep(ITERATION_BACKOFF).await;
+                continue;
+            }
+            if last_gc.elapsed() >= GC_INTERVAL {
+                last_gc = tokio::time::Instant::now();
+                if let Err(e) = collect_garbage(&ch_client).await {
+                    warn!("Collecting superseded salt candidates failed: {e:#}");
+                }
+            }
+            if let Some(remaining) = POLL_INTERVAL.checked_sub(started.elapsed()) {
+                sleep(remaining).await;
             }
         }
-        if let Some(remaining) = POLL_INTERVAL.checked_sub(started.elapsed()) {
-            sleep(remaining).await;
-        }
-    }
+    })
+    .await
 }
 
 async fn download_from_file(

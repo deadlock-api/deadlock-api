@@ -36,22 +36,25 @@ async fn main() -> anyhow::Result<()> {
         .timeout(Duration::from_secs(REQUEST_TIMEOUT_S))
         .connect_timeout(Duration::from_secs(CONNECT_TIMEOUT_S))
         .build()?;
-    loop {
-        interval.tick().await;
+    common::run_until_shutdown(async move {
+        loop {
+            interval.tick().await;
 
-        info!("Updating assets");
-        let (heroes_result, items_result) = tokio::join!(
-            update_heroes(&ch_client, &http_client),
-            update_items(&ch_client, &http_client),
-        );
-        if let Err(e) = heroes_result {
-            error!("Failed to update heroes: {e}");
+            info!("Updating assets");
+            let (heroes_result, items_result) = tokio::join!(
+                update_heroes(&ch_client, &http_client),
+                update_items(&ch_client, &http_client),
+            );
+            if let Err(e) = heroes_result {
+                error!("Failed to update heroes: {e}");
+            }
+            if let Err(e) = items_result {
+                error!("Failed to update items: {e}");
+            }
+            info!("Updated assets");
         }
-        if let Err(e) = items_result {
-            error!("Failed to update items: {e}");
-        }
-        info!("Updated assets");
-    }
+    })
+    .await
 }
 
 async fn fetch_with_retries<T: serde::de::DeserializeOwned>(

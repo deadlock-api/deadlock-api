@@ -65,115 +65,118 @@ async fn main() -> anyhow::Result<()> {
         }
     };
 
-    loop {
-        // Fetch all prioritized account IDs from PostgreSQL
-        let prioritized_account_ids = common::get_all_prioritized_accounts(&pg_pool)
-            .await
-            .unwrap_or_else(|e| {
-                warn!("Failed to fetch prioritized accounts: {e:?}");
-                Vec::new()
-            });
+    common::run_until_shutdown(async move {
+        loop {
+            // Fetch all prioritized account IDs from PostgreSQL
+            let prioritized_account_ids = common::get_all_prioritized_accounts(&pg_pool)
+                .await
+                .unwrap_or_else(|e| {
+                    warn!("Failed to fetch prioritized accounts: {e:?}");
+                    Vec::new()
+                });
 
-        // Convert prioritized account IDs for ClickHouse (u32)
-        let account_ids_u32: Vec<u32> = prioritized_account_ids
-            .iter()
-            .filter_map(|&id| u32::try_from(id).ok())
-            .collect();
+            // Convert prioritized account IDs for ClickHouse (u32)
+            let account_ids_u32: Vec<u32> = prioritized_account_ids
+                .iter()
+                .filter_map(|&id| u32::try_from(id).ok())
+                .collect();
 
-        if account_ids_u32.is_empty() {
-            info!("No prioritized accounts found, sleeping 60s...");
-            tokio::time::sleep(Duration::from_mins(1)).await;
-            continue;
-        }
-
-        // Scans full history via LEFT ANTI JOIN against a merged, bounded anti-set.
-        // The `match_id < MAX_VALID_MATCH_ID` bound on match_salts strips garbage sentinels
-        // so the join side stays dense. A match whose every candidate salt has been written off
-        // counts as uncovered: the GC is the only source that can replace them.
-        let prio_query = format!(
-            r"
-        SELECT pmh.match_id, groupArray(pmh.account_id) AS participants
-        FROM player_match_history pmh
-        LEFT ANTI JOIN (
-            SELECT match_id FROM match_salts
-            WHERE match_id >= 31247321 AND match_id < {MAX_VALID_MATCH_ID}
-            GROUP BY match_id
-            HAVING uniqExact((cluster_id, metadata_salt))
-                 > uniqExactIf((cluster_id, metadata_salt), failed_at IS NOT NULL)
-            UNION DISTINCT
-            SELECT match_id FROM match_player WHERE match_id >= 31247321
-        ) ex ON ex.match_id = pmh.match_id
-        WHERE pmh.account_id IN ?
-          AND pmh.match_mode IN ('Ranked', 'Unranked')
-          AND pmh.start_time < now() - INTERVAL 2 HOUR
-          AND pmh.match_id >= 31247321
-        GROUP BY pmh.match_id
-        ORDER BY pmh.match_id DESC
-        SETTINGS log_comment = 'salt_scraper_prio_pending_matches'
-        "
-        );
-        let pending_matches = match ch_client
-            .query(&prio_query)
-            .bind(&account_ids_u32)
-            .fetch_all::<PendingMatch>()
-            .await
-        {
-            Ok(matches) => matches,
-            Err(e) => {
-                warn!("Failed to fetch prioritized account matches: {e:?}");
-                tokio::time::sleep(Duration::from_secs(10)).await;
+            if account_ids_u32.is_empty() {
+                info!("No prioritized accounts found, sleeping 60s...");
+                tokio::time::sleep(Duration::from_mins(1)).await;
                 continue;
             }
-        };
 
-        if pending_matches.is_empty() {
-            info!("No new matches to fetch, sleeping 60s...");
-            tokio::time::sleep(Duration::from_mins(1)).await;
-            continue;
-        }
-        info!(
-            "Found {} matches for {} prioritized accounts",
-            pending_matches.len(),
-            account_ids_u32.len()
-        );
-        gauge!("salt_scraper.prioritized_matches_pending").set(pending_matches.len() as f64);
+            // Scans full history via LEFT ANTI JOIN against a merged, bounded anti-set.
+            // The `match_id < MAX_VALID_MATCH_ID` bound on match_salts strips garbage sentinels
+            // so the join side stays dense. A match whose every candidate salt has been written off
+            // counts as uncovered: the GC is the only source that can replace them.
+            let prio_query = format!(
+                r"
+            SELECT pmh.match_id, groupArray(pmh.account_id) AS participants
+            FROM player_match_history pmh
+            LEFT ANTI JOIN (
+                SELECT match_id FROM match_salts
+                WHERE match_id >= 31247321 AND match_id < {MAX_VALID_MATCH_ID}
+                GROUP BY match_id
+                HAVING uniqExact((cluster_id, metadata_salt))
+                     > uniqExactIf((cluster_id, metadata_salt), failed_at IS NOT NULL)
+                UNION DISTINCT
+                SELECT match_id FROM match_player WHERE match_id >= 31247321
+            ) ex ON ex.match_id = pmh.match_id
+            WHERE pmh.account_id IN ?
+              AND pmh.match_mode IN ('Ranked', 'Unranked')
+              AND pmh.start_time < now() - INTERVAL 2 HOUR
+              AND pmh.match_id >= 31247321
+            GROUP BY pmh.match_id
+            ORDER BY pmh.match_id DESC
+            SETTINGS log_comment = 'salt_scraper_prio_pending_matches'
+            "
+            );
+            let pending_matches = match ch_client
+                .query(&prio_query)
+                .bind(&account_ids_u32)
+                .fetch_all::<PendingMatch>()
+                .await
+            {
+                Ok(matches) => matches,
+                Err(e) => {
+                    warn!("Failed to fetch prioritized account matches: {e:?}");
+                    tokio::time::sleep(Duration::from_secs(10)).await;
+                    continue;
+                }
+            };
 
-        // Track failed matches for re-queueing
-        let failed_matches: std::sync::Arc<Mutex<Vec<u64>>> =
-            std::sync::Arc::new(Mutex::new(Vec::new()));
+            if pending_matches.is_empty() {
+                info!("No new matches to fetch, sleeping 60s...");
+                tokio::time::sleep(Duration::from_mins(1)).await;
+                continue;
+            }
+            info!(
+                "Found {} matches for {} prioritized accounts",
+                pending_matches.len(),
+                account_ids_u32.len()
+            );
+            gauge!("salt_scraper.prioritized_matches_pending").set(pending_matches.len() as f64);
 
-        futures::stream::iter(pending_matches)
-            .map(|m| {
-                let ch_client = ch_client.clone();
-                let failed_matches = std::sync::Arc::clone(&failed_matches);
-                async move {
-                    let match_id = m.match_id;
-                    match fetch_prioritized_match(&ch_client, match_id).await {
-                        Ok(()) => {
-                            counter!("salt_scraper.prioritized_fetch.success").increment(1);
-                            info!("Fetched prioritized match {match_id}");
-                        }
-                        Err(e) => {
-                            counter!("salt_scraper.prioritized_fetch.failure").increment(1);
-                            warn!("Failed to fetch prioritized match {match_id} after all retries: {e:?}");
-                            failed_matches.lock().await.push(match_id);
+            // Track failed matches for re-queueing
+            let failed_matches: std::sync::Arc<Mutex<Vec<u64>>> =
+                std::sync::Arc::new(Mutex::new(Vec::new()));
+
+            futures::stream::iter(pending_matches)
+                .map(|m| {
+                    let ch_client = ch_client.clone();
+                    let failed_matches = std::sync::Arc::clone(&failed_matches);
+                    async move {
+                        let match_id = m.match_id;
+                        match fetch_prioritized_match(&ch_client, match_id).await {
+                            Ok(()) => {
+                                counter!("salt_scraper.prioritized_fetch.success").increment(1);
+                                info!("Fetched prioritized match {match_id}");
+                            }
+                            Err(e) => {
+                                counter!("salt_scraper.prioritized_fetch.failure").increment(1);
+                                warn!("Failed to fetch prioritized match {match_id} after all retries: {e:?}");
+                                failed_matches.lock().await.push(match_id);
+                            }
                         }
                     }
-                }
-            })
-            .buffer_unordered(2)
-            .collect::<Vec<_>>()
-            .await;
+                })
+                .buffer_unordered(2)
+                .collect::<Vec<_>>()
+                .await;
 
-        let failed = failed_matches.lock().await;
-        if !failed.is_empty() {
-            info!(
-                "Re-queueing {} failed matches for next cycle: {:?}",
-                failed.len(),
-                *failed
-            );
+            let failed = failed_matches.lock().await;
+            if !failed.is_empty() {
+                info!(
+                    "Re-queueing {} failed matches for next cycle: {:?}",
+                    failed.len(),
+                    *failed
+                );
+            }
         }
-    }
+    })
+    .await
 }
 
 /// Fetches a prioritized match with exponential backoff retry.

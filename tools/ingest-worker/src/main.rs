@@ -246,9 +246,13 @@ where
     });
 
     let mut interval = tokio::time::interval(Duration::from_secs(10));
+    let shutdown = common::shutdown_token();
 
     loop {
-        interval.tick().await;
+        tokio::select! {
+            _ = interval.tick() => {}
+            () = shutdown.cancelled() => break,
+        }
         let objs_to_ingest = match list_ingest_objects(&*store).await {
             Ok(value) => {
                 counter!("ingest_worker.list_ingest_objects.success").increment(1);
@@ -271,7 +275,10 @@ where
 
         if objs_to_ingest.is_empty() {
             info!("No files to fetch");
-            tokio::time::sleep(Duration::from_secs(30)).await;
+            tokio::select! {
+                () = tokio::time::sleep(Duration::from_secs(30)) => {}
+                () = shutdown.cancelled() => break,
+            }
             continue;
         }
 
@@ -288,41 +295,57 @@ where
             continue;
         }
 
+        // On shutdown, finish the objects in progress but start no new ones.
         futures::stream::iter(new_keys)
-            .map(|key| {
-                let inserters = &inserters;
-                let post_flush = Arc::clone(&post_flush);
-                async move {
-                    match timeout(
-                        Duration::from_secs(30),
-                        fetch_parse_and_send(&post_flush, inserters, &key),
-                    )
-                    .await
-                    {
-                        Ok(Ok(true)) => {
-                            counter!("ingest_worker.fetch_parse.success").increment(1);
-                        }
-                        Ok(Ok(false)) => {
-                            counter!("ingest_worker.fetch_parse.success").increment(1);
-                            lock_inflight(&post_flush.inflight).remove(&key);
-                        }
-                        Ok(Err(e)) => {
-                            counter!("ingest_worker.fetch_parse.failure").increment(1);
-                            error!("Error fetching/parsing object {key}: {e:#}");
-                            lock_inflight(&post_flush.inflight).remove(&key);
-                        }
-                        Err(_) => {
-                            counter!("ingest_worker.fetch_parse.timeout").increment(1);
-                            error!("Fetch+parse timed out for {key}");
-                            lock_inflight(&post_flush.inflight).remove(&key);
-                        }
-                    }
-                }
-            })
+            .take_until(shutdown.cancelled())
+            .map(|key| ingest_key(&post_flush, &inserters, key))
             .buffer_unordered(parallelism)
             .collect::<Vec<_>>()
             .await;
         info!("Producer drained current listing");
+    }
+
+    info!("Shutting down: flushing queued matches");
+    inserters.shutdown().await;
+    post_flush.tasks.close();
+    post_flush.tasks.wait().await;
+    info!(
+        "Shut down after ingesting {} matches",
+        post_flush.total_ingested.load(Ordering::Relaxed)
+    );
+    Ok(())
+}
+
+/// Runs [`fetch_parse_and_send`] for one key with a timeout, and releases the key
+/// unless it stays in flight until its rows are flushed.
+async fn ingest_key<S: ObjectStore + 'static>(
+    post_flush: &Arc<PostFlush<S>>,
+    inserters: &Inserters,
+    key: Path,
+) {
+    match timeout(
+        Duration::from_secs(30),
+        fetch_parse_and_send(post_flush, inserters, &key),
+    )
+    .await
+    {
+        Ok(Ok(true)) => {
+            counter!("ingest_worker.fetch_parse.success").increment(1);
+        }
+        Ok(Ok(false)) => {
+            counter!("ingest_worker.fetch_parse.success").increment(1);
+            lock_inflight(&post_flush.inflight).remove(&key);
+        }
+        Ok(Err(e)) => {
+            counter!("ingest_worker.fetch_parse.failure").increment(1);
+            error!("Error fetching/parsing object {key}: {e:#}");
+            lock_inflight(&post_flush.inflight).remove(&key);
+        }
+        Err(_) => {
+            counter!("ingest_worker.fetch_parse.timeout").increment(1);
+            error!("Fetch+parse timed out for {key}");
+            lock_inflight(&post_flush.inflight).remove(&key);
+        }
     }
 }
 
@@ -439,8 +462,10 @@ async fn reingest_from_file(
     // Flushes only on size and at the end; a permanently failed flush stops the producers.
     let inserters = Inserters::spawn(ch_client, batch_size, None, num_inserters);
 
-    // Fetch, decompress, parse concurrently — send results to inserters
+    // Fetch, decompress, parse concurrently — send results to inserters. On shutdown,
+    // stop fetching and flush what was parsed.
     futures::stream::iter(match_ids)
+        .take_until(common::shutdown_token().cancelled_owned())
         .map(|match_id| {
             let inserters = &inserters;
             let success_count = &success_count;

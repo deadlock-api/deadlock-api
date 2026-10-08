@@ -72,24 +72,27 @@ async fn main() -> Result<()> {
     let mut queue = VecDeque::new();
     let mut pending_deletions = HashSet::new();
     let mut last_deletion = Instant::now();
-    loop {
-        interval.tick().await;
-        if let Err(e) = fetch_and_update_profiles(
-            &http_client,
-            &ch_client,
-            &pg_client,
-            &mut queue,
-            &mut pending_deletions,
-        )
-        .await
-        {
-            error!("Error updating Steam profiles: {e}");
+    common::run_until_shutdown(async move {
+        loop {
+            interval.tick().await;
+            if let Err(e) = fetch_and_update_profiles(
+                &http_client,
+                &ch_client,
+                &pg_client,
+                &mut queue,
+                &mut pending_deletions,
+            )
+            .await
+            {
+                error!("Error updating Steam profiles: {e}");
+            }
+            if !pending_deletions.is_empty() && last_deletion.elapsed() >= *DELETE_INTERVAL {
+                flush_profile_deletions(&ch_client, &mut pending_deletions).await;
+                last_deletion = Instant::now();
+            }
         }
-        if !pending_deletions.is_empty() && last_deletion.elapsed() >= *DELETE_INTERVAL {
-            flush_profile_deletions(&ch_client, &mut pending_deletions).await;
-            last_deletion = Instant::now();
-        }
-    }
+    })
+    .await
 }
 
 #[instrument(skip_all)]

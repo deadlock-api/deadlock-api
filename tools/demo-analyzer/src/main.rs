@@ -80,91 +80,94 @@ async fn main() -> anyhow::Result<()> {
     let mut last_full_scan: Option<Instant> = None;
     let mut incremental_min_match_id = 0;
 
-    loop {
-        let full_scan = last_full_scan.is_none_or(|t| t.elapsed() >= FULL_SCAN_INTERVAL);
-        if full_scan {
-            incremental_min_match_id = fetch_incremental_min_match_id(&ch_client).await?;
-        }
-        let mut matches =
-            fetch_pending_matches(&ch_client, full_scan, incremental_min_match_id).await?;
-        if full_scan {
-            last_full_scan = Some(Instant::now());
-            // Prune failed_matches for ids that have aged out of the 30-day SQL window,
-            // otherwise the set grows unboundedly over the process lifetime.
-            let valid_ids: HashSet<u64> = matches.iter().map(|m| m.match_id).collect();
-            failed_matches.retain(|id| valid_ids.contains(id));
-        }
-        matches.retain(|m| !failed_matches.contains(&m.match_id));
-
-        if matches.is_empty() {
-            info!("No pending matches to process");
-            if cli.once {
-                return Ok(());
+    common::run_until_shutdown(async move {
+        loop {
+            let full_scan = last_full_scan.is_none_or(|t| t.elapsed() >= FULL_SCAN_INTERVAL);
+            if full_scan {
+                incremental_min_match_id = fetch_incremental_min_match_id(&ch_client).await?;
             }
-            tokio::time::sleep(Duration::from_mins(1)).await;
-            continue;
-        }
+            let mut matches =
+                fetch_pending_matches(&ch_client, full_scan, incremental_min_match_id).await?;
+            if full_scan {
+                last_full_scan = Some(Instant::now());
+                // Prune failed_matches for ids that have aged out of the 30-day SQL window,
+                // otherwise the set grows unboundedly over the process lifetime.
+                let valid_ids: HashSet<u64> = matches.iter().map(|m| m.match_id).collect();
+                failed_matches.retain(|id| valid_ids.contains(id));
+            }
+            matches.retain(|m| !failed_matches.contains(&m.match_id));
 
-        info!(
-            "Processing {} matches ({} previously failed, skipped)",
-            matches.len(),
-            failed_matches.len()
-        );
-        gauge!("demo_analyzer.pending_matches").set(matches.len() as f64);
-        gauge!("demo_analyzer.failed_matches").set(failed_matches.len() as f64);
+            if matches.is_empty() {
+                info!("No pending matches to process");
+                if cli.once {
+                    return Ok(());
+                }
+                tokio::time::sleep(Duration::from_mins(1)).await;
+                continue;
+            }
 
-        let mut pending_updates: Vec<MatchUpdate> = Vec::new();
-        let mut stream = futures::stream::iter(matches)
-            .map(|m| {
-                let http = &http_client;
-                async move {
-                    let match_id = m.match_id;
-                    match process_demo(http, &m).await {
-                        Ok(update) => {
-                            counter!("demo_analyzer.demo_processed.success").increment(1);
-                            Ok(update)
-                        }
-                        Err(e) => {
-                            counter!("demo_analyzer.demo_processed.failure").increment(1);
-                            warn!("Failed to process match {match_id}: {e}");
-                            Err(match_id)
+            info!(
+                "Processing {} matches ({} previously failed, skipped)",
+                matches.len(),
+                failed_matches.len()
+            );
+            gauge!("demo_analyzer.pending_matches").set(matches.len() as f64);
+            gauge!("demo_analyzer.failed_matches").set(failed_matches.len() as f64);
+
+            let mut pending_updates: Vec<MatchUpdate> = Vec::new();
+            let mut stream = futures::stream::iter(matches)
+                .map(|m| {
+                    let http = &http_client;
+                    async move {
+                        let match_id = m.match_id;
+                        match process_demo(http, &m).await {
+                            Ok(update) => {
+                                counter!("demo_analyzer.demo_processed.success").increment(1);
+                                Ok(update)
+                            }
+                            Err(e) => {
+                                counter!("demo_analyzer.demo_processed.failure").increment(1);
+                                warn!("Failed to process match {match_id}: {e}");
+                                Err(match_id)
+                            }
                         }
                     }
-                }
-            })
-            .buffer_unordered(cli.parallelism);
+                })
+                .buffer_unordered(cli.parallelism);
 
-        while let Some(result) = stream.next().await {
-            match result {
-                Ok(update) => pending_updates.push(update),
-                Err(match_id) => {
-                    failed_matches.insert(match_id);
+            while let Some(result) = stream.next().await {
+                match result {
+                    Ok(update) => pending_updates.push(update),
+                    Err(match_id) => {
+                        failed_matches.insert(match_id);
+                    }
+                }
+                if pending_updates.len() >= cli.batch_size {
+                    info!(
+                        "Applying {} match updates to ClickHouse",
+                        pending_updates.len()
+                    );
+                    apply_updates(&ch_client, &pending_updates).await;
+                    pending_updates.clear();
                 }
             }
-            if pending_updates.len() >= cli.batch_size {
+
+            if !pending_updates.is_empty() {
                 info!(
-                    "Applying {} match updates to ClickHouse",
+                    "Applying {} remaining match updates to ClickHouse",
                     pending_updates.len()
                 );
                 apply_updates(&ch_client, &pending_updates).await;
-                pending_updates.clear();
             }
-        }
 
-        if !pending_updates.is_empty() {
-            info!(
-                "Applying {} remaining match updates to ClickHouse",
-                pending_updates.len()
-            );
-            apply_updates(&ch_client, &pending_updates).await;
-        }
+            if cli.once {
+                return Ok(());
+            }
 
-        if cli.once {
-            return Ok(());
+            tokio::time::sleep(Duration::from_mins(1)).await;
         }
-
-        tokio::time::sleep(Duration::from_mins(1)).await;
-    }
+    })
+    .await
 }
 
 /// Read in key order, so it stops at the first granule that matches instead of scanning a week
