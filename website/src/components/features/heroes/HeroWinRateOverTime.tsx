@@ -8,15 +8,13 @@ import { ChartEmpty, ChartError, ChartLoading } from "~/components/patterns/char
 import { type WeekEntry, WeeklyTrendChart } from "~/components/patterns/charts/WeeklyTrendChart";
 import { PanelBody } from "~/components/patterns/panel/Panel";
 import { Delta } from "~/components/ui/delta";
-import { CACHE_DURATIONS } from "~/constants/cache";
 import { day } from "~/dayjs";
 import { useDefaultPeriodLabel } from "~/hooks/useDefaultPeriodLabel";
-import { api } from "~/lib/api";
 import { getPickrateMultiplier } from "~/lib/constants";
 import { formatPercent, possessive } from "~/lib/format";
 import type { GameMode } from "~/lib/game-mode";
 import { withoutOpenTimeBucket } from "~/lib/time-buckets";
-import { queryKeys } from "~/queries/query-keys";
+import { heroStatsQueryOptions } from "~/queries/hero-stats-query";
 
 const MIN_WEEK_MATCHES = 300;
 
@@ -36,11 +34,7 @@ export function HeroWinRateOverTime({
 }) {
   const period = useDefaultPeriodLabel();
   const weeklyRequest = { ...request, bucket: "start_time_week" as const };
-  const { data, isPending, isError, isFetching, refetch } = useQuery({
-    queryKey: queryKeys.analytics.heroStatsOverTime(weeklyRequest),
-    queryFn: async () => (await api.analytics_api.heroStats(weeklyRequest)).data,
-    staleTime: CACHE_DURATIONS.ONE_DAY,
-  });
+  const { data, isPending, isError, isFetching, refetch } = useQuery(heroStatsQueryOptions(weeklyRequest));
 
   const weeks = useMemo(() => {
     if (!data) return [];

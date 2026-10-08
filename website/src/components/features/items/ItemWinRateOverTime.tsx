@@ -8,14 +8,12 @@ import { ChartEmpty, ChartError, ChartLoading } from "~/components/patterns/char
 import { type WeekEntry, WeeklyTrendChart } from "~/components/patterns/charts/WeeklyTrendChart";
 import { PanelBody } from "~/components/patterns/panel/Panel";
 import { Delta } from "~/components/ui/delta";
-import { CACHE_DURATIONS } from "~/constants/cache";
 import { day } from "~/dayjs";
 import { useDefaultPeriodLabel } from "~/hooks/useDefaultPeriodLabel";
-import { api } from "~/lib/api";
 import { formatPercent, possessive } from "~/lib/format";
 import { withoutOpenTimeBucket } from "~/lib/time-buckets";
+import { heroStatsQueryOptions } from "~/queries/hero-stats-query";
 import { itemStatsQueryOptions } from "~/queries/item-stats-query";
-import { queryKeys } from "~/queries/query-keys";
 
 const MIN_WEEK_MATCHES = 200;
 
@@ -40,11 +38,7 @@ export function ItemWinRateOverTime({
   const weeklyHeroRequest = { ...heroRequest, bucket: "start_time_week" as const };
   const itemQuery = useQuery(itemStatsQueryOptions(weeklyItemRequest));
   // Same request as the hero page's weekly chart, so the two share one cache entry.
-  const heroQuery = useQuery({
-    queryKey: queryKeys.analytics.heroStatsOverTime(weeklyHeroRequest),
-    queryFn: async () => (await api.analytics_api.heroStats(weeklyHeroRequest)).data,
-    staleTime: CACHE_DURATIONS.ONE_DAY,
-  });
+  const heroQuery = useQuery(heroStatsQueryOptions(weeklyHeroRequest));
 
   const weeks = useMemo(() => {
     if (!itemQuery.data || !heroQuery.data) return [];

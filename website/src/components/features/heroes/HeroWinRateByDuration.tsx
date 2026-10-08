@@ -7,13 +7,11 @@ import { ChartEmpty, ChartError, ChartLoading } from "~/components/patterns/char
 import { WinRateBarChart } from "~/components/patterns/charts/WinRateBarChart";
 import { PanelBody } from "~/components/patterns/panel/Panel";
 import { TooltipCard, TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
-import { CACHE_DURATIONS } from "~/constants/cache";
 import { useDefaultPeriodLabel } from "~/hooks/useDefaultPeriodLabel";
-import { api } from "~/lib/api";
 import { DURATION_BUCKETS } from "~/lib/constants";
 import { formatPercent } from "~/lib/format";
 import type { GameMode } from "~/lib/game-mode";
-import { queryKeys } from "~/queries/query-keys";
+import { heroStatsQueryOptions } from "~/queries/hero-stats-query";
 
 const MIN_BUCKET_MATCHES = 100;
 
@@ -59,11 +57,7 @@ export function HeroWinRateByDuration({
   const { rows, isPending, failed } = useQueries({
     queries: DURATION_BUCKETS.map((bucket) => {
       const params = { ...request, minDurationS: bucket.minS, maxDurationS: bucket.maxS, bucket: "no_bucket" as const };
-      return {
-        queryKey: queryKeys.analytics.heroStatsByDuration(params),
-        queryFn: async () => (await api.analytics_api.heroStats(params)).data,
-        staleTime: CACHE_DURATIONS.ONE_DAY,
-      };
+      return heroStatsQueryOptions(params);
     }),
     combine: (queries) => ({
       rows: queries.map((q) => q.data?.find((row) => row.hero_id === heroId)),

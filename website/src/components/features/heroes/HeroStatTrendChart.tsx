@@ -4,14 +4,12 @@ import { useMemo } from "react";
 
 import { PATCH_MARKERS_SHORT } from "~/components/domain/charts/PatchMarkers";
 import StatTrendChart, { type StatTrendBucket } from "~/components/patterns/charts/StatTrendChart";
-import { CACHE_DURATIONS } from "~/constants/cache";
-import { api } from "~/lib/api";
 import { getPickrateMultiplier, MIN_MATCHES_PER_BUCKET } from "~/lib/constants";
 import type { GameMode } from "~/lib/game-mode";
 import { buildHeroTableTrend, HERO_TABLE_TRENDS, type HeroTableTrend } from "~/lib/hero-table-trends";
 import { completeTimeBuckets } from "~/lib/time-buckets";
 import { heroBanStatsQueryOptions } from "~/queries/hero-ban-stats-query";
-import { queryKeys } from "~/queries/query-keys";
+import { heroStatsQueryOptions } from "~/queries/hero-stats-query";
 
 export interface HeroStatTrendChartProps {
   params: Omit<AnalyticsApiHeroStatsRequest, "gameMode"> & { gameMode?: GameMode };
@@ -25,12 +23,7 @@ export default function HeroStatTrendChart({ params, heroId, stat, bucket, onBuc
   const heroParams = { ...params, bucket };
   const needsHeroes = stat !== "banRate";
   const needsBans = params.gameMode !== "street_brawl" && ["banRate", "presence", "zScore", "residual"].includes(stat);
-  const heroQuery = useQuery({
-    queryKey: queryKeys.analytics.heroStatsOverTime(heroParams),
-    queryFn: async () => (await api.analytics_api.heroStats(heroParams)).data,
-    staleTime: CACHE_DURATIONS.ONE_DAY,
-    enabled: needsHeroes,
-  });
+  const heroQuery = useQuery({ ...heroStatsQueryOptions(heroParams), enabled: needsHeroes });
   const banParams: AnalyticsApiHeroBanStatsRequest = {
     bucket,
     minAverageBadge: params.minAverageBadge,
