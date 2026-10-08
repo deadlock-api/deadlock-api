@@ -34,10 +34,10 @@ export function useCompareMetrics(accountIds: readonly number[], filters: Compar
     placeholderData: keepPreviousData,
   });
   const own = useQueries({
-    queries: accountIds.map((accountId) => ({
-      ...playerStatsMetricsQueryOptions(compareMetricsParams(filters, accountId)),
-      placeholderData: lastAnswerForAccount<MetricAverages>(client, "api-player-stats-metrics", accountId),
-    })),
+    queries: accountIds.map((accountId) => {
+      const options = playerStatsMetricsQueryOptions(compareMetricsParams(filters, accountId));
+      return { ...options, placeholderData: lastAnswerForAccount(client, options.queryKey, accountId) };
+    }),
   });
   return {
     population: population.data,

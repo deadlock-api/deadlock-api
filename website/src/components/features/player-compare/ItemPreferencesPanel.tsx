@@ -1,5 +1,4 @@
 import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { ItemStats } from "deadlock_api_client";
 import { useState } from "react";
 
 import { ItemImage } from "~/components/domain/assets/ItemImage";
@@ -56,10 +55,10 @@ export function ItemPreferencesPanel({
   const itemsQuery = useQuery(itemUpgradesQueryOptions);
   const client = useQueryClient();
   const statsQueries = useQueries({
-    queries: players.map((player) => ({
-      ...itemStatsQueryOptions(compareItemStatsParams(player.accountId, filters)),
-      placeholderData: lastAnswerForAccount<ItemStats[]>(client, "api-item-stats", player.accountId),
-    })),
+    queries: players.map((player) => {
+      const options = itemStatsQueryOptions(compareItemStatsParams(player.accountId, filters));
+      return { ...options, placeholderData: lastAnswerForAccount(client, options.queryKey, player.accountId) };
+    }),
   });
   const itemsById = new Map((itemsQuery.data ?? []).map((item) => [item.id, item]));
 

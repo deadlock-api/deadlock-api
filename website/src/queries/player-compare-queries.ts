@@ -1,4 +1,4 @@
-import { type QueryClient, queryOptions } from "@tanstack/react-query";
+import { type InferDataFromTag, type QueryClient, type QueryKey, queryOptions } from "@tanstack/react-query";
 import type {
   AnalyticsApiItemStatsRequest,
   AnalyticsApiPlayerScoreboardRequest,
@@ -172,14 +172,20 @@ export function compareItemStatsParams(accountId: number, filters: CompareFilter
 }
 
 /**
- * A placeholder for one player's query in a `useQueries` list: the newest answer cached for the same account under
- * `prefix`, on any filters. `keepPreviousData` does not carry across when every key of the list changes at once (a
- * filter change), so this keeps the old numbers on screen until the new ones arrive instead of blanking the panels.
+ * A placeholder for one player's query in a `useQueries` list: the newest answer cached for the same account in the
+ * family of `queryKey` (its factory's first key part), on any filters. `keepPreviousData` does not carry across when
+ * every key of the list changes at once (a filter change), so this keeps the old numbers on screen until the new ones
+ * arrive instead of blanking the panels.
  */
-export function lastAnswerForAccount<T>(client: QueryClient, prefix: string, accountId: number): () => T | undefined {
+export function lastAnswerForAccount<TKey extends QueryKey>(
+  client: QueryClient,
+  queryKey: TKey,
+  accountId: number,
+): () => InferDataFromTag<unknown, TKey> | undefined {
+  type T = InferDataFromTag<unknown, TKey>;
   return () => {
     let newest: { at: number; data: T } | undefined;
-    for (const query of client.getQueryCache().findAll({ queryKey: [prefix] })) {
+    for (const query of client.getQueryCache().findAll({ queryKey: queryKey.slice(0, 1) })) {
       const params = query.queryKey[1] as { accountId?: number; accountIds?: number[] } | undefined;
       const owner = params?.accountId ?? (params?.accountIds?.length === 1 ? params.accountIds[0] : undefined);
       const data = query.state.data as T | undefined;
