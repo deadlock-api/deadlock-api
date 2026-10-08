@@ -45,13 +45,13 @@ import {
 } from "~/lib/team-builder/analysis";
 import { lanesOf, TEAM_SIZE } from "~/lib/team-builder/lanes";
 import { nextEmptySlot } from "~/lib/team-builder/next-slot";
+import type { RawMatchMetadata } from "~/lib/tracker/match-metadata";
 import { filterPlayableHeroes, heroesQueryOptions } from "~/queries/asset-queries";
 import { heroStatsQueryOptions } from "~/queries/hero-stats-query";
 import { laneMatchupStatsQueryOptions } from "~/queries/lane-matchup-query";
 import { laneSoulCurveQueryOptions } from "~/queries/lane-soul-curve-query";
 import {
   type ImportedMatch,
-  type MatchMetadata,
   matchMetadataQueryOptions,
   parseImportedMatch,
   recentMatchesQueryOptions,
@@ -260,7 +260,7 @@ function TeamBuilderPage() {
   }, [imported, totalPicked, gameMode, setMode, draftFromMatch]);
 
   /** Puts a fetched match on the board, moving the page to that match's game mode if it is in the other one. */
-  const adoptMatch = (matchId: number, metadata: MatchMetadata) => {
+  const adoptMatch = (matchId: number, metadata: RawMatchMetadata) => {
     const match = parseImportedMatch(metadata, 0);
     if (match.gameMode !== gameMode) setMode(match.gameMode === "street_brawl" ? "street_brawl" : "normal_all");
     void setSidesSwapped(null);

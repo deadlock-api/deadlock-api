@@ -5,6 +5,7 @@ import { api } from "~/lib/api";
 import type { GameMode } from "~/lib/game-mode";
 import type { Side } from "~/lib/team-builder/analysis";
 import { lanesOf, slotsOfLane, TEAM_SIZE } from "~/lib/team-builder/lanes";
+import { fetchRawMatchMetadata, type RawMatchMetadata } from "~/lib/tracker/match-metadata";
 
 import { queryKeys } from "./query-keys";
 
@@ -26,7 +27,7 @@ interface RawPlayer {
   account_id: number;
   hero_id: number;
   team: number;
-  assigned_lane?: number;
+  assigned_lane: number;
 }
 
 /** `game_mode` as the match endpoints number it (`ECitadelGameMode`: Normal 1, StreetBrawl 4). */
@@ -34,15 +35,6 @@ const GAME_MODE_IDS: Record<GameMode, number> = { normal: 1, street_brawl: 4 };
 
 const gameModeOf = (id: number | undefined): GameMode =>
   id === GAME_MODE_IDS.street_brawl ? "street_brawl" : "normal";
-
-export interface MatchMetadata {
-  match_info: {
-    game_mode?: number;
-    average_badge_team0?: number | null;
-    average_badge_team1?: number | null;
-    players: RawPlayer[];
-  };
-}
 
 /**
  * Lane assignment drives the slot, since slot position *is* the lane on the board. Players the game
@@ -77,12 +69,16 @@ function toSlots(players: RawPlayer[], side: Side, gameMode: GameMode): Imported
 }
 
 /** Applies a board orientation to raw metadata. Pure, so flipping sides costs no request. */
-export function parseImportedMatch(metadata: MatchMetadata, allyTeam: 0 | 1): ImportedMatch {
+export function parseImportedMatch(metadata: RawMatchMetadata, allyTeam: 0 | 1): ImportedMatch {
   const info = metadata.match_info;
-  const raw = (info.players ?? []).filter((p) => p.hero_id > 0);
+  const raw: RawPlayer[] = (info?.players ?? []).flatMap(({ account_id, hero_id, team, assigned_lane }) =>
+    hero_id && hero_id > 0 && team != null
+      ? [{ account_id: account_id ?? 0, hero_id, team, assigned_lane: assigned_lane ?? 0 }]
+      : [],
+  );
   const enemyTeam = allyTeam === 0 ? 1 : 0;
-  const badgeOf = (team: 0 | 1) => (team === 0 ? info.average_badge_team0 : info.average_badge_team1) || undefined;
-  const gameMode = gameModeOf(info.game_mode);
+  const badgeOf = (team: 0 | 1) => (team === 0 ? info?.average_badge_team0 : info?.average_badge_team1) || undefined;
+  const gameMode = gameModeOf(info?.game_mode);
 
   return {
     gameMode,
@@ -102,9 +98,8 @@ export function parseImportedMatch(metadata: MatchMetadata, allyTeam: 0 | 1): Im
   };
 }
 
-async function fetchMatchMetadata(matchId: number): Promise<MatchMetadata> {
-  const response = await api.matches_api.metadata({ matchId });
-  const metadata = response.data as unknown as MatchMetadata;
+async function fetchMatchMetadata(matchId: number): Promise<RawMatchMetadata> {
+  const metadata = await fetchRawMatchMetadata(matchId);
   if (!metadata?.match_info?.players?.length) throw new Error(`No metadata on record for match ${matchId}`);
   return metadata;
 }
