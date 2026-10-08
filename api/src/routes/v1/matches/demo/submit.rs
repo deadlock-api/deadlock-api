@@ -16,7 +16,7 @@ use super::worker::QueryJob;
 use super::{OutputFormat, job_id};
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
-use crate::routes::v1::matches::salts::fetch_match_salts;
+use crate::routes::v1::matches::salts::{fetch_match_salts, replay_file_url};
 use crate::services::rate_limiter::Quota;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 
@@ -125,10 +125,7 @@ pub(super) async fn submit(
             format!("No demo available for match {}", req.match_id),
         ));
     };
-    let demo_url = format!(
-        "http://replay{cluster_id}.valve.net/1422450/{}_{replay_salt}.dem.bz2",
-        req.match_id
-    );
+    let demo_url = replay_file_url(cluster_id, req.match_id, replay_salt, "dem");
 
     // Plan the query against the demo's schema, read from just the demo's prefix, so an
     // invalid query is rejected here instead of after the worker downloaded the whole demo.

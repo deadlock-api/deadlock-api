@@ -170,20 +170,26 @@ impl From<(u64, CMsgClientToGcGetMatchMetaDataResponse)> for MatchSaltsResponse 
             cluster_id: salts.replay_group_id,
             metadata_salt: salts.metadata_salt,
             replay_salt: salts.replay_salt,
-            metadata_url: salts.replay_group_id.and_then(|cluster_id| {
-                salts.metadata_salt.map(|salt| {
-                    format!(
-                        "http://replay{cluster_id}.valve.net/1422450/{match_id}_{salt}.meta.bz2"
-                    )
-                })
-            }),
-            demo_url: salts.replay_group_id.and_then(|cluster_id| {
-                salts.replay_salt.map(|salt| {
-                    format!("http://replay{cluster_id}.valve.net/1422450/{match_id}_{salt}.dem.bz2")
-                })
-            }),
+            metadata_url: salts
+                .replay_group_id
+                .zip(salts.metadata_salt)
+                .map(|(cluster_id, salt)| replay_file_url(cluster_id, match_id, salt, "meta")),
+            demo_url: salts
+                .replay_group_id
+                .zip(salts.replay_salt)
+                .map(|(cluster_id, salt)| replay_file_url(cluster_id, match_id, salt, "dem")),
         }
     }
+}
+
+/// URL of a match's `.{extension}.bz2` file (`meta` or `dem`) on Valve's replay servers.
+pub(crate) fn replay_file_url(
+    cluster_id: u32,
+    match_id: u64,
+    salt: u32,
+    extension: &str,
+) -> String {
+    format!("http://replay{cluster_id}.valve.net/1422450/{match_id}_{salt}.{extension}.bz2")
 }
 
 fn not_found(match_id: u64) -> APIError {
@@ -342,6 +348,5 @@ pub(super) async fn salts(
         disable_steam.unwrap_or_default(),
     )
     .await
-    .map(|salts| (match_id, salts).into())
-    .map(|s: MatchSaltsResponse| Json(s))
+    .map(|salts| Json(MatchSaltsResponse::from((match_id, salts))))
 }

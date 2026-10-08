@@ -17,7 +17,7 @@ use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::matches::demo::demofusion;
 use crate::routes::v1::matches::demo::demofusion::{TableKind, TableSchema};
-use crate::routes::v1::matches::salts::fetch_match_salts;
+use crate::routes::v1::matches::salts::{fetch_match_salts, replay_file_url};
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::utils::compression::ZSTD_MAGIC;
 
@@ -144,8 +144,7 @@ pub(super) async fn schema(
         ));
     };
 
-    let demo_url =
-        format!("http://replay{cluster_id}.valve.net/1422450/{match_id}_{replay_salt}.dem.bz2");
+    let demo_url = replay_file_url(cluster_id, match_id, replay_salt, "dem");
 
     let tables = fetch_demo_schema(&demo_url).await?;
 
@@ -158,8 +157,7 @@ pub(super) async fn schema(
 
 /// Stream just enough of the bzip2-compressed demo to decode its send-tables, then stop.
 ///
-/// A demo's schema is immutable, so results are cached for 24h keyed on the demo URL,
-/// matching the endpoint's `Cache-Control`.
+/// Nothing is cached here; the schema endpoint's 24h `Cache-Control` covers repeat requests.
 pub(super) async fn fetch_demo_schema(url: &str) -> Result<Vec<TableSchema>, APIError> {
     let response = HTTP_CLIENT
         .get(url)
