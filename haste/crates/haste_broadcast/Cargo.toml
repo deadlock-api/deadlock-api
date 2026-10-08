@@ -15,7 +15,7 @@ serde = { workspace = true, features = ["derive"] }
 serde_json.workspace = true
 thiserror.workspace = true
 tokio = { workspace = true, features = ["time", "sync"] }
-valveprotos = { workspace = true, features = ["gc-client", "serde", "user-msgs"] }
+valveprotos = { workspace = true, features = ["user-msgs"] }
 
 [dev-dependencies]
 tokio = { workspace = true, features = ["macros", "rt", "test-util"] }

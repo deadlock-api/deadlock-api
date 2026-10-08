@@ -26,7 +26,7 @@ edition = "2024"
 # Shared in-repo crates
 common = { version = "0.1.0", path = "tools/common" }
 valveprotos = { path = "valveprotos" }
-haste = { path = "haste", features = ["async"] }
+haste = { path = "haste" }
 haste_broadcast = { path = "haste/crates/haste_broadcast" }
 haste_core = { path = "haste/crates/haste_core" }
 haste_vartype = { path = "haste/crates/haste_vartype" }

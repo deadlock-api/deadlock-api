@@ -21,7 +21,7 @@ valveprotos = { workspace = true, features = ["serde", "user-msgs", "game-msgs"]
 prost = "0.14.4"
 tryhard = "0.5.2"
 strum = { version = "0.28.0", features = ["derive"] }
-haste = { workspace = true }
+haste = { workspace = true, features = ["async"] }
 async-stream = "0.3.6"
 thiserror = "2.0.20"
 serde-env = "0.3.0"

@@ -10,7 +10,7 @@ clap = { workspace = true, features = ["env"] }
 clickhouse = { workspace = true, features = ["time"] }
 common = { workspace = true }
 futures = { workspace = true }
-haste = { workspace = true }
+haste = { workspace = true, features = ["async"] }
 metrics = { workspace = true }
 prost = { workspace = true }
 reqwest = { workspace = true, features = ["stream"] }

@@ -104,9 +104,11 @@ fn load_common_protos() -> io::Result<Option<FileDescriptorSet>> {
 
     #[cfg(feature = "serde")]
     {
-        config
-            .compile_well_known_types()
-            .type_attribute(".", "#[derive(serde::Serialize, serde::Deserialize)]");
+        // NOTE: no compile_well_known_types here: no message has a field of a well-known type
+        // (descriptor.proto is only imported for option extensions), so it only generated an
+        // unused google.protobuf.rs, and it made the serde feature change codegen beyond adding
+        // derives.
+        config.type_attribute(".", "#[derive(serde::Serialize, serde::Deserialize)]");
     }
 
     let protos = collect_protos("protos/common")?;
@@ -123,9 +125,11 @@ fn load_gcsdk_protos() -> io::Result<Option<FileDescriptorSet>> {
     config.default_package_filename("gcsdk");
     #[cfg(feature = "serde")]
     {
-        config
-            .compile_well_known_types()
-            .type_attribute(".", "#[derive(serde::Serialize, serde::Deserialize)]");
+        // NOTE: no compile_well_known_types here: no message has a field of a well-known type
+        // (descriptor.proto is only imported for option extensions), so it only generated an
+        // unused google.protobuf.rs, and it made the serde feature change codegen beyond adding
+        // derives.
+        config.type_attribute(".", "#[derive(serde::Serialize, serde::Deserialize)]");
     }
 
     let protos = collect_protos("protos/gcsdk")?;
@@ -148,9 +152,11 @@ fn compile_deadlock_protos(externs: &[ExternDefs]) -> io::Result<()> {
 
     #[cfg(feature = "serde")]
     {
-        config
-            .compile_well_known_types()
-            .type_attribute(".", "#[derive(serde::Serialize, serde::Deserialize)]");
+        // NOTE: no compile_well_known_types here: no message has a field of a well-known type
+        // (descriptor.proto is only imported for option extensions), so it only generated an
+        // unused google.protobuf.rs, and it made the serde feature change codegen beyond adding
+        // derives.
+        config.type_attribute(".", "#[derive(serde::Serialize, serde::Deserialize)]");
     }
 
     // reflect (prost-reflect) needs the descriptor set on disk.
