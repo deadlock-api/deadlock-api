@@ -167,8 +167,8 @@ export function decideRequestBody(
       },
       sort: {
         type: "choice",
-        instructions: "The stat the question ranks or compares by.",
-        criteria: withNone(SORT_DESCRIPTIONS, "the question ranks by no particular stat"),
+        instructions: "The stat the question asks about, or ranks or compares by.",
+        criteria: withNone(SORT_DESCRIPTIONS, "the question is about no particular stat"),
       },
     },
   };
