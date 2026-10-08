@@ -102,79 +102,53 @@ impl AppState {
 
         // Create an S3 client
         debug!("Creating S3 client");
-        let s3_client = AmazonS3Builder::new()
-            .with_region(&config.s3.region)
-            .with_bucket_name(&config.s3.bucket)
-            .with_access_key_id(&config.s3.access_key_id)
-            .with_secret_access_key(&config.s3.secret_access_key)
-            .with_endpoint(&config.s3.endpoint)
-            .with_allow_http(true)
-            .with_retry(RetryConfig {
-                backoff: BackoffConfig {
-                    init_backoff: Duration::from_millis(200),
-                    max_backoff: Duration::from_secs(3),
-                    base: 2.,
-                },
-                max_retries: 3,
-                retry_timeout: Duration::from_secs(5),
-            })
-            .build()?;
+        let s3_client = s3_store(
+            &config.s3.region,
+            &config.s3.bucket,
+            &config.s3.access_key_id,
+            &config.s3.secret_access_key,
+            &config.s3.endpoint,
+            retry_config(Duration::from_secs(5)),
+        )?;
 
         // Create an S3 cache client
         debug!("Creating S3 cache client");
-        let s3_cache_client = AmazonS3Builder::new()
-            .with_region(&config.s3_cache.region)
-            .with_bucket_name(&config.s3_cache.bucket)
-            .with_access_key_id(&config.s3_cache.access_key_id)
-            .with_secret_access_key(&config.s3_cache.secret_access_key)
-            .with_endpoint(&config.s3_cache.endpoint)
-            .with_allow_http(true)
-            .with_retry(RetryConfig {
+        let s3_cache_client = s3_store(
+            &config.s3_cache.region,
+            &config.s3_cache.bucket,
+            &config.s3_cache.access_key_id,
+            &config.s3_cache.secret_access_key,
+            &config.s3_cache.endpoint,
+            RetryConfig {
                 max_retries: 0,
                 ..Default::default()
-            })
-            .build()?;
+            },
+        )?;
 
         // Create a Cloudflare R2 client (S3-compatible)
         debug!("Creating Cloudflare R2 client");
-        let r2_client = AmazonS3Builder::new()
-            .with_region(&config.r2.region)
-            .with_bucket_name(&config.r2.bucket)
-            .with_access_key_id(&config.r2.access_key_id)
-            .with_secret_access_key(&config.r2.secret_access_key)
-            .with_endpoint(config.r2.endpoint())
-            .with_retry(RetryConfig {
-                backoff: BackoffConfig {
-                    init_backoff: Duration::from_millis(200),
-                    max_backoff: Duration::from_secs(3),
-                    base: 2.,
-                },
-                max_retries: 3,
-                retry_timeout: Duration::from_secs(5),
-            })
-            .build()?;
+        let r2_client = s3_store(
+            &config.r2.region,
+            &config.r2.bucket,
+            &config.r2.access_key_id,
+            &config.r2.secret_access_key,
+            &config.r2.endpoint(),
+            retry_config(Duration::from_secs(5)),
+        )?;
 
         // Create the demo-extracts R2 client (public bucket; reuses the R2 account creds).
         debug!("Creating demo-extracts R2 client");
-        let demo_extracts_client = AmazonS3Builder::new()
-            .with_region(&config.r2.region)
-            .with_bucket_name(&config.demo_extracts_bucket)
-            .with_access_key_id(&config.r2.access_key_id)
-            .with_secret_access_key(&config.r2.secret_access_key)
-            .with_endpoint(config.r2.endpoint())
-            .with_retry(RetryConfig {
-                backoff: BackoffConfig {
-                    init_backoff: Duration::from_millis(200),
-                    max_backoff: Duration::from_secs(3),
-                    base: 2.,
-                },
-                max_retries: 3,
-                // Counts from the start of the initial attempt, so it must exceed the 30s
-                // request timeout: a shorter deadline is already expired when a slow
-                // multipart part times out, and no retry is ever attempted.
-                retry_timeout: Duration::from_mins(3),
-            })
-            .build()?;
+        let demo_extracts_client = s3_store(
+            &config.r2.region,
+            &config.demo_extracts_bucket,
+            &config.r2.access_key_id,
+            &config.r2.secret_access_key,
+            &config.r2.endpoint(),
+            // Counts from the start of the initial attempt, so it must exceed the 30s
+            // request timeout: a shorter deadline is already expired when a slow
+            // multipart part times out, and no retry is ever attempted.
+            retry_config(Duration::from_mins(3)),
+        )?;
 
         // Create a Redis connection pool
         debug!("Creating Redis client");
@@ -232,37 +206,9 @@ impl AppState {
 
         // Create a Clickhouse readonly connection pool
         debug!("Creating readonly Clickhouse client");
-        let ch_client_ro = clickhouse::Client::default()
-            .with_url(format!(
-                "http://{}:{}",
-                config.clickhouse.host, config.clickhouse.http_port
-            ))
-            .with_user(&config.clickhouse.username)
-            .with_password(&config.clickhouse.password)
-            .with_database(&config.clickhouse.dbname)
-            .with_compression(clickhouse::Compression::zstd())
-            .with_setting("output_format_json_quote_64bit_integers", "0")
-            .with_setting("output_format_json_named_tuples_as_objects", "1")
-            .with_setting("enable_json_type", "1")
-            .with_setting("allow_statistics_optimize", "0")
-            .with_setting("allow_experimental_statistics", "1")
-            .with_setting("query_plan_optimize_join_order_limit", "10")
-            .with_setting("optimize_if_transform_strings_to_enum", "1")
-            .with_setting("optimize_syntax_fuse_functions", "1")
-            .with_setting("allow_aggregate_partitions_independently", "1")
-            .with_setting("max_threads", "16")
-            .with_setting("max_execution_time", "20")
-            .with_setting("enable_named_columns_in_function_tuple", "1")
-            .with_setting("do_not_merge_across_partitions_select_final", "1")
-            // Keep `ifNull(average_badge, 0)` comparisons matchable against the projection key
-            // (see `utils::sql::average_badge_filter`).
-            .with_setting("allow_key_condition_coalesce_rewrite", "0")
-            // Evaluate skip indexes (e.g. idx_start_time) at planning time: when deferred to read
-            // time (the default), projection selection sees unpruned parts and a chosen
-            // projection reads every part. Measured on 41 production query shapes: identical
-            // results, -17% bytes and -15% CPU volume-weighted, up to 66x on projection reads.
-            .with_setting("use_skip_indexes_on_data_read", "0")
-            .with_setting("max_memory_usage", "26843545600")
+        // Same connection and settings as the main client, plus read-only enforcement.
+        let ch_client_ro = ch_client
+            .clone()
             .with_setting("readonly", "2")
             .with_setting("allow_ddl", "0")
             .with_setting("allow_introspection_functions", "0");
@@ -408,22 +354,14 @@ impl AppState {
         // Hourly public data-lake dump. Only one replica works at a time (redis lease).
         if config.data_dump.enabled {
             debug!("Starting data dump");
-            let lake_store = AmazonS3Builder::new()
-                .with_region("auto")
-                .with_bucket_name(&config.data_dump.bucket)
-                .with_access_key_id(&config.data_dump.access_key_id)
-                .with_secret_access_key(&config.data_dump.secret_access_key)
-                .with_endpoint(config.r2.endpoint())
-                .with_retry(RetryConfig {
-                    backoff: BackoffConfig {
-                        init_backoff: Duration::from_millis(200),
-                        max_backoff: Duration::from_secs(3),
-                        base: 2.,
-                    },
-                    max_retries: 3,
-                    retry_timeout: Duration::from_mins(3),
-                })
-                .build()?;
+            let lake_store = s3_store(
+                "auto",
+                &config.data_dump.bucket,
+                &config.data_dump.access_key_id,
+                &config.data_dump.secret_access_key,
+                &config.r2.endpoint(),
+                retry_config(Duration::from_mins(3)),
+            )?;
             let ch_client_dump = clickhouse::Client::default()
                 .with_url(format!(
                     "http://{}:{}",
@@ -472,4 +410,37 @@ impl AppState {
             mcp_catalog,
         })))
     }
+}
+
+/// Exponential backoff (200ms..3s, 3 retries) giving up after `retry_timeout`.
+fn retry_config(retry_timeout: Duration) -> RetryConfig {
+    RetryConfig {
+        backoff: BackoffConfig {
+            init_backoff: Duration::from_millis(200),
+            max_backoff: Duration::from_secs(3),
+            base: 2.,
+        },
+        max_retries: 3,
+        retry_timeout,
+    }
+}
+
+/// An S3-compatible object store client (S3, the S3 cache, R2). Plain HTTP endpoints are allowed.
+fn s3_store(
+    region: &str,
+    bucket: &str,
+    access_key_id: &str,
+    secret_access_key: &str,
+    endpoint: &str,
+    retry: RetryConfig,
+) -> Result<AmazonS3, object_store::Error> {
+    AmazonS3Builder::new()
+        .with_region(region)
+        .with_bucket_name(bucket)
+        .with_access_key_id(access_key_id)
+        .with_secret_access_key(secret_access_key)
+        .with_endpoint(endpoint)
+        .with_allow_http(true)
+        .with_retry(retry)
+        .build()
 }
