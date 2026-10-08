@@ -23,14 +23,8 @@ pub enum StartupError {
     AppState(#[from] AppStateError),
 }
 
-#[allow(
-    dead_code,
-    reason = "used by tests, so `expect` would be unfulfilled in the test build"
-)]
 #[derive(Debug, Error)]
 pub(super) enum APIError {
-    #[error("Status {status}")]
-    Status { status: StatusCode },
     #[error("{message}")]
     StatusMsg { status: StatusCode, message: String },
     #[error("Status {status}")]
@@ -126,41 +120,27 @@ fn query_timeout_response() -> Response<Body> {
     )
 }
 
+/// Logs a response status and message at a level matching the status class.
+fn log_status(status: StatusCode, message: &dyn core::fmt::Debug) {
+    match status.as_u16() {
+        200..=299 => info!(?status, ?message, "Successful response"),
+        300..=399 => debug!(?status, ?message, "Redirection"),
+        400..=499 => warn!(?status, ?message, "Client error"),
+        500..=599 => error!(?status, ?message, "Server error"),
+        _ => error!(?status, ?message, "Unexpected status code"),
+    }
+}
+
 impl IntoResponse for APIError {
     #[expect(clippy::too_many_lines)]
     fn into_response(self) -> Response<Body> {
         match self {
-            Self::Status { status } => {
-                match status.as_u16() {
-                    200..=299 => info!(?status, "Successful response"),
-                    300..=399 => debug!(?status, "Redirection"),
-                    400..=499 => warn!(?status, "Client error"),
-                    500..=599 => error!(?status, "Server error"),
-                    _ => error!(?status, "Unexpected status code"),
-                }
-                Response::builder()
-                    .status(status)
-                    .body(Body::empty())
-                    .unwrap_or_else(|_| "Internal server error".to_owned().into_response())
-            }
             Self::StatusMsg { status, message } => {
-                match status.as_u16() {
-                    200..=299 => info!(?status, ?message, "Successful response"),
-                    300..=399 => debug!(?status, ?message, "Redirection"),
-                    400..=499 => warn!(?status, ?message, "Client error"),
-                    500..=599 => error!(?status, ?message, "Server error"),
-                    _ => error!(?status, ?message, "Unexpected status code"),
-                }
+                log_status(status, &message);
                 build_error_response(status, message)
             }
             Self::StatusMsgJson { status, message } => {
-                match status.as_u16() {
-                    200..=299 => info!(?status, ?message, "Successful response"),
-                    300..=399 => debug!(?status, ?message, "Redirection"),
-                    400..=499 => warn!(?status, ?message, "Client error"),
-                    500..=599 => error!(?status, ?message, "Server error"),
-                    _ => error!(?status, ?message, "Unexpected status code"),
-                }
+                log_status(status, &message);
                 build_error_response(status, message)
             }
             Self::RateLimitExceeded { status } => {
@@ -300,15 +280,6 @@ mod tests {
     use axum::http::StatusCode;
 
     use super::*;
-
-    #[test]
-    fn test_api_error_status() {
-        let error = APIError::Status {
-            status: StatusCode::NOT_FOUND,
-        };
-        let response = error.into_response();
-        assert_eq!(response.status(), StatusCode::NOT_FOUND);
-    }
 
     #[test]
     fn test_api_error_status_msg() {
