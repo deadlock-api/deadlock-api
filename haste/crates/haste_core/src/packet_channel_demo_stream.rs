@@ -12,7 +12,7 @@ use bytes::Bytes;
 use snap::raw::Decoder as SnapDecoder;
 
 use crate::async_demostream::AsyncDemoStream;
-use crate::demofile::DemoHeader;
+use crate::demofile::{DEMO_RECORD_BUFFER_SIZE, DemoHeader};
 use crate::demostream::{CmdHeader, ReadCmdError, ReadCmdHeaderError, decode_demo_cmd};
 use crate::packet_source::PacketSource;
 
@@ -81,6 +81,22 @@ impl<P: PacketSource> PacketChannelDemoStream<P> {
         Ok(())
     }
 
+    /// Ensure the next varint is complete (or that the max varint size is available), fetching
+    /// more packets if needed.
+    ///
+    /// NOTE: varints are variable-length, so requiring the max header size up front would treat
+    /// a short final command as the end of the stream.
+    async fn ensure_varint(&mut self) -> Result<(), ReadCmdHeaderError> {
+        const MAX_VARINT32_SIZE: usize = 5;
+        loop {
+            let available = &self.current[self.offset..];
+            if available.len() >= MAX_VARINT32_SIZE || available.iter().any(|b| b & 0x80 == 0) {
+                return Ok(());
+            }
+            self.ensure_bytes(available.len() + 1).await?;
+        }
+    }
+
     fn remaining(&self) -> usize {
         self.current.len().saturating_sub(self.offset)
     }
@@ -143,23 +159,23 @@ impl<P: PacketSource> AsyncDemoStream for PacketChannelDemoStream<P> {
         // Skip demo header on first call
         self.skip_header_if_needed().await?;
 
-        // Ensure we have enough bytes for at least one varint (max 5 bytes each, 3 varints)
-        self.ensure_bytes(15).await?;
-
-        let start_offset = self.offset;
-
+        // NOTE: fetching more bytes compacts the buffer and moves the offset, so the header size
+        // is summed from the varint sizes instead.
         // Read command type (varint)
-        let (cmd_raw, _) = self.read_varint()?;
+        self.ensure_varint().await?;
+        let (cmd_raw, cmd_size) = self.read_varint()?;
         let (cmd, body_compressed) = decode_demo_cmd(cmd_raw)?;
 
         // Read tick (varint, signed stored as unsigned)
-        let (tick_raw, _) = self.read_varint()?;
+        self.ensure_varint().await?;
+        let (tick_raw, tick_size) = self.read_varint()?;
         let tick = tick_raw as i32;
 
         // Read body size (varint)
-        let (body_size, _) = self.read_varint()?;
+        self.ensure_varint().await?;
+        let (body_size, body_size_size) = self.read_varint()?;
 
-        let header_size = (self.offset - start_offset) as u8;
+        let header_size = (cmd_size + tick_size + body_size_size) as u8;
 
         Ok(CmdHeader {
             cmd,
@@ -189,6 +205,17 @@ impl<P: PacketSource> AsyncDemoStream for PacketChannelDemoStream<P> {
         // Decompress with snappy
         let uncompressed_size = snap::raw::decompress_len(body)
             .map_err(|e| ReadCmdError::IoError(io::Error::new(io::ErrorKind::InvalidData, e)))?;
+        // NOTE: the length comes from the (untrusted) snappy header; don't allocate whatever it
+        // claims. the file readers decompress into a buffer of this size too.
+        if uncompressed_size > DEMO_RECORD_BUFFER_SIZE {
+            return Err(ReadCmdError::IoError(io::Error::new(
+                io::ErrorKind::InvalidData,
+                format!(
+                    "cmd body decompresses to {uncompressed_size} bytes, more than the \
+                     {DEMO_RECORD_BUFFER_SIZE} byte limit"
+                ),
+            )));
+        }
 
         self.decompress_buf.resize(uncompressed_size, 0);
         SnapDecoder::new()
@@ -200,5 +227,98 @@ impl<P: PacketSource> AsyncDemoStream for PacketChannelDemoStream<P> {
 
     fn start_position(&self) -> u64 {
         DEMO_HEADER_SIZE as u64
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use core::pin::pin;
+    use core::task::{Context, Poll, Waker};
+    use std::collections::VecDeque;
+
+    use valveprotos::common::EDemoCommands;
+
+    use super::*;
+
+    /// packets that are all available up front; `recv` never pends.
+    struct Packets(VecDeque<Bytes>);
+
+    impl PacketSource for Packets {
+        fn recv(&mut self) -> impl Future<Output = Option<Bytes>> + Send {
+            core::future::ready(self.0.pop_front())
+        }
+    }
+
+    fn block_on<F: Future>(fut: F) -> F::Output {
+        let mut fut = pin!(fut);
+        match fut.as_mut().poll(&mut Context::from_waker(Waker::noop())) {
+            Poll::Ready(v) => v,
+            Poll::Pending => panic!("packet source never pends"),
+        }
+    }
+
+    fn stream(packets: &[&[u8]]) -> PacketChannelDemoStream<Packets> {
+        let mut first = vec![0u8; DEMO_HEADER_SIZE];
+        first.extend_from_slice(packets.first().copied().unwrap_or_default());
+        let rest = packets.iter().skip(1).map(|p| Bytes::copy_from_slice(p));
+        PacketChannelDemoStream::new(Packets(
+            core::iter::once(Bytes::from(first)).chain(rest).collect(),
+        ))
+    }
+
+    fn is_eof(err: &ReadCmdHeaderError) -> bool {
+        matches!(err, ReadCmdHeaderError::IoError(e) if e.kind() == io::ErrorKind::UnexpectedEof)
+    }
+
+    const PACKET: u8 = EDemoCommands::DemPacket as u8;
+
+    #[test]
+    fn short_final_cmd_is_read() {
+        // a 4 byte final cmd (3 byte header + 1 byte body), split across two packets.
+        let mut s = stream(&[&[PACKET, 5], &[1, 0xaa]]);
+        let header = block_on(s.read_cmd_header()).unwrap();
+        assert_eq!(header.cmd, EDemoCommands::DemPacket);
+        assert_eq!(header.tick, 5);
+        assert_eq!(header.body_size, 1);
+        assert_eq!(header.size, 3);
+        assert_eq!(block_on(s.read_cmd(&header)).unwrap(), &[0xaa]);
+        assert!(is_eof(&block_on(s.read_cmd_header()).unwrap_err()));
+    }
+
+    #[test]
+    fn multi_byte_varints_span_packets() {
+        // tick 300 = [0xac, 0x02], split between the two bytes.
+        let mut s = stream(&[&[PACKET, 0xac], &[0x02, 0], &[]]);
+        let header = block_on(s.read_cmd_header()).unwrap();
+        assert_eq!(header.tick, 300);
+        assert_eq!(header.body_size, 0);
+        assert_eq!(header.size, 4);
+        assert!(is_eof(&block_on(s.read_cmd_header()).unwrap_err()));
+    }
+
+    #[test]
+    fn truncated_header_is_eof() {
+        let mut s = stream(&[&[PACKET, 0x80]]);
+        assert!(is_eof(&block_on(s.read_cmd_header()).unwrap_err()));
+    }
+
+    #[test]
+    fn oversized_decompress_len_is_rejected() {
+        // a snappy body whose header claims 1 GiB of output.
+        let mut body = Vec::new();
+        let mut len = 1u32 << 30;
+        while len >= 0x80 {
+            body.push((len as u8) | 0x80);
+            len >>= 7;
+        }
+        body.push(len as u8);
+        let cmd = PACKET | EDemoCommands::DemIsCompressed as u8;
+        let mut bytes = vec![cmd, 0, body.len() as u8];
+        bytes.extend_from_slice(&body);
+        let mut s = stream(&[&bytes]);
+        let header = block_on(s.read_cmd_header()).unwrap();
+        assert!(header.body_compressed);
+        assert!(block_on(s.read_cmd(&header)).is_err());
+        assert!(s.decompress_buf.len() <= DEMO_RECORD_BUFFER_SIZE);
     }
 }
