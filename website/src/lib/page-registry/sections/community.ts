@@ -1,4 +1,4 @@
-import { heroId, heroIds, previousPatchId, sortParam } from "../readers";
+import { heroCodename, heroId, heroIds, previousPatchId, sortParam } from "../readers";
 import type { RegisteredPage } from "../types";
 
 export const COMMUNITY_PAGES: RegisteredPage[] = [
@@ -28,8 +28,9 @@ export const COMMUNITY_PAGES: RegisteredPage[] = [
   },
   {
     id: "voice_lines",
-    description: "a hero's voice lines to listen to: everything a hero says in a match",
+    description: "a hero's voice lines and sounds to listen to: everything a hero says in a match",
     path: "/sounds",
+    search: { character: heroCodename() },
   },
   {
     id: "hero_conversations",

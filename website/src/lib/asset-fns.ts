@@ -10,6 +10,8 @@ import { api } from "~/lib/api";
 const HERO_FIELDS = [
   "id",
   "name",
+  // `hero_atlas`: the codename the sounds page names a hero's voice lines by.
+  "class_name",
   "colors",
   "complexity",
   "development_state",

@@ -30,6 +30,9 @@ export const comboSize = (smallest: number, largest: number): ParamReader => ({
   read: (s) => (s.heroes.length > smallest ? Math.min(s.heroes.length, largest) : undefined),
 });
 
+/** The first hero's codename (`atlas`), the sounds page's name for a hero's voice lines. */
+export const heroCodename = (): ParamReader => ({ uses: "hero", read: (s) => s.heroes[0]?.codename });
+
 /** The first hero's page slug, for a `$heroName` path segment. */
 export const heroSlugParam = (): ParamReader => ({
   uses: "hero",

@@ -14,7 +14,7 @@ export interface SearchCatalog {
   catalog: Catalog;
 }
 
-type HeroAsset = Entity & Pick<Hero, "development_state" | "disabled">;
+type HeroAsset = Entity & Pick<Hero, "development_state" | "disabled" | "class_name">;
 type ItemAsset = Entity & Pick<Upgrade, "shopable" | "disabled" | "shop_image_webp">;
 
 /** The search's names from the asset lists: playable heroes, items the shop sells, every rank. */
@@ -23,7 +23,9 @@ export function buildSearchCatalog(
   items: readonly ItemAsset[],
   ranks: readonly RankTier[],
 ): SearchCatalog {
-  const playable = heroes.filter(isPlayableHero);
+  const playable = heroes
+    .filter(isPlayableHero)
+    .map((hero) => ({ id: hero.id, name: hero.name, codename: hero.class_name.replace(/^hero_/, "") }));
   const shopable = items.filter(isShopableItem);
   return {
     vocabulary: {

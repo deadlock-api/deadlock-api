@@ -9,6 +9,8 @@ export type SearchValue = string | number | boolean;
 export interface Entity {
   id: number;
   name: string;
+  /** A hero's internal name (`atlas` for Abrams), which the sounds page names its voice lines by. */
+  codename?: string;
 }
 
 /**

@@ -140,3 +140,9 @@ test("every sort a page is sent is one the page offers", () => {
     "avg_max_health_per_match",
   );
 });
+
+test("a hero's voice lines open by the hero's codename", () => {
+  const voice = PAGE_REGISTRY.find((page) => page.id === "voice_lines")!;
+  const baba = { ...empty, heroes: [{ id: 81, name: "Baba", codename: "baba" }] };
+  assert.deepEqual(resolvePage(voice, baba, context).search, { character: "baba" });
+});
