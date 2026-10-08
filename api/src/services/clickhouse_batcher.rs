@@ -74,6 +74,30 @@ pub(crate) trait BatchQueryGrouped: Send + Sync + 'static {
 
 // --- Internal engine: deduplicated batch loop / execute pipeline ---
 
+/// Metric names of one batcher kind, built at compile time so recording a batch doesn't
+/// format (and allocate) a name per metric.
+struct MetricNames {
+    window_ms: &'static str,
+    batch_size: &'static str,
+    unique_ids: &'static str,
+    batches: &'static str,
+    query_duration_seconds: &'static str,
+    errors: &'static str,
+}
+
+macro_rules! metric_names {
+    ($prefix:literal) => {
+        MetricNames {
+            window_ms: concat!($prefix, ".window_ms"),
+            batch_size: concat!($prefix, ".batch_size"),
+            unique_ids: concat!($prefix, ".unique_ids"),
+            batches: concat!($prefix, ".batches"),
+            query_duration_seconds: concat!($prefix, ".query_duration_seconds"),
+            errors: concat!($prefix, ".errors"),
+        }
+    };
+}
+
 trait BatcherInner: Send + Sync + 'static {
     type Key: Hash + Eq + Clone + Send + Sync + 'static;
     type Group: Hash + Eq + Clone + Send + Sync + 'static;
@@ -84,8 +108,8 @@ trait BatcherInner: Send + Sync + 'static {
     fn batch_window_ms() -> u64;
     fn max_batch_size() -> usize;
 
-    /// Metric name prefix, e.g. `clickhouse_batcher` or `clickhouse_batcher_multi`.
-    const METRIC_PREFIX: &'static str;
+    /// Metric names, prefixed e.g. `clickhouse_batcher` or `clickhouse_batcher_multi`.
+    const METRICS: MetricNames;
 }
 
 struct SingleBridge<T>(PhantomData<T>);
@@ -107,7 +131,7 @@ impl<T: BatchQuery> BatcherInner for SingleBridge<T> {
     fn max_batch_size() -> usize {
         T::max_batch_size()
     }
-    const METRIC_PREFIX: &'static str = "clickhouse_batcher";
+    const METRICS: MetricNames = metric_names!("clickhouse_batcher");
 }
 
 struct MultiBridge<T>(PhantomData<T>);
@@ -129,7 +153,7 @@ impl<T: BatchQueryMulti> BatcherInner for MultiBridge<T> {
     fn max_batch_size() -> usize {
         T::max_batch_size()
     }
-    const METRIC_PREFIX: &'static str = "clickhouse_batcher_multi";
+    const METRICS: MetricNames = metric_names!("clickhouse_batcher_multi");
 }
 
 struct GroupedBridge<T>(PhantomData<T>);
@@ -151,7 +175,7 @@ impl<T: BatchQueryGrouped> BatcherInner for GroupedBridge<T> {
     fn max_batch_size() -> usize {
         T::max_batch_size()
     }
-    const METRIC_PREFIX: &'static str = "clickhouse_batcher_grouped";
+    const METRICS: MetricNames = metric_names!("clickhouse_batcher_grouped");
 }
 
 struct EngineRequest<I: BatcherInner> {
@@ -232,7 +256,7 @@ async fn batch_loop<I: BatcherInner>(
         }
 
         prev_batch_size = pending.len();
-        gauge!(format!("{}.window_ms", I::METRIC_PREFIX)).set(window.as_secs_f64() * 1000.0);
+        gauge!(I::METRICS.window_ms).set(window.as_secs_f64() * 1000.0);
 
         let mut by_group: HashMap<I::Group, Vec<EngineRequest<I>>> = HashMap::new();
         for req in pending {
@@ -263,22 +287,22 @@ async fn execute_batch<I: BatcherInner>(
     }
 
     let unique_ids = senders.len();
-    let prefix = I::METRIC_PREFIX;
-    histogram!(format!("{prefix}.batch_size")).record(batch_size as f64);
-    histogram!(format!("{prefix}.unique_ids")).record(unique_ids as f64);
-    counter!(format!("{prefix}.batches")).increment(1);
+    let metrics = &I::METRICS;
+    histogram!(metrics.batch_size).record(batch_size as f64);
+    histogram!(metrics.unique_ids).record(unique_ids as f64);
+    counter!(metrics.batches).increment(1);
 
     let keys: Vec<I::Key> = senders.keys().cloned().collect();
     let query = I::build_query(group, &keys);
 
     let start = tokio::time::Instant::now();
     let result = ch_client.query(&query).fetch_all::<I::Value>().await;
-    histogram!(format!("{prefix}.query_duration_seconds")).record(start.elapsed().as_secs_f64());
+    histogram!(metrics.query_duration_seconds).record(start.elapsed().as_secs_f64());
 
     let rows = match result {
         Ok(rows) => rows,
         Err(e) => {
-            counter!(format!("{prefix}.errors")).increment(1);
+            counter!(metrics.errors).increment(1);
             warn!("Batch query failed: {e}");
             for (_, txs) in senders {
                 for tx in txs {
