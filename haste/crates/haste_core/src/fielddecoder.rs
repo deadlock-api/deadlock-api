@@ -327,6 +327,10 @@ impl FieldDecoder {
             }
             Self::BinaryBlock => {
                 let len = br.read_uvarint32()? as usize;
+                // check before allocating: the length is untrusted.
+                if len.saturating_mul(8) > br.num_bits_left() {
+                    return Err(BitError::Overflow.into());
+                }
                 let mut buf = vec![0u8; len];
                 br.read_bytes(&mut buf)?;
                 FieldValue::String(Arc::from(buf))
@@ -502,6 +506,18 @@ mod tests {
         };
         assert_eq!(&bytes[..], &[0xaa, 0x00, 0xbb]);
         assert_eq!(bits, 32);
+    }
+
+    #[test]
+    fn test_binary_block_length_past_end_is_an_error() {
+        // varint 0xffff_ffff, followed by far fewer bytes.
+        let buf = [0xff, 0xff, 0xff, 0xff, 0x0f, 1, 2, 3];
+        let mut ctx = FieldDecodeContext::default();
+        let mut br = BitReader::new(&buf);
+        assert!(matches!(
+            FieldDecoder::BinaryBlock.decode(&mut ctx, &mut br),
+            Err(DecoderError::Bit(BitError::Overflow))
+        ));
     }
 
     #[test]

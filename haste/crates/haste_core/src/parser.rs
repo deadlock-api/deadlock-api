@@ -276,6 +276,14 @@ impl Context {
         let string_data = if msg.data_compressed() {
             let sd = msg.string_data();
             let decompress_len = snap::raw::decompress_len(sd)?;
+            // NOTE: the length comes from the (untrusted) snappy header; don't allocate whatever it
+            // claims.
+            if decompress_len > DEMO_RECORD_BUFFER_SIZE {
+                bail!(
+                    "string table data decompresses to {decompress_len} bytes, more than the \
+                     {DEMO_RECORD_BUFFER_SIZE} byte limit"
+                );
+            }
             self.string_table_buf.resize(decompress_len, 0);
             snap::raw::Decoder::new().decompress(sd, &mut self.string_table_buf)?;
             &self.string_table_buf[..decompress_len]
