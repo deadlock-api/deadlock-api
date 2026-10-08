@@ -55,6 +55,8 @@ export interface PageTarget {
   page: RegisteredPage;
   path: string;
   search: Record<string, SearchValue>;
+  /** The `data-find` value of the element on the page that shows what was asked, if the page has one. */
+  find?: string;
 }
 
 /** Where a selection opens a page: its path with the segments filled, and every parameter the page reads. */
@@ -70,5 +72,10 @@ export function resolvePage(page: RegisteredPage, selection: Selection, context:
     const value = reader.read(selection, context);
     if (value !== undefined) search[param] = value;
   }
-  return { page, path, search: { ...search, ...sharedFilterParams(page.filters ?? [], selection, context) } };
+  return {
+    page,
+    path,
+    search: { ...search, ...sharedFilterParams(page.filters ?? [], selection, context) },
+    find: page.find?.read(selection, context)?.toString(),
+  };
 }

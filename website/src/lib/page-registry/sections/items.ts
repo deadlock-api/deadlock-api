@@ -1,4 +1,4 @@
-import { enemyHeroIds, heroId, itemIds, itemSlugParam } from "../readers";
+import { enemyHeroIds, findItem, findStat, heroId, itemIds, itemSlugParam, itemTiers } from "../readers";
 import type { RegisteredPage } from "../types";
 
 const ALL = ["mode", "rank", "time"] as const;
@@ -11,8 +11,9 @@ export const ITEM_PAGES: RegisteredPage[] = [
       "what to buy against heroes",
     context: 'Which item to buy as one hero against another ("what to buy as haze vs bebop") is this page.',
     path: "/analytics/items",
-    search: { hero: heroId(), enemy: enemyHeroIds(), include_items: itemIds() },
+    search: { hero: heroId(), enemy: enemyHeroIds(), include_items: itemIds(), item_tiers: itemTiers() },
     filters: ALL,
+    find: findItem(),
   },
   {
     id: "item_page",
@@ -20,6 +21,7 @@ export const ITEM_PAGES: RegisteredPage[] = [
     path: "/analytics/items/$itemName",
     pathParams: { itemName: itemSlugParam() },
     fallbackPath: "/analytics/items",
+    find: findStat({ winrate: "win_rate", matches: "matches" }),
   },
   {
     id: "item_timing",

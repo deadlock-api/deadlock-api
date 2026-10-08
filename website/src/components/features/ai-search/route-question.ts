@@ -55,5 +55,7 @@ export async function routeQuestion(
   }
   const target = resolveIntent(intent, catalog, { patches: PATCH_ENTRIES, seasons, now: Date.now() / 1000 });
   if (!target) return done({ kind: "not_understood" });
-  return done({ kind: "opened", id: target.page.id, href: target.path + stringifySearch(target.search) });
+  // The hash points the page at what was asked (`FindOnPage` outlines it); it never reaches the server.
+  const hash = target.find ? `#find:${target.find}` : "";
+  return done({ kind: "opened", id: target.page.id, href: target.path + stringifySearch(target.search) + hash });
 }

@@ -81,6 +81,8 @@ export interface Selection {
   /** The other team, for a page that compares two teams. */
   enemyHeroes: HeroEntity[];
   items: Entity[];
+  /** Shop tiers (1 to 4) the question narrows items to ("t1 items"). */
+  itemTiers?: number[];
   /** Badge range, already a valid pair. */
   rank?: { min: number; max: number };
   mode?: SelectionMode;
@@ -90,7 +92,7 @@ export interface Selection {
 }
 
 /** The parts of a selection a page can use. */
-export type Slot = "hero" | "heroes" | "enemyHeroes" | "item" | "items" | "region" | "sort" | "patch";
+export type Slot = "hero" | "heroes" | "enemyHeroes" | "item" | "items" | "itemTiers" | "region" | "sort" | "patch";
 
 export interface SeasonRef {
   startUnix: number;
@@ -129,6 +131,12 @@ export interface RegisteredPage {
   search?: Record<string, ParamReader>;
   /** Parameters the page always opens with, whatever was asked: the tab of a page that has several. */
   fixed?: Record<string, SearchValue>;
+  /**
+   * What on the page shows the answer: the `data-find` key (`find-keys.ts`) of a hero's row, an item's, or a stat's
+   * spot, read from the question like a parameter. The search scrolls to it and outlines it, so "how long are games"
+   * lands on the average duration. A page without one opens at its top.
+   */
+  find?: ParamReader;
   filters?: readonly SharedFilter[];
 }
 

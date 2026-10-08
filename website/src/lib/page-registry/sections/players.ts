@@ -1,4 +1,4 @@
-import { heroId, region, sortParam, teamSlots } from "../readers";
+import { findStat, heroId, region, sortParam, teamSlots } from "../readers";
 import { SCOREBOARD_STAT_NAMES, scoreboardSort } from "../scoreboards";
 import type { RegisteredPage } from "../types";
 
@@ -13,6 +13,7 @@ export const PLAYER_PAGES: RegisteredPage[] = [
     path: "/analytics/players",
     search: { hero: heroId(), sort_by: sortParam(scoreboardSort("total")) },
     filters: ALL,
+    find: findStat(scoreboardSort("total")),
   },
   {
     id: "player_stats",

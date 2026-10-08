@@ -147,3 +147,76 @@ test("a hero's voice lines open by the hero's codename", () => {
   const baba = { ...empty, heroes: [{ id: 81, name: "Baba", codename: "baba" }] };
   assert.deepEqual(resolvePage(voice, baba, context).search, { character: "baba" });
 });
+
+test("a page points at the spot that shows the asked stat", () => {
+  const games = PAGE_REGISTRY.find((page) => page.id === "games_overview")!;
+  const below = { ...empty, rank: { min: 0, max: 86 }, sort: "duration" as const };
+  assert.deepEqual(resolvePage(games, below, context), {
+    page: games,
+    path: "/analytics/games",
+    search: { min_rank: 0, max_rank: 86 },
+    find: "stat-avg_duration_s",
+  });
+  assert.equal(resolvePage(games, empty, context).find, undefined);
+});
+
+/** Pages with nothing for a question to point at, and why; every other page must declare `find`. */
+const NOTHING_TO_FIND: Record<string, string> = {
+  heroes_over_time: "a chart, no element per hero",
+  heroes_by_rank: "a chart, no element per hero",
+  heroes_by_duration: "a chart, no element per hero",
+  hero_synergy: "rows are combinations of heroes, not one hero",
+  item_combos: "rows are combinations of items, not one item",
+  item_timing: "a chart per item",
+  build_flow: "a flow graph",
+  abilities: "an ability order per hero, already filtered to it",
+  games_over_time: "a chart of the stat the question picks",
+  games_by_rank: "a chart per rank",
+  games_economy: "charts of the soul economy",
+  games_combat: "charts of combat stats",
+  games_buffs: "charts of buff pickups",
+  player_stats: "distribution charts",
+  player_compare: "players the visitor adds",
+  player_tracker: "the visitor's own matches",
+  team_builder: "the draft itself is the answer",
+  leaderboard: "rows are players, a hero is a filter",
+  rank_distribution: "a chart",
+  heatmap: "a map",
+  patch_notes: "notes, not stats",
+  voice_lines: "opens on the hero's lines",
+  hero_conversations: "filtered to the hero",
+  sound_effects: "a sound library",
+  crosshair: "an editor",
+  streamkit: "a setup page",
+  data_dumps: "downloads",
+  deadlockdle: "a game",
+  flashcards: "a game",
+};
+
+test("every page says what a question can point at on it, or why nothing", () => {
+  for (const page of PAGE_REGISTRY) {
+    assert.ok(page.find || NOTHING_TO_FIND[page.id], `${page.id} declares no find and is not in NOTHING_TO_FIND`);
+    assert.ok(!(page.find && NOTHING_TO_FIND[page.id]), `${page.id} declares a find but is listed without one`);
+  }
+});
+
+test("a question points at the hero, item or stat it is about", () => {
+  const page = (id: string) => PAGE_REGISTRY.find((p) => p.id === id)!;
+  const bebop = { id: 15, name: "Bebop", codename: "bebop" };
+  const haze = { id: 13, name: "Haze", codename: "haze" };
+  assert.equal(resolvePage(page("tier_list"), { ...empty, heroes: [haze] }, context).find, "hero-13");
+  // On a hero's counters, the hero asked about is the page; the other one is the row.
+  assert.equal(resolvePage(page("hero_counters"), { ...empty, heroes: [bebop, haze] }, context).find, "hero-13");
+  assert.equal(
+    resolvePage(page("hero_page"), { ...empty, heroes: [haze], sort: "winrate" }, context).find,
+    "stat-win_rate",
+  );
+  assert.equal(
+    resolvePage(page("hero_scoreboard"), { ...empty, sort: "max_health" }, context).find,
+    "stat-avg_max_health_per_match",
+  );
+  assert.equal(
+    resolvePage(page("item_stats"), { ...empty, items: [{ id: 100, name: "Toxic Bullets" }] }, context).find,
+    "item-100",
+  );
+});

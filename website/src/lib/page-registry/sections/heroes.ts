@@ -1,8 +1,16 @@
-import { comboSize, heroId, heroIds, heroSlugParam, sortParam } from "../readers";
+import { comboSize, findHero, findStat, firstFound, heroId, heroIds, heroSlugParam, sortParam } from "../readers";
 import { SCOREBOARD_STAT_NAMES, scoreboardSort } from "../scoreboards";
 import type { RegisteredPage } from "../types";
 
 const ALL = ["mode", "rank", "time"] as const;
+
+/** The headline tiles of a hero's page, by the shared sort keys. */
+const HERO_PAGE_STATS = {
+  winrate: "win_rate",
+  pickrate: "pick_rate",
+  banrate: "ban_rate",
+  matches: "matches",
+} as const;
 
 export const HERO_PAGES: RegisteredPage[] = [
   {
@@ -11,6 +19,7 @@ export const HERO_PAGES: RegisteredPage[] = [
     path: "/analytics/heroes",
     search: { hero_sort_key: sortParam({ winrate: "winrate", pickrate: "pickRate", banrate: "banRate" }) },
     filters: ALL,
+    find: findHero(),
   },
   {
     id: "tier_list",
@@ -30,6 +39,7 @@ export const HERO_PAGES: RegisteredPage[] = [
       }),
     },
     filters: ALL,
+    find: findHero(),
   },
   {
     id: "hero_page",
@@ -38,6 +48,7 @@ export const HERO_PAGES: RegisteredPage[] = [
     path: "/analytics/heroes/$heroName",
     pathParams: { heroName: heroSlugParam() },
     fallbackPath: "/analytics/heroes",
+    find: firstFound(findHero(1), findStat(HERO_PAGE_STATS)),
   },
   {
     id: "hero_counters",
@@ -49,12 +60,14 @@ export const HERO_PAGES: RegisteredPage[] = [
     path: "/analytics/heroes/matchup-details",
     search: { hero_id: heroId() },
     filters: ALL,
+    find: findHero(1),
   },
   {
     id: "hero_matchups",
     description: "the matchup table of all heroes at once: the best and worst opponent and teammate of every hero",
     path: "/analytics/heroes/matchups",
     filters: ALL,
+    find: findHero(),
   },
   {
     id: "hero_synergy",
@@ -105,6 +118,7 @@ export const HERO_PAGES: RegisteredPage[] = [
     description: "hero win rates by how many games players have on the hero: which heroes are hard to learn",
     path: "/analytics/heroes/by-experience",
     filters: ALL,
+    find: findHero(),
   },
   {
     id: "hero_scoreboard",
@@ -115,5 +129,6 @@ export const HERO_PAGES: RegisteredPage[] = [
     path: "/analytics/heroes/scoreboard",
     search: { scoreboard_sort_by: sortParam(scoreboardSort("avg")) },
     filters: ALL,
+    find: firstFound(findHero(), findStat(scoreboardSort("avg"))),
   },
 ];

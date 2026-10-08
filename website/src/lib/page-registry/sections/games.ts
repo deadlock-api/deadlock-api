@@ -1,7 +1,29 @@
-import { sortParam } from "../readers";
-import type { RegisteredPage } from "../types";
+import { findStat, sortParam } from "../readers";
+import type { RegisteredPage, SortKey } from "../types";
 
 const ALL = ["mode", "rank", "time"] as const;
+
+/** The games pages' own stat keys (game-stat-definitions.ts), by the shared sort keys. */
+const GAME_STATS = {
+  kills: "avg_kills",
+  deaths: "avg_deaths",
+  assists: "avg_assists",
+  souls: "avg_net_worth",
+  damage: "avg_player_damage",
+  healing: "avg_player_healing",
+  last_hits: "avg_last_hits",
+  denies: "avg_denies",
+  boss_damage: "avg_boss_damage",
+  creep_damage: "avg_creep_damage",
+  neutral_damage: "avg_neutral_damage",
+  creep_kills: "avg_creep_kills",
+  neutral_kills: "avg_neutral_kills",
+  max_health: "avg_max_health",
+  level: "avg_ending_level",
+  permanent_buffs: "avg_permanent_buffs",
+  accuracy: "avg_accuracy",
+  duration: "avg_duration_s",
+} as const satisfies Partial<Record<SortKey, string>>;
 
 export const GAME_PAGES: RegisteredPage[] = [
   {
@@ -10,32 +32,14 @@ export const GAME_PAGES: RegisteredPage[] = [
     context: "Hidden King and Archmother are the two team sides, not heroes.",
     path: "/analytics/games",
     filters: ALL,
+    find: findStat(GAME_STATS),
   },
   {
     id: "games_over_time",
     description: "how average match stats changed day by day: match duration, kills, souls, damage per game",
     path: "/analytics/games/over-time",
     search: {
-      stat: sortParam({
-        kills: "avg_kills",
-        deaths: "avg_deaths",
-        assists: "avg_assists",
-        souls: "avg_net_worth",
-        damage: "avg_player_damage",
-        healing: "avg_player_healing",
-        last_hits: "avg_last_hits",
-        denies: "avg_denies",
-        boss_damage: "avg_boss_damage",
-        creep_damage: "avg_creep_damage",
-        neutral_damage: "avg_neutral_damage",
-        creep_kills: "avg_creep_kills",
-        neutral_kills: "avg_neutral_kills",
-        max_health: "avg_max_health",
-        level: "avg_ending_level",
-        permanent_buffs: "avg_permanent_buffs",
-        accuracy: "avg_accuracy",
-        duration: "avg_duration_s",
-      }),
+      stat: sortParam(GAME_STATS),
     },
     filters: ALL,
   },

@@ -1,3 +1,4 @@
+import { findKey } from "~/lib/find-keys";
 import { heroSlug } from "~/lib/hero-slug";
 import { itemSlug } from "~/lib/item-slug";
 
@@ -48,6 +49,15 @@ export const itemId = (): ParamReader => ({ uses: "item", read: (s) => s.items[0
 /** Every item's id, comma separated. */
 export const itemIds = (): ParamReader => ({ uses: "items", read: (s) => ids(s.items) });
 
+/** The shop tiers asked about, comma separated; one tier stays a number, like one id. */
+export const itemTiers = (): ParamReader => ({
+  uses: "itemTiers",
+  read: (s) => {
+    const tiers = s.itemTiers ?? [];
+    return tiers.length <= 1 ? tiers[0] : tiers.join(",");
+  },
+});
+
 /** The first item's page slug, for an `$itemName` path segment. */
 export const itemSlugParam = (): ParamReader => ({
   uses: "item",
@@ -79,4 +89,45 @@ export const sortParam = (values: Partial<Record<SortKey, string>>): ParamReader
 export const previousPatchId = (): ParamReader => ({
   uses: "patch",
   read: (s, context) => (s.time === "previous_patch" ? context.patches[1]?.id : undefined),
+});
+
+// What a page points at (`RegisteredPage.find`): readers that build a `data-find` key.
+
+/** The spot that shows the asked stat, by the page's own key for each shared sort key. */
+export const findStat = (keys: Partial<Record<SortKey, string>>): ParamReader => ({
+  uses: "sort",
+  read: (s) => {
+    const key = s.sort && keys[s.sort];
+    return key ? findKey.stat(key) : undefined;
+  },
+});
+
+/** The row or tile of the hero the question names at `index` (0 for the first). */
+export const findHero = (index = 0): ParamReader => ({
+  uses: "heroes",
+  read: (s) => {
+    const hero = s.heroes[index];
+    return hero ? findKey.hero(hero.id) : undefined;
+  },
+});
+
+/** The row or tile of the item the question names at `index`. */
+export const findItem = (index = 0): ParamReader => ({
+  uses: "items",
+  read: (s) => {
+    const item = s.items[index];
+    return item ? findKey.item(item.id) : undefined;
+  },
+});
+
+/** The first of several things the question may point at: a hero's row if it names one, else the stat. */
+export const firstFound = (...readers: ParamReader[]): ParamReader => ({
+  uses: readers[0].uses,
+  read: (s, context) => {
+    for (const reader of readers) {
+      const value = reader.read(s, context);
+      if (value !== undefined) return value;
+    }
+    return undefined;
+  },
 });
