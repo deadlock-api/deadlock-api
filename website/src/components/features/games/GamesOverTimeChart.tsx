@@ -20,16 +20,15 @@ import { SelectGroup, SelectItem, SelectLabel } from "~/components/ui/select";
 import { Stat, StatGroup } from "~/components/ui/stat";
 import { day } from "~/dayjs";
 import { BUFF_TIMINGS_NOTE } from "~/lib/buffs";
-import { wholeTimeBuckets } from "~/lib/time-buckets";
-import { gameStatsQueryOptions } from "~/queries/games-query";
-
 import {
   formatAxisTick,
   formatStatValue,
   getFilteredCategories,
   getStatDefinition,
   valueSpan,
-} from "./stat-definitions";
+} from "~/lib/game-stat-definitions";
+import { wholeTimeBuckets } from "~/lib/time-buckets";
+import { gameStatsQueryOptions } from "~/queries/games-query";
 
 const TIME_BUCKETS = [
   { value: "start_time_day", label: "Day" },

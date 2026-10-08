@@ -10,10 +10,10 @@ import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { ProgressBar } from "~/components/ui/progress-bar";
 import { Stat, StatGroup } from "~/components/ui/stat";
+import { formatStatValue } from "~/lib/game-stat-definitions";
 import { gameStatsQueryOptions } from "~/queries/games-query";
 
 import { formatPercent, formatSouls, groupSoulParts, SOUL_SOURCE_GROUPS } from "./economy-definitions";
-import { formatStatValue } from "./stat-definitions";
 
 interface EconomySoulSourcesProps {
   params: AnalyticsApiGameStatsRequest;

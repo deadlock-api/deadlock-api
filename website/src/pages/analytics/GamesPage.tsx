@@ -4,7 +4,6 @@ import { Suspense } from "react";
 
 import { Filter } from "~/components/domain/filters";
 import GamesOverview from "~/components/features/games/GamesOverview";
-import { ALL_STAT_KEYS, getFilteredCategories } from "~/components/features/games/stat-definitions";
 import { ResponsiveTab, ResponsiveTabsList } from "~/components/patterns/navigation/ResponsiveTabsList";
 import { PageHeader } from "~/components/patterns/page/PageHeader";
 import { PageShell } from "~/components/patterns/page/PageShell";
@@ -18,6 +17,7 @@ import { useModeState } from "~/hooks/useModeState";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { analyticsTabPath, ANALYTICS_VIEWS } from "~/lib/analytics-tabs";
 import { getEffectiveRankRange } from "~/lib/game-mode";
+import { ALL_STAT_KEYS, getFilteredCategories } from "~/lib/game-stat-definitions";
 
 import { BuffsTab, CombatTab, EconomyTab, GamesByRankChart, GamesOverTimeChart } from "./games-views";
 

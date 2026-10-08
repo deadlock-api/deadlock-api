@@ -4,10 +4,9 @@ import { useMemo } from "react";
 
 import { PATCH_MARKERS_SHORT } from "~/components/domain/charts/PatchMarkers";
 import StatTrendChart, { type StatTrendBucket } from "~/components/patterns/charts/StatTrendChart";
+import type { StatDefinition } from "~/lib/game-stat-definitions";
 import { completeTimeBuckets } from "~/lib/time-buckets";
 import { gameStatsQueryOptions } from "~/queries/games-query";
-
-import type { StatDefinition } from "./stat-definitions";
 
 export default function GameStatTrendChart({
   params,

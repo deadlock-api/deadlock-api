@@ -11,11 +11,11 @@ import { CHART_GRID, CHART_X_AXIS, CHART_Y_AXIS, CHART_Y_LABEL } from "~/compone
 import { Stat, StatGroup } from "~/components/ui/stat";
 import { TooltipCard, TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
 import { BUFF_TIMINGS_NOTE } from "~/lib/buffs";
+import { formatAxisTick, formatStatValue, getStatDefinition, valueSpan } from "~/lib/game-stat-definitions";
 import { extractBadgeMap } from "~/lib/leaderboard";
 import { gameStatsQueryOptions } from "~/queries/games-query";
 import { ranksQueryOptions } from "~/queries/ranks-query";
 
-import { formatAxisTick, formatStatValue, getStatDefinition, valueSpan } from "./stat-definitions";
 import { StatSelector } from "./StatSelector";
 
 interface GamesByRankChartProps {

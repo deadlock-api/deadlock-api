@@ -16,11 +16,10 @@ import { Inline } from "~/components/ui/stack";
 import { Text } from "~/components/ui/text";
 import { Tooltip } from "~/components/ui/tooltip";
 import { BUFF_TIMINGS_NOTE } from "~/lib/buffs";
+import { CATEGORY_ICONS, formatStatValue, getFilteredCategories } from "~/lib/game-stat-definitions";
 import { statDelta } from "~/lib/patch-deltas";
 import { cn } from "~/lib/utils";
 import { gameStatsQueryOptions } from "~/queries/games-query";
-
-import { CATEGORY_ICONS, formatStatValue, getFilteredCategories } from "./stat-definitions";
 
 const StatTrendChart = lazy(() => import("./StatTrendChart"));
 

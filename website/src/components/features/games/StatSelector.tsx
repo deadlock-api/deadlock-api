@@ -5,8 +5,7 @@ import { useMemo } from "react";
 import { MetricSelect } from "~/components/patterns/charts/MetricSelect";
 import { FilterBar } from "~/components/patterns/filter-bar/FilterBar";
 import { SelectGroup, SelectItem, SelectLabel } from "~/components/ui/select";
-
-import { getFilteredCategories, getStatDefinition } from "./stat-definitions";
+import { getFilteredCategories, getStatDefinition } from "~/lib/game-stat-definitions";
 
 export function StatSelector({
   value,
