@@ -1,3 +1,4 @@
+use crate::utils::sql::{MAX_FILTERING_AVERAGE_BADGE, MIN_FILTERING_AVERAGE_BADGE};
 use axum::Json;
 use axum::extract::State;
 use axum::http::StatusCode;
@@ -479,15 +480,15 @@ fn build_mv_query(query: &ItemStatsQuery) -> Option<String> {
         filters.push(format!("day <= toDate({v})"));
     }
     // Badge: least/greatest mirror the base table's both-teams semantics, with the
-    // same >11 / <116 guards as MatchInfoFilters. NULL badges are stored as
+    // same badge guards as MatchInfoFilters. NULL badges are stored as
     // 0 / 65535, so any active filter excludes them just like the base table.
     if let Some(v) = query.min_average_badge
-        && v > 11
+        && v > MIN_FILTERING_AVERAGE_BADGE
     {
         filters.push(format!("least_badge >= {v}"));
     }
     if let Some(v) = query.max_average_badge
-        && v < 116
+        && v < MAX_FILTERING_AVERAGE_BADGE
     {
         filters.push(format!("greatest_badge <= {v}"));
     }
@@ -617,8 +618,12 @@ fn build_cohort_mv_query(query: &ItemStatsQuery) -> Option<String> {
         || query.has_ability_order_filter()
         || query.min_match_id.is_some()
         || query.max_match_id.is_some()
-        || query.min_average_badge.is_some_and(|v| v > 11)
-        || query.max_average_badge.is_some_and(|v| v < 116)
+        || query
+            .min_average_badge
+            .is_some_and(|v| v > MIN_FILTERING_AVERAGE_BADGE)
+        || query
+            .max_average_badge
+            .is_some_and(|v| v < MAX_FILTERING_AVERAGE_BADGE)
         || query.reads_corrupted()
         || !MatchMode::is_agg_servable(query.match_mode.as_deref());
     if unsupported {
@@ -764,12 +769,12 @@ fn build_enemy_mv_query(query: &ItemStatsQuery) -> Option<String> {
     }
     // Same badge semantics and no-op guards as build_mv_query.
     if let Some(v) = query.min_average_badge
-        && v > 11
+        && v > MIN_FILTERING_AVERAGE_BADGE
     {
         filters.push(format!("least_badge >= {v}"));
     }
     if let Some(v) = query.max_average_badge
-        && v < 116
+        && v < MAX_FILTERING_AVERAGE_BADGE
     {
         filters.push(format!("greatest_badge <= {v}"));
     }
@@ -864,8 +869,18 @@ fn cohort_mv_skip_reason(query: &ItemStatsQuery) -> &'static str {
             !MatchMode::is_agg_servable(query.match_mode.as_deref()),
             "match_mode",
         ),
-        (query.min_average_badge.is_some_and(|v| v > 11), "badge"),
-        (query.max_average_badge.is_some_and(|v| v < 116), "badge"),
+        (
+            query
+                .min_average_badge
+                .is_some_and(|v| v > MIN_FILTERING_AVERAGE_BADGE),
+            "badge",
+        ),
+        (
+            query
+                .max_average_badge
+                .is_some_and(|v| v < MAX_FILTERING_AVERAGE_BADGE),
+            "badge",
+        ),
         (
             query.corrupted_items() == CorruptedItemsFilter::Include,
             "include_corrupted",

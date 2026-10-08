@@ -1,3 +1,4 @@
+use crate::utils::sql::{MAX_FILTERING_AVERAGE_BADGE, MIN_FILTERING_AVERAGE_BADGE};
 use axum::Json;
 use axum::extract::State;
 use axum::response::IntoResponse;
@@ -318,15 +319,15 @@ fn build_mv_query(query: &HeroStatsQuery) -> Option<String> {
         filters.push(format!("day <= toDate({v})"));
     }
     // Badge: least/greatest mirror the base table's both-teams semantics, with the
-    // same >11 / <116 guards as MatchInfoFilters. Null badges are stored as
+    // same badge guards as MatchInfoFilters. Null badges are stored as
     // 0 / 65535, so any active filter excludes them just like the base table.
     if let Some(v) = query.min_average_badge
-        && v > 11
+        && v > MIN_FILTERING_AVERAGE_BADGE
     {
         filters.push(format!("least_badge >= {v}"));
     }
     if let Some(v) = query.max_average_badge
-        && v < 116
+        && v < MAX_FILTERING_AVERAGE_BADGE
     {
         filters.push(format!("greatest_badge <= {v}"));
     }

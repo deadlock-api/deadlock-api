@@ -14,6 +14,7 @@ use crate::error::APIResult;
 use crate::routes::v1::matches::types::{GameMode, MatchMode};
 use crate::routes::v1::players::rank::badge_from_flat_progress_sql;
 use crate::utils::parse::{comma_separated_deserialize_option, default_last_month_timestamp};
+use crate::utils::sql::{DURATION_COLUMN, MatchInfoFilters, MatchPoolFilters};
 
 #[derive(Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash)]
 #[cfg_attr(test, derive(proptest_derive::Arbitrary))]
@@ -88,29 +89,27 @@ fn build_query(query: &BadgeDistributionQuery) -> String {
         let max_unix_timestamp = ceil_to_hour(max_unix_timestamp);
         info_filters.push(format!("start_time <= {max_unix_timestamp}"));
     }
-    if let Some(min_match_id) = query.min_match_id {
-        info_filters.push(format!("match_id >= {min_match_id}"));
-    }
-    if let Some(max_match_id) = query.max_match_id {
-        info_filters.push(format!("match_id <= {max_match_id}"));
-    }
-    if let Some(min_duration_s) = query.min_duration_s {
-        info_filters.push(format!("duration_s >= {min_duration_s}"));
-    }
-    if let Some(max_duration_s) = query.max_duration_s {
-        info_filters.push(format!("duration_s <= {max_duration_s}"));
-    }
-    if let Some(is_high_skill_range_parties) = query.is_high_skill_range_parties {
-        info_filters.push(format!(
-            "is_high_skill_range_parties = {is_high_skill_range_parties}"
-        ));
-    }
-    if let Some(is_low_pri_pool) = query.is_low_pri_pool {
-        info_filters.push(format!("low_pri_pool = {is_low_pri_pool}"));
-    }
-    if let Some(is_new_player_pool) = query.is_new_player_pool {
-        info_filters.push(format!("new_player_pool = {is_new_player_pool}"));
-    }
+    info_filters.extend(
+        MatchInfoFilters {
+            min_unix_timestamp: None,
+            max_unix_timestamp: None,
+            min_match_id: query.min_match_id,
+            max_match_id: query.max_match_id,
+            min_average_badge: None,
+            max_average_badge: None,
+            min_duration_s: query.min_duration_s,
+            max_duration_s: query.max_duration_s,
+        }
+        .predicates("", DURATION_COLUMN),
+    );
+    info_filters.extend(
+        MatchPoolFilters {
+            is_high_skill_range_parties: query.is_high_skill_range_parties,
+            is_low_pri_pool: query.is_low_pri_pool,
+            is_new_player_pool: query.is_new_player_pool,
+        }
+        .predicates(),
+    );
     let filters = format!(" AND {}", info_filters.join(" AND "));
     let game_mode_filter = GameMode::sql_filter(query.game_mode);
     let match_mode_filter = MatchMode::sql_filter(query.match_mode.as_deref());

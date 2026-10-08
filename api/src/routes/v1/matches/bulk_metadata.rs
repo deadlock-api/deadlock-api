@@ -1,6 +1,9 @@
 #![expect(clippy::struct_excessive_bools)]
 
-use crate::utils::sql::average_badge_filter;
+use crate::utils::sql::{
+    MAX_FILTERING_AVERAGE_BADGE, MIN_FILTERING_AVERAGE_BADGE, MatchPoolFilters,
+    average_badge_filter,
+};
 use core::fmt::Write;
 use core::time::Duration;
 use std::collections::HashSet;
@@ -630,31 +633,23 @@ fn build_query(
         info_filters.push(format!("duration_s <= {max_duration_s}"));
     }
     if let Some(min_badge_level) = query.min_average_badge
-        && min_badge_level > 11
+        && min_badge_level > MIN_FILTERING_AVERAGE_BADGE
     {
         info_filters.push(average_badge_filter("average_badge", ">=", min_badge_level));
     }
     if let Some(max_badge_level) = query.max_average_badge
-        && max_badge_level < 116
+        && max_badge_level < MAX_FILTERING_AVERAGE_BADGE
     {
         info_filters.push(average_badge_filter("average_badge", "<=", max_badge_level));
     }
     // Pool flags exist only on match_player, not on player_match_stats.
-    let mut wide_only_filter = false;
-    if let Some(is_high_skill_range_parties) = query.is_high_skill_range_parties {
-        info_filters.push(format!(
-            "is_high_skill_range_parties = {is_high_skill_range_parties}"
-        ));
-        wide_only_filter = true;
-    }
-    if let Some(is_low_pri_pool) = query.is_low_pri_pool {
-        info_filters.push(format!("low_pri_pool = {is_low_pri_pool}"));
-        wide_only_filter = true;
-    }
-    if let Some(is_new_player_pool) = query.is_new_player_pool {
-        info_filters.push(format!("new_player_pool = {is_new_player_pool}"));
-        wide_only_filter = true;
-    }
+    let pool_filters = MatchPoolFilters {
+        is_high_skill_range_parties: query.is_high_skill_range_parties,
+        is_low_pri_pool: query.is_low_pri_pool,
+        is_new_player_pool: query.is_new_player_pool,
+    };
+    let wide_only_filter = !pool_filters.is_empty();
+    info_filters.extend(pool_filters.predicates());
 
     // Player filters - conditions that require subqueries on match_player
     let mut player_filters = vec![];

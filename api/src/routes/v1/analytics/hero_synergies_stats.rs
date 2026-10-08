@@ -1,4 +1,4 @@
-use crate::utils::sql::average_badge_filter;
+use crate::utils::sql::{DURATION_COLUMN, MatchInfoFilters};
 use axum::Json;
 use axum::extract::State;
 use axum::response::IntoResponse;
@@ -157,34 +157,19 @@ fn build_query(query: &HeroSynergyStatsQuery) -> String {
         MatchMode::sql_filter(query.match_mode.as_deref()),
         game_mode_filter,
     ];
-    if let Some(v) = query.min_unix_timestamp {
-        where_filters.push(format!("start_time >= {v}"));
-    }
-    if let Some(v) = query.max_unix_timestamp {
-        where_filters.push(format!("start_time <= {v}"));
-    }
-    if let Some(v) = query.min_match_id {
-        where_filters.push(format!("match_id >= {v}"));
-    }
-    if let Some(v) = query.max_match_id {
-        where_filters.push(format!("match_id <= {v}"));
-    }
-    if let Some(v) = query.min_average_badge
-        && v > 11
-    {
-        where_filters.push(average_badge_filter("average_badge", ">=", v));
-    }
-    if let Some(v) = query.max_average_badge
-        && v < 116
-    {
-        where_filters.push(average_badge_filter("average_badge", "<=", v));
-    }
-    if let Some(v) = query.min_duration_s {
-        where_filters.push(format!("duration_s >= {v}"));
-    }
-    if let Some(v) = query.max_duration_s {
-        where_filters.push(format!("duration_s <= {v}"));
-    }
+    where_filters.extend(
+        MatchInfoFilters {
+            min_unix_timestamp: query.min_unix_timestamp,
+            max_unix_timestamp: query.max_unix_timestamp,
+            min_match_id: query.min_match_id,
+            max_match_id: query.max_match_id,
+            min_average_badge: query.min_average_badge,
+            max_average_badge: query.max_average_badge,
+            min_duration_s: query.min_duration_s,
+            max_duration_s: query.max_duration_s,
+        }
+        .predicates("", DURATION_COLUMN),
+    );
     // net_worth is per-player; pre-filtering before the group has the same effect
     // as the original symmetric (p1 AND p2) join filter.
     if let Some(min_networth) = query.min_networth {

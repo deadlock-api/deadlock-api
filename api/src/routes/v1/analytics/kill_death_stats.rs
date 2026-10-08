@@ -1,4 +1,4 @@
-use crate::utils::sql::average_badge_filter;
+use crate::utils::sql::{DURATION_COLUMN, MatchInfoFilters, MatchPoolFilters, join_filters};
 use axum::Json;
 use axum::extract::State;
 use axum::http::StatusCode;
@@ -117,50 +117,28 @@ pub(crate) struct KillDeathStats {
 #[expect(clippy::too_many_lines)]
 fn build_query(query: &KillDeathStatsQuery) -> String {
     let mut info_filters = vec![];
-    if let Some(min_unix_timestamp) = query.min_unix_timestamp {
-        info_filters.push(format!("start_time >= {min_unix_timestamp}"));
-    }
-    if let Some(max_unix_timestamp) = query.max_unix_timestamp {
-        info_filters.push(format!("start_time <= {max_unix_timestamp}"));
-    }
-    if let Some(min_match_id) = query.min_match_id {
-        info_filters.push(format!("match_id >= {min_match_id}"));
-    }
-    if let Some(max_match_id) = query.max_match_id {
-        info_filters.push(format!("match_id <= {max_match_id}"));
-    }
-    if let Some(min_badge_level) = query.min_average_badge
-        && min_badge_level > 11
-    {
-        info_filters.push(average_badge_filter("average_badge", ">=", min_badge_level));
-    }
-    if let Some(max_badge_level) = query.max_average_badge
-        && max_badge_level < 116
-    {
-        info_filters.push(average_badge_filter("average_badge", "<=", max_badge_level));
-    }
-    if let Some(min_duration_s) = query.min_duration_s {
-        info_filters.push(format!("duration_s >= {min_duration_s}"));
-    }
-    if let Some(max_duration_s) = query.max_duration_s {
-        info_filters.push(format!("duration_s <= {max_duration_s}"));
-    }
-    if let Some(is_high_skill_range_parties) = query.is_high_skill_range_parties {
-        info_filters.push(format!(
-            "is_high_skill_range_parties = {is_high_skill_range_parties}"
-        ));
-    }
-    if let Some(is_low_pri_pool) = query.is_low_pri_pool {
-        info_filters.push(format!("low_pri_pool = {is_low_pri_pool}"));
-    }
-    if let Some(is_new_player_pool) = query.is_new_player_pool {
-        info_filters.push(format!("new_player_pool = {is_new_player_pool}"));
-    }
-    let info_filters = if info_filters.is_empty() {
-        String::new()
-    } else {
-        format!(" AND {}", info_filters.join(" AND "))
-    };
+    info_filters.extend(
+        MatchInfoFilters {
+            min_unix_timestamp: query.min_unix_timestamp,
+            max_unix_timestamp: query.max_unix_timestamp,
+            min_match_id: query.min_match_id,
+            max_match_id: query.max_match_id,
+            min_average_badge: query.min_average_badge,
+            max_average_badge: query.max_average_badge,
+            min_duration_s: query.min_duration_s,
+            max_duration_s: query.max_duration_s,
+        }
+        .predicates("", DURATION_COLUMN),
+    );
+    info_filters.extend(
+        MatchPoolFilters {
+            is_high_skill_range_parties: query.is_high_skill_range_parties,
+            is_low_pri_pool: query.is_low_pri_pool,
+            is_new_player_pool: query.is_new_player_pool,
+        }
+        .predicates(),
+    );
+    let info_filters = join_filters(&info_filters);
     let mut player_filters = vec![];
     if let Some(account_ids) = &query.account_ids {
         player_filters.push(format!(

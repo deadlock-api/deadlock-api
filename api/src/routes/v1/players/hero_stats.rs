@@ -1,4 +1,7 @@
-use crate::utils::sql::average_badge_filter;
+use crate::utils::sql::{
+    DURATION_COLUMN, MAX_FILTERING_AVERAGE_BADGE, MIN_FILTERING_AVERAGE_BADGE, MatchInfoFilters,
+    average_badge_filter,
+};
 use axum::Json;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
@@ -153,18 +156,20 @@ fn build_query(query: &HeroStatsQuery) -> String {
     if let Some(ref ids) = hero_ids_in {
         mp_filters.push(format!("hero_id IN ({ids})"));
     }
-    if let Some(min_unix_timestamp) = query.min_unix_timestamp {
-        mp_filters.push(format!("start_time >= {min_unix_timestamp}"));
-    }
-    if let Some(max_unix_timestamp) = query.max_unix_timestamp {
-        mp_filters.push(format!("start_time <= {max_unix_timestamp}"));
-    }
-    if let Some(min_match_id) = query.min_match_id {
-        mp_filters.push(format!("match_id >= {min_match_id}"));
-    }
-    if let Some(max_match_id) = query.max_match_id {
-        mp_filters.push(format!("match_id <= {max_match_id}"));
-    }
+    // Time and id bounds go on the inner read; duration and badge on the outer one below.
+    mp_filters.extend(
+        MatchInfoFilters {
+            min_unix_timestamp: query.min_unix_timestamp,
+            max_unix_timestamp: query.max_unix_timestamp,
+            min_match_id: query.min_match_id,
+            max_match_id: query.max_match_id,
+            min_average_badge: None,
+            max_average_badge: None,
+            min_duration_s: None,
+            max_duration_s: None,
+        }
+        .predicates("", DURATION_COLUMN),
+    );
     if let Some(min_networth) = query.min_networth {
         mp_filters.push(format!("net_worth >= {min_networth}"));
     }
@@ -185,12 +190,12 @@ fn build_query(query: &HeroStatsQuery) -> String {
         outer_filters.push(format!("duration_s <= {max_duration_s}"));
     }
     if let Some(min_badge_level) = query.min_average_badge
-        && min_badge_level > 11
+        && min_badge_level > MIN_FILTERING_AVERAGE_BADGE
     {
         outer_filters.push(average_badge_filter("average_badge", ">=", min_badge_level));
     }
     if let Some(max_badge_level) = query.max_average_badge
-        && max_badge_level < 116
+        && max_badge_level < MAX_FILTERING_AVERAGE_BADGE
     {
         outer_filters.push(average_badge_filter("average_badge", "<=", max_badge_level));
     }

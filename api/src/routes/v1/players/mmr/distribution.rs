@@ -14,6 +14,7 @@ use crate::routes::v1::players::mmr::batch::HeroMMRPath;
 use crate::routes::v1::players::rank::badge_from_flat_progress_sql;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::utils::parse::default_last_month_timestamp;
+use crate::utils::sql::{DURATION_COLUMN, MatchInfoFilters, MatchPoolFilters};
 
 #[derive(Copy, Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash)]
 #[cfg_attr(test, derive(proptest_derive::Arbitrary))]
@@ -55,32 +56,27 @@ fn build_filters(query: &MMRDistributionQuery) -> Vec<String> {
         "player_rank_initial_display_rank > 0".to_owned(),
         "player_rank_final_flat_progress IS NOT NULL".to_owned(),
     ];
-    if let Some(min_unix_timestamp) = query.min_unix_timestamp {
-        filters.push(format!("start_time >= {min_unix_timestamp}"));
-    }
-    if let Some(max_unix_timestamp) = query.max_unix_timestamp {
-        filters.push(format!("start_time <= {max_unix_timestamp}"));
-    }
-    if let Some(min_match_id) = query.min_match_id {
-        filters.push(format!("match_id >= {min_match_id}"));
-    }
-    if let Some(max_match_id) = query.max_match_id {
-        filters.push(format!("match_id <= {max_match_id}"));
-    }
-    if let Some(max_duration_s) = query.max_duration_s {
-        filters.push(format!("duration_s <= {max_duration_s}"));
-    }
-    if let Some(is_high_skill_range_parties) = query.is_high_skill_range_parties {
-        filters.push(format!(
-            "is_high_skill_range_parties = {is_high_skill_range_parties}"
-        ));
-    }
-    if let Some(is_low_pri_pool) = query.is_low_pri_pool {
-        filters.push(format!("low_pri_pool = {is_low_pri_pool}"));
-    }
-    if let Some(is_new_player_pool) = query.is_new_player_pool {
-        filters.push(format!("new_player_pool = {is_new_player_pool}"));
-    }
+    filters.extend(
+        MatchInfoFilters {
+            min_unix_timestamp: query.min_unix_timestamp,
+            max_unix_timestamp: query.max_unix_timestamp,
+            min_match_id: query.min_match_id,
+            max_match_id: query.max_match_id,
+            min_average_badge: None,
+            max_average_badge: None,
+            min_duration_s: None,
+            max_duration_s: query.max_duration_s,
+        }
+        .predicates("", DURATION_COLUMN),
+    );
+    filters.extend(
+        MatchPoolFilters {
+            is_high_skill_range_parties: query.is_high_skill_range_parties,
+            is_low_pri_pool: query.is_low_pri_pool,
+            is_new_player_pool: query.is_new_player_pool,
+        }
+        .predicates(),
+    );
     filters
 }
 

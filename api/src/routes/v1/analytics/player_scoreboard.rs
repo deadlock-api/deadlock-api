@@ -1,3 +1,4 @@
+use crate::utils::sql::{MAX_FILTERING_AVERAGE_BADGE, MIN_FILTERING_AVERAGE_BADGE};
 use std::sync::Arc;
 
 use axum::Json;
@@ -165,14 +166,19 @@ FROM (
     }
 }
 
+#[expect(clippy::too_many_lines)]
 fn build_query(query: &PlayerScoreboardQuery) -> String {
     let mut inner_filters = vec!["account_id > 0".to_owned()];
     let needs_match_info_filter = query.min_unix_timestamp.is_some()
         || query.max_unix_timestamp.is_some()
         || query.min_match_id.is_some()
         || query.max_match_id.is_some()
-        || query.min_average_badge.is_some_and(|v| v > 11)
-        || query.max_average_badge.is_some_and(|v| v < 116)
+        || query
+            .min_average_badge
+            .is_some_and(|v| v > MIN_FILTERING_AVERAGE_BADGE)
+        || query
+            .max_average_badge
+            .is_some_and(|v| v < MAX_FILTERING_AVERAGE_BADGE)
         || query.min_duration_s.is_some()
         || query.max_duration_s.is_some()
         || query.game_mode.is_some_and(|g| g != GameMode::Normal);

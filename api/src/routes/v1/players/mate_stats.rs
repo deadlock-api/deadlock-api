@@ -13,6 +13,7 @@ use crate::error::{APIError, APIResult};
 use crate::routes::v1::matches::types::GameMode;
 use crate::routes::v1::players::steam::route::SteamProfileBatcher;
 use crate::services::clickhouse_batcher::in_clause;
+use crate::utils::sql::{MatchInfoFilters, ROSTER_DURATION_COLUMN};
 use crate::utils::types::AccountIdQuery;
 
 #[derive(Copy, Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash, Default)]
@@ -67,24 +68,19 @@ fn build_query(account_id: u32, query: &MateStatsQuery, friend_ids: Option<&[u32
         format!("account_id = {account_id}"),
         GameMode::sql_filter(query.game_mode),
     ];
-    if let Some(min_unix_timestamp) = query.min_unix_timestamp {
-        filters.push(format!("start_time >= {min_unix_timestamp}"));
-    }
-    if let Some(max_unix_timestamp) = query.max_unix_timestamp {
-        filters.push(format!("start_time <= {max_unix_timestamp}"));
-    }
-    if let Some(min_match_id) = query.min_match_id {
-        filters.push(format!("match_id >= {min_match_id}"));
-    }
-    if let Some(max_match_id) = query.max_match_id {
-        filters.push(format!("match_id <= {max_match_id}"));
-    }
-    if let Some(min_duration_s) = query.min_duration_s {
-        filters.push(format!("match_duration_s >= {min_duration_s}"));
-    }
-    if let Some(max_duration_s) = query.max_duration_s {
-        filters.push(format!("match_duration_s <= {max_duration_s}"));
-    }
+    filters.extend(
+        MatchInfoFilters {
+            min_unix_timestamp: query.min_unix_timestamp,
+            max_unix_timestamp: query.max_unix_timestamp,
+            min_match_id: query.min_match_id,
+            max_match_id: query.max_match_id,
+            min_average_badge: None,
+            max_average_badge: None,
+            min_duration_s: query.min_duration_s,
+            max_duration_s: query.max_duration_s,
+        }
+        .predicates("", ROSTER_DURATION_COLUMN),
+    );
     let prewhere_clause = filters.join(" AND ");
     // PREWHERE: under FINAL, ClickHouse only moves sorting-key conditions there itself, so the
     // other filters would run after reading every column. Duplicate versions of a row never

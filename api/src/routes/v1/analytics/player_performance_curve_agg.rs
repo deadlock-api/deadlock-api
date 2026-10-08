@@ -9,6 +9,7 @@
 //!
 //! The table is rebuilt day by day by [`crate::services::cohort_agg_refresh`].
 
+use crate::utils::sql::{MAX_FILTERING_AVERAGE_BADGE, MIN_FILTERING_AVERAGE_BADGE};
 use core::fmt::Write as _;
 
 use super::common_filters::MatchInfoFilters;
@@ -206,12 +207,12 @@ fn agg_filters(query: &PlayerPerformanceCurveQuery) -> String {
     let mut filters = String::new();
     // Mirrors `MatchInfoFilters`: a bound at the end of the scale filters nothing.
     if let Some(v) = query.min_average_badge
-        && v > 11
+        && v > MIN_FILTERING_AVERAGE_BADGE
     {
         let _ = write!(filters, " AND least_badge >= {v}");
     }
     if let Some(v) = query.max_average_badge
-        && v < 116
+        && v < MAX_FILTERING_AVERAGE_BADGE
     {
         let _ = write!(filters, " AND greatest_badge <= {v}");
     }

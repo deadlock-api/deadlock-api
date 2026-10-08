@@ -1,4 +1,4 @@
-use crate::utils::sql::average_badge_filter;
+pub(super) use crate::utils::sql::{MatchInfoFilters, id_list, join_filters};
 use itertools::Itertools;
 
 /// Bit of `items.upgrade_info` marking a corrupted item (build 6712+): the Broker swaps
@@ -27,74 +27,6 @@ pub(super) const CORRUPTED_ITEMS_MIN_UNIX_TIMESTAMP: i64 = 1_790_712_000;
 /// is the first id of partition 108. A `match_id >=` bound prunes whole partitions, which
 /// also works for the hero-led projection; that projection cannot prune by `start_time`.
 pub(super) const CORRUPTED_ITEMS_MIN_MATCH_ID: u64 = 108_000_000;
-
-#[cfg_attr(test, derive(Debug, proptest_derive::Arbitrary))]
-pub(super) struct MatchInfoFilters {
-    pub min_unix_timestamp: Option<i64>,
-    pub max_unix_timestamp: Option<i64>,
-    pub min_match_id: Option<u64>,
-    pub max_match_id: Option<u64>,
-    pub min_average_badge: Option<u8>,
-    pub max_average_badge: Option<u8>,
-    pub min_duration_s: Option<u64>,
-    pub max_duration_s: Option<u64>,
-}
-
-impl MatchInfoFilters {
-    /// Builds the SQL `AND ...` clause for `match_info` filters.
-    /// Returns an empty string when no filters are set.
-    pub(super) fn build(&self) -> String {
-        self.build_with_prefix("")
-    }
-
-    /// Same as [`Self::build`] but qualifies every column reference with the given
-    /// prefix (e.g. `"mp."`). Use when the surrounding query joins another table
-    /// that also has columns named `match_id`/`start_time`/etc.
-    pub(super) fn build_with_prefix(&self, prefix: &str) -> String {
-        let mut filters = Vec::new();
-        if let Some(v) = self.min_unix_timestamp {
-            filters.push(format!("{prefix}start_time >= {v}"));
-        }
-        if let Some(v) = self.max_unix_timestamp {
-            filters.push(format!("{prefix}start_time <= {v}"));
-        }
-        if let Some(v) = self.min_match_id {
-            filters.push(format!("{prefix}match_id >= {v}"));
-        }
-        if let Some(v) = self.max_match_id {
-            filters.push(format!("{prefix}match_id <= {v}"));
-        }
-        if let Some(v) = self.min_average_badge
-            && v > 11
-        {
-            filters.push(average_badge_filter(
-                &format!("{prefix}average_badge"),
-                ">=",
-                v,
-            ));
-        }
-        if let Some(v) = self.max_average_badge
-            && v < 116
-        {
-            filters.push(average_badge_filter(
-                &format!("{prefix}average_badge"),
-                "<=",
-                v,
-            ));
-        }
-        if let Some(v) = self.min_duration_s {
-            filters.push(format!("{prefix}duration_s >= {v}"));
-        }
-        if let Some(v) = self.max_duration_s {
-            filters.push(format!("{prefix}duration_s <= {v}"));
-        }
-        if filters.is_empty() {
-            String::new()
-        } else {
-            format!(" AND {}", filters.join(" AND "))
-        }
-    }
-}
 
 /// Common player-level filters shared across analytics queries.
 /// Returns a `Vec<String>` so callers can extend with file-specific filters
@@ -226,10 +158,6 @@ pub(super) fn ability_unlock_order_prefix_filter(ids: &[u32]) -> String {
     )
 }
 
-pub(super) fn id_list(ids: &[u32]) -> String {
-    ids.iter().map(ToString::to_string).join(", ")
-}
-
 /// Scopes a duo-versus-duo lane query to the requested accounts and hero pairings.
 pub(super) struct LaneDuoFilters<'a> {
     pub accounts: Option<&'a [u32]>,
@@ -324,15 +252,6 @@ fn duo_filter(hero_ids: &[u32], duo: &str) -> String {
     }
 }
 
-/// Formats a filter vec as ` AND ...` or empty string.
-pub(super) fn join_filters(filters: &[String]) -> String {
-    if filters.is_empty() {
-        String::new()
-    } else {
-        format!(" AND {}", filters.join(" AND "))
-    }
-}
-
 /// Granularity [`round_timestamps`] widens a time range to.
 pub(super) const TIMESTAMP_ALIGNMENT_S: i64 = 3600;
 
@@ -405,51 +324,6 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_empty_filters() {
-        let filters = MatchInfoFilters {
-            min_unix_timestamp: None,
-            max_unix_timestamp: None,
-            min_match_id: None,
-            max_match_id: None,
-            min_average_badge: None,
-            max_average_badge: None,
-            min_duration_s: None,
-            max_duration_s: None,
-        };
-        assert_eq!(filters.build(), "");
-    }
-
-    #[test]
-    fn test_badge_boundary_min_ignored_at_11() {
-        let filters = MatchInfoFilters {
-            min_unix_timestamp: None,
-            max_unix_timestamp: None,
-            min_match_id: None,
-            max_match_id: None,
-            min_average_badge: Some(11),
-            max_average_badge: None,
-            min_duration_s: None,
-            max_duration_s: None,
-        };
-        assert_eq!(filters.build(), "");
-    }
-
-    #[test]
-    fn test_badge_boundary_max_ignored_at_116() {
-        let filters = MatchInfoFilters {
-            min_unix_timestamp: None,
-            max_unix_timestamp: None,
-            min_match_id: None,
-            max_match_id: None,
-            min_average_badge: None,
-            max_average_badge: Some(116),
-            min_duration_s: None,
-            max_duration_s: None,
-        };
-        assert_eq!(filters.build(), "");
-    }
-
-    #[test]
     fn test_round_timestamps() {
         let mut min = Some(1_672_531_400_i64); // not on boundary
         let mut max = Some(1_672_531_400_i64);
@@ -489,7 +363,7 @@ mod proptests {
     use proptest::prelude::*;
 
     use super::*;
-    use crate::utils::proptest_utils::{assert_valid_and_fragment, assert_valid_predicate_vec};
+    use crate::utils::proptest_utils::assert_valid_predicate_vec;
 
     prop_compose! {
         fn arb_player_filter_inputs()(
@@ -516,11 +390,6 @@ mod proptests {
 
     proptest! {
         #![proptest_config(ProptestConfig { cases: 64, max_shrink_iters: 16, failure_persistence: None, .. ProptestConfig::default() })]
-
-        #[test]
-        fn match_info_filters_emit_valid_sql(filters: MatchInfoFilters) {
-            assert_valid_and_fragment(&filters.build());
-        }
 
         #[test]
         fn player_filters_emit_valid_sql(params in arb_player_filter_inputs()) {
