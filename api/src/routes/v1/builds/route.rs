@@ -15,9 +15,10 @@ pub(crate) async fn fetch_builds(
     pg_client: &sqlx::Pool<sqlx::Postgres>,
     query: &BuildsSearchQuery,
 ) -> sqlx::Result<Vec<Build>> {
-    let query = query::sql_query(query);
-    debug!(query);
-    Ok(sqlx::query(sqlx::AssertSqlSafe(query))
+    let mut query = query::search_query(query);
+    debug!(query = query.sql().as_str());
+    Ok(query
+        .build()
         .fetch_all(pg_client)
         .await?
         .iter()

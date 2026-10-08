@@ -1,5 +1,5 @@
 use serde::Deserialize;
-use sqlx::{Execute, QueryBuilder};
+use sqlx::QueryBuilder;
 use strum::Display;
 use utoipa::{IntoParams, ToSchema};
 
@@ -140,7 +140,9 @@ impl Default for BuildsSearchQuery {
     }
 }
 
-pub(crate) fn sql_query(params: &BuildsSearchQuery) -> String {
+/// The search query. The free-text searches are bound as parameters; everything
+/// else is a number or a fixed keyword.
+pub(crate) fn search_query(params: &BuildsSearchQuery) -> QueryBuilder<sqlx::Postgres> {
     let mut query_builder: QueryBuilder<sqlx::Postgres> = QueryBuilder::default();
     query_builder.push(
         " WITH hero_builds AS (SELECT data as builds, weekly_favorites, favorites, ignores, \
@@ -154,16 +156,14 @@ pub(crate) fn sql_query(params: &BuildsSearchQuery) -> String {
     }
     if let Some(search_name) = &params.search_name {
         let search_name = urlencoding::decode(search_name).unwrap_or(search_name.into());
-        query_builder.push(" AND lower(data->'hero_build'->>'name') LIKE '%");
-        query_builder.push(search_name.to_lowercase());
-        query_builder.push("%'");
+        query_builder.push(" AND lower(data->'hero_build'->>'name') LIKE ");
+        query_builder.push_bind(format!("%{}%", search_name.to_lowercase()));
     }
     if let Some(search_description) = &params.search_description {
         let search_description =
             urlencoding::decode(search_description).unwrap_or(search_description.into());
-        query_builder.push(" AND lower(data->'hero_build'->>'description') LIKE '%");
-        query_builder.push(search_description.to_lowercase());
-        query_builder.push("%'");
+        query_builder.push(" AND lower(data->'hero_build'->>'description') LIKE ");
+        query_builder.push_bind(format!("%{}%", search_description.to_lowercase()));
     }
     #[expect(deprecated)]
     if let Some(language) = params.language {
@@ -234,11 +234,15 @@ pub(crate) fn sql_query(params: &BuildsSearchQuery) -> String {
         query_builder.push(" OFFSET ");
         query_builder.push(start.to_string());
     }
-    query_builder.build().sql().as_ref().to_owned()
+    query_builder
 }
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn sql_query(params: &BuildsSearchQuery) -> String {
+        search_query(params).into_string()
+    }
 
     #[test]
     fn test_default_values() {
@@ -281,9 +285,22 @@ mod tests {
             " WITH hero_builds AS (SELECT data as builds, weekly_favorites, favorites, ignores, \
              reports, updated_at, published_at, version, ROW_NUMBER() OVER(PARTITION BY hero, build_id ORDER BY \
              version DESC) as rn FROM hero_builds WHERE TRUE AND \
-             lower(data->'hero_build'->>'name') LIKE '%tank build%' ) SELECT builds FROM \
+             lower(data->'hero_build'->>'name') LIKE $1 ) SELECT builds FROM \
              hero_builds ORDER BY favorites desc NULLS LAST LIMIT 100"
         );
+    }
+
+    #[test]
+    fn test_search_text_is_bound_not_inlined() {
+        let query = BuildsSearchQuery {
+            search_name: Some("x' OR '1'='1".to_owned()),
+            search_description: Some("y'; --".to_owned()),
+            ..Default::default()
+        };
+
+        let sql = sql_query(&query);
+        assert!(!sql.contains("OR '1'"));
+        assert!(!sql.contains("--"));
     }
 
     #[test]
@@ -316,7 +333,7 @@ mod tests {
             " WITH hero_builds AS (SELECT data as builds, weekly_favorites, favorites, ignores, \
              reports, updated_at, published_at, version, ROW_NUMBER() OVER(PARTITION BY hero, build_id ORDER BY \
              version DESC) as rn FROM hero_builds WHERE TRUE AND \
-             lower(data->'hero_build'->>'name') LIKE '%tank build%' ) SELECT builds FROM \
+             lower(data->'hero_build'->>'name') LIKE $1 ) SELECT builds FROM \
              hero_builds ORDER BY favorites desc NULLS LAST LIMIT 100"
         );
     }
@@ -334,7 +351,7 @@ mod tests {
             " WITH hero_builds AS (SELECT data as builds, weekly_favorites, favorites, ignores, \
              reports, updated_at, published_at, version, ROW_NUMBER() OVER(PARTITION BY hero, build_id ORDER BY \
              version DESC) as rn FROM hero_builds WHERE TRUE AND \
-             lower(data->'hero_build'->>'description') LIKE '%strength items%' ) SELECT builds \
+             lower(data->'hero_build'->>'description') LIKE $1 ) SELECT builds \
              FROM hero_builds ORDER BY favorites desc NULLS LAST LIMIT 100"
         );
     }
@@ -612,7 +629,7 @@ mod tests {
             " WITH hero_builds AS (SELECT data as builds, weekly_favorites, favorites, ignores, \
              reports, updated_at, published_at, version, ROW_NUMBER() OVER(PARTITION BY hero, build_id ORDER BY \
              version DESC) as rn FROM hero_builds WHERE TRUE AND \
-             lower(data->'hero_build'->>'name') LIKE '%tank%' AND hero = 42 ) SELECT builds FROM \
+             lower(data->'hero_build'->>'name') LIKE $1 AND hero = 42 ) SELECT builds FROM \
              hero_builds ORDER BY updated_at asc NULLS FIRST LIMIT 25 OFFSET 5"
         );
     }
@@ -631,8 +648,8 @@ mod tests {
             " WITH hero_builds AS (SELECT data as builds, weekly_favorites, favorites, ignores, \
              reports, updated_at, published_at, version, ROW_NUMBER() OVER(PARTITION BY hero, build_id ORDER BY \
              version DESC) as rn FROM hero_builds WHERE TRUE AND \
-             lower(data->'hero_build'->>'name') LIKE '%tank%' AND \
-             lower(data->'hero_build'->>'description') LIKE '%strength%' ) SELECT builds FROM \
+             lower(data->'hero_build'->>'name') LIKE $1 AND \
+             lower(data->'hero_build'->>'description') LIKE $2 ) SELECT builds FROM \
              hero_builds ORDER BY favorites desc NULLS LAST LIMIT 100"
         );
     }
