@@ -95,7 +95,7 @@ export function sortByIn(sortBy: string, gameMode: GameMode | undefined, fallbac
   return SORT_CATEGORIES.some((cat) => cat.key === key && cat.economy) ? fallback : sortBy;
 }
 
-export function sortByValuesFor(scope: ScoreboardScope): string[] {
+function sortByValuesFor(scope: ScoreboardScope): string[] {
   return sortCategoriesFor(scope).flatMap((cat) =>
     cat.variants ? cat.variants.map((v) => buildSortByValue(cat.key, v)) : [cat.key],
   );

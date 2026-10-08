@@ -4,7 +4,7 @@ import { GAME_PAGES } from "./sections/games";
 import { HERO_PAGES } from "./sections/heroes";
 import { ITEM_PAGES } from "./sections/items";
 import { PLAYER_PAGES } from "./sections/players";
-import type { RegisteredPage, ResolveContext, SearchValue, Selection, Slot, UnsearchablePage } from "./types";
+import type { RegisteredPage, ResolveContext, SearchValue, Selection, UnsearchablePage } from "./types";
 
 export * from "./types";
 
@@ -40,15 +40,15 @@ export const UNSEARCHABLE_PAGES: readonly UnsearchablePage[] = [
 
 const BY_ID = new Map(PAGE_REGISTRY.map((page) => [page.id, page]));
 
-export const PAGE_IDS: readonly string[] = PAGE_REGISTRY.map((page) => page.id);
-
 export function registeredPage(id: string): RegisteredPage | undefined {
   return BY_ID.get(id);
 }
 
-/** The parts of a selection a page uses, from its readers. */
-export function pageSlots(page: RegisteredPage): Set<Slot> {
-  return new Set([...Object.values(page.pathParams ?? {}), ...Object.values(page.search ?? {})].map((r) => r.uses));
+/** Whether a page opens with two teams (the heroes asked about and the other team): "haze vs bebop" keeps both sides. */
+export function readsEnemyTeam(page: RegisteredPage): boolean {
+  return [...Object.values(page.pathParams ?? {}), ...Object.values(page.search ?? {})].some(
+    (reader) => reader.uses === "enemyHeroes",
+  );
 }
 
 export interface PageTarget {

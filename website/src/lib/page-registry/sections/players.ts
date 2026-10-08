@@ -1,6 +1,6 @@
 import { heroId, region, sortParam, teamSlots } from "../readers";
+import { SCOREBOARD_STAT_NAMES, scoreboardSort } from "../scoreboards";
 import type { RegisteredPage } from "../types";
-import { SCOREBOARD_STAT_NAMES, scoreboardSort } from "./heroes";
 
 const ALL = ["mode", "rank", "time"] as const;
 
