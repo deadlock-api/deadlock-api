@@ -572,6 +572,12 @@ impl EntityContainer {
         Ok(Some(index))
     }
 
+    /// drops the cached baseline entity of `class_id`; called when the class's instance baseline
+    /// bytes change, so the next create decodes the new baseline instead of cloning a stale one.
+    pub(crate) fn invalidate_baseline(&mut self, class_id: i32) {
+        self.baseline_entities.remove(&class_id);
+    }
+
     // SAFETY: if it's being deleted menas that it was created, riiight? but
     // there's a risk (that only should exist if replay is corrupted).
 

@@ -200,7 +200,9 @@ impl Context {
         // wait for DemClassInfos.
         if let Some(string_table) = self.string_tables.find_table(INSTANCE_BASELINE_TABLE_NAME) {
             self.instance_baseline
-                .update(string_table, entity_classes.classes)?;
+                .update(string_table, entity_classes.classes, |class_id| {
+                    self.entities.invalidate_baseline(class_id);
+                })?;
         }
 
         self.entity_classes = Some(entity_classes);
@@ -215,7 +217,9 @@ impl Context {
         };
         if let Some(string_table) = self.string_tables.find_table(INSTANCE_BASELINE_TABLE_NAME) {
             self.instance_baseline
-                .update(string_table, entity_classes.classes)?;
+                .update(string_table, entity_classes.classes, |class_id| {
+                    self.entities.invalidate_baseline(class_id);
+                })?;
         }
 
         Ok(())
@@ -286,7 +290,9 @@ impl Context {
             && let Some(entity_classes) = self.entity_classes.as_ref()
         {
             self.instance_baseline
-                .update(string_table, entity_classes.classes)?;
+                .update(string_table, entity_classes.classes, |class_id| {
+                    self.entities.invalidate_baseline(class_id);
+                })?;
         }
 
         Ok(())
@@ -315,7 +321,9 @@ impl Context {
             && let Some(entity_classes) = self.entity_classes.as_ref()
         {
             self.instance_baseline
-                .update(string_table, entity_classes.classes)?;
+                .update(string_table, entity_classes.classes, |class_id| {
+                    self.entities.invalidate_baseline(class_id);
+                })?;
         }
 
         Ok(())
