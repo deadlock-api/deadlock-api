@@ -46,7 +46,6 @@
     "axios": "^1.20.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "date-fns": "^4.4.0",
     "dayjs": "^1.11.23",
     "deadlock_api_client": "github:deadlock-api/openapi-clients#path:/typescript",
     "deadlock_api_graphql_client": "github:deadlock-api/openapi-clients#path:/typescript-graphql",

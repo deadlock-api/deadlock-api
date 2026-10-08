@@ -150,7 +150,6 @@ export const PATCHES: readonly PatchInfo[] = [
   },
 ];
 
-export const MIN_GAME_DURATION_S = 0;
 export const MAX_GAME_DURATION_S = 60 * 60;
 
 export function getPickrateMultiplier(gameMode?: "normal" | "street_brawl"): number {

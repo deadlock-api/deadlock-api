@@ -10,7 +10,6 @@ import { parseAsDayjsRange } from "~/lib/nuqs-parsers";
 import type { TrackerFilterValues } from "~/lib/tracker/compute";
 
 export const TRACKER_TABS = ["matches", "heroes", "mates"] as const;
-export type TrackerTab = (typeof TRACKER_TABS)[number];
 
 const RESULT_FILTERS = ["all", "win", "loss"] as const;
 const TRACKER_SELECTION_PARSERS = {

@@ -1,4 +1,4 @@
-import { type Dayjs, day } from "~/dayjs";
+import type { Dayjs } from "~/dayjs";
 import { PATCHES } from "~/lib/constants";
 
 export type Granularity = "hour" | "day";
@@ -22,10 +22,6 @@ export function registerExactBoundaries(unixTimestamps: readonly number[]) {
 
 function isExactBoundary(d: Dayjs): boolean {
   return EXACT_BOUNDARY_UNIX.has(d.unix());
-}
-
-export function roundedNow(granularity: Granularity = DEFAULT_GRANULARITY): Dayjs {
-  return day.utc().startOf(granularity);
 }
 
 export function normalizeUnixFloor(d: Dayjs | undefined, granularity: Granularity = DEFAULT_GRANULARITY) {

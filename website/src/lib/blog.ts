@@ -112,10 +112,6 @@ export function getRecentPosts(count?: number): BlogPost[] {
   return count ? sorted.slice(0, count) : sorted;
 }
 
-export function getAllSlugs(): string[] {
-  return loadPosts().map((post) => post.slug);
-}
-
 // A paragraph holding only an image becomes a full-width figure; the image title is the visible caption, the alt
 // stays a short description. Raster charts carry their pixel size (scripts/blog-image-sizes.mjs), which reserves their
 // aspect ratio so the page does not shift while they load. The first image is usually above the fold, so it loads
