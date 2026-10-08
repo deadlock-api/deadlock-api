@@ -11,7 +11,8 @@ const DISMISS_EVENTS = ["pointerdown", "keydown", "wheel"] as const;
 /**
  * Takes a visitor to what they asked for: on a `#find:<key>` URL (the AI search adds it), scrolls to the element
  * marked `data-find="<key>"` once it renders and outlines it (`[data-found]` in effects.css) until the visitor clicks,
- * types or scrolls the wheel.
+ * types or scrolls the wheel. A page that renders the element again (hydration, fresh data) gets the outline moved to
+ * the new one; with several copies, the first visible one is outlined.
  */
 export function FindOnPage() {
   const hash = useLocation({ select: (location) => location.hash });
@@ -20,34 +21,40 @@ export function FindOnPage() {
     if (!hash.startsWith("find:")) return undefined;
     const selector = `[data-find="${CSS.escape(hash.slice("find:".length))}"]`;
     let found: Element | null = null;
-    let unmark: number | undefined;
-    const dismiss = () => {
-      found?.removeAttribute("data-found");
-      for (const type of DISMISS_EVENTS) window.removeEventListener(type, dismiss);
-    };
+    let scrolled = false;
+    let done = false;
+
+    const visible = () => [...document.querySelectorAll(selector)].find((element) => element.checkVisibility());
 
     const mark = () => {
-      found = document.querySelector(selector);
-      if (!found) return false;
-      const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      if (done || found?.isConnected) return;
+      found = visible() ?? null;
+      if (!found) return;
       found.setAttribute("data-found", "");
-      found.scrollIntoView({ block: "center", behavior: reduce ? "auto" : "smooth" });
-      unmark = window.setTimeout(dismiss, OUTLINE_MS);
-      for (const type of DISMISS_EVENTS) window.addEventListener(type, dismiss, { once: true, passive: true });
-      return true;
+      if (!scrolled) {
+        scrolled = true;
+        const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        found.scrollIntoView({ block: "center", behavior: reduce ? "auto" : "smooth" });
+        for (const type of DISMISS_EVENTS) window.addEventListener(type, finish, { once: true, passive: true });
+        stop = window.setTimeout(finish, OUTLINE_MS);
+      }
     };
 
-    const observer = new MutationObserver(() => {
-      if (mark()) observer.disconnect();
-    });
-    if (!mark()) observer.observe(document.body, { childList: true, subtree: true });
-    const giveUp = window.setTimeout(() => observer.disconnect(), WAIT_MS);
-    return () => {
+    // Watches until the outline is dismissed: the element may render late, or be rendered again without the mark.
+    const observer = new MutationObserver(mark);
+    let stop = window.setTimeout(() => !scrolled && finish(), WAIT_MS);
+
+    function finish() {
+      done = true;
       observer.disconnect();
-      window.clearTimeout(giveUp);
-      window.clearTimeout(unmark);
-      dismiss();
-    };
+      window.clearTimeout(stop);
+      for (const type of DISMISS_EVENTS) window.removeEventListener(type, finish);
+      found?.removeAttribute("data-found");
+    }
+
+    observer.observe(document.body, { childList: true, subtree: true });
+    mark();
+    return finish;
   }, [hash]);
 
   return null;
