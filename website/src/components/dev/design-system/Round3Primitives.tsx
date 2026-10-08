@@ -5,6 +5,7 @@ import { useState } from "react";
 import { Specimen, Variants } from "~/components/dev/design-system/Specimen";
 import { SmartLink } from "~/components/domain/navigation/SmartLink";
 import { Avatar, AvatarFallback } from "~/components/ui/avatar";
+import { Button } from "~/components/ui/button";
 import { CheckboxField } from "~/components/ui/checkbox-field";
 import { Code } from "~/components/ui/code";
 import { CornerBadge } from "~/components/ui/corner-badge";
@@ -65,6 +66,56 @@ function SearchInputExamples() {
           onValueChange={setSmall}
           placeholder="Search tables…"
           aria-label="Search tables"
+          className="w-full sm:w-56"
+        />
+      </Variants>
+      <Variants label='variant="bar" with an action' className="items-start">
+        <SearchInput
+          variant="bar"
+          placeholder="Ask for a stat"
+          aria-label="Ask for a stat"
+          action={
+            <Button size="sm" shape="pill">
+              Search
+            </Button>
+          }
+          className="w-full sm:w-96"
+        />
+        <SearchInput
+          variant="bar"
+          defaultValue="best counter against bebop"
+          loading
+          aria-label="Loading bar search"
+          action={
+            <Button size="sm" shape="pill" loading>
+              Search
+            </Button>
+          }
+          className="w-full sm:w-96"
+        />
+      </Variants>
+      <Variants label='shortcut="/"' className="items-start">
+        <SearchInput
+          size="sm"
+          shortcut="/"
+          placeholder="Ask for a stat"
+          aria-label="Search with a shortcut"
+          className="w-full sm:w-56"
+        />
+      </Variants>
+      <Variants label="loading" className="items-start">
+        <SearchInput
+          defaultValue="best counter against bebop"
+          loading
+          loadingLabel="Finding pages"
+          aria-label="Loading search"
+          className="w-full sm:w-64"
+        />
+        <SearchInput
+          size="sm"
+          defaultValue="haze build"
+          loading
+          aria-label="Loading small search"
           className="w-full sm:w-56"
         />
       </Variants>
@@ -279,7 +330,7 @@ export function Round3Primitives() {
       <Specimen
         name="SearchInput"
         source="ui/search-input"
-        note="A text field that filters what is below it: leading icon, a clear button once it has text. value / defaultValue / onValueChange; ref and input props reach the input, className sizes the row."
+        note="A text field that filters what is below it: leading icon, a clear button once it has text, a spinner in its place while loading, a shortcut key while empty. The bar variant is the main search of a page, its action inside. value / defaultValue / onValueChange; ref and input props reach the input, className sizes the row."
       >
         <SearchInputExamples />
       </Specimen>
