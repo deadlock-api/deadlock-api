@@ -52,7 +52,8 @@ async fn main() -> anyhow::Result<()> {
 
 type SnapshotKey = (u64, u32, u32, u16, u16, u16, u16);
 
-/// Returns the snapshot keys inserted on this tick.
+/// Returns the snapshot keys inserted on this tick (the previous tick's keys if fetching
+/// failed).
 #[instrument(skip(http_client, ch_client, previous_tick))]
 async fn fetch_insert_active_matches(
     http_client: &reqwest::Client,
@@ -71,7 +72,9 @@ async fn fetch_insert_active_matches(
             gauge!("active_matches_scraper.fetched_active_matches").set(0);
             counter!("active_matches_scraper.fetch_active_matches.failure").increment(1);
             error!("Failed to fetch active matches: {e:?}");
-            return this_tick;
+            // Keep the last keys, so the next successful tick does not re-insert every
+            // unchanged snapshot.
+            return previous_tick.clone();
         }
     };
     let ch_active_matches = active_matches
