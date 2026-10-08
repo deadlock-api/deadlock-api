@@ -11,6 +11,7 @@ use serde::{Deserialize, Serialize};
 use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
 
+use super::common_filters::{filter_protected_accounts, round_timestamps};
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::matches::types::{GameMode, MatchMode};
@@ -285,8 +286,9 @@ async fn run_query(
 
 async fn get_kill_death_stats(
     ch_client: &clickhouse::Client,
-    query: KillDeathStatsQuery,
+    mut query: KillDeathStatsQuery,
 ) -> APIResult<Vec<KillDeathStats>> {
+    round_timestamps(&mut query.min_unix_timestamp, &mut query.max_unix_timestamp);
     let query_str = build_query(&query);
     debug!(?query_str);
     Ok(run_query(ch_client, &query_str).await?)
@@ -317,9 +319,15 @@ This endpoint returns the kill-death statistics across a 128x128 pixel raster.
     "
 )]
 pub(crate) async fn kill_death_stats(
-    Query(query): Query<KillDeathStatsQuery>,
+    Query(mut query): Query<KillDeathStatsQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
+    if query.team.is_some_and(|t| t > 1) {
+        return Err(APIError::status_msg(
+            StatusCode::BAD_REQUEST,
+            "team must be 0 or 1",
+        ));
+    }
     if query.game_mode.is_some_and(|g| g == GameMode::StreetBrawl)
         && (query.min_average_badge.is_some() || query.max_average_badge.is_some())
     {
@@ -328,6 +336,7 @@ pub(crate) async fn kill_death_stats(
             message: "Cannot filter by average badge for street brawl game mode".to_string(),
         });
     }
+    filter_protected_accounts(&state, &mut query.account_ids, None).await?;
     get_kill_death_stats(&state.ch_client_ro, query)
         .await
         .map(Json)

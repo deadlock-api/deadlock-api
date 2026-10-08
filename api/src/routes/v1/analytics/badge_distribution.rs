@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
 
+use super::common_filters::{ceil_to_hour, floor_to_hour};
 use crate::context::AppState;
 use crate::error::APIResult;
 use crate::routes::v1::matches::types::{GameMode, MatchMode};
@@ -72,25 +73,19 @@ pub(crate) struct BadgeDistribution {
 /// Start of the first ranked season. No match before it carries a player rank.
 const FIRST_RANKED_SEASON_START: i64 = 1785430800;
 
-/// Clients mostly send "now minus 30 days" (and "now") to the second, so every request built a
-/// distinct query string and the result cache never hit. Widening the range to whole hours makes
-/// them share a cache entry; an hour more or less out of a month barely moves the distribution.
-const TIMESTAMP_ALIGNMENT_S: i64 = 3600;
-
 fn build_query(query: &BadgeDistributionQuery) -> String {
-    let min_unix_timestamp = query
-        .min_unix_timestamp
-        .map_or(FIRST_RANKED_SEASON_START, |t| {
-            t.max(FIRST_RANKED_SEASON_START)
-        })
-        .div_euclid(TIMESTAMP_ALIGNMENT_S)
-        * TIMESTAMP_ALIGNMENT_S;
+    // Widened to whole hours so requests sent to the second share a cache entry; an hour more or
+    // less out of a month barely moves the distribution.
+    let min_unix_timestamp = floor_to_hour(
+        query
+            .min_unix_timestamp
+            .map_or(FIRST_RANKED_SEASON_START, |t| {
+                t.max(FIRST_RANKED_SEASON_START)
+            }),
+    );
     let mut info_filters = vec![format!("start_time >= {min_unix_timestamp}")];
     if let Some(max_unix_timestamp) = query.max_unix_timestamp {
-        let max_unix_timestamp = max_unix_timestamp
-            .saturating_add(TIMESTAMP_ALIGNMENT_S - 1)
-            .div_euclid(TIMESTAMP_ALIGNMENT_S)
-            * TIMESTAMP_ALIGNMENT_S;
+        let max_unix_timestamp = ceil_to_hour(max_unix_timestamp);
         info_filters.push(format!("start_time <= {max_unix_timestamp}"));
     }
     if let Some(min_match_id) = query.min_match_id {
