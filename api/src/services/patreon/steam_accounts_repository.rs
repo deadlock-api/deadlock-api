@@ -1,5 +1,3 @@
-#![expect(dead_code)]
-
 use cached::CachedExt;
 use chrono::{DateTime, Duration, Utc};
 use sqlx::{Pool, Postgres};
@@ -23,10 +21,12 @@ pub(crate) type SteamAccountsRepositoryResult<T> = Result<T, SteamAccountsReposi
 #[derive(Debug, Clone)]
 pub(crate) struct SteamAccount {
     pub(crate) id: Uuid,
+    #[expect(dead_code, reason = "mirrors the table row")]
     pub(crate) patron_id: Option<Uuid>,
     pub(crate) steam_id3: i64,
     pub(crate) created_at: DateTime<Utc>,
     pub(crate) deleted_at: Option<DateTime<Utc>>,
+    #[expect(dead_code, reason = "mirrors the table row")]
     pub(crate) user_deleted: bool,
 }
 
@@ -158,36 +158,6 @@ impl SteamAccountsRepository {
 
         // Count will always fit in i32 for practical patron slot limits
         Ok(row.count as i32)
-    }
-
-    /// Checks if a specific `steam_id3` is in cooldown for this patron.
-    /// Returns true if the account was soft-deleted within the last 24 hours.
-    pub(crate) async fn is_steam_id_in_cooldown(
-        &self,
-        patron_id: Uuid,
-        steam_id3: i64,
-    ) -> SteamAccountsRepositoryResult<bool> {
-        let cooldown_threshold = Utc::now() - Duration::hours(24);
-
-        let row = sqlx::query!(
-            r#"
-            SELECT EXISTS(
-                SELECT 1
-                FROM prioritized_steam_accounts
-                WHERE patron_id = $1
-                  AND steam_id3 = $2
-                  AND deleted_at IS NOT NULL
-                  AND deleted_at > $3
-            ) as "exists!"
-            "#,
-            patron_id,
-            steam_id3,
-            cooldown_threshold,
-        )
-        .fetch_one(&self.pg_client)
-        .await?;
-
-        Ok(row.exists)
     }
 
     /// Finds a soft-deleted Steam account by `steam_id3` for a patron.

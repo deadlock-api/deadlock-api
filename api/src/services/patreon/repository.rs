@@ -1,5 +1,3 @@
-#![expect(dead_code)]
-
 use chrono::{DateTime, Utc};
 use sqlx::{Pool, Postgres};
 use thiserror::Error;

@@ -1,5 +1,3 @@
-#![expect(dead_code)]
-
 use aes_gcm::Aes256Gcm;
 use aes_gcm::aead::{Aead, Generate, Key, KeyInit, Nonce};
 use chrono::{DateTime, Utc};
@@ -55,6 +53,7 @@ pub(crate) struct Membership {
 /// Raw response from Patreon identity endpoint with memberships included (JSON:API format)
 #[derive(Debug, Deserialize)]
 pub(crate) struct IdentityWithMembershipsResponse {
+    #[expect(dead_code, reason = "part of the deserialized Patreon response")]
     pub(crate) data: IdentityData,
     #[serde(default)]
     pub(crate) included: Vec<IncludedResource>,
@@ -73,6 +72,7 @@ pub(crate) enum IncludedResource {
 /// Member resource from JSON:API included array
 #[derive(Debug, Deserialize)]
 pub(crate) struct MemberResource {
+    #[expect(dead_code, reason = "part of the deserialized Patreon response")]
     pub(crate) id: String,
     pub(crate) attributes: MemberAttributes,
     #[serde(default)]
@@ -96,6 +96,7 @@ pub(crate) struct MemberRelationships {
     #[serde(default)]
     pub(crate) currently_entitled_tiers: TierRelationship,
     #[serde(default)]
+    #[expect(dead_code, reason = "part of the deserialized Patreon response")]
     pub(crate) campaign: CampaignRelationship,
 }
 
@@ -111,17 +112,20 @@ pub(crate) struct TierRelationship {
 pub(crate) struct TierRef {
     pub(crate) id: String,
     #[serde(rename = "type")]
+    #[expect(dead_code, reason = "part of the deserialized Patreon response")]
     pub(crate) resource_type: String,
 }
 
 /// Campaign relationship data
 #[derive(Debug, Default, Deserialize)]
 pub(crate) struct CampaignRelationship {
+    #[expect(dead_code, reason = "part of the deserialized Patreon response")]
     pub(crate) data: Option<CampaignRef>,
 }
 
 /// Reference to a campaign
 #[derive(Debug, Deserialize)]
+#[expect(dead_code, reason = "part of the deserialized Patreon response")]
 pub(crate) struct CampaignRef {
     pub(crate) id: String,
     #[serde(rename = "type")]
@@ -133,8 +137,6 @@ pub(crate) struct CampaignRef {
 pub(crate) enum PatreonError {
     #[error("HTTP request failed: {0}")]
     Request(#[from] reqwest::Error),
-    #[error("Invalid response from Patreon: {0}")]
-    InvalidResponse(String),
 }
 
 pub(crate) type PatreonResult<T> = Result<T, PatreonError>;
@@ -144,6 +146,7 @@ pub(crate) type PatreonResult<T> = Result<T, PatreonError>;
 pub(crate) struct Patron {
     pub(crate) id: Uuid,
     pub(crate) patreon_user_id: String,
+    #[expect(dead_code, reason = "mirrors the table row")]
     pub(crate) email: Option<String>,
     pub(crate) tier_id: Option<String>,
     pub(crate) pledge_amount_cents: Option<i32>,
@@ -154,7 +157,9 @@ pub(crate) struct Patron {
     pub(crate) refresh_token: Option<String>,
     pub(crate) token_expires_at: Option<DateTime<Utc>>,
     pub(crate) last_verified_at: Option<DateTime<Utc>>,
+    #[expect(dead_code, reason = "mirrors the table row")]
     pub(crate) created_at: DateTime<Utc>,
+    #[expect(dead_code, reason = "mirrors the table row")]
     pub(crate) updated_at: DateTime<Utc>,
 }
 
