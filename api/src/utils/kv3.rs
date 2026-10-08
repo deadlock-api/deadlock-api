@@ -481,7 +481,18 @@ impl<'a> Parser<'a> {
                 b'n' => out.push('\n'),
                 b't' => out.push('\t'),
                 b'r' => out.push('\r'),
-                other => out.push(other as char),
+                other if other.is_ascii() => out.push(other as char),
+                _ => {
+                    // Escaped multi-byte UTF-8 char: copy the whole char, not just its lead
+                    // byte (which would also leave `idx` off a char boundary).
+                    let ch = self.src[self.idx..]
+                        .chars()
+                        .next()
+                        .ok_or_else(|| self.err("unexpected end of input in string"))?;
+                    out.push(ch);
+                    self.idx += ch.len_utf8();
+                    continue;
+                }
             }
             self.idx += 1;
         }
@@ -636,6 +647,12 @@ mod tests {
         assert_eq!(v["c"], serde_json::json!([1, 2, 3]));
         assert_eq!(v["d"], true);
         assert_eq!(v["e"], Value::Null);
+    }
+
+    #[test]
+    fn escaped_non_ascii_char_decodes_as_utf8() {
+        let v: Value = from_str("{ a = \"x\\\u{e9} \\\u{2014}\\n\" }").expect("ok");
+        assert_eq!(v["a"], "x\u{e9} \u{2014}\n");
     }
 
     #[test]
