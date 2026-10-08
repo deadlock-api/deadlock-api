@@ -12,6 +12,8 @@ pub enum FieldMetadataError {
     UnknownArrayLengthIdent(String),
     #[error("field not found")]
     FieldNotFound,
+    #[error("unsupported var type")]
+    UnsupportedVarType,
 }
 
 // NOTE: Clone is derived because FlattenedSerializerField needs to be clonable.
@@ -181,8 +183,9 @@ fn visit_template(
     arg: Expr,
     field: &FlattenedSerializerField,
 ) -> Result<FieldMetadata, FieldMetadataError> {
+    // NOTE: the var type comes from the (untrusted) demo; e.g. `A*<B>` parses fine.
     let Expr::Ident(ident) = expr else {
-        unreachable!();
+        return Err(FieldMetadataError::UnsupportedVarType);
     };
 
     if matches!(
@@ -232,7 +235,7 @@ fn visit_array(
             )),
         },
         Expr::Lit(Lit::Num(length)) => Ok(*length),
-        _ => unreachable!(),
+        _ => Err(FieldMetadataError::UnsupportedVarType),
     }?;
 
     visit_any(expr, field).map(|field_metadata| FieldMetadata {
@@ -250,7 +253,7 @@ fn visit_any(
         Expr::Template { expr, arg } => visit_template(&expr, *arg, field),
         Expr::Array { expr, len } => visit_array(*expr, &len, field),
         Expr::Pointer(_) => Ok(POINTER),
-        _ => unreachable!(),
+        Expr::Lit(_) => Err(FieldMetadataError::UnsupportedVarType),
     }
 }
 
@@ -260,4 +263,32 @@ pub(crate) fn get_field_metadata(
 ) -> Result<FieldMetadata, FieldMetadataError> {
     let expr = vartype::parse(var_type)?;
     visit_any(expr, field)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn unexpected_type_shapes_are_errors() {
+        let field = FlattenedSerializerField::default();
+        for var_type in [
+            "A*<B>",
+            "A<B><C>",
+            "A[2]<B>",
+            "CUtlVector< A*<B> >",
+            "A*<B>[2]",
+        ] {
+            assert!(
+                matches!(
+                    get_field_metadata(&field, var_type),
+                    Err(FieldMetadataError::UnsupportedVarType)
+                ),
+                "{var_type}"
+            );
+        }
+        assert!(get_field_metadata(&field, "CUtlVector< int32 >").is_ok());
+        assert!(get_field_metadata(&field, "uint8[4]").is_ok());
+        assert!(get_field_metadata(&field, "CBodyComponent*").is_ok());
+    }
 }
