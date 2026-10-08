@@ -143,19 +143,22 @@ pub(super) struct MetricValues {
 }
 
 impl MetricValues {
+    /// `quantiles` holds the nine `QUANTILES` levels in order. A short (e.g. empty) array yields
+    /// `nan` (serialized as `null`) for the missing percentiles instead of panicking.
     fn from_stats(avg: f64, std: f64, quantiles: &[f64]) -> Self {
+        let q = |i: usize| quantiles.get(i).copied().unwrap_or(f64::NAN);
         Self {
             avg,
             std,
-            percentile1: quantiles[0],
-            percentile5: quantiles[1],
-            percentile10: quantiles[2],
-            percentile25: quantiles[3],
-            percentile50: quantiles[4],
-            percentile75: quantiles[5],
-            percentile90: quantiles[6],
-            percentile95: quantiles[7],
-            percentile99: quantiles[8],
+            percentile1: q(0),
+            percentile5: q(1),
+            percentile10: q(2),
+            percentile25: q(3),
+            percentile50: q(4),
+            percentile75: q(5),
+            percentile90: q(6),
+            percentile95: q(7),
+            percentile99: q(8),
         }
     }
 }
@@ -699,6 +702,17 @@ pub(crate) async fn player_stats_metrics(
 mod tests {
     use super::*;
     use crate::utils::proptest_utils::assert_valid_sql;
+
+    #[test]
+    fn short_quantiles_do_not_panic() {
+        let empty = MetricValues::from_stats(f64::NAN, f64::NAN, &[]);
+        assert!(empty.percentile1.is_nan() && empty.percentile99.is_nan());
+        let short = MetricValues::from_stats(1.0, 0.5, &[1.0, 2.0]);
+        assert!((short.percentile5 - 2.0).abs() < f64::EPSILON);
+        assert!(short.percentile10.is_nan());
+        let json = serde_json::to_value(&empty).unwrap();
+        assert!(json["percentile50"].is_null());
+    }
 
     #[test]
     fn buff_metrics_are_opt_in() {
