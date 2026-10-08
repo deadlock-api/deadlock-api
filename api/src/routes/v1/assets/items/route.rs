@@ -1,11 +1,10 @@
 use axum::Json;
 use axum::extract::{Path, Query, State};
 use axum::response::IntoResponse;
-use reqwest::StatusCode;
 
 use crate::context::AppState;
-use crate::error::{APIError, APIResult};
-use crate::routes::v1::assets::common::{AssetsQuery, load_localized};
+use crate::error::APIResult;
+use crate::routes::v1::assets::common::{AssetsQuery, find_or_404, load_localized};
 use crate::services::assets::versions::items::fetch_items;
 use crate::services::assets::versions::items::types::{Item, ItemSlotType, ItemType};
 
@@ -50,15 +49,14 @@ pub(super) async fn get_item(
 ) -> APIResult<impl IntoResponse> {
     let items = load_localized(&state, &q, "items", fetch_items).await?;
     let needle_id: Option<u32> = id_or_class_name.parse().ok();
-    items
-        .iter()
-        .find(|i| match needle_id {
+    find_or_404(
+        &items,
+        |i| match needle_id {
             Some(id) => i.id() == id,
             None => i.class_name() == id_or_class_name,
-        })
-        .cloned()
-        .map(Json)
-        .ok_or_else(|| APIError::status_msg(StatusCode::NOT_FOUND, "Item not found"))
+        },
+        "Item not found",
+    )
 }
 
 #[utoipa::path(
@@ -80,7 +78,7 @@ pub(super) async fn get_items_by_type(
     let items = load_localized(&state, &q, "items", fetch_items).await?;
     let filtered: Vec<Item> = items
         .iter()
-        .filter(|i| i.item_type() as u8 == item_type as u8)
+        .filter(|i| i.item_type() == item_type)
         .cloned()
         .collect();
     Ok(Json(filtered).into_response())

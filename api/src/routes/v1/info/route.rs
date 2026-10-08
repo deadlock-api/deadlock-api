@@ -71,14 +71,15 @@ pub struct TableSize {
     data_uncompressed_bytes: Option<u64>,
 }
 
-impl From<TableSizeRow> for TableSize {
-    fn from(row: TableSizeRow) -> Self {
-        TableSize {
-            is_view: row.is_view,
-            rows: row.rows,
-            data_compressed_bytes: row.data_compressed_bytes,
-            data_uncompressed_bytes: row.data_uncompressed_bytes,
-        }
+impl TableSizeRow {
+    fn into_entry(self) -> (String, TableSize) {
+        let size = TableSize {
+            is_view: self.is_view,
+            rows: self.rows,
+            data_compressed_bytes: self.data_compressed_bytes,
+            data_uncompressed_bytes: self.data_uncompressed_bytes,
+        };
+        (self.table, size)
     }
 }
 
@@ -118,11 +119,7 @@ async fn fetch_ch_info(ch_client: &clickhouse::Client) -> APIInfo {
     let table_sizes = table_sizes
         .inspect_err(|e| warn!("Failed to fetch table sizes from ClickHouse: {e}"))
         .ok()
-        .map(|v| {
-            v.into_iter()
-                .map(|row| (row.table.clone(), row.into()))
-                .collect()
-        });
+        .map(|v| v.into_iter().map(TableSizeRow::into_entry).collect());
     #[expect(deprecated)]
     APIInfo {
         fetched_matches_per_day,

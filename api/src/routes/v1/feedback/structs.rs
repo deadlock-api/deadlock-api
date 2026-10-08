@@ -74,10 +74,9 @@ pub(super) struct FeedbackSubmission {
 
 fn check_len(field: &str, value: &str, max: usize) -> APIResult<()> {
     if value.chars().count() > max {
-        return Err(APIError::status_msg(
-            reqwest::StatusCode::BAD_REQUEST,
-            format!("`{field}` must be at most {max} characters"),
-        ));
+        return Err(bad_request(format!(
+            "`{field}` must be at most {max} characters"
+        )));
     }
     Ok(())
 }
