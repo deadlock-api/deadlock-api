@@ -20,7 +20,7 @@ function numberFormat(digits: number, fraction: "fixed" | "trim"): Intl.NumberFo
   return format;
 }
 
-interface DeltaProps extends Omit<React.ComponentProps<"span">, "children"> {
+interface DeltaBaseProps extends Omit<React.ComponentProps<"span">, "children"> {
   /** The signed change. With `format="percent"` this is a fraction: 0.031 renders as +3.1%. */
   value: number | null | undefined;
   format?: "percent" | "number";
@@ -34,13 +34,12 @@ interface DeltaProps extends Omit<React.ComponentProps<"span">, "children"> {
   polarity?: "higher-is-better" | "lower-is-better" | "neutral";
   /** `arrow` draws an arrow instead of the plus or minus glyph, which reads faster in dense rows. */
   sign?: "glyph" | "arrow";
-  /** `badge` draws it as a square Badge in the tone's color, for table cells and stat rows. */
-  display?: "text" | "badge";
   /** `fixed` always prints `digits` decimals (+3.0%); `trim` drops trailing zeros (+1,234, +12.5). */
   fraction?: "fixed" | "trim";
-  /** The badge's size, with `display="badge"`. */
-  size?: "sm" | "default";
 }
+
+/** `badge` draws it as a square Badge in the tone's color, for table cells and stat rows; only a badge has a `size`. */
+type DeltaProps = DeltaBaseProps & ({ display?: "text"; size?: never } | { display: "badge"; size?: "sm" | "default" });
 
 /** A signed change, colored by direction. Zero at the displayed precision renders nothing. */
 export function Delta({
