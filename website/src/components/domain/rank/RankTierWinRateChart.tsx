@@ -37,7 +37,7 @@ export function rankTierLook(
 function TierTooltip({ entry }: { entry?: RankTierWinRate }) {
   if (!entry) return null;
   return (
-    <TooltipCard>
+    <TooltipCard data-slot="rank-tier-win-rate-tooltip">
       <TooltipHeader leading={entry.image && <img src={entry.image} alt="" className="size-6" />} title={entry.name} />
       <TooltipStats>
         <TooltipStat label="Win rate" value={formatPercent(entry.winRate)} />
@@ -83,6 +83,7 @@ export function RankTierWinRateChart({
 
   return (
     <ChartCard
+      data-slot="rank-tier-win-rate-chart"
       title="Win Rate by Rank"
       footer={
         status === "success" &&
