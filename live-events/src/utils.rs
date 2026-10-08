@@ -2,7 +2,7 @@ use core::num::TryFromIntError;
 use core::str::FromStr;
 use core::time::Duration;
 
-use reqwest::Response;
+use reqwest::{Response, StatusCode, Url};
 use serde::{Deserialize, Deserializer};
 
 use crate::error::APIError;
@@ -124,4 +124,70 @@ pub(crate) async fn wait_for_live_demo(
         .fixed_backoff(Duration::from_millis(500))
         .await
         .map_err(|e| APIError::internal(format!("Demo not available: {e}")))
+}
+
+/// Host suffixes Valve serves match broadcasts from. The GC hands out relay URLs like
+/// `http://dist1-ord1.steamcontent.com/tv/<id>`; `valve.net` covers Valve's replay hosts.
+const BROADCAST_HOST_SUFFIXES: [&str; 2] = [".steamcontent.com", ".valve.net"];
+
+/// Validates a user-supplied broadcast URL, so the `?broadcast_url=` endpoints cannot be
+/// pointed at arbitrary hosts: only http(s) URLs on Valve broadcast hosts, without
+/// credentials, are accepted.
+pub(crate) fn validate_broadcast_url(broadcast_url: &str) -> Result<(), APIError> {
+    let bad_request = |message: &str| APIError::StatusMsg {
+        status: StatusCode::BAD_REQUEST,
+        message: message.to_owned(),
+    };
+    let url = Url::parse(broadcast_url).map_err(|_| bad_request("Invalid broadcast_url"))?;
+    if !matches!(url.scheme(), "http" | "https") {
+        return Err(bad_request("broadcast_url must be an http(s) URL"));
+    }
+    if !url.username().is_empty() || url.password().is_some() {
+        return Err(bad_request("broadcast_url must not contain credentials"));
+    }
+    let is_valve_host = url.domain().is_some_and(|host| {
+        let host = host.to_ascii_lowercase();
+        BROADCAST_HOST_SUFFIXES
+            .iter()
+            .any(|suffix| host.ends_with(suffix))
+    });
+    if !is_valve_host {
+        return Err(bad_request(
+            "broadcast_url must point to a Valve broadcast host",
+        ));
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn accepts_valve_broadcast_hosts() {
+        for url in [
+            "http://dist1-ord1.steamcontent.com/tv/18895867",
+            "https://dist1-fra1.steamcontent.com/tv/18895867_abc/",
+            "http://replay3.valve.net/tv/1",
+        ] {
+            assert!(validate_broadcast_url(url).is_ok(), "{url}");
+        }
+    }
+
+    #[test]
+    fn rejects_other_hosts_and_schemes() {
+        for url in [
+            "http://localhost:3000/tv/1",
+            "http://127.0.0.1/tv/1",
+            "http://169.254.169.254/latest/meta-data",
+            "http://steamcontent.com.evil.example/tv/1",
+            "http://evilsteamcontent.com/tv/1",
+            "file:///etc/passwd",
+            "ftp://dist1-ord1.steamcontent.com/tv/1",
+            "http://user:pass@dist1-ord1.steamcontent.com/tv/1",
+            "not a url",
+        ] {
+            assert!(validate_broadcast_url(url).is_err(), "{url}");
+        }
+    }
 }

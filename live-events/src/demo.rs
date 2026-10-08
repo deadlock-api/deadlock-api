@@ -12,7 +12,7 @@ use tracing::info;
 
 use crate::error::APIResult;
 use crate::state::AppState;
-use crate::utils::{spectate_match, wait_for_live_demo};
+use crate::utils::{spectate_match, validate_broadcast_url, wait_for_live_demo};
 
 fn demo_stream(
     broadcast_url: impl Into<String>,
@@ -60,6 +60,7 @@ pub(super) async fn demo_by_broadcast_url(
     Query(query): Query<BroadcastDemoQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
+    validate_broadcast_url(&query.broadcast_url)?;
     info!("Connecting to broadcast URL: {}", query.broadcast_url);
     wait_for_live_demo(&state.http_client, &query.broadcast_url).await?;
 

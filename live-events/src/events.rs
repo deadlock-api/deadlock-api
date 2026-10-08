@@ -206,6 +206,7 @@ pub(super) async fn events_by_broadcast_url(
     Query(query): Query<BroadcastEventsQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
+    utils::validate_broadcast_url(&query.broadcast_url)?;
     info!("Connecting to broadcast URL: {}", query.broadcast_url);
     utils::wait_for_live_demo(&state.http_client, &query.broadcast_url).await?;
 
