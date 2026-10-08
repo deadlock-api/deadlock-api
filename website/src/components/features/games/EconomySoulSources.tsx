@@ -11,10 +11,11 @@ import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { NoValue } from "~/components/ui/no-value";
 import { ProgressBar } from "~/components/ui/progress-bar";
 import { Stat, StatGroup } from "~/components/ui/stat";
+import { formatPercent } from "~/lib/format";
 import { formatStatValue } from "~/lib/game-stat-definitions";
 import { gameStatsQueryOptions } from "~/queries/games-query";
 
-import { formatPercent, formatSouls, groupSoulParts, SOUL_SOURCE_GROUPS } from "./economy-definitions";
+import { formatSouls, groupSoulParts, SOUL_SOURCE_GROUPS } from "./economy-definitions";
 
 interface EconomySoulSourcesProps {
   params: AnalyticsApiGameStatsRequest;

@@ -11,10 +11,11 @@ import { CHART_CURSOR_BAND, CHART_GRID, CHART_X_AXIS, CHART_Y_AXIS } from "~/com
 import { NoValue } from "~/components/ui/no-value";
 import { Segmented, SegmentedItem } from "~/components/ui/segmented";
 import { TooltipCard, TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
+import { formatPercent } from "~/lib/format";
 import { gameStatsQueryOptions } from "~/queries/games-query";
 import { ranksQueryOptions } from "~/queries/ranks-query";
 
-import { formatPercent, formatSouls, formatSoulsCompact, groupSouls, SOUL_SOURCE_GROUPS } from "./economy-definitions";
+import { formatSouls, formatSoulsCompact, groupSouls, SOUL_SOURCE_GROUPS } from "./economy-definitions";
 
 interface EconomySourcesByRankProps {
   params: AnalyticsApiGameStatsRequest;

@@ -1,9 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import type {
-  AnalyticsApiGameStatsRequest,
-  AnalyticsApiPlayerPerformanceCurveRequest,
-  PlayerPerformanceCurvePoint,
-} from "deadlock_api_client";
+import type { AnalyticsApiGameStatsRequest, PlayerPerformanceCurvePoint } from "deadlock_api_client";
 import { Crosshair, HeartPulse, Swords } from "lucide-react";
 import { useState } from "react";
 import { Area, CartesianGrid, ComposedChart, Line, LineChart, Tooltip, XAxis, YAxis } from "recharts";
@@ -32,10 +28,7 @@ import { formatCompactAxisTick } from "~/lib/chart-axis";
 import { formatStatValue } from "~/lib/stat-format";
 import { playerPerformanceCurveQueryOptions } from "~/queries/player-performance-curve-query";
 
-/** Past this few matches are left, so the curves swing (as on the buffs tab and the player comparison's timeline). */
-const LAST_MINUTE = 45;
-
-const minuteLabel = (seconds: number) => `${Math.round(seconds / 60)}m`;
+import { LAST_MINUTE, matchFilters, minuteLabel } from "./match-filters";
 
 type CurveKey = keyof PlayerPerformanceCurvePoint;
 
@@ -112,19 +105,13 @@ interface CombatTabProps {
 
 /** Damage and kills by game minute, per target, from the performance curve on the page's filters. */
 export default function CombatTab({ params }: CombatTabProps) {
-  const curveParams: AnalyticsApiPlayerPerformanceCurveRequest = {
-    // Absolute game time (3, 6, 9 … minutes) rather than shares of the match; the buffs tab reads the same curve.
-    resolution: 0,
-    gameMode: params.gameMode,
-    matchMode: params.matchMode,
-    minUnixTimestamp: params.minUnixTimestamp,
-    maxUnixTimestamp: params.maxUnixTimestamp,
-    minDurationS: params.minDurationS,
-    maxDurationS: params.maxDurationS,
-    minAverageBadge: params.minAverageBadge,
-    maxAverageBadge: params.maxAverageBadge,
-  };
-  const query = useQuery(playerPerformanceCurveQueryOptions(curveParams));
+  const query = useQuery(
+    playerPerformanceCurveQueryOptions({
+      // Absolute game time (3, 6, 9 … minutes) rather than shares of the match; the buffs tab reads the same curve.
+      resolution: 0,
+      ...matchFilters(params),
+    }),
+  );
   const points = (query.data ?? [])
     .filter((point) => point.game_time <= LAST_MINUTE * 60)
     .sort((a, b) => a.game_time - b.game_time);

@@ -1,9 +1,5 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import type {
-  AnalyticsApiBuffStatsRequest,
-  AnalyticsApiGameStatsRequest,
-  AnalyticsBuffStats,
-} from "deadlock_api_client";
+import type { AnalyticsApiGameStatsRequest, AnalyticsBuffStats } from "deadlock_api_client";
 import { Hourglass, ListOrdered, Sparkles } from "lucide-react";
 import { Fragment } from "react";
 import { Area, CartesianGrid, ComposedChart, Line, Tooltip, XAxis, YAxis } from "recharts";
@@ -50,10 +46,7 @@ import { buffStatsQueryOptions } from "~/queries/buff-stats-query";
 import { gameStatsQueryOptions } from "~/queries/games-query";
 import { playerPerformanceCurveQueryOptions } from "~/queries/player-performance-curve-query";
 
-/** Past this few matches are left, so the curve swings (as on the player comparison's timeline). */
-const LAST_MINUTE = 45;
-
-const minuteLabel = (seconds: number) => `${Math.round(seconds / 60)}m`;
+import { LAST_MINUTE, matchFilters, minuteLabel } from "./match-filters";
 
 function Timing({ seconds }: { seconds: number | null | undefined }) {
   return seconds == null ? (
@@ -68,17 +61,7 @@ interface BuffsTabProps {
 }
 
 export default function BuffsTab({ params }: BuffsTabProps) {
-  const buffParams: AnalyticsApiBuffStatsRequest = {
-    gameMode: params.gameMode,
-    matchMode: params.matchMode,
-    minUnixTimestamp: params.minUnixTimestamp,
-    maxUnixTimestamp: params.maxUnixTimestamp,
-    minDurationS: params.minDurationS,
-    maxDurationS: params.maxDurationS,
-    minAverageBadge: params.minAverageBadge,
-    maxAverageBadge: params.maxAverageBadge,
-  };
-  const buffQuery = useQuery({ ...buffStatsQueryOptions(buffParams), placeholderData: keepPreviousData });
+  const buffQuery = useQuery({ ...buffStatsQueryOptions(matchFilters(params)), placeholderData: keepPreviousData });
   // Names, units and colors; without them the buffs still show under their class names.
   const { data: info = new Map<string, BuffInfo>() } = useQuery(buffInfoQueryOptions);
   const { data: gameStats } = useQuery(gameStatsQueryOptions({ ...params, bucket: "no_bucket" }));
@@ -287,23 +270,17 @@ function BuffCurve({ params }: { params: AnalyticsApiGameStatsRequest }) {
     playerPerformanceCurveQueryOptions({
       // Absolute game time (3, 6, 9 … minutes) rather than shares of the match.
       resolution: 0,
-      gameMode: params.gameMode,
-      matchMode: params.matchMode,
-      minUnixTimestamp: params.minUnixTimestamp,
-      maxUnixTimestamp: params.maxUnixTimestamp,
-      minDurationS: params.minDurationS,
-      maxDurationS: params.maxDurationS,
-      minAverageBadge: params.minAverageBadge,
-      maxAverageBadge: params.maxAverageBadge,
+      ...matchFilters(params),
     }),
   );
   const points = (data ?? [])
-    .filter((point) => point.game_time <= LAST_MINUTE * 60 && point.permanent_buffs_avg != null)
+    .filter((point) => point.game_time <= LAST_MINUTE * 60)
     .sort((a, b) => a.game_time - b.game_time)
-    .map((point) => {
-      const buffs = point.permanent_buffs_avg as number;
+    .flatMap((point) => {
+      const buffs = point.permanent_buffs_avg;
+      if (buffs == null) return [];
       const std = point.permanent_buffs_std ?? 0;
-      return { time: point.game_time, buffs, std, band: [Math.max(0, buffs - std), buffs + std] };
+      return [{ time: point.game_time, buffs, std, band: [Math.max(0, buffs - std), buffs + std] }];
     });
   const label = "buffs over the match";
 

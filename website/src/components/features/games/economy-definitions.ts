@@ -1,9 +1,15 @@
-import type { AnalyticsGameStats } from "deadlock_api_client";
+import type { AnalyticsGameStats, PlayerPerformanceCurvePoint } from "deadlock_api_client";
 
 import { CHART_COLOR, SERIES_COLORS } from "~/components/patterns/charts/theme";
 import type { Color } from "~/types/general";
 
-type StatKey = keyof AnalyticsGameStats;
+/** A soul source as the game stats report it (`avg_gold_boss`); the performance curve reports it as `gold_boss_avg`. */
+type StatKey = Extract<keyof AnalyticsGameStats, `avg_gold_${string}`>;
+type CurveKey<K extends StatKey> = K extends `avg_${infer Field}` ? `${Field}_avg` : never;
+
+function curveKey<K extends StatKey>(key: K): CurveKey<K> {
+  return `${key.slice("avg_".length)}_avg` as CurveKey<K>;
+}
 
 export interface SoulSourceGroup {
   key: string;
@@ -84,18 +90,28 @@ export const SOUL_SOURCE_GROUPS: SoulSourceGroup[] = [
   },
 ];
 
+function soulParts(read: (key: StatKey) => number, group: SoulSourceGroup): { base: number; orb: number } {
+  const minus = group.minusKey ? read(group.minusKey) : 0;
+  const extra = (group.extraKeys ?? []).reduce((sum, key) => sum + read(key), 0);
+  return {
+    base: Math.max(0, read(group.baseKey) + extra - minus),
+    orb: group.orbKey ? read(group.orbKey) : 0,
+  };
+}
+
 /** A group's souls, split into what was confirmed directly and what came from its orb. */
 export function groupSoulParts(stats: AnalyticsGameStats, group: SoulSourceGroup): { base: number; orb: number } {
-  const minus = group.minusKey ? (stats[group.minusKey] ?? 0) : 0;
-  const extra = (group.extraKeys ?? []).reduce((sum, key) => sum + (stats[key] ?? 0), 0);
-  return {
-    base: Math.max(0, (stats[group.baseKey] ?? 0) + extra - minus),
-    orb: group.orbKey ? (stats[group.orbKey] ?? 0) : 0,
-  };
+  return soulParts((key) => stats[key] ?? 0, group);
 }
 
 export function groupSouls(stats: AnalyticsGameStats, group: SoulSourceGroup): number {
   const { base, orb } = groupSoulParts(stats, group);
+  return base + orb;
+}
+
+/** A group's souls at one point of the performance curve, split the same way as the game stats. */
+export function curveGroupSouls(point: PlayerPerformanceCurvePoint, group: SoulSourceGroup): number {
+  const { base, orb } = soulParts((key) => point[curveKey(key)] ?? 0, group);
   return base + orb;
 }
 
@@ -108,8 +124,4 @@ export function formatSouls(value: number | null | undefined): string | null {
 export function formatSoulsCompact(value: number): string {
   if (Math.abs(value) >= 1000) return `${(value / 1000).toFixed(value >= 10_000 ? 0 : 1)}k`;
   return Math.round(value).toString();
-}
-
-export function formatPercent(value: number): string {
-  return `${(value * 100).toFixed(1)}%`;
 }

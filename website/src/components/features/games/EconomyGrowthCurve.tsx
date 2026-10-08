@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import type { AnalyticsApiPlayerPerformanceCurveRequest, PlayerPerformanceCurvePoint } from "deadlock_api_client";
+import type { AnalyticsApiPlayerPerformanceCurveRequest } from "deadlock_api_client";
 import { useMemo, useState } from "react";
 import { Area, CartesianGrid, ComposedChart, Line, LineChart, ReferenceArea, Tooltip, XAxis, YAxis } from "recharts";
 
@@ -23,7 +23,7 @@ import { Segmented, SegmentedItem } from "~/components/ui/segmented";
 import { TooltipCard, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
 import { playerPerformanceCurveQueryOptions } from "~/queries/player-performance-curve-query";
 
-import { formatSouls, formatSoulsCompact, SOUL_SOURCE_GROUPS } from "./economy-definitions";
+import { curveGroupSouls, formatSouls, formatSoulsCompact, SOUL_SOURCE_GROUPS } from "./economy-definitions";
 
 interface EconomyGrowthCurveProps {
   params: AnalyticsApiPlayerPerformanceCurveRequest;
@@ -38,8 +38,6 @@ const PHASES = [
   { label: "Late", x1: 66, x2: 100, fillOpacity: 0.06 },
 ];
 
-type CurveKey = keyof PlayerPerformanceCurvePoint;
-
 interface CurvePoint {
   t: number;
   avg: number;
@@ -48,26 +46,6 @@ interface CurvePoint {
   band: number;
   [source: string]: number;
 }
-
-/** The curve's fields per soul source group; same split as `SOUL_SOURCE_GROUPS`. */
-const CURVE_FIELDS: Record<string, { base: CurveKey; orb?: CurveKey; minus?: CurveKey; extra?: CurveKey[] }> = {
-  hero_kills: { base: "gold_player_avg", orb: "gold_player_orbs_avg", minus: "gold_assists_avg" },
-  assists: { base: "gold_assists_avg" },
-  lane_creeps: { base: "gold_lane_creep_avg", orb: "gold_lane_creep_orbs_avg" },
-  jungle: { base: "gold_neutral_creep_avg", orb: "gold_neutral_creep_orbs_avg" },
-  objectives: { base: "gold_boss_avg", orb: "gold_boss_orb_avg" },
-  urn: { base: "gold_treasure_avg" },
-  breakables: { base: "gold_breakable_avg" },
-  team_bonus_items: {
-    base: "gold_team_bonus_avg",
-    extra: [
-      "gold_item_trophy_collector_avg",
-      "gold_item_cultist_sacrifice_avg",
-      "gold_item_goose_egg_avg",
-      "gold_ability_assassinate_avg",
-    ],
-  },
-};
 
 export default function EconomyGrowthCurve({ params }: EconomyGrowthCurveProps) {
   const [mode, setMode] = useState<Mode>("total");
@@ -91,12 +69,7 @@ export default function EconomyGrowthCurve({ params }: EconomyGrowthCurveProps) 
           band: upper - lower,
         };
         for (const group of SOUL_SOURCE_GROUPS) {
-          const fields = CURVE_FIELDS[group.key];
-          const minus = fields.minus ? (point[fields.minus] ?? 0) : 0;
-          const extra = (fields.extra ?? []).reduce((sum, key) => sum + (point[key] ?? 0), 0);
-          const base = Math.max(0, (point[fields.base] ?? 0) + extra - minus);
-          const orb = fields.orb ? (point[fields.orb] ?? 0) : 0;
-          curvePoint[group.key] = base + orb;
+          curvePoint[group.key] = curveGroupSouls(point, group);
         }
         return curvePoint;
       });

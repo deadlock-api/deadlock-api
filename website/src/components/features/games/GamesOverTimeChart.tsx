@@ -22,19 +22,14 @@ import { FilterBar } from "~/components/patterns/filter-bar/FilterBar";
 import { Field } from "~/components/ui/field";
 import { NoValue } from "~/components/ui/no-value";
 import { SegmentedItem } from "~/components/ui/segmented";
-import { SelectGroup, SelectItem, SelectLabel } from "~/components/ui/select";
 import { Stat, StatGroup } from "~/components/ui/stat";
 import { day } from "~/dayjs";
 import { BUFF_TIMINGS_NOTE } from "~/lib/buffs";
-import {
-  formatAxisTick,
-  formatStatValue,
-  getFilteredCategories,
-  getStatDefinition,
-  valueSpan,
-} from "~/lib/game-stat-definitions";
+import { formatAxisTick, formatStatValue, getStatDefinition, valueSpan } from "~/lib/game-stat-definitions";
 import { wholeTimeBuckets } from "~/lib/time-buckets";
 import { gameStatsQueryOptions } from "~/queries/games-query";
+
+import { GameMetricOptions } from "./StatSelector";
 
 const TIME_BUCKETS = [
   { value: "start_time_day", label: "Day" },
@@ -64,7 +59,6 @@ export default function GamesOverTimeChart({
   );
 
   const statDef = getStatDefinition(stat);
-  const categories = useMemo(() => getFilteredCategories(isStreetBrawl), [isStreetBrawl]);
 
   const chartData = useMemo(() => {
     if (!data) return [];
@@ -96,16 +90,7 @@ export default function GamesOverTimeChart({
       <FilterBar variant="toolbar" title="Game trends" icon={ChartNoAxesCombined} aria-label="Trend controls">
         <Field label="Metric" orientation="horizontal" className="w-full @sm:w-auto">
           <MetricSelect value={stat} valueLabel={statDef?.label} onValueChange={onStatChange}>
-            {categories.map((category) => (
-              <SelectGroup key={category.label}>
-                <SelectLabel>{category.label}</SelectLabel>
-                {category.stats.map((option) => (
-                  <SelectItem key={option.key} value={option.key}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectGroup>
-            ))}
+            <GameMetricOptions isStreetBrawl={isStreetBrawl} />
           </MetricSelect>
         </Field>
         <TrendIntervalField
