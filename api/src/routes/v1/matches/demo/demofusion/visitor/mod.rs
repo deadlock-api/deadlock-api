@@ -9,7 +9,7 @@ use std::io::Cursor;
 use bytes::Bytes;
 use haste_core::demofile::{DemoFile, DemoHeaderError};
 use haste_core::demostream::SeekableDemoStream;
-use haste_core::parser::{Parser, Visitor};
+use haste_core::parser::{Parser, SharedState, Visitor};
 
 /// A `.dem` file as an in-memory, seekable stream. `Cursor<Bytes>` supports `Seek`, which the
 /// parallel collector needs to jump between full-packet segment boundaries.
@@ -65,5 +65,17 @@ pub(super) fn scan_full_packet_ticks<D: BuildStream>(
         .map_err(|e| super::error::Error::Schema(e.to_string()))?;
     parser
         .scan_full_packet_ticks()
+        .map_err(|e| super::error::Error::Schema(e.to_string()))
+}
+
+/// Parse the demo's serializers and entity classes once, so that the parallel segment parsers can
+/// share them (`Parser::set_shared_state`) instead of each re-parsing the send tables.
+pub(super) fn parse_shared_state<D: BuildStream>(
+    bytes: Bytes,
+) -> super::error::Result<Option<SharedState>> {
+    let mut parser = sync_parser::<D, _>(bytes, ScanVisitor)
+        .map_err(|e| super::error::Error::Schema(e.to_string()))?;
+    parser
+        .parse_shared_state()
         .map_err(|e| super::error::Error::Schema(e.to_string()))
 }

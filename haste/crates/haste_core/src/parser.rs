@@ -4,6 +4,7 @@ use core::future::Future;
 use prost::Message;
 use std::io;
 use std::io::SeekFrom;
+use std::sync::Arc;
 use valveprotos::common::{
     CDemoClassInfo, CDemoFullPacket, CDemoSendTables, CDemoStringTables, CsvcMsgCreateStringTable,
     CsvcMsgServerInfo, CsvcMsgUpdateStringTable, EDemoCommands, QuantizedFloatEncoderAliasT,
@@ -62,8 +63,8 @@ fn full_packet_interval(tick_interval: f32) -> i32 {
 pub struct Context {
     string_tables: StringTableContainer,
     instance_baseline: InstanceBaseline,
-    serializers: Option<FlattenedSerializerContainer>,
-    entity_classes: Option<EntityClasses>,
+    serializers: Option<Arc<FlattenedSerializerContainer>>,
+    entity_classes: Option<Arc<EntityClasses>>,
     entities: EntityContainer,
     tick_interval: f32,
     full_packet_interval: i32,
@@ -181,12 +182,12 @@ impl Context {
     // 3. DemClassInfo (never update)
 
     fn handle_cmd_send_tables(&mut self, cmd: CDemoSendTables) -> anyhow::Result<()> {
-        self.serializers = Some(
+        self.serializers = Some(Arc::new(
             FlattenedSerializerContainer::parse_with_quantized_float_encoder_aliases(
                 cmd,
                 &self.quantized_float_encoder_aliases,
             )?,
-        );
+        ));
         Ok(())
     }
 
@@ -205,7 +206,7 @@ impl Context {
                 })?;
         }
 
-        self.entity_classes = Some(entity_classes);
+        self.entity_classes = Some(Arc::new(entity_classes));
         Ok(())
     }
 
@@ -345,10 +346,10 @@ impl Context {
         }
         rdr.remaining -= 1;
 
-        let Some(entity_classes) = self.entity_classes.as_ref() else {
+        let Some(entity_classes) = self.entity_classes.as_deref() else {
             bail!("entity classes are not available");
         };
-        let Some(serializers) = self.serializers.as_ref() else {
+        let Some(serializers) = self.serializers.as_deref() else {
             bail!("serializers are not available");
         };
 
@@ -410,12 +411,12 @@ impl Context {
 
     #[must_use]
     pub fn serializers(&self) -> Option<&FlattenedSerializerContainer> {
-        self.serializers.as_ref()
+        self.serializers.as_deref()
     }
 
     #[must_use]
     pub fn entity_classes(&self) -> Option<&EntityClasses> {
-        self.entity_classes.as_ref()
+        self.entity_classes.as_deref()
     }
 
     #[must_use]
@@ -459,6 +460,16 @@ impl Context {
     pub fn deadlock_coord_from_cell(&self, cell: u16, vec: f32) -> f32 {
         deadlock_coord_from_cell_with_max_coord(cell, vec, self.max_coord)
     }
+}
+
+/// the parts of parser state that never change within a demo (flattened serializers from
+/// `DemSendTables` and entity classes from `DemClassInfo`), reference counted so that parsers of
+/// the same demo can share them instead of parsing them again (see
+/// [`Parser::shared_state`] and [`Parser::set_shared_state`]).
+#[derive(Clone)]
+pub struct SharedState {
+    serializers: Arc<FlattenedSerializerContainer>,
+    entity_classes: Arc<EntityClasses>,
 }
 
 pub trait Visitor {
@@ -772,6 +783,23 @@ impl<D: DemoStream, V: Visitor> Parser<D, V> {
         &self.ctx
     }
 
+    /// serializers and entity classes once they have been parsed (after the demo's
+    /// `DemSendTables` and `DemClassInfo`), for sharing with other parsers of the same demo.
+    #[must_use]
+    pub fn shared_state(&self) -> Option<SharedState> {
+        Some(SharedState {
+            serializers: Arc::clone(self.ctx.serializers.as_ref()?),
+            entity_classes: Arc::clone(self.ctx.entity_classes.as_ref()?),
+        })
+    }
+
+    /// installs serializers and entity classes taken from another parser of the *same* demo; the
+    /// parser then skips its own `DemSendTables` / `DemClassInfo` handling.
+    pub fn set_shared_state(&mut self, state: SharedState) {
+        self.ctx.serializers = Some(state.serializers);
+        self.ctx.entity_classes = Some(state.entity_classes);
+    }
+
     pub fn into_visitor(self) -> V {
         self.visitor
     }
@@ -912,6 +940,32 @@ impl<D: SeekableDemoStream, V: Visitor> Parser<D, V> {
         Ok(ticks)
     }
 
+    /// Parses just enough of the demo to know its serializers and entity classes (signon,
+    /// `DemSendTables`, `DemClassInfo`; entity decode is skipped) and returns them for
+    /// [`set_shared_state`](Self::set_shared_state) on other parsers of the same demo. `None` if
+    /// the demo has no send tables or class info. The visitor sees the handled commands; the
+    /// stream is left rewound to its start position.
+    pub fn parse_shared_state(&mut self) -> anyhow::Result<Option<SharedState>> {
+        self.reset()?;
+        self.ctx.skip_entity_packets = true;
+        let result = self.run_seekable(|s: &mut Parser<D, V>, cmd_header: &CmdHeader| {
+            if s.ctx.serializers.is_some() && s.ctx.entity_classes.is_some() {
+                return Ok(None);
+            }
+            Ok(Some(match cmd_header.cmd {
+                EDemoCommands::DemSendTables
+                | EDemoCommands::DemClassInfo
+                | EDemoCommands::DemSignonPacket => ControlFlow::Handle,
+                _ => ControlFlow::Skip,
+            }))
+        });
+        self.ctx.skip_entity_packets = false;
+        result?;
+        let state = self.shared_state();
+        self.reset()?;
+        Ok(state)
+    }
+
     /// Parse the segment owned by a single full packet: the commands from full packet `ordinal`
     /// (a complete state snapshot) up to — but not including — the next full packet, or EOF for the
     /// last one. `ordinal` indexes the list returned by
@@ -965,7 +1019,15 @@ impl<D: SeekableDemoStream, V: Visitor> Parser<D, V> {
 
             // Warm-up (entity decode suppressed): handle init/signon so state is established;
             // skip the per-tick delta packets, whose state our full packet will restate.
+            // Serializers and entity classes never change, so when they are already known (shared
+            // from another parser) their commands are skipped without being read.
             match cmd_header.cmd {
+                EDemoCommands::DemSendTables if s.ctx.serializers.is_some() => {
+                    Ok(Some(ControlFlow::Skip))
+                }
+                EDemoCommands::DemClassInfo if s.ctx.entity_classes.is_some() => {
+                    Ok(Some(ControlFlow::Skip))
+                }
                 EDemoCommands::DemSendTables
                 | EDemoCommands::DemClassInfo
                 | EDemoCommands::DemSignonPacket => Ok(Some(ControlFlow::Handle)),

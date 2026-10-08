@@ -34,7 +34,7 @@ use super::schema::EntitySchema;
 use super::table_extractor::extract_table_names;
 use super::visitor::{
     BuildStream, CollectedBatches, CollectingVisitor, SyncDemoStream, discover_schemas_from_demo,
-    scan_full_packet_ticks, sync_parser,
+    parse_shared_state, scan_full_packet_ticks, sync_parser,
 };
 
 /// Run `query` against a single parse of `demo` and return a stream of its
@@ -227,6 +227,9 @@ fn parse_and_collect<D: BuildStream>(
     }
 
     let num_full_packets = scan_full_packet_ticks::<D>(demo_bytes.clone())?.len();
+    // Serializers and entity classes are the same for every segment: parse them once and share
+    // them, instead of every segment parser re-parsing the send tables.
+    let shared_state = parse_shared_state::<D>(demo_bytes.clone())?;
 
     // One segment per full packet, parsed in parallel — rayon load-balances them across idle
     // workers and `into_par_iter` over the range keeps results in tick order. Segment `i` spans
@@ -239,6 +242,9 @@ fn parse_and_collect<D: BuildStream>(
         .map(|ordinal| -> Result<CollectedBatches> {
             let visitor = CollectingVisitor::new(entity_specs, event_types);
             let mut parser = sync_parser::<D, _>(demo_bytes.clone(), visitor)?;
+            if let Some(shared_state) = &shared_state {
+                parser.set_shared_state(shared_state.clone());
+            }
             // Mirrors the single-threaded path: parse errors (e.g. a truncated tail) are
             // tolerated and whatever was collected so far is kept.
             let _ = parser.run_full_packet(ordinal);
