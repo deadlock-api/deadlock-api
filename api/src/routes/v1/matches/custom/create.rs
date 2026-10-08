@@ -28,7 +28,6 @@ use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::matches::custom::utils;
 use crate::routes::v1::matches::types::{GameMode, ServerRegion};
-use crate::services::rate_limiter::Quota;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::steam::client::SteamClient;
 use crate::services::steam::types::{SteamProxyQuery, SteamProxyResponse};
@@ -84,17 +83,15 @@ struct CreateCustomResponse {
 fn generate_callback_secret(length_bytes: usize) -> String {
     let mut secret_bytes = vec![0u8; length_bytes];
     ThreadRng::default().fill_bytes(&mut secret_bytes);
-    BASE64_URL_SAFE.encode(&mut secret_bytes)
+    BASE64_URL_SAFE.encode(&secret_bytes)
 }
 
 async fn create_party(
     state: &AppState,
-    settings: Option<CreateCustomRequest>,
+    settings: Option<&CreateCustomRequest>,
 ) -> APIResult<SteamProxyResponse<CMsgClientToGcPartyCreateResponse>> {
-    let region_mode = settings
-        .as_ref()
-        .and_then(|m| m.server_region.map(ServerRegion::region_mode));
-    let server_region = settings.as_ref().and_then(|m| m.server_region);
+    let server_region = settings.and_then(|m| m.server_region);
+    let region_mode = server_region.map(ServerRegion::region_mode);
 
     let msg = CMsgClientToGcPartyCreate {
         party_mm_info: CMsgPartyMmInfo {
@@ -117,22 +114,19 @@ async fn create_party(
         disable_party_code: false.into(),
         is_private_lobby: true.into(),
         region_mode: region_mode.map(Into::into),
-        game_mode: settings.as_ref().and_then(|m| m.game_mode.map(Into::into)),
+        game_mode: settings.and_then(|m| m.game_mode.map(Into::into)),
         server_search_key: None,
         mm_preference: (ECitadelMmPreference::KECitadelMmPreferenceCasual as i32).into(),
         private_lobby_settings: cso_citadel_party::PrivateLobbySettings {
-            min_roster_size: settings.as_ref().and_then(|m| m.min_roster_size),
+            min_roster_size: settings.and_then(|m| m.min_roster_size),
             match_slots: vec![],
-            randomize_lanes: settings.as_ref().and_then(|m| m.randomize_lanes),
+            randomize_lanes: settings.and_then(|m| m.randomize_lanes),
             server_region: server_region.map(Into::into),
-            is_publicly_visible: settings
-                .as_ref()
-                .map(|m| m.is_publicly_visible.unwrap_or(true)),
-            cheats_enabled: settings.as_ref().and_then(|m| m.cheats_enabled),
+            is_publicly_visible: settings.map(|m| m.is_publicly_visible.unwrap_or(true)),
+            cheats_enabled: settings.and_then(|m| m.cheats_enabled),
             available_regions: vec![],
-            duplicate_heroes_enabled: settings.as_ref().and_then(|m| m.duplicate_heroes_enabled),
+            duplicate_heroes_enabled: settings.and_then(|m| m.duplicate_heroes_enabled),
             corrupted_item_shop_spawn_minutes: settings
-                .as_ref()
                 .and_then(|m| m.corrupted_item_shop_spawn_minutes),
         }
         .into(),
@@ -170,16 +164,11 @@ async fn switch_to_spectator_slot(
         ..Default::default()
     };
     let response: CMsgClientToGcPartyActionResponse = steam_client
-        .call_steam_proxy(SteamProxyQuery {
-            msg_type: EgcCitadelClientMessages::KEMsgClientToGcPartyAction,
+        .call_steam_proxy(utils::build_proxy_query(
+            EgcCitadelClientMessages::KEMsgClientToGcPartyAction,
             msg,
-            in_all_groups: None,
-            in_any_groups: None,
-            cooldown_time: Duration::from_secs(0),
-            request_timeout: Duration::from_secs(2),
-            username: username.into(),
-            soft_cooldown_millis: None,
-        })
+            username,
+        ))
         .await?
         .msg;
     if response
@@ -234,24 +223,12 @@ The bot will leave the match 15 minutes after creation, regardless of match stat
 | Global | 1000req/h |
 "
 )]
-#[expect(clippy::too_many_lines)]
 pub(super) async fn create_custom(
     rate_limit_key: RateLimitKey,
     State(state): State<AppState>,
     payload: Result<Json<CreateCustomRequest>, JsonRejection>,
 ) -> APIResult<impl IntoResponse> {
-    state
-        .rate_limit_client
-        .apply_limits(
-            &rate_limit_key,
-            "create_custom",
-            &[
-                Quota::ip_limit(10, Duration::from_hours(1)),
-                Quota::key_limit(100, Duration::from_mins(30)),
-                Quota::global_limit(1000, Duration::from_hours(1)),
-            ],
-        )
-        .await?;
+    utils::apply_custom_match_rate_limits(&state, &rate_limit_key, "create_custom").await?;
 
     let payload = match payload {
         Ok(Json(p)) => Some(p),
@@ -269,7 +246,7 @@ pub(super) async fn create_custom(
     let SteamProxyResponse {
         username,
         msg: created_party,
-    } = tryhard::retry_fn(|| create_party(&state, payload.clone()))
+    } = tryhard::retry_fn(|| create_party(&state, payload.as_ref()))
         .retries(5)
         .linear_backoff(Duration::from_millis(100))
         .await?;
@@ -347,7 +324,7 @@ pub(super) async fn create_custom(
         .and_then(|p| p.disable_auto_ready)
         .unwrap_or_default()
     {
-        utils::make_ready(&state.steam_client, username.clone(), party_id, true).await?;
+        utils::make_ready(&state.steam_client, username, party_id, true).await?;
     }
 
     let response = CreateCustomResponse {

@@ -1,17 +1,11 @@
-use core::time::Duration;
-
 use axum::extract::{Path, State};
-use axum::http::StatusCode;
 use axum::response::IntoResponse;
-use itertools::Itertools;
 use serde::Deserialize;
-use tracing::error;
 use utoipa::IntoParams;
 
 use crate::context::AppState;
-use crate::error::{APIError, APIResult};
+use crate::error::APIResult;
 use crate::routes::v1::matches::custom::utils;
-use crate::services::rate_limiter::Quota;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 
 #[derive(Deserialize, IntoParams, Clone)]
@@ -47,32 +41,9 @@ pub(super) async fn ready_up(
     rate_limit_key: RateLimitKey,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
-    state
-        .rate_limit_client
-        .apply_limits(
-            &rate_limit_key,
-            "ready_up",
-            &[
-                Quota::ip_limit(10, Duration::from_hours(1)),
-                Quota::key_limit(100, Duration::from_mins(30)),
-                Quota::global_limit(1000, Duration::from_hours(1)),
-            ],
-        )
-        .await?;
-    let lobby_id = lobby_id.parse().map_err(|_| {
-        APIError::status_msg(StatusCode::BAD_REQUEST, "Invalid lobby id".to_owned())
-    })?;
-    let party_code =
-        utils::get_party_info_with_retries(&mut state.redis_client.clone(), lobby_id).await?;
-    let Some(party_code) = party_code else {
-        error!("Failed to retrieve party info");
-        return Err(APIError::internal("Failed to retrieve party info"));
-    };
-    let Some((username, _, _)) = party_code.split(':').collect_tuple() else {
-        error!("Failed to parse party info");
-        return Err(APIError::internal("Failed to parse party info"));
-    };
-    utils::make_ready(&state.steam_client, username.to_string(), lobby_id, true).await?;
+    let (lobby_id, username) =
+        utils::resolve_lobby_bot(&state, &rate_limit_key, "ready_up", &lobby_id, true).await?;
+    utils::make_ready(&state.steam_client, username, lobby_id, true).await?;
     Ok(())
 }
 
@@ -104,31 +75,8 @@ pub(super) async fn unready(
     rate_limit_key: RateLimitKey,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
-    state
-        .rate_limit_client
-        .apply_limits(
-            &rate_limit_key,
-            "unready",
-            &[
-                Quota::ip_limit(10, Duration::from_hours(1)),
-                Quota::key_limit(100, Duration::from_mins(30)),
-                Quota::global_limit(1000, Duration::from_hours(1)),
-            ],
-        )
-        .await?;
-    let lobby_id = lobby_id.parse().map_err(|_| {
-        APIError::status_msg(StatusCode::BAD_REQUEST, "Invalid lobby id".to_owned())
-    })?;
-    let party_code =
-        utils::get_party_info_with_retries(&mut state.redis_client.clone(), lobby_id).await?;
-    let Some(party_code) = party_code else {
-        error!("Failed to retrieve party info");
-        return Err(APIError::internal("Failed to retrieve party info"));
-    };
-    let Some((username, _, _)) = party_code.split(':').collect_tuple() else {
-        error!("Failed to parse party info");
-        return Err(APIError::internal("Failed to parse party info"));
-    };
-    utils::make_ready(&state.steam_client, username.to_string(), lobby_id, false).await?;
+    let (lobby_id, username) =
+        utils::resolve_lobby_bot(&state, &rate_limit_key, "unready", &lobby_id, true).await?;
+    utils::make_ready(&state.steam_client, username, lobby_id, false).await?;
     Ok(())
 }
