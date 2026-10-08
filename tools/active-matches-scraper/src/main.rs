@@ -23,7 +23,7 @@ use crate::models::active_match::{ActiveMatch, ClickHouseActiveMatch};
 
 static ACTIVE_MATCHES_URL: LazyLock<String> = LazyLock::new(|| {
     std::env::var("ACTIVE_MATCHES_URL")
-        .unwrap_or("https://api.deadlock-api.com/v1/matches/active".to_string())
+        .unwrap_or_else(|_| "https://api.deadlock-api.com/v1/matches/active".to_owned())
 });
 
 #[tokio::main]
@@ -97,7 +97,7 @@ async fn fetch_insert_active_matches(
         info!("No new active matches found");
         return this_tick;
     }
-    match insert_active_matches(ch_client, &ch_active_matches).await {
+    match common::insert_rows(ch_client, "active_matches", &ch_active_matches).await {
         Ok(()) => {
             gauge!("active_matches_scraper.inserted_active_matches")
                 .set(ch_active_matches.len() as f64);
@@ -113,24 +113,10 @@ async fn fetch_insert_active_matches(
     this_tick
 }
 
-#[instrument(skip(ch_client))]
-async fn insert_active_matches(
-    ch_client: &clickhouse::Client,
-    ch_active_matches: &[ClickHouseActiveMatch],
-) -> clickhouse::error::Result<()> {
-    let mut insert = ch_client
-        .insert::<ClickHouseActiveMatch>("active_matches")
-        .await?;
-    for ch_active_match in ch_active_matches {
-        insert.write(ch_active_match).await?;
-    }
-    insert.end().await
-}
-
 #[instrument(skip(http_client))]
 async fn fetch_active_matches(http_client: &reqwest::Client) -> reqwest::Result<Vec<ActiveMatch>> {
     http_client
-        .get(ACTIVE_MATCHES_URL.clone())
+        .get(ACTIVE_MATCHES_URL.as_str())
         .send()
         .await?
         .json()
