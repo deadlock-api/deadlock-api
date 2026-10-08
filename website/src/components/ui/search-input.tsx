@@ -74,6 +74,8 @@ export function SearchInput({
       )}
       {value !== "" && !props.disabled && !props.readOnly && (
         <Button
+          // Not the form's submit: Enter in a search inside a form would press it and clear the field instead.
+          type="button"
           variant="ghost"
           size="icon-xs"
           aria-label="Clear search"
