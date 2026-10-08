@@ -4,7 +4,7 @@ import { ChartNoAxesCombined } from "lucide-react";
 import { parseAsStringLiteral, useQueryState } from "nuqs";
 
 import { ChartLegend, ChartLegendItem } from "~/components/patterns/charts/ChartLegend";
-import { CHART_COLOR } from "~/components/patterns/charts/theme";
+import { CHART_COLOR, SERIES_COLORS } from "~/components/patterns/charts/theme";
 import { PanelWithDetails } from "~/components/patterns/panel/PanelWithDetails";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
@@ -166,7 +166,7 @@ export function RankBenchmarks({
                 <div className="flex flex-wrap items-center justify-between gap-1">
                   <span>Player averages vs. {cohortLabel} lobby averages</span>
                   <ChartLegend className="px-0">
-                    <ChartLegendItem color="var(--chart-4)" shape="line">
+                    <ChartLegendItem color={SERIES_COLORS[3]} shape="line">
                       Player
                     </ChartLegendItem>
                     <ChartLegendItem color={CHART_COLOR.neutral} shape="line">

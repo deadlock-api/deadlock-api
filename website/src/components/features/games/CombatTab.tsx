@@ -23,6 +23,7 @@ import {
   CHART_Y_AXIS,
   CHART_Y_LABEL,
   SERIES_COLORS,
+  CHART_ACTIVE_DOT,
 } from "~/components/patterns/charts/theme";
 import { Panel, PanelBody, PanelHeader } from "~/components/patterns/panel/Panel";
 import { Segmented, SegmentedItem } from "~/components/ui/segmented";
@@ -242,7 +243,7 @@ function DamageCurve({ points, query }: CurveProps) {
               stroke={target.color}
               strokeWidth={2}
               dot={false}
-              activeDot={{ r: 4, stroke: "var(--card)", strokeWidth: 2 }}
+              activeDot={CHART_ACTIVE_DOT}
               isAnimationActive={false}
             />
           ))}

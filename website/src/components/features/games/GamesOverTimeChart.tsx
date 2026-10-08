@@ -10,7 +10,13 @@ import { ChartReading, ChartReadings } from "~/components/patterns/charts/ChartR
 import { ChartLoading, ChartError, ChartEmpty } from "~/components/patterns/charts/ChartStates";
 import { ChartSurface } from "~/components/patterns/charts/ChartSurface";
 import { MetricSelect } from "~/components/patterns/charts/MetricSelect";
-import { CHART_GRID, CHART_MARGIN_MARKED, CHART_X_AXIS, CHART_Y_AXIS } from "~/components/patterns/charts/theme";
+import {
+  CHART_GRID,
+  CHART_MARGIN_MARKED,
+  CHART_X_AXIS,
+  CHART_Y_AXIS,
+  CHART_COLOR,
+} from "~/components/patterns/charts/theme";
 import { TrendIntervalField } from "~/components/patterns/charts/TrendControls";
 import { FilterBar } from "~/components/patterns/filter-bar/FilterBar";
 import { Field } from "~/components/ui/field";
@@ -195,7 +201,7 @@ export default function GamesOverTimeChart({
                 <Line
                   type="linear"
                   dataKey="value"
-                  stroke="var(--color-primary)"
+                  stroke={CHART_COLOR.primary}
                   dot={chartData.length <= 100 ? { r: 2.5 } : false}
                   isAnimationActive={false}
                   activeDot={{ r: 5 }}

@@ -3,6 +3,7 @@ import { parseAsStringLiteral, useQueryState } from "nuqs";
 import { useMemo } from "react";
 
 import { HeroCell } from "~/components/domain/assets/HeroCell";
+import { CHART_COLOR } from "~/components/patterns/charts/theme";
 import { SortableHeader } from "~/components/patterns/data-table/SortableHeader";
 import { TableEmptyRow } from "~/components/patterns/data-table/TableEmptyRow";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
@@ -274,7 +275,7 @@ export function HeroCombStatsTable({
                           min={minWinrate}
                           max={maxWinrate}
                           value={row.wins / row.matches}
-                          color="var(--primary)"
+                          color={CHART_COLOR.primary}
                           label={`${Math.round((row.wins / row.matches) * 100)}%`}
                           delta={(() => {
                             const prev = prevStatsMap?.get(combKey(row.hero_ids));
@@ -317,7 +318,7 @@ export function HeroCombStatsTable({
                               min={0}
                               max={maxShare}
                               value={share}
-                              color="var(--chart-4)"
+                              color={CHART_COLOR.pickRate}
                               label={formatFineShare(share)}
                               delta={prev !== undefined ? share - prev.share : undefined}
                               deltaDigits={fineShareDigits(share)}

@@ -11,6 +11,7 @@ import {
   CHART_MARGIN,
   CHART_X_AXIS,
   CHART_Y_AXIS,
+  CHART_ACTIVE_DOT,
 } from "~/components/patterns/charts/theme";
 import { Panel, PanelBody, PanelHeader } from "~/components/patterns/panel/Panel";
 import { NoValue } from "~/components/ui/no-value";
@@ -228,7 +229,7 @@ function ShareChart({
             stroke={player.color}
             strokeWidth={2}
             dot={false}
-            activeDot={{ r: 4, stroke: "var(--card)", strokeWidth: 2 }}
+            activeDot={CHART_ACTIVE_DOT}
             isAnimationActive={false}
           />
         ))}

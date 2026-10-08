@@ -9,6 +9,7 @@ import { BadgeImage } from "~/components/domain/assets/BadgeImage";
 import { HeroImage } from "~/components/domain/assets/HeroImage";
 import { ItemImage } from "~/components/domain/assets/ItemImage";
 import { RankDelta } from "~/components/features/tracker/shared/RankDelta";
+import { SERIES_COLORS } from "~/components/patterns/charts/theme";
 import { Box } from "~/components/ui/box";
 import { Button } from "~/components/ui/button";
 import { CornerBadge } from "~/components/ui/corner-badge";
@@ -173,7 +174,7 @@ function ItemChip({ item }: { item: BuildItem }) {
       <span className="relative">
         <ItemImage item={item.upgrade} className="size-5" title="" />
         {item.imbuedInto && (
-          <StatusDot color="var(--chart-6)" ring="surface" className="absolute -inset-e-0.5 -bottom-0.5" />
+          <StatusDot color={SERIES_COLORS[5]} ring="surface" className="absolute -inset-e-0.5 -bottom-0.5" />
         )}
         {item.stacks != null && <StackBadge stacks={item.stacks} />}
       </span>

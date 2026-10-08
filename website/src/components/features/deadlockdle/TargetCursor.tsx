@@ -2,6 +2,7 @@ import { gsap } from "gsap";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
 
+import { CHART_COLOR } from "~/components/patterns/charts/theme";
 import { useHydrated } from "~/hooks/useHydrated";
 
 interface TargetCursorProps {
@@ -269,7 +270,7 @@ export function TargetCursor({
 
   if (isMobile) return null;
 
-  const PRIMARY = "var(--primary)";
+  const PRIMARY = CHART_COLOR.primary;
 
   const cornerBase: React.CSSProperties = {
     position: "absolute",

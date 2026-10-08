@@ -6,6 +6,7 @@ import { useMemo } from "react";
 import { HeroCell } from "~/components/domain/assets/HeroCell";
 import { HeroImage } from "~/components/domain/assets/HeroImage";
 import { HeroName } from "~/components/domain/assets/HeroName";
+import { CHART_COLOR } from "~/components/patterns/charts/theme";
 import { SortableHeader } from "~/components/patterns/data-table/SortableHeader";
 import { TableEmptyRow } from "~/components/patterns/data-table/TableEmptyRow";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
@@ -556,7 +557,7 @@ export function HeroMatchupStatsTable({
               relWinrate={heroBestSynergies[heroId]?.rel_winrate}
               prevRelWinrate={prevSynergyRelWinrateMap[heroId]?.[heroBestSynergies[heroId]?.hero_id2]}
               maxMagnitude={bestSynergyScale}
-              color="var(--primary)"
+              color={CHART_COLOR.primary}
               separator="+"
               matchesPlayed={heroBestSynergies[heroId]?.matches_played}
               wins={heroBestSynergies[heroId]?.wins}
@@ -567,7 +568,7 @@ export function HeroMatchupStatsTable({
               relWinrate={heroWorstSynergies[heroId]?.rel_winrate}
               prevRelWinrate={prevSynergyRelWinrateMap[heroId]?.[heroWorstSynergies[heroId]?.hero_id2]}
               maxMagnitude={worstSynergyScale}
-              color="var(--primary)"
+              color={CHART_COLOR.primary}
               separator="+"
               matchesPlayed={heroWorstSynergies[heroId]?.matches_played}
               wins={heroWorstSynergies[heroId]?.wins}
@@ -578,7 +579,7 @@ export function HeroMatchupStatsTable({
               relWinrate={heroBestAgainst[heroId]?.rel_winrate}
               prevRelWinrate={prevCounterRelWinrateMap[heroId]?.[heroBestAgainst[heroId]?.enemy_hero_id]}
               maxMagnitude={bestAgainstScale}
-              color="var(--chart-4)"
+              color={CHART_COLOR.pickRate}
               separator="vs"
               matchesPlayed={heroBestAgainst[heroId]?.matches_played}
               wins={heroBestAgainst[heroId]?.wins}
@@ -589,7 +590,7 @@ export function HeroMatchupStatsTable({
               relWinrate={heroWorstAgainst[heroId]?.rel_winrate}
               prevRelWinrate={prevCounterRelWinrateMap[heroId]?.[heroWorstAgainst[heroId]?.enemy_hero_id]}
               maxMagnitude={worstAgainstScale}
-              color="var(--chart-4)"
+              color={CHART_COLOR.pickRate}
               separator="vs"
               matchesPlayed={heroWorstAgainst[heroId]?.matches_played}
               wins={heroWorstAgainst[heroId]?.wins}

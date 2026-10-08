@@ -14,6 +14,8 @@ import {
   CHART_MARGIN,
   CHART_X_AXIS,
   CHART_Y_AXIS,
+  CHART_ACTIVE_DOT,
+  CHART_COLOR,
 } from "~/components/patterns/charts/theme";
 import { Panel, PanelBody, PanelHeader } from "~/components/patterns/panel/Panel";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
@@ -262,7 +264,7 @@ function PerformanceTrendChart({
               stroke={player.color}
               strokeWidth={2}
               isAnimationActive={false}
-              activeDot={{ r: 4, stroke: "var(--card)", strokeWidth: 2 }}
+              activeDot={CHART_ACTIVE_DOT}
               dot={({
                 cx,
                 cy,
@@ -275,7 +277,15 @@ function PerformanceTrendChart({
                 payload?: TrendRow;
               }) =>
                 payload?.lone[key] && cx != null && cy != null ? (
-                  <circle key={at} cx={cx} cy={cy} r={4} fill={player.color} stroke="var(--card)" strokeWidth={2} />
+                  <circle
+                    key={at}
+                    cx={cx}
+                    cy={cy}
+                    r={4}
+                    fill={player.color}
+                    stroke={CHART_COLOR.surface}
+                    strokeWidth={2}
+                  />
                 ) : (
                   <g key={at} />
                 )

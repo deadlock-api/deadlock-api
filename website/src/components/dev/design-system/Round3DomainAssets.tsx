@@ -84,7 +84,7 @@ export function Round3DomainAssets() {
       <Specimen
         name="HeroImage shape and ring"
         source="domain/assets/HeroImage"
-        note="shape crops the transparent portrait: circle wherever it sits on a surface of its own (lists, timelines, the team builder), rounded for the framed portrait of a match card. ring frames it; a tone marks a side or a result. The size stays a className."
+        note="shape crops the transparent portrait: circle wherever it sits on a surface of its own (lists, timelines, the team builder), rounded for the framed portrait of a match card. ring frames it; a tone marks a side or a result, and target is the drop target under a dragged portrait. The size stays a className."
       >
         <Variants label="shape: square, rounded, circle">
           <HeroImage heroId={HERO_IDS[0]} className="size-10" />
@@ -96,6 +96,7 @@ export function Round3DomainAssets() {
           <HeroImage heroId={HERO_IDS[1]} shape="circle" ring="primary" className="size-10" />
           <HeroImage heroId={HERO_IDS[1]} shape="circle" ring="positive" className="size-10" />
           <HeroImage heroId={HERO_IDS[1]} shape="circle" ring="negative" className="size-10" />
+          <HeroImage heroId={HERO_IDS[1]} shape="circle" ring="target" className="size-10" />
           <HeroImage heroId={UNKNOWN_ID} shape="circle" ring="border" className="size-10" />
         </Variants>
       </Specimen>

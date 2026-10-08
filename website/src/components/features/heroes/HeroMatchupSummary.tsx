@@ -6,6 +6,7 @@ import { Delta } from "~/components/ui/delta";
 import { Heading } from "~/components/ui/heading";
 import { Stack } from "~/components/ui/stack";
 import type { HeroMatchups, MatchupRow } from "~/lib/matchup-stats";
+import { TONE_COLOR } from "~/lib/tone";
 
 const SUMMARY_COUNT = 3;
 /** Pairings seen in fewer matches than this swing too much to headline. */
@@ -80,19 +81,19 @@ export function HeroMatchupSummary({
       title: "Best Teammates",
       caption: `How much better the pair wins than ${heroName} and the teammate do on average.`,
       rows: teammates,
-      accent: "var(--positive)",
+      accent: TONE_COLOR.positive,
     },
     {
       title: "Strong Against",
       caption: `How much more often ${heroName} wins with this hero on the enemy team.`,
       rows: strongAgainst,
-      accent: "var(--positive)",
+      accent: TONE_COLOR.positive,
     },
     {
       title: `Counters ${heroName}`,
       caption: `How much less often ${heroName} wins with this hero on the enemy team.`,
       rows: counteredBy,
-      accent: "var(--negative)",
+      accent: TONE_COLOR.negative,
     },
   ].filter((card) => card.rows.length > 0);
   if (cards.length === 0) return null;

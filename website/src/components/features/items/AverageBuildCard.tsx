@@ -3,6 +3,7 @@ import { useState } from "react";
 import { HeroImage } from "~/components/domain/assets/HeroImage";
 import { ItemImage } from "~/components/domain/assets/ItemImage";
 import { ChartLegend, ChartLegendItem } from "~/components/patterns/charts/ChartLegend";
+import { CHART_COLOR } from "~/components/patterns/charts/theme";
 import { Badge } from "~/components/ui/badge";
 import { Card } from "~/components/ui/card";
 import { CornerBadge } from "~/components/ui/corner-badge";
@@ -147,13 +148,13 @@ function VariantBody({ variant }: { variant: BuildVariant }) {
 function Legend() {
   return (
     <ChartLegend size="sm" label="Build legend">
-      <ChartLegendItem color="var(--foreground)">core</ChartLegendItem>
-      <ChartLegendItem color="var(--muted-foreground)">common</ChartLegendItem>
-      <ChartLegendItem color="var(--warning)" shape="ring">
+      <ChartLegendItem color={CHART_COLOR.ink}>core</ChartLegendItem>
+      <ChartLegendItem color={CHART_COLOR.neutral}>common</ChartLegendItem>
+      <ChartLegendItem color={CHART_COLOR.caution} shape="ring">
         flex
       </ChartLegendItem>
       <ChartLegendItem
-        color="var(--negative)"
+        color={CHART_COLOR.negative}
         icon={
           <Badge variant="negative" size="sm" shape="circle" aria-hidden="true">
             1
@@ -173,7 +174,7 @@ export function AverageBuildCard({ build, heroId }: { build: AverageBuild; heroI
   if (!selected) return null;
 
   return (
-    <Card size="sm" accent="var(--warning)" className="w-full px-3 text-sm">
+    <Card size="sm" accent={CHART_COLOR.caution} className="w-full px-3 text-sm">
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <HeroImage heroId={heroId} shape="rounded" ring="border" className="size-8 shrink-0" />

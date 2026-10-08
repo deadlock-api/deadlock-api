@@ -4,6 +4,7 @@ import { ChartLegend, ChartLegendItem, ChartLegendToggle } from "~/components/pa
 import { ChartReading, ChartReadings } from "~/components/patterns/charts/ChartReadings";
 import { ChartEmpty, ChartLoading } from "~/components/patterns/charts/ChartStates";
 import { RadarChart, RadarSeries } from "~/components/patterns/charts/RadarChart";
+import { CHART_COLOR } from "~/components/patterns/charts/theme";
 import { useSeriesHighlight } from "~/components/patterns/charts/useSeriesHighlight";
 import { Panel, PanelBody, PanelHeader } from "~/components/patterns/panel/Panel";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
@@ -138,7 +139,7 @@ export function PlaystyleRadarPanel({
     <Panel className={className}>
       <PanelHeader size="sm" title="Playstyle">
         <ChartLegend label="Reference">
-          <ChartLegendItem color="var(--chart-axis)" shape="dashed">
+          <ChartLegendItem color={CHART_COLOR.reference} shape="dashed">
             Median player
           </ChartLegendItem>
         </ChartLegend>

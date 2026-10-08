@@ -12,6 +12,7 @@ import {
   CHART_MEDIAN_LINE,
   CHART_TICK,
   CHART_X_AXIS_CUSTOM_TICK,
+  CHART_COLOR,
 } from "~/components/patterns/charts/theme";
 import { PanelBody } from "~/components/patterns/panel/Panel";
 import { Grid } from "~/components/ui/grid";
@@ -288,7 +289,7 @@ function MetricCurve({
             </ChartReading>
           ))}
           {marks.length < 5 && (
-            <ChartReading label="Median player" color="var(--chart-axis)" extra={fmt(values.percentile50)}>
+            <ChartReading label="Median player" color={CHART_COLOR.reference} extra={fmt(values.percentile50)}>
               Median
             </ChartReading>
           )}

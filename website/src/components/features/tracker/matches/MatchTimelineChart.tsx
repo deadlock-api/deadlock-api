@@ -14,7 +14,13 @@ import {
 
 import { HeroImage } from "~/components/domain/assets/HeroImage";
 import { ChartSurface } from "~/components/patterns/charts/ChartSurface";
-import { CHART_COLOR, CHART_CURSOR_LINE, CHART_X_AXIS, CHART_Y_AXIS } from "~/components/patterns/charts/theme";
+import {
+  CHART_COLOR,
+  CHART_CURSOR_LINE,
+  CHART_X_AXIS,
+  CHART_Y_AXIS,
+  CHART_ACTIVE_DOT,
+} from "~/components/patterns/charts/theme";
 import { IconTile } from "~/components/ui/icon-tile";
 import { TooltipCard, TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
 import { Tooltip as HoverTooltip } from "~/components/ui/tooltip";
@@ -389,7 +395,7 @@ export function MatchTimelineChart({
             <stop offset={zeroOffset} stopColor={CHART_COLOR.negative} />
           </linearGradient>
         </defs>
-        <CartesianGrid stroke="var(--chart-grid)" strokeWidth={1} horizontal={lead != null} />
+        <CartesianGrid stroke={CHART_COLOR.grid} strokeWidth={1} horizontal={lead != null} />
         <XAxis
           {...CHART_X_AXIS}
           dataKey="time"
@@ -422,7 +428,7 @@ export function MatchTimelineChart({
           />
         ))}
         {lead && <Tooltip cursor={CHART_CURSOR_LINE} content={<LeadTooltipContent />} />}
-        <ReferenceLine y={0} stroke="var(--chart-axis)" />
+        <ReferenceLine y={0} stroke={CHART_COLOR.reference} />
         {width > LEAD_AXIS_PX + PLOT_END_PX &&
           objectives.map((event, index) => (
             <ReferenceDot
@@ -453,7 +459,7 @@ export function MatchTimelineChart({
             fill={`url(#${gradientId})`}
             fillOpacity={0.2}
             dot={false}
-            activeDot={{ r: 4, strokeWidth: 2, stroke: "var(--card)", fill: "var(--foreground)" }}
+            activeDot={{ ...CHART_ACTIVE_DOT, fill: CHART_COLOR.ink }}
             isAnimationActive={false}
           />
         )}

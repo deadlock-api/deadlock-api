@@ -12,6 +12,7 @@ import {
   CHART_X_AXIS,
   CHART_Y_AXIS,
   CHART_Y_LABEL,
+  CHART_COLOR,
 } from "~/components/patterns/charts/theme";
 import { TooltipCard, TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
 import { niceTicks } from "~/lib/chart-axis";
@@ -77,7 +78,7 @@ export default function BadgeDistributionChart({
       if (tier > minTier) {
         result.push({ badge: tier * 10, tier, value: 0, fill: "transparent", isSpacer: true });
       }
-      const fill = tierData.get(tier)?.color ?? "var(--color-accent)";
+      const fill = tierData.get(tier)?.color ?? CHART_COLOR.fallback;
       for (let sub = 1; sub <= 6; sub++) {
         const badge = tier * 10 + sub;
         result.push({ badge, tier, value: valuePerBadge.get(badge) ?? 0, fill });
@@ -146,7 +147,7 @@ export default function BadgeDistributionChart({
       >
         <BarChart accessibilityLayer data={chartData}>
           <CartesianGrid {...CHART_GRID} />
-          <Bar dataKey="value" fill="var(--color-accent)" radius={4} />
+          <Bar dataKey="value" fill={CHART_COLOR.fallback} radius={4} />
           <Tooltip
             cursor={false}
             isAnimationActive={false}

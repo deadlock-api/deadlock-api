@@ -275,7 +275,7 @@ export function HeroStatsOverTimeChart({
       visibleHeroIds.map((id) => ({
         id,
         name: heroIdMap[id]?.name ?? `Hero ${id}`,
-        color: heroIdMap[id]?.color ?? "var(--foreground)",
+        color: heroIdMap[id]?.color ?? CHART_COLOR.fallback,
       })),
     [visibleHeroIds, heroIdMap],
   );

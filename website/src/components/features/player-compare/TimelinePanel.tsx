@@ -18,6 +18,7 @@ import {
   CHART_SPREAD_BAND,
   CHART_X_AXIS,
   CHART_Y_AXIS,
+  CHART_ACTIVE_DOT,
 } from "~/components/patterns/charts/theme";
 import { Panel, PanelBody, PanelHeader } from "~/components/patterns/panel/Panel";
 import { NoValue } from "~/components/ui/no-value";
@@ -291,7 +292,7 @@ export function TimelinePanel({
                         {relative && (
                           <ChartReading
                             label="Average player"
-                            color="var(--chart-axis)"
+                            color={CHART_COLOR.reference}
                             extra={
                               row.value[FIELD] == null ? undefined : formatValue(row.value[FIELD], selected.digits)
                             }
@@ -317,7 +318,7 @@ export function TimelinePanel({
                     stroke={player.color}
                     strokeWidth={2}
                     dot={false}
-                    activeDot={{ r: 4, stroke: "var(--card)", strokeWidth: 2 }}
+                    activeDot={CHART_ACTIVE_DOT}
                     isAnimationActive={false}
                   />
                 ))}
@@ -331,7 +332,7 @@ export function TimelinePanel({
               </ChartLegendItem>
             ))}
             {relative && (
-              <ChartLegendItem color="var(--chart-axis)" shape="dashed">
+              <ChartLegendItem color={CHART_COLOR.reference} shape="dashed">
                 Average player
               </ChartLegendItem>
             )}

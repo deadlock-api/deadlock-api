@@ -83,7 +83,7 @@ function tickFormatter(stat: ByRankStat): (v: number) => string {
 function BadgePoint(props: ScatterProps) {
   const { cx, cy, payload } = props as { cx: number; cy: number; payload: DataPoint };
   const imgUrl = payload.badgeImageUrl;
-  if (!imgUrl) return <circle cx={cx} cy={cy} r={6} fill="var(--muted-foreground)" />;
+  if (!imgUrl) return <circle cx={cx} cy={cy} r={6} fill={CHART_COLOR.neutral} />;
   return <image x={cx - 18} y={cy - 18} width={36} height={36} href={imgUrl} />;
 }
 

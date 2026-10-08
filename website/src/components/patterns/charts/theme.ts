@@ -78,7 +78,22 @@ export const CHART_COLOR = {
   comparison: "var(--chart-5)",
   /** A hero or rank whose own color is missing from the assets API. */
   fallback: "var(--foreground)",
+  /** Pick rate (and normal purchases) in the stat tables, beside labels in `text-chart-4`. */
+  pickRate: "var(--chart-4)",
+  /** A mark in ink that is not a series: the core items of a build, a point on a curve. */
+  ink: "var(--foreground)",
+  /** A mark that warns: a flexible pick, a value to double-check. */
+  caution: "var(--warning)",
+  /** A reference that is not data (a lobby average, a median), in the axis color; legend keys for one use it too. */
+  reference: "var(--chart-axis)",
+  /** A rule on the plot's own grid, such as an axis line drawn against it. */
+  grid: "var(--chart-grid)",
+  /** The surface under the plot: the rim that separates a dot from the line it sits on. */
+  surface: "var(--card)",
 } as const;
+
+/** The dot on a line under the tooltip cursor: rimmed in the surface color so it reads over the line. */
+export const CHART_ACTIVE_DOT = { r: 4, stroke: CHART_COLOR.surface, strokeWidth: 2 } as const;
 
 export const CHART_MARGIN = { top: 8, right: 8, bottom: 8, left: 0 } as const;
 /** `CHART_MARGIN` with a lane at the top for the labels of `ChartMarkers`. */

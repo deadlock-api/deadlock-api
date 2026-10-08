@@ -14,6 +14,7 @@ import { Text } from "~/components/ui/text";
 import { getDayNumber } from "~/lib/deadlockdle/seed";
 import type { GameMode, GameStatus, StreakState } from "~/lib/deadlockdle/types";
 import { useCountdown } from "~/lib/deadlockdle/use-countdown";
+import { TONE_COLOR } from "~/lib/tone";
 
 import { attemptState } from "./AttemptsIndicator";
 import { DURATION, enter, fadeUp, stagger } from "./motion";
@@ -78,7 +79,7 @@ export function ResultModal({
           exit={{ opacity: 0, y: 8 }}
           transition={enter}
         >
-          <Card tone={tone} size="flush" accent={`var(--${tone})`}>
+          <Card tone={tone} size="flush" accent={TONE_COLOR[tone]}>
             <MotionStack variants={stagger} initial="hidden" animate="show" gap={4} className="p-5">
               <MotionInline variants={fadeUp} justify="between" wrap="nowrap">
                 <Inline gap={3} wrap="nowrap">

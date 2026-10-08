@@ -2,6 +2,7 @@ import { ZoomIn } from "lucide-react";
 import { useState } from "react";
 
 import { ChartLegend, ChartLegendItem } from "~/components/patterns/charts/ChartLegend";
+import { CHART_COLOR } from "~/components/patterns/charts/theme";
 import { Panel, PanelBody, PanelHeader, PanelShowMore } from "~/components/patterns/panel/Panel";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { Button } from "~/components/ui/button";
@@ -50,7 +51,7 @@ export function PercentileComparison({
                 </span>
               </ChartLegendItem>
             ))}
-            <ChartLegendItem color="var(--chart-axis)" shape="dashed">
+            <ChartLegendItem color={CHART_COLOR.reference} shape="dashed">
               Median player
             </ChartLegendItem>
           </ChartLegend>

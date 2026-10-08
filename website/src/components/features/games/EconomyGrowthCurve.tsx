@@ -16,6 +16,7 @@ import {
   CHART_X_LABEL,
   CHART_Y_AXIS,
   CHART_Y_LABEL,
+  CHART_COLOR,
 } from "~/components/patterns/charts/theme";
 import { Segmented, SegmentedItem } from "~/components/ui/segmented";
 import { TooltipCard, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
@@ -105,7 +106,7 @@ export default function EconomyGrowthCurve({ params }: EconomyGrowthCurveProps) 
       key={phase.label}
       x1={phase.x1}
       x2={phase.x2}
-      fill="var(--foreground)"
+      fill={CHART_COLOR.ink}
       fillOpacity={phase.fillOpacity}
       stroke="none"
       label={{ value: phase.label, position: "insideTop", ...CHART_TICK }}
@@ -176,11 +177,11 @@ export default function EconomyGrowthCurve({ params }: EconomyGrowthCurveProps) 
                 isAnimationActive={false}
                 activeDot={false}
               />
-              <Area dataKey="band" stackId="band" fill="var(--color-primary)" {...CHART_SPREAD_BAND} />
+              <Area dataKey="band" stackId="band" fill={CHART_COLOR.primary} {...CHART_SPREAD_BAND} />
               <Line
                 type="monotone"
                 dataKey="avg"
-                stroke="var(--color-primary)"
+                stroke={CHART_COLOR.primary}
                 strokeWidth={2}
                 dot={false}
                 activeDot={{ r: 4 }}

@@ -5,6 +5,7 @@ import { HeroCell } from "~/components/domain/assets/HeroCell";
 import { HeroImage } from "~/components/domain/assets/HeroImage";
 import { HeroDetailsTooltip } from "~/components/features/heroes/HeroDetailsTooltip";
 import { HeroStatTrend } from "~/components/features/heroes/HeroStatTrend";
+import { CHART_COLOR, SERIES_COLORS } from "~/components/patterns/charts/theme";
 import { SortableHeader } from "~/components/patterns/data-table/SortableHeader";
 import { Panel, PanelHeader } from "~/components/patterns/panel/Panel";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
@@ -36,10 +37,10 @@ import {
 const COMPACT_MATCHES = new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 1 });
 
 const HERO_TYPE_CONFIG: Record<HeroType, { label: string; color: string; icon: LucideIcon }> = {
-  assassin: { label: "Assassin", color: "var(--chart-6)", icon: Skull },
-  brawler: { label: "Brawler", color: "var(--chart-1)", icon: Swords },
-  marksman: { label: "Marksman", color: "var(--chart-2)", icon: Crosshair },
-  mystic: { label: "Mystic", color: "var(--chart-4)", icon: Sparkles },
+  assassin: { label: "Assassin", color: SERIES_COLORS[5], icon: Skull },
+  brawler: { label: "Brawler", color: SERIES_COLORS[0], icon: Swords },
+  marksman: { label: "Marksman", color: SERIES_COLORS[1], icon: Crosshair },
+  mystic: { label: "Mystic", color: SERIES_COLORS[3], icon: Sparkles },
 };
 
 /** The overall hero stats: one table, or one panel per hero type. Logic lives in `useHeroStatsTable`. */
@@ -312,7 +313,7 @@ function HeroStatsRow({ rank, hero, table }: { rank: number; hero: HeroStatsRowD
           min={scales.winRate.min}
           max={scales.winRate.max}
           value={hero.winRate}
-          color="var(--primary)"
+          color={CHART_COLOR.primary}
           label={`${formatPercent(hero.winRate)} `}
           delta={hero.winRateDelta}
         />
@@ -340,8 +341,8 @@ function HeroStatsRow({ rank, hero, table }: { rank: number; hero: HeroStatsRowD
             }
             delta={undefined}
           >
-            <ProgressBarSegment value={hero.pickRate} color="var(--chart-4)" />
-            <ProgressBarSegment value={hero.banRate} color="var(--chart-5)" />
+            <ProgressBarSegment value={hero.pickRate} color={CHART_COLOR.pickRate} />
+            <ProgressBarSegment value={hero.banRate} color={CHART_COLOR.comparison} />
           </HeroStatTrend>
         ) : table.pickRateMode === "banRate" ? (
           <HeroStatTrend
@@ -350,7 +351,7 @@ function HeroStatsRow({ rank, hero, table }: { rank: number; hero: HeroStatsRowD
             min={scales.banRate.min}
             max={scales.banRate.max}
             value={hero.banRate}
-            color="var(--chart-5)"
+            color={CHART_COLOR.comparison}
             label={`${(hero.banRate * 100).toFixed(1)}% `}
             delta={hero.banRateDelta}
           />
@@ -361,7 +362,7 @@ function HeroStatsRow({ rank, hero, table }: { rank: number; hero: HeroStatsRowD
             min={scales.matches.min}
             max={scales.matches.max}
             value={row.matches}
-            color="var(--chart-4)"
+            color={CHART_COLOR.pickRate}
             label={`${Math.round((table.normalized ? hero.normalizedPickRate : hero.pickRate) * 100).toFixed(0)}% `}
             delta={table.normalized ? hero.normalizedPickRateDelta : hero.pickRateDelta}
           />
@@ -374,7 +375,7 @@ function HeroStatsRow({ rank, hero, table }: { rank: number; hero: HeroStatsRowD
           min={scales.zScore.min}
           max={scales.zScore.max}
           value={hero.zScore}
-          color={hero.zScore >= 0 ? "var(--positive)" : "var(--negative)"}
+          color={hero.zScore >= 0 ? CHART_COLOR.positive : CHART_COLOR.negative}
           label={`${hero.zScore >= 0 ? "+" : ""}${hero.zScore.toFixed(2)}`}
           delta={hero.zScoreDelta}
           deltaFormat="number"
@@ -387,7 +388,7 @@ function HeroStatsRow({ rank, hero, table }: { rank: number; hero: HeroStatsRowD
           min={scales.residual.min}
           max={scales.residual.max}
           value={hero.residual}
-          color={hero.residual >= 0 ? "var(--chart-3)" : "var(--muted-foreground)"}
+          color={hero.residual >= 0 ? SERIES_COLORS[2] : CHART_COLOR.neutral}
           label={`${hero.residual >= 0 ? "+" : ""}${(hero.residual * 100).toFixed(2)}%`}
           delta={hero.residualDelta}
         />

@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Fragment, memo, useMemo } from "react";
 
 import { ItemCell } from "~/components/domain/assets/ItemCell";
+import { CHART_COLOR } from "~/components/patterns/charts/theme";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { ProgressBarWithLabel } from "~/components/ui/progress-bar";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
@@ -205,7 +206,7 @@ export function ItemCombStatsTable({
                             min={minWinrate}
                             max={maxWinrate}
                             value={row.wins / row.matches}
-                            color="var(--primary)"
+                            color={CHART_COLOR.primary}
                             label={`${Math.round((row.wins / row.matches) * 100).toFixed(0)}% `}
                             delta={prev !== undefined ? row.wins / row.matches - prev.winrate : undefined}
                           />
@@ -237,7 +238,7 @@ export function ItemCombStatsTable({
                             min={0}
                             max={maxShare}
                             value={share}
-                            color="var(--chart-4)"
+                            color={CHART_COLOR.pickRate}
                             label={formatFineShare(share)}
                             delta={prev !== undefined ? share - prev.share : undefined}
                             deltaDigits={fineShareDigits(share)}

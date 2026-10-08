@@ -1,4 +1,5 @@
 import { HeroImage } from "~/components/domain/assets/HeroImage";
+import { CHART_COLOR } from "~/components/patterns/charts/theme";
 import { Card } from "~/components/ui/card";
 import { IconTile } from "~/components/ui/icon-tile";
 import { SplitBar } from "~/components/ui/rate-bar";
@@ -153,8 +154,8 @@ export function LaneCards({
                         <SplitBar
                           left={allyTrack(share)}
                           right={1 - allyTrack(share)}
-                          leftColor="var(--positive)"
-                          rightColor="var(--primary)"
+                          leftColor={CHART_COLOR.positive}
+                          rightColor={CHART_COLOR.primary}
                         />
                       </div>
                     </>

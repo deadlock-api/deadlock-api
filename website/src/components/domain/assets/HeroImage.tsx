@@ -16,6 +16,8 @@ const heroImageVariants = cva("", {
       primary: "border border-primary/50",
       positive: "border border-positive/50",
       negative: "border border-negative/50",
+      /** The drop target under a dragged portrait. */
+      target: "ring-1 ring-foreground ring-inset",
     },
   },
   defaultVariants: { shape: "square", ring: "none" },

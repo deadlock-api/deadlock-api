@@ -5,6 +5,7 @@ import { BarChart3, Layers } from "lucide-react";
 import { lazy, Suspense, useMemo } from "react";
 
 import { NotFound } from "~/components/app/NotFound";
+import { ITEM_SLOT_COLOR } from "~/components/domain/assets/item-slot-color";
 import { ItemImage } from "~/components/domain/assets/ItemImage";
 import { ItemCorruption } from "~/components/features/items/ItemCorruption";
 import { ItemEffectCard } from "~/components/features/items/ItemEffectCard";
@@ -222,11 +223,7 @@ function clock(seconds: number): string {
 }
 
 /** The shop category's color tints the header, as the shop tints its columns. */
-const SLOT_ACCENT = {
-  weapon: "var(--item-weapon)",
-  vitality: "var(--item-vitality)",
-  spirit: "var(--item-spirit)",
-} as const;
+const SLOT_ACCENT = ITEM_SLOT_COLOR;
 
 function ItemDetailPage() {
   const { preferences } = Route.useRouteContext();

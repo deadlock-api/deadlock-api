@@ -23,6 +23,7 @@ import { ItemStatTrend } from "~/components/features/items/ItemStatTrend";
 import { useCorruptedItemMode } from "~/components/features/items/useCorruptedItemMode";
 import { ChartSwatch } from "~/components/patterns/charts/ChartLegend";
 import type { StatTrendBucket } from "~/components/patterns/charts/StatTrendChart";
+import { CHART_COLOR } from "~/components/patterns/charts/theme";
 import { ExpandableRow, ExpandableRowToggle } from "~/components/patterns/data-table/ExpandableRow";
 import { SortableHeader } from "~/components/patterns/data-table/SortableHeader";
 import { FilterBar } from "~/components/patterns/filter-bar/FilterBar";
@@ -88,8 +89,8 @@ function KeyedHeaderLabel({ normalColor = NORMAL_COLOR, children }: { normalColo
   );
 }
 /** Normal purchases in the stacked cells and header keys; corrupted ones in the second color. */
-const NORMAL_COLOR = "var(--chart-4)";
-const CORRUPTED_COLOR = "var(--chart-5)";
+const NORMAL_COLOR = CHART_COLOR.pickRate;
+const CORRUPTED_COLOR = CHART_COLOR.comparison;
 
 /** Rows in the server-rendered HTML; a tall screen shows about 15. */
 const SERVER_ROWS = 30;
@@ -355,7 +356,7 @@ const ItemStatsTableRow = memo(function ItemStatsTableRow({
               min={minWinRate}
               max={maxWinRate}
               value={winRate}
-              color="var(--primary)"
+              color={CHART_COLOR.primary}
               label={
                 corruptedWinRate === undefined ? (
                   `${formatPercent(winRate)} `
@@ -729,7 +730,7 @@ export function ItemStatsTable({
                   <SortableHeader
                     label={
                       corruptedMode === "include" ? (
-                        <KeyedHeaderLabel normalColor="var(--primary)">Win Rate</KeyedHeaderLabel>
+                        <KeyedHeaderLabel normalColor={CHART_COLOR.primary}>Win Rate</KeyedHeaderLabel>
                       ) : (
                         "Win Rate"
                       )

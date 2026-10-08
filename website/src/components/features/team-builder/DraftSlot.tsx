@@ -163,12 +163,7 @@ export function DraftSlot({
           title={`${hero?.name ?? "Hero"}, click to replace or drag to another slot`}
           className="size-full"
         >
-          <HeroImage
-            heroId={heroId}
-            shape="circle"
-            ringColor={isOver ? "var(--foreground)" : undefined}
-            className="size-full"
-          />
+          <HeroImage heroId={heroId} shape="circle" ring={isOver ? "target" : "none"} className="size-full" />
         </DraggablePortrait>
         <Button
           variant="secondary"

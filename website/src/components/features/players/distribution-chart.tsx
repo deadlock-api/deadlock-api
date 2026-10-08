@@ -3,7 +3,7 @@ import { Area, AreaChart, ReferenceLine, Tooltip, XAxis, YAxis } from "recharts"
 
 import { ChartReading, ChartReadings } from "~/components/patterns/charts/ChartReadings";
 import { ChartSurface } from "~/components/patterns/charts/ChartSurface";
-import { CHART_COLOR, CHART_CURSOR_LINE, CHART_X_AXIS_SM } from "~/components/patterns/charts/theme";
+import { CHART_COLOR, CHART_CURSOR_LINE, CHART_X_AXIS_SM, CHART_MEDIAN_LINE } from "~/components/patterns/charts/theme";
 import { approxPercentile, type CurvePoint, formatPercentile } from "~/lib/distribution-percentile";
 
 function DistributionTooltip({
@@ -66,7 +66,7 @@ export function DistributionChart({
             ticks={ticks}
             tickFormatter={(v) => fmt(v as number)}
             {...CHART_X_AXIS_SM}
-            axisLine={{ stroke: "var(--chart-grid)" }}
+            axisLine={{ stroke: CHART_COLOR.grid }}
           />
           <YAxis type="number" domain={[0, "dataMax"]} hide />
           <Tooltip
@@ -80,14 +80,9 @@ export function DistributionChart({
               />
             )}
           />
-          <ReferenceLine x={values.percentile25} stroke="var(--chart-axis)" strokeDasharray="2 2" strokeWidth={1} />
-          <ReferenceLine
-            x={values.percentile50}
-            stroke="var(--muted-foreground)"
-            strokeDasharray="2 2"
-            strokeWidth={1}
-          />
-          <ReferenceLine x={values.percentile75} stroke="var(--chart-axis)" strokeDasharray="2 2" strokeWidth={1} />
+          <ReferenceLine x={values.percentile25} {...CHART_MEDIAN_LINE} />
+          <ReferenceLine x={values.percentile50} stroke={CHART_COLOR.neutral} strokeDasharray="2 2" strokeWidth={1} />
+          <ReferenceLine x={values.percentile75} {...CHART_MEDIAN_LINE} />
           <ReferenceLine x={values.avg} stroke={CHART_COLOR.primary} strokeDasharray="3 3" strokeWidth={1.5} />
           <Area
             type="monotone"

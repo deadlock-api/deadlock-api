@@ -219,6 +219,15 @@ const RULES = [
     skip: (rel) => !COMPOSED(rel) || !rel.endsWith(".tsx"),
   },
   {
+    id: "raw-color-var",
+    message:
+      "a CSS variable as a color prop; use CHART_COLOR, SERIES_COLORS or CHART_ACTIVE_DOT from patterns/charts/theme, or TONE_COLOR from ~/lib/tone",
+    // The whole string is one variable: a color handed to a chart or a component prop. A class's arbitrary value
+    // (`max-w-[var(--x)]`) and a value computed from data are not this.
+    pattern: /(["'`])var\(--[\w-]+\)\1/g,
+    skip: (rel) => !COMPOSED(rel),
+  },
+  {
     id: "raw-loading",
     message: "hand-rolled loading indicator; use Spinner or LoadingState",
     pattern: /animate-spin/g,
