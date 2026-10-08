@@ -260,6 +260,8 @@ reference). Missing observations are gaps, not zeros. See `docs/compact-data-ui.
 - Every component works from 320px. Rows of controls wrap (`flex-wrap`); grids step down (`grid-cols-2 sm:grid-cols-4`).
 - Components that live in panels of varying width use container queries (`@container` + `@md:`), not viewport
   breakpoints. Page-level layout uses viewport breakpoints.
+- A layout computed in code from the room it has (a graph, a plot, a grid of tiles) measures its container with
+  `useElementSize(ref, { round, box, enabled })` from `ui/hooks/use-element-size`, never `window.innerWidth`.
 - Tables scroll horizontally inside `Table`'s own container and drop secondary columns with
   `hidden @md:table-cell`; the identity column is pinned with `data-pinned`. The edge with more columns past it fades
   out, and a pinned cell sheds its minimum width and secondary lines below `@md/table`, so a phone swipe shows more

@@ -1,5 +1,5 @@
 import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, ListOrdered, Plus } from "lucide-react";
-import { useLayoutEffect, useRef, useState } from "react";
+import { useRef, useState, useSyncExternalStore } from "react";
 
 import { AbilityImage } from "~/components/domain/assets/AbilityImage";
 import { ItemImage } from "~/components/domain/assets/ItemImage";
@@ -13,6 +13,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "~/components/ui/dialog";
+import { useElementSize } from "~/components/ui/hooks/use-element-size";
 import { Separator } from "~/components/ui/separator";
 import { buildTimeline, type BuildEvent, type PlayerBuild } from "~/lib/tracker/build";
 import { formatMatchDuration } from "~/lib/tracker/compute";
@@ -36,29 +37,31 @@ function EventImage({ event }: { event: BuildEvent }) {
   );
 }
 
+function subscribeToResize(onChange: () => void) {
+  window.addEventListener("resize", onChange);
+  return () => window.removeEventListener("resize", onChange);
+}
+
+/** The viewport's height: the most a viewport-sized dialog can grow to. 0 on the server. */
+function useViewportHeight() {
+  return useSyncExternalStore(
+    subscribeToResize,
+    () => window.innerHeight,
+    () => 0,
+  );
+}
+
 function BuildTimeline({ events, playerName }: { events: BuildEvent[]; playerName: string }) {
   const gridRef = useRef<HTMLOListElement>(null);
-  const [layout, setLayout] = useState({ columns: 8, capacity: 48 });
   const [selected, setSelected] = useState(0);
-  useLayoutEffect(() => {
-    const grid = gridRef.current;
-    if (!grid) return;
-    const measure = () => {
-      // A column is at least 44px on phones: narrower, a 12px time ("22:05") overflows its tile.
-      const columns = Math.max(1, Math.floor((grid.clientWidth + 4) / (window.innerWidth >= 640 ? 48 : 44)));
-      // Reserve room for the compact header, legend and optional page controls.
-      const rows = Math.max(1, Math.floor((window.innerHeight - 180) / 48));
-      setLayout({ columns, capacity: columns * rows });
-    };
-    measure();
-    const observer = new ResizeObserver(measure);
-    observer.observe(grid);
-    window.addEventListener("resize", measure);
-    return () => {
-      observer.disconnect();
-      window.removeEventListener("resize", measure);
-    };
-  }, []);
+  const { width: gridWidth } = useElementSize(gridRef, { round: true });
+  const viewportHeight = useViewportHeight();
+  // A column is at least 44px in a narrow grid: narrower, a 12px time ("22:05") overflows its tile. Unmeasured (the
+  // server, the first frame) it is eight columns.
+  const columns = gridWidth > 0 ? Math.max(1, Math.floor((gridWidth + 4) / (gridWidth >= 600 ? 48 : 44))) : 8;
+  // The dialog may be as tall as the viewport; reserve room for its header, the legend and the page controls.
+  const rows = viewportHeight > 0 ? Math.max(1, Math.floor((viewportHeight - 180) / 48)) : 6;
+  const layout = { columns, capacity: columns * rows };
   const page = Math.floor(selected / layout.capacity);
   const start = page * layout.capacity;
   const visible = events.slice(start, start + layout.capacity);

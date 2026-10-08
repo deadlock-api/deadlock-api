@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Plus, Workflow } from "lucide-react";
 import { parseAsArrayOf, parseAsNumberLiteral, parseAsString, parseAsStringLiteral, useQueryState } from "nuqs";
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useMemo, useRef, useState } from "react";
 
 import { ItemImage } from "~/components/domain/assets/ItemImage";
 import { ItemName } from "~/components/domain/assets/ItemName";
@@ -25,6 +25,7 @@ import { Delta } from "~/components/ui/delta";
 import { DragScroll } from "~/components/ui/drag-scroll";
 import { Field } from "~/components/ui/field";
 import { Heading } from "~/components/ui/heading";
+import { useElementSize } from "~/components/ui/hooks/use-element-size";
 import { KeyValue, KeyValueList } from "~/components/ui/key-value";
 import { Popover, PopoverContent, PopoverTrigger } from "~/components/ui/popover";
 import { Segmented, SegmentedItem } from "~/components/ui/segmented";
@@ -195,22 +196,6 @@ function serializeExcludedTiers(map: Map<number, Set<number>>): string {
     .filter(([, set]) => set.size > 0)
     .map(([col, set]) => `${col}.${[...set].sort((a, b) => a - b).join("")}`)
     .join(",");
-}
-
-function useContainerWidth() {
-  const ref = useRef<HTMLDivElement>(null);
-  const [width, setWidth] = useState(0);
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const ro = new ResizeObserver((entries) => {
-      for (const entry of entries) setWidth(entry.contentRect.width);
-    });
-    ro.observe(el);
-    setWidth(el.clientWidth);
-    return () => ro.disconnect();
-  }, []);
-  return [ref, width] as const;
 }
 
 /**
@@ -503,7 +488,8 @@ export function ItemFlowGraph({
     [storedLocked, columnCount],
   );
 
-  const [wrapperRef, containerWidth] = useContainerWidth();
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const { width: containerWidth } = useElementSize(wrapperRef);
   const { minUnixTimestamp, maxUnixTimestamp } = useNormalizedTimeRange(minDate, maxDate);
 
   const lockedSet = useMemo(() => new Set(locked), [locked]);

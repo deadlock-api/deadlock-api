@@ -5,6 +5,7 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react"
 import { ChartOverlay, ChartStage, ChartStageFrame } from "~/components/patterns/charts/ChartOverlay";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
+import { useElementSize } from "~/components/ui/hooks/use-element-size";
 import { TooltipCard, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
 
 import {
@@ -187,13 +188,11 @@ export default function HeatmapCanvas({
     heatCtx.putImageData(imageData, 0, 0);
   }, [heatGrid]);
 
+  // The canvases are drawn to the container's size: again whenever it, the map or the heat changes.
+  const containerSize = useElementSize(containerRef, { enabled: mapImagesLoaded });
   useEffect(() => {
-    if (!mapImagesLoaded) return;
-    // Observing a mounted element also schedules its initial draw.
-    const observer = new ResizeObserver(() => renderHeatmap());
-    if (containerRef.current) observer.observe(containerRef.current);
-    return () => observer.disconnect();
-  }, [mapImagesLoaded, renderHeatmap]);
+    if (mapImagesLoaded && containerSize.width > 0) renderHeatmap();
+  }, [mapImagesLoaded, containerSize, renderHeatmap]);
 
   const handleMouseMove = useCallback(
     (e: React.MouseEvent<HTMLCanvasElement>) => {

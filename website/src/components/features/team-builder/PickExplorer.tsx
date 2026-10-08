@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
 import { HeroImage } from "~/components/domain/assets/HeroImage";
 import { ChartOverlay, ChartRegion, ChartStage } from "~/components/patterns/charts/ChartOverlay";
@@ -7,6 +7,7 @@ import { PanelBody } from "~/components/patterns/panel/Panel";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { Button } from "~/components/ui/button";
 import { Card } from "~/components/ui/card";
+import { useElementSize } from "~/components/ui/hooks/use-element-size";
 import { Separator } from "~/components/ui/separator";
 import { Stack } from "~/components/ui/stack";
 import { useHeroColorMap } from "~/hooks/useChartHeroVisibility";
@@ -91,16 +92,9 @@ export function PickExplorer({ recommendations, onPick }: PickExplorerProps) {
   const { heroIdMap } = useHeroColorMap();
   // The plot fills whatever width the panel has, so the layout is measured rather than fixed.
   const [plotRef, setPlotRef] = useState<HTMLDivElement | null>(null);
-  const [width, setWidth] = useState(520);
-
-  useEffect(() => {
-    if (!plotRef) return;
-    // Rounded: the raw fractional width changes every frame of a resize, and each distinct value
-    // re-runs the O(n²) relaxation below.
-    const observer = new ResizeObserver(([entry]) => setWidth(Math.round(entry.contentRect.width)));
-    observer.observe(plotRef);
-    return () => observer.disconnect();
-  }, [plotRef]);
+  // Rounded: the raw fractional width changes every frame of a resize, and each distinct value re-runs the O(n²)
+  // relaxation below.
+  const { width } = useElementSize(plotRef, { round: true, initial: { width: 520, height: 0 } });
 
   const plotted = useMemo(
     () => recommendations.filter((r): r is PlottableRec => r.synergy !== undefined && r.counter !== undefined),

@@ -7,6 +7,7 @@ import { type KeyboardEvent, type ReactNode, useEffect, useMemo, useRef, useStat
 import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { Button } from "~/components/ui/button";
 import { Card } from "~/components/ui/card";
+import { useElementSize } from "~/components/ui/hooks/use-element-size";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
 import { Separator } from "~/components/ui/separator";
 import { useSavedMatches } from "~/hooks/useSavedMatches";
@@ -137,14 +138,7 @@ export function MatchesTab({
 
   // The list takes the height of the details beside it, so while a match loads into a short skeleton the details
   // hold their last loaded height; otherwise the list would shrink and grow back with every pick.
-  const [heldDetailsHeight, setHeldDetailsHeight] = useState<number>();
-  useEffect(() => {
-    const details = detailsRef.current;
-    if (!details || isLoadingDetails) return;
-    const observer = new ResizeObserver(([entry]) => setHeldDetailsHeight(entry.borderBoxSize[0].blockSize));
-    observer.observe(details);
-    return () => observer.disconnect();
-  }, [isLoadingDetails]);
+  const { height: heldDetailsHeight } = useElementSize(detailsRef, { box: "border", enabled: !isLoadingDetails });
   const focusSelectedItem = useRef(false);
   const navigationRef = useRef<HTMLElement>(null);
   const navigationDirection = useRef<-1 | 1 | null>(null);
@@ -274,7 +268,7 @@ export function MatchesTab({
           tabIndex={-1}
           aria-label={selected ? `Match ${selected.match_id} details` : "Overview statistics"}
           className="flex min-w-0 scroll-mt-4 flex-col gap-3"
-          style={{ minHeight: isLoadingDetails ? heldDetailsHeight : undefined }}
+          style={{ minHeight: isLoadingDetails && heldDetailsHeight > 0 ? heldDetailsHeight : undefined }}
         >
           {hiddenLinkedMatch && selected === hiddenLinkedMatch && (
             <Card tone="muted" size="sm" className="flex-row flex-wrap items-center gap-x-4 gap-y-2 px-4 text-sm">
