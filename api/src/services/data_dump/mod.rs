@@ -4,7 +4,7 @@
 //! tables, fresh snapshots for the small ones, a bounded amount of partition rebuilds
 //! (compaction), a `DuckLake` catalog, and finally a conditional write of `manifest.json`,
 //! the only state there is. Any failure leaves the manifest untouched and the next tick
-//! resumes from it; objects nobody references are swept a day after they drop out of it.
+//! resumes from it; objects nobody references are swept an hour after they drop out of it.
 
 use core::time::Duration;
 use std::collections::{BTreeMap, BTreeSet, HashSet};
@@ -38,10 +38,10 @@ mod sweep;
 
 const TICK: Duration = Duration::from_secs(3600);
 const HOUR: i64 = 3600;
-const SWEEP_GRACE: Duration = Duration::from_hours(24);
-/// A snapshot is replaced every tick, so a day of grace would keep ~24 full copies of it.
-const SNAPSHOT_SWEEP_GRACE: Duration = Duration::from_hours(2);
-const CATALOG_RETENTION: Duration = Duration::from_hours(7 * 24);
+/// How long data files and catalogs outlive the manifest that dropped them. Readers re-read
+/// the manifest far more often (the MCP server every 5 minutes); every extra hour keeps a
+/// copy of each rebuilt `match_player` base (~5 GiB) around.
+const SWEEP_GRACE: Duration = Duration::from_hours(1);
 const FOLD_EVERY: chrono::Duration = chrono::Duration::hours(20);
 const LEASE_KEY: &str = "data_dump:leader";
 
@@ -280,7 +280,7 @@ impl DataDump {
         manifest.retire_unreferenced(
             &previously_referenced,
             Utc::now(),
-            chrono::Duration::from_std(SWEEP_GRACE).unwrap_or(chrono::Duration::hours(24)),
+            chrono::Duration::from_std(SWEEP_GRACE).unwrap_or(chrono::Duration::hours(1)),
         );
         manifest.version = next_version;
         manifest.generated_at = Some(Utc::now());
@@ -302,22 +302,9 @@ impl DataDump {
         first_error.map_or(Ok(()), Err)
     }
 
-    /// Deletes data files a day (snapshots: two hours) after they left the manifest, and
-    /// superseded catalogs.
+    /// Deletes data files and superseded catalogs an hour after they left the manifest.
     async fn sweep(&self, manifest: &Manifest) -> Result<(), DumpError> {
         let referenced: HashSet<String> = manifest.referenced_keys().map(str::to_owned).collect();
-        for table in TABLES {
-            if matches!(table.policy, Policy::Snapshot) {
-                sweep::sweep(
-                    &self.store,
-                    &self.key(&format!("tables/{}/snapshot/", table.name)),
-                    &referenced,
-                    &manifest.retired,
-                    SNAPSHOT_SWEEP_GRACE,
-                )
-                .await?;
-            }
-        }
         sweep::sweep(
             &self.store,
             &self.key("tables/"),
@@ -334,7 +321,7 @@ impl DataDump {
             &self.key("catalog/"),
             &catalogs,
             &BTreeMap::new(),
-            CATALOG_RETENTION,
+            SWEEP_GRACE,
         )
         .await?;
         Ok(())

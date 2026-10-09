@@ -24,7 +24,7 @@ pub(crate) async fn sweep(
     grace: Duration,
 ) -> Result<usize, DumpError> {
     let cutoff =
-        Utc::now() - chrono::Duration::from_std(grace).unwrap_or(chrono::Duration::hours(24));
+        Utc::now() - chrono::Duration::from_std(grace).unwrap_or(chrono::Duration::hours(1));
     let stale: Vec<Path> = store
         .list(Some(&Path::from(prefix)))
         .try_filter_map(|meta| {
