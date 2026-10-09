@@ -9,13 +9,11 @@ use strum::Display;
 use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
 
-use super::common_filters::round_timestamps;
+use super::common_filters::round_demo_timestamps;
 use crate::context::AppState;
 use crate::error::APIResult;
 use crate::routes::v1::matches::types::MatchMode;
-use crate::utils::parse::{
-    MIN_DEMO_PLAYER_TIMESTAMP, comma_separated_deserialize_option, default_last_month_timestamp,
-};
+use crate::utils::parse::{comma_separated_deserialize_option, default_last_month_timestamp};
 use crate::utils::sql::{cached_ch_query, impl_match_info};
 
 #[derive(Debug, Clone, Copy, Deserialize, ToSchema, Default, Display, PartialEq, Eq, Hash)]
@@ -125,13 +123,7 @@ async fn get_hero_ban_stats(
     ch_client: &clickhouse::Client,
     mut query: HeroBanStatsQuery,
 ) -> APIResult<Arc<Vec<HeroBanStats>>> {
-    round_timestamps(&mut query.min_unix_timestamp, &mut query.max_unix_timestamp);
-    query.min_unix_timestamp = Some(
-        query
-            .min_unix_timestamp
-            .unwrap_or(MIN_DEMO_PLAYER_TIMESTAMP)
-            .max(MIN_DEMO_PLAYER_TIMESTAMP),
-    );
+    round_demo_timestamps(&mut query.min_unix_timestamp, &mut query.max_unix_timestamp);
     let query_str = build_query(&query);
     debug!(?query_str);
     Ok(run_query(ch_client, &query_str).await?)

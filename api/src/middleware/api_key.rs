@@ -18,9 +18,7 @@ pub(crate) async fn write_api_key_to_header(mut request: Request, next: Next) ->
 /// The API key from the `api_key` query parameter, falling back to a `Bearer` token.
 fn extract_api_key(request: &Request) -> Option<HeaderValue> {
     let query_api_key = request.uri().query().and_then(|query| {
-        parse::querify(query)
-            .into_iter()
-            .find_map(|(key, value)| (key == "api_key").then_some(value))
+        parse::querify(query).find_map(|(key, value)| (key == "api_key").then_some(value))
     });
     if let Some(api_key) = query_api_key
         && let Ok(api_key) = HeaderValue::from_str(api_key)

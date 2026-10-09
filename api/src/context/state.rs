@@ -156,75 +156,12 @@ impl AppState {
             .get_multiplexed_async_connection()
             .await?;
 
-        // Create a Clickhouse connection pool
-        debug!("Creating Clickhouse client");
-        // The main client never uses the query cache: it backs writes and freshness
-        // sensitive background/work-queue reads, which must never serve stale results.
-        let ch_client = clickhouse::Client::default()
-            .with_url(config.clickhouse.url())
-            .with_user(&config.clickhouse.username)
-            .with_password(&config.clickhouse.password)
-            .with_database(&config.clickhouse.dbname)
-            .with_compression(clickhouse::Compression::zstd())
-            .with_setting("output_format_json_quote_64bit_integers", "0")
-            .with_setting("output_format_json_named_tuples_as_objects", "1")
-            .with_setting("enable_json_type", "1")
-            .with_setting("allow_statistics_optimize", "0")
-            .with_setting("allow_experimental_statistics", "1")
-            .with_setting("query_plan_optimize_join_order_limit", "10")
-            .with_setting("optimize_if_transform_strings_to_enum", "1")
-            .with_setting("optimize_syntax_fuse_functions", "1")
-            .with_setting("allow_aggregate_partitions_independently", "1")
-            .with_setting("max_threads", "16")
-            .with_setting("max_execution_time", "20")
-            .with_setting("enable_named_columns_in_function_tuple", "1")
-            .with_setting("do_not_merge_across_partitions_select_final", "1")
-            // Keep `ifNull(average_badge, 0)` comparisons matchable against the projection key
-            // (see `utils::sql::average_badge_filter`).
-            .with_setting("allow_key_condition_coalesce_rewrite", "0")
-            // Evaluate skip indexes (e.g. idx_start_time) at planning time: when deferred to read
-            // time (the default), projection selection sees unpruned parts and a chosen
-            // projection reads every part. Measured on 41 production query shapes: identical
-            // results, -17% bytes and -15% CPU volume-weighted, up to 66x on projection reads.
-            .with_setting("use_skip_indexes_on_data_read", "0")
-            // Cap per-query memory below the server profile default (40 GiB) so a single
-            // heavy analytics query cannot, when several overlap, push total RSS into the
-            // ~85 GiB server ceiling and trigger overcommit kills of unrelated queries.
-            // 25 GiB clears the largest legitimate refresh (~19 GiB) with headroom; spilling
-            // is already enabled server-side (max_bytes_before_external_group_by/sort = 20 GiB).
-            .with_setting("max_memory_usage", "26843545600");
-        ch_health_check(
-            &ch_client,
-            "SELECT 1 SETTINGS log_comment = 'startup_health_check'",
-        )
-        .await?;
-
-        // Create a Clickhouse readonly connection pool
-        debug!("Creating readonly Clickhouse client");
-        // Same connection and settings as the main client, plus read-only enforcement.
-        let ch_client_ro = ch_client
-            .clone()
-            .with_setting("readonly", "2")
-            .with_setting("allow_ddl", "0")
-            .with_setting("allow_introspection_functions", "0");
-        ch_health_check(
-            &ch_client_ro,
-            "SELECT 1 SETTINGS log_comment = 'startup_health_check'",
-        )
-        .await?;
-
-        // Create a Clickhouse restricted connection pool
-        debug!("Creating restricted Clickhouse client");
-        let ch_client_restricted = clickhouse::Client::default()
-            .with_url(config.clickhouse.url())
-            .with_user(&config.clickhouse.restricted_username)
-            .with_password(&config.clickhouse.restricted_password)
-            .with_database(&config.clickhouse.dbname)
-            .with_compression(clickhouse::Compression::zstd())
-            .with_setting("allow_statistics_optimize", "0")
-            .with_setting("max_memory_usage", "26843545600")
-            .with_setting("use_query_cache", "0");
-        ch_health_check(&ch_client_restricted, "SELECT 1").await?;
+        debug!("Creating Clickhouse clients");
+        let ClickhouseClients {
+            main: ch_client,
+            read_only: ch_client_ro,
+            restricted: ch_client_restricted,
+        } = ClickhouseClients::connect(&config).await?;
 
         // Create a Postgres connection pool
         debug!("Creating PostgreSQL client");
@@ -335,37 +272,9 @@ impl AppState {
         let mcp_catalog = Arc::new(SnapshotCatalog::new(&config.mcp_snapshot)?);
         mcp_catalog.clone().spawn_refresh_loop();
 
-        // Hourly public data-lake dump. Only one replica works at a time (redis lease).
         if config.data_dump.enabled {
             debug!("Starting data dump");
-            let lake_store = s3_store(
-                "auto",
-                &config.data_dump.bucket,
-                &config.data_dump.access_key_id,
-                &config.data_dump.secret_access_key,
-                &config.r2.endpoint(),
-                retry_config(Duration::from_mins(3)),
-            )?;
-            let ch_client_dump = clickhouse::Client::default()
-                .with_url(config.clickhouse.url())
-                .with_user(&config.data_dump.username)
-                .with_password(&config.data_dump.password)
-                .with_database("dump")
-                .with_compression(clickhouse::Compression::zstd())
-                // Exports run for up to two hours; keep the HTTP connection busy meanwhile.
-                .with_setting("send_progress_in_http_headers", "1")
-                .with_setting("http_headers_progress_interval_ms", "10000")
-                .with_setting("wait_end_of_query", "1");
-            DataDump {
-                config: config.data_dump.clone(),
-                ch_dump: ch_client_dump,
-                ch_admin: ch_client.clone(),
-                pg: pg_client.clone(),
-                redis: redis_client.clone(),
-                store: Arc::new(lake_store),
-                work_dir: std::env::temp_dir().join("deadlock-data-dump"),
-            }
-            .spawn();
+            spawn_data_dump(&config, &ch_client, &pg_client, &redis_client)?;
         }
 
         Ok(Self(Arc::new(AppStateInner {
@@ -391,6 +300,125 @@ impl AppState {
             mcp_catalog,
         })))
     }
+}
+
+const CH_HEALTH_CHECK: &str = "SELECT 1 SETTINGS log_comment = 'startup_health_check'";
+
+/// The `ClickHouse` clients of [`AppStateInner`].
+struct ClickhouseClients {
+    main: clickhouse::Client,
+    read_only: clickhouse::Client,
+    restricted: clickhouse::Client,
+}
+
+impl ClickhouseClients {
+    /// Builds the clients and health-checks them concurrently, so a misconfigured client fails
+    /// startup.
+    async fn connect(config: &Config) -> Result<Self, clickhouse::error::Error> {
+        // The main client never uses the query cache: it backs writes and freshness
+        // sensitive background/work-queue reads, which must never serve stale results.
+        let ch_client = clickhouse::Client::default()
+            .with_url(config.clickhouse.url())
+            .with_user(&config.clickhouse.username)
+            .with_password(&config.clickhouse.password)
+            .with_database(&config.clickhouse.dbname)
+            .with_compression(clickhouse::Compression::zstd())
+            .with_setting("output_format_json_quote_64bit_integers", "0")
+            .with_setting("output_format_json_named_tuples_as_objects", "1")
+            .with_setting("enable_json_type", "1")
+            .with_setting("allow_statistics_optimize", "0")
+            .with_setting("allow_experimental_statistics", "1")
+            .with_setting("query_plan_optimize_join_order_limit", "10")
+            .with_setting("optimize_if_transform_strings_to_enum", "1")
+            .with_setting("optimize_syntax_fuse_functions", "1")
+            .with_setting("allow_aggregate_partitions_independently", "1")
+            .with_setting("max_threads", "16")
+            .with_setting("max_execution_time", "20")
+            .with_setting("enable_named_columns_in_function_tuple", "1")
+            .with_setting("do_not_merge_across_partitions_select_final", "1")
+            // Keep `ifNull(average_badge, 0)` comparisons matchable against the projection key
+            // (see `utils::sql::average_badge_filter`).
+            .with_setting("allow_key_condition_coalesce_rewrite", "0")
+            // Evaluate skip indexes (e.g. idx_start_time) at planning time: when deferred to read
+            // time (the default), projection selection sees unpruned parts and a chosen
+            // projection reads every part. Measured on 41 production query shapes: identical
+            // results, -17% bytes and -15% CPU volume-weighted, up to 66x on projection reads.
+            .with_setting("use_skip_indexes_on_data_read", "0")
+            // Cap per-query memory below the server profile default (40 GiB) so a single
+            // heavy analytics query cannot, when several overlap, push total RSS into the
+            // ~85 GiB server ceiling and trigger overcommit kills of unrelated queries.
+            // 25 GiB clears the largest legitimate refresh (~19 GiB) with headroom; spilling
+            // is already enabled server-side (max_bytes_before_external_group_by/sort = 20 GiB).
+            .with_setting("max_memory_usage", "26843545600");
+
+        // Same connection and settings as the main client, plus read-only enforcement.
+        let ch_client_ro = ch_client
+            .clone()
+            .with_setting("readonly", "2")
+            .with_setting("allow_ddl", "0")
+            .with_setting("allow_introspection_functions", "0");
+
+        // Runs user-supplied SQL (the `/v1/sql` endpoint).
+        let ch_client_restricted = clickhouse::Client::default()
+            .with_url(config.clickhouse.url())
+            .with_user(&config.clickhouse.restricted_username)
+            .with_password(&config.clickhouse.restricted_password)
+            .with_database(&config.clickhouse.dbname)
+            .with_compression(clickhouse::Compression::zstd())
+            .with_setting("allow_statistics_optimize", "0")
+            .with_setting("max_memory_usage", "26843545600")
+            .with_setting("use_query_cache", "0");
+
+        tokio::try_join!(
+            ch_health_check(&ch_client, CH_HEALTH_CHECK),
+            ch_health_check(&ch_client_ro, CH_HEALTH_CHECK),
+            ch_health_check(&ch_client_restricted, "SELECT 1"),
+        )?;
+
+        Ok(Self {
+            main: ch_client,
+            read_only: ch_client_ro,
+            restricted: ch_client_restricted,
+        })
+    }
+}
+
+/// Spawns the hourly public data-lake dump. Only one replica works at a time (redis lease).
+fn spawn_data_dump(
+    config: &Config,
+    ch_client: &clickhouse::Client,
+    pg_client: &Pool<Postgres>,
+    redis_client: &redis::aio::MultiplexedConnection,
+) -> Result<(), object_store::Error> {
+    let lake_store = s3_store(
+        "auto",
+        &config.data_dump.bucket,
+        &config.data_dump.access_key_id,
+        &config.data_dump.secret_access_key,
+        &config.r2.endpoint(),
+        retry_config(Duration::from_mins(3)),
+    )?;
+    let ch_client_dump = clickhouse::Client::default()
+        .with_url(config.clickhouse.url())
+        .with_user(&config.data_dump.username)
+        .with_password(&config.data_dump.password)
+        .with_database("dump")
+        .with_compression(clickhouse::Compression::zstd())
+        // Exports run for up to two hours; keep the HTTP connection busy meanwhile.
+        .with_setting("send_progress_in_http_headers", "1")
+        .with_setting("http_headers_progress_interval_ms", "10000")
+        .with_setting("wait_end_of_query", "1");
+    DataDump {
+        config: config.data_dump.clone(),
+        ch_dump: ch_client_dump,
+        ch_admin: ch_client.clone(),
+        pg: pg_client.clone(),
+        redis: redis_client.clone(),
+        store: Arc::new(lake_store),
+        work_dir: std::env::temp_dir().join("deadlock-data-dump"),
+    }
+    .spawn();
+    Ok(())
 }
 
 /// Runs a trivial query so a misconfigured `ClickHouse` client fails startup.

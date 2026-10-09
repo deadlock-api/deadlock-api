@@ -307,13 +307,18 @@ async fn get_comb_stats(
     };
     let min_matches = query.min_matches.map_or(DEFAULT_MIN_MATCHES, u64::from);
     let max_matches = query.max_matches.map_or(u64::from(u32::MAX), u64::from);
-    let mut comb_stats_agg = HashMap::new();
+    let mut comb_stats_agg: HashMap<Vec<u32>, HeroCombStats> = HashMap::new();
     for comb_stat in comb_stats.iter() {
-        for comb_hero_ids in comb_stat.hero_ids.iter().combinations(comb_size as usize) {
+        for comb_hero_ids in comb_stat
+            .hero_ids
+            .iter()
+            .copied()
+            .combinations(usize::from(comb_size))
+        {
             *comb_stats_agg
-                .entry(comb_hero_ids.clone())
-                .or_insert_with(|| HeroCombStats {
-                    hero_ids: comb_hero_ids.into_iter().copied().collect_vec(),
+                .entry(comb_hero_ids)
+                .or_insert_with_key(|hero_ids| HeroCombStats {
+                    hero_ids: hero_ids.clone(),
                     wins: 0,
                     losses: 0,
                     matches: 0,

@@ -366,26 +366,39 @@ pub(super) async fn steam(
     let refreshed_ids: Vec<u32> = refreshed.iter().map(|r| r.account_id).collect();
     let mut profiles: Vec<SteamProfile> = refreshed.into_iter().map(SteamProfile::from).collect();
 
-    if !refreshed_ids.is_empty() {
-        let matches_map =
-            fetch_matches_played_last_30d(&state.ch_client_ro, &refreshed_ids).await?;
-        for profile in &mut profiles {
-            if let Some(&(count, last_team_avg_badge)) = matches_map.get(&profile.account_id) {
-                profile.matches_played_last_30d = count;
-                profile.last_team_avg_badge = last_team_avg_badge;
-            }
-        }
-    }
-
-    let fetched_ids: HashSet<u32> = refreshed_ids.into_iter().collect();
+    let fetched_ids: HashSet<u32> = refreshed_ids.iter().copied().collect();
     let missing: Vec<u32> = account_ids
         .into_iter()
         .filter(|id| !fetched_ids.contains(id))
         .collect();
-    if !missing.is_empty() {
-        let fallback = state.batchers.steam_profile.load_many(&missing).await?;
-        profiles.extend(fallback.into_iter().map(SteamProfile::from));
+
+    // The match counts of the refreshed profiles and the stored profiles of the rest are
+    // independent reads, so they run concurrently.
+    let (matches_map, fallback) = tokio::join!(
+        async {
+            if refreshed_ids.is_empty() {
+                Ok(HashMap::new())
+            } else {
+                fetch_matches_played_last_30d(&state.ch_client_ro, &refreshed_ids).await
+            }
+        },
+        async {
+            if missing.is_empty() {
+                Ok(Vec::new())
+            } else {
+                state.batchers.steam_profile.load_many(&missing).await
+            }
+        },
+    );
+    let matches_map = matches_map?;
+    let fallback = fallback?;
+    for profile in &mut profiles {
+        if let Some(&(count, last_team_avg_badge)) = matches_map.get(&profile.account_id) {
+            profile.matches_played_last_30d = count;
+            profile.last_team_avg_badge = last_team_avg_badge;
+        }
     }
+    profiles.extend(fallback.into_iter().map(SteamProfile::from));
 
     let mut headers = HeaderMap::new();
     headers.insert(header::CACHE_CONTROL, HeaderValue::from_static("no-store"));

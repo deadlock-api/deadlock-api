@@ -26,7 +26,7 @@ pub(crate) async fn track_requests(
     req: Request,
     next: Next,
 ) -> impl IntoResponse {
-    let method = req.method().clone();
+    let method = req.method().as_str().to_owned();
     let uri = req.uri().to_string();
     let query_params: HashMap<String, String> = req.uri().query().map_or_default(|q| {
         q.split('&')
@@ -66,7 +66,7 @@ pub(crate) async fn track_requests(
     // Create metrics labels. Keep these bounded: a raw user agent label would create a new
     // series per distinct client string.
     let labels = [
-        ("method", method.to_string()),
+        ("method", method.clone()),
         ("endpoint", matched_path.as_str().to_owned()),
         ("status", status_code.to_string()),
     ];
@@ -81,7 +81,7 @@ pub(crate) async fn track_requests(
     ) {
         let log = RequestLog {
             timestamp: chrono::Utc::now().timestamp_millis(),
-            method: method.to_string(),
+            method,
             path: path_str.to_owned(),
             uri,
             query_params,

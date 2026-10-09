@@ -254,256 +254,63 @@ impl Metric {
             Self::PermanentBuffs | Self::PermanentBuffsPerMin | Self::FirstPermanentBuffTimeS
         )
     }
-
-    #[expect(clippy::too_many_lines)]
-    pub(super) fn extract_values(self, row: &AnalyticsPlayerStatsMetricsRow) -> MetricValues {
-        match self {
-            Self::Kills => {
-                MetricValues::from_stats(row.avg_kills, row.std_kills, &row.quantiles_kills)
-            }
-            Self::Deaths => {
-                MetricValues::from_stats(row.avg_deaths, row.std_deaths, &row.quantiles_deaths)
-            }
-            Self::Assists => {
-                MetricValues::from_stats(row.avg_assists, row.std_assists, &row.quantiles_assists)
-            }
-            Self::NetWorth => MetricValues::from_stats(
-                row.avg_net_worth,
-                row.std_net_worth,
-                &row.quantiles_net_worth,
-            ),
-            Self::NetWorthPerMin => MetricValues::from_stats(
-                row.avg_net_worth_per_min,
-                row.std_net_worth_per_min,
-                &row.quantiles_net_worth_per_min,
-            ),
-            Self::Denies => {
-                MetricValues::from_stats(row.avg_denies, row.std_denies, &row.quantiles_denies)
-            }
-            Self::LastHits => MetricValues::from_stats(
-                row.avg_last_hits,
-                row.std_last_hits,
-                &row.quantiles_last_hits,
-            ),
-            Self::CritShotRate => MetricValues::from_stats(
-                row.avg_crit_shot_rate,
-                row.std_crit_shot_rate,
-                &row.quantiles_crit_shot_rate,
-            ),
-            Self::Accuracy => MetricValues::from_stats(
-                row.avg_accuracy,
-                row.std_accuracy,
-                &row.quantiles_accuracy,
-            ),
-            Self::Kd => MetricValues::from_stats(row.avg_kd, row.std_kd, &row.quantiles_kd),
-            Self::Kda => MetricValues::from_stats(row.avg_kda, row.std_kda, &row.quantiles_kda),
-            Self::KillsPlusAssists => MetricValues::from_stats(
-                row.avg_kills_plus_assists,
-                row.std_kills_plus_assists,
-                &row.quantiles_kills_plus_assists,
-            ),
-            Self::PlayerDamage => MetricValues::from_stats(
-                row.avg_player_damage,
-                row.std_player_damage,
-                &row.quantiles_player_damage,
-            ),
-            Self::PlayerDamagePerHealth => MetricValues::from_stats(
-                row.avg_player_damage_per_health,
-                row.std_player_damage_per_health,
-                &row.quantiles_player_damage_per_health,
-            ),
-            Self::PlayerDamagePerMin => MetricValues::from_stats(
-                row.avg_player_damage_per_min,
-                row.std_player_damage_per_min,
-                &row.quantiles_player_damage_per_min,
-            ),
-            Self::PlayerDamageTakenPerMin => MetricValues::from_stats(
-                row.avg_player_damage_taken_per_min,
-                row.std_player_damage_taken_per_min,
-                &row.quantiles_player_damage_taken_per_min,
-            ),
-            Self::NeutralDamage => MetricValues::from_stats(
-                row.avg_neutral_damage,
-                row.std_neutral_damage,
-                &row.quantiles_neutral_damage,
-            ),
-            Self::NeutralDamagePerMin => MetricValues::from_stats(
-                row.avg_neutral_damage_per_min,
-                row.std_neutral_damage_per_min,
-                &row.quantiles_neutral_damage_per_min,
-            ),
-            Self::BossDamage => MetricValues::from_stats(
-                row.avg_boss_damage,
-                row.std_boss_damage,
-                &row.quantiles_boss_damage,
-            ),
-            Self::BossDamagePerMin => MetricValues::from_stats(
-                row.avg_boss_damage_per_min,
-                row.std_boss_damage_per_min,
-                &row.quantiles_boss_damage_per_min,
-            ),
-            Self::SelfHealing => MetricValues::from_stats(
-                row.avg_self_healing,
-                row.std_self_healing,
-                &row.quantiles_self_healing,
-            ),
-            Self::PlayerHealing => MetricValues::from_stats(
-                row.avg_player_healing,
-                row.std_player_healing,
-                &row.quantiles_player_healing,
-            ),
-            Self::Healing => {
-                MetricValues::from_stats(row.avg_healing, row.std_healing, &row.quantiles_healing)
-            }
-            Self::SelfHealingPerMin => MetricValues::from_stats(
-                row.avg_self_healing_per_min,
-                row.std_self_healing_per_min,
-                &row.quantiles_self_healing_per_min,
-            ),
-            Self::PlayerHealingPerMin => MetricValues::from_stats(
-                row.avg_player_healing_per_min,
-                row.std_player_healing_per_min,
-                &row.quantiles_player_healing_per_min,
-            ),
-            Self::HealingPerMin => MetricValues::from_stats(
-                row.avg_healing_per_min,
-                row.std_healing_per_min,
-                &row.quantiles_healing_per_min,
-            ),
-            Self::TeammateHealing => MetricValues::from_stats(
-                row.avg_teammate_healing,
-                row.std_teammate_healing,
-                &row.quantiles_teammate_healing,
-            ),
-            Self::TeammateBarriering => MetricValues::from_stats(
-                row.avg_teammate_barriering,
-                row.std_teammate_barriering,
-                &row.quantiles_teammate_barriering,
-            ),
-            Self::HealPrevented => MetricValues::from_stats(
-                row.avg_heal_prevented,
-                row.std_heal_prevented,
-                &row.quantiles_heal_prevented,
-            ),
-            Self::PermanentBuffs => MetricValues::from_stats(
-                row.avg_permanent_buffs,
-                row.std_permanent_buffs,
-                &row.quantiles_permanent_buffs,
-            ),
-            Self::PermanentBuffsPerMin => MetricValues::from_stats(
-                row.avg_permanent_buffs_per_min,
-                row.std_permanent_buffs_per_min,
-                &row.quantiles_permanent_buffs_per_min,
-            ),
-            Self::FirstPermanentBuffTimeS => MetricValues::from_stats(
-                row.avg_first_permanent_buff_time_s,
-                row.std_first_permanent_buff_time_s,
-                &row.quantiles_first_permanent_buff_time_s,
-            ),
-        }
-    }
 }
 
 pub(super) type AnalyticsPlayerStatsMetrics = HashMap<Metric, MetricValues>;
 
-#[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
-pub(super) struct AnalyticsPlayerStatsMetricsRow {
-    avg_kills: f64,
-    std_kills: f64,
-    quantiles_kills: Vec<f64>,
-    avg_deaths: f64,
-    std_deaths: f64,
-    quantiles_deaths: Vec<f64>,
-    avg_assists: f64,
-    std_assists: f64,
-    quantiles_assists: Vec<f64>,
-    avg_net_worth: f64,
-    std_net_worth: f64,
-    quantiles_net_worth: Vec<f64>,
-    avg_net_worth_per_min: f64,
-    std_net_worth_per_min: f64,
-    quantiles_net_worth_per_min: Vec<f64>,
-    avg_denies: f64,
-    std_denies: f64,
-    quantiles_denies: Vec<f64>,
-    avg_last_hits: f64,
-    std_last_hits: f64,
-    quantiles_last_hits: Vec<f64>,
-    avg_crit_shot_rate: f64,
-    std_crit_shot_rate: f64,
-    quantiles_crit_shot_rate: Vec<f64>,
-    avg_accuracy: f64,
-    std_accuracy: f64,
-    quantiles_accuracy: Vec<f64>,
-    avg_kd: f64,
-    std_kd: f64,
-    quantiles_kd: Vec<f64>,
-    avg_kda: f64,
-    std_kda: f64,
-    quantiles_kda: Vec<f64>,
-    avg_kills_plus_assists: f64,
-    std_kills_plus_assists: f64,
-    quantiles_kills_plus_assists: Vec<f64>,
-    avg_player_damage: f64,
-    std_player_damage: f64,
-    quantiles_player_damage: Vec<f64>,
-    avg_player_damage_per_health: f64,
-    std_player_damage_per_health: f64,
-    quantiles_player_damage_per_health: Vec<f64>,
-    avg_player_damage_per_min: f64,
-    std_player_damage_per_min: f64,
-    quantiles_player_damage_per_min: Vec<f64>,
-    avg_player_damage_taken_per_min: f64,
-    std_player_damage_taken_per_min: f64,
-    quantiles_player_damage_taken_per_min: Vec<f64>,
-    avg_neutral_damage: f64,
-    std_neutral_damage: f64,
-    quantiles_neutral_damage: Vec<f64>,
-    avg_neutral_damage_per_min: f64,
-    std_neutral_damage_per_min: f64,
-    quantiles_neutral_damage_per_min: Vec<f64>,
-    avg_boss_damage: f64,
-    std_boss_damage: f64,
-    quantiles_boss_damage: Vec<f64>,
-    avg_boss_damage_per_min: f64,
-    std_boss_damage_per_min: f64,
-    quantiles_boss_damage_per_min: Vec<f64>,
-    avg_self_healing: f64,
-    std_self_healing: f64,
-    quantiles_self_healing: Vec<f64>,
-    avg_player_healing: f64,
-    std_player_healing: f64,
-    quantiles_player_healing: Vec<f64>,
-    avg_healing: f64,
-    std_healing: f64,
-    quantiles_healing: Vec<f64>,
-    avg_self_healing_per_min: f64,
-    std_self_healing_per_min: f64,
-    quantiles_self_healing_per_min: Vec<f64>,
-    avg_player_healing_per_min: f64,
-    std_player_healing_per_min: f64,
-    quantiles_player_healing_per_min: Vec<f64>,
-    avg_healing_per_min: f64,
-    std_healing_per_min: f64,
-    quantiles_healing_per_min: Vec<f64>,
-    avg_teammate_healing: f64,
-    std_teammate_healing: f64,
-    quantiles_teammate_healing: Vec<f64>,
-    avg_teammate_barriering: f64,
-    std_teammate_barriering: f64,
-    quantiles_teammate_barriering: Vec<f64>,
-    avg_heal_prevented: f64,
-    std_heal_prevented: f64,
-    quantiles_heal_prevented: Vec<f64>,
-    avg_permanent_buffs: f64,
-    std_permanent_buffs: f64,
-    quantiles_permanent_buffs: Vec<f64>,
-    avg_permanent_buffs_per_min: f64,
-    std_permanent_buffs_per_min: f64,
-    quantiles_permanent_buffs_per_min: Vec<f64>,
-    avg_first_permanent_buff_time_s: f64,
-    std_first_permanent_buff_time_s: f64,
-    quantiles_first_permanent_buff_time_s: Vec<f64>,
+/// Declares [`AnalyticsPlayerStatsMetricsRow`], with an `avg_*`, `std_*` and `quantiles_*` column
+/// per metric in [`Metric::VARIANTS`] order (the order [`build_query`] selects them in), and
+/// [`Metric::extract_values`], which reads one metric's three columns.
+macro_rules! metrics_row {
+    ($($metric:ident => $avg:ident, $std:ident, $quantiles:ident;)*) => {
+        #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
+        pub(super) struct AnalyticsPlayerStatsMetricsRow {
+            $($avg: f64, $std: f64, $quantiles: Vec<f64>,)*
+        }
+
+        impl Metric {
+            pub(super) fn extract_values(self, row: &AnalyticsPlayerStatsMetricsRow) -> MetricValues {
+                match self {
+                    $(Self::$metric => MetricValues::from_stats(row.$avg, row.$std, &row.$quantiles),)*
+                }
+            }
+        }
+    };
+}
+
+metrics_row! {
+    Kills => avg_kills, std_kills, quantiles_kills;
+    Deaths => avg_deaths, std_deaths, quantiles_deaths;
+    Assists => avg_assists, std_assists, quantiles_assists;
+    NetWorth => avg_net_worth, std_net_worth, quantiles_net_worth;
+    NetWorthPerMin => avg_net_worth_per_min, std_net_worth_per_min, quantiles_net_worth_per_min;
+    Denies => avg_denies, std_denies, quantiles_denies;
+    LastHits => avg_last_hits, std_last_hits, quantiles_last_hits;
+    CritShotRate => avg_crit_shot_rate, std_crit_shot_rate, quantiles_crit_shot_rate;
+    Accuracy => avg_accuracy, std_accuracy, quantiles_accuracy;
+    Kd => avg_kd, std_kd, quantiles_kd;
+    Kda => avg_kda, std_kda, quantiles_kda;
+    KillsPlusAssists => avg_kills_plus_assists, std_kills_plus_assists, quantiles_kills_plus_assists;
+    PlayerDamage => avg_player_damage, std_player_damage, quantiles_player_damage;
+    PlayerDamagePerHealth => avg_player_damage_per_health, std_player_damage_per_health, quantiles_player_damage_per_health;
+    PlayerDamagePerMin => avg_player_damage_per_min, std_player_damage_per_min, quantiles_player_damage_per_min;
+    PlayerDamageTakenPerMin => avg_player_damage_taken_per_min, std_player_damage_taken_per_min, quantiles_player_damage_taken_per_min;
+    NeutralDamage => avg_neutral_damage, std_neutral_damage, quantiles_neutral_damage;
+    NeutralDamagePerMin => avg_neutral_damage_per_min, std_neutral_damage_per_min, quantiles_neutral_damage_per_min;
+    BossDamage => avg_boss_damage, std_boss_damage, quantiles_boss_damage;
+    BossDamagePerMin => avg_boss_damage_per_min, std_boss_damage_per_min, quantiles_boss_damage_per_min;
+    SelfHealing => avg_self_healing, std_self_healing, quantiles_self_healing;
+    PlayerHealing => avg_player_healing, std_player_healing, quantiles_player_healing;
+    Healing => avg_healing, std_healing, quantiles_healing;
+    SelfHealingPerMin => avg_self_healing_per_min, std_self_healing_per_min, quantiles_self_healing_per_min;
+    PlayerHealingPerMin => avg_player_healing_per_min, std_player_healing_per_min, quantiles_player_healing_per_min;
+    HealingPerMin => avg_healing_per_min, std_healing_per_min, quantiles_healing_per_min;
+    TeammateHealing => avg_teammate_healing, std_teammate_healing, quantiles_teammate_healing;
+    TeammateBarriering => avg_teammate_barriering, std_teammate_barriering, quantiles_teammate_barriering;
+    HealPrevented => avg_heal_prevented, std_heal_prevented, quantiles_heal_prevented;
+    PermanentBuffs => avg_permanent_buffs, std_permanent_buffs, quantiles_permanent_buffs;
+    PermanentBuffsPerMin => avg_permanent_buffs_per_min, std_permanent_buffs_per_min, quantiles_permanent_buffs_per_min;
+    FirstPermanentBuffTimeS => avg_first_permanent_buff_time_s, std_first_permanent_buff_time_s, quantiles_first_permanent_buff_time_s;
 }
 
 /// SELECT list entry for one metric. Buff metrics that were not requested get typed
@@ -712,6 +519,24 @@ mod tests {
         assert!(short.percentile10.is_nan());
         let json = serde_json::to_value(&empty).unwrap();
         assert!(json["percentile50"].is_null());
+    }
+
+    #[test]
+    fn row_columns_follow_the_metric_order() {
+        let expected = Metric::VARIANTS
+            .iter()
+            .flat_map(|m| {
+                [
+                    format!("avg_{m}"),
+                    format!("std_{m}"),
+                    format!("quantiles_{m}"),
+                ]
+            })
+            .collect_vec();
+        assert_eq!(
+            <AnalyticsPlayerStatsMetricsRow as Row>::COLUMN_NAMES,
+            expected.as_slice()
+        );
     }
 
     #[test]

@@ -1,4 +1,5 @@
 use core::time::Duration;
+use std::collections::HashSet;
 
 use axum::Json;
 use axum::extract::State;
@@ -140,6 +141,7 @@ pub(super) async fn active_matches(
         active_matches.retain(|m| m.players.iter().any(|p| p.account_id == Some(account_id)));
     }
     if let Some(account_ids) = query.account_ids {
+        let account_ids: HashSet<u32> = account_ids.into_iter().collect();
         active_matches.retain(|m| {
             m.players
                 .iter()

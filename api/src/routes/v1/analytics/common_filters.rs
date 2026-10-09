@@ -1,5 +1,6 @@
 use core::fmt::Display;
 
+use crate::utils::parse::MIN_DEMO_PLAYER_TIMESTAMP;
 use crate::utils::sql::{MAX_FILTERING_AVERAGE_BADGE, MIN_FILTERING_AVERAGE_BADGE};
 pub(super) use crate::utils::sql::{MatchInfoFilters, id_list, join_filters};
 use itertools::Itertools;
@@ -329,6 +330,18 @@ pub(super) fn round_timestamps(
 ) {
     *min_unix_timestamp = min_unix_timestamp.map(floor_to_hour);
     *max_unix_timestamp = max_unix_timestamp.map(ceil_to_hour);
+}
+
+/// [`round_timestamps`] for endpoints reading demo-derived data, which does not exist before
+/// [`MIN_DEMO_PLAYER_TIMESTAMP`]: the minimum is also clamped to it, and defaults to it when unset.
+pub(super) fn round_demo_timestamps(
+    min_unix_timestamp: &mut Option<i64>,
+    max_unix_timestamp: &mut Option<i64>,
+) {
+    round_timestamps(min_unix_timestamp, max_unix_timestamp);
+    *min_unix_timestamp = Some(min_unix_timestamp.map_or(MIN_DEMO_PLAYER_TIMESTAMP, |v| {
+        v.max(MIN_DEMO_PLAYER_TIMESTAMP)
+    }));
 }
 
 pub(super) fn floor_to_hour(v: i64) -> i64 {

@@ -103,49 +103,35 @@ trait BatcherInner: Send + Sync + 'static {
     const METRICS: MetricNames;
 }
 
-struct SingleBridge<T>(PhantomData<T>);
+/// Adapts an ungrouped batch trait to [`BatcherInner`] with the unit group.
+macro_rules! ungrouped_bridge {
+    ($bridge:ident, $query:ident, $prefix:literal) => {
+        struct $bridge<T>(PhantomData<T>);
 
-impl<T: BatchQuery> BatcherInner for SingleBridge<T> {
-    type Key = T::Key;
-    type Group = ();
-    type Value = T::Value;
+        impl<T: $query> BatcherInner for $bridge<T> {
+            type Key = T::Key;
+            type Group = ();
+            type Value = T::Value;
 
-    fn build_query((): &(), keys: &[Self::Key]) -> String {
-        T::build_query(keys)
-    }
-    fn key_of(value: &Self::Value) -> Self::Key {
-        T::key_of(value)
-    }
-    fn batch_window_ms() -> u64 {
-        T::batch_window_ms()
-    }
-    fn max_batch_size() -> usize {
-        T::max_batch_size()
-    }
-    const METRICS: MetricNames = metric_names!("clickhouse_batcher");
+            fn build_query((): &(), keys: &[Self::Key]) -> String {
+                T::build_query(keys)
+            }
+            fn key_of(value: &Self::Value) -> Self::Key {
+                T::key_of(value)
+            }
+            fn batch_window_ms() -> u64 {
+                T::batch_window_ms()
+            }
+            fn max_batch_size() -> usize {
+                T::max_batch_size()
+            }
+            const METRICS: MetricNames = metric_names!($prefix);
+        }
+    };
 }
 
-struct MultiBridge<T>(PhantomData<T>);
-
-impl<T: BatchQueryMulti> BatcherInner for MultiBridge<T> {
-    type Key = T::Key;
-    type Group = ();
-    type Value = T::Value;
-
-    fn build_query((): &(), keys: &[Self::Key]) -> String {
-        T::build_query(keys)
-    }
-    fn key_of(value: &Self::Value) -> Self::Key {
-        T::key_of(value)
-    }
-    fn batch_window_ms() -> u64 {
-        T::batch_window_ms()
-    }
-    fn max_batch_size() -> usize {
-        T::max_batch_size()
-    }
-    const METRICS: MetricNames = metric_names!("clickhouse_batcher_multi");
-}
+ungrouped_bridge!(SingleBridge, BatchQuery, "clickhouse_batcher");
+ungrouped_bridge!(MultiBridge, BatchQueryMulti, "clickhouse_batcher_multi");
 
 struct GroupedBridge<T>(PhantomData<T>);
 
@@ -311,13 +297,14 @@ async fn execute_batch<I: BatcherInner>(
 
     for (key, txs) in senders {
         let values = grouped.remove(&key).unwrap_or_default();
-        let last_idx = txs.len() - 1;
-        for (i, tx) in txs.into_iter().enumerate() {
-            if i == last_idx {
-                let _ = tx.send(Ok(values));
-                break;
-            }
+        // Clone for all but the last waiter, which takes the rows.
+        let mut txs = txs.into_iter();
+        let last = txs.next_back();
+        for tx in txs {
             let _ = tx.send(Ok(values.clone()));
+        }
+        if let Some(tx) = last {
+            let _ = tx.send(Ok(values));
         }
     }
 }

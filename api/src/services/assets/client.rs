@@ -8,7 +8,7 @@ use crate::error::{APIError, APIResult};
 use crate::services::assets::types::{AssetsHero, AssetsRanks};
 use crate::services::assets::versions::heroes::{Hero, fetch_heroes as build_heroes};
 use crate::services::assets::versions::items::{Item, fetch_items as build_items};
-use crate::services::assets::versions::ranks::{RankImages, fetch_ranks as build_ranks};
+use crate::services::assets::versions::ranks::{Rank, RankImages, fetch_ranks as build_ranks};
 use crate::services::assets::versions::store::VersionStore;
 
 /// Language the internal lookups resolve hero/rank names in. The streamkit
@@ -52,11 +52,8 @@ impl AssetsClient {
     /// Ranks for the latest known client version.
     pub(crate) async fn fetch_ranks(&self) -> APIResult<Vec<AssetsRanks>> {
         debug!("Loading ranks from versioned assets");
-        let version = self.latest_version().await?;
-        let ranks = build_ranks(&self.r2_client, version, DEFAULT_LANGUAGE)
-            .await
-            .map_err(|e| APIError::internal(format!("building ranks: {e}")))?;
-        ranks
+        self.ranks()
+            .await?
             .iter()
             .map(|r| {
                 Ok(AssetsRanks {
@@ -109,6 +106,14 @@ impl AssetsClient {
         build_heroes(&self.r2_client, version, DEFAULT_LANGUAGE)
             .await
             .map_err(|e| APIError::internal(format!("building heroes: {e}")))
+    }
+
+    /// Cached `Arc<Vec<Rank>>` for the latest version (shared underlying allocation).
+    pub(crate) async fn ranks(&self) -> APIResult<Arc<Vec<Rank>>> {
+        let version = self.latest_version().await?;
+        build_ranks(&self.r2_client, version, DEFAULT_LANGUAGE)
+            .await
+            .map_err(|e| APIError::internal(format!("building ranks: {e}")))
     }
 
     /// Cached `Arc<Vec<Item>>` (abilities, weapons and upgrades) for the latest version.

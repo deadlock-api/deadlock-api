@@ -27,6 +27,7 @@ use utoipa::ToSchema;
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
+use crate::services::assets::versions::ranks::RankImages;
 
 /// There are only 66 badges per format and they change only when a new asset build lands.
 pub(crate) const CACHE_TTL: Duration = Duration::from_hours(24);
@@ -93,10 +94,11 @@ pub(crate) enum RankImageFormat {
 }
 
 impl RankImageFormat {
-    fn suffix(self) -> &'static str {
+    /// The tier's large badge artwork in this format.
+    fn large_image(self, images: &RankImages) -> Option<&str> {
         match self {
-            Self::Png => "",
-            Self::Webp => "_webp",
+            Self::Png => images.large.as_deref(),
+            Self::Webp => images.large_webp.as_deref(),
         }
     }
 
@@ -156,21 +158,21 @@ pub(crate) async fn fetch_tier_image(
     format: RankImageFormat,
 ) -> APIResult<Bytes> {
     let rank = badge / 10;
-    let suffix = format.suffix();
 
-    let image_url = state
+    let ranks = state
         .assets_client
-        .fetch_ranks()
+        .ranks()
         .await
-        .map_err(|e| APIError::internal(format!("Failed to fetch ranks: {e}")))?
+        .map_err(|e| APIError::internal(format!("Failed to fetch ranks: {e}")))?;
+    let image_url = ranks
         .iter()
         .find(|r| r.tier == rank)
-        .and_then(|r| r.images.get(&format!("large{suffix}")).cloned())
+        .and_then(|r| format.large_image(&r.images))
         .ok_or_else(|| {
             APIError::status_msg(StatusCode::NOT_FOUND, "No image available for the rank.")
         })?;
 
-    download_tier_image(&state.http_client, &image_url).await
+    download_tier_image(&state.http_client, image_url).await
 }
 
 /// Tier artwork only changes with a new asset build, and the URL changes with it.

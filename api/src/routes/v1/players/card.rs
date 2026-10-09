@@ -172,21 +172,32 @@ pub(crate) async fn fetch_player_card_raw(
         .await
 }
 
+async fn fetch_player_card_with_retries(
+    steam_client: &SteamClient,
+    account_id: u32,
+    bot_username: &str,
+) -> Result<SteamProxyRawResponse, SteamProxyError> {
+    tryhard::retry_fn(|| fetch_player_card_raw(steam_client, account_id, bot_username.to_owned()))
+        .retries(3)
+        .fixed_backoff(Duration::from_millis(10))
+        .await
+}
+
 async fn get_player_card(
     state: &AppState,
     account_id: u32,
     bot_username: String,
 ) -> APIResult<PlayerCard> {
     let steam_client = &state.steam_client;
-    let raw_data =
-        tryhard::retry_fn(|| fetch_player_card_raw(steam_client, account_id, bot_username.clone()))
-            .retries(3)
-            .fixed_backoff(Duration::from_millis(10))
-            .await?;
-    let proto_player_card: SteamProxyResponse<CMsgCitadelProfileCard> = raw_data.try_into()?;
+    // The rank comes from ClickHouse, independent of the Steam card, so both are fetched
+    // concurrently. A Steam failure still takes precedence over a rank lookup failure.
+    let (raw_data, last_ranked_match) = tokio::join!(
+        fetch_player_card_with_retries(steam_client, account_id, &bot_username),
+        fetch_last_ranked_match(&state.batchers.player_rank, account_id),
+    );
+    let proto_player_card: SteamProxyResponse<CMsgCitadelProfileCard> = raw_data?.try_into()?;
+    let last_ranked_match = last_ranked_match?;
     let ch_player_card = PlayerCardClickhouse::from(&proto_player_card.msg);
-    let last_ranked_match =
-        fetch_last_ranked_match(&state.batchers.player_rank, account_id).await?;
     let player_card = PlayerCard::new(proto_player_card.msg, last_ranked_match.as_ref());
     let ch_client = state
         .ch_client

@@ -265,13 +265,11 @@ async fn fetch_match_history_raw(
             .matches
             .into_iter()
             .filter_map(|e| {
-                PlayerMatchHistoryEntry::from_protobuf(account_id, e).map_or_else(
-                    || {
-                        warn!("Failed to parse player match history entry: {e:?}");
-                        None
-                    },
-                    Some,
-                )
+                let entry = PlayerMatchHistoryEntry::from_protobuf(account_id, e);
+                if entry.is_none() {
+                    warn!("Failed to parse player match history entry: {e:?}");
+                }
+                entry
             })
             .collect(),
         response.continue_cursor,
@@ -404,22 +402,15 @@ pub(super) async fn match_history(
     rate_limit_key: RateLimitKey,
     State(state): State<AppState>,
 ) -> APIResult<(StatusCode, HeaderMap, Json<PlayerMatchHistory>)> {
-    if state
-        .steam_client
-        .is_user_protected(&state.pg_client, account_id)
-        .await?
-    {
-        return Err(APIError::protected_user());
-    }
+    super::ensure_not_protected(&state, &[account_id]).await?;
 
-    let ch_match_history =
-        fetch_ch_match_history(&state.batchers.match_history_read, account_id).await?;
-
-    // Look up bot friend username for this account
-    let bot_username = super::lookup_bot_for_friend(&state.pg_client, account_id)
-        .await
-        .ok()
-        .flatten();
+    // The stored history and the bot friend lookup are independent, so run them concurrently.
+    let (ch_match_history, bot_username) = tokio::join!(
+        fetch_ch_match_history(&state.batchers.match_history_read, account_id),
+        super::lookup_bot_for_friend(&state.pg_client, account_id),
+    );
+    let ch_match_history = ch_match_history?;
+    let bot_username = bot_username.ok().flatten();
 
     // If the account is not friends with a bot, return only stored history from ClickHouse
     if bot_username.is_none() {

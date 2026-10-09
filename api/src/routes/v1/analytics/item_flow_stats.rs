@@ -4,13 +4,14 @@ use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum_extra::extract::Query;
 use clickhouse::Row;
+use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
 
 use super::common_filters::{
-    PlayerFilters, default_min_matches_u32, filter_protected_accounts, join_filters,
+    PlayerFilters, default_min_matches_u32, filter_protected_accounts, is_non_empty, join_filters,
     not_corrupted_sql, round_timestamps,
 };
 use crate::context::AppState;
@@ -235,8 +236,7 @@ const TIME_PHASE_COLUMNS: u8 = 4;
 /// projection can't prune and the rebuild is 25-40% dearer, and street brawl never uses it
 /// (`street_brawl_rounds.*` isn't in it), so those read `upgrades.*` from the base table.
 fn upgrades_source(query: &ItemFlowStatsQuery, is_brawl: bool) -> (String, &'static str) {
-    let has_hero = query.hero_ids.as_ref().is_some_and(|h| !h.is_empty());
-    if is_brawl || !has_hero {
+    if is_brawl || !is_non_empty(query.hero_ids.as_deref()) {
         return (
             "WITH
         upgrades.item_id AS upgrade_item_ids,
@@ -327,27 +327,24 @@ fn query_parts(query: &ItemFlowStatsQuery) -> QueryParts {
     // Locked build path: each item must have been bought *in* its locked stage column (not merely
     // by that point), so the population matches exactly where the item is shown in the graph.
     let purchase_col = column_of("gt", "`street_brawl_rounds.round_duration_s`");
-    let mut locked_clauses = vec![];
-    if let (Some(ids), Some(cols)) = (
-        query.locked_item_ids.as_ref(),
-        query.locked_columns.as_ref(),
-    ) {
-        for (id, col) in ids.iter().zip(cols.iter()) {
-            locked_clauses.push(format!(
+    let locked_clauses = query
+        .locked_item_ids
+        .iter()
+        .flatten()
+        .zip(query.locked_columns.iter().flatten())
+        .map(|(id, col)| {
+            format!(
                 "arrayExists((iid, gt) -> iid = {id} AND gt > 0 AND {purchase_col} = {col}, upgrade_item_ids, upgrade_buy_times)"
-            ));
-        }
-    }
+            )
+        })
+        .collect_vec();
     let locked_predicate = if locked_clauses.is_empty() {
         "1".to_owned()
     } else {
         locked_clauses.join(" AND ")
     };
-    let mut player_filter_vec = base_filter_vec.clone();
-    player_filter_vec.extend(locked_clauses);
-
-    let player_filters = join_filters(&player_filter_vec);
     let base_player_filters = join_filters(&base_filter_vec);
+    let player_filters = base_player_filters.clone() + &join_filters(&locked_clauses);
     let game_mode_filter = GameMode::sql_filter(query.game_mode);
     let match_mode_filter = MatchMode::sql_filter(query.match_mode.as_deref());
     let match_filters = format!("{match_mode_filter} AND {game_mode_filter} {info_filters}");
@@ -366,7 +363,6 @@ fn query_parts(query: &ItemFlowStatsQuery) -> QueryParts {
                 "uniqIf(cityHash64(match_id, account_id), arrayExists(gt -> gt > 0 AND {purchase_col} = {c}, upgrade_buy_times))"
             )
         })
-        .collect::<Vec<_>>()
         .join(", ");
     let reached_select = format!("[{reached_cols}] AS reached_per_column");
     let (upgrades_with, extra_settings) = upgrades_source(query, is_brawl);

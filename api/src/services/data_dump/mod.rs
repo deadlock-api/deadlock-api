@@ -20,7 +20,7 @@ use sqlx::{Pool, Postgres};
 use tracing::{error, info, warn};
 
 use self::compaction::{Params, Reason};
-use self::export::Exporter;
+use self::export::{Exporter, Increment};
 use self::manifest::{Column, FileEntry, FileKind, Manifest, PolicyKind, TableState, TableStatus};
 use self::policy::{Policy, TABLES, TablePolicy};
 use crate::SHUTDOWN_TOKEN;
@@ -496,25 +496,17 @@ impl DataDump {
                         ));
                         let sql = sql::delta_export(nc, name, &key, watermark, lo, hi);
                         let step = format!("{name}-g{generation}-delta-{}", ts(hi));
-                        if let Some(written) = exporter.export(&sql, &key, &step).await? {
-                            let rows_by_partition = exporter
-                                .partition_counts(
-                                    &sql::file_partition_counts(nc, &key, partition_expr),
-                                    &step,
-                                )
-                                .await?;
-                            entries.push(FileEntry {
-                                key,
-                                kind: FileKind::Delta,
-                                generation,
-                                partition: None,
-                                lo: Some(lo),
-                                hi: Some(hi),
-                                rows: written.rows,
-                                bytes: written.bytes,
-                                rows_by_partition,
-                                built_at: Utc::now(),
-                            });
+                        let increment = Increment {
+                            kind: FileKind::Delta,
+                            generation,
+                            lo,
+                            hi,
+                        };
+                        if let Some(entry) = exporter
+                            .export_increment(&sql, key, &step, partition_expr, increment)
+                            .await?
+                        {
+                            entries.push(entry);
                         }
                     }
                     state.files.extend(entries);
@@ -564,25 +556,17 @@ impl DataDump {
                     },
                 );
                 let step = format!("{name}-g{generation}-residual");
-                if let Some(written) = exporter.export(&sql, &key, &step).await? {
-                    let rows_by_partition = exporter
-                        .partition_counts(
-                            &sql::file_partition_counts(nc, &key, partition_expr),
-                            &step,
-                        )
-                        .await?;
-                    state.files.push(FileEntry {
-                        key,
-                        kind: FileKind::Residual,
-                        generation,
-                        partition: None,
-                        lo: Some(fold.lo),
-                        hi: Some(fold.hi),
-                        rows: written.rows,
-                        bytes: written.bytes,
-                        rows_by_partition,
-                        built_at: Utc::now(),
-                    });
+                let increment = Increment {
+                    kind: FileKind::Residual,
+                    generation,
+                    lo: fold.lo,
+                    hi: fold.hi,
+                };
+                if let Some(entry) = exporter
+                    .export_increment(&sql, key, &step, partition_expr, increment)
+                    .await?
+                {
+                    state.files.push(entry);
                 }
                 state.files.retain(|f| !fold.keys.contains(&f.key));
                 info!(

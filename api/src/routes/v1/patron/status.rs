@@ -6,7 +6,7 @@ use serde::Serialize;
 
 use crate::context::AppState;
 use crate::error::APIError;
-use crate::routes::v1::patron::fetch_patron;
+use crate::routes::v1::patron::{account_counts, fetch_patron};
 use crate::services::patreon::extractor::PatronSession;
 use crate::services::patreon::steam_accounts_repository::SteamAccountsRepository;
 
@@ -41,21 +41,12 @@ pub(crate) async fn get_patron_status(
     // Get Steam account counts
     let steam_repo = SteamAccountsRepository::new(app_state.pg_client.clone());
 
-    let active_count = steam_repo
-        .count_active_accounts(session.patron_id)
-        .await
-        .map_err(|e| {
-            tracing::error!("Failed to count active accounts: {e}");
-            APIError::internal("Failed to fetch Steam account data")
-        })?;
-
-    let cooldown_count = steam_repo
-        .count_accounts_in_cooldown(session.patron_id)
-        .await
-        .map_err(|e| {
-            tracing::error!("Failed to count accounts in cooldown: {e}");
-            APIError::internal("Failed to fetch Steam account data")
-        })?;
+    let (active_count, cooldown_count) = account_counts(
+        &steam_repo,
+        session.patron_id,
+        "Failed to fetch Steam account data",
+    )
+    .await?;
 
     let total_slots = patron.slot_limit();
 

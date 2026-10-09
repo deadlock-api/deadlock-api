@@ -12,6 +12,7 @@ use crate::error::APIError;
 use crate::services::patreon::client::PatreonClient;
 use crate::services::patreon::jwt::create_session_token;
 use crate::services::patreon::repository::{PatronRepository, UpsertPatronParams};
+use crate::services::patreon::types::Patron;
 
 /// Patreon OAuth scopes required for this application
 const PATREON_SCOPES: &str = "identity identity[email] campaigns.members";
@@ -74,17 +75,14 @@ pub(crate) struct CallbackParams {
 }
 
 /// Extracts the OAuth state from the `patreon_oauth_state` cookie
-fn extract_state_from_cookie(headers: &HeaderMap) -> Option<String> {
+fn extract_state_from_cookie(headers: &HeaderMap) -> Option<&str> {
     headers
         .get(COOKIE)
         .and_then(|v| v.to_str().ok())
         .and_then(|cookies| {
-            cookies.split(';').find_map(|cookie| {
-                let cookie = cookie.trim();
-                cookie
-                    .strip_prefix("patreon_oauth_state=")
-                    .map(str::to_string)
-            })
+            cookies
+                .split(';')
+                .find_map(|cookie| cookie.trim().strip_prefix("patreon_oauth_state="))
         })
 }
 
@@ -129,12 +127,11 @@ pub(crate) async fn logout(State(state): State<AppState>) -> impl IntoResponse {
 /// 4. Creates or updates patron record in database
 /// 5. Generates JWT session token and sets it as a cookie
 /// 6. Redirects to the frontend redirect URL
-#[expect(clippy::too_many_lines)]
 pub(crate) async fn callback(
     State(app_state): State<AppState>,
     headers: HeaderMap,
     Query(params): Query<CallbackParams>,
-) -> impl IntoResponse {
+) -> Response {
     // If the user cancelled the OAuth flow, Patreon redirects back without a code.
     // Redirect them back to the frontend gracefully.
     let Some(code) = params.code else {
@@ -142,19 +139,54 @@ pub(crate) async fn callback(
     };
 
     // Step 1: Validate state parameter matches cookie (CSRF protection)
-    let Some(stored_state) = extract_state_from_cookie(&headers) else {
-        return plain_response(StatusCode::BAD_REQUEST, "Missing OAuth state cookie");
-    };
-
-    let Some(ref state_param) = params.state else {
-        return plain_response(StatusCode::BAD_REQUEST, "Missing OAuth state parameter");
-    };
-
-    if *state_param != stored_state {
-        return plain_response(StatusCode::BAD_REQUEST, "Invalid OAuth state");
+    if let Err(message) = validate_oauth_state(&headers, params.state.as_deref()) {
+        return plain_response(StatusCode::BAD_REQUEST, message);
     }
 
-    // Create Patreon client
+    // Steps 2-4: Authenticate with Patreon and save the patron
+    let patron = match upsert_patron_from_code(&app_state, &code).await {
+        Ok(patron) => patron,
+        Err((status, message)) => return plain_response(status, message),
+    };
+
+    // Step 5: Generate JWT session token
+    let session_token = match create_session_token(patron.id, &app_state.config.jwt_secret) {
+        Ok(token) => token,
+        Err(e) => {
+            let (status, message) = logged_failure(
+                "Failed to create session token",
+                e,
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Failed to create session",
+            );
+            return plain_response(status, message);
+        }
+    };
+
+    // Step 6: Set session cookie and redirect to frontend
+    session_redirect(&app_state, &session_token)
+}
+
+/// Checks the `state` parameter against the `patreon_oauth_state` cookie, returning the error
+/// message on a mismatch.
+fn validate_oauth_state(
+    headers: &HeaderMap,
+    state_param: Option<&str>,
+) -> Result<(), &'static str> {
+    let stored_state = extract_state_from_cookie(headers).ok_or("Missing OAuth state cookie")?;
+    let state_param = state_param.ok_or("Missing OAuth state parameter")?;
+    if state_param != stored_state {
+        return Err("Invalid OAuth state");
+    }
+    Ok(())
+}
+
+/// Exchanges the authorization code for tokens, fetches the patron's identity and membership,
+/// and creates or updates the patron record. Failures carry the response status and message.
+async fn upsert_patron_from_code(
+    app_state: &AppState,
+    code: &str,
+) -> Result<Patron, (StatusCode, &'static str)> {
     let patreon_client = PatreonClient::new(
         app_state.http_client.clone(),
         app_state.config.patreon.client_id.clone(),
@@ -163,101 +195,77 @@ pub(crate) async fn callback(
     );
 
     // Step 2: Exchange authorization code for tokens
-    let token_response = match patreon_client.exchange_code(&code).await {
-        Ok(response) => response,
-        Err(e) => {
-            tracing::error!("Failed to exchange code: {e}");
-            return plain_response(
-                StatusCode::BAD_GATEWAY,
-                "Failed to authenticate with Patreon",
-            );
-        }
-    };
+    let token_response = patreon_client.exchange_code(code).await.map_err(|e| {
+        logged_failure(
+            "Failed to exchange code",
+            e,
+            StatusCode::BAD_GATEWAY,
+            "Failed to authenticate with Patreon",
+        )
+    })?;
 
-    // Step 3: Fetch patron identity
-    let identity = match patreon_client
+    // Step 3: Fetch patron identity and membership status
+    let identity = patreon_client
         .get_identity(&token_response.access_token)
         .await
-    {
-        Ok(identity) => identity,
-        Err(e) => {
-            tracing::error!("Failed to get identity: {e}");
-            return plain_response(StatusCode::BAD_GATEWAY, "Failed to fetch Patreon identity");
-        }
-    };
-
-    // Step 3b: Fetch membership status
-    let membership = match patreon_client
+        .map_err(|e| {
+            logged_failure(
+                "Failed to get identity",
+                e,
+                StatusCode::BAD_GATEWAY,
+                "Failed to fetch Patreon identity",
+            )
+        })?;
+    let membership = patreon_client
         .get_membership(&token_response.access_token)
         .await
-    {
-        Ok(membership) => membership,
-        Err(e) => {
-            tracing::error!("Failed to get membership: {e}");
-            return plain_response(
+        .map_err(|e| {
+            logged_failure(
+                "Failed to get membership",
+                e,
                 StatusCode::BAD_GATEWAY,
                 "Failed to fetch Patreon membership",
-            );
-        }
-    };
+            )
+        })?;
 
     // Extract membership details (defaults for non-members)
-    let (tier_id, pledge_amount_cents, is_active) = match &membership {
+    let (tier_id, pledge_amount_cents, is_active) = match membership {
         Some(m) => {
-            let is_active = m
-                .patron_status
-                .as_ref()
-                .is_some_and(|s| s == "active_patron");
-            (m.tier_id.clone(), m.pledge_amount_cents, is_active)
+            let is_active = m.patron_status.as_deref() == Some("active_patron");
+            (m.tier_id, m.pledge_amount_cents, is_active)
         }
         None => (None, 0, false),
     };
 
-    // Calculate token expiration time
-    let token_expires_at = Utc::now() + Duration::seconds(token_response.expires_in);
-
     // Step 4: Create or update patron record
-    let patron_repo = PatronRepository::new(
+    let token_expires_at = Utc::now() + Duration::seconds(token_response.expires_in);
+    PatronRepository::new(
         app_state.pg_client.clone(),
         app_state.config.patron_encryption_key.clone(),
-    );
+    )
+    .create_or_update_patron(UpsertPatronParams {
+        patreon_user_id: identity.id,
+        email: identity.email,
+        tier_id,
+        pledge_amount_cents: Some(pledge_amount_cents),
+        is_active,
+        access_token: Some(token_response.access_token),
+        refresh_token: Some(token_response.refresh_token),
+        token_expires_at: Some(token_expires_at),
+    })
+    .await
+    .map_err(|e| {
+        logged_failure(
+            "Failed to save patron",
+            e,
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Failed to save patron data",
+        )
+    })
+}
 
-    let patron = match patron_repo
-        .create_or_update_patron(UpsertPatronParams {
-            patreon_user_id: identity.id,
-            email: identity.email,
-            tier_id,
-            pledge_amount_cents: Some(pledge_amount_cents),
-            is_active,
-            access_token: Some(token_response.access_token),
-            refresh_token: Some(token_response.refresh_token),
-            token_expires_at: Some(token_expires_at),
-        })
-        .await
-    {
-        Ok(patron) => patron,
-        Err(e) => {
-            tracing::error!("Failed to save patron: {e}");
-            return plain_response(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "Failed to save patron data",
-            );
-        }
-    };
-
-    // Step 5: Generate JWT session token
-    let session_token = match create_session_token(patron.id, &app_state.config.jwt_secret) {
-        Ok(token) => token,
-        Err(e) => {
-            tracing::error!("Failed to create session token: {e}");
-            return plain_response(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "Failed to create session",
-            );
-        }
-    };
-
-    // Step 6: Set session cookie and redirect to frontend
+/// Redirects to the frontend, setting the session cookie and clearing the OAuth state cookie.
+fn session_redirect(app_state: &AppState, session_token: &str) -> Response {
     // Session cookie valid for 7 days (matches JWT expiration).
     // SameSite=None (with Secure) is required so the browser includes the cookie on
     // cross-site XHR/fetch/SSE requests to sibling APIs (e.g. ai.deadlock-api.com).
@@ -284,18 +292,28 @@ pub(crate) async fn callback(
     };
 
     let mut response = redirect(&app_state.config.patreon.frontend_redirect_url);
-
+    let response_headers = response.headers_mut();
     for header in session_cookie_headers {
-        response.headers_mut().append(SET_COOKIE, header);
+        response_headers.append(SET_COOKIE, header);
     }
-    response.headers_mut().append(
+    response_headers.append(
         SET_COOKIE,
         HeaderValue::from_static(
             "patreon_oauth_state=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0",
         ),
     );
-
     response
+}
+
+/// Logs `error` with `context` and returns the response `status` and `message`.
+fn logged_failure(
+    context: &str,
+    error: impl core::fmt::Display,
+    status: StatusCode,
+    message: &'static str,
+) -> (StatusCode, &'static str) {
+    tracing::error!("{context}: {error}");
+    (status, message)
 }
 
 /// A `302 Found` redirect to `location`.

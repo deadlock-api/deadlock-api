@@ -311,6 +311,23 @@ pub(super) async fn rank(
 
 const MAX_BATCH_ACCOUNT_IDS: usize = 1_000;
 
+/// Rejects an empty account id list or one longer than `max`.
+fn check_account_id_count(account_ids: &[u32], max: usize) -> APIResult<()> {
+    if account_ids.is_empty() {
+        return Err(APIError::status_msg(
+            StatusCode::BAD_REQUEST,
+            "At least one account ID is required.",
+        ));
+    }
+    if account_ids.len() > max {
+        return Err(APIError::status_msg(
+            StatusCode::BAD_REQUEST,
+            format!("Too many account IDs (max {max})."),
+        ));
+    }
+    Ok(())
+}
+
 #[derive(Debug, Deserialize, utoipa::IntoParams)]
 pub(crate) struct RankBatchQuery {
     /// Comma separated list of account ids, Account IDs are in `SteamID3` format.
@@ -351,18 +368,7 @@ pub(super) async fn rank_batch(
     State(state): State<AppState>,
     rate_limit_key: RateLimitKey,
 ) -> APIResult<Json<Vec<AccountRank>>> {
-    if account_ids.is_empty() {
-        return Err(APIError::status_msg(
-            StatusCode::BAD_REQUEST,
-            "At least one account ID is required.",
-        ));
-    }
-    if account_ids.len() > MAX_BATCH_ACCOUNT_IDS {
-        return Err(APIError::status_msg(
-            StatusCode::BAD_REQUEST,
-            format!("Too many account IDs (max {MAX_BATCH_ACCOUNT_IDS})."),
-        ));
-    }
+    check_account_id_count(&account_ids, MAX_BATCH_ACCOUNT_IDS)?;
     state
         .rate_limit_client
         .apply_limits(
@@ -489,18 +495,7 @@ pub(super) async fn rank_avg_image(
     }): Query<RankAvgImageQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
-    if account_ids.is_empty() {
-        return Err(APIError::status_msg(
-            StatusCode::BAD_REQUEST,
-            "At least one account ID is required.",
-        ));
-    }
-    if account_ids.len() > MAX_AVG_ACCOUNT_IDS {
-        return Err(APIError::status_msg(
-            StatusCode::BAD_REQUEST,
-            format!("Too many account IDs (max {MAX_AVG_ACCOUNT_IDS})."),
-        ));
-    }
+    check_account_id_count(&account_ids, MAX_AVG_ACCOUNT_IDS)?;
 
     let unique_ids: Vec<u32> = account_ids.into_iter().unique().collect();
 

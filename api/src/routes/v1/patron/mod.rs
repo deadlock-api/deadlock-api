@@ -5,9 +5,10 @@ use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
 use crate::context::AppState;
-use crate::error::APIError;
+use crate::error::{APIError, LogInternal};
 use crate::middleware::cache::CacheControlMiddleware;
 use crate::services::patreon::repository::PatronRepository;
+use crate::services::patreon::steam_accounts_repository::SteamAccountsRepository;
 use crate::services::patreon::types::Patron;
 
 mod status;
@@ -36,12 +37,30 @@ async fn fetch_patron(app_state: &AppState, patron_id: uuid::Uuid) -> Result<Pat
     )
     .get_patron_by_id(patron_id)
     .await
-    .map_err(|e| {
-        tracing::error!("Failed to get patron: {e}");
-        APIError::internal("Failed to fetch patron data")
-    })?
+    .log_internal("Failed to get patron", "Failed to fetch patron data")?
     .ok_or_else(|| {
         tracing::error!("Patron not found for session patron_id: {patron_id}");
         APIError::internal("Patron record not found")
     })
+}
+
+/// The patron's active account count and its count of removed accounts still in cooldown,
+/// queried concurrently. A failure maps to an internal error carrying `message`.
+async fn account_counts(
+    repo: &SteamAccountsRepository,
+    patron_id: uuid::Uuid,
+    message: &'static str,
+) -> Result<(i32, i32), APIError> {
+    tokio::try_join!(
+        async {
+            repo.count_active_accounts(patron_id)
+                .await
+                .log_internal("Failed to count active accounts", message)
+        },
+        async {
+            repo.count_accounts_in_cooldown(patron_id)
+                .await
+                .log_internal("Failed to count accounts in cooldown", message)
+        },
+    )
 }

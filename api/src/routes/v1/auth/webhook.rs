@@ -29,7 +29,6 @@ fn verify_signature(body: &[u8], secret: &str, signature_hex: &str) -> bool {
 ///
 /// Receives Patreon webhook events, verifies the HMAC-MD5 signature,
 /// and processes membership updates in the background.
-#[expect(clippy::too_many_lines)]
 pub(crate) async fn webhook(
     State(app_state): State<AppState>,
     headers: HeaderMap,
@@ -118,74 +117,93 @@ pub(crate) async fn webhook(
         "Patreon webhook: {event:?} for user {patreon_user_id} (active: {is_active}, pledge: {pledge_amount_cents:?})"
     );
 
-    // Spawn background task for DB operations
-    let pg_client = app_state.pg_client.clone();
-    let encryption_key = app_state.config.patron_encryption_key.clone();
-
+    // Process in the background and return 200 immediately so Patreon doesn't retry
+    let patron_repo = PatronRepository::new(
+        app_state.pg_client.clone(),
+        app_state.config.patron_encryption_key.clone(),
+    );
+    let steam_accounts_repo = SteamAccountsRepository::new(app_state.pg_client.clone());
     tokio::spawn(async move {
-        let patron_repo = PatronRepository::new(pg_client.clone(), encryption_key);
-        let steam_accounts_repo = SteamAccountsRepository::new(pg_client);
-
-        // Look up patron by patreon_user_id
-        let patron = match patron_repo
-            .get_patron_by_patreon_user_id(&patreon_user_id)
-            .await
-        {
-            Ok(Some(p)) => p,
-            Ok(None) => {
-                info!(
-                    "Patreon webhook: no patron found for patreon_user_id {patreon_user_id}, ignoring"
-                );
-                return;
-            }
-            Err(e) => {
-                error!("Patreon webhook: failed to look up patron {patreon_user_id}: {e}");
-                return;
-            }
-        };
-
-        // Update membership
-        if let Err(e) = patron_repo
-            .update_patron_membership(patron.id, tier_id, pledge_amount_cents, is_active)
-            .await
-        {
-            error!("Patreon webhook: failed to update membership for {patreon_user_id}: {e}");
-            return;
-        }
-
-        // Handle downgrade/cancellation
-        if let Err(e) = handle_downgrade_or_cancellation(
+        apply_membership_update(
+            &patron_repo,
             &steam_accounts_repo,
-            patron.id,
             &patreon_user_id,
+            tier_id,
             pledge_amount_cents,
             is_active,
-            patron.slot_override,
         )
-        .await
-        {
-            error!(
-                "Patreon webhook: failed to handle downgrade/cancellation for {patreon_user_id}: {e}"
-            );
-        }
-
-        // Handle reactivation (re-subscribe)
-        if let Err(e) = handle_reactivation(
-            &steam_accounts_repo,
-            patron.id,
-            &patreon_user_id,
-            pledge_amount_cents,
-            is_active,
-            patron.slot_override,
-        )
-        .await
-        {
-            error!("Patreon webhook: failed to handle reactivation for {patreon_user_id}: {e}");
-        }
+        .await;
     });
 
-    // Return 200 immediately so Patreon doesn't retry
     StatusCode::OK
+}
+
+/// Writes a webhook's membership update to the patron, then downgrades or reactivates their
+/// Steam account slots to match. Failures are logged.
+async fn apply_membership_update(
+    patron_repo: &PatronRepository,
+    steam_accounts_repo: &SteamAccountsRepository,
+    patreon_user_id: &str,
+    tier_id: Option<String>,
+    pledge_amount_cents: Option<i32>,
+    is_active: bool,
+) {
+    // Look up patron by patreon_user_id
+    let patron = match patron_repo
+        .get_patron_by_patreon_user_id(patreon_user_id)
+        .await
+    {
+        Ok(Some(p)) => p,
+        Ok(None) => {
+            info!(
+                "Patreon webhook: no patron found for patreon_user_id {patreon_user_id}, ignoring"
+            );
+            return;
+        }
+        Err(e) => {
+            error!("Patreon webhook: failed to look up patron {patreon_user_id}: {e}");
+            return;
+        }
+    };
+
+    // Update membership
+    if let Err(e) = patron_repo
+        .update_patron_membership(patron.id, tier_id, pledge_amount_cents, is_active)
+        .await
+    {
+        error!("Patreon webhook: failed to update membership for {patreon_user_id}: {e}");
+        return;
+    }
+
+    // Handle downgrade/cancellation
+    if let Err(e) = handle_downgrade_or_cancellation(
+        steam_accounts_repo,
+        patron.id,
+        patreon_user_id,
+        pledge_amount_cents,
+        is_active,
+        patron.slot_override,
+    )
+    .await
+    {
+        error!(
+            "Patreon webhook: failed to handle downgrade/cancellation for {patreon_user_id}: {e}"
+        );
+    }
+
+    // Handle reactivation (re-subscribe)
+    if let Err(e) = handle_reactivation(
+        steam_accounts_repo,
+        patron.id,
+        patreon_user_id,
+        pledge_amount_cents,
+        is_active,
+        patron.slot_override,
+    )
+    .await
+    {
+        error!("Patreon webhook: failed to handle reactivation for {patreon_user_id}: {e}");
+    }
 }
 
 #[cfg(test)]

@@ -3,6 +3,7 @@
 use std::collections::BTreeMap;
 use std::sync::Arc;
 
+use chrono::Utc;
 use clickhouse::Row;
 use object_store::path::Path;
 use object_store::{ObjectStore, ObjectStoreExt};
@@ -10,6 +11,7 @@ use serde::Deserialize;
 use tracing::info;
 
 use super::DumpError;
+use super::manifest::{FileEntry, FileKind};
 use super::sql::{self, LOG_COMMENT};
 
 pub(crate) struct Exporter {
@@ -22,6 +24,14 @@ pub(crate) struct Exporter {
 pub(crate) struct Exported {
     pub(crate) rows: u64,
     pub(crate) bytes: u64,
+}
+
+/// The time window and generation of a delta or residual file, which span every partition.
+pub(crate) struct Increment {
+    pub(crate) kind: FileKind,
+    pub(crate) generation: u32,
+    pub(crate) lo: i64,
+    pub(crate) hi: i64,
 }
 
 #[derive(Row, Deserialize)]
@@ -97,5 +107,37 @@ impl Exporter {
             "data dump exported"
         );
         Ok(Some(Exported { rows, bytes }))
+    }
+
+    /// Exports an increment file (see [`Self::export`]) and counts its rows per partition.
+    pub(crate) async fn export_increment(
+        &self,
+        sql: &str,
+        key: String,
+        step: &str,
+        partition_expr: &str,
+        increment: Increment,
+    ) -> Result<Option<FileEntry>, DumpError> {
+        let Some(written) = self.export(sql, &key, step).await? else {
+            return Ok(None);
+        };
+        let rows_by_partition = self
+            .partition_counts(
+                &sql::file_partition_counts(&self.named_collection, &key, partition_expr),
+                step,
+            )
+            .await?;
+        Ok(Some(FileEntry {
+            key,
+            kind: increment.kind,
+            generation: increment.generation,
+            partition: None,
+            lo: Some(increment.lo),
+            hi: Some(increment.hi),
+            rows: written.rows,
+            bytes: written.bytes,
+            rows_by_partition,
+            built_at: Utc::now(),
+        }))
     }
 }

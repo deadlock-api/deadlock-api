@@ -150,9 +150,7 @@ pub(crate) fn search_query(params: &BuildsSearchQuery) -> QueryBuilder<sqlx::Pos
          version DESC) as rn FROM hero_builds WHERE TRUE",
     );
     if let Some(tag) = params.tag {
-        query_builder.push(" AND data->'hero_build'->'tags' @> '");
-        query_builder.push(tag.to_string());
-        query_builder.push("'");
+        query_builder.push(format_args!(" AND data->'hero_build'->'tags' @> '{tag}'"));
     }
     if let Some(search_name) = &params.search_name {
         let search_name = urlencoding::decode(search_name).unwrap_or(search_name.into());
@@ -166,49 +164,31 @@ pub(crate) fn search_query(params: &BuildsSearchQuery) -> QueryBuilder<sqlx::Pos
         query_builder.push_bind(format!("%{}%", search_description.to_lowercase()));
     }
     #[expect(deprecated)]
-    if let Some(language) = params.language {
-        query_builder.push(" AND language = ");
-        query_builder.push(language.to_string());
+    let language = params.language;
+    for (condition, value) in [
+        (" AND language = ", language),
+        (" AND language = ", params.build_language.map(|l| l as u32)),
+        (" AND build_id = ", params.build_id),
+        (" AND version = ", params.version),
+        (" AND hero = ", params.hero_id),
+        (" AND author_id = ", params.author_id),
+        (" AND rollup_category = ", params.rollup_category),
+    ] {
+        if let Some(value) = value {
+            query_builder.push(condition).push(value);
+        }
     }
-    if let Some(build_language) = params.build_language {
-        query_builder.push(" AND language = ");
-        query_builder.push(build_language as u32);
-    }
-    if let Some(build_id) = params.build_id {
-        query_builder.push(" AND build_id = ");
-        query_builder.push(build_id.to_string());
-    }
-    if let Some(version) = params.version {
-        query_builder.push(" AND version = ");
-        query_builder.push(version.to_string());
-    }
-    if let Some(hero_id) = params.hero_id {
-        query_builder.push(" AND hero = ");
-        query_builder.push(hero_id.to_string());
-    }
-    if let Some(author_id) = params.author_id {
-        query_builder.push(" AND author_id = ");
-        query_builder.push(author_id.to_string());
-    }
-    if let Some(rollup_category) = params.rollup_category {
-        query_builder.push(" AND rollup_category = ");
-        query_builder.push(rollup_category.to_string());
-    }
-    if let Some(min_unix_timestamp) = params.min_unix_timestamp {
-        query_builder.push(" AND updated_at >= ");
-        query_builder.push(format!("to_timestamp({min_unix_timestamp})"));
-    }
-    if let Some(max_unix_timestamp) = params.max_unix_timestamp {
-        query_builder.push(" AND updated_at <= ");
-        query_builder.push(format!("to_timestamp({max_unix_timestamp})"));
-    }
-    if let Some(min_published_unix_timestamp) = params.min_published_unix_timestamp {
-        query_builder.push(" AND published_at >= ");
-        query_builder.push(format!("to_timestamp({min_published_unix_timestamp})"));
-    }
-    if let Some(max_published_unix_timestamp) = params.max_published_unix_timestamp {
-        query_builder.push(" AND published_at <= ");
-        query_builder.push(format!("to_timestamp({max_published_unix_timestamp})"));
+    for (condition, timestamp) in [
+        (" AND updated_at >= ", params.min_unix_timestamp),
+        (" AND updated_at <= ", params.max_unix_timestamp),
+        (" AND published_at >= ", params.min_published_unix_timestamp),
+        (" AND published_at <= ", params.max_published_unix_timestamp),
+    ] {
+        if let Some(timestamp) = timestamp {
+            query_builder
+                .push(condition)
+                .push(format_args!("to_timestamp({timestamp})"));
+        }
     }
     if params.only_latest.unwrap_or_default() {
         query_builder.push(" ) SELECT builds FROM hero_builds WHERE rn = 1");
@@ -227,12 +207,10 @@ pub(crate) fn search_query(params: &BuildsSearchQuery) -> QueryBuilder<sqlx::Pos
     });
 
     if let Some(limit) = params.limit {
-        query_builder.push(" LIMIT ");
-        query_builder.push(limit.to_string());
+        query_builder.push(" LIMIT ").push(limit);
     }
     if let Some(start) = params.start {
-        query_builder.push(" OFFSET ");
-        query_builder.push(start.to_string());
+        query_builder.push(" OFFSET ").push(start);
     }
     query_builder
 }

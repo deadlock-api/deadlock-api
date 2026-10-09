@@ -11,15 +11,14 @@ use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
 
 use super::common_filters::{
-    ability_order_prefix_filter, ability_unlock_order_prefix_filter, default_min_matches_u64,
-    filter_protected_accounts, round_timestamps,
+    DEFAULT_MIN_MATCHES, ability_order_prefix_filter, ability_unlock_order_prefix_filter,
+    default_min_matches_u64, filter_protected_accounts, round_demo_timestamps,
 };
 use crate::context::AppState;
 use crate::error::APIResult;
 use crate::routes::v1::matches::types::MatchMode;
 use crate::utils::parse::{
-    MIN_DEMO_PLAYER_TIMESTAMP, comma_separated_deserialize_option, default_last_month_timestamp,
-    parse_steam_id_option,
+    comma_separated_deserialize_option, default_last_month_timestamp, parse_steam_id_option,
 };
 use crate::utils::sql::{cached_ch_query, id_list, impl_match_info, join_filters};
 
@@ -141,7 +140,7 @@ fn build_query(hero_id: u32, query: &HeroBuildStatsQuery) -> String {
         player_filters.push(ability_unlock_order_prefix_filter(ids));
     }
     let player_filters = join_filters(&player_filters);
-    let min_matches = query.min_matches.unwrap_or(20);
+    let min_matches = query.min_matches.unwrap_or(DEFAULT_MIN_MATCHES);
     format!(
         "
     SELECT
@@ -180,13 +179,7 @@ async fn get_hero_build_stats(
     valid_build_ids: &[i32],
     mut query: HeroBuildStatsQuery,
 ) -> APIResult<Vec<HeroBuildStats>> {
-    round_timestamps(&mut query.min_unix_timestamp, &mut query.max_unix_timestamp);
-    query.min_unix_timestamp = Some(
-        query
-            .min_unix_timestamp
-            .unwrap_or(MIN_DEMO_PLAYER_TIMESTAMP)
-            .max(MIN_DEMO_PLAYER_TIMESTAMP),
-    );
+    round_demo_timestamps(&mut query.min_unix_timestamp, &mut query.max_unix_timestamp);
     let query_str = build_query(hero_id, &query);
     debug!(
         hero_id,

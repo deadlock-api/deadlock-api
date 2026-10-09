@@ -213,19 +213,16 @@ pub(crate) fn default_true() -> bool {
     true
 }
 
-type QueryParam<'a> = (&'a str, &'a str);
-type QueryParams<'a> = Vec<QueryParam<'a>>;
-pub(crate) fn querify(string: &str) -> QueryParams<'_> {
-    let mut v = Vec::new();
-    for pair in string.split('&') {
-        let mut it = pair.split('=').take(2);
-        let kv = match (it.next(), it.next()) {
-            (Some(k), Some(v)) if !k.is_empty() && !v.is_empty() => (k, v),
-            _ => continue,
-        };
-        v.push(kv);
-    }
-    v
+/// The `key=value` pairs of a raw query string, skipping pairs with an empty key or value.
+/// Values are not percent-decoded.
+pub(crate) fn querify(string: &str) -> impl Iterator<Item = (&str, &str)> {
+    string.split('&').filter_map(|pair| {
+        let mut it = pair.split('=');
+        match (it.next(), it.next()) {
+            (Some(k), Some(v)) if !k.is_empty() && !v.is_empty() => Some((k, v)),
+            _ => None,
+        }
+    })
 }
 
 #[cfg(test)]
@@ -448,6 +445,9 @@ mod tests {
 
     #[test]
     fn test_querify() {
+        fn querify(s: &str) -> Vec<(&str, &str)> {
+            super::querify(s).collect()
+        }
         assert_eq!(
             querify("a=1&b=2&c=3"),
             vec![("a", "1"), ("b", "2"), ("c", "3")]

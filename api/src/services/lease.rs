@@ -19,6 +19,26 @@ if redis.call('get', KEYS[1]) == ARGV[1] then
 end
 return 0";
 
+fn millis(d: Duration) -> i64 {
+    i64::try_from(d.as_millis()).unwrap_or(i64::MAX)
+}
+
+/// Runs one of the `*_IF_OWNED` scripts against `key`, with `ttl_ms` as its `ARGV[2]` if given.
+async fn eval_if_owned(
+    redis: &mut MultiplexedConnection,
+    script: &str,
+    key: &str,
+    token: &str,
+    ttl_ms: Option<i64>,
+) -> redis::RedisResult<i64> {
+    let mut cmd = redis::cmd("EVAL");
+    cmd.arg(script).arg(1).arg(key).arg(token);
+    if let Some(ttl_ms) = ttl_ms {
+        cmd.arg(ttl_ms);
+    }
+    cmd.query_async(redis).await
+}
+
 pub(crate) struct Lease {
     redis: MultiplexedConnection,
     key: String,
@@ -52,19 +72,13 @@ impl Lease {
             let mut redis = redis.clone();
             let key = key.to_owned();
             let token = token.to_owned();
-            let ttl_ms = i64::try_from(ttl.as_millis()).unwrap_or(i64::MAX);
+            let ttl_ms = millis(ttl);
             async move {
                 let mut tick = tokio::time::interval(ttl / 3);
                 tick.tick().await;
                 loop {
                     tick.tick().await;
-                    match redis::cmd("EVAL")
-                        .arg(RENEW_IF_OWNED)
-                        .arg(1)
-                        .arg(&key)
-                        .arg(&token)
-                        .arg(ttl_ms)
-                        .query_async::<i64>(&mut redis)
+                    match eval_if_owned(&mut redis, RENEW_IF_OWNED, &key, &token, Some(ttl_ms))
                         .await
                     {
                         Ok(1) => {}
@@ -84,13 +98,14 @@ impl Lease {
 
     pub(crate) async fn release(mut self) {
         self.heartbeat.abort();
-        if let Err(e) = redis::cmd("EVAL")
-            .arg(RELEASE_IF_OWNED)
-            .arg(1)
-            .arg(&self.key)
-            .arg(&self.token)
-            .query_async::<i64>(&mut self.redis)
-            .await
+        if let Err(e) = eval_if_owned(
+            &mut self.redis,
+            RELEASE_IF_OWNED,
+            &self.key,
+            &self.token,
+            None,
+        )
+        .await
         {
             warn!("lease {} release failed: {e}", self.key);
         }
@@ -103,14 +118,14 @@ impl Lease {
             return self.release().await;
         }
         self.heartbeat.abort();
-        if let Err(e) = redis::cmd("EVAL")
-            .arg(RENEW_IF_OWNED)
-            .arg(1)
-            .arg(&self.key)
-            .arg(&self.token)
-            .arg(i64::try_from(hold.as_millis()).unwrap_or(i64::MAX))
-            .query_async::<i64>(&mut self.redis)
-            .await
+        if let Err(e) = eval_if_owned(
+            &mut self.redis,
+            RENEW_IF_OWNED,
+            &self.key,
+            &self.token,
+            Some(millis(hold)),
+        )
+        .await
         {
             warn!("lease {} hold failed: {e}", self.key);
         }

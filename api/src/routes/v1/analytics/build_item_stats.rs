@@ -1,9 +1,11 @@
+use core::fmt::Write;
+
 use axum::Json;
 use axum::extract::State;
 use axum::response::IntoResponse;
 use axum_extra::extract::Query;
 use serde::{Deserialize, Serialize};
-use sqlx::{Execute, Pool, Postgres, QueryBuilder, Row};
+use sqlx::{Pool, Postgres, Row};
 use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
 
@@ -31,31 +33,27 @@ pub struct BuildItemStats {
 }
 
 fn build_query(query: &BuildItemStatsQuery) -> String {
-    let mut query_builder: QueryBuilder<Postgres> = QueryBuilder::default();
-    query_builder.push(
-        "
+    const LAST_UPDATED: &str = "(data -> 'hero_build' ->> 'last_updated_timestamp')::bigint";
+    let mut sql = "
     SELECT (mod_element ->> 'ability_id')::bigint AS item_id, COUNT(*) as num_builds
     FROM hero_builds,
         LATERAL jsonb_array_elements(data -> 'hero_build' -> 'details' -> 'mod_categories') AS \
-         category_element,
+     category_element,
         LATERAL jsonb_array_elements(category_element -> 'mods') AS mod_element
     WHERE TRUE
-    ",
-    );
+    "
+    .to_owned();
     if let Some(hero_id) = query.hero_id {
-        query_builder.push(" AND hero = ");
-        query_builder.push(hero_id.to_string());
+        let _ = write!(sql, " AND hero = {hero_id}");
     }
-    if let Some(min_last_updated_unix_timestamp) = query.min_last_updated_unix_timestamp {
-        query_builder.push(" AND (data -> 'hero_build' ->> 'last_updated_timestamp')::bigint > ");
-        query_builder.push(min_last_updated_unix_timestamp.to_string());
+    if let Some(min) = query.min_last_updated_unix_timestamp {
+        let _ = write!(sql, " AND {LAST_UPDATED} > {min}");
     }
-    if let Some(max_last_updated_unix_timestamp) = query.max_last_updated_unix_timestamp {
-        query_builder.push(" AND (data -> 'hero_build' ->> 'last_updated_timestamp')::bigint < ");
-        query_builder.push(max_last_updated_unix_timestamp.to_string());
+    if let Some(max) = query.max_last_updated_unix_timestamp {
+        let _ = write!(sql, " AND {LAST_UPDATED} < {max}");
     }
-    query_builder.push(" GROUP BY item_id ORDER BY num_builds DESC");
-    query_builder.build().sql().as_ref().to_owned()
+    sql.push_str(" GROUP BY item_id ORDER BY num_builds DESC");
+    sql
 }
 
 async fn get_build_item_stats(

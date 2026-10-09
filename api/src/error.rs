@@ -86,6 +86,22 @@ impl APIError {
     }
 }
 
+/// Maps any displayable error to [`APIError::internal`], logging the cause first, for failures
+/// whose details must not reach the client.
+pub(super) trait LogInternal<T> {
+    /// Logs `"{context}: {error}"` and maps the error to an internal error carrying `message`.
+    fn log_internal(self, context: &str, message: &'static str) -> APIResult<T>;
+}
+
+impl<T, E: core::fmt::Display> LogInternal<T> for Result<T, E> {
+    fn log_internal(self, context: &str, message: &'static str) -> APIResult<T> {
+        self.map_err(|e| {
+            error!("{context}: {e}");
+            APIError::internal(message)
+        })
+    }
+}
+
 fn build_error_response(status: StatusCode, error: impl serde::Serialize) -> Response<Body> {
     Response::builder()
         .status(status)

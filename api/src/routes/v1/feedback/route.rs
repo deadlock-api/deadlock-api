@@ -4,11 +4,10 @@ use axum::Json;
 use axum::extract::State;
 use axum::http::{HeaderMap, StatusCode};
 use axum::response::IntoResponse;
-use tracing::error;
 use uuid::Uuid;
 
 use crate::context::AppState;
-use crate::error::{APIError, APIResult};
+use crate::error::{APIResult, LogInternal};
 use crate::routes::v1::feedback::structs::{FeedbackSubmission, truncate_user_agent};
 use crate::services::rate_limiter::Quota;
 use crate::services::rate_limiter::extractor::RateLimitKey;
@@ -93,10 +92,7 @@ pub(super) async fn submit_feedback(
     .bind((!submission.targets.is_empty()).then_some(sqlx::types::Json(&submission.targets)))
     .execute(&state.pg_client)
     .await
-    .map_err(|e| {
-        error!("Failed to store website feedback: {e}");
-        APIError::internal("Failed to store feedback")
-    })?;
+    .log_internal("Failed to store website feedback", "Failed to store feedback")?;
 
     Ok(StatusCode::CREATED)
 }

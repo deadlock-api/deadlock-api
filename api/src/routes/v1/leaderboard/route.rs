@@ -12,6 +12,7 @@ use base64::prelude::BASE64_STANDARD;
 use cached::macros::cached;
 use clickhouse::{Row, RowOwned, RowWrite};
 use futures::join;
+use itertools::Itertools;
 use prost::Message;
 use serde::Deserialize;
 use tracing::warn;
@@ -102,25 +103,23 @@ async fn fetch_all_steam_names(
         account_id: u32,
     }
 
-    let mut out = HashMap::new();
-    let results = ch_client
-        .query(
-            "
+    Ok(Arc::new(
+        ch_client
+            .query(
+                "
                 SELECT DISTINCT assumeNotNull(name) as name, account_id
                 FROM steam_profiles
                 ARRAY JOIN [personaname, realname] AS name
                 WHERE name IS NOT NULL AND not empty(name)
                 SETTINGS log_comment = 'leaderboard'
             ",
-        )
-        .fetch_all::<CHResponse>()
-        .await?;
-    for row in results {
-        out.entry(row.name)
-            .or_insert_with(Vec::new)
-            .push(row.account_id);
-    }
-    Ok(Arc::new(out))
+            )
+            .fetch_all::<CHResponse>()
+            .await?
+            .into_iter()
+            .map(|row| (row.name, row.account_id))
+            .into_group_map(),
+    ))
 }
 
 /// Snapshots the current leaderboard into `leaderboard`, or a hero's into `hero_leaderboard`, in

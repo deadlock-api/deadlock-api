@@ -40,23 +40,21 @@ async fn check_health(
     pg_client: Pool<Postgres>,
     redis_client: &mut redis::aio::MultiplexedConnection,
 ) -> Result<Status, APIError> {
-    let mut status = Status::default();
-
-    // Check Clickhouse connection
-    status.services.clickhouse = ch_client
-        .query("SELECT 1 SETTINGS log_comment = 'health_check'")
-        .execute()
-        .await
-        .is_ok();
-
-    // Check Postgres connection
-    status.services.postgres = !pg_client.is_closed();
-
-    // Check Redis connection
-    status.services.redis = redis_client
-        .exists::<&str, bool>("health_check")
-        .await
-        .is_ok();
+    // Check Clickhouse and Redis concurrently
+    let (clickhouse, redis) = tokio::join!(
+        ch_client
+            .query("SELECT 1 SETTINGS log_comment = 'health_check'")
+            .execute(),
+        redis_client.exists::<&str, bool>("health_check"),
+    );
+    let status = Status {
+        services: StatusServices {
+            clickhouse: clickhouse.is_ok(),
+            // A closed pool can't hand out connections
+            postgres: !pg_client.is_closed(),
+            redis: redis.is_ok(),
+        },
+    };
 
     if status.services.all_ok() {
         Ok(status)

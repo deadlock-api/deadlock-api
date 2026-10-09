@@ -8,8 +8,8 @@ use utoipa::ToSchema;
 use uuid::Uuid;
 
 use crate::context::AppState;
-use crate::error::APIError;
-use crate::routes::v1::patron::fetch_patron;
+use crate::error::{APIError, LogInternal};
+use crate::routes::v1::patron::{account_counts, fetch_patron};
 use crate::services::patreon::extractor::PatronSession;
 use crate::services::patreon::steam_accounts_repository::{
     SteamAccount, SteamAccountsRepository, SteamAccountsRepositoryError,
@@ -93,17 +93,8 @@ fn account_not_found() -> APIError {
 
 /// Slots taken by the patron's active accounts and removed accounts still in cooldown.
 async fn used_slots(repo: &SteamAccountsRepository, patron_id: Uuid) -> Result<i32, APIError> {
-    let active_count = repo.count_active_accounts(patron_id).await.map_err(|e| {
-        tracing::error!("Failed to count active accounts: {e}");
-        APIError::internal("Failed to count accounts")
-    })?;
-    let cooldown_count = repo
-        .count_accounts_in_cooldown(patron_id)
-        .await
-        .map_err(|e| {
-            tracing::error!("Failed to count accounts in cooldown: {e}");
-            APIError::internal("Failed to count accounts")
-        })?;
+    let (active_count, cooldown_count) =
+        account_counts(repo, patron_id, "Failed to count accounts").await?;
     Ok(active_count + cooldown_count)
 }
 
@@ -115,10 +106,7 @@ async fn get_owned_account(
 ) -> Result<SteamAccount, APIError> {
     repo.get_account_by_id(account_id, patron_id)
         .await
-        .map_err(|e| {
-            tracing::error!("Failed to get account: {e}");
-            APIError::internal("Failed to retrieve account")
-        })?
+        .log_internal("Failed to get account", "Failed to retrieve account")?
         .ok_or_else(account_not_found)
 }
 
@@ -170,10 +158,10 @@ pub(crate) async fn add_steam_account(
     let existing_deleted = repo
         .find_deleted_account_by_steam_id(session.patron_id, request.steam_id3)
         .await
-        .map_err(|e| {
-            tracing::error!("Failed to check for deleted account: {e}");
-            APIError::internal("Failed to check account status")
-        })?;
+        .log_internal(
+            "Failed to check for deleted account",
+            "Failed to check account status",
+        )?;
 
     // An entry still in cooldown already holds its slot; anything else needs a free one.
     if !existing_deleted
@@ -195,17 +183,14 @@ pub(crate) async fn add_steam_account(
         // Sets deleted_at to NULL
         repo.reactivate_account(deleted_account.id, session.patron_id)
             .await
-            .map_err(|e| {
-                tracing::error!("Failed to reactivate account: {e}");
-                APIError::internal("Failed to reactivate Steam account")
-            })?
+            .log_internal(
+                "Failed to reactivate account",
+                "Failed to reactivate Steam account",
+            )?
     } else {
         repo.add_steam_account(session.patron_id, request.steam_id3)
             .await
-            .map_err(|e| {
-                tracing::error!("Failed to add steam account: {e}");
-                APIError::internal("Failed to add Steam account")
-            })?
+            .log_internal("Failed to add steam account", "Failed to add Steam account")?
     };
 
     Ok((
@@ -251,10 +236,10 @@ pub(crate) async fn list_steam_accounts(
     let accounts = repo
         .get_accounts_for_patron(session.patron_id)
         .await
-        .map_err(|e| {
-            tracing::error!("Failed to get accounts for patron: {e}");
-            APIError::internal("Failed to fetch Steam accounts")
-        })?;
+        .log_internal(
+            "Failed to get accounts for patron",
+            "Failed to fetch Steam accounts",
+        )?;
 
     // Transform accounts to include is_in_cooldown flag
     let mut active_count = 0i32;
@@ -317,10 +302,10 @@ async fn resolve_account_id(
             "Invalid account: must be a steam_id3 or an account entry id",
         )
     })?;
-    let accounts = repo.get_accounts_for_patron(patron_id).await.map_err(|e| {
-        tracing::error!("Failed to get accounts for patron: {e}");
-        APIError::internal("Failed to fetch Steam accounts")
-    })?;
+    let accounts = repo.get_accounts_for_patron(patron_id).await.log_internal(
+        "Failed to get accounts for patron",
+        "Failed to fetch Steam accounts",
+    )?;
     accounts
         .into_iter()
         .filter(|a| a.steam_id3 == i64::from(steam_id3))
@@ -448,19 +433,19 @@ pub(crate) async fn replace_steam_account(
     // Step 3: Hard delete the old record
     repo.hard_delete_account(account_id, session.patron_id)
         .await
-        .map_err(|e| {
-            tracing::error!("Failed to hard delete old account: {e}");
-            APIError::internal("Failed to replace account")
-        })?;
+        .log_internal(
+            "Failed to hard delete old account",
+            "Failed to replace account",
+        )?;
 
     // Step 4: Insert new account with the provided steam_id3
     let new_account = repo
         .add_steam_account(session.patron_id, request.steam_id3)
         .await
-        .map_err(|e| {
-            tracing::error!("Failed to add new steam account: {e}");
-            APIError::internal("Failed to replace account")
-        })?;
+        .log_internal(
+            "Failed to add new steam account",
+            "Failed to replace account",
+        )?;
 
     // Return 200 OK with new account details
     Ok(Json(SteamAccountResponse::from(new_account)))
