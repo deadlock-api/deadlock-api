@@ -70,7 +70,8 @@ const SAMPLE_PARAMS = {
     .find((file) => file.endsWith(".md"))
     ?.replace(/\.md$/, ""),
 };
-const SKIP = [/^\/auth\//, /^\/streamkit\/widgets\//, /\$accountId/, /\.xml$/];
+// Server routes that answer XML, images or JSON are not pages.
+const SKIP = [/^\/auth\//, /^\/streamkit\/widgets\//, /\$accountId/, /\.(xml|png)$/, /^\/\.well-known\//];
 // The design system showcase only exists in `pnpm dev`; a build answers 404 there by design.
 const DEV_SERVER = "http://localhost:3000";
 if (args.base !== DEV_SERVER) SKIP.push(/^\/dev\//);
@@ -264,8 +265,13 @@ const context = await browser.newContext({
   timezoneId: args.tz,
   serviceWorkers: "block",
 });
-// Analytics must not count smoke runs as visitors.
-await context.route(/posthog|\/\/i\.deadlock-api\.com\//, (route) => route.abort());
+// Analytics must not count smoke runs as visitors. In production Cloudflare also injects Zaraz (which
+// loads Google Analytics, whose ga-audiences request can hang and keep the page from going network
+// idle) and its RUM beacon.
+await context.route(
+  /posthog|\/\/i\.deadlock-api\.com\/|\/cdn-cgi\/(zaraz|rum)\b|google-analytics\.com|googletagmanager\.com|google\.com\/ads\//,
+  (route) => route.abort(),
+);
 
 console.log(`smoke: ${routes.length} routes on ${args.base} at ${args.width}px${args.tz ? ` in ${args.tz}` : ""}`);
 const results = [];
