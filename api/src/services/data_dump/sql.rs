@@ -169,14 +169,6 @@ pub(crate) fn table_partition_counts(table: &str, partition_expr: &str) -> Strin
     )
 }
 
-/// Partitions holding rows of an account, so a privacy deletion can be scrubbed promptly.
-/// `player_match_history` is ordered by `account_id`, unlike `match_player`.
-pub(crate) fn account_partitions(partition_expr: &str, account_id: u32) -> String {
-    format!(
-        "SELECT DISTINCT toUInt64({partition_expr}) AS p FROM default.player_match_history WHERE account_id = {account_id}"
-    )
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

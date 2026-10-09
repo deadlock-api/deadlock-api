@@ -195,7 +195,9 @@ pub(crate) struct DataDumpConfig {
     pub(crate) rebuild_per_tick: usize,
     /// Hourly deltas older than this are folded into one residual per day.
     pub(crate) fold_after_secs: i64,
-    /// Every partition is rebuilt at least this often (self-healing rolling refresh).
+    /// Every partition is rebuilt at least this often (self-healing rolling refresh). Also
+    /// bounds how long a privacy-deleted account stays in the lake: the row policies keep it
+    /// out of every rebuild, and it may stay up to two weeks.
     pub(crate) max_base_age_secs: i64,
     pub(crate) lease_ttl_secs: u64,
 }
@@ -215,7 +217,7 @@ impl Default for DataDumpConfig {
             lag_secs: 600,
             rebuild_per_tick: 2,
             fold_after_secs: 24 * 3600,
-            max_base_age_secs: 30 * 24 * 3600,
+            max_base_age_secs: 13 * 24 * 3600,
             lease_ttl_secs: 15 * 60,
         }
     }

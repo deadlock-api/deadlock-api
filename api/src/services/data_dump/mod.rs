@@ -4,22 +4,25 @@
 //! tables, fresh snapshots for the small ones, a bounded amount of partition rebuilds
 //! (compaction), a `DuckLake` catalog, and finally a conditional write of `manifest.json`,
 //! the only state there is. Any failure leaves the manifest untouched and the next tick
-//! resumes from it; objects nobody references are swept an hour after they drop out of it.
+//! resumes from it; objects a published manifest dropped are swept at the start of the next
+//! tick, so they outlive it by less than an hour.
+//!
+//! Privacy deletions need no work here: the row policies hide protected accounts from every
+//! export, and the rolling refresh rebuilds each partition within `max_base_age_secs`.
 
 use core::time::Duration;
-use std::collections::{BTreeMap, BTreeSet, HashSet};
+use std::collections::{BTreeMap, HashSet};
 use std::path::PathBuf;
 use std::sync::Arc;
 
 use chrono::{DateTime, Utc};
 use object_store::path::Path;
 use object_store::{Attribute, Attributes, ObjectStore, PutOptions, PutPayload};
-use redis::AsyncCommands;
 use redis::aio::MultiplexedConnection;
 use sqlx::{Pool, Postgres};
 use tracing::{error, info, warn};
 
-use self::compaction::{Params, Reason};
+use self::compaction::Params;
 use self::export::{Exporter, Increment};
 use self::manifest::{Column, FileEntry, FileKind, Manifest, PolicyKind, TableState, TableStatus};
 use self::policy::{Policy, TABLES, TablePolicy};
@@ -38,10 +41,6 @@ mod sweep;
 
 const TICK: Duration = Duration::from_secs(3600);
 const HOUR: i64 = 3600;
-/// How long data files and catalogs outlive the manifest that dropped them. Readers re-read
-/// the manifest far more often (the MCP server every 5 minutes); every extra hour keeps a
-/// copy of each rebuilt `match_player` base (~5 GiB) around.
-const SWEEP_GRACE: Duration = Duration::from_hours(1);
 const FOLD_EVERY: chrono::Duration = chrono::Duration::hours(20);
 const LEASE_KEY: &str = "data_dump:leader";
 
@@ -81,44 +80,6 @@ pub(crate) struct DataDump {
     pub(crate) redis: MultiplexedConnection,
     pub(crate) store: Arc<dyn ObjectStore>,
     pub(crate) work_dir: PathBuf,
-}
-
-fn forced_key(table: &str) -> String {
-    format!("data_dump:forced:{table}")
-}
-
-/// Queues the partitions holding an account's rows for an immediate rebuild, so a privacy
-/// deletion is scrubbed from the lake on the next tick instead of the rolling refresh.
-pub(crate) async fn queue_account_scrub(
-    mut redis: MultiplexedConnection,
-    ch: clickhouse::Client,
-    account_id: u32,
-) {
-    for table in TABLES {
-        let Policy::Incremental { partition_expr, .. } = table.policy else {
-            continue;
-        };
-        let partitions = match ch
-            .query(&sql::account_partitions(partition_expr, account_id))
-            .fetch_all::<u64>()
-            .await
-        {
-            Ok(p) => p,
-            Err(e) => {
-                warn!("data dump: could not resolve partitions of account {account_id}: {e}");
-                continue;
-            }
-        };
-        if partitions.is_empty() {
-            continue;
-        }
-        if let Err(e) = redis
-            .sadd::<_, _, ()>(forced_key(table.name), partitions)
-            .await
-        {
-            warn!("data dump: could not queue scrub for account {account_id}: {e}");
-        }
-    }
 }
 
 fn ts(unix: i64) -> String {
@@ -210,8 +171,13 @@ impl DataDump {
             e_tag,
         } = manifest::load(&self.store, &manifest_key, &self.config.public_url).await?;
         manifest.public_url = self.config.public_url.trim_end_matches('/').to_owned();
-        let previously_referenced: HashSet<String> =
-            manifest.referenced_keys().map(str::to_owned).collect();
+        // Readers re-read the manifest far more often than hourly (the MCP server every 5
+        // minutes), so whatever the previous publish dropped can go before this tick uploads.
+        if let Some(published_at) = manifest.generated_at
+            && let Err(e) = self.sweep(&manifest, published_at).await
+        {
+            warn!("data dump: sweep failed: {e}");
+        }
 
         // The policies filter protected accounts out of the INVOKER views for the dump user.
         update_row_policy(&self.pg, &self.ch_admin).await?;
@@ -224,10 +190,6 @@ impl DataDump {
             .is_none_or(|t| Utc::now() - t > FOLD_EVERY);
 
         let mut first_error: Option<DumpError> = None;
-        // Forced partitions rebuilt in this tick. They leave the redis queue only after the
-        // manifest referencing their new files is published; a tick that dies before that
-        // must rebuild them again, or a privacy scrub would be lost.
-        let mut forced_done: Vec<(&'static str, u64)> = Vec::new();
         for table in TABLES {
             shutdown_check()?;
             let result = match table.policy {
@@ -236,15 +198,8 @@ impl DataDump {
                         .await
                 }
                 Policy::Incremental { .. } => {
-                    self.export_incremental(
-                        &exporter,
-                        &mut manifest,
-                        table,
-                        now_hi,
-                        fold_due,
-                        &mut forced_done,
-                    )
-                    .await
+                    self.export_incremental(&exporter, &mut manifest, table, now_hi, fold_due)
+                        .await
                 }
             };
             if let Err(e) = result {
@@ -277,11 +232,6 @@ impl DataDump {
             }
         }
 
-        manifest.retire_unreferenced(
-            &previously_referenced,
-            Utc::now(),
-            chrono::Duration::from_std(SWEEP_GRACE).unwrap_or(chrono::Duration::hours(1)),
-        );
         manifest.version = next_version;
         manifest.generated_at = Some(Utc::now());
         manifest::publish(&self.store, &manifest_key, &manifest, e_tag.as_deref()).await?;
@@ -295,45 +245,21 @@ impl DataDump {
                 .collect::<Vec<_>>(),
             "data dump manifest published"
         );
-        self.clear_forced(forced_done).await;
-
-        self.sweep(&manifest).await?;
-
         first_error.map_or(Ok(()), Err)
     }
 
-    /// Deletes data files and superseded catalogs an hour after they left the manifest.
-    async fn sweep(&self, manifest: &Manifest) -> Result<(), DumpError> {
+    /// Deletes data files and catalogs `manifest`, published at `published_at`, no longer
+    /// references.
+    async fn sweep(
+        &self,
+        manifest: &Manifest,
+        published_at: DateTime<Utc>,
+    ) -> Result<(), DumpError> {
         let referenced: HashSet<String> = manifest.referenced_keys().map(str::to_owned).collect();
-        sweep::sweep(
-            &self.store,
-            &self.key("tables/"),
-            &referenced,
-            &manifest.retired,
-            SWEEP_GRACE,
-        )
-        .await?;
-        // A catalog is uploaded in the tick that retires its predecessor, so its upload time
-        // is the predecessor's retirement time.
+        sweep::sweep(&self.store, &self.key("tables/"), &referenced, published_at).await?;
         let catalogs: HashSet<String> = manifest.catalog.iter().cloned().collect();
-        sweep::sweep(
-            &self.store,
-            &self.key("catalog/"),
-            &catalogs,
-            &BTreeMap::new(),
-            SWEEP_GRACE,
-        )
-        .await?;
+        sweep::sweep(&self.store, &self.key("catalog/"), &catalogs, published_at).await?;
         Ok(())
-    }
-
-    async fn clear_forced(&self, done: Vec<(&'static str, u64)>) {
-        let mut redis = self.redis.clone();
-        for (table, partition) in done {
-            if let Err(e) = redis.srem::<_, _, ()>(forced_key(table), partition).await {
-                warn!("data dump: could not clear forced partition {table}/{partition}: {e}");
-            }
-        }
     }
 
     async fn fetch_columns(
@@ -417,7 +343,6 @@ impl DataDump {
         table: &TablePolicy,
         now_hi: i64,
         fold_due: bool,
-        forced_done: &mut Vec<(&'static str, u64)>,
     ) -> Result<(), DumpError> {
         let Policy::Incremental {
             watermark,
@@ -565,22 +490,13 @@ impl DataDump {
 
         // Bounded rebuild work on the generation being built, or the current one.
         let target_gen = state.building.unwrap_or(state.generation);
-        let forced: BTreeSet<u64> = self
-            .redis
-            .clone()
-            .smembers::<_, Vec<u64>>(forced_key(name))
-            .await
-            .unwrap_or_default()
-            .into_iter()
-            .collect();
         let params = Params {
             budget: self.config.rebuild_per_tick,
             threshold_divisor: 100,
             threshold_min: 20_000,
             max_base_age_secs: self.config.max_base_age_secs,
         };
-        let plan =
-            compaction::plan_rebuilds(state, target_gen, &actual, &forced, watermark_hi, &params);
+        let plan = compaction::plan_rebuilds(state, target_gen, &actual, watermark_hi, &params);
         for rebuild in plan {
             shutdown_check()?;
             let p = rebuild.partition;
@@ -614,9 +530,6 @@ impl DataDump {
                 "data dump: {name} g{target_gen} rebuilt partition {p} ({:?})",
                 rebuild.reason
             );
-            if rebuild.reason == Reason::Forced {
-                forced_done.push((name, p));
-            }
         }
 
         // A building generation becomes current once every partition has a base.

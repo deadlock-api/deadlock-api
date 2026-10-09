@@ -1,11 +1,11 @@
-//! Stateless garbage collection: anything under the tables prefix that the published manifest
-//! does not reference is deleted once the grace period has passed. For a file the manifest
-//! retired (folded or replaced by compaction) the grace period counts from its retirement,
-//! so readers of the previous manifest keep working; for an object that was never published
-//! (left behind by a crashed run) it counts from its upload.
+//! Stateless garbage collection, run at the start of a tick against the manifest the
+//! previous tick published: anything under a prefix that manifest does not reference and
+//! that was uploaded before it was published is deleted. That is every file the publish
+//! dropped (folded or replaced by compaction) and every object a crashed run left behind,
+//! but never an upload of a run still in flight. A dropped file therefore outlives its
+//! manifest by less than one tick, so readers of the previous manifest keep working.
 
-use core::time::Duration;
-use std::collections::{BTreeMap, HashSet};
+use std::collections::HashSet;
 use std::sync::Arc;
 
 use chrono::{DateTime, Utc};
@@ -20,11 +20,8 @@ pub(crate) async fn sweep(
     store: &Arc<dyn ObjectStore>,
     prefix: &str,
     referenced: &HashSet<String>,
-    retired: &BTreeMap<String, DateTime<Utc>>,
-    grace: Duration,
+    published_at: DateTime<Utc>,
 ) -> Result<usize, DumpError> {
-    let cutoff =
-        Utc::now() - chrono::Duration::from_std(grace).unwrap_or(chrono::Duration::hours(1));
     let stale: Vec<Path> = store
         .list(Some(&Path::from(prefix)))
         .try_filter_map(|meta| {
@@ -32,8 +29,7 @@ pub(crate) async fn sweep(
                 meta.location.as_ref(),
                 meta.last_modified,
                 referenced,
-                retired,
-                cutoff,
+                published_at,
             );
             async move { Ok(stale.then_some(meta.location)) }
         })
@@ -55,10 +51,9 @@ fn is_stale(
     key: &str,
     last_modified: DateTime<Utc>,
     referenced: &HashSet<String>,
-    retired: &BTreeMap<String, DateTime<Utc>>,
-    cutoff: DateTime<Utc>,
+    published_at: DateTime<Utc>,
 ) -> bool {
-    !referenced.contains(key) && retired.get(key).copied().unwrap_or(last_modified) < cutoff
+    !referenced.contains(key) && last_modified < published_at
 }
 
 #[cfg(test)]
@@ -66,26 +61,18 @@ mod tests {
     use super::*;
 
     #[test]
-    fn an_old_file_retired_just_now_is_kept() {
-        let now = Utc::now();
-        let cutoff = now - chrono::Duration::hours(24);
-        let built = now - chrono::Duration::days(3);
-        let retired = BTreeMap::from([("old".to_owned(), now)]);
-        assert!(!is_stale("old", built, &HashSet::new(), &retired, cutoff));
-
-        let retired = BTreeMap::from([("old".to_owned(), now - chrono::Duration::hours(25))]);
-        assert!(is_stale("old", built, &HashSet::new(), &retired, cutoff));
+    fn unreferenced_objects_older_than_the_publish_go() {
+        let published_at = Utc::now();
+        let before = published_at - chrono::Duration::minutes(5);
+        assert!(is_stale("old", before, &HashSet::new(), published_at));
+        let referenced = HashSet::from(["old".to_owned()]);
+        assert!(!is_stale("old", before, &referenced, published_at));
     }
 
     #[test]
-    fn unpublished_objects_age_from_their_upload() {
-        let now = Utc::now();
-        let cutoff = now - chrono::Duration::hours(24);
-        let none = BTreeMap::new();
-        assert!(!is_stale("orphan", now, &HashSet::new(), &none, cutoff));
-        let old = now - chrono::Duration::days(2);
-        assert!(is_stale("orphan", old, &HashSet::new(), &none, cutoff));
-        let referenced = HashSet::from(["orphan".to_owned()]);
-        assert!(!is_stale("orphan", old, &referenced, &none, cutoff));
+    fn uploads_after_the_publish_are_kept() {
+        let published_at = Utc::now();
+        let after = published_at + chrono::Duration::minutes(5);
+        assert!(!is_stale("in-flight", after, &HashSet::new(), published_at));
     }
 }

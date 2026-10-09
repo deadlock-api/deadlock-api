@@ -5,7 +5,7 @@
 //! `p` is in `base(p)` if `t <= base(p).hi`, otherwise in exactly one live delta or residual
 //! whose `(lo, hi]` contains `t`. Only watermarks are compared, never wall-clock time.
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeMap;
 
 use super::manifest::{FileKind, TableState};
 
@@ -21,7 +21,6 @@ pub(crate) struct Params {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum Reason {
-    Forced,
     Missing,
     Pending,
     Drift,
@@ -47,13 +46,11 @@ pub(crate) fn pending_rows(table: &TableState, generation: u32, partition: u64) 
 /// Picks up to `params.budget` partitions to rebuild, most urgent first.
 ///
 /// `actual` maps every partition currently in `ClickHouse` to its raw row count (the probe);
-/// `forced` are partitions queued by privacy deletion requests; `watermark_hi` is the
-/// table's current watermark.
+/// `watermark_hi` is the table's current watermark.
 pub(crate) fn plan_rebuilds(
     table: &TableState,
     generation: u32,
     actual: &BTreeMap<u64, u64>,
-    forced: &BTreeSet<u64>,
     watermark_hi: i64,
     params: &Params,
 ) -> Vec<Rebuild> {
@@ -64,11 +61,6 @@ pub(crate) fn plan_rebuilds(
         }
     };
 
-    for &p in forced {
-        if actual.contains_key(&p) {
-            push(p, Reason::Forced);
-        }
-    }
     for &p in actual.keys() {
         if table.base(generation, p).is_none() {
             push(p, Reason::Missing);
@@ -209,22 +201,22 @@ mod tests {
     }
 
     #[test]
-    fn missing_bases_come_before_pending_and_forced_first() {
+    fn missing_bases_come_before_pending() {
         let t = table(vec![
             file(FileKind::Base, Some(1), 0, 100, 1_000_000),
             file(FileKind::Delta, Some(1), 100, 200, 50_000),
         ]);
         let actual = BTreeMap::from([(1, 1_050_000), (2, 10), (3, 10)]);
-        let plan = plan_rebuilds(&t, 1, &actual, &BTreeSet::from([3]), 200, &params());
+        let plan = plan_rebuilds(&t, 1, &actual, 200, &params());
         assert_eq!(
             plan,
             vec![
                 Rebuild {
-                    partition: 3,
-                    reason: Reason::Forced
+                    partition: 2,
+                    reason: Reason::Missing
                 },
                 Rebuild {
-                    partition: 2,
+                    partition: 3,
                     reason: Reason::Missing
                 },
             ]
@@ -233,19 +225,11 @@ mod tests {
             &t,
             1,
             &actual,
-            &BTreeSet::new(),
             200,
             &Params {
                 budget: 3,
                 ..params()
             },
-        );
-        assert_eq!(
-            plan[1],
-            Rebuild {
-                partition: 3,
-                reason: Reason::Missing
-            }
         );
         assert_eq!(
             plan[2],
@@ -276,12 +260,12 @@ mod tests {
         ]);
         let actual = BTreeMap::from([(1, 1_000_100), (2, 1_000)]);
         assert_eq!(
-            plan_rebuilds(&t, 1, &actual, &BTreeSet::new(), 200, &params()),
+            plan_rebuilds(&t, 1, &actual, 200, &params()),
             Vec::<Rebuild>::new()
         );
 
         let drifted = BTreeMap::from([(1, 1_200_000), (2, 1_000)]);
-        let plan = plan_rebuilds(&t, 1, &drifted, &BTreeSet::new(), 200, &params());
+        let plan = plan_rebuilds(&t, 1, &drifted, 200, &params());
         assert_eq!(
             plan,
             vec![Rebuild {
@@ -291,7 +275,7 @@ mod tests {
         );
 
         let old = 100 + 31 * 86_400;
-        let plan = plan_rebuilds(&t, 1, &actual, &BTreeSet::new(), old, &params());
+        let plan = plan_rebuilds(&t, 1, &actual, old, &params());
         assert_eq!(plan.len(), 2);
         assert!(plan.iter().all(|r| r.reason == Reason::Rolling));
     }

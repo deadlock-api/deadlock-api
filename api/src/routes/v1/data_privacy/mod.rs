@@ -135,11 +135,6 @@ pub(crate) async fn request_deletion(
     verify_ownership(&state, &open_id_params, steam_id).await?;
     protect_account(&state.pg_client, steam_id).await?;
     update_row_policy(&state.pg_client, &state.ch_client).await?;
-    tokio::spawn(crate::services::data_dump::queue_account_scrub(
-        state.redis_client.clone(),
-        state.ch_client.clone(),
-        steam_id,
-    ));
     Ok(())
 }
 
