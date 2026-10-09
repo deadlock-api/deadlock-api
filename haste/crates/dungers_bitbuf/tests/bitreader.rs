@@ -150,3 +150,32 @@ fn test_read_bits_matches_reference() {
         }
     }
 }
+
+#[test]
+fn test_read_bits_matches_read_ubit64_at_every_offset() {
+    let buf: Vec<u8> = (0..64u32)
+        .map(|i| (i.wrapping_mul(0x9d) ^ 0x5a) as u8)
+        .collect();
+    for offset in 0..16 {
+        for num_bits in 0..=(buf.len() * 8 - offset) {
+            let mut br = BitReader::new(&buf);
+            br.seek(offset).unwrap();
+            let mut out = vec![0u8; num_bits.div_ceil(8)];
+            br.read_bits(&mut out, num_bits).unwrap();
+            assert_eq!(br.num_bits_read(), offset + num_bits);
+
+            let mut want = BitReader::new(&buf);
+            want.seek(offset).unwrap();
+            for (i, byte) in out.iter().enumerate() {
+                let bits = (num_bits - i * 8).min(8);
+                assert_eq!(u64::from(*byte), want.read_ubit64(bits).unwrap());
+            }
+        }
+
+        // one bit too many is an error.
+        let mut br = BitReader::new(&buf);
+        br.seek(offset).unwrap();
+        let mut out = vec![0u8; buf.len() + 1];
+        assert!(br.read_bits(&mut out, buf.len() * 8 - offset + 1).is_err());
+    }
+}

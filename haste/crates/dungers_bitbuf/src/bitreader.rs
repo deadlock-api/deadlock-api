@@ -81,6 +81,29 @@ impl<'a> BitReader<'a> {
         Ok(self.cur_bit)
     }
 
+    /// advances the reader by `num_bits`. returns [`BitError::Overflow`] (without moving) if fewer
+    /// than `num_bits` bits are left.
+    #[inline]
+    pub fn skip(&mut self, num_bits: usize) -> Result<(), BitError> {
+        if self.num_bits_left() < num_bits {
+            return Err(BitError::Overflow);
+        }
+        self.cur_bit += num_bits;
+        Ok(())
+    }
+
+    /// returns the next `num_bits` without consuming them. bits past the end of the buffer read as
+    /// zero, so callers must check [`Self::num_bits_left`] (or let a following [`Self::skip`]
+    /// fail) before trusting more bits than are left.
+    ///
+    /// a single load yields at least 57 bits; bits beyond that (`num_bits` > 57) may read as zero.
+    #[must_use]
+    #[inline]
+    pub fn peek_ubit64_zero_extended(&self, num_bits: usize) -> u64 {
+        debug_assert!(num_bits <= 57, "a single load only yields 57 usable bits");
+        (self.load_u64_le(self.cur_bit >> 3) >> (self.cur_bit & 7)) & EXTRA_MASKS[num_bits.min(64)]
+    }
+
     /// `read_ubit64` reads the specified number of bits into a `u64`. the function can read up to a
     /// maximum of 64 bits at a time. if the `num_bits` exceeds the number of remaining bits, the
     /// function returns an [`BitError::Overflow`] error.
@@ -128,45 +151,36 @@ impl<'a> BitReader<'a> {
             return Err(BitError::Overflow);
         }
 
-        // byte-aligned fast path: a plain copy.
-        if self.cur_bit.is_multiple_of(8) {
-            let start = self.cur_bit >> 3;
-            let num_bytes = num_bits >> 3;
+        let start = self.cur_bit >> 3;
+        let shift = self.cur_bit & 7;
+        let num_bytes = num_bits >> 3;
+        let dst = &mut buf[..num_bytes];
+
+        if shift == 0 {
+            // byte-aligned: a plain copy.
             let src = self
                 .data
                 .get(start..start + num_bytes)
                 .ok_or(BitError::Overflow)?;
-            buf[..num_bytes].copy_from_slice(src);
-            self.cur_bit += num_bytes << 3;
-            let rem_bits = num_bits & 7;
-            if rem_bits > 0 {
-                buf[num_bytes] = self.read_ubit64(rem_bits)?.try_into()?;
+            dst.copy_from_slice(src);
+        } else if num_bytes > 0 {
+            // unaligned: every output byte is stitched together from two adjacent input bytes.
+            // the last whole output byte ends at bit `cur_bit + 8 * num_bytes - 1`, which lives in
+            // byte `start + num_bytes` (shift > 0), so `num_bytes + 1` input bytes are needed; the
+            // bounds check above guarantees they exist.
+            let src = self
+                .data
+                .get(start..=start + num_bytes)
+                .ok_or(BitError::Overflow)?;
+            for ((d, &lo), &hi) in dst.iter_mut().zip(src).zip(&src[1..]) {
+                *d = (lo >> shift) | (hi << (8 - shift));
             }
-            return Ok(());
         }
+        self.cur_bit += num_bytes << 3;
 
-        let mut bits_left = num_bits;
-        let mut bytes_written = 0;
-
-        while bits_left >= 64 {
-            let value = self.read_ubit64(64)?;
-            let bytes = value.to_le_bytes();
-
-            let dest_range = bytes_written..bytes_written + 8;
-            buf[dest_range].copy_from_slice(&bytes);
-
-            bytes_written += 8;
-            bits_left -= 64;
-        }
-
-        while bits_left >= 8 {
-            buf[bytes_written] = self.read_ubit64(8)?.try_into()?;
-            bytes_written += 1;
-            bits_left -= 8;
-        }
-
-        if bits_left > 0 {
-            buf[bytes_written] = self.read_ubit64(bits_left)?.try_into()?;
+        let rem_bits = num_bits & 7;
+        if rem_bits > 0 {
+            buf[num_bytes] = self.read_ubit64(rem_bits)?.try_into()?;
         }
 
         Ok(())
@@ -183,6 +197,30 @@ impl<'a> BitReader<'a> {
     where
         T: From<u8> + core::ops::BitOrAssign + core::ops::Shl<usize, Output = T>,
     {
+        // fast path: a single load yields at least 57 bits, i.e. 7 whole bytes; most varints are
+        // shorter than that and are decoded without a bounds-checked read per byte.
+        const FAST_BYTES: usize = 7;
+        let bytes = (self.load_u64_le(self.cur_bit >> 3) >> (self.cur_bit & 7)).to_le_bytes();
+        let mut value = T::from(0);
+        for (count, &byte) in bytes
+            .iter()
+            .enumerate()
+            .take(max_varint_size::<T>().min(FAST_BYTES))
+        {
+            value |= T::from(byte & PAYLOAD_BITS) << (count * 7);
+            if (byte & CONTINUE_BIT) == 0 {
+                // bytes past the end of the buffer load as zero (which would end the varint), so
+                // only accept it if all of its bytes are actually there.
+                let num_bits = (count + 1) << 3;
+                if num_bits > self.num_bits_left() {
+                    return Err(BitError::Overflow);
+                }
+                self.cur_bit += num_bits;
+                return Ok(value);
+            }
+        }
+
+        // slow path: longer (or malformed) varints are read byte by byte.
         let byte = self.read_byte()?;
         if (byte & CONTINUE_BIT) == 0 {
             return Ok(T::from(byte));

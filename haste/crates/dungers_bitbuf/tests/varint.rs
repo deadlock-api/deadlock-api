@@ -76,3 +76,51 @@ fn test_uvarint32_rejects_overlong() {
     let mut br = BitReader::new(&buf);
     assert_eq!(br.read_uvarint32().unwrap(), u32::MAX);
 }
+
+#[test]
+fn test_varuint_unaligned_and_truncated() {
+    let values: Vec<u64> = (0..64)
+        .map(|i| (1u64 << i) - 1)
+        .chain([u64::MAX, 0, 1])
+        .collect();
+    for offset in 0..8 {
+        let mut buf = vec![0u8; 1024];
+        let mut bw = BitWriter::new(&mut buf);
+        bw.write_ubit64(0x55, offset).unwrap();
+        for x in &values {
+            bw.write_uvarint64(*x).unwrap();
+        }
+
+        let mut br = BitReader::new(&buf);
+        br.read_ubit64(offset).unwrap();
+        for want in &values {
+            let got: u64 = br.read_uvarint().unwrap();
+            assert_eq!(got, *want);
+        }
+    }
+
+    // a varint that runs past the end of the buffer is an overflow, even if the missing bytes
+    // would have ended it.
+    for len in 1..=10usize {
+        let mut buf = vec![0xffu8; len];
+        let mut br = BitReader::new(&buf);
+        assert!(br.read_uvarint::<u64>().is_err(), "{len}");
+        assert_eq!(br.num_bits_read() % 8, 0);
+
+        // ... while the same bytes followed by a terminating byte decode fine.
+        buf.push(0x01);
+        let mut br = BitReader::new(&buf);
+        let got = br.read_uvarint::<u64>();
+        if len < 10 {
+            assert!(got.is_ok(), "{len}");
+            assert_eq!(br.num_bits_read(), (len + 1) * 8);
+        } else {
+            assert!(got.is_err(), "{len}");
+        }
+    }
+
+    // too many continuation bytes for a u32.
+    let buf = [0xffu8; 16];
+    let mut br = BitReader::new(&buf);
+    assert!(br.read_uvarint::<u32>().is_err());
+}

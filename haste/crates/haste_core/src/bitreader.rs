@@ -67,10 +67,17 @@ impl<'a> BitReader<'a> {
         self.inner.read_bytes(buf)
     }
 
+    /// delegated from [`dungers::bitbuf::BitReader`].
     #[inline]
     pub fn skip_bits(&mut self, num_bits: usize) -> Result<(), BitError> {
-        self.inner.seek_relative(num_bits as isize)?;
-        Ok(())
+        self.inner.skip(num_bits)
+    }
+
+    /// delegated from [`dungers::bitbuf::BitReader`].
+    #[must_use]
+    #[inline]
+    pub(crate) fn peek_ubit64_zero_extended(&self, num_bits: usize) -> u64 {
+        self.inner.peek_ubit64_zero_extended(num_bits)
     }
 
     #[must_use]

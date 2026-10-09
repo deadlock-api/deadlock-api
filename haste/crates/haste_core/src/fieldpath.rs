@@ -767,9 +767,24 @@ struct FlatBranch {
     right: FlatChild,
 }
 
+/// number of bits resolved by a single [`FlatTree::lookup`] probe.
+const LOOKUP_BITS: usize = 8;
+
+/// entry of the first-level lookup table, indexed by the next [`LOOKUP_BITS`] bits of the stream
+/// (in stream order: the first bit is the least significant one).
+#[derive(Clone, Copy)]
+enum Lookup {
+    /// the code is complete within the peeked bits; it is `len` bits long.
+    Leaf { op: FieldOp, len: u8 },
+    /// the code is longer than [`LOOKUP_BITS`]; the walk continues bit by bit at this branch.
+    Branch(u32),
+}
+
 struct FlatTree {
     nodes: Vec<FlatBranch>,
-    root: u32,
+    /// the frequent ops have codes of a few bits, so nearly every op is resolved by one probe of
+    /// this table instead of a bit-by-bit walk.
+    lookup: [Lookup; 1 << LOOKUP_BITS],
 }
 
 fn flatten_child(node: &Node<FieldOp>, out: &mut Vec<FlatBranch>) -> FlatChild {
@@ -787,12 +802,66 @@ fn flatten_branch(node: &Node<FieldOp>, out: &mut Vec<FlatBranch>) -> u32 {
     idx
 }
 
+/// resolves `bits` (in stream order) against the tree starting at branch `root`.
+fn build_lookup_entry(nodes: &[FlatBranch], root: u32, bits: usize) -> Lookup {
+    let mut idx = root;
+    for i in 0..LOOKUP_BITS {
+        let node = &nodes[idx as usize];
+        let child = if (bits >> i) & 1 == 1 {
+            &node.right
+        } else {
+            &node.left
+        };
+        match child {
+            FlatChild::Leaf(op) => {
+                return Lookup::Leaf {
+                    op: *op,
+                    len: (i + 1) as u8,
+                };
+            }
+            FlatChild::Branch(next) => idx = *next,
+        }
+    }
+    Lookup::Branch(idx)
+}
+
 static FIELDOP_TREE: LazyLock<FlatTree> = LazyLock::new(|| {
     let hierarchy = build_fieldop_hierarchy();
     let mut nodes = Vec::new();
     let root = flatten_branch(&hierarchy, &mut nodes);
-    FlatTree { nodes, root }
+    let lookup = core::array::from_fn(|bits| build_lookup_entry(&nodes, root, bits));
+    FlatTree { nodes, lookup }
 });
+
+/// reads the next field op: one table probe for codes of up to [`LOOKUP_BITS`] bits, then a
+/// bit-by-bit walk of the flattened tree for the (rare) longer ones.
+#[inline]
+fn read_field_op(tree: &FlatTree, br: &mut BitReader) -> Result<FieldOp, BitError> {
+    // bits past the end of the buffer peek as zero; `skip_bits` fails if the code needs more bits
+    // than there are left, exactly where a bit-by-bit walk would have run out.
+    let peeked = br.peek_ubit64_zero_extended(LOOKUP_BITS) as usize;
+    let mut node = match tree.lookup[peeked & ((1 << LOOKUP_BITS) - 1)] {
+        Lookup::Leaf { op, len } => {
+            br.skip_bits(len as usize)?;
+            return Ok(op);
+        }
+        Lookup::Branch(idx) => {
+            br.skip_bits(LOOKUP_BITS)?;
+            &tree.nodes[idx as usize]
+        }
+    };
+    loop {
+        let child = if br.read_bool()? {
+            &node.right
+        } else {
+            &node.left
+        };
+        match child {
+            FlatChild::Leaf(op) => return Ok(*op),
+            FlatChild::Branch(idx) => node = &tree.nodes[*idx as usize],
+        }
+    }
+}
 
 pub(crate) fn read_field_paths(
     br: &mut BitReader,
@@ -800,48 +869,27 @@ pub(crate) fn read_field_paths(
 ) -> Result<usize, FieldPathError> {
     // NOTE: majority of field path reads are shorter then 32 (but some are beyond thousand).
 
-    // Walking the huffman tree beats accumulating all the bits and doing a static lookup (like
-    // butterfly does [1]): the hierarchical structure makes decisions on variable values, cutting
-    // branch misses of the otherwise ~40-arm match.
-    //
-    // The tree is flattened into a contiguous array (`FlatTree`) with leaf children embedded in
-    // their parent branch, so each bit costs a single array load instead of chasing a boxed-node
-    // pointer — far friendlier to the cache than the original `Box<Node>` hierarchy.
+    // Ops are huffman coded. Rather than accumulating bits and matching on them (like butterfly
+    // does [1]) or walking the tree one bit at a time, the next few bits are peeked and resolved
+    // with a single lookup (see `read_field_op`); the tree is flattened into a contiguous array
+    // (`FlatTree`) for the rare codes that are longer.
     //
     // [1] https://github.com/ButterflyStats/butterfly/blob/339e91a882cadc1a8f72446616f7d7f1480c3791/src/butterfly/private/entity.cpp#L93
 
     let tree = &*FIELDOP_TREE;
-    let nodes = tree.nodes.as_slice();
-    let root = tree.root as usize;
 
     let mut fp = FieldPath::default();
     let mut i: usize = 0;
 
-    let mut node = &nodes[root];
-
     loop {
-        let child = if br.read_bool()? {
-            &node.right
-        } else {
-            &node.left
-        };
-
-        match child {
-            FlatChild::Leaf(op) => {
-                (op)(&mut fp, br)?;
-                if fp.finished {
-                    return Ok(i);
-                }
-                let max = fps.len();
-                *fps.get_mut(i).ok_or(FieldPathError::TooMany(max))? = fp.clone();
-                i += 1;
-
-                node = &nodes[root];
-            }
-            FlatChild::Branch(idx) => {
-                node = &nodes[*idx as usize];
-            }
+        let op = read_field_op(tree, br)?;
+        op(&mut fp, br)?;
+        if fp.finished {
+            return Ok(i);
         }
+        let max = fps.len();
+        *fps.get_mut(i).ok_or(FieldPathError::TooMany(max))? = fp.clone();
+        i += 1;
     }
 }
 
@@ -871,6 +919,78 @@ mod tests {
             fp.inc_penultimate(1),
             Err(FieldPathError::Underflow)
         ));
+    }
+
+    /// the original bit-by-bit tree walk, as a reference for the table driven `read_field_op`.
+    fn read_field_paths_bitwise(
+        br: &mut BitReader,
+        fps: &mut [FieldPath],
+    ) -> Result<usize, FieldPathError> {
+        let mut nodes = Vec::new();
+        let root = flatten_branch(&build_fieldop_hierarchy(), &mut nodes);
+        let mut fp = FieldPath::default();
+        let mut i = 0;
+        let mut node = &nodes[root as usize];
+        loop {
+            let child = if br.read_bool()? {
+                &node.right
+            } else {
+                &node.left
+            };
+            match child {
+                FlatChild::Leaf(op) => {
+                    op(&mut fp, br)?;
+                    if fp.finished {
+                        return Ok(i);
+                    }
+                    let max = fps.len();
+                    *fps.get_mut(i).ok_or(FieldPathError::TooMany(max))? = fp.clone();
+                    i += 1;
+                    node = &nodes[root as usize];
+                }
+                FlatChild::Branch(idx) => node = &nodes[*idx as usize],
+            }
+        }
+    }
+
+    #[test]
+    fn test_read_field_paths_matches_bitwise_walk() {
+        let mut state = 0x2545_f491_4f6c_dd1du64;
+        let mut fps = vec![FieldPath::default(); 64];
+        let mut want_fps = vec![FieldPath::default(); 64];
+        let mut num_ok = 0;
+        for len in (0..4096).map(|i| i % 48) {
+            let buf: Vec<u8> = (0..len)
+                .map(|_| {
+                    state ^= state << 13;
+                    state ^= state >> 7;
+                    state ^= state << 17;
+                    // bias towards zero bits, which make the frequent short codes (and the
+                    // finishing op) likely, so that many inputs decode successfully.
+                    (state as u8) & (state >> 8) as u8
+                })
+                .collect();
+
+            let mut br = BitReader::new(&buf);
+            let got = read_field_paths(&mut br, &mut fps);
+            let mut want_br = BitReader::new(&buf);
+            let want = read_field_paths_bitwise(&mut want_br, &mut want_fps);
+
+            match (got, want) {
+                (Ok(n), Ok(want_n)) => {
+                    num_ok += 1;
+                    assert_eq!(n, want_n);
+                    assert_eq!(br.num_bits_read(), want_br.num_bits_read());
+                    for (fp, want_fp) in fps[..n].iter().zip(&want_fps[..n]) {
+                        assert_eq!(fp.data, want_fp.data);
+                        assert_eq!(fp.last, want_fp.last);
+                    }
+                }
+                (Err(_), Err(_)) => {}
+                (got, want) => panic!("got {got:?}, want {want:?} for {buf:?}"),
+            }
+        }
+        assert!(num_ok > 100, "only {num_ok} inputs decoded");
     }
 
     #[test]
