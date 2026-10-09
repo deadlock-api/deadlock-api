@@ -8,6 +8,7 @@ import { EntityNotFound } from "~/components/app/EntityNotFound";
 import { HeroImage } from "~/components/domain/assets/HeroImage";
 import { HeroMatchupDetailsStatsTable } from "~/components/features/heroes/HeroMatchupDetailsStatsTable";
 import { HeroMatchupSummary } from "~/components/features/heroes/HeroMatchupSummary";
+import { HeroPreRelease } from "~/components/features/heroes/HeroPreRelease";
 import { HeroSkillOrder } from "~/components/features/heroes/HeroSkillOrder";
 import { HeroTopItems } from "~/components/features/heroes/HeroTopItems";
 import { ChartLoading } from "~/components/patterns/charts/ChartStates";
@@ -30,6 +31,7 @@ import { findKey } from "~/lib/find-keys";
 import { formatPercent } from "~/lib/format";
 import { DEFAULT_MATCH_MODE } from "~/lib/game-mode";
 import { fetchHeroMatchups, type HeroMatchupsRequest } from "~/lib/hero-matchup-fns";
+import { isPreReleaseHero } from "~/lib/hero-roster";
 import { findHeroBySlug, heroSlug } from "~/lib/hero-slug";
 import { catchPrefetch, ensureCached, prefetchCached } from "~/lib/prefetch-safe";
 import { rankOf } from "~/lib/rank-of";
@@ -152,7 +154,7 @@ function summarizeHeroStats(rows: readonly AnalyticsHeroStats[] | undefined, her
 }
 
 export const Route = createFileRoute("/analytics/heroes/$heroName")({
-  component: HeroDetailPage,
+  component: HeroPage,
   loader: async ({ context: { queryClient, preferences }, params }) => {
     const [heroes, seasons] = await Promise.all([
       ensureCached(queryClient, heroesQueryOptions),
@@ -161,9 +163,27 @@ export const Route = createFileRoute("/analytics/heroes/$heroName")({
     const playable = filterPlayableHeroes(heroes);
     const hero = findHeroBySlug(playable, params.heroName);
     if (!hero) {
+      const upcoming = heroes.filter(isPreReleaseHero);
+      const announced = findHeroBySlug(upcoming, params.heroName);
+      // An announced hero gets its page before its first match: the address the stats will live at from release on.
+      if (announced) {
+        const color = announced.colors?.style ?? announced.colors?.ui;
+        return {
+          kind: "pre-release" as const,
+          heroId: announced.id,
+          heroName: announced.name,
+          accent: color ? `rgb(${color.join(" ")})` : undefined,
+          complexity: announced.complexity,
+          tags: announced.tags ?? [],
+          slug: params.heroName,
+          cardImage: announced.images.top_bar_vertical_image_webp ?? announced.images.top_bar_vertical_image ?? null,
+          breadcrumb: announced.name,
+          upcoming: upcoming.filter((other) => other.id !== announced.id).map(({ id, name }) => ({ id, name })),
+        };
+      }
       // "Haze", "grey_talon" or its id "15" name a hero: send them to its canonical address.
-      const canonical =
-        findHeroBySlug(playable, slugify(params.heroName)) ?? findByIdSegment(playable, params.heroName);
+      const known = [...playable, ...upcoming];
+      const canonical = findHeroBySlug(known, slugify(params.heroName)) ?? findByIdSegment(known, params.heroName);
       if (canonical) {
         throw redirect({
           to: "/analytics/heroes/$heroName",
@@ -188,6 +208,7 @@ export const Route = createFileRoute("/analytics/heroes/$heroName")({
     const summary = summarizeHeroStats(stats, hero.id);
     const color = hero.colors?.style ?? hero.colors?.ui;
     return {
+      kind: "live" as const,
       heroId: hero.id,
       heroName: hero.name,
       // The hero's own color tints its header; a data color, so it is passed to the component built for it.
@@ -212,6 +233,16 @@ export const Route = createFileRoute("/analytics/heroes/$heroName")({
   head: ({ loaderData }) => {
     // The not-found page sets its own title and noindex; a second title and a canonical to the section came first.
     if (!loaderData) return {};
+    if (loaderData.kind === "pre-release") {
+      const { heroName, slug, cardImage } = loaderData;
+      return seo({
+        title: pageTitle(`${heroName} Deadlock Stats & Builds`),
+        description: `${heroName} is an upcoming Deadlock hero, still in pre-release. Win rate, pick rate, best builds, and counters for ${heroName} go live here as soon as the hero enters matchmaking.`,
+        path: `/analytics/heroes/${slug}`,
+        ogImage: cardImage ?? undefined,
+        ogImageKind: cardImage ? "thumbnail" : "card",
+      });
+    }
     const { heroName, slug, cardImage, rankRange, coverage, summary } = loaderData;
     const description = summary
       ? `${heroName} holds a ${formatPercent(summary.winRate)} win rate (#${summary.rank} of ${summary.heroCount} heroes) and a ${formatPercent(summary.pickRate)} pick rate in ${rankRange} Deadlock matches. Live matchups, synergies, and counters, updated daily.`
@@ -266,9 +297,17 @@ function HeroLinkCard({
 const HERO_TYPE_LABEL = { assassin: "Assassin", brawler: "Brawler", marksman: "Marksman", mystic: "Mystic" } as const;
 const MAX_COMPLEXITY = 3;
 
+function HeroPage() {
+  const data = Route.useLoaderData();
+  return data.kind === "pre-release" ? <HeroPreRelease {...data} /> : <HeroDetailPage />;
+}
+
 function HeroDetailPage() {
   const { preferences } = Route.useRouteContext();
-  const { heroId, heroName, rankRange, matchups, accent, heroType, complexity } = Route.useLoaderData();
+  const data = Route.useLoaderData();
+  // HeroPage renders this page only for a live hero.
+  if (data.kind !== "live") throw new Error(`${data.heroName} is not released yet`);
+  const { heroId, heroName, rankRange, matchups, accent, heroType, complexity } = data;
   const router = useRouter();
   const retryMatchups = () => void router.invalidate();
   const { seasons } = useSeasons();

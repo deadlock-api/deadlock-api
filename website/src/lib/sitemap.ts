@@ -6,7 +6,7 @@ import { api } from "~/lib/api";
 import { fetchPatchList } from "~/lib/patch-list-fns";
 import { INDEXED_PATCHES, isSettled, patchWindows } from "~/lib/patches";
 
-import { isPlayableHero } from "./hero-roster";
+import { isPlayableHero, isPreReleaseHero } from "./hero-roster";
 import { heroSlug } from "./hero-slug";
 import { isShopableItem } from "./item-roster";
 import { itemSlug } from "./item-slug";
@@ -136,10 +136,13 @@ async function withRetries<T>(what: string, load: () => Promise<T>, attempts = 3
 }
 
 async function loadHeroEntries(): Promise<SitemapEntry[]> {
-  const response = await withRetries("heroes", () => api.heroes_api.listHeroes({ onlyActive: true }));
-  return response.data.filter(isPlayableHero).map((hero) => ({
-    path: `/analytics/heroes/${heroSlug(hero.name)}`,
-  }));
+  const response = await withRetries("heroes", () => api.heroes_api.listHeroes({ onlyActive: false }));
+  // A pre-release hero's page goes in too, so it is indexed by the day its stats arrive.
+  return response.data
+    .filter((hero) => isPlayableHero(hero) || isPreReleaseHero(hero))
+    .map((hero) => ({
+      path: `/analytics/heroes/${heroSlug(hero.name)}`,
+    }));
 }
 
 async function loadItemEntries(): Promise<SitemapEntry[]> {
