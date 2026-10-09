@@ -71,3 +71,23 @@ pub async fn fetch_hero_ids(http_client: &reqwest::Client) -> reqwest::Result<Ve
         .map(|h| h.id)
         .collect())
 }
+
+/// Calls `on_refresh` with the current ranked season right away and then hourly, from a
+/// background task. Seasons turn over on the order of months, so that is ample. A failed
+/// fetch is logged and skipped.
+pub fn spawn_season_refresh_task<F>(on_refresh: F)
+where
+    F: Fn(Option<CurrentSeason>) + Send + 'static,
+{
+    tokio::spawn(async move {
+        let http_client = crate::http_client();
+        let mut interval = tokio::time::interval(Duration::from_hours(1));
+        loop {
+            interval.tick().await;
+            match fetch_current_season(&http_client).await {
+                Ok(season) => on_refresh(season),
+                Err(e) => tracing::warn!("Failed to refresh ranked season: {e:?}"),
+            }
+        }
+    });
+}

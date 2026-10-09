@@ -25,6 +25,11 @@ use tokio::io::AsyncReadExt;
 use tokio_util::io::StreamReader;
 use tracing::{debug, error, info, warn};
 
+use crate::models::{
+    DemoPlayer, MatchUpdate, MatchWithReplay, ObservedSteamName, ObservedSteamNameChange,
+};
+use crate::visitor::{DemoAnalyzerVisitor, SharedState, VisitorError};
+
 mod hashes;
 mod models;
 mod visitor;
@@ -73,11 +78,6 @@ impl FailedMatches {
         self.0.len()
     }
 }
-
-use models::{
-    DemoPlayer, MatchUpdate, MatchWithReplay, ObservedSteamName, ObservedSteamNameChange,
-};
-use visitor::{DemoAnalyzerVisitor, SharedState, VisitorError};
 
 #[derive(Parser)]
 #[command(about = "Analyze Deadlock demo files to extract player hero build data")]

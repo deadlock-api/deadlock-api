@@ -29,10 +29,6 @@ use valveprotos::deadlock::{
     CMsgClientToGcFindHeroBuilds, CMsgClientToGcFindHeroBuildsResponse, EgcCitadelClientMessages,
 };
 
-// const ALL_LANGS: &[i32] = &[
-//     0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 21, 22, 24, 25, 26, 27,
-//     255,
-// ];
 const ASCII_LOWER: [char; 26] = [
     'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's',
     't', 'u', 'v', 'w', 'x', 'y', 'z',
@@ -76,23 +72,6 @@ async fn run_update_loop(
         }
     };
     heroes.shuffle(&mut rng());
-
-    // for hero_id in heroes {
-    //     for langs in ALL_LANGS.chunks(2) {
-    //         if langs.contains(&0) {
-    //             for search in ASCII_LOWER
-    //                 .iter()
-    //                 .cartesian_product(ASCII_LOWER.iter())
-    //                 .cartesian_product(ASCII_LOWER.iter())
-    //             {
-    //                 let search = format!("{}{}{}", search.0.0, search.0.1, search.1);
-    //                 update_builds(http_client, pg_client, hero_id, langs, Some(search)).await;
-    //             }
-    //         } else {
-    //             update_builds(http_client, pg_client, hero_id, langs, None).await;
-    //         }
-    //     }
-    // }
 
     let mut last_missing_fetch: Option<Instant> = None;
     for ((a, b), c) in ASCII_LOWER
@@ -324,14 +303,16 @@ async fn fetch_builds(
         http_client,
         EgcCitadelClientMessages::KEMsgClientToGcFindHeroBuilds,
         &msg,
-        None,
-        None,
-        Duration::from_mins(20),
-        // No soft cooldown: the crawler never borrows a cooling-down bot, leaving that
-        // headroom to the API's on-demand build lookups.
-        Some(Duration::ZERO),
-        Duration::from_secs(5),
-        None,
+        common::SteamProxyOptions {
+            in_all_groups: None,
+            in_any_groups: None,
+            cooldown: Duration::from_mins(20),
+            // No soft cooldown: the crawler never borrows a cooling-down bot, leaving that
+            // headroom to the API's on-demand build lookups.
+            soft_cooldown: Some(Duration::ZERO),
+            request_timeout: Duration::from_secs(5),
+            username: None,
+        },
     )
     .await?;
     Ok(response.results)

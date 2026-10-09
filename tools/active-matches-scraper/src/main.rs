@@ -44,7 +44,7 @@ async fn main() -> anyhow::Result<()> {
         loop {
             interval.tick().await;
             previous_tick =
-                fetch_insert_active_matches(&http_client, &ch_client, &previous_tick).await;
+                fetch_insert_active_matches(&http_client, &ch_client, previous_tick).await;
         }
     })
     .await
@@ -58,7 +58,7 @@ type SnapshotKey = (u64, u32, u32, u16, u16, u16, u16);
 async fn fetch_insert_active_matches(
     http_client: &reqwest::Client,
     ch_client: &clickhouse::Client,
-    previous_tick: &HashSet<SnapshotKey>,
+    previous_tick: HashSet<SnapshotKey>,
 ) -> HashSet<SnapshotKey> {
     let mut this_tick = HashSet::new();
     let active_matches = match fetch_active_matches(http_client).await {
@@ -74,7 +74,7 @@ async fn fetch_insert_active_matches(
             error!("Failed to fetch active matches: {e:?}");
             // Keep the last keys, so the next successful tick does not re-insert every
             // unchanged snapshot.
-            return previous_tick.clone();
+            return previous_tick;
         }
     };
     let ch_active_matches = active_matches

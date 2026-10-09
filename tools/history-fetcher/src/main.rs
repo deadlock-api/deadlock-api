@@ -36,7 +36,7 @@ static HISTORY_COOLDOWN_MILLIS: LazyLock<u64> =
 
 /// Ranked interval to request alongside each account's plain match history.
 /// `None` until the first refresh succeeds, and between seasons.
-static RANK_INTERVAL: LazyLock<RwLock<Option<u32>>> = LazyLock::new(|| RwLock::new(None));
+static RANK_INTERVAL: std::sync::RwLock<Option<u32>> = std::sync::RwLock::new(None);
 
 /// Interval in seconds to refresh the prioritized accounts list from the database.
 /// Default: 300 seconds (5 minutes).
@@ -93,7 +93,7 @@ async fn main() -> anyhow::Result<()> {
     // Spawn background task to periodically refresh prioritized accounts
     spawn_prioritization_refresh_task(pg_pool.clone(), prioritized_accounts.clone());
 
-    spawn_rank_interval_refresh_task(http_client.clone());
+    spawn_rank_interval_refresh_task();
 
     // All fetchers queue their entries here; they are flushed in one CH insert once
     // HISTORY_BATCH_SIZE rows are pending or HISTORY_FLUSH_INTERVAL_MS elapsed.
@@ -158,23 +158,21 @@ async fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-/// Keeps [`RANK_INTERVAL`] current. Seasons turn over on the order of months, so
-/// an hourly refresh is ample; the first tick fires immediately.
-fn spawn_rank_interval_refresh_task(http_client: reqwest::Client) {
-    tokio::spawn(async move {
-        let mut interval = tokio::time::interval(Duration::from_hours(1));
-        loop {
-            interval.tick().await;
-            match common::fetch_current_season(&http_client).await {
-                Ok(v) => {
-                    let interval = v.map(|s| s.interval);
-                    debug!(rank_interval = ?interval, "Refreshed ranked interval");
-                    *RANK_INTERVAL.write().await = interval;
-                }
-                Err(e) => warn!("Failed to refresh ranked interval: {e:?}"),
-            }
-        }
+/// Keeps [`RANK_INTERVAL`] current.
+fn spawn_rank_interval_refresh_task() {
+    common::spawn_season_refresh_task(|season| {
+        let interval = season.map(|s| s.interval);
+        debug!(rank_interval = ?interval, "Refreshed ranked interval");
+        *RANK_INTERVAL
+            .write()
+            .unwrap_or_else(std::sync::PoisonError::into_inner) = interval;
     });
+}
+
+fn rank_interval() -> Option<u32> {
+    *RANK_INTERVAL
+        .read()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
 }
 
 /// Updates a prioritized account's match history with retry logic.
@@ -214,37 +212,44 @@ async fn update_prioritized_account(
     )
     .await;
 
-    let mut map = prioritized_accounts.write().await;
-    let steam_id3 = i64::from(account);
-
-    if let Ok(ack) = result {
-        counter!("history_fetcher.prioritized_fetch.success").increment(1);
-        if let Some(entry) = map.get_mut(&steam_id3) {
-            entry.1 = Some(Instant::now());
-        }
-        if let Some(ack) = ack {
-            let prioritized_accounts = Arc::clone(prioritized_accounts);
-            tokio::spawn(async move {
-                if confirm_insert(ack, account).await {
-                    return;
-                }
-                let window = Duration::from_secs(*PRIORITIZATION_WINDOW_SECS);
-                if let Some(entry) = prioritized_accounts.write().await.get_mut(&steam_id3) {
-                    entry.1 = Some(Instant::now() - window);
-                }
-            });
-        }
-    } else {
+    let Ok(ack) = result else {
         counter!("history_fetcher.prioritized_fetch.failure").increment(1);
-        let window = Duration::from_secs(*PRIORITIZATION_WINDOW_SECS);
-        if let Some(entry) = map.get_mut(&steam_id3) {
-            entry.1 = Some(Instant::now() - window);
+        if requeue(prioritized_accounts, account).await {
             warn!(
                 account = account,
                 "All retries exhausted for prioritized account, re-queuing for next cycle"
             );
         }
+        return;
+    };
+    counter!("history_fetcher.prioritized_fetch.success").increment(1);
+    if let Some(entry) = prioritized_accounts
+        .write()
+        .await
+        .get_mut(&i64::from(account))
+    {
+        entry.1 = Some(Instant::now());
     }
+    if let Some(ack) = ack {
+        let prioritized_accounts = Arc::clone(prioritized_accounts);
+        tokio::spawn(async move {
+            if !confirm_insert(ack, account).await {
+                requeue(&prioritized_accounts, account).await;
+            }
+        });
+    }
+}
+
+/// Marks `account` as last fetched one window ago, so the next cycle picks it up again.
+/// `false` if it is no longer tracked.
+async fn requeue(prioritized_accounts: &PrioritizedAccountsMap, account: u32) -> bool {
+    let window = Duration::from_secs(*PRIORITIZATION_WINDOW_SECS);
+    let mut map = prioritized_accounts.write().await;
+    let Some(entry) = map.get_mut(&i64::from(account)) else {
+        return false;
+    };
+    entry.1 = Some(Instant::now() - window);
+    true
 }
 
 /// Fetches an account's match history and queues its entries for insertion. `None` if the
@@ -256,7 +261,7 @@ async fn update_account(
     account: u32,
     bot_username: Option<&str>,
 ) -> Option<Option<InsertAck>> {
-    let rank_interval = *RANK_INTERVAL.read().await;
+    let rank_interval = rank_interval();
     let match_history = match fetch_account_match_history(http_client, account, bot_username, None)
         .await
     {
@@ -359,12 +364,14 @@ async fn fetch_account_match_history(
         http_client,
         EgcCitadelClientMessages::KEMsgClientToGcGetMatchHistory,
         &msg,
-        Some(&["GetMatchHistory"]),
-        None,
-        job_cooldown,
-        Some(job_cooldown),
-        Duration::from_secs(5),
-        bot_username,
+        common::SteamProxyOptions {
+            in_all_groups: Some(&["GetMatchHistory"]),
+            in_any_groups: None,
+            cooldown: job_cooldown,
+            soft_cooldown: Some(job_cooldown),
+            request_timeout: Duration::from_secs(5),
+            username: bot_username,
+        },
     )
     .await
     .map(|(_, response)| response)

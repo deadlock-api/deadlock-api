@@ -49,24 +49,16 @@ fn calibration_matches() -> Option<u32> {
     Some(CALIBRATION_MATCHES.load(Ordering::Relaxed)).filter(|v| *v > 0)
 }
 
-/// Seasons turn over on the order of months; the first tick fires immediately.
 fn spawn_season_refresh_task() {
-    tokio::spawn(async move {
-        let http_client = common::http_client();
-        let mut interval = tokio::time::interval(Duration::from_hours(1));
-        loop {
-            interval.tick().await;
-            match common::fetch_current_season(&http_client).await {
-                Ok(Some(s)) => {
-                    debug!(
-                        calibration_matches = s.calibration_matches,
-                        "Refreshed season"
-                    );
-                    CALIBRATION_MATCHES.store(s.calibration_matches, Ordering::Relaxed);
-                }
-                Ok(None) => debug!("No ranked season in progress"),
-                Err(e) => warn!("Failed to refresh ranked season: {e:?}"),
-            }
+    common::spawn_season_refresh_task(|season| {
+        if let Some(s) = season {
+            debug!(
+                calibration_matches = s.calibration_matches,
+                "Refreshed season"
+            );
+            CALIBRATION_MATCHES.store(s.calibration_matches, Ordering::Relaxed);
+        } else {
+            debug!("No ranked season in progress");
         }
     });
 }
@@ -375,39 +367,38 @@ async fn fetch_parse_and_send<S: ObjectStore + 'static>(
     };
 
     let data = obj.bytes().await?;
-    let parsed = decompress_and_parse(data).await?;
+    // The rows are built on the blocking thread too: that includes decompressing the hero
+    // release votes. A match with an error outcome yields its id instead.
+    let parsed = decompress_and_parse(data, |m| {
+        if m.match_outcome == Some(EMatchOutcome::KEOutcomeError as i32) {
+            Err(m.match_id)
+        } else {
+            Ok(build_parsed_match(&m))
+        }
+    })
+    .await?;
 
     let filename = key
         .filename()
         .with_context(|| format!("Missing filename for key {key}"))?
         .to_owned();
 
-    let match_info = match parsed {
-        Ok(m)
-            if m.match_outcome
-                .is_some_and(|o| o == EMatchOutcome::KEOutcomeError as i32) =>
-        {
-            let new_path = Path::from(format!("{FAILED_PREFIX}/{filename}"));
-            move_object(store, key, &new_path).await?;
+    let parsed = match parsed {
+        Ok(Ok(parsed)) => parsed,
+        Ok(Err(match_id)) => {
+            move_to_failed(store, key, &filename).await?;
             counter!("ingest_worker.match_outcome_error").increment(1);
-            warn!(
-                "[{:?}] Match outcome is error, moved to failed/",
-                m.match_id
-            );
-            gauge!("ingest_worker.objs_to_ingest").decrement(1);
+            warn!("[{match_id:?}] Match outcome is error, moved to failed/");
             return Ok(false);
         }
         Err(e) => {
-            let new_path = Path::from(format!("{FAILED_PREFIX}/{filename}"));
-            move_object(store, key, &new_path).await?;
+            move_to_failed(store, key, &filename).await?;
             warn!("[{filename}] Error parsing match data: {e}");
-            gauge!("ingest_worker.objs_to_ingest").decrement(1);
             return Ok(false);
         }
-        Ok(m) => m,
     };
 
-    let Some(flushed) = inserters.insert(build_parsed_match(&match_info)).await else {
+    let Some(flushed) = inserters.insert(parsed).await else {
         bail!("Batch inserters have shut down");
     };
     let post_flush = Arc::clone(post_flush);
@@ -428,6 +419,22 @@ async fn fetch_parse_and_send<S: ObjectStore + 'static>(
         lock_inflight(&post_flush.inflight).remove(&key);
     });
     Ok(true)
+}
+
+/// Moves an object that cannot be ingested to `failed/`.
+async fn move_to_failed(
+    store: &impl ObjectStore,
+    key: &Path,
+    filename: &str,
+) -> object_store::Result<()> {
+    move_object(
+        store,
+        key,
+        &Path::from(format!("{FAILED_PREFIX}/{filename}")),
+    )
+    .await?;
+    gauge!("ingest_worker.objs_to_ingest").decrement(1);
+    Ok(())
 }
 
 /// Known file extensions for match metadata files.
@@ -526,8 +533,7 @@ async fn fetch_and_parse_match(
     let obj = find_match_object(store, match_id).await?;
 
     let data = obj.bytes().await?;
-    let match_info = decompress_and_parse(data).await??;
-    Ok(build_parsed_match(&match_info))
+    decompress_and_parse(data, |m| build_parsed_match(&m)).await?
 }
 
 fn build_parsed_match(match_info: &MatchInfo) -> ParsedMatch {
@@ -609,14 +615,21 @@ async fn get_object(store: &impl ObjectStore, key: &Path) -> object_store::Resul
     }
 }
 
-/// Decompress and parse an object on a blocking thread to avoid starving the async runtime.
+/// Decompress and parse an object, then `convert` the match, on a blocking thread to
+/// avoid starving the async runtime.
 ///
 /// The outer error is a decompression (or join) failure; the inner one is a protobuf
 /// parse failure, which callers treat differently.
-async fn decompress_and_parse(data: Bytes) -> std::io::Result<anyhow::Result<MatchInfo>> {
-    tokio::task::spawn_blocking(move || decompress(&data).map(|d| parse_match_data(&d)))
-        .await
-        .map_err(std::io::Error::other)?
+async fn decompress_and_parse<T, F>(data: Bytes, convert: F) -> std::io::Result<anyhow::Result<T>>
+where
+    T: Send + 'static,
+    F: FnOnce(MatchInfo) -> T + Send + 'static,
+{
+    tokio::task::spawn_blocking(move || {
+        decompress(&data).map(|d| parse_match_data(&d).map(convert))
+    })
+    .await
+    .map_err(std::io::Error::other)?
 }
 
 /// The container is sniffed from the magic bytes rather than taken from the key's extension:

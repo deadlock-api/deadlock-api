@@ -39,14 +39,8 @@ const REDIS_EXPIRY: i64 = 900; // 15 minutes in seconds
 
 // Percentile (0.0 - 1.0) used to choose where to start
 // filling gaps between the min and max match id range. Defaults to 0.5 (50%).
-static GAP_PERCENTILE: LazyLock<f64> = LazyLock::new(|| {
-    let p = env::var("GAP_PERCENTILE")
-        .ok()
-        .and_then(|s| s.parse::<f64>().ok())
-        .unwrap_or(0.5);
-
-    p.clamp(0.0, 1.0)
-});
+static GAP_PERCENTILE: LazyLock<f64> =
+    LazyLock::new(|| common::env_or("GAP_PERCENTILE", 0.5_f64).clamp(0.0, 1.0));
 
 // When set to a truthy value, the bot skips finding and spectating gap matches,
 // only spectating active matches.

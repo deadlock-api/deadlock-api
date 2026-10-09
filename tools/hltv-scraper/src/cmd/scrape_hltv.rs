@@ -7,7 +7,7 @@ use std::sync::Arc;
 use anyhow::Context;
 use async_compression::tokio::write::BzEncoder;
 use bytes::Bytes;
-use dashmap::DashMap;
+use dashmap::DashSet;
 use jiff::{Timestamp, ToSpan};
 use lru::LruCache;
 use metrics::gauge;
@@ -31,7 +31,7 @@ pub(crate) async fn run(spectate_server_url: String) -> anyhow::Result<()> {
     let base_url =
         Url::parse(&spectate_server_url).context("Parsing base url for spectate server")?;
 
-    let currently_downloading: Arc<DashMap<u64, bool>> = Arc::new(DashMap::new());
+    let currently_downloading: Arc<DashSet<u64>> = Arc::new(DashSet::new());
 
     let mut already_downloaded: LruCache<u64, bool> =
         LruCache::new(NonZeroUsize::new(100).unwrap_or(NonZeroUsize::MIN));
@@ -64,7 +64,7 @@ pub(crate) async fn run(spectate_server_url: String) -> anyhow::Result<()> {
         let chosen_match = matches
             .into_iter()
             .filter(|x| !already_downloaded.contains(&x.match_id))
-            .filter(|x| !currently_downloading.contains_key(&x.match_id))
+            .filter(|x| !currently_downloading.contains(&x.match_id))
             .filter(|x| match x.started_at {
                 Some(started) => started < started_before,
                 None => x.updated_at < updated_before,
@@ -126,10 +126,10 @@ fn download_task(
     http_client: reqwest::Client,
     store: Arc<impl ObjectStore>,
     cache_store: Arc<impl ObjectStore>,
-    currently_downloading: Arc<DashMap<u64, bool>>,
+    currently_downloading: Arc<DashSet<u64>>,
     smi: SpectatedMatchInfo,
 ) {
-    currently_downloading.insert(smi.match_id, true);
+    currently_downloading.insert(smi.match_id);
     tokio::task::spawn(async move {
         let label = smi.match_type.label();
         let match_id = smi.match_id;
@@ -159,36 +159,45 @@ fn download_task(
         }
         currently_downloading.remove(&smi.match_id);
 
-        if let Some(match_metadata) = match_metadata
-            && let Err(e) = push_meta_to_object_store(
-                store,
-                cache_store,
+        if let Some(match_metadata) = match_metadata {
+            store_meta(
+                &*store,
+                &*cache_store,
                 &match_metadata,
                 &smi.match_type,
                 match_id,
             )
-            .await
-        {
-            error!(
-                "[{label} {match_id}] Got error writing meta to object store: {:?}",
-                e
-            );
-            match store_meta_to_local_store(
-                Path::new(LOCAL_STORE_ROOT),
-                &match_metadata,
-                &smi.match_type,
-                match_id,
-            )
-            .await
-            {
-                Ok(()) => info!("[{label} {match_id}] Wrote meta to local store instead"),
-                Err(e) => error!(
-                    "[{label} {match_id}] Got error writing meta to local store: {:?}",
-                    e
-                ),
-            }
+            .await;
         }
     });
+}
+
+/// Writes the compressed metadata to the object store, or to the local store if that fails.
+async fn store_meta(
+    store: &impl ObjectStore,
+    cache_store: &impl ObjectStore,
+    match_metadata: &CMsgMatchMetaData,
+    match_type: &SpectatedMatchType,
+    match_id: u64,
+) {
+    let label = match_type.label();
+    let output = match compress_match_metadata(match_metadata).await {
+        Ok(output) => Bytes::from(output),
+        Err(e) => {
+            error!("[{label} {match_id}] Got error compressing meta: {e:?}");
+            return;
+        }
+    };
+    let Err(e) =
+        push_meta_to_object_store(store, cache_store, output.clone(), label, match_id).await
+    else {
+        return;
+    };
+    error!("[{label} {match_id}] Got error writing meta to object store: {e:?}");
+    match store_meta_to_local_store(Path::new(LOCAL_STORE_ROOT), &output, label, match_id).await {
+        Ok(()) => info!("[{label} {match_id}] Wrote meta to local store instead"),
+        Err(e) => error!("[{label} {match_id}] Got error writing meta to local store: {e:?}"),
+    }
 }
 
 async fn compress_match_metadata(match_metadata: &CMsgMatchMetaData) -> anyhow::Result<Vec<u8>> {
@@ -209,15 +218,12 @@ async fn compress_match_metadata(match_metadata: &CMsgMatchMetaData) -> anyhow::
 }
 
 async fn push_meta_to_object_store(
-    store: Arc<impl ObjectStore>,
-    cache_store: Arc<impl ObjectStore>,
-    match_metadata: &CMsgMatchMetaData,
-    match_type: &SpectatedMatchType,
+    store: &impl ObjectStore,
+    cache_store: &impl ObjectStore,
+    output: Bytes,
+    label: &str,
     match_id: u64,
-) -> anyhow::Result<()> {
-    let label = match_type.label();
-    let output = Bytes::from(compress_match_metadata(match_metadata).await?);
-
+) -> object_store::Result<()> {
     let ingest_path =
         object_store::path::Path::from(format!("/ingest/metadata/{match_id}.meta_hltv.bz2"));
     let cache_path_str = format!("{match_id}.meta_hltv.bz2");
@@ -241,13 +247,10 @@ async fn push_meta_to_object_store(
 
 async fn store_meta_to_local_store(
     root_path: &Path,
-    match_metadata: &CMsgMatchMetaData,
-    match_type: &SpectatedMatchType,
+    output: &[u8],
+    label: &str,
     match_id: u64,
-) -> anyhow::Result<()> {
-    let label = match_type.label();
-    let output = compress_match_metadata(match_metadata).await?;
-
+) -> std::io::Result<()> {
     let p = root_path.join(format!("metadata/{match_id}.meta_hltv.bz2"));
     if let Some(dir) = p.parent() {
         tokio::fs::create_dir_all(dir).await?;

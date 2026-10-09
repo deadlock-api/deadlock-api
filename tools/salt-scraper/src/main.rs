@@ -259,12 +259,14 @@ async fn fetch_salts(
         http_client,
         EgcCitadelClientMessages::KEMsgClientToGcGetMatchMetaData,
         &msg,
-        Some(&["GetMatchMetaData"]),
-        None,
-        job_cooldown,
-        soft_cooldown,
-        Duration::from_secs(5),
-        None,
+        common::SteamProxyOptions {
+            in_all_groups: Some(&["GetMatchMetaData"]),
+            in_any_groups: None,
+            cooldown: job_cooldown,
+            soft_cooldown,
+            request_timeout: Duration::from_secs(5),
+            username: None,
+        },
     )
     .await
 }

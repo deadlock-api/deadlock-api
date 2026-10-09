@@ -45,19 +45,38 @@ pub struct SteamProxyResponse {
     pub username: String,
 }
 
-#[expect(clippy::too_many_arguments)]
+/// How sv-proxy should route and pace one [`call_steam_proxy`] call.
+#[derive(Debug, Clone, Copy)]
+pub struct SteamProxyOptions<'a> {
+    /// Only use bots that are in all of these groups.
+    pub in_all_groups: Option<&'a [&'a str]>,
+    /// Only use bots that are in any of these groups.
+    pub in_any_groups: Option<&'a [&'a str]>,
+    /// How long the bot rests after the job; a rate limit rests it four times as long.
+    pub cooldown: Duration,
+    /// How far into its cooldown a bot still counts as ready. `None` means 5 minutes.
+    pub soft_cooldown: Option<Duration>,
+    /// Total time allowed for the proxy request.
+    pub request_timeout: Duration,
+    /// Run the job on this bot.
+    pub username: Option<&'a str>,
+}
+
 #[instrument(skip(http_client, msg))]
 pub async fn call_steam_proxy<T: Message + Default>(
     http_client: &reqwest::Client,
     msg_type: EgcCitadelClientMessages,
     msg: &impl Message,
-    in_all_groups: Option<&[&str]>,
-    in_any_groups: Option<&[&str]>,
-    cooldown_time: Duration,
-    soft_cooldown_time: Option<Duration>,
-    request_timeout: Duration,
-    username: Option<&str>,
+    options: SteamProxyOptions<'_>,
 ) -> anyhow::Result<(String, T)> {
+    let SteamProxyOptions {
+        in_all_groups,
+        in_any_groups,
+        cooldown,
+        soft_cooldown,
+        request_timeout,
+        username,
+    } = options;
     let serialized_message = msg.encode_to_vec();
     let encoded_message = BASE64_STANDARD.encode(&serialized_message);
     let result: reqwest::Result<SteamProxyResponse> = http_client
@@ -66,9 +85,9 @@ pub async fn call_steam_proxy<T: Message + Default>(
         .timeout(request_timeout)
         .json(&json!({
             "message_kind": msg_type as i32,
-            "job_cooldown_millis": cooldown_time.as_millis(),
-            "rate_limit_cooldown_millis": 4 * cooldown_time.as_millis(),
-            "soft_cooldown_millis": soft_cooldown_time.map_or(5 * 60 * 1000, |d| d.as_millis()),
+            "job_cooldown_millis": cooldown.as_millis(),
+            "rate_limit_cooldown_millis": 4 * cooldown.as_millis(),
+            "soft_cooldown_millis": soft_cooldown.map_or(5 * 60 * 1000, |d| d.as_millis()),
             "bot_in_all_groups": in_all_groups,
             "bot_in_any_groups": in_any_groups,
             "bot_username": username,
