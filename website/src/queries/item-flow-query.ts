@@ -58,7 +58,11 @@ export function trimItemFlowForDefaultView(data: ItemFlowStats, tierOf: (itemId:
   const keep = new Set<ItemFlowNode>();
   const shown = new Set<string>();
   const columns = new Map<number, ItemFlowNode[]>();
-  for (const node of data.nodes) columns.set(node.column, [...(columns.get(node.column) ?? []), node]);
+  for (const node of data.nodes) {
+    const column = columns.get(node.column);
+    if (column) column.push(node);
+    else columns.set(node.column, [node]);
+  }
   for (const [column, nodes] of columns) {
     const byMatches = nodes.slice().sort((a, b) => b.matches - a.matches);
     for (const node of byMatches.slice(0, ITEM_FLOW_DEFAULT_PER_COLUMN)) {

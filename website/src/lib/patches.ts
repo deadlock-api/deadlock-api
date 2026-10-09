@@ -105,7 +105,9 @@ export function mergePatchFeed(feed: readonly PatchFeedItem[], curated: readonly
   for (const post of posts) {
     const id = post.day ?? post.published.format("YYYY-MM-DD");
     if (!post.day && !/update/i.test(post.title) && !forumDays.has(id)) continue;
-    byDay.set(id, [...(byDay.get(id) ?? []), post]);
+    const group = byDay.get(id);
+    if (group) group.push(post);
+    else byDay.set(id, [post]);
   }
 
   const entries = new Map(curated.map((patch) => [patch.id, { ...patch }]));

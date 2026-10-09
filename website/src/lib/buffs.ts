@@ -105,7 +105,9 @@ export function summarizeBuffStats(
   for (const row of rows) {
     if (!row.is_permanent || row.pickups === 0) continue;
     const { stat } = parseBuffType(row.buff_type);
-    groups.set(stat, [...(groups.get(stat) ?? []), row]);
+    const group = groups.get(stat);
+    if (group) group.push(row);
+    else groups.set(stat, [row]);
   }
   return [...groups.entries()]
     .map(([stat, levels]): BuffStatSummary => {

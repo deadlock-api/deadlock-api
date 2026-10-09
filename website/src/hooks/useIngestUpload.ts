@@ -122,6 +122,14 @@ export function useIngestUpload() {
     dispatch({ type: "SHOW_RESULT", result: { title, description, type: "error" } });
   };
 
+  /** Reports an unexpected failure: `Failed to <action>: <message>`, or `fallback` for a non-Error throw. */
+  const showFailure = (error: unknown, action: string, fallback: string) => {
+    showError("Something went wrong", error instanceof Error ? `Failed to ${action}: ${error.message}` : fallback);
+  };
+
+  const showNotAFolder = () =>
+    showError("That is a file", "Drop the httpcache folder itself, not a file from inside it.");
+
   const incrementSalts = () => dispatch({ type: "SCAN_PROGRESS" });
 
   const runScanAndUpload = async (scanFn: () => Promise<Iterable<Salts>>) => {
@@ -147,12 +155,7 @@ export function useIngestUpload() {
         dispatch({ type: "SHOW_RESULT", result: uploadResult(summary) });
       }
     } catch (error) {
-      showError(
-        "Something went wrong",
-        error instanceof Error
-          ? `Failed to scan or upload: ${error.message}`
-          : "Failed to scan directory or upload salts. Please try again.",
-      );
+      showFailure(error, "scan or upload", "Failed to scan directory or upload salts. Please try again.");
       console.error("Scan/upload failed:", error);
     }
     dispatch({ type: "SCAN_DONE" });
@@ -166,12 +169,7 @@ export function useIngestUpload() {
         await runScanAndUpload(() => scanDirHandle(dirHandle, incrementSalts));
       } catch (error) {
         if (error instanceof DOMException && error.name === "AbortError") return;
-        showError(
-          "Something went wrong",
-          error instanceof Error
-            ? `Failed to open directory picker: ${error.message}`
-            : "Failed to open directory picker. Please try again.",
-        );
+        showFailure(error, "open directory picker", "Failed to open directory picker. Please try again.");
         console.error("Directory picker failed:", error);
       }
     } else {
@@ -197,22 +195,21 @@ export function useIngestUpload() {
           if (handle && handle.kind === "directory") {
             await runScanAndUpload(() => scanDirHandle(handle as FileSystemDirectoryHandle, incrementSalts));
           } else {
-            showError("That is a file", "Drop the httpcache folder itself, not a file from inside it.");
+            showNotAFolder();
           }
         } else {
           const entry = item.webkitGetAsEntry();
           if (entry?.isDirectory) {
             await runScanAndUpload(() => scanEntry(entry, incrementSalts));
           } else {
-            showError("That is a file", "Drop the httpcache folder itself, not a file from inside it.");
+            showNotAFolder();
           }
         }
       } catch (error) {
-        showError(
-          "Something went wrong",
-          error instanceof Error
-            ? `Failed to process dropped item: ${error.message}`
-            : "Failed to process the dropped item. Please ensure you're dropping a directory.",
+        showFailure(
+          error,
+          "process dropped item",
+          "Failed to process the dropped item. Please ensure you're dropping a directory.",
         );
         console.error("Drop handling failed:", error);
       }

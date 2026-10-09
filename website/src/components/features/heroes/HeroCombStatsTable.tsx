@@ -1,6 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
 import { parseAsStringLiteral, useQueryState } from "nuqs";
-import { useMemo } from "react";
 
 import { HeroCell } from "~/components/domain/assets/HeroCell";
 import { CHART_COLOR } from "~/components/patterns/charts/theme";
@@ -28,6 +27,14 @@ const parseAsSortKey = parseAsStringLiteral(SORT_KEYS);
 const parseAsSortDir = parseAsStringLiteral(["desc", "asc"] as const);
 
 const combKey = (heroIds: number[]) => [...heroIds].sort((a, b) => a - b).join("-");
+
+/** Each combination's win rate and share of the matches of all the rows, by `combKey`. */
+function prevShares(rows: { hero_ids: number[]; wins: number; matches: number }[]) {
+  const sumMatches = rows.reduce((acc, row) => acc + row.matches, 0);
+  return new Map(
+    rows.map((row) => [combKey(row.hero_ids), { winrate: row.wins / row.matches, share: row.matches / sumMatches }]),
+  );
+}
 
 /**
  * The combinations the table can list for these filters. The API filters whole teams, so a combination may still be
@@ -110,53 +117,29 @@ export function HeroCombStatsTable({
 
   // A combination's share is its matches out of the matches of every listable combination, not only the rows shown,
   // so it keeps its meaning whatever "Show" is set to.
-  const prevStatsMap = useMemo(() => {
-    if (!prevHeroData) return undefined;
-    const prevRows = listableCombs(prevHeroData, combSizeFilter, includeHeroIds, excludeHeroIds);
-    const prevSumMatches = prevRows.reduce((acc, row) => acc + row.matches, 0);
-    const map = new Map<string, { winrate: number; share: number }>();
-    for (const row of prevRows) {
-      map.set(combKey(row.hero_ids), {
-        winrate: row.wins / row.matches,
-        share: row.matches / prevSumMatches,
-      });
-    }
-    return map;
-  }, [prevHeroData, combSizeFilter, includeHeroIds, excludeHeroIds]);
+  const prevStatsMap =
+    prevHeroData && prevShares(listableCombs(prevHeroData, combSizeFilter, includeHeroIds, excludeHeroIds));
 
   const [sortKey, setSortKey] = useQueryState("combo_sort", parseAsSortKey.withDefault("winRate"));
   const [sortDir, setSortDir] = useQueryState("combo_sort_dir", parseAsSortDir.withDefault("desc"));
   const { toggle: handleSort } = useSort<SortKey>(sortParams([sortKey, setSortKey], [sortDir, setSortDir]));
 
   // Sorted before the "Show" cut, so sorting by matches shows the most played combinations, not a reordered top 50.
-  const sortedData = useMemo(
-    () =>
-      listableCombs(heroData, combSizeFilter, includeHeroIds, excludeHeroIds)
-        .map((row) => ({
-          row,
-          // A raw win-rate sort would put every 100% combination with a dozen matches above
-          // the ones proven over thousands. Share and match count order the same.
-          score: sortKey === "winRate" ? shrunkWinRate(row.wins, row.matches) : row.matches,
-        }))
-        .sort((a, b) => (sortDir === "desc" ? b.score - a.score : a.score - b.score))
-        .map(({ row }) => row),
-    [heroData, combSizeFilter, includeHeroIds, excludeHeroIds, sortKey, sortDir],
-  );
-  const sumMatches = useMemo(() => sortedData.reduce((acc, row) => acc + row.matches, 0), [sortedData]);
-  const limitedData = useMemo(() => sortedData.slice(0, combsToShow), [combsToShow, sortedData]);
+  const sortedData = listableCombs(heroData, combSizeFilter, includeHeroIds, excludeHeroIds)
+    .map((row) => ({
+      row,
+      // A raw win-rate sort would put every 100% combination with a dozen matches above
+      // the ones proven over thousands. Share and match count order the same.
+      score: sortKey === "winRate" ? shrunkWinRate(row.wins, row.matches) : row.matches,
+    }))
+    .sort((a, b) => (sortDir === "desc" ? b.score - a.score : a.score - b.score))
+    .map(({ row }) => row);
+  const sumMatches = sortedData.reduce((acc, row) => acc + row.matches, 0);
+  const limitedData = sortedData.slice(0, combsToShow);
   // The bars run from zero to the largest share shown, so a rare combination draws a short bar, not an empty one.
-  const maxShare = useMemo(
-    () => limitedData.reduce((max, row) => Math.max(max, row.matches / sumMatches), 0),
-    [limitedData, sumMatches],
-  );
-  const minWinrate = useMemo(
-    () => limitedData.reduce((min, row) => Math.min(min, row.wins / row.matches), 1),
-    [limitedData],
-  );
-  const maxWinrate = useMemo(
-    () => limitedData.reduce((max, row) => Math.max(max, row.wins / row.matches), 0),
-    [limitedData],
-  );
+  const maxShare = limitedData.reduce((max, row) => Math.max(max, row.matches / sumMatches), 0);
+  const minWinrate = limitedData.reduce((min, row) => Math.min(min, row.wins / row.matches), 1);
+  const maxWinrate = limitedData.reduce((max, row) => Math.max(max, row.wins / row.matches), 0);
 
   return (
     <>

@@ -35,7 +35,7 @@ const ROUND_PLAN: HigherLowerCategory[] = [
   "abilities",
 ];
 
-export const ABILITY_ROUNDS = ROUND_PLAN.filter((category) => category === "abilities").length;
+const ABILITY_ROUNDS = ROUND_PLAN.filter((category) => category === "abilities").length;
 
 export type ValueFormat = "percent" | "decimal" | "number";
 
@@ -96,7 +96,7 @@ export function formatValue(value: number, format: ValueFormat): string {
  * still being ingested, and a number that moved during the day could flip an answer. The range is whole days, start
  * to end of day, the shape the analytics pages give a `date_range`, so a stats link shows exactly these matches.
  */
-export function statsDays(date: string) {
+function statsDays(date: string) {
   const last = day.utc(date).subtract(2, "day").endOf("day");
   return { first: last.subtract(6, "day").startOf("day"), last };
 }

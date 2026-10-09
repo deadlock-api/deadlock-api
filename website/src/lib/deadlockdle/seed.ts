@@ -1,7 +1,7 @@
 import { day } from "~/dayjs";
 
 /** Deterministic hash from date string */
-export function getDailySeed(date: string): number {
+function getDailySeed(date: string): number {
   let hash = 0;
   for (const char of date) {
     hash = ((hash << 5) - hash + char.charCodeAt(0)) | 0;

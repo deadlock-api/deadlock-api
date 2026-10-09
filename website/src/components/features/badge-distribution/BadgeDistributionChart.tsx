@@ -1,6 +1,6 @@
 import type { Rank } from "deadlock_api_client";
 import type { BadgeDistribution } from "deadlock_api_client";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { Bar, BarChart, CartesianGrid, ReferenceLine, Tooltip, XAxis, YAxis } from "recharts";
 
 import { RANK_ICON_AXIS_HEIGHT, RankTierIcons } from "~/components/domain/rank/RankTierIcons";
@@ -44,75 +44,60 @@ interface ChartEntry {
   isSpacer?: boolean;
 }
 
+/** The badge at which half of the selected metric sits at or below it. */
+function medianBadgeOf(chartData: ChartEntry[], total: number): number | undefined {
+  let running = 0;
+  for (const entry of chartData) {
+    running += entry.value;
+    if (!entry.isSpacer && running >= total / 2) return entry.badge;
+  }
+  return undefined;
+}
+
 export default function BadgeDistributionChart({
   badgeDistributionData,
   ranksData,
   metric,
 }: BadgeDistributionChartProps) {
-  const tierData = useMemo(() => {
-    const map = new Map<number, Rank>();
-    ranksData.forEach((r) => {
-      map.set(r.tier, r);
-    });
-    return map;
-  }, [ranksData]);
-
-  const badgeMap = useMemo(() => extractBadgeMap(ranksData), [ranksData]);
-
-  const valuePerBadge = useMemo(() => {
-    const map = new Map<number, number>();
-    badgeDistributionData.forEach((item) => {
-      map.set(item.badge_level, (metric === "players" ? item.unique_players : item.total_matches) ?? 0);
-    });
-    return map;
-  }, [badgeDistributionData, metric]);
+  const tierData = new Map(ranksData.map((rank) => [rank.tier, rank]));
+  const badgeMap = extractBadgeMap(ranksData);
+  const valuePerBadge = new Map(
+    badgeDistributionData.map((item) => [
+      item.badge_level,
+      (metric === "players" ? item.unique_players : item.total_matches) ?? 0,
+    ]),
+  );
 
   // Every tier from the lowest to the highest badge in the data, gaps included.
-  const tiers = useMemo(() => {
-    const badges = badgeDistributionData.map((item) => item.badge_level);
-    if (badges.length === 0) return [];
-    return range(Math.floor(Math.min(...badges) / 10), Math.floor(Math.max(...badges) / 10) + 1);
-  }, [badgeDistributionData]);
+  const badges = badgeDistributionData.map((item) => item.badge_level);
+  const tiers =
+    badges.length === 0 ? [] : range(Math.floor(Math.min(...badges) / 10), Math.floor(Math.max(...badges) / 10) + 1);
 
-  const chartData = useMemo(() => {
-    const result: ChartEntry[] = [];
-    for (const tier of tiers) {
-      if (tier > tiers[0]) {
-        result.push({ badge: tier * 10, tier, value: 0, fill: "transparent", isSpacer: true });
-      }
-      const fill = tierData.get(tier)?.color ?? CHART_COLOR.fallback;
-      for (let sub = 1; sub <= 6; sub++) {
-        const badge = tier * 10 + sub;
-        result.push({ badge, tier, value: valuePerBadge.get(badge) ?? 0, fill });
-      }
+  const chartData: ChartEntry[] = [];
+  for (const tier of tiers) {
+    if (tier > tiers[0]) {
+      chartData.push({ badge: tier * 10, tier, value: 0, fill: "transparent", isSpacer: true });
     }
-    return result;
-  }, [tiers, valuePerBadge, tierData]);
+    const fill = tierData.get(tier)?.color ?? CHART_COLOR.fallback;
+    for (let sub = 1; sub <= 6; sub++) {
+      const badge = tier * 10 + sub;
+      chartData.push({ badge, tier, value: valuePerBadge.get(badge) ?? 0, fill });
+    }
+  }
 
-  const shares = useMemo(() => {
-    const total = chartData.reduce((sum, entry) => sum + entry.value, 0);
-    const atOrAbove = new Map<number, number>();
-    let running = 0;
-    for (const entry of chartData.toReversed()) {
-      running += entry.value;
-      atOrAbove.set(entry.badge, running);
-    }
-    return { total, atOrAbove };
-  }, [chartData]);
+  const total = chartData.reduce((sum, entry) => sum + entry.value, 0);
+  const atOrAbove = new Map<number, number>();
+  let aboveSum = 0;
+  for (const entry of chartData.toReversed()) {
+    aboveSum += entry.value;
+    atOrAbove.set(entry.badge, aboveSum);
+  }
 
-  // The badge at which half of the selected metric sits at or below it.
-  const medianBadge = useMemo(() => {
-    let running = 0;
-    for (const entry of chartData) {
-      running += entry.value;
-      if (!entry.isSpacer && running >= shares.total / 2) return entry.badge;
-    }
-    return undefined;
-  }, [chartData, shares.total]);
+  const medianBadge = medianBadgeOf(chartData, total);
 
   const ticks = tiers.map((tier) => tier * 10 + 3);
 
-  const valueTicks = useMemo(() => niceTicks(0, Math.max(0, ...chartData.map((entry) => entry.value))), [chartData]);
+  const valueTicks = niceTicks(0, Math.max(0, ...chartData.map((entry) => entry.value)));
 
   // Rank names need about 64px each. Narrower (a phone), Recharts dropped every other one and the rest drifted off
   // their icons, so only the icons stay; they carry the name in their tooltip.
@@ -156,13 +141,10 @@ export default function BadgeDistributionChart({
                       label={BADGE_DISTRIBUTION_METRIC_LABEL[metric]}
                       value={entry.value.toLocaleString("en-US")}
                     />
-                    {shares.total > 0 && (
+                    {total > 0 && (
                       <>
-                        <TooltipStat label={`Share of ${metric}`} value={formatPercent(entry.value / shares.total)} />
-                        <TooltipStat
-                          label="Top"
-                          value={formatPercent((shares.atOrAbove.get(entry.badge) ?? 0) / shares.total)}
-                        />
+                        <TooltipStat label={`Share of ${metric}`} value={formatPercent(entry.value / total)} />
+                        <TooltipStat label="Top" value={formatPercent((atOrAbove.get(entry.badge) ?? 0) / total)} />
                       </>
                     )}
                   </TooltipStats>

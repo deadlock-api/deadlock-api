@@ -51,15 +51,12 @@ interface PlayableSound {
   heroId: number;
 }
 
-function flattenUrls(obj: unknown, prefix = ""): [string, string][] {
-  const results: [string, string][] = [];
+/** Every URL leaf of the sound tree with its slash-joined path, collected into one array as it recurses. */
+function flattenUrls(obj: unknown, prefix = "", results: [string, string][] = []): [string, string][] {
   if (typeof obj === "string" && obj.startsWith("https://")) {
     results.push([prefix, obj]);
   } else if (obj && typeof obj === "object" && !Array.isArray(obj)) {
-    for (const [k, v] of Object.entries(obj)) {
-      const newPrefix = prefix ? `${prefix}/${k}` : k;
-      results.push(...flattenUrls(v, newPrefix));
-    }
+    for (const [k, v] of Object.entries(obj)) flattenUrls(v, prefix ? `${prefix}/${k}` : k, results);
   }
   return results;
 }
@@ -440,11 +437,10 @@ function GuessSound() {
       names.push({ id: names.length, name: sound.abilityName });
     }
     if (rawAbilities) {
+      const playableHeroIds = new Set(playableHeroes.map((h) => h.id));
       for (const ability of rawAbilities) {
         if (!ability.ability_type || !VALID_ABILITY_TYPES.has(ability.ability_type)) continue;
-        if (!hasDisplayName(ability) || !ability.hero) continue;
-        const heroInfo = playableHeroes.find((h) => h.id === ability.hero);
-        if (!heroInfo) continue;
+        if (!hasDisplayName(ability) || !ability.hero || !playableHeroIds.has(ability.hero)) continue;
         const lower = ability.name.toLowerCase();
         if (seen.has(lower)) continue;
         seen.add(lower);

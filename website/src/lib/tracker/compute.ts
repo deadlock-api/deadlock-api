@@ -166,10 +166,13 @@ export function matchSortKeysFor(gameMode: GameMode): readonly MatchSortKey[] {
 export const SORT_DIRS = ["asc", "desc"] as const;
 export type SortDir = (typeof SORT_DIRS)[number];
 
+/** (kills + assists) / deaths, or kills + assists when there were no deaths. */
+function kdaOf(kills: number, deaths: number, assists: number): number {
+  return deaths > 0 ? (kills + assists) / deaths : kills + assists;
+}
+
 export function kdaRatio(entry: PlayerMatchHistoryEntry): number {
-  return entry.player_deaths > 0
-    ? (entry.player_kills + entry.player_assists) / entry.player_deaths
-    : entry.player_kills + entry.player_assists;
+  return kdaOf(entry.player_kills, entry.player_deaths, entry.player_assists);
 }
 
 const MATCH_SORT_VALUES: Record<MatchSortKey, (entry: PlayerMatchHistoryEntry) => number> = {
@@ -270,7 +273,7 @@ export function summarize(entries: PlayerMatchHistoryEntry[]): TrackerSummary {
     wins,
     losses,
     winrate: scored > 0 ? wins / scored : 0,
-    kdaRatio: deaths > 0 ? (kills + assists) / deaths : kills + assists,
+    kdaRatio: kdaOf(kills, deaths, assists),
     avgKills: matches > 0 ? kills / matches : 0,
     avgDeaths: matches > 0 ? deaths / matches : 0,
     avgAssists: matches > 0 ? assists / matches : 0,
@@ -407,14 +410,19 @@ export interface RankHistoryPoint {
 /** Ranked badge progression, oldest first. Ignores the mode filter's unranked entries by nature. */
 export function rankHistoryPoints(entries: PlayerMatchHistoryEntry[]): RankHistoryPoint[] {
   return entries
-    .filter((entry) => entry.ranked_display_badge != null && entry.ranked_display_badge > 0)
-    .map((entry) => ({
-      matchId: entry.match_id,
-      time: entry.start_time,
-      badge: entry.ranked_display_badge as number,
-      linear: badgeToLinear(entry.ranked_display_badge as number),
-      delta: entry.ranked_delta ?? null,
-    }))
+    .flatMap((entry) => {
+      const badge = entry.ranked_display_badge;
+      if (badge == null || badge <= 0) return [];
+      return [
+        {
+          matchId: entry.match_id,
+          time: entry.start_time,
+          badge,
+          linear: badgeToLinear(badge),
+          delta: entry.ranked_delta ?? null,
+        },
+      ];
+    })
     .sort((a, b) => a.time - b.time || a.matchId - b.matchId);
 }
 
@@ -549,7 +557,7 @@ export function computePerformanceTrend(entries: PlayerMatchHistoryEntry[], wind
       matchNumber: i + 1,
       time: entry.start_time,
       winrate: wins / window,
-      kdaRatio: deaths > 0 ? (kills + assists) / deaths : kills + assists,
+      kdaRatio: kdaOf(kills, deaths, assists),
       soulsPerMin: seconds > 0 ? souls / (seconds / 60) : 0,
     });
   }
@@ -722,9 +730,10 @@ export function recordsByMatchId(records: PersonalRecords, gameMode: GameMode): 
   for (const { key, label, format } of recordKindsFor(gameMode)) {
     const record = records[key];
     if (!record) continue;
-    const list = held.get(record.entry.match_id) ?? [];
-    list.push({ label, value: format(record.value) });
-    held.set(record.entry.match_id, list);
+    const value = { label, value: format(record.value) };
+    const list = held.get(record.entry.match_id);
+    if (list) list.push(value);
+    else held.set(record.entry.match_id, [value]);
   }
   return held;
 }

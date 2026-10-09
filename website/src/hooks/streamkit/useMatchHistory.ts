@@ -32,9 +32,9 @@ export const useMatchHistory = ({ accountId, numMatches = 10 }: UseMatchHistoryP
     refetchInterval: (query) => (query.state.status === "error" ? 60_000 : false),
     select: (heroesData) =>
       new Map(
-        heroesData
-          .filter((h) => h.images.icon_hero_card_webp)
-          .map((h) => [h.id, h.images.icon_hero_card_webp as string]),
+        heroesData.flatMap((h) =>
+          h.images.icon_hero_card_webp ? [[h.id, h.images.icon_hero_card_webp] as const] : [],
+        ),
       ),
   });
 

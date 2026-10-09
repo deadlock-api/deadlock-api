@@ -15,6 +15,7 @@ import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { Inline, Stack } from "~/components/ui/stack";
 import { Text } from "~/components/ui/text";
 import { useHydrated } from "~/hooks/useHydrated";
+import { seededShuffle } from "~/lib/deadlockdle/seed";
 import { pageTitle, seo } from "~/lib/seo";
 import { filterShopableItems, itemUpgradesQueryOptions, type SlimUpgrade } from "~/queries/asset-queries";
 
@@ -95,15 +96,6 @@ function buildUpgradePathPool(items: SlimUpgrade[]): UpgradePathEntry[] {
     .sort((a, b) => a.target.item_tier - b.target.item_tier || a.target.name.localeCompare(b.target.name));
 }
 
-function shuffle<T>(items: T[], random: () => number): T[] {
-  const result = [...items];
-  for (let i = result.length - 1; i > 0; i--) {
-    const j = Math.floor(random() * (i + 1));
-    [result[i], result[j]] = [result[j], result[i]];
-  }
-  return result;
-}
-
 function entryToOption(entry: UpgradePathEntry): UpgradePathOption {
   return {
     key: entry.answerKey,
@@ -177,7 +169,7 @@ function rankedDistractors(
   addCandidates((entry) => sameComponentCount(entry));
   addCandidates(() => true);
 
-  return shuffle(distractors, random);
+  return seededShuffle(distractors, random);
 }
 
 function pickCard(pool: UpgradePathEntry[], excludeIds: Set<number>, random: () => number): UpgradePathCard | null {
@@ -190,7 +182,7 @@ function pickCard(pool: UpgradePathEntry[], excludeIds: Set<number>, random: () 
 
   return {
     answer,
-    options: shuffle([answerOption, ...distractors], random),
+    options: seededShuffle([answerOption, ...distractors], random),
   };
 }
 
