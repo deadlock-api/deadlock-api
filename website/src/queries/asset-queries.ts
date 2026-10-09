@@ -15,8 +15,9 @@ import { queryKeys } from "./query-keys";
 
 export type { SlimHero, SlimUpgrade };
 
+/** Every hero, pre-release and disabled ones too: the games keep the playable ones. */
 async function fetchHeroes(): Promise<Hero[]> {
-  const response = await api.heroes_api.listHeroes({ onlyActive: true });
+  const response = await api.heroes_api.listHeroes({ onlyActive: false });
   return response.data;
 }
 
@@ -29,6 +30,12 @@ export const heroesQueryOptions = queryOptions({
   queryKey: queryKeys.assets.heroes(),
   queryFn: () => fetchSlimHeroes(),
   staleTime: CACHE_DURATIONS.FOREVER,
+});
+
+/** The heroes anyone can pick in matchmaking, from the same cache entry as `heroesQueryOptions`. */
+export const playableHeroesQueryOptions = queryOptions({
+  ...heroesQueryOptions,
+  select: (heroes: SlimHero[]) => filterPlayableHeroes(heroes),
 });
 
 export const heroesFullQueryOptions = queryOptions({
@@ -136,6 +143,7 @@ export async function loadSeasons(queryClient: QueryClient): Promise<SeasonInfo[
   return seasons ?? [];
 }
 
+/** The heroes anyone can pick in matchmaking: the hero lists also hold pre-release and disabled ones. */
 export function filterPlayableHeroes<T extends SlimHero>(heroes: T[]): T[] {
   return heroes.filter(isPlayableHero);
 }

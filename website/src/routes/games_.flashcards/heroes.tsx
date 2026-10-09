@@ -1,6 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo } from "react";
 
 import {
   FlashcardGame,
@@ -9,7 +8,7 @@ import {
   useFlashcardEntry,
 } from "~/components/features/flashcards/FlashcardGame";
 import { pageTitle, seo } from "~/lib/seo";
-import { filterPlayableHeroes, heroesQueryOptions, type SlimHero } from "~/queries/asset-queries";
+import { playableHeroesQueryOptions, type SlimHero } from "~/queries/asset-queries";
 
 export const Route = createFileRoute("/games_/flashcards/heroes")({
   component: HeroFlashcards,
@@ -31,12 +30,7 @@ function PromptIcon() {
 }
 
 function HeroFlashcards() {
-  const { data: heroes, isLoading, isError, isFetching, refetch } = useQuery(heroesQueryOptions);
-
-  const pool = useMemo(() => {
-    if (!heroes) return [];
-    return filterPlayableHeroes(heroes);
-  }, [heroes]);
+  const { data: pool = [], isLoading, isError, isFetching, refetch } = useQuery(playableHeroesQueryOptions);
 
   return (
     <FlashcardGame

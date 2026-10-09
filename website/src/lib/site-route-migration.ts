@@ -70,8 +70,8 @@ export async function redirectLegacyHeroId({
   context: { queryClient: QueryClient };
 }) {
   if (!location.href.includes("heroId=")) return;
-  const { filterPlayableHeroes, heroesQueryOptions } = await import("~/queries/asset-queries");
-  const heroes = await catchPrefetch(ensureCached(context.queryClient, heroesQueryOptions));
-  const href = heroes && legacyHeroIdHref(location.href, filterPlayableHeroes(heroes));
+  const { playableHeroesQueryOptions } = await import("~/queries/asset-queries");
+  const heroes = await catchPrefetch(ensureCached(context.queryClient, playableHeroesQueryOptions));
+  const href = heroes && legacyHeroIdHref(location.href, heroes);
   if (href) throw redirect({ href, statusCode: 301 });
 }

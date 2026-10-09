@@ -8,7 +8,7 @@ import { API_ORIGIN } from "~/lib/constants";
 import { ensureCached } from "~/lib/prefetch-safe";
 import { isDemoAccount } from "~/lib/tracker/demo";
 
-import { filterPlayableHeroes, heroesQueryOptions } from "./asset-queries";
+import { playableHeroesQueryOptions } from "./asset-queries";
 import { queryKeys } from "./query-keys";
 
 /**
@@ -40,10 +40,10 @@ export function trackerMatchHistoryQueryOptions(accountId: number) {
       if (isDemoAccount(accountId)) {
         const [{ demoMatchHistory }, heroes] = await Promise.all([
           import("~/lib/tracker/demo-data"),
-          ensureCached(client, heroesQueryOptions),
+          ensureCached(client, playableHeroesQueryOptions),
         ]);
         return demoMatchHistory(
-          filterPlayableHeroes(heroes).map((hero) => hero.id),
+          heroes.map((hero) => hero.id),
           Date.now() / 1000,
         );
       }

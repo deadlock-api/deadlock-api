@@ -17,6 +17,8 @@ const HERO_FIELDS = [
   "development_state",
   "disabled",
   "hero_type",
+  // "Strategist", "Focused": the only words the game has for a pre-release hero yet.
+  "tags",
 ] as const satisfies readonly (keyof Hero)[];
 const HERO_IMAGE_FIELDS = [
   "hero_card_critical_webp",
@@ -26,6 +28,9 @@ const HERO_IMAGE_FIELDS = [
   "icon_image_small_webp",
   "minimap_image",
   "minimap_image_webp",
+  // The portrait of a pre-release hero, which has no hero card yet.
+  "top_bar_vertical_image",
+  "top_bar_vertical_image_webp",
 ] as const satisfies readonly (keyof HeroImages)[];
 /** Of the 15 `items` slots (weapons, movement, innates) only the four signature abilities are read. */
 const HERO_ITEM_SLOTS = new Set(["signature1", "signature2", "signature3", "signature4"]);
@@ -55,9 +60,12 @@ function pickKeys<T extends object, K extends keyof T>(obj: T, keys: readonly K[
   return Object.fromEntries(keys.filter((key) => key in obj).map((key) => [key, obj[key]])) as Pick<T, K>;
 }
 
-/** Active heroes with only the fields the site reads. Runs in the Worker, also for a browser's request. */
+/**
+ * Every hero, pre-release and disabled ones too, with only the fields the site reads; lists of heroes to pick from
+ * keep the playable ones (`isPlayableHero`). Runs in the Worker, also for a browser's request.
+ */
 export const fetchSlimHeroes = createServerFn({ method: "GET" }).handler(async (): Promise<SlimHero[]> => {
-  const response = await api.heroes_api.listHeroes({ onlyActive: true });
+  const response = await api.heroes_api.listHeroes({ onlyActive: false });
   return response.data.map((hero) =>
     Object.assign(pickKeys(hero, HERO_FIELDS), {
       images: pickKeys(hero.images, HERO_IMAGE_FIELDS),

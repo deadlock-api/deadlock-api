@@ -46,7 +46,7 @@ import {
 import { lanesOf, TEAM_SIZE } from "~/lib/team-builder/lanes";
 import { nextEmptySlot } from "~/lib/team-builder/next-slot";
 import type { RawMatchMetadata } from "~/lib/tracker/match-metadata";
-import { filterPlayableHeroes, heroesQueryOptions } from "~/queries/asset-queries";
+import { playableHeroesQueryOptions } from "~/queries/asset-queries";
 import { heroStatsQueryOptions } from "~/queries/hero-stats-query";
 import { laneMatchupStatsQueryOptions } from "~/queries/lane-matchup-query";
 import { laneSoulCurveQueryOptions } from "~/queries/lane-soul-curve-query";
@@ -129,7 +129,7 @@ function TeamBuilderPage() {
 
   const [heroesQuery, heroStatsQuery, synergyQuery, counterQuery, laneCounterQuery] = useQueries({
     queries: [
-      heroesQueryOptions,
+      playableHeroesQueryOptions,
       heroStatsQueryOptions(sharedFilters),
       draftSynergyStatsQueryOptions(matrixParams),
       draftCounterStatsQueryOptions(matrixParams),
@@ -174,7 +174,7 @@ function TeamBuilderPage() {
   );
   const soulCurves = useMemo(() => new SoulCurves(soulCurveQuery.data), [soulCurveQuery.data]);
 
-  const playableHeroes = useMemo(() => filterPlayableHeroes(heroesQuery.data ?? []), [heroesQuery.data]);
+  const playableHeroes = useMemo(() => heroesQuery.data ?? [], [heroesQuery.data]);
   const candidates = useMemo(() => playableHeroes.map((hero) => hero.id), [playableHeroes]);
 
   const analysis = useMemo(() => analyzeDraft(draft, index), [draft, index]);

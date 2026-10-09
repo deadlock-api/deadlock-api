@@ -67,9 +67,16 @@ function HeroImageView({
 }: HeroImageLook & { hero: SlimHero | undefined; loading?: boolean }) {
   const look = cn(heroImageVariants({ shape, ring: ringColor ? "none" : ring }), className);
   const images = hero?.images;
-  const portrait = art === "portrait" && (images?.icon_hero_card_webp || images?.icon_hero_card);
-  const webp = portrait ? images?.icon_hero_card_webp : images?.minimap_image_webp;
-  const png = portrait ? images?.icon_hero_card : images?.minimap_image;
+  // A pre-release hero has no card yet, only the narrower top bar portrait; `object-cover` crops it to 3:4.
+  const card = images?.icon_hero_card_webp || images?.icon_hero_card;
+  const topBar = images?.top_bar_vertical_image_webp || images?.top_bar_vertical_image;
+  const portrait = art === "portrait" && (card || topBar);
+  const webp = portrait
+    ? card
+      ? images?.icon_hero_card_webp
+      : images?.top_bar_vertical_image_webp
+    : images?.minimap_image_webp;
+  const png = portrait ? (card ? images?.icon_hero_card : images?.top_bar_vertical_image) : images?.minimap_image;
   const frame = portrait ? "aspect-3/4 w-24 object-cover object-top" : "aspect-square size-8";
   // A data color cannot be a class, and a border would eat into the art: the frame is an inset shadow.
   const ringStyle = ringColor ? { boxShadow: `inset 0 0 0 1px ${ringColor}` } : undefined;

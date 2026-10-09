@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import type { UseQueryOptions } from "@tanstack/react-query";
 import type { Ability } from "deadlock_api_client";
 
+import { isPlayableHero } from "~/lib/hero-roster";
 import {
   abilitiesQueryOptions,
   heroesQueryOptions,
@@ -58,13 +59,13 @@ export function useItemById(itemId: number): { item: SlimUpgrade | undefined; is
 }
 
 /**
- * The hero id when it names a hero, otherwise null: a hand-edited `?hero=9999` showed "Any" in the filter while the
+ * The hero id when it names a playable hero, otherwise null: a hand-edited `?hero=9999` showed "Any" in the filter while the
  * requests still carried it and matched nothing. While the hero list loads, the id is trusted.
  */
 export function useKnownHeroId(heroId: number | null): number | null {
   const { data: known } = useQuery({
     ...heroesQueryOptions,
-    select: (heroes: SlimHero[]) => heroId == null || heroes.some((hero) => hero.id === heroId),
+    select: (heroes: SlimHero[]) => heroId == null || heroes.some((hero) => hero.id === heroId && isPlayableHero(hero)),
   });
   return known === false ? null : heroId;
 }
