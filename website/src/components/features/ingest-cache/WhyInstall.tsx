@@ -1,4 +1,4 @@
-import { CloudDownload, Gamepad2, Power, ShieldCheck } from "lucide-react";
+import { CloudDownload, Gamepad2, History, Power, ShieldCheck } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { IconTile } from "~/components/ui/icon-tile";
@@ -35,6 +35,9 @@ export function WhyInstall() {
           <ul>
             <Reason icon={<Gamepad2 />} title="Every match you play, on every tracker">
               It sends each match as soon as Deadlock loads it, and everything already in your Steam cache.
+            </Reason>
+            <Reason icon={<History />} title="Your whole match history, not just new games">
+              It also goes back through all your past matches and sends every one that is still missing.
             </Reason>
             <Reason icon={<CloudDownload />} title="Finds matches nobody has yet">
               While Deadlock is closed, it uses your Steam session to fetch a few matches a day that are still missing.
