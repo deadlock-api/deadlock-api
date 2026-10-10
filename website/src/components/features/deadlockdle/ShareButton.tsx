@@ -1,5 +1,7 @@
+import { CopyButton } from "~/components/ui/copy-button";
 import { getDayNumber, puzzleShareUrl } from "~/lib/deadlockdle/seed";
 import type { GameMode, GameStatus } from "~/lib/deadlockdle/types";
+import { cn } from "~/lib/utils";
 
 const MODE_LABELS: Record<GameMode, string> = {
   "guess-hero": "Hero",
@@ -25,4 +27,15 @@ export function generateShareText(
     .map((_, i) => (i === guesses.length - 1 && status === "won" ? "\u{1f7e9}" : "\u{1f7e5}"))
     .join("");
   return `Deadlockdle #${dayNum} - ${label} ${score}\n${grid}\n${puzzleShareUrl(date)}`;
+}
+
+/** Copies a result to the clipboard, in the games' terminal voice. */
+export function ShareButton({ variant = "outline", ...props }: React.ComponentProps<typeof CopyButton>) {
+  return (
+    <CopyButton
+      variant={variant}
+      {...props}
+      className={cn("cursor-target font-mono text-xs tracking-wider uppercase", props.className)}
+    />
+  );
 }

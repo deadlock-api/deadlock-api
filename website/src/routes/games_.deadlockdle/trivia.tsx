@@ -3,13 +3,13 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useCallback, useMemo, useRef, useState } from "react";
 
 import { AnswerOption, revealedState } from "~/components/domain/minigames/AnswerOption";
-import { ScoreSummary } from "~/components/domain/minigames/ScoreSummary";
-import { ShareButton } from "~/components/domain/minigames/ShareButton";
 import { TerminalBadge } from "~/components/domain/minigames/TerminalBadge";
 import { TerminalButton } from "~/components/domain/minigames/TerminalButton";
 import { GameShell, GameShellError, GameShellLoading } from "~/components/features/deadlockdle/GameShell";
 import { GuessFeedback } from "~/components/features/deadlockdle/GuessFeedback";
 import { NextGameButton } from "~/components/features/deadlockdle/NextGameButton";
+import { ScoreSummary } from "~/components/features/deadlockdle/ScoreSummary";
+import { ShareButton } from "~/components/features/deadlockdle/ShareButton";
 import { useGuessFeedback } from "~/components/features/deadlockdle/use-guess-feedback";
 import { Card, CardContent } from "~/components/ui/card";
 import { Stack } from "~/components/ui/stack";

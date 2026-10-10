@@ -7,8 +7,6 @@ import { AbilityImage } from "~/components/domain/assets/AbilityImage";
 import { AssetImage } from "~/components/domain/assets/AssetImage";
 import { HeroImage } from "~/components/domain/assets/HeroImage";
 import { AnswerOption, revealedState } from "~/components/domain/minigames/AnswerOption";
-import { ScoreSummary } from "~/components/domain/minigames/ScoreSummary";
-import { ShareButton } from "~/components/domain/minigames/ShareButton";
 import { TerminalBadge } from "~/components/domain/minigames/TerminalBadge";
 import { TerminalButton } from "~/components/domain/minigames/TerminalButton";
 import {
@@ -26,6 +24,8 @@ import {
 import { GameShell, GameShellError, GameShellLoading } from "~/components/features/deadlockdle/GameShell";
 import { GuessFeedback } from "~/components/features/deadlockdle/GuessFeedback";
 import { NextGameButton } from "~/components/features/deadlockdle/NextGameButton";
+import { ScoreSummary } from "~/components/features/deadlockdle/ScoreSummary";
+import { ShareButton } from "~/components/features/deadlockdle/ShareButton";
 import { useGuessFeedback } from "~/components/features/deadlockdle/use-guess-feedback";
 import { Card, CardContent } from "~/components/ui/card";
 import { Inline, Stack } from "~/components/ui/stack";
