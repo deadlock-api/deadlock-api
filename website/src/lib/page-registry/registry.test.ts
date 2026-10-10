@@ -177,7 +177,6 @@ const NOTHING_TO_FIND: Record<string, string> = {
   games_buffs: "charts of buff pickups",
   player_stats: "distribution charts",
   player_compare: "players the visitor adds",
-  player_tracker: "the visitor's own matches",
   team_builder: "the draft itself is the answer",
   leaderboard: "rows are players, a hero is a filter",
   rank_distribution: "a chart",
@@ -189,6 +188,7 @@ const NOTHING_TO_FIND: Record<string, string> = {
   crosshair: "an editor",
   streamkit: "a setup page",
   data_dumps: "downloads",
+  ingest_cache: "instructions, not stats",
   deadlockdle: "a game",
   flashcards: "a game",
 };

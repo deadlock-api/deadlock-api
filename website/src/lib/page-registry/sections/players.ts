@@ -27,11 +27,6 @@ export const PLAYER_PAGES: RegisteredPage[] = [
     path: "/analytics/players/compare",
   },
   {
-    id: "player_tracker",
-    description: "your own match history, heroes, rank and teammates: my stats, my matches, my profile",
-    path: "/tracker",
-  },
-  {
     id: "team_builder",
     description: "draft two teams of heroes and predict which wins: my team against an enemy team",
     context: "Two teams of heroes against each other, for a draft.",

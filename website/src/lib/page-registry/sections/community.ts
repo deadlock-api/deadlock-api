@@ -62,6 +62,12 @@ export const COMMUNITY_PAGES: RegisteredPage[] = [
     path: "/data-dumps",
   },
   {
+    id: "ingest_cache",
+    description:
+      "upload or send in your own matches so trackers show them: missing matches, how to upload, the background tool",
+    path: "/ingest-cache",
+  },
+  {
     id: "deadlockdle",
     description: "a daily guessing game about heroes, items and abilities",
     path: "/games/deadlockdle",
