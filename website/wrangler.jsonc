@@ -34,6 +34,17 @@
   "ratelimits": [
     { "name": "AI_SEARCH_RATE_LIMITER", "namespace_id": "1001", "simple": { "limit": 10, "period": 60 } }
   ],
+  // Guess the Rank (src/lib/guess-the-rank): the video catalog and the community's votes in D1, the videos in R2.
+  // A separate pipeline uploads the videos and inserts their rows; the site only reads `videos` and writes votes.
+  "d1_databases": [
+    {
+      "binding": "GUESS_THE_RANK_DB",
+      "database_name": "guess-the-rank",
+      "database_id": "4bc641d1-a277-4339-94dd-179dcf66931c",
+      "migrations_dir": "migrations/guess-the-rank"
+    }
+  ],
+  "r2_buckets": [{ "binding": "GUESS_THE_RANK_VIDEOS", "bucket_name": "guess-the-rank" }],
   "observability": {
     "enabled": true
   },
