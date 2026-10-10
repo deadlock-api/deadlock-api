@@ -86,11 +86,11 @@ export function VoteDistributionChart({
     (top && top.votes > 0 ? `; the most guessed tier was ${top.name}.` : ".");
 
   return (
-    <Stack gap={2}>
-      <ChartSurface label={label} size="md" variant="flush">
+    <Stack gap={2} className="flex-1">
+      <ChartSurface label={label} size="grow" variant="flush">
         <BarChart data={data} margin={CHART_MARGIN} accessibilityLayer>
           <CartesianGrid {...CHART_GRID} />
-          <XAxis {...CHART_X_AXIS} dataKey="tier" interval={0} height={48} tick={<RankTierTick tiers={tiers} />} />
+          <XAxis {...CHART_X_AXIS} dataKey="tier" interval={0} height={36} tick={<RankTierTick tiers={tiers} />} />
           <YAxis
             {...CHART_Y_AXIS}
             allowDecimals={false}
@@ -117,7 +117,7 @@ export function VoteDistributionChart({
           </ChartLegendItem>
         )}
         <ChartLegendItem shape="square" color={ROLE_COLOR.other}>
-          Other guesses
+          Others
         </ChartLegendItem>
       </ChartLegend>
     </Stack>
