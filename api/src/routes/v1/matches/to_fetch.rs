@@ -13,7 +13,6 @@ use tracing::debug;
 
 use crate::context::AppState;
 use crate::error::APIResult;
-use crate::routes::v1::players::rank::badge_from_flat_progress_sql;
 use crate::utils::parse::parse_steam_id_option;
 use crate::utils::sql::id_list;
 
@@ -47,7 +46,7 @@ async fn prioritized_account_ids(pg_client: &Pool<Postgres>) -> Result<Arc<Vec<u
 
 /// Pending matches in fetch order: prioritized accounts' matches, then ranked, unranked,
 /// street brawl and everything else; newest day first, within a day ranked games with
-/// higher-badge players (badge after each player's latest ranked match) first, then the newest.
+/// a higher-badge player (any one player's badge at that match) first, then the newest.
 /// Holds every pending prioritized match plus the newest others, up to `POOL_LIMIT`.
 #[cached(ttl_secs = 60, convert = "{ 0 }", key = "u8", sync_writes = "default")]
 async fn pending_pool(
@@ -63,45 +62,22 @@ async fn pending_pool(
              WHERE account_id IN ({ids}) AND match_id >= {MIN_MATCH_ID}"
         )
     };
-    // Matches missing from `player_match_by_match` get the defaults 'Invalid' and badge 0.
-    let badge = badge_from_flat_progress_sql(
-        "player_rank_final_flat_progress",
-        "player_rank_initial_display_rank",
-    );
-    // CTEs are inlined per reference, so without MATERIALIZED the pending_matches FINAL scan ran
-    // three times and the ~77M-row player_match_by_match lookup twice.
     let query = format!(
-        "WITH prio AS ({prio}),
-         pool AS MATERIALIZED (
-             SELECT match_id, match_id IN prio AS is_prio FROM pending_matches FINAL
+        "WITH prio AS ({prio})
+         SELECT match_id FROM (
+             SELECT match_id, match_id IN prio AS is_prio, start_time, match_mode, game_mode, badge
+             FROM pending_matches FINAL
              WHERE state = 'pending' AND match_id >= {MIN_MATCH_ID}
              ORDER BY is_prio DESC, match_id DESC LIMIT {POOL_LIMIT}
-         ),
-         players AS MATERIALIZED (
-             SELECT match_id, account_id, match_mode, game_mode, start_time FROM player_match_by_match
-             WHERE match_id IN (SELECT match_id FROM pool)
-         ),
-         badges AS (
-             SELECT account_id,
-                    argMax(if(player_rank_final_flat_progress IS NULL,
-                              toUInt32(player_rank_initial_display_rank),
-                              {badge}), match_id) AS badge
-             FROM player_match_stats
-             WHERE account_id IN (SELECT account_id FROM players WHERE match_mode = 'Ranked')
-               AND match_mode = 'Ranked' AND player_rank_initial_display_rank > 0
-             GROUP BY account_id
          )
-         SELECT match_id
-         FROM pool LEFT JOIN players USING match_id LEFT JOIN badges USING account_id
-         GROUP BY match_id, is_prio
-         ORDER BY if(is_prio, 0, multiIf(any(match_mode) = 'Ranked', 1,
-                                         any(game_mode) = 'StreetBrawl', 3,
-                                         any(match_mode) = 'Unranked', 2,
+         ORDER BY if(is_prio, 0, multiIf(match_mode = 'Ranked', 1,
+                                         game_mode = 'StreetBrawl', 3,
+                                         match_mode = 'Unranked', 2,
                                          4)),
-                  toDate(any(start_time)) DESC,
-                  avgIf(badge, badge > 0 AND match_mode = 'Ranked') DESC,
+                  toDate(start_time) DESC,
+                  badge DESC,
                   match_id DESC
-         SETTINGS log_comment = 'matches_to_fetch_pool', enable_materialized_cte = 1"
+         SETTINGS log_comment = 'matches_to_fetch_pool'"
     );
     let ids: Vec<u64> = ch_client.query(&query).fetch_all().await?;
     Ok(Arc::new(ids))
