@@ -1,14 +1,19 @@
+import { Download } from "lucide-react";
+
 import { CopyableCode } from "~/components/patterns/code/CopyableCode";
 import { Disclosure } from "~/components/patterns/content/Disclosure";
 import { Step, Steps } from "~/components/patterns/content/Steps";
+import { Button } from "~/components/ui/button";
 import { Card, CardContent } from "~/components/ui/card";
 import { Code } from "~/components/ui/code";
 import { Kbd } from "~/components/ui/kbd";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
+import { Text } from "~/components/ui/text";
 import { TextLink } from "~/components/ui/text-link";
 
 const REPO = "https://github.com/deadlock-api/deadlock-api-ingest";
 
+const WINDOWS_SETUP = `${REPO}/releases/latest/download/deadlock-api-ingest-setup.exe`;
 const WINDOWS_INSTALL = `irm https://raw.githubusercontent.com/deadlock-api/deadlock-api-ingest/master/install-windows.ps1 | iex`;
 const WINDOWS_UNINSTALL = `& "$env:LOCALAPPDATA\\deadlock-api-ingest\\uninstall-windows.ps1"`;
 const LINUX_INSTALL = `curl -fsSL https://raw.githubusercontent.com/deadlock-api/deadlock-api-ingest/master/install-linux.sh | bash`;
@@ -18,9 +23,10 @@ const DOCKER_INSTALL = `docker run -d --restart unless-stopped --name deadlock-a
   ghcr.io/deadlock-api/deadlock-api-ingest:latest`;
 const DOCKER_UNINSTALL = "docker rm -f deadlock-api-ingest";
 
-function Uninstall({ code }: { code: string }) {
+function Uninstall({ code, children }: { code: string; children?: React.ReactNode }) {
   return (
     <Disclosure variant="inline" title="Uninstall">
+      {children}
       <CopyableCode size="sm" language="bash" code={code} copyLabel="Copy uninstall command" />
     </Disclosure>
   );
@@ -40,21 +46,49 @@ export function InstallGuide() {
 
           <TabsContent value="windows" className="flex flex-col gap-4">
             <Steps>
-              <Step title="Open PowerShell as administrator: right-click Start, then Terminal (Admin) or Windows PowerShell (Admin)." />
-              <Step title="Paste the installer and press Enter.">
-                <CopyableCode language="bash" code={WINDOWS_INSTALL} copyLabel="Copy Windows install command" />
+              <Step title="Download the installer.">
+                <div className="flex flex-col items-start gap-2">
+                  <Button asChild size="lg">
+                    <a href={WINDOWS_SETUP} download>
+                      <Download aria-hidden="true" />
+                      Download for Windows
+                    </a>
+                  </Button>
+                  <Text variant="caption" tone="muted">
+                    If Windows says it protected your PC, click More info, then Run anyway.
+                  </Text>
+                </div>
               </Step>
-              <Step
-                title={
-                  <>
-                    Press <Kbd>Y</Kbd> when it asks about auto-start, or wait 10 seconds. It then starts by itself every
-                    time you sign in.
-                  </>
-                }
-              />
+              <Step title="Open it. It installs for your account only, so no admin rights are needed, and starts by itself every time you sign in." />
+              <Step title="A small window opens and shows every match you send. You can close it, the tool keeps running." />
               <Step title="Play Deadlock. Your matches are sent while you play." />
             </Steps>
-            <Uninstall code={WINDOWS_UNINSTALL} />
+            <Disclosure variant="inline" title="Install with PowerShell instead">
+              <Steps variant="plain">
+                <Step title="Open PowerShell as administrator: right-click Start, then Terminal (Admin) or Windows PowerShell (Admin)." />
+                <Step title="Paste the installer and press Enter.">
+                  <CopyableCode
+                    size="sm"
+                    language="bash"
+                    code={WINDOWS_INSTALL}
+                    copyLabel="Copy Windows install command"
+                  />
+                </Step>
+                <Step
+                  title={
+                    <>
+                      Press <Kbd>Y</Kbd> when it asks about auto-start, or wait 10 seconds.
+                    </>
+                  }
+                />
+              </Steps>
+            </Disclosure>
+            <Uninstall code={WINDOWS_UNINSTALL}>
+              <Text as="p" variant="caption" tone="muted">
+                Installed with the installer: remove Deadlock API Ingest under Settings, Apps, Installed apps. Installed
+                with PowerShell: run this.
+              </Text>
+            </Uninstall>
           </TabsContent>
 
           <TabsContent value="linux" className="flex flex-col gap-4">
@@ -63,6 +97,13 @@ export function InstallGuide() {
                 <CopyableCode language="bash" code={LINUX_INSTALL} copyLabel="Copy Linux install command" />
               </Step>
               <Step title="Play Deadlock. Your matches are sent while you play." />
+              <Step
+                title={
+                  <>
+                    To see the matches you have sent, run <Code>deadlock-api-ingest --gui</Code>.
+                  </>
+                }
+              />
             </Steps>
             <Uninstall code={LINUX_UNINSTALL} />
           </TabsContent>
