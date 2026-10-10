@@ -62,7 +62,6 @@ import { Route as FlashcardsItemUpgradesRouteImport } from './routes/flashcards/
 import { Route as FlashcardsItemsRouteImport } from './routes/flashcards/items'
 import { Route as GamesDeadlockdleRouteImport } from './routes/games_.deadlockdle'
 import { Route as GamesFlashcardsRouteImport } from './routes/games_.flashcards'
-import { Route as GamesGuessTheRankRouteImport } from './routes/games_.guess-the-rank'
 import { Route as HeroesIndexRouteImport } from './routes/heroes.index'
 import { Route as HeroesHeroNameRouteImport } from './routes/heroes.$heroName'
 import { Route as ItemsIndexRouteImport } from './routes/items.index'
@@ -381,11 +380,6 @@ const GamesDeadlockdleRoute = GamesDeadlockdleRouteImport.update({
 const GamesFlashcardsRoute = GamesFlashcardsRouteImport.update({
   id: '/games_/flashcards',
   path: '/games/flashcards',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const GamesGuessTheRankRoute = GamesGuessTheRankRouteImport.update({
-  id: '/games_/guess-the-rank',
-  path: '/games/guess-the-rank',
   getParentRoute: () => rootRouteImport,
 } as any)
 const HeroesIndexRoute = HeroesIndexRouteImport.update({
@@ -718,7 +712,6 @@ export interface FileRoutesByFullPath {
   '/flashcards/items': typeof FlashcardsItemsRoute
   '/games/deadlockdle': typeof GamesDeadlockdleRouteWithChildren
   '/games/flashcards': typeof GamesFlashcardsRouteWithChildren
-  '/games/guess-the-rank': typeof GamesGuessTheRankRoute
   '/heroes/$heroName': typeof HeroesHeroNameRoute
   '/items/$itemName': typeof ItemsItemNameRoute
   '/og/compare.png': typeof OgCompareDotpngRoute
@@ -816,7 +809,6 @@ export interface FileRoutesByTo {
   '/flashcards/item-effects': typeof FlashcardsItemEffectsRoute
   '/flashcards/item-upgrades': typeof FlashcardsItemUpgradesRoute
   '/flashcards/items': typeof FlashcardsItemsRoute
-  '/games/guess-the-rank': typeof GamesGuessTheRankRoute
   '/heroes/$heroName': typeof HeroesHeroNameRoute
   '/items/$itemName': typeof ItemsItemNameRoute
   '/og/compare.png': typeof OgCompareDotpngRoute
@@ -926,7 +918,6 @@ export interface FileRoutesById {
   '/flashcards/items': typeof FlashcardsItemsRoute
   '/games_/deadlockdle': typeof GamesDeadlockdleRouteWithChildren
   '/games_/flashcards': typeof GamesFlashcardsRouteWithChildren
-  '/games_/guess-the-rank': typeof GamesGuessTheRankRoute
   '/heroes/$heroName': typeof HeroesHeroNameRoute
   '/items/$itemName': typeof ItemsItemNameRoute
   '/og/compare.png': typeof OgCompareDotpngRoute
@@ -1037,7 +1028,6 @@ export interface FileRouteTypes {
     | '/flashcards/items'
     | '/games/deadlockdle'
     | '/games/flashcards'
-    | '/games/guess-the-rank'
     | '/heroes/$heroName'
     | '/items/$itemName'
     | '/og/compare.png'
@@ -1135,7 +1125,6 @@ export interface FileRouteTypes {
     | '/flashcards/item-effects'
     | '/flashcards/item-upgrades'
     | '/flashcards/items'
-    | '/games/guess-the-rank'
     | '/heroes/$heroName'
     | '/items/$itemName'
     | '/og/compare.png'
@@ -1244,7 +1233,6 @@ export interface FileRouteTypes {
     | '/flashcards/items'
     | '/games_/deadlockdle'
     | '/games_/flashcards'
-    | '/games_/guess-the-rank'
     | '/heroes/$heroName'
     | '/items/$itemName'
     | '/og/compare.png'
@@ -1344,7 +1332,6 @@ export interface RootRouteChildren {
   DevDesignSystemRoute: typeof DevDesignSystemRoute
   GamesDeadlockdleRoute: typeof GamesDeadlockdleRouteWithChildren
   GamesFlashcardsRoute: typeof GamesFlashcardsRouteWithChildren
-  GamesGuessTheRankRoute: typeof GamesGuessTheRankRoute
   OgCompareDotpngRoute: typeof OgCompareDotpngRoute
   OgCrosshairDotpngRoute: typeof OgCrosshairDotpngRoute
   PlayersAccountIdRoute: typeof PlayersAccountIdRoute
@@ -1730,13 +1717,6 @@ declare module '@tanstack/react-router' {
       path: '/games/flashcards'
       fullPath: '/games/flashcards'
       preLoaderRoute: typeof GamesFlashcardsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/games_/guess-the-rank': {
-      id: '/games_/guess-the-rank'
-      path: '/games/guess-the-rank'
-      fullPath: '/games/guess-the-rank'
-      preLoaderRoute: typeof GamesGuessTheRankRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/heroes/': {
@@ -2369,7 +2349,6 @@ const rootRouteChildren: RootRouteChildren = {
   DevDesignSystemRoute: DevDesignSystemRoute,
   GamesDeadlockdleRoute: GamesDeadlockdleRouteWithChildren,
   GamesFlashcardsRoute: GamesFlashcardsRouteWithChildren,
-  GamesGuessTheRankRoute: GamesGuessTheRankRoute,
   OgCompareDotpngRoute: OgCompareDotpngRoute,
   OgCrosshairDotpngRoute: OgCrosshairDotpngRoute,
   PlayersAccountIdRoute: PlayersAccountIdRoute,

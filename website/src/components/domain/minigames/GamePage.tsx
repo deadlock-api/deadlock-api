@@ -11,8 +11,7 @@ const MotionPageShell = motion.create(PageShell);
 interface GamePageProps extends Omit<React.ComponentProps<typeof MotionPageShell>, "title" | "children" | "width"> {
   title: string;
   subtitle?: React.ReactNode;
-  /** The hub the back link returns to; a game without a hub (Guess the Rank) has no back link. */
-  hub?: "/games/deadlockdle" | "/games/flashcards";
+  hub: "/games/deadlockdle" | "/games/flashcards";
   hubSearch?: { date?: string };
   /** Sits on the trailing edge of the title: the archive marker. */
   badge?: React.ReactNode;
@@ -22,7 +21,7 @@ interface GamePageProps extends Omit<React.ComponentProps<typeof MotionPageShell
   children: React.ReactNode;
 }
 
-/** The page of one game: the way back to its hub (if it has one), the title in the game face, then the game. */
+/** The page of one game: the way back to its hub, the title in the game face, then the game. */
 export function GamePage({
   title,
   subtitle,
@@ -49,17 +48,15 @@ export function GamePage({
         align="start"
         as={as}
         eyebrow={
-          hub && (
-            <Link
-              to={hub}
-              search={hubSearch}
-              activeOptions={{ exact: true }}
-              className="cursor-target inline-flex items-center gap-1.5 font-mono tracking-wider uppercase transition-colors hover:text-primary"
-            >
-              <ArrowLeft className="size-3" />
-              Back to Hub
-            </Link>
-          )
+          <Link
+            to={hub}
+            search={hubSearch}
+            activeOptions={{ exact: true }}
+            className="cursor-target inline-flex items-center gap-1.5 font-mono tracking-wider uppercase transition-colors hover:text-primary"
+          >
+            <ArrowLeft className="size-3" />
+            Back to Hub
+          </Link>
         }
         title={
           <span className="bg-linear-to-b from-foreground to-foreground/50 bg-clip-text font-game font-normal text-transparent uppercase">

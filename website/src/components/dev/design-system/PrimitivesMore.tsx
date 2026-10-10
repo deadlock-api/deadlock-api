@@ -12,7 +12,6 @@ import { IconTile } from "~/components/ui/icon-tile";
 import { ImgWithSkeleton } from "~/components/ui/img-with-skeleton";
 import { Skeleton } from "~/components/ui/skeleton";
 import { Toaster } from "~/components/ui/sonner";
-import { Video } from "~/components/ui/video";
 import { useHydrated } from "~/hooks/useHydrated";
 
 const HEADING_SIZES = ["eyebrow", "xs", "sm", "default", "lg", "xl", "2xl"] as const;
@@ -131,31 +130,6 @@ export function PrimitivesMore() {
             inline with text
           </div>
         </Variants>
-      </Specimen>
-
-      <Specimen
-        name="Video"
-        source="ui/video"
-        note="A clip with the browser's own controls (seek, replay, volume, fullscreen), playing inline on phones and fetching only its metadata until played. aspect video holds a 16:9 box from the first frame, so the page never moves as the clip loads; the backdrop stands in for the game while it loads or letterboxes. shape flush sits inside a surface that frames it. Name it with aria-label; caption tracks are children. Shown without a source here: the empty state is the backdrop with disabled controls."
-      >
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="flex flex-col gap-1">
-            <Video aria-label="Empty clip" />
-            <span className="text-xs text-muted-foreground">aspect video · shape default · no source</span>
-          </div>
-          <div className="flex flex-col gap-1">
-            <Video aria-label="Clip with a poster" poster="/favicon.png" />
-            <span className="text-xs text-muted-foreground">poster</span>
-          </div>
-          <div className="flex flex-col gap-1">
-            <Video aria-label="Flush clip" shape="flush" />
-            <span className="text-xs text-muted-foreground">shape flush</span>
-          </div>
-          <div className="flex flex-col gap-1">
-            <Video aria-label="Clip at its own aspect" aspect="auto" poster="/favicon.png" className="max-w-24" />
-            <span className="text-xs text-muted-foreground">aspect auto (the poster's own size)</span>
-          </div>
-        </div>
       </Specimen>
 
       <Specimen

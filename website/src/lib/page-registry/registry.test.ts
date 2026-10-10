@@ -191,7 +191,6 @@ const NOTHING_TO_FIND: Record<string, string> = {
   ingest_cache: "instructions, not stats",
   deadlockdle: "a game",
   flashcards: "a game",
-  guess_the_rank: "a game",
 };
 
 test("every page says what a question can point at on it, or why nothing", () => {

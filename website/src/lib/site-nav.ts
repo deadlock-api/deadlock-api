@@ -6,7 +6,6 @@ import {
   Database,
   Gamepad2,
   GitCompareArrows,
-  Clapperboard,
   GraduationCap,
   HardDrive,
   Home,
@@ -83,7 +82,6 @@ export const navGroups: NavGroup[] = [
     links: [
       { to: "/games/deadlockdle", label: "Deadlockdle", icon: Gamepad2 },
       { to: "/games/flashcards", label: "Flashcards", icon: GraduationCap },
-      { to: "/games/guess-the-rank", label: "Guess the Rank", icon: Clapperboard },
     ],
   },
   // The route itself returns 404 outside the dev server; this only keeps the link out of production navigation.
