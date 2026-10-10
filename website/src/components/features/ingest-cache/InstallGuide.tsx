@@ -1,5 +1,6 @@
 import { Download } from "lucide-react";
 
+import { INGEST_REPO, WINDOWS_SETUP_URL } from "~/components/features/ingest-cache/links";
 import { CopyableCode } from "~/components/patterns/code/CopyableCode";
 import { Disclosure } from "~/components/patterns/content/Disclosure";
 import { Step, Steps } from "~/components/patterns/content/Steps";
@@ -11,9 +12,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { Text } from "~/components/ui/text";
 import { TextLink } from "~/components/ui/text-link";
 
-const REPO = "https://github.com/deadlock-api/deadlock-api-ingest";
-
-const WINDOWS_SETUP = `${REPO}/releases/latest/download/deadlock-api-ingest-setup.exe`;
 const WINDOWS_INSTALL = `irm https://raw.githubusercontent.com/deadlock-api/deadlock-api-ingest/master/install-windows.ps1 | iex`;
 const WINDOWS_UNINSTALL = `& "$env:LOCALAPPDATA\\deadlock-api-ingest\\uninstall-windows.ps1"`;
 const LINUX_INSTALL = `curl -fsSL https://raw.githubusercontent.com/deadlock-api/deadlock-api-ingest/master/install-linux.sh | bash`;
@@ -49,7 +47,7 @@ export function InstallGuide() {
               <Step title="Download the installer.">
                 <div className="flex flex-col items-start gap-2">
                   <Button asChild size="lg">
-                    <a href={WINDOWS_SETUP} download>
+                    <a href={WINDOWS_SETUP_URL} download>
                       <Download aria-hidden="true" />
                       Download for Windows
                     </a>
@@ -126,7 +124,7 @@ export function InstallGuide() {
         </Tabs>
       </CardContent>
       <CardContent>
-        <TextLink href={REPO} external className="text-sm">
+        <TextLink href={INGEST_REPO} external className="text-sm">
           Source code on GitHub
         </TextLink>
       </CardContent>
