@@ -13,10 +13,10 @@ import {
 } from "lucide-react";
 import { useMemo } from "react";
 
+import { ShareButton } from "~/components/domain/minigames/ShareButton";
 import { TerminalButton } from "~/components/domain/minigames/TerminalButton";
 import { type DailyStatus, GameCard, getDailyResult, getDailyStatus } from "~/components/features/deadlockdle/GameCard";
 import { DURATION, enter, fadeUp, stagger } from "~/components/features/deadlockdle/motion";
-import { ShareButton } from "~/components/features/deadlockdle/ShareButton";
 import { Hero, HeroActions } from "~/components/patterns/page/Hero";
 import { PageHeader } from "~/components/patterns/page/PageHeader";
 import { PageShell } from "~/components/patterns/page/PageShell";
