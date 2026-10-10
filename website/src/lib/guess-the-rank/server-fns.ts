@@ -6,10 +6,9 @@ import type { R2Bucket, WorkerEnv } from "~/lib/worker-env";
 
 import {
   type DailyRound,
-  dailyPool,
   isValidGuessDate,
-  pickDailyVideos,
   ROUNDS_PER_DAY,
+  selectDailyVideos,
   toDailyRounds,
   VIDEO_PREFIX,
   type VideoRow,
@@ -22,7 +21,8 @@ import { readResult, recordVote, type RoundResult, voterHash } from "./votes";
 //
 // Under the Vite dev server there is no Worker and no bindings: every day is empty and the page shows its empty state.
 
-/** How long an isolate keeps a day's draw. Past rows never change, but an upload that lands late joins the pool. */
+/** How long an isolate keeps a day's videos. The schedule of today and past days never changes, but an upload that
+ * lands late or a withdrawn video does. */
 const POOL_TTL_MS = 5 * 60_000;
 
 const pools = new Map<string, { at: number; videos: Promise<VideoRow[]> }>();
@@ -43,12 +43,17 @@ async function loadDailyVideos(env: WorkerEnv, date: string): Promise<VideoRow[]
   const bucket = env.GUESS_THE_RANK_VIDEOS;
   if (!db || !bucket) return [];
   const [rows, keys] = await Promise.all([
+    // Only this day and the days before it: a later day's videos never leave the database early.
     db
-      .prepare("SELECT id, r2_key, poster_key, badge, duration_s, added_at, active FROM videos WHERE active = 1")
+      .prepare(
+        "SELECT id, r2_key, poster_key, badge, duration_s, active, play_date FROM videos " +
+          "WHERE active = 1 AND play_date IS NOT NULL AND play_date <= ?1",
+      )
+      .bind(date)
       .all<VideoRow>(),
     bucketKeys(bucket),
   ]);
-  return pickDailyVideos(dailyPool(rows.results, keys, date), date);
+  return selectDailyVideos(rows.results, keys, date);
 }
 
 /** The day's videos in round order, kept per isolate for `POOL_TTL_MS`. */

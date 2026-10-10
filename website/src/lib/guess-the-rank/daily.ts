@@ -7,8 +7,10 @@ import {
   seededShuffle,
 } from "~/lib/daily-seed";
 
-// Which clips a day plays. Every player gets the same three: the day's pool, in a fixed order, shuffled by the same
-// seeded random as Deadlockdle.
+// Which clips a day plays. The video pipeline schedules every video for its own day (`play_date`, three a day), so a
+// day plays the videos scheduled for it, in an order shuffled by the same seeded random as Deadlockdle. Every player
+// gets the same three. A day the schedule left short is topped up from days already played, so it is never empty
+// while any video exists.
 
 /** The first day of Guess the Rank, day 1; archive days go back to it. */
 export const GUESS_THE_RANK_EPOCH = "2026-10-10";
@@ -18,6 +20,16 @@ export const ROUNDS_PER_DAY = 3;
 
 /** The seed's mode name: the same date gives Deadlockdle's modes and this game different draws. */
 const SEED_MODE = "guess-the-rank";
+/** The seed of the top-up draw, apart from the round order's. */
+const TOP_UP_SEED_MODE = "guess-the-rank:top-up";
+
+/**
+ * Days whose round order is fixed by hand. The launch day was played under the earlier rule (a draw from every
+ * uploaded video) before the schedule existed; its rounds keep that order, so nobody mid-game sees them swap.
+ */
+const PINNED_ROUND_ORDER: Readonly<Record<string, readonly string[]>> = {
+  "2026-10-10": ["0c295560cc03a777", "703749758aa6c30f", "bd563e614e11d186"],
+};
 
 /** Where the bucket's objects are served publicly. */
 export const VIDEO_ORIGIN = "https://guess-the-rank.deadlock-api.com";
@@ -25,15 +37,16 @@ export const VIDEO_ORIGIN = "https://guess-the-rank.deadlock-api.com";
 /** The R2 prefix the pipeline uploads videos under. */
 export const VIDEO_PREFIX = "videos/";
 
-/** A row of the `videos` table, as the pool reads it. */
+/** A row of the `videos` table, as the daily selection reads it. */
 export interface VideoRow {
   id: string;
   r2_key: string;
   poster_key: string | null;
   badge: number;
   duration_s: number;
-  added_at: string;
   active: number;
+  /** The UTC day the video is scheduled for (YYYY-MM-DD); null until scheduled. */
+  play_date: string | null;
 }
 
 /** One round as the browser gets it: the clip, never its rank. */
@@ -50,23 +63,46 @@ export function objectUrl(key: string): string {
   return `${VIDEO_ORIGIN}/${key.split("/").map(encodeURIComponent).join("/")}`;
 }
 
-/**
- * The videos a day draws from: active rows added before that day began (UTC), so an upload during the day never
- * changes today's rounds, whose video is in the bucket (a row whose upload failed or was removed never plays), by id.
- */
-export function dailyPool(rows: readonly VideoRow[], keysInBucket: ReadonlySet<string>, date: string): VideoRow[] {
-  const dayStart = Date.parse(`${date}T00:00:00Z`);
-  return rows
-    .filter((row) => {
-      const added = Date.parse(row.added_at);
-      return row.active === 1 && Number.isFinite(added) && added < dayStart && keysInBucket.has(row.r2_key);
-    })
-    .toSorted((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+const byId = (a: { id: string }, b: { id: string }) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
+
+/** The day's videos in round order: by id, shuffled by the day's seed (or a pinned order). */
+export function roundOrder<T extends { id: string }>(videos: readonly T[], date: string): T[] {
+  const sorted = videos.toSorted(byId);
+  const pinned = PINNED_ROUND_ORDER[date];
+  if (pinned) {
+    const rank = (video: T) => {
+      const i = pinned.indexOf(video.id);
+      return i === -1 ? pinned.length : i;
+    };
+    return sorted.toSorted((a, b) => rank(a) - rank(b));
+  }
+  return seededShuffle(sorted, seededRandom(getModeSeed(date, SEED_MODE)));
 }
 
-/** The day's videos in round order: the pool shuffled by the day's seed, the first `ROUNDS_PER_DAY`. */
-export function pickDailyVideos<T>(pool: readonly T[], date: string): T[] {
-  return seededShuffle([...pool], seededRandom(getModeSeed(date, SEED_MODE))).slice(0, ROUNDS_PER_DAY);
+/**
+ * The videos `date` plays, in round order: the active videos scheduled for it whose object is in the bucket. A day
+ * with fewer than `ROUNDS_PER_DAY` (the schedule ran out, a video was withdrawn) is topped up with a seeded draw from
+ * days already played; a later day's videos are never shown early.
+ */
+export function selectDailyVideos(
+  rows: readonly VideoRow[],
+  keysInBucket: ReadonlySet<string>,
+  date: string,
+): VideoRow[] {
+  const playable = rows.filter((row) => row.active === 1 && row.play_date != null && keysInBucket.has(row.r2_key));
+  const scheduled = playable
+    .filter((row) => row.play_date === date)
+    .toSorted(byId)
+    .slice(0, ROUNDS_PER_DAY);
+  const missing = ROUNDS_PER_DAY - scheduled.length;
+  const topUp =
+    missing > 0
+      ? seededShuffle(
+          playable.filter((row) => row.play_date != null && row.play_date < date).toSorted(byId),
+          seededRandom(getModeSeed(date, TOP_UP_SEED_MODE)),
+        ).slice(0, missing)
+      : [];
+  return roundOrder([...scheduled, ...topUp], date);
 }
 
 /** The browser's view of the day's videos. */
