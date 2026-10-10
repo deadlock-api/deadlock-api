@@ -7,7 +7,8 @@
  * hero portraits on top, the text underneath, shrunk until it fits. The heroes
  * further out only show up on wide previews (Discord, Slack, X).
  *
- * Hero art is fetched from the assets API, so this needs network access.
+ * Hero art (and, for the Guess the Rank card, the rank badges) is fetched from the assets API, so this needs network
+ * access.
  *
  * Usage: pnpm og            # all cards
  *        pnpm og blog-foo   # only cards whose name contains "blog-foo"
@@ -22,6 +23,7 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const OUT_DIR = join(ROOT, "public", "og", "v2");
 const BLOG_DIR = join(ROOT, "content", "blog");
 const HEROES_URL = "https://api.deadlock-api.com/v1/assets/heroes?only_active=true";
+const RANKS_URL = "https://api.deadlock-api.com/v1/assets/ranks";
 const HEROES_PER_CARD = 7;
 
 const PAGE_CARDS = [
@@ -37,6 +39,14 @@ const PAGE_CARDS = [
   ["streamkit", "Stream Toolkit", "Chatbot commands & OBS overlay widgets for streamers"],
   ["ingest-cache", "Community Match Ingest", "Scan your Steam cache to contribute match data"],
   ["blog", "Blog", "Engineering posts, data analyses & project updates"],
+];
+
+/**
+ * Cards whose art is the ranked tiers' badges instead of hero portraits: the badges fan out from a hidden one in the
+ * middle, a dark silhouette with a question mark. Static, so no day's answer is ever on it.
+ */
+const RANK_CARDS = [
+  ["guess-the-rank", "Guess the Rank", "Watch the clip, guess the player's rank. Three new clips every day."],
 ];
 
 async function blogCards() {
@@ -74,9 +84,36 @@ function heroesFor(name, urls) {
   return Array.from({ length: HEROES_PER_CARD }, () => pool.splice(Math.floor(random() * pool.length), 1)[0]);
 }
 
+/** Every ranked tier's badge (tier > 0), lowest first, as the assets API names them. */
+async function rankBadges() {
+  const res = await fetch(RANKS_URL);
+  if (!res.ok) throw new Error(`${RANKS_URL}: ${res.status}`);
+  return (await res.json())
+    .filter((rank) => rank.tier > 0 && (rank.images?.large_webp ?? rank.images?.large))
+    .toSorted((a, b) => a.tier - b.tier)
+    .map((rank) => ({ tier: rank.tier, url: rank.images.large_webp ?? rank.images.large }));
+}
+
+/**
+ * The tiers from lowest (left) to highest (right), largest in the middle, where one badge is hidden. The art of the
+ * top tiers carries more transparent padding, so they are drawn larger (as `RankTierIcons` does on the site).
+ */
+function rankFanHtml(badges) {
+  const middle = Math.floor(badges.length / 2);
+  const pad = (tier) => (tier === 9 ? 1.45 : tier >= 10 ? 1.3 : tier === 8 ? 1.05 : 1);
+  return `<div class="badges">${badges
+    .map(({ tier, url }, i) => {
+      const d = Math.abs(i - middle);
+      return i === middle
+        ? `<div class="mystery" style="--d:0;--pad:${pad(tier)}"><img src="${url}" alt="" /><span>?</span></div>`
+        : `<div style="--d:${d};--pad:${pad(tier)}"><img src="${url}" alt="" /></div>`;
+    })
+    .join("")}</div>`;
+}
+
 const escapeHtml = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
-function cardHtml({ title, subtitle, heroes, font, logo }) {
+function cardHtml({ title, subtitle, heroes, art, font, logo }) {
   const center = (HEROES_PER_CARD - 1) / 2;
   return `<!doctype html>
 <style>
@@ -92,6 +129,15 @@ function cardHtml({ title, subtitle, heroes, font, logo }) {
     /* the portraits are rectangular crops; without this their cut-off sides show as hard vertical edges */
     -webkit-mask-image: linear-gradient(90deg, transparent, #000 16%, #000 84%, transparent);
   }
+  .badges { top: 40px; left: 50%; width: 1260px; transform: translateX(-50%); display: flex; align-items: center; justify-content: center; }
+  .badges > div {
+    width: calc(184px - var(--d) * 16px); height: calc(184px - var(--d) * 16px); margin: calc(var(--d) * 16px) -8px 0;
+    flex: none; display: grid; place-items: center; position: relative; z-index: calc(10 - var(--d));
+    filter: brightness(calc(1 - var(--d) * 0.1)) drop-shadow(0 0 18px rgba(0, 0, 0, 0.9));
+  }
+  .badges img { width: 100%; height: 100%; object-fit: contain; transform: scale(var(--pad)); }
+  .mystery img { filter: brightness(0) drop-shadow(0 0 2px rgba(250, 68, 84, 0.95)) drop-shadow(0 0 26px rgba(250, 68, 84, 0.55)); }
+  .mystery span { position: absolute; font-size: 128px; font-weight: 800; color: #fa4454; text-shadow: 0 0 28px rgba(250, 68, 84, 0.6); }
   .fade { inset: 0; z-index: 20; background: linear-gradient(transparent 44%, rgba(10, 10, 12, 0.92) 62%, #0a0a0c 72%); }
   main {
     left: 285px; top: 0; width: 630px; height: 630px; padding: 330px 40px 28px; z-index: 30;
@@ -104,7 +150,7 @@ function cardHtml({ title, subtitle, heroes, font, logo }) {
   footer svg { width: 38px; height: auto; }
 </style>
 <div class="glow"></div>
-<div class="heroes">${heroes.map((url, i) => `<img src="${url}" style="--d:${Math.abs(i - center)}" alt="" />`).join("")}</div>
+${art ?? `<div class="heroes">${heroes.map((url, i) => `<img src="${url}" style="--d:${Math.abs(i - center)}" alt="" />`).join("")}</div>`}
 <div class="fade"></div>
 <main>
   <section>
@@ -116,7 +162,10 @@ function cardHtml({ title, subtitle, heroes, font, logo }) {
 }
 
 const filter = process.argv[2];
-const cards = [...PAGE_CARDS, ...(await blogCards())].filter(([name]) => !filter || name.includes(filter));
+const cards = [...PAGE_CARDS, ...RANK_CARDS, ...(await blogCards())].filter(
+  ([name]) => !filter || name.includes(filter),
+);
+const rankCards = new Set(RANK_CARDS.map(([name]) => name));
 if (cards.length === 0) throw new Error(`no card matches "${filter}"`);
 
 const fontFile = join(ROOT, "node_modules/@fontsource-variable/inter/files/inter-latin-wght-normal.woff2");
@@ -126,12 +175,16 @@ const logo = (await readFile(join(ROOT, "public", "logo", "hexe.svg"), "utf8"))
   .replace(/fill="#[0-9A-Fa-f]+"/g, 'fill="currentColor"')
   .replace(/width="(\d+)" height="(\d+)"/, 'viewBox="0 0 $1 $2"');
 const heroUrls = await heroCardUrls();
+const rankArt = cards.some(([name]) => rankCards.has(name)) ? rankFanHtml(await rankBadges()) : undefined;
 
 const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: 1200, height: 630 } });
 /* oxlint-disable no-await-in-loop -- cards share one page, so they render one after another */
 for (const [name, title, subtitle] of cards) {
-  await page.setContent(cardHtml({ title, subtitle, heroes: heroesFor(name, heroUrls), font, logo }));
+  const art = rankCards.has(name) ? rankArt : undefined;
+  await page.setContent(cardHtml({ title, subtitle, heroes: heroesFor(name, heroUrls), art, font, logo }));
+  // Remote art must be decoded before the screenshot.
+  await page.evaluate(() => Promise.all([...document.images].map((img) => img.decode().catch(() => {}))));
   await page.evaluate(async () => {
     await document.fonts.ready;
     const main = document.querySelector("main");

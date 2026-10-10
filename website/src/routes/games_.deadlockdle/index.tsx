@@ -4,6 +4,7 @@ import {
   ArrowUpDown,
   ChevronLeft,
   ChevronRight,
+  Clapperboard,
   Crosshair,
   Ear,
   HelpCircle,
@@ -13,6 +14,7 @@ import {
 } from "lucide-react";
 import { useMemo } from "react";
 
+import { GameTile } from "~/components/domain/minigames/GameTile";
 import { ShareButton } from "~/components/domain/minigames/ShareButton";
 import { TerminalButton } from "~/components/domain/minigames/TerminalButton";
 import { type DailyStatus, GameCard, getDailyResult, getDailyStatus } from "~/components/features/deadlockdle/GameCard";
@@ -257,6 +259,18 @@ function DeadlockdleHub() {
             </motion.div>
           ))}
         </motion.div>
+      </section>
+
+      {/* Another daily game, not a Deadlockdle mode: its own tile after the modes. */}
+      <section aria-label="More daily games">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3">
+          <GameTile
+            to="/games/guess-the-rank"
+            title="Guess the Rank"
+            description="Watch three gameplay clips a day and guess each player's rank, then see how everyone guessed."
+            icon={Clapperboard}
+          />
+        </div>
       </section>
 
       <AnimatePresence>

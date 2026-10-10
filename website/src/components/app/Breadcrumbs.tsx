@@ -21,6 +21,7 @@ const ROUTE_LABELS: Record<string, string> = {
   "/community/badge-distribution": "Rank Distribution",
   "/analytics/games": "Games",
   "/games/deadlockdle/higher-lower": "Higher or Lower",
+  "/games/guess-the-rank": "Guess the Rank",
   "/community/heatmap": "Kill Heatmap",
   "/analytics/players": "Player Analytics",
   "/tracker": "Player Tracker",

@@ -70,6 +70,7 @@ const OG_IMAGES: Record<string, string> = {
   "/ingest-cache": "/og/v2/ingest-cache.png",
   "/blog": "/og/v2/blog.png",
   "/games/deadlockdle": "/og/v2/default.png",
+  "/games/guess-the-rank": "/og/v2/guess-the-rank.png",
 };
 
 export function seo({
