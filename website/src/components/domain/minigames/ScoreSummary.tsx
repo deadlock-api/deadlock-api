@@ -15,18 +15,22 @@ interface ScoreSummaryProps {
   countdown?: { label: string; value: string };
   /** `lg` draws the score in the display step of the type scale, for a result screen that is only the score. */
   size?: "default" | "lg";
+  className?: string;
 }
 
 /** The end-of-game score of the quiz modes, beside the time until the next puzzle. */
-export function ScoreSummary({ score, scoreLabel, grade, countdown, size = "default" }: ScoreSummaryProps) {
+export function ScoreSummary({ score, scoreLabel, grade, countdown, size = "default", className }: ScoreSummaryProps) {
+  // Side by side once both fit: on a phone the countdown would be cut.
   return (
-    <StatGroup className={cn("font-mono", countdown ? "grid-cols-2" : "grid-cols-1")}>
-      <Stat
-        align="center"
-        label={scoreLabel}
-        value={<span className={cn(GRADE_TEXT[grade], size === "lg" && "type-display")}>{score}</span>}
-      />
-      {countdown && <Stat align="center" label={countdown.label} value={countdown.value} />}
-    </StatGroup>
+    <div data-slot="score-summary" className={cn("@container min-w-0", className)}>
+      <StatGroup className={cn("font-mono", countdown ? "grid-cols-1 @xs:grid-cols-2" : "grid-cols-1")}>
+        <Stat
+          align="center"
+          label={scoreLabel}
+          value={<span className={cn(GRADE_TEXT[grade], size === "lg" && "type-display")}>{score}</span>}
+        />
+        {countdown && <Stat align="center" label={countdown.label} value={countdown.value} />}
+      </StatGroup>
+    </div>
   );
 }

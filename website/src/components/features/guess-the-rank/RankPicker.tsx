@@ -25,7 +25,7 @@ export function RankPicker({
   const revealed = answer !== undefined;
   return (
     <div className="@container">
-      <fieldset className="grid grid-cols-3 gap-2 @md:grid-cols-4 @2xl:grid-cols-6">
+      <fieldset className="grid grid-cols-3 gap-2 @md:grid-cols-4 @2xl:grid-cols-6 @4xl:grid-cols-11">
         <legend className="sr-only">Rank tier</legend>
         {tiers.map((tier) => (
           <AnswerOption
@@ -43,7 +43,7 @@ export function RankPicker({
             onClick={() => onValueChange(tier.tier)}
           >
             {tier.image && <ImgWithSkeleton src={tier.image} alt="" className="size-12 object-contain" />}
-            <Text variant="caption" wrap="truncate" className="w-full">
+            <Text variant="caption" align="center" wrap="truncate" className="w-full">
               {tier.name}
             </Text>
           </AnswerOption>

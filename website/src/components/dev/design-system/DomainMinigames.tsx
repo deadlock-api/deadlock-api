@@ -464,13 +464,13 @@ export function DomainMinigames() {
       <Specimen
         name="ScoreSummary"
         source="domain/minigames/ScoreSummary"
-        note="The end-of-game score of a daily game beside the time to the next one. grade colors the score (good, fair, poor) and scoreLabel names it, so color is not the only cue. An archive day has no countdown. size lg sets the score in the display step for a result screen that is only the score."
+        note="The end-of-game score of a daily game beside the time to the next one. grade colors the score (good, fair, poor), which the number itself already tells; scoreLabel names it. Side by side once both fit, stacked on a phone. An archive day has no countdown. size lg sets the score in the display step for a result screen that is only the score."
         className="theme-terminal"
       >
         <div className="grid gap-3 lg:grid-cols-2">
           <ScoreSummary
             score="8/9"
-            scoreLabel="Rank Reader"
+            scoreLabel="Score"
             grade="good"
             countdown={{ label: "Next clips", value: "07:12:45" }}
           />
@@ -480,7 +480,7 @@ export function DomainMinigames() {
             grade="fair"
             countdown={{ label: "Next Trivia", value: "Out now" }}
           />
-          <ScoreSummary score="1/9" scoreLabel="Keep Watching" grade="poor" />
+          <ScoreSummary score="1/9" scoreLabel="Score" grade="poor" />
           <ScoreSummary score="12" scoreLabel="Streak" grade="good" size="lg" />
         </div>
       </Specimen>

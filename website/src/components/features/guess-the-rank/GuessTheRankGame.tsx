@@ -11,7 +11,10 @@ import { Section } from "~/components/patterns/page/Section";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
+import { Card, CardContent } from "~/components/ui/card";
+import { Grid } from "~/components/ui/grid";
 import { Heading } from "~/components/ui/heading";
+import { ImgWithSkeleton } from "~/components/ui/img-with-skeleton";
 import { Stack } from "~/components/ui/stack";
 import { StepMeter, StepMeterStep } from "~/components/ui/step-meter";
 import { Text } from "~/components/ui/text";
@@ -20,22 +23,22 @@ import { useCountdown } from "~/lib/deadlockdle/use-countdown";
 import type { DailyRound } from "~/lib/guess-the-rank/daily";
 import {
   guessableTiers,
+  distanceLabel,
   guessShareText,
   MAX_ROUND_POINTS,
   roundPoints,
   scoreGrade,
+  subtierOfBadge,
+  tierDistance,
   tierOfBadge,
 } from "~/lib/guess-the-rank/scoring";
+import { badgeLabel, getRankImageUrl } from "~/lib/rank-utils";
 
 import { type ClipPhase, trackGuessTheRank, useClipAnalytics } from "./analytics";
 import { GuessTheRankFeedbackNotice } from "./GuessTheRankFeedbackNotice";
 import { RankPicker, type RankTier } from "./RankPicker";
-import { RoundReveal } from "./RoundReveal";
+import { POINT_TONE, RoundReveal } from "./RoundReveal";
 import { type GuessedRound, useGuessTheRank } from "./use-guess-the-rank";
-
-const RULES =
-  "Watch the clip as often as you like, then pick the player's rank. The right tier scores 3 points, one tier off 2, " +
-  "two tiers off 1.";
 
 /** A round's clip: seek and replay freely, before and after the guess. */
 function RoundClip({
@@ -117,12 +120,6 @@ function RoundView({
 
       {guessed ? (
         <>
-          <RankPicker
-            tiers={tiers}
-            value={guessed.guess}
-            onValueChange={() => {}}
-            answer={tierOfBadge(guessed.badge)}
-          />
           <RoundReveal date={date} round={round} guessed={guessed} ranks={ranks} tiers={tiers} />
           <div className="flex justify-center">
             <TerminalButton ref={focusNext} variant="soft" size="touch" onClick={game.advance}>
@@ -135,9 +132,6 @@ function RoundView({
           <Heading as="h2" size="sm" className="font-mono uppercase">
             What rank is this player?
           </Heading>
-          <Text variant="caption" tone="muted">
-            {RULES}
-          </Text>
           <RankPicker
             tiers={tiers}
             value={selected}
@@ -190,6 +184,44 @@ function RoundView({
   );
 }
 
+/** One round of the day at a glance: the player's badge, your guess and the points it scored. */
+function RoundRecap({ index, guessed, ranks }: { index: number; guessed: GuessedRound; ranks: readonly Rank[] }) {
+  const actual = tierOfBadge(guessed.badge);
+  const image = getRankImageUrl(
+    ranks.find((rank) => rank.tier === actual),
+    "webp",
+    subtierOfBadge(guessed.badge),
+  );
+  const points = roundPoints(guessed.guess, actual);
+  const guessName = ranks.find((rank) => rank.tier === guessed.guess)?.name ?? `Tier ${guessed.guess}`;
+  return (
+    <Card size="xs">
+      <CardContent className="flex items-center gap-3">
+        {image && <ImgWithSkeleton src={image} alt="" className="size-10 shrink-0 object-contain" />}
+        <Stack gap={0} className="flex-1">
+          <Text variant="caption" tone="muted">
+            Clip {index + 1}
+          </Text>
+          <Text variant="label" wrap="truncate" className="font-game font-normal uppercase">
+            {badgeLabel(ranks, guessed.badge)}
+          </Text>
+          <Text variant="caption" tone="muted" wrap="truncate">
+            You: {guessName} · {distanceLabel(tierDistance(guessed.guess, actual))}
+          </Text>
+        </Stack>
+        <Text
+          variant="label"
+          numeric="tabular"
+          tone={POINT_TONE[points as keyof typeof POINT_TONE]}
+          className="font-mono"
+        >
+          +{points}
+        </Text>
+      </CardContent>
+    </Card>
+  );
+}
+
 function DaySummary({
   date,
   isArchive,
@@ -212,14 +244,19 @@ function DaySummary({
   const grade = scoreGrade(points, max);
 
   return (
-    <Stack gap={6}>
+    <Stack gap={5}>
       <ScoreSummary
         score={`${points}/${max}`}
-        scoreLabel={grade === "good" ? "Rank Reader" : grade === "fair" ? "Not Bad" : "Keep Watching"}
+        scoreLabel="Score"
         grade={grade}
         countdown={isArchive ? undefined : { label: "Next clips", value: countdown ?? "Out now" }}
       />
-      <div className="flex flex-col items-center gap-2">
+      <Grid columns={{ base: 1, md: 3 }} gap={2}>
+        {guessed.map((entry, i) => (
+          <RoundRecap key={rounds[i].videoId} index={i} guessed={entry} ranks={ranks} />
+        ))}
+      </Grid>
+      <div className="flex justify-center">
         <ShareButton
           text={guessShareText(date, scored)}
           onClick={() =>
@@ -228,18 +265,22 @@ function DaySummary({
         >
           Share result
         </ShareButton>
-        {!isArchive && (
-          <Text variant="caption" tone="muted" align="center">
-            Come back tomorrow for three new clips.
-          </Text>
-        )}
       </div>
       {rounds.map((round, i) => (
         <Section key={round.videoId} title={`Clip ${i + 1}`} size="sm">
-          <Stack gap={4}>
-            <SummaryClip date={date} round={round} total={rounds.length} phase="summary" />
-            <RoundReveal date={date} round={round} guessed={guessed[i]} ranks={ranks} tiers={tiers} />
-          </Stack>
+          <Grid columns={{ base: 1, xl: 12 }}>
+            <div className="@4xl:col-span-8">
+              <SummaryClip date={date} round={round} total={rounds.length} phase="summary" />
+            </div>
+            <RoundReveal
+              className="@4xl:col-span-4"
+              date={date}
+              round={round}
+              guessed={guessed[i]}
+              ranks={ranks}
+              tiers={tiers}
+            />
+          </Grid>
         </Section>
       ))}
     </Stack>
