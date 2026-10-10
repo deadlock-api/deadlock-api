@@ -1,4 +1,4 @@
-//! `/v1/assets/{images,icons,sounds,fonts}` route layer.
+//! `/v1/assets/{images,icons,sounds,fonts,models}` route layer.
 
 pub(super) mod route;
 
@@ -11,8 +11,8 @@ use crate::context::AppState;
 #[derive(OpenApi)]
 #[openapi(tags((
     name = "Assets",
-    description = "File-tree indexes of static assets (images, icons, sounds, fonts) hosted on \
-                   the CDN, mapping each asset's name to its public URL."
+    description = "File-tree indexes of static assets (images, icons, sounds, fonts, models) \
+                   hosted on the CDN, mapping each asset's name to its public URL."
 )))]
 struct ApiDoc;
 
@@ -22,4 +22,5 @@ pub(super) fn router() -> OpenApiRouter<AppState> {
         .routes(routes!(route::icons))
         .routes(routes!(route::sounds))
         .routes(routes!(route::fonts))
+        .routes(routes!(route::models))
 }

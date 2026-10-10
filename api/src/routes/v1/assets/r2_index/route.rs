@@ -72,3 +72,19 @@ pub(super) async fn sounds(State(state): State<AppState>) -> APIResult<impl Into
 pub(super) async fn fonts(State(state): State<AppState>) -> APIResult<impl IntoResponse> {
     respond(&state, IndexFolder::Fonts).await
 }
+
+#[utoipa::path(
+    get,
+    path = "/models",
+    responses(
+        (status = OK, body = serde_json::Value),
+        (status = INTERNAL_SERVER_ERROR, description = "Failed to load source assets"),
+    ),
+    tags = ["Assets Bucket"],
+    summary = "Models Index",
+    description = "Nested file-tree of all hosted 3D models (glTF binary, one `<pose>.glb` per \
+                   pose below each game model path), mapping each name to its public CDN URL."
+)]
+pub(super) async fn models(State(state): State<AppState>) -> APIResult<impl IntoResponse> {
+    respond(&state, IndexFolder::Models).await
+}

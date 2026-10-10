@@ -13,6 +13,7 @@ pub(crate) enum IndexFolder {
     Icons,
     Sounds,
     Fonts,
+    Models,
 }
 
 /// Fetch the cached JSON file-tree index for `folder`.

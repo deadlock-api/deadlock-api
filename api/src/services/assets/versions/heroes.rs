@@ -19,6 +19,7 @@ use crate::services::assets::versions::store;
 use crate::utils::kv3;
 
 const IMAGE_BASE_URL: &str = "https://assets-bucket.deadlock-api.com/assets-api-res/images";
+const MODELS_BASE_URL: &str = "https://assets-bucket.deadlock-api.com/assets-api-res/models";
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "PascalCase")]
@@ -249,6 +250,9 @@ struct RawHero {
     complexity: i64,
     #[serde(rename = "m_nModelSkin", default)]
     skin: i64,
+    /// `resource_name:"models/heroes_wip/abrams/abrams.vmdl"`
+    #[serde(default, rename = "m_strModelName")]
+    model_name: Option<String>,
     #[serde(rename = "m_mapStartingStats")]
     starting_stats: RawStartingStats,
 
@@ -386,6 +390,15 @@ pub(crate) struct Hero {
     pub complexity: i64,
     pub skin: i64,
     pub images: HeroImages,
+    /// 3D model of the hero as a self-contained glTF binary (`.glb`), keyed by
+    /// pose (e.g. `hero_select`, the hero select screen pose). Each file holds
+    /// the skinned mesh, its skeleton and that pose's animation clip; weapons
+    /// and props only sit in the hero's hands once the clip is applied. Uses
+    /// `EXT_meshopt_compression` and `EXT_texture_webp`. Empty when the game
+    /// files don't ship the hero's model.
+    #[schema(value_type = StdMap<String, String>)]
+    #[graphql(skip)]
+    pub models: IndexMap<String, String>,
     #[schema(value_type = StdMap<HeroItemType, String>)]
     #[graphql(skip)]
     pub items: IndexMap<HeroItemType, String>,
@@ -443,6 +456,9 @@ impl Hero {
 impl Hero {
     async fn item_draft_weights(&self) -> Json<Option<IndexMap<String, f64>>> {
         Json(self.item_draft_weights.clone())
+    }
+    async fn models(&self) -> Json<IndexMap<String, String>> {
+        Json(self.models.clone())
     }
     async fn items(&self) -> Json<IndexMap<HeroItemType, String>> {
         Json(self.items.clone())
@@ -753,6 +769,7 @@ pub(crate) fn build_heroes(
         &style_colors,
         &backgrounds,
         None,
+        &HashMap::new(),
         only_active,
     ))
 }
@@ -760,13 +777,15 @@ pub(crate) fn build_heroes(
 /// `known_assets`, when present, is the set of image / icon URLs published in
 /// the bucket indexes; image fields pointing anywhere else are dropped so we
 /// don't hand out 404 URLs (e.g. `*_card.psd` referenced by vote stub heroes
-/// that doesn't exist in the game files).
+/// that doesn't exist in the game files). `models` maps a model path to its
+/// published pose GLBs (see [`parse_models_index`]).
 fn transform_root(
     root: &IndexMap<String, serde_json::Value>,
     localization: &HashMap<String, String>,
     style_colors: &HashMap<String, String>,
     backgrounds: &HashMap<String, String>,
     known_assets: Option<&HashSet<String>>,
+    models: &HashMap<String, IndexMap<String, String>>,
     only_active: bool,
 ) -> Vec<Hero> {
     let mut out = Vec::with_capacity(root.len());
@@ -802,6 +821,7 @@ fn transform_root(
             style_colors,
             backgrounds,
             known_assets,
+            models,
         ));
     }
     out
@@ -842,6 +862,7 @@ fn transform(
     style_colors: &HashMap<String, String>,
     backgrounds: &HashMap<String, String>,
     known_assets: Option<&HashSet<String>>,
+    models: &HashMap<String, IndexMap<String, String>>,
 ) -> Hero {
     let name = strip_gender_markers(
         loc.get(&format!("{class_name}:n"))
@@ -897,6 +918,14 @@ fn transform(
         backgrounds.get(class_name).map(String::as_str),
         known_assets,
     );
+
+    let models = r
+        .model_name
+        .as_deref()
+        .and_then(model_path)
+        .and_then(|p| models.get(p))
+        .cloned()
+        .unwrap_or_default();
 
     let physics = HeroPhysics {
         stealth_speed_meters_per_second: r.stealth_speed_meters_per_second,
@@ -995,6 +1024,7 @@ fn transform(
         complexity: r.complexity,
         skin: r.skin,
         images,
+        models,
         items,
         starting_stats: build_starting_stats(&r.starting_stats),
         item_slot_info,
@@ -1223,6 +1253,48 @@ fn build_images(
     }
 }
 
+/// `heroes_wip/abrams/abrams` from `resource_name:"models/heroes_wip/abrams/abrams.vmdl"`,
+/// the folder the pipeline uploads the model's `<pose>.glb` files to.
+fn model_path(resource: &str) -> Option<&str> {
+    let path = resource.strip_prefix("resource_name:").unwrap_or(resource);
+    path.trim_matches('"')
+        .strip_prefix("models/")?
+        .strip_suffix(".vmdl")
+}
+
+/// Group the model GLB URLs of the models index by model path:
+/// `heroes_wip/abrams/abrams` -> `{"hero_select": ".../hero_select.glb"}`.
+fn parse_models_index(index: serde_json::Value) -> HashMap<String, IndexMap<String, String>> {
+    fn collect(v: serde_json::Value, out: &mut HashMap<String, IndexMap<String, String>>) {
+        match v {
+            serde_json::Value::String(url) => {
+                let Some(rel) = url
+                    .strip_prefix(MODELS_BASE_URL)
+                    .and_then(|r| r.strip_prefix('/'))
+                else {
+                    return;
+                };
+                let Some((path, pose)) = rel
+                    .strip_suffix(".glb")
+                    .and_then(|r| r.rsplit_once('/'))
+                    .map(|(p, s)| (p.to_owned(), s.to_owned()))
+                else {
+                    return;
+                };
+                out.entry(path).or_default().insert(pose, url);
+            }
+            serde_json::Value::Object(m) => m.into_iter().for_each(|(_, v)| collect(v, out)),
+            _ => {}
+        }
+    }
+    let mut out = HashMap::new();
+    collect(index, &mut out);
+    for poses in out.values_mut() {
+        poses.sort_unstable_keys();
+    }
+    out
+}
+
 fn png_to_webp(s: &str) -> String {
     s.replace(".png", ".webp")
 }
@@ -1308,22 +1380,25 @@ struct ParsedSources {
     style_colors: Arc<HashMap<String, String>>,
     backgrounds: Arc<HashMap<String, String>>,
     known_assets: Option<Arc<HashSet<String>>>,
+    models: Arc<HashMap<String, IndexMap<String, String>>>,
 }
 
 #[cached(max_size = 8, ttl_secs = 86400, convert = "{ version }", key = "u32")]
 async fn parsed_version_sources(r2: &AmazonS3, version: u32) -> Result<ParsedSources, AssetsError> {
     // CSS files are optional: a NotFound leaves the lookup empty so the
     // per-hero `background_image*` / `colors.style*` fields serialize as null.
-    let (vdata, style_css, bg_css, known_assets) = tokio::join!(
+    let (vdata, style_css, bg_css, known_assets, models) = tokio::join!(
         store::fetch_text(r2, version, "scripts/heroes.vdata"),
         fetch_optional_text(r2, version, "styles/citadel_base_styles.css"),
         fetch_optional_text(r2, version, "styles/hero_background_default.css"),
         fetch_known_assets(r2),
+        fetch_models(r2),
     );
     let (vdata, style_css, bg_css) = (vdata?, style_css?, bg_css?);
     let raw_root: IndexMap<String, serde_json::Value> = kv3::from_str(&vdata)?;
     Ok(ParsedSources {
         known_assets: known_assets.map(Arc::new),
+        models: Arc::new(models),
         raw_root: Arc::new(raw_root),
         style_colors: Arc::new(
             style_css
@@ -1370,6 +1445,22 @@ async fn fetch_known_assets(r2: &AmazonS3) -> Option<HashSet<String>> {
     Some(out)
 }
 
+/// Published hero model GLBs by model path, from the models index. Best
+/// effort: empty (no `models` on any hero) if the index can't be loaded.
+async fn fetch_models(r2: &AmazonS3) -> HashMap<String, IndexMap<String, String>> {
+    let parsed = fetch_index(r2, IndexFolder::Models)
+        .await
+        .map_err(|e| e.to_string())
+        .and_then(|b| serde_json::from_slice(&b).map_err(|e| e.to_string()));
+    match parsed {
+        Ok(index) => parse_models_index(index),
+        Err(e) => {
+            tracing::warn!("Hero models unavailable, failed to load models index: {e}");
+            HashMap::new()
+        }
+    }
+}
+
 async fn fetch_optional_text(
     r2: &AmazonS3,
     version: u32,
@@ -1411,6 +1502,7 @@ fn build_from_sources(s: &ParsedSources, localization: &HashMap<String, String>)
         &s.style_colors,
         &s.backgrounds,
         s.known_assets.as_deref(),
+        &s.models,
         false,
     )
 }
@@ -1440,5 +1532,40 @@ mod tests {
         assert!(!is_active(Some(true), None, false, true));
         assert!(!is_active(Some(false), None, false, false));
         assert!(is_active(Some(true), None, false, false));
+    }
+
+    #[test]
+    fn model_path_from_resource_name() {
+        assert_eq!(
+            model_path(r#"resource_name:"models/heroes_wip/abrams/abrams.vmdl""#),
+            Some("heroes_wip/abrams/abrams")
+        );
+        assert_eq!(
+            model_path("models/heroes_staging/nano/nano_v2/nano.vmdl"),
+            Some("heroes_staging/nano/nano_v2/nano")
+        );
+        assert_eq!(model_path(r#"resource_name:"particles/x.vpcf""#), None);
+    }
+
+    #[test]
+    fn models_index_groups_poses_by_model_path() {
+        let url = |p: &str| format!("{MODELS_BASE_URL}/{p}");
+        let index = serde_json::json!({
+            "heroes_wip": {
+                "abrams": { "abrams": {
+                    "hero_select.glb": url("heroes_wip/abrams/abrams/hero_select.glb"),
+                    "a_pose.glb": url("heroes_wip/abrams/abrams/a_pose.glb"),
+                }},
+            },
+            "stray.txt": url("stray.txt"),
+        });
+        let models = parse_models_index(index);
+        assert_eq!(models.len(), 1);
+        let abrams = &models["heroes_wip/abrams/abrams"];
+        assert_eq!(abrams.keys().collect::<Vec<_>>(), ["a_pose", "hero_select"]);
+        assert_eq!(
+            abrams["hero_select"],
+            url("heroes_wip/abrams/abrams/hero_select.glb")
+        );
     }
 }

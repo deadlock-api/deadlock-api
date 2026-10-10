@@ -9,7 +9,8 @@ set -euo pipefail
 #   4. Build the versions/<build>/ folder (vdata/css/steam.inf/localization and
 #      the map entities extracted from the dl_midtown entity lump,
 #      zstd-compressed) from the extracted files.
-#   5. Extract + process the media assets (images/icons/fonts/sounds).
+#   5. Extract + process the media assets (images/icons/fonts/sounds) and
+#      export the hero 3D models as GLBs (see export_hero_models.py).
 #   6. Upload the media assets to R2.
 #   7. Upload the versions/<build>/ folder to R2.
 #   8. Rebuild the R2 indexes (per-folder index.json.zst + steam-info/all.json.zst)
@@ -17,7 +18,7 @@ set -euo pipefail
 #      asset update — the index must never drift from what's in the bucket.
 #
 # Requires: wget/curl, unzip, zstd, uv, rclone, convert (ImageMagick),
-#           python3, and Steam credentials in the environment.
+#           python3, npm (Node.js), and Steam credentials in the environment.
 #
 # Environment:
 #   STEAM_USERNAME / STEAM_PASSWORD  Steam login for the depot download.
@@ -92,7 +93,7 @@ check_cmd() {
     fi
 }
 
-for cmd in unzip zstd uv rclone convert python3 rsync; do
+for cmd in unzip zstd uv rclone convert python3 rsync npm; do
     check_cmd "$cmd"
 done
 
@@ -149,6 +150,12 @@ if [ ! -f Source2Viewer-CLI ] || [ ! -f libSkiaSharp.so ]; then
     fi
     unzip -o Decompiler.zip && rm Decompiler.zip
     chmod +x Source2Viewer-CLI
+fi
+
+# gltf-transform compacts the exported hero models (meshopt + WebP textures).
+GLTF_TRANSFORM="$WORK_DIR/gltf-transform/node_modules/.bin/gltf-transform"
+if [ ! -x "$GLTF_TRANSFORM" ]; then
+    npm install --silent --no-audit --no-fund --prefix "$WORK_DIR/gltf-transform" @gltf-transform/cli@4.5.1
 fi
 
 # Remove com.apple.quarantine xattr if present
@@ -377,6 +384,13 @@ find images -type f -name "*_psd.*" -exec bash -c 'mv "$1" "${1/_psd./.}"' _ {} 
 find images -type f -name "*_psd_128.*" -exec bash -c 'mv "$1" "${1/_psd_128./.}"' _ {} \;
 find images -type f -name "*_png.*" -exec bash -c 'mv "$1" "${1/_png./.}"' _ {} \;
 
+# Hero 3D models, one GLB per pose: models/<model path>/<pose>.glb
+rm -rf models
+mkdir -p models
+python3 "$SCRIPT_DIR/export_hero_models.py" ./Source2Viewer-CLI "$GLTF_TRANSFORM" \
+    "$citadel_folder"/pak01_dir.vpk "$citadel_folder"/scripts/heroes.vdata models \
+    || echo "Warning: hero model export failed, skipping."
+
 # 5b. Validate the build before uploading ANYTHING to R2. A partial or broken
 # build (e.g. missing localization, empty media) must never reach the bucket and
 # poison the version, so fail hard here instead.
@@ -417,6 +431,7 @@ fi
 [ -n "$(find sounds -type f -name '*.mp3'  -print -quit 2>/dev/null)" ] || warn "no sounds/*.mp3 produced"
 [ -n "$(find icons  -type f -name '*.svg'  -print -quit 2>/dev/null)" ] || warn "no icons/*.svg produced"
 [ -n "$(find fonts  -type f \( -name '*.otf' -o -name '*.ttf' \) -print -quit 2>/dev/null)" ] || warn "no fonts/*.otf or *.ttf produced"
+[ -n "$(find models -type f -name '*.glb'  -print -quit 2>/dev/null)" ] || warn "no models/*.glb produced"
 
 if [ "$errors" -gt 0 ]; then
     echo "Build validation failed with $errors error(s); aborting before any upload."
@@ -430,6 +445,7 @@ rclone copy -P -c --transfers 8 --checkers 8 images/ "$REMOTE/images/"
 rclone copy -P -c --transfers 8 --checkers 8 icons/ "$REMOTE/icons/"
 rclone copy -P -c --transfers 8 --checkers 8 sounds/ "$REMOTE/sounds/"
 rclone copy -P -c --transfers 8 --checkers 8 fonts/ "$REMOTE/fonts/"
+rclone copy -P -c --transfers 8 --checkers 8 models/ "$REMOTE/models/"
 
 # 7. Upload the versioned source files (vdata/css/steam.inf/localization) to R2
 echo "Uploading versions/$BUILD to R2..."
@@ -477,7 +493,7 @@ PY
 
 # folder:local-dir pairs. Every index is incremental: seed from the current
 # bucket index and merge in this build's files.
-for pair in sounds:sounds images:images icons:icons fonts:fonts; do
+for pair in sounds:sounds images:images icons:icons fonts:fonts models:models; do
     folder="${pair%%:*}"; localdir="${pair##*:}"
     echo ">> index: $folder"
     rclone cat "$REMOTE/$folder/index.json.zst" 2>/dev/null | zstd -dq > current_index.json 2>/dev/null || true
