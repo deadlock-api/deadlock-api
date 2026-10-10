@@ -21,6 +21,9 @@ const CLAIM_TTL_SECS: u64 = 15 * 60;
 const POOL_LIMIT: usize = 200_000;
 const MIN_MATCH_ID: u64 = 31_247_321;
 const CLAIM_PREFIX: &str = "matches_to_fetch:claimed:";
+/// Matches from `active_matches` are pending while still being played; their salts only exist
+/// once the match ended.
+const MIN_AGE_SECS: u32 = 2 * 60 * 60;
 
 fn worklist(ids: impl Serialize) -> Response {
     (
@@ -68,6 +71,7 @@ async fn pending_pool(
              SELECT match_id, match_id IN prio AS is_prio, start_time, match_mode, game_mode, badge
              FROM pending_matches FINAL
              WHERE state = 'pending' AND match_id >= {MIN_MATCH_ID}
+               AND start_time < now() - INTERVAL {MIN_AGE_SECS} SECOND
              ORDER BY is_prio DESC, match_id DESC LIMIT {POOL_LIMIT}
          )
          ORDER BY if(is_prio, 0, multiIf(match_mode = 'Ranked', 1,
