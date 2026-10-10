@@ -1,3 +1,4 @@
+import { cachedJson, type JsonCache, NO_CACHE } from "~/lib/edge-cache";
 import type { D1Database, D1PreparedStatement } from "~/lib/worker-env";
 
 import { tierOfBadge } from "./scoring";
@@ -45,9 +46,23 @@ export function voteStatements(db: D1Database, videoId: string, voter: string, t
   ];
 }
 
-/** The statements that read a voter's guess and the tally without voting. */
-export function resultStatements(db: D1Database, videoId: string, voter: string): D1PreparedStatement[] {
-  return [db.prepare(VOTER_GUESS).bind(videoId, voter), db.prepare(TALLY).bind(videoId)];
+// The edge cache (src/lib/edge-cache.ts) keeps D1 out of repeated requests. A counted guess never changes, so it is
+// kept for a week and a voter asking again (or guessing again) costs no read. "Not voted yet" is kept briefly, and a
+// vote replaces it. The tally may lag other voters' votes by `TALLY_TTL_SECONDS`.
+const GUESS_TTL_SECONDS = 7 * 86_400;
+const NO_GUESS_TTL_SECONDS = 60;
+const TALLY_TTL_SECONDS = 30;
+
+const guessKey = (videoId: string, voter: string) => `guess-the-rank/guess/${videoId}/${voter}`;
+const tallyKey = (videoId: string) => `guess-the-rank/tally/${videoId}`;
+
+type Rows = Record<string, unknown>[];
+
+function readTally(db: D1Database, cache: JsonCache, videoId: string): Promise<Rows> {
+  return cachedJson(cache, tallyKey(videoId), TALLY_TTL_SECONDS, async () => {
+    const { results } = await db.prepare(TALLY).bind(videoId).all();
+    return results;
+  });
 }
 
 /** Records a vote (once per voter) and returns the round's answer with the tally. */
@@ -56,9 +71,20 @@ export async function recordVote(
   video: { id: string; badge: number },
   voter: string,
   tier: number,
+  cache: JsonCache = NO_CACHE,
 ): Promise<RoundResult> {
+  const known = await cache.get<Rows>(guessKey(video.id, voter));
+  if (known?.value.length) {
+    const counted = toRoundResult(video.badge, known.value, await readTally(db, cache, video.id));
+    if (counted) return counted;
+  }
   const results = await db.batch(voteStatements(db, video.id, voter, tier));
-  return toRoundResult(video.badge, results[2].results, results[3].results) ?? emptyResult(video.badge, tier);
+  const [voterRows, tallyRows] = [results[2].results, results[3].results];
+  await Promise.all([
+    cache.set(guessKey(video.id, voter), voterRows, GUESS_TTL_SECONDS),
+    cache.set(tallyKey(video.id), tallyRows, TALLY_TTL_SECONDS),
+  ]);
+  return toRoundResult(video.badge, voterRows, tallyRows) ?? emptyResult(video.badge, tier);
 }
 
 /** The round's answer for a voter who already voted on it; null for anyone else, who must not learn the rank. */
@@ -66,9 +92,16 @@ export async function readResult(
   db: D1Database,
   video: { id: string; badge: number },
   voter: string,
+  cache: JsonCache = NO_CACHE,
 ): Promise<RoundResult | null> {
-  const results = await db.batch(resultStatements(db, video.id, voter));
-  return toRoundResult(video.badge, results[0].results, results[1].results);
+  const key = guessKey(video.id, voter);
+  let voterRows = (await cache.get<Rows>(key))?.value;
+  if (!voterRows) {
+    ({ results: voterRows } = await db.prepare(VOTER_GUESS).bind(video.id, voter).all());
+    await cache.set(key, voterRows, voterRows.length > 0 ? GUESS_TTL_SECONDS : NO_GUESS_TTL_SECONDS);
+  }
+  if (voterRows.length === 0) return null;
+  return toRoundResult(video.badge, voterRows, await readTally(db, cache, video.id));
 }
 
 function emptyResult(badge: number, guess: number): RoundResult {

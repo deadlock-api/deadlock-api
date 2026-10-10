@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { getRequestHeader } from "@tanstack/react-start/server";
 
 import { api } from "~/lib/api";
+import { cachedJson, edgeCache } from "~/lib/edge-cache";
 import type { R2Bucket, WorkerEnv } from "~/lib/worker-env";
 
 import {
@@ -21,9 +22,12 @@ import { readResult, recordVote, type RoundResult, voterHash } from "./votes";
 //
 // Under the Vite dev server there is no Worker and no bindings: every day is empty and the page shows its empty state.
 
-/** How long an isolate keeps a day's videos. The schedule of today and past days never changes, but an upload that
- * lands late or a withdrawn video does. */
+/** How long an isolate, and the location's edge cache, keep a day's videos. The schedule of today and past days never
+ * changes, but an upload that lands late or a withdrawn video does. */
 const POOL_TTL_MS = 5 * 60_000;
+
+/** This location's cache in front of D1 and the R2 listing, shared by its isolates. */
+const cache = edgeCache("guess-the-rank");
 
 const pools = new Map<string, { at: number; videos: Promise<VideoRow[]> }>();
 
@@ -56,12 +60,14 @@ async function loadDailyVideos(env: WorkerEnv, date: string): Promise<VideoRow[]
   return selectDailyVideos(rows.results, keys, date);
 }
 
-/** The day's videos in round order, kept per isolate for `POOL_TTL_MS`. */
+/** The day's videos in round order, kept per isolate and in the edge cache for `POOL_TTL_MS`. */
 function dailyVideos(env: WorkerEnv | undefined, date: string, now = Date.now()): Promise<VideoRow[]> {
   if (!env) return Promise.resolve([]);
   const cached = pools.get(date);
   if (cached && now - cached.at < POOL_TTL_MS) return cached.videos;
-  const videos = loadDailyVideos(env, date);
+  const videos = cachedJson(cache, `guess-the-rank/daily/${date}`, POOL_TTL_MS / 1000, () =>
+    loadDailyVideos(env, date),
+  );
   pools.set(date, { at: now, videos });
   // A failed read is not kept: the next request tries again.
   videos.catch(() => pools.delete(date));
@@ -137,7 +143,7 @@ export const submitGuess = createServerFn({ method: "POST" })
     if (!db) throw new Error("Guess the Rank is not available here");
     if (!(await validTiers()).has(data.tier)) throw new Error("Invalid tier");
     const video = await roundVideo(context.env, data);
-    return recordVote(db, video, await voterHash(voterIp(), video.id), data.tier);
+    return recordVote(db, video, await voterHash(voterIp(), video.id), data.tier, cache);
   });
 
 /** A round's answer with fresh stats, for a voter who already guessed it; null (no rank) for anyone else. */
@@ -147,5 +153,5 @@ export const getRoundResult = createServerFn({ method: "GET" })
     const db = context.env?.GUESS_THE_RANK_DB;
     if (!db) return null;
     const video = await roundVideo(context.env, data);
-    return readResult(db, video, await voterHash(voterIp(), video.id));
+    return readResult(db, video, await voterHash(voterIp(), video.id), cache);
   });

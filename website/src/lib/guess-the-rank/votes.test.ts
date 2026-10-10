@@ -4,6 +4,7 @@ import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { test } from "node:test";
 
+import type { JsonCache } from "~/lib/edge-cache";
 import type { D1Database, D1PreparedStatement } from "~/lib/worker-env";
 
 import { readResult, recordVote, toRoundResult, voterHash } from "./votes";
@@ -70,6 +71,59 @@ test("the result is only read back for a voter who voted", async () => {
   assert.equal(await readResult(db, VIDEO, "voter-a"), null);
   await recordVote(db, VIDEO, "voter-a", 8);
   assert.deepEqual(await readResult(db, VIDEO, "voter-a"), { badge: 74, tier: 7, guess: 8, stats: { 8: 1 }, total: 1 });
+});
+
+/** An edge cache in memory, without expiry. */
+function memoryCache(): JsonCache {
+  const entries = new Map<string, string>();
+  return {
+    get: async <T>(key: string) => {
+      const entry = entries.get(key);
+      return entry === undefined ? undefined : { value: JSON.parse(entry) as T };
+    },
+    set: async (key, value) => void entries.set(key, JSON.stringify(value)),
+  };
+}
+
+/** Counts the database's round trips. */
+function countingDatabase(db: D1Database): D1Database & { calls: number } {
+  const counted = {
+    calls: 0,
+    prepare: (query: string) => {
+      const wrap = (statement: D1PreparedStatement): D1PreparedStatement => ({
+        ...statement,
+        bind: (...values: unknown[]) => wrap(statement.bind(...values)),
+        all: <T>() => {
+          counted.calls++;
+          return statement.all<T>();
+        },
+      });
+      return wrap(db.prepare(query));
+    },
+    batch: <T>(statements: D1PreparedStatement[]) => {
+      counted.calls++;
+      return db.batch<T>(statements);
+    },
+  };
+  return counted;
+}
+
+test("with an edge cache, repeated guesses and result reads do not reach the database", async () => {
+  const db = countingDatabase(testDatabase());
+  const cache = memoryCache();
+  assert.equal(await readResult(db, VIDEO, "voter-a", cache), null);
+  assert.equal(await readResult(db, VIDEO, "voter-a", cache), null);
+  assert.equal(db.calls, 1);
+
+  const first = await recordVote(db, VIDEO, "voter-a", 6, cache);
+  assert.deepEqual(first, { badge: 74, tier: 7, guess: 6, stats: { 6: 1 }, total: 1 });
+  assert.equal(db.calls, 2);
+
+  for (let i = 0; i < 5; i++) {
+    assert.deepEqual(await recordVote(db, VIDEO, "voter-a", 9, cache), first);
+    assert.deepEqual(await readResult(db, VIDEO, "voter-a", cache), first);
+  }
+  assert.equal(db.calls, 2);
 });
 
 test("the voter id is a salted hash per address and video", async () => {
