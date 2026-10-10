@@ -46,9 +46,9 @@ async fn prioritized_account_ids(pg_client: &Pool<Postgres>) -> Result<Arc<Vec<u
 }
 
 /// Pending matches in fetch order: prioritized accounts' matches, then ranked, unranked,
-/// street brawl and everything else; ranked games with higher-badge players (badge after each
-/// player's latest ranked match) first, then the newest. Holds every pending prioritized match plus the
-/// newest others, up to `POOL_LIMIT`.
+/// street brawl and everything else; newest day first, within a day ranked games with
+/// higher-badge players (badge after each player's latest ranked match) first, then the newest.
+/// Holds every pending prioritized match plus the newest others, up to `POOL_LIMIT`.
 #[cached(ttl_secs = 60, convert = "{ 0 }", key = "u8", sync_writes = "default")]
 async fn pending_pool(
     ch_client: &clickhouse::Client,
@@ -78,7 +78,7 @@ async fn pending_pool(
              ORDER BY is_prio DESC, match_id DESC LIMIT {POOL_LIMIT}
          ),
          players AS MATERIALIZED (
-             SELECT match_id, account_id, match_mode, game_mode FROM player_match_by_match
+             SELECT match_id, account_id, match_mode, game_mode, start_time FROM player_match_by_match
              WHERE match_id IN (SELECT match_id FROM pool)
          ),
          badges AS (
@@ -98,6 +98,7 @@ async fn pending_pool(
                                          any(game_mode) = 'StreetBrawl', 3,
                                          any(match_mode) = 'Unranked', 2,
                                          4)),
+                  toDate(any(start_time)) DESC,
                   avgIf(badge, badge > 0 AND match_mode = 'Ranked') DESC,
                   match_id DESC
          SETTINGS log_comment = 'matches_to_fetch_pool', enable_materialized_cte = 1"
