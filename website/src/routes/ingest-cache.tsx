@@ -1,8 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Download, FolderUp } from "lucide-react";
+import { FolderUp } from "lucide-react";
 
 import { CacheUpload } from "~/components/features/ingest-cache/CacheUpload";
 import { INGEST_FAQ, ingestFaqJsonLd } from "~/components/features/ingest-cache/faq";
+import { InstallButton } from "~/components/features/ingest-cache/InstallButton";
 import { InstallGuide } from "~/components/features/ingest-cache/InstallGuide";
 import { WhyInstall } from "~/components/features/ingest-cache/WhyInstall";
 import { Disclosure } from "~/components/patterns/content/Disclosure";
@@ -44,12 +45,7 @@ function IngestCache() {
         description="Statlocker, Tracklock and other trackers can only show the matches someone has sent in. Install the background tool once and every match you play gets sent."
         actions={
           <>
-            <Button asChild size="lg">
-              <a href="#install">
-                <Download aria-hidden="true" />
-                Install the tool
-              </a>
-            </Button>
+            <InstallButton />
             <Button asChild size="lg" variant="outline">
               <a href="#upload">
                 <FolderUp aria-hidden="true" />
