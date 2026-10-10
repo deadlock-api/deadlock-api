@@ -305,7 +305,7 @@ export function GuessTheRankGame({ date: dateParam }: { date?: string }) {
         <EmptyState
           icon={Clapperboard}
           title="No clips for this day yet"
-          description="New clips join the next day after they are added. Check back tomorrow."
+          description="No clips are scheduled for this day yet. Check back tomorrow."
         />
       </>
     );
