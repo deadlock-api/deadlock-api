@@ -85,6 +85,11 @@ pub(crate) fn parse_var_type(var_type: &str) -> FieldType {
         return FieldType::Scalar(DataType::UInt64);
     }
 
+    // Fixed-size C strings (e.g. `char[128]` player names) are one string, not an array.
+    if var_type.starts_with("char[") {
+        return FieldType::Scalar(DataType::Utf8);
+    }
+
     if let Some((element_type, length)) = extract_fixed_array(var_type) {
         return FieldType::FixedArray {
             element: Box::new(parse_var_type(element_type)),
@@ -99,7 +104,9 @@ pub(crate) fn parse_var_type(var_type: &str) -> FieldType {
             FieldType::Scalar(DataType::UInt64)
         }
 
-        "float32" | "float" | "GameTime_t" | "GameTick_t" => FieldType::Scalar(DataType::Float32),
+        "float32" | "float" | "GameTime_t" | "GameTick_t" | "CNetworkedQuantizedFloat" => {
+            FieldType::Scalar(DataType::Float32)
+        }
 
         "float64" | "double" => FieldType::Scalar(DataType::Float64),
 
@@ -179,6 +186,20 @@ mod tests {
             FieldType::Scalar(DataType::Float32)
         );
         assert_eq!(parse_var_type("bool"), FieldType::Scalar(DataType::Boolean));
+    }
+
+    #[test]
+    fn test_parse_quantized_float_and_char_string() {
+        // CBodyComponent.m_vecX/Y/Z (positions within a cell)
+        assert_eq!(
+            parse_var_type("CNetworkedQuantizedFloat"),
+            FieldType::Scalar(DataType::Float32)
+        );
+        // CCitadelPlayerController.m_iszPlayerName
+        assert_eq!(
+            parse_var_type("char[128]"),
+            FieldType::Scalar(DataType::Utf8)
+        );
     }
 
     #[test]
