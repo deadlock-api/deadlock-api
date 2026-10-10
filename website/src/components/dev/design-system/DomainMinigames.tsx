@@ -17,6 +17,8 @@ import { HeroImage } from "~/components/domain/assets/HeroImage";
 import { AnswerOption, type AnswerOptionState, revealedState } from "~/components/domain/minigames/AnswerOption";
 import { GamePage } from "~/components/domain/minigames/GamePage";
 import { GameTile } from "~/components/domain/minigames/GameTile";
+import { ScoreSummary } from "~/components/domain/minigames/ScoreSummary";
+import { ShareButton } from "~/components/domain/minigames/ShareButton";
 import { TerminalBadge } from "~/components/domain/minigames/TerminalBadge";
 import { TerminalButton } from "~/components/domain/minigames/TerminalButton";
 import {
@@ -456,6 +458,47 @@ export function DomainMinigames() {
             Failed
           </TerminalBadge>
           <TerminalBadge variant="warning">Archive · Day 212</TerminalBadge>
+        </Variants>
+      </Specimen>
+
+      <Specimen
+        name="ScoreSummary"
+        source="domain/minigames/ScoreSummary"
+        note="The end-of-game score of a daily game beside the time to the next one. grade colors the score (good, fair, poor) and scoreLabel names it, so color is not the only cue. An archive day has no countdown. size lg sets the score in the display step for a result screen that is only the score."
+        className="theme-terminal"
+      >
+        <div className="grid gap-3 lg:grid-cols-2">
+          <ScoreSummary
+            score="8/9"
+            scoreLabel="Rank Reader"
+            grade="good"
+            countdown={{ label: "Next clips", value: "07:12:45" }}
+          />
+          <ScoreSummary
+            score="5/10"
+            scoreLabel="Not Bad"
+            grade="fair"
+            countdown={{ label: "Next Trivia", value: "Out now" }}
+          />
+          <ScoreSummary score="1/9" scoreLabel="Keep Watching" grade="poor" />
+          <ScoreSummary score="12" scoreLabel="Streak" grade="good" size="lg" />
+        </div>
+      </Specimen>
+
+      <Specimen
+        name="ShareButton"
+        source="domain/minigames/ShareButton"
+        note="Copies a game's share text to the clipboard in the games' voice; a CopyButton (outline by default) that confirms with a check once copied. It takes every CopyButton prop."
+        className="theme-terminal"
+      >
+        <Variants>
+          <ShareButton text={"Guess the Rank #1 7/9\n\u{1f7e9}\u{1f7e8}\u{1f7e5}"}>Share result</ShareButton>
+          <ShareButton text="Deadlockdle Day 200 - Trivia 8/10" variant="soft">
+            Share Result
+          </ShareButton>
+          <ShareButton text="disabled" disabled>
+            Disabled
+          </ShareButton>
         </Variants>
       </Specimen>
     </>
