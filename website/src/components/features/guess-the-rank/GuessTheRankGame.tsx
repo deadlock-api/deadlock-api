@@ -28,7 +28,6 @@ import {
 } from "~/lib/guess-the-rank/scoring";
 
 import { type ClipPhase, trackGuessTheRank, useClipAnalytics } from "./analytics";
-import { GuessTheRankFeedbackNotice } from "./GuessTheRankFeedbackNotice";
 import { RankPicker, type RankTier } from "./RankPicker";
 import { RoundReveal } from "./RoundReveal";
 import { type GuessedRound, useGuessTheRank } from "./use-guess-the-rank";
@@ -78,7 +77,6 @@ function RoundView({
   tiers,
   ranks,
   game,
-  onActivity,
 }: {
   date: string;
   round: DailyRound;
@@ -87,8 +85,6 @@ function RoundView({
   tiers: readonly RankTier[];
   ranks: readonly Rank[];
   game: ReturnType<typeof useGuessTheRank>;
-  /** The round got under way: its clip played or a tier was picked. */
-  onActivity: () => void;
 }) {
   const [selected, setSelected] = useState<number | null>(null);
   const isLast = round.round === total - 1;
@@ -105,15 +101,7 @@ function RoundView({
 
   return (
     <Stack gap={5}>
-      <RoundClip
-        round={round}
-        total={total}
-        {...clip.handlers}
-        onPlay={(event) => {
-          onActivity();
-          clip.handlers.onPlay(event);
-        }}
-      />
+      <RoundClip round={round} total={total} {...clip.handlers} />
 
       {guessed ? (
         <>
@@ -153,7 +141,6 @@ function RoundView({
                 change: tierChanges.current,
               });
               setSelected(tier);
-              onActivity();
               game.resetSubmitError();
             }}
             disabled={game.submitting}
@@ -277,13 +264,6 @@ export function GuessTheRankGame({ date: dateParam }: { date?: string }) {
       trackGuessTheRank("error", { date, kind: "rounds_load", message: roundsQuery.error.message });
   }, [roundsQuery.isError, roundsQuery.error, date]);
 
-  // The feedback notice waits for a pause: never while a clip of an unguessed round is being watched or its tier
-  // picked. A fresh round counts as a pause until it gets under way, so a first visit still sees it right away.
-  const [activeVideo, setActiveVideo] = useState<string | null>(null);
-  const current = shownRound === null ? null : rounds[shownRound];
-  const midRound = current != null && !guessed[current.round] && activeVideo === current.videoId;
-  const notice = <GuessTheRankFeedbackNotice ready={ready && !midRound} />;
-
   if (roundsQuery.isError || ranksQuery.isError) {
     return (
       <ErrorState
@@ -300,22 +280,18 @@ export function GuessTheRankGame({ date: dateParam }: { date?: string }) {
   if (roundsQuery.isPending || !ranks || !game.loaded) return <LoadingState label="clips" />;
   if (rounds.length === 0) {
     return (
-      <>
-        {notice}
-        <EmptyState
-          icon={Clapperboard}
-          title="No clips for this day yet"
-          description="New clips join the next day after they are added. Check back tomorrow."
-        />
-      </>
+      <EmptyState
+        icon={Clapperboard}
+        title="No clips for this day yet"
+        description="New clips join the next day after they are added. Check back tomorrow."
+      />
     );
   }
 
-  const shown = current;
+  const shown = shownRound === null ? null : rounds[shownRound];
 
   return (
     <Stack gap={5}>
-      {notice}
       <StepMeter label={`Clip ${(shownRound ?? rounds.length - 1) + 1} of ${rounds.length}`} className="justify-center">
         {rounds.map((round, i) => {
           const entry = guessed[i];
@@ -341,7 +317,6 @@ export function GuessTheRankGame({ date: dateParam }: { date?: string }) {
               tiers={tiers}
               ranks={ranks}
               game={game}
-              onActivity={() => setActiveVideo(shown.videoId)}
             />
           ) : (
             <DaySummary
