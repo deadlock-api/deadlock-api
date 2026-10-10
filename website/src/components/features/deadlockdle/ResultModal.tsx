@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Clock, Target, Trophy } from "lucide-react";
 import { useEffect, useRef } from "react";
 
+import { ShareButton } from "~/components/domain/minigames/ShareButton";
 import { TerminalBadge } from "~/components/domain/minigames/TerminalBadge";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent } from "~/components/ui/card";
@@ -19,7 +20,7 @@ import { TONE_COLOR } from "~/lib/tone";
 import { attemptState } from "./AttemptsIndicator";
 import { DURATION, enter, fadeUp, stagger } from "./motion";
 import { NextGameButton } from "./NextGameButton";
-import { generateShareText, ShareButton } from "./ShareButton";
+import { generateShareText } from "./share-text";
 
 interface ResultModalProps {
   open: boolean;
