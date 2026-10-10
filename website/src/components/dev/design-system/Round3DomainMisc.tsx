@@ -8,7 +8,6 @@ import { AbilityName } from "~/components/domain/assets/AbilityName";
 import { ItemImage } from "~/components/domain/assets/ItemImage";
 import { ItemName } from "~/components/domain/assets/ItemName";
 import { SocialLinks, SteamIcon } from "~/components/domain/brand/BrandIcons";
-import { FeedbackNoticeDialog } from "~/components/domain/feedback/FeedbackNoticeDialog";
 import { GraphNodeCard } from "~/components/domain/graph/GraphNodeCard";
 import { GamePage } from "~/components/domain/minigames/GamePage";
 import { GameTile } from "~/components/domain/minigames/GameTile";
@@ -19,7 +18,6 @@ import { MatchTimeRangeSelector } from "~/components/domain/selectors/MatchTimeR
 import { ModeSelector } from "~/components/domain/selectors/ModeSelector";
 import { RankRangeSelector } from "~/components/domain/selectors/RankRangeSelector";
 import { Badge } from "~/components/ui/badge";
-import { Button } from "~/components/ui/button";
 import { Card, CardContent } from "~/components/ui/card";
 import { Tooltip, TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
 
@@ -29,49 +27,12 @@ const ITEM_NODES = [
   { itemId: 2678489038, accent: "spirit", winRate: 0.5, pickRate: 0.06 },
 ] as const;
 
-const NOTICE_SPECIMEN_KEY = "design-system-feedback-notice-dismissed";
-
-/** Opens the notice on demand: each press forgets "Don't show again" and mounts a fresh one. */
-function FeedbackNoticeExample() {
-  const [shown, setShown] = useState(0);
-  return (
-    <Variants label="press to open; tick Don't show again and it stays closed until pressed again">
-      <Button
-        variant="outline"
-        onClick={() => {
-          try {
-            window.localStorage.removeItem(NOTICE_SPECIMEN_KEY);
-          } catch {
-            // Storage may be unavailable; the notice then opens anyway.
-          }
-          setShown((count) => count + 1);
-        }}
-      >
-        Show feedback notice
-      </Button>
-      {shown > 0 && (
-        <FeedbackNoticeDialog key={shown} storageKey={NOTICE_SPECIMEN_KEY} title="Help shape this page">
-          <span className="block">The description, one span per paragraph.</span>
-        </FeedbackNoticeDialog>
-      )}
-    </Variants>
-  );
-}
-
 export function Round3DomainMisc() {
   const [locked, setLocked] = useState<number | null>(ITEM_NODES[0].itemId);
   const [tiers, setTiers] = useState([3, 4]);
 
   return (
     <>
-      <Specimen
-        name="FeedbackNoticeDialog"
-        source="domain/feedback/FeedbackNoticeDialog"
-        note="Asks for feedback on a new page and spotlights the feedback launcher while open. It opens on every visit until closed with Don't show again ticked, remembered under storageKey: one key per page (the tracker and Guess the Rank each have their own). ready holds it back until the page is at a pause, such as a game between rounds. Children are the description's paragraphs; title names the page. A Dialog: focus is trapped, Escape closes it and focus returns."
-      >
-        <FeedbackNoticeExample />
-      </Specimen>
-
       <Specimen
         name="BrandIcons and SocialLinks"
         source="domain/brand/BrandIcons"
