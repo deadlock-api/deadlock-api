@@ -1,67 +1,17 @@
-import { useEffect, useState } from "react";
+import { FeedbackNoticeDialog as FeedbackNotice } from "~/components/domain/feedback/FeedbackNoticeDialog";
 
-import { Button } from "~/components/ui/button";
-import { CheckboxField } from "~/components/ui/checkbox-field";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "~/components/ui/dialog";
-import { useHydrated } from "~/hooks/useHydrated";
-import { readLocalStorage, writeLocalStorage } from "~/lib/local-storage";
-
-const STORAGE_KEY = "tracker-feedback-notice-dismissed";
-
+/** The Player Tracker's feedback notice, remembered under its own key. */
 export function FeedbackNoticeDialog() {
-  // Storage exists only in the browser, so the notice opens on the render after hydration: opened by the first one,
-  // the client's markup differed from the server's.
-  const hydrated = useHydrated();
-  const [closed, setClosed] = useState(false);
-  const open = hydrated && !closed && readLocalStorage(STORAGE_KEY) !== "true";
-  const [dontShowAgain, setDontShowAgain] = useState(false);
-
-  // Spotlights the feedback launcher (rendered by the root layout) while the notice is open.
-  useEffect(() => {
-    if (!open) return;
-    document.body.dataset.feedbackSpotlight = "true";
-    return () => {
-      delete document.body.dataset.feedbackSpotlight;
-    };
-  }, [open]);
-
-  const handleOpenChange = (nextOpen: boolean) => {
-    if (!nextOpen && dontShowAgain) writeLocalStorage(STORAGE_KEY, "true");
-    setClosed(!nextOpen);
-  };
-
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Help shape the Player Tracker</DialogTitle>
-          <DialogDescription className="flex flex-col gap-2 pt-1 text-start">
-            <span className="block">
-              This page is brand new and we need a lot of feedback to make it better. Use the feedback button in the
-              bottom-right corner to tell us what you think.
-            </span>
-            <span className="block">
-              You can also annotate exact parts of the page to point out precisely what you mean. All feedback is
-              completely anonymous.
-            </span>
-          </DialogDescription>
-        </DialogHeader>
-        <DialogFooter className="items-center gap-3 sm:justify-between">
-          <CheckboxField
-            label="Don't show again"
-            checked={dontShowAgain}
-            onCheckedChange={(checked) => setDontShowAgain(checked === true)}
-          />
-          <Button onClick={() => handleOpenChange(false)}>Close</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <FeedbackNotice storageKey="tracker-feedback-notice-dismissed" title="Help shape the Player Tracker">
+      <span className="block">
+        This page is brand new and we need a lot of feedback to make it better. Use the feedback button in the
+        bottom-right corner to tell us what you think.
+      </span>
+      <span className="block">
+        You can also annotate exact parts of the page to point out precisely what you mean. All feedback is completely
+        anonymous.
+      </span>
+    </FeedbackNotice>
   );
 }
