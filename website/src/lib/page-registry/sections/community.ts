@@ -77,4 +77,9 @@ export const COMMUNITY_PAGES: RegisteredPage[] = [
     description: "flashcards to learn hero abilities and item effects",
     path: "/games/flashcards",
   },
+  {
+    id: "guess_the_rank",
+    description: "a daily game: watch gameplay clips and guess the player's rank, then see how others guessed",
+    path: "/games/guess-the-rank",
+  },
 ];

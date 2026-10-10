@@ -148,7 +148,7 @@ export const NAV: readonly NavChapter[] = [
         ],
       },
       { title: "Feedback", items: ["Alert", "Callout", "Skeleton", "Spinner"] },
-      { title: "Media", items: ["ImgWithSkeleton", "SoundButton"] },
+      { title: "Media", items: ["ImgWithSkeleton", "SoundButton", "Video"] },
     ],
   },
   {
@@ -329,6 +329,8 @@ export const NAV: readonly NavChapter[] = [
           "GameTile and GamePage heading level",
           "TerminalButton",
           "TerminalBadge",
+          "ScoreSummary",
+          "ShareButton",
           "Mini-game states",
           "Play a sound",
         ],

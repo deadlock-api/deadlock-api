@@ -25,7 +25,7 @@ export const LEGACY_PAGE_PATHS = {
 export function migrateLegacyHref(href: string): string | null {
   const url = new URL(href, "https://deadlock-api.com");
   const root = `/${url.pathname.split("/")[1]}`;
-  if (root === "/games" && /^\/games\/(deadlockdle|flashcards)(\/|$)/.test(url.pathname)) return null;
+  if (root === "/games" && /^\/games\/(deadlockdle|flashcards|guess-the-rank)(\/|$)/.test(url.pathname)) return null;
   if (root === "/players" && url.pathname.replace(/\/$/, "") !== root) {
     return `/tracker${url.pathname}${url.search}${url.hash}`;
   }
