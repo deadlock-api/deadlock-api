@@ -62,6 +62,17 @@ POSES: dict[str, list[str]] = {
     ],
 }
 
+# pose name -> model -> its clip preference, overriding POSES for models whose
+# preferred clip doesn't work outside the game. Only clips from the pose's
+# POSES list are exported, so pick from those.
+POSE_OVERRIDES: dict[str, dict[str, list[str]]] = {
+    "hero_select": {
+        # ui_hero_select hangs him mid-air (his select scene isn't part of
+        # the model) and parks his gun ~4 m to his side.
+        "models/heroes_wip/ratking/ratking.vmdl": ["weapon_stand_idle"],
+    },
+}
+
 MODEL_RE = re.compile(r'm_strModelName\s*=\s*resource_name:"([^"]+\.vmdl)"')
 MESH_RE = re.compile(r'm_Name = "([^"]+)"\s+m_nMeshIndex = (\d+)')
 DEFAULT_MASK_RE = re.compile(r"m_nDefaultMeshGroupMask = (\d+)")
@@ -162,6 +173,14 @@ def export(
         # Unsupported-shader stack traces are expected and non-fatal.
         stderr=subprocess.DEVNULL,
     )
+    if len(models) == 1 and target.is_dir():
+        # ... unless it writes several files (Rat King's ratking_physics.glb
+        # too): those go into the `-o` folder, below the full model path.
+        for f in [p for p in target.rglob("*") if p.is_file()]:
+            dest = out / f.relative_to(target)
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            f.replace(dest)
+        shutil.rmtree(target)
 
 
 def optimize(gltf_transform: str, src: Path, dst: Path) -> None:
@@ -196,7 +215,8 @@ def main() -> int:
                     print(f"  ! {model}: not in the game files, skipping")
                     continue
                 found = set(glb_animations(glb))
-                clip = next((c for c in clips if c in found), None)
+                preferred = POSE_OVERRIDES.get(pose, {}).get(model, clips)
+                clip = next((c for c in preferred if c in found), None)
                 if clip is None:
                     print(f"  ! {model}: no {pose} clip ({', '.join(clips)}), skipping")
                     continue
