@@ -298,15 +298,17 @@ const StagePicker = memo(function StagePicker({
 
 // The item an empty stage of the build suggests is bought by at least this share of the build's players.
 const NEXT_MIN_SHARE = 0.1;
+// Street Brawl spreads its purchases over more rounds, so a late round rarely has an item a tenth of players buy.
+const NEXT_MIN_SHARE_BRAWL = 0.05;
 
 /**
  * The item an empty stage of the build suggests: the best win rate (pulled toward the build's, see SHRINK_SHARE)
  * among the items a good part of the build's players buy there, other than those in `taken` (an item is owned once).
  */
-function nextPick(view: View, column: number, taken: Set<number>): Choice | undefined {
+function nextPick(view: View, column: number, taken: Set<number>, minShare = NEXT_MIN_SHARE): Choice | undefined {
   let best: Choice | undefined;
   for (const choice of view.byKey.values()) {
-    if (choice.column !== column || taken.has(choice.itemId) || choice.pickRate < NEXT_MIN_SHARE) continue;
+    if (choice.column !== column || taken.has(choice.itemId) || choice.pickRate < minShare) continue;
     if (!best || choice.score > best.score) best = choice;
   }
   return best;
@@ -882,7 +884,7 @@ export function BuildFlowExplorer({
   const taken = new Set(path.map((key) => parseKey(key).itemId));
   for (const stage of view.stages) {
     if (path.some((key) => parseKey(key).column === stage.column)) continue;
-    const next = nextPick(view, stage.column, taken);
+    const next = nextPick(view, stage.column, taken, isStreetBrawl ? NEXT_MIN_SHARE_BRAWL : NEXT_MIN_SHARE);
     if (next) {
       nextPicks.set(stage.column, next);
       taken.add(next.itemId);
