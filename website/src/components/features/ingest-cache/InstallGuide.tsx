@@ -1,4 +1,5 @@
 import { Download } from "lucide-react";
+import { useState } from "react";
 
 import { useInstallCtaTracking } from "~/components/domain/ingest/analytics";
 import { INGEST_REPO, WINDOWS_SETUP_URL } from "~/components/domain/ingest/links";
@@ -12,6 +13,7 @@ import { Kbd } from "~/components/ui/kbd";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { Text } from "~/components/ui/text";
 import { TextLink } from "~/components/ui/text-link";
+import { useIsLinux } from "~/hooks/useIsLinux";
 
 const WINDOWS_INSTALL = `irm https://raw.githubusercontent.com/deadlock-api/deadlock-api-ingest/master/install-windows.ps1 | iex`;
 const WINDOWS_UNINSTALL = `& "$env:LOCALAPPDATA\\deadlock-api-ingest\\uninstall-windows.ps1"`;
@@ -34,10 +36,12 @@ function Uninstall({ code, children }: { code: string; children?: React.ReactNod
 /** The background tool's install steps, one tab per platform; every note sits in the tab it is about. */
 export function InstallGuide() {
   const downloadTracking = useInstallCtaTracking("ingest_guide", "download");
+  const isLinux = useIsLinux();
+  const [picked, setPicked] = useState<string>();
   return (
     <Card className="h-full">
       <CardContent>
-        <Tabs defaultValue="windows" className="gap-5">
+        <Tabs value={picked ?? (isLinux ? "linux" : "windows")} onValueChange={setPicked} className="gap-5">
           <TabsList aria-label="Platform">
             <TabsTrigger value="windows">Windows</TabsTrigger>
             <TabsTrigger value="linux">Linux</TabsTrigger>

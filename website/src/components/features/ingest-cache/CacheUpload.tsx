@@ -1,4 +1,5 @@
 import { AlertCircle, AlertTriangle, CheckCircle2, FolderOpen, FolderSearch, Upload } from "lucide-react";
+import { useState } from "react";
 
 import { CopyableCode } from "~/components/patterns/code/CopyableCode";
 import { Disclosure } from "~/components/patterns/content/Disclosure";
@@ -15,6 +16,7 @@ import { Stack } from "~/components/ui/stack";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { Text } from "~/components/ui/text";
 import { type IngestResult, useIngestUpload } from "~/hooks/useIngestUpload";
+import { useIsLinux } from "~/hooks/useIsLinux";
 
 import { STEAM_CACHE_PATHS } from "./faq";
 
@@ -23,8 +25,10 @@ function CachePath({ path }: { path: string }) {
 }
 
 function CachePaths() {
+  const isLinux = useIsLinux();
+  const [picked, setPicked] = useState<string>();
   return (
-    <Tabs defaultValue="windows" className="gap-3">
+    <Tabs value={picked ?? (isLinux ? "linux" : "windows")} onValueChange={setPicked} className="gap-3">
       <TabsList aria-label="Operating system">
         <TabsTrigger value="windows">Windows</TabsTrigger>
         <TabsTrigger value="macos">macOS</TabsTrigger>
