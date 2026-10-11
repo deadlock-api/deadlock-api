@@ -97,7 +97,7 @@ rmcp = { version = "3.2.0", default-features = false, features = ["server", "tra
 duckdb = { version = "1.10505.0", features = ["bundled", "parquet", "json"] }
 # DuckDB pins arrow 58; enables the JSON writer on that version for MCP result formatting.
 arrow_duckdb = { package = "arrow", version = "58", default-features = false, features = ["chrono-tz", "json"] }
-toon-format = { version = "0.5", default-features = false }
+toon-format = { version = "0.6", default-features = false }
 
 [build-dependencies]
 prost-reflect = "0.16"
@@ -106,7 +106,7 @@ heck = "0.5"
 [dev-dependencies]
 clickhouse-sql-parser = { git = "https://github.com/raimannma/clickhouse-antlr4", version = "0.1.0" }
 proptest = "1"
-proptest-derive = "0.8"
+proptest-derive = "0.9"
 rstest = "0.27.0"
 insta = { version = "1", features = ["json"] }
 
