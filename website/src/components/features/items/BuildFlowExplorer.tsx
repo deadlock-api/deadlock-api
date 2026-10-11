@@ -536,20 +536,6 @@ export function BuildFlowExplorer({
         </PanelBody>
       </Panel>
 
-      {!isStreetBrawl && economyItems.length > 0 && (
-        <BuildEconomy
-          title={path.length > 0 ? "Souls for your build" : "Souls for the most common build"}
-          items={economyItems}
-          heroId={heroId}
-          gameMode={gameMode}
-          matchMode={matchMode}
-          minRankId={minRankId}
-          maxRankId={maxRankId}
-          minUnixTimestamp={minUnixTimestamp ?? 0}
-          maxUnixTimestamp={maxUnixTimestamp}
-        />
-      )}
-
       <FilterBar variant="toolbar" title="Items by stage" aria-label="Build flow controls">
         <Field label="Sort" orientation="horizontal">
           <Segmented value={sortBy} onValueChange={setSortBy} width="hug">
@@ -684,6 +670,19 @@ export function BuildFlowExplorer({
           </Stack>
         )}
       </div>
+      {!isStreetBrawl && economyItems.length > 0 && (
+        <BuildEconomy
+          title={path.length > 0 ? "Souls for your build" : "Souls for the most common build"}
+          items={economyItems}
+          heroId={heroId}
+          gameMode={gameMode}
+          matchMode={matchMode}
+          minRankId={minRankId}
+          maxRankId={maxRankId}
+          minUnixTimestamp={minUnixTimestamp ?? 0}
+          maxUnixTimestamp={maxUnixTimestamp}
+        />
+      )}
     </Stack>
   );
 }
