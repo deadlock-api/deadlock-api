@@ -20,12 +20,15 @@ export function SaveBuildButton({
   path,
   sells,
   flex,
+  skills,
 }: {
   defaultName: string;
   heroId: number | null;
   path: string[];
   sells: string[];
   flex: number[];
+  /** The reader's own skill order, if any. */
+  skills?: number[];
 }) {
   const { save } = useSavedBuilds();
   const [open, setOpen] = useState(false);
@@ -51,7 +54,7 @@ export function SaveBuildButton({
             event.preventDefault();
             const trimmed = name.trim();
             if (!trimmed) return;
-            save({ name: trimmed, heroId, path, sells, flex });
+            save({ name: trimmed, heroId, path, sells, flex, skills });
             setOpen(false);
           }}
         >

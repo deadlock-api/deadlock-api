@@ -18,6 +18,8 @@ export interface SavedBuild {
   sells: string[];
   /** When its flex slots open, in minutes; saves from before flex slots lack it. */
   flex?: number[];
+  /** Its skill order, ability ids by upgrade; saves without one take the common order. */
+  skills?: number[];
   /** Unix milliseconds. */
   savedAt: number;
 }

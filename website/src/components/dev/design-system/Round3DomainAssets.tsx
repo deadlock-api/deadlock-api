@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 
 import { SAMPLE_ABILITY_IDS, SAMPLE_ITEM_IDS, UNKNOWN_ID } from "~/components/dev/design-system/samples";
 import { Specimen, Variants } from "~/components/dev/design-system/Specimen";
@@ -20,6 +21,21 @@ const RANKED_HEROES = [
   { heroId: 3, winRate: 0.528, usage: 0.44 },
   { heroId: 4, winRate: 0.497, usage: 0.08 },
 ];
+
+/** The editor of AbilityOrderGrid: a cell press makes that upgrade the cell's ability. */
+function AbilityOrderEditorExample() {
+  const [order, setOrder] = useState<number[]>(
+    [0, 1, 0, 2, 0, 3, 1, 1, 2, 2, 3, 0].map((slot) => SAMPLE_ABILITY_IDS[slot]),
+  );
+  return (
+    <AbilityOrderGrid
+      abilityIds={SAMPLE_ABILITY_IDS}
+      abilityNames={["First", "Second", "Third", "Ultimate"]}
+      steps={order.map((abilityId) => ({ abilityId }))}
+      onValueChange={setOrder}
+    />
+  );
+}
 
 export function Round3DomainAssets() {
   const { data: ranks } = useQuery(ranksQueryOptions);
@@ -186,7 +202,7 @@ export function Round3DomainAssets() {
       <Specimen
         name="AbilityOrderGrid"
         source="domain/assets/AbilityOrderGrid"
-        note="A skill order: a row per ability in slot order, a column per upgrade, the upgrade's number in its slot color where the ability was taken. pickRate on the steps adds the row of how many players took each step, from @lg. Screen readers get a numbered list of the upgrades instead of the grid."
+        note="A skill order: a row per ability in slot order, a column per upgrade, the upgrade's number in its slot color where the ability was taken. pickRate on the steps adds the row of how many players took each step, from @lg. Screen readers get a numbered list of the upgrades instead of the grid. With onValueChange it is an editor: every cell is a toggle button labelled with its upgrade and ability (abilityNames), and maxPerAbility (4) disables cells that would overfill an ability."
       >
         <AbilityOrderGrid
           abilityIds={SAMPLE_ABILITY_IDS}
@@ -195,6 +211,9 @@ export function Round3DomainAssets() {
             pickRate: 1 - index * 0.04,
           }))}
         />
+        <Variants label="editor (onValueChange): press a cell to give that upgrade to its row's ability; an ability at four points disables its free cells">
+          <AbilityOrderEditorExample />
+        </Variants>
       </Specimen>
     </>
   );

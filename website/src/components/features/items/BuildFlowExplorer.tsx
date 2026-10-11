@@ -25,7 +25,7 @@ import {
   BuildSlotItem,
   BuildStage,
 } from "~/components/domain/graph/BuildFlow";
-import { HeroSkillOrder, useHeroSkillPath } from "~/components/domain/graph/HeroSkillOrder";
+import { useHeroSkillPath } from "~/components/domain/graph/HeroSkillOrder";
 import {
   ItemGrid,
   ItemGridSearch,
@@ -44,6 +44,7 @@ import {
 } from "~/components/features/items/BuildEconomy";
 import { BuildHeroChooser } from "~/components/features/items/BuildHeroChooser";
 import { SavedBuildsMenu, SaveBuildButton } from "~/components/features/items/BuildSaves";
+import { BuildSkillOrder } from "~/components/features/items/BuildSkillOrder";
 import { ChartLegend, ChartLegendItem } from "~/components/patterns/charts/ChartLegend";
 import { FilterBar } from "~/components/patterns/filter-bar/FilterBar";
 import { Panel, PanelBody, PanelHeader } from "~/components/patterns/panel/Panel";
@@ -68,7 +69,6 @@ import { useHeroById } from "~/hooks/useAssetById";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { type BuildFocus, type BuildGoal, completeBuild } from "~/lib/build-completer";
 import type { GameMode, MatchMode } from "~/lib/game-mode";
-import { DEFAULT_RANK_RANGE, rankRangeLabel } from "~/lib/rank-utils";
 import { TONE_TEXT, toneOf, type Tone } from "~/lib/tone";
 import { wilsonScoreInterval } from "~/lib/wilson";
 import { itemPricePerTierQueryOptions, itemUpgradesQueryOptions } from "~/queries/asset-queries";
@@ -79,7 +79,6 @@ import {
   type ItemFlowStats,
 } from "~/queries/item-flow-query";
 import { itemStatsQueryOptions } from "~/queries/item-stats-query";
-import { ranksQueryOptions } from "~/queries/ranks-query";
 
 const PHASE_INTERVAL_S = 600;
 const PHASE_COUNT = 4;
@@ -473,7 +472,6 @@ export function BuildFlowExplorer({
   // The page's hero filter, set when a saved build of another hero is opened.
   const [, setHero] = useQueryState("hero", parseAsInteger);
   const { hero } = useHeroById(heroId ?? -1);
-  const { data: ranks } = useQuery(ranksQueryOptions);
   const [storedFlex, setFlex] = useQueryState(
     "build_flex",
     parseAsArrayOf(parseAsInteger).withDefault(DEFAULT_FLEX_MINUTES),
@@ -488,6 +486,8 @@ export function BuildFlowExplorer({
   );
   const [pointed, setPointed] = useState<string | null>(null);
   const [completing, setCompleting] = useState(false);
+  // The reader's skill order, ability ids by upgrade; without it the build takes its players' most common one.
+  const [storedSkills, setSkills] = useQueryState("build_skills", parseAsArrayOf(parseAsInteger));
   const queryClient = useQueryClient();
   // The picked item being dragged to another stage, and the stage it is over.
   const [dragged, setDragged] = useState<string | null>(null);
@@ -717,7 +717,20 @@ export function BuildFlowExplorer({
     minMatches: 10,
     includeItemIds: path.length > 0 ? [...new Set(path.map((key) => parseKey(key).itemId))] : undefined,
   };
-  const { path: skillPath } = useHeroSkillPath(heroId ?? 0, skillRequest, undefined, heroId != null && !isStreetBrawl);
+  const {
+    path: skillPath,
+    slotAbilities,
+    orderQuery: skillQuery,
+  } = useHeroSkillPath(heroId ?? 0, skillRequest, undefined, heroId != null && !isStreetBrawl);
+  // The build's skill order: the reader's (`build_skills`, abilities of this hero only) or the most common one.
+  const commonSkills = useMemo(() => skillPath?.steps.map((step) => step.abilityId) ?? [], [skillPath]);
+  const skillOrder = useMemo(
+    () =>
+      storedSkills && storedSkills.length > 0 && storedSkills.every((id) => slotAbilities.includes(id))
+        ? storedSkills
+        : commonSkills,
+    [storedSkills, slotAbilities, commonSkills],
+  );
 
   // Dim the stages only while another build's answer loads; a refresh of the shown one keeps them as they are.
   const switching = isFetching && isPlaceholderData;
@@ -906,6 +919,7 @@ export function BuildFlowExplorer({
                   void setPath(build.path.length > 0 ? build.path : null, AT_ONCE);
                   void setSells(build.sells.length > 0 ? build.sells : null, AT_ONCE);
                   void setFlex(build.flex ?? null, AT_ONCE);
+                  void setSkills(build.skills ?? null, AT_ONCE);
                 })
               }
             />
@@ -916,6 +930,7 @@ export function BuildFlowExplorer({
                 path={path}
                 sells={[...sellOf].map(([key, column]) => `${key}:${column}`)}
                 flex={flexMinutes}
+                skills={storedSkills ?? undefined}
               />
             )}
             {path.length > 0 && (
@@ -1392,11 +1407,11 @@ export function BuildFlowExplorer({
         <BuildEconomy
           title={path.length > 0 ? "Souls for your build" : "Souls for the most common build"}
           items={economyItems}
-          skills={
-            skillPath?.steps.flatMap((step) =>
-              step.at != null ? [{ level: step.level, abilityId: step.abilityId, at: step.at }] : [],
-            ) ?? []
-          }
+          skills={skillOrder.flatMap((abilityId, i) => {
+            // The reader's order takes its upgrades at the times the common one's are taken, step by step.
+            const at = skillPath?.steps[i]?.at;
+            return at != null ? [{ level: i + 1, abilityId, at }] : [];
+          })}
           flexMinutes={flexMinutes}
           onFlexMinutesChange={(minutes) => startTransition(() => void setFlex(minutes, AT_ONCE))}
           heroId={heroId}
@@ -1409,13 +1424,16 @@ export function BuildFlowExplorer({
         />
       )}
       {heroId != null && !isStreetBrawl && (
-        // The skill order of the players who bought the build's items (the hero's most common one without picks).
-        <HeroSkillOrder
+        // The build's skill order, starting from the most common one of its players.
+        <BuildSkillOrder
           heroId={heroId}
-          heroName={hero?.name ?? "Hero"}
-          rankRange={rankRangeLabel(ranks, minRankId ?? DEFAULT_RANK_RANGE.min, maxRankId ?? DEFAULT_RANK_RANGE.max)}
-          scope={path.length > 0 ? "Most common with this build" : "Most common"}
+          slotAbilities={slotAbilities}
+          order={skillOrder}
+          common={skillPath?.steps ?? []}
+          commonStats={skillPath ? { winRate: skillPath.winRate, matches: skillPath.matches } : null}
           request={skillRequest}
+          loading={skillQuery.isPending}
+          onValueChange={(next) => startTransition(() => void setSkills(next, AT_ONCE))}
         />
       )}
     </Stack>
