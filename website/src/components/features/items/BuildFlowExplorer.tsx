@@ -940,9 +940,12 @@ export function BuildFlowExplorer({
         });
         // The build's own players first (at least 200, then 50 of them bought the item): a build no one played has no
         // win rate to show, so the completion goes as far as the games do.
+        // A confident build stops at 200: its win rate is to rest on games, not a streak of 50.
         const tiers = [
           [...stepView.byKey.values()].filter((c) => c.matches >= COMPLETE_MIN_GAMES),
-          [...stepView.byKey.values()].filter((c) => c.matches >= COMPLETE_FALLBACK_GAMES),
+          ...(goal === "confident"
+            ? []
+            : [[...stepView.byKey.values()].filter((c) => c.matches >= COMPLETE_FALLBACK_GAMES)]),
         ];
         let next: string | undefined;
         for (const choices of tiers) {
@@ -953,7 +956,8 @@ export function BuildFlowExplorer({
               // Paced like a real build, so cheap early items do not take the slots late ones need.
               slots: Math.min(slotUse[index].open, COMPLETE_HELD_BY_STAGE[index] ?? slotUse[index].open),
             })),
-            choices,
+            // The low end of each item's 95% interval, for the confident goal.
+            choices: choices.map((c) => ({ ...c, lowerBound: c.interval[0] })),
             path: current,
             priceOf: (id) => costOf.get(id) ?? 0,
             categoryOf: (id) => slotOf.get(id),
@@ -1092,7 +1096,8 @@ export function BuildFlowExplorer({
                     if (budgets) {
                       void complete(
                         "balanced",
-                        suggestion.label === "Most common" ? "popular" : "winning",
+                        // The best win rate by the least it may be: a perfect record from a few games does not make the build.
+                        suggestion.label === "Most common" ? "popular" : "confident",
                         [],
                         suggestion.label,
                       );

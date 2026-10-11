@@ -64,3 +64,18 @@ test("slots limit the build, and an upgrade frees its component's slot", () => {
   });
   assert.deepEqual(added, ["0:5"]);
 });
+
+test("the confident goal ranks a rate from many games over a perfect one from a few", () => {
+  const stage = { column: 0, available: 800, slots: 9 };
+  const few = { ...choice(0, 1, 0.1, 0.62), lowerBound: 0.66 };
+  const many = { ...choice(0, 2, 0.6, 0.58), lowerBound: 0.57 };
+  const fewer = { ...choice(0, 1, 0.1, 0.62), lowerBound: 0.44 };
+  assert.deepEqual(
+    completeBuild({ ...base, stages: [stage], choices: [few, many], path: [], focus: "balanced", goal: "winning" }),
+    ["0:1"],
+  );
+  assert.deepEqual(
+    completeBuild({ ...base, stages: [stage], choices: [fewer, many], path: [], focus: "balanced", goal: "confident" }),
+    ["0:2"],
+  );
+});

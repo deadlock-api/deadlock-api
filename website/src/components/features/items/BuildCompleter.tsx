@@ -16,6 +16,8 @@ const FOCUS_OPTIONS = [
 const GOAL_OPTIONS = [
   { value: "popular", label: "Most bought" },
   { value: "winning", label: "Win rate" },
+  // The least the win rate may be by its 95% interval: a perfect record from a few games does not win the pick.
+  { value: "confident", label: "Confident" },
 ] as const;
 
 /** "Complete build": fills the build's open stages to their souls and slots, leaning toward a category and goal. */

@@ -1,7 +1,11 @@
 /** What an auto-completed build leans toward: one shop category, or none. */
 export type BuildFocus = "balanced" | "weapon" | "spirit" | "vitality";
-/** What it ranks items by: how many players buy them, or how they win (pulled toward the build's own rate). */
-export type BuildGoal = "popular" | "winning";
+/**
+ * What it ranks items by: how many players buy them (`popular`), how they win pulled toward the build's own rate
+ * (`winning`), or the least their win rate may be by its 95% interval (`confident`): 9 wins in 9 games is a 70% at
+ * least, 600 in 1,000 a 57%, so a rate from a handful of games does not outrank one from many.
+ */
+export type BuildGoal = "popular" | "winning" | "confident";
 
 export interface CompleterChoice {
   key: string;
@@ -11,6 +15,8 @@ export interface CompleterChoice {
   pickRate: number;
   /** Win rate pulled toward the build's own; the `winning` goal ranks by it. */
   score: number;
+  /** The low end of its win rate's 95% interval; the `confident` goal ranks by it (`score` without it). */
+  lowerBound?: number;
 }
 
 export interface CompleterStage {
@@ -65,10 +71,11 @@ export function completeBuild(input: CompleterInput): string[] {
     const candidates = choices.filter(
       (c) => c.column === stage.column && !owned.has(c.itemId) && c.pickRate >= MIN_PICK_RATE,
     );
-    const best = Math.max(...candidates.map((c) => (goal === "popular" ? c.pickRate : c.score)), 1e-9);
+    const value = (c: CompleterChoice) =>
+      goal === "popular" ? c.pickRate : goal === "confident" ? (c.lowerBound ?? c.score) : c.score;
+    const best = Math.max(...candidates.map(value), 1e-9);
     const rank = (c: CompleterChoice) =>
-      ((goal === "popular" ? c.pickRate : c.score) / best) *
-      (focus === "balanced" || categoryOf(c.itemId) === focus ? 1 : OFF_FOCUS_WEIGHT);
+      (value(c) / best) * (focus === "balanced" || categoryOf(c.itemId) === focus ? 1 : OFF_FOCUS_WEIGHT);
     for (const choice of [...candidates].sort((a, b) => rank(b) - rank(a))) {
       // An upgrade takes its components' slots and their price, so it needs no new slot if built from one held.
       const frees = componentsOf(choice.itemId).filter((id) => held.has(id));
