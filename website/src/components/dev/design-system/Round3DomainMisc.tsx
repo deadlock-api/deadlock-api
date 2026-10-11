@@ -20,6 +20,7 @@ import {
   BuildStage,
 } from "~/components/domain/graph/BuildFlow";
 import { GraphNodeCard } from "~/components/domain/graph/GraphNodeCard";
+import { HeroSkillOrder } from "~/components/domain/graph/HeroSkillOrder";
 import { InstallButton } from "~/components/domain/ingest/InstallButton";
 import { GamePage } from "~/components/domain/minigames/GamePage";
 import { GameTile } from "~/components/domain/minigames/GameTile";
@@ -297,6 +298,22 @@ export function Round3DomainMisc() {
       >
         <Variants label="press a row to add or remove it · point at a 0–9m row: 9–20m rows link or fade · Remove in a slot · budget under and over · a sold and a suggested item">
           <BuildFlowExample />
+        </Variants>
+      </Specimen>
+
+      <Specimen
+        name="HeroSkillOrder"
+        source="domain/graph/HeroSkillOrder"
+        note="A hero's most common skill order as an AbilityOrderGrid in a Panel, from the ability order stats of `request` (filters such as includeItemIds narrow it to a build's players), with its opener, win rate and share, and a link to the ability page. Loading, error and too-few-games states are its own."
+      >
+        <Variants label="Haze, Phantom+ (live data)">
+          <HeroSkillOrder
+            heroId={13}
+            heroName="Haze"
+            rankRange="Phantom 1+"
+            request={{ minAverageBadge: 91, minMatches: 20 }}
+            className="w-full max-w-xl"
+          />
         </Variants>
       </Specimen>
 

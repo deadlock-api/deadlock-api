@@ -6,10 +6,10 @@ import { lazy, Suspense, useMemo } from "react";
 
 import { EntityNotFound } from "~/components/app/EntityNotFound";
 import { HeroImage } from "~/components/domain/assets/HeroImage";
+import { HeroSkillOrder } from "~/components/domain/graph/HeroSkillOrder";
 import { HeroMatchupDetailsStatsTable } from "~/components/features/heroes/HeroMatchupDetailsStatsTable";
 import { HeroMatchupSummary } from "~/components/features/heroes/HeroMatchupSummary";
 import { HeroPreRelease } from "~/components/features/heroes/HeroPreRelease";
-import { HeroSkillOrder } from "~/components/features/heroes/HeroSkillOrder";
 import { HeroTopItems } from "~/components/features/heroes/HeroTopItems";
 import { ChartLoading } from "~/components/patterns/charts/ChartStates";
 import { LinkCard } from "~/components/patterns/content/LinkCard";

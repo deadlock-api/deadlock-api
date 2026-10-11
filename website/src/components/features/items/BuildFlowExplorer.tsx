@@ -25,6 +25,7 @@ import {
   BuildSlotItem,
   BuildStage,
 } from "~/components/domain/graph/BuildFlow";
+import { HeroSkillOrder } from "~/components/domain/graph/HeroSkillOrder";
 import {
   ItemGrid,
   ItemGridSearch,
@@ -66,6 +67,7 @@ import type { Dayjs } from "~/dayjs";
 import { useHeroById } from "~/hooks/useAssetById";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import type { GameMode, MatchMode } from "~/lib/game-mode";
+import { DEFAULT_RANK_RANGE, rankRangeLabel } from "~/lib/rank-utils";
 import { TONE_TEXT, toneOf, type Tone } from "~/lib/tone";
 import { wilsonScoreInterval } from "~/lib/wilson";
 import { itemPricePerTierQueryOptions, itemUpgradesQueryOptions } from "~/queries/asset-queries";
@@ -76,6 +78,7 @@ import {
   type ItemFlowStats,
 } from "~/queries/item-flow-query";
 import { itemStatsQueryOptions } from "~/queries/item-stats-query";
+import { ranksQueryOptions } from "~/queries/ranks-query";
 
 const PHASE_INTERVAL_S = 600;
 const PHASE_COUNT = 4;
@@ -437,6 +440,7 @@ export function BuildFlowExplorer({
   // The page's hero filter, set when a saved build of another hero is opened.
   const [, setHero] = useQueryState("hero", parseAsInteger);
   const { hero } = useHeroById(heroId ?? -1);
+  const { data: ranks } = useQuery(ranksQueryOptions);
   const [pointed, setPointed] = useState<string | null>(null);
   // The stage a narrow screen shows (index into the stages); a wide one shows every stage.
   const [shownStage, setShownStage] = useState(0);
@@ -1114,6 +1118,24 @@ export function BuildFlowExplorer({
           </Stack>
         )}
       </div>
+      {heroId != null && !isStreetBrawl && (
+        // The skill order of the players who bought the build's items (the hero's most common one without picks).
+        <HeroSkillOrder
+          heroId={heroId}
+          heroName={hero?.name ?? "Hero"}
+          rankRange={rankRangeLabel(ranks, minRankId ?? DEFAULT_RANK_RANGE.min, maxRankId ?? DEFAULT_RANK_RANGE.max)}
+          request={{
+            gameMode: "normal",
+            matchMode,
+            minAverageBadge: minRankId,
+            maxAverageBadge: maxRankId,
+            minUnixTimestamp: minUnixTimestamp ?? 0,
+            maxUnixTimestamp,
+            minMatches: 10,
+            includeItemIds: path.length > 0 ? [...new Set(path.map((key) => parseKey(key).itemId))] : undefined,
+          }}
+        />
+      )}
       {!isStreetBrawl && economyItems.length > 0 && (
         <BuildEconomy
           title={path.length > 0 ? "Souls for your build" : "Souls for the most common build"}

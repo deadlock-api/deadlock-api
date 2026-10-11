@@ -314,7 +314,7 @@ export const NAV: readonly NavChapter[] = [
         ],
       },
       { title: "Charts", items: ["PatchMarkers"] },
-      { title: "Graphs", items: ["GraphNodeCard", "BuildFlow"] },
+      { title: "Graphs", items: ["GraphNodeCard", "BuildFlow", "HeroSkillOrder"] },
       { title: "Draft", items: ["DraftSlot"] },
       { title: "Brand", items: ["BrandIcons and SocialLinks"] },
       { title: "Navigation", items: ["SmartLink"] },
