@@ -17,6 +17,8 @@ import { playerPerformanceCurveQueryOptions } from "~/queries/player-performance
 // Must match TIME_PHASE_BOUNDARIES on the API: the build flow's stages, in seconds.
 const STAGE_STARTS = [0, 540, 1200, 1800] as const;
 const STAGE_LABELS = ["0–9m", "9–20m", "20–30m", "30m+"] as const;
+// Selling refunds half an item's price.
+const SELL_REFUND = 0.5;
 // The plot ends here: few games run longer, and the curve's last points come from those few.
 const END_S = 2700;
 const TICKS = [0, 300, 600, 900, 1200, 1500, 1800, 2100, 2400, 2700];
@@ -206,8 +208,17 @@ export function BuildEconomy({
           sold: soldAt != null ? { at: soldAt, souls: at(soldAt) } : null,
         };
       });
-    const series = points.filter((p) => p.t <= END_S);
-    if (series.at(-1)?.t !== END_S) series.push({ t: END_S, souls: at(END_S) });
+    // The build's spending over time: each purchase adds its price, each sale takes back the refund.
+    const events = placed.flatMap((p) => [
+      ...(p.boughtAt != null ? [{ t: p.boughtAt, delta: p.cost }] : []),
+      ...(p.sold ? [{ t: p.sold.at, delta: -p.cost * SELL_REFUND }] : []),
+    ]);
+    const spentAt = (t: number) => events.reduce((sum, e) => (e.t <= t ? sum + e.delta : sum), 0);
+    // The curve's own points, plus a point at every purchase and sale so the spending steps where it happens.
+    const times = [...new Set([...points.map((p) => p.t), ...events.map((e) => Math.round(e.t)), END_S])]
+      .filter((t) => t <= END_S)
+      .sort((a, b) => a - b);
+    const series = times.map((t) => ({ t, souls: at(t), spent: spentAt(t) }));
     return { series, placed };
   }, [curve.points, stats.data, items]);
 
@@ -271,6 +282,15 @@ export function BuildEconomy({
                       dot={false}
                       isAnimationActive={false}
                     />
+                    <Line
+                      dataKey="spent"
+                      type="stepAfter"
+                      stroke={CHART_COLOR.ink}
+                      strokeWidth={1.5}
+                      strokeDasharray="4 3"
+                      dot={false}
+                      isAnimationActive={false}
+                    />
                     {plot.placed.flatMap((p) => {
                       const href = imageOf.get(p.itemId);
                       const marks = [];
@@ -305,6 +325,9 @@ export function BuildEconomy({
                 <ChartLegend className="justify-center">
                   <ChartLegendItem color={CHART_COLOR.share} shape="line">
                     Average net worth
+                  </ChartLegendItem>
+                  <ChartLegendItem color={CHART_COLOR.ink} shape="dashed">
+                    Build spending
                   </ChartLegendItem>
                   <ChartLegendItem color={CHART_COLOR.ink} shape="ring">
                     Bought
