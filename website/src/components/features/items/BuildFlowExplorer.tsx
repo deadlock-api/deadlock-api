@@ -1320,7 +1320,13 @@ export function BuildFlowExplorer({
                           aria-busy={switching || undefined}
                         >
                           {stage.choices.length === 0 ? (
-                            <EmptyState variant="inline" title="No purchases" />
+                            <>
+                              <EmptyState variant="inline" title="No purchases" />
+                              {/* None of the build's players bought here: the hero's other items are still a search away. */}
+                              {pickable.length > 0 && (
+                                <StagePicker stage={{ ...stage, candidates: pickable }} onPick={toggle} display="row" />
+                              )}
+                            </>
                           ) : (
                             <>
                               {/* The column names sort every stage's list: by how many buy an item, or by its win rate. */}
