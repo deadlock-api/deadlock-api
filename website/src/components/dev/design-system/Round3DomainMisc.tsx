@@ -60,7 +60,12 @@ function BuildFlowExample() {
           label="0–9m"
           meta="800"
           footer={
-            <BuildBudget spent={picked.length * 800} available={6700} format={(n) => `${(n / 1000).toFixed(1)}k`} />
+            <BuildBudget
+              spent={picked.length * 800}
+              available={6700}
+              slots={{ used: picked.length, open: 9 }}
+              format={(n) => `${(n / 1000).toFixed(1)}k`}
+            />
           }
         >
           {picked.map((itemId) => (
@@ -79,7 +84,14 @@ function BuildFlowExample() {
         </BuildSlot>
         <BuildSlot
           label="9–20m"
-          footer={<BuildBudget spent={24000} available={20500} format={(n) => `${(n / 1000).toFixed(1)}k`} />}
+          footer={
+            <BuildBudget
+              spent={24000}
+              available={20500}
+              slots={{ used: 11, open: 10 }}
+              format={(n) => `${(n / 1000).toFixed(1)}k`}
+            />
+          }
         >
           <BuildSlotItem
             state="sold"
@@ -294,7 +306,7 @@ export function Round3DomainMisc() {
       <Specimen
         name="BuildFlow"
         source="domain/graph/BuildFlow"
-        note="A build read stage by stage. BuildStage is one stage (title, a meta line, its choices). BuildChoiceList holds BuildChoice toggle rows: the item, a bar and figure for how often it is bought, the win rate with a signed bar and its interval against the build's own; selected adds a check and a primary frame, the pointer or keyboard shows a plus. relation marks rows against the choice pointed at in a neighbouring stage: linked rows swap their bar for the link figure, unlinked ones fade. BuildBoard holds one BuildSlot per stage (label, meta, footer; Empty without items) of BuildSlotItem rows (media, name, meta, actions; state held or sold, struck through), and a BuildBudget footer: spent against earned souls, in the loss color with a warning mark once over."
+        note="A build read stage by stage. BuildStage is one stage (title, a meta line, its choices). BuildChoiceList holds BuildChoice toggle rows: the item, a bar and figure for how often it is bought, the win rate with a signed bar and its interval against the build's own; selected adds a check and a primary frame, the pointer or keyboard shows a plus. relation marks rows against the choice pointed at in a neighbouring stage: linked rows swap their bar for the link figure, unlinked ones fade. BuildBoard holds one BuildSlot per stage (label, meta, action, footer; Empty without items) of BuildSlotItem rows (media, name, meta, actions; state held, sold (struck through) or suggested (dashed)), and a BuildBudget footer: spent against earned souls and with slots the items held against the slots open, in the loss color with a warning mark once either is over."
       >
         <Variants label="press a row to add or remove it · point at a 0–9m row: 9–20m rows link or fade · Remove in a slot · budget under and over · a sold and a suggested item">
           <BuildFlowExample />
