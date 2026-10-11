@@ -22,7 +22,7 @@
       "/badge-distribution", "/badge-distribution/*", "/heatmap", "/heatmap/*",
       "/deadlockdle", "/deadlockdle/*", "/flashcards", "/flashcards/*",
       "/patches", "/patches/*", "/matches/*",
-      "/data-dumps", "/streamkit", "/crosshair", "/compare", "/og/compare.png", "/og/crosshair.png", "/.well-known/*"
+      "/data-dumps", "/streamkit", "/crosshair", "/compare", "/og/compare.png", "/og/crosshair.png", "/og/match.png", "/.well-known/*"
     ]
   },
   "routes": [

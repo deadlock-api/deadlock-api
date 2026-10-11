@@ -8,6 +8,8 @@ export const SITE_LABEL = "deadlock-api.com/compare";
  * cached cards and link previews (Discord keeps its own by image URL) then fetch the new one.
  */
 export const CROSSHAIR_CARD_VERSION = "2";
+/** The match card's design version, the same way. */
+export const MATCH_CARD_VERSION = "1";
 
 /**
  * The response headers of a drawn card, kept `maxAge` seconds by browsers and the edge; never cached in dev.
