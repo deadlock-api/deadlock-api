@@ -280,7 +280,7 @@ export function BuildSlot({
         {meta && <span className="shrink-0 tabular-nums">{meta}</span>}
         {action}
       </span>
-      <ul className="flex min-h-8 flex-1 flex-col gap-1">
+      <ul className="@container flex min-h-8 flex-1 flex-col gap-1">
         {empty ? <li className="flex flex-1 items-center type-caption text-muted-foreground">Empty</li> : children}
       </ul>
       {footer}
@@ -334,8 +334,9 @@ export function BuildSlotItem({
       {...props}
     >
       <span className="shrink-0">{media}</span>
-      <span className="flex min-w-0 flex-1 flex-col">
-        <span data-slot="build-slot-item-name" className="truncate type-label">
+      {/* Name over its line where the slot is narrow; one line, name first, where it is wide. */}
+      <span className="flex min-w-0 flex-1 flex-col @md:flex-row @md:items-baseline @md:gap-2">
+        <span data-slot="build-slot-item-name" className="truncate type-label @md:max-w-1/2 @md:shrink-0">
           {name}
         </span>
         {/* One line, cut at the card's edge. A suggestion says so in words as well as by its dashed frame: it is not
