@@ -1036,7 +1036,7 @@ export function BuildFlowExplorer({
                 />
               )}
               {/* One-press builds in place of the current one (with Undo): Complete build from empty, balanced, by most bought or
-                  by win rate. Street Brawl, without a souls budget, takes the path of one item a round. */}
+                  confidently by win rate. Street Brawl, without a souls budget, takes the path of one item a round. */}
               {suggestions.map((suggestion) => (
                 <Button
                   key={suggestion.label}
@@ -1615,8 +1615,8 @@ interface View {
   byKey: Map<string, Choice>;
   /** Per choice, the choices in the neighbouring stages bought by the same players, both ways. */
   links: Map<string, Map<string, { matches: number; wins: number }>>;
-  /** Each choice's win rate pulled toward the build's own, for ranking: see SHRINK_SHARE. */
-  shrink: (wins: number, matches: number) => number;
+  /** The least a win rate may be, a small sample pulled toward the build's own first: see `Choice.confident`. */
+  confident: (wins: number, matches: number) => number;
 }
 
 function buildView(
@@ -1725,13 +1725,13 @@ function buildView(
     stages,
     byKey,
     links,
-    shrink: (wins, matches) => (wins + reference * shrink) / (matches + shrink),
+    confident: (wins, matches) => confidentRate(wins, matches, reference, shrink),
   };
 }
 
 /**
  * A whole build, one item per stage, followed through the links: the most bought first item and then, stage by stage,
- * what its buyers bought most next (`common`), or the same by win rate pulled toward the build's (`winning`). A stage
+ * what its buyers bought most next (`common`), or the same by the least the win rate may be (`winning`). A stage
  * with a pick of the reader's keeps it, so a started build is completed rather than replaced. Ends early where nobody
  * went on. It reads every choice of a stage, not the sorted and cut list on screen, so the sort does not change it.
  */
@@ -1749,7 +1749,7 @@ function suggestPath(view: View, by: "common" | "winning"): Choice[] {
       next =
         by === "common"
           ? all.sort((a, b) => b.matches - a.matches)[0]
-          : all.filter((c) => c.pickRate >= SUGGEST_MIN_SHARE).sort((a, b) => b.score - a.score)[0];
+          : all.filter((c) => c.pickRate >= SUGGEST_MIN_SHARE).sort((a, b) => b.confident - a.confident)[0];
     } else if (!next && from) {
       let best = Number.NEGATIVE_INFINITY;
       for (const [key, link] of view.links.get(from.key) ?? []) {
@@ -1758,7 +1758,7 @@ function suggestPath(view: View, by: "common" | "winning"): Choice[] {
         // The winning build only takes a step a good part of the previous item's buyers took: a chain of rare steps
         // ends on a hundred games that won 80%.
         if (by === "winning" && link.matches < from.matches * SUGGEST_MIN_SHARE) continue;
-        const rank = by === "common" ? link.matches : view.shrink(link.wins, link.matches);
+        const rank = by === "common" ? link.matches : view.confident(link.wins, link.matches);
         if (rank > best) {
           best = rank;
           next = choice;
