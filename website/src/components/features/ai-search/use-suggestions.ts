@@ -1,10 +1,12 @@
 import { type QueryClient, queryOptions, useQuery, useQueryClient } from "@tanstack/react-query";
 
+import { bareMatchIdOf } from "~/lib/ai-search/lookup";
 import { useDebouncedValue } from "~/lib/utils";
 
 /** One row of the search's dropdown: the page the question routes to, a hero's page, or a player's tracker. */
 export type Suggestion =
   | { kind: "page"; key: string; id: string; href: string; title: string; filters: string[]; heroId?: number }
+  | { kind: "match"; key: string; matchId: number; href: string }
   | { kind: "hero"; key: string; id: number; href: string; name: string }
   | { kind: "player"; key: string; accountId: number; href: string; name: string; avatar?: string };
 
@@ -77,6 +79,12 @@ export function useSuggestions(question: string, enabled: boolean) {
       ]
     : [];
   const pagePath = routed?.href.split("#")[0];
+  // A bare number opens a player's tracker first; it may just as well be a match.
+  const bareMatchId = bareMatchIdOf(trimmed);
+  const matchRows: Suggestion[] =
+    bareMatchId !== undefined && pagePath !== `/matches/${bareMatchId}`
+      ? [{ kind: "match", key: `match:${bareMatchId}`, matchId: bareMatchId, href: `/matches/${bareMatchId}` }]
+      : [];
   const heroRows: Suggestion[] = (lookupTerm === trimmed ? (heroes.data ?? []) : [])
     .filter((hero) => hero.href !== pagePath)
     .map((hero) => ({ kind: "hero", key: `hero:${hero.id}`, id: hero.id, href: hero.href, name: hero.name }));
@@ -93,9 +101,10 @@ export function useSuggestions(question: string, enabled: boolean) {
 
   return {
     page,
+    matches: matchRows,
     heroes: heroRows,
     players: playerRows,
-    all: [...page, ...heroRows, ...playerRows],
+    all: [...page, ...matchRows, ...heroRows, ...playerRows],
     pagePending: trimmed.length >= 3 && (routeTerm !== trimmed || route.isFetching),
   };
 }

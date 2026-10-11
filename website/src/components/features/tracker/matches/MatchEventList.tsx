@@ -12,6 +12,7 @@ import { Separator } from "~/components/ui/separator";
 import { TONE_TEXT } from "~/lib/tone";
 import { formatMatchDuration } from "~/lib/tracker/compute";
 import { describeObjectiveOutcome, OBJECTIVE_LABELS, type ObjectiveEvent } from "~/lib/tracker/objectives";
+import { type MatchSides, PLAYER_SIDES } from "~/lib/tracker/teams";
 import { cn } from "~/lib/utils";
 
 import type { TimelineEvent } from "./MatchTimelineChart";
@@ -21,10 +22,12 @@ export function MatchEventList({
   combat,
   objectives,
   playerName,
+  sides = PLAYER_SIDES,
 }: {
   combat: TimelineEvent[];
   objectives: ObjectiveEvent[];
   playerName: string;
+  sides?: MatchSides;
 }) {
   const [filter, setFilter] = useState("all");
   const [latestFirst, setLatestFirst] = useState(false);
@@ -58,7 +61,7 @@ export function MatchEventList({
         <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between">
           <p className="min-w-0 flex-1 text-xs wrap-anywhere text-muted-foreground">
             Combat events for <span className="font-medium text-foreground">{playerName}</span>. Objectives are shown
-            from your team’s perspective.
+            from {sides.neutral ? `${sides.own}’s side` : "your team’s perspective"}.
           </p>
           <div className="flex w-full items-center gap-1 sm:w-auto">
             <Select value={filter} onValueChange={setFilter}>

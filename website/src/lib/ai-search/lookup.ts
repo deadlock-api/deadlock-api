@@ -33,3 +33,20 @@ export function playerLookupOf(question: string): PlayerLookup | undefined {
   const parsed = parseSteamIdInput(question.replace(LOOKUP_WORDS, " ").trim());
   return "steamId3" in parsed ? { steamId3: parsed.steamId3 } : { name: question.trim() };
 }
+
+/** The match ID a match lookup names ("match 107857788"), or undefined when it is not one (see `lookupOf`). */
+export function matchLookupOf(question: string): number | undefined {
+  if (lookupOf(question) !== "match") return undefined;
+  return Number(question.replace(LOOKUP_WORDS, " ").trim());
+}
+
+/**
+ * The match a bare number could be ("107857788"), which reads as a player first: offered beside the player so either
+ * opens. Undefined for anything but a lone number of five or more digits.
+ */
+export function bareMatchIdOf(question: string): number | undefined {
+  const trimmed = question.trim();
+  if (!/^\d{5,}$/.test(trimmed)) return undefined;
+  const matchId = Number(trimmed);
+  return Number.isSafeInteger(matchId) ? matchId : undefined;
+}

@@ -48,8 +48,9 @@ function buildBreadcrumbs(pathname: string, labelsByPath: Map<string, string>): 
   let path = "";
   for (const segment of segments) {
     path += `/${segment}`;
-    // /games is the legacy analytics URL; game hubs provide their own useful parent link.
-    if (path === "/games" || path === "/tracker/players") continue;
+    // /games is the legacy analytics URL; game hubs provide their own useful parent link. /matches has no page of its
+    // own, one per match only.
+    if (path === "/games" || path === "/tracker/players" || path === "/matches") continue;
     const label =
       labelsByPath.get(path) ??
       ROUTE_LABELS[path] ??

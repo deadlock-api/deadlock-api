@@ -26,6 +26,7 @@ export const UNSEARCHABLE_PAGES: readonly UnsearchablePage[] = [
   { path: "/patron", reason: "an account page, not stats" },
   { path: "/tracker", reason: "the patron-only player tracker, never a search result" },
   { path: "/tracker/*", reason: "the patron-only player tracker, never a search result" },
+  { path: "/matches/*", reason: "one match, opened by its ID, which the search reads in code" },
   { path: "/data-privacy", reason: "a legal page" },
   { path: "/deadlockstats-privacy", reason: "a legal page" },
   { path: "/blog", reason: "articles, not stats" },

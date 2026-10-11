@@ -1,6 +1,8 @@
 import { type LaneInfo, LANES } from "~/lib/team-builder/lanes";
 import type { TrackerMatchPlayer, TrackerMatchStat } from "~/queries/tracker-queries";
 
+import { TEAMS } from "./teams";
+
 /** The laning phase has no fixed end in game; nine minutes is where this compares lanes. */
 const LANE_PHASE_END_S = 540;
 
@@ -34,9 +36,14 @@ function statAt(player: TrackerMatchPlayer, time: number): TrackerMatchStat | nu
  * Every lane's matchup from the tracked player's team, in `LANES` order, all sampled at the same time. Lanes
  * without players on both sides are left out; empty when the tracked player is missing or there is no soul timeline.
  */
-export function computeLaneMatchups(players: TrackerMatchPlayer[], accountId: number): LaneMatchup[] {
-  const tracked = players.find((player) => player.account_id === accountId);
-  if (!tracked) return [];
+/**
+ * Each lane's matchup from one side: the tracked player's team, their lane first, or, with no tracked player, the
+ * Hidden King's side of a match seen on its own.
+ */
+export function computeLaneMatchups(players: TrackerMatchPlayer[], accountId?: number): LaneMatchup[] {
+  const tracked = accountId === undefined ? undefined : players.find((player) => player.account_id === accountId);
+  if (accountId !== undefined && !tracked) return [];
+  const ownTeam = tracked?.team ?? TEAMS[0].key;
 
   let lastSample = 0;
   for (const player of players) for (const stat of player.stats) lastSample = Math.max(lastSample, stat.time_stamp_s);
@@ -56,9 +63,9 @@ export function computeLaneMatchups(players: TrackerMatchPlayer[], accountId: nu
   for (const lane of LANES) {
     const laners = players.filter((player) => player.assigned_lane === lane.id);
     const ownPlayers = laners
-      .filter((player) => player.team === tracked.team)
+      .filter((player) => player.team === ownTeam)
       .toSorted((a, b) => Number(b === tracked) - Number(a === tracked));
-    const enemyPlayers = laners.filter((player) => player.team !== tracked.team);
+    const enemyPlayers = laners.filter((player) => player.team !== ownTeam);
     if (ownPlayers.length === 0 || enemyPlayers.length === 0) continue;
     const own = ownPlayers.map(withStat);
     const enemy = enemyPlayers.map(withStat);

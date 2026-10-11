@@ -1,4 +1,4 @@
-import { SparklesIcon } from "lucide-react";
+import { SparklesIcon, SwordsIcon } from "lucide-react";
 
 import { HeroImage } from "~/components/domain/assets/HeroImage";
 import { SteamAvatar } from "~/components/domain/player/SteamAvatar";
@@ -11,6 +11,7 @@ import type { Suggestion, useSuggestions } from "./use-suggestions";
 
 const GROUPS = [
   { key: "page", label: "Page" },
+  { key: "matches", label: "Match" },
   { key: "heroes", label: "Heroes" },
   { key: "players", label: "Players" },
 ] as const;
@@ -19,6 +20,7 @@ function leadingOf(row: Suggestion) {
   if (row.kind === "hero") return <HeroImage heroId={row.id} className="size-6" />;
   if (row.kind === "page" && row.heroId !== undefined) return <HeroImage heroId={row.heroId} className="size-6" />;
   if (row.kind === "player") return <SteamAvatar src={row.avatar} size="sm" />;
+  if (row.kind === "match") return <SwordsIcon aria-hidden="true" className="size-4 text-muted-foreground" />;
   return <SparklesIcon aria-hidden="true" className="size-4 text-primary" />;
 }
 
@@ -28,6 +30,7 @@ function isHeroPage(row: Suggestion) {
 }
 
 function labelOf(row: Suggestion) {
+  if (row.kind === "match") return `Match ${row.matchId}`;
   if (row.kind !== "page") return row.name;
   return isHeroPage(row) ? row.filters[0] : row.title;
 }
@@ -36,6 +39,7 @@ function descriptionOf(row: Suggestion) {
   if (isHeroPage(row)) return "Hero page";
   if (row.kind === "page") return row.filters.length > 0 ? row.filters.join(" · ") : undefined;
   if (row.kind === "hero") return "Hero page";
+  if (row.kind === "match") return "Match details";
   return "Player tracker";
 }
 

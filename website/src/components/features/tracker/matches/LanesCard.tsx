@@ -81,7 +81,8 @@ export function LanesCard({
   nameOf,
 }: {
   matchups: LaneMatchup[];
-  trackedAccountId: number;
+  /** The tracked player, whose lane stands out; absent when the match is seen on its own. */
+  trackedAccountId?: number;
   nameOf: (player: TrackerMatchPlayer) => string;
 }) {
   return (
@@ -92,7 +93,8 @@ export function LanesCard({
       </div>
       <div className="grid gap-2 @xl:grid-cols-3">
         {matchups.map(({ lane, time, own, enemy, diff }) => {
-          const ownLane = own.some(({ player }) => player.account_id === trackedAccountId);
+          const ownLane =
+            trackedAccountId !== undefined && own.some(({ player }) => player.account_id === trackedAccountId);
           return (
             <Card
               key={lane.id}

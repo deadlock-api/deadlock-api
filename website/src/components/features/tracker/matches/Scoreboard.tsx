@@ -302,7 +302,8 @@ export function Scoreboard({
   onViewPlayer,
 }: {
   match: TrackerMatchMetadata;
-  accountId: number;
+  /** The tracked player, whose row stands out; absent when the match is seen on its own. */
+  accountId?: number;
   ranks: Rank[];
   laned: boolean;
   /** The match's own mode: Street Brawl grants fixed souls each round, so its scoreboard has no soul stats. */

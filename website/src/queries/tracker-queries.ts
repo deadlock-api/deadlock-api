@@ -29,7 +29,7 @@ import {
 
 import { abilitiesQueryOptions, heroesQueryOptions, itemUpgradesQueryOptions } from "./asset-queries";
 import { trackerMatchHistoryQueryOptions } from "./match-history-queries";
-import { queryKeys } from "./query-keys";
+import { type MatchMetadataSource, queryKeys } from "./query-keys";
 
 export { trackerMatchHistoryQueryOptions };
 
@@ -212,9 +212,134 @@ async function unlessRateLimited<T>(query: Promise<T>): Promise<T | null> {
   }
 }
 
-export function trackerMatchMetadataQueryOptions(matchId: number) {
+/** A stored match's headline facts, for its own page. */
+export interface MatchSummary {
+  match_id: number;
+  start_time: number;
+  duration_s: number;
+  /** "Ranked", "Unranked", … as stored. */
+  match_mode: string;
+  /** "Normal", "StreetBrawl", … as stored. */
+  game_mode: string;
+  winning_team: string;
+  average_badge_team0: number | null;
+  average_badge_team1: number | null;
+  /** Street Brawl's round score, Team0 first. */
+  team_score: [number, number] | null;
+  /** Street Brawl's rounds, each with its length. */
+  round_durations_s: number[];
+  players: MatchSummaryPlayer[];
+}
+
+/** One player's line of a stored match, as much as the match's header shows. */
+export interface MatchSummaryPlayer {
+  account_id: number;
+  team: string;
+  hero_id: number;
+  player_level: number;
+  kills: number;
+  deaths: number;
+  assists: number;
+  net_worth: number;
+  last_hits: number;
+  denies: number;
+  abandon_match_time_s: number | null;
+  /** "Win", "Loss", "Penalized", "PenalizedParty", "NotScored". */
+  player_match_outcome: string;
+  rank_badge: number | null;
+  rank_delta: number | null;
+  demotion_protected: boolean;
+  calibration: boolean;
+}
+
+/** A match's headline facts from what is stored, or null when we do not have the match. */
+export function matchSummaryQueryOptions(matchId: number) {
   return queryOptions({
-    queryKey: queryKeys.players.matchMetadata(matchId),
+    queryKey: queryKeys.players.matchSummary(matchId),
+    queryFn: async (): Promise<MatchSummary | null> => {
+      const result = await graphql.query({
+        matches: {
+          __args: { where: { match_id: { eq: matchId } }, limit: 1 },
+          match_id: true,
+          start_time: true,
+          duration_s: true,
+          match_mode: true,
+          game_mode: true,
+          winning_team: true,
+          average_badge_team_0: true,
+          average_badge_team_1: true,
+          team_score: true,
+          street_brawl_rounds: true,
+          players: {
+            account_id: true,
+            team: true,
+            hero_id: true,
+            player_level: true,
+            kills: true,
+            deaths: true,
+            assists: true,
+            net_worth: true,
+            last_hits: true,
+            denies: true,
+            abandon_match_time_s: true,
+            player_match_outcome: true,
+            player_rank_initial_display_rank: true,
+            player_rank_initial_flat_progress: true,
+            player_rank_final_flat_progress: true,
+            player_rank_consumed_demotion_protection: true,
+            player_rank_initial_calibration_games: true,
+          },
+        },
+      });
+      const match = result.matches[0];
+      if (!match) return null;
+      const score = Array.isArray(match.team_score) ? (match.team_score as number[]) : null;
+      const rounds = Array.isArray(match.street_brawl_rounds)
+        ? (match.street_brawl_rounds as { round_duration_s?: number }[])
+        : [];
+      return {
+        match_id: match.match_id ?? matchId,
+        start_time: match.start_time ?? 0,
+        duration_s: match.duration_s ?? 0,
+        match_mode: match.match_mode ?? "",
+        game_mode: match.game_mode ?? "",
+        winning_team: match.winning_team ?? "",
+        average_badge_team0: match.average_badge_team_0 || null,
+        average_badge_team1: match.average_badge_team_1 || null,
+        team_score: score && score.length === 2 ? [score[0], score[1]] : null,
+        round_durations_s: rounds.map((round) => round.round_duration_s ?? 0).filter((duration) => duration > 0),
+        players: (match.players ?? []).map((player) => ({
+          account_id: player.account_id ?? 0,
+          team: player.team ?? "",
+          hero_id: player.hero_id ?? 0,
+          player_level: player.player_level ?? 0,
+          kills: player.kills ?? 0,
+          deaths: player.deaths ?? 0,
+          assists: player.assists ?? 0,
+          net_worth: player.net_worth ?? 0,
+          last_hits: player.last_hits ?? 0,
+          denies: player.denies ?? 0,
+          abandon_match_time_s: player.abandon_match_time_s || null,
+          player_match_outcome: player.player_match_outcome ?? "",
+          rank_badge: player.player_rank_initial_display_rank || null,
+          rank_delta: rankDelta(player.player_rank_initial_flat_progress, player.player_rank_final_flat_progress),
+          demotion_protected: player.player_rank_consumed_demotion_protection === true,
+          calibration: (player.player_rank_initial_calibration_games ?? 0) > 0,
+        })),
+      };
+    },
+    // A stored match never changes; a missing one may be sent in any time.
+    staleTime: (query) => (query.state.data === null ? CACHE_DURATIONS.FIVE_MINUTES : CACHE_DURATIONS.FOREVER),
+  });
+}
+
+/**
+ * One match's details. `graphql` reads only what is stored: the REST fallback may fetch a match from Steam, which a
+ * page that only shows stored matches must not trigger.
+ */
+export function trackerMatchMetadataQueryOptions(matchId: number, source: MatchMetadataSource = "any") {
+  return queryOptions({
+    queryKey: queryKeys.players.matchMetadata(matchId, source),
     queryFn: async ({ client }): Promise<TrackerMatchMetadata | null> => {
       if (isDemoMatch(matchId)) {
         const [{ demoMatchMetadata }, history, heroes, items, abilities] = await Promise.all([
@@ -226,60 +351,62 @@ export function trackerMatchMetadataQueryOptions(matchId: number) {
         ]);
         return demoMatchMetadata(matchId, history, { heroes, items, abilities });
       }
-      const result = await unlessRateLimited(
-        graphql.query({
-          matches: {
-            __args: { where: { match_id: { eq: matchId } }, limit: 1 },
-            winning_team: true,
-            average_badge_team_0: true,
-            average_badge_team_1: true,
-            objectives: true,
-            mid_boss: true,
-            players: {
-              account_id: true,
-              team: true,
-              hero_id: true,
-              pregame_hero_id: true,
-              assigned_lane: true,
+      const request = graphql.query({
+        matches: {
+          __args: { where: { match_id: { eq: matchId } }, limit: 1 },
+          winning_team: true,
+          average_badge_team_0: true,
+          average_badge_team_1: true,
+          objectives: true,
+          mid_boss: true,
+          players: {
+            account_id: true,
+            team: true,
+            hero_id: true,
+            pregame_hero_id: true,
+            assigned_lane: true,
+            kills: true,
+            deaths: true,
+            assists: true,
+            net_worth: true,
+            player_level: true,
+            last_hits: true,
+            denies: true,
+            max_player_damage: true,
+            max_player_damage_taken: true,
+            max_boss_damage: true,
+            mvp_rank: true,
+            player_rank_initial_display_rank: true,
+            player_rank_initial_flat_progress: true,
+            player_rank_final_flat_progress: true,
+            player_rank_consumed_demotion_protection: true,
+            ability_stats: true,
+            items: { item_id: true, game_time_s: true, sold_time_s: true, upgrade_id: true, imbued_ability_id: true },
+            stats: {
+              custom_user_stats: true,
+              time_stamp_s: true,
+              net_worth: true,
+              player_healing: true,
               kills: true,
               deaths: true,
               assists: true,
-              net_worth: true,
-              player_level: true,
-              last_hits: true,
+              creep_kills: true,
               denies: true,
-              max_player_damage: true,
-              max_player_damage_taken: true,
-              max_boss_damage: true,
-              mvp_rank: true,
-              player_rank_initial_display_rank: true,
-              player_rank_initial_flat_progress: true,
-              player_rank_final_flat_progress: true,
-              player_rank_consumed_demotion_protection: true,
-              ability_stats: true,
-              items: { item_id: true, game_time_s: true, sold_time_s: true, upgrade_id: true, imbued_ability_id: true },
-              stats: {
-                custom_user_stats: true,
-                time_stamp_s: true,
-                net_worth: true,
-                player_healing: true,
-                kills: true,
-                deaths: true,
-                assists: true,
-                creep_kills: true,
-                denies: true,
-                player_damage: true,
-              },
-              steam: { personaname: true },
-              player_slot: true,
-              death_details: true,
+              player_damage: true,
             },
+            steam: { personaname: true },
+            player_slot: true,
+            death_details: true,
           },
-        }),
-      );
+        },
+      });
+      // Only stored matches: a rate limit is an error to retry, not a missing match.
+      const result = source === "graphql" ? await request : await unlessRateLimited(request);
       const match = result?.matches[0];
       // A match row may exist before its players arrive; keep that incomplete response retryable.
-      if (!match?.players?.length) return trackerMatchFromRawMetadata(await fetchRawMatchMetadata(matchId));
+      if (!match?.players?.length) {
+        return source === "graphql" ? null : trackerMatchFromRawMetadata(await fetchRawMatchMetadata(matchId));
+      }
       return {
         winning_team: match.winning_team,
         average_badge_team0: match.average_badge_team_0,
