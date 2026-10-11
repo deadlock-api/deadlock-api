@@ -510,7 +510,8 @@ export function BuildFlowExplorer({
     [storedFlex],
   );
   const [pointed, setPointed] = useState<string | null>(null);
-  const [completing, setCompleting] = useState(false);
+  // The completion running, by the control that started it: "complete", or a one-press build's label.
+  const [completing, setCompleting] = useState<string | null>(null);
   const boardRef = useRef<HTMLOListElement>(null);
   // The reader's skill order, ability ids by upgrade; without it the build takes its players' most common one.
   const [storedSkills, setSkills] = useQueryState("build_skills", parseAsArrayOf(parseAsInteger));
@@ -727,7 +728,8 @@ export function BuildFlowExplorer({
       { label: "Most common", path: suggestPath(view, "common") },
       { label: "Best win rate", path: suggestPath(view, "winning") },
       // Once the build holds all of one, it has nothing to add (and would only repeat the picks).
-    ].filter((s) => s.path.length > 1 && s.path.some((c) => !c.selected));
+      // They replace the build, so they stay offered whatever it holds.
+    ].filter((s) => s.path.length > 1);
   }, [view]);
 
   // The build the economy panel prices: the reader's picks, or the most common build before there are any.
@@ -901,11 +903,13 @@ export function BuildFlowExplorer({
   });
   // Completes the build one item at a time on the build's own data: each step reads the players of the build so far,
   // so an item is only added if enough of them bought it too, and the finished build still has games behind it.
-  const complete = async (focus: BuildFocus, goal: BuildGoal) => {
+  // `from` is the build to complete: the current one, or empty for a one-press build that replaces it. `control` names
+  // the button pressed, which shows the work.
+  const complete = async (focus: BuildFocus, goal: BuildGoal, from: string[] = path, control = "complete") => {
     if (!budgets) return;
-    setCompleting(true);
+    setCompleting(control);
     try {
-      const current = [...path];
+      const current = [...from];
       for (let step = 0; step < COMPLETE_MAX_ITEMS; step++) {
         // oxlint-disable-next-line no-await-in-loop -- each step reads the answer for the build the last step made
         const answer = await queryClient.query(flowQuery(current));
@@ -944,22 +948,27 @@ export function BuildFlowExplorer({
         if (!next) break;
         current.push(next);
       }
-      if (current.length > path.length) {
+      if (current.length > from.length) {
         const before = path;
         changePath(current);
         const open = view.stages.filter((stage) => !current.some((key) => parseKey(key).column === stage.column));
-        toast(`Added ${current.length - before.length} items`, {
-          description:
-            open.length > 0
-              ? `Too few games go on to ${open.map((stage) => stage.title).join(", ")} with this build`
-              : undefined,
-          action: { label: "Undo", onClick: () => changePath(before.length > 0 ? before : null) },
-        });
+        toast(
+          from.length === 0 && before.length > 0
+            ? `Replaced the build: ${current.length} items`
+            : `Added ${current.length - before.length} items`,
+          {
+            description:
+              open.length > 0
+                ? `Too few games go on to ${open.map((stage) => stage.title).join(", ")} with this build`
+                : undefined,
+            action: { label: "Undo", onClick: () => changePath(before.length > 0 ? before : null) },
+          },
+        );
       } else {
         toast("No item to add: too few players of this build bought more");
       }
     } finally {
-      setCompleting(false);
+      setCompleting(null);
     }
   };
   // A build nobody played in these filters: its numbers are not zeros but missing.
@@ -1044,26 +1053,36 @@ export function BuildFlowExplorer({
               {!isStreetBrawl && (
                 <BuildCompleter
                   disabled={!budgets}
-                  busy={completing}
+                  busy={completing === "complete"}
                   onComplete={(focus, goal) => void complete(focus, goal)}
                 />
               )}
-              {/* One-press builds: Complete build with a balanced focus by most bought or by win rate, so they fill the
-                  build the same way; Street Brawl, without a souls budget, takes the path of one item a round. */}
+              {/* One-press builds in place of the current one (with Undo): Complete build from empty, balanced, by most bought or
+                  by win rate. Street Brawl, without a souls budget, takes the path of one item a round. */}
               {suggestions.map((suggestion) => (
                 <Button
                   key={suggestion.label}
                   variant="subtle"
                   size="sm"
-                  disabled={completing}
-                  onClick={() =>
-                    budgets
-                      ? void complete("balanced", suggestion.label === "Most common" ? "popular" : "winning")
-                      : changePath((prev) => [
-                          ...prev,
-                          ...suggestion.path.filter((c) => !prev.includes(c.key)).map((c) => c.key),
-                        ])
-                  }
+                  disabled={completing != null}
+                  loading={completing === suggestion.label}
+                  onClick={() => {
+                    if (budgets) {
+                      void complete(
+                        "balanced",
+                        suggestion.label === "Most common" ? "popular" : "winning",
+                        [],
+                        suggestion.label,
+                      );
+                      return;
+                    }
+                    // Street Brawl: the path of one item a round, in place of the build, with Undo.
+                    const before = path;
+                    changePath(suggestion.path.map((c) => c.key));
+                    toast(`${suggestion.label} build`, {
+                      action: { label: "Undo", onClick: () => changePath(before.length > 0 ? before : null) },
+                    });
+                  }}
                 >
                   {suggestion.label}
                 </Button>
