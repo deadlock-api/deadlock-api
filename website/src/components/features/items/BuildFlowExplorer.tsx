@@ -307,23 +307,55 @@ function saleLine(
   return parts.join(" · ");
 }
 
-/** The menu of a picked item: keep it, sell it in a later stage, or take it out of the build. */
+// The swaps a picked item's menu offers, and the share of the build's players an alternative needs.
+const SWAP_COUNT = 3;
+const SWAP_MIN_SHARE = 0.1;
+
+/**
+ * The menu of a picked item: keep it, sell it in a later stage, swap it for another item of its stage, or take it out
+ * of the build. The swaps are ranked on the build without this item (`without`, fetched while the menu is open): with
+ * it, every other item's numbers would come from players who bought both.
+ */
 function ItemPlan({
   name,
+  column,
   stages,
   isStreetBrawl,
   sellColumn,
+  without,
+  taken,
   onSell,
+  onSwap,
   onRemove,
 }: {
   name: string;
+  column: number;
   stages: Stage[];
   isStreetBrawl: boolean;
   sellColumn: number | null;
+  without: ReturnType<typeof itemFlowQueryOptions>;
+  /** Items the build already holds: never offered as a swap. */
+  taken: Set<number>;
   onSell: (column: number | null) => void;
+  onSwap: (itemId: number) => void;
   onRemove: () => void;
 }) {
   const [open, setOpen] = useState(false);
+  const { data, isPending } = useQuery({ ...without, enabled: open, placeholderData: undefined });
+  const swaps = useMemo(() => {
+    if (!data) return [];
+    const games = Math.max(1, data.summary.matches);
+    const reference = data.summary.matches > 0 ? data.summary.wins / data.summary.matches : 0.5;
+    const shrink = Math.max(SHRINK_MIN_GAMES, data.summary.matches * SHRINK_SHARE);
+    return data.nodes
+      .filter((n) => n.column === column && !taken.has(n.item_id) && n.matches / games >= SWAP_MIN_SHARE)
+      .map((n) => {
+        const winRate = isStreetBrawl ? n.wins / Math.max(1, n.matches) : n.adjusted_win_rate;
+        return { itemId: n.item_id, winRate, score: (winRate * n.matches + reference * shrink) / (n.matches + shrink) };
+      })
+      .sort((a, b) => b.score - a.score)
+      .slice(0, SWAP_COUNT);
+  }, [data, column, taken, isStreetBrawl]);
   const choose = (action: () => void) => {
     action();
     setOpen(false);
@@ -335,7 +367,11 @@ function ItemPlan({
           <EllipsisVertical />
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="end" aria-label={`Plan for ${name}`} className="flex w-48 flex-col gap-1 p-1">
+      <PopoverContent
+        align="end"
+        aria-label={`Plan for ${name}`}
+        className="flex w-72 max-w-(--radix-popover-content-available-width) flex-col gap-1 p-1"
+      >
         <OptionRow selected={sellColumn == null} onClick={() => choose(() => onSell(null))}>
           Keep
         </OptionRow>
@@ -348,6 +384,23 @@ function ItemPlan({
             Sell at {stageLabel(stage.column, isStreetBrawl)}
           </OptionRow>
         ))}
+        <Separator />
+        {isPending ? (
+          <LoadingState size="sm" text="Finding swaps…" label="swaps" />
+        ) : swaps.length === 0 ? (
+          <EmptyState variant="inline" title="No swap" />
+        ) : (
+          swaps.map((swap) => (
+            <OptionRow
+              key={swap.itemId}
+              leading={<ItemImage itemId={swap.itemId} alt="" className="size-6" />}
+              trailing={<span className="text-xs tabular-nums">{percent(swap.winRate)}</span>}
+              onClick={() => choose(() => onSwap(swap.itemId))}
+            >
+              Swap for <ItemName itemId={swap.itemId} />
+            </OptionRow>
+          ))
+        )}
         <Separator />
         <OptionRow onClick={() => choose(onRemove)}>Remove</OptionRow>
       </PopoverContent>
@@ -429,7 +482,8 @@ export function BuildFlowExplorer({
   }, [storedSells, pathSet, columnCount]);
 
   const { minUnixTimestamp, maxUnixTimestamp } = useNormalizedTimeRange(minDate, maxDate);
-  const { data, isLoading, isFetching, isPlaceholderData, isError, refetch } = useQuery(
+  // The build flow answer for a build path, with the page's filters.
+  const flowQuery = (keys: string[]) =>
     itemFlowQueryOptions({
       heroIds: heroId != null ? String(heroId) : undefined,
       gameMode,
@@ -441,10 +495,10 @@ export function BuildFlowExplorer({
       minMatches: minMatches ?? undefined,
       phaseIntervalS: PHASE_INTERVAL_S,
       phaseCount: columnCount,
-      lockedItemIds: path.map((key) => parseKey(key).itemId),
-      lockedColumns: path.map((key) => parseKey(key).column),
-    }),
-  );
+      lockedItemIds: keys.map((key) => parseKey(key).itemId),
+      lockedColumns: keys.map((key) => parseKey(key).column),
+    });
+  const { data, isLoading, isFetching, isPlaceholderData, isError, refetch } = useQuery(flowQuery(path));
   const { data: upgrades } = useQuery(itemUpgradesQueryOptions);
   const { data: pricePerTier } = useQuery(itemPricePerTierQueryOptions);
   // The shop price of the item's tier, from the generic data; the item's own cost until that list is loaded.
@@ -612,6 +666,7 @@ export function BuildFlowExplorer({
           };
         })
       : null;
+  const heldItems = new Set(path.map((key) => parseKey(key).itemId));
   // What each empty stage suggests: never an item the build holds or an earlier stage already suggests.
   const nextPicks = new Map<number, Choice>();
   const taken = new Set(path.map((key) => parseKey(key).itemId));
@@ -822,6 +877,13 @@ export function BuildFlowExplorer({
                           actions={
                             <ItemPlan
                               name={name}
+                              column={stage.column}
+                              without={flowQuery(path.filter((k) => k !== key))}
+                              taken={heldItems}
+                              onSwap={(next) => {
+                                planSale(key, null);
+                                changePath((prev) => [...prev.filter((k) => k !== key), `${stage.column}:${next}`]);
+                              }}
                               stages={view.stages.filter((s) => s.column > stage.column)}
                               isStreetBrawl={isStreetBrawl}
                               sellColumn={sellColumn ?? null}
