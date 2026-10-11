@@ -4,10 +4,9 @@ import { HeroImage } from "~/components/domain/assets/HeroImage";
 import { useHeroRoster } from "~/components/domain/selectors/useHeroPicker";
 import { Panel, PanelBody, PanelHeader } from "~/components/patterns/panel/Panel";
 import { Button } from "~/components/ui/button";
-import { Inline } from "~/components/ui/stack";
 
 /**
- * The Build Designer without a hero: every hero's portrait in a dense row to pick from, since a build over all heroes'
+ * The Build Designer without a hero: every hero's portrait and name to pick from, since a build over all heroes'
  * games is rarely the one wanted. Picking sets the page's hero filter, which also holds the full searchable picker.
  */
 export function BuildHeroChooser({ onPick }: { onPick: (heroId: number) => void }) {
@@ -16,17 +15,22 @@ export function BuildHeroChooser({ onPick }: { onPick: (heroId: number) => void 
     <Panel>
       <PanelHeader title="Pick a hero" icon={UserRound} size="sm" />
       <PanelBody size="sm">
-        <Inline gap={1} asChild>
-          <ul aria-label="Heroes">
-            {heroes.map((hero) => (
-              <li key={hero.id}>
-                <Button variant="ghost" size="icon" aria-label={hero.name} onClick={() => onPick(hero.id)}>
-                  <HeroImage heroId={hero.id} shape="circle" title="" className="size-8" />
-                </Button>
-              </li>
-            ))}
-          </ul>
-        </Inline>
+        {/* Portrait and name, in as many columns as fit: names a first-timer can read, three rows or so. */}
+        <ul aria-label="Heroes" className="grid grid-cols-[repeat(auto-fill,minmax(5.5rem,1fr))] gap-1">
+          {heroes.map((hero) => (
+            <li key={hero.id}>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-auto w-full flex-col gap-1 py-1.5"
+                onClick={() => onPick(hero.id)}
+              >
+                <HeroImage heroId={hero.id} shape="circle" title="" className="size-8" />
+                <span className="w-full truncate text-xs">{hero.name}</span>
+              </Button>
+            </li>
+          ))}
+        </ul>
       </PanelBody>
     </Panel>
   );
