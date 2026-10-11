@@ -86,8 +86,8 @@ export function TrackerGate({ accountId, children }: { accountId: number; childr
       <GateCard icon={<Lock />} title="Unlock the player tracker">
         <p className="text-sm leading-relaxed text-muted-foreground">
           Full match history, rank progression, hero breakdowns, and mate &amp; opponent analytics. Free for every
-          account that sent its matches with the ingest tool in the last {INGEST_TRACKER_WINDOW_DAYS} days, and for the
-          prioritized Steam accounts linked to your Patreon subscription.
+          account that sent its matches with the ingest tool in the last {INGEST_TRACKER_WINDOW_DAYS} days (once we have
+          checked one of them), and for the prioritized Steam accounts linked to your Patreon subscription.
         </p>
         {isAuthenticated && (
           <p className="text-sm text-muted-foreground">
@@ -136,8 +136,8 @@ export function TrackerGate({ accountId, children }: { accountId: number; childr
       <GateCard icon={<ShieldX />} title="Not one of your prioritized accounts">
         <p className="text-sm leading-relaxed text-muted-foreground">
           The tracker opens for Steam accounts linked to your Patreon subscription, and for every account that sent its
-          matches with the ingest tool in the last {INGEST_TRACKER_WINDOW_DAYS} days. Add this account on the
-          Prioritized Fetching page, or run the tool on it.
+          matches with the ingest tool in the last {INGEST_TRACKER_WINDOW_DAYS} days, once we have checked one of them.
+          Add this account on the Prioritized Fetching page, or run the tool on it.
         </p>
         <div className="flex flex-col gap-2 pt-2 sm:flex-row">
           <Button asChild>
