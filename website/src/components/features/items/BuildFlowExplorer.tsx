@@ -1097,6 +1097,8 @@ export function BuildFlowExplorer({
                   <Button
                     variant="ghost"
                     size="xs"
+                    // A completion running would write its build back over the cleared one.
+                    disabled={completing != null}
                     onClick={() => {
                       // A build is a few dozen presses of work: clearing it can be taken back.
                       const before = { path, sells: storedSells, skills: storedSkills };
@@ -1223,7 +1225,8 @@ export function BuildFlowExplorer({
                 </ChartLegend>
               </div>
             </div>
-            <BuildBoard aria-label="Build by stage" ref={boardRef}>
+            {/* Inert while a completion fills it: an edit made between its steps would be written over by the next. */}
+            <BuildBoard aria-label="Build by stage" ref={boardRef} inert={completing != null || undefined}>
               {view.stages.map((stage, index) => {
                 const held = path.filter((key) => parseKey(key).column === stage.column);
                 // Every item of the stage for its picker: the build's players' first, then the hero's items the build
@@ -1320,7 +1323,7 @@ export function BuildFlowExplorer({
                                 aria-hidden={false}
                                 start={
                                   <>
-                                    Add ·{" "}
+                                    <span aria-hidden="true">Add · </span>
                                     <SortButton
                                       active={sortBy === "pickrate"}
                                       sortDir="desc"

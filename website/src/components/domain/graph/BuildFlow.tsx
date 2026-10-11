@@ -95,7 +95,8 @@ export function BuildChoiceHeader({
       className={cn("flex items-center justify-between gap-2 px-1.5 type-caption text-muted-foreground", className)}
       {...props}
     >
-      <span className="truncate whitespace-nowrap">{start}</span>
+      {/* Not cut: a sort button here needs its focus ring drawn outside it. */}
+      <span className="min-w-0 whitespace-nowrap">{start}</span>
       <span className={cn("min-w-fit shrink-0 text-end whitespace-nowrap", VALUE_WIDTH)}>{end}</span>
     </div>
   );
@@ -401,7 +402,7 @@ export function BuildBudget({
   const figures = (
     <span
       className={cn(
-        "flex items-center gap-1 type-caption text-muted-foreground tabular-nums",
+        "flex min-w-0 items-center gap-1 type-caption text-muted-foreground tabular-nums",
         variant === "inline" ? "gap-2" : "@md:shrink-0 @md:gap-3",
       )}
     >
@@ -421,7 +422,11 @@ export function BuildBudget({
       data-slot="build-budget"
       data-variant={variant}
       data-over={overSouls || overSlots || undefined}
-      className={cn(variant === "bar" && "@container", variant === "inline" && "inline-flex min-w-0", className)}
+      className={cn(
+        variant === "bar" && "@container",
+        variant === "inline" && "inline-flex max-w-full min-w-0",
+        className,
+      )}
       {...props}
     >
       {variant === "inline" ? (

@@ -19,6 +19,8 @@ import {
   CHART_Y_AXIS,
 } from "~/components/patterns/charts/theme";
 import { Panel, PanelBody, PanelHeader } from "~/components/patterns/panel/Panel";
+import { EmptyState } from "~/components/patterns/states/EmptyState";
+import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { NoValue } from "~/components/ui/no-value";
 import { Slider } from "~/components/ui/slider";
@@ -480,6 +482,19 @@ export function BuildPurchases({
         <PanelBody>
           <LoadingState label="buy order" variant="skeleton" />
         </PanelBody>
+      ) : economy.curve.isError ? (
+        <PanelBody>
+          <ErrorState
+            variant="inline"
+            title="The buy order did not load"
+            retrying={economy.curve.isFetching}
+            onRetry={() => void economy.curve.refetch()}
+          />
+        </PanelBody>
+      ) : !plot || plot.placed.length === 0 ? (
+        <PanelBody>
+          <EmptyState variant="inline" title="No purchases to order" />
+        </PanelBody>
       ) : (
         <Table density="dense" className="tabular-nums" aria-label="Build items in buy order">
           <TableHeader tone="muted">
@@ -493,7 +508,7 @@ export function BuildPurchases({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {(plot?.placed ?? []).map((p, index) => (
+            {plot.placed.map((p, index) => (
               <TableRow key={p.key}>
                 <TableCell className="text-end text-muted-foreground">{index + 1}</TableCell>
                 <TableCell data-pinned>
@@ -536,6 +551,8 @@ function skillLanes(
   skills: readonly { level: number; abilityId: number; at: number }[],
   abilities: readonly number[],
 ): { abilityId: number; slot: number; marks: { level: number; at: number; position: number }[] }[] {
+  // In slot order, the slot's color as the skill grid has it: nothing until the slots are known.
+  if (abilities.length === 0) return [];
   const order = [...new Set([...abilities, ...skills.map((s) => s.abilityId)])];
   return order.flatMap((abilityId, slot) => {
     const own = skills.filter((s) => s.abilityId === abilityId).sort((a, b) => a.at - b.at);
