@@ -38,7 +38,6 @@ import {
   BuildEconomy,
   compactSouls,
   type EconomyItem,
-  gameClock,
   soulsAt,
   useSoulCurve,
 } from "~/components/features/items/BuildEconomy";
@@ -308,8 +307,9 @@ function saleLine(
 ): string {
   const parts = [count(price)];
   if (sale?.share != null && sale.share >= 0.05) {
+    // Short enough for a quarter-width card: "sold 8% 35m", "upgraded 94% 8m".
     parts.push(
-      `${component ? "replaced" : "sold"} ${percent(sale.share, 0)}${sale.at != null ? ` ~${gameClock(sale.at)}` : ""}`,
+      `${component ? "upgraded" : "sold"} ${percent(sale.share, 0)}${sale.at != null ? ` ${Math.round(sale.at / 60)}m` : ""}`,
     );
   }
   return parts.join(" · ");
@@ -358,8 +358,14 @@ function ItemPlan({
     return data.nodes
       .filter((n) => n.column === column && !taken.has(n.item_id) && n.matches / games >= SWAP_MIN_SHARE)
       .map((n) => {
-        const winRate = isStreetBrawl ? n.wins / Math.max(1, n.matches) : n.adjusted_win_rate;
-        return { itemId: n.item_id, winRate, score: (winRate * n.matches + reference * shrink) / (n.matches + shrink) };
+        // Raw: the players who bought it here are exactly the swapped build's, so this is the win rate it will show.
+        const winRate = n.wins / Math.max(1, n.matches);
+        return {
+          itemId: n.item_id,
+          winRate,
+          games: n.matches,
+          score: (winRate * n.matches + reference * shrink) / (n.matches + shrink),
+        };
       })
       .sort((a, b) => b.score - a.score)
       .slice(0, SWAP_COUNT);
@@ -402,7 +408,11 @@ function ItemPlan({
             <OptionRow
               key={swap.itemId}
               leading={<ItemImage itemId={swap.itemId} alt="" className="size-6" />}
-              trailing={<span className="text-xs tabular-nums">{percent(swap.winRate)}</span>}
+              trailing={
+                <span className="text-xs tabular-nums">
+                  {percent(swap.winRate)} · {count(swap.games)}
+                </span>
+              }
               onClick={() => choose(() => onSwap(swap.itemId))}
             >
               Swap for <ItemName itemId={swap.itemId} />
@@ -520,6 +530,20 @@ export function BuildFlowExplorer({
       lockedColumns: keys.map((key) => parseKey(key).column),
     });
   const { data, isLoading, isFetching, isPlaceholderData, isError, refetch } = useQuery(flowQuery(path));
+  // The hero's items without the build (the page's default answer, usually cached): what a stage's picker offers once
+  // the build is so narrow that the stage has no purchases of its own.
+  const { data: unbuilt } = useQuery({ ...flowQuery([]), enabled: path.length > 0 });
+  const fallbackCandidates = useMemo(() => {
+    const byColumn = new Map<number, Stage["candidates"]>();
+    if (!unbuilt) return byColumn;
+    const games = Math.max(1, unbuilt.summary.matches);
+    for (const node of [...unbuilt.nodes].sort((a, b) => b.matches - a.matches)) {
+      const list = byColumn.get(node.column) ?? [];
+      list.push({ id: node.item_id, winRate: node.wins / Math.max(1, node.matches), pickRate: node.matches / games });
+      byColumn.set(node.column, list);
+    }
+    return byColumn;
+  }, [unbuilt]);
   const { data: upgrades } = useQuery(itemUpgradesQueryOptions);
   const { data: pricePerTier } = useQuery(itemPricePerTierQueryOptions);
   // The shop price of the item's tier, from the generic data; the item's own cost until that list is loaded.
@@ -729,17 +753,25 @@ export function BuildFlowExplorer({
       taken.add(next.itemId);
     }
   }
+  // Per picked item the pick it is built into: a later or same-stage pick whose components include it.
+  const mergedInto = new Map<string, string>();
+  for (const key of path) {
+    const { column, itemId } = parseKey(key);
+    const into = path.find((other) => {
+      const o = parseKey(other);
+      return other !== key && o.column >= column && (componentsOf.get(o.itemId) ?? []).includes(itemId);
+    });
+    if (into) mergedInto.set(key, into);
+  }
   // Per stage the items the build holds at its end (sold ones and ones built into a later pick free their slot) against
   // the slots open by then.
   const slotUse = view.stages.map((stage) => {
     const end = STAGE_ENDS[stage.column] ?? STAGE_ENDS[STAGE_ENDS.length - 1];
-    const bought = path.filter((key) => parseKey(key).column <= stage.column);
-    const boughtIds = new Set(bought.map((key) => parseKey(key).itemId));
-    const merged = new Set(bought.flatMap((key) => componentsOf.get(parseKey(key).itemId) ?? []));
-    const used = bought.filter((key) => {
+    const used = path.filter((key) => {
+      if (parseKey(key).column > stage.column) return false;
       const sold = sellOf.get(key);
-      const { itemId } = parseKey(key);
-      return !(sold != null && sold <= stage.column) && !(merged.has(itemId) && boughtIds.has(itemId));
+      const into = mergedInto.get(key);
+      return !(sold != null && sold <= stage.column) && !(into && parseKey(into).column <= stage.column);
     }).length;
     return { used, open: BASE_SLOTS + flexMinutes.filter((m) => m * 60 <= end).length };
   });
@@ -908,6 +940,13 @@ export function BuildFlowExplorer({
               {view.stages.map((stage, index) => {
                 const held = path.filter((key) => parseKey(key).column === stage.column);
                 const soldHere = path.filter((key) => sellOf.get(key) === stage.column);
+                // Earlier picks an item bought in this stage is built from: they leave their slot here.
+                const mergedHere = path.flatMap((key) => {
+                  const into = mergedInto.get(key);
+                  return into && parseKey(into).column === stage.column && parseKey(key).column < stage.column
+                    ? [{ key, into }]
+                    : [];
+                });
                 return (
                   <BuildSlot
                     key={stage.column}
@@ -916,6 +955,17 @@ export function BuildFlowExplorer({
                     action={
                       stage.candidates.length > 0 ? (
                         <StagePicker stage={stage} onPick={toggle} display="icon" />
+                      ) : (fallbackCandidates.get(stage.column)?.length ?? 0) > 0 ? (
+                        <StagePicker
+                          stage={{
+                            ...stage,
+                            candidates: (fallbackCandidates.get(stage.column) ?? []).filter(
+                              (c) => !heldItems.has(c.id),
+                            ),
+                          }}
+                          onPick={toggle}
+                          display="icon"
+                        />
                       ) : undefined
                     }
                     footer={
@@ -955,9 +1005,11 @@ export function BuildFlowExplorer({
                                   {" · "}
                                 </>
                               )}
-                              {sellColumn != null
-                                ? `${count(costOf.get(itemId) ?? 0)} · sold ${stageLabel(sellColumn, isStreetBrawl)}`
-                                : saleLine(costOf.get(itemId) ?? 0, sale, isComponent.has(itemId))}
+                              {mergedInto.get(key) && parseKey(mergedInto.get(key) ?? "").column === stage.column
+                                ? `${count(costOf.get(itemId) ?? 0)} · into ${nameOf.get(parseKey(mergedInto.get(key) ?? "").itemId) ?? "an upgrade"}`
+                                : sellColumn != null
+                                  ? `${count(costOf.get(itemId) ?? 0)} · sold ${stageLabel(sellColumn, isStreetBrawl)}`
+                                  : saleLine(costOf.get(itemId) ?? 0, sale, isComponent.has(itemId))}
                             </>
                           }
                           actions={
@@ -1008,6 +1060,18 @@ export function BuildFlowExplorer({
                           />
                         );
                       })()}
+                    {mergedHere.map(({ key, into }) => {
+                      const { itemId } = parseKey(key);
+                      return (
+                        <BuildSlotItem
+                          key={`${key}:merged`}
+                          state="sold"
+                          media={<ItemImage itemId={itemId} className="size-8" />}
+                          name={<ItemName itemId={itemId} />}
+                          meta={`built into ${nameOf.get(parseKey(into).itemId) ?? "an upgrade"}`}
+                        />
+                      );
+                    })}
                     {soldHere.map((key) => {
                       const { itemId } = parseKey(key);
                       return (
