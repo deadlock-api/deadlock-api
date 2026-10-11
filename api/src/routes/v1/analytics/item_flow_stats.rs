@@ -203,6 +203,18 @@ pub struct ItemFlowEdge {
     pub matches: u64,
 }
 
+/// The locked build path without one of its locked items: how the population changes when that
+/// item's constraint is dropped and every other one kept.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct ItemFlowLeaveOneOut {
+    /// The locked item left out. See more: <https://api.deadlock-api.com/v1/assets/items>
+    pub item_id: u32,
+    /// Its locked stage column.
+    pub column: u32,
+    pub wins: u64,
+    pub matches: u64,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct ItemFlowStats {
     pub nodes: Vec<ItemFlowNode>,
@@ -214,6 +226,9 @@ pub struct ItemFlowStats {
     /// Distinct baseline games that bought any upgrade in each stage column (index = column).
     /// `reached / baseline.matches` shows how survivorship-selected a (late) stage is.
     pub reached_per_column: Vec<u64>,
+    /// One entry per locked item, in request order: the totals of the locked build path without that
+    /// item. `summary` against an entry is what that one item adds to the build. Empty without locks.
+    pub leave_one_out: Vec<ItemFlowLeaveOneOut>,
 }
 
 /// Net-worth-at-buy bucket size (souls) for win-rate standardization.
@@ -278,6 +293,9 @@ struct QueryParts {
     extra_select: String,
     /// `[uniqIf(...), ...] AS reached_per_column` over the baseline population for the totals query.
     reached_select: String,
+    /// `loo_wins` / `loo_matches` arrays for the totals query: per locked item, the locked population
+    /// with every lock but that one.
+    leave_one_out_select: String,
     /// See [`upgrades_source`]; goes right before the `SELECT` that reads `match_player`.
     upgrades_with: String,
     /// Appended to the `SETTINGS` of every query.
@@ -339,6 +357,34 @@ fn query_parts(query: &ItemFlowStatsQuery) -> QueryParts {
             )
         })
         .collect_vec();
+    // Per locked item, the predicate of all the other locks (`1` when it is the only one).
+    let others = (0..locked_clauses.len())
+        .map(|skip| {
+            let rest = locked_clauses
+                .iter()
+                .enumerate()
+                .filter(|(i, _)| *i != skip)
+                .map(|(_, clause)| clause.as_str())
+                .collect_vec();
+            if rest.is_empty() {
+                "1".to_owned()
+            } else {
+                rest.join(" AND ")
+            }
+        })
+        .collect_vec();
+    let leave_one_out_select = if others.is_empty() {
+        "CAST([], 'Array(UInt64)') AS loo_wins, CAST([], 'Array(UInt64)') AS loo_matches".to_owned()
+    } else {
+        format!(
+            "[{}] AS loo_wins, [{}] AS loo_matches",
+            others
+                .iter()
+                .map(|p| format!("countIf(won AND ({p}))"))
+                .join(", "),
+            others.iter().map(|p| format!("countIf({p})")).join(", "),
+        )
+    };
     let locked_predicate = if locked_clauses.is_empty() {
         "1".to_owned()
     } else {
@@ -376,6 +422,7 @@ fn query_parts(query: &ItemFlowStatsQuery) -> QueryParts {
         column_expr,
         extra_select,
         reached_select,
+        leave_one_out_select,
         upgrades_with,
         extra_settings,
     }
@@ -390,6 +437,7 @@ fn build_totals_query(parts: &QueryParts) -> String {
         base_player_filters,
         locked_predicate: lp,
         reached_select,
+        leave_one_out_select,
         upgrades_with,
         extra_settings,
         ..
@@ -416,7 +464,8 @@ fn build_totals_query(parts: &QueryParts) -> String {
         avgIf(duration_s, {lp})       AS s_avg_duration_s,
         avg(net_worth)                AS b_avg_net_worth,
         avg(duration_s)               AS b_avg_duration_s,
-        {reached_select}
+        {reached_select},
+        {leave_one_out_select}
     FROM match_player
     WHERE {match_filters} {base_player_filters}
     SETTINGS log_comment = 'item_flow_stats_totals', apply_patch_parts = 0{extra_settings}
@@ -609,6 +658,8 @@ struct ItemFlowTotalsRow {
     b_avg_net_worth: f64,
     b_avg_duration_s: f64,
     reached_per_column: Vec<u64>,
+    loo_wins: Vec<u64>,
+    loo_matches: Vec<u64>,
 }
 
 cached_ch_query! {
@@ -634,6 +685,9 @@ async fn get_item_flow_stats(
 ) -> APIResult<ItemFlowStats> {
     round_timestamps(&mut query.min_unix_timestamp, &mut query.max_unix_timestamp);
     let parts = query_parts(&query);
+    // The locks in request order, which `leave_one_out` follows.
+    let locked_ids = query.locked_item_ids.clone().unwrap_or_default();
+    let locked_columns = query.locked_columns.clone().unwrap_or_default();
     let nodes_query = build_nodes_query(&query, &parts);
     let edges_query = build_edges_query(&query, &parts);
     let totals_query = build_totals_query(&parts);
@@ -670,6 +724,19 @@ async fn get_item_flow_stats(
             avg_net_worth: finite(totals.b_avg_net_worth),
             avg_duration_s: finite(totals.b_avg_duration_s),
         },
+        leave_one_out: locked_ids
+            .iter()
+            .zip(&locked_columns)
+            .zip(totals.loo_wins.iter().zip(&totals.loo_matches))
+            .map(
+                |((&item_id, &column), (&wins, &matches))| ItemFlowLeaveOneOut {
+                    item_id,
+                    column,
+                    wins,
+                    matches,
+                },
+            )
+            .collect(),
         reached_per_column: totals.reached_per_column,
     })
 }
