@@ -31,13 +31,16 @@ interface PageHeaderProps extends Omit<React.ComponentProps<"header">, "title">,
   /** Buttons and menus, on the trailing edge. */
   actions?: ReactNode;
   align?: "center" | "start";
-  /** Only for previews that show a header inside another page, which already has its `<h1>`. */
-  as?: "h1" | "div";
+  /**
+   * `h2` for a header under the page's own `<h1>` (a sample profile below the page that names it); `div` only for
+   * previews that show a header inside another page.
+   */
+  as?: "h1" | "h2" | "div";
   /** Longer context, kept behind an "About this data" disclosure so the data stays above the fold. */
   children?: ReactNode;
 }
 
-/** The one `<h1>` of a page. */
+/** The one `<h1>` of a page, unless `as` says otherwise. */
 export function PageHeader({
   title,
   description,

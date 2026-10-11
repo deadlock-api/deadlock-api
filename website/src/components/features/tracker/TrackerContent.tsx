@@ -32,14 +32,19 @@ function focusMatchDetails(section: HTMLElement | null, matchId: number) {
   details?.scrollIntoView({ block: "start" });
 }
 
-/** A player's whole tracker page. `notice` sits above the player header, for whatever the page has to say first. */
+/**
+ * A player's whole tracker page. `notice` sits above the player header, for whatever the page has to say first; when
+ * it carries the page's own top heading, `playerHeading` is `h2`.
+ */
 export function TrackerContent({
   accountId,
   notice,
+  playerHeading,
   defaultDateRange,
 }: {
   accountId: number;
   notice?: ReactNode;
+  playerHeading?: "h1" | "h2";
   /** Replaces the visitor's season-or-patch default; has to be referentially stable. */
   defaultDateRange?: DateRange;
 }) {
@@ -150,7 +155,7 @@ export function TrackerContent({
   return (
     <PageShell>
       {notice}
-      <PlayerHeader accountId={accountId} entries={historyQuery.data} ranks={ranks}>
+      <PlayerHeader accountId={accountId} entries={historyQuery.data} ranks={ranks} as={playerHeading}>
         <TrackerFilterBar
           mode={mode}
           onModeChange={setMode}
