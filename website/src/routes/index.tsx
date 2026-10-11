@@ -345,7 +345,7 @@ function IndexRoute() {
                 </Button>
               </Inline>
             </Stack>
-            <Grid asChild columns={7} gap={1.5} className="justify-items-center">
+            <Grid asChild columns={8} gap={1.5} className="justify-items-center">
               <ul aria-label="Sites that show matches from Deadlock API">
                 {TRACKER_SITES.map((site) => {
                   const icon = (

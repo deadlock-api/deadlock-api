@@ -3,7 +3,7 @@ import { Slot } from "radix-ui";
 import { GAP, type Space } from "~/components/ui/layout-props";
 import { cn } from "~/lib/utils";
 
-type Columns = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 12;
+type Columns = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 12;
 /** Column counts by the width of the grid's own container, not of the viewport. */
 type ResponsiveColumns = { base?: Columns; sm?: Columns; md?: Columns; lg?: Columns; xl?: Columns };
 
@@ -17,6 +17,7 @@ const COLUMNS: Record<keyof ResponsiveColumns, Record<Columns, string>> = {
     5: "grid-cols-5",
     6: "grid-cols-6",
     7: "grid-cols-7",
+    8: "grid-cols-8",
     12: "grid-cols-12",
   },
   sm: {
@@ -27,6 +28,7 @@ const COLUMNS: Record<keyof ResponsiveColumns, Record<Columns, string>> = {
     5: "@sm:grid-cols-5",
     6: "@sm:grid-cols-6",
     7: "@sm:grid-cols-7",
+    8: "@sm:grid-cols-8",
     12: "@sm:grid-cols-12",
   },
   md: {
@@ -37,6 +39,7 @@ const COLUMNS: Record<keyof ResponsiveColumns, Record<Columns, string>> = {
     5: "@md:grid-cols-5",
     6: "@md:grid-cols-6",
     7: "@md:grid-cols-7",
+    8: "@md:grid-cols-8",
     12: "@md:grid-cols-12",
   },
   lg: {
@@ -47,6 +50,7 @@ const COLUMNS: Record<keyof ResponsiveColumns, Record<Columns, string>> = {
     5: "@2xl:grid-cols-5",
     6: "@2xl:grid-cols-6",
     7: "@2xl:grid-cols-7",
+    8: "@2xl:grid-cols-8",
     12: "@2xl:grid-cols-12",
   },
   xl: {
@@ -57,6 +61,7 @@ const COLUMNS: Record<keyof ResponsiveColumns, Record<Columns, string>> = {
     5: "@4xl:grid-cols-5",
     6: "@4xl:grid-cols-6",
     7: "@4xl:grid-cols-7",
+    8: "@4xl:grid-cols-8",
     12: "@4xl:grid-cols-12",
   },
 };
