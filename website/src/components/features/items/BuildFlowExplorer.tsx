@@ -1059,23 +1059,24 @@ export function BuildFlowExplorer({
                   onComplete={(focus, goal) => void complete(focus, goal)}
                 />
               )}
+              {/* One-press builds: Complete build with a balanced focus by most bought or by win rate, so they fill the
+                  build the same way; Street Brawl, without a souls budget, takes the path of one item a round. */}
               {suggestions.map((suggestion) => (
                 <Button
                   key={suggestion.label}
                   variant="subtle"
                   size="sm"
-                  aria-label={`${suggestion.label}: ${suggestion.path.map((c) => nameOf.get(c.itemId) ?? "Item").join(", ")}`}
+                  disabled={completing}
                   onClick={() =>
-                    changePath((prev) => [
-                      ...prev,
-                      ...suggestion.path.filter((c) => !prev.includes(c.key)).map((c) => c.key),
-                    ])
+                    budgets
+                      ? void complete("balanced", suggestion.label === "Most common" ? "popular" : "winning")
+                      : changePath((prev) => [
+                          ...prev,
+                          ...suggestion.path.filter((c) => !prev.includes(c.key)).map((c) => c.key),
+                        ])
                   }
                 >
                   {suggestion.label}
-                  {suggestion.path.map((choice) => (
-                    <ItemImage key={choice.key} itemId={choice.itemId} className="size-5" />
-                  ))}
                 </Button>
               ))}
             </Inline>
