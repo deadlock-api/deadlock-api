@@ -1,7 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
 import { Hourglass, ListPlus, Route } from "lucide-react";
-import { parseAsArrayOf, parseAsNumberLiteral, parseAsString, parseAsStringLiteral, useQueryState } from "nuqs";
-import { memo, useMemo, useState } from "react";
+import {
+  parseAsArrayOf,
+  parseAsNumberLiteral,
+  parseAsString,
+  parseAsStringLiteral,
+  throttle,
+  useQueryState,
+} from "nuqs";
+import { memo, startTransition, useMemo, useState } from "react";
 
 import { ItemImage } from "~/components/domain/assets/ItemImage";
 import { ItemName } from "~/components/domain/assets/ItemName";
@@ -64,6 +71,8 @@ const LATE_REACH = 0.8;
 // rate: 26 wins of 30 games (a T4 bought by players already far ahead) then ranks below 62% from thousands.
 const SHRINK_SHARE = 0.02;
 const SHRINK_MIN_GAMES = 100;
+
+const AT_ONCE = { limitUrlUpdates: throttle(50) };
 
 const SORT_OPTIONS = [
   { value: "pickrate", label: "Most bought" },
@@ -252,8 +261,13 @@ export function BuildFlowExplorer({
     [storedPath, columnCount],
   );
   const pathSet = useMemo(() => new Set(path), [path]);
+  // A change of the build re-renders every stage in a transition, so the press paints first (312 ms on a 4x-throttled
+  // phone before). The URL update is throttled rather than debounced, which would hold the value outside the
+  // transition (see ItemsPage).
+  const changePath = (update: string[] | null | ((prev: string[]) => string[] | null)) =>
+    startTransition(() => void setPath(update, AT_ONCE));
   const toggle = (key: string) =>
-    void setPath((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]));
+    changePath((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]));
 
   const { minUnixTimestamp, maxUnixTimestamp } = useNormalizedTimeRange(minDate, maxDate);
   const { data, isLoading, isFetching, isPlaceholderData, isError, refetch } = useQuery(
@@ -339,7 +353,7 @@ export function BuildFlowExplorer({
       <Panel>
         <PanelHeader title="Your build" icon={Route} size="sm">
           {path.length > 0 && (
-            <Button variant="ghost" size="xs" onClick={() => void setPath(null)}>
+            <Button variant="ghost" size="xs" onClick={() => changePath(null)}>
               Clear
             </Button>
           )}
@@ -379,7 +393,7 @@ export function BuildFlowExplorer({
                       size="sm"
                       aria-label={`${suggestion.label}: ${suggestion.path.map((c) => nameOf.get(c.itemId) ?? "Item").join(", ")}`}
                       onClick={() =>
-                        void setPath((prev) => [
+                        changePath((prev) => [
                           ...prev,
                           ...suggestion.path.filter((c) => !prev.includes(c.key)).map((c) => c.key),
                         ])
@@ -497,7 +511,7 @@ export function BuildFlowExplorer({
           <EmptyState
             title="No games with this build"
             action={
-              <Button variant="outline" size="sm" onClick={() => void setPath((prev) => prev.slice(0, -1))}>
+              <Button variant="outline" size="sm" onClick={() => changePath((prev) => prev.slice(0, -1))}>
                 Remove the last item
               </Button>
             }
@@ -573,10 +587,10 @@ export function BuildFlowExplorer({
                               aria-label={`${nameOf.get(choice.itemId) ?? "Item"}: bought ${percent(choice.pickRate)}, win rate ${percent(choice.winRate)}`}
                               relation={!near ? "none" : link ? "linked" : "unlinked"}
                               onClick={() => toggle(choice.key)}
-                              onPointerEnter={() => setPointed(choice.key)}
-                              onPointerLeave={() => setPointed(null)}
-                              onFocus={() => setPointed(choice.key)}
-                              onBlur={() => setPointed(null)}
+                              onPointerEnter={() => startTransition(() => setPointed(choice.key))}
+                              onPointerLeave={() => startTransition(() => setPointed(null))}
+                              onFocus={() => startTransition(() => setPointed(choice.key))}
+                              onBlur={() => startTransition(() => setPointed(null))}
                             />
                           );
                         })}
