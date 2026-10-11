@@ -54,6 +54,7 @@ import { ProgressBar, ProgressBarSegment } from "~/components/ui/progress-bar";
 import { Segmented, SegmentedItem } from "~/components/ui/segmented";
 import { Separator } from "~/components/ui/separator";
 import { Skeleton } from "~/components/ui/skeleton";
+import { SortButton } from "~/components/ui/sort-button";
 import { Inline, Stack } from "~/components/ui/stack";
 import { Stat, StatGroup } from "~/components/ui/stat";
 import type { Dayjs } from "~/dayjs";
@@ -114,11 +115,6 @@ const EMPTY_PATH: string[] = [];
 // Items each stage's list shows, the ones the server's first answer holds.
 const PER_STAGE = ITEM_FLOW_DEFAULT_PER_COLUMN;
 const AT_ONCE = { limitUrlUpdates: throttle(50) };
-
-const SORT_OPTIONS = [
-  { value: "pickrate", label: "Most bought" },
-  { value: "winrate", label: "Win rate" },
-] as const;
 
 function stageLabel(column: number, isStreetBrawl: boolean): string {
   if (isStreetBrawl) return `Round ${column + 1}`;
@@ -1114,18 +1110,6 @@ export function BuildFlowExplorer({
                   {suggestion.label}
                 </Button>
               ))}
-              {/* How each stage card lists the items to add from. */}
-              <Inline gap={3} className="ms-auto">
-                <Field label="Sort" orientation="horizontal">
-                  <Segmented value={sortBy} onValueChange={setSortBy} width="hug">
-                    {SORT_OPTIONS.map((option) => (
-                      <SegmentedItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SegmentedItem>
-                    ))}
-                  </Segmented>
-                </Field>
-              </Inline>
             </Inline>
             {/* The build's figures and, beside them where the panel is wide, its spending by shop category. */}
             <div className="flex flex-col gap-3 @6xl:flex-row @6xl:items-center @6xl:gap-10">
@@ -1322,7 +1306,36 @@ export function BuildFlowExplorer({
                             <EmptyState variant="inline" title="No purchases" />
                           ) : (
                             <>
-                              <BuildChoiceHeader start="Add · bought · cost" end="Win rate" />
+                              {/* The column names sort every stage's list: by how many buy an item, or by its win rate. */}
+                              <BuildChoiceHeader
+                                aria-hidden={false}
+                                start={
+                                  <>
+                                    Add ·{" "}
+                                    <SortButton
+                                      active={sortBy === "pickrate"}
+                                      sortDir="desc"
+                                      aria-pressed={sortBy === "pickrate"}
+                                      aria-label="Sort by bought"
+                                      onClick={() => void setSortBy("pickrate")}
+                                    >
+                                      bought
+                                    </SortButton>
+                                  </>
+                                }
+                                end={
+                                  <SortButton
+                                    align="end"
+                                    active={sortBy === "winrate"}
+                                    sortDir="desc"
+                                    aria-pressed={sortBy === "winrate"}
+                                    aria-label="Sort by win rate"
+                                    onClick={() => void setSortBy("winrate")}
+                                  >
+                                    Win rate
+                                  </SortButton>
+                                }
+                              />
                               <BuildChoiceList aria-label={`Items bought at ${stage.title}`}>
                                 {stage.choices.map((choice) => {
                                   const near = linked != null && Math.abs(linked.column - choice.column) === 1;

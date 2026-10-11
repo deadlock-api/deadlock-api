@@ -95,8 +95,8 @@ export function BuildChoiceHeader({
       className={cn("flex items-center justify-between gap-2 px-1.5 type-caption text-muted-foreground", className)}
       {...props}
     >
-      <span className="truncate">{start}</span>
-      <span className={cn("shrink-0 text-end", VALUE_WIDTH)}>{end}</span>
+      <span className="truncate whitespace-nowrap">{start}</span>
+      <span className={cn("min-w-fit shrink-0 text-end whitespace-nowrap", VALUE_WIDTH)}>{end}</span>
     </div>
   );
 }
