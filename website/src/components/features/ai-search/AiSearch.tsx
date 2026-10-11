@@ -6,6 +6,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import { useCloseSideNavDrawer } from "~/components/patterns/navigation/SideNavShell";
 import { Button } from "~/components/ui/button";
 import { Callout, CalloutAnchor, CalloutContent, CalloutDescription, CalloutTitle } from "~/components/ui/callout";
+import { Popover, PopoverAnchor, PopoverContent } from "~/components/ui/popover";
 import { RollingText } from "~/components/ui/rolling-text";
 import { SearchInput } from "~/components/ui/search-input";
 import { Inline } from "~/components/ui/stack";
@@ -15,6 +16,8 @@ import { cn } from "~/lib/utils";
 
 import { setLastSearch, useLastSearch } from "./last-search";
 import { useSearchShortcut } from "./search-shortcut";
+import { SuggestionList } from "./SuggestionList";
+import { routeQueryOptions, type Suggestion, useSuggestions } from "./use-suggestions";
 
 /** Questions the home page's field rolls through as its placeholder, to show what it can be asked. */
 const PLACEHOLDER_QUESTIONS = [
@@ -121,6 +124,11 @@ export function AiSearch({ size = "default", className }: AiSearchProps) {
   /** The question asked last: an answer to an earlier one that arrives late is dropped. */
   const latest = useRef(0);
   const input = useRef<HTMLInputElement>(null);
+  /** The dropdown under the field: open while the field has focus and something typed, until Escape or a pick. */
+  const [listOpen, setListOpen] = useState(false);
+  /** The row the keyboard cursor is on, and whether the arrow keys put it there. */
+  const [cursor, setCursor] = useState({ at: 0, moved: false });
+  const listId = useId();
 
   useEffect(
     () => () => {
@@ -133,6 +141,11 @@ export function AiSearch({ size = "default", className }: AiSearchProps) {
   useSearchShortcut(input, home);
 
   const question = last && last.version !== draft.version ? last.question : draft.text;
+  const suggestions = useSuggestions(question, listOpen);
+  const rows = suggestions.all;
+  const active = Math.min(cursor.at, rows.length - 1);
+  const showList =
+    listOpen && !searching && question.trim().length >= 2 && (rows.length > 0 || suggestions.pagePending);
 
   const ask = (text: string, source: Source = home ? "home" : "sidebar") => {
     const trimmed = text.trim();
@@ -140,97 +153,168 @@ export function AiSearch({ size = "default", className }: AiSearchProps) {
     const asked = ++latest.current;
     setSearching(true);
     setNotice(null);
-    // The search's code (the page registry, the name matcher, the catalogs) loads with the first question.
-    import("./route-question")
-      .then(({ routeQuestion }) => routeQuestion(queryClient, trimmed))
-      .then(
-        (routed) => {
-          if (asked !== latest.current) return undefined;
-          setSearching(false);
-          trackQuestion({
-            question: trimmed,
-            source,
-            outcome: routed.kind,
-            page: routed.kind === "opened" ? routed.id : undefined,
-            direct: routed.direct,
-            duration_ms: routed.durationMs,
-          });
-          if (routed.kind !== "opened") {
-            setNotice(routed.kind);
-            return undefined;
-          }
-          setLastSearch(trimmed);
-          closeDrawer();
-          return navigate({ href: routed.href });
-        },
-        () => {
-          if (asked !== latest.current) return;
-          setSearching(false);
-          trackQuestion({ question: trimmed, source, outcome: "error" });
-          setNotice("error");
-        },
-      );
+    // The search's code (the page registry, the name matcher, the catalogs) loads with the first question. A question
+    // the dropdown already routed is answered from its cache.
+    queryClient.query(routeQueryOptions(queryClient, trimmed)).then(
+      (routed) => {
+        if (asked !== latest.current) return undefined;
+        setSearching(false);
+        trackQuestion({
+          question: trimmed,
+          source,
+          outcome: routed.kind,
+          page: routed.kind === "opened" ? routed.id : undefined,
+          direct: routed.direct,
+          duration_ms: routed.durationMs,
+        });
+        if (routed.kind !== "opened") {
+          setNotice(routed.kind);
+          return undefined;
+        }
+        setLastSearch(trimmed);
+        closeDrawer();
+        return navigate({ href: routed.href });
+      },
+      () => {
+        if (asked !== latest.current) return;
+        setSearching(false);
+        trackQuestion({ question: trimmed, source, outcome: "error" });
+        setNotice("error");
+      },
+    );
+  };
+
+  const pick = (row: Suggestion) => {
+    const trimmed = question.trim();
+    trackQuestion({
+      question: trimmed,
+      source: home ? "home" : "sidebar",
+      outcome: "opened",
+      page: row.kind === "page" ? row.id : row.kind === "hero" ? "hero_page" : "player-tracker",
+    });
+    if (row.kind === "page") setLastSearch(trimmed);
+    setListOpen(false);
+    closeDrawer();
+    input.current?.blur();
+    void navigate({ href: row.href });
   };
 
   return (
     <search aria-label="Find a stat" className={cn("flex w-full flex-col gap-3", home && "max-w-2xl", className)}>
       <Callout open={notice !== null} onOpenChange={(open) => !open && setNotice(null)}>
+        {/* The dropdown has its own popover root inside the callout's anchor: Radix binds an anchor to the nearest root,
+            so nested the other way round the callout would claim the dropdown's anchor. */}
         <CalloutAnchor asChild>
-          <form
-            onSubmit={(event) => {
-              event.preventDefault();
-              ask(question);
-            }}
-          >
-            <SearchInput
-              ref={input}
-              name="q"
-              variant={home ? "bar" : "default"}
-              size={size}
-              loading={!home && searching}
-              loadingLabel={FINDING}
-              shortcut="/"
-              aria-label="Ask for a stat"
-              aria-invalid={notice === "not_understood" || undefined}
-              aria-describedby={notice ? noticeId : undefined}
-              placeholder={home ? ASK : "Ask for a stat"}
-              placeholderContent={
-                home ? (
-                  <>
-                    {ASK}:&nbsp;
-                    <RollingText>
-                      {PLACEHOLDER_QUESTIONS.map((example) => (
-                        <span key={example}>{example}</span>
-                      ))}
-                    </RollingText>
-                  </>
-                ) : undefined
-              }
-              autoComplete="off"
-              enterKeyHint="search"
-              maxLength={MAX_QUESTION_LENGTH}
-              value={question}
-              onValueChange={(text) => {
-                setDraft({ text, version: last?.version ?? 0 });
-                setNotice(null);
-              }}
-              onKeyDown={(event) => {
-                if (event.key === "Escape" && searching) {
-                  // Drops the running question instead of clearing the field.
-                  event.preventDefault();
-                  latest.current += 1;
-                  setSearching(false);
-                }
-              }}
-              action={
-                home && (
-                  <Button type="submit" shape="pill" loading={searching} loadingLabel={FINDING}>
-                    Search
-                  </Button>
-                )
-              }
-            />
-          </form>
+          <div className="w-full">
+            <Popover open={showList} onOpenChange={setListOpen}>
+              <PopoverAnchor asChild>
+                <form
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    ask(question);
+                  }}
+                >
+                  <SearchInput
+                    ref={input}
+                    name="q"
+                    variant={home ? "bar" : "default"}
+                    size={size}
+                    loading={!home && searching}
+                    loadingLabel={FINDING}
+                    shortcut="/"
+                    aria-label="Ask for a stat"
+                    // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- SearchInput renders a native text input; this is the WAI-ARIA combobox pattern
+                    role="combobox"
+                    aria-expanded={showList}
+                    aria-controls={listId}
+                    aria-autocomplete="list"
+                    aria-activedescendant={showList && rows.length > 0 ? `${listId}-${active}` : undefined}
+                    onFocus={() => setListOpen(true)}
+                    onBlur={() => setListOpen(false)}
+                    aria-invalid={notice === "not_understood" || undefined}
+                    aria-describedby={notice ? noticeId : undefined}
+                    placeholder={home ? ASK : "Ask for a stat"}
+                    placeholderContent={
+                      home ? (
+                        <>
+                          {ASK}:&nbsp;
+                          <RollingText>
+                            {PLACEHOLDER_QUESTIONS.map((example) => (
+                              <span key={example}>{example}</span>
+                            ))}
+                          </RollingText>
+                        </>
+                      ) : undefined
+                    }
+                    autoComplete="off"
+                    enterKeyHint="search"
+                    maxLength={MAX_QUESTION_LENGTH}
+                    value={question}
+                    onValueChange={(text) => {
+                      setDraft({ text, version: last?.version ?? 0 });
+                      setNotice(null);
+                      setListOpen(true);
+                      setCursor({ at: 0, moved: false });
+                    }}
+                    onKeyDown={(event) => {
+                      if (showList && rows.length > 0 && (event.key === "ArrowDown" || event.key === "ArrowUp")) {
+                        event.preventDefault();
+                        const step = event.key === "ArrowDown" ? 1 : -1;
+                        setCursor({ at: (active + step + rows.length) % rows.length, moved: true });
+                        return;
+                      }
+                      // Enter opens the row under the cursor, the top one unless the arrows moved it. While the page for
+                      // the question is still being worked out, the top row could be a hero the question merely names, so
+                      // Enter asks as before.
+                      if (
+                        event.key === "Enter" &&
+                        showList &&
+                        rows[active] &&
+                        (cursor.moved || !suggestions.pagePending)
+                      ) {
+                        event.preventDefault();
+                        pick(rows[active]);
+                        return;
+                      }
+                      if (event.key === "Escape" && showList) {
+                        event.preventDefault();
+                        setListOpen(false);
+                        return;
+                      }
+                      if (event.key === "Escape" && searching) {
+                        // Drops the running question instead of clearing the field.
+                        event.preventDefault();
+                        latest.current += 1;
+                        setSearching(false);
+                      }
+                    }}
+                    action={
+                      home && (
+                        <Button type="submit" shape="pill" loading={searching} loadingLabel={FINDING}>
+                          Search
+                        </Button>
+                      )
+                    }
+                  />
+                </form>
+              </PopoverAnchor>
+              <PopoverContent
+                align="start"
+                className="w-(--radix-popover-trigger-width) p-1"
+                onOpenAutoFocus={(event) => event.preventDefault()}
+                onCloseAutoFocus={(event) => event.preventDefault()}
+                onInteractOutside={(event) => input.current?.contains(event.target as Node) && event.preventDefault()}
+              >
+                <SuggestionList
+                  id={listId}
+                  suggestions={suggestions}
+                  active={active}
+                  onPick={pick}
+                  onHover={(at) => setCursor({ at, moved: true })}
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
         </CalloutAnchor>
         {notice && (
           <CalloutContent id={noticeId} variant={NOTICES[notice].variant}>

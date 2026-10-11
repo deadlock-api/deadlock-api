@@ -6,6 +6,7 @@ const ALL = ["mode", "rank", "time"] as const;
 export const ITEM_PAGES: RegisteredPage[] = [
   {
     id: "item_stats",
+    title: "Item Stats",
     description:
       "win rate of every item, optionally on one hero and against enemy heroes: best items, what to build on a hero, " +
       "what to buy against heroes",
@@ -17,6 +18,7 @@ export const ITEM_PAGES: RegisteredPage[] = [
   },
   {
     id: "item_page",
+    title: "Item Page",
     description: "one item's own page: its win rate, which heroes buy it and when",
     path: "/analytics/items/$itemName",
     pathParams: { itemName: itemSlugParam() },
@@ -25,6 +27,7 @@ export const ITEM_PAGES: RegisteredPage[] = [
   },
   {
     id: "item_timing",
+    title: "Item Purchase Timing",
     description: "when to buy an item: its win rate by purchase time or by souls at purchase",
     path: "/analytics/items/item-purchase-analysis",
     search: { item_ids: itemIds(), hero: heroId(), enemy: enemyHeroIds() },
@@ -32,6 +35,7 @@ export const ITEM_PAGES: RegisteredPage[] = [
   },
   {
     id: "build_flow",
+    title: "Build Flow",
     description: "a hero's build order: which items are bought first, second and later, and how each path wins",
     context: '"haze build" or "what to build on haze" is item_stats or build_flow.',
     path: "/analytics/items/build-flow",
@@ -40,12 +44,14 @@ export const ITEM_PAGES: RegisteredPage[] = [
   },
   {
     id: "item_combos",
+    title: "Item Combos",
     description: "items bought together in one build and how those combinations win",
     path: "/analytics/items/combos",
     filters: ALL,
   },
   {
     id: "abilities",
+    title: "Ability Stats",
     description: "a hero's ability and skill order: which abilities to level and upgrade first",
     path: "/analytics/abilities",
     search: { hero_id: heroId() },
