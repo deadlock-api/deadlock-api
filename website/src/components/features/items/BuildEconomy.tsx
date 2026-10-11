@@ -19,6 +19,7 @@ import {
   CHART_Y_AXIS,
 } from "~/components/patterns/charts/theme";
 import { Panel, PanelBody, PanelHeader } from "~/components/patterns/panel/Panel";
+import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { NoValue } from "~/components/ui/no-value";
 import { Slider } from "~/components/ui/slider";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
@@ -474,46 +475,55 @@ export function BuildPurchases({
   return (
     <Panel {...props}>
       <PanelHeader title="Buy order" icon={ListOrdered} size="sm" />
-      <Table density="dense" className="tabular-nums" aria-label="Build items in buy order">
-        <TableHeader tone="muted">
-          <TableRow>
-            <TableHead className="w-8 text-end">#</TableHead>
-            <TableHead data-pinned>Item</TableHead>
-            <TableHead className="hidden text-end @sm/table:table-cell">Price</TableHead>
-            <TableHead className="hidden text-end @md/table:table-cell">Souls</TableHead>
-            <TableHead className="text-end">Bought</TableHead>
-            <TableHead className="text-end">Then</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {(plot?.placed ?? []).map((p, index) => (
-            <TableRow key={p.key}>
-              <TableCell className="text-end text-muted-foreground">{index + 1}</TableCell>
-              <TableCell data-pinned>
-                <ItemCell itemId={p.itemId} size="sm" className="max-w-48" />
-              </TableCell>
-              <TableCell className="hidden text-end @sm/table:table-cell">
-                {p.price.toLocaleString("en-US")}
-                {p.price > p.cost && <span className="text-muted-foreground"> +{p.cost.toLocaleString("en-US")}</span>}
-              </TableCell>
-              <TableCell className="hidden text-end @md/table:table-cell">
-                {p.netWorthAtBuy != null ? compact(p.netWorthAtBuy) : <NoValue />}
-              </TableCell>
-              <TableCell className="text-end">{p.boughtAt != null ? clock(p.boughtAt) : <NoValue />}</TableCell>
-              <TableCell className="text-end text-muted-foreground">
-                {/* A share of purchases where the API reports sales, else the average time of a sale. */}
-                {p.soldShare != null ? (
-                  `${isComponent.has(p.itemId) ? "upgraded" : "sold"} ${Math.round(p.soldShare * 100)}%`
-                ) : p.avgSellAt != null ? (
-                  `sold ${clock(p.avgSellAt)}`
-                ) : (
-                  <NoValue />
-                )}
-              </TableCell>
+      {/* The order is the purchases' places on the soul curve: nothing to list until it is in. */}
+      {economy.curve.isPending ? (
+        <PanelBody>
+          <LoadingState label="buy order" variant="skeleton" />
+        </PanelBody>
+      ) : (
+        <Table density="dense" className="tabular-nums" aria-label="Build items in buy order">
+          <TableHeader tone="muted">
+            <TableRow>
+              <TableHead className="w-8 text-end">#</TableHead>
+              <TableHead data-pinned>Item</TableHead>
+              <TableHead className="hidden text-end @sm/table:table-cell">Price</TableHead>
+              <TableHead className="hidden text-end @md/table:table-cell">Souls</TableHead>
+              <TableHead className="text-end">Bought</TableHead>
+              <TableHead className="text-end">Then</TableHead>
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+          </TableHeader>
+          <TableBody>
+            {(plot?.placed ?? []).map((p, index) => (
+              <TableRow key={p.key}>
+                <TableCell className="text-end text-muted-foreground">{index + 1}</TableCell>
+                <TableCell data-pinned>
+                  <ItemCell itemId={p.itemId} size="sm" className="max-w-48" />
+                </TableCell>
+                <TableCell className="hidden text-end @sm/table:table-cell">
+                  {p.price.toLocaleString("en-US")}
+                  {p.price > p.cost && (
+                    <span className="text-muted-foreground"> +{p.cost.toLocaleString("en-US")}</span>
+                  )}
+                </TableCell>
+                <TableCell className="hidden text-end @md/table:table-cell">
+                  {p.netWorthAtBuy != null ? compact(p.netWorthAtBuy) : <NoValue />}
+                </TableCell>
+                <TableCell className="text-end">{p.boughtAt != null ? clock(p.boughtAt) : <NoValue />}</TableCell>
+                <TableCell className="text-end text-muted-foreground">
+                  {/* A share of purchases where the API reports sales, else the average time of a sale. */}
+                  {p.soldShare != null ? (
+                    `${isComponent.has(p.itemId) ? "upgraded" : "sold"} ${Math.round(p.soldShare * 100)}%`
+                  ) : p.avgSellAt != null ? (
+                    `sold ${clock(p.avgSellAt)}`
+                  ) : (
+                    <NoValue />
+                  )}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      )}
     </Panel>
   );
 }
