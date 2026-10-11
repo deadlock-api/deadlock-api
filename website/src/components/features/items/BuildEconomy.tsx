@@ -26,6 +26,7 @@ import { NoValue } from "~/components/ui/no-value";
 import { Slider } from "~/components/ui/slider";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import type { GameMode, MatchMode } from "~/lib/game-mode";
+import { cn } from "~/lib/utils";
 import { itemUpgradesQueryOptions } from "~/queries/asset-queries";
 import { itemStatsQueryOptions } from "~/queries/item-stats-query";
 import { playerPerformanceCurveQueryOptions } from "~/queries/player-performance-curve-query";
@@ -524,9 +525,12 @@ export function BuildPurchases({
                   {p.netWorthAtBuy != null ? compact(p.netWorthAtBuy) : <NoValue />}
                 </TableCell>
                 <TableCell className="text-end">{p.boughtAt != null ? clock(p.boughtAt) : <NoValue />}</TableCell>
-                <TableCell className="text-end text-muted-foreground">
-                  {/* A share of purchases where the API reports sales, else the average time of a sale. */}
-                  {p.soldShare != null ? (
+                <TableCell className={cn("text-end", !p.sold && "text-muted-foreground")}>
+                  {/* The build's own sale where it plans one; else what its buyers do: a share of purchases where the
+                      API reports sales, else the average time of a sale. */}
+                  {p.sold ? (
+                    `sold ${clock(p.sold.at)}`
+                  ) : p.soldShare != null ? (
                     `${isComponent.has(p.itemId) ? "upgraded" : "sold"} ${Math.round(p.soldShare * 100)}%`
                   ) : p.avgSellAt != null ? (
                     `sold ${clock(p.avgSellAt)}`
