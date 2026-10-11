@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { ChevronRight, ListPlus, Route } from "lucide-react";
+import { ChevronRight, Hourglass, ListPlus, Route } from "lucide-react";
 import { parseAsArrayOf, parseAsNumberLiteral, parseAsString, parseAsStringLiteral, useQueryState } from "nuqs";
 import { Fragment, memo, useMemo, useState } from "react";
 
@@ -58,6 +58,8 @@ const STREET_BRAWL_ROUNDS = 8;
 const TIME_PHASE_LABELS = ["0–9m", "9–20m", "20–30m", "30m+"] as const;
 // Where the win rate bar under each choice reaches its end, in points from the build's own win rate.
 const CHANGE_SCALE = 10;
+// Below this share of games reaching a stage, its header marks the stage as one of long games.
+const LATE_REACH = 0.8;
 // The win rate sort counts every choice as if it also had 2% of the build's games (at least 100) at the build's own win
 // rate: 26 wins of 30 games (a T4 bought by players already far ahead) then ranks below 62% from thousands.
 const SHRINK_SHARE = 0.02;
@@ -507,7 +509,17 @@ export function BuildFlowExplorer({
               <BuildStage
                 key={stage.column}
                 title={stage.title}
-                meta={`${percent(stage.reached, 0)} of games`}
+                meta={
+                  // A stage most games never reach (30m+) shows long games only, whose win rates run high.
+                  stage.reached < LATE_REACH ? (
+                    <span className="inline-flex items-center gap-1 text-warning">
+                      <Hourglass className="size-3" aria-hidden="true" />
+                      {percent(stage.reached, 0)} of games
+                    </span>
+                  ) : (
+                    `${percent(stage.reached, 0)} of games`
+                  )
+                }
                 aria-busy={switching || undefined}
               >
                 {stage.choices.length === 0 ? (
