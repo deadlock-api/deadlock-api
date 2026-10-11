@@ -1,3 +1,5 @@
+import { INGEST_TRACKER_WINDOW_DAYS } from "~/components/domain/ingest/links";
+
 /** Where Steam keeps its cache, most common first. The FAQ answers below name the most common ones. */
 export const STEAM_CACHE_PATHS = {
   windows: "C:\\Program Files (x86)\\Steam\\appcache\\httpcache",
@@ -51,6 +53,10 @@ export const INGEST_FAQ: readonly IngestFaqEntry[] = [
     question: "What does it send, and is it safe?",
     answer:
       "The cache upload sends only match IDs and their salts, read from the addresses of the match files in Steam's cache. The background tool sends the same, plus your Steam account ID, a public number that already appears in every match you play. Nothing else about your account, your PC or your other games is sent. The tool uses your saved Steam session to ask Steam for missing matches, and that session is never sent to Deadlock API. The tool is open source on GitHub.",
+  },
+  {
+    question: "Do I get the player tracker for running the tool?",
+    answer: `Yes. Every Steam account the background tool sent matches for in the last ${INGEST_TRACKER_WINDOW_DAYS} days gets its player tracker on deadlock-api.com for free: full match history, rank progression, hero stats, and the teammates and opponents you play with most. There is nothing to sign in to; open your profile on the tracker page once the tool has sent a match. The one-time cache upload does not unlock it, because it does not send your Steam account ID.`,
   },
   {
     question: "Does it work on macOS?",

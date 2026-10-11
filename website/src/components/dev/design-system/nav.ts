@@ -319,6 +319,7 @@ export const NAV: readonly NavChapter[] = [
       { title: "Brand", items: ["BrandIcons and SocialLinks"] },
       { title: "Navigation", items: ["SmartLink"] },
       { title: "Feedback", items: ["FeedbackNoticeDialog"] },
+      { title: "Ingest", items: ["InstallButton"] },
       {
         title: "Mini-games",
         items: [

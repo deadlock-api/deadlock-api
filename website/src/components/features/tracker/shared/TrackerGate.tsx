@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { Lock, ShieldX } from "lucide-react";
 
+import { INGEST_TRACKER_WINDOW_DAYS } from "~/components/domain/ingest/links";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { Button } from "~/components/ui/button";
@@ -11,6 +12,7 @@ import { IconTile } from "~/components/ui/icon-tile";
 import { usePatronAuth } from "~/hooks/usePatronAuth";
 import { IS_DEV } from "~/lib/constants";
 import { steamAccountsQueryOptions } from "~/queries/patron-queries";
+import { trackerIngestStatusQueryOptions } from "~/queries/tracker-queries";
 
 function GateCard({ icon, title, children }: { icon: React.ReactNode; title: string; children: React.ReactNode }) {
   return (
@@ -50,11 +52,17 @@ export function TrackerGate({ accountId, children }: { accountId: number; childr
     enabled: !IS_DEV && isAuthenticated && hasSlots,
   });
 
+  // Running the ingest tool opens the account's tracker for anyone, signed in or not.
+  const ingestQuery = useQuery({ ...trackerIngestStatusQueryOptions(accountId), enabled: !IS_DEV });
+
   // Patreon OAuth is unavailable against localhost, so the gate would make the page untestable in dev.
   if (IS_DEV) return children;
 
-  // Until the status answers, a patron would see the sign-in gate flash before their profile.
-  if (isLoading || !isResolved || (isAuthenticated && hasSlots && accountsQuery.isPending)) {
+  if (ingestQuery.data?.active) return children;
+
+  // Until both answer, a visitor would see the sign-in gate flash before the profile. A failed ingest check falls back
+  // to the Patreon gate rather than blocking it.
+  if (ingestQuery.isPending || isLoading || !isResolved || (isAuthenticated && hasSlots && accountsQuery.isPending)) {
     return <LoadingState label="player tracker" align="center" />;
   }
 
@@ -74,9 +82,10 @@ export function TrackerGate({ accountId, children }: { accountId: number; childr
 
   if (!isAuthenticated || !hasSlots) {
     return (
-      <GateCard icon={<Lock />} title="The player tracker is a patron feature">
+      <GateCard icon={<Lock />} title="Unlock the player tracker">
         <p className="text-sm leading-relaxed text-muted-foreground">
-          Full match history, rank progression, hero breakdowns, and mate &amp; opponent analytics are available for the
+          Full match history, rank progression, hero breakdowns, and mate &amp; opponent analytics. Free for every
+          account that sent its matches with the ingest tool in the last {INGEST_TRACKER_WINDOW_DAYS} days, and for the
           prioritized Steam accounts linked to your Patreon subscription.
         </p>
         {isAuthenticated && (
@@ -85,19 +94,25 @@ export function TrackerGate({ accountId, children }: { accountId: number; childr
           </p>
         )}
         <div className="flex flex-col gap-2 pt-2 sm:flex-row">
-          <Button onClick={login}>Sign in with Patreon</Button>
-          <Button variant="secondary" asChild>
-            <Link to="/tracker/demo">View demo profile</Link>
+          <Button asChild>
+            <Link to="/ingest-cache">Run the ingest tool</Link>
           </Button>
+          {!isAuthenticated && (
+            <Button variant="secondary" onClick={login}>
+              Sign in with Patreon
+            </Button>
+          )}
           <Button variant="outline" asChild>
-            <Link to="/patron">Learn more</Link>
+            <Link to="/tracker/demo">View demo profile</Link>
           </Button>
         </div>
       </GateCard>
     );
   }
 
-  const isOwnAccount = accountsQuery.data?.accounts.some((account) => account.steam_id3 === accountId) ?? false;
+  const isOwnAccount =
+    accountsQuery.data?.accounts.some((account) => account.steam_id3 === accountId && account.deleted_at === null) ??
+    false;
   if (accountsQuery.isError && !isOwnAccount) {
     return (
       <div className="mx-auto max-w-xl py-16">
@@ -115,12 +130,16 @@ export function TrackerGate({ accountId, children }: { accountId: number; childr
     return (
       <GateCard icon={<ShieldX />} title="Not one of your prioritized accounts">
         <p className="text-sm leading-relaxed text-muted-foreground">
-          The tracker is only available for Steam accounts linked to your Patreon subscription. Add this account on the
-          Prioritized Fetching page to track it.
+          The tracker opens for Steam accounts linked to your Patreon subscription, and for every account that sent its
+          matches with the ingest tool in the last {INGEST_TRACKER_WINDOW_DAYS} days. Add this account on the
+          Prioritized Fetching page, or run the tool on it.
         </p>
         <div className="flex flex-col gap-2 pt-2 sm:flex-row">
           <Button asChild>
             <Link to="/patron">Manage accounts</Link>
+          </Button>
+          <Button variant="secondary" asChild>
+            <Link to="/ingest-cache">Run the ingest tool</Link>
           </Button>
           <Button variant="outline" asChild>
             <Link to="/tracker">Your accounts</Link>

@@ -10,6 +10,7 @@ import { ItemName } from "~/components/domain/assets/ItemName";
 import { SocialLinks, SteamIcon } from "~/components/domain/brand/BrandIcons";
 import { FeedbackNoticeDialog } from "~/components/domain/feedback/FeedbackNoticeDialog";
 import { GraphNodeCard } from "~/components/domain/graph/GraphNodeCard";
+import { InstallButton } from "~/components/domain/ingest/InstallButton";
 import { GamePage } from "~/components/domain/minigames/GamePage";
 import { GameTile } from "~/components/domain/minigames/GameTile";
 import { HeroSelector } from "~/components/domain/selectors/HeroSelector";
@@ -64,6 +65,18 @@ export function Round3DomainMisc() {
 
   return (
     <>
+      <Specimen
+        name="InstallButton"
+        source="domain/ingest/InstallButton"
+        note="The ingest tool's call to action. On Windows it downloads the installer; elsewhere it links to the install steps, which are #install on /ingest-cache itself, so other pages pass installHref (INGEST_INSTALL_PATH). size defaults to lg, the page's main action; other Button props pass through."
+      >
+        <Variants label="size: lg (default), sm; variant: outline">
+          <InstallButton installHref="/ingest-cache#install" />
+          <InstallButton size="sm" installHref="/ingest-cache#install" />
+          <InstallButton size="sm" variant="outline" installHref="/ingest-cache#install" />
+        </Variants>
+      </Specimen>
+
       <Specimen
         name="FeedbackNoticeDialog"
         source="domain/feedback/FeedbackNoticeDialog"

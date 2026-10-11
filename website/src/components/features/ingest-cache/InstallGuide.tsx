@@ -1,6 +1,6 @@
 import { Download } from "lucide-react";
 
-import { INGEST_REPO, WINDOWS_SETUP_URL } from "~/components/features/ingest-cache/links";
+import { INGEST_REPO, WINDOWS_SETUP_URL } from "~/components/domain/ingest/links";
 import { CopyableCode } from "~/components/patterns/code/CopyableCode";
 import { Disclosure } from "~/components/patterns/content/Disclosure";
 import { Step, Steps } from "~/components/patterns/content/Steps";

@@ -1,9 +1,12 @@
-import { CloudDownload, Gamepad2, History, Power, ShieldCheck } from "lucide-react";
+import { ChartLine, CloudDownload, Gamepad2, History, Power, ShieldCheck } from "lucide-react";
 
+import { INGEST_TRACKER_WINDOW_DAYS } from "~/components/domain/ingest/links";
+import { SmartLink } from "~/components/domain/navigation/SmartLink";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { IconTile } from "~/components/ui/icon-tile";
 import { Inline, Stack } from "~/components/ui/stack";
 import { Text } from "~/components/ui/text";
+import { TextLink } from "~/components/ui/text-link";
 
 function Reason({ icon, title, children }: { icon: React.ReactNode; title: string; children: React.ReactNode }) {
   return (
@@ -41,6 +44,13 @@ export function WhyInstall() {
             </Reason>
             <Reason icon={<CloudDownload />} title="Finds matches nobody has yet">
               While Deadlock is closed, it uses your Steam session to fetch a few matches a day that are still missing.
+            </Reason>
+            <Reason icon={<ChartLine />} title="Unlocks your player tracker">
+              Every account it sent matches for in the last {INGEST_TRACKER_WINDOW_DAYS} days gets its{" "}
+              <TextLink asChild underline="always">
+                <SmartLink href="/tracker/demo">player tracker</SmartLink>
+              </TextLink>{" "}
+              for free, no sign-in needed.
             </Reason>
             <Reason icon={<Power />} title="Set up once">
               It starts with your PC and stays out of the way. Nothing to click after the install.
