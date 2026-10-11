@@ -317,7 +317,8 @@ export function BuildSlotItem({
         <span data-slot="build-slot-item-name" className="truncate type-label">
           {name}
         </span>
-        {meta && <span className="truncate type-caption text-muted-foreground tabular-nums">{meta}</span>}
+        {/* Up to two lines: a price, a change and a sale line do not fit a quarter-width card on one. */}
+        {meta && <span className="line-clamp-2 type-caption text-muted-foreground tabular-nums">{meta}</span>}
       </span>
       {actions && <span className="flex shrink-0 items-center">{actions}</span>}
     </li>
