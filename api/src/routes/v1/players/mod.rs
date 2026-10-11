@@ -2,6 +2,7 @@ pub mod account_stats;
 pub mod card;
 pub mod enemy_stats;
 pub mod hero_stats;
+mod ingest_status;
 pub(crate) mod match_history;
 pub mod mate_stats;
 pub mod mmr;
@@ -231,6 +232,7 @@ pub(super) fn router() -> OpenApiRouter<AppState> {
         .routes(routes!(mate_stats::mate_stats))
         .routes(routes!(enemy_stats::enemy_stats))
         .routes(routes!(hero_stats::player_hero_stats))
+        .routes(routes!(ingest_status::ingest_status))
         .routes(routes!(rank::rank))
         .routes(routes!(rank::rank_batch))
         .routes(routes!(rank::rank_image))
