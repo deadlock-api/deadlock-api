@@ -31,7 +31,7 @@ export function BuildStage({
     <section
       data-slot="build-stage"
       className={cn(
-        "flex min-w-0 flex-col gap-1.5 transition-opacity duration-normal ease-standard aria-busy:opacity-50",
+        "@container flex min-w-0 flex-col gap-1.5 transition-opacity duration-normal ease-standard aria-busy:opacity-50",
         className,
       )}
       {...props}
@@ -82,10 +82,14 @@ export function BuildChoiceHeader({
       {...props}
     >
       <span className="truncate">{start}</span>
-      <span className="w-12 shrink-0 text-end">{end}</span>
+      <span className={cn("shrink-0 text-end", VALUE_WIDTH)}>{end}</span>
     </div>
   );
 }
+
+// The win rate column and the bought bar grow with the stage's width: a wide stage gives its bars room to read.
+const VALUE_WIDTH = "w-12 @xs:w-16 @sm:w-24 @md:w-32";
+const SHARE_WIDTH = "w-10 min-w-3 @xs:w-16 @sm:w-20 @md:w-24";
 
 const buildChoiceVariants = cva(
   [
@@ -120,6 +124,7 @@ export function BuildChoice({
   name,
   meta,
   share,
+  price,
   link,
   value,
   tone = "muted",
@@ -136,6 +141,8 @@ export function BuildChoice({
     meta?: React.ReactNode;
     /** 0 to 1: the meta drawn as a bar, scaled to the stage. */
     share?: number;
+    /** At the end of the meta line: what it costs, "3,200". Stays while the row is `linked`. */
+    price?: React.ReactNode;
     /** Replaces `meta` and `share` while the row is `linked`: the text and its 0 to 1 bar. */
     link?: { label: React.ReactNode; share: number };
     /** The number at the end: "52.4%". */
@@ -175,19 +182,22 @@ export function BuildChoice({
         <span className="line-clamp-2 type-label leading-tight wrap-break-word">{name}</span>
         {link && relation === "linked" ? (
           <span className="flex min-w-0 items-center gap-1.5 type-caption font-semibold text-info tabular-nums">
-            <ProgressBar variant="thin" value={link.share} color="var(--info)" className="w-10 shrink-0" />
-            <span className="truncate">{link.label}</span>
+            <ProgressBar variant="thin" value={link.share} color="var(--info)" className={SHARE_WIDTH} />
+            <span className="shrink-0">{link.label}</span>
+            {price && <span className="shrink-0 font-normal text-muted-foreground">· {price}</span>}
           </span>
         ) : (
           <span className="flex min-w-0 items-center gap-1.5 type-caption text-muted-foreground tabular-nums">
             {share !== undefined && (
-              <ProgressBar variant="thin" value={share} color="var(--chart-share)" className="w-10 shrink-0" />
+              <ProgressBar variant="thin" value={share} color="var(--chart-share)" className={SHARE_WIDTH} />
             )}
-            <span className="truncate">{meta}</span>
+            {/* The bar gives way before the figures do. */}
+            <span className="shrink-0">{meta}</span>
+            {price && <span className="shrink-0">· {price}</span>}
           </span>
         )}
       </span>
-      <span className="flex w-12 shrink-0 flex-col items-end gap-1">
+      <span className={cn("flex shrink-0 flex-col items-end gap-1", VALUE_WIDTH)}>
         <span className={cn("type-label tabular-nums", TONE_TEXT[tone])}>{value ?? <NoValue />}</span>
         {change && (
           <DivergingBar value={change.value} scale={change.scale} interval={change.interval} className="w-full" />
@@ -208,13 +218,17 @@ export function BuildPath({ className, ...props }: React.ComponentProps<"ol">) {
   );
 }
 
-/** One stage of a BuildPath: its name and the `BuildPathItem`s chosen there, or "Any item" when none is. */
+/**
+ * One stage of a BuildPath: its name, a figure at the end of that line (what the stage's items cost), and the
+ * `BuildPathItem`s chosen there, or "Any item" when none is.
+ */
 export function BuildPathStep({
   label,
+  meta,
   className,
   children,
   ...props
-}: React.ComponentProps<"li"> & { label: React.ReactNode }) {
+}: React.ComponentProps<"li"> & { label: React.ReactNode; meta?: React.ReactNode }) {
   const empty = !children || (Array.isArray(children) && children.length === 0);
   return (
     <li
@@ -226,7 +240,10 @@ export function BuildPathStep({
       )}
       {...props}
     >
-      <span className="type-caption font-medium text-muted-foreground">{label}</span>
+      <span className="flex items-baseline justify-between gap-2 type-caption text-muted-foreground">
+        <span className="truncate font-medium">{label}</span>
+        {meta && <span className="shrink-0 tabular-nums">{meta}</span>}
+      </span>
       <span className="flex min-h-8 flex-wrap items-center gap-1">
         {empty ? <span className="type-caption text-muted-foreground">Any item</span> : children}
       </span>

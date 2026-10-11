@@ -43,7 +43,7 @@ import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import type { GameMode, MatchMode } from "~/lib/game-mode";
 import { TONE_TEXT, toneOf, type Tone } from "~/lib/tone";
 import { wilsonScoreInterval } from "~/lib/wilson";
-import { itemUpgradesQueryOptions } from "~/queries/asset-queries";
+import { itemPricePerTierQueryOptions, itemUpgradesQueryOptions } from "~/queries/asset-queries";
 import {
   ITEM_FLOW_DEFAULT_PER_COLUMN,
   ITEM_FLOW_PER_COLUMN_OPTIONS,
@@ -224,10 +224,12 @@ const StagePicker = memo(function StagePicker({ stage, onPick }: { stage: Stage;
 
 function ChoiceTooltip({
   choice,
+  cost,
   isStreetBrawl,
   next,
 }: {
   choice: Choice;
+  cost: number | undefined;
   isStreetBrawl: boolean;
   next: { itemId: number; share: number }[];
 }) {
@@ -242,6 +244,7 @@ function ChoiceTooltip({
         />
         {!isStreetBrawl && <TooltipStat label="Raw win rate" value={percent(choice.rawWinRate)} />}
         <TooltipStat label="95% interval" value={`${percent(choice.interval[0])}–${percent(choice.interval[1])}`} />
+        {cost ? <TooltipStat label="Cost" value={`${count(cost)} souls`} /> : null}
         <TooltipStat label="Bought" value={percent(choice.pickRate)} />
         <TooltipStat label="Matches" value={count(choice.matches)} />
         {!isStreetBrawl && <TooltipStat label="Net worth at buy" value={count(Math.round(choice.avgNetWorth))} />}
@@ -316,7 +319,15 @@ export function BuildFlowExplorer({
     }),
   );
   const { data: upgrades } = useQuery(itemUpgradesQueryOptions);
-  const costOf = useMemo(() => new Map((upgrades ?? []).map((item) => [item.id, item.cost ?? 0])), [upgrades]);
+  const { data: pricePerTier } = useQuery(itemPricePerTierQueryOptions);
+  // The shop price of the item's tier, from the generic data; the item's own cost until that list is loaded.
+  const costOf = useMemo(
+    () =>
+      new Map(
+        (upgrades ?? []).map((item) => [item.id, pricePerTier?.[item.item_tier ?? 0] || (item.cost ?? 0)] as const),
+      ),
+    [upgrades, pricePerTier],
+  );
   const nameOf = useMemo(() => new Map((upgrades ?? []).map((item) => [item.id, item.name ?? "Item"])), [upgrades]);
 
   const view = useMemo(
@@ -336,14 +347,14 @@ export function BuildFlowExplorer({
     return { column: source.column, links };
   }, [pointed, view]);
 
-  // Whole builds to start from, while none is picked.
+  // Whole builds to start from, or to complete the started one with: they keep the reader's picks.
   const suggestions = useMemo(() => {
-    if (!view || path.length > 0) return [];
+    if (!view) return [];
     return [
       { label: "Most common", path: suggestPath(view, "common") },
       { label: "Best win rate", path: suggestPath(view, "winning") },
-    ].filter((s) => s.path.length > 1);
-  }, [view, path.length]);
+    ].filter((s) => s.path.length > 1 && s.path.some((c) => !c.selected));
+  }, [view]);
 
   // Dim the stages only while another build's answer loads; a refresh of the shown one keeps them as they are.
   const switching = isFetching && isPlaceholderData;
@@ -358,7 +369,13 @@ export function BuildFlowExplorer({
   const winRate = summary.matches > 0 ? summary.wins / summary.matches : 0;
   const baseWinRate = baseline.matches > 0 ? baseline.wins / baseline.matches : 0;
   const [wrLow, wrHigh] = wilsonScoreInterval(summary.wins, summary.matches);
-  const cost = path.reduce((sum, key) => sum + (costOf.get(parseKey(key).itemId) ?? 0), 0);
+  // What the build's picks cost, per stage and in all.
+  const stageCost = new Map<number, number>();
+  for (const key of path) {
+    const { column, itemId } = parseKey(key);
+    stageCost.set(column, (stageCost.get(column) ?? 0) + (costOf.get(itemId) ?? 0));
+  }
+  const cost = [...stageCost.values()].reduce((sum, n) => sum + n, 0);
   const duration = Math.round(summary.avg_duration_s);
   // A build nobody played in these filters: its numbers are not zeros but missing.
   const noGames = summary.matches === 0;
@@ -378,7 +395,11 @@ export function BuildFlowExplorer({
             <Stack gap={2}>
               <BuildPath aria-label="Build path">
                 {view.stages.map((stage) => (
-                  <BuildPathStep key={stage.column} label={stage.title}>
+                  <BuildPathStep
+                    key={stage.column}
+                    label={stage.title}
+                    meta={stageCost.get(stage.column) ? count(stageCost.get(stage.column) ?? 0) : undefined}
+                  >
                     {path
                       .filter((key) => parseKey(key).column === stage.column)
                       .map((key) => {
@@ -404,7 +425,12 @@ export function BuildFlowExplorer({
                       variant="subtle"
                       size="sm"
                       aria-label={`${suggestion.label}: ${suggestion.path.map((c) => nameOf.get(c.itemId) ?? "Item").join(", ")}`}
-                      onClick={() => void setPath(suggestion.path.map((c) => c.key))}
+                      onClick={() =>
+                        void setPath((prev) => [
+                          ...prev,
+                          ...suggestion.path.filter((c) => !prev.includes(c.key)).map((c) => c.key),
+                        ])
+                      }
                     >
                       {suggestion.label}
                       {suggestion.path.map((choice, index) => (
@@ -540,7 +566,7 @@ export function BuildFlowExplorer({
                     <EmptyState variant="inline" title="No purchases" />
                   ) : (
                     <>
-                      <BuildChoiceHeader start="Item · bought" end="Win rate" />
+                      <BuildChoiceHeader start="Item · bought · cost" end="Win rate" />
                       <BuildChoiceList aria-label={`Items bought at ${stage.title}`}>
                         {stage.choices.map((choice) => {
                           const near = linked != null && Math.abs(linked.column - choice.column) === 1;
@@ -552,6 +578,7 @@ export function BuildFlowExplorer({
                               content={
                                 <ChoiceTooltip
                                   choice={choice}
+                                  cost={costOf.get(choice.itemId)}
                                   isStreetBrawl={isStreetBrawl}
                                   next={nextChoices(view, choice)}
                                 />
@@ -562,6 +589,7 @@ export function BuildFlowExplorer({
                                 name={<ItemName itemId={choice.itemId} className="line-clamp-2 whitespace-normal" />}
                                 share={choice.pickShare}
                                 meta={percent(choice.pickRate)}
+                                price={costOf.get(choice.itemId) ? count(costOf.get(choice.itemId) ?? 0) : undefined}
                                 link={
                                   link && {
                                     // Of the pointed-at item's buyers: bought this one in the stage after it, or before.
@@ -736,27 +764,32 @@ function buildView(
 
 /**
  * A whole build, one item per stage, followed through the links: the most bought first item and then, stage by stage,
- * what its buyers bought most next (`common`), or the same by win rate pulled toward the build's (`winning`). Ends early
- * where nobody went on.
+ * what its buyers bought most next (`common`), or the same by win rate pulled toward the build's (`winning`). A stage
+ * with a pick of the reader's keeps it, so a started build is completed rather than replaced. Ends early where nobody
+ * went on.
  */
 function suggestPath(view: View, by: "common" | "winning"): Choice[] {
-  const first = view.stages[0]?.choices ?? [];
-  const rank = (c: Choice) => (by === "common" ? c.matches : c.score);
-  let current = [...first].sort((a, b) => rank(b) - rank(a))[0];
-  if (!current) return [];
-  const path = [current];
-  for (;;) {
-    const from = current;
-    let best: { choice: Choice; rank: number } | null = null;
-    for (const [key, link] of view.links.get(from.key) ?? []) {
-      const choice = view.byKey.get(key);
-      if (!choice || choice.column !== from.column + 1) continue;
-      const r = by === "common" ? link.matches : view.shrink(link.wins, link.matches);
-      if (!best || r > best.rank) best = { choice, rank: r };
+  const path: Choice[] = [];
+  for (const stage of view.stages) {
+    const from = path.at(-1);
+    const picked = stage.choices.filter((c) => c.selected).sort((a, b) => b.matches - a.matches)[0];
+    let next: Choice | undefined = picked;
+    if (!next && !from) {
+      next = [...stage.choices].sort((a, b) => (by === "common" ? b.matches - a.matches : b.score - a.score))[0];
+    } else if (!next && from) {
+      let best = Number.NEGATIVE_INFINITY;
+      for (const [key, link] of view.links.get(from.key) ?? []) {
+        const choice = view.byKey.get(key);
+        if (!choice || choice.column !== stage.column) continue;
+        const rank = by === "common" ? link.matches : view.shrink(link.wins, link.matches);
+        if (rank > best) {
+          best = rank;
+          next = choice;
+        }
+      }
     }
-    if (!best) break;
-    current = best.choice;
-    path.push(current);
+    if (!next) break;
+    path.push(next);
   }
   return path;
 }

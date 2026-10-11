@@ -54,7 +54,7 @@ function BuildFlowExample() {
   return (
     <div className="flex w-full max-w-xl flex-col gap-4">
       <BuildPath aria-label="Build path">
-        <BuildPathStep label="0–9m">
+        <BuildPathStep label="0–9m" meta="800">
           {picked.map((itemId) => (
             <BuildPathItem
               key={itemId}

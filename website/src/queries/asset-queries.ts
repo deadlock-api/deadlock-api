@@ -123,6 +123,16 @@ export const corruptionQueryOptions = queryOptions({
   staleTime: CACHE_DURATIONS.FOREVER,
 });
 
+/**
+ * The shop price of an item by its tier (index 1 is tier 1), from the generic data. Only this list is kept, so a page
+ * that preloads it does not carry the rest of the generic data into its HTML.
+ */
+export const itemPricePerTierQueryOptions = queryOptions({
+  queryKey: queryKeys.assets.itemPricePerTier(),
+  queryFn: async () => (await api.generic_data_api.getGenericData()).data.item_price_per_tier ?? [],
+  staleTime: CACHE_DURATIONS.FOREVER,
+});
+
 export const rankedSeasonsQueryOptions = queryOptions({
   queryKey: queryKeys.assets.rankedSeasons(),
   queryFn: async () => {
