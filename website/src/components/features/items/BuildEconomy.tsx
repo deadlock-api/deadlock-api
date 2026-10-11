@@ -261,6 +261,8 @@ export function BuildEconomy({
       .filter((t) => t <= END_S)
       .sort((a, b) => a - b);
     const series = times.map((t) => ({ t, souls: at(t), spent: spentAt(t) }));
+    // In the order the build buys them, which the list beside the plot numbers.
+    placed.sort((a, b) => (a.boughtAt ?? Number.POSITIVE_INFINITY) - (b.boughtAt ?? Number.POSITIVE_INFINITY));
     return { series, placed };
   }, [curve.points, stats.data, items]);
 
