@@ -1311,7 +1311,10 @@ export function BuildFlowExplorer({
                                       key={choice.key}
                                       media={<ItemImage itemId={choice.itemId} className="size-7" />}
                                       name={
-                                        <ItemName itemId={choice.itemId} className="line-clamp-2 whitespace-normal" />
+                                        <ItemName
+                                          itemId={choice.itemId}
+                                          className="line-clamp-2 whitespace-normal @md:whitespace-nowrap"
+                                        />
                                       }
                                       share={choice.pickShare}
                                       meta={percent(choice.pickRate)}

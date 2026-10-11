@@ -103,6 +103,8 @@ export function BuildChoiceHeader({
 
 // The win rate column and the bought bar grow with the stage's width: a wide stage gives its bars room to read.
 const VALUE_WIDTH = "w-12 @xs:w-14 @sm:w-20 @md:w-28";
+// On one line, the figures beside the name keep one width, linked or not: the name's room does not change on hover.
+const META_WIDTH = "@md:w-44 @md:shrink-0";
 const SHARE_WIDTH = "w-8 min-w-3 @xs:w-12 @sm:w-16 @md:w-12";
 
 const buildChoiceVariants = cva(
@@ -198,13 +200,23 @@ export function BuildChoice({
           {name}
         </span>
         {link && relation === "linked" ? (
-          <span className="flex min-w-0 items-center gap-1.5 type-caption font-semibold text-info tabular-nums">
+          <span
+            className={cn(
+              "flex min-w-0 items-center gap-1.5 type-caption font-semibold text-info tabular-nums",
+              META_WIDTH,
+            )}
+          >
             <ProgressBar variant="thin" value={link.share} color="var(--info)" className={SHARE_WIDTH} />
             <span className="shrink-0">{link.label}</span>
             {price && <span className="shrink-0 font-normal text-muted-foreground">· {price}</span>}
           </span>
         ) : (
-          <span className="flex min-w-0 items-center gap-1.5 type-caption text-muted-foreground tabular-nums">
+          <span
+            className={cn(
+              "flex min-w-0 items-center gap-1.5 type-caption text-muted-foreground tabular-nums",
+              META_WIDTH,
+            )}
+          >
             {share !== undefined && (
               <ProgressBar variant="thin" value={share} color="var(--chart-share)" className={SHARE_WIDTH} />
             )}
