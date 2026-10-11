@@ -226,6 +226,10 @@ pub struct ItemFlowStats {
     /// Distinct baseline games that bought any upgrade in each stage column (index = column).
     /// `reached / baseline.matches` shows how survivorship-selected a (late) stage is.
     pub reached_per_column: Vec<u64>,
+    /// Of `reached_per_column`, the games that were won (index = column). `reached_wins / reached`
+    /// is the win rate of games that got that far, the fair baseline for a build ending there.
+    #[serde(default)]
+    pub reached_wins_per_column: Vec<u64>,
     /// One entry per locked item, in request order: the totals of the locked build path without that
     /// item. `summary` against an entry is what that one item adds to the build. Empty without locks.
     pub leave_one_out: Vec<ItemFlowLeaveOneOut>,
@@ -411,7 +415,16 @@ fn query_parts(query: &ItemFlowStatsQuery) -> QueryParts {
             )
         })
         .join(", ");
-    let reached_select = format!("[{reached_cols}] AS reached_per_column");
+    let reached_win_cols = (0..count)
+        .map(|c| {
+            format!(
+                "uniqIf(cityHash64(match_id, account_id), won AND arrayExists(gt -> gt > 0 AND {purchase_col} = {c}, upgrade_buy_times))"
+            )
+        })
+        .join(", ");
+    let reached_select = format!(
+        "[{reached_cols}] AS reached_per_column, [{reached_win_cols}] AS reached_wins_per_column"
+    );
     let (upgrades_with, extra_settings) = upgrades_source(query, is_brawl);
 
     QueryParts {
@@ -658,6 +671,8 @@ struct ItemFlowTotalsRow {
     b_avg_net_worth: f64,
     b_avg_duration_s: f64,
     reached_per_column: Vec<u64>,
+    #[serde(default)]
+    reached_wins_per_column: Vec<u64>,
     loo_wins: Vec<u64>,
     loo_matches: Vec<u64>,
 }
@@ -738,6 +753,7 @@ async fn get_item_flow_stats(
             )
             .collect(),
         reached_per_column: totals.reached_per_column,
+        reached_wins_per_column: totals.reached_wins_per_column,
     })
 }
 
@@ -767,7 +783,8 @@ sooner, raw win rate is heavily confounded by wealth; the adjusted figure re-wei
 rate across net-worth buckets to the stage-wide distribution, isolating the item's contribution from
 the buyer's lead. It is still observational, not a controlled/causal estimate. `reached_per_column`
 gives the distinct baseline games that bought any upgrade in each column, so consumers can show how
-survivorship-selected (e.g. long-game-only) a late stage is.
+survivorship-selected (e.g. long-game-only) a late stage is; `reached_wins_per_column` counts the won
+ones among them, the win rate a build ending in that stage should be compared with.
 
 Corrupted items (build 6712+, same item id as the normal item) are not counted as purchases; the
 normal item they replaced still is.
