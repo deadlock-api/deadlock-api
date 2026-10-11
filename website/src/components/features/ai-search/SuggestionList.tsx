@@ -37,6 +37,9 @@ function labelOf(row: Suggestion) {
 
 function descriptionOf(row: Suggestion) {
   if (isHeroPage(row)) return "Hero page";
+  if (row.kind === "page" && row.id === "match") {
+    return row.stored === false ? "We don't have this match yet" : row.stored ? "Match details" : undefined;
+  }
   if (row.kind === "page") return row.filters.length > 0 ? row.filters.join(" · ") : undefined;
   if (row.kind === "hero") return "Hero page";
   if (row.kind === "match") return "Match details";

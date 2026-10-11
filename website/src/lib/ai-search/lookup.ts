@@ -37,7 +37,9 @@ export function playerLookupOf(question: string): PlayerLookup | undefined {
 /** The match ID a match lookup names ("match 107857788"), or undefined when it is not one (see `lookupOf`). */
 export function matchLookupOf(question: string): number | undefined {
   if (lookupOf(question) !== "match") return undefined;
-  return Number(question.replace(LOOKUP_WORDS, " ").trim());
+  const matchId = Number(question.replace(LOOKUP_WORDS, " ").trim());
+  // Past 2^53 a number rounds to another integer, which would open someone else's match.
+  return Number.isSafeInteger(matchId) ? matchId : undefined;
 }
 
 /**

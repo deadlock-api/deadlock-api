@@ -457,7 +457,9 @@ export function MatchDetails({
         records={records}
         matchLink={matchLink}
       />
+      {/* A new match or player starts over: the picked player must not carry over from the last one. */}
       <MatchView
+        key={`${entry.match_id}-${accountId}`}
         matchId={entry.match_id}
         durationS={entry.match_duration_s}
         gameMode={entryGameMode(entry)}
@@ -549,6 +551,7 @@ export function NeutralMatchDetails({
         )}
       </div>
       <MatchView
+        key={matchId}
         matchId={matchId}
         durationS={durationS}
         gameMode={gameMode}
