@@ -974,6 +974,8 @@ export function BuildFlowExplorer({
               open.length > 0
                 ? `Too few games go on to ${open.map((stage) => stage.title).join(", ")} with this build`
                 : undefined,
+            // Gone after a few seconds rather than covering the board while the build is refined.
+            duration: 5000,
             action: { label: "Undo", onClick: () => changePath(before.length > 0 ? before : null) },
           },
         );
