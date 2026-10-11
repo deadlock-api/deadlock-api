@@ -98,7 +98,7 @@ export function BuildChoiceHeader({
 
 // The win rate column and the bought bar grow with the stage's width: a wide stage gives its bars room to read.
 const VALUE_WIDTH = "w-12 @xs:w-14 @sm:w-20 @md:w-28";
-const SHARE_WIDTH = "w-8 min-w-3 @xs:w-12 @sm:w-16 @md:w-20";
+const SHARE_WIDTH = "w-8 min-w-3 @xs:w-12 @sm:w-16 @md:w-12";
 
 const buildChoiceVariants = cva(
   [
@@ -187,8 +187,11 @@ export function BuildChoice({
           {selected ? <CheckIcon className="size-3" /> : <PlusIcon className="size-3" />}
         </span>
       </span>
-      <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-        <span className="line-clamp-2 type-label leading-tight wrap-break-word">{name}</span>
+      {/* Name over its line where the stage is narrow; one line, name first, where it is wide. */}
+      <span className="flex min-w-0 flex-1 flex-col gap-0.5 @md:flex-row @md:items-center @md:gap-3">
+        <span className="line-clamp-2 type-label leading-tight wrap-break-word @md:line-clamp-none @md:min-w-0 @md:flex-1 @md:truncate">
+          {name}
+        </span>
         {link && relation === "linked" ? (
           <span className="flex min-w-0 items-center gap-1.5 type-caption font-semibold text-info tabular-nums">
             <ProgressBar variant="thin" value={link.share} color="var(--info)" className={SHARE_WIDTH} />
@@ -206,10 +209,22 @@ export function BuildChoice({
           </span>
         )}
       </span>
-      <span className={cn("flex shrink-0 flex-col items-end gap-0.5", VALUE_WIDTH)}>
-        <span className={cn("type-label tabular-nums", TONE_TEXT[tone])}>{value ?? <NoValue />}</span>
+      <span
+        className={cn(
+          "flex shrink-0 flex-col items-end gap-0.5 @md:flex-row-reverse @md:items-center @md:gap-2",
+          VALUE_WIDTH,
+        )}
+      >
+        <span className={cn("type-label tabular-nums @md:w-12 @md:shrink-0 @md:text-end", TONE_TEXT[tone])}>
+          {value ?? <NoValue />}
+        </span>
         {change && (
-          <DivergingBar value={change.value} scale={change.scale} interval={change.interval} className="w-full" />
+          <DivergingBar
+            value={change.value}
+            scale={change.scale}
+            interval={change.interval}
+            className="w-full @md:min-w-0 @md:flex-1"
+          />
         )}
       </span>
     </button>
