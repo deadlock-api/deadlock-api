@@ -100,7 +100,22 @@ export const itemsPageOptions = {
         }),
         flow.trimItemFlowForDefaultView,
       );
-      if (isServer) await flowSeed;
+      // The designer's budgets and souls panel read the hero's item sales and soul curve; both answers are small, so
+      // the page carries them instead of drawing skeletons until the browser asks. The keys match the designer's.
+      const economy = {
+        heroIds: deps.heroId !== null ? String(deps.heroId) : undefined,
+        gameMode: common.gameMode,
+        matchMode: common.matchMode,
+        minAverageBadge: common.minAverageBadge,
+        maxAverageBadge: common.maxAverageBadge,
+        ...range,
+      };
+      const [{ playerPerformanceCurveQueryOptions }] = await Promise.all([
+        import("~/queries/player-performance-curve-query"),
+      ]);
+      const sales = prefetchCached(queryClient, itemStatsQueryOptions(economy));
+      const curve = prefetchCached(queryClient, playerPerformanceCurveQueryOptions({ ...economy, resolution: 0 }));
+      if (isServer) await Promise.all([flowSeed, sales, curve]);
       return { leader: null, coverage };
     }
     if (tab === "item-combos") {
