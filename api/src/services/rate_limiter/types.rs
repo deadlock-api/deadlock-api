@@ -21,7 +21,7 @@ pub(crate) struct Quota {
 }
 
 impl Quota {
-    pub(crate) fn ip_limit(limit: usize, period: Duration) -> Self {
+    pub(crate) const fn ip_limit(limit: usize, period: Duration) -> Self {
         Self {
             limit,
             period,

@@ -1,5 +1,7 @@
+use core::time::Duration;
 use std::sync::{Arc, LazyLock};
 
+use axum::extract::FromRequestParts;
 use rmcp::ServerHandler;
 use rmcp::handler::server::tool::parse_json_object;
 use rmcp::model::{
@@ -14,9 +16,12 @@ use tracing::{Instrument, debug, info_span, warn};
 
 use super::catalog::{DATABASE, QueryError, SCHEMA, SnapshotCatalog};
 use super::format::format_query_output;
+use crate::error::APIError;
 use crate::services::assets::client::AssetsClient;
 use crate::services::assets::versions::items::Item;
 use crate::services::assets::versions::items::types::ItemType;
+use crate::services::rate_limiter::extractor::RateLimitKey;
+use crate::services::rate_limiter::{Quota, RateLimitClient};
 
 const INSTRUCTIONS: &str = "\
 Read-only SQL access to hourly parquet snapshots of the Deadlock API database (https://deadlock-api.com).
@@ -24,6 +29,7 @@ Read-only SQL access to hourly parquet snapshots of the Deadlock API database (h
 - Database `deadlock`, schema `main`; unqualified table names resolve there.
 - Engine: DuckDB (DuckDB SQL dialect). The database is attached read-only: CREATE, INSERT, UPDATE, DELETE, DROP, SET and extension loading fail.
 - Results are capped at 1,024 rows and 50 KB per query; queries time out after 45 seconds.
+- Meant for coding agents and short scripts, not for polling or bulk export: `execute_query` is limited to 30 calls per minute, 300 per hour and 400 per day per client. For recurring or bulk access download the parquet dumps directly (https://deadlock-api.com/data-dumps) or use the REST API (https://api.deadlock-api.com/docs).
 - Column comments carry the original ClickHouse type. Table comments say how the table is exported.
 - Only read queries run: SELECT, WITH, FROM, DESCRIBE, SHOW, SUMMARIZE.
 - `match_player` holds hundreds of gigabytes in parquet files split by `match_id` range. Filters on `match_id` or `start_time` skip whole files and are fast; a filter on `account_id` alone has to scan everything and is slow, so combine it with a `start_time` range. Select only needed columns and use LIMIT.
@@ -36,7 +42,19 @@ Read-only SQL access to hourly parquet snapshots of the Deadlock API database (h
 pub(super) struct McpServer {
     pub(super) catalog: Arc<SnapshotCatalog>,
     pub(super) assets: AssetsClient,
+    pub(super) rate_limit: RateLimitClient,
 }
+
+/// The MCP server is for agents running a handful of queries, not for jobs that poll it around
+/// the clock. Sized from two weeks of traffic (2026-10): the busiest agent session or short
+/// script peaked at 22 queries a minute and 281 a day, while the permanent pollers ran 768 to
+/// 10,800 a day. The daily quota is what turns a poller away; the shorter ones stop bursts from
+/// filling the query slots. An API key gets its own bucket and can be given custom quotas.
+const QUERY_QUOTAS: [Quota; 3] = [
+    Quota::ip_limit(30, Duration::from_mins(1)),
+    Quota::ip_limit(300, Duration::from_hours(1)),
+    Quota::ip_limit(400, Duration::from_hours(24)),
+];
 
 impl ServerHandler for McpServer {
     fn get_info(&self) -> ServerConfig {
@@ -60,7 +78,7 @@ impl ServerHandler for McpServer {
     async fn call_tool(
         &self,
         request: CallToolRequestParams,
-        _context: RequestContext<RoleServer>,
+        context: RequestContext<RoleServer>,
     ) -> Result<CallToolResponse, ErrorData> {
         // Child span of the HTTP request span: the tool name is the only thing that
         // distinguishes one `POST /v1/mcp` from another, since the JSON-RPC body never
@@ -71,7 +89,10 @@ impl ServerHandler for McpServer {
             let result = match request.name.as_ref() {
                 "execute_query" => {
                     let ExecuteQueryArgs { sql } = parse_json_object(args)?;
-                    self.execute_query(sql).await
+                    match self.check_rate_limit(&context).await {
+                        Some(limited) => limited,
+                        None => self.execute_query(sql).await,
+                    }
                 }
                 "list_databases" => list_databases(),
                 "list_tables" => self.list_tables(parse_json_object(args)?),
@@ -146,6 +167,42 @@ enum Missing {
 }
 
 impl McpServer {
+    /// Returns the tool error to answer with when the caller is over a query quota. The quota is
+    /// reported as a tool result rather than an HTTP 429 so the agent reads why it was stopped.
+    async fn check_rate_limit(
+        &self,
+        context: &RequestContext<RoleServer>,
+    ) -> Option<CallToolResult> {
+        let mut parts = context
+            .extensions
+            .get::<axum::http::request::Parts>()?
+            .clone();
+        let key = RateLimitKey::from_request_parts(&mut parts, &())
+            .await
+            .ok()?;
+        match self
+            .rate_limit
+            .apply_limits(&key, "mcp_query", &QUERY_QUOTAS)
+            .await
+        {
+            Ok(_) => None,
+            Err(APIError::RateLimitExceeded { status }) => Some(query_error(
+                format!(
+                    "Rate limit exceeded: {} queries per {} seconds. Next query allowed in {} \
+                     seconds. This server is meant for coding agents running a few queries, not \
+                     for polling or bulk export; for that, download the parquet dumps \
+                     (https://deadlock-api.com/data-dumps) or use the REST API \
+                     (https://api.deadlock-api.com/docs).",
+                    status.quota.limit,
+                    status.quota.period.as_secs(),
+                    status.next_request_in().as_secs(),
+                ),
+                "RateLimitError".to_owned(),
+            )),
+            Err(e) => Some(query_error(e.to_string(), "PermissionError".to_owned())),
+        }
+    }
+
     async fn execute_query(&self, sql: String) -> CallToolResult {
         debug!("MCP QUERY: {sql}");
         match self.catalog.query(sql).await {

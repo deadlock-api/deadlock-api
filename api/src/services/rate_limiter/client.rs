@@ -14,7 +14,8 @@ use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::rate_limiter::types::QuotaType;
 use crate::services::rate_limiter::{Quota, Status};
 
-const MAX_TTL_MICROS: i64 = 60 * 60 * 1000 * 1000;
+/// How long requests are kept by default; a route with a longer quota keeps them for that.
+const MIN_RETENTION: Duration = Duration::from_hours(1);
 
 #[derive(Clone)]
 pub(crate) struct RateLimitClient {
@@ -92,7 +93,17 @@ impl RateLimitClient {
         let current_time = Utc::now();
         let mut pipe = redis::pipe();
         pipe.ignore_errors();
-        add_increment_cmds(&mut pipe, &prefixed_key, current_time.timestamp_micros());
+        // Kept as long as the longest quota looks back, or that quota could never be reached.
+        let retention = quotas
+            .iter()
+            .map(|q| q.period)
+            .fold(MIN_RETENTION, Duration::max);
+        add_increment_cmds(
+            &mut pipe,
+            &prefixed_key,
+            current_time.timestamp_micros(),
+            retention,
+        );
         for quota in &quotas {
             add_check_cmds(
                 &mut pipe,
@@ -229,7 +240,7 @@ impl RateLimitClient {
 
     async fn increment_key(&self, key: &str) -> RedisResult<()> {
         let mut pipe = redis::pipe();
-        add_increment_cmds(&mut pipe, key, Utc::now().timestamp_micros());
+        add_increment_cmds(&mut pipe, key, Utc::now().timestamp_micros(), MIN_RETENTION);
         pipe.exec_async(&mut self.redis_client.clone()).await
     }
 }
@@ -238,11 +249,17 @@ impl RateLimitClient {
 const INCREMENT_CMDS: usize = 3;
 
 /// Records one request at `current_time` (micros) in the sorted set `key`, trimming entries
-/// older than the max TTL.
-fn add_increment_cmds(pipe: &mut redis::Pipeline, key: &str, current_time: i64) {
-    pipe.zrembyscore(key, 0, current_time - MAX_TTL_MICROS)
+/// older than `retention`.
+fn add_increment_cmds(
+    pipe: &mut redis::Pipeline,
+    key: &str,
+    current_time: i64,
+    retention: Duration,
+) {
+    let retention_micros = i64::try_from(retention.as_micros()).unwrap_or(i64::MAX);
+    pipe.zrembyscore(key, 0, current_time.saturating_sub(retention_micros))
         .zadd(key, current_time, current_time)
-        .expire(key, MAX_TTL_MICROS / 1000 / 1000);
+        .expire(key, i64::try_from(retention.as_secs()).unwrap_or(i64::MAX));
 }
 
 fn quota_key<'a>(quota: &Quota, key: &'a str, prefixed_key: &'a str) -> &'a str {
