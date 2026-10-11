@@ -776,26 +776,6 @@ export function BuildFlowExplorer({
                 sells={[...sellOf].map(([key, column]) => `${key}:${column}`)}
               />
             )}
-            {/* Whole builds to start from or complete the started one with; once one has nothing to add it goes. */}
-            {suggestions.map((suggestion) => (
-              <Button
-                key={suggestion.label}
-                variant="subtle"
-                size="sm"
-                aria-label={`${suggestion.label}: ${suggestion.path.map((c) => nameOf.get(c.itemId) ?? "Item").join(", ")}`}
-                onClick={() =>
-                  changePath((prev) => [
-                    ...prev,
-                    ...suggestion.path.filter((c) => !prev.includes(c.key)).map((c) => c.key),
-                  ])
-                }
-              >
-                {suggestion.label}
-                {suggestion.path.map((choice) => (
-                  <ItemImage key={choice.key} itemId={choice.itemId} className="size-5" />
-                ))}
-              </Button>
-            ))}
             {path.length > 0 && (
               <>
                 <CopyButton variant="ghost" size="xs" icon={Link} text={() => window.location.href}>
@@ -817,6 +797,29 @@ export function BuildFlowExplorer({
         </PanelHeader>
         <PanelBody className="@container">
           <Stack gap={3}>
+            {/* Whole builds to start from or complete the started one with; once one has nothing to add it goes, and the
+                row keeps its height (two lines where the two wrap) so the board does not jump. */}
+            <Inline gap={2} className="min-h-18 @md:min-h-8">
+              {suggestions.map((suggestion) => (
+                <Button
+                  key={suggestion.label}
+                  variant="subtle"
+                  size="sm"
+                  aria-label={`${suggestion.label}: ${suggestion.path.map((c) => nameOf.get(c.itemId) ?? "Item").join(", ")}`}
+                  onClick={() =>
+                    changePath((prev) => [
+                      ...prev,
+                      ...suggestion.path.filter((c) => !prev.includes(c.key)).map((c) => c.key),
+                    ])
+                  }
+                >
+                  {suggestion.label}
+                  {suggestion.path.map((choice) => (
+                    <ItemImage key={choice.key} itemId={choice.itemId} className="size-5" />
+                  ))}
+                </Button>
+              ))}
+            </Inline>
             {/* While another build loads, its numbers are not known yet: the old ones would read as the new build's. */}
             <StatGroup
               variant="plain"
