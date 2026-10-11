@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { EllipsisVertical, Hourglass, Link, ListPlus, Plus, Route, TriangleAlert } from "lucide-react";
 import {
   parseAsArrayOf,
@@ -34,6 +34,7 @@ import {
   ItemSlotTabs,
 } from "~/components/domain/selectors/ItemGrid";
 import { useItemPicker } from "~/components/domain/selectors/useItemPicker";
+import { BuildCompleter } from "~/components/features/items/BuildCompleter";
 import {
   BuildEconomy,
   compactSouls,
@@ -65,6 +66,7 @@ import { Stat, StatGroup } from "~/components/ui/stat";
 import type { Dayjs } from "~/dayjs";
 import { useHeroById } from "~/hooks/useAssetById";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
+import { type BuildFocus, type BuildGoal, completeBuild } from "~/lib/build-completer";
 import type { GameMode, MatchMode } from "~/lib/game-mode";
 import { DEFAULT_RANK_RANGE, rankRangeLabel } from "~/lib/rank-utils";
 import { TONE_TEXT, toneOf, type Tone } from "~/lib/tone";
@@ -110,6 +112,11 @@ const CATEGORIES = [
 // (minutes, `build_flex`); these are where they start.
 const BASE_SLOTS = 9;
 const DEFAULT_FLEX_MINUTES = [10, 20, 30];
+// An auto-completed build adds at most this many items, each bought by at least this many of the build's players.
+const COMPLETE_MAX_ITEMS = 12;
+const COMPLETE_MIN_GAMES = 200;
+// The most items an auto-completed build holds by each stage's end (then capped by the open slots).
+const COMPLETE_HELD_BY_STAGE = [5, 9, 11];
 // Under this many games a build's win rate is marked as resting on few games.
 const FEW_GAMES = 100;
 // Selling refunds half an item's price.
@@ -480,6 +487,8 @@ export function BuildFlowExplorer({
     [storedFlex],
   );
   const [pointed, setPointed] = useState<string | null>(null);
+  const [completing, setCompleting] = useState(false);
+  const queryClient = useQueryClient();
   // The picked item being dragged to another stage, and the stage it is over.
   const [dragged, setDragged] = useState<string | null>(null);
   const [dropColumn, setDropColumn] = useState<number | null>(null);
@@ -834,6 +843,46 @@ export function BuildFlowExplorer({
     }).length;
     return { used, open: BASE_SLOTS + flexMinutes.filter((m) => m * 60 <= end).length };
   });
+  // Completes the build one item at a time on the build's own data: each step reads the players of the build so far,
+  // so an item is only added if enough of them bought it too, and the finished build still has games behind it.
+  const complete = async (focus: BuildFocus, goal: BuildGoal) => {
+    if (!budgets) return;
+    setCompleting(true);
+    try {
+      const current = [...path];
+      for (let step = 0; step < COMPLETE_MAX_ITEMS; step++) {
+        // oxlint-disable-next-line no-await-in-loop -- each step reads the answer for the build the last step made
+        const answer = await queryClient.query(flowQuery(current));
+        const stepView = buildView(answer, {
+          path: new Set(current),
+          columnCount,
+          perColumn,
+          sortBy,
+          isStreetBrawl,
+        });
+        const [next] = completeBuild({
+          stages: view.stages.map((stage, index) => ({
+            column: stage.column,
+            available: budgets[index].available,
+            // Paced like a real build, so cheap early items do not take the slots late ones need.
+            slots: Math.min(slotUse[index].open, COMPLETE_HELD_BY_STAGE[index] ?? slotUse[index].open),
+          })),
+          choices: [...stepView.byKey.values()].filter((c) => c.matches >= COMPLETE_MIN_GAMES),
+          path: current,
+          priceOf: (id) => costOf.get(id) ?? 0,
+          categoryOf: (id) => slotOf.get(id),
+          componentsOf: (id) => componentsOf.get(id) ?? [],
+          focus,
+          goal,
+        });
+        if (!next) break;
+        current.push(next);
+      }
+      if (current.length > path.length) changePath(current);
+    } finally {
+      setCompleting(false);
+    }
+  };
   // A build nobody played in these filters: its numbers are not zeros but missing.
   const noGames = summary.matches === 0;
   // A Street Brawl answer can have fewer rounds than the stage that was shown.
@@ -893,6 +942,11 @@ export function BuildFlowExplorer({
             {/* Whole builds to start from or complete the started one with; once one has nothing to add it goes, and the
                 row keeps its height (two lines where the two wrap) so the board does not jump. */}
             <Inline gap={2} className="min-h-18 @md:min-h-8">
+              <BuildCompleter
+                disabled={!budgets}
+                busy={completing}
+                onComplete={(focus, goal) => void complete(focus, goal)}
+              />
               {suggestions.map((suggestion) => (
                 <Button
                   key={suggestion.label}
