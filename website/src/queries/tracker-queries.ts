@@ -8,6 +8,7 @@ import type {
 import { CACHE_DURATIONS } from "~/constants/cache";
 import { api } from "~/lib/api";
 import { graphql, isGraphqlRateLimited } from "~/lib/graphql";
+import { getIngestStatus } from "~/lib/ingest-status-api";
 import { ensureCached } from "~/lib/prefetch-safe";
 import { combatStats, type CombatStats } from "~/lib/tracker/combat-stats";
 import { DEMO_ACCOUNT_ID, isDemoAccount, isDemoMatch } from "~/lib/tracker/demo";
@@ -36,6 +37,15 @@ export { trackerMatchHistoryQueryOptions };
 const loadDemoData = () => import("~/lib/tracker/demo-data");
 
 const demoHistory = (client: QueryClient) => ensureCached(client, trackerMatchHistoryQueryOptions(DEMO_ACCOUNT_ID));
+
+/** Whether the ingest tool recently sent this account's matches, which opens its tracker without Patreon. */
+export function trackerIngestStatusQueryOptions(accountId: number) {
+  return queryOptions({
+    queryKey: queryKeys.players.ingestStatus(accountId),
+    queryFn: () => getIngestStatus(accountId),
+    staleTime: CACHE_DURATIONS.FIVE_MINUTES,
+  });
+}
 
 export function trackerRankQueryOptions(accountId: number) {
   return queryOptions({

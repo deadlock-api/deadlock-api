@@ -117,6 +117,7 @@ export const queryKeys = {
     enemyStats: (params: PlayersApiEnemyStatsRequest) => ["api-player-enemy-stats", params] as const,
     matchMetadata: (matchId: number) => ["api-tracker-match-metadata", matchId] as const,
     abilities: () => ["api-tracker-abilities"] as const,
+    ingestStatus: (accountId: number) => ["api-player-ingest-status", accountId] as const,
   },
   patron: {
     all: ["patron"] as const,

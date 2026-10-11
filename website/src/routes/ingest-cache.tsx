@@ -1,9 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { FolderUp } from "lucide-react";
 
+import { InstallButton } from "~/components/domain/ingest/InstallButton";
 import { CacheUpload } from "~/components/features/ingest-cache/CacheUpload";
 import { INGEST_FAQ, ingestFaqJsonLd } from "~/components/features/ingest-cache/faq";
-import { InstallButton } from "~/components/features/ingest-cache/InstallButton";
 import { InstallGuide } from "~/components/features/ingest-cache/InstallGuide";
 import { WhyInstall } from "~/components/features/ingest-cache/WhyInstall";
 import { Disclosure } from "~/components/patterns/content/Disclosure";
@@ -81,6 +81,10 @@ function IngestCache() {
               <ComparisonCell />
             </ComparisonRow>
             <ComparisonRow label="Finds matches still missing for everyone">
+              <ComparisonCell included />
+              <ComparisonCell />
+            </ComparisonRow>
+            <ComparisonRow label="Unlocks your player tracker">
               <ComparisonCell included />
               <ComparisonCell />
             </ComparisonRow>
