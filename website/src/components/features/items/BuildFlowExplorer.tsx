@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
-import { ListPlus, Route } from "lucide-react";
+import { ChevronRight, ListPlus, Route } from "lucide-react";
 import { parseAsArrayOf, parseAsNumberLiteral, parseAsString, parseAsStringLiteral, useQueryState } from "nuqs";
-import { memo, useMemo, useState } from "react";
+import { Fragment, memo, useMemo, useState } from "react";
 
 import { ItemImage } from "~/components/domain/assets/ItemImage";
 import { ItemName } from "~/components/domain/assets/ItemName";
@@ -34,7 +34,7 @@ import { Grid } from "~/components/ui/grid";
 import { Popover, PopoverContent, PopoverTrigger } from "~/components/ui/popover";
 import { Segmented, SegmentedItem } from "~/components/ui/segmented";
 import { Separator } from "~/components/ui/separator";
-import { Stack } from "~/components/ui/stack";
+import { Inline, Stack } from "~/components/ui/stack";
 import { Stat, StatGroup } from "~/components/ui/stat";
 import { Tooltip, TooltipHeader, TooltipProvider, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
 import type { Dayjs } from "~/dayjs";
@@ -332,6 +332,15 @@ export function BuildFlowExplorer({
     return { column: source.column, links };
   }, [pointed, view]);
 
+  // Whole builds to start from, while none is picked.
+  const suggestions = useMemo(() => {
+    if (!view || path.length > 0) return [];
+    return [
+      { label: "Most common", path: suggestPath(view, "common") },
+      { label: "Best win rate", path: suggestPath(view, "winning") },
+    ].filter((s) => s.path.length > 1);
+  }, [view, path.length]);
+
   // Dim the stages only while another build's answer loads; a refresh of the shown one keeps them as they are.
   const switching = isFetching && isPlaceholderData;
 
@@ -360,27 +369,50 @@ export function BuildFlowExplorer({
         </PanelHeader>
         <PanelBody className="@container">
           <div className="grid items-center gap-4 @4xl:grid-cols-[minmax(0,1fr)_auto]">
-            <BuildPath aria-label="Build path">
-              {view.stages.map((stage) => (
-                <BuildPathStep key={stage.column} label={stage.title}>
-                  {path
-                    .filter((key) => parseKey(key).column === stage.column)
-                    .map((key) => {
-                      const { itemId } = parseKey(key);
-                      return (
-                        <Tooltip key={key} content={<ItemName itemId={itemId} />}>
-                          <BuildPathItem
-                            media={<ItemImage itemId={itemId} className="size-8" />}
-                            aria-label={`Remove ${nameOf.get(itemId) ?? "item"} from ${stage.title}`}
-                            onClick={() => toggle(key)}
-                          />
-                        </Tooltip>
-                      );
-                    })}
-                </BuildPathStep>
-              ))}
-            </BuildPath>
-            <StatGroup variant="plain" size="xs" className="grid-cols-2 gap-x-6 @md:grid-cols-4">
+            <Stack gap={2}>
+              <BuildPath aria-label="Build path">
+                {view.stages.map((stage) => (
+                  <BuildPathStep key={stage.column} label={stage.title}>
+                    {path
+                      .filter((key) => parseKey(key).column === stage.column)
+                      .map((key) => {
+                        const { itemId } = parseKey(key);
+                        return (
+                          <Tooltip key={key} content={<ItemName itemId={itemId} />}>
+                            <BuildPathItem
+                              media={<ItemImage itemId={itemId} className="size-8" />}
+                              aria-label={`Remove ${nameOf.get(itemId) ?? "item"} from ${stage.title}`}
+                              onClick={() => toggle(key)}
+                            />
+                          </Tooltip>
+                        );
+                      })}
+                  </BuildPathStep>
+                ))}
+              </BuildPath>
+              {suggestions.length > 0 && (
+                <Inline gap={2}>
+                  {suggestions.map((suggestion) => (
+                    <Button
+                      key={suggestion.label}
+                      variant="subtle"
+                      size="sm"
+                      aria-label={`${suggestion.label}: ${suggestion.path.map((c) => nameOf.get(c.itemId) ?? "Item").join(", ")}`}
+                      onClick={() => void setPath(suggestion.path.map((c) => c.key))}
+                    >
+                      {suggestion.label}
+                      {suggestion.path.map((choice, index) => (
+                        <Fragment key={choice.key}>
+                          {index > 0 && <ChevronRight className="size-3" />}
+                          <ItemImage itemId={choice.itemId} className="size-5" />
+                        </Fragment>
+                      ))}
+                    </Button>
+                  ))}
+                </Inline>
+              )}
+            </Stack>
+            <StatGroup variant="plain" size="xs" className="grid-cols-2 gap-x-6 @md:grid-cols-4 @4xl:grid-cols-2">
               <Stat
                 label="Win rate"
                 value={percent(winRate)}
@@ -539,7 +571,9 @@ interface View {
   stages: Stage[];
   byKey: Map<string, Choice>;
   /** Per choice, the choices in the neighbouring stages bought by the same players, both ways. */
-  links: Map<string, Map<string, { matches: number }>>;
+  links: Map<string, Map<string, { matches: number; wins: number }>>;
+  /** Each choice's win rate pulled toward the build's own, for ranking: see SHRINK_SHARE. */
+  shrink: (wins: number, matches: number) => number;
 }
 
 function buildView(
@@ -631,18 +665,51 @@ function buildView(
     });
   }
 
-  const links = new Map<string, Map<string, { matches: number }>>();
-  const addLink = (from: string, to: string, matches: number) => {
+  const links = new Map<string, Map<string, { matches: number; wins: number }>>();
+  const addLink = (from: string, to: string, link: { matches: number; wins: number }) => {
     const map = links.get(from);
-    if (map) map.set(to, { matches });
-    else links.set(from, new Map([[to, { matches }]]));
+    if (map) map.set(to, link);
+    else links.set(from, new Map([[to, link]]));
   };
   for (const edge of data.edges) {
     const from = `${edge.from_column}:${edge.from_item_id}`;
     const to = `${edge.from_column + 1}:${edge.to_item_id}`;
-    addLink(from, to, edge.matches);
-    addLink(to, from, edge.matches);
+    const link = { matches: edge.matches, wins: edge.wins };
+    addLink(from, to, link);
+    addLink(to, from, link);
   }
 
-  return { stages, byKey, links };
+  return {
+    stages,
+    byKey,
+    links,
+    shrink: (wins, matches) => (wins + reference * shrink) / (matches + shrink),
+  };
+}
+
+/**
+ * A whole build, one item per stage, followed through the links: the most bought first item and then, stage by stage,
+ * what its buyers bought most next (`common`), or the same by win rate pulled toward the build's (`winning`). Ends early
+ * where nobody went on.
+ */
+function suggestPath(view: View, by: "common" | "winning"): Choice[] {
+  const first = view.stages[0]?.choices ?? [];
+  const rank = (c: Choice) => (by === "common" ? c.matches : c.score);
+  let current = [...first].sort((a, b) => rank(b) - rank(a))[0];
+  if (!current) return [];
+  const path = [current];
+  for (;;) {
+    const from = current;
+    let best: { choice: Choice; rank: number } | null = null;
+    for (const [key, link] of view.links.get(from.key) ?? []) {
+      const choice = view.byKey.get(key);
+      if (!choice || choice.column !== from.column + 1) continue;
+      const r = by === "common" ? link.matches : view.shrink(link.wins, link.matches);
+      if (!best || r > best.rank) best = { choice, rank: r };
+    }
+    if (!best) break;
+    current = best.choice;
+    path.push(current);
+  }
+  return path;
 }
