@@ -878,6 +878,9 @@ export function BuildFlowExplorer({
                           available={budgets[index]?.available ?? 0}
                           format={compactSouls}
                         />
+                      ) : !isStreetBrawl ? (
+                        // The budget's height while the soul curve loads, so the cards do not grow when it lands.
+                        <Skeleton className="h-6.5 w-full" />
                       ) : undefined
                     }
                   >
