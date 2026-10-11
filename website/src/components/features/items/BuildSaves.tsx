@@ -75,7 +75,7 @@ export function SaveBuildButton({
   );
 }
 
-/** "Saved": the builds kept in this browser, to open one again or delete it. */
+/** "My builds": the builds kept in this browser, to open one again or delete it. */
 export function SavedBuildsMenu({ onOpen }: { onOpen: (build: SavedBuild) => void }) {
   const { builds, remove } = useSavedBuilds();
   const [open, setOpen] = useState(false);
@@ -84,7 +84,7 @@ export function SavedBuildsMenu({ onOpen }: { onOpen: (build: SavedBuild) => voi
       <PopoverTrigger asChild>
         <Button variant="ghost" size="xs">
           <FolderOpen />
-          Saved
+          My builds
         </Button>
       </PopoverTrigger>
       <PopoverContent

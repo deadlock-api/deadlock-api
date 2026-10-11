@@ -108,7 +108,7 @@ export function AbilityOrderGrid({
                   className={cn(
                     cell,
                     FOCUS_RING,
-                    "cursor-pointer transition-colors duration-fast ease-standard hover:border-muted-foreground disabled:cursor-not-allowed disabled:opacity-40",
+                    "cursor-pointer transition-colors duration-fast ease-standard hover:border-muted-foreground disabled:cursor-not-allowed disabled:border-dashed disabled:bg-transparent disabled:hover:border-hairline",
                   )}
                 >
                   {taken ? index + 1 : null}

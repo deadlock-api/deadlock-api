@@ -71,7 +71,8 @@ export function BuildSkillOrder({
   }, [prefixed]);
   const steps = order.map((abilityId, i) => ({
     abilityId,
-    pickRate: custom ? undefined : common[i]?.pickRate,
+    // The common order's share where this step still follows it: the row stays, so an edit does not shrink the panel.
+    pickRate: abilityId === common[i]?.abilityId ? common[i]?.pickRate : undefined,
   }));
 
   return (

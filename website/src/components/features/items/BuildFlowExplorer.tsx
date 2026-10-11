@@ -426,7 +426,7 @@ function ItemPlan({
               leading={<ItemImage itemId={swap.itemId} alt="" className="size-6" />}
               trailing={
                 <span className="text-xs tabular-nums">
-                  {percent(swap.winRate)} · {count(swap.games)}
+                  {percent(swap.winRate)} WR · {count(swap.games)} games
                 </span>
               }
               onClick={() => choose(() => onSwap(swap.itemId))}
@@ -994,15 +994,21 @@ export function BuildFlowExplorer({
                   size="xs"
                   onClick={() => {
                     // A build is a few dozen presses of work: clearing it can be taken back.
-                    const before = { path, sells: storedSells };
+                    const before = { path, sells: storedSells, skills: storedSkills };
                     changePath(null);
-                    startTransition(() => void setSells(null, AT_ONCE));
+                    startTransition(() => {
+                      void setSells(null, AT_ONCE);
+                      void setSkills(null, AT_ONCE);
+                    });
                     toast("Cleared the build", {
                       action: {
                         label: "Undo",
                         onClick: () => {
                           changePath(before.path);
-                          startTransition(() => void setSells(before.sells.length > 0 ? before.sells : null, AT_ONCE));
+                          startTransition(() => {
+                            void setSells(before.sells.length > 0 ? before.sells : null, AT_ONCE);
+                            void setSkills(before.skills, AT_ONCE);
+                          });
                         },
                       },
                     });
@@ -1275,7 +1281,8 @@ export function BuildFlowExplorer({
                             state="suggested"
                             media={<ItemImage itemId={next.itemId} className="size-8" />}
                             name={<ItemName itemId={next.itemId} />}
-                            meta={`${percent(next.winRate)} WR · ${percent(next.pickRate, 0)} buy`}
+                            // The games beside the rate: a suggestion's rate from a few hundred games swings as the build changes.
+                            meta={`${percent(next.winRate)} WR · ${count(next.matches)} games`}
                             actions={
                               <Button
                                 variant="ghost"
