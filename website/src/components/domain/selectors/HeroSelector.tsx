@@ -98,7 +98,7 @@ export function HeroSelector(props: HeroSelectorProps) {
           <HeroImage heroId={firstHero} className="size-4 shrink-0 object-contain" />
         ) : undefined
       }
-      contentClassName={cn("w-80 max-w-(--radix-popover-content-available-width) p-0", contentClassName)}
+      contentClassName={cn("w-88 max-w-(--radix-popover-content-available-width) p-0", contentClassName)}
       open={open}
       onOpenChange={(next) => {
         setOpen(next);
