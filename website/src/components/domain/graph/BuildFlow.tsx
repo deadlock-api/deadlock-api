@@ -106,7 +106,9 @@ export function BuildChoiceHeader({
 const VALUE_WIDTH = "w-12 @xs:w-14 @sm:w-20 @md:w-28";
 // On one line, the figures beside the name keep one width, linked or not: the name's room does not change on hover.
 const META_WIDTH = "@md:w-36 @md:shrink-0";
-const SHARE_WIDTH = "w-8 min-w-3 @xs:w-12 @sm:w-16 @md:w-12";
+// Under 16rem a stage has no room for the bar beside the figures (an over-budget price ran into the win rate): the
+// figures stay, the bar goes.
+const SHARE_WIDTH = "hidden w-8 min-w-3 @3xs:block @xs:w-12 @sm:w-16 @md:w-12";
 
 const buildChoiceVariants = cva(
   [
