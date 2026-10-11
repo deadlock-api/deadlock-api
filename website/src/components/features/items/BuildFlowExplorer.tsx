@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { EllipsisVertical, Hourglass, Link, ListPlus, Route } from "lucide-react";
+import { EllipsisVertical, Hourglass, Link, ListPlus, Plus, Route } from "lucide-react";
 import {
   parseAsArrayOf,
   parseAsNumberLiteral,
@@ -222,15 +222,30 @@ function StagePickerBody({
  * "All items" under a stage's list: every item bought there, to add one that is not in the top rows. No count: the
  * server's trimmed answer holds only the shown rows, so it would print 8 and then jump to the real number.
  */
-const StagePicker = memo(function StagePicker({ stage, onPick }: { stage: Stage; onPick: (key: string) => void }) {
+const StagePicker = memo(function StagePicker({
+  stage,
+  onPick,
+  display = "full",
+}: {
+  stage: Stage;
+  onPick: (key: string) => void;
+  /** `full`: "All items" across the list's width. `icon`: a plus, in a stage card of the build. */
+  display?: "full" | "icon";
+}) {
   const [open, setOpen] = useState(false);
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button variant="ghost" size="xs" className="w-full" aria-label={`All items, ${stage.title}`}>
-          <ListPlus />
-          All items
-        </Button>
+        {display === "icon" ? (
+          <Button variant="ghost" size="icon-xs" aria-label={`Add item, ${stage.title}`}>
+            <Plus />
+          </Button>
+        ) : (
+          <Button variant="ghost" size="xs" className="w-full" aria-label={`All items, ${stage.title}`}>
+            <ListPlus />
+            All items
+          </Button>
+        )}
       </PopoverTrigger>
       <PopoverContent
         align="center"
@@ -676,6 +691,11 @@ export function BuildFlowExplorer({
                     key={stage.column}
                     label={stage.title}
                     meta={stageCost.get(stage.column) ? count(stageCost.get(stage.column) ?? 0) : undefined}
+                    action={
+                      stage.candidates.length > 0 ? (
+                        <StagePicker stage={stage} onPick={toggle} display="icon" />
+                      ) : undefined
+                    }
                     footer={
                       budgets ? (
                         <BuildBudget

@@ -217,18 +217,25 @@ export function BuildBoard({ className, ...props }: React.ComponentProps<"ol">) 
 }
 
 /**
- * One stage of a BuildBoard: its name and a figure at the end of that line (the stage's spending), the
- * `BuildSlotItem`s of the stage (bought, or sold there), "Empty" without any, and a `footer` (its BuildBudget).
+ * One stage of a BuildBoard: its name, a figure at the end of that line (the stage's spending) and an `action` after it
+ * (an add button), the `BuildSlotItem`s of the stage (bought, or sold there), "Empty" without any, and a `footer` (its
+ * BuildBudget).
  */
 export function BuildSlot({
   label,
   meta,
+  action,
   footer,
   className,
   children,
   ...props
-}: React.ComponentProps<"li"> & { label: React.ReactNode; meta?: React.ReactNode; footer?: React.ReactNode }) {
-  const empty = !children || (Array.isArray(children) && children.length === 0);
+}: React.ComponentProps<"li"> & {
+  label: React.ReactNode;
+  meta?: React.ReactNode;
+  action?: React.ReactNode;
+  footer?: React.ReactNode;
+}) {
+  const empty = Children.toArray(children).length === 0;
   return (
     <li
       data-slot="build-slot"
@@ -239,9 +246,10 @@ export function BuildSlot({
       )}
       {...props}
     >
-      <span className="flex items-baseline justify-between gap-2 type-caption text-muted-foreground">
-        <span className="truncate font-medium text-foreground">{label}</span>
+      <span className="flex min-h-6 items-center gap-2 type-caption text-muted-foreground">
+        <span className="flex-1 truncate font-medium text-foreground">{label}</span>
         {meta && <span className="shrink-0 tabular-nums">{meta}</span>}
+        {action}
       </span>
       <ul className="flex min-h-10 flex-1 flex-col gap-1">
         {empty ? <li className="flex flex-1 items-center type-caption text-muted-foreground">Empty</li> : children}
