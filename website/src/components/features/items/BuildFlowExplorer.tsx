@@ -1059,9 +1059,8 @@ function buildView(
   const stages: Stage[] = [];
   for (let column = 0; column <= lastColumn; column++) {
     const all = (byColumn.get(column) ?? []).slice().sort(compare);
-    const chosen = all.filter((c) => c.selected);
-    // The picks count toward the rows shown: "8" shows eight.
-    const choices = [...chosen, ...all.filter((c) => !c.selected).slice(0, Math.max(0, perColumn - chosen.length))];
+    // The lists offer what to add: the picks are on the build's board, not repeated here at a trivial 100% bought.
+    const choices = all.filter((c) => !c.selected).slice(0, perColumn);
     const top = Math.max(0, ...choices.map((c) => c.pickRate));
     for (const c of choices) c.pickShare = top > 0 ? c.pickRate / top : 0;
     stages.push({
