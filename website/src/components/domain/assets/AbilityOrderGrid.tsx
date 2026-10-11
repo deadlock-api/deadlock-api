@@ -81,9 +81,12 @@ export function AbilityOrderGrid({
   onValueChange,
   abilityNames,
   maxPerAbility = 4,
+  size = "default",
   className,
   ...props
 }: Omit<React.ComponentProps<"div">, "children"> & {
+  /** `sm`: cells up to 32px rather than 40px, for a grid in a dense panel. */
+  size?: "sm" | "default";
   /** Makes the grid an editor of the order: called with the order after a cell press, ability ids by upgrade. */
   /** The abilities' names in slot order, for the editor's cell labels ("Upgrade 3: Fixation"). */
   abilityNames?: readonly string[];
@@ -101,6 +104,7 @@ export function AbilityOrderGrid({
   return (
     <div
       data-slot="ability-order-grid"
+      data-size={size}
       className={cn("@container min-w-0", editable && "overflow-x-auto pb-1", className)}
       {...props}
     >
@@ -119,7 +123,7 @@ export function AbilityOrderGrid({
         className="grid items-center justify-start gap-1 @md:gap-1.5"
         // An editor's cells keep a 24px target (Law 18) and the grid scrolls sideways where they do not fit.
         style={{
-          gridTemplateColumns: `max-content repeat(${steps.length}, minmax(${editable ? "1.5rem" : "0"}, 2.5rem))`,
+          gridTemplateColumns: `max-content repeat(${steps.length}, minmax(${editable ? "1.5rem" : "0"}, ${size === "sm" ? "2rem" : "2.5rem"}))`,
         }}
       >
         {abilityIds.map((abilityId, slot) => (

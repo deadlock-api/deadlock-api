@@ -122,7 +122,13 @@ export function BuildSkillOrder({
                 </>
               ) : null}
             </div>
-            <AbilityOrderGrid abilityIds={slotAbilities} abilityNames={names} steps={steps} onValueChange={onChange} />
+            <AbilityOrderGrid
+              abilityIds={slotAbilities}
+              abilityNames={names}
+              steps={steps}
+              onValueChange={onChange}
+              size="sm"
+            />
           </>
         )}
       </PanelBody>

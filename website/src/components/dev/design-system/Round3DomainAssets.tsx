@@ -216,6 +216,13 @@ export function Round3DomainAssets() {
         <Variants label="editor (onValueChange): press a cell to give that upgrade to its row's ability; an ability at four points moves its last point to the pressed cell">
           <AbilityOrderEditorExample />
         </Variants>
+        <Variants label='size="sm": cells up to 32px, for a dense panel'>
+          <AbilityOrderGrid
+            size="sm"
+            abilityIds={SAMPLE_ABILITY_IDS}
+            steps={[0, 1, 0, 2, 0, 3, 1, 1, 2, 2, 3, 0].map((slot) => ({ abilityId: SAMPLE_ABILITY_IDS[slot] }))}
+          />
+        </Variants>
       </Specimen>
 
       <Specimen
