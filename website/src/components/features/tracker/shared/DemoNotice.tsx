@@ -1,13 +1,34 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { FlaskConical } from "lucide-react";
+import { Download, FlaskConical, Heart } from "lucide-react";
 
 import { InstallButton } from "~/components/domain/ingest/InstallButton";
 import { INGEST_INSTALL_PATH, INGEST_TRACKER_WINDOW_DAYS } from "~/components/domain/ingest/links";
 import { PlayerSearch } from "~/components/domain/player/PlayerSearch";
-import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
+import { IconTile } from "~/components/ui/icon-tile";
+import { Inline, Stack } from "~/components/ui/stack";
+import { Text } from "~/components/ui/text";
 import { usePatronAuth } from "~/hooks/usePatronAuth";
+
+function Way({ icon, title, children }: { icon: React.ReactNode; title: string; children: React.ReactNode }) {
+  return (
+    <Inline asChild align="start" gap={3} wrap="nowrap">
+      <li>
+        <IconTile tone="primary" size="sm">
+          {icon}
+        </IconTile>
+        <Stack gap={0.5}>
+          <Text variant="label">{title}</Text>
+          <Text as="p" variant="caption" tone="muted">
+            {children}
+          </Text>
+        </Stack>
+      </li>
+    </Inline>
+  );
+}
 
 /** Says, before anything else on the page, that the profile below is generated and how to get a real one. */
 export function DemoNotice() {
@@ -15,45 +36,62 @@ export function DemoNotice() {
   const navigate = useNavigate();
   return (
     // A standing label, not an event: `alert` would interrupt a screen reader on every visit.
-    <Alert variant="primary" role="note" aria-label="Demo profile">
-      <FlaskConical aria-hidden="true" />
-      <AlertTitle className="flex items-center gap-2">
-        <Badge size="sm">Demo</Badge>
-        This is a demo profile
-      </AlertTitle>
-      <AlertDescription className="gap-2">
-        <p>
-          The player, their teammates and every match on this page are made-up sample data, so you can try the tracker
-          first. Your own profile shows your real match history, rank progression and teammates.
-        </p>
-        <p>
-          Run the free ingest tool and your own tracker unlocks automatically: every account that sent its matches in
-          the last {INGEST_TRACKER_WINDOW_DAYS} days is open, no sign-in needed. Patrons get it for their prioritized
-          accounts too.
-        </p>
-        <div className="flex flex-wrap gap-2">
-          <InstallButton size="sm" installHref={INGEST_INSTALL_PATH} />
-          <PlayerSearch
-            label="Open your profile…"
-            variant="outline"
-            onValueChange={(player) =>
-              void navigate({ to: "/tracker/players/$accountId", params: { accountId: String(player.accountId) } })
-            }
-          />
-          {isAuthenticated ? (
-            <Button size="sm" variant="outline" asChild>
-              <Link to="/tracker">Your accounts</Link>
-            </Button>
-          ) : (
-            <Button size="sm" variant="outline" onClick={login}>
-              Sign in with Patreon
-            </Button>
+    <Card tone="primary" role="note" aria-label="Demo profile">
+      <CardHeader>
+        <CardTitle as="h2" className="flex items-center gap-2">
+          <FlaskConical aria-hidden="true" />
+          This is a demo profile
+          <Badge size="sm">Demo</Badge>
+        </CardTitle>
+        <CardDescription>
+          The player, their teammates and every match below are made-up sample data, so you can try the tracker before
+          you have your own. Your own tracker shows your real match history with every build and timeline, how your rank
+          moved, your stats on each hero, and the teammates and opponents you play with and against the most.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <Stack gap={4}>
+          <Stack gap={3} asChild>
+            <ul aria-label="Ways to get your own tracker">
+              <Way icon={<Download />} title="Run the ingest tool, free">
+                Every Steam account the tool sent matches for in the last {INGEST_TRACKER_WINDOW_DAYS} days has its
+                tracker unlocked, no sign-in needed. It also gets your matches onto every Deadlock tracker site.
+              </Way>
+              <Way icon={<Heart />} title="Or support us on Patreon">
+                From $1.50 a month: the tracker for the Steam accounts you link, and their matches fetched first.
+              </Way>
+            </ul>
+          </Stack>
+          <Inline gap={2}>
+            <InstallButton size="default" installHref={INGEST_INSTALL_PATH} />
+            {isAuthenticated ? (
+              <Button variant="secondary" asChild>
+                <Link to="/tracker">Your accounts</Link>
+              </Button>
+            ) : (
+              <Button variant="secondary" asChild>
+                <Link to="/patron">Get Patreon</Link>
+              </Button>
+            )}
+            <PlayerSearch
+              label="Open your profile…"
+              variant="outline"
+              size="default"
+              onValueChange={(player) =>
+                void navigate({ to: "/tracker/players/$accountId", params: { accountId: String(player.accountId) } })
+              }
+            />
+          </Inline>
+          {!isAuthenticated && (
+            <Text as="p" variant="caption" tone="muted">
+              Already a patron?{" "}
+              <Button variant="link" size="inline" onClick={login}>
+                Sign in with Patreon
+              </Button>
+            </Text>
           )}
-          <Button size="sm" variant="ghost" asChild>
-            <Link to="/ingest-cache">How it works</Link>
-          </Button>
-        </div>
-      </AlertDescription>
-    </Alert>
+        </Stack>
+      </CardContent>
+    </Card>
   );
 }

@@ -1,6 +1,6 @@
 import { parseSteamIdInput } from "~/lib/steam";
 
-/** A question after one player or one match, which the site has no page for. */
+/** A question after one player (the tracker has their page) or one match (no page holds one). */
 export type Lookup = "player" | "match";
 
 /** Words around an ID that still make the question a lookup ("steam id 280308116", "analyze match 107857788"). */
@@ -9,7 +9,7 @@ const LOOKUP_WORDS =
 
 /**
  * A Steam ID or profile link, a match ID, or what can only be a player's name: answered without the model, since no
- * page holds one player or one match. A bare number needs five digits, so "7" or "2024" are not taken for an ID; a
+ * analytics page holds one player or one match. A bare number needs five digits, so "7" or "2024" are not taken for an ID; a
  * name is one word of five or more characters with a digit or an underscore ("CnuHHep_2340"), so "t3" or "1v1" are not.
  * Run it after the hero and item names had their chance.
  */
@@ -20,4 +20,16 @@ export function lookupOf(question: string): Lookup | undefined {
   if (/^\d{1,4}$/.test(rest)) return undefined;
   if ("steamId3" in parseSteamIdInput(rest)) return "player";
   return /^(?=\S*[a-z])(?=\S*[\d_])\S{5,}$/i.test(question.trim()) ? "player" : undefined;
+}
+
+/** The player a lookup names: an account read off a Steam ID or profile link, or a name for the Steam search. */
+export type PlayerLookup = { steamId3: number } | { name: string };
+
+/** The player a question looks up, or undefined when it is not a player lookup (see `lookupOf`). */
+export function playerLookupOf(question: string): PlayerLookup | undefined {
+  if (lookupOf(question) !== "player") return undefined;
+  const vanity = /steamcommunity\.com\/id\/([^/?#\s]+)/i.exec(question);
+  if (vanity) return { name: vanity[1] };
+  const parsed = parseSteamIdInput(question.replace(LOOKUP_WORDS, " ").trim());
+  return "steamId3" in parsed ? { steamId3: parsed.steamId3 } : { name: question.trim() };
 }

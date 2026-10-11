@@ -3,16 +3,18 @@ import type { QueryClient } from "@tanstack/react-query";
 import { buildSearchCatalog, type SearchCatalog } from "~/lib/ai-search/catalog";
 import { intentFromDecision, questionEntities } from "~/lib/ai-search/decide";
 import { directIntent } from "~/lib/ai-search/intent";
-import { lookupOf } from "~/lib/ai-search/lookup";
+import { lookupOf, type PlayerLookup, playerLookupOf } from "~/lib/ai-search/lookup";
 import { resolveIntent } from "~/lib/ai-search/resolve";
 import { decideSearch } from "~/lib/ai-search/search-fns";
 import { PATCHES } from "~/lib/constants";
+import { isClientError } from "~/lib/http";
 import type { SeasonRef } from "~/lib/page-registry";
 import { toPatchEntry } from "~/lib/patches";
 import { ensureCached } from "~/lib/prefetch-safe";
 import { stringifySearch } from "~/lib/search-params";
 import { heroesQueryOptions, itemUpgradesQueryOptions, loadSeasons } from "~/queries/asset-queries";
 import { ranksQueryOptions } from "~/queries/ranks-query";
+import { steamSearchQueryOptions } from "~/queries/steam-queries";
 
 // The search's work, loaded on its first question so the field in every page's sidebar costs no more than a field.
 
@@ -33,13 +35,29 @@ async function loadSearchCatalog(queryClient: QueryClient): Promise<SearchCatalo
 }
 
 /**
- * What a question came to: the page to open, a question no page answers, a question after one player or one match
- * (no page holds either), or a visitor who asked too much. A failed model call throws, like any other failed request.
+ * The account a player lookup names: its Steam ID, else the Steam profile with exactly that name. The search is fuzzy
+ * ("noob123" finds "Inoob132" first), so its top match would open someone else's tracker.
+ */
+async function findPlayer(queryClient: QueryClient, player: PlayerLookup): Promise<number | undefined> {
+  if ("steamId3" in player) return player.steamId3;
+  // The search answers 404 when no profile matches.
+  const profiles = await ensureCached(queryClient, steamSearchQueryOptions(player.name)).catch((error: unknown) => {
+    if (isClientError(error)) return [];
+    throw error;
+  });
+  const name = player.name.toLowerCase();
+  return profiles.find((profile) => profile.personaname.toLowerCase() === name)?.account_id;
+}
+
+/**
+ * What a question came to: the page to open, a question no page answers, a player the Steam search does not know, a
+ * question after one match (no page holds one), or a visitor who asked too much. A failed model call throws, like any
+ * other failed request.
  */
 type Routed =
   | { kind: "opened"; id: string; href: string }
   | { kind: "not_understood" }
-  | { kind: "player_lookup" }
+  | { kind: "player_not_found" }
   | { kind: "match_lookup" }
   | { kind: "rate_limited" };
 
@@ -54,8 +72,14 @@ export async function routeQuestion(
   const direct = intent !== undefined;
   const done = (routed: Routed) => ({ ...routed, direct, durationMs: performance.now() - startedAt });
   if (!intent) {
-    const lookup = lookupOf(question);
-    if (lookup) return done({ kind: lookup === "player" ? "player_lookup" : "match_lookup" });
+    // One player opens their tracker page, which says how to unlock it when it is locked.
+    const player = playerLookupOf(question);
+    if (player) {
+      const accountId = await findPlayer(queryClient, player);
+      if (accountId === undefined) return done({ kind: "player_not_found" });
+      return done({ kind: "opened", id: "player-tracker", href: `/tracker/players/${accountId}` });
+    }
+    if (lookupOf(question) === "match") return done({ kind: "match_lookup" });
     const entities = questionEntities(question, vocabulary);
     const decided = await decideSearch({ data: { question, entities, rankNames: [...vocabulary.rankNames] } });
     if (!decided.ok && decided.reason === "rate_limited") return done({ kind: "rate_limited" });

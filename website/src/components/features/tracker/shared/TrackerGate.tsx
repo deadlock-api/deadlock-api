@@ -2,7 +2,8 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { Lock, ShieldX } from "lucide-react";
 
-import { INGEST_TRACKER_WINDOW_DAYS } from "~/components/domain/ingest/links";
+import { InstallButton } from "~/components/domain/ingest/InstallButton";
+import { INGEST_INSTALL_PATH, INGEST_TRACKER_WINDOW_DAYS } from "~/components/domain/ingest/links";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { Button } from "~/components/ui/button";
@@ -94,18 +95,22 @@ export function TrackerGate({ accountId, children }: { accountId: number; childr
           </p>
         )}
         <div className="flex flex-col gap-2 pt-2 sm:flex-row">
-          <Button asChild>
-            <Link to="/ingest-cache">Run the ingest tool</Link>
+          <InstallButton size="default" installHref={INGEST_INSTALL_PATH} />
+          <Button variant="secondary" asChild>
+            <Link to="/patron">Get Patreon</Link>
           </Button>
-          {!isAuthenticated && (
-            <Button variant="secondary" onClick={login}>
-              Sign in with Patreon
-            </Button>
-          )}
           <Button variant="outline" asChild>
             <Link to="/tracker/demo">View demo profile</Link>
           </Button>
         </div>
+        {!isAuthenticated && (
+          <p className="text-sm text-muted-foreground">
+            Already a patron?{" "}
+            <Button variant="link" size="inline" onClick={login}>
+              Sign in with Patreon
+            </Button>
+          </p>
+        )}
       </GateCard>
     );
   }

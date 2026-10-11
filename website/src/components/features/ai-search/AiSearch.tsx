@@ -55,7 +55,7 @@ function trackQuestion(event: {
 }
 
 /** Why a question opened no page, said in a callout under the field. */
-type Notice = "not_understood" | "player_lookup" | "match_lookup" | "rate_limited" | "error";
+type Notice = "not_understood" | "player_not_found" | "match_lookup" | "rate_limited" | "error";
 
 const NOTICES: Record<
   Notice,
@@ -67,7 +67,12 @@ const NOTICES: Record<
     title: "Sorry, I didn't understand that",
     description: TRY,
   },
-  player_lookup: { variant: "info", icon: <CircleSlashIcon />, title: "We don't have player stats", description: TRY },
+  player_not_found: {
+    variant: "info",
+    icon: <CircleSlashIcon />,
+    title: "No player found",
+    description: "Paste their Steam ID or profile link, or try their exact Steam name.",
+  },
   match_lookup: {
     variant: "info",
     icon: <CircleSlashIcon />,

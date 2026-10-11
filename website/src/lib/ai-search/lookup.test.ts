@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { lookupOf } from "./lookup";
+import { lookupOf, playerLookupOf } from "./lookup";
 
 test("a Steam ID in any format, a profile link or a player's name is a player lookup", () => {
   for (const question of [
@@ -37,4 +37,15 @@ test("short numbers, short tokens and stat questions are neither", () => {
     "t1 items as bebop against lady geist",
   ])
     assert.equal(lookupOf(question), undefined, question);
+});
+
+test("a player lookup names the account of a Steam ID or profile link, else a name to search", () => {
+  assert.deepEqual(playerLookupOf("280308116"), { steamId3: 280308116 });
+  assert.deepEqual(playerLookupOf("player stats for 112483159"), { steamId3: 112483159 });
+  assert.deepEqual(playerLookupOf("76561198072573844"), { steamId3: 112308116 });
+  assert.deepEqual(playerLookupOf("https://steamcommunity.com/profiles/76561198072573844"), { steamId3: 112308116 });
+  assert.deepEqual(playerLookupOf("steamcommunity.com/id/somename"), { name: "somename" });
+  assert.deepEqual(playerLookupOf("CnuHHep_2340"), { name: "CnuHHep_2340" });
+  assert.equal(playerLookupOf("who counters abrams"), undefined);
+  assert.equal(playerLookupOf("match 107857788"), undefined);
 });
