@@ -1129,7 +1129,8 @@ export function BuildFlowExplorer({
             </Inline>
           </Inline>
         </PanelHeader>
-        <PanelBody className="@container">
+        {/* Busy while a completion fills the board: said here, as the inert board is out of the accessibility tree. */}
+        <PanelBody className="@container" aria-busy={completing != null || undefined}>
           <Stack gap={3}>
             {/* The build's figures and, beside them where the panel is wide, its spending by shop category. */}
             <div className="flex flex-col gap-3 @3xl:flex-row @3xl:items-center @3xl:gap-8">
@@ -1227,12 +1228,7 @@ export function BuildFlowExplorer({
               </div>
             </div>
             {/* Inert while a completion fills it: an edit made between its steps would be written over by the next. */}
-            <BuildBoard
-              aria-label="Build by stage"
-              ref={boardRef}
-              inert={completing != null || undefined}
-              aria-busy={completing != null || undefined}
-            >
+            <BuildBoard aria-label="Build by stage" ref={boardRef} inert={completing != null || undefined}>
               {view.stages.map((stage, index) => {
                 const held = path.filter((key) => parseKey(key).column === stage.column);
                 // Every item of the stage for its picker: the build's players' first, then the hero's items the build
