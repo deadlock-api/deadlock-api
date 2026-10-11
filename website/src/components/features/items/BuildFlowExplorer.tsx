@@ -58,9 +58,10 @@ const STREET_BRAWL_ROUNDS = 8;
 const TIME_PHASE_LABELS = ["0–9m", "9–20m", "20–30m", "30m+"] as const;
 // Where the win rate bar under each choice reaches its end, in points from the build's own win rate.
 const CHANGE_SCALE = 10;
-// Sorted by win rate, a choice whose 95% interval is wider than this (±6 points) goes below the sure ones: a 70% from
-// 40 games would otherwise top every stage.
-const SURE_CI_WIDTH = 0.12;
+// The win rate sort counts every choice as if it also had 2% of the build's games (at least 100) at the build's own win
+// rate: 26 wins of 30 games (a T4 bought by players already far ahead) then ranks below 62% from thousands.
+const SHRINK_SHARE = 0.02;
+const SHRINK_MIN_GAMES = 100;
 // How many follow-up items a choice's tooltip lists.
 const NEXT_COUNT = 3;
 
@@ -106,6 +107,8 @@ interface Choice {
   rawWinRate: number;
   /** The 95% interval of `winRate`: the raw Wilson interval moved by the adjustment. */
   interval: readonly [number, number];
+  /** `winRate` pulled toward the build's own by a share of its games: what the win rate sort ranks by. */
+  score: number;
   tone: Tone;
   /** Share of the build's games that bought it in this stage. */
   pickRate: number;
@@ -310,6 +313,7 @@ export function BuildFlowExplorer({
   );
   const { data: upgrades } = useQuery(itemUpgradesQueryOptions);
   const costOf = useMemo(() => new Map((upgrades ?? []).map((item) => [item.id, item.cost ?? 0])), [upgrades]);
+  const nameOf = useMemo(() => new Map((upgrades ?? []).map((item) => [item.id, item.name ?? "Item"])), [upgrades]);
 
   const view = useMemo(
     () => (data ? buildView(data, { path: pathSet, columnCount, perColumn, sortBy, isStreetBrawl }) : null),
@@ -367,7 +371,7 @@ export function BuildFlowExplorer({
                         <Tooltip key={key} content={<ItemName itemId={itemId} />}>
                           <BuildPathItem
                             media={<ItemImage itemId={itemId} className="size-8" />}
-                            aria-label={`Remove ${stage.title} item`}
+                            aria-label={`Remove ${nameOf.get(itemId) ?? "item"} from ${stage.title}`}
                             onClick={() => toggle(key)}
                           />
                         </Tooltip>
@@ -498,6 +502,7 @@ export function BuildFlowExplorer({
                                 interval: [(choice.interval[0] - winRate) * 100, (choice.interval[1] - winRate) * 100],
                               }}
                               selected={choice.selected}
+                              aria-label={`${nameOf.get(choice.itemId) ?? "Item"}: bought ${percent(choice.pickRate)}, win rate ${percent(choice.winRate)}`}
                               relation={!near ? "none" : link ? "linked" : "unlinked"}
                               onClick={() => toggle(choice.key)}
                               onPointerEnter={() => setPointed(choice.key)}
@@ -556,6 +561,7 @@ function buildView(
   const population = Math.max(1, data.summary.matches);
   const reference = data.summary.matches > 0 ? data.summary.wins / data.summary.matches : 0.5;
   const allGames = Math.max(1, data.baseline.matches);
+  const shrink = Math.max(SHRINK_MIN_GAMES, data.summary.matches * SHRINK_SHARE);
 
   const toChoice = (node: ItemFlowStats["nodes"][number]): Choice => {
     const key = `${node.column}:${node.item_id}`;
@@ -576,6 +582,7 @@ function buildView(
       winRate,
       rawWinRate: raw,
       interval,
+      score: (winRate * node.matches + reference * shrink) / (node.matches + shrink),
       tone,
       pickRate: node.matches / population,
       pickShare: 0,
@@ -596,10 +603,9 @@ function buildView(
     else byColumn.set(node.column, [choice]);
   }
 
-  const sure = (c: Choice) => c.interval[1] - c.interval[0] <= SURE_CI_WIDTH;
   const compare =
     sortBy === "winrate"
-      ? (a: Choice, b: Choice) => Number(sure(b)) - Number(sure(a)) || b.winRate - a.winRate
+      ? (a: Choice, b: Choice) => b.score - a.score
       : (a: Choice, b: Choice) => b.matches - a.matches;
 
   // Street Brawl rounds past the last one anybody reached are left out; the four time phases always show.
