@@ -70,6 +70,7 @@ import { Route as ItemsItemNameRouteImport } from './routes/items.$itemName'
 import { Route as MatchesMatchIdRouteImport } from './routes/matches.$matchId'
 import { Route as OgCompareDotpngRouteImport } from './routes/og.compare[.]png'
 import { Route as OgCrosshairDotpngRouteImport } from './routes/og.crosshair[.]png'
+import { Route as OgMatchDotpngRouteImport } from './routes/og.match[.]png'
 import { Route as PatchesIndexRouteImport } from './routes/patches.index'
 import { Route as PatchesPatchIdRouteImport } from './routes/patches.$patchId'
 import { Route as PlayersAccountIdRouteImport } from './routes/players_.$accountId'
@@ -424,6 +425,11 @@ const OgCrosshairDotpngRoute = OgCrosshairDotpngRouteImport.update({
   path: '/og/crosshair.png',
   getParentRoute: () => rootRouteImport,
 } as any)
+const OgMatchDotpngRoute = OgMatchDotpngRouteImport.update({
+  id: '/og/match.png',
+  path: '/og/match.png',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PatchesIndexRoute = PatchesIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -730,6 +736,7 @@ export interface FileRoutesByFullPath {
   '/matches/$matchId': typeof MatchesMatchIdRoute
   '/og/compare.png': typeof OgCompareDotpngRoute
   '/og/crosshair.png': typeof OgCrosshairDotpngRoute
+  '/og/match.png': typeof OgMatchDotpngRoute
   '/patches/$patchId': typeof PatchesPatchIdRoute
   '/players/$accountId': typeof PlayersAccountIdRoute
   '/tracker/demo': typeof TrackerDemoRoute
@@ -829,6 +836,7 @@ export interface FileRoutesByTo {
   '/matches/$matchId': typeof MatchesMatchIdRoute
   '/og/compare.png': typeof OgCompareDotpngRoute
   '/og/crosshair.png': typeof OgCrosshairDotpngRoute
+  '/og/match.png': typeof OgMatchDotpngRoute
   '/patches/$patchId': typeof PatchesPatchIdRoute
   '/players/$accountId': typeof PlayersAccountIdRoute
   '/tracker/demo': typeof TrackerDemoRoute
@@ -940,6 +948,7 @@ export interface FileRoutesById {
   '/matches/$matchId': typeof MatchesMatchIdRoute
   '/og/compare.png': typeof OgCompareDotpngRoute
   '/og/crosshair.png': typeof OgCrosshairDotpngRoute
+  '/og/match.png': typeof OgMatchDotpngRoute
   '/patches/$patchId': typeof PatchesPatchIdRoute
   '/players_/$accountId': typeof PlayersAccountIdRoute
   '/tracker_/demo': typeof TrackerDemoRoute
@@ -1052,6 +1061,7 @@ export interface FileRouteTypes {
     | '/matches/$matchId'
     | '/og/compare.png'
     | '/og/crosshair.png'
+    | '/og/match.png'
     | '/patches/$patchId'
     | '/players/$accountId'
     | '/tracker/demo'
@@ -1151,6 +1161,7 @@ export interface FileRouteTypes {
     | '/matches/$matchId'
     | '/og/compare.png'
     | '/og/crosshair.png'
+    | '/og/match.png'
     | '/patches/$patchId'
     | '/players/$accountId'
     | '/tracker/demo'
@@ -1261,6 +1272,7 @@ export interface FileRouteTypes {
     | '/matches/$matchId'
     | '/og/compare.png'
     | '/og/crosshair.png'
+    | '/og/match.png'
     | '/patches/$patchId'
     | '/players_/$accountId'
     | '/tracker_/demo'
@@ -1360,6 +1372,7 @@ export interface RootRouteChildren {
   MatchesMatchIdRoute: typeof MatchesMatchIdRoute
   OgCompareDotpngRoute: typeof OgCompareDotpngRoute
   OgCrosshairDotpngRoute: typeof OgCrosshairDotpngRoute
+  OgMatchDotpngRoute: typeof OgMatchDotpngRoute
   PlayersAccountIdRoute: typeof PlayersAccountIdRoute
   TrackerDemoRoute: typeof TrackerDemoRoute
   AnalyticsIndexRoute: typeof AnalyticsIndexRoute
@@ -1799,6 +1812,13 @@ declare module '@tanstack/react-router' {
       path: '/og/crosshair.png'
       fullPath: '/og/crosshair.png'
       preLoaderRoute: typeof OgCrosshairDotpngRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/og/match.png': {
+      id: '/og/match.png'
+      path: '/og/match.png'
+      fullPath: '/og/match.png'
+      preLoaderRoute: typeof OgMatchDotpngRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/patches/': {
@@ -2393,6 +2413,7 @@ const rootRouteChildren: RootRouteChildren = {
   MatchesMatchIdRoute: MatchesMatchIdRoute,
   OgCompareDotpngRoute: OgCompareDotpngRoute,
   OgCrosshairDotpngRoute: OgCrosshairDotpngRoute,
+  OgMatchDotpngRoute: OgMatchDotpngRoute,
   PlayersAccountIdRoute: PlayersAccountIdRoute,
   TrackerDemoRoute: TrackerDemoRoute,
   AnalyticsIndexRoute: AnalyticsIndexRoute,
