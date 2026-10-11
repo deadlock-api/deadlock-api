@@ -72,7 +72,9 @@ export function AbilityOrderGrid({
         aria-label={editable ? "Skill order" : undefined}
         className="grid items-center justify-start gap-1 @md:gap-1.5"
         // An editor's cells keep a 24px target (Law 18) and the grid scrolls sideways where they do not fit.
-        style={{ gridTemplateColumns: `auto repeat(${steps.length}, minmax(${editable ? "1.5rem" : "0"}, 2.5rem))` }}
+        style={{
+          gridTemplateColumns: `max-content repeat(${steps.length}, minmax(${editable ? "1.5rem" : "0"}, 2.5rem))`,
+        }}
       >
         {abilityIds.map((abilityId, slot) => (
           <div key={abilityId} className="contents">
