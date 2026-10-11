@@ -12,6 +12,8 @@ const row = (abilities: number[], wins: number) => ({
   total_kills: 5,
   total_deaths: 6,
   total_assists: 7,
+  // Whole seconds, one a step, as the pack rounds them.
+  avg_upgrade_times_s: abilities.map((_, i) => 60 * (i + 1)),
 });
 
 test("packed ability orders unpack to the same rows", () => {

@@ -25,7 +25,7 @@ import {
   BuildSlotItem,
   BuildStage,
 } from "~/components/domain/graph/BuildFlow";
-import { HeroSkillOrder } from "~/components/domain/graph/HeroSkillOrder";
+import { HeroSkillOrder, useHeroSkillPath } from "~/components/domain/graph/HeroSkillOrder";
 import {
   ItemGrid,
   ItemGridSearch,
@@ -664,6 +664,20 @@ export function BuildFlowExplorer({
     }));
   }, [path, view, costOf, sellOf]);
 
+  // The skill order of the players who bought the build's items (the hero's overall one without picks): the panel at
+  // the end shows it, and the souls timeline places its upgrades.
+  const skillRequest = {
+    gameMode: "normal" as const,
+    matchMode,
+    minAverageBadge: minRankId,
+    maxAverageBadge: maxRankId,
+    minUnixTimestamp: minUnixTimestamp ?? 0,
+    maxUnixTimestamp,
+    minMatches: 10,
+    includeItemIds: path.length > 0 ? [...new Set(path.map((key) => parseKey(key).itemId))] : undefined,
+  };
+  const { path: skillPath } = useHeroSkillPath(heroId ?? 0, skillRequest, undefined, heroId != null && !isStreetBrawl);
+
   // Dim the stages only while another build's answer loads; a refresh of the shown one keeps them as they are.
   const switching = isFetching && isPlaceholderData;
 
@@ -1245,6 +1259,11 @@ export function BuildFlowExplorer({
         <BuildEconomy
           title={path.length > 0 ? "Souls for your build" : "Souls for the most common build"}
           items={economyItems}
+          skills={
+            skillPath?.steps.flatMap((step) =>
+              step.at != null ? [{ level: step.level, abilityId: step.abilityId, at: step.at }] : [],
+            ) ?? []
+          }
           flexMinutes={flexMinutes}
           onFlexMinutesChange={(minutes) => startTransition(() => void setFlex(minutes, AT_ONCE))}
           heroId={heroId}
@@ -1262,16 +1281,8 @@ export function BuildFlowExplorer({
           heroId={heroId}
           heroName={hero?.name ?? "Hero"}
           rankRange={rankRangeLabel(ranks, minRankId ?? DEFAULT_RANK_RANGE.min, maxRankId ?? DEFAULT_RANK_RANGE.max)}
-          request={{
-            gameMode: "normal",
-            matchMode,
-            minAverageBadge: minRankId,
-            maxAverageBadge: maxRankId,
-            minUnixTimestamp: minUnixTimestamp ?? 0,
-            maxUnixTimestamp,
-            minMatches: 10,
-            includeItemIds: path.length > 0 ? [...new Set(path.map((key) => parseKey(key).itemId))] : undefined,
-          }}
+          scope={path.length > 0 ? "Most common with this build" : "Most common"}
+          request={skillRequest}
         />
       )}
     </Stack>

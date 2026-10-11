@@ -11,7 +11,7 @@ import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { InlineStat } from "~/components/ui/inline-stat";
 import { TextLink } from "~/components/ui/text-link";
 import { useDefaultPeriodLabel } from "~/hooks/useDefaultPeriodLabel";
-import { type AbilityTrieNode, buildAbilityTrie, getSortedChildren } from "~/lib/ability-order-utils";
+import { type AbilityTrieNode, avgTimeS, buildAbilityTrie, getSortedChildren } from "~/lib/ability-order-utils";
 import { formatPercent, possessive } from "~/lib/format";
 import { abilityOrderQueryOptions } from "~/queries/ability-order-query";
 import { abilitiesQueryOptions, heroesQueryOptions } from "~/queries/asset-queries";
@@ -21,46 +21,44 @@ const MAX_STEPS = 12;
 const MIN_PATH_SHARE = 0.05;
 const HERO_ABILITY_SLOTS = ["signature1", "signature2", "signature3", "signature4"] as const;
 
-interface Step {
+export interface SkillStep {
   level: number;
   abilityId: number;
   /** Share of players at the previous step who took this upgrade next. */
   pickRate: number;
+  /** When the players on this path took it, on average (seconds); null for answers without times. */
+  at: number | null;
 }
 
-function mostCommonPath(root: AbilityTrieNode): { steps: Step[]; leaf: AbilityTrieNode } {
-  const steps: Step[] = [];
+function mostCommonPath(root: AbilityTrieNode): { steps: SkillStep[]; leaf: AbilityTrieNode } {
+  const steps: SkillStep[] = [];
   let node = root;
   while (steps.length < MAX_STEPS) {
     const next = getSortedChildren(node)[0];
     if (!next || next.abilityId == null || next.matches < root.matches * MIN_PATH_SHARE) break;
-    steps.push({ level: steps.length + 1, abilityId: next.abilityId, pickRate: next.matches / node.matches });
+    steps.push({
+      level: steps.length + 1,
+      abilityId: next.abilityId,
+      pickRate: next.matches / node.matches,
+      at: avgTimeS(next),
+    });
     node = next;
   }
   return { steps, leaf: node };
 }
 
-export function HeroSkillOrder({
-  heroId,
-  totalMatches,
-  heroName,
-  request,
-  rankRange,
-  className,
-}: {
-  className?: string;
-  heroId: number;
-  heroName: string;
-  request: Omit<AnalyticsApiAbilityOrderStatsRequest, "heroId">;
-  /** The request's rank range in words, such as "Phantom 1+". */
-  rankRange: string;
-  /** The hero's matches over the same filters. The orders only cover sequences played at least `minMatches` times,
-   * which leaves out about half the hero's matches (most full sequences are unique), so their own total overstates
-   * every share. */
-  totalMatches?: number;
-}) {
-  const period = useDefaultPeriodLabel();
-  const orderQuery = useQuery(abilityOrderQueryOptions({ ...request, heroId }));
+/**
+ * A hero's most common skill order from the ability order stats of `request`: the hero's four abilities in slot order,
+ * the path's steps (with each upgrade's average time) and its share and win rate, and the three queries behind it.
+ */
+export function useHeroSkillPath(
+  heroId: number,
+  request: Omit<AnalyticsApiAbilityOrderStatsRequest, "heroId">,
+  totalMatches?: number,
+  /** Off while there is no hero to ask about. */
+  enabled = true,
+) {
+  const orderQuery = useQuery({ ...abilityOrderQueryOptions({ ...request, heroId }), enabled });
   const heroesQuery = useQuery(heroesQueryOptions);
   const abilitiesQuery = useQuery(abilitiesQueryOptions);
   const heroes = heroesQuery.data;
@@ -85,6 +83,38 @@ export function HeroSkillOrder({
     return { steps, share: leaf.matches / players, winRate: leaf.wins / leaf.matches, matches: leaf.matches };
   }, [orderQuery.data, totalMatches]);
 
+  return { orderQuery, heroesQuery, abilitiesQuery, slotAbilities, path };
+}
+
+export function HeroSkillOrder({
+  heroId,
+  totalMatches,
+  heroName,
+  request,
+  rankRange,
+  scope = "Most common",
+  className,
+}: {
+  className?: string;
+  heroId: number;
+  heroName: string;
+  request: Omit<AnalyticsApiAbilityOrderStatsRequest, "heroId">;
+  /** What the order is, before the rank range in the header: "Most common", "Most common with this build". */
+  scope?: string;
+  /** The request's rank range in words, such as "Phantom 1+". */
+  rankRange: string;
+  /** The hero's matches over the same filters. The orders only cover sequences played at least `minMatches` times,
+   * which leaves out about half the hero's matches (most full sequences are unique), so their own total overstates
+   * every share. */
+  totalMatches?: number;
+}) {
+  const period = useDefaultPeriodLabel();
+  const { orderQuery, heroesQuery, abilitiesQuery, slotAbilities, path } = useHeroSkillPath(
+    heroId,
+    request,
+    totalMatches,
+  );
+
   // The grid's rows need the hero and ability lists too; without them it would wait forever, so a failure of any of
   // the three is the panel's error.
   const failed = [orderQuery, heroesQuery, abilitiesQuery].filter((query) => query.isError && !query.data);
@@ -95,7 +125,7 @@ export function HeroSkillOrder({
 
   return (
     <Panel className={className}>
-      <PanelHeader title={`${heroName} Skill Order`} description={`Most common · ${rankRange}`} />
+      <PanelHeader title={`${heroName} Skill Order`} description={`${scope} · ${rankRange}`} />
       <PanelBody className="flex flex-col gap-4">
         {failed.length > 0 ? (
           <ErrorState

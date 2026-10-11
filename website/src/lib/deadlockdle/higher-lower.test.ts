@@ -96,7 +96,7 @@ function data(date: string): HigherLowerData {
         rows: [
           { abilities: [a, a, b, b, c, a, d, a, c, b, c, c, b, d, d], matches: 900, wins: 0, losses: 0, players: 0 },
           { abilities: [b, b, a, a, c, b, d, b, c, a, a, c, c, d, d], matches: 300, wins: 0, losses: 0, players: 0 },
-        ].map((row) => ({ ...row, total_kills: 0, total_deaths: 0, total_assists: 0 })),
+        ].map((row) => ({ ...row, total_kills: 0, total_deaths: 0, total_assists: 0, avg_upgrade_times_s: [] })),
       };
     }),
   };

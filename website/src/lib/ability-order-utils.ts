@@ -10,7 +10,16 @@ export interface AbilityTrieNode {
   totalKills: number;
   totalDeaths: number;
   totalAssists: number;
+  /** Sum of the step's average upgrade time (seconds) weighted by matches; `avgTimeS` divides it out. */
+  timeWeight: number;
+  /** Matches whose order reported a time for this step. */
+  timedMatches: number;
   children: Map<number, AbilityTrieNode>;
+}
+
+/** When the players on this node took its upgrade, on average (seconds), or null without times. */
+export function avgTimeS(node: AbilityTrieNode): number | null {
+  return node.timedMatches > 0 ? node.timeWeight / node.timedMatches : null;
 }
 
 function createNode(abilityId: number | null, depth: number): AbilityTrieNode {
@@ -24,6 +33,8 @@ function createNode(abilityId: number | null, depth: number): AbilityTrieNode {
     totalKills: 0,
     totalDeaths: 0,
     totalAssists: 0,
+    timeWeight: 0,
+    timedMatches: 0,
     children: new Map(),
   };
 }
@@ -56,6 +67,11 @@ export function buildAbilityTrie(data: AnalyticsAbilityOrderStats[]): AbilityTri
       child.totalKills += row.total_kills;
       child.totalDeaths += row.total_deaths;
       child.totalAssists += row.total_assists;
+      const time = row.avg_upgrade_times_s?.[i];
+      if (time != null && Number.isFinite(time) && time > 0) {
+        child.timeWeight += time * row.matches;
+        child.timedMatches += row.matches;
+      }
       current = child;
     }
   }
@@ -163,6 +179,8 @@ export interface PackedAbilityOrders {
   kills: number[];
   deaths: number[];
   assists: number[];
+  /** Per order its upgrades' average times in whole seconds; absent in answers from before the API had them. */
+  times?: number[][];
 }
 
 export function packAbilityOrders(
@@ -181,6 +199,7 @@ export function packAbilityOrders(
     kills: rows.map((row) => row.total_kills),
     deaths: rows.map((row) => row.total_deaths),
     assists: rows.map((row) => row.total_assists),
+    times: rows.map((row) => (row.avg_upgrade_times_s ?? []).map((t) => Math.round(t))),
   };
 }
 
@@ -197,5 +216,6 @@ export function unpackAbilityOrders(
     total_kills: packed.kills[i],
     total_deaths: packed.deaths[i],
     total_assists: packed.assists[i],
+    avg_upgrade_times_s: packed.times?.[i] ?? [],
   }));
 }

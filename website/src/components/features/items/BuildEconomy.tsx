@@ -3,6 +3,7 @@ import { Coins } from "lucide-react";
 import { useMemo, useState } from "react";
 import { CartesianGrid, ComposedChart, Line, ReferenceArea, ReferenceDot, ReferenceLine, XAxis, YAxis } from "recharts";
 
+import { AbilityImage } from "~/components/domain/assets/AbilityImage";
 import { RankedEntityList, RankedEntityMetric, RankedEntityRow } from "~/components/domain/assets/RankedEntityList";
 import { ChartLegend, ChartLegendItem } from "~/components/patterns/charts/ChartLegend";
 import { ChartEmpty, ChartError, ChartLoading } from "~/components/patterns/charts/ChartStates";
@@ -19,6 +20,7 @@ import {
 import { Panel, PanelBody, PanelFooter, PanelHeader } from "~/components/patterns/panel/Panel";
 import { Slider } from "~/components/ui/slider";
 import type { GameMode, MatchMode } from "~/lib/game-mode";
+import { cn } from "~/lib/utils";
 import { itemUpgradesQueryOptions } from "~/queries/asset-queries";
 import { itemStatsQueryOptions } from "~/queries/item-stats-query";
 import { playerPerformanceCurveQueryOptions } from "~/queries/player-performance-curve-query";
@@ -30,6 +32,11 @@ const STAGE_LABELS = ["0–9m", "9–20m", "20–30m", "30m+"] as const;
 const SELL_REFUND = 0.5;
 // The plot ends here: few games run longer, and the curve's last points come from those few.
 const END_S = 2700;
+// The skill lane: icons closer than this (seconds, a 20px icon on a ~500px plot) step into the next row, up to four.
+const SKILL_MIN_GAP_S = 120;
+const SKILL_LANES = 4;
+const SKILL_LANE_HEIGHT = { 1: "h-5", 2: "h-11", 3: "h-17", 4: "h-23" } as const;
+const SKILL_LANE_TOP = ["top-0", "top-6", "top-12", "top-18"] as const;
 // The y-axis width in pixels: the flex slider under the plot is inset by the same (`ps-10`).
 const Y_AXIS_WIDTH = 40;
 const TICKS = [0, 300, 600, 900, 1200, 1500, 1800, 2100, 2400, 2700];
@@ -49,6 +56,8 @@ export interface EconomyItem {
 interface BuildEconomyProps {
   title: React.ReactNode;
   items: EconomyItem[];
+  /** The skill order's upgrades and when they are taken (seconds): a lane under the timeline. */
+  skills?: readonly { level: number; abilityId: number; at: number }[];
   /** When the three flex slots unlock, in minutes; the timeline marks them and its slider moves them. */
   flexMinutes: readonly number[];
   onFlexMinutesChange: (minutes: number[]) => void;
@@ -134,6 +143,7 @@ const compact = compactSouls;
 export function BuildEconomy({
   title,
   items,
+  skills = [],
   flexMinutes,
   onFlexMinutesChange,
   heroId,
@@ -167,6 +177,17 @@ export function BuildEconomy({
   // The slider's own value while the URL behind `flexMinutes` catches up in a transition: tied to the value it moved
   // from, so key presses build on each other, and dropped once the props change (to the new value, or another build).
   const flexKey = flexMinutes.join(",");
+  const lanes = useMemo(() => {
+    const placed: { level: number; abilityId: number; at: number; lane: number }[] = [];
+    const laneEnds: number[] = [];
+    for (const skill of [...skills].sort((a, b) => a.at - b.at)) {
+      let lane = laneEnds.findIndex((end) => skill.at - end >= SKILL_MIN_GAP_S);
+      if (lane < 0) lane = laneEnds.length < SKILL_LANES ? laneEnds.length : SKILL_LANES - 1;
+      laneEnds[lane] = skill.at;
+      placed.push({ ...skill, lane });
+    }
+    return { placed, count: Math.max(1, laneEnds.length) as 1 | 2 | 3 | 4 };
+  }, [skills]);
   const [flexDraft, setFlexDraft] = useState<{ from: string; minutes: number[] } | null>(null);
   const shownFlex = flexDraft?.from === flexKey ? flexDraft.minutes : [...flexMinutes];
   // Items another item is built from: their sales count the purchases merged into that upgrade as well.
@@ -353,6 +374,26 @@ export function BuildEconomy({
                   </ComposedChart>
                 </ChartSurface>
                 {/* Under the timeline it sets: when the three flex slots open, marked on the plot above. */}
+                {skills.length > 0 && (
+                  // The skill upgrades on the same span as the plot: each at its average time, stepped into a lower
+                  // row where it would cover the one before.
+                  <div className="ps-10 pe-4">
+                    <ol aria-label="Skill upgrades by time" className={cn("relative", SKILL_LANE_HEIGHT[lanes.count])}>
+                      {lanes.placed.map((skill) => (
+                        <li
+                          key={skill.level}
+                          className={cn("absolute -translate-x-1/2", SKILL_LANE_TOP[skill.lane])}
+                          style={{ insetInlineStart: `${(Math.min(skill.at, END_S) / END_S) * 100}%` }}
+                        >
+                          <AbilityImage abilityId={skill.abilityId} title="" className="size-5" />
+                          <span className="sr-only">
+                            Upgrade {skill.level} at {gameClock(skill.at)}
+                          </span>
+                        </li>
+                      ))}
+                    </ol>
+                  </div>
+                )}
                 {/* The track spans the plot exactly (a fixed y-axis width on its left, the plot margin on its right), so a
                     thumb sits on its minute and on its marker line. */}
                 <div className="flex flex-col gap-1 ps-10 pe-4">
