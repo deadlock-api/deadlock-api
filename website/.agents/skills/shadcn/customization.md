@@ -121,7 +121,7 @@ module.exports = {
 
 ```tsx
 // 3. Use in components.
-<div className="bg-warning text-warning-foreground">Warning</div>
+<div className="text-warning-foreground bg-warning">Warning</div>
 ```
 
 ---
@@ -149,7 +149,7 @@ Prefer these approaches in order:
 ### 2. Tailwind classes via `className`
 
 ```tsx
-<Card className="max-w-md mx-auto">...</Card>
+<Card className="mx-auto max-w-md">...</Card>
 ```
 
 ### 3. Add a new variant
