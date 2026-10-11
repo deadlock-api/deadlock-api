@@ -19,7 +19,8 @@ import {
 
 import { OptimizedImage } from "~/components/domain/assets/OptimizedImage";
 import { useInstallCtaTracking } from "~/components/domain/ingest/analytics";
-import { WINDOWS_SETUP_URL } from "~/components/domain/ingest/links";
+import { InstallButton } from "~/components/domain/ingest/InstallButton";
+import { INGEST_INSTALL_PATH, WINDOWS_SETUP_URL } from "~/components/domain/ingest/links";
 import { SmartLink } from "~/components/domain/navigation/SmartLink";
 import { AiSearch } from "~/components/features/ai-search/AiSearch";
 import { LinkCard } from "~/components/patterns/content/LinkCard";
@@ -40,6 +41,7 @@ import { Text } from "~/components/ui/text";
 import { TextLink } from "~/components/ui/text-link";
 import { useIsWindows } from "~/hooks/useIsWindows";
 import { API_ORIGIN } from "~/lib/constants";
+import { useExperiment } from "~/lib/experiments";
 import { ORGANIZATION, pageTitle, seo, SITE_URL } from "~/lib/seo";
 import { TRACKER_SITES } from "~/lib/tracker-sites";
 
@@ -236,6 +238,7 @@ const sponsors = [
 function IndexRoute() {
   const isWindows = useIsWindows();
   const installTracking = useInstallCtaTracking("home", isWindows ? "download" : "install_steps");
+  const heroInstallVariant = useExperiment("exp-home-hero-install-cta");
   return (
     <PageShell density="marketing">
       {/* The search belongs to the hero: it sits right under it, not a section's distance away. */}
@@ -260,7 +263,13 @@ function IndexRoute() {
           </Stack>
 
           <HeroActions>
-            {valueProps.map((prop) => (
+            {heroInstallVariant === "test" && (
+              <InstallButton shape="pill" size="default" installHref={INGEST_INSTALL_PATH} placement="home_hero" />
+            )}
+            {(heroInstallVariant === "test"
+              ? valueProps.filter((prop) => prop.label !== "Open Source")
+              : valueProps
+            ).map((prop) => (
               <Button key={prop.label} asChild variant="outline" shape="pill">
                 <SmartLink href={prop.href} external={prop.external} title={prop.title}>
                   <prop.icon className="size-3.5" />

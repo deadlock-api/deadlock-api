@@ -11,6 +11,7 @@ export type InstallCtaPlacement =
   | "ingest_header"
   | "ingest_guide"
   | "home"
+  | "home_hero"
   | "tracker_gate"
   | "tracker_demo"
   | "match_not_stored"
