@@ -24,8 +24,8 @@ export const PAGE_REGISTRY: readonly RegisteredPage[] = [
 export const UNSEARCHABLE_PAGES: readonly UnsearchablePage[] = [
   { path: "/", reason: "the home page the search lives on" },
   { path: "/patron", reason: "an account page, not stats" },
-  { path: "/tracker", reason: "the patron-only player tracker, never a search result" },
-  { path: "/tracker/*", reason: "the patron-only player tracker, never a search result" },
+  { path: "/tracker", reason: "a redirect to the demo profile" },
+  { path: "/tracker/*", reason: "player profiles, opened by account; never a search result" },
   { path: "/matches/*", reason: "one match, opened by its ID, which the search reads in code" },
   { path: "/data-privacy", reason: "a legal page" },
   { path: "/deadlockstats-privacy", reason: "a legal page" },

@@ -39,7 +39,7 @@ export const Route = createFileRoute("/tracker_/players/$accountId")({
       description: name
         ? `Full Deadlock match history, rank progression, hero breakdowns, and mate & opponent analytics for ${name}.`
         : "Full Deadlock match history, rank progression, hero breakdowns, and mate & opponent analytics for prioritized players.",
-      path: loaderData ? `/tracker/players/${loaderData.accountId}` : "/tracker",
+      path: loaderData ? `/tracker/players/${loaderData.accountId}` : "/tracker/demo",
     });
     // A profile opens only for the patron who owns the account; a crawler would index a sign-in gate under the name.
     return { ...base, meta: [...base.meta, { name: "robots", content: "noindex, follow" }] };

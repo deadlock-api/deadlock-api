@@ -51,11 +51,13 @@ function buildBreadcrumbs(pathname: string, labelsByPath: Map<string, string>): 
     // /games is the legacy analytics URL; game hubs provide their own useful parent link. /matches has no page of its
     // own, one per match only.
     if (path === "/games" || path === "/tracker/players" || path === "/matches") continue;
+    // /tracker redirects to the demo profile, which stands for the tracker as a whole.
+    if (path === "/tracker" && pathname.startsWith("/tracker/demo")) continue;
     const label =
       labelsByPath.get(path) ??
       ROUTE_LABELS[path] ??
       segment.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
-    items.push({ label, path: path === "/players" ? "/tracker" : path });
+    items.push({ label, path: path === "/players" || path === "/tracker" ? "/tracker/demo" : path });
   }
   return items;
 }
