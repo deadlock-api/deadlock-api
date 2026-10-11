@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
-import { ChevronRight, Hourglass, ListPlus, Route } from "lucide-react";
+import { Hourglass, ListPlus, Route } from "lucide-react";
 import { parseAsArrayOf, parseAsNumberLiteral, parseAsString, parseAsStringLiteral, useQueryState } from "nuqs";
-import { Fragment, memo, useMemo, useState } from "react";
+import { memo, useMemo, useState } from "react";
 
 import { ItemImage } from "~/components/domain/assets/ItemImage";
 import { ItemName } from "~/components/domain/assets/ItemName";
@@ -241,6 +241,8 @@ export function BuildFlowExplorer({
   // The build, scoped to a stage: `${column}:${itemId}`. In the URL so a build can be shared as a link.
   const [storedPath, setPath] = useQueryState("build_path", parseAsArrayOf(parseAsString).withDefault([]));
   const [pointed, setPointed] = useState<string | null>(null);
+  // The stage a narrow screen shows (index into the stages); a wide one shows every stage.
+  const [shownStage, setShownStage] = useState(0);
 
   const isStreetBrawl = gameMode === "street_brawl";
   const columnCount = isStreetBrawl ? STREET_BRAWL_ROUNDS : PHASE_COUNT;
@@ -384,11 +386,8 @@ export function BuildFlowExplorer({
                       }
                     >
                       {suggestion.label}
-                      {suggestion.path.map((choice, index) => (
-                        <Fragment key={choice.key}>
-                          {index > 0 && <ChevronRight className="size-3" />}
-                          <ItemImage itemId={choice.itemId} className="size-5" />
-                        </Fragment>
+                      {suggestion.path.map((choice) => (
+                        <ItemImage key={choice.key} itemId={choice.itemId} className="size-5" />
                       ))}
                     </Button>
                   ))}
@@ -504,74 +503,91 @@ export function BuildFlowExplorer({
             }
           />
         ) : (
-          <Grid columns={{ base: 1, sm: 2, xl: 4 }} gap={4}>
-            {view.stages.map((stage) => (
-              <BuildStage
-                key={stage.column}
-                title={stage.title}
-                meta={
-                  // A stage most games never reach (30m+) shows long games only, whose win rates run high.
-                  stage.reached < LATE_REACH ? (
-                    <span className="inline-flex items-center gap-1 text-warning">
-                      <Hourglass className="size-3" aria-hidden="true" />
-                      {percent(stage.reached, 0)} of games
-                    </span>
-                  ) : (
-                    `${percent(stage.reached, 0)} of games`
-                  )
-                }
-                aria-busy={switching || undefined}
+          // A narrow container shows one stage at a time behind a switcher; a wide one shows them side by side.
+          <Stack gap={3} className="@container">
+            <div className="@2xl:hidden">
+              <Segmented
+                aria-label="Stage"
+                value={String(Math.min(shownStage, view.stages.length - 1))}
+                onValueChange={(v) => setShownStage(Number(v))}
               >
-                {stage.choices.length === 0 ? (
-                  <EmptyState variant="inline" title="No purchases" />
-                ) : (
-                  <>
-                    <BuildChoiceHeader start="Item · bought · cost" end="Win rate" />
-                    <BuildChoiceList aria-label={`Items bought at ${stage.title}`}>
-                      {stage.choices.map((choice) => {
-                        const near = linked != null && Math.abs(linked.column - choice.column) === 1;
-                        const link = near ? linked.links.get(choice.key) : undefined;
-                        const after = linked != null && choice.column > linked.column;
-                        return (
-                          <BuildChoice
-                            key={choice.key}
-                            media={<ItemImage itemId={choice.itemId} className="size-8" />}
-                            name={<ItemName itemId={choice.itemId} className="line-clamp-2 whitespace-normal" />}
-                            share={choice.pickShare}
-                            meta={percent(choice.pickRate)}
-                            price={costOf.get(choice.itemId) ? count(costOf.get(choice.itemId) ?? 0) : undefined}
-                            link={
-                              link && {
-                                // Of the pointed-at item's buyers: bought this one in the stage after it, or before.
-                                label: `${percent(link.share, 0)} ${after ? "next" : "before"}`,
-                                share: link.share,
+                {view.stages.map((stage, index) => (
+                  <SegmentedItem key={stage.column} value={String(index)}>
+                    {isStreetBrawl ? `R${stage.column + 1}` : stage.title}
+                  </SegmentedItem>
+                ))}
+              </Segmented>
+            </div>
+            <Grid columns={{ base: 1, lg: 2, xl: 4 }} gap={4}>
+              {view.stages.map((stage, index) => (
+                <BuildStage
+                  key={stage.column}
+                  className={index === Math.min(shownStage, view.stages.length - 1) ? undefined : "hidden @2xl:flex"}
+                  title={stage.title}
+                  meta={
+                    // A stage most games never reach (30m+) shows long games only, whose win rates run high.
+                    stage.reached < LATE_REACH ? (
+                      <span className="inline-flex items-center gap-1 text-warning">
+                        <Hourglass className="size-3" aria-hidden="true" />
+                        {percent(stage.reached, 0)} of games
+                      </span>
+                    ) : (
+                      `${percent(stage.reached, 0)} of games`
+                    )
+                  }
+                  aria-busy={switching || undefined}
+                >
+                  {stage.choices.length === 0 ? (
+                    <EmptyState variant="inline" title="No purchases" />
+                  ) : (
+                    <>
+                      <BuildChoiceHeader start="Item · bought · cost" end="Win rate" />
+                      <BuildChoiceList aria-label={`Items bought at ${stage.title}`}>
+                        {stage.choices.map((choice) => {
+                          const near = linked != null && Math.abs(linked.column - choice.column) === 1;
+                          const link = near ? linked.links.get(choice.key) : undefined;
+                          const after = linked != null && choice.column > linked.column;
+                          return (
+                            <BuildChoice
+                              key={choice.key}
+                              media={<ItemImage itemId={choice.itemId} className="size-8" />}
+                              name={<ItemName itemId={choice.itemId} className="line-clamp-2 whitespace-normal" />}
+                              share={choice.pickShare}
+                              meta={percent(choice.pickRate)}
+                              price={costOf.get(choice.itemId) ? count(costOf.get(choice.itemId) ?? 0) : undefined}
+                              link={
+                                link && {
+                                  // Of the pointed-at item's buyers: bought this one in the stage after it, or before.
+                                  label: `${percent(link.share, 0)} ${after ? "next" : "before"}`,
+                                  share: link.share,
+                                }
                               }
-                            }
-                            value={percent(choice.winRate)}
-                            tone={choice.tone}
-                            change={{
-                              value: (choice.winRate - winRate) * 100,
-                              scale: CHANGE_SCALE,
-                              interval: [(choice.interval[0] - winRate) * 100, (choice.interval[1] - winRate) * 100],
-                            }}
-                            selected={choice.selected}
-                            aria-label={`${nameOf.get(choice.itemId) ?? "Item"}: bought ${percent(choice.pickRate)}, win rate ${percent(choice.winRate)}`}
-                            relation={!near ? "none" : link ? "linked" : "unlinked"}
-                            onClick={() => toggle(choice.key)}
-                            onPointerEnter={() => setPointed(choice.key)}
-                            onPointerLeave={() => setPointed(null)}
-                            onFocus={() => setPointed(choice.key)}
-                            onBlur={() => setPointed(null)}
-                          />
-                        );
-                      })}
-                    </BuildChoiceList>
-                  </>
-                )}
-                {stage.candidates.length > 0 && <StagePicker stage={stage} onPick={toggle} />}
-              </BuildStage>
-            ))}
-          </Grid>
+                              value={percent(choice.winRate)}
+                              tone={choice.tone}
+                              change={{
+                                value: (choice.winRate - winRate) * 100,
+                                scale: CHANGE_SCALE,
+                                interval: [(choice.interval[0] - winRate) * 100, (choice.interval[1] - winRate) * 100],
+                              }}
+                              selected={choice.selected}
+                              aria-label={`${nameOf.get(choice.itemId) ?? "Item"}: bought ${percent(choice.pickRate)}, win rate ${percent(choice.winRate)}`}
+                              relation={!near ? "none" : link ? "linked" : "unlinked"}
+                              onClick={() => toggle(choice.key)}
+                              onPointerEnter={() => setPointed(choice.key)}
+                              onPointerLeave={() => setPointed(null)}
+                              onFocus={() => setPointed(choice.key)}
+                              onBlur={() => setPointed(null)}
+                            />
+                          );
+                        })}
+                      </BuildChoiceList>
+                    </>
+                  )}
+                  {stage.candidates.length > 0 && <StagePicker stage={stage} onPick={toggle} />}
+                </BuildStage>
+              ))}
+            </Grid>
+          </Stack>
         )}
       </div>
     </Stack>
