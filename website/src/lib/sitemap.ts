@@ -29,7 +29,6 @@ const STATIC_ENTRIES: SitemapEntry[] = [
   { path: "/analytics/games" },
   { path: "/community/heatmap" },
   { path: "/analytics/players" },
-  { path: "/tracker" },
   { path: "/tracker/demo" },
   { path: "/analytics/team-builder" },
   { path: "/streamkit" },

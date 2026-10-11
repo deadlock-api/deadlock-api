@@ -45,7 +45,7 @@ export const navGroups: NavGroup[] = [
     label: "Patron",
     links: [
       { to: "/patron", label: "Prioritized Fetching", icon: Zap, special: true },
-      { to: "/tracker", label: "Player Tracker", icon: UserSearch },
+      { to: "/tracker/demo", label: "Player Tracker", icon: UserSearch },
     ],
   },
   {

@@ -53,11 +53,11 @@ export function PatronAuthProvider({ children }: PatronAuthProviderProps) {
   );
 
   const login = useCallback(() => {
-    // Signing in from the demo tracker leads to the real one.
+    // Signing in from the demo tracker leads to the accounts it can open.
     const { pathname } = window.location;
     // Where to come back to; storage can be blocked, and signing in must still work then (it lands on /patron).
     try {
-      sessionStorage.setItem("patron_redirect_path", pathname === "/tracker/demo" ? "/tracker" : pathname);
+      sessionStorage.setItem("patron_redirect_path", pathname === "/tracker/demo" ? "/patron" : pathname);
     } catch {
       // Ignore: the callback falls back to /patron.
     }

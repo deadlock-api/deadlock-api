@@ -67,7 +67,7 @@ export function DemoNotice() {
             <InstallButton size="default" installHref={INGEST_INSTALL_PATH} />
             {isAuthenticated ? (
               <Button variant="secondary" asChild>
-                <Link to="/tracker">Your accounts</Link>
+                <Link to="/patron">Your accounts</Link>
               </Button>
             ) : (
               <Button variant="secondary" asChild>

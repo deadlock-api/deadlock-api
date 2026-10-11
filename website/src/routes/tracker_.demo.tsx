@@ -23,7 +23,7 @@ export const Route = createFileRoute("/tracker_/demo")({
       prefetchCached(queryClient, heroesQueryOptions),
       prefetchCached(queryClient, ranksQueryOptions),
     ]);
-    return { breadcrumb: "Demo profile" };
+    return { breadcrumb: "Player Tracker" };
   },
   head: () =>
     seo({

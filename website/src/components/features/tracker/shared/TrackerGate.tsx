@@ -146,9 +146,6 @@ export function TrackerGate({ accountId, children }: { accountId: number; childr
           <Button variant="secondary" asChild>
             <Link to="/ingest-cache">Run the ingest tool</Link>
           </Button>
-          <Button variant="outline" asChild>
-            <Link to="/tracker">Your accounts</Link>
-          </Button>
         </div>
       </GateCard>
     );
