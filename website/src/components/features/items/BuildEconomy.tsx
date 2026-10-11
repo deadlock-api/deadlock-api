@@ -382,7 +382,8 @@ export function BuildEconomy({
                 {skills.length > 0 && (
                   // The skill upgrades on the same span as the plot: each at its average time, stepped into a lower
                   // row where it would cover the one before.
-                  <div className="relative ps-10 pe-4">
+                  // A narrow plot packs the early upgrades into one clump: the lane shows from a medium width on.
+                  <div className="relative hidden ps-10 pe-4 @md:block">
                     {/* Named in the y-axis' gutter, beside the lane. */}
                     <span aria-hidden="true" className="absolute inset-s-0 top-0 type-caption text-muted-foreground">
                       Skills
@@ -454,9 +455,16 @@ export function BuildEconomy({
                     : `${p.price.toLocaleString("en-US")} souls`
                 }
               >
-                <RankedEntityMetric label="Souls" value={p.netWorthAtBuy != null ? compact(p.netWorthAtBuy) : null} />
+                {/* On a phone the chart above says it; the item names need the room. */}
+                <RankedEntityMetric
+                  className="hidden @sm:flex"
+                  label="Souls"
+                  value={p.netWorthAtBuy != null ? compact(p.netWorthAtBuy) : null}
+                />
                 <RankedEntityMetric label="Bought" value={p.boughtAt != null ? clock(p.boughtAt) : null} />
                 <RankedEntityMetric
+                  // "Replaced" needs more than the default width on a phone.
+                  className="w-16"
                   // A share of purchases where the API reports sales, else the average time of a sale.
                   label={isComponent.has(p.itemId) ? "Replaced" : p.soldShare != null ? "Sold" : "Sold at"}
                   value={
