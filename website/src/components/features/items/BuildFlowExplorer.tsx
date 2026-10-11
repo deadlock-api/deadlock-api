@@ -292,14 +292,15 @@ const NEXT_MIN_SHARE = 0.1;
 const NEXT_MIN_SHARE_BRAWL = 0.05;
 
 /**
- * The item an empty stage of the build suggests: the best win rate (pulled toward the build's, see SHRINK_SHARE)
- * among the items a good part of the build's players buy there, other than those in `taken` (an item is owned once).
+ * The item an empty stage of the build suggests: the best win rate by the least it may be (its 95% interval's low
+ * end) among the items a good part of the build's players buy there, other than those in `taken` (an item is owned
+ * once).
  */
 function nextPick(view: View, column: number, taken: Set<number>, minShare = NEXT_MIN_SHARE): Choice | undefined {
   let best: Choice | undefined;
   for (const choice of view.byKey.values()) {
     if (choice.column !== column || taken.has(choice.itemId) || choice.pickRate < minShare) continue;
-    if (!best || choice.score > best.score) best = choice;
+    if (!best || choice.interval[0] > best.interval[0]) best = choice;
   }
   return best;
 }
