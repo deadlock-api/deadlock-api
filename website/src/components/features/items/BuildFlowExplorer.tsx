@@ -34,6 +34,7 @@ import { Grid } from "~/components/ui/grid";
 import { Popover, PopoverContent, PopoverTrigger } from "~/components/ui/popover";
 import { Segmented, SegmentedItem } from "~/components/ui/segmented";
 import { Separator } from "~/components/ui/separator";
+import { Skeleton } from "~/components/ui/skeleton";
 import { Inline, Stack } from "~/components/ui/stack";
 import { Stat, StatGroup } from "~/components/ui/stat";
 import { Tooltip, TooltipHeader, TooltipProvider, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
@@ -412,39 +413,66 @@ export function BuildFlowExplorer({
                 </Inline>
               )}
             </Stack>
-            <StatGroup variant="plain" size="xs" className="grid-cols-2 gap-x-6 @md:grid-cols-4 @4xl:grid-cols-2">
+            {/* While another build loads, its numbers are not known yet: the old ones would read as the new build's. */}
+            <StatGroup
+              variant="plain"
+              size="xs"
+              aria-busy={switching || undefined}
+              className="grid-cols-2 gap-x-6 @md:grid-cols-4 @4xl:grid-cols-2"
+            >
               <Stat
                 label="Win rate"
-                value={percent(winRate)}
+                value={switching ? <Skeleton className="h-6 w-16" /> : percent(winRate)}
                 // Compare the printed tenth of a percent, so 49.99% shows as an even 50.0%, not a red one.
-                tone={toneOf(Math.round(winRate * 1000), 500)}
+                tone={switching ? undefined : toneOf(Math.round(winRate * 1000), 500)}
                 sub={
-                  path.length > 0 ? (
+                  switching ? (
+                    <Skeleton className="h-4 w-20" />
+                  ) : path.length === 0 ? (
+                    `±${((wrHigh - wrLow) * 50).toFixed(1)} pts`
+                  ) : Math.round((winRate - baseWinRate) * 1000) === 0 ? (
+                    "+0.0 pts vs all"
+                  ) : (
                     <>
                       <Delta value={(winRate - baseWinRate) * 100} format="number" unit=" pts" /> vs all
                     </>
-                  ) : (
-                    `±${((wrHigh - wrLow) * 50).toFixed(1)} pts`
                   )
                 }
               />
               <Stat
                 label="Games"
-                value={count(summary.matches)}
-                sub={path.length > 0 ? `${percent(summary.matches / Math.max(1, baseline.matches))} of all` : undefined}
+                value={switching ? <Skeleton className="h-6 w-16" /> : count(summary.matches)}
+                sub={
+                  path.length === 0 ? undefined : switching ? (
+                    <Skeleton className="h-4 w-16" />
+                  ) : (
+                    `${percent(summary.matches / Math.max(1, baseline.matches))} of all`
+                  )
+                }
               />
               <Stat
                 label="Game length"
-                value={`${Math.floor(duration / 60)}:${String(duration % 60).padStart(2, "0")}`}
+                value={
+                  switching ? (
+                    <Skeleton className="h-6 w-12" />
+                  ) : (
+                    `${Math.floor(duration / 60)}:${String(duration % 60).padStart(2, "0")}`
+                  )
+                }
               />
+              {/* The cost is the picked items' own, known before the build's games load. */}
               <Stat
                 label={path.length > 0 ? "Build cost" : "Avg KDA"}
                 value={
-                  path.length > 0
-                    ? count(cost)
-                    : [summary.total_kills, summary.total_deaths, summary.total_assists]
-                        .map((n) => (n / Math.max(1, summary.matches)).toFixed(1))
-                        .join(" / ")
+                  path.length > 0 ? (
+                    count(cost)
+                  ) : switching ? (
+                    <Skeleton className="h-6 w-20" />
+                  ) : (
+                    [summary.total_kills, summary.total_deaths, summary.total_assists]
+                      .map((n) => (n / Math.max(1, summary.matches)).toFixed(1))
+                      .join(" / ")
+                  )
                 }
               />
             </StatGroup>

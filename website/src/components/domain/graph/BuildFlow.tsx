@@ -12,7 +12,8 @@ import { cn } from "~/lib/utils";
 
 /**
  * One stage of a build (a time phase, a round): its name, a quiet line beside it (how many games reach it) and its
- * choices below. A stage of a build flow sits in a `Grid` next to the others.
+ * choices below. A stage of a build flow sits in a `Grid` next to the others. `aria-busy` fades it while the numbers it
+ * shows are about to be replaced.
  */
 export function BuildStage({
   title,
@@ -27,7 +28,14 @@ export function BuildStage({
   meta?: React.ReactNode;
 }) {
   return (
-    <section data-slot="build-stage" className={cn("flex min-w-0 flex-col gap-1.5", className)} {...props}>
+    <section
+      data-slot="build-stage"
+      className={cn(
+        "flex min-w-0 flex-col gap-1.5 transition-opacity duration-normal ease-standard aria-busy:opacity-50",
+        className,
+      )}
+      {...props}
+    >
       <header className="flex min-h-7 items-baseline justify-between gap-2 border-b border-hairline pb-1">
         <Heading as="h3" size="sm">
           {title}
