@@ -118,6 +118,8 @@ const COMPLETE_MIN_GAMES = 200;
 const COMPLETE_FALLBACK_GAMES = 50;
 // The most items an auto-completed build holds by each stage's end (then capped by the open slots).
 const COMPLETE_HELD_BY_STAGE = [4, 7, 10];
+// Under this many games a build shows no win rate at all.
+const MIN_RATE_GAMES = 30;
 // Under this many games a build's win rate is marked as resting on few games.
 const FEW_GAMES = 100;
 // Selling refunds half an item's price.
@@ -431,11 +433,8 @@ function ItemPlan({
             <OptionRow
               key={swap.itemId}
               leading={<ItemImage itemId={swap.itemId} alt="" className="size-6" />}
-              trailing={
-                <span className="text-xs tabular-nums">
-                  {percent(swap.winRate)} WR · {count(swap.games)} games
-                </span>
-              }
+              // On its own line under the name, which keeps the menu's width on a phone.
+              description={`${percent(swap.winRate)} WR · ${count(swap.games)} games`}
               onClick={() => choose(() => onSwap(swap.itemId))}
             >
               Swap for <ItemName itemId={swap.itemId} />
@@ -971,6 +970,8 @@ export function BuildFlowExplorer({
       setCompleting(null);
     }
   };
+  // A win rate from a handful of games (13, 1) reads like a fact; under this many it is not shown.
+  const tooFewGames = summary.matches < MIN_RATE_GAMES;
   // A build nobody played in these filters: its numbers are not zeros but missing.
   const noGames = summary.matches === 0;
   // A Street Brawl answer can have fewer rounds than the stage that was shown.
@@ -1097,12 +1098,14 @@ export function BuildFlowExplorer({
             >
               <Stat
                 label="Win rate"
-                value={switching ? <Skeleton className="h-6 w-16" /> : noGames ? null : percent(winRate)}
+                value={switching ? <Skeleton className="h-6 w-16" /> : tooFewGames ? null : percent(winRate)}
                 tone={switching ? undefined : buildTone}
                 sub={
                   switching ? (
                     <Skeleton className="h-4 w-20" />
-                  ) : noGames ? undefined : path.length === 0 ? (
+                  ) : noGames ? undefined : tooFewGames ? (
+                    `under ${MIN_RATE_GAMES} games`
+                  ) : path.length === 0 ? (
                     `±${((wrHigh - wrLow) * 50).toFixed(1)} pts`
                   ) : (
                     <>
