@@ -113,8 +113,26 @@ export const itemsPageOptions = {
       const [{ playerPerformanceCurveQueryOptions }] = await Promise.all([
         import("~/queries/player-performance-curve-query"),
       ]);
-      const sales = prefetchCached(queryClient, itemStatsQueryOptions(economy));
-      const curve = prefetchCached(queryClient, playerPerformanceCurveQueryOptions({ ...economy, resolution: 0 }));
+      // Seeded with the fields the designer reads (the curve answer has ~100 metrics a point); the browser refetches the
+      // full answers after hydration.
+      const sales = prefetchSeed(queryClient, itemStatsQueryOptions(economy), (rows) =>
+        rows.map(
+          (row) =>
+            ({
+              item_id: row.item_id,
+              matches: row.matches,
+              sold: row.sold,
+              avg_buy_time_s: row.avg_buy_time_s,
+              avg_sell_time_s: row.avg_sell_time_s,
+            }) as typeof row,
+        ),
+      );
+      const curve = prefetchSeed(
+        queryClient,
+        playerPerformanceCurveQueryOptions({ ...economy, resolution: 0 }),
+        (points) =>
+          points.map((point) => ({ game_time: point.game_time, net_worth_avg: point.net_worth_avg }) as typeof point),
+      );
       if (isServer) await Promise.all([flowSeed, sales, curve]);
       return { leader: null, coverage };
     }
