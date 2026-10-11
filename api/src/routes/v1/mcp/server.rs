@@ -22,6 +22,8 @@ use crate::services::assets::versions::items::Item;
 use crate::services::assets::versions::items::types::ItemType;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::rate_limiter::{Quota, RateLimitClient};
+use crate::services::steam::client::SteamClient;
+use crate::services::steam::types::FeedItem;
 
 const INSTRUCTIONS: &str = "\
 Read-only SQL access to hourly parquet snapshots of the Deadlock API database (https://deadlock-api.com).
@@ -37,12 +39,14 @@ Read-only SQL access to hourly parquet snapshots of the Deadlock API database (h
 - `match_player` is exported incrementally, so up to ~2% of rows can appear twice with different `created_at`. `match_player_latest` keeps only the newest row per (`match_id`, `account_id`), which costs extra work; prefer it when counts matter, and `match_player` for ranges and rough aggregates.
 - Schema exploration: `SHOW TABLES`, `DESCRIBE match_player`, `SUMMARIZE match_salts`, `duckdb_columns()`.
 - DuckDB extras: `SELECT * EXCLUDE (col)`, `GROUP BY ALL`, `QUALIFY`, `arg_max(x, y)`, list/struct literals, `strftime`/`date_trunc`.
-- Heroes and items (abilities, weapons, shop upgrades) are stored as numeric ids. `list_heroes` and `list_items` map them to names; pass an `id` to get the full details of one hero or item.";
+- Heroes and items (abilities, weapons, shop upgrades) are stored as numeric ids. `list_heroes` and `list_items` map them to names; pass an `id` to get the full details of one hero or item.
+- `list_patches` lists the game patches with the time range each was live; use it to scope `start_time` filters to a patch. Pass a patch `link` to get its full notes.";
 
 pub(super) struct McpServer {
     pub(super) catalog: Arc<SnapshotCatalog>,
     pub(super) assets: AssetsClient,
     pub(super) rate_limit: RateLimitClient,
+    pub(super) steam: SteamClient,
 }
 
 /// The MCP server is for agents running a handful of queries, not for jobs that poll it around
@@ -99,6 +103,7 @@ impl ServerHandler for McpServer {
                 "list_columns" => self.list_columns(parse_json_object(args)?),
                 "list_heroes" => self.list_heroes(parse_json_object(args)?).await,
                 "list_items" => self.list_items(parse_json_object(args)?).await,
+                "list_patches" => self.list_patches(parse_json_object(args)?).await,
                 other => CallToolResult::error(vec![ContentBlock::text(format!(
                     "Unknown tool: '{other}'"
                 ))]),
@@ -137,6 +142,19 @@ struct ListHeroesArgs {
 struct ListItemsArgs {
     r#type: Option<ItemType>,
     id: Option<u32>,
+}
+
+#[derive(Deserialize)]
+struct ListPatchesArgs {
+    source: Option<PatchSource>,
+    link: Option<String>,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "lowercase")]
+enum PatchSource {
+    Forum,
+    Steam,
 }
 
 #[derive(Serialize)]
@@ -330,6 +348,69 @@ impl McpServer {
             .collect();
         success(&json!({ "success": true, "itemCount": items.len(), "items": items }))
     }
+
+    async fn list_patches(&self, args: ListPatchesArgs) -> CallToolResult {
+        let feed = match self.steam.fetch_combined_patch_feed().await {
+            Ok(feed) => feed,
+            Err(e) => return patches_error(&e),
+        };
+        let patches = patch_summaries(&feed);
+        if let Some(link) = args.link {
+            return match feed.iter().zip(patches).find(|(_, p)| p["link"] == link) {
+                Some((item, mut patch)) => {
+                    patch["content"] = json!(match item {
+                        FeedItem::Forum(p) => &p.content,
+                        FeedItem::Steam(p) => &p.content,
+                    });
+                    success(&patch)
+                }
+                None => lookup_not_found(format!("Patch not found: {link}")),
+            };
+        }
+        let patches: Vec<_> = feed
+            .iter()
+            .zip(patches)
+            .filter(|(item, _)| args.source.is_none_or(|s| s == patch_source(item)))
+            .map(|(_, patch)| patch)
+            .collect();
+        success(&json!({ "success": true, "patchCount": patches.len(), "patches": patches }))
+    }
+}
+
+fn patch_source(item: &FeedItem) -> PatchSource {
+    match item {
+        FeedItem::Forum(_) => PatchSource::Forum,
+        FeedItem::Steam(_) => PatchSource::Steam,
+    }
+}
+
+/// One summary per feed item, which is sorted newest first. A patch is live until the next
+/// patch of the same source is published.
+fn patch_summaries(feed: &[FeedItem]) -> Vec<Value> {
+    let (mut next_forum, mut next_steam) = (None, None);
+    feed.iter()
+        .map(|item| {
+            let pub_date = item.pub_date().to_utc();
+            let (source, title, link, end_date) = match item {
+                FeedItem::Forum(p) => ("forum", &p.title, &p.link, next_forum.replace(pub_date)),
+                FeedItem::Steam(p) => ("steam", &p.title, &p.link, next_steam.replace(pub_date)),
+            };
+            json!({
+                "source": source,
+                "title": title.trim(),
+                "pubDate": pub_date,
+                "endDate": end_date,
+                "link": link,
+            })
+        })
+        .collect()
+}
+
+fn patches_error(error: &impl core::fmt::Display) -> CallToolResult {
+    warn!("MCP list_patches failed: {error}");
+    CallToolResult::error(vec![ContentBlock::text(format!(
+        "Error calling tool 'list_patches': failed to load the patch feed: {error}"
+    ))])
 }
 
 fn item_summary(item: &Item) -> Value {
@@ -582,6 +663,23 @@ static TOOLS: LazyLock<Vec<Tool>> = LazyLock::new(|| {
             })),
         )
         .with_title("List Items"),
+        Tool::new(
+            "list_patches",
+            "List the game patches, newest first, from the official forum changelog (`forum`) and the Steam news feed (`steam`), with `title`, `link`, `pubDate` and `endDate`: when the next patch of the same source was published, null for the live one. Matches with `start_time` in [`pubDate`, `endDate`) were played on that patch. Pass `link` to get the full notes of one patch instead.",
+            object(json!({
+                "properties": {
+                    "source": {
+                        "anyOf": [{ "type": "string", "enum": ["forum", "steam"] }, { "type": "null" }],
+                        "default": null,
+                        "description": "Only list patches from this source"
+                    },
+                    "link": optional_string("Patch link; returns that patch with its full notes")
+                },
+                "type": "object",
+                "additionalProperties": false
+            })),
+        )
+        .with_title("List Patches"),
     ]
     .into_iter()
     .map(|tool| {
@@ -590,3 +688,59 @@ static TOOLS: LazyLock<Vec<Tool>> = LazyLock::new(|| {
     })
     .collect()
 });
+
+#[cfg(test)]
+mod tests {
+    use chrono::DateTime;
+
+    use super::*;
+    use crate::services::steam::types::{ForumPatch, PatchCategory, PatchGuid, SteamNews};
+
+    fn guid() -> PatchGuid {
+        PatchGuid {
+            is_perma_link: false,
+            text: String::new(),
+        }
+    }
+
+    fn forum(ts: i64) -> FeedItem {
+        FeedItem::Forum(ForumPatch {
+            title: "forum".into(),
+            pub_date: DateTime::from_timestamp(ts, 0).unwrap().fixed_offset(),
+            link: format!("forum/{ts}"),
+            guid: guid(),
+            category: PatchCategory {
+                domain: String::new(),
+                text: "Changelog".into(),
+            },
+            content: String::new(),
+        })
+    }
+
+    fn steam(ts: i64) -> FeedItem {
+        FeedItem::Steam(SteamNews {
+            title: " steam ".into(),
+            pub_date: DateTime::from_timestamp(ts, 0).unwrap().fixed_offset(),
+            link: format!("steam/{ts}"),
+            guid: guid(),
+            content: String::new(),
+        })
+    }
+
+    #[test]
+    fn a_patch_ends_at_the_next_patch_of_the_same_source() {
+        let summaries = patch_summaries(&[steam(400), forum(300), steam(200), forum(100)]);
+        let end_dates: Vec<_> = summaries.iter().map(|p| &p["endDate"]).collect();
+        assert_eq!(
+            end_dates,
+            [
+                &Value::Null,
+                &Value::Null,
+                &json!("1970-01-01T00:06:40Z"),
+                &json!("1970-01-01T00:05:00Z"),
+            ]
+        );
+        assert_eq!(summaries[0]["title"], "steam");
+        assert_eq!(summaries[3]["pubDate"], "1970-01-01T00:01:40Z");
+    }
+}

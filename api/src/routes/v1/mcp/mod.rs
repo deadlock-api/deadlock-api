@@ -23,6 +23,7 @@ pub(super) fn router(state: &AppState) -> OpenApiRouter<AppState> {
     let catalog = Arc::clone(&state.mcp_catalog);
     let assets = state.assets_client.clone();
     let rate_limit = state.rate_limit_client.clone();
+    let steam = state.steam_client.clone();
     let config = StreamableHttpServerConfig::default()
         .with_legacy_session_mode(false)
         .with_cancellation_token(SHUTDOWN_TOKEN.child_token())
@@ -33,6 +34,7 @@ pub(super) fn router(state: &AppState) -> OpenApiRouter<AppState> {
                 catalog: Arc::clone(&catalog),
                 assets: assets.clone(),
                 rate_limit: rate_limit.clone(),
+                steam: steam.clone(),
             })
         },
         Arc::new(NeverSessionManager::default()),
