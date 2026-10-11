@@ -379,26 +379,31 @@ export function BuildBudget({
     <div
       data-slot="build-budget"
       data-over={overSouls || overSlots || undefined}
-      className={cn("flex flex-col gap-1", className)}
+      className={cn("@container", className)}
       {...props}
     >
-      <ProgressBar
-        variant="thin"
-        value={available > 0 ? Math.min(1, spent / available) : 1}
-        color={overSouls ? "var(--negative)" : "var(--chart-share)"}
-        className="w-full"
-      />
-      <span className="flex items-center gap-1 type-caption text-muted-foreground tabular-nums">
-        {(overSouls || overSlots) && <TriangleAlertIcon aria-hidden="true" className="size-3 shrink-0 text-negative" />}
-        <span className={cn("truncate", overSouls && "text-negative")}>
-          {format(spent)} of {format(available)} souls
-        </span>
-        {slots && (
-          <span className={cn("ms-auto shrink-0", overSlots && "text-negative")}>
-            {slots.used}/{slots.open} slots
+      {/* The bar over its figures where the card is narrow; the bar, then the figures, on one line where it is wide. */}
+      <div className="flex flex-col gap-1 @md:flex-row @md:items-center @md:gap-3">
+        <ProgressBar
+          variant="thin"
+          value={available > 0 ? Math.min(1, spent / available) : 1}
+          color={overSouls ? "var(--negative)" : "var(--chart-share)"}
+          className="w-full @md:min-w-0 @md:flex-1"
+        />
+        <span className="flex items-center gap-1 type-caption text-muted-foreground tabular-nums @md:shrink-0 @md:gap-3">
+          {(overSouls || overSlots) && (
+            <TriangleAlertIcon aria-hidden="true" className="size-3 shrink-0 text-negative" />
+          )}
+          <span className={cn("truncate", overSouls && "text-negative")}>
+            {format(spent)} of {format(available)} souls
           </span>
-        )}
-      </span>
+          {slots && (
+            <span className={cn("ms-auto shrink-0", overSlots && "text-negative")}>
+              {slots.used}/{slots.open} slots
+            </span>
+          )}
+        </span>
+      </div>
     </div>
   );
 }
