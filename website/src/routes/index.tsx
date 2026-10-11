@@ -3,6 +3,7 @@ import {
   BarChart3,
   Code,
   Database,
+  Download,
   HardDrive,
   Heart,
   ListOrdered,
@@ -302,6 +303,24 @@ function IndexRoute() {
         </Grid>
       </Section>
 
+      <LinkCard
+        asChild
+        size="sm"
+        orientation="horizontal"
+        tone="primary"
+        className="mx-auto w-full max-w-2xl"
+        title="Track all your matches on all tracker sites"
+        description="Install the ingest tool once and every match you play gets sent."
+        cta="Install"
+        media={
+          <IconTile size="sm" tone="primary">
+            <Download />
+          </IconTile>
+        }
+      >
+        <SmartLink href="/ingest-cache">{null}</SmartLink>
+      </LinkCard>
+
       <Section
         size="lg"
         align="center"
@@ -404,8 +423,9 @@ function IndexRoute() {
           </p>
           <p>
             The platform is fully open source and provides free access to all data, including hourly database dumps for
-            researchers and developers. A $1.50/month patron tier offers prioritized data fetching for personal Steam
-            accounts, ensuring your matches and stats are always up to date.
+            researchers and developers. Players can help fill in the gaps with the open source ingest tool, which sends
+            the matches in their Steam cache. A $1.50/month patron tier offers prioritized data fetching for personal
+            Steam accounts, ensuring your matches and stats are always up to date.
           </p>
         </Prose>
       </Section>
