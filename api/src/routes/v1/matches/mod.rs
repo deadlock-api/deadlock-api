@@ -7,7 +7,7 @@ mod live_url;
 pub(crate) mod metadata;
 mod recently_fetched;
 pub(crate) mod salts;
-mod to_fetch;
+pub(crate) mod to_fetch;
 pub(crate) mod types;
 
 use core::time::Duration;

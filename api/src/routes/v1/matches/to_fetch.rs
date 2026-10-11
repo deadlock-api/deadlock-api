@@ -7,12 +7,14 @@ use axum::http::header::CACHE_CONTROL;
 use axum::response::{IntoResponse, Response};
 use axum_extra::extract::Query;
 use cached::macros::cached;
+use clickhouse::Row;
 use serde::{Deserialize, Serialize};
 use sqlx::{Pool, Postgres};
 use tracing::debug;
 
 use crate::context::AppState;
 use crate::error::APIResult;
+use crate::services::clickhouse_insert_batcher::{BatchInsert, ClickhouseInsertBatcher};
 use crate::utils::parse::parse_steam_id_option;
 use crate::utils::sql::id_list;
 
@@ -24,6 +26,51 @@ const CLAIM_PREFIX: &str = "matches_to_fetch:claimed:";
 /// Matches from `active_matches` are pending while still being played; their salts only exist
 /// once the match ended.
 const MIN_AGE_SECS: u32 = 2 * 60 * 60;
+
+/// A `pending_matches` row for a match the API was asked for but could not fetch because the
+/// Steam proxy had no bot to spare. Nothing else is known about the match, so every column but
+/// the id is zeroed: `match_mode` is `Invalid`, which the to-fetch order reads as "requested".
+/// `updated_at` is zero so this row never wins over one that knows more: a `pending` row from
+/// `player_match_history` (versioned by `start_time`) or a `done` row from salts or metadata.
+#[derive(Debug, Clone, Row, Serialize)]
+pub(crate) struct RequestedMatchRow {
+    match_id: u64,
+    state: i8,
+    updated_at: u32,
+    start_time: u32,
+    match_mode: i8,
+    game_mode: i8,
+    badge: u32,
+}
+
+impl RequestedMatchRow {
+    /// `None` for ids `pending_matches` doesn't track (too old, or custom matches).
+    pub(crate) fn new(match_id: u64) -> Option<Self> {
+        (MIN_MATCH_ID..u64::from(u32::MAX))
+            .contains(&match_id)
+            .then_some(Self {
+                match_id,
+                state: 0,
+                updated_at: 0,
+                start_time: 0,
+                match_mode: 0,
+                game_mode: 0,
+                badge: 0,
+            })
+    }
+}
+
+pub(crate) struct RequestedMatchInsert;
+
+impl BatchInsert for RequestedMatchInsert {
+    type Row = RequestedMatchRow;
+
+    fn table_name() -> &'static str {
+        "pending_matches"
+    }
+}
+
+pub(crate) type RequestedMatchInsertBatcher = ClickhouseInsertBatcher<RequestedMatchInsert>;
 
 fn worklist(ids: impl Serialize) -> Response {
     (
@@ -47,9 +94,11 @@ async fn prioritized_account_ids(pg_client: &Pool<Postgres>) -> Result<Arc<Vec<u
     ))
 }
 
-/// Pending matches in fetch order: prioritized accounts' matches, then ranked, unranked,
-/// street brawl and everything else; newest day first, within a day ranked games with
-/// a higher-badge player (any one player's badge at that match) first, then the newest.
+/// Pending matches in fetch order: prioritized accounts' matches first, then newest day first;
+/// within a day matches requested from the API while the Steam proxy was rate limited (counted
+/// as today's, their start time is unknown), then ranked, unranked, street brawl and everything
+/// else; within those a higher-badge player (any one player's badge at that match) first, then
+/// the newest.
 /// Holds every pending prioritized match plus the newest others, up to `POOL_LIMIT`.
 #[cached(ttl_secs = 60, convert = "{ 0 }", key = "u8", sync_writes = "default")]
 async fn pending_pool(
@@ -74,11 +123,13 @@ async fn pending_pool(
                AND start_time < now() - INTERVAL {MIN_AGE_SECS} SECOND
              ORDER BY is_prio DESC, match_id DESC LIMIT {POOL_LIMIT}
          )
-         ORDER BY if(is_prio, 0, multiIf(match_mode = 'Ranked', 1,
-                                         game_mode = 'StreetBrawl', 3,
-                                         match_mode = 'Unranked', 2,
-                                         4)),
-                  toDate(start_time) DESC,
+         ORDER BY is_prio DESC,
+                  toDate(if(start_time = 0, now(), start_time)) DESC,
+                  multiIf(match_mode = 'Invalid', 1,
+                          match_mode = 'Ranked', 2,
+                          game_mode = 'StreetBrawl', 4,
+                          match_mode = 'Unranked', 3,
+                          5),
                   badge DESC,
                   match_id DESC
          SETTINGS log_comment = 'matches_to_fetch_pool'"

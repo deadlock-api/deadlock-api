@@ -17,11 +17,12 @@ use valveprotos::deadlock::{
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
+use crate::routes::v1::matches::to_fetch::RequestedMatchRow;
 use crate::routes::v1::matches::types::ClickhouseSalts;
 use crate::services::clickhouse_batcher::{BatchQuery, ClickhouseBatcher, in_clause};
 use crate::services::rate_limiter::Quota;
 use crate::services::rate_limiter::extractor::RateLimitKey;
-use crate::services::steam::types::{SteamProxyQuery, SteamProxyResponse};
+use crate::services::steam::types::{SteamProxyError, SteamProxyQuery, SteamProxyResponse};
 use crate::utils::types::MatchIdQuery;
 
 /// Bot cooldown after a `GetMatchMetaData` job, i.e. 50 of them per bot per day.
@@ -192,6 +193,14 @@ pub(crate) fn replay_file_url(
     format!("http://replay{cluster_id}.valve.net/1422450/{match_id}_{salt}.{extension}.bz2")
 }
 
+/// Whether the Steam proxy turned the request away for want of a bot: all bots of the group
+/// are on cooldown (429) or none is alive (503).
+fn is_proxy_exhausted(e: &SteamProxyError) -> bool {
+    matches!(e, SteamProxyError::Request(e) if e.status().is_some_and(|s| {
+        s == StatusCode::TOO_MANY_REQUESTS || s == StatusCode::SERVICE_UNAVAILABLE
+    }))
+}
+
 fn not_found(match_id: u64) -> APIError {
     APIError::status_msg(
         StatusCode::NOT_FOUND,
@@ -282,7 +291,20 @@ pub(super) async fn fetch_match_salts(
                 Duration::ZERO
             }),
         })
-        .await?;
+        .await;
+    let result = match result {
+        Ok(result) => result,
+        Err(e) => {
+            // No bot to spare: queue the match so the to-fetch workers pick it up instead.
+            if !is_custom
+                && is_proxy_exhausted(&e)
+                && let Some(row) = RequestedMatchRow::new(match_id)
+            {
+                state.batchers.requested_match_insert.insert_one(row).await;
+            }
+            return Err(e.into());
+        }
+    };
     let username = format!("api-fetch:{}", result.username);
     let salts: SteamProxyResponse<CMsgClientToGcGetMatchMetaDataResponse> = result.try_into()?;
     let salts = salts.msg;
