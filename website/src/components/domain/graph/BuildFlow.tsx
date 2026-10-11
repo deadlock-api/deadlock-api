@@ -311,44 +311,49 @@ export function BuildSlotItem({
 
 /**
  * What a build has spent by the end of a stage against what a player has earned by then: a bar and the two figures,
- * in the loss color with a warning mark once spending passes earnings.
+ * and with `slots` the item slots it fills against those open. In the loss color with a warning mark once spending
+ * passes earnings or the items pass the slots.
  */
 export function BuildBudget({
   spent,
   available,
+  slots,
   format = (n) => n.toLocaleString("en-US"),
   className,
   ...props
 }: Omit<React.ComponentProps<"div">, "children"> & {
   spent: number;
   available: number;
+  /** Items held at the end of the stage against the slots open by then. */
+  slots?: { used: number; open: number };
   /** Prints a soul amount: "6.7k". */
   format?: (souls: number) => string;
 }) {
-  const over = spent > available;
+  const overSouls = spent > available;
+  const overSlots = slots != null && slots.used > slots.open;
   return (
     <div
       data-slot="build-budget"
-      data-over={over || undefined}
+      data-over={overSouls || overSlots || undefined}
       className={cn("flex flex-col gap-1", className)}
       {...props}
     >
       <ProgressBar
         variant="thin"
         value={available > 0 ? Math.min(1, spent / available) : 1}
-        color={over ? "var(--negative)" : "var(--chart-share)"}
+        color={overSouls ? "var(--negative)" : "var(--chart-share)"}
         className="w-full"
       />
-      <span
-        className={cn(
-          "flex items-center gap-1 type-caption tabular-nums",
-          over ? "text-negative" : "text-muted-foreground",
-        )}
-      >
-        {over && <TriangleAlertIcon aria-hidden="true" className="size-3 shrink-0" />}
-        <span className="truncate">
+      <span className="flex items-center gap-1 type-caption text-muted-foreground tabular-nums">
+        {(overSouls || overSlots) && <TriangleAlertIcon aria-hidden="true" className="size-3 shrink-0 text-negative" />}
+        <span className={cn("truncate", overSouls && "text-negative")}>
           {format(spent)} of {format(available)} souls
         </span>
+        {slots && (
+          <span className={cn("ms-auto shrink-0", overSlots && "text-negative")}>
+            {slots.used}/{slots.open} slots
+          </span>
+        )}
       </span>
     </div>
   );

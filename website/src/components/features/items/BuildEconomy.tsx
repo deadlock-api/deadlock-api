@@ -1,14 +1,23 @@
 import { useQuery } from "@tanstack/react-query";
 import { Coins } from "lucide-react";
-import { useMemo } from "react";
-import { CartesianGrid, ComposedChart, Line, ReferenceArea, ReferenceDot, XAxis, YAxis } from "recharts";
+import { useMemo, useState } from "react";
+import { CartesianGrid, ComposedChart, Line, ReferenceArea, ReferenceDot, ReferenceLine, XAxis, YAxis } from "recharts";
 
 import { RankedEntityList, RankedEntityMetric, RankedEntityRow } from "~/components/domain/assets/RankedEntityList";
 import { ChartLegend, ChartLegendItem } from "~/components/patterns/charts/ChartLegend";
 import { ChartEmpty, ChartError, ChartLoading } from "~/components/patterns/charts/ChartStates";
 import { ChartSurface } from "~/components/patterns/charts/ChartSurface";
-import { CHART_COLOR, CHART_GRID, CHART_TICK, CHART_X_AXIS, CHART_Y_AXIS } from "~/components/patterns/charts/theme";
+import {
+  CHART_COLOR,
+  CHART_GRID,
+  CHART_MARKER_LABEL,
+  CHART_MARKER_LINE,
+  CHART_TICK,
+  CHART_X_AXIS,
+  CHART_Y_AXIS,
+} from "~/components/patterns/charts/theme";
 import { Panel, PanelBody, PanelFooter, PanelHeader } from "~/components/patterns/panel/Panel";
+import { Slider } from "~/components/ui/slider";
 import type { GameMode, MatchMode } from "~/lib/game-mode";
 import { itemUpgradesQueryOptions } from "~/queries/asset-queries";
 import { itemStatsQueryOptions } from "~/queries/item-stats-query";
@@ -21,6 +30,8 @@ const STAGE_LABELS = ["0–9m", "9–20m", "20–30m", "30m+"] as const;
 const SELL_REFUND = 0.5;
 // The plot ends here: few games run longer, and the curve's last points come from those few.
 const END_S = 2700;
+// The y-axis width in pixels: the flex slider under the plot is inset by the same (`ps-10`).
+const Y_AXIS_WIDTH = 40;
 const TICKS = [0, 300, 600, 900, 1200, 1500, 1800, 2100, 2400, 2700];
 
 export interface EconomyItem {
@@ -38,6 +49,9 @@ export interface EconomyItem {
 interface BuildEconomyProps {
   title: React.ReactNode;
   items: EconomyItem[];
+  /** When the three flex slots unlock, in minutes; the timeline marks them and its slider moves them. */
+  flexMinutes: readonly number[];
+  onFlexMinutesChange: (minutes: number[]) => void;
   heroId: number | null;
   gameMode?: GameMode;
   matchMode?: MatchMode;
@@ -120,6 +134,8 @@ const compact = compactSouls;
 export function BuildEconomy({
   title,
   items,
+  flexMinutes,
+  onFlexMinutesChange,
   heroId,
   gameMode,
   matchMode,
@@ -148,6 +164,11 @@ export function BuildEconomy({
   });
   const stats = useQuery(itemStatsQueryOptions(filters));
   const { data: upgrades } = useQuery(itemUpgradesQueryOptions);
+  // The slider's own value while the URL behind `flexMinutes` catches up in a transition: tied to the value it moved
+  // from, so key presses build on each other, and dropped once the props change (to the new value, or another build).
+  const flexKey = flexMinutes.join(",");
+  const [flexDraft, setFlexDraft] = useState<{ from: string; minutes: number[] } | null>(null);
+  const shownFlex = flexDraft?.from === flexKey ? flexDraft.minutes : [...flexMinutes];
   // Items another item is built from: their sales count the purchases merged into that upgrade as well.
   const isComponent = useMemo(() => {
     const classNames = new Set((upgrades ?? []).flatMap((item) => item.component_items ?? []));
@@ -265,6 +286,14 @@ export function BuildEconomy({
                       />
                     ))}
                     <CartesianGrid {...CHART_GRID} />
+                    {flexMinutes.map((m, i) => (
+                      <ReferenceLine
+                        key={i}
+                        x={m * 60}
+                        {...CHART_MARKER_LINE}
+                        label={{ value: `+${i + 1}`, position: "insideBottomRight", ...CHART_MARKER_LABEL }}
+                      />
+                    ))}
                     <XAxis
                       {...CHART_X_AXIS}
                       dataKey="t"
@@ -273,7 +302,8 @@ export function BuildEconomy({
                       ticks={TICKS}
                       tickFormatter={(s: number) => `${s / 60}m`}
                     />
-                    <YAxis {...CHART_Y_AXIS} tickFormatter={compact} />
+                    {/* 40px, the flex slider's inset below, so the two share the plot's span. */}
+                    <YAxis {...CHART_Y_AXIS} width={Y_AXIS_WIDTH} tickFormatter={compact} />
                     <Line
                       dataKey="souls"
                       type="monotone"
@@ -322,6 +352,28 @@ export function BuildEconomy({
                     })}
                   </ComposedChart>
                 </ChartSurface>
+                {/* Under the timeline it sets: when the three flex slots open, marked on the plot above. */}
+                {/* The track spans the plot exactly (a fixed y-axis width on its left, the plot margin on its right), so a
+                    thumb sits on its minute and on its marker line. */}
+                <div className="flex flex-col gap-1 ps-10 pe-4">
+                  <Slider
+                    min={0}
+                    max={END_S / 60}
+                    step={1}
+                    minStepsBetweenThumbs={0}
+                    value={shownFlex}
+                    onValueChange={(next) => {
+                      setFlexDraft({ from: flexKey, minutes: next });
+                      onFlexMinutesChange(next);
+                    }}
+                    thumbLabels={["First flex slot", "Second flex slot", "Third flex slot"]}
+                    getValueText={(m) => `${m} minutes`}
+                  />
+                  <span className="flex justify-between gap-2 text-xs text-muted-foreground tabular-nums">
+                    <span>Flex slots</span>
+                    <span className="text-foreground">{shownFlex.map((m) => `${m}m`).join(" · ")}</span>
+                  </span>
+                </div>
                 <ChartLegend className="justify-center">
                   <ChartLegendItem color={CHART_COLOR.share} shape="line">
                     Average net worth

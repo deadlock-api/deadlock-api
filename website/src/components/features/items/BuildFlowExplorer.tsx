@@ -107,6 +107,10 @@ const CATEGORIES = [
   { slot: "vitality", label: "Vitality", color: ITEM_SLOT_COLOR.vitality },
   { slot: "spirit", label: "Spirit", color: ITEM_SLOT_COLOR.spirit },
 ] as const;
+// Every player starts with nine item slots and unlocks up to three flex slots over the game, at times the build sets
+// (minutes, `build_flex`); these are where they start.
+const BASE_SLOTS = 9;
+const DEFAULT_FLEX_MINUTES = [10, 20, 30];
 // Selling refunds half an item's price.
 const SELL_REFUND = 0.5;
 const AT_ONCE = { limitUrlUpdates: throttle(50) };
@@ -441,6 +445,18 @@ export function BuildFlowExplorer({
   const [, setHero] = useQueryState("hero", parseAsInteger);
   const { hero } = useHeroById(heroId ?? -1);
   const { data: ranks } = useQuery(ranksQueryOptions);
+  const [storedFlex, setFlex] = useQueryState(
+    "build_flex",
+    parseAsArrayOf(parseAsInteger).withDefault(DEFAULT_FLEX_MINUTES),
+  );
+  // Three times in order within the plotted game; a malformed list falls back to the defaults.
+  const flexMinutes = useMemo(
+    () =>
+      storedFlex.length === 3 && storedFlex.every((m) => Number.isFinite(m))
+        ? storedFlex.map((m) => Math.min(Math.max(m, 0), 45)).sort((a, b) => a - b)
+        : DEFAULT_FLEX_MINUTES,
+    [storedFlex],
+  );
   const [pointed, setPointed] = useState<string | null>(null);
   // The stage a narrow screen shows (index into the stages); a wide one shows every stage.
   const [shownStage, setShownStage] = useState(0);
@@ -519,6 +535,16 @@ export function BuildFlowExplorer({
     () => new Map((upgrades ?? []).map((item) => [item.id, item.item_slot_type ?? undefined])),
     [upgrades],
   );
+  // Per item the items it is built from, which buying it takes out of their slots.
+  const componentsOf = useMemo(() => {
+    const idByClass = new Map((upgrades ?? []).map((item) => [item.class_name, item.id]));
+    return new Map(
+      (upgrades ?? []).map((item) => [
+        item.id,
+        (item.component_items ?? []).flatMap((name) => idByClass.get(name) ?? []),
+      ]),
+    );
+  }, [upgrades]);
   // Items another item is built from: their sales count the purchases merged into that upgrade as well.
   const isComponent = useMemo(() => {
     const classNames = new Set((upgrades ?? []).flatMap((item) => item.component_items ?? []));
@@ -703,6 +729,20 @@ export function BuildFlowExplorer({
       taken.add(next.itemId);
     }
   }
+  // Per stage the items the build holds at its end (sold ones and ones built into a later pick free their slot) against
+  // the slots open by then.
+  const slotUse = view.stages.map((stage) => {
+    const end = STAGE_ENDS[stage.column] ?? STAGE_ENDS[STAGE_ENDS.length - 1];
+    const bought = path.filter((key) => parseKey(key).column <= stage.column);
+    const boughtIds = new Set(bought.map((key) => parseKey(key).itemId));
+    const merged = new Set(bought.flatMap((key) => componentsOf.get(parseKey(key).itemId) ?? []));
+    const used = bought.filter((key) => {
+      const sold = sellOf.get(key);
+      const { itemId } = parseKey(key);
+      return !(sold != null && sold <= stage.column) && !(merged.has(itemId) && boughtIds.has(itemId));
+    }).length;
+    return { used, open: BASE_SLOTS + flexMinutes.filter((m) => m * 60 <= end).length };
+  });
   // A build nobody played in these filters: its numbers are not zeros but missing.
   const noGames = summary.matches === 0;
   // A Street Brawl answer can have fewer rounds than the stage that was shown.
@@ -880,6 +920,7 @@ export function BuildFlowExplorer({
                         <BuildBudget
                           spent={budgets[index]?.spent ?? 0}
                           available={budgets[index]?.available ?? 0}
+                          slots={slotUse[index]}
                           format={compactSouls}
                         />
                       ) : !isStreetBrawl ? (
@@ -1140,6 +1181,8 @@ export function BuildFlowExplorer({
         <BuildEconomy
           title={path.length > 0 ? "Souls for your build" : "Souls for the most common build"}
           items={economyItems}
+          flexMinutes={flexMinutes}
+          onFlexMinutesChange={(minutes) => startTransition(() => void setFlex(minutes, AT_ONCE))}
           heroId={heroId}
           gameMode={gameMode}
           matchMode={matchMode}
