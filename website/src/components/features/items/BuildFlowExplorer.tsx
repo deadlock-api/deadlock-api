@@ -559,7 +559,7 @@ export function BuildFlowExplorer({
                             >
                               <BuildChoice
                                 media={<ItemImage itemId={choice.itemId} className="size-8" />}
-                                name={<ItemName itemId={choice.itemId} />}
+                                name={<ItemName itemId={choice.itemId} className="line-clamp-2 whitespace-normal" />}
                                 share={choice.pickShare}
                                 meta={percent(choice.pickRate)}
                                 link={

@@ -74,7 +74,7 @@ function BuildFlowExample() {
               <BuildChoice
                 key={choice.itemId}
                 media={<ItemImage itemId={choice.itemId} className="size-8" />}
-                name={<ItemName itemId={choice.itemId} />}
+                name={<ItemName itemId={choice.itemId} className="line-clamp-2 whitespace-normal" />}
                 share={choice.pickRate / 0.62}
                 meta={`${(choice.pickRate * 100).toFixed(1)}%`}
                 value={`${(choice.winRate * 100).toFixed(1)}%`}
@@ -99,7 +99,7 @@ function BuildFlowExample() {
               <BuildChoice
                 key={choice.itemId}
                 media={<ItemImage itemId={choice.itemId} className="size-8" />}
-                name={<ItemName itemId={choice.itemId} />}
+                name={<ItemName itemId={choice.itemId} className="line-clamp-2 whitespace-normal" />}
                 share={choice.pickRate / 0.62}
                 meta={`${(choice.pickRate * 100).toFixed(1)}%`}
                 link={{ label: `${40 - index * 15}% next`, share: (40 - index * 15) / 100 }}

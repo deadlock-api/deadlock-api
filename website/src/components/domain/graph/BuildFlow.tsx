@@ -82,7 +82,7 @@ export function BuildChoiceHeader({
       {...props}
     >
       <span className="truncate">{start}</span>
-      <span className="w-14 shrink-0 text-end">{end}</span>
+      <span className="w-12 shrink-0 text-end">{end}</span>
     </div>
   );
 }
@@ -172,7 +172,7 @@ export function BuildChoice({
         </span>
       </span>
       <span className="flex min-w-0 flex-1 flex-col gap-1">
-        <span className="truncate type-label">{name}</span>
+        <span className="line-clamp-2 type-label leading-tight wrap-break-word">{name}</span>
         {link && relation === "linked" ? (
           <span className="flex min-w-0 items-center gap-1.5 type-caption font-semibold text-info tabular-nums">
             <ProgressBar variant="thin" value={link.share} color="var(--info)" className="w-10 shrink-0" />
@@ -187,7 +187,7 @@ export function BuildChoice({
           </span>
         )}
       </span>
-      <span className="flex w-14 shrink-0 flex-col items-end gap-1">
+      <span className="flex w-12 shrink-0 flex-col items-end gap-1">
         <span className={cn("type-label tabular-nums", TONE_TEXT[tone])}>{value ?? <NoValue />}</span>
         {change && (
           <DivergingBar value={change.value} scale={change.scale} interval={change.interval} className="w-full" />
