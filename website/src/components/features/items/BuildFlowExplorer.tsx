@@ -9,7 +9,7 @@ import {
   throttle,
   useQueryState,
 } from "nuqs";
-import { memo, startTransition, useMemo, useState } from "react";
+import { memo, startTransition, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { HeroName } from "~/components/domain/assets/HeroName";
@@ -496,6 +496,7 @@ export function BuildFlowExplorer({
   );
   const [pointed, setPointed] = useState<string | null>(null);
   const [completing, setCompleting] = useState(false);
+  const boardRef = useRef<HTMLOListElement>(null);
   // The build tool open under the build: the item lists, the souls timeline or the skill order.
   const [storedTool, setTool] = useQueryState(
     "build_tool",
@@ -1150,7 +1151,7 @@ export function BuildFlowExplorer({
                 ))}
               </ChartLegend>
             </div>
-            <BuildBoard aria-label="Build by stage">
+            <BuildBoard aria-label="Build by stage" ref={boardRef}>
               {view.stages.map((stage, index) => {
                 const held = path.filter((key) => parseKey(key).column === stage.column);
                 const soldHere = path.filter((key) => sellOf.get(key) === stage.column);
@@ -1487,6 +1488,18 @@ export function BuildFlowExplorer({
                                         setShownStage(index + 1);
                                       }
                                       toggle(choice.key);
+                                      // Far down a list the build is out of sight: say where the item went.
+                                      const board = boardRef.current?.getBoundingClientRect();
+                                      if (
+                                        !choice.selected &&
+                                        board &&
+                                        (board.bottom < 0 || board.top > window.innerHeight)
+                                      ) {
+                                        toast(`${nameOf.get(choice.itemId) ?? "Item"} added to ${stage.title}`, {
+                                          duration: 2500,
+                                          action: { label: "Undo", onClick: () => toggle(choice.key) },
+                                        });
+                                      }
                                     }}
                                     onPointerEnter={() => startTransition(() => setPointed(choice.key))}
                                     onPointerLeave={() => startTransition(() => setPointed(null))}
