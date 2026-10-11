@@ -9,7 +9,7 @@ import { ChartLegend, ChartLegendItem } from "~/components/patterns/charts/Chart
 import { ChartEmpty, ChartError, ChartLoading } from "~/components/patterns/charts/ChartStates";
 import { ChartSurface } from "~/components/patterns/charts/ChartSurface";
 import { CHART_COLOR, CHART_GRID, CHART_TICK, CHART_X_AXIS, CHART_Y_AXIS } from "~/components/patterns/charts/theme";
-import { Panel, PanelBody, PanelHeader } from "~/components/patterns/panel/Panel";
+import { Panel, PanelBody, PanelFooter, PanelHeader } from "~/components/patterns/panel/Panel";
 import type { GameMode, MatchMode } from "~/lib/game-mode";
 import { itemUpgradesQueryOptions } from "~/queries/asset-queries";
 import { itemStatsQueryOptions } from "~/queries/item-stats-query";
@@ -156,6 +156,21 @@ export function BuildEconomy({
     return { series, placed };
   }, [curve.data, stats.data, items]);
 
+  // What the whole build costs, against the net worth when its last item is bought.
+  const last = plot?.placed.reduce<Placed | null>(
+    (latest, p) => (p.boughtAt != null && (latest?.boughtAt ?? -1) < p.boughtAt ? p : latest),
+    null,
+  );
+  const total =
+    last?.boughtAt != null && last.netWorthAtBuy
+      ? {
+          cost: items.reduce((sum, item) => sum + item.cost, 0),
+          share: items.reduce((sum, item) => sum + item.cost, 0) / last.netWorthAtBuy,
+          netWorth: last.netWorthAtBuy,
+          at: last.boughtAt,
+        }
+      : null;
+
   return (
     <Panel>
       <PanelHeader title={title} icon={Coins} size="sm" />
@@ -272,6 +287,12 @@ export function BuildEconomy({
           </RankedEntityList>
         </div>
       </PanelBody>
+      {total && (
+        <PanelFooter>
+          {total.cost.toLocaleString("en-US")} souls in all: {Math.round(total.share * 100)}% of the{" "}
+          {compact(total.netWorth)} net worth at {clock(total.at)}
+        </PanelFooter>
+      )}
     </Panel>
   );
 }
