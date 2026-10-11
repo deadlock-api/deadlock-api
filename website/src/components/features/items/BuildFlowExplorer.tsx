@@ -1172,7 +1172,10 @@ export function BuildFlowExplorer({
                       if (dropColumn !== stage.column) setDropColumn(stage.column);
                     }}
                     onDragLeave={(event) => {
-                      if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setDropColumn(null);
+                      // Chrome leaves `relatedTarget` empty when the pointer crosses into the card's own children:
+                      // only a move onto another element clears the highlight (a drop or the drag's end clear it too).
+                      const into = event.relatedTarget as Node | null;
+                      if (into && !event.currentTarget.contains(into)) setDropColumn(null);
                     }}
                     onDrop={(event) => {
                       event.preventDefault();
