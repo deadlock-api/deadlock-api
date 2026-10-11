@@ -10,6 +10,7 @@ import {
   useQueryState,
 } from "nuqs";
 import { memo, startTransition, useMemo, useState } from "react";
+import { toast } from "sonner";
 
 import { HeroName } from "~/components/domain/assets/HeroName";
 import { ITEM_SLOT_COLOR } from "~/components/domain/assets/item-slot-color";
@@ -897,7 +898,15 @@ export function BuildFlowExplorer({
         if (!next) break;
         current.push(next);
       }
-      if (current.length > path.length) changePath(current);
+      if (current.length > path.length) {
+        const before = path;
+        changePath(current);
+        toast(`Added ${current.length - before.length} items`, {
+          action: { label: "Undo", onClick: () => changePath(before.length > 0 ? before : null) },
+        });
+      } else {
+        toast("No item to add: too few players of this build bought more");
+      }
     } finally {
       setCompleting(false);
     }
@@ -953,8 +962,19 @@ export function BuildFlowExplorer({
                   variant="ghost"
                   size="xs"
                   onClick={() => {
+                    // A build is a few dozen presses of work: clearing it can be taken back.
+                    const before = { path, sells: storedSells };
                     changePath(null);
                     startTransition(() => void setSells(null, AT_ONCE));
+                    toast("Cleared the build", {
+                      action: {
+                        label: "Undo",
+                        onClick: () => {
+                          changePath(before.path);
+                          startTransition(() => void setSells(before.sells.length > 0 ? before.sells : null, AT_ONCE));
+                        },
+                      },
+                    });
                   }}
                 >
                   Clear
