@@ -217,7 +217,8 @@ export function BuildBoard({ className, ...props }: React.ComponentProps<"ol">) 
 }
 
 /**
- * One stage of a BuildBoard: its name, a figure at the end of that line (the stage's spending) and an `action` after it
+ * One stage of a BuildBoard, four rows where the board is four across (its name and items, then the two parts of its
+ * `footer`), on the board's shared row tracks so the slots' parts line up from slot to slot: its name, a figure at the end of that line (the stage's spending) and an `action` after it
  * (an add button), the `BuildSlotItem`s of the stage (bought, or sold there), "Empty" without any, and a `footer` (its
  * BuildBudget).
  */
@@ -245,7 +246,7 @@ export function BuildSlot({
       data-empty={empty || undefined}
       data-drop={drop === "over" || undefined}
       className={cn(
-        "flex min-w-0 flex-col gap-2 rounded-md border border-hairline bg-subtle p-2 transition-colors duration-fast ease-standard data-drop:border-primary data-drop:bg-primary/10 data-empty:border-dashed data-empty:bg-transparent",
+        "flex min-w-0 flex-col gap-2 rounded-md border border-hairline bg-subtle p-2 transition-colors duration-fast ease-standard data-drop:border-primary data-drop:bg-primary/10 data-empty:border-dashed data-empty:bg-transparent @4xl:row-span-4 @4xl:grid @4xl:grid-rows-subgrid",
         className,
       )}
       {...props}
