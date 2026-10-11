@@ -10,7 +10,11 @@ type ItemCellProps = Omit<React.ComponentProps<"span">, "children"> & {
   linkToDetail?: boolean;
   /** `corrupted` draws the icon in the Broker's frame, for a row about the corrupted version of the item. */
   variant?: "normal" | "corrupted";
+  /** `sm`: a 24px icon, for dense tables, as HeroCell's. */
+  size?: "sm" | "default";
 };
+
+const IMAGE_SIZE = { sm: "size-6", default: "size-8" } as const;
 
 /**
  * A shop item as the identity of a row: icon and name on one line. The name truncates to the width the parent leaves
@@ -32,6 +36,7 @@ function ItemCellView({
   loading = false,
   linkToDetail = false,
   variant = "normal",
+  size = "default",
   className,
   ...props
 }: ItemCellProps & { item: SlimUpgrade | undefined; loading?: boolean }) {
@@ -39,14 +44,15 @@ function ItemCellView({
     <span
       data-slot="item-cell"
       data-variant={variant}
-      className={cn("flex min-w-0 items-center gap-2", className)}
+      data-size={size}
+      className={cn("flex min-w-0 items-center", size === "sm" ? "gap-1.5" : "gap-2", className)}
       {...props}
     >
       {/* The name beside it already says what this is; the corrupted frame says which version. */}
       {variant === "corrupted" ? (
-        <CorruptedItemImage item={item} loading={loading} />
+        <CorruptedItemImage item={item} loading={loading} className={cn("shrink-0", IMAGE_SIZE[size])} />
       ) : (
-        <ItemImage item={item} loading={loading} title="" className="size-8 shrink-0" />
+        <ItemImage item={item} loading={loading} title="" className={cn("shrink-0", IMAGE_SIZE[size])} />
       )}
       <ItemName item={item} loading={loading} linkToDetail={linkToDetail} />
     </span>

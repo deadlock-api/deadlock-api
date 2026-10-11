@@ -49,12 +49,13 @@ export function Round3DomainAssets() {
         source="domain/assets/HeroCell · domain/assets/ItemCell"
         note="The identity of a table or list row: image and name on one line, the name truncating to the width the parent leaves. Pass item instead of itemId to render an item the table already holds, so a long table keeps one subscription."
       >
-        <Variants label="HeroCell size: default, sm · linkToDetail">
+        <Variants label="HeroCell and ItemCell size: default, sm · linkToDetail">
           <HeroCell heroId={HERO_IDS[0]} />
           <HeroCell heroId={HERO_IDS[1]} linkToDetail />
           <HeroCell heroId={HERO_IDS[2]} size="sm" className="text-xs" />
           <ItemCell itemId={SAMPLE_ITEM_IDS[0]} />
           <ItemCell itemId={SAMPLE_ITEM_IDS[1]} linkToDetail />
+          <ItemCell itemId={SAMPLE_ITEM_IDS[1]} size="sm" className="text-xs" />
         </Variants>
         <Variants label="ItemCell variant: normal, corrupted (a row about the corrupted version), corrupted loading">
           <ItemCell itemId={SAMPLE_ITEM_IDS[2]} linkToDetail />

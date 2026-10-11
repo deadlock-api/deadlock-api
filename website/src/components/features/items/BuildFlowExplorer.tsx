@@ -1511,7 +1511,7 @@ export function BuildFlowExplorer({
       </Panel>
 
       {/* Under the build: the souls chart, and beside it where the page is wide the skill order over the buy order;
-          the chart grows to the stack's height. Under each other where it is narrower. */}
+          the chart grows to the stack's height. Where it is narrower the two sit side by side under the chart. */}
       <div className="@container min-w-0">
         <div className="grid gap-4 @7xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
           {!isStreetBrawl && economyItems.length > 0 && (
@@ -1529,7 +1529,8 @@ export function BuildFlowExplorer({
             />
           )}
           {!isStreetBrawl && (
-            <div className="flex min-w-0 flex-col gap-4">
+            // Under the chart, side by side where there is room; beside it, one over the other.
+            <div className="flex min-w-0 flex-col gap-4 @4xl:grid @4xl:grid-cols-2 @7xl:flex">
               {heroId != null && (
                 // The build's skill order, starting from the most common one of its players.
                 <BuildSkillOrder
@@ -1544,7 +1545,7 @@ export function BuildFlowExplorer({
                   onValueChange={(next) => startTransition(() => void setSkills(next, AT_ONCE))}
                 />
               )}
-              {economyItems.length > 0 && <BuildPurchases economy={economy} className="flex-1" />}
+              {economyItems.length > 0 && <BuildPurchases economy={economy} className="flex-1 only:col-span-2" />}
             </div>
           )}
         </div>

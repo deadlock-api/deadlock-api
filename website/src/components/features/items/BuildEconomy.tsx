@@ -508,7 +508,7 @@ export function BuildPurchases({
             <TableRow key={p.key}>
               <TableCell className="text-end text-muted-foreground">{index + 1}</TableCell>
               <TableCell data-pinned>
-                <ItemCell itemId={p.itemId} className="max-w-48" />
+                <ItemCell itemId={p.itemId} size="sm" className="max-w-48" />
               </TableCell>
               <TableCell className="hidden text-end @sm/table:table-cell">
                 {p.price.toLocaleString("en-US")}
