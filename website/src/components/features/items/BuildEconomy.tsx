@@ -257,7 +257,8 @@ export function BuildEconomy({
                 <RankedEntityMetric label="Souls" value={p.netWorthAtBuy != null ? compact(p.netWorthAtBuy) : null} />
                 <RankedEntityMetric label="Bought" value={p.boughtAt != null ? clock(p.boughtAt) : null} />
                 <RankedEntityMetric
-                  label="Sold"
+                  // A share of purchases where the API reports sales, else the average time of a sale.
+                  label={p.soldShare != null ? "Sold" : "Sold at"}
                   value={
                     p.soldShare != null
                       ? `${Math.round(p.soldShare * 100)}%`
