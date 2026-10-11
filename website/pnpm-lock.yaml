@@ -180,10 +180,10 @@ importers:
         version: 1.11.23
       deadlock_api_client:
         specifier: github:deadlock-api/openapi-clients#path:/typescript
-        version: https://codeload.github.com/deadlock-api/openapi-clients/tar.gz/f0b0a0efc90893a8886dfb9a83244cb328a3c753#path:/typescript(debug@4.4.3(supports-color@10.2.2))(supports-color@10.2.2)
+        version: https://codeload.github.com/deadlock-api/openapi-clients/tar.gz/8894b6c61f997a92116a277f03531e6db01d2271#path:/typescript(debug@4.4.3(supports-color@10.2.2))(supports-color@10.2.2)
       deadlock_api_graphql_client:
         specifier: github:deadlock-api/openapi-clients#path:/typescript-graphql
-        version: https://codeload.github.com/deadlock-api/openapi-clients/tar.gz/f0b0a0efc90893a8886dfb9a83244cb328a3c753#path:/typescript-graphql
+        version: https://codeload.github.com/deadlock-api/openapi-clients/tar.gz/8894b6c61f997a92116a277f03531e6db01d2271#path:/typescript-graphql
       framer-motion:
         specifier: ^14.1.0
         version: 14.1.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
@@ -3346,12 +3346,12 @@ packages:
   dayjs@1.11.23:
     resolution: {integrity: sha512-QDTCU0M0MxR3hQfnlDJfwekQiaanm1ubOD231u73WBckQ/fsamwRLiE2GBz6D3a/xF1NgfiDLJjXBa1hYOYTtQ==}
 
-  deadlock_api_client@https://codeload.github.com/deadlock-api/openapi-clients/tar.gz/f0b0a0efc90893a8886dfb9a83244cb328a3c753#path:/typescript:
-    resolution: {gitHosted: true, integrity: sha512-sUZaAhpSxN1qXtX/N1GuTXvlhsJZSxv9lFCyOqBLCe3CtYPaxNSq9axPGJ1TMg3yfK2H1F6FjWA7GRdQYbrCjw==, path: /typescript, tarball: https://codeload.github.com/deadlock-api/openapi-clients/tar.gz/f0b0a0efc90893a8886dfb9a83244cb328a3c753}
+  deadlock_api_client@https://codeload.github.com/deadlock-api/openapi-clients/tar.gz/8894b6c61f997a92116a277f03531e6db01d2271#path:/typescript:
+    resolution: {gitHosted: true, integrity: sha512-hxgh9C8PhKjEKZlROVb5CeL4E5scNApA9qDG7jWs75+wAqwL6WFyxGC5NMS4AlCL+msDM/S/8zUEc5uuV5ZiZQ==, path: /typescript, tarball: https://codeload.github.com/deadlock-api/openapi-clients/tar.gz/8894b6c61f997a92116a277f03531e6db01d2271}
     version: 0.1.0
 
-  deadlock_api_graphql_client@https://codeload.github.com/deadlock-api/openapi-clients/tar.gz/f0b0a0efc90893a8886dfb9a83244cb328a3c753#path:/typescript-graphql:
-    resolution: {gitHosted: true, integrity: sha512-sUZaAhpSxN1qXtX/N1GuTXvlhsJZSxv9lFCyOqBLCe3CtYPaxNSq9axPGJ1TMg3yfK2H1F6FjWA7GRdQYbrCjw==, path: /typescript-graphql, tarball: https://codeload.github.com/deadlock-api/openapi-clients/tar.gz/f0b0a0efc90893a8886dfb9a83244cb328a3c753}
+  deadlock_api_graphql_client@https://codeload.github.com/deadlock-api/openapi-clients/tar.gz/8894b6c61f997a92116a277f03531e6db01d2271#path:/typescript-graphql:
+    resolution: {gitHosted: true, integrity: sha512-hxgh9C8PhKjEKZlROVb5CeL4E5scNApA9qDG7jWs75+wAqwL6WFyxGC5NMS4AlCL+msDM/S/8zUEc5uuV5ZiZQ==, path: /typescript-graphql, tarball: https://codeload.github.com/deadlock-api/openapi-clients/tar.gz/8894b6c61f997a92116a277f03531e6db01d2271}
     version: 0.1.0
 
   debug@4.4.3:
@@ -7926,14 +7926,14 @@ snapshots:
 
   dayjs@1.11.23: {}
 
-  deadlock_api_client@https://codeload.github.com/deadlock-api/openapi-clients/tar.gz/f0b0a0efc90893a8886dfb9a83244cb328a3c753#path:/typescript(debug@4.4.3(supports-color@10.2.2))(supports-color@10.2.2):
+  deadlock_api_client@https://codeload.github.com/deadlock-api/openapi-clients/tar.gz/8894b6c61f997a92116a277f03531e6db01d2271#path:/typescript(debug@4.4.3(supports-color@10.2.2))(supports-color@10.2.2):
     dependencies:
       axios: 1.20.0(debug@4.4.3(supports-color@10.2.2))(supports-color@10.2.2)
     transitivePeerDependencies:
       - debug
       - supports-color
 
-  deadlock_api_graphql_client@https://codeload.github.com/deadlock-api/openapi-clients/tar.gz/f0b0a0efc90893a8886dfb9a83244cb328a3c753#path:/typescript-graphql: {}
+  deadlock_api_graphql_client@https://codeload.github.com/deadlock-api/openapi-clients/tar.gz/8894b6c61f997a92116a277f03531e6db01d2271#path:/typescript-graphql: {}
 
   debug@4.4.3(supports-color@10.2.2):
     dependencies:

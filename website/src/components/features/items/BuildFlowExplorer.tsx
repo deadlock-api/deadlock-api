@@ -810,9 +810,8 @@ export function BuildFlowExplorer({
   // What the build is compared with: the games that reached its last stage, where the API reports their wins (late
   // stages hold long games only, which flatter any build ending there); all games otherwise.
   const lastColumn = Math.max(0, ...path.map((key) => parseKey(key).column));
-  const reachedWins = (data as ItemFlowStats & { reached_wins_per_column?: number[] }).reached_wins_per_column?.[
-    lastColumn
-  ];
+  // Optional in the schema: answers cached from before the API had it lack it.
+  const reachedWins = data.reached_wins_per_column?.[lastColumn];
   const reachedGames = data.reached_per_column[lastColumn];
   const reachedBase = lastColumn > 0 && reachedWins != null && reachedGames > 0;
   const baseWinRate = reachedBase
@@ -870,13 +869,9 @@ export function BuildFlowExplorer({
         })
       : null;
   const heldItems = new Set(path.map((key) => parseKey(key).itemId));
-  // What each pick adds: the build's players who took it against those who, all else the same, did not. Read from
-  // `leave_one_out`, which an API before it lacks. Colored only when the gap clears its 95% margin.
-  const leaveOneOut = (
-    data as typeof data & {
-      leave_one_out?: { item_id: number; column: number; wins: number; matches: number }[];
-    }
-  ).leave_one_out;
+  // What each pick adds: the build's players who took it against those who, all else the same, did not, from
+  // `leave_one_out`. Colored only when the gap clears its 95% margin.
+  const leaveOneOut = data.leave_one_out;
   const impactOf = new Map<string, { delta: number; sure: boolean }>();
   for (const entry of leaveOneOut ?? []) {
     const otherWins = entry.wins - summary.wins;
