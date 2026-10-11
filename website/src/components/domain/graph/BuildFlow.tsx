@@ -296,7 +296,8 @@ export function BuildSlot({
       {...props}
     >
       {/* The meta and action at the end of the label's line; on a line of their own, at its end, where they do not fit. */}
-      <span className="flex min-h-6 flex-wrap items-center gap-x-2 gap-y-0.5 type-caption text-muted-foreground">
+      {/* Lines packed at the top: a neighbour's two-line header makes the shared row taller than this one. */}
+      <span className="flex min-h-6 flex-wrap content-start items-center gap-x-2 gap-y-0.5 type-caption text-muted-foreground">
         <span className="min-w-0 truncate font-medium text-foreground">{label}</span>
         <span className="ms-auto flex min-w-0 items-center gap-2">
           {meta && <span className="min-w-0 tabular-nums">{meta}</span>}
