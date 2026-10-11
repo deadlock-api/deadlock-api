@@ -808,7 +808,7 @@ export function BuildFlowExplorer({
     path: skillPath,
     slotAbilities,
     orderQuery: skillQuery,
-  } = useHeroSkillPath(heroId ?? 0, skillRequest, undefined, heroId != null && !isStreetBrawl);
+  } = useHeroSkillPath(heroId ?? 0, skillRequest, undefined, heroId != null && !isStreetBrawl, true);
   // The build's skill order: the reader's (`build_skills`, abilities of this hero only) or the most common one.
   const commonSkills = useMemo(() => skillPath?.steps.map((step) => step.abilityId) ?? [], [skillPath]);
   const skillOrder = useMemo(

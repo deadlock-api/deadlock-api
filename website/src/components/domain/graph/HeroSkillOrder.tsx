@@ -57,8 +57,20 @@ export function useHeroSkillPath(
   totalMatches?: number,
   /** Off while there is no hero to ask about. */
   enabled = true,
+  /**
+   * Keeps the shown order while another request for the same hero loads (a build's items changed), so its panel does
+   * not drop to a shorter loading state and back. Never across heroes: their abilities differ.
+   */
+  keepWhileLoading = false,
 ) {
-  const orderQuery = useQuery({ ...abilityOrderQueryOptions({ ...request, heroId }), enabled });
+  const orderQuery = useQuery({
+    ...abilityOrderQueryOptions({ ...request, heroId }),
+    enabled,
+    placeholderData: keepWhileLoading
+      ? (previous, previousQuery) =>
+          (previousQuery?.queryKey[1] as { heroId?: number } | undefined)?.heroId === heroId ? previous : undefined
+      : undefined,
+  });
   const heroesQuery = useQuery(heroesQueryOptions);
   const abilitiesQuery = useQuery(abilitiesQueryOptions);
   const heroes = heroesQuery.data;
