@@ -1,11 +1,22 @@
 import { type QueryClient, queryOptions, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { bareMatchIdOf } from "~/lib/ai-search/lookup";
+import { CACHE_DURATIONS } from "~/constants/cache";
+import { bareMatchIdOf, matchLookupOf } from "~/lib/ai-search/lookup";
 import { useDebouncedValue } from "~/lib/utils";
 
 /** One row of the search's dropdown: the page the question routes to, a hero's page, or a player's tracker. */
 export type Suggestion =
-  | { kind: "page"; key: string; id: string; href: string; title: string; filters: string[]; heroId?: number }
+  | {
+      kind: "page";
+      key: string;
+      id: string;
+      href: string;
+      title: string;
+      filters: string[];
+      heroId?: number;
+      /** For a match's page: whether we have the match, once known. */
+      stored?: boolean;
+    }
   | { kind: "match"; key: string; matchId: number; href: string }
   | { kind: "hero"; key: string; id: number; href: string; name: string }
   | { kind: "player"; key: string; accountId: number; href: string; name: string; avatar?: string };
@@ -40,7 +51,11 @@ export function routeQueryOptions(queryClient: QueryClient, question: string) {
 export function useSuggestions(question: string, enabled: boolean) {
   const queryClient = useQueryClient();
   const trimmed = question.trim();
-  const nameLike = trimmed.split(/\s+/).length <= MAX_NAME_WORDS;
+  // A number (an account ID or a match) or a match lookup is not a Steam name; the Player Tracker row covers the ID.
+  const nameLike =
+    trimmed.split(/\s+/).length <= MAX_NAME_WORDS &&
+    bareMatchIdOf(trimmed) === undefined &&
+    matchLookupOf(trimmed) === undefined;
   const lookupTerm = useDebouncedValue(trimmed, LOOKUP_DELAY_MS);
   const routeTerm = useDebouncedValue(trimmed, ROUTE_DELAY_MS);
 
@@ -64,6 +79,24 @@ export function useSuggestions(question: string, enabled: boolean) {
     retry: false,
   });
 
+  // Whether we have the match a number names: a bare number only offers a match we have, "match <id>" says whether
+  // it is stored. One row looked up by its key, loaded with the first question like the rest of the search.
+  const matchId = bareMatchIdOf(lookupTerm) ?? matchLookupOf(lookupTerm);
+  const stored = useQuery({
+    queryKey: ["ai-search", "match-stored", matchId],
+    queryFn: async () => {
+      const { graphql } = await import("~/lib/graphql");
+      const result = await graphql.query({
+        matches: { __args: { where: { match_id: { eq: matchId } }, limit: 1 }, match_id: true },
+      });
+      return result.matches.length > 0;
+    },
+    enabled: enabled && matchId !== undefined,
+    staleTime: CACHE_DURATIONS.FIVE_MINUTES,
+    retry: false,
+  });
+  const matchStored = matchId !== undefined && lookupTerm === trimmed ? stored.data : undefined;
+
   const routed = route.data?.kind === "opened" && routeTerm === trimmed ? route.data : undefined;
   const page: Suggestion[] = routed
     ? [
@@ -75,6 +108,7 @@ export function useSuggestions(question: string, enabled: boolean) {
           title: routed.title,
           filters: routed.filters,
           heroId: routed.heroId,
+          stored: routed.id === "match" ? matchStored : undefined,
         },
       ]
     : [];
@@ -82,7 +116,7 @@ export function useSuggestions(question: string, enabled: boolean) {
   // A bare number opens a player's tracker first; it may just as well be a match.
   const bareMatchId = bareMatchIdOf(trimmed);
   const matchRows: Suggestion[] =
-    bareMatchId !== undefined && pagePath !== `/matches/${bareMatchId}`
+    bareMatchId !== undefined && matchStored === true && pagePath !== `/matches/${bareMatchId}`
       ? [{ kind: "match", key: `match:${bareMatchId}`, matchId: bareMatchId, href: `/matches/${bareMatchId}` }]
       : [];
   const heroRows: Suggestion[] = (lookupTerm === trimmed ? (heroes.data ?? []) : [])

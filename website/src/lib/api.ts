@@ -6,6 +6,7 @@ import {
   CrosshairApi,
   GenericDataApi,
   HeroesApi,
+  InternalApi,
   ItemsApi,
   LeaderboardApi,
   MatchesApi,
@@ -36,6 +37,7 @@ export class Api {
   public leaderboard_api: LeaderboardApi;
   public matches_api: MatchesApi;
   public players_api: PlayersApi;
+  public internal_api: InternalApi;
   public steam_api: SteamApi;
   public heroes_api: HeroesApi;
   public items_api: ItemsApi;
@@ -58,6 +60,7 @@ export class Api {
     this.leaderboard_api = new LeaderboardApi(undefined, API_ORIGIN, axios_client);
     this.matches_api = new MatchesApi(undefined, API_ORIGIN, axios_client);
     this.players_api = new PlayersApi(undefined, API_ORIGIN, axios_client);
+    this.internal_api = new InternalApi(undefined, API_ORIGIN, axios_client);
     this.steam_api = new SteamApi(undefined, API_ORIGIN, axios_client);
     this.heroes_api = new HeroesApi(undefined, API_ORIGIN, axios_client);
     this.items_api = new ItemsApi(undefined, API_ORIGIN, axios_client);

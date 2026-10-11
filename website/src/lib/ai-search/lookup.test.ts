@@ -54,6 +54,7 @@ test("a match lookup names its match ID, and a bare number may be a match too", 
   assert.equal(matchLookupOf("analyze match 107857788"), 107857788);
   assert.equal(matchLookupOf("match id 61234567"), 61234567);
   assert.equal(matchLookupOf("280308116"), undefined);
+  assert.equal(matchLookupOf("match 99999999999999999999"), undefined);
   assert.equal(bareMatchIdOf("107857788"), 107857788);
   assert.equal(bareMatchIdOf(" 61234567 "), 61234567);
   assert.equal(bareMatchIdOf("2024"), undefined);
