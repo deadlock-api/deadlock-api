@@ -41,6 +41,7 @@ import {
   soulsAt,
   useSoulCurve,
 } from "~/components/features/items/BuildEconomy";
+import { BuildHeroChooser } from "~/components/features/items/BuildHeroChooser";
 import { SavedBuildsMenu, SaveBuildButton } from "~/components/features/items/BuildSaves";
 import { ChartLegend, ChartLegendItem } from "~/components/patterns/charts/ChartLegend";
 import { FilterBar } from "~/components/patterns/filter-bar/FilterBar";
@@ -667,6 +668,26 @@ export function BuildFlowExplorer({
         })
       : null;
   const heldItems = new Set(path.map((key) => parseKey(key).itemId));
+  // What each pick adds: the build's players who took it against those who, all else the same, did not. Read from
+  // `leave_one_out`, which an API before it lacks. Colored only when the gap clears its 95% margin.
+  const leaveOneOut = (
+    data as typeof data & {
+      leave_one_out?: { item_id: number; column: number; wins: number; matches: number }[];
+    }
+  ).leave_one_out;
+  const impactOf = new Map<string, { delta: number; sure: boolean }>();
+  for (const entry of leaveOneOut ?? []) {
+    const otherWins = entry.wins - summary.wins;
+    const otherMatches = entry.matches - summary.matches;
+    if (summary.matches === 0 || otherMatches <= 0) continue;
+    const pWith = summary.wins / summary.matches;
+    const pWithout = otherWins / otherMatches;
+    const se = Math.sqrt((pWith * (1 - pWith)) / summary.matches + (pWithout * (1 - pWithout)) / otherMatches);
+    impactOf.set(`${entry.column}:${entry.item_id}`, {
+      delta: pWith - pWithout,
+      sure: Math.abs(pWith - pWithout) > 1.96 * se,
+    });
+  }
   // What each empty stage suggests: never an item the build holds or an earlier stage already suggests.
   const nextPicks = new Map<number, Choice>();
   const taken = new Set(path.map((key) => parseKey(key).itemId));
@@ -685,6 +706,7 @@ export function BuildFlowExplorer({
 
   return (
     <Stack gap={4}>
+      {heroId == null && <BuildHeroChooser onPick={(next) => startTransition(() => void setHero(next, AT_ONCE))} />}
       <Panel>
         {/* Named for its hero, so a build over every hero's games does not pass for one hero's. */}
         <PanelHeader
@@ -870,9 +892,22 @@ export function BuildFlowExplorer({
                           media={<ItemImage itemId={itemId} className="size-8" />}
                           name={<ItemName itemId={itemId} />}
                           meta={
-                            sellColumn != null
-                              ? `${count(costOf.get(itemId) ?? 0)} · sold ${stageLabel(sellColumn, isStreetBrawl)}`
-                              : saleLine(costOf.get(itemId) ?? 0, sale, isComponent.has(itemId))
+                            <>
+                              {impactOf.has(key) && (
+                                <>
+                                  <Delta
+                                    value={(impactOf.get(key)?.delta ?? 0) * 100}
+                                    format="number"
+                                    unit=" pts"
+                                    polarity={impactOf.get(key)?.sure ? "higher-is-better" : "neutral"}
+                                  />
+                                  {" · "}
+                                </>
+                              )}
+                              {sellColumn != null
+                                ? `${count(costOf.get(itemId) ?? 0)} · sold ${stageLabel(sellColumn, isStreetBrawl)}`
+                                : saleLine(costOf.get(itemId) ?? 0, sale, isComponent.has(itemId))}
+                            </>
                           }
                           actions={
                             <ItemPlan
