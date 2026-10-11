@@ -115,15 +115,26 @@ export function HeroTopItems({
         <span>
           Ranked by the low end of each win rate&apos;s confidence interval, so a few lucky games can&apos;t top it.
         </span>
-        <TextLink asChild>
-          <Link
-            to="/analytics/items"
-            search={{ hero: heroId, min_rank: request.minAverageBadge, max_rank: request.maxAverageBadge }}
-            preload="intent"
-          >
-            All {heroName} item stats
-          </Link>
-        </TextLink>
+        <span className="flex flex-wrap gap-x-4 gap-y-1">
+          <TextLink asChild>
+            <Link
+              to="/analytics/items/build-flow"
+              search={{ hero: heroId, min_rank: request.minAverageBadge, max_rank: request.maxAverageBadge }}
+              preload="intent"
+            >
+              {heroName} build order
+            </Link>
+          </TextLink>
+          <TextLink asChild>
+            <Link
+              to="/analytics/items"
+              search={{ hero: heroId, min_rank: request.minAverageBadge, max_rank: request.maxAverageBadge }}
+              preload="intent"
+            >
+              All {heroName} item stats
+            </Link>
+          </TextLink>
+        </span>
       </PanelFooter>
     </Panel>
   );
