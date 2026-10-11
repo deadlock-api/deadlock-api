@@ -1159,6 +1159,21 @@ export function BuildFlowExplorer({
           </Stack>
         )}
       </div>
+      {!isStreetBrawl && economyItems.length > 0 && (
+        <BuildEconomy
+          title={path.length > 0 ? "Souls for your build" : "Souls for the most common build"}
+          items={economyItems}
+          flexMinutes={flexMinutes}
+          onFlexMinutesChange={(minutes) => startTransition(() => void setFlex(minutes, AT_ONCE))}
+          heroId={heroId}
+          gameMode={gameMode}
+          matchMode={matchMode}
+          minRankId={minRankId}
+          maxRankId={maxRankId}
+          minUnixTimestamp={minUnixTimestamp ?? 0}
+          maxUnixTimestamp={maxUnixTimestamp}
+        />
+      )}
       {heroId != null && !isStreetBrawl && (
         // The skill order of the players who bought the build's items (the hero's most common one without picks).
         <HeroSkillOrder
@@ -1175,21 +1190,6 @@ export function BuildFlowExplorer({
             minMatches: 10,
             includeItemIds: path.length > 0 ? [...new Set(path.map((key) => parseKey(key).itemId))] : undefined,
           }}
-        />
-      )}
-      {!isStreetBrawl && economyItems.length > 0 && (
-        <BuildEconomy
-          title={path.length > 0 ? "Souls for your build" : "Souls for the most common build"}
-          items={economyItems}
-          flexMinutes={flexMinutes}
-          onFlexMinutesChange={(minutes) => startTransition(() => void setFlex(minutes, AT_ONCE))}
-          heroId={heroId}
-          gameMode={gameMode}
-          matchMode={matchMode}
-          minRankId={minRankId}
-          maxRankId={maxRankId}
-          minUnixTimestamp={minUnixTimestamp ?? 0}
-          maxUnixTimestamp={maxUnixTimestamp}
         />
       )}
     </Stack>
