@@ -9,11 +9,14 @@ import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { Button } from "~/components/ui/button";
 import { InlineStat } from "~/components/ui/inline-stat";
+import { NoValue } from "~/components/ui/no-value";
 import { Skeleton } from "~/components/ui/skeleton";
 import { abilityOrderQueryOptions } from "~/queries/ability-order-query";
 import { abilitiesQueryOptions } from "~/queries/asset-queries";
 
 const percent = (value: number) => `${(value * 100).toFixed(1)}%`;
+// Under this many games an order's win rate is not shown, as with the build's own.
+const MIN_RATE_GAMES = 30;
 
 /**
  * The build's skill order as an editor: it starts as the most common order of the build's players, a cell press makes
@@ -88,24 +91,26 @@ export function BuildSkillOrder({
           </Button>
         )}
       </PanelHeader>
-      <PanelBody className="flex flex-col gap-3">
+      <PanelBody className="@container flex flex-col gap-3">
         {loading ? (
           <LoadingState label="skill order" variant="skeleton" />
         ) : slotAbilities.length === 0 || order.length === 0 ? (
           <EmptyState variant="inline" title="Too few games share one skill order to show it" />
         ) : (
           <>
-            <div className="flex min-h-5 flex-wrap gap-x-5 gap-y-1 text-sm">
+            {/* Two lines' height where the figures wrap (a phone), so an edit that changes them does not move the grid. */}
+            <div className="flex min-h-11 flex-wrap content-start gap-x-5 gap-y-1 text-sm @md:min-h-5">
               {custom ? (
                 isPending ? (
                   <Skeleton className="h-5 w-48" />
                 ) : stats && stats.matches > 0 && stats.winRate != null ? (
                   <>
-                    <InlineStat value={percent(stats.winRate)} label="win rate" />
+                    {/* The build's own floor: no win rate from fewer than 30 games. */}
                     <InlineStat
-                      value={stats.matches.toLocaleString("en-US")}
-                      label={`games start like this to upgrade ${lastChange + 1}`}
+                      value={stats.matches >= MIN_RATE_GAMES ? percent(stats.winRate) : <NoValue />}
+                      label="win rate"
                     />
+                    <InlineStat value={stats.matches.toLocaleString("en-US")} label="games start like this" />
                   </>
                 ) : (
                   <InlineStat value="0" label="games start like this" />

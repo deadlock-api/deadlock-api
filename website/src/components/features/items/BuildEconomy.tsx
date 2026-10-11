@@ -32,11 +32,11 @@ const STAGE_LABELS = ["0–9m", "9–20m", "20–30m", "30m+"] as const;
 const SELL_REFUND = 0.5;
 // The plot ends here: few games run longer, and the curve's last points come from those few.
 const END_S = 2700;
-// The skill lane: icons closer than this (seconds, a 20px icon on a ~500px plot) step into the next row, up to four.
+// The skill lane: icons closer than this (seconds, a 20px icon on a ~500px plot) step into the next row, up to three;
+// the lane always takes three rows, so an edited skill order does not move what follows it.
 const SKILL_MIN_GAP_S = 120;
-const SKILL_LANES = 4;
-const SKILL_LANE_HEIGHT = { 1: "h-5", 2: "h-11", 3: "h-17", 4: "h-23" } as const;
-const SKILL_LANE_TOP = ["top-0", "top-6", "top-12", "top-18"] as const;
+const SKILL_LANES = 3;
+const SKILL_LANE_TOP = ["top-0", "top-6", "top-12"] as const;
 // The y-axis width in pixels: the flex slider under the plot is inset by the same (`ps-10`).
 const Y_AXIS_WIDTH = 40;
 const TICKS = [0, 300, 600, 900, 1200, 1500, 1800, 2100, 2400, 2700];
@@ -189,7 +189,7 @@ export function BuildEconomy({
       laneEnds[lane] = skill.at;
       placed.push({ ...skill, lane });
     }
-    return { placed, count: Math.max(1, laneEnds.length) as 1 | 2 | 3 | 4 };
+    return { placed };
   }, [skills]);
   const [flexDraft, setFlexDraft] = useState<{ from: string; minutes: number[] } | null>(null);
   const shownFlex = flexDraft?.from === flexKey ? flexDraft.minutes : [...flexMinutes];
@@ -269,18 +269,18 @@ export function BuildEconomy({
     return { series, placed };
   }, [curve.points, stats.data, items]);
 
-  // What the whole build costs, against the net worth when its last item is bought.
-  const last = plot?.placed.reduce<Placed | null>(
-    (latest, p) => (p.boughtAt != null && (latest?.boughtAt ?? -1) < p.boughtAt ? p : latest),
-    null,
-  );
+  // What the whole build costs (less its sales' refunds), against the net worth at the end of its last stage: the
+  // budget the stage cards use. At the moment of its last purchase it could read over 100%.
+  const lastColumn = Math.max(-1, ...items.map((item) => item.column));
+  const endAt = STAGE_STARTS[lastColumn + 1] ?? END_S;
+  const spent = items.reduce((sum, item) => sum + item.cost - (item.sellColumn != null ? item.price * 0.5 : 0), 0);
   const total =
-    last?.boughtAt != null && last.netWorthAtBuy
+    curve.points && lastColumn >= 0
       ? {
-          cost: items.reduce((sum, item) => sum + item.cost, 0),
-          share: items.reduce((sum, item) => sum + item.cost, 0) / last.netWorthAtBuy,
-          netWorth: last.netWorthAtBuy,
-          at: last.boughtAt,
+          cost: spent,
+          share: spent / Math.max(1, soulsAt(curve.points, endAt)),
+          netWorth: soulsAt(curve.points, endAt),
+          at: endAt,
         }
       : null;
 
@@ -388,7 +388,7 @@ export function BuildEconomy({
                     <span aria-hidden="true" className="absolute inset-s-0 top-0 type-caption text-muted-foreground">
                       Skills
                     </span>
-                    <ol aria-label="Skill upgrades by time" className={cn("relative", SKILL_LANE_HEIGHT[lanes.count])}>
+                    <ol aria-label="Skill upgrades by time" className="relative h-17">
                       {lanes.placed.map((skill) => (
                         <li
                           key={skill.level}
