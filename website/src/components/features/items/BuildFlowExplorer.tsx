@@ -1226,7 +1226,12 @@ export function BuildFlowExplorer({
               </div>
             </div>
             {/* Inert while a completion fills it: an edit made between its steps would be written over by the next. */}
-            <BuildBoard aria-label="Build by stage" ref={boardRef} inert={completing != null || undefined}>
+            <BuildBoard
+              aria-label="Build by stage"
+              ref={boardRef}
+              inert={completing != null || undefined}
+              aria-busy={completing != null || undefined}
+            >
               {view.stages.map((stage, index) => {
                 const held = path.filter((key) => parseKey(key).column === stage.column);
                 // Every item of the stage for its picker: the build's players' first, then the hero's items the build
