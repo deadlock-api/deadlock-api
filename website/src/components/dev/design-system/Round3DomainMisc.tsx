@@ -9,6 +9,15 @@ import { ItemImage } from "~/components/domain/assets/ItemImage";
 import { ItemName } from "~/components/domain/assets/ItemName";
 import { SocialLinks, SteamIcon } from "~/components/domain/brand/BrandIcons";
 import { FeedbackNoticeDialog } from "~/components/domain/feedback/FeedbackNoticeDialog";
+import {
+  BuildChoice,
+  BuildChoiceHeader,
+  BuildChoiceList,
+  BuildPath,
+  BuildPathItem,
+  BuildPathStep,
+  BuildStage,
+} from "~/components/domain/graph/BuildFlow";
 import { GraphNodeCard } from "~/components/domain/graph/GraphNodeCard";
 import { InstallButton } from "~/components/domain/ingest/InstallButton";
 import { GamePage } from "~/components/domain/minigames/GamePage";
@@ -29,6 +38,81 @@ const ITEM_NODES = [
   { itemId: 968099481, accent: "vitality", winRate: 0.487, pickRate: 0.12 },
   { itemId: 2678489038, accent: "spirit", winRate: 0.5, pickRate: 0.06 },
 ] as const;
+
+const BUILD_CHOICES = [
+  { itemId: 1548066885, winRate: 0.534, pickRate: 0.62, interval: [0.52, 0.548] },
+  { itemId: 968099481, winRate: 0.487, pickRate: 0.31, interval: [0.47, 0.504] },
+  { itemId: 2678489038, winRate: 0.51, pickRate: 0.12, interval: [0.46, 0.56] },
+] as const;
+
+/** A two-stage build: press a row to add it to the path above, press its art in the path to take it out again. */
+function BuildFlowExample() {
+  const [picked, setPicked] = useState<number[]>([BUILD_CHOICES[0].itemId]);
+  const [pointed, setPointed] = useState<number | null>(null);
+  const toggle = (itemId: number) =>
+    setPicked((prev) => (prev.includes(itemId) ? prev.filter((id) => id !== itemId) : [...prev, itemId]));
+  return (
+    <div className="flex w-full max-w-xl flex-col gap-4">
+      <BuildPath aria-label="Build path">
+        <BuildPathStep label="0–9m">
+          {picked.map((itemId) => (
+            <BuildPathItem
+              key={itemId}
+              media={<ItemImage itemId={itemId} className="size-8" />}
+              aria-label="Remove item"
+              onClick={() => toggle(itemId)}
+            />
+          ))}
+        </BuildPathStep>
+        <BuildPathStep label="9–20m" />
+      </BuildPath>
+      <div className="grid grid-cols-2 gap-4">
+        <BuildStage title="0–9m" meta="100% of games">
+          <BuildChoiceHeader start="Item · bought" end="Win rate" />
+          <BuildChoiceList aria-label="Items bought at 0–9m">
+            {BUILD_CHOICES.map((choice) => (
+              <BuildChoice
+                key={choice.itemId}
+                media={<ItemImage itemId={choice.itemId} className="size-8" />}
+                name={<ItemName itemId={choice.itemId} />}
+                share={choice.pickRate / 0.62}
+                meta={`${(choice.pickRate * 100).toFixed(1)}%`}
+                value={`${(choice.winRate * 100).toFixed(1)}%`}
+                tone={choice.interval[0] > 0.5 ? "positive" : choice.interval[1] < 0.5 ? "negative" : "muted"}
+                change={{
+                  value: (choice.winRate - 0.5) * 100,
+                  scale: 10,
+                  interval: [(choice.interval[0] - 0.5) * 100, (choice.interval[1] - 0.5) * 100],
+                }}
+                selected={picked.includes(choice.itemId)}
+                onClick={() => toggle(choice.itemId)}
+                onPointerEnter={() => setPointed(choice.itemId)}
+                onPointerLeave={() => setPointed(null)}
+              />
+            ))}
+          </BuildChoiceList>
+        </BuildStage>
+        <BuildStage title="9–20m" meta="97% of games">
+          <BuildChoiceHeader start="Item · bought" end="Win rate" />
+          <BuildChoiceList aria-label="Items bought at 9–20m">
+            {BUILD_CHOICES.map((choice, index) => (
+              <BuildChoice
+                key={choice.itemId}
+                media={<ItemImage itemId={choice.itemId} className="size-8" />}
+                name={<ItemName itemId={choice.itemId} />}
+                share={choice.pickRate / 0.62}
+                meta={`${(choice.pickRate * 100).toFixed(1)}%`}
+                link={{ label: `${40 - index * 15}% next`, share: (40 - index * 15) / 100 }}
+                value={`${(choice.winRate * 100).toFixed(1)}%`}
+                relation={pointed === null ? "none" : index < 2 ? "linked" : "unlinked"}
+              />
+            ))}
+          </BuildChoiceList>
+        </BuildStage>
+      </div>
+    </div>
+  );
+}
 
 const NOTICE_SPECIMEN_KEY = "design-system-feedback-notice-dismissed";
 
@@ -170,6 +254,16 @@ export function Round3DomainMisc() {
             />
           ))}
           <GraphNodeCard className="w-40" name="Root" winRate={0.5} pickRate={1} dimmed />
+        </Variants>
+      </Specimen>
+
+      <Specimen
+        name="BuildFlow"
+        source="domain/graph/BuildFlow"
+        note="A build read stage by stage. BuildStage is one stage (title, a meta line, its choices). BuildChoiceList holds BuildChoice toggle rows: the item, a bar and figure for how often it is bought, the win rate with a signed bar and its interval against the build's own; selected adds a check and a primary frame, the pointer or keyboard shows a plus. relation marks rows against the choice pointed at in a neighbouring stage: linked rows swap their bar for the link figure, unlinked ones fade. BuildPath + BuildPathStep (Any item when empty) + BuildPathItem (press to remove) show the build so far."
+      >
+        <Variants label="press a row to add or remove it · point at a 0–9m row: 9–20m rows link or fade · press the art in the path to remove">
+          <BuildFlowExample />
         </Variants>
       </Specimen>
 

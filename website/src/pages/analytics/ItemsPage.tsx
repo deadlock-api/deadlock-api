@@ -24,8 +24,8 @@ const ItemPurchaseAnalysis = lazy(() =>
 const ItemStatsExplorer = lazy(() =>
   import("~/components/features/items/ItemStatsExplorer").then((m) => ({ default: m.ItemStatsExplorer })),
 );
-const ItemFlowGraph = lazy(() =>
-  import("~/components/features/items/ItemFlowGraph").then((m) => ({ default: m.ItemFlowGraph })),
+const BuildFlowExplorer = lazy(() =>
+  import("~/components/features/items/BuildFlowExplorer").then((m) => ({ default: m.BuildFlowExplorer })),
 );
 const ItemCombStatsTable = lazy(() =>
   import("~/components/features/items/ItemCombStatsTable").then((m) => ({ default: m.ItemCombStatsTable })),
@@ -186,7 +186,7 @@ export function ItemsPage() {
           <Section titleDisplay="hidden" title="Item Build Flow">
             <ChunkErrorBoundary>
               <Suspense fallback={<LoadingState />}>
-                <ItemFlowGraph
+                <BuildFlowExplorer
                   heroId={hero}
                   minRankId={effectiveMinRankId}
                   maxRankId={effectiveMaxRankId}

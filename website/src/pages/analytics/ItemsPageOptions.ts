@@ -75,7 +75,7 @@ export const itemsPageOptions = {
       gameMode: "normal" as const,
       matchMode: DEFAULT_MATCH_MODE,
     };
-    // Every view names items, and the build flow and combos trim their answers by the item list.
+    // Every view names items, and the combos trim their answer by the item list.
     const items = prefetchCached(queryClient, itemUpgradesQueryOptions);
     const coverage = defaultTemporalCoverage(seasons, preferences.dateFilter);
     // The server waits for the view's data, so its HTML carries it. In the browser a tab click or a hero pick does not:
@@ -98,10 +98,7 @@ export const itemsPageOptions = {
           lockedItemIds: [],
           lockedColumns: [],
         }),
-        async (data) => {
-          const tiers = new Map((await items)?.map((item) => [item.id, item.item_tier ?? 0]));
-          return flow.trimItemFlowForDefaultView(data, (itemId) => tiers.get(itemId) ?? 0);
-        },
+        flow.trimItemFlowForDefaultView,
       );
       if (isServer) await flowSeed;
       return { leader: null, coverage };

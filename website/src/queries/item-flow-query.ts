@@ -46,15 +46,17 @@ export function itemFlowQueryOptions(params: AnalyticsApiItemFlowStatsRequest) {
   });
 }
 
+/** Items per stage the build flow offers to show. */
+export const ITEM_FLOW_PER_COLUMN_OPTIONS = [8, 12, 20] as const;
 /** Items per stage the build flow shows until the reader picks another count. */
-export const ITEM_FLOW_DEFAULT_PER_COLUMN = 6;
+export const ITEM_FLOW_DEFAULT_PER_COLUMN = ITEM_FLOW_PER_COLUMN_OPTIONS[0];
 
 /**
  * The part of a build flow answer its default view reads: per stage the most-bought items (the default sort and
- * count), one item of every tier bought there (the stage's tier toggles list the tiers present), the links between
- * shown items and the totals. Several megabytes shrink to a few kilobytes; the order of what is kept is unchanged.
+ * count), the links between shown items and the totals. Several megabytes shrink to a few kilobytes; the order of what
+ * is kept is unchanged.
  */
-export function trimItemFlowForDefaultView(data: ItemFlowStats, tierOf: (itemId: number) => number): ItemFlowStats {
+export function trimItemFlowForDefaultView(data: ItemFlowStats): ItemFlowStats {
   const keep = new Set<ItemFlowNode>();
   const shown = new Set<string>();
   const columns = new Map<number, ItemFlowNode[]>();
@@ -68,13 +70,6 @@ export function trimItemFlowForDefaultView(data: ItemFlowStats, tierOf: (itemId:
     for (const node of byMatches.slice(0, ITEM_FLOW_DEFAULT_PER_COLUMN)) {
       keep.add(node);
       shown.add(`${column}:${node.item_id}`);
-    }
-    const tiers = new Set<number>();
-    for (const node of byMatches) {
-      const tier = tierOf(node.item_id);
-      if (tiers.has(tier)) continue;
-      tiers.add(tier);
-      keep.add(node);
     }
   }
   return {
