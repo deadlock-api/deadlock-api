@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Coins, ListOrdered } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { CartesianGrid, ComposedChart, Line, ReferenceArea, ReferenceDot, ReferenceLine, XAxis, YAxis } from "recharts";
 
 import { AbilityImage } from "~/components/domain/assets/AbilityImage";
@@ -40,6 +40,8 @@ const ITEM_MARK_SPAN = 26;
 const ITEM_MARK_ROWS = 4;
 // The plot's right margin, in pixels (the chart's `margin.right`).
 const PLOT_MARGIN_RIGHT = 16;
+const NO_SKILLS: readonly { level: number; abilityId: number; at: number }[] = [];
+const NO_ABILITIES: readonly number[] = [];
 // The y-axis width in pixels: the flex slider under the plot is inset by the same (`ps-10`).
 const Y_AXIS_WIDTH = 40;
 const TICKS = [0, 300, 600, 900, 1200, 1500, 1800, 2100, 2400, 2700];
@@ -261,8 +263,8 @@ interface BuildEconomyProps extends Omit<React.ComponentProps<typeof Panel>, "ti
 export function BuildEconomy({
   title,
   economy,
-  skills = [],
-  abilities = [],
+  skills = NO_SKILLS,
+  abilities = NO_ABILITIES,
   flexMinutes,
   onFlexMinutesChange,
   ...props
@@ -276,15 +278,12 @@ export function BuildEconomy({
   const lanes = useMemo(() => skillLanes(skills, abilities), [skills, abilities]);
   // The plot's width, to step marks that would cover each other into rows above the curve.
   const [plotWidth, setPlotWidth] = useState(0);
-  const plotRef = useRef<HTMLDivElement>(null);
-  const plotShown = plot != null;
-  useEffect(() => {
-    const element = plotRef.current;
+  const plotRef = (element: HTMLDivElement | null) => {
     if (!element) return;
     const observer = new ResizeObserver(([entry]) => setPlotWidth(entry.contentRect.width));
     observer.observe(element);
     return () => observer.disconnect();
-  }, [plotShown]);
+  };
   const rowOf = useMemo(() => {
     const rows = new Map<string, number>();
     if (!plot || plotWidth <= 0) return rows;
