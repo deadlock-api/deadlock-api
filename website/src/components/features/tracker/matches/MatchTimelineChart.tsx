@@ -39,7 +39,7 @@ import {
   type ObjectiveEventKind,
 } from "~/lib/tracker/objectives";
 import type { SoulLead, SoulLeadPoint } from "~/lib/tracker/soul-lead";
-import { TEAMS } from "~/lib/tracker/teams";
+import { type MatchSides, PLAYER_SIDES, TEAMS } from "~/lib/tracker/teams";
 import { cn } from "~/lib/utils";
 import type { TrackerMatchPlayer } from "~/queries/tracker-queries";
 
@@ -160,7 +160,15 @@ function leadTicks(min: number, max: number): number[] {
   return ticks;
 }
 
-function LeadTooltipContent({ active, payload }: { active?: boolean; payload?: { payload: SoulLeadPoint }[] }) {
+function LeadTooltipContent({
+  active,
+  payload,
+  sides = PLAYER_SIDES,
+}: {
+  active?: boolean;
+  payload?: { payload: SoulLeadPoint }[];
+  sides?: MatchSides;
+}) {
   if (!active || !payload?.length) return null;
   const point = payload[0].payload;
   return (
@@ -174,14 +182,16 @@ function LeadTooltipContent({ active, payload }: { active?: boolean; payload?: {
           >
             {point.lead === 0
               ? "Even"
-              : `${point.lead > 0 ? "Ahead" : "Behind"} by ${Math.abs(point.lead).toLocaleString("en-US")}`}
+              : sides.neutral
+                ? `${point.lead > 0 ? sides.own : sides.enemy} ahead by ${Math.abs(point.lead).toLocaleString("en-US")}`
+                : `${point.lead > 0 ? "Ahead" : "Behind"} by ${Math.abs(point.lead).toLocaleString("en-US")}`}
           </span>
         }
         subtitle={formatMatchDuration(point.time)}
       />
       <TooltipStats>
-        <TooltipStat label="Your team" value={point.own.toLocaleString("en-US")} />
-        <TooltipStat label="Enemy team" value={point.enemy.toLocaleString("en-US")} />
+        <TooltipStat label={sides.own} value={point.own.toLocaleString("en-US")} />
+        <TooltipStat label={sides.enemy} value={point.enemy.toLocaleString("en-US")} />
       </TooltipStats>
     </TooltipCard>
   );
@@ -313,6 +323,7 @@ export function MatchTimelineChart({
   deadWindows,
   deadWindowColor,
   durationS,
+  sides = PLAYER_SIDES,
 }: {
   lead: SoulLead | null;
   objectives: ObjectiveEvent[];
@@ -322,6 +333,8 @@ export function MatchTimelineChart({
   /** A player's time dead is bad for the tracked team when they are an ally and good when an enemy. */
   deadWindowColor: string;
   durationS: number;
+  /** How the tooltip names the two sides. */
+  sides?: MatchSides;
 }) {
   const gradientId = useId();
   const [width, setWidth] = useState(0);
@@ -429,7 +442,7 @@ export function MatchTimelineChart({
             ifOverflow="hidden"
           />
         ))}
-        {lead && <Tooltip cursor={CHART_CURSOR_LINE} content={<LeadTooltipContent />} />}
+        {lead && <Tooltip cursor={CHART_CURSOR_LINE} content={<LeadTooltipContent sides={sides} />} />}
         <ReferenceLine y={0} stroke={CHART_COLOR.reference} />
         {width > LEAD_AXIS_PX + PLOT_END_PX &&
           objectives.map((event, index) => (

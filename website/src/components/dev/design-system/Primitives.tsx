@@ -776,6 +776,9 @@ export function Primitives() {
         <Variants>
           <CopyButton text="deadlock-api.com" variant="outline" size="sm" />
           <CopyButton text="deadlock-api.com" variant="ghost" size="icon-sm" />
+          <CopyButton text="deadlock-api.com" icon={null} variant="ghost" size="xs">
+            Copy match link
+          </CopyButton>
           <CopyButton
             text="https://deadlock-api.com"
             icon={Link2}

@@ -5,7 +5,7 @@ import { intentFromDecision, questionEntities } from "~/lib/ai-search/decide";
 import { describeIntent } from "~/lib/ai-search/describe";
 import { findMentions, words } from "~/lib/ai-search/entities";
 import { directIntent, NO_FILTERS } from "~/lib/ai-search/intent";
-import { lookupOf, type PlayerLookup, playerLookupOf } from "~/lib/ai-search/lookup";
+import { matchLookupOf, type PlayerLookup, playerLookupOf } from "~/lib/ai-search/lookup";
 import { resolveIntent } from "~/lib/ai-search/resolve";
 import { decideSearch } from "~/lib/ai-search/search-fns";
 import { PATCHES } from "~/lib/constants";
@@ -52,15 +52,14 @@ async function findPlayer(queryClient: QueryClient, player: PlayerLookup): Promi
 }
 
 /**
- * What a question came to: the page to open, a question no page answers, a player the Steam search does not know, a
- * question after one match (no page holds one), or a visitor who asked too much. A failed model call throws, like any
+ * What a question came to: the page to open (a match or a player's tracker too), a question no page answers, a player
+ * the Steam search does not know, or a visitor who asked too much. A failed model call throws, like any
  * other failed request.
  */
 type Routed =
   | { kind: "opened"; id: string; href: string; title: string; filters: string[]; heroId?: number }
   | { kind: "not_understood" }
   | { kind: "player_not_found" }
-  | { kind: "match_lookup" }
   | { kind: "rate_limited" };
 
 /** `direct`: a bare hero or item name, answered without the model. `durationMs`: catalogs and model together. */
@@ -87,7 +86,11 @@ export async function routeQuestion(
         filters: [],
       });
     }
-    if (lookupOf(question) === "match") return done({ kind: "match_lookup" });
+    // One match opens its own page, which says how to send it in when we do not have it.
+    const matchId = matchLookupOf(question);
+    if (matchId !== undefined) {
+      return done({ kind: "opened", id: "match", href: `/matches/${matchId}`, title: `Match ${matchId}`, filters: [] });
+    }
     const entities = questionEntities(question, vocabulary);
     const decided = await decideSearch({ data: { question, entities, rankNames: [...vocabulary.rankNames] } });
     if (!decided.ok && decided.reason === "rate_limited") return done({ kind: "rate_limited" });

@@ -22,7 +22,7 @@ import { formatMatchDuration } from "~/lib/tracker/compute";
 import type { FightSummary } from "~/lib/tracker/fights";
 import type { ObjectiveEvent } from "~/lib/tracker/objectives";
 import type { SoulLead } from "~/lib/tracker/soul-lead";
-import { TEAMS } from "~/lib/tracker/teams";
+import { type MatchSides, PLAYER_SIDES, TEAMS } from "~/lib/tracker/teams";
 import { cn } from "~/lib/utils";
 import type { TrackerMatchPlayer } from "~/queries/tracker-queries";
 
@@ -55,6 +55,7 @@ export function MatchTimeline({
   viewedIsAlly,
   durationS,
   nameOf,
+  sides = PLAYER_SIDES,
 }: {
   ref?: Ref<HTMLElement>;
   /** Null when neither team ever led, as in Street Brawl. */
@@ -70,6 +71,8 @@ export function MatchTimeline({
   viewedIsAlly: boolean;
   durationS: number;
   nameOf: (player: TrackerMatchPlayer) => string;
+  /** How the timeline names the two sides: the tracked player's team, or both teams by name. */
+  sides?: MatchSides;
 }) {
   const [visibleLayers, setVisibleLayers] = useState(["kill", "death", "dead", "objective"]);
   const killTextClass = viewedIsAlly ? TONE_TEXT.positive : TONE_TEXT.negative;
@@ -145,9 +148,19 @@ export function MatchTimeline({
       <section ref={ref} aria-label="Match timeline" tabIndex={-1}>
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground tabular-nums">
           <span className="text-sm font-semibold text-foreground">Match timeline</span>
-          {lead && <span>Ahead for {Math.round(lead.aheadShare * 100)}% of the match</span>}
+          {lead && (
+            <span>
+              {sides.neutral ? `${sides.own} ahead` : "Ahead"} for {Math.round(lead.aheadShare * 100)}% of the match
+            </span>
+          )}
           {objectives.length > 0 && (
-            <span title="Objectives destroyed and mid bosses claimed by your team, then by the enemy">
+            <span
+              title={
+                sides.neutral
+                  ? `Objectives destroyed and mid bosses claimed by ${sides.own}, then by ${sides.enemy}`
+                  : "Objectives destroyed and mid bosses claimed by your team, then by the enemy"
+              }
+            >
               Objectives <span className={cn("font-semibold", TONE_TEXT.positive)}>{taken}</span> –{" "}
               <span className={cn("font-semibold", TONE_TEXT.negative)}>{objectives.length - taken}</span>
             </span>
@@ -240,8 +253,9 @@ export function MatchTimeline({
           deadWindows={visibleLayers.includes("dead") ? deadWindows : []}
           deadWindowColor={deathColor}
           durationS={durationS}
+          sides={sides}
         />
-        <MatchEventList combat={events} objectives={objectives} playerName={viewedName} />
+        <MatchEventList combat={events} objectives={objectives} playerName={viewedName} sides={sides} />
       </section>
     </Card>
   );

@@ -67,6 +67,7 @@ import { Route as HeroesIndexRouteImport } from './routes/heroes.index'
 import { Route as HeroesHeroNameRouteImport } from './routes/heroes.$heroName'
 import { Route as ItemsIndexRouteImport } from './routes/items.index'
 import { Route as ItemsItemNameRouteImport } from './routes/items.$itemName'
+import { Route as MatchesMatchIdRouteImport } from './routes/matches.$matchId'
 import { Route as OgCompareDotpngRouteImport } from './routes/og.compare[.]png'
 import { Route as OgCrosshairDotpngRouteImport } from './routes/og.crosshair[.]png'
 import { Route as PatchesIndexRouteImport } from './routes/patches.index'
@@ -408,6 +409,11 @@ const ItemsItemNameRoute = ItemsItemNameRouteImport.update({
   path: '/$itemName',
   getParentRoute: () => ItemsRoute,
 } as any)
+const MatchesMatchIdRoute = MatchesMatchIdRouteImport.update({
+  id: '/matches/$matchId',
+  path: '/matches/$matchId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const OgCompareDotpngRoute = OgCompareDotpngRouteImport.update({
   id: '/og/compare.png',
   path: '/og/compare.png',
@@ -721,6 +727,7 @@ export interface FileRoutesByFullPath {
   '/games/guess-the-rank': typeof GamesGuessTheRankRoute
   '/heroes/$heroName': typeof HeroesHeroNameRoute
   '/items/$itemName': typeof ItemsItemNameRoute
+  '/matches/$matchId': typeof MatchesMatchIdRoute
   '/og/compare.png': typeof OgCompareDotpngRoute
   '/og/crosshair.png': typeof OgCrosshairDotpngRoute
   '/patches/$patchId': typeof PatchesPatchIdRoute
@@ -819,6 +826,7 @@ export interface FileRoutesByTo {
   '/games/guess-the-rank': typeof GamesGuessTheRankRoute
   '/heroes/$heroName': typeof HeroesHeroNameRoute
   '/items/$itemName': typeof ItemsItemNameRoute
+  '/matches/$matchId': typeof MatchesMatchIdRoute
   '/og/compare.png': typeof OgCompareDotpngRoute
   '/og/crosshair.png': typeof OgCrosshairDotpngRoute
   '/patches/$patchId': typeof PatchesPatchIdRoute
@@ -929,6 +937,7 @@ export interface FileRoutesById {
   '/games_/guess-the-rank': typeof GamesGuessTheRankRoute
   '/heroes/$heroName': typeof HeroesHeroNameRoute
   '/items/$itemName': typeof ItemsItemNameRoute
+  '/matches/$matchId': typeof MatchesMatchIdRoute
   '/og/compare.png': typeof OgCompareDotpngRoute
   '/og/crosshair.png': typeof OgCrosshairDotpngRoute
   '/patches/$patchId': typeof PatchesPatchIdRoute
@@ -1040,6 +1049,7 @@ export interface FileRouteTypes {
     | '/games/guess-the-rank'
     | '/heroes/$heroName'
     | '/items/$itemName'
+    | '/matches/$matchId'
     | '/og/compare.png'
     | '/og/crosshair.png'
     | '/patches/$patchId'
@@ -1138,6 +1148,7 @@ export interface FileRouteTypes {
     | '/games/guess-the-rank'
     | '/heroes/$heroName'
     | '/items/$itemName'
+    | '/matches/$matchId'
     | '/og/compare.png'
     | '/og/crosshair.png'
     | '/patches/$patchId'
@@ -1247,6 +1258,7 @@ export interface FileRouteTypes {
     | '/games_/guess-the-rank'
     | '/heroes/$heroName'
     | '/items/$itemName'
+    | '/matches/$matchId'
     | '/og/compare.png'
     | '/og/crosshair.png'
     | '/patches/$patchId'
@@ -1345,6 +1357,7 @@ export interface RootRouteChildren {
   GamesDeadlockdleRoute: typeof GamesDeadlockdleRouteWithChildren
   GamesFlashcardsRoute: typeof GamesFlashcardsRouteWithChildren
   GamesGuessTheRankRoute: typeof GamesGuessTheRankRoute
+  MatchesMatchIdRoute: typeof MatchesMatchIdRoute
   OgCompareDotpngRoute: typeof OgCompareDotpngRoute
   OgCrosshairDotpngRoute: typeof OgCrosshairDotpngRoute
   PlayersAccountIdRoute: typeof PlayersAccountIdRoute
@@ -1766,6 +1779,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/items/$itemName'
       preLoaderRoute: typeof ItemsItemNameRouteImport
       parentRoute: typeof ItemsRoute
+    }
+    '/matches/$matchId': {
+      id: '/matches/$matchId'
+      path: '/matches/$matchId'
+      fullPath: '/matches/$matchId'
+      preLoaderRoute: typeof MatchesMatchIdRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/og/compare.png': {
       id: '/og/compare.png'
@@ -2370,6 +2390,7 @@ const rootRouteChildren: RootRouteChildren = {
   GamesDeadlockdleRoute: GamesDeadlockdleRouteWithChildren,
   GamesFlashcardsRoute: GamesFlashcardsRouteWithChildren,
   GamesGuessTheRankRoute: GamesGuessTheRankRoute,
+  MatchesMatchIdRoute: MatchesMatchIdRoute,
   OgCompareDotpngRoute: OgCompareDotpngRoute,
   OgCrosshairDotpngRoute: OgCrosshairDotpngRoute,
   PlayersAccountIdRoute: PlayersAccountIdRoute,

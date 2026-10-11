@@ -9,8 +9,11 @@ import { cn } from "~/lib/utils";
 type CopyButtonProps = ComponentProps<typeof Button> & {
   /** A function defers the value to click time, for text that only exists in the browser like the page URL. */
   text: string | (() => string);
-  /** What is copied, when it is not plain text: `Link` for a URL. A check mark replaces it once copied. */
-  icon?: LucideIcon;
+  /**
+   * What is copied, when it is not plain text: `Link` for a URL. A check mark replaces it once copied. `null` leaves
+   * a labelled button without an icon, as in a line of quiet text actions; an `icon*` size always needs one.
+   */
+  icon?: LucideIcon | null;
 };
 
 /** An `icon*` size shows the icon alone and needs an `aria-label` or `title`; any other size adds the children. */
@@ -49,7 +52,7 @@ export function CopyButton({
         }
       }}
     >
-      {copied ? <Check /> : <Icon />}
+      {Icon === null && !iconDisplay ? null : copied ? <Check /> : Icon ? <Icon /> : <Copy />}
       {!iconDisplay && (copied ? "Copied" : children)}
     </Button>
   );

@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import type { PlayerMatchHistoryEntry, Rank } from "deadlock_api_client";
-import { CircleDashed, Gavel, Link2, LogOut, RefreshCw, ShieldCheck, Trophy, UsersRound } from "lucide-react";
+import { CircleDashed, Gavel, LogOut, RefreshCw, ShieldCheck, Trophy, UsersRound } from "lucide-react";
 import { type ReactNode, useMemo, useRef, useState } from "react";
 
 import { BadgeImage } from "~/components/domain/assets/BadgeImage";
@@ -20,6 +20,7 @@ import { Stat, StatGroup } from "~/components/ui/stat";
 import { TextLink } from "~/components/ui/text-link";
 import { useSteamProfiles } from "~/hooks/useSteamProfiles";
 import { hasSoulEconomy } from "~/lib/game-mode";
+import type { GameMode } from "~/lib/game-mode";
 import { TONE_TEXT } from "~/lib/tone";
 import {
   brawlRounds,
@@ -37,9 +38,10 @@ import { computeFights } from "~/lib/tracker/fights";
 import { computeLaneMatchups } from "~/lib/tracker/lane-matchup";
 import { computeObjectiveEvents } from "~/lib/tracker/objectives";
 import { computeSoulLead } from "~/lib/tracker/soul-lead";
-import { TEAMS } from "~/lib/tracker/teams";
+import { NEUTRAL_SIDES, PLAYER_SIDES, TEAMS } from "~/lib/tracker/teams";
 import { cn } from "~/lib/utils";
 import { itemUpgradesQueryOptions } from "~/queries/asset-queries";
+import type { MatchMetadataSource } from "~/queries/query-keys";
 import {
   type TrackerMatchPlayer,
   trackerAbilitiesQueryOptions,
@@ -66,20 +68,79 @@ function Note({ icon: Icon, className, children }: { icon: typeof Gavel; classNa
 }
 
 /** What the match history row knows about the match, so it shows before the match details load. */
+/** The tracker's link to a match: the page as filtered, with the match open. */
+function trackerMatchLink(matchId: number) {
+  const url = new URL(window.location.href);
+  // nuqs batches URL writes; use the displayed match even if its URL is still catching up.
+  url.searchParams.set("match", String(matchId));
+  url.searchParams.delete("tab");
+  return url.toString();
+}
+
+/** The line under a match's headline: mode, length, start, its ID and what can be done with it. */
+function MatchMeta({
+  matchId,
+  modeLabel,
+  durationS,
+  brawlAvgRoundS,
+  startTime,
+  savedFor,
+  matchLink,
+}: {
+  matchId: number;
+  modeLabel: string;
+  durationS: number;
+  brawlAvgRoundS?: number | null;
+  startTime: number;
+  /** The tracked account the match can be saved for; a match seen on its own has none. */
+  savedFor?: number;
+  /** The URL "Copy match link" copies, read when clicked. */
+  matchLink: () => string;
+}) {
+  const { toTime } = useTrackerTime();
+  return (
+    <div className="flex flex-wrap items-center gap-x-3 text-xs text-muted-foreground tabular-nums">
+      <span>
+        {modeLabel} · {formatMatchDuration(durationS)}
+        {brawlAvgRoundS != null && brawlAvgRoundS > 0 && ` (${formatMatchDuration(brawlAvgRoundS)} a round)`}
+        {startTime > 0 && ` · ${toTime(startTime).format("ddd, MMM D, YYYY HH:mm")}`}
+      </span>
+      <span className="inline-flex items-center gap-0.5">
+        Match {matchId}
+        <CopyButton text={String(matchId)} size="icon-xs" title="Copy match ID" />
+        {savedFor !== undefined && <SaveMatchButton accountId={savedFor} matchId={matchId} />}
+      </span>
+      <CopyButton variant="ghost" size="xs" icon={null} text={matchLink} title="Copy link to this match">
+        Copy match link
+      </CopyButton>
+      {/* The Team Builder loads drafts from the API, which has never seen a generated demo match. */}
+      {!isDemoMatch(matchId) && (
+        <TextLink asChild tone="muted" underline="hover" className="inline-flex min-h-6 items-center gap-1">
+          <Link to="/analytics/team-builder" search={{ match: matchId }}>
+            <UsersRound className="size-3.5" />
+            Team Builder
+          </Link>
+        </TextLink>
+      )}
+    </div>
+  );
+}
+
 function MatchHeader({
   entry,
   accountId,
   ranks,
   heroName,
   records,
+  matchLink,
 }: {
   entry: PlayerMatchHistoryEntry;
   accountId: number;
   ranks: Rank[];
   heroName: string;
   records: HeldRecord[] | undefined;
+  matchLink: () => string;
 }) {
-  const { toTime } = useTrackerTime();
   const matchId = entry.match_id;
   const win = isWin(entry);
   const rounds = brawlRounds(entry);
@@ -120,44 +181,15 @@ function MatchHeader({
                 {calibration && <Note icon={CircleDashed}>Calibration match</Note>}
               </span>
             </div>
-            <div className="flex flex-wrap items-center gap-x-3 text-xs text-muted-foreground tabular-nums">
-              <span>
-                {matchModeLabel(entry)} · {formatMatchDuration(entry.match_duration_s)}
-                {entry.brawl_avg_round_time_s != null &&
-                  entry.brawl_avg_round_time_s > 0 &&
-                  ` (${formatMatchDuration(entry.brawl_avg_round_time_s)} a round)`}{" "}
-                · {toTime(entry.start_time).format("ddd, MMM D, YYYY HH:mm")}
-              </span>
-              <span className="inline-flex items-center gap-0.5">
-                Match {matchId}
-                <CopyButton text={String(matchId)} size="icon-xs" title="Copy match ID" />
-                <SaveMatchButton accountId={accountId} matchId={matchId} />
-              </span>
-              <CopyButton
-                variant="ghost"
-                size="xs"
-                text={() => {
-                  const url = new URL(window.location.href);
-                  // nuqs batches URL writes; use the displayed match even if its URL is still catching up.
-                  url.searchParams.set("match", String(matchId));
-                  url.searchParams.delete("tab");
-                  return url.toString();
-                }}
-                title="Copy link to this match with your current filters"
-              >
-                <Link2 data-icon="inline-start" />
-                Copy match link
-              </CopyButton>
-              {/* The Team Builder loads drafts from the API, which has never seen a generated demo match. */}
-              {!isDemoMatch(matchId) && (
-                <TextLink asChild tone="muted" underline="hover" className="inline-flex min-h-6 items-center gap-1">
-                  <Link to="/analytics/team-builder" search={{ match: matchId }}>
-                    <UsersRound className="size-3.5" />
-                    Team Builder
-                  </Link>
-                </TextLink>
-              )}
-            </div>
+            <MatchMeta
+              matchId={matchId}
+              modeLabel={matchModeLabel(entry)}
+              durationS={entry.match_duration_s}
+              brawlAvgRoundS={entry.brawl_avg_round_time_s}
+              startTime={entry.start_time}
+              savedFor={accountId}
+              matchLink={matchLink}
+            />
           </div>
         </div>
         <StatGroup variant="plain" size="xs" className="ms-auto auto-cols-max grid-flow-col gap-4 @sm:gap-6">
@@ -187,12 +219,40 @@ function MatchHeader({
   );
 }
 
-function MatchBody({ entry, accountId, ranks }: { entry: PlayerMatchHistoryEntry; accountId: number; ranks: Rank[] }) {
-  const matchId = entry.match_id;
+interface MatchViewProps {
+  matchId: number;
+  durationS: number;
+  gameMode: GameMode;
+  ranks: Rank[];
+  /**
+   * The player the match is seen through: their team is "Your team", their row stands out and their lane is compared.
+   * Absent, the match is seen on its own, from the Hidden King's side with both teams named.
+   */
+  accountId?: number;
+  /** The tracked player's side as their history knows it (0 or 1), for when the metadata lacks them. */
+  playerTeam?: number;
+  /** Whether the map had lanes; by default every normal-mode match. */
+  laned?: boolean;
+  /** `graphql` shows only stored matches and never asks Steam for one. */
+  source?: MatchMetadataSource;
+  /** Says what to do when the match has no details yet. */
+  unavailable?: ReactNode;
+}
+
+/** One match: the timeline, the scoreboard and the lanes, seen through a tracked player or on its own. */
+export function MatchView({
+  matchId,
+  durationS,
+  gameMode,
+  ranks,
+  accountId,
+  playerTeam,
   // Street Brawl reports lane ids too, but its map has no lanes to speak of.
-  const laned = hasLanes(entry);
+  laned = gameMode === "normal",
+  source = "any",
+  unavailable,
+}: MatchViewProps) {
   // Street Brawl grants fixed souls each round: no soul lead, no soul columns.
-  const gameMode = entryGameMode(entry);
   const soulEconomy = hasSoulEconomy(gameMode);
   const {
     data: match,
@@ -201,7 +261,7 @@ function MatchBody({ entry, accountId, ranks }: { entry: PlayerMatchHistoryEntry
     isFetching,
     fetchStatus,
     refetch,
-  } = useQuery(trackerMatchMetadataQueryOptions(matchId));
+  } = useQuery(trackerMatchMetadataQueryOptions(matchId, source));
   const itemsQuery = useQuery({
     ...itemUpgradesQueryOptions,
     select: (items) => new Map(items.map((item) => [item.id, item])),
@@ -219,9 +279,12 @@ function MatchBody({ entry, accountId, ranks }: { entry: PlayerMatchHistoryEntry
   const { profiles } = useSteamProfiles(unnamedAccountIds);
 
   const tracked = match?.players.find((player) => player.account_id === accountId);
+  // A player who was not in the match (and whose side no history names) has no side to see it from.
+  const neutral = accountId === undefined || (match != null && !tracked && playerTeam === undefined);
+  const sides = neutral ? NEUTRAL_SIDES : PLAYER_SIDES;
   // The history entry knows the side even when the metadata lacks the player (partial ingestion); guessing Team0
   // would invert the soul lead and the objectives for a player on the other side.
-  const ownTeam = tracked?.team ?? TEAMS[entry.player_team === 1 ? 1 : 0].key;
+  const ownTeam = tracked?.team ?? TEAMS[playerTeam === 1 ? 1 : 0].key;
 
   const soulLead = useMemo(
     () => (match && soulEconomy ? computeSoulLead(match.players, ownTeam) : null),
@@ -230,13 +293,20 @@ function MatchBody({ entry, accountId, ranks }: { entry: PlayerMatchHistoryEntry
   const objectiveEvents = useMemo(() => (match ? computeObjectiveEvents(match, ownTeam) : []), [match, ownTeam]);
 
   const laneMatchups = useMemo(
-    () => (laned && match ? computeLaneMatchups(match.players, accountId) : []),
-    [laned, match, accountId],
+    () => (laned && match ? computeLaneMatchups(match.players, neutral ? undefined : accountId) : []),
+    [laned, match, accountId, neutral],
   );
-  const [viewedAccountId, setViewedAccountId] = useState(accountId);
+  // The player the timeline plots and the scoreboard marks: the tracked player, or, seen on its own, the match's MVP
+  // until another one is picked.
+  const [pickedAccountId, setViewedAccountId] = useState(accountId);
+  const mvpAccountId = match?.players.find((player) => player.mvp_rank === 1)?.account_id;
+  const viewedAccountId = pickedAccountId ?? (neutral ? mvpAccountId : undefined);
   const fights = useMemo(
-    () => (match ? computeFights(match.deaths, match.players, viewedAccountId, entry.match_duration_s) : null),
-    [match, viewedAccountId, entry.match_duration_s],
+    () =>
+      match && viewedAccountId !== undefined
+        ? computeFights(match.deaths, match.players, viewedAccountId, durationS)
+        : null,
+    [match, viewedAccountId, durationS],
   );
   const viewedPlayer = match?.players.find((player) => player.account_id === viewedAccountId);
   const timelineRef = useRef<HTMLElement>(null);
@@ -265,6 +335,16 @@ function MatchBody({ entry, accountId, ranks }: { entry: PlayerMatchHistoryEntry
     </Button>
   );
   if (isError && !match) {
+    if (neutral) {
+      return (
+        <ErrorState
+          title="Could not load the match"
+          description="Try again in a moment."
+          onRetry={() => refetch()}
+          retrying={isFetching}
+        />
+      );
+    }
     return (
       <EmptyState
         title="Match details are still being processed"
@@ -275,6 +355,7 @@ function MatchBody({ entry, accountId, ranks }: { entry: PlayerMatchHistoryEntry
   }
 
   if (!match) {
+    if (unavailable) return unavailable;
     return (
       <EmptyState
         title="Match details unavailable"
@@ -286,7 +367,8 @@ function MatchBody({ entry, accountId, ranks }: { entry: PlayerMatchHistoryEntry
 
   const missingBuildAssets = [itemsQuery, abilitiesQuery].filter((query) => query.data == null);
   return (
-    <div className="flex flex-col gap-4">
+    // The container the scoreboard's two team columns and the lane cards query, wherever the view is placed.
+    <div className="@container flex flex-col gap-4">
       {fetchStatus === "paused" ? (
         <TrackerQueryPaused description="Showing loaded match details. Refresh resumes when you're back online." />
       ) : isError ? (
@@ -306,8 +388,9 @@ function MatchBody({ entry, accountId, ranks }: { entry: PlayerMatchHistoryEntry
         players={match.players}
         onViewPlayer={viewPlayer}
         viewedIsAlly={viewedPlayer?.team === ownTeam}
-        durationS={entry.match_duration_s}
+        durationS={durationS}
         nameOf={nameOf}
+        sides={sides}
       />
       {missingBuildAssets.some((query) => query.fetchStatus === "paused") ? (
         <TrackerQueryPaused description="Build details will load automatically when you're back online." />
@@ -329,14 +412,16 @@ function MatchBody({ entry, accountId, ranks }: { entry: PlayerMatchHistoryEntry
         ranks={ranks}
         laned={laned}
         gameMode={gameMode}
-        durationS={entry.match_duration_s}
+        durationS={durationS}
         itemsById={itemsQuery.data}
         abilitiesById={abilitiesQuery.data}
         nameOf={nameOf}
-        viewedAccountId={viewedAccountId}
+        viewedAccountId={viewedAccountId ?? null}
         onViewPlayer={viewPlayer}
       />
-      {laneMatchups.length > 0 && <LanesCard matchups={laneMatchups} trackedAccountId={accountId} nameOf={nameOf} />}
+      {laneMatchups.length > 0 && (
+        <LanesCard matchups={laneMatchups} trackedAccountId={neutral ? undefined : accountId} nameOf={nameOf} />
+      )}
     </div>
   );
 }
@@ -347,6 +432,9 @@ export function MatchDetails({
   ranks,
   heroName,
   records,
+  matchLink = () => trackerMatchLink(entry.match_id),
+  source,
+  unavailable,
 }: {
   entry: PlayerMatchHistoryEntry;
   accountId: number;
@@ -354,11 +442,121 @@ export function MatchDetails({
   heroName: string;
   /** Personal bests this match holds over the filtered history. */
   records: HeldRecord[] | undefined;
+  /** What "Copy match link" copies; by default the tracker with this match open. */
+  matchLink?: () => string;
+  source?: MatchMetadataSource;
+  unavailable?: ReactNode;
 }) {
   return (
     <div className="@container flex flex-col gap-4">
-      <MatchHeader entry={entry} accountId={accountId} ranks={ranks} heroName={heroName} records={records} />
-      <MatchBody entry={entry} accountId={accountId} ranks={ranks} />
+      <MatchHeader
+        entry={entry}
+        accountId={accountId}
+        ranks={ranks}
+        heroName={heroName}
+        records={records}
+        matchLink={matchLink}
+      />
+      <MatchView
+        matchId={entry.match_id}
+        durationS={entry.match_duration_s}
+        gameMode={entryGameMode(entry)}
+        laned={hasLanes(entry)}
+        ranks={ranks}
+        accountId={accountId}
+        playerTeam={entry.player_team}
+        source={source}
+        unavailable={unavailable}
+      />
+    </div>
+  );
+}
+
+/**
+ * A match seen on its own, in the tracker's layout: which team won (Street Brawl's rounds too), each team's average
+ * rank and the match's meta line, then the match itself from the Hidden King's side.
+ */
+export function NeutralMatchDetails({
+  matchId,
+  ranks,
+  durationS,
+  gameMode,
+  laned,
+  modeLabel,
+  startTime,
+  winningTeam,
+  averageBadges,
+  teamScore,
+  brawlAvgRoundS,
+  matchLink,
+  unavailable,
+}: {
+  matchId: number;
+  ranks: Rank[];
+  durationS: number;
+  gameMode: GameMode;
+  laned: boolean;
+  modeLabel: string;
+  startTime: number;
+  /** "Team0" or "Team1". */
+  winningTeam: string;
+  /** Each team's average badge, Team0 first; null for a team without one. */
+  averageBadges: [number | null, number | null];
+  /** Street Brawl's round score, Team0 first. */
+  teamScore: [number, number] | null;
+  brawlAvgRoundS: number | null;
+  matchLink: () => string;
+  unavailable?: ReactNode;
+}) {
+  const winner = TEAMS.find((team) => team.key === winningTeam);
+  return (
+    <div className="@container flex flex-col gap-4">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
+        <div className="flex min-w-64 flex-1 flex-col gap-0.5 leading-tight">
+          <div className="flex flex-wrap items-baseline gap-x-2">
+            <span className="text-lg font-semibold">{winner ? `${winner.name} won` : "Match"}</span>
+            {teamScore && (
+              <span className="text-sm text-muted-foreground tabular-nums">
+                {teamScore[0]}–{teamScore[1]} rounds
+              </span>
+            )}
+          </div>
+          <MatchMeta
+            matchId={matchId}
+            modeLabel={modeLabel}
+            durationS={durationS}
+            brawlAvgRoundS={brawlAvgRoundS}
+            startTime={startTime}
+            matchLink={matchLink}
+          />
+        </div>
+        {averageBadges.some((badge) => badge != null) && (
+          <StatGroup variant="plain" size="xs" className="ms-auto auto-cols-max grid-flow-col gap-4 @sm:gap-6">
+            {TEAMS.map((team, index) => {
+              const badge = averageBadges[index];
+              return (
+                badge != null && (
+                  <Stat
+                    key={team.key}
+                    align="end"
+                    label={team.name}
+                    value={<BadgeImage badge={badge} ranks={ranks} size="inline" />}
+                  />
+                )
+              );
+            })}
+          </StatGroup>
+        )}
+      </div>
+      <MatchView
+        matchId={matchId}
+        durationS={durationS}
+        gameMode={gameMode}
+        laned={laned}
+        ranks={ranks}
+        source="graphql"
+        unavailable={unavailable}
+      />
     </div>
   );
 }

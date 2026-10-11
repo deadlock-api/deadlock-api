@@ -58,7 +58,7 @@ function trackQuestion(event: {
 }
 
 /** Why a question opened no page, said in a callout under the field. */
-type Notice = "not_understood" | "player_not_found" | "match_lookup" | "rate_limited" | "error";
+type Notice = "not_understood" | "player_not_found" | "rate_limited" | "error";
 
 const NOTICES: Record<
   Notice,
@@ -75,12 +75,6 @@ const NOTICES: Record<
     icon: <CircleSlashIcon />,
     title: "No player found",
     description: "Paste their Steam ID or profile link, or try their exact Steam name.",
-  },
-  match_lookup: {
-    variant: "info",
-    icon: <CircleSlashIcon />,
-    title: "We don't have stats for single matches",
-    description: TRY,
   },
   rate_limited: {
     variant: "warning",
@@ -190,7 +184,9 @@ export function AiSearch({ size = "default", className }: AiSearchProps) {
       question: trimmed,
       source: home ? "home" : "sidebar",
       outcome: "opened",
-      page: row.kind === "page" ? row.id : row.kind === "hero" ? "hero_page" : "player-tracker",
+      page: { page: row.kind === "page" ? row.id : "", match: "match", hero: "hero_page", player: "player-tracker" }[
+        row.kind
+      ],
     });
     if (row.kind === "page") setLastSearch(trimmed);
     setListOpen(false);
