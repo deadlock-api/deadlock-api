@@ -281,12 +281,12 @@ const NEXT_MIN_SHARE = 0.1;
 
 /**
  * The item an empty stage of the build suggests: the best win rate (pulled toward the build's, see SHRINK_SHARE)
- * among the items a good part of the build's players buy there.
+ * among the items a good part of the build's players buy there, other than those in `taken` (an item is owned once).
  */
-function nextPick(view: View, column: number): Choice | undefined {
+function nextPick(view: View, column: number, taken: Set<number>): Choice | undefined {
   let best: Choice | undefined;
   for (const choice of view.byKey.values()) {
-    if (choice.column !== column || choice.selected || choice.pickRate < NEXT_MIN_SHARE) continue;
+    if (choice.column !== column || taken.has(choice.itemId) || choice.pickRate < NEXT_MIN_SHARE) continue;
     if (!best || choice.score > best.score) best = choice;
   }
   return best;
@@ -612,6 +612,17 @@ export function BuildFlowExplorer({
           };
         })
       : null;
+  // What each empty stage suggests: never an item the build holds or an earlier stage already suggests.
+  const nextPicks = new Map<number, Choice>();
+  const taken = new Set(path.map((key) => parseKey(key).itemId));
+  for (const stage of view.stages) {
+    if (path.some((key) => parseKey(key).column === stage.column)) continue;
+    const next = nextPick(view, stage.column, taken);
+    if (next) {
+      nextPicks.set(stage.column, next);
+      taken.add(next.itemId);
+    }
+  }
   // A build nobody played in these filters: its numbers are not zeros but missing.
   const noGames = summary.matches === 0;
   // A Street Brawl answer can have fewer rounds than the stage that was shown.
@@ -827,7 +838,7 @@ export function BuildFlowExplorer({
                     {held.length === 0 &&
                       soldHere.length === 0 &&
                       (() => {
-                        const next = nextPick(view, stage.column);
+                        const next = nextPicks.get(stage.column);
                         if (!next) return null;
                         return (
                           <BuildSlotItem
@@ -839,12 +850,11 @@ export function BuildFlowExplorer({
                             actions={
                               <Button
                                 variant="ghost"
-                                size="xs"
+                                size="icon-xs"
                                 aria-label={`Add ${nameOf.get(next.itemId) ?? "item"} to ${stage.title}`}
                                 onClick={() => toggle(next.key)}
                               >
                                 <Plus />
-                                Add
                               </Button>
                             }
                           />
