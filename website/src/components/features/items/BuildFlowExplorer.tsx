@@ -123,6 +123,7 @@ const COMPLETE_HELD_BY_STAGE = [4, 7, 10];
 const FEW_GAMES = 100;
 // Selling refunds half an item's price.
 const SELL_REFUND = 0.5;
+const EMPTY_PATH: string[] = [];
 const AT_ONCE = { limitUrlUpdates: throttle(50) };
 
 const SORT_OPTIONS = [
@@ -476,7 +477,22 @@ export function BuildFlowExplorer({
   );
   const sortBy = storedSort === "pickrate" ? "pickrate" : "winrate";
   // The build, scoped to a stage: `${column}:${itemId}`. In the URL so a build can be shared as a link.
-  const [storedPath, setPath] = useQueryState("build_path", parseAsArrayOf(parseAsString).withDefault([]));
+  const [storedPathRaw, setPathRaw] = useQueryState("build_path", parseAsArrayOf(parseAsString).withDefault([]));
+  // The mode a build was made in: its stages are that mode's (time phases or rounds), so another mode starts empty
+  // rather than reading them as its own. Links from before carry none and are normal-mode builds.
+  const [buildMode, setBuildMode] = useQueryState("build_mode", parseAsString);
+  const modeKey = gameMode === "street_brawl" ? "street_brawl" : "normal";
+  const storedPath = (buildMode ?? "normal") === modeKey ? storedPathRaw : EMPTY_PATH;
+  const setPath = (
+    update: string[] | null | ((prev: string[]) => string[] | null),
+    options?: Parameters<typeof setPathRaw>[1],
+  ) => {
+    void setPathRaw(
+      typeof update === "function" ? (prev) => update((buildMode ?? "normal") === modeKey ? prev : []) : update,
+      options,
+    );
+    void setBuildMode(modeKey === "normal" ? null : modeKey, options);
+  };
   // Planned sales: `${column}:${itemId}:${sellColumn}`, the stage a picked item is sold in.
   const [storedSells, setSells] = useQueryState("build_sell", parseAsArrayOf(parseAsString).withDefault([]));
   // The page's hero filter, set when a saved build of another hero is opened.
@@ -523,7 +539,7 @@ export function BuildFlowExplorer({
   // phone before). The URL update is throttled rather than debounced, which would hold the value outside the
   // transition (see ItemsPage).
   const changePath = (update: string[] | null | ((prev: string[]) => string[] | null)) =>
-    startTransition(() => void setPath(update, AT_ONCE));
+    startTransition(() => setPath(update, AT_ONCE));
   const planSale = (key: string, sellColumn: number | null) =>
     startTransition(
       () =>
@@ -565,7 +581,7 @@ export function BuildFlowExplorer({
         ],
         AT_ONCE,
       );
-      void setPath((prev) => [...prev.filter((k) => k !== key && k !== moved), moved], AT_ONCE);
+      setPath((prev) => [...prev.filter((k) => k !== key && k !== moved), moved], AT_ONCE);
     });
   };
 
@@ -975,7 +991,7 @@ export function BuildFlowExplorer({
               onOpen={(build) =>
                 startTransition(() => {
                   if (build.heroId !== heroId) void setHero(build.heroId, AT_ONCE);
-                  void setPath(build.path.length > 0 ? build.path : null, AT_ONCE);
+                  setPath(build.path.length > 0 ? build.path : null, AT_ONCE);
                   void setSells(build.sells.length > 0 ? build.sells : null, AT_ONCE);
                   void setFlex(build.flex ?? null, AT_ONCE);
                   void setSkills(build.skills ?? null, AT_ONCE);
@@ -1188,7 +1204,11 @@ export function BuildFlowExplorer({
                     meta={stageCost.get(stage.column) ? count(stageCost.get(stage.column) ?? 0) : undefined}
                     action={
                       stage.candidates.length > 0 ? (
-                        <StagePicker stage={stage} onPick={toggle} display="icon" />
+                        <StagePicker
+                          stage={{ ...stage, candidates: stage.candidates.filter((c) => !heldItems.has(c.id)) }}
+                          onPick={toggle}
+                          display="icon"
+                        />
                       ) : (fallbackCandidates.get(stage.column)?.length ?? 0) > 0 ? (
                         <StagePicker
                           stage={{
@@ -1688,9 +1708,13 @@ function buildView(
  */
 function suggestPath(view: View, by: "common" | "winning"): Choice[] {
   const path: Choice[] = [];
+  // An item is owned once: neither a pick of the reader's nor an earlier step of the path is suggested again.
+  const taken = new Set([...view.byKey.values()].filter((c) => c.selected).map((c) => c.itemId));
   for (const stage of view.stages) {
     const from = path.at(-1);
-    const all = [...view.byKey.values()].filter((c) => c.column === stage.column);
+    const all = [...view.byKey.values()].filter(
+      (c) => c.column === stage.column && (c.selected || !taken.has(c.itemId)),
+    );
     let next = all.filter((c) => c.selected).sort((a, b) => b.matches - a.matches)[0];
     if (!next && !from) {
       next =
@@ -1701,7 +1725,7 @@ function suggestPath(view: View, by: "common" | "winning"): Choice[] {
       let best = Number.NEGATIVE_INFINITY;
       for (const [key, link] of view.links.get(from.key) ?? []) {
         const choice = view.byKey.get(key);
-        if (!choice || choice.column !== stage.column) continue;
+        if (!choice || choice.column !== stage.column || taken.has(choice.itemId)) continue;
         // The winning build only takes a step a good part of the previous item's buyers took: a chain of rare steps
         // ends on a hundred games that won 80%.
         if (by === "winning" && link.matches < from.matches * SUGGEST_MIN_SHARE) continue;
@@ -1714,6 +1738,7 @@ function suggestPath(view: View, by: "common" | "winning"): Choice[] {
     }
     if (!next) break;
     path.push(next);
+    taken.add(next.itemId);
   }
   return path;
 }
