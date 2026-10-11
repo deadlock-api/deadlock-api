@@ -1113,13 +1113,13 @@ export function BuildFlowExplorer({
         <PanelBody className="@container">
           <Stack gap={3}>
             {/* The build's figures and, beside them where the panel is wide, its spending by shop category. */}
-            <div className="flex flex-col gap-3 @6xl:flex-row @6xl:items-center @6xl:gap-10">
+            <div className="flex flex-col gap-3 @3xl:flex-row @3xl:items-center @3xl:gap-8">
               {/* While another build loads, its numbers are not known yet: the old ones would read as the new build's. */}
               <StatGroup
                 variant="plain"
                 size="xs"
                 aria-busy={switching || undefined}
-                className="grid-cols-2 gap-x-6 @md:grid-cols-4 @6xl:flex @6xl:shrink-0 @6xl:gap-x-10"
+                className="grid-cols-2 gap-x-6 @md:grid-cols-4 @3xl:flex @3xl:shrink-0 @3xl:gap-x-8"
               >
                 <Stat
                   label="Win rate"
@@ -1188,12 +1188,8 @@ export function BuildFlowExplorer({
                 />
               </StatGroup>
               {/* What the build spends per shop category, always drawn so the first pick does not shift the board. */}
-              <div className="flex flex-col gap-1.5 @3xl:flex-row-reverse @3xl:items-center @3xl:gap-3 @6xl:min-w-0 @6xl:flex-1 @6xl:flex-col-reverse @6xl:items-stretch">
-                <ProgressBar
-                  variant="thin"
-                  max={Math.max(1, cost)}
-                  className="w-full min-w-0 @3xl:flex-1 @6xl:flex-none"
-                >
+              <div className="flex min-w-0 flex-col-reverse gap-1.5 @3xl:flex-1">
+                <ProgressBar variant="thin" max={Math.max(1, cost)} className="w-full min-w-0">
                   {CATEGORIES.map((category) => (
                     <ProgressBarSegment
                       key={category.slot}
