@@ -191,7 +191,10 @@ function StagePickerBody({
   );
 }
 
-/** "All items" under a stage's list: every item bought there, to add one that is not in the top rows. */
+/**
+ * "All items" under a stage's list: every item bought there, to add one that is not in the top rows. No count: the
+ * server's trimmed answer holds only the shown rows, so it would print 8 and then jump to the real number.
+ */
 const StagePicker = memo(function StagePicker({ stage, onPick }: { stage: Stage; onPick: (key: string) => void }) {
   const [open, setOpen] = useState(false);
   return (
@@ -199,7 +202,7 @@ const StagePicker = memo(function StagePicker({ stage, onPick }: { stage: Stage;
       <PopoverTrigger asChild>
         <Button variant="ghost" size="xs" className="w-full" aria-label={`All items, ${stage.title}`}>
           <ListPlus />
-          All {stage.candidates.length} items
+          All items
         </Button>
       </PopoverTrigger>
       <PopoverContent
