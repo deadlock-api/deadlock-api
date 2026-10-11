@@ -17,6 +17,7 @@ import { cn } from "~/lib/utils";
  */
 export function BuildStage({
   title,
+  titleDisplay = "visible",
   meta,
   className,
   children,
@@ -24,6 +25,8 @@ export function BuildStage({
 }: Omit<React.ComponentProps<"section">, "title"> & {
   /** "0–9m", "Round 3". */
   title: React.ReactNode;
+  /** `hidden`: the title names the section for screen readers only, where the card around it already shows it. */
+  titleDisplay?: "visible" | "hidden";
   /** Beside the title: "97% of games". */
   meta?: React.ReactNode;
 }) {
@@ -31,17 +34,23 @@ export function BuildStage({
     <section
       data-slot="build-stage"
       className={cn(
-        "@container flex min-w-0 flex-col gap-1.5 transition-opacity duration-normal ease-standard aria-busy:opacity-50",
+        "@container flex min-w-0 flex-col gap-1 transition-opacity duration-normal ease-standard aria-busy:opacity-50",
         className,
       )}
       {...props}
     >
-      <header className="flex min-h-7 items-baseline justify-between gap-2 border-b border-hairline pb-1">
-        <Heading as="h3" size="sm">
+      {titleDisplay === "hidden" ? (
+        <Heading as="h3" size="sm" className="sr-only">
           {title}
         </Heading>
-        {meta && <span className="truncate type-caption text-muted-foreground tabular-nums">{meta}</span>}
-      </header>
+      ) : (
+        <header className="flex min-h-7 items-baseline justify-between gap-2 border-b border-hairline pb-1">
+          <Heading as="h3" size="sm">
+            {title}
+          </Heading>
+          {meta && <span className="truncate type-caption text-muted-foreground tabular-nums">{meta}</span>}
+        </header>
+      )}
       {children}
     </section>
   );
@@ -78,7 +87,7 @@ export function BuildChoiceHeader({
     <div
       data-slot="build-choice-header"
       aria-hidden="true"
-      className={cn("flex items-center justify-between gap-2 px-2 type-caption text-muted-foreground", className)}
+      className={cn("flex items-center justify-between gap-2 px-1.5 type-caption text-muted-foreground", className)}
       {...props}
     >
       <span className="truncate">{start}</span>
@@ -88,13 +97,13 @@ export function BuildChoiceHeader({
 }
 
 // The win rate column and the bought bar grow with the stage's width: a wide stage gives its bars room to read.
-const VALUE_WIDTH = "w-12 @xs:w-16 @sm:w-24 @md:w-32";
-const SHARE_WIDTH = "w-10 min-w-3 @xs:w-16 @sm:w-20 @md:w-24";
+const VALUE_WIDTH = "w-12 @xs:w-14 @sm:w-20 @md:w-28";
+const SHARE_WIDTH = "w-8 min-w-3 @xs:w-12 @sm:w-16 @md:w-20";
 
 const buildChoiceVariants = cva(
   [
     FOCUS_RING,
-    "group/choice flex w-full min-w-0 cursor-pointer items-center gap-2 rounded-md border border-transparent px-2 py-1.5 text-start transition duration-fast ease-standard",
+    "group/choice flex w-full min-w-0 cursor-pointer items-center gap-2 rounded-md border border-transparent px-1.5 py-1 text-start transition duration-fast ease-standard",
     "hover:bg-accent aria-pressed:border-primary/50 aria-pressed:bg-primary/15 aria-pressed:hover:bg-primary/20",
   ],
   {
@@ -178,7 +187,7 @@ export function BuildChoice({
           {selected ? <CheckIcon className="size-3" /> : <PlusIcon className="size-3" />}
         </span>
       </span>
-      <span className="flex min-w-0 flex-1 flex-col gap-1">
+      <span className="flex min-w-0 flex-1 flex-col gap-0.5">
         <span className="line-clamp-2 type-label leading-tight wrap-break-word">{name}</span>
         {link && relation === "linked" ? (
           <span className="flex min-w-0 items-center gap-1.5 type-caption font-semibold text-info tabular-nums">
@@ -197,7 +206,7 @@ export function BuildChoice({
           </span>
         )}
       </span>
-      <span className={cn("flex shrink-0 flex-col items-end gap-1", VALUE_WIDTH)}>
+      <span className={cn("flex shrink-0 flex-col items-end gap-0.5", VALUE_WIDTH)}>
         <span className={cn("type-label tabular-nums", TONE_TEXT[tone])}>{value ?? <NoValue />}</span>
         {change && (
           <DivergingBar value={change.value} scale={change.scale} interval={change.interval} className="w-full" />
@@ -246,7 +255,7 @@ export function BuildSlot({
       data-empty={empty || undefined}
       data-drop={drop === "over" || undefined}
       className={cn(
-        "flex min-w-0 flex-col gap-2 rounded-md border border-hairline bg-subtle p-2 transition-colors duration-fast ease-standard data-drop:border-primary data-drop:bg-primary/10 data-empty:border-dashed data-empty:bg-transparent @4xl:row-span-4 @4xl:grid @4xl:grid-rows-subgrid",
+        "flex min-w-0 flex-col gap-1.5 rounded-md border border-hairline bg-subtle p-2 transition-colors duration-fast ease-standard data-drop:border-primary data-drop:bg-primary/10 data-empty:border-dashed data-empty:bg-transparent @4xl:row-span-4 @4xl:grid @4xl:grid-cols-1 @4xl:grid-rows-subgrid",
         className,
       )}
       {...props}
@@ -256,7 +265,7 @@ export function BuildSlot({
         {meta && <span className="shrink-0 tabular-nums">{meta}</span>}
         {action}
       </span>
-      <ul className="flex min-h-10 flex-1 flex-col gap-1">
+      <ul className="flex min-h-8 flex-1 flex-col gap-1">
         {empty ? <li className="flex flex-1 items-center type-caption text-muted-foreground">Empty</li> : children}
       </ul>
       {footer}
@@ -273,7 +282,7 @@ const buildSlotItemVariants = cva("flex min-w-0 items-center gap-2 rounded-sm", 
     state: {
       held: "",
       sold: "opacity-60 [&_[data-slot=build-slot-item-name]]:line-through",
-      suggested: "border border-dashed border-hairline p-1",
+      suggested: "border border-dashed border-hairline px-1 py-0.5",
     },
   },
   defaultVariants: { state: "held" },
@@ -311,15 +320,17 @@ export function BuildSlotItem({
     >
       <span className="shrink-0">{media}</span>
       <span className="flex min-w-0 flex-1 flex-col">
-        {/* A suggestion says so in words as well as by its dashed frame: it is not part of the build until added. */}
-        {state === "suggested" && (
-          <span className="type-caption font-medium text-muted-foreground uppercase">Suggested</span>
-        )}
         <span data-slot="build-slot-item-name" className="truncate type-label">
           {name}
         </span>
-        {/* Up to two lines: a price, a change and a sale line do not fit a quarter-width card on one. */}
-        {meta && <span className="line-clamp-2 type-caption text-muted-foreground tabular-nums">{meta}</span>}
+        {/* One line, cut at the card's edge. A suggestion says so in words as well as by its dashed frame: it is not
+            part of the build until added. */}
+        {(meta || state === "suggested") && (
+          <span className="truncate type-caption text-muted-foreground tabular-nums">
+            {state === "suggested" && <span className="font-medium">Suggested{meta ? " · " : ""}</span>}
+            {meta}
+          </span>
+        )}
       </span>
       {actions && <span className="flex shrink-0 items-center">{actions}</span>}
     </li>

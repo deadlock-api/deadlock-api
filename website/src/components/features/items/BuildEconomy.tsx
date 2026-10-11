@@ -5,7 +5,7 @@ import { CartesianGrid, ComposedChart, Line, ReferenceArea, ReferenceDot, Refere
 
 import { AbilityImage } from "~/components/domain/assets/AbilityImage";
 import { AbilityLevelMark } from "~/components/domain/assets/AbilityOrderGrid";
-import { RankedEntityList, RankedEntityMetric, RankedEntityRow } from "~/components/domain/assets/RankedEntityList";
+import { ItemCell } from "~/components/domain/assets/ItemCell";
 import { ChartLegend, ChartLegendItem } from "~/components/patterns/charts/ChartLegend";
 import { ChartEmpty, ChartError, ChartLoading } from "~/components/patterns/charts/ChartStates";
 import { ChartSurface } from "~/components/patterns/charts/ChartSurface";
@@ -19,7 +19,9 @@ import {
   CHART_Y_AXIS,
 } from "~/components/patterns/charts/theme";
 import { Panel, PanelBody, PanelFooter, PanelHeader } from "~/components/patterns/panel/Panel";
+import { NoValue } from "~/components/ui/no-value";
 import { Slider } from "~/components/ui/slider";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import type { GameMode, MatchMode } from "~/lib/game-mode";
 import { itemUpgradesQueryOptions } from "~/queries/asset-queries";
 import { itemStatsQueryOptions } from "~/queries/item-stats-query";
@@ -478,7 +480,10 @@ export function BuildEconomy({
   );
 }
 
-/** The build's items in the order it buys them: price, the net worth and time of the purchase, and how often it goes. */
+/**
+ * The build's items in the order it buys them, a line apiece: price (and what it adds over a held component), the net
+ * worth and time of the purchase, and how often its buyers sell it, or upgrade it when it is a component.
+ */
 export function BuildPurchases({
   economy,
   ...props
@@ -487,42 +492,46 @@ export function BuildPurchases({
   return (
     <Panel {...props}>
       <PanelHeader title="Buy order" icon={ListOrdered} size="sm" />
-      <RankedEntityList density="compact" columns="single" aria-label="Build items in buy order">
-        {(plot?.placed ?? []).map((p, index) => (
-          <RankedEntityRow
-            key={p.key}
-            rank={index + 1}
-            entity={{ itemId: p.itemId }}
-            // The item's price, as on the build's cards, and what it adds when it upgrades a held component.
-            meta={
-              p.price > p.cost
-                ? `${p.price.toLocaleString("en-US")} souls · +${p.cost.toLocaleString("en-US")}`
-                : `${p.price.toLocaleString("en-US")} souls`
-            }
-          >
-            {/* On a phone the chart says it; the item names need the room. */}
-            <RankedEntityMetric
-              className="hidden @sm:flex"
-              label="Souls"
-              value={p.netWorthAtBuy != null ? compact(p.netWorthAtBuy) : null}
-            />
-            <RankedEntityMetric label="Bought" value={p.boughtAt != null ? clock(p.boughtAt) : null} />
-            <RankedEntityMetric
-              // "Replaced" needs more than the default width on a phone.
-              className="w-16"
-              // A share of purchases where the API reports sales, else the average time of a sale.
-              label={isComponent.has(p.itemId) ? "Replaced" : p.soldShare != null ? "Sold" : "Sold at"}
-              value={
-                p.soldShare != null
-                  ? `${Math.round(p.soldShare * 100)}%`
-                  : p.avgSellAt != null
-                    ? clock(p.avgSellAt)
-                    : null
-              }
-            />
-          </RankedEntityRow>
-        ))}
-      </RankedEntityList>
+      <Table density="dense" className="tabular-nums" aria-label="Build items in buy order">
+        <TableHeader tone="muted">
+          <TableRow>
+            <TableHead className="w-8 text-end">#</TableHead>
+            <TableHead data-pinned>Item</TableHead>
+            <TableHead className="hidden text-end @sm/table:table-cell">Price</TableHead>
+            <TableHead className="hidden text-end @md/table:table-cell">Souls</TableHead>
+            <TableHead className="text-end">Bought</TableHead>
+            <TableHead className="text-end">Then</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {(plot?.placed ?? []).map((p, index) => (
+            <TableRow key={p.key}>
+              <TableCell className="text-end text-muted-foreground">{index + 1}</TableCell>
+              <TableCell data-pinned>
+                <ItemCell itemId={p.itemId} className="max-w-48" />
+              </TableCell>
+              <TableCell className="hidden text-end @sm/table:table-cell">
+                {p.price.toLocaleString("en-US")}
+                {p.price > p.cost && <span className="text-muted-foreground"> +{p.cost.toLocaleString("en-US")}</span>}
+              </TableCell>
+              <TableCell className="hidden text-end @md/table:table-cell">
+                {p.netWorthAtBuy != null ? compact(p.netWorthAtBuy) : <NoValue />}
+              </TableCell>
+              <TableCell className="text-end">{p.boughtAt != null ? clock(p.boughtAt) : <NoValue />}</TableCell>
+              <TableCell className="text-end text-muted-foreground">
+                {/* A share of purchases where the API reports sales, else the average time of a sale. */}
+                {p.soldShare != null ? (
+                  `${isComponent.has(p.itemId) ? "upgraded" : "sold"} ${Math.round(p.soldShare * 100)}%`
+                ) : p.avgSellAt != null ? (
+                  `sold ${clock(p.avgSellAt)}`
+                ) : (
+                  <NoValue />
+                )}
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
     </Panel>
   );
 }

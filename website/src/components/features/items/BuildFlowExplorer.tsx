@@ -1201,8 +1201,8 @@ export function BuildFlowExplorer({
               />
             </StatGroup>
             {/* What the build spends per shop category, always drawn so the first pick does not shift the board. */}
-            <div className="flex flex-col gap-1.5">
-              <ProgressBar variant="thin" max={Math.max(1, cost)} className="w-full">
+            <div className="flex flex-col gap-1.5 @3xl:flex-row-reverse @3xl:items-center @3xl:gap-3">
+              <ProgressBar variant="thin" max={Math.max(1, cost)} className="w-full min-w-0 @3xl:flex-1">
                 {CATEGORIES.map((category) => (
                   <ProgressBarSegment
                     key={category.slot}
@@ -1211,7 +1211,7 @@ export function BuildFlowExplorer({
                   />
                 ))}
               </ProgressBar>
-              <ChartLegend>
+              <ChartLegend className="shrink-0">
                 {CATEGORIES.map((category) => (
                   <ChartLegendItem key={category.slot} color={category.color} shape="square">
                     {category.label} {count(categoryCost.get(category.slot) ?? 0)}
@@ -1252,7 +1252,24 @@ export function BuildFlowExplorer({
                       setDragged(null);
                       setDropColumn(null);
                     }}
-                    label={stage.title}
+                    label={
+                      <>
+                        {stage.title}
+                        {/* A stage most games never reach (30m+) shows long games only, whose win rates run high. */}
+                        {stage.reached < LATE_REACH ? (
+                          <span className="font-normal text-warning">
+                            {" · "}
+                            <Hourglass className="inline size-3 align-text-bottom" aria-hidden="true" />{" "}
+                            {percent(stage.reached, 0)} of games
+                          </span>
+                        ) : (
+                          <span className="font-normal text-muted-foreground">
+                            {" · "}
+                            {percent(stage.reached, 0)} of games
+                          </span>
+                        )}
+                      </>
+                    }
                     meta={stageCost.get(stage.column) ? count(stageCost.get(stage.column) ?? 0) : undefined}
                     action={(() => {
                       // Every item of the stage: the build's players' first, then the hero's items the build
@@ -1282,25 +1299,15 @@ export function BuildFlowExplorer({
                         ) : undefined}
                         {/* What the stage's players buy, to add from, in the stage's own card. */}
                         <BuildStage
-                          title="Add items"
-                          meta={
-                            // A stage most games never reach (30m+) shows long games only, whose win rates run high.
-                            stage.reached < LATE_REACH ? (
-                              <span className="inline-flex items-center gap-1 text-warning">
-                                <Hourglass className="size-3" aria-hidden="true" />
-                                {percent(stage.reached, 0)} of games
-                              </span>
-                            ) : (
-                              `${percent(stage.reached, 0)} of games`
-                            )
-                          }
+                          title={`Add items, ${stage.title}`}
+                          titleDisplay="hidden"
                           aria-busy={switching || undefined}
                         >
                           {stage.choices.length === 0 ? (
                             <EmptyState variant="inline" title="No purchases" />
                           ) : (
                             <>
-                              <BuildChoiceHeader start="Item · bought · cost" end="Win rate" />
+                              <BuildChoiceHeader start="Add · bought · cost" end="Win rate" />
                               <BuildChoiceList aria-label={`Items bought at ${stage.title}`}>
                                 {stage.choices.map((choice) => {
                                   const near = linked != null && Math.abs(linked.column - choice.column) === 1;
@@ -1311,7 +1318,7 @@ export function BuildFlowExplorer({
                                   return (
                                     <BuildChoice
                                       key={choice.key}
-                                      media={<ItemImage itemId={choice.itemId} className="size-8" />}
+                                      media={<ItemImage itemId={choice.itemId} className="size-7" />}
                                       name={
                                         <ItemName itemId={choice.itemId} className="line-clamp-2 whitespace-normal" />
                                       }
