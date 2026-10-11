@@ -11,6 +11,36 @@ const SLOT_CELL = [
   "border-chart-5/70 bg-chart-5/25",
 ] as const;
 
+/**
+ * One upgrade's number in its ability slot's color, as a cell of the grid shows it: for timelines and lists of
+ * upgrades outside the grid.
+ */
+export function AbilityLevelMark({
+  level,
+  abilitySlot = 0,
+  className,
+  ...props
+}: React.ComponentProps<"span"> & {
+  /** The upgrade's number in the order (1 to 16). */
+  level: number;
+  /** The ability's slot, 0 to 3: the mark's color. */
+  abilitySlot?: number;
+}) {
+  return (
+    <span
+      data-slot="ability-level-mark"
+      className={cn(
+        "flex h-5 min-w-5 items-center justify-center rounded-sm border px-0.5 type-caption font-semibold text-foreground tabular-nums",
+        SLOT_CELL[abilitySlot % SLOT_CELL.length],
+        className,
+      )}
+      {...props}
+    >
+      {level}
+    </span>
+  );
+}
+
 const formatPercent = (rate: number) => `${Math.round(rate * 100)}%`;
 
 /**

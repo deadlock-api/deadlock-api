@@ -3,12 +3,13 @@ import { useState } from "react";
 
 import { SAMPLE_ABILITY_IDS, SAMPLE_ITEM_IDS, UNKNOWN_ID } from "~/components/dev/design-system/samples";
 import { Specimen, Variants } from "~/components/dev/design-system/Specimen";
-import { AbilityOrderGrid } from "~/components/domain/assets/AbilityOrderGrid";
+import { AbilityLevelMark, AbilityOrderGrid } from "~/components/domain/assets/AbilityOrderGrid";
 import { BadgeImage } from "~/components/domain/assets/BadgeImage";
 import { HeroCell } from "~/components/domain/assets/HeroCell";
 import { HeroImage } from "~/components/domain/assets/HeroImage";
 import { ItemCell } from "~/components/domain/assets/ItemCell";
 import { RankedEntityList, RankedEntityMetric, RankedEntityRow } from "~/components/domain/assets/RankedEntityList";
+import { Inline } from "~/components/ui/stack";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { toneOf } from "~/lib/tone";
 import { itemUpgradesQueryOptions } from "~/queries/asset-queries";
@@ -214,6 +215,19 @@ export function Round3DomainAssets() {
         <Variants label="editor (onValueChange): press a cell to give that upgrade to its row's ability; an ability at four points moves its last point to the pressed cell">
           <AbilityOrderEditorExample />
         </Variants>
+      </Specimen>
+
+      <Specimen
+        name="AbilityLevelMark"
+        source="domain/assets/AbilityOrderGrid"
+        note="One upgrade's number in its ability slot's color (abilitySlot 0 to 3), as the grid's cells show it: for timelines of upgrades outside the grid, such as the Build Designer's skill lanes under the souls chart."
+      >
+        <Inline gap={1}>
+          {[0, 1, 2, 3].map((slot) => (
+            <AbilityLevelMark key={slot} level={slot * 4 + 1} abilitySlot={slot} />
+          ))}
+          <AbilityLevelMark level={12} abilitySlot={0} />
+        </Inline>
       </Specimen>
     </>
   );

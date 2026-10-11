@@ -38,10 +38,11 @@ import { useItemPicker } from "~/components/domain/selectors/useItemPicker";
 import { BuildCompleter } from "~/components/features/items/BuildCompleter";
 import {
   BuildEconomy,
+  BuildPurchases,
   compactSouls,
   type EconomyItem,
   soulsAt,
-  useSoulCurve,
+  useBuildEconomy,
 } from "~/components/features/items/BuildEconomy";
 import { BuildHeroChooser } from "~/components/features/items/BuildHeroChooser";
 import { SavedBuildsMenu, SaveBuildButton } from "~/components/features/items/BuildSaves";
@@ -711,7 +712,6 @@ export function BuildFlowExplorer({
       ),
     [itemStats],
   );
-  const { points: soulCurve } = useSoulCurve(economyFilters);
 
   const view = useMemo(
     () => (data ? buildView(data, { path: pathSet, columnCount, perColumn, sortBy, isStreetBrawl }) : null),
@@ -768,6 +768,9 @@ export function BuildFlowExplorer({
       sellColumn: null,
     }));
   }, [path, view, costOf, sellOf, payOf]);
+  // The souls chart and the buy order read the build on the hero's soul curve; the stage budgets read the curve.
+  const economy = useBuildEconomy({ items: economyItems, ...economyFilters });
+  const soulCurve = economy.curve.points;
 
   // The skill order of the players who bought the build's items (the hero's overall one without picks): the panel at
   // the end shows it, and the souls timeline places its upgrades.
@@ -1511,46 +1514,43 @@ export function BuildFlowExplorer({
         </PanelBody>
       </Panel>
 
-      {/* Under the build: the souls timeline (budget, sales, flex slots) beside the skill order where the page is wide
-          enough, under each other where it is not. */}
+      {/* Under the build: the souls chart, and beside it where the page is wide the skill order over the buy order;
+          the chart grows to the stack's height. Under each other where it is narrower. */}
       <div className="@container min-w-0">
-        <div className="grid gap-4 @7xl:grid-cols-2 @7xl:items-start">
-          <>
-            {!isStreetBrawl && economyItems.length > 0 && (
-              <BuildEconomy
-                title={path.length > 0 ? "Souls for your build" : "Souls for the most common build"}
-                items={economyItems}
-                skills={skillOrder.flatMap((abilityId, i) => {
-                  // The reader's order takes its upgrades at the times the common one's are taken, step by step.
-                  const at = skillPath?.steps[i]?.at;
-                  return at != null ? [{ level: i + 1, abilityId, at }] : [];
-                })}
-                flexMinutes={flexMinutes}
-                onFlexMinutesChange={(minutes) => startTransition(() => void setFlex(minutes, AT_ONCE))}
-                heroId={heroId}
-                gameMode={gameMode}
-                matchMode={matchMode}
-                minRankId={minRankId}
-                maxRankId={maxRankId}
-                minUnixTimestamp={minUnixTimestamp ?? 0}
-                maxUnixTimestamp={maxUnixTimestamp}
-              />
-            )}
-            {heroId != null && !isStreetBrawl && (
-              // The build's skill order, starting from the most common one of its players.
-              <BuildSkillOrder
-                heroId={heroId}
-                slotAbilities={slotAbilities}
-                order={skillOrder}
-                common={skillPath?.steps ?? []}
-                scope={path.length > 0 ? "most common with these items" : "most common"}
-                commonStats={skillPath ? { winRate: skillPath.winRate, matches: skillPath.matches } : null}
-                request={skillRequest}
-                loading={skillQuery.isPending}
-                onValueChange={(next) => startTransition(() => void setSkills(next, AT_ONCE))}
-              />
-            )}
-          </>
+        <div className="grid gap-4 @7xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+          {!isStreetBrawl && economyItems.length > 0 && (
+            <BuildEconomy
+              title={path.length > 0 ? "Souls for your build" : "Souls for the most common build"}
+              economy={economy}
+              skills={skillOrder.flatMap((abilityId, i) => {
+                // The reader's order takes its upgrades at the times the common one's are taken, step by step.
+                const at = skillPath?.steps[i]?.at;
+                return at != null ? [{ level: i + 1, abilityId, at }] : [];
+              })}
+              abilities={slotAbilities}
+              flexMinutes={flexMinutes}
+              onFlexMinutesChange={(minutes) => startTransition(() => void setFlex(minutes, AT_ONCE))}
+            />
+          )}
+          {!isStreetBrawl && (
+            <div className="flex min-w-0 flex-col gap-4">
+              {heroId != null && (
+                // The build's skill order, starting from the most common one of its players.
+                <BuildSkillOrder
+                  heroId={heroId}
+                  slotAbilities={slotAbilities}
+                  order={skillOrder}
+                  common={skillPath?.steps ?? []}
+                  scope={path.length > 0 ? "most common with these items" : "most common"}
+                  commonStats={skillPath ? { winRate: skillPath.winRate, matches: skillPath.matches } : null}
+                  request={skillRequest}
+                  loading={skillQuery.isPending}
+                  onValueChange={(next) => startTransition(() => void setSkills(next, AT_ONCE))}
+                />
+              )}
+              {economyItems.length > 0 && <BuildPurchases economy={economy} className="flex-1" />}
+            </div>
+          )}
         </div>
       </div>
     </Stack>

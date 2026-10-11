@@ -1,9 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
-import { Coins } from "lucide-react";
+import { Coins, ListOrdered } from "lucide-react";
 import { useMemo, useState } from "react";
 import { CartesianGrid, ComposedChart, Line, ReferenceArea, ReferenceDot, ReferenceLine, XAxis, YAxis } from "recharts";
 
 import { AbilityImage } from "~/components/domain/assets/AbilityImage";
+import { AbilityLevelMark } from "~/components/domain/assets/AbilityOrderGrid";
 import { RankedEntityList, RankedEntityMetric, RankedEntityRow } from "~/components/domain/assets/RankedEntityList";
 import { ChartLegend, ChartLegendItem } from "~/components/patterns/charts/ChartLegend";
 import { ChartEmpty, ChartError, ChartLoading } from "~/components/patterns/charts/ChartStates";
@@ -20,7 +21,6 @@ import {
 import { Panel, PanelBody, PanelFooter, PanelHeader } from "~/components/patterns/panel/Panel";
 import { Slider } from "~/components/ui/slider";
 import type { GameMode, MatchMode } from "~/lib/game-mode";
-import { cn } from "~/lib/utils";
 import { itemUpgradesQueryOptions } from "~/queries/asset-queries";
 import { itemStatsQueryOptions } from "~/queries/item-stats-query";
 import { playerPerformanceCurveQueryOptions } from "~/queries/player-performance-curve-query";
@@ -32,11 +32,8 @@ const STAGE_LABELS = ["0–9m", "9–20m", "20–30m", "30m+"] as const;
 const SELL_REFUND = 0.5;
 // The plot ends here: few games run longer, and the curve's last points come from those few.
 const END_S = 2700;
-// The skill lane: icons closer than this (seconds, a 20px icon on a ~500px plot) step into the next row, up to three;
-// the lane always takes three rows, so an edited skill order does not move what follows it.
-const SKILL_MIN_GAP_S = 120;
-const SKILL_LANES = 3;
-const SKILL_LANE_TOP = ["top-0", "top-6", "top-12"] as const;
+// A skill mark's width as a share of the plot (a 20px mark on a ~600px plot): marks of one ability step apart by it.
+const SKILL_MARK_SPAN = 0.035;
 // The y-axis width in pixels: the flex slider under the plot is inset by the same (`ps-10`).
 const Y_AXIS_WIDTH = 40;
 const TICKS = [0, 300, 600, 900, 1200, 1500, 1800, 2100, 2400, 2700];
@@ -54,23 +51,6 @@ export interface EconomyItem {
   netWorthAtBuy: number | null;
   /** The stage the build sells it in, if it does. */
   sellColumn: number | null;
-}
-
-interface BuildEconomyProps {
-  title: React.ReactNode;
-  items: EconomyItem[];
-  /** The skill order's upgrades and when they are taken (seconds): a lane under the timeline. */
-  skills?: readonly { level: number; abilityId: number; at: number }[];
-  /** When the three flex slots unlock, in minutes; the timeline marks them and its slider moves them. */
-  flexMinutes: readonly number[];
-  onFlexMinutesChange: (minutes: number[]) => void;
-  heroId: number | null;
-  gameMode?: GameMode;
-  matchMode?: MatchMode;
-  minRankId?: number;
-  maxRankId?: number;
-  minUnixTimestamp?: number;
-  maxUnixTimestamp?: number;
 }
 
 interface Placed extends EconomyItem {
@@ -138,61 +118,29 @@ export const gameClock = (s: number) => `${Math.floor(s / 60)}:${String(Math.rou
 const clock = gameClock;
 const compact = compactSouls;
 
+interface BuildEconomyOptions extends SoulCurveFilters {
+  items: EconomyItem[];
+}
+
 /**
- * The build on the hero's soul curve: the average net worth over the game, each item where the curve reaches the net
- * worth its buyers had when they bought it, and a sold mark where the build sells it. Beside it each item's
- * price, that net worth and time, and how often or when it is sold.
+ * The build on the hero's soul curve: each item where the curve reaches the net worth its buyers had when they bought
+ * it, a sold mark where the build sells it, and the build's spending over time. The souls chart and the buy order
+ * list read the same answer.
  */
-export function BuildEconomy({
-  title,
-  items,
-  skills = [],
-  flexMinutes,
-  onFlexMinutesChange,
-  heroId,
-  gameMode,
-  matchMode,
-  minRankId,
-  maxRankId,
-  minUnixTimestamp,
-  maxUnixTimestamp,
-}: BuildEconomyProps) {
-  const filters = {
-    heroIds: heroId != null ? String(heroId) : undefined,
-    gameMode,
-    matchMode,
-    minAverageBadge: minRankId,
-    maxAverageBadge: maxRankId,
-    minUnixTimestamp,
-    maxUnixTimestamp,
-  };
-  const curve = useSoulCurve({
-    heroId,
-    gameMode,
-    matchMode,
-    minRankId,
-    maxRankId,
-    minUnixTimestamp,
-    maxUnixTimestamp,
-  });
-  const stats = useQuery(itemStatsQueryOptions(filters));
+export function useBuildEconomy({ items, ...filters }: BuildEconomyOptions) {
+  const curve = useSoulCurve(filters);
+  const stats = useQuery(
+    itemStatsQueryOptions({
+      heroIds: filters.heroId != null ? String(filters.heroId) : undefined,
+      gameMode: filters.gameMode,
+      matchMode: filters.matchMode,
+      minAverageBadge: filters.minRankId,
+      maxAverageBadge: filters.maxRankId,
+      minUnixTimestamp: filters.minUnixTimestamp,
+      maxUnixTimestamp: filters.maxUnixTimestamp,
+    }),
+  );
   const { data: upgrades } = useQuery(itemUpgradesQueryOptions);
-  // The slider's own value while the URL behind `flexMinutes` catches up in a transition: tied to the value it moved
-  // from, so key presses build on each other, and dropped once the props change (to the new value, or another build).
-  const flexKey = flexMinutes.join(",");
-  const lanes = useMemo(() => {
-    const placed: { level: number; abilityId: number; at: number; lane: number }[] = [];
-    const laneEnds: number[] = [];
-    for (const skill of [...skills].sort((a, b) => a.at - b.at)) {
-      let lane = laneEnds.findIndex((end) => skill.at - end >= SKILL_MIN_GAP_S);
-      if (lane < 0) lane = laneEnds.length < SKILL_LANES ? laneEnds.length : SKILL_LANES - 1;
-      laneEnds[lane] = skill.at;
-      placed.push({ ...skill, lane });
-    }
-    return { placed };
-  }, [skills]);
-  const [flexDraft, setFlexDraft] = useState<{ from: string; minutes: number[] } | null>(null);
-  const shownFlex = flexDraft?.from === flexKey ? flexDraft.minutes : [...flexMinutes];
   // Items another item is built from: their sales count the purchases merged into that upgrade as well.
   const isComponent = useMemo(() => {
     const classNames = new Set((upgrades ?? []).flatMap((item) => item.component_items ?? []));
@@ -203,7 +151,6 @@ export function BuildEconomy({
       new Map((upgrades ?? []).map((item) => [item.id, item.shop_image_webp ?? item.shop_image_small ?? undefined])),
     [upgrades],
   );
-
   const plot = useMemo(() => {
     const points = curve.points;
     if (!points) return null;
@@ -284,201 +231,202 @@ export function BuildEconomy({
         }
       : null;
 
+  return { curve, plot, total, isComponent, imageOf };
+}
+
+export type BuildEconomyData = ReturnType<typeof useBuildEconomy>;
+
+interface BuildEconomyProps extends Omit<React.ComponentProps<typeof Panel>, "title"> {
+  title: React.ReactNode;
+  economy: BuildEconomyData;
+  /** The skill order's upgrades and when they are taken (seconds): a lane per ability under the timeline. */
+  skills?: readonly { level: number; abilityId: number; at: number }[];
+  /** The hero's four abilities in slot order: the lanes' order. */
+  abilities?: readonly number[];
+  /** When the three flex slots unlock, in minutes; the timeline marks them and its slider moves them. */
+  flexMinutes: readonly number[];
+  onFlexMinutesChange: (minutes: number[]) => void;
+}
+
+/**
+ * The souls chart: the hero's average net worth over the game with the build's items on it, its spending, the skill
+ * upgrades by ability, and the flex slots' unlock times on a slider. The plot grows with its panel.
+ */
+export function BuildEconomy({
+  title,
+  economy,
+  skills = [],
+  abilities = [],
+  flexMinutes,
+  onFlexMinutesChange,
+  ...props
+}: BuildEconomyProps) {
+  const { curve, plot, total, imageOf } = economy;
+  // The slider's own value while the URL behind `flexMinutes` catches up in a transition: tied to the value it moved
+  // from, so key presses build on each other, and dropped once the props change (to the new value, or another build).
+  const flexKey = flexMinutes.join(",");
+  const [flexDraft, setFlexDraft] = useState<{ from: string; minutes: number[] } | null>(null);
+  const shownFlex = flexDraft?.from === flexKey ? flexDraft.minutes : [...flexMinutes];
+  const lanes = useMemo(() => skillLanes(skills, abilities), [skills, abilities]);
+
   return (
-    <Panel>
+    <Panel {...props}>
       <PanelHeader title={title} icon={Coins} size="sm" />
-      <PanelBody className="@container">
-        <div className="grid gap-4 @3xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
-          <div className="flex min-w-0 flex-col gap-2">
-            {curve.isPending ? (
-              <ChartLoading label="soul curve" size="lg" />
-            ) : curve.isError ? (
-              <ChartError label="soul curve" retrying={curve.isFetching} onRetry={() => void curve.refetch()} />
-            ) : !plot ? (
-              <ChartEmpty label="soul curve" />
-            ) : (
-              <>
-                <ChartSurface label="Average net worth over the game, with the build's items" variant="flush" size="lg">
-                  <ComposedChart data={plot.series} margin={{ top: 20, right: 16, bottom: 0, left: 0 }}>
-                    {STAGE_STARTS.map((start, i) => (
-                      <ReferenceArea
-                        key={start}
-                        x1={start}
-                        x2={STAGE_STARTS[i + 1] ?? END_S}
-                        fill={CHART_COLOR.ink}
-                        fillOpacity={i % 2 === 0 ? 0 : 0.04}
-                        stroke="none"
-                        label={{ value: STAGE_LABELS[i], position: "insideTop", offset: -16, ...CHART_TICK }}
-                      />
-                    ))}
-                    <CartesianGrid {...CHART_GRID} />
-                    {flexMinutes.map((m, i) => (
-                      <ReferenceLine
-                        key={i}
-                        x={m * 60}
-                        {...CHART_MARKER_LINE}
-                        label={{ value: `+${i + 1}`, position: "insideBottomRight", ...CHART_MARKER_LABEL }}
-                      />
-                    ))}
-                    <XAxis
-                      {...CHART_X_AXIS}
-                      dataKey="t"
-                      type="number"
-                      domain={[0, END_S]}
-                      ticks={TICKS}
-                      tickFormatter={(s: number) => `${s / 60}m`}
+      <PanelBody className="@container flex flex-1 flex-col gap-2">
+        {curve.isPending ? (
+          <ChartLoading label="soul curve" size="lg" />
+        ) : curve.isError ? (
+          <ChartError label="soul curve" retrying={curve.isFetching} onRetry={() => void curve.refetch()} />
+        ) : !plot ? (
+          <ChartEmpty label="soul curve" />
+        ) : (
+          <>
+            {/* At least the large plot's height, more where the panel beside it is taller. */}
+            <div className="flex min-h-90 flex-1 flex-col @xl:min-h-105">
+              <ChartSurface label="Average net worth over the game, with the build's items" variant="flush" size="grow">
+                <ComposedChart data={plot.series} margin={{ top: 20, right: 16, bottom: 0, left: 0 }}>
+                  {STAGE_STARTS.map((start, i) => (
+                    <ReferenceArea
+                      key={start}
+                      x1={start}
+                      x2={STAGE_STARTS[i + 1] ?? END_S}
+                      fill={CHART_COLOR.ink}
+                      fillOpacity={i % 2 === 0 ? 0 : 0.04}
+                      stroke="none"
+                      label={{ value: STAGE_LABELS[i], position: "insideTop", offset: -16, ...CHART_TICK }}
                     />
-                    {/* 40px, the flex slider's inset below, so the two share the plot's span. */}
-                    <YAxis {...CHART_Y_AXIS} width={Y_AXIS_WIDTH} tickFormatter={compact} />
-                    <Line
-                      dataKey="souls"
-                      type="monotone"
-                      stroke={CHART_COLOR.share}
-                      strokeWidth={2}
-                      dot={false}
-                      isAnimationActive={false}
+                  ))}
+                  <CartesianGrid {...CHART_GRID} />
+                  {flexMinutes.map((m, i) => (
+                    <ReferenceLine
+                      key={i}
+                      x={m * 60}
+                      {...CHART_MARKER_LINE}
+                      label={{ value: `+${i + 1}`, position: "insideBottomRight", ...CHART_MARKER_LABEL }}
                     />
-                    <Line
-                      dataKey="spent"
-                      type="stepAfter"
-                      stroke={CHART_COLOR.ink}
-                      strokeWidth={1.5}
-                      strokeDasharray="4 3"
-                      dot={false}
-                      isAnimationActive={false}
-                    />
-                    {plot.placed.flatMap((p) => {
-                      const href = imageOf.get(p.itemId);
-                      const marks = [];
-                      if (p.boughtAt != null && p.netWorthAtBuy != null && p.boughtAt <= END_S) {
-                        marks.push(
-                          <ReferenceDot
-                            key={`${p.key}-buy`}
-                            x={p.boughtAt}
-                            y={p.netWorthAtBuy}
-                            shape={({ cx, cy }: { cx?: number; cy?: number }) => (
-                              <ItemMark href={href} cx={cx ?? 0} cy={cy ?? 0} />
-                            )}
-                          />,
-                        );
-                      }
-                      if (p.sold) {
-                        marks.push(
-                          <ReferenceDot
-                            key={`${p.key}-sell`}
-                            x={p.sold.at}
-                            y={p.sold.souls}
-                            shape={({ cx, cy }: { cx?: number; cy?: number }) => (
-                              <ItemMark href={href} cx={cx ?? 0} cy={cy ?? 0} sold />
-                            )}
-                          />,
-                        );
-                      }
-                      return marks;
-                    })}
-                  </ComposedChart>
-                </ChartSurface>
-                {/* Under the timeline it sets: when the three flex slots open, marked on the plot above. */}
-                {skills.length > 0 && (
-                  // The skill upgrades on the same span as the plot: each at its average time, stepped into a lower
-                  // row where it would cover the one before.
-                  // A narrow plot packs the early upgrades into one clump: the lane shows from a medium width on.
-                  <div className="relative hidden ps-10 pe-4 @md:block">
-                    {/* Named in the y-axis' gutter, beside the lane. */}
-                    <span aria-hidden="true" className="absolute inset-s-0 top-0 type-caption text-muted-foreground">
-                      Skills
+                  ))}
+                  <XAxis
+                    {...CHART_X_AXIS}
+                    dataKey="t"
+                    type="number"
+                    domain={[0, END_S]}
+                    ticks={TICKS}
+                    tickFormatter={(s: number) => `${s / 60}m`}
+                  />
+                  {/* 40px, the flex slider's inset below, so the two share the plot's span. */}
+                  <YAxis {...CHART_Y_AXIS} width={Y_AXIS_WIDTH} tickFormatter={compact} />
+                  <Line
+                    dataKey="souls"
+                    type="monotone"
+                    stroke={CHART_COLOR.share}
+                    strokeWidth={2}
+                    dot={false}
+                    isAnimationActive={false}
+                  />
+                  <Line
+                    dataKey="spent"
+                    type="stepAfter"
+                    stroke={CHART_COLOR.ink}
+                    strokeWidth={1.5}
+                    strokeDasharray="4 3"
+                    dot={false}
+                    isAnimationActive={false}
+                  />
+                  {plot.placed.flatMap((p) => {
+                    const href = imageOf.get(p.itemId);
+                    const marks = [];
+                    if (p.boughtAt != null && p.netWorthAtBuy != null && p.boughtAt <= END_S) {
+                      marks.push(
+                        <ReferenceDot
+                          key={`${p.key}-buy`}
+                          x={p.boughtAt}
+                          y={p.netWorthAtBuy}
+                          shape={({ cx, cy }: { cx?: number; cy?: number }) => (
+                            <ItemMark href={href} cx={cx ?? 0} cy={cy ?? 0} />
+                          )}
+                        />,
+                      );
+                    }
+                    if (p.sold) {
+                      marks.push(
+                        <ReferenceDot
+                          key={`${p.key}-sell`}
+                          x={p.sold.at}
+                          y={p.sold.souls}
+                          shape={({ cx, cy }: { cx?: number; cy?: number }) => (
+                            <ItemMark href={href} cx={cx ?? 0} cy={cy ?? 0} sold />
+                          )}
+                        />,
+                      );
+                    }
+                    return marks;
+                  })}
+                </ComposedChart>
+              </ChartSurface>
+            </div>
+            {lanes.length > 0 && (
+              // The skill upgrades on the plot's span, one lane per ability, its icon in the y-axis' gutter: each
+              // upgrade a numbered mark at its average time. A narrow plot packs the early upgrades into one clump:
+              // the lanes show from a medium width on.
+              <ol aria-label="Skill upgrades by time" className="hidden flex-col gap-0.5 @md:flex">
+                {lanes.map((lane) => (
+                  <li key={lane.abilityId} className="flex h-5 items-center pe-4">
+                    <span className="flex w-10 shrink-0 justify-center">
+                      <AbilityImage abilityId={lane.abilityId} className="size-5" />
                     </span>
-                    <ol aria-label="Skill upgrades by time" className="relative h-17">
-                      {lanes.placed.map((skill) => (
+                    <ol className="relative h-5 flex-1">
+                      {lane.marks.map((mark) => (
                         <li
-                          key={skill.level}
-                          className={cn("absolute -translate-x-1/2", SKILL_LANE_TOP[skill.lane])}
-                          style={{ insetInlineStart: `${(Math.min(skill.at, END_S) / END_S) * 100}%` }}
+                          key={mark.level}
+                          className="absolute top-0 -translate-x-1/2"
+                          style={{ insetInlineStart: `${mark.position * 100}%` }}
                         >
-                          <AbilityImage abilityId={skill.abilityId} title="" className="size-5" />
-                          <span className="sr-only">
-                            Upgrade {skill.level} at {gameClock(skill.at)}
-                          </span>
+                          <AbilityLevelMark level={mark.level} abilitySlot={lane.slot} />
+                          <span className="sr-only">at {gameClock(mark.at)}</span>
                         </li>
                       ))}
                     </ol>
-                  </div>
-                )}
-                {/* The track spans the plot exactly (a fixed y-axis width on its left, the plot margin on its right), so a
-                    thumb sits on its minute and on its marker line. */}
-                <div className="flex flex-col gap-1 ps-10 pe-4">
-                  <Slider
-                    min={0}
-                    max={END_S / 60}
-                    step={1}
-                    minStepsBetweenThumbs={0}
-                    value={shownFlex}
-                    onValueChange={(next) => {
-                      setFlexDraft({ from: flexKey, minutes: next });
-                      onFlexMinutesChange(next);
-                    }}
-                    thumbLabels={["First flex slot", "Second flex slot", "Third flex slot"]}
-                    getValueText={(m) => `${m} minutes`}
-                  />
-                  <span className="flex justify-between gap-2 text-xs text-muted-foreground tabular-nums">
-                    <span>Flex slots</span>
-                    <span className="text-foreground">{shownFlex.map((m) => `${m}m`).join(" · ")}</span>
-                  </span>
-                </div>
-                <ChartLegend className="justify-center">
-                  <ChartLegendItem color={CHART_COLOR.share} shape="line">
-                    Average net worth
-                  </ChartLegendItem>
-                  <ChartLegendItem color={CHART_COLOR.ink} shape="dashed">
-                    Build spending
-                  </ChartLegendItem>
-                  <ChartLegendItem color={CHART_COLOR.ink} shape="ring">
-                    Bought
-                  </ChartLegendItem>
-                  <ChartLegendItem color={CHART_COLOR.negative} shape="ring">
-                    Sold
-                  </ChartLegendItem>
-                </ChartLegend>
-              </>
+                  </li>
+                ))}
+              </ol>
             )}
-          </div>
-          <RankedEntityList density="compact" columns="auto" aria-label="Build items by net worth">
-            {(plot?.placed ?? []).map((p, index) => (
-              <RankedEntityRow
-                key={p.key}
-                rank={index + 1}
-                entity={{ itemId: p.itemId }}
-                // The item's price, as on the build's cards, and what it adds when it upgrades a held component.
-                meta={
-                  p.price > p.cost
-                    ? `${p.price.toLocaleString("en-US")} souls · +${p.cost.toLocaleString("en-US")}`
-                    : `${p.price.toLocaleString("en-US")} souls`
-                }
-              >
-                {/* On a phone the chart above says it; the item names need the room. */}
-                <RankedEntityMetric
-                  className="hidden @sm:flex"
-                  label="Souls"
-                  value={p.netWorthAtBuy != null ? compact(p.netWorthAtBuy) : null}
-                />
-                <RankedEntityMetric label="Bought" value={p.boughtAt != null ? clock(p.boughtAt) : null} />
-                <RankedEntityMetric
-                  // "Replaced" needs more than the default width on a phone.
-                  className="w-16"
-                  // A share of purchases where the API reports sales, else the average time of a sale.
-                  label={isComponent.has(p.itemId) ? "Replaced" : p.soldShare != null ? "Sold" : "Sold at"}
-                  value={
-                    p.soldShare != null
-                      ? `${Math.round(p.soldShare * 100)}%`
-                      : p.avgSellAt != null
-                        ? clock(p.avgSellAt)
-                        : null
-                  }
-                />
-              </RankedEntityRow>
-            ))}
-          </RankedEntityList>
-        </div>
+            {/* The track spans the plot exactly (a fixed y-axis width on its left, the plot margin on its right), so a
+                thumb sits on its minute and on its marker line. */}
+            <div className="flex flex-col gap-1 ps-10 pe-4">
+              <Slider
+                min={0}
+                max={END_S / 60}
+                step={1}
+                minStepsBetweenThumbs={0}
+                value={shownFlex}
+                onValueChange={(next) => {
+                  setFlexDraft({ from: flexKey, minutes: next });
+                  onFlexMinutesChange(next);
+                }}
+                thumbLabels={["First flex slot", "Second flex slot", "Third flex slot"]}
+                getValueText={(m) => `${m} minutes`}
+              />
+              <span className="flex justify-between gap-2 text-xs text-muted-foreground tabular-nums">
+                <span>Flex slots</span>
+                <span className="text-foreground">{shownFlex.map((m) => `${m}m`).join(" · ")}</span>
+              </span>
+            </div>
+            <ChartLegend className="justify-center">
+              <ChartLegendItem color={CHART_COLOR.share} shape="line">
+                Average net worth
+              </ChartLegendItem>
+              <ChartLegendItem color={CHART_COLOR.ink} shape="dashed">
+                Build spending
+              </ChartLegendItem>
+              <ChartLegendItem color={CHART_COLOR.ink} shape="ring">
+                Bought
+              </ChartLegendItem>
+              <ChartLegendItem color={CHART_COLOR.negative} shape="ring">
+                Sold
+              </ChartLegendItem>
+            </ChartLegend>
+          </>
+        )}
       </PanelBody>
       {total && (
         <PanelFooter>
@@ -488,6 +436,77 @@ export function BuildEconomy({
       )}
     </Panel>
   );
+}
+
+/** The build's items in the order it buys them: price, the net worth and time of the purchase, and how often it goes. */
+export function BuildPurchases({
+  economy,
+  ...props
+}: Omit<React.ComponentProps<typeof Panel>, "title"> & { economy: BuildEconomyData }) {
+  const { plot, isComponent } = economy;
+  return (
+    <Panel {...props}>
+      <PanelHeader title="Buy order" icon={ListOrdered} size="sm" />
+      <RankedEntityList density="compact" columns="single" aria-label="Build items in buy order">
+        {(plot?.placed ?? []).map((p, index) => (
+          <RankedEntityRow
+            key={p.key}
+            rank={index + 1}
+            entity={{ itemId: p.itemId }}
+            // The item's price, as on the build's cards, and what it adds when it upgrades a held component.
+            meta={
+              p.price > p.cost
+                ? `${p.price.toLocaleString("en-US")} souls · +${p.cost.toLocaleString("en-US")}`
+                : `${p.price.toLocaleString("en-US")} souls`
+            }
+          >
+            {/* On a phone the chart says it; the item names need the room. */}
+            <RankedEntityMetric
+              className="hidden @sm:flex"
+              label="Souls"
+              value={p.netWorthAtBuy != null ? compact(p.netWorthAtBuy) : null}
+            />
+            <RankedEntityMetric label="Bought" value={p.boughtAt != null ? clock(p.boughtAt) : null} />
+            <RankedEntityMetric
+              // "Replaced" needs more than the default width on a phone.
+              className="w-16"
+              // A share of purchases where the API reports sales, else the average time of a sale.
+              label={isComponent.has(p.itemId) ? "Replaced" : p.soldShare != null ? "Sold" : "Sold at"}
+              value={
+                p.soldShare != null
+                  ? `${Math.round(p.soldShare * 100)}%`
+                  : p.avgSellAt != null
+                    ? clock(p.avgSellAt)
+                    : null
+              }
+            />
+          </RankedEntityRow>
+        ))}
+      </RankedEntityList>
+    </Panel>
+  );
+}
+
+/**
+ * The skill upgrades by ability, in slot order: each at its share of the plot's span. Marks of one ability closer
+ * than a mark's width are pushed apart (the later one right), so a run of upgrades reads as a run of numbers.
+ */
+function skillLanes(
+  skills: readonly { level: number; abilityId: number; at: number }[],
+  abilities: readonly number[],
+): { abilityId: number; slot: number; marks: { level: number; at: number; position: number }[] }[] {
+  const order = [...new Set([...abilities, ...skills.map((s) => s.abilityId)])];
+  return order.flatMap((abilityId, slot) => {
+    const own = skills.filter((s) => s.abilityId === abilityId).sort((a, b) => a.at - b.at);
+    if (own.length === 0) return [];
+    let last = Number.NEGATIVE_INFINITY;
+    const marks = own.map((s) => {
+      const position = Math.max(Math.min(s.at, END_S) / END_S, last + SKILL_MARK_SPAN);
+      last = position;
+      return { level: s.level, at: s.at, position: Math.min(position, 1) };
+    });
+    return [{ abilityId, slot, marks }];
+  });
 }
 
 /** An item's icon on the plot, framed in ink; a sold one is framed in the loss color and faded. */

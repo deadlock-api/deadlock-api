@@ -279,6 +279,7 @@ export const NAV: readonly NavChapter[] = [
           "HeroImage art",
           "RankedEntityList",
           "AbilityOrderGrid",
+          "AbilityLevelMark",
         ],
       },
       { title: "Rank", items: ["RankTierIcons", "RankTierTick", "RankTierWinRateChart", "RankBadgeTick"] },
