@@ -1257,16 +1257,12 @@ export function BuildFlowExplorer({
                     label={
                       <>
                         {stage.title}
-                        {/* A stage most games never reach (30m+) shows long games only, whose win rates run high. */}
-                        {stage.reached < LATE_REACH ? (
+                        {/* Only a stage most games never reach (30m+) says how many do: it shows long games only, whose
+                            win rates run high. */}
+                        {stage.reached < LATE_REACH && (
                           <span className="font-normal text-warning">
                             {" · "}
                             <Hourglass className="inline size-3 align-text-bottom" aria-hidden="true" />{" "}
-                            {percent(stage.reached, 0)} of games
-                          </span>
-                        ) : (
-                          <span className="font-normal text-muted-foreground">
-                            {" · "}
                             {percent(stage.reached, 0)} of games
                           </span>
                         )}
