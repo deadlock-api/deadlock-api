@@ -290,6 +290,7 @@ fn brawl_round_expr(buy_time_expr: &str, round_durations_expr: &str) -> String {
     format!("arrayCount(s -> s < {buy_time_expr}, arrayCumSum({round_durations_expr}))")
 }
 
+#[allow(clippy::too_many_lines)]
 fn query_parts(query: &ItemFlowStatsQuery) -> QueryParts {
     let info_filters = query.match_info().build();
     let base_filter_vec = PlayerFilters {

@@ -131,6 +131,8 @@ impl_match_info!(AbilityOrderStatsQuery);
 pub struct AnalyticsAbilityOrderStats {
     /// See more: <https://api.deadlock-api.com/v1/assets/heroes>
     pub abilities: Vec<u32>,
+    /// Average game time (in seconds) at which each upgrade in `abilities` was bought, index-aligned with `abilities`.
+    pub avg_upgrade_times_s: Vec<f64>,
     pub wins: u64,
     pub losses: u64,
     pub matches: u64,
@@ -175,6 +177,11 @@ fn build_query(query: &AbilityOrderStatsQuery) -> String {
         "
     SELECT
         abilities,
+        avgForEach(arrayFilter(
+            (t, x) -> dictHas('default.ability_items_dict', toUInt64(x)),
+            items.game_time_s,
+            items.item_id
+        )) AS avg_upgrade_times_s,
         countIf(won) AS wins,
         countIf(not won) AS losses,
         wins + losses AS matches,
