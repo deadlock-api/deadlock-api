@@ -952,10 +952,11 @@ export function BuildFlowExplorer({
         });
         // The build's own players first (at least 200, then 50 of them bought the item): a build no one played has no
         // win rate to show, so the completion goes as far as the games do.
-        // A confident build stops at 200: its win rate is to rest on games, not a streak of 50.
+        // A confident build, and a one-press one (a whole build to start from), stops at 200: its win rate is to rest
+        // on games, not a streak of 50.
         const tiers = [
           [...stepView.byKey.values()].filter((c) => c.matches >= COMPLETE_MIN_GAMES),
-          ...(goal === "confident"
+          ...(goal === "confident" || control !== "complete"
             ? []
             : [[...stepView.byKey.values()].filter((c) => c.matches >= COMPLETE_FALLBACK_GAMES)]),
         ];
