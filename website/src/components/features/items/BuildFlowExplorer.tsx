@@ -617,6 +617,31 @@ export function BuildFlowExplorer({
       ]),
     );
   }, [upgrades]);
+  // Per picked item the pick it is built into: a later or same-stage pick whose components include it.
+  const mergedInto = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const key of path) {
+      const { column, itemId } = parseKey(key);
+      const into = path.find((other) => {
+        const o = parseKey(other);
+        return other !== key && o.column >= column && (componentsOf.get(o.itemId) ?? []).includes(itemId);
+      });
+      if (into) map.set(key, into);
+    }
+    return map;
+  }, [path, componentsOf]);
+  // What each pick costs the build: an upgrade bought onto a component the build holds pays only the difference.
+  const payOf = useMemo(() => {
+    const pay = new Map<string, number>();
+    for (const key of path) {
+      const own = costOf.get(parseKey(key).itemId) ?? 0;
+      const credit = path
+        .filter((other) => mergedInto.get(other) === key)
+        .reduce((sum, other) => sum + (costOf.get(parseKey(other).itemId) ?? 0), 0);
+      pay.set(key, Math.max(0, own - credit));
+    }
+    return (key: string) => pay.get(key) ?? costOf.get(parseKey(key).itemId) ?? 0;
+  }, [path, mergedInto, costOf]);
   // Items another item is built from: their sales count the purchases merged into that upgrade as well.
   const isComponent = useMemo(() => {
     const classNames = new Set((upgrades ?? []).flatMap((item) => item.component_items ?? []));
@@ -695,7 +720,7 @@ export function BuildFlowExplorer({
           key,
           itemId,
           column,
-          cost: costOf.get(itemId) ?? 0,
+          cost: payOf(key),
           netWorthAtBuy: view?.byKey.get(key)?.netWorthAtBuy ?? null,
           sellColumn: sellOf.get(key) ?? null,
         };
@@ -710,7 +735,7 @@ export function BuildFlowExplorer({
       netWorthAtBuy: c.netWorthAtBuy,
       sellColumn: null,
     }));
-  }, [path, view, costOf, sellOf]);
+  }, [path, view, costOf, sellOf, payOf]);
 
   // The skill order of the players who bought the build's items (the hero's overall one without picks): the panel at
   // the end shows it, and the souls timeline places its upgrades.
@@ -768,15 +793,15 @@ export function BuildFlowExplorer({
   // What the build's picks cost, per stage and in all.
   const stageCost = new Map<number, number>();
   for (const key of path) {
-    const { column, itemId } = parseKey(key);
-    stageCost.set(column, (stageCost.get(column) ?? 0) + (costOf.get(itemId) ?? 0));
+    const { column } = parseKey(key);
+    stageCost.set(column, (stageCost.get(column) ?? 0) + payOf(key));
   }
   const cost = [...stageCost.values()].reduce((sum, n) => sum + n, 0);
   const categoryCost = new Map<string, number>();
   for (const key of path) {
     const { itemId } = parseKey(key);
     const slot = slotOf.get(itemId);
-    if (slot) categoryCost.set(slot, (categoryCost.get(slot) ?? 0) + (costOf.get(itemId) ?? 0));
+    if (slot) categoryCost.set(slot, (categoryCost.get(slot) ?? 0) + payOf(key));
   }
   const duration = Math.round(summary.avg_duration_s);
   // Without a build the win rate is read against 50%. With one, against all games, colored only when its 95% interval
@@ -799,7 +824,7 @@ export function BuildFlowExplorer({
           for (const key of path) {
             const { column, itemId } = parseKey(key);
             const price = costOf.get(itemId) ?? 0;
-            if (column <= stage.column) spent += price;
+            if (column <= stage.column) spent += payOf(key);
             const sold = sellOf.get(key);
             if (sold != null && sold <= stage.column) spent -= price * SELL_REFUND;
           }
@@ -840,16 +865,6 @@ export function BuildFlowExplorer({
       nextPicks.set(stage.column, next);
       taken.add(next.itemId);
     }
-  }
-  // Per picked item the pick it is built into: a later or same-stage pick whose components include it.
-  const mergedInto = new Map<string, string>();
-  for (const key of path) {
-    const { column, itemId } = parseKey(key);
-    const into = path.find((other) => {
-      const o = parseKey(other);
-      return other !== key && o.column >= column && (componentsOf.get(o.itemId) ?? []).includes(itemId);
-    });
-    if (into) mergedInto.set(key, into);
   }
   // Per stage the items the build holds at its end (sold ones and ones built into a later pick free their slot) against
   // the slots open by then.
