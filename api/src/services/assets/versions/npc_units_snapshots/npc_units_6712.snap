@@ -1,5 +1,5 @@
 ---
-source: src/services/assets/versions/npc_units.rs
+source: api/src/services/assets/versions/npc_units.rs
 expression: units
 ---
 [
@@ -403,6 +403,9 @@ expression: units
     "neutral_melee": "citadel_neutral_light_melee_strong",
     "image": "https://assets-bucket.deadlock-api.com/assets-api-res/images/npcs/neutrals/neutral_underground_heavy.png",
     "image_webp": "https://assets-bucket.deadlock-api.com/assets-api-res/images/npcs/neutrals/neutral_underground_heavy.webp",
+    "models": {
+      "idle": "https://assets-bucket.deadlock-api.com/assets-api-res/models/npc_units/neutral_underhand_01/neutral_underhand_01/idle.glb"
+    },
     "viewer_souls_class": {
       "0": "strong_to_viewer",
       "10000": "normal_to_viewer",

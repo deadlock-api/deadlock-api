@@ -125,8 +125,27 @@ def strip_meshes(glb: Path, hidden: set[str]) -> None:
     write_glb(glb, gltf, rest)
 
 
-def export(s2v: str, vpk: str, models: list[str], clips: list[str], out: Path) -> None:
-    """Export `models` (``.vmdl`` paths) with only the animations in `clips`."""
+def export(
+    s2v: str,
+    vpk: str,
+    models: list[str],
+    clips: list[str] | None,
+    out: Path,
+    materials: bool = True,
+) -> None:
+    """Export `models` (``.vmdl`` paths) with only the animations in `clips`
+    (every animation when None, none when empty)."""
+    args = ["--gltf_export_materials", "--gltf_textures_adapt"] if materials else []
+    if len(models) == 1:
+        # A single input is written to `-o` + `.glb`, not into an `-o` folder.
+        target = out / models[0].removesuffix(".vmdl")
+        target.parent.mkdir(parents=True, exist_ok=True)
+    else:
+        target = out
+    if clips is None:
+        args += ["--gltf_export_animations"]
+    elif clips:
+        args += ["--gltf_export_animations", "--gltf_animation_list", ",".join(clips)]
     subprocess.run(
         [
             s2v,
@@ -134,12 +153,9 @@ def export(s2v: str, vpk: str, models: list[str], clips: list[str], out: Path) -
             "-d",
             "-f", ",".join(f"{m}_c" for m in models),
             "--gltf_export_format", "glb",
-            "--gltf_export_materials",
-            "--gltf_textures_adapt",
-            "--gltf_export_animations",
-            "--gltf_animation_list", ",".join(clips),
+            *args,
             "--threads", "8",
-            "-o", str(out),
+            "-o", str(target),
         ],
         check=True,
         stdout=subprocess.DEVNULL,

@@ -10,7 +10,8 @@ set -euo pipefail
 #      the map entities extracted from the dl_midtown entity lump,
 #      zstd-compressed) from the extracted files.
 #   5. Extract + process the media assets (images/icons/fonts/sounds) and
-#      export the hero 3D models as GLBs (see export_hero_models.py).
+#      export the hero and NPC unit 3D models as GLBs (see export_hero_models.py
+#      and export_npc_models.py).
 #   6. Upload the media assets to R2.
 #   7. Upload the versions/<build>/ folder to R2.
 #   8. Rebuild the R2 indexes (per-folder index.json.zst + steam-info/all.json.zst)
@@ -152,7 +153,7 @@ if [ ! -f Source2Viewer-CLI ] || [ ! -f libSkiaSharp.so ]; then
     chmod +x Source2Viewer-CLI
 fi
 
-# gltf-transform compacts the exported hero models (meshopt + WebP textures).
+# gltf-transform compacts the exported hero and NPC models (meshopt + WebP textures).
 GLTF_TRANSFORM="$WORK_DIR/gltf-transform/node_modules/.bin/gltf-transform"
 if [ ! -x "$GLTF_TRANSFORM" ]; then
     npm install --silent --no-audit --no-fund --prefix "$WORK_DIR/gltf-transform" @gltf-transform/cli@4.5.1
@@ -384,12 +385,15 @@ find images -type f -name "*_psd.*" -exec bash -c 'mv "$1" "${1/_psd./.}"' _ {} 
 find images -type f -name "*_psd_128.*" -exec bash -c 'mv "$1" "${1/_psd_128./.}"' _ {} \;
 find images -type f -name "*_png.*" -exec bash -c 'mv "$1" "${1/_png./.}"' _ {} \;
 
-# Hero 3D models, one GLB per pose: models/<model path>/<pose>.glb
+# Hero and NPC unit 3D models, one GLB per pose: models/<model path>/<pose>.glb
 rm -rf models
 mkdir -p models
 python3 "$SCRIPT_DIR/export_hero_models.py" ./Source2Viewer-CLI "$GLTF_TRANSFORM" \
     "$citadel_folder"/pak01_dir.vpk "$citadel_folder"/scripts/heroes.vdata models \
     || echo "Warning: hero model export failed, skipping."
+python3 "$SCRIPT_DIR/export_npc_models.py" ./Source2Viewer-CLI "$GLTF_TRANSFORM" \
+    "$citadel_folder"/pak01_dir.vpk "$citadel_folder"/scripts/npc_units.vdata models \
+    || echo "Warning: NPC model export failed, skipping."
 
 # 5b. Validate the build before uploading ANYTHING to R2. A partial or broken
 # build (e.g. missing localization, empty media) must never reach the bucket and

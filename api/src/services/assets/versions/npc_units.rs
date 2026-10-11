@@ -14,6 +14,7 @@ use crate::services::assets::versions::common::{
 };
 use crate::services::assets::versions::error::AssetsError;
 use crate::services::assets::versions::localization;
+use crate::services::assets::versions::models::{ModelsByPath, fetch_models, models_of};
 
 // ===================================================== Raw KV3 shape
 
@@ -289,6 +290,28 @@ struct RawNpcUnit {
     /// `panorama:"file://{images}/npcs/neutrals/<name>.psd"`.
     #[serde(default, rename = "m_strCustomUnitIcon")]
     custom_unit_icon: Option<String>,
+    /// `resource_name:"models/npc/midboss/midboss.vmdl"` (`m_strModelName` on a few units).
+    #[serde(default, rename = "m_sModelName", alias = "m_strModelName")]
+    model_name: Option<String>,
+    /// Model of the hideout critters / props without `m_sModelName`.
+    #[serde(default, rename = "m_hModel")]
+    h_model: Option<String>,
+    #[serde(default, rename = "m_RatModel")]
+    rat_model: Option<String>,
+    /// Per-team models: troopers, shrines (`destroyable_building`), ...
+    #[serde(default, rename = "m_sAmberModelName")]
+    amber_model_name: Option<String>,
+    #[serde(default, rename = "m_sSapphireModelName", alias = "m_sSapphModelName")]
+    sapphire_model_name: Option<String>,
+    /// The Patron's effigies and cores.
+    #[serde(default, rename = "m_AmberEffigyModel")]
+    amber_effigy_model: Option<String>,
+    #[serde(default, rename = "m_SapphEffigyModel")]
+    sapphire_effigy_model: Option<String>,
+    #[serde(default, rename = "m_AmberCoreModel")]
+    amber_core_model: Option<String>,
+    #[serde(default, rename = "m_SapphCoreModel")]
+    sapphire_core_model: Option<String>,
     /// Distance threshold → soul orb class shown to the viewer.
     #[serde(default, rename = "m_mapViewerSoulsClass")]
     viewer_souls_class: Option<IndexMap<String, String>>,
@@ -676,6 +699,28 @@ pub(crate) struct NeutralDamageGrowth {
     pub damage_growth_pct_per_min: Option<f64>,
 }
 
+/// Published pose GLBs (see `NpcUnit::models`) of a per-team model pair.
+#[derive(Debug, Serialize, Clone, ToSchema)]
+pub(crate) struct TeamModels {
+    #[serde(skip_serializing_if = "IndexMap::is_empty")]
+    #[schema(value_type = std::collections::HashMap<String, String>)]
+    pub amber: IndexMap<String, String>,
+    #[serde(skip_serializing_if = "IndexMap::is_empty")]
+    #[schema(value_type = std::collections::HashMap<String, String>)]
+    pub sapphire: IndexMap<String, String>,
+}
+
+impl TeamModels {
+    /// None when neither team has a published model.
+    fn new(models: &ModelsByPath, amber: Option<&str>, sapphire: Option<&str>) -> Option<Self> {
+        let out = Self {
+            amber: models_of(models, amber),
+            sapphire: models_of(models, sapphire),
+        };
+        (!out.amber.is_empty() || !out.sapphire.is_empty()).then_some(out)
+    }
+}
+
 #[derive(Debug, Serialize, Clone, ToSchema)]
 pub(crate) struct NpcUnit {
     pub class_name: String,
@@ -698,6 +743,24 @@ pub(crate) struct NpcUnit {
     /// Unit icon (`m_strCustomUnitIcon`) as webp.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub image_webp: Option<String>,
+    /// 3D model of the unit as a self-contained glTF binary (`.glb`), keyed by
+    /// pose: `idle` (the model's idle clip baked in) or `default` (no
+    /// animation, for models without an idle clip). Uses
+    /// `EXT_meshopt_compression` and `EXT_texture_webp`. Omitted when the unit
+    /// has no published model.
+    #[serde(skip_serializing_if = "IndexMap::is_empty")]
+    #[schema(value_type = std::collections::HashMap<String, String>)]
+    pub models: IndexMap<String, String>,
+    /// Per-team variants of the unit's model, same shape as `models`
+    /// (troopers, shrines, zipline containers).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub team_models: Option<TeamModels>,
+    /// The Patron's effigy models, per team.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub effigy_models: Option<TeamModels>,
+    /// The Patron's core models, per team.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub core_models: Option<TeamModels>,
     /// Distance threshold (as string key) → soul orb class shown to the viewer.
     #[serde(skip_serializing_if = "Option::is_none")]
     #[schema(value_type = Option<std::collections::HashMap<String, String>>)]
@@ -840,16 +903,18 @@ pub(crate) struct NpcUnit {
 
 // ===================================================== Build
 
+/// `models` maps a model path to its published pose GLBs.
 pub(crate) fn build_npc_units(
     vdata: &str,
     loc: &HashMap<String, String>,
+    models: &ModelsByPath,
 ) -> Result<Vec<NpcUnit>, AssetsError> {
     // `generic_data_type` and other scalar top-level keys are filtered out.
     build_from_kv3(
         vdata,
         "npc unit",
         |_, value| value.is_object(),
-        |class_name, raw| transform(class_name, raw, loc),
+        |class_name, raw| transform(class_name, raw, loc, models),
     )
 }
 
@@ -874,7 +939,12 @@ fn unit_icon_urls(v: Option<&str>) -> Option<(String, String)> {
 }
 
 #[expect(clippy::too_many_lines)]
-fn transform(class_name: String, mut r: RawNpcUnit, loc: &HashMap<String, String>) -> NpcUnit {
+fn transform(
+    class_name: String,
+    mut r: RawNpcUnit,
+    loc: &HashMap<String, String>,
+    models: &ModelsByPath,
+) -> NpcUnit {
     let id = entity_id(&class_name);
     let name = r
         .loc_unit_name
@@ -882,6 +952,28 @@ fn transform(class_name: String, mut r: RawNpcUnit, loc: &HashMap<String, String
         .filter(|t| !t.is_empty())
         .map(|t| localization::localize(loc, &t));
     let (image, image_webp) = unit_icon_urls(r.custom_unit_icon.as_deref()).unzip();
+    let team_models = TeamModels::new(
+        models,
+        r.amber_model_name.as_deref(),
+        r.sapphire_model_name.as_deref(),
+    );
+    let effigy_models = TeamModels::new(
+        models,
+        r.amber_effigy_model.as_deref(),
+        r.sapphire_effigy_model.as_deref(),
+    );
+    let core_models = TeamModels::new(
+        models,
+        r.amber_core_model.as_deref(),
+        r.sapphire_core_model.as_deref(),
+    );
+    let models = models_of(
+        models,
+        r.model_name
+            .as_deref()
+            .or(r.h_model.as_deref())
+            .or(r.rat_model.as_deref()),
+    );
 
     let mut weapon_infos = r.weapon_infos.take().unwrap_or_default();
     let boss_weapon_info = weapon_infos
@@ -907,6 +999,10 @@ fn transform(class_name: String, mut r: RawNpcUnit, loc: &HashMap<String, String
         neutral_melee: r.neutral_melee.filter(|s| !s.is_empty()),
         image,
         image_webp,
+        models,
+        team_models,
+        effigy_models,
+        core_models,
         viewer_souls_class: r.viewer_souls_class.filter(|m| !m.is_empty()),
         neutral_damage_growth: r.neutral_damage_growth.map(|s| Subclass {
             subclass: NeutralDamageGrowth {
@@ -1239,16 +1335,19 @@ pub(crate) async fn fetch_npc_units(
     version: u32,
     language: &str,
 ) -> Result<Arc<Vec<NpcUnit>>, AssetsError> {
-    let (vdata, loc) =
-        localization::fetch_with_localization(r2, version, "scripts/npc_units.vdata", language)
-            .await?;
-    let units = build_npc_units(&vdata, &loc)?;
+    let (sources, models) = tokio::join!(
+        localization::fetch_with_localization(r2, version, "scripts/npc_units.vdata", language),
+        fetch_models(r2),
+    );
+    let (vdata, loc) = sources?;
+    let units = build_npc_units(&vdata, &loc, &models)?;
     Ok(Arc::new(units))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::services::assets::versions::models::MODELS_BASE_URL;
 
     fn fixture() -> String {
         let manifest = env!("CARGO_MANIFEST_DIR");
@@ -1258,11 +1357,58 @@ mod tests {
 
     #[test]
     fn snapshot_npc_units() {
-        let units = build_npc_units(&fixture(), &HashMap::new()).expect("builds");
+        let units = build_npc_units(&fixture(), &HashMap::new(), &HashMap::new()).expect("builds");
         insta::with_settings!(
             { snapshot_path => "npc_units_snapshots", prepend_module_to_snapshot => false, sort_maps => true },
             { insta::assert_json_snapshot!("npc_units", units); }
         );
+    }
+
+    #[test]
+    fn team_effigy_and_core_models() {
+        let idle = |p: &str| format!("{MODELS_BASE_URL}/{p}/idle.glb");
+        let models: ModelsByPath = [
+            "npc_units/troopers/amber_trooper_01/amber_trooper_01",
+            "npc_units/troopers/sapphire_trooper_01/sapphire_trooper_01",
+            "npc/shrine_sapphire/shrine_sapphire",
+            "npc/effigy_amber/effigy_amber_model",
+            "npc/core_sapphire/core_sapphire",
+        ]
+        .into_iter()
+        .map(|p| {
+            (
+                p.to_owned(),
+                [("idle".to_owned(), idle(p))].into_iter().collect(),
+            )
+        })
+        .collect();
+        let units = build_npc_units(&fixture(), &HashMap::new(), &models).expect("builds");
+        let unit = |c: &str| units.iter().find(|u| u.class_name == c).expect(c);
+
+        let trooper = unit("trooper_normal").team_models.as_ref().expect("teams");
+        assert_eq!(
+            trooper.sapphire["idle"],
+            idle("npc_units/troopers/sapphire_trooper_01/sapphire_trooper_01")
+        );
+        assert_eq!(trooper.amber.len(), 1);
+        // `m_sSapphModelName`, and no amber shrine published.
+        let shrine = unit("destroyable_building")
+            .team_models
+            .as_ref()
+            .expect("teams");
+        assert!(shrine.amber.is_empty());
+        assert_eq!(
+            shrine.sapphire["idle"],
+            idle("npc/shrine_sapphire/shrine_sapphire")
+        );
+        let patron = unit("npc_boss_tier3");
+        assert_eq!(
+            patron.effigy_models.as_ref().expect("effigy").amber["idle"],
+            idle("npc/effigy_amber/effigy_amber_model")
+        );
+        assert!(patron.core_models.as_ref().expect("core").amber.is_empty());
+        // `trooper_base` ships empty `resource_name:""` team models.
+        assert!(unit("trooper_base").team_models.is_none());
     }
 
     fn loc_6712() -> HashMap<String, String> {
@@ -1287,7 +1433,18 @@ mod tests {
             "{manifest}/src/services/assets/versions/npc_units_fixtures/npc_units_6712.vdata"
         ))
         .expect("vdata fixture");
-        let units = build_npc_units(&vdata, &loc_6712()).expect("builds");
+        let underhand_idle = format!(
+            "{MODELS_BASE_URL}/npc_units/neutral_underhand_01/neutral_underhand_01/idle.glb"
+        );
+        let models: ModelsByPath = [(
+            "npc_units/neutral_underhand_01/neutral_underhand_01".to_owned(),
+            [("idle".to_owned(), underhand_idle.clone())]
+                .into_iter()
+                .collect(),
+        )]
+        .into_iter()
+        .collect();
+        let units = build_npc_units(&vdata, &loc_6712(), &models).expect("builds");
         let underhand = units
             .iter()
             .find(|u| u.class_name == "neutral_underground_strong")
@@ -1303,6 +1460,7 @@ mod tests {
                 "https://assets-bucket.deadlock-api.com/assets-api-res/images/npcs/neutrals/neutral_underground_heavy.webp"
             )
         );
+        assert_eq!(underhand.models.get("idle"), Some(&underhand_idle));
         insta::with_settings!(
             { snapshot_path => "npc_units_snapshots", prepend_module_to_snapshot => false, sort_maps => true },
             { insta::assert_json_snapshot!("npc_units_6712", units); }
