@@ -16,6 +16,7 @@ const ROUTE_LABELS: Record<string, string> = {
   "/analytics/heroes": "Hero Stats",
   "/analytics/items": "Item Stats",
   "/analytics/items/item-purchase-analysis": "Purchase Analysis",
+  "/analytics/items/build-flow": "Build Designer",
   "/analytics/abilities": "Ability Stats",
   "/community/leaderboard": "Leaderboard",
   "/community/badge-distribution": "Rank Distribution",

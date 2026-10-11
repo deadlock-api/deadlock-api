@@ -1,5 +1,5 @@
 import { cva, type VariantProps } from "class-variance-authority";
-import { CheckIcon, PlusIcon, XIcon } from "lucide-react";
+import { CheckIcon, PlusIcon, TriangleAlertIcon } from "lucide-react";
 import { Children, isValidElement } from "react";
 
 import { Heading } from "~/components/ui/heading";
@@ -207,73 +207,134 @@ export function BuildChoice({
   );
 }
 
-/** The build so far, one `BuildPathStep` per stage, read left to right; the steps wrap onto rows when narrow. */
-export function BuildPath({ className, ...props }: React.ComponentProps<"ol">) {
+/** The build being designed: one `BuildSlot` per stage, four across when there is room, then two, one on a phone. */
+export function BuildBoard({ className, ...props }: React.ComponentProps<"ol">) {
   return (
-    <ol
-      data-slot="build-path"
-      className={cn("grid min-w-0 grid-cols-[repeat(auto-fit,minmax(4.5rem,1fr))] gap-1", className)}
-      {...props}
-    />
+    <div data-slot="build-board" className="@container min-w-0">
+      <ol className={cn("grid min-w-0 grid-cols-1 gap-2 @md:grid-cols-2 @4xl:grid-cols-4", className)} {...props} />
+    </div>
   );
 }
 
 /**
- * One stage of a BuildPath: its name, a figure at the end of that line (what the stage's items cost), and the
- * `BuildPathItem`s chosen there, or "Any item" when none is.
+ * One stage of a BuildBoard: its name and a figure at the end of that line (the stage's spending), the
+ * `BuildSlotItem`s of the stage (bought, or sold there), "Empty" without any, and a `footer` (its BuildBudget).
  */
-export function BuildPathStep({
+export function BuildSlot({
   label,
   meta,
+  footer,
   className,
   children,
   ...props
-}: React.ComponentProps<"li"> & { label: React.ReactNode; meta?: React.ReactNode }) {
+}: React.ComponentProps<"li"> & { label: React.ReactNode; meta?: React.ReactNode; footer?: React.ReactNode }) {
   const empty = !children || (Array.isArray(children) && children.length === 0);
   return (
     <li
-      data-slot="build-path-step"
+      data-slot="build-slot"
       data-empty={empty || undefined}
       className={cn(
-        "@container flex min-w-0 flex-col gap-1 rounded-md border border-hairline bg-subtle px-2 py-1.5 data-empty:border-dashed data-empty:bg-transparent",
+        "flex min-w-0 flex-col gap-2 rounded-md border border-hairline bg-subtle p-2 data-empty:border-dashed data-empty:bg-transparent",
         className,
       )}
       {...props}
     >
-      {/* A narrow step puts the meta on a line of its own, kept even while empty, so a pick does not grow the step. */}
-      <span className="flex flex-col type-caption text-muted-foreground @min-[8rem]:flex-row @min-[8rem]:items-baseline @min-[8rem]:justify-between @min-[8rem]:gap-x-2">
-        <span className="truncate font-medium">{label}</span>
-        <span className="shrink-0 tabular-nums">{meta ?? "\u00a0"}</span>
+      <span className="flex items-baseline justify-between gap-2 type-caption text-muted-foreground">
+        <span className="truncate font-medium text-foreground">{label}</span>
+        {meta && <span className="shrink-0 tabular-nums">{meta}</span>}
       </span>
-      <span className="flex min-h-8 flex-wrap items-center gap-1">
-        {empty ? <span className="type-caption text-muted-foreground">Any item</span> : children}
-      </span>
+      <ul className="flex min-h-10 flex-1 flex-col gap-1">
+        {empty ? <li className="flex flex-1 items-center type-caption text-muted-foreground">Empty</li> : children}
+      </ul>
+      {footer}
     </li>
   );
 }
 
-/** An item in a BuildPathStep, a button that takes it out of the build; name it (`aria-label`) "Remove …". */
-export function BuildPathItem({
+const buildSlotItemVariants = cva("flex min-w-0 items-center gap-2 rounded-sm", {
+  variants: {
+    /** `held`: bought in this stage. `sold`: bought earlier and sold in this stage, faded and struck through. */
+    state: { held: "", sold: "opacity-60 [&_[data-slot=build-slot-item-name]]:line-through" },
+  },
+  defaultVariants: { state: "held" },
+});
+
+/** One item of a BuildSlot: its art, name, a meta line (price, how often it is sold) and `actions` at the end. */
+export function BuildSlotItem({
   media,
+  name,
+  meta,
+  actions,
+  state,
   className,
   ...props
-}: Omit<React.ComponentProps<"button">, "children" | "type"> & { media: React.ReactNode }) {
+}: Omit<React.ComponentProps<"li">, "children"> &
+  VariantProps<typeof buildSlotItemVariants> & {
+    media: React.ReactNode;
+    name: React.ReactNode;
+    meta?: React.ReactNode;
+    actions?: React.ReactNode;
+  }) {
   return (
-    // ds-allow raw-button: the item's art is the hit area; the remove mark is drawn over it
-    <button
-      type="button"
-      data-slot="build-path-item"
-      className={cn(
-        FOCUS_RING,
-        "group/path-item relative flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-md",
-        className,
-      )}
+    <li
+      data-slot="build-slot-item"
+      data-state={state ?? "held"}
+      className={cn(buildSlotItemVariants({ state }), className)}
       {...props}
     >
-      {media}
-      <span className="absolute inset-0 flex items-center justify-center rounded-md bg-background/70 opacity-0 transition duration-fast ease-standard group-hover/path-item:opacity-100 group-focus-visible/path-item:opacity-100">
-        <XIcon aria-hidden="true" className="size-4" />
+      <span className="shrink-0">{media}</span>
+      <span className="flex min-w-0 flex-1 flex-col">
+        <span data-slot="build-slot-item-name" className="truncate type-label">
+          {name}
+        </span>
+        {meta && <span className="truncate type-caption text-muted-foreground tabular-nums">{meta}</span>}
       </span>
-    </button>
+      {actions && <span className="flex shrink-0 items-center">{actions}</span>}
+    </li>
+  );
+}
+
+/**
+ * What a build has spent by the end of a stage against what a player has earned by then: a bar and the two figures,
+ * in the loss color with a warning mark once spending passes earnings.
+ */
+export function BuildBudget({
+  spent,
+  available,
+  format = (n) => n.toLocaleString("en-US"),
+  className,
+  ...props
+}: Omit<React.ComponentProps<"div">, "children"> & {
+  spent: number;
+  available: number;
+  /** Prints a soul amount: "6.7k". */
+  format?: (souls: number) => string;
+}) {
+  const over = spent > available;
+  return (
+    <div
+      data-slot="build-budget"
+      data-over={over || undefined}
+      className={cn("flex flex-col gap-1", className)}
+      {...props}
+    >
+      <ProgressBar
+        variant="thin"
+        value={available > 0 ? Math.min(1, spent / available) : 1}
+        color={over ? "var(--negative)" : "var(--chart-share)"}
+        className="w-full"
+      />
+      <span
+        className={cn(
+          "flex items-center gap-1 type-caption tabular-nums",
+          over ? "text-negative" : "text-muted-foreground",
+        )}
+      >
+        {over && <TriangleAlertIcon aria-hidden="true" className="size-3 shrink-0" />}
+        <span className="truncate">
+          {format(spent)} of {format(available)} souls
+        </span>
+      </span>
+    </div>
   );
 }

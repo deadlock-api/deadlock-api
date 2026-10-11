@@ -35,8 +35,9 @@ export const ITEM_PAGES: RegisteredPage[] = [
   },
   {
     id: "build_flow",
-    title: "Build Flow",
-    description: "a hero's build order: which items are bought first, second and later, and how each path wins",
+    title: "Build Designer",
+    description:
+      "design a build for a hero: which items to buy in each stage of the game, what they cost, when to sell them and how the build wins",
     context: '"haze build" or "what to build on haze" is item_stats or build_flow.',
     path: "/analytics/items/build-flow",
     search: { hero: heroId() },

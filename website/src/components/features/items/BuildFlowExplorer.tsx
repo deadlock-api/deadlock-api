@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { Hourglass, Link, ListPlus, Route } from "lucide-react";
+import { EllipsisVertical, Hourglass, Link, ListPlus, Route } from "lucide-react";
 import {
   parseAsArrayOf,
   parseAsNumberLiteral,
@@ -17,9 +17,10 @@ import {
   BuildChoice,
   BuildChoiceHeader,
   BuildChoiceList,
-  BuildPath,
-  BuildPathItem,
-  BuildPathStep,
+  BuildBoard,
+  BuildBudget,
+  BuildSlot,
+  BuildSlotItem,
   BuildStage,
 } from "~/components/domain/graph/BuildFlow";
 import {
@@ -30,7 +31,14 @@ import {
   ItemSlotTabs,
 } from "~/components/domain/selectors/ItemGrid";
 import { useItemPicker } from "~/components/domain/selectors/useItemPicker";
-import { BuildEconomy, type EconomyItem } from "~/components/features/items/BuildEconomy";
+import {
+  BuildEconomy,
+  compactSouls,
+  type EconomyItem,
+  gameClock,
+  soulsAt,
+  useSoulCurve,
+} from "~/components/features/items/BuildEconomy";
 import { FilterBar } from "~/components/patterns/filter-bar/FilterBar";
 import { Panel, PanelBody, PanelHeader } from "~/components/patterns/panel/Panel";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
@@ -41,6 +49,7 @@ import { CopyButton } from "~/components/ui/copy-button";
 import { Delta } from "~/components/ui/delta";
 import { Field } from "~/components/ui/field";
 import { Grid } from "~/components/ui/grid";
+import { OptionRow } from "~/components/ui/option-row";
 import { Popover, PopoverContent, PopoverTrigger } from "~/components/ui/popover";
 import { Segmented, SegmentedItem } from "~/components/ui/segmented";
 import { Separator } from "~/components/ui/separator";
@@ -59,6 +68,7 @@ import {
   itemFlowQueryOptions,
   type ItemFlowStats,
 } from "~/queries/item-flow-query";
+import { itemStatsQueryOptions } from "~/queries/item-stats-query";
 
 const PHASE_INTERVAL_S = 600;
 const PHASE_COUNT = 4;
@@ -79,6 +89,10 @@ const SHRINK_MIN_GAMES = 100;
 const LINK_MIN_SHARE = 0.1;
 // The best win rate build takes only items bought by at least this share of the players it follows.
 const SUGGEST_MIN_SHARE = 0.15;
+// Where each time phase ends, in seconds: a stage's budget is the souls earned by then (the last, open one at 45m).
+const STAGE_ENDS = [540, 1200, 1800, 2700] as const;
+// Selling refunds half an item's price.
+const SELL_REFUND = 0.5;
 const AT_ONCE = { limitUrlUpdates: throttle(50) };
 
 const SORT_OPTIONS = [
@@ -235,6 +249,69 @@ const StagePicker = memo(function StagePicker({ stage, onPick }: { stage: Stage;
   );
 });
 
+/** A picked item's price and what its buyers do with it later: "3,200 · sold 62% ~24:10". */
+function saleLine(
+  price: number,
+  sale: { share: number | null; at: number | null } | undefined,
+  component: boolean,
+): string {
+  const parts = [count(price)];
+  if (sale?.share != null && sale.share >= 0.05) {
+    parts.push(
+      `${component ? "replaced" : "sold"} ${percent(sale.share, 0)}${sale.at != null ? ` ~${gameClock(sale.at)}` : ""}`,
+    );
+  }
+  return parts.join(" · ");
+}
+
+/** The menu of a picked item: keep it, sell it in a later stage, or take it out of the build. */
+function ItemPlan({
+  name,
+  stages,
+  isStreetBrawl,
+  sellColumn,
+  onSell,
+  onRemove,
+}: {
+  name: string;
+  stages: Stage[];
+  isStreetBrawl: boolean;
+  sellColumn: number | null;
+  onSell: (column: number | null) => void;
+  onRemove: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const choose = (action: () => void) => {
+    action();
+    setOpen(false);
+  };
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button variant="ghost" size="icon-xs" aria-label={`Plan for ${name}`}>
+          <EllipsisVertical />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="end" aria-label={`Plan for ${name}`} className="flex w-48 flex-col gap-1 p-1">
+        <OptionRow selected={sellColumn == null} onClick={() => choose(() => onSell(null))}>
+          Keep
+        </OptionRow>
+        {stages.map((stage) => (
+          <OptionRow
+            key={stage.column}
+            selected={sellColumn === stage.column}
+            onClick={() => choose(() => onSell(stage.column))}
+          >
+            Sell at {stageLabel(stage.column, isStreetBrawl)}
+          </OptionRow>
+        ))}
+        <Separator />
+        <OptionRow onClick={() => choose(onRemove)}>Remove</OptionRow>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 export function BuildFlowExplorer({
   heroId,
   minRankId,
@@ -258,6 +335,8 @@ export function BuildFlowExplorer({
   const sortBy = storedSort === "pickrate" ? "pickrate" : "winrate";
   // The build, scoped to a stage: `${column}:${itemId}`. In the URL so a build can be shared as a link.
   const [storedPath, setPath] = useQueryState("build_path", parseAsArrayOf(parseAsString).withDefault([]));
+  // Planned sales: `${column}:${itemId}:${sellColumn}`, the stage a picked item is sold in.
+  const [storedSells, setSells] = useQueryState("build_sell", parseAsArrayOf(parseAsString).withDefault([]));
   const [pointed, setPointed] = useState<string | null>(null);
   // The stage a narrow screen shows (index into the stages); a wide one shows every stage.
   const [shownStage, setShownStage] = useState(0);
@@ -277,6 +356,28 @@ export function BuildFlowExplorer({
     startTransition(() => void setPath(update, AT_ONCE));
   const toggle = (key: string) =>
     changePath((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]));
+  // The stage each picked item is sold in; a plan for an item no longer picked, or for a stage not after its own, is
+  // dropped.
+  const sellOf = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const entry of storedSells) {
+      const [column, itemId, sellColumn] = entry.split(":").map(Number);
+      const key = `${column}:${itemId}`;
+      if (pathSet.has(key) && sellColumn > column && sellColumn < columnCount) map.set(key, sellColumn);
+    }
+    return map;
+  }, [storedSells, pathSet, columnCount]);
+  const planSale = (key: string, sellColumn: number | null) =>
+    startTransition(
+      () =>
+        void setSells(
+          (prev) => [
+            ...prev.filter((entry) => !entry.startsWith(`${key}:`)),
+            ...(sellColumn != null ? [`${key}:${sellColumn}`] : []),
+          ],
+          AT_ONCE,
+        ),
+    );
 
   const { minUnixTimestamp, maxUnixTimestamp } = useNormalizedTimeRange(minDate, maxDate);
   const { data, isLoading, isFetching, isPlaceholderData, isError, refetch } = useQuery(
@@ -306,6 +407,47 @@ export function BuildFlowExplorer({
     [upgrades, pricePerTier],
   );
   const nameOf = useMemo(() => new Map((upgrades ?? []).map((item) => [item.id, item.name ?? "Item"])), [upgrades]);
+  // Items another item is built from: their sales count the purchases merged into that upgrade as well.
+  const isComponent = useMemo(() => {
+    const classNames = new Set((upgrades ?? []).flatMap((item) => item.component_items ?? []));
+    return new Set((upgrades ?? []).filter((item) => classNames.has(item.class_name)).map((item) => item.id));
+  }, [upgrades]);
+  // How often and when the hero's players sell each item, and the souls they have earned over the game (the economy
+  // panel reads the same two answers).
+  const economyFilters = {
+    heroId,
+    gameMode,
+    matchMode,
+    minRankId,
+    maxRankId,
+    minUnixTimestamp: minUnixTimestamp ?? 0,
+    maxUnixTimestamp,
+  };
+  const { data: itemStats } = useQuery(
+    itemStatsQueryOptions({
+      heroIds: heroId != null ? String(heroId) : undefined,
+      gameMode,
+      matchMode,
+      minAverageBadge: minRankId,
+      maxAverageBadge: maxRankId,
+      minUnixTimestamp: minUnixTimestamp ?? 0,
+      maxUnixTimestamp,
+    }),
+  );
+  const salesOf = useMemo(
+    () =>
+      new Map(
+        (itemStats ?? []).map((row) => [
+          row.item_id,
+          {
+            share: row.sold != null && row.matches > 0 ? row.sold / row.matches : null,
+            at: row.avg_sell_time_s > 0 ? row.avg_sell_time_s : null,
+          },
+        ]),
+      ),
+    [itemStats],
+  );
+  const { points: soulCurve } = useSoulCurve(economyFilters);
 
   const view = useMemo(
     () => (data ? buildView(data, { path: pathSet, columnCount, perColumn, sortBy, isStreetBrawl }) : null),
@@ -345,6 +487,7 @@ export function BuildFlowExplorer({
           column,
           cost: costOf.get(itemId) ?? 0,
           netWorthAtBuy: view?.byKey.get(key)?.netWorthAtBuy ?? null,
+          sellColumn: sellOf.get(key) ?? null,
         };
       });
     }
@@ -355,8 +498,9 @@ export function BuildFlowExplorer({
       column: c.column,
       cost: costOf.get(c.itemId) ?? 0,
       netWorthAtBuy: c.netWorthAtBuy,
+      sellColumn: null,
     }));
-  }, [path, view, costOf]);
+  }, [path, view, costOf, sellOf]);
 
   // Dim the stages only while another build's answer loads; a refresh of the shown one keeps them as they are.
   const switching = isFetching && isPlaceholderData;
@@ -390,6 +534,25 @@ export function BuildFlowExplorer({
         : wrHigh < baseWinRate
           ? "negative"
           : "muted";
+  // Per stage what the build has spent by its end (purchases, less the refunds of its sales) and what the hero's players
+  // have earned by then. Street Brawl rounds reset their souls, so they have no such budget.
+  const budgets =
+    soulCurve && !isStreetBrawl
+      ? view.stages.map((stage) => {
+          let spent = 0;
+          for (const key of path) {
+            const { column, itemId } = parseKey(key);
+            const price = costOf.get(itemId) ?? 0;
+            if (column <= stage.column) spent += price;
+            const sold = sellOf.get(key);
+            if (sold != null && sold <= stage.column) spent -= price * SELL_REFUND;
+          }
+          return {
+            spent,
+            available: soulsAt(soulCurve, STAGE_ENDS[stage.column] ?? STAGE_ENDS[STAGE_ENDS.length - 1]),
+          };
+        })
+      : null;
   // A build nobody played in these filters: its numbers are not zeros but missing.
   const noGames = summary.matches === 0;
   // A Street Brawl answer can have fewer rounds than the stage that was shown.
@@ -404,75 +567,47 @@ export function BuildFlowExplorer({
           icon={Route}
           size="sm"
         >
-          {path.length > 0 && (
-            <Inline gap={1}>
-              <CopyButton variant="ghost" size="xs" icon={Link} text={() => window.location.href}>
-                Copy link
-              </CopyButton>
-              <Button variant="ghost" size="xs" onClick={() => changePath(null)}>
-                Clear
+          <Inline gap={1}>
+            {/* Whole builds to start from or complete the started one with; once one has nothing to add it goes. */}
+            {suggestions.map((suggestion) => (
+              <Button
+                key={suggestion.label}
+                variant="subtle"
+                size="sm"
+                aria-label={`${suggestion.label}: ${suggestion.path.map((c) => nameOf.get(c.itemId) ?? "Item").join(", ")}`}
+                onClick={() =>
+                  changePath((prev) => [
+                    ...prev,
+                    ...suggestion.path.filter((c) => !prev.includes(c.key)).map((c) => c.key),
+                  ])
+                }
+              >
+                {suggestion.label}
+                {suggestion.path.map((choice) => (
+                  <ItemImage key={choice.key} itemId={choice.itemId} className="size-5" />
+                ))}
               </Button>
-            </Inline>
-          )}
+            ))}
+            {path.length > 0 && (
+              <>
+                <CopyButton variant="ghost" size="xs" icon={Link} text={() => window.location.href}>
+                  Copy link
+                </CopyButton>
+                <Button variant="ghost" size="xs" onClick={() => changePath(null)}>
+                  Clear
+                </Button>
+              </>
+            )}
+          </Inline>
         </PanelHeader>
         <PanelBody className="@container">
-          <div className="grid items-center gap-4 @4xl:grid-cols-[minmax(0,1fr)_auto]">
-            <Stack gap={2}>
-              <BuildPath aria-label="Build path">
-                {view.stages.map((stage) => (
-                  <BuildPathStep
-                    key={stage.column}
-                    label={stage.title}
-                    meta={stageCost.get(stage.column) ? count(stageCost.get(stage.column) ?? 0) : undefined}
-                  >
-                    {path
-                      .filter((key) => parseKey(key).column === stage.column)
-                      .map((key) => {
-                        const { itemId } = parseKey(key);
-                        return (
-                          <BuildPathItem
-                            key={key}
-                            media={<ItemImage itemId={itemId} className="size-8" />}
-                            aria-label={`Remove ${nameOf.get(itemId) ?? "item"} from ${stage.title}`}
-                            onClick={() => toggle(key)}
-                          />
-                        );
-                      })}
-                  </BuildPathStep>
-                ))}
-              </BuildPath>
-              {/* The row keeps its height without suggestions (two lines where the two wrap), so the panel does not jump when
-                  the build fills up. */}
-              {view.stages.length > 1 && (
-                <Inline gap={2} className="min-h-18 @md:min-h-8">
-                  {suggestions.map((suggestion) => (
-                    <Button
-                      key={suggestion.label}
-                      variant="subtle"
-                      size="sm"
-                      aria-label={`${suggestion.label}: ${suggestion.path.map((c) => nameOf.get(c.itemId) ?? "Item").join(", ")}`}
-                      onClick={() =>
-                        changePath((prev) => [
-                          ...prev,
-                          ...suggestion.path.filter((c) => !prev.includes(c.key)).map((c) => c.key),
-                        ])
-                      }
-                    >
-                      {suggestion.label}
-                      {suggestion.path.map((choice) => (
-                        <ItemImage key={choice.key} itemId={choice.itemId} className="size-5" />
-                      ))}
-                    </Button>
-                  ))}
-                </Inline>
-              )}
-            </Stack>
+          <Stack gap={3}>
             {/* While another build loads, its numbers are not known yet: the old ones would read as the new build's. */}
             <StatGroup
               variant="plain"
               size="xs"
               aria-busy={switching || undefined}
-              className="grid-cols-2 gap-x-6 @md:grid-cols-4 @4xl:grid-cols-2"
+              className="grid-cols-2 gap-x-6 @md:grid-cols-4"
             >
               <Stat
                 label="Win rate"
@@ -532,11 +667,77 @@ export function BuildFlowExplorer({
                 }
               />
             </StatGroup>
-          </div>
+            <BuildBoard aria-label="Build by stage">
+              {view.stages.map((stage, index) => {
+                const held = path.filter((key) => parseKey(key).column === stage.column);
+                const soldHere = path.filter((key) => sellOf.get(key) === stage.column);
+                return (
+                  <BuildSlot
+                    key={stage.column}
+                    label={stage.title}
+                    meta={stageCost.get(stage.column) ? count(stageCost.get(stage.column) ?? 0) : undefined}
+                    footer={
+                      budgets ? (
+                        <BuildBudget
+                          spent={budgets[index]?.spent ?? 0}
+                          available={budgets[index]?.available ?? 0}
+                          format={compactSouls}
+                        />
+                      ) : undefined
+                    }
+                  >
+                    {held.map((key) => {
+                      const { itemId } = parseKey(key);
+                      const name = nameOf.get(itemId) ?? "Item";
+                      const sale = salesOf.get(itemId);
+                      const sellColumn = sellOf.get(key);
+                      return (
+                        <BuildSlotItem
+                          key={key}
+                          media={<ItemImage itemId={itemId} className="size-8" />}
+                          name={<ItemName itemId={itemId} />}
+                          meta={
+                            sellColumn != null
+                              ? `${count(costOf.get(itemId) ?? 0)} · sold ${stageLabel(sellColumn, isStreetBrawl)}`
+                              : saleLine(costOf.get(itemId) ?? 0, sale, isComponent.has(itemId))
+                          }
+                          actions={
+                            <ItemPlan
+                              name={name}
+                              stages={view.stages.filter((s) => s.column > stage.column)}
+                              isStreetBrawl={isStreetBrawl}
+                              sellColumn={sellColumn ?? null}
+                              onSell={(column) => planSale(key, column)}
+                              onRemove={() => {
+                                planSale(key, null);
+                                toggle(key);
+                              }}
+                            />
+                          }
+                        />
+                      );
+                    })}
+                    {soldHere.map((key) => {
+                      const { itemId } = parseKey(key);
+                      return (
+                        <BuildSlotItem
+                          key={`${key}:sold`}
+                          state="sold"
+                          media={<ItemImage itemId={itemId} className="size-8" />}
+                          name={<ItemName itemId={itemId} />}
+                          meta={`+${count((costOf.get(itemId) ?? 0) * SELL_REFUND)} back`}
+                        />
+                      );
+                    })}
+                  </BuildSlot>
+                );
+              })}
+            </BuildBoard>
+          </Stack>
         </PanelBody>
       </Panel>
 
-      <FilterBar variant="toolbar" title="Items by stage" aria-label="Build flow controls">
+      <FilterBar variant="toolbar" title="Add items" aria-label="Item list controls">
         <Field label="Sort" orientation="horizontal">
           <Segmented value={sortBy} onValueChange={setSortBy} width="hug">
             {SORT_OPTIONS.map((option) => (

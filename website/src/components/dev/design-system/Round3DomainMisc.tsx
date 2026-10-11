@@ -13,9 +13,10 @@ import {
   BuildChoice,
   BuildChoiceHeader,
   BuildChoiceList,
-  BuildPath,
-  BuildPathItem,
-  BuildPathStep,
+  BuildBoard,
+  BuildBudget,
+  BuildSlot,
+  BuildSlotItem,
   BuildStage,
 } from "~/components/domain/graph/BuildFlow";
 import { GraphNodeCard } from "~/components/domain/graph/GraphNodeCard";
@@ -53,19 +54,40 @@ function BuildFlowExample() {
     setPicked((prev) => (prev.includes(itemId) ? prev.filter((id) => id !== itemId) : [...prev, itemId]));
   return (
     <div className="flex w-full max-w-xl flex-col gap-4">
-      <BuildPath aria-label="Build path">
-        <BuildPathStep label="0–9m" meta="800">
+      <BuildBoard aria-label="Build by stage" className="@md:grid-cols-2 @4xl:grid-cols-2">
+        <BuildSlot
+          label="0–9m"
+          meta="800"
+          footer={
+            <BuildBudget spent={picked.length * 800} available={6700} format={(n) => `${(n / 1000).toFixed(1)}k`} />
+          }
+        >
           {picked.map((itemId) => (
-            <BuildPathItem
+            <BuildSlotItem
               key={itemId}
               media={<ItemImage itemId={itemId} className="size-8" />}
-              aria-label="Remove item"
-              onClick={() => toggle(itemId)}
+              name={<ItemName itemId={itemId} />}
+              meta="800 · sold 12% ~21:30"
+              actions={
+                <Button variant="ghost" size="xs" onClick={() => toggle(itemId)}>
+                  Remove
+                </Button>
+              }
             />
           ))}
-        </BuildPathStep>
-        <BuildPathStep label="9–20m" />
-      </BuildPath>
+        </BuildSlot>
+        <BuildSlot
+          label="9–20m"
+          footer={<BuildBudget spent={24000} available={20500} format={(n) => `${(n / 1000).toFixed(1)}k`} />}
+        >
+          <BuildSlotItem
+            state="sold"
+            media={<ItemImage itemId={BUILD_CHOICES[1].itemId} className="size-8" />}
+            name={<ItemName itemId={BUILD_CHOICES[1].itemId} />}
+            meta="+400 back"
+          />
+        </BuildSlot>
+      </BuildBoard>
       <div className="grid grid-cols-2 gap-4">
         <BuildStage title="0–9m" meta="100% of games">
           <BuildChoiceHeader start="Item · bought" end="Win rate" />
@@ -260,9 +282,9 @@ export function Round3DomainMisc() {
       <Specimen
         name="BuildFlow"
         source="domain/graph/BuildFlow"
-        note="A build read stage by stage. BuildStage is one stage (title, a meta line, its choices). BuildChoiceList holds BuildChoice toggle rows: the item, a bar and figure for how often it is bought, the win rate with a signed bar and its interval against the build's own; selected adds a check and a primary frame, the pointer or keyboard shows a plus. relation marks rows against the choice pointed at in a neighbouring stage: linked rows swap their bar for the link figure, unlinked ones fade. BuildPath + BuildPathStep (Any item when empty) + BuildPathItem (press to remove) show the build so far."
+        note="A build read stage by stage. BuildStage is one stage (title, a meta line, its choices). BuildChoiceList holds BuildChoice toggle rows: the item, a bar and figure for how often it is bought, the win rate with a signed bar and its interval against the build's own; selected adds a check and a primary frame, the pointer or keyboard shows a plus. relation marks rows against the choice pointed at in a neighbouring stage: linked rows swap their bar for the link figure, unlinked ones fade. BuildBoard holds one BuildSlot per stage (label, meta, footer; Empty without items) of BuildSlotItem rows (media, name, meta, actions; state held or sold, struck through), and a BuildBudget footer: spent against earned souls, in the loss color with a warning mark once over."
       >
-        <Variants label="press a row to add or remove it · point at a 0–9m row: 9–20m rows link or fade · press the art in the path to remove">
+        <Variants label="press a row to add or remove it · point at a 0–9m row: 9–20m rows link or fade · Remove in a slot · budget under and over · a sold item">
           <BuildFlowExample />
         </Variants>
       </Specimen>

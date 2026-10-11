@@ -20,8 +20,6 @@ const STAGE_LABELS = ["0–9m", "9–20m", "20–30m", "30m+"] as const;
 // The plot ends here: few games run longer, and the curve's last points come from those few.
 const END_S = 2700;
 const TICKS = [0, 300, 600, 900, 1200, 1500, 1800, 2100, 2400, 2700];
-// An item most of its buyers sell gets a sold mark at their average sell time.
-const SOLD_BY_MOST = 0.5;
 
 export interface EconomyItem {
   key: string;
@@ -31,6 +29,8 @@ export interface EconomyItem {
   cost: number;
   /** Its buyers' average net worth when they bought it in that stage. */
   netWorthAtBuy: number | null;
+  /** The stage the build sells it in, if it does. */
+  sellColumn: number | null;
 }
 
 interface BuildEconomyProps {
@@ -50,16 +50,69 @@ interface Placed extends EconomyItem {
   boughtAt: number | null;
   soldShare: number | null;
   avgSellAt: number | null;
-  /** Set when most buyers sell it: the sold mark's place. */
+  /** Set when the build sells it: the sold mark's place. */
   sold: { at: number; souls: number } | null;
 }
 
-const clock = (s: number) => `${Math.floor(s / 60)}:${String(Math.round(s) % 60).padStart(2, "0")}`;
-const compact = (n: number) => (n >= 1000 ? `${(n / 1000).toFixed(n >= 10000 ? 0 : 1)}k` : String(Math.round(n)));
+export interface SoulCurveFilters {
+  heroId: number | null;
+  gameMode?: GameMode;
+  matchMode?: MatchMode;
+  minRankId?: number;
+  maxRankId?: number;
+  minUnixTimestamp?: number;
+  maxUnixTimestamp?: number;
+}
+
+type CurvePoint = { t: number; souls: number };
+
+/** The hero's average net worth over the game (absolute time), from 0 at the start; one query for every reader. */
+export function useSoulCurve(filters: SoulCurveFilters) {
+  const curve = useQuery(
+    playerPerformanceCurveQueryOptions({
+      heroIds: filters.heroId != null ? String(filters.heroId) : undefined,
+      gameMode: filters.gameMode,
+      matchMode: filters.matchMode,
+      minAverageBadge: filters.minRankId,
+      maxAverageBadge: filters.maxRankId,
+      minUnixTimestamp: filters.minUnixTimestamp,
+      maxUnixTimestamp: filters.maxUnixTimestamp,
+      resolution: 0,
+    }),
+  );
+  const points = useMemo((): CurvePoint[] | null => {
+    if (!curve.data || curve.data.length === 0) return null;
+    return [
+      { t: 0, souls: 0 },
+      ...curve.data.map((p) => ({ t: p.game_time, souls: p.net_worth_avg })).sort((a, b) => a.t - b.t),
+    ];
+  }, [curve.data]);
+  return { ...curve, points };
+}
+
+/** The average net worth at `t` seconds, read between the curve's points. */
+export function soulsAt(points: CurvePoint[], t: number): number {
+  const i = points.findIndex((p) => p.t >= t);
+  if (i < 0) return points[points.length - 1].souls;
+  if (i === 0) return points[0].souls;
+  const a = points[i - 1];
+  const b = points[i];
+  return a.souls + ((b.souls - a.souls) * (t - a.t)) / (b.t - a.t);
+}
+
+/** Souls in a short form: "6.7k", "38k". */
+export const compactSouls = (n: number) =>
+  n >= 1000 ? `${(n / 1000).toFixed(n >= 10000 ? 0 : 1)}k` : String(Math.round(n));
+
+/** A game time in seconds as "12:05". */
+export const gameClock = (s: number) => `${Math.floor(s / 60)}:${String(Math.round(s) % 60).padStart(2, "0")}`;
+
+const clock = gameClock;
+const compact = compactSouls;
 
 /**
  * The build on the hero's soul curve: the average net worth over the game, each item where the curve reaches the net
- * worth its buyers had when they bought it, and a sold mark where most buyers sell it again. Beside it each item's
+ * worth its buyers had when they bought it, and a sold mark where the build sells it. Beside it each item's
  * price, that net worth and time, and how often or when it is sold.
  */
 export function BuildEconomy({
@@ -82,7 +135,15 @@ export function BuildEconomy({
     minUnixTimestamp,
     maxUnixTimestamp,
   };
-  const curve = useQuery(playerPerformanceCurveQueryOptions({ ...filters, resolution: 0 }));
+  const curve = useSoulCurve({
+    heroId,
+    gameMode,
+    matchMode,
+    minRankId,
+    maxRankId,
+    minUnixTimestamp,
+    maxUnixTimestamp,
+  });
   const stats = useQuery(itemStatsQueryOptions(filters));
   const { data: upgrades } = useQuery(itemUpgradesQueryOptions);
   // Items another item is built from: their sales count the purchases merged into that upgrade as well.
@@ -97,19 +158,9 @@ export function BuildEconomy({
   );
 
   const plot = useMemo(() => {
-    if (!curve.data || curve.data.length === 0) return null;
-    const points = [
-      { t: 0, souls: 0 },
-      ...curve.data.map((p) => ({ t: p.game_time, souls: p.net_worth_avg })).sort((a, b) => a.t - b.t),
-    ];
-    const soulsAt = (t: number) => {
-      const i = points.findIndex((p) => p.t >= t);
-      if (i < 0) return points[points.length - 1].souls;
-      if (i === 0) return points[0].souls;
-      const a = points[i - 1];
-      const b = points[i];
-      return a.souls + ((b.souls - a.souls) * (t - a.t)) / (b.t - a.t);
-    };
+    const points = curve.points;
+    if (!points) return null;
+    const at = (t: number) => soulsAt(points, t);
     // The curve rises, so the time a net worth is reached is read back off it.
     const timeOf = (souls: number) => {
       const i = points.findIndex((p) => p.souls >= souls);
@@ -138,27 +189,27 @@ export function BuildEconomy({
           byNetWorth != null && byNetWorth >= from && byNetWorth <= to
             ? byNetWorth
             : Math.min(Math.max(avgBuyAt ?? (from + to) / 2, from), to);
-        const netWorth = soulsAt(boughtAt);
-        // A component's "sales" are mostly upgrades into the next item, not sales: it gets no sold mark.
-        const sells =
-          !isComponent.has(item.itemId) &&
-          soldShare != null &&
-          soldShare >= SOLD_BY_MOST &&
-          avgSellAt != null &&
-          avgSellAt <= END_S;
+        const netWorth = at(boughtAt);
+        // Sold in the stage the build sells it in, at its buyers' average sell time if that falls in the stage.
+        let soldAt: number | null = null;
+        if (item.sellColumn != null) {
+          const sellFrom = STAGE_STARTS[item.sellColumn] ?? END_S;
+          const sellTo = STAGE_STARTS[item.sellColumn + 1] ?? END_S;
+          soldAt = Math.min(Math.max(avgSellAt ?? (sellFrom + sellTo) / 2, sellFrom), sellTo);
+        }
         return {
           ...item,
           netWorthAtBuy: netWorth,
           boughtAt,
           soldShare,
           avgSellAt,
-          sold: sells && avgSellAt != null ? { at: avgSellAt, souls: soulsAt(avgSellAt) } : null,
+          sold: soldAt != null ? { at: soldAt, souls: at(soldAt) } : null,
         };
       });
     const series = points.filter((p) => p.t <= END_S);
-    if (series.at(-1)?.t !== END_S) series.push({ t: END_S, souls: soulsAt(END_S) });
+    if (series.at(-1)?.t !== END_S) series.push({ t: END_S, souls: at(END_S) });
     return { series, placed };
-  }, [curve.data, stats.data, items, isComponent]);
+  }, [curve.points, stats.data, items]);
 
   // What the whole build costs, against the net worth when its last item is bought.
   const last = plot?.placed.reduce<Placed | null>(
@@ -259,7 +310,7 @@ export function BuildEconomy({
                     Bought
                   </ChartLegendItem>
                   <ChartLegendItem color={CHART_COLOR.negative} shape="ring">
-                    Sold by most
+                    Sold
                   </ChartLegendItem>
                 </ChartLegend>
               </>

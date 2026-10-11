@@ -170,11 +170,11 @@ export const ANALYTICS_VIEWS: { [S in AnalyticsSection]: Record<AnalyticsTab<S>,
       description: "When to buy each Deadlock item: win rate by purchase time, per hero and rank, from live matches.",
     },
     "build-flow": {
-      title: "Deadlock Item Build Flow & Build Orders",
-      heading: "Deadlock Item Build Flow",
-      summary: "The paths builds take from one purchase to the next.",
+      title: "Deadlock Build Designer: Item Builds & Build Orders",
+      heading: "Deadlock Build Designer",
+      summary: "Plan an item build stage by stage, with its win rate, cost and souls.",
       description:
-        "How Deadlock builds unfold: the items players buy next after each purchase, with win rates per path.",
+        "Design Deadlock item builds stage by stage: what players buy next, how each build wins, what it costs and when items are sold.",
     },
     "item-combos": {
       title: "Deadlock Item Combos & Synergies",

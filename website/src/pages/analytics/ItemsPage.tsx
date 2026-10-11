@@ -96,7 +96,7 @@ export function ItemsPage() {
             }
           }}
         />
-        {/* Build Flow and Item Combos do not take a purchase window; a filter there would silently do nothing. */}
+        {/* Build Designer and Item Combos do not take a purchase window; a filter there would silently do nothing. */}
         {(tab === "item-stats" || tab === "item-purchase-analysis") && (
           <Filter.TimeRange
             value={[minBoughtAtS ?? undefined, maxBoughtAtS ?? undefined]}
@@ -131,7 +131,7 @@ export function ItemsPage() {
             Purchase Analysis
           </ResponsiveTab>
           <ResponsiveTab value="build-flow" href={analyticsTabPath("items", "build-flow")}>
-            Build Flow
+            Build Designer
           </ResponsiveTab>
           <ResponsiveTab value="item-combos" href={analyticsTabPath("items", "item-combos")}>
             Item Combos
@@ -183,7 +183,7 @@ export function ItemsPage() {
           </Section>
         </TabsContent>
         <TabsContent value="build-flow">
-          <Section titleDisplay="hidden" title="Item Build Flow">
+          <Section titleDisplay="hidden" title="Build Designer">
             <ChunkErrorBoundary>
               <Suspense fallback={<LoadingState />}>
                 <BuildFlowExplorer
