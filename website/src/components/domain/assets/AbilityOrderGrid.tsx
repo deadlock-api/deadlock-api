@@ -53,7 +53,11 @@ export function AbilityOrderGrid({
   const editable = onValueChange !== undefined;
   const pointsOf = (abilityId: number) => steps.filter((step) => step.abilityId === abilityId).length;
   return (
-    <div data-slot="ability-order-grid" className={cn("@container min-w-0", className)} {...props}>
+    <div
+      data-slot="ability-order-grid"
+      className={cn("@container min-w-0", editable && "overflow-x-auto pb-1", className)}
+      {...props}
+    >
       <ol className={editable ? "hidden" : "sr-only"}>
         {steps.map((step, index) => (
           <li key={index}>
@@ -67,7 +71,8 @@ export function AbilityOrderGrid({
         role={editable ? "group" : undefined}
         aria-label={editable ? "Skill order" : undefined}
         className="grid items-center justify-start gap-1 @md:gap-1.5"
-        style={{ gridTemplateColumns: `auto repeat(${steps.length}, minmax(0, 2.5rem))` }}
+        // An editor's cells keep a 24px target (Law 18) and the grid scrolls sideways where they do not fit.
+        style={{ gridTemplateColumns: `auto repeat(${steps.length}, minmax(${editable ? "1.5rem" : "0"}, 2.5rem))` }}
       >
         {abilityIds.map((abilityId, slot) => (
           <div key={abilityId} className="contents">
