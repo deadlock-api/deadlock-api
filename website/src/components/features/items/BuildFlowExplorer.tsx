@@ -65,7 +65,6 @@ import { Separator } from "~/components/ui/separator";
 import { Skeleton } from "~/components/ui/skeleton";
 import { Inline, Stack } from "~/components/ui/stack";
 import { Stat, StatGroup } from "~/components/ui/stat";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import type { Dayjs } from "~/dayjs";
 import { useHeroById } from "~/hooks/useAssetById";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
@@ -513,11 +512,6 @@ export function BuildFlowExplorer({
   const [pointed, setPointed] = useState<string | null>(null);
   const [completing, setCompleting] = useState(false);
   const boardRef = useRef<HTMLOListElement>(null);
-  // The build tool open under the build: the item lists, the souls timeline or the skill order.
-  const [storedTool, setTool] = useQueryState(
-    "build_tool",
-    parseAsStringLiteral(["add", "souls", "skills"] as const).withDefault("add"),
-  );
   // The reader's skill order, ability ids by upgrade; without it the build takes its players' most common one.
   const [storedSkills, setSkills] = useQueryState("build_skills", parseAsArrayOf(parseAsInteger));
   const queryClient = useQueryClient();
@@ -968,11 +962,6 @@ export function BuildFlowExplorer({
       setCompleting(false);
     }
   };
-  // A tool the mode or the missing hero does not offer (Street Brawl has no souls timeline) opens the item lists.
-  const tool =
-    (storedTool === "souls" && isStreetBrawl) || (storedTool === "skills" && (heroId == null || isStreetBrawl))
-      ? "add"
-      : storedTool;
   // A build nobody played in these filters: its numbers are not zeros but missing.
   const noGames = summary.matches === 0;
   // A Street Brawl answer can have fewer rounds than the stage that was shown.
@@ -1355,226 +1344,211 @@ export function BuildFlowExplorer({
         </PanelBody>
       </Panel>
 
-      {/* The tools that change the build, one at a time under it: the item lists, the souls timeline (budget, sales,
-          flex slots) and the skill order. */}
-      <Tabs value={tool} onValueChange={(next) => void setTool(next as typeof tool)}>
-        <TabsList variant="line" aria-label="Build tools">
-          <TabsTrigger value="add">Add items</TabsTrigger>
-          {!isStreetBrawl && <TabsTrigger value="souls">Souls &amp; slots</TabsTrigger>}
-          {heroId != null && !isStreetBrawl && <TabsTrigger value="skills">Skill order</TabsTrigger>}
-        </TabsList>
-        <TabsContent value="add">
-          <Stack gap={4}>
-            <FilterBar variant="toolbar" title="Items by stage" aria-label="Item list controls">
-              <Field label="Sort" orientation="horizontal">
-                <Segmented value={sortBy} onValueChange={setSortBy} width="hug">
-                  {SORT_OPTIONS.map((option) => (
-                    <SegmentedItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SegmentedItem>
-                  ))}
-                </Segmented>
-              </Field>
-              <Field label="Show" orientation="horizontal">
-                <Segmented
-                  value={String(perColumn)}
-                  onValueChange={(v) => setPerColumn(Number(v) as (typeof ITEM_FLOW_PER_COLUMN_OPTIONS)[number])}
-                  width="hug"
-                >
-                  {ITEM_FLOW_PER_COLUMN_OPTIONS.map((n) => (
-                    <SegmentedItem key={n} value={String(n)}>
-                      {n}
-                    </SegmentedItem>
-                  ))}
-                </Segmented>
-              </Field>
-            </FilterBar>
+      {/* Under the build, all on one view: the item lists to add from, the souls timeline (budget, sales, flex
+          slots) and the skill order. */}
+      <Stack gap={4}>
+        <FilterBar variant="toolbar" title="Items by stage" aria-label="Item list controls">
+          <Field label="Sort" orientation="horizontal">
+            <Segmented value={sortBy} onValueChange={setSortBy} width="hug">
+              {SORT_OPTIONS.map((option) => (
+                <SegmentedItem key={option.value} value={option.value}>
+                  {option.label}
+                </SegmentedItem>
+              ))}
+            </Segmented>
+          </Field>
+          <Field label="Show" orientation="horizontal">
+            <Segmented
+              value={String(perColumn)}
+              onValueChange={(v) => setPerColumn(Number(v) as (typeof ITEM_FLOW_PER_COLUMN_OPTIONS)[number])}
+              width="hug"
+            >
+              {ITEM_FLOW_PER_COLUMN_OPTIONS.map((n) => (
+                <SegmentedItem key={n} value={String(n)}>
+                  {n}
+                </SegmentedItem>
+              ))}
+            </Segmented>
+          </Field>
+        </FilterBar>
 
-            <div className="relative">
-              {switching && (
-                <LoadingState
-                  label="build flow"
-                  className="pointer-events-none absolute inset-0 z-10 flex items-start justify-center pt-24"
-                />
-              )}
-              {noGames && !switching ? (
-                <EmptyState
-                  title="No games with this build"
-                  action={
-                    <Button variant="outline" size="sm" onClick={() => changePath((prev) => prev.slice(0, -1))}>
-                      Remove the last item
-                    </Button>
-                  }
-                />
-              ) : (
-                // A narrow container shows one stage at a time behind a switcher; a wide one shows them side by side.
-                <Stack gap={3} className="@container">
-                  <div className="@2xl:hidden">
-                    <Segmented
-                      aria-label="Stage"
-                      value={String(shownIndex)}
-                      onValueChange={(v) => setShownStage(Number(v))}
-                    >
-                      {view.stages.map((stage, index) => (
-                        <SegmentedItem key={stage.column} value={String(index)}>
-                          {isStreetBrawl ? `R${stage.column + 1}` : stage.title}
-                        </SegmentedItem>
-                      ))}
-                    </Segmented>
-                  </div>
-                  <Grid columns={{ base: 1, lg: 2, xl: 4 }} gap={4}>
-                    {view.stages.map((stage, index) => (
-                      <BuildStage
-                        key={stage.column}
-                        className={index === shownIndex ? undefined : "hidden @2xl:flex"}
-                        title={stage.title}
-                        meta={
-                          // A stage most games never reach (30m+) shows long games only, whose win rates run high.
-                          stage.reached < LATE_REACH ? (
-                            <span className="inline-flex items-center gap-1 text-warning">
-                              <Hourglass className="size-3" aria-hidden="true" />
-                              {percent(stage.reached, 0)} of games
-                            </span>
-                          ) : (
-                            `${percent(stage.reached, 0)} of games`
-                          )
-                        }
-                        aria-busy={switching || undefined}
-                      >
-                        {stage.choices.length === 0 ? (
-                          <EmptyState variant="inline" title="No purchases" />
-                        ) : (
-                          <>
-                            <BuildChoiceHeader start="Item · bought · cost" end="Win rate" />
-                            <BuildChoiceList aria-label={`Items bought at ${stage.title}`}>
-                              {stage.choices.map((choice) => {
-                                const near = linked != null && Math.abs(linked.column - choice.column) === 1;
-                                // Only a link a good part of the pointed-at item's buyers took stands out; the rest fade.
-                                const found = near ? linked.links.get(choice.key) : undefined;
-                                const link = found && found.share >= LINK_MIN_SHARE ? found : undefined;
-                                const after = linked != null && choice.column > linked.column;
-                                return (
-                                  <BuildChoice
-                                    key={choice.key}
-                                    media={<ItemImage itemId={choice.itemId} className="size-8" />}
-                                    name={
-                                      <ItemName itemId={choice.itemId} className="line-clamp-2 whitespace-normal" />
-                                    }
-                                    share={choice.pickShare}
-                                    meta={percent(choice.pickRate)}
-                                    price={
-                                      costOf.get(choice.itemId) ? (
-                                        // Past what the stage has left once the build's spending is paid, it reads as a loss.
-                                        budgets &&
-                                        (costOf.get(choice.itemId) ?? 0) >
-                                          budgets[index].available - budgets[index].spent ? (
-                                          <span className="inline-flex items-center gap-0.5 text-negative">
-                                            <TriangleAlert className="size-3" aria-label="Over the stage's souls" />
-                                            {count(costOf.get(choice.itemId) ?? 0)}
-                                          </span>
-                                        ) : (
-                                          count(costOf.get(choice.itemId) ?? 0)
-                                        )
-                                      ) : undefined
-                                    }
-                                    link={
-                                      link && {
-                                        // Of the pointed-at item's buyers: bought this one in the stage after it, or before.
-                                        label: `${percent(link.share)} ${after ? "next" : "before"}`,
-                                        share: link.share,
-                                      }
-                                    }
-                                    value={percent(choice.winRate)}
-                                    tone={choice.tone}
-                                    change={{
-                                      value: (choice.winRate - winRate) * 100,
-                                      scale: CHANGE_SCALE,
-                                      interval: [
-                                        (choice.interval[0] - winRate) * 100,
-                                        (choice.interval[1] - winRate) * 100,
-                                      ],
-                                    }}
-                                    selected={choice.selected}
-                                    aria-label={`${nameOf.get(choice.itemId) ?? "Item"}: bought ${percent(choice.pickRate)}, win rate ${percent(choice.winRate)}`}
-                                    relation={!near ? "none" : link ? "linked" : "unlinked"}
-                                    onClick={() => {
-                                      // On a narrow screen a pick in the shown stage moves on to the next one, the way a
-                                      // build is read; a wide one shows every stage and ignores it.
-                                      if (!choice.selected && index === shownIndex && index + 1 < view.stages.length) {
-                                        setShownStage(index + 1);
-                                      }
-                                      toggle(choice.key);
-                                      // Far down a list the build is out of sight: say where the item went.
-                                      const board = boardRef.current?.getBoundingClientRect();
-                                      if (
-                                        !choice.selected &&
-                                        board &&
-                                        (board.bottom < 0 || board.top > window.innerHeight)
-                                      ) {
-                                        toast(`${nameOf.get(choice.itemId) ?? "Item"} added to ${stage.title}`, {
-                                          duration: 2500,
-                                          action: { label: "Undo", onClick: () => toggle(choice.key) },
-                                        });
-                                      }
-                                    }}
-                                    onPointerEnter={() => startTransition(() => setPointed(choice.key))}
-                                    onPointerLeave={() => startTransition(() => setPointed(null))}
-                                    onFocus={() => startTransition(() => setPointed(choice.key))}
-                                    onBlur={() => startTransition(() => setPointed(null))}
-                                  />
-                                );
-                              })}
-                            </BuildChoiceList>
-                          </>
-                        )}
-                        {stage.candidates.length > 0 && <StagePicker stage={stage} onPick={toggle} />}
-                      </BuildStage>
-                    ))}
-                  </Grid>
-                </Stack>
-              )}
-            </div>
-          </Stack>
-        </TabsContent>
-        <TabsContent value="souls">
-          {!isStreetBrawl && economyItems.length > 0 && (
-            <BuildEconomy
-              title={path.length > 0 ? "Souls for your build" : "Souls for the most common build"}
-              items={economyItems}
-              skills={skillOrder.flatMap((abilityId, i) => {
-                // The reader's order takes its upgrades at the times the common one's are taken, step by step.
-                const at = skillPath?.steps[i]?.at;
-                return at != null ? [{ level: i + 1, abilityId, at }] : [];
-              })}
-              flexMinutes={flexMinutes}
-              onFlexMinutesChange={(minutes) => startTransition(() => void setFlex(minutes, AT_ONCE))}
-              heroId={heroId}
-              gameMode={gameMode}
-              matchMode={matchMode}
-              minRankId={minRankId}
-              maxRankId={maxRankId}
-              minUnixTimestamp={minUnixTimestamp ?? 0}
-              maxUnixTimestamp={maxUnixTimestamp}
+        <div className="relative">
+          {switching && (
+            <LoadingState
+              label="build flow"
+              className="pointer-events-none absolute inset-0 z-10 flex items-start justify-center pt-24"
             />
           )}
-        </TabsContent>
-        <TabsContent value="skills">
-          {heroId != null && !isStreetBrawl && (
-            // The build's skill order, starting from the most common one of its players.
-            <BuildSkillOrder
-              heroId={heroId}
-              slotAbilities={slotAbilities}
-              order={skillOrder}
-              common={skillPath?.steps ?? []}
-              scope={path.length > 0 ? "most common with these items" : "most common"}
-              commonStats={skillPath ? { winRate: skillPath.winRate, matches: skillPath.matches } : null}
-              request={skillRequest}
-              loading={skillQuery.isPending}
-              onValueChange={(next) => startTransition(() => void setSkills(next, AT_ONCE))}
+          {noGames && !switching ? (
+            <EmptyState
+              title="No games with this build"
+              action={
+                <Button variant="outline" size="sm" onClick={() => changePath((prev) => prev.slice(0, -1))}>
+                  Remove the last item
+                </Button>
+              }
             />
+          ) : (
+            // A narrow container shows one stage at a time behind a switcher; a wide one shows them side by side.
+            <Stack gap={3} className="@container">
+              <div className="@2xl:hidden">
+                <Segmented
+                  aria-label="Stage"
+                  value={String(shownIndex)}
+                  onValueChange={(v) => setShownStage(Number(v))}
+                >
+                  {view.stages.map((stage, index) => (
+                    <SegmentedItem key={stage.column} value={String(index)}>
+                      {isStreetBrawl ? `R${stage.column + 1}` : stage.title}
+                    </SegmentedItem>
+                  ))}
+                </Segmented>
+              </div>
+              <Grid columns={{ base: 1, lg: 2, xl: 4 }} gap={4}>
+                {view.stages.map((stage, index) => (
+                  <BuildStage
+                    key={stage.column}
+                    className={index === shownIndex ? undefined : "hidden @2xl:flex"}
+                    title={stage.title}
+                    meta={
+                      // A stage most games never reach (30m+) shows long games only, whose win rates run high.
+                      stage.reached < LATE_REACH ? (
+                        <span className="inline-flex items-center gap-1 text-warning">
+                          <Hourglass className="size-3" aria-hidden="true" />
+                          {percent(stage.reached, 0)} of games
+                        </span>
+                      ) : (
+                        `${percent(stage.reached, 0)} of games`
+                      )
+                    }
+                    aria-busy={switching || undefined}
+                  >
+                    {stage.choices.length === 0 ? (
+                      <EmptyState variant="inline" title="No purchases" />
+                    ) : (
+                      <>
+                        <BuildChoiceHeader start="Item · bought · cost" end="Win rate" />
+                        <BuildChoiceList aria-label={`Items bought at ${stage.title}`}>
+                          {stage.choices.map((choice) => {
+                            const near = linked != null && Math.abs(linked.column - choice.column) === 1;
+                            // Only a link a good part of the pointed-at item's buyers took stands out; the rest fade.
+                            const found = near ? linked.links.get(choice.key) : undefined;
+                            const link = found && found.share >= LINK_MIN_SHARE ? found : undefined;
+                            const after = linked != null && choice.column > linked.column;
+                            return (
+                              <BuildChoice
+                                key={choice.key}
+                                media={<ItemImage itemId={choice.itemId} className="size-8" />}
+                                name={<ItemName itemId={choice.itemId} className="line-clamp-2 whitespace-normal" />}
+                                share={choice.pickShare}
+                                meta={percent(choice.pickRate)}
+                                price={
+                                  costOf.get(choice.itemId) ? (
+                                    // Past what the stage has left once the build's spending is paid, it reads as a loss.
+                                    budgets &&
+                                    (costOf.get(choice.itemId) ?? 0) >
+                                      budgets[index].available - budgets[index].spent ? (
+                                      <span className="inline-flex items-center gap-0.5 text-negative">
+                                        <TriangleAlert className="size-3" aria-label="Over the stage's souls" />
+                                        {count(costOf.get(choice.itemId) ?? 0)}
+                                      </span>
+                                    ) : (
+                                      count(costOf.get(choice.itemId) ?? 0)
+                                    )
+                                  ) : undefined
+                                }
+                                link={
+                                  link && {
+                                    // Of the pointed-at item's buyers: bought this one in the stage after it, or before.
+                                    label: `${percent(link.share)} ${after ? "next" : "before"}`,
+                                    share: link.share,
+                                  }
+                                }
+                                value={percent(choice.winRate)}
+                                tone={choice.tone}
+                                change={{
+                                  value: (choice.winRate - winRate) * 100,
+                                  scale: CHANGE_SCALE,
+                                  interval: [
+                                    (choice.interval[0] - winRate) * 100,
+                                    (choice.interval[1] - winRate) * 100,
+                                  ],
+                                }}
+                                selected={choice.selected}
+                                aria-label={`${nameOf.get(choice.itemId) ?? "Item"}: bought ${percent(choice.pickRate)}, win rate ${percent(choice.winRate)}`}
+                                relation={!near ? "none" : link ? "linked" : "unlinked"}
+                                onClick={() => {
+                                  // On a narrow screen a pick in the shown stage moves on to the next one, the way a
+                                  // build is read; a wide one shows every stage and ignores it.
+                                  if (!choice.selected && index === shownIndex && index + 1 < view.stages.length) {
+                                    setShownStage(index + 1);
+                                  }
+                                  toggle(choice.key);
+                                  // Far down a list the build is out of sight: say where the item went.
+                                  const board = boardRef.current?.getBoundingClientRect();
+                                  if (
+                                    !choice.selected &&
+                                    board &&
+                                    (board.bottom < 0 || board.top > window.innerHeight)
+                                  ) {
+                                    toast(`${nameOf.get(choice.itemId) ?? "Item"} added to ${stage.title}`, {
+                                      duration: 2500,
+                                      action: { label: "Undo", onClick: () => toggle(choice.key) },
+                                    });
+                                  }
+                                }}
+                                onPointerEnter={() => startTransition(() => setPointed(choice.key))}
+                                onPointerLeave={() => startTransition(() => setPointed(null))}
+                                onFocus={() => startTransition(() => setPointed(choice.key))}
+                                onBlur={() => startTransition(() => setPointed(null))}
+                              />
+                            );
+                          })}
+                        </BuildChoiceList>
+                      </>
+                    )}
+                    {stage.candidates.length > 0 && <StagePicker stage={stage} onPick={toggle} />}
+                  </BuildStage>
+                ))}
+              </Grid>
+            </Stack>
           )}
-        </TabsContent>
-      </Tabs>
+        </div>
+      </Stack>
+      {!isStreetBrawl && economyItems.length > 0 && (
+        <BuildEconomy
+          title={path.length > 0 ? "Souls for your build" : "Souls for the most common build"}
+          items={economyItems}
+          skills={skillOrder.flatMap((abilityId, i) => {
+            // The reader's order takes its upgrades at the times the common one's are taken, step by step.
+            const at = skillPath?.steps[i]?.at;
+            return at != null ? [{ level: i + 1, abilityId, at }] : [];
+          })}
+          flexMinutes={flexMinutes}
+          onFlexMinutesChange={(minutes) => startTransition(() => void setFlex(minutes, AT_ONCE))}
+          heroId={heroId}
+          gameMode={gameMode}
+          matchMode={matchMode}
+          minRankId={minRankId}
+          maxRankId={maxRankId}
+          minUnixTimestamp={minUnixTimestamp ?? 0}
+          maxUnixTimestamp={maxUnixTimestamp}
+        />
+      )}
+      {heroId != null && !isStreetBrawl && (
+        // The build's skill order, starting from the most common one of its players.
+        <BuildSkillOrder
+          heroId={heroId}
+          slotAbilities={slotAbilities}
+          order={skillOrder}
+          common={skillPath?.steps ?? []}
+          scope={path.length > 0 ? "most common with these items" : "most common"}
+          commonStats={skillPath ? { winRate: skillPath.winRate, matches: skillPath.matches } : null}
+          request={skillRequest}
+          loading={skillQuery.isPending}
+          onValueChange={(next) => startTransition(() => void setSkills(next, AT_ONCE))}
+        />
+      )}
     </Stack>
   );
 }
