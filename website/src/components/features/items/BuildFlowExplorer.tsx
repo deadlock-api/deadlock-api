@@ -186,7 +186,7 @@ interface Stage {
   reached: number;
   choices: Choice[];
   /** Every item of the stage that is not in the build, for the full picker. */
-  candidates: { id: number; winRate: number; pickRate: number }[];
+  candidates: { id: number; winRate: number; pickRate: number; matches: number }[];
 }
 
 interface Link {
@@ -238,7 +238,14 @@ function StagePickerBody({
                       c ? `${item.name}: ${percent(c.winRate)} win rate, ${percent(c.pickRate)} bought` : undefined
                     }
                   >
-                    {c && <span className={TONE_TEXT[toneOf(c.winRate, 0.5)]}>{percent(c.winRate)} WR</span>}
+                    {/* Colored only from a sample that can carry it: a rate from a dozen games stays quiet. */}
+                    {c && (
+                      <span
+                        className={c.matches >= FEW_GAMES ? TONE_TEXT[toneOf(c.winRate, 0.5)] : "text-muted-foreground"}
+                      >
+                        {percent(c.winRate)} WR
+                      </span>
+                    )}
                   </ItemGridTile>
                 );
               })}
@@ -608,7 +615,12 @@ export function BuildFlowExplorer({
     const games = Math.max(1, unbuilt.summary.matches);
     for (const node of [...unbuilt.nodes].sort((a, b) => b.matches - a.matches)) {
       const list = byColumn.get(node.column) ?? [];
-      list.push({ id: node.item_id, winRate: node.wins / Math.max(1, node.matches), pickRate: node.matches / games });
+      list.push({
+        id: node.item_id,
+        winRate: node.wins / Math.max(1, node.matches),
+        pickRate: node.matches / games,
+        matches: node.matches,
+      });
       byColumn.set(node.column, list);
     }
     return byColumn;
@@ -1669,7 +1681,7 @@ function buildView(
       candidates: all
         .filter((c) => !c.selected)
         .sort((a, b) => b.matches - a.matches)
-        .map((c) => ({ id: c.itemId, winRate: c.winRate, pickRate: c.pickRate })),
+        .map((c) => ({ id: c.itemId, winRate: c.winRate, pickRate: c.pickRate, matches: c.matches })),
     });
   }
 
