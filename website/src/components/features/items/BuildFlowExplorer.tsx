@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { Hourglass, ListPlus, Route } from "lucide-react";
+import { Hourglass, Link, ListPlus, Route } from "lucide-react";
 import {
   parseAsArrayOf,
   parseAsNumberLiteral,
@@ -10,6 +10,7 @@ import {
 } from "nuqs";
 import { memo, startTransition, useMemo, useState } from "react";
 
+import { HeroName } from "~/components/domain/assets/HeroName";
 import { ItemImage } from "~/components/domain/assets/ItemImage";
 import { ItemName } from "~/components/domain/assets/ItemName";
 import {
@@ -35,6 +36,7 @@ import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { Button } from "~/components/ui/button";
+import { CopyButton } from "~/components/ui/copy-button";
 import { Delta } from "~/components/ui/delta";
 import { Field } from "~/components/ui/field";
 import { Grid } from "~/components/ui/grid";
@@ -369,11 +371,21 @@ export function BuildFlowExplorer({
   return (
     <Stack gap={4}>
       <Panel>
-        <PanelHeader title="Your build" icon={Route} size="sm">
+        {/* Named for its hero, so a build over every hero's games does not pass for one hero's. */}
+        <PanelHeader
+          title={heroId != null ? <>Your {<HeroName heroId={heroId} />} build</> : "Your build · all heroes"}
+          icon={Route}
+          size="sm"
+        >
           {path.length > 0 && (
-            <Button variant="ghost" size="xs" onClick={() => changePath(null)}>
-              Clear
-            </Button>
+            <Inline gap={1}>
+              <CopyButton variant="ghost" size="xs" icon={Link} text={() => window.location.href}>
+                Copy link
+              </CopyButton>
+              <Button variant="ghost" size="xs" onClick={() => changePath(null)}>
+                Clear
+              </Button>
+            </Inline>
           )}
         </PanelHeader>
         <PanelBody className="@container">
