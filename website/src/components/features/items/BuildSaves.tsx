@@ -100,6 +100,7 @@ export function SavedBuildsMenu({ onOpen }: { onOpen: (build: SavedBuild) => voi
               <OptionRow
                 className="flex-1"
                 aria-label={`Open ${build.name}`}
+                trailing={<span className="text-xs text-muted-foreground tabular-nums">{build.path.length} items</span>}
                 leading={
                   build.heroId != null ? (
                     <HeroImage heroId={build.heroId} shape="circle" title="" className="size-6 shrink-0" />
