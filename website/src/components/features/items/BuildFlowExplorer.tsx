@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { EllipsisVertical, Hourglass, Link, ListPlus, Plus, Route } from "lucide-react";
 import {
   parseAsArrayOf,
+  parseAsInteger,
   parseAsNumberLiteral,
   parseAsString,
   parseAsStringLiteral,
@@ -39,6 +40,7 @@ import {
   soulsAt,
   useSoulCurve,
 } from "~/components/features/items/BuildEconomy";
+import { SavedBuildsMenu, SaveBuildButton } from "~/components/features/items/BuildSaves";
 import { FilterBar } from "~/components/patterns/filter-bar/FilterBar";
 import { Panel, PanelBody, PanelHeader } from "~/components/patterns/panel/Panel";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
@@ -57,6 +59,7 @@ import { Skeleton } from "~/components/ui/skeleton";
 import { Inline, Stack } from "~/components/ui/stack";
 import { Stat, StatGroup } from "~/components/ui/stat";
 import type { Dayjs } from "~/dayjs";
+import { useHeroById } from "~/hooks/useAssetById";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import type { GameMode, MatchMode } from "~/lib/game-mode";
 import { TONE_TEXT, toneOf, type Tone } from "~/lib/tone";
@@ -352,6 +355,9 @@ export function BuildFlowExplorer({
   const [storedPath, setPath] = useQueryState("build_path", parseAsArrayOf(parseAsString).withDefault([]));
   // Planned sales: `${column}:${itemId}:${sellColumn}`, the stage a picked item is sold in.
   const [storedSells, setSells] = useQueryState("build_sell", parseAsArrayOf(parseAsString).withDefault([]));
+  // The page's hero filter, set when a saved build of another hero is opened.
+  const [, setHero] = useQueryState("hero", parseAsInteger);
+  const { hero } = useHeroById(heroId ?? -1);
   const [pointed, setPointed] = useState<string | null>(null);
   // The stage a narrow screen shows (index into the stages); a wide one shows every stage.
   const [shownStage, setShownStage] = useState(0);
@@ -369,19 +375,6 @@ export function BuildFlowExplorer({
   // transition (see ItemsPage).
   const changePath = (update: string[] | null | ((prev: string[]) => string[] | null)) =>
     startTransition(() => void setPath(update, AT_ONCE));
-  const toggle = (key: string) =>
-    changePath((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]));
-  // The stage each picked item is sold in; a plan for an item no longer picked, or for a stage not after its own, is
-  // dropped.
-  const sellOf = useMemo(() => {
-    const map = new Map<string, number>();
-    for (const entry of storedSells) {
-      const [column, itemId, sellColumn] = entry.split(":").map(Number);
-      const key = `${column}:${itemId}`;
-      if (pathSet.has(key) && sellColumn > column && sellColumn < columnCount) map.set(key, sellColumn);
-    }
-    return map;
-  }, [storedSells, pathSet, columnCount]);
   const planSale = (key: string, sellColumn: number | null) =>
     startTransition(
       () =>
@@ -393,6 +386,22 @@ export function BuildFlowExplorer({
           AT_ONCE,
         ),
     );
+  const toggle = (key: string) => {
+    // A removed item takes its sale plan with it, so picking it again starts without one.
+    if (pathSet.has(key)) planSale(key, null);
+    changePath((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]));
+  };
+  // The stage each picked item is sold in; a plan for an item no longer picked, or for a stage not after its own, is
+  // dropped.
+  const sellOf = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const entry of storedSells) {
+      const [column, itemId, sellColumn] = entry.split(":").map(Number);
+      const key = `${column}:${itemId}`;
+      if (pathSet.has(key) && sellColumn > column && sellColumn < columnCount) map.set(key, sellColumn);
+    }
+    return map;
+  }, [storedSells, pathSet, columnCount]);
 
   const { minUnixTimestamp, maxUnixTimestamp } = useNormalizedTimeRange(minDate, maxDate);
   const { data, isLoading, isFetching, isPlaceholderData, isError, refetch } = useQuery(
@@ -583,6 +592,23 @@ export function BuildFlowExplorer({
           size="sm"
         >
           <Inline gap={1}>
+            <SavedBuildsMenu
+              onOpen={(build) =>
+                startTransition(() => {
+                  if (build.heroId !== heroId) void setHero(build.heroId, AT_ONCE);
+                  void setPath(build.path.length > 0 ? build.path : null, AT_ONCE);
+                  void setSells(build.sells.length > 0 ? build.sells : null, AT_ONCE);
+                })
+              }
+            />
+            {path.length > 0 && (
+              <SaveBuildButton
+                defaultName={`${hero?.name ?? "My"} build`}
+                heroId={heroId}
+                path={path}
+                sells={[...sellOf].map(([key, column]) => `${key}:${column}`)}
+              />
+            )}
             {/* Whole builds to start from or complete the started one with; once one has nothing to add it goes. */}
             {suggestions.map((suggestion) => (
               <Button
@@ -608,7 +634,14 @@ export function BuildFlowExplorer({
                 <CopyButton variant="ghost" size="xs" icon={Link} text={() => window.location.href}>
                   Copy link
                 </CopyButton>
-                <Button variant="ghost" size="xs" onClick={() => changePath(null)}>
+                <Button
+                  variant="ghost"
+                  size="xs"
+                  onClick={() => {
+                    changePath(null);
+                    startTransition(() => void setSells(null, AT_ONCE));
+                  }}
+                >
                   Clear
                 </Button>
               </>
