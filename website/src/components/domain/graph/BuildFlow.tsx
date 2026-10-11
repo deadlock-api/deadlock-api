@@ -362,10 +362,16 @@ export function BuildSlotItem({
         <span data-slot="build-slot-item-name" className="truncate type-label @md:max-w-1/2 @md:shrink-0">
           {name}
         </span>
-        {/* One line, cut at the card's edge. A suggestion says so in words as well as by its dashed frame: it is not
-            part of the build until added. */}
+        {/* One line, cut at the card's edge (two for a suggestion). A suggestion says so in words as well as by its
+            dashed frame: it is not part of the build until added. */}
         {(meta || state === "suggested") && (
-          <span className="truncate type-caption text-muted-foreground tabular-nums">
+          <span
+            className={cn(
+              "type-caption text-muted-foreground tabular-nums",
+              // A suggestion's rate and games stay whole on two lines: it stands alone in its stage.
+              state === "suggested" ? "line-clamp-2" : "truncate",
+            )}
+          >
             {state === "suggested" && <span className="font-medium">Suggested{meta ? " · " : ""}</span>}
             {meta}
           </span>
