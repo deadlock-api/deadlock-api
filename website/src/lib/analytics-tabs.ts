@@ -172,7 +172,7 @@ export const ANALYTICS_VIEWS: { [S in AnalyticsSection]: Record<AnalyticsTab<S>,
     "build-flow": {
       title: "Deadlock Build Designer: Item Builds & Build Orders",
       heading: "Deadlock Build Designer",
-      summary: "Plan an item build stage by stage, with its win rate, cost and souls.",
+      summary: "Plan an item build and skill order stage by stage, with win rates, costs and souls.",
       description:
         "Design Deadlock item builds stage by stage: what players buy next, how each build wins, what it costs and when items are sold.",
     },
