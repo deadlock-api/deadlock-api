@@ -14,9 +14,6 @@ use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::rate_limiter::types::QuotaType;
 use crate::services::rate_limiter::{Quota, Status};
 
-/// How long requests are kept by default; a route with a longer quota keeps them for that.
-const MIN_RETENTION: Duration = Duration::from_hours(1);
-
 #[derive(Clone)]
 pub(crate) struct RateLimitClient {
     redis_client: MultiplexedConnection,
@@ -93,16 +90,11 @@ impl RateLimitClient {
         let current_time = Utc::now();
         let mut pipe = redis::pipe();
         pipe.ignore_errors();
-        // Kept as long as the longest quota looks back, or that quota could never be reached.
-        let retention = quotas
-            .iter()
-            .map(|q| q.period)
-            .fold(MIN_RETENTION, Duration::max);
         add_increment_cmds(
             &mut pipe,
             &prefixed_key,
             current_time.timestamp_micros(),
-            retention,
+            longest_period(&quotas, |q| !q.r#type.is_global()).unwrap_or_default(),
         );
         for quota in &quotas {
             add_check_cmds(
@@ -130,7 +122,7 @@ impl RateLimitClient {
 
         // Check all quotas
         let mut all_statuses = Vec::new();
-        for quota in quotas {
+        for &quota in &quotas {
             let check = parse_check(results.next(), results.next(), current_time);
             let Ok((requests, oldest_request)) = check else {
                 let quota_key = quota_key(&quota, key, &prefixed_key);
@@ -148,7 +140,9 @@ impl RateLimitClient {
 
         // Increment the global key only after quota checks pass to prevent
         // a single abusive user from exhausting the global rate limit for everyone
-        if let Err(e) = self.increment_key(key).await {
+        if let Some(retention) = longest_period(&quotas, |q| q.r#type.is_global())
+            && let Err(e) = self.increment_key(key, retention).await
+        {
             warn!("Failed to increment rate limit key: {e}, will not apply limits");
             return Ok(None);
         }
@@ -238,15 +232,24 @@ impl RateLimitClient {
             .collect())
     }
 
-    async fn increment_key(&self, key: &str) -> RedisResult<()> {
+    async fn increment_key(&self, key: &str, retention: Duration) -> RedisResult<()> {
         let mut pipe = redis::pipe();
-        add_increment_cmds(&mut pipe, key, Utc::now().timestamp_micros(), MIN_RETENTION);
+        add_increment_cmds(&mut pipe, key, Utc::now().timestamp_micros(), retention);
         pipe.exec_async(&mut self.redis_client.clone()).await
     }
 }
 
 /// Number of commands [`add_increment_cmds`] adds to a pipeline.
 const INCREMENT_CMDS: usize = 3;
+
+/// How long a key must keep requests: as long as the longest of its quotas looks back.
+fn longest_period(quotas: &[Quota], reads_key: impl Fn(&Quota) -> bool) -> Option<Duration> {
+    quotas
+        .iter()
+        .filter(|q| reads_key(q))
+        .map(|q| q.period)
+        .max()
+}
 
 /// Records one request at `current_time` (micros) in the sorted set `key`, trimming entries
 /// older than `retention`.
