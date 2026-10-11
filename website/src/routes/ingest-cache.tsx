@@ -45,7 +45,7 @@ function IngestCache() {
         description="Statlocker, Tracklock and other trackers can only show the matches someone has sent in. Install the background tool once and every match you play gets sent."
         actions={
           <>
-            <InstallButton />
+            <InstallButton placement="ingest_header" />
             <Button asChild size="lg" variant="outline">
               <a href="#upload">
                 <FolderUp aria-hidden="true" />

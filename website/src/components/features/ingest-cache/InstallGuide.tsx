@@ -1,5 +1,6 @@
 import { Download } from "lucide-react";
 
+import { useInstallCtaTracking } from "~/components/domain/ingest/analytics";
 import { INGEST_REPO, WINDOWS_SETUP_URL } from "~/components/domain/ingest/links";
 import { CopyableCode } from "~/components/patterns/code/CopyableCode";
 import { Disclosure } from "~/components/patterns/content/Disclosure";
@@ -32,6 +33,7 @@ function Uninstall({ code, children }: { code: string; children?: React.ReactNod
 
 /** The background tool's install steps, one tab per platform; every note sits in the tab it is about. */
 export function InstallGuide() {
+  const downloadTracking = useInstallCtaTracking("ingest_guide", "download");
   return (
     <Card className="h-full">
       <CardContent>
@@ -47,7 +49,7 @@ export function InstallGuide() {
               <Step title="Download the installer.">
                 <div className="flex flex-col items-start gap-2">
                   <Button asChild size="lg">
-                    <a href={WINDOWS_SETUP_URL} download>
+                    <a href={WINDOWS_SETUP_URL} download {...downloadTracking}>
                       <Download aria-hidden="true" />
                       Download for Windows
                     </a>

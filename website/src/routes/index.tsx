@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 
 import { OptimizedImage } from "~/components/domain/assets/OptimizedImage";
+import { useInstallCtaTracking } from "~/components/domain/ingest/analytics";
 import { WINDOWS_SETUP_URL } from "~/components/domain/ingest/links";
 import { SmartLink } from "~/components/domain/navigation/SmartLink";
 import { AiSearch } from "~/components/features/ai-search/AiSearch";
@@ -234,6 +235,7 @@ const sponsors = [
 
 function IndexRoute() {
   const isWindows = useIsWindows();
+  const installTracking = useInstallCtaTracking("home", isWindows ? "download" : "install_steps");
   return (
     <PageShell density="marketing">
       {/* The search belongs to the hero: it sits right under it, not a section's distance away. */}
@@ -321,12 +323,12 @@ function IndexRoute() {
               <Inline>
                 <Button asChild>
                   {isWindows ? (
-                    <a href={WINDOWS_SETUP_URL} download>
+                    <a href={WINDOWS_SETUP_URL} download {...installTracking}>
                       <Download aria-hidden="true" />
                       Download for Windows
                     </a>
                   ) : (
-                    <SmartLink href="/ingest-cache">
+                    <SmartLink href="/ingest-cache" {...installTracking}>
                       <Download aria-hidden="true" />
                       Install the tool
                     </SmartLink>

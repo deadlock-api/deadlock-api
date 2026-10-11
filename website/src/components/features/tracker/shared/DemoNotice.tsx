@@ -64,7 +64,7 @@ export function DemoNotice() {
             </ul>
           </Stack>
           <Inline gap={2}>
-            <InstallButton size="default" installHref={INGEST_INSTALL_PATH} />
+            <InstallButton size="default" installHref={INGEST_INSTALL_PATH} placement="tracker_demo" />
             {isAuthenticated ? (
               <Button variant="secondary" asChild>
                 <Link to="/patron">Your accounts</Link>

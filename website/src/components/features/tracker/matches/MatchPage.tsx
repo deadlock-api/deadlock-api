@@ -50,7 +50,7 @@ function MatchNotStored({ matchId }: { matchId: number }) {
       description="A match shows up here once someone who played it sends it in. Install the ingest tool and every match you play is sent by itself, or upload the matches in your Steam cache once."
       action={
         <Inline justify="center" gap={2}>
-          <InstallButton size="default" installHref={INGEST_INSTALL_PATH} />
+          <InstallButton size="default" installHref={INGEST_INSTALL_PATH} placement="match_not_stored" />
           <Button variant="outline" asChild>
             <Link to="/ingest-cache" hash="upload">
               <FolderUp aria-hidden="true" />

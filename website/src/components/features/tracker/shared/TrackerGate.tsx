@@ -95,7 +95,7 @@ export function TrackerGate({ accountId, children }: { accountId: number; childr
           </p>
         )}
         <div className="flex flex-col gap-2 pt-2 sm:flex-row">
-          <InstallButton size="default" installHref={INGEST_INSTALL_PATH} />
+          <InstallButton size="default" installHref={INGEST_INSTALL_PATH} placement="tracker_gate" />
           <Button variant="secondary" asChild>
             <Link to="/patron">Get Patreon</Link>
           </Button>

@@ -71,9 +71,9 @@ export function Round3DomainMisc() {
         note="The ingest tool's call to action. On Windows it downloads the installer; elsewhere it links to the install steps, which are #install on /ingest-cache itself, so other pages pass installHref (INGEST_INSTALL_PATH). size defaults to lg, the page's main action; other Button props pass through."
       >
         <Variants label="size: lg (default), sm; variant: outline">
-          <InstallButton installHref="/ingest-cache#install" />
-          <InstallButton size="sm" installHref="/ingest-cache#install" />
-          <InstallButton size="sm" variant="outline" installHref="/ingest-cache#install" />
+          <InstallButton installHref="/ingest-cache#install" placement="design_system" />
+          <InstallButton size="sm" installHref="/ingest-cache#install" placement="design_system" />
+          <InstallButton size="sm" variant="outline" installHref="/ingest-cache#install" placement="design_system" />
         </Variants>
       </Specimen>
 
