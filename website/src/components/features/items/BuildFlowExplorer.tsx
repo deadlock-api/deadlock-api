@@ -721,7 +721,20 @@ export function BuildFlowExplorer({
 
   const { summary, baseline } = data;
   const winRate = summary.matches > 0 ? summary.wins / summary.matches : 0;
-  const baseWinRate = baseline.matches > 0 ? baseline.wins / baseline.matches : 0;
+  // What the build is compared with: the games that reached its last stage, where the API reports their wins (late
+  // stages hold long games only, which flatter any build ending there); all games otherwise.
+  const lastColumn = Math.max(0, ...path.map((key) => parseKey(key).column));
+  const reachedWins = (data as ItemFlowStats & { reached_wins_per_column?: number[] }).reached_wins_per_column?.[
+    lastColumn
+  ];
+  const reachedGames = data.reached_per_column[lastColumn];
+  const reachedBase = lastColumn > 0 && reachedWins != null && reachedGames > 0;
+  const baseWinRate = reachedBase
+    ? reachedWins / reachedGames
+    : baseline.matches > 0
+      ? baseline.wins / baseline.matches
+      : 0;
+  const baseLabel = reachedBase ? `vs ${stageLabel(lastColumn, isStreetBrawl)} games` : "vs all";
   const [wrLow, wrHigh] = wilsonScoreInterval(summary.wins, summary.matches);
   // What the build's picks cost, per stage and in all.
   const stageCost = new Map<number, number>();
@@ -923,7 +936,7 @@ export function BuildFlowExplorer({
                       ) : (
                         <Delta value={(winRate - baseWinRate) * 100} format="number" />
                       )}{" "}
-                      ±{((wrHigh - wrLow) * 50).toFixed(1)} vs all
+                      ±{((wrHigh - wrLow) * 50).toFixed(1)} {baseLabel}
                     </>
                   )
                 }
