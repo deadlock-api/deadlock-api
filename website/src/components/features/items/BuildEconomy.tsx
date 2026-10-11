@@ -1,5 +1,4 @@
 import { useQuery } from "@tanstack/react-query";
-import type { ItemStats } from "deadlock_api_client";
 import { Coins } from "lucide-react";
 import { useMemo } from "react";
 import { CartesianGrid, ComposedChart, Line, ReferenceArea, ReferenceDot, XAxis, YAxis } from "recharts";
@@ -58,12 +57,6 @@ interface Placed extends EconomyItem {
 const clock = (s: number) => `${Math.floor(s / 60)}:${String(Math.round(s) % 60).padStart(2, "0")}`;
 const compact = (n: number) => (n >= 1000 ? `${(n / 1000).toFixed(n >= 10000 ? 0 : 1)}k` : String(Math.round(n)));
 
-/** The sold purchases of an item, from an API that reports them; older answers lack the field. */
-function soldOf(row: ItemStats): number | null {
-  const sold = (row as ItemStats & { sold?: number }).sold;
-  return typeof sold === "number" ? sold : null;
-}
-
 /**
  * The build on the hero's soul curve: the average net worth over the game, each item where the curve reaches the net
  * worth its buyers had when they bought it, and a sold mark where most buyers sell it again. Beside it each item's
@@ -92,6 +85,11 @@ export function BuildEconomy({
   const curve = useQuery(playerPerformanceCurveQueryOptions({ ...filters, resolution: 0 }));
   const stats = useQuery(itemStatsQueryOptions(filters));
   const { data: upgrades } = useQuery(itemUpgradesQueryOptions);
+  // Items another item is built from: their sales count the purchases merged into that upgrade as well.
+  const isComponent = useMemo(() => {
+    const classNames = new Set((upgrades ?? []).flatMap((item) => item.component_items ?? []));
+    return new Set((upgrades ?? []).filter((item) => classNames.has(item.class_name)).map((item) => item.id));
+  }, [upgrades]);
   const imageOf = useMemo(
     () =>
       new Map((upgrades ?? []).map((item) => [item.id, item.shop_image_webp ?? item.shop_image_small ?? undefined])),
@@ -126,7 +124,7 @@ export function BuildEconomy({
       .sort((a, b) => a.column - b.column || (a.netWorthAtBuy ?? 0) - (b.netWorthAtBuy ?? 0))
       .map((item) => {
         const row = byItem.get(item.itemId);
-        const sold = row ? soldOf(row) : null;
+        const sold = row?.sold ?? null;
         const soldShare = row && sold != null && row.matches > 0 ? sold / row.matches : null;
         const avgSellAt = row && row.avg_sell_time_s > 0 ? row.avg_sell_time_s : null;
         // Bought in its stage, so it sits in its stage's stretch of the curve. The API's net worth at purchase is off
@@ -141,7 +139,13 @@ export function BuildEconomy({
             ? byNetWorth
             : Math.min(Math.max(avgBuyAt ?? (from + to) / 2, from), to);
         const netWorth = soulsAt(boughtAt);
-        const sells = soldShare != null && soldShare >= SOLD_BY_MOST && avgSellAt != null && avgSellAt <= END_S;
+        // A component's "sales" are mostly upgrades into the next item, not sales: it gets no sold mark.
+        const sells =
+          !isComponent.has(item.itemId) &&
+          soldShare != null &&
+          soldShare >= SOLD_BY_MOST &&
+          avgSellAt != null &&
+          avgSellAt <= END_S;
         return {
           ...item,
           netWorthAtBuy: netWorth,
@@ -154,7 +158,7 @@ export function BuildEconomy({
     const series = points.filter((p) => p.t <= END_S);
     if (series.at(-1)?.t !== END_S) series.push({ t: END_S, souls: soulsAt(END_S) });
     return { series, placed };
-  }, [curve.data, stats.data, items]);
+  }, [curve.data, stats.data, items, isComponent]);
 
   // What the whole build costs, against the net worth when its last item is bought.
   const last = plot?.placed.reduce<Placed | null>(
@@ -273,7 +277,7 @@ export function BuildEconomy({
                 <RankedEntityMetric label="Bought" value={p.boughtAt != null ? clock(p.boughtAt) : null} />
                 <RankedEntityMetric
                   // A share of purchases where the API reports sales, else the average time of a sale.
-                  label={p.soldShare != null ? "Sold" : "Sold at"}
+                  label={isComponent.has(p.itemId) ? "Replaced" : p.soldShare != null ? "Sold" : "Sold at"}
                   value={
                     p.soldShare != null
                       ? `${Math.round(p.soldShare * 100)}%`
