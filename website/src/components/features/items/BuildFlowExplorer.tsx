@@ -797,6 +797,7 @@ export function BuildFlowExplorer({
                   if (build.heroId !== heroId) void setHero(build.heroId, AT_ONCE);
                   void setPath(build.path.length > 0 ? build.path : null, AT_ONCE);
                   void setSells(build.sells.length > 0 ? build.sells : null, AT_ONCE);
+                  void setFlex(build.flex ?? null, AT_ONCE);
                 })
               }
             />
@@ -806,6 +807,7 @@ export function BuildFlowExplorer({
                 heroId={heroId}
                 path={path}
                 sells={[...sellOf].map(([key, column]) => `${key}:${column}`)}
+                flex={flexMinutes}
               />
             )}
             {path.length > 0 && (

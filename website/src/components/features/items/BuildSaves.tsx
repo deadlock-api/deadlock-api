@@ -19,11 +19,13 @@ export function SaveBuildButton({
   heroId,
   path,
   sells,
+  flex,
 }: {
   defaultName: string;
   heroId: number | null;
   path: string[];
   sells: string[];
+  flex: number[];
 }) {
   const { save } = useSavedBuilds();
   const [open, setOpen] = useState(false);
@@ -49,7 +51,7 @@ export function SaveBuildButton({
             event.preventDefault();
             const trimmed = name.trim();
             if (!trimmed) return;
-            save({ name: trimmed, heroId, path, sells });
+            save({ name: trimmed, heroId, path, sells, flex });
             setOpen(false);
           }}
         >

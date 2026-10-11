@@ -9,13 +9,15 @@ const UPDATED_EVENT = "build-designer-saved-builds-updated";
 const MAX_SAVED = 50;
 const serverSnapshot = () => null;
 
-/** A build saved from the Build Designer: its hero and the `build_path` / `build_sell` entries of its URL. */
+/** A build saved from the Build Designer: its hero and the `build_path` / `build_sell` / `build_flex` of its URL. */
 export interface SavedBuild {
   id: string;
   name: string;
   heroId: number | null;
   path: string[];
   sells: string[];
+  /** When its flex slots open, in minutes; saves from before flex slots lack it. */
+  flex?: number[];
   /** Unix milliseconds. */
   savedAt: number;
 }
@@ -66,8 +68,11 @@ export function useSavedBuilds() {
   };
   const save = (build: Omit<SavedBuild, "id" | "savedAt">) => {
     const current = parseSavedBuilds(readLocalStorage(KEY));
-    const saved: SavedBuild = { ...build, id: crypto.randomUUID(), savedAt: Date.now() };
-    if (write([saved, ...current].slice(0, MAX_SAVED))) toast.success(`Saved "${build.name}"`);
+    // Saving under a name the hero already has updates that save rather than adding a second one.
+    const same = current.find((b) => b.name === build.name && b.heroId === build.heroId);
+    const saved: SavedBuild = { ...build, id: same?.id ?? crypto.randomUUID(), savedAt: Date.now() };
+    const rest = current.filter((b) => b.id !== same?.id);
+    if (write([saved, ...rest].slice(0, MAX_SAVED))) toast.success(`${same ? "Updated" : "Saved"} "${build.name}"`);
   };
   const remove = (id: string) => {
     const current = parseSavedBuilds(readLocalStorage(KEY));
