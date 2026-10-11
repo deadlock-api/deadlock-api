@@ -988,11 +988,14 @@ export function BuildFlowExplorer({
             {/* Whole builds to start from or complete the started one with; once one has nothing to add it goes, and the
                 row keeps its height (two lines where the two wrap) so the board does not jump. */}
             <Inline gap={2} className="min-h-18 @md:min-h-8">
-              <BuildCompleter
-                disabled={!budgets}
-                busy={completing}
-                onComplete={(focus, goal) => void complete(focus, goal)}
-              />
+              {/* Street Brawl rounds have no souls budget to complete a build against. */}
+              {!isStreetBrawl && (
+                <BuildCompleter
+                  disabled={!budgets}
+                  busy={completing}
+                  onComplete={(focus, goal) => void complete(focus, goal)}
+                />
+              )}
               {suggestions.map((suggestion) => (
                 <Button
                   key={suggestion.label}
