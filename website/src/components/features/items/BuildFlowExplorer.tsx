@@ -1258,7 +1258,23 @@ export function BuildFlowExplorer({
                         )}
                       </>
                     }
-                    meta={stageCost.get(stage.column) ? count(stageCost.get(stage.column) ?? 0) : undefined}
+                    meta={
+                      // At the card's top right: what the build has spent by the stage's end against the souls and
+                      // slots a player has by then. Street Brawl rounds reset their souls: there, what the round costs.
+                      budgets ? (
+                        <BuildBudget
+                          variant="inline"
+                          spent={budgets[index]?.spent ?? 0}
+                          available={budgets[index]?.available ?? 0}
+                          slots={slotUse[index]}
+                          format={compactSouls}
+                        />
+                      ) : !isStreetBrawl ? (
+                        <Skeleton className="h-4 w-32" />
+                      ) : stageCost.get(stage.column) ? (
+                        count(stageCost.get(stage.column) ?? 0)
+                      ) : undefined
+                    }
                     action={(() => {
                       // Every item of the stage: the build's players' first, then the hero's items the build
                       // narrowed away, so a search always finds an item even when few games are left.
@@ -1274,19 +1290,6 @@ export function BuildFlowExplorer({
                     })()}
                     footer={
                       <>
-                        {budgets ? (
-                          <BuildBudget
-                            // A little room under the build's own part of the card, before the items to add.
-                            className="pb-1.5"
-                            spent={budgets[index]?.spent ?? 0}
-                            available={budgets[index]?.available ?? 0}
-                            slots={slotUse[index]}
-                            format={compactSouls}
-                          />
-                        ) : !isStreetBrawl ? (
-                          // The budget's height while the soul curve loads, so the cards do not grow when it lands.
-                          <Skeleton className="h-8 w-full" />
-                        ) : undefined}
                         {/* What the stage's players buy, to add from, in the stage's own card. */}
                         <BuildStage
                           title={`Add items, ${stage.title}`}

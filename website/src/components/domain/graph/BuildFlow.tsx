@@ -104,7 +104,7 @@ export function BuildChoiceHeader({
 // The win rate column and the bought bar grow with the stage's width: a wide stage gives its bars room to read.
 const VALUE_WIDTH = "w-12 @xs:w-14 @sm:w-20 @md:w-28";
 // On one line, the figures beside the name keep one width, linked or not: the name's room does not change on hover.
-const META_WIDTH = "@md:w-44 @md:shrink-0";
+const META_WIDTH = "@md:w-36 @md:shrink-0";
 const SHARE_WIDTH = "w-8 min-w-3 @xs:w-12 @sm:w-16 @md:w-12";
 
 const buildChoiceVariants = cva(
@@ -258,10 +258,10 @@ export function BuildBoard({ className, ...props }: React.ComponentProps<"ol">) 
 }
 
 /**
- * One stage of a BuildBoard, four rows where the board is four across (its name and items, then the two parts of its
- * `footer`), on the board's shared row tracks so the slots' parts line up from slot to slot: its name, a figure at the end of that line (the stage's spending) and an `action` after it
- * (an add button), the `BuildSlotItem`s of the stage (bought, or sold there), "Empty" without any, and a `footer` (its
- * BuildBudget).
+ * One stage of a BuildBoard, three rows where the board is four across, on the board's shared row tracks so the slots'
+ * parts line up from slot to slot: its name with a `meta` (its BuildBudget, `inline`) and an `action` (an add button) at
+ * the end of that line, the `BuildSlotItem`s of the stage (bought, or sold there), "Empty" without any, and a `footer`
+ * (one element: the items to add, a budget bar).
  */
 export function BuildSlot({
   label,
@@ -287,15 +287,18 @@ export function BuildSlot({
       data-empty={empty || undefined}
       data-drop={drop === "over" || undefined}
       className={cn(
-        "flex min-w-0 flex-col gap-1.5 rounded-md border border-hairline bg-subtle p-2 transition-colors duration-fast ease-standard data-drop:border-primary data-drop:bg-primary/10 data-empty:border-dashed data-empty:bg-transparent @4xl:row-span-4 @4xl:grid @4xl:grid-cols-1 @4xl:grid-rows-subgrid",
+        "flex min-w-0 flex-col gap-2 rounded-md border border-hairline bg-subtle p-2 transition-colors duration-fast ease-standard data-drop:border-primary data-drop:bg-primary/10 data-empty:border-dashed data-empty:bg-transparent @4xl:row-span-3 @4xl:grid @4xl:grid-cols-1 @4xl:grid-rows-subgrid",
         className,
       )}
       {...props}
     >
-      <span className="flex min-h-6 items-center gap-2 type-caption text-muted-foreground">
-        <span className="flex-1 truncate font-medium text-foreground">{label}</span>
-        {meta && <span className="shrink-0 tabular-nums">{meta}</span>}
-        {action}
+      {/* The meta and action at the end of the label's line; on a line of their own, at its end, where they do not fit. */}
+      <span className="flex min-h-6 flex-wrap items-center gap-x-2 gap-y-0.5 type-caption text-muted-foreground">
+        <span className="min-w-0 truncate font-medium text-foreground">{label}</span>
+        <span className="ms-auto flex min-w-0 items-center gap-2">
+          {meta && <span className="min-w-0 tabular-nums">{meta}</span>}
+          {action}
+        </span>
       </span>
       <ul className="@container flex min-h-8 flex-1 flex-col gap-1">
         {empty ? <li className="flex flex-1 items-center type-caption text-muted-foreground">Empty</li> : children}
@@ -371,14 +374,16 @@ export function BuildSlotItem({
 }
 
 /**
- * What a build has spent by the end of a stage against what a player has earned by then: a bar and the two figures,
- * and with `slots` the item slots it fills against those open. In the loss color with a warning mark once spending
- * passes earnings or the items pass the slots.
+ * What a build has spent by the end of a stage against what a player has earned by then, and with `slots` the item
+ * slots it fills against those open: `bar` draws the spending as a bar over the figures (one line where it is wide),
+ * `inline` is the figures alone, for a slot's header. In the loss color with a warning mark once spending passes
+ * earnings or the items pass the slots.
  */
 export function BuildBudget({
   spent,
   available,
   slots,
+  variant = "bar",
   format = (n) => n.toLocaleString("en-US"),
   className,
   ...props
@@ -387,40 +392,52 @@ export function BuildBudget({
   available: number;
   /** Items held at the end of the stage against the slots open by then. */
   slots?: { used: number; open: number };
+  variant?: "bar" | "inline";
   /** Prints a soul amount: "6.7k". */
   format?: (souls: number) => string;
 }) {
   const overSouls = spent > available;
   const overSlots = slots != null && slots.used > slots.open;
+  const figures = (
+    <span
+      className={cn(
+        "flex items-center gap-1 type-caption text-muted-foreground tabular-nums",
+        variant === "inline" ? "gap-2" : "@md:shrink-0 @md:gap-3",
+      )}
+    >
+      {(overSouls || overSlots) && <TriangleAlertIcon aria-hidden="true" className="size-3 shrink-0 text-negative" />}
+      <span className={cn("truncate", overSouls && "text-negative")}>
+        {format(spent)} of {format(available)} souls
+      </span>
+      {slots && (
+        <span className={cn("shrink-0", variant === "bar" && "ms-auto", overSlots && "text-negative")}>
+          {slots.used}/{slots.open} slots
+        </span>
+      )}
+    </span>
+  );
   return (
     <div
       data-slot="build-budget"
+      data-variant={variant}
       data-over={overSouls || overSlots || undefined}
-      className={cn("@container", className)}
+      className={cn(variant === "bar" && "@container", variant === "inline" && "inline-flex min-w-0", className)}
       {...props}
     >
-      {/* The bar over its figures where the card is narrow; the bar, then the figures, on one line where it is wide. */}
-      <div className="flex flex-col gap-1 @md:flex-row @md:items-center @md:gap-3">
-        <ProgressBar
-          variant="thin"
-          value={available > 0 ? Math.min(1, spent / available) : 1}
-          color={overSouls ? "var(--negative)" : "var(--chart-share)"}
-          className="w-full @md:min-w-0 @md:flex-1"
-        />
-        <span className="flex items-center gap-1 type-caption text-muted-foreground tabular-nums @md:shrink-0 @md:gap-3">
-          {(overSouls || overSlots) && (
-            <TriangleAlertIcon aria-hidden="true" className="size-3 shrink-0 text-negative" />
-          )}
-          <span className={cn("truncate", overSouls && "text-negative")}>
-            {format(spent)} of {format(available)} souls
-          </span>
-          {slots && (
-            <span className={cn("ms-auto shrink-0", overSlots && "text-negative")}>
-              {slots.used}/{slots.open} slots
-            </span>
-          )}
-        </span>
-      </div>
+      {variant === "inline" ? (
+        figures
+      ) : (
+        // The bar over its figures where the card is narrow; the bar, then the figures, on one line where it is wide.
+        <div className="flex flex-col gap-1 @md:flex-row @md:items-center @md:gap-3">
+          <ProgressBar
+            variant="thin"
+            value={available > 0 ? Math.min(1, spent / available) : 1}
+            color={overSouls ? "var(--negative)" : "var(--chart-share)"}
+            className="w-full @md:min-w-0 @md:flex-1"
+          />
+          {figures}
+        </div>
+      )}
     </div>
   );
 }
