@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { EllipsisVertical, Hourglass, Link, ListPlus, Plus, Route, TriangleAlert } from "lucide-react";
+import { EllipsisVertical, Hourglass, Link, Plus, Route, TriangleAlert } from "lucide-react";
 import {
   parseAsArrayOf,
   parseAsInteger,
@@ -256,34 +256,15 @@ function StagePickerBody({
   );
 }
 
-/**
- * "All items" under a stage's list: every item bought there, to add one that is not in the top rows. No count: the
- * server's trimmed answer holds only the shown rows, so it would print 8 and then jump to the real number.
- */
-const StagePicker = memo(function StagePicker({
-  stage,
-  onPick,
-  display = "full",
-}: {
-  stage: Stage;
-  onPick: (key: string) => void;
-  /** `full`: "All items" across the list's width. `icon`: a plus, in a stage card of the build. */
-  display?: "full" | "icon";
-}) {
+/** The plus in a stage card's header: every item bought there, to add one that is not in the stage's list. */
+const StagePicker = memo(function StagePicker({ stage, onPick }: { stage: Stage; onPick: (key: string) => void }) {
   const [open, setOpen] = useState(false);
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        {display === "icon" ? (
-          <Button variant="ghost" size="icon-xs" aria-label={`Add item, ${stage.title}`}>
-            <Plus />
-          </Button>
-        ) : (
-          <Button variant="ghost" size="xs" className="w-full" aria-label={`All items, ${stage.title}`}>
-            <ListPlus />
-            All items
-          </Button>
-        )}
+        <Button variant="ghost" size="icon-xs" aria-label={`Add item, ${stage.title}`}>
+          <Plus />
+        </Button>
       </PopoverTrigger>
       <PopoverContent
         align="center"
@@ -1127,97 +1108,104 @@ export function BuildFlowExplorer({
                 </Field>
               </Inline>
             </Inline>
-            {/* While another build loads, its numbers are not known yet: the old ones would read as the new build's. */}
-            <StatGroup
-              variant="plain"
-              size="xs"
-              aria-busy={switching || undefined}
-              className="grid-cols-2 gap-x-6 @md:grid-cols-4"
-            >
-              <Stat
-                label="Win rate"
-                value={switching ? <Skeleton className="h-6 w-16" /> : tooFewGames ? null : percent(winRate)}
-                tone={switching ? undefined : buildTone}
-                sub={
-                  switching ? (
-                    <Skeleton className="h-4 w-20" />
-                  ) : noGames ? undefined : tooFewGames ? (
-                    `under ${MIN_RATE_GAMES} games`
-                  ) : path.length === 0 ? (
-                    `±${((wrHigh - wrLow) * 50).toFixed(1)} pts`
-                  ) : (
-                    <>
-                      {Math.round((winRate - baseWinRate) * 1000) === 0 ? (
-                        "+0.0"
-                      ) : (
-                        <Delta value={(winRate - baseWinRate) * 100} format="number" />
-                      )}{" "}
-                      ±{((wrHigh - wrLow) * 50).toFixed(1)} {baseLabel}
-                    </>
-                  )
-                }
-              />
-              <Stat
-                label="Games"
-                value={switching ? <Skeleton className="h-6 w-16" /> : count(summary.matches)}
-                sub={
-                  path.length === 0 ? undefined : switching ? (
-                    <Skeleton className="h-4 w-16" />
-                  ) : summary.matches > 0 && summary.matches < FEW_GAMES ? (
-                    // Too few games for the win rate beside it to mean much: said in the warning color with a mark.
-                    <span className="inline-flex items-center gap-1 text-warning">
-                      <TriangleAlert className="size-3" aria-hidden="true" />
-                      few games · {percent(summary.matches / Math.max(1, baseline.matches))} of all
-                    </span>
-                  ) : (
-                    `${percent(summary.matches / Math.max(1, baseline.matches))} of all`
-                  )
-                }
-              />
-              <Stat
-                label="Game length"
-                value={
-                  switching ? (
-                    <Skeleton className="h-6 w-12" />
-                  ) : noGames ? null : (
-                    `${Math.floor(duration / 60)}:${String(duration % 60).padStart(2, "0")}`
-                  )
-                }
-              />
-              {/* The cost is the picked items' own, known before the build's games load. */}
-              <Stat
-                label={path.length > 0 ? "Build cost" : "Avg KDA"}
-                value={
-                  path.length > 0 ? (
-                    count(cost)
-                  ) : switching ? (
-                    <Skeleton className="h-6 w-20" />
-                  ) : (
-                    [summary.total_kills, summary.total_deaths, summary.total_assists]
-                      .map((n) => (n / Math.max(1, summary.matches)).toFixed(1))
-                      .join(" / ")
-                  )
-                }
-              />
-            </StatGroup>
-            {/* What the build spends per shop category, always drawn so the first pick does not shift the board. */}
-            <div className="flex flex-col gap-1.5 @3xl:flex-row-reverse @3xl:items-center @3xl:gap-3">
-              <ProgressBar variant="thin" max={Math.max(1, cost)} className="w-full min-w-0 @3xl:flex-1">
-                {CATEGORIES.map((category) => (
-                  <ProgressBarSegment
-                    key={category.slot}
-                    value={categoryCost.get(category.slot) ?? 0}
-                    color={category.color}
-                  />
-                ))}
-              </ProgressBar>
-              <ChartLegend className="shrink-0">
-                {CATEGORIES.map((category) => (
-                  <ChartLegendItem key={category.slot} color={category.color} shape="square">
-                    {category.label} {count(categoryCost.get(category.slot) ?? 0)}
-                  </ChartLegendItem>
-                ))}
-              </ChartLegend>
+            {/* The build's figures and, beside them where the panel is wide, its spending by shop category. */}
+            <div className="flex flex-col gap-3 @6xl:flex-row @6xl:items-center @6xl:gap-10">
+              {/* While another build loads, its numbers are not known yet: the old ones would read as the new build's. */}
+              <StatGroup
+                variant="plain"
+                size="xs"
+                aria-busy={switching || undefined}
+                className="grid-cols-2 gap-x-6 @md:grid-cols-4 @6xl:flex @6xl:shrink-0 @6xl:gap-x-10"
+              >
+                <Stat
+                  label="Win rate"
+                  value={switching ? <Skeleton className="h-6 w-16" /> : tooFewGames ? null : percent(winRate)}
+                  tone={switching ? undefined : buildTone}
+                  sub={
+                    switching ? (
+                      <Skeleton className="h-4 w-20" />
+                    ) : noGames ? undefined : tooFewGames ? (
+                      `under ${MIN_RATE_GAMES} games`
+                    ) : path.length === 0 ? (
+                      `±${((wrHigh - wrLow) * 50).toFixed(1)} pts`
+                    ) : (
+                      <>
+                        {Math.round((winRate - baseWinRate) * 1000) === 0 ? (
+                          "+0.0"
+                        ) : (
+                          <Delta value={(winRate - baseWinRate) * 100} format="number" />
+                        )}{" "}
+                        ±{((wrHigh - wrLow) * 50).toFixed(1)} {baseLabel}
+                      </>
+                    )
+                  }
+                />
+                <Stat
+                  label="Games"
+                  value={switching ? <Skeleton className="h-6 w-16" /> : count(summary.matches)}
+                  sub={
+                    path.length === 0 ? undefined : switching ? (
+                      <Skeleton className="h-4 w-16" />
+                    ) : summary.matches > 0 && summary.matches < FEW_GAMES ? (
+                      // Too few games for the win rate beside it to mean much: said in the warning color with a mark.
+                      <span className="inline-flex items-center gap-1 text-warning">
+                        <TriangleAlert className="size-3" aria-hidden="true" />
+                        few games · {percent(summary.matches / Math.max(1, baseline.matches))} of all
+                      </span>
+                    ) : (
+                      `${percent(summary.matches / Math.max(1, baseline.matches))} of all`
+                    )
+                  }
+                />
+                <Stat
+                  label="Game length"
+                  value={
+                    switching ? (
+                      <Skeleton className="h-6 w-12" />
+                    ) : noGames ? null : (
+                      `${Math.floor(duration / 60)}:${String(duration % 60).padStart(2, "0")}`
+                    )
+                  }
+                />
+                {/* The cost is the picked items' own, known before the build's games load. */}
+                <Stat
+                  label={path.length > 0 ? "Build cost" : "Avg KDA"}
+                  value={
+                    path.length > 0 ? (
+                      count(cost)
+                    ) : switching ? (
+                      <Skeleton className="h-6 w-20" />
+                    ) : (
+                      [summary.total_kills, summary.total_deaths, summary.total_assists]
+                        .map((n) => (n / Math.max(1, summary.matches)).toFixed(1))
+                        .join(" / ")
+                    )
+                  }
+                />
+              </StatGroup>
+              {/* What the build spends per shop category, always drawn so the first pick does not shift the board. */}
+              <div className="flex flex-col gap-1.5 @3xl:flex-row-reverse @3xl:items-center @3xl:gap-3 @6xl:min-w-0 @6xl:flex-1 @6xl:flex-col-reverse @6xl:items-stretch">
+                <ProgressBar
+                  variant="thin"
+                  max={Math.max(1, cost)}
+                  className="w-full min-w-0 @3xl:flex-1 @6xl:flex-none"
+                >
+                  {CATEGORIES.map((category) => (
+                    <ProgressBarSegment
+                      key={category.slot}
+                      value={categoryCost.get(category.slot) ?? 0}
+                      color={category.color}
+                    />
+                  ))}
+                </ProgressBar>
+                <ChartLegend className="shrink-0">
+                  {CATEGORIES.map((category) => (
+                    <ChartLegendItem key={category.slot} color={category.color} shape="square">
+                      {category.label} {count(categoryCost.get(category.slot) ?? 0)}
+                    </ChartLegendItem>
+                  ))}
+                </ChartLegend>
+              </div>
             </div>
             <BuildBoard aria-label="Build by stage" ref={boardRef}>
               {view.stages.map((stage, index) => {
@@ -1281,7 +1269,7 @@ export function BuildFlowExplorer({
                       );
                       const candidates = [...own, ...rest];
                       return candidates.length > 0 ? (
-                        <StagePicker stage={{ ...stage, candidates }} onPick={toggle} display="icon" />
+                        <StagePicker stage={{ ...stage, candidates }} onPick={toggle} />
                       ) : undefined;
                     })()}
                     footer={
@@ -1384,7 +1372,6 @@ export function BuildFlowExplorer({
                               </BuildChoiceList>
                             </>
                           )}
-                          {stage.candidates.length > 0 && <StagePicker stage={stage} onPick={toggle} />}
                         </BuildStage>
                       </>
                     }
