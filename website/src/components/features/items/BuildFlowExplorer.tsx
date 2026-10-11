@@ -363,8 +363,6 @@ function ItemPlan({
   const swaps = useMemo(() => {
     if (!data) return [];
     const games = Math.max(1, data.summary.matches);
-    const reference = data.summary.matches > 0 ? data.summary.wins / data.summary.matches : 0.5;
-    const shrink = Math.max(SHRINK_MIN_GAMES, data.summary.matches * SHRINK_SHARE);
     return data.nodes
       .filter((n) => n.column === column && !taken.has(n.item_id) && n.matches / games >= SWAP_MIN_SHARE)
       .map((n) => {
@@ -374,12 +372,14 @@ function ItemPlan({
           itemId: n.item_id,
           winRate,
           games: n.matches,
-          score: (winRate * n.matches + reference * shrink) / (n.matches + shrink),
+          // Ranked by the least the win rate may be (its 95% interval's low end), as Complete build's confident pick:
+          // a rate from a few dozen games does not outrank one from hundreds.
+          score: wilsonScoreInterval(n.wins, n.matches)[0],
         };
       })
       .sort((a, b) => b.score - a.score)
       .slice(0, SWAP_COUNT);
-  }, [data, column, taken, isStreetBrawl]);
+  }, [data, column, taken]);
   const choose = (action: () => void) => {
     action();
     setOpen(false);
