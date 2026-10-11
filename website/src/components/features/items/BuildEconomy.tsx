@@ -18,7 +18,7 @@ import {
   CHART_X_AXIS,
   CHART_Y_AXIS,
 } from "~/components/patterns/charts/theme";
-import { Panel, PanelBody, PanelFooter, PanelHeader } from "~/components/patterns/panel/Panel";
+import { Panel, PanelBody, PanelHeader } from "~/components/patterns/panel/Panel";
 import { NoValue } from "~/components/ui/no-value";
 import { Slider } from "~/components/ui/slider";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
@@ -226,22 +226,7 @@ export function useBuildEconomy({ items, ...filters }: BuildEconomyOptions) {
     return { series, placed };
   }, [curve.points, stats.data, items]);
 
-  // What the whole build costs (less its sales' refunds), against the net worth at the end of its last stage: the
-  // budget the stage cards use. At the moment of its last purchase it could read over 100%.
-  const lastColumn = Math.max(-1, ...items.map((item) => item.column));
-  const endAt = STAGE_STARTS[lastColumn + 1] ?? END_S;
-  const spent = items.reduce((sum, item) => sum + item.cost - (item.sellColumn != null ? item.price * 0.5 : 0), 0);
-  const total =
-    curve.points && lastColumn >= 0
-      ? {
-          cost: spent,
-          share: spent / Math.max(1, soulsAt(curve.points, endAt)),
-          netWorth: soulsAt(curve.points, endAt),
-          at: endAt,
-        }
-      : null;
-
-  return { curve, plot, total, isComponent, imageOf };
+  return { curve, plot, isComponent, imageOf };
 }
 
 export type BuildEconomyData = ReturnType<typeof useBuildEconomy>;
@@ -271,7 +256,7 @@ export function BuildEconomy({
   onFlexMinutesChange,
   ...props
 }: BuildEconomyProps) {
-  const { curve, plot, total, imageOf } = economy;
+  const { curve, plot, imageOf } = economy;
   // The slider's own value while the URL behind `flexMinutes` catches up in a transition: tied to the value it moved
   // from, so key presses build on each other, and dropped once the props change (to the new value, or another build).
   const flexKey = flexMinutes.join(",");
@@ -434,7 +419,7 @@ export function BuildEconomy({
             )}
             {/* The track spans the plot exactly (a fixed y-axis width on its left, the plot margin on its right), so a
                 thumb sits on its minute and on its marker line. */}
-            <div className="flex flex-col gap-1 ps-10 pe-4">
+            <div className="flex flex-col gap-1.5 ps-10 pe-4">
               <Slider
                 min={0}
                 max={END_S / 60}
@@ -448,34 +433,31 @@ export function BuildEconomy({
                 thumbLabels={["First flex slot", "Second flex slot", "Third flex slot"]}
                 getValueText={(m) => `${m} minutes`}
               />
-              <span className="flex justify-between gap-2 text-xs text-muted-foreground tabular-nums">
-                <span>Flex slots</span>
-                <span className="text-foreground">{shownFlex.map((m) => `${m}m`).join(" · ")}</span>
-              </span>
+              {/* The slots' times and the legend on one line, under each other where they do not fit. */}
+              <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
+                <span className="flex gap-2 text-xs text-muted-foreground tabular-nums">
+                  <span>Flex slots</span>
+                  <span className="text-foreground">{shownFlex.map((m) => `${m}m`).join(" · ")}</span>
+                </span>
+                <ChartLegend>
+                  <ChartLegendItem color={CHART_COLOR.share} shape="line">
+                    Average net worth
+                  </ChartLegendItem>
+                  <ChartLegendItem color={CHART_COLOR.ink} shape="dashed">
+                    Build spending
+                  </ChartLegendItem>
+                  <ChartLegendItem color={CHART_COLOR.ink} shape="ring">
+                    Bought
+                  </ChartLegendItem>
+                  <ChartLegendItem color={CHART_COLOR.negative} shape="ring">
+                    Sold
+                  </ChartLegendItem>
+                </ChartLegend>
+              </div>
             </div>
-            <ChartLegend className="justify-center">
-              <ChartLegendItem color={CHART_COLOR.share} shape="line">
-                Average net worth
-              </ChartLegendItem>
-              <ChartLegendItem color={CHART_COLOR.ink} shape="dashed">
-                Build spending
-              </ChartLegendItem>
-              <ChartLegendItem color={CHART_COLOR.ink} shape="ring">
-                Bought
-              </ChartLegendItem>
-              <ChartLegendItem color={CHART_COLOR.negative} shape="ring">
-                Sold
-              </ChartLegendItem>
-            </ChartLegend>
           </>
         )}
       </PanelBody>
-      {total && (
-        <PanelFooter>
-          {total.cost.toLocaleString("en-US")} souls in all: {Math.round(total.share * 100)}% of the{" "}
-          {compact(total.netWorth)} net worth at {clock(total.at)}
-        </PanelFooter>
-      )}
     </Panel>
   );
 }
