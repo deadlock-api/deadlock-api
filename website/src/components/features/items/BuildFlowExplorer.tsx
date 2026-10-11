@@ -395,18 +395,24 @@ function ItemPlan({
         aria-label={`Plan for ${name}`}
         className="flex w-72 max-w-(--radix-popover-content-available-width) flex-col gap-1 p-1"
       >
-        <OptionRow selected={sellColumn == null} onClick={() => choose(() => onSell(null))}>
-          Keep
-        </OptionRow>
-        {stages.map((stage) => (
-          <OptionRow
-            key={stage.column}
-            selected={sellColumn === stage.column}
-            onClick={() => choose(() => onSell(stage.column))}
-          >
-            Sell at {stageLabel(stage.column, isStreetBrawl)}
-          </OptionRow>
-        ))}
+        {stages.length > 0 && (
+          // When the build sells it: a single choice, kept open so the change shows (a round's number in Street
+          // Brawl, whose eight rounds do not fit by name).
+          <Field label={isStreetBrawl ? "Sell in round" : "Sell"} className="p-1">
+            <Segmented
+              size="sm"
+              value={sellColumn == null ? "keep" : String(sellColumn)}
+              onValueChange={(next) => onSell(next === "keep" ? null : Number(next))}
+            >
+              <SegmentedItem value="keep">Keep</SegmentedItem>
+              {stages.map((stage) => (
+                <SegmentedItem key={stage.column} value={String(stage.column)}>
+                  {isStreetBrawl ? stage.column + 1 : stageLabel(stage.column, isStreetBrawl)}
+                </SegmentedItem>
+              ))}
+            </Segmented>
+          </Field>
+        )}
         <Separator />
         {isPending ? (
           // Three rows' height, the swaps' own, so the menu does not jump when they land.
@@ -431,12 +437,28 @@ function ItemPlan({
           ))
         )}
         <Separator />
-        {moveTo.map((stage) => (
-          <OptionRow key={stage.column} onClick={() => choose(() => onMove(stage.column))}>
-            Move to {stageLabel(stage.column, isStreetBrawl)}
-          </OptionRow>
-        ))}
-        <OptionRow onClick={() => choose(onRemove)}>Remove</OptionRow>
+        {/* Buttons, not a choice: a move takes the item, and this menu, to another stage's card. */}
+        <div className="flex flex-wrap items-center gap-1 p-1">
+          <div className="flex flex-wrap items-center gap-1">
+            <span aria-hidden="true" className="pe-1 type-caption text-muted-foreground">
+              Move to
+            </span>
+            {moveTo.map((stage) => (
+              <Button
+                key={stage.column}
+                variant="outline"
+                size="xs"
+                aria-label={`Move to ${stageLabel(stage.column, isStreetBrawl)}`}
+                onClick={() => choose(() => onMove(stage.column))}
+              >
+                {isStreetBrawl ? stage.column + 1 : stageLabel(stage.column, isStreetBrawl)}
+              </Button>
+            ))}
+          </div>
+          <Button variant="ghost" size="xs" className="ms-auto" onClick={() => choose(onRemove)}>
+            Remove
+          </Button>
+        </div>
       </PopoverContent>
     </Popover>
   );
