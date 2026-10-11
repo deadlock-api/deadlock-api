@@ -276,6 +276,22 @@ const StagePicker = memo(function StagePicker({
   );
 });
 
+// The item an empty stage of the build suggests is bought by at least this share of the build's players.
+const NEXT_MIN_SHARE = 0.1;
+
+/**
+ * The item an empty stage of the build suggests: the best win rate (pulled toward the build's, see SHRINK_SHARE)
+ * among the items a good part of the build's players buy there.
+ */
+function nextPick(view: View, column: number): Choice | undefined {
+  let best: Choice | undefined;
+  for (const choice of view.byKey.values()) {
+    if (choice.column !== column || choice.selected || choice.pickRate < NEXT_MIN_SHARE) continue;
+    if (!best || choice.score > best.score) best = choice;
+  }
+  return best;
+}
+
 /** A picked item's price and what its buyers do with it later: "3,200 · sold 62% ~24:10". */
 function saleLine(
   price: number,
@@ -808,6 +824,32 @@ export function BuildFlowExplorer({
                         />
                       );
                     })}
+                    {held.length === 0 &&
+                      soldHere.length === 0 &&
+                      (() => {
+                        const next = nextPick(view, stage.column);
+                        if (!next) return null;
+                        return (
+                          <BuildSlotItem
+                            key={`${next.key}:next`}
+                            state="suggested"
+                            media={<ItemImage itemId={next.itemId} className="size-8" />}
+                            name={<ItemName itemId={next.itemId} />}
+                            meta={`${percent(next.winRate)} WR · ${percent(next.pickRate, 0)} buy`}
+                            actions={
+                              <Button
+                                variant="ghost"
+                                size="xs"
+                                aria-label={`Add ${nameOf.get(next.itemId) ?? "item"} to ${stage.title}`}
+                                onClick={() => toggle(next.key)}
+                              >
+                                <Plus />
+                                Add
+                              </Button>
+                            }
+                          />
+                        );
+                      })()}
                     {soldHere.map((key) => {
                       const { itemId } = parseKey(key);
                       return (

@@ -261,8 +261,15 @@ export function BuildSlot({
 
 const buildSlotItemVariants = cva("flex min-w-0 items-center gap-2 rounded-sm", {
   variants: {
-    /** `held`: bought in this stage. `sold`: bought earlier and sold in this stage, faded and struck through. */
-    state: { held: "", sold: "opacity-60 [&_[data-slot=build-slot-item-name]]:line-through" },
+    /**
+     * `held`: bought in this stage. `sold`: bought earlier and sold in this stage, faded and struck through.
+     * `suggested`: not in the build, offered to add, in a dashed frame.
+     */
+    state: {
+      held: "",
+      sold: "opacity-60 [&_[data-slot=build-slot-item-name]]:line-through",
+      suggested: "border border-dashed border-hairline p-1",
+    },
   },
   defaultVariants: { state: "held" },
 });
