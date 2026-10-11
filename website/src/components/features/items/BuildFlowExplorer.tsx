@@ -360,6 +360,8 @@ export function BuildFlowExplorer({
   const [wrLow, wrHigh] = wilsonScoreInterval(summary.wins, summary.matches);
   const cost = path.reduce((sum, key) => sum + (costOf.get(parseKey(key).itemId) ?? 0), 0);
   const duration = Math.round(summary.avg_duration_s);
+  // A build nobody played in these filters: its numbers are not zeros but missing.
+  const noGames = summary.matches === 0;
 
   return (
     <Stack gap={4}>
@@ -425,13 +427,13 @@ export function BuildFlowExplorer({
             >
               <Stat
                 label="Win rate"
-                value={switching ? <Skeleton className="h-6 w-16" /> : percent(winRate)}
+                value={switching ? <Skeleton className="h-6 w-16" /> : noGames ? null : percent(winRate)}
                 // Compare the printed tenth of a percent, so 49.99% shows as an even 50.0%, not a red one.
                 tone={switching ? undefined : toneOf(Math.round(winRate * 1000), 500)}
                 sub={
                   switching ? (
                     <Skeleton className="h-4 w-20" />
-                  ) : path.length === 0 ? (
+                  ) : noGames ? undefined : path.length === 0 ? (
                     `±${((wrHigh - wrLow) * 50).toFixed(1)} pts`
                   ) : Math.round((winRate - baseWinRate) * 1000) === 0 ? (
                     "+0.0 pts vs all"
@@ -458,7 +460,7 @@ export function BuildFlowExplorer({
                 value={
                   switching ? (
                     <Skeleton className="h-6 w-12" />
-                  ) : (
+                  ) : noGames ? null : (
                     `${Math.floor(duration / 60)}:${String(duration % 60).padStart(2, "0")}`
                   )
                 }
@@ -515,75 +517,89 @@ export function BuildFlowExplorer({
             className="pointer-events-none absolute inset-0 z-10 flex items-start justify-center pt-24"
           />
         )}
-        <TooltipProvider delayDuration={300}>
-          <Grid columns={{ base: 1, sm: 2, xl: 4 }} gap={4}>
-            {view.stages.map((stage) => (
-              <BuildStage
-                key={stage.column}
-                title={stage.title}
-                meta={`${percent(stage.reached, 0)} of games`}
-                aria-busy={switching || undefined}
-              >
-                {stage.choices.length === 0 ? (
-                  <EmptyState variant="inline" title="No purchases" />
-                ) : (
-                  <>
-                    <BuildChoiceHeader start="Item · bought" end="Win rate" />
-                    <BuildChoiceList aria-label={`Items bought at ${stage.title}`}>
-                      {stage.choices.map((choice) => {
-                        const near = linked != null && Math.abs(linked.column - choice.column) === 1;
-                        const link = near ? linked.links.get(choice.key) : undefined;
-                        const after = linked != null && choice.column > linked.column;
-                        return (
-                          <Tooltip
-                            key={choice.key}
-                            content={
-                              <ChoiceTooltip
-                                choice={choice}
-                                isStreetBrawl={isStreetBrawl}
-                                next={nextChoices(view, choice)}
-                              />
-                            }
-                          >
-                            <BuildChoice
-                              media={<ItemImage itemId={choice.itemId} className="size-8" />}
-                              name={<ItemName itemId={choice.itemId} />}
-                              share={choice.pickShare}
-                              meta={percent(choice.pickRate)}
-                              link={
-                                link && {
-                                  // Of the pointed-at item's buyers: bought this one in the stage after it, or before.
-                                  label: `${percent(link.share, 0)} ${after ? "next" : "before"}`,
-                                  share: link.share,
-                                }
+        {noGames && !switching ? (
+          <EmptyState
+            title="No games with this build"
+            action={
+              <Button variant="outline" size="sm" onClick={() => void setPath((prev) => prev.slice(0, -1))}>
+                Remove the last item
+              </Button>
+            }
+          />
+        ) : (
+          <TooltipProvider delayDuration={300}>
+            <Grid columns={{ base: 1, sm: 2, xl: 4 }} gap={4}>
+              {view.stages.map((stage) => (
+                <BuildStage
+                  key={stage.column}
+                  title={stage.title}
+                  meta={`${percent(stage.reached, 0)} of games`}
+                  aria-busy={switching || undefined}
+                >
+                  {stage.choices.length === 0 ? (
+                    <EmptyState variant="inline" title="No purchases" />
+                  ) : (
+                    <>
+                      <BuildChoiceHeader start="Item · bought" end="Win rate" />
+                      <BuildChoiceList aria-label={`Items bought at ${stage.title}`}>
+                        {stage.choices.map((choice) => {
+                          const near = linked != null && Math.abs(linked.column - choice.column) === 1;
+                          const link = near ? linked.links.get(choice.key) : undefined;
+                          const after = linked != null && choice.column > linked.column;
+                          return (
+                            <Tooltip
+                              key={choice.key}
+                              content={
+                                <ChoiceTooltip
+                                  choice={choice}
+                                  isStreetBrawl={isStreetBrawl}
+                                  next={nextChoices(view, choice)}
+                                />
                               }
-                              value={percent(choice.winRate)}
-                              tone={choice.tone}
-                              change={{
-                                value: (choice.winRate - winRate) * 100,
-                                scale: CHANGE_SCALE,
-                                interval: [(choice.interval[0] - winRate) * 100, (choice.interval[1] - winRate) * 100],
-                              }}
-                              selected={choice.selected}
-                              aria-label={`${nameOf.get(choice.itemId) ?? "Item"}: bought ${percent(choice.pickRate)}, win rate ${percent(choice.winRate)}`}
-                              relation={!near ? "none" : link ? "linked" : "unlinked"}
-                              onClick={() => toggle(choice.key)}
-                              onPointerEnter={() => setPointed(choice.key)}
-                              onPointerLeave={() => setPointed(null)}
-                              onFocus={() => setPointed(choice.key)}
-                              onBlur={() => setPointed(null)}
-                            />
-                          </Tooltip>
-                        );
-                      })}
-                    </BuildChoiceList>
-                  </>
-                )}
-                {stage.candidates.length > 0 && <StagePicker stage={stage} onPick={toggle} />}
-              </BuildStage>
-            ))}
-          </Grid>
-        </TooltipProvider>
+                            >
+                              <BuildChoice
+                                media={<ItemImage itemId={choice.itemId} className="size-8" />}
+                                name={<ItemName itemId={choice.itemId} />}
+                                share={choice.pickShare}
+                                meta={percent(choice.pickRate)}
+                                link={
+                                  link && {
+                                    // Of the pointed-at item's buyers: bought this one in the stage after it, or before.
+                                    label: `${percent(link.share, 0)} ${after ? "next" : "before"}`,
+                                    share: link.share,
+                                  }
+                                }
+                                value={percent(choice.winRate)}
+                                tone={choice.tone}
+                                change={{
+                                  value: (choice.winRate - winRate) * 100,
+                                  scale: CHANGE_SCALE,
+                                  interval: [
+                                    (choice.interval[0] - winRate) * 100,
+                                    (choice.interval[1] - winRate) * 100,
+                                  ],
+                                }}
+                                selected={choice.selected}
+                                aria-label={`${nameOf.get(choice.itemId) ?? "Item"}: bought ${percent(choice.pickRate)}, win rate ${percent(choice.winRate)}`}
+                                relation={!near ? "none" : link ? "linked" : "unlinked"}
+                                onClick={() => toggle(choice.key)}
+                                onPointerEnter={() => setPointed(choice.key)}
+                                onPointerLeave={() => setPointed(null)}
+                                onFocus={() => setPointed(choice.key)}
+                                onBlur={() => setPointed(null)}
+                              />
+                            </Tooltip>
+                          );
+                        })}
+                      </BuildChoiceList>
+                    </>
+                  )}
+                  {stage.candidates.length > 0 && <StagePicker stage={stage} onPick={toggle} />}
+                </BuildStage>
+              ))}
+            </Grid>
+          </TooltipProvider>
+        )}
       </div>
     </Stack>
   );
