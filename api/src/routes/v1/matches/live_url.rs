@@ -368,19 +368,9 @@ These URLs can be used in any demofile broadcast parser:
     "
 )]
 pub(super) async fn ingest_urls(
-    rate_limit_key: RateLimitKey,
     State(state): State<AppState>,
     Json(broadcast_urls): Json<Vec<IngestLiveUrl>>,
 ) -> APIResult<impl IntoResponse> {
-    state
-        .rate_limit_client
-        .apply_limits(
-            &rate_limit_key,
-            "ingest_broadcast_urls",
-            &[Quota::ip_limit(100, Duration::from_secs(1))],
-        )
-        .await?;
-
     if broadcast_urls.is_empty() {
         return Err(APIError::status_msg(
             StatusCode::BAD_REQUEST,

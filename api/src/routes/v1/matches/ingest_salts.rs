@@ -1,4 +1,3 @@
-use core::time::Duration;
 use std::collections::HashMap;
 
 use axum::Json;
@@ -12,8 +11,6 @@ use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::matches::salts::insert_salts;
 use crate::routes::v1::matches::types::ClickhouseSalts;
-use crate::services::rate_limiter::Quota;
-use crate::services::rate_limiter::extractor::RateLimitKey;
 
 const MAX_SALTS_PER_REQUEST: usize = 1000;
 
@@ -52,19 +49,9 @@ The endpoint accepts a list of MatchSalts objects, which contain the following f
     "
 )]
 pub(super) async fn ingest_salts(
-    rate_limit_key: RateLimitKey,
     State(state): State<AppState>,
     Json(match_salts): Json<Vec<ClickhouseSalts>>,
 ) -> APIResult<impl IntoResponse> {
-    state
-        .rate_limit_client
-        .apply_limits(
-            &rate_limit_key,
-            "ingest_salts",
-            &[Quota::ip_limit(100, Duration::from_secs(1))],
-        )
-        .await?;
-
     debug!("Received salts: {match_salts:?}");
 
     if match_salts.is_empty() {
