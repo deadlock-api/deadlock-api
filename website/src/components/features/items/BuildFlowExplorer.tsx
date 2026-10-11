@@ -957,10 +957,12 @@ export function BuildFlowExplorer({
         }
         if (!next) break;
         current.push(next);
+        // On the board as it is found, so the build fills in while the next step loads (its answer is the one the
+        // board then reads, fetched once).
+        changePath([...current]);
       }
       if (current.length > from.length) {
         const before = path;
-        changePath(current);
         const open = view.stages.filter((stage) => !current.some((key) => parseKey(key).column === stage.column));
         toast(
           from.length === 0 && before.length > 0
