@@ -121,6 +121,14 @@ function stageLabel(column: number, isStreetBrawl: boolean): string {
   return TIME_PHASE_LABELS[column] ?? `Stage ${column + 1}`;
 }
 
+/**
+ * The low end of a win rate's 95% interval once `shrink` games at `reference` are added to its own: the least it may
+ * be, with a small sample pulled toward the reference first. `wins` may be fractional (an adjusted rate's).
+ */
+function confidentRate(wins: number, matches: number, reference: number, shrink: number): number {
+  return wilsonScoreInterval(wins + reference * shrink, matches + shrink)[0];
+}
+
 const percent = (value: number, digits = 1) => `${(value * 100).toFixed(digits)}%`;
 const count = (value: number) => value.toLocaleString("en-US");
 
@@ -153,6 +161,12 @@ interface Choice {
   interval: readonly [number, number];
   /** `winRate` pulled toward the build's own by a share of its games: what the win rate sort ranks by. */
   score: number;
+  /**
+   * The least `score` may be: the low end of its 95% interval. A perfect record from a dozen games is pulled to the
+   * build's rate before the interval is taken, so it does not outrank a good one from hundreds (12 of 12 ranks at 49%,
+   * 66% of 300 at 58%). Suggestions, swaps and the confident completion rank by it.
+   */
+  confident: number;
   tone: Tone;
   /** Share of the build's games that bought it in this stage. */
   pickRate: number;
@@ -292,15 +306,14 @@ const NEXT_MIN_SHARE = 0.1;
 const NEXT_MIN_SHARE_BRAWL = 0.05;
 
 /**
- * The item an empty stage of the build suggests: the best win rate by the least it may be (its 95% interval's low
- * end) among the items a good part of the build's players buy there, other than those in `taken` (an item is owned
+ * The item an empty stage of the build suggests: the best win rate by the least it may be (`Choice.confident`) among the items a good part of the build's players buy there, other than those in `taken` (an item is owned
  * once).
  */
 function nextPick(view: View, column: number, taken: Set<number>, minShare = NEXT_MIN_SHARE): Choice | undefined {
   let best: Choice | undefined;
   for (const choice of view.byKey.values()) {
     if (choice.column !== column || taken.has(choice.itemId) || choice.pickRate < minShare) continue;
-    if (!best || choice.interval[0] > best.interval[0]) best = choice;
+    if (!best || choice.confident > best.confident) best = choice;
   }
   return best;
 }
@@ -364,6 +377,8 @@ function ItemPlan({
   const swaps = useMemo(() => {
     if (!data) return [];
     const games = Math.max(1, data.summary.matches);
+    const reference = data.summary.matches > 0 ? data.summary.wins / data.summary.matches : 0.5;
+    const shrink = Math.max(SHRINK_MIN_GAMES, data.summary.matches * SHRINK_SHARE);
     return data.nodes
       .filter((n) => n.column === column && !taken.has(n.item_id) && n.matches / games >= SWAP_MIN_SHARE)
       .map((n) => {
@@ -373,9 +388,9 @@ function ItemPlan({
           itemId: n.item_id,
           winRate,
           games: n.matches,
-          // Ranked by the least the win rate may be (its 95% interval's low end), as Complete build's confident pick:
-          // a rate from a few dozen games does not outrank one from hundreds.
-          score: wilsonScoreInterval(n.wins, n.matches)[0],
+          // Ranked by the least the win rate may be, as Complete build's confident pick (see `Choice.confident`): a
+          // rate from a few dozen games does not outrank one from hundreds.
+          score: confidentRate(n.wins, n.matches, reference, shrink),
         };
       })
       .sort((a, b) => b.score - a.score)
@@ -953,8 +968,8 @@ export function BuildFlowExplorer({
               // Paced like a real build, so cheap early items do not take the slots late ones need.
               slots: Math.min(slotUse[index].open, COMPLETE_HELD_BY_STAGE[index] ?? slotUse[index].open),
             })),
-            // The low end of each item's 95% interval, for the confident goal.
-            choices: choices.map((c) => ({ ...c, lowerBound: c.interval[0] })),
+            // The least each item's win rate may be, for the confident goal.
+            choices: choices.map((c) => ({ ...c, lowerBound: c.confident })),
             path: current,
             priceOf: (id) => costOf.get(id) ?? 0,
             categoryOf: (id) => slotOf.get(id),
@@ -1644,6 +1659,7 @@ function buildView(
       winRate,
       interval,
       score: (winRate * node.matches + reference * shrink) / (node.matches + shrink),
+      confident: confidentRate(winRate * node.matches, node.matches, reference, shrink),
       tone,
       pickRate: node.matches / population,
       pickShare: 0,

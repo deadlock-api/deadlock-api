@@ -2,8 +2,8 @@
 export type BuildFocus = "balanced" | "weapon" | "spirit" | "vitality";
 /**
  * What it ranks items by: how many players buy them (`popular`), how they win pulled toward the build's own rate
- * (`winning`), or the least their win rate may be by its 95% interval (`confident`): 9 wins in 9 games is a 70% at
- * least, 600 in 1,000 a 57%, so a rate from a handful of games does not outrank one from many.
+ * (`winning`), or the least their win rate may be by its 95% interval (`confident`, `lowerBound`), so a rate from a
+ * handful of games does not outrank one from many.
  */
 export type BuildGoal = "popular" | "winning" | "confident";
 
