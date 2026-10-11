@@ -72,6 +72,10 @@ const LATE_REACH = 0.8;
 const SHRINK_SHARE = 0.02;
 const SHRINK_MIN_GAMES = 100;
 
+// A neighbouring row lights up for the pointed-at one only if at least this share of its buyers bought both.
+const LINK_MIN_SHARE = 0.1;
+// The best win rate build takes only items bought by at least this share of the players it follows.
+const SUGGEST_MIN_SHARE = 0.15;
 const AT_ONCE = { limitUrlUpdates: throttle(50) };
 
 const SORT_OPTIONS = [
@@ -321,6 +325,7 @@ export function BuildFlowExplorer({
     return [
       { label: "Most common", path: suggestPath(view, "common") },
       { label: "Best win rate", path: suggestPath(view, "winning") },
+      // Once the build holds all of one, it has nothing to add (and would only repeat the picks).
     ].filter((s) => s.path.length > 1 && s.path.some((c) => !c.selected));
   }, [view]);
 
@@ -345,8 +350,21 @@ export function BuildFlowExplorer({
   }
   const cost = [...stageCost.values()].reduce((sum, n) => sum + n, 0);
   const duration = Math.round(summary.avg_duration_s);
+  // Without a build the win rate is read against 50%. With one, against all games, colored only when its 95% interval
+  // clears them; the ± beside the change says how sure it is (115 games at 80.9% are +30 points, but ±7).
+  const buildTone: Tone =
+    path.length === 0
+      ? // Compare the printed tenth of a percent, so 49.99% shows as an even 50.0%, not a red one.
+        toneOf(Math.round(winRate * 1000), 500)
+      : wrLow > baseWinRate
+        ? "positive"
+        : wrHigh < baseWinRate
+          ? "negative"
+          : "muted";
   // A build nobody played in these filters: its numbers are not zeros but missing.
   const noGames = summary.matches === 0;
+  // A Street Brawl answer can have fewer rounds than the stage that was shown.
+  const shownIndex = Math.min(shownStage, view.stages.length - 1);
 
   return (
     <Stack gap={4}>
@@ -384,8 +402,10 @@ export function BuildFlowExplorer({
                   </BuildPathStep>
                 ))}
               </BuildPath>
-              {suggestions.length > 0 && (
-                <Inline gap={2}>
+              {/* The row keeps its height without suggestions (two lines where the two wrap), so the panel does not jump when
+                  the build fills up. */}
+              {view.stages.length > 1 && (
+                <Inline gap={2} className="min-h-18 @md:min-h-8">
                   {suggestions.map((suggestion) => (
                     <Button
                       key={suggestion.label}
@@ -418,18 +438,20 @@ export function BuildFlowExplorer({
               <Stat
                 label="Win rate"
                 value={switching ? <Skeleton className="h-6 w-16" /> : noGames ? null : percent(winRate)}
-                // Compare the printed tenth of a percent, so 49.99% shows as an even 50.0%, not a red one.
-                tone={switching ? undefined : toneOf(Math.round(winRate * 1000), 500)}
+                tone={switching ? undefined : buildTone}
                 sub={
                   switching ? (
                     <Skeleton className="h-4 w-20" />
                   ) : noGames ? undefined : path.length === 0 ? (
                     `±${((wrHigh - wrLow) * 50).toFixed(1)} pts`
-                  ) : Math.round((winRate - baseWinRate) * 1000) === 0 ? (
-                    "+0.0 pts vs all"
                   ) : (
                     <>
-                      <Delta value={(winRate - baseWinRate) * 100} format="number" unit=" pts" /> vs all
+                      {Math.round((winRate - baseWinRate) * 1000) === 0 ? (
+                        "+0.0"
+                      ) : (
+                        <Delta value={(winRate - baseWinRate) * 100} format="number" />
+                      )}{" "}
+                      ±{((wrHigh - wrLow) * 50).toFixed(1)} vs all
                     </>
                   )
                 }
@@ -520,11 +542,7 @@ export function BuildFlowExplorer({
           // A narrow container shows one stage at a time behind a switcher; a wide one shows them side by side.
           <Stack gap={3} className="@container">
             <div className="@2xl:hidden">
-              <Segmented
-                aria-label="Stage"
-                value={String(Math.min(shownStage, view.stages.length - 1))}
-                onValueChange={(v) => setShownStage(Number(v))}
-              >
+              <Segmented aria-label="Stage" value={String(shownIndex)} onValueChange={(v) => setShownStage(Number(v))}>
                 {view.stages.map((stage, index) => (
                   <SegmentedItem key={stage.column} value={String(index)}>
                     {isStreetBrawl ? `R${stage.column + 1}` : stage.title}
@@ -536,7 +554,7 @@ export function BuildFlowExplorer({
               {view.stages.map((stage, index) => (
                 <BuildStage
                   key={stage.column}
-                  className={index === Math.min(shownStage, view.stages.length - 1) ? undefined : "hidden @2xl:flex"}
+                  className={index === shownIndex ? undefined : "hidden @2xl:flex"}
                   title={stage.title}
                   meta={
                     // A stage most games never reach (30m+) shows long games only, whose win rates run high.
@@ -559,7 +577,9 @@ export function BuildFlowExplorer({
                       <BuildChoiceList aria-label={`Items bought at ${stage.title}`}>
                         {stage.choices.map((choice) => {
                           const near = linked != null && Math.abs(linked.column - choice.column) === 1;
-                          const link = near ? linked.links.get(choice.key) : undefined;
+                          // Only a link a good part of the pointed-at item's buyers took stands out; the rest fade.
+                          const found = near ? linked.links.get(choice.key) : undefined;
+                          const link = found && found.share >= LINK_MIN_SHARE ? found : undefined;
                           const after = linked != null && choice.column > linked.column;
                           return (
                             <BuildChoice
@@ -572,7 +592,7 @@ export function BuildFlowExplorer({
                               link={
                                 link && {
                                   // Of the pointed-at item's buyers: bought this one in the stage after it, or before.
-                                  label: `${percent(link.share, 0)} ${after ? "next" : "before"}`,
+                                  label: `${percent(link.share)} ${after ? "next" : "before"}`,
                                   share: link.share,
                                 }
                               }
@@ -586,7 +606,14 @@ export function BuildFlowExplorer({
                               selected={choice.selected}
                               aria-label={`${nameOf.get(choice.itemId) ?? "Item"}: bought ${percent(choice.pickRate)}, win rate ${percent(choice.winRate)}`}
                               relation={!near ? "none" : link ? "linked" : "unlinked"}
-                              onClick={() => toggle(choice.key)}
+                              onClick={() => {
+                                // On a narrow screen a pick in the shown stage moves on to the next one, the way a
+                                // build is read; a wide one shows every stage and ignores it.
+                                if (!choice.selected && index === shownIndex && index + 1 < view.stages.length) {
+                                  setShownStage(index + 1);
+                                }
+                                toggle(choice.key);
+                              }}
                               onPointerEnter={() => startTransition(() => setPointed(choice.key))}
                               onPointerLeave={() => startTransition(() => setPointed(null))}
                               onFocus={() => startTransition(() => setPointed(choice.key))}
@@ -641,7 +668,9 @@ function buildView(
   const toChoice = (node: ItemFlowStats["nodes"][number]): Choice => {
     const key = `${node.column}:${node.item_id}`;
     const raw = node.matches > 0 ? node.wins / node.matches : 0;
-    const winRate = isStreetBrawl ? raw : node.adjusted_win_rate;
+    // A picked item was bought by every game of the build, so its raw win rate is the build's own; the adjusted one
+    // (reweighted by net worth at purchase) would read as a second, different win rate for the same games.
+    const winRate = isStreetBrawl || path.has(key) ? raw : node.adjusted_win_rate;
     const [low, high] = wilsonScoreInterval(node.wins, node.matches);
     const interval = [low + winRate - raw, high + winRate - raw] as const;
     // Colored only when the interval clears the build's own win rate: a choice that may well be even stays neutral.
@@ -686,7 +715,8 @@ function buildView(
   for (let column = 0; column <= lastColumn; column++) {
     const all = (byColumn.get(column) ?? []).slice().sort(compare);
     const chosen = all.filter((c) => c.selected);
-    const choices = [...chosen, ...all.filter((c) => !c.selected).slice(0, perColumn)];
+    // The picks count toward the rows shown: "8" shows eight.
+    const choices = [...chosen, ...all.filter((c) => !c.selected).slice(0, Math.max(0, perColumn - chosen.length))];
     const top = Math.max(0, ...choices.map((c) => c.pickRate));
     for (const c of choices) c.pickShare = top > 0 ? c.pickRate / top : 0;
     stages.push({
@@ -727,21 +757,27 @@ function buildView(
  * A whole build, one item per stage, followed through the links: the most bought first item and then, stage by stage,
  * what its buyers bought most next (`common`), or the same by win rate pulled toward the build's (`winning`). A stage
  * with a pick of the reader's keeps it, so a started build is completed rather than replaced. Ends early where nobody
- * went on.
+ * went on. It reads every choice of a stage, not the sorted and cut list on screen, so the sort does not change it.
  */
 function suggestPath(view: View, by: "common" | "winning"): Choice[] {
   const path: Choice[] = [];
   for (const stage of view.stages) {
     const from = path.at(-1);
-    const picked = stage.choices.filter((c) => c.selected).sort((a, b) => b.matches - a.matches)[0];
-    let next: Choice | undefined = picked;
+    const all = [...view.byKey.values()].filter((c) => c.column === stage.column);
+    let next = all.filter((c) => c.selected).sort((a, b) => b.matches - a.matches)[0];
     if (!next && !from) {
-      next = [...stage.choices].sort((a, b) => (by === "common" ? b.matches - a.matches : b.score - a.score))[0];
+      next =
+        by === "common"
+          ? all.sort((a, b) => b.matches - a.matches)[0]
+          : all.filter((c) => c.pickRate >= SUGGEST_MIN_SHARE).sort((a, b) => b.score - a.score)[0];
     } else if (!next && from) {
       let best = Number.NEGATIVE_INFINITY;
       for (const [key, link] of view.links.get(from.key) ?? []) {
         const choice = view.byKey.get(key);
         if (!choice || choice.column !== stage.column) continue;
+        // The winning build only takes a step a good part of the previous item's buyers took: a chain of rare steps
+        // ends on a hundred games that won 80%.
+        if (by === "winning" && link.matches < from.matches * SUGGEST_MIN_SHARE) continue;
         const rank = by === "common" ? link.matches : view.shrink(link.wins, link.matches);
         if (rank > best) {
           best = rank;

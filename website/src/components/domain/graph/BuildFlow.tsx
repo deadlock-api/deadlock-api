@@ -212,7 +212,7 @@ export function BuildPath({ className, ...props }: React.ComponentProps<"ol">) {
   return (
     <ol
       data-slot="build-path"
-      className={cn("grid min-w-0 grid-cols-[repeat(auto-fit,minmax(6rem,1fr))] gap-1", className)}
+      className={cn("grid min-w-0 grid-cols-[repeat(auto-fit,minmax(4.5rem,1fr))] gap-1", className)}
       {...props}
     />
   );
@@ -235,14 +235,15 @@ export function BuildPathStep({
       data-slot="build-path-step"
       data-empty={empty || undefined}
       className={cn(
-        "flex min-w-0 flex-col gap-1 rounded-md border border-hairline bg-subtle px-2 py-1.5 data-empty:border-dashed data-empty:bg-transparent",
+        "@container flex min-w-0 flex-col gap-1 rounded-md border border-hairline bg-subtle px-2 py-1.5 data-empty:border-dashed data-empty:bg-transparent",
         className,
       )}
       {...props}
     >
-      <span className="flex items-baseline justify-between gap-2 type-caption text-muted-foreground">
+      {/* A narrow step puts the meta on a line of its own, kept even while empty, so a pick does not grow the step. */}
+      <span className="flex flex-col type-caption text-muted-foreground @min-[8rem]:flex-row @min-[8rem]:items-baseline @min-[8rem]:justify-between @min-[8rem]:gap-x-2">
         <span className="truncate font-medium">{label}</span>
-        {meta && <span className="shrink-0 tabular-nums">{meta}</span>}
+        <span className="shrink-0 tabular-nums">{meta ?? "\u00a0"}</span>
       </span>
       <span className="flex min-h-8 flex-wrap items-center gap-1">
         {empty ? <span className="type-caption text-muted-foreground">Any item</span> : children}
