@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Coins, ListOrdered } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { CartesianGrid, ComposedChart, Line, ReferenceArea, ReferenceDot, ReferenceLine, XAxis, YAxis } from "recharts";
 
 import { AbilityImage } from "~/components/domain/assets/AbilityImage";
@@ -34,6 +34,12 @@ const SELL_REFUND = 0.5;
 const END_S = 2700;
 // A skill mark's width as a share of the plot (a 20px mark on a ~600px plot): marks of one ability step apart by it.
 const SKILL_MARK_SPAN = 0.035;
+// An item mark's width with its frame and a gap, in pixels: marks closer than this on the curve step up into rows
+// above it, at most this many, each a mark's height higher, tied to their point by a leader line.
+const ITEM_MARK_SPAN = 26;
+const ITEM_MARK_ROWS = 4;
+// The plot's right margin, in pixels (the chart's `margin.right`).
+const PLOT_MARGIN_RIGHT = 16;
 // The y-axis width in pixels: the flex slider under the plot is inset by the same (`ps-10`).
 const Y_AXIS_WIDTH = 40;
 const TICKS = [0, 300, 600, 900, 1200, 1500, 1800, 2100, 2400, 2700];
@@ -268,6 +274,35 @@ export function BuildEconomy({
   const [flexDraft, setFlexDraft] = useState<{ from: string; minutes: number[] } | null>(null);
   const shownFlex = flexDraft?.from === flexKey ? flexDraft.minutes : [...flexMinutes];
   const lanes = useMemo(() => skillLanes(skills, abilities), [skills, abilities]);
+  // The plot's width, to step marks that would cover each other into rows above the curve.
+  const [plotWidth, setPlotWidth] = useState(0);
+  const plotRef = useRef<HTMLDivElement>(null);
+  const plotShown = plot != null;
+  useEffect(() => {
+    const element = plotRef.current;
+    if (!element) return;
+    const observer = new ResizeObserver(([entry]) => setPlotWidth(entry.contentRect.width));
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [plotShown]);
+  const rowOf = useMemo(() => {
+    const rows = new Map<string, number>();
+    if (!plot || plotWidth <= 0) return rows;
+    const perSecond = (plotWidth - Y_AXIS_WIDTH - PLOT_MARGIN_RIGHT) / END_S;
+    const rowEnds: number[] = [];
+    for (const p of plot.placed) {
+      if (p.boughtAt == null) continue;
+      const x = p.boughtAt * perSecond;
+      let row = rowEnds.findIndex((end) => x - end >= ITEM_MARK_SPAN);
+      if (row < 0) {
+        // Every row is taken here: a new one, or else the row that frees up first.
+        row = rowEnds.length < ITEM_MARK_ROWS ? rowEnds.length : rowEnds.indexOf(Math.min(...rowEnds));
+      }
+      rowEnds[row] = x;
+      rows.set(p.key, row);
+    }
+    return rows;
+  }, [plot, plotWidth]);
 
   return (
     <Panel {...props}>
@@ -282,7 +317,7 @@ export function BuildEconomy({
         ) : (
           <>
             {/* At least the large plot's height, more where the panel beside it is taller. */}
-            <div className="flex min-h-90 flex-1 flex-col @xl:min-h-105">
+            <div ref={plotRef} className="flex min-h-90 flex-1 flex-col @xl:min-h-105">
               <ChartSurface label="Average net worth over the game, with the build's items" variant="flush" size="grow">
                 <ComposedChart data={plot.series} margin={{ top: 20, right: 16, bottom: 0, left: 0 }}>
                   {STAGE_STARTS.map((start, i) => (
@@ -338,11 +373,17 @@ export function BuildEconomy({
                     if (p.boughtAt != null && p.netWorthAtBuy != null && p.boughtAt <= END_S) {
                       marks.push(
                         <ReferenceDot
-                          key={`${p.key}-buy`}
+                          // Keyed by its row too: the plot keeps a dot's first shape, so a new row is a new dot.
+                          key={`${p.key}-buy-${rowOf.get(p.key) ?? 0}`}
                           x={p.boughtAt}
                           y={p.netWorthAtBuy}
                           shape={({ cx, cy }: { cx?: number; cy?: number }) => (
-                            <ItemMark href={href} cx={cx ?? 0} cy={cy ?? 0} />
+                            <ItemMark
+                              href={href}
+                              cx={cx ?? 0}
+                              cy={cy ?? 0}
+                              lift={(rowOf.get(p.key) ?? 0) * ITEM_MARK_SPAN}
+                            />
                           )}
                         />,
                       );
@@ -509,21 +550,33 @@ function skillLanes(
   });
 }
 
-/** An item's icon on the plot, framed in ink; a sold one is framed in the loss color and faded. */
+/**
+ * An item's icon on the plot, framed in ink; a sold one is framed in the loss color and faded. A `lift` raises it
+ * above its point on the curve (below it near the plot's top), where a dot marks the point and a line ties the two.
+ */
 function ItemMark({
   href,
   cx,
-  cy,
+  cy: pointY,
   sold = false,
+  lift = 0,
 }: {
   href: string | undefined;
   cx: number;
   cy: number;
   sold?: boolean;
+  lift?: number;
 }) {
   const size = 20;
+  const cy = lift > 0 && pointY - lift < size ? pointY + lift : pointY - lift;
   return (
     <g>
+      {lift > 0 && (
+        <>
+          <line x1={cx} y1={pointY} x2={cx} y2={cy} stroke={CHART_COLOR.ink} strokeWidth={1} strokeOpacity={0.6} />
+          <circle cx={cx} cy={pointY} r={2.5} fill={CHART_COLOR.ink} />
+        </>
+      )}
       <rect
         x={cx - size / 2 - 2}
         y={cy - size / 2 - 2}
