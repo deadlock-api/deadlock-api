@@ -27,6 +27,7 @@ export function BuildSkillOrder({
   common,
   request,
   commonStats,
+  scope = "most common",
   loading,
   onValueChange: onChange,
 }: {
@@ -37,6 +38,8 @@ export function BuildSkillOrder({
   order: readonly number[];
   /** The most common order and its share of players at each step, to compare with and to reset to. */
   common: readonly { abilityId: number; pickRate: number }[];
+  /** Whose order the common one is, in the title: "most common", "most common with these items". */
+  scope?: string;
   /** How the players on the common order did, shown while the order is unchanged. */
   commonStats?: { winRate: number; matches: number } | null;
   /** The ability order filters of the build (items, ranks, dates). */
@@ -77,7 +80,7 @@ export function BuildSkillOrder({
 
   return (
     <Panel>
-      <PanelHeader title={custom ? "Your skill order" : "Skill order · most common"} icon={Sparkles} size="sm">
+      <PanelHeader title={custom ? "Your skill order" : `Skill order · ${scope}`} icon={Sparkles} size="sm">
         {custom && (
           <Button variant="ghost" size="xs" onClick={() => onChange(null)}>
             <RotateCcw />

@@ -46,7 +46,10 @@ export interface EconomyItem {
   itemId: number;
   /** The build flow stage it was picked in. */
   column: number;
+  /** What it adds to the build's spending: its price, less a held component's that it is built from. */
   cost: number;
+  /** Its shop price. */
+  price: number;
   /** Its buyers' average net worth when they bought it in that stage. */
   netWorthAtBuy: number | null;
   /** The stage the build sells it in, if it does. */
@@ -379,7 +382,11 @@ export function BuildEconomy({
                 {skills.length > 0 && (
                   // The skill upgrades on the same span as the plot: each at its average time, stepped into a lower
                   // row where it would cover the one before.
-                  <div className="ps-10 pe-4">
+                  <div className="relative ps-10 pe-4">
+                    {/* Named in the y-axis' gutter, beside the lane. */}
+                    <span aria-hidden="true" className="absolute inset-s-0 top-0 type-caption text-muted-foreground">
+                      Skills
+                    </span>
                     <ol aria-label="Skill upgrades by time" className={cn("relative", SKILL_LANE_HEIGHT[lanes.count])}>
                       {lanes.placed.map((skill) => (
                         <li
@@ -440,7 +447,12 @@ export function BuildEconomy({
                 key={p.key}
                 rank={index + 1}
                 entity={{ itemId: p.itemId }}
-                meta={`${p.cost.toLocaleString("en-US")} souls`}
+                // The item's price, as on the build's cards, and what it adds when it upgrades a held component.
+                meta={
+                  p.price > p.cost
+                    ? `${p.price.toLocaleString("en-US")} souls · +${p.cost.toLocaleString("en-US")}`
+                    : `${p.price.toLocaleString("en-US")} souls`
+                }
               >
                 <RankedEntityMetric label="Souls" value={p.netWorthAtBuy != null ? compact(p.netWorthAtBuy) : null} />
                 <RankedEntityMetric label="Bought" value={p.boughtAt != null ? clock(p.boughtAt) : null} />

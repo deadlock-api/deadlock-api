@@ -746,6 +746,7 @@ export function BuildFlowExplorer({
           itemId,
           column,
           cost: payOf(key),
+          price: costOf.get(itemId) ?? 0,
           netWorthAtBuy: view?.byKey.get(key)?.netWorthAtBuy ?? null,
           sellColumn: sellOf.get(key) ?? null,
         };
@@ -757,6 +758,7 @@ export function BuildFlowExplorer({
       itemId: c.itemId,
       column: c.column,
       cost: costOf.get(c.itemId) ?? 0,
+      price: costOf.get(c.itemId) ?? 0,
       netWorthAtBuy: c.netWorthAtBuy,
       sellColumn: null,
     }));
@@ -1570,6 +1572,7 @@ export function BuildFlowExplorer({
               slotAbilities={slotAbilities}
               order={skillOrder}
               common={skillPath?.steps ?? []}
+              scope={path.length > 0 ? "most common with these items" : "most common"}
               commonStats={skillPath ? { winRate: skillPath.winRate, matches: skillPath.matches } : null}
               request={skillRequest}
               loading={skillQuery.isPending}
