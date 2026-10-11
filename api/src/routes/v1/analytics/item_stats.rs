@@ -393,6 +393,9 @@ pub struct ItemStats {
     pub avg_buy_time_relative: f64,
     /// Average sell time as percentage of match duration (for items that were sold)
     pub avg_sell_time_relative: f64,
+    /// How many of the `matches` purchases were sold again. `sold / matches` is the sell rate.
+    #[serde(default)]
+    pub sold: u64,
 }
 
 // All rollups below (`item_stats_agg`, `item_cohort_stats_*_agg_v2`, `item_enemy_stats_agg`)
@@ -437,7 +440,8 @@ SELECT
     sum(sum_buy_time) / sum(n_matches)                       AS avg_buy_time_s,
     if(sum(n_sold) = 0, 0, sum(sum_sold_time) / sum(n_sold)) AS avg_sell_time_s,
     sum(sum_buy_rel) / sum(n_matches)                        AS avg_buy_time_relative,
-    if(sum(n_sold) = 0, 0, sum(sum_sold_rel) / sum(n_sold))  AS avg_sell_time_relative
+    if(sum(n_sold) = 0, 0, sum(sum_sold_rel) / sum(n_sold))  AS avg_sell_time_relative,
+    sum(n_sold)                                              AS sold
 FROM {table}
 WHERE {where_clause}
 GROUP BY item_id, bucket
@@ -1111,7 +1115,8 @@ SELECT
     avg(buy_time) AS avg_buy_time_s,
     ifNotFinite(avgIf(sold_time, sold_time > 0), 0) AS avg_sell_time_s,
     avg((buy_time / duration_s) * 100) AS avg_buy_time_relative,
-    ifNotFinite(avgIf((sold_time / duration_s) * 100, sold_time > 0), 0) AS avg_sell_time_relative
+    ifNotFinite(avgIf((sold_time / duration_s) * 100, sold_time > 0), 0) AS avg_sell_time_relative,
+    countIf(sold_time > 0) AS sold
 FROM match_player
 ARRAY JOIN
     {items_array_join}{nw_array_join}
