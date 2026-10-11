@@ -55,7 +55,8 @@ export function DemoNotice() {
             <ul aria-label="Ways to get your own tracker">
               <Way icon={<Download />} title="Run the ingest tool, free">
                 Every Steam account the tool sent matches for in the last {INGEST_TRACKER_WINDOW_DAYS} days has its
-                tracker unlocked, no sign-in needed. It also gets your matches onto every Deadlock tracker site.
+                tracker unlocked once we have checked one of those matches, no sign-in needed. It also gets your matches
+                onto every Deadlock tracker site.
               </Way>
               <Way icon={<Heart />} title="Or support us on Patreon">
                 From $1.50 a month: the tracker for the Steam accounts you link, and their matches fetched first.

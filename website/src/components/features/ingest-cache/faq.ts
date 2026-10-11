@@ -56,7 +56,7 @@ export const INGEST_FAQ: readonly IngestFaqEntry[] = [
   },
   {
     question: "Do I get the player tracker for running the tool?",
-    answer: `Yes. Every Steam account the background tool sent matches for in the last ${INGEST_TRACKER_WINDOW_DAYS} days gets its player tracker on deadlock-api.com for free: full match history, rank progression, hero stats, and the teammates and opponents you play with most. There is nothing to sign in to; open your profile on the tracker page once the tool has sent a match. The one-time cache upload does not unlock it, because it does not send your Steam account ID.`,
+    answer: `Yes. Every Steam account the background tool sent matches for in the last ${INGEST_TRACKER_WINDOW_DAYS} days gets its player tracker on deadlock-api.com for free: full match history, rank progression, hero stats, and the teammates and opponents you play with most. There is nothing to sign in to: open your profile on the tracker page once we have checked one of the matches the tool sent. A match counts for whoever sent it first, so matches someone else already sent do not unlock it. The one-time cache upload does not unlock it, because it does not send your Steam account ID.`,
   },
   {
     question: "Does it work on macOS?",
