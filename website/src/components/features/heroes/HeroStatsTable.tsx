@@ -1,8 +1,6 @@
-import { Link } from "@tanstack/react-router";
 import { Crosshair, Skull, Sparkles, Swords, type LucideIcon } from "lucide-react";
 
 import { HeroCell } from "~/components/domain/assets/HeroCell";
-import { HeroImage } from "~/components/domain/assets/HeroImage";
 import { HeroDetailsTooltip } from "~/components/features/heroes/HeroDetailsTooltip";
 import { HeroStatTrend } from "~/components/features/heroes/HeroStatTrend";
 import { CHART_COLOR, SERIES_COLORS } from "~/components/patterns/charts/theme";
@@ -19,11 +17,9 @@ import { Segmented, SegmentedItem } from "~/components/ui/segmented";
 import { SortButton, ariaSort } from "~/components/ui/sort-button";
 import { Inline, Stack } from "~/components/ui/stack";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
-import { TextLink } from "~/components/ui/text-link";
 import { findKey } from "~/lib/find-keys";
 import { formatPercent } from "~/lib/format";
 import { Z_SCORE_BR_WEIGHT, Z_SCORE_PR_WEIGHT, Z_SCORE_WR_WEIGHT } from "~/lib/hero-scoring";
-import { heroSlug } from "~/lib/hero-slug";
 
 import {
   type HeroStatsRowData,
@@ -280,21 +276,7 @@ function HeroStatsRow({ rank, hero, table }: { rank: number; hero: HeroStatsRowD
       <TableCell className="text-center font-semibold">{rank}</TableCell>
       <TableCell data-pinned>
         <Stack gap={1}>
-          {table.heroLinkVariant === "test" && heroName !== undefined ? (
-            <TextLink asChild tone="inherit" underline="dotted">
-              <Link
-                to="/analytics/heroes/$heroName"
-                params={{ heroName: heroSlug(heroName) }}
-                preload="intent"
-                className="flex items-center gap-2"
-              >
-                <HeroImage heroId={row.hero_id} />
-                <span className="truncate">{heroName}</span>
-              </Link>
-            </TextLink>
-          ) : (
-            <HeroCell heroId={row.hero_id} linkToDetail />
-          )}
+          <HeroCell heroId={row.hero_id} linkToDetail />
           {/* In a narrow table the sample size stays, shortened ("19K"): without it a phone lost how much a win rate
               rests on. The short form is generated content with empty alt text, so the page text (crawlers, screen
               readers, copy) holds the count once. */}

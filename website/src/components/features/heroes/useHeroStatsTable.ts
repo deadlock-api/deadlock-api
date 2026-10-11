@@ -9,7 +9,6 @@ import type { Dayjs } from "~/dayjs";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { BANS_PER_MATCH, computeBanRates } from "~/lib/ban-rate";
 import { getPickrateMultiplier } from "~/lib/constants";
-import { useExperiment } from "~/lib/experiments";
 import type { GameMode, MatchMode } from "~/lib/game-mode";
 import { computeResiduals, computeZScores } from "~/lib/hero-scoring";
 import { heroesQueryOptions } from "~/queries/asset-queries";
@@ -210,7 +209,6 @@ export function useHeroStatsTable({
     enabled: hasPreviousInterval && supportsBans,
   });
   const heroesQuery = useQuery(heroesQueryOptions);
-  const heroLinkVariant = useExperiment("exp-hero-row-link");
 
   const heroData = statsQuery.data;
   const heroes = heroesQuery.data;
@@ -450,7 +448,6 @@ export function useHeroStatsTable({
     onPickRateModeChange,
     onPickRateModeClick,
     trend: { params: statsParams, bucket: trendBucket, onBucketChange: setTrendBucket },
-    heroLinkVariant,
     gameMode,
   };
 }
