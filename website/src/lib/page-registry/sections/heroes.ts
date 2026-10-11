@@ -15,6 +15,7 @@ const HERO_PAGE_STATS = {
 export const HERO_PAGES: RegisteredPage[] = [
   {
     id: "hero_stats",
+    title: "Hero Stats",
     description: "win rate, pick rate and ban rate of every hero in one table; best, worst or most played heroes",
     path: "/analytics/heroes",
     search: { hero_sort_key: sortParam({ winrate: "winrate", pickrate: "pickRate", banrate: "banRate" }) },
@@ -23,6 +24,7 @@ export const HERO_PAGES: RegisteredPage[] = [
   },
   {
     id: "tier_list",
+    title: "Hero Tier List",
     description: "every hero ranked S to D; the meta, which heroes are strong, op or broken right now",
     path: "/analytics/heroes/tier-list",
     search: {
@@ -43,6 +45,7 @@ export const HERO_PAGES: RegisteredPage[] = [
   },
   {
     id: "hero_page",
+    title: "Hero Page",
     description: "one hero's own page: how good it is, its win rate, best items, matchups and abilities at a glance",
     context: 'Pick it for a question about one hero that names no specific stat, such as "is haze good".',
     path: "/analytics/heroes/$heroName",
@@ -52,6 +55,7 @@ export const HERO_PAGES: RegisteredPage[] = [
   },
   {
     id: "hero_counters",
+    title: "Hero Counters",
     description: "one hero against every other hero: its counters, who it beats, who it loses to",
     context:
       'A question naming one hero\'s counters, or one hero against another ("haze vs bebop"), is this page, unless it ' +
@@ -64,6 +68,7 @@ export const HERO_PAGES: RegisteredPage[] = [
   },
   {
     id: "hero_matchups",
+    title: "Hero Matchups",
     description: "the matchup table of all heroes at once: the best and worst opponent and teammate of every hero",
     path: "/analytics/heroes/matchups",
     filters: ALL,
@@ -71,6 +76,7 @@ export const HERO_PAGES: RegisteredPage[] = [
   },
   {
     id: "hero_synergy",
+    title: "Hero Combos",
     description:
       "hero duos and trios on the same team and how often they win together: who to pair a hero with, good teammates, synergy",
     context: "Only for heroes playing together. A question about the trooper or soul economy is games_economy.",
@@ -80,6 +86,7 @@ export const HERO_PAGES: RegisteredPage[] = [
   },
   {
     id: "heroes_over_time",
+    title: "Heroes Over Time",
     description: "how heroes' win rate or pick rate changed day by day; trends, nerfs and buffs",
     path: "/analytics/heroes/over-time",
     search: {
@@ -100,6 +107,7 @@ export const HERO_PAGES: RegisteredPage[] = [
   },
   {
     id: "heroes_by_rank",
+    title: "Heroes by Rank",
     description: "hero win and pick rates compared across ranks: which heroes are stronger in low elo than in high elo",
     context:
       'Only for comparing ranks with each other. A question about one rank range ("best heroes in eternus") is ' +
@@ -109,12 +117,14 @@ export const HERO_PAGES: RegisteredPage[] = [
   },
   {
     id: "heroes_by_duration",
+    title: "Heroes by Match Length",
     description: "hero win rates in short and long games: early-game and late-game heroes, who scales",
     path: "/analytics/heroes/by-duration",
     filters: ALL,
   },
   {
     id: "heroes_by_experience",
+    title: "Heroes by Experience",
     description: "hero win rates by how many games players have on the hero: which heroes are hard to learn",
     path: "/analytics/heroes/by-experience",
     filters: ALL,
@@ -122,6 +132,7 @@ export const HERO_PAGES: RegisteredPage[] = [
   },
   {
     id: "hero_scoreboard",
+    title: "Hero Scoreboard",
     description: `every hero's average per match, heroes ranked by any stat: ${SCOREBOARD_STAT_NAMES}`,
     context:
       'Heroes only, never players: a question about players or people ("players with the most kills", "who has ' +

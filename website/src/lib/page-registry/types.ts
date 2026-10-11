@@ -119,6 +119,8 @@ export type SharedFilter = "mode" | "rank" | "time";
 export interface RegisteredPage {
   /** Stable and readable: the model answers with it. */
   id: string;
+  /** For visitors: the page's name, as the search's suggestions show it. */
+  title: string;
   /** For the model: what the page shows, in the words a visitor would use. */
   description: string;
   /** For the model, when the description is not enough: game terms that point here, cases it is easily mixed up with. */
