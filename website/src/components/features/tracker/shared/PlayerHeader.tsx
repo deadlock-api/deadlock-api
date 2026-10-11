@@ -24,11 +24,14 @@ export function PlayerHeader({
   accountId,
   entries,
   ranks,
+  as = "h1",
   children,
 }: {
   accountId: number;
   entries: PlayerMatchHistoryEntry[] | undefined;
   ranks: Rank[];
+  /** `h2` when the page names itself above the profile (the demo). */
+  as?: "h1" | "h2";
   /** The filter bar, centered between the profile and the rank when the header is wide enough, else below both. */
   children: ReactNode;
 }) {
@@ -55,6 +58,7 @@ export function PlayerHeader({
       <div className="grid items-center gap-3 [grid-template-areas:'profile'_'rank'_'filters'] sm:grid-cols-[minmax(0,1fr)_auto] sm:[grid-template-areas:'profile_rank'_'filters_filters'] @7xl:grid-cols-[auto_minmax(0,1fr)_auto] @7xl:[grid-template-areas:'profile_filters_rank']">
         <div className="flex min-w-0 flex-col gap-1 [grid-area:profile]">
           <PageHeader
+            as={as}
             media={
               <SteamAvatar
                 src={profile?.avatarfull ?? profile?.avatar}
