@@ -114,10 +114,11 @@ const CATEGORIES = [
 const BASE_SLOTS = 9;
 const DEFAULT_FLEX_MINUTES = [10, 20, 30];
 // An auto-completed build adds at most this many items, each bought by at least this many of the build's players.
-const COMPLETE_MAX_ITEMS = 12;
+const COMPLETE_MAX_ITEMS = 20;
 const COMPLETE_MIN_GAMES = 200;
+const COMPLETE_FALLBACK_GAMES = 20;
 // The most items an auto-completed build holds by each stage's end (then capped by the open slots).
-const COMPLETE_HELD_BY_STAGE = [5, 9, 11];
+const COMPLETE_HELD_BY_STAGE = [4, 7, 10];
 // Under this many games a build's win rate is marked as resting on few games.
 const FEW_GAMES = 100;
 // Selling refunds half an item's price.
@@ -895,28 +896,43 @@ export function BuildFlowExplorer({
           sortBy,
           isStreetBrawl,
         });
-        const [next] = completeBuild({
-          stages: view.stages.map((stage, index) => ({
-            column: stage.column,
-            available: budgets[index].available,
-            // Paced like a real build, so cheap early items do not take the slots late ones need.
-            slots: Math.min(slotUse[index].open, COMPLETE_HELD_BY_STAGE[index] ?? slotUse[index].open),
-          })),
-          choices: [...stepView.byKey.values()].filter((c) => c.matches >= COMPLETE_MIN_GAMES),
-          path: current,
-          priceOf: (id) => costOf.get(id) ?? 0,
-          categoryOf: (id) => slotOf.get(id),
-          componentsOf: (id) => componentsOf.get(id) ?? [],
-          focus,
-          goal,
-        });
+        // The build's own players first (at least 200, then 20 of them bought the item): a build no one played has no
+        // win rate to show, so the completion goes as far as the games do.
+        const tiers = [
+          [...stepView.byKey.values()].filter((c) => c.matches >= COMPLETE_MIN_GAMES),
+          [...stepView.byKey.values()].filter((c) => c.matches >= COMPLETE_FALLBACK_GAMES),
+        ];
+        let next: string | undefined;
+        for (const choices of tiers) {
+          [next] = completeBuild({
+            stages: view.stages.map((stage, index) => ({
+              column: stage.column,
+              available: budgets[index].available,
+              // Paced like a real build, so cheap early items do not take the slots late ones need.
+              slots: Math.min(slotUse[index].open, COMPLETE_HELD_BY_STAGE[index] ?? slotUse[index].open),
+            })),
+            choices,
+            path: current,
+            priceOf: (id) => costOf.get(id) ?? 0,
+            categoryOf: (id) => slotOf.get(id),
+            componentsOf: (id) => componentsOf.get(id) ?? [],
+            focus,
+            goal,
+          });
+          if (next) break;
+        }
         if (!next) break;
         current.push(next);
       }
       if (current.length > path.length) {
         const before = path;
         changePath(current);
+        const open = view.stages.filter((stage) => !current.some((key) => parseKey(key).column === stage.column));
         toast(`Added ${current.length - before.length} items`, {
+          description:
+            open.length > 0
+              ? `Too few games go on to ${open.map((stage) => stage.title).join(", ")} with this build`
+              : undefined,
           action: { label: "Undo", onClick: () => changePath(before.length > 0 ? before : null) },
         });
       } else {

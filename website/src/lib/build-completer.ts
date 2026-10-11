@@ -37,7 +37,7 @@ export interface CompleterInput {
 // An item bought by fewer of the build's players than this is never added: a rare pick is noise, not a plan.
 const MIN_PICK_RATE = 0.05;
 // How much the focus category is favoured: an item of another category ranks at this share of its value.
-const OFF_FOCUS_WEIGHT = 0.5;
+const OFF_FOCUS_WEIGHT = 0.25;
 
 /**
  * Completes a build stage by stage with the items its players buy there, best first by `goal` and with `focus`'s
@@ -53,9 +53,14 @@ export function completeBuild(input: CompleterInput): string[] {
   for (const stage of stages) {
     // What the build holds and has spent up to this stage: the reader's picks so far and what was added so far.
     const sofar = [...picks.filter((p) => p.column <= stage.column), ...added];
-    let spent = sofar.reduce((sum, p) => sum + priceOf(p.itemId), 0);
     const held = new Set(sofar.map((p) => p.itemId));
-    for (const p of sofar) for (const id of componentsOf(p.itemId)) held.delete(id);
+    // An upgrade onto a held component costs the difference: the component's price is not paid twice.
+    const merged = new Set(sofar.flatMap((p) => componentsOf(p.itemId)).filter((id) => held.has(id)));
+    let spent = sofar.reduce((sum, p) => sum + priceOf(p.itemId), 0);
+    for (const p of sofar) {
+      for (const id of componentsOf(p.itemId)) if (held.has(id)) spent -= priceOf(id);
+    }
+    for (const id of merged) held.delete(id);
 
     const candidates = choices.filter(
       (c) => c.column === stage.column && !owned.has(c.itemId) && c.pickRate >= MIN_PICK_RATE,
@@ -65,10 +70,10 @@ export function completeBuild(input: CompleterInput): string[] {
       ((goal === "popular" ? c.pickRate : c.score) / best) *
       (focus === "balanced" || categoryOf(c.itemId) === focus ? 1 : OFF_FOCUS_WEIGHT);
     for (const choice of [...candidates].sort((a, b) => rank(b) - rank(a))) {
-      const price = priceOf(choice.itemId);
-      if (spent + price > stage.available) continue;
-      // An upgrade takes its components' slots, so it needs no new one if it is built from one held.
+      // An upgrade takes its components' slots and their price, so it needs no new slot if built from one held.
       const frees = componentsOf(choice.itemId).filter((id) => held.has(id));
+      const price = priceOf(choice.itemId) - frees.reduce((sum, id) => sum + priceOf(id), 0);
+      if (spent + price > stage.available) continue;
       if (held.size - frees.length + 1 > stage.slots) continue;
       for (const id of frees) held.delete(id);
       held.add(choice.itemId);
