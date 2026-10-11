@@ -110,6 +110,8 @@ const CATEGORIES = [
 // (minutes, `build_flex`); these are where they start.
 const BASE_SLOTS = 9;
 const DEFAULT_FLEX_MINUTES = [10, 20, 30];
+// Under this many games a build's win rate is marked as resting on few games.
+const FEW_GAMES = 100;
 // Selling refunds half an item's price.
 const SELL_REFUND = 0.5;
 const AT_ONCE = { limitUrlUpdates: throttle(50) };
@@ -932,6 +934,12 @@ export function BuildFlowExplorer({
                 sub={
                   path.length === 0 ? undefined : switching ? (
                     <Skeleton className="h-4 w-16" />
+                  ) : summary.matches > 0 && summary.matches < FEW_GAMES ? (
+                    // Too few games for the win rate beside it to mean much: said in the warning color with a mark.
+                    <span className="inline-flex items-center gap-1 text-warning">
+                      <TriangleAlert className="size-3" aria-hidden="true" />
+                      few games · {percent(summary.matches / Math.max(1, baseline.matches))} of all
+                    </span>
                   ) : (
                     `${percent(summary.matches / Math.max(1, baseline.matches))} of all`
                   )
