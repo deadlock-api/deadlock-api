@@ -138,7 +138,7 @@ function BuildFlowExample() {
             ))}
           </BuildChoiceList>
         </BuildStage>
-        <BuildStage title="9–20m" meta="97% of games">
+        <BuildStage title="9–20m" meta="97% of games" surface="inset">
           <BuildChoiceHeader start="Item · bought" end="Win rate" />
           <BuildChoiceList aria-label="Items bought at 9–20m">
             {BUILD_CHOICES.map((choice, index) => (

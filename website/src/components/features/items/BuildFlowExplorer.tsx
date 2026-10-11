@@ -1276,6 +1276,8 @@ export function BuildFlowExplorer({
                       <>
                         {budgets ? (
                           <BuildBudget
+                            // A little room under the build's own part of the card, before the items to add.
+                            className="pb-1.5"
                             spent={budgets[index]?.spent ?? 0}
                             available={budgets[index]?.available ?? 0}
                             slots={slotUse[index]}
@@ -1283,12 +1285,13 @@ export function BuildFlowExplorer({
                           />
                         ) : !isStreetBrawl ? (
                           // The budget's height while the soul curve loads, so the cards do not grow when it lands.
-                          <Skeleton className="h-6.5 w-full" />
+                          <Skeleton className="h-8 w-full" />
                         ) : undefined}
                         {/* What the stage's players buy, to add from, in the stage's own card. */}
                         <BuildStage
                           title={`Add items, ${stage.title}`}
                           titleDisplay="hidden"
+                          surface="inset"
                           aria-busy={switching || undefined}
                         >
                           {stage.choices.length === 0 ? (

@@ -18,6 +18,7 @@ import { cn } from "~/lib/utils";
 export function BuildStage({
   title,
   titleDisplay = "visible",
+  surface = "plain",
   meta,
   className,
   children,
@@ -27,14 +28,18 @@ export function BuildStage({
   title: React.ReactNode;
   /** `hidden`: the title names the section for screen readers only, where the card around it already shows it. */
   titleDisplay?: "visible" | "hidden";
+  /** `inset`: a recessed well, set apart from what else the card around it holds (the build's own items). */
+  surface?: "plain" | "inset";
   /** Beside the title: "97% of games". */
   meta?: React.ReactNode;
 }) {
   return (
     <section
       data-slot="build-stage"
+      data-surface={surface}
       className={cn(
         "@container flex min-w-0 flex-col gap-1 transition-opacity duration-normal ease-standard aria-busy:opacity-50",
+        surface === "inset" && "rounded-md border border-hairline bg-card p-1",
         className,
       )}
       {...props}
