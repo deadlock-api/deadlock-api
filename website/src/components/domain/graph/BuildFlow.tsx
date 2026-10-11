@@ -48,7 +48,7 @@ export function BuildStage({
 }
 
 /**
- * The choices of a BuildStage: `BuildChoice` rows (each may sit inside a `Tooltip`), one list item apiece. Label it
+ * The choices of a BuildStage: `BuildChoice` rows, one list item apiece. Label it
  * (`aria-label`) with the stage.
  */
 export function BuildChoiceList({ className, children, ...props }: React.ComponentProps<"ul">) {
@@ -117,7 +117,7 @@ const buildChoiceVariants = cva(
  * One choice of a stage, a toggle button (`aria-pressed`): the item, its name, a line under it with the share of
  * players who take it (`share` draws it as a bar), and its win rate at the end with a signed bar against the
  * reference. A `linked` row shows `link` in that line instead: how it stands to the choice pointed at (the share of
- * that item's buyers who also bought this one). Details on hover are a `Tooltip` around it.
+ * that item's buyers who also bought this one).
  */
 export function BuildChoice({
   media,

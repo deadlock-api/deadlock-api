@@ -37,7 +37,6 @@ import { Separator } from "~/components/ui/separator";
 import { Skeleton } from "~/components/ui/skeleton";
 import { Inline, Stack } from "~/components/ui/stack";
 import { Stat, StatGroup } from "~/components/ui/stat";
-import { Tooltip, TooltipHeader, TooltipProvider, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
 import type { Dayjs } from "~/dayjs";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import type { GameMode, MatchMode } from "~/lib/game-mode";
@@ -63,8 +62,6 @@ const CHANGE_SCALE = 10;
 // rate: 26 wins of 30 games (a T4 bought by players already far ahead) then ranks below 62% from thousands.
 const SHRINK_SHARE = 0.02;
 const SHRINK_MIN_GAMES = 100;
-// How many follow-up items a choice's tooltip lists.
-const NEXT_COUNT = 3;
 
 const SORT_OPTIONS = [
   { value: "pickrate", label: "Most bought" },
@@ -102,10 +99,8 @@ interface Choice {
   itemId: number;
   matches: number;
   wins: number;
-  players: number;
   /** The headline: net-worth adjusted in normal games, raw in Street Brawl. */
   winRate: number;
-  rawWinRate: number;
   /** The 95% interval of `winRate`: the raw Wilson interval moved by the adjustment. */
   interval: readonly [number, number];
   /** `winRate` pulled toward the build's own by a share of its games: what the win rate sort ranks by. */
@@ -115,8 +110,6 @@ interface Choice {
   pickRate: number;
   /** `pickRate` against the stage's most bought choice, for the bar. */
   pickShare: number;
-  avgNetWorth: number;
-  kda: readonly [number, number, number];
   selected: boolean;
 }
 
@@ -221,49 +214,6 @@ const StagePicker = memo(function StagePicker({ stage, onPick }: { stage: Stage;
     </Popover>
   );
 });
-
-function ChoiceTooltip({
-  choice,
-  cost,
-  isStreetBrawl,
-  next,
-}: {
-  choice: Choice;
-  cost: number | undefined;
-  isStreetBrawl: boolean;
-  next: { itemId: number; share: number }[];
-}) {
-  return (
-    <>
-      <TooltipHeader title={<ItemName itemId={choice.itemId} />} />
-      <TooltipStats>
-        <TooltipStat
-          label={isStreetBrawl ? "Win rate" : "Win rate (adj.)"}
-          value={percent(choice.winRate)}
-          className={TONE_TEXT[choice.tone]}
-        />
-        {!isStreetBrawl && <TooltipStat label="Raw win rate" value={percent(choice.rawWinRate)} />}
-        <TooltipStat label="95% interval" value={`${percent(choice.interval[0])}–${percent(choice.interval[1])}`} />
-        {cost ? <TooltipStat label="Cost" value={`${count(cost)} souls`} /> : null}
-        <TooltipStat label="Bought" value={percent(choice.pickRate)} />
-        <TooltipStat label="Matches" value={count(choice.matches)} />
-        {!isStreetBrawl && <TooltipStat label="Net worth at buy" value={count(Math.round(choice.avgNetWorth))} />}
-        <TooltipStat label="Avg KDA" value={choice.kda.map((n) => n.toFixed(1)).join(" / ")} />
-        {next.map((n, index) => (
-          <TooltipStat
-            key={n.itemId}
-            label={index === 0 ? "Bought next" : ""}
-            value={
-              <>
-                <ItemName itemId={n.itemId} /> {percent(n.share, 0)}
-              </>
-            }
-          />
-        ))}
-      </TooltipStats>
-    </>
-  );
-}
 
 export function BuildFlowExplorer({
   heroId,
@@ -405,13 +355,12 @@ export function BuildFlowExplorer({
                       .map((key) => {
                         const { itemId } = parseKey(key);
                         return (
-                          <Tooltip key={key} content={<ItemName itemId={itemId} />}>
-                            <BuildPathItem
-                              media={<ItemImage itemId={itemId} className="size-8" />}
-                              aria-label={`Remove ${nameOf.get(itemId) ?? "item"} from ${stage.title}`}
-                              onClick={() => toggle(key)}
-                            />
-                          </Tooltip>
+                          <BuildPathItem
+                            key={key}
+                            media={<ItemImage itemId={itemId} className="size-8" />}
+                            aria-label={`Remove ${nameOf.get(itemId) ?? "item"} from ${stage.title}`}
+                            onClick={() => toggle(key)}
+                          />
                         );
                       })}
                   </BuildPathStep>
@@ -553,93 +502,68 @@ export function BuildFlowExplorer({
             }
           />
         ) : (
-          <TooltipProvider delayDuration={300}>
-            <Grid columns={{ base: 1, sm: 2, xl: 4 }} gap={4}>
-              {view.stages.map((stage) => (
-                <BuildStage
-                  key={stage.column}
-                  title={stage.title}
-                  meta={`${percent(stage.reached, 0)} of games`}
-                  aria-busy={switching || undefined}
-                >
-                  {stage.choices.length === 0 ? (
-                    <EmptyState variant="inline" title="No purchases" />
-                  ) : (
-                    <>
-                      <BuildChoiceHeader start="Item · bought · cost" end="Win rate" />
-                      <BuildChoiceList aria-label={`Items bought at ${stage.title}`}>
-                        {stage.choices.map((choice) => {
-                          const near = linked != null && Math.abs(linked.column - choice.column) === 1;
-                          const link = near ? linked.links.get(choice.key) : undefined;
-                          const after = linked != null && choice.column > linked.column;
-                          return (
-                            <Tooltip
-                              key={choice.key}
-                              content={
-                                <ChoiceTooltip
-                                  choice={choice}
-                                  cost={costOf.get(choice.itemId)}
-                                  isStreetBrawl={isStreetBrawl}
-                                  next={nextChoices(view, choice)}
-                                />
+          <Grid columns={{ base: 1, sm: 2, xl: 4 }} gap={4}>
+            {view.stages.map((stage) => (
+              <BuildStage
+                key={stage.column}
+                title={stage.title}
+                meta={`${percent(stage.reached, 0)} of games`}
+                aria-busy={switching || undefined}
+              >
+                {stage.choices.length === 0 ? (
+                  <EmptyState variant="inline" title="No purchases" />
+                ) : (
+                  <>
+                    <BuildChoiceHeader start="Item · bought · cost" end="Win rate" />
+                    <BuildChoiceList aria-label={`Items bought at ${stage.title}`}>
+                      {stage.choices.map((choice) => {
+                        const near = linked != null && Math.abs(linked.column - choice.column) === 1;
+                        const link = near ? linked.links.get(choice.key) : undefined;
+                        const after = linked != null && choice.column > linked.column;
+                        return (
+                          <BuildChoice
+                            key={choice.key}
+                            media={<ItemImage itemId={choice.itemId} className="size-8" />}
+                            name={<ItemName itemId={choice.itemId} className="line-clamp-2 whitespace-normal" />}
+                            share={choice.pickShare}
+                            meta={percent(choice.pickRate)}
+                            price={costOf.get(choice.itemId) ? count(costOf.get(choice.itemId) ?? 0) : undefined}
+                            link={
+                              link && {
+                                // Of the pointed-at item's buyers: bought this one in the stage after it, or before.
+                                label: `${percent(link.share, 0)} ${after ? "next" : "before"}`,
+                                share: link.share,
                               }
-                            >
-                              <BuildChoice
-                                media={<ItemImage itemId={choice.itemId} className="size-8" />}
-                                name={<ItemName itemId={choice.itemId} className="line-clamp-2 whitespace-normal" />}
-                                share={choice.pickShare}
-                                meta={percent(choice.pickRate)}
-                                price={costOf.get(choice.itemId) ? count(costOf.get(choice.itemId) ?? 0) : undefined}
-                                link={
-                                  link && {
-                                    // Of the pointed-at item's buyers: bought this one in the stage after it, or before.
-                                    label: `${percent(link.share, 0)} ${after ? "next" : "before"}`,
-                                    share: link.share,
-                                  }
-                                }
-                                value={percent(choice.winRate)}
-                                tone={choice.tone}
-                                change={{
-                                  value: (choice.winRate - winRate) * 100,
-                                  scale: CHANGE_SCALE,
-                                  interval: [
-                                    (choice.interval[0] - winRate) * 100,
-                                    (choice.interval[1] - winRate) * 100,
-                                  ],
-                                }}
-                                selected={choice.selected}
-                                aria-label={`${nameOf.get(choice.itemId) ?? "Item"}: bought ${percent(choice.pickRate)}, win rate ${percent(choice.winRate)}`}
-                                relation={!near ? "none" : link ? "linked" : "unlinked"}
-                                onClick={() => toggle(choice.key)}
-                                onPointerEnter={() => setPointed(choice.key)}
-                                onPointerLeave={() => setPointed(null)}
-                                onFocus={() => setPointed(choice.key)}
-                                onBlur={() => setPointed(null)}
-                              />
-                            </Tooltip>
-                          );
-                        })}
-                      </BuildChoiceList>
-                    </>
-                  )}
-                  {stage.candidates.length > 0 && <StagePicker stage={stage} onPick={toggle} />}
-                </BuildStage>
-              ))}
-            </Grid>
-          </TooltipProvider>
+                            }
+                            value={percent(choice.winRate)}
+                            tone={choice.tone}
+                            change={{
+                              value: (choice.winRate - winRate) * 100,
+                              scale: CHANGE_SCALE,
+                              interval: [(choice.interval[0] - winRate) * 100, (choice.interval[1] - winRate) * 100],
+                            }}
+                            selected={choice.selected}
+                            aria-label={`${nameOf.get(choice.itemId) ?? "Item"}: bought ${percent(choice.pickRate)}, win rate ${percent(choice.winRate)}`}
+                            relation={!near ? "none" : link ? "linked" : "unlinked"}
+                            onClick={() => toggle(choice.key)}
+                            onPointerEnter={() => setPointed(choice.key)}
+                            onPointerLeave={() => setPointed(null)}
+                            onFocus={() => setPointed(choice.key)}
+                            onBlur={() => setPointed(null)}
+                          />
+                        );
+                      })}
+                    </BuildChoiceList>
+                  </>
+                )}
+                {stage.candidates.length > 0 && <StagePicker stage={stage} onPick={toggle} />}
+              </BuildStage>
+            ))}
+          </Grid>
         )}
       </div>
     </Stack>
   );
-}
-
-/** The items most often bought in the next stage by the buyers of `choice`. */
-function nextChoices(view: View, choice: Choice): { itemId: number; share: number }[] {
-  return [...(view.links.get(choice.key) ?? [])]
-    .filter(([key]) => parseKey(key).column === choice.column + 1)
-    .sort((a, b) => b[1].matches - a[1].matches)
-    .slice(0, NEXT_COUNT)
-    .map(([key, link]) => ({ itemId: parseKey(key).itemId, share: link.matches / Math.max(1, choice.matches) }));
 }
 
 interface View {
@@ -680,23 +604,18 @@ function buildView(
     const interval = [low + winRate - raw, high + winRate - raw] as const;
     // Colored only when the interval clears the build's own win rate: a choice that may well be even stays neutral.
     const tone: Tone = interval[0] > reference ? "positive" : interval[1] < reference ? "negative" : "muted";
-    const per = (n: number) => (node.matches > 0 ? n / node.matches : 0);
     return {
       key,
       column: node.column,
       itemId: node.item_id,
       matches: node.matches,
       wins: node.wins,
-      players: node.players,
       winRate,
-      rawWinRate: raw,
       interval,
       score: (winRate * node.matches + reference * shrink) / (node.matches + shrink),
       tone,
       pickRate: node.matches / population,
       pickShare: 0,
-      avgNetWorth: node.avg_net_worth_at_buy,
-      kda: [per(node.total_kills), per(node.total_deaths), per(node.total_assists)],
       selected: path.has(key),
     };
   };
