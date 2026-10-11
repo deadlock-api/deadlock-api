@@ -116,7 +116,7 @@ const DEFAULT_FLEX_MINUTES = [10, 20, 30];
 // An auto-completed build adds at most this many items, each bought by at least this many of the build's players.
 const COMPLETE_MAX_ITEMS = 20;
 const COMPLETE_MIN_GAMES = 200;
-const COMPLETE_FALLBACK_GAMES = 20;
+const COMPLETE_FALLBACK_GAMES = 50;
 // The most items an auto-completed build holds by each stage's end (then capped by the open slots).
 const COMPLETE_HELD_BY_STAGE = [4, 7, 10];
 // Under this many games a build's win rate is marked as resting on few games.
@@ -922,7 +922,7 @@ export function BuildFlowExplorer({
           sortBy,
           isStreetBrawl,
         });
-        // The build's own players first (at least 200, then 20 of them bought the item): a build no one played has no
+        // The build's own players first (at least 200, then 50 of them bought the item): a build no one played has no
         // win rate to show, so the completion goes as far as the games do.
         const tiers = [
           [...stepView.byKey.values()].filter((c) => c.matches >= COMPLETE_MIN_GAMES),
@@ -1204,26 +1204,19 @@ export function BuildFlowExplorer({
                     }}
                     label={stage.title}
                     meta={stageCost.get(stage.column) ? count(stageCost.get(stage.column) ?? 0) : undefined}
-                    action={
-                      stage.candidates.length > 0 ? (
-                        <StagePicker
-                          stage={{ ...stage, candidates: stage.candidates.filter((c) => !heldItems.has(c.id)) }}
-                          onPick={toggle}
-                          display="icon"
-                        />
-                      ) : (fallbackCandidates.get(stage.column)?.length ?? 0) > 0 ? (
-                        <StagePicker
-                          stage={{
-                            ...stage,
-                            candidates: (fallbackCandidates.get(stage.column) ?? []).filter(
-                              (c) => !heldItems.has(c.id),
-                            ),
-                          }}
-                          onPick={toggle}
-                          display="icon"
-                        />
-                      ) : undefined
-                    }
+                    action={(() => {
+                      // Every item of the stage: the build's players' first, then the hero's items the build
+                      // narrowed away, so a search always finds an item even when few games are left.
+                      const own = stage.candidates.filter((c) => !heldItems.has(c.id));
+                      const ownIds = new Set(own.map((c) => c.id));
+                      const rest = (fallbackCandidates.get(stage.column) ?? []).filter(
+                        (c) => !heldItems.has(c.id) && !ownIds.has(c.id),
+                      );
+                      const candidates = [...own, ...rest];
+                      return candidates.length > 0 ? (
+                        <StagePicker stage={{ ...stage, candidates }} onPick={toggle} display="icon" />
+                      ) : undefined;
+                    })()}
                     footer={
                       budgets ? (
                         <BuildBudget
