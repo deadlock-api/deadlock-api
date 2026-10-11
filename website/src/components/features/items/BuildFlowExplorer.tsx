@@ -398,7 +398,9 @@ function ItemPlan({
         </Button>
       </PopoverTrigger>
       <PopoverContent
-        align="end"
+        // Beside the item rather than over it: it opens to the right of its menu button where there is room.
+        side="right"
+        align="start"
         aria-label={`Plan for ${name}`}
         className="flex w-72 max-w-(--radix-popover-content-available-width) flex-col gap-1 p-1"
       >
@@ -416,7 +418,12 @@ function ItemPlan({
         ))}
         <Separator />
         {isPending ? (
-          <LoadingState size="sm" text="Finding swaps…" label="swaps" />
+          // Three rows' height, the swaps' own, so the menu does not jump when they land.
+          <div aria-busy="true" aria-label="Finding swaps" className="flex flex-col gap-1">
+            {Array.from({ length: SWAP_COUNT }, (_, i) => (
+              <Skeleton key={i} className="h-8 w-full" />
+            ))}
+          </div>
         ) : swaps.length === 0 ? (
           <EmptyState variant="inline" title="No swap" />
         ) : (
