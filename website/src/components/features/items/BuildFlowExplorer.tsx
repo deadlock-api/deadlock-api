@@ -1,14 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { EllipsisVertical, Hourglass, Link, Plus, Route, TriangleAlert } from "lucide-react";
-import {
-  parseAsArrayOf,
-  parseAsInteger,
-  parseAsNumberLiteral,
-  parseAsString,
-  parseAsStringLiteral,
-  throttle,
-  useQueryState,
-} from "nuqs";
+import { parseAsArrayOf, parseAsInteger, parseAsString, parseAsStringLiteral, throttle, useQueryState } from "nuqs";
 import { memo, startTransition, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
@@ -72,12 +64,7 @@ import type { GameMode, MatchMode } from "~/lib/game-mode";
 import { TONE_TEXT, toneOf, type Tone } from "~/lib/tone";
 import { wilsonScoreInterval } from "~/lib/wilson";
 import { itemPricePerTierQueryOptions, itemUpgradesQueryOptions } from "~/queries/asset-queries";
-import {
-  ITEM_FLOW_DEFAULT_PER_COLUMN,
-  ITEM_FLOW_PER_COLUMN_OPTIONS,
-  itemFlowQueryOptions,
-  type ItemFlowStats,
-} from "~/queries/item-flow-query";
+import { ITEM_FLOW_DEFAULT_PER_COLUMN, itemFlowQueryOptions, type ItemFlowStats } from "~/queries/item-flow-query";
 import { itemStatsQueryOptions } from "~/queries/item-stats-query";
 
 const PHASE_INTERVAL_S = 600;
@@ -124,6 +111,8 @@ const FEW_GAMES = 100;
 // Selling refunds half an item's price.
 const SELL_REFUND = 0.5;
 const EMPTY_PATH: string[] = [];
+// Items each stage's list shows, the ones the server's first answer holds.
+const PER_STAGE = ITEM_FLOW_DEFAULT_PER_COLUMN;
 const AT_ONCE = { limitUrlUpdates: throttle(50) };
 
 const SORT_OPTIONS = [
@@ -256,15 +245,33 @@ function StagePickerBody({
   );
 }
 
-/** The plus in a stage card's header: every item bought there, to add one that is not in the stage's list. */
-const StagePicker = memo(function StagePicker({ stage, onPick }: { stage: Stage; onPick: (key: string) => void }) {
+/**
+ * Every item bought in a stage, to add one that is not in its list: the plus in the stage card's header (`icon`), and
+ * an "Add item" row under a full list (`row`).
+ */
+const StagePicker = memo(function StagePicker({
+  stage,
+  onPick,
+  display = "icon",
+}: {
+  stage: Stage;
+  onPick: (key: string) => void;
+  display?: "icon" | "row";
+}) {
   const [open, setOpen] = useState(false);
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button variant="ghost" size="icon-xs" aria-label={`Add item, ${stage.title}`}>
-          <Plus />
-        </Button>
+        {display === "row" ? (
+          <Button variant="ghost" size="xs" className="w-full" aria-label={`Add item, ${stage.title}`}>
+            <Plus />
+            Add item
+          </Button>
+        ) : (
+          <Button variant="ghost" size="icon-xs" aria-label={`Add item, ${stage.title}`}>
+            <Plus />
+          </Button>
+        )}
       </PopoverTrigger>
       <PopoverContent
         align="center"
@@ -475,10 +482,8 @@ export function BuildFlowExplorer({
   matchMode,
 }: BuildFlowExplorerProps) {
   // View controls persisted in the URL (shareable), prefixed `flow_` to avoid clashing with the page's other filters.
-  const [perColumn, setPerColumn] = useQueryState(
-    "flow_top",
-    parseAsNumberLiteral(ITEM_FLOW_PER_COLUMN_OPTIONS).withDefault(ITEM_FLOW_DEFAULT_PER_COLUMN),
-  );
+  // Items each stage lists; the rest are a search away in its picker.
+  const perColumn = PER_STAGE;
   // `winrate_adj` is the old name of the win rate sort, still in shared links.
   const [storedSort, setSortBy] = useQueryState(
     "flow_sort",
@@ -1115,19 +1120,6 @@ export function BuildFlowExplorer({
                     ))}
                   </Segmented>
                 </Field>
-                <Field label="Show" orientation="horizontal">
-                  <Segmented
-                    value={String(perColumn)}
-                    onValueChange={(v) => setPerColumn(Number(v) as (typeof ITEM_FLOW_PER_COLUMN_OPTIONS)[number])}
-                    width="hug"
-                  >
-                    {ITEM_FLOW_PER_COLUMN_OPTIONS.map((n) => (
-                      <SegmentedItem key={n} value={String(n)}>
-                        {n}
-                      </SegmentedItem>
-                    ))}
-                  </Segmented>
-                </Field>
               </Inline>
             </Inline>
             {/* The build's figures and, beside them where the panel is wide, its spending by shop category. */}
@@ -1232,6 +1224,16 @@ export function BuildFlowExplorer({
             <BuildBoard aria-label="Build by stage" ref={boardRef}>
               {view.stages.map((stage, index) => {
                 const held = path.filter((key) => parseKey(key).column === stage.column);
+                // Every item of the stage for its picker: the build's players' first, then the hero's items the build
+                // narrowed away, so a search always finds an item even when few games are left.
+                const own = stage.candidates.filter((c) => !heldItems.has(c.id));
+                const ownIds = new Set(own.map((c) => c.id));
+                const pickable = [
+                  ...own,
+                  ...(fallbackCandidates.get(stage.column) ?? []).filter(
+                    (c) => !heldItems.has(c.id) && !ownIds.has(c.id),
+                  ),
+                ];
                 const soldHere = path.filter((key) => sellOf.get(key) === stage.column);
                 // Earlier picks an item bought in this stage is built from: they leave their slot here.
                 const mergedHere = path.flatMap((key) => {
@@ -1297,19 +1299,11 @@ export function BuildFlowExplorer({
                         count(stageCost.get(stage.column) ?? 0)
                       ) : undefined
                     }
-                    action={(() => {
-                      // Every item of the stage: the build's players' first, then the hero's items the build
-                      // narrowed away, so a search always finds an item even when few games are left.
-                      const own = stage.candidates.filter((c) => !heldItems.has(c.id));
-                      const ownIds = new Set(own.map((c) => c.id));
-                      const rest = (fallbackCandidates.get(stage.column) ?? []).filter(
-                        (c) => !heldItems.has(c.id) && !ownIds.has(c.id),
-                      );
-                      const candidates = [...own, ...rest];
-                      return candidates.length > 0 ? (
-                        <StagePicker stage={{ ...stage, candidates }} onPick={toggle} />
-                      ) : undefined;
-                    })()}
+                    action={
+                      pickable.length > 0 ? (
+                        <StagePicker stage={{ ...stage, candidates: pickable }} onPick={toggle} />
+                      ) : undefined
+                    }
                     footer={
                       <>
                         {/* What the stage's players buy, to add from, in the stage's own card. */}
@@ -1401,6 +1395,10 @@ export function BuildFlowExplorer({
                                   );
                                 })}
                               </BuildChoiceList>
+                              {/* A full list (there are more items than it shows): the stage's picker at its end too. */}
+                              {stage.choices.length >= PER_STAGE && pickable.length > 0 && (
+                                <StagePicker stage={{ ...stage, candidates: pickable }} onPick={toggle} display="row" />
+                              )}
                             </>
                           )}
                         </BuildStage>
