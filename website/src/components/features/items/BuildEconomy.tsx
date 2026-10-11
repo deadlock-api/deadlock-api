@@ -434,7 +434,7 @@ export function BuildEconomy({
               </>
             )}
           </div>
-          <RankedEntityList density="compact" columns="single" aria-label="Build items by net worth">
+          <RankedEntityList density="compact" columns="auto" aria-label="Build items by net worth">
             {(plot?.placed ?? []).map((p, index) => (
               <RankedEntityRow
                 key={p.key}

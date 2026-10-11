@@ -310,6 +310,10 @@ export function BuildSlotItem({
     >
       <span className="shrink-0">{media}</span>
       <span className="flex min-w-0 flex-1 flex-col">
+        {/* A suggestion says so in words as well as by its dashed frame: it is not part of the build until added. */}
+        {state === "suggested" && (
+          <span className="type-caption font-medium text-muted-foreground uppercase">Suggested</span>
+        )}
         <span data-slot="build-slot-item-name" className="truncate type-label">
           {name}
         </span>
