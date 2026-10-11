@@ -2,9 +2,10 @@ import { guessDayNumber, guessShareUrl, ROUNDS_PER_DAY } from "./daily";
 
 // Points for a guess: the rank tier is what is guessed, the subtier is only shown. The tiers, their names and badges
 // come from the assets API (/v1/assets/ranks); every ranked tier (tier > 0) can be guessed. A guess scores by how many
-// tiers it is off: the right tier 3 points, one off 2, two off 1, further 0. Three rounds make 9.
+// tiers it is off: the right tier 5 points, then one less per tier off, down to 1 for four off; further 0. Three
+// rounds make 15.
 
-const POINTS_BY_DISTANCE = [3, 2, 1] as const;
+const POINTS_BY_DISTANCE = [5, 4, 3, 2, 1] as const;
 
 export const MAX_ROUND_POINTS = POINTS_BY_DISTANCE[0];
 export const MAX_DAY_POINTS = MAX_ROUND_POINTS * ROUNDS_PER_DAY;
@@ -43,12 +44,13 @@ export function distanceLabel(distance: number): string {
   return `${distance} ${distance === 1 ? "tier" : "tiers"} off`;
 }
 
-/** A round in the share text: green exact, yellow one off, orange two off, red further. */
+/** A round in the share text: green exact, yellow one off, orange two off, red three or four off, black no points. */
 export function distanceEmoji(distance: number): string {
   if (distance === 0) return "\u{1f7e9}";
   if (distance === 1) return "\u{1f7e8}";
   if (distance === 2) return "\u{1f7e7}";
-  return "\u{1f7e5}";
+  if (distance < POINTS_BY_DISTANCE.length) return "\u{1f7e5}";
+  return "\u2b1b";
 }
 
 /** How a day's score reads. */
@@ -58,7 +60,7 @@ export function scoreGrade(points: number, max: number): "good" | "fair" | "poor
   return "poor";
 }
 
-/** "Guess the Rank #3 7/9", a square per round, and the link. */
+/** "Guess the Rank #3 12/15", a square per round, and the link. */
 export function guessShareText(date: string, rounds: readonly { guess: number; actual: number }[]): string {
   const points = rounds.reduce((sum, { guess, actual }) => sum + roundPoints(guess, actual), 0);
   const max = rounds.length * MAX_ROUND_POINTS;

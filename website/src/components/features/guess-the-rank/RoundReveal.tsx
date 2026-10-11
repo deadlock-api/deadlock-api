@@ -27,7 +27,7 @@ import { type GuessedRound, useRoundResult } from "./use-guess-the-rank";
 import { VoteDistributionChart } from "./VoteDistributionChart";
 
 // Partial credit stays neutral: only a miss and an exact guess carry a verdict color, beside the signed number.
-export const POINT_TONE = { 0: "negative", 1: "muted", 2: "muted", 3: "positive" } as const;
+export const POINT_TONE = { 0: "negative", 1: "muted", 2: "muted", 3: "muted", 4: "muted", 5: "positive" } as const;
 
 /**
  * A guessed round's answer: the player's actual badge, how far off the guess was and its points, then how everyone

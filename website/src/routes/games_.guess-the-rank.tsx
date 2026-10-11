@@ -54,9 +54,9 @@ function HowToPlay() {
           as often as you like, skip around in it, then guess which rank tier the player was in when the match started.
         </p>
         <p>
-          A guess of the right tier scores 3 points, one tier off scores 2 and two tiers off scores 1, for up to 9
-          points a day. After each guess you see the player's actual rank and how everyone else guessed. Guesses are
-          anonymous and count once per clip.
+          A guess of the right tier scores 5 points, and every tier it is off costs one, down to 1 point for four tiers
+          off, for up to 15 points a day. After each guess you see the player's actual rank and how everyone else
+          guessed. Guesses are anonymous and count once per clip.
         </p>
         <p>
           To see how players are spread over the ranks, look at the{" "}

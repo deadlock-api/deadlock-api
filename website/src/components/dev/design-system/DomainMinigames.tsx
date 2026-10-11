@@ -469,7 +469,7 @@ export function DomainMinigames() {
       >
         <div className="grid gap-3 lg:grid-cols-2">
           <ScoreSummary
-            score="8/9"
+            score="12/15"
             scoreLabel="Score"
             grade="good"
             countdown={{ label: "Next clips", value: "07:12:45" }}
@@ -480,7 +480,7 @@ export function DomainMinigames() {
             grade="fair"
             countdown={{ label: "Next Trivia", value: "Out now" }}
           />
-          <ScoreSummary score="1/9" scoreLabel="Score" grade="poor" />
+          <ScoreSummary score="3/15" scoreLabel="Score" grade="poor" />
           <ScoreSummary score="12" scoreLabel="Streak" grade="good" size="lg" />
         </div>
       </Specimen>
@@ -492,7 +492,7 @@ export function DomainMinigames() {
         className="theme-terminal"
       >
         <Variants>
-          <ShareButton text={"Guess the Rank #1 7/9\n\u{1f7e9}\u{1f7e8}\u{1f7e5}"}>Share result</ShareButton>
+          <ShareButton text={"Guess the Rank #1 12/15\n\u{1f7e9}\u{1f7e8}\u{1f7e5}"}>Share result</ShareButton>
           <ShareButton text="Deadlockdle Day 200 - Trivia 8/10" variant="soft">
             Share Result
           </ShareButton>
