@@ -1008,69 +1008,9 @@ export function BuildFlowExplorer({
           icon={Route}
           size="sm"
         >
-          <Inline gap={1}>
-            <SavedBuildsMenu
-              onOpen={(build) =>
-                startTransition(() => {
-                  if (build.heroId !== heroId) void setHero(build.heroId, AT_ONCE);
-                  setPath(build.path.length > 0 ? build.path : null, AT_ONCE);
-                  void setSells(build.sells.length > 0 ? build.sells : null, AT_ONCE);
-                  void setFlex(build.flex ?? null, AT_ONCE);
-                  void setSkills(build.skills ?? null, AT_ONCE);
-                })
-              }
-            />
-            {path.length > 0 && (
-              <SaveBuildButton
-                defaultName={`${hero?.name ?? "My"} build`}
-                heroId={heroId}
-                path={path}
-                sells={[...sellOf].map(([key, column]) => `${key}:${column}`)}
-                flex={flexMinutes}
-                skills={storedSkills ?? undefined}
-              />
-            )}
-            {path.length > 0 && (
-              <>
-                <CopyButton variant="ghost" size="xs" icon={Link} text={() => window.location.href}>
-                  Copy link
-                </CopyButton>
-                <Button
-                  variant="ghost"
-                  size="xs"
-                  onClick={() => {
-                    // A build is a few dozen presses of work: clearing it can be taken back.
-                    const before = { path, sells: storedSells, skills: storedSkills };
-                    changePath(null);
-                    startTransition(() => {
-                      void setSells(null, AT_ONCE);
-                      void setSkills(null, AT_ONCE);
-                    });
-                    toast("Cleared the build", {
-                      action: {
-                        label: "Undo",
-                        onClick: () => {
-                          changePath(before.path);
-                          startTransition(() => {
-                            void setSells(before.sells.length > 0 ? before.sells : null, AT_ONCE);
-                            void setSkills(before.skills, AT_ONCE);
-                          });
-                        },
-                      },
-                    });
-                  }}
-                >
-                  Clear
-                </Button>
-              </>
-            )}
-          </Inline>
-        </PanelHeader>
-        <PanelBody className="@container">
-          <Stack gap={3}>
-            {/* Whole builds to start from or complete the started one with; once one has nothing to add it goes, and the
-                row keeps its height (two lines where the two wrap) so the board does not jump. */}
-            <Inline gap={2} className="min-h-18 @md:min-h-8">
+          <Inline gap={3}>
+            {/* Whole builds to start from or complete the started one with, before the build's own actions. */}
+            <Inline gap={2}>
               {/* Street Brawl rounds have no souls budget to complete a build against. */}
               {!isStreetBrawl && (
                 <BuildCompleter
@@ -1111,6 +1051,67 @@ export function BuildFlowExplorer({
                 </Button>
               ))}
             </Inline>
+            <Inline gap={1}>
+              <SavedBuildsMenu
+                onOpen={(build) =>
+                  startTransition(() => {
+                    if (build.heroId !== heroId) void setHero(build.heroId, AT_ONCE);
+                    setPath(build.path.length > 0 ? build.path : null, AT_ONCE);
+                    void setSells(build.sells.length > 0 ? build.sells : null, AT_ONCE);
+                    void setFlex(build.flex ?? null, AT_ONCE);
+                    void setSkills(build.skills ?? null, AT_ONCE);
+                  })
+                }
+              />
+              {path.length > 0 && (
+                <SaveBuildButton
+                  defaultName={`${hero?.name ?? "My"} build`}
+                  heroId={heroId}
+                  path={path}
+                  sells={[...sellOf].map(([key, column]) => `${key}:${column}`)}
+                  flex={flexMinutes}
+                  skills={storedSkills ?? undefined}
+                />
+              )}
+              {path.length > 0 && (
+                <>
+                  <CopyButton variant="ghost" size="xs" icon={Link} text={() => window.location.href}>
+                    Copy link
+                  </CopyButton>
+                  <Button
+                    variant="ghost"
+                    size="xs"
+                    onClick={() => {
+                      // A build is a few dozen presses of work: clearing it can be taken back.
+                      const before = { path, sells: storedSells, skills: storedSkills };
+                      changePath(null);
+                      startTransition(() => {
+                        void setSells(null, AT_ONCE);
+                        void setSkills(null, AT_ONCE);
+                      });
+                      toast("Cleared the build", {
+                        action: {
+                          label: "Undo",
+                          onClick: () => {
+                            changePath(before.path);
+                            startTransition(() => {
+                              void setSells(before.sells.length > 0 ? before.sells : null, AT_ONCE);
+                              void setSkills(before.skills, AT_ONCE);
+                            });
+                          },
+                        },
+                      });
+                    }}
+                  >
+                    Clear
+                  </Button>
+                </>
+              )}
+            </Inline>
+          </Inline>
+        </PanelHeader>
+        <PanelBody className="@container">
+          <Stack gap={3}>
             {/* The build's figures and, beside them where the panel is wide, its spending by shop category. */}
             <div className="flex flex-col gap-3 @6xl:flex-row @6xl:items-center @6xl:gap-10">
               {/* While another build loads, its numbers are not known yet: the old ones would read as the new build's. */}
