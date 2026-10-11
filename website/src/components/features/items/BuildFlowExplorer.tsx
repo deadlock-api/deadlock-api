@@ -12,6 +12,7 @@ import {
 import { memo, startTransition, useMemo, useState } from "react";
 
 import { HeroName } from "~/components/domain/assets/HeroName";
+import { ITEM_SLOT_COLOR } from "~/components/domain/assets/item-slot-color";
 import { ItemImage } from "~/components/domain/assets/ItemImage";
 import { ItemName } from "~/components/domain/assets/ItemName";
 import {
@@ -41,6 +42,7 @@ import {
   useSoulCurve,
 } from "~/components/features/items/BuildEconomy";
 import { SavedBuildsMenu, SaveBuildButton } from "~/components/features/items/BuildSaves";
+import { ChartLegend, ChartLegendItem } from "~/components/patterns/charts/ChartLegend";
 import { FilterBar } from "~/components/patterns/filter-bar/FilterBar";
 import { Panel, PanelBody, PanelHeader } from "~/components/patterns/panel/Panel";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
@@ -53,6 +55,7 @@ import { Field } from "~/components/ui/field";
 import { Grid } from "~/components/ui/grid";
 import { OptionRow } from "~/components/ui/option-row";
 import { Popover, PopoverContent, PopoverTrigger } from "~/components/ui/popover";
+import { ProgressBar, ProgressBarSegment } from "~/components/ui/progress-bar";
 import { Segmented, SegmentedItem } from "~/components/ui/segmented";
 import { Separator } from "~/components/ui/separator";
 import { Skeleton } from "~/components/ui/skeleton";
@@ -94,6 +97,12 @@ const LINK_MIN_SHARE = 0.1;
 const SUGGEST_MIN_SHARE = 0.15;
 // Where each time phase ends, in seconds: a stage's budget is the souls earned by then (the last, open one at 45m).
 const STAGE_ENDS = [540, 1200, 1800, 2700] as const;
+// The shop's categories, in its order, with their colors.
+const CATEGORIES = [
+  { slot: "weapon", label: "Weapon", color: ITEM_SLOT_COLOR.weapon },
+  { slot: "vitality", label: "Vitality", color: ITEM_SLOT_COLOR.vitality },
+  { slot: "spirit", label: "Spirit", color: ITEM_SLOT_COLOR.spirit },
+] as const;
 // Selling refunds half an item's price.
 const SELL_REFUND = 0.5;
 const AT_ONCE = { limitUrlUpdates: throttle(50) };
@@ -431,6 +440,10 @@ export function BuildFlowExplorer({
     [upgrades, pricePerTier],
   );
   const nameOf = useMemo(() => new Map((upgrades ?? []).map((item) => [item.id, item.name ?? "Item"])), [upgrades]);
+  const slotOf = useMemo(
+    () => new Map((upgrades ?? []).map((item) => [item.id, item.item_slot_type ?? undefined])),
+    [upgrades],
+  );
   // Items another item is built from: their sales count the purchases merged into that upgrade as well.
   const isComponent = useMemo(() => {
     const classNames = new Set((upgrades ?? []).flatMap((item) => item.component_items ?? []));
@@ -546,6 +559,12 @@ export function BuildFlowExplorer({
     stageCost.set(column, (stageCost.get(column) ?? 0) + (costOf.get(itemId) ?? 0));
   }
   const cost = [...stageCost.values()].reduce((sum, n) => sum + n, 0);
+  const categoryCost = new Map<string, number>();
+  for (const key of path) {
+    const { itemId } = parseKey(key);
+    const slot = slotOf.get(itemId);
+    if (slot) categoryCost.set(slot, (categoryCost.get(slot) ?? 0) + (costOf.get(itemId) ?? 0));
+  }
   const duration = Math.round(summary.avg_duration_s);
   // Without a build the win rate is read against 50%. With one, against all games, colored only when its 95% interval
   // clears them; the ± beside the change says how sure it is (115 games at 80.9% are +30 points, but ±7).
@@ -715,6 +734,25 @@ export function BuildFlowExplorer({
                 }
               />
             </StatGroup>
+            {/* What the build spends per shop category, always drawn so the first pick does not shift the board. */}
+            <div className="flex flex-col gap-1.5">
+              <ProgressBar variant="thin" max={Math.max(1, cost)} className="w-full">
+                {CATEGORIES.map((category) => (
+                  <ProgressBarSegment
+                    key={category.slot}
+                    value={categoryCost.get(category.slot) ?? 0}
+                    color={category.color}
+                  />
+                ))}
+              </ProgressBar>
+              <ChartLegend>
+                {CATEGORIES.map((category) => (
+                  <ChartLegendItem key={category.slot} color={category.color} shape="square">
+                    {category.label} {count(categoryCost.get(category.slot) ?? 0)}
+                  </ChartLegendItem>
+                ))}
+              </ChartLegend>
+            </div>
             <BuildBoard aria-label="Build by stage">
               {view.stages.map((stage, index) => {
                 const held = path.filter((key) => parseKey(key).column === stage.column);

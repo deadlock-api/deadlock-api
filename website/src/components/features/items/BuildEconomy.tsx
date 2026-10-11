@@ -233,14 +233,14 @@ export function BuildEconomy({
         <div className="grid gap-4 @3xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
           <div className="flex min-w-0 flex-col gap-2">
             {curve.isPending ? (
-              <ChartLoading label="soul curve" size="md" />
+              <ChartLoading label="soul curve" size="lg" />
             ) : curve.isError ? (
               <ChartError label="soul curve" retrying={curve.isFetching} onRetry={() => void curve.refetch()} />
             ) : !plot ? (
               <ChartEmpty label="soul curve" />
             ) : (
               <>
-                <ChartSurface label="Average net worth over the game, with the build's items" variant="flush" size="md">
+                <ChartSurface label="Average net worth over the game, with the build's items" variant="flush" size="lg">
                   <ComposedChart data={plot.series} margin={{ top: 20, right: 16, bottom: 0, left: 0 }}>
                     {STAGE_STARTS.map((start, i) => (
                       <ReferenceArea
