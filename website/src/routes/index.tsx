@@ -28,8 +28,9 @@ import { PageHeader } from "~/components/patterns/page/PageHeader";
 import { PageShell } from "~/components/patterns/page/PageShell";
 import { Section } from "~/components/patterns/page/Section";
 import { Button } from "~/components/ui/button";
-import { Card } from "~/components/ui/card";
+import { Card, CardContent } from "~/components/ui/card";
 import { Grid } from "~/components/ui/grid";
+import { Heading } from "~/components/ui/heading";
 import { IconTile } from "~/components/ui/icon-tile";
 import { Separator } from "~/components/ui/separator";
 import { Inline, Stack } from "~/components/ui/stack";
@@ -37,6 +38,7 @@ import { Text } from "~/components/ui/text";
 import { TextLink } from "~/components/ui/text-link";
 import { API_ORIGIN } from "~/lib/constants";
 import { ORGANIZATION, pageTitle, seo, SITE_URL } from "~/lib/seo";
+import { TRACKER_SITES } from "~/lib/tracker-sites";
 
 export const Route = createFileRoute("/")({
   head: () =>
@@ -303,23 +305,47 @@ function IndexRoute() {
         </Grid>
       </Section>
 
-      <LinkCard
-        asChild
-        size="sm"
-        orientation="horizontal"
-        tone="primary"
-        className="mx-auto w-full max-w-2xl"
-        title="Track all your matches on all tracker sites"
-        description="Install the ingest tool once and every match you play gets sent."
-        cta="Install"
-        media={
-          <IconTile size="sm" tone="primary">
-            <Download />
-          </IconTile>
-        }
-      >
-        <SmartLink href="/ingest-cache">{null}</SmartLink>
-      </LinkCard>
+      <Card tone="primary" className="mx-auto w-full max-w-3xl">
+        <CardContent>
+          <Grid columns={{ base: 1, md: 2 }} gap={6} className="items-center">
+            <Stack gap={3}>
+              <Heading as="h2" size="xl">
+                Track all your matches on all tracker sites
+              </Heading>
+              <Text as="p" tone="muted">
+                Install the ingest tool once and every match you play gets sent.
+              </Text>
+              <Inline>
+                <Button asChild>
+                  <SmartLink href="/ingest-cache">
+                    <Download aria-hidden="true" />
+                    Install the tool
+                  </SmartLink>
+                </Button>
+              </Inline>
+            </Stack>
+            <Inline asChild gap={1.5} justify="center">
+              <ul aria-label="Sites that show matches from Deadlock API">
+                {TRACKER_SITES.map((site) => (
+                  <li key={site.name}>
+                    <img
+                      src={site.icon}
+                      alt={site.name}
+                      title={site.name}
+                      width={24}
+                      height={24}
+                      loading="lazy"
+                      decoding="async"
+                      referrerPolicy="no-referrer"
+                      className="size-6 object-contain"
+                    />
+                  </li>
+                ))}
+              </ul>
+            </Inline>
+          </Grid>
+        </CardContent>
+      </Card>
 
       <Section
         size="lg"
