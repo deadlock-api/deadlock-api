@@ -86,6 +86,17 @@ function BuildFlowExample() {
             name={<ItemName itemId={BUILD_CHOICES[1].itemId} />}
             meta="+400 back"
           />
+          <BuildSlotItem
+            state="suggested"
+            media={<ItemImage itemId={BUILD_CHOICES[2].itemId} className="size-8" />}
+            name={<ItemName itemId={BUILD_CHOICES[2].itemId} />}
+            meta="56.0% WR · 40% buy"
+            actions={
+              <Button variant="ghost" size="xs">
+                Add
+              </Button>
+            }
+          />
         </BuildSlot>
       </BuildBoard>
       <div className="grid grid-cols-2 gap-4">
@@ -284,7 +295,7 @@ export function Round3DomainMisc() {
         source="domain/graph/BuildFlow"
         note="A build read stage by stage. BuildStage is one stage (title, a meta line, its choices). BuildChoiceList holds BuildChoice toggle rows: the item, a bar and figure for how often it is bought, the win rate with a signed bar and its interval against the build's own; selected adds a check and a primary frame, the pointer or keyboard shows a plus. relation marks rows against the choice pointed at in a neighbouring stage: linked rows swap their bar for the link figure, unlinked ones fade. BuildBoard holds one BuildSlot per stage (label, meta, footer; Empty without items) of BuildSlotItem rows (media, name, meta, actions; state held or sold, struck through), and a BuildBudget footer: spent against earned souls, in the loss color with a warning mark once over."
       >
-        <Variants label="press a row to add or remove it · point at a 0–9m row: 9–20m rows link or fade · Remove in a slot · budget under and over · a sold item">
+        <Variants label="press a row to add or remove it · point at a 0–9m row: 9–20m rows link or fade · Remove in a slot · budget under and over · a sold and a suggested item">
           <BuildFlowExample />
         </Variants>
       </Specimen>
