@@ -826,11 +826,14 @@ export function BuildFlowExplorer({
       : 0;
   const baseLabel = reachedBase ? `vs ${stageLabel(lastColumn, isStreetBrawl)} games` : "vs all";
   const [wrLow, wrHigh] = wilsonScoreInterval(summary.wins, summary.matches);
-  // What the build's picks cost, per stage and in all.
+  // What the build spends, per stage and in all: its picks at what they cost on top of their components, less the
+  // refund of a sale in the stage it is sold in (as the budgets and the souls panel count it).
   const stageCost = new Map<number, number>();
   for (const key of path) {
-    const { column } = parseKey(key);
+    const { column, itemId } = parseKey(key);
     stageCost.set(column, (stageCost.get(column) ?? 0) + payOf(key));
+    const sold = sellOf.get(key);
+    if (sold != null) stageCost.set(sold, (stageCost.get(sold) ?? 0) - (costOf.get(itemId) ?? 0) * SELL_REFUND);
   }
   const cost = [...stageCost.values()].reduce((sum, n) => sum + n, 0);
   const categoryCost = new Map<string, number>();
@@ -1336,7 +1339,7 @@ export function BuildFlowExplorer({
                             media={<ItemImage itemId={next.itemId} className="size-8" />}
                             name={<ItemName itemId={next.itemId} />}
                             // The games beside the rate: a suggestion's rate from a few hundred games swings as the build changes.
-                            meta={`${percent(next.winRate)} WR · ${count(next.matches)} games`}
+                            meta={`${percent(next.wins / Math.max(1, next.matches))} WR · ${count(next.matches)} games`}
                             actions={
                               <Button
                                 variant="ghost"
