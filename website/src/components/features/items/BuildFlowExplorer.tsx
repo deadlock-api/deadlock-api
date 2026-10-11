@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { EllipsisVertical, Hourglass, Link, ListPlus, Plus, Route } from "lucide-react";
+import { EllipsisVertical, Hourglass, Link, ListPlus, Plus, Route, TriangleAlert } from "lucide-react";
 import {
   parseAsArrayOf,
   parseAsInteger,
@@ -1116,7 +1116,20 @@ export function BuildFlowExplorer({
                               name={<ItemName itemId={choice.itemId} className="line-clamp-2 whitespace-normal" />}
                               share={choice.pickShare}
                               meta={percent(choice.pickRate)}
-                              price={costOf.get(choice.itemId) ? count(costOf.get(choice.itemId) ?? 0) : undefined}
+                              price={
+                                costOf.get(choice.itemId) ? (
+                                  // Past what the stage has left once the build's spending is paid, it reads as a loss.
+                                  budgets &&
+                                  (costOf.get(choice.itemId) ?? 0) > budgets[index].available - budgets[index].spent ? (
+                                    <span className="inline-flex items-center gap-0.5 text-negative">
+                                      <TriangleAlert className="size-3" aria-label="Over the stage's souls" />
+                                      {count(costOf.get(choice.itemId) ?? 0)}
+                                    </span>
+                                  ) : (
+                                    count(costOf.get(choice.itemId) ?? 0)
+                                  )
+                                ) : undefined
+                              }
                               link={
                                 link && {
                                   // Of the pointed-at item's buyers: bought this one in the stage after it, or before.
