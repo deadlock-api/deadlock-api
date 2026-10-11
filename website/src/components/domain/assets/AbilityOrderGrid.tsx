@@ -13,6 +13,22 @@ const SLOT_CELL = [
 
 const formatPercent = (rate: number) => `${Math.round(rate * 100)}%`;
 
+/**
+ * The order after a cell press: upgrade `index` becomes `abilityId`. An ability already at `max` points moves its last
+ * point there instead, the upgrade it leaves taking the ability that `index` had.
+ */
+function pressCell(steps: readonly AbilityOrderStep[], index: number, abilityId: number, max: number): number[] {
+  const order = steps.map((step) => step.abilityId);
+  if (order[index] === abilityId) return order;
+  const points = order.filter((id) => id === abilityId).length;
+  if (points >= max) {
+    const last = order.lastIndexOf(abilityId);
+    order[last] = order[index];
+  }
+  order[index] = abilityId;
+  return order;
+}
+
 export interface AbilityOrderStep {
   abilityId: number;
   /** Share of the players at the previous step who took this upgrade next. */
@@ -25,7 +41,8 @@ export interface AbilityOrderStep {
  * many players took each one, where the container is wide enough (`@lg`) to print it. Screen readers get the order as a numbered list instead of the grid.
  *
  * With `onValueChange` it is an editor: every cell is a button that makes that upgrade that row's ability (pressed where
- * it already is), and `maxPerAbility` disables the cells that would give an ability more points than it can take.
+ * it already is). An ability already at `maxPerAbility` points gives up its last one instead: that upgrade takes the
+ * ability the pressed one had, so every ability keeps a count it can take.
  */
 export function AbilityOrderGrid({
   abilityIds,
@@ -51,7 +68,6 @@ export function AbilityOrderGrid({
 }) {
   const hasRates = steps.some((step) => step.pickRate !== undefined);
   const editable = onValueChange !== undefined;
-  const pointsOf = (abilityId: number) => steps.filter((step) => step.abilityId === abilityId).length;
   return (
     <div
       data-slot="ability-order-grid"
@@ -105,8 +121,7 @@ export function AbilityOrderGrid({
                   type="button"
                   aria-pressed={taken}
                   aria-label={`Upgrade ${index + 1}: ${abilityNames?.[slot] ?? `ability ${slot + 1}`}`}
-                  disabled={!taken && pointsOf(abilityId) >= maxPerAbility}
-                  onClick={() => onValueChange(steps.map((s, i) => (i === index ? abilityId : s.abilityId)))}
+                  onClick={() => onValueChange(pressCell(steps, index, abilityId, maxPerAbility))}
                   className={cn(
                     cell,
                     FOCUS_RING,

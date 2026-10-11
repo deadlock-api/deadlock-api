@@ -202,7 +202,7 @@ export function Round3DomainAssets() {
       <Specimen
         name="AbilityOrderGrid"
         source="domain/assets/AbilityOrderGrid"
-        note="A skill order: a row per ability in slot order, a column per upgrade, the upgrade's number in its slot color where the ability was taken. pickRate on the steps adds the row of how many players took each step, from @lg. Screen readers get a numbered list of the upgrades instead of the grid. With onValueChange it is an editor: every cell is a toggle button labelled with its upgrade and ability (abilityNames), and maxPerAbility (4) disables cells that would overfill an ability."
+        note="A skill order: a row per ability in slot order, a column per upgrade, the upgrade's number in its slot color where the ability was taken. pickRate on the steps adds the row of how many players took each step, from @lg. Screen readers get a numbered list of the upgrades instead of the grid. With onValueChange it is an editor: every cell is a toggle button labelled with its upgrade and ability (abilityNames); pressing a cell of an ability at maxPerAbility (4) points moves its last point there, the left upgrade taking the pressed one's ability."
       >
         <AbilityOrderGrid
           abilityIds={SAMPLE_ABILITY_IDS}
@@ -211,7 +211,7 @@ export function Round3DomainAssets() {
             pickRate: 1 - index * 0.04,
           }))}
         />
-        <Variants label="editor (onValueChange): press a cell to give that upgrade to its row's ability; an ability at four points disables its free cells">
+        <Variants label="editor (onValueChange): press a cell to give that upgrade to its row's ability; an ability at four points moves its last point to the pressed cell">
           <AbilityOrderEditorExample />
         </Variants>
       </Specimen>
