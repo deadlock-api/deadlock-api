@@ -30,6 +30,7 @@ import {
   ItemSlotTabs,
 } from "~/components/domain/selectors/ItemGrid";
 import { useItemPicker } from "~/components/domain/selectors/useItemPicker";
+import { BuildEconomy, type EconomyItem } from "~/components/features/items/BuildEconomy";
 import { FilterBar } from "~/components/patterns/filter-bar/FilterBar";
 import { Panel, PanelBody, PanelHeader } from "~/components/patterns/panel/Panel";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
@@ -127,6 +128,8 @@ interface Choice {
   pickRate: number;
   /** `pickRate` against the stage's most bought choice, for the bar. */
   pickShare: number;
+  /** Its buyers' average net worth when they bought it in this stage. */
+  netWorthAtBuy: number;
   selected: boolean;
 }
 
@@ -331,6 +334,30 @@ export function BuildFlowExplorer({
     ].filter((s) => s.path.length > 1 && s.path.some((c) => !c.selected));
   }, [view]);
 
+  // The build the economy panel prices: the reader's picks, or the most common build before there are any.
+  const economyItems = useMemo((): EconomyItem[] => {
+    if (path.length > 0) {
+      return path.map((key) => {
+        const { column, itemId } = parseKey(key);
+        return {
+          key,
+          itemId,
+          column,
+          cost: costOf.get(itemId) ?? 0,
+          netWorthAtBuy: view?.byKey.get(key)?.netWorthAtBuy ?? null,
+        };
+      });
+    }
+    if (!view) return [];
+    return suggestPath(view, "common").map((c) => ({
+      key: c.key,
+      itemId: c.itemId,
+      column: c.column,
+      cost: costOf.get(c.itemId) ?? 0,
+      netWorthAtBuy: c.netWorthAtBuy,
+    }));
+  }, [path, view, costOf]);
+
   // Dim the stages only while another build's answer loads; a refresh of the shown one keeps them as they are.
   const switching = isFetching && isPlaceholderData;
 
@@ -508,6 +535,20 @@ export function BuildFlowExplorer({
           </div>
         </PanelBody>
       </Panel>
+
+      {!isStreetBrawl && economyItems.length > 0 && (
+        <BuildEconomy
+          title={path.length > 0 ? "Souls for your build" : "Souls for the most common build"}
+          items={economyItems}
+          heroId={heroId}
+          gameMode={gameMode}
+          matchMode={matchMode}
+          minRankId={minRankId}
+          maxRankId={maxRankId}
+          minUnixTimestamp={minUnixTimestamp ?? 0}
+          maxUnixTimestamp={maxUnixTimestamp}
+        />
+      )}
 
       <FilterBar variant="toolbar" title="Items by stage" aria-label="Build flow controls">
         <Field label="Sort" orientation="horizontal">
@@ -699,6 +740,7 @@ function buildView(
       tone,
       pickRate: node.matches / population,
       pickShare: 0,
+      netWorthAtBuy: node.avg_net_worth_at_buy,
       selected: path.has(key),
     };
   };
