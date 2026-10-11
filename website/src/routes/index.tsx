@@ -20,6 +20,7 @@ import {
 import { OptimizedImage } from "~/components/domain/assets/OptimizedImage";
 import { SmartLink } from "~/components/domain/navigation/SmartLink";
 import { AiSearch } from "~/components/features/ai-search/AiSearch";
+import { WINDOWS_SETUP_URL } from "~/components/features/ingest-cache/links";
 import { LinkCard } from "~/components/patterns/content/LinkCard";
 import { LogoWallItem } from "~/components/patterns/content/LogoWall";
 import { Prose } from "~/components/patterns/content/Prose";
@@ -36,6 +37,7 @@ import { Separator } from "~/components/ui/separator";
 import { Inline, Stack } from "~/components/ui/stack";
 import { Text } from "~/components/ui/text";
 import { TextLink } from "~/components/ui/text-link";
+import { useIsWindows } from "~/hooks/useIsWindows";
 import { API_ORIGIN } from "~/lib/constants";
 import { ORGANIZATION, pageTitle, seo, SITE_URL } from "~/lib/seo";
 import { TRACKER_SITES } from "~/lib/tracker-sites";
@@ -231,6 +233,7 @@ const sponsors = [
 ];
 
 function IndexRoute() {
+  const isWindows = useIsWindows();
   return (
     <PageShell density="marketing">
       {/* The search belongs to the hero: it sits right under it, not a section's distance away. */}
@@ -317,32 +320,50 @@ function IndexRoute() {
               </Text>
               <Inline>
                 <Button asChild>
-                  <SmartLink href="/ingest-cache">
-                    <Download aria-hidden="true" />
-                    Install the tool
-                  </SmartLink>
+                  {isWindows ? (
+                    <a href={WINDOWS_SETUP_URL} download>
+                      <Download aria-hidden="true" />
+                      Download for Windows
+                    </a>
+                  ) : (
+                    <SmartLink href="/ingest-cache">
+                      <Download aria-hidden="true" />
+                      Install the tool
+                    </SmartLink>
+                  )}
                 </Button>
               </Inline>
             </Stack>
-            <Inline asChild gap={1.5} justify="center">
+            <Grid asChild columns={7} gap={1.5} className="justify-items-center">
               <ul aria-label="Sites that show matches from Deadlock API">
-                {TRACKER_SITES.map((site) => (
-                  <li key={site.name}>
+                {TRACKER_SITES.map((site) => {
+                  const icon = (
                     <img
                       src={site.icon}
                       alt={site.name}
                       title={site.name}
-                      width={24}
-                      height={24}
+                      width={28}
+                      height={28}
                       loading="lazy"
                       decoding="async"
                       referrerPolicy="no-referrer"
-                      className="size-6 object-contain"
+                      className="size-7 object-contain"
                     />
-                  </li>
-                ))}
+                  );
+                  return (
+                    <li key={site.name}>
+                      {site.href ? (
+                        <a href={site.href} target="_blank" rel="sponsored noreferrer" className="flex">
+                          {icon}
+                        </a>
+                      ) : (
+                        icon
+                      )}
+                    </li>
+                  );
+                })}
               </ul>
-            </Inline>
+            </Grid>
           </Grid>
         </CardContent>
       </Card>

@@ -3,6 +3,8 @@ export interface TrackerSite {
   name: string;
   /** The site's own icon, served from its own host. */
   icon: string;
+  /** Set for sponsors only: their logo links to them. */
+  href?: string;
 }
 
 /**
@@ -10,9 +12,17 @@ export interface TrackerSite {
  * also listed under img-src in public/_headers; the few behind a bot wall come from Google's favicon service.
  */
 export const TRACKER_SITES: readonly TrackerSite[] = [
-  { name: "DeadChaps", icon: "https://www.deadchaps.gg/favicon.png" },
-  { name: "Statlocker", icon: "https://statlocker.gg/logo-icon-192.png" },
-  { name: "EDL", icon: "https://edl.gg/edl-apple-touch-icon.png" },
+  {
+    name: "DeadChaps",
+    icon: "https://www.deadchaps.gg/favicon.png",
+    href: "https://www.deadchaps.gg/?ref=deadlock-api.com",
+  },
+  {
+    name: "Statlocker",
+    icon: "https://statlocker.gg/logo-icon-192.png",
+    href: "https://statlocker.gg/?ref=deadlock-api.com",
+  },
+  { name: "EDL", icon: "https://edl.gg/edl-apple-touch-icon.png", href: "https://edl.gg" },
   { name: "Tracklock", icon: "https://tracklock.gg/favicon.ico" },
   { name: "LockBlaze", icon: "https://www.lockblaze.com/favicon.ico" },
   { name: "Tracker.gg", icon: "https://www.google.com/s2/favicons?domain=tracker.gg&sz=64" },
