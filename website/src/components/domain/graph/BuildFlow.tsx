@@ -226,6 +226,7 @@ export function BuildSlot({
   meta,
   action,
   footer,
+  drop = "none",
   className,
   children,
   ...props
@@ -234,14 +235,17 @@ export function BuildSlot({
   meta?: React.ReactNode;
   action?: React.ReactNode;
   footer?: React.ReactNode;
+  /** `over`: an item is dragged over the slot and would move here on drop. */
+  drop?: "none" | "over";
 }) {
   const empty = Children.toArray(children).length === 0;
   return (
     <li
       data-slot="build-slot"
       data-empty={empty || undefined}
+      data-drop={drop === "over" || undefined}
       className={cn(
-        "flex min-w-0 flex-col gap-2 rounded-md border border-hairline bg-subtle p-2 data-empty:border-dashed data-empty:bg-transparent",
+        "flex min-w-0 flex-col gap-2 rounded-md border border-hairline bg-subtle p-2 transition-colors duration-fast ease-standard data-drop:border-primary data-drop:bg-primary/10 data-empty:border-dashed data-empty:bg-transparent",
         className,
       )}
       {...props}
@@ -274,7 +278,10 @@ const buildSlotItemVariants = cva("flex min-w-0 items-center gap-2 rounded-sm", 
   defaultVariants: { state: "held" },
 });
 
-/** One item of a BuildSlot: its art, name, a meta line (price, how often it is sold) and `actions` at the end. */
+/**
+ * One item of a BuildSlot: its art, name, a meta line (price, how often it is sold) and `actions` at the end. With
+ * `draggable` it shows the grab cursor; the drag itself (moving it to another slot) is the board's.
+ */
 export function BuildSlotItem({
   media,
   name,
@@ -294,7 +301,11 @@ export function BuildSlotItem({
     <li
       data-slot="build-slot-item"
       data-state={state ?? "held"}
-      className={cn(buildSlotItemVariants({ state }), className)}
+      className={cn(
+        buildSlotItemVariants({ state }),
+        props.draggable && "cursor-grab active:cursor-grabbing",
+        className,
+      )}
       {...props}
     >
       <span className="shrink-0">{media}</span>

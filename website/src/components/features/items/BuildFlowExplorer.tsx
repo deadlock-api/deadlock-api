@@ -333,6 +333,8 @@ function ItemPlan({
   without,
   taken,
   onSell,
+  moveTo,
+  onMove,
   onSwap,
   onRemove,
 }: {
@@ -345,6 +347,9 @@ function ItemPlan({
   /** Items the build already holds: never offered as a swap. */
   taken: Set<number>;
   onSell: (column: number | null) => void;
+  /** The stages it can move to, the keyboard's way of dragging it there. */
+  moveTo: Stage[];
+  onMove: (column: number) => void;
   onSwap: (itemId: number) => void;
   onRemove: () => void;
 }) {
@@ -420,6 +425,11 @@ function ItemPlan({
           ))
         )}
         <Separator />
+        {moveTo.map((stage) => (
+          <OptionRow key={stage.column} onClick={() => choose(() => onMove(stage.column))}>
+            Move to {stageLabel(stage.column, isStreetBrawl)}
+          </OptionRow>
+        ))}
         <OptionRow onClick={() => choose(onRemove)}>Remove</OptionRow>
       </PopoverContent>
     </Popover>
@@ -468,6 +478,9 @@ export function BuildFlowExplorer({
     [storedFlex],
   );
   const [pointed, setPointed] = useState<string | null>(null);
+  // The picked item being dragged to another stage, and the stage it is over.
+  const [dragged, setDragged] = useState<string | null>(null);
+  const [dropColumn, setDropColumn] = useState<number | null>(null);
   // The stage a narrow screen shows (index into the stages); a wide one shows every stage.
   const [shownStage, setShownStage] = useState(0);
 
@@ -511,6 +524,23 @@ export function BuildFlowExplorer({
     }
     return map;
   }, [storedSells, pathSet, columnCount]);
+  // Moves a picked item to another stage. Its sale plan stays if the sale still comes after its new stage.
+  const move = (key: string, column: number) => {
+    const { itemId } = parseKey(key);
+    const moved = `${column}:${itemId}`;
+    if (moved === key) return;
+    const sale = sellOf.get(key);
+    startTransition(() => {
+      void setSells(
+        (prev) => [
+          ...prev.filter((entry) => !entry.startsWith(`${key}:`) && !entry.startsWith(`${moved}:`)),
+          ...(sale != null && sale > column ? [`${moved}:${sale}`] : []),
+        ],
+        AT_ONCE,
+      );
+      void setPath((prev) => [...prev.filter((k) => k !== key && k !== moved), moved], AT_ONCE);
+    });
+  };
 
   const { minUnixTimestamp, maxUnixTimestamp } = useNormalizedTimeRange(minDate, maxDate);
   // The build flow answer for a build path, with the page's filters.
@@ -966,6 +996,22 @@ export function BuildFlowExplorer({
                 return (
                   <BuildSlot
                     key={stage.column}
+                    drop={dragged && dropColumn === stage.column ? "over" : "none"}
+                    onDragOver={(event) => {
+                      if (!dragged || parseKey(dragged).column === stage.column) return;
+                      event.preventDefault();
+                      event.dataTransfer.dropEffect = "move";
+                      if (dropColumn !== stage.column) setDropColumn(stage.column);
+                    }}
+                    onDragLeave={(event) => {
+                      if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setDropColumn(null);
+                    }}
+                    onDrop={(event) => {
+                      event.preventDefault();
+                      if (dragged) move(dragged, stage.column);
+                      setDragged(null);
+                      setDropColumn(null);
+                    }}
                     label={stage.title}
                     meta={stageCost.get(stage.column) ? count(stageCost.get(stage.column) ?? 0) : undefined}
                     action={
@@ -1006,6 +1052,16 @@ export function BuildFlowExplorer({
                       return (
                         <BuildSlotItem
                           key={key}
+                          draggable
+                          onDragStart={(event) => {
+                            event.dataTransfer.effectAllowed = "move";
+                            event.dataTransfer.setData("text/plain", key);
+                            setDragged(key);
+                          }}
+                          onDragEnd={() => {
+                            setDragged(null);
+                            setDropColumn(null);
+                          }}
                           media={<ItemImage itemId={itemId} className="size-8" />}
                           name={<ItemName itemId={itemId} />}
                           meta={
@@ -1034,6 +1090,8 @@ export function BuildFlowExplorer({
                               column={stage.column}
                               without={flowQuery(path.filter((k) => k !== key))}
                               taken={heldItems}
+                              moveTo={view.stages.filter((s) => s.column !== stage.column)}
+                              onMove={(column) => move(key, column)}
                               onSwap={(next) => {
                                 planSale(key, null);
                                 changePath((prev) => [...prev.filter((k) => k !== key), `${stage.column}:${next}`]);
