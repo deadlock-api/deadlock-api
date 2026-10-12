@@ -337,16 +337,18 @@ impl Database {
         if !read_only {
             conn.execute_batch("INSTALL httpfs; INSTALL icu; INSTALL ducklake;")?;
         }
+        // Unlike the extension settings, the HTTP and parquet ones are per connection: without
+        // GLOBAL they would miss the `try_clone()`d connections that queries run on.
         conn.execute_batch(
             "LOAD httpfs;
              LOAD icu;
              LOAD ducklake;
              SET autoinstall_known_extensions = false;
              SET autoload_known_extensions = false;
-             SET http_retries = 5;
-             SET http_retry_wait_ms = 500;
-             SET http_retry_backoff = 2;
-             SET parquet_metadata_cache = true;",
+             SET GLOBAL http_retries = 5;
+             SET GLOBAL http_retry_wait_ms = 500;
+             SET GLOBAL http_retry_backoff = 2;
+             SET GLOBAL parquet_metadata_cache = true;",
         )?;
         conn.execute_batch(&format!(
             "ATTACH {} AS lake (READ_ONLY);",
@@ -577,6 +579,32 @@ mod tests {
         let out = run_query(&ro, "SELECT * FROM t_latest").unwrap();
         assert_eq!(out.batches[0].num_rows(), 1);
         drop(ro);
+        std::fs::remove_dir_all(&work_dir).unwrap();
+    }
+
+    #[test]
+    fn query_connections_inherit_the_settings() {
+        let (db, work_dir) = test_database();
+        db.open(AccessMode::ReadWrite).unwrap().close().unwrap();
+        let ro = db.open(AccessMode::ReadOnly).unwrap();
+        // Queries run on clones, as in `SnapshotCatalog::query`.
+        let conn = ro.try_clone().unwrap();
+        for (name, value) in [
+            ("http_retries", "5"),
+            ("http_retry_wait_ms", "500"),
+            ("http_retry_backoff", "2.0"),
+            ("parquet_metadata_cache", "true"),
+        ] {
+            let actual: String = conn
+                .query_row(
+                    &format!("SELECT current_setting('{name}')::VARCHAR"),
+                    [],
+                    |row| row.get(0),
+                )
+                .unwrap();
+            assert_eq!(actual, value, "{name}");
+        }
+        drop((conn, ro));
         std::fs::remove_dir_all(&work_dir).unwrap();
     }
 
