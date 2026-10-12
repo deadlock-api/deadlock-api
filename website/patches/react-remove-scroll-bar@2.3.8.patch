@@ -1,0 +1,45 @@
+diff --git a/dist/es2015/utils.js b/dist/es2015/utils.js
+index 3c81084ca0a7eb56fa43a54be88010ec0ffe3f76..8c352127f43927b66a4163f62131f3ef8a3ab275 100644
+--- a/dist/es2015/utils.js
++++ b/dist/es2015/utils.js
+@@ -19,7 +19,9 @@ export var getGapWidth = function (gapMode) {
+     }
+     var offsets = getOffset(gapMode);
+     var documentWidth = document.documentElement.clientWidth;
+-    var windowWidth = window.innerWidth;
++    // A root with `scrollbar-gutter: stable` keeps its gutter when the scroll locks, so no gap needs filling.
++    var gutterKept = window.getComputedStyle(document.documentElement).scrollbarGutter.indexOf("stable") !== -1;
++    var windowWidth = gutterKept ? documentWidth : window.innerWidth;
+     return {
+         left: offsets[0],
+         top: offsets[1],
+diff --git a/dist/es2019/utils.js b/dist/es2019/utils.js
+index b19ac06ee27a876a5e7990dce1b2131e117b3be6..fdcc3afb6c759f307b765f108cea995df8731ca2 100644
+--- a/dist/es2019/utils.js
++++ b/dist/es2019/utils.js
+@@ -18,7 +18,9 @@ export const getGapWidth = (gapMode = 'margin') => {
+     }
+     const offsets = getOffset(gapMode);
+     const documentWidth = document.documentElement.clientWidth;
+-    const windowWidth = window.innerWidth;
++    // A root with `scrollbar-gutter: stable` keeps its gutter when the scroll locks, so no gap needs filling.
++    const gutterKept = window.getComputedStyle(document.documentElement).scrollbarGutter.includes("stable");
++    const windowWidth = gutterKept ? documentWidth : window.innerWidth;
+     return {
+         left: offsets[0],
+         top: offsets[1],
+diff --git a/dist/es5/utils.js b/dist/es5/utils.js
+index 782bccf4ea2ae1a2400b4a8e46ecd7eaa4174df0..a90e8fb20f130732ca4282d6f76f887d3e7d8c1b 100644
+--- a/dist/es5/utils.js
++++ b/dist/es5/utils.js
+@@ -22,7 +22,9 @@ var getGapWidth = function (gapMode) {
+     }
+     var offsets = getOffset(gapMode);
+     var documentWidth = document.documentElement.clientWidth;
+-    var windowWidth = window.innerWidth;
++    // A root with `scrollbar-gutter: stable` keeps its gutter when the scroll locks, so no gap needs filling.
++    var gutterKept = window.getComputedStyle(document.documentElement).scrollbarGutter.indexOf("stable") !== -1;
++    var windowWidth = gutterKept ? documentWidth : window.innerWidth;
+     return {
+         left: offsets[0],
+         top: offsets[1],
