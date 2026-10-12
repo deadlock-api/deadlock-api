@@ -72,6 +72,35 @@ impl BatchInsert for RequestedMatchInsert {
 
 pub(crate) type RequestedMatchInsertBatcher = ClickhouseInsertBatcher<RequestedMatchInsert>;
 
+/// Queues the requested matches that have no metadata and that `pending_matches` doesn't know
+/// yet. Ids above the newest `active_matches` match can't be real, so they are never queued.
+pub(crate) async fn queue_unknown_matches(
+    state: &AppState,
+    match_ids: &[u64],
+) -> clickhouse::error::Result<()> {
+    if match_ids.is_empty() {
+        return Ok(());
+    }
+    let ids = id_list(match_ids);
+    let query = format!(
+        "SELECT match_id FROM (SELECT arrayJoin([{ids}]) AS match_id) \
+         WHERE match_id BETWEEN {MIN_MATCH_ID} AND (SELECT max(match_id) FROM active_matches) \
+           AND match_id NOT IN (SELECT match_id FROM match_player WHERE match_id IN ({ids})) \
+           AND match_id NOT IN (SELECT match_id FROM pending_matches WHERE match_id IN ({ids})) \
+         SETTINGS log_comment = 'queue_unknown_matches'"
+    );
+    let unknown: Vec<u64> = state.ch_client_ro.query(&query).fetch_all().await?;
+    if !unknown.is_empty() {
+        debug!(?unknown, "queueing requested matches");
+        let rows = unknown
+            .into_iter()
+            .filter_map(RequestedMatchRow::new)
+            .collect();
+        state.batchers.requested_match_insert.insert(rows).await;
+    }
+    Ok(())
+}
+
 fn worklist(ids: impl Serialize) -> Response {
     (
         [(CACHE_CONTROL, HeaderValue::from_static("no-store"))],

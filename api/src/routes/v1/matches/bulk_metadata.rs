@@ -22,6 +22,7 @@ use utoipa::{IntoParams, ToSchema};
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
+use crate::routes::v1::matches::to_fetch::queue_unknown_matches;
 use crate::routes::v1::matches::types::{GameMode, MatchMode, reject_brawl_badge_filter};
 use crate::routes::v1::players::without_protected;
 use crate::services::rate_limiter::Quota;
@@ -904,6 +905,15 @@ pub(super) async fn bulk_metadata(
         }
     }
     debug!(?query);
+    if let Some(match_ids) = query.match_ids.clone().filter(|ids| !ids.is_empty()) {
+        // Queue requested matches we have no metadata for, off the request path.
+        let state = state.clone();
+        tokio::spawn(async move {
+            if let Err(e) = queue_unknown_matches(&state, &match_ids).await {
+                warn!("Failed to queue unknown matches: {e}");
+            }
+        });
+    }
     let format = query.format;
     let player_columns = player_columns(&query);
     let players_tuple_type = if player_columns.is_empty() {
