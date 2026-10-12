@@ -10,14 +10,15 @@ use clickhouse::Row;
 use serde::{Deserialize, Serialize};
 use tracing::{debug, warn};
 use utoipa::{IntoParams, ToSchema};
+use valveprotos::deadlock::c_msg_client_to_gc_get_match_meta_data_response::EResult;
 use valveprotos::deadlock::{
     CMsgClientToGcGetMatchMetaData, CMsgClientToGcGetMatchMetaDataResponse,
-    EgcCitadelClientMessages, c_msg_client_to_gc_get_match_meta_data_response,
+    EgcCitadelClientMessages,
 };
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
-use crate::routes::v1::matches::to_fetch::RequestedMatchRow;
+use crate::routes::v1::matches::to_fetch::{queue_requested_matches, resolve_invalid_match};
 use crate::routes::v1::matches::types::ClickhouseSalts;
 use crate::services::clickhouse_batcher::{BatchQuery, ClickhouseBatcher, in_clause};
 use crate::services::rate_limiter::Quota;
@@ -296,11 +297,8 @@ pub(super) async fn fetch_match_salts(
         Ok(result) => result,
         Err(e) => {
             // No bot to spare: queue the match so the to-fetch workers pick it up instead.
-            if !is_custom
-                && is_proxy_exhausted(&e)
-                && let Some(row) = RequestedMatchRow::new(match_id)
-            {
-                state.batchers.requested_match_insert.insert_one(row).await;
+            if !is_custom && is_proxy_exhausted(&e) {
+                queue_requested_matches(state, &[match_id]).await;
             }
             return Err(e.into());
         }
@@ -308,9 +306,15 @@ pub(super) async fn fetch_match_salts(
     let username = format!("api-fetch:{}", result.username);
     let salts: SteamProxyResponse<CMsgClientToGcGetMatchMetaDataResponse> = result.try_into()?;
     let salts = salts.msg;
-    if salts.result.is_none_or(|r| {
-        r != c_msg_client_to_gc_get_match_meta_data_response::EResult::KEResultSuccess as i32
-    }) {
+    if salts.result == Some(EResult::KEResultInvalidMatch as i32) {
+        // Steam doesn't know the match: stop handing it out to the to-fetch workers.
+        resolve_invalid_match(state, match_id).await;
+        return Err(not_found(match_id));
+    }
+    if salts
+        .result
+        .is_none_or(|r| r != EResult::KEResultSuccess as i32)
+    {
         return Err(APIError::status_msg(
             StatusCode::NOT_FOUND,
             format!("Failed to fetch match salts for match {match_id}"),
