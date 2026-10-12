@@ -543,6 +543,7 @@ fn describe_query_error(error: &QueryError) -> (String, String) {
             QueryError::Busy => "BusyError",
             QueryError::Cancelled => "CancelledError",
             QueryError::NotReadOnly => "PermissionError",
+            QueryError::MultipleStatements => "InvalidInputException",
             QueryError::DuckDb(_) => "DuckDBError",
         };
         return (error.to_string(), error_type.to_owned());
