@@ -11,9 +11,11 @@ import { BANS_PER_MATCH, computeBanRates } from "~/lib/ban-rate";
 import { getPickrateMultiplier } from "~/lib/constants";
 import type { GameMode, MatchMode } from "~/lib/game-mode";
 import { computeResiduals, computeZScores } from "~/lib/hero-scoring";
+import { computeSwapRates, type HeroSwapRates } from "~/lib/swap-rate";
 import { heroesQueryOptions } from "~/queries/asset-queries";
 import { heroBanStatsQueryOptions } from "~/queries/hero-ban-stats-query";
 import { heroStatsQueryOptions } from "~/queries/hero-stats-query";
+import { heroSwapStatsQueryOptions } from "~/queries/hero-swap-stats-query";
 
 export const HERO_TYPE_ORDER = ["assassin", "brawler", "marksman", "mystic"] as const;
 export type HeroType = (typeof HERO_TYPE_ORDER)[number];
@@ -64,6 +66,8 @@ export interface HeroStatsRowData {
   zScoreDelta?: number;
   residual: number;
   residualDelta?: number;
+  /** Pre-game swaps onto and away from the hero, from the matches whose demo recorded them. */
+  swap?: HeroSwapRates;
 }
 
 /** A hero and its position in the sorted table (or group), counted before the name filter. */
@@ -208,6 +212,8 @@ export function useHeroStatsTable({
     ...heroBanStatsQueryOptions(prevBanParams),
     enabled: hasPreviousInterval && supportsBans,
   });
+  // Swaps come from the same demo analysis as bans, so they take the same filters and skip Brawl too.
+  const { data: normalSwapData } = useQuery({ ...heroSwapStatsQueryOptions(banParams), enabled: supportsBans });
   const heroesQuery = useQuery(heroesQueryOptions);
 
   const heroData = statsQuery.data;
@@ -233,6 +239,8 @@ export function useHeroStatsTable({
     return { banStatsMap: computeBanRates(banData), sumBans: banData.reduce((sum, row) => sum + row.bans, 0) };
   }, [banData]);
   const hasBans = banStatsMap.size > 0;
+  const swapData = supportsBans ? normalSwapData : undefined;
+  const swapRatesMap = useMemo(() => computeSwapRates(swapData ?? []), [swapData]);
 
   const prevStatsMap = useMemo(() => {
     if (!prevHeroData) return undefined;
@@ -302,6 +310,7 @@ export function useHeroStatsTable({
         zScoreDelta: deltaOf(zScore, prev?.zScore),
         residual,
         residualDelta: deltaOf(residual, prev?.residual),
+        swap: swapRatesMap.get(row.hero_id),
       };
     });
     return {
@@ -316,7 +325,7 @@ export function useHeroStatsTable({
         residual: range(residuals),
       },
     };
-  }, [heroData, pickrateMultiplier, hasBans, banStatsMap, prevStatsMap, heroNameMap]);
+  }, [heroData, pickrateMultiplier, hasBans, banStatsMap, prevStatsMap, heroNameMap, swapRatesMap]);
 
   const shownPickRateMode: PickRateMode = hasBans ? pickRateMode : "pickRate";
 

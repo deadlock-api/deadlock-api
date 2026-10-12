@@ -9,6 +9,7 @@ import { TooltipStat, TooltipStats } from "~/components/ui/tooltip";
 import { BUFF_TIMINGS_NOTE } from "~/lib/buffs";
 import { type GameMode, hasSoulEconomy } from "~/lib/game-mode";
 import { formatStatValue } from "~/lib/stat-format";
+import type { HeroSwapRates } from "~/lib/swap-rate";
 
 interface HeroDetailsRow {
   hero_id: number;
@@ -51,6 +52,7 @@ export function HeroDetailsTooltip({
   pickrateMultiplier,
   heroName,
   gameMode,
+  swap,
 }: {
   row: HeroDetailsRow;
   /** Names the button: a table of them all read "Show hero details". */
@@ -60,6 +62,8 @@ export function HeroDetailsTooltip({
   pickrateMultiplier?: number;
   /** Street Brawl has no soul economy, so its details leave out net worth. */
   gameMode?: GameMode;
+  /** Pre-game swaps; left out when the demos recorded none for the filters. */
+  swap?: HeroSwapRates;
 }) {
   const showEconomy = hasSoulEconomy(gameMode);
   const avgKills = row.total_kills / row.matches;
@@ -153,6 +157,31 @@ export function HeroDetailsTooltip({
             <TooltipStat label="Shots Hit" value={row.total_shots_hit.toLocaleString("en-US")} />
             <TooltipStat label="Shots Missed" value={row.total_shots_missed.toLocaleString("en-US")} />
           </DetailGroup>
+          {swap && swap.matches > 0 && (
+            <>
+              <Separator />
+              <DetailGroup title="Pre-Game Swaps">
+                <TooltipStat
+                  label="Swapped In"
+                  value={`${(swap.swapInRate * 100).toFixed(1)}% of ${swap.matches.toLocaleString("en-US")}`}
+                />
+                <TooltipStat
+                  label="Swap-In Win Rate"
+                  value={
+                    swap.swapInWinRate !== undefined ? (
+                      `${(swap.swapInWinRate * 100).toFixed(1)}%`
+                    ) : (
+                      <NoValue label="Nobody swapped in" />
+                    )
+                  }
+                />
+                <TooltipStat
+                  label="Swapped Away"
+                  value={`${(swap.swapAwayRate * 100).toFixed(1)}% of ${swap.pregamePicks.toLocaleString("en-US")}`}
+                />
+              </DetailGroup>
+            </>
+          )}
         </Stack>
       </PopoverContent>
     </Popover>

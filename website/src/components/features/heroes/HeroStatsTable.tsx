@@ -382,6 +382,7 @@ function HeroStatsRow({ rank, hero, table }: { rank: number; hero: HeroStatsRowD
           sumMatches={table.sumMatches}
           pickrateMultiplier={table.pickrateMultiplier}
           gameMode={table.gameMode}
+          swap={hero.swap}
         />
       </TableCell>
     </TableRow>

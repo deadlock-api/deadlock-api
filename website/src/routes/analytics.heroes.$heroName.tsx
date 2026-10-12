@@ -45,6 +45,7 @@ import {
 } from "~/lib/seasons";
 import { datasetJsonLd, pageTitle, seo } from "~/lib/seo";
 import { closestNameBySlug, findByIdSegment, slugify } from "~/lib/slug";
+import { computeSwapRates } from "~/lib/swap-rate";
 import { toneOf } from "~/lib/tone";
 import {
   filterPlayableHeroes,
@@ -54,6 +55,7 @@ import {
 } from "~/queries/asset-queries";
 import { heroBanStatsQueryOptions } from "~/queries/hero-ban-stats-query";
 import { heroStatsQueryOptions } from "~/queries/hero-stats-query";
+import { heroSwapStatsQueryOptions } from "~/queries/hero-swap-stats-query";
 import { itemStatsQueryOptions } from "~/queries/item-stats-query";
 import { ranksQueryOptions } from "~/queries/ranks-query";
 
@@ -203,6 +205,8 @@ export const Route = createFileRoute("/analytics/heroes/$heroName")({
       ),
       prefetchCached(queryClient, itemUpgradesQueryOptions),
       catchPrefetch(fetchHeroMatchups({ data: matchupsRequest(hero.id, seasons, preferences.dateFilter) })),
+      // Swaps come from the same demos as bans, so they take the ban filters.
+      prefetchCached(queryClient, heroSwapStatsQueryOptions(currentBanParams(seasons, preferences.dateFilter))),
     ]);
     const cardImage = hero.images.hero_card_critical_webp ?? hero.images.icon_hero_card_webp ?? null;
     const summary = summarizeHeroStats(stats, hero.id);
@@ -314,6 +318,7 @@ function HeroDetailPage() {
   const period = defaultPeriodLabel(seasons, preferences.dateFilter);
   const statsQuery = useQuery(heroStatsQueryOptions(currentStatsParams(seasons, preferences.dateFilter)));
   const banQuery = useQuery(heroBanStatsQueryOptions(currentBanParams(seasons, preferences.dateFilter)));
+  const swapQuery = useQuery(heroSwapStatsQueryOptions(currentBanParams(seasons, preferences.dateFilter)));
 
   const summary = useMemo(() => {
     const base = summarizeHeroStats(statsQuery.data, heroId);
@@ -321,9 +326,26 @@ function HeroDetailPage() {
     const banRates = banQuery.data ? computeBanRates(banQuery.data) : undefined;
     const banRate = banRates?.get(heroId);
     const banRateRank = banRate !== undefined && banRates ? rankOf(banRate, [...banRates.values()]) : undefined;
+    const swapRates = swapQuery.data ? computeSwapRates(swapQuery.data) : undefined;
+    const swap = swapRates?.get(heroId);
+    const swapAwayRank =
+      swap && swapRates
+        ? rankOf(
+            swap.swapAwayRate,
+            [...swapRates.values()].map((s) => s.swapAwayRate),
+          )
+        : undefined;
     // Ranked among the heroes with ban data, so "of N" counts those, not the heroes played (they can differ).
-    return { ...base, banRate, banRateRank, banHeroCount: banRates?.size };
-  }, [statsQuery.data, banQuery.data, heroId]);
+    return {
+      ...base,
+      banRate,
+      banRateRank,
+      banHeroCount: banRates?.size,
+      swap: swap && swap.matches > 0 ? swap : undefined,
+      swapAwayRank,
+      swapHeroCount: swapRates?.size,
+    };
+  }, [statsQuery.data, banQuery.data, swapQuery.data, heroId]);
 
   const rankLabel = (rank: number | undefined, total?: number) =>
     summary && rank !== undefined ? `#${rank} of ${total ?? summary.heroCount}` : undefined;
@@ -373,7 +395,7 @@ function HeroDetailPage() {
         }
       >
         {summary ? (
-          <StatGroup variant="plain" className="grid-cols-2 @lg:grid-cols-4">
+          <StatGroup variant="plain" className="grid-cols-2 @lg:grid-cols-3 @4xl:grid-cols-6">
             <Stat
               data-find={findKey.stat("win_rate")}
               label="Win Rate"
@@ -392,6 +414,22 @@ function HeroDetailPage() {
               label="Ban Rate"
               value={summary.banRate !== undefined ? formatPercent(summary.banRate) : undefined}
               sub={rankLabel(summary.banRateRank, summary.banHeroCount)}
+            />
+            <Stat
+              data-find={findKey.stat("swap_in_rate")}
+              label="Swapped In"
+              value={summary.swap ? formatPercent(summary.swap.swapInRate) : undefined}
+              sub={
+                summary.swap?.swapInWinRate !== undefined
+                  ? `${formatPercent(summary.swap.swapInWinRate)} win rate`
+                  : undefined
+              }
+            />
+            <Stat
+              data-find={findKey.stat("swap_away_rate")}
+              label="Swapped Away"
+              value={summary.swap ? formatPercent(summary.swap.swapAwayRate) : undefined}
+              sub={rankLabel(summary.swapAwayRank, summary.swapHeroCount)}
             />
             <Stat
               data-find={findKey.stat("matches")}
