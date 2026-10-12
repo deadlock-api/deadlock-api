@@ -1,8 +1,11 @@
 use core::cmp::max;
+use std::sync::Arc;
 
+use arrow_duckdb::compute::cast;
 use arrow_duckdb::json::WriterBuilder;
 use arrow_duckdb::json::writer::JsonArray;
-use duckdb::arrow::datatypes::DataType;
+use duckdb::arrow::array::{AsArray, StructArray};
+use duckdb::arrow::datatypes::{DataType, FieldRef, Fields};
 use duckdb::arrow::error::ArrowError;
 use duckdb::arrow::record_batch::RecordBatch;
 use serde::Serialize;
@@ -74,10 +77,51 @@ fn rows_as_objects(batches: &[RecordBatch]) -> Result<Vec<Map<String, Value>>, A
         .with_explicit_nulls(true)
         .build::<_, JsonArray>(Vec::new());
     for batch in batches.iter().filter(|b| b.num_rows() > 0) {
-        writer.write(batch)?;
+        writer.write(&with_string_map_keys(batch)?)?;
     }
     writer.finish()?;
     serde_json::from_slice(&writer.into_inner()).map_err(|e| ArrowError::JsonError(e.to_string()))
+}
+
+/// `batch` with the keys of every map cast to strings: arrow-json writes maps as JSON objects
+/// and rejects any other key type, such as the `MAP(UINTEGER, INTEGER)` stats columns of
+/// `match_player`. Integer and float keys come out as `DuckDB`'s own `map::JSON` writes them.
+fn with_string_map_keys(batch: &RecordBatch) -> Result<RecordBatch, ArrowError> {
+    let data_type = DataType::Struct(batch.schema().fields().clone());
+    let with_string_keys = string_map_keys(&data_type);
+    if with_string_keys == data_type {
+        return Ok(batch.clone());
+    }
+    let columns = StructArray::from(batch.clone());
+    Ok(cast(&columns, &with_string_keys)?.as_struct().into())
+}
+
+/// `data_type` with every map key, however deeply nested, cast to `Utf8`.
+fn string_map_keys(data_type: &DataType) -> DataType {
+    let with_type =
+        |f: &FieldRef, new_type: DataType| Arc::new(f.as_ref().clone().with_data_type(new_type));
+    let with_string_keys = |f: &FieldRef| with_type(f, string_map_keys(f.data_type()));
+    match data_type {
+        // Map entries are a struct of the key and the value.
+        DataType::Map(entries, sorted) => {
+            let DataType::Struct(fields) = entries.data_type() else {
+                return data_type.clone();
+            };
+            let [key, value] = fields.as_ref() else {
+                return data_type.clone();
+            };
+            let entry = Fields::from(vec![
+                with_type(key, DataType::Utf8),
+                with_string_keys(value),
+            ]);
+            DataType::Map(with_type(entries, DataType::Struct(entry)), *sorted)
+        }
+        DataType::List(f) => DataType::List(with_string_keys(f)),
+        DataType::LargeList(f) => DataType::LargeList(with_string_keys(f)),
+        DataType::FixedSizeList(f, size) => DataType::FixedSizeList(with_string_keys(f), *size),
+        DataType::Struct(fields) => DataType::Struct(fields.iter().map(with_string_keys).collect()),
+        other => other.clone(),
+    }
 }
 
 /// SQL-style type names, matching what `list_columns` reports and what `CAST(x AS ...)` accepts.
@@ -172,6 +216,34 @@ mod tests {
         assert_eq!(keys, ["a", "b", "c", "d", "e", "f"]);
         assert_eq!(json["rowCount"], 1);
         assert!(json.get("truncated").is_none());
+    }
+
+    #[test]
+    fn formats_maps_with_any_key_type() {
+        let result = run("SELECT
+                MAP {1::UINTEGER: 2, 3: 4} AS ints,
+                MAP {-1::BIGINT: 2::BIGINT} AS bigints,
+                [MAP {1: 'a'}] AS list_of_maps,
+                [MAP {1: 'a'}]::MAP(INTEGER, VARCHAR)[1] AS array_of_maps,
+                {'s': MAP {1.5: true}} AS struct_of_map,
+                MAP {1: MAP {2: 3}} AS map_of_maps,
+                MAP {'k': 1} AS strings,
+                NULL::MAP(INTEGER, INTEGER) AS null_map");
+        let json = serde_json::to_value(&result).unwrap();
+        assert_eq!(json["columnTypes"][0], "MAP(UINTEGER, INTEGER)");
+        assert_eq!(
+            json["rows"][0],
+            serde_json::json!({
+                "ints": { "1": 2, "3": 4 },
+                "bigints": { "-1": 2 },
+                "list_of_maps": [{ "1": "a" }],
+                "array_of_maps": [{ "1": "a" }],
+                "struct_of_map": { "s": { "1.5": true } },
+                "map_of_maps": { "1": { "2": 3 } },
+                "strings": { "k": 1 },
+                "null_map": null,
+            })
+        );
     }
 
     #[test]

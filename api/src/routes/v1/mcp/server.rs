@@ -226,7 +226,12 @@ impl McpServer {
         match self.catalog.query(sql).await {
             Ok(output) => match format_query_output(&output) {
                 Ok(result) => success(&result),
-                Err(e) => query_error(e.to_string(), "SerializationError".to_owned()),
+                Err(e) => query_error(
+                    format!(
+                        "{e}. Cast the column to a supported type, e.g. `col::VARCHAR` or `col::JSON`"
+                    ),
+                    "SerializationError".to_owned(),
+                ),
             },
             Err(e) => {
                 warn!("MCP query failed: {e}");
