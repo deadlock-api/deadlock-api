@@ -127,7 +127,7 @@ fn start_times_query(match_ids: &[u64]) -> String {
         })
         .join(" OR ");
     format!(
-        "SELECT requested, toUnixTimestamp(argMax(start_time, match_id)) \
+        "SELECT toUInt64(requested), toUnixTimestamp(argMax(start_time, match_id)) \
          FROM match_player \
          ARRAY JOIN arrayFilter(r -> match_id BETWEEN r - {START_TIME_ID_WINDOW} AND r, [{ids}]) \
              AS requested \
@@ -369,6 +369,8 @@ mod tests {
     fn start_times_query_is_valid_sql() {
         let sql = start_times_query(&[31_307_609, 70_156_416]);
         assert_valid_sql(&sql);
+        // An id literal that fits UInt32 is typed UInt32, which the u64 row type rejects.
+        assert!(sql.starts_with("SELECT toUInt64(requested),"));
         assert!(sql.contains(
             "WHERE match_id BETWEEN 31306609 AND 31307609 OR match_id BETWEEN 70155416 AND 70156416"
         ));
