@@ -10,7 +10,7 @@ use cached::macros::cached;
 use clickhouse::Row;
 use serde::{Deserialize, Serialize};
 use sqlx::{Pool, Postgres};
-use tracing::debug;
+use tracing::{debug, warn};
 
 use crate::context::AppState;
 use crate::error::APIResult;
@@ -27,13 +27,19 @@ const CLAIM_PREFIX: &str = "matches_to_fetch:claimed:";
 /// once the match ended.
 const MIN_AGE_SECS: u32 = 2 * 60 * 60;
 
-/// A `pending_matches` row for a match the API was asked for but could not fetch because the
-/// Steam proxy had no bot to spare. Nothing else is known about the match, so every column but
-/// the id is zeroed: `match_mode` is `Invalid`, which the to-fetch order reads as "requested".
-/// `updated_at` is zero so this row never wins over one that knows more: a `pending` row from
+/// A `pending_matches` row written by the API rather than by a materialized view.
+///
+/// A requested row is for a match the API was asked for but could not fetch, either because
+/// the Steam proxy had no bot to spare or because bulk metadata was asked for a match it does
+/// not have. Nothing else is known about the match, so every column but the id is zeroed:
+/// `match_mode` is `Invalid`, which the to-fetch order reads as "requested". `updated_at` is
+/// zero so this row never wins over one that knows more: a `pending` row from
 /// `player_match_history` (versioned by `start_time`) or a `done` row from salts or metadata.
+///
+/// An invalid row is `done` for a match Steam says does not exist, so it leaves the to-fetch
+/// pool instead of staying pending forever.
 #[derive(Debug, Clone, Row, Serialize)]
-pub(crate) struct RequestedMatchRow {
+pub(crate) struct PendingMatchRow {
     match_id: u64,
     state: i8,
     updated_at: u32,
@@ -43,37 +49,86 @@ pub(crate) struct RequestedMatchRow {
     badge: u32,
 }
 
-impl RequestedMatchRow {
-    /// `None` for ids `pending_matches` doesn't track (too old, or custom matches).
-    pub(crate) fn new(match_id: u64) -> Option<Self> {
-        (MIN_MATCH_ID..u64::from(u32::MAX))
-            .contains(&match_id)
-            .then_some(Self {
-                match_id,
-                state: 0,
-                updated_at: 0,
-                start_time: 0,
-                match_mode: 0,
-                game_mode: 0,
-                badge: 0,
-            })
+impl PendingMatchRow {
+    fn requested(match_id: u64) -> Self {
+        Self {
+            match_id,
+            state: 0,
+            updated_at: 0,
+            start_time: 0,
+            match_mode: 0,
+            game_mode: 0,
+            badge: 0,
+        }
+    }
+
+    fn invalid(match_id: u64) -> Self {
+        Self {
+            state: 1,
+            updated_at: u32::try_from(chrono::Utc::now().timestamp()).unwrap_or(u32::MAX),
+            ..Self::requested(match_id)
+        }
     }
 }
 
-pub(crate) struct RequestedMatchInsert;
+pub(crate) struct PendingMatchInsert;
 
-impl BatchInsert for RequestedMatchInsert {
-    type Row = RequestedMatchRow;
+impl BatchInsert for PendingMatchInsert {
+    type Row = PendingMatchRow;
 
     fn table_name() -> &'static str {
         "pending_matches"
     }
 }
 
-pub(crate) type RequestedMatchInsertBatcher = ClickhouseInsertBatcher<RequestedMatchInsert>;
+pub(crate) type PendingMatchInsertBatcher = ClickhouseInsertBatcher<PendingMatchInsert>;
+
+/// The newest match id seen in `active_matches`. Ids above it can't be real matches yet.
+#[cached(ttl_secs = 60, convert = "{ 0 }", key = "u8", sync_writes = "default")]
+async fn newest_match_id(ch_client: &clickhouse::Client) -> clickhouse::error::Result<u64> {
+    ch_client
+        .query("SELECT max(match_id) FROM active_matches SETTINGS log_comment = 'newest_match_id'")
+        .fetch_one()
+        .await
+}
+
+/// Whether `match_id` is one `pending_matches` tracks: not too old, not a custom match, and
+/// not newer than any match seen being played.
+async fn is_trackable(state: &AppState, match_id: u64) -> bool {
+    if match_id < MIN_MATCH_ID {
+        return false;
+    }
+    match newest_match_id(&state.ch_client_ro).await {
+        Ok(newest) => match_id <= newest,
+        Err(e) => {
+            warn!("Failed to load the newest match id: {e}");
+            false
+        }
+    }
+}
+
+/// Queues matches the API was asked for but could not fetch. Ids `pending_matches` doesn't
+/// track are dropped, so a made-up id never enters the to-fetch pool.
+pub(crate) async fn queue_requested_matches(state: &AppState, match_ids: &[u64]) {
+    let mut rows = Vec::with_capacity(match_ids.len());
+    for &match_id in match_ids {
+        if is_trackable(state, match_id).await {
+            rows.push(PendingMatchRow::requested(match_id));
+        }
+    }
+    state.batchers.pending_match_insert.insert(rows).await;
+}
+
+/// Marks a match Steam says does not exist as done, taking it out of the to-fetch pool.
+pub(crate) async fn resolve_invalid_match(state: &AppState, match_id: u64) {
+    if (MIN_MATCH_ID..u64::from(u32::MAX)).contains(&match_id) {
+        let row = PendingMatchRow::invalid(match_id);
+        state.batchers.pending_match_insert.insert_one(row).await;
+    }
+}
 
 /// Queues the requested matches that have no metadata and that `pending_matches` doesn't know
-/// yet. Ids above the newest `active_matches` match can't be real, so they are never queued.
+/// yet.
 pub(crate) async fn queue_unknown_matches(
     state: &AppState,
     match_ids: &[u64],
@@ -84,19 +139,14 @@ pub(crate) async fn queue_unknown_matches(
     let ids = id_list(match_ids);
     let query = format!(
         "SELECT match_id FROM (SELECT arrayJoin([{ids}]) AS match_id) \
-         WHERE match_id BETWEEN {MIN_MATCH_ID} AND (SELECT max(match_id) FROM active_matches) \
-           AND match_id NOT IN (SELECT match_id FROM match_player WHERE match_id IN ({ids})) \
+         WHERE match_id NOT IN (SELECT match_id FROM match_player WHERE match_id IN ({ids})) \
            AND match_id NOT IN (SELECT match_id FROM pending_matches WHERE match_id IN ({ids})) \
          SETTINGS log_comment = 'queue_unknown_matches'"
     );
     let unknown: Vec<u64> = state.ch_client_ro.query(&query).fetch_all().await?;
     if !unknown.is_empty() {
         debug!(?unknown, "queueing requested matches");
-        let rows = unknown
-            .into_iter()
-            .filter_map(RequestedMatchRow::new)
-            .collect();
-        state.batchers.requested_match_insert.insert(rows).await;
+        queue_requested_matches(state, &unknown).await;
     }
     Ok(())
 }

@@ -5,7 +5,7 @@ use crate::routes::v1::matches::metadata::DemoPlayerBatcher;
 use crate::routes::v1::matches::salts::{
     MatchInfoExistsBatcher, MatchSaltsExistsBatcher, MatchSaltsReadBatcher,
 };
-use crate::routes::v1::matches::to_fetch::RequestedMatchInsertBatcher;
+use crate::routes::v1::matches::to_fetch::PendingMatchInsertBatcher;
 use crate::routes::v1::players::hero_stats::PlayerHeroStatsBatcher;
 use crate::routes::v1::players::match_history::{
     MatchHistoryInsertBatcher, MatchHistoryReadBatcher,
@@ -21,7 +21,7 @@ pub(crate) struct Batchers {
     pub(crate) match_salts_graphql: MatchSaltsGraphQlBatcher,
     pub(crate) match_salts_exists: MatchSaltsExistsBatcher,
     pub(crate) match_info_exists: MatchInfoExistsBatcher,
-    pub(crate) requested_match_insert: Arc<RequestedMatchInsertBatcher>,
+    pub(crate) pending_match_insert: Arc<PendingMatchInsertBatcher>,
     pub(crate) player_hero_stats: PlayerHeroStatsBatcher,
     pub(crate) demo_player: DemoPlayerBatcher,
     pub(crate) steam_profile: SteamProfileBatcher,
@@ -38,7 +38,7 @@ impl Batchers {
             match_salts_graphql: MatchSaltsGraphQlBatcher::new(ch_client_ro.clone()),
             match_salts_exists: MatchSaltsExistsBatcher::new(ch_client_ro.clone()),
             match_info_exists: MatchInfoExistsBatcher::new(ch_client_ro.clone()),
-            requested_match_insert: Arc::new(RequestedMatchInsertBatcher::new(ch_client.clone())),
+            pending_match_insert: Arc::new(PendingMatchInsertBatcher::new(ch_client.clone())),
             player_hero_stats: PlayerHeroStatsBatcher::new(ch_client_ro.clone()),
             demo_player: DemoPlayerBatcher::new(ch_client_ro.clone()),
             steam_profile: SteamProfileBatcher::new(ch_client_ro.clone()),
@@ -50,6 +50,6 @@ impl Batchers {
     /// Spawn background flush tasks for all insert batchers.
     pub(crate) fn start_background_flushes(&self) {
         self.match_history_insert.clone().start_background_flush();
-        self.requested_match_insert.clone().start_background_flush();
+        self.pending_match_insert.clone().start_background_flush();
     }
 }
