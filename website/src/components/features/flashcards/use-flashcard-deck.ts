@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { type AnswerOptionState, revealedState } from "~/components/domain/minigames/AnswerOption";
 import { seededRandom } from "~/lib/deadlockdle/seed";
 
+import { trackFlashcardAnswer, trackFlashcards } from "./analytics";
 import { useAnswerKeys } from "./use-answer-keys";
 import { useFlashcardProgress } from "./use-flashcard-progress";
 import { useNextCardFocus } from "./use-next-card-focus";
@@ -147,6 +148,9 @@ export function useFlashcardDeck<Entry extends { id: number }, Option>({
     setDeal((d) => ({ ...d, card: next, selected: null, serial }));
   };
 
+  // A filter or a patch can shrink the pool below cards already mastered; only the ones still in it count.
+  const masteredInPool = pool.reduce((count, entry) => count + Number(seenIds.has(entry.id)), 0);
+
   const choose = (option: Option) => {
     if (!card || selected !== null) return;
     const key = optionKey(option);
@@ -155,6 +159,18 @@ export function useFlashcardDeck<Entry extends { id: number }, Option>({
     setDeal((d) => ({ ...d, selected: key }));
     markAnswered();
     const nextSeen = recordAnswer(card.answer.id, correct);
+    const masteredAfter = pool.reduce((count, entry) => count + Number(nextSeen.has(entry.id)), 0);
+    trackFlashcardAnswer(deck, {
+      correct,
+      no_repeats: noRepeats,
+      streak: correct ? stats.streak + 1 : 0,
+      answered: stats.seen + 1,
+      mastered: masteredAfter,
+      pool_size: pool.length,
+    });
+    if (correct && masteredAfter === pool.length && masteredAfter > masteredInPool) {
+      trackFlashcards("deck_mastered", deck, { answered: stats.seen + 1, pool_size: pool.length });
+    }
     const exclude = excludeAfter(card, nextSeen);
     advanceTimer.current = window.setTimeout(
       () => {
@@ -177,19 +193,19 @@ export function useFlashcardDeck<Entry extends { id: number }, Option>({
 
   const updateNoRepeats = (value: boolean) => {
     setNoRepeats(value);
+    trackFlashcards("no_repeats_toggled", deck, { no_repeats: value });
     // Allowing repeats again after the pool was mastered: deal a card rather than stay on "mastered".
     if (!value && card === null && pool.length > 0) dealNext(new Set());
   };
 
   const reset = () => {
+    trackFlashcards("progress_reset", deck, { answered: stats.seen, mastered: masteredInPool, pool_size: pool.length });
     clearAdvanceTimer();
     resetProgress();
     dealNext(new Set());
   };
 
   const empty = pool.length === 0;
-  // A filter or a patch can shrink the pool below cards already mastered; only the ones still in it count.
-  const masteredInPool = pool.reduce((count, entry) => count + Number(seenIds.has(entry.id)), 0);
   // The last card keeps its verdict on screen before "mastered" replaces it.
   const exhausted = noRepeats && pool.length > 0 && masteredInPool >= pool.length && selected === null;
   const verdict: "correct" | "wrong" | null =
