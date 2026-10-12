@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::sync::Arc;
 
 use axum::Json;
@@ -8,6 +9,7 @@ use axum::response::{IntoResponse, Response};
 use axum_extra::extract::Query;
 use cached::macros::cached;
 use clickhouse::Row;
+use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use sqlx::{Pool, Postgres};
 use tracing::{debug, warn};
@@ -31,10 +33,12 @@ const MIN_AGE_SECS: u32 = 2 * 60 * 60;
 ///
 /// A requested row is for a match the API was asked for but could not fetch, either because
 /// the Steam proxy had no bot to spare or because bulk metadata was asked for a match it does
-/// not have. Nothing else is known about the match, so every column but the id is zeroed:
-/// `match_mode` is `Invalid`, which the to-fetch order reads as "requested". `updated_at` is
-/// zero so this row never wins over one that knows more: a `pending` row from
-/// `player_match_history` (versioned by `start_time`) or a `done` row from salts or metadata.
+/// not have. Nothing is known about the match but a rough start time, estimated from its id,
+/// which sorts it into its day and keeps it out of the pool while it may still be played.
+/// The other columns are zeroed: `match_mode` is `Invalid`, which the to-fetch order reads as
+/// "requested". `updated_at` is zero so this row never wins over one that knows more: a
+/// `pending` row from `player_match_history` (versioned by `start_time`) or a `done` row from
+/// salts or metadata.
 ///
 /// An invalid row is `done` for a match Steam says does not exist, so it leaves the to-fetch
 /// pool instead of staying pending forever.
@@ -50,12 +54,12 @@ pub(crate) struct PendingMatchRow {
 }
 
 impl PendingMatchRow {
-    fn requested(match_id: u64) -> Self {
+    fn requested(match_id: u64, start_time: u32) -> Self {
         Self {
             match_id,
             state: 0,
             updated_at: 0,
-            start_time: 0,
+            start_time,
             match_mode: 0,
             game_mode: 0,
             badge: 0,
@@ -66,7 +70,7 @@ impl PendingMatchRow {
         Self {
             state: 1,
             updated_at: u32::try_from(chrono::Utc::now().timestamp()).unwrap_or(u32::MAX),
-            ..Self::requested(match_id)
+            ..Self::requested(match_id, 0)
         }
     }
 }
@@ -107,15 +111,73 @@ async fn is_trackable(state: &AppState, match_id: u64) -> bool {
     }
 }
 
+/// How far below a requested id the start time estimate looks for a match with metadata.
+/// Every 1000 ids since `MIN_MATCH_ID` hold one, except the newest, not fetched yet.
+const START_TIME_ID_WINDOW: u64 = 1000;
+
+fn start_times_query(match_ids: &[u64]) -> String {
+    let ids = id_list(match_ids);
+    let ranges = match_ids
+        .iter()
+        .map(|id| {
+            format!(
+                "match_id BETWEEN {} AND {id}",
+                id.saturating_sub(START_TIME_ID_WINDOW)
+            )
+        })
+        .join(" OR ");
+    format!(
+        "SELECT requested, toUnixTimestamp(argMax(start_time, match_id)) \
+         FROM match_player \
+         ARRAY JOIN arrayFilter(r -> match_id BETWEEN r - {START_TIME_ID_WINDOW} AND r, [{ids}]) \
+             AS requested \
+         WHERE {ranges} \
+         GROUP BY requested \
+         SETTINGS log_comment = 'requested_matches_start_times'"
+    )
+}
+
+/// Rough start times of `match_ids`: that of the closest lower match with metadata, as match
+/// ids grow with start time. Ids without one in reach are the newest matches, so they get now.
+async fn estimate_start_times(
+    ch_client: &clickhouse::Client,
+    match_ids: &[u64],
+) -> HashMap<u64, u32> {
+    let now = u32::try_from(chrono::Utc::now().timestamp()).unwrap_or(u32::MAX);
+    let mut start_times: HashMap<u64, u32> = match ch_client
+        .query(&start_times_query(match_ids))
+        .fetch_all::<(u64, u32)>()
+        .await
+    {
+        Ok(rows) => rows.into_iter().collect(),
+        Err(e) => {
+            warn!("Failed to estimate start times of requested matches: {e}");
+            HashMap::new()
+        }
+    };
+    for &match_id in match_ids {
+        start_times.entry(match_id).or_insert(now);
+    }
+    start_times
+}
+
 /// Queues matches the API was asked for but could not fetch. Ids `pending_matches` doesn't
 /// track are dropped, so a made-up id never enters the to-fetch pool.
 pub(crate) async fn queue_requested_matches(state: &AppState, match_ids: &[u64]) {
-    let mut rows = Vec::with_capacity(match_ids.len());
+    let mut trackable = Vec::with_capacity(match_ids.len());
     for &match_id in match_ids {
         if is_trackable(state, match_id).await {
-            rows.push(PendingMatchRow::requested(match_id));
+            trackable.push(match_id);
         }
     }
+    if trackable.is_empty() {
+        return;
+    }
+    let start_times = estimate_start_times(&state.ch_client_ro, &trackable).await;
+    let rows = trackable
+        .into_iter()
+        .map(|match_id| PendingMatchRow::requested(match_id, start_times[&match_id]))
+        .collect();
     state.batchers.pending_match_insert.insert(rows).await;
 }
 
@@ -174,8 +236,8 @@ async fn prioritized_account_ids(pg_client: &Pool<Postgres>) -> Result<Arc<Vec<u
 }
 
 /// Pending matches in fetch order: prioritized accounts' matches first, then newest day first;
-/// within a day matches requested from the API while the Steam proxy was rate limited (counted
-/// as today's, their start time is unknown), then ranked, unranked, street brawl and everything
+/// within a day matches requested from the API (dated by an estimate from their id; older
+/// requests without one count as today's), then ranked, unranked, street brawl and everything
 /// else; within those a higher-badge player (any one player's badge at that match) first, then
 /// the newest.
 /// Holds every pending prioritized match plus the newest others, up to `POOL_LIMIT`.
@@ -296,4 +358,19 @@ pub(super) async fn matches_to_fetch(
     }
 
     Ok(worklist(claimed))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::utils::proptest_utils::assert_valid_sql;
+
+    #[test]
+    fn start_times_query_is_valid_sql() {
+        let sql = start_times_query(&[31_307_609, 70_156_416]);
+        assert_valid_sql(&sql);
+        assert!(sql.contains(
+            "WHERE match_id BETWEEN 31306609 AND 31307609 OR match_id BETWEEN 70155416 AND 70156416"
+        ));
+    }
 }
