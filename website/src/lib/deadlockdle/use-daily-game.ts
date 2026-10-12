@@ -3,6 +3,7 @@ import { useCallback } from "react";
 import { day } from "~/dayjs";
 import { useStoredDailyState, useStoredState } from "~/lib/use-stored-state";
 
+import { trackDeadlockdle } from "./analytics";
 import { getTodayDate, resolvePuzzleDate } from "./seed";
 import { gameStorageKey, legacyGameStorageKey, streakStorageKey } from "./storage";
 import type { DailyGameState, GameMode, GameStatus, StreakState } from "./types";
@@ -63,6 +64,16 @@ export function useDailyGame(mode: GameMode, maxAttempts: number, date?: string)
       }
       saveGameState({ ...gameState, guesses, status, hintsRevealed: guesses.length });
 
+      if (guesses.length === 1) trackDeadlockdle("game_started", mode, puzzleDate, isArchive);
+      trackDeadlockdle("guess_submitted", mode, puzzleDate, isArchive, { attempt: guesses.length, correct });
+      if (status !== "playing") {
+        trackDeadlockdle("game_completed", mode, puzzleDate, isArchive, {
+          won: status === "won",
+          attempts: guesses.length,
+          max_attempts: maxAttempts,
+        });
+      }
+
       // Once per puzzle day: a second tab or a replayed finish must not count the same day twice.
       if (status === "playing" || isArchive || streakState.lastPlayedDate === puzzleDate) return;
       const won = status === "won";
@@ -76,7 +87,7 @@ export function useDailyGame(mode: GameMode, maxAttempts: number, date?: string)
         gamesWon: streakState.gamesWon + (won ? 1 : 0),
       });
     },
-    [gameState, streakState, isFinished, isArchive, maxAttempts, puzzleDate, saveGameState, saveStreak],
+    [gameState, streakState, isFinished, isArchive, maxAttempts, mode, puzzleDate, saveGameState, saveStreak],
   );
 
   return {

@@ -13,6 +13,7 @@ import { Card, CardContent } from "~/components/ui/card";
 import { Field } from "~/components/ui/field";
 import { Stack } from "~/components/ui/stack";
 import { Text } from "~/components/ui/text";
+import { trackDeadlockdle } from "~/lib/deadlockdle/analytics";
 import { useItems, puzzleLoadError } from "~/lib/deadlockdle/queries";
 import {
   getDayNumber,
@@ -119,12 +120,13 @@ function ItemStatsQuiz() {
   const setAnswer = useCallback(
     (itemId: number, field: keyof ItemAnswer, value: number | string | boolean) => {
       if (state.submitted) return;
+      if (Object.keys(state.answers).length === 0) trackDeadlockdle("game_started", "item-stats", date, isArchive);
       saveState({
         ...state,
         answers: { ...state.answers, [itemId]: { ...state.answers[itemId], [field]: value } },
       });
     },
-    [state, saveState],
+    [state, saveState, date, isArchive],
   );
 
   const allFieldsFilled = useMemo(() => {
@@ -161,9 +163,14 @@ function ItemStatsQuiz() {
       );
     }, 0);
 
+    trackDeadlockdle("game_completed", "item-stats", date, isArchive, {
+      score,
+      max_score: TOTAL_FIELDS,
+      score_pct: Math.round((score / TOTAL_FIELDS) * 100),
+    });
     justSubmitted.current = true;
     saveState({ ...state, submitted: true, score, totalFields: TOTAL_FIELDS });
-  }, [allFieldsFilled, state, dailyItems, saveState]);
+  }, [allFieldsFilled, state, dailyItems, saveState, date, isArchive]);
 
   // Submitting unmounts the Submit All button, which dropped focus to <body>; the score takes it instead (only right
   // after submitting, not when a finished day is reopened).
@@ -342,6 +349,7 @@ function ItemStatsQuiz() {
             />
             <div className="flex flex-col items-center gap-3">
               <ShareButton
+                onClick={() => trackDeadlockdle("share_clicked", "item-stats", date, isArchive)}
                 text={`Deadlockdle #${getDayNumber(state.date)} - Stats ${state.score}/${state.totalFields}\n${puzzleShareUrl(date)}`}
               >
                 Share Result

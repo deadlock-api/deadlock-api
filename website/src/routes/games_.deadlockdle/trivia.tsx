@@ -15,6 +15,7 @@ import { Card, CardContent } from "~/components/ui/card";
 import { Stack } from "~/components/ui/stack";
 import { StepMeter, StepMeterStep } from "~/components/ui/step-meter";
 import { Text } from "~/components/ui/text";
+import { trackDeadlockdle, trackQuizAnswer } from "~/lib/deadlockdle/analytics";
 import { useAbilities, useHeroes, useItems, useNpcUnits, puzzleLoadError } from "~/lib/deadlockdle/queries";
 import {
   getDayNumber,
@@ -139,6 +140,12 @@ function Trivia() {
       const newScore = state.score + (isCorrect ? 1 : 0);
 
       const isLastQuestion = state.currentQuestion >= QUESTION_COUNT - 1;
+      trackQuizAnswer("trivia", date, isArchive, {
+        question: state.currentQuestion,
+        total: QUESTION_COUNT,
+        correct: isCorrect,
+        score: newScore,
+      });
 
       // The answer and the move to the next question are one write: saving the move only after the reveal let a
       // reload in between show the answered question again and score it twice.
@@ -150,7 +157,7 @@ function Trivia() {
         currentQuestion: isLastQuestion ? state.currentQuestion : state.currentQuestion + 1,
       });
     },
-    [state, isRevealed, currentQ, saveState, showFeedback],
+    [state, isRevealed, currentQ, saveState, showFeedback, date, isArchive],
   );
 
   const advance = useCallback(() => {
@@ -311,7 +318,12 @@ function Trivia() {
             </Stack>
 
             <div className="flex flex-col items-center gap-3">
-              <ShareButton text={shareText}>Share Result</ShareButton>
+              <ShareButton
+                text={shareText}
+                onClick={() => trackDeadlockdle("share_clicked", "trivia", date, isArchive)}
+              >
+                Share Result
+              </ShareButton>
               <NextGameButton currentMode="trivia" date={date} />
             </div>
           </motion.div>

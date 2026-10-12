@@ -25,6 +25,7 @@ import { PageShell } from "~/components/patterns/page/PageShell";
 import { Input } from "~/components/ui/input";
 import { day } from "~/dayjs";
 import { useHydrated } from "~/hooks/useHydrated";
+import { trackDeadlockdle } from "~/lib/deadlockdle/analytics";
 import {
   EPOCH_DATE,
   getDayNumber,
@@ -281,7 +282,11 @@ function DeadlockdleHub() {
             transition={{ duration: DURATION.slow, delay: DURATION.fast }}
             className="flex justify-center"
           >
-            <ShareButton variant="soft" text={() => buildShareText(date, statuses)}>
+            <ShareButton
+              variant="soft"
+              text={() => buildShareText(date, statuses)}
+              onClick={() => trackDeadlockdle("share_clicked", "all", date, isArchive)}
+            >
               Share All Results
             </ShareButton>
           </motion.div>

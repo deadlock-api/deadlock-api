@@ -3,6 +3,7 @@ import { ArrowRight, Home } from "lucide-react";
 import { useMemo } from "react";
 
 import { TerminalButton } from "~/components/domain/minigames/TerminalButton";
+import { trackDeadlockdle } from "~/lib/deadlockdle/analytics";
 import { getTodayDate } from "~/lib/deadlockdle/seed";
 import type { GameMode } from "~/lib/deadlockdle/types";
 
@@ -19,7 +20,10 @@ const GAMES: { mode: GameMode; title: string; path: string }[] = [
 ];
 
 export function NextGameButton({ currentMode, date = getTodayDate() }: { currentMode: GameMode; date?: string }) {
-  const search = date === getTodayDate() ? {} : { date };
+  const isArchive = date !== getTodayDate();
+  const search = isArchive ? { date } : {};
+  const trackNext = (to: GameMode | "all") =>
+    trackDeadlockdle("next_game_clicked", currentMode, date, isArchive, { to });
 
   const next = useMemo(() => {
     const currentIndex = GAMES.findIndex((g) => g.mode === currentMode);
@@ -34,7 +38,7 @@ export function NextGameButton({ currentMode, date = getTodayDate() }: { current
   if (!next) {
     return (
       <TerminalButton asChild>
-        <Link to="/games/deadlockdle" search={search} preload="intent">
+        <Link to="/games/deadlockdle" search={search} preload="intent" onClick={() => trackNext("all")}>
           <Home />
           All Complete
         </Link>
@@ -44,7 +48,7 @@ export function NextGameButton({ currentMode, date = getTodayDate() }: { current
 
   return (
     <TerminalButton asChild variant="soft">
-      <Link to={next.path} search={search} preload="intent">
+      <Link to={next.path} search={search} preload="intent" onClick={() => trackNext(next.mode)}>
         {next.title}
         <ArrowRight />
       </Link>

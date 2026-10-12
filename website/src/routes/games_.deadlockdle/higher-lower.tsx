@@ -32,6 +32,7 @@ import { Inline, Stack } from "~/components/ui/stack";
 import { StepMeter, StepMeterStep } from "~/components/ui/step-meter";
 import { Text } from "~/components/ui/text";
 import { TextLink } from "~/components/ui/text-link";
+import { trackDeadlockdle, trackQuizAnswer } from "~/lib/deadlockdle/analytics";
 import {
   bestStreak,
   CATEGORY_LABEL,
@@ -277,6 +278,12 @@ function HigherLower() {
       const answers = [...state.answers];
       answers[state.currentQuestion] = guess;
       const isLast = state.currentQuestion >= rounds.length - 1;
+      trackQuizAnswer("higher-lower", date, isArchive, {
+        question: state.currentQuestion,
+        total: rounds.length,
+        correct,
+        score: state.score + (correct ? 1 : 0),
+      });
       // The answer and the move to the next round are one write, so a reload mid-reveal cannot score a round twice.
       saveState({
         ...state,
@@ -286,7 +293,7 @@ function HigherLower() {
         currentQuestion: isLast ? state.currentQuestion : state.currentQuestion + 1,
       });
     },
-    [rounds, state, isRevealed, saveState, showFeedback],
+    [rounds, state, isRevealed, saveState, showFeedback, date, isArchive],
   );
 
   const advance = useCallback(() => setRevealing(null), []);
@@ -547,7 +554,12 @@ function HigherLower() {
             </Stack>
 
             <Stack gap={3} align="center">
-              <ShareButton variant="default" size="touch" text={shareText}>
+              <ShareButton
+                variant="default"
+                size="touch"
+                text={shareText}
+                onClick={() => trackDeadlockdle("share_clicked", "higher-lower", date, isArchive)}
+              >
                 Share Result
               </ShareButton>
               <NextGameButton currentMode="higher-lower" date={date} />

@@ -12,6 +12,7 @@ import { Inline, Stack } from "~/components/ui/stack";
 import { Stat, StatGroup } from "~/components/ui/stat";
 import { StepMeter, StepMeterStep } from "~/components/ui/step-meter";
 import { Text } from "~/components/ui/text";
+import { trackDeadlockdle } from "~/lib/deadlockdle/analytics";
 import { getDayNumber } from "~/lib/deadlockdle/seed";
 import type { GameMode, GameStatus, StreakState } from "~/lib/deadlockdle/types";
 import { useCountdown } from "~/lib/deadlockdle/use-countdown";
@@ -176,7 +177,10 @@ export function ResultModal({
                 variants={fadeUp}
                 className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center sm:justify-end"
               >
-                <ShareButton text={() => generateShareText(mode, date, guesses, maxAttempts, status)}>
+                <ShareButton
+                  text={() => generateShareText(mode, date, guesses, maxAttempts, status)}
+                  onClick={() => trackDeadlockdle("share_clicked", mode, date, isArchive ?? false)}
+                >
                   Share Result
                 </ShareButton>
                 <NextGameButton currentMode={mode} date={date} />
