@@ -10,6 +10,7 @@ mod build_tags;
 mod client_versions;
 mod colors;
 pub(crate) mod common;
+mod convars;
 mod generic_data;
 mod heroes;
 mod items;
@@ -29,6 +30,7 @@ pub(super) fn router() -> OpenApiRouter<AppState> {
         .nest("/build-tags", build_tags::router())
         .nest("/client-versions", client_versions::router())
         .nest("/colors", colors::router())
+        .nest("/convars", convars::router())
         .nest("/generic-data", generic_data::router())
         .nest("/heroes", heroes::router())
         .nest("/items", items::router())

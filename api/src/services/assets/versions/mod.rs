@@ -9,6 +9,7 @@ pub(crate) mod accolades;
 pub(crate) mod build_tags;
 pub(crate) mod colors;
 pub(crate) mod common;
+pub(crate) mod convars;
 pub(crate) mod css;
 pub(crate) mod error;
 pub(crate) mod generic_data;

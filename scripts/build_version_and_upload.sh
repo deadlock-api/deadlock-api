@@ -6,9 +6,10 @@ set -euo pipefail
 #   1. Download DepotDownloader + Source2Viewer-CLI tooling.
 #   2. Download the Deadlock game files from Steam.
 #   3. Extract the required VPK contents.
-#   4. Build the versions/<build>/ folder (vdata/css/steam.inf/localization and
-#      the map entities extracted from the dl_midtown entity lump,
-#      zstd-compressed) from the extracted files.
+#   4. Build the versions/<build>/ folder (vdata/css/steam.inf/localization,
+#      the map entities extracted from the dl_midtown entity lump and the
+#      convar defaults extracted from client.dll/server.dll, zstd-compressed)
+#      from the extracted files.
 #   5. Extract + process the media assets (images/icons/fonts/sounds) and
 #      export the hero and NPC unit 3D models as GLBs (see export_hero_models.py
 #      and export_npc_models.py).
@@ -181,6 +182,7 @@ fi
 # must be listed explicitly or the versions/ folder ships without localization.
 # The panorama/fonts/*.(otf,ttf) files are ALSO loose now -- Valve moved them out of
 # pak01 -- so they must be listed too or the fonts/ output ships empty.
+# client.dll/server.dll hold the convar defaults (see extract_convars.py).
 cat > filelist.txt <<'EOF'
 regex:citadel/pak01_.*\.vpk$
 regex:citadel/steam\.inf$
@@ -188,6 +190,7 @@ regex:citadel/maps/dl_midtown\.vpk$
 regex:citadel/resource/localization/.*\.txt$
 regex:citadel/panorama/fonts/.*\.otf$
 regex:citadel/panorama/fonts/.*\.ttf$
+regex:citadel/bin/win64/(client|server)\.dll$
 EOF
 echo "Downloading Deadlock game files (windows depot, pak01 + loose fonts)..."
 DEPOT_DIR="$WORK_DIR/depot"
@@ -277,6 +280,17 @@ else
     echo "Warning: maps/dl_midtown entity lump missing, skipping map entities."
 fi
 
+# Convar defaults (/v1/assets/convars), compiled into the game DLLs.
+CONVAR_DLLS=("$citadel_folder/bin/win64/client.dll" "$citadel_folder/bin/win64/server.dll")
+if [ -f "${CONVAR_DLLS[0]}" ] && [ -f "${CONVAR_DLLS[1]}" ]; then
+    echo "Extracting convar defaults..."
+    uv run --with pefile --with unicorn python "$SCRIPT_DIR/extract_convars.py" "${CONVAR_DLLS[@]}" \
+        > "$VERSION_DIR/convars.json" \
+        || { echo "Warning: convar extraction failed, skipping."; rm -f "$VERSION_DIR/convars.json"; }
+else
+    echo "Warning: client.dll/server.dll missing, skipping convars."
+fi
+
 # Localization (raw per-language KeyValues .txt files)
 for d in "${LOCALIZATION_DIRS[@]}"; do
     if [ -d "$citadel_folder/resource/localization/$d" ]; then
@@ -288,10 +302,11 @@ done
 echo "Merging localization for build $BUILD..."
 uv run --with zstandard python "$SCRIPT_DIR/merge_localization.py" "$VERSION_DIR/localization"
 
-# zstd-compress the remaining scripts/styles/steam.inf/map files (level 19)
-echo "Compressing vdata/css/steam.inf/map entities..."
+# zstd-compress the remaining scripts/styles/steam.inf/map/convars files (level 19)
+echo "Compressing vdata/css/steam.inf/map entities/convars..."
 find "$VERSION_DIR" -type f \
-    \( -name '*.vdata' -o -name '*.css' -o -name 'steam.inf' -o -path '*/map/*.json' \) \
+    \( -name '*.vdata' -o -name '*.css' -o -name 'steam.inf' -o -path '*/map/*.json' \
+       -o -name 'convars.json' \) \
     -print0 | xargs -0 -r -P 8 -n 1 zstd -19 -q --rm
 
 leftover=$(find "$VERSION_DIR" -type f ! -name '*.zst' | wc -l)
@@ -431,6 +446,7 @@ fi
 # moves these between pak01 and loose depot files and occasionally drops them
 # entirely; a missing type shouldn't block the build or the other uploads.
 [ -s "$VERSION_DIR/map/entities.json.zst" ] || warn "missing map/entities.json.zst (map entities)"
+[ -s "$VERSION_DIR/convars.json.zst" ] || warn "missing convars.json.zst (convar defaults)"
 [ -n "$(find images -type f -name '*.webp' -print -quit 2>/dev/null)" ] || warn "no images/*.webp produced"
 [ -n "$(find sounds -type f -name '*.mp3'  -print -quit 2>/dev/null)" ] || warn "no sounds/*.mp3 produced"
 [ -n "$(find icons  -type f -name '*.svg'  -print -quit 2>/dev/null)" ] || warn "no icons/*.svg produced"
