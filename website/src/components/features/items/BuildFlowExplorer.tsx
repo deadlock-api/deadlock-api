@@ -316,18 +316,14 @@ function nextPick(view: View, column: number, taken: Set<number>, minShare = NEX
   return best;
 }
 
-/** A picked item's price and what its buyers do with it later: "3,200 · sold 62% ~24:10". */
-function saleLine(
-  price: number,
-  sale: { share: number | null; at: number | null } | undefined,
-  component: boolean,
-): string {
+/**
+ * A picked item's price and what its buyers do with it, worded as the buy order's Buyers column so it does not read as
+ * the build's own sale: "3,200 · 62% sell", "800 · 94% upgrade".
+ */
+function saleLine(price: number, sale: { share: number | null } | undefined, component: boolean): string {
   const parts = [count(price)];
   if (sale?.share != null && sale.share >= 0.05) {
-    // Short enough for a quarter-width card: "sold 8% 35m", "upgraded 94% 8m".
-    parts.push(
-      `${component ? "upgraded" : "sold"} ${percent(sale.share, 0)}${sale.at != null ? ` ${Math.round(sale.at / 60)}m` : ""}`,
-    );
+    parts.push(`${percent(sale.share, 0)} ${component ? "upgrade" : "sell"}`);
   }
   return parts.join(" · ");
 }
@@ -695,7 +691,7 @@ export function BuildFlowExplorer({
     const classNames = new Set((upgrades ?? []).flatMap((item) => item.component_items ?? []));
     return new Set((upgrades ?? []).filter((item) => classNames.has(item.class_name)).map((item) => item.id));
   }, [upgrades]);
-  // How often and when the hero's players sell each item, and the souls they have earned over the game (the economy
+  // How often the hero's players sell each item, and the souls they have earned over the game (the economy
   // panel reads the same two answers).
   const economyFilters = {
     heroId,
@@ -724,7 +720,6 @@ export function BuildFlowExplorer({
           row.item_id,
           {
             share: row.sold != null && row.matches > 0 ? row.sold / row.matches : null,
-            at: row.avg_sell_time_s > 0 ? row.avg_sell_time_s : null,
           },
         ]),
       ),
