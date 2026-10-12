@@ -55,20 +55,75 @@ pub(super) fn format_query_output(output: &QueryOutput) -> Result<QueryResult, A
         truncated: output.truncated.then_some(true),
         warning: output.truncated.then(|| MAX_ROWS_WARNING.to_owned()),
     };
-    let mut chars = toon(&result).len();
-    while !result.rows.is_empty() && chars > MAX_CHARS {
+    fit_output_limit(&mut result);
+    Ok(result)
+}
+
+/// Fits `result` into the output limit: drops rows until it fits or one row is left, then cuts
+/// the strings of that row.
+fn fit_output_limit(result: &mut QueryResult) {
+    while result.rows.len() > 1 && !fits(result) {
         let remove = max(1, result.rows.len() / 10);
         result.rows.truncate(result.rows.len() - remove);
-        result.row_count = result.rows.len();
-        result.truncated = Some(true);
-        result.warning = Some(format!(
-            "Results limited to {} rows due to {}KB output size limit.",
-            result.rows.len(),
-            MAX_CHARS / 1000
-        ));
-        chars = toon(&result).len();
+        mark_cut(result, None);
     }
-    Ok(result)
+    if !result.rows.is_empty() && !fits(result) {
+        cut_strings(result);
+    }
+}
+
+fn fits(result: &QueryResult) -> bool {
+    toon(result).len() <= MAX_CHARS
+}
+
+/// Halves the length of the strings in `result`'s one row until it fits, and drops the row if
+/// that is not enough.
+fn cut_strings(result: &mut QueryResult) {
+    let lengths = core::iter::successors(Some(MAX_CHARS / 2), |&len| (len > 0).then_some(len / 2));
+    for max_len in lengths {
+        for value in result.rows.iter_mut().flat_map(Map::values_mut) {
+            shorten_strings(value, max_len);
+        }
+        mark_cut(result, Some(max_len));
+        if fits(result) {
+            return;
+        }
+    }
+    result.rows.clear();
+    mark_cut(result, None);
+    result.warning = Some(format!(
+        "A single row exceeds the {}KB output size limit. Select fewer or smaller columns.",
+        MAX_CHARS / 1000
+    ));
+}
+
+/// Records that the output limit cut `result` to its current rows, and its strings to
+/// `max_len` characters.
+fn mark_cut(result: &mut QueryResult, max_len: Option<usize>) {
+    result.row_count = result.rows.len();
+    result.truncated = Some(true);
+    let strings =
+        max_len.map_or_default(|n| format!(" and strings cut to {n} characters (marked with …)"));
+    result.warning = Some(format!(
+        "Results limited to {} rows{strings} due to {}KB output size limit.",
+        result.row_count,
+        MAX_CHARS / 1000
+    ));
+}
+
+/// Cuts every string in `value` longer than `max_len` characters to that length plus `…`.
+fn shorten_strings(value: &mut Value, max_len: usize) {
+    match value {
+        Value::String(s) => {
+            if let Some((end, _)) = s.char_indices().nth(max_len) {
+                s.truncate(end);
+                s.push('…');
+            }
+        }
+        Value::Array(values) => values.iter_mut().for_each(|v| shorten_strings(v, max_len)),
+        Value::Object(map) => map.values_mut().for_each(|v| shorten_strings(v, max_len)),
+        _ => {}
+    }
 }
 
 /// Serializes rows as objects in column order, with JSON values as arrow-json renders them.
@@ -288,6 +343,41 @@ mod tests {
             json["warning"]
         );
         assert!(toon(&json).len() <= MAX_CHARS + 200);
+    }
+
+    #[test]
+    fn cuts_the_strings_of_a_single_oversized_row() {
+        let result =
+            run("SELECT 1 AS id, repeat('é', 60000) AS s, ['short', repeat('x', 60000)] AS l");
+        let json = serde_json::to_value(&result).unwrap();
+        assert_eq!(json["rowCount"], 1);
+        assert_eq!(json["rows"][0]["id"], 1);
+        let s = json["rows"][0]["s"].as_str().unwrap();
+        assert!(s.ends_with('…') && s.starts_with("éé"), "{s}");
+        assert_eq!(json["rows"][0]["l"][0], "short");
+        assert!(json["rows"][0]["l"][1].as_str().unwrap().ends_with('…'));
+        assert_eq!(json["truncated"], true);
+        assert!(
+            json["warning"].as_str().unwrap().contains("strings cut to"),
+            "{}",
+            json["warning"]
+        );
+        assert!(toon(&result).len() <= MAX_CHARS);
+    }
+
+    #[test]
+    fn drops_a_single_oversized_row_without_long_strings() {
+        let json = serde_json::to_value(run("SELECT range(20000) AS l")).unwrap();
+        assert_eq!(json["rowCount"], 0);
+        assert_eq!(json["truncated"], true);
+        assert!(
+            json["warning"]
+                .as_str()
+                .unwrap()
+                .starts_with("A single row exceeds"),
+            "{}",
+            json["warning"]
+        );
     }
 
     #[test]
