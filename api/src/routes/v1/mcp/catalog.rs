@@ -69,6 +69,8 @@ pub(crate) enum QueryError {
     Cancelled,
     #[error("Only read queries are allowed: SELECT, WITH, FROM, DESCRIBE, SHOW or SUMMARIZE")]
     NotReadOnly,
+    #[error("Send one statement per query: only the last one would return its result")]
+    MultipleStatements,
     #[error(transparent)]
     DuckDb(#[from] duckdb::Error),
 }
@@ -488,24 +490,54 @@ fn table_meta(manifest_tables: &BTreeMap<String, TableMeta>, name: &str) -> Opti
     })
 }
 
-/// Whether every statement of `sql` only reads. `DuckDB`'s own parser decides: it
-/// serializes SELECT statements (which DESCRIBE, SHOW and SUMMARIZE are) and nothing else.
-/// Syntax errors pass, so preparing the query reports them. The read-only database already
-/// rejects writes; this keeps a query from detaching the catalog for everyone else.
-fn is_read_only(conn: &Connection, sql: &str) -> duckdb::Result<bool> {
-    let error_type: Option<String> = conn.query_row(
-        "SELECT json_extract_string(json_serialize_sql(?::VARCHAR), '$.error_type')",
-        [sql],
-        |row| row.get(0),
-    )?;
-    Ok(error_type.as_deref() != Some("not implemented"))
+/// `sql` as one read-only statement, the way `DuckDB`'s parser writes it back: without comments
+/// or a trailing `;`. `None` if it does not parse, so preparing it reports the syntax error.
+///
+/// Only SELECT statements (which DESCRIBE, SHOW and SUMMARIZE are) serialize; everything else
+/// fails with "not implemented". The read-only database already rejects writes; this keeps a
+/// query from detaching the catalog for everyone else.
+fn read_only_statement(conn: &Connection, sql: &str) -> Result<Option<String>, QueryError> {
+    let (error_type, statements, canonical): (Option<String>, Option<u64>, Option<String>) = conn
+        .query_row(
+            "SELECT json_extract_string(j, '$.error_type'),
+                    json_array_length(j, '$.statements'),
+                    CASE WHEN json_array_length(j, '$.statements') = 1 THEN json_deserialize_sql(j) END
+             FROM (SELECT json_serialize_sql(?::VARCHAR) AS j)",
+            [sql],
+            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+        )?;
+    // A statement that is not a SELECT fails with "not implemented", SQL that does not parse
+    // has no statements, and the canonical form is only written back for exactly one.
+    match (error_type.as_deref(), statements) {
+        (Some("not implemented"), _) => Err(QueryError::NotReadOnly),
+        // Every statement but the last would run in full and its result be thrown away.
+        (_, Some(2..)) => Err(QueryError::MultipleStatements),
+        _ => Ok(canonical),
+    }
+}
+
+/// Prepares `canonical`, the agent's `sql` as `DuckDB` writes it back, under the row cap:
+/// `query_arrow` materializes the whole result before the first batch, so the cap goes into the
+/// query and `DuckDB` stops reading once it has one row too many. An error is reported against
+/// `sql` where that fails as well, which binder and catalog errors do; `sql` itself never runs.
+fn prepare_capped<'conn>(
+    conn: &'conn Connection,
+    sql: &str,
+    canonical: &str,
+) -> Result<duckdb::Statement<'conn>, QueryError> {
+    let capped = format!("SELECT * FROM ({canonical}) LIMIT {}", MAX_ROWS + 1);
+    // `prepare` runs every statement but the last, so the sandbox must not depend on `DuckDB`
+    // writing `canonical` back as exactly one statement.
+    read_only_statement(conn, &capped)?;
+    conn.prepare(&capped)
+        .map_err(|capped_error| conn.prepare(sql).err().unwrap_or(capped_error).into())
 }
 
 pub(crate) fn run_query(conn: &Connection, sql: &str) -> Result<QueryOutput, QueryError> {
-    if !is_read_only(conn, sql)? {
-        return Err(QueryError::NotReadOnly);
-    }
-    let mut stmt = conn.prepare(sql)?;
+    let mut stmt = match read_only_statement(conn, sql)? {
+        Some(canonical) => prepare_capped(conn, sql, &canonical)?,
+        None => conn.prepare(sql)?,
+    };
     let mut batches = Vec::new();
     let mut remaining = MAX_ROWS;
     let mut truncated = false;
@@ -527,6 +559,9 @@ pub(crate) fn run_query(conn: &Connection, sql: &str) -> Result<QueryOutput, Que
 
 #[cfg(test)]
 mod tests {
+    use duckdb::arrow::array::AsArray;
+    use duckdb::arrow::datatypes::Int64Type;
+
     use super::*;
 
     /// A database whose `DuckLake` catalog holds table `t` (data under `data/`) and view
@@ -661,5 +696,92 @@ mod tests {
         );
         drop(ro);
         std::fs::remove_dir_all(&work_dir).unwrap();
+    }
+
+    #[test]
+    fn row_cap_stops_reading() {
+        let conn = Connection::open_in_memory().unwrap();
+        conn.execute_batch("SET threads = 1").unwrap();
+        // Any row past the first vectors fails the query: it must never be read.
+        let out = run_query(
+            &conn,
+            "SELECT CASE WHEN i < 100000 THEN i ELSE error('read past the row cap') END AS i
+             FROM range(10000000) t(i)",
+        )
+        .unwrap();
+        assert!(out.truncated);
+        assert_eq!(
+            out.batches.iter().map(RecordBatch::num_rows).sum::<usize>(),
+            MAX_ROWS
+        );
+    }
+
+    #[test]
+    fn capped_queries_keep_their_shape() {
+        let conn = Connection::open_in_memory().unwrap();
+        conn.execute_batch("CREATE TABLE t AS SELECT range AS i FROM range(3)")
+            .unwrap();
+        for (sql, rows) in [
+            ("SELECT i FROM t ORDER BY i DESC;", 3),
+            ("SELECT i FROM t; ;\n", 3),
+            ("SELECT i FROM t -- trailing comment", 3),
+            ("SELECT i FROM t /* trailing */", 3),
+            ("-- leading\nSELECT i FROM t;\n-- trailing", 3),
+            ("SELECT ';' AS i FROM t; /* trailing */", 3),
+            ("WITH x AS (SELECT 1 AS a) SELECT * FROM x", 1),
+            ("FROM t LIMIT 2", 2),
+            ("DESCRIBE t", 1),
+            ("SHOW TABLES", 1),
+            ("SUMMARIZE t", 1),
+            ("VALUES (1), (2)", 2),
+        ] {
+            let out = run_query(&conn, sql).unwrap_or_else(|e| panic!("{sql}: {e}"));
+            assert_eq!(
+                out.batches.iter().map(RecordBatch::num_rows).sum::<usize>(),
+                rows,
+                "{sql}"
+            );
+        }
+        let out = run_query(&conn, "SELECT i FROM t ORDER BY i DESC").unwrap();
+        let order = out.batches[0].column(0).as_primitive::<Int64Type>();
+        assert_eq!(order.values(), &[2, 1, 0]);
+    }
+
+    #[test]
+    fn multiple_statements_are_rejected() {
+        let conn = Connection::open_in_memory().unwrap();
+        assert!(matches!(
+            run_query(&conn, "SELECT 1; SELECT 2"),
+            Err(QueryError::MultipleStatements)
+        ));
+    }
+
+    #[test]
+    fn a_capped_query_cannot_break_out_of_its_subquery() {
+        let conn = Connection::open_in_memory().unwrap();
+        let canonical = "SELECT 1) t; CREATE TABLE escaped AS SELECT 1; SELECT * FROM (SELECT 1";
+        assert!(prepare_capped(&conn, "SELECT 1", canonical).is_err());
+        let tables: i64 = conn
+            .query_row("SELECT count(*) FROM duckdb_tables()", [], |row| row.get(0))
+            .unwrap();
+        assert_eq!(tables, 0, "a statement outside the subquery ran");
+    }
+
+    #[test]
+    fn errors_quote_the_original_query() {
+        let conn = Connection::open_in_memory().unwrap();
+        let Err(QueryError::DuckDb(e)) = run_query(&conn, "SELEC 1") else {
+            panic!("expected a syntax error");
+        };
+        let message = e.to_string();
+        assert!(message.contains(r#"near "SELEC""#), "{message}");
+        assert!(message.contains("LINE 1: SELEC 1"), "{message}");
+
+        let Err(QueryError::DuckDb(e)) = run_query(&conn, "SELECT nope -- typo\nFROM range(3)")
+        else {
+            panic!("expected a binder error");
+        };
+        let message = e.to_string();
+        assert!(message.contains("LINE 1: SELECT nope -- typo"), "{message}");
     }
 }
