@@ -60,7 +60,7 @@ import { Stat, StatGroup } from "~/components/ui/stat";
 import type { Dayjs } from "~/dayjs";
 import { useHeroById } from "~/hooks/useAssetById";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
-import { type BuildFocus, type BuildGoal, completeBuild } from "~/lib/build-completer";
+import { type BuildFocus, type BuildGoal, type CompleterStep, completeBuild, SELL_REFUND } from "~/lib/build-completer";
 import type { GameMode, MatchMode } from "~/lib/game-mode";
 import { TONE_TEXT, toneOf, type Tone } from "~/lib/tone";
 import { wilsonScoreInterval } from "~/lib/wilson";
@@ -109,8 +109,6 @@ const COMPLETE_HELD_BY_STAGE = [4, 7, 10];
 const MIN_RATE_GAMES = 30;
 // Under this many games a build's win rate is marked as resting on few games.
 const FEW_GAMES = 100;
-// Selling refunds half an item's price.
-const SELL_REFUND = 0.5;
 const EMPTY_PATH: string[] = [];
 // Items each stage's list shows, the ones the server's first answer holds.
 const PER_STAGE = ITEM_FLOW_DEFAULT_PER_COLUMN;
@@ -932,7 +930,8 @@ export function BuildFlowExplorer({
     return { used, open: BASE_SLOTS + flexMinutes.filter((m) => m * 60 <= end).length };
   });
   // Completes the build one item at a time on the build's own data: each step reads the players of the build so far,
-  // so an item is only added if enough of them bought it too, and the finished build still has games behind it.
+  // so an item is only added if enough of them bought it too, and the finished build still has games behind it. With
+  // the slots full, a step sells an item most of its buyers sell to make room.
   // `from` is the build to complete: the current one, or empty for a one-press build that replaces it. `control` names
   // the button pressed, which shows the work.
   const complete = async (focus: BuildFocus, goal: BuildGoal, from: string[] = path, control = "complete") => {
@@ -940,6 +939,9 @@ export function BuildFlowExplorer({
     setCompleting(control);
     try {
       const current = [...from];
+      // The build's sales: the reader's plans stay when their build is completed, and a one-press build starts without.
+      const sales = new Map(from.length > 0 ? sellOf : []);
+      let sold = 0;
       for (let step = 0; step < COMPLETE_MAX_ITEMS; step++) {
         // oxlint-disable-next-line no-await-in-loop -- each step reads the answer for the build the last step made
         const answer = await queryClient.query(flowQuery(current));
@@ -960,7 +962,7 @@ export function BuildFlowExplorer({
             ? []
             : [[...stepView.byKey.values()].filter((c) => c.matches >= COMPLETE_FALLBACK_GAMES)]),
         ];
-        let next: string | undefined;
+        let next: CompleterStep | undefined;
         for (const choices of tiers) {
           [next] = completeBuild({
             stages: view.stages.map((stage, index) => ({
@@ -975,24 +977,35 @@ export function BuildFlowExplorer({
             priceOf: (id) => costOf.get(id) ?? 0,
             categoryOf: (id) => slotOf.get(id),
             componentsOf: (id) => componentsOf.get(id) ?? [],
+            sells: sales,
+            sellShareOf: (id) => salesOf.get(id)?.share,
             focus,
             goal,
           });
           if (next) break;
         }
         if (!next) break;
-        current.push(next);
+        current.push(next.key);
+        if (next.sells) {
+          sales.set(next.sells, parseKey(next.key).column);
+          sold++;
+        }
         // On the board as it is found, so the build fills in while the next step loads (its answer is the one the
         // board then reads, fetched once).
         changePath([...current]);
+        startTransition(
+          () => void setSells(sales.size > 0 ? [...sales].map(([key, column]) => `${key}:${column}`) : null, AT_ONCE),
+        );
       }
       if (current.length > from.length) {
         const before = path;
+        const beforeSells = storedSells;
+        const soldNote = sold > 0 ? `, sold ${sold}` : "";
         const open = view.stages.filter((stage) => !current.some((key) => parseKey(key).column === stage.column));
         toast(
           from.length === 0 && before.length > 0
-            ? `Replaced the build: ${current.length} items`
-            : `Added ${current.length - before.length} items`,
+            ? `Replaced the build: ${current.length} items${soldNote}`
+            : `Added ${current.length - before.length} items${soldNote}`,
           {
             description:
               open.length > 0
@@ -1000,7 +1013,13 @@ export function BuildFlowExplorer({
                 : undefined,
             // Gone after a few seconds rather than covering the board while the build is refined.
             duration: 5000,
-            action: { label: "Undo", onClick: () => changePath(before.length > 0 ? before : null) },
+            action: {
+              label: "Undo",
+              onClick: () => {
+                changePath(before.length > 0 ? before : null);
+                startTransition(() => void setSells(beforeSells.length > 0 ? beforeSells : null, AT_ONCE));
+              },
+            },
           },
         );
       } else {

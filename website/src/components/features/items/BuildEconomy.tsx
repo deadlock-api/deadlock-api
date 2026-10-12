@@ -25,6 +25,7 @@ import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { NoValue } from "~/components/ui/no-value";
 import { Slider } from "~/components/ui/slider";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
+import { SELL_REFUND } from "~/lib/build-completer";
 import type { GameMode, MatchMode } from "~/lib/game-mode";
 import { itemUpgradesQueryOptions } from "~/queries/asset-queries";
 import { itemStatsQueryOptions } from "~/queries/item-stats-query";
@@ -33,8 +34,6 @@ import { playerPerformanceCurveQueryOptions } from "~/queries/player-performance
 // Must match TIME_PHASE_BOUNDARIES on the API: the build flow's stages, in seconds.
 const STAGE_STARTS = [0, 540, 1200, 1800] as const;
 const STAGE_LABELS = ["0–9m", "9–20m", "20–30m", "30m+"] as const;
-// Selling refunds half an item's price.
-const SELL_REFUND = 0.5;
 // The plot ends here: few games run longer, and the curve's last points come from those few.
 const END_S = 2700;
 // A skill mark's width as a share of the plot (a 20px mark on a ~600px plot): marks of one ability step apart by it.
