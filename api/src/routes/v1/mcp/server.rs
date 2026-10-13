@@ -248,7 +248,7 @@ impl McpServer {
             return limited;
         }
         debug!("MCP QUERY: {sql}");
-        match self.catalog.query(sql).await {
+        match self.catalog.query(sql, context.ct.clone()).await {
             Ok(output) => match format_query_output(&output) {
                 Ok(result) => success(&result),
                 Err(e) => query_error(
@@ -259,7 +259,12 @@ impl McpServer {
                 ),
             },
             Err(e) => {
-                warn!("MCP query failed: {e}");
+                // A client that disconnects or cancels is routine, not a failure.
+                if matches!(e, QueryError::Cancelled) {
+                    debug!("MCP query cancelled");
+                } else {
+                    warn!("MCP query failed: {e}");
+                }
                 let (error, error_type) = describe_query_error(&e);
                 query_error(error, error_type)
             }
@@ -592,6 +597,7 @@ fn describe_query_error(error: &QueryError) -> (String, String) {
             QueryError::Timeout => "TimeoutError",
             QueryError::Busy => "BusyError",
             QueryError::Cancelled => "CancelledError",
+            QueryError::Internal(_) => "InternalError",
             QueryError::NotReadOnly => "PermissionError",
             QueryError::MultipleStatements => "InvalidInputException",
             QueryError::DuckDb(_) => "DuckDBError",
