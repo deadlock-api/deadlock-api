@@ -10,6 +10,7 @@ use uuid::Uuid;
 use crate::context::AppState;
 use crate::error::{APIError, LogInternal};
 use crate::routes::v1::patron::{account_counts, fetch_patron};
+use crate::routes::v1::players::{collect_invite_links, lookup_bot_for_friend};
 use crate::services::patreon::extractor::PatronSession;
 use crate::services::patreon::steam_accounts_repository::{
     SteamAccount, SteamAccountsRepository, SteamAccountsRepositoryError,
@@ -532,4 +533,64 @@ pub(crate) async fn reactivate_steam_account(
 
     // Return 200 OK with reactivated account details
     Ok(Json(SteamAccountResponse::from(reactivated)))
+}
+
+/// Whether a prioritized account is friends with one of the bots
+#[derive(Debug, Serialize, ToSchema)]
+pub(crate) struct BotFriendStatus {
+    is_friend: bool,
+    /// Friend invite links of bots to add, empty once `is_friend` is true
+    invites: Vec<String>,
+}
+
+/// GET /v1/patron/steam-accounts/{account_id}/bot-friend
+///
+/// Reports whether the account is friends with a bot, and otherwise the invite links to add one.
+#[utoipa::path(
+    get,
+    path = "/steam-accounts/{account_id}/bot-friend",
+    params(("account_id" = String, Path, description = "The account's `steam_id3`, or the `id` of its entry as returned by the list endpoint")),
+    security(("api_key_header" = []), ("api_key_query" = [])),
+    responses(
+        (status = OK, body = BotFriendStatus),
+        (status = UNAUTHORIZED, description = "Missing API key, or the key is not linked to a patron"),
+        (status = NOT_FOUND, description = "Account not found or does not belong to the patron"),
+    ),
+    tags = ["Internal"],
+    summary = "Prioritized Steam Account Bot Friend Status",
+    description = "
+Reports whether a prioritized Steam account is friends with one of the bots. Bot friends get their match history fetched from Steam directly; an account that is not one yet gets invite links to add a bot as friend.
+
+### Authentication
+Requires an API key linked to an active Patreon membership, sent as `X-API-Key` header,
+`api_key` query parameter or `Authorization: Bearer <key>`. A `patron_session` from the
+website login works as well.
+"
+)]
+pub(crate) async fn bot_friend_status(
+    State(app_state): State<AppState>,
+    session: PatronSession,
+    Path(account): Path<String>,
+) -> Result<impl IntoResponse, APIError> {
+    let repo = SteamAccountsRepository::new(app_state.pg_client.clone());
+    let account_id = resolve_account_id(&repo, session.patron_id, &account).await?;
+    let account = get_owned_account(&repo, account_id, session.patron_id).await?;
+    let steam_id3 = u32::try_from(account.steam_id3)
+        .map_err(|_| APIError::internal("Stored steam_id3 is out of range"))?;
+
+    if lookup_bot_for_friend(&app_state.pg_client, steam_id3)
+        .await?
+        .is_some()
+    {
+        return Ok(Json(BotFriendStatus {
+            is_friend: true,
+            invites: vec![],
+        }));
+    }
+    let invites =
+        collect_invite_links(&app_state.pg_client, &mut app_state.redis_client.clone()).await?;
+    Ok(Json(BotFriendStatus {
+        is_friend: false,
+        invites,
+    }))
 }

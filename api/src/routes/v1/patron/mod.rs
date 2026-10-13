@@ -26,6 +26,7 @@ pub(super) fn router() -> OpenApiRouter<AppState> {
             steam_accounts::replace_steam_account
         ))
         .routes(routes!(steam_accounts::reactivate_steam_account))
+        .routes(routes!(steam_accounts::bot_friend_status))
         .layer(CacheControlMiddleware::new(Duration::from_secs(0)).private())
 }
 

@@ -130,7 +130,10 @@ async fn apply_bot_rate_limits(
         .map(|_| ())
 }
 
-async fn lookup_bot_for_friend(pg: &sqlx::PgPool, account_id: u32) -> APIResult<Option<String>> {
+pub(crate) async fn lookup_bot_for_friend(
+    pg: &sqlx::PgPool,
+    account_id: u32,
+) -> APIResult<Option<String>> {
     let friend_id = i32::try_from(account_id).map_err(|_| {
         APIError::status_msg(StatusCode::BAD_REQUEST, "Invalid account ID".to_owned())
     })?;
@@ -147,7 +150,9 @@ async fn lookup_bot_for_friend(pg: &sqlx::PgPool, account_id: u32) -> APIResult<
     }
 }
 
-async fn collect_invite_links(
+/// Up to five friend invite links of the bots with the fewest friends, for an account that is not
+/// a bot friend yet.
+pub(crate) async fn collect_invite_links(
     pg: &sqlx::PgPool,
     redis: &mut redis::aio::MultiplexedConnection,
 ) -> APIResult<Vec<String>> {
