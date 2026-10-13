@@ -227,8 +227,22 @@ fn build_query(query: &ItemPermutationStatsQuery) -> String {
         if comb_size < 2 {
             return String::new();
         }
+        // Only increasing index tuples, so each combination is built once in purchase order rather
+        // than all `n^k` tuples filtered down to `i0_index < i1_index < ...`.
         let joins = (0..comb_size)
-            .map(|i| format!(" ARRAY JOIN p_items AS i{i}, arrayEnumerate(p_items) AS i{i}_index "))
+            .map(|i| {
+                if i == 0 {
+                    " ARRAY JOIN p_items AS i0, arrayEnumerate(p_items) AS j0".to_owned()
+                } else {
+                    let prev = i - 1;
+                    let index = if i + 1 < comb_size {
+                        format!(", arraySlice(arrayEnumerate(p_items), j{prev} + 1) AS j{i}")
+                    } else {
+                        String::new()
+                    };
+                    format!(" ARRAY JOIN arraySlice(p_items, j{prev} + 1) AS i{i}{index}")
+                }
+            })
             .join("\n");
         let intersect_array = (0..comb_size).map(|i| format!("i{i}")).join(", ");
         let owned_items = if include_corrupted {
@@ -239,10 +253,6 @@ fn build_query(query: &ItemPermutationStatsQuery) -> String {
                 not_corrupted_sql("u")
             )
         };
-        let filters_distinct = (0..comb_size)
-            .tuple_windows()
-            .map(|(i, j)| format!("i{i}_index < i{j}_index"))
-            .join(" AND ");
         format!(
             "
         WITH t_upgrades AS (SELECT id from items WHERE type = 'upgrade'),
@@ -255,7 +265,6 @@ fn build_query(query: &ItemPermutationStatsQuery) -> String {
                countIf(not won)  AS losses,
                wins + losses AS matches
         FROM t_players {joins}
-        WHERE {filters_distinct}
         GROUP BY {intersect_array}
         {having_clause}
         ORDER BY matches DESC
