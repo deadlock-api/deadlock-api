@@ -57,8 +57,16 @@ pub(super) fn format_query_output(output: &QueryOutput) -> Result<QueryResult, A
     };
     let mut chars = toon(&result).len();
     while !result.rows.is_empty() && chars > MAX_CHARS {
-        let remove = max(1, result.rows.len() / 10);
-        result.rows.truncate(result.rows.len() - remove);
+        let rows = result.rows.len();
+        // Far over the limit, the share of rows it is over by goes at once, so a huge result does
+        // not take dozens of serializations to shrink. Close to it, the 10% steps keep as many
+        // rows as fit even when a few large rows skew the average.
+        let remove = if chars > 2 * MAX_CHARS {
+            rows - rows * MAX_CHARS / chars
+        } else {
+            max(1, rows / 10)
+        };
+        result.rows.truncate(rows - remove);
         result.row_count = result.rows.len();
         result.truncated = Some(true);
         result.warning = Some(format!(
