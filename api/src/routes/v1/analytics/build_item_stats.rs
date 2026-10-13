@@ -33,7 +33,6 @@ pub struct BuildItemStats {
 }
 
 fn build_query(query: &BuildItemStatsQuery) -> String {
-    const LAST_UPDATED: &str = "(data -> 'hero_build' ->> 'last_updated_timestamp')::bigint";
     let mut sql = "
     SELECT (mod_element ->> 'ability_id')::bigint AS item_id, COUNT(*) as num_builds
     FROM hero_builds,
@@ -47,10 +46,10 @@ fn build_query(query: &BuildItemStatsQuery) -> String {
         let _ = write!(sql, " AND hero = {hero_id}");
     }
     if let Some(min) = query.min_last_updated_unix_timestamp {
-        let _ = write!(sql, " AND {LAST_UPDATED} > {min}");
+        let _ = write!(sql, " AND updated_at > to_timestamp({min})");
     }
     if let Some(max) = query.max_last_updated_unix_timestamp {
-        let _ = write!(sql, " AND {LAST_UPDATED} < {max}");
+        let _ = write!(sql, " AND updated_at < to_timestamp({max})");
     }
     sql.push_str(" GROUP BY item_id ORDER BY num_builds DESC");
     sql
