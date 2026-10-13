@@ -284,10 +284,14 @@ fn upgrades_source(query: &ItemFlowStatsQuery, is_brawl: bool) -> (String, &'sta
 }
 
 struct QueryParts {
-    match_filters: String,
-    /// Player filters including the locked build path.
+    /// Match filters and the scalar player filters (hero, account, net worth), as an explicit
+    /// `PREWHERE`. Left to itself, ClickHouse ran the lock `arrayExists` lambdas first, on every
+    /// scanned row: a narrow badge range keeps ~3% of them. Measured on a 2.5-month, badge 91+, two
+    /// lock request: nodes -23% and edges -27% wall time; with a hero filter, edges -89%.
+    prewhere: String,
+    /// Array player filters (items, ability order) including the locked build path.
     player_filters: String,
-    /// Player filters excluding the locked build path (for the baseline population).
+    /// Array player filters excluding the locked build path (for the baseline population).
     base_player_filters: String,
     /// Boolean predicate selecting the locked build-path population (`1` when nothing is locked).
     /// Combined with `base_player_filters` via conditional aggregation for the summary totals.
@@ -322,11 +326,15 @@ fn brawl_round_expr(buy_time_expr: &str, round_durations_expr: &str) -> String {
 #[allow(clippy::too_many_lines)]
 fn query_parts(query: &ItemFlowStatsQuery) -> QueryParts {
     let info_filters = query.match_info().build();
-    let base_filter_vec = PlayerFilters {
+    let scalar_filter_vec = PlayerFilters {
         hero_ids: query.hero_ids.as_deref(),
         account_ids: query.account_ids.as_deref(),
         min_networth: query.min_networth,
         max_networth: query.max_networth,
+        ..Default::default()
+    }
+    .build();
+    let base_filter_vec = PlayerFilters {
         include_item_ids: query.include_item_ids.as_deref(),
         exclude_item_ids: query.exclude_item_ids.as_deref(),
         ability_order_prefix: query.ability_order_prefix.as_deref(),
@@ -412,7 +420,10 @@ fn query_parts(query: &ItemFlowStatsQuery) -> QueryParts {
     let player_filters = base_player_filters.clone() + &join_filters(&locked_clauses);
     let game_mode_filter = GameMode::sql_filter(query.game_mode);
     let match_mode_filter = MatchMode::sql_filter(query.match_mode.as_deref());
-    let match_filters = format!("{match_mode_filter} AND {game_mode_filter} {info_filters}");
+    let prewhere = format!(
+        "{match_mode_filter} AND {game_mode_filter} {info_filters}{}",
+        join_filters(&scalar_filter_vec)
+    );
 
     let column_expr = column_of("e.buy_time", "e.round_durations");
     let extra_select = if is_brawl {
@@ -452,7 +463,7 @@ fn query_parts(query: &ItemFlowStatsQuery) -> QueryParts {
     let (upgrades_with, extra_settings) = upgrades_source(query, is_brawl);
 
     QueryParts {
-        match_filters,
+        prewhere,
         player_filters,
         base_player_filters,
         locked_predicate,
@@ -473,7 +484,7 @@ fn query_parts(query: &ItemFlowStatsQuery) -> QueryParts {
 /// restricts it to the locked build path for the `s_*` columns.
 fn build_totals_query(parts: &QueryParts) -> String {
     let QueryParts {
-        match_filters,
+        prewhere,
         base_player_filters,
         locked_predicate: lp,
         bought_columns,
@@ -509,7 +520,8 @@ fn build_totals_query(parts: &QueryParts) -> String {
         {reached_select},
         {leave_one_out_select}
     FROM match_player
-    WHERE {match_filters} {base_player_filters}
+    PREWHERE {prewhere}
+    WHERE TRUE {base_player_filters}
     SETTINGS log_comment = 'item_flow_stats_totals', apply_patch_parts = 0{extra_settings}
     "
     )
@@ -517,7 +529,7 @@ fn build_totals_query(parts: &QueryParts) -> String {
 
 fn build_nodes_query(query: &ItemFlowStatsQuery, parts: &QueryParts) -> String {
     let QueryParts {
-        match_filters,
+        prewhere,
         player_filters,
         column_expr,
         extra_select,
@@ -574,7 +586,8 @@ fn build_nodes_query(query: &ItemFlowStatsQuery, parts: &QueryParts) -> String {
                     upgrade_buy_times AS buy_time,
                     upgrade_net_worths AS nw,
                     {first_purchase} AS first
-                WHERE {match_filters} {player_filters}
+                PREWHERE {prewhere}
+                WHERE TRUE {player_filters}
                     AND buy_time > 0 AND nw > 0
             ) e
         )
@@ -603,7 +616,7 @@ fn build_nodes_query(query: &ItemFlowStatsQuery, parts: &QueryParts) -> String {
 
 fn build_edges_query(query: &ItemFlowStatsQuery, parts: &QueryParts) -> String {
     let QueryParts {
-        match_filters,
+        prewhere,
         player_filters,
         by_column_select,
         upgrades_with,
@@ -627,7 +640,8 @@ fn build_edges_query(query: &ItemFlowStatsQuery, parts: &QueryParts) -> String {
         {upgrades_with}
         SELECT won, {by_column_select}
         FROM match_player
-        WHERE {match_filters} {player_filters}
+        PREWHERE {prewhere}
+        WHERE TRUE {player_filters}
     )
     ARRAY JOIN arrayPopBack(arrayEnumerate(by_column)) AS i
     ARRAY JOIN by_column[i] AS from_item_id
