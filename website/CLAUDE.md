@@ -21,6 +21,7 @@ tanstack-start
 │   │                           # sections/*.ts (registry.test.ts fails otherwise). The AI search routes on it
 │   ├── lib/ai-search/          # AI search: Mercury Decide picks the page (server fn, secret INCEPTION_API_KEY);
 │   │                           # hero and item names are matched in code
+│   ├── lib/server-api-key.ts   # the website's own API key (secret DEADLOCK_API_KEY), sent only on server-side requests
 │   └── lib/utils.ts            # cn() helper
 ├── docs/design-system.md       # the design system contract (read before any UI work)
 ├── scripts/lint-design-system.mjs  # enforces it, part of `pnpm lint`

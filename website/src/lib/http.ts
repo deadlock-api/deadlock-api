@@ -1,4 +1,5 @@
 import { API_ORIGIN } from "~/lib/constants";
+import { serverApiKeyHeaders } from "~/lib/server-api-key";
 
 export class ApiError extends Error {
   status: number;
@@ -51,7 +52,7 @@ export async function fetchApi<T>(path: string, options?: FetchApiOptions): Prom
     const response = await fetch(`${API_ORIGIN}${path}`, {
       method,
       credentials,
-      headers: body ? { "Content-Type": "application/json" } : undefined,
+      headers: { ...serverApiKeyHeaders(), ...(body ? { "Content-Type": "application/json" } : {}) },
       body: body ? JSON.stringify(body) : undefined,
       signal: controller?.signal,
     });

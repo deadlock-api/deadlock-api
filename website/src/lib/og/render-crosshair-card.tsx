@@ -2,6 +2,7 @@ import { GoogleFont, ImageResponse } from "@cf-wasm/og";
 
 import { API_ORIGIN } from "~/lib/constants";
 import { type CrosshairRenderSettings, renderCrosshair } from "~/lib/crosshair-render";
+import { serverApiKeyHeaders } from "~/lib/server-api-key";
 
 // Bundled as data URIs: the Worker cannot fetch the site's own public files from its own domain.
 import logo from "../../../public/favicon.png?inline";
@@ -26,7 +27,9 @@ const FONTS = ([700, 800] as const).map((weight) => new GoogleFont("Inter", { we
  * blur the crosshair's square pixels. The pixels come from the site's renderer, the same as the API's.
  */
 async function loadCrosshair(code: string, screenHeight: string): Promise<CrosshairPixels | undefined> {
-  const response = await fetch(`${API_ORIGIN}/v1/crosshair/code/settings?${new URLSearchParams({ code })}`);
+  const response = await fetch(`${API_ORIGIN}/v1/crosshair/code/settings?${new URLSearchParams({ code })}`, {
+    headers: serverApiKeyHeaders(),
+  });
   if (!response.ok) return undefined;
   const image = renderCrosshair((await response.json()) as CrosshairRenderSettings, Number(screenHeight));
   if (!image) return undefined;

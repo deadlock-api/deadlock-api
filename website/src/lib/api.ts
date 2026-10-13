@@ -54,7 +54,7 @@ export class Api {
   public client: AxiosInstance;
 
   constructor(config: ApiConfig = DEFAULT_API_CONFIG) {
-    const axios_client = createApiClient(config.timeout);
+    const axios_client = createApiClient(config.timeout, API_ORIGIN);
     this.client = axios_client;
     this.analytics_api = new AnalyticsApi(undefined, API_ORIGIN, axios_client);
     this.leaderboard_api = new LeaderboardApi(undefined, API_ORIGIN, axios_client);

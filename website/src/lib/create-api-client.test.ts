@@ -3,8 +3,10 @@ import { test } from "node:test";
 
 import { createApiClient } from "./create-api-client";
 
+const API_ORIGIN = "https://api.example.test";
+
 test("server fetch requests preserve runtime cache defaults and JSON responses", async () => {
-  const client = createApiClient(1_000);
+  const client = createApiClient(1_000, API_ORIGIN);
   const response = await client.get("https://assets.example.test/heroes", {
     adapter: "fetch",
     params: { language: "english" },
@@ -24,7 +26,7 @@ test("server fetch requests preserve runtime cache defaults and JSON responses",
 });
 
 test("server fetch requests retain JSON bodies and request headers", async () => {
-  const client = createApiClient(1_000);
+  const client = createApiClient(1_000, API_ORIGIN);
   await client.post(
     "https://api.example.test/query",
     { account_id: 123 },
@@ -47,7 +49,7 @@ test("server fetch requests retain JSON bodies and request headers", async () =>
 });
 
 test("server fetch requests continue to reject unsuccessful HTTP responses", async () => {
-  const client = createApiClient(1_000);
+  const client = createApiClient(1_000, API_ORIGIN);
   await assert.rejects(
     client.get("https://api.example.test/unavailable", {
       adapter: "fetch",
@@ -55,4 +57,29 @@ test("server fetch requests continue to reject unsuccessful HTTP responses", asy
     }),
     { name: "AxiosError", status: 503 },
   );
+});
+
+test("server requests to the API carry the website's key, requests elsewhere do not", async () => {
+  process.env.DEADLOCK_API_KEY = "website-key";
+  try {
+    const client = createApiClient(1_000, API_ORIGIN);
+    const keyFor = async (url: string) => {
+      let key: string | null = null;
+      await client.get(url, {
+        adapter: "fetch",
+        env: {
+          fetch: async (_input, init) => {
+            key = new Headers(init?.headers).get("X-API-Key");
+            return Response.json({});
+          },
+        },
+      });
+      return key;
+    };
+    assert.equal(await keyFor(`${API_ORIGIN}/v1/info`), "website-key");
+    assert.equal(await keyFor("https://api.example.test.evil.test/v1/info"), null);
+    assert.equal(await keyFor("https://assets.example.test/heroes"), null);
+  } finally {
+    delete process.env.DEADLOCK_API_KEY;
+  }
 });
