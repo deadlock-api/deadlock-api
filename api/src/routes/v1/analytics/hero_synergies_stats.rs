@@ -150,13 +150,17 @@ fn build_query(query: &HeroSynergyStatsQuery) -> String {
     //   1: hero_id, 2: won, 3: kills, 4: deaths, 5: assists, 6: denies,
     //   7: last_hits, 8: net_worth, 9: max_boss_damage, 10: max_creep_kills,
     //   11: account_id, appended only when an account filter needs it
-    let game_mode_filter = GameMode::sql_filter(query.game_mode);
-    let mut where_filters = vec![
-        "team IN ('Team0', 'Team1')".to_owned(),
+    // FINAL dedups re-ingested (match_id, account_id) rows, which would otherwise add their pairs
+    // twice. Under FINAL, ClickHouse only moves sorting-key conditions to PREWHERE itself, so the
+    // match-level filters go there explicitly. Duplicate versions never differ in these columns,
+    // so filtering before FINAL keeps the same rows.
+    let mut prewhere_filters = vec![
         MatchMode::sql_filter(query.match_mode.as_deref()),
-        game_mode_filter,
+        GameMode::sql_filter(query.game_mode),
     ];
-    where_filters.extend(query.match_info().predicates("", DURATION_COLUMN));
+    prewhere_filters.extend(query.match_info().predicates("", DURATION_COLUMN));
+    let prewhere_clause = prewhere_filters.join(" AND ");
+    let mut where_filters = vec!["team IN ('Team0', 'Team1')".to_owned()];
     // net_worth is per-player; pre-filtering before the group has the same effect
     // as the original symmetric (p1 AND p2) join filter.
     where_filters.extend(range_filters(
@@ -197,10 +201,6 @@ fn build_query(query: &HeroSynergyStatsQuery) -> String {
         query.min_matches,
         query.max_matches,
     ));
-    // No `optimize_use_projections = 0`: with skip indexes evaluated at planning time
-    // (`use_skip_indexes_on_data_read = 0` on the clients) the planner picks the hero-led
-    // projection only when it prunes better. Measured on production shapes: identical results,
-    // 37% of the bytes, 71% of the CPU, 75% of the wall time.
     format!(
         "
     SELECT (pair.1).1 AS hero_id1,
@@ -228,7 +228,8 @@ fn build_query(query: &HeroSynergyStatsQuery) -> String {
                    hero_id, toUInt32(won), kills, deaths, assists, denies,
                    last_hits, net_worth, max_boss_damage, max_creep_kills{account_col}
                )) AS arr
-        FROM match_player
+        FROM match_player FINAL
+        PREWHERE {prewhere_clause}
         WHERE {where_clause}
         GROUP BY {group_keys}
     )
