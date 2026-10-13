@@ -94,14 +94,29 @@ export async function readResult(
   voter: string,
   cache: JsonCache = NO_CACHE,
 ): Promise<RoundResult | null> {
-  const key = guessKey(video.id, voter);
-  let voterRows = (await cache.get<Rows>(key))?.value;
-  if (!voterRows) {
-    ({ results: voterRows } = await db.prepare(VOTER_GUESS).bind(video.id, voter).all());
-    await cache.set(key, voterRows, voterRows.length > 0 ? GUESS_TTL_SECONDS : NO_GUESS_TTL_SECONDS);
-  }
+  const voterRows = await readVoterRows(db, video.id, voter, cache);
   if (voterRows.length === 0) return null;
   return toRoundResult(video.badge, voterRows, await readTally(db, cache, video.id));
+}
+
+async function readVoterRows(db: D1Database, videoId: string, voter: string, cache: JsonCache): Promise<Rows> {
+  const key = guessKey(videoId, voter);
+  const known = (await cache.get<Rows>(key))?.value;
+  if (known) return known;
+  const { results } = await db.prepare(VOTER_GUESS).bind(videoId, voter).all();
+  await cache.set(key, results, results.length > 0 ? GUESS_TTL_SECONDS : NO_GUESS_TTL_SECONDS);
+  return results;
+}
+
+/** The tier the voter's vote on a video counted for; null when they have not voted on it. */
+export async function readGuess(
+  db: D1Database,
+  videoId: string,
+  voter: string,
+  cache: JsonCache = NO_CACHE,
+): Promise<number | null> {
+  const guess = Number((await readVoterRows(db, videoId, voter, cache))[0]?.tier);
+  return Number.isInteger(guess) ? guess : null;
 }
 
 function emptyResult(badge: number, guess: number): RoundResult {

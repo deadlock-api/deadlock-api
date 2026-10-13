@@ -38,6 +38,7 @@ import { type ClipPhase, trackGuessTheRank, useClipAnalytics } from "./analytics
 import { GuessTheRankFeedbackNotice } from "./GuessTheRankFeedbackNotice";
 import { RankPicker, type RankTier } from "./RankPicker";
 import { POINT_TONE, RoundReveal } from "./RoundReveal";
+import { ScoreDistribution } from "./ScoreDistribution";
 import { type GuessedRound, useGuessTheRank } from "./use-guess-the-rank";
 
 /** A round's clip: seek and replay freely, before and after the guess. */
@@ -256,6 +257,7 @@ function DaySummary({
           <RoundRecap key={rounds[i].videoId} index={i} guessed={entry} ranks={ranks} />
         ))}
       </Grid>
+      <ScoreDistribution date={date} points={points} max={max} />
       <div className="flex justify-center">
         <ShareButton
           text={guessShareText(date, scored)}

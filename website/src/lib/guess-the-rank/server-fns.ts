@@ -14,6 +14,7 @@ import {
   VIDEO_PREFIX,
   type VideoRow,
 } from "./daily";
+import { type DayScores, dayPoints, playerHash, readDayScores, recordDayScore } from "./scores";
 import { guessableTiers } from "./scoring";
 import { readResult, recordVote, type RoundResult, voterHash } from "./votes";
 
@@ -154,4 +155,16 @@ export const getRoundResult = createServerFn({ method: "GET" })
     if (!db) return null;
     const video = await roundVideo(context.env, data);
     return readResult(db, video, await voterHash(voterIp(), video.id), cache);
+  });
+
+/** How everyone scored on a day. Asking also counts this player's score, once they have guessed every clip. */
+export const getDayScores = createServerFn({ method: "GET" })
+  .validator((input: { date: string }) => ({ date: requireDate(input as unknown as Record<string, unknown>) }))
+  .handler(async ({ data, context }): Promise<DayScores | null> => {
+    const db = context.env?.GUESS_THE_RANK_DB;
+    if (!db) return null;
+    const ip = voterIp();
+    const points = await dayPoints(db, await dailyVideos(context.env, data.date), ip, cache);
+    if (points !== null) await recordDayScore(db, data.date, await playerHash(ip, data.date), points, cache);
+    return readDayScores(db, data.date, cache);
   });

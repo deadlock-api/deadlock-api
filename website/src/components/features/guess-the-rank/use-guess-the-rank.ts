@@ -4,7 +4,7 @@ import { useCallback, useMemo, useState } from "react";
 import { getTodayDate } from "~/lib/daily-seed";
 import { type DailyRound, resolveGuessDate } from "~/lib/guess-the-rank/daily";
 import { roundPoints, tierDistance, tierOfBadge } from "~/lib/guess-the-rank/scoring";
-import { getDailyRounds, getRoundResult, submitGuess } from "~/lib/guess-the-rank/server-fns";
+import { getDailyRounds, getDayScores, getRoundResult, submitGuess } from "~/lib/guess-the-rank/server-fns";
 import type { RoundResult } from "~/lib/guess-the-rank/votes";
 import { useStoredDailyState } from "~/lib/use-stored-state";
 import { ranksQueryOptions } from "~/queries/ranks-query";
@@ -56,6 +56,15 @@ export function useRoundResult(date: string, round: DailyRound, enabled: boolean
     queryKey: resultQueryKey(date, round),
     queryFn: () => getRoundResult({ data: { date, round: round.round, videoId: round.videoId } }),
     enabled,
+    staleTime: 60_000,
+  });
+}
+
+/** How everyone scored on the day; asking also counts this visitor's own score on the server. Null under the dev server. */
+export function useDayScores(date: string) {
+  return useQuery({
+    queryKey: ["guess-the-rank", "scores", date],
+    queryFn: () => getDayScores({ data: { date } }),
     staleTime: 60_000,
   });
 }

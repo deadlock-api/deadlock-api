@@ -1,54 +1,16 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
-import path from "node:path";
-import { DatabaseSync } from "node:sqlite";
 import { test } from "node:test";
 
-import type { JsonCache } from "~/lib/edge-cache";
 import type { D1Database, D1PreparedStatement } from "~/lib/worker-env";
 
+import { memoryCache, testDatabase as migratedDatabase } from "./test-database";
 import { readResult, recordVote, toRoundResult, voterHash } from "./votes";
 
-const SCHEMA = readFileSync(path.join(import.meta.dirname, "../../../migrations/guess-the-rank/0001_init.sql"), "utf8");
-
-interface Statement extends D1PreparedStatement {
-  run(): Record<string, unknown>[];
-}
-
-/** D1 over node:sqlite: a batch runs its statements in order, in one transaction, like D1's. */
-function testDatabase(): D1Database {
-  const sqlite = new DatabaseSync(":memory:");
-  sqlite.exec(SCHEMA);
-  sqlite.exec(
+const testDatabase = () =>
+  migratedDatabase(
     "INSERT INTO videos (id, r2_key, badge, hero_id, match_id, duration_s, added_at) " +
       "VALUES ('v1', 'videos/v1.mp4', 74, 1, 1, 120, '2026-10-01T00:00:00Z')",
   );
-  const prepare = (query: string, values: unknown[] = []): Statement => ({
-    bind: (...next: unknown[]) => prepare(query, next),
-    run: () => {
-      const statement = sqlite.prepare(query);
-      const params = values as (string | number)[];
-      if (/^\s*select/i.test(query)) return statement.all(...params) as Record<string, unknown>[];
-      statement.run(...params);
-      return [];
-    },
-    all: async <T>() => ({ results: prepare(query, values).run() as T[] }),
-  });
-  return {
-    prepare: (query) => prepare(query),
-    batch: async <T>(statements: D1PreparedStatement[]) => {
-      sqlite.exec("BEGIN");
-      try {
-        const results = statements.map((statement) => ({ results: (statement as Statement).run() as T[] }));
-        sqlite.exec("COMMIT");
-        return results;
-      } catch (error) {
-        sqlite.exec("ROLLBACK");
-        throw error;
-      }
-    },
-  };
-}
 
 const VIDEO = { id: "v1", badge: 74 };
 
@@ -72,18 +34,6 @@ test("the result is only read back for a voter who voted", async () => {
   await recordVote(db, VIDEO, "voter-a", 8);
   assert.deepEqual(await readResult(db, VIDEO, "voter-a"), { badge: 74, tier: 7, guess: 8, stats: { 8: 1 }, total: 1 });
 });
-
-/** An edge cache in memory, without expiry. */
-function memoryCache(): JsonCache {
-  const entries = new Map<string, string>();
-  return {
-    get: async <T>(key: string) => {
-      const entry = entries.get(key);
-      return entry === undefined ? undefined : { value: JSON.parse(entry) as T };
-    },
-    set: async (key, value) => void entries.set(key, JSON.stringify(value)),
-  };
-}
 
 /** Counts the database's round trips. */
 function countingDatabase(db: D1Database): D1Database & { calls: number } {
