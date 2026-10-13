@@ -138,20 +138,23 @@ fi
 # The zip ships Source2Viewer-CLI alongside libSkiaSharp.so (and friends); a
 # partial cache restore that brings back only the managed binary leaves the
 # natives absent, and the CLI then aborts with "Unable to load libSkiaSharp".
-# Pinned to 19.1: 20.0 (latest) only adds VCS shader version 71, so it still logs
-# "Only VCS file versions 59 through 71 are supported ... 72" for
-# materials/minimap/*.vmat_c (non-fatal; the same 42 files are extracted).
-if [ ! -f Source2Viewer-CLI ] || [ ! -f libSkiaSharp.so ]; then
+# Built from our fork (deadlock-api/ValveResourceFormat): upstream releases up
+# to 20.0 can't read build 6779+ (KV3 type-byte bit 6, new UINT32_ZERO/ONE node
+# types 26/27). The version stamp makes a cached older CLI get replaced.
+VRF_RELEASE="deadlock-6779"
+VRF_URL="https://github.com/deadlock-api/ValveResourceFormat/releases/download/$VRF_RELEASE"
+if [ ! -f Source2Viewer-CLI ] || [ ! -f libSkiaSharp.so ] || [ "$(cat .vrf-version 2>/dev/null)" != "$VRF_RELEASE" ]; then
     if [[ "$OSTYPE" == "darwin"* ]]; then
-        curl -L -o Decompiler.zip "https://github.com/ValveResourceFormat/ValveResourceFormat/releases/download/19.1/cli-macos-arm64.zip"
+        curl -L -o Decompiler.zip "$VRF_URL/cli-macos-arm64.zip"
     elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
-        wget https://github.com/ValveResourceFormat/ValveResourceFormat/releases/download/19.1/cli-linux-x64.zip -O Decompiler.zip
+        wget "$VRF_URL/cli-linux-x64.zip" -O Decompiler.zip
     else
         echo "Unsupported OS: $OSTYPE"
         exit 1
     fi
     unzip -o Decompiler.zip && rm Decompiler.zip
     chmod +x Source2Viewer-CLI
+    echo "$VRF_RELEASE" > .vrf-version
 fi
 
 # gltf-transform compacts the exported hero and NPC models (meshopt + WebP textures).

@@ -105,6 +105,7 @@ jobs:
           path: |
             .assets-build/DepotDownloader
             .assets-build/Source2Viewer-CLI
+            .assets-build/.vrf-version
             .assets-build/*.so
             .assets-build/gltf-transform
             .assets-build/.video-hashes
