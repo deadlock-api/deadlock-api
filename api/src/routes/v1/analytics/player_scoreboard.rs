@@ -20,10 +20,7 @@ use crate::error::{APIError, APIResult};
 use crate::routes::v1::analytics::scoreboard_types::ScoreboardQuerySortBy;
 use crate::routes::v1::matches::types::{GameMode, MatchMode, reject_brawl_badge_filter};
 use crate::utils::parse::comma_separated_deserialize_option;
-use crate::utils::sql::{
-    MAX_FILTERING_AVERAGE_BADGE, MIN_FILTERING_AVERAGE_BADGE, cached_ch_query, having_clause,
-    id_list, impl_match_info,
-};
+use crate::utils::sql::{cached_ch_query, having_clause, id_list, impl_match_info};
 use crate::utils::types::SortDirectionDesc;
 
 fn default_limit() -> Option<u32> {
@@ -171,20 +168,13 @@ FROM (
 }
 
 fn build_query(query: &PlayerScoreboardQuery) -> String {
-    let mut inner_filters = vec!["account_id > 0".to_owned()];
-    let needs_match_info_filter = query.min_unix_timestamp.is_some()
-        || query.max_unix_timestamp.is_some()
-        || query.min_match_id.is_some()
-        || query.max_match_id.is_some()
-        || query
-            .min_average_badge
-            .is_some_and(|v| v > MIN_FILTERING_AVERAGE_BADGE)
-        || query
-            .max_average_badge
-            .is_some_and(|v| v < MAX_FILTERING_AVERAGE_BADGE)
-        || query.min_duration_s.is_some()
-        || query.max_duration_s.is_some()
-        || query.game_mode.is_some_and(|g| g != GameMode::Normal);
+    let match_info_filters = query.match_info().build();
+    let game_mode_filter = GameMode::sql_filter(query.game_mode);
+    let match_mode_filter = MatchMode::sql_filter(query.match_mode.as_deref());
+    let mut inner_filters = vec![
+        "account_id > 0".to_owned(),
+        format!("{match_mode_filter} AND {game_mode_filter} {match_info_filters}"),
+    ];
     // Account-scoped reads are primary-key ranges on player_match_stats but open every part of
     // match_player, and an all-time scan aggregates there in sort order instead of hashing
     // every account (~15 GiB peak). Time and hero filters stay on match_player, whose
@@ -195,19 +185,11 @@ fn build_query(query: &PlayerScoreboardQuery) -> String {
     // them so this never scans the full history.
     let table = if query.sort_by.is_buff_sort() {
         "match_player"
-    } else if has_account_filter || (!needs_match_info_filter && query.hero_id.is_none()) {
+    } else if has_account_filter || (match_info_filters.is_empty() && query.hero_id.is_none()) {
         "player_match_stats"
     } else {
         "match_player"
     };
-    if needs_match_info_filter {
-        let match_info_filters = query.match_info().build();
-        let game_mode_filter = GameMode::sql_filter(query.game_mode);
-        let match_mode_filter = MatchMode::sql_filter(query.match_mode.as_deref());
-        inner_filters.push(format!(
-            "{match_mode_filter} AND {game_mode_filter} {match_info_filters}"
-        ));
-    }
     if let Some(hero_id) = query.hero_id {
         inner_filters.push(format!("hero_id = {hero_id}"));
     }
@@ -513,6 +495,26 @@ mod tests {
         });
         assert!(sql.contains("FROM player_match_stats "));
         assert!(!sql.contains("match_player"));
+    }
+
+    #[test]
+    fn mode_filters_apply_without_other_match_filters() {
+        let default_modes = build_query(&PlayerScoreboardQuery {
+            game_mode: Some(GameMode::Normal),
+            ..Default::default()
+        });
+        assert!(
+            default_modes.contains("match_mode IN ('Ranked', 'Unranked') AND game_mode = 1"),
+            "{default_modes}"
+        );
+        assert!(default_modes.contains("FROM player_match_stats FINAL"));
+
+        let ranked = build_query(&PlayerScoreboardQuery {
+            match_mode: Some(vec![MatchMode::Ranked]),
+            ..Default::default()
+        });
+        assert!(ranked.contains("match_mode = 'Ranked'"), "{ranked}");
+        assert!(ranked.contains("FROM player_match_stats FINAL"));
     }
 
     #[test]
