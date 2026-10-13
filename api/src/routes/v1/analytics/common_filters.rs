@@ -170,7 +170,9 @@ pub(super) fn rollup_day_filters(
     range_filters(
         "day",
         min_unix_timestamp.map(|v| format!("toDate({v})")),
-        max_unix_timestamp.map(|v| format!("toDate({v})")),
+        // A window that ends at midnight, such as `23:59:59` rounded up by `ceil_to_hour`, must
+        // not pull in the whole next day.
+        max_unix_timestamp.map(|v| format!("toDate({})", v.saturating_sub(1))),
     )
 }
 
@@ -425,6 +427,28 @@ pub(super) async fn filter_protected_accounts(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn rollup_day_filters_keep_the_window_days() {
+        const DAY: i64 = 86_400;
+        let oct5 = 20_731 * DAY; // 2026-10-05 00:00 UTC
+        let oct8 = oct5 + 3 * DAY;
+        // (max_unix_timestamp, last day the rollup may read)
+        for (max, last_day) in [
+            (oct8 + DAY - 1, oct8),          // 23:59:59, as the website sends it
+            (oct8 + DAY, oct8),              // the same, rounded up to midnight by ceil_to_hour
+            (oct8 + 14 * 3600, oct8),        // ends mid-day: the partial day stays in
+            (oct8 + DAY + 3600, oct8 + DAY), // 01:00 the next day reads that day
+        ] {
+            let filters = rollup_day_filters(Some(oct5), Some(max));
+            let read_until: i64 = filters[1]
+                .trim_start_matches("day <= toDate(")
+                .trim_end_matches(')')
+                .parse()
+                .unwrap();
+            assert_eq!(read_until.div_euclid(DAY) * DAY, last_day, "max = {max}");
+        }
+    }
 
     #[test]
     fn test_round_timestamps() {
