@@ -1,5 +1,5 @@
 import type { Hero } from "deadlock_api_client";
-import { AudioLines } from "lucide-react";
+import { AudioLines, Download } from "lucide-react";
 
 import { HeroImage } from "~/components/domain/assets/HeroImage";
 import { LoadMore } from "~/components/patterns/data-table/LoadMore";
@@ -7,9 +7,12 @@ import { SideNav, SideNavItem } from "~/components/patterns/navigation/SideNav";
 import { Panel, PanelHeader } from "~/components/patterns/panel/Panel";
 import { SoundListItem } from "~/components/patterns/sound/SoundList";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
+import { Button } from "~/components/ui/button";
+import { DownloadButton } from "~/components/ui/download-button";
 import type { useInfiniteItems } from "~/components/ui/hooks/use-infinite-items";
 import type { useSoundPlayer } from "~/components/ui/hooks/use-sound-player";
 import { IconTile } from "~/components/ui/icon-tile";
+import { Popover, PopoverContent, PopoverTrigger } from "~/components/ui/popover";
 import { SCROLLBAR_THIN } from "~/components/ui/recipes";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
 import { SoundButton } from "~/components/ui/sound-button";
@@ -137,7 +140,50 @@ export function SoundGroupItem({
           {several ? i + 1 : undefined}
         </SoundButton>
       ))}
+      <SoundDownload group={group} />
     </SoundListItem>
+  );
+}
+
+/** Saves a row's sound as its mp3; a row of several takes asks which one. Sits at the row's end, in line down a column. */
+function SoundDownload({ group }: { group: SoundGroup }) {
+  const [only] = group.takes;
+  if (group.takes.length === 1 && only) {
+    return (
+      <DownloadButton
+        href={only.url}
+        size="icon-xs"
+        variant="ghost"
+        aria-label={`Download ${group.label}`}
+        title={`Download ${only.name}.mp3`}
+        className="ms-auto"
+      />
+    );
+  }
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button size="icon-xs" variant="ghost" aria-label={`Download ${group.label}`} className="ms-auto">
+          <Download aria-hidden="true" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="end" aria-label={`Download ${group.label}`} className="w-auto p-2">
+        <div className="flex max-w-60 flex-wrap gap-1">
+          {group.takes.map((take, i) => (
+            <DownloadButton
+              key={take.url}
+              href={take.url}
+              size="xs"
+              variant="subtle"
+              aria-label={`Download ${group.label}, take ${i + 1}`}
+              title={`${take.name}.mp3`}
+            >
+              {i + 1}
+            </DownloadButton>
+          ))}
+        </div>
+      </PopoverContent>
+    </Popover>
   );
 }
 

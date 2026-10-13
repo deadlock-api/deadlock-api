@@ -148,7 +148,7 @@ export const NAV: readonly NavChapter[] = [
         ],
       },
       { title: "Feedback", items: ["Alert", "Callout", "Skeleton", "Spinner"] },
-      { title: "Media", items: ["ImgWithSkeleton", "SoundButton", "Video"] },
+      { title: "Media", items: ["ImgWithSkeleton", "SoundButton", "DownloadButton", "Video"] },
     ],
   },
   {

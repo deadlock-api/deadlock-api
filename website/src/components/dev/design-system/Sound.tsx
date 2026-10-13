@@ -2,6 +2,7 @@ import { Specimen, Variants } from "~/components/dev/design-system/Specimen";
 import { HeroImage } from "~/components/domain/assets/HeroImage";
 import { LoadMore } from "~/components/patterns/data-table/LoadMore";
 import { SoundList, SoundListItem } from "~/components/patterns/sound/SoundList";
+import { DownloadButton } from "~/components/ui/download-button";
 import { useInfiniteItems } from "~/components/ui/hooks/use-infinite-items";
 import { useSoundPlayer } from "~/components/ui/hooks/use-sound-player";
 import { SoundButton } from "~/components/ui/sound-button";
@@ -86,6 +87,24 @@ export function SoundSpecimens() {
       </Specimen>
 
       <Specimen
+        name="DownloadButton"
+        source="ui/download-button"
+        note="Saves a file instead of opening it, through the headless `useDownload` (ui/hooks/use-download: `download(href, filename?)`, `loading`, `failed`). A cross-origin `href` is fetched and saved from a blob, so its host must allow CORS. A spinner shows while it loads, a toast when it fails. An `icon*` size is the icon alone and needs an `aria-label`."
+      >
+        <Variants label="variants">
+          <DownloadButton href={CAST} />
+          <DownloadButton href={CAST} variant="outline" size="sm" filename="abrams-charge-cast.mp3">
+            Download mp3
+          </DownloadButton>
+          <DownloadButton href={CAST} size="icon-xs" aria-label="Download Abrams charge cast" />
+          <DownloadButton href={MISSING} variant="subtle" size="xs">
+            Missing file
+          </DownloadButton>
+          <DownloadButton href={CAST} disabled />
+        </Variants>
+      </Specimen>
+
+      <Specimen
         name="SoundList"
         source="patterns/sound/SoundList"
         note="Rows of sounds: `SoundListItem` takes a `label`, a quiet `meta` line, `media` (a hero icon) and its takes as children. The takes sit at the row's end and drop below the name in a narrow container. `active` marks the row that is playing with a fill and an edge; the playing button's stop glyph says it too."
@@ -100,6 +119,7 @@ export function SoundSpecimens() {
           </SoundListItem>
           <SoundListItem label="Charge cast" meta="abrams / a2_charge">
             <SoundButton {...button(CAST, "Charge cast")} />
+            <DownloadButton href={CAST} size="icon-xs" aria-label="Download Charge cast" className="ms-auto" />
           </SoundListItem>
           <SoundListItem label="Paradox" meta="Line 1" media={<HeroImage heroId={10} className="size-8" />} active>
             <SoundButton state="playing" duration={3} label="Paradox, line 1" />
