@@ -162,9 +162,7 @@ fn build_query(query: &KillDeathStatsQuery) -> String {
     let kill_array_join = kill_join_cols.join(", ");
     let game_mode_filter = GameMode::sql_filter(query.game_mode);
     let match_mode_filter = MatchMode::sql_filter(query.match_mode.as_deref());
-    let match_filters = format!(
-        "start_time > now() - interval 2 MONTH AND {match_mode_filter} AND {game_mode_filter} {info_filters}"
-    );
+    let match_filters = format!("{match_mode_filter} AND {game_mode_filter} {info_filters}");
     let kill_player_filter = if player_filters.is_empty() {
         String::new()
     } else {
