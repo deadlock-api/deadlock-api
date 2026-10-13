@@ -2927,6 +2927,7 @@ dependencies = [
  "reqwest",
  "rmcp",
  "rstest",
+ "schemars",
  "serde",
  "serde-env",
  "serde_json",
@@ -6533,6 +6534,7 @@ dependencies = [
  "pastey",
  "pin-project-lite",
  "rand 0.10.3",
+ "rmcp-macros",
  "schemars",
  "serde",
  "serde_json",
@@ -6544,6 +6546,19 @@ dependencies = [
  "tower-service",
  "tracing",
  "uuid",
+]
+
+[[package]]
+name = "rmcp-macros"
+version = "3.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a1da498700030856ba63114bceefa30ba21f5e278cb975e5b9de3529fe842b40"
+dependencies = [
+ "darling 0.24.1",
+ "proc-macro2",
+ "quote",
+ "serde_json",
+ "syn 3.0.7",
 ]
 
 [[package]]

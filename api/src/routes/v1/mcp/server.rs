@@ -2,14 +2,16 @@ use core::time::Duration;
 use std::sync::{Arc, LazyLock};
 
 use axum::extract::FromRequestParts;
-use rmcp::ServerHandler;
-use rmcp::handler::server::tool::parse_json_object;
+use rmcp::handler::server::router::tool::ToolRouter;
+use rmcp::handler::server::tool::ToolCallContext;
+use rmcp::handler::server::wrapper::Parameters;
 use rmcp::model::{
     CallToolRequestParams, CallToolResponse, CallToolResult, ContentBlock, ErrorData,
-    Implementation, JsonObject, ListToolsResult, PaginatedRequestParams, ServerCapabilities,
-    ServerConfig, Tool, ToolAnnotations, object,
+    Implementation, ServerCapabilities, ServerConfig, ToolAnnotations, object,
 };
 use rmcp::service::{RequestContext, RoleServer};
+use rmcp::{ServerHandler, tool, tool_handler, tool_router};
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use tracing::{Instrument, debug, info_span, warn};
@@ -60,6 +62,27 @@ const QUERY_QUOTAS: [Quota; 3] = [
     Quota::ip_limit(400, Duration::from_hours(24)),
 ];
 
+/// Built once: the server is created per request, and every tool shares the same output schema
+/// and annotations.
+static TOOL_ROUTER: LazyLock<ToolRouter<McpServer>> = LazyLock::new(|| {
+    let output_schema = Arc::new(object(json!({
+        "properties": { "result": { "type": "string" } },
+        "required": ["result"],
+        "type": "object"
+    })));
+    let read_only = ToolAnnotations::default()
+        .read_only(true)
+        .destructive(false)
+        .open_world(false);
+    let mut router = McpServer::tool_router();
+    for route in router.map.values_mut() {
+        route.attr.output_schema = Some(Arc::clone(&output_schema));
+        route.attr.annotations = Some(read_only.clone());
+    }
+    router
+});
+
+#[tool_handler(router = TOOL_ROUTER)]
 impl ServerHandler for McpServer {
     fn get_info(&self) -> ServerConfig {
         ServerConfig::new(ServerCapabilities::builder().enable_tools().build())
@@ -71,14 +94,6 @@ impl ServerHandler for McpServer {
             .with_instructions(INSTRUCTIONS)
     }
 
-    async fn list_tools(
-        &self,
-        _request: Option<PaginatedRequestParams>,
-        _context: RequestContext<RoleServer>,
-    ) -> Result<ListToolsResult, ErrorData> {
-        Ok(ListToolsResult::with_all_items(TOOLS.clone()))
-    }
-
     async fn call_tool(
         &self,
         request: CallToolRequestParams,
@@ -88,70 +103,68 @@ impl ServerHandler for McpServer {
         // distinguishes one `POST /v1/mcp` from another, since the JSON-RPC body never
         // reaches the HTTP layer.
         let span = info_span!("mcp.call_tool", mcp.tool.name = %request.name);
-        async move {
-            let args = request.arguments.unwrap_or_default();
-            let result = match request.name.as_ref() {
-                "execute_query" => {
-                    let ExecuteQueryArgs { sql } = parse_json_object(args)?;
-                    match self.check_rate_limit(&context).await {
-                        Some(limited) => limited,
-                        None => self.execute_query(sql).await,
-                    }
-                }
-                "list_databases" => list_databases(),
-                "list_tables" => self.list_tables(parse_json_object(args)?),
-                "list_columns" => self.list_columns(parse_json_object(args)?),
-                "list_heroes" => self.list_heroes(parse_json_object(args)?).await,
-                "list_items" => self.list_items(parse_json_object(args)?).await,
-                "list_patches" => self.list_patches(parse_json_object(args)?).await,
-                other => CallToolResult::error(vec![ContentBlock::text(format!(
-                    "Unknown tool: '{other}'"
-                ))]),
-            };
-            Ok(result.into())
-        }
-        .instrument(span)
-        .await
+        TOOL_ROUTER
+            .call(ToolCallContext::new(self, request, context))
+            .instrument(span)
+            .await
     }
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, JsonSchema)]
+#[schemars(deny_unknown_fields)]
 struct ExecuteQueryArgs {
+    /// SQL query to execute (`DuckDB` SQL dialect)
     sql: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, JsonSchema)]
+#[schemars(deny_unknown_fields)]
 struct ListTablesArgs {
+    /// Database name to list tables from (defaults to current database)
     database: Option<String>,
+    /// Optional schema name to filter by
     schema: Option<String>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, JsonSchema)]
+#[schemars(deny_unknown_fields)]
 struct ListColumnsArgs {
+    /// Table or view name
     table: String,
+    /// Database name (defaults to current database)
     database: Option<String>,
+    /// Schema name (defaults to current schema)
     schema: Option<String>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, JsonSchema)]
+#[schemars(deny_unknown_fields)]
 struct ListHeroesArgs {
+    /// Hero id; returns the full details of that hero
     id: Option<u32>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, JsonSchema)]
+#[schemars(deny_unknown_fields)]
 struct ListItemsArgs {
+    /// Item type to list: `upgrade` for shop items, `ability` for hero abilities, `weapon` for hero weapons. Required unless `id` is set.
     r#type: Option<ItemType>,
+    /// Item id; returns the full details of that item
     id: Option<u32>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, JsonSchema)]
+#[schemars(deny_unknown_fields)]
 struct ListPatchesArgs {
+    /// Only list patches from this source
     source: Option<PatchSource>,
+    /// Patch link; returns that patch with its full notes
     link: Option<String>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, Deserialize)]
+#[derive(Clone, Copy, PartialEq, Eq, Deserialize, JsonSchema)]
 #[serde(rename_all = "lowercase")]
+#[schemars(inline)]
 enum PatchSource {
     Forum,
     Steam,
@@ -184,6 +197,7 @@ enum Missing {
     Table,
 }
 
+#[tool_router]
 impl McpServer {
     /// Returns the tool error to answer with when the caller is over a query quota. The quota is
     /// reported as a tool result rather than an HTTP 429 so the agent reads why it was stopped.
@@ -221,7 +235,18 @@ impl McpServer {
         }
     }
 
-    async fn execute_query(&self, sql: String) -> CallToolResult {
+    #[tool(
+        title = "Execute Query",
+        description = "Execute a read-only SQL query on the Deadlock database (hourly parquet snapshots of the ClickHouse tables). Unqualified table names resolve to the `deadlock` database and `main` schema automatically. Results are limited to 1,024 rows and 50 KB."
+    )]
+    async fn execute_query(
+        &self,
+        Parameters(ExecuteQueryArgs { sql }): Parameters<ExecuteQueryArgs>,
+        context: RequestContext<RoleServer>,
+    ) -> CallToolResult {
+        if let Some(limited) = self.check_rate_limit(&context).await {
+            return limited;
+        }
         debug!("MCP QUERY: {sql}");
         match self.catalog.query(sql).await {
             Ok(output) => match format_query_output(&output) {
@@ -241,7 +266,24 @@ impl McpServer {
         }
     }
 
-    fn list_tables(&self, args: ListTablesArgs) -> CallToolResult {
+    #[tool(
+        title = "List Databases",
+        description = "List all databases available in the connection."
+    )]
+    #[expect(clippy::unused_self, reason = "#[tool] needs a method")]
+    fn list_databases(&self) -> CallToolResult {
+        success(&json!({
+            "success": true,
+            "databases": [{ "name": DATABASE, "type": "duckdb" }],
+            "databaseCount": 1,
+        }))
+    }
+
+    #[tool(
+        title = "List Tables",
+        description = "List all tables and views in a database with their comments. If database is not specified, uses the current database."
+    )]
+    fn list_tables(&self, Parameters(args): Parameters<ListTablesArgs>) -> CallToolResult {
         let database = args.database.unwrap_or_else(|| DATABASE.to_owned());
         let schema = args.schema.unwrap_or_else(|| "all".to_owned());
         if let Some(missing) = missing_scope(&database, &schema, true) {
@@ -267,7 +309,11 @@ impl McpServer {
         }))
     }
 
-    fn list_columns(&self, args: ListColumnsArgs) -> CallToolResult {
+    #[tool(
+        title = "List Columns",
+        description = "List all columns of a table or view with their types and comments. If database/schema are not specified, uses the current database/schema."
+    )]
+    fn list_columns(&self, Parameters(args): Parameters<ListColumnsArgs>) -> CallToolResult {
         let database = args.database.unwrap_or_else(|| DATABASE.to_owned());
         let schema = args.schema.unwrap_or_else(|| SCHEMA.to_owned());
         if let Some(missing) = missing_scope(&database, &schema, false) {
@@ -302,7 +348,11 @@ impl McpServer {
         }))
     }
 
-    async fn list_heroes(&self, args: ListHeroesArgs) -> CallToolResult {
+    #[tool(
+        title = "List Heroes",
+        description = "List the heroes of the current game version with their `id` (the hero id in the tables), `name` and `className`. Pass `id` to get the full details of one hero instead: description, stats, abilities, images."
+    )]
+    async fn list_heroes(&self, Parameters(args): Parameters<ListHeroesArgs>) -> CallToolResult {
         let heroes = match self.assets.heroes().await {
             Ok(heroes) => heroes,
             Err(e) => return assets_error("list_heroes", &e),
@@ -329,7 +379,11 @@ impl McpServer {
         success(&json!({ "success": true, "heroCount": heroes.len(), "heroes": heroes }))
     }
 
-    async fn list_items(&self, args: ListItemsArgs) -> CallToolResult {
+    #[tool(
+        title = "List Items",
+        description = "List the items of one type in the current game version with their `id` (the item id in the tables), `name` and `className`; abilities and weapons also list their `heroes`, upgrades their `slot`, `tier`, `cost` and whether they are still `shopable`. Pass `id` to get the full details of one item instead: description, properties, upgrades, images."
+    )]
+    async fn list_items(&self, Parameters(args): Parameters<ListItemsArgs>) -> CallToolResult {
         let items = match self.assets.items().await {
             Ok(items) => items,
             Err(e) => return assets_error("list_items", &e),
@@ -354,7 +408,11 @@ impl McpServer {
         success(&json!({ "success": true, "itemCount": items.len(), "items": items }))
     }
 
-    async fn list_patches(&self, args: ListPatchesArgs) -> CallToolResult {
+    #[tool(
+        title = "List Patches",
+        description = "List the game patches, newest first, from the official forum changelog (`forum`) and the Steam news feed (`steam`), with `title`, `link`, `pubDate` and `endDate`: when the next patch of the same source was published, null for the live one. Matches with `start_time` in [`pubDate`, `endDate`) were played on that patch. Pass `link` to get the full notes of one patch instead."
+    )]
+    async fn list_patches(&self, Parameters(args): Parameters<ListPatchesArgs>) -> CallToolResult {
         let feed = match self.steam.fetch_combined_patch_feed().await {
             Ok(feed) => feed,
             Err(e) => return patches_error(&e),
@@ -458,14 +516,6 @@ fn lookup_not_found(error: String) -> CallToolResult {
     })
 }
 
-fn list_databases() -> CallToolResult {
-    success(&json!({
-        "success": true,
-        "databases": [{ "name": DATABASE, "type": "duckdb" }],
-        "databaseCount": 1,
-    }))
-}
-
 fn missing_scope(database: &str, schema: &str, allow_all_schemas: bool) -> Option<Missing> {
     if database != DATABASE {
         Some(Missing::Database)
@@ -562,139 +612,6 @@ fn describe_query_error(error: &QueryError) -> (String, String) {
     (message.clone(), error_type)
 }
 
-fn optional_string(description: &str) -> Value {
-    json!({
-        "anyOf": [{ "type": "string" }, { "type": "null" }],
-        "default": null,
-        "description": description
-    })
-}
-
-fn optional_integer(description: &str) -> Value {
-    json!({
-        "anyOf": [{ "type": "integer", "minimum": 0 }, { "type": "null" }],
-        "default": null,
-        "description": description
-    })
-}
-
-static TOOLS: LazyLock<Vec<Tool>> = LazyLock::new(|| {
-    let output_schema: Arc<JsonObject> = Arc::new(object(json!({
-        "properties": { "result": { "type": "string" } },
-        "required": ["result"],
-        "type": "object"
-    })));
-    let read_only = ToolAnnotations::default()
-        .read_only(true)
-        .destructive(false)
-        .open_world(false);
-    [
-        Tool::new(
-            "execute_query",
-            "Execute a read-only SQL query on the Deadlock database (hourly parquet snapshots of the ClickHouse tables). Unqualified table names resolve to the `deadlock` database and `main` schema automatically. Results are limited to 1,024 rows and 50 KB.",
-            object(json!({
-                "properties": {
-                    "sql": { "type": "string", "description": "SQL query to execute (DuckDB SQL dialect)" }
-                },
-                "required": ["sql"],
-                "type": "object",
-                "additionalProperties": false
-            })),
-        )
-        .with_title("Execute Query"),
-        Tool::new(
-            "list_databases",
-            "List all databases available in the connection.",
-            object(json!({
-                "properties": {},
-                "type": "object",
-                "additionalProperties": false
-            })),
-        )
-        .with_title("List Databases"),
-        Tool::new(
-            "list_tables",
-            "List all tables and views in a database with their comments. If database is not specified, uses the current database.",
-            object(json!({
-                "properties": {
-                    "database": optional_string("Database name to list tables from (defaults to current database)"),
-                    "schema": optional_string("Optional schema name to filter by")
-                },
-                "type": "object",
-                "additionalProperties": false
-            })),
-        )
-        .with_title("List Tables"),
-        Tool::new(
-            "list_columns",
-            "List all columns of a table or view with their types and comments. If database/schema are not specified, uses the current database/schema.",
-            object(json!({
-                "properties": {
-                    "table": { "type": "string", "description": "Table or view name" },
-                    "database": optional_string("Database name (defaults to current database)"),
-                    "schema": optional_string("Schema name (defaults to current schema)")
-                },
-                "required": ["table"],
-                "type": "object",
-                "additionalProperties": false
-            })),
-        )
-        .with_title("List Columns"),
-        Tool::new(
-            "list_heroes",
-            "List the heroes of the current game version with their `id` (the hero id in the tables), `name` and `className`. Pass `id` to get the full details of one hero instead: description, stats, abilities, images.",
-            object(json!({
-                "properties": {
-                    "id": optional_integer("Hero id; returns the full details of that hero")
-                },
-                "type": "object",
-                "additionalProperties": false
-            })),
-        )
-        .with_title("List Heroes"),
-        Tool::new(
-            "list_items",
-            "List the items of one type in the current game version with their `id` (the item id in the tables), `name` and `className`; abilities and weapons also list their `heroes`, upgrades their `slot`, `tier`, `cost` and whether they are still `shopable`. Pass `id` to get the full details of one item instead: description, properties, upgrades, images.",
-            object(json!({
-                "properties": {
-                    "type": {
-                        "anyOf": [{ "type": "string", "enum": ["ability", "weapon", "upgrade"] }, { "type": "null" }],
-                        "default": null,
-                        "description": "Item type to list: `upgrade` for shop items, `ability` for hero abilities, `weapon` for hero weapons. Required unless `id` is set."
-                    },
-                    "id": optional_integer("Item id; returns the full details of that item")
-                },
-                "type": "object",
-                "additionalProperties": false
-            })),
-        )
-        .with_title("List Items"),
-        Tool::new(
-            "list_patches",
-            "List the game patches, newest first, from the official forum changelog (`forum`) and the Steam news feed (`steam`), with `title`, `link`, `pubDate` and `endDate`: when the next patch of the same source was published, null for the live one. Matches with `start_time` in [`pubDate`, `endDate`) were played on that patch. Pass `link` to get the full notes of one patch instead.",
-            object(json!({
-                "properties": {
-                    "source": {
-                        "anyOf": [{ "type": "string", "enum": ["forum", "steam"] }, { "type": "null" }],
-                        "default": null,
-                        "description": "Only list patches from this source"
-                    },
-                    "link": optional_string("Patch link; returns that patch with its full notes")
-                },
-                "type": "object",
-                "additionalProperties": false
-            })),
-        )
-        .with_title("List Patches"),
-    ]
-    .into_iter()
-    .map(|tool| {
-        tool.with_raw_output_schema(Arc::clone(&output_schema))
-            .annotate(read_only.clone())
-    })
-    .collect()
-});
-
 #[cfg(test)]
 mod tests {
     use chrono::DateTime;
@@ -731,6 +648,35 @@ mod tests {
             guid: guid(),
             content: String::new(),
         })
+    }
+
+    #[test]
+    fn every_tool_is_read_only_with_a_toon_result() {
+        let tools = TOOL_ROUTER.list_all();
+        let names: Vec<_> = tools.iter().map(|t| t.name.as_ref()).collect();
+        assert_eq!(
+            names,
+            [
+                "execute_query",
+                "list_columns",
+                "list_databases",
+                "list_heroes",
+                "list_items",
+                "list_patches",
+                "list_tables",
+            ]
+        );
+        for tool in &tools {
+            assert!(tool.title.is_some(), "{} has no title", tool.name);
+            assert_eq!(
+                tool.annotations.as_ref().unwrap().read_only_hint,
+                Some(true)
+            );
+            assert_eq!(
+                tool.output_schema.as_deref().unwrap()["required"],
+                json!(["result"])
+            );
+        }
     }
 
     #[test]

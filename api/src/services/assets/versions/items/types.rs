@@ -5,6 +5,7 @@
 
 use async_graphql::{ComplexObject, Enum, Json, SimpleObject, Union};
 use indexmap::IndexMap;
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use strum::{Display, EnumString};
 use utoipa::ToSchema;
@@ -102,9 +103,12 @@ pub(crate) enum StatsUsageFlag {
 }
 
 /// Discriminator for the `type` field on every item variant.
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, Display, ToSchema, PartialEq, Eq, Enum)]
+#[derive(
+    Debug, Clone, Copy, Serialize, Deserialize, Display, ToSchema, JsonSchema, PartialEq, Eq, Enum,
+)]
 #[serde(rename_all = "lowercase")]
 #[strum(serialize_all = "lowercase")]
+#[schemars(inline)]
 pub(crate) enum ItemType {
     Ability,
     Weapon,

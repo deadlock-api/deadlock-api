@@ -93,7 +93,8 @@ rayon = "1"
 tokio-util = { version = "0.7.19", features = ["io", "rt"] }
 image = { version = "0.25.10", default-features = false, features = ["png", "webp"] }
 ab_glyph = "0.2.32"
-rmcp = { version = "3.2.0", default-features = false, features = ["server", "transport-streamable-http-server"] }
+rmcp = { version = "3.2.0", default-features = false, features = ["macros", "server", "transport-streamable-http-server"] }
+schemars = "1.2.2"
 duckdb = { version = "1.10505.0", features = ["bundled", "parquet", "json"] }
 # DuckDB pins arrow 58; enables the JSON writer on that version for MCP result formatting.
 arrow_duckdb = { package = "arrow", version = "58", default-features = false, features = ["chrono-tz", "json"] }
