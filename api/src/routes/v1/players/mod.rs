@@ -1,5 +1,3 @@
-pub mod account_stats;
-pub mod card;
 pub mod enemy_stats;
 pub mod hero_stats;
 mod ingest_status;
@@ -16,19 +14,13 @@ use core::time::Duration;
 use axum::http::StatusCode;
 use rand::seq::SliceRandom;
 use redis::AsyncTypedCommands;
-use serde_json::json;
 use utoipa::OpenApi;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
-use valveprotos::deadlock::EgcCitadelClientMessages;
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::middleware::cache::CacheControlMiddleware;
-use crate::services::patreon;
-use crate::services::rate_limiter::Quota;
-use crate::services::rate_limiter::extractor::RateLimitKey;
-use crate::services::steam::types::SteamProxyQuery;
 
 #[derive(OpenApi)]
 #[openapi(tags((name = "Players", description = "Player related endpoints")))]
@@ -66,68 +58,6 @@ pub(crate) async fn without_protected(
         .into_iter()
         .filter(|id| !protected_users.contains(id))
         .collect())
-}
-
-/// A Steam proxy query run on `bot_username`, the bot the queried account is friends with.
-fn bot_proxy_query<M: prost::Message>(
-    msg_type: EgcCitadelClientMessages,
-    msg: M,
-    bot_username: String,
-) -> SteamProxyQuery<M> {
-    SteamProxyQuery {
-        msg_type,
-        msg,
-        in_all_groups: None,
-        in_any_groups: None,
-        cooldown_time: Duration::from_secs(10),
-        request_timeout: Duration::from_secs(2),
-        username: Some(bot_username),
-        soft_cooldown_millis: None,
-    }
-}
-
-async fn check_patreon_access(
-    pg: &sqlx::PgPool,
-    rate_limit_key: &RateLimitKey,
-    account_id: u32,
-) -> APIResult<()> {
-    let is_prioritized = patreon::is_account_prioritized(pg, i64::from(account_id)).await?;
-    if !is_prioritized {
-        let has_patron_key = match rate_limit_key.api_key {
-            Some(api_key) => patreon::extractor::get_patron_id_for_api_key(pg, api_key)
-                .await
-                .is_some(),
-            None => false,
-        };
-        if !has_patron_key {
-            return Err(APIError::status_msg(
-                StatusCode::FORBIDDEN,
-                "This endpoint is only available to Patreon subscribers.",
-            ));
-        }
-    }
-    Ok(())
-}
-
-async fn apply_bot_rate_limits(
-    state: &AppState,
-    rate_limit_key: &RateLimitKey,
-    endpoint_name: &str,
-) -> APIResult<()> {
-    state
-        .rate_limit_client
-        .apply_limits(
-            rate_limit_key,
-            endpoint_name,
-            &[
-                Quota::ip_limit(5, Duration::from_mins(1)),
-                Quota::key_limit(20, Duration::from_mins(1)),
-                Quota::key_limit(800, Duration::from_hours(1)),
-                Quota::global_limit(200, Duration::from_mins(1)),
-            ],
-        )
-        .await
-        .map(|_| ())
 }
 
 pub(crate) async fn lookup_bot_for_friend(
@@ -204,36 +134,10 @@ pub(crate) async fn collect_invite_links(
     Ok(results.into_iter().flatten().collect())
 }
 
-pub(super) async fn resolve_bot_for_account(
-    state: &AppState,
-    rate_limit_key: &RateLimitKey,
-    account_id: u32,
-    endpoint_name: &str,
-) -> APIResult<String> {
-    ensure_not_protected(state, &[account_id]).await?;
-    check_patreon_access(&state.pg_client, rate_limit_key, account_id).await?;
-    apply_bot_rate_limits(state, rate_limit_key, endpoint_name).await?;
-
-    if let Some(bot_username) = lookup_bot_for_friend(&state.pg_client, account_id).await? {
-        return Ok(bot_username);
-    }
-
-    let invites = collect_invite_links(&state.pg_client, &mut state.redis_client.clone()).await?;
-    Err(APIError::StatusMsgJson {
-        status: StatusCode::BAD_REQUEST,
-        message: json!({
-            "message": "Account ID is not a friend of any bot. Please add the bot as friend first using one of these invites.",
-            "invites": invites,
-        }),
-    })
-}
-
 #[expect(deprecated)]
 pub(super) fn router() -> OpenApiRouter<AppState> {
     OpenApiRouter::with_openapi(ApiDoc::openapi())
         .routes(routes!(match_history::match_history))
-        .routes(routes!(card::card))
-        .routes(routes!(account_stats::account_stats))
         .routes(routes!(mate_stats::mate_stats))
         .routes(routes!(enemy_stats::enemy_stats))
         .routes(routes!(hero_stats::player_hero_stats))
