@@ -1,10 +1,11 @@
 import type { PlayerMatchHistoryEntry } from "deadlock_api_client";
 import { UsersRound } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import { PlayerCell } from "~/components/domain/player/PlayerCell";
 import { CompanionMatchesDialog } from "~/components/features/tracker/breakdown/CompanionMatchesDialog";
 import { EnemiesTab, MatesTab } from "~/components/features/tracker/breakdown/PlayerStatsTable";
+import { TeammatePairs } from "~/components/features/tracker/breakdown/TeammatePairs";
 import { useEnemyRows, useMateRows } from "~/components/features/tracker/breakdown/useCompanionRows";
 import { PanelWithDetails } from "~/components/patterns/panel/PanelWithDetails";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
@@ -17,6 +18,7 @@ import { useSteamProfiles } from "~/hooks/useSteamProfiles";
 import { formatPercent } from "~/lib/format";
 import type { CompanionRow } from "~/lib/tracker/companions";
 import type { TrackerFilterValues } from "~/lib/tracker/compute";
+import { computeTeammatePairs } from "~/lib/tracker/teammate-pairs";
 
 export function CompanionsPanel({
   accountId,
@@ -31,6 +33,7 @@ export function CompanionsPanel({
 }) {
   const { query: mates, rows: mateRows } = useMateRows({ accountId, filters, entries });
   const { query: enemies, rows: enemyRows } = useEnemyRows({ accountId, filters, entries });
+  const pairs = useMemo(() => computeTeammatePairs(mateRows, entries), [mateRows, entries]);
   const [open, setOpen] = useState(false);
   const openMatchFromDialog = (matchId: number) => {
     setOpen(false);
@@ -57,10 +60,21 @@ export function CompanionsPanel({
             </Heading>
             <EnemiesTab accountId={accountId} filters={filters} entries={entries} onOpenMatch={openMatchFromDialog} />
           </div>
+          <div className="flex min-w-0 flex-col gap-2 @4xl/stats-dialog:col-span-2">
+            <TeammatePairs
+              pairs={pairs}
+              isPending={mates.isPending}
+              isError={mates.isError}
+              isFetching={mates.isFetching}
+              onRetry={() => mates.refetch()}
+              entries={entries}
+              onOpenMatch={openMatchFromDialog}
+            />
+          </div>
         </div>
       }
     >
-      <div className="@container/companions">
+      <div className="@container/companions flex flex-col gap-3">
         <div className="grid gap-3 @xl/companions:grid-cols-2">
           <CompanionPreview
             label="Teammates"
@@ -85,6 +99,16 @@ export function CompanionsPanel({
             onRetry={() => enemies.refetch()}
           />
         </div>
+        <TeammatePairs
+          pairs={pairs}
+          isPending={mates.isPending}
+          isError={mates.isError}
+          isFetching={mates.isFetching}
+          onRetry={() => mates.refetch()}
+          limit={3}
+          entries={entries}
+          onOpenMatch={onOpenMatch}
+        />
       </div>
     </PanelWithDetails>
   );
