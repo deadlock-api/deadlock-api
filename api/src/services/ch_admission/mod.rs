@@ -37,11 +37,18 @@ pub(crate) async fn acquire() -> Result<ChPermit<'static>, Busy> {
     CH_ADMISSION.acquire(client).await
 }
 
-/// Error of an admission-controlled `ClickHouse` query.
-#[derive(Debug, Error)]
+/// Error of an admission-controlled `ClickHouse` query. Cloneable, as concurrent misses of one
+/// cached query share its result ([`crate::services::ch_cache`]).
+#[derive(Debug, Clone, Error)]
 pub(crate) enum ChQueryError {
     #[error("{0}")]
     Busy(#[from] Busy),
     #[error("{0}")]
-    Clickhouse(#[from] clickhouse::error::Error),
+    Clickhouse(Arc<clickhouse::error::Error>),
+}
+
+impl From<clickhouse::error::Error> for ChQueryError {
+    fn from(e: clickhouse::error::Error) -> Self {
+        Self::Clickhouse(Arc::new(e))
+    }
 }

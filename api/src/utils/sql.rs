@@ -106,27 +106,21 @@ pub(crate) fn query_cache_key(query_str: &str) -> u128 {
 }
 
 /// Declares an async fn `name(ch_client, query_str)` that runs a `ClickHouse` query and caches
-/// the result per query string for `ttl_secs`, keeping at most `max_size` entries.
+/// the result per query string for `ttl_secs`, keeping at most `max_size` results in memory.
 ///
-/// Concurrent misses of one query share a single run (`sync_writes = "by_key"`; the bucket lock
-/// is also held on hits, so 1024 buckets keep unrelated queries apart). Rows come back in an
-/// `Arc`, so a hit costs no deep clone. The key is [`query_cache_key`]. A miss first takes a
-/// slot from the `ClickHouse` admission limiter ([`crate::services::ch_admission`]); a
-/// [`ChQueryError::Busy`](crate::services::ch_admission::ChQueryError) is not cached.
+/// The cache is a [`ChCache`](crate::services::ch_cache::ChCache): concurrent misses of one query
+/// share a single run, a miss reads the shared disk tier before querying `ClickHouse`, and a query
+/// first takes a slot from the `ClickHouse` admission limiter ([`crate::services::ch_admission`]).
+/// Errors, including [`ChQueryError::Busy`](crate::services::ch_admission::ChQueryError), are not
+/// cached. The cache is named after the function's path, which keeps its disk entries across
+/// releases; renaming or moving the function starts it empty.
 ///
-/// `fn name(max_size, ttl_secs) -> Vec<Row>;` fetches all rows. `fn name(max_size, ttl_secs) -> T
-/// = fetch;` caches whatever `fetch(ch_client, query_str)` returns.
+/// `fn name(max_size, ttl_secs) -> Vec<Row>;` fetches all rows and returns them in an `Arc`, so a
+/// hit costs no deep clone. `fn name(max_size, ttl_secs) -> T = fetch;` caches whatever
+/// `fetch(ch_client, query_str)` returns and returns a clone of it.
 macro_rules! cached_ch_query {
     ($(#[$meta:meta])* $vis:vis fn $name:ident($size:literal, $ttl:literal) -> Vec<$row:ty>;) => {
         $(#[$meta])*
-        #[::cached::macros::cached(
-            max_size = $size,
-            ttl_secs = $ttl,
-            sync_writes = "by_key",
-            sync_writes_buckets = 1024,
-            convert = "{ crate::utils::sql::query_cache_key(query_str) }",
-            key = "u128"
-        )]
         $vis async fn $name(
             ch_client: &::clickhouse::Client,
             query_str: &str,
@@ -134,33 +128,49 @@ macro_rules! cached_ch_query {
             ::std::sync::Arc<Vec<$row>>,
             crate::services::ch_admission::ChQueryError,
         > {
-            let permit = crate::services::ch_admission::acquire().await?;
-            let rows = ch_client
-                .query(query_str)
-                .fetch_all()
+            static CACHE: ::std::sync::LazyLock<crate::services::ch_cache::ChCache<Vec<$row>>> =
+                ::std::sync::LazyLock::new(|| {
+                    crate::services::ch_cache::ChCache::new(
+                        concat!(module_path!(), "::", stringify!($name)),
+                        $size,
+                        ::core::time::Duration::from_secs($ttl),
+                    )
+                });
+            CACHE
+                .get_or_fetch(query_str, async {
+                    let permit = crate::services::ch_admission::acquire().await?;
+                    Ok(ch_client
+                        .query(query_str)
+                        .fetch_all()
+                        .await
+                        .inspect_err(|e| permit.observe(e))?)
+                })
                 .await
-                .inspect_err(|e| permit.observe(e))?;
-            Ok(::std::sync::Arc::new(rows))
         }
     };
     ($(#[$meta:meta])* $vis:vis fn $name:ident($size:literal, $ttl:literal) -> $ret:ty = $fetch:path;) => {
         $(#[$meta])*
-        #[::cached::macros::cached(
-            max_size = $size,
-            ttl_secs = $ttl,
-            sync_writes = "by_key",
-            sync_writes_buckets = 1024,
-            convert = "{ crate::utils::sql::query_cache_key(query_str) }",
-            key = "u128"
-        )]
         $vis async fn $name(
             ch_client: &::clickhouse::Client,
             query_str: &str,
         ) -> ::core::result::Result<$ret, crate::services::ch_admission::ChQueryError> {
-            let permit = crate::services::ch_admission::acquire().await?;
-            Ok($fetch(ch_client, query_str)
+            static CACHE: ::std::sync::LazyLock<crate::services::ch_cache::ChCache<$ret>> =
+                ::std::sync::LazyLock::new(|| {
+                    crate::services::ch_cache::ChCache::new(
+                        concat!(module_path!(), "::", stringify!($name)),
+                        $size,
+                        ::core::time::Duration::from_secs($ttl),
+                    )
+                });
+            CACHE
+                .get_or_fetch(query_str, async {
+                    let permit = crate::services::ch_admission::acquire().await?;
+                    Ok($fetch(ch_client, query_str)
+                        .await
+                        .inspect_err(|e| permit.observe(e))?)
+                })
                 .await
-                .inspect_err(|e| permit.observe(e))?)
+                .map(|value| (*value).clone())
         }
     };
 }

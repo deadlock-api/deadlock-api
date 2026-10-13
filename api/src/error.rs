@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use axum::body::Body;
 use axum::http::{Response, header};
 use axum::response::IntoResponse;
@@ -46,7 +48,7 @@ pub(super) enum APIError {
     #[error("Request Error: {0}")]
     Request(#[from] reqwest::Error),
     #[error("Clickhouse Error: {0}")]
-    Clickhouse(#[from] clickhouse::error::Error),
+    Clickhouse(Arc<clickhouse::error::Error>),
     #[error("{0}")]
     ClickhouseBusy(crate::services::ch_admission::Busy),
     #[error("PostgreSQL Error: {0}")]
@@ -86,6 +88,12 @@ impl APIError {
             status: StatusCode::FORBIDDEN,
             message: "The requested user is protected.".to_owned(),
         }
+    }
+}
+
+impl From<clickhouse::error::Error> for APIError {
+    fn from(e: clickhouse::error::Error) -> Self {
+        Self::Clickhouse(Arc::new(e))
     }
 }
 
@@ -364,17 +372,17 @@ mod tests {
 
     #[test]
     fn test_api_error_clickhouse_timeout_is_gateway_timeout() {
-        let error = APIError::Clickhouse(clickhouse::error::Error::BadResponse(
+        let error = APIError::from(clickhouse::error::Error::BadResponse(
             "Code: 159. DB::Exception: Timeout exceeded: elapsed 20.1 seconds, maximum: 20. \
              (TIMEOUT_EXCEEDED)"
                 .to_owned(),
         ));
         assert_eq!(error.into_response().status(), StatusCode::GATEWAY_TIMEOUT);
 
-        let error = APIError::Clickhouse(clickhouse::error::Error::TimedOut);
+        let error = APIError::from(clickhouse::error::Error::TimedOut);
         assert_eq!(error.into_response().status(), StatusCode::GATEWAY_TIMEOUT);
 
-        let error = APIError::Clickhouse(clickhouse::error::Error::BadResponse(
+        let error = APIError::from(clickhouse::error::Error::BadResponse(
             "Code: 60. DB::Exception: Unknown table (UNKNOWN_TABLE)".to_owned(),
         ));
         assert_eq!(

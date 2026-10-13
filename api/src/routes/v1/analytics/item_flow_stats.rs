@@ -663,7 +663,7 @@ cached_ch_query! {
 }
 
 /// Combined locked-path + baseline totals, one row.
-#[derive(Debug, Clone, Default, Row, Deserialize)]
+#[derive(Debug, Clone, Default, Row, Serialize, Deserialize)]
 struct ItemFlowTotalsRow {
     s_wins: u64,
     s_losses: u64,
