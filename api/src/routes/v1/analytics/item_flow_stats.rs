@@ -18,7 +18,7 @@ use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::matches::types::{GameMode, MatchMode, reject_brawl_badge_filter};
 use crate::utils::parse::{comma_separated_deserialize_option, default_last_month_timestamp};
-use crate::utils::sql::{cached_ch_query, id_list, impl_match_info};
+use crate::utils::sql::{cached_ch_query, impl_match_info};
 
 fn default_phase_interval_s() -> Option<u32> {
     600.into()
@@ -295,7 +295,14 @@ struct QueryParts {
     column_expr: String,
     /// Extra columns to carry into the per-purchase subquery (e.g. street brawl round durations).
     extra_select: String,
-    /// `[uniqIf(...), ...] AS reached_per_column` over the baseline population for the totals query.
+    /// `ARRAY JOIN` entry flagging each purchase that is the player's first of that item in its
+    /// column (`first = 1`), among those the nodes query keeps; counts the distinct buyers.
+    first_purchase: String,
+    /// `[...] AS by_column`: per stage column, the distinct items the player bought in it.
+    by_column_select: String,
+    /// `WITH` entry: the columns of the player's purchases, for the totals query.
+    bought_columns: String,
+    /// `[countIf(...), ...] AS reached_per_column` over the baseline population for the totals query.
     reached_select: String,
     /// `loo_wins` / `loo_matches` arrays for the totals query: per locked item, the locked population
     /// with every lock but that one.
@@ -334,17 +341,24 @@ fn query_parts(query: &ItemFlowStatsQuery) -> QueryParts {
     } else {
         TIME_PHASE_COLUMNS
     };
-    let boundaries_literal = format!("[{}]", id_list(TIME_PHASE_BOUNDARIES));
     // The 0-based column (clamped) a purchase at `buy_time_expr` falls into, matching node placement.
     // `b <= buy_time` puts a boundary minute into the *later* phase (e.g. 9:00 → 9-20m), so a
-    // 12-minute purchase lands in 9-20m, never in 0-9m.
+    // 12-minute purchase lands in 9-20m, never in 0-9m. Normal mode sums one comparison per boundary
+    // (never above `count - 1`) instead of a lambda: it runs once per purchase, ~100M times a week.
     let column_of = |buy_time_expr: &str, round_durations_expr: &str| -> String {
-        let raw = if is_brawl {
-            brawl_round_expr(buy_time_expr, round_durations_expr)
+        if is_brawl {
+            format!(
+                "toUInt8(least({}, {}))",
+                brawl_round_expr(buy_time_expr, round_durations_expr),
+                count - 1
+            )
         } else {
-            format!("arrayCount(b -> b <= {buy_time_expr}, {boundaries_literal})")
-        };
-        format!("toUInt8(least({raw}, {}))", count - 1)
+            let raw = TIME_PHASE_BOUNDARIES
+                .iter()
+                .map(|b| format!("({buy_time_expr} >= {b})"))
+                .join(" + ");
+            format!("toUInt8({raw})")
+        }
     };
 
     // Locked build path: each item must have been bought *in* its locked stage column (not merely
@@ -407,20 +421,30 @@ fn query_parts(query: &ItemFlowStatsQuery) -> QueryParts {
         String::new()
     };
 
-    // Distinct baseline games that bought any upgrade in each stage column, as one Array(UInt64).
+    // Purchases the nodes query drops (`buy_time > 0 AND nw > 0`) go to a column of their own, so
+    // they never take the first slot of a kept purchase.
+    let first_purchase = format!(
+        "arrayEnumerateUniq(arrayMap((gt, bnw) -> if(gt > 0 AND bnw > 0, {purchase_col}, 255), upgrade_buy_times, upgrade_net_worths), upgrade_item_ids)"
+    );
+    let by_column_select = format!(
+        "[{}] AS by_column",
+        (0..count)
+            .map(|c| {
+                format!(
+                    "arrayDistinct(arrayFilter((iid, gt) -> gt > 0 AND {purchase_col} = {c}, upgrade_item_ids, upgrade_buy_times))"
+                )
+            })
+            .join(", ")
+    );
+    let bought_columns =
+        format!("arrayMap(gt -> {purchase_col}, arrayFilter(gt -> gt > 0, upgrade_buy_times))");
+    // Baseline games that bought any upgrade in each stage column, as one Array(UInt64). A row is one
+    // player in one match, so a count is the number of games.
     let reached_cols = (0..count)
-        .map(|c| {
-            format!(
-                "uniqIf(cityHash64(match_id, account_id), arrayExists(gt -> gt > 0 AND {purchase_col} = {c}, upgrade_buy_times))"
-            )
-        })
+        .map(|c| format!("countIf(has(bought_columns, {c}))"))
         .join(", ");
     let reached_win_cols = (0..count)
-        .map(|c| {
-            format!(
-                "uniqIf(cityHash64(match_id, account_id), won AND arrayExists(gt -> gt > 0 AND {purchase_col} = {c}, upgrade_buy_times))"
-            )
-        })
+        .map(|c| format!("countIf(won AND has(bought_columns, {c}))"))
         .join(", ");
     let reached_select = format!(
         "[{reached_cols}] AS reached_per_column, [{reached_win_cols}] AS reached_wins_per_column"
@@ -434,6 +458,9 @@ fn query_parts(query: &ItemFlowStatsQuery) -> QueryParts {
         locked_predicate,
         column_expr,
         extra_select,
+        first_purchase,
+        by_column_select,
+        bought_columns,
         reached_select,
         leave_one_out_select,
         upgrades_with,
@@ -449,6 +476,7 @@ fn build_totals_query(parts: &QueryParts) -> String {
         match_filters,
         base_player_filters,
         locked_predicate: lp,
+        bought_columns,
         reached_select,
         leave_one_out_select,
         upgrades_with,
@@ -457,7 +485,8 @@ fn build_totals_query(parts: &QueryParts) -> String {
     } = parts;
     format!(
         "
-    {upgrades_with}
+    {upgrades_with},
+        {bought_columns} AS bought_columns
     SELECT
         countIf(won AND ({lp}))      AS s_wins,
         countIf((not won) AND ({lp})) AS s_losses,
@@ -486,46 +515,13 @@ fn build_totals_query(parts: &QueryParts) -> String {
     )
 }
 
-/// Per-purchase rows: one row per (player, upgrade purchased) with its phase column assigned.
-/// Reads the upgrade purchases from [`upgrades_source`].
-fn purchases_subquery(parts: &QueryParts) -> String {
-    let QueryParts {
-        match_filters,
-        player_filters,
-        column_expr,
-        extra_select,
-        upgrades_with,
-        ..
-    } = parts;
-    format!(
-        "
-        SELECT
-            match_id,
-            account_id,
-            won,
-            kills,
-            deaths,
-            assists,
-            item_id,
-            toUInt8(assumeNotNull({column_expr})) AS column
-        FROM (
-            {upgrades_with}
-            SELECT match_id, account_id, won, kills, deaths, assists, item_id, buy_time{extra_select}
-            FROM match_player
-            ARRAY JOIN upgrade_item_ids AS item_id, upgrade_buy_times AS buy_time
-            WHERE {match_filters} {player_filters}
-                AND buy_time > 0
-        ) e
-    "
-    )
-}
-
 fn build_nodes_query(query: &ItemFlowStatsQuery, parts: &QueryParts) -> String {
     let QueryParts {
         match_filters,
         player_filters,
         column_expr,
         extra_select,
+        first_purchase,
         upgrades_with,
         extra_settings,
         ..
@@ -541,7 +537,8 @@ fn build_nodes_query(query: &ItemFlowStatsQuery, parts: &QueryParts) -> String {
     // Per (column, item) stats plus a net-worth-standardized win rate: each item's win rate is
     // re-weighted across net-worth-at-buy buckets to the stage-wide net-worth distribution (`ref`),
     // so the "richer buyers win more" confound is removed. Raw wins/matches are kept for pick rate
-    // and Wilson CIs.
+    // and Wilson CIs. `ref` is a window over `cells`: a join with a second CTE reference would scan
+    // `match_player` twice.
     format!(
         "
     WITH cells AS (
@@ -551,7 +548,7 @@ fn build_nodes_query(query: &ItemFlowStatsQuery, parts: &QueryParts) -> String {
             intDiv(nw, {NW_BUCKET}) AS nb,
             countIf(won) AS cwins,
             count()      AS cm,
-            uniqState(cityHash64(match_id, account_id)) AS cpl,
+            countIf(first) AS cpl,
             sum(kills)   AS ck,
             sum(deaths)  AS cd,
             sum(assists) AS ca,
@@ -566,35 +563,36 @@ fn build_nodes_query(query: &ItemFlowStatsQuery, parts: &QueryParts) -> String {
                 assists,
                 item_id,
                 nw,
+                first,
                 toUInt8(assumeNotNull({column_expr})) AS column
             FROM (
                 {upgrades_with}
-                SELECT match_id, account_id, won, kills, deaths, assists, item_id, buy_time, nw{extra_select}
+                SELECT match_id, account_id, won, kills, deaths, assists, item_id, buy_time, nw, first = 1 AS first{extra_select}
                 FROM match_player
                 ARRAY JOIN
                     upgrade_item_ids AS item_id,
                     upgrade_buy_times AS buy_time,
-                    upgrade_net_worths AS nw
+                    upgrade_net_worths AS nw,
+                    {first_purchase} AS first
                 WHERE {match_filters} {player_filters}
                     AND buy_time > 0 AND nw > 0
             ) e
         )
         GROUP BY column, item_id, nb
-    ),
-    ref AS (SELECT column, nb, sum(cm) AS w FROM cells GROUP BY column, nb)
+    )
     SELECT
         column,
         item_id,
         sum(cwins)                  AS wins,
         toUInt64(sum(cm) - sum(cwins)) AS losses,
         sum(cm)                     AS matches,
-        uniqMerge(cpl)        AS players,
+        sum(cpl)              AS players,
         sum(ck)               AS total_kills,
         sum(cd)               AS total_deaths,
         sum(ca)               AS total_assists,
         {adjusted_win_rate_expr}       AS adjusted_win_rate,
         sum(cnw) / sum(cm)             AS avg_net_worth_at_buy
-    FROM cells INNER JOIN ref USING (column, nb)
+    FROM (SELECT *, sum(cm) OVER (PARTITION BY column, nb) AS w FROM cells)
     GROUP BY column, item_id
     HAVING matches >= {min_matches}
     ORDER BY column ASC, matches DESC
@@ -604,36 +602,37 @@ fn build_nodes_query(query: &ItemFlowStatsQuery, parts: &QueryParts) -> String {
 }
 
 fn build_edges_query(query: &ItemFlowStatsQuery, parts: &QueryParts) -> String {
-    let purchases = purchases_subquery(parts);
-    let extra_settings = parts.extra_settings;
+    let QueryParts {
+        match_filters,
+        player_filters,
+        by_column_select,
+        upgrades_with,
+        extra_settings,
+        ..
+    } = parts;
     let min_matches = query.min_matches.unwrap_or(20);
-    // Per player, collect (column, item_id) pairs, then emit one transition per
-    // distinct (item in column c) -> (item in column c+1). arrayDistinct dedups
-    // within a player so each transition counts at most once per match.
+    // Per player, the distinct items of each column; one transition per item in column c and item
+    // in column c+1, so each counts at most once per match. Read straight off the player's row: an
+    // ARRAY JOIN regrouped by player held every purchase in one hash table (~20 GiB for a season).
     format!(
         "
     SELECT
-        p.1 AS from_column,
-        p.2 AS from_item_id,
-        p.3 AS to_item_id,
+        from_column,
+        from_item_id,
+        to_item_id,
         countIf(won)     AS wins,
         countIf(not won) AS losses,
         wins + losses    AS matches
     FROM (
-        SELECT
-            won,
-            arrayDistinct(arrayFlatten(arrayMap(
-                x -> arrayMap(y -> (x.1, x.2, y.2), arrayFilter(y -> y.1 = x.1 + 1, ci)),
-                ci
-            ))) AS pairs
-        FROM (
-            SELECT match_id, account_id, won, groupArray((column, item_id)) AS ci
-            FROM ({purchases})
-            GROUP BY match_id, account_id, won
-        )
+        {upgrades_with}
+        SELECT won, {by_column_select}
+        FROM match_player
+        WHERE {match_filters} {player_filters}
     )
-    ARRAY JOIN pairs AS p
-    GROUP BY from_column, from_item_id, to_item_id
+    ARRAY JOIN arrayPopBack(arrayEnumerate(by_column)) AS i
+    ARRAY JOIN by_column[i] AS from_item_id
+    ARRAY JOIN by_column[i + 1] AS to_item_id
+    GROUP BY toUInt8(i - 1) AS from_column, from_item_id, to_item_id
     HAVING matches >= {min_matches}
     ORDER BY matches DESC
     SETTINGS log_comment = 'item_flow_stats_edges', apply_patch_parts = 0{extra_settings}
