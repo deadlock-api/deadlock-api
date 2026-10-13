@@ -1,4 +1,3 @@
-use anyhow::bail;
 #[cfg(feature = "async")]
 use core::future::Future;
 use prost::Message;
@@ -11,19 +10,107 @@ use valveprotos::common::{
     SvcMessages,
 };
 
+use dungers::bitbuf::BitError;
+
 use crate::bitreader::BitReader;
 use crate::demofile::{DEMO_RECORD_BUFFER_SIZE, DemoHeaderError};
 use crate::demostream::{CmdFormat, CmdHeader};
-use crate::demostream::{DemoStream, SeekableDemoStream};
+use crate::demostream::{
+    DecodeCmdError, DemoStream, ReadCmdError, ReadCmdHeaderError, SeekableDemoStream,
+};
 use crate::entities::{
-    DeltaHeader, Entity, EntityContainer, deadlock_coord_from_cell_with_max_coord,
+    DeltaHeader, Entity, EntityContainer, EntityParseError, deadlock_coord_from_cell_with_max_coord,
 };
 use crate::entityclasses::EntityClasses;
 use crate::fielddecoder::FieldDecodeContext;
-use crate::flattenedserializers::FlattenedSerializerContainer;
+use crate::flattenedserializers::{FlattenedSerializerContainer, FlattenedSerializersError};
 use crate::instancebaseline::{INSTANCE_BASELINE_TABLE_NAME, InstanceBaseline};
 use crate::protowire::{PacketEntities, decode_full_packet_string_tables, decode_packet_entities};
-use crate::stringtables::StringTableContainer;
+use crate::stringtables::{StringTableContainer, StringTableError};
+
+pub use crate::instancebaseline::InstanceBaselineError;
+
+/// failures of the parser itself: reading the demo stream, decoding commands, packets, string
+/// tables and entities, or a demo that is inconsistent with itself. errors returned by a
+/// [`Visitor`] are not included, see [`ParserError`].
+#[derive(thiserror::Error, Debug)]
+pub enum ParseError {
+    #[error(transparent)]
+    IoError(#[from] io::Error),
+    #[error(transparent)]
+    ReadCmdHeaderError(#[from] ReadCmdHeaderError),
+    #[error(transparent)]
+    ReadCmdError(#[from] ReadCmdError),
+    #[error(transparent)]
+    DecodeCmdError(#[from] DecodeCmdError),
+    #[error(transparent)]
+    DecodeProtobufError(#[from] prost::DecodeError),
+    #[error(transparent)]
+    DecompressError(#[from] snap::Error),
+    #[error(transparent)]
+    BitError(#[from] BitError),
+    #[error(transparent)]
+    StringTableError(#[from] StringTableError),
+    #[error(transparent)]
+    InstanceBaselineError(#[from] InstanceBaselineError),
+    #[error(transparent)]
+    EntityParseError(#[from] EntityParseError),
+    #[error(transparent)]
+    FlattenedSerializersError(#[from] FlattenedSerializersError),
+    #[error("packet message of {size} bytes exceeds the {buf_len} byte buffer")]
+    PacketMessageTooLarge { size: usize, buf_len: usize },
+    #[error(
+        "string table data decompresses to {decompress_len} bytes, more than the \
+         {DEMO_RECORD_BUFFER_SIZE} byte limit"
+    )]
+    StringTableDataTooLarge { decompress_len: usize },
+    #[error("entity classes are not available")]
+    EntityClassesNotAvailable,
+    #[error("serializers are not available")]
+    SerializersNotAvailable,
+    #[error("string table not found")]
+    StringTableNotFound,
+}
+
+/// error of the parser's run methods, which call into a visitor: either the parser failed
+/// ([`ParseError`]) or the visitor returned an error `E` (its `Error` type), which is passed
+/// through as is so that it can be matched on (for example to treat a sentinel error that stops
+/// parsing early as success).
+#[derive(thiserror::Error, Debug)]
+pub enum ParserError<E> {
+    #[error(transparent)]
+    Parse(#[from] ParseError),
+    #[error(transparent)]
+    Visitor(E),
+}
+
+// NOTE: a generic `From<T: Into<ParseError>>` would overlap with the reflexive `From` impl, so
+// every source of `ParseError` gets its own impl to keep `?` working in the run methods.
+macro_rules! impl_from_for_parser_error {
+    ($($ty:ty),* $(,)?) => {
+        $(
+            impl<E> From<$ty> for ParserError<E> {
+                fn from(err: $ty) -> Self {
+                    Self::Parse(ParseError::from(err))
+                }
+            }
+        )*
+    };
+}
+
+impl_from_for_parser_error!(
+    io::Error,
+    ReadCmdHeaderError,
+    ReadCmdError,
+    DecodeCmdError,
+    prost::DecodeError,
+    snap::Error,
+    BitError,
+    StringTableError,
+    InstanceBaselineError,
+    EntityParseError,
+    FlattenedSerializersError,
+);
 
 // as can be observed when dumping commands. also as specified in clarity
 // (src/main/java/skadistats/clarity/model/engine/AbstractDotaEngineType.java)
@@ -88,13 +175,13 @@ pub struct Context {
 fn read_packet_message<'b>(
     br: &mut BitReader,
     buf: &'b mut [u8],
-) -> anyhow::Result<(u32, &'b [u8])> {
+) -> Result<(u32, &'b [u8]), ParseError> {
     let command = br.read_ubitvar()?;
     let size = br.read_uvarint32()? as usize;
 
     let buf_len = buf.len();
     let Some(buf) = buf.get_mut(..size) else {
-        bail!("packet message of {size} bytes exceeds the {buf_len} byte buffer");
+        return Err(ParseError::PacketMessageTooLarge { size, buf_len });
     };
     br.read_bytes(buf)?;
     Ok((command, buf))
@@ -181,7 +268,7 @@ impl Context {
     // 2. DemSendTables (flattened serializers; never update)
     // 3. DemClassInfo (never update)
 
-    fn handle_cmd_send_tables(&mut self, cmd: CDemoSendTables) -> anyhow::Result<()> {
+    fn handle_cmd_send_tables(&mut self, cmd: CDemoSendTables) -> Result<(), ParseError> {
         self.serializers = Some(Arc::new(
             FlattenedSerializerContainer::parse_with_quantized_float_encoder_aliases(
                 cmd,
@@ -191,7 +278,7 @@ impl Context {
         Ok(())
     }
 
-    fn handle_cmd_class_info(&mut self, cmd: &CDemoClassInfo) -> anyhow::Result<()> {
+    fn handle_cmd_class_info(&mut self, cmd: &CDemoClassInfo) -> Result<(), ParseError> {
         let entity_classes = EntityClasses::parse(cmd);
 
         // NOTE: DemClassInfo message becomes available after
@@ -210,11 +297,11 @@ impl Context {
         Ok(())
     }
 
-    fn handle_cmd_string_tables(&mut self, cmd: &CDemoStringTables) -> anyhow::Result<()> {
+    fn handle_cmd_string_tables(&mut self, cmd: &CDemoStringTables) -> Result<(), ParseError> {
         self.string_tables.do_full_update(cmd);
 
         let Some(entity_classes) = self.entity_classes.as_ref() else {
-            bail!("entity classes are not available")
+            return Err(ParseError::EntityClassesNotAvailable);
         };
         if let Some(string_table) = self.string_tables.find_table(INSTANCE_BASELINE_TABLE_NAME) {
             self.instance_baseline
@@ -232,7 +319,7 @@ impl Context {
         &mut self,
         command: u32,
         buf: &'b [u8],
-    ) -> anyhow::Result<Option<PacketEntities<'b>>> {
+    ) -> Result<Option<PacketEntities<'b>>, ParseError> {
         match command {
             c if c == SvcMessages::SvcCreateStringTable as u32 => {
                 let msg = CsvcMsgCreateStringTable::decode(buf)?;
@@ -263,7 +350,7 @@ impl Context {
     fn handle_svc_create_string_table(
         &mut self,
         msg: &CsvcMsgCreateStringTable,
-    ) -> anyhow::Result<()> {
+    ) -> Result<(), ParseError> {
         let string_table = self.string_tables.create_string_table_mut(
             msg.name(),
             msg.user_data_fixed_size(),
@@ -279,10 +366,7 @@ impl Context {
             // NOTE: the length comes from the (untrusted) snappy header; don't allocate whatever it
             // claims.
             if decompress_len > DEMO_RECORD_BUFFER_SIZE {
-                bail!(
-                    "string table data decompresses to {decompress_len} bytes, more than the \
-                     {DEMO_RECORD_BUFFER_SIZE} byte limit"
-                );
+                return Err(ParseError::StringTableDataTooLarge { decompress_len });
             }
             self.string_table_buf.resize(decompress_len, 0);
             snap::raw::Decoder::new().decompress(sd, &mut self.string_table_buf)?;
@@ -309,7 +393,7 @@ impl Context {
     fn handle_svc_update_string_table(
         &mut self,
         msg: &CsvcMsgUpdateStringTable,
-    ) -> anyhow::Result<()> {
+    ) -> Result<(), ParseError> {
         debug_assert!(msg.table_id.is_some(), "invalid table id");
         let table_id = msg.table_id() as usize;
 
@@ -318,7 +402,7 @@ impl Context {
             "trying to update non-existent table"
         );
         let Some(string_table) = self.string_tables.get_table_mut(table_id) else {
-            bail!("string table not found")
+            return Err(ParseError::StringTableNotFound);
         };
 
         let mut br = BitReader::new(msg.string_data());
@@ -345,7 +429,7 @@ impl Context {
         &mut self,
         rdr: &mut EntityDeltaReader,
         should_track: F,
-    ) -> anyhow::Result<Option<(DeltaHeader, EntityDelta)>>
+    ) -> Result<Option<(DeltaHeader, EntityDelta)>, ParseError>
     where
         F: Fn(u64) -> bool,
     {
@@ -355,10 +439,10 @@ impl Context {
         rdr.remaining -= 1;
 
         let Some(entity_classes) = self.entity_classes.as_deref() else {
-            bail!("entity classes are not available");
+            return Err(ParseError::EntityClassesNotAvailable);
         };
         let Some(serializers) = self.serializers.as_deref() else {
-            bail!("serializers are not available");
+            return Err(ParseError::SerializersNotAvailable);
         };
 
         let br = &mut rdr.br;
@@ -645,12 +729,18 @@ impl<D: DemoStream, V: Visitor> Parser<D, V> {
     // recorded).
     //
     // must be publicly exposed for this to be actually useful.
-    fn dispatch(&mut self, cf: ControlFlow, cmd_header: &CmdHeader) -> anyhow::Result<()> {
+    fn dispatch(
+        &mut self,
+        cf: ControlFlow,
+        cmd_header: &CmdHeader,
+    ) -> Result<(), ParserError<V::Error>> {
         match cf {
             ControlFlow::Handle => {
                 self.handle_cmd(cmd_header)?;
                 if self.ctx.prev_tick != self.ctx.tick {
-                    self.visitor.on_tick_end(&self.ctx)?;
+                    self.visitor
+                        .on_tick_end(&self.ctx)
+                        .map_err(ParserError::Visitor)?;
                 }
             }
             ControlFlow::Skip => self.demo_stream.skip_cmd(cmd_header)?,
@@ -659,9 +749,9 @@ impl<D: DemoStream, V: Visitor> Parser<D, V> {
         Ok(())
     }
 
-    fn run<F>(&mut self, mut handler: F) -> anyhow::Result<()>
+    fn run<F>(&mut self, mut handler: F) -> Result<(), ParserError<V::Error>>
     where
-        F: FnMut(&mut Self, &CmdHeader) -> anyhow::Result<ControlFlow>,
+        F: FnMut(&mut Self, &CmdHeader) -> Result<ControlFlow, ParserError<V::Error>>,
     {
         loop {
             match self.demo_stream.read_cmd_header() {
@@ -681,14 +771,14 @@ impl<D: DemoStream, V: Visitor> Parser<D, V> {
         }
     }
 
-    pub fn run_to_end(&mut self) -> anyhow::Result<()> {
+    pub fn run_to_end(&mut self) -> Result<(), ParserError<V::Error>> {
         self.run(|_notnotself, _cmd_header| Ok(ControlFlow::Handle))
     }
 
     /// like [`run_to_end`](Self::run_to_end), but entities are cleared whenever a full packet
     /// arrives, so that the entity state is rebuilt from each snapshot (entities that the snapshot
     /// does not restate do not linger).
-    pub fn run_to_end_final_state(&mut self) -> anyhow::Result<()> {
+    pub fn run_to_end_final_state(&mut self) -> Result<(), ParserError<V::Error>> {
         self.run(|notnotself, cmd_header| {
             if cmd_header.cmd == EDemoCommands::DemFullPacket {
                 notnotself.ctx.entities.clear();
@@ -697,12 +787,14 @@ impl<D: DemoStream, V: Visitor> Parser<D, V> {
         })
     }
 
-    fn handle_cmd(&mut self, cmd_header: &CmdHeader) -> anyhow::Result<()> {
+    fn handle_cmd(&mut self, cmd_header: &CmdHeader) -> Result<(), ParserError<V::Error>> {
         // TODO: consider introducing CmdInstance thing that would allow to decode body once and
         // not read it, but skip, if unconsumed. note that to work temporary ownership of
         // demo_stream will need to be taken.
         let cmd_body = self.demo_stream.read_cmd(cmd_header)?;
-        self.visitor.on_cmd(&self.ctx, cmd_header, cmd_body)?;
+        self.visitor
+            .on_cmd(&self.ctx, cmd_header, cmd_body)
+            .map_err(ParserError::Visitor)?;
 
         match cmd_header.cmd {
             EDemoCommands::DemPacket | EDemoCommands::DemSignonPacket => {
@@ -740,18 +832,22 @@ impl<D: DemoStream, V: Visitor> Parser<D, V> {
         visitor: &mut V,
         buf: &mut [u8],
         data: &[u8],
-    ) -> anyhow::Result<()> {
+    ) -> Result<(), ParserError<V::Error>> {
         let mut br = BitReader::new(data);
         while br.num_bits_left() > 8 {
             let (command, buf) = read_packet_message(&mut br, buf)?;
-            visitor.on_packet(ctx, command, buf)?;
+            visitor
+                .on_packet(ctx, command, buf)
+                .map_err(ParserError::Visitor)?;
             if let Some(msg) = ctx.handle_packet_message(command, buf)? {
                 let mut rdr = EntityDeltaReader::new(&msg);
                 while let Some((delta_header, delta)) =
                     ctx.read_entity_delta(&mut rdr, |hash| visitor.should_track_entity(hash))?
                 {
                     if let Some(entity) = ctx.delta_entity(&delta) {
-                        visitor.on_entity(ctx, delta_header, entity)?;
+                        visitor
+                            .on_entity(ctx, delta_header, entity)
+                            .map_err(ParserError::Visitor)?;
                     }
                 }
             }
@@ -759,7 +855,10 @@ impl<D: DemoStream, V: Visitor> Parser<D, V> {
         Ok(())
     }
 
-    fn handle_cmd_full_packet(&mut self, cmd: CDemoFullPacket) -> anyhow::Result<()> {
+    fn handle_cmd_full_packet(
+        &mut self,
+        cmd: CDemoFullPacket,
+    ) -> Result<(), ParserError<V::Error>> {
         if let Some(string_table) = cmd.string_table.as_ref() {
             self.ctx.handle_cmd_string_tables(string_table)?;
         }
@@ -820,9 +919,9 @@ impl<D: DemoStream, V: Visitor> Parser<D, V> {
 impl<D: SeekableDemoStream, V: Visitor> Parser<D, V> {
     /// like [`run`](Parser::run) but the handler can return `None` to break out of the loop,
     /// unreading the current cmd header and restoring the previous tick.
-    fn run_seekable<F>(&mut self, mut handler: F) -> anyhow::Result<()>
+    fn run_seekable<F>(&mut self, mut handler: F) -> Result<(), ParserError<V::Error>>
     where
-        F: FnMut(&mut Self, &CmdHeader) -> anyhow::Result<Option<ControlFlow>>,
+        F: FnMut(&mut Self, &CmdHeader) -> Result<Option<ControlFlow>, ParserError<V::Error>>,
     {
         loop {
             match self.demo_stream.read_cmd_header() {
@@ -854,7 +953,7 @@ impl<D: SeekableDemoStream, V: Visitor> Parser<D, V> {
         Ok(())
     }
 
-    pub fn run_to_tick(&mut self, target_tick: i32) -> anyhow::Result<()> {
+    pub fn run_to_tick(&mut self, target_tick: i32) -> Result<(), ParserError<V::Error>> {
         // TODO: do not allow tick to be less then -1
 
         // TODO: do not allow tick to be greater then total ticks
@@ -894,7 +993,8 @@ impl<D: SeekableDemoStream, V: Visitor> Parser<D, V> {
                 let cmd_body = notnotself.demo_stream.read_cmd(cmd_header)?;
                 notnotself
                     .visitor
-                    .on_cmd(&notnotself.ctx, cmd_header, cmd_body)?;
+                    .on_cmd(&notnotself.ctx, cmd_header, cmd_body)
+                    .map_err(ParserError::Visitor)?;
 
                 let mut cmd = D::decode_cmd_full_packet(cmd_body)?;
                 if has_full_packet_ahead {
@@ -907,7 +1007,10 @@ impl<D: SeekableDemoStream, V: Visitor> Parser<D, V> {
                 }
                 notnotself.handle_cmd_full_packet(cmd)?;
                 // NOTE: there's absolutely no reason to check if tick changed because it changed.
-                notnotself.visitor.on_tick_end(&notnotself.ctx)?;
+                notnotself
+                    .visitor
+                    .on_tick_end(&notnotself.ctx)
+                    .map_err(ParserError::Visitor)?;
 
                 did_handle_last_full_packet = !has_full_packet_ahead;
 
@@ -929,7 +1032,7 @@ impl<D: SeekableDemoStream, V: Visitor> Parser<D, V> {
     /// rewound to its start position. Full packets are complete state snapshots, so their offsets
     /// are valid points at which to begin an independent parse — this is the basis for splitting a
     /// demo into segments that can be parsed in parallel.
-    pub fn scan_full_packet_ticks(&mut self) -> anyhow::Result<Vec<i32>> {
+    pub fn scan_full_packet_ticks(&mut self) -> Result<Vec<i32>, ParseError> {
         self.reset()?;
         let mut ticks = Vec::new();
         loop {
@@ -953,7 +1056,7 @@ impl<D: SeekableDemoStream, V: Visitor> Parser<D, V> {
     /// [`set_shared_state`](Self::set_shared_state) on other parsers of the same demo. `None` if
     /// the demo has no send tables or class info. The visitor sees the handled commands; the
     /// stream is left rewound to its start position.
-    pub fn parse_shared_state(&mut self) -> anyhow::Result<Option<SharedState>> {
+    pub fn parse_shared_state(&mut self) -> Result<Option<SharedState>, ParserError<V::Error>> {
         self.reset()?;
         self.ctx.skip_entity_packets = true;
         let result = self.run_seekable(|s: &mut Parser<D, V>, cmd_header: &CmdHeader| {
@@ -988,7 +1091,7 @@ impl<D: SeekableDemoStream, V: Visitor> Parser<D, V> {
     /// re-creates all live entities and brings its own table changes) before collecting forward. Because every command belongs to exactly one
     /// full packet's segment and boundaries fall on the full-packet command itself, concatenating
     /// the per-ordinal outputs in order reproduces a single end-to-end parse exactly.
-    pub fn run_full_packet(&mut self, ordinal: usize) -> anyhow::Result<()> {
+    pub fn run_full_packet(&mut self, ordinal: usize) -> Result<(), ParserError<V::Error>> {
         self.reset()?;
 
         let mut fp_seen: usize = 0;
@@ -1093,17 +1196,20 @@ impl<D: AsyncDemoStream, V: AsyncVisitor> AsyncStreamingParser<D, V> {
         &mut self.visitor
     }
 
-    pub async fn run_to_end(&mut self) -> anyhow::Result<()> {
+    pub async fn run_to_end(&mut self) -> Result<(), ParserError<V::Error>> {
         self.run_internal(false).await
     }
 
     /// like [`run_to_end`](Self::run_to_end), but entities are cleared whenever a full packet
     /// arrives, so that the entity state is rebuilt from each snapshot.
-    pub async fn run_to_end_final_state(&mut self) -> anyhow::Result<()> {
+    pub async fn run_to_end_final_state(&mut self) -> Result<(), ParserError<V::Error>> {
         self.run_internal(true).await
     }
 
-    async fn run_internal(&mut self, reset_on_full_packet: bool) -> anyhow::Result<()> {
+    async fn run_internal(
+        &mut self,
+        reset_on_full_packet: bool,
+    ) -> Result<(), ParserError<V::Error>> {
         loop {
             match self.demo_stream.read_cmd_header().await {
                 Ok(cmd_header) => {
@@ -1116,7 +1222,10 @@ impl<D: AsyncDemoStream, V: AsyncVisitor> AsyncStreamingParser<D, V> {
 
                     self.handle_cmd(&cmd_header).await?;
                     if self.ctx.prev_tick != self.ctx.tick {
-                        self.visitor.on_tick_end(&self.ctx).await?;
+                        self.visitor
+                            .on_tick_end(&self.ctx)
+                            .await
+                            .map_err(ParserError::Visitor)?;
                     }
                 }
                 Err(err) => {
@@ -1138,9 +1247,12 @@ impl<D: AsyncDemoStream, V: AsyncVisitor> AsyncStreamingParser<D, V> {
         }
     }
 
-    async fn handle_cmd(&mut self, cmd_header: &CmdHeader) -> anyhow::Result<()> {
+    async fn handle_cmd(&mut self, cmd_header: &CmdHeader) -> Result<(), ParserError<V::Error>> {
         let cmd_body = self.demo_stream.read_cmd(cmd_header).await?;
-        self.visitor.on_cmd(&self.ctx, cmd_header, cmd_body).await?;
+        self.visitor
+            .on_cmd(&self.ctx, cmd_header, cmd_body)
+            .await
+            .map_err(ParserError::Visitor)?;
 
         match cmd_header.cmd {
             EDemoCommands::DemPacket | EDemoCommands::DemSignonPacket => {
@@ -1186,18 +1298,24 @@ impl<D: AsyncDemoStream, V: AsyncVisitor> AsyncStreamingParser<D, V> {
         visitor: &mut V,
         buf: &mut [u8],
         data: &[u8],
-    ) -> anyhow::Result<()> {
+    ) -> Result<(), ParserError<V::Error>> {
         let mut br = BitReader::new(data);
         while br.num_bits_left() > 8 {
             let (command, buf) = read_packet_message(&mut br, buf)?;
-            visitor.on_packet(ctx, command, buf).await?;
+            visitor
+                .on_packet(ctx, command, buf)
+                .await
+                .map_err(ParserError::Visitor)?;
             if let Some(msg) = ctx.handle_packet_message(command, buf)? {
                 let mut rdr = EntityDeltaReader::new(&msg);
                 while let Some((delta_header, delta)) =
                     ctx.read_entity_delta(&mut rdr, |hash| visitor.should_track_entity(hash))?
                 {
                     if let Some(entity) = ctx.delta_entity(&delta) {
-                        visitor.on_entity(ctx, delta_header, entity).await?;
+                        visitor
+                            .on_entity(ctx, delta_header, entity)
+                            .await
+                            .map_err(ParserError::Visitor)?;
                     }
                 }
             }

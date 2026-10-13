@@ -1,10 +1,19 @@
 use std::sync::Arc;
 
-use anyhow::Context;
 use tokio::sync::RwLock;
 use tokio::task::AbortHandle;
 use tokio::time::{Duration, interval};
 use tracing::warn;
+
+#[derive(Debug, thiserror::Error)]
+pub(crate) enum PollError {
+    #[error("Initial poll request failed")]
+    Request(#[source] reqwest::Error),
+    #[error("Initial poll request returned error status")]
+    Status(#[source] reqwest::Error),
+    #[error("Failed to read initial poll body")]
+    Body(#[source] reqwest::Error),
+}
 
 /// Starts polling a given URL at a specified interval, updating the shared state with the latest plaintext response.
 ///
@@ -12,19 +21,19 @@ use tracing::warn;
 pub(crate) async fn start_polling_text(
     url: String,
     interval_duration: Duration,
-) -> anyhow::Result<(AbortHandle, Arc<RwLock<String>>)> {
+) -> Result<(AbortHandle, Arc<RwLock<String>>), PollError> {
     let client = common::http_client();
 
     let initial = client
         .get(&url)
         .send()
         .await
-        .context("Initial poll request failed")?
+        .map_err(PollError::Request)?
         .error_for_status()
-        .context("Initial poll request returned error status")?
+        .map_err(PollError::Status)?
         .text()
         .await
-        .context("Failed to read initial poll body")?;
+        .map_err(PollError::Body)?;
 
     let data = Arc::new(RwLock::new(initial));
     let data_clone = Arc::clone(&data);

@@ -26,8 +26,16 @@ static ACTIVE_MATCHES_URL: LazyLock<String> = LazyLock::new(|| {
         .unwrap_or_else(|_| "https://api.deadlock-api.com/v1/matches/active".to_owned())
 });
 
+#[derive(Debug, thiserror::Error)]
+enum Error {
+    #[error(transparent)]
+    Metrics(#[from] common::MetricsError),
+    #[error(transparent)]
+    Env(#[from] std::env::VarError),
+}
+
 #[tokio::main]
-async fn main() -> anyhow::Result<()> {
+async fn main() -> Result<(), Error> {
     let _otel_guard = common::init_tracing(env!("CARGO_PKG_NAME"));
     common::init_metrics()?;
     let http_client = common::http_client();

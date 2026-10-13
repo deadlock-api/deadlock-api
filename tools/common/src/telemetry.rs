@@ -117,7 +117,15 @@ pub fn init_tracing(service_name: &str) -> Option<OtelGuard> {
     guard
 }
 
-pub fn init_metrics() -> anyhow::Result<()> {
+#[derive(Debug, thiserror::Error)]
+pub enum MetricsError {
+    #[error(transparent)]
+    Addr(#[from] core::net::AddrParseError),
+    #[error(transparent)]
+    Install(#[from] metrics_exporter_prometheus::BuildError),
+}
+
+pub fn init_metrics() -> Result<(), MetricsError> {
     Ok(PrometheusBuilder::new()
         .with_http_listener("0.0.0.0:9002".parse::<SocketAddrV4>()?)
         .install()?)

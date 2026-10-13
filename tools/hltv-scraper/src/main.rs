@@ -21,13 +21,23 @@ mod cmd;
 mod easy_poll;
 mod hltv;
 
+#[derive(Debug, thiserror::Error)]
+pub(crate) enum Error {
+    #[error("Failed to initialize metrics server")]
+    InitMetrics(#[source] common::MetricsError),
+    #[error(transparent)]
+    ScrapeHltv(#[from] cmd::scrape_hltv::ScrapeHltvError),
+    #[error(transparent)]
+    SpectateBot(#[from] cmd::run_spectate_bot::SpectateBotError),
+}
+
 #[tokio::main]
-async fn main() -> anyhow::Result<()> {
+async fn main() -> Result<(), Error> {
     let _otel_guard = common::init_tracing(env!("CARGO_PKG_NAME"));
     tracing::info!("Starting processing!");
     let result = run_cli().await;
     if let Err(e) = &result {
-        tracing::error!("Command failed: {e:#}");
+        tracing::error!("Command failed: {}", common::ErrorChain(e));
     }
     result
 }

@@ -13,5 +13,5 @@ haste_broadcast.workspace = true
 haste_core.workspace = true
 
 [dev-dependencies]
-anyhow.workspace = true
 prost.workspace = true
+thiserror.workspace = true

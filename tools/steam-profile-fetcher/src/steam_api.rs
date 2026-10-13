@@ -1,6 +1,5 @@
 use std::env;
 
-use anyhow::Result;
 use itertools::Itertools;
 use rand::rng;
 use rand::seq::IndexedRandom;
@@ -19,17 +18,23 @@ static STEAM_API_KEYS: std::sync::LazyLock<Vec<String>> = std::sync::LazyLock::n
         .collect()
 });
 
-fn pick_api_key() -> Result<&'static String> {
-    STEAM_API_KEYS
-        .choose(&mut rng())
-        .ok_or_else(|| anyhow::anyhow!("no Steam API keys configured (set STEAM_API_KEYS)"))
+#[derive(Debug, thiserror::Error)]
+pub(crate) enum Error {
+    #[error("no Steam API keys configured (set STEAM_API_KEYS)")]
+    NoApiKeys,
+    #[error(transparent)]
+    Http(#[from] reqwest::Error),
+}
+
+fn pick_api_key() -> Result<&'static String, Error> {
+    STEAM_API_KEYS.choose(&mut rng()).ok_or(Error::NoApiKeys)
 }
 
 #[instrument(skip(http_client), fields(account_ids = account_ids.len()))]
 pub(crate) async fn fetch_steam_profiles(
     http_client: &reqwest::Client,
     account_ids: &[u32],
-) -> Result<Vec<SteamPlayerSummary>> {
+) -> Result<Vec<SteamPlayerSummary>, Error> {
     if account_ids.is_empty() {
         return Ok(Vec::new());
     }
@@ -66,7 +71,7 @@ pub(crate) async fn fetch_steam_profiles(
 pub(crate) async fn fetch_steam_friends(
     http_client: &reqwest::Client,
     account_id: u32,
-) -> Result<Vec<SteamFriend>> {
+) -> Result<Vec<SteamFriend>, Error> {
     let api_key = pick_api_key()?;
     let steam_id64 = common::account_id_to_steam_id64(account_id);
     let url = format!(

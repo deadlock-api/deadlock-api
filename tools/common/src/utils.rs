@@ -45,6 +45,31 @@ pub struct SteamProxyResponse {
     pub username: String,
 }
 
+/// Displays an error with its whole source chain, `outer: inner: ...`.
+pub struct ErrorChain<'a>(pub &'a dyn core::error::Error);
+
+impl core::fmt::Display for ErrorChain<'_> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(f, "{}", self.0)?;
+        let mut source = self.0.source();
+        while let Some(e) = source {
+            write!(f, ": {e}")?;
+            source = e.source();
+        }
+        Ok(())
+    }
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum SteamProxyError {
+    #[error(transparent)]
+    Http(#[from] reqwest::Error),
+    #[error(transparent)]
+    Base64(#[from] base64::DecodeError),
+    #[error(transparent)]
+    Decode(#[from] prost::DecodeError),
+}
+
 /// How sv-proxy should route and pace one [`call_steam_proxy`] call.
 #[derive(Debug, Clone, Copy)]
 pub struct SteamProxyOptions<'a> {
@@ -68,7 +93,7 @@ pub async fn call_steam_proxy<T: Message + Default>(
     msg_type: EgcCitadelClientMessages,
     msg: &impl Message,
     options: SteamProxyOptions<'_>,
-) -> anyhow::Result<(String, T)> {
+) -> Result<(String, T), SteamProxyError> {
     let SteamProxyOptions {
         in_all_groups,
         in_any_groups,

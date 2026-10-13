@@ -550,6 +550,8 @@ impl<'client, C: HttpClient + 'client> DemoStream for BroadcastHttp<'client, C> 
 }
 
 impl<'client, C: HttpClient + 'client> SeekableDemoStream for BroadcastHttp<'client, C> {
+    type TotalTicksError = ReadCmdHeaderError;
+
     /// panics if [`BroadcastHttp`] was not constructed with `start_reading_and_buffer`. othwerwise
     /// delegated to [`std::io::Cursor`].
     fn seek(&mut self, pos: SeekFrom) -> Result<u64, io::Error> {
@@ -584,7 +586,7 @@ impl<'client, C: HttpClient + 'client> SeekableDemoStream for BroadcastHttp<'cli
     }
 
     /// panics if [`BroadcastHttp`] was not constructed with `start_reading_and_buffer`.
-    fn total_ticks(&mut self) -> Result<i32, anyhow::Error> {
+    fn total_ticks(&mut self) -> Result<i32, ReadCmdHeaderError> {
         match self.stream_buffer {
             StreamBuffer::Last(_) => not_seekable_panic!(),
             StreamBuffer::Seekable(_) => {

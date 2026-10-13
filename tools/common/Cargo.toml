@@ -4,7 +4,6 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-anyhow = { workspace = true }
 base64 = { workspace = true }
 clickhouse = { workspace = true }
 fred = { workspace = true }
@@ -20,6 +19,7 @@ reqwest = { workspace = true, features = ["json"] }
 serde = { workspace = true }
 serde_json = { workspace = true }
 sqlx = { workspace = true, features = ["macros", "postgres", "runtime-tokio", "time"] }
+thiserror = { workspace = true }
 tokio = { workspace = true, features = ["signal", "sync", "time"] }
 tokio-util = { workspace = true }
 tracing = { workspace = true }

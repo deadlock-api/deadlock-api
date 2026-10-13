@@ -15,7 +15,6 @@ use core::time::Duration;
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::time::Instant;
 
-use anyhow::Result;
 use cached::macros::cached;
 use futures::stream::StreamExt;
 use itertools::Itertools;
@@ -57,8 +56,24 @@ const REFETCH_INTERVAL_SEMI_ACTIVE: &str = "INTERVAL 1 WEEK"; // played within 3
 const REFETCH_INTERVAL_INACTIVE: &str = "INTERVAL 2 WEEK"; // everyone else
 const RECENT_ACTIVITY_INTERVAL: &str = "INTERVAL 30 DAY";
 
+#[derive(Debug, thiserror::Error)]
+enum Error {
+    #[error(transparent)]
+    Metrics(#[from] common::MetricsError),
+    #[error(transparent)]
+    Env(#[from] std::env::VarError),
+    #[error(transparent)]
+    Client(#[from] common::ClientError),
+    #[error(transparent)]
+    Postgres(#[from] sqlx::Error),
+    #[error(transparent)]
+    ClickHouse(#[from] clickhouse::error::Error),
+    #[error(transparent)]
+    SteamApi(#[from] steam_api::Error),
+}
+
 #[tokio::main]
-async fn main() -> Result<()> {
+async fn main() -> Result<(), Error> {
     let _otel_guard = common::init_tracing(env!("CARGO_PKG_NAME"));
     common::init_metrics()?;
 
@@ -102,7 +117,7 @@ async fn fetch_and_update_profiles(
     pg_client: &sqlx::Pool<sqlx::Postgres>,
     queue: &mut VecDeque<u32>,
     pending_deletions: &mut HashSet<u32>,
-) -> Result<()> {
+) -> Result<(), Error> {
     if queue.is_empty() {
         let protected_users = get_protected_users_cached(pg_client).await?;
         let limited_account_ids = get_account_ids_to_update(ch_client, Some(QUEUE_SIZE)).await?;
@@ -151,7 +166,7 @@ async fn fetch_and_update_profiles(
             error!("Failed to fetch Steam profiles: {e}");
             counter!("steam_profile_fetcher.fetched_profiles.failure")
                 .increment(batch_ids.len() as u64);
-            return Err(e);
+            return Err(e.into());
         }
     };
 

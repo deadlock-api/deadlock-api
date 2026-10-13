@@ -37,8 +37,18 @@ const ASCII_LOWER: [char; 26] = [
 /// slowly, so running it before every search prefix (~once a minute) was wasted work.
 const MISSING_BUILDS_INTERVAL: Duration = Duration::from_mins(30);
 
+#[derive(Debug, thiserror::Error)]
+enum Error {
+    #[error(transparent)]
+    Metrics(#[from] common::MetricsError),
+    #[error(transparent)]
+    Env(#[from] std::env::VarError),
+    #[error(transparent)]
+    Client(#[from] common::ClientError),
+}
+
 #[tokio::main]
-async fn main() -> anyhow::Result<()> {
+async fn main() -> Result<(), Error> {
     let _otel_guard = common::init_tracing(env!("CARGO_PKG_NAME"));
     common::init_metrics()?;
     let http_client = common::http_client();
@@ -291,7 +301,7 @@ async fn fetch_builds(
     langs: &[i32],
     search: Option<&str>,
     hero_build_id: Option<u32>,
-) -> anyhow::Result<Vec<HeroBuildResult>> {
+) -> Result<Vec<HeroBuildResult>, common::SteamProxyError> {
     let msg = CMsgClientToGcFindHeroBuilds {
         hero_id: hero_id.into(),
         language: langs.to_vec(),

@@ -245,8 +245,11 @@ pub trait SeekableDemoStream: DemoStream {
 
     fn start_position(&self) -> u64;
 
-    // TODO: how not cool is it to rely on anyhow here?
-    fn total_ticks(&mut self) -> Result<i32, anyhow::Error>;
+    /// error of [`total_ticks`](Self::total_ticks); streams obtain the total ticks differently
+    /// (demo files read them from the file info, broadcasts scan for the last tick).
+    type TotalTicksError: core::error::Error + Send + Sync + 'static;
+
+    fn total_ticks(&mut self) -> Result<i32, Self::TotalTicksError>;
 }
 
 #[cfg(test)]

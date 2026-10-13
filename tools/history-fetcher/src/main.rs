@@ -73,8 +73,22 @@ static HISTORY_INSERTERS: LazyLock<usize> =
 /// Key: `steam_id3` (as i64), Value: (`bot_id`, `Option<Instant>` where None = never fetched).
 type PrioritizedAccountsMap = Arc<RwLock<HashMap<i64, (String, Option<Instant>)>>>;
 
+#[derive(Debug, thiserror::Error)]
+enum Error {
+    #[error(transparent)]
+    Metrics(#[from] common::MetricsError),
+    #[error(transparent)]
+    Env(#[from] std::env::VarError),
+    #[error(transparent)]
+    Client(#[from] common::ClientError),
+}
+
+#[derive(Debug, thiserror::Error)]
+#[error("Failed to fetch prioritized account {0}")]
+struct PrioritizedFetchError(u32);
+
 #[tokio::main]
-async fn main() -> anyhow::Result<()> {
+async fn main() -> Result<(), Error> {
     let _otel_guard = common::init_tracing(env!("CARGO_PKG_NAME"));
     common::init_metrics()?;
 
@@ -206,7 +220,7 @@ async fn update_prioritized_account(
             async {
                 update_account(inserter, http_client, account, Some(bot_id))
                     .await
-                    .ok_or_else(|| format!("Failed to fetch prioritized account {account}"))
+                    .ok_or(PrioritizedFetchError(account))
             }
         },
     )
@@ -347,7 +361,7 @@ async fn fetch_account_match_history(
     account: u32,
     bot_username: Option<&str>,
     rank_interval: Option<u32>,
-) -> anyhow::Result<CMsgClientToGcGetMatchHistoryResponse> {
+) -> Result<CMsgClientToGcGetMatchHistoryResponse, common::SteamProxyError> {
     let msg = CMsgClientToGcGetMatchHistory {
         account_id: account.into(),
         game_mode: rank_interval

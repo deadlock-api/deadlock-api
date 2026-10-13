@@ -11,6 +11,16 @@ use sqlx::postgres::{PgConnectOptions, PgPoolOptions};
 use sqlx::{ConnectOptions, Pool, Postgres};
 use tracing::log::LevelFilter;
 
+#[derive(Debug, thiserror::Error)]
+pub enum ClientError {
+    #[error(transparent)]
+    Env(#[from] VarError),
+    #[error(transparent)]
+    ObjectStore(#[from] object_store::Error),
+    #[error(transparent)]
+    Postgres(#[from] sqlx::Error),
+}
+
 pub fn get_ch_client() -> Result<clickhouse::Client, VarError> {
     Ok(clickhouse::Client::default()
         .with_url(env::var("CLICKHOUSE_URL").unwrap_or_else(|_| "http://127.0.0.1:8123".to_owned()))
@@ -32,7 +42,7 @@ fn build_s3_client(
     access_key_env: &str,
     secret_key_env: &str,
     endpoint_env: &str,
-) -> anyhow::Result<object_store::aws::AmazonS3> {
+) -> Result<object_store::aws::AmazonS3, ClientError> {
     Ok(AmazonS3Builder::new()
         .with_region(env::var(region_env)?)
         .with_bucket_name(env::var(bucket_env)?)
@@ -43,7 +53,7 @@ fn build_s3_client(
         .build()?)
 }
 
-pub fn get_store() -> anyhow::Result<impl object_store::ObjectStore> {
+pub fn get_store() -> Result<impl object_store::ObjectStore, ClientError> {
     build_s3_client(
         "S3_REGION",
         "S3_BUCKET_NAME",
@@ -53,7 +63,7 @@ pub fn get_store() -> anyhow::Result<impl object_store::ObjectStore> {
     )
 }
 
-pub fn get_cache_store() -> anyhow::Result<impl object_store::ObjectStore> {
+pub fn get_cache_store() -> Result<impl object_store::ObjectStore, ClientError> {
     build_s3_client(
         "S3_CACHE_REGION",
         "S3_CACHE_BUCKET_NAME",
@@ -63,7 +73,7 @@ pub fn get_cache_store() -> anyhow::Result<impl object_store::ObjectStore> {
     )
 }
 
-pub async fn get_pg_client() -> anyhow::Result<Pool<Postgres>> {
+pub async fn get_pg_client() -> Result<Pool<Postgres>, ClientError> {
     let pg_options = PgConnectOptions::new_without_pgpass()
         .host(&env::var("POSTGRES_HOST").unwrap_or_else(|_| "localhost".to_owned()))
         .username(&env::var("POSTGRES_USERNAME").unwrap_or_else(|_| "postgres".to_owned()))

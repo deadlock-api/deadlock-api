@@ -16,7 +16,7 @@ pub(crate) fn read_cmd_header<R: Read>(mut rdr: R) -> Result<CmdHeader, ReadCmdH
 
 pub(crate) fn scan_for_last_tick(
     demo_stream: &mut impl SeekableDemoStream,
-) -> Result<i32, anyhow::Error> {
+) -> Result<i32, ReadCmdHeaderError> {
     let mut last_tick: i32 = -1;
     let backup = demo_stream.stream_position()?;
     loop {
@@ -29,7 +29,7 @@ pub(crate) fn scan_for_last_tick(
                 demo_stream.seek(SeekFrom::Start(backup))?;
                 return Ok(last_tick);
             }
-            Err(err) => return Err(err.into()),
+            Err(err) => return Err(err),
         }
     }
 }

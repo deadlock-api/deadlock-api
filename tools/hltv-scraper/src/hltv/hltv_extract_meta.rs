@@ -1,19 +1,35 @@
 use std::io::Cursor;
 
-use anyhow::bail;
 use bytes::Bytes;
+use dungers::bitbuf::BitError;
 use haste::broadcast::BroadcastFile;
-use haste::demostream::DemoStream;
+use haste::demostream::{DemoStream, ReadCmdError};
 use prost::Message;
 use tracing::warn;
 use valveprotos::common::EDemoCommands;
 use valveprotos::deadlock::{CCitadelUserMsgPostMatchDetails, CitadelUserMessageIds};
 
-fn process_post_match(details_buf: &[u8]) -> anyhow::Result<Vec<u8>> {
+#[derive(Debug, thiserror::Error)]
+pub(crate) enum AnalyzeFragmentError {
+    #[error(transparent)]
+    Join(#[from] tokio::task::JoinError),
+    #[error(transparent)]
+    Io(#[from] std::io::Error),
+    #[error(transparent)]
+    ReadCmd(#[from] ReadCmdError),
+    #[error(transparent)]
+    Bits(#[from] BitError),
+    #[error(transparent)]
+    Decode(#[from] prost::DecodeError),
+    #[error("details doesn't have metadata content in it")]
+    MissingMetaContent,
+}
+
+fn process_post_match(details_buf: &[u8]) -> Result<Vec<u8>, AnalyzeFragmentError> {
     let details = CCitadelUserMsgPostMatchDetails::decode(details_buf)?;
 
     let Some(meta_content) = details.match_details else {
-        bail!("details doesn't have metadata content in it");
+        return Err(AnalyzeFragmentError::MissingMetaContent);
     };
 
     Ok(meta_content)
@@ -25,11 +41,13 @@ pub(crate) struct FragmentAnalysis {
     pub has_end_command: bool,
 }
 
-pub(crate) async fn analyze_fragment(fragment_buf: Bytes) -> anyhow::Result<FragmentAnalysis> {
+pub(crate) async fn analyze_fragment(
+    fragment_buf: Bytes,
+) -> Result<FragmentAnalysis, AnalyzeFragmentError> {
     tokio::task::spawn_blocking(move || analyze_fragment_sync(fragment_buf)).await?
 }
 
-fn analyze_fragment_sync(fragment_buf: Bytes) -> anyhow::Result<FragmentAnalysis> {
+fn analyze_fragment_sync(fragment_buf: Bytes) -> Result<FragmentAnalysis, AnalyzeFragmentError> {
     let cursor = Cursor::new(fragment_buf);
     let mut demo_file = BroadcastFile::start_reading(cursor);
     let mut has_end_command = false;

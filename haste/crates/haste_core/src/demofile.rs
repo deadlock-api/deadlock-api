@@ -1,4 +1,3 @@
-use anyhow::Context;
 use dungers::varint;
 use prost::Message;
 use std::io::{self, Read, Seek, SeekFrom};
@@ -36,6 +35,19 @@ pub enum DemoHeaderError {
     IoError(#[from] io::Error),
     #[error("invalid demo file stamp (got {got:?}; want id {DEMO_HEADER_ID:?})")]
     InvalidDemoFileStamp { got: [u8; DEMO_HEADER_ID_SIZE] },
+}
+
+/// error of [`DemoFile::file_info`] (and its [`SeekableDemoStream::total_ticks`]).
+#[derive(thiserror::Error, Debug)]
+pub enum FileInfoError {
+    #[error(transparent)]
+    IoError(#[from] io::Error),
+    #[error(transparent)]
+    ReadCmdHeaderError(#[from] ReadCmdHeaderError),
+    #[error(transparent)]
+    ReadCmdError(#[from] ReadCmdError),
+    #[error(transparent)]
+    DecodeProtobufError(#[from] prost::DecodeError),
 }
 
 fn read_demo_header<R: Read>(mut rdr: R) -> Result<DemoHeader, DemoHeaderError> {
@@ -89,19 +101,22 @@ impl<R: Read + Seek> DemoFile<R> {
         &self.demo_header
     }
 
-    pub fn file_info(&mut self) -> Result<&CDemoFileInfo, anyhow::Error> {
-        if self.file_info.is_none() {
+    pub fn file_info(&mut self) -> Result<&CDemoFileInfo, FileInfoError> {
+        let file_info = if let Some(file_info) = self.file_info.take() {
+            file_info
+        } else {
             let backup = self.rdr.stream_position()?;
 
             self.rdr
                 .seek(SeekFrom::Start(self.demo_header.fileinfo_offset as u64))?;
             let cmd_header = self.read_cmd_header()?;
-            self.file_info = Some(CDemoFileInfo::decode(self.read_cmd(&cmd_header)?)?);
+            let file_info = CDemoFileInfo::decode(self.read_cmd(&cmd_header)?)?;
 
             self.rdr.seek(SeekFrom::Start(backup))?;
-        }
+            file_info
+        };
 
-        self.file_info.as_ref().context("file info not set")
+        Ok(self.file_info.insert(file_info))
     }
 }
 
@@ -176,7 +191,9 @@ impl<R: Read + Seek> SeekableDemoStream for DemoFile<R> {
         size_of::<DemoHeader>() as u64
     }
 
-    fn total_ticks(&mut self) -> Result<i32, anyhow::Error> {
+    type TotalTicksError = FileInfoError;
+
+    fn total_ticks(&mut self) -> Result<i32, FileInfoError> {
         self.file_info()
             .map(valveprotos::common::CDemoFileInfo::playback_ticks)
     }

@@ -5,7 +5,6 @@ use std::env;
 use std::sync::{Arc, LazyLock, Mutex};
 use std::time::Instant;
 
-use anyhow::{Context, Result, anyhow};
 use axum::extract::State;
 use axum::routing::{get, post};
 use axum::{Json, Router};
@@ -26,7 +25,7 @@ use valveprotos::deadlock::{
 };
 use valveprotos::gcsdk::EgcPlatform;
 
-use crate::easy_poll::start_polling_text;
+use crate::easy_poll::{PollError, start_polling_text};
 
 const BOT_RUNTIME_HOURS: u64 = 6;
 const SPECTATE_COOLDOWN: Duration = Duration::from_millis(10);
@@ -48,6 +47,38 @@ static DISABLE_GAP_SPECTATING: LazyLock<bool> = LazyLock::new(|| {
     env::var("DISABLE_GAP_SPECTATING")
         .is_ok_and(|s| matches!(s.trim().to_lowercase().as_str(), "1" | "true" | "yes"))
 });
+
+#[derive(Debug, thiserror::Error)]
+pub(crate) enum SpectateBotError {
+    #[error(transparent)]
+    Redis(#[from] fred::error::Error),
+    #[error(transparent)]
+    Http(#[from] reqwest::Error),
+    #[error(transparent)]
+    Encode(#[from] prost::EncodeError),
+    #[error(transparent)]
+    Base64(#[from] base64::DecodeError),
+    #[error(transparent)]
+    Decode(#[from] prost::DecodeError),
+    #[error(transparent)]
+    Poll(#[from] PollError),
+    #[error(transparent)]
+    Timestamp(#[from] jiff::Error),
+    #[error("Failed to parse client version")]
+    ParseClientVersion,
+    #[error("current_patch mutex poisoned")]
+    PatchMutexPoisoned,
+    #[error("No current patch version available")]
+    NoPatchVersion,
+    #[error("Spectate bot server stopped")]
+    ServerStopped,
+    #[error("Spectate bot server failed")]
+    ServerFailed(#[source] std::io::Error),
+    #[error("Spectate bot server task failed")]
+    ServerTask(#[source] tokio::task::JoinError),
+}
+
+type Result<T, E = SpectateBotError> = core::result::Result<T, E>;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 struct PoolLimitInfo {
@@ -159,7 +190,7 @@ impl SpectatorBot {
         key: &str,
         matches: &[SpectatedMatchInfo],
         expiry_seconds: i64,
-    ) -> anyhow::Result<()> {
+    ) -> Result<()> {
         let payload: Vec<(u64, String)> = matches
             .iter()
             .filter_map(|x| serde_json::to_string(&x).ok().map(|s| (x.match_id, s)))
@@ -178,7 +209,7 @@ impl SpectatorBot {
         Ok(())
     }
 
-    async fn mark_ended(&self, match_ids: &[u64]) -> anyhow::Result<()> {
+    async fn mark_ended(&self, match_ids: &[u64]) -> Result<()> {
         self.redis
             .hdel::<(), _, _>(REDIS_SPEC_KEY, match_ids.to_vec())
             .await?;
@@ -232,7 +263,7 @@ impl SpectatorBot {
             .split_once("ClientVersion=")
             .and_then(|(_, rest)| rest.split_once('\n'))
             .and_then(|(v, _)| v.trim().parse::<u64>().ok())
-            .context("Failed to parse client version")?;
+            .ok_or(SpectateBotError::ParseClientVersion)?;
 
         if let Ok(mut current) = self.current_patch.lock() {
             let overridden = env::var("CLIENT_VERSION").ok().and_then(|s| s.parse().ok());
@@ -257,8 +288,8 @@ impl SpectatorBot {
         let current_patch = self
             .current_patch
             .lock()
-            .map_err(|_| anyhow!("current_patch mutex poisoned"))?
-            .context("No current patch version available")?;
+            .map_err(|_| SpectateBotError::PatchMutexPoisoned)?
+            .ok_or(SpectateBotError::NoPatchVersion)?;
 
         let spectate_message = CMsgClientToGcSpectateLobby {
             match_id: Some(match_id),
@@ -502,7 +533,7 @@ impl Drop for AbortOnDrop {
     }
 }
 
-async fn run_server(bot: Arc<SpectatorBot>) -> Result<()> {
+async fn run_server(bot: Arc<SpectatorBot>) -> std::io::Result<()> {
     let app = Router::new()
         .route("/matches", get(fetch_matches))
         .route("/matches-past-hour", get(count_extra_matches))
@@ -590,9 +621,9 @@ pub(crate) async fn run_bot(
     tokio::select! {
         () = bot_loop => Ok(()),
         result = &mut server => match result {
-            Ok(Ok(())) => Err(anyhow!("Spectate bot server stopped")),
-            Ok(Err(e)) => Err(e.context("Spectate bot server failed")),
-            Err(e) => Err(anyhow!(e).context("Spectate bot server task failed")),
+            Ok(Ok(())) => Err(SpectateBotError::ServerStopped),
+            Ok(Err(e)) => Err(SpectateBotError::ServerFailed(e)),
+            Err(e) => Err(SpectateBotError::ServerTask(e)),
         },
         () = shutdown.cancelled() => {
             info!("Shutting down spectate bot");

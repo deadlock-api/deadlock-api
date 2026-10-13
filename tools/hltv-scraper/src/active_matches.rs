@@ -44,7 +44,7 @@ fn has_objective(mask: u32, objective: ECitadelTeamObjective) -> bool {
 }
 
 #[cached(ttl_secs = 60, convert = "{ 0 }", key = "u8", sync_writes = "default")]
-pub(crate) async fn fetch_active_matches_cached() -> anyhow::Result<Vec<ActiveMatch>> {
+pub(crate) async fn fetch_active_matches_cached() -> reqwest::Result<Vec<ActiveMatch>> {
     let res = common::http_client()
         .get("https://api.deadlock-api.com/v1/matches/active")
         .send()

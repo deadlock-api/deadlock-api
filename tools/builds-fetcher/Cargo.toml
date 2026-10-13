@@ -4,7 +4,6 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-anyhow = { workspace = true }
 clickhouse = { workspace = true }
 common = { workspace = true }
 itertools = { workspace = true }
@@ -13,6 +12,7 @@ rand = { workspace = true }
 reqwest = { workspace = true, features = ["json"] }
 serde_json = { workspace = true }
 sqlx = { workspace = true, features = ["macros", "postgres", "runtime-tokio", "time"] }
+thiserror = { workspace = true }
 time = "0.3.55"
 tokio = { workspace = true }
 tracing = { workspace = true }

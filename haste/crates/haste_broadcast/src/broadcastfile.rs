@@ -79,6 +79,8 @@ impl<R: Read + Seek> DemoStream for BroadcastFile<R> {
 }
 
 impl<R: Read + Seek> SeekableDemoStream for BroadcastFile<R> {
+    type TotalTicksError = ReadCmdHeaderError;
+
     /// delegated from [`std::io::Seek`].
     fn seek(&mut self, pos: SeekFrom) -> Result<u64, io::Error> {
         self.rdr.seek(pos)
@@ -98,7 +100,7 @@ impl<R: Read + Seek> SeekableDemoStream for BroadcastFile<R> {
         0
     }
 
-    fn total_ticks(&mut self) -> Result<i32, anyhow::Error> {
+    fn total_ticks(&mut self) -> Result<i32, ReadCmdHeaderError> {
         if self.total_ticks.is_none() {
             self.total_ticks = Some(scan_for_last_tick(self)?);
         }

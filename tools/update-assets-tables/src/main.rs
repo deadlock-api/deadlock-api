@@ -19,12 +19,35 @@ use crate::models::{ChHero, ChItem, ItemType};
 
 mod models;
 
+#[derive(Debug, thiserror::Error)]
+enum Error {
+    #[error(transparent)]
+    Metrics(#[from] common::MetricsError),
+    #[error(transparent)]
+    Env(#[from] std::env::VarError),
+}
+
+#[derive(Debug, thiserror::Error)]
+enum UpdateError {
+    #[error(transparent)]
+    Fetch(#[from] reqwest::Error),
+    #[error(transparent)]
+    Clickhouse(#[from] clickhouse::error::Error),
+    #[error("{staging} holds {staged} rows, expected {inserted}; keeping the current {table}")]
+    StagingRowMismatch {
+        table: String,
+        staging: String,
+        staged: u64,
+        inserted: u32,
+    },
+}
+
 const UPDATE_INTERVAL_S: u64 = 60 * 60; // Run every hour
 const MAX_FETCH_ATTEMPTS: u32 = 4;
 const CACHE_BUST_AFTER_ATTEMPTS: u32 = 2;
 
 #[tokio::main]
-async fn main() -> anyhow::Result<()> {
+async fn main() -> Result<(), Error> {
     let _otel_guard = common::init_tracing(env!("CARGO_PKG_NAME"));
     common::init_metrics()?;
 
@@ -55,7 +78,7 @@ async fn main() -> anyhow::Result<()> {
 async fn fetch_with_retries<T: serde::de::DeserializeOwned>(
     http_client: &reqwest::Client,
     base_url: &str,
-) -> anyhow::Result<T> {
+) -> reqwest::Result<T> {
     let mut attempt = 0;
     let backoff = common::Backoff {
         retries: MAX_FETCH_ATTEMPTS - 1,
@@ -84,14 +107,13 @@ async fn fetch_with_retries<T: serde::de::DeserializeOwned>(
         }
     })
     .await
-    .map_err(Into::into)
 }
 
 #[instrument(skip_all)]
 async fn update_heroes(
     ch_client: &clickhouse::Client,
     http_client: &reqwest::Client,
-) -> anyhow::Result<()> {
+) -> Result<(), UpdateError> {
     info!("Updating heroes");
     let heroes: Vec<Hero> = fetch_with_retries(
         http_client,
@@ -145,7 +167,7 @@ async fn update_heroes(
 async fn update_items(
     ch_client: &clickhouse::Client,
     http_client: &reqwest::Client,
-) -> anyhow::Result<()> {
+) -> Result<(), UpdateError> {
     info!("Updating items");
     let raw_items: Vec<Item> =
         fetch_with_retries(http_client, "https://api.deadlock-api.com/v1/assets/items").await?;
@@ -210,7 +232,10 @@ async fn update_items(
 
 /// Recreates `{table}_staging` from the live table, so its schema always matches and a swap
 /// can never bring back an outdated one. The previous run's rows are dropped with it.
-async fn create_staging(ch_client: &clickhouse::Client, table: &str) -> anyhow::Result<String> {
+async fn create_staging(
+    ch_client: &clickhouse::Client,
+    table: &str,
+) -> clickhouse::error::Result<String> {
     let staging = format!("{table}_staging");
     ch_client
         .query(&format!("DROP TABLE IF EXISTS {staging} SYNC"))
@@ -234,15 +259,19 @@ async fn swap_in(
     table: &str,
     staging: &str,
     inserted: u32,
-) -> anyhow::Result<()> {
+) -> Result<(), UpdateError> {
     let staged: u64 = ch_client
         .query(&format!("SELECT count() FROM {staging}"))
         .fetch_one()
         .await?;
-    anyhow::ensure!(
-        staged == u64::from(inserted),
-        "{staging} holds {staged} rows, expected {inserted}; keeping the current {table}"
-    );
+    if staged != u64::from(inserted) {
+        return Err(UpdateError::StagingRowMismatch {
+            table: table.to_owned(),
+            staging: staging.to_owned(),
+            staged,
+            inserted,
+        });
+    }
     ch_client
         .query(&format!("EXCHANGE TABLES {table} AND {staging}"))
         .execute()

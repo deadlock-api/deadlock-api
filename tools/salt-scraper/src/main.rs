@@ -13,7 +13,6 @@
 use core::time::Duration;
 use std::sync::LazyLock;
 
-use anyhow::bail;
 use clickhouse::Client;
 use futures::StreamExt;
 use metrics::{counter, gauge};
@@ -26,6 +25,27 @@ use valveprotos::deadlock::{
 };
 
 mod models;
+
+#[derive(Debug, thiserror::Error)]
+enum Error {
+    #[error(transparent)]
+    Metrics(#[from] common::MetricsError),
+    #[error(transparent)]
+    Env(#[from] std::env::VarError),
+    #[error(transparent)]
+    Client(#[from] common::ClientError),
+}
+
+/// Why a single match's salts could not be fetched and stored.
+#[derive(Debug, thiserror::Error)]
+enum FetchError {
+    #[error(transparent)]
+    SteamProxy(#[from] common::SteamProxyError),
+    #[error("Got a rate limited response: {0:?}")]
+    RateLimited(CMsgClientToGcGetMatchMetaDataResponse),
+    #[error(transparent)]
+    Ingest(#[from] clickhouse::error::Error),
+}
 
 /// Upper bound for valid `match_ids`. `match_salts` has historical garbage values up to
 /// ~3.7e18 which otherwise force the anti-join set to cover a huge key range. Real
@@ -43,7 +63,7 @@ static PRIORITIZATION_MAX_RETRIES: LazyLock<u32> =
 
 #[tokio::main]
 #[expect(clippy::too_many_lines)]
-async fn main() -> anyhow::Result<()> {
+async fn main() -> Result<(), Error> {
     let _otel_guard = common::init_tracing(env!("CARGO_PKG_NAME"));
     common::init_metrics()?;
 
@@ -178,7 +198,7 @@ async fn fetch_prioritized_match(
     http_client: &reqwest::Client,
     ch_client: &Client,
     match_id: u64,
-) -> anyhow::Result<()> {
+) -> Result<(), FetchError> {
     info!("Fetching prioritized match {match_id}");
 
     // Use exponential backoff for prioritized matches
@@ -202,7 +222,7 @@ async fn fetch_match_internal(
     http_client: &reqwest::Client,
     ch_client: &Client,
     match_id: u64,
-) -> anyhow::Result<()> {
+) -> Result<(), FetchError> {
     // Fetch Salts
     let salts = fetch_salts(http_client, match_id).await;
     let (username, salts) = match salts {
@@ -214,14 +234,14 @@ async fn fetch_match_internal(
         Err(e) => {
             counter!("salt_scraper.fetch_salts.failure").increment(1);
             warn!("Failed to fetch salts: {:?}", e);
-            return Err(e);
+            return Err(e.into());
         }
     };
 
     // Parse Salts
     if salts.result == Some(KEResultRateLimited as i32) {
         counter!("salt_scraper.parse_salt.failure").increment(1);
-        bail!("Got a rate limited response: {salts:?}");
+        return Err(FetchError::RateLimited(salts));
     }
     counter!("salt_scraper.parse_salt.success").increment(1);
     debug!("Parsed salts");
@@ -244,7 +264,7 @@ async fn fetch_match_internal(
 async fn fetch_salts(
     http_client: &reqwest::Client,
     match_id: u64,
-) -> anyhow::Result<(String, CMsgClientToGcGetMatchMetaDataResponse)> {
+) -> Result<(String, CMsgClientToGcGetMatchMetaDataResponse), common::SteamProxyError> {
     let msg = CMsgClientToGcGetMatchMetaData {
         match_id: Some(match_id),
         ..Default::default()

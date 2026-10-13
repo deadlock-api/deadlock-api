@@ -10,10 +10,10 @@ use std::collections::BTreeMap;
 use std::fs::File;
 use std::io::BufReader;
 
-use haste::demofile::DemoFile;
+use haste::demofile::{DemoFile, DemoHeaderError};
 use haste::entities::{DeltaHeader, Entity, fkey_from_path};
 use haste::fxhash;
-use haste::parser::{Context, Parser, Visitor};
+use haste::parser::{Context, Parser, ParserError, Visitor};
 use haste::valveprotos::common::{CsvcMsgServerInfo, SvcMessages};
 use prost::Message;
 
@@ -127,10 +127,20 @@ impl Visitor for MyVisitor {
     }
 }
 
-fn main() -> anyhow::Result<()> {
-    let path = std::env::args()
-        .nth(1)
-        .ok_or_else(|| anyhow::anyhow!("usage: deadlock-demo-check <path-to-dem-file>"))?;
+#[derive(Debug, thiserror::Error)]
+enum CheckError {
+    #[error("usage: deadlock-demo-check <path-to-dem-file>")]
+    Usage,
+    #[error(transparent)]
+    Io(#[from] std::io::Error),
+    #[error(transparent)]
+    DemoHeader(#[from] DemoHeaderError),
+    #[error(transparent)]
+    Parser(#[from] ParserError<std::io::Error>),
+}
+
+fn main() -> Result<(), CheckError> {
+    let path = std::env::args().nth(1).ok_or(CheckError::Usage)?;
     let demo_file = DemoFile::start_reading(BufReader::new(File::open(path)?))?;
     let mut parser = Parser::from_stream_with_visitor(demo_file, MyVisitor::default())?;
     let result = parser.run_to_end();
@@ -140,5 +150,5 @@ fn main() -> anyhow::Result<()> {
     for (packet_type, (count, bytes)) in &visitor.packets {
         println!("packet type {packet_type}: count={count} bytes={bytes}");
     }
-    result
+    Ok(result?)
 }

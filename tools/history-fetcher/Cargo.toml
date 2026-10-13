@@ -4,13 +4,13 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-anyhow = { workspace = true }
 common = { workspace = true }
 futures = { workspace = true }
 metrics = { workspace = true }
 player-match-history = { workspace = true }
 reqwest = { workspace = true }
 sqlx = { workspace = true, features = ["postgres", "runtime-tokio"] }
+thiserror = { workspace = true }
 tokio = { workspace = true }
 tracing = { workspace = true }
 valveprotos = { workspace = true, features = ["gc-client", "serde"] }

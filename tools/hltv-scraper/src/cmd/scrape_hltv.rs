@@ -4,7 +4,6 @@ use std::collections::HashSet;
 use std::path::Path;
 use std::sync::Arc;
 
-use anyhow::Context;
 use async_compression::tokio::write::BzEncoder;
 use bytes::Bytes;
 use dashmap::DashSet;
@@ -26,10 +25,29 @@ use crate::cmd::run_spectate_bot::{SpectatedMatchInfo, SpectatedMatchType};
 /// Fallback for metadata the object store rejected; docker-compose mounts `./local-store` here.
 const LOCAL_STORE_ROOT: &str = "/matches";
 
-pub(crate) async fn run(spectate_server_url: String) -> anyhow::Result<()> {
+#[derive(Debug, thiserror::Error)]
+pub(crate) enum ScrapeHltvError {
+    #[error("Parsing base url for spectate server")]
+    ParseBaseUrl(#[source] url::ParseError),
+    #[error(transparent)]
+    JoinUrl(url::ParseError),
+    #[error(transparent)]
+    Client(#[from] common::ClientError),
+}
+
+#[derive(Debug, thiserror::Error)]
+enum CompressError {
+    #[error(transparent)]
+    Encode(#[from] prost::EncodeError),
+    #[error("Error writing buf write")]
+    Write(#[source] std::io::Error),
+    #[error("Error finishing buf write")]
+    Finish(#[source] std::io::Error),
+}
+
+pub(crate) async fn run(spectate_server_url: String) -> Result<(), ScrapeHltvError> {
     let spec_client = common::http_client();
-    let base_url =
-        Url::parse(&spectate_server_url).context("Parsing base url for spectate server")?;
+    let base_url = Url::parse(&spectate_server_url).map_err(ScrapeHltvError::ParseBaseUrl)?;
 
     let currently_downloading: Arc<DashSet<u64>> = Arc::new(DashSet::new());
 
@@ -41,7 +59,7 @@ pub(crate) async fn run(spectate_server_url: String) -> anyhow::Result<()> {
     let aws_cache_store = common::get_cache_store()?;
     let cache_store = Arc::new(aws_cache_store);
 
-    let matches_url = base_url.join("matches")?;
+    let matches_url = base_url.join("matches").map_err(ScrapeHltvError::JoinUrl)?;
     loop {
         let current_count = currently_downloading.len();
 
@@ -50,7 +68,10 @@ pub(crate) async fn run(spectate_server_url: String) -> anyhow::Result<()> {
         let matches = match fetch_spectated_matches(&spec_client, &matches_url).await {
             Ok(matches) => matches,
             Err(e) => {
-                error!("Failed to get matches to check against: {e:#}");
+                error!(
+                    "Failed to get matches to check against: {}",
+                    common::ErrorChain(&e)
+                );
                 sleep(Duration::from_secs(5)).await;
                 continue;
             }
@@ -200,7 +221,9 @@ async fn store_meta(
     }
 }
 
-async fn compress_match_metadata(match_metadata: &CMsgMatchMetaData) -> anyhow::Result<Vec<u8>> {
+async fn compress_match_metadata(
+    match_metadata: &CMsgMatchMetaData,
+) -> Result<Vec<u8>, CompressError> {
     let mut buf_meta = Vec::new();
     match_metadata.encode(&mut buf_meta)?;
 
@@ -209,11 +232,8 @@ async fn compress_match_metadata(match_metadata: &CMsgMatchMetaData) -> anyhow::
     compressor
         .write_all(&buf_meta)
         .await
-        .context("Error writing buf write")?;
-    compressor
-        .shutdown()
-        .await
-        .context("Error finishing buf write")?;
+        .map_err(CompressError::Write)?;
+    compressor.shutdown().await.map_err(CompressError::Finish)?;
     Ok(output)
 }
 

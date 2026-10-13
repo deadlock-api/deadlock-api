@@ -37,7 +37,6 @@ dungers_bitbuf = { path = "haste/crates/dungers_bitbuf" }
 dungers_charsor = { path = "haste/crates/dungers_charsor" }
 dungers_varint = { path = "haste/crates/dungers_varint" }
 
-anyhow = "1.0.104"
 async-compression = "0.4.48"
 base64 = "0.23.1"
 cached = "4.0"

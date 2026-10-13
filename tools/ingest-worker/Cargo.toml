@@ -4,7 +4,6 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-anyhow = { workspace = true }
 bzip2 = "0.6"
 bytes = "1"
 zstd = "0.14"
@@ -17,6 +16,7 @@ object_store = { workspace = true }
 prost = { workspace = true }
 serde = { workspace = true }
 serde_repr = { workspace = true }
+thiserror = { workspace = true }
 tokio = { workspace = true }
 tokio-util = { workspace = true, features = ["rt"] }
 tracing = { workspace = true }

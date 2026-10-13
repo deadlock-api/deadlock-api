@@ -6,7 +6,7 @@ use crate::stringtables::StringTable;
 pub(crate) const INSTANCE_BASELINE_TABLE_NAME: &str = "instancebaseline";
 
 #[derive(thiserror::Error, Debug)]
-pub(crate) enum InstanceBaselineError {
+pub enum InstanceBaselineError {
     #[error(transparent)]
     ParseInt(#[from] ParseIntError),
     #[error("instance baseline for class id {class_id}, but there are only {classes} classes")]

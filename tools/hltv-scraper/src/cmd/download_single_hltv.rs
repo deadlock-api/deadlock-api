@@ -1,26 +1,24 @@
 use std::time::Instant;
 
-use anyhow::Context;
 use metrics::{counter, histogram};
 use tracing::{debug, info, warn};
 use valveprotos::deadlock::CMsgMatchMetaData;
 
 use crate::cmd::run_spectate_bot::SpectatedMatchType;
 use crate::hltv::hltv_download;
+use crate::hltv::hltv_download::DownloadError;
 
 pub(crate) async fn download_single_hltv_meta(
     match_type: SpectatedMatchType,
     match_id: u64,
     broadcast_url: String,
-) -> anyhow::Result<Option<CMsgMatchMetaData>> {
+) -> Result<Option<CMsgMatchMetaData>, DownloadError> {
     let start = Instant::now();
     let label = match_type.label();
 
     // Fragments are fetched for as long as the match runs; bound each read, not the total.
     let client = common::streaming_http_client();
-    let mut recv = hltv_download::download_match_mpsc(client, match_id, broadcast_url)
-        .await
-        .context("Error downloading match initialization")?;
+    let mut recv = hltv_download::download_match_mpsc(client, match_id, broadcast_url).await?;
 
     let mut fragment_count = 0;
     let mut did_receive_last_fragment = false;

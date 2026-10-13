@@ -14,7 +14,6 @@ use core::time::Duration;
 use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, LazyLock, Mutex};
 
-use anyhow::{Context, bail};
 use cached::macros::cached;
 use clap::Parser;
 use clickhouse::Client;
@@ -28,6 +27,66 @@ use tokio_util::bytes::Bytes;
 use tracing::{debug, error, info, instrument, warn};
 
 mod models;
+
+#[derive(Debug, thiserror::Error)]
+enum Error {
+    #[error(transparent)]
+    Metrics(#[from] common::MetricsError),
+    #[error(transparent)]
+    Env(#[from] std::env::VarError),
+    #[error(transparent)]
+    Client(#[from] common::ClientError),
+    #[error("reading {path}")]
+    ReadMatchIds {
+        path: String,
+        #[source]
+        source: std::io::Error,
+    },
+    #[error("invalid match id {line:?}")]
+    InvalidMatchId {
+        line: String,
+        #[source]
+        source: core::num::ParseIntError,
+    },
+    #[error("No match ids found in {0}")]
+    NoMatchIds(String),
+    #[error("fetching salts for the requested match ids")]
+    FetchRequestedSalts(#[source] clickhouse::error::Error),
+    #[error("fetching the incremental match id bound")]
+    FetchIncrementalBound(#[source] clickhouse::error::Error),
+    #[error("fetching pending match salts")]
+    FetchPendingSalts(#[source] clickhouse::error::Error),
+    #[error("stamping salt verdicts")]
+    StampVerdicts(#[source] clickhouse::error::Error),
+    #[error("deleting superseded salt candidates")]
+    CollectGarbage(#[source] clickhouse::error::Error),
+}
+
+#[derive(Debug, thiserror::Error)]
+enum DownloadError {
+    #[error("fetching metadata for match {match_id}")]
+    FetchMetadata {
+        match_id: u64,
+        #[source]
+        source: FetchError,
+    },
+    #[error("uploading main metadata")]
+    UploadMain(#[source] object_store::Error),
+    #[error("uploading cached metadata")]
+    UploadCache(#[source] object_store::Error),
+    #[error("deleting outdated HLTV metadata (main)")]
+    DeleteHltvMain(#[source] object_store::Error),
+    #[error("deleting outdated HLTV metadata (cache)")]
+    DeleteHltvCache(#[source] object_store::Error),
+}
+
+#[derive(Debug, thiserror::Error)]
+enum FetchError {
+    #[error("every candidate salt failed")]
+    AllCandidatesFailed(#[source] reqwest::Error),
+    #[error("no candidate salts")]
+    NoCandidates,
+}
 
 /// Upper bound on matches downloaded per iteration. Without it a large backlog
 /// keeps a single iteration running for hours, during which matches that got
@@ -189,7 +248,7 @@ struct Cli {
 }
 
 #[tokio::main]
-async fn main() -> anyhow::Result<()> {
+async fn main() -> Result<(), Error> {
     let _otel_guard = common::init_tracing(env!("CARGO_PKG_NAME"));
     common::init_metrics()?;
 
@@ -212,14 +271,17 @@ async fn main() -> anyhow::Result<()> {
             if let Err(e) = run_iteration(&ch_client, &store, &cache_store, &state, &mut scan).await
             {
                 counter!("matchdata_downloader.iteration.failure").increment(1);
-                error!("Iteration failed: {e:#}");
+                error!("Iteration failed: {}", common::ErrorChain(&e));
                 sleep(ITERATION_BACKOFF).await;
                 continue;
             }
             if last_gc.elapsed() >= GC_INTERVAL {
                 last_gc = tokio::time::Instant::now();
                 if let Err(e) = collect_garbage(&ch_client).await {
-                    warn!("Collecting superseded salt candidates failed: {e:#}");
+                    warn!(
+                        "Collecting superseded salt candidates failed: {}",
+                        common::ErrorChain(&e)
+                    );
                 }
             }
             if let Some(remaining) = POLL_INTERVAL.checked_sub(started.elapsed()) {
@@ -235,23 +297,28 @@ async fn download_from_file(
     store: &Arc<dyn ObjectStore>,
     cache_store: &Arc<dyn ObjectStore>,
     file_path: &str,
-) -> anyhow::Result<()> {
+) -> Result<(), Error> {
     let content = tokio::fs::read_to_string(file_path)
         .await
-        .with_context(|| format!("reading {file_path}"))?;
+        .map_err(|source| Error::ReadMatchIds {
+            path: file_path.to_owned(),
+            source,
+        })?;
     let mut match_ids = content
         .lines()
         .map(str::trim)
         .filter(|l| !l.is_empty())
         .map(|l| {
-            l.parse::<u64>()
-                .with_context(|| format!("invalid match id {l:?}"))
+            l.parse::<u64>().map_err(|source| Error::InvalidMatchId {
+                line: l.to_owned(),
+                source,
+            })
         })
-        .collect::<anyhow::Result<Vec<_>>>()?;
+        .collect::<Result<Vec<_>, _>>()?;
     match_ids.sort_unstable();
     match_ids.dedup();
     if match_ids.is_empty() {
-        bail!("No match ids found in {file_path}");
+        return Err(Error::NoMatchIds(file_path.to_owned()));
     }
 
     let salts = group_by_match(
@@ -259,7 +326,7 @@ async fn download_from_file(
             .query(&salts_by_id_query(&match_ids))
             .fetch_all::<MatchSalts>()
             .await
-            .context("fetching salts for the requested match ids")?,
+            .map_err(Error::FetchRequestedSalts)?,
     );
     info!(
         "Downloading {} of {} requested matches; {} have no usable salts",
@@ -299,7 +366,7 @@ async fn run_iteration(
     cache_store: &Arc<dyn ObjectStore>,
     state: &State,
     scan: &mut Scan,
-) -> anyhow::Result<()> {
+) -> Result<(), Error> {
     let full_scan = scan
         .last_full
         .is_none_or(|t| t.elapsed() >= FULL_SCAN_INTERVAL);
@@ -311,7 +378,7 @@ async fn run_iteration(
             "matchdata_downloader_fetch_incremental_min_match_id",
         )
         .await
-        .context("fetching the incremental match id bound")?;
+        .map_err(Error::FetchIncrementalBound)?;
         0
     } else {
         scan.incremental_min_match_id
@@ -322,7 +389,7 @@ async fn run_iteration(
             .query(&pending_salts_query(min_match_id))
             .fetch_all::<MatchSalts>()
             .await
-            .context("fetching pending match salts")?,
+            .map_err(Error::FetchPendingSalts)?,
     );
 
     // Only a full scan sees the whole pending set: an incremental one would report too few
@@ -361,7 +428,7 @@ async fn run_iteration(
 /// Each row repeats its candidate's sorting key, so coalescing folds the verdict onto that row
 /// rather than adding one. The column a row does not speak to stays NULL, which coalescing
 /// skips, so both verdicts fit in one statement.
-async fn stamp(ch_client: &Client, verdicts: &Verdicts) -> anyhow::Result<()> {
+async fn stamp(ch_client: &Client, verdicts: &Verdicts) -> Result<(), Error> {
     let row = |s: &MatchSalts, verified: &str, failed: &str| {
         format!(
             "({},{},{},toDateTime({}),{verified},{failed})",
@@ -389,7 +456,7 @@ async fn stamp(ch_client: &Client, verdicts: &Verdicts) -> anyhow::Result<()> {
         ))
         .execute()
         .await
-        .context("stamping salt verdicts")?;
+        .map_err(Error::StampVerdicts)?;
     counter!("matchdata_downloader.salts_stamped", "verdict" => "verified")
         .increment(verdicts.verified.len() as u64);
     counter!("matchdata_downloader.salts_stamped", "verdict" => "failed")
@@ -399,7 +466,7 @@ async fn stamp(ch_client: &Client, verdicts: &Verdicts) -> anyhow::Result<()> {
 
 /// Drops candidates that lost to a verified sibling. Pure cleanup: readers already prefer the
 /// verified candidate, so a failure only warns.
-async fn collect_garbage(ch_client: &Client) -> anyhow::Result<()> {
+async fn collect_garbage(ch_client: &Client) -> Result<(), Error> {
     ch_client
         .query(
             "DELETE FROM match_salts \
@@ -410,7 +477,7 @@ async fn collect_garbage(ch_client: &Client) -> anyhow::Result<()> {
         )
         .execute()
         .await
-        .context("deleting superseded salt candidates")
+        .map_err(Error::CollectGarbage)
 }
 
 /// Each result carries its own match id: [`futures::StreamExt::buffer_unordered`]
@@ -420,7 +487,7 @@ async fn process_batch<B, C>(
     bucket: &B,
     cache_bucket: &C,
     salts: &[MatchCandidates],
-) -> Vec<(u64, anyhow::Result<Option<MatchSalts>>)>
+) -> Vec<(u64, Result<Option<MatchSalts>, DownloadError>)>
 where
     B: ObjectStore + ?Sized,
     C: ObjectStore + ?Sized,
@@ -430,7 +497,11 @@ where
             let r = download_match(bucket, cache_bucket, s).await;
             match &r {
                 Ok(_) => gauge!("matchdata_downloader.matches_to_download").decrement(1),
-                Err(e) => error!("Failed to download match {}: {e:#}", s.match_id),
+                Err(e) => error!(
+                    "Failed to download match {}: {}",
+                    s.match_id,
+                    common::ErrorChain(e)
+                ),
             }
             (s.match_id, r)
         })
@@ -450,7 +521,7 @@ struct Verdicts {
 fn handle_results(
     state: &State,
     batch: &[MatchCandidates],
-    results: Vec<(u64, anyhow::Result<Option<MatchSalts>>)>,
+    results: Vec<(u64, Result<Option<MatchSalts>, DownloadError>)>,
 ) -> Verdicts {
     let by_id: HashMap<u64, &MatchCandidates> = batch.iter().map(|m| (m.match_id, m)).collect();
     let mut verdicts = Verdicts::default();
@@ -574,7 +645,7 @@ async fn download_match<B, C>(
     bucket: &B,
     cache_bucket: &C,
     salts: &MatchCandidates,
-) -> anyhow::Result<Option<MatchSalts>>
+) -> Result<Option<MatchSalts>, DownloadError>
 where
     B: ObjectStore + ?Sized,
     C: ObjectStore + ?Sized,
@@ -589,7 +660,10 @@ where
 
     let (winner, bytes) = fetch_first_working(&salts.candidates)
         .await
-        .with_context(|| format!("fetching metadata for match {}", salts.match_id))?;
+        .map_err(|source| DownloadError::FetchMetadata {
+            match_id: salts.match_id,
+            source,
+        })?;
 
     let (up_main, up_cache, del_main, del_cache) = tokio::join!(
         upload_object(bucket, &main_key, bytes.clone()),
@@ -597,10 +671,10 @@ where
         delete_object(bucket, &outdated_hltv_key),
         delete_object(cache_bucket, &outdated_hltv_key),
     );
-    up_main.context("uploading main metadata")?;
-    up_cache.context("uploading cached metadata")?;
-    del_main.context("deleting outdated HLTV metadata (main)")?;
-    del_cache.context("deleting outdated HLTV metadata (cache)")?;
+    up_main.map_err(DownloadError::UploadMain)?;
+    up_cache.map_err(DownloadError::UploadCache)?;
+    del_main.map_err(DownloadError::DeleteHltvMain)?;
+    del_cache.map_err(DownloadError::DeleteHltvCache)?;
 
     info!("Match downloaded");
     Ok(Some(winner))
@@ -608,7 +682,7 @@ where
 
 /// Sequential rather than concurrent: all but one candidate are expected to be wrong, and a
 /// wrong salt still costs the replay server a request.
-async fn fetch_first_working(candidates: &[MatchSalts]) -> anyhow::Result<(MatchSalts, Bytes)> {
+async fn fetch_first_working(candidates: &[MatchSalts]) -> Result<(MatchSalts, Bytes), FetchError> {
     let mut last_err = None;
     for candidate in candidates {
         match fetch_metadata(candidate).await {
@@ -617,8 +691,8 @@ async fn fetch_first_working(candidates: &[MatchSalts]) -> anyhow::Result<(Match
         }
     }
     match last_err {
-        Some(e) => Err(e).context("every candidate salt failed"),
-        None => bail!("no candidate salts"),
+        Some(e) => Err(FetchError::AllCandidatesFailed(e)),
+        None => Err(FetchError::NoCandidates),
     }
 }
 
@@ -735,6 +809,13 @@ mod tests {
         }
     }
 
+    fn failure(match_id: u64) -> DownloadError {
+        DownloadError::FetchMetadata {
+            match_id,
+            source: FetchError::NoCandidates,
+        }
+    }
+
     #[test]
     fn candidates_of_one_match_are_grouped_without_disturbing_the_order() {
         let grouped = group_by_match(vec![
@@ -770,7 +851,7 @@ mod tests {
             match_id: 1,
             candidates: vec![candidate(1, 187), candidate(1, 390)],
         }];
-        let fail = || vec![(1, Err(anyhow::anyhow!("502 Bad Gateway")))];
+        let fail = || vec![(1, Err(failure(1)))];
 
         for _ in 1..MAX_ATTEMPTS {
             assert_eq!(
@@ -880,9 +961,9 @@ mod tests {
             &state,
             &batch,
             vec![
-                (30, Err(anyhow::anyhow!("502 Bad Gateway"))),
+                (30, Err(failure(30))),
                 (10, Ok(Some(candidate(10, 1)))),
-                (20, Err(anyhow::anyhow!("502 Bad Gateway"))),
+                (20, Err(failure(20))),
             ],
         );
 

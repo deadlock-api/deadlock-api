@@ -28,13 +28,13 @@ checksum = "366ffbaa4442f4684d91e2cd7c5ea7c4ed8add41959a31447066e279e432b618"
 name = "active-matches-scraper"
 version = "0.1.0"
 dependencies = [
- "anyhow",
  "clickhouse",
  "common",
  "metrics",
  "reqwest",
  "serde",
  "serde_repr",
+ "thiserror",
  "tokio",
  "tracing",
 ]
@@ -1286,7 +1286,6 @@ dependencies = [
 name = "builds-fetcher"
 version = "0.1.0"
 dependencies = [
- "anyhow",
  "clickhouse",
  "common",
  "itertools 0.15.0",
@@ -1295,6 +1294,7 @@ dependencies = [
  "reqwest",
  "serde_json",
  "sqlx",
+ "thiserror",
  "time",
  "tokio",
  "tracing",
@@ -1648,7 +1648,6 @@ dependencies = [
 name = "common"
 version = "0.1.0"
 dependencies = [
- "anyhow",
  "base64 0.23.1",
  "clickhouse",
  "fred",
@@ -1664,6 +1663,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sqlx",
+ "thiserror",
  "tokio",
  "tokio-util",
  "tracing",
@@ -3020,7 +3020,6 @@ dependencies = [
 name = "demo-analyzer"
 version = "0.1.0"
 dependencies = [
- "anyhow",
  "async-compression",
  "clap",
  "clickhouse",
@@ -3957,17 +3956,16 @@ dependencies = [
 name = "haste"
 version = "0.0.0"
 dependencies = [
- "anyhow",
  "haste_broadcast",
  "haste_core",
  "prost",
+ "thiserror",
 ]
 
 [[package]]
 name = "haste_broadcast"
 version = "0.0.0"
 dependencies = [
- "anyhow",
  "bytes",
  "haste_core",
  "http",
@@ -3983,7 +3981,6 @@ dependencies = [
 name = "haste_core"
 version = "0.0.0"
 dependencies = [
- "anyhow",
  "bytes",
  "dungers",
  "hashbrown 0.17.1",
@@ -4027,13 +4024,13 @@ checksum = "7f24254aa9a54b5c858eaee2f5bccdb46aaf0e486a595ed5fd8f86ba55232a70"
 name = "history-fetcher"
 version = "0.1.0"
 dependencies = [
- "anyhow",
  "common",
  "futures",
  "metrics",
  "player-match-history",
  "reqwest",
  "sqlx",
+ "thiserror",
  "tokio",
  "tracing",
  "valveprotos",
@@ -4061,7 +4058,6 @@ dependencies = [
 name = "hltv-scraper"
 version = "0.1.0"
 dependencies = [
- "anyhow",
  "async-compression",
  "axum",
  "base64 0.23.1",
@@ -4070,6 +4066,7 @@ dependencies = [
  "clap",
  "common",
  "dashmap",
+ "dungers",
  "fred",
  "haste",
  "itertools 0.15.0",
@@ -4084,6 +4081,7 @@ dependencies = [
  "thiserror",
  "tokio",
  "tracing",
+ "url",
  "valveprotos",
 ]
 
@@ -4441,7 +4439,6 @@ dependencies = [
 name = "ingest-worker"
 version = "0.1.0"
 dependencies = [
- "anyhow",
  "bytes",
  "bzip2",
  "clap",
@@ -4453,6 +4450,7 @@ dependencies = [
  "prost",
  "serde",
  "serde_repr",
+ "thiserror",
  "tokio",
  "tokio-util",
  "tracing",
@@ -4932,7 +4930,6 @@ dependencies = [
 name = "matchdata-downloader"
 version = "0.1.0"
 dependencies = [
- "anyhow",
  "cached",
  "clap",
  "clickhouse",
@@ -4942,6 +4939,7 @@ dependencies = [
  "object_store 0.14.2",
  "reqwest",
  "serde",
+ "thiserror",
  "tokio",
  "tokio-util",
  "tracing",
@@ -6766,13 +6764,13 @@ checksum = "9774ba4a74de5f7b1c1451ed6cd5285a32eddb5cccb8cc655a4e50009e06477f"
 name = "salt-scraper"
 version = "0.1.0"
 dependencies = [
- "anyhow",
  "clickhouse",
  "common",
  "futures",
  "metrics",
  "reqwest",
  "serde",
+ "thiserror",
  "tokio",
  "tracing",
  "valveprotos",
@@ -7474,7 +7472,6 @@ checksum = "d7beae5182595e9a8b683fa98c4317f956c9a2dec3b9716990d20023cc60c766"
 name = "steam-profile-fetcher"
 version = "0.1.0"
 dependencies = [
- "anyhow",
  "cached",
  "clickhouse",
  "common",
@@ -7486,6 +7483,7 @@ dependencies = [
  "serde",
  "serde_repr",
  "sqlx",
+ "thiserror",
  "tokio",
  "tracing",
 ]
@@ -8424,13 +8422,13 @@ checksum = "8ecb6da28b8a351d773b68d5825ac39017e680750f980f3a1a85cd8dd28a47c1"
 name = "update-assets-tables"
 version = "0.1.0"
 dependencies = [
- "anyhow",
  "clickhouse",
  "common",
  "metrics",
  "reqwest",
  "serde",
  "serde_repr",
+ "thiserror",
  "tokio",
  "tracing",
 ]

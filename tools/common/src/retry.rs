@@ -1,8 +1,9 @@
 //! Retry utilities using tryhard for resilient operations.
 
-use core::fmt::Display;
 use core::future::Future;
 use core::time::Duration;
+
+use crate::ErrorChain;
 
 /// How [`retry_with_backoff`] spaces its attempts: the delay starts at `initial_delay` and
 /// doubles after every failure, up to `max_delay`.
@@ -42,7 +43,7 @@ pub async fn retry_with_backoff<F, Fut, T, E>(
 where
     F: FnMut() -> Fut,
     Fut: Future<Output = Result<T, E>>,
-    E: Display,
+    E: core::error::Error,
 {
     tryhard::retry_fn(operation)
         .retries(backoff.retries)
@@ -53,7 +54,8 @@ where
                 attempt,
                 max_retries = backoff.retries,
                 next_delay_ms = next_delay.map_or(0, |d| d.as_millis()),
-                "{label} failed, retrying: {error:#}"
+                "{label} failed, retrying: {}",
+                ErrorChain(error)
             );
             core::future::ready(())
         })

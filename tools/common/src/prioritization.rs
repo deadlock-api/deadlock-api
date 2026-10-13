@@ -8,7 +8,7 @@ use sqlx::{Pool, Postgres};
 /// Returns all currently prioritized Steam account IDs.
 ///
 /// Fetches all `steam_id3` values where the patron is active and the account is not deleted.
-pub async fn get_all_prioritized_accounts(pool: &Pool<Postgres>) -> anyhow::Result<Vec<i64>> {
+pub async fn get_all_prioritized_accounts(pool: &Pool<Postgres>) -> sqlx::Result<Vec<i64>> {
     let result = sqlx::query_scalar!(
         r#"
         SELECT psa.steam_id3
@@ -28,7 +28,7 @@ pub async fn get_all_prioritized_accounts(pool: &Pool<Postgres>) -> anyhow::Resu
 /// `steam_id3` and the `bot_id` (username) of the befriended bot.
 pub async fn get_all_prioritized_accounts_with_bots(
     pool: &Pool<Postgres>,
-) -> anyhow::Result<Vec<(i64, String)>> {
+) -> sqlx::Result<Vec<(i64, String)>> {
     let rows: Vec<(i64, String)> = sqlx::query_as(
         r"
         SELECT psa.steam_id3, bf.bot_id

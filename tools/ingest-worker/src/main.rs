@@ -18,7 +18,6 @@ use std::borrow::Cow;
 use std::collections::HashSet;
 use std::sync::{Arc, Mutex};
 
-use anyhow::{Context, bail};
 use bytes::Bytes;
 use clap::Parser;
 use common::{BatchInserter, BatchInserterConfig};
@@ -99,6 +98,40 @@ struct Cli {
     #[arg(long, default_value_t = 60_000, env = "INGEST_FLUSH_INTERVAL_MS")]
     ingest_flush_interval_ms: u64,
 }
+
+#[derive(Debug, thiserror::Error)]
+enum Error {
+    #[error(transparent)]
+    Metrics(#[from] common::MetricsError),
+    #[error(transparent)]
+    Env(#[from] std::env::VarError),
+    #[error(transparent)]
+    Client(#[from] common::ClientError),
+    #[error(transparent)]
+    Io(#[from] std::io::Error),
+}
+
+/// Why a single match object could not be ingested.
+#[derive(Debug, thiserror::Error)]
+enum IngestError {
+    #[error(transparent)]
+    ObjectStore(#[from] object_store::Error),
+    /// Decompression failed.
+    #[error(transparent)]
+    Io(#[from] std::io::Error),
+    #[error(transparent)]
+    Parse(#[from] ParseError),
+    #[error("Missing filename for key {0}")]
+    MissingFilename(Path),
+    #[error("Batch inserters have shut down")]
+    InsertersShutDown,
+    #[error("Match {0} not found in processed or failed folders")]
+    MatchNotFound(String),
+}
+
+#[derive(Debug, thiserror::Error)]
+#[error("Error parsing match data")]
+struct ParseError;
 
 /// Parsed match data ready for ``ClickHouse`` insertion.
 struct ParsedMatch {
@@ -182,7 +215,7 @@ fn lock_inflight(inflight: &InflightSet) -> std::sync::MutexGuard<'_, HashSet<Pa
 }
 
 #[tokio::main]
-async fn main() -> anyhow::Result<()> {
+async fn main() -> Result<(), Error> {
     let _otel_guard = common::init_tracing(env!("CARGO_PKG_NAME"));
     common::init_metrics()?;
 
@@ -194,7 +227,7 @@ async fn main() -> anyhow::Result<()> {
     let store = Arc::new(common::get_store()?);
 
     if let Some(ref file_path) = cli.reingest_file {
-        return reingest_from_file(
+        reingest_from_file(
             &*store,
             &ch_client,
             file_path,
@@ -202,7 +235,8 @@ async fn main() -> anyhow::Result<()> {
             cli.reingest_batch_size,
             cli.reingest_inserters,
         )
-        .await;
+        .await?;
+        return Ok(());
     }
 
     run_ingest_loop(
@@ -223,7 +257,7 @@ async fn run_ingest_loop<S>(
     batch_size: usize,
     num_inserters: usize,
     flush_interval: Duration,
-) -> anyhow::Result<()>
+) -> Result<(), Error>
 where
     S: ObjectStore + 'static,
 {
@@ -332,7 +366,10 @@ async fn ingest_key<S: ObjectStore + 'static>(
         }
         Ok(Err(e)) => {
             counter!("ingest_worker.fetch_parse.failure").increment(1);
-            error!("Error fetching/parsing object {key}: {e:#}");
+            error!(
+                "Error fetching/parsing object {key}: {}",
+                common::ErrorChain(&e)
+            );
             false
         }
         Err(_) => {
@@ -356,7 +393,7 @@ async fn fetch_parse_and_send<S: ObjectStore + 'static>(
     post_flush: &Arc<PostFlush<S>>,
     inserters: &Inserters,
     key: &Path,
-) -> anyhow::Result<bool> {
+) -> Result<bool, IngestError> {
     let store = &*post_flush.store;
     let obj = match get_object(store, key).await {
         Ok(obj) => obj,
@@ -380,7 +417,7 @@ async fn fetch_parse_and_send<S: ObjectStore + 'static>(
 
     let filename = key
         .filename()
-        .with_context(|| format!("Missing filename for key {key}"))?
+        .ok_or_else(|| IngestError::MissingFilename(key.clone()))?
         .to_owned();
 
     let parsed = match parsed {
@@ -399,7 +436,7 @@ async fn fetch_parse_and_send<S: ObjectStore + 'static>(
     };
 
     let Some(flushed) = inserters.insert(parsed).await else {
-        bail!("Batch inserters have shut down");
+        return Err(IngestError::InsertersShutDown);
     };
     let post_flush = Arc::clone(post_flush);
     let key = key.clone();
@@ -453,7 +490,7 @@ async fn reingest_from_file(
     parallelism: usize,
     batch_size: usize,
     num_inserters: usize,
-) -> anyhow::Result<()> {
+) -> std::io::Result<()> {
     let content = tokio::fs::read_to_string(file_path).await?;
     let match_ids: Vec<&str> = content
         .lines()
@@ -529,11 +566,11 @@ async fn reingest_from_file(
 async fn fetch_and_parse_match(
     store: &impl ObjectStore,
     match_id: &str,
-) -> anyhow::Result<ParsedMatch> {
+) -> Result<ParsedMatch, IngestError> {
     let obj = find_match_object(store, match_id).await?;
 
     let data = obj.bytes().await?;
-    decompress_and_parse(data, |m| build_parsed_match(&m)).await?
+    Ok(decompress_and_parse(data, |m| build_parsed_match(&m)).await??)
 }
 
 fn build_parsed_match(match_info: &MatchInfo) -> ParsedMatch {
@@ -567,7 +604,10 @@ fn build_ch_players(match_info: &MatchInfo) -> Vec<ClickhouseMatchPlayer> {
 }
 
 /// Try to find a match file in processed/ first, then failed/, across all known extensions.
-async fn find_match_object(store: &impl ObjectStore, match_id: &str) -> anyhow::Result<GetResult> {
+async fn find_match_object(
+    store: &impl ObjectStore,
+    match_id: &str,
+) -> Result<GetResult, IngestError> {
     for folder in [PROCESSED_PREFIX, FAILED_PREFIX] {
         for ext in MATCH_EXTENSIONS {
             let path = Path::from(format!("{folder}/{match_id}{ext}"));
@@ -577,7 +617,7 @@ async fn find_match_object(store: &impl ObjectStore, match_id: &str) -> anyhow::
             }
         }
     }
-    bail!("Match {match_id} not found in processed or failed folders")
+    Err(IngestError::MatchNotFound(match_id.to_owned()))
 }
 
 async fn list_ingest_objects(store: &impl ObjectStore) -> object_store::Result<Vec<Path>> {
@@ -620,7 +660,10 @@ async fn get_object(store: &impl ObjectStore, key: &Path) -> object_store::Resul
 ///
 /// The outer error is a decompression (or join) failure; the inner one is a protobuf
 /// parse failure, which callers treat differently.
-async fn decompress_and_parse<T, F>(data: Bytes, convert: F) -> std::io::Result<anyhow::Result<T>>
+async fn decompress_and_parse<T, F>(
+    data: Bytes,
+    convert: F,
+) -> std::io::Result<Result<T, ParseError>>
 where
     T: Send + 'static,
     F: FnOnce(MatchInfo) -> T + Send + 'static,
@@ -657,7 +700,7 @@ fn decompress(data: &[u8]) -> std::io::Result<Cow<'_, [u8]>> {
     Ok(decompressed)
 }
 
-fn parse_match_data(buf: &[u8]) -> anyhow::Result<MatchInfo> {
+fn parse_match_data(buf: &[u8]) -> Result<MatchInfo, ParseError> {
     let details = CMsgMatchMetaData::decode(buf)
         .ok()
         .and_then(|m| m.match_details);
@@ -679,7 +722,7 @@ fn parse_match_data(buf: &[u8]) -> anyhow::Result<MatchInfo> {
     } else {
         counter!("ingest_worker.parse_match_data.failure").increment(1);
         error!("Error parsing match data");
-        Err(anyhow::anyhow!("Error parsing match data"))
+        Err(ParseError)
     }
 }
 

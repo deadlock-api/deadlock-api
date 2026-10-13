@@ -19,7 +19,8 @@ use async_compression::tokio::bufread::{BzDecoder, ZstdDecoder};
 use clap::Parser;
 use futures::{StreamExt, TryStreamExt};
 use haste::async_demofile::AsyncDemoFile;
-use haste::parser::AsyncStreamingParser;
+use haste::demofile::DemoHeaderError;
+use haste::parser::{AsyncStreamingParser, ParserError};
 use metrics::{counter, gauge};
 use tokio::io::AsyncReadExt;
 use tokio_util::io::StreamReader;
@@ -79,6 +80,37 @@ impl FailedMatches {
     }
 }
 
+#[derive(Debug, thiserror::Error)]
+enum Error {
+    #[error(transparent)]
+    Metrics(#[from] common::MetricsError),
+    #[error(transparent)]
+    Env(#[from] std::env::VarError),
+    #[error(transparent)]
+    Http(#[from] reqwest::Error),
+    #[error(transparent)]
+    ClickHouse(#[from] clickhouse::error::Error),
+}
+
+/// Why a demo could not be turned into a [`MatchUpdate`].
+#[derive(Debug, thiserror::Error)]
+enum DemoError {
+    #[error("missing cluster_id for match {0}")]
+    MissingClusterId(u64),
+    #[error("missing replay_salt for match {0}")]
+    MissingReplaySalt(u64),
+    #[error(transparent)]
+    Http(#[from] reqwest::Error),
+    #[error(transparent)]
+    Io(#[from] std::io::Error),
+    #[error(transparent)]
+    DemoHeader(#[from] DemoHeaderError),
+    #[error(transparent)]
+    Parse(#[from] ParserError<VisitorError>),
+    #[error("{0}")]
+    LockPoisoned(String),
+}
+
 #[derive(Parser)]
 #[command(about = "Analyze Deadlock demo files to extract player hero build data")]
 struct Cli {
@@ -96,7 +128,7 @@ struct Cli {
 }
 
 #[tokio::main]
-async fn main() -> anyhow::Result<()> {
+async fn main() -> Result<(), Error> {
     let _otel_guard = common::init_tracing(env!("CARGO_PKG_NAME"));
     common::init_metrics()?;
 
@@ -130,7 +162,10 @@ async fn main() -> anyhow::Result<()> {
                 Ok(matches) => matches,
                 Err(e) => {
                     counter!("demo_analyzer.fetch_pending_matches.failure").increment(1);
-                    error!("Failed to fetch pending matches: {e:#}");
+                    error!(
+                        "Failed to fetch pending matches: {}",
+                        common::ErrorChain(&e)
+                    );
                     if cli.once {
                         return Err(e);
                     }
@@ -185,7 +220,8 @@ async fn main() -> anyhow::Result<()> {
             tokio::time::sleep(Duration::from_mins(1)).await;
         }
     })
-    .await
+    .await?;
+    Ok(())
 }
 
 /// Processes `matches` and applies their updates in batches; returns the failed match ids.
@@ -248,7 +284,7 @@ async fn fetch_pending_matches(
     ch_client: &clickhouse::Client,
     full_scan: bool,
     incremental_min_match_id: u64,
-) -> anyhow::Result<Vec<MatchWithReplay>> {
+) -> clickhouse::error::Result<Vec<MatchWithReplay>> {
     let (window, min_match_id) = if full_scan {
         ("30 DAY", 0)
     } else {
@@ -310,13 +346,13 @@ async fn fetch_pending_matches(
 async fn process_demo(
     http_client: &reqwest::Client,
     match_info: &MatchWithReplay,
-) -> anyhow::Result<MatchUpdate> {
+) -> Result<MatchUpdate, DemoError> {
     let cluster_id = match_info
         .cluster_id
-        .ok_or_else(|| anyhow::anyhow!("missing cluster_id for match {}", match_info.match_id))?;
+        .ok_or(DemoError::MissingClusterId(match_info.match_id))?;
     let replay_salt = match_info
         .replay_salt
-        .ok_or_else(|| anyhow::anyhow!("missing replay_salt for match {}", match_info.match_id))?;
+        .ok_or(DemoError::MissingReplaySalt(match_info.match_id))?;
     let url = format!(
         "http://replay{cluster_id}.valve.net/1422450/{}_{replay_salt}.dem.bz2",
         match_info.match_id
@@ -351,14 +387,13 @@ async fn process_demo(
 
     // AllDataCollected is the expected early-exit signal, not an error.
     match parser.run_to_end().await {
-        Ok(()) => {}
-        Err(e)
-            if e.downcast_ref::<VisitorError>()
-                .is_some_and(|ve| matches!(ve, VisitorError::AllDataCollected)) => {}
-        Err(e) => return Err(e),
+        Ok(()) | Err(ParserError::Visitor(VisitorError::AllDataCollected)) => {}
+        Err(e) => return Err(e.into()),
     }
 
-    let state = state.lock().map_err(|e| anyhow::anyhow!("{e}"))?;
+    let state = state
+        .lock()
+        .map_err(|e| DemoError::LockPoisoned(e.to_string()))?;
     let update = correlate(match_info, &state);
 
     info!(
@@ -437,7 +472,10 @@ async fn apply_updates(
     }
 }
 
-async fn apply_update(ch_client: &clickhouse::Client, update: &MatchUpdate) -> anyhow::Result<()> {
+async fn apply_update(
+    ch_client: &clickhouse::Client,
+    update: &MatchUpdate,
+) -> clickhouse::error::Result<()> {
     let bans = format_array(update.banned_hero_ids.iter().copied());
     let accounts = format_array(update.players.iter().map(|p| p.account_id));
     let builds = format_array(update.players.iter().map(|p| p.hero_build_id));
@@ -477,7 +515,7 @@ async fn apply_update(ch_client: &clickhouse::Client, update: &MatchUpdate) -> a
 async fn insert_observed_name_changes(
     ch_client: &clickhouse::Client,
     update: &MatchUpdate,
-) -> anyhow::Result<()> {
+) -> clickhouse::error::Result<()> {
     let observed_names: HashMap<u32, &str> = update
         .players
         .iter()
