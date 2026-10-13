@@ -107,7 +107,7 @@ export function SoundSpecimens() {
       <Specimen
         name="SoundList"
         source="patterns/sound/SoundList"
-        note="Rows of sounds: `SoundListItem` takes a `label`, a quiet `meta` line, `media` (a hero icon) and its takes as children. The takes sit at the row's end and drop below the name in a narrow container. `active` marks the row that is playing with a fill and an edge; the playing button's stop glyph says it too."
+        note="Rows of sounds: `SoundListItem` takes a `label`, a quiet `meta` line, `media` (a hero icon), an `action` at the row's end (a download) and its takes as children. The takes sit at the row's end and drop below the name in a narrow container. `active` marks the row that is playing with a fill and an edge; the playing button's stop glyph says it too."
       >
         <SoundList aria-label="Example sounds">
           <SoundListItem label="Kill Haze" meta="Lines" active={TAKES.some((url) => url === player.playback?.id)}>
@@ -117,9 +117,12 @@ export function SoundSpecimens() {
               </SoundButton>
             ))}
           </SoundListItem>
-          <SoundListItem label="Charge cast" meta="abrams / a2_charge">
+          <SoundListItem
+            label="Charge cast"
+            meta="abrams / a2_charge"
+            action={<DownloadButton href={CAST} size="icon-xs" aria-label="Download Charge cast" />}
+          >
             <SoundButton {...button(CAST, "Charge cast")} />
-            <DownloadButton href={CAST} size="icon-xs" aria-label="Download Charge cast" className="ms-auto" />
           </SoundListItem>
           <SoundListItem label="Paradox" meta="Line 1" media={<HeroImage heroId={10} className="size-8" />} active>
             <SoundButton state="playing" duration={3} label="Paradox, line 1" />

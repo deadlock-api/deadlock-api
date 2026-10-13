@@ -127,7 +127,23 @@ export function SoundGroupItem({
   const active = group.takes.some((take) => take.url === playingUrl);
   const several = group.takes.length > 1;
   return (
-    <SoundListItem label={label} meta={meta} media={media} active={active}>
+    <SoundListItem
+      label={label}
+      meta={meta}
+      media={media}
+      active={active}
+      action={
+        <SoundDownload
+          label={group.label}
+          files={group.takes.map((take, i) => ({
+            url: take.url,
+            name: take.name,
+            short: i + 1,
+            label: several ? `${group.label}, take ${i + 1}` : group.label,
+          }))}
+        />
+      }
+    >
       {group.takes.map((take, i) => (
         <SoundButton
           key={take.url}
@@ -140,45 +156,54 @@ export function SoundGroupItem({
           {several ? i + 1 : undefined}
         </SoundButton>
       ))}
-      <SoundDownload group={group} />
     </SoundListItem>
   );
 }
 
-/** Saves a row's sound as its mp3; a row of several takes asks which one. Sits at the row's end, in line down a column. */
-function SoundDownload({ group }: { group: SoundGroup }) {
-  const [only] = group.takes;
-  if (group.takes.length === 1 && only) {
+export interface SoundFile {
+  url: string;
+  /** The file name without extension. */
+  name: string;
+  /** What its button shows in the popover: a take number. */
+  short: React.ReactNode;
+  /** What its button says to assistive technology: "Kill Haze, take 2". */
+  label: string;
+}
+
+/** Saves a row's sound as its mp3; a row of several files asks which one. */
+export function SoundDownload({ label, files, className }: { label: string; files: SoundFile[]; className?: string }) {
+  const [only] = files;
+  if (files.length === 1 && only) {
     return (
       <DownloadButton
         href={only.url}
         size="icon-xs"
         variant="ghost"
-        aria-label={`Download ${group.label}`}
+        aria-label={`Download ${label}`}
         title={`Download ${only.name}.mp3`}
-        className="ms-auto"
+        className={className}
       />
     );
   }
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button size="icon-xs" variant="ghost" aria-label={`Download ${group.label}`} className="ms-auto">
+        <Button size="icon-xs" variant="ghost" aria-label={`Download ${label}`} className={className}>
           <Download aria-hidden="true" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="end" aria-label={`Download ${group.label}`} className="w-auto p-2">
-        <div className="flex max-w-60 flex-wrap gap-1">
-          {group.takes.map((take, i) => (
+      <PopoverContent align="end" aria-label={`Download ${label}`} className="w-auto p-2">
+        <div className="flex max-w-72 flex-wrap gap-1">
+          {files.map((file) => (
             <DownloadButton
-              key={take.url}
-              href={take.url}
+              key={file.url}
+              href={file.url}
               size="xs"
               variant="subtle"
-              aria-label={`Download ${group.label}, take ${i + 1}`}
-              title={`${take.name}.mp3`}
+              aria-label={`Download ${file.label}`}
+              title={`${file.name}.mp3`}
             >
-              {i + 1}
+              {file.short}
             </DownloadButton>
           ))}
         </div>

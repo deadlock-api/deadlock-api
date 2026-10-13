@@ -1,7 +1,13 @@
 import { useMemo } from "react";
 
 import { HeroSelector } from "~/components/domain/selectors/HeroSelector";
-import { SoundListMore, type SoundPlayer, VoiceAvatar } from "~/components/features/sounds/SoundBrowserParts";
+import {
+  SoundDownload,
+  type SoundFile,
+  SoundListMore,
+  type SoundPlayer,
+  VoiceAvatar,
+} from "~/components/features/sounds/SoundBrowserParts";
 import { nameOf, type SoundCatalog } from "~/components/features/sounds/useSoundCatalog";
 import { Panel, PanelHeader } from "~/components/patterns/panel/Panel";
 import { SoundList, SoundListItem } from "~/components/patterns/sound/SoundList";
@@ -71,7 +77,7 @@ const TAKE_LETTERS = "abcdefghijklmnopqrstuvwxyz";
 
 /**
  * One conversation in a row: who speaks, a button per line (the speaker's head and the line's number, a letter for a
- * second take), and Play all at the end, which plays the first take of every line in order.
+ * second take), Play all, which plays the first take of every line in order, and a download of any line.
  */
 function ConversationItem({
   conversation,
@@ -87,6 +93,23 @@ function ConversationItem({
   const sequenceState = player.stateOf(id);
   const playingLine = player.playback?.id === id ? player.playback.index : -1;
   const urls = conversation.lines.map((line) => line.takes[0].url);
+  const files: SoundFile[] = conversation.lines.flatMap((line, index) => {
+    const speaker = nameOf(catalog, line.speaker);
+    return line.takes.map((take, i) => {
+      const name = `${index + 1}${line.takes.length > 1 ? TAKE_LETTERS[i] : ""}`;
+      return {
+        url: take.url,
+        name: take.name,
+        short: (
+          <>
+            <VoiceAvatar hero={catalog.heroes.get(line.speaker)} size="2xs" />
+            {name}
+          </>
+        ),
+        label: `${speaker}, line ${name}`,
+      };
+    });
+  });
   return (
     <SoundListItem
       label={title}
@@ -99,6 +122,7 @@ function ConversationItem({
         </span>
       }
       active={sequenceState !== "idle" && sequenceState !== "error"}
+      action={<SoundDownload label={`conversation ${title}`} files={files} />}
     >
       {conversation.lines.map((line, index) => {
         const speaker = nameOf(catalog, line.speaker);

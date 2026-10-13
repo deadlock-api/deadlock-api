@@ -27,6 +27,8 @@ interface SoundListItemProps extends Omit<React.ComponentProps<"li">, "title"> {
   meta?: React.ReactNode;
   /** A small picture before the name, such as the speaker's hero icon. Decorative: the label names the row. */
   media?: React.ReactNode;
+  /** A control at the row's end, outside the takes, such as a download: it lines up down a column. */
+  action?: React.ReactNode;
   /** The row whose sound is playing; it is marked by a fill and an edge, its button says the rest. */
   active?: boolean;
 }
@@ -35,6 +37,7 @@ export function SoundListItem({
   label,
   meta,
   media,
+  action,
   active = false,
   className,
   children,
@@ -71,6 +74,11 @@ export function SoundListItem({
       {children && (
         <div data-slot="sound-list-item-takes" className="flex min-w-32 flex-1 flex-wrap items-center gap-1">
           {children}
+        </div>
+      )}
+      {action && (
+        <div data-slot="sound-list-item-action" className="ms-auto flex shrink-0 items-center">
+          {action}
         </div>
       )}
     </li>
