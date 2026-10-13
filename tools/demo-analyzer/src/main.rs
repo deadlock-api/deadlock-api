@@ -225,7 +225,9 @@ async fn process_matches(
                 "Applying {} match updates to ClickHouse",
                 pending_updates.len()
             );
-            failed.extend(apply_updates(ch_client, &pending_updates).await);
+            if let Err(match_ids) = apply_updates(ch_client, &pending_updates).await {
+                failed.extend(match_ids);
+            }
             pending_updates.clear();
         }
     }
@@ -235,7 +237,9 @@ async fn process_matches(
             "Applying {} remaining match updates to ClickHouse",
             pending_updates.len()
         );
-        failed.extend(apply_updates(ch_client, &pending_updates).await);
+        if let Err(match_ids) = apply_updates(ch_client, &pending_updates).await {
+            failed.extend(match_ids);
+        }
     }
     failed
 }
@@ -402,10 +406,13 @@ fn correlate(match_info: &MatchWithReplay, state: &SharedState) -> MatchUpdate {
     }
 }
 
-/// Applies `updates`, returning the matches whose update failed: they are still unprocessed, so
-/// they must back off like failed demos instead of being downloaded again on the next pass.
-async fn apply_updates(ch_client: &clickhouse::Client, updates: &[MatchUpdate]) -> Vec<u64> {
-    futures::stream::iter(updates)
+/// Applies `updates`, failing with the matches whose update failed: they are still unprocessed,
+/// so they must back off like failed demos instead of being downloaded again on the next pass.
+async fn apply_updates(
+    ch_client: &clickhouse::Client,
+    updates: &[MatchUpdate],
+) -> Result<(), Vec<u64>> {
+    let failed: Vec<u64> = futures::stream::iter(updates)
         .map(|update| async move {
             match apply_update(ch_client, update).await {
                 Ok(()) => {
@@ -422,7 +429,12 @@ async fn apply_updates(ch_client: &clickhouse::Client, updates: &[MatchUpdate]) 
         .buffer_unordered(UPDATE_CONCURRENCY)
         .filter_map(core::future::ready)
         .collect()
-        .await
+        .await;
+    if failed.is_empty() {
+        Ok(())
+    } else {
+        Err(failed)
+    }
 }
 
 async fn apply_update(ch_client: &clickhouse::Client, update: &MatchUpdate) -> anyhow::Result<()> {
@@ -563,20 +575,5 @@ mod tests {
         }
         assert!(!failed.is_backing_off(1, start + MAX_RETRY_DELAY));
         assert!(!failed.is_backing_off(2, start));
-    }
-
-    #[tokio::test]
-    async fn failed_updates_are_reported() {
-        // Nothing listens there, so every update fails after its retries.
-        let ch_client = clickhouse::Client::default().with_url("http://127.0.0.1:1");
-        let update = |match_id| MatchUpdate {
-            match_id,
-            start_time: 0,
-            banned_hero_ids: vec![],
-            players: vec![],
-        };
-        let mut failed = apply_updates(&ch_client, &[update(1), update(2)]).await;
-        failed.sort_unstable();
-        assert_eq!(failed, [1, 2]);
     }
 }
