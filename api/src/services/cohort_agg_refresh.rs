@@ -6,7 +6,7 @@ use serde::Deserialize;
 use tokio::time::interval;
 use tracing::{debug, error, info};
 
-use crate::routes::v1::analytics::player_performance_curve_agg;
+use crate::routes::v1::analytics::{item_stats, player_performance_curve_agg};
 use crate::services::lease::Lease;
 
 const REFRESH_INTERVAL_SECS: u64 = 30 * 60;
@@ -66,13 +66,22 @@ enum Source {
     EnemyHero,
     /// Sums every stats tick's metrics per time key (`player_performance_curve_agg_v2`).
     PerformanceCurve,
+    /// One row per purchase, at the `item_stats_agg_v2` grain.
+    ItemStats,
 }
 
 // The _v2 tables carry uniqCombined(14) player states (migration 40); the plain uniq states
 // of the v1 tables were ~90% of item_stats_cohort_mv's CPU. Pointing the job here builds them
 // from scratch while the API keeps reading v1 until they cover the horizon.
-fn cohort_specs() -> [CohortSpec; 4] {
+fn cohort_specs() -> [CohortSpec; 5] {
     [
+        // Replaces the `item_stats_agg` refreshable MV, which recomputed all 65 days every hour.
+        CohortSpec {
+            table: item_stats::ITEM_STATS_AGG_TABLE,
+            staging: item_stats::ITEM_STATS_AGG_STAGING,
+            source: Source::ItemStats,
+            horizon_days: HORIZON_DAYS,
+        },
         CohortSpec {
             table: "default.item_cohort_stats_time_agg_v2",
             staging: "default.item_cohort_stats_time_agg_v2_staging",
@@ -109,7 +118,7 @@ fn cohort_specs() -> [CohortSpec; 4] {
     ]
 }
 
-/// Measures of every item rollup (`item_stats_agg`, the cohort and enemy rollups), over one
+/// Measures of every item rollup (`item_stats_agg_v2`, the cohort and enemy rollups), over one
 /// purchase's `won`, `buy_time`, `sold_time`, `duration_s` and `account_id`.
 pub(crate) const ITEM_ROLLUP_MEASURES: &str = "count() AS n_matches,
     sum(won) AS n_wins,
@@ -134,6 +143,7 @@ fn select_body(spec: &CohortSpec, since_clause: &str) -> String {
         Source::PerformanceCurve => {
             return player_performance_curve_agg::agg_select_body(since_clause);
         }
+        Source::ItemStats => return item_stats::item_stats_agg_select_body(since_clause),
     };
     format!(
         "SELECT

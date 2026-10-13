@@ -132,7 +132,7 @@ impl BucketQuery {
         )
     }
 
-    /// Bucket expression against the pre-aggregated `item_stats_agg` view, or
+    /// Bucket expression against the pre-aggregated `item_stats_agg_v2` rollup, or
     /// `None` for buckets the view cannot serve. Net-worth and game-time buckets
     /// need per-purchase data, and `StartTimeHour` needs sub-day resolution the
     /// day-grained view does not keep; those run against the base table.
@@ -440,13 +440,13 @@ pub struct ItemStats {
     pub sold: u64,
 }
 
-// All rollups below (`item_stats_agg`, `item_cohort_stats_*_agg_v2`, `item_enemy_stats_agg`)
+// All rollups below (`item_stats_agg_v2`, `item_cohort_stats_*_agg_v2`, `item_enemy_stats_agg`)
 // are built from the `upgrades.*` arrays, which exclude corrupted purchases (migration 42),
 // and keep no per-purchase corruption or enhanced dimension: `corrupted_items` `include`/`only`
 // and `enhanced_items` `exclude`/`only` requests always go to the base table.
 
-/// Horizon of the `item_stats_agg` materialized view, in days. Keep in sync with
-/// the `INTERVAL ... DAY` in `clickhouse/item_stats_agg.sql`.
+/// Horizon of `item_stats_agg_v2`, in days. Keep in sync with `HORIZON_DAYS` in
+/// `services/cohort_agg_refresh.rs`, which maintains it.
 const MV_HORIZON_DAYS: i64 = 65;
 /// Horizon of the `item_cohort_stats_*_agg` tables, in days. Matches
 /// `MV_HORIZON_DAYS` so cohort queries over the current-patch window (a fixed
@@ -460,7 +460,7 @@ const COHORT_MV_HORIZON_DAYS: i64 = 65;
 /// Measure columns every item rollup shares, after its grain columns.
 const ROLLUP_MEASURES: &str = "n_matches, n_wins, sum_buy_time, sum_buy_rel, sum_sold_time, n_sold, sum_sold_rel, players_state";
 
-/// The `SELECT` over an item rollup source (`item_stats_agg`, `item_cohort_stats_*_agg_v2` and
+/// The `SELECT` over an item rollup source (`item_stats_agg_v2`, `item_cohort_stats_*_agg_v2` and
 /// `item_enemy_stats_agg` share their measures), from [`Rollup::source`]. The per-row averages
 /// equal the base query's `avg()`/`avgIf()`: the denominators (`matches`, `n_sold`) are the same
 /// counts. `players_state` is a `uniqCombined(14)` state (migration 39): merging plain uniq states
@@ -489,9 +489,14 @@ SETTINGS log_comment = '{log_comment}'
     )
 }
 
-/// `item_stats_agg`: per day, mode, item, hero, team and badge.
+/// The item-stats rollup, rebuilt per day by `services/cohort_agg_refresh.rs` from
+/// [`item_stats_agg_select_body`]. Its columns are those of [`ITEM_STATS_AGG`], in order.
+pub(crate) const ITEM_STATS_AGG_TABLE: &str = "default.item_stats_agg_v2";
+pub(crate) const ITEM_STATS_AGG_STAGING: &str = "default.item_stats_agg_v2_staging";
+
+/// `item_stats_agg_v2`: per day, mode, item, hero, team and badge.
 const ITEM_STATS_AGG: Rollup<'static> = Rollup {
-    table: "item_stats_agg",
+    table: ITEM_STATS_AGG_TABLE,
     grain: &[
         ("game_mode", "game_mode"),
         ("match_mode", "match_mode"),
@@ -505,8 +510,8 @@ const ITEM_STATS_AGG: Rollup<'static> = Rollup {
     measures: ROLLUP_MEASURES,
 };
 
-/// The `item_stats_agg` rows of a window's partial days. Keep in sync with the view's `SELECT` in
-/// `tools/migrations/clickhouse/42_exclude_corrupted_items.sql`.
+/// The `item_stats_agg_v2` rows of the matches `where_clause` selects, grouped by the grain
+/// columns of `grain_select`/`group_by`: a window's partial days, or a whole rollup day.
 fn item_stats_agg_rows(
     EdgeRows {
         where_clause,
@@ -527,10 +532,29 @@ GROUP BY {group_by}"
     )
 }
 
-/// Builds a query against the pre-aggregated `item_stats_agg` view when the
+/// The `item_stats_agg_v2` rows of the matches selected by `since_clause`, at the full grain and
+/// in the table's column order. The refresh job builds the rollup's days with it.
+pub(crate) fn item_stats_agg_select_body(since_clause: &str) -> String {
+    let grain = ITEM_STATS_AGG.grain;
+    item_stats_agg_rows(&EdgeRows {
+        where_clause: since_clause.to_owned(),
+        grain_select: grain
+            .iter()
+            .map(|(col, expr)| format!("{expr} AS {col},\n    "))
+            .collect::<Vec<_>>()
+            .concat(),
+        group_by: grain
+            .iter()
+            .map(|(col, _)| *col)
+            .collect::<Vec<_>>()
+            .join(", "),
+    })
+}
+
+/// Builds a query against the pre-aggregated `item_stats_agg_v2` rollup when the
 /// request falls within the "global meta" subset it materializes, else `None`
-/// (the caller then uses the base-table query). See `clickhouse/item_stats_agg.sql`
-/// for the grain and the list of what is and isn't covered.
+/// (the caller then uses the base-table query). See [`ITEM_STATS_AGG`] for the grain; the
+/// checks below list what is and isn't covered.
 fn build_mv_query(query: &ItemStatsQuery) -> Option<String> {
     let bucket_expr = query.bucket.mv_bucket_expr()?;
 
@@ -1308,7 +1332,7 @@ cached_ch_query! {
 }
 
 cached_ch_query! {
-    /// Separate cache for the pre-aggregated rollup queries (`item_stats_agg`, cohort and
+    /// Separate cache for the pre-aggregated rollup queries (`item_stats_agg_v2`, cohort and
     /// enemy rollups): the long tail of per-account base-table queries would otherwise
     /// evict these few, heavily repeated entries from the shared cache long before
     /// their TTL.
@@ -1323,7 +1347,7 @@ async fn get_item_stats(
     if query.range_is_empty() {
         return Ok(Arc::default());
     }
-    // Prefer the pre-aggregated item_stats_agg view for the global-meta subset of
+    // Prefer the pre-aggregated item_stats_agg_v2 rollup for the global-meta subset of
     // parameters; fall back to the base table for everything else, and on any MV
     // error so a missing or rebuilding view never breaks the endpoint.
     if let Some(mv_query) = build_mv_query(&query) {
@@ -1530,25 +1554,42 @@ mod tests {
     }
 
     #[test]
-    fn edge_rows_mirror_the_item_stats_agg_view() {
+    fn agg_select_body_matches_the_item_stats_agg_v2_columns() {
         let migration = include_str!(
-            "../../../../../tools/migrations/clickhouse/42_exclude_corrupted_items.sql"
+            "../../../../../tools/migrations/clickhouse/52_item_stats_agg_incremental.sql"
         );
-        let rows = item_stats_agg_rows(&EdgeRows {
-            where_clause: String::new(),
-            grain_select: String::new(),
-            group_by: String::new(),
-        });
-        for line in rows.lines().filter(|l| l.contains(" AS ")) {
-            let line = line.trim().trim_end_matches(',');
-            assert!(migration.contains(line), "{line}");
-        }
-        for (col, expr) in ITEM_STATS_AGG.grain {
-            assert!(
-                migration.contains(&format!("{expr} AS {col}")) || col == expr,
-                "{col}"
-            );
-        }
+        let create = &migration[migration.find("CREATE TABLE").unwrap()..];
+        let create = &create[..create.find("ENGINE").unwrap()];
+        let table_columns = create
+            .lines()
+            .filter_map(|l| l.trim().strip_prefix('`')?.split('`').next())
+            .collect::<Vec<_>>();
+        // The refresh job inserts by position.
+        let select_columns = ITEM_STATS_AGG
+            .grain
+            .iter()
+            .map(|(col, _)| *col)
+            .chain(ROLLUP_MEASURES.split(", "))
+            .collect::<Vec<_>>();
+        assert_eq!(table_columns, select_columns);
+
+        let body = item_stats_agg_select_body("start_time >= 0");
+        assert_valid_sql(&body);
+        let aliases = body[..body.find("\nFROM ").unwrap()]
+            .lines()
+            .filter_map(|l| l.trim().trim_end_matches(',').rsplit_once(" AS "))
+            .map(|(_, alias)| alias)
+            .collect::<Vec<_>>();
+        assert_eq!(aliases, select_columns);
+        assert!(body.contains(&format!(
+            "GROUP BY {}",
+            ITEM_STATS_AGG
+                .grain
+                .iter()
+                .map(|(col, _)| *col)
+                .collect::<Vec<_>>()
+                .join(", ")
+        )));
     }
 
     #[test]
