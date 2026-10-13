@@ -1,3 +1,4 @@
+use core::sync::atomic::{AtomicBool, Ordering};
 use core::time::Duration;
 use std::collections::{BTreeMap, HashMap};
 use std::path::PathBuf;
@@ -8,7 +9,8 @@ use duckdb::arrow::datatypes::SchemaRef;
 use duckdb::arrow::record_batch::RecordBatch;
 use duckdb::{AccessMode, Config, Connection};
 use regex::Regex;
-use tokio::sync::Semaphore;
+use tokio::sync::{OwnedSemaphorePermit, Semaphore};
+use tokio_util::sync::CancellationToken;
 use tracing::{debug, info, warn};
 
 use crate::context::McpSnapshotConfig;
@@ -67,6 +69,9 @@ pub(crate) enum QueryError {
     Busy,
     #[error("Query execution was cancelled")]
     Cancelled,
+    /// The server failed, not the query: a panic, a poisoned lock or a closed semaphore.
+    #[error("Query failed on the server: {0}")]
+    Internal(String),
     #[error("Only read queries are allowed: SELECT, WITH, FROM, DESCRIBE, SHOW or SUMMARIZE")]
     NotReadOnly,
     #[error("Send one statement per query: only the last one would return its result")]
@@ -163,34 +168,61 @@ impl SnapshotCatalog {
         });
     }
 
-    pub(crate) async fn query(&self, sql: String) -> Result<QueryOutput, QueryError> {
+    /// Runs `sql` on the current snapshot. The query is interrupted when it times out or
+    /// `cancel` fires, e.g. because the client disconnected.
+    pub(crate) async fn query(
+        &self,
+        sql: String,
+        cancel: CancellationToken,
+    ) -> Result<QueryOutput, QueryError> {
         let snapshot = self.snapshot().ok_or(QueryError::NotReady)?;
-        let permit = tokio::time::timeout(
+        let permit = tokio::select! {
+            // A client that is already gone does not take a free slot.
+            biased;
+            () = cancel.cancelled() => return Err(QueryError::Cancelled),
+            permit = self.acquire_slot() => permit?,
+        };
+        let deadline = tokio::time::Instant::now() + QUERY_TIMEOUT;
+        let conn = snapshot
+            .conn
+            .lock()
+            .map_err(|e| QueryError::Internal(e.to_string()))?
+            .try_clone()?;
+        let interrupt = conn.interrupt_handle();
+        let cancelled = Arc::new(AtomicBool::new(false));
+        let query_cancelled = Arc::clone(&cancelled);
+        let mut task = tokio::task::spawn_blocking(move || {
+            // Keeps the slot taken until an interrupted query has actually stopped and released
+            // the database (locals drop in reverse order).
+            let _permit = permit;
+            let _snapshot = snapshot;
+            run_cancellable_query(&conn, &sql, &query_cancelled)
+        });
+        // Returns the result if the query finishes, else the reason it has to be interrupted.
+        let error = tokio::select! {
+            // A query that finished keeps its result, even at the deadline.
+            biased;
+            joined = &mut task => {
+                return joined.map_err(|e| QueryError::Internal(e.to_string()))?;
+            }
+            () = tokio::time::sleep_until(deadline) => QueryError::Timeout,
+            () = cancel.cancelled() => QueryError::Cancelled,
+        };
+        // `DuckDB` forgets an interrupt that arrives between statements, so the flag stops the
+        // query there and the interrupt stops the statement running now.
+        cancelled.store(true, Ordering::Relaxed);
+        interrupt.interrupt();
+        Err(error)
+    }
+
+    async fn acquire_slot(&self) -> Result<OwnedSemaphorePermit, QueryError> {
+        tokio::time::timeout(
             QUEUE_TIMEOUT,
             Arc::clone(&self.query_permits).acquire_owned(),
         )
         .await
         .map_err(|_| QueryError::Busy)?
-        .map_err(|_| QueryError::Cancelled)?;
-        let deadline = tokio::time::Instant::now() + QUERY_TIMEOUT;
-        let conn = snapshot
-            .conn
-            .lock()
-            .map_err(|_| QueryError::Cancelled)?
-            .try_clone()?;
-        let interrupt = conn.interrupt_handle();
-        let task = tokio::task::spawn_blocking(move || {
-            // Keeps the database alive while the cloned connection runs, and the slot taken
-            // until an interrupted query has actually stopped.
-            let _snapshot = snapshot;
-            let _permit = permit;
-            run_query(&conn, &sql)
-        });
-        let Ok(joined) = tokio::time::timeout_at(deadline, task).await else {
-            interrupt.interrupt();
-            return Err(QueryError::Timeout);
-        };
-        joined.map_err(|_| QueryError::Cancelled)?
+        .map_err(|e| QueryError::Internal(e.to_string()))
     }
 
     /// Rebuilds the catalog if the lake's manifest changed. Returns whether a rebuild happened.
@@ -525,23 +557,40 @@ fn prepare_capped<'conn>(
     conn: &'conn Connection,
     sql: &str,
     canonical: &str,
+    cancelled: &AtomicBool,
 ) -> Result<duckdb::Statement<'conn>, QueryError> {
     let capped = format!("SELECT * FROM ({canonical}) LIMIT {}", MAX_ROWS + 1);
     // `prepare` runs every statement but the last, so the sandbox must not depend on `DuckDB`
     // writing `canonical` back as exactly one statement.
     read_only_statement(conn, &capped)?;
     conn.prepare(&capped).or_else(|capped_error| {
+        // An interrupted prepare is no reason to run the query without the cap.
+        check_cancelled(cancelled)?;
         let stmt = conn.prepare(sql)?;
         warn!("MCP query runs without the row cap, its canonical form failed: {capped_error}");
         Ok(stmt)
     })
 }
 
+#[cfg(test)]
 pub(crate) fn run_query(conn: &Connection, sql: &str) -> Result<QueryOutput, QueryError> {
-    let mut stmt = match read_only_statement(conn, sql)? {
-        Some(canonical) => prepare_capped(conn, sql, &canonical)?,
+    run_cancellable_query(conn, sql, &AtomicBool::new(false))
+}
+
+/// Runs `sql`, stopping before each statement once `cancelled` is set.
+fn run_cancellable_query(
+    conn: &Connection,
+    sql: &str,
+    cancelled: &AtomicBool,
+) -> Result<QueryOutput, QueryError> {
+    check_cancelled(cancelled)?;
+    let canonical = read_only_statement(conn, sql)?;
+    check_cancelled(cancelled)?;
+    let mut stmt = match canonical {
+        Some(canonical) => prepare_capped(conn, sql, &canonical, cancelled)?,
         None => conn.prepare(sql)?,
     };
+    check_cancelled(cancelled)?;
     let mut batches = Vec::new();
     let mut remaining = MAX_ROWS;
     let mut truncated = false;
@@ -559,6 +608,13 @@ pub(crate) fn run_query(conn: &Connection, sql: &str) -> Result<QueryOutput, Que
         batches,
         truncated,
     })
+}
+
+fn check_cancelled(cancelled: &AtomicBool) -> Result<(), QueryError> {
+    if cancelled.load(Ordering::Relaxed) {
+        return Err(QueryError::Cancelled);
+    }
+    Ok(())
 }
 
 #[cfg(test)]
@@ -593,6 +649,74 @@ mod tests {
         ))
         .unwrap();
         (db, work_dir)
+    }
+
+    /// A catalog serving an in-memory database, with `slots` query slots.
+    fn memory_catalog(slots: usize) -> SnapshotCatalog {
+        let dir = std::env::temp_dir().join(format!("deadlock-mcp-test-{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&dir).unwrap();
+        SnapshotCatalog {
+            http: reqwest::Client::new(),
+            manifest_url: String::new(),
+            work_dir: dir.clone(),
+            snapshot: ArcSwapOption::from_pointee(Snapshot {
+                conn: Mutex::new(Connection::open_in_memory().unwrap()),
+                dir,
+                tables: BTreeMap::new(),
+                version: 0,
+            }),
+            query_permits: Arc::new(Semaphore::new(slots)),
+        }
+    }
+
+    /// Runs for minutes unless interrupted.
+    const ENDLESS_QUERY: &str =
+        "SELECT count(*) FROM range(10000000000) t(i) WHERE md5(i::VARCHAR) LIKE 'ffff%'";
+
+    /// Runs a query that would take minutes with `cancel`, and asserts that it is cancelled and
+    /// gives its slot back within seconds.
+    fn assert_cancelled(cancel: CancellationToken) {
+        let runtime = tokio::runtime::Runtime::new().unwrap();
+        let (result, released) = runtime.block_on(async {
+            let catalog = memory_catalog(1);
+            let result = catalog.query(ENDLESS_QUERY.to_owned(), cancel).await;
+            let slot = catalog.query_permits.acquire();
+            let released = tokio::time::timeout(Duration::from_secs(10), slot).await;
+            (result, released.is_ok())
+        });
+        // Waits for the query to drop the snapshot and its directory, but not forever for a
+        // query that was never interrupted.
+        runtime.shutdown_timeout(Duration::from_secs(10));
+        assert!(matches!(result, Err(QueryError::Cancelled)));
+        assert!(released, "the cancelled query kept its slot");
+    }
+
+    #[test]
+    fn cancelling_interrupts_a_running_query() {
+        let cancel = CancellationToken::new();
+        let canceller = cancel.clone();
+        std::thread::spawn(move || {
+            std::thread::sleep(Duration::from_millis(500));
+            canceller.cancel();
+        });
+        assert_cancelled(cancel);
+    }
+
+    #[test]
+    fn a_cancelled_query_runs_no_further_statement() {
+        let conn = Connection::open_in_memory().unwrap();
+        let result = run_cancellable_query(&conn, ENDLESS_QUERY, &AtomicBool::new(true));
+        assert!(matches!(result, Err(QueryError::Cancelled)));
+    }
+
+    #[tokio::test]
+    async fn cancelling_stops_waiting_for_a_slot() {
+        let catalog = memory_catalog(0);
+        let cancel = CancellationToken::new();
+        cancel.cancel();
+        // Without the cancellation the query would be turned away as busy after waiting.
+        let result = catalog.query("SELECT 1".to_owned(), cancel).await;
+        assert!(matches!(result, Err(QueryError::Cancelled)));
     }
 
     #[test]
@@ -764,7 +888,7 @@ mod tests {
     fn a_capped_query_cannot_break_out_of_its_subquery() {
         let conn = Connection::open_in_memory().unwrap();
         let canonical = "SELECT 1) t; CREATE TABLE escaped AS SELECT 1; SELECT * FROM (SELECT 1";
-        assert!(prepare_capped(&conn, "SELECT 1", canonical).is_err());
+        assert!(prepare_capped(&conn, "SELECT 1", canonical, &AtomicBool::new(false)).is_err());
         let tables: i64 = conn
             .query_row("SELECT count(*) FROM duckdb_tables()", [], |row| row.get(0))
             .unwrap();
