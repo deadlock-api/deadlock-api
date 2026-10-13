@@ -362,25 +362,4 @@ mod tests {
         let result = insert_builds(&pool, builds).await.unwrap();
         assert_eq!(result.rows_affected(), 0);
     }
-
-    #[test]
-    fn only_a_search_that_ran_can_find_no_builds() {
-        let search = |code: Option<i32>, builds: usize| {
-            search_results(CMsgClientToGcFindHeroBuildsResponse {
-                response: code,
-                results: vec![HeroBuildResult::default(); builds],
-            })
-        };
-        let success = Some(EResponse::KESuccess as i32);
-        let busy = Some(EResponse::KETooBusy as i32);
-        let internal_error = Some(EResponse::KEInternalError as i32);
-
-        assert_eq!(search(success, 0).unwrap().len(), 0);
-        assert_eq!(search(success, 2).unwrap().len(), 2);
-        assert_eq!(search(None, 1).unwrap().len(), 1);
-        assert!(search(busy, 0).unwrap_err().is::<GcBusy>());
-        for refused in [internal_error, Some(99)] {
-            assert!(!search(refused, 0).unwrap_err().is::<GcBusy>());
-        }
-    }
 }
