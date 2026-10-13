@@ -7,9 +7,10 @@ use std::sync::{Arc, LazyLock, Mutex};
 use arc_swap::ArcSwapOption;
 use duckdb::arrow::datatypes::SchemaRef;
 use duckdb::arrow::record_batch::RecordBatch;
-use duckdb::{AccessMode, Config, Connection};
+use duckdb::{AccessMode, Config, Connection, InterruptHandle};
 use regex::Regex;
 use tokio::sync::{OwnedSemaphorePermit, Semaphore};
+use tokio::task::JoinHandle;
 use tokio_util::sync::CancellationToken;
 use tracing::{debug, info, warn};
 
@@ -24,6 +25,10 @@ pub(crate) const MAX_ROWS: usize = 1024;
 pub(crate) const QUERY_TIMEOUT: Duration = Duration::from_secs(45);
 /// How long a query waits for a free slot before it is turned away as busy.
 const QUEUE_TIMEOUT: Duration = Duration::from_secs(10);
+/// How often a timed out or cancelled query is interrupted until it has stopped.
+const INTERRUPT_INTERVAL: Duration = Duration::from_millis(100);
+/// How long an interrupted query may take to stop before it is logged as stuck.
+const INTERRUPT_WARN_AFTER: Duration = Duration::from_secs(10);
 const REFRESH_INTERVAL: Duration = Duration::from_secs(300);
 const MAX_CONCURRENT_QUERIES: usize = 16;
 const MEMORY_LIMIT: &str = "6GB";
@@ -208,10 +213,9 @@ impl SnapshotCatalog {
             () = tokio::time::sleep_until(deadline) => QueryError::Timeout,
             () = cancel.cancelled() => QueryError::Cancelled,
         };
-        // `DuckDB` forgets an interrupt that arrives between statements, so the flag stops the
-        // query there and the interrupt stops the statement running now.
+        // Stops the query between statements, where `DuckDB` would forget an interrupt.
         cancelled.store(true, Ordering::Relaxed);
-        interrupt.interrupt();
+        tokio::spawn(interrupt_until_finished(task, interrupt));
         Err(error)
     }
 
@@ -330,6 +334,41 @@ impl SnapshotCatalog {
             tables,
             version: manifest.version,
         })
+    }
+}
+
+/// `DuckDB` only interrupts the statement running at the time and forgets the interrupt
+/// otherwise: keep interrupting until the task has stopped, in case one lands just before a
+/// statement starts.
+async fn interrupt_until_finished<T>(mut task: JoinHandle<T>, interrupt: Arc<InterruptHandle>) {
+    let start = tokio::time::Instant::now();
+    let mut warned = false;
+    loop {
+        interrupt.interrupt();
+        if tokio::time::timeout(INTERRUPT_INTERVAL, &mut task)
+            .await
+            .is_ok()
+        {
+            break;
+        }
+        if !warned && start.elapsed() >= INTERRUPT_WARN_AFTER {
+            warned = true;
+            warn!(
+                "MCP query still holds its slot {}s after it was interrupted",
+                start.elapsed().as_secs()
+            );
+        }
+    }
+    if warned {
+        warn!(
+            "MCP query stopped {:?} after it was interrupted",
+            start.elapsed()
+        );
+    } else {
+        debug!(
+            "MCP query stopped {:?} after it was interrupted",
+            start.elapsed()
+        );
     }
 }
 
@@ -700,6 +739,27 @@ mod tests {
             canceller.cancel();
         });
         assert_cancelled(cancel);
+    }
+
+    #[test]
+    fn an_interrupt_before_the_query_starts_is_not_lost() {
+        let runtime = tokio::runtime::Runtime::new().unwrap();
+        let conn = Connection::open_in_memory().unwrap();
+        let interrupt = conn.interrupt_handle();
+        let stopped = runtime.block_on(async {
+            let task = tokio::task::spawn_blocking(move || {
+                // The first interrupt arrives while nothing runs, and `DuckDB` forgets it.
+                std::thread::sleep(Duration::from_millis(50));
+                run_query(&conn, ENDLESS_QUERY)
+            });
+            let interrupting = interrupt_until_finished(task, interrupt);
+            tokio::time::timeout(Duration::from_secs(10), interrupting)
+                .await
+                .is_ok()
+        });
+        // Dropping the runtime would wait forever for a query that was never interrupted.
+        runtime.shutdown_timeout(Duration::from_secs(10));
+        assert!(stopped, "the query outlived the interrupts");
     }
 
     #[test]
