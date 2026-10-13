@@ -23,6 +23,7 @@ use super::lane_common::{
 use crate::context::AppState;
 use crate::error::APIResult;
 use crate::routes::v1::matches::types::{GameMode, MatchMode, reject_brawl_badge_filter};
+use crate::services::ch_admission::ChQueryError;
 use crate::utils::parse::{comma_separated_deserialize_option, default_last_month_timestamp};
 use crate::utils::sql::{cached_ch_query, impl_match_info};
 
@@ -638,10 +639,15 @@ async fn get_lane_soul_curve(
     let table_rows = if let Some(table_query) = build_table_query(&query, &stats) {
         debug!(?table_query);
         // A missing or broken table must never take the endpoint down with it.
-        run_query(ch_client, &table_query)
-            .await
-            .inspect_err(|e| warn!("lane_soul_curve table query failed, using match_player: {e}"))
-            .ok()
+        // A busy database is not: the match_player fallback would only add more load.
+        match run_query(ch_client, &table_query).await {
+            Ok(rows) => Some(rows),
+            Err(e @ ChQueryError::Busy(_)) => return Err(e.into()),
+            Err(e) => {
+                warn!("lane_soul_curve table query failed, using match_player: {e}");
+                None
+            }
+        }
     } else {
         None
     };

@@ -203,7 +203,7 @@ async fn run_sql(
         .with_setting("log_comment", "sql")
         .fetch_bytes("JSONEachRow")
         .map(AsyncBufReadExt::lines)?;
-    Ok(match stream_rows(lines, format).await? {
+    Ok(match stream_rows(lines, format, ()).await? {
         Some(body) => body,
         None if format == ResponseFormat::Ndjson => Body::empty(),
         None => Body::from("[]"),

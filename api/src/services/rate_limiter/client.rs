@@ -77,10 +77,7 @@ impl RateLimitClient {
             ));
         }
 
-        let prefix = rate_limit_key
-            .api_key
-            .map_or_else(|| rate_limit_key.client.to_string(), |k| k.to_string());
-        let prefixed_key = format!("{prefix}:{key}");
+        let prefixed_key = format!("{}:{key}", rate_limit_key.client_id());
 
         let quotas = self.effective_quotas(rate_limit_key, key, quotas).await;
 

@@ -7,6 +7,7 @@ use thiserror::Error;
 use tracing::{debug, error, info, warn};
 
 use crate::context::AppStateError;
+use crate::services::ch_admission::ChQueryError;
 use crate::services::crosshair::CrosshairError;
 use crate::services::rate_limiter;
 use crate::services::steam::types::SteamProxyError;
@@ -46,6 +47,8 @@ pub(super) enum APIError {
     Request(#[from] reqwest::Error),
     #[error("Clickhouse Error: {0}")]
     Clickhouse(#[from] clickhouse::error::Error),
+    #[error("{0}")]
+    ClickhouseBusy(crate::services::ch_admission::Busy),
     #[error("PostgreSQL Error: {0}")]
     PostgreSQL(#[from] sqlx::Error),
     #[error("Redis Error: {0}")]
@@ -86,6 +89,15 @@ impl APIError {
     }
 }
 
+impl From<ChQueryError> for APIError {
+    fn from(e: ChQueryError) -> Self {
+        match e {
+            ChQueryError::Busy(busy) => Self::ClickhouseBusy(busy),
+            ChQueryError::Clickhouse(e) => Self::Clickhouse(e),
+        }
+    }
+}
+
 /// Maps any displayable error to [`APIError::internal`], logging the cause first, for failures
 /// whose details must not reach the client.
 pub(super) trait LogInternal<T> {
@@ -119,7 +131,7 @@ fn build_error_response(status: StatusCode, error: impl serde::Serialize) -> Res
 
 /// Whether a `ClickHouse` error means the query ran into a timeout (client side, or the server's
 /// `max_execution_time`), which is reported as `504` rather than a generic internal error.
-fn is_query_timeout(e: &clickhouse::error::Error) -> bool {
+pub(crate) fn is_query_timeout(e: &clickhouse::error::Error) -> bool {
     match e {
         clickhouse::error::Error::TimedOut => true,
         clickhouse::error::Error::BadResponse(msg) => {
@@ -237,6 +249,16 @@ impl IntoResponse for APIError {
                     Self::internal("Database error.").into_response()
                 }
             }
+            Self::ClickhouseBusy(busy) => {
+                warn!("Rejected query: {busy}");
+                let mut res = build_error_response(
+                    StatusCode::SERVICE_UNAVAILABLE,
+                    "The database is busy. Retry in a few seconds.",
+                );
+                res.headers_mut()
+                    .insert(header::RETRY_AFTER, header::HeaderValue::from_static("5"));
+                res
+            }
             Self::PostgreSQL(e) => {
                 error!("PostgreSQL error: {e}");
                 Self::internal("Database error.").into_response()
@@ -291,6 +313,16 @@ mod tests {
         let error = APIError::status_msg(StatusCode::BAD_REQUEST, "Invalid input");
         let response = error.into_response();
         assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+    }
+
+    #[test]
+    fn clickhouse_busy_is_503_with_retry_after() {
+        let error = APIError::from(ChQueryError::Busy(
+            crate::services::ch_admission::Busy::Timeout,
+        ));
+        let response = error.into_response();
+        assert_eq!(response.status(), StatusCode::SERVICE_UNAVAILABLE);
+        assert_eq!(response.headers()[header::RETRY_AFTER], "5");
     }
 
     #[test]

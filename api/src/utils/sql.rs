@@ -110,7 +110,9 @@ pub(crate) fn query_cache_key(query_str: &str) -> u128 {
 ///
 /// Concurrent misses of one query share a single run (`sync_writes = "by_key"`; the bucket lock
 /// is also held on hits, so 1024 buckets keep unrelated queries apart). Rows come back in an
-/// `Arc`, so a hit costs no deep clone. The key is [`query_cache_key`].
+/// `Arc`, so a hit costs no deep clone. The key is [`query_cache_key`]. A miss first takes a
+/// slot from the `ClickHouse` admission limiter ([`crate::services::ch_admission`]); a
+/// [`ChQueryError::Busy`](crate::services::ch_admission::ChQueryError) is not cached.
 ///
 /// `fn name(max_size, ttl_secs) -> Vec<Row>;` fetches all rows. `fn name(max_size, ttl_secs) -> T
 /// = fetch;` caches whatever `fetch(ch_client, query_str)` returns.
@@ -128,12 +130,17 @@ macro_rules! cached_ch_query {
         $vis async fn $name(
             ch_client: &::clickhouse::Client,
             query_str: &str,
-        ) -> ::clickhouse::error::Result<::std::sync::Arc<Vec<$row>>> {
-            ch_client
+        ) -> ::core::result::Result<
+            ::std::sync::Arc<Vec<$row>>,
+            crate::services::ch_admission::ChQueryError,
+        > {
+            let permit = crate::services::ch_admission::acquire().await?;
+            let rows = ch_client
                 .query(query_str)
                 .fetch_all()
                 .await
-                .map(::std::sync::Arc::new)
+                .inspect_err(|e| permit.observe(e))?;
+            Ok(::std::sync::Arc::new(rows))
         }
     };
     ($(#[$meta:meta])* $vis:vis fn $name:ident($size:literal, $ttl:literal) -> $ret:ty = $fetch:path;) => {
@@ -149,8 +156,11 @@ macro_rules! cached_ch_query {
         $vis async fn $name(
             ch_client: &::clickhouse::Client,
             query_str: &str,
-        ) -> ::clickhouse::error::Result<$ret> {
-            $fetch(ch_client, query_str).await
+        ) -> ::core::result::Result<$ret, crate::services::ch_admission::ChQueryError> {
+            let permit = crate::services::ch_admission::acquire().await?;
+            Ok($fetch(ch_client, query_str)
+                .await
+                .inspect_err(|e| permit.observe(e))?)
         }
     };
 }

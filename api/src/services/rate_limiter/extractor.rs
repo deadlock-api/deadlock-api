@@ -23,6 +23,14 @@ pub(crate) struct RateLimitKey {
     pub(super) client: Client,
 }
 
+impl RateLimitKey {
+    /// The identity limits are counted under: the API key if present, else the client.
+    pub(crate) fn client_id(&self) -> String {
+        self.api_key
+            .map_or_else(|| self.client.to_string(), |k| k.to_string())
+    }
+}
+
 impl<S> FromRequestParts<S> for RateLimitKey
 where
     S: Send + Sync,

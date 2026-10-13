@@ -1,4 +1,5 @@
 pub(super) mod assets;
+pub(crate) mod ch_admission;
 pub(crate) mod clickhouse_batcher;
 pub(crate) mod clickhouse_insert_batcher;
 pub(crate) mod cohort_agg_refresh;

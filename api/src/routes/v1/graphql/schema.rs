@@ -446,9 +446,18 @@ async fn run_query<T>(ch_client: &clickhouse::Client, sql: &str) -> GqlResult<Ve
 where
     T: serde::de::DeserializeOwned,
 {
+    let permit = crate::services::ch_admission::acquire()
+        .await
+        .map_err(|busy| {
+            async_graphql::ErrorExtensions::extend_with(
+                async_graphql::Error::new(format!("{busy}. Retry in a few seconds.")),
+                |_, ext| ext.set("code", "SERVICE_BUSY"),
+            )
+        })?;
     let cursor = ch_client
         .query(sql)
         .fetch_bytes("JSONEachRow")
+        .inspect_err(|e| permit.observe(e))
         .map_err(|e| async_graphql::Error::new(format!("ClickHouse error: {e}")))?;
     let mut lines = cursor.lines();
     let mut out: Vec<T> = Vec::new();

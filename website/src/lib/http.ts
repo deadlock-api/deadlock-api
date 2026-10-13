@@ -1,35 +1,8 @@
+import { ApiError } from "~/lib/api-error";
 import { API_ORIGIN } from "~/lib/constants";
 import { serverApiKeyHeaders } from "~/lib/server-api-key";
 
-export class ApiError extends Error {
-  status: number;
-  constructor(status: number, message: string) {
-    super(message);
-    this.name = "ApiError";
-    this.status = status;
-  }
-
-  /** The error for a failed response, with the message from its JSON body when it has one. */
-  static fromResponse(status: number, statusText: string, body: unknown): ApiError {
-    const fallback = `HTTP ${status}: ${statusText}`;
-    const data = typeof body === "object" && body !== null ? (body as Record<string, unknown>) : {};
-    const message = [data.message, data.error, data.detail].find((value): value is string => typeof value === "string");
-    return new ApiError(status, message ?? fallback);
-  }
-}
-
-/** Whether `error` is a 4xx from the API (an `ApiError` or an Axios error), which a retry will not fix. */
-export function isClientError(error: unknown): boolean {
-  // Axios's public error marker classifies errors without loading the HTTP client on pages that make no API requests.
-  const isAxiosError =
-    typeof error === "object" && error !== null && "isAxiosError" in error && error.isAxiosError === true;
-  const status = isAxiosError
-    ? (error as { response?: { status?: number } }).response?.status
-    : error instanceof ApiError
-      ? error.status
-      : undefined;
-  return status !== undefined && status >= 400 && status < 500;
-}
+export { ApiError, isClientError, isServiceBusy, retryAfterMs, retryDelay, shouldRetry } from "~/lib/api-error";
 
 interface FetchApiOptions {
   method?: string;

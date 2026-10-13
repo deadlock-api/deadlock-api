@@ -20,9 +20,9 @@ import {
   SteamApi,
 } from "deadlock_api_client";
 
+import { ApiError } from "~/lib/api-error";
 import { API_ORIGIN } from "~/lib/constants";
 import { createApiClient } from "~/lib/create-api-client";
-import { ApiError } from "~/lib/http";
 
 export interface ApiConfig {
   timeout: number;

@@ -31,9 +31,12 @@ fn chunk(prefix: Option<u8>, line: &str, suffix: Option<u8>) -> Bytes {
     Bytes::from(buf)
 }
 
+/// Streams `lines` as a JSON array or NDJSON body; `None` if there are no rows. `hold` is kept
+/// alive until the body is fully sent or dropped (e.g. a `ClickHouse` admission permit).
 pub(crate) async fn stream_rows(
     mut lines: Lines<BytesCursor>,
     format: ResponseFormat,
+    hold: impl Send + 'static,
 ) -> std::io::Result<Option<Body>> {
     let Some(first) = lines.next_line().await? else {
         return Ok(None);
@@ -69,5 +72,9 @@ pub(crate) async fn stream_rows(
             }
         },
     );
+    let stream = futures::StreamExt::map(stream, move |chunk| {
+        let _ = &hold;
+        chunk
+    });
     Ok(Some(Body::from_stream(stream)))
 }

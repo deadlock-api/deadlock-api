@@ -17,6 +17,7 @@ use crate::context::config::Config;
 use crate::routes::v1::mcp::{CatalogError, SnapshotCatalog};
 use crate::services::assets::client::AssetsClient;
 use crate::services::assets::versions::store::VersionStore;
+use crate::services::ch_admission::spawn_controller as spawn_ch_admission_controller;
 use crate::services::data_dump::DataDump;
 use crate::services::rate_limiter::RateLimitClient;
 use crate::services::request_logger::RequestLogger;
@@ -236,6 +237,7 @@ impl AppState {
         }
         let steam_search_index = SteamSearchIndex::new(steam_search_index_path);
         steam_search_index.spawn_refresh_loop(ch_client_ro.clone());
+        spawn_ch_admission_controller(ch_client_ro.clone());
 
         if !cfg!(debug_assertions) && std::env::var_os("COHORT_AGG_REFRESH_DISABLED").is_none() {
             debug!("Starting cohort agg refresh");

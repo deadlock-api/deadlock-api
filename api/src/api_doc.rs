@@ -13,6 +13,10 @@ use utoipa::{Modify, OpenApi};
 
 We have auto generated and updated clients for many languages. You can find them here: [https://github.com/deadlock-api/openapi-clients](https://github.com/deadlock-api/openapi-clients)
 
+## Load Shedding
+
+Endpoints backed by the database queue uncached queries when it is busy. If a query waits too long, the request fails with `503 Service Unavailable` and a `Retry-After` header: wait that many seconds before retrying, and don't send many uncached requests in parallel from one client. Requests with an API key have a larger share of the queue.
+
 ## Support the Deadlock API
 
 Whether you're building your own database, developing data science projects, or enhancing your website with game and player analytics, the Deadlock API has the data you need.

@@ -1,5 +1,6 @@
 #![expect(clippy::struct_excessive_bools)]
 
+use crate::services::ch_admission;
 use crate::utils::sql::{
     MAX_FILTERING_AVERAGE_BADGE, MIN_FILTERING_AVERAGE_BADGE, MatchPoolFilters,
     average_badge_filter, id_list,
@@ -922,8 +923,11 @@ pub(super) async fn bulk_metadata(
         players_tuple_type(&state.ch_client_ro, &player_columns).await
     };
     let query = build_query(query, players_tuple_type.as_deref())?;
-    let lines = fetch_lines(&state.ch_client_ro, &query)?;
-    let Some(body) = stream_rows(lines, format).await? else {
+    let permit = ch_admission::acquire()
+        .await
+        .map_err(APIError::ClickhouseBusy)?;
+    let lines = fetch_lines(&state.ch_client_ro, &query).inspect_err(|e| permit.observe(e))?;
+    let Some(body) = stream_rows(lines, format, permit).await? else {
         return Err(APIError::status_msg(
             StatusCode::NOT_FOUND,
             "No matches found".to_owned(),

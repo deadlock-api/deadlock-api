@@ -4,8 +4,8 @@ import { setupRouterSsrQueryIntegration } from "@tanstack/react-router-ssr-query
 
 import { NotFound } from "./components/app/NotFound";
 import { RouteError } from "./components/app/RouteError";
+import { retryDelay, shouldRetry } from "./lib/api-error";
 import { isChunkLoadError, reloadOnceForStaleChunk } from "./lib/chunk-reload";
-import { isClientError } from "./lib/http";
 import type { Preferences } from "./lib/preferences";
 import { parseSearch, stringifySearch } from "./lib/search-params";
 import { routeTree } from "./routeTree.gen";
@@ -23,7 +23,8 @@ export function getRouter() {
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: {
-        retry: (failureCount, error) => failureCount < 3 && !isClientError(error),
+        retry: shouldRetry,
+        retryDelay,
       },
     },
   });
