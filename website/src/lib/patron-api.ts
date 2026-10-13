@@ -3,8 +3,7 @@
  * Handles API calls for patron Steam account management
  */
 
-import { isAxiosError } from "axios";
-import type { PlayerCard as GeneratedPlayerCard, PlayerCardSlot as GeneratedPlayerCardSlot } from "deadlock_api_client";
+import type { BotFriendStatus as GeneratedBotFriendStatus } from "deadlock_api_client";
 
 import { api } from "~/lib/api";
 import { ApiError, fetchApi } from "~/lib/http";
@@ -50,17 +49,7 @@ export interface SteamAccountsResponse {
   summary: SteamAccountsListSummary;
 }
 
-export type PlayerCardSlot = GeneratedPlayerCardSlot;
-export type PlayerCard = GeneratedPlayerCard;
-
-export class BotNotFriendError extends ApiError {
-  invites: string[];
-  constructor(invites: string[], message: string) {
-    super(400, message);
-    this.name = "BotNotFriendError";
-    this.invites = invites;
-  }
-}
+export type BotFriendStatus = GeneratedBotFriendStatus;
 
 // ============================================================================
 // API Functions
@@ -136,33 +125,12 @@ export async function reactivateSteamAccount(accountId: string): Promise<SteamAc
 }
 
 /**
- * Fetches the Steam profile card for a given account.
- * Uses the generated PlayersApi client. Public endpoint — no auth required.
- * Throws BotNotFriendError if the account hasn't friended a bot yet.
+ * Whether a prioritized account is friends with one of the bots, and otherwise the invite links to add one.
+ * @param steamId3 - The Steam ID3 of one of the patron's accounts
  */
-export async function getPlayerCard(steamId3: number): Promise<PlayerCard> {
-  try {
-    const response = await api.players_api.card({ accountId: steamId3 });
-    const card = response.data;
-    if (!card) throw new ApiError(404, "Player card not found");
-    return card;
-  } catch (error: unknown) {
-    if (isAxiosError(error) && error.response) {
-      const { status, data } = error.response;
-      if (status === 400 && typeof data === "object" && data !== null) {
-        const payload = data.error ?? data;
-        if (typeof payload === "object" && payload !== null && Array.isArray(payload.invites)) {
-          throw new BotNotFriendError(payload.invites, payload.message ?? "Not a bot friend");
-        }
-      }
-      const message =
-        typeof data === "object" && data !== null
-          ? (data.message ?? data.error ?? data.detail ?? `HTTP ${status}`)
-          : `HTTP ${status}`;
-      throw new ApiError(status, String(message));
-    }
-    throw error;
-  }
+export async function getBotFriendStatus(steamId3: number): Promise<BotFriendStatus> {
+  const response = await api.internal_api.botFriendStatus({ accountId: String(steamId3) }, { withCredentials: true });
+  return response.data;
 }
 
 /**

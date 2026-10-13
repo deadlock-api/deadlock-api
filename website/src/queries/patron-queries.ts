@@ -9,8 +9,8 @@ import { CACHE_DURATIONS } from "~/constants/cache";
 import {
   addSteamAccount,
   deleteSteamAccount,
+  getBotFriendStatus,
   getPatronStatus,
-  getPlayerCard,
   listSteamAccounts,
   reactivateSteamAccount,
   refetchMatchHistory,
@@ -53,10 +53,10 @@ export function steamAccountsQueryOptions() {
   });
 }
 
-export function playerCardQueryOptions(steamId3: number) {
+export function botFriendStatusQueryOptions(steamId3: number) {
   return queryOptions({
-    queryKey: queryKeys.patron.playerCard(steamId3),
-    queryFn: () => getPlayerCard(steamId3),
+    queryKey: queryKeys.patron.botFriendStatus(steamId3),
+    queryFn: () => getBotFriendStatus(steamId3),
     retry: false,
     staleTime: CACHE_DURATIONS.FIVE_MINUTES,
   });
@@ -74,8 +74,8 @@ export function useSteamAccounts() {
   return useQuery(steamAccountsQueryOptions());
 }
 
-export function usePlayerCard(steamId3: number, enabled = true) {
-  return useQuery({ ...playerCardQueryOptions(steamId3), enabled });
+export function useBotFriendStatus(steamId3: number, enabled = true) {
+  return useQuery({ ...botFriendStatusQueryOptions(steamId3), enabled });
 }
 
 // ============================================================================

@@ -1,7 +1,6 @@
-import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { isAxiosError } from "axios";
-import { AlertTriangle, CheckCircle, Clock, RefreshCw, XCircle } from "lucide-react";
+import { AlertTriangle, CheckCircle, Clock, RefreshCw, UserSearch, XCircle } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -25,16 +24,14 @@ import { TextLink } from "~/components/ui/text-link";
 import { Tooltip } from "~/components/ui/tooltip";
 import { formatCooldownRemaining, formatDate, formatRelativeTime } from "~/lib/format";
 import { type SteamAccount, steamId3ToSteamId64 } from "~/lib/patron-api";
-import { getRankImageUrl, getRankLabel } from "~/lib/rank-utils";
 import {
+  useBotFriendStatus,
   useDeleteSteamAccount,
-  usePlayerCard,
   useReactivateSteamAccount,
   useRefetchMatchHistory,
   useReplaceSteamAccount,
   useSteamAccounts,
 } from "~/queries/patron-queries";
-import { ranksQueryOptions } from "~/queries/ranks-query";
 
 function SteamAccountsListSkeleton() {
   return (
@@ -59,43 +56,38 @@ function SteamAccountsListSkeleton() {
   );
 }
 
-type CardQuery = ReturnType<typeof usePlayerCard>;
+type BotFriendQuery = ReturnType<typeof useBotFriendStatus>;
 
-/** The friend invites a player card request fails with while the bot is not the player's Steam friend yet. */
-function botInvites(error: unknown): string[] | null {
-  if (typeof error !== "object" || error === null || !("invites" in error)) return null;
-  return Array.isArray(error.invites) ? (error.invites as string[]) : null;
-}
-
-function BotFriendCell({ cardQuery }: { cardQuery: CardQuery }) {
+function BotFriendCell({ botFriendQuery }: { botFriendQuery: BotFriendQuery }) {
   const [dialogOpen, setDialogOpen] = useState(false);
 
-  if (cardQuery.isLoading) {
+  if (botFriendQuery.isLoading) {
     return <Skeleton className="h-5 w-20" />;
   }
 
-  if (cardQuery.isError) {
-    const invites = botInvites(cardQuery.error);
-    if (invites) {
-      return (
-        <>
-          <Tooltip content="The bot needs to be your Steam friend to access your match history for priority ingestion">
-            <Button variant="destructive-soft" size="xs" onClick={() => setDialogOpen(true)}>
-              <AlertTriangle />
-              Add bot friend
-            </Button>
-          </Tooltip>
-          <AddBotDialog
-            open={dialogOpen}
-            onOpenChange={setDialogOpen}
-            invites={invites}
-            isChecking={cardQuery.isFetching}
-            onCheck={() => cardQuery.refetch()}
-          />
-        </>
-      );
-    }
+  const status = botFriendQuery.data;
+  if (!status) {
     return <NoValue />;
+  }
+
+  if (!status.is_friend) {
+    return (
+      <>
+        <Tooltip content="The bot needs to be your Steam friend to access your match history for priority ingestion">
+          <Button variant="destructive-soft" size="xs" onClick={() => setDialogOpen(true)}>
+            <AlertTriangle />
+            Add bot friend
+          </Button>
+        </Tooltip>
+        <AddBotDialog
+          open={dialogOpen}
+          onOpenChange={setDialogOpen}
+          invites={status.invites}
+          isChecking={botFriendQuery.isFetching}
+          onCheck={() => botFriendQuery.refetch()}
+        />
+      </>
+    );
   }
 
   return (
@@ -103,28 +95,6 @@ function BotFriendCell({ cardQuery }: { cardQuery: CardQuery }) {
       <CheckCircle />
       Connected
     </Badge>
-  );
-}
-
-function PlayerCardRankCell({ cardQuery }: { cardQuery: CardQuery }) {
-  const ranksQuery = useQuery(ranksQueryOptions);
-
-  const card = cardQuery.data;
-  if (cardQuery.isError || !card || card.ranked_rank === null || card.ranked_badge_level === null) {
-    return <NoValue />;
-  }
-
-  const rank = ranksQuery.data?.find((r) => r.tier === card.ranked_rank);
-  // Obscurus (tier 0) has subrank 0 in the card — use 1 for image lookup fallback
-  const subrank = card.ranked_subrank || 1;
-  const imageUrl = getRankImageUrl(rank, "webp");
-  const label = rank ? getRankLabel(rank, subrank) : `${card.ranked_rank}·${card.ranked_subrank}`;
-
-  return (
-    <div className="flex items-center gap-1.5">
-      {imageUrl && <img src={imageUrl} alt={label} className="size-6 object-contain" />}
-      <span className="text-sm">{label}</span>
-    </div>
   );
 }
 
@@ -192,7 +162,7 @@ function AccountRow({
   isReactivating: boolean;
 }) {
   const isActive = account.deleted_at === null;
-  const cardQuery = usePlayerCard(account.steam_id3, isActive);
+  const botFriendQuery = useBotFriendStatus(account.steam_id3, isActive);
   const cooldownRemaining = account.deleted_at ? formatCooldownRemaining(account.deleted_at) : null;
   const canReplace = account.deleted_at !== null && !account.is_in_cooldown;
   const isDeleted = account.deleted_at !== null;
@@ -245,8 +215,15 @@ function AccountRow({
           </Badge>
         )}
       </TableCell>
-      <TableCell>{isActive ? <BotFriendCell cardQuery={cardQuery} /> : <NoValue />}</TableCell>
-      <TableCell>{isActive ? <PlayerCardRankCell cardQuery={cardQuery} /> : <NoValue />}</TableCell>
+      <TableCell>{isActive ? <BotFriendCell botFriendQuery={botFriendQuery} /> : <NoValue />}</TableCell>
+      <TableCell>
+        <Button asChild variant="ghost" size="xs" className="text-muted-foreground">
+          <Link to="/tracker/players/$accountId" params={{ accountId: String(account.steam_id3) }} preload="intent">
+            <UserSearch />
+            Player Tracker
+          </Link>
+        </Button>
+      </TableCell>
       <TableCell>
         <RefetchMatchHistoryCell steamId3={account.steam_id3} isActive={isActive} />
       </TableCell>
@@ -347,7 +324,7 @@ export function SteamAccountsList() {
                 <TableHead>Added</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Bot Friend</TableHead>
-                <TableHead>Rank</TableHead>
+                <TableHead>Tracker</TableHead>
                 <TableHead>Refetch</TableHead>
                 <TableHead className="w-15">Actions</TableHead>
               </TableRow>

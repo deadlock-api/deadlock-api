@@ -131,6 +131,6 @@ export const queryKeys = {
     all: ["patron"] as const,
     status: () => [...queryKeys.patron.all, "status"] as const,
     steamAccounts: () => [...queryKeys.patron.all, "steam-accounts"] as const,
-    playerCard: (steamId3: number) => [...queryKeys.patron.all, "player-card", steamId3] as const,
+    botFriendStatus: (steamId3: number) => [...queryKeys.patron.all, "bot-friend", steamId3] as const,
   },
 } as const;
