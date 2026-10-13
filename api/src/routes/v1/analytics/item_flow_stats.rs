@@ -285,7 +285,7 @@ fn upgrades_source(query: &ItemFlowStatsQuery, is_brawl: bool) -> (String, &'sta
 
 struct QueryParts {
     /// Match filters and the scalar player filters (hero, account, net worth), as an explicit
-    /// `PREWHERE`. Left to itself, ClickHouse ran the lock `arrayExists` lambdas first, on every
+    /// `PREWHERE`. Left to itself, `ClickHouse` ran the lock `arrayExists` lambdas first, on every
     /// scanned row: a narrow badge range keeps ~3% of them. Measured on a 2.5-month, badge 91+, two
     /// lock request: nodes -23% and edges -27% wall time; with a hero filter, edges -89%.
     prewhere: String,
