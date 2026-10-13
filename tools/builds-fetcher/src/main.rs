@@ -159,21 +159,15 @@ async fn fetch_missing_builds(
         )
         .await
         {
-            Ok(Ok(builds)) => {
+            Ok(builds) => {
                 counter!("builds_fetcher.fetch_missing_build.success").increment(1);
                 builds
             }
-            Ok(Err(EResponse::KETooBusy)) => {
+            Err(FetchBuildsError::Refused(EResponse::KETooBusy)) => {
                 // Every further request would be turned away as well.
                 counter!("builds_fetcher.fetch_missing_build.busy").increment(1);
                 warn!("The GC is too busy, fetching missing builds again next interval");
                 return;
-            }
-            Ok(Err(code)) => {
-                counter!("builds_fetcher.fetch_missing_build.failure").increment(1);
-                warn!("The GC refused the search for build {build_id}: {code:?}");
-                sleep(Duration::from_secs(10)).await;
-                continue;
             }
             Err(e) => {
                 counter!("builds_fetcher.fetch_missing_build.failure").increment(1);
@@ -212,18 +206,11 @@ async fn update_builds(
     search: Option<&str>,
 ) {
     let builds = match fetch_builds(http_client, hero_id, langs, search, None).await {
-        Ok(Ok(builds)) => {
+        Ok(builds) => {
             counter!("builds_fetcher.fetch_builds.success", "hero_id" => hero_id.to_string())
                 .increment(1);
             debug!("Fetched {} builds", builds.len());
             builds
-        }
-        Ok(Err(code)) => {
-            counter!("builds_fetcher.fetch_builds.failure", "hero_id" => hero_id.to_string())
-                .increment(1);
-            warn!("The GC refused the search: {code:?}");
-            sleep(Duration::from_secs(10)).await;
-            return;
         }
         Err(e) => {
             counter!("builds_fetcher.fetch_builds.failure", "hero_id" => hero_id.to_string())
@@ -312,7 +299,7 @@ async fn fetch_builds(
     langs: &[i32],
     search: Option<&str>,
     hero_build_id: Option<u32>,
-) -> anyhow::Result<Result<Vec<HeroBuildResult>, EResponse>> {
+) -> Result<Vec<HeroBuildResult>, FetchBuildsError> {
     let msg = CMsgClientToGcFindHeroBuilds {
         hero_id: hero_id.into(),
         language: langs.to_vec(),
@@ -340,11 +327,19 @@ async fn fetch_builds(
     // build does not exist. An answer without a code counts as a success, although the proto
     // default is `k_eInternalError`, so a GC that leaves the code out keeps working as before. An
     // unknown code counts as an internal error.
-    Ok(match response.response.map(EResponse::try_from) {
+    match response.response.map(EResponse::try_from) {
         None | Some(Ok(EResponse::KESuccess)) => Ok(response.results),
-        Some(Ok(code)) => Err(code),
-        Some(Err(_)) => Err(EResponse::KEInternalError),
-    })
+        Some(Ok(code)) => Err(FetchBuildsError::Refused(code)),
+        Some(Err(_)) => Err(FetchBuildsError::Refused(EResponse::KEInternalError)),
+    }
+}
+
+#[derive(Debug, thiserror::Error)]
+enum FetchBuildsError {
+    #[error(transparent)]
+    Request(#[from] anyhow::Error),
+    #[error("The GC refused the search: {0:?}")]
+    Refused(EResponse),
 }
 
 #[cfg(test)]
