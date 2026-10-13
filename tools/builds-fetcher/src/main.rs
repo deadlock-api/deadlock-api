@@ -24,7 +24,9 @@ use sqlx::{Pool, Postgres, QueryBuilder};
 use time::OffsetDateTime;
 use tokio::time::sleep;
 use tracing::{debug, info, instrument, warn};
-use valveprotos::deadlock::c_msg_client_to_gc_find_hero_builds_response::HeroBuildResult;
+use valveprotos::deadlock::c_msg_client_to_gc_find_hero_builds_response::{
+    EResponse, HeroBuildResult,
+};
 use valveprotos::deadlock::{
     CMsgClientToGcFindHeroBuilds, CMsgClientToGcFindHeroBuildsResponse, EgcCitadelClientMessages,
 };
@@ -91,7 +93,7 @@ async fn run_update_loop(
 }
 
 /// Fetches builds seen in analyzed demos that the search crawl hasn't picked up.
-/// Ids the GC returns nothing for (private/deleted builds) are recorded in
+/// Ids a successful search finds nothing for (private/deleted builds) are recorded in
 /// `hero_builds_fetch_failed` and never tried again.
 #[instrument(skip_all)]
 async fn fetch_missing_builds(
@@ -160,6 +162,12 @@ async fn fetch_missing_builds(
             Ok(builds) => {
                 counter!("builds_fetcher.fetch_missing_build.success").increment(1);
                 builds
+            }
+            Err(e) if e.is::<GcBusy>() => {
+                // Every further request would be turned away as well.
+                counter!("builds_fetcher.fetch_missing_build.busy").increment(1);
+                warn!("The GC is too busy, fetching missing builds again next interval");
+                return;
             }
             Err(e) => {
                 counter!("builds_fetcher.fetch_missing_build.failure").increment(1);
@@ -315,8 +323,27 @@ async fn fetch_builds(
         },
     )
     .await?;
-    Ok(response.results)
+    search_results(response)
 }
+
+/// The builds a search found. A busy or failing GC answers with no builds as well, so only a
+/// successful search means a build does not exist. An answer without a code counts as a success,
+/// although the proto default is `k_eInternalError`, so a GC that leaves the code out keeps
+/// working as before.
+fn search_results(
+    response: CMsgClientToGcFindHeroBuildsResponse,
+) -> anyhow::Result<Vec<HeroBuildResult>> {
+    match response.response.map(EResponse::try_from) {
+        None | Some(Ok(EResponse::KESuccess)) => Ok(response.results),
+        Some(Ok(EResponse::KETooBusy)) => Err(GcBusy.into()),
+        _ => anyhow::bail!("The GC refused the search: {:?}", response.response),
+    }
+}
+
+/// The GC was too busy to search; the same search can succeed later.
+#[derive(Debug, thiserror::Error)]
+#[error("The GC is too busy")]
+struct GcBusy;
 
 #[cfg(test)]
 mod tests {
@@ -334,5 +361,26 @@ mod tests {
         let builds = vec![HeroBuildResult::default()];
         let result = insert_builds(&pool, builds).await.unwrap();
         assert_eq!(result.rows_affected(), 0);
+    }
+
+    #[test]
+    fn only_a_search_that_ran_can_find_no_builds() {
+        let search = |code: Option<i32>, builds: usize| {
+            search_results(CMsgClientToGcFindHeroBuildsResponse {
+                response: code,
+                results: vec![HeroBuildResult::default(); builds],
+            })
+        };
+        let success = Some(EResponse::KESuccess as i32);
+        let busy = Some(EResponse::KETooBusy as i32);
+        let internal_error = Some(EResponse::KEInternalError as i32);
+
+        assert_eq!(search(success, 0).unwrap().len(), 0);
+        assert_eq!(search(success, 2).unwrap().len(), 2);
+        assert_eq!(search(None, 1).unwrap().len(), 1);
+        assert!(search(busy, 0).unwrap_err().is::<GcBusy>());
+        for refused in [internal_error, Some(99)] {
+            assert!(!search(refused, 0).unwrap_err().is::<GcBusy>());
+        }
     }
 }
