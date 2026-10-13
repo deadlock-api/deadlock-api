@@ -12,11 +12,11 @@ use tracing::{debug, warn};
 use utoipa::{IntoParams, ToSchema};
 
 use super::common_filters::{
-    CORRUPTED_ITEMS_MIN_MATCH_ID, CORRUPTED_ITEMS_MIN_UNIX_TIMESTAMP, MatchInfoFilters,
-    PlayerFilters, account_match_prefilter, corrupted_sql, default_min_matches_u32,
-    filter_protected_accounts, is_non_empty, join_filters, not_corrupted_sql, range_filters,
-    rollup_badge_filters, rollup_day_filters, rollup_oldest_servable, round_timestamps,
-    with_legacy_id,
+    CORRUPTED_ITEMS_MIN_MATCH_ID, CORRUPTED_ITEMS_MIN_UNIX_TIMESTAMP, ENHANCED_ITEMS_MIN_MATCH_ID,
+    ENHANCED_ITEMS_MIN_UNIX_TIMESTAMP, MatchInfoFilters, PlayerFilters, account_match_prefilter,
+    corrupted_sql, default_min_matches_u32, enhanced_sql, filter_protected_accounts, is_non_empty,
+    join_filters, not_corrupted_sql, not_enhanced_sql, range_filters, rollup_badge_filters,
+    rollup_day_filters, rollup_oldest_servable, round_timestamps, with_legacy_id,
 };
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
@@ -165,6 +165,22 @@ pub enum CorruptedItemsFilter {
     /// Count corrupted purchases as purchases of the normal item.
     Include,
     /// Only corrupted purchases: stats for the corrupted variant of each item.
+    Only,
+}
+
+/// How enhanced purchases are counted. Street Brawl only: some draft picks are the enhanced
+/// version of an upgrade, which keeps the normal item's id.
+#[derive(Debug, Clone, Copy, Deserialize, ToSchema, Default, Display, PartialEq, Eq, Hash)]
+#[cfg_attr(test, derive(proptest_derive::Arbitrary))]
+#[serde(rename_all = "snake_case")]
+#[strum(serialize_all = "snake_case")]
+pub enum EnhancedItemsFilter {
+    /// Count enhanced purchases as purchases of the normal item.
+    #[default]
+    Include,
+    /// Only normal purchases. Enhanced purchases are left out.
+    Exclude,
+    /// Only enhanced purchases: stats for the enhanced variant of each item.
     Only,
 }
 
@@ -322,6 +338,10 @@ pub(crate) struct ItemStatsQuery {
     #[param(default = false)]
     #[deprecated(note = "Use corrupted_items=include instead")]
     include_corrupted_items: Option<bool>,
+    /// How to count enhanced items (Street Brawl only: a draft pick that is the enhanced version of an upgrade, with the same item id). `include`: enhanced purchases count as the normal item. `exclude`: only normal purchases. `only`: only enhanced purchases, so each row describes the enhanced variant of `item_id`. Compare it with the same request using `exclude`. Matches before 2026-04-08 do not record which purchases were enhanced, so `exclude` and `only` ignore earlier time and match-id bounds. `exclude` and `only` require `game_mode=street_brawl` and skip the pre-aggregated rollups, so those requests are slower. **Default:** `include`.
+    #[serde(default)]
+    #[param(inline)]
+    enhanced_items: EnhancedItemsFilter,
 }
 
 impl_match_info!(ItemStatsQuery);
@@ -343,16 +363,34 @@ impl ItemStatsQuery {
         self.corrupted_items() != CorruptedItemsFilter::Exclude
     }
 
-    /// `corrupted_items=only` with a time or match-id upper bound before the first match that
-    /// can contain a corrupted item: the result is empty, so no query needs to run.
-    fn corrupted_only_range_is_empty(&self) -> bool {
-        self.corrupted_items() == CorruptedItemsFilter::Only
-            && (self
-                .max_unix_timestamp
-                .is_some_and(|v| v < CORRUPTED_ITEMS_MIN_UNIX_TIMESTAMP)
-                || self
-                    .max_match_id
-                    .is_some_and(|v| v < CORRUPTED_ITEMS_MIN_MATCH_ID))
+    /// Whether purchases are split by the enhanced bit. The rollups have no such dimension,
+    /// so such requests always go to the base table.
+    fn filters_enhanced(&self) -> bool {
+        self.enhanced_items != EnhancedItemsFilter::Include
+    }
+
+    /// Lower bounds the base query must apply on top of the requested ones: the first
+    /// match that can contain a corrupted item for `corrupted_items=only`, and the first
+    /// match that records the enhanced bit when filtering on it. `None` when no floor applies.
+    fn min_bounds_floor(&self) -> Option<(i64, u64)> {
+        let corrupted = (self.corrupted_items() == CorruptedItemsFilter::Only).then_some((
+            CORRUPTED_ITEMS_MIN_UNIX_TIMESTAMP,
+            CORRUPTED_ITEMS_MIN_MATCH_ID,
+        ));
+        let enhanced = self.filters_enhanced().then_some((
+            ENHANCED_ITEMS_MIN_UNIX_TIMESTAMP,
+            ENHANCED_ITEMS_MIN_MATCH_ID,
+        ));
+        corrupted.into_iter().chain(enhanced).reduce(core::cmp::max)
+    }
+
+    /// A time or match-id upper bound before the floor from [`Self::min_bounds_floor`]: the
+    /// result is empty, so no query needs to run.
+    fn range_is_empty(&self) -> bool {
+        self.min_bounds_floor().is_some_and(|(min_ts, min_id)| {
+            self.max_unix_timestamp.is_some_and(|v| v < min_ts)
+                || self.max_match_id.is_some_and(|v| v < min_id)
+        })
     }
 
     fn has_ability_order_filter(&self) -> bool {
@@ -400,8 +438,8 @@ pub struct ItemStats {
 
 // All rollups below (`item_stats_agg`, `item_cohort_stats_*_agg_v2`, `item_enemy_stats_agg`)
 // are built from the `upgrades.*` arrays, which exclude corrupted purchases (migration 42),
-// and keep no per-purchase corruption dimension: `corrupted_items` `include`/`only` requests
-// always go to the base table.
+// and keep no per-purchase corruption or enhanced dimension: `corrupted_items` `include`/`only`
+// and `enhanced_items` `exclude`/`only` requests always go to the base table.
 
 /// Horizon of the `item_stats_agg` materialized view, in days. Keep in sync with
 /// the `INTERVAL ... DAY` in `clickhouse/item_stats_agg.sql`.
@@ -480,6 +518,7 @@ fn build_mv_query(query: &ItemStatsQuery) -> Option<String> {
         || query.min_match_id.is_some()
         || query.max_match_id.is_some()
         || query.reads_corrupted()
+        || query.filters_enhanced()
         || !MatchMode::is_agg_servable(query.match_mode.as_deref());
     if personalized || unsupported_filter {
         return None;
@@ -589,6 +628,7 @@ fn build_cohort_mv_query(query: &ItemStatsQuery) -> Option<String> {
             .max_average_badge
             .is_some_and(|v| v < MAX_FILTERING_AVERAGE_BADGE)
         || query.reads_corrupted()
+        || query.filters_enhanced()
         || !MatchMode::is_agg_servable(query.match_mode.as_deref());
     if unsupported {
         return None;
@@ -660,6 +700,7 @@ fn build_enemy_mv_query(query: &ItemStatsQuery) -> Option<String> {
         || query.min_match_id.is_some()
         || query.max_match_id.is_some()
         || query.reads_corrupted()
+        || query.filters_enhanced()
         || !MatchMode::is_agg_servable(query.match_mode.as_deref());
     if unsupported {
         return None;
@@ -767,6 +808,7 @@ fn cohort_mv_skip_reason(query: &ItemStatsQuery) -> &'static str {
             query.corrupted_items() == CorruptedItemsFilter::Only,
             "only_corrupted",
         ),
+        (query.filters_enhanced(), "enhanced"),
         (query.min_unix_timestamp.is_none(), "no_min_timestamp"),
         (
             query
@@ -843,33 +885,27 @@ fn validate_item_order(chains: Option<&[Vec<u32>]>) -> APIResult<()> {
 fn build_query(query: &ItemStatsQuery) -> String {
     let corrupted_items = query.corrupted_items();
     let only_corrupted = corrupted_items == CorruptedItemsFilter::Only;
+    let enhanced_items = query.enhanced_items;
     /* ---------- match_info filters ----------
      *
      * `corrupted_items=only`: no match before build 6712 can match, so raise the lower bounds
-     * to the first possible match. The `match_id` bound prunes whole partitions, for the base
-     * table and for the hero-led projection alike. The projection has no `start_time` index,
-     * so without that bound it would read every hero row of the table. All windows that
-     * start before the patch also produce the same SQL, so they share one cache entry.
+     * to the first possible match. `enhanced_items` `exclude`/`only`: matches before the
+     * enhanced bit was recorded cannot be classified, so raise them to the first such match.
+     * The `match_id` bound prunes whole partitions, for the base table and for the hero-led
+     * projection alike. The projection has no `start_time` index, so without that bound it
+     * would read every hero row of the table. All windows that start before the floor also
+     * produce the same SQL, so they share one cache entry.
      */
-    let (min_unix_timestamp, min_match_id) = if only_corrupted {
-        (
+    let (min_unix_timestamp, min_match_id) = match query.min_bounds_floor() {
+        Some((floor_ts, floor_id)) => (
             Some(
                 query
                     .min_unix_timestamp
-                    .map_or(CORRUPTED_ITEMS_MIN_UNIX_TIMESTAMP, |v| {
-                        v.max(CORRUPTED_ITEMS_MIN_UNIX_TIMESTAMP)
-                    }),
+                    .map_or(floor_ts, |v| v.max(floor_ts)),
             ),
-            Some(
-                query
-                    .min_match_id
-                    .map_or(CORRUPTED_ITEMS_MIN_MATCH_ID, |v| {
-                        v.max(CORRUPTED_ITEMS_MIN_MATCH_ID)
-                    }),
-            ),
-        )
-    } else {
-        (query.min_unix_timestamp, query.min_match_id)
+            Some(query.min_match_id.map_or(floor_id, |v| v.max(floor_id))),
+        ),
+        None => (query.min_unix_timestamp, query.min_match_id),
     };
     let info_filters = MatchInfoFilters {
         min_unix_timestamp,
@@ -1009,9 +1045,12 @@ fn build_query(query: &ItemStatsQuery) -> String {
      * store, so it falls back to the base table on its own. With `corrupted_items`
      * `include`/`only`, the main scan reads `items.*` instead. The projection does store
      * those arrays, so ClickHouse could pick it without a hero predicate (a full projection
-     * scan). Projections therefore stay off for those opt-in cases.
+     * scan). Projections therefore stay off for those opt-in cases, and for `enhanced_items`
+     * `exclude`/`only`, which read `items.*` too.
      */
-    if !has_buyer_hero_filter && (enemy_hero_ids.is_none() || query.reads_corrupted()) {
+    let use_items_arrays =
+        has_buyer_hero_filter || query.reads_corrupted() || query.filters_enhanced();
+    if !has_buyer_hero_filter && (enemy_hero_ids.is_none() || use_items_arrays) {
         settings.push("optimize_use_projections = 0");
     }
     let settings_clause = settings.join(", ");
@@ -1020,16 +1059,17 @@ fn build_query(query: &ItemStatsQuery) -> String {
     // column, and ClickHouse moves it to PREWHERE on its own. In the enemy case, which has
     // its own PREWHERE, it goes there explicitly. Measured on partition 108: 153 MiB read
     // instead of 545 MiB.
-    let has_corrupted_filter = if only_corrupted {
-        format!(
-            " AND arrayExists(u -> {}, items.upgrade_info)",
-            corrupted_sql("u")
-        )
-    } else {
-        String::new()
-    };
+    // `enhanced_items=only` does the same with the enhanced bit.
+    let has_variant_filter = [
+        only_corrupted.then(|| corrupted_sql("u")),
+        (enhanced_items == EnhancedItemsFilter::Only).then(|| enhanced_sql("u")),
+    ]
+    .into_iter()
+    .flatten()
+    .map(|pred| format!(" AND arrayExists(u -> {pred}, items.upgrade_info)"))
+    .join("");
     let match_filters =
-        format!("{match_mode_filter} AND {game_mode_filter} {info_filters}{has_corrupted_filter}");
+        format!("{match_mode_filter} AND {game_mode_filter} {info_filters}{has_variant_filter}");
     // With an enemy filter the match filters move to PREWHERE alongside the semi-join, so
     // the array-joined `WHERE` only keeps the predicates that need the joined aliases.
     let (prewhere_clause, where_match_filters) = if enemy_prewhere.is_empty() {
@@ -1051,26 +1091,36 @@ fn build_query(query: &ItemStatsQuery) -> String {
      * `items.upgrade_info`, which the _v2 projection (migration 42) carries.
      *
      * `corrupted_items` `include`/`only` also need `items.*`, because `upgrades.*` has no
-     * corrupted purchases.
+     * corrupted purchases, and `enhanced_items` `exclude`/`only` need `items.upgrade_info`.
      */
-    let use_items_arrays = has_buyer_hero_filter || query.reads_corrupted();
     let (items_array_join, upgrade_filter, nw_col) = if use_items_arrays {
-        let (upgrade_info_join, corrupted_filter) = match corrupted_items {
-            CorruptedItemsFilter::Include => (String::new(), String::new()),
-            CorruptedItemsFilter::Exclude => (
+        let corrupted_filter = match corrupted_items {
+            CorruptedItemsFilter::Include => None,
+            CorruptedItemsFilter::Exclude => Some(not_corrupted_sql("upgrade_info")),
+            CorruptedItemsFilter::Only => Some(corrupted_sql("upgrade_info")),
+        };
+        let enhanced_filter = match enhanced_items {
+            EnhancedItemsFilter::Include => None,
+            EnhancedItemsFilter::Exclude => Some(not_enhanced_sql("upgrade_info")),
+            EnhancedItemsFilter::Only => Some(enhanced_sql("upgrade_info")),
+        };
+        let variant_filters: Vec<String> = corrupted_filter
+            .into_iter()
+            .chain(enhanced_filter)
+            .collect();
+        let (upgrade_info_join, variant_filter) = if variant_filters.is_empty() {
+            (String::new(), String::new())
+        } else {
+            (
                 ",\n    items.upgrade_info AS upgrade_info".to_owned(),
-                format!(" AND {}", not_corrupted_sql("upgrade_info")),
-            ),
-            CorruptedItemsFilter::Only => (
-                ",\n    items.upgrade_info AS upgrade_info".to_owned(),
-                format!(" AND {}", corrupted_sql("upgrade_info")),
-            ),
+                format!(" AND {}", variant_filters.join(" AND ")),
+            )
         };
         (
             format!(
                 "items.item_id      AS item_id,\n    items.game_time_s  AS buy_time,\n    items.sold_time_s  AS sold_time{upgrade_info_join}"
             ),
-            format!("\n    AND item_id IN t_upgrades AND buy_time > 0{corrupted_filter}"),
+            format!("\n    AND item_id IN t_upgrades AND buy_time > 0{variant_filter}"),
             ",\n    `items.net_worth_at_buy` AS net_worth_at_buy",
         )
     } else {
@@ -1154,7 +1204,7 @@ async fn get_item_stats(
     mut query: ItemStatsQuery,
 ) -> APIResult<Arc<Vec<ItemStats>>> {
     round_timestamps(&mut query.min_unix_timestamp, &mut query.max_unix_timestamp);
-    if query.corrupted_only_range_is_empty() {
+    if query.range_is_empty() {
         return Ok(Arc::default());
     }
     // Prefer the pre-aggregated item_stats_agg view for the global-meta subset of
@@ -1236,6 +1286,12 @@ pub(crate) async fn item_stats(
         query.max_average_badge,
     )?;
     validate_item_order(query.item_order.as_deref())?;
+    if query.filters_enhanced() && query.game_mode != Some(GameMode::StreetBrawl) {
+        return Err(APIError::status_msg(
+            StatusCode::BAD_REQUEST,
+            "enhanced_items=exclude/only requires game_mode=street_brawl",
+        ));
+    }
     #[expect(deprecated)]
     filter_protected_accounts(&state, &mut query.account_ids, query.account_id).await?;
     get_item_stats(&state.ch_client_ro, query).await.map(Json)
@@ -1583,6 +1639,80 @@ mod tests {
     }
 
     #[test]
+    fn enhanced_items_filter_on_the_enhanced_bit() {
+        let floor = format!(
+            "start_time >= {ENHANCED_ITEMS_MIN_UNIX_TIMESTAMP} AND match_id >= {ENHANCED_ITEMS_MIN_MATCH_ID}"
+        );
+        for (filter, bit_filter) in [
+            (
+                EnhancedItemsFilter::Exclude,
+                "bitAnd(upgrade_info, 131072) = 0",
+            ),
+            (
+                EnhancedItemsFilter::Only,
+                "bitAnd(upgrade_info, 131072) != 0",
+            ),
+        ] {
+            for hero_ids in [None, Some(vec![7])] {
+                let has_hero = hero_ids.is_some();
+                let query = ItemStatsQuery {
+                    hero_ids,
+                    game_mode: Some(GameMode::StreetBrawl),
+                    enhanced_items: filter,
+                    ..Default::default()
+                };
+                let sql = build_query(&query);
+                assert_valid_sql(&sql);
+                assert!(sql.contains("items.item_id      AS item_id"));
+                assert!(sql.contains(",\n    items.upgrade_info AS upgrade_info"));
+                // Corrupted purchases stay excluded by default.
+                assert!(sql.contains(&format!(
+                    "AND item_id IN t_upgrades AND buy_time > 0 AND bitAnd(upgrade_info, 8388608) = 0 AND {bit_filter}\n"
+                )));
+                assert!(sql.contains(&floor), "{sql}");
+                assert_eq!(
+                    sql.contains("arrayExists(u -> bitAnd(u, 131072) != 0, items.upgrade_info)"),
+                    filter == EnhancedItemsFilter::Only
+                );
+                assert_eq!(sql.contains("optimize_use_projections = 0"), !has_hero);
+                assert!(build_mv_query(&query).is_none());
+            }
+        }
+        // `include` (the default) leaves the query untouched.
+        assert!(!build_query(&ItemStatsQuery::default()).contains("131072"));
+    }
+
+    #[test]
+    fn enhanced_items_combine_with_corrupted_items() {
+        let sql = build_query(&ItemStatsQuery {
+            game_mode: Some(GameMode::StreetBrawl),
+            corrupted_items: Some(CorruptedItemsFilter::Only),
+            enhanced_items: EnhancedItemsFilter::Exclude,
+            ..Default::default()
+        });
+        assert_valid_sql(&sql);
+        assert!(sql.contains(
+            "AND bitAnd(upgrade_info, 8388608) != 0 AND bitAnd(upgrade_info, 131072) = 0\n"
+        ));
+        // The later (corrupted) floor wins.
+        assert!(sql.contains(&format!("match_id >= {CORRUPTED_ITEMS_MIN_MATCH_ID}")));
+        assert!(!sql.contains(&format!("match_id >= {ENHANCED_ITEMS_MIN_MATCH_ID}")));
+    }
+
+    #[test]
+    fn enhanced_items_before_the_bit_is_recorded_is_empty() {
+        let query = |max_match_id| ItemStatsQuery {
+            game_mode: Some(GameMode::StreetBrawl),
+            enhanced_items: EnhancedItemsFilter::Only,
+            max_match_id,
+            ..Default::default()
+        };
+        assert!(query(Some(ENHANCED_ITEMS_MIN_MATCH_ID - 1)).range_is_empty());
+        assert!(!query(Some(ENHANCED_ITEMS_MIN_MATCH_ID)).range_is_empty());
+        assert!(!query(None).range_is_empty());
+    }
+
+    #[test]
     fn only_corrupted_items_clamps_the_window_to_the_patch() {
         let floor = format!(
             "start_time >= {CORRUPTED_ITEMS_MIN_UNIX_TIMESTAMP} AND match_id >= {CORRUPTED_ITEMS_MIN_MATCH_ID}"
@@ -1628,22 +1758,17 @@ mod tests {
             max_match_id,
             ..Default::default()
         };
-        assert!(
-            only(Some(CORRUPTED_ITEMS_MIN_UNIX_TIMESTAMP - 1), None)
-                .corrupted_only_range_is_empty()
-        );
-        assert!(only(None, Some(CORRUPTED_ITEMS_MIN_MATCH_ID - 1)).corrupted_only_range_is_empty());
-        assert!(!only(None, None).corrupted_only_range_is_empty());
-        assert!(
-            !only(Some(CORRUPTED_ITEMS_MIN_UNIX_TIMESTAMP), None).corrupted_only_range_is_empty()
-        );
+        assert!(only(Some(CORRUPTED_ITEMS_MIN_UNIX_TIMESTAMP - 1), None).range_is_empty());
+        assert!(only(None, Some(CORRUPTED_ITEMS_MIN_MATCH_ID - 1)).range_is_empty());
+        assert!(!only(None, None).range_is_empty());
+        assert!(!only(Some(CORRUPTED_ITEMS_MIN_UNIX_TIMESTAMP), None).range_is_empty());
         // Only `only` short-circuits.
         assert!(
             !ItemStatsQuery {
                 corrupted_items: Some(CorruptedItemsFilter::Include),
                 ..only(Some(1), None)
             }
-            .corrupted_only_range_is_empty()
+            .range_is_empty()
         );
     }
 

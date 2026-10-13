@@ -32,6 +32,31 @@ pub(super) const CORRUPTED_ITEMS_MIN_UNIX_TIMESTAMP: i64 = 1_790_712_000;
 /// also works for the hero-led projection; that projection cannot prune by `start_time`.
 pub(super) const CORRUPTED_ITEMS_MIN_MATCH_ID: u64 = 108_000_000;
 
+/// Bit of `items.upgrade_info` marking an enhanced item in Street Brawl: some draft picks
+/// are the enhanced version of an upgrade, which keeps the normal item's `item_id`. Never
+/// set outside Street Brawl.
+pub(super) const ENHANCED_ITEM_BIT: u32 = 0x2_0000;
+
+/// SQL predicate that is true for enhanced purchases, given an expression for the
+/// purchase's `upgrade_info` value.
+pub(super) fn enhanced_sql(upgrade_info_expr: &str) -> String {
+    format!("bitAnd({upgrade_info_expr}, {ENHANCED_ITEM_BIT}) != 0")
+}
+
+/// SQL predicate that is true for non-enhanced purchases, given an expression for the
+/// purchase's `upgrade_info` value.
+pub(super) fn not_enhanced_sql(upgrade_info_expr: &str) -> String {
+    format!("bitAnd({upgrade_info_expr}, {ENHANCED_ITEM_BIT}) = 0")
+}
+
+/// `items.upgrade_info` is 0 for every purchase before this, so enhanced items cannot be
+/// told apart in older matches. The first enhanced purchase on record is in match
+/// `74_174_026`, which started at 2026-04-08 22:39:04 UTC. This is 2026-04-08 22:00:00 UTC.
+pub(super) const ENHANCED_ITEMS_MIN_UNIX_TIMESTAMP: i64 = 1_775_685_600;
+/// Lower bound on the match id of any match with a known enhanced flag: the first id of
+/// partition 74 (see [`CORRUPTED_ITEMS_MIN_MATCH_ID`]).
+pub(super) const ENHANCED_ITEMS_MIN_MATCH_ID: u64 = 74_000_000;
+
 /// Common player-level filters shared across analytics queries.
 /// Returns a `Vec<String>` so callers can extend with file-specific filters
 /// before formatting.
