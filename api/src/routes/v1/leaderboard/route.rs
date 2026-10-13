@@ -27,7 +27,6 @@ use crate::error::{APIError, APIResult};
 use crate::routes::v1::leaderboard::types::{
     HeroLeaderboardClickhouse, Leaderboard, LeaderboardClickhouse, LeaderboardRegion,
 };
-use crate::services::steam::client::SteamClient;
 use crate::services::steam::types::{
     SteamProxyError, SteamProxyQuery, SteamProxyRawResponse, SteamProxyResponse,
 };
@@ -58,13 +57,16 @@ pub(super) struct LeaderboardIdQuery {
     leaderboard_id: Option<u32>,
 }
 
+/// Fetches a leaderboard from Steam, at most every ten minutes per variant. Each fetch of the
+/// current leaderboard is also snapshotted: here, not in the callers, so cache hits do not store
+/// the same entries again.
 #[cached(
     ttl_secs = 600,
     convert = "{ (region, hero_id, leaderboard_id) }",
     key = "(LeaderboardRegion, Option<u32>, Option<u32>)"
 )]
 pub(crate) async fn fetch_leaderboard_raw(
-    steam_client: &SteamClient,
+    state: &AppState,
     region: LeaderboardRegion,
     hero_id: Option<u32>,
     leaderboard_id: Option<u32>,
@@ -74,7 +76,8 @@ pub(crate) async fn fetch_leaderboard_raw(
         hero_id,
         leaderboard_id,
     };
-    steam_client
+    let response = state
+        .steam_client
         .call_steam_proxy_raw(SteamProxyQuery {
             msg_type: EgcCitadelClientMessages::KEMsgClientToGcGetLeaderboard,
             msg,
@@ -85,7 +88,16 @@ pub(crate) async fn fetch_leaderboard_raw(
             soft_cooldown_millis: None,
             username: None,
         })
-        .await
+        .await?;
+    // Snapshots track the current leaderboard only; other leaderboards would mix seasons. A
+    // response that does not decode is skipped here; the caller reports it.
+    if leaderboard_id.is_none()
+        && let Ok(data) = BASE64_STANDARD.decode(&response.data)
+        && let Ok(proto) = CMsgClientToGcGetLeaderboardResponse::decode(data.as_slice())
+    {
+        spawn_snapshot(state.ch_client.clone(), region, hero_id, proto.entries);
+    }
+    Ok(response)
 }
 
 #[cached(
@@ -219,31 +231,22 @@ async fn ensure_valid_hero_id(state: &AppState, hero_id: u32) -> APIResult<()> {
     }
 }
 
-/// The leaderboard as the raw protobuf message. The current leaderboard is also snapshotted.
+/// The leaderboard as the raw protobuf message.
 async fn fetch_leaderboard_proto(
     state: &AppState,
     region: LeaderboardRegion,
     hero_id: Option<u32>,
     leaderboard_id: Option<u32>,
 ) -> APIResult<Vec<u8>> {
-    let steam_response = tryhard::retry_fn(|| {
-        fetch_leaderboard_raw(&state.steam_client, region, hero_id, leaderboard_id)
-    })
-    .retries(3)
-    .fixed_backoff(Duration::from_millis(10))
-    .await?;
-    let decoded = BASE64_STANDARD.decode(&steam_response.data)?;
-    // Snapshots track the current leaderboard only; other leaderboards would mix seasons.
-    if leaderboard_id.is_none()
-        && let Ok(proto) = CMsgClientToGcGetLeaderboardResponse::decode(decoded.as_slice())
-    {
-        spawn_snapshot(state.ch_client.clone(), region, hero_id, proto.entries);
-    }
-    Ok(decoded)
+    let steam_response =
+        tryhard::retry_fn(|| fetch_leaderboard_raw(state, region, hero_id, leaderboard_id))
+            .retries(3)
+            .fixed_backoff(Duration::from_millis(10))
+            .await?;
+    Ok(BASE64_STANDARD.decode(&steam_response.data)?)
 }
 
-/// The parsed leaderboard, with each entry's possible account ids looked up by its name. The
-/// current leaderboard is also snapshotted.
+/// The parsed leaderboard, with each entry's possible account ids looked up by its name.
 async fn fetch_leaderboard(
     state: &AppState,
     region: LeaderboardRegion,
@@ -251,20 +254,11 @@ async fn fetch_leaderboard(
     leaderboard_id: Option<u32>,
 ) -> APIResult<Leaderboard> {
     let (raw_leaderboard, steam_names) = join!(
-        fetch_leaderboard_raw(&state.steam_client, region, hero_id, leaderboard_id),
+        fetch_leaderboard_raw(state, region, hero_id, leaderboard_id),
         fetch_all_steam_names(&state.ch_client_ro),
     );
     let proto_leaderboard: SteamProxyResponse<CMsgClientToGcGetLeaderboardResponse> =
         raw_leaderboard?.try_into()?;
-    // Snapshots track the current leaderboard only; other leaderboards would mix seasons.
-    if leaderboard_id.is_none() {
-        spawn_snapshot(
-            state.ch_client.clone(),
-            region,
-            hero_id,
-            proto_leaderboard.msg.entries.clone(),
-        );
-    }
     let mut leaderboard: Leaderboard = proto_leaderboard.msg.try_into()?;
     match steam_names {
         Ok(steam_names) => {
