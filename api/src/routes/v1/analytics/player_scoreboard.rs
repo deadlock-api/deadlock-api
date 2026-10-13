@@ -184,7 +184,8 @@ fn build_query(query: &PlayerScoreboardQuery) -> String {
             .is_some_and(|v| v < MAX_FILTERING_AVERAGE_BADGE)
         || query.min_duration_s.is_some()
         || query.max_duration_s.is_some()
-        || query.game_mode.is_some_and(|g| g != GameMode::Normal);
+        || query.game_mode.is_some_and(|g| g != GameMode::Normal)
+        || query.match_mode.is_some();
     // Account-scoped reads are primary-key ranges on player_match_stats but open every part of
     // match_player, and an all-time scan aggregates there in sort order instead of hashing
     // every account (~15 GiB peak). Time and hero filters stay on match_player, whose
@@ -513,6 +514,15 @@ mod tests {
         });
         assert!(sql.contains("FROM player_match_stats "));
         assert!(!sql.contains("match_player"));
+    }
+
+    #[test]
+    fn match_mode_alone_filters_the_matches() {
+        let sql = build_query(&PlayerScoreboardQuery {
+            match_mode: Some(vec![MatchMode::Ranked]),
+            ..Default::default()
+        });
+        assert!(sql.contains("match_mode = 'Ranked'"), "{sql}");
     }
 
     #[test]
