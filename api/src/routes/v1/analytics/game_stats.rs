@@ -226,6 +226,9 @@ pub struct AnalyticsGameStats {
     pub avg_first_permanent_buff_time_s: Option<f64>,
 }
 
+/// `preferred_block_size_bytes = 0`: the ~50 numeric columns make rows ~240 bytes wide, so the
+/// default 1 MB block budget shrinks every read to one granule and multiplies the per-read
+/// overhead. Full 65,536-row blocks cut wall time by 16% at +25% peak memory (~750 MB).
 fn build_query(query: &GameStatsQuery) -> String {
     let info_filters = query.match_info().build();
     let player_filters = join_filters(
@@ -312,7 +315,7 @@ fn build_query(query: &GameStatsQuery) -> String {
         {player_filters}
     GROUP BY bucket
     ORDER BY bucket
-    SETTINGS log_comment = 'game_stats', apply_patch_parts = 0
+    SETTINGS log_comment = 'game_stats', apply_patch_parts = 0, preferred_block_size_bytes = 0
     "
     )
 }
