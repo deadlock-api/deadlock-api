@@ -336,21 +336,15 @@ async fn fetch_builds(
         },
     )
     .await?;
-    Ok(search_results(response))
-}
-
-/// The builds a search found, or the code the GC refused it with. A busy or failing GC answers
-/// with no builds as well, so only a successful search means a build does not exist. An answer
-/// without a code counts as a success, although the proto default is `k_eInternalError`, so a GC
-/// that leaves the code out keeps working as before. An unknown code counts as an internal error.
-fn search_results(
-    response: CMsgClientToGcFindHeroBuildsResponse,
-) -> Result<Vec<HeroBuildResult>, EResponse> {
-    match response.response.map(EResponse::try_from) {
+    // A busy or failing GC answers with no builds as well, so only a successful search means a
+    // build does not exist. An answer without a code counts as a success, although the proto
+    // default is `k_eInternalError`, so a GC that leaves the code out keeps working as before. An
+    // unknown code counts as an internal error.
+    Ok(match response.response.map(EResponse::try_from) {
         None | Some(Ok(EResponse::KESuccess)) => Ok(response.results),
         Some(Ok(code)) => Err(code),
         Some(Err(_)) => Err(EResponse::KEInternalError),
-    }
+    })
 }
 
 #[cfg(test)]
