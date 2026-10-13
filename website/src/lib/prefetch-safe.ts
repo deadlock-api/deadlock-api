@@ -54,6 +54,17 @@ export function prefetchCached<
 }
 
 /**
+ * A page's headline data, which the server must have. Without it the page is only a header and an inline error, and
+ * answering that with a 200 got hero pages marked "Soft 404" during an API outage; the edge cache also kept that
+ * render for a day. On the server a missing answer throws, so the page answers 500, the edge cache keeps its last
+ * good copy and crawlers retry later. In the browser it passes through: the page shows its own error with a retry.
+ */
+export function requireOnServer<T>(data: T | undefined, what: string): T | undefined {
+  if (data === undefined && typeof window === "undefined") throw new Error(`${what} did not load`);
+  return data;
+}
+
+/**
  * Prefetch for a query whose full answer is too large to embed in the page (megabytes of rows behind a top-50 view).
  * On the server the cache keeps only `trim(data)`, which must render the view's default state exactly as the full
  * answer would, and the entry is marked invalidated, so the browser refetches the full answer right after hydration

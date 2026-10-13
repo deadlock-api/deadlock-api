@@ -28,7 +28,7 @@ import { formatPercent } from "~/lib/format";
 import { DEFAULT_MATCH_MODE } from "~/lib/game-mode";
 import { fetchItemBestHeroes } from "~/lib/item-hero-fns";
 import { findItemBySlug, itemSlug } from "~/lib/item-slug";
-import { catchPrefetch, ensureCached, prefetchCached } from "~/lib/prefetch-safe";
+import { catchPrefetch, ensureCached, prefetchCached, requireOnServer } from "~/lib/prefetch-safe";
 import { rankOf } from "~/lib/rank-of";
 import { DEFAULT_RANK_RANGE, rankRangeLabel } from "~/lib/rank-utils";
 import { defaultPeriodLabel, defaultTemporalCoverage, defaultUnixRange, type SeasonInfo } from "~/lib/seasons";
@@ -168,7 +168,11 @@ export const Route = createFileRoute("/analytics/items/$itemName")({
         }),
       ),
     ]);
-    const summary = summarizeItemStats(stats, heroStats, item.id);
+    const summary = summarizeItemStats(
+      requireOnServer(stats, "Item stats"),
+      requireOnServer(heroStats, "Hero stats"),
+      item.id,
+    );
     return {
       itemId: item.id,
       itemName: item.name,

@@ -33,7 +33,7 @@ import { DEFAULT_MATCH_MODE } from "~/lib/game-mode";
 import { fetchHeroMatchups, type HeroMatchupsRequest } from "~/lib/hero-matchup-fns";
 import { isPreReleaseHero } from "~/lib/hero-roster";
 import { findHeroBySlug, heroSlug } from "~/lib/hero-slug";
-import { catchPrefetch, ensureCached, prefetchCached } from "~/lib/prefetch-safe";
+import { catchPrefetch, ensureCached, prefetchCached, requireOnServer } from "~/lib/prefetch-safe";
 import { rankOf } from "~/lib/rank-of";
 import { DEFAULT_RANK_RANGE, rankRangeLabel } from "~/lib/rank-utils";
 import {
@@ -209,7 +209,7 @@ export const Route = createFileRoute("/analytics/heroes/$heroName")({
       prefetchCached(queryClient, heroSwapStatsQueryOptions(currentBanParams(seasons, preferences.dateFilter))),
     ]);
     const cardImage = hero.images.hero_card_critical_webp ?? hero.images.icon_hero_card_webp ?? null;
-    const summary = summarizeHeroStats(stats, hero.id);
+    const summary = summarizeHeroStats(requireOnServer(stats, "Hero stats"), hero.id);
     const color = hero.colors?.style ?? hero.colors?.ui;
     return {
       kind: "live" as const,
