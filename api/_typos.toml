@@ -11,6 +11,8 @@ Modifer = "Modifer"
 VAlue = "VAlue"
 NAme = "NAme"
 Verticall = "Verticall"
+# Deliberate syntax error in an MCP query test.
+SELEC = "SELEC"
 
 [files]
 extend-exclude = [

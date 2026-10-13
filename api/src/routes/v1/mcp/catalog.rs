@@ -518,8 +518,9 @@ fn read_only_statement(conn: &Connection, sql: &str) -> Result<Option<String>, Q
 
 /// Prepares `canonical`, the agent's `sql` as `DuckDB` writes it back, under the row cap:
 /// `query_arrow` materializes the whole result before the first batch, so the cap goes into the
-/// query and `DuckDB` stops reading once it has one row too many. An error is reported against
-/// `sql` where that fails as well, which binder and catalog errors do; `sql` itself never runs.
+/// query and `DuckDB` stops reading once it has one row too many. If the capped query does not
+/// prepare, `sql` is prepared instead: its error is the one to report, since it quotes the agent's
+/// text, and if it prepares, `DuckDB` wrote back SQL it cannot run, so `sql` runs uncapped.
 fn prepare_capped<'conn>(
     conn: &'conn Connection,
     sql: &str,
@@ -529,8 +530,11 @@ fn prepare_capped<'conn>(
     // `prepare` runs every statement but the last, so the sandbox must not depend on `DuckDB`
     // writing `canonical` back as exactly one statement.
     read_only_statement(conn, &capped)?;
-    conn.prepare(&capped)
-        .map_err(|capped_error| conn.prepare(sql).err().unwrap_or(capped_error).into())
+    conn.prepare(&capped).or_else(|capped_error| {
+        let stmt = conn.prepare(sql)?;
+        warn!("MCP query runs without the row cap, its canonical form failed: {capped_error}");
+        Ok(stmt)
+    })
 }
 
 pub(crate) fn run_query(conn: &Connection, sql: &str) -> Result<QueryOutput, QueryError> {
