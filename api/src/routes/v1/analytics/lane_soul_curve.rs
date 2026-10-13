@@ -382,12 +382,29 @@ fn duo_filters(query: &LaneSoulCurveQuery) -> LaneDuoFilters<'_> {
 
 /// `per_time` and the final curve `SELECT`, reading a `lane_samples` CTE with one row per lane and
 /// sample: `assigned_lane`, `t`, `team0`, `team1` and each stat's `<stat>_t0` / `<stat>_t1` totals.
-fn curve_select(query: &LaneSoulCurveQuery, stats: &LaneStats, duo_filters: &str) -> String {
+/// `packed` groups on [`LaneGrouping::select_grouped_packed`] keys, for `UInt8` hero ids only.
+fn curve_select(
+    query: &LaneSoulCurveQuery,
+    stats: &LaneStats,
+    duo_filters: &str,
+    packed: bool,
+) -> String {
     let grouping = LaneGrouping::new(query.group_by.as_deref());
-    let grouped_select = grouping.select_grouped();
-    let outer_dims = grouping.select_all_by_name();
-    let per_time_group_by = grouping.group_by_clause(&["t"]);
-    let outer_group_by = grouping.group_by_clause(&[]);
+    let (grouped_select, outer_dims, per_time_group_by, outer_group_by) = if packed {
+        (
+            grouping.select_grouped_packed(),
+            grouping.select_all_unpacked(),
+            grouping.packed_group_by_clause(&["t"]),
+            grouping.packed_group_by_clause(&[]),
+        )
+    } else {
+        (
+            grouping.select_grouped(),
+            grouping.select_all_by_name(),
+            grouping.group_by_clause(&["t"]),
+            grouping.group_by_clause(&[]),
+        )
+    };
 
     let side_swap = stats.side_swap();
     let sample_aggregates = sample_aggregates(stats);
@@ -450,14 +467,45 @@ fn build_table_query(query: &LaneSoulCurveQuery, stats: &LaneStats) -> Option<St
     }
     .build();
     let time_bounds = time_bounds(query, "t");
-    let curve_select = curve_select(query, stats, &duo_filters.side_filters("duo", "enemy_duo"));
+    let grouping = LaneGrouping::new(query.group_by.as_deref());
+    // Drops matchups with fewer lanes than `min_matches` before the per-sample pass: a matchup's
+    // `matches_played` (lanes at one sample) can't exceed its lanes. Without FINAL, unmerged
+    // duplicates only add lanes, so no matchup that clears `min_matches` is dropped. Over a season
+    // it keeps ~1/4 of the matchups and halves peak memory.
+    let (prune_cte, prune_filter) = match query.min_matches.filter(|m| *m > 1) {
+        Some(min) if !grouping.dims().is_empty() => {
+            let keys = grouping.packed_names();
+            (
+                format!(
+                    "
+frequent_matchups AS (
+    SELECT
+    {}
+        count() AS lanes
+    FROM lane_matchups
+    ARRAY JOIN
+        [team0, team1] AS duo,
+        [team1, team0] AS enemy_duo
+    PREWHERE {table_filters}
+    GROUP BY {keys}
+    HAVING lanes >= {min}
+),",
+                    grouping.select_grouped_packed()
+                ),
+                format!(" AND ({keys}) IN (SELECT {keys} FROM frequent_matchups)"),
+            )
+        }
+        _ => (String::new(), String::new()),
+    };
+    let duo_filters = duo_filters.side_filters("duo", "enemy_duo") + &prune_filter;
+    let curve_select = curve_select(query, stats, &duo_filters, true);
     // PREWHERE: under FINAL, ClickHouse only moves sorting-key conditions there itself, so the
     // other filters would run after reading every column. Duplicate versions of a row never
     // differ in the filtered columns (checked 2026-10-04), so filtering before FINAL keeps the
     // same rows.
     Some(format!(
         "
-WITH
+WITH{prune_cte}
 lane_samples AS (
     SELECT
         assigned_lane,
@@ -495,7 +543,7 @@ fn build_query(query: &LaneSoulCurveQuery, stats: &LaneStats) -> String {
     let player_tuple = player_tuple(stats);
     let side_totals = side_totals(stats);
     let sample_array_join = sample_array_join(stats);
-    let curve_select = curve_select(query, stats, &duo_filters);
+    let curve_select = curve_select(query, stats, &duo_filters, false);
 
     let MinMatchesPushdown {
         cte: prune_cte,

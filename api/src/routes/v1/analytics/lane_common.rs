@@ -202,6 +202,38 @@ impl LaneGroupBy {
         }
     }
 
+    /// Grouping column on `lane_matchups`, whose `UInt8` hero ids pack a sorted duo into one
+    /// `UInt16`. Grouping the per-sample pass on the duo arrays instead cost ~4x the CPU over a
+    /// season (`lane_soul_curve`, 2026-10-13); wider integer keys were as slow as the arrays.
+    fn packed_definition(self) -> &'static str {
+        match self {
+            Self::AssignedLane => "assigned_lane",
+            Self::HeroIds => "toUInt16(duo[1] * 256 + duo[2]) AS hero_key",
+            Self::EnemyHeroIds => "toUInt16(enemy_duo[1] * 256 + enemy_duo[2]) AS enemy_hero_key",
+        }
+    }
+
+    fn packed_name(self) -> &'static str {
+        match self {
+            Self::AssignedLane => "assigned_lane",
+            Self::HeroIds => "hero_key",
+            Self::EnemyHeroIds => "enemy_hero_key",
+        }
+    }
+
+    /// The output column of [`Self::packed_definition`].
+    fn unpacked(self) -> &'static str {
+        match self {
+            Self::AssignedLane => "assigned_lane",
+            Self::HeroIds => {
+                "[toUInt32(intDiv(hero_key, 256)), toUInt32(hero_key % 256)] AS hero_ids"
+            }
+            Self::EnemyHeroIds => {
+                "[toUInt32(intDiv(enemy_hero_key, 256)), toUInt32(enemy_hero_key % 256)] AS enemy_hero_ids"
+            }
+        }
+    }
+
     /// Stand-in for a folded dimension. `0` is free for `assigned_lane`: unassigned players are
     /// filtered out before grouping.
     fn folded(self) -> &'static str {
@@ -238,12 +270,29 @@ impl LaneGrouping {
             .join("\n    ")
     }
 
+    /// [`Self::select_grouped`] with [`LaneGroupBy::packed_definition`].
+    pub(super) fn select_grouped_packed(&self) -> String {
+        self.0
+            .iter()
+            .map(|dim| format!("{},", dim.packed_definition()))
+            .join("\n    ")
+    }
+
+    /// Comma-separated packed grouping columns, for `GROUP BY` and `IN`.
+    pub(super) fn packed_names(&self) -> String {
+        self.0.iter().map(|dim| dim.packed_name()).join(", ")
+    }
+
     pub(super) fn select_all_defined(&self) -> String {
         self.select_all(LaneGroupBy::definition)
     }
 
     pub(super) fn select_all_by_name(&self) -> String {
         self.select_all(LaneGroupBy::name)
+    }
+
+    pub(super) fn select_all_unpacked(&self) -> String {
+        self.select_all(LaneGroupBy::unpacked)
     }
 
     fn select_all(&self, grouped: impl Fn(LaneGroupBy) -> &'static str) -> String {
@@ -261,10 +310,18 @@ impl LaneGrouping {
 
     /// Empty when nothing is grouped, collapsing the query to a single row.
     pub(super) fn group_by_clause(&self, extra: &[&str]) -> String {
+        self.group_by_names(LaneGroupBy::name, extra)
+    }
+
+    pub(super) fn packed_group_by_clause(&self, extra: &[&str]) -> String {
+        self.group_by_names(LaneGroupBy::packed_name, extra)
+    }
+
+    fn group_by_names(&self, name: impl Fn(LaneGroupBy) -> &'static str, extra: &[&str]) -> String {
         let cols = self
             .0
             .iter()
-            .map(|dim| dim.name())
+            .map(|dim| name(*dim))
             .chain(extra.iter().copied())
             .join(", ");
         if cols.is_empty() {
