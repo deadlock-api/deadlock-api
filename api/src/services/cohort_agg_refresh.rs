@@ -109,6 +109,17 @@ fn cohort_specs() -> [CohortSpec; 4] {
     ]
 }
 
+/// Measures of every item rollup (`item_stats_agg`, the cohort and enemy rollups), over one
+/// purchase's `won`, `buy_time`, `sold_time`, `duration_s` and `account_id`.
+pub(crate) const ITEM_ROLLUP_MEASURES: &str = "count() AS n_matches,
+    sum(won) AS n_wins,
+    sum(buy_time) AS sum_buy_time,
+    sum((buy_time / duration_s) * 100) AS sum_buy_rel,
+    sum(if(sold_time > 0, sold_time, 0)) AS sum_sold_time,
+    sum(toUInt64(sold_time > 0)) AS n_sold,
+    sum(if(sold_time > 0, (sold_time / duration_s) * 100, 0)) AS sum_sold_rel,
+    uniqCombinedState(14)(account_id) AS players_state";
+
 /// The purchase side reads `upgrades.*`, which excludes corrupted purchases (migration 42);
 /// the cohort side keeps the raw `items.item_id` so it matches the `hasAll(items.item_id, ...)`
 /// presence filter of the base query.
@@ -119,7 +130,7 @@ fn select_body(spec: &CohortSpec, since_clause: &str) -> String {
             bucket_col,
             extra_array_join,
         } => (bucket_select, bucket_col, extra_array_join),
-        Source::EnemyHero => return enemy_hero_select_body(since_clause),
+        Source::EnemyHero => return enemy_hero_select_body(since_clause, None),
         Source::PerformanceCurve => {
             return player_performance_curve_agg::agg_select_body(since_clause);
         }
@@ -132,14 +143,7 @@ fn select_body(spec: &CohortSpec, since_clause: &str) -> String {
     cohort_item_id,
     item_id,
     {bucket_select},
-    count() AS n_matches,
-    sum(won) AS n_wins,
-    sum(buy_time) AS sum_buy_time,
-    sum((buy_time / duration_s) * 100) AS sum_buy_rel,
-    sum(if(sold_time > 0, sold_time, 0)) AS sum_sold_time,
-    sum(toUInt64(sold_time > 0)) AS n_sold,
-    sum(if(sold_time > 0, (sold_time / duration_s) * 100, 0)) AS sum_sold_rel,
-    uniqCombinedState(14)(account_id) AS players_state
+    {ITEM_ROLLUP_MEASURES}
 FROM default.match_player
 ARRAY JOIN
     `upgrades.item_id` AS item_id,
@@ -153,10 +157,27 @@ GROUP BY game_mode, match_mode, day, cohort_item_id, item_id, {bucket_col}"
     )
 }
 
+/// The rows of the cohort rollup `table` for the matches selected by `since_clause`. The
+/// item-stats rollup readers aggregate a window's partial days with it.
+///
+/// # Panics
+/// When this job does not build `table` as a cohort rollup.
+pub(crate) fn cohort_rollup_rows(table: &str, since_clause: &str) -> String {
+    let spec = cohort_specs()
+        .into_iter()
+        .find(|spec| spec.table == table && matches!(spec.source, Source::Cohort { .. }))
+        .unwrap_or_else(|| panic!("{table} is not a cohort rollup"));
+    select_body(&spec, since_clause)
+}
+
 /// Keep in sync with the backfill in
 /// `tools/migrations/clickhouse/41_create_item_enemy_stats_agg.sql`. The opposing-team
 /// expression mirrors the semi-join of the `item_stats` base query so both count the same rows.
-fn enemy_hero_select_body(since_clause: &str) -> String {
+/// `enemy_hero_id` keeps only the buyers facing that hero.
+pub(crate) fn enemy_hero_select_body(since_clause: &str, enemy_hero_id: Option<u32>) -> String {
+    let enemy_team_having = enemy_hero_id.map_or_else(String::new, |id| {
+        format!("HAVING has(enemy_hero_ids, {id})")
+    });
     format!(
         "SELECT
     game_mode,
@@ -166,14 +187,7 @@ fn enemy_hero_select_body(since_clause: &str) -> String {
     ifNull(average_badge, 0) AS least_badge,
     ifNull(average_badge, 65535) AS greatest_badge,
     CAST(upgrade_item_id, 'UInt32') AS item_id,
-    count() AS n_matches,
-    sum(won) AS n_wins,
-    sum(buy_time) AS sum_buy_time,
-    sum((buy_time / duration_s) * 100) AS sum_buy_rel,
-    sum(if(sold_time > 0, sold_time, 0)) AS sum_sold_time,
-    sum(toUInt64(sold_time > 0)) AS n_sold,
-    sum(if(sold_time > 0, (sold_time / duration_s) * 100, 0)) AS sum_sold_rel,
-    uniqCombinedState(14)(account_id) AS players_state
+    {ITEM_ROLLUP_MEASURES}
 FROM (
     SELECT
         game_mode, match_mode, start_time, average_badge, won, duration_s, account_id,
@@ -188,6 +202,7 @@ FROM (
         WHERE match_mode IN ('Ranked', 'Unranked') AND team IN ('Team0', 'Team1')
             AND {since_clause}
         GROUP BY match_id, team
+        {enemy_team_having}
     ) AS enemies ON enemies.match_id = buyers.match_id
         AND enemies.enemy_team = if(buyers.team = 'Team0', 'Team1', 'Team0')
     WHERE match_mode IN ('Ranked', 'Unranked')

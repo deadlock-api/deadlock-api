@@ -11,8 +11,9 @@ use utoipa::{IntoParams, ToSchema};
 
 use super::common_filters::{
     PlayerFilters, filter_protected_accounts, is_non_empty, join_filters, range_filters,
-    rollup_badge_filters, rollup_day_filters, rollup_oldest_servable, round_timestamps,
+    rollup_oldest_servable, round_timestamps,
 };
+use super::rollup_window::{DaySplit, EdgeRows, Rollup, RollupFilters};
 use crate::context::AppState;
 use crate::error::APIResult;
 use crate::routes::v1::matches::types::{GameMode, MatchMode, reject_brawl_badge_filter};
@@ -241,6 +242,65 @@ pub struct AnalyticsHeroStats {
 /// the `INTERVAL ... DAY` in the view's refresh `SELECT`.
 const MV_HORIZON_DAYS: i64 = 65;
 
+/// Grain columns of the hero-stats rollups, with the `match_player` expressions of [`mv_rows`].
+const MV_GRAIN: &[(&str, &str)] = &[
+    ("game_mode", "game_mode"),
+    ("match_mode", "match_mode"),
+    ("hero_id", "hero_id"),
+    ("least_badge", "ifNull(average_badge, 0)"),
+    ("greatest_badge", "ifNull(average_badge, 65535)"),
+    ("day", "toDate(start_time)"),
+];
+/// Measure columns of the hero-stats rollups, as [`mv_rows`] yields them.
+const MV_MEASURES: &str = "n_matches, n_wins, sum_kills, sum_deaths, sum_assists, sum_net_worth, sum_last_hits, \
+    sum_denies, sum_player_damage, sum_player_damage_taken, sum_boss_damage, sum_creep_damage, \
+    sum_neutral_damage, sum_max_health, sum_shots_hit, sum_shots_missed, sum_permanent_buffs, \
+    n_permanent_buff_timing_matches, sum_first_permanent_buff_time_s";
+
+/// The hero-stats rollup rows of a window's partial days. Keep in sync with the `SELECT` of both
+/// views in `tools/migrations/clickhouse/50_power_up_buff_analytics.sql`.
+fn mv_rows(
+    EdgeRows {
+        where_clause,
+        grain_select,
+        group_by,
+    }: &EdgeRows,
+) -> String {
+    format!(
+        "SELECT
+    {grain_select}count() AS n_matches,
+    sum(won) AS n_wins,
+    sum(kills) AS sum_kills,
+    sum(deaths) AS sum_deaths,
+    sum(assists) AS sum_assists,
+    sum(net_worth) AS sum_net_worth,
+    sum(last_hits) AS sum_last_hits,
+    sum(denies) AS sum_denies,
+    sum(max_player_damage) AS sum_player_damage,
+    sum(max_player_damage_taken) AS sum_player_damage_taken,
+    sum(max_boss_damage) AS sum_boss_damage,
+    sum(max_creep_damage) AS sum_creep_damage,
+    sum(max_neutral_damage) AS sum_neutral_damage,
+    sum(max_max_health) AS sum_max_health,
+    sum(max_shots_hit) AS sum_shots_hit,
+    sum(max_shots_missed) AS sum_shots_missed,
+    sum(permanent_buffs) AS sum_permanent_buffs,
+    count(first_permanent_buff_time_s) AS n_permanent_buff_timing_matches,
+    sum(ifNull(first_permanent_buff_time_s, 0)) AS sum_first_permanent_buff_time_s
+FROM (
+    SELECT
+        game_mode, match_mode, hero_id, match_id, start_time, average_badge, won, kills, deaths,
+        assists, net_worth, last_hits, denies, max_player_damage, max_player_damage_taken,
+        max_boss_damage, max_creep_damage, max_neutral_damage, max_max_health, max_shots_hit,
+        max_shots_missed, account_id, permanent_buffs, first_permanent_buff_time_s
+    FROM default.match_player
+    WHERE match_mode IN ('Ranked', 'Unranked') AND {where_clause}
+    LIMIT 1 BY match_id, account_id
+)
+GROUP BY {group_by}"
+    )
+}
+
 /// Builds a query against a pre-aggregated hero-stats rollup when the request falls
 /// within the "global meta" subset they materialize, else `None` (the caller then
 /// uses the base-table query). Both rollups are grained on
@@ -256,6 +316,10 @@ const MV_HORIZON_DAYS: i64 = 65;
 /// use the full-history one. A request reads exactly one table, so totals never
 /// double-count. The `_v2` views (migration 50) add the permanent buff pickup sums; every
 /// rolled-up row has buff counts, so `permanent_buff_matches` is `n_matches`.
+///
+/// Only the window's whole days come from the rollup; its partial days are aggregated from
+/// `match_player` (see [`rollup_window`](super::rollup_window)). A window without a whole day
+/// uses the base table.
 fn build_mv_query(query: &HeroStatsQuery) -> Option<String> {
     let bucket_expr = query.bucket.mv_bucket_expr()?;
     // Per-player / per-row filters the grain cannot express → base table.
@@ -278,6 +342,7 @@ fn build_mv_query(query: &HeroStatsQuery) -> Option<String> {
     if personalized || unsupported_filter || unsupported_match_mode {
         return None;
     }
+    let split = DaySplit::new(query.min_unix_timestamp, query.max_unix_timestamp)?;
 
     // Pick the rollup: the hourly 65-day `hero_stats_agg` for windows that start
     // comfortably inside its horizon (freshest data), else the 6-hourly full-history
@@ -292,17 +357,23 @@ fn build_mv_query(query: &HeroStatsQuery) -> Option<String> {
         ("hero_stats_agg_all_v2", "hero_stats_mv_all")
     };
 
-    let mut filters = vec![GameMode::sql_filter(query.game_mode)];
-    filters.extend(MatchMode::agg_sql_filter(query.match_mode.as_deref()));
-    filters.extend(rollup_day_filters(
-        query.min_unix_timestamp,
-        query.max_unix_timestamp,
-    ));
-    filters.extend(rollup_badge_filters(
+    let filters = RollupFilters::new(
+        query.game_mode,
+        query.match_mode.as_deref(),
         query.min_average_badge,
         query.max_average_badge,
-    ));
-    let where_clause = filters.join(" AND ");
+    );
+    let rollup = Rollup {
+        table: mv_table,
+        grain: MV_GRAIN,
+        measures: MV_MEASURES,
+    };
+    let source = rollup.source(
+        &split,
+        &filters,
+        &format!("hero_id, {bucket_expr}"),
+        mv_rows,
+    );
 
     let matches_per_bucket = if query.bucket == BucketQuery::NoBucket {
         "matches"
@@ -337,8 +408,7 @@ fn build_mv_query(query: &HeroStatsQuery) -> Option<String> {
         sum(n_matches) AS permanent_buff_matches,
         sum(sum_first_permanent_buff_time_s) AS total_first_permanent_buff_time_s,
         sum(n_permanent_buff_timing_matches) AS permanent_buff_timing_matches
-    FROM {mv_table}
-    WHERE {where_clause}
+    FROM {source}
     GROUP BY hero_id, bucket
     ORDER BY hero_id, bucket
     SETTINGS log_comment = '{mv_log_comment}'
@@ -639,6 +709,74 @@ mod tests {
         assert_valid_sql(&mv);
         assert!(mv.contains("FROM hero_stats_agg_all_v2"));
         assert!(mv.contains("sum(n_matches) AS permanent_buff_matches"));
+    }
+
+    #[test]
+    fn rollup_reads_whole_days_and_the_partial_days_from_match_player() {
+        // 2026-10-05 14:00 to 2026-10-08 14:00 UTC, the window of issue #471.
+        let (min, max) = (1_791_208_800, 1_791_468_000);
+        let sql = build_mv_query(&HeroStatsQuery {
+            min_unix_timestamp: Some(min),
+            max_unix_timestamp: Some(max),
+            bucket: BucketQuery::StartTimeDay,
+            game_mode: Some(GameMode::Normal),
+            min_average_badge: Some(50),
+            ..Default::default()
+        })
+        .expect("routes to a rollup");
+        assert_valid_sql(&sql);
+        assert!(sql.contains("day >= toDate(1791244800) AND day < toDate(1791417600)"));
+        // Both partial days in one scan, the badge filter pushed below the dedup.
+        assert_eq!(sql.matches("UNION ALL").count(), 1);
+        assert!(sql.contains(
+            "((start_time >= 1791208800 AND start_time <= 1791244799) OR \
+             (start_time >= 1791417600 AND start_time <= 1791468000)) AND game_mode = 1 AND \
+             ifNull(average_badge, 0) >= 50\n    LIMIT 1 BY match_id, account_id"
+        ));
+        // Grouped by the bucket's and the filters' grain only.
+        assert!(sql.contains("GROUP BY game_mode, hero_id, least_badge, day"));
+
+        // Day-aligned: the rollup alone.
+        let aligned = build_mv_query(&HeroStatsQuery {
+            min_unix_timestamp: Some(1_791_244_800),
+            max_unix_timestamp: Some(1_791_417_599),
+            ..Default::default()
+        })
+        .expect("routes to a rollup");
+        assert!(!aligned.contains("UNION ALL"));
+        assert!(!aligned.contains("match_player"));
+
+        // No whole day: the base table.
+        assert!(
+            build_mv_query(&HeroStatsQuery {
+                min_unix_timestamp: Some(min),
+                max_unix_timestamp: Some(min + 12 * 3600),
+                ..Default::default()
+            })
+            .is_none()
+        );
+    }
+
+    #[test]
+    fn edge_rows_mirror_the_rollup_views() {
+        let migration = include_str!(
+            "../../../../../tools/migrations/clickhouse/50_power_up_buff_analytics.sql"
+        );
+        let rows = mv_rows(&EdgeRows {
+            where_clause: String::new(),
+            grain_select: String::new(),
+            group_by: String::new(),
+        });
+        for line in rows.lines().filter(|l| l.contains(" AS ")) {
+            let line = line.trim().trim_end_matches(',');
+            assert!(migration.contains(line), "{line}");
+        }
+        for (col, expr) in MV_GRAIN {
+            assert!(
+                migration.contains(&format!("{expr} AS {col}")) || col == expr,
+                "{col}"
+            );
+        }
     }
 
     #[test]

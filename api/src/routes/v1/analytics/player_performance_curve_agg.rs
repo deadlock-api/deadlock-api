@@ -14,6 +14,7 @@ use core::fmt::Write as _;
 use super::common_filters::{MatchInfoFilters, is_non_empty, join_filters, rollup_badge_filters};
 use super::player_performance_curve::{PlayerPerformanceCurveQuery, curve_metrics};
 use super::power_up_buffs::PERMANENT_BUFF_TIMES;
+use super::rollup_window::{DAY_S, DaySplit};
 use crate::routes::v1::matches::types::{GameMode, MatchMode};
 
 pub(crate) const AGG_TABLE: &str = "default.player_performance_curve_agg_v2";
@@ -23,7 +24,6 @@ pub(crate) const AGG_HORIZON_DAYS: u32 = 180;
 
 /// Width of a duration bucket. Duration filters that are multiples of it can be served.
 const DURATION_BUCKET_S: u64 = 300;
-const DAY_S: i64 = 86_400;
 /// Marks a stats tick that is not one of the absolute-time sample points.
 const NO_TIME: &str = "4294967295";
 
@@ -161,26 +161,16 @@ pub(super) fn plan(query: &PlayerPerformanceCurveQuery, now: i64) -> Option<AggP
     {
         return None;
     }
-    let min = query.min_unix_timestamp.unwrap_or(0).max(0);
-    let first_day = min + (DAY_S - min.rem_euclid(DAY_S)) % DAY_S;
+    let DaySplit {
+        first_day,
+        end_day,
+        edges,
+    } = DaySplit::new(query.min_unix_timestamp, query.max_unix_timestamp)?;
     let today = now - now.rem_euclid(DAY_S);
     let horizon_start = today - (i64::from(AGG_HORIZON_DAYS) - 1) * DAY_S;
-    // `start_time <= max` is inclusive: a day is full when its last second is in the window.
-    let end_day = match query.max_unix_timestamp {
-        Some(max) => (max + 1) - (max + 1).rem_euclid(DAY_S),
-        None => today + DAY_S,
-    };
+    let end_day = end_day.unwrap_or(today + DAY_S);
     if first_day < horizon_start || end_day <= first_day {
         return None;
-    }
-    let mut edges = Vec::new();
-    if min < first_day {
-        edges.push((min, first_day - 1));
-    }
-    if let Some(max) = query.max_unix_timestamp
-        && max >= end_day
-    {
-        edges.push((end_day, max));
     }
     Some(AggPlan {
         first_day,

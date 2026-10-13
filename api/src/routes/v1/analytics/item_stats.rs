@@ -15,12 +15,16 @@ use super::common_filters::{
     CORRUPTED_ITEMS_MIN_MATCH_ID, CORRUPTED_ITEMS_MIN_UNIX_TIMESTAMP, ENHANCED_ITEMS_MIN_MATCH_ID,
     ENHANCED_ITEMS_MIN_UNIX_TIMESTAMP, MatchInfoFilters, PlayerFilters, account_match_prefilter,
     corrupted_sql, default_min_matches_u32, enhanced_sql, filter_protected_accounts, is_non_empty,
-    join_filters, not_corrupted_sql, not_enhanced_sql, range_filters, rollup_badge_filters,
-    rollup_day_filters, rollup_oldest_servable, round_timestamps, with_legacy_id,
+    join_filters, not_corrupted_sql, not_enhanced_sql, range_filters, rollup_oldest_servable,
+    round_timestamps, with_legacy_id,
 };
+use super::rollup_window::{DaySplit, EdgeRows, Rollup, RollupFilters};
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::matches::types::{GameMode, MatchMode, reject_brawl_badge_filter};
+use crate::services::cohort_agg_refresh::{
+    ITEM_ROLLUP_MEASURES, cohort_rollup_rows, enemy_hero_select_body,
+};
 use crate::utils::parse::{
     comma_separated_chains_deserialize_option, comma_separated_deserialize_option,
     default_last_month_timestamp, parse_steam_id_option,
@@ -453,19 +457,15 @@ const MV_HORIZON_DAYS: i64 = 65;
 /// `tools/migrations/clickhouse/32_cohort_agg_incremental.sql`.
 const COHORT_MV_HORIZON_DAYS: i64 = 65;
 
-/// The `SELECT` over an item rollup (`item_stats_agg`, `item_cohort_stats_*_agg_v2` and
-/// `item_enemy_stats_agg` share their columns). The per-row averages equal the base query's
-/// `avg()`/`avgIf()`: the denominators (`matches`, `n_sold`) are the same counts. `players_state` is
-/// a `uniqCombined(14)` state (migration 39): merging plain uniq states was ~99% of this query's
-/// CPU.
-fn rollup_query(
-    table: &str,
-    bucket_expr: &str,
-    filters: &[String],
-    having_clause: &str,
-    log_comment: &str,
-) -> String {
-    let where_clause = filters.join(" AND ");
+/// Measure columns every item rollup shares, after its grain columns.
+const ROLLUP_MEASURES: &str = "n_matches, n_wins, sum_buy_time, sum_buy_rel, sum_sold_time, n_sold, sum_sold_rel, players_state";
+
+/// The `SELECT` over an item rollup source (`item_stats_agg`, `item_cohort_stats_*_agg_v2` and
+/// `item_enemy_stats_agg` share their measures), from [`Rollup::source`]. The per-row averages
+/// equal the base query's `avg()`/`avgIf()`: the denominators (`matches`, `n_sold`) are the same
+/// counts. `players_state` is a `uniqCombined(14)` state (migration 39): merging plain uniq states
+/// was ~99% of this query's CPU.
+fn rollup_query(source: &str, bucket_expr: &str, having_clause: &str, log_comment: &str) -> String {
     format!(
         "
 SELECT
@@ -480,13 +480,50 @@ SELECT
     sum(sum_buy_rel) / sum(n_matches)                        AS avg_buy_time_relative,
     if(sum(n_sold) = 0, 0, sum(sum_sold_rel) / sum(n_sold))  AS avg_sell_time_relative,
     sum(n_sold)                                              AS sold
-FROM {table}
-WHERE {where_clause}
+FROM {source}
 GROUP BY item_id, bucket
 {having_clause}
 ORDER BY item_id, bucket
 SETTINGS log_comment = '{log_comment}'
         "
+    )
+}
+
+/// `item_stats_agg`: per day, mode, item, hero, team and badge.
+const ITEM_STATS_AGG: Rollup<'static> = Rollup {
+    table: "item_stats_agg",
+    grain: &[
+        ("game_mode", "game_mode"),
+        ("match_mode", "match_mode"),
+        ("item_id", "CAST(upgrade_item_id, 'UInt32')"),
+        ("hero_id", "hero_id"),
+        ("team", "team"),
+        ("least_badge", "ifNull(average_badge, 0)"),
+        ("greatest_badge", "ifNull(average_badge, 65535)"),
+        ("day", "toDate(start_time)"),
+    ],
+    measures: ROLLUP_MEASURES,
+};
+
+/// The `item_stats_agg` rows of a window's partial days. Keep in sync with the view's `SELECT` in
+/// `tools/migrations/clickhouse/42_exclude_corrupted_items.sql`.
+fn item_stats_agg_rows(
+    EdgeRows {
+        where_clause,
+        grain_select,
+        group_by,
+    }: &EdgeRows,
+) -> String {
+    format!(
+        "SELECT
+    {grain_select}{ITEM_ROLLUP_MEASURES}
+FROM default.match_player
+ARRAY JOIN
+    `upgrades.item_id` AS upgrade_item_id,
+    `upgrades.game_time_s` AS buy_time,
+    `upgrades.sold_time_s` AS sold_time
+WHERE match_mode IN ('Ranked', 'Unranked') AND {where_clause} AND duration_s > 0
+GROUP BY {group_by}"
     )
 }
 
@@ -533,52 +570,114 @@ fn build_mv_query(query: &ItemStatsQuery) -> Option<String> {
         return None;
     }
 
-    /* ---------- filters (all on item_stats_agg columns) ---------- */
-    let mut filters = vec![GameMode::sql_filter(query.game_mode)];
-    filters.extend(MatchMode::agg_sql_filter(query.match_mode.as_deref()));
-    filters.extend(rollup_day_filters(
-        query.min_unix_timestamp,
-        query.max_unix_timestamp,
-    ));
-    filters.extend(rollup_badge_filters(
+    let split = DaySplit::new(query.min_unix_timestamp, query.max_unix_timestamp)?;
+
+    let mut filters = RollupFilters::new(
+        query.game_mode,
+        query.match_mode.as_deref(),
         query.min_average_badge,
         query.max_average_badge,
-    ));
+    );
     let hero_ids = query.all_hero_ids();
     if !hero_ids.is_empty() {
-        filters.push(format!("hero_id IN ({})", id_list(&hero_ids)));
+        let hero_filter = format!("hero_id IN ({})", id_list(&hero_ids));
+        filters.rollup.push(hero_filter.clone());
+        filters.base.push(hero_filter);
     }
+    let source = ITEM_STATS_AGG.source(
+        &split,
+        &filters,
+        &format!("item_id, {bucket_expr}"),
+        item_stats_agg_rows,
+    );
 
     Some(rollup_query(
-        "item_stats_agg",
+        &source,
         bucket_expr,
-        &filters,
         &query.matches_having_clause(),
         "item_stats_mv",
     ))
 }
 
-/// Bucket support against the cohort rollups: returns the rollup table and the
+/// `item_cohort_stats_time_agg_v2`: per day, mode, cohort item, item and buy minute.
+const COHORT_TIME_AGG: Rollup<'static> = Rollup {
+    table: "default.item_cohort_stats_time_agg_v2",
+    grain: &[
+        ("game_mode", "game_mode"),
+        ("match_mode", "match_mode"),
+        ("day", "toDate(start_time)"),
+        ("cohort_item_id", "cohort_item_id"),
+        ("item_id", "item_id"),
+        ("bucket_minute", "toUInt32(floor(buy_time / 60))"),
+    ],
+    measures: ROLLUP_MEASURES,
+};
+
+/// `item_cohort_stats_net_worth_agg_v2`: per day, mode, cohort item, item and net worth step.
+const COHORT_NW_AGG: Rollup<'static> = Rollup {
+    table: "default.item_cohort_stats_net_worth_agg_v2",
+    grain: &[
+        ("game_mode", "game_mode"),
+        ("match_mode", "match_mode"),
+        ("day", "toDate(start_time)"),
+        ("cohort_item_id", "cohort_item_id"),
+        ("item_id", "item_id"),
+        (
+            "bucket_net_worth",
+            "toUInt32(floor(net_worth_at_buy / 1000) * 1000)",
+        ),
+    ],
+    measures: ROLLUP_MEASURES,
+};
+
+/// `item_enemy_stats_agg`: per day, mode, enemy hero, badge and item.
+const ENEMY_AGG: Rollup<'static> = Rollup {
+    table: "item_enemy_stats_agg",
+    grain: &[
+        ("game_mode", "game_mode"),
+        ("match_mode", "match_mode"),
+        ("day", "toDate(start_time)"),
+        ("enemy_hero_id", "enemy_hero_id"),
+        ("least_badge", "ifNull(average_badge, 0)"),
+        ("greatest_badge", "ifNull(average_badge, 65535)"),
+        ("item_id", "CAST(upgrade_item_id, 'UInt32')"),
+    ],
+    measures: ROLLUP_MEASURES,
+};
+
+/// Bucket support against the cohort rollups: returns the rollup and the
 /// bucket expression, or `None` for buckets they cannot serve. The time-grained
 /// view stores per-minute buckets, so any coarser grouping (no bucket, start-time
 /// day/week/month) merges its states exactly; the net-worth view stores step-1000
 /// buckets, so the wider steps (all multiples of 1000) re-bucket exactly.
-fn cohort_mv_bucket(bucket: BucketQuery) -> Option<(&'static str, String)> {
-    const TIME_AGG: &str = "item_cohort_stats_time_agg_v2";
-    const NW_AGG: &str = "item_cohort_stats_net_worth_agg_v2";
+fn cohort_mv_bucket(bucket: BucketQuery) -> Option<(&'static Rollup<'static>, String)> {
     match bucket {
-        BucketQuery::NoBucket => Some((TIME_AGG, "toUInt32(0)".to_owned())),
-        BucketQuery::StartTimeDay => Some((TIME_AGG, "toStartOfDay(toDateTime(day))".to_owned())),
-        BucketQuery::StartTimeWeek => Some((TIME_AGG, "toDateTime(toStartOfWeek(day))".to_owned())),
-        BucketQuery::StartTimeMonth => {
-            Some((TIME_AGG, "toDateTime(toStartOfMonth(day))".to_owned()))
+        BucketQuery::NoBucket => Some((&COHORT_TIME_AGG, "toUInt32(0)".to_owned())),
+        BucketQuery::StartTimeDay => {
+            Some((&COHORT_TIME_AGG, "toStartOfDay(toDateTime(day))".to_owned()))
         }
-        BucketQuery::GameTimeMin => Some((TIME_AGG, "bucket_minute".to_owned())),
-        BucketQuery::NetWorthBy1000 => Some((NW_AGG, "bucket_net_worth".to_owned())),
-        BucketQuery::NetWorthBy2000 => Some((NW_AGG, net_worth_bucket("bucket_net_worth", 2000))),
-        BucketQuery::NetWorthBy3000 => Some((NW_AGG, net_worth_bucket("bucket_net_worth", 3000))),
-        BucketQuery::NetWorthBy5000 => Some((NW_AGG, net_worth_bucket("bucket_net_worth", 5000))),
-        BucketQuery::NetWorthBy10000 => Some((NW_AGG, net_worth_bucket("bucket_net_worth", 10000))),
+        BucketQuery::StartTimeWeek => Some((
+            &COHORT_TIME_AGG,
+            "toDateTime(toStartOfWeek(day))".to_owned(),
+        )),
+        BucketQuery::StartTimeMonth => Some((
+            &COHORT_TIME_AGG,
+            "toDateTime(toStartOfMonth(day))".to_owned(),
+        )),
+        BucketQuery::GameTimeMin => Some((&COHORT_TIME_AGG, "bucket_minute".to_owned())),
+        BucketQuery::NetWorthBy1000 => Some((&COHORT_NW_AGG, "bucket_net_worth".to_owned())),
+        BucketQuery::NetWorthBy2000 => {
+            Some((&COHORT_NW_AGG, net_worth_bucket("bucket_net_worth", 2000)))
+        }
+        BucketQuery::NetWorthBy3000 => {
+            Some((&COHORT_NW_AGG, net_worth_bucket("bucket_net_worth", 3000)))
+        }
+        BucketQuery::NetWorthBy5000 => {
+            Some((&COHORT_NW_AGG, net_worth_bucket("bucket_net_worth", 5000)))
+        }
+        BucketQuery::NetWorthBy10000 => {
+            Some((&COHORT_NW_AGG, net_worth_bucket("bucket_net_worth", 10000)))
+        }
         // Hero/team need dimensions the cohort grain dropped; the normalized
         // game-time bucket needs per-match duration; sub-day windows need
         // sub-day resolution.
@@ -598,7 +697,7 @@ fn build_cohort_mv_query(query: &ItemStatsQuery) -> Option<String> {
         Some([id]) => *id,
         _ => return None,
     };
-    let (table, bucket_expr) = cohort_mv_bucket(query.bucket)?;
+    let (rollup, bucket_expr) = cohort_mv_bucket(query.bucket)?;
 
     // The rollup grain is (game_mode, day, cohort_item, item, bucket); anything
     // outside it falls back. Badge bounds use the same >11 / <116 no-op guards
@@ -644,20 +743,28 @@ fn build_cohort_mv_query(query: &ItemStatsQuery) -> Option<String> {
         return None;
     }
 
-    let mut filters = vec![
-        GameMode::sql_filter(query.game_mode),
-        format!("cohort_item_id = {cohort_item_id}"),
-    ];
-    filters.extend(MatchMode::agg_sql_filter(query.match_mode.as_deref()));
-    filters.extend(rollup_day_filters(
-        query.min_unix_timestamp,
-        query.max_unix_timestamp,
-    ));
+    let split = DaySplit::new(query.min_unix_timestamp, query.max_unix_timestamp)?;
+
+    // Badge filters were declined above: the cohort grain has no badge.
+    let mut filters = RollupFilters::new(query.game_mode, query.match_mode.as_deref(), None, None);
+    filters
+        .rollup
+        .push(format!("cohort_item_id = {cohort_item_id}"));
+    // Only the cohort item's owners fan out to it. The refresh job's rows keep the full grain,
+    // which this filter already keeps small.
+    filters
+        .base
+        .push(format!("has(items.item_id, {cohort_item_id})"));
+    let source = rollup.source(
+        &split,
+        &filters,
+        &format!("item_id, {bucket_expr}"),
+        |edge| cohort_rollup_rows(rollup.table, &edge.where_clause),
+    );
 
     Some(rollup_query(
-        table,
+        &source,
         &bucket_expr,
-        &filters,
         &query.matches_having_clause(),
         "item_stats_cohort_mv",
     ))
@@ -714,24 +821,29 @@ fn build_enemy_mv_query(query: &ItemStatsQuery) -> Option<String> {
         return None;
     }
 
-    let mut filters = vec![
-        GameMode::sql_filter(query.game_mode),
-        format!("enemy_hero_id = {enemy_hero_id}"),
-    ];
-    filters.extend(MatchMode::agg_sql_filter(query.match_mode.as_deref()));
-    filters.extend(rollup_day_filters(
-        query.min_unix_timestamp,
-        query.max_unix_timestamp,
-    ));
-    filters.extend(rollup_badge_filters(
+    let split = DaySplit::new(query.min_unix_timestamp, query.max_unix_timestamp)?;
+
+    let mut filters = RollupFilters::new(
+        query.game_mode,
+        query.match_mode.as_deref(),
         query.min_average_badge,
         query.max_average_badge,
-    ));
+    );
+    filters
+        .rollup
+        .push(format!("enemy_hero_id = {enemy_hero_id}"));
+    // The refresh job's rows keep the full grain, which the enemy hero filter already keeps
+    // small. Only the buyers facing the enemy hero's team are aggregated.
+    let source = ENEMY_AGG.source(
+        &split,
+        &filters,
+        &format!("item_id, {bucket_expr}"),
+        |edge| enemy_hero_select_body(&edge.where_clause, Some(enemy_hero_id)),
+    );
 
     Some(rollup_query(
-        "item_enemy_stats_agg",
+        &source,
         bucket_expr,
-        &filters,
         &query.matches_having_clause(),
         "item_stats_enemy_mv",
     ))
@@ -815,6 +927,10 @@ fn cohort_mv_skip_reason(query: &ItemStatsQuery) -> &'static str {
                 .min_unix_timestamp
                 .is_some_and(|ts| ts < oldest_servable),
             "horizon",
+        ),
+        (
+            DaySplit::new(query.min_unix_timestamp, query.max_unix_timestamp).is_none(),
+            "no_whole_day",
         ),
     ];
     reasons
@@ -1320,6 +1436,13 @@ mod proptests {
         }
 
         #[test]
+        fn item_stats_build_cohort_mv_query_is_valid_sql(query: ItemStatsQuery) {
+            if let Some(sql) = build_cohort_mv_query(&query) {
+                assert_valid_sql(&sql);
+            }
+        }
+
+        #[test]
         fn item_stats_build_mv_query_is_valid_sql(query: ItemStatsQuery) {
             if let Some(sql) = build_mv_query(&query) {
                 assert_valid_sql(&sql);
@@ -1331,6 +1454,134 @@ mod proptests {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::utils::proptest_utils::assert_valid_sql;
+
+    /// 14:00 UTC ten days ago and 14:00 UTC two days ago: a window with mid-day bounds inside
+    /// every rollup's horizon.
+    fn mid_day_window() -> (i64, i64) {
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_secs()
+            .cast_signed();
+        let today = now - now.rem_euclid(86_400);
+        (
+            today - 10 * 86_400 + 14 * 3600,
+            today - 2 * 86_400 + 14 * 3600,
+        )
+    }
+
+    #[test]
+    fn rollups_read_whole_days_and_the_partial_days_from_match_player() {
+        let (min, max) = mid_day_window();
+        let window = ItemStatsQuery {
+            min_unix_timestamp: Some(min),
+            max_unix_timestamp: Some(max),
+            min_average_badge: Some(50),
+            ..Default::default()
+        };
+        let first_day = min - min.rem_euclid(86_400) + 86_400;
+        let end_day = max - max.rem_euclid(86_400);
+        let day_filter = format!("day >= toDate({first_day}) AND day < toDate({end_day})");
+        let queries = [
+            (
+                build_mv_query(&ItemStatsQuery {
+                    hero_ids: Some(vec![7]),
+                    ..window.clone()
+                }),
+                "hero_id IN (7)",
+            ),
+            (
+                build_cohort_mv_query(&ItemStatsQuery {
+                    include_item_ids: Some(vec![1_548_066_885]),
+                    min_average_badge: None,
+                    ..window.clone()
+                }),
+                "has(items.item_id, 1548066885)",
+            ),
+            (
+                build_cohort_mv_query(&ItemStatsQuery {
+                    include_item_ids: Some(vec![1_548_066_885]),
+                    min_average_badge: None,
+                    bucket: BucketQuery::NetWorthBy2000,
+                    ..window.clone()
+                }),
+                "bucket_net_worth",
+            ),
+            (
+                build_enemy_mv_query(&ItemStatsQuery {
+                    enemy_hero_ids: Some(vec![66]),
+                    ..window.clone()
+                }),
+                "HAVING has(enemy_hero_ids, 66)",
+            ),
+        ];
+        for (sql, marker) in queries {
+            let sql = sql.expect("routes to a rollup");
+            assert_valid_sql(&sql);
+            assert!(sql.contains(&day_filter), "{sql}");
+            assert_eq!(sql.matches("UNION ALL").count(), 1);
+            assert!(sql.contains(&format!(
+                "((start_time >= {min} AND start_time <= {}) OR (start_time >= {end_day} AND start_time <= {max}))",
+                first_day - 1
+            )));
+            assert!(sql.contains(marker), "{marker}");
+        }
+    }
+
+    #[test]
+    fn edge_rows_mirror_the_item_stats_agg_view() {
+        let migration = include_str!(
+            "../../../../../tools/migrations/clickhouse/42_exclude_corrupted_items.sql"
+        );
+        let rows = item_stats_agg_rows(&EdgeRows {
+            where_clause: String::new(),
+            grain_select: String::new(),
+            group_by: String::new(),
+        });
+        for line in rows.lines().filter(|l| l.contains(" AS ")) {
+            let line = line.trim().trim_end_matches(',');
+            assert!(migration.contains(line), "{line}");
+        }
+        for (col, expr) in ITEM_STATS_AGG.grain {
+            assert!(
+                migration.contains(&format!("{expr} AS {col}")) || col == expr,
+                "{col}"
+            );
+        }
+    }
+
+    #[test]
+    fn rollups_decline_a_window_without_a_whole_day() {
+        let (min, _) = mid_day_window();
+        let window = ItemStatsQuery {
+            min_unix_timestamp: Some(min),
+            max_unix_timestamp: Some(min + 12 * 3600),
+            ..Default::default()
+        };
+        assert!(build_mv_query(&window).is_none());
+        assert!(
+            build_cohort_mv_query(&ItemStatsQuery {
+                include_item_ids: Some(vec![1]),
+                ..window.clone()
+            })
+            .is_none()
+        );
+        assert!(
+            build_enemy_mv_query(&ItemStatsQuery {
+                enemy_hero_ids: Some(vec![66]),
+                ..window.clone()
+            })
+            .is_none()
+        );
+        assert_eq!(
+            cohort_mv_skip_reason(&ItemStatsQuery {
+                include_item_ids: Some(vec![1]),
+                ..window
+            }),
+            "no_whole_day"
+        );
+    }
 
     #[test]
     fn enemy_hero_filter_is_a_prewhere_semi_join_not_a_join() {
@@ -1405,7 +1656,6 @@ mod tests {
                 .contains("arraySlice(arrayDistinct(abilities), 1, 1) = [1999680326]")
         );
     }
-    use crate::utils::proptest_utils::assert_valid_sql;
 
     #[test]
     fn enemy_mv_serves_only_the_single_enemy_hero_shape() {

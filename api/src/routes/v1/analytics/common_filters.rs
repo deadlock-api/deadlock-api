@@ -162,18 +162,6 @@ pub(super) fn rollup_oldest_servable(horizon_days: i64) -> Option<i64> {
     Some(now - (horizon_days - ROLLUP_ROUTING_MARGIN_DAYS) * 86_400)
 }
 
-/// Time-window filters on the `day` column of a day-grained rollup.
-pub(super) fn rollup_day_filters(
-    min_unix_timestamp: Option<i64>,
-    max_unix_timestamp: Option<i64>,
-) -> Vec<String> {
-    range_filters(
-        "day",
-        min_unix_timestamp.map(|v| format!("toDate({v})")),
-        max_unix_timestamp.map(|v| format!("toDate({v})")),
-    )
-}
-
 /// Badge filters on a rollup's per-match `least_badge`/`greatest_badge` columns. They mirror the
 /// base table's both-teams semantics, with the same no-op guards as [`MatchInfoFilters`]. NULL
 /// badges are stored as 0 / 65535, so any active filter excludes them just like the base table.
@@ -181,12 +169,40 @@ pub(super) fn rollup_badge_filters(
     min_average_badge: Option<u8>,
     max_average_badge: Option<u8>,
 ) -> Vec<String> {
+    badge_filters(
+        "least_badge",
+        "greatest_badge",
+        min_average_badge,
+        max_average_badge,
+    )
+}
+
+/// [`rollup_badge_filters`] on the `match_player` expressions the rollups compute their badge
+/// columns from.
+pub(super) fn rollup_badge_base_filters(
+    min_average_badge: Option<u8>,
+    max_average_badge: Option<u8>,
+) -> Vec<String> {
+    badge_filters(
+        "ifNull(average_badge, 0)",
+        "ifNull(average_badge, 65535)",
+        min_average_badge,
+        max_average_badge,
+    )
+}
+
+fn badge_filters(
+    least: &str,
+    greatest: &str,
+    min_average_badge: Option<u8>,
+    max_average_badge: Option<u8>,
+) -> Vec<String> {
     let mut filters = Vec::new();
     if let Some(v) = min_average_badge.filter(|&v| v > MIN_FILTERING_AVERAGE_BADGE) {
-        filters.push(format!("least_badge >= {v}"));
+        filters.push(format!("{least} >= {v}"));
     }
     if let Some(v) = max_average_badge.filter(|&v| v < MAX_FILTERING_AVERAGE_BADGE) {
-        filters.push(format!("greatest_badge <= {v}"));
+        filters.push(format!("{greatest} <= {v}"));
     }
     filters
 }
