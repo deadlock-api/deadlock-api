@@ -1,6 +1,8 @@
 import { LogOut } from "lucide-react";
+import { useState } from "react";
 
 import { AddSteamAccountForm } from "~/components/features/patron/AddSteamAccountForm";
+import { BotFriendWarning, NewAccountBotDialog } from "~/components/features/patron/BotFriendWarning";
 import { PatronStatusCard } from "~/components/features/patron/PatronStatusCard";
 import { SteamAccountsList } from "~/components/features/patron/SteamAccountsList";
 import { NotSubscribedState } from "~/components/features/patron/UnauthenticatedState";
@@ -28,6 +30,8 @@ export function PatronPageSkeleton() {
 export function AuthenticatedDashboard() {
   const query = usePatronStatus();
   const { logout, isLoggingOut } = usePatronAuth();
+  // The account just added: the bot friend dialog opens for it, as it is not prioritized without one.
+  const [addedSteamId3, setAddedSteamId3] = useState<number | null>(null);
   const status = query.data;
   const isLoading = query.isLoading;
   const hasAvailableSlots = (status?.steam_accounts_summary.available_slots ?? 0) > 0;
@@ -55,11 +59,15 @@ export function AuthenticatedDashboard() {
         }
       />
 
+      <BotFriendWarning />
+
       <PatronStatusCard />
 
-      {hasAvailableSlots && <AddSteamAccountForm />}
+      {hasAvailableSlots && <AddSteamAccountForm onAdded={setAddedSteamId3} />}
 
       <SteamAccountsList />
+
+      <NewAccountBotDialog steamId3={addedSteamId3} onClose={() => setAddedSteamId3(null)} />
     </PageShell>
   );
 }

@@ -63,7 +63,8 @@ function SteamIdFormatHelper() {
   );
 }
 
-export function AddSteamAccountForm() {
+/** `onAdded` gets the SteamID3 of each account once it is saved. */
+export function AddSteamAccountForm({ onAdded }: { onAdded?: (steamId3: number) => void }) {
   const steamId = useSteamIdInput();
   const inputId = useId();
   const query = usePatronStatus();
@@ -82,6 +83,7 @@ export function AddSteamAccountForm() {
       onSuccess: () => {
         toast.success("Steam account added successfully");
         steamId.reset();
+        onAdded?.(steamId3);
       },
       onError: (error) => {
         toast.error("Failed to add Steam account", { description: error.message });
