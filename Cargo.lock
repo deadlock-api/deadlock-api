@@ -1583,7 +1583,7 @@ dependencies = [
 [[package]]
 name = "clickhouse-sql-parser"
 version = "0.1.0"
-source = "git+https://github.com/raimannma/clickhouse-antlr4#0d9161a6d4909aea3a205bc9b1d39582ae1b57ce"
+source = "git+https://github.com/raimannma/clickhouse-antlr4#cf3c371bf07f12f5bcb05c862154a90ea49a7f52"
 dependencies = [
  "antlr4rust",
 ]
@@ -2007,7 +2007,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d045de693cb712d0b22c6a64be5b953f67b3ce00ab5ad3dd5d8b441886ab8e1a"
 dependencies = [
  "quote",
- "syn 3.0.7",
+ "syn 2.0.119",
 ]
 
 [[package]]
@@ -7783,7 +7783,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "32497e9a4c7b38532efcdebeef879707aa9f794296a4f0244f6f69e9bc8574bd"
 dependencies = [
  "fastrand",
- "getrandom 0.4.3",
+ "getrandom 0.3.4",
  "once_cell",
  "rustix 1.1.5",
  "windows-sys 0.61.2",
