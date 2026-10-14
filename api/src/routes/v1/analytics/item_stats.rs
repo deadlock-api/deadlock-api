@@ -1320,14 +1320,14 @@ SETTINGS {settings_clause}
 }
 
 cached_ch_query! {
-    fn run_query(5_000, 21600) -> Vec<ItemStats>;
+    fn run_query(5_000, 3600) -> Vec<ItemStats>;
 }
 
 cached_ch_query! {
     /// Separate cache for per-account base-table queries: ~100k a day, cheap (~30ms) and
     /// almost never repeated, they evicted the shared cache every ~15 minutes and made
     /// the expensive global queries (10s+) rerun several times per TTL.
-    fn run_account_query(1_000, 21600) -> Vec<ItemStats>;
+    fn run_account_query(1_000, 3600) -> Vec<ItemStats>;
 }
 
 cached_ch_query! {
@@ -1335,7 +1335,7 @@ cached_ch_query! {
     /// enemy rollups): the long tail of per-account base-table queries would otherwise
     /// evict these few, heavily repeated entries from the shared cache long before
     /// their TTL.
-    fn run_rollup_query(5_000, 21600) -> Vec<ItemStats>;
+    fn run_rollup_query(5_000, 3600) -> Vec<ItemStats>;
 }
 
 async fn get_item_stats(

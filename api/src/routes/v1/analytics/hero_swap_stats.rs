@@ -143,7 +143,7 @@ fn build_query(query: &HeroSwapStatsQuery) -> String {
 }
 
 cached_ch_query! {
-    fn run_query(5_000, 21600) -> Vec<HeroSwapStats>;
+    fn run_query(5_000, 3600) -> Vec<HeroSwapStats>;
 }
 
 async fn get_hero_swap_stats(

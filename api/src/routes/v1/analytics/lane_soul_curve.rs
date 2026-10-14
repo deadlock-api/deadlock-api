@@ -594,7 +594,7 @@ SETTINGS log_comment = 'lane_soul_curve', apply_patch_parts = 0
 }
 
 cached_ch_query! {
-    fn run_query(5_000, 21600) -> Vec<LaneSoulCurveRow>;
+    fn run_query(5_000, 3600) -> Vec<LaneSoulCurveRow>;
 }
 
 fn to_response(row: LaneSoulCurveRow, requested: &[LaneStat]) -> LaneSoulCurve {

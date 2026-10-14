@@ -142,7 +142,7 @@ SETTINGS log_comment = 'hero_scoreboard', apply_patch_parts = 0, max_threads = 3
 }
 
 cached_ch_query! {
-    fn run_query(5_000, 21600) -> Vec<HeroEntry>;
+    fn run_query(5_000, 3600) -> Vec<HeroEntry>;
 }
 
 async fn get_hero_scoreboard(

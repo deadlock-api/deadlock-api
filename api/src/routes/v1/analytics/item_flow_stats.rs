@@ -655,11 +655,11 @@ fn build_edges_query(query: &ItemFlowStatsQuery, parts: &QueryParts) -> String {
 }
 
 cached_ch_query! {
-    fn run_nodes_query(5_000, 21600) -> Vec<ItemFlowNode>;
+    fn run_nodes_query(5_000, 3600) -> Vec<ItemFlowNode>;
 }
 
 cached_ch_query! {
-    fn run_edges_query(5_000, 21600) -> Vec<ItemFlowEdge>;
+    fn run_edges_query(5_000, 3600) -> Vec<ItemFlowEdge>;
 }
 
 /// Combined locked-path + baseline totals, one row.
@@ -691,7 +691,7 @@ struct ItemFlowTotalsRow {
 }
 
 cached_ch_query! {
-    fn run_totals_query(5_000, 21600) -> ItemFlowTotalsRow = fetch_totals;
+    fn run_totals_query(5_000, 3600) -> ItemFlowTotalsRow = fetch_totals;
 }
 
 async fn fetch_totals(

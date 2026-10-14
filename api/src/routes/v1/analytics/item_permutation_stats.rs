@@ -275,7 +275,7 @@ fn build_query(query: &ItemPermutationStatsQuery) -> String {
 }
 
 cached_ch_query! {
-    fn run_query(5_000, 21600) -> Vec<ItemPermutationStats>;
+    fn run_query(5_000, 3600) -> Vec<ItemPermutationStats>;
 }
 
 async fn get_item_permutation_stats(

@@ -255,7 +255,7 @@ fn into_response(rows: Vec<BuffStatsRow>) -> Vec<AnalyticsBuffStats> {
 // Concurrent misses of one query share a single run. by_key holds a hashed bucket lock (hits
 // included) for the whole query; this endpoint runs few queries at once, so collisions are rare.
 cached_ch_query! {
-    fn run_query(5_000, 21600) -> Vec<BuffStatsRow>;
+    fn run_query(5_000, 3600) -> Vec<BuffStatsRow>;
 }
 
 async fn get_buff_stats(

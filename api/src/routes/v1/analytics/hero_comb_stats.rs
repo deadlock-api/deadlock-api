@@ -290,7 +290,7 @@ SETTINGS log_comment = 'hero_comb_stats', apply_patch_parts = 0, query_plan_exec
 // Concurrent misses of one query share a single run. by_key holds a hashed bucket lock (hits
 // included) for the whole query; this endpoint runs few queries at once, so collisions are rare.
 cached_ch_query! {
-    fn run_query(5_000, 21600) -> Vec<HeroCombStats>;
+    fn run_query(5_000, 3600) -> Vec<HeroCombStats>;
 }
 
 async fn get_comb_stats(

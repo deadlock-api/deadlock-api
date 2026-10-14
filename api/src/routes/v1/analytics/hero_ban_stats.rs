@@ -116,7 +116,7 @@ fn build_query(query: &HeroBanStatsQuery) -> String {
 }
 
 cached_ch_query! {
-    fn run_query(5_000, 21600) -> Vec<HeroBanStats>;
+    fn run_query(5_000, 3600) -> Vec<HeroBanStats>;
 }
 
 async fn get_hero_ban_stats(

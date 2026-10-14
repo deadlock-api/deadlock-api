@@ -170,7 +170,7 @@ async fn fetch_valid_build_ids(pg_client: &Pool<Postgres>, hero_id: u32) -> sqlx
 }
 
 cached_ch_query! {
-    fn run_query(5_000, 21600) -> Vec<HeroBuildStats>;
+    fn run_query(5_000, 3600) -> Vec<HeroBuildStats>;
 }
 
 async fn get_hero_build_stats(
