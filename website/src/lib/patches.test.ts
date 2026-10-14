@@ -62,7 +62,7 @@ test("merge: one patch per release day, no hero spotlights, curated names kept",
   assert.equal(byId.get("2026-09-29")?.endUnix, unix("2026-10-05T23:05:32Z"));
 });
 
-test("merge: a hero going live is a patch of its own, a teaser is not", () => {
+test("merge: a hero going live is a patch of its own, named by its post, a teaser is not", () => {
   const feed: PatchFeedItem[] = [
     {
       source: "steam",
@@ -78,7 +78,7 @@ test("merge: a hero going live is a patch of its own, a teaser is not", () => {
     patches.slice(0, 2).map((p) => p.id),
     ["2026-10-13", "2026-10-05"],
   );
-  assert.equal(patches[0].shortName, "Patch");
+  assert.equal(patches[0].shortName, "Fairfax Industries Employee Spotlight");
   assert.equal(patches[0].startUnix, unix("2026-10-13T20:59:55Z"));
   assert.equal(patches[1].endUnix, unix("2026-10-13T20:59:55Z"));
 });

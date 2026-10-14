@@ -102,13 +102,20 @@ const USUAL_RELEASE_HOUR_UTC = 20;
  * Every patch the feed knows, newest first, one entry per release day. The forum and Steam announce most patches
  * twice: the forum by its date ("09-16-2026 Update"), Steam by its date or its name ("City Never Sleeps"). A Steam post
  * without a date counts only when it is an update, ships a hero ("available in-game now") or the forum has a patch
- * that day, which leaves out the hero teasers. A hero release is named by its date, not by its post's title. A curated patch keeps its name and exact start, and stays even when the feed no longer reaches back to
- * it.
+ * that day, which leaves out the hero teasers. A curated patch keeps its name and exact start, and stays even when
+ * the feed no longer reaches back to it.
  */
 export function mergePatchFeed(feed: readonly PatchFeedItem[], curated: readonly PatchEntry[]): PatchEntry[] {
   const posts = feed.map((item) => {
     const published = day.utc(item.pub_date);
-    return { ...item, title: item.title.trim(), published, day: titleDay(item.title), hero: isHeroRelease(item) };
+    // "Make Your Move." reads as "Make Your Move Patch" in titles.
+    return {
+      ...item,
+      title: item.title.trim().replace(/\.$/, ""),
+      published,
+      day: titleDay(item.title),
+      hero: isHeroRelease(item),
+    };
   });
   const forumDays = new Set(posts.flatMap((post) => (post.source === "forum" && post.day ? [post.day] : [])));
   const byDay = new Map<string, typeof posts>();
@@ -130,7 +137,7 @@ export function mergePatchFeed(feed: readonly PatchFeedItem[], curated: readonly
     };
     // Steam's post is the release itself; the forum thread is often written later, or edited with the next patch.
     const timed = group.find((post) => post.source === "steam" && onTime(post)) ?? group.find(onTime);
-    const named = group.find((post) => post.source === "steam" && !post.day && !post.hero);
+    const named = group.find((post) => post.source === "steam" && !post.day);
     const startUnix = timed ? timed.published.unix() : releaseDay.hour(USUAL_RELEASE_HOUR_UTC).unix();
     entries.set(id, {
       id,
