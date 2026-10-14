@@ -289,8 +289,12 @@ struct BuiltDays {
 
 impl BuiltDays {
     fn new(table: &str, split: &DaySplit) -> Self {
+        // Every part of a day partition comes from the one insert that built it (the refresh job
+        // replaces the partition as a whole), so its first row carries the day's BUILT_THROUGH.
+        // `_part_offset = 0` reads one granule per part instead of every row of the window: ~1M
+        // rows instead of ~155M per scan on the 30-day cohort window, a third of its CPU.
         let days = format!(
-            "SELECT day, max({BUILT_THROUGH}) AS built_through FROM {table} WHERE {} GROUP BY day HAVING built_through > 0",
+            "SELECT day, max({BUILT_THROUGH}) AS built_through FROM {table} WHERE {} AND _part_offset = 0 GROUP BY day HAVING built_through > 0",
             split.day_filters().join(" AND ")
         );
         let first_day = split.first_day;
@@ -506,7 +510,7 @@ mod tests {
             DAY + 3 * DAY_S
         )));
         assert!(source.contains(&format!(
-            "(start_time >= {} AND start_time <= {}) OR (start_time >= {} AND start_time <= {}) OR (start_time >= {} AND start_time < (SELECT toDateTime(ifNull(minOrNull(day), toDate({}))) FROM (SELECT day, max(built_through) AS built_through FROM t_agg WHERE day >= toDate({}) AND day < toDate({}) GROUP BY day HAVING built_through > 0)))",
+            "(start_time >= {} AND start_time <= {}) OR (start_time >= {} AND start_time <= {}) OR (start_time >= {} AND start_time < (SELECT toDateTime(ifNull(minOrNull(day), toDate({}))) FROM (SELECT day, max(built_through) AS built_through FROM t_agg WHERE day >= toDate({}) AND day < toDate({}) AND _part_offset = 0 GROUP BY day HAVING built_through > 0)))",
             DAY + 14 * H,
             DAY + DAY_S - 1,
             DAY + 3 * DAY_S,
