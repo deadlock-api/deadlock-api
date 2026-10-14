@@ -189,10 +189,9 @@ async fn main() -> Result<(), Error> {
     .await
 }
 
-/// Fetches a prioritized match with exponential backoff retry.
-///
-/// Uses configurable max retries (default 5) with exponential backoff delays.
-/// Logs when fetching a prioritized match and tracks retry attempts.
+/// Fetches a prioritized match's salts and stores them, each with its own exponential backoff
+/// retry (configurable max retries, default 5). The Steam call and the insert are retried
+/// separately: every Steam call puts a bot on cooldown, so a failed insert must not repeat it.
 #[instrument(skip(http_client, ch_client))]
 async fn fetch_prioritized_match(
     http_client: &reqwest::Client,
@@ -201,31 +200,37 @@ async fn fetch_prioritized_match(
 ) -> Result<(), FetchError> {
     info!("Fetching prioritized match {match_id}");
 
-    // Use exponential backoff for prioritized matches
+    let backoff = common::Backoff::long(*PRIORITIZATION_MAX_RETRIES);
     let mut attempts = 0u32;
-    common::retry_with_backoff(
-        "prioritized salt fetch",
-        common::Backoff::long(*PRIORITIZATION_MAX_RETRIES),
-        || {
-            if attempts > 0 {
-                counter!("salt_scraper.prioritized_fetch.retry").increment(1);
-            }
-            attempts += 1;
-            fetch_match_internal(http_client, ch_client, match_id)
-        },
-    )
-    .await
+    let (username, salts) = common::retry_with_backoff("prioritized salt fetch", backoff, || {
+        if attempts > 0 {
+            counter!("salt_scraper.prioritized_fetch.retry").increment(1);
+        }
+        attempts += 1;
+        fetch_match_salts(http_client, match_id)
+    })
+    .await?;
+
+    let salts = MatchSalt {
+        match_id,
+        cluster_id: salts.replay_group_id,
+        metadata_salt: salts.metadata_salt,
+        replay_salt: salts.replay_salt,
+        username: Some(format!("salt-scraper:{username}")),
+    };
+    common::retry_with_backoff("prioritized salt insert", backoff, || {
+        ingest_salts(ch_client, &salts)
+    })
+    .await?;
+    Ok(())
 }
 
-/// Internal match fetch logic used by both regular and prioritized fetches.
-async fn fetch_match_internal(
+/// Fetches a match's salts from the GC, failing on a rate limited response.
+async fn fetch_match_salts(
     http_client: &reqwest::Client,
-    ch_client: &Client,
     match_id: u64,
-) -> Result<(), FetchError> {
-    // Fetch Salts
-    let salts = fetch_salts(http_client, match_id).await;
-    let (username, salts) = match salts {
+) -> Result<(String, CMsgClientToGcGetMatchMetaDataResponse), FetchError> {
+    let (username, salts) = match fetch_salts(http_client, match_id).await {
         Ok(r) => {
             counter!("salt_scraper.fetch_salts.success").increment(1);
             debug!("Fetched salts: {:?}", r.1);
@@ -238,27 +243,13 @@ async fn fetch_match_internal(
         }
     };
 
-    // Parse Salts
     if salts.result == Some(KEResultRateLimited as i32) {
         counter!("salt_scraper.parse_salt.failure").increment(1);
         return Err(FetchError::RateLimited(salts));
     }
     counter!("salt_scraper.parse_salt.success").increment(1);
     debug!("Parsed salts");
-
-    // Ingest Salts
-    match ingest_salts(ch_client, match_id, salts, &username).await {
-        Ok(()) => {
-            counter!("salt_scraper.ingest_salt.success").increment(1);
-            debug!("Ingested salts");
-            Ok(())
-        }
-        Err(e) => {
-            counter!("salt_scraper.ingest_salt.failure").increment(1);
-            warn!("Failed to ingest salts: {:?}", e);
-            Err(e.into())
-        }
-    }
+    Ok((username, salts))
 }
 
 async fn fetch_salts(
@@ -291,18 +282,17 @@ async fn fetch_salts(
     .await
 }
 
-async fn ingest_salts(
-    ch_client: &Client,
-    match_id: u64,
-    salts: CMsgClientToGcGetMatchMetaDataResponse,
-    username: &str,
-) -> clickhouse::error::Result<()> {
-    let salts = MatchSalt {
-        match_id,
-        cluster_id: salts.replay_group_id,
-        metadata_salt: salts.metadata_salt,
-        replay_salt: salts.replay_salt,
-        username: Some(format!("salt-scraper:{username}")),
-    };
-    common::insert_rows(ch_client, "match_salts", &[salts]).await
+async fn ingest_salts(ch_client: &Client, salts: &MatchSalt) -> clickhouse::error::Result<()> {
+    match common::insert_rows(ch_client, "match_salts", core::slice::from_ref(salts)).await {
+        Ok(()) => {
+            counter!("salt_scraper.ingest_salt.success").increment(1);
+            debug!("Ingested salts");
+            Ok(())
+        }
+        Err(e) => {
+            counter!("salt_scraper.ingest_salt.failure").increment(1);
+            warn!("Failed to ingest salts: {:?}", e);
+            Err(e)
+        }
+    }
 }
