@@ -1,5 +1,5 @@
 use core::time::Duration;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use clickhouse::Row;
 use serde::Deserialize;
@@ -389,11 +389,19 @@ async fn refresh(
     let log_comment = format!("{}_refresh", spec.table);
     let source = source_watermarks(ch_client, spec.horizon_days).await?;
     let stored = stored_match_counts(ch_client, spec.table).await?;
+    // A day only counts as built while its partition exists: the state outlives the partitions
+    // dropped past the horizon, so a day that re-enters a grown horizon would never be rebuilt.
+    let built_days = distinct_days(ch_client, spec.table).await?;
+    let built: HashSet<&str> = built_days.iter().map(String::as_str).collect();
 
     let stale: Vec<(String, u32, u64)> = source
         .iter()
         .filter(|row| {
-            let prev = stored.get(&row.day).copied().unwrap_or(0);
+            let prev = if built.contains(row.day.as_str()) {
+                stored.get(&row.day).copied().unwrap_or(0)
+            } else {
+                0
+            };
             row.n_matches > prev + rebuild_threshold(row.n_matches)
         })
         .map(|row| (row.day.clone(), row.max_created, row.n_matches))
@@ -404,9 +412,8 @@ async fn refresh(
     record_watermarks(ch_client, spec.table, &stale).await?;
 
     let dropped = if let Some(oldest_fresh) = source.iter().map(|r| &r.day).min() {
-        let stale_partitions: Vec<String> = distinct_days(ch_client, spec.table)
-            .await?
-            .into_iter()
+        let stale_partitions: Vec<&String> = built_days
+            .iter()
             .filter(|d| d.as_str() < oldest_fresh.as_str())
             .collect();
         for day in &stale_partitions {
