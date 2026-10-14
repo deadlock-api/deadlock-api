@@ -259,6 +259,10 @@ pub(super) fn build_match_players_query(args: &BuildArgs<'_>) -> Result<String, 
         )?;
     }
     sql.push_str(&settings_clause(args));
+    // The SELECT aliases `toUnixTimestamp(start_time) AS start_time`; without this the
+    // WHERE's raw-column `start_time` filter would bind to that alias instead (see
+    // `I64Filter::to_start_time_sql`).
+    sql.push_str(", prefer_column_name_to_alias = 1");
     Ok(sql)
 }
 
@@ -455,6 +459,7 @@ mod tests {
         assert!(!sql.contains("WITH t_matches"));
         assert!(sql.contains("WHERE account_id = 123"));
         assert!(sql.contains("LIMIT 5"));
+        assert!(sql.ends_with(", prefer_column_name_to_alias = 1"));
     }
 
     #[test]

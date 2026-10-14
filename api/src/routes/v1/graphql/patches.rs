@@ -6,7 +6,6 @@ use crate::context::AppState;
 use crate::routes::v1::graphql::filters::{
     I64Filter, MatchHistoryWhere, MatchPlayerWhere, StringFilter,
 };
-use crate::routes::v1::graphql::projection::SQL_START_TIME_UNIX;
 use crate::routes::v1::graphql::schema::{
     OrderByMatch, OrderByMatchHistory, OrderByMatchPlayer, OrderDirection, Page,
     load_match_history, load_match_players, load_matches,
@@ -42,7 +41,7 @@ impl Patch {
             lt: self.end_date,
             ..Default::default()
         }
-        .to_sql(SQL_START_TIME_UNIX)
+        .to_start_time_sql()
     }
 }
 
@@ -294,11 +293,11 @@ mod tests {
         let patches = to_patches(vec![forum(400), forum(200)]);
         assert_eq!(
             patches[0].live_scope().unwrap(),
-            "toUnixTimestamp(start_time) >= 400"
+            "start_time >= toDateTime(400)"
         );
         assert_eq!(
             patches[1].live_scope().unwrap(),
-            "(toUnixTimestamp(start_time) >= 200 AND toUnixTimestamp(start_time) < 400)"
+            "(start_time >= toDateTime(200) AND start_time < toDateTime(400))"
         );
     }
 
