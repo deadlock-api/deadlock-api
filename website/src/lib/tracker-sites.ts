@@ -51,8 +51,5 @@ export const TRACKER_SITES: readonly TrackerSite[] = [
   { name: "Chudlock", icon: "https://chudlock.com/favicon.svg" },
   { name: "ScrimCache", icon: "https://scrimcache.vercel.app/favicon-mlc.png" },
   { name: "The Cursed Apple", icon: "https://thecursedapple.app/favicon.svg" },
-  {
-    name: "Deadlock Plus",
-    icon: "https://raw.githubusercontent.com/deadlock-plus/deadlock-plus/refs/heads/main/apps/desktop/static/favicon.png",
-  },
+  { name: "Deadlock+", icon: "https://deadlockplus.app/favicon.png" },
 ];
