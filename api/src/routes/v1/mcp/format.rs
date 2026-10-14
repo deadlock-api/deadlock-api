@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 use arrow_duckdb::compute::cast;
 use arrow_duckdb::json::WriterBuilder;
-use arrow_duckdb::json::writer::JsonArray;
+use arrow_duckdb::json::writer::{JsonArray, JsonFormat};
 use duckdb::arrow::array::{AsArray, StructArray};
 use duckdb::arrow::datatypes::{DataType, FieldRef, Fields};
 use duckdb::arrow::error::ArrowError;
@@ -73,14 +73,20 @@ pub(super) fn format_query_output(output: &QueryOutput) -> Result<QueryResult, A
 
 /// Serializes rows as objects in column order, with JSON values as arrow-json renders them.
 fn rows_as_objects(batches: &[RecordBatch]) -> Result<Vec<Map<String, Value>>, ArrowError> {
+    serde_json::from_slice(&write_json::<JsonArray>(batches)?)
+        .map_err(|e| ArrowError::JsonError(e.to_string()))
+}
+
+/// Writes rows as JSON objects in column order, framed by `F`: a JSON array or NDJSON.
+pub(crate) fn write_json<F: JsonFormat>(batches: &[RecordBatch]) -> Result<Vec<u8>, ArrowError> {
     let mut writer = WriterBuilder::new()
         .with_explicit_nulls(true)
-        .build::<_, JsonArray>(Vec::new());
+        .build::<_, F>(Vec::new());
     for batch in batches.iter().filter(|b| b.num_rows() > 0) {
         writer.write(&with_string_map_keys(batch)?)?;
     }
     writer.finish()?;
-    serde_json::from_slice(&writer.into_inner()).map_err(|e| ArrowError::JsonError(e.to_string()))
+    Ok(writer.into_inner())
 }
 
 /// `batch` with the keys of every map cast to strings: arrow-json writes maps as JSON objects
@@ -244,6 +250,25 @@ mod tests {
                 "null_map": null,
             })
         );
+    }
+
+    #[test]
+    fn writes_json_array_and_ndjson() {
+        use arrow_duckdb::json::writer::LineDelimited;
+
+        let conn = Connection::open_in_memory().unwrap();
+        let rows = run_query(&conn, "SELECT i, MAP {i: 'x'} AS m FROM range(2) t(i)").unwrap();
+        assert_eq!(
+            String::from_utf8(write_json::<JsonArray>(&rows.batches).unwrap()).unwrap(),
+            r#"[{"i":0,"m":{"0":"x"}},{"i":1,"m":{"1":"x"}}]"#
+        );
+        assert_eq!(
+            String::from_utf8(write_json::<LineDelimited>(&rows.batches).unwrap()).unwrap(),
+            "{\"i\":0,\"m\":{\"0\":\"x\"}}\n{\"i\":1,\"m\":{\"1\":\"x\"}}\n"
+        );
+        let empty = run_query(&conn, "SELECT 1 AS i WHERE false").unwrap();
+        assert_eq!(write_json::<JsonArray>(&empty.batches).unwrap(), b"[]");
+        assert_eq!(write_json::<LineDelimited>(&empty.batches).unwrap(), b"");
     }
 
     #[test]

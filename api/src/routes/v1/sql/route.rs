@@ -1,85 +1,29 @@
 use core::time::Duration;
-use std::sync::LazyLock;
 
+use arrow_duckdb::json::writer::{JsonArray, LineDelimited};
 use axum::Json;
-use axum::body::Body;
 use axum::extract::{Path, State};
 use axum::http::{StatusCode, header};
 use axum::response::IntoResponse;
 use axum_extra::extract::Query;
-use cached::macros::cached;
-use regex::Regex;
 use serde::{Deserialize, Serialize};
-use tokio::io::AsyncBufReadExt;
+use tokio_util::sync::CancellationToken;
 use tracing::{debug, warn};
 use utoipa::IntoParams;
 
 use crate::context::AppState;
-use crate::error::{APIError, APIResult};
+use crate::error::{APIError, APIResult, LogInternal};
+use crate::routes::v1::mcp::{QueryError, write_json};
 use crate::services::rate_limiter::Quota;
 use crate::services::rate_limiter::extractor::RateLimitKey;
-use crate::utils::json_stream::{ResponseFormat, stream_rows};
+use crate::utils::json_stream::ResponseFormat;
 
-static SYSTEM_TABLE_RE: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"(?i)\bsystem\s*\.\s*\w+").unwrap());
-
-static BLOCKED_FUNCTION_RE: LazyLock<Regex> = LazyLock::new(|| {
-    // Matches dangerous ClickHouse table functions with optional whitespace before '('
-    Regex::new(
-        r"(?i)\b(url|file|remote|remoteSecure|input|cluster|clusterAllReplicas|mysql|postgresql|s3|s3Cluster|hdfs|jdbc|odbc|executable|mongo|sqlite|azureBlobStorage)\s*\(",
-    )
-    .unwrap()
-});
-
-static BLOCK_COMMENT_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"/\*[\s\S]*?\*/").unwrap());
-
-static LINE_COMMENT_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"--[^\n]*").unwrap());
-
-static INTO_OUTFILE_RE: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"(?i)\bINTO\s+OUTFILE\b").unwrap());
-
-/// Normalizes a SQL query by stripping comments and collapsing whitespace.
-/// The normalized form is used both for validation AND sent to `ClickHouse`,
-/// ensuring no divergence between what we validate and what executes.
-fn normalize_query(query: &str) -> String {
-    let without_block = BLOCK_COMMENT_RE.replace_all(query, " ");
-    let without_line = LINE_COMMENT_RE.replace_all(&without_block, " ");
-    without_line
-        .split_whitespace()
-        .collect::<Vec<_>>()
-        .join(" ")
-}
-
-/// Validates that a user-supplied SQL query is safe to execute.
-fn validate_query(query: &str) -> Result<(), &'static str> {
-    if query.is_empty() {
-        return Err("Query cannot be empty");
-    }
-
-    // Must start with SELECT or WITH (for CTEs)
-    let upper = query.to_uppercase();
-    if !upper.starts_with("SELECT") && !upper.starts_with("WITH") {
-        return Err("Only SELECT queries are allowed");
-    }
-
-    if SYSTEM_TABLE_RE.is_match(query) {
-        return Err("Access to system tables is not allowed");
-    }
-
-    if BLOCKED_FUNCTION_RE.is_match(query) {
-        return Err("Query contains a blocked function");
-    }
-
-    if INTO_OUTFILE_RE.is_match(query) {
-        return Err("INTO OUTFILE is not allowed");
-    }
-
-    Ok(())
-}
+/// Rows a query returns at most; the rest are cut off and `X-Truncated: true` is set.
+const MAX_ROWS: usize = 100_000;
 
 #[derive(Debug, Deserialize, Serialize, IntoParams)]
 pub(super) struct SQLQuery {
-    /// The SQL query to execute. It must follow the Clickhouse SQL syntax.
+    /// The SQL query to execute. It must follow the `DuckDB` SQL syntax.
     query: String,
     /// The response format. Valid values: `json` (a JSON array), `ndjson` (newline-delimited JSON objects).
     #[serde(default)]
@@ -93,19 +37,11 @@ pub(super) struct TableQuery {
     table: String,
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize, clickhouse::Row)]
+#[derive(Debug, Clone, Serialize)]
 pub struct TableSchemaRow {
     name: String,
     r#type: String,
     comment: Option<String>,
-}
-
-#[derive(thiserror::Error, Debug)]
-enum SQLQueryError {
-    #[error("Failed to execute query: {0}")]
-    Query(#[from] clickhouse::error::Error),
-    #[error("Failed to read query result: {0}")]
-    Read(#[from] tokio::io::Error),
 }
 
 #[utoipa::path(
@@ -123,7 +59,10 @@ enum SQLQueryError {
 https://data.deadlock-api.com (DuckDB / DuckLake, or the MCP server at `/v1/mcp`) instead;
 see https://deadlock-api.com/data-dumps.
 
-Executes a SQL query on the database.
+Executes a read-only `DuckDB` SQL query on the public data lake (hourly parquet snapshots of
+the database), the same one the MCP server at `/v1/mcp` queries. Unqualified table names resolve
+to its views; filter `match_player` on `match_id` or `start_time` to skip files. At most 100,000
+rows are returned (`X-Truncated: true` when cut off), and queries time out after 45 seconds.
 
 ### Rate Limits:
 | Type | Limit |
@@ -155,22 +94,54 @@ pub(super) async fn sql(
     .await?;
 
     let format = query.format;
-    let query = normalize_query(&query.query.replace(';', ""));
+    debug!("CUSTOM QUERY: {}", query.query);
 
-    validate_query(&query).map_err(|msg| APIError::status_msg(StatusCode::BAD_REQUEST, msg))?;
-
-    debug!("CUSTOM QUERY: {query}");
-
-    run_sql(&state.ch_client_restricted, &query, format)
+    // Interrupts the query when the client disconnects and this handler is dropped.
+    let cancel = CancellationToken::new();
+    let _cancel_on_drop = cancel.clone().drop_guard();
+    let catalog = std::sync::Arc::clone(&state.mcp_catalog);
+    let output = tokio::spawn(async move { catalog.query(query.query, MAX_ROWS, cancel).await })
         .await
-        .map(|body| ([(header::CONTENT_TYPE, format.content_type())], body))
-        .map_err(|sql_error| {
-            warn!("Failed to execute query: {sql_error}");
-            APIError::status_msg(
-                StatusCode::BAD_REQUEST,
-                "Query execution failed. Check your SQL syntax and try again.",
-            )
-        })
+        .log_internal("SQL query task failed", "Query execution failed")?
+        .map_err(|e| query_error(&e))?;
+
+    let body = match format {
+        ResponseFormat::Json => write_json::<JsonArray>(&output.batches),
+        ResponseFormat::Ndjson => write_json::<LineDelimited>(&output.batches),
+    }
+    .map_err(|e| {
+        APIError::status_msg(
+            StatusCode::BAD_REQUEST,
+            format!("{e}. Cast the column to a supported type, e.g. `col::VARCHAR` or `col::JSON`"),
+        )
+    })?;
+    Ok((
+        [
+            (header::CONTENT_TYPE, format.content_type()),
+            (
+                header::HeaderName::from_static("x-truncated"),
+                if output.truncated { "true" } else { "false" },
+            ),
+        ],
+        body,
+    ))
+}
+
+/// Maps a failed query to a response: the caller's mistakes to 400 with `DuckDB`'s message,
+/// server failures to 500 without their details.
+fn query_error(error: &QueryError) -> APIError {
+    let status = match *error {
+        QueryError::NotReady | QueryError::Busy => StatusCode::SERVICE_UNAVAILABLE,
+        QueryError::Timeout => StatusCode::GATEWAY_TIMEOUT,
+        QueryError::Cancelled | QueryError::Internal(_) => {
+            warn!("Failed to execute query: {error}");
+            return APIError::internal("Query execution failed");
+        }
+        QueryError::NotReadOnly | QueryError::MultipleStatements | QueryError::DuckDb(_) => {
+            StatusCode::BAD_REQUEST
+        }
+    };
+    APIError::status_msg(status, error.to_string())
 }
 
 /// Rejects the request unless custom queries are enabled, then applies `quotas`.
@@ -193,23 +164,6 @@ async fn check_access(
     Ok(())
 }
 
-async fn run_sql(
-    ch_client: &clickhouse::Client,
-    query: &str,
-    format: ResponseFormat,
-) -> Result<Body, SQLQueryError> {
-    let lines = ch_client
-        .query(query)
-        .with_setting("log_comment", "sql")
-        .fetch_bytes("JSONEachRow")
-        .map(AsyncBufReadExt::lines)?;
-    Ok(match stream_rows(lines, format, ()).await? {
-        Some(body) => body,
-        None if format == ResponseFormat::Ndjson => Body::empty(),
-        None => Body::from("[]"),
-    })
-}
-
 #[utoipa::path(
     get,
     path = "/tables",
@@ -224,7 +178,7 @@ async fn run_sql(
 https://data.deadlock-api.com (DuckDB / DuckLake, or the MCP server at `/v1/mcp`) instead;
 see https://deadlock-api.com/data-dumps.
 
-Lists all tables in the database.
+Lists all tables of the public data lake.
 
 ### Rate Limits:
 | Type | Limit |
@@ -252,30 +206,11 @@ pub(super) async fn list_tables(
     )
     .await?;
 
-    Ok(Json(fetch_list_tables(&state.ch_client_restricted).await?))
-}
-
-#[cached(
-    ttl_secs = 3600,
-    convert = "{ 0 }",
-    key = "u8",
-    sync_writes = "default"
-)]
-async fn fetch_list_tables(
-    ch_client: &clickhouse::Client,
-) -> clickhouse::error::Result<Vec<String>> {
-    ch_client
-        .query(
-            "
-            SELECT name
-            FROM system.tables
-            WHERE database = 'default'
-                AND name NOT LIKE '%inner%'
-                AND engine != 'MaterializedView'
-        ",
-        )
-        .fetch_all::<String>()
-        .await
+    let snapshot = state
+        .mcp_catalog
+        .snapshot()
+        .ok_or_else(|| query_error(&QueryError::NotReady))?;
+    Ok(Json(snapshot.tables.keys().cloned().collect::<Vec<_>>()))
 }
 
 #[utoipa::path(
@@ -293,7 +228,8 @@ async fn fetch_list_tables(
 https://data.deadlock-api.com (DuckDB / DuckLake, or the MCP server at `/v1/mcp`) instead;
 see https://deadlock-api.com/data-dumps.
 
-Returns the schema of a table.
+Returns the columns of a data lake table with their `DuckDB` types; column comments carry the
+original `ClickHouse` type.
 
 ### Rate Limits:
 | Type | Limit |
@@ -322,33 +258,22 @@ pub(super) async fn table_schema(
     )
     .await?;
 
-    // Validate table name: only alphanumeric and underscores allowed
-    if !table.chars().all(|c| c.is_alphanumeric() || c == '_') {
-        return Err(APIError::status_msg(
-            StatusCode::BAD_REQUEST,
-            "Invalid table name",
-        ));
-    }
-
+    let snapshot = state
+        .mcp_catalog
+        .snapshot()
+        .ok_or_else(|| query_error(&QueryError::NotReady))?;
+    let info = snapshot
+        .tables
+        .get(&table)
+        .ok_or_else(|| APIError::status_msg(StatusCode::NOT_FOUND, "Table not found"))?;
     Ok(Json(
-        fetch_table_schema(&state.ch_client_restricted, &table).await?,
+        info.columns
+            .iter()
+            .map(|c| TableSchemaRow {
+                name: c.name.clone(),
+                r#type: c.data_type.clone(),
+                comment: c.comment.clone(),
+            })
+            .collect::<Vec<_>>(),
     ))
-}
-
-#[cached(ttl_secs = 3600, convert = r#"{ table.to_string() }"#, key = "String")]
-async fn fetch_table_schema(
-    ch_client: &clickhouse::Client,
-    table: &str,
-) -> clickhouse::error::Result<Vec<TableSchemaRow>> {
-    ch_client
-        .query(
-            "
-            SELECT name, type, nullIf(comment, '') AS comment
-            FROM system.columns
-            WHERE database = 'default' AND table = ?
-        ",
-        )
-        .bind(table)
-        .fetch_all()
-        .await
 }

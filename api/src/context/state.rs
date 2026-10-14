@@ -76,7 +76,6 @@ pub(crate) struct AppStateInner {
     pub(crate) redis_client: redis::aio::MultiplexedConnection,
     pub(crate) ch_client: clickhouse::Client,
     pub(crate) ch_client_ro: clickhouse::Client,
-    pub(crate) ch_client_restricted: clickhouse::Client,
     pub(crate) pg_client: Pool<Postgres>,
     pub(crate) feature_flags: FeatureFlags,
     pub(crate) steam_client: SteamClient,
@@ -162,7 +161,6 @@ impl AppState {
         let ClickhouseClients {
             main: ch_client,
             read_only: ch_client_ro,
-            restricted: ch_client_restricted,
         } = ClickhouseClients::connect(&config).await?;
 
         // Create a Postgres connection pool
@@ -294,7 +292,6 @@ impl AppState {
             redis_client,
             ch_client,
             ch_client_ro,
-            ch_client_restricted,
             pg_client,
             feature_flags,
             steam_client,
@@ -316,7 +313,6 @@ const CH_HEALTH_CHECK: &str = "SELECT 1 SETTINGS log_comment = 'startup_health_c
 struct ClickhouseClients {
     main: clickhouse::Client,
     read_only: clickhouse::Client,
-    restricted: clickhouse::Client,
 }
 
 impl ClickhouseClients {
@@ -366,27 +362,14 @@ impl ClickhouseClients {
             .with_setting("allow_ddl", "0")
             .with_setting("allow_introspection_functions", "0");
 
-        // Runs user-supplied SQL (the `/v1/sql` endpoint).
-        let ch_client_restricted = clickhouse::Client::default()
-            .with_url(config.clickhouse.url())
-            .with_user(&config.clickhouse.restricted_username)
-            .with_password(&config.clickhouse.restricted_password)
-            .with_database(&config.clickhouse.dbname)
-            .with_compression(clickhouse::Compression::zstd())
-            .with_setting("allow_statistics_optimize", "0")
-            .with_setting("max_memory_usage", "26843545600")
-            .with_setting("use_query_cache", "0");
-
         tokio::try_join!(
             ch_health_check(&ch_client, CH_HEALTH_CHECK),
             ch_health_check(&ch_client_ro, CH_HEALTH_CHECK),
-            ch_health_check(&ch_client_restricted, "SELECT 1"),
         )?;
 
         Ok(Self {
             main: ch_client,
             read_only: ch_client_ro,
-            restricted: ch_client_restricted,
         })
     }
 }

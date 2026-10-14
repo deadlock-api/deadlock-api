@@ -16,7 +16,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use tracing::{Instrument, debug, info_span, warn};
 
-use super::catalog::{DATABASE, QueryError, SCHEMA, SnapshotCatalog};
+use super::catalog::{DATABASE, MAX_ROWS, QueryError, SCHEMA, SnapshotCatalog};
 use super::format::format_query_output;
 use crate::error::APIError;
 use crate::services::assets::client::AssetsClient;
@@ -248,7 +248,7 @@ impl McpServer {
             return limited;
         }
         debug!("MCP QUERY: {sql}");
-        match self.catalog.query(sql, context.ct.clone()).await {
+        match self.catalog.query(sql, MAX_ROWS, context.ct.clone()).await {
             Ok(output) => match format_query_output(&output) {
                 Ok(result) => success(&result),
                 Err(e) => query_error(

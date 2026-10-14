@@ -104,9 +104,6 @@ pub(crate) struct ClickhouseConfig {
     pub(super) password: String,
     #[serde(default = "default_clickhouse_dbname")]
     pub(super) dbname: String,
-    #[serde(default = "default_clickhouse_username")]
-    pub(super) restricted_username: String,
-    pub(super) restricted_password: String,
     #[serde(default = "default_true")]
     pub(crate) allow_custom_queries: bool,
 }

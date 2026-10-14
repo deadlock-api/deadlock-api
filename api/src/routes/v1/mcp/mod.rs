@@ -10,7 +10,8 @@ use rmcp::transport::streamable_http_server::StreamableHttpServerConfig;
 use rmcp::transport::streamable_http_server::session::never::NeverSessionManager;
 use utoipa_axum::router::OpenApiRouter;
 
-pub(crate) use self::catalog::{CatalogError, SnapshotCatalog};
+pub(crate) use self::catalog::{CatalogError, QueryError, SnapshotCatalog};
+pub(crate) use self::format::write_json;
 use self::server::McpServer;
 use crate::SHUTDOWN_TOKEN;
 use crate::context::AppState;

@@ -5,6 +5,8 @@ use std::path::PathBuf;
 use std::sync::{Arc, LazyLock, Mutex};
 
 use arc_swap::ArcSwapOption;
+use arrow_duckdb::array::UInt32Array;
+use arrow_duckdb::compute::take_record_batch;
 use duckdb::arrow::datatypes::SchemaRef;
 use duckdb::arrow::record_batch::RecordBatch;
 use duckdb::{AccessMode, Config, Connection};
@@ -19,6 +21,9 @@ use crate::services::data_dump::manifest::{Manifest, PolicyKind, TableStatus};
 pub(crate) const DATABASE: &str = "deadlock";
 pub(crate) const SCHEMA: &str = "main";
 pub(crate) const MAX_ROWS: usize = 1024;
+/// Arrow memory a query result may hold in the API process, whatever its row cap: rows are
+/// cut off past it, so a few huge values cannot exhaust the memory outside `DuckDB`'s limit.
+const MAX_RESULT_BYTES: usize = 64 << 20;
 /// Below the tool-call timeouts of MCP clients (about a minute): a query that outlives the
 /// client only holds a query slot nobody is waiting on.
 pub(crate) const QUERY_TIMEOUT: Duration = Duration::from_secs(45);
@@ -116,7 +121,7 @@ impl Drop for Snapshot {
 
 pub(crate) struct QueryOutput {
     pub(crate) schema: SchemaRef,
-    /// At most `MAX_ROWS` rows in total.
+    /// At most the `max_rows` the query ran with, and about `MAX_RESULT_BYTES`.
     pub(crate) batches: Vec<RecordBatch>,
     pub(crate) truncated: bool,
 }
@@ -168,11 +173,12 @@ impl SnapshotCatalog {
         });
     }
 
-    /// Runs `sql` on the current snapshot. The query is interrupted when it times out or
-    /// `cancel` fires, e.g. because the client disconnected.
+    /// Runs `sql` on the current snapshot, keeping at most `max_rows` rows. The query is
+    /// interrupted when it times out or `cancel` fires, e.g. because the client disconnected.
     pub(crate) async fn query(
         &self,
         sql: String,
+        max_rows: usize,
         cancel: CancellationToken,
     ) -> Result<QueryOutput, QueryError> {
         let snapshot = self.snapshot().ok_or(QueryError::NotReady)?;
@@ -196,7 +202,7 @@ impl SnapshotCatalog {
             // the database (locals drop in reverse order).
             let _permit = permit;
             let _snapshot = snapshot;
-            run_cancellable_query(&conn, &sql, &query_cancelled)
+            run_cancellable_query(&conn, &sql, max_rows, &query_cancelled)
         });
         // Returns the result if the query finishes, else the reason it has to be interrupted.
         let error = tokio::select! {
@@ -548,7 +554,7 @@ fn read_only_statement(conn: &Connection, sql: &str) -> Result<Option<String>, Q
     }
 }
 
-/// Prepares `canonical`, the agent's `sql` as `DuckDB` writes it back, under the row cap:
+/// Prepares `canonical`, the agent's `sql` as `DuckDB` writes it back, under the `max_rows` cap:
 /// `query_arrow` materializes the whole result before the first batch, so the cap goes into the
 /// query and `DuckDB` stops reading once it has one row too many. If the capped query does not
 /// prepare, `sql` is prepared instead: its error is the one to report, since it quotes the agent's
@@ -557,9 +563,10 @@ fn prepare_capped<'conn>(
     conn: &'conn Connection,
     sql: &str,
     canonical: &str,
+    max_rows: usize,
     cancelled: &AtomicBool,
 ) -> Result<duckdb::Statement<'conn>, QueryError> {
-    let capped = format!("SELECT * FROM ({canonical}) LIMIT {}", MAX_ROWS + 1);
+    let capped = format!("SELECT * FROM ({canonical}) LIMIT {}", max_rows + 1);
     // `prepare` runs every statement but the last, so the sandbox must not depend on `DuckDB`
     // writing `canonical` back as exactly one statement.
     read_only_statement(conn, &capped)?;
@@ -574,33 +581,49 @@ fn prepare_capped<'conn>(
 
 #[cfg(test)]
 pub(crate) fn run_query(conn: &Connection, sql: &str) -> Result<QueryOutput, QueryError> {
-    run_cancellable_query(conn, sql, &AtomicBool::new(false))
+    run_cancellable_query(conn, sql, MAX_ROWS, &AtomicBool::new(false))
 }
 
-/// Runs `sql`, stopping before each statement once `cancelled` is set.
+/// Runs `sql` for at most `max_rows` rows and about `MAX_RESULT_BYTES`, stopping before each
+/// statement once `cancelled` is set.
 fn run_cancellable_query(
     conn: &Connection,
     sql: &str,
+    max_rows: usize,
     cancelled: &AtomicBool,
 ) -> Result<QueryOutput, QueryError> {
     check_cancelled(cancelled)?;
     let canonical = read_only_statement(conn, sql)?;
     check_cancelled(cancelled)?;
     let mut stmt = match canonical {
-        Some(canonical) => prepare_capped(conn, sql, &canonical, cancelled)?,
+        Some(canonical) => prepare_capped(conn, sql, &canonical, max_rows, cancelled)?,
         None => conn.prepare(sql)?,
     };
     check_cancelled(cancelled)?;
     let mut batches = Vec::new();
-    let mut remaining = MAX_ROWS;
+    let mut remaining = max_rows;
+    let mut remaining_bytes = MAX_RESULT_BYTES;
     let mut truncated = false;
     for batch in stmt.query_arrow([])? {
+        let bytes = batch.get_array_memory_size();
+        if bytes > remaining_bytes {
+            // Keeps the share of rows that fits, assuming they are about the same size, copied
+            // out so the rest of the batch is freed: a slice holds on to all of its buffers.
+            let fit = (batch.num_rows() * remaining_bytes / bytes).min(remaining);
+            let rows = UInt32Array::from_iter_values(0..u32::try_from(fit).unwrap_or(u32::MAX));
+            let kept = take_record_batch(&batch, &rows)
+                .map_err(|e| QueryError::Internal(e.to_string()))?;
+            batches.push(kept);
+            truncated = true;
+            break;
+        }
         if batch.num_rows() > remaining {
             batches.push(batch.slice(0, remaining));
             truncated = true;
             break;
         }
         remaining -= batch.num_rows();
+        remaining_bytes -= bytes;
         batches.push(batch);
     }
     Ok(QueryOutput {
@@ -679,7 +702,9 @@ mod tests {
         let runtime = tokio::runtime::Runtime::new().unwrap();
         let (result, released) = runtime.block_on(async {
             let catalog = memory_catalog(1);
-            let result = catalog.query(ENDLESS_QUERY.to_owned(), cancel).await;
+            let result = catalog
+                .query(ENDLESS_QUERY.to_owned(), MAX_ROWS, cancel)
+                .await;
             let slot = catalog.query_permits.acquire();
             let released = tokio::time::timeout(Duration::from_secs(10), slot).await;
             (result, released.is_ok())
@@ -705,7 +730,7 @@ mod tests {
     #[test]
     fn a_cancelled_query_runs_no_further_statement() {
         let conn = Connection::open_in_memory().unwrap();
-        let result = run_cancellable_query(&conn, ENDLESS_QUERY, &AtomicBool::new(true));
+        let result = run_cancellable_query(&conn, ENDLESS_QUERY, MAX_ROWS, &AtomicBool::new(true));
         assert!(matches!(result, Err(QueryError::Cancelled)));
     }
 
@@ -715,7 +740,7 @@ mod tests {
         let cancel = CancellationToken::new();
         cancel.cancel();
         // Without the cancellation the query would be turned away as busy after waiting.
-        let result = catalog.query("SELECT 1".to_owned(), cancel).await;
+        let result = catalog.query("SELECT 1".to_owned(), MAX_ROWS, cancel).await;
         assert!(matches!(result, Err(QueryError::Cancelled)));
     }
 
@@ -799,6 +824,17 @@ mod tests {
             "SELECT * FROM read_csv('/etc/passwd')",
             "SELECT * FROM read_text('/proc/self/environ')",
             "SELECT * FROM read_csv('https://s3-cache.deadlock-api.com/other-bucket/x.csv')",
+            "SELECT * FROM glob('/etc/*')",
+            "SELECT * FROM read_parquet('/tmp/*.parquet')",
+            "ATTACH ':memory:' AS m",
+            "ATTACH '/tmp/evil.duckdb' AS m",
+            "COPY (SELECT 1) TO '/tmp/out.csv'",
+            "COPY lake.t TO '/tmp/out.parquet'",
+            "EXPORT DATABASE '/tmp/export'",
+            "LOAD httpfs",
+            "CHECKPOINT",
+            "CREATE SECRET s (TYPE s3, KEY_ID 'a', SECRET 'b')",
+            "RESET enable_external_access",
         ] {
             assert!(run_query(&ro, sql).is_err(), "{sql} should be rejected");
         }
@@ -845,6 +881,30 @@ mod tests {
     }
 
     #[test]
+    fn byte_cap_truncates_large_values() {
+        let conn = Connection::open_in_memory().unwrap();
+        let out = run_cancellable_query(
+            &conn,
+            "SELECT repeat('x', 1000000) AS s FROM range(200)",
+            100_000,
+            &AtomicBool::new(false),
+        )
+        .unwrap();
+        assert!(out.truncated);
+        let rows: usize = out.batches.iter().map(RecordBatch::num_rows).sum();
+        assert!(
+            rows > 0 && rows <= MAX_RESULT_BYTES / 1_000_000,
+            "{rows} rows kept"
+        );
+        let bytes: usize = out
+            .batches
+            .iter()
+            .map(RecordBatch::get_array_memory_size)
+            .sum();
+        assert!(bytes <= MAX_RESULT_BYTES + (1 << 20), "{bytes} bytes held");
+    }
+
+    #[test]
     fn capped_queries_keep_their_shape() {
         let conn = Connection::open_in_memory().unwrap();
         conn.execute_batch("CREATE TABLE t AS SELECT range AS i FROM range(3)")
@@ -888,7 +948,16 @@ mod tests {
     fn a_capped_query_cannot_break_out_of_its_subquery() {
         let conn = Connection::open_in_memory().unwrap();
         let canonical = "SELECT 1) t; CREATE TABLE escaped AS SELECT 1; SELECT * FROM (SELECT 1";
-        assert!(prepare_capped(&conn, "SELECT 1", canonical, &AtomicBool::new(false)).is_err());
+        assert!(
+            prepare_capped(
+                &conn,
+                "SELECT 1",
+                canonical,
+                MAX_ROWS,
+                &AtomicBool::new(false)
+            )
+            .is_err()
+        );
         let tables: i64 = conn
             .query_row("SELECT count(*) FROM duckdb_tables()", [], |row| row.get(0))
             .unwrap();
