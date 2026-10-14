@@ -29,7 +29,9 @@ use crate::services::steam::types::{
 
 const STEAM_OPENID_ENDPOINT: &str = "https://steamcommunity.com/openid/login";
 const RSS_ENDPOINT: &str = "https://forums.playdeadlock.com/forums/changelog.10/index.rss";
-const STEAM_NEWS_ENDPOINT: &str = "https://store.steampowered.com/feeds/news/app/1422450/";
+// Without `l`, Steam localizes titles and notes by the caller's location (Ukrainian from production, 2026-10).
+const STEAM_NEWS_ENDPOINT: &str =
+    "https://store.steampowered.com/feeds/news/app/1422450/?l=english";
 
 /// Client for interacting with the Steam API and proxy
 #[derive(Clone)]
