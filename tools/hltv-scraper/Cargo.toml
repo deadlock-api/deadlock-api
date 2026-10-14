@@ -16,8 +16,8 @@ dungers = { workspace = true, features = ["bitbuf"] }
 fred = { workspace = true }
 haste = { workspace = true }
 itertools = { workspace = true }
-jiff = { version = "0.2.37", features = ["serde"] }
-lru = "0.18.4"
+jiff = { version = "0.2.38", features = ["serde"] }
+lru = "0.18.5"
 metrics = { workspace = true }
 object_store = { workspace = true }
 prost = { workspace = true }

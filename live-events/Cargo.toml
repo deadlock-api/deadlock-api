@@ -7,14 +7,14 @@ repository = "https://github.com/deadlock-api/deadlock-live-events"
 license = "MIT"
 
 [dependencies]
-reqwest = { version = "0.13.4", features = ["json", "http2", "gzip"] }
-tokio = { version = "1.53.1", features = ["macros", "rt-multi-thread", "signal", "sync", "time"] }
+reqwest = { version = "0.13.5", features = ["json", "http2", "gzip"] }
+tokio = { version = "1.53.3", features = ["macros", "rt-multi-thread", "signal", "sync", "time"] }
 tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
 axum = "0.8.9"
 serde = { version = "1.0.229", features = ["derive"] }
-serde_json = "1.0.151"
+serde_json = "1.0.154"
 tower-layer = "0.3.3"
-tower-http = { version = "0.7.0", features = ["cors", "normalize-path", "trace", "limit"] }
+tower-http = { version = "0.7.1", features = ["cors", "normalize-path", "trace", "limit"] }
 tracing = "0.1.44"
 futures = "0.3.34"
 valveprotos = { workspace = true, features = ["serde", "user-msgs", "game-msgs"] }
@@ -23,6 +23,6 @@ tryhard = "0.5.2"
 strum = { version = "0.28.0", features = ["derive"] }
 haste = { workspace = true, features = ["async"] }
 async-stream = "0.3.6"
-thiserror = "2.0.20"
+thiserror = "2.0.21"
 serde-env = "0.3.0"
 bytes = "1.12.1"

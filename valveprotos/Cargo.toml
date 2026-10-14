@@ -16,8 +16,8 @@ ignored = ["prost"]
 [dependencies]
 prost = "0.14.4"
 prost-reflect = { version = "0.16", features = ["derive"], optional = true }
-serde = { version = "1.0.228", optional = true, features = ["derive"] }
-ureq = { version = "3.3", features = ["json"], optional = true }
+serde = { version = "1.0.229", optional = true, features = ["derive"] }
+ureq = { version = "3.4", features = ["json"], optional = true }
 
 [build-dependencies]
 heck = "0.5"
