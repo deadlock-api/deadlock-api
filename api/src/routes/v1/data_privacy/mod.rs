@@ -21,13 +21,10 @@ pub(crate) struct DataPrivacyRequest {
     open_id_params: HashMap<String, String>,
 }
 
-fn steam_id_i32(steam_id: u32) -> APIResult<i32> {
-    i32::try_from(steam_id).map_err(|_| {
-        APIError::status_msg(
-            axum::http::StatusCode::BAD_REQUEST,
-            "SteamID3 is out of range".to_string(),
-        )
-    })
+/// `protected_user_accounts.steam_id` is `INTEGER`: store the u32 bit pattern, read back with
+/// `i32::cast_unsigned`, so ids of 2^31 and above round-trip.
+fn steam_id_i32(steam_id: u32) -> i32 {
+    steam_id.cast_signed()
 }
 
 /// Checks the `OpenID` login proves the requester owns `steam_id`.
@@ -50,7 +47,7 @@ async fn verify_ownership(
 }
 
 async fn protect_account(pg_client: &sqlx::Pool<sqlx::Postgres>, steam_id: u32) -> APIResult<()> {
-    let steam_id_i32 = steam_id_i32(steam_id)?;
+    let steam_id_i32 = steam_id_i32(steam_id);
     sqlx::query!(
         r#"
         INSERT INTO protected_user_accounts (steam_id)
@@ -68,7 +65,7 @@ async fn protect_account(pg_client: &sqlx::Pool<sqlx::Postgres>, steam_id: u32) 
 }
 
 async fn unprotect_account(pg_client: &sqlx::Pool<sqlx::Postgres>, steam_id: u32) -> APIResult<()> {
-    let steam_id_i32 = steam_id_i32(steam_id)?;
+    let steam_id_i32 = steam_id_i32(steam_id);
     sqlx::query!(
         r#"
         DELETE FROM protected_user_accounts
@@ -95,11 +92,11 @@ pub(crate) async fn update_row_policy(
     pg_client: &sqlx::Pool<sqlx::Postgres>,
     ch_client: &clickhouse::Client,
 ) -> APIResult<()> {
-    let protected_accounts: Vec<i32> = sqlx::query!("SELECT steam_id FROM protected_user_accounts")
+    let protected_accounts: Vec<u32> = sqlx::query!("SELECT steam_id FROM protected_user_accounts")
         .fetch_all(pg_client)
         .await?
         .into_iter()
-        .map(|record| record.steam_id)
+        .map(|record| record.steam_id.cast_unsigned())
         .collect();
 
     if protected_accounts.is_empty() {
