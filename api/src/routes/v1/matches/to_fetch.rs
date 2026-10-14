@@ -181,6 +181,15 @@ pub(crate) async fn queue_requested_matches(state: &AppState, match_ids: &[u64])
     state.batchers.pending_match_insert.insert(rows).await;
 }
 
+/// Queues a match whose live URL was just requested, so it is fetched once it ended. Its start
+/// time is the time of the request, which keeps it out of the pool for [`MIN_AGE_SECS`] while
+/// it is still being played.
+pub(crate) async fn queue_live_match(state: &AppState, match_id: u64) {
+    let now = u32::try_from(chrono::Utc::now().timestamp()).unwrap_or(u32::MAX);
+    let row = PendingMatchRow::requested(match_id, now);
+    state.batchers.pending_match_insert.insert_one(row).await;
+}
+
 /// Marks a match Steam says does not exist as done, taking it out of the to-fetch pool.
 pub(crate) async fn resolve_invalid_match(state: &AppState, match_id: u64) {
     if (MIN_MATCH_ID..u64::from(u32::MAX)).contains(&match_id) {

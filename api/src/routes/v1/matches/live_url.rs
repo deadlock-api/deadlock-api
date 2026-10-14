@@ -20,6 +20,7 @@ use valveprotos::gcsdk::EgcPlatform;
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
+use crate::routes::v1::matches::to_fetch::queue_live_match;
 use crate::services::rate_limiter::Quota;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::steam::client::SteamClient;
@@ -201,6 +202,7 @@ async fn oldest_possibly_live_match_id(
 
 /// Resolve a match's live broadcast URL, reusing a cached one when present and otherwise spectating
 /// the lobby (rate-limited, since spectating is expensive) and caching the result for an hour.
+/// A spectated match is queued in `pending_matches`, so it is fetched once it ended.
 ///
 /// # Errors
 ///
@@ -273,6 +275,7 @@ pub(super) async fn resolve_broadcast_url(
         "updated_at": chrono::Utc::now().timestamp(),
     });
     store_live_urls(state, [(match_id, payload)]).await?;
+    queue_live_match(state, match_id).await;
 
     Ok((broadcast_url, lobby_id))
 }
