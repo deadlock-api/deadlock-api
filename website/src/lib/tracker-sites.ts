@@ -53,4 +53,5 @@ export const TRACKER_SITES: readonly TrackerSite[] = [
   { name: "The Cursed Apple", icon: "https://thecursedapple.app/favicon.svg" },
   { name: "Deadlock+", icon: "https://deadlockplus.app/favicon.png" },
   { name: "Tierspire", icon: "https://tierspire.com/apple-touch-icon.png" },
+  { name: "Deadlock Brasil", icon: "https://dlbr.gg/apple-touch-icon.png" },
 ];
