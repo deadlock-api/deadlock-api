@@ -40,6 +40,17 @@ pub(crate) enum DownloadError {
     ReceiverDropped,
 }
 
+impl DownloadError {
+    /// A fragment status that can clear up on its own: 404 (not produced yet), 405 and 5xx.
+    fn is_retryable_status(&self) -> bool {
+        match self {
+            Self::FragmentNotFound | Self::TemporaryError => true,
+            Self::UnexpectedStatusCode(status) => status.is_server_error(),
+            _ => false,
+        }
+    }
+}
+
 /// The part of a `/sync` response the downloader uses; the other fields are ignored.
 #[derive(Deserialize)]
 struct SyncResponse {
@@ -56,8 +67,8 @@ struct SyncResponse {
 /// 404s of `/sync` are retried for at least 5 seconds. At the start of the download, they instead
 /// have a 30s leniency to have a chance to startup.
 ///
-/// 404s of fragments (`/<fragment>/full` and `/<fragment>/delta`) are continuously retried for as
-/// long as the `/sync` endpoint stays alive.
+/// 404s, 405s and 5xx of fragments (`/<fragment>/full` and `/<fragment>/delta`) are continuously
+/// retried for as long as the `/sync` endpoint stays alive.
 ///
 /// General logic:
 ///
@@ -203,9 +214,17 @@ async fn fragment_fetching_loop(
                         break;
                     }
                     Err(e) => match e {
-                        DownloadError::FragmentNotFound => {
-                            counter!("hltv.fragment.error.not_found").increment(1);
-                            // warn!("[{match_id} {fragment_n}] Got 404");
+                        DownloadError::FragmentNotFound
+                        | DownloadError::TemporaryError
+                        | DownloadError::UnexpectedStatusCode(_)
+                            if e.is_retryable_status() =>
+                        {
+                            if matches!(e, DownloadError::FragmentNotFound) {
+                                counter!("hltv.fragment.error.not_found").increment(1);
+                            } else {
+                                counter!("hltv.fragment.error.temporary").increment(1);
+                                error!("[{match_id} {fragment_n}] {e}, retrying");
+                            }
                             retry_count += 1;
 
                             // minimum 4 sec wait time
@@ -221,7 +240,9 @@ async fn fragment_fetching_loop(
                                 } else if retry_count > 5 {
                                     counter!("hltv.fragment.error.many_retries_failed")
                                         .increment(1);
-                                    error!("[{match_id} {fragment_n}] still 404 after 5 retries");
+                                    error!(
+                                        "[{match_id} {fragment_n}] still failing after 5 retries: {e}"
+                                    );
                                     hard_retry = true;
                                     break;
                                 }
@@ -286,7 +307,7 @@ async fn check_sync_availability(client: &Client, broadcast_url: &str) -> bool {
 
 /// Download a specific fragment from a match
 ///
-/// Returns an error in case of a 404.
+/// Returns an error for any non-2xx status.
 pub(crate) async fn download_match_fragment(
     client: &Client,
     broadcast_url: &str,
@@ -308,6 +329,7 @@ pub(crate) async fn download_match_fragment(
         counter!("hltv.fragment.http.405").increment(1);
         Err(DownloadError::TemporaryError)
     } else {
+        counter!(format!("hltv.fragment.http.{}", resp.status().as_u16())).increment(1);
         Err(DownloadError::UnexpectedStatusCode(resp.status()))
     }
 }
