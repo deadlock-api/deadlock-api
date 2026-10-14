@@ -171,7 +171,11 @@ pub(super) async fn load_matches(
 ) -> GqlResult<Vec<Match>> {
     let state = app_state(ctx)?;
     let projection = project_matches(&ctx.look_ahead());
-    let via_player_match_stats = via_player_match_stats(state, where_.as_ref()).await?;
+    let excluded_accounts = protected_accounts(state).await?;
+    let via_player_match_stats = where_
+        .as_ref()
+        .and_then(MatchPlayerWhere::player_match_stats_accounts)
+        .is_some();
     let mut filters = where_.map_or_default(|w| w.to_sql_filters());
     filters.extend(scope);
     let sql = build_matches_query(&BuildArgs {
@@ -182,6 +186,7 @@ pub(super) async fn load_matches(
         limit: page.limit.clamp(1, MAX_LIMIT),
         offset: page.offset,
         via_player_match_stats,
+        excluded_accounts: &excluded_accounts,
     });
     run_built_query(state, "matches", sql).await
 }
@@ -195,7 +200,11 @@ pub(super) async fn load_match_players(
 ) -> GqlResult<Vec<MatchPlayer>> {
     let state = app_state(ctx)?;
     let projection = project_match_players(&ctx.look_ahead());
-    let via_player_match_stats = via_player_match_stats(state, where_.as_ref()).await?;
+    let excluded_accounts = protected_accounts(state).await?;
+    let via_player_match_stats = where_
+        .as_ref()
+        .and_then(MatchPlayerWhere::player_match_stats_accounts)
+        .is_some();
     let mut filters = where_.map_or_default(|w| w.to_sql_filters());
     filters.extend(scope);
     let sql = build_match_players_query(&BuildArgs {
@@ -206,6 +215,7 @@ pub(super) async fn load_match_players(
         limit: page.limit.clamp(1, MAX_LIMIT),
         offset: page.offset,
         via_player_match_stats,
+        excluded_accounts: &excluded_accounts,
     });
     run_built_query(state, "match_players", sql).await
 }
@@ -219,6 +229,7 @@ pub(super) async fn load_match_history(
 ) -> GqlResult<Vec<MatchHistoryEntry>> {
     let state = app_state(ctx)?;
     let columns = project_match_history(&ctx.look_ahead());
+    let excluded_accounts = protected_accounts(state).await?;
     let mut filters = where_.map_or_default(|w| w.to_sql_filters());
     filters.where_.extend(scope);
     let sql = build_match_history_query(&MatchHistoryBuildArgs {
@@ -228,6 +239,7 @@ pub(super) async fn load_match_history(
         order_dir: page.order_direction.unwrap_or_default().into(),
         limit: page.limit.clamp(1, MAX_LIMIT),
         offset: page.offset,
+        excluded_accounts: &excluded_accounts,
     });
     run_built_query(state, "match_history", sql).await
 }
@@ -403,19 +415,16 @@ impl QueryRoot {
     }
 }
 
-async fn via_player_match_stats(
-    state: &AppState,
-    where_: Option<&MatchPlayerWhere>,
-) -> GqlResult<bool> {
-    let Some(account_ids) = where_.and_then(MatchPlayerWhere::player_match_stats_accounts) else {
-        return Ok(false);
-    };
+/// The protected accounts, sorted, for [`BuildArgs::excluded_accounts`].
+async fn protected_accounts(state: &AppState) -> GqlResult<Vec<u32>> {
     let protected = state
         .steam_client
         .get_protected_users(&state.pg_client)
         .await
         .map_err(|e| async_graphql::Error::new(format!("Protected user lookup failed: {e}")))?;
-    Ok(!account_ids.iter().any(|id| protected.contains(id)))
+    let mut accounts: Vec<u32> = protected.iter().copied().collect();
+    accounts.sort_unstable();
+    Ok(accounts)
 }
 
 /// Runs the SQL a GraphQL query built, traced and its row count recorded

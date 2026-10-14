@@ -6,6 +6,7 @@ use core::fmt::Write;
 use crate::routes::v1::graphql::filters::MatchHistorySqlFilters;
 use crate::routes::v1::graphql::projection::{Column, MATCH_HISTORY_COLUMNS, Projection};
 use crate::routes::v1::players::match_history::{COALESCED_COLUMNS, ETERNUS_MAX_BADGE};
+use crate::utils::sql::id_list;
 
 #[derive(Clone, Copy, Debug)]
 pub(super) enum OrderKey {
@@ -32,6 +33,18 @@ impl OrderDir {
             Self::Desc => "DESC",
         }
     }
+}
+
+/// `filters` plus one dropping the rows of `excluded_accounts`.
+fn with_excluded_accounts(filters: &[String], excluded_accounts: &[u32]) -> Vec<String> {
+    let mut out = filters.to_vec();
+    out.extend(excluded_accounts_filter("account_id", excluded_accounts));
+    out
+}
+
+fn excluded_accounts_filter(column: &str, excluded_accounts: &[u32]) -> Option<String> {
+    (!excluded_accounts.is_empty())
+        .then(|| format!("{column} NOT IN ({})", id_list(excluded_accounts)))
 }
 
 fn where_clause(filters: &[String]) -> String {
@@ -86,9 +99,11 @@ pub(super) struct BuildArgs<'a> {
     pub(super) limit: u32,
     pub(super) offset: u32,
     /// Select rows on `player_match_stats`. Only valid for filters from
-    /// `MatchPlayerWhere::player_match_stats_accounts` without protected accounts:
-    /// that table has no GDPR row policy.
+    /// `MatchPlayerWhere::player_match_stats_accounts`.
     pub(super) via_player_match_stats: bool,
+    /// Protected accounts, whose rows every query shape drops: the API's `ClickHouse`
+    /// user is not subject to the GDPR row policies.
+    pub(super) excluded_accounts: &'a [u32],
 }
 
 /// Columns the demo-analyzer writes via lightweight `UPDATE` (i.e. patch parts).
@@ -140,7 +155,10 @@ fn settings_clause(args: &BuildArgs<'_>) -> String {
 /// the same query plan: filter & order in `t_matches`, then re-fetch the
 /// minimal set of columns from `match_player`.
 pub(super) fn build_matches_query(args: &BuildArgs<'_>) -> Result<String, core::fmt::Error> {
-    let where_clause = where_clause(args.filters);
+    let where_clause = where_clause(&with_excluded_accounts(
+        args.filters,
+        args.excluded_accounts,
+    ));
     // AccountId is unreachable here (OrderByMatch doesn't expose it) — fall back to match_id.
     let (cte_order, outer_order): (&str, &str) = match args.order_by {
         OrderKey::StartTime => ("any(start_time)", "any(match_player.start_time)"),
@@ -183,6 +201,11 @@ pub(super) fn build_matches_query(args: &BuildArgs<'_>) -> Result<String, core::
 
     sql.push_str(" FROM match_player ");
     sql.push_str("WHERE match_player.match_id IN t_matches ");
+    if let Some(excluded) =
+        excluded_accounts_filter("match_player.account_id", args.excluded_accounts)
+    {
+        write!(&mut sql, "AND {excluded} ")?;
+    }
     sql.push_str("GROUP BY match_player.match_id ");
     write!(
         &mut sql,
@@ -195,7 +218,10 @@ pub(super) fn build_matches_query(args: &BuildArgs<'_>) -> Result<String, core::
 
 /// Player-row query: one row per (`match_id`, `account_id`) — no aggregation.
 pub(super) fn build_match_players_query(args: &BuildArgs<'_>) -> Result<String, core::fmt::Error> {
-    let where_clause = where_clause(args.filters);
+    let where_clause = where_clause(&with_excluded_accounts(
+        args.filters,
+        args.excluded_accounts,
+    ));
     let order_col = match args.order_by {
         OrderKey::MatchId => "match_id",
         OrderKey::StartTime => "start_time",
@@ -245,6 +271,8 @@ pub(super) struct MatchHistoryBuildArgs<'a> {
     pub(super) order_dir: OrderDir,
     pub(super) limit: u32,
     pub(super) offset: u32,
+    /// Protected accounts, whose rows the query drops (see [`BuildArgs::excluded_accounts`]).
+    pub(super) excluded_accounts: &'a [u32],
 }
 
 /// Merged (post-`CoalescingMergeTree`) expression for a `player_match_history`
@@ -316,7 +344,10 @@ pub(super) fn build_match_history_query(
     sql.push_str("SELECT ");
     sql.push_str(&select);
     sql.push_str(" FROM player_match_history");
-    sql.push_str(&where_clause(&args.filters.where_));
+    sql.push_str(&where_clause(&with_excluded_accounts(
+        &args.filters.where_,
+        args.excluded_accounts,
+    )));
     sql.push_str(" GROUP BY account_id, match_id");
     if !args.filters.having.is_empty() {
         write!(&mut sql, " HAVING {}", args.filters.having.join(" AND "))?;
@@ -388,6 +419,7 @@ mod tests {
             limit: 10,
             offset: 0,
             via_player_match_stats: false,
+            excluded_accounts: &[],
         })
         .unwrap();
         assert!(sql.contains("WITH t_matches"));
@@ -416,6 +448,7 @@ mod tests {
             limit: 5,
             offset: 0,
             via_player_match_stats: false,
+            excluded_accounts: &[],
         })
         .unwrap();
         assert!(sql.contains("FROM match_player"));
@@ -451,6 +484,7 @@ mod tests {
             limit: 50,
             offset: 0,
             via_player_match_stats: false,
+            excluded_accounts: &[],
         })
         .unwrap();
         assert!(sql.contains("groupArray(tuple("));
@@ -478,6 +512,7 @@ mod tests {
             limit: 1,
             offset: 0,
             via_player_match_stats: false,
+            excluded_accounts: &[],
         })
         .unwrap();
         assert!(sql.contains(
@@ -502,6 +537,7 @@ mod tests {
             limit: 1,
             offset: 0,
             via_player_match_stats: false,
+            excluded_accounts: &[],
         })
         .unwrap();
         assert!(!sql.contains("demo_player"));
@@ -521,6 +557,7 @@ mod tests {
             limit: 10,
             offset: 0,
             via_player_match_stats: false,
+            excluded_accounts: &[],
         })
         .unwrap();
         assert!(sql.contains("apply_patch_parts = 0"));
@@ -544,6 +581,7 @@ mod tests {
             limit: 5,
             offset: 0,
             via_player_match_stats: false,
+            excluded_accounts: &[],
         })
         .unwrap();
         assert!(sql.contains("hero_build_id"));
@@ -572,6 +610,7 @@ mod tests {
             order_dir: OrderDir::Desc,
             limit: 10,
             offset: 0,
+            excluded_accounts: &[],
         })
         .unwrap();
         assert!(sql.contains("FROM player_match_history"));
@@ -595,6 +634,7 @@ mod tests {
             order_dir: OrderDir::Desc,
             limit: 10,
             offset: 0,
+            excluded_accounts: &[],
         })
         .unwrap();
         assert!(sql.contains(&format!("least(argMaxIf(ranked_display_badge, created_at, ranked_display_badge IS NOT NULL), {ETERNUS_MAX_BADGE}) AS ranked_display_badge")));
@@ -616,6 +656,7 @@ mod tests {
             order_dir: OrderDir::Desc,
             limit: 10,
             offset: 0,
+            excluded_accounts: &[],
         })
         .unwrap();
         assert!(
@@ -634,6 +675,7 @@ mod tests {
             order_dir: OrderDir::Asc,
             limit: 10,
             offset: 5,
+            excluded_accounts: &[],
         })
         .unwrap();
         assert!(sql.contains("ORDER BY argMax(toUnixTimestamp(start_time), created_at) ASC"));
@@ -659,6 +701,7 @@ mod tests {
             limit: 5,
             offset: 0,
             via_player_match_stats: false,
+            excluded_accounts: &[],
         })
         .unwrap();
         assert!(sql.contains("apply_patch_parts = 0"));
@@ -682,6 +725,7 @@ mod tests {
             limit: 10,
             offset: 20,
             via_player_match_stats: true,
+            excluded_accounts: &[],
         })
         .unwrap();
         assert!(sql.starts_with(
@@ -703,6 +747,7 @@ mod tests {
             limit: 5,
             offset: 0,
             via_player_match_stats: true,
+            excluded_accounts: &[],
         })
         .unwrap();
         assert!(sql.contains(
@@ -710,6 +755,58 @@ mod tests {
         ));
         assert!(sql.contains("FROM match_player WHERE match_player.match_id IN t_matches"));
         crate::utils::proptest_utils::assert_valid_sql(&sql);
+    }
+
+    #[test]
+    fn excluded_accounts_dropped_from_every_shape() {
+        let matches = build_matches_query(&BuildArgs {
+            projection: &match_id_only(),
+            filters: &["hero_id = 1".into()],
+            order_by: OrderKey::MatchId,
+            order_dir: OrderDir::Desc,
+            limit: 5,
+            offset: 0,
+            via_player_match_stats: false,
+            excluded_accounts: &[7, 9],
+        })
+        .unwrap();
+        assert!(matches.contains(
+            "FROM match_player WHERE hero_id = 1 AND account_id NOT IN (7, 9)  GROUP BY match_id"
+        ));
+        assert!(matches.contains(
+            "WHERE match_player.match_id IN t_matches AND match_player.account_id NOT IN (7, 9) GROUP BY"
+        ));
+        crate::utils::proptest_utils::assert_valid_sql(&matches);
+
+        let players = build_match_players_query(&BuildArgs {
+            projection: &match_id_only(),
+            filters: &["account_id = 7".into()],
+            order_by: OrderKey::MatchId,
+            order_dir: OrderDir::Desc,
+            limit: 5,
+            offset: 0,
+            via_player_match_stats: true,
+            excluded_accounts: &[7, 9],
+        })
+        .unwrap();
+        assert!(players.contains(
+            "FROM player_match_stats WHERE account_id = 7 AND account_id NOT IN (7, 9) "
+        ));
+        crate::utils::proptest_utils::assert_valid_sql(&players);
+
+        let columns = match_history_columns(&["account_id", "match_id"]);
+        let history = build_match_history_query(&MatchHistoryBuildArgs {
+            columns: &columns,
+            filters: &MatchHistorySqlFilters::default(),
+            order_by: OrderKey::MatchId,
+            order_dir: OrderDir::Desc,
+            limit: 10,
+            offset: 0,
+            excluded_accounts: &[7, 9],
+        })
+        .unwrap();
+        assert!(history.contains("FROM player_match_history WHERE account_id NOT IN (7, 9) "));
+        crate::utils::proptest_utils::assert_valid_sql(&history);
     }
 }
 
@@ -822,6 +919,7 @@ mod proptests {
                 limit,
                 offset,
                 via_player_match_stats,
+                excluded_accounts: &[],
             }).unwrap();
             assert_valid_sql(&sql);
         }
@@ -854,6 +952,7 @@ mod proptests {
                 limit,
                 offset,
                 via_player_match_stats,
+                excluded_accounts: &[],
             }).unwrap();
             assert_valid_sql(&sql);
         }
@@ -882,6 +981,7 @@ mod proptests {
                 order_dir,
                 limit,
                 offset,
+                excluded_accounts: &[],
             }).unwrap();
             assert_valid_sql(&sql);
         }
