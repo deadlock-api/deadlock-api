@@ -445,16 +445,15 @@ pub struct ItemStats {
 // and keep no per-purchase corruption or enhanced dimension: `corrupted_items` `include`/`only`
 // and `enhanced_items` `exclude`/`only` requests always go to the base table.
 
-/// Horizon of `item_stats_agg_v2`, in days. Keep in sync with `HORIZON_DAYS` in
-/// `services/cohort_agg_refresh.rs`, which maintains it.
+/// Days of `item_stats_agg_v2` requests are routed to. Must not exceed `HORIZON_DAYS` in
+/// `services/cohort_agg_refresh.rs`, which maintains it. Routing is by time alone, so after
+/// `HORIZON_DAYS` grows, raise this only once the refresh job has built the added days.
 const MV_HORIZON_DAYS: i64 = 65;
 /// Horizon of the `item_cohort_stats_*_agg` tables, in days. Matches
 /// `MV_HORIZON_DAYS` so cohort queries over the current-patch window (a fixed
 /// start date, often >30 days back) route to the rollup instead of the base
-/// table. Also bounds `item_enemy_stats_agg`, which the same job maintains. Keep in
-/// sync with `HORIZON_DAYS` in `services/cohort_agg_refresh.rs`
-/// and the backfill range in
-/// `tools/migrations/clickhouse/32_cohort_agg_incremental.sql`.
+/// table. Also bounds `item_enemy_stats_agg`, which the same job maintains. Same constraint
+/// as [`MV_HORIZON_DAYS`]: at most `HORIZON_DAYS` in `services/cohort_agg_refresh.rs`.
 const COHORT_MV_HORIZON_DAYS: i64 = 65;
 
 /// Measure columns every item rollup shares, after its grain columns.

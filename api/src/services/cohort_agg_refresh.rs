@@ -18,7 +18,11 @@ const LEASE_TTL: Duration = Duration::from_mins(10);
 /// The lease outlives the run until shortly before the leader's next tick, so the other
 /// replicas skip the rest of this interval.
 const LEASE_HOLD_MARGIN: Duration = Duration::from_mins(1);
-const HORIZON_DAYS: u32 = 65;
+/// Days the item rollups keep. Covers the whole ranked season, whose start is the site's default
+/// window: at 65 days the season outgrew the rollups and those requests fell back to full
+/// `match_player` scans. The readers' routing horizons in `item_stats.rs` must never exceed it,
+/// and may only be raised once the added days are built.
+const HORIZON_DAYS: u32 = 120;
 const GROUP_BY_SPILL_BYTES: u64 = 8_000_000_000;
 const PER_DAY_MAX_MEMORY_BYTES: u64 = 15_032_385_536;
 
@@ -44,7 +48,7 @@ fn rebuild_threshold(day_matches: u64) -> u64 {
 /// Persistent record of the source state each agg day partition was last built
 /// from: `max(created_at)` and the match count at build time. A day is rebuilt only
 /// once its source match count has grown by more than `MIN_NEW_MATCHES`, so we do
-/// targeted incremental work and never a blind 65-day full rebuild.
+/// targeted incremental work and never a blind full-horizon rebuild.
 pub(crate) const STATE_TABLE: &str = "default.cohort_agg_refresh_state";
 
 struct CohortSpec {
@@ -108,7 +112,7 @@ fn cohort_specs() -> [CohortSpec; 5] {
             source: Source::EnemyHero,
             horizon_days: HORIZON_DAYS,
         },
-        // Seasons run past the 65-day horizon, and the curve's default window is the season.
+        // The curve's default window is the season, so it keeps a longer horizon.
         CohortSpec {
             table: player_performance_curve_agg::AGG_TABLE,
             staging: player_performance_curve_agg::AGG_STAGING,
