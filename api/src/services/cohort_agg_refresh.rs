@@ -336,22 +336,17 @@ WHERE table_name = '{table}'"
     Ok(rows.into_iter().map(|r| (r.day, r.n_matches)).collect())
 }
 
-async fn record_watermarks(
+async fn record_watermark(
     ch_client: &clickhouse::Client,
     table: &str,
-    days: &[(String, u32, u64)],
+    day: &str,
+    built_through: u32,
+    n_matches: u64,
 ) -> Result<(), clickhouse::error::Error> {
-    if days.is_empty() {
-        return Ok(());
-    }
-    let values = days
-        .iter()
-        .map(|(day, ts, n)| format!("('{table}', '{day}', toDateTime({ts}), {n}, now())"))
-        .collect::<Vec<_>>()
-        .join(", ");
     ch_client
         .query(&format!(
-            "INSERT INTO {STATE_TABLE} (table_name, day, source_max_created_at, source_match_count, refreshed_at) VALUES {values}"
+            "INSERT INTO {STATE_TABLE} (table_name, day, source_max_created_at, source_match_count, refreshed_at) \
+             VALUES ('{table}', '{day}', toDateTime({built_through}), {n_matches}, now())"
         ))
         .execute()
         .await
@@ -420,10 +415,12 @@ async fn refresh(
         .map(|row| (row.day.clone(), row.max_created, row.n_matches))
         .collect();
     // Newest first: recent days are read the most, and fill in from `match_player` until built.
-    for (day, built_through, _) in &stale {
+    // Each day is recorded as soon as it is built, so a pass cut short (an error, a deploy) keeps
+    // its progress instead of rebuilding every day again.
+    for (day, built_through, n_matches) in &stale {
         rebuild_day(ch_client, spec, day, *built_through, &log_comment).await?;
+        record_watermark(ch_client, spec.table, day, *built_through, *n_matches).await?;
     }
-    record_watermarks(ch_client, spec.table, &stale).await?;
 
     let dropped = if let Some(oldest_fresh) = source.iter().map(|r| &r.day).min() {
         let stale_partitions: Vec<&String> = built_days
