@@ -24,7 +24,7 @@ pub(crate) mod player_performance_curve_agg;
 pub mod player_scoreboard;
 mod player_stats_metrics;
 mod power_up_buffs;
-mod rollup_window;
+pub(crate) mod rollup_window;
 pub mod scoreboard_types;
 
 use core::time::Duration;

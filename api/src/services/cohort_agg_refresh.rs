@@ -6,6 +6,7 @@ use serde::Deserialize;
 use tokio::time::interval;
 use tracing::{debug, error, info};
 
+use crate::routes::v1::analytics::rollup_window::BUILT_THROUGH;
 use crate::routes::v1::analytics::{item_stats, player_performance_curve_agg};
 use crate::services::lease::Lease;
 
@@ -20,9 +21,14 @@ const LEASE_TTL: Duration = Duration::from_mins(10);
 const LEASE_HOLD_MARGIN: Duration = Duration::from_mins(1);
 /// Days the item rollups keep. Covers the whole ranked season, whose start is the site's default
 /// window: at 65 days the season outgrew the rollups and those requests fell back to full
-/// `match_player` scans. The readers' routing horizons in `item_stats.rs` must never exceed it,
-/// and may only be raised once the added days are built.
-const HORIZON_DAYS: u32 = 120;
+/// `match_player` scans. Reads fill in older days from `match_player` (see
+/// `rollup_window::Coverage::Incremental`).
+pub(crate) const HORIZON_DAYS: u32 = 120;
+/// A day is built from the matches ingested at least this long before the build. `created_at`
+/// is set when an insert starts, so a slow insert can commit rows older than the newest visible
+/// one; once every insert that started before the cap has committed, the rows a build skips
+/// all have `created_at` above its [`BUILT_THROUGH`] cap, which is where reads look for them.
+const BUILT_THROUGH_LAG: &str = "INTERVAL 5 MINUTE";
 const GROUP_BY_SPILL_BYTES: u64 = 8_000_000_000;
 const PER_DAY_MAX_MEMORY_BYTES: u64 = 15_032_385_536;
 
@@ -231,11 +237,13 @@ GROUP BY game_mode, match_mode, day, enemy_hero_id, least_badge, greatest_badge,
     )
 }
 
-/// Restricts a rebuild to a single calendar day. The literal must match the
-/// `toDate(start_time)` grouping (server timezone) so partition ids line up.
-fn day_window_clause(day: &str) -> String {
+/// Restricts a rebuild to a single calendar day, and to the matches ingested up to
+/// `built_through`. The day literal must match the `toDate(start_time)` grouping (server
+/// timezone) so partition ids line up.
+fn day_window_clause(day: &str, built_through: u32) -> String {
     format!(
-        "start_time >= toDateTime('{day}') AND start_time < toDateTime('{day}') + INTERVAL 1 DAY"
+        "start_time >= toDateTime('{day}') AND start_time < toDateTime('{day}') + INTERVAL 1 DAY \
+         AND created_at <= toDateTime({built_through})"
     )
 }
 
@@ -292,7 +300,8 @@ ORDER BY (table_name, day)"
         .await
 }
 
-/// Per-day `max(created_at)` and match count in the source over the horizon. Cheap:
+/// Per-day build cap (`max(created_at)`, at most [`BUILT_THROUGH_LAG`] ago) and match count in
+/// the source over the horizon, newest day first. Cheap:
 /// reads only `start_time`/`created_at`/`match_id`, no array joins (~0.2s vs ~30s
 /// for a day rebuild).
 async fn source_watermarks(
@@ -301,11 +310,12 @@ async fn source_watermarks(
 ) -> Result<Vec<WatermarkRow>, clickhouse::error::Error> {
     ch_client
         .query(&format!(
-            "SELECT toString(toDate(start_time)) AS day, toUnixTimestamp(max(created_at)) AS max_created, uniqExact(match_id) AS n_matches
+            "SELECT toString(toDate(start_time)) AS day, toUnixTimestamp(least(max(created_at), now() - {BUILT_THROUGH_LAG})) AS max_created, uniqExact(match_id) AS n_matches
 FROM default.match_player
 WHERE {SOURCE_FILTER}
     AND start_time >= toStartOfDay(now()) - INTERVAL {horizon_days} DAY
-GROUP BY day"
+GROUP BY day
+ORDER BY day DESC"
         ))
         .fetch_all::<WatermarkRow>()
         .await
@@ -347,19 +357,22 @@ async fn record_watermarks(
         .await
 }
 
+/// Rebuilds `day` from the matches ingested up to `built_through`, which every row of the
+/// partition records in [`BUILT_THROUGH`] (the last column of every table this job builds).
 async fn rebuild_day(
     ch_client: &clickhouse::Client,
     spec: &CohortSpec,
     day: &str,
+    built_through: u32,
     log_comment: &str,
 ) -> Result<(), clickhouse::error::Error> {
     ch_client
         .query(&format!("TRUNCATE TABLE {}", spec.staging))
         .execute()
         .await?;
-    let body = select_body(spec, &day_window_clause(day));
+    let body = select_body(spec, &day_window_clause(day, built_through));
     let insert = format!(
-        "INSERT INTO {staging} {body} SETTINGS max_bytes_before_external_group_by = \
+        "INSERT INTO {staging} SELECT *, toDateTime({built_through}) AS {BUILT_THROUGH} FROM ({body}) SETTINGS max_bytes_before_external_group_by = \
          {GROUP_BY_SPILL_BYTES}, max_threads = 8, max_memory_usage = {PER_DAY_MAX_MEMORY_BYTES}, \
          log_comment = '{log_comment}'",
         staging = spec.staging,
@@ -406,8 +419,9 @@ async fn refresh(
         })
         .map(|row| (row.day.clone(), row.max_created, row.n_matches))
         .collect();
-    for (day, _, _) in &stale {
-        rebuild_day(ch_client, spec, day, &log_comment).await?;
+    // Newest first: recent days are read the most, and fill in from `match_player` until built.
+    for (day, built_through, _) in &stale {
+        rebuild_day(ch_client, spec, day, *built_through, &log_comment).await?;
     }
     record_watermarks(ch_client, spec.table, &stale).await?;
 

@@ -13,7 +13,7 @@ use super::common_filters::{
     PlayerFilters, filter_protected_accounts, is_non_empty, join_filters, range_filters,
     rollup_oldest_servable, round_timestamps,
 };
-use super::rollup_window::{DaySplit, EdgeRows, Rollup, RollupFilters};
+use super::rollup_window::{Coverage, DaySplit, EdgeRows, Rollup, RollupFilters};
 use crate::context::AppState;
 use crate::error::APIResult;
 use crate::routes::v1::matches::types::{GameMode, MatchMode, reject_brawl_badge_filter};
@@ -367,6 +367,7 @@ fn build_mv_query(query: &HeroStatsQuery) -> Option<String> {
         table: mv_table,
         grain: MV_GRAIN,
         measures: MV_MEASURES,
+        coverage: Coverage::Complete,
     };
     let source = rollup.source(
         &split,

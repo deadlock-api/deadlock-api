@@ -15,15 +15,15 @@ use super::common_filters::{
     CORRUPTED_ITEMS_MIN_MATCH_ID, CORRUPTED_ITEMS_MIN_UNIX_TIMESTAMP, ENHANCED_ITEMS_MIN_MATCH_ID,
     ENHANCED_ITEMS_MIN_UNIX_TIMESTAMP, MatchInfoFilters, PlayerFilters, account_match_prefilter,
     corrupted_sql, default_min_matches_u32, enhanced_sql, filter_protected_accounts, is_non_empty,
-    join_filters, not_corrupted_sql, not_enhanced_sql, range_filters, rollup_oldest_servable,
-    round_timestamps, with_legacy_id,
+    join_filters, not_corrupted_sql, not_enhanced_sql, range_filters, round_timestamps,
+    with_legacy_id,
 };
-use super::rollup_window::{DaySplit, EdgeRows, Rollup, RollupFilters};
+use super::rollup_window::{Coverage, DaySplit, EdgeRows, Reach, Rollup, RollupFilters};
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::matches::types::{GameMode, MatchMode, reject_brawl_badge_filter};
 use crate::services::cohort_agg_refresh::{
-    ITEM_ROLLUP_MEASURES, cohort_rollup_rows, enemy_hero_select_body,
+    HORIZON_DAYS, ITEM_ROLLUP_MEASURES, cohort_rollup_rows, enemy_hero_select_body,
 };
 use crate::utils::parse::{
     comma_separated_chains_deserialize_option, comma_separated_deserialize_option,
@@ -445,16 +445,20 @@ pub struct ItemStats {
 // and keep no per-purchase corruption or enhanced dimension: `corrupted_items` `include`/`only`
 // and `enhanced_items` `exclude`/`only` requests always go to the base table.
 
-/// Days of `item_stats_agg_v2` requests are routed to. Must not exceed `HORIZON_DAYS` in
-/// `services/cohort_agg_refresh.rs`, which maintains it. Routing is by time alone, so after
-/// `HORIZON_DAYS` grows, raise this only once the refresh job has built the added days.
-const MV_HORIZON_DAYS: i64 = 120;
-/// Horizon of the `item_cohort_stats_*_agg` tables, in days. Matches
-/// `MV_HORIZON_DAYS` so cohort queries over the current-patch window (a fixed
-/// start date, often >30 days back) route to the rollup instead of the base
-/// table. Also bounds `item_enemy_stats_agg`, which the same job maintains. Same constraint
-/// as [`MV_HORIZON_DAYS`]: at most `HORIZON_DAYS` in `services/cohort_agg_refresh.rs`.
-const COHORT_MV_HORIZON_DAYS: i64 = 120;
+/// How the item rollups (`item_stats_agg_v2`, the cohort and enemy rollups) cover a window: the
+/// refresh job builds their last [`HORIZON_DAYS`] days, and reads fill in the rest from
+/// `match_player` (see [`Coverage::Incremental`]).
+const ITEM_ROLLUP_COVERAGE: Coverage = Coverage::Incremental {
+    horizon_days: HORIZON_DAYS,
+};
+
+/// How far before the item rollups' built days a hero-filtered `item_stats_agg_v2` window may
+/// start. Its base-table query reads the hero-led `item_stats_by_hero_mode_badge_v2` projection,
+/// ~2.3% of the rows per hero, while the rollup's base-table rows scan whole days. Measured
+/// against the base-table query: -22% CPU at 5 days, -16% at 10, +6% at 20, +29% at 30, +94%
+/// at 80. Every other item rollup request is [`Reach::Unlimited`]: its base-table query scans
+/// whole days too (no hero filter: -44% CPU at 80 days, -10% CPU and -66% memory all-time).
+const HERO_FILTERED_REACH: Reach = Reach::Days(10);
 
 /// Measure columns every item rollup shares, after its grain columns.
 const ROLLUP_MEASURES: &str = "n_matches, n_wins, sum_buy_time, sum_buy_rel, sum_sold_time, n_sold, sum_sold_rel, players_state";
@@ -507,6 +511,7 @@ const ITEM_STATS_AGG: Rollup<'static> = Rollup {
         ("day", "toDate(start_time)"),
     ],
     measures: ROLLUP_MEASURES,
+    coverage: ITEM_ROLLUP_COVERAGE,
 };
 
 /// The `item_stats_agg_v2` rows of the matches `where_clause` selects, grouped by the grain
@@ -584,12 +589,13 @@ fn build_mv_query(query: &ItemStatsQuery) -> Option<String> {
         return None;
     }
 
-    // The view only holds the last MV_HORIZON_DAYS days; older windows use base.
-    let oldest_servable = rollup_oldest_servable(MV_HORIZON_DAYS)?;
-    if query
-        .min_unix_timestamp
-        .is_none_or(|min_ts| min_ts < oldest_servable)
-    {
+    let hero_ids = query.all_hero_ids();
+    let reach = if hero_ids.is_empty() {
+        Reach::Unlimited
+    } else {
+        HERO_FILTERED_REACH
+    };
+    if !ITEM_STATS_AGG.serves(query.min_unix_timestamp, reach) {
         return None;
     }
 
@@ -601,7 +607,6 @@ fn build_mv_query(query: &ItemStatsQuery) -> Option<String> {
         query.min_average_badge,
         query.max_average_badge,
     );
-    let hero_ids = query.all_hero_ids();
     if !hero_ids.is_empty() {
         let hero_filter = format!("hero_id IN ({})", id_list(&hero_ids));
         filters.rollup.push(hero_filter.clone());
@@ -634,6 +639,7 @@ const COHORT_TIME_AGG: Rollup<'static> = Rollup {
         ("bucket_minute", "toUInt32(floor(buy_time / 60))"),
     ],
     measures: ROLLUP_MEASURES,
+    coverage: ITEM_ROLLUP_COVERAGE,
 };
 
 /// `item_cohort_stats_net_worth_agg_v2`: per day, mode, cohort item, item and net worth step.
@@ -651,6 +657,7 @@ const COHORT_NW_AGG: Rollup<'static> = Rollup {
         ),
     ],
     measures: ROLLUP_MEASURES,
+    coverage: ITEM_ROLLUP_COVERAGE,
 };
 
 /// `item_enemy_stats_agg`: per day, mode, enemy hero, badge and item.
@@ -666,6 +673,7 @@ const ENEMY_AGG: Rollup<'static> = Rollup {
         ("item_id", "CAST(upgrade_item_id, 'UInt32')"),
     ],
     measures: ROLLUP_MEASURES,
+    coverage: ITEM_ROLLUP_COVERAGE,
 };
 
 /// Bucket support against the cohort rollups: returns the rollup and the
@@ -756,13 +764,7 @@ fn build_cohort_mv_query(query: &ItemStatsQuery) -> Option<String> {
         return None;
     }
 
-    // The views only hold the last COHORT_MV_HORIZON_DAYS days; older windows
-    // use the base table.
-    let oldest_servable = rollup_oldest_servable(COHORT_MV_HORIZON_DAYS)?;
-    if query
-        .min_unix_timestamp
-        .is_none_or(|min_ts| min_ts < oldest_servable)
-    {
+    if !rollup.serves(query.min_unix_timestamp, Reach::Unlimited) {
         return None;
     }
 
@@ -836,11 +838,7 @@ fn build_enemy_mv_query(query: &ItemStatsQuery) -> Option<String> {
         return None;
     }
 
-    let oldest_servable = rollup_oldest_servable(COHORT_MV_HORIZON_DAYS)?;
-    if query
-        .min_unix_timestamp
-        .is_none_or(|min_ts| min_ts < oldest_servable)
-    {
+    if !ENEMY_AGG.serves(query.min_unix_timestamp, Reach::Unlimited) {
         return None;
     }
 
@@ -879,9 +877,6 @@ fn build_enemy_mv_query(query: &ItemStatsQuery) -> Option<String> {
 /// `build_cohort_mv_query`'s `None` branches; diagnostic only, no effect on results.
 #[expect(deprecated)]
 fn cohort_mv_skip_reason(query: &ItemStatsQuery) -> &'static str {
-    // A clock before the epoch makes the rollup decline every window.
-    let oldest_servable = rollup_oldest_servable(COHORT_MV_HORIZON_DAYS).unwrap_or(i64::MAX);
-
     let reasons = [
         (
             !matches!(query.include_item_ids.as_deref(), Some([_])),
@@ -944,11 +939,8 @@ fn cohort_mv_skip_reason(query: &ItemStatsQuery) -> &'static str {
             "only_corrupted",
         ),
         (query.filters_enhanced(), "enhanced"),
-        (query.min_unix_timestamp.is_none(), "no_min_timestamp"),
         (
-            query
-                .min_unix_timestamp
-                .is_some_and(|ts| ts < oldest_servable),
+            !COHORT_TIME_AGG.serves(query.min_unix_timestamp, Reach::Unlimited),
             "horizon",
         ),
         (
@@ -1543,13 +1535,63 @@ mod tests {
             let sql = sql.expect("routes to a rollup");
             assert_valid_sql(&sql);
             assert!(sql.contains(&day_filter), "{sql}");
-            assert_eq!(sql.matches("UNION ALL").count(), 1);
+            // The built days, the days the rollup lacks with the partial days, and the matches
+            // ingested after their day was built.
+            assert_eq!(sql.matches("UNION ALL").count(), 2);
             assert!(sql.contains(&format!(
-                "((start_time >= {min} AND start_time <= {}) OR (start_time >= {end_day} AND start_time <= {max}))",
+                "((start_time >= {min} AND start_time <= {}) OR (start_time >= {end_day} AND start_time <= {max}) OR ",
                 first_day - 1
             )));
+            assert!(sql.contains("built_through > 0"));
+            assert!(sql.contains("AND created_at > (SELECT "));
             assert!(sql.contains(marker), "{marker}");
         }
+    }
+
+    #[test]
+    fn rollups_reach_before_their_horizon_unless_a_hero_projection_is_cheaper() {
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_secs()
+            .cast_signed();
+        let days_back = |d: i64| now - d * 86_400;
+        let horizon = i64::from(HORIZON_DAYS);
+        for min_unix_timestamp in [None, Some(days_back(horizon + 200))] {
+            let window = ItemStatsQuery {
+                min_unix_timestamp,
+                ..Default::default()
+            };
+            assert!(build_mv_query(&window).is_some());
+            assert!(
+                build_cohort_mv_query(&ItemStatsQuery {
+                    include_item_ids: Some(vec![1_548_066_885]),
+                    ..window.clone()
+                })
+                .is_some()
+            );
+            assert!(
+                build_enemy_mv_query(&ItemStatsQuery {
+                    enemy_hero_ids: Some(vec![6]),
+                    ..window
+                })
+                .is_some()
+            );
+        }
+        let hero = |days: i64| ItemStatsQuery {
+            min_unix_timestamp: Some(days_back(days)),
+            hero_ids: Some(vec![1]),
+            ..Default::default()
+        };
+        assert!(build_mv_query(&hero(horizon + 5)).is_some());
+        assert!(build_mv_query(&hero(horizon + 15)).is_none());
+        assert!(
+            build_mv_query(&ItemStatsQuery {
+                min_unix_timestamp: None,
+                ..hero(0)
+            })
+            .is_none()
+        );
     }
 
     #[test]
@@ -1736,10 +1778,6 @@ mod tests {
             },
             ItemStatsQuery {
                 bucket: BucketQuery::Hero,
-                ..servable.clone()
-            },
-            ItemStatsQuery {
-                min_unix_timestamp: Some(recent - COHORT_MV_HORIZON_DAYS * 86_400),
                 ..servable.clone()
             },
             ItemStatsQuery {
