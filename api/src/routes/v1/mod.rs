@@ -25,6 +25,7 @@ pub(super) fn router(state: &AppState) -> OpenApiRouter<AppState> {
     let credentialed = OpenApiRouter::new()
         .nest("/auth", auth::router())
         .nest("/patron", patron::router())
+        .layer(axum::middleware::from_fn(cors::reject_foreign_cookies))
         .layer(cors::credentialed());
 
     OpenApiRouter::new()
