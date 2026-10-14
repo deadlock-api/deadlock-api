@@ -4933,7 +4933,6 @@ dependencies = [
 name = "matchdata-downloader"
 version = "0.1.0"
 dependencies = [
- "cached",
  "clap",
  "clickhouse",
  "common",

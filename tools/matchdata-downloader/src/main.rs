@@ -14,7 +14,6 @@ use core::time::Duration;
 use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, LazyLock, Mutex};
 
-use cached::macros::cached;
 use clap::Parser;
 use clickhouse::Client;
 use futures::StreamExt;
@@ -64,6 +63,8 @@ enum Error {
 
 #[derive(Debug, thiserror::Error)]
 enum DownloadError {
+    #[error("checking for existing metadata")]
+    CheckExisting(#[source] object_store::Error),
     #[error("fetching metadata for match {match_id}")]
     FetchMetadata {
         match_id: u64,
@@ -652,9 +653,17 @@ where
 {
     let main_key = main_metadata_key(salts.match_id);
     let cache_key = cache_metadata_key(salts.match_id);
+    let processed_key = processed_metadata_key(salts.match_id);
     let outdated_hltv_key = outdated_hltv_metadata_key(salts.match_id);
 
-    if key_exists(bucket, &main_key).await {
+    // The ingest worker moves the file to `processed/`, so `ingest/` alone misses every match
+    // that was ingested before a restart emptied [`State::uploaded`].
+    let (in_ingest, in_processed) = tokio::try_join!(
+        key_exists(bucket, &main_key),
+        key_exists(bucket, &processed_key),
+    )
+    .map_err(DownloadError::CheckExisting)?;
+    if in_ingest || in_processed {
         return Ok(None);
     }
 
@@ -698,6 +707,10 @@ async fn fetch_first_working(candidates: &[MatchSalts]) -> Result<(MatchSalts, B
 
 fn main_metadata_key(match_id: u64) -> Path {
     Path::from(format!("/ingest/metadata/{match_id}.meta.bz2"))
+}
+
+fn processed_metadata_key(match_id: u64) -> Path {
+    Path::from(format!("/processed/metadata/{match_id}.meta.bz2"))
 }
 
 fn cache_metadata_key(match_id: u64) -> Path {
@@ -778,15 +791,19 @@ async fn delete_object<S: ObjectStore + ?Sized>(store: &S, key: &Path) -> object
     }
 }
 
-#[cached(
-    max_size = 10_000,
-    convert = r#"{ format!("{file_path}") }"#,
-    key = "String"
-)]
+/// Only `NotFound` means missing: treating any failed `head` as missing would download and
+/// ingest the match again whenever the store hiccups.
 #[instrument(skip(store))]
-async fn key_exists<S: ObjectStore + ?Sized>(store: &S, file_path: &Path) -> bool {
+async fn key_exists<S: ObjectStore + ?Sized>(
+    store: &S,
+    file_path: &Path,
+) -> object_store::Result<bool> {
     debug!("Checking if key exists");
-    store.head(file_path).await.is_ok()
+    match store.head(file_path).await {
+        Ok(_) => Ok(true),
+        Err(object_store::Error::NotFound { .. }) => Ok(false),
+        Err(e) => Err(e),
+    }
 }
 
 #[cfg(test)]
@@ -880,6 +897,22 @@ mod tests {
 
         assert_eq!(verdicts.verified, vec![candidate(1, 390)]);
         assert_eq!(verdicts.failed, Vec::<MatchSalts>::new());
+    }
+
+    /// After a restart [`State::uploaded`] is empty and the ingest worker has already moved
+    /// the file out of `ingest/`, so only `processed/` still shows it was downloaded.
+    #[tokio::test]
+    async fn a_match_already_moved_to_processed_is_not_downloaded_again() {
+        let bucket = object_store::memory::InMemory::new();
+        let cache_bucket = object_store::memory::InMemory::new();
+        bucket
+            .put(&processed_metadata_key(1), PutPayload::from_static(b"meta"))
+            .await
+            .unwrap();
+
+        let result = download_match(&bucket, &cache_bucket, &salts(1)).await;
+
+        assert!(matches!(result, Ok(None)), "{result:?}");
     }
 
     #[test]
