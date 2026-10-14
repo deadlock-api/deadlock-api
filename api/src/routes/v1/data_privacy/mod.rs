@@ -81,11 +81,18 @@ async fn unprotect_account(pg_client: &sqlx::Pool<sqlx::Postgres>, steam_id: u32
     Ok(())
 }
 
-/// Row policies hiding protected accounts, by the table they guard.
-const GDPR_ROW_POLICIES: [(&str, &str); 3] = [
+/// Row policies hiding protected accounts, by the table they guard. Every table with an
+/// `account_id` column that `api_readonly_user` or `dump_user` can read needs one.
+const GDPR_ROW_POLICIES: [(&str, &str); 9] = [
     ("gdpr_protection_mp", "match_player"),
     ("gdpr_protection_sp", "steam_profiles"),
     ("gdpr_protection_spon", "steam_profile_observed_names"),
+    ("gdpr_protection_pms", "player_match_stats"),
+    ("gdpr_protection_pmh", "player_match_history"),
+    ("gdpr_protection_pmbm", "player_match_by_match"),
+    ("gdpr_protection_pmr", "player_match_roster"),
+    ("gdpr_protection_pc", "player_card"),
+    ("gdpr_protection_dp", "demo_player"),
 ];
 
 pub(crate) async fn update_row_policy(
