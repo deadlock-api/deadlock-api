@@ -16,6 +16,7 @@ use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::commands::variables::{ResolverContext, Variable, VariableCategory};
 use crate::routes::v1::leaderboard::types::LeaderboardRegion;
+use crate::routes::v1::players::ensure_not_protected;
 use crate::services::rate_limiter::Quota;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::utils::parse::parse_steam_id;
@@ -264,6 +265,7 @@ async fn resolve_variables(
             ],
         )
         .await?;
+    ensure_not_protected(state, &[account_id]).await?;
 
     let extra_args: HashMap<String, String> = hero_name
         .map(|hero_name| ("hero_name".to_owned(), hero_name))

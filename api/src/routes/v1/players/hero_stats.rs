@@ -11,7 +11,7 @@ use utoipa::{IntoParams, ToSchema};
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::matches::types::{GameMode, MatchMode, reject_brawl_badge_filter};
-use crate::routes::v1::players::ensure_not_protected;
+use crate::routes::v1::players::{ensure_not_protected, without_protected};
 use crate::services::clickhouse_batcher::{BatchQueryGrouped, ClickhouseBatcherGrouped};
 use crate::utils::parse::{comma_separated_deserialize, comma_separated_deserialize_option};
 use crate::utils::types::AccountIdQuery;
@@ -324,7 +324,7 @@ This endpoint returns statistics for each hero played by a given player account.
     "
 )]
 pub(super) async fn player_hero_stats(
-    Query(query): Query<HeroStatsQuery>,
+    Query(mut query): Query<HeroStatsQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
     reject_brawl_badge_filter(
@@ -332,6 +332,11 @@ pub(super) async fn player_hero_stats(
         query.min_average_badge,
         query.max_average_badge,
     )?;
+    let requested = core::mem::take(&mut query.account_ids);
+    query.account_ids = without_protected(&state, requested.iter().copied()).await?;
+    if !requested.is_empty() && query.account_ids.is_empty() {
+        return Err(APIError::protected_user());
+    }
     get_hero_stats(&state.batchers.player_hero_stats, query)
         .await
         .map(Json)

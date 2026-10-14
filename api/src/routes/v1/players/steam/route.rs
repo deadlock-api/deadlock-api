@@ -494,6 +494,12 @@ async fn search_steam(
         }
     }
 
+    let protected_users = state
+        .steam_client
+        .get_protected_users(&state.pg_client)
+        .await?;
+    profiles.retain(|p| !protected_users.contains(&p.account_id));
+
     if profiles.is_empty() {
         return Err(APIError::status_msg(
             StatusCode::NOT_FOUND,
