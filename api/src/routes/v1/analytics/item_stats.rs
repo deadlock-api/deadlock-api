@@ -20,8 +20,9 @@ use super::common_filters::{
 };
 use super::rollup_window::{Coverage, DaySplit, EdgeRows, Reach, Rollup, RollupFilters};
 use crate::context::AppState;
-use crate::error::{APIError, APIResult};
+use crate::error::{APIError, APIResult, is_query_timeout};
 use crate::routes::v1::matches::types::{GameMode, MatchMode, reject_brawl_badge_filter};
+use crate::services::ch_admission::ChQueryError;
 use crate::services::cohort_agg_refresh::{
     HORIZON_DAYS, ITEM_ROLLUP_MEASURES, cohort_rollup_rows, enemy_hero_select_body,
 };
@@ -1330,6 +1331,13 @@ cached_ch_query! {
     fn run_rollup_query(5_000, 3600) -> Vec<ItemStats>;
 }
 
+/// Whether a failed rollup query should be retried on the base table. Not after a timeout: the
+/// base table reads more than the rollup for the same request, so the retry would only time
+/// out as well, after spending another full query budget on a loaded server.
+fn retry_on_base_table(e: &ChQueryError) -> bool {
+    !matches!(e, ChQueryError::Clickhouse(e) if is_query_timeout(e))
+}
+
 async fn get_item_stats(
     ch_client: &clickhouse::Client,
     mut query: ItemStatsQuery,
@@ -1339,20 +1347,26 @@ async fn get_item_stats(
         return Ok(Arc::default());
     }
     // Prefer the pre-aggregated item_stats_agg_v2 rollup for the global-meta subset of
-    // parameters; fall back to the base table for everything else, and on any MV
-    // error so a missing or rebuilding view never breaks the endpoint.
+    // parameters; fall back to the base table for everything else, and on an MV error other
+    // than a timeout so a missing or rebuilding view never breaks the endpoint.
     if let Some(mv_query) = build_mv_query(&query) {
         debug!(?mv_query);
         match run_rollup_query(ch_client, &mv_query).await {
             Ok(rows) => return Ok(rows),
-            Err(e) => warn!("item_stats MV query failed, falling back to base table: {e}"),
+            Err(e) if retry_on_base_table(&e) => {
+                warn!("item_stats MV query failed, falling back to base table: {e}");
+            }
+            Err(e) => return Err(e.into()),
         }
     }
     if let Some(cohort_mv_query) = build_cohort_mv_query(&query) {
         debug!(?cohort_mv_query);
         match run_rollup_query(ch_client, &cohort_mv_query).await {
             Ok(rows) => return Ok(rows),
-            Err(e) => warn!("item_stats cohort MV query failed, falling back to base table: {e}"),
+            Err(e) if retry_on_base_table(&e) => {
+                warn!("item_stats cohort MV query failed, falling back to base table: {e}");
+            }
+            Err(e) => return Err(e.into()),
         }
     } else if matches!(query.include_item_ids.as_deref(), Some([_])) {
         // Single-item cohort shape that the rollup declined: this is the base-table
@@ -1367,7 +1381,10 @@ async fn get_item_stats(
         debug!(?enemy_mv_query);
         match run_rollup_query(ch_client, &enemy_mv_query).await {
             Ok(rows) => return Ok(rows),
-            Err(e) => warn!("item_stats enemy MV query failed, falling back to base table: {e}"),
+            Err(e) if retry_on_base_table(&e) => {
+                warn!("item_stats enemy MV query failed, falling back to base table: {e}");
+            }
+            Err(e) => return Err(e.into()),
         }
     }
     let base_query = build_query(&query);
@@ -1470,6 +1487,24 @@ mod proptests {
 mod tests {
     use super::*;
     use crate::utils::proptest_utils::assert_valid_sql;
+
+    #[test]
+    fn rollup_timeouts_are_not_retried_on_the_base_table() {
+        let timeout = ChQueryError::from(clickhouse::error::Error::BadResponse(
+            "Code: 159. DB::Exception: Timeout exceeded: elapsed 20.1 seconds, maximum: 20. \
+             (TIMEOUT_EXCEEDED)"
+                .to_owned(),
+        ));
+        assert!(!retry_on_base_table(&timeout));
+        assert!(!retry_on_base_table(&ChQueryError::from(
+            clickhouse::error::Error::TimedOut
+        )));
+        let missing_table = ChQueryError::from(clickhouse::error::Error::BadResponse(
+            "Code: 60. DB::Exception: Unknown table expression identifier (UNKNOWN_TABLE)"
+                .to_owned(),
+        ));
+        assert!(retry_on_base_table(&missing_table));
+    }
 
     /// 14:00 UTC ten days ago and 14:00 UTC two days ago: a window with mid-day bounds inside
     /// every rollup's horizon.
