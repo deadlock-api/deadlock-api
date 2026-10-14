@@ -68,11 +68,12 @@ fn has_session_cookie(headers: &HeaderMap) -> bool {
 
 /// `https://deadlock-api.com` and its subdomains.
 fn is_allowed_origin(origin: &HeaderValue) -> bool {
-    let Some(host) = origin
-        .to_str()
-        .ok()
-        .and_then(|origin| origin.strip_prefix("https://"))
-    else {
+    origin.to_str().is_ok_and(is_own_origin)
+}
+
+/// Is `origin` (`scheme://host[:port]`) `https://deadlock-api.com` or one of its subdomains.
+pub(crate) fn is_own_origin(origin: &str) -> bool {
+    let Some(host) = origin.strip_prefix("https://") else {
         return false;
     };
     host == "deadlock-api.com"

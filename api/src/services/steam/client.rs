@@ -1,5 +1,5 @@
 use core::time::Duration;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 use base64::Engine;
@@ -18,6 +18,7 @@ use wreq_util::Emulation;
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
+use crate::middleware::cors::is_own_origin;
 use crate::services::rate_limiter::Quota;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::steam::types::{
@@ -26,6 +27,7 @@ use crate::services::steam::types::{
     SteamProxyResponse, SteamProxyResult, SteamRss,
 };
 
+const STEAM_OPENID_ENDPOINT: &str = "https://steamcommunity.com/openid/login";
 const RSS_ENDPOINT: &str = "https://forums.playdeadlock.com/forums/changelog.10/index.rss";
 const STEAM_NEWS_ENDPOINT: &str = "https://store.steampowered.com/feeds/news/app/1422450/";
 
@@ -137,11 +139,19 @@ impl SteamClient {
             .map(|p| p.contains(&steam_id))
     }
 
+    /// Verifies a Steam `OpenID` assertion issued to deadlock-api.com proves ownership of
+    /// `steam_id`.
     pub(crate) async fn verify_user_owns_steam_id(
         &self,
-        open_id_params: &std::collections::HashMap<String, String>,
+        open_id_params: &HashMap<String, String>,
         steam_id: u64,
     ) -> Result<(), SteamAccountVerifyError> {
+        // Steam only checks the signature, so the claims must be checked here. Without the
+        // return_to check, any site offering "Sign in with Steam" could replay its users'
+        // assertions against us.
+        if !is_assertion_for(open_id_params, steam_id) {
+            return Err(SteamAccountVerifyError::VerificationFailed);
+        }
         // make a request to the OpenID provider to verify the parameters
         let params: Vec<(&str, &str)> = open_id_params
             .iter()
@@ -151,23 +161,14 @@ impl SteamClient {
             .collect();
         let response = self
             .http_client
-            .post("https://steamcommunity.com/openid/login")
+            .post(STEAM_OPENID_ENDPOINT)
             .form(&params)
             .send()
             .await?
             .text()
             .await?;
         // check the response for "is_valid:true"
-        if !response.contains("is_valid:true") {
-            return Err(SteamAccountVerifyError::VerificationFailed);
-        }
-        // check that the claimed Steam ID matches the provided Steam ID
-        let claimed_steam_id = open_id_params
-            .get("openid.claimed_id")
-            .and_then(|url| url.rsplit('/').next())
-            .and_then(|id_str| id_str.parse::<u64>().ok())
-            .ok_or(SteamAccountVerifyError::VerificationFailed)?;
-        if claimed_steam_id != steam_id {
+        if !response.lines().any(|line| line.trim() == "is_valid:true") {
             return Err(SteamAccountVerifyError::VerificationFailed);
         }
         Ok(())
@@ -491,6 +492,35 @@ async fn fetch_steam_account_name_cached(
         .ok_or(SteamAccountNameError::ParseError)
 }
 
+/// Does the `OpenID` assertion claim `steam_id`, come from Steam, and was it issued to one of our
+/// own sites. Only fields covered by the signature count, as Steam's `check_authentication`
+/// ignores everything else.
+fn is_assertion_for(params: &HashMap<String, String>, steam_id: u64) -> bool {
+    let get = |key: &str| params.get(key).map(String::as_str);
+    let Some(signed) = get("openid.signed") else {
+        return false;
+    };
+    let signed: HashSet<&str> = signed.split(',').collect();
+    if !["op_endpoint", "claimed_id", "identity", "return_to"]
+        .iter()
+        .all(|field| signed.contains(field))
+    {
+        return false;
+    }
+    if get("openid.op_endpoint") != Some(STEAM_OPENID_ENDPOINT) {
+        return false;
+    }
+    let expected_id = format!("https://steamcommunity.com/openid/id/{steam_id}");
+    if get("openid.claimed_id") != Some(&expected_id)
+        || get("openid.identity") != Some(&expected_id)
+    {
+        return false;
+    }
+    get("openid.return_to")
+        .and_then(|return_to| Url::parse(return_to).ok())
+        .is_some_and(|url| is_own_origin(&url.origin().ascii_serialization()))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -534,5 +564,91 @@ mod tests {
             steam_count >= 2,
             "expected at least 2 steam entries, got {steam_count}",
         );
+    }
+
+    const STEAM_ID: u64 = 76_561_198_000_000_000;
+
+    fn assertion(return_to: &str) -> HashMap<String, String> {
+        let id = format!("https://steamcommunity.com/openid/id/{STEAM_ID}");
+        [
+            ("openid.ns", "http://specs.openid.net/auth/2.0"),
+            ("openid.mode", "id_res"),
+            ("openid.op_endpoint", STEAM_OPENID_ENDPOINT),
+            ("openid.claimed_id", &id),
+            ("openid.identity", &id),
+            ("openid.return_to", return_to),
+            ("openid.response_nonce", "2026-10-14T00:00:00Zabc"),
+            ("openid.assoc_handle", "1234567890"),
+            (
+                "openid.signed",
+                "signed,op_endpoint,claimed_id,identity,return_to,response_nonce,assoc_handle",
+            ),
+            ("openid.sig", "c2lnbmF0dXJl"),
+        ]
+        .into_iter()
+        .map(|(k, v)| (k.to_owned(), v.to_owned()))
+        .collect()
+    }
+
+    #[test]
+    fn test_accepts_own_return_to() {
+        for return_to in [
+            "https://deadlock-api.com/data-privacy?action=tracking",
+            "https://www.deadlock-api.com/data-privacy?action=deletion",
+        ] {
+            assert!(
+                is_assertion_for(&assertion(return_to), STEAM_ID),
+                "{return_to}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_rejects_foreign_return_to() {
+        for return_to in [
+            "https://evil.com/login",
+            "https://deadlock-api.com.evil.com/data-privacy",
+            "https://evil.com/?r=https://deadlock-api.com",
+            "https://deadlock-api.com@evil.com/",
+            "http://deadlock-api.com/data-privacy",
+            "https://deadlock-api.com:8443/data-privacy",
+            "not a url",
+        ] {
+            assert!(
+                !is_assertion_for(&assertion(return_to), STEAM_ID),
+                "{return_to}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_rejects_wrong_or_unsigned_claims() {
+        let ok = "https://deadlock-api.com/data-privacy";
+        assert!(!is_assertion_for(&assertion(ok), STEAM_ID + 1));
+
+        let mut params = assertion(ok);
+        params.insert(
+            "openid.claimed_id".to_owned(),
+            format!("https://evil.com/openid/id/{STEAM_ID}"),
+        );
+        assert!(!is_assertion_for(&params, STEAM_ID));
+
+        let mut params = assertion(ok);
+        params.insert(
+            "openid.signed".to_owned(),
+            "signed,op_endpoint,claimed_id,identity,response_nonce,assoc_handle".to_owned(),
+        );
+        assert!(!is_assertion_for(&params, STEAM_ID));
+
+        let mut params = assertion(ok);
+        params.insert(
+            "openid.op_endpoint".to_owned(),
+            "https://evil.com/openid".to_owned(),
+        );
+        assert!(!is_assertion_for(&params, STEAM_ID));
+
+        let mut params = assertion(ok);
+        params.remove("openid.return_to");
+        assert!(!is_assertion_for(&params, STEAM_ID));
     }
 }
