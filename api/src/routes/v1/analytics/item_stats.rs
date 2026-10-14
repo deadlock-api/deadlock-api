@@ -448,13 +448,13 @@ pub struct ItemStats {
 /// Days of `item_stats_agg_v2` requests are routed to. Must not exceed `HORIZON_DAYS` in
 /// `services/cohort_agg_refresh.rs`, which maintains it. Routing is by time alone, so after
 /// `HORIZON_DAYS` grows, raise this only once the refresh job has built the added days.
-const MV_HORIZON_DAYS: i64 = 65;
+const MV_HORIZON_DAYS: i64 = 120;
 /// Horizon of the `item_cohort_stats_*_agg` tables, in days. Matches
 /// `MV_HORIZON_DAYS` so cohort queries over the current-patch window (a fixed
 /// start date, often >30 days back) route to the rollup instead of the base
 /// table. Also bounds `item_enemy_stats_agg`, which the same job maintains. Same constraint
 /// as [`MV_HORIZON_DAYS`]: at most `HORIZON_DAYS` in `services/cohort_agg_refresh.rs`.
-const COHORT_MV_HORIZON_DAYS: i64 = 65;
+const COHORT_MV_HORIZON_DAYS: i64 = 120;
 
 /// Measure columns every item rollup shares, after its grain columns.
 const ROLLUP_MEASURES: &str = "n_matches, n_wins, sum_buy_time, sum_buy_rel, sum_sold_time, n_sold, sum_sold_rel, players_state";
@@ -1739,7 +1739,7 @@ mod tests {
                 ..servable.clone()
             },
             ItemStatsQuery {
-                min_unix_timestamp: Some(recent - 60 * 86_400),
+                min_unix_timestamp: Some(recent - COHORT_MV_HORIZON_DAYS * 86_400),
                 ..servable.clone()
             },
             ItemStatsQuery {
