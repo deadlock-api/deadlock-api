@@ -35,12 +35,16 @@ pub(super) fn extract_table_names(sql: &str) -> Result<Vec<String>> {
     let statements = Parser::parse_sql(&dialect, sql)
         .map_err(|e| Error::Schema(format!("SQL parse error: {e}")))?;
 
+    // Only a single read-only query may run: DDL, DML, `COPY`, `SET` and friends would act on the
+    // session (and its file store) rather than read the demo tables.
+    let [Statement::Query(query)] = statements.as_slice() else {
+        return Err(Error::Schema(
+            "only a single SELECT query is allowed".to_owned(),
+        ));
+    };
+
     let mut tables = Vec::new();
-    for stmt in statements {
-        if let Statement::Query(query) = stmt {
-            extract_from_query(&query, &mut tables);
-        }
-    }
+    extract_from_query(query, &mut tables);
 
     // Deduplicate and sort
     tables.sort();
@@ -198,5 +202,20 @@ mod tests {
         )
         .unwrap();
         assert_eq!(tables, vec!["CCitadelPlayerPawn"]);
+    }
+
+    #[test]
+    fn test_rejects_non_query_statements() {
+        for sql in [
+            "CREATE EXTERNAL TABLE t STORED AS CSV LOCATION '/etc/passwd'",
+            "COPY (SELECT 1) TO '/tmp/x.csv'",
+            "INSERT INTO CCitadelPlayerPawn VALUES (1)",
+            "SET datafusion.execution.batch_size = 1",
+            "DROP TABLE CCitadelPlayerPawn",
+            "SELECT 1; SELECT 2",
+            "",
+        ] {
+            assert!(extract_table_names(sql).is_err(), "{sql}");
+        }
     }
 }

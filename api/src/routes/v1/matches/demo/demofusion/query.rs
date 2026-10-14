@@ -24,6 +24,7 @@ use datafusion::arrow::record_batch::RecordBatch;
 use datafusion::common::tree_node::{TreeNode, TreeNodeRecursion};
 use datafusion::datasource::MemTable;
 use datafusion::execution::SendableRecordBatchStream;
+use datafusion::execution::context::SQLOptions;
 use datafusion::logical_expr::LogicalPlan;
 use datafusion::prelude::SessionContext;
 use rayon::prelude::*;
@@ -97,7 +98,20 @@ async fn query_stream<D: BuildStream>(
         ctx.register_table(table_name, Arc::new(table))?;
     }
 
-    Ok(ctx.sql(query).await?.execute_stream().await?)
+    Ok(ctx
+        .sql_with_options(query, read_only_sql())
+        .await?
+        .execute_stream()
+        .await?)
+}
+
+/// User SQL may only read: DDL (`CREATE EXTERNAL TABLE` would reach the local file store), DML
+/// (`COPY TO` writes files) and other statements (`SET`, ...) are rejected at planning time.
+pub(crate) fn read_only_sql() -> SQLOptions {
+    SQLOptions::new()
+        .with_allow_ddl(false)
+        .with_allow_dml(false)
+        .with_allow_statements(false)
 }
 
 pub(crate) type Schemas = HashMap<Arc<str>, EntitySchema>;
@@ -186,6 +200,7 @@ pub(crate) async fn discover_entity_projections(
 
     let mut out: HashMap<Arc<str>, EntityProjection> = HashMap::new();
     let logical = ctx.state().create_logical_plan(query).await?;
+    read_only_sql().verify_plan(&logical)?;
     let optimized = ctx.state().optimize(&logical)?;
     optimized.apply(|node| {
         if let LogicalPlan::TableScan(scan) = node
@@ -300,4 +315,30 @@ fn merge_projection(slot: &mut EntityProjection, scan_projection: Option<&Vec<us
 fn multi_batch_table(schema: SchemaRef, batches: Option<&Vec<RecordBatch>>) -> Result<MemTable> {
     let partition: Vec<RecordBatch> = batches.cloned().unwrap_or_default();
     Ok(MemTable::try_new(schema, vec![partition])?)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn read_only_sql_rejects_side_effects() {
+        let ctx = SessionContext::new();
+        for sql in [
+            "CREATE EXTERNAL TABLE t (a INT) STORED AS CSV LOCATION '/etc/passwd'",
+            "CREATE TABLE t AS SELECT 1",
+            "COPY (SELECT 1) TO '/tmp/demofusion-test.csv'",
+            "SET datafusion.execution.batch_size = 1",
+        ] {
+            assert!(
+                ctx.sql_with_options(sql, read_only_sql()).await.is_err(),
+                "{sql}"
+            );
+        }
+        assert!(
+            ctx.sql_with_options("SELECT 1", read_only_sql())
+                .await
+                .is_ok()
+        );
+    }
 }

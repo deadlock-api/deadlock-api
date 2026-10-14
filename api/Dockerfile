@@ -26,6 +26,12 @@ ENV exe_name=$EXE_NAME
 RUN apt-get update \
     && apt-get install -y --no-install-recommends ca-certificates libssl-dev openssl libc6 curl \
     && rm -rf /var/lib/apt/lists/*
+# Run unprivileged. The writable state dirs are pre-created so fresh volumes mounted there
+# inherit the ownership.
+RUN useradd --system --uid 10001 --no-create-home --shell /usr/sbin/nologin api \
+    && mkdir -p /var/lib/deadlock-api/steam_search_index /var/lib/deadlock-api/ch_cache \
+    && chown -R api:api /var/lib/deadlock-api
 WORKDIR /app
 COPY --from=builder /usr/local/bin/${EXE_NAME} /usr/local/bin/
+USER api
 ENTRYPOINT ["/usr/local/bin/deadlock-api-rust"]

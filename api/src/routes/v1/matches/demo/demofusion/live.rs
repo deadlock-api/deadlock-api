@@ -32,7 +32,7 @@ use super::event_batch_builder::EventBatchBuilder;
 use super::events::{decode_event, event_schema};
 use super::query::{
     Schemas, build_entity_specs, discover_entity_projections, projected_entity_schema,
-    resolve_referenced,
+    read_only_sql, resolve_referenced,
 };
 use super::table_extractor::extract_table_names;
 use super::visitor::{BroadcastDemoStream, discover_schemas_from_demo};
@@ -158,7 +158,11 @@ pub(crate) async fn query_live(
         }
     });
 
-    Ok(ctx.sql(query).await?.execute_stream().await?)
+    Ok(ctx
+        .sql_with_options(query, read_only_sql())
+        .await?
+        .execute_stream()
+        .await?)
 }
 
 /// Connect to the broadcast relay and fetch the signon fragment, retrying on failure for

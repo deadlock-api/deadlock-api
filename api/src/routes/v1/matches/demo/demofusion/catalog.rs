@@ -13,6 +13,7 @@ use datafusion::prelude::SessionContext;
 
 use super::error::Result;
 use super::events::{EventType, event_schema};
+use super::query::read_only_sql;
 use super::table_extractor::extract_table_names;
 use super::visitor::{SyncDemoStream, discover_all_schemas_from_demo};
 
@@ -100,6 +101,7 @@ pub(crate) async fn validate(query: &str, tables: &[TableSchema]) -> Result<()> 
 
     let state = ctx.state();
     let logical = state.create_logical_plan(query).await?;
+    read_only_sql().verify_plan(&logical)?;
     state.optimize(&logical)?;
     Ok(())
 }
