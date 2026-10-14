@@ -7,7 +7,8 @@ import { mergePatchFeed, type PatchEntry, type PatchFeedItem, patchNotesContent,
 
 /**
  * Every patch, newest first: the forum changelog and Steam news of `/v2/patches`, one entry per release, over the
- * curated `PATCHES`. The feed carries every post's full notes (~90 KB); the Worker keeps them and sends the list. When
+ * curated `PATCHES`. The feed carries every post's full notes (~90 KB); the Worker reads them (a hero release is
+ * known by its text) and sends only the list. When
  * the feed fails, the curated patches still make a list.
  */
 export const fetchPatchList = createServerFn({ method: "GET" }).handler(async (): Promise<PatchEntry[]> => {
@@ -19,6 +20,7 @@ export const fetchPatchList = createServerFn({ method: "GET" }).handler(async ()
       source: (item as { source?: string }).source === "steam" ? "steam" : "forum",
       title: item.title,
       pub_date: item.pub_date,
+      content: item.content,
     }));
     return mergePatchFeed(feed, curated);
   } catch (error) {

@@ -62,6 +62,27 @@ test("merge: one patch per release day, no hero spotlights, curated names kept",
   assert.equal(byId.get("2026-09-29")?.endUnix, unix("2026-10-05T23:05:32Z"));
 });
 
+test("merge: a hero going live is a patch of its own, a teaser is not", () => {
+  const feed: PatchFeedItem[] = [
+    {
+      source: "steam",
+      pub_date: "2026-10-13T20:59:55Z",
+      title: "Fairfax Industries Employee Spotlight",
+      content: "<p>Take flight with Deadman Danny, <b>available in-game now</b>!</p>",
+    },
+    { source: "steam", pub_date: "2026-10-11T20:00:00Z", title: "Coming Soon", content: "<p>Next Friday.</p>" },
+    ...FEED,
+  ];
+  const patches = mergePatchFeed(feed, []);
+  assert.deepEqual(
+    patches.slice(0, 2).map((p) => p.id),
+    ["2026-10-13", "2026-10-05"],
+  );
+  assert.equal(patches[0].shortName, "Patch");
+  assert.equal(patches[0].startUnix, unix("2026-10-13T20:59:55Z"));
+  assert.equal(patches[1].endUnix, unix("2026-10-13T20:59:55Z"));
+});
+
 test("merge keeps curated patches the feed no longer reaches", () => {
   const patches = mergePatchFeed(FEED.slice(0, 2), [entry("2025-02-25", "2025-02-25T21:51:13Z", "Map Rework")]);
   assert.deepEqual(

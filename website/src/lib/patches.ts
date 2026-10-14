@@ -79,6 +79,16 @@ export function patchNotesContent(feed: readonly PatchFeedItem[], id: string): s
   return pool.toSorted((a, b) => (b.content?.length ?? 0) - (a.content?.length ?? 0))[0]?.content;
 }
 
+/** A hero's announcement post ships the hero: "Deadman Danny, available in-game now!" */
+const HERO_RELEASE = /\bavailable (?:in-game |to play )?now\b/i;
+
+/** Whether a post announces a hero going live the day it went up, which is a game update of its own. */
+function isHeroRelease(post: PatchFeedItem): boolean {
+  return (
+    post.source === "steam" && HERO_RELEASE.test(post.content?.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ") ?? "")
+  );
+}
+
 /** A post's time counts as the release only when it went up within two days of the release day. */
 const RELEASE_SLACK_S = 2 * DAY_S;
 
@@ -91,20 +101,20 @@ const USUAL_RELEASE_HOUR_UTC = 20;
 /**
  * Every patch the feed knows, newest first, one entry per release day. The forum and Steam announce most patches
  * twice: the forum by its date ("09-16-2026 Update"), Steam by its date or its name ("City Never Sleeps"). A Steam post
- * without a date counts only when it is an update or the forum has a patch that day, which leaves out the hero
- * spotlights. A curated patch keeps its name and exact start, and stays even when the feed no longer reaches back to
+ * without a date counts only when it is an update, ships a hero ("available in-game now") or the forum has a patch
+ * that day, which leaves out the hero teasers. A hero release is named by its date, not by its post's title. A curated patch keeps its name and exact start, and stays even when the feed no longer reaches back to
  * it.
  */
 export function mergePatchFeed(feed: readonly PatchFeedItem[], curated: readonly PatchEntry[]): PatchEntry[] {
   const posts = feed.map((item) => {
     const published = day.utc(item.pub_date);
-    return { ...item, title: item.title.trim(), published, day: titleDay(item.title) };
+    return { ...item, title: item.title.trim(), published, day: titleDay(item.title), hero: isHeroRelease(item) };
   });
   const forumDays = new Set(posts.flatMap((post) => (post.source === "forum" && post.day ? [post.day] : [])));
   const byDay = new Map<string, typeof posts>();
   for (const post of posts) {
     const id = post.day ?? post.published.format("YYYY-MM-DD");
-    if (!post.day && !/update/i.test(post.title) && !forumDays.has(id)) continue;
+    if (!post.day && !/update/i.test(post.title) && !post.hero && !forumDays.has(id)) continue;
     const group = byDay.get(id);
     if (group) group.push(post);
     else byDay.set(id, [post]);
@@ -120,7 +130,7 @@ export function mergePatchFeed(feed: readonly PatchFeedItem[], curated: readonly
     };
     // Steam's post is the release itself; the forum thread is often written later, or edited with the next patch.
     const timed = group.find((post) => post.source === "steam" && onTime(post)) ?? group.find(onTime);
-    const named = group.find((post) => post.source === "steam" && !post.day);
+    const named = group.find((post) => post.source === "steam" && !post.day && !post.hero);
     const startUnix = timed ? timed.published.unix() : releaseDay.hour(USUAL_RELEASE_HOUR_UTC).unix();
     entries.set(id, {
       id,
