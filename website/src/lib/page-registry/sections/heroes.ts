@@ -93,7 +93,7 @@ export const HERO_PAGES: RegisteredPage[] = [
       trend_heroes: heroIds(),
       hero_stat: sortParam({
         winrate: "winrate",
-        pickrate: "matches",
+        pickrate: "pickrate",
         matches: "matches",
         banrate: "ban_rate",
         kills: "kills_per_match",

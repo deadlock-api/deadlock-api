@@ -1,6 +1,6 @@
-import type { HERO_STATS_WITH_BAN_RATE } from "~/types/api_hero_stats";
+import type { HERO_STATS_WITH_RATES } from "~/types/api_hero_stats";
 
-export type HeroTrendStat = (typeof HERO_STATS_WITH_BAN_RATE)[number];
+export type HeroTrendStat = (typeof HERO_STATS_WITH_RATES)[number];
 export type HeroTrendPoint = { date: number } & Record<string, number>;
 export type HeroTrendBuckets = Record<number, [heroId: number, value: number, matches?: number][]>;
 
@@ -17,10 +17,11 @@ export const HERO_TREND_LABELS: Record<HeroTrendStat, string> = {
   denies_per_match: "Denies per match",
   permanent_buffs_per_match: "Buff pickups per match",
   ban_rate: "Ban rate",
+  pickrate: "Pick rate",
 };
 
 export function isPercentageTrend(stat: HeroTrendStat) {
-  return stat === "winrate" || stat === "ban_rate";
+  return stat === "winrate" || stat === "ban_rate" || stat === "pickrate";
 }
 
 export function formatTrendValue(value: number, stat: HeroTrendStat) {

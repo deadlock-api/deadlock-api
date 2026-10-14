@@ -218,13 +218,13 @@ export function HeroOverTimeTab({ filters }: { filters: HeroFilters }) {
   );
 }
 
-/** Ban rate has no per-duration or per-experience reading; those views show win rate in its place. */
-function statWithoutBans(filters: HeroFilters) {
-  return filters.heroStat === "ban_rate" ? "winrate" : filters.heroStat;
+/** Ban and pick rate have no per-duration or per-experience reading; those views show win rate in their place. */
+function statWithoutRates(filters: HeroFilters) {
+  return filters.heroStat === "ban_rate" || filters.heroStat === "pickrate" ? "winrate" : filters.heroStat;
 }
 
 export function HeroByDurationTab({ filters }: { filters: HeroFilters }) {
-  const stat = statWithoutBans(filters);
+  const stat = statWithoutRates(filters);
   return (
     <Section titleDisplay="hidden" title="Hero Stats by Game Duration">
       <FilterBar variant="toolbar" title="Duration comparison" icon={ChartNoAxesCombined} aria-label="Chart controls">
@@ -310,7 +310,7 @@ export function HeroByRankTab({ filters }: { filters: HeroFilters }) {
 }
 
 export function HeroByExperienceTab({ filters }: { filters: HeroFilters }) {
-  const stat = statWithoutBans(filters);
+  const stat = statWithoutRates(filters);
   return (
     <Section titleDisplay="hidden" title="Hero Stats by Experience">
       <FilterBar

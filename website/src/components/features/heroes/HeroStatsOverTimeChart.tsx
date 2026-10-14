@@ -50,13 +50,19 @@ import { useHeroColorMap } from "~/hooks/useChartHeroVisibility";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { BANS_PER_MATCH, computeBanRatesByBucket } from "~/lib/ban-rate";
 import { formatCompactAxisTick, niceTicks } from "~/lib/chart-axis";
-import { MIN_MATCHES_PER_BUCKET } from "~/lib/constants";
+import { getPickrateMultiplier, MIN_MATCHES_PER_BUCKET } from "~/lib/constants";
 import type { GameMode, MatchMode } from "~/lib/game-mode";
-import { buildHeroTrendPoints, HERO_TREND_LABELS, isPercentageTrend, type HeroTrendBuckets } from "~/lib/hero-trends";
+import {
+  buildHeroTrendPoints,
+  HERO_TREND_LABELS,
+  isPercentageTrend,
+  type HeroTrendBuckets,
+  type HeroTrendStat,
+} from "~/lib/hero-trends";
 import { wholeTimeBuckets } from "~/lib/time-buckets";
 import { heroBanStatsQueryOptions } from "~/queries/hero-ban-stats-query";
 import { heroChartStatsQueryOptions } from "~/queries/hero-stats-query";
-import { type HERO_STATS_WITH_BAN_RATE, hero_stats_transform } from "~/types/api_hero_stats";
+import { hero_stats_transform } from "~/types/api_hero_stats";
 
 import { useHeroChartSelection } from "./useHeroChartSelection";
 
@@ -140,7 +146,7 @@ export function HeroStatsOverTimeChart({
   gameMode,
   matchMode,
 }: {
-  heroStat: (typeof HERO_STATS_WITH_BAN_RATE)[number];
+  heroStat: HeroTrendStat;
   heroTimeInterval: HeroStatsBucketEnum;
   minRankId?: number;
   maxRankId?: number;
@@ -189,7 +195,9 @@ export function HeroStatsOverTimeChart({
   const banData = unsupportedBanRate ? undefined : banQuery.data;
   const activeQuery = isBanRate ? banQuery : heroQuery;
 
-  const requiresSampleFloor = !isBanRate && heroStat !== "matches" && heroStat !== "wins" && heroStat !== "losses";
+  const isPickRate = heroStat === "pickrate";
+  const requiresSampleFloor =
+    !isBanRate && !isPickRate && heroStat !== "matches" && heroStat !== "wins" && heroStat !== "losses";
   const minMatchesPerBucket = useMemo(() => {
     if (!requiresSampleFloor) return 0;
     // Rates need a representative sample; exact counts remain useful even for tiny buckets.
@@ -217,6 +225,30 @@ export function HeroStatsOverTimeChart({
       }
       return map;
     }
+    if (isPickRate) {
+      if (!heroData) return {};
+      const rows = wholeTimeBuckets(heroData, heroTimeInterval, { minUnixTimestamp, maxUnixTimestamp });
+      const multiplier = getPickrateMultiplier(gameMode);
+      // Every match has one pick per player slot, so a bucket's matches are its picks over the slots. Like ban rate:
+      // a bucket with only a handful of matches is left out, and a hero nobody picked in a bucket is 0%, not a gap.
+      const matchesByBucket = new Map<number, Map<number, number>>();
+      for (const row of rows) {
+        const heroMatches = matchesByBucket.get(row.bucket) ?? new Map<number, number>();
+        heroMatches.set(row.hero_id, row.matches);
+        matchesByBucket.set(row.bucket, heroMatches);
+      }
+      const heroIds = [...new Set(rows.map((row) => row.hero_id))];
+      const map: Record<number, [number, number, number?][]> = {};
+      for (const [bucket, heroMatches] of matchesByBucket) {
+        const picks = [...heroMatches.values()].reduce((sum, matches) => sum + matches, 0);
+        if (bucket < (minUnixTimestamp ?? 0) || picks / multiplier < MIN_MATCHES_PER_BUCKET) continue;
+        map[bucket] = heroIds.map((heroId) => {
+          const matches = heroMatches.get(heroId) ?? 0;
+          return [heroId, (100 * multiplier * matches) / picks, matches];
+        });
+      }
+      return map;
+    }
     const map: Record<number, [number, number, number?][]> = {};
     if (heroData) {
       // The API's daily rollups count the whole start day, so a bucket that begins before the range would mix in the
@@ -235,6 +267,8 @@ export function HeroStatsOverTimeChart({
     heroStat,
     heroData,
     isBanRate,
+    isPickRate,
+    gameMode,
     banData,
     minUnixTimestamp,
     maxUnixTimestamp,

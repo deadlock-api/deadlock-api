@@ -18,6 +18,9 @@ export const HERO_STATS = [
 
 export const HERO_STATS_WITH_BAN_RATE = [...HERO_STATS, "ban_rate"] as const;
 
+/** Every stat the heroes pages chart, including the two shares of all matches: ban rate and pick rate. */
+export const HERO_STATS_WITH_RATES = [...HERO_STATS_WITH_BAN_RATE, "pickrate"] as const;
+
 /** The hero stats that measure the soul economy, which Street Brawl does not have. */
 const ECONOMY_HERO_STATS: ReadonlySet<string> = new Set(["net_worth_per_match"]);
 
@@ -97,5 +100,5 @@ export const TIME_INTERVALS = [
   },
 ] as const satisfies readonly TimeInterval[];
 
-export const BY_RANK_STATS = [...HERO_STATS_WITH_BAN_RATE, "pickrate"] as const;
+export const BY_RANK_STATS = HERO_STATS_WITH_RATES;
 export type ByRankStat = (typeof BY_RANK_STATS)[number];

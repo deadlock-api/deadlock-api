@@ -11,7 +11,7 @@ import { HERO_TREND_LABELS, type HeroTrendStat } from "~/lib/hero-trends";
 import { heroStatsFor, TIME_INTERVALS } from "~/types/api_hero_stats";
 
 const METRIC_GROUPS = [
-  { label: "Performance", stats: ["winrate", "ban_rate"] },
+  { label: "Performance", stats: ["winrate", "pickrate", "ban_rate"] },
   { label: "Match volume", stats: ["matches", "wins", "losses"] },
   {
     label: "Combat & economy",
