@@ -13,7 +13,7 @@ if redis.call('get', KEYS[1]) == ARGV[1] then
 end
 return 0";
 
-const RELEASE_IF_OWNED: &str = r"
+pub(crate) const RELEASE_IF_OWNED: &str = r"
 if redis.call('get', KEYS[1]) == ARGV[1] then
     return redis.call('del', KEYS[1])
 end

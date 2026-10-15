@@ -117,9 +117,19 @@ pub(super) async fn enemy_stats(
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
     ensure_not_protected(&state, &[account_id]).await?;
-    get_enemy_stats(&state.ch_client_ro, account_id, query)
-        .await
-        .map(Json)
+    let enemies = get_enemy_stats(&state.ch_client_ro, account_id, query).await?;
+    // Filtered after the cached query so the cache entry stays independent of the protected list.
+    let protected_users = state
+        .steam_client
+        .get_protected_users(&state.pg_client)
+        .await?;
+    Ok(Json(
+        enemies
+            .iter()
+            .filter(|e| !protected_users.contains(&e.enemy_id))
+            .cloned()
+            .collect::<Vec<_>>(),
+    ))
 }
 
 #[cfg(test)]
