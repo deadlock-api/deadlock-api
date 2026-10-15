@@ -117,6 +117,21 @@ fn steam_friends(friends: impl IntoIterator<Item = (u32, u32)>) -> Vec<SteamFrie
         .collect()
 }
 
+/// Drops the protected accounts from each profile's friends list, so a protected account can't be
+/// found through the friends lists of the players it is friends with.
+async fn hide_protected_friends(state: &AppState, profiles: &mut [SteamProfile]) -> APIResult<()> {
+    let protected_users = state
+        .steam_client
+        .get_protected_users(&state.pg_client)
+        .await?;
+    for profile in profiles {
+        profile
+            .friends
+            .retain(|f| !protected_users.contains(&f.account_id));
+    }
+    Ok(())
+}
+
 impl From<SteamProfileRow> for SteamProfile {
     fn from(row: SteamProfileRow) -> Self {
         let friends = steam_friends(
@@ -285,13 +300,9 @@ pub(crate) async fn steam_single(
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
     ensure_not_protected(&state, &[account_id]).await?;
-    state
-        .batchers
-        .steam_profile
-        .load(account_id)
-        .await
-        .map(SteamProfile::from)
-        .map(Json)
+    let mut profile = SteamProfile::from(state.batchers.steam_profile.load(account_id).await?);
+    hide_protected_friends(&state, core::slice::from_mut(&mut profile)).await?;
+    Ok(Json(profile))
 }
 
 #[utoipa::path(
@@ -363,7 +374,7 @@ pub(super) async fn steam(
     let account_ids = without_protected(&state, account_ids).await?;
 
     if !refresh {
-        let profiles = state
+        let mut profiles = state
             .batchers
             .steam_profile
             .load_many(&account_ids)
@@ -371,6 +382,7 @@ pub(super) async fn steam(
             .into_iter()
             .map(SteamProfile::from)
             .collect::<Vec<_>>();
+        hide_protected_friends(&state, &mut profiles).await?;
         return Ok((HeaderMap::new(), Json(profiles)));
     }
 
@@ -411,6 +423,7 @@ pub(super) async fn steam(
         }
     }
     profiles.extend(fallback.into_iter().map(SteamProfile::from));
+    hide_protected_friends(&state, &mut profiles).await?;
 
     let mut headers = HeaderMap::new();
     headers.insert(header::CACHE_CONTROL, HeaderValue::from_static("no-store"));
@@ -511,6 +524,11 @@ async fn search_steam(
         .get_protected_users(&state.pg_client)
         .await?;
     profiles.retain(|p| !protected_users.contains(&p.account_id));
+    for profile in &mut profiles {
+        profile
+            .friends
+            .retain(|f| !protected_users.contains(&f.account_id));
+    }
 
     if profiles.is_empty() {
         return Err(APIError::status_msg(
