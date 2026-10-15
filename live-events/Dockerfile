@@ -1,11 +1,15 @@
 ARG EXE_NAME=deadlock-live-events
 
-FROM rust:1.99-slim-trixie AS chef
+FROM rust:slim-trixie AS chef
 RUN apt-get update \
     && apt-get install -y --no-install-recommends protobuf-compiler libprotobuf-dev sccache ca-certificates gcc libssl-dev pkg-config cmake build-essential curl
+WORKDIR /app
+# The Rust version comes from rust-toolchain.toml; only rustup is used from the base image.
+# Installed in its own layer, so it stays cached until the file changes.
+COPY rust-toolchain.toml ./
+RUN rustup toolchain install
 RUN cargo install --locked cargo-chef
 ENV RUSTC_WRAPPER=sccache SCCACHE_DIR=/sccache
-WORKDIR /app
 
 FROM chef AS planner
 # Build context is the repo root (one cargo workspace).

@@ -1,2 +1,6 @@
+# The one place the Rust version is set: rustup reads it locally, in CI and in the Docker builds,
+# and mise reads it too (see .mise.toml). Dependabot bumps it, patch releases included.
 [toolchain]
-channel = "stable"
+channel = "1.99.0"
+profile = "minimal"
+components = ["rustfmt", "clippy"]

@@ -82,7 +82,7 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y protobuf-compiler libprotobuf-dev clang mold
       - name: Install Rust toolchain
         run: |
-          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain none
           echo "$HOME/.cargo/bin" >> $GITHUB_PATH
       # Sticky disks instead of rust-cache, see the lint job in rust-ci-checks.yml.
       - name: Mount cargo registry

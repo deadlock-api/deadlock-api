@@ -1,12 +1,15 @@
 [tools]
 node = "26"
 pnpm = "12.1.0"
-rust = "1.99"
 java = "temurin-21"
 uv = "latest"
 lefthook = "latest"
 "cargo:typos-cli" = "latest"
 "cargo:cargo-machete" = "latest"
+
+[settings]
+# Rust comes from rust-toolchain.toml; a `rust` tool here would override it.
+idiomatic_version_file_enable_tools = ["rust"]
 
 [tasks.setup]
 description = "Install dev tools and git hooks"

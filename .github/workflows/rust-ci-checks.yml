@@ -100,7 +100,7 @@ jobs:
       - name: Install Rust toolchain
         if: inputs.lint-install-rust-toolchain
         run: |
-          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain none
           echo "$HOME/.cargo/bin" >> $GITHUB_PATH
       # Blacksmith serves rust-cache from GitHub's backend at ~3.5 MB/s (4 min for
       # 1 GB); sticky disks mount in seconds. Only master commits them, like

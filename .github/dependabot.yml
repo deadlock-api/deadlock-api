@@ -26,6 +26,13 @@ updates:
       - dependency-name: "metrics"
         versions: ["0.24.4", "0.24.5"]
 
+  # The Rust version, used locally, in CI and in the Docker builds.
+  - package-ecosystem: rust-toolchain
+    directory: /
+    schedule:
+      interval: daily
+    rebase-strategy: auto
+
   - package-ecosystem: docker
     directory: /api
     schedule:

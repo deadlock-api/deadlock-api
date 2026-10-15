@@ -1,9 +1,13 @@
-FROM rust:1.99-slim-trixie AS builder
+FROM rust:slim-trixie AS builder
 RUN apt-get update \
     && apt-get install -y --no-install-recommends protobuf-compiler libprotobuf-dev ca-certificates gcc libssl-dev pkg-config cmake build-essential clang curl git mold \
     && rm -rf /var/lib/apt/lists/*
 ENV SQLX_OFFLINE=true
 WORKDIR /app
+# The Rust version comes from rust-toolchain.toml; only rustup is used from the base image.
+# Installed in its own layer, so it stays cached until the file changes.
+COPY rust-toolchain.toml ./
+RUN rustup toolchain install
 # Tune codegen for the deploy host (AMD EPYC 7502P, Zen 2). Includes the mold
 # linker flag from .cargo/config.toml because RUSTFLAGS replaces, not extends,
 # the target.cfg rustflags from cargo config. Use the short-name form so it
