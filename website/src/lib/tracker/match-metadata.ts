@@ -14,8 +14,8 @@ import type {
 /** The REST metadata of one match; the tracker and the team builder's match import both read it. */
 export async function fetchRawMatchMetadata(matchId: number): Promise<RawMatchMetadata> {
   const response = await api.matches_api.metadata({ matchId });
-  // The SDK declares no body for this endpoint (`void`); the API serves the protobuf JSON.
-  return response.data as unknown as RawMatchMetadata;
+  // The SDK types the body as a plain object; the API serves the protobuf JSON described by `RawMatchMetadata`.
+  return response.data;
 }
 
 /**
