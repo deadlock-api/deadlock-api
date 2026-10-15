@@ -83,6 +83,14 @@ impl APIError {
         }
     }
 
+    /// Whether the same call can succeed when repeated right away.
+    pub(crate) fn is_retryable(&self) -> bool {
+        match self {
+            Self::SteamProxy(e) => e.is_retryable(),
+            _ => true,
+        }
+    }
+
     pub(super) fn protected_user() -> Self {
         Self::StatusMsg {
             status: StatusCode::FORBIDDEN,
@@ -209,30 +217,17 @@ impl IntoResponse for APIError {
                 )
             }
             Self::SteamProxy(e) => {
-                let (status, message) = match &e {
-                    SteamProxyError::Request(_) => (
-                        StatusCode::SERVICE_UNAVAILABLE,
-                        "Failed to fetch data from Steam. Retry your request later.",
-                    ),
-                    SteamProxyError::Base64(_) => (
-                        StatusCode::INTERNAL_SERVER_ERROR,
-                        "Failed to decode base64 data from Steam. Retrying won't help.",
-                    ),
-                    SteamProxyError::Protobuf(_) => (
-                        StatusCode::INTERNAL_SERVER_ERROR,
-                        "Failed to parse protobuf message from Steam. Retrying won't help.",
-                    ),
-                    SteamProxyError::NoBaseUrl => (
-                        StatusCode::INTERNAL_SERVER_ERROR,
-                        "No Steam proxy URL configured.",
-                    ),
-                };
-                if status.is_server_error() && status != StatusCode::SERVICE_UNAVAILABLE {
-                    error!(message, "Internal Error");
+                let status = e.response_status();
+                if status == StatusCode::INTERNAL_SERVER_ERROR {
+                    error!("Steam proxy error: {e}");
                 } else {
                     warn!("Steam proxy error: {e}");
                 }
-                build_error_response(status, message)
+                let mut res = build_error_response(status, e.response_message());
+                if let Some(secs) = e.retry_after_secs() {
+                    res.headers_mut().insert(header::RETRY_AFTER, secs.into());
+                }
+                res
             }
             Self::Protobuf(_) => {
                 Self::internal("Failed to parse protobuf message from Steam. Retrying won't help.")
@@ -331,6 +326,43 @@ mod tests {
         let response = error.into_response();
         assert_eq!(response.status(), StatusCode::SERVICE_UNAVAILABLE);
         assert_eq!(response.headers()[header::RETRY_AFTER], "5");
+    }
+
+    fn steam_proxy_status(status: StatusCode, body: &str) -> Response<Body> {
+        APIError::from(SteamProxyError::from_status(status, body.to_owned())).into_response()
+    }
+
+    #[test]
+    fn steam_proxy_cooldown_retries_after_proxy_wait() {
+        let response = steam_proxy_status(
+            StatusCode::TOO_MANY_REQUESTS,
+            r#"{"message": "", "pool_limit_info": {"wait_for_millis": 2300}}"#,
+        );
+        assert_eq!(response.status(), StatusCode::SERVICE_UNAVAILABLE);
+        assert_eq!(response.headers()[header::RETRY_AFTER], "3");
+    }
+
+    #[test]
+    fn steam_proxy_no_alive_bots_retries_after_a_minute() {
+        let response = steam_proxy_status(StatusCode::SERVICE_UNAVAILABLE, "");
+        assert_eq!(response.status(), StatusCode::SERVICE_UNAVAILABLE);
+        assert_eq!(response.headers()[header::RETRY_AFTER], "60");
+    }
+
+    #[test]
+    fn steam_proxy_job_failure_is_bad_gateway() {
+        let response = steam_proxy_status(StatusCode::BAD_GATEWAY, "");
+        assert_eq!(response.status(), StatusCode::BAD_GATEWAY);
+        assert!(response.headers().get(header::RETRY_AFTER).is_none());
+    }
+
+    #[test]
+    fn steam_proxy_rejection_is_not_retryable() {
+        for status in [StatusCode::UNAUTHORIZED, StatusCode::BAD_REQUEST] {
+            let response = steam_proxy_status(status, "Invalid auth token");
+            assert_eq!(response.status(), StatusCode::INTERNAL_SERVER_ERROR);
+            assert!(response.headers().get(header::RETRY_AFTER).is_none());
+        }
     }
 
     #[test]

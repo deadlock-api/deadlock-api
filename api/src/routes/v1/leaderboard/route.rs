@@ -2,6 +2,7 @@ use core::time::Duration;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
+use tryhard::RetryPolicy;
 
 use axum::Json;
 use axum::extract::{Path, Query, State};
@@ -241,7 +242,13 @@ async fn fetch_leaderboard_proto(
     let steam_response =
         tryhard::retry_fn(|| fetch_leaderboard_raw(state, region, hero_id, leaderboard_id))
             .retries(3)
-            .fixed_backoff(Duration::from_millis(10))
+            .custom_backoff(|_, e: &SteamProxyError| {
+                if e.is_retryable() {
+                    RetryPolicy::Delay(Duration::from_millis(10))
+                } else {
+                    RetryPolicy::Break
+                }
+            })
             .await?;
     Ok(BASE64_STANDARD.decode(&steam_response.data)?)
 }

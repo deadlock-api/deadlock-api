@@ -9,6 +9,7 @@ use chrono::{DateTime, NaiveDateTime};
 use serde::Deserialize;
 use sqlx::QueryBuilder;
 use tracing::warn;
+use tryhard::RetryPolicy;
 use utoipa::IntoParams;
 use valveprotos::deadlock::c_msg_client_to_gc_find_hero_builds_response::HeroBuildResult;
 use valveprotos::deadlock::{
@@ -20,7 +21,7 @@ use crate::error::{APIError, APIResult};
 use crate::routes::v1::builds::structs::Build;
 use crate::services::rate_limiter::Quota;
 use crate::services::rate_limiter::extractor::RateLimitKey;
-use crate::services::steam::types::{SteamProxyQuery, SteamProxyResponse};
+use crate::services::steam::types::{SteamProxyError, SteamProxyQuery, SteamProxyResponse};
 use crate::utils::types::AccountIdQuery;
 
 #[derive(Debug, Deserialize, IntoParams)]
@@ -127,7 +128,13 @@ async fn fetch_and_store_builds(
             })
         })
         .retries(3)
-        .fixed_backoff(Duration::from_millis(10))
+        .custom_backoff(|_, e: &SteamProxyError| {
+            if e.is_retryable() {
+                RetryPolicy::Delay(Duration::from_millis(10))
+            } else {
+                RetryPolicy::Break
+            }
+        })
         .await?;
 
     let results = response.msg.results;

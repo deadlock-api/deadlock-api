@@ -104,17 +104,20 @@ impl SteamClient {
             .choose(&mut rand::rng())
             .ok_or(SteamProxyError::NoBaseUrl)?;
 
-        self.http_client
+        let response = self
+            .http_client
             .post(url)
             .bearer_auth(&self.steam_proxy_api_key)
             .timeout(query.request_timeout)
             .json(body)
             .send()
-            .await?
-            .error_for_status()?
-            .json()
-            .await
-            .map_err(Into::into)
+            .await?;
+        let status = response.status();
+        if !status.is_success() {
+            let body = response.text().await.unwrap_or_default();
+            return Err(SteamProxyError::from_status(status, body));
+        }
+        response.json().await.map_err(Into::into)
     }
 
     /// Get the current client version from the Steam Database

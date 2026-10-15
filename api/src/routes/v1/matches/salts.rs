@@ -197,9 +197,10 @@ pub(crate) fn replay_file_url(
 /// Whether the Steam proxy turned the request away for want of a bot: all bots of the group
 /// are on cooldown (429) or none is alive (503).
 fn is_proxy_exhausted(e: &SteamProxyError) -> bool {
-    matches!(e, SteamProxyError::Request(e) if e.status().is_some_and(|s| {
-        s == StatusCode::TOO_MANY_REQUESTS || s == StatusCode::SERVICE_UNAVAILABLE
-    }))
+    matches!(
+        e,
+        SteamProxyError::Cooldown { .. } | SteamProxyError::NoAliveBots(_)
+    )
 }
 
 fn not_found(match_id: u64) -> APIError {

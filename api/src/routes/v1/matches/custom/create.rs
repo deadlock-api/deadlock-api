@@ -14,6 +14,7 @@ use reqwest::Url;
 use serde::{Deserialize, Serialize};
 use tokio::time::sleep;
 use tracing::{debug, error};
+use tryhard::RetryPolicy;
 use utoipa::{IntoParams, ToSchema};
 use valveprotos::deadlock::c_msg_client_to_gc_party_action::EAction;
 use valveprotos::deadlock::{
@@ -248,7 +249,13 @@ pub(super) async fn create_custom(
         msg: created_party,
     } = tryhard::retry_fn(|| create_party(&state, payload.as_ref()))
         .retries(5)
-        .linear_backoff(Duration::from_millis(100))
+        .custom_backoff(|attempt, e: &APIError| {
+            if e.is_retryable() {
+                RetryPolicy::Delay(Duration::from_millis(100) * attempt)
+            } else {
+                RetryPolicy::Break
+            }
+        })
         .await?;
     debug!("Created party: {created_party:?}");
     let Some(party_id) = created_party.party_id.filter(|&p| p > 0) else {

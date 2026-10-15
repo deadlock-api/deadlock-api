@@ -9,6 +9,7 @@ use redis::{AsyncTypedCommands, ExpireOption};
 use serde::{Deserialize, Serialize};
 use sqlx::{Pool, Postgres};
 use tracing::debug;
+use tryhard::RetryPolicy;
 use utoipa::ToSchema;
 use uuid::Uuid;
 use valveprotos::deadlock::{
@@ -264,7 +265,13 @@ pub(super) async fn resolve_broadcast_url(
     let (broadcast_url, lobby_id) =
         tryhard::retry_fn(|| spectate_match(&state.steam_client, match_id, live_events_pool))
             .retries(3)
-            .fixed_backoff(Duration::from_millis(10))
+            .custom_backoff(|_, e: &APIError| {
+                if e.is_retryable() {
+                    RetryPolicy::Delay(Duration::from_millis(10))
+                } else {
+                    RetryPolicy::Break
+                }
+            })
             .await?;
 
     let payload = serde_json::json!({
