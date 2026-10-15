@@ -106,7 +106,7 @@ const GAMES: {
   {
     mode: "item-stats",
     title: "Item Stats Quiz",
-    description: "Name the activation, tier and slot of five items. How well do you know your shop?",
+    description: "Name the activation, tier, slot and a stat of five items. How well do you know your shop?",
     icon: Puzzle,
     path: "/games/deadlockdle/item-stats",
     shareLabel: "Stats",

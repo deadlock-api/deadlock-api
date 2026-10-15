@@ -14,6 +14,7 @@ import { Field } from "~/components/ui/field";
 import { Stack } from "~/components/ui/stack";
 import { Text } from "~/components/ui/text";
 import { trackDeadlockdle } from "~/lib/deadlockdle/analytics";
+import { itemStatQuestion } from "~/lib/deadlockdle/item-stat";
 import { useItems, puzzleLoadError } from "~/lib/deadlockdle/queries";
 import {
   getDayNumber,
@@ -40,15 +41,15 @@ export const Route = createFileRoute("/games_/deadlockdle/item-stats")({
     seo({
       title: pageTitle("Item Stats Quiz - Deadlockdle"),
       description:
-        "How well do you know Deadlock items? Name the activation, tier and slot of five items in this daily quiz.",
+        "How well do you know Deadlock items? Name the activation, tier, slot and a stat of five items in this daily quiz.",
       path: "/games/deadlockdle/item-stats",
     }),
 });
 
-const SUBTITLE = "Name each item's activation, tier and slot";
+const SUBTITLE = "Name each item's activation, tier, slot and stat";
 const ITEMS_COUNT = 5;
-const FIELDS_PER_ITEM = 3;
-const TOTAL_FIELDS = ITEMS_COUNT * FIELDS_PER_ITEM;
+/** Activation, tier and slot; an item with a stat to name has one more. */
+const BASE_FIELDS = 3;
 
 const SLOT_TYPES = ["weapon", "spirit", "vitality"] as const;
 type SlotType = (typeof SLOT_TYPES)[number];
@@ -57,6 +58,8 @@ interface ItemAnswer {
   active?: boolean;
   tier?: number;
   slot?: string;
+  /** The value picked for the item's stat, as written in its options ("65%"). */
+  stat?: string;
 }
 
 interface ItemStatsState {
@@ -72,7 +75,7 @@ const DEFAULT_STATE: ItemStatsState = {
   answers: {},
   submitted: false,
   score: 0,
-  totalFields: TOTAL_FIELDS,
+  totalFields: ITEMS_COUNT * BASE_FIELDS,
 };
 
 function freshState(date: string): ItemStatsState {
@@ -117,6 +120,16 @@ function ItemStatsQuiz() {
     return shuffled.slice(0, ITEMS_COUNT);
   }, [shopableItems, date]);
 
+  // Each item's stat to name, its wrong values fixed by the day's seed.
+  const statQuestions = useMemo(() => {
+    const rng = seededRandom(getModeSeed(date, "item-stats-values"));
+    return new Map(dailyItems.map((item) => [item.id, itemStatQuestion(item, rng)]));
+  }, [dailyItems, date]);
+  const totalFields = dailyItems.reduce(
+    (total, item) => total + BASE_FIELDS + Number(statQuestions.get(item.id) !== undefined),
+    0,
+  );
+
   const setAnswer = useCallback(
     (itemId: number, field: keyof ItemAnswer, value: number | string | boolean) => {
       if (state.submitted) return;
@@ -133,23 +146,30 @@ function ItemStatsQuiz() {
     if (dailyItems.length === 0) return false;
     return dailyItems.every((item) => {
       const answer = state.answers[item.id];
-      return answer != null && answer.active != null && answer.tier != null && answer.slot != null;
+      return (
+        answer != null &&
+        answer.active != null &&
+        answer.tier != null &&
+        answer.slot != null &&
+        (answer.stat != null || !statQuestions.get(item.id))
+      );
     });
-  }, [dailyItems, state.answers]);
+  }, [dailyItems, state.answers, statQuestions]);
 
   const fieldResults = useMemo(() => {
     if (!state.submitted || dailyItems.length === 0) return null;
-    const results: Record<number, { active: boolean; tier: boolean; slot: boolean }> = {};
+    const results: Record<number, { active: boolean; tier: boolean; slot: boolean; stat: boolean }> = {};
     for (const item of dailyItems) {
       const answer = state.answers[item.id];
       results[item.id] = {
         active: answer?.active === item.is_active_item,
         tier: answer?.tier === item.item_tier,
         slot: answer?.slot === item.item_slot_type,
+        stat: answer?.stat === statQuestions.get(item.id)?.answer,
       };
     }
     return results;
-  }, [state.submitted, dailyItems, state.answers]);
+  }, [state.submitted, dailyItems, state.answers, statQuestions]);
 
   const handleSubmit = useCallback(() => {
     if (!allFieldsFilled || state.submitted) return;
@@ -159,18 +179,19 @@ function ItemStatsQuiz() {
         total +
         Number(answer?.active === item.is_active_item) +
         Number(answer?.tier === item.item_tier) +
-        Number(answer?.slot === item.item_slot_type)
+        Number(answer?.slot === item.item_slot_type) +
+        Number(statQuestions.has(item.id) && answer?.stat === statQuestions.get(item.id)?.answer)
       );
     }, 0);
 
     trackDeadlockdle("game_completed", "item-stats", date, isArchive, {
       score,
-      max_score: TOTAL_FIELDS,
-      score_pct: Math.round((score / TOTAL_FIELDS) * 100),
+      max_score: totalFields,
+      score_pct: Math.round((score / totalFields) * 100),
     });
     justSubmitted.current = true;
-    saveState({ ...state, submitted: true, score, totalFields: TOTAL_FIELDS });
-  }, [allFieldsFilled, state, dailyItems, saveState, date, isArchive]);
+    saveState({ ...state, submitted: true, score, totalFields });
+  }, [allFieldsFilled, state, dailyItems, statQuestions, totalFields, saveState, date, isArchive]);
 
   // Submitting unmounts the Submit All button, which dropped focus to <body>; the score takes it instead (only right
   // after submitting, not when a finished day is reopened).
@@ -209,6 +230,7 @@ function ItemStatsQuiz() {
         {dailyItems.map((item, index) => {
           const answer = state.answers[item.id] ?? {};
           const result = fieldResults?.[item.id];
+          const statQuestion = statQuestions.get(item.id);
           const revealed = result != null;
 
           return (
@@ -242,7 +264,7 @@ function ItemStatsQuiz() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                  <div className="flex flex-wrap gap-x-5 gap-y-3">
                     <Field label="Activation" className="font-mono">
                       <div className="flex gap-1.5">
                         {([true, false] as const).map((isActive) => {
@@ -310,6 +332,31 @@ function ItemStatsQuiz() {
                         <p className="text-xs text-negative">Correct: {capitalize(item.item_slot_type)}</p>
                       )}
                     </Field>
+
+                    {statQuestion && (
+                      <Field label={statQuestion.label} className="font-mono">
+                        <div className="flex gap-1.5">
+                          {statQuestion.options.map((option) => {
+                            const isSelected = answer.stat === option;
+                            return (
+                              <AnswerOption
+                                key={option}
+                                variant="tile"
+                                state={tileState(isSelected, option === statQuestion.answer, revealed)}
+                                aria-pressed={isSelected}
+                                onClick={() => setAnswer(item.id, "stat", option)}
+                                disabled={state.submitted}
+                              >
+                                {option}
+                              </AnswerOption>
+                            );
+                          })}
+                        </div>
+                        {result && !result.stat && (
+                          <p className="text-xs text-negative">Correct: {statQuestion.answer}</p>
+                        )}
+                      </Field>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -344,7 +391,13 @@ function ItemStatsQuiz() {
             <ScoreSummary
               score={`${state.score}/${state.totalFields}`}
               scoreLabel="Correct Answers"
-              grade={state.score >= TOTAL_FIELDS * 0.8 ? "good" : state.score >= TOTAL_FIELDS * 0.5 ? "fair" : "poor"}
+              grade={
+                state.score >= state.totalFields * 0.8
+                  ? "good"
+                  : state.score >= state.totalFields * 0.5
+                    ? "fair"
+                    : "poor"
+              }
               countdown={isArchive ? undefined : { label: "Next Quiz", value: countdown ?? "Out now" }}
             />
             <div className="flex flex-col items-center gap-3">
