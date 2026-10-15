@@ -85,7 +85,7 @@ jobs:
           # Components are pushed from this run's own tag: `latest` may be overwritten by another run meanwhile.
           tags: |
             ghcr.io/${{ github.repository }}/tools-base:latest
-            ghcr.io/${{ github.repository }}/tools-base:build-${{ github.sha }}
+            ghcr.io/${{ github.repository }}/tools-base:build-${{ github.run_id }}
 
   push-components:
     runs-on: ubuntu-latest
@@ -134,6 +134,6 @@ jobs:
       - name: Push Component
         if: steps.should_deploy.outputs.deploy == 'true'
         run: |
-          docker pull ghcr.io/${{ github.repository }}/tools-base:build-${{ github.sha }}
-          docker tag ghcr.io/${{ github.repository }}/tools-base:build-${{ github.sha }} ghcr.io/${{ github.repository }}/${{ matrix.component }}:latest
+          docker pull ghcr.io/${{ github.repository }}/tools-base:build-${{ github.run_id }}
+          docker tag ghcr.io/${{ github.repository }}/tools-base:build-${{ github.run_id }} ghcr.io/${{ github.repository }}/${{ matrix.component }}:latest
           docker push ghcr.io/${{ github.repository }}/${{ matrix.component }}:latest
