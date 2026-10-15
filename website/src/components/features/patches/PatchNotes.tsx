@@ -36,7 +36,12 @@ export function PatchNotes({
         onOpenChange={setOpen}
         className={layout === "fill" ? "@5xl:relative @5xl:min-h-64 @5xl:flex-1" : undefined}
       >
-        <div className={cn("@5xl:absolute @5xl:inset-0 @5xl:scroll-fade-y @5xl:overflow-y-auto", SCROLLBAR_THIN)}>
+        <div
+          className={cn(
+            layout === "fill" && "@5xl:absolute @5xl:inset-0 @5xl:scroll-fade-y @5xl:overflow-y-auto",
+            SCROLLBAR_THIN,
+          )}
+        >
           <PanelBody className="flex flex-col items-start gap-3">
             {notes.blurb && <Text as="p">{notes.blurb}</Text>}
             {hasMore && (
