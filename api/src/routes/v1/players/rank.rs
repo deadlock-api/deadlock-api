@@ -18,7 +18,7 @@ use crate::services::clickhouse_batcher::{BatchQuery, ClickhouseBatcher, in_clau
 use crate::services::rank_image::{self, RankImageFormat, RankImageQuery};
 use crate::services::rate_limiter::Quota;
 use crate::services::rate_limiter::extractor::RateLimitKey;
-use crate::utils::parse::{comma_separated_steam_ids, steamid64_to_steamid3};
+use crate::utils::parse::{comma_separated_steam_ids, list_steam_id3};
 use crate::utils::types::AccountIdQuery;
 
 /// Convert a raw badge value (11–116) to a 1-based contiguous index (1–66).
@@ -458,7 +458,7 @@ where
         .filter(|s| !s.is_empty())
         .map(|s| {
             let steam_id = s.parse::<u64>().map_err(serde::de::Error::custom)?;
-            steamid64_to_steamid3(steam_id).map_err(serde::de::Error::custom)
+            list_steam_id3(steam_id).map_err(serde::de::Error::custom)
         })
         .collect()
 }
@@ -719,5 +719,25 @@ mod tests {
             let badge = idx_to_badge(idx);
             assert_eq!(badge_to_idx(badge), idx);
         }
+    }
+
+    #[derive(Debug, Deserialize)]
+    struct AccountIdsTestStruct {
+        #[serde(deserialize_with = "deserialize_account_ids")]
+        ids: Vec<u32>,
+    }
+
+    #[test]
+    fn test_deserialize_account_ids() {
+        let parse = |ids: &str| {
+            serde_json::from_value::<AccountIdsTestStruct>(serde_json::json!({ "ids": ids }))
+                .map(|q| q.ids)
+        };
+        assert_eq!(
+            parse("123456, 76561198123456789,").unwrap(),
+            vec![123456, 163191061]
+        );
+        assert!(parse("123456,76561197960265728").is_err()); // Steam ID 64 of account 0
+        assert!(parse("4294967296").is_err());
     }
 }

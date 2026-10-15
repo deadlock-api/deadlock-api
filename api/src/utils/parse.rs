@@ -53,12 +53,19 @@ impl SteamIdRaw {
     }
 }
 
+/// Converts one entry of an account id list to a `SteamID3`. The `SteamID64` of account 0 is
+/// rejected, as the single id parsers do.
+pub(crate) fn list_steam_id3(steam_id: u64) -> Result<u32, String> {
+    if steam_id == STEAM_ID_64_IDENT {
+        return Err(format!("Invalid steam id: {steam_id}"));
+    }
+    steamid64_to_steamid3(steam_id).map_err(|_| format!("Invalid steam id: {steam_id}"))
+}
+
 fn steam_ids3<E: serde::de::Error>(steam_ids: Vec<u64>) -> Result<Vec<u32>, E> {
     steam_ids
         .into_iter()
-        .map(|id| {
-            steamid64_to_steamid3(id).map_err(|_| E::custom(format!("Invalid steam id: {id}")))
-        })
+        .map(|id| list_steam_id3(id).map_err(E::custom))
         .collect()
 }
 
@@ -359,6 +366,7 @@ mod tests {
     #[case("{\"ids\": \"123456,a\"}")]
     #[case("{\"ids\": \"123456,4294967296\"}")] // One invalid id fails the whole list
     #[case("{\"ids\": [4294967296]}")]
+    #[case("{\"ids\": \"123456,76561197960265728\"}")] // Steam ID 64 of account 0
     fn test_comma_separated_steam_ids_invalid(#[case] json: &str) {
         assert!(serde_json::from_str::<SteamIdsTestStruct>(json).is_err());
     }
@@ -387,6 +395,7 @@ mod tests {
     #[rstest]
     #[case("{\"ids\": \"a\"}")]
     #[case("{\"ids\": \"4294967296\"}")] // Too big for a Steam ID 32, too small for a Steam ID 64
+    #[case("{\"ids\": \"76561197960265728\"}")] // Steam ID 64 of account 0
     fn test_comma_separated_steam_ids_option_invalid(#[case] json: &str) {
         assert!(serde_json::from_str::<SteamIdsOptionTestStruct>(json).is_err());
     }
