@@ -285,8 +285,9 @@ mod tests {
     #[rstest]
     #[case("76561198123456789", 163191061u32)] // Steam ID 64 to Steam ID 32
     #[case("123456", 123456u32)] // Steam ID 32 stays the same
+    #[case(" 76561198123456789 ", 163191061u32)] // Padded
     fn test_parse_steam_id3_valid_from_string(#[case] input: String, #[case] expected: u32) {
-        let json = format!("{{\"steam_id\": {input}}}");
+        let json = format!("{{\"steam_id\": \"{input}\"}}");
         let result: SteamIdTestStruct = serde_json::from_str(&json).unwrap();
         assert_eq!(result.steam_id, expected);
     }
@@ -299,8 +300,11 @@ mod tests {
     }
 
     #[rstest]
-    #[case(0u64)] // Invalid Steam ID (0)
-    fn test_parse_steam_id_invalid(#[case] input: u64) {
+    #[case("0")] // Invalid Steam ID (0)
+    #[case("76561197960265728")] // Steam ID 64 of account 0
+    #[case("4294967296")] // Too big for a Steam ID 32, too small for a Steam ID 64
+    #[case("\"abc\"")]
+    fn test_parse_steam_id_invalid(#[case] input: &str) {
         let json = format!("{{\"steam_id\": {input}}}");
         let result = serde_json::from_str::<SteamIdTestStruct>(&json);
         assert!(result.is_err());
@@ -319,9 +323,44 @@ mod tests {
     #[case("{\"steam_id\": null}", None)] // Null becomes None
     #[case("{\"steam_id\": \"76561198123456789\"}", Some(163191061u32))] // As a string, like a query value
     #[case("{\"steam_id\": \" 123456 \"}", Some(123456u32))] // Padded, like parse_steam_id accepts
+    #[case("{\"steam_id\": \"0\"}", None)] // 0 as a string also becomes None
     fn test_parse_steam_id_option(#[case] json: &str, #[case] expected: Option<u32>) {
         let result: SteamIdOptionTestStruct = serde_json::from_str(json).unwrap();
         assert_eq!(result.steam_id, expected);
+    }
+
+    #[rstest]
+    #[case("{\"steam_id\": 4294967296}")] // Too big for a Steam ID 32, too small for a Steam ID 64
+    #[case("{\"steam_id\": \"4294967296\"}")]
+    #[case("{\"steam_id\": \"abc\"}")]
+    fn test_parse_steam_id_option_invalid(#[case] json: &str) {
+        assert!(serde_json::from_str::<SteamIdOptionTestStruct>(json).is_err());
+    }
+
+    #[derive(Deserialize, Debug)]
+    struct SteamIdsTestStruct {
+        #[serde(deserialize_with = "comma_separated_steam_ids")]
+        ids: Vec<u32>,
+    }
+
+    #[rstest]
+    #[case("{\"ids\": \"123456,76561198123456789\"}", vec![123456, 163191061])] // Steam ID 32 and 64 mixed
+    #[case("{\"ids\": \" 123456 , 76561198123456789 \"}", vec![123456, 163191061])] // Padded entries
+    #[case("{\"ids\": \"[123456,76561198123456789]\"}", vec![123456, 163191061])] // Bracketed string
+    #[case("{\"ids\": [123456, 76561198123456789]}", vec![123456, 163191061])] // Number array
+    #[case("{\"ids\": [\"123456\", \"76561198123456789\"]}", vec![123456, 163191061])] // String array
+    #[case("{\"ids\": 76561198123456789}", vec![163191061])] // Single number
+    fn test_comma_separated_steam_ids(#[case] json: &str, #[case] expected: Vec<u32>) {
+        let result: SteamIdsTestStruct = serde_json::from_str(json).unwrap();
+        assert_eq!(result.ids, expected);
+    }
+
+    #[rstest]
+    #[case("{\"ids\": \"123456,a\"}")]
+    #[case("{\"ids\": \"123456,4294967296\"}")] // One invalid id fails the whole list
+    #[case("{\"ids\": [4294967296]}")]
+    fn test_comma_separated_steam_ids_invalid(#[case] json: &str) {
+        assert!(serde_json::from_str::<SteamIdsTestStruct>(json).is_err());
     }
 
     #[derive(Deserialize, Debug)]
@@ -333,6 +372,9 @@ mod tests {
     #[rstest]
     #[case("{\"ids\": \"123456,76561198123456789\"}", Some(vec![123456, 163191061]))] // Steam ID 32 and 64 mixed
     #[case("{\"ids\": \"76561198123456789\"}", Some(vec![163191061]))]
+    #[case("{\"ids\": [123456, 76561198123456789]}", Some(vec![123456, 163191061]))] // Number array
+    #[case("{\"ids\": \"\"}", None)] // Empty string
+    #[case("{\"ids\": null}", None)]
     #[case("{}", None)]
     fn test_comma_separated_steam_ids_option(
         #[case] json: &str,
