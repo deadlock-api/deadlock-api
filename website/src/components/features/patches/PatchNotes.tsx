@@ -1,9 +1,4 @@
-import { ChevronDown } from "lucide-react";
-import { useState } from "react";
-
 import { Panel, PanelBody, PanelHeader } from "~/components/patterns/panel/Panel";
-import { Button } from "~/components/ui/button";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "~/components/ui/collapsible";
 import { Heading } from "~/components/ui/heading";
 import { SCROLLBAR_THIN } from "~/components/ui/recipes";
 import { Text } from "~/components/ui/text";
@@ -11,31 +6,25 @@ import type { PatchNotes as Notes } from "~/lib/patch-notes";
 import { cn } from "~/lib/utils";
 
 /**
- * What Valve wrote about a patch, as a panel: the opening lines of its announcement, and the full notes behind "Read
- * more". Both are plain text blocks, so nothing of the post's own markup reaches the page.
+ * What Valve wrote about a patch, as a panel: the opening lines of its announcement, then the full notes. Both are
+ * plain text blocks, so nothing of the post's own markup reaches the page.
  */
 export function PatchNotes({
   notes,
   layout = "fit",
 }: {
   notes: Notes;
-  /** `fit`: the blurb, and the notes behind "Read more". `fill`: from a wide page on, the height of the block beside it. */
+  /** `fit`: the notes scroll past a fixed height. `fill`: from a wide page on, the height of the block beside it. */
   layout?: "fit" | "fill";
 }) {
-  const [open, setOpen] = useState(false);
   if (!notes.blurb && notes.blocks.length === 0) return null;
-  const hasMore = notes.blocks.length > 0;
   return (
     <Panel>
       <PanelHeader title="Patch Notes" size="sm" />
-      {/* Stacked, the notes open behind "Read more". Beside the stats the panel takes their height and shows as much
+      {/* Stacked, the notes scroll past a fixed height. Beside the stats the panel takes their height and shows as much
           of the text as fits, scrolling for the rest; its text adds nothing to the height of the row, but a short table
           does not shrink it below a readable floor. */}
-      <Collapsible
-        open={open}
-        onOpenChange={setOpen}
-        className={layout === "fill" ? "@5xl:relative @5xl:min-h-64 @5xl:flex-1" : undefined}
-      >
+      <div className={layout === "fill" ? "@5xl:relative @5xl:min-h-64 @5xl:flex-1" : undefined}>
         <div
           className={cn(
             layout === "fill" && "@5xl:absolute @5xl:inset-0 @5xl:scroll-fade-y @5xl:overflow-y-auto",
@@ -44,21 +33,10 @@ export function PatchNotes({
         >
           <PanelBody className="flex flex-col items-start gap-3">
             {notes.blurb && <Text as="p">{notes.blurb}</Text>}
-            {hasMore && (
-              <CollapsibleTrigger asChild>
-                <Button variant="ghost" size="sm" className={layout === "fill" ? "@5xl:hidden" : undefined}>
-                  {open ? "Show less" : notes.blurb ? "Read more" : "Show notes"}
-                  <ChevronDown aria-hidden="true" className={cn(open && "rotate-180")} />
-                </Button>
-              </CollapsibleTrigger>
-            )}
-            <CollapsibleContent
-              forceMount
-              className={cn("w-full data-[state=closed]:hidden", layout === "fill" && "@5xl:data-[state=closed]:block")}
-            >
+            {notes.blocks.length > 0 && (
               <div
                 className={cn(
-                  "flex max-h-96 flex-col gap-3 overflow-y-auto",
+                  "flex max-h-96 w-full flex-col gap-3 overflow-y-auto",
                   layout === "fill" && "@5xl:max-h-none",
                   SCROLLBAR_THIN,
                 )}
@@ -90,10 +68,10 @@ export function PatchNotes({
                   );
                 })}
               </div>
-            </CollapsibleContent>
+            )}
           </PanelBody>
         </div>
-      </Collapsible>
+      </div>
     </Panel>
   );
 }
