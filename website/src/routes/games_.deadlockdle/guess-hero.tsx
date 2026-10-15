@@ -13,7 +13,7 @@ import { useDailyGuess } from "~/components/features/deadlockdle/use-daily-guess
 import { Stack } from "~/components/ui/stack";
 import { heroHints } from "~/lib/deadlockdle/hints";
 import { useHeroes, puzzleLoadError } from "~/lib/deadlockdle/queries";
-import { validatePuzzleDateSearch } from "~/lib/deadlockdle/seed";
+import { getModeSeed, seededRandom, validatePuzzleDateSearch } from "~/lib/deadlockdle/seed";
 import { pageTitle, seo } from "~/lib/seo";
 import { filterPlayableHeroes } from "~/queries/asset-queries";
 
@@ -58,6 +58,19 @@ function WarpFilters() {
       </defs>
     </svg>
   );
+}
+
+/** How far the silhouette is zoomed in, by wrong guesses so far: a part of the hero first, the whole hero at the end. */
+const ZOOM_STEPS = [2, 1.7, 1.45, 1.25, 1.1, 1];
+
+function zoomOf(guessCount: number): number {
+  return ZOOM_STEPS[Math.min(guessCount, ZOOM_STEPS.length - 1)];
+}
+
+/** The day's part of the hero the zoom closes in on, kept off the card's empty edges. */
+function focusOf(date: string): { x: number; y: number } {
+  const rng = seededRandom(getModeSeed(date, "guess-hero-focus"));
+  return { x: 0.35 + rng() * 0.3, y: 0.25 + rng() * 0.35 };
 }
 
 function getWarpFilter(guessCount: number, isFinished: boolean): string {
@@ -137,6 +150,8 @@ function GuessHero() {
           <SilhouetteFrame
             state={isFinished ? "revealed" : "hidden"}
             label={isFinished ? dailyHero.name : "Mystery hero"}
+            zoom={zoomOf(gameState.guesses.length)}
+            focus={focusOf(date)}
             className="h-32 w-32 sm:h-50 sm:w-50"
           >
             <img

@@ -9,10 +9,15 @@ interface SilhouetteFrameProps extends React.ComponentProps<"div"> {
   reveal?: number;
   /** What the art is, once it is revealed. While hidden the frame announces itself as a mystery. */
   label?: string;
+  /** How far the frame is zoomed into the art, 1 (the whole art, default) or more; a revealed frame shows it whole. */
+  zoom?: number;
+  /** The point of the art the zoom closes in on, each axis 0 to 1 (default the center). */
+  focus?: { x: number; y: number };
 }
 
 /**
  * Mystery art: the image is hidden behind a solid brand silhouette, and comes back to itself as the round is solved.
+ * `zoom` crops it to a part of the art around `focus`, for rounds that widen the view with each guess.
  * The children are the art; the frame owns the filter. The art needs a transparent background, or its silhouette is
  * its bounding box.
  */
@@ -20,6 +25,8 @@ export function SilhouetteFrame({
   state = "hidden",
   reveal,
   label,
+  zoom = 1,
+  focus = { x: 0.5, y: 0.5 },
   className,
   style,
   children,
@@ -55,7 +62,14 @@ export function SilhouetteFrame({
           </filter>
         </svg>
       )}
-      <span className="inline-flex size-full" style={{ filter: silhouetted ? `url(#${filterId})` : undefined }}>
+      <span
+        className="inline-flex size-full transition-transform duration-slow motion-reduce:transition-none"
+        style={{
+          filter: silhouetted ? `url(#${filterId})` : undefined,
+          transform: state === "revealed" || zoom <= 1 ? undefined : `scale(${zoom})`,
+          transformOrigin: `${focus.x * 100}% ${focus.y * 100}%`,
+        }}
+      >
         {children}
       </span>
     </div>

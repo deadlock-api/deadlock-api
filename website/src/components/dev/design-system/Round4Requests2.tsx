@@ -127,6 +127,9 @@ function MiniGameStates() {
         <SilhouetteFrame reveal={reveal} label="Partly revealed hero">
           <HeroImage heroId={HERO_IDS[2]} className="size-20" />
         </SilhouetteFrame>
+        <SilhouetteFrame zoom={2.5} focus={{ x: 0.3, y: 0.25 }} label="Zoomed hidden hero">
+          <HeroImage heroId={HERO_IDS[2]} className="size-20" />
+        </SilhouetteFrame>
         <SilhouetteFrame state="revealed" label="Seven">
           <HeroImage heroId={HERO_IDS[2]} className="size-20" />
         </SilhouetteFrame>
