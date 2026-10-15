@@ -44,7 +44,7 @@ permissions:
   id-token: write
 
 concurrency:
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
   group: ${{ github.workflow }}-${{ github.ref }}
 
 jobs:
@@ -110,7 +110,8 @@ jobs:
   deploy-merge-manifests:
     name: "Deploy: Merge Manifests"
     if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/master')
-    needs: deploy
+    # The per-platform images build alongside the checks; `latest` is only published once they pass.
+    needs: [checks, deploy]
     runs-on: blacksmith-2vcpu-ubuntu-2404
     steps:
       - name: Login to GitHub Container Registry
