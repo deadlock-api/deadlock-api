@@ -27,7 +27,7 @@ import { findKey } from "~/lib/find-keys";
 import { formatPercent } from "~/lib/format";
 import { DEFAULT_MATCH_MODE } from "~/lib/game-mode";
 import { fetchItemBestHeroes } from "~/lib/item-hero-fns";
-import { findItemBySlug, itemSlug } from "~/lib/item-slug";
+import { findItemBySlug, findRenamedItem, itemSlug } from "~/lib/item-slug";
 import { catchPrefetch, ensureCached, prefetchCached, requireOnServer } from "~/lib/prefetch-safe";
 import { rankOf } from "~/lib/rank-of";
 import { DEFAULT_RANK_RANGE, rankRangeLabel } from "~/lib/rank-utils";
@@ -136,9 +136,11 @@ export const Route = createFileRoute("/analytics/items/$itemName")({
     const shopable = filterShopableItems(items);
     const item = findItemBySlug(shopable, params.itemName);
     if (!item) {
-      // "Extra_Health" or an item id names an item: send it to its canonical address.
+      // "Extra_Health", an item id or a name Valve has since changed names an item: send it to its canonical address.
       const canonical =
-        findItemBySlug(shopable, slugify(params.itemName)) ?? findByIdSegment(shopable, params.itemName);
+        findItemBySlug(shopable, slugify(params.itemName)) ??
+        findByIdSegment(shopable, params.itemName) ??
+        findRenamedItem(shopable, params.itemName);
       if (canonical) {
         throw redirect({
           to: "/analytics/items/$itemName",
