@@ -151,14 +151,25 @@ pub(super) async fn mate_stats(
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
     ensure_not_protected(&state, &[account_id]).await?;
-    get_mate_stats(
+    let mates = get_mate_stats(
         &state.ch_client_ro,
         &state.batchers.steam_profile,
         account_id,
         query,
     )
-    .await
-    .map(Json)
+    .await?;
+    // Filtered after the cached query so the cache entry stays independent of the protected list.
+    let protected_users = state
+        .steam_client
+        .get_protected_users(&state.pg_client)
+        .await?;
+    Ok(Json(
+        mates
+            .iter()
+            .filter(|m| !protected_users.contains(&m.mate_id))
+            .cloned()
+            .collect::<Vec<_>>(),
+    ))
 }
 
 #[cfg(test)]
