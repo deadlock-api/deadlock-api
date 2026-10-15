@@ -181,6 +181,8 @@ pub(crate) struct PlayerPerformanceCurveQuery {
     )]
     pub(super) exclude_item_ids: Option<Vec<u32>>,
     /// Comma separated list of ability ids: only players whose ability upgrade order starts with exactly this sequence (one entry per ability point spent, unlocks included; see `ability_unlock_order_prefix` to match only the unlock order). See more: <https://api.deadlock-api.com/v1/analytics/ability-order-stats>
+    // Order matters, and repeated keys reach the API reordered: clients must send one `a,b` value.
+    #[param(explode = false)]
     #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
     #[cfg_attr(
         test,
@@ -188,6 +190,8 @@ pub(crate) struct PlayerPerformanceCurveQuery {
     )]
     pub(super) ability_order_prefix: Option<Vec<u32>>,
     /// Comma separated list of ability ids: only players who unlocked (put their first point into) their abilities in exactly this order, e.g. `a,b` for players who unlocked `a` first and `b` second. See more: <https://api.deadlock-api.com/v1/assets/heroes>
+    // Order matters, and repeated keys reach the API reordered: clients must send one `a,b` value.
+    #[param(explode = false)]
     #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
     #[cfg_attr(
         test,
