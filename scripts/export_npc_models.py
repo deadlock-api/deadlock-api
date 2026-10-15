@@ -1,3 +1,7 @@
+#!/usr/bin/env -S uv run --script
+# /// script
+# requires-python = ">=3.12"
+# ///
 """Export every model referenced by npc_units.vdata as web-ready GLBs.
 
 Same output layout and compaction as export_hero_models.py:

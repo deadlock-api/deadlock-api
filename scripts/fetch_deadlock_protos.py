@@ -1,4 +1,7 @@
-#!/usr/bin/env python3
+#!/usr/bin/env -S uv run --script
+# /// script
+# requires-python = ">=3.12"
+# ///
 """Fetch Deadlock protobuf definitions into the local cache for inspection."""
 
 from __future__ import annotations

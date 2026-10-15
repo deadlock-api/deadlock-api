@@ -1,3 +1,10 @@
+#!/usr/bin/env -S uv run --script
+# /// script
+# requires-python = ">=3.12"
+# dependencies = [
+#   "zstandard>=0.23",
+# ]
+# ///
 """Merge per-category zstd-compressed Valve KeyValues localization files in
 each `versions/<build>/localization/` folder into a single flat JSON per
 language: `<lang>.json.zst` containing one key->value mapping (no nesting).

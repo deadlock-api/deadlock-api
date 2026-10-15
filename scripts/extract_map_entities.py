@@ -1,4 +1,7 @@
-#!/usr/bin/env python3
+#!/usr/bin/env -S uv run --script
+# /// script
+# requires-python = ">=3.12"
+# ///
 """Extract the `/v1/assets/map` `entities` (interactable map features) from a
 decompiled map entity lump.
 
@@ -7,7 +10,7 @@ positions follow map changes without code changes. Manually:
 
     Source2Viewer-CLI -i game/citadel/maps/dl_midtown.vpk -d \
         -f maps/dl_midtown/entities/ -e vents_c -o out
-    python3 scripts/extract_map_entities.py \
+    uv run scripts/extract_map_entities.py \
         out/maps/dl_midtown/entities/default_ents.vents > entities.json
 
 Output: a JSON object of category -> list of entities, each with its world

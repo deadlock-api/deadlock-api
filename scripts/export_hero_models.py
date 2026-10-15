@@ -1,3 +1,7 @@
+#!/usr/bin/env -S uv run --script
+# /// script
+# requires-python = ">=3.12"
+# ///
 """Export every hero model referenced by heroes.vdata as web-ready GLBs.
 
 Each model is exported once per pose in POSES and written to

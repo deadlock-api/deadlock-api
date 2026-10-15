@@ -277,7 +277,7 @@ done
 MAP_ENTS="$citadel_folder/maps/dl_midtown/entities/default_ents.vents"
 if [ -f "$MAP_ENTS" ]; then
     mkdir -p "$VERSION_DIR/map"
-    python3 "$SCRIPT_DIR/extract_map_entities.py" "$MAP_ENTS" > "$VERSION_DIR/map/entities.json" \
+    uv run "$SCRIPT_DIR/extract_map_entities.py" "$MAP_ENTS" > "$VERSION_DIR/map/entities.json" \
         || { echo "Warning: map entity extraction failed, skipping."; rm -rf "$VERSION_DIR/map"; }
 else
     echo "Warning: maps/dl_midtown entity lump missing, skipping map entities."
@@ -287,7 +287,7 @@ fi
 CONVAR_DLLS=("$citadel_folder/bin/win64/client.dll" "$citadel_folder/bin/win64/server.dll")
 if [ -f "${CONVAR_DLLS[0]}" ] && [ -f "${CONVAR_DLLS[1]}" ]; then
     echo "Extracting convar defaults..."
-    uv run --with pefile --with unicorn python "$SCRIPT_DIR/extract_convars.py" "${CONVAR_DLLS[@]}" \
+    uv run "$SCRIPT_DIR/extract_convars.py" "${CONVAR_DLLS[@]}" \
         > "$VERSION_DIR/convars.json" \
         || { echo "Warning: convar extraction failed, skipping."; rm -f "$VERSION_DIR/convars.json"; }
 else
@@ -303,7 +303,7 @@ done
 
 # Merge per-language localization .txt into <lang>.json.zst (drops the .txt)
 echo "Merging localization for build $BUILD..."
-uv run --with zstandard python "$SCRIPT_DIR/merge_localization.py" "$VERSION_DIR/localization"
+uv run "$SCRIPT_DIR/merge_localization.py" "$VERSION_DIR/localization"
 
 # zstd-compress the remaining scripts/styles/steam.inf/map/convars files (level 19)
 echo "Compressing vdata/css/steam.inf/map entities/convars..."
@@ -406,10 +406,10 @@ find images -type f -name "*_png.*" -exec bash -c 'mv "$1" "${1/_png./.}"' _ {} 
 # Hero and NPC unit 3D models, one GLB per pose: models/<model path>/<pose>.glb
 rm -rf models
 mkdir -p models
-python3 "$SCRIPT_DIR/export_hero_models.py" ./Source2Viewer-CLI "$GLTF_TRANSFORM" \
+uv run "$SCRIPT_DIR/export_hero_models.py" ./Source2Viewer-CLI "$GLTF_TRANSFORM" \
     "$citadel_folder"/pak01_dir.vpk "$citadel_folder"/scripts/heroes.vdata models \
     || echo "Warning: hero model export failed, skipping."
-python3 "$SCRIPT_DIR/export_npc_models.py" ./Source2Viewer-CLI "$GLTF_TRANSFORM" \
+uv run "$SCRIPT_DIR/export_npc_models.py" ./Source2Viewer-CLI "$GLTF_TRANSFORM" \
     "$citadel_folder"/pak01_dir.vpk "$citadel_folder"/scripts/npc_units.vdata models \
     || echo "Warning: NPC model export failed, skipping."
 
