@@ -28,7 +28,7 @@ use valveprotos::deadlock::{
 };
 
 use crate::context::AppState;
-use crate::error::{APIError, APIResult};
+use crate::error::{APIError, APIResult, is_transient};
 use crate::routes::v1::matches::salts::fetch_match_salts;
 use crate::services::clickhouse_batcher::{BatchQueryMulti, ClickhouseBatcherMulti, in_clause};
 use crate::services::rate_limiter::Quota;
@@ -88,18 +88,61 @@ struct MatchMetadataResponse {
 
 static MIN_MATCH_ID_IN_CACHE: OnceCell<u64> = OnceCell::const_new();
 
+/// Why fetching a match's metadata from Valve's replay CDN failed.
+#[derive(Clone, Copy)]
+enum MetadataFetchFailure {
+    /// The CDN answered 404: Valve deletes old replays and uploads new ones a while after the
+    /// match ends. Not an upstream failure.
+    NotOnReplayServers,
+    /// An upstream failure a retry may get past (see [`is_transient`]).
+    UpstreamTransient,
+    /// An upstream answer that a retry would get again.
+    UpstreamPermanent,
+}
+
+impl MetadataFetchFailure {
+    fn from_request_error(e: &reqwest::Error) -> Self {
+        if e.status() == Some(StatusCode::NOT_FOUND) {
+            Self::NotOnReplayServers
+        } else if is_transient(e) {
+            Self::UpstreamTransient
+        } else {
+            Self::UpstreamPermanent
+        }
+    }
+
+    /// The response to a request for a match that recently failed this way.
+    fn error(self, match_id: u64) -> APIError {
+        match self {
+            Self::NotOnReplayServers => APIError::status_msg(
+                StatusCode::NOT_FOUND,
+                format!("Match metadata for match {match_id} is not on Valve's replay servers"),
+            ),
+            Self::UpstreamTransient => APIError::status_msg(
+                StatusCode::SERVICE_UNAVAILABLE,
+                "Match metadata recently failed to fetch from upstream. Retry later.",
+            ),
+            Self::UpstreamPermanent => APIError::status_msg(
+                StatusCode::BAD_GATEWAY,
+                "Match metadata recently got an unexpected response from upstream. Retrying won't help.",
+            ),
+        }
+    }
+}
+
 /// Negative cache of match IDs whose metadata fetch from Valve's replay CDN recently failed.
 /// Lets retry storms short-circuit instead of repeatedly re-hitting S3 and the (often
 /// unavailable) CDN for the same match.
-static METADATA_FETCH_FAILURES: LazyLock<Mutex<TtlCache<u64, ()>>> = LazyLock::new(|| {
-    Mutex::new(
-        TtlCache::<u64, ()>::builder()
-            .ttl(Duration::from_mins(1))
-            .initial_capacity(100_000)
-            .build()
-            .expect("ttl is set"),
-    )
-});
+static METADATA_FETCH_FAILURES: LazyLock<Mutex<TtlCache<u64, MetadataFetchFailure>>> =
+    LazyLock::new(|| {
+        Mutex::new(
+            TtlCache::<u64, MetadataFetchFailure>::builder()
+                .ttl(Duration::from_mins(1))
+                .initial_capacity(100_000)
+                .build()
+                .expect("ttl is set"),
+        )
+    });
 
 async fn min_cache_match_id(ch_client: &clickhouse::Client) -> &u64 {
     MIN_MATCH_ID_IN_CACHE
@@ -164,16 +207,8 @@ async fn fetch_match_metadata_raw(
     is_custom: bool,
     disable_steam: bool,
 ) -> APIResult<Bytes> {
-    if METADATA_FETCH_FAILURES
-        .lock()
-        .await
-        .cache_get(&match_id)
-        .is_some()
-    {
-        return Err(APIError::status_msg(
-            StatusCode::SERVICE_UNAVAILABLE,
-            "Match metadata recently failed to fetch from upstream. Retry later.",
-        ));
+    if let Some(failure) = METADATA_FETCH_FAILURES.lock().await.cache_get(&match_id) {
+        return Err(failure.error(match_id));
     }
 
     // Try to fetch from the cache first
@@ -217,8 +252,17 @@ async fn fetch_match_metadata_raw(
     {
         Ok(metadata) => Ok(metadata.into()),
         Err(e) => {
-            METADATA_FETCH_FAILURES.lock().await.cache_set(match_id, ());
-            Err(e.into())
+            let failure = MetadataFetchFailure::from_request_error(&e);
+            METADATA_FETCH_FAILURES
+                .lock()
+                .await
+                .cache_set(match_id, failure);
+            Err(match failure {
+                MetadataFetchFailure::NotOnReplayServers => failure.error(match_id),
+                // The first time, the upstream error itself is logged and answered.
+                MetadataFetchFailure::UpstreamTransient
+                | MetadataFetchFailure::UpstreamPermanent => e.into(),
+            })
         }
     }
 }

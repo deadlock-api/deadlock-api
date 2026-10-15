@@ -149,6 +149,27 @@ pub(crate) fn is_query_timeout(e: &clickhouse::error::Error) -> bool {
     }
 }
 
+/// Whether a failed outgoing request may succeed if the client retries. It won't when the
+/// upstream answered 4xx (other than 408 and 429) or a whole body that isn't valid JSON: those
+/// come back the same. Everything else may: 408, 429 and 5xx, timeouts, and connections that
+/// failed or broke off mid-body (which reqwest also reports as a decode error).
+pub(crate) fn is_transient(e: &reqwest::Error) -> bool {
+    match e.status() {
+        Some(status) => {
+            matches!(
+                status,
+                StatusCode::REQUEST_TIMEOUT | StatusCode::TOO_MANY_REQUESTS
+            ) || status.is_server_error()
+        }
+        None => !e.is_builder() && !is_invalid_json(e),
+    }
+}
+
+fn is_invalid_json(e: &reqwest::Error) -> bool {
+    core::iter::successors(core::error::Error::source(e), |source| source.source())
+        .any(<dyn core::error::Error>::is::<serde_json::Error>)
+}
+
 fn query_timeout_response() -> Response<Body> {
     build_error_response(
         StatusCode::GATEWAY_TIMEOUT,
@@ -210,9 +231,13 @@ impl IntoResponse for APIError {
             }
             Self::SteamProxy(e) => {
                 let (status, message) = match &e {
-                    SteamProxyError::Request(_) => (
+                    SteamProxyError::Request(e) if is_transient(e) => (
                         StatusCode::SERVICE_UNAVAILABLE,
                         "Failed to fetch data from Steam. Retry your request later.",
+                    ),
+                    SteamProxyError::Request(_) => (
+                        StatusCode::BAD_GATEWAY,
+                        "Steam returned an unexpected response. Retrying won't help.",
                     ),
                     SteamProxyError::Base64(_) => (
                         StatusCode::INTERNAL_SERVER_ERROR,
@@ -228,7 +253,7 @@ impl IntoResponse for APIError {
                     ),
                 };
                 if status.is_server_error() && status != StatusCode::SERVICE_UNAVAILABLE {
-                    error!(message, "Internal Error");
+                    error!(message, "Steam proxy error: {e}");
                 } else {
                     warn!("Steam proxy error: {e}");
                 }
@@ -241,11 +266,18 @@ impl IntoResponse for APIError {
             Self::Base64Decode(_) => {
                 Self::internal("Failed to decode base64 data. Retrying won't help.").into_response()
             }
-            Self::Request(e) => {
+            Self::Request(e) if is_transient(&e) => {
                 warn!("Request error: {e}");
                 build_error_response(
                     StatusCode::SERVICE_UNAVAILABLE,
                     "A needed request failed. Retry your request later.",
+                )
+            }
+            Self::Request(e) => {
+                error!("Request error: {e}");
+                build_error_response(
+                    StatusCode::BAD_GATEWAY,
+                    "A needed request got an unexpected response. Retrying won't help.",
                 )
             }
             Self::Clickhouse(e) => {
@@ -313,8 +345,73 @@ mod tests {
     use core::time::Duration;
 
     use axum::http::StatusCode;
+    use rstest::rstest;
 
     use super::*;
+
+    /// An `http://` URL of a local server that answers its first connection with `response`
+    /// (raw HTTP) and then closes it.
+    async fn serve_once(response: &'static str) -> String {
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let url = format!("http://{}", listener.local_addr().unwrap());
+        tokio::spawn(async move {
+            let (mut socket, _) = listener.accept().await.unwrap();
+            let mut request = [0; 1024];
+            let _ = socket.read(&mut request).await;
+            socket.write_all(response.as_bytes()).await.unwrap();
+        });
+        url
+    }
+
+    async fn json_error(response: &'static str) -> reqwest::Error {
+        let url = serve_once(response).await;
+        reqwest::get(url)
+            .await
+            .and_then(reqwest::Response::error_for_status)
+            .unwrap()
+            .json::<serde_json::Value>()
+            .await
+            .unwrap_err()
+    }
+
+    async fn status_error(response: &'static str) -> reqwest::Error {
+        let url = serve_once(response).await;
+        reqwest::get(url)
+            .await
+            .and_then(reqwest::Response::error_for_status)
+            .unwrap_err()
+    }
+
+    #[rstest]
+    #[case("HTTP/1.1 503 Service Unavailable\r\nContent-Length: 0\r\n\r\n", true)]
+    #[case("HTTP/1.1 429 Too Many Requests\r\nContent-Length: 0\r\n\r\n", true)]
+    #[case("HTTP/1.1 408 Request Timeout\r\nContent-Length: 0\r\n\r\n", true)]
+    #[case("HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\n\r\n", false)]
+    #[case("HTTP/1.1 401 Unauthorized\r\nContent-Length: 0\r\n\r\n", false)]
+    #[tokio::test]
+    async fn test_is_transient_status(#[case] response: &'static str, #[case] transient: bool) {
+        assert_eq!(is_transient(&status_error(response).await), transient);
+    }
+
+    #[rstest]
+    // The whole body arrived, but it isn't JSON.
+    #[case("HTTP/1.1 200 OK\r\nContent-Length: 9\r\n\r\nnot json!", false)]
+    // The connection closed before the announced body was complete.
+    #[case("HTTP/1.1 200 OK\r\nContent-Length: 100\r\n\r\n{\"a\":", true)]
+    #[tokio::test]
+    async fn test_is_transient_body(#[case] response: &'static str, #[case] transient: bool) {
+        assert_eq!(is_transient(&json_error(response).await), transient);
+    }
+
+    #[tokio::test]
+    async fn test_is_transient_connection_refused() {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let url = format!("http://{}", listener.local_addr().unwrap());
+        drop(listener);
+        assert!(is_transient(&reqwest::get(url).await.unwrap_err()));
+    }
 
     #[test]
     fn test_api_error_status_msg() {
