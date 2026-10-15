@@ -29,11 +29,12 @@ export function PatchNotes({
     <Panel>
       <PanelHeader title="Patch Notes" size="sm" />
       {/* Stacked, the notes open behind "Read more". Beside the stats the panel takes their height and shows as much
-          of the text as fits, scrolling for the rest; its text adds nothing to the height of the row. */}
+          of the text as fits, scrolling for the rest; its text adds nothing to the height of the row, but a short table
+          does not shrink it below a readable floor. */}
       <Collapsible
         open={open}
         onOpenChange={setOpen}
-        className={layout === "fill" ? "@5xl:relative @5xl:min-h-0 @5xl:flex-1" : undefined}
+        className={layout === "fill" ? "@5xl:relative @5xl:min-h-64 @5xl:flex-1" : undefined}
       >
         <div className={cn("@5xl:absolute @5xl:inset-0 @5xl:scroll-fade-y @5xl:overflow-y-auto", SCROLLBAR_THIN)}>
           <PanelBody className="flex flex-col items-start gap-3">
