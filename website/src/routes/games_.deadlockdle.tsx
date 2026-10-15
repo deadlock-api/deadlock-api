@@ -1,15 +1,20 @@
 import { ClientOnly, createFileRoute, Outlet } from "@tanstack/react-router";
 import { AnimatePresence, motion, MotionConfig } from "framer-motion";
 import { Crosshair } from "lucide-react";
-import { useCallback } from "react";
+import { lazy, Suspense, useCallback } from "react";
 
-import { TargetCursor } from "~/components/features/deadlockdle/TargetCursor";
+import { ChunkErrorBoundary } from "~/components/patterns/states/ChunkErrorBoundary";
 import { Button } from "~/components/ui/button";
 import { StatusDot } from "~/components/ui/status-dot";
 import { NEW_ROCKER_PRELOAD } from "~/lib/fonts";
 import { useStoredState } from "~/lib/use-stored-state";
 
 const CURSOR_STORAGE_KEY = "deadlockdle:custom-cursor";
+
+// GSAP only loads once a reader turns the custom cursor on; it is off by default.
+const TargetCursor = lazy(() =>
+  import("~/components/features/deadlockdle/TargetCursor").then((module) => ({ default: module.TargetCursor })),
+);
 
 function useCursorToggle() {
   // Stored as the JSON literal "true" / "false"; off until hydrated so the server markup matches.
@@ -34,7 +39,12 @@ function DeadlockdleLayout() {
       {/* Browser only: the server build stubs it (plugins/client-only-modules.mjs). */}
       {cursorEnabled && (
         <ClientOnly>
-          <TargetCursor />
+          {/* A chunk gone after a deploy fails only the cursor, not the game around it. */}
+          <ChunkErrorBoundary>
+            <Suspense fallback={null}>
+              <TargetCursor />
+            </Suspense>
+          </ChunkErrorBoundary>
         </ClientOnly>
       )}
 
