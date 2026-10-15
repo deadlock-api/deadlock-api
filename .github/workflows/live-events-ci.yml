@@ -86,17 +86,6 @@ jobs:
         with:
           cache-key: deadlock-api/live-events-${{ matrix.platform }}
 
-      - name: Determine Docker Tag
-        run: |
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            DOCKER_TAG="${{ inputs.tag }}"
-          elif [[ "${{ github.ref }}" == "refs/heads/master" ]]; then
-            DOCKER_TAG="latest"
-          else
-            DOCKER_TAG="${{ github.sha }}"
-          fi
-          echo "DOCKER_TAG=$DOCKER_TAG" >> $GITHUB_ENV
-
       - name: Build and push Docker image
         uses: useblacksmith/build-push-action@9b0579bbec7a6cad2f171596c57e7ac1e7658850 # v2.3.0
         with:
@@ -104,7 +93,8 @@ jobs:
           context: .
           file: live-events/Dockerfile
           push: true
-          tags: ${{ env.IMAGE_NAME }}:${{ env.DOCKER_TAG }}-${{ matrix.platform }}
+          # Tagged by run, so the manifest below merges this run's images and not another run's.
+          tags: ${{ env.IMAGE_NAME }}:build-${{ github.run_id }}-${{ matrix.platform }}
           platforms: ${{ matrix.docker_platform }}
 
   deploy-merge-manifests:
@@ -138,5 +128,5 @@ jobs:
           TAG="${{ env.DOCKER_TAG }}"
 
           docker buildx imagetools create -t "${IMAGE}:${TAG}" \
-            "${IMAGE}:${TAG}-amd64" \
-            "${IMAGE}:${TAG}-arm64"
+            "${IMAGE}:build-${{ github.run_id }}-amd64" \
+            "${IMAGE}:build-${{ github.run_id }}-arm64"
