@@ -329,7 +329,7 @@ pub(super) async fn metadata_raw(
     path = "/{match_id}/metadata",
     params(MatchIdQuery, MetadataQuery),
     responses(
-        (status = OK, description = "Match metadata, see protobuf type: CMsgMatchMetaDataContents"),
+        (status = OK, body = Object, description = "Match metadata, see protobuf type: CMsgMatchMetaDataContents"),
         (status = BAD_REQUEST, description = "Provided parameters are invalid."),
         (status = TOO_MANY_REQUESTS, description = "Rate limit exceeded"),
         (status = NOT_FOUND, description = "Match metadata not found"),

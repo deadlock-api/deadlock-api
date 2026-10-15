@@ -830,7 +830,11 @@ fn fetch_lines(
     path = "/metadata",
     params(BulkMatchMetadataQuery),
     responses(
-        (status = OK, body = [u8]),
+        (status = OK, content(
+            (Vec<Object> = "application/json"),
+            // With `format=ndjson`: one match object per line.
+            (String = "application/x-ndjson"),
+        )),
         (status = BAD_REQUEST, description = "Provided parameters are invalid."),
         (status = TOO_MANY_REQUESTS, description = "Rate limit exceeded"),
     ),
