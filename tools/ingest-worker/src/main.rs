@@ -116,11 +116,11 @@ enum Error {
 enum IngestError {
     #[error(transparent)]
     ObjectStore(#[from] object_store::Error),
-    /// Decompression failed.
+    /// The blocking decompress + parse task failed.
     #[error(transparent)]
     Io(#[from] std::io::Error),
     #[error(transparent)]
-    Parse(#[from] ParseError),
+    Unreadable(#[from] UnreadableData),
     #[error("Missing filename for key {0}")]
     MissingFilename(Path),
     #[error("Batch inserters have shut down")]
@@ -132,6 +132,15 @@ enum IngestError {
 #[derive(Debug, thiserror::Error)]
 #[error("Error parsing match data")]
 struct ParseError;
+
+/// Why an object's bytes can't be read as a match. Retrying the same bytes won't help.
+#[derive(Debug, thiserror::Error)]
+enum UnreadableData {
+    #[error("Error decompressing match data: {0}")]
+    Decompress(#[from] std::io::Error),
+    #[error(transparent)]
+    Parse(#[from] ParseError),
+}
 
 /// Parsed match data ready for ``ClickHouse`` insertion.
 struct ParsedMatch {
@@ -384,7 +393,7 @@ async fn ingest_key<S: ObjectStore + 'static>(
 }
 
 /// Fetch + decompress + parse a single object, then either:
-/// - move it to `failed/` if it can't be parsed or has an error outcome, or
+/// - move it to `failed/` if it can't be decompressed or parsed, or has an error outcome, or
 /// - queue its rows for batched insertion; once they are flushed the object is moved to
 ///   `processed/` (on a failed flush it stays in `ingest/` and is re-listed later).
 ///
@@ -430,7 +439,7 @@ async fn fetch_parse_and_send<S: ObjectStore + 'static>(
         }
         Err(e) => {
             move_to_failed(store, key, &filename).await?;
-            warn!("[{filename}] Error parsing match data: {e}");
+            warn!("[{filename}] {e}, moved to failed/");
             return Ok(false);
         }
     };
@@ -658,21 +667,23 @@ async fn get_object(store: &impl ObjectStore, key: &Path) -> object_store::Resul
 /// Decompress and parse an object, then `convert` the match, on a blocking thread to
 /// avoid starving the async runtime.
 ///
-/// The outer error is a decompression (or join) failure; the inner one is a protobuf
-/// parse failure, which callers treat differently.
+/// The outer error is a join failure (the blocking task panicked); the inner one means the
+/// bytes can't be decompressed or parsed, which callers treat differently.
 async fn decompress_and_parse<T, F>(
     data: Bytes,
     convert: F,
-) -> std::io::Result<Result<T, ParseError>>
+) -> std::io::Result<Result<T, UnreadableData>>
 where
     T: Send + 'static,
     F: FnOnce(MatchInfo) -> T + Send + 'static,
 {
-    tokio::task::spawn_blocking(move || {
-        decompress(&data).map(|d| parse_match_data(&d).map(convert))
+    let parsed = tokio::task::spawn_blocking(move || -> Result<T, UnreadableData> {
+        let data = decompress(&data)?;
+        Ok(convert(parse_match_data(&data)?))
     })
     .await
-    .map_err(std::io::Error::other)?
+    .map_err(std::io::Error::other)?;
+    Ok(parsed)
 }
 
 /// The container is sniffed from the magic bytes rather than taken from the key's extension:
