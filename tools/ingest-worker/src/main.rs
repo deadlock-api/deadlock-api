@@ -116,9 +116,9 @@ enum Error {
 enum IngestError {
     #[error(transparent)]
     ObjectStore(#[from] object_store::Error),
-    /// The blocking decompress + parse task failed.
-    #[error(transparent)]
-    Io(#[from] std::io::Error),
+    /// The blocking decompress + parse task was cancelled by the runtime shutting down.
+    #[error("Decompress + parse task was cancelled")]
+    Cancelled,
     #[error(transparent)]
     Unreadable(#[from] UnreadableData),
     #[error("Missing filename for key {0}")]
@@ -133,14 +133,34 @@ enum IngestError {
 #[error("Error parsing match data")]
 struct ParseError;
 
+impl UnreadableData {
+    /// Metric label for why the data is unreadable.
+    fn reason(&self) -> &'static str {
+        match self {
+            Self::Decompress(_) => "decompress",
+            Self::TooLarge => "too_large",
+            Self::Parse(_) => "parse",
+            Self::Panicked(_) => "panic",
+        }
+    }
+}
+
 /// Why an object's bytes can't be read as a match. Retrying the same bytes won't help.
 #[derive(Debug, thiserror::Error)]
 enum UnreadableData {
-    #[error("Error decompressing match data: {0}")]
+    #[error("Error decompressing match data")]
     Decompress(#[from] std::io::Error),
+    #[error("Decompressed match data exceeds {MAX_DECOMPRESSED_BYTES} bytes")]
+    TooLarge,
     #[error(transparent)]
     Parse(#[from] ParseError),
+    #[error("Decompress + parse panicked: {0}")]
+    Panicked(String),
 }
+
+/// Real match metadata decompresses to a few MB; anything this large is corrupt or a bomb.
+/// The cap also bounds how long a decode can run past the fetch timeout, which can't stop it.
+const MAX_DECOMPRESSED_BYTES: u64 = 256 * 1024 * 1024;
 
 /// Parsed match data ready for ``ClickHouse`` insertion.
 struct ParsedMatch {
@@ -404,6 +424,10 @@ async fn fetch_parse_and_send<S: ObjectStore + 'static>(
     key: &Path,
 ) -> Result<bool, IngestError> {
     let store = &*post_flush.store;
+    let filename = key
+        .filename()
+        .ok_or_else(|| IngestError::MissingFilename(key.clone()))?
+        .to_owned();
     let obj = match get_object(store, key).await {
         Ok(obj) => obj,
         // Another worker already processed and moved this object between our
@@ -424,11 +448,6 @@ async fn fetch_parse_and_send<S: ObjectStore + 'static>(
     })
     .await?;
 
-    let filename = key
-        .filename()
-        .ok_or_else(|| IngestError::MissingFilename(key.clone()))?
-        .to_owned();
-
     let parsed = match parsed {
         Ok(Ok(parsed)) => parsed,
         Ok(Err(match_id)) => {
@@ -439,7 +458,8 @@ async fn fetch_parse_and_send<S: ObjectStore + 'static>(
         }
         Err(e) => {
             move_to_failed(store, key, &filename).await?;
-            warn!("[{filename}] {e}, moved to failed/");
+            counter!("ingest_worker.unreadable_data", "reason" => e.reason()).increment(1);
+            warn!("[{filename}] {}, moved to failed/", common::ErrorChain(&e));
             return Ok(false);
         }
     };
@@ -667,48 +687,68 @@ async fn get_object(store: &impl ObjectStore, key: &Path) -> object_store::Resul
 /// Decompress and parse an object, then `convert` the match, on a blocking thread to
 /// avoid starving the async runtime.
 ///
-/// The outer error is a join failure (the blocking task panicked); the inner one means the
-/// bytes can't be decompressed or parsed, which callers treat differently.
+/// The outer error means the task was cancelled; the inner one means the bytes can't be
+/// decompressed, parsed or converted, which callers treat differently. A panic counts as the
+/// latter: the same bytes would panic again on every retry.
 async fn decompress_and_parse<T, F>(
     data: Bytes,
     convert: F,
-) -> std::io::Result<Result<T, UnreadableData>>
+) -> Result<Result<T, UnreadableData>, IngestError>
 where
     T: Send + 'static,
     F: FnOnce(MatchInfo) -> T + Send + 'static,
 {
-    let parsed = tokio::task::spawn_blocking(move || -> Result<T, UnreadableData> {
+    match tokio::task::spawn_blocking(move || -> Result<T, UnreadableData> {
         let data = decompress(&data)?;
         Ok(convert(parse_match_data(&data)?))
     })
     .await
-    .map_err(std::io::Error::other)?;
-    Ok(parsed)
+    {
+        Ok(parsed) => Ok(parsed),
+        Err(e) if e.is_panic() => {
+            let payload = e.into_panic();
+            let msg = payload
+                .downcast_ref::<&str>()
+                .map(|s| (*s).to_owned())
+                .or_else(|| payload.downcast_ref::<String>().cloned())
+                .unwrap_or_default();
+            Ok(Err(UnreadableData::Panicked(msg)))
+        }
+        Err(_) => Err(IngestError::Cancelled),
+    }
 }
 
 /// The container is sniffed from the magic bytes rather than taken from the key's extension:
 /// Valve kept the `.meta.bz2` name but switched the actual compression to zstd for newer
 /// matches. Data matching neither magic is passed through as already-plain protobuf.
-fn decompress(data: &[u8]) -> std::io::Result<Cow<'_, [u8]>> {
-    use std::io::Read;
-
+fn decompress(data: &[u8]) -> Result<Cow<'_, [u8]>, UnreadableData> {
     const ZSTD_MAGIC: [u8; 4] = [0x28, 0xb5, 0x2f, 0xfd];
     const BZIP2_MAGIC: [u8; 3] = *b"BZh";
 
     let decompressed = if data.starts_with(&ZSTD_MAGIC) {
-        let mut buf = vec![];
-        zstd::stream::read::Decoder::new(data)?.read_to_end(&mut buf)?;
-        Cow::Owned(buf)
+        Cow::Owned(read_capped(zstd::stream::read::Decoder::new(data)?)?)
     } else if data.starts_with(&BZIP2_MAGIC) {
-        let mut buf = vec![];
-        bzip2::read::BzDecoder::new(data).read_to_end(&mut buf)?;
-        Cow::Owned(buf)
+        Cow::Owned(read_capped(bzip2::read::BzDecoder::new(data))?)
     } else {
         Cow::Borrowed(data)
     };
     counter!("ingest_worker.decompress_object.success").increment(1);
     debug!("Decompressed object");
     Ok(decompressed)
+}
+
+/// Reads `reader` to the end, failing once it yields more than [`MAX_DECOMPRESSED_BYTES`].
+fn read_capped(reader: impl std::io::Read) -> Result<Vec<u8>, UnreadableData> {
+    use std::io::Read;
+
+    let mut buf = vec![];
+    reader
+        .take(MAX_DECOMPRESSED_BYTES + 1)
+        .read_to_end(&mut buf)?;
+    if buf.len() as u64 > MAX_DECOMPRESSED_BYTES {
+        return Err(UnreadableData::TooLarge);
+    }
+    Ok(buf)
 }
 
 fn parse_match_data(buf: &[u8]) -> Result<MatchInfo, ParseError> {
