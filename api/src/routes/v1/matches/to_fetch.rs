@@ -17,6 +17,7 @@ use tracing::{debug, warn};
 use crate::context::AppState;
 use crate::error::APIResult;
 use crate::services::clickhouse_insert_batcher::{BatchInsert, ClickhouseInsertBatcher};
+use crate::services::lease::RELEASE_IF_OWNED;
 use crate::utils::parse::parse_steam_id_option;
 use crate::utils::sql::id_list;
 
@@ -230,18 +231,34 @@ fn worklist(ids: impl Serialize) -> Response {
         .into_response()
 }
 
-#[cached(ttl_secs = 300, convert = "{ 0 }", key = "u8", sync_writes = "default")]
-async fn prioritized_account_ids(pg_client: &Pool<Postgres>) -> Result<Arc<Vec<u32>>, sqlx::Error> {
-    let ids: Vec<i64> = sqlx::query_scalar(
+/// The prioritized accounts, or none if Postgres fails. That fallback is cached too, so an
+/// outage costs one failed query a minute instead of one per request.
+#[cached(ttl_secs = 60, convert = "{ 0 }", key = "u8", sync_writes = "default")]
+async fn prioritized_account_ids(pg_client: &Pool<Postgres>) -> Arc<Vec<u32>> {
+    let ids: Vec<i64> = match sqlx::query_scalar(
         "SELECT steam_id3 FROM prioritized_steam_accounts WHERE deleted_at IS NULL",
     )
     .fetch_all(pg_client)
-    .await?;
-    Ok(Arc::new(
+    .await
+    {
+        Ok(ids) => ids,
+        Err(e) => {
+            // Without the prioritized accounts the pool is just the newest pending matches.
+            warn!("Failed to load prioritized accounts: {e}");
+            vec![]
+        }
+    };
+    Arc::new(
         ids.into_iter()
             .filter_map(|id| u32::try_from(id).ok())
             .collect(),
-    ))
+    )
+}
+
+/// Cache key of [`pending_pool`]: the pool depends on the prioritized accounts.
+fn pool_key(prioritized: &[u32]) -> u64 {
+    use core::hash::{BuildHasher, BuildHasherDefault};
+    BuildHasherDefault::<std::hash::DefaultHasher>::default().hash_one(prioritized)
 }
 
 /// Pending matches in fetch order: prioritized accounts' matches first, then newest day first;
@@ -250,7 +267,13 @@ async fn prioritized_account_ids(pg_client: &Pool<Postgres>) -> Result<Arc<Vec<u
 /// else; within those a higher-badge player (any one player's badge at that match) first, then
 /// the newest.
 /// Holds every pending prioritized match plus the newest others, up to `POOL_LIMIT`.
-#[cached(ttl_secs = 60, convert = "{ 0 }", key = "u8", sync_writes = "default")]
+#[cached(
+    max_size = 2,
+    ttl_secs = 60,
+    convert = "{ pool_key(prioritized) }",
+    key = "u64",
+    sync_writes = "default"
+)]
 async fn pending_pool(
     ch_client: &clickhouse::Client,
     prioritized: &[u32],
@@ -330,11 +353,7 @@ pub(super) async fn matches_to_fetch(
         return Ok(worklist(ids));
     }
 
-    // Without the prioritized accounts the pool is just the newest pending matches.
-    let prioritized = prioritized_account_ids(&state.pg_client)
-        .await
-        .inspect_err(|e| warn!("Failed to load prioritized accounts: {e}"))
-        .unwrap_or_default();
+    let prioritized = prioritized_account_ids(&state.pg_client).await;
     let pool = pending_pool(&state.ch_client_ro, prioritized.as_slice()).await?;
     let n = pool.len();
     if n == 0 {
@@ -342,6 +361,8 @@ pub(super) async fn matches_to_fetch(
     }
 
     // Walk the pool in priority order, skipping matches another worker has claimed.
+    // The claims carry this request's token, so a failed chunk can release exactly its own.
+    let token = uuid::Uuid::new_v4().to_string();
     let mut conn = state.redis_client.clone();
     let mut claimed: Vec<u64> = Vec::with_capacity(BATCH_SIZE);
     let mut scanned = 0usize;
@@ -353,19 +374,24 @@ pub(super) async fn matches_to_fetch(
         for id in ids {
             pipe.cmd("SET")
                 .arg(format!("{CLAIM_PREFIX}{id}"))
-                .arg(1u8)
+                .arg(&token)
                 .arg("NX")
                 .arg("EX")
                 .arg(CLAIM_TTL_SECS);
         }
         let results: Vec<Option<String>> = match pipe.query_async(&mut conn).await {
             Ok(results) => results,
-            // The matches claimed so far stay claimed for `CLAIM_TTL_SECS`: hand them out.
-            Err(e) if !claimed.is_empty() => {
+            Err(e) => {
+                // Redis may have run some of the SETs before failing; claims nobody is handed
+                // would hide those matches from every worker for `CLAIM_TTL_SECS`.
+                release_claims(&mut conn, ids, &token).await;
+                // The matches claimed so far are this worker's: hand them out.
+                if claimed.is_empty() {
+                    return Err(e.into());
+                }
                 warn!("Failed to claim more matches to fetch: {e}");
                 break;
             }
-            Err(e) => return Err(e.into()),
         };
 
         for (id, res) in ids.iter().zip(results.iter()) {
@@ -377,6 +403,22 @@ pub(super) async fn matches_to_fetch(
     }
 
     Ok(worklist(claimed))
+}
+
+/// Best effort: releases the claims of `ids` that hold `token`, leaving other workers' alone.
+async fn release_claims(conn: &mut redis::aio::MultiplexedConnection, ids: &[u64], token: &str) {
+    let mut pipe = redis::pipe();
+    for id in ids {
+        pipe.cmd("EVAL")
+            .arg(RELEASE_IF_OWNED)
+            .arg(1)
+            .arg(format!("{CLAIM_PREFIX}{id}"))
+            .arg(token)
+            .ignore();
+    }
+    if let Err(e) = pipe.query_async::<()>(conn).await {
+        warn!("Failed to release claims of matches to fetch: {e}");
+    }
 }
 
 #[cfg(test)]
