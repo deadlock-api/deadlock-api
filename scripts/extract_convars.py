@@ -1,4 +1,11 @@
-#!/usr/bin/env python3
+#!/usr/bin/env -S uv run --script
+# /// script
+# requires-python = ">=3.12"
+# dependencies = [
+#   "pefile>=2024.8.26",
+#   "unicorn>=2.1",
+# ]
+# ///
 """Extract the convar default values compiled into the Deadlock game DLLs.
 
 Convars aren't in any game data file: each one is registered by a small static
@@ -18,7 +25,7 @@ addresses.
 
 Run by `scripts/build_version_and_upload.sh` on every assets build. Manually:
 
-    uv run --with pefile --with unicorn python scripts/extract_convars.py \
+    uv run scripts/extract_convars.py \
         game/citadel/bin/win64/client.dll game/citadel/bin/win64/server.dll \
         > convars.json
 

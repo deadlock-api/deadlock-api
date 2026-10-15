@@ -1,5 +1,6 @@
-#!/usr/bin/env python3
+#!/usr/bin/env -S uv run --script
 # /// script
+# requires-python = ">=3.12"
 # dependencies = [
 #   "keyvalues3>=0.6",
 #   "zstandard>=0.23",

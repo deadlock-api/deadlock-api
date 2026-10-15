@@ -1,4 +1,7 @@
-#!/usr/bin/env python3
+#!/usr/bin/env -S uv run --script
+# /// script
+# requires-python = ">=3.12"
+# ///
 """Generate the `/v1/assets/map` geometry module from a decompiled map entity lump.
 
 The zip-line lane splines and neutral camp positions are not in any vdata/css
@@ -7,7 +10,7 @@ with Source2Viewer-CLI (tested with 20.0) and run this script on the result:
 
     Source2Viewer-CLI -i game/citadel/maps/dl_midtown.vpk -d \
         -f maps/dl_midtown/entities/ -e vents_c -o out
-    python3 scripts/extract_map_geometry.py \
+    uv run scripts/extract_map_geometry.py \
         out/maps/dl_midtown/entities/default_ents.vents \
         > api/src/services/assets/versions/map/city_never_sleeps.rs
     cargo fmt -p deadlock-api-rust
