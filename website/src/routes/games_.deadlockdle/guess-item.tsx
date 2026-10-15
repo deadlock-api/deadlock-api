@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { useMemo } from "react";
 
 import { SilhouetteFrame } from "~/components/domain/minigames/SilhouetteFrame";
+import { AnswerStatsLink } from "~/components/features/deadlockdle/AnswerStatsLink";
 import { GameShell, GameShellError, GameShellLoading } from "~/components/features/deadlockdle/GameShell";
 import { GuessFeedback } from "~/components/features/deadlockdle/GuessFeedback";
 import { GuessInput } from "~/components/features/deadlockdle/GuessInput";
@@ -154,7 +155,9 @@ function GuessItem() {
         maxAttempts={MAX_ATTEMPTS}
         streakState={streakState}
         isArchive={isArchive}
-      />
+      >
+        <AnswerStatsLink mode="guess-item" date={date} isArchive={isArchive} item={dailyItem.name} />
+      </ResultModal>
     </GameShell>
   );
 }

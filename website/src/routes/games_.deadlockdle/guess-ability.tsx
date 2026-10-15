@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { motion } from "framer-motion";
 import { useMemo } from "react";
 
+import { AnswerStatsLink } from "~/components/features/deadlockdle/AnswerStatsLink";
 import { GameShell, GameShellError, GameShellLoading } from "~/components/features/deadlockdle/GameShell";
 import { GuessFeedback } from "~/components/features/deadlockdle/GuessFeedback";
 import { GuessInput } from "~/components/features/deadlockdle/GuessInput";
@@ -138,7 +139,9 @@ function GuessAbility() {
         maxAttempts={MAX_ATTEMPTS}
         streakState={streakState}
         isArchive={isArchive}
-      />
+      >
+        <AnswerStatsLink mode="guess-ability" date={date} isArchive={isArchive} hero={hero.name} />
+      </ResultModal>
     </GameShell>
   );
 }

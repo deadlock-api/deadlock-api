@@ -5,6 +5,7 @@ import { Volume2, VolumeX } from "lucide-react";
 import { type RefObject, useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 
 import { PlayButton } from "~/components/domain/minigames/PlayButton";
+import { AnswerStatsLink } from "~/components/features/deadlockdle/AnswerStatsLink";
 import { GameShell, GameShellError, GameShellLoading } from "~/components/features/deadlockdle/GameShell";
 import { GuessFeedback, wrongGuessMessage } from "~/components/features/deadlockdle/GuessFeedback";
 import { GuessInput } from "~/components/features/deadlockdle/GuessInput";
@@ -601,7 +602,9 @@ function GuessSound() {
         maxAttempts={MAX_ATTEMPTS}
         streakState={streakState}
         isArchive={isArchive}
-      />
+      >
+        <AnswerStatsLink mode="guess-sound" date={date} isArchive={isArchive} hero={dailySound.heroName} />
+      </ResultModal>
     </GameShell>
   );
 }

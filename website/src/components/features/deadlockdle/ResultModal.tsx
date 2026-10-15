@@ -33,6 +33,8 @@ interface ResultModalProps {
   maxAttempts: number;
   streakState: StreakState;
   isArchive?: boolean;
+  /** Beside the answer: a link to its real stats (`AnswerStatsLink`). */
+  children?: React.ReactNode;
 }
 
 const MotionStack = motion.create(Stack);
@@ -49,6 +51,7 @@ export function ResultModal({
   maxAttempts,
   streakState,
   isArchive,
+  children,
 }: ResultModalProps) {
   const countdown = useCountdown(date);
   const containerRef = useRef<HTMLElement>(null);
@@ -105,14 +108,17 @@ export function ResultModal({
               <motion.div variants={fadeUp}>
                 <Card tone="inset" size="xs">
                   <CardContent>
-                    <Stack gap={0.5}>
-                      <Text variant="eyebrow" className="font-mono">
-                        [Answer]
-                      </Text>
-                      <Text as="p" variant="label">
-                        {answer}
-                      </Text>
-                    </Stack>
+                    <Inline justify="between" gap={3}>
+                      <Stack gap={0.5}>
+                        <Text variant="eyebrow" className="font-mono">
+                          [Answer]
+                        </Text>
+                        <Text as="p" variant="label">
+                          {answer}
+                        </Text>
+                      </Stack>
+                      {children}
+                    </Inline>
                   </CardContent>
                 </Card>
               </motion.div>

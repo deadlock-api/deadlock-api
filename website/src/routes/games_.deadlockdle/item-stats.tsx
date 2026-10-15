@@ -7,6 +7,7 @@ import { AnswerOption, type AnswerOptionState, revealedState } from "~/component
 import { ScoreSummary } from "~/components/domain/minigames/ScoreSummary";
 import { ShareButton } from "~/components/domain/minigames/ShareButton";
 import { TerminalButton } from "~/components/domain/minigames/TerminalButton";
+import { AnswerStatsLink } from "~/components/features/deadlockdle/AnswerStatsLink";
 import { GameShell, GameShellError, GameShellLoading } from "~/components/features/deadlockdle/GameShell";
 import { NextGameButton } from "~/components/features/deadlockdle/NextGameButton";
 import { Card, CardContent } from "~/components/ui/card";
@@ -246,7 +247,7 @@ function ItemStatsQuiz() {
             >
               <Card size="sm">
                 <CardContent className="flex flex-col gap-4">
-                  <div className="flex items-center gap-3">
+                  <div className="flex flex-wrap items-center gap-3">
                     <Card tone="inset" size="flush" className="size-16 shrink-0 items-center justify-center">
                       {/* The shop art's background is the slot color, which would answer the Slot question. */}
                       <ItemImage
@@ -262,6 +263,11 @@ function ItemStatsQuiz() {
                         Item {index + 1} of {ITEMS_COUNT}
                       </Text>
                     </div>
+                    {revealed && (
+                      <div className="ms-auto">
+                        <AnswerStatsLink mode="item-stats" date={date} isArchive={isArchive} item={item.name} />
+                      </div>
+                    )}
                   </div>
 
                   <div className="flex flex-wrap gap-x-5 gap-y-3">

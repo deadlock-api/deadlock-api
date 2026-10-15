@@ -9,7 +9,7 @@ import type { GameMode } from "./types";
 type Properties = Record<string, string | number | boolean | null>;
 
 export function trackDeadlockdle(
-  name: "game_started" | "guess_submitted" | "game_completed" | "share_clicked" | "next_game_clicked",
+  name: "game_started" | "guess_submitted" | "game_completed" | "share_clicked" | "next_game_clicked" | "stats_clicked",
   mode: GameMode | "all",
   date: string,
   isArchive: boolean,
