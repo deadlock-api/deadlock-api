@@ -25,7 +25,7 @@ use crate::utils::types::AccountIdQuery;
 
 #[derive(Deserialize, IntoParams, Clone)]
 pub(crate) struct AccountIdsQuery {
-    /// Comma separated list of account ids, Account IDs are in `SteamID3` format.
+    /// Comma separated list of account ids, in `SteamID3` or `SteamID64` format.
     #[param(inline, min_items = 1, max_items = 1_000)]
     #[serde(deserialize_with = "comma_separated_deserialize")]
     pub(crate) account_ids: Vec<u64>,

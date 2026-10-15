@@ -406,13 +406,26 @@ pub(super) fn default_min_matches_u64() -> Option<u64> {
     Some(DEFAULT_MIN_MATCHES)
 }
 
+/// The most `account_ids` a request may filter on, as the parameters document.
+pub(super) const MAX_ACCOUNT_IDS: usize = 1_000;
+
 /// Filters out protected users from `account_ids` and checks a single `account_id`.
-/// Returns an error if all requested accounts are protected.
+/// Returns an error if there are more than [`MAX_ACCOUNT_IDS`] or all requested accounts are
+/// protected.
 pub(super) async fn filter_protected_accounts(
     state: &crate::context::AppState,
     account_ids: &mut Option<Vec<u32>>,
     account_id: Option<u32>,
 ) -> crate::error::APIResult<()> {
+    if account_ids
+        .as_ref()
+        .is_some_and(|ids| ids.len() > MAX_ACCOUNT_IDS)
+    {
+        return Err(crate::error::APIError::status_msg(
+            axum::http::StatusCode::BAD_REQUEST,
+            format!("Too many account IDs (max {MAX_ACCOUNT_IDS})."),
+        ));
+    }
     if account_ids.is_none() && account_id.is_none() {
         return Ok(());
     }

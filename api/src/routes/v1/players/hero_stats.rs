@@ -13,15 +13,15 @@ use crate::error::{APIError, APIResult};
 use crate::routes::v1::matches::types::{GameMode, MatchMode, reject_brawl_badge_filter};
 use crate::routes::v1::players::{ensure_not_protected, without_protected};
 use crate::services::clickhouse_batcher::{BatchQueryGrouped, ClickhouseBatcherGrouped};
-use crate::utils::parse::{comma_separated_deserialize, comma_separated_deserialize_option};
+use crate::utils::parse::{comma_separated_deserialize_option, comma_separated_steam_ids};
 use crate::utils::types::AccountIdQuery;
 
 #[derive(Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash, Default)]
 #[cfg_attr(test, derive(proptest_derive::Arbitrary))]
 pub(crate) struct HeroStatsQuery {
-    /// Comma separated list of account ids, Account IDs are in `SteamID3` format.
+    /// Comma separated list of account ids, in `SteamID3` or `SteamID64` format.
     #[param(inline, min_items = 1, max_items = 1000)]
-    #[serde(deserialize_with = "comma_separated_deserialize")]
+    #[serde(deserialize_with = "comma_separated_steam_ids")]
     pub(crate) account_ids: Vec<u32>,
     /// Filter matches based on their game mode. Valid values: `normal`, `street_brawl`. **Default:** `normal`.
     #[serde(

@@ -32,45 +32,79 @@ pub(crate) fn steamid3_to_steamid64(steam_id: u32) -> u64 {
     u64::from(steam_id) + STEAM_ID_64_IDENT
 }
 
+/// A Steam account id as sent by a client: a number or a string, `SteamID3` or `SteamID64`.
+#[derive(Deserialize)]
+#[serde(untagged)]
+enum SteamIdRaw {
+    U64(u64),
+    String(String),
+}
+
+impl SteamIdRaw {
+    fn steam_id3(self) -> Result<u32, String> {
+        let steam_id = match self {
+            Self::U64(v) => v,
+            Self::String(s) => s
+                .trim()
+                .parse::<u64>()
+                .map_err(|_| "Invalid steam id string".to_owned())?,
+        };
+        steamid64_to_steamid3(steam_id).map_err(|_| format!("Invalid steam id: {steam_id}"))
+    }
+}
+
+fn steam_ids3<E: serde::de::Error>(steam_ids: Vec<u64>) -> Result<Vec<u32>, E> {
+    steam_ids
+        .into_iter()
+        .map(|id| {
+            steamid64_to_steamid3(id).map_err(|_| E::custom(format!("Invalid steam id: {id}")))
+        })
+        .collect()
+}
+
 pub(crate) fn parse_steam_id<'de, D>(deserializer: D) -> Result<u32, D::Error>
 where
     D: Deserializer<'de>,
 {
-    #[derive(Deserialize)]
-    #[serde(untagged)]
-    enum SteamIdRaw {
-        U64(u64),
-        String(String),
-    }
-
-    let steam_id_u64 =
-        match SteamIdRaw::deserialize(deserializer).map_err(serde::de::Error::custom)? {
-            SteamIdRaw::U64(v) => v,
-            SteamIdRaw::String(s) => s
-                .trim()
-                .parse::<u64>()
-                .map_err(|_| serde::de::Error::custom("Invalid steam id string"))?,
-        };
-
-    let steam_id3 = steamid64_to_steamid3(steam_id_u64).map_err(serde::de::Error::custom)?;
+    let steam_id3 = SteamIdRaw::deserialize(deserializer)?
+        .steam_id3()
+        .map_err(serde::de::Error::custom)?;
     if steam_id3 == 0 {
         return Err(serde::de::Error::custom("Invalid steam id"));
     }
     Ok(steam_id3)
 }
 
+/// Like [`parse_steam_id`], but `0` means no account (the filter is left out).
 pub(crate) fn parse_steam_id_option<'de, D>(deserializer: D) -> Result<Option<u32>, D::Error>
 where
     D: Deserializer<'de>,
 {
-    Option::<u64>::deserialize(deserializer)
-        .map_err(serde::de::Error::custom)
-        .and_then(|steam_id| {
-            steam_id
-                .map(|s| steamid64_to_steamid3(s).map_err(serde::de::Error::custom))
-                .transpose()
-        })
-        .map(|steam_id| steam_id.filter(|&s| s > 0))
+    let steam_id3 = Option::<SteamIdRaw>::deserialize(deserializer)?
+        .map(SteamIdRaw::steam_id3)
+        .transpose()
+        .map_err(serde::de::Error::custom)?;
+    Ok(steam_id3.filter(|&id| id > 0))
+}
+
+/// A comma separated list of Steam account ids, `SteamID3` or `SteamID64`, as `SteamID3`s.
+pub(crate) fn comma_separated_steam_ids<'de, D>(deserializer: D) -> Result<Vec<u32>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    steam_ids3(comma_separated_deserialize::<D, u64>(deserializer)?)
+}
+
+/// [`comma_separated_steam_ids`] for an optional parameter.
+pub(crate) fn comma_separated_steam_ids_option<'de, D>(
+    deserializer: D,
+) -> Result<Option<Vec<u32>>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    comma_separated_deserialize_option::<D, u64>(deserializer)?
+        .map(steam_ids3)
+        .transpose()
 }
 
 // Query Parameter Parsing
@@ -283,9 +317,36 @@ mod tests {
     #[case("{\"steam_id\": 123456}", Some(123456u32))] // Steam ID 32 stays the same
     #[case("{\"steam_id\": 0}", None)] // Invalid Steam ID (0) becomes None
     #[case("{\"steam_id\": null}", None)] // Null becomes None
+    #[case("{\"steam_id\": \"76561198123456789\"}", Some(163191061u32))] // As a string, like a query value
+    #[case("{\"steam_id\": \" 123456 \"}", Some(123456u32))] // Padded, like parse_steam_id accepts
     fn test_parse_steam_id_option(#[case] json: &str, #[case] expected: Option<u32>) {
         let result: SteamIdOptionTestStruct = serde_json::from_str(json).unwrap();
         assert_eq!(result.steam_id, expected);
+    }
+
+    #[derive(Deserialize, Debug)]
+    struct SteamIdsOptionTestStruct {
+        #[serde(default, deserialize_with = "comma_separated_steam_ids_option")]
+        ids: Option<Vec<u32>>,
+    }
+
+    #[rstest]
+    #[case("{\"ids\": \"123456,76561198123456789\"}", Some(vec![123456, 163191061]))] // Steam ID 32 and 64 mixed
+    #[case("{\"ids\": \"76561198123456789\"}", Some(vec![163191061]))]
+    #[case("{}", None)]
+    fn test_comma_separated_steam_ids_option(
+        #[case] json: &str,
+        #[case] expected: Option<Vec<u32>>,
+    ) {
+        let result: SteamIdsOptionTestStruct = serde_json::from_str(json).unwrap();
+        assert_eq!(result.ids, expected);
+    }
+
+    #[rstest]
+    #[case("{\"ids\": \"a\"}")]
+    #[case("{\"ids\": \"4294967296\"}")] // Too big for a Steam ID 32, too small for a Steam ID 64
+    fn test_comma_separated_steam_ids_option_invalid(#[case] json: &str) {
+        assert!(serde_json::from_str::<SteamIdsOptionTestStruct>(json).is_err());
     }
 
     #[derive(Deserialize, Debug)]
