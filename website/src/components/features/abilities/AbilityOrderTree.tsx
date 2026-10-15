@@ -7,19 +7,15 @@ import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { DragScroll } from "~/components/ui/drag-scroll";
-import { CACHE_DURATIONS } from "~/constants/cache";
 import type { Dayjs } from "~/dayjs";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { buildAbilityTrie, getSortedChildren, mergeStreetBrawlRows } from "~/lib/ability-order-utils";
-import { api } from "~/lib/api";
+import { getHeroAbilityMetadata } from "~/lib/build-transform";
 import type { MatchMode } from "~/lib/game-mode";
 import { abilityOrderQueryOptions } from "~/queries/ability-order-query";
-import { abilitiesQueryOptions } from "~/queries/asset-queries";
-import { queryKeys } from "~/queries/query-keys";
+import { abilitiesQueryOptions, heroesQueryOptions } from "~/queries/asset-queries";
 
 import AbilityOrderNode from "./AbilityOrderNode";
-
-const HERO_ABILITY_SLOTS = ["signature1", "signature2", "signature3", "signature4"] as const;
 
 interface AbilityOrderTreeProps {
   heroId: number;
@@ -73,36 +69,18 @@ export default function AbilityOrderTree({
     refetch: refetchOrder,
   } = useQuery(abilityOrderQueryOptions(abilityOrderStatsQuery));
 
-  const { data: heroData } = useQuery({
-    queryKey: queryKeys.assets.hero(heroId),
-    queryFn: async () => {
-      const response = await api.heroes_api.getHero({
-        heroId,
-      });
-      return response.data;
-    },
-    staleTime: CACHE_DURATIONS.FOREVER,
+  // The cached hero list already holds the signature ability slots.
+  const { data: hero } = useQuery({
+    ...heroesQueryOptions,
+    select: (heroes) => heroes.find((candidate) => candidate.id === heroId),
   });
 
   const { data: abilityItems } = useQuery(abilitiesQueryOptions);
 
-  const abilitySlotMap = useMemo(() => {
-    const map = new Map<number, number>();
-    if (!heroData || !abilityItems) return map;
-
-    for (let i = 0; i < HERO_ABILITY_SLOTS.length; i++) {
-      const slot = HERO_ABILITY_SLOTS[i];
-      const className = heroData.items?.[slot];
-      if (!className) continue;
-
-      const ability = abilityItems.find((item) => item.class_name === className);
-      if (!ability) continue;
-
-      map.set(ability.id, i + 1);
-    }
-
-    return map;
-  }, [heroData, abilityItems]);
+  const abilitySlotMap = useMemo(
+    () => getHeroAbilityMetadata(hero, abilityItems)?.abilityIdToSlot ?? new Map<number, number>(),
+    [hero, abilityItems],
+  );
 
   const trie = useMemo(() => {
     if (!abilityOrderData) return null;

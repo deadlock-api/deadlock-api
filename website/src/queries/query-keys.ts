@@ -39,7 +39,6 @@ export const queryKeys = {
     sounds: () => ["assets-sounds"] as const,
     itemUpgrades: () => ["assets-items-upgrades"] as const,
     itemUpgradesFull: () => ["assets-items-upgrades-full"] as const,
-    hero: (heroId: number) => ["assets-hero", heroId] as const,
     item: (itemId: number) => ["assets-item", itemId] as const,
     rankedSeasons: () => ["assets-ranked-seasons"] as const,
     miscEntities: () => ["assets-misc-entities"] as const,
