@@ -330,8 +330,10 @@ pub(super) async fn matches_to_fetch(
         return Ok(worklist(ids));
     }
 
+    // Without the prioritized accounts the pool is just the newest pending matches.
     let prioritized = prioritized_account_ids(&state.pg_client)
         .await
+        .inspect_err(|e| warn!("Failed to load prioritized accounts: {e}"))
         .unwrap_or_default();
     let pool = pending_pool(&state.ch_client_ro, prioritized.as_slice()).await?;
     let n = pool.len();
@@ -356,7 +358,15 @@ pub(super) async fn matches_to_fetch(
                 .arg("EX")
                 .arg(CLAIM_TTL_SECS);
         }
-        let results: Vec<Option<String>> = pipe.query_async(&mut conn).await.unwrap_or_default();
+        let results: Vec<Option<String>> = match pipe.query_async(&mut conn).await {
+            Ok(results) => results,
+            // The matches claimed so far stay claimed for `CLAIM_TTL_SECS`: hand them out.
+            Err(e) if !claimed.is_empty() => {
+                warn!("Failed to claim more matches to fetch: {e}");
+                break;
+            }
+            Err(e) => return Err(e.into()),
+        };
 
         for (id, res) in ids.iter().zip(results.iter()) {
             if res.is_some() {
