@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { bareMatchIdOf, lookupOf, matchLookupOf, playerLookupOf } from "./lookup";
+import { bareMatchIdOf, isNameLike, lookupOf, matchLookupOf, playerLookupOf } from "./lookup";
 
 test("a Steam ID in any format, a profile link or a player's name is a player lookup", () => {
   for (const question of [
@@ -44,7 +44,7 @@ test("a player lookup names the account of a Steam ID or profile link, else a na
   assert.deepEqual(playerLookupOf("player stats for 112483159"), { steamId3: 112483159 });
   assert.deepEqual(playerLookupOf("76561198072573844"), { steamId3: 112308116 });
   assert.deepEqual(playerLookupOf("https://steamcommunity.com/profiles/76561198072573844"), { steamId3: 112308116 });
-  assert.deepEqual(playerLookupOf("steamcommunity.com/id/somename"), { name: "somename" });
+  assert.deepEqual(playerLookupOf("steamcommunity.com/id/somename"), { vanity: "somename" });
   assert.deepEqual(playerLookupOf("CnuHHep_2340"), { name: "CnuHHep_2340" });
   assert.equal(playerLookupOf("who counters abrams"), undefined);
   assert.equal(playerLookupOf("match 107857788"), undefined);
@@ -59,4 +59,10 @@ test("a match lookup names its match ID, and a bare number may be a match too", 
   assert.equal(bareMatchIdOf(" 61234567 "), 61234567);
   assert.equal(bareMatchIdOf("2024"), undefined);
   assert.equal(bareMatchIdOf("match 107857788"), undefined);
+});
+
+test("a word or two is name-like, a question, a match ID or a match lookup is not", () => {
+  for (const question of ["xaiyadev", "Мер Г.", "rat king"]) assert.equal(isNameLike(question), true, question);
+  for (const question of ["who counters abrams", "107857788", "match 107857788", "x"])
+    assert.equal(isNameLike(question), false, question);
 });

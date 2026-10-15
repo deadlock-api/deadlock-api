@@ -5,7 +5,7 @@ import { intentFromDecision, questionEntities } from "~/lib/ai-search/decide";
 import { describeIntent } from "~/lib/ai-search/describe";
 import { findMentions, words } from "~/lib/ai-search/entities";
 import { directIntent, NO_FILTERS } from "~/lib/ai-search/intent";
-import { matchLookupOf, type PlayerLookup, playerLookupOf } from "~/lib/ai-search/lookup";
+import { isNameLike, matchLookupOf, type PlayerLookup, playerLookupOf } from "~/lib/ai-search/lookup";
 import { resolveIntent } from "~/lib/ai-search/resolve";
 import { decideSearch } from "~/lib/ai-search/search-fns";
 import { PATCHES } from "~/lib/constants";
@@ -14,6 +14,7 @@ import type { SeasonRef } from "~/lib/page-registry";
 import { toPatchEntry } from "~/lib/patches";
 import { ensureCached } from "~/lib/prefetch-safe";
 import { stringifySearch } from "~/lib/search-params";
+import { resolveSteamVanity } from "~/lib/steam-vanity-fns";
 import { heroesQueryOptions, itemUpgradesQueryOptions, loadSeasons } from "~/queries/asset-queries";
 import { ranksQueryOptions } from "~/queries/ranks-query";
 import { steamSearchQueryOptions } from "~/queries/steam-queries";
@@ -42,13 +43,33 @@ async function loadSearchCatalog(queryClient: QueryClient): Promise<SearchCatalo
  */
 async function findPlayer(queryClient: QueryClient, player: PlayerLookup): Promise<number | undefined> {
   if ("steamId3" in player) return player.steamId3;
-  // The search answers 404 when no profile matches.
-  const profiles = await ensureCached(queryClient, steamSearchQueryOptions(player.name)).catch((error: unknown) => {
+  // A custom profile link's name is not the profile's name, so the Steam search cannot find it.
+  if ("vanity" in player) return (await resolveSteamVanity({ data: player.vanity })) ?? undefined;
+  return exactPlayer(await playersNamed(queryClient, player.name), player.name);
+}
+
+/** The Steam profiles the search finds for a name, best first; none when it finds none (it answers 404 then). */
+async function playersNamed(queryClient: QueryClient, name: string) {
+  return ensureCached(queryClient, steamSearchQueryOptions(name)).catch((error: unknown) => {
     if (isClientError(error)) return [];
     throw error;
   });
-  const name = player.name.toLowerCase();
-  return profiles.find((profile) => profile.personaname.toLowerCase() === name)?.account_id;
+}
+
+/** The profile named exactly `name`, ignoring case: the search's top match may be someone else ("noob123"). */
+function exactPlayer(profiles: { account_id: number; personaname: string }[], name: string) {
+  const lower = name.trim().toLowerCase();
+  return profiles.find((profile) => profile.personaname.toLowerCase() === lower)?.account_id;
+}
+
+function trackerOf(accountId: number): Routed {
+  return {
+    kind: "opened",
+    id: "player-tracker",
+    href: `/tracker/players/${accountId}`,
+    title: "Player Tracker",
+    filters: [],
+  };
 }
 
 /**
@@ -58,7 +79,11 @@ async function findPlayer(queryClient: QueryClient, player: PlayerLookup): Promi
  */
 type Routed =
   | { kind: "opened"; id: string; href: string; title: string; filters: string[]; heroId?: number }
-  | { kind: "not_understood" }
+  | {
+      kind: "not_understood";
+      /** How many Steam players the question could be a name of: the dropdown offers them in its place. */
+      players: number;
+    }
   | { kind: "player_not_found" }
   | { kind: "rate_limited" };
 
@@ -77,14 +102,7 @@ export async function routeQuestion(
     const player = playerLookupOf(question);
     if (player) {
       const accountId = await findPlayer(queryClient, player);
-      if (accountId === undefined) return done({ kind: "player_not_found" });
-      return done({
-        kind: "opened",
-        id: "player-tracker",
-        href: `/tracker/players/${accountId}`,
-        title: "Player Tracker",
-        filters: [],
-      });
+      return done(accountId === undefined ? { kind: "player_not_found" } : trackerOf(accountId));
     }
     // One match opens its own page, which says how to send it in when we do not have it.
     const matchId = matchLookupOf(question);
@@ -98,7 +116,13 @@ export async function routeQuestion(
     intent = intentFromDecision(decided.answers, question, entities, vocabulary.rankNames);
   }
   const target = resolveIntent(intent, catalog, { patches: PATCH_ENTRIES, seasons, now: Date.now() / 1000 });
-  if (!target) return done({ kind: "not_understood" });
+  if (!target) {
+    // A word or two no page answers is most likely a player's name without a digit ("xaiyadev").
+    if (!isNameLike(question)) return done({ kind: "not_understood", players: 0 });
+    const players = await playersNamed(queryClient, question.trim());
+    const accountId = exactPlayer(players, question);
+    return done(accountId === undefined ? { kind: "not_understood", players: players.length } : trackerOf(accountId));
+  }
   // The hash points the page at what was asked (`FindOnPage` outlines it); it never reaches the server.
   const hash = target.find ? `#find:${target.find}` : "";
   return done({

@@ -46,11 +46,14 @@ function trackQuestion(event: {
   page?: string;
   direct?: boolean;
   duration_ms?: number;
+  /** For a question no page answers: how many Steam players the dropdown offered in its place. */
+  players?: number;
 }) {
   void getAnalytics().then((posthog) =>
     posthog?.capture("ai_search", {
       page: null,
       direct: false,
+      players: null,
       ...event,
       duration_ms: event.duration_ms === undefined ? null : Math.round(event.duration_ms),
     }),
@@ -160,7 +163,21 @@ export function AiSearch({ size = "default", className }: AiSearchProps) {
           page: routed.kind === "opened" ? routed.id : undefined,
           direct: routed.direct,
           duration_ms: routed.durationMs,
+          players: routed.kind === "not_understood" ? routed.players : undefined,
         });
+        if (routed.kind === "not_understood" && routed.players > 0) {
+          // A name no page answers: the dropdown's players are the answer, with the cursor on the first one.
+          setCursor({
+            at: Math.max(
+              0,
+              suggestions.all.findIndex((row) => row.kind === "player"),
+            ),
+            moved: true,
+          });
+          input.current?.focus();
+          setListOpen(true);
+          return undefined;
+        }
         if (routed.kind !== "opened") {
           setNotice(routed.kind);
           return undefined;

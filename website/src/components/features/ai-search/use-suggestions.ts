@@ -1,7 +1,7 @@
 import { type QueryClient, queryOptions, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { CACHE_DURATIONS } from "~/constants/cache";
-import { bareMatchIdOf, matchLookupOf } from "~/lib/ai-search/lookup";
+import { bareMatchIdOf, isNameLike, matchLookupOf } from "~/lib/ai-search/lookup";
 import { useDebouncedValue } from "~/lib/utils";
 
 /** One row of the search's dropdown: the page the question routes to, a hero's page, or a player's tracker. */
@@ -25,8 +25,6 @@ export type Suggestion =
 const LOOKUP_DELAY_MS = 250;
 const ROUTE_DELAY_MS = 600;
 const MAX_PLAYERS = 4;
-/** A Steam name is a word or two; a longer question ("who counters abrams") only finds players by accident. */
-const MAX_NAME_WORDS = 2;
 
 const loadRouter = () => import("./route-question");
 
@@ -52,10 +50,7 @@ export function useSuggestions(question: string, enabled: boolean) {
   const queryClient = useQueryClient();
   const trimmed = question.trim();
   // A number (an account ID or a match) or a match lookup is not a Steam name; the Player Tracker row covers the ID.
-  const nameLike =
-    trimmed.split(/\s+/).length <= MAX_NAME_WORDS &&
-    bareMatchIdOf(trimmed) === undefined &&
-    matchLookupOf(trimmed) === undefined;
+  const nameLike = isNameLike(trimmed);
   const lookupTerm = useDebouncedValue(trimmed, LOOKUP_DELAY_MS);
   const routeTerm = useDebouncedValue(trimmed, ROUTE_DELAY_MS);
 

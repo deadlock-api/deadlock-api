@@ -22,14 +22,17 @@ export function lookupOf(question: string): Lookup | undefined {
   return /^(?=\S*[a-z])(?=\S*[\d_])\S{5,}$/i.test(question.trim()) ? "player" : undefined;
 }
 
-/** The player a lookup names: an account read off a Steam ID or profile link, or a name for the Steam search. */
-export type PlayerLookup = { steamId3: number } | { name: string };
+/**
+ * The player a lookup names: an account read off a Steam ID or profile link, a custom profile link's name for Steam to
+ * resolve, or a name for the Steam search.
+ */
+export type PlayerLookup = { steamId3: number } | { vanity: string } | { name: string };
 
 /** The player a question looks up, or undefined when it is not a player lookup (see `lookupOf`). */
 export function playerLookupOf(question: string): PlayerLookup | undefined {
   if (lookupOf(question) !== "player") return undefined;
   const vanity = /steamcommunity\.com\/id\/([^/?#\s]+)/i.exec(question);
-  if (vanity) return { name: vanity[1] };
+  if (vanity) return { vanity: vanity[1] };
   const parsed = parseSteamIdInput(question.replace(LOOKUP_WORDS, " ").trim());
   return "steamId3" in parsed ? { steamId3: parsed.steamId3 } : { name: question.trim() };
 }
@@ -51,4 +54,18 @@ export function bareMatchIdOf(question: string): number | undefined {
   if (!/^\d{5,}$/.test(trimmed)) return undefined;
   const matchId = Number(trimmed);
   return Number.isSafeInteger(matchId) ? matchId : undefined;
+}
+
+/** A Steam name is a word or two; a longer question ("who counters abrams") only finds players by accident. */
+const MAX_NAME_WORDS = 2;
+
+/** Whether a question could be a Steam name: a word or two, not a match ID and not a match lookup. */
+export function isNameLike(question: string): boolean {
+  const trimmed = question.trim();
+  return (
+    trimmed.length >= 2 &&
+    trimmed.split(/\s+/).length <= MAX_NAME_WORDS &&
+    bareMatchIdOf(trimmed) === undefined &&
+    matchLookupOf(trimmed) === undefined
+  );
 }
