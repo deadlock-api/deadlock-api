@@ -738,6 +738,7 @@ mod tests {
             vec![123456, 163191061]
         );
         assert!(parse("123456,76561197960265728").is_err()); // Steam ID 64 of account 0
+        assert!(parse("123456,0").is_err()); // Account 0
         assert!(parse("4294967296").is_err());
     }
 }
