@@ -22,7 +22,7 @@ use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::matches::types::ActiveMatch;
 use crate::services::steam::types::SteamProxyQuery;
-use crate::utils::parse::{comma_separated_deserialize_option, parse_steam_id_option};
+use crate::utils::parse::{comma_separated_steam_ids_option, parse_steam_id_option};
 
 #[derive(Deserialize, IntoParams)]
 pub(super) struct ActiveMatchesQuery {
@@ -32,7 +32,7 @@ pub(super) struct ActiveMatchesQuery {
     account_id: Option<u32>,
     /// Comma separated list of account ids to include
     #[param(inline, min_items = 1, max_items = 1_000)]
-    #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
+    #[serde(default, deserialize_with = "comma_separated_steam_ids_option")]
     account_ids: Option<Vec<u32>>,
 }
 

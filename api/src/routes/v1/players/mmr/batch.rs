@@ -14,14 +14,14 @@ use crate::routes::v1::players::mmr::mmr_history::MMRHistory;
 use crate::routes::v1::players::rank::badge_from_flat_progress_sql;
 use crate::routes::v1::players::without_protected;
 use crate::services::rate_limiter::extractor::RateLimitKey;
-use crate::utils::parse::comma_separated_deserialize;
+use crate::utils::parse::comma_separated_steam_ids;
 use crate::utils::sql::{cached_ch_query, id_list};
 
 #[derive(Deserialize, IntoParams, Clone)]
 pub(crate) struct MMRBatchQuery {
-    /// Comma separated list of account ids, Account IDs are in `SteamID3` format.
+    /// Comma separated list of account ids, in `SteamID3` or `SteamID64` format.
     #[param(inline, min_items = 1, max_items = 1_000)]
-    #[serde(deserialize_with = "comma_separated_deserialize")]
+    #[serde(deserialize_with = "comma_separated_steam_ids")]
     pub(crate) account_ids: Vec<u32>,
     /// Filter matches based on their ID.
     max_match_id: Option<u64>,

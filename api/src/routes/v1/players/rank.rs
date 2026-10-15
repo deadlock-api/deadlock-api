@@ -18,7 +18,7 @@ use crate::services::clickhouse_batcher::{BatchQuery, ClickhouseBatcher, in_clau
 use crate::services::rank_image::{self, RankImageFormat, RankImageQuery};
 use crate::services::rate_limiter::Quota;
 use crate::services::rate_limiter::extractor::RateLimitKey;
-use crate::utils::parse::comma_separated_deserialize;
+use crate::utils::parse::{comma_separated_steam_ids, steamid64_to_steamid3};
 use crate::utils::types::AccountIdQuery;
 
 /// Convert a raw badge value (11–116) to a 1-based contiguous index (1–66).
@@ -330,9 +330,9 @@ fn check_account_id_count(account_ids: &[u32], max: usize) -> APIResult<()> {
 
 #[derive(Debug, Deserialize, utoipa::IntoParams)]
 pub(crate) struct RankBatchQuery {
-    /// Comma separated list of account ids, Account IDs are in `SteamID3` format.
+    /// Comma separated list of account ids, in `SteamID3` or `SteamID64` format.
     #[param(inline, min_items = 1, max_items = 1_000)]
-    #[serde(deserialize_with = "comma_separated_deserialize")]
+    #[serde(deserialize_with = "comma_separated_steam_ids")]
     account_ids: Vec<u32>,
 }
 
@@ -447,6 +447,7 @@ async fn serve_rank_image(
 
 const MAX_AVG_ACCOUNT_IDS: usize = 12;
 
+/// Like [`comma_separated_steam_ids`], but skips empty entries (`1,2,`).
 fn deserialize_account_ids<'de, D>(deserializer: D) -> Result<Vec<u32>, D::Error>
 where
     D: serde::Deserializer<'de>,
@@ -455,7 +456,10 @@ where
     raw.split(',')
         .map(str::trim)
         .filter(|s| !s.is_empty())
-        .map(|s| s.parse::<u32>().map_err(serde::de::Error::custom))
+        .map(|s| {
+            let steam_id = s.parse::<u64>().map_err(serde::de::Error::custom)?;
+            steamid64_to_steamid3(steam_id).map_err(serde::de::Error::custom)
+        })
         .collect()
 }
 
