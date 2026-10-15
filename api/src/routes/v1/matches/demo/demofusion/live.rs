@@ -191,9 +191,13 @@ async fn connect_with_retry(
 }
 
 /// Broadcast fetch client. Redirects are only followed to hosts that pass the broadcast URL
-/// allow-list, so a relay cannot bounce the server elsewhere.
+/// allow-list, so a relay cannot bounce the server elsewhere. The timeouts match live-events'
+/// client for the same relays: haste retries a timed-out fetch and then ends the stream, where a
+/// stalled relay would otherwise hold the producer and the parser thread forever.
 static BROADCAST_CLIENT: LazyLock<reqwest::Client> = LazyLock::new(|| {
     reqwest::Client::builder()
+        .connect_timeout(Duration::from_secs(10))
+        .read_timeout(Duration::from_secs(60))
         .redirect(crate::utils::broadcast_url::redirect_policy())
         .build()
         // Same failure mode as `reqwest::Client::new()`, which panics on TLS backend init errors.
