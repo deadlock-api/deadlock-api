@@ -5,7 +5,7 @@
 
 use std::sync::Arc;
 
-use async_graphql::extensions::Analyzer;
+use async_graphql::extensions::{Analyzer, Tracing};
 use async_graphql::{
     Context, EmptyMutation, EmptySubscription, Enum, Object, Result as GqlResult, Schema,
 };
@@ -47,6 +47,7 @@ pub(crate) fn build_schema() -> GraphQLSchema {
         .limit_depth(DEPTH_LIMIT)
         .limit_complexity(COMPLEXITY_LIMIT)
         .extension(MetricsExtension)
+        .extension(Tracing)
         .extension(Analyzer)
         .finish()
 }
