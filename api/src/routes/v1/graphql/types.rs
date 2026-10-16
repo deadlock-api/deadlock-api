@@ -23,6 +23,8 @@ pub(super) struct JsonScalar(pub serde_json::Value);
 async_graphql::scalar!(JsonScalar);
 
 #[derive(Clone, Debug, Default, Deserialize, SimpleObject)]
+/// Field weights are row units per match (see `cost.rs`): `players` are a match's ~12 adjacent
+/// rows, read and JSON-encoded in one `groupArray`.
 #[graphql(complex, rename_fields = "snake_case")]
 pub(super) struct Match {
     // Identity / schedule
@@ -60,30 +62,32 @@ pub(super) struct Match {
     pub(super) objectives_mask_team_1: Option<u32>,
 
     // JSON passthrough for complex columns
-    #[graphql(complexity = 50)]
+    #[graphql(complexity = 2)]
     pub(super) team_score: Option<JsonScalar>,
-    #[graphql(complexity = 50)]
+    #[graphql(complexity = 2)]
     pub(super) match_tracked_stats: Option<JsonScalar>,
-    #[graphql(complexity = 50)]
+    #[graphql(complexity = 2)]
     pub(super) team_0_tracked_stats: Option<JsonScalar>,
-    #[graphql(complexity = 50)]
+    #[graphql(complexity = 2)]
     pub(super) team_1_tracked_stats: Option<JsonScalar>,
-    #[graphql(complexity = 100)]
+    #[graphql(complexity = 30)]
     pub(super) objectives: Option<JsonScalar>,
-    #[graphql(complexity = 100)]
+    #[graphql(complexity = 4)]
     pub(super) mid_boss: Option<JsonScalar>,
-    #[graphql(complexity = 100)]
+    #[graphql(complexity = 1)]
     pub(super) street_brawl_rounds: Option<JsonScalar>,
-    #[graphql(complexity = 50)]
+    #[graphql(complexity = 2)]
     pub(super) banned_hero_ids: Option<JsonScalar>,
     pub(super) first_mid_boss_time_s: Option<u32>,
     pub(super) first_objective_destroyed_time_s: Option<u32>,
 
-    #[graphql(complexity = "50 + 5 * child_complexity")]
+    #[graphql(complexity = "4 * child_complexity")]
     pub(super) players: Option<Vec<MatchPlayer>>,
 }
 
 #[derive(Clone, Debug, Default, Deserialize, SimpleObject)]
+/// Field weights are row units (see `cost.rs`), measured per row with each row in its own
+/// granule; `items` / `upgrades` / `stats` weigh per selected subfield.
 #[graphql(complex, rename_fields = "snake_case")]
 pub(super) struct MatchPlayer {
     // Identity
@@ -121,6 +125,7 @@ pub(super) struct MatchPlayer {
     pub(super) hero_xp: Option<u32>,
     pub(super) hero_equips: Option<Vec<u64>>,
     /// The `items.item_id` entries that are abilities.
+    #[graphql(complexity = 15)]
     pub(super) abilities: Option<Vec<u32>>,
     /// When the row was ingested, as a unix timestamp.
     pub(super) created_at: Option<i64>,
@@ -168,7 +173,7 @@ pub(super) struct MatchPlayer {
     pub(super) max_teammate_healing: Option<u32>,
     pub(super) max_teammate_barriering: Option<u32>,
     /// The last `stats` snapshot of the match.
-    #[graphql(complexity = 50)]
+    #[graphql(complexity = 85)]
     pub(super) final_stats: Option<Stat>,
 
     // Player-level flags
@@ -191,32 +196,32 @@ pub(super) struct MatchPlayer {
     /// Hero locked before the pre-game swap window; null when unknown. Differs from `hero_id` when the player swapped.
     pub(super) pregame_hero_id: Option<u32>,
 
-    #[graphql(complexity = "20 + 5 * child_complexity")]
+    #[graphql(complexity = "6 * child_complexity")]
     pub(super) items: Option<Vec<Item>>,
     /// The `items` entries that are purchased upgrade items (no abilities, no
     /// starting items, no corrupted items: those keep the normal item's id and are
     /// only in `items`, with bit 23 (`0x800000`) set in `upgrade_info`).
-    #[graphql(complexity = "20 + 5 * child_complexity")]
+    #[graphql(complexity = "7 * child_complexity")]
     pub(super) upgrades: Option<Vec<UpgradePurchase>>,
-    #[graphql(complexity = "20 + 5 * child_complexity")]
+    #[graphql(complexity = "4 * child_complexity")]
     pub(super) stats: Option<Vec<Stat>>,
-    #[graphql(complexity = 100)]
+    #[graphql(complexity = 50)]
     pub(super) death_details: Option<JsonScalar>,
-    #[graphql(complexity = 50)]
+    #[graphql(complexity = 15)]
     pub(super) accolades: Option<JsonScalar>,
-    #[graphql(complexity = 50)]
+    #[graphql(complexity = 2)]
     pub(super) book_reward: Option<JsonScalar>,
-    #[graphql(complexity = 50)]
+    #[graphql(complexity = 30)]
     pub(super) power_up_buffs: Option<JsonScalar>,
-    #[graphql(complexity = 50)]
+    #[graphql(complexity = 5)]
     pub(super) ability_stats: Option<JsonScalar>,
-    #[graphql(complexity = 50)]
+    #[graphql(complexity = 5)]
     pub(super) player_tracked_stats: Option<JsonScalar>,
-    #[graphql(complexity = 50)]
+    #[graphql(complexity = 15)]
     pub(super) stats_type_stat: Option<JsonScalar>,
-    #[graphql(complexity = 50)]
+    #[graphql(complexity = 6)]
     pub(super) hero_xp_rewards: Option<JsonScalar>,
-    #[graphql(complexity = 50)]
+    #[graphql(complexity = 2)]
     pub(super) hero_release_votes: Option<JsonScalar>,
 }
 
@@ -371,6 +376,8 @@ pub(super) struct Stat {
     pub(super) melee_kills: Option<u32>,
     pub(super) ability_kills: Option<u32>,
     pub(super) headshot_kills: Option<u32>,
+    /// Rebuilt from the delta-encoded `custom_user_stats_deltas` column: ~20x a plain subfield.
+    #[graphql(complexity = 21)]
     pub(super) custom_user_stats: Option<JsonScalar>,
     pub(super) gold_source_players_kills: Option<u32>,
     pub(super) gold_source_players_damage: Option<u32>,

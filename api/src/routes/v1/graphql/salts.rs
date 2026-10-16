@@ -3,7 +3,7 @@
 
 use core::fmt::Write;
 
-use async_graphql::{ComplexObject, InputObject, Result as GqlResult, SimpleObject};
+use async_graphql::{ComplexObject, Context, InputObject, Result as GqlResult, SimpleObject};
 use clickhouse::Row;
 use serde::Deserialize;
 
@@ -119,7 +119,7 @@ fn build_match_salts_query(
 }
 
 pub(super) async fn load_match_salts_page(
-    state: &AppState,
+    ctx: &Context<'_>,
     where_: Option<MatchSaltsWhere>,
     order_dir: OrderDir,
     limit: u32,
@@ -127,7 +127,7 @@ pub(super) async fn load_match_salts_page(
 ) -> GqlResult<Vec<MatchSalts>> {
     let filters = where_.map_or_default(|w| w.to_sql_filters());
     let sql = build_match_salts_query(&filters, order_dir, limit, offset);
-    run_built_query(state, "match_salts", sql).await
+    run_built_query(ctx, "match_salts", sql).await
 }
 
 pub(crate) struct MatchSaltsGraphQlQuery;

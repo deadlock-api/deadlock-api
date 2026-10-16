@@ -10,6 +10,7 @@ mod schema;
 mod sql;
 mod types;
 
+use core::sync::atomic::{AtomicU32, Ordering};
 use core::time::Duration;
 use std::sync::OnceLock;
 
@@ -21,6 +22,7 @@ use axum::response::{Html, IntoResponse, Response};
 use utoipa::OpenApi;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
+use uuid::Uuid;
 
 use crate::context::AppState;
 use crate::error::APIError;
@@ -35,9 +37,29 @@ pub(super) const RATE_LIMIT_KEY: &str = "graphql_match_player";
 /// Longest query or variables text kept in `request_logs`; the body limit alone allows 10 MB.
 const MAX_LOGGED_TEXT_BYTES: usize = 64 * 1024;
 
+/// Ties a GraphQL request's `request_logs` row (`graphql_request_id`) to the `system.query_log`
+/// rows of the `ClickHouse` queries it ran (`query_id` = `{id}-{n}`), so its complexity can be
+/// compared with the CPU it cost. The batched nested lookups (`steam`, `salts`) serve many
+/// requests per query and aren't tagged.
+pub(super) struct GraphQLRequestId {
+    id: Uuid,
+    next_query: AtomicU32,
+}
+
+impl GraphQLRequestId {
+    pub(super) fn next_query_id(&self) -> String {
+        format!(
+            "{}-{}",
+            self.id,
+            self.next_query.fetch_add(1, Ordering::Relaxed)
+        )
+    }
+}
+
 /// What `track_requests` logs for a GraphQL request, handed over as a response extension.
 #[derive(Clone, Debug)]
 pub(crate) struct GraphQLRequestLog {
+    pub(crate) request_id: Uuid,
     pub(crate) query: String,
     /// JSON object, `None` when the request had no variables.
     pub(crate) variables: Option<String>,
@@ -52,6 +74,7 @@ impl GraphQLRequestLog {
             .then(|| serde_json::to_string(&req.variables).ok())
             .flatten();
         Self {
+            request_id: Uuid::new_v4(),
             query: truncated(&req.query),
             variables: variables.as_deref().map(truncated),
             complexity: None,
@@ -132,7 +155,11 @@ async fn graphql_handler(
     let request = request
         .data(state)
         .data(rate_limit_key)
-        .data(hero_build_loader);
+        .data(hero_build_loader)
+        .data(GraphQLRequestId {
+            id: log.request_id,
+            next_query: AtomicU32::new(0),
+        });
     let resp = shared_schema().execute(request).await;
     log.set_cost(&resp);
     let mut response = GraphQLResponse::from(resp).into_response();

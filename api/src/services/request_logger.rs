@@ -56,6 +56,9 @@ pub(crate) struct RequestLog {
     pub rate_limit_remaining: Option<u64>,
     /// Seconds until the rate limit window resets (None if no rate limiting applied)
     pub rate_limit_reset: Option<u64>,
+    /// Prefix of the `query_id` of every `ClickHouse` query the GraphQL request ran
+    #[serde(with = "clickhouse::serde::uuid::option")]
+    pub graphql_request_id: Option<Uuid>,
     /// Validated GraphQL query complexity (None for non-GraphQL requests)
     pub graphql_complexity: Option<u64>,
     /// Validated GraphQL query depth (None for non-GraphQL requests)

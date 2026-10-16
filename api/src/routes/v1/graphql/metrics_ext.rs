@@ -7,10 +7,13 @@ use async_graphql::extensions::{
 };
 use async_graphql::parser::types::ExecutableDocument;
 use async_graphql::{Response, ServerError, ValidationResult, Variables};
+
+use crate::routes::v1::graphql::cost::COMPLEXITY_LIMIT;
 use tracing::Instrument as _;
 
 /// Emits Prometheus metrics and a tracing span (with the validated complexity and depth) for
-/// every GraphQL request.
+/// every GraphQL request, and rejects queries over [`COMPLEXITY_LIMIT`] — after validation, so
+/// a rejected query still reports (and logs) its complexity.
 ///
 /// Per-request metrics:
 /// - `graphql_requests_total{status}` — ok / error
@@ -76,6 +79,17 @@ impl Extension for MetricsExtensionInner {
     ) -> Result<ValidationResult, Vec<ServerError>> {
         let result = next.run(ctx).await?;
         let _ = self.validation_result.set(result);
+        if result.complexity > COMPLEXITY_LIMIT {
+            return Err(vec![ServerError::new(
+                format!(
+                    "Query complexity {} exceeds the limit of {COMPLEXITY_LIMIT} (one point is about \
+                     1 ms of database time). Lower `limit`, select fewer fields or narrow `where` \
+                     (an `account_id`, `match_id` or `start_time` range).",
+                    result.complexity
+                ),
+                None,
+            )]);
+        }
         Ok(result)
     }
 }

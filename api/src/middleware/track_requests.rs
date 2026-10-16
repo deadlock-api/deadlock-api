@@ -99,6 +99,7 @@ pub(crate) async fn track_requests(
             accept_encoding,
             rate_limit_remaining,
             rate_limit_reset,
+            graphql_request_id: graphql.as_ref().map(|g| g.request_id),
             graphql_complexity: graphql.as_ref().and_then(|g| g.complexity),
             graphql_depth: graphql.as_ref().and_then(|g| g.depth),
             graphql_variables: graphql.as_ref().and_then(|g| g.variables.clone()),

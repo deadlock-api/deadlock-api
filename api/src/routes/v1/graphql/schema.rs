@@ -16,9 +16,10 @@ use crate::context::AppState;
 use crate::routes::v1::assets::common::Language;
 use crate::routes::v1::builds::query::BuildsSearchQuerySortBy;
 use crate::routes::v1::builds::structs::Build;
+use crate::routes::v1::graphql::GraphQLRequestId;
 use crate::routes::v1::graphql::assets::{load_heroes, load_items, load_ranks};
 use crate::routes::v1::graphql::builds::{HeroBuildWhere, HeroBuildsArgs, load_hero_builds};
-use crate::routes::v1::graphql::cost::{COMPLEXITY_LIMIT, DEPTH_LIMIT, MAX_LIMIT};
+use crate::routes::v1::graphql::cost::{self, DEPTH_LIMIT, MAX_LIMIT};
 use crate::routes::v1::graphql::filters::{MatchHistoryWhere, MatchPlayerWhere};
 use crate::routes::v1::graphql::metrics_ext::MetricsExtension;
 use crate::routes::v1::graphql::patches::{Patch, PatchWhere, load_patches};
@@ -45,7 +46,8 @@ pub(crate) type GraphQLSchema = Schema<QueryRoot, EmptyMutation, EmptySubscripti
 pub(crate) fn build_schema() -> GraphQLSchema {
     Schema::build(QueryRoot, EmptyMutation, EmptySubscription)
         .limit_depth(DEPTH_LIMIT)
-        .limit_complexity(COMPLEXITY_LIMIT)
+        // Enforces `cost::COMPLEXITY_LIMIT` itself (instead of `limit_complexity`), so rejected
+        // queries still report their complexity; registered first so it wraps `Analyzer`.
         .extension(MetricsExtension)
         .extension(Tracing)
         .extension(Analyzer)
@@ -191,7 +193,7 @@ pub(super) async fn load_matches(
         via_player_match_stats,
         excluded_accounts: &excluded_accounts,
     });
-    run_built_query(state, "matches", sql).await
+    run_built_query(ctx, "matches", sql).await
 }
 
 /// `scope` is an extra SQL predicate AND-ed to the `where_` filters.
@@ -220,7 +222,7 @@ pub(super) async fn load_match_players(
         via_player_match_stats,
         excluded_accounts: &excluded_accounts,
     });
-    run_built_query(state, "match_players", sql).await
+    run_built_query(ctx, "match_players", sql).await
 }
 
 /// `scope` is an extra SQL predicate AND-ed to the `where_` filters.
@@ -244,7 +246,7 @@ pub(super) async fn load_match_history(
         offset: page.offset,
         excluded_accounts: &excluded_accounts,
     });
-    run_built_query(state, "match_history", sql).await
+    run_built_query(ctx, "match_history", sql).await
 }
 
 pub(crate) struct QueryRoot;
@@ -252,6 +254,7 @@ pub(crate) struct QueryRoot;
 #[Object(rename_fields = "snake_case", rename_args = "snake_case")]
 impl QueryRoot {
     /// Match-grouped query — one node per match_id with players aggregated.
+    #[graphql(complexity = "cost::matches(where_.as_ref(), order_by, limit, child_complexity)")]
     async fn matches(
         &self,
         ctx: &Context<'_>,
@@ -271,6 +274,9 @@ impl QueryRoot {
     }
 
     /// Player-row query — one node per (match_id, account_id).
+    #[graphql(
+        complexity = "cost::match_players(where_.as_ref(), order_by, limit, child_complexity)"
+    )]
     async fn match_players(
         &self,
         ctx: &Context<'_>,
@@ -290,7 +296,10 @@ impl QueryRoot {
     }
 
     /// Player match history — one node per (account_id, match_id), from the
-    /// stored `player_match_history` table (no on-demand Steam fetch).
+    /// stored `player_match_history` table (no on-demand Steam fetch). Filter on
+    /// `account_id`: without it the query merges the whole table and exceeds the
+    /// complexity limit.
+    #[graphql(complexity = "cost::match_history(where_.as_ref(), child_complexity)")]
     async fn match_history(
         &self,
         ctx: &Context<'_>,
@@ -313,6 +322,7 @@ impl QueryRoot {
     /// `/v1/matches/{match_id}/salts` endpoint minus the on-demand Steam fetch.
     /// Ordered by match_id. Salts that failed verification are dropped after
     /// paging, so a page can hold slightly fewer than `limit` nodes.
+    #[graphql(complexity = "cost::rows(limit, cost::SALTS_LOOKUP_UNITS + child_complexity)")]
     async fn match_salts(
         &self,
         ctx: &Context<'_>,
@@ -322,7 +332,7 @@ impl QueryRoot {
         #[graphql(default = 0)] offset: u32,
     ) -> GqlResult<Vec<MatchSalts>> {
         load_match_salts_page(
-            app_state(ctx)?,
+            ctx,
             where_,
             order_direction.unwrap_or_default().into(),
             limit.clamp(1, MAX_LIMIT),
@@ -335,7 +345,7 @@ impl QueryRoot {
     /// the same data as the REST `/v2/patches` feed, so only as far back as
     /// those RSS feeds reach. Ordered by `pub_date`. Every patch can scope the
     /// match queries to the time it was live.
-    #[graphql(complexity = "5 + limit as usize * child_complexity")]
+    #[graphql(complexity = "1 + (limit as usize).saturating_mul(child_complexity)")]
     async fn patches(
         &self,
         ctx: &Context<'_>,
@@ -357,7 +367,7 @@ impl QueryRoot {
     /// Hero builds from the stored `hero_builds` table — the same data as the
     /// REST `/v1/builds` search. Every version of a build is returned unless
     /// `where.only_latest` is set.
-    #[graphql(complexity = "50 + 5 * child_complexity")]
+    #[graphql(complexity = "cost::rows(limit, cost::HERO_BUILD_LOOKUP_UNITS + child_complexity)")]
     async fn hero_builds(
         &self,
         ctx: &Context<'_>,
@@ -383,7 +393,7 @@ impl QueryRoot {
     /// All heroes for the given client version (defaults to latest), localized
     /// to `language` (defaults to English). Sourced from the versioned assets,
     /// not ClickHouse.
-    #[graphql(complexity = "100 + 10 * child_complexity")]
+    #[graphql(complexity = "1 + child_complexity / 10")]
     async fn heroes(
         &self,
         ctx: &Context<'_>,
@@ -395,7 +405,7 @@ impl QueryRoot {
 
     /// All items (abilities, weapons, upgrades) for the given client version
     /// (defaults to latest), localized to `language` (defaults to English).
-    #[graphql(complexity = "100 + 10 * child_complexity")]
+    #[graphql(complexity = "1 + child_complexity")]
     async fn items(
         &self,
         ctx: &Context<'_>,
@@ -407,7 +417,7 @@ impl QueryRoot {
 
     /// All rank tiers for the given client version (defaults to latest),
     /// localized to `language` (defaults to English).
-    #[graphql(complexity = "50 + 10 * child_complexity")]
+    #[graphql(complexity = "1 + child_complexity / 10")]
     async fn ranks(
         &self,
         ctx: &Context<'_>,
@@ -431,19 +441,24 @@ async fn protected_accounts(state: &AppState) -> GqlResult<Vec<u32>> {
 }
 
 /// Runs the SQL a GraphQL query built, traced and its row count recorded
-/// under `operation`.
+/// under `operation`. Its `query_id` ties it to the request's `request_logs` row
+/// (see [`GraphQLRequestId`]).
 pub(super) async fn run_built_query<T>(
-    state: &AppState,
+    ctx: &Context<'_>,
     operation: &'static str,
     sql: Result<String, core::fmt::Error>,
 ) -> GqlResult<Vec<T>>
 where
     T: serde::de::DeserializeOwned,
 {
+    let state = app_state(ctx)?;
     let sql = sql.map_err(|e| async_graphql::Error::new(format!("SQL build error: {e}")))?;
-    debug!(?sql, operation, "graphql built sql");
-    let rows = run_query::<T>(&state.ch_client_ro, &sql)
-        .instrument(info_span!("graphql.clickhouse", operation, sql = %sql))
+    let query_id = ctx
+        .data_opt::<GraphQLRequestId>()
+        .map(GraphQLRequestId::next_query_id);
+    debug!(?sql, operation, ?query_id, "graphql built sql");
+    let rows = run_query::<T>(&state.ch_client_ro, &sql, query_id.as_deref())
+        .instrument(info_span!("graphql.clickhouse", operation, query_id, sql = %sql))
         .await?;
     record_rows_returned(operation, rows.len());
     Ok(rows)
@@ -454,7 +469,11 @@ pub(super) fn record_rows_returned(operation: &'static str, rows: usize) {
     metrics::histogram!("graphql_rows_returned", "operation" => operation).record(rows as f64);
 }
 
-async fn run_query<T>(ch_client: &clickhouse::Client, sql: &str) -> GqlResult<Vec<T>>
+async fn run_query<T>(
+    ch_client: &clickhouse::Client,
+    sql: &str,
+    query_id: Option<&str>,
+) -> GqlResult<Vec<T>>
 where
     T: serde::de::DeserializeOwned,
 {
@@ -466,8 +485,11 @@ where
                 |_, ext| ext.set("code", "SERVICE_BUSY"),
             )
         })?;
-    let cursor = ch_client
-        .query(sql)
+    let mut query = ch_client.query(sql);
+    if let Some(query_id) = query_id {
+        query = query.with_setting("query_id", query_id);
+    }
+    let cursor = query
         .fetch_bytes("JSONEachRow")
         .inspect_err(|e| permit.observe(e))
         .map_err(|e| async_graphql::Error::new(format!("ClickHouse error: {e}")))?;

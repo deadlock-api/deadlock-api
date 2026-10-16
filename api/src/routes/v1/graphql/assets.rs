@@ -13,6 +13,7 @@ use crate::error::{APIError, APIResult};
 use crate::routes::v1::assets::common::{AssetsQuery, Language, load_localized};
 use crate::routes::v1::builds::structs::Build;
 use crate::routes::v1::graphql::builds::load_hero_build;
+use crate::routes::v1::graphql::cost;
 use crate::routes::v1::graphql::salts::{MatchSalts, load_match_salts};
 use crate::routes::v1::graphql::schema::app_state;
 use crate::routes::v1::graphql::types::{
@@ -95,6 +96,7 @@ pub(super) fn found<T>(result: APIResult<T>) -> GqlResult<Option<T>> {
 impl Match {
     /// Stored salts of this match (no on-demand Steam fetch). `null` when none
     /// are stored.
+    #[graphql(complexity = "cost::SALTS_LOOKUP_UNITS + child_complexity")]
     async fn salts(&self, ctx: &Context<'_>) -> GqlResult<Option<MatchSalts>> {
         let Some(match_id) = self.match_id else {
             return Ok(None);
@@ -116,6 +118,7 @@ impl MatchPlayer {
     /// Stored Steam profile for this player's `account_id` (no live Steam
     /// fetch). `null` for protected users and accounts without a stored
     /// profile.
+    #[graphql(complexity = "cost::STEAM_LOOKUP_UNITS + child_complexity")]
     async fn steam(&self, ctx: &Context<'_>) -> GqlResult<Option<SteamProfile>> {
         let Some(account_id) = self.account_id else {
             return Ok(None);
@@ -126,6 +129,7 @@ impl MatchPlayer {
     /// Latest stored version of the build this player used, matched on
     /// (`hero_id`, `hero_build_id`). `null` when the build is not in the
     /// database.
+    #[graphql(complexity = "cost::HERO_BUILD_LOOKUP_UNITS + child_complexity")]
     async fn hero_build(&self, ctx: &Context<'_>) -> GqlResult<Option<Build>> {
         let (Some(hero_id), Some(build_id)) = (self.hero_id, self.hero_build_id) else {
             return Ok(None);
@@ -135,6 +139,7 @@ impl MatchPlayer {
 
     /// Stored salts of this player's match (no on-demand Steam fetch). `null`
     /// when none are stored.
+    #[graphql(complexity = "cost::SALTS_LOOKUP_UNITS + child_complexity")]
     async fn salts(&self, ctx: &Context<'_>) -> GqlResult<Option<MatchSalts>> {
         let Some(match_id) = self.match_id else {
             return Ok(None);

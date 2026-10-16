@@ -3,6 +3,7 @@
 use async_graphql::{ComplexObject, Context, InputObject, Result as GqlResult, SimpleObject};
 
 use crate::context::AppState;
+use crate::routes::v1::graphql::cost;
 use crate::routes::v1::graphql::filters::{
     I64Filter, MatchHistoryWhere, MatchPlayerWhere, StringFilter,
 };
@@ -49,7 +50,9 @@ impl Patch {
 impl Patch {
     /// The root `matches` query, scoped to the matches started while this
     /// patch was live (`pub_date` until `end_date`).
-    #[graphql(complexity = "50 + child_complexity")]
+    #[graphql(
+        complexity = "cost::patch_matches(where_.as_ref(), order_by, limit, child_complexity)"
+    )]
     async fn matches(
         &self,
         ctx: &Context<'_>,
@@ -70,7 +73,9 @@ impl Patch {
 
     /// The root `match_players` query, scoped to the matches started while
     /// this patch was live (`pub_date` until `end_date`).
-    #[graphql(complexity = "50 + child_complexity")]
+    #[graphql(
+        complexity = "cost::patch_match_players(where_.as_ref(), order_by, limit, child_complexity)"
+    )]
     async fn match_players(
         &self,
         ctx: &Context<'_>,
@@ -91,7 +96,7 @@ impl Patch {
 
     /// The root `match_history` query, scoped to the matches started while
     /// this patch was live (`pub_date` until `end_date`).
-    #[graphql(complexity = "50 + child_complexity")]
+    #[graphql(complexity = "cost::match_history(where_.as_ref(), child_complexity)")]
     async fn match_history(
         &self,
         ctx: &Context<'_>,
