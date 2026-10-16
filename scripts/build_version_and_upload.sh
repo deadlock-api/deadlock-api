@@ -138,11 +138,11 @@ fi
 # The zip ships Source2Viewer-CLI alongside libSkiaSharp.so (and friends); a
 # partial cache restore that brings back only the managed binary leaves the
 # natives absent, and the CLI then aborts with "Unable to load libSkiaSharp".
-# Built from our fork (deadlock-api/ValveResourceFormat): upstream releases up
-# to 20.0 can't read build 6779+ (KV3 type-byte bit 6, new UINT32_ZERO/ONE node
-# types 26/27). The version stamp makes a cached older CLI get replaced.
-VRF_RELEASE="deadlock-6779"
-VRF_URL="https://github.com/deadlock-api/ValveResourceFormat/releases/download/$VRF_RELEASE"
+# Pinned to 20.1: the first release that reads build 6779+ (KV3 UINT32_ZERO/ONE
+# node types 26/27) and VCS shader version 72. The version stamp makes a cached
+# older CLI get replaced.
+VRF_RELEASE="20.1"
+VRF_URL="https://github.com/ValveResourceFormat/ValveResourceFormat/releases/download/$VRF_RELEASE"
 if [ ! -f Source2Viewer-CLI ] || [ ! -f libSkiaSharp.so ] || [ "$(cat .vrf-version 2>/dev/null)" != "$VRF_RELEASE" ]; then
     if [[ "$OSTYPE" == "darwin"* ]]; then
         curl -L -o Decompiler.zip "$VRF_URL/cli-macos-arm64.zip"
