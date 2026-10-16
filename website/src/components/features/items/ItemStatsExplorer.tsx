@@ -216,7 +216,7 @@ export function ItemStatsExplorer({
     queryKey: queryKeys.analytics.topBuilds(topBuildsQuery),
     queryFn: async () => {
       const response = await api.matches_api.bulkMetadata(topBuildsQuery);
-      return response.data as unknown as BulkMatchMetadata[];
+      return response.data as BulkMatchMetadata[];
     },
     enabled: topBuildsEnabled,
     staleTime: CACHE_DURATIONS.FIVE_MINUTES,

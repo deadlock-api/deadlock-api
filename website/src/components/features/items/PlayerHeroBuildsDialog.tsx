@@ -109,7 +109,7 @@ export function PlayerHeroBuildsDialog({
         limit: RECENT_MATCH_LIMIT,
       };
       const response = await api.matches_api.bulkMetadata(request);
-      return response.data as unknown as BulkMatchMetadata[];
+      return response.data as BulkMatchMetadata[];
     },
     enabled: open && effectiveAccountId != null,
     staleTime: CACHE_DURATIONS.FIVE_MINUTES,
