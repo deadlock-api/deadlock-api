@@ -9,7 +9,8 @@ use async_graphql::parser::types::ExecutableDocument;
 use async_graphql::{Response, ServerError, ValidationResult, Variables};
 use tracing::Instrument as _;
 
-/// Emits Prometheus metrics and a tracing span for every GraphQL request.
+/// Emits Prometheus metrics and a tracing span (with the validated complexity and depth) for
+/// every GraphQL request.
 ///
 /// Per-request metrics:
 /// - `graphql_requests_total{status}` — ok / error
@@ -33,8 +34,12 @@ struct MetricsExtensionInner {
 impl Extension for MetricsExtensionInner {
     async fn request(&self, ctx: &ExtensionContext<'_>, next: NextRequest<'_>) -> Response {
         let start = Instant::now();
-        let span = tracing::info_span!("graphql.request");
-        let resp = next.run(ctx).instrument(span).await;
+        let span = tracing::info_span!(
+            "graphql.request",
+            graphql.complexity = tracing::field::Empty,
+            graphql.depth = tracing::field::Empty,
+        );
+        let resp = next.run(ctx).instrument(span.clone()).await;
         let elapsed = start.elapsed().as_secs_f64();
         let status = if resp.is_err() { "error" } else { "ok" };
 
@@ -46,6 +51,8 @@ impl Extension for MetricsExtensionInner {
             metrics::histogram!("graphql_query_complexity").record(vr.complexity as f64);
             #[expect(clippy::cast_precision_loss)]
             metrics::histogram!("graphql_query_depth").record(vr.depth as f64);
+            span.record("graphql.complexity", vr.complexity);
+            span.record("graphql.depth", vr.depth);
         }
 
         resp

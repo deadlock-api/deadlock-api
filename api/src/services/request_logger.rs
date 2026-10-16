@@ -56,4 +56,8 @@ pub(crate) struct RequestLog {
     pub rate_limit_remaining: Option<u64>,
     /// Seconds until the rate limit window resets (None if no rate limiting applied)
     pub rate_limit_reset: Option<u64>,
+    /// Validated GraphQL query complexity (None for non-GraphQL requests)
+    pub graphql_complexity: Option<u64>,
+    /// Validated GraphQL query depth (None for non-GraphQL requests)
+    pub graphql_depth: Option<u64>,
 }

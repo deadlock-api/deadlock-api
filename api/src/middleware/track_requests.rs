@@ -9,6 +9,7 @@ use axum::middleware::Next;
 use axum::response::IntoResponse;
 
 use crate::context::AppState;
+use crate::routes::v1::graphql::GraphQLCost;
 use crate::services::request_logger::RequestLog;
 use crate::utils::request::{client_ip, header_str, parse_api_key};
 
@@ -59,6 +60,7 @@ pub(crate) async fn track_requests(
     let content_type = get_header(headers, header::CONTENT_TYPE);
     let rate_limit_remaining = get_header_u64(headers, "ratelimit-remaining");
     let rate_limit_reset = get_header_u64(headers, "ratelimit-reset");
+    let graphql_cost = response.extensions().get::<GraphQLCost>().copied();
 
     // Use Content-Length header for response size instead of buffering the entire body
     let response_size = get_header_u64(headers, header::CONTENT_LENGTH).unwrap_or(0);
@@ -97,6 +99,8 @@ pub(crate) async fn track_requests(
             accept_encoding,
             rate_limit_remaining,
             rate_limit_reset,
+            graphql_complexity: graphql_cost.map(|c| c.complexity),
+            graphql_depth: graphql_cost.map(|c| c.depth),
         };
         state.request_logger.insert_one(log).await;
     }

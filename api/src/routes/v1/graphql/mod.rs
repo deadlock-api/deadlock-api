@@ -17,7 +17,7 @@ use async_graphql::dataloader::DataLoader;
 use async_graphql::http::GraphiQLSource;
 use async_graphql_axum::{GraphQLRequest, GraphQLResponse};
 use axum::extract::State;
-use axum::response::{Html, IntoResponse};
+use axum::response::{Html, IntoResponse, Response};
 use utoipa::OpenApi;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
@@ -31,6 +31,31 @@ use builds::HeroBuildLoader;
 use schema::{GraphQLSchema, build_schema};
 
 pub(super) const RATE_LIMIT_KEY: &str = "graphql_match_player";
+
+/// Validated cost of a GraphQL request, handed to `track_requests` as a response extension
+/// so it lands in `request_logs`.
+#[derive(Clone, Copy, Debug)]
+pub(crate) struct GraphQLCost {
+    pub(crate) complexity: u64,
+    pub(crate) depth: u64,
+}
+
+impl GraphQLCost {
+    /// Reads the `analyzer` response extension; absent when the request failed before validation.
+    fn from_response(resp: &async_graphql::Response) -> Option<Self> {
+        let async_graphql::Value::Object(analyzer) = resp.extensions.get("analyzer")? else {
+            return None;
+        };
+        let field = |name: &str| match analyzer.get(name)? {
+            async_graphql::Value::Number(n) => n.as_u64(),
+            _ => None,
+        };
+        Some(Self {
+            complexity: field("complexity")?,
+            depth: field("depth")?,
+        })
+    }
+}
 
 fn shared_schema() -> &'static GraphQLSchema {
     static SCHEMA: OnceLock<GraphQLSchema> = OnceLock::new();
@@ -66,7 +91,7 @@ async fn graphql_handler(
     rate_limit_key: RateLimitKey,
     State(state): State<AppState>,
     req: GraphQLRequest,
-) -> Result<GraphQLResponse, APIError> {
+) -> Result<Response, APIError> {
     state
         .rate_limit_client
         .apply_limits(
@@ -87,7 +112,13 @@ async fn graphql_handler(
         .data(state)
         .data(rate_limit_key)
         .data(hero_build_loader);
-    Ok(shared_schema().execute(request).await.into())
+    let resp = shared_schema().execute(request).await;
+    let cost = GraphQLCost::from_response(&resp);
+    let mut response = GraphQLResponse::from(resp).into_response();
+    if let Some(cost) = cost {
+        response.extensions_mut().insert(cost);
+    }
+    Ok(response)
 }
 
 #[derive(OpenApi)]
