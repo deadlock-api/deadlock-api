@@ -93,13 +93,21 @@ pub enum BucketQuery {
 // `arrayFirstIndex` search, which was ~44% of a net-worth-bucket query's cost.
 const NET_WORTH_AT_BUY_EXPR: &str = "net_worth_at_buy";
 
+// The same value computed at query time, with the column's MATERIALIZED expression applied
+// to the array-joined `buy_time`. The hero-led `item_stats_by_hero_mode_badge_v2` projection
+// stores `stats.*` but not `items.net_worth_at_buy`, so referencing the column pushes
+// hero-filtered net-worth queries onto a full base-table scan of the window. Measured on
+// production shapes: 5.8-11.8 GB read -> 0.18-0.38 GB, 13-45 CPU-s -> 1.3 CPU-s, same rows.
+const NET_WORTH_AT_BUY_INLINE_EXPR: &str = "coalesce(arrayElementOrNull(stats.net_worth, arrayFirstIndex(ts -> ts >= buy_time, stats.time_stamp_s) - 1), net_worth)";
+
 /// `expr` floored to a multiple of `step`.
 fn net_worth_bucket(expr: &str, step: u32) -> String {
     format!("toUInt32(floor(({expr}) / {step}) * {step})")
 }
 
 impl BucketQuery {
-    fn get_select_clause(self) -> String {
+    /// `net_worth_expr` is the per-purchase net worth the net-worth buckets floor.
+    fn get_select_clause(self, net_worth_expr: &str) -> String {
         match self {
             Self::NoBucket => "toUInt32(0)".to_owned(),
             Self::Hero => "toUInt32(hero_id)".to_owned(),
@@ -112,16 +120,16 @@ impl BucketQuery {
             Self::GameTimeNormalizedPercentage => {
                 "toUInt32(floor((buy_time - 1) / duration_s * 100))".to_owned()
             }
-            Self::NetWorthBy1000 => net_worth_bucket(NET_WORTH_AT_BUY_EXPR, 1000),
-            Self::NetWorthBy2000 => net_worth_bucket(NET_WORTH_AT_BUY_EXPR, 2000),
-            Self::NetWorthBy3000 => net_worth_bucket(NET_WORTH_AT_BUY_EXPR, 3000),
-            Self::NetWorthBy5000 => net_worth_bucket(NET_WORTH_AT_BUY_EXPR, 5000),
-            Self::NetWorthBy10000 => net_worth_bucket(NET_WORTH_AT_BUY_EXPR, 10000),
+            Self::NetWorthBy1000 => net_worth_bucket(net_worth_expr, 1000),
+            Self::NetWorthBy2000 => net_worth_bucket(net_worth_expr, 2000),
+            Self::NetWorthBy3000 => net_worth_bucket(net_worth_expr, 3000),
+            Self::NetWorthBy5000 => net_worth_bucket(net_worth_expr, 5000),
+            Self::NetWorthBy10000 => net_worth_bucket(net_worth_expr, 10000),
         }
     }
 
-    /// Whether this bucket's select clause references `net_worth_at_buy`, so the
-    /// base query knows to ARRAY JOIN the precomputed `items.net_worth_at_buy`.
+    /// Whether this bucket's select clause references the net worth at buy time, so the
+    /// base query knows to ARRAY JOIN the precomputed `items.net_worth_at_buy` or compute it.
     fn needs_net_worth_at_buy(self) -> bool {
         matches!(
             self,
@@ -370,6 +378,12 @@ impl ItemStatsQuery {
     /// `upgrades.*`, which has none, so such requests always go to the base table.
     fn reads_corrupted(&self) -> bool {
         self.corrupted_items() != CorruptedItemsFilter::Exclude
+    }
+
+    /// Whether the request is scoped to one or more accounts.
+    #[expect(deprecated)]
+    fn filters_accounts(&self) -> bool {
+        self.account_id.is_some() || is_non_empty(self.account_ids.as_deref())
     }
 
     /// Whether purchases are split by the enhanced bit. The rollups have no such dimension,
@@ -1086,7 +1100,16 @@ fn build_query(query: &ItemStatsQuery) -> String {
     let player_filters = join_filters(&player_filters);
 
     /* ---------- misc ---------- */
-    let bucket_expr = query.bucket.get_select_clause();
+    // A buyer hero filter without an account filter is served by the hero-led projection,
+    // which lacks `items.net_worth_at_buy`, so the net worth is computed from its `stats.*`.
+    // Account-filtered queries can read the base table through the match_id prefilter,
+    // where the precomputed column stays far cheaper than the `stats.*` arrays.
+    let inline_net_worth = has_buyer_hero_filter && !query.filters_accounts();
+    let bucket_expr = query.bucket.get_select_clause(if inline_net_worth {
+        NET_WORTH_AT_BUY_INLINE_EXPR
+    } else {
+        NET_WORTH_AT_BUY_EXPR
+    });
     let having_clause = query.matches_having_clause();
 
     /* ---------- enemy-team filter (optional) ---------- */
@@ -1268,7 +1291,7 @@ fn build_query(query: &ItemStatsQuery) -> String {
     };
     // Only ARRAY JOIN the precomputed net-worth column when a net-worth bucket
     // needs it, so other buckets don't pay to read it.
-    let nw_array_join = if query.bucket.needs_net_worth_at_buy() {
+    let nw_array_join = if query.bucket.needs_net_worth_at_buy() && !inline_net_worth {
         nw_col
     } else {
         ""
@@ -1393,9 +1416,7 @@ async fn get_item_stats(
     }
     let base_query = build_query(&query);
     debug!(?base_query);
-    #[expect(deprecated)]
-    let per_account = query.account_id.is_some() || is_non_empty(query.account_ids.as_deref());
-    if per_account {
+    if query.filters_accounts() {
         Ok(run_account_query(ch_client, &base_query).await?)
     } else {
         Ok(run_query(ch_client, &base_query).await?)
@@ -1853,6 +1874,39 @@ mod tests {
     }
 
     #[test]
+    fn hero_net_worth_buckets_compute_net_worth_so_the_hero_projection_applies() {
+        let hero = build_query(&ItemStatsQuery {
+            hero_ids: Some(vec![7]),
+            bucket: BucketQuery::NetWorthBy2000,
+            ..Default::default()
+        });
+        assert_valid_sql(&hero);
+        assert!(hero.contains(&format!(
+            "toUInt32(floor(({NET_WORTH_AT_BUY_INLINE_EXPR}) / 2000) * 2000)"
+        )));
+        assert!(!hero.contains("net_worth_at_buy"));
+        assert!(!hero.contains("optimize_use_projections"));
+
+        // No hero filter: the base table, where the precomputed column is cheaper.
+        let no_hero = build_query(&ItemStatsQuery {
+            bucket: BucketQuery::NetWorthBy2000,
+            ..Default::default()
+        });
+        assert!(no_hero.contains("`upgrades.net_worth_at_buy` AS net_worth_at_buy"));
+        assert!(!no_hero.contains("stats.net_worth"));
+
+        // Account filter: the match_id prefilter can put it on the base table too.
+        let account = build_query(&ItemStatsQuery {
+            hero_ids: Some(vec![7]),
+            account_ids: Some(vec![1]),
+            bucket: BucketQuery::NetWorthBy2000,
+            ..Default::default()
+        });
+        assert!(account.contains("`items.net_worth_at_buy` AS net_worth_at_buy"));
+        assert!(!account.contains("stats.net_worth"));
+    }
+
+    #[test]
     #[expect(deprecated)]
     fn include_corrupted_items_reads_raw_items_without_the_bit_filter() {
         for hero_ids in [None, Some(vec![7])] {
@@ -1868,7 +1922,10 @@ mod tests {
                 sql.contains("WITH t_upgrades AS (SELECT id FROM items WHERE type = 'upgrade')")
             );
             assert!(sql.contains("items.item_id      AS item_id"));
-            assert!(sql.contains("`items.net_worth_at_buy` AS net_worth_at_buy"));
+            assert_eq!(
+                sql.contains("`items.net_worth_at_buy` AS net_worth_at_buy"),
+                !has_hero
+            );
             assert!(sql.contains("AND item_id IN t_upgrades AND buy_time > 0\n"));
             assert!(!sql.contains("upgrades.item_id"));
             assert!(!sql.contains("upgrade_info"));
@@ -1977,7 +2034,10 @@ mod tests {
             assert_valid_sql(&sql);
             assert!(sql.contains("items.item_id      AS item_id"));
             assert!(sql.contains(",\n    items.upgrade_info AS upgrade_info"));
-            assert!(sql.contains("`items.net_worth_at_buy` AS net_worth_at_buy"));
+            assert_eq!(
+                sql.contains("`items.net_worth_at_buy` AS net_worth_at_buy"),
+                !has_hero
+            );
             assert!(sql.contains(
                 "AND item_id IN t_upgrades AND buy_time > 0 AND bitAnd(upgrade_info, 8388608) != 0\n"
             ));
