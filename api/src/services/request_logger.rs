@@ -60,4 +60,8 @@ pub(crate) struct RequestLog {
     pub graphql_complexity: Option<u64>,
     /// Validated GraphQL query depth (None for non-GraphQL requests)
     pub graphql_depth: Option<u64>,
+    /// GraphQL query text, truncated to 64 KiB (None for non-GraphQL requests)
+    pub graphql_query: Option<String>,
+    /// GraphQL variables as a JSON object, truncated to 64 KiB
+    pub graphql_variables: Option<String>,
 }

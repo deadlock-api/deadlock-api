@@ -32,29 +32,49 @@ use schema::{GraphQLSchema, build_schema};
 
 pub(super) const RATE_LIMIT_KEY: &str = "graphql_match_player";
 
-/// Validated cost of a GraphQL request, handed to `track_requests` as a response extension
-/// so it lands in `request_logs`.
-#[derive(Clone, Copy, Debug)]
-pub(crate) struct GraphQLCost {
-    pub(crate) complexity: u64,
-    pub(crate) depth: u64,
+/// Longest query or variables text kept in `request_logs`; the body limit alone allows 10 MB.
+const MAX_LOGGED_TEXT_BYTES: usize = 64 * 1024;
+
+/// What `track_requests` logs for a GraphQL request, handed over as a response extension.
+#[derive(Clone, Debug)]
+pub(crate) struct GraphQLRequestLog {
+    pub(crate) query: String,
+    /// JSON object, `None` when the request had no variables.
+    pub(crate) variables: Option<String>,
+    /// `None` when the request failed before validation.
+    pub(crate) complexity: Option<u64>,
+    pub(crate) depth: Option<u64>,
 }
 
-impl GraphQLCost {
-    /// Reads the `analyzer` response extension; absent when the request failed before validation.
-    fn from_response(resp: &async_graphql::Response) -> Option<Self> {
-        let async_graphql::Value::Object(analyzer) = resp.extensions.get("analyzer")? else {
-            return None;
+impl GraphQLRequestLog {
+    fn new(req: &async_graphql::Request) -> Self {
+        let variables = (!req.variables.is_empty())
+            .then(|| serde_json::to_string(&req.variables).ok())
+            .flatten();
+        Self {
+            query: truncated(&req.query),
+            variables: variables.as_deref().map(truncated),
+            complexity: None,
+            depth: None,
+        }
+    }
+
+    /// Fills the cost from the `analyzer` response extension.
+    fn set_cost(&mut self, resp: &async_graphql::Response) {
+        let Some(async_graphql::Value::Object(analyzer)) = resp.extensions.get("analyzer") else {
+            return;
         };
         let field = |name: &str| match analyzer.get(name)? {
             async_graphql::Value::Number(n) => n.as_u64(),
             _ => None,
         };
-        Some(Self {
-            complexity: field("complexity")?,
-            depth: field("depth")?,
-        })
+        self.complexity = field("complexity");
+        self.depth = field("depth");
     }
+}
+
+fn truncated(text: &str) -> String {
+    text[..text.floor_char_boundary(MAX_LOGGED_TEXT_BYTES)].to_owned()
 }
 
 fn shared_schema() -> &'static GraphQLSchema {
@@ -107,17 +127,16 @@ async fn graphql_handler(
 
     let hero_build_loader =
         DataLoader::new(HeroBuildLoader::new(state.pg_client.clone()), tokio::spawn);
-    let request = req
-        .into_inner()
+    let request = req.into_inner();
+    let mut log = GraphQLRequestLog::new(&request);
+    let request = request
         .data(state)
         .data(rate_limit_key)
         .data(hero_build_loader);
     let resp = shared_schema().execute(request).await;
-    let cost = GraphQLCost::from_response(&resp);
+    log.set_cost(&resp);
     let mut response = GraphQLResponse::from(resp).into_response();
-    if let Some(cost) = cost {
-        response.extensions_mut().insert(cost);
-    }
+    response.extensions_mut().insert(log);
     Ok(response)
 }
 
