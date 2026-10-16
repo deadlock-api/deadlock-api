@@ -35,13 +35,14 @@ import {
 import { badgeLabel, getRankImageUrl } from "~/lib/rank-utils";
 
 import { type ClipPhase, trackGuessTheRank, useClipAnalytics } from "./analytics";
+import { applyClipAudio, rememberClipAudio } from "./clip-audio";
 import { GuessTheRankFeedbackNotice } from "./GuessTheRankFeedbackNotice";
 import { RankPicker, type RankTier } from "./RankPicker";
 import { POINT_TONE, RoundReveal } from "./RoundReveal";
 import { ScoreDistribution } from "./ScoreDistribution";
 import { type GuessedRound, useGuessTheRank } from "./use-guess-the-rank";
 
-/** A round's clip: seek and replay freely, before and after the guess. */
+/** A round's clip: seek and replay freely, before and after the guess, at the volume the viewer last chose. */
 function RoundClip({
   round,
   total,
@@ -52,6 +53,8 @@ function RoundClip({
       src={round.videoUrl}
       poster={round.posterUrl ?? undefined}
       aria-label={`Clip ${round.round + 1} of ${total}`}
+      ref={applyClipAudio}
+      onVolumeChange={rememberClipAudio}
       {...handlers}
     />
   );
