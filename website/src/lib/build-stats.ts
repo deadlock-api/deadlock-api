@@ -274,6 +274,23 @@ export function buildMatchesItems(
   return withItems.every((id) => listed.has(id)) && !withoutItems.some((id) => listed.has(id));
 }
 
+/**
+ * Wins and matches by rank tier, from rows bucketed by average badge (tier × 10 + subtier). Badge 0, a match without
+ * an average rank, has no tier and is left out.
+ */
+export function badgeTiers(
+  rows: readonly { bucket: number; wins: number; matches: number }[],
+): Map<number, { wins: number; matches: number }> {
+  const tiers = new Map<number, { wins: number; matches: number }>();
+  for (const row of rows) {
+    const tier = Math.floor(row.bucket / 10);
+    if (tier === 0) continue;
+    const total = tiers.get(tier) ?? { wins: 0, matches: 0 };
+    tiers.set(tier, { wins: total.wins + row.wins, matches: total.matches + row.matches });
+  }
+  return tiers;
+}
+
 /** The shop categories, in the shop's order. */
 export const BUILD_SLOTS = ["weapon", "vitality", "spirit"] as const;
 export type BuildSlot = (typeof BUILD_SLOTS)[number];

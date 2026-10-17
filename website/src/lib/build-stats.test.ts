@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 
 import {
+  badgeTiers,
   buildAbilityOrder,
   buildAdherence,
   buildCategoryName,
@@ -152,6 +153,22 @@ test("adherence splits a build's matches into the ones that followed it and the 
   });
   assert.equal(buildAdherence({ wins: 5, matches: 10 }, { wins: 6, matches: 11 }).otherWinRate, null);
   assert.deepEqual(buildUnlockOrder([3, 3, 1, 2, 3, 4, 1]), [3, 1, 2, 4]);
+});
+
+test("badge buckets fold into rank tiers without the unranked", () => {
+  const rows = [
+    { bucket: 0, wins: 50, matches: 100 },
+    { bucket: 91, wins: 10, matches: 20 },
+    { bucket: 96, wins: 5, matches: 10 },
+    { bucket: 116, wins: 3, matches: 4 },
+  ];
+  assert.deepEqual(
+    [...badgeTiers(rows)],
+    [
+      [9, { wins: 15, matches: 30 }],
+      [11, { wins: 3, matches: 4 }],
+    ],
+  );
 });
 
 test("a build's souls split by shop category, each listed item once", () => {

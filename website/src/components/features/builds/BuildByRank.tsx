@@ -4,7 +4,7 @@ import { PanelSection } from "~/components/patterns/panel/Panel";
 import { Delta } from "~/components/ui/delta";
 import { KeyValue, KeyValueList } from "~/components/ui/key-value";
 import { Skeleton } from "~/components/ui/skeleton";
-import type { BuildRow } from "~/lib/build-stats";
+import { badgeTiers, type BuildRow } from "~/lib/build-stats";
 import { formatPercent } from "~/lib/format";
 import { type BuildPurchaseFilters, buildBucketsQueryOptions } from "~/queries/hero-build-stats-query";
 import { heroStatsQueryOptions } from "~/queries/hero-stats-query";
@@ -12,18 +12,6 @@ import { ranksQueryOptions } from "~/queries/ranks-query";
 
 /** A rank needs this many of the build's matches for its win rate to be shown. */
 const MIN_MATCHES = 20;
-
-/** Folds badge buckets (tier × 10 + subtier) into tiers; badge 0, a match without an average rank, has none. */
-function byTier(rows: readonly { bucket: number; wins: number; matches: number }[]) {
-  const tiers = new Map<number, { wins: number; matches: number }>();
-  for (const row of rows) {
-    const tier = Math.floor(row.bucket / 10);
-    if (tier === 0) continue;
-    const total = tiers.get(tier) ?? { wins: 0, matches: 0 };
-    tiers.set(tier, { wins: total.wins + row.wins, matches: total.matches + row.matches });
-  }
-  return tiers;
-}
 
 /**
  * How the build wins at each rank in the filtered range, against every player of the hero at that rank: some builds
@@ -67,7 +55,7 @@ export function BuildByRank({
       maxUnixTimestamp: filters.maxUnixTimestamp,
       bucket: "avg_badge",
     }),
-    select: (rows) => byTier(rows.filter((row) => row.hero_id === heroId)),
+    select: (rows) => badgeTiers(rows.filter((row) => row.hero_id === heroId)),
     enabled: active,
   });
   const ranksQuery = useQuery(ranksQueryOptions);
@@ -77,7 +65,7 @@ export function BuildByRank({
   const minTier = Math.floor((filters.minAverageBadge ?? 0) / 10);
   const maxTier = Math.floor((filters.maxAverageBadge ?? Infinity) / 10);
   const tiers = (ranksQuery.data ?? []).filter((rank) => rank.tier > 0 && rank.tier >= minTier && rank.tier <= maxTier);
-  const buildTiers = byTier(query.data ?? []);
+  const buildTiers = badgeTiers(query.data ?? []);
 
   return (
     <section className="flex flex-col">
