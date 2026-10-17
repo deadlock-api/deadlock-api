@@ -123,9 +123,12 @@ const TOOLTIP_TARGET_DISPLAY = {
  */
 function TooltipTarget({
   display = "inline-block",
+  underline = "none",
   className,
   ...props
 }: ComponentProps<"span"> & {
+  /** `dotted`: the "there is more behind this" mark of a value whose hover card holds more than a hint (a plot). */
+  underline?: "none" | "dotted";
   /**
    * How the target sits in its line. `inline-block` lets the focus ring box the whole trigger. A trigger that must
    * fill its column — a bar, a full-width row — takes `block`.
@@ -140,7 +143,14 @@ function TooltipTarget({
       data-display={display}
       // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- the span exists to make a hover card reachable by keyboard
       tabIndex={0}
-      className={cn(FOCUS_RING, "cursor-default rounded-sm", TOOLTIP_TARGET_DISPLAY[display], className)}
+      className={cn(
+        FOCUS_RING,
+        "cursor-default rounded-sm",
+        TOOLTIP_TARGET_DISPLAY[display],
+        underline === "dotted" &&
+          "underline decoration-muted-foreground decoration-dotted underline-offset-4 hover:decoration-current hover:decoration-solid focus-visible:decoration-current focus-visible:decoration-solid",
+        className,
+      )}
       {...props}
     />
   );

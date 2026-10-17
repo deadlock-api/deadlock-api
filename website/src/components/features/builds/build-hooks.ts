@@ -2,8 +2,10 @@ import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 
 import { buildItemIds, buildItemUsage, type BuildRow } from "~/lib/build-stats";
+import type { GaussianStats } from "~/lib/gaussian";
 import { abilitiesQueryOptions, heroesQueryOptions } from "~/queries/asset-queries";
 import { type BuildPurchaseFilters, buildItemPurchasesQueryOptions } from "~/queries/hero-build-stats-query";
+import { playerPerformanceCurveQueryOptions } from "~/queries/player-performance-curve-query";
 
 const HERO_ABILITY_SLOTS = ["signature1", "signature2", "signature3", "signature4"] as const;
 
@@ -56,4 +58,70 @@ export function useBuildItemUsage({
   // A failed request leaves the items without their rates rather than holding skeletons.
   const pending = query.isPending && meta != null && (!active || query.fetchStatus !== "idle");
   return { usage, pending, failed: query.isError };
+}
+
+/** The playstyle metrics the performance curve has a spread for, by metric key, with the curve's field. */
+const CURVE_FIELDS = {
+  soulsPerMin: "net_worth",
+  kills: "kills",
+  deaths: "deaths",
+  assists: "assists",
+  damagePerMin: "player_damage",
+  denies: "denies",
+  neutralKills: "neutral_kills",
+  objectiveDamage: "boss_damage",
+} as const;
+
+export interface EndOfMatchDistribution {
+  value: GaussianStats;
+  reference: GaussianStats;
+}
+
+/**
+ * The build's and the hero's mean and spread of each curve metric at the end of the match (the last tenth of it), by
+ * playstyle metric key: what a distribution in a tooltip is drawn from.
+ */
+export function useEndOfMatchDistributions({
+  heroId,
+  buildId,
+  filters,
+  active,
+}: {
+  heroId: number;
+  buildId: number;
+  filters: BuildPurchaseFilters;
+  active: boolean;
+}): Partial<Record<keyof typeof CURVE_FIELDS, EndOfMatchDistribution>> {
+  const params = {
+    heroIds: String(heroId),
+    gameMode: "normal" as const,
+    matchMode: filters.matchMode,
+    minAverageBadge: filters.minAverageBadge,
+    maxAverageBadge: filters.maxAverageBadge,
+    minUnixTimestamp: filters.minUnixTimestamp,
+    maxUnixTimestamp: filters.maxUnixTimestamp,
+    resolution: 10,
+  };
+  const buildQuery = useQuery({
+    ...playerPerformanceCurveQueryOptions({ ...params, heroBuildId: buildId }),
+    enabled: active,
+  });
+  const heroQuery = useQuery({ ...playerPerformanceCurveQueryOptions(params), enabled: active });
+  const last = <T extends { game_time: number }>(points: readonly T[] | undefined) =>
+    points?.reduce<T | undefined>(
+      (latest, point) => (!latest || point.game_time > latest.game_time ? point : latest),
+      undefined,
+    );
+  const build = last(buildQuery.data) as Record<string, number | null | undefined> | undefined;
+  const hero = last(heroQuery.data) as Record<string, number | null | undefined> | undefined;
+  if (!build || !hero) return {};
+  return Object.fromEntries(
+    Object.entries(CURVE_FIELDS).map(([key, field]) => [
+      key,
+      {
+        value: { avg: build[`${field}_avg`], std: build[`${field}_std`] },
+        reference: { avg: hero[`${field}_avg`], std: hero[`${field}_std`] },
+      },
+    ]),
+  );
 }

@@ -14,13 +14,10 @@ import {
 } from "~/components/patterns/charts/theme";
 import { PanelSection } from "~/components/patterns/panel/Panel";
 import { TooltipCard, TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
-import { CACHE_DURATIONS } from "~/constants/cache";
-import { api } from "~/lib/api";
 import { niceTicks } from "~/lib/chart-axis";
 import { formatSignedPercent } from "~/lib/format";
 import type { BuildPurchaseFilters } from "~/queries/hero-build-stats-query";
 import { playerPerformanceCurveQueryOptions } from "~/queries/player-performance-curve-query";
-import { queryKeys } from "~/queries/query-keys";
 
 /** The last game time drawn: few matches last longer, so the line would only show noise past it. */
 const LAST_MINUTE = 40;
@@ -61,14 +58,7 @@ export function BuildSoulsByTime({
     resolution: 0,
   };
   const buildQuery = useQuery({
-    queryKey: [...queryKeys.analytics.playerPerformanceCurve(params), buildId],
-    queryFn: async () => {
-      const response = await api.analytics_api.playerPerformanceCurve(params, {
-        params: { hero_build_id: buildId },
-      });
-      return response.data;
-    },
-    staleTime: CACHE_DURATIONS.ONE_HOUR,
+    ...playerPerformanceCurveQueryOptions({ ...params, heroBuildId: buildId }),
     enabled: active,
   });
   const heroQuery = useQuery(playerPerformanceCurveQueryOptions(params));

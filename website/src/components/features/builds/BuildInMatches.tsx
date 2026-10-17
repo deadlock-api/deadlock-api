@@ -1,7 +1,7 @@
 import { Activity, ListOrdered, ShoppingBag, Swords } from "lucide-react";
 
 import { RankedEntityList, RankedEntityMetric, RankedEntityRow } from "~/components/domain/assets/RankedEntityList";
-import { useBuildItemUsage, useSkillOrder } from "~/components/features/builds/build-hooks";
+import { useBuildItemUsage, useEndOfMatchDistributions, useSkillOrder } from "~/components/features/builds/build-hooks";
 import { BuildByDuration } from "~/components/features/builds/BuildByDuration";
 import { BuildItemTile } from "~/components/features/builds/BuildItemTile";
 import { BuildMatchups } from "~/components/features/builds/BuildMatchups";
@@ -56,6 +56,7 @@ export function BuildInMatches({
 }) {
   const { usage, pending } = useBuildItemUsage({ heroId, row, filters, active });
   const { slotAbilities, skillOrder } = useSkillOrder(heroId, row);
+  const distributions = useEndOfMatchDistributions({ heroId, buildId: row.hero_build_id, filters, active });
   // The items most of the build's players buy, listed or not, by when they buy them on average.
   const buyOrder = usage
     ? [...usage.byItem.values()]
@@ -153,7 +154,12 @@ export function BuildInMatches({
         </Panel>
         <Panel className="flex flex-col @7xl:col-span-2">
           <PanelHeader title="Playstyle vs. average build" icon={Activity} size="sm" />
-          <BuildPlaystyle totals={performance} average={averagePerformance} pending={performancePending}>
+          <BuildPlaystyle
+            totals={performance}
+            average={averagePerformance}
+            pending={performancePending}
+            distributions={distributions}
+          >
             <BuildSoulsByTime heroId={heroId} buildId={row.hero_build_id} filters={filters} active={active} />
           </BuildPlaystyle>
         </Panel>

@@ -1,9 +1,37 @@
+import type { EndOfMatchDistribution } from "~/components/features/builds/build-hooks";
+import { ChartLegend, ChartLegendItem } from "~/components/patterns/charts/ChartLegend";
+import { GAUSSIAN_COLORS, GaussianComparison } from "~/components/patterns/charts/GaussianComparison";
 import { PanelSection } from "~/components/patterns/panel/Panel";
 import { Delta } from "~/components/ui/delta";
 import { KeyValue, KeyValueList } from "~/components/ui/key-value";
 import { NoValue } from "~/components/ui/no-value";
 import { Skeleton } from "~/components/ui/skeleton";
+import { Tooltip, TooltipHeader, TooltipTarget } from "~/components/ui/tooltip";
 import { BUILD_METRICS, type BuildPerformanceTotals, metricDelta, type MetricGroup } from "~/lib/build-performance";
+
+/** A metric's spread at the end of the match: the build's curve over the hero's. */
+function DistributionCard({ title, distribution }: { title: string; distribution: EndOfMatchDistribution }) {
+  return (
+    <div className="flex w-72 flex-col gap-2">
+      <TooltipHeader title={title} subtitle="At the end of the match" />
+      <GaussianComparison
+        value={distribution.value}
+        reference={distribution.reference}
+        label={`${title} at the end of the match, this build against the hero`}
+      />
+      <ChartLegend label="Curves">
+        <ChartLegendItem color={GAUSSIAN_COLORS.value} shape="line">
+          This build
+        </ChartLegendItem>
+        <ChartLegendItem color={GAUSSIAN_COLORS.reference} shape="dashed">
+          Hero average
+        </ChartLegendItem>
+      </ChartLegend>
+    </div>
+  );
+}
+
+const NO_DISTRIBUTIONS: Partial<Record<string, EndOfMatchDistribution>> = {};
 
 const GROUPS: { group: MetricGroup; title: string }[] = [
   { group: "combat", title: "Combat" },
@@ -19,12 +47,15 @@ export function BuildPlaystyle({
   totals,
   average,
   pending,
+  distributions = NO_DISTRIBUTIONS,
   children,
 }: {
   /** The build's performance totals; undefined while they load or when the request failed. */
   totals: BuildPerformanceTotals | undefined;
   average: BuildPerformanceTotals | null;
   pending: boolean;
+  /** The end-of-match distributions behind some metrics, by metric key: their value opens a plot of the two. */
+  distributions?: Partial<Record<string, EndOfMatchDistribution>>;
   /** A section of its own in the grid, after combat and economy: per-time numbers that need requests of their own. */
   children?: React.ReactNode;
 }) {
@@ -45,7 +76,18 @@ export function BuildPlaystyle({
                   <Skeleton className="ms-auto h-4 w-20" />
                 ) : (
                   <span className="inline-flex items-baseline gap-2">
-                    {value === null ? <NoValue /> : metric.format(value)}
+                    {value === null ? (
+                      <NoValue />
+                    ) : distributions[metric.key] ? (
+                      <Tooltip
+                        variant="preview"
+                        content={<DistributionCard title={metric.label} distribution={distributions[metric.key]!} />}
+                      >
+                        <TooltipTarget underline="dotted">{metric.format(value)}</TooltipTarget>
+                      </Tooltip>
+                    ) : (
+                      metric.format(value)
+                    )}
                     <span className="w-14 text-end text-xs">
                       <Delta
                         value={delta}
