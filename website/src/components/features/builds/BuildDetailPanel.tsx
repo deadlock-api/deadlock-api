@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { Hammer } from "lucide-react";
+import { Hammer, Info } from "lucide-react";
 import { useMemo } from "react";
 
 import { AbilityOrderGrid } from "~/components/domain/assets/AbilityOrderGrid";
@@ -12,6 +12,7 @@ import { CopyButton } from "~/components/ui/copy-button";
 import { Delta } from "~/components/ui/delta";
 import { SCROLLBAR_THIN } from "~/components/ui/recipes";
 import { Stat, StatGroup } from "~/components/ui/stat";
+import { Tooltip, TooltipTarget } from "~/components/ui/tooltip";
 import { day } from "~/dayjs";
 import {
   buildItemIds,
@@ -44,6 +45,21 @@ function useSlotAbilities(heroId: number): number[] {
     const ability = abilities.find((candidate) => candidate.class_name === hero.items?.[slot]);
     return ability ? [ability.id] : [];
   });
+}
+
+/** A category's name, and what its author wrote about it behind an info mark. */
+function CategoryTitle({ name, description }: { name: string; description: string | null }) {
+  if (!description) return name;
+  return (
+    <span className="inline-flex max-w-full items-center gap-1">
+      <span className="truncate">{name}</span>
+      <Tooltip content={description}>
+        <TooltipTarget aria-label={`About ${name}`} className="inline-flex shrink-0 items-center">
+          <Info aria-hidden="true" className="size-3.5" />
+        </TooltipTarget>
+      </Tooltip>
+    </span>
+  );
 }
 
 /** One build in full: who made it, how it did, the items of each of its categories and its skill order. */
@@ -148,13 +164,25 @@ export function BuildDetailPanel({
               .filter((category) => category.itemIds.length > 0)
               .map((category) => (
                 <section key={`${category.name}|${category.itemIds.join()}`} className="flex flex-col">
-                  <PanelSection title={buildCategoryName(category.name) ?? "Items"}>
+                  <PanelSection
+                    title={
+                      <CategoryTitle
+                        name={buildCategoryName(category.name) ?? "Items"}
+                        description={category.description}
+                      />
+                    }
+                  >
                     <span className="tabular-nums">{category.itemIds.length}</span>
                   </PanelSection>
                   <ul className="flex flex-wrap gap-1.5 px-4 py-2">
                     {category.itemIds.map((itemId) => (
                       <li key={itemId}>
-                        <BuildItemTile itemId={itemId} usage={usage?.byItem.get(itemId)} pending={purchasesPending} />
+                        <BuildItemTile
+                          itemId={itemId}
+                          usage={usage?.byItem.get(itemId)}
+                          pending={purchasesPending}
+                          note={category.notes[itemId]}
+                        />
                       </li>
                     ))}
                   </ul>

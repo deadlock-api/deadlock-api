@@ -1,5 +1,9 @@
+import { MessageSquareText } from "lucide-react";
+
 import { ItemImage } from "~/components/domain/assets/ItemImage";
+import { CornerBadge } from "~/components/ui/corner-badge";
 import { Skeleton } from "~/components/ui/skeleton";
+import { Tooltip, TooltipHeader, TooltipStat, TooltipStats, TooltipTarget } from "~/components/ui/tooltip";
 import { useItemById } from "~/hooks/useAssetById";
 import type { BuildItemUsage } from "~/lib/build-stats";
 import { formatPercent, formatShare } from "~/lib/format";
@@ -12,43 +16,65 @@ function clock(seconds: number): string {
   return `${Math.floor(whole / 60)}:${String(whole % 60).padStart(2, "0")}`;
 }
 
-/** One item of a build with how often the build's players bought it, under the icon. */
+/**
+ * One item of a build, with how often the build's players bought it under the icon. Its tooltip names the item, holds
+ * the author's note on it and the purchases; an item with a note carries a mark in its corner.
+ */
 export function BuildItemTile({
   itemId,
   usage,
   pending,
+  note,
 }: {
   itemId: number;
   /** Undefined when nobody on the build bought it, or while the purchases load (`pending`). */
   usage: BuildItemUsage | undefined;
   pending: boolean;
+  /** What the build's author wrote about the item. */
+  note?: string;
 }) {
   const { item } = useItemById(itemId);
   const name = item?.name ?? "Item";
-  const details = usage
-    ? `${name}: bought in ${formatShare(usage.boughtRate)} of the build's matches, at ${clock(usage.avgBuyTimeS)} on average, ${formatPercent(usage.winRate)} wins`
-    : pending
-      ? name
-      : `${name}: not bought by the build's players`;
   const rate = usage?.boughtRate ?? 0;
   return (
-    <div className="flex w-10 flex-col items-center gap-0.5" title={details}>
-      <ItemImage
-        item={item}
-        // The tile's own text names the item and says how often it was bought.
-        alt=""
-        title=""
-        emphasis={!pending && rate < RARELY_BOUGHT ? "dim" : "normal"}
-        className="size-9"
-      />
-      {pending ? (
-        <Skeleton className="h-4 w-8" />
-      ) : (
-        <span aria-hidden="true" className="text-xs text-muted-foreground tabular-nums">
-          {formatShare(rate)}
+    <Tooltip
+      content={
+        <>
+          <TooltipHeader title={name} subtitle={note} />
+          {!pending && (
+            <TooltipStats>
+              <TooltipStat label="Bought in" value={`${formatShare(rate)} of matches`} />
+              {usage && <TooltipStat label="Bought at" value={clock(usage.avgBuyTimeS)} />}
+              {usage && <TooltipStat label="Win rate when bought" value={formatPercent(usage.winRate)} />}
+            </TooltipStats>
+          )}
+        </>
+      }
+    >
+      <TooltipTarget aria-label={name} className="flex w-10 flex-col items-center gap-0.5">
+        <span className="relative">
+          <ItemImage
+            item={item}
+            // The target names the item; the tooltip says how often it was bought.
+            alt=""
+            title=""
+            emphasis={!pending && rate < RARELY_BOUGHT ? "dim" : "normal"}
+            className="size-9"
+          />
+          {note && (
+            <CornerBadge tone="scrim" aria-hidden="true">
+              <MessageSquareText className="size-3" />
+            </CornerBadge>
+          )}
         </span>
-      )}
-      <span className="sr-only">{details}</span>
-    </div>
+        {pending ? (
+          <Skeleton className="h-4 w-8" />
+        ) : (
+          <span aria-hidden="true" className="text-xs text-muted-foreground tabular-nums">
+            {formatShare(rate)}
+          </span>
+        )}
+      </TooltipTarget>
+    </Tooltip>
   );
 }

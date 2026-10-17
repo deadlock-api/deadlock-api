@@ -3,7 +3,13 @@ import type { AnalyticsApiHeroBuildStatsRequest, AnalyticsApiItemStatsRequest } 
 
 import { CACHE_DURATIONS } from "~/constants/cache";
 import { api } from "~/lib/api";
-import { buildAbilityOrder, type BuildItemPurchase, type BuildMeta, type BuildStatRow } from "~/lib/build-stats";
+import {
+  buildAbilityOrder,
+  type BuildBucketRow,
+  type BuildItemPurchase,
+  type BuildMeta,
+  type BuildStatRow,
+} from "~/lib/build-stats";
 import { API_ORIGIN } from "~/lib/constants";
 import { GraphqlHttpError } from "~/lib/graphql";
 
@@ -20,6 +26,25 @@ export function heroBuildStatsQueryOptions(params: AnalyticsApiHeroBuildStatsReq
         losses,
         matches,
         players,
+      }));
+    },
+    staleTime: CACHE_DURATIONS.ONE_HOUR,
+  });
+}
+
+/** The hero build stats split by `params.bucket` (a week, a rank badge): one row per build and bucket. */
+export function heroBuildBucketsQueryOptions(
+  params: AnalyticsApiHeroBuildStatsRequest & { bucket: NonNullable<AnalyticsApiHeroBuildStatsRequest["bucket"]> },
+) {
+  return queryOptions({
+    queryKey: queryKeys.analytics.heroBuildStats(params),
+    queryFn: async (): Promise<BuildBucketRow[]> => {
+      const response = await api.analytics_api.heroBuildStats(params);
+      return response.data.map(({ hero_build_id, bucket, wins, matches }) => ({
+        hero_build_id,
+        bucket,
+        wins,
+        matches,
       }));
     },
     staleTime: CACHE_DURATIONS.ONE_HOUR,
@@ -46,7 +71,13 @@ interface GraphqlBuild {
     last_updated_timestamp: number;
     language: number;
     details: {
-      mod_categories: { name: string | null; mods: { ability_id: number }[] | null }[] | null;
+      mod_categories:
+        | {
+            name: string | null;
+            description: string | null;
+            mods: { ability_id: number; annotation: string | null }[] | null;
+          }[]
+        | null;
       ability_order: { currency_changes: { ability_id: number; currency_type: number; delta: number }[] | null } | null;
     } | null;
   };
@@ -54,7 +85,7 @@ interface GraphqlBuild {
 
 const BUILD_FIELDS =
   "hero_build{hero_build_id name author_account_id version last_updated_timestamp language " +
-  "details{mod_categories{name mods{ability_id}} ability_order{currency_changes{ability_id currency_type delta}}}}";
+  "details{mod_categories{name description mods{ability_id annotation}} ability_order{currency_changes{ability_id currency_type delta}}}}";
 
 /**
  * The latest version of each build in `buildIds`, by id; a build the API no longer stores maps to null. The builds
@@ -93,6 +124,13 @@ export function heroBuildMetaQueryOptions(heroId: number, buildIds: readonly num
               language: build.language,
               categories: (build.details?.mod_categories ?? []).map((category) => ({
                 name: category.name ?? "",
+                description: category.description?.trim() || null,
+                notes: Object.fromEntries(
+                  (category.mods ?? []).flatMap((mod) => {
+                    const note = mod.annotation?.trim();
+                    return note ? [[mod.ability_id, note]] : [];
+                  }),
+                ),
                 // An item listed twice in one category is shown once.
                 itemIds: [...new Set((category.mods ?? []).map((mod) => mod.ability_id))],
               })),
@@ -116,11 +154,11 @@ export type BuildPurchaseFilters = Pick<
 >;
 
 export function buildItemPurchasesQueryOptions(buildId: number, params: BuildPurchaseFilters, heroId: number) {
-  const request = { ...params, heroIds: String(heroId), minMatches: 1 };
+  const request = { ...params, heroIds: String(heroId), heroBuildId: buildId, minMatches: 1 };
   return queryOptions({
-    queryKey: queryKeys.analytics.buildItemPurchases(buildId, request),
+    queryKey: queryKeys.analytics.itemStats(request),
     queryFn: async (): Promise<BuildItemPurchase[]> => {
-      const response = await api.analytics_api.itemStats(request, { params: { hero_build_id: buildId } });
+      const response = await api.analytics_api.itemStats(request);
       return response.data.map(({ item_id, wins, matches, avg_buy_time_s }) => ({
         item_id,
         wins,
