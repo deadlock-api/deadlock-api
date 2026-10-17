@@ -171,6 +171,8 @@ function TableRow({
         // in the cascade and paint over it. A pinned cell draws the opaque twin of it (`table-stripe`).
         "border-b transition-colors even:bg-subtle hover:bg-muted/50 has-aria-expanded:bg-muted/50 data-interactive:cursor-pointer data-plain:border-0 data-plain:hover:bg-transparent data-static:hover:bg-transparent data-[state=current]:bg-accent data-[state=current]:font-medium data-[state=selected]:bg-muted",
         ROW_TONE[tone],
+        // A row stepped through with `useListNavigation` shows the focus of its control as an outline round the row.
+        "has-[[data-list-index]:focus-visible]:outline-2 has-[[data-list-index]:focus-visible]:-outline-offset-2 has-[[data-list-index]:focus-visible]:outline-ring [&_[data-list-index]:focus-visible]:ring-0",
         className,
       )}
       {...props}

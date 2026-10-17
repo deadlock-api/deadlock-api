@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { GitCompareArrows, Hammer, Info } from "lucide-react";
+import { GitCompareArrows, Hammer, Info, ListTree, Swords } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { AbilityOrderGrid } from "~/components/domain/assets/AbilityOrderGrid";
@@ -269,6 +269,7 @@ export function BuildDetailPanel({
         </div>
         {meta ? (
           <>
+            <PanelHeader title="The build" icon={ListTree} size="sm" />
             {meta.categories
               .filter((category) => category.itemIds.length > 0)
               .map((category) => (
@@ -297,6 +298,40 @@ export function BuildDetailPanel({
                   </ul>
                 </section>
               ))}
+            {skillOrder.length > 0 && slotAbilities.length > 0 && (
+              <section className="flex flex-col">
+                <PanelSection title="Skill order" />
+                <div className="px-3 py-1.5">
+                  <AbilityOrderGrid
+                    size="sm"
+                    abilityIds={slotAbilities}
+                    steps={skillOrder.map((abilityId) => ({ abilityId }))}
+                  />
+                </div>
+              </section>
+            )}
+            {authorBuilds.length > 0 && (
+              <section className="flex flex-col">
+                <PanelSection title="More by this author" />
+                <ul className="flex flex-col py-1">
+                  {authorBuilds.map((build) => (
+                    <li key={build.hero_build_id}>
+                      <Button
+                        variant="row"
+                        className="flex items-center justify-between gap-3 px-3 py-1 text-xs"
+                        onClick={() => onBuildIdChange(build.hero_build_id)}
+                      >
+                        <span className="min-w-0 truncate">{build.meta?.name ?? `Build ${build.hero_build_id}`}</span>
+                        <span className="shrink-0 text-muted-foreground tabular-nums">
+                          {build.matches.toLocaleString("en-US")} · {formatPercent(build.winRate)}
+                        </span>
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
+            <PanelHeader title="In matches" icon={Swords} size="sm" />
             {buyOrder.length >= 3 && (
               <section className="flex flex-col">
                 <PanelSection title="Bought in this order">
@@ -325,40 +360,14 @@ export function BuildDetailPanel({
             )}
             {skillOrder.length > 0 && slotAbilities.length > 0 && (
               <section className="flex flex-col">
-                <PanelSection title="Skill order" />
-                <div className="flex flex-col gap-2 px-3 py-1.5">
-                  <AbilityOrderGrid
-                    size="sm"
-                    abilityIds={slotAbilities}
-                    steps={skillOrder.map((abilityId) => ({ abilityId }))}
-                  />
+                <PanelSection title="Skill order followed" />
+                <div className="px-3 py-1.5">
                   <BuildSkillAdherence heroId={heroId} row={row} skillOrder={skillOrder} filters={purchaseFilters} />
                 </div>
               </section>
             )}
             <BuildPlaystyle totals={performance} average={averagePerformance} pending={performancePending} />
             <BuildTopPlayers heroId={heroId} buildId={row.hero_build_id} filters={purchaseFilters} />
-            {authorBuilds.length > 0 && (
-              <section className="flex flex-col">
-                <PanelSection title="More by this author" />
-                <ul className="flex flex-col py-1">
-                  {authorBuilds.map((build) => (
-                    <li key={build.hero_build_id}>
-                      <Button
-                        variant="row"
-                        className="flex items-center justify-between gap-3 px-3 py-1 text-xs"
-                        onClick={() => onBuildIdChange(build.hero_build_id)}
-                      >
-                        <span className="min-w-0 truncate">{build.meta?.name ?? `Build ${build.hero_build_id}`}</span>
-                        <span className="shrink-0 text-muted-foreground tabular-nums">
-                          {build.matches.toLocaleString("en-US")} · {formatPercent(build.winRate)}
-                        </span>
-                      </Button>
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            )}
           </>
         ) : pending ? (
           <LoadingState variant="skeleton" size="sm" />
