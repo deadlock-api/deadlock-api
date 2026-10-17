@@ -95,6 +95,9 @@ pub(super) struct HeroCounterStatsQuery {
         proptest(strategy = "crate::utils::proptest_utils::arb_small_u32_list()")
     )]
     account_ids: Option<Vec<u32>>,
+    /// Only matchups where `hero_id`'s player started the match with this hero build selected. Matches without a
+    /// processed demo record no build. See more: <https://api.deadlock-api.com/v1/analytics/hero-build-stats/{hero_id}>
+    hero_build_id: Option<u64>,
 }
 
 impl_match_info!(HeroCounterStatsQuery);
@@ -158,13 +161,16 @@ fn build_query(query: &HeroCounterStatsQuery) -> String {
         )
     };
     #[expect(deprecated)]
-    let p1_where = side_where(PlayerFilters {
+    let mut p1_where = side_where(PlayerFilters {
         account_id: query.account_id,
         account_ids: query.account_ids.as_deref(),
         min_networth: query.min_networth,
         max_networth: query.max_networth,
         ..Default::default()
     });
+    if let Some(hero_build_id) = query.hero_build_id {
+        p1_where.push_str(&format!(" AND hero_build_id = {hero_build_id}"));
+    }
     let p2_where = side_where(PlayerFilters {
         min_networth: query.min_enemy_networth,
         max_networth: query.max_enemy_networth,
