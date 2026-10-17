@@ -8,6 +8,7 @@ import { BuildItemTile } from "~/components/features/builds/BuildItemTile";
 import { BuildMatchups } from "~/components/features/builds/BuildMatchups";
 import { BuildPlaystyle } from "~/components/features/builds/BuildPlaystyle";
 import { BuildSkillAdherence } from "~/components/features/builds/BuildSkillAdherence";
+import { BuildSkillTaken } from "~/components/features/builds/BuildSkillTaken";
 import { BuildSoulsByTime } from "~/components/features/builds/BuildSoulsByTime";
 import { BuildTopPlayers } from "~/components/features/builds/BuildTopPlayers";
 import { Section } from "~/components/patterns/page/Section";
@@ -183,6 +184,7 @@ export function BuildInMatches({
               </div>
             </section>
           )}
+          <BuildSkillTaken heroId={heroId} build={row} filters={filters} active={active} />
           <BuildTopPlayers heroId={heroId} buildId={row.hero_build_id} filters={filters} active={active} />
         </Panel>
         <Panel className="flex flex-col">
