@@ -135,7 +135,9 @@ function BuildsPage() {
         <p>
           Every Deadlock match records the hero build each player had selected when it started. This page counts those
           matches for every published build of a hero: how often it was played, by how many players, and how it won
-          against the hero&apos;s other builds, with each build&apos;s items and skill order.
+          against the hero&apos;s other builds. For each build it shows what its players really buy and when, how they
+          play against the hero&apos;s average build, how closely they keep to its skill order, and which enemy heroes
+          it beats. Only matches with a processed replay record the build.
         </p>
       </PageHeader>
 
