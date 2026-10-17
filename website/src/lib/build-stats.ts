@@ -170,6 +170,51 @@ export function distinguishingItems(presence: readonly BuildItemPresence[], minS
     .sort((a, b) => b.vsWithout! - a.vsWithout! || b.share - a.share || a.itemId - b.itemId);
 }
 
+export interface BuildItemUsage {
+  itemId: number;
+  /** Share of the build's matches in which its players bought the item. */
+  boughtRate: number;
+  /** Win rate of the build's matches in which the item was bought. */
+  winRate: number;
+  avgBuyTimeS: number;
+}
+
+/** One item's purchases by the players of one build, as the item stats with a `hero_build_id` count them. */
+export interface BuildItemPurchase {
+  item_id: number;
+  wins: number;
+  matches: number;
+  avg_buy_time_s: number;
+}
+
+/**
+ * What a build's players bought, against the `matches` the build was played: every item by id, and the items the build
+ * does not list that at least `minRate` of its matches bought, most bought first.
+ */
+export function buildItemUsage(
+  purchases: readonly BuildItemPurchase[],
+  matches: number,
+  listed: readonly number[],
+  minRate = 0.2,
+): { byItem: Map<number, BuildItemUsage>; offBuild: BuildItemUsage[] } {
+  const byItem = new Map<number, BuildItemUsage>();
+  for (const row of purchases) {
+    if (row.matches === 0) continue;
+    byItem.set(row.item_id, {
+      itemId: row.item_id,
+      // Two endpoints count the two numbers; a share past 1 would only be their rounding apart.
+      boughtRate: matches > 0 ? Math.min(1, row.matches / matches) : 0,
+      winRate: row.wins / row.matches,
+      avgBuyTimeS: row.avg_buy_time_s,
+    });
+  }
+  const listedSet = new Set(listed);
+  const offBuild = [...byItem.values()]
+    .filter((usage) => !listedSet.has(usage.itemId) && usage.boughtRate >= minRate)
+    .sort((a, b) => b.boughtRate - a.boughtRate || a.itemId - b.itemId);
+  return { byItem, offBuild };
+}
+
 /** Every item a build lists, once, in the order it first appears. */
 export function buildItemIds(meta: BuildMeta): number[] {
   return [...new Set(meta.categories.flatMap((category) => category.itemIds))];

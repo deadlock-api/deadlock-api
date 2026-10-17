@@ -5,6 +5,7 @@ import {
   buildAbilityOrder,
   buildCategoryName,
   buildItemPresence,
+  buildItemUsage,
   type BuildMeta,
   buildRows,
   buildTrends,
@@ -107,4 +108,25 @@ test("a trend compares a build's recent share with its share over the range, amo
   assert.ok(Math.abs(trends.get(1)!.change - (0.25 - 0.6)) < 1e-9);
   assert.equal(trends.get(2)?.recentMatches, 30);
   assert.equal(buildTrends(rows, []).size, 0);
+});
+
+test("item usage is the share of the build's matches that bought the item, and lists the unlisted favourites", () => {
+  const purchase = (item_id: number, wins: number, matches: number) => ({
+    item_id,
+    wins,
+    matches,
+    avg_buy_time_s: 600,
+  });
+  const { byItem, offBuild } = buildItemUsage(
+    [purchase(1, 45, 90), purchase(2, 10, 15), purchase(3, 30, 50), purchase(4, 5, 10), purchase(5, 1, 0)],
+    100,
+    [1, 2],
+  );
+  assert.equal(byItem.get(1)?.boughtRate, 0.9);
+  assert.equal(byItem.get(2)?.winRate, 10 / 15);
+  assert.equal(byItem.has(5), false);
+  assert.deepEqual(
+    offBuild.map((usage) => usage.itemId),
+    [3],
+  );
 });

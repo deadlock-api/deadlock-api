@@ -1,9 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { Hammer } from "lucide-react";
+import { useMemo } from "react";
 
 import { AbilityOrderGrid } from "~/components/domain/assets/AbilityOrderGrid";
-import { ItemImage } from "~/components/domain/assets/ItemImage";
 import { PlayerCell } from "~/components/domain/player/PlayerCell";
+import { BuildItemTile } from "~/components/features/builds/BuildItemTile";
 import { Panel, PanelHeader, PanelSection } from "~/components/patterns/panel/Panel";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
@@ -12,11 +13,22 @@ import { Delta } from "~/components/ui/delta";
 import { SCROLLBAR_THIN } from "~/components/ui/recipes";
 import { Stat, StatGroup } from "~/components/ui/stat";
 import { day } from "~/dayjs";
-import { type BuildRow, type BuildTrend, buildCategoryName, buildLanguageName } from "~/lib/build-stats";
+import {
+  buildItemIds,
+  buildItemUsage,
+  type BuildRow,
+  type BuildTrend,
+  buildCategoryName,
+  buildLanguageName,
+} from "~/lib/build-stats";
 import { formatPercent, formatShare } from "~/lib/format";
 import { cn } from "~/lib/utils";
 import { abilitiesQueryOptions, heroesQueryOptions } from "~/queries/asset-queries";
+import { type BuildPurchaseFilters, buildItemPurchasesQueryOptions } from "~/queries/hero-build-stats-query";
 import type { SteamProfile } from "~/queries/steam-queries";
+
+/** The most items the "Also bought" row shows. */
+const OFF_BUILD_SHOWN = 8;
 
 const HERO_ABILITY_SLOTS = ["signature1", "signature2", "signature3", "signature4"] as const;
 
@@ -37,6 +49,7 @@ function useSlotAbilities(heroId: number): number[] {
 /** One build in full: who made it, how it did, the items of each of its categories and its skill order. */
 export function BuildDetailPanel({
   row,
+  purchaseFilters,
   trend,
   heroId,
   profile,
@@ -45,6 +58,8 @@ export function BuildDetailPanel({
   className,
 }: {
   row: BuildRow;
+  /** The page's match filters, for the purchases of the build's players. */
+  purchaseFilters: BuildPurchaseFilters;
   /** The build's share in the range's last days; undefined while it loads or without recent matches. */
   trend: BuildTrend | undefined;
   heroId: number;
@@ -56,6 +71,17 @@ export function BuildDetailPanel({
 }) {
   const slotAbilities = useSlotAbilities(heroId);
   const { meta } = row;
+  const purchasesQuery = useQuery({
+    ...buildItemPurchasesQueryOptions(row.hero_build_id, purchaseFilters, heroId),
+    enabled: meta != null,
+  });
+  const purchases = purchasesQuery.data;
+  const usage = useMemo(
+    () => (purchases && meta ? buildItemUsage(purchases, row.matches, buildItemIds(meta)) : undefined),
+    [purchases, meta, row.matches],
+  );
+  // A failed request leaves the items without their rates rather than holding skeletons.
+  const purchasesPending = purchasesQuery.isPending && purchasesQuery.fetchStatus !== "idle";
   const name = meta?.name ?? `Build ${row.hero_build_id}`;
   // Ability ids the hero no longer has (reworked since the build was saved) are left out.
   const skillOrder = meta?.abilityOrder.filter((abilityId) => slotAbilities.includes(abilityId)) ?? [];
@@ -128,12 +154,24 @@ export function BuildDetailPanel({
                   <ul className="flex flex-wrap gap-1.5 px-4 py-2">
                     {category.itemIds.map((itemId) => (
                       <li key={itemId}>
-                        <ItemImage itemId={itemId} className="size-9" />
+                        <BuildItemTile itemId={itemId} usage={usage?.byItem.get(itemId)} pending={purchasesPending} />
                       </li>
                     ))}
                   </ul>
                 </section>
               ))}
+            {usage && usage.offBuild.length > 0 && (
+              <section className="flex flex-col">
+                <PanelSection title="Also bought" />
+                <ul className="flex flex-wrap gap-1.5 px-4 py-2">
+                  {usage.offBuild.slice(0, OFF_BUILD_SHOWN).map((item) => (
+                    <li key={item.itemId}>
+                      <BuildItemTile itemId={item.itemId} usage={item} pending={false} />
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
             {skillOrder.length > 0 && slotAbilities.length > 0 && (
               <section className="flex flex-col">
                 <PanelSection title="Skill order" />

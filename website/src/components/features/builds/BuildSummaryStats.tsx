@@ -1,3 +1,4 @@
+import { Button } from "~/components/ui/button";
 import { Skeleton } from "~/components/ui/skeleton";
 import { Stat, StatGroup } from "~/components/ui/stat";
 import type { BuildSummary } from "~/lib/build-stats";
@@ -9,10 +10,13 @@ const count = (value: number) => value.toLocaleString("en-US");
 export function BuildSummaryStats({
   summary,
   metaPending,
+  onBuildIdChange,
 }: {
   summary: BuildSummary;
   /** Build names are still loading: the leader's name holds a skeleton. */
   metaPending: boolean;
+  /** Shows a build in the detail panel: the leader's name is a button. */
+  onBuildIdChange: (buildId: number) => void;
 }) {
   const leader = summary.mostReliable;
   return (
@@ -27,7 +31,15 @@ export function BuildSummaryStats({
         value={
           leader &&
           (leader.meta ? (
-            <span title={leader.meta.name}>{leader.meta.name}</span>
+            <Button
+              variant="text"
+              size="inline"
+              title={leader.meta.name}
+              className="block max-w-full truncate text-start"
+              onClick={() => onBuildIdChange(leader.hero_build_id)}
+            >
+              {leader.meta.name}
+            </Button>
           ) : metaPending ? (
             <Skeleton className="h-6 w-32" />
           ) : (

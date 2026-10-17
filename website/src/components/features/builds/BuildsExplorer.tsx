@@ -161,7 +161,7 @@ export function BuildsExplorer({
 
   return (
     <div className="@container flex flex-col gap-3">
-      <BuildSummaryStats summary={summary} metaPending={meta.pending} />
+      <BuildSummaryStats summary={summary} metaPending={meta.pending} onBuildIdChange={onBuildIdChange} />
       <div className="grid gap-3 @3xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
         <BuildScatterChart
           rows={rows}
@@ -188,6 +188,14 @@ export function BuildsExplorer({
         />
         <BuildDetailPanel
           row={selected}
+          purchaseFilters={{
+            gameMode: "normal",
+            matchMode,
+            minAverageBadge: minRankId,
+            maxAverageBadge: maxRankId,
+            minUnixTimestamp,
+            maxUnixTimestamp,
+          }}
           trend={trends?.get(selected.hero_build_id)}
           heroId={heroId}
           profile={selected.meta ? profiles.byId[selected.meta.authorId] : undefined}

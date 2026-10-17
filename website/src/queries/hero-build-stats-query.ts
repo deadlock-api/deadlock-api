@@ -1,9 +1,9 @@
 import { queryOptions } from "@tanstack/react-query";
-import type { AnalyticsApiHeroBuildStatsRequest } from "deadlock_api_client";
+import type { AnalyticsApiHeroBuildStatsRequest, AnalyticsApiItemStatsRequest } from "deadlock_api_client";
 
 import { CACHE_DURATIONS } from "~/constants/cache";
 import { api } from "~/lib/api";
-import { buildAbilityOrder, type BuildMeta, type BuildStatRow } from "~/lib/build-stats";
+import { buildAbilityOrder, type BuildItemPurchase, type BuildMeta, type BuildStatRow } from "~/lib/build-stats";
 import { API_ORIGIN } from "~/lib/constants";
 import { GraphqlHttpError } from "~/lib/graphql";
 
@@ -101,6 +101,32 @@ export function heroBuildMetaQueryOptions(heroId: number, buildIds: readonly num
           : null;
       }
       return result;
+    },
+    staleTime: CACHE_DURATIONS.ONE_HOUR,
+  });
+}
+
+/**
+ * The items bought by the players who started their matches with `buildId`, from the item stats. Every item with one
+ * purchase counts: the panel compares them with the build's own list.
+ */
+export type BuildPurchaseFilters = Pick<
+  AnalyticsApiItemStatsRequest,
+  "gameMode" | "matchMode" | "minAverageBadge" | "maxAverageBadge" | "minUnixTimestamp" | "maxUnixTimestamp"
+>;
+
+export function buildItemPurchasesQueryOptions(buildId: number, params: BuildPurchaseFilters, heroId: number) {
+  const request = { ...params, heroIds: String(heroId), minMatches: 1 };
+  return queryOptions({
+    queryKey: queryKeys.analytics.buildItemPurchases(buildId, request),
+    queryFn: async (): Promise<BuildItemPurchase[]> => {
+      const response = await api.analytics_api.itemStats(request, { params: { hero_build_id: buildId } });
+      return response.data.map(({ item_id, wins, matches, avg_buy_time_s }) => ({
+        item_id,
+        wins,
+        matches,
+        avg_buy_time_s,
+      }));
     },
     staleTime: CACHE_DURATIONS.ONE_HOUR,
   });
