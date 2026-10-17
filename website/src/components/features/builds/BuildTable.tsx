@@ -188,7 +188,10 @@ export function BuildTable({
           })),
         ];
   const sign = sort.dir === "desc" ? -1 : 1;
-  const sortMetric = sort.sortKey.startsWith("m:") ? metricByKey(sort.sortKey.slice(2)) : undefined;
+  // A hand-edited `sort` naming no metric sorts by matches, as an unknown column key does.
+  const sortMetric = sort.sortKey.startsWith("m:")
+    ? BUILD_METRICS.find((metric) => metric.key === sort.sortKey.slice(2))
+    : undefined;
   const value = (row: BuildRow) => {
     if (sortMetric) {
       const totals = performance?.[row.hero_build_id];
