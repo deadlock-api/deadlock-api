@@ -543,6 +543,8 @@ mod proptests {
                 exclude_item_ids: exclude_item_ids.as_deref(),
                 ability_order_prefix: ability_order_prefix.as_deref(),
                 ability_unlock_order_prefix: ability_unlock_order_prefix.as_deref(),
+                // Any present or absent number; the inputs already vary one.
+                hero_build_id: min_networth,
             };
             assert_valid_predicate_vec(&filters.build());
         }
