@@ -22,6 +22,7 @@ import {
   heroBuildPerformanceQueryOptions,
   heroBuildStatsQueryOptions,
 } from "~/queries/hero-build-stats-query";
+import { heroStatsQueryOptions } from "~/queries/hero-stats-query";
 import { type SteamProfileMap, steamProfileBatches, steamProfilesQueryOptions } from "~/queries/steam-queries";
 
 /** How many days at the end of the range the trend looks at. */
@@ -168,6 +169,21 @@ export function BuildsExplorer({
         : null,
     [performance, rows],
   );
+  // Every player of the hero in the same matches, to read the builds' pooled win rate against. The heroes page asks for
+  // the same request, so it is often cached.
+  const heroStatsQuery = useQuery({
+    ...heroStatsQueryOptions({
+      gameMode: "normal",
+      matchMode,
+      minAverageBadge: minRankId,
+      maxAverageBadge: maxRankId,
+      minUnixTimestamp,
+      maxUnixTimestamp,
+    }),
+    select: (rows) => rows.find((row) => row.hero_id === heroId),
+  });
+  const heroRow = heroStatsQuery.data;
+  const heroWinRate = heroRow && heroRow.matches > 0 ? heroRow.wins / heroRow.matches : undefined;
   const recent = recentQuery.data;
   const trends = useMemo(() => (recent ? buildTrends(rows, recent) : null), [rows, recent]);
 
@@ -244,6 +260,7 @@ export function BuildsExplorer({
           performance={performance}
           averagePerformance={averagePerformance}
           summary={summary}
+          heroWinRate={heroWinRate}
           performancePending={performanceQuery.isPending && performanceQuery.fetchStatus !== "idle"}
           profiles={profiles.byId}
           metaPending={meta.pending}

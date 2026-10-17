@@ -110,6 +110,7 @@ export function BuildTable({
   performancePending,
   averagePerformance,
   summary,
+  heroWinRate,
   profiles,
   metaPending,
   profilesPending,
@@ -126,6 +127,7 @@ export function BuildTable({
   /** Every listed build's totals pooled, for the footer. */
   averagePerformance: BuildPerformanceTotals | null;
   summary: BuildSummary;
+  heroWinRate?: number;
   profiles: SteamProfileMap;
   metaPending: boolean;
   profilesPending: boolean;
@@ -181,7 +183,7 @@ export function BuildTable({
     // The table scrolls inside the panel, so the panel keeps one height beside the build details.
     <Panel className="@container/builds flex flex-col *:data-[slot=table-container]:max-h-136">
       <PanelHeader title="Builds" icon={ListOrdered} size="sm">
-        <BuildSummaryStats summary={summary} />
+        <BuildSummaryStats summary={summary} heroWinRate={heroWinRate} />
         <SearchInput
           value={query}
           onValueChange={setQuery}
