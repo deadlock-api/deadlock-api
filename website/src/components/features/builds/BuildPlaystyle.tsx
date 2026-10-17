@@ -19,11 +19,14 @@ export function BuildPlaystyle({
   totals,
   average,
   pending,
+  children,
 }: {
   /** The build's performance totals; undefined while they load or when the request failed. */
   totals: BuildPerformanceTotals | undefined;
   average: BuildPerformanceTotals | null;
   pending: boolean;
+  /** A section of its own in the grid, after combat and economy: per-time numbers that need requests of their own. */
+  children?: React.ReactNode;
 }) {
   if (!totals && !pending) return null;
   const section = ({ group, title }: (typeof GROUPS)[number]) => (
@@ -59,15 +62,14 @@ export function BuildPlaystyle({
       </KeyValueList>
     </section>
   );
-  // Two columns: combat on the left, economy and survival under each other on the right.
+  // Two columns and two rows: combat beside economy, then the per-time souls beside survival and support.
   return (
     <div className="@container">
       <div className="grid @lg:grid-cols-2">
-        <div className="flex flex-col">{section(GROUPS[0])}</div>
-        <div className="flex flex-col">
-          {section(GROUPS[1])}
-          {section(GROUPS[2])}
-        </div>
+        {section(GROUPS[0])}
+        {section(GROUPS[1])}
+        {children && <div className="flex flex-col">{children}</div>}
+        {section(GROUPS[2])}
       </div>
     </div>
   );

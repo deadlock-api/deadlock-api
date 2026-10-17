@@ -7,6 +7,7 @@ import { BuildItemTile } from "~/components/features/builds/BuildItemTile";
 import { BuildMatchups } from "~/components/features/builds/BuildMatchups";
 import { BuildPlaystyle } from "~/components/features/builds/BuildPlaystyle";
 import { BuildSkillAdherence } from "~/components/features/builds/BuildSkillAdherence";
+import { BuildSoulsByTime } from "~/components/features/builds/BuildSoulsByTime";
 import { BuildTopPlayers } from "~/components/features/builds/BuildTopPlayers";
 import { Section } from "~/components/patterns/page/Section";
 import { Panel, PanelHeader, PanelSection } from "~/components/patterns/panel/Panel";
@@ -124,7 +125,7 @@ export function BuildInMatches({
                           />
                           <RankedEntityMetric
                             label="Diff"
-                            labelDisplay={index === 0 ? "visible" : "hidden"}
+                            labelDisplay="hidden"
                             value={formatSignedPercent(change)}
                             tone={toneOf(Math.round(change * 1000))}
                             change={{ value: change, scale: KEY_ITEM_SCALE }}
@@ -150,9 +151,11 @@ export function BuildInMatches({
             </>
           )}
         </Panel>
-        <Panel className="flex flex-col @3xl:col-span-2">
+        <Panel className="flex flex-col @7xl:col-span-2">
           <PanelHeader title="Playstyle vs. average build" icon={Activity} size="sm" />
-          <BuildPlaystyle totals={performance} average={averagePerformance} pending={performancePending} />
+          <BuildPlaystyle totals={performance} average={averagePerformance} pending={performancePending}>
+            <BuildSoulsByTime heroId={heroId} buildId={row.hero_build_id} filters={filters} active={active} />
+          </BuildPlaystyle>
         </Panel>
         <Panel className="flex flex-col">
           <PanelHeader title="Skill order, match length and players" icon={ListOrdered} size="sm" />

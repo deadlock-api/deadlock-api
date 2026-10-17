@@ -45,7 +45,7 @@ function MatchupList({ title, matchups, build }: { title: string; matchups: Matc
               />
               <RankedEntityMetric
                 label="Diff"
-                labelDisplay={index === 0 ? "visible" : "hidden"}
+                labelDisplay="hidden"
                 value={formatSignedPercent(change)}
                 tone={toneOf(Math.round(change * 1000))}
                 change={{ value: change, scale: CHANGE_SCALE }}
