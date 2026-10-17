@@ -1,6 +1,7 @@
 import { parseAsArrayOf, parseAsInteger, parseAsStringLiteral, useQueryState, useQueryStates } from "nuqs";
 import { CartesianGrid, ReferenceLine, Scatter, ScatterChart, Tooltip, XAxis, YAxis } from "recharts";
 
+import { useItemPrices } from "~/components/features/builds/build-hooks";
 import { ChartCard } from "~/components/patterns/charts/ChartCard";
 import { ChartLegend, ChartLegendItem } from "~/components/patterns/charts/ChartLegend";
 import { ChartSurface } from "~/components/patterns/charts/ChartSurface";
@@ -17,7 +18,7 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
 import { TooltipCard, TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
 import { BUILD_METRICS, type BuildPerformanceTotals } from "~/lib/build-performance";
-import { buildMatchesItems, type BuildRow } from "~/lib/build-stats";
+import { buildMatchesItems, type BuildRow, type BuildSlot, buildSlotCost } from "~/lib/build-stats";
 import { niceTicks, percentTicks, winRateDomain } from "~/lib/chart-axis";
 import { formatPercent, formatSignedPercent } from "~/lib/format";
 
@@ -47,14 +48,23 @@ function logTicks(min: number, max: number): number[] {
 
 const compact = (value: number) => value.toLocaleString("en-US", { notation: "compact", maximumFractionDigits: 1 });
 
-/** What the x axis can show: how often a build was played, or one of its playstyle numbers. */
+/**
+ * What the x axis can show: how often a build was played, one of its playstyle numbers, or the share of its items'
+ * cost in one shop category.
+ */
 const X_OPTIONS = [
   { key: "matches", label: "Matches" },
   { key: "kda", label: "KDA" },
   { key: "soulsPerMin", label: "Souls/min" },
   { key: "damagePerMin", label: "Hero damage/min" },
   { key: "deaths", label: "Deaths" },
+  { key: "weaponShare", label: "Weapon share" },
+  { key: "spiritShare", label: "Spirit share" },
 ] as const;
+const SHARE_SLOT: Partial<Record<(typeof X_OPTIONS)[number]["key"], BuildSlot>> = {
+  weaponShare: "weapon",
+  spiritShare: "spirit",
+};
 type XKey = (typeof X_OPTIONS)[number]["key"];
 const parseXKey = parseAsStringLiteral(X_OPTIONS.map((option) => option.key))
   .withDefault("matches")
@@ -115,14 +125,29 @@ export function BuildScatterChart({
     with_items: parseAsArrayOf(parseAsInteger).withDefault([]),
     without_items: parseAsArrayOf(parseAsInteger).withDefault([]),
   });
+  const prices = useItemPrices();
   const xKey: XKey = performance ? chosenX : "matches";
-  const xMetric = xKey === "matches" ? undefined : BUILD_METRICS.find((metric) => metric.key === xKey);
+  const shareSlot = SHARE_SLOT[xKey];
+  const xMetric = BUILD_METRICS.find((metric) => metric.key === xKey);
   const xLabel = X_OPTIONS.find((option) => option.key === xKey)!.label;
+  // Every axis but matches is linear.
+  const linear = xKey !== "matches";
+  const xFormat = shareSlot ? (value: number) => formatPercent(value, 0) : xMetric ? xMetric.format : compact;
+  const xValue = (row: BuildRow): number | null => {
+    if (shareSlot) {
+      const cost = row.meta ? buildSlotCost(row.meta, prices) : null;
+      return cost && cost.total > 0 ? cost.bySlot[shareSlot] / cost.total : null;
+    }
+    if (xMetric) {
+      const totals = performance?.[row.hero_build_id];
+      return totals ? xMetric.value(totals) : null;
+    }
+    return row.matches;
+  };
   // The selected build is drawn last, so no other dot covers it.
   const points: Point[] = rows
     .flatMap((row) => {
-      const totals = performance?.[row.hero_build_id];
-      const x = xMetric ? (totals ? xMetric.value(totals) : null) : row.matches;
+      const x = xValue(row);
       return x === null ? [] : [{ row, x }];
     })
     .map(({ row, x }) => ({
@@ -139,7 +164,7 @@ export function BuildScatterChart({
   const minX = Math.min(...points.map((point) => point.x));
   const maxX = Math.max(...points.map((point) => point.x));
   const linearTicks = niceTicks(minX, maxX, 5);
-  const xDomain: [number, number] = xMetric
+  const xDomain: [number, number] = linear
     ? [linearTicks[0], linearTicks[linearTicks.length - 1]]
     : [minX * 0.9, maxX * 1.1];
   const yDomain = winRateDomain([...points.map((point) => point.winRate), average]);
@@ -148,7 +173,7 @@ export function BuildScatterChart({
 
   return (
     <ChartCard
-      title={`${xMetric ? xLabel : "Popularity"} vs. win rate`}
+      title={`${linear ? xLabel : "Popularity"} vs. win rate`}
       actions={
         <>
           {/* Always there, disabled until the playstyle numbers load, so the header never changes height. */}
@@ -191,12 +216,12 @@ export function BuildScatterChart({
             type="number"
             dataKey="x"
             name={xLabel}
-            scale={xMetric ? "linear" : "log"}
+            scale={linear ? "linear" : "log"}
             domain={xDomain}
-            ticks={xMetric ? linearTicks : logTicks(xDomain[0], xDomain[1])}
-            tickFormatter={xMetric ? (value: number) => xMetric.format(value) : compact}
+            ticks={linear ? linearTicks : logTicks(xDomain[0], xDomain[1])}
+            tickFormatter={xFormat}
             allowDataOverflow
-            label={{ ...CHART_X_LABEL, value: xMetric ? xLabel : "Matches (log scale)", offset: -8 }}
+            label={{ ...CHART_X_LABEL, value: linear ? xLabel : "Matches (log scale)", offset: -8 }}
           />
           <YAxis
             {...CHART_Y_AXIS}
@@ -233,7 +258,7 @@ export function BuildScatterChart({
                       value={`${formatPercent(row.interval[0])} – ${formatPercent(row.interval[1])}`}
                     />
                     <TooltipStat label="Vs. average" value={formatSignedPercent(row.vsAverage)} />
-                    {xMetric && <TooltipStat label={xLabel} value={xMetric.format(point.x)} />}
+                    {linear && <TooltipStat label={xLabel} value={xFormat(point.x)} />}
                     <TooltipStat label="Matches" value={row.matches.toLocaleString("en-US")} />
                     <TooltipStat label="Players" value={row.players.toLocaleString("en-US")} />
                   </TooltipStats>
