@@ -119,7 +119,9 @@ export function BuildsExplorer({
         maxRankId,
         minUnixTimestamp: Math.max(minUnixTimestamp ?? 0, windowEnd - TREND_WINDOW_DAYS * 86_400),
         maxUnixTimestamp,
-        minMatches: 1,
+        // Builds with one or two matches in the window are a long tail of builds too small for the list: leaving them
+        // out cuts the answer by about 70% for a share change of under a tenth of a point.
+        minMatches: 3,
         matchMode,
       }),
     ),
