@@ -9,9 +9,9 @@ import { BuildTable } from "~/components/features/builds/BuildTable";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
-import type { Dayjs } from "~/dayjs";
+import { day, type Dayjs } from "~/dayjs";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
-import { type BuildMeta, buildRows, summarizeBuilds } from "~/lib/build-stats";
+import { type BuildMeta, buildRows, buildTrends, summarizeBuilds } from "~/lib/build-stats";
 import type { MatchMode } from "~/lib/game-mode";
 import {
   buildMetaBatches,
@@ -19,6 +19,9 @@ import {
   heroBuildStatsQueryOptions,
 } from "~/queries/hero-build-stats-query";
 import { type SteamProfileMap, steamProfileBatches, steamProfilesQueryOptions } from "~/queries/steam-queries";
+
+/** How many days at the end of the range the trend looks at. */
+const TREND_WINDOW_DAYS = 7;
 
 export interface BuildsExplorerProps {
   heroId: number;
@@ -100,6 +103,23 @@ export function BuildsExplorer({
   );
   const stats = statsQuery.data;
 
+  // The range's last days, against which each build's share is compared. An open range ends today (UTC).
+  const windowEnd = maxUnixTimestamp ?? day.utc().startOf("day").add(1, "day").unix();
+  const recentQuery = useQuery({
+    ...heroBuildStatsQueryOptions(
+      heroBuildStatsRequest({
+        heroId,
+        minRankId,
+        maxRankId,
+        minUnixTimestamp: Math.max(minUnixTimestamp ?? 0, windowEnd - TREND_WINDOW_DAYS * 86_400),
+        maxUnixTimestamp,
+        minMatches: 1,
+        matchMode,
+      }),
+    ),
+    enabled: stats !== undefined,
+  });
+
   const meta = useQueries({
     queries: buildMetaBatches(stats?.map((row) => row.hero_build_id) ?? []).map((batch) =>
       heroBuildMetaQueryOptions(heroId, batch),
@@ -109,6 +129,8 @@ export function BuildsExplorer({
 
   const rows = useMemo(() => (stats ? buildRows(stats, meta.builds) : []), [stats, meta.builds]);
   const summary = useMemo(() => summarizeBuilds(rows), [rows]);
+  const recent = recentQuery.data;
+  const trends = useMemo(() => (recent ? buildTrends(rows, recent) : null), [rows, recent]);
 
   const authorIds = rows.flatMap((row) => (row.meta ? [row.meta.authorId] : []));
   const profiles = useQueries({
@@ -156,6 +178,8 @@ export function BuildsExplorer({
       <div className="grid gap-3 @3xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
         <BuildTable
           rows={rows}
+          trends={trends}
+          trendsPending={recentQuery.isPending}
           profiles={profiles.byId}
           metaPending={meta.pending}
           profilesPending={profiles.pending}
@@ -164,6 +188,7 @@ export function BuildsExplorer({
         />
         <BuildDetailPanel
           row={selected}
+          trend={trends?.get(selected.hero_build_id)}
           heroId={heroId}
           profile={selected.meta ? profiles.byId[selected.meta.authorId] : undefined}
           pending={meta.pending}

@@ -91,6 +91,34 @@ export function summarizeBuilds(rows: readonly BuildRow[]): BuildSummary {
   };
 }
 
+export interface BuildTrend {
+  /** Share of the listed builds' matches in the recent window. */
+  recentShare: number;
+  recentMatches: number;
+  /** Recent share minus the share over the whole range: positive while a build is catching on. */
+  change: number;
+}
+
+/**
+ * How each listed build's share moved in a recent window of the range. Both shares are taken over the same builds,
+ * the ones in `rows`, so a build outside the list does not shift them. Empty when the window has no matches.
+ */
+export function buildTrends(
+  rows: readonly BuildRow[],
+  recent: readonly Pick<BuildStatRow, "hero_build_id" | "matches">[],
+): Map<number, BuildTrend> {
+  const recentById = new Map(recent.map((row) => [row.hero_build_id, row.matches]));
+  const total = rows.reduce((sum, row) => sum + (recentById.get(row.hero_build_id) ?? 0), 0);
+  const trends = new Map<number, BuildTrend>();
+  if (total === 0) return trends;
+  for (const row of rows) {
+    const recentMatches = recentById.get(row.hero_build_id) ?? 0;
+    const recentShare = recentMatches / total;
+    trends.set(row.hero_build_id, { recentShare, recentMatches, change: recentShare - row.share });
+  }
+  return trends;
+}
+
 export interface BuildItemPresence {
   itemId: number;
   /** How many of the builds list the item. */

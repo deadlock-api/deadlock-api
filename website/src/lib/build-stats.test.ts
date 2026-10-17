@@ -7,6 +7,7 @@ import {
   buildItemPresence,
   type BuildMeta,
   buildRows,
+  buildTrends,
   distinguishingItems,
   summarizeBuilds,
 } from "./build-stats";
@@ -93,4 +94,17 @@ test("the distinguishing items leave out the ones nearly every build or almost n
     items.map((i) => i.itemId),
     [3, 2],
   );
+});
+
+test("a trend compares a build's recent share with its share over the range, among the listed builds", () => {
+  const rows = buildRows([stat(1, 30, 30), stat(2, 20, 20)]);
+  const trends = buildTrends(rows, [
+    { hero_build_id: 1, matches: 10 },
+    { hero_build_id: 2, matches: 30 },
+    { hero_build_id: 3, matches: 1000 },
+  ]);
+  assert.equal(trends.get(1)?.recentShare, 0.25);
+  assert.ok(Math.abs(trends.get(1)!.change - (0.25 - 0.6)) < 1e-9);
+  assert.equal(trends.get(2)?.recentMatches, 30);
+  assert.equal(buildTrends(rows, []).size, 0);
 });

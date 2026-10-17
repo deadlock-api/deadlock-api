@@ -12,8 +12,8 @@ import { Delta } from "~/components/ui/delta";
 import { SCROLLBAR_THIN } from "~/components/ui/recipes";
 import { Stat, StatGroup } from "~/components/ui/stat";
 import { day } from "~/dayjs";
-import { type BuildRow, buildCategoryName, buildLanguageName } from "~/lib/build-stats";
-import { formatPercent } from "~/lib/format";
+import { type BuildRow, type BuildTrend, buildCategoryName, buildLanguageName } from "~/lib/build-stats";
+import { formatPercent, formatShare } from "~/lib/format";
 import { cn } from "~/lib/utils";
 import { abilitiesQueryOptions, heroesQueryOptions } from "~/queries/asset-queries";
 import type { SteamProfile } from "~/queries/steam-queries";
@@ -37,6 +37,7 @@ function useSlotAbilities(heroId: number): number[] {
 /** One build in full: who made it, how it did, the items of each of its categories and its skill order. */
 export function BuildDetailPanel({
   row,
+  trend,
   heroId,
   profile,
   pending,
@@ -44,6 +45,8 @@ export function BuildDetailPanel({
   className,
 }: {
   row: BuildRow;
+  /** The build's share in the range's last days; undefined while it loads or without recent matches. */
+  trend: BuildTrend | undefined;
   heroId: number;
   profile: SteamProfile | undefined;
   /** Build contents are still loading. */
@@ -88,19 +91,28 @@ export function BuildDetailPanel({
               </span>
             </div>
           ) : null}
-          <StatGroup size="xs" variant="joined" className="grid-cols-2 @xs:grid-cols-4">
-            <Stat label="Matches" value={row.matches.toLocaleString("en-US")} />
-            <Stat label="Players" value={row.players.toLocaleString("en-US")} />
-            <Stat label="Win rate" value={formatPercent(row.winRate)} />
+          <StatGroup size="xs" variant="joined" className="grid-cols-2 @lg:grid-cols-4">
+            <Stat label="Matches" value={row.matches.toLocaleString("en-US")} sub={`${formatShare(row.share)} share`} />
             <Stat
-              label="Vs. avg"
-              value={
-                row.verdict === "even" ? (
-                  <Delta value={row.vsAverage} polarity="neutral" />
-                ) : (
-                  <Delta value={row.vsAverage} />
-                )
+              label="Players"
+              value={row.players.toLocaleString("en-US")}
+              sub={`${(row.matches / Math.max(1, row.players)).toFixed(1)} games each`}
+            />
+            <Stat
+              label="Win rate"
+              value={formatPercent(row.winRate)}
+              sub={
+                <>
+                  {/* Colored only when the whole interval is on one side of the average. */}
+                  <Delta value={row.vsAverage} polarity={row.verdict === "even" ? "neutral" : "higher-is-better"} /> vs.
+                  avg
+                </>
               }
+            />
+            <Stat
+              label="Last 7 days"
+              value={trend ? formatShare(trend.recentShare) : null}
+              sub={trend && <Delta value={trend.change} unit=" pp" polarity="neutral" sign="arrow" />}
             />
           </StatGroup>
         </div>

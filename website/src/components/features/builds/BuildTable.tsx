@@ -1,22 +1,30 @@
 import { ListOrdered } from "lucide-react";
+import { parseAsStringLiteral, useQueryState } from "nuqs";
+import { useState } from "react";
 
 import { CHART_COLOR } from "~/components/patterns/charts/theme";
 import { SortableHeader } from "~/components/patterns/data-table/SortableHeader";
+import { TableEmptyRow } from "~/components/patterns/data-table/TableEmptyRow";
 import { Panel, PanelHeader } from "~/components/patterns/panel/Panel";
 import { Button } from "~/components/ui/button";
-import { useSort } from "~/components/ui/hooks/use-sort";
+import { Delta } from "~/components/ui/delta";
+import { sortParams, useSort } from "~/components/ui/hooks/use-sort";
 import { ProgressBar } from "~/components/ui/progress-bar";
 import { DivergingBar } from "~/components/ui/rate-bar";
+import { SearchInput } from "~/components/ui/search-input";
 import { Skeleton } from "~/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { day } from "~/dayjs";
-import { type BuildRow, buildLanguageName } from "~/lib/build-stats";
+import { type BuildRow, type BuildTrend, buildLanguageName } from "~/lib/build-stats";
 import { formatPercent, formatShare, formatSignedPercent } from "~/lib/format";
 import { TONE_TEXT, toneOf } from "~/lib/tone";
 import { cn } from "~/lib/utils";
 import type { SteamProfileMap } from "~/queries/steam-queries";
 
-type SortKey = "matches" | "players" | "winRate" | "lowerBound" | "updated";
+const SORT_KEYS = ["matches", "players", "winRate", "lowerBound", "trend", "updated"] as const;
+type SortKey = (typeof SORT_KEYS)[number];
+const parseSortKey = parseAsStringLiteral(SORT_KEYS).withDefault("matches");
+const parseSortDir = parseAsStringLiteral(["asc", "desc"] as const).withDefault("desc");
 
 const COLUMNS: { key: SortKey; label: string; name: string; className?: string }[] = [
   { key: "matches", label: "Matches", name: "matches" },
@@ -28,16 +36,28 @@ const COLUMNS: { key: SortKey; label: string; name: string; className?: string }
     name: "confidence above the average",
     className: "hidden @md/builds:table-cell",
   },
+  {
+    key: "trend",
+    label: "7d trend",
+    name: "share change in the last 7 days",
+    className: "hidden @lg/builds:table-cell",
+  },
   { key: "updated", label: "Updated", name: "last update", className: "hidden @xl/builds:table-cell" },
 ];
 
-const sortValue: Record<SortKey, (row: BuildRow) => number> = {
+const sortValue: Record<SortKey, (row: BuildRow, trend: BuildTrend | undefined) => number> = {
   matches: (row) => row.matches,
   players: (row) => row.players,
   winRate: (row) => row.winRate,
   lowerBound: (row) => row.interval[0],
+  trend: (_, trend) => trend?.change ?? 0,
   updated: (row) => row.meta?.updatedAt ?? 0,
 };
+
+/** Search text without case or accents, so "Pokemon" finds "Pokémon". */
+function fold(text: string): string {
+  return text.normalize("NFKD").replace(/\p{M}/gu, "").toLowerCase();
+}
 
 /** Where the bar beside a win rate reaches its edge: ten points over or under the average. */
 const VS_AVERAGE_SCALE = 0.1;
@@ -45,6 +65,8 @@ const VS_AVERAGE_SCALE = 0.1;
 /** Every played build, sortable; a row press shows it in the detail panel. */
 export function BuildTable({
   rows,
+  trends,
+  trendsPending,
   profiles,
   metaPending,
   profilesPending,
@@ -52,26 +74,46 @@ export function BuildTable({
   onBuildIdChange,
 }: {
   rows: readonly BuildRow[];
+  /** Null while the recent window loads or when it has no matches. */
+  trends: ReadonlyMap<number, BuildTrend> | null;
+  trendsPending: boolean;
   profiles: SteamProfileMap;
   metaPending: boolean;
   profilesPending: boolean;
   selectedId: number;
   onBuildIdChange: (buildId: number) => void;
 }) {
-  const sort = useSort<SortKey>({ defaultValue: { key: "matches", dir: "desc" } });
+  const sort = useSort<SortKey>(
+    sortParams(useQueryState("sort", parseSortKey), useQueryState("dir", parseSortDir), { history: "replace" }),
+  );
+  const [query, setQuery] = useState("");
   const sign = sort.dir === "desc" ? -1 : 1;
-  const sorted = [...rows].sort(
-    (a, b) =>
-      sign * (sortValue[sort.sortKey](a) - sortValue[sort.sortKey](b)) ||
-      b.matches - a.matches ||
-      a.hero_build_id - b.hero_build_id,
+  const value = (row: BuildRow) => sortValue[sort.sortKey](row, trends?.get(row.hero_build_id));
+  const needle = fold(query.trim());
+  const shown = needle
+    ? rows.filter((row) => {
+        const author = row.meta ? profiles[row.meta.authorId]?.personaname : undefined;
+        return [row.meta?.name, author, String(row.hero_build_id)].some((text) => text && fold(text).includes(needle));
+      })
+    : rows;
+  const sorted = [...shown].sort(
+    (a, b) => sign * (value(a) - value(b)) || b.matches - a.matches || a.hero_build_id - b.hero_build_id,
   );
   const maxShare = Math.max(...rows.map((row) => row.share));
 
   return (
     // The table scrolls inside the panel, so the panel keeps one height beside the build details.
     <Panel className="@container/builds flex flex-col *:data-[slot=table-container]:max-h-136">
-      <PanelHeader title={`${rows.length} builds`} icon={ListOrdered} size="sm" />
+      <PanelHeader title={`${rows.length} builds`} icon={ListOrdered} size="sm">
+        <SearchInput
+          value={query}
+          onValueChange={setQuery}
+          placeholder="Name, author or ID"
+          aria-label="Filter builds by name, author or ID"
+          size="sm"
+          className="w-full @sm:ms-auto @sm:w-56"
+        />
+      </PanelHeader>
       <Table density="compact" aria-label="Builds by matches and win rate">
         <TableHeader position="sticky">
           <TableRow>
@@ -179,12 +221,28 @@ export function BuildTable({
                     />
                   </div>
                 </TableCell>
+                <TableCell className="hidden text-end text-xs tabular-nums @lg/builds:table-cell">
+                  {trendsPending ? (
+                    <Skeleton className="ms-auto h-4 w-12" />
+                  ) : (
+                    <Delta
+                      value={trends?.get(row.hero_build_id)?.change}
+                      unit=" pp"
+                      polarity="neutral"
+                      sign="arrow"
+                      className="justify-end"
+                    />
+                  )}
+                </TableCell>
                 <TableCell className="hidden text-end text-xs whitespace-nowrap text-muted-foreground tabular-nums @xl/builds:table-cell">
                   {row.meta ? day.unix(row.meta.updatedAt).utc().format("MMM D, YYYY") : ""}
                 </TableCell>
               </TableRow>
             );
           })}
+          {sorted.length === 0 && (
+            <TableEmptyRow colSpan={COLUMNS.length + 2}>No build matches “{query}”</TableEmptyRow>
+          )}
         </TableBody>
       </Table>
     </Panel>
