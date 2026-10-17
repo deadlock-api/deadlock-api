@@ -5,6 +5,9 @@
 //! make it scan ([`Scan`]) plus `limit` times the per-row weight of the selected fields. Field
 //! weights are in row units ([`ROW_UNIT_US`]); unannotated fields count 1.
 //!
+//! Checked against 5,800 production requests on 2026-10-17 (predicted vs `system.query_log` CPU,
+//! joined on `request_logs.graphql_request_id`): no request above 1.6x its complexity.
+//!
 //! Measured worst cases the model now rejects: `matches(limit: 10000) { players { items } }`
 //! (85 CPU-s), `match_history` without an account filter (14-32 CPU-s, a full-table merge) and
 //! `matches` ordered by `average_badge` without a time range (24 CPU-s).
@@ -23,9 +26,16 @@ pub(super) const COMPLEXITY_LIMIT: usize = 10_000;
 /// Hard cap on `limit` regardless of input — mirrors the REST `bulk_metadata` cap.
 pub(super) const MAX_LIMIT: u32 = 10_000;
 
-/// CPU of one row unit: a plain `match_player` column, per row, when every row sits in its own
-/// granule (account histories). Rows next to each other (a time range) cost ~10x less.
+/// CPU of one row unit: a plain `match_player` column, per row, for the rows of a few weeks of
+/// matches. Rows next to each other (a time range) cost less.
 const ROW_UNIT_US: usize = 35;
+/// Rows spread over whole account histories each sit in their own granule: measured 2.6-3.6x the
+/// row units of a recent window (2026-10-17, `stats` / `items` / plain columns of single accounts).
+const SPARSE_ROW_FACTOR: usize = 3;
+/// A `start_time` window of an account scan longer than this reads sparse rows.
+const DENSE_DAYS: usize = 30;
+/// Player rows of one match.
+const PLAYERS_PER_MATCH: usize = 12;
 /// Row units of every `matches` / `match_players` row before its fields: the key columns and
 /// the key lookup.
 const ROW_BASE_UNITS: usize = 4;
@@ -42,10 +52,11 @@ const SECONDS_PER_DAY: i64 = 86_400;
 
 /// What the `where` / `order_by` of a `matches` or `match_players` query make it scan.
 enum Scan {
-    /// `account_id` `eq` / `in` on columns `player_match_stats` has: reads those accounts' rows.
-    Accounts(usize),
+    /// `account_id` `eq` / `in` on columns `player_match_stats` has: reads those accounts' rows,
+    /// `sparse` without a `start_time` window of at most [`DENSE_DAYS`].
+    Accounts { accounts: usize, sparse: bool },
     /// `match_id` `eq` / `in`: reads those matches' granules.
-    Matches,
+    Matches(usize),
     /// Ordered by `match_id` (the sort key): reads in order and stops at `limit`.
     KeyOrdered,
     /// Sorts every row of the `start_time` range, `None` if unbounded.
@@ -54,34 +65,70 @@ enum Scan {
 
 impl Scan {
     fn of(where_: Option<&MatchPlayerWhere>, key_ordered: bool, scope_days: Option<usize>) -> Self {
+        let days = where_
+            .and_then(|w| w.start_time.as_ref())
+            .and_then(days_spanned)
+            .or(scope_days);
         if let Some(accounts) = where_.and_then(MatchPlayerWhere::player_match_stats_accounts) {
-            return Self::Accounts(accounts.len());
+            return Self::Accounts {
+                accounts: accounts.len(),
+                sparse: days.is_none_or(|d| d > DENSE_DAYS),
+            };
         }
-        if where_
-            .and_then(|w| w.match_id.as_ref())
-            .is_some_and(|f| f.eq.is_some() || f.r#in.as_ref().is_some_and(|ids| !ids.is_empty()))
-        {
-            return Self::Matches;
+        let matches = where_.and_then(|w| w.match_id.as_ref()).map_or(0, |f| {
+            usize::from(f.eq.is_some()) + f.r#in.as_ref().map_or(0, Vec::len)
+        });
+        if matches > 0 {
+            return Self::Matches(matches);
         }
         if key_ordered {
             return Self::KeyOrdered;
         }
-        let days = where_
-            .and_then(|w| w.start_time.as_ref())
-            .and_then(days_spanned);
-        Self::Days(days.or(scope_days))
+        Self::Days(days)
     }
 
     /// `per_day` / `full`: the cost of sorting one day of rows / the whole table.
-    fn ms(&self, base: usize, per_day: usize, full: usize) -> usize {
+    fn ms(&self, costs: ScanCosts) -> usize {
+        let ScanCosts {
+            pinned,
+            key_ordered,
+            base,
+            per_day,
+            full,
+        } = costs;
         match *self {
-            Self::Accounts(n) => 100 + n / 20,
-            Self::Matches => 20,
-            Self::KeyOrdered => 300,
+            Self::Accounts { accounts, .. } => 100 + accounts / 20,
+            Self::Matches(_) => pinned,
+            Self::KeyOrdered => key_ordered,
             Self::Days(Some(days)) => (base + per_day * days).min(full),
             Self::Days(None) => full,
         }
     }
+
+    /// Milliseconds of the up to `limit` rows of `row_units` each it returns; a pinned match has
+    /// `rows_per_match` rows.
+    fn rows(&self, limit: u32, row_units: usize, rows_per_match: usize) -> usize {
+        match *self {
+            Self::Accounts { sparse: true, .. } => {
+                rows(limit, row_units.saturating_mul(SPARSE_ROW_FACTOR))
+            }
+            Self::Matches(n) => {
+                let pinned = u32::try_from(n.saturating_mul(rows_per_match)).unwrap_or(u32::MAX);
+                rows(limit.min(pinned), row_units)
+            }
+            _ => rows(limit, row_units),
+        }
+    }
+}
+
+/// Milliseconds of each [`Scan`] of one query shape.
+#[derive(Clone, Copy)]
+struct ScanCosts {
+    pinned: usize,
+    key_ordered: usize,
+    base: usize,
+    per_day: usize,
+    full: usize,
 }
 
 /// Days of `start_time` a filter keeps, `None` without a lower bound.
@@ -104,12 +151,25 @@ pub(super) fn rows(limit: u32, row_units: usize) -> usize {
 }
 
 fn match_players_scan(scan: &Scan) -> usize {
-    scan.ms(200, 25, 5_400)
+    scan.ms(ScanCosts {
+        pinned: 20,
+        key_ordered: 300,
+        base: 200,
+        per_day: 25,
+        full: 5_400,
+    })
 }
 
-/// The `GROUP BY match_id` of every scanned row costs ~5x the player-row sort.
+/// Two passes over `match_player` (pick the matches, then aggregate their players); unordered,
+/// the `GROUP BY match_id` of every scanned row costs ~5x the player-row sort.
 fn matches_scan(scan: &Scan) -> usize {
-    scan.ms(300, 160, 24_000)
+    scan.ms(ScanCosts {
+        pinned: 40,
+        key_ordered: 600,
+        base: 300,
+        per_day: 160,
+        full: 24_000,
+    })
 }
 
 fn match_players_key_ordered(order_by: Option<OrderByMatchPlayer>) -> bool {
@@ -127,7 +187,11 @@ pub(super) fn match_players(
     row_units: usize,
 ) -> usize {
     let scan = Scan::of(where_, match_players_key_ordered(order_by), None);
-    match_players_scan(&scan).saturating_add(rows(limit, ROW_BASE_UNITS + row_units))
+    match_players_scan(&scan).saturating_add(scan.rows(
+        limit,
+        ROW_BASE_UNITS + row_units,
+        PLAYERS_PER_MATCH,
+    ))
 }
 
 pub(super) fn patch_match_players(
@@ -141,7 +205,11 @@ pub(super) fn patch_match_players(
         match_players_key_ordered(order_by),
         Some(PATCH_DAYS),
     );
-    match_players_scan(&scan).saturating_add(rows(limit, ROW_BASE_UNITS + row_units))
+    match_players_scan(&scan).saturating_add(scan.rows(
+        limit,
+        ROW_BASE_UNITS + row_units,
+        PLAYERS_PER_MATCH,
+    ))
 }
 
 pub(super) fn matches(
@@ -151,7 +219,7 @@ pub(super) fn matches(
     row_units: usize,
 ) -> usize {
     let scan = Scan::of(where_, matches_key_ordered(order_by), None);
-    matches_scan(&scan).saturating_add(rows(limit, ROW_BASE_UNITS + row_units))
+    matches_scan(&scan).saturating_add(scan.rows(limit, ROW_BASE_UNITS + row_units, 1))
 }
 
 pub(super) fn patch_matches(
@@ -161,12 +229,13 @@ pub(super) fn patch_matches(
     row_units: usize,
 ) -> usize {
     let scan = Scan::of(where_, matches_key_ordered(order_by), Some(PATCH_DAYS));
-    matches_scan(&scan).saturating_add(rows(limit, ROW_BASE_UNITS + row_units))
+    matches_scan(&scan).saturating_add(scan.rows(limit, ROW_BASE_UNITS + row_units, 1))
 }
 
 /// `match_history` merges every row of the filtered accounts before it applies `limit`, so its
-/// cost is per account: 0.7 ms plus 0.33 ms per selected column. Without an account filter it
-/// merges the whole table.
+/// cost is per account: 3.5 ms plus 1.65 ms per selected column, after 20 ms to plan and start
+/// the query (2026-10-17: 1-6 accounts of ~22 columns took up to 80-180 ms). Without an account
+/// filter it merges the whole table.
 pub(super) fn match_history(where_: Option<&MatchHistoryWhere>, columns: usize) -> usize {
     let accounts = where_.and_then(|w| w.account_id.as_ref()).map_or(0, |f| {
         usize::from(f.eq.is_some()) + f.r#in.as_ref().map_or(0, Vec::len)
@@ -174,7 +243,9 @@ pub(super) fn match_history(where_: Option<&MatchHistoryWhere>, columns: usize) 
     if accounts == 0 {
         return 20_000;
     }
-    accounts.saturating_mul(700 + 330 * columns).div_ceil(1000)
+    20 + accounts
+        .saturating_mul(3_500 + 1_650 * columns)
+        .div_ceil(1000)
 }
 
 #[cfg(test)]
@@ -243,7 +314,7 @@ mod tests {
         )
         .await;
         assert!(!rejected);
-        assert!(c < 20, "{c}");
+        assert!(c < 100, "{c}");
     }
 
     #[tokio::test]
@@ -258,6 +329,33 @@ mod tests {
         .await;
         assert!(!rejected);
         assert!(c < 1_000, "{c}");
+    }
+
+    #[tokio::test]
+    async fn account_history_rows_are_sparse() {
+        // One account's last 60 matches with `stats`: 1.1-2.0 CPU-s measured (2026-10-17).
+        let query = |window: &str| {
+            format!(
+                "{{ match_players(where: {{account_id: {{eq: 1}}{window}}}, order_by: START_TIME, limit: 60) \
+                 {{ match_id kills items {{ item_id game_time_s }} stats {{ time_stamp_s gold_player \
+                 creep_kills custom_user_stats }} }} }}"
+            )
+        };
+        let (history, _) = complexity(&query("")).await;
+        let start = chrono::Utc::now().timestamp() - 7 * 86_400;
+        let (recent, _) = complexity(&query(&format!(", start_time: {{gte: {start}}}"))).await;
+        assert!((1_000..3_000).contains(&history), "{history}");
+        assert!(recent * 2 < history, "{recent} vs {history}");
+    }
+
+    #[tokio::test]
+    async fn pinned_matches_cap_rows() {
+        // `limit` can't return more than 12 rows per pinned match.
+        let (c, _) = complexity(
+            "{ match_players(where: {match_id: {in: [1, 2]}}, limit: 10000) { match_id kills } }",
+        )
+        .await;
+        assert!(c < 50, "{c}");
     }
 
     #[tokio::test]

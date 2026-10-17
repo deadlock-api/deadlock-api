@@ -42,9 +42,12 @@ fn with_excluded_accounts(filters: &[String], excluded_accounts: &[u32]) -> Vec<
     out
 }
 
+/// `identity` keeps the filter out of primary key analysis: on `match_player`, whose key is
+/// `(match_id, account_id)`, that ran a generic exclusion search over every granule, 0.45 CPU-s
+/// per query whatever it read. It prunes nothing on any table.
 fn excluded_accounts_filter(column: &str, excluded_accounts: &[u32]) -> Option<String> {
     (!excluded_accounts.is_empty())
-        .then(|| format!("{column} NOT IN ({})", id_list(excluded_accounts)))
+        .then(|| format!("identity({column}) NOT IN ({})", id_list(excluded_accounts)))
 }
 
 fn where_clause(filters: &[String]) -> String {
@@ -137,9 +140,19 @@ fn references_patched_column(args: &BuildArgs<'_>) -> bool {
 
 /// Builds the trailing `SETTINGS` clause, appending `apply_patch_parts = 0`
 /// whenever the query touches none of the [`PATCHED_COLUMNS`].
-fn settings_clause(args: &BuildArgs<'_>) -> String {
+///
+/// `key_ordered`: the query reads `match_player` in `match_id` order up to its `LIMIT`. Every
+/// reading thread runs ahead of the `LIMIT`, so it gets 4 instead of 32: a filtered `matches`
+/// page read 199M rows (24 CPU-s) with 32 threads and 0.8M (2.2 CPU-s) with 4, at the same wall
+/// time.
+fn settings_clause(args: &BuildArgs<'_>, key_ordered: bool) -> String {
+    let threads = if key_ordered && !args.via_player_match_stats {
+        4
+    } else {
+        32
+    };
     let mut clause = format!(
-        "SETTINGS log_comment = '{}', max_threads = 32",
+        "SETTINGS log_comment = '{}', max_threads = {threads}",
         super::RATE_LIMIT_KEY
     );
     if !references_patched_column(args) {
@@ -160,7 +173,7 @@ pub(super) fn build_matches_query(args: &BuildArgs<'_>) -> Result<String, core::
         args.excluded_accounts,
     ));
     // AccountId is unreachable here (OrderByMatch doesn't expose it) — fall back to match_id.
-    let (cte_order, outer_order): (&str, &str) = match args.order_by {
+    let (cte_order, outer_order) = match args.order_by {
         OrderKey::StartTime => ("any(start_time)", "any(match_player.start_time)"),
         OrderKey::AverageBadge => (
             "coalesce(any(average_badge), 0)",
@@ -170,6 +183,7 @@ pub(super) fn build_matches_query(args: &BuildArgs<'_>) -> Result<String, core::
             ("match_id", "match_player.match_id")
         }
     };
+    let key_ordered = !matches!(args.order_by, OrderKey::StartTime | OrderKey::AverageBadge);
     let dir = args.order_dir.as_sql();
     let source = if args.via_player_match_stats {
         "player_match_stats"
@@ -178,12 +192,23 @@ pub(super) fn build_matches_query(args: &BuildArgs<'_>) -> Result<String, core::
     };
 
     let mut sql = String::new();
-    write!(
-        &mut sql,
-        "WITH t_matches AS (SELECT match_id FROM {source}{where_clause} GROUP BY match_id ORDER BY {cte_order} {dir} LIMIT {limit} OFFSET {offset}) ",
-        limit = args.limit,
-        offset = args.offset,
-    )?;
+    // In `match_id` order `DISTINCT` stops reading at the `LIMIT`; `GROUP BY` aggregates every
+    // matching row first (a whole-table `matches` page: 369M rows, 41-57 CPU-s).
+    if key_ordered {
+        write!(
+            &mut sql,
+            "WITH t_matches AS (SELECT DISTINCT match_id FROM {source}{where_clause} ORDER BY match_id {dir} LIMIT {limit} OFFSET {offset}) ",
+            limit = args.limit,
+            offset = args.offset,
+        )?;
+    } else {
+        write!(
+            &mut sql,
+            "WITH t_matches AS (SELECT match_id FROM {source}{where_clause} GROUP BY match_id ORDER BY {cte_order} {dir} LIMIT {limit} OFFSET {offset}) ",
+            limit = args.limit,
+            offset = args.offset,
+        )?;
+    }
 
     sql.push_str("SELECT match_player.match_id AS match_id");
     for col in &args.projection.match_columns {
@@ -212,7 +237,7 @@ pub(super) fn build_matches_query(args: &BuildArgs<'_>) -> Result<String, core::
         "ORDER BY {outer_order} {dir} LIMIT {limit} ",
         limit = args.limit,
     )?;
-    sql.push_str(&settings_clause(args));
+    sql.push_str(&settings_clause(args, key_ordered));
     Ok(sql)
 }
 
@@ -258,7 +283,10 @@ pub(super) fn build_match_players_query(args: &BuildArgs<'_>) -> Result<String, 
             offset = args.offset,
         )?;
     }
-    sql.push_str(&settings_clause(args));
+    sql.push_str(&settings_clause(
+        args,
+        matches!(args.order_by, OrderKey::MatchId),
+    ));
     // The SELECT aliases `toUnixTimestamp(start_time) AS start_time`; without this the
     // WHERE's raw-column `start_time` filter would bind to that alias instead (see
     // `I64Filter::to_start_time_sql`).
@@ -763,6 +791,34 @@ mod tests {
     }
 
     #[test]
+    fn key_ordered_reads_use_distinct_and_few_threads() {
+        let projection = match_id_only();
+        let filters = ["hero_id = 1".to_owned()];
+        let args = |order_by| BuildArgs {
+            projection: &projection,
+            filters: &filters,
+            order_by,
+            order_dir: OrderDir::Desc,
+            limit: 5,
+            offset: 0,
+            via_player_match_stats: false,
+            excluded_accounts: &[],
+        };
+        let by_id = build_matches_query(&args(OrderKey::MatchId)).unwrap();
+        assert!(by_id.contains("WITH t_matches AS (SELECT DISTINCT match_id FROM match_player"));
+        assert!(by_id.contains("max_threads = 4"));
+        let by_time = build_matches_query(&args(OrderKey::StartTime)).unwrap();
+        assert!(by_time.contains("GROUP BY match_id ORDER BY any(start_time) DESC"));
+        assert!(by_time.contains("max_threads = 32"));
+
+        let players = build_match_players_query(&args(OrderKey::MatchId)).unwrap();
+        assert!(players.contains("max_threads = 4"));
+        let players = build_match_players_query(&args(OrderKey::StartTime)).unwrap();
+        assert!(players.contains("max_threads = 32"));
+        crate::utils::proptest_utils::assert_valid_sql(&by_id);
+    }
+
+    #[test]
     fn excluded_accounts_dropped_from_every_shape() {
         let matches = build_matches_query(&BuildArgs {
             projection: &match_id_only(),
@@ -776,10 +832,10 @@ mod tests {
         })
         .unwrap();
         assert!(matches.contains(
-            "FROM match_player WHERE hero_id = 1 AND account_id NOT IN (7, 9)  GROUP BY match_id"
+            "SELECT DISTINCT match_id FROM match_player WHERE hero_id = 1 AND identity(account_id) NOT IN (7, 9)  ORDER BY match_id DESC"
         ));
         assert!(matches.contains(
-            "WHERE match_player.match_id IN t_matches AND match_player.account_id NOT IN (7, 9) GROUP BY"
+            "WHERE match_player.match_id IN t_matches AND identity(match_player.account_id) NOT IN (7, 9) GROUP BY"
         ));
         crate::utils::proptest_utils::assert_valid_sql(&matches);
 
@@ -795,7 +851,7 @@ mod tests {
         })
         .unwrap();
         assert!(players.contains(
-            "FROM player_match_stats WHERE account_id = 7 AND account_id NOT IN (7, 9) "
+            "FROM player_match_stats WHERE account_id = 7 AND identity(account_id) NOT IN (7, 9) "
         ));
         crate::utils::proptest_utils::assert_valid_sql(&players);
 
@@ -810,7 +866,9 @@ mod tests {
             excluded_accounts: &[7, 9],
         })
         .unwrap();
-        assert!(history.contains("FROM player_match_history WHERE account_id NOT IN (7, 9) "));
+        assert!(
+            history.contains("FROM player_match_history WHERE identity(account_id) NOT IN (7, 9) ")
+        );
         crate::utils::proptest_utils::assert_valid_sql(&history);
     }
 }
