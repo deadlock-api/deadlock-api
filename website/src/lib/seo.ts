@@ -59,6 +59,7 @@ const OG_IMAGES: Record<string, string> = {
   "/analytics/heroes": "/og/v2/heroes.png",
   "/analytics/items": "/og/v2/items.png",
   "/analytics/abilities": "/og/v2/abilities.png",
+  "/analytics/builds": "/og/v2/builds.png",
   "/community/leaderboard": "/og/v2/leaderboard.png",
   "/community/badge-distribution": "/og/v2/badge-distribution.png",
   "/analytics/games": "/og/v2/games.png",

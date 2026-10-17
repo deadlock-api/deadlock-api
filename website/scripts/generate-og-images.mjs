@@ -31,6 +31,7 @@ const PAGE_CARDS = [
   ["heroes", "Hero Stats & Analytics", "Win rates, pick rates, matchups & performance data"],
   ["items", "Item Stats & Build Analytics", "Win rates, purchase timing, confidence intervals & combos"],
   ["abilities", "Ability Stats & Upgrade Paths", "Optimal skill orders & ability win rates by rank"],
+  ["builds", "Build Stats", "Win rates, items & skill orders of every published hero build"],
   ["leaderboard", "Ranked Leaderboard", "Top players by region, hero filters & player search"],
   ["badge-distribution", "Rank Distribution", "Average Match rank distribution data over time"],
   ["games", "Live Games", "Active matches and recent game results"],
@@ -177,7 +178,8 @@ const logo = (await readFile(join(ROOT, "public", "logo", "hexe.svg"), "utf8"))
 const heroUrls = await heroCardUrls();
 const rankArt = cards.some(([name]) => rankCards.has(name)) ? rankFanHtml(await rankBadges()) : undefined;
 
-const browser = await chromium.launch();
+// Playwright's own Chromium when it is installed, the system Chrome otherwise.
+const browser = await chromium.launch().catch(() => chromium.launch({ channel: "chrome" }));
 const page = await browser.newPage({ viewport: { width: 1200, height: 630 } });
 /* oxlint-disable no-await-in-loop -- cards share one page, so they render one after another */
 for (const [name, title, subtitle] of cards) {
