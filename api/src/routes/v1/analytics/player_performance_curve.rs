@@ -12,7 +12,7 @@ use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
 
 use super::common_filters::{
-    PlayerFilters, filter_protected_accounts, join_filters, round_timestamps,
+    PlayerFilters, filter_protected_accounts, id_list, join_filters, round_timestamps,
 };
 use super::player_performance_curve_agg;
 use super::power_up_buffs::PERMANENT_BUFF_TIMES;
@@ -376,9 +376,15 @@ fn projection_setting(query: &PlayerPerformanceCurveQuery) -> &'static str {
     }
 }
 
-fn build_query(query: &PlayerPerformanceCurveQuery) -> String {
-    let info_filters = query.match_info().build();
-    let player_filters = PlayerFilters {
+/// The player filters of `build_query`, joined.
+fn player_filters(query: &PlayerPerformanceCurveQuery) -> String {
+    // With heroes given, a build is filtered through the matches its players had it in rather than on its column: the
+    // hero curve projection has no build column, so `hero_build_id = …` reads the base table instead (58M rows and
+    // 1.6 s cold for one Haze build over a season, against 0.67 s). A hero is in a match at most once, so the match and
+    // the hero name the player.
+    let hero_ids = query.hero_ids.as_deref().filter(|ids| !ids.is_empty());
+    let build_by_match = hero_ids.zip(query.hero_build_id);
+    let mut player_filters = PlayerFilters {
         hero_ids: query.hero_ids.as_deref(),
         account_ids: query.account_ids.as_deref(),
         min_networth: query.min_networth,
@@ -387,11 +393,26 @@ fn build_query(query: &PlayerPerformanceCurveQuery) -> String {
         exclude_item_ids: query.exclude_item_ids.as_deref(),
         ability_order_prefix: query.ability_order_prefix.as_deref(),
         ability_unlock_order_prefix: query.ability_unlock_order_prefix.as_deref(),
-        hero_build_id: query.hero_build_id,
+        hero_build_id: if build_by_match.is_some() {
+            None
+        } else {
+            query.hero_build_id
+        },
         ..Default::default()
     }
     .build();
-    let player_filters = join_filters(&player_filters);
+    if let Some((hero_ids, hero_build_id)) = build_by_match {
+        player_filters.push(format!(
+            "match_id IN (SELECT match_id FROM match_player WHERE hero_id IN ({}) AND hero_build_id = {hero_build_id})",
+            id_list(hero_ids)
+        ));
+    }
+    join_filters(&player_filters)
+}
+
+fn build_query(query: &PlayerPerformanceCurveQuery) -> String {
+    let info_filters = query.match_info().build();
+    let player_filters = player_filters(query);
 
     let resolution = query.resolution.unwrap_or(10);
     let (game_time_selection, additional_filter) = if resolution == 0 {
@@ -574,5 +595,26 @@ mod proptests {
         fn player_performance_curve_build_query_is_valid_sql(query: PlayerPerformanceCurveQuery) {
             assert_valid_sql(&build_query(&query));
         }
+    }
+
+    #[test]
+    fn build_with_heroes_is_filtered_through_its_matches() {
+        let with_heroes = PlayerPerformanceCurveQuery {
+            hero_ids: Some(vec![8]),
+            hero_build_id: Some(696_055),
+            ..Default::default()
+        };
+        let sql = build_query(&with_heroes);
+        assert!(sql.contains(
+            "match_id IN (SELECT match_id FROM match_player WHERE hero_id IN (8) AND hero_build_id = 696055)"
+        ));
+        assert_eq!(sql.matches("hero_build_id = 696055").count(), 1);
+
+        let without_heroes = PlayerPerformanceCurveQuery {
+            hero_build_id: Some(696_055),
+            ..Default::default()
+        };
+        assert!(build_query(&without_heroes).contains("hero_build_id = 696055"));
+        assert!(!build_query(&without_heroes).contains("match_id IN"));
     }
 }
