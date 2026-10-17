@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { PanelSection } from "~/components/patterns/panel/Panel";
 import { Delta } from "~/components/ui/delta";
 import { KeyValue, KeyValueList } from "~/components/ui/key-value";
+import { NoValue } from "~/components/ui/no-value";
 import { Skeleton } from "~/components/ui/skeleton";
 import { badgeTiers, type BuildRow } from "~/lib/build-stats";
 import { formatPercent } from "~/lib/format";
@@ -91,7 +92,10 @@ export function BuildByRank({
                       )}
                     </span>
                   </span>
-                ) : null
+                ) : (
+                  // Too few of the build's matches for a win rate.
+                  <NoValue />
+                )
               }
             />
           );
