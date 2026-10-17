@@ -79,6 +79,21 @@ export function BuildDetailPanel({
   return (
     <Panel className={cn("flex h-120 flex-col", className)}>
       <PanelHeader title={name} icon={Hammer} size="sm">
+        {meta && (
+          <span className="flex min-w-0 items-center gap-2 text-xs text-muted-foreground">
+            <PlayerCell
+              size="sm"
+              accountId={meta.authorId}
+              name={profile?.personaname}
+              avatar={profile?.avatar}
+              loading={profilePending && !profile}
+            />
+            <span className="whitespace-nowrap tabular-nums">
+              v{meta.version} · {day.unix(meta.updatedAt).utc().format("MMM D, YYYY")}
+              {meta.language !== 0 && ` · ${buildLanguageName(meta.language)}`}
+            </span>
+          </span>
+        )}
         {rows.length > 1 && (
           <Tooltip content="Compare with another build">
             <Button
@@ -103,23 +118,6 @@ export function BuildDetailPanel({
         </CopyButton>
       </PanelHeader>
       <div className={cn(SCROLLBAR_THIN, "@container relative flex min-h-0 flex-1 flex-col overflow-y-auto")}>
-        <div className="flex flex-col gap-2 px-3 py-2">
-          {meta ? (
-            <div className="flex min-w-0 flex-wrap items-center justify-between gap-x-3 gap-y-1">
-              <PlayerCell
-                size="sm"
-                accountId={meta.authorId}
-                name={profile?.personaname}
-                avatar={profile?.avatar}
-                loading={profilePending && !profile}
-              />
-              <span className="text-xs text-muted-foreground tabular-nums">
-                v{meta.version} · {day.unix(meta.updatedAt).utc().format("MMM D, YYYY")}
-                {meta.language !== 0 && ` · ${buildLanguageName(meta.language)}`}
-              </span>
-            </div>
-          ) : null}
-        </div>
         {meta ? (
           <>
             {meta.categories
