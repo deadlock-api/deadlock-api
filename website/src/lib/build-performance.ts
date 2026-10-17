@@ -281,14 +281,3 @@ export function metricDelta(metric: BuildMetric, value: number | null, average: 
   if (metric.delta === "points") return value - average;
   return average !== 0 ? value / average - 1 : null;
 }
-
-/**
- * The real badge closest to an average of badges (tier = first digits, subtier 1 to 6 = last digit): 77.4 is Emissary
- * 6's 76 rather than the 77 no rank has. Null for 0, a build without ranked matches.
- */
-export function nearestBadge(average: number): number | null {
-  if (!(average > 0)) return null;
-  const tier = Math.floor(average / 10);
-  const subtier = Math.min(6, Math.max(1, Math.round(average % 10)));
-  return tier * 10 + subtier;
-}

@@ -50,12 +50,15 @@ export function BuildSkillAdherence({
   row,
   skillOrder,
   filters,
+  active = true,
 }: {
   heroId: number;
   row: BuildRow;
   /** The build's skill order, ability ids by point. */
   skillOrder: readonly number[];
   filters: BuildPurchaseFilters;
+  /** False while the selection is still moving: nothing is asked for yet. */
+  active?: boolean;
 }) {
   const unlockOrder = buildUnlockOrder(skillOrder);
   const firstPoints = skillOrder.slice(0, FIRST_POINTS);
@@ -71,11 +74,11 @@ export function BuildSkillAdherence({
   };
   const unlockQuery = useQuery({
     ...heroBuildStatsQueryOptions({ ...base, abilityUnlockOrderPrefix: unlockOrder }),
-    enabled: unlockOrder.length >= 2,
+    enabled: active && unlockOrder.length >= 2,
   });
   const pointsQuery = useQuery({
     ...heroBuildStatsQueryOptions({ ...base, abilityOrderPrefix: firstPoints }),
-    enabled: firstPoints.length === FIRST_POINTS,
+    enabled: active && firstPoints.length === FIRST_POINTS,
   });
   // No row is an answer: none of the build's matches followed it.
   const followed = (data: { wins: number; matches: number }[] | undefined) =>
@@ -87,13 +90,13 @@ export function BuildSkillAdherence({
         label="Same unlock order"
         row={row}
         followed={followed(unlockQuery.data)}
-        pending={unlockQuery.isPending && unlockQuery.fetchStatus !== "idle"}
+        pending={unlockQuery.isPending && unlockOrder.length >= 2}
       />
       <AdherenceStat
         label={`Same first ${FIRST_POINTS} points`}
         row={row}
         followed={followed(pointsQuery.data)}
-        pending={pointsQuery.isPending && pointsQuery.fetchStatus !== "idle"}
+        pending={pointsQuery.isPending && firstPoints.length === FIRST_POINTS}
       />
     </StatGroup>
   );

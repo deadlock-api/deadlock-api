@@ -2,6 +2,7 @@ import { useQueries, useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 
 import { BuildDetailPanel } from "~/components/features/builds/BuildDetailPanel";
+import { BuildInMatches } from "~/components/features/builds/BuildInMatches";
 import { BuildItemsPanel } from "~/components/features/builds/BuildItemsPanel";
 import { BuildScatterChart } from "~/components/features/builds/BuildScatterChart";
 import { BuildTable } from "~/components/features/builds/BuildTable";
@@ -13,6 +14,7 @@ import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { poolPerformance } from "~/lib/build-performance";
 import { type BuildMeta, buildRows, buildTrends, summarizeBuilds } from "~/lib/build-stats";
 import type { MatchMode } from "~/lib/game-mode";
+import { useDebouncedValue } from "~/lib/utils";
 import {
   buildMetaBatches,
   heroBuildMetaQueryOptions,
@@ -23,6 +25,9 @@ import { type SteamProfileMap, steamProfileBatches, steamProfilesQueryOptions } 
 
 /** How many days at the end of the range the trend looks at. */
 const TREND_WINDOW_DAYS = 7;
+
+/** How long the selection must rest before the selected build's details are asked for. */
+const SETTLE_MS = 300;
 
 export interface BuildsExplorerProps {
   heroId: number;
@@ -163,6 +168,11 @@ export function BuildsExplorer({
     combine: combineProfiles,
   });
 
+  // Stepping through the list with the keys would fire every request of every build passed over: the selected build's
+  // details are asked for once the selection has rested, and show their loading states until then.
+  const selectedId = (rows.find((row) => row.hero_build_id === buildId) ?? rows.at(0))?.hero_build_id ?? null;
+  const settled = useDebouncedValue(selectedId, SETTLE_MS) === selectedId;
+
   if (statsQuery.isPending) return <LoadingState />;
   if (statsQuery.isError) {
     return (
@@ -183,6 +193,15 @@ export function BuildsExplorer({
   }
 
   const selected = rows.find((row) => row.hero_build_id === buildId) ?? rows[0];
+  const purchaseFilters = {
+    gameMode: "normal" as const,
+    matchMode,
+    minAverageBadge: minRankId,
+    maxAverageBadge: maxRankId,
+    minUnixTimestamp,
+    maxUnixTimestamp,
+  };
+  const performancePending = performanceQuery.isPending && performanceQuery.fetchStatus !== "idle";
 
   return (
     <div className="@container flex flex-col gap-3">
@@ -225,18 +244,8 @@ export function BuildsExplorer({
               row.meta.authorId === selected.meta?.authorId,
           )}
           onBuildIdChange={onBuildIdChange}
-          performance={performance?.[selected.hero_build_id]}
-          averagePerformance={averagePerformance}
-          performancePending={performanceQuery.isPending && performanceQuery.fetchStatus !== "idle"}
-          purchaseFilters={{
-            gameMode: "normal",
-            matchMode,
-            minAverageBadge: minRankId,
-            maxAverageBadge: maxRankId,
-            minUnixTimestamp,
-            maxUnixTimestamp,
-          }}
-          trend={trends?.get(selected.hero_build_id)}
+          purchaseFilters={purchaseFilters}
+          active={settled}
           heroId={heroId}
           profile={selected.meta ? profiles.byId[selected.meta.authorId] : undefined}
           pending={meta.pending}
@@ -244,6 +253,15 @@ export function BuildsExplorer({
           className="@3xl:h-0 @3xl:min-h-full"
         />
       </div>
+      <BuildInMatches
+        heroId={heroId}
+        row={selected}
+        filters={purchaseFilters}
+        active={settled}
+        performance={performance?.[selected.hero_build_id]}
+        averagePerformance={averagePerformance}
+        performancePending={performancePending}
+      />
     </div>
   );
 }

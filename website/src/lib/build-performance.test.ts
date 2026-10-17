@@ -5,7 +5,6 @@ import {
   BUILD_METRICS,
   type BuildPerformanceTotals,
   metricDelta,
-  nearestBadge,
   PERFORMANCE_TOTAL_KEYS,
   poolPerformance,
 } from "./build-performance";
@@ -53,11 +52,4 @@ test("a difference is relative for amounts and in points for rates", () => {
   assert.ok(Math.abs(metricDelta(metric("accuracy"), 0.32, 0.3)! - 0.02) < 1e-9);
   assert.equal(metricDelta(metric("kills"), 6, 0), null);
   assert.equal(metricDelta(metric("kills"), null, 5), null);
-});
-
-test("an average badge reads as the closest real badge", () => {
-  assert.equal(nearestBadge(77.4), 76);
-  assert.equal(nearestBadge(80.2), 81);
-  assert.equal(nearestBadge(93.5), 94);
-  assert.equal(nearestBadge(0), null);
 });

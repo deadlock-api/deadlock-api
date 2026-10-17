@@ -18,10 +18,13 @@ export function BuildTopPlayers({
   heroId,
   buildId,
   filters,
+  active = true,
 }: {
   heroId: number;
   buildId: number;
   filters: BuildPurchaseFilters;
+  /** False while the selection is still moving: nothing is asked for yet. */
+  active?: boolean;
 }) {
   const request = {
     sortBy: "matches" as const,
@@ -41,6 +44,7 @@ export function BuildTopPlayers({
       return response.data.map(({ account_id, matches }) => ({ accountId: account_id, matches }));
     },
     staleTime: CACHE_DURATIONS.ONE_HOUR,
+    enabled: active,
   });
   const players = playersQuery.data;
   const accountIds = (players ?? []).map((player) => player.accountId).sort((a, b) => a - b);
