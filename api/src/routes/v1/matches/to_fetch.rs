@@ -3,8 +3,8 @@ use std::sync::Arc;
 
 use axum::Json;
 use axum::extract::State;
-use axum::http::HeaderValue;
-use axum::http::header::CACHE_CONTROL;
+use axum::http::header::{CACHE_CONTROL, COOKIE, SET_COOKIE};
+use axum::http::{HeaderMap, HeaderValue, StatusCode};
 use axum::response::{IntoResponse, Response};
 use axum_extra::extract::Query;
 use cached::macros::cached;
@@ -13,12 +13,14 @@ use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use sqlx::{Pool, Postgres};
 use tracing::{debug, warn};
+use uuid::Uuid;
 
 use crate::context::AppState;
 use crate::error::APIResult;
 use crate::services::clickhouse_insert_batcher::{BatchInsert, ClickhouseInsertBatcher};
 use crate::services::lease::RELEASE_IF_OWNED;
 use crate::utils::parse::parse_steam_id_option;
+use crate::utils::request::header_str;
 use crate::utils::sql::id_list;
 
 const BATCH_SIZE: usize = 100;
@@ -26,6 +28,10 @@ const CLAIM_TTL_SECS: u64 = 15 * 60;
 const POOL_LIMIT: usize = 200_000;
 const MIN_MATCH_ID: u64 = 31_247_321;
 const CLAIM_PREFIX: &str = "matches_to_fetch:claimed:";
+/// Set of the match ids one to-fetch response claimed, keyed by its claim token.
+const CLAIM_LIST_PREFIX: &str = "matches_to_fetch:claim_list:";
+/// Carries a response's claim token, so the worker can release the list it was handed.
+const CLAIM_COOKIE: &str = "to_fetch_claim";
 /// Matches from `active_matches` are pending while still being played; their salts only exist
 /// once the match ended.
 const MIN_AGE_SECS: u32 = 2 * 60 * 60;
@@ -231,6 +237,61 @@ fn worklist(ids: impl Serialize) -> Response {
         .into_response()
 }
 
+/// The claim token in the request's [`CLAIM_COOKIE`], if it holds a valid one.
+fn claim_token(headers: &HeaderMap) -> Option<Uuid> {
+    header_str(headers, COOKIE)?
+        .split(';')
+        .find_map(|cookie| cookie.trim().strip_prefix(CLAIM_COOKIE)?.strip_prefix('='))
+        .and_then(|token| Uuid::parse_str(token).ok())
+}
+
+/// The `Set-Cookie` value handing out `token`, or clearing the cookie if `None`. Scoped to
+/// the to-fetch routes and living as long as the claims it releases.
+fn claim_cookie(token: Option<Uuid>) -> HeaderValue {
+    let (value, max_age) = token.map_or((String::new(), 0), |t| (t.to_string(), CLAIM_TTL_SECS));
+    HeaderValue::from_str(&format!(
+        "{CLAIM_COOKIE}={value}; Path=/v1/matches/to-fetch; Max-Age={max_age}; HttpOnly; Secure; \
+         SameSite=Strict"
+    ))
+    .expect("a UUID is always a valid cookie value")
+}
+
+/// Releases the claims of the list handed out with `token`, leaving matches other workers
+/// have claimed since alone.
+async fn release_claim_list(
+    conn: &mut redis::aio::MultiplexedConnection,
+    token: Uuid,
+) -> redis::RedisResult<()> {
+    let list_key = format!("{CLAIM_LIST_PREFIX}{token}");
+    let (ids,): (Vec<u64>,) = redis::pipe()
+        .atomic()
+        .smembers(&list_key)
+        .del(&list_key)
+        .ignore()
+        .query_async(conn)
+        .await?;
+    if !ids.is_empty() {
+        release_claims(conn, &ids, &token.to_string()).await;
+    }
+    Ok(())
+}
+
+/// Remembers which matches `token` claimed, so [`release_claim_list`] can release them.
+async fn store_claim_list(
+    conn: &mut redis::aio::MultiplexedConnection,
+    token: Uuid,
+    ids: &[u64],
+) -> redis::RedisResult<()> {
+    let list_key = format!("{CLAIM_LIST_PREFIX}{token}");
+    redis::pipe()
+        .sadd(&list_key, ids)
+        .ignore()
+        .expire(&list_key, i64::try_from(CLAIM_TTL_SECS).unwrap_or(i64::MAX))
+        .ignore()
+        .query_async(conn)
+        .await
+}
+
 /// The prioritized accounts, or none if Postgres fails. That fallback is cached too, so an
 /// outage costs one failed query a minute instead of one per request.
 #[cached(ttl_secs = 60, convert = "{ 0 }", key = "u8", sync_writes = "default")]
@@ -342,11 +403,24 @@ pub(super) struct ToFetchQuery {
     account_id: Option<u32>,
 }
 
+/// Hands out the next matches to fetch and claims them for [`CLAIM_TTL_SECS`], so other
+/// workers skip them. The response's [`CLAIM_COOKIE`] identifies the claimed list: sending it
+/// with the next to-fetch request, or to [`release_matches_to_fetch`], releases that list.
 pub(super) async fn matches_to_fetch(
     Query(ToFetchQuery { account_id }): Query<ToFetchQuery>,
     State(state): State<AppState>,
+    headers: HeaderMap,
 ) -> APIResult<impl IntoResponse> {
     debug!(?account_id, "matches_to_fetch request");
+
+    // A worker asking again is done with its previous list. Release it first, so the
+    // matches it didn't get to are handed out again, possibly to this worker.
+    let mut conn = state.redis_client.clone();
+    if let Some(old) = claim_token(&headers)
+        && let Err(e) = release_claim_list(&mut conn, old).await
+    {
+        warn!("Failed to release the previous claims of matches to fetch: {e}");
+    }
 
     if let Some(account_id) = account_id {
         let ids = pending_pool_for_account(&state.ch_client_ro, account_id).await?;
@@ -362,8 +436,8 @@ pub(super) async fn matches_to_fetch(
 
     // Walk the pool in priority order, skipping matches another worker has claimed.
     // The claims carry this request's token, so a failed chunk can release exactly its own.
-    let token = uuid::Uuid::new_v4().to_string();
-    let mut conn = state.redis_client.clone();
+    let token_id = Uuid::new_v4();
+    let token = token_id.to_string();
     let mut claimed: Vec<u64> = Vec::with_capacity(BATCH_SIZE);
     let mut scanned = 0usize;
     while claimed.len() < BATCH_SIZE && scanned < n {
@@ -402,7 +476,31 @@ pub(super) async fn matches_to_fetch(
         scanned += chunk;
     }
 
-    Ok(worklist(claimed))
+    if claimed.is_empty() {
+        return Ok(worklist(claimed));
+    }
+    // Without the list the claims can't be released early, but they still expire.
+    if let Err(e) = store_claim_list(&mut conn, token_id, &claimed).await {
+        warn!("Failed to store the claim list of matches to fetch: {e}");
+    }
+    let mut response = worklist(claimed);
+    response
+        .headers_mut()
+        .insert(SET_COOKIE, claim_cookie(Some(token_id)));
+    Ok(response)
+}
+
+/// Releases the matches handed out with the request's [`CLAIM_COOKIE`], for a worker that
+/// won't fetch the rest of its list. Matches it did fetch leave the pool on their own.
+pub(super) async fn release_matches_to_fetch(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> APIResult<impl IntoResponse> {
+    if let Some(token) = claim_token(&headers) {
+        let mut conn = state.redis_client.clone();
+        release_claim_list(&mut conn, token).await?;
+    }
+    Ok((StatusCode::NO_CONTENT, [(SET_COOKIE, claim_cookie(None))]))
 }
 
 /// Best effort: releases the claims of `ids` that hold `token`, leaving other workers' alone.
@@ -425,6 +523,96 @@ async fn release_claims(conn: &mut redis::aio::MultiplexedConnection, ids: &[u64
 mod tests {
     use super::*;
     use crate::utils::proptest_utils::assert_valid_sql;
+
+    #[test]
+    fn claim_token_reads_the_claim_cookie() {
+        let token = Uuid::new_v4();
+        let mut headers = HeaderMap::new();
+        headers.insert(
+            COOKIE,
+            HeaderValue::from_str(&format!("other=1; {CLAIM_COOKIE}={token}; x=y")).unwrap(),
+        );
+        assert_eq!(claim_token(&headers), Some(token));
+    }
+
+    #[test]
+    fn claim_token_ignores_missing_and_invalid_cookies() {
+        let mut headers = HeaderMap::new();
+        assert_eq!(claim_token(&headers), None);
+        headers.insert(COOKIE, HeaderValue::from_static("to_fetch_claim=nope"));
+        assert_eq!(claim_token(&headers), None);
+        headers.insert(COOKIE, HeaderValue::from_static("to_fetch_claimx=1"));
+        assert_eq!(claim_token(&headers), None);
+    }
+
+    #[test]
+    fn claim_cookie_round_trips_and_clears() {
+        let token = Uuid::new_v4();
+        let set = claim_cookie(Some(token));
+        let set = set.to_str().unwrap();
+        assert!(set.starts_with(&format!(
+            "{CLAIM_COOKIE}={token}; Path=/v1/matches/to-fetch;"
+        )));
+        assert!(set.contains("Max-Age=900"));
+        let mut headers = HeaderMap::new();
+        headers.insert(
+            COOKIE,
+            HeaderValue::from_str(set.split(';').next().unwrap()).unwrap(),
+        );
+        assert_eq!(claim_token(&headers), Some(token));
+
+        let clear = claim_cookie(None);
+        assert!(
+            clear
+                .to_str()
+                .unwrap()
+                .starts_with(&format!("{CLAIM_COOKIE}=; "))
+        );
+        assert!(clear.to_str().unwrap().contains("Max-Age=0"));
+    }
+
+    #[tokio::test]
+    #[ignore = "needs a throwaway Redis at TEST_REDIS_URL"]
+    async fn release_claim_list_releases_only_own_claims() {
+        let url = std::env::var("TEST_REDIS_URL").expect("TEST_REDIS_URL");
+        let client = redis::Client::open(url).unwrap();
+        let mut conn = client.get_multiplexed_async_connection().await.unwrap();
+        let (mine, theirs) = (Uuid::new_v4(), Uuid::new_v4());
+        let ids = [1_u64, 2, 3].map(|i| u64::from(u32::MAX) + i);
+        for id in ids {
+            let _: () = redis::cmd("SET")
+                .arg(format!("{CLAIM_PREFIX}{id}"))
+                .arg(mine.to_string())
+                .query_async(&mut conn)
+                .await
+                .unwrap();
+        }
+        store_claim_list(&mut conn, mine, &ids).await.unwrap();
+        // The claim on the second match expired and another worker took it.
+        let _: () = redis::cmd("SET")
+            .arg(format!("{CLAIM_PREFIX}{}", ids[1]))
+            .arg(theirs.to_string())
+            .query_async(&mut conn)
+            .await
+            .unwrap();
+
+        release_claim_list(&mut conn, mine).await.unwrap();
+
+        let claims: Vec<Option<String>> = redis::cmd("MGET")
+            .arg(ids.map(|id| format!("{CLAIM_PREFIX}{id}")).to_vec())
+            .query_async(&mut conn)
+            .await
+            .unwrap();
+        assert_eq!(claims, [None, Some(theirs.to_string()), None]);
+        let list_exists: bool = redis::cmd("EXISTS")
+            .arg(format!("{CLAIM_LIST_PREFIX}{mine}"))
+            .query_async(&mut conn)
+            .await
+            .unwrap();
+        assert!(!list_exists);
+        // Releasing again is a no-op.
+        release_claim_list(&mut conn, mine).await.unwrap();
+    }
 
     #[test]
     fn start_times_query_is_valid_sql() {
