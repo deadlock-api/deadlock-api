@@ -1,11 +1,20 @@
 import { ListOrdered } from "lucide-react";
-import { parseAsString, parseAsStringLiteral, useQueryState } from "nuqs";
+import {
+  parseAsArrayOf,
+  parseAsInteger,
+  parseAsString,
+  parseAsStringLiteral,
+  useQueryState,
+  useQueryStates,
+} from "nuqs";
 import { useState } from "react";
 
+import { ItemSelector } from "~/components/domain/selectors/ItemSelector";
 import { BuildSummaryStats } from "~/components/features/builds/BuildSummaryStats";
 import { CHART_COLOR } from "~/components/patterns/charts/theme";
 import { SortableHeader } from "~/components/patterns/data-table/SortableHeader";
 import { TableEmptyRow } from "~/components/patterns/data-table/TableEmptyRow";
+import type { TriState } from "~/components/patterns/filter-bar/TriStateSelector";
 import { Panel, PanelHeader } from "~/components/patterns/panel/Panel";
 import { Button } from "~/components/ui/button";
 import { Delta } from "~/components/ui/delta";
@@ -20,7 +29,7 @@ import { Skeleton } from "~/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { day } from "~/dayjs";
 import { BUILD_METRICS, type BuildMetric, type BuildPerformanceTotals } from "~/lib/build-performance";
-import { type BuildRow, type BuildSummary, type BuildTrend, buildLanguageName } from "~/lib/build-stats";
+import { buildItemIds, type BuildRow, type BuildSummary, type BuildTrend, buildLanguageName } from "~/lib/build-stats";
 import { formatPercent, formatShare, formatSignedPercent } from "~/lib/format";
 import { TONE_TEXT, toneOf } from "~/lib/tone";
 import { cn } from "~/lib/utils";
@@ -138,6 +147,25 @@ export function BuildTable({
     sortParams(useQueryState("sort", parseSortKey), useQueryState("dir", parseSortDir), { history: "replace" }),
   );
   const [query, setQuery] = useState("");
+  // In the URL like the page's filters, so a shared link keeps them. One update sets both lists.
+  const [itemParams, setItemParams] = useQueryStates(
+    {
+      with_items: parseAsArrayOf(parseAsInteger).withDefault([]),
+      without_items: parseAsArrayOf(parseAsInteger).withDefault([]),
+    },
+    { history: "replace" },
+  );
+  const itemStates = new Map<number, TriState>([
+    ...itemParams.with_items.map((id): [number, TriState] => [id, "included"]),
+    ...itemParams.without_items.map((id): [number, TriState] => [id, "excluded"]),
+  ]);
+  const setItemStates = (next: Map<number, TriState>) => {
+    const ids = (state: TriState) => {
+      const matching = [...next].filter(([, s]) => s === state).map(([id]) => id);
+      return matching.length > 0 ? matching : null;
+    };
+    void setItemParams({ with_items: ids("included"), without_items: ids("excluded") });
+  };
   const [view, setView] = useQueryState("columns", parseView.withOptions({ history: "replace" }));
   const metricColumns = view === "overview" ? [] : VIEW_METRICS[view];
   const columns =
@@ -163,12 +191,23 @@ export function BuildTable({
     return (sortValue[sort.sortKey] ?? sortValue.matches)(row, trends?.get(row.hero_build_id));
   };
   const needle = fold(query.trim());
-  const shown = needle
+  const byText = needle
     ? rows.filter((row) => {
         const author = row.meta ? profiles[row.meta.authorId]?.personaname : undefined;
         return [row.meta?.name, author, String(row.hero_build_id)].some((text) => text && fold(text).includes(needle));
       })
     : rows;
+  // Builds that list every included item and none of the excluded ones; without contents a build cannot qualify.
+  const filteringItems = itemParams.with_items.length > 0 || itemParams.without_items.length > 0;
+  const shown = filteringItems
+    ? byText.filter((row) => {
+        if (!row.meta) return false;
+        const listed = new Set(buildItemIds(row.meta));
+        return (
+          itemParams.with_items.every((id) => listed.has(id)) && !itemParams.without_items.some((id) => listed.has(id))
+        );
+      })
+    : byText;
   const sorted = [...shown].sort(
     (a, b) => sign * (value(a) - value(b)) || b.matches - a.matches || a.hero_build_id - b.hero_build_id,
   );
@@ -184,6 +223,7 @@ export function BuildTable({
     <Panel className="@container/builds flex flex-col *:data-[slot=table-container]:max-h-136">
       <PanelHeader title="Builds" icon={ListOrdered} size="sm">
         <BuildSummaryStats summary={summary} heroWinRate={heroWinRate} />
+        <ItemSelector selection="tri-state" size="sm" value={itemStates} onValueChange={setItemStates} />
         <SearchInput
           value={query}
           onValueChange={setQuery}
@@ -346,10 +386,12 @@ export function BuildTable({
             );
           })}
           {sorted.length === 0 && (
-            <TableEmptyRow colSpan={columns.length + 2}>No build matches “{query}”</TableEmptyRow>
+            <TableEmptyRow colSpan={columns.length + 2}>
+              {needle ? `No build matches “${query}”` : "No build lists these items"}
+            </TableEmptyRow>
           )}
         </TableBody>
-        {!needle && (
+        {!needle && !filteringItems && (
           <TableFooter>
             <TableRow>
               <TableCell />
