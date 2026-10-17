@@ -13,7 +13,7 @@ import { steamProfilesQueryOptions } from "~/queries/steam-queries";
 /** How many of the build's most frequent players the section lists. */
 const PLAYERS_SHOWN = 5;
 
-/** The players who started the most matches with the build, linked to the tracker. */
+/** The players who started the most matches with the build. */
 export function BuildTopPlayers({
   heroId,
   buildId,
@@ -64,7 +64,6 @@ export function BuildTopPlayers({
                       name={profile?.personaname}
                       avatar={profile?.avatar}
                       loading={profilesQuery.isPending}
-                      linkToDetail
                     />
                   }
                   value={`${player.matches.toLocaleString("en-US")} ${player.matches === 1 ? "match" : "matches"}`}

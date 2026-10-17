@@ -212,7 +212,6 @@ export function BuildDetailPanel({
                 name={profile?.personaname}
                 avatar={profile?.avatar}
                 loading={profilePending && !profile}
-                linkToDetail
               />
               <span className="text-xs text-muted-foreground tabular-nums">
                 v{meta.version} · {day.unix(meta.updatedAt).utc().format("MMM D, YYYY")}
