@@ -12,7 +12,7 @@ import { BUILD_METRICS, type BuildPerformanceTotals, metricDelta, type MetricGro
 /** A metric's spread at the end of the match: the build's curve over the hero's. */
 function DistributionCard({ title, distribution }: { title: string; distribution: EndOfMatchDistribution }) {
   return (
-    <div className="flex w-72 flex-col gap-2">
+    <div className="flex flex-col gap-2">
       <TooltipHeader title={title} subtitle="At the end of the match" />
       <GaussianComparison
         value={distribution.value}
