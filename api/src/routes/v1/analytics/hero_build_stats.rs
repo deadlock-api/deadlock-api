@@ -7,6 +7,7 @@ use axum_extra::extract::Query;
 use clickhouse::Row;
 use serde::{Deserialize, Serialize};
 use sqlx::{Pool, Postgres};
+use strum::Display;
 use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
 
@@ -22,6 +23,33 @@ use crate::utils::parse::{
     default_last_month_timestamp, parse_steam_id_option,
 };
 use crate::utils::sql::{cached_ch_query, id_list, impl_match_info, join_filters};
+
+#[derive(Debug, Clone, Copy, Deserialize, ToSchema, Default, Display, PartialEq, Eq, Hash)]
+#[cfg_attr(test, derive(proptest_derive::Arbitrary))]
+#[serde(rename_all = "snake_case")]
+#[strum(serialize_all = "snake_case")]
+pub enum BucketQuery {
+    /// No Bucketing
+    #[default]
+    NoBucket,
+    /// Bucket Hero Build Stats By Average Badge Level (tier = first digits, subtier = last digit) of both teams involved. See more: <https://api.deadlock-api.com/v1/assets/ranks>
+    AvgBadge,
+    /// Bucket Hero Build Stats By Start Time (Day)
+    StartTimeDay,
+    /// Bucket Hero Build Stats By Start Time (Week)
+    StartTimeWeek,
+}
+
+impl BucketQuery {
+    fn select_expr(self) -> &'static str {
+        match self {
+            Self::NoBucket => "toUInt32(0)",
+            Self::AvgBadge => "toUInt32(assumeNotNull(coalesce(mp.average_badge, 0)))",
+            Self::StartTimeDay => "toUInt32(toStartOfDay(mp.start_time))",
+            Self::StartTimeWeek => "toUInt32(toDateTime(toStartOfWeek(mp.start_time)))",
+        }
+    }
+}
 
 #[derive(Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash)]
 pub(super) struct HeroBuildStatsPath {
@@ -42,6 +70,10 @@ pub(super) struct HeroBuildStatsQuery {
         )
     )]
     match_mode: Option<Vec<MatchMode>>,
+    /// Bucket allows you to group the stats by a specific field. `min_matches` applies to each build and bucket.
+    #[serde(default)]
+    #[param(inline)]
+    bucket: BucketQuery,
     /// Filter matches based on their start time (Unix timestamp). **Default:** 30 days ago. **Minimum:** March 1, 2026.
     #[serde(default = "default_last_month_timestamp")]
     #[param(default = default_last_month_timestamp)]
@@ -110,6 +142,8 @@ pub struct HeroBuildStats {
     pub hero_id: u8,
     /// The ID of the hero build. The `hero_build_id` is the first build the player had selected when the game started.
     pub hero_build_id: u64,
+    /// The bucket value (depends on the bucket query parameter, 0 without one).
+    pub bucket: u32,
     /// The number of wins with this build.
     pub wins: u64,
     /// The number of losses with this build.
@@ -146,11 +180,13 @@ fn build_query(hero_id: u32, query: &HeroBuildStatsQuery) -> String {
     }
     let player_filters = join_filters(&player_filters);
     let min_matches = query.min_matches.unwrap_or(DEFAULT_MIN_MATCHES);
+    let bucket_expr = query.bucket.select_expr();
     format!(
         "
     SELECT
         mp.hero_id AS hero_id,
         assumeNotNull(mp.hero_build_id) AS hero_build_id,
+        {bucket_expr} AS bucket,
         countIf(mp.won) AS wins,
         countIf(NOT mp.won) AS losses,
         wins + losses AS matches,
@@ -159,9 +195,9 @@ fn build_query(hero_id: u32, query: &HeroBuildStatsQuery) -> String {
     WHERE {match_mode_filter} AND mp.game_mode = 1
       AND mp.demo_processed = 1 AND mp.hero_build_id IS NOT NULL
       {info_filters} {player_filters}
-    GROUP BY hero_id, hero_build_id
+    GROUP BY hero_id, hero_build_id, bucket
     HAVING matches >= {min_matches}
-    ORDER BY matches DESC
+    ORDER BY matches DESC, bucket
     SETTINGS log_comment = 'hero_build_stats'
     "
     )
@@ -284,6 +320,7 @@ mod tests {
         HeroBuildStats {
             hero_id: 13,
             hero_build_id,
+            bucket: 0,
             wins: 1,
             losses: 1,
             matches: 2,
