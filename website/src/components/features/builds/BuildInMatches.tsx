@@ -122,6 +122,8 @@ export function BuildInMatches({
                           <RankedEntityMetric
                             label="Without"
                             labelDisplay={index === 0 ? "visible" : "hidden"}
+                            // Below 24rem the item names need its room; the difference column still tells it.
+                            className="hidden @sm:flex"
                             value={formatPercent(item.winRateWithout!)}
                           />
                           <RankedEntityMetric
