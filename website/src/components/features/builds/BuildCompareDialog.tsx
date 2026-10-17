@@ -106,58 +106,97 @@ export function BuildCompareDialog({
             </SelectContent>
           </Select>
         </Field>
-        <Table density="dense" aria-label={`${nameOf(build)} against ${nameOf(other)}`}>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="text-xs text-muted-foreground">Stat</TableHead>
-              <TableHead className="max-w-40 truncate text-end text-xs" title={nameOf(build)}>
-                {nameOf(build)}
-              </TableHead>
-              <TableHead className="max-w-40 truncate text-end text-xs" title={nameOf(other)}>
-                {nameOf(other)}
-              </TableHead>
-              <TableHead className="text-end text-xs text-muted-foreground">Difference</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {BASE_ROWS.map((row) => {
-              const a = row.value(build);
-              const b = row.value(other);
-              return (
-                <TableRow key={row.label}>
-                  <TableCell className="text-muted-foreground">{row.label}</TableCell>
-                  <TableCell className="text-end tabular-nums">{row.format(a)}</TableCell>
-                  <TableCell className="text-end tabular-nums">{row.format(b)}</TableCell>
-                  <TableCell className="text-end">
-                    <Delta
-                      value={row.rate ? b - a : a !== 0 ? b / a - 1 : null}
-                      unit={row.rate ? " pp" : undefined}
-                      polarity={row.label === "Win rate" ? "higher-is-better" : "neutral"}
-                    />
-                  </TableCell>
+        {/* Two tables side by side: usage and combat, then economy and survival. */}
+        <div className="@container">
+          <div className="grid gap-x-6 gap-y-3 @2xl:grid-cols-2">
+            <Table density="dense" aria-label={`${nameOf(build)} against ${nameOf(other)}: usage and combat`}>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="text-xs text-muted-foreground">Stat</TableHead>
+                  <TableHead className="text-end text-xs" title={nameOf(build)}>
+                    Selected
+                  </TableHead>
+                  <TableHead className="text-end text-xs" title={nameOf(other)}>
+                    Compared
+                  </TableHead>
+                  <TableHead className="text-end text-xs text-muted-foreground">Difference</TableHead>
                 </TableRow>
-              );
-            })}
-            {BUILD_METRICS.map((metric) => {
-              const a = totalsA ? metric.value(totalsA) : null;
-              const b = totalsB ? metric.value(totalsB) : null;
-              return (
-                <TableRow key={metric.key}>
-                  <TableCell className="text-muted-foreground">{metric.label}</TableCell>
-                  <MetricCell metric={metric} totals={totalsA} />
-                  <MetricCell metric={metric} totals={totalsB} />
-                  <TableCell className="text-end">
-                    <Delta
-                      value={metricDelta(metric, b, a)}
-                      unit={metric.delta === "points" ? " pp" : undefined}
-                      polarity={metric.polarity}
-                    />
-                  </TableCell>
+              </TableHeader>
+              <TableBody>
+                {BASE_ROWS.map((row) => {
+                  const a = row.value(build);
+                  const b = row.value(other);
+                  return (
+                    <TableRow key={row.label}>
+                      <TableCell className="text-muted-foreground">{row.label}</TableCell>
+                      <TableCell className="text-end tabular-nums">{row.format(a)}</TableCell>
+                      <TableCell className="text-end tabular-nums">{row.format(b)}</TableCell>
+                      <TableCell className="text-end">
+                        <Delta
+                          value={row.rate ? b - a : a !== 0 ? b / a - 1 : null}
+                          unit={row.rate ? " pp" : undefined}
+                          polarity={row.label === "Win rate" ? "higher-is-better" : "neutral"}
+                        />
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+                {BUILD_METRICS.filter((metric) => metric.group === "combat").map((metric) => {
+                  const a = totalsA ? metric.value(totalsA) : null;
+                  const b = totalsB ? metric.value(totalsB) : null;
+                  return (
+                    <TableRow key={metric.key}>
+                      <TableCell className="text-muted-foreground">{metric.label}</TableCell>
+                      <MetricCell metric={metric} totals={totalsA} />
+                      <MetricCell metric={metric} totals={totalsB} />
+                      <TableCell className="text-end">
+                        <Delta
+                          value={metricDelta(metric, b, a)}
+                          unit={metric.delta === "points" ? " pp" : undefined}
+                          polarity={metric.polarity}
+                        />
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+            <Table density="dense" aria-label={`${nameOf(build)} against ${nameOf(other)}: economy and survival`}>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="text-xs text-muted-foreground">Stat</TableHead>
+                  <TableHead className="text-end text-xs" title={nameOf(build)}>
+                    Selected
+                  </TableHead>
+                  <TableHead className="text-end text-xs" title={nameOf(other)}>
+                    Compared
+                  </TableHead>
+                  <TableHead className="text-end text-xs text-muted-foreground">Difference</TableHead>
                 </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
+              </TableHeader>
+              <TableBody>
+                {BUILD_METRICS.filter((metric) => metric.group !== "combat").map((metric) => {
+                  const a = totalsA ? metric.value(totalsA) : null;
+                  const b = totalsB ? metric.value(totalsB) : null;
+                  return (
+                    <TableRow key={metric.key}>
+                      <TableCell className="text-muted-foreground">{metric.label}</TableCell>
+                      <MetricCell metric={metric} totals={totalsA} />
+                      <MetricCell metric={metric} totals={totalsB} />
+                      <TableCell className="text-end">
+                        <Delta
+                          value={metricDelta(metric, b, a)}
+                          unit={metric.delta === "points" ? " pp" : undefined}
+                          polarity={metric.polarity}
+                        />
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
+        </div>
         <div className="@container grid gap-3 sm:grid-cols-3">
           <ItemRow title={`Only in ${nameOf(build)}`} itemIds={itemsA.filter((id) => !setB.has(id))} />
           <ItemRow title="In both" itemIds={itemsA.filter((id) => setB.has(id))} />
