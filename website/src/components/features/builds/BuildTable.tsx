@@ -9,6 +9,7 @@ import { TableEmptyRow } from "~/components/patterns/data-table/TableEmptyRow";
 import { Panel, PanelHeader } from "~/components/patterns/panel/Panel";
 import { Button } from "~/components/ui/button";
 import { Delta } from "~/components/ui/delta";
+import { useListNavigation } from "~/components/ui/hooks/use-list-navigation";
 import { sortParams, useSort } from "~/components/ui/hooks/use-sort";
 import { NoValue } from "~/components/ui/no-value";
 import { ProgressBar } from "~/components/ui/progress-bar";
@@ -170,6 +171,11 @@ export function BuildTable({
     (a, b) => sign * (value(a) - value(b)) || b.matches - a.matches || a.hero_build_id - b.hero_build_id,
   );
   const maxShare = Math.max(...rows.map((row) => row.share));
+  const navigation = useListNavigation({
+    count: sorted.length,
+    value: sorted.findIndex((row) => row.hero_build_id === selectedId),
+    onValueChange: (index) => onBuildIdChange(sorted[index].hero_build_id),
+  });
 
   return (
     // The table scrolls inside the panel, so the panel keeps one height beside the build details.
@@ -211,7 +217,7 @@ export function BuildTable({
             ))}
           </TableRow>
         </TableHeader>
-        <TableBody>
+        <TableBody onKeyDown={navigation.onKeyDown}>
           {sorted.map((row, index) => {
             const selected = row.hero_build_id === selectedId;
             const author = row.meta ? profiles[row.meta.authorId] : undefined;
@@ -231,6 +237,7 @@ export function BuildTable({
                         variant="text"
                         size="inline"
                         aria-current={selected || undefined}
+                        data-list-index={index}
                         title={row.meta.name}
                         className="block max-w-full justify-start truncate text-start font-medium"
                         onClick={(event) => {
@@ -247,6 +254,7 @@ export function BuildTable({
                         variant="text"
                         size="inline"
                         aria-current={selected || undefined}
+                        data-list-index={index}
                         className="justify-start text-muted-foreground"
                         onClick={(event) => {
                           event.stopPropagation();
