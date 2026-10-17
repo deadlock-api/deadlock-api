@@ -34,7 +34,7 @@ const DEFAULT_HERO_ID = 2;
 const DEFAULT_MIN_MATCHES = 20;
 const TITLE = "Deadlock Build Stats: Best Hero Builds by Win Rate";
 const DESCRIPTION =
-  "Win rates of the published Deadlock hero builds players actually start their matches with: popularity, win rate, items and skill order of every build, by rank and patch.";
+  "Win rates of the published Deadlock hero builds players start their matches with: how popular each is, its items and skill order, by rank and patch.";
 
 /** The hero builds analytics endpoint counts normal matches only; Street Brawl has no build to choose. */
 const MODES = ["normal_all", "normal_ranked", "normal_unranked"] as const;
