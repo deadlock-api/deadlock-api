@@ -132,6 +132,16 @@ export function buildItemPresence(rows: readonly BuildRow[]): BuildItemPresence[
     .sort((a, b) => b.share - a.share || b.builds - a.builds || a.itemId - b.itemId);
 }
 
+/**
+ * The items that tell the played builds apart: listed by some builds and left out of others (between `minShare` and
+ * `1 - minShare` of the matches), the ones whose builds won most against the builds without them first.
+ */
+export function distinguishingItems(presence: readonly BuildItemPresence[], minShare = 0.1): BuildItemPresence[] {
+  return presence
+    .filter((item) => item.vsWithout !== null && item.share >= minShare && item.share <= 1 - minShare)
+    .sort((a, b) => b.vsWithout! - a.vsWithout! || b.share - a.share || a.itemId - b.itemId);
+}
+
 /** Every item a build lists, once, in the order it first appears. */
 export function buildItemIds(meta: BuildMeta): number[] {
   return [...new Set(meta.categories.flatMap((category) => category.itemIds))];

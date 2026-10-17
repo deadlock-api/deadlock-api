@@ -20,9 +20,14 @@ type SortKey = "matches" | "players" | "winRate" | "lowerBound" | "updated";
 
 const COLUMNS: { key: SortKey; label: string; name: string; className?: string }[] = [
   { key: "matches", label: "Matches", name: "matches" },
-  { key: "players", label: "Players", name: "players", className: "hidden @3xl/builds:table-cell" },
+  { key: "players", label: "Players", name: "players", className: "hidden @lg/builds:table-cell" },
   { key: "winRate", label: "Win rate", name: "win rate" },
-  { key: "lowerBound", label: "Vs. avg", name: "confidence above the average" },
+  {
+    key: "lowerBound",
+    label: "Vs. avg",
+    name: "confidence above the average",
+    className: "hidden @md/builds:table-cell",
+  },
   { key: "updated", label: "Updated", name: "last update", className: "hidden @xl/builds:table-cell" },
 ];
 
@@ -106,6 +111,7 @@ export function BuildTable({
                     {row.meta ? (
                       <Button
                         variant="text"
+                        size="inline"
                         aria-current={selected || undefined}
                         title={row.meta.name}
                         className="block max-w-full justify-start truncate text-start font-medium"
@@ -121,6 +127,7 @@ export function BuildTable({
                     ) : (
                       <Button
                         variant="text"
+                        size="inline"
                         aria-current={selected || undefined}
                         className="justify-start text-muted-foreground"
                         onClick={(event) => {
@@ -155,11 +162,11 @@ export function BuildTable({
                     />
                   </div>
                 </TableCell>
-                <TableCell className="hidden text-end tabular-nums @3xl/builds:table-cell">
+                <TableCell className="hidden text-end tabular-nums @lg/builds:table-cell">
                   {row.players.toLocaleString("en-US")}
                 </TableCell>
                 <TableCell className="text-end tabular-nums">{formatPercent(row.winRate)}</TableCell>
-                <TableCell className="text-end">
+                <TableCell className="hidden text-end @md/builds:table-cell">
                   <div className="ms-auto flex w-20 flex-col items-end gap-1">
                     <span className={cn("text-xs tabular-nums", TONE_TEXT[toneOf(verdictSign(row))])}>
                       {formatSignedPercent(row.vsAverage)}

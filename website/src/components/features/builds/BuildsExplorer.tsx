@@ -140,16 +140,20 @@ export function BuildsExplorer({
   return (
     <div className="@container flex flex-col gap-3">
       <BuildSummaryStats summary={summary} metaPending={meta.pending} />
-      <div className="grid gap-3 @5xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+      <div className="grid gap-3 @3xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
         <BuildScatterChart
           rows={rows}
           average={summary.winRate}
           selectedId={selected.hero_build_id}
           onBuildIdChange={onBuildIdChange}
         />
-        <BuildItemsPanel rows={rows} pending={meta.pending} className="@5xl:h-0 @5xl:min-h-full" />
+        <BuildItemsPanel
+          rows={rows}
+          pending={meta.pending}
+          className="max-h-120 @3xl:h-0 @3xl:max-h-none @3xl:min-h-full"
+        />
       </div>
-      <div className="grid gap-3 @5xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+      <div className="grid gap-3 @3xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
         <BuildTable
           rows={rows}
           profiles={profiles.byId}
@@ -164,7 +168,7 @@ export function BuildsExplorer({
           profile={selected.meta ? profiles.byId[selected.meta.authorId] : undefined}
           pending={meta.pending}
           profilePending={profiles.pending}
-          className="@5xl:h-0 @5xl:min-h-full"
+          className="@3xl:h-0 @3xl:min-h-full"
         />
       </div>
     </div>

@@ -30,7 +30,7 @@ const DESCRIPTION =
   "Win rates of the published Deadlock hero builds players actually start their matches with: popularity, win rate, items and skill order of every build, by rank and patch.";
 
 /** The hero builds analytics endpoint counts normal matches only; Street Brawl has no build to choose. */
-const DISABLED_MODES = ["street_brawl"] as const;
+const MODES = ["normal_all", "normal_ranked", "normal_unranked"] as const;
 
 /** A choice re-renders the page in a transition, so the tap paints first; one choice is one history entry. */
 const together = { limitUrlUpdates: throttle(50) };
@@ -123,7 +123,7 @@ function BuildsPage() {
         <Filter.ModeWithRank
           value={{ mode, rank: [minRankId, maxRankId] }}
           defaultValue={{ mode: DEFAULT_MODE, rank: [DEFAULT_RANK_RANGE.min, DEFAULT_RANK_RANGE.max] }}
-          disabledModes={DISABLED_MODES}
+          modes={MODES}
           onValueChange={(next) => {
             if (next.mode !== mode) setMode(next.mode);
             if (next.rank[0] !== minRankId || next.rank[1] !== maxRankId) {

@@ -93,7 +93,8 @@ export function heroBuildMetaQueryOptions(heroId: number, buildIds: readonly num
               language: build.language,
               categories: (build.details?.mod_categories ?? []).map((category) => ({
                 name: category.name ?? "",
-                itemIds: (category.mods ?? []).map((mod) => mod.ability_id),
+                // An item listed twice in one category is shown once.
+                itemIds: [...new Set((category.mods ?? []).map((mod) => mod.ability_id))],
               })),
               abilityOrder: buildAbilityOrder(build.details?.ability_order?.currency_changes),
             }

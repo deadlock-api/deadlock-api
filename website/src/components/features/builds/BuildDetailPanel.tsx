@@ -70,7 +70,7 @@ export function BuildDetailPanel({
           <span className="tabular-nums">ID {row.hero_build_id}</span>
         </CopyButton>
       </PanelHeader>
-      <div className={cn(SCROLLBAR_THIN, "@container flex min-h-0 flex-1 flex-col overflow-y-auto")}>
+      <div className={cn(SCROLLBAR_THIN, "@container relative flex min-h-0 flex-1 flex-col overflow-y-auto")}>
         <div className="flex flex-col gap-3 px-4 py-3">
           {meta ? (
             <div className="flex min-w-0 flex-wrap items-center justify-between gap-x-3 gap-y-1">
@@ -108,14 +108,14 @@ export function BuildDetailPanel({
           <>
             {meta.categories
               .filter((category) => category.itemIds.length > 0)
-              .map((category, index) => (
-                <section key={index} className="flex flex-col">
+              .map((category) => (
+                <section key={`${category.name}|${category.itemIds.join()}`} className="flex flex-col">
                   <PanelSection title={buildCategoryName(category.name) ?? "Items"}>
                     <span className="tabular-nums">{category.itemIds.length}</span>
                   </PanelSection>
                   <ul className="flex flex-wrap gap-1.5 px-4 py-2">
-                    {category.itemIds.map((itemId, position) => (
-                      <li key={`${itemId}-${position}`}>
+                    {category.itemIds.map((itemId) => (
+                      <li key={itemId}>
                         <ItemImage itemId={itemId} className="size-9" />
                       </li>
                     ))}

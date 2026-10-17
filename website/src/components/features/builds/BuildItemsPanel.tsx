@@ -5,7 +5,8 @@ import { RankedEntityList, RankedEntityMetric, RankedEntityRow } from "~/compone
 import { Panel, PanelHeader } from "~/components/patterns/panel/Panel";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
-import { type BuildRow, buildItemPresence } from "~/lib/build-stats";
+import { SCROLLBAR_THIN } from "~/components/ui/recipes";
+import { type BuildRow, buildItemPresence, distinguishingItems } from "~/lib/build-stats";
 import { formatShare, formatSignedPercent } from "~/lib/format";
 import { toneOf } from "~/lib/tone";
 import { cn } from "~/lib/utils";
@@ -15,8 +16,8 @@ const ITEMS_SHOWN = 15;
 const CHANGE_SCALE = 0.1;
 
 /**
- * The items the played builds list most, weighted by how often each build was played, and how the builds that list an
- * item won against the builds that do not.
+ * The items some played builds list and others leave out, with how often a build that lists the item was played and
+ * how those builds won against the builds without it: the best difference first.
  */
 export function BuildItemsPanel({
   rows,
@@ -28,15 +29,15 @@ export function BuildItemsPanel({
   pending: boolean;
   className?: string;
 }) {
-  const items = useMemo(() => buildItemPresence(rows).slice(0, ITEMS_SHOWN), [rows]);
+  const items = useMemo(() => distinguishingItems(buildItemPresence(rows)).slice(0, ITEMS_SHOWN), [rows]);
   return (
     <Panel className={cn("flex flex-col", className)}>
-      <PanelHeader title="Items in played builds" icon={ShoppingBag} size="sm" />
-      <div className="min-h-0 flex-1 overflow-y-auto px-3">
+      <PanelHeader title="Items that set builds apart" icon={ShoppingBag} size="sm" />
+      <div className={cn(SCROLLBAR_THIN, "relative min-h-0 flex-1 overflow-y-auto px-3")}>
         {pending ? (
           <LoadingState variant="skeleton" size="sm" />
         ) : items.length === 0 ? (
-          <EmptyState variant="plain" title="No build contents" />
+          <EmptyState variant="plain" title="The builds list the same items" />
         ) : (
           <RankedEntityList density="compact" columns="single">
             {items.map((item, index) => (

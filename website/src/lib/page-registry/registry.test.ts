@@ -169,6 +169,7 @@ const NOTHING_TO_FIND: Record<string, string> = {
   item_combos: "rows are combinations of items, not one item",
   item_timing: "a chart per item",
   build_flow: "a flow graph",
+  build_stats: "rows are builds of the hero, already filtered to it",
   abilities: "an ability order per hero, already filtered to it",
   games_over_time: "a chart of the stat the question picks",
   games_by_rank: "a chart per rank",

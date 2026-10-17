@@ -36,6 +36,7 @@ import { Route as TrackerRouteImport } from './routes/tracker'
 import { Route as DotwellKnownApiCatalogRouteImport } from './routes/[.]well-known.api-catalog'
 import { Route as AnalyticsIndexRouteImport } from './routes/analytics.index'
 import { Route as AnalyticsAbilitiesRouteImport } from './routes/analytics.abilities'
+import { Route as AnalyticsBuildsRouteImport } from './routes/analytics.builds'
 import { Route as AnalyticsGamesRouteImport } from './routes/analytics.games'
 import { Route as AnalyticsHeroesRouteImport } from './routes/analytics.heroes'
 import { Route as AnalyticsItemsRouteImport } from './routes/analytics.items'
@@ -252,6 +253,11 @@ const AnalyticsIndexRoute = AnalyticsIndexRouteImport.update({
 const AnalyticsAbilitiesRoute = AnalyticsAbilitiesRouteImport.update({
   id: '/analytics/abilities',
   path: '/analytics/abilities',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AnalyticsBuildsRoute = AnalyticsBuildsRouteImport.update({
+  id: '/analytics/builds',
+  path: '/analytics/builds',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AnalyticsGamesRoute = AnalyticsGamesRouteImport.update({
@@ -708,6 +714,7 @@ export interface FileRoutesByFullPath {
   '/tracker': typeof TrackerRoute
   '/.well-known/api-catalog': typeof DotwellKnownApiCatalogRoute
   '/analytics/abilities': typeof AnalyticsAbilitiesRoute
+  '/analytics/builds': typeof AnalyticsBuildsRoute
   '/analytics/games': typeof AnalyticsGamesRouteWithChildren
   '/analytics/heroes': typeof AnalyticsHeroesRouteWithChildren
   '/analytics/items': typeof AnalyticsItemsRouteWithChildren
@@ -814,6 +821,7 @@ export interface FileRoutesByTo {
   '/tracker': typeof TrackerRoute
   '/.well-known/api-catalog': typeof DotwellKnownApiCatalogRoute
   '/analytics/abilities': typeof AnalyticsAbilitiesRoute
+  '/analytics/builds': typeof AnalyticsBuildsRoute
   '/analytics/team-builder': typeof AnalyticsTeamBuilderRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/community/badge-distribution': typeof CommunityBadgeDistributionRoute
@@ -920,6 +928,7 @@ export interface FileRoutesById {
   '/tracker': typeof TrackerRoute
   '/.well-known/api-catalog': typeof DotwellKnownApiCatalogRoute
   '/analytics/abilities': typeof AnalyticsAbilitiesRoute
+  '/analytics/builds': typeof AnalyticsBuildsRoute
   '/analytics/games': typeof AnalyticsGamesRouteWithChildren
   '/analytics/heroes': typeof AnalyticsHeroesRouteWithChildren
   '/analytics/items': typeof AnalyticsItemsRouteWithChildren
@@ -1033,6 +1042,7 @@ export interface FileRouteTypes {
     | '/tracker'
     | '/.well-known/api-catalog'
     | '/analytics/abilities'
+    | '/analytics/builds'
     | '/analytics/games'
     | '/analytics/heroes'
     | '/analytics/items'
@@ -1139,6 +1149,7 @@ export interface FileRouteTypes {
     | '/tracker'
     | '/.well-known/api-catalog'
     | '/analytics/abilities'
+    | '/analytics/builds'
     | '/analytics/team-builder'
     | '/blog/$slug'
     | '/community/badge-distribution'
@@ -1244,6 +1255,7 @@ export interface FileRouteTypes {
     | '/tracker'
     | '/.well-known/api-catalog'
     | '/analytics/abilities'
+    | '/analytics/builds'
     | '/analytics/games'
     | '/analytics/heroes'
     | '/analytics/items'
@@ -1356,6 +1368,7 @@ export interface RootRouteChildren {
   TrackerRoute: typeof TrackerRoute
   DotwellKnownApiCatalogRoute: typeof DotwellKnownApiCatalogRoute
   AnalyticsAbilitiesRoute: typeof AnalyticsAbilitiesRoute
+  AnalyticsBuildsRoute: typeof AnalyticsBuildsRoute
   AnalyticsGamesRoute: typeof AnalyticsGamesRouteWithChildren
   AnalyticsHeroesRoute: typeof AnalyticsHeroesRouteWithChildren
   AnalyticsItemsRoute: typeof AnalyticsItemsRouteWithChildren
@@ -1574,6 +1587,13 @@ declare module '@tanstack/react-router' {
       path: '/analytics/abilities'
       fullPath: '/analytics/abilities'
       preLoaderRoute: typeof AnalyticsAbilitiesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/analytics/builds': {
+      id: '/analytics/builds'
+      path: '/analytics/builds'
+      fullPath: '/analytics/builds'
+      preLoaderRoute: typeof AnalyticsBuildsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/analytics/games': {
@@ -2397,6 +2417,7 @@ const rootRouteChildren: RootRouteChildren = {
   TrackerRoute: TrackerRoute,
   DotwellKnownApiCatalogRoute: DotwellKnownApiCatalogRoute,
   AnalyticsAbilitiesRoute: AnalyticsAbilitiesRoute,
+  AnalyticsBuildsRoute: AnalyticsBuildsRoute,
   AnalyticsGamesRoute: AnalyticsGamesRouteWithChildren,
   AnalyticsHeroesRoute: AnalyticsHeroesRouteWithChildren,
   AnalyticsItemsRoute: AnalyticsItemsRouteWithChildren,

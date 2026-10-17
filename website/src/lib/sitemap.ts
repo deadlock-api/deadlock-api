@@ -23,6 +23,7 @@ const STATIC_ENTRIES: SitemapEntry[] = [
   { path: "/" },
   { path: "/analytics/heroes" },
   { path: "/analytics/items" },
+  { path: "/analytics/builds" },
   { path: "/analytics/abilities" },
   { path: "/community/leaderboard" },
   { path: "/community/badge-distribution" },

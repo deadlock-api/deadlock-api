@@ -4,6 +4,7 @@ import type {
   AnalyticsApiBuffStatsRequest,
   AnalyticsApiGameStatsRequest,
   AnalyticsApiHeroBanStatsRequest,
+  AnalyticsApiHeroBuildStatsRequest,
   AnalyticsApiHeroCombStatsRequest,
   AnalyticsApiHeroCountersStatsRequest,
   AnalyticsApiHeroScoreboardRequest,
@@ -58,6 +59,10 @@ export const queryKeys = {
       ["api-item-permutation-stats", params] as const,
     heroStats: (params: AnalyticsApiHeroStatsRequest) => ["api-hero-stats", params] as const,
     heroBanStats: (params: AnalyticsApiHeroBanStatsRequest) => ["api-hero-ban-stats", params] as const,
+    heroBuildStats: (params: AnalyticsApiHeroBuildStatsRequest) => ["api-hero-build-stats", params] as const,
+    /** The latest version of each build, `buildIds` sorted so one set of builds is one cache entry. */
+    heroBuildMeta: (heroId: number, buildIds: readonly number[]) =>
+      ["graphql-hero-build-meta", heroId, buildIds] as const,
     heroSwapStats: (params: AnalyticsApiHeroSwapStatsRequest) => ["api-hero-swap-stats", params] as const,
     heroTierInputs: (stats: AnalyticsApiHeroStatsRequest, bans: AnalyticsApiHeroBanStatsRequest | null) =>
       ["hero-tier-inputs", stats, bans] as const,

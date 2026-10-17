@@ -7,6 +7,7 @@ import {
   buildItemPresence,
   type BuildMeta,
   buildRows,
+  distinguishingItems,
   summarizeBuilds,
 } from "./build-stats";
 
@@ -77,4 +78,19 @@ test("a refund takes back the ability's last point", () => {
     { ability_id: 2, currency_type: 1, delta: -1 },
   ]);
   assert.deepEqual(order, [1, 2, 2]);
+});
+
+test("the distinguishing items leave out the ones nearly every build or almost no build lists", () => {
+  const item = (itemId: number, share: number, vsWithout: number | null) => ({
+    itemId,
+    builds: 1,
+    share,
+    winRate: 0.5,
+    vsWithout,
+  });
+  const items = distinguishingItems([item(1, 1, null), item(2, 0.5, -0.02), item(3, 0.3, 0.04), item(4, 0.05, 0.2)]);
+  assert.deepEqual(
+    items.map((i) => i.itemId),
+    [3, 2],
+  );
 });
