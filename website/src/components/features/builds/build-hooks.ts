@@ -60,6 +60,23 @@ export function useBuildItemUsage({
   return { usage, pending, failed: query.isError };
 }
 
+/**
+ * The performance curve request of a hero under the page's filters. `resolution: 0` answers at fixed game times (every
+ * three minutes up to fifteen, every five after), any other at that step of percent of the match.
+ */
+export function performanceCurveParams(heroId: number, filters: BuildPurchaseFilters, resolution: number) {
+  return {
+    heroIds: String(heroId),
+    gameMode: "normal" as const,
+    matchMode: filters.matchMode,
+    minAverageBadge: filters.minAverageBadge,
+    maxAverageBadge: filters.maxAverageBadge,
+    minUnixTimestamp: filters.minUnixTimestamp,
+    maxUnixTimestamp: filters.maxUnixTimestamp,
+    resolution,
+  };
+}
+
 /** The playstyle metrics the performance curve has a spread for, by metric key, with the curve's field. */
 const CURVE_FIELDS = {
   soulsPerMin: "net_worth",
@@ -92,16 +109,7 @@ export function useEndOfMatchDistributions({
   filters: BuildPurchaseFilters;
   active: boolean;
 }): Partial<Record<keyof typeof CURVE_FIELDS, EndOfMatchDistribution>> {
-  const params = {
-    heroIds: String(heroId),
-    gameMode: "normal" as const,
-    matchMode: filters.matchMode,
-    minAverageBadge: filters.minAverageBadge,
-    maxAverageBadge: filters.maxAverageBadge,
-    minUnixTimestamp: filters.minUnixTimestamp,
-    maxUnixTimestamp: filters.maxUnixTimestamp,
-    resolution: 10,
-  };
+  const params = performanceCurveParams(heroId, filters, 10);
   const buildQuery = useQuery({
     ...playerPerformanceCurveQueryOptions({ ...params, heroBuildId: buildId }),
     enabled: active,

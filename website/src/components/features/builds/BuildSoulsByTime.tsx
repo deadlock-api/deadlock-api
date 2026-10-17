@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { CartesianGrid, Line, LineChart, ReferenceLine, Tooltip, XAxis, YAxis } from "recharts";
 
+import { performanceCurveParams } from "~/components/features/builds/build-hooks";
 import { ChartEmpty, ChartLoading } from "~/components/patterns/charts/ChartStates";
 import { ChartSurface } from "~/components/patterns/charts/ChartSurface";
 import {
@@ -46,17 +47,7 @@ export function BuildSoulsByTime({
   /** False while the selection is still moving: nothing is asked for yet. */
   active?: boolean;
 }) {
-  // `resolution: 0` answers at fixed game times: every three minutes up to fifteen, every five after.
-  const params = {
-    heroIds: String(heroId),
-    gameMode: "normal" as const,
-    matchMode: filters.matchMode,
-    minAverageBadge: filters.minAverageBadge,
-    maxAverageBadge: filters.maxAverageBadge,
-    minUnixTimestamp: filters.minUnixTimestamp,
-    maxUnixTimestamp: filters.maxUnixTimestamp,
-    resolution: 0,
-  };
+  const params = performanceCurveParams(heroId, filters, 0);
   const buildQuery = useQuery({
     ...playerPerformanceCurveQueryOptions({ ...params, heroBuildId: buildId }),
     enabled: active,
