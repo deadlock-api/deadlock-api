@@ -10,6 +10,8 @@ import { cn } from "~/lib/utils";
 const VALUE_COLOR = SERIES_COLORS[3];
 const REFERENCE_COLOR = CHART_COLOR.neutral;
 
+const formatTick = (x: number) => x.toLocaleString("en-US", { maximumFractionDigits: 1 });
+
 /**
  * Two distributions as normal curves fitted to their mean and standard deviation: the subject's (`value`, in a series
  * color) over a reference's (dashed, neutral), each with a line at its mean. The curves are approximations from two
@@ -19,7 +21,7 @@ export function GaussianComparison({
   value,
   reference,
   label,
-  format = (x) => x.toLocaleString("en-US", { maximumFractionDigits: 1 }),
+  format = formatTick,
   bounded = false,
   className,
   ...props
