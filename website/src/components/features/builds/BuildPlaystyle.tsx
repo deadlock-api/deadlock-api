@@ -104,10 +104,11 @@ export function BuildPlaystyle({
       </KeyValueList>
     </section>
   );
-  // Two columns and two rows: combat beside economy, then the per-time souls beside survival and support.
+  // Two columns and two rows: combat beside economy, then the per-time souls beside survival and support. A panel with
+  // the page's full width puts all four in one row.
   return (
     <div className="@container">
-      <div className="grid @lg:grid-cols-2">
+      <div className="grid @lg:grid-cols-2 @6xl:grid-cols-4">
         {section(GROUPS[0])}
         {section(GROUPS[1])}
         {children && <div className="flex flex-col">{children}</div>}
