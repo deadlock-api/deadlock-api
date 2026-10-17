@@ -72,6 +72,9 @@ pub(super) struct PlayerFilters<'a> {
     pub exclude_item_ids: Option<&'a [u32]>,
     pub ability_order_prefix: Option<&'a [u32]>,
     pub ability_unlock_order_prefix: Option<&'a [u32]>,
+    /// The hero build the player had selected when the match started. Only demo-processed matches record one, and the
+    /// rollups have no build dimension: an endpoint that takes it must read the base table when it is set.
+    pub hero_build_id: Option<u64>,
 }
 
 impl PlayerFilters<'_> {
@@ -111,6 +114,9 @@ impl PlayerFilters<'_> {
             && !ids.is_empty()
         {
             filters.push(ability_unlock_order_prefix_filter(ids));
+        }
+        if let Some(hero_build_id) = self.hero_build_id {
+            filters.push(format!("hero_build_id = {hero_build_id}"));
         }
         filters
     }

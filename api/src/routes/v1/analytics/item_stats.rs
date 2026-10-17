@@ -1085,6 +1085,7 @@ fn build_query(query: &ItemStatsQuery) -> String {
         exclude_item_ids: query.exclude_item_ids.as_deref(),
         ability_order_prefix: query.ability_order_prefix.as_deref(),
         ability_unlock_order_prefix: query.ability_unlock_order_prefix.as_deref(),
+        hero_build_id: query.hero_build_id,
         ..Default::default()
     };
     let mut player_filters = player_filter_inputs.build();
@@ -1102,9 +1103,6 @@ fn build_query(query: &ItemStatsQuery) -> String {
     ));
     if let Some(chains) = &query.item_order {
         player_filters.extend(chains.iter().filter_map(|c| item_order_predicate(c)));
-    }
-    if let Some(hero_build_id) = query.hero_build_id {
-        player_filters.push(format!("hero_build_id = {hero_build_id}"));
     }
     let player_filters = join_filters(&player_filters);
 

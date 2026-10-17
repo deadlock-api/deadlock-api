@@ -149,6 +149,7 @@ pub(super) fn plan(query: &PlayerPerformanceCurveQuery, now: i64) -> Option<AggP
         || is_non_empty(query.exclude_item_ids.as_deref())
         || is_non_empty(query.ability_order_prefix.as_deref())
         || is_non_empty(query.ability_unlock_order_prefix.as_deref())
+        || query.hero_build_id.is_some()
         || query.min_networth.is_some()
         || query.max_networth.is_some()
         || query.min_match_id.is_some()
