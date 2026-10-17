@@ -81,7 +81,19 @@ export function BuildInMatches({
 
   return (
     <Section title={`${name} in matches`} size="sm" className="gap-2">
-      <div className="grid gap-3 @3xl:grid-cols-2 @7xl:grid-cols-5">
+      {/* Playstyle first: a row of its own while three panels fit beside each other, two columns of five when all do. */}
+      <div className="grid gap-3 @4xl:grid-cols-3 @8xl:grid-cols-5">
+        <Panel className="flex flex-col @4xl:col-span-3 @8xl:col-span-2">
+          <PanelHeader title="Playstyle vs. average build" icon={Activity} size="sm" />
+          <BuildPlaystyle
+            totals={performance}
+            average={averagePerformance}
+            pending={performancePending}
+            distributions={distributions}
+          >
+            <BuildSoulsByTime heroId={heroId} buildId={row.hero_build_id} filters={filters} active={active} />
+          </BuildPlaystyle>
+        </Panel>
         <Panel className="flex flex-col">
           <PanelHeader title="Purchases" icon={ShoppingBag} size="sm" />
           {pending ? (
@@ -154,17 +166,6 @@ export function BuildInMatches({
               )}
             </>
           )}
-        </Panel>
-        <Panel className="flex flex-col @7xl:col-span-2">
-          <PanelHeader title="Playstyle vs. average build" icon={Activity} size="sm" />
-          <BuildPlaystyle
-            totals={performance}
-            average={averagePerformance}
-            pending={performancePending}
-            distributions={distributions}
-          >
-            <BuildSoulsByTime heroId={heroId} buildId={row.hero_build_id} filters={filters} active={active} />
-          </BuildPlaystyle>
         </Panel>
         <Panel className="flex flex-col">
           <PanelHeader title="Skill order and players" icon={ListOrdered} size="sm" />
