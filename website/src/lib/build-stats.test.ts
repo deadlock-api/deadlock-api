@@ -1,0 +1,80 @@
+import assert from "node:assert/strict";
+import { test } from "node:test";
+
+import {
+  buildAbilityOrder,
+  buildCategoryName,
+  buildItemPresence,
+  type BuildMeta,
+  buildRows,
+  summarizeBuilds,
+} from "./build-stats";
+
+const stat = (id: number, wins: number, losses: number) => ({
+  hero_build_id: id,
+  wins,
+  losses,
+  matches: wins + losses,
+  players: wins + losses,
+});
+
+const meta = (buildId: number, itemIds: number[]): BuildMeta => ({
+  buildId,
+  name: `Build ${buildId}`,
+  authorId: 1,
+  version: 1,
+  updatedAt: 0,
+  language: 0,
+  categories: [{ name: "", itemIds }],
+  abilityOrder: [],
+});
+
+test("a build is above or below average only when its whole interval is", () => {
+  const rows = buildRows([stat(1, 700, 300), stat(2, 300, 700), stat(3, 6, 4)]);
+  assert.deepEqual(
+    rows.map((row) => row.verdict),
+    ["above", "below", "even"],
+  );
+  assert.equal(rows[0].share, 1000 / 2010);
+});
+
+test("the most reliable build is the largest lower bound, not the highest win rate", () => {
+  const summary = summarizeBuilds(buildRows([stat(1, 8, 2), stat(2, 600, 400)]));
+  assert.equal(summary.mostReliable?.hero_build_id, 2);
+  assert.equal(summary.matches, 1010);
+  assert.equal(summary.topShare, 1000 / 1010);
+});
+
+test("item presence is weighted by matches and compared with the builds without the item", () => {
+  const rows = buildRows(
+    [stat(1, 60, 40), stat(2, 40, 60)],
+    new Map([
+      [1, meta(1, [10, 20, 10])],
+      [2, meta(2, [20])],
+    ]),
+  );
+  const [shared, only] = buildItemPresence(rows);
+  assert.deepEqual(shared, { itemId: 20, builds: 2, share: 1, winRate: 0.5, vsWithout: null });
+  assert.equal(only.itemId, 10);
+  assert.equal(only.share, 0.5);
+  assert.ok(Math.abs(only.vsWithout! - 0.2) < 1e-9);
+});
+
+test("category keys read as the game names them", () => {
+  assert.equal(buildCategoryName("#Citadel_HeroBuilds_EarlyGame"), "Early Game");
+  assert.equal(buildCategoryName("#Citadel_HeroBuilds_Lane"), "Laning");
+  assert.equal(buildCategoryName("#Citadel_HeroBuilds_SomethingNew"), "Something New");
+  assert.equal(buildCategoryName("  "), null);
+  assert.equal(buildCategoryName("CORE"), "CORE");
+});
+
+test("a refund takes back the ability's last point", () => {
+  const order = buildAbilityOrder([
+    { ability_id: 1, currency_type: 2, delta: -1 },
+    { ability_id: 2, currency_type: 2, delta: -1 },
+    { ability_id: 1, currency_type: 1, delta: -1 },
+    { ability_id: 1, currency_type: 1, delta: 1 },
+    { ability_id: 2, currency_type: 1, delta: -1 },
+  ]);
+  assert.deepEqual(order, [1, 2, 2]);
+});

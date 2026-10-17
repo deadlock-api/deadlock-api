@@ -37,6 +37,10 @@ pub(super) fn router() -> OpenApiRouter<AppState> {
         .routes(routes!(live_url::urls, live_url::ingest_urls))
         .routes(routes!(salts::salts))
         .route("/to-fetch", axum::routing::get(to_fetch::matches_to_fetch))
+        .route(
+            "/to-fetch/release",
+            axum::routing::post(to_fetch::release_matches_to_fetch),
+        )
         .merge(
             OpenApiRouter::new()
                 .routes(routes!(metadata::metadata))
