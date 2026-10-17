@@ -65,7 +65,7 @@ export function buildBucketsQueryOptions(
   return queryOptions({
     queryKey: [...queryKeys.analytics.heroBuildStats(params), bucket] as const,
     queryFn: async (): Promise<{ bucket: number; wins: number; matches: number }[]> => {
-      const response = await api.analytics_api.heroBuildStats(params, { params: { bucket } });
+      const response = await api.analytics_api.heroBuildStats({ ...params, bucket });
       return response.data.map(({ bucket, wins, matches }) => ({ bucket, wins, matches }));
     },
     staleTime: CACHE_DURATIONS.ONE_HOUR,
