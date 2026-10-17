@@ -11,7 +11,14 @@ import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { useKnownHeroId } from "~/hooks/useAssetById";
 import { useDateRangeState } from "~/hooks/useDateRangeState";
 import { useModeState } from "~/hooks/useModeState";
-import { DEFAULT_MATCH_MODE, DEFAULT_MODE, getEffectiveRankRange, MODE_CONFIG } from "~/lib/game-mode";
+import {
+  DEFAULT_MATCH_MODE,
+  DEFAULT_MODE,
+  getEffectiveRankRange,
+  MATCH_MODES,
+  MODE_CONFIG,
+  modeFromParams,
+} from "~/lib/game-mode";
 import { prefetchCached } from "~/lib/prefetch-safe";
 import { DEFAULT_RANK_RANGE } from "~/lib/rank-utils";
 import { defaultTemporalCoverage, defaultUnixRange } from "~/lib/seasons";
@@ -37,24 +44,48 @@ const together = { limitUrlUpdates: throttle(50) };
 
 export const Route = createFileRoute("/analytics/builds")({
   component: BuildsPage,
-  // The hero filter lives in the URL under nuqs; read it here so the loader warms the hero the page will show.
+  // The filters live in the URL under nuqs; read them here so the loader warms the request the page will make, and a
+  // shared link with a rank or mode renders its builds on the server too. A custom date range is left to the browser.
   loaderDeps: ({ search }) => {
-    const heroId = (search as { hero?: unknown }).hero;
-    return { heroId: typeof heroId === "number" && Number.isInteger(heroId) ? heroId : DEFAULT_HERO_ID };
+    const { hero, min_rank, max_rank, min_matches, game_mode, match_mode, date_range } = search as Record<
+      string,
+      unknown
+    >;
+    const integer = (value: unknown, fallback: number) =>
+      typeof value === "number" && Number.isInteger(value) ? value : fallback;
+    const urlMode = modeFromParams(
+      game_mode === "street_brawl" ? "street_brawl" : "normal",
+      MATCH_MODES.find((mode) => mode === match_mode) ?? DEFAULT_MATCH_MODE,
+    );
+    const mode = urlMode === "street_brawl" ? DEFAULT_MODE : urlMode;
+    const { effectiveMinRankId, effectiveMaxRankId } = getEffectiveRankRange(
+      mode,
+      integer(min_rank, DEFAULT_RANK_RANGE.min),
+      integer(max_rank, DEFAULT_RANK_RANGE.max),
+    );
+    return {
+      heroId: integer(hero, DEFAULT_HERO_ID),
+      minRankId: effectiveMinRankId,
+      maxRankId: effectiveMaxRankId,
+      minMatches: integer(min_matches, DEFAULT_MIN_MATCHES),
+      matchMode: MODE_CONFIG[mode].matchMode,
+      customDates: date_range !== undefined,
+    };
   },
   loader: async ({ context: { queryClient, preferences }, deps }) => {
     const seasons = await loadSeasons(queryClient);
     const range = defaultUnixRange(seasons, preferences.dateFilter);
+    if (deps.customDates) return { coverage: defaultTemporalCoverage(seasons, preferences.dateFilter) };
     const stats = await prefetchCached(
       queryClient,
       heroBuildStatsQueryOptions(
         heroBuildStatsRequest({
           heroId: deps.heroId,
-          minRankId: DEFAULT_RANK_RANGE.min,
-          maxRankId: DEFAULT_RANK_RANGE.max,
+          minRankId: deps.minRankId,
+          maxRankId: deps.maxRankId,
           ...range,
-          minMatches: DEFAULT_MIN_MATCHES,
-          matchMode: DEFAULT_MATCH_MODE,
+          minMatches: deps.minMatches,
+          matchMode: deps.matchMode,
         }),
       ),
     );
