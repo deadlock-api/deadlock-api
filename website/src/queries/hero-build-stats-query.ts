@@ -134,11 +134,13 @@ export function buildItemPurchasesQueryOptions(buildId: number, params: BuildPur
     queryKey: queryKeys.analytics.itemStats(request),
     queryFn: async (): Promise<BuildItemPurchase[]> => {
       const response = await api.analytics_api.itemStats(request);
-      return response.data.map(({ item_id, wins, matches, avg_buy_time_s }) => ({
+      return response.data.map(({ item_id, wins, matches, avg_buy_time_s, sold, avg_sell_time_s }) => ({
         item_id,
         wins,
         matches,
         avg_buy_time_s,
+        sold: sold ?? 0,
+        avg_sell_time_s,
       }));
     },
     staleTime: CACHE_DURATIONS.ONE_HOUR,

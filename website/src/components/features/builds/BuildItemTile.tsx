@@ -45,6 +45,12 @@ export function BuildItemTile({
             <TooltipStats>
               <TooltipStat label="Bought in" value={`${formatShare(rate)} of matches`} />
               {usage && <TooltipStat label="Bought at" value={clock(usage.avgBuyTimeS)} />}
+              {usage && usage.soldRate > 0 && (
+                <TooltipStat
+                  label="Sold"
+                  value={`${formatShare(usage.soldRate)} of buys, at ${clock(usage.avgSellTimeS)}`}
+                />
+              )}
               {usage && <TooltipStat label="Win rate when bought" value={formatPercent(usage.winRate)} />}
             </TooltipStats>
           )}

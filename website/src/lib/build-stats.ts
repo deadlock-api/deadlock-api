@@ -211,6 +211,10 @@ export interface BuildItemUsage {
   /** Win rate of the build's matches in which the item was bought. */
   winRate: number;
   avgBuyTimeS: number;
+  /** Share of the purchases that were sold again (not upgraded). */
+  soldRate: number;
+  /** When the sold ones were sold, on average; 0 when none was. */
+  avgSellTimeS: number;
 }
 
 /** One item's purchases by the players of one build, as the item stats with a `hero_build_id` count them. */
@@ -219,6 +223,8 @@ export interface BuildItemPurchase {
   wins: number;
   matches: number;
   avg_buy_time_s: number;
+  sold: number;
+  avg_sell_time_s: number;
 }
 
 /**
@@ -240,6 +246,8 @@ export function buildItemUsage(
       boughtRate: matches > 0 ? Math.min(1, row.matches / matches) : 0,
       winRate: row.wins / row.matches,
       avgBuyTimeS: row.avg_buy_time_s,
+      soldRate: row.sold / row.matches,
+      avgSellTimeS: row.avg_sell_time_s,
     });
   }
   const listedSet = new Set(listed);
