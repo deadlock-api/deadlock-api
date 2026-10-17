@@ -11,6 +11,7 @@ import {
   CHART_X_AXIS,
   CHART_X_LABEL,
   CHART_Y_AXIS,
+  CHART_Y_LABEL,
 } from "~/components/patterns/charts/theme";
 import { TooltipCard, TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
 import type { BuildRow } from "~/lib/build-stats";
@@ -146,6 +147,7 @@ export function BuildScatterChart({
             domain={yDomain}
             ticks={percentTicks(yDomain)}
             tickFormatter={(value: number) => formatPercent(value, 0)}
+            label={{ ...CHART_Y_LABEL, value: "Win rate" }}
           />
           <ReferenceLine y={average} {...CHART_BASELINE} ifOverflow="extendDomain" />
           <Tooltip
