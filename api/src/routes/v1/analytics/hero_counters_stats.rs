@@ -1,3 +1,5 @@
+use core::fmt::Write;
+
 use axum::Json;
 use axum::extract::State;
 use axum::response::IntoResponse;
@@ -169,7 +171,7 @@ fn build_query(query: &HeroCounterStatsQuery) -> String {
         ..Default::default()
     });
     if let Some(hero_build_id) = query.hero_build_id {
-        p1_where.push_str(&format!(" AND hero_build_id = {hero_build_id}"));
+        let _ = write!(p1_where, " AND hero_build_id = {hero_build_id}");
     }
     let p2_where = side_where(PlayerFilters {
         min_networth: query.min_enemy_networth,
