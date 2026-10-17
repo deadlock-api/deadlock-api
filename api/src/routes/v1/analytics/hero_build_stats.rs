@@ -51,6 +51,65 @@ impl BucketQuery {
     }
 }
 
+/// The performance totals, in the order of their [`HeroBuildStats`] fields: (column, `match_player` expression).
+const PERFORMANCE: &[(&str, &str)] = &[
+    ("total_kills", "sum(mp.kills)"),
+    ("total_deaths", "sum(mp.deaths)"),
+    ("total_assists", "sum(mp.assists)"),
+    ("total_net_worth", "sum(mp.net_worth)"),
+    ("total_last_hits", "sum(mp.last_hits)"),
+    ("total_denies", "sum(mp.denies)"),
+    ("total_player_damage", "sum(mp.max_player_damage)"),
+    (
+        "total_player_damage_taken",
+        "sum(mp.max_player_damage_taken)",
+    ),
+    ("total_boss_damage", "sum(mp.max_boss_damage)"),
+    ("total_creep_damage", "sum(mp.max_creep_damage)"),
+    ("total_neutral_damage", "sum(mp.max_neutral_damage)"),
+    ("total_max_health", "sum(mp.max_max_health)"),
+    ("total_shots_hit", "sum(mp.max_shots_hit)"),
+    ("total_shots_missed", "sum(mp.max_shots_missed)"),
+    ("total_hero_bullets_hit", "sum(mp.max_hero_bullets_hit)"),
+    (
+        "total_hero_bullets_hit_crit",
+        "sum(mp.max_hero_bullets_hit_crit)",
+    ),
+    ("total_self_healing", "sum(mp.max_self_healing)"),
+    ("total_player_healing", "sum(mp.max_player_healing)"),
+    ("total_teammate_healing", "sum(mp.max_teammate_healing)"),
+    ("total_damage_mitigated", "sum(mp.max_damage_mitigated)"),
+    ("total_creep_kills", "sum(mp.max_creep_kills)"),
+    ("total_neutral_kills", "sum(mp.max_neutral_kills)"),
+    ("total_level", "sum(mp.max_level)"),
+    ("total_duration_s", "sum(mp.duration_s)"),
+    (
+        "avg_average_badge",
+        "ifNotFinite(avgIf(mp.average_badge, mp.average_badge IS NOT NULL), 0)",
+    ),
+];
+
+/// The performance columns: their aggregates, or typed nulls (read nothing) when not asked for. They triple the bytes
+/// a query reads, so a plain request does without them.
+fn performance_columns(include: bool) -> String {
+    PERFORMANCE
+        .iter()
+        .map(|(column, expr)| {
+            let ty = if *column == "avg_average_badge" {
+                "Float64"
+            } else {
+                "UInt64"
+            };
+            if include {
+                format!("toNullable({expr}) AS {column}")
+            } else {
+                format!("CAST(NULL, 'Nullable({ty})') AS {column}")
+            }
+        })
+        .collect::<Vec<_>>()
+        .join(",\n        ")
+}
+
 #[derive(Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash)]
 pub(super) struct HeroBuildStatsPath {
     /// The hero ID to fetch build stats for. See more: <https://api.deadlock-api.com/v1/assets/heroes>
@@ -98,6 +157,9 @@ pub(super) struct HeroBuildStatsQuery {
     max_match_id: Option<u64>,
     /// Filter results for a specific hero build.
     hero_build_id: Option<u64>,
+    /// Add the performance totals (kills, souls, damage, healing, accuracy, match length, average badge) to every
+    /// build. They make the query read about three times as much data, so they are left out unless asked for.
+    include_performance: Option<bool>,
     /// The minimum number of matches played for a build to be included in the response.
     #[serde(default = "default_min_matches_u64")]
     #[param(minimum = 1, default = 20)]
@@ -152,6 +214,64 @@ pub struct HeroBuildStats {
     pub matches: u64,
     /// The number of unique players who used this build.
     pub players: u64,
+    /// Sum of the kills of every match with this build. Average per match: `total_kills / matches`. This and the
+    /// other totals are only present with `include_performance=true`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub total_kills: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub total_deaths: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub total_assists: Option<u64>,
+    /// Sum of the final net worth (souls).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub total_net_worth: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub total_last_hits: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub total_denies: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub total_player_damage: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub total_player_damage_taken: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub total_boss_damage: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub total_creep_damage: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub total_neutral_damage: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub total_max_health: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub total_shots_hit: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub total_shots_missed: Option<u64>,
+    /// Bullets that hit an enemy hero.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub total_hero_bullets_hit: Option<u64>,
+    /// Hero hits that were crits (headshots).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub total_hero_bullets_hit_crit: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub total_self_healing: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub total_player_healing: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub total_teammate_healing: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub total_damage_mitigated: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub total_creep_kills: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub total_neutral_kills: Option<u64>,
+    /// Sum of the final hero levels.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub total_level: Option<u64>,
+    /// Sum of the match durations (seconds), for per-minute rates.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub total_duration_s: Option<u64>,
+    /// Average badge (tier = first digits, subtier = last digit) of the matches with this build that have one; 0 without any. See more: <https://api.deadlock-api.com/v1/assets/ranks>
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub avg_average_badge: Option<f64>,
 }
 
 fn build_query(hero_id: u32, query: &HeroBuildStatsQuery) -> String {
@@ -181,6 +301,7 @@ fn build_query(hero_id: u32, query: &HeroBuildStatsQuery) -> String {
     let player_filters = join_filters(&player_filters);
     let min_matches = query.min_matches.unwrap_or(DEFAULT_MIN_MATCHES);
     let bucket_expr = query.bucket.select_expr();
+    let performance = performance_columns(query.include_performance.unwrap_or_default());
     format!(
         "
     SELECT
@@ -190,7 +311,8 @@ fn build_query(hero_id: u32, query: &HeroBuildStatsQuery) -> String {
         countIf(mp.won) AS wins,
         countIf(NOT mp.won) AS losses,
         wins + losses AS matches,
-        uniq(mp.account_id) AS players
+        uniq(mp.account_id) AS players,
+        {performance}
     FROM match_player mp
     WHERE {match_mode_filter} AND mp.game_mode = 1
       AND mp.demo_processed = 1 AND mp.hero_build_id IS NOT NULL
@@ -325,7 +447,55 @@ mod tests {
             losses: 1,
             matches: 2,
             players: 2,
+            total_kills: None,
+            total_deaths: None,
+            total_assists: None,
+            total_net_worth: None,
+            total_last_hits: None,
+            total_denies: None,
+            total_player_damage: None,
+            total_player_damage_taken: None,
+            total_boss_damage: None,
+            total_creep_damage: None,
+            total_neutral_damage: None,
+            total_max_health: None,
+            total_shots_hit: None,
+            total_shots_missed: None,
+            total_hero_bullets_hit: None,
+            total_hero_bullets_hit_crit: None,
+            total_self_healing: None,
+            total_player_healing: None,
+            total_teammate_healing: None,
+            total_damage_mitigated: None,
+            total_creep_kills: None,
+            total_neutral_kills: None,
+            total_level: None,
+            total_duration_s: None,
+            avg_average_badge: None,
         }
+    }
+
+    #[test]
+    fn performance_totals_are_selected_in_struct_order() {
+        let sql = build_query(
+            2,
+            &HeroBuildStatsQuery {
+                include_performance: Some(true),
+                ..Default::default()
+            },
+        );
+        crate::utils::proptest_utils::assert_valid_sql(&sql);
+        let at = |column: &str| sql.find(&format!("AS {column}")).unwrap();
+        assert!(at("players") < at("total_kills"));
+        assert!(at("total_level") < at("total_duration_s"));
+        assert!(at("total_duration_s") < at("avg_average_badge"));
+        if std::env::var_os("PRINT_HERO_BUILD_STATS_SQL").is_some() {
+            println!("{sql}");
+        }
+        let plain = build_query(2, &HeroBuildStatsQuery::default());
+        crate::utils::proptest_utils::assert_valid_sql(&plain);
+        assert!(!plain.contains("sum(mp.kills)"));
+        assert!(plain.contains("CAST(NULL, 'Nullable(UInt64)') AS total_kills"));
     }
 
     #[test]
