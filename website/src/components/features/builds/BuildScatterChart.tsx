@@ -126,7 +126,9 @@ export function BuildScatterChart({
     without_items: parseAsArrayOf(parseAsInteger).withDefault([]),
   });
   const prices = useItemPrices();
-  const xKey: XKey = performance ? chosenX : "matches";
+  // The shares need only the builds' items; the playstyle axes wait for the performance numbers.
+  const needsPerformance = (key: XKey) => key !== "matches" && !SHARE_SLOT[key];
+  const xKey: XKey = performance || !needsPerformance(chosenX) ? chosenX : "matches";
   const shareSlot = SHARE_SLOT[xKey];
   const xMetric = BUILD_METRICS.find((metric) => metric.key === xKey);
   const xLabel = X_OPTIONS.find((option) => option.key === xKey)!.label;
@@ -176,14 +178,14 @@ export function BuildScatterChart({
       title={`${linear ? xLabel : "Popularity"} vs. win rate`}
       actions={
         <>
-          {/* Always there, disabled until the playstyle numbers load, so the header never changes height. */}
-          <Select value={xKey} onValueChange={(value) => void setX(value as XKey)} disabled={!performance}>
+          {/* Always there, its playstyle options disabled until their numbers load, so the header never changes height. */}
+          <Select value={xKey} onValueChange={(value) => void setX(value as XKey)}>
             <SelectTrigger size="sm" aria-label="X axis" className="w-40">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               {X_OPTIONS.map((option) => (
-                <SelectItem key={option.key} value={option.key}>
+                <SelectItem key={option.key} value={option.key} disabled={!performance && needsPerformance(option.key)}>
                   {option.label}
                 </SelectItem>
               ))}
