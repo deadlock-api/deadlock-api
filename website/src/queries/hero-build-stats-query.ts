@@ -3,13 +3,7 @@ import type { AnalyticsApiHeroBuildStatsRequest, AnalyticsApiItemStatsRequest } 
 
 import { CACHE_DURATIONS } from "~/constants/cache";
 import { api } from "~/lib/api";
-import {
-  buildAbilityOrder,
-  type BuildBucketRow,
-  type BuildItemPurchase,
-  type BuildMeta,
-  type BuildStatRow,
-} from "~/lib/build-stats";
+import { buildAbilityOrder, type BuildItemPurchase, type BuildMeta, type BuildStatRow } from "~/lib/build-stats";
 import { API_ORIGIN } from "~/lib/constants";
 import { GraphqlHttpError } from "~/lib/graphql";
 
@@ -26,25 +20,6 @@ export function heroBuildStatsQueryOptions(params: AnalyticsApiHeroBuildStatsReq
         losses,
         matches,
         players,
-      }));
-    },
-    staleTime: CACHE_DURATIONS.ONE_HOUR,
-  });
-}
-
-/** The hero build stats split by `params.bucket` (a week, a rank badge): one row per build and bucket. */
-export function heroBuildBucketsQueryOptions(
-  params: AnalyticsApiHeroBuildStatsRequest & { bucket: NonNullable<AnalyticsApiHeroBuildStatsRequest["bucket"]> },
-) {
-  return queryOptions({
-    queryKey: queryKeys.analytics.heroBuildStats(params),
-    queryFn: async (): Promise<BuildBucketRow[]> => {
-      const response = await api.analytics_api.heroBuildStats(params);
-      return response.data.map(({ hero_build_id, bucket, wins, matches }) => ({
-        hero_build_id,
-        bucket,
-        wins,
-        matches,
       }));
     },
     staleTime: CACHE_DURATIONS.ONE_HOUR,

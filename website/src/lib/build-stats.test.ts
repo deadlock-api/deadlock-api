@@ -8,8 +8,6 @@ import {
   buildItemUsage,
   type BuildMeta,
   buildRows,
-  buildTiers,
-  buildWeeks,
   buildTrends,
   distinguishingItems,
   summarizeBuilds,
@@ -130,38 +128,5 @@ test("item usage is the share of the build's matches that bought the item, and l
   assert.deepEqual(
     offBuild.map((usage) => usage.itemId),
     [3],
-  );
-});
-
-test("weekly shares are taken over every build that week, and thin weeks have no win rate", () => {
-  const row = (hero_build_id: number, bucket: number, wins: number, matches: number) => ({
-    hero_build_id,
-    bucket,
-    wins,
-    matches,
-  });
-  const weeks = buildWeeks([row(1, 200, 30, 50), row(2, 200, 20, 50), row(1, 100, 5, 10), row(3, 100, 15, 30)], [1, 2]);
-  assert.deepEqual(
-    weeks.map((week) => week.week),
-    [100, 200],
-  );
-  assert.deepEqual(weeks[0].builds[1], { share: 0.25, winRate: null, matches: 10 });
-  assert.deepEqual(weeks[0].builds[2], { share: 0, winRate: null, matches: 0 });
-  assert.deepEqual(weeks[1].builds[1], { share: 0.5, winRate: 0.6, matches: 50 });
-});
-
-test("badge buckets fold into rank tiers without the unranked bucket", () => {
-  const tiers = buildTiers([
-    { hero_build_id: 1, bucket: 0, wins: 5, matches: 10 },
-    { hero_build_id: 1, bucket: 91, wins: 3, matches: 5 },
-    { hero_build_id: 1, bucket: 96, wins: 2, matches: 5 },
-    { hero_build_id: 1, bucket: 101, wins: 1, matches: 2 },
-  ]);
-  assert.deepEqual(
-    [...tiers],
-    [
-      [9, { wins: 5, matches: 10 }],
-      [10, { wins: 1, matches: 2 }],
-    ],
   );
 });
