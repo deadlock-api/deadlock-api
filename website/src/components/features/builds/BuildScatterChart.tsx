@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { CartesianGrid, ReferenceLine, Scatter, ScatterChart, Tooltip, XAxis, YAxis } from "recharts";
 
 import { ChartCard } from "~/components/patterns/charts/ChartCard";
@@ -13,9 +14,11 @@ import {
   CHART_Y_AXIS,
   CHART_Y_LABEL,
 } from "~/components/patterns/charts/theme";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
 import { TooltipCard, TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
+import { BUILD_METRICS, type BuildPerformanceTotals } from "~/lib/build-performance";
 import type { BuildRow } from "~/lib/build-stats";
-import { percentTicks, winRateDomain } from "~/lib/chart-axis";
+import { niceTicks, percentTicks, winRateDomain } from "~/lib/chart-axis";
 import { formatPercent, formatSignedPercent } from "~/lib/format";
 
 const VERDICT_COLOR: Record<BuildRow["verdict"], string> = {
@@ -44,9 +47,21 @@ function logTicks(min: number, max: number): number[] {
 
 const compact = (value: number) => value.toLocaleString("en-US", { notation: "compact", maximumFractionDigits: 1 });
 
+/** What the x axis can show: how often a build was played, or one of its playstyle numbers. */
+const X_OPTIONS = [
+  { key: "matches", label: "Matches" },
+  { key: "kda", label: "KDA" },
+  { key: "soulsPerMin", label: "Souls/min" },
+  { key: "damagePerMin", label: "Hero damage/min" },
+  { key: "deaths", label: "Deaths" },
+] as const;
+type XKey = (typeof X_OPTIONS)[number]["key"];
+
 interface Point {
   id: number;
   name: string;
+  /** The x value: matches, or the chosen playstyle number. */
+  x: number;
   matches: number;
   winRate: number;
   row: BuildRow;
@@ -79,65 +94,97 @@ export function BuildScatterChart({
   average,
   selectedId,
   onBuildIdChange,
+  performance,
 }: {
   rows: readonly BuildRow[];
   average: number;
   selectedId: number;
   onBuildIdChange: (buildId: number) => void;
+  /** Every build's performance totals, by id, for the playstyle axes; until they load only matches is offered. */
+  performance?: Readonly<Record<number, BuildPerformanceTotals>>;
 }) {
+  const [chosenX, setX] = useState<XKey>("matches");
+  const xKey: XKey = performance ? chosenX : "matches";
+  const xMetric = xKey === "matches" ? undefined : BUILD_METRICS.find((metric) => metric.key === xKey);
+  const xLabel = X_OPTIONS.find((option) => option.key === xKey)!.label;
   // The selected build is drawn last, so no other dot covers it.
   const points: Point[] = rows
-    .map((row) => ({
+    .flatMap((row) => {
+      const totals = performance?.[row.hero_build_id];
+      const x = xMetric ? (totals ? xMetric.value(totals) : null) : row.matches;
+      return x === null ? [] : [{ row, x }];
+    })
+    .map(({ row, x }) => ({
       id: row.hero_build_id,
       name: row.meta?.name ?? `Build ${row.hero_build_id}`,
+      x,
       matches: row.matches,
       winRate: row.winRate,
       row,
       selected: row.hero_build_id === selectedId,
     }))
     .sort((a, b) => Number(a.selected) - Number(b.selected));
-  const minMatches = Math.min(...points.map((point) => point.matches));
-  const maxMatches = Math.max(...points.map((point) => point.matches));
-  const xDomain: [number, number] = [minMatches * 0.9, maxMatches * 1.1];
+  const minX = Math.min(...points.map((point) => point.x));
+  const maxX = Math.max(...points.map((point) => point.x));
+  const linearTicks = niceTicks(minX, maxX, 5);
+  const xDomain: [number, number] = xMetric
+    ? [linearTicks[0], linearTicks[linearTicks.length - 1]]
+    : [minX * 0.9, maxX * 1.1];
   const yDomain = winRateDomain([...points.map((point) => point.winRate), average]);
   const above = rows.filter((row) => row.verdict === "above").length;
   const below = rows.filter((row) => row.verdict === "below").length;
 
   return (
     <ChartCard
-      title="Popularity vs. win rate"
+      title={`${xMetric ? xLabel : "Popularity"} vs. win rate`}
       actions={
-        <ChartLegend label="Dot colors">
-          {(["above", "even", "below"] as const).map((verdict) => (
-            <ChartLegendItem key={verdict} color={VERDICT_COLOR[verdict]} shape="dot">
-              {VERDICT_LABEL[verdict]}
+        <>
+          {performance && (
+            <Select value={xKey} onValueChange={(value) => setX(value as XKey)}>
+              <SelectTrigger size="sm" aria-label="X axis">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {X_OPTIONS.map((option) => (
+                  <SelectItem key={option.key} value={option.key}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+          <ChartLegend label="Dot colors">
+            {(["above", "even", "below"] as const).map((verdict) => (
+              <ChartLegendItem key={verdict} color={VERDICT_COLOR[verdict]} shape="dot">
+                {VERDICT_LABEL[verdict]}
+              </ChartLegendItem>
+            ))}
+            <ChartLegendItem color={CHART_COLOR.reference} shape="dashed">
+              Average
             </ChartLegendItem>
-          ))}
-          <ChartLegendItem color={CHART_COLOR.reference} shape="dashed">
-            Average
-          </ChartLegendItem>
-        </ChartLegend>
+          </ChartLegend>
+        </>
       }
     >
       <ChartSurface
         variant="flush"
         size="default"
         announce="label"
-        label={`${rows.length} builds by matches played and win rate: ${above} win confidently above the average of ${formatPercent(average)}, ${below} below it.`}
+        label={`${points.length} builds by ${xLabel.toLowerCase()} and win rate: ${above} win confidently above the average of ${formatPercent(average)}, ${below} below it.`}
       >
         <ScatterChart margin={{ ...CHART_MARGIN, bottom: 16 }} accessibilityLayer={false}>
           <CartesianGrid {...CHART_GRID} vertical />
           <XAxis
             {...CHART_X_AXIS}
             type="number"
-            dataKey="matches"
-            name="Matches"
-            scale="log"
+            dataKey="x"
+            name={xLabel}
+            scale={xMetric ? "linear" : "log"}
             domain={xDomain}
-            ticks={logTicks(xDomain[0], xDomain[1])}
-            tickFormatter={compact}
+            ticks={xMetric ? linearTicks : logTicks(xDomain[0], xDomain[1])}
+            tickFormatter={xMetric ? (value: number) => xMetric.format(value) : compact}
             allowDataOverflow
-            label={{ ...CHART_X_LABEL, value: "Matches (log scale)", offset: -8 }}
+            label={{ ...CHART_X_LABEL, value: xMetric ? xLabel : "Matches (log scale)", offset: -8 }}
           />
           <YAxis
             {...CHART_Y_AXIS}
@@ -167,6 +214,7 @@ export function BuildScatterChart({
                       value={`${formatPercent(row.interval[0])} – ${formatPercent(row.interval[1])}`}
                     />
                     <TooltipStat label="Vs. average" value={formatSignedPercent(row.vsAverage)} />
+                    {xMetric && <TooltipStat label={xLabel} value={xMetric.format(point.x)} />}
                     <TooltipStat label="Matches" value={row.matches.toLocaleString("en-US")} />
                     <TooltipStat label="Players" value={row.players.toLocaleString("en-US")} />
                   </TooltipStats>

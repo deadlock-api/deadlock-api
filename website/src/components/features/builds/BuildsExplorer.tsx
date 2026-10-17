@@ -213,6 +213,7 @@ export function BuildsExplorer({
           average={summary.winRate}
           selectedId={selected.hero_build_id}
           onBuildIdChange={onBuildIdChange}
+          performance={performance}
         />
         <BuildItemsPanel
           rows={rows}
