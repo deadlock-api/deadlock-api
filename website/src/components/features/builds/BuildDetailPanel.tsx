@@ -1,23 +1,36 @@
+import { useQuery } from "@tanstack/react-query";
 import { GitCompareArrows, Hammer, Info } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import { AbilityOrderGrid } from "~/components/domain/assets/AbilityOrderGrid";
+import { ITEM_SLOT_COLOR } from "~/components/domain/assets/item-slot-color";
 import { PlayerCell } from "~/components/domain/player/PlayerCell";
 import { useBuildItemUsage, useSkillOrder } from "~/components/features/builds/build-hooks";
 import { BuildCompareDialog } from "~/components/features/builds/BuildCompareDialog";
 import { BuildItemTile } from "~/components/features/builds/BuildItemTile";
+import { ChartLegend, ChartLegendItem } from "~/components/patterns/charts/ChartLegend";
 import { Panel, PanelHeader, PanelSection } from "~/components/patterns/panel/Panel";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { Button } from "~/components/ui/button";
 import { CopyButton } from "~/components/ui/copy-button";
+import { NoValue } from "~/components/ui/no-value";
+import { ProgressBar, ProgressBarSegment } from "~/components/ui/progress-bar";
 import { SCROLLBAR_THIN } from "~/components/ui/recipes";
 import { Tooltip, TooltipTarget } from "~/components/ui/tooltip";
 import { day } from "~/dayjs";
 import type { BuildPerformanceTotals } from "~/lib/build-performance";
-import { type BuildRow, buildCategoryName, buildLanguageName } from "~/lib/build-stats";
+import {
+  BUILD_SLOTS,
+  type BuildMeta,
+  type BuildRow,
+  buildCategoryName,
+  buildLanguageName,
+  buildSlotCost,
+} from "~/lib/build-stats";
 import { formatPercent } from "~/lib/format";
 import { cn } from "~/lib/utils";
+import { itemUpgradesQueryOptions } from "~/queries/asset-queries";
 import type { BuildPurchaseFilters } from "~/queries/hero-build-stats-query";
 import type { SteamProfile } from "~/queries/steam-queries";
 
@@ -37,6 +50,43 @@ function CategoryTitle({ name, description }: { name: string; description: strin
 }
 
 /** One build as written: who made it, how it did, the items of each of its categories and its skill order. */
+const SLOT_LABEL = { weapon: "Weapon", vitality: "Vitality", spirit: "Spirit" } as const;
+
+/** How the build's souls split over the three shop categories: a gun build leans weapon, a caster build spirit. */
+function BuildSlotSplit({ meta }: { meta: BuildMeta }) {
+  const itemsQuery = useQuery(itemUpgradesQueryOptions);
+  const items = useMemo(
+    () =>
+      new Map((itemsQuery.data ?? []).map((item) => [item.id, { slot: item.item_slot_type, cost: item.cost ?? 0 }])),
+    [itemsQuery.data],
+  );
+  // Before the prices load the total is 0: the bar stays an empty track and the shares placeholders.
+  const { total, bySlot } = buildSlotCost(meta, items);
+  return (
+    <section className="flex flex-col">
+      {/* No total: a build lists options beside what is bought, so its items' sum is no game's spending. */}
+      <PanelSection title="Souls by shop category" />
+      <div className="flex flex-col gap-1.5 px-3 py-1.5 @md:flex-row @md:items-center @md:gap-4">
+        <ProgressBar variant="thin" max={Math.max(1, total)} className="@md:min-w-0 @md:flex-1">
+          {BUILD_SLOTS.map((slot) => (
+            <ProgressBarSegment key={slot} value={bySlot[slot]} color={ITEM_SLOT_COLOR[slot]} />
+          ))}
+        </ProgressBar>
+        <ChartLegend size="sm" label="Shop categories" className="shrink-0">
+          {BUILD_SLOTS.map((slot) => (
+            <ChartLegendItem key={slot} color={ITEM_SLOT_COLOR[slot]} shape="square">
+              {SLOT_LABEL[slot]}{" "}
+              <span className="text-foreground tabular-nums">
+                {total > 0 ? formatPercent(bySlot[slot] / total, 0) : <NoValue />}
+              </span>
+            </ChartLegendItem>
+          ))}
+        </ChartLegend>
+      </div>
+    </section>
+  );
+}
+
 export function BuildDetailPanel({
   row,
   rows,
@@ -120,6 +170,7 @@ export function BuildDetailPanel({
       <div className={cn(SCROLLBAR_THIN, "@container relative flex min-h-0 flex-1 flex-col overflow-y-auto")}>
         {meta ? (
           <>
+            <BuildSlotSplit meta={meta} />
             {meta.categories
               .filter((category) => category.itemIds.length > 0)
               .map((category) => (

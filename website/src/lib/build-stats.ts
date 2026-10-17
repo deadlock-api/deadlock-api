@@ -274,6 +274,27 @@ export function buildMatchesItems(
   return withItems.every((id) => listed.has(id)) && !withoutItems.some((id) => listed.has(id));
 }
 
+/** The shop categories, in the shop's order. */
+export const BUILD_SLOTS = ["weapon", "vitality", "spirit"] as const;
+export type BuildSlot = (typeof BUILD_SLOTS)[number];
+
+/**
+ * What a build's items cost in souls, in all and per shop category. Each listed item counts once at its full price, so
+ * a component bought on the way to its upgrade counts too, as it does in the shop. Items `items` does not know (removed
+ * from the game) are left out.
+ */
+export function buildSlotCost(
+  meta: BuildMeta,
+  items: ReadonlyMap<number, { slot: string; cost: number }>,
+): { total: number; bySlot: Record<BuildSlot, number> } {
+  const bySlot: Record<BuildSlot, number> = { weapon: 0, vitality: 0, spirit: 0 };
+  for (const id of buildItemIds(meta)) {
+    const item = items.get(id);
+    if (item && item.slot in bySlot) bySlot[item.slot as BuildSlot] += item.cost;
+  }
+  return { total: bySlot.weapon + bySlot.vitality + bySlot.spirit, bySlot };
+}
+
 /** Every item a build lists, once, in the order it first appears. */
 export function buildItemIds(meta: BuildMeta): number[] {
   return [...new Set(meta.categories.flatMap((category) => category.itemIds))];

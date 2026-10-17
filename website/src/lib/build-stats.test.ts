@@ -10,6 +10,7 @@ import {
   buildMatchesItems,
   type BuildMeta,
   buildRows,
+  buildSlotCost,
   buildUnlockOrder,
   buildTrends,
   distinguishingItems,
@@ -151,6 +152,16 @@ test("adherence splits a build's matches into the ones that followed it and the 
   });
   assert.equal(buildAdherence({ wins: 5, matches: 10 }, { wins: 6, matches: 11 }).otherWinRate, null);
   assert.deepEqual(buildUnlockOrder([3, 3, 1, 2, 3, 4, 1]), [3, 1, 2, 4]);
+});
+
+test("a build's souls split by shop category, each listed item once", () => {
+  const items = new Map([
+    [10, { slot: "weapon", cost: 800 }],
+    [20, { slot: "spirit", cost: 1600 }],
+    [30, { slot: "vitality", cost: 500 }],
+  ]);
+  const build = meta(1, [10, 20, 10, 99]);
+  assert.deepEqual(buildSlotCost(build, items), { total: 2400, bySlot: { weapon: 800, vitality: 0, spirit: 1600 } });
 });
 
 test("a build matches an item filter by what it lists", () => {
