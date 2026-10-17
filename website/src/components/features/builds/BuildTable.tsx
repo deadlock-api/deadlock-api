@@ -29,7 +29,13 @@ import { Skeleton } from "~/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { day } from "~/dayjs";
 import { BUILD_METRICS, type BuildMetric, type BuildPerformanceTotals } from "~/lib/build-performance";
-import { buildItemIds, type BuildRow, type BuildSummary, type BuildTrend, buildLanguageName } from "~/lib/build-stats";
+import {
+  buildMatchesItems,
+  type BuildRow,
+  type BuildSummary,
+  type BuildTrend,
+  buildLanguageName,
+} from "~/lib/build-stats";
 import { formatPercent, formatShare, formatSignedPercent } from "~/lib/format";
 import { TONE_TEXT, toneOf } from "~/lib/tone";
 import { cn } from "~/lib/utils";
@@ -200,13 +206,7 @@ export function BuildTable({
   // Builds that list every included item and none of the excluded ones; without contents a build cannot qualify.
   const filteringItems = itemParams.with_items.length > 0 || itemParams.without_items.length > 0;
   const shown = filteringItems
-    ? byText.filter((row) => {
-        if (!row.meta) return false;
-        const listed = new Set(buildItemIds(row.meta));
-        return (
-          itemParams.with_items.every((id) => listed.has(id)) && !itemParams.without_items.some((id) => listed.has(id))
-        );
-      })
+    ? byText.filter((row) => buildMatchesItems(row.meta, itemParams.with_items, itemParams.without_items))
     : byText;
   const sorted = [...shown].sort(
     (a, b) => sign * (value(a) - value(b)) || b.matches - a.matches || a.hero_build_id - b.hero_build_id,

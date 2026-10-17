@@ -1,4 +1,4 @@
-import { parseAsStringLiteral, useQueryState } from "nuqs";
+import { parseAsArrayOf, parseAsInteger, parseAsStringLiteral, useQueryState, useQueryStates } from "nuqs";
 import { CartesianGrid, ReferenceLine, Scatter, ScatterChart, Tooltip, XAxis, YAxis } from "recharts";
 
 import { ChartCard } from "~/components/patterns/charts/ChartCard";
@@ -17,7 +17,7 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
 import { TooltipCard, TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
 import { BUILD_METRICS, type BuildPerformanceTotals } from "~/lib/build-performance";
-import type { BuildRow } from "~/lib/build-stats";
+import { buildMatchesItems, type BuildRow } from "~/lib/build-stats";
 import { niceTicks, percentTicks, winRateDomain } from "~/lib/chart-axis";
 import { formatPercent, formatSignedPercent } from "~/lib/format";
 
@@ -69,6 +69,8 @@ interface Point {
   winRate: number;
   row: BuildRow;
   selected: boolean;
+  /** Left out by the list's item filter: drawn faint. */
+  dimmed: boolean;
 }
 
 function BuildDot({ cx, cy, payload }: { cx?: number; cy?: number; payload?: Point }) {
@@ -79,8 +81,9 @@ function BuildDot({ cx, cy, payload }: { cx?: number; cy?: number; payload?: Poi
       cy={cy}
       r={payload.selected ? 7 : 4.5}
       fill={VERDICT_COLOR[payload.row.verdict]}
-      fillOpacity={payload.selected ? 1 : 0.75}
+      fillOpacity={payload.selected ? 1 : payload.dimmed ? 0.12 : 0.75}
       stroke={payload.selected ? CHART_COLOR.ink : CHART_COLOR.surface}
+      strokeOpacity={payload.dimmed && !payload.selected ? 0.3 : 1}
       strokeWidth={payload.selected ? 2.5 : 1}
       // A dot is pressable: it selects its build.
       style={{ cursor: "pointer" }}
@@ -107,6 +110,11 @@ export function BuildScatterChart({
   performance?: Readonly<Record<number, BuildPerformanceTotals>>;
 }) {
   const [chosenX, setX] = useQueryState("x", parseXKey);
+  // The list's item filter, read from the same URL parameters: builds it leaves out are drawn faint here.
+  const [itemParams] = useQueryStates({
+    with_items: parseAsArrayOf(parseAsInteger).withDefault([]),
+    without_items: parseAsArrayOf(parseAsInteger).withDefault([]),
+  });
   const xKey: XKey = performance ? chosenX : "matches";
   const xMetric = xKey === "matches" ? undefined : BUILD_METRICS.find((metric) => metric.key === xKey);
   const xLabel = X_OPTIONS.find((option) => option.key === xKey)!.label;
@@ -125,6 +133,7 @@ export function BuildScatterChart({
       winRate: row.winRate,
       row,
       selected: row.hero_build_id === selectedId,
+      dimmed: !buildMatchesItems(row.meta, itemParams.with_items, itemParams.without_items),
     }))
     .sort((a, b) => Number(a.selected) - Number(b.selected));
   const minX = Math.min(...points.map((point) => point.x));
@@ -209,7 +218,14 @@ export function BuildScatterChart({
               const { row } = point;
               return (
                 <TooltipCard>
-                  <TooltipHeader title={point.name} subtitle={VERDICT_LABEL[row.verdict]} />
+                  <TooltipHeader
+                    title={point.name}
+                    subtitle={
+                      point.dimmed
+                        ? `${VERDICT_LABEL[row.verdict]} · left out by the item filter`
+                        : VERDICT_LABEL[row.verdict]
+                    }
+                  />
                   <TooltipStats>
                     <TooltipStat label="Win rate" value={formatPercent(row.winRate)} />
                     <TooltipStat

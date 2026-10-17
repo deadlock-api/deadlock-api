@@ -7,6 +7,7 @@ import {
   buildCategoryName,
   buildItemPresence,
   buildItemUsage,
+  buildMatchesItems,
   type BuildMeta,
   buildRows,
   buildUnlockOrder,
@@ -150,4 +151,13 @@ test("adherence splits a build's matches into the ones that followed it and the 
   });
   assert.equal(buildAdherence({ wins: 5, matches: 10 }, { wins: 6, matches: 11 }).otherWinRate, null);
   assert.deepEqual(buildUnlockOrder([3, 3, 1, 2, 3, 4, 1]), [3, 1, 2, 4]);
+});
+
+test("a build matches an item filter by what it lists", () => {
+  const build = meta(1, [10, 20]);
+  assert.equal(buildMatchesItems(build, [10], []), true);
+  assert.equal(buildMatchesItems(build, [10, 30], []), false);
+  assert.equal(buildMatchesItems(build, [], [20]), false);
+  assert.equal(buildMatchesItems(undefined, [10], []), false);
+  assert.equal(buildMatchesItems(undefined, [], []), true);
 });

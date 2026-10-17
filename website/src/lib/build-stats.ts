@@ -259,6 +259,21 @@ export function buildItemUsage(
   return { byItem, offBuild };
 }
 
+/**
+ * Whether a build lists every item of `withItems` and none of `withoutItems`. A build whose contents are not known
+ * (`meta` missing) cannot qualify while a list is set.
+ */
+export function buildMatchesItems(
+  meta: BuildMeta | null | undefined,
+  withItems: readonly number[],
+  withoutItems: readonly number[],
+): boolean {
+  if (withItems.length === 0 && withoutItems.length === 0) return true;
+  if (!meta) return false;
+  const listed = new Set(buildItemIds(meta));
+  return withItems.every((id) => listed.has(id)) && !withoutItems.some((id) => listed.has(id));
+}
+
 /** Every item a build lists, once, in the order it first appears. */
 export function buildItemIds(meta: BuildMeta): number[] {
   return [...new Set(meta.categories.flatMap((category) => category.itemIds))];
