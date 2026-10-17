@@ -3,6 +3,7 @@ import { Activity, ListOrdered, ShoppingBag, Swords } from "lucide-react";
 import { RankedEntityList, RankedEntityMetric, RankedEntityRow } from "~/components/domain/assets/RankedEntityList";
 import { useBuildItemUsage, useEndOfMatchDistributions, useSkillOrder } from "~/components/features/builds/build-hooks";
 import { BuildByDuration } from "~/components/features/builds/BuildByDuration";
+import { BuildByRank } from "~/components/features/builds/BuildByRank";
 import { BuildItemTile } from "~/components/features/builds/BuildItemTile";
 import { BuildMatchups } from "~/components/features/builds/BuildMatchups";
 import { BuildPlaystyle } from "~/components/features/builds/BuildPlaystyle";
@@ -166,7 +167,7 @@ export function BuildInMatches({
           </BuildPlaystyle>
         </Panel>
         <Panel className="flex flex-col">
-          <PanelHeader title="Skill order, match length and players" icon={ListOrdered} size="sm" />
+          <PanelHeader title="Skill order and players" icon={ListOrdered} size="sm" />
           {skillOrder.length > 0 && slotAbilities.length > 0 && (
             <section className="flex flex-col">
               <PanelSection title="Skill order followed" />
@@ -181,12 +182,13 @@ export function BuildInMatches({
               </div>
             </section>
           )}
-          <BuildByDuration heroId={heroId} build={row} filters={filters} active={active} />
           <BuildTopPlayers heroId={heroId} buildId={row.hero_build_id} filters={filters} active={active} />
         </Panel>
         <Panel className="flex flex-col">
-          <PanelHeader title="Matchups" icon={Swords} size="sm" />
+          <PanelHeader title="Where it wins" icon={Swords} size="sm" />
           <BuildMatchups heroId={heroId} build={row} filters={filters} active={active} />
+          <BuildByDuration heroId={heroId} build={row} filters={filters} active={active} />
+          <BuildByRank heroId={heroId} build={row} filters={filters} active={active} />
         </Panel>
       </div>
     </Section>

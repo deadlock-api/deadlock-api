@@ -54,6 +54,24 @@ export function heroBuildPerformanceQueryOptions(params: AnalyticsApiHeroBuildSt
   });
 }
 
+/**
+ * One build's wins and matches split by `bucket`: `avg_badge` by the match's average badge (tier × 10 + subtier, 0
+ * unranked), `duration` in 10-minute steps of match length (the step's start in seconds).
+ */
+export function buildBucketsQueryOptions(
+  params: Omit<AnalyticsApiHeroBuildStatsRequest, "bucket"> & { heroBuildId: number },
+  bucket: "avg_badge" | "duration",
+) {
+  return queryOptions({
+    queryKey: [...queryKeys.analytics.heroBuildStats(params), bucket] as const,
+    queryFn: async (): Promise<{ bucket: number; wins: number; matches: number }[]> => {
+      const response = await api.analytics_api.heroBuildStats(params, { params: { bucket } });
+      return response.data.map(({ bucket, wins, matches }) => ({ bucket, wins, matches }));
+    },
+    staleTime: CACHE_DURATIONS.ONE_HOUR,
+  });
+}
+
 /** Builds asked for in one GraphQL request: 100 resolve in about half a second, well inside the complexity limit. */
 export const BUILD_META_BATCH = 100;
 
