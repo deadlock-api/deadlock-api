@@ -26,7 +26,7 @@ export function BuildPlaystyle({
   pending: boolean;
 }) {
   if (!totals && !pending) return null;
-  return GROUPS.map(({ group, title }) => (
+  const section = ({ group, title }: (typeof GROUPS)[number]) => (
     <section key={group} className="flex flex-col">
       <PanelSection title={title} />
       <KeyValueList className="px-3 py-0.5">
@@ -58,5 +58,17 @@ export function BuildPlaystyle({
         })}
       </KeyValueList>
     </section>
-  ));
+  );
+  // Two columns: combat on the left, economy and survival under each other on the right.
+  return (
+    <div className="@container">
+      <div className="grid @lg:grid-cols-2">
+        <div className="flex flex-col">{section(GROUPS[0])}</div>
+        <div className="flex flex-col">
+          {section(GROUPS[1])}
+          {section(GROUPS[2])}
+        </div>
+      </div>
+    </div>
+  );
 }

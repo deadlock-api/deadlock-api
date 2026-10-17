@@ -170,6 +170,8 @@ function TableRow({
         // Even rows carry a faint translucent stripe, the same on a card or on glass; hover and the states come later
         // in the cascade and paint over it. A pinned cell draws the opaque twin of it (`table-stripe`).
         "border-b transition-colors even:bg-subtle hover:bg-muted/50 has-aria-expanded:bg-muted/50 data-interactive:cursor-pointer data-plain:border-0 data-plain:hover:bg-transparent data-static:hover:bg-transparent data-[state=current]:bg-accent data-[state=current]:font-medium data-[state=selected]:bg-muted",
+        // `active`: the row whose details are open beside the table, in a faint brand tint.
+        "data-[state=active]:bg-primary/10 data-[state=active]:hover:bg-primary/15",
         ROW_TONE[tone],
         // A row stepped through with `useListNavigation` shows the focus of its control as an outline round the row.
         "has-[[data-list-index]:focus-visible]:outline-2 has-[[data-list-index]:focus-visible]:-outline-offset-2 has-[[data-list-index]:focus-visible]:outline-ring [&_[data-list-index]:focus-visible]:ring-0",

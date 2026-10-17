@@ -226,7 +226,7 @@ export function BuildTable({
               <TableRow
                 key={row.hero_build_id}
                 data-interactive=""
-                data-state={selected ? "selected" : undefined}
+                data-state={selected ? "active" : undefined}
                 onClick={(event) => {
                   onBuildIdChange(row.hero_build_id);
                   // A click on the row's cells focuses its button, so the arrow keys go on from here.

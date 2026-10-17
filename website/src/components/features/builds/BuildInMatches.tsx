@@ -78,7 +78,7 @@ export function BuildInMatches({
 
   return (
     <Section title={`${name} in matches`} size="sm" className="gap-2">
-      <div className="grid gap-3 @3xl:grid-cols-2 @7xl:grid-cols-4">
+      <div className="grid gap-3 @3xl:grid-cols-2 @7xl:grid-cols-5">
         <Panel className="flex flex-col">
           <PanelHeader title="Purchases" icon={ShoppingBag} size="sm" />
           {pending ? (
@@ -150,12 +150,12 @@ export function BuildInMatches({
             </>
           )}
         </Panel>
-        <Panel className="flex flex-col">
+        <Panel className="flex flex-col @3xl:col-span-2">
           <PanelHeader title="Playstyle vs. average build" icon={Activity} size="sm" />
           <BuildPlaystyle totals={performance} average={averagePerformance} pending={performancePending} />
         </Panel>
         <Panel className="flex flex-col">
-          <PanelHeader title="Skill order and match length" icon={ListOrdered} size="sm" />
+          <PanelHeader title="Skill order, match length and players" icon={ListOrdered} size="sm" />
           {skillOrder.length > 0 && slotAbilities.length > 0 && (
             <section className="flex flex-col">
               <PanelSection title="Skill order followed" />
@@ -171,11 +171,11 @@ export function BuildInMatches({
             </section>
           )}
           <BuildByDuration heroId={heroId} build={row} filters={filters} active={active} />
+          <BuildTopPlayers heroId={heroId} buildId={row.hero_build_id} filters={filters} active={active} />
         </Panel>
         <Panel className="flex flex-col">
-          <PanelHeader title="Matchups and players" icon={Swords} size="sm" />
+          <PanelHeader title="Matchups" icon={Swords} size="sm" />
           <BuildMatchups heroId={heroId} build={row} filters={filters} active={active} />
-          <BuildTopPlayers heroId={heroId} buildId={row.hero_build_id} filters={filters} active={active} />
         </Panel>
       </div>
     </Section>

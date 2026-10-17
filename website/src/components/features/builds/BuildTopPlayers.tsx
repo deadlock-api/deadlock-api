@@ -36,6 +36,8 @@ export function BuildTopPlayers({
     minUnixTimestamp: filters.minUnixTimestamp,
     maxUnixTimestamp: filters.maxUnixTimestamp,
     limit: PLAYERS_SHOWN,
+    // The scoreboard's default minimum (20 matches a player) leaves a niche build without anyone.
+    minMatches: 1,
   };
   const playersQuery = useQuery({
     queryKey: queryKeys.analytics.playerScoreboard(request),
