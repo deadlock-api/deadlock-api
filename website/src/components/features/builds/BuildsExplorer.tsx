@@ -9,6 +9,7 @@ import { BuildTable } from "~/components/features/builds/BuildTable";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
+import { Button } from "~/components/ui/button";
 import { day, type Dayjs } from "~/dayjs";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { poolPerformance } from "~/lib/build-performance";
@@ -26,6 +27,9 @@ import { type SteamProfileMap, steamProfileBatches, steamProfilesQueryOptions } 
 /** How many days at the end of the range the trend looks at. */
 const TREND_WINDOW_DAYS = 7;
 
+/** The minimum the empty state offers to lower to. */
+const LOW_MIN_MATCHES = 5;
+
 /** How long the selection must rest before the selected build's details are asked for. */
 const SETTLE_MS = 300;
 
@@ -41,6 +45,8 @@ export interface BuildsExplorerProps {
   /** The build the detail panel shows; the most played one when null or not in the results. */
   buildId: number | null;
   onBuildIdChange: (buildId: number) => void;
+  /** Lowers the minimum from the empty state. */
+  onMinMatchesChange?: (minMatches: number) => void;
 }
 
 /** The request the page's loader warms and the explorer reads, from the same filters. */
@@ -92,6 +98,7 @@ export function BuildsExplorer({
   matchMode,
   buildId,
   onBuildIdChange,
+  onMinMatchesChange,
 }: BuildsExplorerProps) {
   const { minUnixTimestamp, maxUnixTimestamp } = useNormalizedTimeRange(minDate, maxDate);
   const statsQuery = useQuery(
@@ -190,6 +197,14 @@ export function BuildsExplorer({
       <EmptyState
         title="No builds in these matches"
         description="No published build reached the minimum number of matches. Lower the minimum or widen the filters."
+        action={
+          onMinMatchesChange &&
+          minMatches > LOW_MIN_MATCHES && (
+            <Button variant="outline" size="sm" onClick={() => onMinMatchesChange(LOW_MIN_MATCHES)}>
+              Show builds with {LOW_MIN_MATCHES}+ matches
+            </Button>
+          )
+        }
       />
     );
   }

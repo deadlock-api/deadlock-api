@@ -189,6 +189,7 @@ function BuildsPage() {
             matchMode={MODE_CONFIG[mode].matchMode}
             buildId={buildId}
             onBuildIdChange={(id) => void setBuildId(id)}
+            onMinMatchesChange={(next) => startTransition(() => void setMinMatches(next, together))}
           />
         </Suspense>
       </ChunkErrorBoundary>
