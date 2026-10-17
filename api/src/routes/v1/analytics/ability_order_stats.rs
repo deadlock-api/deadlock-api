@@ -96,6 +96,9 @@ pub(super) struct AbilityOrderStatsQuery {
         proptest(strategy = "crate::utils::proptest_utils::arb_small_u32_list()")
     )]
     account_ids: Option<Vec<u32>>,
+    /// Only players who started the match with this hero build selected. Matches without a processed demo record no
+    /// build. See more: <https://api.deadlock-api.com/v1/analytics/hero-build-stats/{hero_id}>
+    hero_build_id: Option<u64>,
     /// Comma separated list of item ids to include (only players who have purchased these items). See more: <https://api.deadlock-api.com/v1/assets/items>
     #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
     #[cfg_attr(
@@ -162,6 +165,7 @@ fn build_query(query: &AbilityOrderStatsQuery) -> String {
         exclude_item_ids: query.exclude_item_ids.as_deref(),
         ability_order_prefix: query.ability_order_prefix.as_deref(),
         ability_unlock_order_prefix: query.ability_unlock_order_prefix.as_deref(),
+        hero_build_id: query.hero_build_id,
         ..Default::default()
     };
     let mut player_filters = player_filter_inputs.build();
