@@ -182,7 +182,7 @@ export function BuildTable({
           placeholder="Name, author or ID"
           aria-label="Filter builds by name, author or ID"
           size="sm"
-          className="w-full @sm:ms-auto @sm:w-48"
+          className="w-full @sm:ms-auto @sm:w-60"
         />
         <Segmented size="sm" width="hug" value={view} onValueChange={setView} aria-label="Columns">
           <SegmentedItem value="overview">Overview</SegmentedItem>

@@ -16,9 +16,9 @@ import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { Button } from "~/components/ui/button";
 import { CopyButton } from "~/components/ui/copy-button";
 import { Delta } from "~/components/ui/delta";
+import { KeyValue, KeyValueList } from "~/components/ui/key-value";
 import { SCROLLBAR_THIN } from "~/components/ui/recipes";
 import { Skeleton } from "~/components/ui/skeleton";
-import { Stat, StatGroup } from "~/components/ui/stat";
 import { Tooltip, TooltipTarget } from "~/components/ui/tooltip";
 import { day } from "~/dayjs";
 import { BUILD_METRICS, type BuildPerformanceTotals, metricDelta, nearestBadge } from "~/lib/build-performance";
@@ -62,33 +62,23 @@ function useSlotAbilities(heroId: number): number[] {
 
 const KDA_METRIC = BUILD_METRICS.find((metric) => metric.key === "kda")!;
 
-/** The rank the build's players have on average, as a badge, against the hero's average build. */
-function BuildRankStat({
-  totals,
-  average,
-  pending,
-}: {
-  totals: BuildPerformanceTotals | undefined;
-  average: BuildPerformanceTotals | null;
-  pending: boolean;
-}) {
+/** The rank the build's players have on average, as a badge. */
+function BuildRankValue({ totals, pending }: { totals: BuildPerformanceTotals | undefined; pending: boolean }) {
   const { data: ranks } = useQuery(ranksQueryOptions);
   const badge = totals ? nearestBadge(totals.avg_average_badge) : null;
-  const averageBadge = average ? nearestBadge(average.avg_average_badge) : null;
   return (
-    <Stat
+    <KeyValue
       label="Avg. rank"
       value={
         badge !== null && ranks ? (
-          <span className="inline-flex min-w-0 items-center gap-1.5">
+          <span className="inline-flex min-w-0 items-center gap-1">
             <BadgeImage badge={badge} ranks={ranks} size="inline" />
             <span className="truncate">{badgeLabel(ranks, badge)}</span>
           </span>
         ) : pending ? (
-          <Skeleton className="h-6 w-24" />
+          <Skeleton className="ms-auto h-4 w-20" />
         ) : null
       }
-      sub={averageBadge !== null && ranks && `Hero avg. ${badgeLabel(ranks, averageBadge)}`}
     />
   );
 }
@@ -219,44 +209,63 @@ export function BuildDetailPanel({
               </span>
             </div>
           ) : null}
-          <StatGroup size="xs" variant="joined" className="grid-cols-3">
-            <Stat label="Matches" value={row.matches.toLocaleString("en-US")} sub={`${formatShare(row.share)} share`} />
-            <Stat
-              label="Players"
-              value={row.players.toLocaleString("en-US")}
-              sub={`${(row.matches / Math.max(1, row.players)).toFixed(1)} games each`}
-            />
-            <Stat
-              label="Win rate"
-              value={formatPercent(row.winRate)}
-              sub={
+          <KeyValueList variant="plain" className="grid grid-cols-2 gap-x-4">
+            <KeyValue
+              label="Matches"
+              value={
                 <>
-                  {/* Colored only when the whole interval is on one side of the average. */}
-                  <Delta value={row.vsAverage} polarity={row.verdict === "even" ? "neutral" : "higher-is-better"} /> vs.
-                  avg
+                  {row.matches.toLocaleString("en-US")}{" "}
+                  <span className="font-normal text-muted-foreground">{formatShare(row.share)}</span>
                 </>
               }
             />
-            <Stat
-              label="Last 7 days"
-              value={trend ? formatShare(trend.recentShare) : null}
-              sub={trend && <Delta value={trend.change} unit=" pp" polarity="neutral" sign="arrow" />}
-            />
-            <BuildRankStat totals={performance} average={averagePerformance} pending={performancePending} />
-            <Stat
-              label="KDA"
+            <KeyValue
+              label="Win rate"
               value={
-                kda !== null ? KDA_METRIC.format(kda) : performancePending ? <Skeleton className="h-6 w-12" /> : null
+                <span className="inline-flex items-baseline gap-1.5">
+                  {formatPercent(row.winRate)}
+                  {/* Colored only when the whole interval is on one side of the average. */}
+                  <Delta value={row.vsAverage} polarity={row.verdict === "even" ? "neutral" : "higher-is-better"} />
+                </span>
               }
-              sub={
-                kda !== null && (
-                  <>
-                    <Delta value={metricDelta(KDA_METRIC, kda, averageKda)} /> vs. avg
-                  </>
+            />
+            <KeyValue
+              label="Players"
+              value={
+                <>
+                  {row.players.toLocaleString("en-US")}{" "}
+                  <span className="font-normal text-muted-foreground">
+                    {(row.matches / Math.max(1, row.players)).toFixed(1)}×
+                  </span>
+                </>
+              }
+            />
+            <KeyValue
+              label="Last 7 days"
+              value={
+                trend && (
+                  <span className="inline-flex items-baseline gap-1.5">
+                    {formatShare(trend.recentShare)}
+                    <Delta value={trend.change} unit=" pp" polarity="neutral" sign="arrow" />
+                  </span>
                 )
               }
             />
-          </StatGroup>
+            <BuildRankValue totals={performance} pending={performancePending} />
+            <KeyValue
+              label="KDA"
+              value={
+                kda !== null ? (
+                  <span className="inline-flex items-baseline gap-1.5">
+                    {KDA_METRIC.format(kda)}
+                    <Delta value={metricDelta(KDA_METRIC, kda, averageKda)} />
+                  </span>
+                ) : performancePending ? (
+                  <Skeleton className="ms-auto h-4 w-12" />
+                ) : null
+              }
+            />
+          </KeyValueList>
         </div>
         {meta ? (
           <>
