@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { parseAsStringLiteral, useQueryState } from "nuqs";
 import { CartesianGrid, ReferenceLine, Scatter, ScatterChart, Tooltip, XAxis, YAxis } from "recharts";
 
 import { ChartCard } from "~/components/patterns/charts/ChartCard";
@@ -56,6 +56,9 @@ const X_OPTIONS = [
   { key: "deaths", label: "Deaths" },
 ] as const;
 type XKey = (typeof X_OPTIONS)[number]["key"];
+const parseXKey = parseAsStringLiteral(X_OPTIONS.map((option) => option.key))
+  .withDefault("matches")
+  .withOptions({ history: "replace" });
 
 interface Point {
   id: number;
@@ -103,7 +106,7 @@ export function BuildScatterChart({
   /** Every build's performance totals, by id, for the playstyle axes; until they load only matches is offered. */
   performance?: Readonly<Record<number, BuildPerformanceTotals>>;
 }) {
-  const [chosenX, setX] = useState<XKey>("matches");
+  const [chosenX, setX] = useQueryState("x", parseXKey);
   const xKey: XKey = performance ? chosenX : "matches";
   const xMetric = xKey === "matches" ? undefined : BUILD_METRICS.find((metric) => metric.key === xKey);
   const xLabel = X_OPTIONS.find((option) => option.key === xKey)!.label;
@@ -140,7 +143,7 @@ export function BuildScatterChart({
       actions={
         <>
           {performance && (
-            <Select value={xKey} onValueChange={(value) => setX(value as XKey)}>
+            <Select value={xKey} onValueChange={(value) => void setX(value as XKey)}>
               <SelectTrigger size="sm" aria-label="X axis">
                 <SelectValue />
               </SelectTrigger>
