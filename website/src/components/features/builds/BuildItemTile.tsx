@@ -55,6 +55,9 @@ export function BuildItemTile({
                 />
               )}
               {usage && <TooltipStat label="Win rate when bought" value={formatPercent(usage.winRate)} />}
+              {usage && usage.winRateWithout !== null && (
+                <TooltipStat label="Win rate without" value={formatPercent(usage.winRateWithout)} />
+              )}
             </TooltipStats>
           )}
         </>

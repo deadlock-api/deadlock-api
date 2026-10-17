@@ -202,12 +202,17 @@ export interface BuildItemUsage {
   boughtRate: number;
   /** Win rate of the build's matches in which the item was bought. */
   winRate: number;
+  /** Win rate of the build's matches in which it was not; null with too few of those to tell. */
+  winRateWithout: number | null;
   avgBuyTimeS: number;
   /** Share of the purchases that were sold again (not upgraded). */
   soldRate: number;
   /** When the sold ones were sold, on average; 0 when none was. */
   avgSellTimeS: number;
 }
+
+/** The matches without an item a win rate without it needs. */
+const MIN_WITHOUT_MATCHES = 10;
 
 /** One item's purchases by the players of one build, as the item stats with a `hero_build_id` count them. */
 export interface BuildItemPurchase {
@@ -220,23 +225,28 @@ export interface BuildItemPurchase {
 }
 
 /**
- * What a build's players bought, against the `matches` the build was played: every item by id, and the items the build
+ * What a build's players bought, against the build's own wins and matches: every item by id, and the items the build
  * does not list that at least `minRate` of its matches bought, most bought first.
  */
 export function buildItemUsage(
   purchases: readonly BuildItemPurchase[],
-  matches: number,
+  build: { wins: number; matches: number },
   listed: readonly number[],
   minRate = 0.2,
 ): { byItem: Map<number, BuildItemUsage>; offBuild: BuildItemUsage[] } {
+  const { matches } = build;
   const byItem = new Map<number, BuildItemUsage>();
   for (const row of purchases) {
     if (row.matches === 0) continue;
+    // The matches without the item are the build's others; a few too many purchases (two endpoints) clamp to none.
+    const withoutMatches = Math.max(0, matches - row.matches);
+    const withoutWins = Math.max(0, build.wins - row.wins);
     byItem.set(row.item_id, {
       itemId: row.item_id,
       // Two endpoints count the two numbers; a share past 1 would only be their rounding apart.
       boughtRate: matches > 0 ? Math.min(1, row.matches / matches) : 0,
       winRate: row.wins / row.matches,
+      winRateWithout: withoutMatches >= MIN_WITHOUT_MATCHES ? withoutWins / withoutMatches : null,
       avgBuyTimeS: row.avg_buy_time_s,
       soldRate: row.sold / row.matches,
       avgSellTimeS: row.avg_sell_time_s,

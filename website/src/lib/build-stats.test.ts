@@ -122,12 +122,14 @@ test("item usage is the share of the build's matches that bought the item, and l
   });
   const { byItem, offBuild } = buildItemUsage(
     [purchase(1, 45, 90), purchase(2, 10, 15), purchase(3, 30, 50), purchase(4, 5, 10), purchase(5, 1, 0)],
-    100,
+    { wins: 55, matches: 100 },
     [1, 2],
   );
   assert.equal(byItem.get(1)?.boughtRate, 0.9);
   assert.equal(byItem.get(2)?.winRate, 10 / 15);
   assert.equal(byItem.get(1)?.soldRate, 0.5);
+  assert.equal(byItem.get(1)?.winRateWithout, 10 / 10);
+  assert.equal(byItem.get(2)?.winRateWithout, 45 / 85);
   assert.equal(byItem.has(5), false);
   assert.deepEqual(
     offBuild.map((usage) => usage.itemId),

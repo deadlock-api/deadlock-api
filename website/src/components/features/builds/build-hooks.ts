@@ -50,8 +50,8 @@ export function useBuildItemUsage({
   });
   const purchases = query.data;
   const usage = useMemo(
-    () => (purchases && meta ? buildItemUsage(purchases, row.matches, buildItemIds(meta)) : undefined),
-    [purchases, meta, row.matches],
+    () => (purchases && meta ? buildItemUsage(purchases, row, buildItemIds(meta)) : undefined),
+    [purchases, meta, row],
   );
   // A failed request leaves the items without their rates rather than holding skeletons.
   const pending = query.isPending && meta != null && (!active || query.fetchStatus !== "idle");

@@ -1,5 +1,6 @@
 import { Activity, ListOrdered, ShoppingBag, Swords } from "lucide-react";
 
+import { RankedEntityList, RankedEntityMetric, RankedEntityRow } from "~/components/domain/assets/RankedEntityList";
 import { useBuildItemUsage, useSkillOrder } from "~/components/features/builds/build-hooks";
 import { BuildByDuration } from "~/components/features/builds/BuildByDuration";
 import { BuildItemTile } from "~/components/features/builds/BuildItemTile";
@@ -13,10 +14,18 @@ import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
 import type { BuildPerformanceTotals } from "~/lib/build-performance";
 import type { BuildRow } from "~/lib/build-stats";
+import { formatPercent, formatShare, formatSignedPercent } from "~/lib/format";
+import { toneOf } from "~/lib/tone";
 import type { BuildPurchaseFilters } from "~/queries/hero-build-stats-query";
 
 /** An item joins the purchase order when at least this share of the build's matches bought it. */
 const BUY_ORDER_MIN_RATE = 0.5;
+
+/** A key item is bought in at least this share of the build's matches and skipped in as many. */
+const KEY_ITEM_MIN_RATE = 0.15;
+const KEY_ITEMS_SHOWN = 5;
+/** Where a key item's bar reaches its edge: fifteen points either way. */
+const KEY_ITEM_SCALE = 0.15;
 
 /** The most items the "Also bought" row shows. */
 const OFF_BUILD_SHOWN = 12;
@@ -52,6 +61,19 @@ export function BuildInMatches({
         .filter((item) => item.boughtRate >= BUY_ORDER_MIN_RATE)
         .sort((a, b) => a.avgBuyTimeS - b.avgBuyTimeS)
     : [];
+  // The items whose purchase splits the build's matches into ones that win more and ones that win less: bought in
+  // enough and skipped in enough matches to compare, the biggest difference first.
+  const keyItems = usage
+    ? [...usage.byItem.values()]
+        .filter(
+          (item) =>
+            item.winRateWithout !== null &&
+            item.boughtRate >= KEY_ITEM_MIN_RATE &&
+            item.boughtRate <= 1 - KEY_ITEM_MIN_RATE,
+        )
+        .sort((a, b) => b.winRate - b.winRateWithout! - (a.winRate - a.winRateWithout!))
+        .slice(0, KEY_ITEMS_SHOWN)
+    : [];
   const name = row.meta?.name ?? `Build ${row.hero_build_id}`;
 
   return (
@@ -77,6 +99,42 @@ export function BuildInMatches({
                   ))}
                 </ol>
               </section>
+              {keyItems.length > 0 && (
+                <section className="flex flex-col">
+                  <PanelSection title="Key items" />
+                  <RankedEntityList density="compact" columns="single" className="px-3">
+                    {keyItems.map((item, index) => {
+                      const change = item.winRate - item.winRateWithout!;
+                      return (
+                        <RankedEntityRow
+                          key={item.itemId}
+                          rank={index + 1}
+                          entity={{ itemId: item.itemId }}
+                          meta={`Bought in ${formatShare(item.boughtRate)}`}
+                        >
+                          <RankedEntityMetric
+                            label="Bought"
+                            labelDisplay={index === 0 ? "visible" : "hidden"}
+                            value={formatPercent(item.winRate)}
+                          />
+                          <RankedEntityMetric
+                            label="Without"
+                            labelDisplay={index === 0 ? "visible" : "hidden"}
+                            value={formatPercent(item.winRateWithout!)}
+                          />
+                          <RankedEntityMetric
+                            label="Diff"
+                            labelDisplay={index === 0 ? "visible" : "hidden"}
+                            value={formatSignedPercent(change)}
+                            tone={toneOf(Math.round(change * 1000))}
+                            change={{ value: change, scale: KEY_ITEM_SCALE }}
+                          />
+                        </RankedEntityRow>
+                      );
+                    })}
+                  </RankedEntityList>
+                </section>
+              )}
               {usage.offBuild.length > 0 && (
                 <section className="flex flex-col">
                   <PanelSection title="Also bought" />
