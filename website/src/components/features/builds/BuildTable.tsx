@@ -2,6 +2,7 @@ import { ListOrdered } from "lucide-react";
 import { parseAsString, parseAsStringLiteral, useQueryState } from "nuqs";
 import { useState } from "react";
 
+import { BuildSummaryStats } from "~/components/features/builds/BuildSummaryStats";
 import { CHART_COLOR } from "~/components/patterns/charts/theme";
 import { SortableHeader } from "~/components/patterns/data-table/SortableHeader";
 import { TableEmptyRow } from "~/components/patterns/data-table/TableEmptyRow";
@@ -173,14 +174,15 @@ export function BuildTable({
   return (
     // The table scrolls inside the panel, so the panel keeps one height beside the build details.
     <Panel className="@container/builds flex flex-col *:data-[slot=table-container]:max-h-136">
-      <PanelHeader title={`${rows.length} builds`} icon={ListOrdered} size="sm">
+      <PanelHeader title="Builds" icon={ListOrdered} size="sm">
+        <BuildSummaryStats summary={summary} />
         <SearchInput
           value={query}
           onValueChange={setQuery}
           placeholder="Name, author or ID"
           aria-label="Filter builds by name, author or ID"
           size="sm"
-          className="w-full @sm:ms-auto @sm:w-56"
+          className="w-full @sm:ms-auto @sm:w-48"
         />
         <Segmented size="sm" width="hug" value={view} onValueChange={setView} aria-label="Columns">
           <SegmentedItem value="overview">Overview</SegmentedItem>

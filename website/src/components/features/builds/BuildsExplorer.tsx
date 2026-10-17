@@ -4,7 +4,6 @@ import { useMemo } from "react";
 import { BuildDetailPanel } from "~/components/features/builds/BuildDetailPanel";
 import { BuildItemsPanel } from "~/components/features/builds/BuildItemsPanel";
 import { BuildScatterChart } from "~/components/features/builds/BuildScatterChart";
-import { BuildSummaryStats } from "~/components/features/builds/BuildSummaryStats";
 import { BuildTable } from "~/components/features/builds/BuildTable";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
@@ -187,7 +186,6 @@ export function BuildsExplorer({
 
   return (
     <div className="@container flex flex-col gap-3">
-      <BuildSummaryStats summary={summary} metaPending={meta.pending} onBuildIdChange={onBuildIdChange} />
       <div className="grid gap-3 @3xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
         <BuildScatterChart
           rows={rows}

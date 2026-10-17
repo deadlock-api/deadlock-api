@@ -43,9 +43,8 @@ test("a build is above or below average only when its whole interval is", () => 
   assert.equal(rows[0].share, 1000 / 2010);
 });
 
-test("the most reliable build is the largest lower bound, not the highest win rate", () => {
+test("the summary pools the builds and takes the most played one's share", () => {
   const summary = summarizeBuilds(buildRows([stat(1, 8, 2), stat(2, 600, 400)]));
-  assert.equal(summary.mostReliable?.hero_build_id, 2);
   assert.equal(summary.matches, 1010);
   assert.equal(summary.topShare, 1000 / 1010);
 });

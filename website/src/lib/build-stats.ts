@@ -52,8 +52,6 @@ export interface BuildSummary {
   winRate: number;
   /** The most played build's share of all tracked matches. */
   topShare: number;
-  /** The build whose win rate is most confidently high: the largest Wilson lower bound. */
-  mostReliable: BuildRow | null;
 }
 
 export function buildRows(stats: readonly BuildStatRow[], meta?: ReadonlyMap<number, BuildMeta | null>): BuildRow[] {
@@ -78,12 +76,7 @@ export function buildRows(stats: readonly BuildStatRow[], meta?: ReadonlyMap<num
 export function summarizeBuilds(rows: readonly BuildRow[]): BuildSummary {
   const matches = rows.reduce((sum, row) => sum + row.matches, 0);
   const wins = rows.reduce((sum, row) => sum + row.wins, 0);
-  let mostReliable: BuildRow | null = null;
-  let top = 0;
-  for (const row of rows) {
-    top = Math.max(top, row.matches);
-    if (!mostReliable || row.interval[0] > mostReliable.interval[0]) mostReliable = row;
-  }
+  const top = rows.reduce((max, row) => Math.max(max, row.matches), 0);
   return {
     builds: rows.length,
     matches,
@@ -91,7 +84,6 @@ export function summarizeBuilds(rows: readonly BuildRow[]): BuildSummary {
     players: rows.reduce((sum, row) => sum + row.players, 0),
     winRate: matches > 0 ? wins / matches : 0,
     topShare: matches > 0 ? top / matches : 0,
-    mostReliable,
   };
 }
 
