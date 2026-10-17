@@ -38,6 +38,9 @@ pub enum BucketQuery {
     StartTimeDay,
     /// Bucket Hero Build Stats By Start Time (Week)
     StartTimeWeek,
+    /// Bucket Hero Build Stats By Match Duration, in 10-minute steps: the bucket is the step's start in seconds
+    /// (`1200` for matches of 20 to 30 minutes).
+    Duration,
 }
 
 impl BucketQuery {
@@ -47,6 +50,7 @@ impl BucketQuery {
             Self::AvgBadge => "toUInt32(assumeNotNull(coalesce(mp.average_badge, 0)))",
             Self::StartTimeDay => "toUInt32(toStartOfDay(mp.start_time))",
             Self::StartTimeWeek => "toUInt32(toDateTime(toStartOfWeek(mp.start_time)))",
+            Self::Duration => "toUInt32(intDiv(mp.duration_s, 600) * 600)",
         }
     }
 }
