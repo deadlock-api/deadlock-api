@@ -306,6 +306,8 @@ pub(crate) struct ItemStatsQuery {
         proptest(strategy = "crate::utils::proptest_utils::arb_small_u32_list()")
     )]
     ability_unlock_order_prefix: Option<Vec<u32>>,
+    /// Only players who started the match with this hero build selected (the first build they had selected when the game started). Matches without a processed demo record no build. See more: <https://api.deadlock-api.com/v1/analytics/hero-build-stats/{hero_id}>
+    hero_build_id: Option<u64>,
     /// The minimum number of matches played for an item to be included in the response.
     #[serde(default = "default_min_matches_u32")]
     #[param(minimum = 1, default = 20)]
@@ -599,6 +601,7 @@ fn build_mv_query(query: &ItemStatsQuery) -> Option<String> {
         || query.max_bought_at_s.is_some()
         || is_non_empty(query.item_order.as_deref())
         || query.has_ability_order_filter()
+        || query.hero_build_id.is_some()
         || query.min_match_id.is_some()
         || query.max_match_id.is_some()
         || query.reads_corrupted()
@@ -768,6 +771,7 @@ fn build_cohort_mv_query(query: &ItemStatsQuery) -> Option<String> {
         || query.max_bought_at_s.is_some()
         || is_non_empty(query.item_order.as_deref())
         || query.has_ability_order_filter()
+        || query.hero_build_id.is_some()
         || query.min_match_id.is_some()
         || query.max_match_id.is_some()
         || query
@@ -848,6 +852,7 @@ fn build_enemy_mv_query(query: &ItemStatsQuery) -> Option<String> {
         || query.max_bought_at_s.is_some()
         || is_non_empty(query.item_order.as_deref())
         || query.has_ability_order_filter()
+        || query.hero_build_id.is_some()
         || query.min_match_id.is_some()
         || query.max_match_id.is_some()
         || query.reads_corrupted()
@@ -929,6 +934,7 @@ fn cohort_mv_skip_reason(query: &ItemStatsQuery) -> &'static str {
         ),
         (is_non_empty(query.item_order.as_deref()), "item_order"),
         (query.has_ability_order_filter(), "ability_order"),
+        (query.hero_build_id.is_some(), "hero_build"),
         (
             query.min_match_id.is_some() || query.max_match_id.is_some(),
             "match_id",
@@ -1096,6 +1102,9 @@ fn build_query(query: &ItemStatsQuery) -> String {
     ));
     if let Some(chains) = &query.item_order {
         player_filters.extend(chains.iter().filter_map(|c| item_order_predicate(c)));
+    }
+    if let Some(hero_build_id) = query.hero_build_id {
+        player_filters.push(format!("hero_build_id = {hero_build_id}"));
     }
     let player_filters = join_filters(&player_filters);
 
@@ -1749,6 +1758,43 @@ mod tests {
         let plain = build_query(&ItemStatsQuery::default());
         assert!(!plain.contains("PREWHERE"));
         assert!(plain.contains("\nWHERE match_mode IN ('Ranked', 'Unranked') AND 1=1 "));
+    }
+
+    #[test]
+    fn hero_build_filter_declines_every_rollup() {
+        let recent = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_secs()
+            .cast_signed()
+            - 86_400;
+        let query = ItemStatsQuery {
+            min_unix_timestamp: Some(recent),
+            hero_ids: Some(vec![2]),
+            hero_build_id: Some(242_723),
+            ..Default::default()
+        };
+        assert!(build_mv_query(&query).is_none());
+        assert!(
+            build_enemy_mv_query(&ItemStatsQuery {
+                enemy_hero_ids: Some(vec![66]),
+                ..query.clone()
+            })
+            .is_none()
+        );
+        let cohort = ItemStatsQuery {
+            hero_ids: None,
+            include_item_ids: Some(vec![1]),
+            ..query.clone()
+        };
+        assert!(build_cohort_mv_query(&cohort).is_none());
+        assert_eq!(cohort_mv_skip_reason(&cohort), "hero_build");
+        let sql = build_query(&query);
+        assert!(sql.contains("hero_build_id = 242723"));
+        assert_valid_sql(&sql);
+        if std::env::var_os("PRINT_ITEM_STATS_SQL").is_some() {
+            println!("{sql}");
+        }
     }
 
     #[test]
