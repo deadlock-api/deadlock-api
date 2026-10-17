@@ -142,20 +142,20 @@ export function BuildScatterChart({
       title={`${xMetric ? xLabel : "Popularity"} vs. win rate`}
       actions={
         <>
-          {performance && (
-            <Select value={xKey} onValueChange={(value) => void setX(value as XKey)}>
-              <SelectTrigger size="sm" aria-label="X axis">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {X_OPTIONS.map((option) => (
-                  <SelectItem key={option.key} value={option.key}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
+          {/* Always there, disabled until the playstyle numbers load, so the header never changes height. */}
+          <Select value={xKey} onValueChange={(value) => void setX(value as XKey)} disabled={!performance}>
+            <SelectTrigger size="sm" aria-label="X axis" className="w-40">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {X_OPTIONS.map((option) => (
+                <SelectItem key={option.key} value={option.key}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
           <ChartLegend label="Dot colors">
             {(["above", "even", "below"] as const).map((verdict) => (
               <ChartLegendItem key={verdict} color={VERDICT_COLOR[verdict]} shape="dot">

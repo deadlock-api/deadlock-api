@@ -18,7 +18,8 @@ export function BuildSummaryStats({
       <InlineStat value={count(summary.builds)} label={summary.builds === 1 ? "build" : "builds"} />
       <InlineStat value={count(summary.matches)} label="matches" />
       <InlineStat value={formatPercent(summary.winRate)} label="avg. win rate" />
-      {heroWinRate !== undefined && <InlineStat value={formatPercent(heroWinRate)} label="all players" />}
+      {/* There from the first paint, a placeholder until it loads, so the strip does not reflow. */}
+      <InlineStat value={heroWinRate === undefined ? null : formatPercent(heroWinRate)} label="all players" />
       <InlineStat value={formatPercent(summary.topShare)} label="top build share" />
     </div>
   );
