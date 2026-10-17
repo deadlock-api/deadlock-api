@@ -3,6 +3,7 @@ import type { AnalyticsApiHeroBuildStatsRequest, AnalyticsApiItemStatsRequest } 
 
 import { CACHE_DURATIONS } from "~/constants/cache";
 import { api } from "~/lib/api";
+import { type BuildPerformanceTotals, PERFORMANCE_TOTAL_KEYS } from "~/lib/build-performance";
 import { buildAbilityOrder, type BuildItemPurchase, type BuildMeta, type BuildStatRow } from "~/lib/build-stats";
 import { API_ORIGIN } from "~/lib/constants";
 import { GraphqlHttpError } from "~/lib/graphql";
@@ -21,6 +22,33 @@ export function heroBuildStatsQueryOptions(params: AnalyticsApiHeroBuildStatsReq
         matches,
         players,
       }));
+    },
+    staleTime: CACHE_DURATIONS.ONE_HOUR,
+  });
+}
+
+/**
+ * The hero build stats with the performance totals of every build, by build id. A request of its own: the totals make
+ * the query read about three times the data, so the page's list does not wait for them.
+ */
+export function heroBuildPerformanceQueryOptions(params: AnalyticsApiHeroBuildStatsRequest) {
+  return queryOptions({
+    queryKey: queryKeys.analytics.heroBuildStats({ ...params, includePerformance: true }),
+    queryFn: async (): Promise<Record<number, BuildPerformanceTotals>> => {
+      const response = await api.analytics_api.heroBuildStats({ ...params, includePerformance: true });
+      const rows = response.data;
+      // An API without the totals leaves them out: those builds have no performance rather than zeros.
+      return Object.fromEntries(
+        rows.flatMap((row) => {
+          if (row.total_kills === undefined || row.total_kills === null) return [];
+          const totals = {
+            matches: row.matches,
+            avg_average_badge: row.avg_average_badge ?? 0,
+          } as BuildPerformanceTotals;
+          for (const key of PERFORMANCE_TOTAL_KEYS) totals[key] = row[key] ?? 0;
+          return [[row.hero_build_id, totals]];
+        }),
+      );
     },
     staleTime: CACHE_DURATIONS.ONE_HOUR,
   });

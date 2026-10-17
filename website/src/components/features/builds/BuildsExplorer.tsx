@@ -11,11 +11,13 @@ import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { day, type Dayjs } from "~/dayjs";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
+import { poolPerformance } from "~/lib/build-performance";
 import { type BuildMeta, buildRows, buildTrends, summarizeBuilds } from "~/lib/build-stats";
 import type { MatchMode } from "~/lib/game-mode";
 import {
   buildMetaBatches,
   heroBuildMetaQueryOptions,
+  heroBuildPerformanceQueryOptions,
   heroBuildStatsQueryOptions,
 } from "~/queries/hero-build-stats-query";
 import { type SteamProfileMap, steamProfileBatches, steamProfilesQueryOptions } from "~/queries/steam-queries";
@@ -129,6 +131,30 @@ export function BuildsExplorer({
 
   const rows = useMemo(() => (stats ? buildRows(stats, meta.builds) : []), [stats, meta.builds]);
   const summary = useMemo(() => summarizeBuilds(rows), [rows]);
+  const performanceQuery = useQuery({
+    ...heroBuildPerformanceQueryOptions(
+      heroBuildStatsRequest({
+        heroId,
+        minRankId,
+        maxRankId,
+        minUnixTimestamp,
+        maxUnixTimestamp,
+        minMatches,
+        matchMode,
+      }),
+    ),
+    enabled: stats !== undefined,
+  });
+  const performance = performanceQuery.data;
+  const averagePerformance = useMemo(
+    () =>
+      performance
+        ? poolPerformance(
+            rows.flatMap((row) => (performance[row.hero_build_id] ? [performance[row.hero_build_id]] : [])),
+          )
+        : null,
+    [performance, rows],
+  );
   const recent = recentQuery.data;
   const trends = useMemo(() => (recent ? buildTrends(rows, recent) : null), [rows, recent]);
 
@@ -180,6 +206,10 @@ export function BuildsExplorer({
           rows={rows}
           trends={trends}
           trendsPending={recentQuery.isPending}
+          performance={performance}
+          averagePerformance={averagePerformance}
+          summary={summary}
+          performancePending={performanceQuery.isPending && performanceQuery.fetchStatus !== "idle"}
           profiles={profiles.byId}
           metaPending={meta.pending}
           profilesPending={profiles.pending}
@@ -188,6 +218,18 @@ export function BuildsExplorer({
         />
         <BuildDetailPanel
           row={selected}
+          rows={rows}
+          performanceById={performance}
+          authorBuilds={rows.filter(
+            (row) =>
+              row.hero_build_id !== selected.hero_build_id &&
+              row.meta != null &&
+              row.meta.authorId === selected.meta?.authorId,
+          )}
+          onBuildIdChange={onBuildIdChange}
+          performance={performance?.[selected.hero_build_id]}
+          averagePerformance={averagePerformance}
+          performancePending={performanceQuery.isPending && performanceQuery.fetchStatus !== "idle"}
           purchaseFilters={{
             gameMode: "normal",
             matchMode,

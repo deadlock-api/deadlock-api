@@ -1,5 +1,5 @@
 import { ListOrdered } from "lucide-react";
-import { parseAsStringLiteral, useQueryState } from "nuqs";
+import { parseAsString, parseAsStringLiteral, useQueryState } from "nuqs";
 import { useState } from "react";
 
 import { CHART_COLOR } from "~/components/patterns/charts/theme";
@@ -9,22 +9,59 @@ import { Panel, PanelHeader } from "~/components/patterns/panel/Panel";
 import { Button } from "~/components/ui/button";
 import { Delta } from "~/components/ui/delta";
 import { sortParams, useSort } from "~/components/ui/hooks/use-sort";
+import { NoValue } from "~/components/ui/no-value";
 import { ProgressBar } from "~/components/ui/progress-bar";
 import { DivergingBar } from "~/components/ui/rate-bar";
 import { SearchInput } from "~/components/ui/search-input";
+import { Segmented, SegmentedItem } from "~/components/ui/segmented";
 import { Skeleton } from "~/components/ui/skeleton";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
+import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { day } from "~/dayjs";
-import { type BuildRow, type BuildTrend, buildLanguageName } from "~/lib/build-stats";
+import { BUILD_METRICS, type BuildMetric, type BuildPerformanceTotals } from "~/lib/build-performance";
+import { type BuildRow, type BuildSummary, type BuildTrend, buildLanguageName } from "~/lib/build-stats";
 import { formatPercent, formatShare, formatSignedPercent } from "~/lib/format";
 import { TONE_TEXT, toneOf } from "~/lib/tone";
 import { cn } from "~/lib/utils";
 import type { SteamProfileMap } from "~/queries/steam-queries";
 
-const SORT_KEYS = ["matches", "players", "winRate", "lowerBound", "trend", "updated"] as const;
-type SortKey = (typeof SORT_KEYS)[number];
-const parseSortKey = parseAsStringLiteral(SORT_KEYS).withDefault("matches");
+/** A column's sort key: one of the overview's, or `m:` and a metric's key. */
+type SortKey = string;
+const parseSortKey = parseAsString.withDefault("matches");
 const parseSortDir = parseAsStringLiteral(["asc", "desc"] as const).withDefault("desc");
+
+const VIEWS = ["overview", "combat", "economy"] as const;
+type View = (typeof VIEWS)[number];
+const parseView = parseAsStringLiteral(VIEWS).withDefault("overview");
+
+/** Where a column that gives way first is hidden: `narrow` below a mid-size table, `wide` below a wide one. */
+const HIDE_BELOW = { narrow: "hidden @lg/builds:table-cell", wide: "hidden @3xl/builds:table-cell" } as const;
+
+/** The metric columns of the two performance views; `hide` columns give way as the table narrows. */
+const VIEW_METRICS: Record<
+  Exclude<View, "overview">,
+  { metric: BuildMetric; label: string; hide?: keyof typeof HIDE_BELOW }[]
+> = {
+  combat: [
+    { metric: metricByKey("kda"), label: "KDA" },
+    { metric: metricByKey("kills"), label: "K / D / A", hide: "wide" },
+    { metric: metricByKey("damagePerMin"), label: "Dmg/min" },
+    { metric: metricByKey("accuracy"), label: "Accuracy", hide: "narrow" },
+    { metric: metricByKey("critRate"), label: "Headshots", hide: "narrow" },
+  ],
+  economy: [
+    { metric: metricByKey("soulsPerMin"), label: "Souls/min" },
+    { metric: metricByKey("lastHits"), label: "Last hits" },
+    { metric: metricByKey("objectiveDamage"), label: "Obj. dmg" },
+    { metric: metricByKey("level"), label: "Level", hide: "narrow" },
+    { metric: metricByKey("duration"), label: "Length", hide: "narrow" },
+  ],
+};
+
+function metricByKey(key: string): BuildMetric {
+  const metric = BUILD_METRICS.find((candidate) => candidate.key === key);
+  if (!metric) throw new Error(`Unknown build metric ${key}`);
+  return metric;
+}
 
 const COLUMNS: { key: SortKey; label: string; name: string; className?: string }[] = [
   { key: "matches", label: "Matches", name: "matches" },
@@ -45,7 +82,7 @@ const COLUMNS: { key: SortKey; label: string; name: string; className?: string }
   { key: "updated", label: "Updated", name: "last update", className: "hidden @xl/builds:table-cell" },
 ];
 
-const sortValue: Record<SortKey, (row: BuildRow, trend: BuildTrend | undefined) => number> = {
+const sortValue: Record<string, (row: BuildRow, trend: BuildTrend | undefined) => number> = {
   matches: (row) => row.matches,
   players: (row) => row.players,
   winRate: (row) => row.winRate,
@@ -67,6 +104,10 @@ export function BuildTable({
   rows,
   trends,
   trendsPending,
+  performance,
+  performancePending,
+  averagePerformance,
+  summary,
   profiles,
   metaPending,
   profilesPending,
@@ -77,6 +118,12 @@ export function BuildTable({
   /** Null while the recent window loads or when it has no matches. */
   trends: ReadonlyMap<number, BuildTrend> | null;
   trendsPending: boolean;
+  /** Every build's performance totals, by id; undefined while they load. */
+  performance: Readonly<Record<number, BuildPerformanceTotals>> | undefined;
+  performancePending: boolean;
+  /** Every listed build's totals pooled, for the footer. */
+  averagePerformance: BuildPerformanceTotals | null;
+  summary: BuildSummary;
   profiles: SteamProfileMap;
   metaPending: boolean;
   profilesPending: boolean;
@@ -87,8 +134,30 @@ export function BuildTable({
     sortParams(useQueryState("sort", parseSortKey), useQueryState("dir", parseSortDir), { history: "replace" }),
   );
   const [query, setQuery] = useState("");
+  const [view, setView] = useQueryState("columns", parseView.withOptions({ history: "replace" }));
+  const metricColumns = view === "overview" ? [] : VIEW_METRICS[view];
+  const columns =
+    view === "overview"
+      ? COLUMNS
+      : [
+          COLUMNS[0],
+          COLUMNS[2],
+          ...metricColumns.map(({ metric, label, hide }) => ({
+            key: `m:${metric.key}`,
+            label,
+            name: metric.label.toLowerCase(),
+            className: hide ? HIDE_BELOW[hide] : undefined,
+          })),
+        ];
   const sign = sort.dir === "desc" ? -1 : 1;
-  const value = (row: BuildRow) => sortValue[sort.sortKey](row, trends?.get(row.hero_build_id));
+  const sortMetric = sort.sortKey.startsWith("m:") ? metricByKey(sort.sortKey.slice(2)) : undefined;
+  const value = (row: BuildRow) => {
+    if (sortMetric) {
+      const totals = performance?.[row.hero_build_id];
+      return (totals && sortMetric.value(totals)) ?? Number.NEGATIVE_INFINITY;
+    }
+    return (sortValue[sort.sortKey] ?? sortValue.matches)(row, trends?.get(row.hero_build_id));
+  };
   const needle = fold(query.trim());
   const shown = needle
     ? rows.filter((row) => {
@@ -113,13 +182,18 @@ export function BuildTable({
           size="sm"
           className="w-full @sm:ms-auto @sm:w-56"
         />
+        <Segmented size="sm" width="hug" value={view} onValueChange={setView} aria-label="Columns">
+          <SegmentedItem value="overview">Overview</SegmentedItem>
+          <SegmentedItem value="combat">Combat</SegmentedItem>
+          <SegmentedItem value="economy">Economy</SegmentedItem>
+        </Segmented>
       </PanelHeader>
       <Table density="compact" aria-label="Builds by matches and win rate">
         <TableHeader position="sticky">
           <TableRow>
             <TableHead className="w-8 text-end text-xs text-muted-foreground">#</TableHead>
             <TableHead className="text-xs text-muted-foreground">Build</TableHead>
-            {COLUMNS.map(({ key, label, name, className }) => (
+            {columns.map(({ key, label, name, className }) => (
               <SortableHeader
                 key={key}
                 label={label}
@@ -204,46 +278,84 @@ export function BuildTable({
                     />
                   </div>
                 </TableCell>
-                <TableCell className="hidden text-end tabular-nums @lg/builds:table-cell">
-                  {row.players.toLocaleString("en-US")}
-                </TableCell>
+                {view === "overview" && (
+                  <TableCell className="hidden text-end tabular-nums @lg/builds:table-cell">
+                    {row.players.toLocaleString("en-US")}
+                  </TableCell>
+                )}
                 <TableCell className="text-end tabular-nums">{formatPercent(row.winRate)}</TableCell>
-                <TableCell className="hidden text-end @md/builds:table-cell">
-                  <div className="ms-auto flex w-20 flex-col items-end gap-1">
-                    <span className={cn("text-xs tabular-nums", TONE_TEXT[toneOf(verdictSign(row))])}>
-                      {formatSignedPercent(row.vsAverage)}
-                    </span>
-                    <DivergingBar
-                      value={row.vsAverage}
-                      interval={[row.interval[0] - average, row.interval[1] - average]}
-                      scale={VS_AVERAGE_SCALE}
-                      className="w-full"
+                {metricColumns.map(({ metric, hide }) => (
+                  <TableCell key={metric.key} className={cn("text-end tabular-nums", hide && HIDE_BELOW[hide])}>
+                    <MetricValue
+                      metric={metric}
+                      totals={performance?.[row.hero_build_id]}
+                      pending={performancePending}
                     />
-                  </div>
-                </TableCell>
-                <TableCell className="hidden text-end text-xs tabular-nums @lg/builds:table-cell">
-                  {trendsPending ? (
-                    <Skeleton className="ms-auto h-4 w-12" />
-                  ) : (
-                    <Delta
-                      value={trends?.get(row.hero_build_id)?.change}
-                      unit=" pp"
-                      polarity="neutral"
-                      sign="arrow"
-                      className="justify-end"
-                    />
-                  )}
-                </TableCell>
-                <TableCell className="hidden text-end text-xs whitespace-nowrap text-muted-foreground tabular-nums @xl/builds:table-cell">
-                  {row.meta ? day.unix(row.meta.updatedAt).utc().format("MMM D, YYYY") : ""}
-                </TableCell>
+                  </TableCell>
+                ))}
+                {view === "overview" && (
+                  <>
+                    <TableCell className="hidden text-end @md/builds:table-cell">
+                      <div className="ms-auto flex w-20 flex-col items-end gap-1">
+                        <span className={cn("text-xs tabular-nums", TONE_TEXT[toneOf(verdictSign(row))])}>
+                          {formatSignedPercent(row.vsAverage)}
+                        </span>
+                        <DivergingBar
+                          value={row.vsAverage}
+                          interval={[row.interval[0] - average, row.interval[1] - average]}
+                          scale={VS_AVERAGE_SCALE}
+                          className="w-full"
+                        />
+                      </div>
+                    </TableCell>
+                    <TableCell className="hidden text-end text-xs tabular-nums @lg/builds:table-cell">
+                      {trendsPending ? (
+                        <Skeleton className="ms-auto h-4 w-12" />
+                      ) : (
+                        <Delta
+                          value={trends?.get(row.hero_build_id)?.change}
+                          unit=" pp"
+                          polarity="neutral"
+                          sign="arrow"
+                          className="justify-end"
+                        />
+                      )}
+                    </TableCell>
+                    <TableCell className="hidden text-end text-xs whitespace-nowrap text-muted-foreground tabular-nums @xl/builds:table-cell">
+                      {row.meta ? day.unix(row.meta.updatedAt).utc().format("MMM D, YYYY") : ""}
+                    </TableCell>
+                  </>
+                )}
               </TableRow>
             );
           })}
           {sorted.length === 0 && (
-            <TableEmptyRow colSpan={COLUMNS.length + 2}>No build matches “{query}”</TableEmptyRow>
+            <TableEmptyRow colSpan={columns.length + 2}>No build matches “{query}”</TableEmptyRow>
           )}
         </TableBody>
+        {!needle && (
+          <TableFooter>
+            <TableRow>
+              <TableCell />
+              <TableCell className="text-xs text-muted-foreground">All builds</TableCell>
+              <TableCell className="text-end tabular-nums">{summary.matches.toLocaleString("en-US")}</TableCell>
+              {view === "overview" && <TableCell className="hidden @lg/builds:table-cell" />}
+              <TableCell className="text-end tabular-nums">{formatPercent(summary.winRate)}</TableCell>
+              {metricColumns.map(({ metric, hide }) => (
+                <TableCell key={metric.key} className={cn("text-end tabular-nums", hide && HIDE_BELOW[hide])}>
+                  <MetricValue metric={metric} totals={averagePerformance ?? undefined} pending={performancePending} />
+                </TableCell>
+              ))}
+              {view === "overview" && (
+                <>
+                  <TableCell className="hidden @md/builds:table-cell" />
+                  <TableCell className="hidden @lg/builds:table-cell" />
+                  <TableCell className="hidden @xl/builds:table-cell" />
+                </>
+              )}
+            </TableRow>
+          </TableFooter>
+        )}
       </Table>
     </Panel>
   );
@@ -252,4 +364,28 @@ export function BuildTable({
 /** A difference is colored only when the whole interval is on one side of the average. */
 function verdictSign(row: BuildRow): number {
   return row.verdict === "above" ? 1 : row.verdict === "below" ? -1 : 0;
+}
+
+/** A build's value of one metric in a table cell, a K / D / A triple for the kills column. */
+function MetricValue({
+  metric,
+  totals,
+  pending,
+}: {
+  metric: BuildMetric;
+  totals: BuildPerformanceTotals | undefined;
+  pending: boolean;
+}) {
+  if (!totals) return pending ? <Skeleton className="ms-auto h-4 w-12" /> : <NoValue />;
+  if (metric.key === "kills") {
+    // Totals only come with at least one match, so the divisor is never 0.
+    const per = (total: number) => (total / totals.matches).toFixed(1);
+    return (
+      <span className="whitespace-nowrap">
+        {per(totals.total_kills)} / {per(totals.total_deaths)} / {per(totals.total_assists)}
+      </span>
+    );
+  }
+  const value = metric.value(totals);
+  return value === null ? <NoValue /> : metric.format(value);
 }
