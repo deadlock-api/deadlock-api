@@ -354,7 +354,7 @@ export function Round4Requests2() {
       <Specimen
         name="Details affordance"
         source="ui/text-link · ui/detail-popover"
-        note='`underline="dotted"` is the one mark for "there is more behind this word": it says the text opens details rather than a page. `TooltipTarget` makes a plain value focusable so its hover card is reachable by keyboard; its `underline="dotted"` marks a value whose card holds more than a hint (a plot).'
+        note='`underline="dotted"` is the one mark for "there is more behind this word": it says the text opens details rather than a page. `TooltipTarget` makes a plain value focusable so its hover card is reachable by keyboard; its `underline="dashed"` marks a value with a hover card behind it (a plot, more numbers).'
       >
         <Variants>
           <TextLink href="#dotted" tone="inherit" underline="dotted">
@@ -372,7 +372,7 @@ export function Round4Requests2() {
             <TooltipTarget>Hover or tab to this value</TooltipTarget>
           </Tooltip>
           <Tooltip content="A distribution plot would open here.">
-            <TooltipTarget underline="dotted">3.51</TooltipTarget>
+            <TooltipTarget underline="dashed">3.51</TooltipTarget>
           </Tooltip>
         </Variants>
       </Specimen>

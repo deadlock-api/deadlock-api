@@ -83,7 +83,7 @@ export function BuildPlaystyle({
                         variant="preview"
                         content={<DistributionCard title={metric.label} distribution={distributions[metric.key]!} />}
                       >
-                        <TooltipTarget underline="dotted">{metric.format(value)}</TooltipTarget>
+                        <TooltipTarget underline="dashed">{metric.format(value)}</TooltipTarget>
                       </Tooltip>
                     ) : (
                       metric.format(value)
