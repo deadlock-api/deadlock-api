@@ -79,7 +79,6 @@ export function RankTierWinRateChart({
   const enough = tiers.length >= Math.max(1, minTiers);
   const best = enough ? tiers.reduce((a, b) => (b.winRate > a.winRate ? b : a)) : undefined;
   const worst = enough ? tiers.reduce((a, b) => (b.winRate < a.winRate ? b : a)) : undefined;
-  const hoverHint = tiers.some((tier) => tier.pickRate !== undefined) ? "pick rate and matches" : "matches";
 
   return (
     <ChartCard
@@ -91,7 +90,7 @@ export function RankTierWinRateChart({
         worst && (
           <>
             {subject} most at {best.name} ({formatPercent(best.winRate)}) and least at {worst.name} (
-            {formatPercent(worst.winRate)}). Hover a bar for {hoverHint}.
+            {formatPercent(worst.winRate)}).
           </>
         )
       }
