@@ -1,7 +1,18 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link, createFileRoute, notFound, redirect, useRouter } from "@tanstack/react-router";
 import type { AnalyticsHeroStats } from "deadlock_api_client";
-import { ListOrdered, type LucideIcon, Map, Medal, ShoppingBag, Swords, Trophy, Users, UsersRound } from "lucide-react";
+import {
+  Hammer,
+  ListOrdered,
+  type LucideIcon,
+  Map,
+  Medal,
+  ShoppingBag,
+  Swords,
+  Trophy,
+  Users,
+  UsersRound,
+} from "lucide-react";
 import { lazy, Suspense, useMemo } from "react";
 
 import { EntityNotFound } from "~/components/app/EntityNotFound";
@@ -281,6 +292,7 @@ function HeroLinkCard({
     | "/analytics/heroes/tier-list"
     | "/analytics/heroes/matchup-details"
     | "/analytics/heroes/combos"
+    | "/analytics/builds"
     | "/analytics/items"
     | "/analytics/abilities"
     | "/community/leaderboard"
@@ -530,7 +542,7 @@ function HeroDetailPage() {
 
       <Section title={`More ${heroName} Stats`}>
         <nav aria-label={`More ${heroName} stats`} className="@container">
-          <div className="grid gap-3 @xl:grid-cols-2 @4xl:grid-cols-4">
+          <div className="grid gap-3 @xl:grid-cols-2 @4xl:grid-cols-3">
             <HeroLinkCard
               to="/analytics/heroes/matchup-details"
               search={{ hero_id: heroId, ...RANK_SEARCH }}
@@ -544,6 +556,13 @@ function HeroDetailPage() {
               icon={UsersRound}
               title="Best Duos"
               description={`The teammates that win most often next to ${heroName}.`}
+            />
+            <HeroLinkCard
+              to="/analytics/builds"
+              search={{ hero: heroId, ...RANK_SEARCH }}
+              icon={Hammer}
+              title="Popular Builds"
+              description={`The published ${heroName} builds players start with, and how each one wins.`}
             />
             <HeroLinkCard
               to="/analytics/items"
