@@ -56,6 +56,9 @@ pub(crate) struct PlayerScoreboardQuery {
     match_mode: Option<Vec<MatchMode>>,
     /// Filter matches based on the hero ID. See more: <https://api.deadlock-api.com/v1/assets/heroes>
     hero_id: Option<u32>,
+    /// Only matches the player started with this hero build selected. Matches without a processed demo record no
+    /// build. See more: <https://api.deadlock-api.com/v1/analytics/hero-build-stats/{hero_id}>
+    hero_build_id: Option<u64>,
     /// The minimum number of matches played for a player to be included in the scoreboard.
     #[serde(default = "default_min_matches_u32")]
     #[param(minimum = 1, default = 20)]
@@ -138,7 +141,8 @@ fn from_clause_parts(
     // On the unscoped full-table read FINAL + count() also beats the raw
     // uniq(match_id) scan (measured 41% less wall time, 90% less peak memory)
     // and is exact where uniq loses a match to a hash collision.
-    let use_final = query.hero_id.is_none() && query.account_ids.is_none();
+    let use_final =
+        query.hero_id.is_none() && query.account_ids.is_none() && query.hero_build_id.is_none();
 
     if use_final {
         (format!(" FROM {table} FINAL "), true, "count()")
@@ -183,7 +187,8 @@ fn build_query(query: &PlayerScoreboardQuery) -> String {
     // Buff sorts read match_player.permanent_buffs: player_match_stats only has it for rows
     // ingested since it was added. The handler requires a time or match-id lower bound for
     // them so this never scans the full history.
-    let table = if query.sort_by.is_buff_sort() {
+    // `player_match_stats` has no build column.
+    let table = if query.sort_by.is_buff_sort() || query.hero_build_id.is_some() {
         "match_player"
     } else if has_account_filter || (match_info_filters.is_empty() && query.hero_id.is_none()) {
         "player_match_stats"
@@ -192,6 +197,9 @@ fn build_query(query: &PlayerScoreboardQuery) -> String {
     };
     if let Some(hero_id) = query.hero_id {
         inner_filters.push(format!("hero_id = {hero_id}"));
+    }
+    if let Some(hero_build_id) = query.hero_build_id {
+        inner_filters.push(format!("hero_build_id = {hero_build_id}"));
     }
     inner_filters.extend(range_filters(
         "net_worth",
