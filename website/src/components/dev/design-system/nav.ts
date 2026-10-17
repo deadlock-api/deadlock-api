@@ -240,6 +240,7 @@ export const NAV: readonly NavChapter[] = [
           "ChartLegendToggle",
           "ChartReadings",
           "ChartReveal",
+          "GaussianComparison",
           "ChartReadings rows",
           "Chart states",
           "ChartOverlay",

@@ -1,4 +1,4 @@
-interface GaussianStats {
+export interface GaussianStats {
   avg?: number | null;
   std?: number | null;
 }

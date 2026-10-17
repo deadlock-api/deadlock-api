@@ -23,6 +23,7 @@ import { ChartReading, ChartReadingList, ChartReadings } from "~/components/patt
 import { ChartReveal, ChartRevealBack, ChartRevealFront } from "~/components/patterns/charts/ChartReveal";
 import { ChartEmpty, ChartError, ChartLoading } from "~/components/patterns/charts/ChartStates";
 import { ChartSurface } from "~/components/patterns/charts/ChartSurface";
+import { GaussianComparison } from "~/components/patterns/charts/GaussianComparison";
 import {
   CHART_BASELINE,
   CHART_COLOR,
@@ -245,6 +246,35 @@ export function Charts() {
               2.52 · P61
             </ChartReading>
           </ChartReadings>
+        </Variants>
+      </Specimen>
+
+      <Specimen
+        name="GaussianComparison"
+        source="patterns/charts/GaussianComparison"
+        note="Two distributions as normal curves fitted to a mean and a standard deviation: the subject in a series color over a dashed, neutral reference, each with a line at its mean. Approximations from two moments, not histograms. Without a spread it shows the means only; without any mean it says the distribution is unavailable. bounded keeps a rate under 1."
+      >
+        <Variants label="Value against reference · a rate (bounded) · means only" className="items-start">
+          <GaussianComparison
+            className="w-64"
+            value={{ avg: 6.4, std: 3.1 }}
+            reference={{ avg: 5.6, std: 3.3 }}
+            label="Kills of a build against its hero"
+          />
+          <GaussianComparison
+            className="w-64"
+            value={{ avg: 0.39, std: 0.06 }}
+            reference={{ avg: 0.36, std: 0.07 }}
+            bounded
+            format={(x) => `${Math.round(x * 100)}%`}
+            label="Accuracy against the lobby"
+          />
+          <GaussianComparison
+            className="w-64"
+            value={{ avg: 21000 }}
+            reference={{ avg: 19800 }}
+            label="Souls, means only"
+          />
         </Variants>
       </Specimen>
 

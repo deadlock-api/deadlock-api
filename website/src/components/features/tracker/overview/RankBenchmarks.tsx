@@ -4,6 +4,7 @@ import { ChartNoAxesCombined } from "lucide-react";
 import { parseAsStringLiteral, useQueryState } from "nuqs";
 
 import { ChartLegend, ChartLegendItem } from "~/components/patterns/charts/ChartLegend";
+import { GaussianComparison } from "~/components/patterns/charts/GaussianComparison";
 import { CHART_COLOR, SERIES_COLORS } from "~/components/patterns/charts/theme";
 import { PanelWithDetails } from "~/components/patterns/panel/PanelWithDetails";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
@@ -27,8 +28,6 @@ import type { TrackerFilterValues } from "~/lib/tracker/compute";
 import { cn } from "~/lib/utils";
 import { playerStatsMetricsQueryOptions } from "~/queries/player-stats-metrics-query";
 import { ranksQueryOptions } from "~/queries/ranks-query";
-
-import { MetricGaussian } from "./MetricGaussian";
 
 const PRIMARY_METRICS = [
   "kills",
@@ -314,9 +313,9 @@ function BenchmarkMetric({
         </div>
       </DetailPopover>
       {showDistribution && (
-        <MetricGaussian
-          player={player}
-          cohort={cohort}
+        <GaussianComparison
+          value={player}
+          reference={cohort}
           label={def.label}
           format={(value) => formatPlayerMetricValue(value, def.format) ?? ""}
           bounded={def.format === "percent"}
