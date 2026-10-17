@@ -121,7 +121,7 @@ export function BuildScatterChart({
     >
       <ChartSurface
         variant="flush"
-        size="default"
+        size="md"
         announce="label"
         label={`${rows.length} builds by matches played and win rate: ${above} win confidently above the average of ${formatPercent(average)}, ${below} below it.`}
       >

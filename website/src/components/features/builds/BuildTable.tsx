@@ -188,7 +188,7 @@ export function BuildTable({
           <SegmentedItem value="economy">Economy</SegmentedItem>
         </Segmented>
       </PanelHeader>
-      <Table density="compact" aria-label="Builds by matches and win rate">
+      <Table density="dense" aria-label="Builds by matches and win rate">
         <TableHeader position="sticky">
           <TableRow>
             <TableHead className="w-8 text-end text-xs text-muted-foreground">#</TableHead>

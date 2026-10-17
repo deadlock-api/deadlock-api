@@ -20,7 +20,7 @@ export function BuildSummaryStats({
 }) {
   const leader = summary.mostReliable;
   return (
-    <StatGroup size="sm" className="grid-cols-2 @3xl:grid-cols-5">
+    <StatGroup size="xs" variant="joined" className="grid-cols-2 @3xl:grid-cols-5">
       <Stat label="Builds played" value={count(summary.builds)} />
       <Stat label="Matches" value={count(summary.matches)} />
       <Stat label="Avg. win rate" value={formatPercent(summary.winRate)} />
@@ -41,7 +41,7 @@ export function BuildSummaryStats({
               {leader.meta.name}
             </Button>
           ) : metaPending ? (
-            <Skeleton className="h-6 w-32" />
+            <Skeleton className="h-5 w-32" />
           ) : (
             `Build ${leader.hero_build_id}`
           ))

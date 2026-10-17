@@ -60,7 +60,7 @@ export function BuildItemTile({
         </>
       }
     >
-      <TooltipTarget aria-label={name} className="flex w-10 flex-col items-center gap-0.5">
+      <TooltipTarget aria-label={name} className="flex w-9 flex-col items-center">
         <span className="relative">
           <ItemImage
             item={item}
@@ -68,7 +68,7 @@ export function BuildItemTile({
             alt=""
             title=""
             emphasis={!pending && rate < RARELY_BOUGHT ? "dim" : "normal"}
-            className="size-9"
+            className="size-8"
           />
           {note && (
             <CornerBadge tone="scrim" aria-hidden="true">

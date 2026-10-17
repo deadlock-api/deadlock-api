@@ -203,7 +203,7 @@ export function BuildDetailPanel({
         </CopyButton>
       </PanelHeader>
       <div className={cn(SCROLLBAR_THIN, "@container relative flex min-h-0 flex-1 flex-col overflow-y-auto")}>
-        <div className="flex flex-col gap-3 px-4 py-3">
+        <div className="flex flex-col gap-2 px-3 py-2">
           {meta ? (
             <div className="flex min-w-0 flex-wrap items-center justify-between gap-x-3 gap-y-1">
               <PlayerCell
@@ -219,7 +219,7 @@ export function BuildDetailPanel({
               </span>
             </div>
           ) : null}
-          <StatGroup size="xs" variant="joined" className="grid-cols-2 @lg:grid-cols-4">
+          <StatGroup size="xs" variant="joined" className="grid-cols-3">
             <Stat label="Matches" value={row.matches.toLocaleString("en-US")} sub={`${formatShare(row.share)} share`} />
             <Stat
               label="Players"
@@ -274,7 +274,7 @@ export function BuildDetailPanel({
                   >
                     <span className="tabular-nums">{category.itemIds.length}</span>
                   </PanelSection>
-                  <ul className="flex flex-wrap gap-1.5 px-4 py-2">
+                  <ul className="flex flex-wrap gap-1 px-3 py-1.5">
                     {category.itemIds.map((itemId) => (
                       <li key={itemId}>
                         <BuildItemTile
@@ -293,7 +293,7 @@ export function BuildDetailPanel({
                 <PanelSection title="Bought in this order">
                   <span className="tabular-nums">{buyOrder.length}</span>
                 </PanelSection>
-                <ol className="flex flex-wrap gap-1.5 px-4 py-2">
+                <ol className="flex flex-wrap gap-1 px-3 py-1.5">
                   {buyOrder.map((item) => (
                     <li key={item.itemId}>
                       <BuildItemTile itemId={item.itemId} usage={item} pending={false} caption="time" />
@@ -305,7 +305,7 @@ export function BuildDetailPanel({
             {usage && usage.offBuild.length > 0 && (
               <section className="flex flex-col">
                 <PanelSection title="Also bought" />
-                <ul className="flex flex-wrap gap-1.5 px-4 py-2">
+                <ul className="flex flex-wrap gap-1 px-3 py-1.5">
                   {usage.offBuild.slice(0, OFF_BUILD_SHOWN).map((item) => (
                     <li key={item.itemId}>
                       <BuildItemTile itemId={item.itemId} usage={item} pending={false} />
@@ -317,7 +317,7 @@ export function BuildDetailPanel({
             {skillOrder.length > 0 && slotAbilities.length > 0 && (
               <section className="flex flex-col">
                 <PanelSection title="Skill order" />
-                <div className="flex flex-col gap-3 px-4 py-2">
+                <div className="flex flex-col gap-2 px-3 py-1.5">
                   <AbilityOrderGrid
                     size="sm"
                     abilityIds={slotAbilities}
@@ -337,7 +337,7 @@ export function BuildDetailPanel({
                     <li key={build.hero_build_id}>
                       <Button
                         variant="row"
-                        className="flex items-center justify-between gap-3 px-4 py-1.5 text-xs"
+                        className="flex items-center justify-between gap-3 px-3 py-1 text-xs"
                         onClick={() => onBuildIdChange(build.hero_build_id)}
                       >
                         <span className="min-w-0 truncate">{build.meta?.name ?? `Build ${build.hero_build_id}`}</span>

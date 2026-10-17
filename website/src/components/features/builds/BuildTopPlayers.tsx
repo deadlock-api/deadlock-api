@@ -50,7 +50,7 @@ export function BuildTopPlayers({
   return (
     <section className="flex flex-col">
       <PanelSection title="Most played by" />
-      <KeyValueList className="px-4 py-1">
+      <KeyValueList className="px-3 py-0.5">
         {players
           ? players.map((player) => {
               const profile = profilesQuery.data?.[player.accountId];

@@ -29,7 +29,7 @@ export function BuildPlaystyle({
   return GROUPS.map(({ group, title }) => (
     <section key={group} className="flex flex-col">
       <PanelSection title={title} />
-      <KeyValueList className="px-4 py-1">
+      <KeyValueList className="px-3 py-0.5">
         {BUILD_METRICS.filter((metric) => metric.group === group).map((metric) => {
           const value = totals ? metric.value(totals) : null;
           const delta = metricDelta(metric, value, average ? metric.value(average) : null);
