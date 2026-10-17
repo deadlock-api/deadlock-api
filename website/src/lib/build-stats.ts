@@ -174,6 +174,36 @@ export function distinguishingItems(presence: readonly BuildItemPresence[], minS
     .sort((a, b) => b.vsWithout! - a.vsWithout! || b.share - a.share || a.itemId - b.itemId);
 }
 
+export interface BuildAdherence {
+  /** Share of the build's matches whose player followed it. */
+  share: number;
+  /** Win rate of the matches that followed it, null without any. */
+  winRate: number | null;
+  /** Win rate of the build's other matches, null without any. */
+  otherWinRate: number | null;
+}
+
+/** How many of a build's matches followed some part of it (`followed`), and how both groups won. */
+export function buildAdherence(
+  build: { wins: number; matches: number },
+  followed: { wins: number; matches: number },
+): BuildAdherence {
+  // The two counts come from two requests; a later match can put the part ahead of the whole by a few.
+  const matches = Math.min(followed.matches, build.matches);
+  const wins = Math.min(followed.wins, build.wins);
+  const otherMatches = build.matches - matches;
+  return {
+    share: build.matches > 0 ? matches / build.matches : 0,
+    winRate: matches > 0 ? wins / matches : null,
+    otherWinRate: otherMatches > 0 ? (build.wins - wins) / otherMatches : null,
+  };
+}
+
+/** The order in which a skill order unlocks the abilities: each ability at its first point. */
+export function buildUnlockOrder(order: readonly number[]): number[] {
+  return [...new Set(order)];
+}
+
 export interface BuildItemUsage {
   itemId: number;
   /** Share of the build's matches in which its players bought the item. */

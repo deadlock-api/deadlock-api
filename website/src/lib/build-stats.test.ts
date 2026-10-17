@@ -3,11 +3,13 @@ import { test } from "node:test";
 
 import {
   buildAbilityOrder,
+  buildAdherence,
   buildCategoryName,
   buildItemPresence,
   buildItemUsage,
   type BuildMeta,
   buildRows,
+  buildUnlockOrder,
   buildTrends,
   distinguishingItems,
   summarizeBuilds,
@@ -129,4 +131,19 @@ test("item usage is the share of the build's matches that bought the item, and l
     offBuild.map((usage) => usage.itemId),
     [3],
   );
+});
+
+test("adherence splits a build's matches into the ones that followed it and the rest", () => {
+  assert.deepEqual(buildAdherence({ wins: 60, matches: 100 }, { wins: 45, matches: 75 }), {
+    share: 0.75,
+    winRate: 0.6,
+    otherWinRate: 0.6,
+  });
+  assert.deepEqual(buildAdherence({ wins: 10, matches: 20 }, { wins: 0, matches: 0 }), {
+    share: 0,
+    winRate: null,
+    otherWinRate: 0.5,
+  });
+  assert.equal(buildAdherence({ wins: 5, matches: 10 }, { wins: 6, matches: 11 }).otherWinRate, null);
+  assert.deepEqual(buildUnlockOrder([3, 3, 1, 2, 3, 4, 1]), [3, 1, 2, 4]);
 });

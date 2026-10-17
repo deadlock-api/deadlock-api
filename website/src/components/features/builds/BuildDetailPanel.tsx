@@ -5,6 +5,7 @@ import { useMemo } from "react";
 import { AbilityOrderGrid } from "~/components/domain/assets/AbilityOrderGrid";
 import { PlayerCell } from "~/components/domain/player/PlayerCell";
 import { BuildItemTile } from "~/components/features/builds/BuildItemTile";
+import { BuildSkillAdherence } from "~/components/features/builds/BuildSkillAdherence";
 import { Panel, PanelHeader, PanelSection } from "~/components/patterns/panel/Panel";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
@@ -203,12 +204,13 @@ export function BuildDetailPanel({
             {skillOrder.length > 0 && slotAbilities.length > 0 && (
               <section className="flex flex-col">
                 <PanelSection title="Skill order" />
-                <div className="px-4 py-2">
+                <div className="flex flex-col gap-3 px-4 py-2">
                   <AbilityOrderGrid
                     size="sm"
                     abilityIds={slotAbilities}
                     steps={skillOrder.map((abilityId) => ({ abilityId }))}
                   />
+                  <BuildSkillAdherence heroId={heroId} row={row} skillOrder={skillOrder} filters={purchaseFilters} />
                 </div>
               </section>
             )}
