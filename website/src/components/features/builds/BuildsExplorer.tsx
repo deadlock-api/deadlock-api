@@ -196,7 +196,9 @@ export function BuildsExplorer({
   // Stepping through the list with the keys would fire every request of every build passed over: the selected build's
   // details are asked for once the selection has rested, and show their loading states until then.
   const selectedId = (rows.find((row) => row.hero_build_id === buildId) ?? rows.at(0))?.hero_build_id ?? null;
-  const settled = useDebouncedValue(selectedId, SETTLE_MS) === selectedId;
+  // The first build after the list loads is asked for at once: nothing was passed over to get to it.
+  const restedId = useDebouncedValue(selectedId, SETTLE_MS);
+  const settled = restedId === selectedId || restedId === null;
 
   if (statsQuery.isPending) return <LoadingState />;
   if (statsQuery.isError) {
