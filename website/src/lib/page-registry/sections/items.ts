@@ -48,7 +48,8 @@ export const ITEM_PAGES: RegisteredPage[] = [
     title: "Build Stats",
     description:
       "win rates of the published hero builds players start their matches with: the most played and best builds of a " +
-      "hero, each build's items and skill order",
+      "hero, each build's items and skill order, what its players really buy and when, their KDA and souls against " +
+      "the hero's average, and the enemy heroes a build wins and loses against",
     context: '"best haze build" or "most popular haze builds" is build_stats.',
     path: "/analytics/builds",
     search: { hero: heroId() },
