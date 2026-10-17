@@ -9,6 +9,7 @@ import { BuildCompareDialog } from "~/components/features/builds/BuildCompareDia
 import { BuildItemTile } from "~/components/features/builds/BuildItemTile";
 import { BuildPlaystyle } from "~/components/features/builds/BuildPlaystyle";
 import { BuildSkillAdherence } from "~/components/features/builds/BuildSkillAdherence";
+import { BuildTopPlayers } from "~/components/features/builds/BuildTopPlayers";
 import { Panel, PanelHeader, PanelSection } from "~/components/patterns/panel/Panel";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
@@ -36,6 +37,9 @@ import { abilitiesQueryOptions, heroesQueryOptions } from "~/queries/asset-queri
 import { type BuildPurchaseFilters, buildItemPurchasesQueryOptions } from "~/queries/hero-build-stats-query";
 import { ranksQueryOptions } from "~/queries/ranks-query";
 import type { SteamProfile } from "~/queries/steam-queries";
+
+/** An item joins the purchase order when at least this share of the build's matches bought it. */
+const BUY_ORDER_MIN_RATE = 0.5;
 
 /** The most items the "Also bought" row shows. */
 const OFF_BUILD_SHOWN = 8;
@@ -158,6 +162,12 @@ export function BuildDetailPanel({
     () => (purchases && meta ? buildItemUsage(purchases, row.matches, buildItemIds(meta)) : undefined),
     [purchases, meta, row.matches],
   );
+  // The items most of the build's players buy, listed or not, by when they buy them on average.
+  const buyOrder = usage
+    ? [...usage.byItem.values()]
+        .filter((item) => item.boughtRate >= BUY_ORDER_MIN_RATE)
+        .sort((a, b) => a.avgBuyTimeS - b.avgBuyTimeS)
+    : [];
   // A failed request leaves the items without their rates rather than holding skeletons.
   const purchasesPending = purchasesQuery.isPending && purchasesQuery.fetchStatus !== "idle";
   const name = meta?.name ?? `Build ${row.hero_build_id}`;
@@ -279,6 +289,20 @@ export function BuildDetailPanel({
                   </ul>
                 </section>
               ))}
+            {buyOrder.length >= 3 && (
+              <section className="flex flex-col">
+                <PanelSection title="Bought in this order">
+                  <span className="tabular-nums">{buyOrder.length}</span>
+                </PanelSection>
+                <ol className="flex flex-wrap gap-1.5 px-4 py-2">
+                  {buyOrder.map((item) => (
+                    <li key={item.itemId}>
+                      <BuildItemTile itemId={item.itemId} usage={item} pending={false} caption="time" />
+                    </li>
+                  ))}
+                </ol>
+              </section>
+            )}
             {usage && usage.offBuild.length > 0 && (
               <section className="flex flex-col">
                 <PanelSection title="Also bought" />
@@ -305,6 +329,7 @@ export function BuildDetailPanel({
               </section>
             )}
             <BuildPlaystyle totals={performance} average={averagePerformance} pending={performancePending} />
+            <BuildTopPlayers heroId={heroId} buildId={row.hero_build_id} filters={purchaseFilters} />
             {authorBuilds.length > 0 && (
               <section className="flex flex-col">
                 <PanelSection title="More by this author" />

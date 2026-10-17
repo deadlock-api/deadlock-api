@@ -25,6 +25,7 @@ export function BuildItemTile({
   usage,
   pending,
   note,
+  caption = "rate",
 }: {
   itemId: number;
   /** Undefined when nobody on the build bought it, or while the purchases load (`pending`). */
@@ -32,6 +33,8 @@ export function BuildItemTile({
   pending: boolean;
   /** What the build's author wrote about the item. */
   note?: string;
+  /** Under the icon: how often it was bought (`rate`), or when on average (`time`). */
+  caption?: "rate" | "time";
 }) {
   const { item } = useItemById(itemId);
   const name = item?.name ?? "Item";
@@ -77,7 +80,7 @@ export function BuildItemTile({
           <Skeleton className="h-4 w-8" />
         ) : (
           <span aria-hidden="true" className="text-xs text-muted-foreground tabular-nums">
-            {formatShare(rate)}
+            {caption === "time" && usage ? clock(usage.avgBuyTimeS) : formatShare(rate)}
           </span>
         )}
       </TooltipTarget>
