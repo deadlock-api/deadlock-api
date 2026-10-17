@@ -3,7 +3,7 @@ import { useMemo } from "react";
 
 import { buildItemIds, buildItemUsage, type BuildRow } from "~/lib/build-stats";
 import type { GaussianStats } from "~/lib/gaussian";
-import { abilitiesQueryOptions, heroesQueryOptions } from "~/queries/asset-queries";
+import { abilitiesQueryOptions, heroesQueryOptions, itemUpgradesQueryOptions } from "~/queries/asset-queries";
 import { type BuildPurchaseFilters, buildItemPurchasesQueryOptions } from "~/queries/hero-build-stats-query";
 import { playerPerformanceCurveQueryOptions } from "~/queries/player-performance-curve-query";
 
@@ -131,5 +131,14 @@ export function useEndOfMatchDistributions({
         reference: { avg: hero[`${field}_avg`], std: hero[`${field}_std`] },
       },
     ]),
+  );
+}
+
+/** Every item's shop category and price, by id, for `buildSlotCost`; empty until the items load. */
+export function useItemPrices(): ReadonlyMap<number, { slot: string; cost: number }> {
+  const { data } = useQuery(itemUpgradesQueryOptions);
+  return useMemo(
+    () => new Map((data ?? []).map((item) => [item.id, { slot: item.item_slot_type, cost: item.cost ?? 0 }])),
+    [data],
   );
 }

@@ -1,6 +1,7 @@
 import { useState } from "react";
 
 import { ItemImage } from "~/components/domain/assets/ItemImage";
+import { useItemPrices } from "~/components/features/builds/build-hooks";
 import { PanelSection } from "~/components/patterns/panel/Panel";
 import { Delta } from "~/components/ui/delta";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "~/components/ui/dialog";
@@ -9,7 +10,7 @@ import { NoValue } from "~/components/ui/no-value";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { BUILD_METRICS, type BuildMetric, type BuildPerformanceTotals, metricDelta } from "~/lib/build-performance";
-import { buildItemIds, type BuildRow } from "~/lib/build-stats";
+import { BUILD_SLOT_LABEL, BUILD_SLOTS, buildItemIds, type BuildRow, buildSlotCost } from "~/lib/build-stats";
 import { formatPercent } from "~/lib/format";
 
 const nameOf = (row: BuildRow) => row.meta?.name ?? `Build ${row.hero_build_id}`;
@@ -71,6 +72,7 @@ export function BuildCompareDialog({
   rows: readonly BuildRow[];
   performance: Readonly<Record<number, BuildPerformanceTotals>> | undefined;
 }) {
+  const prices = useItemPrices();
   const others = rows.filter((row) => row.hero_build_id !== build.hero_build_id);
   const [otherId, setOtherId] = useState<number | null>(null);
   const other = others.find((row) => row.hero_build_id === otherId) ?? others[0];
@@ -82,6 +84,13 @@ export function BuildCompareDialog({
   const setA = new Set(itemsA);
   const totalsA = performance?.[build.hero_build_id];
   const totalsB = performance?.[other.hero_build_id];
+  // Each shop category's share of what the build's items cost; null without contents or prices.
+  const slotCost = (row: BuildRow) => {
+    const cost = row.meta ? buildSlotCost(row.meta, prices) : null;
+    return cost && cost.total > 0 ? cost : null;
+  };
+  const slotsA = slotCost(build);
+  const slotsB = slotCost(other);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -189,6 +198,24 @@ export function BuildCompareDialog({
                           unit={metric.delta === "points" ? " pp" : undefined}
                           polarity={metric.polarity}
                         />
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+                {BUILD_SLOTS.map((slot) => {
+                  const a = slotsA && slotsA.bySlot[slot] / slotsA.total;
+                  const b = slotsB && slotsB.bySlot[slot] / slotsB.total;
+                  return (
+                    <TableRow key={slot}>
+                      <TableCell className="text-muted-foreground">{BUILD_SLOT_LABEL[slot]} souls</TableCell>
+                      <TableCell className="text-end tabular-nums">
+                        {a === null ? <NoValue /> : formatPercent(a, 0)}
+                      </TableCell>
+                      <TableCell className="text-end tabular-nums">
+                        {b === null ? <NoValue /> : formatPercent(b, 0)}
+                      </TableCell>
+                      <TableCell className="text-end">
+                        <Delta value={a !== null && b !== null ? b - a : null} unit=" pp" polarity="neutral" />
                       </TableCell>
                     </TableRow>
                   );

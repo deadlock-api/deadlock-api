@@ -277,6 +277,7 @@ export function buildMatchesItems(
 /** The shop categories, in the shop's order. */
 export const BUILD_SLOTS = ["weapon", "vitality", "spirit"] as const;
 export type BuildSlot = (typeof BUILD_SLOTS)[number];
+export const BUILD_SLOT_LABEL: Record<BuildSlot, string> = { weapon: "Weapon", vitality: "Vitality", spirit: "Spirit" };
 
 /**
  * What a build's items cost in souls, in all and per shop category. Each listed item counts once at its full price, so
