@@ -151,7 +151,7 @@ function TooltipTarget({
         "cursor-default rounded-sm",
         TOOLTIP_TARGET_DISPLAY[display],
         underline === "dashed" &&
-          "underline decoration-muted-foreground decoration-dashed underline-offset-4 hover:decoration-current hover:decoration-solid focus-visible:decoration-current focus-visible:decoration-solid",
+          "underline decoration-muted-foreground decoration-dashed underline-offset-2 hover:decoration-current hover:decoration-solid focus-visible:decoration-current focus-visible:decoration-solid",
         className,
       )}
       {...props}
