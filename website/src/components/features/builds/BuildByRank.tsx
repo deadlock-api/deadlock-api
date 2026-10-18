@@ -1,6 +1,6 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 
-import { RankTierTick } from "~/components/domain/rank/RankTierTick";
+import { RANK_TICK_NAMED_HEIGHT, RankTierTick } from "~/components/domain/rank/RankTierTick";
 import { type RankTierWinRate, rankTierLook } from "~/components/domain/rank/RankTierWinRateChart";
 import { ChartEmpty, ChartLoading } from "~/components/patterns/charts/ChartStates";
 import { CHART_COLOR } from "~/components/patterns/charts/theme";
@@ -17,9 +17,6 @@ import { ranksQueryOptions } from "~/queries/ranks-query";
 
 /** A rank needs this many of the build's matches for its win rate to be shown. */
 const MIN_MATCHES = 20;
-
-/** Room under the bars for the rank badges. */
-const BADGE_AXIS_HEIGHT = 36;
 
 type RankBar = RankTierWinRate & {
   heroWinRate?: number;
@@ -135,8 +132,8 @@ export function BuildByRank({
             valueKey="winRate"
             colorKey="fill"
             values="visible"
-            xAxisHeight={BADGE_AXIS_HEIGHT}
-            xTick={<RankTierTick tiers={bars} />}
+            xAxisHeight={RANK_TICK_NAMED_HEIGHT}
+            xTick={<RankTierTick tiers={bars} name="visible" />}
             tooltip={<RankBarTooltip />}
           />
         </StaleOverlay>
