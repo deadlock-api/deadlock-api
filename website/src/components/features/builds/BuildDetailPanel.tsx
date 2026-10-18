@@ -136,8 +136,10 @@ export function BuildDetailPanel({
                         />
                       }
                     >
-                      {/* What the numbers under the icons are, named once over the first group. */}
-                      {index === 0 && <span className="shrink-0 whitespace-nowrap">Bought in % of matches</span>}
+                      {/* What the numbers under the icons are, named once over the first group. It takes the room
+                          the group's name leaves and wraps in it, so a narrow column breaks this line rather than
+                          "Early Game". */}
+                      {index === 0 && <span className="min-w-0 grow basis-0 text-end">Bought in % of matches</span>}
                     </PanelSection>
                     <ul className="flex flex-wrap gap-1 px-3 py-1.5">
                       {category.itemIds.map((itemId) => (
