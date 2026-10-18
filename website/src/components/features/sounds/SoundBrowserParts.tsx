@@ -32,7 +32,8 @@ export interface BrowseEntry {
 const AVATAR_SIZE = { "2xs": "size-4", xs: "size-6", sm: "size-8" } as const;
 
 export function VoiceAvatar({ hero, size = "sm" }: { hero: Hero | undefined; size?: keyof typeof AVATAR_SIZE }) {
-  if (hero) return <HeroImage hero={hero} title="" className={AVATAR_SIZE[size]} />;
+  // Always beside the voice's name (a row label, a button's name), so the picture is not read again.
+  if (hero) return <HeroImage hero={hero} decorative className={AVATAR_SIZE[size]} />;
   if (size === "2xs") return null;
   return (
     <IconTile size={size} shape="circle">

@@ -185,14 +185,12 @@ function PanelSpecimens() {
       <Specimen
         name="PanelSection"
         source="patterns/panel/Panel"
-        note="A titled strip that divides the rows of a panel or list into groups. Children sit on the trailing edge. variant=label drops the band for a quiet sentence-case label, for panels with many small groups. Also here: PanelShowMore as a row button."
+        note="A titled strip that divides the rows of a panel or list into groups. Children sit on the trailing edge. variant=label drops the band for a quiet sentence-case label, for panels with many small groups. as (div by default, h3 or h4) makes the title a heading one below the panel's, for groups a reader navigates by (Today here is an h3). Also here: PanelShowMore as a row button."
       >
         <Panel>
           <PanelHeader title="Match history" icon={Layers} />
-          <PanelSection title="Today">
-            <Badge variant="muted" size="sm">
-              3
-            </Badge>
+          <PanelSection as="h3" title="Today">
+            <Badge variant="muted">3</Badge>
           </PanelSection>
           <PanelBody size="sm">Rows of today</PanelBody>
           <PanelSection title="A very long section title that truncates instead of wrapping onto a second line" />

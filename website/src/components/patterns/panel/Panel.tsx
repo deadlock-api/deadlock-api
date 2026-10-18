@@ -234,6 +234,11 @@ type PanelSectionProps = Omit<React.ComponentProps<"div">, "title"> & {
   title: React.ReactNode;
   /** Counts or controls on the trailing edge. */
   children?: React.ReactNode;
+  /**
+   * The title's element. `div` (the default) for a strip that only divides rows; a heading level, one below the
+   * panel's title, when the groups are what a reader navigates by (the topics of a long list).
+   */
+  as?: "div" | "h3" | "h4";
 } & (
     | {
         /** `strip`: a filled, ruled band with an uppercase label, for groups of rows that scroll or need a hard edge. */
@@ -254,6 +259,7 @@ type PanelSectionProps = Omit<React.ComponentProps<"div">, "title"> & {
 /** A titled strip that divides the rows of a panel or list into groups: "Today", "Core items". */
 export function PanelSection({
   title,
+  as: Title = "div",
   variant = "strip",
   tone = "subtle",
   className,
@@ -271,7 +277,7 @@ export function PanelSection({
         )}
         {...props}
       >
-        <div className="truncate font-semibold text-foreground">{title}</div>
+        <Title className="truncate font-semibold text-foreground">{title}</Title>
         {children}
       </div>
     );
@@ -287,7 +293,7 @@ export function PanelSection({
       )}
       {...props}
     >
-      <div className="truncate eyebrow">{title}</div>
+      <Title className="truncate eyebrow">{title}</Title>
       {children}
     </div>
   );

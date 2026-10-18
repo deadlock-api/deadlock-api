@@ -139,9 +139,11 @@ function CharacterLines({
           const title =
             section === "all" && topic.folder ? `${sectionLabel(topic.folder)} · ${topic.label}` : topic.label;
           return (
-            <section key={topic.id} aria-label={title}>
-              <PanelSection title={title}>{topic.rows.length.toLocaleString("en-US")}</PanelSection>
-              <SoundList aria-label={title}>
+            <div key={topic.id}>
+              <PanelSection as="h3" title={title}>
+                {topic.rows.length.toLocaleString("en-US")}
+              </PanelSection>
+              <SoundList>
                 {topic.rows.map((row) => (
                   <SoundGroupItem
                     key={row.group.id}
@@ -152,7 +154,7 @@ function CharacterLines({
                   />
                 ))}
               </SoundList>
-            </section>
+            </div>
           );
         })
       )}
