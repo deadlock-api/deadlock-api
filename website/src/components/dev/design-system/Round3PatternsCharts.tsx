@@ -87,7 +87,7 @@ export function Round3PatternsCharts() {
       <Specimen
         name="ChartLegend items"
         source="patterns/charts/ChartLegend"
-        note="Compose ChartLegendItem children. ChartSwatch is the mark on its own, for a tooltip row or a table cell."
+        note="Compose ChartLegendItem children. ChartSwatch is the mark on its own, for a tooltip row or a table cell. Match the shape to the mark: line, dashed, square, band (a shaded spread around an average), dot, ring, triangles."
       >
         <Variants label='size="default" | "sm"' className="block">
           <ChartLegend>
@@ -100,6 +100,9 @@ export function Round3PatternsCharts() {
             </ChartLegendItem>
             <ChartLegendItem color="var(--chart-axis)" shape="dashed">
               Median
+            </ChartLegendItem>
+            <ChartLegendItem color={SERIES_COLORS[0]} shape="band">
+              ±1 std dev
             </ChartLegendItem>
           </ChartLegend>
           <ChartLegend size="sm">
