@@ -2,6 +2,7 @@ import { MessageSquare } from "lucide-react";
 import { useState } from "react";
 
 import { Specimen, Variants } from "~/components/dev/design-system/Specimen";
+import { TableEmptyRow } from "~/components/patterns/data-table/TableEmptyRow";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent } from "~/components/ui/card";
 import { moveItem, useReorder } from "~/components/ui/hooks/use-reorder";
@@ -156,6 +157,20 @@ export function Round4Requests() {
             </TableHeader>
             <TableBody>
               <HeroRows />
+            </TableBody>
+          </Table>
+        </Variants>
+        <Variants label='TableHead width="fill" and "hug", empty body' className="items-stretch">
+          <Table density="dense">
+            <TableHeader tone="muted">
+              <TableRow>
+                <TableHead width="fill">Hero</TableHead>
+                <TableHead className="text-end">Matches</TableHead>
+                <TableHead width="hug">Pick</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              <TableEmptyRow colSpan={3}>No heroes match.</TableEmptyRow>
             </TableBody>
           </Table>
         </Variants>

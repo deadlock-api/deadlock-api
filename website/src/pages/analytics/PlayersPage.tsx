@@ -202,6 +202,8 @@ export function PlayersPage({
             >
               {(data) => (
                 <ScoreboardTable
+                  // A measure: on a wide screen the stats stay within reach of the names they belong to.
+                  className="max-w-6xl"
                   entries={data}
                   selectedAccountIds={picked}
                   onValueChange={setPicked}

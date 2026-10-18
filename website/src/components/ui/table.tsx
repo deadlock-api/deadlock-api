@@ -231,19 +231,30 @@ function TableRow({
 /** `muted`: a quiet column or row name, beside the values it names. */
 const HEAD_TONE = { default: "text-foreground", muted: "text-muted-foreground" } as const;
 
+/**
+ * A column's width, set on its head so it holds whatever the body shows (an empty or filtered body re-spread columns
+ * sized by their body cells): `auto` shares out as the browser likes, `fill` takes the room the others leave (the
+ * column of the row's name; its body cells add `max-w-0` to truncate), `hug` is as narrow as its widest content (a
+ * column of controls).
+ */
+const HEAD_WIDTH = { auto: "", fill: "w-full", hug: "w-px" } as const;
+
 function TableHead({
   tone = "default",
+  width = "auto",
   className,
   ...props
-}: React.ComponentProps<"th"> & { tone?: keyof typeof HEAD_TONE }) {
+}: React.ComponentProps<"th"> & { tone?: keyof typeof HEAD_TONE; width?: keyof typeof HEAD_WIDTH }) {
   const density = React.use(TableDensityContext);
   return (
     <th
       data-slot="table-head"
       data-tone={tone}
+      data-width={width}
       className={cn(
         "text-start align-middle font-medium whitespace-nowrap data-pinned:sticky data-pinned:inset-s-0 data-pinned:z-10 data-pinned:bg-muted [&:has([role=checkbox])]:pe-0 [&>[role=checkbox]]:translate-y-0.5",
         HEAD_TONE[tone],
+        HEAD_WIDTH[width],
         HEAD_DENSITY[density],
         className,
       )}

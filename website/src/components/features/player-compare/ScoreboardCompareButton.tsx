@@ -6,14 +6,16 @@ import { COMPARE_FILTER_KEYS } from "~/lib/compare-share";
 
 /**
  * The way from the players picked on the scoreboard into their comparison, for the table's pick column header. It is
- * there (disabled) before anyone is picked, and its label keeps one width, so picking never moves the table.
+ * there (disabled) before anyone is picked, and its label keeps one width, so picking never moves the table. Inside a
+ * narrow container (the scoreboard under 28rem) it shows only the icon and the count.
  */
 export function ScoreboardCompareButton({ accountIds }: { accountIds: readonly number[] }) {
   const count = accountIds.length;
   const content = (
     <>
       <GitCompareArrows aria-hidden="true" />
-      Compare
+      {/* On a narrow board the icon and the count; the accessible name keeps the word. */}
+      <span className="hidden @md:inline">Compare</span>
       <span className="tabular-nums">{count}</span>
     </>
   );

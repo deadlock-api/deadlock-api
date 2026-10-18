@@ -19,6 +19,7 @@ import { findKey } from "~/lib/find-keys";
 import { extractBadgeMap } from "~/lib/leaderboard";
 import { formatScoreboardValue, sortByLabel } from "~/lib/scoreboard-sorts";
 import { parseSteamIdInput } from "~/lib/steam";
+import { cn } from "~/lib/utils";
 import { ranksQueryOptions } from "~/queries/ranks-query";
 
 /** A row's add-to-comparison toggle: a plus to add, a check once added. */
@@ -205,7 +206,8 @@ export function ScoreboardTable({
   );
 
   return (
-    <div className={className} {...props}>
+    // A container, so the pick column's button can shorten to its icon and count when the board is narrow.
+    <div className={cn("@container", className)} {...props}>
       {controls}
       <PaginationStatus
         page={currentPage}
@@ -217,8 +219,8 @@ export function ScoreboardTable({
       <Table density="compact" className="tabular-nums">
         <TableHeader tone="muted">
           <TableRow>
-            <TableHead className="w-8 text-end sm:w-12">#</TableHead>
-            <TableHead>Player</TableHead>
+            <TableHead className="min-w-8 text-end sm:min-w-12">#</TableHead>
+            <TableHead width="fill">Player</TableHead>
             {sortBy !== "matches" && (
               <SortableHeader
                 data-find={findKey.stat("matches")}
@@ -241,7 +243,11 @@ export function ScoreboardTable({
               align="end"
               onSortChange={sort.toggle}
             />
-            {selectable && <TableHead className="w-28 text-center">{pickHeader}</TableHead>}
+            {selectable && (
+              <TableHead width="hug" className="text-center">
+                {pickHeader}
+              </TableHead>
+            )}
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -252,8 +258,8 @@ export function ScoreboardTable({
               // oxlint-disable-next-line react/no-array-index-key
               <TableRow key={`${accountId ?? i}-${entry.rank}`}>
                 <TableCell className="text-end">{entry.rank + 1}</TableCell>
-                {/* `w-full max-w-0` hands this column whatever the others leave, and the name truncates inside it. */}
-                <TableCell className="w-full max-w-0">
+                {/* The head's `fill` hands this column whatever the others leave; `max-w-0` truncates the name in it. */}
+                <TableCell className="max-w-0">
                   <PlayerCell
                     accountId={accountId}
                     name={profile?.personaname ?? (accountId == null ? `#${entry.rank + 1}` : undefined)}
