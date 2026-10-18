@@ -431,6 +431,8 @@ export function Primitives() {
           <Delta value={0.004} threshold={0.03} />
           <span className="text-xs text-muted-foreground">zero renders nothing:</span>
           <Delta value={0.0001} />
+          <span className="text-xs text-muted-foreground">unless zero=&quot;visible&quot;:</span>
+          <Delta value={0.0001} unit=" pp" sign="arrow" zero="visible" />
         </Variants>
       </Specimen>
 

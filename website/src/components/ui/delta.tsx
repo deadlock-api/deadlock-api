@@ -41,12 +41,17 @@ interface DeltaBaseProps extends Omit<React.ComponentProps<"span">, "children"> 
    * changes that stand out of the noise take a color.
    */
   threshold?: number;
+  /**
+   * A change that rounds to zero renders nothing by default; `visible` prints it unsigned and muted ("0.0 pp"), for a
+   * column where a blank would read as missing data.
+   */
+  zero?: "hidden" | "visible";
 }
 
 /** `badge` draws it as a square Badge in the tone's color, for table cells and stat rows; only a badge has a `size`. */
 type DeltaProps = DeltaBaseProps & ({ display?: "text"; size?: never } | { display: "badge"; size?: "sm" | "default" });
 
-/** A signed change, colored by direction. Zero at the displayed precision renders nothing. */
+/** A signed change, colored by direction. Zero at the displayed precision renders nothing unless `zero="visible"`. */
 export function Delta({
   value,
   format = "percent",
@@ -58,6 +63,7 @@ export function Delta({
   fraction = "fixed",
   size = "default",
   threshold = 0,
+  zero = "hidden",
   className,
   ...props
 }: DeltaProps) {
@@ -66,16 +72,22 @@ export function Delta({
   const scale = 10 ** digits;
   // Round first so a change too small to display is hidden rather than shown as "-0.0%".
   const rounded = Math.round((format === "percent" ? value * 100 : value) * scale) / scale;
-  if (rounded === 0) return null;
+  if (rounded === 0 && zero === "hidden") return null;
   const tone =
-    polarity === "neutral" || Math.abs(value) < threshold
+    rounded === 0 || polarity === "neutral" || Math.abs(value) < threshold
       ? "muted"
       : toneOf(polarity === "lower-is-better" ? -rounded : rounded);
   const Arrow = rounded > 0 ? ArrowUp : ArrowDown;
   const content = (
     <>
-      {arrow ? <Arrow aria-hidden="true" className="size-3 shrink-0" /> : rounded > 0 ? "+" : "\u2212"}
-      {arrow && <span className="sr-only">{rounded > 0 ? "up" : "down"} </span>}
+      {rounded === 0 ? null : arrow ? (
+        <Arrow aria-hidden="true" className="size-3 shrink-0" />
+      ) : rounded > 0 ? (
+        "+"
+      ) : (
+        "\u2212"
+      )}
+      {arrow && rounded !== 0 && <span className="sr-only">{rounded > 0 ? "up" : "down"} </span>}
       {numberFormat(digits, fraction).format(Math.abs(rounded))}
       {unit ?? (format === "percent" ? "%" : "")}
     </>
