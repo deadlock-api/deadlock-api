@@ -10,7 +10,7 @@ import { Button } from "~/components/ui/button";
 import { Card, CardContent } from "~/components/ui/card";
 import { Code } from "~/components/ui/code";
 import { Kbd } from "~/components/ui/kbd";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsPanels, TabsTrigger } from "~/components/ui/tabs";
 import { Text } from "~/components/ui/text";
 import { TextLink } from "~/components/ui/text-link";
 import { useIsLinux } from "~/hooks/useIsLinux";
@@ -48,85 +48,87 @@ export function InstallGuide() {
             <TabsTrigger value="docker">Docker</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="windows" className="flex flex-col gap-4">
-            <Steps>
-              <Step title="Download the installer.">
-                <div className="flex flex-col items-start gap-2">
-                  <Button asChild size="lg">
-                    <a href={WINDOWS_SETUP_URL} download {...downloadTracking}>
-                      <Download aria-hidden="true" />
-                      Download for Windows
-                    </a>
-                  </Button>
-                  <Text variant="caption" tone="muted">
-                    If Windows says it protected your PC, click More info, then Run anyway.
-                  </Text>
-                </div>
-              </Step>
-              <Step title="Open it. It installs for your account only, so no admin rights are needed, and starts by itself every time you sign in." />
-              <Step title="A small window opens and shows every match you send. You can close it, the tool keeps running." />
-              <Step title="Play Deadlock. Your matches are sent while you play." />
-            </Steps>
-            <Disclosure variant="inline" title="Install with PowerShell instead">
-              <Steps variant="plain">
-                <Step title="Open PowerShell as administrator: right-click Start, then Terminal (Admin) or Windows PowerShell (Admin)." />
-                <Step title="Paste the installer and press Enter.">
-                  <CopyableCode
-                    size="sm"
-                    language="bash"
-                    code={WINDOWS_INSTALL}
-                    copyLabel="Copy Windows install command"
-                  />
+          <TabsPanels>
+            <TabsContent value="windows" className="flex flex-col gap-4">
+              <Steps>
+                <Step title="Download the installer.">
+                  <div className="flex flex-col items-start gap-2">
+                    <Button asChild size="lg">
+                      <a href={WINDOWS_SETUP_URL} download {...downloadTracking}>
+                        <Download aria-hidden="true" />
+                        Download for Windows
+                      </a>
+                    </Button>
+                    <Text variant="caption" tone="muted">
+                      If Windows says it protected your PC, click More info, then Run anyway.
+                    </Text>
+                  </div>
                 </Step>
+                <Step title="Open it. It installs for your account only, so no admin rights are needed, and starts by itself every time you sign in." />
+                <Step title="A small window opens and shows every match you send. You can close it, the tool keeps running." />
+                <Step title="Play Deadlock. Your matches are sent while you play." />
+              </Steps>
+              <Disclosure variant="inline" title="Install with PowerShell instead">
+                <Steps variant="plain">
+                  <Step title="Open PowerShell as administrator: right-click Start, then Terminal (Admin) or Windows PowerShell (Admin)." />
+                  <Step title="Paste the installer and press Enter.">
+                    <CopyableCode
+                      size="sm"
+                      language="bash"
+                      code={WINDOWS_INSTALL}
+                      copyLabel="Copy Windows install command"
+                    />
+                  </Step>
+                  <Step
+                    title={
+                      <>
+                        Press <Kbd>Y</Kbd> when it asks about auto-start, or wait 10 seconds.
+                      </>
+                    }
+                  />
+                </Steps>
+              </Disclosure>
+              <Uninstall code={WINDOWS_UNINSTALL}>
+                <Text as="p" variant="caption" tone="muted">
+                  Installed with the installer: remove Deadlock API Ingest under Settings, Apps, Installed apps.
+                  Installed with PowerShell: run this.
+                </Text>
+              </Uninstall>
+            </TabsContent>
+
+            <TabsContent value="linux" className="flex flex-col gap-4">
+              <Steps>
+                <Step title="Paste the installer into a terminal. It installs into your home folder and starts on login, no sudo needed.">
+                  <CopyableCode language="bash" code={LINUX_INSTALL} copyLabel="Copy Linux install command" />
+                </Step>
+                <Step title="Play Deadlock. Your matches are sent while you play." />
                 <Step
                   title={
                     <>
-                      Press <Kbd>Y</Kbd> when it asks about auto-start, or wait 10 seconds.
+                      To see the matches you have sent, run <Code>deadlock-api-ingest --gui</Code>.
                     </>
                   }
                 />
               </Steps>
-            </Disclosure>
-            <Uninstall code={WINDOWS_UNINSTALL}>
-              <Text as="p" variant="caption" tone="muted">
-                Installed with the installer: remove Deadlock API Ingest under Settings, Apps, Installed apps. Installed
-                with PowerShell: run this.
-              </Text>
-            </Uninstall>
-          </TabsContent>
+              <Uninstall code={LINUX_UNINSTALL} />
+            </TabsContent>
 
-          <TabsContent value="linux" className="flex flex-col gap-4">
-            <Steps>
-              <Step title="Paste the installer into a terminal. It installs into your home folder and starts on login, no sudo needed.">
-                <CopyableCode language="bash" code={LINUX_INSTALL} copyLabel="Copy Linux install command" />
-              </Step>
-              <Step title="Play Deadlock. Your matches are sent while you play." />
-              <Step
-                title={
-                  <>
-                    To see the matches you have sent, run <Code>deadlock-api-ingest --gui</Code>.
-                  </>
-                }
-              />
-            </Steps>
-            <Uninstall code={LINUX_UNINSTALL} />
-          </TabsContent>
-
-          <TabsContent value="docker" className="flex flex-col gap-4">
-            <Steps>
-              <Step
-                title={
-                  <>
-                    Start the container. If Steam lives somewhere else, change the folder before the <Code>:</Code>.
-                  </>
-                }
-              >
-                <CopyableCode language="bash" code={DOCKER_INSTALL} copyLabel="Copy Docker command" />
-              </Step>
-              <Step title="Play Deadlock. Your matches are sent while you play." />
-            </Steps>
-            <Uninstall code={DOCKER_UNINSTALL} />
-          </TabsContent>
+            <TabsContent value="docker" className="flex flex-col gap-4">
+              <Steps>
+                <Step
+                  title={
+                    <>
+                      Start the container. If Steam lives somewhere else, change the folder before the <Code>:</Code>.
+                    </>
+                  }
+                >
+                  <CopyableCode language="bash" code={DOCKER_INSTALL} copyLabel="Copy Docker command" />
+                </Step>
+                <Step title="Play Deadlock. Your matches are sent while you play." />
+              </Steps>
+              <Uninstall code={DOCKER_UNINSTALL} />
+            </TabsContent>
+          </TabsPanels>
         </Tabs>
       </CardContent>
       <CardContent>

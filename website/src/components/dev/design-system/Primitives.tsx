@@ -73,7 +73,7 @@ import { Spinner } from "~/components/ui/spinner";
 import { Inline } from "~/components/ui/stack";
 import { Stat, StatGroup } from "~/components/ui/stat";
 import { Switch } from "~/components/ui/switch";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsPanels, TabsTrigger } from "~/components/ui/tabs";
 import { Text } from "~/components/ui/text";
 import { Textarea } from "~/components/ui/textarea";
 import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group";
@@ -409,7 +409,7 @@ export function Primitives() {
       <Specimen
         name="Tabs"
         source="ui/tabs"
-        note="nav: top-level sections of a page. line: sections of one block. default: views inside a panel or dialog."
+        note="nav: top-level sections of a page. line: sections of one block. default: views inside a panel or dialog. TabsPanels around the TabsContents keeps them all mounted in one cell (inactive ones invisible), for panels of different heights or a default tab picked after hydration."
       >
         {(["nav", "line", "default"] as const).map((variant) => (
           <Variants key={variant} label={variant} className="block">
@@ -431,6 +431,28 @@ export function Primitives() {
             </Tabs>
           </Variants>
         ))}
+        <Variants
+          label="TabsPanels: every panel in one cell, as tall as the tallest, so switching moves nothing below"
+          className="block"
+        >
+          <Tabs defaultValue="windows">
+            <TabsList>
+              <TabsTrigger value="windows">Windows</TabsTrigger>
+              <TabsTrigger value="linux">Linux</TabsTrigger>
+            </TabsList>
+            <TabsPanels>
+              <TabsContent value="windows" className="flex flex-col gap-1 text-sm text-muted-foreground">
+                <span>Step one</span>
+                <span>Step two</span>
+                <span>Step three</span>
+              </TabsContent>
+              <TabsContent value="linux" className="text-sm text-muted-foreground">
+                One step
+              </TabsContent>
+            </TabsPanels>
+          </Tabs>
+          <Text tone="muted">This line never moves.</Text>
+        </Variants>
       </Specimen>
 
       <Specimen

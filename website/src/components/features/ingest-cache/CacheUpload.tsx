@@ -13,7 +13,7 @@ import { Input } from "~/components/ui/input";
 import { ProgressBar } from "~/components/ui/progress-bar";
 import { Spinner } from "~/components/ui/spinner";
 import { Stack } from "~/components/ui/stack";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsPanels, TabsTrigger } from "~/components/ui/tabs";
 import { Text } from "~/components/ui/text";
 import { type IngestResult, useIngestUpload } from "~/hooks/useIngestUpload";
 import { useIsLinux } from "~/hooks/useIsLinux";
@@ -34,24 +34,26 @@ function CachePaths() {
         <TabsTrigger value="macos">macOS</TabsTrigger>
         <TabsTrigger value="linux">Linux</TabsTrigger>
       </TabsList>
-      <TabsContent value="windows">
-        <CachePath path={STEAM_CACHE_PATHS.windows} />
-      </TabsContent>
-      <TabsContent value="macos">
-        <CachePath path={STEAM_CACHE_PATHS.macos} />
-      </TabsContent>
-      <TabsContent value="linux" className="flex flex-col gap-2">
-        {STEAM_CACHE_PATHS.linux.map((path) => (
-          <CachePath key={path} path={path} />
-        ))}
-        <Disclosure variant="inline" title="Flatpak, Snap and other installs">
-          <Stack gap={2}>
-            {STEAM_CACHE_PATHS.linuxMore.map((path) => (
-              <CachePath key={path} path={path} />
-            ))}
-          </Stack>
-        </Disclosure>
-      </TabsContent>
+      <TabsPanels>
+        <TabsContent value="windows">
+          <CachePath path={STEAM_CACHE_PATHS.windows} />
+        </TabsContent>
+        <TabsContent value="macos">
+          <CachePath path={STEAM_CACHE_PATHS.macos} />
+        </TabsContent>
+        <TabsContent value="linux" className="flex flex-col gap-2">
+          {STEAM_CACHE_PATHS.linux.map((path) => (
+            <CachePath key={path} path={path} />
+          ))}
+          <Disclosure variant="inline" title="Flatpak, Snap and other installs">
+            <Stack gap={2}>
+              {STEAM_CACHE_PATHS.linuxMore.map((path) => (
+                <CachePath key={path} path={path} />
+              ))}
+            </Stack>
+          </Disclosure>
+        </TabsContent>
+      </TabsPanels>
     </Tabs>
   );
 }

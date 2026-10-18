@@ -116,14 +116,37 @@ function TabsTrigger({ className, ...props }: React.ComponentProps<typeof TabsPr
   );
 }
 
-function TabsContent({ className, ...props }: React.ComponentProps<typeof TabsPrimitive.Content>) {
+// Set by TabsPanels: its TabsContents share one grid cell.
+const TabsPanelsContext = React.createContext(false);
+
+/**
+ * Lays its `TabsContent`s in one grid cell, every one of them mounted, so the tab area is as tall as its tallest panel
+ * and switching tabs (or a default tab picked after hydration) never moves what is below. Inactive panels are
+ * `invisible`, which also takes them out of the tab order and the accessibility tree.
+ */
+function TabsPanels({ className, ...props }: React.ComponentProps<"div">) {
+  return (
+    <TabsPanelsContext value={true}>
+      <div data-slot="tabs-panels" className={cn("grid min-w-0 grid-cols-1", className)} {...props} />
+    </TabsPanelsContext>
+  );
+}
+
+function TabsContent({ className, forceMount, ...props }: React.ComponentProps<typeof TabsPrimitive.Content>) {
+  const stacked = React.use(TabsPanelsContext);
   return (
     <TabsPrimitive.Content
       data-slot="tabs-content"
-      className={cn(FOCUS_RING, "flex-1 rounded-sm", className)}
+      forceMount={stacked ? true : forceMount}
+      className={cn(
+        FOCUS_RING,
+        "flex-1 rounded-sm",
+        stacked && "col-start-1 row-start-1 min-w-0 data-[state=inactive]:invisible",
+        className,
+      )}
       {...props}
     />
   );
 }
 
-export { Tabs, TabsList, TabsTrigger, TabsContent, tabsListVariants };
+export { Tabs, TabsList, TabsTrigger, TabsContent, TabsPanels, tabsListVariants };
