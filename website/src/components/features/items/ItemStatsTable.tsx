@@ -238,6 +238,9 @@ function ConfidenceTierBadge({ row }: { row: DisplayItemStats }) {
       case 1:
         // Big warning, something more extreme than alert
         return <span className="icon-[mdi--alert-circle] h-4 w-4" />;
+      case 2:
+        // Warning: a glyph of its own, so Low does not pass for Moderate
+        return <span className="icon-[mdi--alert] h-4 w-4" />;
       case 3:
         // Question
         return <span className="icon-[mdi--help-circle] h-4 w-4" />;
@@ -257,7 +260,8 @@ function ConfidenceTierBadge({ row }: { row: DisplayItemStats }) {
     }
   };
 
-  const variant = tier === 1 ? "negative" : tier === 2 || tier === 3 ? "warning" : tier >= 4 ? "positive" : "muted";
+  // One glyph and one tone per tier: very low in the loss color, low a warning, moderate quiet, high a gain.
+  const variant = tier === 1 ? "negative" : tier === 2 ? "warning" : tier >= 4 ? "positive" : "muted";
 
   const name = CONFIDENCE_NAMES[tier] ?? "Unknown";
   const percent = (value: number) => `${(value * 100).toFixed(1)}%`;
