@@ -10,6 +10,7 @@ import {
   useFlashcardEntry,
 } from "~/components/features/flashcards/FlashcardGame";
 import { useFlashcardDeck } from "~/components/features/flashcards/use-flashcard-deck";
+import { MetaItem, MetaList } from "~/components/patterns/content/MetaList";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { Inline, Stack } from "~/components/ui/stack";
@@ -260,30 +261,19 @@ function UpgradedItem() {
   const { target } = useFlashcardEntry<UpgradePathEntry>();
   return (
     <>
-      <img
-        src={itemImageSrc(target)}
-        alt={target.name}
-        className="size-20 shrink-0 object-contain sm:size-24"
-        draggable={false}
-      />
+      <img src={itemImageSrc(target)} alt="" className="size-20 shrink-0 object-contain sm:size-24" draggable={false} />
       <Stack gap={1} className="flex-1">
         <div>
           <Text as="div" variant="eyebrow" className="font-mono">
             Upgraded item
           </Text>
-          <div className="truncate text-lg font-semibold text-foreground">{target.name}</div>
+          <div className="text-lg font-semibold text-balance text-foreground">{target.name}</div>
         </div>
-        <div className="flex flex-wrap items-center gap-2 font-mono text-xs tracking-wider text-muted-foreground uppercase">
-          <span>{target.item_slot_type}</span>
-          <span className="text-muted-foreground">|</span>
-          <span>Tier {target.item_tier}</span>
-          {target.cost != null && (
-            <>
-              <span className="text-muted-foreground">|</span>
-              <span>{target.cost.toLocaleString("en-US")} souls</span>
-            </>
-          )}
-        </div>
+        <MetaList className="font-mono tracking-wider uppercase">
+          <MetaItem>{target.item_slot_type}</MetaItem>
+          <MetaItem>Tier {target.item_tier}</MetaItem>
+          {target.cost != null && <MetaItem>{target.cost.toLocaleString("en-US")} souls</MetaItem>}
+        </MetaList>
       </Stack>
     </>
   );

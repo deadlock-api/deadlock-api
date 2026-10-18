@@ -36,12 +36,7 @@ function ItemPrompt({ direction }: { direction: Direction }) {
   if (direction === "effects-to-name") return <ItemEffectCard item={item} className="p-5" hideName />;
   return (
     <div className="flex items-center gap-4 p-5">
-      <img
-        src={item.shop_image_webp ?? ""}
-        alt={item.name}
-        className="size-16 shrink-0 object-contain"
-        draggable={false}
-      />
+      <img src={item.shop_image_webp ?? ""} alt="" className="size-16 shrink-0 object-contain" draggable={false} />
       <span className="font-game text-2xl tracking-tight uppercase">{item.name}</span>
     </div>
   );
