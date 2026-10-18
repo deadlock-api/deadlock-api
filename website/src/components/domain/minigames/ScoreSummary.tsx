@@ -20,9 +20,10 @@ interface ScoreSummaryProps {
 
 /** The end-of-game score of the quiz modes, beside the time until the next puzzle. */
 export function ScoreSummary({ score, scoreLabel, grade, countdown, size = "default", className }: ScoreSummaryProps) {
-  // Side by side once both fit: on a phone the countdown would be cut.
+  // Side by side once both fit: on a phone the countdown would be cut. A container-query box has no intrinsic width, so
+  // the root takes the full width itself: under a centring parent it would otherwise collapse to nothing.
   return (
-    <div data-slot="score-summary" className={cn("@container min-w-0", className)}>
+    <div data-slot="score-summary" className={cn("@container w-full min-w-0", className)}>
       <StatGroup className={cn("font-mono", countdown ? "grid-cols-1 @xs:grid-cols-2" : "grid-cols-1")}>
         <Stat
           align="center"

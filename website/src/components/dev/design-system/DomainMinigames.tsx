@@ -34,6 +34,7 @@ import {
   VersusValue,
 } from "~/components/domain/minigames/Versus";
 import { Card, CardContent } from "~/components/ui/card";
+import { Stack } from "~/components/ui/stack";
 
 const ANSWER_STATES: AnswerOptionState[] = ["idle", "selected", "correct", "wrong", "dimmed"];
 const QUIZ_OPTIONS = ["Infernus", "Seven", "Haze", "Paradox"];
@@ -464,7 +465,7 @@ export function DomainMinigames() {
       <Specimen
         name="ScoreSummary"
         source="domain/minigames/ScoreSummary"
-        note="The end-of-game score of a daily game beside the time to the next one. grade colors the score (good, fair, poor), which the number itself already tells; scoreLabel names it. Side by side once both fit, stacked on a phone. An archive day has no countdown. size lg sets the score in the display step for a result screen that is only the score."
+        note="The end-of-game score of a daily game beside the time to the next one. grade colors the score (good, fair, poor), which the number itself already tells; scoreLabel names it. Side by side once both fit, stacked on a phone. An archive day has no countdown. size lg sets the score in the display step for a result screen that is only the score. It is a container-query box, so it always takes the full width of its parent, also under a centring Stack (the last case)."
         className="theme-terminal"
       >
         <div className="grid gap-3 lg:grid-cols-2">
@@ -482,6 +483,15 @@ export function DomainMinigames() {
           />
           <ScoreSummary score="3/15" scoreLabel="Score" grade="poor" />
           <ScoreSummary score="12" scoreLabel="Streak" grade="good" size="lg" />
+          <Stack gap={3} align="center" className="lg:col-span-2">
+            <ScoreSummary
+              size="lg"
+              score="7/10"
+              scoreLabel="Not Bad"
+              grade="fair"
+              countdown={{ label: "Next Run", value: "07:12:45" }}
+            />
+          </Stack>
         </div>
       </Specimen>
 
