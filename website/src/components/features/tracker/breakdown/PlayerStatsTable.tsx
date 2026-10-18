@@ -14,7 +14,7 @@ import { useSort } from "~/components/ui/hooks/use-sort";
 import { Input } from "~/components/ui/input";
 import { ProgressBar } from "~/components/ui/progress-bar";
 import { SearchInput } from "~/components/ui/search-input";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableRowHeader } from "~/components/ui/table";
 import { Tooltip, TooltipTarget } from "~/components/ui/tooltip";
 import { useSteamProfiles } from "~/hooks/useSteamProfiles";
 import { formatPercent } from "~/lib/format";
@@ -186,7 +186,7 @@ function CompanionTable({
             const winrate = row.matches > 0 ? row.wins / row.matches : 0;
             return (
               <TableRow key={row.accountId}>
-                <TableCell className="w-full max-w-0">
+                <TableRowHeader className="w-full max-w-0">
                   <PlayerCell
                     accountId={row.accountId}
                     name={profile?.personaname}
@@ -194,7 +194,7 @@ function CompanionTable({
                     loading={isLoadingProfiles && !profile}
                     linkToDetail
                   />
-                </TableCell>
+                </TableRowHeader>
                 <TableCell className="text-end tabular-nums">
                   <CompanionMatchesDialog
                     row={row}

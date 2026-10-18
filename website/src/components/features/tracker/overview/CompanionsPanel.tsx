@@ -13,7 +13,7 @@ import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { SkeletonRows } from "~/components/patterns/states/Skeletons";
 import { Button } from "~/components/ui/button";
 import { Heading, useNextHeadingLevel } from "~/components/ui/heading";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableRowHeader } from "~/components/ui/table";
 import { useSteamProfiles } from "~/hooks/useSteamProfiles";
 import { formatPercent } from "~/lib/format";
 import type { CompanionRow } from "~/lib/tracker/companions";
@@ -180,7 +180,7 @@ function CompanionPreview({
               const profile = profiles[row.accountId];
               return (
                 <TableRow key={row.accountId}>
-                  <TableCell className="w-full max-w-0 ps-0">
+                  <TableRowHeader className="w-full max-w-0 ps-0">
                     <PlayerCell
                       size="sm"
                       accountId={row.accountId}
@@ -189,7 +189,7 @@ function CompanionPreview({
                       loading={isLoading && !profile}
                       linkToDetail
                     />
-                  </TableCell>
+                  </TableRowHeader>
                   <TableCell className="text-end tabular-nums">
                     <CompanionMatchesDialog
                       row={row}

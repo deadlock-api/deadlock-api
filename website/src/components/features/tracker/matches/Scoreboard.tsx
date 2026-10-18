@@ -23,7 +23,16 @@ import { Separator } from "~/components/ui/separator";
 import { SortButton } from "~/components/ui/sort-button";
 import { Stack } from "~/components/ui/stack";
 import { StatusDot } from "~/components/ui/status-dot";
-import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  TableRowHeader,
+} from "~/components/ui/table";
 import { Tooltip, TooltipHeader, TooltipStat, TooltipStats, TooltipTarget } from "~/components/ui/tooltip";
 import { IS_DEV } from "~/lib/constants";
 import { formatShare } from "~/lib/format";
@@ -502,8 +511,7 @@ export function Scoreboard({
                     className={cn(isTracked && "font-medium")}
                   >
                     <TableRow data-plain="">
-                      {/* The cell holds only the portrait and a level badge, so it carries the label itself. */}
-                      <TableCell className="w-8 py-1 ps-2 pe-0" aria-label={`${name}, level ${player.level}`}>
+                      <TableCell className="w-8 py-1 ps-2 pe-0">
                         <DetailPopover
                           label={`${name}'s match stats`}
                           size="icon-xs"
@@ -534,7 +542,8 @@ export function Scoreboard({
                           </span>
                         </DetailPopover>
                       </TableCell>
-                      <TableCell className="w-full max-w-0 py-1">
+                      {/* The player's name heads all three rows of their group. */}
+                      <TableRowHeader scope="rowgroup" className="w-full max-w-0 py-1">
                         <div className="flex items-center gap-1.5">
                           <Button
                             variant="text"
@@ -584,7 +593,7 @@ export function Scoreboard({
                             </span>
                           )}
                         </div>
-                      </TableCell>
+                      </TableRowHeader>
                       <TableCell className="px-1.5 py-1 text-end text-muted-foreground tabular-nums">
                         {player.kills} / {player.deaths} / {player.assists}
                       </TableCell>

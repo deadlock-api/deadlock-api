@@ -21,7 +21,7 @@ import { nextSort } from "~/components/ui/hooks/use-sort";
 import { NoValue } from "~/components/ui/no-value";
 import { ProgressBar } from "~/components/ui/progress-bar";
 import { SwitchField } from "~/components/ui/switch-field";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableRowHeader } from "~/components/ui/table";
 import { formatPercent } from "~/lib/format";
 import { type GameMode, hasSoulEconomy } from "~/lib/game-mode";
 import { benchmarkRankRange } from "~/lib/tracker/benchmarks";
@@ -297,7 +297,7 @@ export function HeroesTab({
                       onClick={() => onSelectHero(row.heroId)}
                       title="Show matches on this hero"
                     >
-                      <TableCell data-pinned={showAllStats ? "" : undefined}>
+                      <TableRowHeader data-pinned={showAllStats ? "" : undefined}>
                         <div className="flex items-center gap-1 @sm:gap-2">
                           <HeroImage heroId={row.heroId} shape="circle" className="size-6 @sm:size-7" />
                           <Button
@@ -312,7 +312,7 @@ export function HeroesTab({
                             <HeroName heroId={row.heroId} className="max-w-18 @sm:max-w-20 @md:max-w-30" />
                           </Button>
                         </div>
-                      </TableCell>
+                      </TableRowHeader>
                       {columns.map((column) => {
                         const average = averages?.get(row.heroId);
                         return (

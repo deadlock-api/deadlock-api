@@ -10,7 +10,7 @@ import { Button } from "~/components/ui/button";
 import { Field } from "~/components/ui/field";
 import { ProgressBar } from "~/components/ui/progress-bar";
 import { Segmented, SegmentedItem } from "~/components/ui/segmented";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableRowHeader } from "~/components/ui/table";
 import { Tooltip } from "~/components/ui/tooltip";
 import { type GameMode, hasSoulEconomy } from "~/lib/game-mode";
 import type { TrackerHeroRow } from "~/lib/tracker/compute";
@@ -134,7 +134,7 @@ export function HeroStatsTable({
             <TableBody>
               {visible.map((row) => (
                 <TableRow key={row.heroId}>
-                  <TableCell className="ps-0">
+                  <TableRowHeader className="ps-0">
                     <Tooltip content="Filter matches to this hero">
                       <Button
                         variant="ghost"
@@ -151,7 +151,7 @@ export function HeroStatsTable({
                         <ArrowUpRight aria-hidden="true" className="size-3 text-muted-foreground" />
                       </Button>
                     </Tooltip>
-                  </TableCell>
+                  </TableRowHeader>
                   <TableCell className="text-end">
                     <span className="text-xs tabular-nums">{row.matches.toLocaleString("en-US")}</span>
                   </TableCell>

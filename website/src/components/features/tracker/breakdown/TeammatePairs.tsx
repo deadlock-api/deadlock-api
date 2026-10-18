@@ -6,7 +6,7 @@ import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { SkeletonRows } from "~/components/patterns/states/Skeletons";
 import { Heading, useNextHeadingLevel } from "~/components/ui/heading";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableRowHeader } from "~/components/ui/table";
 import { useSteamProfiles } from "~/hooks/useSteamProfiles";
 import { formatPercent } from "~/lib/format";
 import type { TeammatePairRow } from "~/lib/tracker/teammate-pairs";
@@ -78,7 +78,7 @@ function PairsTable({
       <TableBody>
         {pairs.map((pair) => (
           <TableRow key={pair.memberIds.join(",")}>
-            <TableCell className="w-full max-w-0 ps-0">
+            <TableRowHeader className="w-full max-w-0 ps-0">
               <span className="flex min-w-0 flex-wrap gap-x-3 gap-y-1">
                 {pair.memberIds.map((accountId) => {
                   const profile = profiles[accountId];
@@ -96,7 +96,7 @@ function PairsTable({
                   );
                 })}
               </span>
-            </TableCell>
+            </TableRowHeader>
             <TableCell className="text-end tabular-nums">
               <CompanionMatchesDialog
                 row={{ ...pair, accountId: pair.memberIds[0] }}
