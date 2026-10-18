@@ -1,11 +1,9 @@
 import type { AnalyticsApiItemStatsRequest } from "deadlock_api_client";
-import { ChartNoAxesCombined } from "lucide-react";
 import { parseAsInteger, useQueryState } from "nuqs";
 import { useMemo } from "react";
 
 import { ItemSelector } from "~/components/domain/selectors/ItemSelector";
 import { ItemBuyTimingChart } from "~/components/features/items/ItemBuyTimingChart";
-import { FilterBar } from "~/components/patterns/filter-bar/FilterBar";
 import type { Dayjs } from "~/dayjs";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { enemyHeroFilter } from "~/lib/enemy-heroes";
@@ -73,24 +71,19 @@ export function ItemPurchaseAnalysis({
   );
 
   return (
-    <div>
-      <div className="flex flex-col gap-4">
-        <FilterBar
-          variant="toolbar"
-          title="Purchase analysis"
-          icon={ChartNoAxesCombined}
-          aria-label="Purchase analysis controls"
-        >
-          <ItemSelector
-            selection="multiple"
-            size="sm"
-            emptyLabel="None"
-            value={Array.from(itemIds)}
-            onValueChange={(ids) => setItemIds(new Set(ids))}
-          />
-        </FilterBar>
-        <ItemBuyTimingChart itemIds={Array.from(itemIds)} baseQueryOptions={queryStatOptions} />
-      </div>
-    </div>
+    // The item picker sits in the chart's own header, beside what it changes.
+    <ItemBuyTimingChart
+      itemIds={Array.from(itemIds)}
+      baseQueryOptions={queryStatOptions}
+      itemPicker={
+        <ItemSelector
+          selection="multiple"
+          size="sm"
+          emptyLabel="None"
+          value={Array.from(itemIds)}
+          onValueChange={(ids) => setItemIds(new Set(ids))}
+        />
+      }
+    />
   );
 }

@@ -180,9 +180,16 @@ interface ItemBuyTimingChartProps {
   itemIds: number[];
   baseQueryOptions: Omit<AnalyticsApiItemStatsRequest, "bucket">;
   rowTotalMatches?: number;
+  /** The control that picks `itemIds`, at the end of the chart's header. */
+  itemPicker?: React.ReactNode;
 }
 
-export function ItemBuyTimingChart({ itemIds, baseQueryOptions, rowTotalMatches }: ItemBuyTimingChartProps) {
+export function ItemBuyTimingChart({
+  itemIds,
+  baseQueryOptions,
+  rowTotalMatches,
+  itemPicker,
+}: ItemBuyTimingChartProps) {
   // In the URL like the page's filters, so a reload or a shared link keeps the chart as it was set.
   const [showFineGrainedIntervals, setShowFineGrainedIntervals] = useQueryState(
     "buy_fine",
@@ -269,7 +276,7 @@ export function ItemBuyTimingChart({ itemIds, baseQueryOptions, rowTotalMatches 
 
   return (
     <TooltipProvider>
-      <ChartCard title="Purchase Analysis" className="w-full">
+      <ChartCard title="Purchase Analysis" actions={itemPicker} className="w-full">
         <PanelBody size="sm">
           <Inline className="gap-x-4 gap-y-2">
             {/* The choices wrap under their label where the card is narrower than the row. */}
@@ -314,7 +321,7 @@ export function ItemBuyTimingChart({ itemIds, baseQueryOptions, rowTotalMatches 
         )}
         <div>
           {itemIds.length === 0 ? (
-            <EmptyState variant="plain" title="Pick one or more items above" />
+            <EmptyState variant="plain" title="Pick one or more items" />
           ) : isLoading ? (
             <div className="p-2">
               <ChartLoading label="purchase analysis" size="lg" />
