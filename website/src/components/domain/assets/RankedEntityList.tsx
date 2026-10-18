@@ -181,7 +181,11 @@ export function RankedEntityMetric({
       ) : share !== undefined ? (
         <ProgressBar variant="thin" value={share} color="var(--chart-share)" className="w-full" />
       ) : (
-        <span aria-hidden="true" className="h-1.5 group-data-[density=compact]/ranked:hidden" />
+        // A compact list drops the bar's row, unless another metric of the row draws a bar: then the labels line up.
+        <span
+          aria-hidden="true"
+          className="h-1.5 [[data-density=compact]_[data-slot=ranked-entity-row]:not(:has([data-slot=diverging-bar],[data-slot=progress-bar]))_&]:hidden"
+        />
       )}
     </>
   );
