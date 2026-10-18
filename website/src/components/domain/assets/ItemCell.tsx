@@ -59,7 +59,7 @@ function ItemCellView({
       {variant === "corrupted" ? (
         <CorruptedItemImage item={item} loading={loading} className={cn("shrink-0", IMAGE_SIZE[size])} />
       ) : (
-        <ItemImage item={item} loading={loading} title="" className={cn("shrink-0", IMAGE_SIZE[size])} />
+        <ItemImage item={item} loading={loading} alt="" title="" className={cn("shrink-0", IMAGE_SIZE[size])} />
       )}
       {meta === undefined ? (
         name
