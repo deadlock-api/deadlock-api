@@ -1,5 +1,8 @@
 export const UPDATE_INTERVAL_MS = 5 * 60 * 1000;
 
+/** The overlay page zooms its body by this much, so the widget is legible on a 1080p stream at OBS's 1:1 scale. */
+export const WIDGET_SCALE = 3;
+
 export const DEFAULT_VARIABLES = ["rank_img", "leaderboard_place", "wins_losses_today", "total_kd", "hours_played"];
 
 export const DEFAULT_LABELS = ["Rank", "Place", "Daily W-L", "K/D", "Hours Played"];

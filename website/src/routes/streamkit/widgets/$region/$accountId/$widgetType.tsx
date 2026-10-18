@@ -5,6 +5,7 @@ import { useEffect, useRef } from "react";
 import { BoxWidget } from "~/components/features/streamkit/widgets/box";
 import { RawWidget } from "~/components/features/streamkit/widgets/raw";
 import { Text } from "~/components/ui/text";
+import { WIDGET_SCALE } from "~/constants/streamkit/widget";
 import { splitWidgetList, withoutEmptyVariables } from "~/lib/streamkit-list";
 import { readWidgetFlag, readWidgetInt, readWidgetSearch } from "~/lib/streamkit-widget-search";
 import { snakeToPretty } from "~/lib/utils";
@@ -66,7 +67,7 @@ function Widget() {
   }, [fetchedVersion, versionError]);
 
   useEffect(() => {
-    document.body.style.zoom = "3";
+    document.body.style.zoom = String(WIDGET_SCALE);
     document.body.style.backgroundColor = "transparent";
     document.documentElement.style.backgroundColor = "transparent";
     document.body.style.backgroundImage = "none";

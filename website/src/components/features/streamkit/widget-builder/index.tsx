@@ -1,18 +1,18 @@
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate, useSearch } from "@tanstack/react-router";
-import { useReducer } from "react";
+import { useReducer, useRef } from "react";
 
 import { UrlDisplay } from "~/components/features/streamkit/command/UrlDisplay";
-import { Step, Steps } from "~/components/patterns/content/Steps";
 import { Section } from "~/components/patterns/page/Section";
-import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Card } from "~/components/ui/card";
 import { CheckboxField } from "~/components/ui/checkbox-field";
 import { Field } from "~/components/ui/field";
+import { useElementSize } from "~/components/ui/hooks/use-element-size";
+import { InlineStat } from "~/components/ui/inline-stat";
 import { Input } from "~/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
 import { Inline, Stack } from "~/components/ui/stack";
-import { DEFAULT_LABELS, DEFAULT_SUBTEXTS, DEFAULT_VARIABLES } from "~/constants/streamkit/widget";
+import { DEFAULT_LABELS, DEFAULT_SUBTEXTS, DEFAULT_VARIABLES, WIDGET_SCALE } from "~/constants/streamkit/widget";
 import { availableVariablesQueryOptions } from "~/queries/streamkit-queries";
 import type { Theme } from "~/types/streamkit/widget";
 
@@ -70,6 +70,13 @@ export function WidgetBuilder({ region, accountId }: WidgetBuilderProps) {
   };
   const widgetUrl = buildWidgetUrl(region, accountId, widgetConfig);
   const widgetPreview = buildWidgetPreview(region, accountId, widgetConfig);
+  // The overlay page zooms the widget, so the OBS browser source has to be the preview's size times that zoom.
+  const previewRef = useRef<HTMLDivElement>(null);
+  const previewSize = useElementSize(previewRef, { box: "border", round: true });
+  const sourceSize =
+    previewSize.width > 0
+      ? `${Math.ceil(previewSize.width * WIDGET_SCALE)} × ${Math.ceil(previewSize.height * WIDGET_SCALE)}`
+      : null;
 
   return (
     <Stack gap={6}>
@@ -145,51 +152,36 @@ export function WidgetBuilder({ region, accountId }: WidgetBuilderProps) {
                 : { backgroundColor: config.previewBackgroundColor }
             }
           >
-            {widgetPreview}
+            <div ref={previewRef} className="flex w-fit">
+              {widgetPreview}
+            </div>
           </Card>
         )}
 
-        <Inline gap={4} wrap="nowrap">
-          <CheckboxField
-            label="Show Image"
-            checked={config.previewBackgroundImage}
-            onCheckedChange={(checked) => updateConfig({ previewBackgroundImage: checked === true })}
-          />
-          {!config.previewBackgroundImage && (
-            <Field label="Background Color" orientation="horizontal">
-              <Input
-                type="color"
-                aria-label="Background Color"
-                disabled={config.previewBackgroundImage}
-                value={config.previewBackgroundColor}
-                onChange={(e) => updateConfig({ previewBackgroundColor: e.target.value as PreviewBackgroundColor })}
-              />
-            </Field>
-          )}
+        <Inline gap={4} justify="between">
+          <Inline gap={4} wrap="nowrap">
+            <CheckboxField
+              label="Show Image"
+              checked={config.previewBackgroundImage}
+              onCheckedChange={(checked) => updateConfig({ previewBackgroundImage: checked === true })}
+            />
+            {!config.previewBackgroundImage && (
+              <Field label="Background Color" orientation="horizontal">
+                <Input
+                  type="color"
+                  aria-label="Background Color"
+                  disabled={config.previewBackgroundImage}
+                  value={config.previewBackgroundColor}
+                  onChange={(e) => updateConfig({ previewBackgroundColor: e.target.value as PreviewBackgroundColor })}
+                />
+              </Field>
+            )}
+          </Inline>
+          {sourceSize && <InlineStat value={sourceSize} label="OBS browser source" />}
         </Inline>
       </Section>
 
-      <Stack gap={2}>
-        <UrlDisplay generatedUrl={widgetUrl ?? ""} />
-        <Alert>
-          <AlertTitle>OBS Setup Instructions</AlertTitle>
-          <AlertDescription>
-            <Steps variant="plain">
-              <Step>Add a new browser source in OBS.</Step>
-              <Step>Paste the generated URL into the URL field.</Step>
-              <Step>Adjust the width and height to your liking.</Step>
-              <Step>Tick the "Deactivate when not showing" box.</Step>
-              <Step>Click "OK" to add the widget to your stream.</Step>
-            </Steps>
-          </AlertDescription>
-        </Alert>
-        <Alert variant="destructive">
-          <AlertTitle>OBS Version Warning</AlertTitle>
-          <AlertDescription>
-            Old OBS-Versions might cause issues. Please update to the latest version if you encounter any issues!
-          </AlertDescription>
-        </Alert>
-      </Stack>
+      <UrlDisplay generatedUrl={widgetUrl ?? ""} />
     </Stack>
   );
 }
