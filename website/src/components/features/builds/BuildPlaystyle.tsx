@@ -55,6 +55,7 @@ export function BuildPlaystyle({
   pending,
   distributions = NO_DISTRIBUTIONS,
   children,
+  trailing,
 }: {
   /** The build's performance totals; undefined while they load or when the request failed. */
   totals: BuildPerformanceTotals | undefined;
@@ -64,6 +65,8 @@ export function BuildPlaystyle({
   distributions?: Partial<Record<string, EndOfMatchDistribution>>;
   /** A section of its own in the grid, after combat and economy: per-time numbers that need requests of their own. */
   children?: React.ReactNode;
+  /** Sections under survival and support, in its column: the build's course over the match beside the souls. */
+  trailing?: React.ReactNode;
 }) {
   if (!totals && !pending) return null;
   const section = ({ group, title }: (typeof GROUPS)[number]) => (
@@ -111,15 +114,18 @@ export function BuildPlaystyle({
       </KeyValueList>
     </section>
   );
-  // Two columns and two rows: combat beside economy, then the per-time souls beside survival and support. A panel with
-  // the page's full width puts all four in one row.
+  // Two columns and two rows: combat beside economy, then the per-time souls beside survival and support with the
+  // trailing sections under it. A panel with the page's full width puts all four in one row.
   return (
     <div className="@container">
       <div className="grid @lg:grid-cols-2 @6xl:grid-cols-4">
         {section(GROUPS[0])}
         {section(GROUPS[1])}
         {children && <div className="flex flex-col">{children}</div>}
-        {section(GROUPS[2])}
+        <div className="flex flex-col">
+          {section(GROUPS[2])}
+          {trailing}
+        </div>
       </div>
     </div>
   );

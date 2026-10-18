@@ -15,6 +15,7 @@ import { Section } from "~/components/patterns/page/Section";
 import { Panel, PanelHeader, PanelSection } from "~/components/patterns/panel/Panel";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
+import { InlineStat } from "~/components/ui/inline-stat";
 import type { BuildPerformanceTotals } from "~/lib/build-performance";
 import type { BuildRow } from "~/lib/build-stats";
 import { formatPercent, formatShare, formatSignedPercent } from "~/lib/format";
@@ -35,9 +36,9 @@ const KEY_ITEM_SCALE = 0.15;
 const OFF_BUILD_SHOWN = 12;
 
 /**
- * What the selected build's players do in their matches, in four panels side by side: what they buy and when, how
- * they play against the hero's average build, how they keep to the skill order and fare by match length, and whom
- * they beat and who plays it most.
+ * What the selected build's players do in their matches, in four panels side by side: how they play against the hero's
+ * average build and fare by match length, what they buy and when, how they keep to the skill order and who plays it
+ * most, and whom they beat and at which ranks.
  */
 export function BuildInMatches({
   heroId,
@@ -82,7 +83,24 @@ export function BuildInMatches({
   const name = row.meta?.name ?? `Build ${row.hero_build_id}`;
 
   return (
-    <Section title={`${name} in matches`} size="sm" className="gap-2">
+    <Section
+      title={`${name} in matches`}
+      size="sm"
+      className="gap-2"
+      description={
+        // The build's own headline, so the panels below read against it without a look back up at the list.
+        <span className="flex flex-wrap items-baseline gap-x-4 gap-y-1 text-xs">
+          <InlineStat value={row.matches.toLocaleString("en-US")} label="matches" />
+          <InlineStat value={row.players.toLocaleString("en-US")} label="players" />
+          <InlineStat value={formatPercent(row.winRate)} label="win rate" />
+          <InlineStat
+            value={formatSignedPercent(row.vsAverage)}
+            label="vs. the hero's builds"
+            tone={row.verdict === "above" ? "positive" : row.verdict === "below" ? "negative" : undefined}
+          />
+        </span>
+      }
+    >
       {/* Playstyle first: a row of its own while three panels fit beside each other, two columns of five when all do. */}
       <div className="grid gap-3 @4xl:grid-cols-3 @8xl:grid-cols-5">
         <Panel className="flex flex-col @4xl:col-span-3 @8xl:col-span-2">
@@ -92,6 +110,7 @@ export function BuildInMatches({
             average={averagePerformance}
             pending={performancePending}
             distributions={distributions}
+            trailing={<BuildByDuration heroId={heroId} build={row} filters={filters} active={active} />}
           >
             <BuildSoulsByTime heroId={heroId} buildId={row.hero_build_id} filters={filters} active={active} />
           </BuildPlaystyle>
@@ -196,7 +215,6 @@ export function BuildInMatches({
         <Panel className="flex flex-col">
           <PanelHeader title="Where it wins" icon={Swords} size="sm" />
           <BuildMatchups heroId={heroId} build={row} filters={filters} active={active} />
-          <BuildByDuration heroId={heroId} build={row} filters={filters} active={active} />
           <BuildByRank heroId={heroId} build={row} filters={filters} active={active} />
         </Panel>
       </div>

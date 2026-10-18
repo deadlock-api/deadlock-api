@@ -78,7 +78,16 @@ function metricByKey(key: string): BuildMetric {
   return metric;
 }
 
-const COLUMNS: { key: SortKey; label: string; name: string; className?: string }[] = [
+interface Column {
+  key: SortKey;
+  label: string;
+  name: string;
+  /** What the column means, behind an info button in its header. */
+  description?: string;
+  className?: string;
+}
+
+const COLUMNS: Column[] = [
   { key: "matches", label: "Matches", name: "matches" },
   { key: "players", label: "Players", name: "players", className: "hidden @lg/builds:table-cell" },
   { key: "winRate", label: "Win rate", name: "win rate" },
@@ -86,12 +95,15 @@ const COLUMNS: { key: SortKey; label: string; name: string; className?: string }
     key: "lowerBound",
     label: "Vs. avg",
     name: "confidence above the average",
+    description:
+      "Win rate against the hero's builds pooled. The bar is its 95% range: colored only when the whole range is on one side.",
     className: "hidden @md/builds:table-cell",
   },
   {
     key: "trend",
     label: "7d trend",
     name: "share change in the last 7 days",
+    description: "How the build's share of the hero's build matches moved in the last 7 days, in points.",
     className: "hidden @lg/builds:table-cell",
   },
   { key: "updated", label: "Updated", name: "last update", className: "hidden @xl/builds:table-cell" },
@@ -172,7 +184,7 @@ export function BuildTable({
   };
   const [view, setView] = useQueryState("columns", parseView.withOptions({ history: "replace" }));
   const metricColumns = view === "overview" ? [] : VIEW_METRICS[view];
-  const columns =
+  const columns: Column[] =
     view === "overview"
       ? COLUMNS
       : [
@@ -243,7 +255,7 @@ export function BuildTable({
           <TableRow>
             <TableHead className="w-8 text-end text-xs text-muted-foreground">#</TableHead>
             <TableHead className="text-xs text-muted-foreground">Build</TableHead>
-            {columns.map(({ key, label, name, className }) => (
+            {columns.map(({ key, label, name, description, className }) => (
               <SortableHeader
                 key={key}
                 label={label}
@@ -254,6 +266,7 @@ export function BuildTable({
                 size="sm"
                 className={cn("text-xs text-muted-foreground", className)}
                 sortLabel={`Sort by ${name}`}
+                description={description}
                 onSortChange={sort.toggle}
               />
             ))}
