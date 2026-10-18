@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 
 import { AuthenticatedDashboard, PatronPageSkeleton } from "~/components/features/patron/AuthenticatedDashboard";
 import { UnauthenticatedState } from "~/components/features/patron/UnauthenticatedState";
+import { PageHeader } from "~/components/patterns/page/PageHeader";
 import { PageShell } from "~/components/patterns/page/PageShell";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { PatronAuthProvider } from "~/contexts/PatronAuthContext";
@@ -36,7 +37,8 @@ function PatronPage() {
   // An outage is not a sign-out: the sign-in pitch would ask a patron to log in again.
   if (statusError) {
     return (
-      <PageShell>
+      <PageShell density="content">
+        <PageHeader title="Prioritized Fetching" />
         <ErrorState
           title="Could not check your sign-in"
           description="The Patreon status is temporarily unavailable. Try again in a moment."

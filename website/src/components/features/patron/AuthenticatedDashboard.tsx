@@ -8,21 +8,18 @@ import { SteamAccountsList } from "~/components/features/patron/SteamAccountsLis
 import { NotSubscribedState } from "~/components/features/patron/UnauthenticatedState";
 import { PageHeader } from "~/components/patterns/page/PageHeader";
 import { PageShell } from "~/components/patterns/page/PageShell";
+import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { Button } from "~/components/ui/button";
-import { Skeleton } from "~/components/ui/skeleton";
 import { Spinner } from "~/components/ui/spinner";
-import { Stack } from "~/components/ui/stack";
 import { usePatronAuth } from "~/hooks/usePatronAuth";
 import { usePatronStatus } from "~/queries/patron-queries";
 
+/** The page while the patron's status loads: the real heading, so the page has its h1, and a polite loading status. */
 export function PatronPageSkeleton() {
   return (
     <PageShell density="content">
-      <Stack gap={2}>
-        <Skeleton className="h-8 w-48" />
-        <Skeleton className="h-4 w-96" />
-      </Stack>
-      <Skeleton className="h-32 w-full" />
+      <PageHeader title="Patron Dashboard" />
+      <LoadingState size="sm" label="your patron status" />
     </PageShell>
   );
 }
