@@ -163,17 +163,16 @@ export function WidgetBuilder({ region, accountId }: WidgetBuilderProps) {
               checked={config.previewBackgroundImage}
               onCheckedChange={(checked) => updateConfig({ previewBackgroundImage: checked === true })}
             />
-            {!config.previewBackgroundImage && (
-              <Field label="Background Color" orientation="horizontal">
-                <Input
-                  type="color"
-                  aria-label="Background Color"
-                  disabled={config.previewBackgroundImage}
-                  value={config.previewBackgroundColor}
-                  onChange={(e) => updateConfig({ previewBackgroundColor: e.target.value as PreviewBackgroundColor })}
-                />
-              </Field>
-            )}
+            {/* Disabled under the image rather than removed, so turning the image off moves nothing. */}
+            <Field label="Background Color" orientation="horizontal">
+              <Input
+                type="color"
+                aria-label="Background Color"
+                disabled={config.previewBackgroundImage}
+                value={config.previewBackgroundColor}
+                onChange={(e) => updateConfig({ previewBackgroundColor: e.target.value as PreviewBackgroundColor })}
+              />
+            </Field>
           </Inline>
           {sourceSize && <InlineStat value={sourceSize} label="OBS browser source" />}
         </Inline>

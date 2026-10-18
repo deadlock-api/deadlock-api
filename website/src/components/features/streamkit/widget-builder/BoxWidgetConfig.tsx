@@ -164,24 +164,24 @@ export function BoxWidgetConfig({ config, updateConfig, availableVariables }: Bo
         </Stack>
       </Section>
 
-      {config.theme !== "glass" && (
-        <Field label="Background Opacity">
-          <Inline wrap="nowrap">
-            <Slider
-              aria-label="Background opacity"
-              min={0}
-              max={100}
-              value={[config.opacity]}
-              onValueChange={([v]) => updateConfig({ opacity: v })}
-              getValueText={(v) => `${v}%`}
-              className="w-full"
-            />
-            <Text tone="muted" numeric="tabular" className="min-w-10">
-              {config.opacity}%
-            </Text>
-          </Inline>
-        </Field>
-      )}
+      {/* Glass has no opacity: the field stays, disabled, so choosing it moves nothing below. */}
+      <Field label="Background Opacity">
+        <Inline wrap="nowrap">
+          <Slider
+            aria-label="Background opacity"
+            min={0}
+            max={100}
+            disabled={config.theme === "glass"}
+            value={[config.opacity]}
+            onValueChange={([v]) => updateConfig({ opacity: v })}
+            getValueText={(v) => `${v}%`}
+            className="w-full"
+          />
+          <Text tone="muted" numeric="tabular" className="min-w-10">
+            {config.opacity}%
+          </Text>
+        </Inline>
+      </Field>
     </>
   );
 }
