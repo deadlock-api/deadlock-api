@@ -12,7 +12,7 @@ export const StatDisplay: FC<StatDisplayProps> = ({ stat, theme = "dark", classN
   return (
     <div className={cn("relative flex min-w-fit flex-col items-center rounded-lg p-2.5", className)}>
       {isImageStat && value ? (
-        <img src={value as string} alt={label} className="w-16" />
+        <img src={value as string} alt={label} width={64} height={50} className="h-auto w-16" />
       ) : (
         <StatText label={label} value={value} prefix={prefix} suffix={suffix} theme={theme} />
       )}

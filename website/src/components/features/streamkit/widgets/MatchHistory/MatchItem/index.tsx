@@ -15,8 +15,9 @@ export const MatchItem = ({ match, heroImage, theme }: MatchItemProps) => {
       <img
         src={heroImage}
         alt={`Match ${isWin ? "Win" : "Loss"}`}
-        className={cn("ms-auto me-auto h-auto w-auto rounded-[2px] object-cover", !isWin && "opacity-60 grayscale")}
-        style={{ maxWidth: "80%" }}
+        width={24}
+        height={32}
+        className={cn("mx-auto h-8 w-6 rounded-[2px] object-cover object-top", !isWin && "opacity-60 grayscale")}
       />
       <div className="absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-current to-transparent opacity-20" />
       <div className={cn("absolute bottom-0 h-[3px] bg-current", isWin ? "inset-x-0" : "inset-x-2.5")} />

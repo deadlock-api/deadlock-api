@@ -1,6 +1,7 @@
 import { Fragment } from "react";
 
 import { StatDisplay } from "~/components/features/streamkit/widgets/StatDisplay";
+import { Spinner } from "~/components/ui/spinner";
 import { cn } from "~/lib/utils";
 
 import type { BoxStatsProps } from "./BoxStats.types";
@@ -9,10 +10,7 @@ export const BoxStats = ({ stats, theme, loading }: BoxStatsProps) => {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-4">
-        <div className="relative h-8 w-8">
-          <div className="absolute inset-0 animate-ping rounded-full border-2 border-blue-500/20" />
-          <div className="absolute inset-0.5 animate-spin rounded-full border-2 border-transparent border-t-blue-500" />
-        </div>
+        <Spinner size="lg" label="Loading stats" className={theme === "light" ? "text-gray-900" : "text-white"} />
       </div>
     );
   }

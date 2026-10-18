@@ -110,7 +110,13 @@ export const BoxWidget = ({
     // the box stretches under a strip longer than its stats.
     <div className="inline-flex flex-col" style={themeStyles.cssVariables}>
       {showMatchHistory && (
-        <MatchHistory theme={theme} numMatches={numMatchesToShow} accountId={accountId} opacity={opacity} />
+        <MatchHistory
+          theme={theme}
+          numMatches={numMatchesToShow}
+          accountId={accountId}
+          pending={matchHistoryShowsToday && !stats}
+          opacity={opacity}
+        />
       )}
       <div className={themeStyles.containerClasses(showMatchHistory)}>
         {shouldShowHeader && (

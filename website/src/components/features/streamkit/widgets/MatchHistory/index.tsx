@@ -4,28 +4,35 @@ import { cn } from "~/lib/utils";
 import type { MatchHistoryProps } from "./MatchHistory.types";
 import { MatchItem } from "./MatchItem";
 
-export const MatchHistory = ({ theme, numMatches = 10, accountId, opacity = 100 }: MatchHistoryProps) => {
+export const MatchHistory = ({
+  theme,
+  numMatches = 10,
+  accountId,
+  pending = false,
+  opacity = 100,
+}: MatchHistoryProps) => {
   const { matches, heroes, loading } = useMatchHistory({
     accountId,
     numMatches,
   });
 
-  if (loading) return null;
+  const stripClasses = cn(
+    "flex h-9 items-center justify-start gap-0.5 rounded-t-xl border border-b-0 border-white/[0.03] pt-1",
+    theme === "light"
+      ? "[background:rgba(255,255,255,var(--bg-opacity))]"
+      : theme === "glass"
+        ? "bg-white/5"
+        : "[background:rgba(26,27,30,var(--bg-opacity))]",
+  );
+  const style = { "--bg-opacity": opacity / 100 } as React.CSSProperties;
+
+  // The strip's place is kept while the matches load, so the box below does not jump down when they arrive.
+  if (loading || pending) return <div style={style} className={stripClasses} />;
   if (!matches || matches.length === 0) return null;
   if (!heroes || heroes.size === 0) return null;
 
   return (
-    <div
-      style={{ "--bg-opacity": opacity / 100 } as React.CSSProperties}
-      className={cn(
-        "flex h-9 items-center justify-start gap-0.5 rounded-t-xl border border-b-0 border-white/[0.03] pt-1",
-        theme === "light"
-          ? "[background:rgba(255,255,255,var(--bg-opacity))]"
-          : theme === "glass"
-            ? "bg-white/5"
-            : "[background:rgba(26,27,30,var(--bg-opacity))]",
-      )}
-    >
+    <div style={style} className={stripClasses}>
       {matches.map((match) => {
         const heroImage = heroes.get(match.hero_id);
         if (!heroImage) return null;

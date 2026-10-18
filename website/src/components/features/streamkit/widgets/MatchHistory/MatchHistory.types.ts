@@ -11,6 +11,7 @@ export interface MatchHistoryProps {
   theme: Theme;
   numMatches?: number;
   accountId: string;
-
+  /** The number of matches is not known yet (today's count still loading): the strip keeps its place. */
+  pending?: boolean;
   opacity?: number;
 }
