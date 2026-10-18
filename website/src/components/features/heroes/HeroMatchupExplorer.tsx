@@ -16,6 +16,7 @@ import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { StaleOverlay } from "~/components/patterns/states/StaleOverlay";
 import { Button } from "~/components/ui/button";
+import { Delta } from "~/components/ui/delta";
 import { DivergingBar } from "~/components/ui/rate-bar";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { findKey } from "~/lib/find-keys";
@@ -30,10 +31,19 @@ const SMALL_SAMPLE_THRESHOLD = 100;
 const number = (value: number) => value.toLocaleString("en-US");
 const points = (value: number) => formatSignedPercent(value).replace("%", " pp");
 
-function Impact({ value, scale }: { value: number; scale: number }) {
+/** The impact, its change versus the previous period on the same line, and the bar under both. */
+function Impact({ value, delta, scale }: { value: number; delta?: number; scale: number }) {
   return (
     <div className="flex min-w-16 flex-col gap-1">
-      <span className={cn("text-end font-semibold tabular-nums", TONE_TEXT[toneOf(value)])}>{points(value)}</span>
+      <span className="flex items-baseline justify-end gap-1.5">
+        <span className={cn("font-semibold tabular-nums", TONE_TEXT[toneOf(value)])}>{points(value)}</span>
+        {delta !== undefined && (
+          <>
+            <span className="sr-only">change versus the previous period</span>
+            <Delta value={delta} unit=" pp" className="text-xs" />
+          </>
+        )}
+      </span>
       <DivergingBar value={value} scale={scale} className="h-1 w-full" />
     </div>
   );
@@ -63,9 +73,7 @@ function MatchupRanking({
               <TableHead className="ps-3">Hero</TableHead>
               <TableHead className="hidden text-end sm:table-cell">Matches</TableHead>
               <TableHead className="text-end">Win rate</TableHead>
-              <TableHead className="pe-3 text-end" title="Win-rate difference in percentage points">
-                Impact
-              </TableHead>
+              <TableHead className="pe-3 text-end">Impact</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -96,13 +104,8 @@ function MatchupRanking({
                     )}
                   </TableCell>
                   <TableCell className="text-end tabular-nums">{formatPercent(row.wins / row.matches)}</TableCell>
-                  <TableCell
-                    className="pe-3"
-                    title={
-                      delta === undefined ? undefined : `${points(delta)} impact change versus the previous period`
-                    }
-                  >
-                    <Impact value={row.relWinrate} scale={scale} />
+                  <TableCell className="pe-3">
+                    <Impact value={row.relWinrate} delta={delta} scale={scale} />
                   </TableCell>
                 </TableRow>
               );
