@@ -30,7 +30,7 @@ export const MatchHistory = ({ theme, numMatches = 10, accountId, opacity = 100 
         const heroImage = heroes.get(match.hero_id);
         if (!heroImage) return null;
 
-        return <MatchItem key={match.match_id} match={match} heroImage={heroImage} />;
+        return <MatchItem key={match.match_id} match={match} heroImage={heroImage} theme={theme} />;
       })}
     </div>
   );
