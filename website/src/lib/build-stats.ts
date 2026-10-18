@@ -169,11 +169,14 @@ export function distinguishingItems(presence: readonly BuildItemPresence[], minS
 export interface BuildAdherence {
   /** Share of the build's matches whose player followed it. */
   share: number;
-  /** Win rate of the matches that followed it, null without any. */
+  /** Win rate of the matches that followed it, null with too few to tell. */
   winRate: number | null;
-  /** Win rate of the build's other matches, null without any. */
+  /** Win rate of the build's other matches, null with too few to tell. */
   otherWinRate: number | null;
 }
+
+/** A group of a build's matches needs this many for its win rate to be shown: 100% from 2 matches is noise. */
+const MIN_ADHERENCE_MATCHES = 20;
 
 /** How many of a build's matches followed some part of it (`followed`), and how both groups won. */
 export function buildAdherence(
@@ -186,8 +189,8 @@ export function buildAdherence(
   const otherMatches = build.matches - matches;
   return {
     share: build.matches > 0 ? matches / build.matches : 0,
-    winRate: matches > 0 ? wins / matches : null,
-    otherWinRate: otherMatches > 0 ? (build.wins - wins) / otherMatches : null,
+    winRate: matches >= MIN_ADHERENCE_MATCHES ? wins / matches : null,
+    otherWinRate: otherMatches >= MIN_ADHERENCE_MATCHES ? (build.wins - wins) / otherMatches : null,
   };
 }
 

@@ -154,6 +154,8 @@ test("adherence splits a build's matches into the ones that followed it and the 
     otherWinRate: 0.5,
   });
   assert.equal(buildAdherence({ wins: 5, matches: 10 }, { wins: 6, matches: 11 }).otherWinRate, null);
+  // Two matches that followed it are too few for a win rate.
+  assert.equal(buildAdherence({ wins: 50, matches: 100 }, { wins: 2, matches: 2 }).winRate, null);
   assert.deepEqual(buildUnlockOrder([3, 3, 1, 2, 3, 4, 1]), [3, 1, 2, 4]);
 });
 
