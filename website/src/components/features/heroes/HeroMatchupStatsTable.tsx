@@ -465,7 +465,7 @@ export function HeroMatchupStatsTable({
                 matchup={synergyMatchup(heroBestSynergies[heroId])}
                 prevRelWinrates={prevSynergyRelWinrateMap[heroId]}
                 maxMagnitude={bestSynergyScale}
-                color={CHART_COLOR.primary}
+                color={CHART_COLOR.positive}
                 separator="+"
               />
               <MatchupCell
@@ -473,7 +473,7 @@ export function HeroMatchupStatsTable({
                 matchup={synergyMatchup(heroWorstSynergies[heroId])}
                 prevRelWinrates={prevSynergyRelWinrateMap[heroId]}
                 maxMagnitude={worstSynergyScale}
-                color={CHART_COLOR.primary}
+                color={CHART_COLOR.negative}
                 separator="+"
               />
               <MatchupCell
@@ -481,7 +481,7 @@ export function HeroMatchupStatsTable({
                 matchup={counterMatchup(heroBestAgainst[heroId])}
                 prevRelWinrates={prevCounterRelWinrateMap[heroId]}
                 maxMagnitude={bestAgainstScale}
-                color={CHART_COLOR.pickRate}
+                color={CHART_COLOR.positive}
                 separator="vs"
               />
               <MatchupCell
@@ -489,7 +489,7 @@ export function HeroMatchupStatsTable({
                 matchup={counterMatchup(heroWorstAgainst[heroId])}
                 prevRelWinrates={prevCounterRelWinrateMap[heroId]}
                 maxMagnitude={worstAgainstScale}
-                color={CHART_COLOR.pickRate}
+                color={CHART_COLOR.negative}
                 separator="vs"
               />
             </TableRow>

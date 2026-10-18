@@ -369,7 +369,7 @@ function HeroStatsRow({ rank, hero, table }: { rank: number; hero: HeroStatsRowD
             max={scales.matches.max}
             value={row.matches}
             color={CHART_COLOR.pickRate}
-            label={`${Math.round((table.normalized ? hero.normalizedPickRate : hero.pickRate) * 100).toFixed(0)}% `}
+            label={`${formatPercent(table.normalized ? hero.normalizedPickRate : hero.pickRate)} `}
             delta={table.normalized ? hero.normalizedPickRateDelta : hero.pickRateDelta}
           />
         )}

@@ -15,7 +15,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~
 import { Tooltip, TooltipStat, TooltipStats, TooltipTarget } from "~/components/ui/tooltip";
 import type { Dayjs } from "~/dayjs";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
-import { fineShareDigits, formatFineShare } from "~/lib/format";
+import { fineShareDigits, formatFineShare, formatPercent } from "~/lib/format";
 import type { GameMode, MatchMode } from "~/lib/game-mode";
 import { shrunkWinRate } from "~/lib/shrinkage";
 import { heroCombStatsQueryOptions } from "~/queries/hero-comb-stats-query";
@@ -259,7 +259,7 @@ export function HeroCombStatsTable({
                               max={maxWinrate}
                               value={winRate}
                               color={CHART_COLOR.primary}
-                              label={`${Math.round(winRate * 100)}%`}
+                              label={formatPercent(winRate)}
                               delta={prev !== undefined ? winRate - prev.winrate : undefined}
                             />
                           </TooltipTarget>
