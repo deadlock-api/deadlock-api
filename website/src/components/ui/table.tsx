@@ -148,8 +148,9 @@ function TableBody({ className, ...props }: React.ComponentProps<"tbody">) {
         "[&_tr:last-child]:border-0",
         "[&[data-interactive]_tr]:cursor-pointer [&[data-interactive]:hover_tr]:bg-muted/50",
         "[&[data-state=current]_tr]:bg-accent [&[data-state=current]_tr]:font-medium [&[data-state=current]_tr>:first-child]:shadow-current-start",
-        "[&[data-state=selected]_tr]:bg-muted",
-        "[&[data-state=viewed]_tr]:bg-primary/10",
+        // Selected and viewed take the current row's rule too: their fills alone are about 1.1:1 against the card.
+        "[&[data-state=selected]_tr]:bg-muted [&[data-state=selected]_tr>:first-child]:shadow-current-start",
+        "[&[data-state=viewed]_tr]:bg-primary/10 [&[data-state=viewed]_tr>:first-child]:shadow-current-start",
         className,
       )}
       {...props}
