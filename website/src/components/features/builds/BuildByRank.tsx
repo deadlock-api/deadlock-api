@@ -3,12 +3,14 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { RankTierTick } from "~/components/domain/rank/RankTierTick";
 import { type RankTierWinRate, rankTierLook } from "~/components/domain/rank/RankTierWinRateChart";
 import { ChartEmpty, ChartLoading } from "~/components/patterns/charts/ChartStates";
+import { CHART_COLOR } from "~/components/patterns/charts/theme";
 import { WinRateBarChart } from "~/components/patterns/charts/WinRateBarChart";
 import { PanelSection } from "~/components/patterns/panel/Panel";
 import { StaleOverlay } from "~/components/patterns/states/StaleOverlay";
 import { TooltipCard, TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
 import { badgeTiers, type BuildRow } from "~/lib/build-stats";
 import { formatPercent, formatSignedPoints } from "~/lib/format";
+import { winRateNoise } from "~/lib/wilson";
 import { type BuildPurchaseFilters, buildBucketsQueryOptions } from "~/queries/hero-build-stats-query";
 import { heroStatsQueryOptions } from "~/queries/hero-stats-query";
 import { ranksQueryOptions } from "~/queries/ranks-query";
@@ -19,7 +21,11 @@ const MIN_MATCHES = 20;
 /** Room under the bars for the rank badges. */
 const BADGE_AXIS_HEIGHT = 36;
 
-type RankBar = RankTierWinRate & { heroWinRate?: number };
+type RankBar = RankTierWinRate & {
+  heroWinRate?: number;
+  /** Green or red only where the rank's win rate is clear of 50% by more than its noise, gray inside it. */
+  fill: string;
+};
 
 function RankBarTooltip({ entry }: { entry?: RankBar }) {
   if (!entry) return null;
@@ -95,10 +101,17 @@ export function BuildByRank({
     .sort(([a], [b]) => a - b)
     .map(([tier, stats]) => {
       const hero = heroQuery.data?.get(tier);
+      const winRate = stats.wins / stats.matches;
       return Object.assign(rankTierLook(tier, ranks.get(tier)), {
-        winRate: stats.wins / stats.matches,
+        winRate,
         matches: stats.matches,
         heroWinRate: hero && hero.matches > 0 ? hero.wins / hero.matches : undefined,
+        fill:
+          Math.abs(winRate - 0.5) < winRateNoise(stats.matches)
+            ? CHART_COLOR.neutral
+            : winRate > 0.5
+              ? CHART_COLOR.positive
+              : CHART_COLOR.negative,
       });
     });
 
@@ -119,6 +132,7 @@ export function BuildByRank({
             data={bars}
             xKey="tier"
             valueKey="winRate"
+            colorKey="fill"
             xAxisHeight={BADGE_AXIS_HEIGHT}
             xTick={<RankTierTick tiers={bars} />}
             tooltip={<RankBarTooltip />}
