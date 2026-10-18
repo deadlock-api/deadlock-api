@@ -30,6 +30,7 @@ import { Separator } from "~/components/ui/separator";
 import { Inline } from "~/components/ui/stack";
 import { SwitchField } from "~/components/ui/switch-field";
 import { TooltipCard, TooltipHeader, TooltipProvider, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
+import { formatRange } from "~/lib/format";
 import { hasSoulEconomy } from "~/lib/game-mode";
 import { wilsonScoreInterval } from "~/lib/wilson";
 import { itemUpgradesQueryOptions } from "~/queries/asset-queries";
@@ -261,6 +262,20 @@ export function ItemBuyTimingChart({
     return [Math.max(0, min - adjustmentFactor), max + adjustmentFactor];
   }, [chartData, shown.bucketType]);
 
+  // The win rate axis on whole steps (every 10 points, or 5 over a narrow range) with room above and below the data,
+  // so its top tick is not an odd "77%".
+  const yAxis = useMemo(() => {
+    const rates = Object.values(chartData)
+      .flat()
+      .flatMap((d) => (d.winrate === null ? [] : [d.winrate]));
+    if (rates.length === 0) return { domain: [0, 100] as [number, number], ticks: undefined };
+    const lo = Math.max(0, Math.floor((Math.min(...rates) - 5) / 10) * 10);
+    const hi = Math.min(100, Math.ceil((Math.max(...rates) + 5) / 10) * 10);
+    const step = hi - lo > 50 ? 10 : 5;
+    const ticks = Array.from({ length: Math.floor((hi - lo) / step) + 1 }, (_, i) => lo + i * step);
+    return { domain: [lo, hi] as [number, number], ticks };
+  }, [chartData]);
+
   const hasValidData =
     !isLoading &&
     Object.values(chartData)
@@ -344,10 +359,10 @@ export function ItemBuyTimingChart({
                   />
                   <YAxis
                     {...CHART_Y_AXIS}
-                    domain={[(min: number) => Math.max(0, min - 10), (max: number) => Math.min(100, max + 10)]}
+                    domain={yAxis.domain}
+                    ticks={yAxis.ticks}
                     label={{ ...CHART_Y_LABEL, ...CHART_TICK, value: "Win Rate (%)" }}
                     tickFormatter={(v) => `${v?.toFixed(0)}%`}
-                    tickCount={10}
                   />
                   <Tooltip
                     cursor={CHART_CURSOR_LINE}
@@ -362,7 +377,7 @@ export function ItemBuyTimingChart({
                                 <TooltipHeader
                                   leading={<ChartSwatch shape="line" color={entry.color ?? CHART_COLOR.neutral} />}
                                   title={entry.name}
-                                  subtitle={`${config.tooltipPrefix} ${config.formatter(d.bucketStart)} - ${config.formatter(d.bucketEnd)}`}
+                                  subtitle={`${config.tooltipPrefix} ${formatRange(config.formatter(d.bucketStart), config.formatter(d.bucketEnd))}`}
                                 />
                                 <TooltipStats>
                                   <TooltipStat
