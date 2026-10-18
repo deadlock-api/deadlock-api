@@ -200,22 +200,29 @@ export function BuildInMatches({
         </Panel>
         <Panel className="flex flex-col @2xl:order-last @2xl:col-span-2 @4xl:order-none @4xl:col-span-1">
           <PanelHeader title="Skill order and players" icon={ListOrdered} size="sm" />
-          {skillOrder.length > 0 && slotAbilities.length > 0 && (
-            <section className="flex flex-col">
-              <PanelSection variant="label" title="Skill order followed" />
-              <div className="px-3 py-1.5">
-                <BuildSkillAdherence
-                  heroId={heroId}
-                  row={row}
-                  skillOrder={skillOrder}
-                  filters={filters}
-                  active={active}
-                />
+          {/* Across a whole row, the players sit beside the skill order instead of under it. */}
+          <div className="@container">
+            <div className="grid @2xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+              <div className="flex min-w-0 flex-col">
+                {skillOrder.length > 0 && slotAbilities.length > 0 && (
+                  <section className="flex flex-col">
+                    <PanelSection variant="label" title="Skill order followed" />
+                    <div className="px-3 py-1.5">
+                      <BuildSkillAdherence
+                        heroId={heroId}
+                        row={row}
+                        skillOrder={skillOrder}
+                        filters={filters}
+                        active={active}
+                      />
+                    </div>
+                  </section>
+                )}
+                <BuildSkillTaken heroId={heroId} build={row} filters={filters} active={active} />
               </div>
-            </section>
-          )}
-          <BuildSkillTaken heroId={heroId} build={row} filters={filters} active={active} />
-          <BuildTopPlayers heroId={heroId} buildId={row.hero_build_id} filters={filters} active={active} />
+              <BuildTopPlayers heroId={heroId} buildId={row.hero_build_id} filters={filters} active={active} />
+            </div>
+          </div>
         </Panel>
         <Panel className="flex flex-col">
           <PanelHeader title="Matchups and ranks" icon={Swords} size="sm" />
