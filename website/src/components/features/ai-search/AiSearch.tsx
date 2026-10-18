@@ -7,7 +7,7 @@ import { useCloseSideNavDrawer } from "~/components/patterns/navigation/SideNavS
 import { Button } from "~/components/ui/button";
 import { Callout, CalloutAnchor, CalloutContent, CalloutDescription, CalloutTitle } from "~/components/ui/callout";
 import { useListboxCursor } from "~/components/ui/hooks/use-listbox-cursor";
-import { Popover, PopoverAnchor, PopoverContent } from "~/components/ui/popover";
+import { Popover, PopoverAnchor, PopoverContent, sideWithRoom } from "~/components/ui/popover";
 import { RollingText } from "~/components/ui/rolling-text";
 import { SearchInput } from "~/components/ui/search-input";
 import { Inline } from "~/components/ui/stack";
@@ -124,6 +124,15 @@ export function AiSearch({ size = "default", className }: AiSearchProps) {
   const input = useRef<HTMLInputElement>(null);
   /** The dropdown under the field: open while the field has focus and something typed, until Escape or a pick. */
   const [listOpen, setListOpen] = useState(false);
+  /**
+   * The side the dropdown opens on, chosen when the field takes the focus with room for the list at its full height
+   * (max-h-96), and kept while results arrive, so the list never jumps over the field under the pointer.
+   */
+  const [listSide, setListSide] = useState<"top" | "bottom">("bottom");
+  const chooseListSide = (field: HTMLElement) => {
+    const rem = Number.parseFloat(getComputedStyle(document.documentElement).fontSize);
+    setListSide(sideWithRoom(field, 24 * rem));
+  };
 
   useEffect(
     () => () => {
@@ -237,7 +246,10 @@ export function AiSearch({ size = "default", className }: AiSearchProps) {
                     aria-controls={cursor.listId}
                     aria-autocomplete="list"
                     aria-activedescendant={cursor.activeId}
-                    onFocus={() => setListOpen(true)}
+                    onFocus={(event) => {
+                      chooseListSide(event.currentTarget);
+                      setListOpen(true);
+                    }}
                     onBlur={() => setListOpen(false)}
                     aria-invalid={notice === "not_understood" || undefined}
                     aria-describedby={notice ? noticeId : undefined}
@@ -302,6 +314,8 @@ export function AiSearch({ size = "default", className }: AiSearchProps) {
                 </form>
               </PopoverAnchor>
               <PopoverContent
+                side={listSide}
+                fit="available"
                 align="start"
                 className="w-(--radix-popover-trigger-width) p-1"
                 onOpenAutoFocus={(event) => event.preventDefault()}

@@ -780,7 +780,7 @@ export function Primitives() {
       <Specimen
         name="Popover"
         source="ui/popover"
-        note="Opens on click and holds controls: a filter list, a calendar, a menu. Information shown on hover is a Tooltip. It is a dialog named by aria-label on PopoverContent, or by its trigger without one."
+        note="Opens on click and holds controls: a filter list, a calendar, a menu. Information shown on hover is a Tooltip. It is a dialog named by aria-label on PopoverContent, or by its trigger without one. fit available keeps the given side and caps the height at the room there, its content scrolling (min-h-0 on the scroller), for a popup that grows while open (a combobox's results); sideWithRoom(anchor, reserve) picks that side when it opens."
       >
         <Variants>
           <Popover>
@@ -799,6 +799,42 @@ export function Primitives() {
             </PopoverTrigger>
             <PopoverContent aria-label="Rank" className="w-56 text-sm">
               Named "Rank" rather than by its trigger
+            </PopoverContent>
+          </Popover>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm">
+                fit available
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent aria-label="Heroes" side="bottom" fit="available" className="w-56 p-1 text-sm">
+              <div className="flex min-h-0 flex-col overflow-y-auto">
+                {[
+                  "Abrams",
+                  "Bebop",
+                  "Dynamo",
+                  "Grey Talon",
+                  "Haze",
+                  "Infernus",
+                  "Ivy",
+                  "Kelvin",
+                  "Lady Geist",
+                  "Lash",
+                  "McGinnis",
+                  "Mo & Krill",
+                  "Paradox",
+                  "Pocket",
+                  "Seven",
+                  "Shiv",
+                  "Vindicta",
+                  "Viscous",
+                  "Warden",
+                  "Wraith",
+                  "Yamato",
+                ].map((hero) => (
+                  <OptionRow key={hero}>{hero}</OptionRow>
+                ))}
+              </div>
             </PopoverContent>
           </Popover>
         </Variants>

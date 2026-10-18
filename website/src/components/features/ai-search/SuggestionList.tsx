@@ -75,8 +75,13 @@ interface SuggestionListProps {
 export function SuggestionList({ id, suggestions, getOptionProps, onPick }: SuggestionListProps) {
   let index = 0;
   return (
-    // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- the popup list of a custom combobox; a native select or datalist cannot carry it
-    <div role="listbox" id={id} aria-label="Suggestions" className="flex max-h-96 flex-col gap-1 overflow-y-auto">
+    <div
+      // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- the popup list of a custom combobox; a native select or datalist cannot carry it
+      role="listbox"
+      id={id}
+      aria-label="Suggestions"
+      className="flex max-h-96 min-h-0 flex-col gap-1 overflow-y-auto"
+    >
       {GROUPS.map((group) => {
         const rows = suggestions[group.key];
         // The page waits on the model: a row of the same size holds its place, so nothing below jumps when it answers.
