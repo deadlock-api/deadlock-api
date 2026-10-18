@@ -14,8 +14,6 @@ export function HeroStatTrend({
   heroId,
   heroName,
   stat,
-  bucket,
-  onBucketChange,
   ...progressProps
 }: HeroStatTrendChartProps & Omit<ComponentProps<typeof ProgressBarWithLabel>, "tooltip"> & { heroName: string }) {
   return (
@@ -27,13 +25,7 @@ export function HeroStatTrend({
         <Suspense fallback={<LoadingState label="trend" className="flex h-62.5 items-center justify-center" />}>
           <div className="flex flex-col gap-3">
             <p className="text-sm font-semibold">{heroName}</p>
-            <HeroStatTrendChart
-              params={params}
-              heroId={heroId}
-              stat={stat}
-              bucket={bucket}
-              onBucketChange={onBucketChange}
-            />
+            <HeroStatTrendChart params={params} heroId={heroId} stat={stat} />
           </div>
         </Suspense>
       }

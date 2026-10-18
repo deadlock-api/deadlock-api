@@ -22,7 +22,6 @@ import { ItemTierSelector } from "~/components/domain/selectors/ItemTierSelector
 import { ItemStatTrend } from "~/components/features/items/ItemStatTrend";
 import { useCorruptedItemMode } from "~/components/features/items/useCorruptedItemMode";
 import { ChartSwatch } from "~/components/patterns/charts/ChartLegend";
-import type { StatTrendBucket } from "~/components/patterns/charts/StatTrendChart";
 import { CHART_COLOR } from "~/components/patterns/charts/theme";
 import { ExpandableRow, ExpandableRowToggle } from "~/components/patterns/data-table/ExpandableRow";
 import { SortableHeader } from "~/components/patterns/data-table/SortableHeader";
@@ -172,8 +171,6 @@ interface ItemStatsTableRowProps {
   minUsage: number;
   maxUsage: number;
   trendParams: AnalyticsApiItemStatsRequest;
-  trendBucket: StatTrendBucket;
-  onTrendBucketChange: (bucket: StatTrendBucket) => void;
   isIncluded: boolean;
   isExcluded: boolean;
   prevStatsMap?: Map<number, { winrate: number; pickrate: number; normalizedPickrate: number }>;
@@ -301,8 +298,6 @@ const ItemStatsTableRow = memo(function ItemStatsTableRow({
   minUsage,
   maxUsage,
   trendParams,
-  trendBucket,
-  onTrendBucketChange,
   isIncluded,
   isExcluded,
   prevStatsMap,
@@ -347,8 +342,6 @@ const ItemStatsTableRow = memo(function ItemStatsTableRow({
               itemId={row.item_id}
               itemName={itemName}
               stat="winRate"
-              bucket={trendBucket}
-              onBucketChange={onTrendBucketChange}
               min={minWinRate}
               max={maxWinRate}
               value={winRate}
@@ -391,8 +384,6 @@ const ItemStatsTableRow = memo(function ItemStatsTableRow({
               itemId={row.item_id}
               itemName={itemName}
               stat="pickRate"
-              bucket={trendBucket}
-              onBucketChange={onTrendBucketChange}
               min={minUsage}
               max={maxUsage}
               value={row.matches}
@@ -495,7 +486,6 @@ export function ItemStatsTable({
   corruptedStatsMap,
   details,
 }: ItemStatsTableProps) {
-  const [trendBucket, setTrendBucket] = useState<StatTrendBucket>("start_time_day");
   const [sortField, setSortField] = useQueryState("item_sort_field", parseAsSortField.withDefault("winRate"));
   const [sortDirection, setSortDirection] = useQueryState(
     "item_sort_direction",
@@ -773,8 +763,6 @@ export function ItemStatsTable({
                     minUsage={minUsage}
                     maxUsage={maxUsage}
                     trendParams={trendParams}
-                    trendBucket={trendBucket}
-                    onTrendBucketChange={setTrendBucket}
                     isIncluded={includeItems.has(row.item_id)}
                     isExcluded={excludeItems.has(row.item_id)}
                     prevStatsMap={prevStatsMap}

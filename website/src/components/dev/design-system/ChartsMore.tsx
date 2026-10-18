@@ -202,7 +202,7 @@ export function ChartsMore() {
       <Specimen
         name="StatTrendChart"
         source="patterns/charts/StatTrendChart"
-        note="One stat over time with its own interval switch, sized for a hover card or a dialog. The caller fetches; the chart draws the pending, error and empty states itself."
+        note="One stat over time, sized for a hover card or a dialog. With onValueChange the header holds the interval switch; without it the chart is read-only and names the interval at the same height, which is the only form a hover card may hold. The caller fetches; the chart draws the pending, error and empty states itself."
       >
         <Variants className="grid items-start md:grid-cols-2">
           {(
@@ -227,6 +227,12 @@ export function ChartsMore() {
               </Card>
             </div>
           ))}
+          <div className="flex min-w-0 flex-col gap-1.5">
+            <span className="eyebrow">read-only (no onValueChange): inside a hover card</span>
+            <Card size="sm" className="px-3">
+              <StatTrendChart data={trendPoints(bucket)} stat={stat} value={bucket} markers={MARKERS} />
+            </Card>
+          </div>
           <div className="flex min-w-0 flex-col gap-1.5">
             <span className="eyebrow">comparisonLabel: a second series (e.g. corrupted purchases)</span>
             <Card size="sm" className="px-3">

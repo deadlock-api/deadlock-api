@@ -14,8 +14,6 @@ export function ItemStatTrend({
   itemId,
   itemName,
   stat,
-  bucket,
-  onBucketChange,
   ...progressProps
 }: ItemStatTrendChartProps & Omit<ComponentProps<typeof ProgressBarWithLabel>, "tooltip"> & { itemName: string }) {
   return (
@@ -27,13 +25,7 @@ export function ItemStatTrend({
         <Suspense fallback={<LoadingState label="trend" className="flex h-62.5 items-center justify-center" />}>
           <div className="flex flex-col gap-3">
             <p className="text-sm font-semibold">{itemName}</p>
-            <ItemStatTrendChart
-              params={params}
-              itemId={itemId}
-              stat={stat}
-              bucket={bucket}
-              onBucketChange={onBucketChange}
-            />
+            <ItemStatTrendChart params={params} itemId={itemId} stat={stat} />
           </div>
         </Suspense>
       }

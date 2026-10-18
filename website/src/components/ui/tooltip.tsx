@@ -98,6 +98,8 @@ function Tooltip({
     /**
      * `hint` describes the trigger to assistive technology, so its content is read as text. `preview` is for content
      * that is heavy or fetches on open (a chart): it renders once, opens after a short delay and is not announced.
+     * Its content is read-only: it is out of the tab order and a tap never opens it, so it may not hold a control.
+     * Content with controls is a `Popover`.
      */
     variant?: "hint" | "preview";
     /**

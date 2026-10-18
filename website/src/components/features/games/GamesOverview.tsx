@@ -1,8 +1,7 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import type { AnalyticsApiGameStatsRequest, AnalyticsGameStats } from "deadlock_api_client";
-import { Fragment, lazy, Suspense, useState } from "react";
+import { Fragment, lazy, Suspense } from "react";
 
-import type { StatTrendBucket } from "~/components/patterns/charts/StatTrendChart";
 import { Panel, PanelHeader } from "~/components/patterns/panel/Panel";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
@@ -47,7 +46,6 @@ interface GamesOverviewProps {
 }
 
 export default function GamesOverview({ params, prevParams, onStatClick, isStreetBrawl = false }: GamesOverviewProps) {
-  const [trendBucket, setTrendBucket] = useState<StatTrendBucket>("start_time_day");
   const {
     data: currentData,
     isPending,
@@ -137,18 +135,13 @@ export default function GamesOverview({ params, prevParams, onStatClick, isStree
                   <Fragment key={stat.key}>
                     <Tooltip
                       variant="preview"
-                      side="bottom"
-                      align="end"
+                      // Beside the row, not below it: below, the card covered the next rows of the list.
+                      side="left"
                       content={
                         <Suspense
                           fallback={<LoadingState label="trend" className="flex h-62.5 items-center justify-center" />}
                         >
-                          <StatTrendChart
-                            params={params}
-                            stat={stat}
-                            value={trendBucket}
-                            onValueChange={setTrendBucket}
-                          />
+                          <StatTrendChart params={params} stat={stat} />
                         </Suspense>
                       }
                     >

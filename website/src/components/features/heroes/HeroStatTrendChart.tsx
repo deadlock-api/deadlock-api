@@ -15,17 +15,18 @@ export interface HeroStatTrendChartProps {
   params: Omit<AnalyticsApiHeroStatsRequest, "gameMode"> & { gameMode?: GameMode };
   heroId: number;
   stat: HeroTableTrend;
-  bucket: StatTrendBucket;
-  onBucketChange: (bucket: StatTrendBucket) => void;
 }
 
-export default function HeroStatTrendChart({ params, heroId, stat, bucket, onBucketChange }: HeroStatTrendChartProps) {
-  const heroParams = { ...params, bucket };
+// The trend lives in a hover card, so it is read-only (a hover card's content is out of the tab order): one interval.
+const BUCKET: StatTrendBucket = "start_time_day";
+
+export default function HeroStatTrendChart({ params, heroId, stat }: HeroStatTrendChartProps) {
+  const heroParams = { ...params, bucket: BUCKET };
   const needsHeroes = stat !== "banRate";
   const needsBans = params.gameMode !== "street_brawl" && ["banRate", "presence", "zScore", "residual"].includes(stat);
   const heroQuery = useQuery({ ...heroStatsQueryOptions(heroParams), enabled: needsHeroes });
   const banParams: AnalyticsApiHeroBanStatsRequest = {
-    bucket,
+    bucket: BUCKET,
     minAverageBadge: params.minAverageBadge,
     maxAverageBadge: params.maxAverageBadge,
     minUnixTimestamp: params.minUnixTimestamp,
@@ -36,14 +37,14 @@ export default function HeroStatTrendChart({ params, heroId, stat, bucket, onBuc
   const normalizedPickrate = Boolean(params.minHeroMatches || params.minHeroMatchesTotal);
   const chartData = useMemo(() => {
     const range = { minUnixTimestamp: params.minUnixTimestamp, maxUnixTimestamp: params.maxUnixTimestamp };
-    const heroes = completeTimeBuckets(heroQuery.data ?? [], bucket, range);
+    const heroes = completeTimeBuckets(heroQuery.data ?? [], BUCKET, range);
     const sampleSizes = heroes.map((hero) => hero.matches).sort((a, b) => a - b);
     const minMatchesPerBucket = Math.ceil(
       Math.max(MIN_MATCHES_PER_BUCKET, 0.1 * (sampleSizes[Math.floor(sampleSizes.length / 2)] ?? 0)),
     );
     return buildHeroTableTrend({
       heroes,
-      bans: needsBans ? completeTimeBuckets(banQuery.data ?? [], bucket, range) : [],
+      bans: needsBans ? completeTimeBuckets(banQuery.data ?? [], BUCKET, range) : [],
       heroId,
       stat,
       pickrateMultiplier: getPickrateMultiplier(params.gameMode),
@@ -53,7 +54,6 @@ export default function HeroStatTrendChart({ params, heroId, stat, bucket, onBuc
   }, [
     heroQuery.data,
     banQuery.data,
-    bucket,
     needsBans,
     heroId,
     stat,
@@ -76,8 +76,7 @@ export default function HeroStatTrendChart({ params, heroId, stat, bucket, onBuc
             : "ready"
       }
       stat={normalizedPickrate && stat === "pickRate" ? { ...definition, label: "Pick Rate (Normalized)" } : definition}
-      value={bucket}
-      onValueChange={onBucketChange}
+      value={BUCKET}
     />
   );
 }

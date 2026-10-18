@@ -1,9 +1,8 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import type { AnalyticsHeroStats } from "deadlock_api_client";
 import { parseAsStringLiteral, throttle, useQueryState } from "nuqs";
-import { startTransition, useMemo, useState } from "react";
+import { startTransition, useMemo } from "react";
 
-import type { StatTrendBucket } from "~/components/patterns/charts/StatTrendChart";
 import { sortParams, useSort } from "~/components/ui/hooks/use-sort";
 import type { Dayjs } from "~/dayjs";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
@@ -138,7 +137,6 @@ export function useHeroStatsTable({
   nameQuery,
   groupByType = false,
 }: HeroStatsTableFilters) {
-  const [trendBucket, setTrendBucket] = useState<StatTrendBucket>("start_time_day");
   const [sortKey, setSortKey] = useQueryState("hero_sort_key", parseAsSortKey.withDefault("winrate"));
   const [sortDir, setSortDir] = useQueryState("hero_sort_dir", parseAsSortDir.withDefault("desc"));
   const [pickRateMode, setPickRateMode] = useQueryState(
@@ -456,7 +454,7 @@ export function useHeroStatsTable({
     onSort,
     onPickRateModeChange,
     onPickRateModeClick,
-    trend: { params: statsParams, bucket: trendBucket, onBucketChange: setTrendBucket },
+    trend: { params: statsParams },
     gameMode,
   };
 }

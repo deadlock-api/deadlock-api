@@ -20,13 +20,21 @@ import { formatAxisTick, formatStatValue, type StatFormat, type StatTrendPoint, 
 import { cn } from "~/lib/utils";
 
 const STAT_TREND_BUCKETS = [
-  { value: "start_time_hour", label: "Hour", tickFormat: "MM/DD HH:mm", tooltipFormat: "YYYY-MM-DD HH:mm" },
-  { value: "start_time_day", label: "Day", tickFormat: "MM/DD", tooltipFormat: "YYYY-MM-DD" },
-  { value: "start_time_week", label: "Week", tickFormat: "MM/DD", tooltipFormat: "YYYY-MM-DD" },
-  { value: "start_time_month", label: "Month", tickFormat: "MM/YY", tooltipFormat: "YYYY-MM" },
+  {
+    value: "start_time_hour",
+    label: "Hour",
+    name: "Hourly",
+    tickFormat: "MM/DD HH:mm",
+    tooltipFormat: "YYYY-MM-DD HH:mm",
+  },
+  { value: "start_time_day", label: "Day", name: "Daily", tickFormat: "MM/DD", tooltipFormat: "YYYY-MM-DD" },
+  { value: "start_time_week", label: "Week", name: "Weekly", tickFormat: "MM/DD", tooltipFormat: "YYYY-MM-DD" },
+  { value: "start_time_month", label: "Month", name: "Monthly", tickFormat: "MM/YY", tooltipFormat: "YYYY-MM" },
 ] as const satisfies ReadonlyArray<{
   value: string;
   label: string;
+  /** The interval as a word, shown when the chart cannot change it. */
+  name: string;
   tickFormat: string;
   tooltipFormat: string;
 }>;
@@ -51,6 +59,11 @@ interface StatTrendChartProps extends Omit<React.ComponentProps<"div">, "onChang
   valueLabel?: string;
   /** Events drawn as labelled vertical lines, such as patches; `at` is a timestamp in ms. */
   markers?: readonly ChartMarker[];
+  /**
+   * With a handler the header holds the interval switch; without one the chart is read-only and the header names the
+   * interval in its place, at the same height. A chart inside a hover card (`Tooltip variant="preview"`) is always
+   * read-only: a hover card's content is out of the tab order and out of reach of a touch screen.
+   */
   onValueChange?: (value: StatTrendBucket) => void;
 }
 
@@ -74,19 +87,24 @@ export default function StatTrendChart({
     <div className={cn("flex flex-col gap-2", className)} {...props}>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <span className="text-xs font-semibold text-foreground">{stat.label}</span>
-        <Segmented
-          size="sm"
-          width="hug"
-          aria-label={`${stat.label} time interval`}
-          value={value}
-          onValueChange={onValueChange}
-        >
-          {STAT_TREND_BUCKETS.map((option) => (
-            <SegmentedItem key={option.value} value={option.value}>
-              {option.label}
-            </SegmentedItem>
-          ))}
-        </Segmented>
+        {onValueChange ? (
+          <Segmented
+            size="sm"
+            width="hug"
+            aria-label={`${stat.label} time interval`}
+            value={value}
+            onValueChange={onValueChange}
+          >
+            {STAT_TREND_BUCKETS.map((option) => (
+              <SegmentedItem key={option.value} value={option.value}>
+                {option.label}
+              </SegmentedItem>
+            ))}
+          </Segmented>
+        ) : (
+          // The height of the switch it stands in for, so a read-only chart lines up with an interactive one.
+          <span className="flex min-h-8 items-center text-xs text-muted-foreground">{bucketDef.name}</span>
+        )}
       </div>
 
       <div aria-live="polite" aria-busy={state === "loading"}>

@@ -8,21 +8,20 @@ import type { StatDefinition } from "~/lib/game-stat-definitions";
 import { completeTimeBuckets } from "~/lib/time-buckets";
 import { gameStatsQueryOptions } from "~/queries/games-query";
 
+// The hover card's trend is read-only (its content is out of the tab order); the Over Time tab changes the interval.
+const BUCKET: StatTrendBucket = "start_time_day";
+
 export default function GameStatTrendChart({
   params,
   stat,
-  value: bucket,
-  onValueChange,
 }: {
   params: AnalyticsApiGameStatsRequest;
   stat: StatDefinition;
-  value: StatTrendBucket;
-  onValueChange: (value: StatTrendBucket) => void;
 }) {
-  const { data, isPending, isError } = useQuery(gameStatsQueryOptions({ ...params, bucket }));
+  const { data, isPending, isError } = useQuery(gameStatsQueryOptions({ ...params, bucket: BUCKET }));
   const chartData = useMemo(
     () =>
-      completeTimeBuckets(data ?? [], bucket, {
+      completeTimeBuckets(data ?? [], BUCKET, {
         minUnixTimestamp: params.minUnixTimestamp,
         maxUnixTimestamp: params.maxUnixTimestamp,
       })
@@ -32,7 +31,7 @@ export default function GameStatTrendChart({
           value: entry[stat.key] ?? null,
           matches: stat.key === "total_matches" ? undefined : entry.total_matches,
         })),
-    [data, stat.key, bucket, params.minUnixTimestamp, params.maxUnixTimestamp],
+    [data, stat.key, params.minUnixTimestamp, params.maxUnixTimestamp],
   );
 
   return (
@@ -41,8 +40,7 @@ export default function GameStatTrendChart({
       markers={PATCH_MARKERS_SHORT}
       state={isPending ? "loading" : isError ? "error" : "ready"}
       stat={stat}
-      value={bucket}
-      onValueChange={onValueChange}
+      value={BUCKET}
     />
   );
 }
