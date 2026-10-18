@@ -279,8 +279,9 @@ function BuildsExplorerView({
     // Overview first, details on demand: the list and the build picked from it, then what its players do in their
     // matches, and last the chart and items that compare every build at once.
     <StaleOverlay active={stale} label="builds" className="@container flex flex-col gap-3">
-      {/* A build asked for by its ID that these filters leave out: the list shows another, and says why. */}
-      {buildId !== null && selected.hero_build_id !== buildId && (
+      {/* A build asked for by its ID that these filters leave out: the list shows another, and says why. Not while the
+          last filters' builds stand in for the next ones, which may well hold it. */}
+      {!stale && buildId !== null && selected.hero_build_id !== buildId && (
         <Alert variant="info">
           <SearchX aria-hidden="true" />
           <AlertTitle>Build {buildId} is not in this list</AlertTitle>
