@@ -24,7 +24,7 @@ import { SortButton } from "~/components/ui/sort-button";
 import { Stack } from "~/components/ui/stack";
 import { StatusDot } from "~/components/ui/status-dot";
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
-import { Tooltip, TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
+import { Tooltip, TooltipHeader, TooltipStat, TooltipStats, TooltipTarget } from "~/components/ui/tooltip";
 import { IS_DEV } from "~/lib/constants";
 import { formatShare } from "~/lib/format";
 import { type GameMode, hasSoulEconomy } from "~/lib/game-mode";
@@ -564,7 +564,9 @@ export function Scoreboard({
                           )}
                           {player.mvp_rank === 1 && (
                             <Tooltip content="Match MVP">
-                              <Crown className="size-3.5 shrink-0 text-warning" aria-label="Match MVP" />
+                              <TooltipTarget className="shrink-0">
+                                <Crown className="size-3.5 text-warning" aria-label="Match MVP" />
+                              </TooltipTarget>
                             </Tooltip>
                           )}
                           {showsRank(player) && (

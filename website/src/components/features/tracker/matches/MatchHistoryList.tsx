@@ -45,16 +45,18 @@ function SessionHeader({ session }: { session: PlaySession }) {
           {" – "}
           <span className={cn("font-semibold", TONE_TEXT.negative)}>{session.losses}L</span>
         </span>
-        <RankDelta
-          value={session.rankDelta}
-          className="font-semibold"
-          title="Net rank change in selected session matches"
-        />
-        <span
-          className="ms-auto"
-          title={`${toTime(session.startUnix).format("HH:mm")} – ${toTime(session.endUnix).format("HH:mm")}`}
-        >
+        {session.rankDelta != null && (
+          <span>
+            <span className="sr-only">Rank change </span>
+            <RankDelta value={session.rankDelta} className="font-semibold" />
+          </span>
+        )}
+        <span className="ms-auto">
           {formatPlaytime(session.totalTimeS)}
+          <span className="sr-only">
+            {" "}
+            played, {toTime(session.startUnix).format("HH:mm")} to {toTime(session.endUnix).format("HH:mm")}
+          </span>
         </span>
       </span>
     </PanelSection>

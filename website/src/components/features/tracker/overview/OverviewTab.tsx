@@ -18,7 +18,6 @@ import { KeyValue, KeyValueList } from "~/components/ui/key-value";
 import { NoValue } from "~/components/ui/no-value";
 import { ProgressBar } from "~/components/ui/progress-bar";
 import { Stat, StatGroup } from "~/components/ui/stat";
-import { Tooltip, TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
 import { formatPercent } from "~/lib/format";
 import { hasSoulEconomy, MODE_CONFIG } from "~/lib/game-mode";
 import {
@@ -208,18 +207,7 @@ export function OverviewTab({
                 label="Kill / death ratio"
                 value={(s.avgDeaths > 0 ? s.avgKills / s.avgDeaths : s.avgKills * s.matches).toFixed(2)}
               />
-              <Tooltip
-                content={
-                  <>
-                    <TooltipHeader title="Takedowns / match" subtitle="Kills + assists per match" />
-                    <TooltipStats>
-                      <TooltipStat label="Value" value={decimal(s.avgKills + s.avgAssists)} />
-                    </TooltipStats>
-                  </>
-                }
-              >
-                <KeyValue label="Takedowns / match" value={decimal(s.avgKills + s.avgAssists)} />
-              </Tooltip>
+              <KeyValue label="Takedowns / match" value={decimal(s.avgKills + s.avgAssists)} />
               <KeyValue
                 label="Total kills / assists"
                 value={`${integer(s.avgKills * s.matches)} / ${integer(s.avgAssists * s.matches)}`}

@@ -159,15 +159,15 @@ export function MatchTimeline({
             </span>
           )}
           {objectives.length > 0 && (
-            <span
-              title={
-                sides.neutral
-                  ? `Objectives destroyed and mid bosses claimed by ${sides.own}, then by ${sides.enemy}`
-                  : "Objectives destroyed and mid bosses claimed by your team, then by the enemy"
-              }
-            >
-              Objectives <span className={cn("font-semibold", TONE_TEXT.positive)}>{taken}</span> –{" "}
-              <span className={cn("font-semibold", TONE_TEXT.negative)}>{objectives.length - taken}</span>
+            <span>
+              {/* Which side is which is read out, not left to the colors. */}
+              <span aria-hidden="true">
+                Objectives <span className={cn("font-semibold", TONE_TEXT.positive)}>{taken}</span> –{" "}
+                <span className={cn("font-semibold", TONE_TEXT.negative)}>{objectives.length - taken}</span>
+              </span>
+              <span className="sr-only">
+                Objectives: {sides.own} {taken}, {sides.enemy} {objectives.length - taken}
+              </span>
             </span>
           )}
           {lead && lead.peak.lead > 0 && (

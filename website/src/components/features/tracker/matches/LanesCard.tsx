@@ -117,12 +117,8 @@ export function LanesCard({
                   <span className="text-sm font-medium">{lane.name}</span>
                   <span
                     className={cn("ms-auto text-sm font-semibold tabular-nums", diff !== 0 && TONE_TEXT[toneOf(diff)])}
-                    title={
-                      diff == null
-                        ? "Lane soul comparison unavailable: missing player stats"
-                        : `Lane soul difference at ${formatMatchDuration(time)}`
-                    }
                   >
+                    <span className="sr-only">Soul difference: </span>
                     {diff == null ? (
                       <NoValue label="Unavailable" />
                     ) : diff > 0 ? (

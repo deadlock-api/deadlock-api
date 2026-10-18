@@ -10,6 +10,7 @@ import { PageHeader } from "~/components/patterns/page/PageHeader";
 import { Button } from "~/components/ui/button";
 import { InlineStat } from "~/components/ui/inline-stat";
 import { TextLink } from "~/components/ui/text-link";
+import { Tooltip, TooltipTarget } from "~/components/ui/tooltip";
 import { formatPercent } from "~/lib/format";
 import { extractBadgeMap } from "~/lib/leaderboard";
 import { formatPlaytime, peakRank, summarize } from "~/lib/tracker/compute";
@@ -122,12 +123,11 @@ export function PlayerHeader({
                   {badgeInfo.name} {badgeInfo.subtier}
                 </div>
                 {peak && (
-                  <div
-                    className="text-xs whitespace-nowrap text-muted-foreground"
-                    title={`Peak reached ${toTime(peak.time).format("MMM D, YYYY")}`}
-                  >
-                    Peak {peak.name}
-                  </div>
+                  <Tooltip content={`Reached ${toTime(peak.time).format("MMM D, YYYY")}`}>
+                    <TooltipTarget className="text-xs whitespace-nowrap text-muted-foreground">
+                      Peak {peak.name}
+                    </TooltipTarget>
+                  </Tooltip>
                 )}
               </div>
             )}
