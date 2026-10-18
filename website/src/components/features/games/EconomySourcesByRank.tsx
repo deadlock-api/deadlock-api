@@ -7,7 +7,13 @@ import { RankTierTick } from "~/components/domain/rank/RankTierTick";
 import { ChartLegend, ChartLegendItem, ChartSwatch } from "~/components/patterns/charts/ChartLegend";
 import { ChartEmpty, ChartError, ChartLoading } from "~/components/patterns/charts/ChartStates";
 import { ChartSurface } from "~/components/patterns/charts/ChartSurface";
-import { CHART_CURSOR_BAND, CHART_GRID, CHART_X_AXIS, CHART_Y_AXIS } from "~/components/patterns/charts/theme";
+import {
+  CHART_CURSOR_BAND,
+  CHART_GRID,
+  CHART_STACK_SEGMENT,
+  CHART_X_AXIS,
+  CHART_Y_AXIS,
+} from "~/components/patterns/charts/theme";
 import { NoValue } from "~/components/ui/no-value";
 import { Segmented, SegmentedItem } from "~/components/ui/segmented";
 import { TooltipCard, TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
@@ -174,6 +180,7 @@ export default function EconomySourcesByRank({ params }: EconomySourcesByRankPro
                   stackId="souls"
                   fill={group.color}
                   isAnimationActive={false}
+                  {...CHART_STACK_SEGMENT}
                 />
               ))}
             </BarChart>

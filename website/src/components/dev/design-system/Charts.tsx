@@ -31,6 +31,7 @@ import {
   CHART_CURSOR_LINE,
   CHART_GRID,
   CHART_MARGIN,
+  CHART_STACK_SEGMENT,
   CHART_X_AXIS,
   CHART_X_AXIS_SM,
   CHART_Y_AXIS,
@@ -227,6 +228,29 @@ export function Charts() {
             ))}
           </div>
         </Variants>
+      </Specimen>
+
+      <Specimen
+        name="Stacked bars"
+        source="patterns/charts/theme · CHART_STACK_SEGMENT"
+        note="Every Bar with a stackId spreads CHART_STACK_SEGMENT: a 1px rim in the surface color between the segments, so two neighbours of similar hue still read as two parts."
+      >
+        <ChartSurface label="Soul sources by rank, stacked" size="sm" variant="flush" className="max-w-md">
+          <BarChart data={BY_RANK} margin={CHART_MARGIN}>
+            <XAxis dataKey="rank" {...CHART_X_AXIS} interval={0} tickFormatter={(rank: string) => rank.slice(0, 3)} />
+            <YAxis {...CHART_Y_AXIS} hide />
+            {[0.5, 0.3, 0.2].map((share, i) => (
+              <Bar
+                key={share}
+                dataKey={(row: (typeof BY_RANK)[number]) => row.winRate * share}
+                stackId="parts"
+                fill={SERIES_COLORS[i]}
+                isAnimationActive={false}
+                {...CHART_STACK_SEGMENT}
+              />
+            ))}
+          </BarChart>
+        </ChartSurface>
       </Specimen>
 
       <Specimen

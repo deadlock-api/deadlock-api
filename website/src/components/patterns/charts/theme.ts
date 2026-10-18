@@ -136,6 +136,12 @@ export const CHART_CUSTOM_TICK_DY = 14;
 export const CHART_MEDIAN_LINE = { stroke: "var(--chart-axis)", strokeDasharray: "2 2", strokeWidth: 1 } as const;
 
 /**
+ * The rim between the segments of a stacked bar, in the surface color: neighbouring segments whose hues are close for
+ * a color-blind eye still read as separate parts. Spread it on every `Bar` with a `stackId`.
+ */
+export const CHART_STACK_SEGMENT = { stroke: "var(--card)", strokeWidth: 1 } as const;
+
+/**
  * The ±1 standard deviation band around an average line: a faint fill, no edge. Draw it as a range `Area` (a dataKey
  * returning `[low, high]`) under the line, in the line's color.
  */

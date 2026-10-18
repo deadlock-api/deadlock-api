@@ -26,22 +26,11 @@ export interface SoulSourceGroup {
   minusKey?: StatKey;
 }
 
+/**
+ * In order of their usual share of soul income (measured 2026-10), the order of every list, stack and legend of them,
+ * so neighbouring panels read the sources in one order. The team bonus, which a player barely steers, comes last.
+ */
 export const SOUL_SOURCE_GROUPS: SoulSourceGroup[] = [
-  {
-    key: "hero_kills",
-    label: "Hero Kills",
-    color: SERIES_COLORS[0],
-    baseKey: "avg_gold_player",
-    orbKey: "avg_gold_player_orbs",
-    // The API's hero kill souls include assist souls, shown as their own source.
-    minusKey: "avg_gold_assists",
-  },
-  {
-    key: "assists",
-    label: "Assists",
-    color: SERIES_COLORS[5],
-    baseKey: "avg_gold_assists",
-  },
   {
     key: "lane_creeps",
     label: "Lane Creeps",
@@ -57,6 +46,15 @@ export const SOUL_SOURCE_GROUPS: SoulSourceGroup[] = [
     orbKey: "avg_gold_neutral_creep_orbs",
   },
   {
+    key: "hero_kills",
+    label: "Hero Kills",
+    color: SERIES_COLORS[0],
+    baseKey: "avg_gold_player",
+    orbKey: "avg_gold_player_orbs",
+    // The API's hero kill souls include assist souls, shown as their own source.
+    minusKey: "avg_gold_assists",
+  },
+  {
     key: "objectives",
     label: "Objectives",
     color: SERIES_COLORS[3],
@@ -64,16 +62,22 @@ export const SOUL_SOURCE_GROUPS: SoulSourceGroup[] = [
     orbKey: "avg_gold_boss_orb",
   },
   {
-    key: "urn",
-    label: "Urn",
-    color: SERIES_COLORS[4],
-    baseKey: "avg_gold_treasure",
+    key: "assists",
+    label: "Assists",
+    color: SERIES_COLORS[5],
+    baseKey: "avg_gold_assists",
   },
   {
     key: "breakables",
     label: "Breakables",
     color: SERIES_COLORS[7],
     baseKey: "avg_gold_breakable",
+  },
+  {
+    key: "urn",
+    label: "Urn",
+    color: SERIES_COLORS[4],
+    baseKey: "avg_gold_treasure",
   },
   {
     // Income a player barely steers: neutral, so the series hues stay with the sources they farm.

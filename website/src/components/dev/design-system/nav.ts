@@ -238,6 +238,7 @@ export const NAV: readonly NavChapter[] = [
           "Series palette",
           "ChartSurface",
           "ChartCard",
+          "Stacked bars",
           "ChartLegend",
           "ChartLegend items",
           "ChartLegendToggle",

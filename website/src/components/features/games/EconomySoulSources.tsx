@@ -43,8 +43,8 @@ export default function EconomySoulSources({ params }: EconomySoulSourcesProps) 
       };
     });
     // The sources cover all but ~1% of net worth in normal matches (measured 2026-10 over 580k players), so the
-    // shares are of the soul income they add up to; there is no residual "other" slice to guess at.
-    rows.sort((a, b) => b.value - a.value);
+    // shares are of the soul income they add up to; there is no residual "other" slice to guess at. The rows keep the
+    // sources' one order, which the stack and legends beside them share.
     const total = rows.reduce((sum, r) => sum + r.value, 0);
     for (const row of rows) {
       row.share = total > 0 ? row.value / total : 0;
