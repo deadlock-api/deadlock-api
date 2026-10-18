@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import type { HashMapValue } from "deadlock_api_client";
 import { ChartArea, Coins, Flame, HeartPulse, Sparkles, Swords, type LucideIcon, Wheat } from "lucide-react";
 import { useState } from "react";
@@ -9,6 +9,7 @@ import { Disclosure } from "~/components/patterns/content/Disclosure";
 import { FilterBar } from "~/components/patterns/filter-bar/FilterBar";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
+import { StaleOverlay } from "~/components/patterns/states/StaleOverlay";
 import { Text } from "~/components/ui/text";
 import type { Dayjs } from "~/dayjs";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
@@ -79,7 +80,11 @@ export function PlayerStatsDistributionCharts({
     minUnixTimestamp: minUnixTimestamp ?? 0,
     maxUnixTimestamp,
   };
-  const { data, isLoading, isError, refetch } = useQuery(playerStatsMetricsQueryOptions(params));
+  // A filter change keeps the charts on screen, washed out, until the new answer is in: the page never collapses.
+  const { data, isLoading, isError, isPlaceholderData, refetch } = useQuery({
+    ...playerStatsMetricsQueryOptions(params),
+    placeholderData: keepPreviousData,
+  });
   // Street Brawl has no soul economy: its net worth distributions would describe fixed round grants.
   const metricsShown = playerMetricsFor(ALL_METRICS, gameMode);
   const selectedMetric = selectedIndex != null ? (metricsShown[selectedIndex] ?? null) : null;
@@ -89,6 +94,7 @@ export function PlayerStatsDistributionCharts({
   const buffQuery = useQuery({
     ...playerStatsMetricsQueryOptions({ ...params, includeBuffMetrics: true }),
     enabled: buffsShown,
+    placeholderData: keepPreviousData,
   });
   /** A metric's distribution; one the filtered matches never recorded (a pickup time before the update) is missing. */
   const valuesOf = (metric: PlayerMetricDefinition): HashMapValue | undefined => {
@@ -128,7 +134,11 @@ export function PlayerStatsDistributionCharts({
         </ChartLegend>
       </FilterBar>
 
-      <div className="flex flex-col gap-3">
+      <StaleOverlay
+        active={isPlaceholderData || (buffsShown && buffQuery.isPlaceholderData)}
+        label="player stat distributions"
+        className="flex flex-col gap-3"
+      >
         {groupedMetrics.map(({ category, metrics }) => {
           const Icon = CATEGORY_ICON[category];
           const open = openCategories.has(category);
@@ -174,7 +184,7 @@ export function PlayerStatsDistributionCharts({
             </Disclosure>
           );
         })}
-      </div>
+      </StaleOverlay>
 
       <PlayerMetricDistributionDialog
         metric={selectedMetric}
