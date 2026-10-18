@@ -13,7 +13,7 @@ import {
   Users,
   UsersRound,
 } from "lucide-react";
-import { lazy, Suspense, useMemo } from "react";
+import { lazy, Suspense, useMemo, useState } from "react";
 
 import { EntityNotFound } from "~/components/app/EntityNotFound";
 import { HeroImage } from "~/components/domain/assets/HeroImage";
@@ -359,6 +359,8 @@ function HeroDetailPage() {
     };
   }, [statsQuery.data, banQuery.data, swapQuery.data, heroId]);
 
+  const [matchupsExpanded, setMatchupsExpanded] = useState(false);
+
   const rankLabel = (rank: number | undefined, total?: number) =>
     summary && rank !== undefined ? `#${rank} of ${total ?? summary.heroCount}` : undefined;
 
@@ -518,14 +520,29 @@ function HeroDetailPage() {
 
       <Section title={`${heroName} Matchups & Synergies`} description={rankRange}>
         <HeroMatchupSummary heroName={heroName} matchups={matchups} onRetry={retryMatchups} />
-        <div className="grid items-start gap-4 lg:grid-cols-2">
+        {/* One Show all for both sides, so the panels side by side keep one height. */}
+        <div className="grid gap-4 lg:grid-cols-2">
           <Panel>
             <PanelHeader title={`${heroName} with Teammates`} />
-            <HeroMatchupDetailsStatsTable stat={0} matchups={matchups} onRetry={retryMatchups} linkHeroes />
+            <HeroMatchupDetailsStatsTable
+              stat={0}
+              matchups={matchups}
+              onRetry={retryMatchups}
+              linkHeroes
+              expanded={matchupsExpanded}
+              onExpandedChange={setMatchupsExpanded}
+            />
           </Panel>
           <Panel>
             <PanelHeader title={`${heroName} against Enemies`} />
-            <HeroMatchupDetailsStatsTable stat={1} matchups={matchups} onRetry={retryMatchups} linkHeroes />
+            <HeroMatchupDetailsStatsTable
+              stat={1}
+              matchups={matchups}
+              onRetry={retryMatchups}
+              linkHeroes
+              expanded={matchupsExpanded}
+              onExpandedChange={setMatchupsExpanded}
+            />
           </Panel>
         </div>
       </Section>

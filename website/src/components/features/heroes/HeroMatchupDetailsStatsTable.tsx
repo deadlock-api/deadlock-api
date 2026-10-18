@@ -147,18 +147,28 @@ export function HeroMatchupDetailsStatsTable({
   matchups,
   onRetry,
   linkHeroes,
+  expanded: expandedProp,
+  onExpandedChange,
 }: {
   stat: HeroMatchupDetailsStatsTableStat;
   /** Undefined when the matchups failed to load. */
   matchups: HeroMatchups | undefined;
   onRetry?: () => void;
   linkHeroes?: boolean;
+  /** Whether every row shows. Controlled with `onExpandedChange`, so two tables side by side open together. */
+  expanded?: boolean;
+  onExpandedChange?: (expanded: boolean) => void;
 }) {
   const isSynergy = stat === HeroMatchupDetailsStatsTableStat.SYNERGY;
   const rows = (isSynergy ? matchups?.synergyRows : matchups?.counterRows) ?? [];
   // One symmetric scale for the table, so a bar's length compares across rows and its side gives the sign.
   const scale = rows.reduce((max, row) => Math.max(max, Math.abs(row.relWinrate)), 0);
-  const [expanded, setExpanded] = useState(false);
+  const [ownExpanded, setOwnExpanded] = useState(false);
+  const expanded = expandedProp ?? ownExpanded;
+  const setExpanded = (next: boolean) => {
+    if (expandedProp === undefined) setOwnExpanded(next);
+    onExpandedChange?.(next);
+  };
   const visibleRows = expanded ? rows : rows.slice(0, COLLAPSED_ROWS);
 
   if (!matchups) {

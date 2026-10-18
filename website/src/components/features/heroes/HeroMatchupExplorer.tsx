@@ -190,7 +190,7 @@ export function HeroMatchupExplorer({
           onRetry={() => void retry()}
         />
       ) : (
-        <StaleOverlay active={isStale} label="hero matchups" className="grid items-start gap-3 xl:grid-cols-2">
+        <StaleOverlay active={isStale} label="hero matchups" className="grid gap-3 xl:grid-cols-2">
           <MatchupRanking
             title="Allies"
             rows={synergyRows}
