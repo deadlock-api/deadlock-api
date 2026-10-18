@@ -134,6 +134,7 @@ export function BuildByRank({
             xKey="tier"
             valueKey="winRate"
             colorKey="fill"
+            values="visible"
             xAxisHeight={BADGE_AXIS_HEIGHT}
             xTick={<RankTierTick tiers={bars} />}
             tooltip={<RankBarTooltip />}
