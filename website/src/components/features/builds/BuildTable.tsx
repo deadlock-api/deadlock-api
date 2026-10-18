@@ -387,6 +387,7 @@ export function BuildTable({
                           unit=" pp"
                           polarity="neutral"
                           sign="arrow"
+                          zero="visible"
                           className="justify-end"
                         />
                       )}
