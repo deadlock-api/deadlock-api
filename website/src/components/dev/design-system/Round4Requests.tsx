@@ -95,7 +95,7 @@ export function Round4Requests() {
       <Specimen
         name="TableHeader tone and position"
         source="ui/table"
-        note={`\`tone\` fills the head row; \`position="sticky"\` pins it to the top of the table's own scroll container and defaults the tone to \`card\`, because a translucent head lets the rows scroll through it. The fill lands on the cells, not on the section, so a pinned identity column keeps it.`}
+        note={`\`tone\` fills the head row; \`position="sticky"\` pins it to the top of the table's own scroll container and defaults the tone to \`card\`, because a translucent head lets the rows scroll through it. The container gets scroll padding of the head (and a sticky foot) row's height, so a row scrolled into view by focus is never under it. The fill lands on the cells, not on the section, so a pinned identity column keeps it.`}
       >
         <Variants label='tone="muted"' className="items-stretch">
           <Table density="compact" className="w-full">

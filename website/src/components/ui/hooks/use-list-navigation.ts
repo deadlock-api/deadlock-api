@@ -25,7 +25,8 @@ export function nextListIndex(key: string, index: number, count: number, pageSiz
 /**
  * Headless keyboard selection for a vertical list whose rows each hold a focusable control (a table of rows that
  * open a detail view): the arrow keys, Page Up / Down, Home and End choose the row and move focus to its control,
- * found by its `data-list-index`. Spread `onKeyDown` on the element that holds the rows.
+ * found by its `data-list-index`, and scroll its row (`tr` or `li`) into view. Spread `onKeyDown` on the element that
+ * holds the rows.
  */
 export function useListNavigation({
   count,
@@ -47,7 +48,12 @@ export function useListNavigation({
       if (next === null) return;
       event.preventDefault();
       if (next !== value) onValueChange(next);
-      event.currentTarget.querySelector<HTMLElement>(`[data-list-index="${next}"]`)?.focus();
+      const control = event.currentTarget.querySelector<HTMLElement>(`[data-list-index="${next}"]`);
+      if (!control) return;
+      // The whole row comes into view, not only its control, and only as far as needed; the scroll box's scroll
+      // padding keeps it clear of a sticky head or foot row.
+      control.focus({ preventScroll: true });
+      (control.closest("tr, li") ?? control).scrollIntoView({ block: "nearest" });
     },
   };
 }

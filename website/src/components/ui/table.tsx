@@ -11,6 +11,14 @@ const TableDensityContext = React.createContext<TableDensity>("default");
 
 const HEAD_DENSITY: Record<TableDensity, string> = { default: "h-10 px-2", compact: "h-9 px-2", dense: "h-7 px-1.5" };
 const CELL_DENSITY: Record<TableDensity, string> = { default: "p-2", compact: "px-2 py-1.5", dense: "px-1.5 py-1" };
+// A sticky head or foot row covers the edge of the scroll box. Scroll padding of the row's height keeps a row that
+// is scrolled into view (focus, `scrollIntoView`) clear of it (WCAG 2.4.11, focus not obscured).
+const STICKY_SCROLL_PADDING: Record<TableDensity, string> = {
+  default:
+    "has-[>table>thead[data-position=sticky]]:scroll-pt-10 has-[>table>tfoot[data-position=sticky]]:scroll-pb-10",
+  compact: "has-[>table>thead[data-position=sticky]]:scroll-pt-9 has-[>table>tfoot[data-position=sticky]]:scroll-pb-9",
+  dense: "has-[>table>thead[data-position=sticky]]:scroll-pt-7 has-[>table>tfoot[data-position=sticky]]:scroll-pb-7",
+};
 
 /**
  * `density` sets the row height of every cell at once: `default` for short lists, `compact` (about 40px rows) for
@@ -49,6 +57,7 @@ function Table({
         className={cn(
           SCROLLBAR_THIN,
           "relative w-full scroll-fade-x overflow-x-auto",
+          STICKY_SCROLL_PADDING[density],
           width === "fill" && "has-data-pinned:@container/table",
           height === "fill" && "flex-1",
           height === "scroll" && "min-h-0 flex-1",
