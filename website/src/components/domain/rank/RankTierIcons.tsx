@@ -41,7 +41,9 @@ export function RankTierIcons({ tiers, ranks, display = "icon" }: RankTierIconsP
   const scale = useXAxisScale();
   const plot = usePlotArea();
   // React's ids contain characters that break a `url(#...)` reference.
-  const filterId = `rank-icon-shadow-${useId().replace(/[^\w-]/g, "")}`;
+  const id = useId().replace(/[^\w-]/g, "");
+  const filterId = `rank-icon-shadow-${id}`;
+  const clipId = `rank-icon-band-${id}`;
   if (!scale || !plot) return null;
 
   const axisY = plot.y + plot.height;
@@ -63,6 +65,16 @@ export function RankTierIcons({ tiers, ranks, display = "icon" }: RankTierIconsP
           <filter id={filterId} x="-30%" y="-30%" width="160%" height="160%">
             <feDropShadow dx="0" dy="1" stdDeviation="2" floodColor="black" floodOpacity="0.7" />
           </filter>
+          {/* The badges stay in the axis band: a scaled badge's box (and Eternus' wings) would cross the baseline
+              into the plot and cover the bars of its tier. */}
+          <clipPath id={clipId}>
+            <rect
+              x={plot.x - ICON_SIZE}
+              y={axisY + 1}
+              width={plot.width + 2 * ICON_SIZE}
+              height={RANK_ICON_AXIS_HEIGHT}
+            />
+          </clipPath>
         </defs>
         {tiers.map(({ tier, firstBadge, lastBadge }) => {
           const first = scale(firstBadge, { position: "middle" });
@@ -81,6 +93,7 @@ export function RankTierIcons({ tiers, ranks, display = "icon" }: RankTierIconsP
             <g key={tier}>
               <image
                 href={imageUrl}
+                clipPath={`url(#${clipId})`}
                 x={centerX - size / 2}
                 y={centerY - size / 2}
                 width={size}
