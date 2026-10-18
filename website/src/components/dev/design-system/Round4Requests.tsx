@@ -179,9 +179,9 @@ export function Round4Requests() {
       <Specimen
         name="TableFooter"
         source="ui/table"
-        note="The result rows under the body: a total, a tally. Ruled off from the body, no stripe, no hover fill. tone highlight makes it the table's result: a brand rule and tint, the pinned cell included."
+        note="The result rows under the body: a total, a tally. Ruled off from the body, no stripe, no hover fill. tone highlight makes it the table's result: a brand rule and tint, the pinned cell included. position sticky keeps it under the rows of a table that scrolls (the third one here)."
       >
-        <Variants label='tone="default", tone="highlight"' className="items-start">
+        <Variants label='tone="default", tone="highlight", position="sticky"' className="items-start">
           <Table density="dense" width="hug">
             <TableHeader tone="muted">
               <TableRow>
@@ -220,6 +220,27 @@ export function Round4Requests() {
               </TableRow>
             </TableFooter>
           </Table>
+          <div className="*:data-[slot=table-container]:max-h-32">
+            <Table density="dense" width="hug">
+              <TableHeader position="sticky">
+                <TableRow>
+                  <TableHead>Hero</TableHead>
+                  <TableHead className="text-end">Matches</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                <HeroRows />
+              </TableBody>
+              <TableFooter position="sticky">
+                <TableRow>
+                  <TableCell>Total</TableCell>
+                  <TableCell className="text-end tabular-nums">
+                    {ROWS.reduce((sum, row) => sum + row.matches, 0).toLocaleString("en-US")}
+                  </TableCell>
+                </TableRow>
+              </TableFooter>
+            </Table>
+          </div>
         </Variants>
       </Specimen>
 
