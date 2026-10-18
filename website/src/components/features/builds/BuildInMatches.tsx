@@ -225,7 +225,11 @@ export function BuildInMatches({
           </div>
         </Panel>
         <Panel className="flex flex-col">
-          <PanelHeader title="Matchups and ranks" icon={Swords} size="sm" />
+          <PanelHeader
+            title={filters.matchMode === "unranked" ? "Matchups" : "Matchups and ranks"}
+            icon={Swords}
+            size="sm"
+          />
           <BuildMatchups heroId={heroId} build={row} filters={filters} active={active} />
           <BuildByRank heroId={heroId} build={row} filters={filters} active={active} />
         </Panel>

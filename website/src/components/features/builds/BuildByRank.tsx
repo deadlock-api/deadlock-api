@@ -76,7 +76,7 @@ export function BuildByRank({
       },
       "avg_badge",
     ),
-    enabled: active,
+    enabled: active && filters.matchMode !== "unranked",
     placeholderData: keepPreviousData,
   });
   const heroQuery = useQuery({
@@ -90,10 +90,11 @@ export function BuildByRank({
       bucket: "avg_badge",
     }),
     select: (rows) => badgeTiers(rows.filter((row) => row.hero_id === heroId)),
-    enabled: active,
+    enabled: active && filters.matchMode !== "unranked",
   });
   const ranksQuery = useQuery(ranksQueryOptions);
-  if (query.isError || ranksQuery.isError) return null;
+  // Unranked lobbies carry no rank: there is nothing to break down, known before anything loads.
+  if (filters.matchMode === "unranked" || query.isError || ranksQuery.isError) return null;
 
   const ranks = new Map((ranksQuery.data ?? []).map((rank) => [rank.tier, rank]));
   const bars: RankBar[] = [...badgeTiers(query.data ?? [])]
