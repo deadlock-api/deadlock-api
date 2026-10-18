@@ -10,6 +10,7 @@ import { HeroImage } from "~/components/domain/assets/HeroImage";
 import { ItemImage } from "~/components/domain/assets/ItemImage";
 import { RankDelta } from "~/components/features/tracker/shared/RankDelta";
 import { SERIES_COLORS } from "~/components/patterns/charts/theme";
+import { Badge } from "~/components/ui/badge";
 import { Box } from "~/components/ui/box";
 import { Button } from "~/components/ui/button";
 import { CornerBadge } from "~/components/ui/corner-badge";
@@ -58,7 +59,7 @@ import type { TrackerAbility, TrackerMatchMetadata, TrackerMatchPlayer } from "~
 import type { Color } from "~/types/general";
 
 import { BuildTimelineDialog } from "./BuildTimelineDialog";
-import { PlayerCombatStats } from "./PlayerCombatStats";
+import { COMBAT_METRIC_ORDER, PlayerCombatStats } from "./PlayerCombatStats";
 import { TeamStatsDetails } from "./TeamStatsDetails";
 
 function ColumnSortButton({
@@ -202,9 +203,21 @@ const Divider = () => (
   </Box>
 );
 
+/** What every player's strip of a scoreboard holds, so the strips share their slots and line up. */
+interface StripSlots {
+  /** Some player has a rank change, a demotion save or a badge (shown here at phone width). */
+  rank: boolean;
+  /** Some player spent time dead. */
+  dead: boolean;
+  /** The combat metrics some player has, in their fixed order. */
+  combat: readonly string[];
+}
+
 /**
  * The stats the table dropped at this width, spelled out under the player. A phone shows the whole set here,
- * since there is no pointer to open the hover card with, and a wide panel shows only what no column carries.
+ * since there is no pointer to open the hover card with, and a wide panel shows only what no column carries. From a
+ * medium-width table every stat has a fixed slot in a grid of equal columns, empty where this player has none, so each
+ * stat sits in the same column for every player; a phone runs them together to keep the rows short.
  */
 function PlayerStatStrip({
   player,
@@ -212,16 +225,19 @@ function PlayerStatStrip({
   context,
   ranks,
   pregameHeroName,
+  slots,
 }: {
   player: TrackerMatchPlayer;
   columns: PlayerStatColumn[];
   context: PlayerContext;
   ranks: Rank[];
   pregameHeroName?: string;
+  slots: StripSlots;
 }) {
+  const swapped = player.pregame_hero_id != null && player.pregame_hero_id !== player.hero_id;
   return (
-    <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 pb-1 text-xs text-muted-foreground tabular-nums">
-      {showsRank(player) && (
+    <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 pb-1 text-xs text-muted-foreground tabular-nums @md:grid @md:grid-cols-[repeat(auto-fill,minmax(7.5rem,1fr))]">
+      {slots.rank && (
         // The name row hands the rank down here at phone width, where the name needs the room more.
         <span className="flex items-center gap-1 @sm:hidden">
           {player.demotion_protected && (
@@ -232,19 +248,27 @@ function PlayerStatStrip({
         </span>
       )}
       {columns.map((column) => (
-        <span key={column.key} className={cn("whitespace-nowrap", REVEAL[column.reveal].strip)}>
+        <span key={column.key} className={cn("truncate whitespace-nowrap", REVEAL[column.reveal].strip)}>
           <span className="text-foreground">{column.format(column.value(player))}</span> {column.label.toLowerCase()}
         </span>
       ))}
-      <span className="whitespace-nowrap">
+      <span className="truncate">
         <span className="text-foreground">{formatShare(context.killShare)}</span> kill share
       </span>
-      {context.deadForS != null && (
-        <span className="whitespace-nowrap">
-          <span className="text-foreground">{formatMatchDuration(context.deadForS)}</span> dead
+      {slots.dead &&
+        (context.deadForS != null ? (
+          <span className="truncate">
+            <span className="text-foreground">{formatMatchDuration(context.deadForS)}</span> dead
+          </span>
+        ) : (
+          <span aria-hidden="true" />
+        ))}
+      <PlayerCombatStats player={player} labels={slots.combat} />
+      {swapped && (
+        <span className="col-span-full">
+          <Badge variant="outline">Swapped from {pregameHeroName ?? `Hero ${player.pregame_hero_id}`}</Badge>
         </span>
       )}
-      <PlayerCombatStats player={player} pregameHeroName={pregameHeroName} />
     </div>
   );
 }
@@ -346,6 +370,14 @@ export function Scoreboard({
   });
 
   const maxima = useMemo(() => statMaxima(match.players), [match]);
+  const stripSlots = useMemo<StripSlots>(() => {
+    const combat = new Set(match.players.flatMap((player) => player.combat_stats?.metrics.map((m) => m.label) ?? []));
+    return {
+      rank: match.players.some(showsRank),
+      dead: match.players.some((player) => playerContext(match, player, durationS).deadForS != null),
+      combat: COMBAT_METRIC_ORDER.filter((label) => combat.has(label)),
+    };
+  }, [match, durationS]);
   const headingLevel = useNextHeadingLevel();
   const hasWinner = TEAMS.some((team) => team.key === match.winning_team);
 
@@ -616,6 +648,7 @@ export function Scoreboard({
                           context={context}
                           ranks={ranks}
                           pregameHeroName={heroesById?.get(player.pregame_hero_id ?? 0)?.name}
+                          slots={stripSlots}
                         />
                       </TableCell>
                     </TableRow>
@@ -630,7 +663,10 @@ export function Scoreboard({
                             {finalItems.map((item) => (
                               <ItemChip key={`${item.upgrade.id}-${item.boughtAt}`} item={item} />
                             ))}
-                            <BuildTimelineDialog build={build} playerName={name} />
+                            {/* At the row's end, so the button is in one place for every player. */}
+                            <span className="ms-auto">
+                              <BuildTimelineDialog build={build} playerName={name} />
+                            </span>
                           </div>
                         </TableCell>
                       </TableRow>
