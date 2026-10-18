@@ -46,12 +46,26 @@ const buttonVariants = cva(
         steam: "border border-steam-border bg-steam-bg font-semibold text-foreground hover:bg-steam-bg-hover",
         /** A name inside a clickable row: no box of its own, it keeps the surrounding type and only recolors. */
         text: "h-auto rounded-sm p-0 text-inherit hover:text-primary",
+        /**
+         * A small dismiss control over a card or portrait (remove a pick): a quiet icon on the secondary surface that
+         * turns destructive under the pointer.
+         */
+        dismiss: "bg-secondary text-muted-foreground hover:bg-secondary hover:text-destructive",
         /** A full-width row of a list or panel that acts as one button. Bring your own layout inside. */
         row: "h-auto w-full justify-start rounded-none text-start font-normal whitespace-normal hover:bg-subtle-hover focus-visible:bg-subtle-hover aria-[current]:bg-accent aria-[current]:hover:bg-accent data-selected:bg-accent data-selected:hover:bg-accent",
       },
       shape: {
         default: "",
         pill: "rounded-full",
+      },
+      /**
+       * `group` hides the button until the pointer is over its `group` ancestor or the focus is inside it. Only on a
+       * device that can hover, and only by opacity: on a touch screen it always shows, and it keeps its place in the
+       * tab order both ways.
+       */
+      reveal: {
+        always: "",
+        group: "[@media(hover:hover)]:[.group:not(:hover):not(:focus-within)_&]:opacity-0",
       },
       /** `raised` lifts a button that floats over page content, such as a launcher pinned to a corner. */
       elevation: {
@@ -107,6 +121,7 @@ const buttonVariants = cva(
       size: "default",
       elevation: "none",
       scrim: "none",
+      reveal: "always",
     },
   },
 );
@@ -128,6 +143,7 @@ function Button({
   size = "default",
   elevation = "none",
   scrim = "none",
+  reveal = "always",
   asChild = false,
   loading = false,
   loadingLabel = "Loading",
@@ -155,7 +171,7 @@ function Button({
       aria-busy={loading || undefined}
       aria-disabled={loading || undefined}
       className={cn(
-        buttonVariants({ variant, shape, size, elevation, scrim, className }),
+        buttonVariants({ variant, shape, size, elevation, scrim, reveal, className }),
         loading && "cursor-progress",
       )}
       {...props}

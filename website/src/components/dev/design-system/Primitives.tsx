@@ -88,6 +88,7 @@ const BUTTON_VARIANTS = [
   "positive-soft",
   "negative-soft",
   "toggle",
+  "dismiss",
 ] as const;
 const BUTTON_SIZES = ["xs", "sm", "sm-tight", "default", "lg", "touch"] as const;
 const ICON_SIZES = ["icon-xs", "icon-sm", "icon", "icon-lg"] as const;
@@ -214,6 +215,22 @@ export function Primitives() {
           <Button variant="link" className="h-auto p-0">
             Inline text action
           </Button>
+        </Variants>
+        <Variants label='variant="dismiss" reveal="group": shown on hover or focus inside the group, always on touch'>
+          {["Seven", "Haze"].map((name) => (
+            <div key={name} className="group relative size-12 rounded-full bg-muted">
+              <Button
+                variant="dismiss"
+                reveal="group"
+                size="icon-xs"
+                shape="pill"
+                aria-label={`Remove ${name}`}
+                className="absolute -inset-e-0.5 -top-0.5"
+              >
+                <X />
+              </Button>
+            </div>
+          ))}
         </Variants>
         <Variants label='variant="row"' className="block max-w-sm overflow-hidden rounded-lg border">
           {["Infernus", "Haze", "Avg Damage Mitigated per Player per Match (a label that wraps)"].map((hero) => (

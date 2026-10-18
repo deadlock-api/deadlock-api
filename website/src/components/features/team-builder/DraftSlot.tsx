@@ -100,6 +100,8 @@ export function DraftSlot({
 }: DraftSlotProps) {
   const { hero } = useHeroById(heroId ?? -1);
   const [isOver, setIsOver] = useState(false);
+  // The two slots of a lane would share one name without their place in it.
+  const slotName = `${TEAM_NAMES[side]} ${lane ? `${lane.name} lane, slot ${(slot % 2) + 1} of 2` : `slot ${slot + 1}`}`;
   // The box takes the slot's width up to the portrait size and keeps itself square, so a row of slots
   // narrower than the portraits shrinks them to fit instead of overlapping each other and the card edge.
   // The portrait fills the box, so it stays round at any width.
@@ -131,7 +133,7 @@ export function DraftSlot({
           state={isOver ? "over" : "idle"}
           onClick={onPick}
           data-draft-slot={draftSlotKey({ side, slot })}
-          aria-label={`Add hero to ${TEAM_NAMES[side]} ${lane ? `${lane.name} lane` : `slot ${slot + 1}`}`}
+          aria-label={`Add hero to ${slotName}`}
           {...dropTargetProps}
           className={cn("mx-auto", box)}
         >
@@ -160,18 +162,25 @@ export function DraftSlot({
           onDragEnd={onDragEnd}
           onClick={onPick}
           data-draft-slot={draftSlotKey({ side, slot })}
+          aria-label={`Replace ${hero?.name ?? "hero"}, ${slotName}`}
           className="size-full"
         >
-          <HeroImage heroId={heroId} shape="circle" ring={isOver ? "target" : "none"} className="size-full" />
+          <HeroImage
+            heroId={heroId}
+            shape="circle"
+            ring={isOver ? "target" : "none"}
+            decorative
+            className="size-full"
+          />
         </DraggablePortrait>
         <Button
-          variant="secondary"
+          variant="dismiss"
+          reveal="group"
           size="icon-xs"
           shape="pill"
           onClick={onClear}
           aria-label={`Remove ${hero?.name ?? "hero"}`}
-          // Hover-revealed on pointer devices only: there is no hover to reveal it on a phone.
-          className="absolute -inset-e-0.5 -top-0.5 text-muted-foreground hover:text-destructive md:hidden md:group-focus-within:flex md:group-hover:flex"
+          className="absolute -inset-e-0.5 -top-0.5"
         >
           <XIcon />
         </Button>
