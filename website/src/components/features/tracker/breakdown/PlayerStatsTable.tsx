@@ -1,5 +1,5 @@
 import type { PlayerMatchHistoryEntry } from "deadlock_api_client";
-import { useId, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
 import { PlayerCell } from "~/components/domain/player/PlayerCell";
 import { useTrackerTime } from "~/components/features/tracker/shared/useTrackerTime";
@@ -11,9 +11,9 @@ import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { Button } from "~/components/ui/button";
 import { Field } from "~/components/ui/field";
 import { useSort } from "~/components/ui/hooks/use-sort";
-import { Input } from "~/components/ui/input";
 import { ProgressBar } from "~/components/ui/progress-bar";
 import { SearchInput } from "~/components/ui/search-input";
+import { Segmented, SegmentedItem } from "~/components/ui/segmented";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableRowHeader } from "~/components/ui/table";
 import { Tooltip, TooltipTarget } from "~/components/ui/tooltip";
 import { useSteamProfiles } from "~/hooks/useSteamProfiles";
@@ -23,6 +23,9 @@ import type { TrackerFilterValues } from "~/lib/tracker/compute";
 
 import { CompanionMatchesDialog } from "./CompanionMatchesDialog";
 import { useEnemyRows, useMateRows } from "./useCompanionRows";
+
+/** The smallest number of shared games a player needs to be listed; the same steps as the hero pool's. */
+const MINIMUM_MATCHES = [1, 2, 5, 10] as const;
 
 interface CompanionTableProps {
   paginationKey: string;
@@ -53,7 +56,6 @@ function CompanionTable({
   entries,
   onOpenMatch,
 }: CompanionTableProps) {
-  const minimumMatchesId = useId();
   const { toTime, fromNow } = useTrackerTime();
   const [minMatches, setMinMatches] = useState(2);
   const [searchQuery, setSearchQuery] = useState("");
@@ -129,19 +131,22 @@ function CompanionTable({
             setCurrentPage(0);
           }}
         />
-        <Field orientation="horizontal" label="Min matches" htmlFor={minimumMatchesId}>
-          <Input
-            id={minimumMatchesId}
-            type="number"
+        <Field orientation="horizontal" label="Min. games">
+          <Segmented
             size="sm"
-            min={1}
-            value={minMatches}
-            onChange={(e) => {
-              setMinMatches(Math.max(1, Number(e.target.value) || 1));
+            width="hug"
+            value={String(minMatches)}
+            onValueChange={(value) => {
+              setMinMatches(Number(value));
               setCurrentPage(0);
             }}
-            className="w-20"
-          />
+          >
+            {MINIMUM_MATCHES.map((minimum) => (
+              <SegmentedItem key={minimum} value={String(minimum)}>
+                {minimum}+<span className="sr-only"> games</span>
+              </SegmentedItem>
+            ))}
+          </Segmented>
         </Field>
       </PaginationControls>
       <PaginationStatus
