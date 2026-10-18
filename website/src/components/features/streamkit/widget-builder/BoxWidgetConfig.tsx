@@ -125,6 +125,7 @@ export function BoxWidgetConfig({ config, updateConfig, availableVariables }: Bo
                 </Select>
                 <Input
                   type="text"
+                  syntax="template"
                   value={row.label}
                   onChange={(e) => updateRow(row.id, { label: e.target.value })}
                   className="w-full @sm:w-1/2"
@@ -144,6 +145,7 @@ export function BoxWidgetConfig({ config, updateConfig, availableVariables }: Bo
               </Button>
               <Input
                 type="text"
+                syntax="template"
                 value={row.subtext}
                 onChange={(e) => updateRow(row.id, { subtext: e.target.value })}
                 aria-label={`Second line for variable ${index + 1}`}

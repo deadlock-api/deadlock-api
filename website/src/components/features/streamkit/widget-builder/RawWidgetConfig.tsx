@@ -55,6 +55,7 @@ export function RawWidgetConfig({ config, updateConfig, availableVariables }: Ra
           <Input
             id={prefixId}
             type="text"
+            syntax="template"
             value={config.prefix}
             onChange={(e) => updateConfig({ prefix: e.target.value })}
           />
@@ -63,6 +64,7 @@ export function RawWidgetConfig({ config, updateConfig, availableVariables }: Ra
           <Input
             id={suffixId}
             type="text"
+            syntax="template"
             value={config.suffix}
             onChange={(e) => updateConfig({ suffix: e.target.value })}
           />

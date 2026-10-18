@@ -1,5 +1,6 @@
 import * as React from "react";
 
+import { type ControlSyntax, syntaxProps } from "~/components/ui/control-syntax";
 import { useFieldControlProps } from "~/components/ui/hooks/use-field-control";
 import { CONTROL_SURFACE, DISABLED_STATE, FOCUS_RING_BORDER, INVALID_STATE, READ_ONLY } from "~/components/ui/recipes";
 import { cn } from "~/lib/utils";
@@ -14,9 +15,12 @@ function Input({
   type,
   size = "default",
   spinners = "native",
+  syntax = "text",
   ...props
 }: Omit<React.ComponentProps<"input">, "size"> & {
   size?: "default" | "sm";
+  /** `template` for a value with `{placeholders}`: no spell check, autofill or autocorrect. */
+  syntax?: ControlSyntax;
   /** Only meaningful for `type="number"`: whether the browser's own stepper is drawn. */
   spinners?: "native" | "hidden";
 }) {
@@ -27,6 +31,8 @@ function Input({
       data-slot="input"
       data-size={size}
       data-spinners={spinners}
+      data-syntax={syntax}
+      {...syntaxProps(syntax)}
       className={cn(
         DISABLED_STATE,
         CONTROL_SURFACE,

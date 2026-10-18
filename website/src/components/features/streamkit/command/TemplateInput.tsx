@@ -1,3 +1,5 @@
+import { useId } from "react";
+
 import { Field } from "~/components/ui/field";
 import { Textarea } from "~/components/ui/textarea";
 
@@ -10,11 +12,13 @@ interface TemplateInputProps {
 }
 
 export function TemplateInput({ template, onTemplateChange, error = null, ref }: TemplateInputProps) {
+  const id = useId();
   return (
-    <Field label="Command Template" htmlFor="template" error={error}>
+    <Field label="Command Template" htmlFor={id} error={error}>
       <Textarea
         ref={ref}
-        id="template"
+        id={id}
+        syntax="template"
         value={template}
         onChange={(e) => onTemplateChange(e.target.value)}
         placeholder="Example: {steam_account_name} has {wins_today}W - {losses_today}L today"

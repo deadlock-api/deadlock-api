@@ -1,12 +1,22 @@
+import { type ControlSyntax, syntaxProps } from "~/components/ui/control-syntax";
 import { useFieldControlProps } from "~/components/ui/hooks/use-field-control";
 import { CONTROL_SURFACE, DISABLED_STATE, FOCUS_RING_BORDER, INVALID_STATE, READ_ONLY } from "~/components/ui/recipes";
 import { cn } from "~/lib/utils";
 
-function Textarea({ className, ...props }: React.ComponentProps<"textarea">) {
+function Textarea({
+  className,
+  syntax = "text",
+  ...props
+}: React.ComponentProps<"textarea"> & {
+  /** `template` for a value with `{placeholders}`: no spell check, autofill or autocorrect. */
+  syntax?: ControlSyntax;
+}) {
   const fieldProps = useFieldControlProps(props);
   return (
     <textarea
       data-slot="textarea"
+      data-syntax={syntax}
+      {...syntaxProps(syntax)}
       className={cn(
         DISABLED_STATE,
         CONTROL_SURFACE,

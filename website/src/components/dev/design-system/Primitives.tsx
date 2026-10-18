@@ -543,10 +543,23 @@ export function Primitives() {
           {/* ds-allow color-literal: the value of a native color input is user data and must be a hex string */}
           <Input type="color" defaultValue="#fa4454" aria-label="Font color" />
         </Variants>
+        <Variants label='syntax="template": no spell check, autofill or autocorrect for {placeholders}'>
+          <Input
+            syntax="template"
+            defaultValue="{wins_today}W - {losses_today}L"
+            className="w-64"
+            aria-label="Template input"
+          />
+        </Variants>
       </Specimen>
 
-      <Specimen name="Textarea" source="ui/textarea" note="Grows with its content.">
+      <Specimen
+        name="Textarea"
+        source="ui/textarea"
+        note='Grows with its content. syntax="template" (as here) turns off spell check, autofill and autocorrect for {placeholders}.'
+      >
         <Textarea
+          syntax="template"
           placeholder="Example: {steam_account_name} has {wins_today}W today"
           className="max-w-md"
           aria-label="Template"
