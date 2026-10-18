@@ -2,15 +2,33 @@ import type { Rank } from "deadlock_api_client";
 import { useId } from "react";
 import { DefaultZIndexes, usePlotArea, useXAxisScale, ZIndexLayer } from "recharts";
 
+import { CHART_TICK } from "~/components/patterns/charts/theme";
+
 const ICON_SIZE = 48;
 const AXIS_GAP = 4;
 /** X axis height that fits the badges; pass it to the chart's `<XAxis height>`. */
 export const RANK_ICON_AXIS_HEIGHT = ICON_SIZE + 2 * AXIS_GAP;
+const NAME_GAP = 8;
+const NAME_LINE = 20;
+/** X axis height that fits the badges and the names under them (`display="icon-name"`). */
+export const RANK_ICON_NAME_AXIS_HEIGHT = RANK_ICON_AXIS_HEIGHT + NAME_GAP + NAME_LINE;
+/** The narrowest tier that still gets its name; narrower (a phone), only the badges stay and their title names them. */
+const NAME_MIN_WIDTH = 64;
 
 interface TierSpan {
   tier: number;
   firstBadge: number;
   lastBadge: number;
+}
+
+interface RankTierIconsProps {
+  tiers: TierSpan[];
+  ranks: ReadonlyMap<number, Rank>;
+  /**
+   * `icon` (default): the badge alone; the XAxis takes `RANK_ICON_AXIS_HEIGHT`. `icon-name`: the rank's name centred
+   * under each badge while every tier is wide enough for it; the XAxis takes `RANK_ICON_NAME_AXIS_HEIGHT`.
+   */
+  display?: "icon" | "icon-name";
 }
 
 /**
@@ -19,7 +37,7 @@ interface TierSpan {
  * x axis is keyed by badge (`tier * 10 + subtier`); it reads the axis scale and plot area from the chart context.
  */
 // Law 6 does not apply: it draws an SVG layer inside a Recharts chart from the chart context, so it spreads no props.
-export function RankTierIcons({ tiers, ranks }: { tiers: TierSpan[]; ranks: ReadonlyMap<number, Rank> }) {
+export function RankTierIcons({ tiers, ranks, display = "icon" }: RankTierIconsProps) {
   const scale = useXAxisScale();
   const plot = usePlotArea();
   // React's ids contain characters that break a `url(#...)` reference.
@@ -27,6 +45,17 @@ export function RankTierIcons({ tiers, ranks }: { tiers: TierSpan[]; ranks: Read
   if (!scale || !plot) return null;
 
   const axisY = plot.y + plot.height;
+  // Names show on every tier or on none, measured on the narrowest tier: the bars' width times their count.
+  const showNames =
+    display === "icon-name" &&
+    tiers.every(({ firstBadge, lastBadge }) => {
+      const first = scale(firstBadge, { position: "middle" });
+      const last = scale(lastBadge, { position: "middle" });
+      if (first == null || last == null || lastBadge === firstBadge) return false;
+      const barWidth = (last - first) / (lastBadge - firstBadge);
+      return barWidth * (lastBadge - firstBadge + 1) >= NAME_MIN_WIDTH;
+    });
+  const nameY = axisY + RANK_ICON_AXIS_HEIGHT + NAME_GAP;
   return (
     <ZIndexLayer zIndex={DefaultZIndexes.bar + 1}>
       <g style={{ pointerEvents: "none" }}>
@@ -46,19 +75,26 @@ export function RankTierIcons({ tiers, ranks }: { tiers: TierSpan[]; ranks: Read
           // factors bring each badge's art to about the same size (measured 2026-10; Oracle's art fills its image).
           const baseSize = Math.min(ICON_SIZE, (last - first) * 1.2);
           const size = baseSize * (tier === 8 ? 1 : tier === 9 ? 1.6 : tier >= 10 ? 1.4 : 1);
+          const centerX = (first + last) / 2;
           const centerY = axisY + AXIS_GAP + baseSize / 2;
           return (
-            <image
-              key={tier}
-              href={imageUrl}
-              x={(first + last) / 2 - size / 2}
-              y={centerY - size / 2}
-              width={size}
-              height={size}
-              filter={`url(#${filterId})`}
-            >
-              <title>{rank?.name ?? `Rank ${tier}`}</title>
-            </image>
+            <g key={tier}>
+              <image
+                href={imageUrl}
+                x={centerX - size / 2}
+                y={centerY - size / 2}
+                width={size}
+                height={size}
+                filter={`url(#${filterId})`}
+              >
+                <title>{rank?.name ?? `Rank ${tier}`}</title>
+              </image>
+              {showNames && rank?.name && (
+                <text x={centerX} y={nameY} textAnchor="middle" dominantBaseline="hanging" {...CHART_TICK}>
+                  {rank.name}
+                </text>
+              )}
+            </g>
           );
         })}
       </g>

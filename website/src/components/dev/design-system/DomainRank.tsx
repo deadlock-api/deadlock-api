@@ -8,7 +8,11 @@ import {
   RANK_BADGE_NAME_AXIS_WIDTH,
   RankBadgeTick,
 } from "~/components/domain/rank/RankBadgeTick";
-import { RANK_ICON_AXIS_HEIGHT, RankTierIcons } from "~/components/domain/rank/RankTierIcons";
+import {
+  RANK_ICON_AXIS_HEIGHT,
+  RANK_ICON_NAME_AXIS_HEIGHT,
+  RankTierIcons,
+} from "~/components/domain/rank/RankTierIcons";
 import { RankTierTick } from "~/components/domain/rank/RankTierTick";
 import { rankTierLook, RankTierWinRateChart } from "~/components/domain/rank/RankTierWinRateChart";
 import { ChartSurface } from "~/components/patterns/charts/ChartSurface";
@@ -87,7 +91,8 @@ export function DomainRank() {
       <Specimen
         name="RankTierIcons"
         source="domain/rank/RankTierIcons"
-        note="For a chart with one bar per badge (tier * 10 + subtier): draws each tier's badge once, centred under its subtier bars. Render it as a direct child of the chart and give the XAxis a height of RANK_ICON_AXIS_HEIGHT."
+        note="For a chart with one bar per badge (tier * 10 + subtier): draws each tier's badge once, centred under its subtier bars. Render it as a direct child of the chart and give the XAxis a height of RANK_ICON_AXIS_HEIGHT. display=icon-name writes the rank's name centred under each badge while every tier is at least 64px wide (XAxis height RANK_ICON_NAME_AXIS_HEIGHT)."
+        className="grid gap-3 lg:grid-cols-2"
       >
         <ChartSurface label="Players by rank badge" size="md">
           <BarChart data={playersByBadge} margin={CHART_MARGIN}>
@@ -96,6 +101,15 @@ export function DomainRank() {
             <YAxis {...CHART_Y_AXIS} />
             <Bar dataKey="players" radius={2} isAnimationActive={false} />
             <RankTierIcons tiers={TIER_SPANS} ranks={rankByTier} />
+          </BarChart>
+        </ChartSurface>
+        <ChartSurface label="Players by rank badge, with rank names" size="md">
+          <BarChart data={playersByBadge} margin={CHART_MARGIN}>
+            <CartesianGrid {...CHART_GRID} />
+            <XAxis {...CHART_X_AXIS} dataKey="badge" tick={false} height={RANK_ICON_NAME_AXIS_HEIGHT} />
+            <YAxis {...CHART_Y_AXIS} />
+            <Bar dataKey="players" radius={2} isAnimationActive={false} />
+            <RankTierIcons tiers={TIER_SPANS} ranks={rankByTier} display="icon-name" />
           </BarChart>
         </ChartSurface>
       </Specimen>

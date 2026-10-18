@@ -1,9 +1,8 @@
 import type { Rank } from "deadlock_api_client";
 import type { BadgeDistribution } from "deadlock_api_client";
-import { useState } from "react";
 import { Bar, BarChart, CartesianGrid, ReferenceLine, Tooltip, XAxis, YAxis } from "recharts";
 
-import { RANK_ICON_AXIS_HEIGHT, RankTierIcons } from "~/components/domain/rank/RankTierIcons";
+import { RANK_ICON_NAME_AXIS_HEIGHT, RankTierIcons } from "~/components/domain/rank/RankTierIcons";
 import { ChartSurface } from "~/components/patterns/charts/ChartSurface";
 import {
   CHART_BASELINE,
@@ -95,15 +94,7 @@ export default function BadgeDistributionChart({
 
   const medianBadge = medianBadgeOf(chartData, total);
 
-  const ticks = tiers.map((tier) => tier * 10 + 3);
-
   const valueTicks = niceTicks(0, Math.max(0, ...chartData.map((entry) => entry.value)));
-
-  // Rank names need about 64px each. Narrower (a phone), Recharts dropped every other one and the rest drifted off
-  // their icons, so only the icons stay; they carry the name in their tooltip.
-  const [chartWidth, setChartWidth] = useState(0);
-  const showNames = ticks.length > 0 && chartWidth / ticks.length >= 64;
-  const xAxisTickFormatter = (badge: number) => (showNames ? (tierData.get(Math.floor(badge / 10))?.name ?? "") : "");
 
   const tierCenters = tiers.map((tier) => ({ tier, firstBadge: tier * 10 + 1, lastBadge: tier * 10 + 6 }));
 
@@ -114,7 +105,6 @@ export default function BadgeDistributionChart({
         size="fill"
         variant="bare"
         className="min-h-0 w-full flex-1"
-        onResize={setChartWidth}
       >
         <BarChart accessibilityLayer data={chartData}>
           <CartesianGrid {...CHART_GRID} />
@@ -152,16 +142,8 @@ export default function BadgeDistributionChart({
               );
             }}
           />
-          <XAxis
-            {...CHART_X_AXIS}
-            dataKey="badge"
-            minTickGap={0}
-            ticks={ticks}
-            textAnchor="middle"
-            tickFormatter={xAxisTickFormatter}
-            dx={7}
-            tickMargin={RANK_ICON_AXIS_HEIGHT + 8}
-          />
+          {/* The rank names are drawn by RankTierIcons, centred under each tier's badge. */}
+          <XAxis {...CHART_X_AXIS} dataKey="badge" tick={false} height={RANK_ICON_NAME_AXIS_HEIGHT} />
           <YAxis
             {...CHART_Y_AXIS}
             dataKey="value"
@@ -179,7 +161,7 @@ export default function BadgeDistributionChart({
               label={{ value: "Median", position: "insideTopLeft", ...CHART_TICK }}
             />
           )}
-          <RankTierIcons tiers={tierCenters} ranks={tierData} />
+          <RankTierIcons tiers={tierCenters} ranks={tierData} display="icon-name" />
         </BarChart>
       </ChartSurface>
     </div>
