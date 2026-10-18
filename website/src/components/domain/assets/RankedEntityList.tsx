@@ -171,7 +171,9 @@ export function RankedEntityRow({
  * One number of a RankedEntityRow: the value over its label, and with `share` a thin bar under the value for a
  * number that is a part of a whole (how often it is bought). `tone` colors the value; the number itself still says
  * which side of the pivot it is on. With `change` the bar is signed: a gain right, a loss left. With `details` the value
- * opens a hover card, and is underlined dashed to say so. A `tone` colors the signed bar too.
+ * opens a hover card, and is underlined dashed to say so. A `tone` colors the signed bar too. With `significant`, a
+ * difference within the noise is told apart by more than color (WCAG 1.4.1): regular weight, muted, and "within noise"
+ * for screen readers, as `Delta` does.
  */
 export function RankedEntityMetric({
   label,
@@ -181,6 +183,7 @@ export function RankedEntityMetric({
   change,
   details,
   tone,
+  significant,
   width = "default",
   className,
   ...props
@@ -198,14 +201,27 @@ export function RankedEntityMetric({
   change?: { value: number | null; scale: number; interval?: readonly [number, number] };
   /** What stands behind the number (the numbers before and after, the sample): a hover card on the value, reachable by keyboard. */
   details?: React.ReactNode;
+  /** The value's color where it stands out of the noise. */
   tone?: Tone;
+  /** Whether the difference stands out of the noise: `false` mutes it and sets it lighter, whatever its `tone`. */
+  significant?: boolean;
   /** `wide` for a value with a unit after it ("+16.8 pp"), which the default column cuts. */
   width?: "default" | "wide";
 }) {
+  const noise = significant === false;
+  const shownTone = noise ? "muted" : tone;
   const body = (
     <>
-      <span className={cn("type-label whitespace-nowrap tabular-nums", tone && TONE_TEXT[tone])}>
+      <span
+        data-significance={significant === undefined ? undefined : noise ? "noise" : "clear"}
+        className={cn(
+          "type-label whitespace-nowrap tabular-nums",
+          noise && "font-normal",
+          shownTone && TONE_TEXT[shownTone],
+        )}
+      >
         {value ?? <NoValue />}
+        {noise && value != null && <span className="sr-only">, within noise</span>}
       </span>
       {/* Every metric keeps the bar's row, so the labels of a row line up whether or not a value has a bar. */}
       {change ? (
@@ -213,7 +229,7 @@ export function RankedEntityMetric({
           value={change.value}
           scale={change.scale}
           interval={change.interval}
-          tone={tone}
+          tone={shownTone}
           className="w-full"
         />
       ) : share !== undefined ? (

@@ -59,8 +59,9 @@ function MatchupList({ title, matchups, build }: { title: string; matchups: Matc
                 labelDisplay={index === 0 ? "visible" : "hidden"}
                 width="wide"
                 value={formatSignedPoints(change)}
+                tone={toneOf(Math.round(change * 1000))}
                 // Only a difference outside the matchup's noise takes a color.
-                tone={Math.abs(change) < winRateNoise(matchup.matches) ? "muted" : toneOf(Math.round(change * 1000))}
+                significant={Math.abs(change) >= winRateNoise(matchup.matches)}
                 change={{ value: change, scale: CHANGE_SCALE }}
               />
             </RankedEntityRow>

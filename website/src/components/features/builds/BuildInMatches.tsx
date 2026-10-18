@@ -161,11 +161,8 @@ export function BuildInMatches({
                             labelDisplay={index === 0 ? "visible" : "hidden"}
                             width="wide"
                             value={formatSignedPoints(change)}
-                            tone={
-                              Math.abs(change) < winRateNoise(bought, row.matches - bought)
-                                ? "muted"
-                                : toneOf(Math.round(change * 1000))
-                            }
+                            tone={toneOf(Math.round(change * 1000))}
+                            significant={Math.abs(change) >= winRateNoise(bought, row.matches - bought)}
                             change={{ value: change, scale: KEY_ITEM_SCALE }}
                           />
                         </RankedEntityRow>

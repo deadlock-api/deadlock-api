@@ -92,14 +92,13 @@ export function BuildItemsPanel({
                   labelDisplay={index === 0 ? "visible" : "hidden"}
                   width="wide"
                   value={item.vsWithout === null ? null : formatSignedPoints(item.vsWithout)}
-                  tone={
+                  tone={item.vsWithout === null ? undefined : toneOf(Math.round(item.vsWithout * 1000))}
+                  // Only a difference outside the noise of the two groups of matches takes a color.
+                  significant={
                     item.vsWithout === null
                       ? undefined
-                      : // Only a difference outside the noise of the two groups of matches takes a color.
-                        Math.abs(item.vsWithout) <
-                          winRateNoise(item.share * totalMatches, (1 - item.share) * totalMatches)
-                        ? "muted"
-                        : toneOf(Math.round(item.vsWithout * 1000))
+                      : Math.abs(item.vsWithout) >=
+                        winRateNoise(item.share * totalMatches, (1 - item.share) * totalMatches)
                   }
                   change={{ value: item.vsWithout, scale: CHANGE_SCALE }}
                 />
