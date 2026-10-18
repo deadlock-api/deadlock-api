@@ -85,10 +85,8 @@ function SharedMatchesTable({
       <TableBody>
         {matches.map((match) => (
           <TableRow key={match.matchId}>
-            <TableRowHeader data-pinned>
-              <Text tone="muted" className="whitespace-nowrap">
-                {dateLabel(match.startTime)}
-              </Text>
+            <TableRowHeader data-pinned className="whitespace-normal @sm/table:whitespace-nowrap">
+              <Text tone="muted">{dateLabel(match.startTime)}</Text>
             </TableRowHeader>
             {columns.map((player) => {
               const team = match.teams.find((candidate) =>
@@ -103,7 +101,9 @@ function SharedMatchesTable({
                 >
                   {team && entry ? (
                     <Inline gap={1.5} wrap="nowrap" justify="end">
-                      {/* Fixed widths, none shrinking: the letters, heroes and numbers line up down the column. */}
+                      {/* Fixed widths, none shrinking: the letters, heroes and numbers line up down the column. Narrower, the
+                          table drops the souls and the KDA's fixed box (under 28rem), then the hero and the date's
+                          one line (under 24rem), so every player's column fits down to a 320px screen. */}
                       <Text
                         tone={team.won ? "positive" : "negative"}
                         className="w-4 shrink-0 text-center font-semibold"
@@ -111,8 +111,12 @@ function SharedMatchesTable({
                         <span aria-hidden="true">{team.won ? "W" : "L"}</span>
                         <span className="sr-only">{team.won ? "Won" : "Lost"} as</span>
                       </Text>
-                      <HeroImage heroId={entry.heroId} shape="circle" className="size-5 shrink-0" />
-                      <Text className="w-16 shrink-0 text-end whitespace-nowrap">
+                      <HeroImage
+                        heroId={entry.heroId}
+                        shape="circle"
+                        className="hidden size-5 shrink-0 @sm/table:block"
+                      />
+                      <Text className="shrink-0 text-end whitespace-nowrap @md/table:w-16">
                         <span aria-hidden="true">
                           {entry.kills}/{entry.deaths}/{entry.assists}
                         </span>
@@ -121,7 +125,7 @@ function SharedMatchesTable({
                         </span>
                       </Text>
                       {showSouls && (
-                        <Text tone="muted" className="w-12 shrink-0 text-end whitespace-nowrap">
+                        <Text tone="muted" className="hidden w-12 shrink-0 text-end whitespace-nowrap @md/table:inline">
                           {compactSouls(entry.netWorth)}
                           <span className="sr-only"> souls</span>
                         </Text>
