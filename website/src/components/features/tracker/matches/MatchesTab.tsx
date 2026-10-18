@@ -257,7 +257,7 @@ export function MatchesTab({
 
   return (
     <div className="@container/matches">
-      <div className="grid gap-4 @5xl/matches:grid-cols-[17rem_minmax(0,1fr)] @7xl/matches:grid-cols-[19rem_minmax(0,1fr)]">
+      <div className="grid gap-4 @4xl/matches:grid-cols-[17rem_minmax(0,1fr)] @7xl/matches:grid-cols-[19rem_minmax(0,1fr)]">
         <section
           ref={detailsRef}
           data-match-details={selectedId}
@@ -286,7 +286,7 @@ export function MatchesTab({
               <Button
                 variant="ghost"
                 size="sm"
-                className="self-end @5xl/matches:hidden"
+                className="self-end @4xl/matches:hidden"
                 onClick={() => listRef.current?.focusMatch(sortedEntries[0]?.match_id)}
               >
                 Match history
@@ -347,10 +347,10 @@ export function MatchesTab({
         {/* Out of flow, so the list takes the height of the details beside it instead of setting it. */}
         <aside
           className={cn(
-            "relative h-104 @5xl/matches:order-first @5xl/matches:h-auto @5xl/matches:min-h-96",
+            "relative h-104 @4xl/matches:order-first @4xl/matches:h-auto @4xl/matches:min-h-96",
             // Keep match history available while scrolling through the overview.
             selected === null &&
-              "@5xl/matches:sticky @5xl/matches:top-4 @5xl/matches:h-[calc(var(--spacing)*-20+100vh)] @5xl/matches:min-h-0 @5xl/matches:self-start",
+              "@4xl/matches:sticky @4xl/matches:top-4 @4xl/matches:h-[calc(var(--spacing)*-20+100vh)] @4xl/matches:min-h-0 @4xl/matches:self-start",
           )}
         >
           <Card tone="inset" size="flush" className="absolute inset-0">

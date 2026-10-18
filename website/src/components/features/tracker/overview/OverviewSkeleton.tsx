@@ -9,9 +9,9 @@ export function OverviewSkeleton() {
       <output className="text-sm text-muted-foreground">Loading match history…</output>
       <div
         aria-hidden="true"
-        className="grid items-start gap-4 @5xl/matches:grid-cols-[17rem_minmax(0,1fr)] @7xl/matches:grid-cols-[19rem_minmax(0,1fr)]"
+        className="grid items-start gap-4 @4xl/matches:grid-cols-[17rem_minmax(0,1fr)] @7xl/matches:grid-cols-[19rem_minmax(0,1fr)]"
       >
-        <Panel className="hidden @5xl/matches:flex">
+        <Panel className="hidden @4xl/matches:flex">
           <PanelBody size="sm" className="flex flex-col gap-3">
             <Skeleton className="h-5 w-24" />
             <Skeleton className="h-7 w-full" />
