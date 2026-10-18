@@ -10,6 +10,8 @@ import { cn } from "~/lib/utils";
  * A share image that is itself the copy button: full width at its own aspect ratio, it presses in on click and, while
  * `state` is `confirmed`, rings in the brand color with the `confirmation` over it. The parent owns the copy and the
  * state (`useCopyToClipboard` resets it on its own), so a separate copy button can confirm through the same image.
+ * Its polite status is the copy's one live region: it says `confirmation`, or `failure` while `state` is `failed`, so
+ * a separate copy button stays quiet (no `aria-live` of its own) and nothing is announced twice.
  * Until the image at `src` has loaded, a skeleton holds its space; a new `src` (a changed comparison) shows it again.
  */
 export function SharePreview({
@@ -19,6 +21,7 @@ export function SharePreview({
   alt = "",
   state = "idle",
   confirmation = "Link copied",
+  failure = "Copy failed",
   fit = "width",
   className,
   style,
@@ -35,8 +38,10 @@ export function SharePreview({
   height: number;
   /** Describes the image; the button is named by its `aria-label`. */
   alt?: string;
-  state?: "idle" | "confirmed";
+  /** `failed`: the copy did not happen; only the status says so, the image stays as it is. */
+  state?: "idle" | "confirmed" | "failed";
   confirmation?: string;
+  failure?: string;
 }) {
   const confirmed = state === "confirmed";
   // The src that has finished loading (or failed); anything else is still on its way.
@@ -86,7 +91,7 @@ export function SharePreview({
         </span>
       )}
       <span className="sr-only" aria-live="polite">
-        {confirmed ? confirmation : ""}
+        {confirmed ? confirmation : state === "failed" ? failure : ""}
       </span>
     </button>
   );

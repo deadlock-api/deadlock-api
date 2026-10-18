@@ -25,7 +25,8 @@ export function ShareComparison({
   return (
     <Panel {...props}>
       <PanelHeader size="sm" title="Share">
-        <Button size="xs" onClick={copyLink} aria-live="polite">
+        {/* No live region of its own: the card's status announces the copy once, for both. */}
+        <Button size="xs" onClick={copyLink}>
           {copied ? <CheckIcon aria-hidden="true" /> : <LinkIcon aria-hidden="true" />}
           {copied ? "Link copied" : failed ? "Copy failed" : "Copy link"}
         </Button>
@@ -39,7 +40,7 @@ export function ShareComparison({
           height={630}
           alt="The share card of this comparison"
           aria-label="Copy the link to this comparison"
-          state={copied ? "confirmed" : "idle"}
+          state={copied ? "confirmed" : failed ? "failed" : "idle"}
           onClick={copyLink}
           // The header's button is the keyboard's way to copy; the card is a second, pointer-sized target for it.
           tabIndex={-1}

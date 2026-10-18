@@ -262,7 +262,7 @@ export function Round4Requests() {
       <Specimen
         name="SharePreview"
         source="ui/share-preview"
-        note="A share image that is its own copy button: full width at its aspect ratio, it presses in on click, and while state is confirmed it rings in the brand color with the confirmation over it. The parent copies and owns the state, so a separate button can confirm through the same image. A skeleton holds the space until the image has loaded, and again when src changes. Click it."
+        note="A share image that is its own copy button: full width at its aspect ratio, it presses in on click, and while state is confirmed it rings in the brand color with the confirmation over it. The parent copies and owns the state, so a separate button can confirm through the same image. Its polite status (confirmed, or failed) is the copy's only live region: the separate button has none. A skeleton holds the space until the image has loaded, and again when src changes. Click it."
       >
         <Variants label='state="idle", then "confirmed" for two seconds' className="items-stretch">
           <div className="w-96 max-w-full">
