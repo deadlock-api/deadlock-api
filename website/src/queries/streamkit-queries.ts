@@ -1,4 +1,4 @@
-import { queryOptions } from "@tanstack/react-query";
+import { keepPreviousData, queryOptions } from "@tanstack/react-query";
 import type { VariablesResolveRegionEnum } from "deadlock_api_client";
 
 import { CACHE_DURATIONS } from "~/constants/cache";
@@ -38,7 +38,11 @@ export const availableVariablesQueryOptions = queryOptions({
   staleTime: CACHE_DURATIONS.FOREVER,
 });
 
-/** Live variable values for a widget on stream, refetched every `refreshInterval` even while the tab is hidden. */
+/**
+ * Live variable values for a widget on stream, refetched every `refreshInterval` even while the tab is hidden. A new
+ * key (a stat added in the builder, the header turned on) keeps the previous values until it resolves, so the widget
+ * never collapses to a spinner and back.
+ */
 export function streamkitStatsQueryOptions({
   region,
   accountId,
@@ -55,6 +59,7 @@ export function streamkitStatsQueryOptions({
   return queryOptions({
     queryKey: queryKeys.streamkit.stats(region, accountId, variables, extraArgs),
     queryFn: () => resolveVariables(region, accountId, variables, extraArgs),
+    placeholderData: keepPreviousData,
     staleTime: refreshInterval - 10_000,
     refetchInterval: refreshInterval,
     refetchIntervalInBackground: true,

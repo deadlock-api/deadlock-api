@@ -37,5 +37,6 @@ export const useStats = ({
     }),
   );
 
+  // `isLoading` is only true for a key that has never had data: a changed key shows the previous values meanwhile.
   return { stats: data ?? null, loading: isLoading, error };
 };
