@@ -52,5 +52,6 @@ test("a difference is relative for amounts and in points for rates", () => {
   assert.ok(Math.abs(metricDelta(metric("accuracy"), 0.32, 0.3)! - 0.02) < 1e-9);
   assert.equal(metricDelta(metric("kills"), 6, 0), null);
   assert.equal(metricDelta(metric("teammateHealing"), 3, 0.4), null);
+  assert.equal(metricDelta(metric("teammateHealing"), 0.4, 3), null);
   assert.equal(metricDelta(metric("kills"), null, 5), null);
 });
