@@ -70,10 +70,14 @@ function zoomOf(guessCount: number): number {
   return ZOOM_STEPS[Math.min(guessCount, ZOOM_STEPS.length - 1)];
 }
 
-/** The day's part of the hero the zoom closes in on, kept off the card's empty edges. */
+/**
+ * The day's part of the hero the zoom closes in on: the head's outline at the top of the card. The card is a bust that
+ * fills its frame below the shoulders, so a focus inside the figure showed one solid shape with no outline at all;
+ * near the top, a fifth to a third of the zoomed view is background (measured over every hero card).
+ */
 function focusOf(date: string): { x: number; y: number } {
   const rng = seededRandom(getModeSeed(date, "guess-hero-focus"));
-  return { x: 0.35 + rng() * 0.3, y: 0.25 + rng() * 0.35 };
+  return { x: 0.35 + rng() * 0.3, y: 0.05 + rng() * 0.1 };
 }
 
 function getWarpFilter(guessCount: number, isFinished: boolean): string {
