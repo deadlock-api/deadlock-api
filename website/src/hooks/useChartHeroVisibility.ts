@@ -1,11 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
 import { useCallback, useMemo, useState } from "react";
 
+import { chartMarkColor } from "~/components/patterns/charts/theme";
 import { resolveVisibleHeroIds } from "~/lib/hero-trends";
 import { heroesQueryOptions } from "~/queries/asset-queries";
 
 /**
- * Builds a map of hero ID → { name, color } from asset data.
+ * Builds a map of hero ID → { name, color } from asset data, each color lifted to stand 3:1 off the plot.
  * Shared across all hero chart components.
  */
 export function useHeroColorMap() {
@@ -15,7 +16,8 @@ export function useHeroColorMap() {
     const map: Record<number, { name: string; color: string }> = {};
     for (const hero of assetsHeroes || []) {
       const uiColor = hero.colors?.style ?? hero.colors?.ui;
-      map[hero.id] = { name: hero.name, color: uiColor ? `rgb(${uiColor.join(",")})` : "var(--foreground)" };
+      // Lifted to the mark lightness floor: several hero colors (dark purples, maroons) sat under 3:1 on the card.
+      map[hero.id] = { name: hero.name, color: chartMarkColor(uiColor ? `rgb(${uiColor.join(",")})` : undefined) };
     }
     return map;
   }, [assetsHeroes]);
