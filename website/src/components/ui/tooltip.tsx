@@ -1,6 +1,7 @@
 import { HoverCard as HoverCardPrimitive, Tooltip as TooltipPrimitive } from "radix-ui";
-import type { ComponentProps, ReactNode } from "react";
+import { type ComponentProps, type ReactNode, useRef } from "react";
 
+import { useControllableState } from "~/components/ui/hooks/use-controllable-state";
 import { FOCUS_RING, POPPER_MOTION } from "~/components/ui/recipes";
 import { cn } from "~/lib/utils";
 
@@ -26,18 +27,62 @@ function TooltipCard({ className, ...props }: ComponentProps<"div">) {
 }
 
 /**
+ * What makes a trigger a toggletip: a press toggles the card, so a tap opens it on a touch screen, where hover never
+ * happens. The trigger becomes a button (`role`, `aria-expanded`; Enter and Space on a non-native one), which also
+ * makes an `aria-label` on a `TooltipTarget` span a valid name.
+ */
+function useToggleTrigger(open: boolean, setOpen: (open: boolean) => void) {
+  // Whether the card was open when the press began: hover or focus may open it on the way to the click.
+  const openAtPress = useRef(false);
+  // A touch press toggles on pointer up: a hover card cancels the touch's click.
+  const touchHandled = useRef(false);
+  return {
+    role: "button",
+    "aria-expanded": open,
+    // Default prevented, so Radix does not close the card on the press, and the press does not move focus.
+    onPointerDown: (event: React.PointerEvent) => {
+      openAtPress.current = open;
+      touchHandled.current = false;
+      event.preventDefault();
+    },
+    onPointerUp: (event: React.PointerEvent) => {
+      if (event.pointerType !== "touch") return;
+      touchHandled.current = true;
+      setOpen(!openAtPress.current);
+    },
+    onClick: (event: React.MouseEvent) => {
+      event.preventDefault();
+      if (touchHandled.current) {
+        touchHandled.current = false;
+        return;
+      }
+      // `detail` is 0 for a click from the keyboard (Enter or Space on a native button).
+      setOpen(event.detail > 0 ? !openAtPress.current : !open);
+    },
+    onKeyDown: (event: React.KeyboardEvent) => {
+      if (event.currentTarget instanceof HTMLButtonElement) return;
+      if (event.key !== "Enter" && event.key !== " ") return;
+      event.preventDefault();
+      setOpen(!open);
+    },
+  } as const;
+}
+
+/**
  * The one hover surface: a hint for an action, the details behind a value, a preview. The child is the trigger and
  * the root: `ref`, `aria-*`, `data-*` and handlers reach it. `open`, `defaultOpen` and `onOpenChange` control it.
- * Empty `content` (`null`, `false`) leaves the trigger without a tooltip.
+ * Empty `content` (`null`, `false`) leaves the trigger without a tooltip. `trigger="toggle"` makes it a toggletip:
+ * hover and focus still open it, and a click or a tap toggles it, so the card is reachable on a touch screen.
  */
 function Tooltip({
   children,
   content,
   variant = "hint",
+  trigger = "hover",
   side = "top",
   align = "center",
-  open,
-  defaultOpen,
+  open: openProp,
+  defaultOpen = false,
   onOpenChange,
   ...props
 }: Omit<ComponentProps<typeof TooltipPrimitive.Trigger>, "content" | "asChild"> &
@@ -49,22 +94,28 @@ function Tooltip({
      * that is heavy or fetches on open (a chart): it renders once, opens after a short delay and is not announced.
      */
     variant?: "hint" | "preview";
+    /**
+     * `hover`: hover and focus open it. `toggle`: a press toggles it too, and the trigger is a button that reports
+     * `aria-expanded`. Use `toggle` where the card holds what a touch reader needs (a value's numbers, a note).
+     */
+    trigger?: "hover" | "toggle";
   }) {
   const empty = content == null || content === false;
+  const [open, setOpen] = useControllableState({
+    value: openProp,
+    defaultValue: defaultOpen,
+    onValueChange: onOpenChange,
+  });
+  const toggleProps = useToggleTrigger(open, setOpen);
+  const triggerProps = trigger === "toggle" && !empty ? { ...props, ...toggleProps } : props;
   if (variant === "preview") {
     return (
-      <HoverCardPrimitive.Root
-        openDelay={150}
-        closeDelay={100}
-        open={open}
-        defaultOpen={defaultOpen}
-        onOpenChange={onOpenChange}
-      >
+      <HoverCardPrimitive.Root openDelay={150} closeDelay={100} open={open} onOpenChange={setOpen}>
         {/* Radix types this trigger as an anchor; with `asChild` the props land on the child, whatever it is. */}
         <HoverCardPrimitive.Trigger
           data-slot="tooltip-trigger"
           asChild
-          {...(props as ComponentProps<typeof HoverCardPrimitive.Trigger>)}
+          {...(triggerProps as ComponentProps<typeof HoverCardPrimitive.Trigger>)}
         >
           {children}
         </HoverCardPrimitive.Trigger>
@@ -90,8 +141,8 @@ function Tooltip({
     );
   }
   return (
-    <TooltipPrimitive.Root data-slot="tooltip" open={open} defaultOpen={defaultOpen} onOpenChange={onOpenChange}>
-      <TooltipPrimitive.Trigger data-slot="tooltip-trigger" asChild {...props}>
+    <TooltipPrimitive.Root data-slot="tooltip" open={open} onOpenChange={setOpen}>
+      <TooltipPrimitive.Trigger data-slot="tooltip-trigger" asChild {...triggerProps}>
         {children}
       </TooltipPrimitive.Trigger>
       {!empty && (
@@ -148,7 +199,8 @@ function TooltipTarget({
       tabIndex={0}
       className={cn(
         FOCUS_RING,
-        "cursor-default rounded-sm",
+        // The trigger of a toggletip is a button (`role` from `Tooltip trigger="toggle"`), and points like one.
+        "cursor-default rounded-sm [&[role=button]]:cursor-pointer",
         TOOLTIP_TARGET_DISPLAY[display],
         underline === "dashed" &&
           "underline decoration-muted-foreground decoration-dashed underline-offset-2 hover:decoration-current hover:decoration-solid focus-visible:decoration-current focus-visible:decoration-solid",

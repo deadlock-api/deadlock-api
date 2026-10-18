@@ -1,10 +1,6 @@
-import { Info } from "lucide-react";
-import { useState } from "react";
-
-import { Button } from "~/components/ui/button";
+import { InfoTip } from "~/components/ui/info-tip";
 import { ariaSort, SortButton, type SortDir } from "~/components/ui/sort-button";
 import { TableHead } from "~/components/ui/table";
-import { Tooltip } from "~/components/ui/tooltip";
 import { cn } from "~/lib/utils";
 
 const cellAlignClass = { start: "text-start", center: "text-center", end: "text-end" };
@@ -44,9 +40,6 @@ export function SortableHeader<Key extends string>({
   children?: React.ReactNode;
 }) {
   const isActive = activeSortKey === sortKey;
-  // A toggletip: hover and focus open it like a tooltip, and a click or tap toggles it, which a plain tooltip
-  // swallowed (a press closed it, and a touch never opened it).
-  const [infoOpen, setInfoOpen] = useState(false);
   const sortButton = (
     <SortButton active={isActive} sortDir={sortDir} align={align} size={size} onClick={() => onSortChange(sortKey)}>
       <span>{label}</span>
@@ -63,22 +56,9 @@ export function SortableHeader<Key extends string>({
       {description == null ? (
         sortButton
       ) : (
-        <span data-slot="sortable-header-described" className="inline-flex items-center">
+        <span data-slot="sortable-header-described" className="inline-flex items-center gap-1">
           {sortButton}
-          <Tooltip content={description} open={infoOpen} onOpenChange={setInfoOpen}>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-xs"
-              aria-expanded={infoOpen}
-              onPointerDown={(event) => event.preventDefault()}
-              onClick={() => setInfoOpen((open) => !open)}
-              aria-label={typeof label === "string" ? `About ${label}` : "About this column"}
-              className="text-muted-foreground"
-            >
-              <Info />
-            </Button>
-          </Tooltip>
+          <InfoTip label={typeof label === "string" ? `About ${label}` : "About this column"} content={description} />
         </span>
       )}
     </TableHead>

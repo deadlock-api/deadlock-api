@@ -90,6 +90,7 @@ export function BuildPlaystyle({
                     ) : distributions[metric.key] ? (
                       <Tooltip
                         variant="preview"
+                        trigger="toggle"
                         content={<DistributionCard title={metric.label} distribution={distributions[metric.key]!} />}
                       >
                         <TooltipTarget underline="dashed">{metric.format(value)}</TooltipTarget>

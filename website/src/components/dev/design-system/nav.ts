@@ -138,6 +138,7 @@ export const NAV: readonly NavChapter[] = [
         title: "Overlays",
         items: [
           "Tooltip",
+          "InfoTip",
           "DetailPopover",
           "Details affordance",
           "SelectionBox",

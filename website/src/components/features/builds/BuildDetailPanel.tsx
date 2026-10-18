@@ -1,4 +1,4 @@
-import { GitCompareArrows, Hammer, Info } from "lucide-react";
+import { GitCompareArrows, Hammer } from "lucide-react";
 import { useState } from "react";
 
 import { AbilityOrderGrid } from "~/components/domain/assets/AbilityOrderGrid";
@@ -11,8 +11,8 @@ import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { Button } from "~/components/ui/button";
 import { CopyButton } from "~/components/ui/copy-button";
+import { InfoTip } from "~/components/ui/info-tip";
 import { SCROLLBAR_THIN } from "~/components/ui/recipes";
-import { Tooltip, TooltipTarget } from "~/components/ui/tooltip";
 import { day } from "~/dayjs";
 import type { BuildPerformanceTotals } from "~/lib/build-performance";
 import { type BuildRow, buildCategoryName, buildLanguageName } from "~/lib/build-stats";
@@ -28,13 +28,9 @@ import type { SteamProfile } from "~/queries/steam-queries";
 function CategoryTitle({ name, description }: { name: string; description: string | null }) {
   if (!description) return <span className="whitespace-normal">{name}</span>;
   return (
-    <span className="inline-flex max-w-full items-center gap-1 whitespace-normal">
+    <span className="inline-flex max-w-full items-center gap-1.5 whitespace-normal">
       <span className="min-w-0">{name}</span>
-      <Tooltip content={description}>
-        <TooltipTarget aria-label={`About ${name}`} className="inline-flex shrink-0 items-center">
-          <Info aria-hidden="true" className="size-3.5" />
-        </TooltipTarget>
-      </Tooltip>
+      <InfoTip label={`About ${name}`} content={description} />
     </span>
   );
 }

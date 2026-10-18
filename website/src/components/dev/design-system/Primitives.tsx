@@ -54,6 +54,7 @@ import {
   DialogTrigger,
 } from "~/components/ui/dialog";
 import { Field } from "~/components/ui/field";
+import { InfoTip } from "~/components/ui/info-tip";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { OptionRow } from "~/components/ui/option-row";
@@ -626,6 +627,24 @@ export function Primitives() {
             </Button>
           </Tooltip>
         </Variants>
+        <Variants label='trigger="toggle": hover or focus opens it, a click or tap toggles it (aria-expanded)'>
+          <Tooltip
+            trigger="toggle"
+            content={
+              <>
+                <TooltipHeader title="Toxic Bullets" subtitle="Rush this against tanks" />
+                <TooltipStats>
+                  <TooltipStat label="Bought in" value="61% of matches" />
+                </TooltipStats>
+              </>
+            }
+          >
+            <TooltipTarget className="flex flex-col items-center text-xs">
+              <span className="sr-only">Toxic Bullets, bought in </span>
+              61%
+            </TooltipTarget>
+          </Tooltip>
+        </Variants>
         <Variants label="TooltipTarget display (tab through them to see the ring)" className="items-stretch">
           <div className="flex w-full max-w-md flex-col gap-2 text-sm">
             <p className="text-muted-foreground">
@@ -636,6 +655,19 @@ export function Primitives() {
               block: fills its column, for a bar or a full-width row
             </TooltipTarget>
           </div>
+        </Variants>
+      </Specimen>
+
+      <Specimen
+        name="InfoTip"
+        source="ui/info-tip"
+        note="An info mark beside a label, for what an author wrote about it. A toggletip: hover and focus open it, a click or tap toggles it, Escape closes it. A 16px glyph with a 24px hit area; the parent keeps a gap of at least 4px."
+      >
+        <Variants>
+          <span className="inline-flex items-center gap-1.5 text-xs font-semibold">
+            Laning
+            <InfoTip label="About Laning" content="Buy these before the first guardian falls." />
+          </span>
         </Variants>
       </Specimen>
 

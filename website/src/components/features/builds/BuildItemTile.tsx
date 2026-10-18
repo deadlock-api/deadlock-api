@@ -39,8 +39,10 @@ export function BuildItemTile({
   const { item } = useItemById(itemId);
   const name = item?.name ?? "Item";
   const rate = usage?.boughtRate ?? 0;
+  const byTime = caption === "time" && usage;
   return (
     <Tooltip
+      trigger="toggle"
       content={
         <>
           <TooltipHeader title={name} subtitle={note} />
@@ -63,11 +65,12 @@ export function BuildItemTile({
         </>
       }
     >
-      <TooltipTarget aria-label={name} className="flex w-9 flex-col items-center">
+      {/* Named by its content: the item, then the number under its icon, so the visible number is part of the name. */}
+      <TooltipTarget className="flex w-9 flex-col items-center">
         <span className="relative">
           <ItemImage
             item={item}
-            // The target names the item; the tooltip says how often it was bought.
+            // The hidden text below names the item.
             alt=""
             title=""
             emphasis={!pending && rate < RARELY_BOUGHT ? "dim" : "normal"}
@@ -80,11 +83,15 @@ export function BuildItemTile({
             </CornerBadge>
           )}
         </span>
+        <span className="sr-only">
+          {name}
+          {!pending && (byTime ? ", bought at " : ", bought in ")}
+        </span>
         {pending ? (
           <Skeleton className="h-4 w-8" />
         ) : (
-          <span aria-hidden="true" className="text-xs text-muted-foreground tabular-nums">
-            {caption === "time" && usage ? clock(usage.avgBuyTimeS) : formatShare(rate)}
+          <span className="text-xs text-muted-foreground tabular-nums">
+            {byTime ? clock(usage.avgBuyTimeS) : formatShare(rate)}
           </span>
         )}
       </TooltipTarget>
