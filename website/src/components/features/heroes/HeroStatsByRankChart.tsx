@@ -82,8 +82,14 @@ function tickFormatter(stat: ByRankStat): (v: number) => string {
 function BadgePoint(props: ScatterProps) {
   const { cx, cy, payload } = props as { cx: number; cy: number; payload: DataPoint };
   const imgUrl = payload.badgeImageUrl;
-  if (!imgUrl) return <circle cx={cx} cy={cy} r={6} fill={CHART_COLOR.neutral} />;
-  return <image x={cx - 18} y={cy - 18} width={36} height={36} href={imgUrl} />;
+  if (!imgUrl) return <circle cx={cx} cy={cy} r={6} fill={payload.heroColor} stroke={CHART_COLOR.surface} />;
+  // Every hero's points are the same rank badges: a circle in the hero's color says whose trail a point is on.
+  return (
+    <g>
+      <circle cx={cx} cy={cy} r={17} fill={CHART_COLOR.surface} stroke={payload.heroColor} strokeWidth={3} />
+      <image x={cx - 14} y={cy - 14} width={28} height={28} href={imgUrl} />
+    </g>
+  );
 }
 
 function CustomTooltip({
