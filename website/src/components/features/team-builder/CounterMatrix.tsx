@@ -32,11 +32,12 @@ export function CounterMatrix({ analysis, index, loading }: CounterMatrixProps) 
     <Panel>
       <PanelHeader title="Counter matrix">
         <Button
-          variant="ghost"
+          variant="toggle"
           size="xs"
+          aria-pressed={swapped}
+          aria-label="Swap axes"
           onClick={() => setSwapped((current) => !current)}
-          className="ms-auto font-normal text-muted-foreground hover:text-foreground"
-          title="Swap the two axes"
+          className="ms-auto"
         >
           <ArrowLeftRightIcon />
           <span className="hidden @[22rem]:inline">Swap</span>
