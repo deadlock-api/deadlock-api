@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use axum::Json;
 use axum::extract::State;
-use axum::http::StatusCode;
+use axum::http::{HeaderMap, StatusCode, header};
 use axum::response::IntoResponse;
 use serde_json::json;
 use tracing::debug;
@@ -13,9 +13,6 @@ use crate::routes::v1::matches::salts::insert_salts;
 use crate::routes::v1::matches::types::ClickhouseSalts;
 
 const MAX_SALTS_PER_REQUEST: usize = 1000;
-
-/// Attributed to salts submitted without a username, so they don't show up as unknown.
-const DEFAULT_USERNAME: &str = "api-ingest";
 
 #[utoipa::path(
     post,
@@ -38,7 +35,7 @@ The endpoint accepts a list of MatchSalts objects, which contain the following f
 - `cluster_id`: The cluster ID
 - `metadata_salt`: The metadata salt
 - `replay_salt`: The replay salt
-- `username`: The username of the person who submitted the match (defaults to `api-ingest`)
+- `username`: The username of the person who submitted the match (defaults to the request's `User-Agent`)
 
 ### Rate Limits:
 | Type | Limit |
@@ -50,6 +47,7 @@ The endpoint accepts a list of MatchSalts objects, which contain the following f
 )]
 pub(super) async fn ingest_salts(
     State(state): State<AppState>,
+    headers: HeaderMap,
     Json(match_salts): Json<Vec<ClickhouseSalts>>,
 ) -> APIResult<impl IntoResponse> {
     debug!("Received salts: {match_salts:?}");
@@ -70,6 +68,12 @@ pub(super) async fn ingest_salts(
             ),
         ));
     }
+
+    let user_agent = headers
+        .get(header::USER_AGENT)
+        .and_then(|v| v.to_str().ok())
+        .map(str::trim)
+        .filter(|ua| !ua.is_empty());
 
     let match_ids: Vec<u64> = match_salts.iter().map(|s| s.match_id).collect();
     let existing: HashMap<u64, (bool, bool)> = state
@@ -100,7 +104,7 @@ pub(super) async fn ingest_salts(
         })
         .map(|mut salt| {
             if salt.username.as_deref().is_none_or(|u| u.trim().is_empty()) {
-                salt.username = Some(DEFAULT_USERNAME.to_owned());
+                salt.username = user_agent.map(str::to_owned);
             }
             salt
         })
