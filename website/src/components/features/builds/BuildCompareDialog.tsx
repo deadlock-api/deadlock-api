@@ -103,12 +103,12 @@ export function BuildCompareDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent size="xl" className="flex max-h-5/6 flex-col gap-3 overflow-y-auto *:shrink-0">
         <DialogHeader>
-          <DialogTitle>Compare builds</DialogTitle>
+          <DialogTitle>Compare {nameOf(build)}</DialogTitle>
           <DialogDescription className="sr-only">
             {nameOf(build)} against another build of the same hero
           </DialogDescription>
         </DialogHeader>
-        <Field orientation="horizontal" label="Compare with">
+        <Field orientation="horizontal" label="With">
           <Select value={String(other.hero_build_id)} onValueChange={(value) => setOtherId(Number(value))}>
             <SelectTrigger size="sm" className="max-w-80 min-w-0">
               <SelectValue />
