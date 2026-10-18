@@ -3,6 +3,7 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { RankedEntityList, RankedEntityMetric, RankedEntityRow } from "~/components/domain/assets/RankedEntityList";
 import { useAnswerWithRow } from "~/components/features/builds/build-hooks";
 import { PanelSection } from "~/components/patterns/panel/Panel";
+import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { StaleOverlay } from "~/components/patterns/states/StaleOverlay";
 import { Skeleton } from "~/components/ui/skeleton";
 import { CACHE_DURATIONS } from "~/constants/cache";
@@ -16,6 +17,11 @@ import { queryKeys } from "~/queries/query-keys";
 
 /** Matchups with fewer matches than this are left out: their win rate is mostly noise. */
 const MIN_MATCHUP_MATCHES = 30;
+/**
+ * A build of few matches meets few heroes that often: then the heroes met this often fill the lists instead, their
+ * differences muted inside their wider noise.
+ */
+const FEW_MATCHUP_MATCHES = 10;
 const SHOWN = 3;
 /** Where a difference's bar reaches its edge: ten points either way. */
 const CHANGE_SCALE = 0.1;
@@ -88,7 +94,7 @@ export function BuildMatchups({
     minUnixTimestamp: filters.minUnixTimestamp,
     maxUnixTimestamp: filters.maxUnixTimestamp,
     sameLaneFilter: false,
-    minMatches: MIN_MATCHUP_MATCHES,
+    minMatches: FEW_MATCHUP_MATCHES,
     heroBuildId: build.hero_build_id,
   };
   const query = useQuery({
@@ -98,7 +104,7 @@ export function BuildMatchups({
       return (
         response.data
           // The build's players are all of its hero; any other hero's pairs are not about this build.
-          .filter((row) => row.hero_id === heroId && row.matches_played >= MIN_MATCHUP_MATCHES)
+          .filter((row) => row.hero_id === heroId && row.matches_played >= FEW_MATCHUP_MATCHES)
           .map((row) => ({
             heroId: row.enemy_hero_id,
             wins: row.wins,
@@ -127,8 +133,30 @@ export function BuildMatchups({
       </section>
     );
   }
-  const sorted = [...query.data].sort((a, b) => b.winRate - a.winRate || b.matches - a.matches);
-  if (sorted.length < SHOWN * 2) return null;
+  const often = query.data.filter((matchup) => matchup.matches >= MIN_MATCHUP_MATCHES);
+  const pool = often.length >= SHOWN * 2 ? often : query.data;
+  const sorted = [...pool].sort((a, b) => b.winRate - a.winRate || b.matches - a.matches);
+  // A build of few matches meets few heroes often enough: it says so in the room the lists would take, and a handful
+  // reads as one list rather than a strong and a weak half of the same heroes.
+  if (sorted.length === 0) {
+    return (
+      <section className="flex flex-1 flex-col">
+        <PanelSection variant="label" title="Matchups" />
+        <EmptyState
+          variant="plain"
+          title={`No enemy hero met this build in ${FEW_MATCHUP_MATCHES}+ matches`}
+          className="flex-1"
+        />
+      </section>
+    );
+  }
+  if (sorted.length < SHOWN * 2) {
+    return (
+      <StaleOverlay active={query.isPlaceholderData} label="matchups">
+        <MatchupList title="Matchups" matchups={sorted} build={answer?.row ?? build} />
+      </StaleOverlay>
+    );
+  }
   return (
     <StaleOverlay active={query.isPlaceholderData} label="matchups">
       <MatchupList title="Strong against" matchups={sorted.slice(0, SHOWN)} build={answer?.row ?? build} />
