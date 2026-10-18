@@ -26,6 +26,30 @@ import { trackerMatchMetadataQueryOptions } from "~/queries/tracker-queries";
  */
 const PREFETCH_HOVER_MS = 100;
 
+/** A row's small status mark: the icon for the eye, its label for screen readers. */
+function Mark({
+  icon: Icon,
+  label,
+  tone = "muted",
+  filled = false,
+}: {
+  icon: typeof Trophy;
+  label: string;
+  tone?: "muted" | "warning";
+  filled?: boolean;
+}) {
+  return (
+    <>
+      <Icon
+        aria-hidden="true"
+        className={cn("size-3 shrink-0", tone === "warning" ? "text-warning" : "text-muted-foreground")}
+        fill={filled ? "currentColor" : "none"}
+      />
+      <span className="sr-only">{label}</span>
+    </>
+  );
+}
+
 /** One compact, selectable match in the history column. */
 export function MatchListItem({
   entry,
@@ -99,17 +123,13 @@ export function MatchListItem({
       <div className="flex min-w-0 flex-1 flex-col gap-0.5 leading-tight">
         <div className="flex items-center gap-1.5">
           <span className={cn("truncate text-sm", selected ? "font-semibold" : "font-medium")}>{heroName}</span>
-          {saved && <Bookmark className="size-3 shrink-0 text-warning" fill="currentColor" aria-label="Saved match" />}
-          {hasRecord && <Trophy className="size-3 shrink-0 text-warning" aria-label="Personal best" />}
-          {abandoned && <LogOut className="size-3 shrink-0 text-muted-foreground" aria-label="Abandoned" />}
-          {unscored && (
-            <span aria-label="Not scored" className="contents">
-              {unscored === "not_scored" ? (
-                <CircleDashed className="size-3 shrink-0 text-muted-foreground" />
-              ) : (
-                <Gavel className="size-3 shrink-0 text-muted-foreground" />
-              )}
-            </span>
+          {/* Each mark says what it is in words; the icons themselves are decorative. */}
+          {saved && <Mark icon={Bookmark} label="Saved match" tone="warning" filled />}
+          {hasRecord && <Mark icon={Trophy} label="Personal best" tone="warning" />}
+          {abandoned && <Mark icon={LogOut} label="Abandoned" />}
+          {unscored === "not_scored" && <Mark icon={CircleDashed} label="Not scored" />}
+          {(unscored === "penalized" || unscored === "party_penalized") && (
+            <Mark icon={Gavel} label={unscored === "party_penalized" ? "Party penalized" : "Penalized"} />
           )}
           <span className="ms-auto shrink-0 ps-2 text-sm tabular-nums">
             {entry.player_kills} / {entry.player_deaths} / {entry.player_assists}
