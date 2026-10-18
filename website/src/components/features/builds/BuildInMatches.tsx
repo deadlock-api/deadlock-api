@@ -95,7 +95,7 @@ export function BuildInMatches({
           <InlineStat value={formatPercent(row.winRate)} label="win rate" />
           <InlineStat
             value={formatSignedPoints(row.vsAverage)}
-            label="vs. the hero's builds"
+            label="vs. all builds"
             tone={row.verdict === "above" ? "positive" : row.verdict === "below" ? "negative" : undefined}
           />
         </span>
@@ -127,7 +127,7 @@ export function BuildInMatches({
             <StaleOverlay active={stale} label="purchases">
               <section className="flex flex-col">
                 <PanelSection variant="label" title="Bought in this order">
-                  <span className="whitespace-nowrap">average buy time</span>
+                  <span className="whitespace-nowrap">Average buy time</span>
                 </PanelSection>
                 <ol className="flex flex-wrap gap-1 px-3 py-1.5">
                   {buyOrder.map((item) => (
@@ -164,8 +164,8 @@ export function BuildInMatches({
                             value={formatPercent(item.winRateWithout!)}
                           />
                           <RankedEntityMetric
-                            label="Diff"
-                            labelDisplay="hidden"
+                            label="Vs. without"
+                            labelDisplay={index === 0 ? "visible" : "hidden"}
                             width="wide"
                             value={formatSignedPoints(change)}
                             tone={
@@ -184,7 +184,7 @@ export function BuildInMatches({
               {usage.offBuild.length > 0 && (
                 <section className="flex flex-col">
                   <PanelSection variant="label" title="Also bought">
-                    <span className="whitespace-nowrap">bought in % of matches</span>
+                    <span className="whitespace-nowrap">Bought in % of matches</span>
                   </PanelSection>
                   <ul className="flex flex-wrap gap-1 px-3 py-1.5">
                     {usage.offBuild.slice(0, OFF_BUILD_SHOWN).map((item) => (

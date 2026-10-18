@@ -168,7 +168,7 @@ export function BuildDetailPanel({
           <>
             <BuildSlotSplit meta={meta} />
             {/* Two columns of groups once the panel is wide enough, so more of the build shows without a scroll. */}
-            <div className="grid @lg:grid-cols-2">
+            <div className="grid @md:grid-cols-2">
               {meta.categories
                 .filter((category) => category.itemIds.length > 0)
                 .map((category, index) => (
@@ -183,7 +183,7 @@ export function BuildDetailPanel({
                       }
                     >
                       {/* What the numbers under the icons are, named once over the first group. */}
-                      {index === 0 && <span className="shrink-0 whitespace-nowrap">bought in % of matches</span>}
+                      {index === 0 && <span className="shrink-0 whitespace-nowrap">Bought in % of matches</span>}
                     </PanelSection>
                     <ul className="flex flex-wrap gap-1 px-3 py-1.5">
                       {category.itemIds.map((itemId) => (
