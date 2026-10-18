@@ -17,6 +17,7 @@ import { HeroImage } from "~/components/domain/assets/HeroImage";
 import { AnswerOption, type AnswerOptionState, revealedState } from "~/components/domain/minigames/AnswerOption";
 import { GamePage } from "~/components/domain/minigames/GamePage";
 import { GameTile } from "~/components/domain/minigames/GameTile";
+import { RevealActions } from "~/components/domain/minigames/RevealActions";
 import { ScoreSummary } from "~/components/domain/minigames/ScoreSummary";
 import { ShareButton } from "~/components/domain/minigames/ShareButton";
 import { TerminalBadge } from "~/components/domain/minigames/TerminalBadge";
@@ -34,6 +35,7 @@ import {
   VersusValue,
 } from "~/components/domain/minigames/Versus";
 import { Card, CardContent } from "~/components/ui/card";
+import { Separator } from "~/components/ui/separator";
 import { Stack } from "~/components/ui/stack";
 
 const ANSWER_STATES: AnswerOptionState[] = ["idle", "selected", "correct", "wrong", "dimmed"];
@@ -61,6 +63,7 @@ export function DomainMinigames() {
   const [matchPick, setMatchPick] = useState<number | null>(null);
   const [hlGuess, setHlGuess] = useState<string | null>(null);
   const [h2hPick, setH2hPick] = useState<number | null>(null);
+  const [revealed, setRevealed] = useState(false);
 
   return (
     <>
@@ -459,6 +462,28 @@ export function DomainMinigames() {
             Failed
           </TerminalBadge>
           <TerminalBadge variant="warning">Archive · Day 212</TerminalBadge>
+        </Variants>
+      </Specimen>
+
+      <Specimen
+        name="RevealActions"
+        source="domain/minigames/RevealActions"
+        note="The actions that follow an answer (Next round, See stats). The row is always laid out, so the reveal moves nothing below it: until revealed it is invisible, inert and aria-hidden. When it goes live, focus moves to the control marked data-autofocus (else the first one) without scrolling. justify defaults to center; it takes every Inline prop."
+        className="theme-terminal"
+      >
+        <Variants label="hidden, then revealed (the rule under it never moves)" className="flex-col items-stretch">
+          <TerminalButton variant="outline" aria-pressed={revealed} onClick={() => setRevealed((r) => !r)}>
+            {revealed ? "Hide" : "Answer"}
+          </TerminalButton>
+          <RevealActions revealed={revealed}>
+            <TerminalButton variant="outline" size="touch">
+              See Stats
+            </TerminalButton>
+            <TerminalButton data-autofocus variant="soft" size="touch" onClick={() => setRevealed(false)}>
+              Next round
+            </TerminalButton>
+          </RevealActions>
+          <Separator />
         </Variants>
       </Specimen>
 

@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useCallback, useMemo, useRef, useState } from "react";
 
 import { AnswerOption, revealedState } from "~/components/domain/minigames/AnswerOption";
+import { RevealActions } from "~/components/domain/minigames/RevealActions";
 import { ScoreSummary } from "~/components/domain/minigames/ScoreSummary";
 import { ShareButton } from "~/components/domain/minigames/ShareButton";
 import { TerminalBadge } from "~/components/domain/minigames/TerminalBadge";
@@ -115,9 +116,6 @@ function Trivia() {
   // The player sets the pace: after an answer "Next question" takes focus, and the next question's text takes it once
   // the answered one is gone, so it is read before its options. Nothing moves before the first answer.
   const answered = useRef(false);
-  const focusNextButton = useCallback((element: HTMLButtonElement | null) => {
-    element?.focus({ preventScroll: true });
-  }, []);
   const focusQuestion = useCallback((element: HTMLParagraphElement | null) => {
     if (element && answered.current && (document.activeElement === document.body || document.activeElement === null)) {
       element.focus();
@@ -252,13 +250,11 @@ function Trivia() {
               ))}
             </Stack>
 
-            {isRevealed && (
-              <div className="flex justify-center">
-                <TerminalButton ref={focusNextButton} variant="soft" onClick={advance}>
-                  {state.completed ? "See results" : "Next question"}
-                </TerminalButton>
-              </div>
-            )}
+            <RevealActions revealed={isRevealed}>
+              <TerminalButton variant="soft" size="touch" onClick={advance}>
+                {state.completed ? "See results" : "Next question"}
+              </TerminalButton>
+            </RevealActions>
 
             <StepMeter label={`Question ${shownIndex + 1} of ${QUESTION_COUNT}`} className="justify-center pt-2">
               {questions.map((q, i) => (

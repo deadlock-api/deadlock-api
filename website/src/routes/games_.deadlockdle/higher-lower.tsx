@@ -7,6 +7,7 @@ import { AbilityImage } from "~/components/domain/assets/AbilityImage";
 import { AssetImage } from "~/components/domain/assets/AssetImage";
 import { HeroImage } from "~/components/domain/assets/HeroImage";
 import { AnswerOption, revealedState } from "~/components/domain/minigames/AnswerOption";
+import { RevealActions } from "~/components/domain/minigames/RevealActions";
 import { ScoreSummary } from "~/components/domain/minigames/ScoreSummary";
 import { ShareButton } from "~/components/domain/minigames/ShareButton";
 import { TerminalBadge } from "~/components/domain/minigames/TerminalBadge";
@@ -64,7 +65,6 @@ import { useResultsRef } from "~/lib/deadlockdle/use-results-ref";
 import { isTyping } from "~/lib/keyboard";
 import { pageTitle, seo } from "~/lib/seo";
 import { useStoredDailyState } from "~/lib/use-stored-state";
-import { cn } from "~/lib/utils";
 
 export const Route = createFileRoute("/games_/deadlockdle/higher-lower")({
   component: HigherLower,
@@ -254,11 +254,6 @@ function HigherLower() {
   // Focus follows the player: after an answer "Next round" takes it, then the next question once the answered one is
   // gone, so it is read before the cards. Nothing moves before the first answer.
   const answered = useRef(false);
-  const nextButton = useRef<HTMLButtonElement>(null);
-  useEffect(() => {
-    // The action row is always laid out, inert until the reveal; focus moves to it once it is live.
-    if (isRevealed) nextButton.current?.focus({ preventScroll: true });
-  }, [isRevealed]);
   const focusQuestion = useCallback((element: HTMLParagraphElement | null) => {
     if (element && answered.current && (document.activeElement === document.body || document.activeElement === null)) {
       element.focus();
@@ -500,19 +495,14 @@ function HigherLower() {
               )}
             </Stack>
 
-            <Inline
-              justify="center"
-              inert={!isRevealed}
-              aria-hidden={!isRevealed || undefined}
-              className={cn(!isRevealed && "invisible")}
-            >
+            <RevealActions revealed={isRevealed}>
               <StatSourceLink source={round.source} date={date} aria-label="See stats (opens in a new tab)">
                 See Stats
               </StatSourceLink>
-              <TerminalButton ref={nextButton} variant="soft" size="touch" onClick={advance}>
+              <TerminalButton data-autofocus variant="soft" size="touch" onClick={advance}>
                 {shownIndex >= total - 1 ? "See results" : "Next round"}
               </TerminalButton>
-            </Inline>
+            </RevealActions>
 
             <StepMeter label={`Round ${shownIndex + 1} of ${total}`} className="justify-center pt-2">
               {rounds.map((r, i) => (

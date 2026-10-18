@@ -364,6 +364,7 @@ export const NAV: readonly NavChapter[] = [
           "GameTile and GamePage heading level",
           "TerminalButton",
           "TerminalBadge",
+          "RevealActions",
           "ScoreSummary",
           "ShareButton",
           "Mini-game states",
