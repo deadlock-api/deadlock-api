@@ -219,7 +219,13 @@ export const heroesPageOptions = {
     await redirectLegacyHeroId(options);
     redirectAnalyticsTab(options);
   },
-  component: lazyRouteComponent(() => import("./HeroesPage"), "HeroesPage"),
+  // The router loads the page's code before it hydrates, but it does not run the loader again in the browser: the
+  // requested view's code comes with the page's, so hydration renders the server's tab instead of its fallback.
+  component: lazyRouteComponent(async () => {
+    const [page, { preloadHeroView }] = await Promise.all([import("./HeroesPage"), import("./heroes-views")]);
+    if (typeof window !== "undefined") await preloadHeroView(analyticsTabFromPath("heroes", window.location.pathname));
+    return page;
+  }, "HeroesPage"),
   loader: async ({
     context: { queryClient, preferences },
     location,
@@ -244,9 +250,14 @@ export const heroesPageOptions = {
     // The server waits for the view's data, so its HTML carries it. In the browser a tab click does not: the view shows
     // its own loading state, where waiting kept the navigation pending and washed out the whole page (PendingNavigation).
     const isServer = typeof window === "undefined";
+    // The view's code is awaited in both: a lazy view would otherwise hydrate into its Suspense fallback on the server
+    // render, and on a tab click collapse the old panel to that fallback before the new one can render.
+    const { preloadHeroView } = await import("./heroes-views");
+    const viewCode = preloadHeroView(tab);
     if (tab !== "stats" && tab !== "tier-list") {
-      const view = Promise.all([heroes, prefetchHeroView(queryClient, tab, r)]);
+      const view = Promise.all([heroes, prefetchHeroView(queryClient, tab, r), viewCode]);
       if (isServer) await view;
+      else await viewCode;
       return { leader: null, tierList: [], period, coverage };
     }
     const common = {
@@ -272,8 +283,11 @@ export const heroesPageOptions = {
     const current = Promise.all([statsFor(r.range), heroes, bansFor(r.range)]);
     // Only the overall table compares with the previous period; the tier list would carry it in its HTML for nothing.
     const previous = tab === "stats" ? Promise.all([statsFor(r.prevRange), bansFor(r.prevRange)]) : undefined;
-    if (!isServer) return { leader: null, tierList: [], period, coverage };
-    const [[stats, heroList, bans]] = await Promise.all([current, previous]);
+    if (!isServer) {
+      await viewCode;
+      return { leader: null, tierList: [], period, coverage };
+    }
+    const [[stats, heroList, bans]] = await Promise.all([current, previous, viewCode]);
     if (tab === "tier-list") return { leader: null, tierList: findTierList(stats, bans, heroList), period, coverage };
     // The leader is measured over the default range, which is this season unless the visitor prefers patches.
     return { leader: findWinRateLeader(stats, heroList), tierList: [], period, coverage };

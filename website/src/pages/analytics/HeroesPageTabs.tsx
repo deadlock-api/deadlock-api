@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import type { HeroScoreboardSortByEnum } from "deadlock_api_client";
 import { ChartNoAxesCombined, GraduationCap, ListOrdered, Swords, Table2, Trophy, UsersRound } from "lucide-react";
 import { parseAsBoolean, parseAsString, parseAsStringLiteral, useQueryState } from "nuqs";
-import { lazy, Suspense, useId } from "react";
+import { Suspense, useId } from "react";
 
 import { SortBySelector } from "~/components/domain/player-scoreboard/SortBySelector";
 import { HeroCombFilters } from "~/components/features/heroes/HeroCombFilters";
@@ -31,46 +31,16 @@ import { HERO_SORT_BY_VALUES, sortByIn } from "~/lib/scoreboard-sorts";
 import { heroScoreboardQueryOptions } from "~/queries/hero-scoreboard-query";
 import { BY_RANK_STATS, HERO_STATS, heroStatsFor } from "~/types/api_hero_stats";
 
-const HeroStatsOverTimeChart = lazy(() =>
-  import("~/components/features/heroes/HeroStatsOverTimeChart").then((m) => ({
-    default: m.HeroStatsOverTimeChart,
-  })),
-);
-const HeroStatsByDurationChart = lazy(() =>
-  import("~/components/features/heroes/HeroStatsByDurationChart").then((m) => ({
-    default: m.HeroStatsByDurationChart,
-  })),
-);
-const HeroStatsByRankChart = lazy(() =>
-  import("~/components/features/heroes/HeroStatsByRankChart").then((m) => ({
-    default: m.HeroStatsByRankChart,
-  })),
-);
-const HeroStatsByExperienceTable = lazy(() =>
-  import("~/components/features/heroes/HeroStatsByExperienceTable").then((m) => ({
-    default: m.HeroStatsByExperienceTable,
-  })),
-);
-const HeroMatchupStatsTable = lazy(() =>
-  import("~/components/features/heroes/HeroMatchupStatsTable").then((m) => ({
-    default: m.HeroMatchupStatsTable,
-  })),
-);
-const HeroCombStatsTable = lazy(() =>
-  import("~/components/features/heroes/HeroCombStatsTable").then((m) => ({
-    default: m.HeroCombStatsTable,
-  })),
-);
-const HeroTierList = lazy(() =>
-  import("~/components/features/heroes/HeroTierList").then((m) => ({
-    default: m.HeroTierList,
-  })),
-);
-const HeroMatchupExplorer = lazy(() =>
-  import("~/components/features/heroes/HeroMatchupExplorer").then((m) => ({
-    default: m.HeroMatchupExplorer,
-  })),
-);
+import {
+  HeroCombStatsTable,
+  HeroMatchupExplorer,
+  HeroMatchupStatsTable,
+  HeroStatsByDurationChart,
+  HeroStatsByExperienceTable,
+  HeroStatsByRankChart,
+  HeroStatsOverTimeChart,
+  HeroTierList,
+} from "./heroes-views";
 
 /** The page's filters, shared by every tab; each tab owns its own controls and their URL params. */
 type HeroFilters = ReturnType<typeof useHeroFilters>;
@@ -80,7 +50,10 @@ function useGroupByType() {
   return useQueryState("group_by_type", parseAsBoolean.withDefault(false));
 }
 
-/** A lazily loaded tab body: its chunk loads with a spinner and fails into a retry. */
+/**
+ * A lazily loaded tab body: a chunk that fails to load offers a retry. The route loader preloads the requested view
+ * (`preloadHeroView`) on the server and before a tab click lands, so a rendered tab never falls back to the spinner.
+ */
 function LazyTab({ children }: { children: React.ReactNode }) {
   return (
     <ChunkErrorBoundary>

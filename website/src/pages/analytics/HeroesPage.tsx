@@ -4,8 +4,9 @@ import { PageHeader } from "~/components/patterns/page/PageHeader";
 import { PageShell } from "~/components/patterns/page/PageShell";
 import { Tabs, TabsContent } from "~/components/ui/tabs";
 import { type HeroTab, useHeroFilters } from "~/hooks/useHeroFilters";
-import { analyticsTabPath, ANALYTICS_VIEWS } from "~/lib/analytics-tabs";
+import { type AnalyticsTab, analyticsTabPath, ANALYTICS_VIEWS } from "~/lib/analytics-tabs";
 
+import { preloadHeroView } from "./heroes-views";
 import {
   HeroByDurationTab,
   HeroByExperienceTab,
@@ -18,6 +19,12 @@ import {
   HeroScoreboardTab,
   HeroTierListTab,
 } from "./HeroesPageTabs";
+
+/** A view's code starts loading when its tab is pointed at or focused, before the click. */
+function preloadOnIntent(tab: AnalyticsTab<"heroes">) {
+  const preload = () => void preloadHeroView(tab);
+  return { onPointerEnter: preload, onFocus: preload };
+}
 
 /** The heroes analytics page: shared filters, then one tab component per view, each owning its controls and data. */
 export function HeroesPage() {
@@ -43,28 +50,60 @@ export function HeroesPage() {
           <ResponsiveTab value="stats" href={analyticsTabPath("heroes", "stats")}>
             Overall Stats
           </ResponsiveTab>
-          <ResponsiveTab value="tier-list" href={analyticsTabPath("heroes", "tier-list")}>
+          <ResponsiveTab
+            value="tier-list"
+            href={analyticsTabPath("heroes", "tier-list")}
+            {...preloadOnIntent("tier-list")}
+          >
             Tier List
           </ResponsiveTab>
-          <ResponsiveTab value="stats-over-time" href={analyticsTabPath("heroes", "stats-over-time")}>
+          <ResponsiveTab
+            value="stats-over-time"
+            href={analyticsTabPath("heroes", "stats-over-time")}
+            {...preloadOnIntent("stats-over-time")}
+          >
             Over Time
           </ResponsiveTab>
-          <ResponsiveTab value="stats-by-duration" href={analyticsTabPath("heroes", "stats-by-duration")}>
+          <ResponsiveTab
+            value="stats-by-duration"
+            href={analyticsTabPath("heroes", "stats-by-duration")}
+            {...preloadOnIntent("stats-by-duration")}
+          >
             By Duration
           </ResponsiveTab>
-          <ResponsiveTab value="stats-by-rank" href={analyticsTabPath("heroes", "stats-by-rank")}>
+          <ResponsiveTab
+            value="stats-by-rank"
+            href={analyticsTabPath("heroes", "stats-by-rank")}
+            {...preloadOnIntent("stats-by-rank")}
+          >
             By Rank
           </ResponsiveTab>
-          <ResponsiveTab value="stats-by-experience" href={analyticsTabPath("heroes", "stats-by-experience")}>
+          <ResponsiveTab
+            value="stats-by-experience"
+            href={analyticsTabPath("heroes", "stats-by-experience")}
+            {...preloadOnIntent("stats-by-experience")}
+          >
             By Experience
           </ResponsiveTab>
-          <ResponsiveTab value="hero-combs" href={analyticsTabPath("heroes", "hero-combs")}>
+          <ResponsiveTab
+            value="hero-combs"
+            href={analyticsTabPath("heroes", "hero-combs")}
+            {...preloadOnIntent("hero-combs")}
+          >
             Combos
           </ResponsiveTab>
-          <ResponsiveTab value="matchups" href={analyticsTabPath("heroes", "matchups")}>
+          <ResponsiveTab
+            value="matchups"
+            href={analyticsTabPath("heroes", "matchups")}
+            {...preloadOnIntent("matchups")}
+          >
             Matchups
           </ResponsiveTab>
-          <ResponsiveTab value="hero-matchup-details" href={analyticsTabPath("heroes", "hero-matchup-details")}>
+          <ResponsiveTab
+            value="hero-matchup-details"
+            href={analyticsTabPath("heroes", "hero-matchup-details")}
+            {...preloadOnIntent("hero-matchup-details")}
+          >
             Matchup Details
           </ResponsiveTab>
           <ResponsiveTab value="hero-scoreboard" href={analyticsTabPath("heroes", "hero-scoreboard")}>
