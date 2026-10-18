@@ -46,7 +46,7 @@ export const PLAYER_STAT_COLUMNS: PlayerStatColumn[] = [
     label: "Souls",
     value: (player) => player.net_worth,
     format: whole,
-    barColor: "var(--warning)",
+    barColor: "var(--chart-3)",
     reveal: "always",
   },
   {
@@ -55,7 +55,7 @@ export const PLAYER_STAT_COLUMNS: PlayerStatColumn[] = [
     label: "Hero damage",
     value: (player) => player.player_damage,
     format: compactNumber,
-    barColor: "var(--primary)",
+    barColor: "var(--chart-5)",
     reveal: "sm",
   },
   {
@@ -64,7 +64,7 @@ export const PLAYER_STAT_COLUMNS: PlayerStatColumn[] = [
     label: "Last hits",
     value: (player) => player.last_hits,
     format: whole,
-    barColor: "var(--info)",
+    barColor: "var(--chart-4)",
     reveal: "md",
   },
   {
@@ -73,7 +73,7 @@ export const PLAYER_STAT_COLUMNS: PlayerStatColumn[] = [
     label: "Denies",
     value: (player) => player.denies,
     format: whole,
-    barColor: "var(--info)",
+    barColor: "var(--chart-4)",
     reveal: "md",
   },
   {
@@ -82,7 +82,7 @@ export const PLAYER_STAT_COLUMNS: PlayerStatColumn[] = [
     label: "Damage taken",
     value: (player) => player.player_damage_taken,
     format: compactNumber,
-    barColor: "var(--chart-5)",
+    barColor: "var(--chart-6)",
     reveal: "lg",
   },
   {
@@ -91,7 +91,7 @@ export const PLAYER_STAT_COLUMNS: PlayerStatColumn[] = [
     label: "Objective damage",
     value: (player) => player.boss_damage,
     format: compactNumber,
-    barColor: "var(--chart-6)",
+    barColor: "var(--chart-8)",
     reveal: "lg",
   },
   {
@@ -100,7 +100,7 @@ export const PLAYER_STAT_COLUMNS: PlayerStatColumn[] = [
     label: "Healing",
     value: (player) => player.player_healing,
     format: compactNumber,
-    barColor: "var(--positive)",
+    barColor: "var(--chart-7)",
     reveal: "lg",
   },
 ];

@@ -16,7 +16,10 @@ const progressBarVariants = cva("", {
        * `relative` element so it stays above the fill.
        */
       cell: "pointer-events-none absolute inset-0 opacity-20",
-      /** A thin rounded bar beside a visible rate label. Its fill defaults to positive. */
+      /**
+       * A thin rounded bar beside a visible rate label. Its fill defaults to neutral ink: a length is not a verdict,
+       * so a bar that means good or bad, or a series, passes its `color`.
+       */
       thin: "relative h-1.5 min-w-0 rounded-full bg-muted",
     },
   },
@@ -161,7 +164,7 @@ export function ProgressBar({
   const span = maxVal - minVal;
   const width = `${(span > 0 ? ((clamped - minVal) / span) * 100 : 100).toFixed(2)}%`;
   const fill = cn("h-full transition-all duration-slow ease-standard", variant === "thin" && "rounded-full");
-  const fallbackFill = variant === "thin" ? "bg-positive" : "bg-primary";
+  const fallbackFill = variant === "thin" ? "bg-muted-foreground" : "bg-primary";
   const scale = useMemo(() => ({ min: minVal, max: maxVal, value: clamped }), [minVal, maxVal, clamped]);
 
   return (

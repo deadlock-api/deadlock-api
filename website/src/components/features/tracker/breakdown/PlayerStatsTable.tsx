@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 
 import { PlayerCell } from "~/components/domain/player/PlayerCell";
 import { useTrackerTime } from "~/components/features/tracker/shared/useTrackerTime";
+import { CHART_COLOR } from "~/components/patterns/charts/theme";
 import { PaginationControls, PaginationStatus } from "~/components/patterns/data-table/PaginationControls";
 import { SortableHeader } from "~/components/patterns/data-table/SortableHeader";
 import { TableEmptyRow } from "~/components/patterns/data-table/TableEmptyRow";
@@ -215,7 +216,12 @@ function CompanionTable({
                 <TableCell>
                   <div className="flex items-center justify-end gap-2">
                     <span className="tabular-nums">{formatPercent(winrate)}</span>
-                    <ProgressBar variant="thin" value={winrate} className="hidden w-16 @md:block" />
+                    <ProgressBar
+                      variant="thin"
+                      color={CHART_COLOR.winRate}
+                      value={winrate}
+                      className="hidden w-16 @md:block"
+                    />
                   </div>
                 </TableCell>
                 <TableCell className="hidden text-end whitespace-nowrap text-muted-foreground @lg:table-cell">

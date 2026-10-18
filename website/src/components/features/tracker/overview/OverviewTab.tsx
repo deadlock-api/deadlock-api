@@ -7,6 +7,7 @@ import { HeroImage } from "~/components/domain/assets/HeroImage";
 import { HeroName } from "~/components/domain/assets/HeroName";
 import { HeroesTab } from "~/components/features/tracker/heroes/HeroesTab";
 import { useTrackerTime } from "~/components/features/tracker/shared/useTrackerTime";
+import { CHART_COLOR } from "~/components/patterns/charts/theme";
 import { Panel, PanelBody, PanelHeader } from "~/components/patterns/panel/Panel";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { Badge } from "~/components/ui/badge";
@@ -20,6 +21,7 @@ import { ProgressBar } from "~/components/ui/progress-bar";
 import { Stat, StatGroup } from "~/components/ui/stat";
 import { formatPercent } from "~/lib/format";
 import { hasSoulEconomy, MODE_CONFIG } from "~/lib/game-mode";
+import { toneOf } from "~/lib/tone";
 import {
   computeActivity,
   computeOutcomeSplits,
@@ -127,7 +129,8 @@ export function OverviewTab({
       label: "Win rate",
       value: formatPercent(s.winrate),
       detail: `${signed(s.wins - s.losses)} win / loss balance`,
-      accent: true,
+      // Judged against an even record; the signed balance beside it says which way.
+      tone: toneOf(s.winrate, 0.5),
     },
     { label: "KDA ratio", value: s.kdaRatio.toFixed(2), detail: "(kills + assists) / deaths" },
     ...(soulEconomy
@@ -184,8 +187,8 @@ export function OverviewTab({
           soulEconomy ? "@3xl/overview:grid-cols-6" : "@3xl/overview:grid-cols-5",
         )}
       >
-        {headline.map(({ label, value, detail, accent }) => (
-          <Stat key={label} label={label} value={value} sub={detail} tone={accent ? "positive" : undefined} />
+        {headline.map(({ label, value, detail, tone }) => (
+          <Stat key={label} label={label} value={value} sub={detail} tone={tone} />
         ))}
       </StatGroup>
 
@@ -197,7 +200,7 @@ export function OverviewTab({
               <CardContent>
                 <StatGroup variant="plain" size="sm" className="grid-cols-3">
                   <Stat label="Kills" value={decimal(s.avgKills)} align="center" />
-                  <Stat label="Deaths" value={decimal(s.avgDeaths)} tone="negative" align="center" />
+                  <Stat label="Deaths" value={decimal(s.avgDeaths)} align="center" />
                   <Stat label="Assists" value={decimal(s.avgAssists)} align="center" />
                 </StatGroup>
               </CardContent>
@@ -377,6 +380,7 @@ function SplitRows({ label, rows }: { label: string; rows: OutcomeSplit[] }) {
             </span>
             <ProgressBar
               variant="thin"
+              color={CHART_COLOR.winRate}
               value={row.matches ? row.wins / row.matches : undefined}
               className="col-span-3 h-0.5"
             />

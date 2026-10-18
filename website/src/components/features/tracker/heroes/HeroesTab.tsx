@@ -11,6 +11,7 @@ import { HeroName } from "~/components/domain/assets/HeroName";
 import { FormDots } from "~/components/domain/match/FormDots";
 import { TrackerQueryPaused } from "~/components/features/tracker/shared/TrackerQueryPaused";
 import { useTrackerTime } from "~/components/features/tracker/shared/useTrackerTime";
+import { CHART_COLOR } from "~/components/patterns/charts/theme";
 import { SortableHeader } from "~/components/patterns/data-table/SortableHeader";
 import { TableEmptyRow } from "~/components/patterns/data-table/TableEmptyRow";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
@@ -336,7 +337,12 @@ export function HeroesTab({
                                 )}
                                 <span>{column.format(row, fromNow)}</span>
                                 {column.key === "winrate" && (
-                                  <ProgressBar variant="thin" value={row.winrate} className="hidden w-16 @md:block" />
+                                  <ProgressBar
+                                    variant="thin"
+                                    color={CHART_COLOR.winRate}
+                                    value={row.winrate}
+                                    className="hidden w-16 @md:block"
+                                  />
                                 )}
                               </div>
                             ) : (

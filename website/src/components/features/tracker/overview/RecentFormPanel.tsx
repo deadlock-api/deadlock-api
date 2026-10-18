@@ -18,7 +18,7 @@ import { Tooltip, TooltipHeader, TooltipStat, TooltipStats } from "~/components/
 import type { Dayjs } from "~/dayjs";
 import { formatPercent } from "~/lib/format";
 import { type GameMode, hasSoulEconomy } from "~/lib/game-mode";
-import { TONE_TEXT } from "~/lib/tone";
+import { TONE_TEXT, toneOf } from "~/lib/tone";
 import { formatMatchDuration, isWin, type TrackerSummary } from "~/lib/tracker/compute";
 import {
   MIN_COMPARISON_MATCHES,
@@ -325,7 +325,7 @@ export function RecentFormPanel({
         <div className="flex flex-wrap items-baseline justify-between gap-2 pb-2">
           <InlineStat
             size="lg"
-            tone="positive"
+            tone={toneOf(recent.winrate, 0.5)}
             value={formatPercent(recent.winrate)}
             label={
               <span className="tabular-nums">

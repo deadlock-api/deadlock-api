@@ -440,7 +440,10 @@ export function Round3PrimitivesMore() {
             <ProgressBarMarker value={0.47} color="var(--chart-5)" />
           </ProgressBar>
         </Variants>
-        <Variants label='variant="thin": beside a visible rate; positive unless a color is given' className="gap-6">
+        <Variants
+          label='variant="thin": beside a visible rate; neutral ink unless a color is given (CHART_COLOR.winRate for a win rate)'
+          className="gap-6"
+        >
           {[0.62, 0.48, 0.31].map((rate) => (
             <span key={rate} className="flex items-center gap-2 text-xs tabular-nums">
               {Math.round(rate * 100)}%

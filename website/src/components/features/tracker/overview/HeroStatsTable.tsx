@@ -3,6 +3,7 @@ import { type ReactNode, useState } from "react";
 
 import { HeroImage } from "~/components/domain/assets/HeroImage";
 import { HeroName } from "~/components/domain/assets/HeroName";
+import { CHART_COLOR } from "~/components/patterns/charts/theme";
 import { SortableHeader } from "~/components/patterns/data-table/SortableHeader";
 import { PanelWithDetails } from "~/components/patterns/panel/PanelWithDetails";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
@@ -158,7 +159,7 @@ export function HeroStatsTable({
                   <TableCell className="text-end">
                     <div className="ms-auto flex w-12 flex-col gap-1 text-xs tabular-nums">
                       <span>{(row.winrate * 100).toFixed(0)}%</span>
-                      <ProgressBar variant="thin" value={row.winrate} className="h-1" />
+                      <ProgressBar variant="thin" color={CHART_COLOR.winRate} value={row.winrate} className="h-1" />
                     </div>
                   </TableCell>
                   <TableCell className="text-end">
