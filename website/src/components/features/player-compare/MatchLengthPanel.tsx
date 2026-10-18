@@ -1,4 +1,5 @@
 import { Timer } from "lucide-react";
+import { useState } from "react";
 import { Bar, BarChart, CartesianGrid, ReferenceLine, Tooltip, XAxis, YAxis } from "recharts";
 
 import { ChartLegend } from "~/components/patterns/charts/ChartLegend";
@@ -10,7 +11,7 @@ import {
   CHART_CURSOR_BAND,
   CHART_GRID,
   CHART_MARGIN,
-  CHART_X_AXIS,
+  CHART_X_AXIS_CATEGORY,
   CHART_Y_AXIS,
 } from "~/components/patterns/charts/theme";
 import { Panel, PanelBody, PanelHeader } from "~/components/patterns/panel/Panel";
@@ -47,6 +48,9 @@ export function MatchLengthPanel({
   /** Layout from the parent (grid placement). */
   className?: string;
 }) {
+  // Four labels fit a phone's plot only without their unit: "25–35" (the panel's title says minutes).
+  const [plotWidth, setPlotWidth] = useState(0);
+  const tickLabel = (label: string) => (plotWidth > 0 && plotWidth < 300 ? label.replace(/ min$/, "") : label);
   const pending = histories.some((history) => history.isPending);
   const allFailed = histories.length > 0 && histories.every((history) => history.isError);
   const keys = players.map((player) => String(player.accountId));
@@ -101,10 +105,16 @@ export function MatchLengthPanel({
               className="min-h-32 flex-1"
             />
           ) : (
-            <ChartSurface label={summary} announce="label" size="grow" variant="flush">
+            <ChartSurface
+              onResize={(width) => setPlotWidth(width)}
+              label={summary}
+              announce="label"
+              size="grow"
+              variant="flush"
+            >
               <BarChart data={rows} margin={CHART_MARGIN} accessibilityLayer={false} barGap={2}>
                 <CartesianGrid {...CHART_GRID} />
-                <XAxis {...CHART_X_AXIS} dataKey="label" />
+                <XAxis {...CHART_X_AXIS_CATEGORY} dataKey="label" tickFormatter={tickLabel} />
                 <YAxis
                   {...CHART_Y_AXIS}
                   type="number"

@@ -19,6 +19,11 @@ const AXIS = { stroke: "var(--chart-axis)", tick: CHART_TICK, tickLine: false, a
  */
 export const CHART_X_AXIS = { ...AXIS, height: "auto" } as const;
 export const CHART_Y_AXIS = { ...AXIS, width: "auto" } as const;
+/**
+ * A category x-axis (match length brackets, weekdays): every category keeps its label. Recharts' default thins an
+ * axis it thinks is crowded from the end, which left "25–35 min | 45+ min" on a phone.
+ */
+export const CHART_X_AXIS_CATEGORY = { ...CHART_X_AXIS, interval: 0 } as const;
 export const CHART_X_AXIS_SM = { ...CHART_X_AXIS, tick: CHART_TICK_SM } as const;
 export const CHART_Y_AXIS_SM = { ...CHART_Y_AXIS, tick: CHART_TICK_SM } as const;
 
@@ -60,6 +65,18 @@ export const CHART_MARKER_LABEL = {
 /** Tooltip cursors: a vertical rule for line and area charts, a column highlight for bars. */
 export const CHART_CURSOR_LINE = { stroke: "var(--chart-axis)", strokeWidth: 1 } as const;
 export const CHART_CURSOR_BAND = { fill: "var(--subtle-hover)" } as const;
+
+/**
+ * The ticks to label on an axis `width` px long: every k-th one, the smallest k that leaves `minGap` px per label, so
+ * the labels stay evenly spaced (Recharts' own thinning drops uneven ones: "00:00 | 06:00 | 12:00 | 21:00"). Pass the
+ * result as `ticks` with `interval={0}`; the plot's width comes from `ChartSurface`'s `onResize`. Before the plot is
+ * measured (width 0) every tick is kept.
+ */
+export function thinTicks<T>(ticks: readonly T[], width: number, minGap = 44): T[] {
+  if (width <= 0 || ticks.length <= 2) return [...ticks];
+  const step = Math.max(1, Math.ceil((minGap * ticks.length) / width));
+  return ticks.filter((_, index) => index % step === 0);
+}
 
 /** Categorical series colors. Assign by index in this order and never cycle; fold a 9th series into "Other". */
 export const SERIES_COLORS = [

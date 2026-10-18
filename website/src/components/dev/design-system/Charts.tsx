@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   Area,
   AreaChart,
@@ -35,9 +36,11 @@ import {
   CHART_MARGIN,
   CHART_STACK_SEGMENT,
   CHART_X_AXIS,
+  CHART_X_AXIS_CATEGORY,
   CHART_X_AXIS_SM,
   CHART_Y_AXIS,
   SERIES_COLORS,
+  thinTicks,
 } from "~/components/patterns/charts/theme";
 import { TONE_COLOR, toneOf } from "~/lib/tone";
 
@@ -49,6 +52,27 @@ const WEEKS = Array.from({ length: 10 }, (_, week) => ({
   label: `W${week + 1}`,
   ...Object.fromEntries(SERIES.map((name, i) => [name, 0.5 + Math.sin((week + i * 2) / 2.2) * 0.03 + i * 0.006])),
 }));
+function ThinnedAxisDemo() {
+  const [plotWidth, setPlotWidth] = useState(0);
+  return (
+    <ChartSurface label="Weekly win rate, every other week labelled when narrow" size="sm" onResize={setPlotWidth}>
+      <LineChart data={WEEKS} margin={CHART_MARGIN}>
+        <XAxis
+          {...CHART_X_AXIS}
+          dataKey="label"
+          ticks={thinTicks(
+            WEEKS.map((week) => week.label),
+            plotWidth,
+            64,
+          )}
+          interval={0}
+        />
+        <Line dataKey="Infernus" isAnimationActive={false} dot={false} />
+      </LineChart>
+    </ChartSurface>
+  );
+}
+
 function InfernusWeeks({ className }: { className?: string }) {
   return (
     <ChartDataTable
@@ -253,6 +277,22 @@ export function Charts() {
               </div>
             ))}
           </div>
+        </Variants>
+      </Specimen>
+
+      <Specimen
+        name="Category and thinned axes"
+        source="patterns/charts/theme"
+        note="CHART_X_AXIS_CATEGORY labels every category (Recharts would drop some from the end on a narrow plot). thinTicks(ticks, plotWidth) keeps every k-th tick so a long axis stays evenly labelled; pass interval={0} and the width from ChartSurface onResize."
+      >
+        <Variants className="grid items-start md:grid-cols-2">
+          <ChartSurface label="Win rate by rank, every rank labelled" size="sm">
+            <BarChart data={BY_RANK} margin={CHART_MARGIN}>
+              <XAxis {...CHART_X_AXIS_CATEGORY} dataKey="rank" tickFormatter={(rank: string) => rank.slice(0, 3)} />
+              <Bar dataKey="winRate" isAnimationActive={false} />
+            </BarChart>
+          </ChartSurface>
+          <ThinnedAxisDemo />
         </Variants>
       </Specimen>
 

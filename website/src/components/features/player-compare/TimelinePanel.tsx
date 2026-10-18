@@ -106,6 +106,20 @@ function curveParams(filters: CompareFilters, accountId?: number) {
 const minuteLabel = (seconds: number) => `${Math.round(seconds / 60)}m`;
 
 /**
+ * The game minutes to label: round ones on an even step (every 5, 10 or 15 minutes, the smallest whose labels fit the
+ * plot), so the gaps between labels match the time between them. The plot's last minute is left to the axis' end,
+ * where its label would be cut.
+ */
+function minuteTicks(rows: readonly { time: number }[], width: number): number[] {
+  const first = rows[0]?.time ?? 0;
+  const last = rows.at(-1)?.time ?? 0;
+  const step = [5, 10, 15].find((minutes) => width <= 0 || (last / 60 / minutes) * 40 <= width) ?? 15;
+  const ticks: number[] = [];
+  for (let time = Math.ceil(first / (step * 60)) * step * 60; time < last; time += step * 60) ticks.push(time);
+  return ticks;
+}
+
+/**
  * Where each compared player stands at each point of a match: their average souls (not in Street Brawl), last hits,
  * kills, damage and more by game minute, drawn as the lead over the average player on the same filters (the dashed
  * zero line). Who wins the lane, who scales.
@@ -121,6 +135,7 @@ export function TimelinePanel({
   className?: string;
 }) {
   const [chosenMetric, setMetric] = useState<TimelineMetric>("souls");
+  const [plotWidth, setPlotWidth] = useState(0);
   // Street Brawl hands every player the same souls each round: no souls line there, and kills stand in for it until
   // the mode changes back.
   const metrics = (Object.keys(METRICS) as TimelineMetric[]).filter(
@@ -230,6 +245,7 @@ export function TimelinePanel({
             />
           ) : (
             <ChartSurface
+              onResize={(width) => setPlotWidth(width)}
               label={summary}
               announce="label"
               size="grow"
@@ -263,10 +279,9 @@ export function TimelinePanel({
                   dataKey="time"
                   type="number"
                   domain={["dataMin", "dataMax"]}
-                  ticks={rows.map((row) => row.time)}
+                  ticks={minuteTicks(rows, plotWidth)}
                   tickFormatter={minuteLabel}
-                  interval="preserveStartEnd"
-                  minTickGap={12}
+                  interval={0}
                 />
                 <YAxis
                   {...CHART_Y_AXIS}

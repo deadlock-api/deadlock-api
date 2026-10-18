@@ -4,7 +4,11 @@ import { Medal } from "lucide-react";
 import { useState } from "react";
 import { CartesianGrid, Line, LineChart, Tooltip, XAxis, YAxis } from "recharts";
 
-import { RANK_BADGE_NAME_AXIS_WIDTH, RankBadgeTick } from "~/components/domain/rank/RankBadgeTick";
+import {
+  RANK_BADGE_AXIS_WIDTH,
+  RANK_BADGE_NAME_AXIS_WIDTH,
+  RankBadgeTick,
+} from "~/components/domain/rank/RankBadgeTick";
 import { ChartDataTable } from "~/components/patterns/charts/ChartDataTable";
 import { ChartLegend, ChartLegendItem } from "~/components/patterns/charts/ChartLegend";
 import { ChartReading, ChartReadings } from "~/components/patterns/charts/ChartReadings";
@@ -146,6 +150,7 @@ function RankHistoryChart({
   filters: CompareFilters;
   daysByPlayer: ReturnType<typeof dailyRanks>[];
 }) {
+  const { axisWidth, tickDisplay, setPlotWidth } = useRankAxis();
   const series = players.map((player, index) => ({ key: String(player.accountId), days: daysByPlayer[index] ?? [] }));
   const extent = rankDayExtent(series);
   const ranked = players.filter((_, index) => daysByPlayer[index]?.length);
@@ -175,6 +180,7 @@ function RankHistoryChart({
   return (
     <Stack gap={2} className="flex-1">
       <ChartSurface
+        onResize={(width) => setPlotWidth(width)}
         label={summary}
         announce="label"
         size="grow"
@@ -209,13 +215,13 @@ function RankHistoryChart({
           />
           <YAxis
             {...CHART_Y_AXIS}
-            width={RANK_BADGE_NAME_AXIS_WIDTH}
+            width={axisWidth}
             type="number"
             domain={axis.domain}
             ticks={axis.ticks}
             interval={0}
             allowDecimals={false}
-            tick={<RankBadgeTick ranks={ranks} display="badge-name" />}
+            tick={<RankBadgeTick ranks={ranks} display={tickDisplay} />}
           />
           <Tooltip
             cursor={CHART_CURSOR_LINE}
@@ -271,6 +277,7 @@ function RankByMatchChart({
   ranks: readonly Rank[] | undefined;
   pointsByPlayer: ReturnType<typeof rankHistoryPoints>[];
 }) {
+  const { axisWidth, tickDisplay, setPlotWidth } = useRankAxis();
   const series = players.map((player, index) => ({
     key: String(player.accountId),
     points: pointsByPlayer[index] ?? [],
@@ -295,6 +302,7 @@ function RankByMatchChart({
   return (
     <Stack gap={2} className="flex-1">
       <ChartSurface
+        onResize={(width) => setPlotWidth(width)}
         label={summary}
         announce="label"
         size="grow"
@@ -330,13 +338,13 @@ function RankByMatchChart({
           />
           <YAxis
             {...CHART_Y_AXIS}
-            width={RANK_BADGE_NAME_AXIS_WIDTH}
+            width={axisWidth}
             type="number"
             domain={axis.domain}
             ticks={axis.ticks}
             interval={0}
             allowDecimals={false}
-            tick={<RankBadgeTick ranks={ranks} display="badge-name" />}
+            tick={<RankBadgeTick ranks={ranks} display={tickDisplay} />}
           />
           <Tooltip
             cursor={CHART_CURSOR_LINE}
@@ -395,6 +403,20 @@ function RankByMatchChart({
       </ChartSurface>
     </Stack>
   );
+}
+
+/**
+ * The rank axis for the plot's width: the badge and its name, or on a narrow plot (a phone) the badge alone, so the
+ * plot keeps its room; the name is in the reading and the data table.
+ */
+function useRankAxis() {
+  const [plotWidth, setPlotWidth] = useState(0);
+  const narrow = plotWidth > 0 && plotWidth < 340;
+  return {
+    axisWidth: narrow ? RANK_BADGE_AXIS_WIDTH : RANK_BADGE_NAME_AXIS_WIDTH,
+    tickDisplay: narrow ? ("badge" as const) : ("badge-name" as const),
+    setPlotWidth,
+  };
 }
 
 function listNames(names: string[]): string {

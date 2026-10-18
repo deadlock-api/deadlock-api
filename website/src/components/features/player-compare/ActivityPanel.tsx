@@ -1,4 +1,5 @@
 import { CalendarDays, Clock } from "lucide-react";
+import { useState } from "react";
 import { CartesianGrid, Line, LineChart, Tooltip, XAxis, YAxis } from "recharts";
 
 import { ChartDataTable } from "~/components/patterns/charts/ChartDataTable";
@@ -11,6 +12,7 @@ import {
   CHART_GRID,
   CHART_MARGIN,
   CHART_X_AXIS,
+  thinTicks,
   CHART_Y_AXIS,
   CHART_ACTIVE_DOT,
 } from "~/components/patterns/charts/theme";
@@ -180,8 +182,12 @@ function ShareChart({
   const top = Math.ceil(max * 10) / 10;
   const domain: [number, number] = [0, top];
   const yTicks = [0, top / 2, top];
+  // Evenly spaced labels for the plot's width: every 3 hours on a wide plot, every 6 on a phone.
+  const [plotWidth, setPlotWidth] = useState(0);
+  const xTicks = thinTicks(ticks ?? points.map((entry) => entry.label), plotWidth);
   return (
     <ChartSurface
+      onResize={(width) => setPlotWidth(width)}
       label={summary}
       announce="label"
       size="md"
@@ -205,7 +211,7 @@ function ShareChart({
     >
       <LineChart data={points} margin={CHART_MARGIN} accessibilityLayer={false}>
         <CartesianGrid {...CHART_GRID} />
-        <XAxis {...CHART_X_AXIS} dataKey="label" ticks={ticks} interval="preserveStartEnd" minTickGap={16} />
+        <XAxis {...CHART_X_AXIS} dataKey="label" ticks={xTicks} interval={0} />
         <YAxis
           {...CHART_Y_AXIS}
           type="number"
