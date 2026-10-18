@@ -8,6 +8,7 @@ import { Card } from "~/components/ui/card";
 import { Field } from "~/components/ui/field";
 import { Heading } from "~/components/ui/heading";
 import { Input } from "~/components/ui/input";
+import { Popover, PopoverContent, PopoverTrigger } from "~/components/ui/popover";
 import { Inline, Stack } from "~/components/ui/stack";
 import { Text } from "~/components/ui/text";
 import { Textarea } from "~/components/ui/textarea";
@@ -116,25 +117,15 @@ export function FeedbackWidget() {
   const [nickname, setNickname] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const commentId = useId();
+  const titleId = useId();
+  const commentRef = useRef<HTMLTextAreaElement>(null);
 
-  const focusComment = useCallback((element: HTMLTextAreaElement | null) => element?.focus(), []);
+  const closePanel = useCallback(() => setOpen(false), []);
 
-  // Closing unmounts the panel with the focus in it; the launcher that replaces it takes the focus back (Law 17).
-  const restoreFocus = useRef(false);
-  const closePanel = useCallback(() => {
-    restoreFocus.current = true;
-    setOpen(false);
-  }, []);
-  const focusLauncher = useCallback((element: HTMLButtonElement | null) => {
-    if (!element || !restoreFocus.current) return;
-    restoreFocus.current = false;
-    element.focus();
-  }, []);
-
-  // Deferred to the open handler: `localStorage` does not exist during SSR.
-  const openPanel = useCallback(() => {
-    setNickname((current) => current || (readLocalStorage(NICKNAME_STORAGE_KEY) ?? ""));
-    setOpen(true);
+  // The nickname is read when the panel opens: `localStorage` does not exist during SSR.
+  const onOpenChange = useCallback((next: boolean) => {
+    if (next) setNickname((current) => current || (readLocalStorage(NICKNAME_STORAGE_KEY) ?? ""));
+    setOpen(next);
   }, []);
 
   const startPicking = useCallback(() => {
@@ -197,20 +188,37 @@ export function FeedbackWidget() {
     return <ElementPicker onPick={handlePick} onCancel={cancelPicking} />;
   }
 
+  // The panel is a popover dialog over its launcher: Escape from any control closes it, Tab stays inside, and the
+  // focus goes back to the launcher (Law 17).
   return (
     <div
       className="pointer-events-none fixed inset-4 z-90 flex flex-col items-end justify-end print:hidden"
       data-feedback-ui
     >
-      {open ? (
-        <Card
-          tone="floating"
-          size="sm"
-          className="pointer-events-auto max-h-full w-92 max-w-full gap-3 overflow-y-auto p-4"
+      <Popover open={open} onOpenChange={onOpenChange} modal>
+        <PopoverTrigger asChild>
+          <Button size="sm" elevation="raised" className="pointer-events-auto" aria-label="Feedback">
+            <MessageSquarePlus className="size-4" />
+            <span className="hidden sm:inline">Feedback</span>
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent
+          side="top"
+          align="end"
+          collisionPadding={16}
+          aria-labelledby={titleId}
+          data-feedback-ui
+          onOpenAutoFocus={(event) => {
+            event.preventDefault();
+            commentRef.current?.focus();
+          }}
+          className="z-90 flex max-h-(--radix-popover-content-available-height) w-92 max-w-(--radix-popover-content-available-width) flex-col gap-3 overflow-y-auto"
         >
           <Stack gap={1}>
             <Inline justify="between" wrap="nowrap">
-              <Heading as="h2">Help improve this site</Heading>
+              <Heading as="h2" id={titleId}>
+                Help improve this site
+              </Heading>
               <Button variant="ghost" size="icon-sm" onClick={closePanel} aria-label="Close">
                 <X className="size-4" />
               </Button>
@@ -243,12 +251,9 @@ export function FeedbackWidget() {
           >
             <Textarea
               id={commentId}
-              ref={focusComment}
+              ref={commentRef}
               value={comment}
               onChange={(event) => setComment(event.target.value.slice(0, MAX_COMMENT_LENGTH))}
-              onKeyDown={(event) => {
-                if (event.key === "Escape") closePanel();
-              }}
               placeholder={targets.length > 0 ? TARGET_PROMPT : GENERAL_PROMPT}
               rows={5}
               className="field-sizing-fixed resize-y"
@@ -264,20 +269,8 @@ export function FeedbackWidget() {
           <Button className="w-full" disabled={!comment.trim() || submitting} onClick={() => void handleSubmit()}>
             {submitting ? "Sending..." : "Send feedback"}
           </Button>
-        </Card>
-      ) : (
-        <Button
-          ref={focusLauncher}
-          size="sm"
-          elevation="raised"
-          className="pointer-events-auto"
-          onClick={openPanel}
-          aria-label="Feedback"
-        >
-          <MessageSquarePlus className="size-4" />
-          <span className="hidden sm:inline">Feedback</span>
-        </Button>
-      )}
+        </PopoverContent>
+      </Popover>
     </div>
   );
 }
