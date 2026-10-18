@@ -203,7 +203,6 @@ export function HeroByDurationTab({ filters }: { filters: HeroFilters }) {
       <FilterBar variant="toolbar" title="Duration comparison" icon={ChartNoAxesCombined} aria-label="Chart controls">
         <Field label="Metric" orientation="horizontal" className="w-full sm:w-auto">
           <HeroStatSelector
-            label="Stat"
             value={stat}
             onChange={(val) => filters.setHeroStat(val)}
             options={heroStatsFor(HERO_STATS, filters.gameMode)}
@@ -236,7 +235,6 @@ export function HeroByRankTab({ filters }: { filters: HeroFilters }) {
           <FilterBar variant="toolbar" title="Rank comparison" icon={ChartNoAxesCombined} aria-label="Chart controls">
             <Field label="X Axis" orientation="horizontal" className="w-full sm:w-auto">
               <HeroStatSelector
-                label="X Axis"
                 value={filters.byRankX}
                 onChange={(val) => filters.setByRankX(val)}
                 options={heroStatsFor(BY_RANK_STATS, filters.gameMode)}
@@ -244,7 +242,6 @@ export function HeroByRankTab({ filters }: { filters: HeroFilters }) {
             </Field>
             <Field label="Y Axis" orientation="horizontal" className="w-full sm:w-auto">
               <HeroStatSelector
-                label="Y Axis"
                 value={filters.byRankY}
                 onChange={(val) => filters.setByRankY(val)}
                 options={heroStatsFor(BY_RANK_STATS, filters.gameMode)}
@@ -294,7 +291,6 @@ export function HeroByExperienceTab({ filters }: { filters: HeroFilters }) {
       >
         <Field label="Stat" orientation="horizontal" className="w-full sm:w-auto">
           <HeroStatSelector
-            label="Stat"
             value={stat}
             onChange={(val) => filters.setHeroStat(val)}
             options={heroStatsFor(HERO_STATS, filters.gameMode)}

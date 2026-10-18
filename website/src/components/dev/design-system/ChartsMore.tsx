@@ -122,7 +122,7 @@ export function ChartsMore() {
       <Specimen
         name="MetricSelect"
         source="patterns/charts/MetricSelect"
-        note="A small Select of grouped metrics, for option sets too large for a Segmented. The options are SelectGroup / SelectLabel / SelectItem children; valueLabel names the selected one on the trigger during SSR. Disabled until hydration because its value usually comes from the URL."
+        note="A small Select of grouped metrics, for option sets too large for a Segmented. The options are SelectGroup / SelectLabel / SelectItem children; valueLabel names the selected one on the trigger during SSR. Disabled until hydration because its value usually comes from the URL. Inside a Field the visible label names the trigger (label then value); `label` is its name only outside one."
       >
         <Variants>
           <MetricSelect

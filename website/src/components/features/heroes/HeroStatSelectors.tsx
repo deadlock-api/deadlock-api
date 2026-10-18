@@ -20,7 +20,8 @@ export function HeroStatSelector<T extends readonly string[]>({
   value: T[number];
   onChange: (val: T[number]) => void;
   options?: T;
-  label: string;
+  /** The control's name when no `Field` labels it. */
+  label?: string;
 }) {
   const items = options ?? HERO_STATS;
   if (items.length > 7) {
