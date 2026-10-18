@@ -325,7 +325,8 @@ function BuildsExplorerView({
         performancePending={performancePending}
       />
       <Section title="All builds compared" className="gap-3 pt-3">
-        <div className="grid gap-3 @3xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+        {/* Side by side only where the items panel's names and two metrics fit beside the chart. */}
+        <div className="grid gap-3 @5xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
           <BuildScatterChart
             rows={rows}
             average={summary.winRate}
@@ -340,7 +341,7 @@ function BuildsExplorerView({
             rows={rows}
             pending={meta.pending}
             onItemHover={setHoveredItemId}
-            className="max-h-120 @3xl:h-0 @3xl:max-h-none @3xl:min-h-full"
+            className="max-h-120 @5xl:h-0 @5xl:max-h-none @5xl:min-h-full"
           />
         </div>
       </Section>
