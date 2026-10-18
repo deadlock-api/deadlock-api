@@ -132,11 +132,22 @@ const buildChoiceVariants = cva(
   },
 );
 
+// What the value's tone says, in words, for a screen reader: the color alone does not reach it.
+const TONE_WORDS: Partial<Record<Tone, string>> = {
+  positive: "above the build",
+  negative: "below the build",
+  muted: "within noise",
+};
+
 /**
  * One choice of a stage, a toggle button (`aria-pressed`): the item, its name, a line under it with the share of
  * players who take it (`share` draws it as a bar), and its win rate at the end with a signed bar against the
  * reference. A `linked` row shows `link` in that line instead: how it stands to the choice pointed at (the share of
  * that item's buyers who also bought this one).
+ *
+ * Its accessible name is composed from its own parts, so a caller cannot drop one: the name, "bought" and the meta (or
+ * the link), the price ("over budget" with `overBudget`), "win rate" and the value, and with a `change` the tone in
+ * words ("above the build", "below the build", "within noise"). The media is decorative; do not pass an `aria-label`.
  */
 export function BuildChoice({
   media,
@@ -144,6 +155,7 @@ export function BuildChoice({
   meta,
   share,
   price,
+  overBudget = false,
   link,
   value,
   tone = "muted",
@@ -152,7 +164,7 @@ export function BuildChoice({
   relation,
   className,
   ...props
-}: Omit<React.ComponentProps<"button">, "name" | "value" | "type" | "children"> &
+}: Omit<React.ComponentProps<"button">, "name" | "value" | "type" | "children" | "aria-label"> &
   VariantProps<typeof buildChoiceVariants> & {
     media: React.ReactNode;
     name: React.ReactNode;
@@ -162,6 +174,8 @@ export function BuildChoice({
     share?: number;
     /** At the end of the meta line: what it costs, "3,200". Stays while the row is `linked`. */
     price?: React.ReactNode;
+    /** The price is more than the stage has left: in the loss color with a warning mark, "over budget" in words. */
+    overBudget?: boolean;
     /** Replaces `meta` and `share` while the row is `linked`: the text and its 0 to 1 bar. */
     link?: { label: React.ReactNode; share: number };
     /** The number at the end: "52.4%". */
@@ -182,7 +196,7 @@ export function BuildChoice({
       className={cn(buildChoiceVariants({ relation }), className)}
       {...props}
     >
-      <span className="relative shrink-0">
+      <span aria-hidden="true" className="relative shrink-0">
         {media}
         {/* A check on a chosen row; a plus on the row under the pointer or the keyboard, which it would add. */}
         <span
@@ -210,8 +224,11 @@ export function BuildChoice({
             )}
           >
             <ProgressBar variant="thin" value={link.share} color="var(--info)" className={SHARE_WIDTH} />
-            <span className="shrink-0">{link.label}</span>
-            {price && <span className="shrink-0 font-normal text-muted-foreground">· {price}</span>}
+            <span className="shrink-0">
+              <span className="sr-only">, </span>
+              {link.label}
+            </span>
+            {price && <ChoicePrice price={price} overBudget={overBudget} className="font-normal" />}
           </span>
         ) : (
           <span
@@ -224,8 +241,13 @@ export function BuildChoice({
               <ProgressBar variant="thin" value={share} color="var(--chart-share)" className={SHARE_WIDTH} />
             )}
             {/* The bar gives way before the figures do. */}
-            <span className="shrink-0">{meta}</span>
-            {price && <span className="shrink-0">· {price}</span>}
+            {meta && (
+              <span className="shrink-0">
+                <span className="sr-only">, bought </span>
+                {meta}
+              </span>
+            )}
+            {price && <ChoicePrice price={price} overBudget={overBudget} />}
           </span>
         )}
       </span>
@@ -236,7 +258,9 @@ export function BuildChoice({
         )}
       >
         <span className={cn("type-label tabular-nums @md:w-12 @md:shrink-0 @md:text-end", TONE_TEXT[tone])}>
+          <span className="sr-only">, win rate </span>
           {value ?? <NoValue />}
+          {change && TONE_WORDS[tone] && <span className="sr-only">, {TONE_WORDS[tone]}</span>}
         </span>
         {change && (
           <DivergingBar
@@ -248,6 +272,27 @@ export function BuildChoice({
         )}
       </span>
     </button>
+  );
+}
+
+/** A choice's price after its meta: "· 3,200", or in the loss color with a warning mark when it is over budget. */
+function ChoicePrice({
+  price,
+  overBudget,
+  className,
+}: {
+  price: React.ReactNode;
+  overBudget: boolean;
+  className?: string;
+}) {
+  return (
+    <span className={cn("inline-flex shrink-0 items-center gap-0.5", className, overBudget && "text-negative")}>
+      <span aria-hidden="true">·</span>
+      <span className="sr-only">, costs </span>
+      {overBudget && <TriangleAlertIcon aria-hidden="true" className="size-3" />}
+      {price}
+      {overBudget && <span className="sr-only">, over budget</span>}
+    </span>
   );
 }
 

@@ -1415,19 +1415,13 @@ export function BuildFlowExplorer({
                                       share={choice.pickShare}
                                       meta={percent(choice.pickRate)}
                                       price={
-                                        costOf.get(choice.itemId) ? (
-                                          // Past what the stage has left once the build's spending is paid, it reads as a loss.
-                                          budgets &&
-                                          (costOf.get(choice.itemId) ?? 0) >
-                                            budgets[index].available - budgets[index].spent ? (
-                                            <span className="inline-flex items-center gap-0.5 text-negative">
-                                              <TriangleAlert className="size-3" aria-label="Over the stage's souls" />
-                                              {count(costOf.get(choice.itemId) ?? 0)}
-                                            </span>
-                                          ) : (
-                                            count(costOf.get(choice.itemId) ?? 0)
-                                          )
-                                        ) : undefined
+                                        costOf.get(choice.itemId) ? count(costOf.get(choice.itemId) ?? 0) : undefined
+                                      }
+                                      // Past what the stage has left once the build's spending is paid, it reads as a loss.
+                                      overBudget={
+                                        budgets != null &&
+                                        (costOf.get(choice.itemId) ?? 0) >
+                                          budgets[index].available - budgets[index].spent
                                       }
                                       link={
                                         link && {
@@ -1448,7 +1442,6 @@ export function BuildFlowExplorer({
                                       }}
                                       selected={choice.selected}
                                       data-choice={choice.key}
-                                      aria-label={`${nameOf.get(choice.itemId) ?? "Item"}: bought ${percent(choice.pickRate)}, win rate ${percent(choice.winRate)}`}
                                       relation={!near ? "none" : link ? "linked" : "unlinked"}
                                       onClick={() => {
                                         // The pick leaves this list: focus moves on to the row after it (or before it),
