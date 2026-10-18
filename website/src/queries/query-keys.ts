@@ -63,6 +63,8 @@ export const queryKeys = {
     /** The latest version of each build, `buildIds` sorted so one set of builds is one cache entry. */
     heroBuildMeta: (heroId: number, buildIds: readonly number[]) =>
       ["graphql-hero-build-meta", heroId, buildIds] as const,
+    /** One build by its ID alone, to find the hero it is for. */
+    heroBuildLookup: (buildId: number) => ["graphql-hero-build-lookup", buildId] as const,
     heroSwapStats: (params: AnalyticsApiHeroSwapStatsRequest) => ["api-hero-swap-stats", params] as const,
     heroTierInputs: (stats: AnalyticsApiHeroStatsRequest, bans: AnalyticsApiHeroBanStatsRequest | null) =>
       ["hero-tier-inputs", stats, bans] as const,

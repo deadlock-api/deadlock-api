@@ -165,6 +165,32 @@ export function heroBuildMetaQueryOptions(heroId: number, buildIds: readonly num
   });
 }
 
+/** A published build found by its ID alone, as players share it: the hero it is for, null when none has the ID. */
+export function heroBuildLookupQueryOptions(buildId: number) {
+  return queryOptions({
+    queryKey: queryKeys.analytics.heroBuildLookup(buildId),
+    queryFn: async ({ signal }): Promise<{ buildId: number; heroId: number; name: string } | null> => {
+      const response = await fetch(`${API_ORIGIN}/v1/graphql`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          query: `query HeroBuildLookup { hero_builds(where: {build_id: ${buildId}, only_latest: true}, limit: 1) { hero_build { hero_id hero_build_id name } } }`,
+        }),
+        signal,
+      });
+      if (!response.ok) throw new GraphqlHttpError(response.status, `${response.status}: ${await response.text()}`);
+      const body = (await response.json()) as {
+        data?: { hero_builds: { hero_build: { hero_id: number; hero_build_id: number; name: string } }[] | null };
+        errors?: { message: string }[];
+      };
+      if (!body.data) throw new Error(body.errors?.[0]?.message ?? "GraphQL returned no data");
+      const build = body.data.hero_builds?.[0]?.hero_build;
+      return build ? { buildId: build.hero_build_id, heroId: build.hero_id, name: build.name.trim() } : null;
+    },
+    staleTime: CACHE_DURATIONS.ONE_HOUR,
+  });
+}
+
 /**
  * The items bought by the players who started their matches with `buildId`, from the item stats. Every item with one
  * purchase counts: the panel compares them with the build's own list.

@@ -1,3 +1,4 @@
+import { BuildIdFilter } from "~/components/domain/filters/BuildIdFilter";
 import { MatchDurationFilter } from "~/components/domain/filters/MatchDurationFilter";
 import { MinMatchesFilter } from "~/components/domain/filters/MinMatchesFilter";
 import { ModeWithRankFilter } from "~/components/domain/filters/ModeWithRankFilter";
@@ -16,4 +17,5 @@ export const Filter = {
   SeasonPatchDate: SeasonPatchDatePicker,
   MatchDuration: MatchDurationFilter,
   TimeRange: MatchTimeRangeSelector,
+  BuildId: BuildIdFilter,
 };

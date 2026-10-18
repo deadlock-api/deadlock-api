@@ -13,6 +13,7 @@ const DEFAULT_DATES: DateRange = [PATCHES[0].startDate, PATCHES[0].endDate];
 
 export function DomainFilters() {
   const [hero, setHero] = useState<number | null>(null);
+  const [buildId, setBuildId] = useState<number | null>(null);
   const [mode, setMode] = useState<Mode>("normal_ranked");
   const [ranks, setRanks] = useState<[number, number]>([0, 116]);
   const [minMatches, setMinMatches] = useState(20);
@@ -26,11 +27,18 @@ export function DomainFilters() {
     <Specimen
       name="Filter namespace"
       source="domain/filters"
-      note="Filter.Root is FilterBar; the members are the game's filters, each a FilterCell. Pages own the URL state and pass value and onValueChange. Filter.ModeWithRank hides the rank range in Brawl, which is never ranked."
+      note="Filter.Root is FilterBar; the members are the game's filters, each a FilterCell. Pages own the URL state and pass value and onValueChange. Filter.ModeWithRank hides the rank range in Brawl, which is never ranked. Filter.BuildId looks a published build up by its ID and hands back the build and its hero."
     >
-      <Variants label="Hero · ModeWithRank · MinMatches · Item (tri-state) · SeasonPatchDate · MatchDuration">
+      <Variants label="Hero · BuildId · ModeWithRank · MinMatches · Item (tri-state) · SeasonPatchDate · MatchDuration">
         <Filter.Root>
           <Filter.Hero value={hero} onValueChange={setHero} allowNull />
+          <Filter.BuildId
+            value={buildId}
+            onValueChange={(choice) => {
+              setHero(choice.heroId);
+              setBuildId(choice.buildId);
+            }}
+          />
           <Filter.ModeWithRank
             value={{ mode, rank: ranks }}
             onValueChange={({ mode: nextMode, rank }) => {
