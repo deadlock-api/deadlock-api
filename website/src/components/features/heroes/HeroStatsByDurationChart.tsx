@@ -10,7 +10,14 @@ import { ChartReading, ChartReadings } from "~/components/patterns/charts/ChartR
 import { ChartSidebarLayout } from "~/components/patterns/charts/ChartSidebarLayout";
 import { ChartEmpty, ChartError, ChartLoading } from "~/components/patterns/charts/ChartStates";
 import { ChartSurface } from "~/components/patterns/charts/ChartSurface";
-import { CHART_COLOR, CHART_GRID, CHART_X_AXIS, CHART_X_LABEL, CHART_Y_AXIS } from "~/components/patterns/charts/theme";
+import {
+  CHART_ACTIVE_DOT,
+  CHART_COLOR,
+  CHART_GRID,
+  CHART_X_AXIS,
+  CHART_X_LABEL,
+  CHART_Y_AXIS,
+} from "~/components/patterns/charts/theme";
 import { StaleOverlay } from "~/components/patterns/states/StaleOverlay";
 import type { Dayjs } from "~/dayjs";
 import { useHeroColorMap } from "~/hooks/useChartHeroVisibility";
@@ -235,7 +242,8 @@ export function HeroStatsByDurationChart({
                         type="linear"
                         dataKey={heroId}
                         stroke={heroIdMap[heroId]?.color || CHART_COLOR.fallback}
-                        dot={{ r: 4, fill: CHART_COLOR.primary }}
+                        // In the hero's color, so a lone point beside a gap still says whose it is.
+                        dot={{ ...CHART_ACTIVE_DOT, fill: heroIdMap[heroId]?.color || CHART_COLOR.fallback }}
                         activeDot={{ r: 6 }}
                         strokeWidth={2}
                         name={heroIdMap[heroId]?.name}
