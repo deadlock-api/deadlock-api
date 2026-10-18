@@ -7,7 +7,6 @@ import {
   useQueryState,
   useQueryStates,
 } from "nuqs";
-import { useState } from "react";
 
 import { ItemSelector } from "~/components/domain/selectors/ItemSelector";
 import { BuildSummaryStats } from "~/components/features/builds/BuildSummaryStats";
@@ -51,6 +50,7 @@ import type { SteamProfileMap } from "~/queries/steam-queries";
 /** A column's sort key: one of the overview's, or `m:` and a metric's key. */
 type SortKey = string;
 const parseSortKey = parseAsString.withDefault("matches");
+const parseQuery = parseAsString.withDefault("").withOptions({ history: "replace" });
 const parseSortDir = parseAsStringLiteral(["asc", "desc"] as const).withDefault("desc");
 
 const VIEWS = ["overview", "combat", "economy"] as const;
@@ -179,7 +179,8 @@ export function BuildTable({
   const sort = useSort<SortKey>(
     sortParams(useQueryState("sort", parseSortKey), useQueryState("dir", parseSortDir), { history: "replace" }),
   );
-  const [query, setQuery] = useState("");
+  // In the URL like the sort and the item filter, so a shared link keeps the search too.
+  const [query, setQuery] = useQueryState("q", parseQuery);
   // In the URL like the page's filters, so a shared link keeps them. One update sets both lists.
   const [itemParams, setItemParams] = useQueryStates(
     {

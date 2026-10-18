@@ -1,5 +1,6 @@
 import { ShoppingBag } from "lucide-react";
-import { useMemo, useState } from "react";
+import { parseAsStringLiteral, useQueryState } from "nuqs";
+import { useMemo } from "react";
 
 import { RankedEntityList, RankedEntityMetric, RankedEntityRow } from "~/components/domain/assets/RankedEntityList";
 import { Panel, PanelHeader, PanelScrollArea } from "~/components/patterns/panel/Panel";
@@ -13,6 +14,10 @@ import { cn } from "~/lib/utils";
 import { winRateNoise } from "~/lib/wilson";
 
 const ITEMS_SHOWN = 15;
+const parseSide = parseAsStringLiteral(["best", "worst"] as const)
+  .withDefault("best")
+  .withOptions({ history: "replace" });
+
 /** Where the win rate bar reaches its edge: ten points either way. */
 const CHANGE_SCALE = 0.1;
 
@@ -33,7 +38,8 @@ export function BuildItemsPanel({
   onItemHover?: (itemId: number | null) => void;
   className?: string;
 }) {
-  const [side, setSide] = useState<"best" | "worst">("best");
+  // In the URL like the page's other view settings, so a shared link keeps it.
+  const [side, setSide] = useQueryState("items_side", parseSide);
   const ranked = useMemo(() => distinguishingItems(buildItemPresence(rows)), [rows]);
   const items = (
     side === "best"
