@@ -6,7 +6,16 @@ import { Panel, PanelHeader } from "~/components/patterns/panel/Panel";
 import { NoValue } from "~/components/ui/no-value";
 import { Skeleton } from "~/components/ui/skeleton";
 import { Inline } from "~/components/ui/stack";
-import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "~/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableFooter,
+  TableHead,
+  TableHeader,
+  TableRow,
+  TableRowHeader,
+} from "~/components/ui/table";
 import { Text } from "~/components/ui/text";
 import type { GameMode } from "~/lib/game-mode";
 import { COMPARE_STAT_GROUPS, type CompareStat, compareStatWinners, scoreComparison } from "~/lib/player-compare";
@@ -60,7 +69,7 @@ export function HeadToHeadTable({
   return (
     <Panel {...props}>
       <PanelHeader size="sm" title="Head to head" />
-      <Table density="dense" height="fill" className="tabular-nums">
+      <Table density="dense" height="fill" className="tabular-nums" aria-label="Head to head">
         <TableHeader tone="muted">
           <TableRow>
             <TableHead data-pinned>Stat</TableHead>
@@ -80,13 +89,13 @@ export function HeadToHeadTable({
                 const winners = compareStatWinners(aggregates, stat);
                 return (
                   <TableRow key={stat.key}>
-                    <TableCell data-pinned className="text-muted-foreground">
+                    <TableRowHeader data-pinned tone="muted">
                       {/* A table cell ignores max-width: the label's own box wraps it in a narrow table. */}
                       <span className="block max-w-24 whitespace-normal @md/table:max-w-none @md/table:whitespace-nowrap">
                         {stat.label}
                       </span>
                       {stat.polarity === "lower" && <span className="sr-only"> (lower is better)</span>}
-                    </TableCell>
+                    </TableRowHeader>
                     {players.map((player, index) => {
                       const won = winners.includes(index);
                       const value = values[index];

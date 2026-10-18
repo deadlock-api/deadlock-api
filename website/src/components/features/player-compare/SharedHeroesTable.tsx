@@ -10,8 +10,7 @@ import { SkeletonRows } from "~/components/patterns/states/Skeletons";
 import { NoValue } from "~/components/ui/no-value";
 import { Skeleton } from "~/components/ui/skeleton";
 import { Inline, Stack } from "~/components/ui/stack";
-import { StatusDot } from "~/components/ui/status-dot";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableRowHeader } from "~/components/ui/table";
 import { Text } from "~/components/ui/text";
 import { TextLink } from "~/components/ui/text-link";
 import { Tooltip, TooltipHeader, TooltipStat, TooltipStats, TooltipTarget } from "~/components/ui/tooltip";
@@ -21,6 +20,7 @@ import { sharedHeroes } from "~/lib/player-compare";
 import { formatStatValue } from "~/lib/stat-format";
 import { toneOf } from "~/lib/tone";
 
+import { PlayerColumnHead } from "./CompareTableParts";
 import type { ComparedPlayer } from "./types";
 
 const COLLAPSED_ROWS = 6;
@@ -65,26 +65,19 @@ export function SharedHeroesTable({
         <EmptyState variant="plain" icon={UsersRound} title="No heroes in common" className="min-h-32" />
       ) : (
         <>
-          <Table density="dense" className="tabular-nums">
+          <Table density="dense" className="tabular-nums" aria-label="Shared heroes">
             <TableHeader tone="muted">
               <TableRow>
                 <TableHead data-pinned>Hero</TableHead>
                 {players.map((player) => (
-                  <TableHead key={player.accountId} className="text-end">
-                    <Inline gap={1.5} wrap="nowrap" justify="end">
-                      <StatusDot color={player.color} />
-                      <span className="max-w-20 truncate @xl/table:max-w-none" title={player.name}>
-                        {player.name}
-                      </span>
-                    </Inline>
-                  </TableHead>
+                  <PlayerColumnHead key={player.accountId} player={player} crownSlot={false} />
                 ))}
               </TableRow>
             </TableHeader>
             <TableBody>
               {shown.map((hero) => (
                 <TableRow key={hero.heroId}>
-                  <TableCell data-pinned>
+                  <TableRowHeader data-pinned>
                     {/* Drills in: the whole comparison on this hero. */}
                     <TextLink asChild tone="inherit">
                       <Link
@@ -94,7 +87,7 @@ export function SharedHeroesTable({
                         <HeroCell heroId={hero.heroId} size="sm" className="max-w-36" />
                       </Link>
                     </TextLink>
-                  </TableCell>
+                  </TableRowHeader>
                   {hero.stats.map((stats, index) => (
                     <TableCell key={accountIds[index]} className="text-end">
                       {stats ? (
@@ -148,7 +141,9 @@ export function SharedHeroesTable({
                                       tone={toneOf(Math.round(stats.winRate * 100), 50)}
                                       className="whitespace-nowrap @xl/table:w-16 @xl/table:shrink-0 @xl/table:text-end"
                                     >
-                                      {formatPercent(stats.winRate, 0)} WR
+                                      {formatPercent(stats.winRate, 0)}
+                                      <span aria-hidden="true"> WR</span>
+                                      <span className="sr-only"> win rate</span>
                                     </Text>
                                     <Text
                                       variant="caption"

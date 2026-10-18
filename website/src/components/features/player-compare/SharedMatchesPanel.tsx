@@ -6,7 +6,7 @@ import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { NoValue } from "~/components/ui/no-value";
 import { Skeleton } from "~/components/ui/skeleton";
 import { Inline, Stack } from "~/components/ui/stack";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableRowHeader } from "~/components/ui/table";
 import { Text } from "~/components/ui/text";
 import { day } from "~/dayjs";
 import { useHydrated } from "~/hooks/useHydrated";
@@ -85,11 +85,11 @@ function SharedMatchesTable({
       <TableBody>
         {matches.map((match) => (
           <TableRow key={match.matchId}>
-            <TableCell data-pinned>
+            <TableRowHeader data-pinned>
               <Text tone="muted" className="whitespace-nowrap">
                 {dateLabel(match.startTime)}
               </Text>
-            </TableCell>
+            </TableRowHeader>
             {columns.map((player) => {
               const team = match.teams.find((candidate) =>
                 candidate.players.some((entry) => entry.accountId === player.accountId),
@@ -113,7 +113,12 @@ function SharedMatchesTable({
                       </Text>
                       <HeroImage heroId={entry.heroId} shape="circle" className="size-5 shrink-0" />
                       <Text className="w-16 shrink-0 text-end whitespace-nowrap">
-                        {entry.kills}/{entry.deaths}/{entry.assists}
+                        <span aria-hidden="true">
+                          {entry.kills}/{entry.deaths}/{entry.assists}
+                        </span>
+                        <span className="sr-only">
+                          {entry.kills} kills, {entry.deaths} deaths, {entry.assists} assists
+                        </span>
                       </Text>
                       {showSouls && (
                         <Text tone="muted" className="w-12 shrink-0 text-end whitespace-nowrap">

@@ -234,7 +234,9 @@ function ItemRow({
                 {formatShare(entry.share)}
                 <span className="sr-only"> bought</span> ·{" "}
                 <Text variant="caption" tone={tone}>
-                  {formatPercent(entry.winRate, 0)} WR
+                  {formatPercent(entry.winRate, 0)}
+                  <span aria-hidden="true"> WR</span>
+                  <span className="sr-only"> win rate</span>
                 </Text>
               </Text>
             </Stack>

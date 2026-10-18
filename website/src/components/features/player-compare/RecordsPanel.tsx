@@ -6,7 +6,7 @@ import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { NoValue } from "~/components/ui/no-value";
 import { Skeleton } from "~/components/ui/skeleton";
 import { Inline } from "~/components/ui/stack";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableRowHeader } from "~/components/ui/table";
 import { day } from "~/dayjs";
 import { BEST_HERO_MIN_MATCHES, type PlayerRecords, playerRecords, type RecordMatch } from "~/lib/compare-records";
 import { type GameMode, hasSoulEconomy } from "~/lib/game-mode";
@@ -200,7 +200,7 @@ export function RecordsPanel({
       {noMatches ? (
         <EmptyState variant="plain" icon={Trophy} title="No matches on these filters" className="min-h-32 flex-1" />
       ) : (
-        <Table density="dense" height="fill" className="tabular-nums">
+        <Table density="dense" height="fill" className="tabular-nums" aria-label="Records">
           <TableHeader tone="muted">
             <TableRow>
               <TableHead data-pinned>Record</TableHead>
@@ -215,11 +215,11 @@ export function RecordsPanel({
               const winners = statWinners(values, "higher");
               return (
                 <TableRow key={row.key}>
-                  <TableCell data-pinned className="text-muted-foreground">
+                  <TableRowHeader data-pinned tone="muted">
                     <span className="block max-w-24 whitespace-normal @md/table:max-w-none @md/table:whitespace-nowrap">
                       {row.label}
                     </span>
-                  </TableCell>
+                  </TableRowHeader>
                   {players.map((player, index) => {
                     const history = histories[index];
                     const record = records[index];
