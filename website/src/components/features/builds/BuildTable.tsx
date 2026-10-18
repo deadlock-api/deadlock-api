@@ -106,7 +106,7 @@ const COLUMNS: Column[] = [
   { key: "players", label: "Players", className: "hidden @2xl/builds:table-cell" },
   { key: "winRate", label: "Win rate" },
   {
-    key: "lowerBound",
+    key: "vsAverage",
     label: "Vs. all builds",
     className: "hidden @md/builds:table-cell",
   },
@@ -122,7 +122,7 @@ const sortValue: Record<string, (row: BuildRow, trend: BuildTrend | undefined) =
   matches: (row) => row.matches,
   players: (row) => row.players,
   winRate: (row) => row.winRate,
-  lowerBound: (row) => row.interval[0],
+  vsAverage: (row) => row.vsAverage,
   trend: (_, trend) => trend?.change ?? 0,
   updated: (row) => row.meta?.updatedAt ?? 0,
 };
