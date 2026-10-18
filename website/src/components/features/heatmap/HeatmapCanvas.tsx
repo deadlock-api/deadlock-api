@@ -248,7 +248,7 @@ export default function HeatmapCanvas({
     // covering its top and its bottom lane.
     <ChartStageFrame fit="square">
       <ChartOverlay position="top-end" narrow="outside">
-        <HeatmapLegend viewMode={viewMode} maxValue={legendMax} />
+        <HeatmapLegend viewMode={viewMode} maxValue={legendMax} sensitivity={sensitivity} />
       </ChartOverlay>
       {/* The tooltip sits outside the stage, which clips what leaves it. */}
       <div ref={containerRef} className="relative min-w-0">

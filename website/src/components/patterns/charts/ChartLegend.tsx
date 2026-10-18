@@ -196,12 +196,29 @@ export function ChartLegend({
   );
 }
 
-/** The key to a continuous color scale: the low label, the ramp, the high label. */
+function GradientRamp({ stops, size = "full" }: { stops: readonly string[]; size?: "full" | "half" }) {
+  return (
+    <span
+      aria-hidden="true"
+      data-slot="chart-gradient-ramp"
+      className={cn("h-2.5 rounded-full", size === "half" ? "w-10" : "w-24")}
+      style={{ background: `linear-gradient(to right, ${stops.join(", ")})` }}
+    />
+  );
+}
+
+/**
+ * The key to a continuous color scale: its name, the low label, the ramp, the high label. `mid` splits the ramp at
+ * its centre with the value there (the 1x of a diverging ramp), so its neutral point is read, not guessed.
+ */
 export function ChartGradientLegend({
   stops,
   min,
   max,
+  mid,
   label = "Color scale",
+  labelDisplay = "hidden",
+  clipped = false,
   className,
   ...props
 }: Omit<React.ComponentProps<"div">, "children"> & {
@@ -209,23 +226,49 @@ export function ChartGradientLegend({
   stops: readonly string[];
   min: React.ReactNode;
   max: React.ReactNode;
+  /** The value at the centre of the ramp, printed between its halves. */
+  mid?: React.ReactNode;
+  /** What the colors measure: "Kills". */
   label?: string;
+  /** `visible` prints the label before the scale (a plot whose measure changes with a view); `hidden` only names it. */
+  labelDisplay?: "visible" | "hidden";
+  /** The top of the ramp is a cap, not the largest value: values above it share its color. The max reads "≥N". */
+  clipped?: boolean;
 }) {
+  const half = Math.ceil(stops.length / 2);
   return (
     <div
       data-slot="chart-gradient-legend"
-      className={cn("flex items-center gap-1.5 text-xs text-muted-foreground tabular-nums", className)}
+      data-clipped={clipped || undefined}
+      className={cn(
+        "flex items-center gap-1.5 text-xs whitespace-nowrap text-muted-foreground tabular-nums",
+        className,
+      )}
       {...props}
     >
-      <span className="sr-only">{label}, from</span>
+      <span className={labelDisplay === "visible" ? "text-foreground" : "sr-only"}>{label}</span>
+      <span className="sr-only">, from</span>
       <span>{min}</span>
       <span className="sr-only">to</span>
-      <span
-        aria-hidden="true"
-        className="h-2.5 w-24 rounded-full"
-        style={{ background: `linear-gradient(to right, ${stops.join(", ")})` }}
-      />
-      <span>{max}</span>
+      {mid == null ? (
+        <GradientRamp stops={stops} />
+      ) : (
+        <>
+          <GradientRamp size="half" stops={stops.slice(0, half)} />
+          <span className="sr-only">through</span>
+          <span>{mid}</span>
+          <GradientRamp size="half" stops={stops.slice(stops.length - half)} />
+        </>
+      )}
+      <span>
+        {clipped && (
+          <>
+            <span aria-hidden="true">≥</span>
+            <span className="sr-only">at least </span>
+          </>
+        )}
+        {max}
+      </span>
     </div>
   );
 }

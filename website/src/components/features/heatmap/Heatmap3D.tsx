@@ -259,7 +259,7 @@ export default function Heatmap3D({
     // On a phone the map fills the width, so the legend and the sliders leave it instead of covering it.
     <ChartStageFrame fit="square">
       <ChartOverlay position="top-end" narrow="outside">
-        <HeatmapLegend viewMode={viewMode} maxValue={heat.maxValue} />
+        <HeatmapLegend viewMode={viewMode} maxValue={heat.maxValue} sensitivity={sensitivity} />
       </ChartOverlay>
       <ChartStage>
         {/* The WebGL scene stands for the whole map: named, and described by the sentence under it. */}

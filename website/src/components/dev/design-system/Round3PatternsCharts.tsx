@@ -279,11 +279,25 @@ export function Round3PatternsCharts() {
       <Specimen
         name="Canvas ramps"
         source="patterns/charts/theme"
-        note="CHART_RAMP for plots drawn pixel by pixel: sequential (inferno, lighter is more in every color vision) for counts and rates, diverging (blue, pale middle, red) for a ratio against a baseline. chartRampColor(ramp, t) reads a color; chartRampCss(ramp) gives the legend its stops."
+        note="CHART_RAMP for plots drawn pixel by pixel: sequential (inferno, lighter is more in every color vision) for counts and rates, diverging (blue, pale middle, red) for a ratio against a baseline. chartRampColor(ramp, t) reads a color; chartRampCss(ramp) gives the legend its stops. ChartGradientLegend: labelDisplay visible prints what the colors measure, clipped marks a capped top as ≥N, mid splits the ramp at its neutral value."
       >
         <Variants label="sequential, diverging">
-          <ChartGradientLegend label="Kills" min="0" max="1,240" stops={chartRampCss("sequential")} />
-          <ChartGradientLegend label="Kill share" min="0.5×" max="2×" stops={chartRampCss("diverging")} />
+          <ChartGradientLegend
+            label="Kills"
+            labelDisplay="visible"
+            clipped
+            min="0"
+            max="1,240"
+            stops={chartRampCss("sequential")}
+          />
+          <ChartGradientLegend
+            label="Kill share"
+            labelDisplay="visible"
+            min="0.5×"
+            mid="1×"
+            max="2×"
+            stops={chartRampCss("diverging")}
+          />
         </Variants>
       </Specimen>
     </>
