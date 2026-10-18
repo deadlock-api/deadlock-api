@@ -66,6 +66,9 @@ export function RankedEntityList({
 
 const METRIC_WIDTH = { default: "w-12 @md:w-16", wide: "w-16 @md:w-20" } as const;
 
+/** `secondary` metrics give way below a phone-wide list (`@sm`), so the name keeps its room for the main number. */
+const METRIC_PRIORITY = { primary: "flex", secondary: "hidden @sm:flex" } as const;
+
 /**
  * The labels of a list's metric columns, once above its rows, lined up with the metrics at the row's end. Children
  * are `RankedEntityListLabel`s in the order of the metrics. Hidden from screen readers: each metric keeps its own label
@@ -185,6 +188,7 @@ export function RankedEntityMetric({
   tone,
   significant,
   width = "default",
+  priority = "primary",
   className,
   ...props
 }: Omit<React.ComponentProps<"div">, "children"> & {
@@ -205,6 +209,11 @@ export function RankedEntityMetric({
   tone?: Tone;
   /** Whether the difference stands out of the noise: `false` mutes it and sets it lighter, whatever its `tone`. */
   significant?: boolean;
+  /**
+   * `secondary`: a supporting number that a phone-wide list (below `@sm`) leaves out, so the name and the main number
+   * keep their room. Use it on every metric but the one a row is read for.
+   */
+  priority?: keyof typeof METRIC_PRIORITY;
   /** `wide` for a value with a unit after it ("+16.8 pp"), which the default column cuts. */
   width?: "default" | "wide";
 }) {
@@ -246,7 +255,8 @@ export function RankedEntityMetric({
   return (
     <div
       data-slot="ranked-entity-metric"
-      className={cn("flex flex-col items-end gap-1", METRIC_WIDTH[width], className)}
+      data-priority={priority}
+      className={cn(METRIC_PRIORITY[priority], "flex-col items-end gap-1", METRIC_WIDTH[width], className)}
       {...props}
     >
       <dt className={cn("order-2 type-caption text-muted-foreground", labelDisplay === "hidden" && "sr-only")}>

@@ -141,18 +141,19 @@ export function BuildInMatches({
                           entity={{ itemId: item.itemId }}
                           meta={`${formatShare(item.boughtRate)} bought it`}
                         >
-                          {/* The two rates step back: the gap between them is what a key item is read for. */}
+                          {/* The two rates step back, and give way on a phone: the gap between them is what a key
+                              item is read for. */}
                           <RankedEntityMetric
                             label="With it"
                             labelDisplay={index === 0 ? "visible" : "hidden"}
+                            priority="secondary"
                             value={formatPercent(item.winRate)}
                             tone="muted"
                           />
                           <RankedEntityMetric
                             label="Without"
                             labelDisplay={index === 0 ? "visible" : "hidden"}
-                            // Below 24rem the item names need its room; the difference column still tells it.
-                            className="hidden @sm:flex"
+                            priority="secondary"
                             value={formatPercent(item.winRateWithout!)}
                             tone="muted"
                           />
