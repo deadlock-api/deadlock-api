@@ -1,5 +1,6 @@
 import { AbilityOrderGrid } from "~/components/domain/assets/AbilityOrderGrid";
 import { useHeroSkillPath } from "~/components/domain/graph/HeroSkillOrder";
+import { BuildSectionError } from "~/components/features/builds/BuildSectionError";
 import { PanelSection } from "~/components/patterns/panel/Panel";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { StaleOverlay } from "~/components/patterns/states/StaleOverlay";
@@ -42,7 +43,16 @@ export function BuildSkillTaken({
     active,
     true,
   );
-  if (orderQuery.isError) return null;
+  if (orderQuery.isError) {
+    return (
+      <BuildSectionError
+        title="Most taken skill order"
+        what="the skill order"
+        onRetry={() => void orderQuery.refetch()}
+        retrying={orderQuery.isFetching}
+      />
+    );
+  }
   if (!orderQuery.isPending && (!path || slotAbilities.length === 0)) return null;
 
   return (

@@ -1,6 +1,7 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 
 import { PlayerCell } from "~/components/domain/player/PlayerCell";
+import { BuildSectionError } from "~/components/features/builds/BuildSectionError";
 import { PanelSection } from "~/components/patterns/panel/Panel";
 import { StaleOverlay } from "~/components/patterns/states/StaleOverlay";
 import { KeyValue, KeyValueList } from "~/components/ui/key-value";
@@ -58,7 +59,17 @@ export function BuildTopPlayers({
     placeholderData: keepPreviousData,
   });
 
-  if (playersQuery.isError || (players && players.length === 0)) return null;
+  if (playersQuery.isError) {
+    return (
+      <BuildSectionError
+        title="Most played by"
+        what="the players"
+        onRetry={() => void playersQuery.refetch()}
+        retrying={playersQuery.isFetching}
+      />
+    );
+  }
+  if (players && players.length === 0) return null;
   return (
     <section className="flex flex-col">
       <PanelSection variant="label" title="Most played by" />

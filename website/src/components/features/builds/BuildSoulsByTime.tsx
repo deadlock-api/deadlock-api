@@ -3,6 +3,7 @@ import { useId } from "react";
 import { CartesianGrid, Line, LineChart, ReferenceLine, Tooltip, XAxis, YAxis } from "recharts";
 
 import { performanceCurveParams } from "~/components/features/builds/build-hooks";
+import { BuildSectionError } from "~/components/features/builds/BuildSectionError";
 import { ChartEmpty, ChartLoading } from "~/components/patterns/charts/ChartStates";
 import { ChartSurface } from "~/components/patterns/charts/ChartSurface";
 import {
@@ -57,7 +58,19 @@ export function BuildSoulsByTime({
     placeholderData: keepPreviousData,
   });
   const heroQuery = useQuery(playerPerformanceCurveQueryOptions(params));
-  if (buildQuery.isError || heroQuery.isError) return null;
+  if (buildQuery.isError || heroQuery.isError) {
+    return (
+      <BuildSectionError
+        title="Souls vs. hero average"
+        what="the souls over time"
+        onRetry={() => {
+          if (buildQuery.isError) void buildQuery.refetch();
+          if (heroQuery.isError) void heroQuery.refetch();
+        }}
+        retrying={buildQuery.isFetching || heroQuery.isFetching}
+      />
+    );
+  }
 
   const heroAt = new Map(heroQuery.data?.map((point) => [point.game_time, point.net_worth_avg]));
   const points: Point[] = (buildQuery.data ?? []).flatMap((point) => {

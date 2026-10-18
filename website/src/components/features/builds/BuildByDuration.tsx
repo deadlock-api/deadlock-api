@@ -1,5 +1,6 @@
 import { keepPreviousData, useQueries, useQuery } from "@tanstack/react-query";
 
+import { BuildSectionError } from "~/components/features/builds/BuildSectionError";
 import { PanelSection } from "~/components/patterns/panel/Panel";
 import { StaleOverlay } from "~/components/patterns/states/StaleOverlay";
 import { Delta } from "~/components/ui/delta";
@@ -75,7 +76,16 @@ export function BuildByDuration({
       enabled: active,
     })),
   });
-  if (query.isError) return null;
+  if (query.isError) {
+    return (
+      <BuildSectionError
+        title="By match length"
+        what="the win rate by match length"
+        onRetry={() => void query.refetch()}
+        retrying={query.isFetching}
+      />
+    );
+  }
   const lengths = LENGTHS.map((length) =>
     (query.data ?? [])
       .filter((row) => row.bucket >= length.from && row.bucket < length.to)

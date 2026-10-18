@@ -2,6 +2,7 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 
 import { RankedEntityList, RankedEntityMetric, RankedEntityRow } from "~/components/domain/assets/RankedEntityList";
 import { useAnswerWithRow } from "~/components/features/builds/build-hooks";
+import { BuildSectionError } from "~/components/features/builds/BuildSectionError";
 import { PanelSection } from "~/components/patterns/panel/Panel";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { StaleOverlay } from "~/components/patterns/states/StaleOverlay";
@@ -120,7 +121,16 @@ export function BuildMatchups({
 
   // The last build's matchups stay with its own win rate while the next build's load.
   const answer = useAnswerWithRow(query.data, query.isPlaceholderData, build);
-  if (query.isError) return null;
+  if (query.isError) {
+    return (
+      <BuildSectionError
+        title="Matchups"
+        what="the matchups"
+        onRetry={() => void query.refetch()}
+        retrying={query.isFetching}
+      />
+    );
+  }
   if (!query.data) {
     return (
       <section className="flex flex-col">
