@@ -63,14 +63,15 @@ export function RefreshControl({ accountId }: { accountId: number }) {
           {dataUpdatedAt > 0 ? "Refresh failed · showing loaded history" : "Could not load matches"}
         </output>
       )}
-      {isPaused ? (
-        <span className="text-xs">Waiting for connection…</span>
-      ) : isFetching ? (
-        <span className="text-xs">Refreshing…</span>
-      ) : (
-        lastAttemptAt > 0 &&
-        remaining > 0 && <span className="text-xs tabular-nums">next in {formatCountdown(remaining)}</span>
-      )}
+      {/* Always mounted and as wide as its longest usual text, so "Refreshing…", the countdown and nothing take the
+          same room and the header never rewraps mid-refresh. */}
+      <output className="min-w-20 text-xs whitespace-nowrap tabular-nums">
+        {isPaused
+          ? "Waiting for connection…"
+          : isFetching
+            ? "Refreshing…"
+            : lastAttemptAt > 0 && remaining > 0 && `next in ${formatCountdown(remaining)}`}
+      </output>
     </span>
   );
 }
