@@ -85,7 +85,7 @@ export function PanelWithDetails({
           <div className="flex flex-wrap items-center justify-between gap-3 pe-8">
             <DialogTitle>{title}</DialogTitle>
             {description && (
-              <Text variant="meta" tone="muted" numeric="tabular">
+              <Text variant="caption" tone="muted" numeric="tabular">
                 {description}
               </Text>
             )}

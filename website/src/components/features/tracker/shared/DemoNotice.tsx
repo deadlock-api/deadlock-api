@@ -4,7 +4,6 @@ import { Download, FlaskConical, Heart } from "lucide-react";
 import { InstallButton } from "~/components/domain/ingest/InstallButton";
 import { INGEST_INSTALL_PATH, INGEST_TRACKER_WINDOW_DAYS } from "~/components/domain/ingest/links";
 import { PlayerSearch } from "~/components/domain/player/PlayerSearch";
-import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
 import { IconTile } from "~/components/ui/icon-tile";
@@ -41,7 +40,6 @@ export function DemoNotice() {
         <CardTitle as="h2" className="flex items-center gap-2">
           <FlaskConical aria-hidden="true" />
           This is a demo profile
-          <Badge size="sm">Demo</Badge>
         </CardTitle>
         <CardDescription>
           The player, their teammates and every match below are made-up sample data, so you can try the tracker before

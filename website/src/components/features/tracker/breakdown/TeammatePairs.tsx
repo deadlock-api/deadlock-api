@@ -41,7 +41,7 @@ export function TeammatePairs({
     ) : null;
   return (
     <div className="flex min-w-0 flex-col gap-1">
-      <Heading as={headingLevel} size="eyebrow">
+      <Heading as={headingLevel} size="xs">
         Teammate pairs
       </Heading>
       <PairsTable pairs={limit == null ? pairs : pairs.slice(0, limit)} entries={entries} onOpenMatch={onOpenMatch} />

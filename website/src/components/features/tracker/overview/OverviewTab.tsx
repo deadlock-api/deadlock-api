@@ -376,7 +376,7 @@ function SplitRows({ label, rows }: { label: string; rows: OutcomeSplit[] }) {
   const headingLevel = useNextHeadingLevel();
   return (
     <div className="min-w-0">
-      <Heading as={headingLevel} size="eyebrow" className="pb-1">
+      <Heading as={headingLevel} size="xs" className="pb-1">
         {label}
       </Heading>
       <div className="flex flex-col gap-1">

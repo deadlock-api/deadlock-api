@@ -6,6 +6,7 @@ import { DetailPopover } from "~/components/ui/detail-popover";
 import { Heading, useNextHeadingLevel } from "~/components/ui/heading";
 import { NoValue } from "~/components/ui/no-value";
 import { StatusDot } from "~/components/ui/status-dot";
+import { Text } from "~/components/ui/text";
 import { TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
 import { TONE_TEXT, toneOf } from "~/lib/tone";
 import { formatMatchDuration } from "~/lib/tracker/compute";
@@ -143,7 +144,9 @@ export function LanesCard({
                       />
                     ))}
                   </div>
-                  <span className="eyebrow">vs</span>
+                  <Text variant="caption" tone="muted">
+                    vs
+                  </Text>
                   <div className="flex min-w-0 flex-col gap-1">
                     {enemy.map((laner) => (
                       <Laner

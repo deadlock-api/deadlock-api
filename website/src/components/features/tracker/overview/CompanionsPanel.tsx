@@ -148,7 +148,7 @@ function CompanionPreview({
 
   return (
     <div className="flex min-w-0 flex-col gap-1">
-      <Heading as={headingLevel} size="eyebrow">
+      <Heading as={headingLevel} size="xs">
         {label}
       </Heading>
       {isPending ? (

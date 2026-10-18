@@ -183,7 +183,7 @@ export function TrendPanels({
             />
           </BarChart>
         </ChartSurface>
-        <ChartLegend size="sm">
+        <ChartLegend>
           <ChartLegendItem color={CHART_COLOR.positive}>Wins</ChartLegendItem>
           <ChartLegendItem color={CHART_COLOR.negative}>Losses</ChartLegendItem>
         </ChartLegend>
