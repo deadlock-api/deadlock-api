@@ -9,10 +9,13 @@ interface GuessInputProps {
   options: { id: string | number; name: string }[];
   onSubmit: (id: string | number, name: string) => void;
   disabled?: boolean;
+  /** The field's accessible name, in sentence case ("Guess the hero"); it also names the list of suggestions. */
+  label: string;
+  /** Defaults to the label with an ellipsis. Set in sentence case: the terminal face uppercases it. */
   placeholder?: string;
 }
 
-export function GuessInput({ options, onSubmit, disabled, placeholder = "TYPE YOUR GUESS..." }: GuessInputProps) {
+export function GuessInput({ options, onSubmit, disabled, label, placeholder = `${label}…` }: GuessInputProps) {
   const [value, setValue] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [showDropdown, setShowDropdown] = useState(false);
@@ -76,8 +79,8 @@ export function GuessInput({ options, onSubmit, disabled, placeholder = "TYPE YO
           onBlur={() => setShowDropdown(false)}
           disabled={disabled}
           placeholder={placeholder}
-          aria-label={placeholder}
-          className="cursor-target w-full font-mono"
+          aria-label={label}
+          className="cursor-target w-full font-mono placeholder:uppercase"
           autoComplete="off"
         />
       </PopoverAnchor>
@@ -90,7 +93,7 @@ export function GuessInput({ options, onSubmit, disabled, placeholder = "TYPE YO
         onInteractOutside={(e) => e.target === inputRef.current && e.preventDefault()}
       >
         {/* oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- the popup list of a custom combobox; a native select or datalist cannot carry it */}
-        <div role="listbox" id={listId} aria-label={placeholder}>
+        <div role="listbox" id={listId} aria-label={label}>
           {results.map((item, i) => (
             <OptionRow
               key={item.id}

@@ -128,7 +128,7 @@ function GuessAbility() {
       {hints.length > 0 && <HintReveal hints={hints} revealedCount={gameState.hintsRevealed} />}
 
       <div className="flex justify-center">
-        <GuessInput options={guessOptions} onSubmit={guess} disabled={isFinished} placeholder="GUESS THE ABILITY..." />
+        <GuessInput options={guessOptions} onSubmit={guess} disabled={isFinished} label="Guess the ability" />
       </div>
 
       <PreviousGuesses guesses={gameState.guesses} answer={ability.name} />

@@ -585,12 +585,7 @@ function GuessSound() {
       {hints.length > 0 && <HintReveal hints={hints} revealedCount={gameState.hintsRevealed} />}
 
       <div className="flex justify-center">
-        <GuessInput
-          options={guessOptions}
-          onSubmit={handleGuess}
-          disabled={isFinished}
-          placeholder="GUESS THE ABILITY..."
-        />
+        <GuessInput options={guessOptions} onSubmit={handleGuess} disabled={isFinished} label="Guess the ability" />
       </div>
 
       <PreviousGuesses guesses={gameState.guesses} answer={dailySound.abilityName} />

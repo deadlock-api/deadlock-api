@@ -16,7 +16,7 @@ function stripHtml(text: string): string {
 }
 
 function truncate(text: string, length: number): string {
-  return text.length > length ? `${text.slice(0, length)}...` : text;
+  return text.length > length ? `${text.slice(0, length)}…` : text;
 }
 
 /** Guess the Hero: type, a base stat, redacted lore, the weapon, then playstyle (or role, a second stat, complexity). */
