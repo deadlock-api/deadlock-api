@@ -58,7 +58,7 @@ import { Field } from "~/components/ui/field";
 import { InfoTip } from "~/components/ui/info-tip";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
-import { OptionRow } from "~/components/ui/option-row";
+import { OptionGroup, OptionRow } from "~/components/ui/option-row";
 import { Popover, PopoverContent, PopoverTrigger } from "~/components/ui/popover";
 import { ProgressBarWithLabel } from "~/components/ui/progress-bar";
 import { DivergingBar } from "~/components/ui/rate-bar";
@@ -605,7 +605,7 @@ export function Primitives() {
       <Specimen
         name="OptionRow"
         source="ui/option-row"
-        note="One choice in a popover or dialog list. hint and trailing add columns; active marks the keyboard cursor of a listbox whose field keeps the focus (an accent fill plus a primary mark down the start edge, 3:1 on the popover, so the cursor is not a fill alone). The edge is reserved on every row."
+        note="One choice in a popover or dialog list. hint and trailing add columns; active marks the keyboard cursor of a listbox whose field keeps the focus (an accent fill plus a primary mark down the start edge, 3:1 on the popover, so the cursor is not a fill alone). The edge is reserved on every row. OptionGroup names a group of rows (role group, a sentence-case caption label, not an eyebrow)."
       >
         <Variants className="items-start gap-6">
           <div className="w-56 rounded-md border bg-popover p-2">
@@ -620,11 +620,13 @@ export function Primitives() {
             ))}
           </div>
           <div className="w-56 rounded-md border bg-popover p-2">
-            {["Haze", "Bebop", "Seven"].map((hero, index) => (
-              <OptionRow key={hero} active={index === 1} tabIndex={-1}>
-                {hero}
-              </OptionRow>
-            ))}
+            <OptionGroup label="Heroes">
+              {["Haze", "Bebop", "Seven"].map((hero, index) => (
+                <OptionRow key={hero} active={index === 1} tabIndex={-1}>
+                  {hero}
+                </OptionRow>
+              ))}
+            </OptionGroup>
           </div>
         </Variants>
       </Specimen>

@@ -1,6 +1,6 @@
 import { CheckIcon } from "lucide-react";
 import { Slot } from "radix-ui";
-import { cloneElement, isValidElement } from "react";
+import { cloneElement, isValidElement, useId } from "react";
 
 import { DISABLED_STATE, FOCUS_RING } from "~/components/ui/recipes";
 import { cn } from "~/lib/utils";
@@ -80,5 +80,34 @@ export function OptionRow({
     <button type="button" {...rowProps}>
       {content}
     </button>
+  );
+}
+
+interface OptionGroupProps extends React.ComponentProps<"div"> {
+  /** The group's name, drawn above its rows in sentence case and naming the group for assistive technology. */
+  label: React.ReactNode;
+}
+
+/** A named group of OptionRows in a list or listbox ("Heroes", "Players"). */
+export function OptionGroup({ label, className, children, ...props }: OptionGroupProps) {
+  const labelId = useId();
+  return (
+    <div
+      data-slot="option-group"
+      // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- a group of options in an ARIA listbox; fieldset and optgroup cannot sit there
+      role="group"
+      aria-labelledby={labelId}
+      className={cn("flex flex-col", className)}
+      {...props}
+    >
+      <span
+        id={labelId}
+        data-slot="option-group-label"
+        className="px-2 pt-1 pb-0.5 type-caption font-semibold text-muted-foreground"
+      >
+        {label}
+      </span>
+      {children}
+    </div>
   );
 }

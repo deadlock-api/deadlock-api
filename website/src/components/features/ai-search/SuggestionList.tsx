@@ -3,16 +3,15 @@ import { SparklesIcon, SwordsIcon } from "lucide-react";
 import { HeroImage } from "~/components/domain/assets/HeroImage";
 import { SteamAvatar } from "~/components/domain/player/SteamAvatar";
 import type { useListboxCursor } from "~/components/ui/hooks/use-listbox-cursor";
-import { OptionRow } from "~/components/ui/option-row";
+import { OptionGroup, OptionRow } from "~/components/ui/option-row";
 import { Skeleton } from "~/components/ui/skeleton";
 import { Inline, Stack } from "~/components/ui/stack";
-import { Text } from "~/components/ui/text";
 
 import type { Suggestion, useSuggestions } from "./use-suggestions";
 
 const GROUPS = [
-  { key: "page", label: "Page" },
-  { key: "matches", label: "Match" },
+  { key: "page", label: "Pages" },
+  { key: "matches", label: "Matches" },
   { key: "heroes", label: "Heroes" },
   { key: "players", label: "Players" },
 ] as const;
@@ -87,13 +86,8 @@ export function SuggestionList({ id, suggestions, getOptionProps, onPick }: Sugg
         // The page waits on the model: a row of the same size holds its place, so nothing below jumps when it answers.
         const placeholder = group.key === "page" && rows.length === 0 && suggestions.pagePending;
         if (rows.length === 0 && !placeholder) return null;
-        const labelId = `${id}-${group.key}`;
         return (
-          // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- a group of options inside the ARIA listbox above
-          <Stack key={group.key} role="group" aria-labelledby={labelId} aria-busy={placeholder || undefined} gap={0}>
-            <Text id={labelId} variant="eyebrow" tone="muted" className="px-2 pt-1 pb-0.5">
-              {group.label}
-            </Text>
+          <OptionGroup key={group.key} label={group.label} aria-busy={placeholder || undefined}>
             {placeholder && <SuggestionSkeleton />}
             {rows.map((row) => {
               const at = index++;
@@ -110,7 +104,7 @@ export function SuggestionList({ id, suggestions, getOptionProps, onPick }: Sugg
                 </OptionRow>
               );
             })}
-          </Stack>
+          </OptionGroup>
         );
       })}
     </div>

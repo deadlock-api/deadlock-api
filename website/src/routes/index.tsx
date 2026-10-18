@@ -246,7 +246,9 @@ function IndexRoute() {
       <Hero size="sm">
         <Stack gap={2} align="center">
           <PageHeader size="display" title="Deadlock API" />
-          <Text variant="eyebrow">sponsored by</Text>
+          <Text variant="caption" tone="muted">
+            Sponsored by
+          </Text>
           <Card asChild tone="primary" size="sm" interaction="pressable" className="px-4">
             <a href={mainSponsor.href} title={mainSponsor.title} target="_blank" rel="sponsored noreferrer">
               <OptimizedImage
