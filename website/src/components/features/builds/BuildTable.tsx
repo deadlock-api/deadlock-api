@@ -34,7 +34,7 @@ import {
   type BuildTrend,
   buildLanguageName,
 } from "~/lib/build-stats";
-import { formatPercent, formatSignedPercent } from "~/lib/format";
+import { formatPercent, formatSignedPoints } from "~/lib/format";
 import { TONE_TEXT, toneOf } from "~/lib/tone";
 import { cn } from "~/lib/utils";
 import type { SteamProfileMap } from "~/queries/steam-queries";
@@ -356,7 +356,7 @@ export function BuildTable({
                     <TableCell className="hidden text-end @md/builds:table-cell">
                       <div className="ms-auto flex w-20 flex-col items-end gap-1">
                         <span className={cn("text-xs tabular-nums", TONE_TEXT[toneOf(verdictSign(row))])}>
-                          {formatSignedPercent(row.vsAverage)}
+                          {formatSignedPoints(row.vsAverage)}
                         </span>
                         <DivergingBar
                           value={row.vsAverage}

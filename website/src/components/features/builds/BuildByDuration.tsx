@@ -110,6 +110,7 @@ export function BuildByDuration({
                           <Delta
                             value={stats.wins / stats.matches - hero.wins / hero.matches}
                             threshold={winRateNoise(stats.matches)}
+                            unit=" pp"
                           />
                         )}
                       </span>

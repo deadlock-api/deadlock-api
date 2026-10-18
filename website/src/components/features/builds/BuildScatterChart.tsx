@@ -21,7 +21,7 @@ import { TooltipCard, TooltipHeader, TooltipStat, TooltipStats } from "~/compone
 import { BUILD_METRICS, type BuildPerformanceTotals } from "~/lib/build-performance";
 import { buildMatchesItems, type BuildRow, type BuildSlot, buildSlotCost } from "~/lib/build-stats";
 import { niceTicks, percentTicks, winRateDomain } from "~/lib/chart-axis";
-import { formatPercent, formatSignedPercent } from "~/lib/format";
+import { formatPercent, formatSignedPoints } from "~/lib/format";
 
 const VERDICT_COLOR: Record<BuildRow["verdict"], string> = {
   above: CHART_COLOR.positive,
@@ -299,7 +299,7 @@ export function BuildScatterChart({
                       label="95% interval"
                       value={`${formatPercent(row.interval[0])} – ${formatPercent(row.interval[1])}`}
                     />
-                    <TooltipStat label="Vs. average" value={formatSignedPercent(row.vsAverage)} />
+                    <TooltipStat label="Vs. average" value={formatSignedPoints(row.vsAverage)} />
                     {linear && <TooltipStat label={xLabel} value={xFormat(point.x)} />}
                     <TooltipStat label="Matches" value={row.matches.toLocaleString("en-US")} />
                     <TooltipStat label="Players" value={row.players.toLocaleString("en-US")} />

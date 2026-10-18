@@ -8,7 +8,7 @@ import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { SCROLLBAR_THIN } from "~/components/ui/recipes";
 import { Segmented, SegmentedItem } from "~/components/ui/segmented";
 import { type BuildRow, buildItemPresence, distinguishingItems } from "~/lib/build-stats";
-import { formatShare, formatSignedPercent } from "~/lib/format";
+import { formatShare, formatSignedPoints } from "~/lib/format";
 import { toneOf } from "~/lib/tone";
 import { cn } from "~/lib/utils";
 import { winRateNoise } from "~/lib/wilson";
@@ -81,7 +81,8 @@ export function BuildItemsPanel({
                 <RankedEntityMetric
                   label="Vs. rest"
                   labelDisplay={index === 0 ? "visible" : "hidden"}
-                  value={item.vsWithout === null ? null : formatSignedPercent(item.vsWithout)}
+                  width="wide"
+                  value={item.vsWithout === null ? null : formatSignedPoints(item.vsWithout)}
                   tone={
                     item.vsWithout === null
                       ? undefined

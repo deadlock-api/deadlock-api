@@ -19,7 +19,7 @@ import { StaleOverlay } from "~/components/patterns/states/StaleOverlay";
 import { InlineStat } from "~/components/ui/inline-stat";
 import type { BuildPerformanceTotals } from "~/lib/build-performance";
 import type { BuildRow } from "~/lib/build-stats";
-import { formatPercent, formatShare, formatSignedPercent } from "~/lib/format";
+import { formatPercent, formatShare, formatSignedPoints } from "~/lib/format";
 import { toneOf } from "~/lib/tone";
 import { winRateNoise } from "~/lib/wilson";
 import type { BuildPurchaseFilters } from "~/queries/hero-build-stats-query";
@@ -94,7 +94,7 @@ export function BuildInMatches({
           <InlineStat value={row.players.toLocaleString("en-US")} label="players" />
           <InlineStat value={formatPercent(row.winRate)} label="win rate" />
           <InlineStat
-            value={formatSignedPercent(row.vsAverage)}
+            value={formatSignedPoints(row.vsAverage)}
             label="vs. the hero's builds"
             tone={row.verdict === "above" ? "positive" : row.verdict === "below" ? "negative" : undefined}
           />
@@ -162,7 +162,8 @@ export function BuildInMatches({
                           <RankedEntityMetric
                             label="Diff"
                             labelDisplay="hidden"
-                            value={formatSignedPercent(change)}
+                            width="wide"
+                            value={formatSignedPoints(change)}
                             tone={
                               Math.abs(change) < winRateNoise(bought, row.matches - bought)
                                 ? "muted"

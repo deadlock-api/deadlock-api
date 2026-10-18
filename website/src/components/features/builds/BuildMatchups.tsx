@@ -7,7 +7,7 @@ import { Skeleton } from "~/components/ui/skeleton";
 import { CACHE_DURATIONS } from "~/constants/cache";
 import { api } from "~/lib/api";
 import type { BuildRow } from "~/lib/build-stats";
-import { formatPercent, formatSignedPercent } from "~/lib/format";
+import { formatPercent, formatSignedPoints } from "~/lib/format";
 import { toneOf } from "~/lib/tone";
 import { winRateNoise } from "~/lib/wilson";
 import type { BuildPurchaseFilters } from "~/queries/hero-build-stats-query";
@@ -48,7 +48,8 @@ function MatchupList({ title, matchups, build }: { title: string; matchups: Matc
               <RankedEntityMetric
                 label="Diff"
                 labelDisplay="hidden"
-                value={formatSignedPercent(change)}
+                width="wide"
+                value={formatSignedPoints(change)}
                 // Only a difference outside the matchup's noise takes a color.
                 tone={Math.abs(change) < winRateNoise(matchup.matches) ? "muted" : toneOf(Math.round(change * 1000))}
                 change={{ value: change, scale: CHANGE_SCALE }}

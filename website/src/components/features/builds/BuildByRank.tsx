@@ -8,7 +8,7 @@ import { PanelSection } from "~/components/patterns/panel/Panel";
 import { StaleOverlay } from "~/components/patterns/states/StaleOverlay";
 import { TooltipCard, TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
 import { badgeTiers, type BuildRow } from "~/lib/build-stats";
-import { formatPercent, formatSignedPercent } from "~/lib/format";
+import { formatPercent, formatSignedPoints } from "~/lib/format";
 import { type BuildPurchaseFilters, buildBucketsQueryOptions } from "~/queries/hero-build-stats-query";
 import { heroStatsQueryOptions } from "~/queries/hero-stats-query";
 import { ranksQueryOptions } from "~/queries/ranks-query";
@@ -31,7 +31,7 @@ function RankBarTooltip({ entry }: { entry?: RankBar }) {
         {entry.heroWinRate !== undefined && (
           <>
             <TooltipStat label="Hero at this rank" value={formatPercent(entry.heroWinRate)} />
-            <TooltipStat label="Vs. hero" value={formatSignedPercent(entry.winRate - entry.heroWinRate)} />
+            <TooltipStat label="Vs. hero" value={formatSignedPoints(entry.winRate - entry.heroWinRate)} />
           </>
         )}
         <TooltipStat label="Matches" value={entry.matches.toLocaleString("en-US")} />
