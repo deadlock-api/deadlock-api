@@ -223,7 +223,7 @@ export function BuildInMatches({
           <BuildByRank heroId={heroId} build={row} filters={filters} active={active} />
         </Panel>
         <Panel className="flex flex-col @2xl:order-2 @2xl:col-span-2 @4xl:col-span-3">
-          <PanelHeader title="Playstyle vs. average build" icon={Activity} size="sm" />
+          <PanelHeader title="Playstyle vs. all builds" icon={Activity} size="sm" />
           <BuildPlaystyle
             totals={performance}
             average={averagePerformance}
