@@ -5,7 +5,7 @@ import { RawWidget } from "~/components/features/streamkit/widgets/raw";
 import { withoutEmptyVariables } from "~/lib/streamkit-list";
 import type { Region } from "~/types/streamkit/widget";
 
-import type { WidgetConfig } from "./widget-config";
+import { type WidgetConfig, widgetColumns } from "./widget-config";
 
 export function buildWidgetPreview(region: string, accountId: string, config: WidgetConfig): ReactElement | null {
   if (!accountId || !region) return null;
@@ -13,7 +13,7 @@ export function buildWidgetPreview(region: string, accountId: string, config: Wi
   switch (config.widgetType) {
     case "box": {
       // The same columns the widget URL carries: an "Add Variable" left unpicked is dropped from both.
-      const { variables, labels, subtexts } = withoutEmptyVariables(config);
+      const { variables, labels, subtexts } = withoutEmptyVariables(widgetColumns(config.rows));
       return (
         <BoxWidget
           region={region as Region}

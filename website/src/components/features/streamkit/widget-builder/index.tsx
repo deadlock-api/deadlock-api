@@ -19,7 +19,7 @@ import type { Theme } from "~/types/streamkit/widget";
 import { BoxWidgetConfig } from "./BoxWidgetConfig";
 import { RawWidgetConfig } from "./RawWidgetConfig";
 import type { PreviewBackgroundColor } from "./widget-config";
-import { themes, widgetConfigReducer, widgetTypes } from "./widget-config";
+import { themes, widgetConfigReducer, widgetRows, widgetTypes } from "./widget-config";
 import { buildWidgetPreview } from "./widget-preview";
 import { buildWidgetUrl } from "./widget-url";
 
@@ -35,14 +35,12 @@ export function WidgetBuilder({ region, accountId }: WidgetBuilderProps) {
   const [config, updateConfig] = useReducer(widgetConfigReducer, {
     widgetType: widgetTypes.includes(search["widget-type"] ?? "") ? (search["widget-type"] as string) : widgetTypes[0],
     theme: "dark",
-    variables: DEFAULT_VARIABLES,
+    rows: widgetRows(DEFAULT_VARIABLES, DEFAULT_LABELS, DEFAULT_SUBTEXTS),
     variable: "wins_losses_today",
     prefix: "Score: ",
     suffix: "",
     // ds-allow color-literal: default of a viewer-chosen overlay color; a color input needs hex
     fontColor: "#ffffff",
-    labels: DEFAULT_LABELS,
-    subtexts: DEFAULT_SUBTEXTS,
     extraArgs: {},
     showHeader: true,
     showBranding: true,
@@ -59,7 +57,7 @@ export function WidgetBuilder({ region, accountId }: WidgetBuilderProps) {
   const { data: availableVariables = [] } = useQuery(availableVariablesQueryOptions);
 
   // Only the arguments the chosen variables take: a `hero_name` left from a removed variable stayed in the URL.
-  const shownVariables = config.widgetType === "raw" ? [config.variable] : config.variables;
+  const shownVariables = config.widgetType === "raw" ? [config.variable] : config.rows.map((row) => row.variable);
   const usedArgs = new Set(
     availableVariables.filter((v) => shownVariables.includes(v.name)).flatMap((v) => v.extra_args ?? []),
   );

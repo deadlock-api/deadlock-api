@@ -11,16 +11,40 @@ export const themes: { value: Theme; label: string }[] = [
 
 export type PreviewBackgroundColor = Color;
 
+/** One stat of the box widget: its variable, its label and its optional second line. `id` keys the builder row. */
+export interface WidgetRow {
+  id: number;
+  variable: string;
+  label: string;
+  subtext: string;
+}
+
+export function widgetRows(variables: readonly string[], labels: readonly string[], subtexts: readonly string[]) {
+  return variables.map((variable, id): WidgetRow => ({
+    id,
+    variable,
+    label: labels[id] ?? "",
+    subtext: subtexts[id] ?? "",
+  }));
+}
+
+/** The rows as the parallel lists the widget URL carries. */
+export function widgetColumns(rows: readonly WidgetRow[]) {
+  return {
+    variables: rows.map((row) => row.variable),
+    labels: rows.map((row) => row.label),
+    subtexts: rows.map((row) => row.subtext),
+  };
+}
+
 export interface WidgetConfig {
   widgetType: string;
   theme: Theme;
-  variables: string[];
+  rows: WidgetRow[];
   variable: string;
   prefix: string;
   suffix: string;
   fontColor: Color;
-  labels: string[];
-  subtexts: string[];
   extraArgs: { [key: string]: string };
   showHeader: boolean;
   showBranding: boolean;

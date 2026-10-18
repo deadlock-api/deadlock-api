@@ -1,8 +1,11 @@
+import { Plus, X } from "lucide-react";
+
 import { ExtraArguments } from "~/components/features/streamkit/widgets/ExtraArguments";
 import { Section } from "~/components/patterns/page/Section";
 import { Button } from "~/components/ui/button";
 import { CheckboxField } from "~/components/ui/checkbox-field";
 import { Field } from "~/components/ui/field";
+import { useFocusAfterChange } from "~/components/ui/hooks/use-focus-after-change";
 import { Input } from "~/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
 import { Slider } from "~/components/ui/slider";
@@ -11,7 +14,7 @@ import { Text } from "~/components/ui/text";
 import { snakeToPretty } from "~/lib/utils";
 import type { Variable } from "~/types/streamkit/command";
 
-import type { WidgetConfig, WidgetConfigAction } from "./widget-config";
+import type { WidgetConfig, WidgetConfigAction, WidgetRow } from "./widget-config";
 
 interface BoxWidgetConfigProps {
   config: WidgetConfig;
@@ -20,41 +23,30 @@ interface BoxWidgetConfigProps {
 }
 
 export function BoxWidgetConfig({ config, updateConfig, availableVariables }: BoxWidgetConfigProps) {
-  function updateVariable(index: number, value: string) {
-    const newVariables = [...config.variables];
-    newVariables[index] = value;
-    const newLabels = [...config.labels];
+  const { rows } = config;
+  // A removed row takes the focused Remove button with it: focus moves to the next row's, the previous one's, or Add.
+  const { ref: rowsRef, focusAfterChange } = useFocusAfterChange(rows.map((row) => row.id).join());
+
+  function updateRow(id: number, change: Partial<WidgetRow>) {
+    updateConfig({ rows: rows.map((row) => (row.id === id ? { ...row, ...change } : row)) });
+  }
+
+  function updateVariable(id: number, value: string) {
     const availableVariable = availableVariables.find((v) => v.name === value);
-    newLabels[index] = value ? (availableVariable?.default_label ?? snakeToPretty(value)) : "";
-    updateConfig({ variables: newVariables, labels: newLabels });
-  }
-
-  function updateLabel(index: number, value: string) {
-    const newLabels = [...config.labels];
-    newLabels[index] = value;
-    updateConfig({ labels: newLabels });
-  }
-
-  function updateSubtext(index: number, value: string) {
-    const newSubtexts = [...config.subtexts];
-    newSubtexts[index] = value;
-    updateConfig({ subtexts: newSubtexts });
+    updateRow(id, { variable: value, label: value ? (availableVariable?.default_label ?? snakeToPretty(value)) : "" });
   }
 
   function removeVariable(index: number) {
-    updateConfig({
-      variables: config.variables.filter((_, i) => i !== index),
-      labels: config.labels.filter((_, i) => i !== index),
-      subtexts: config.subtexts.filter((_, i) => i !== index),
-    });
+    focusAfterChange([
+      ...[rows[index + 1], rows[index - 1]].filter(Boolean).map((row) => `[data-remove-row="${row.id}"]`),
+      "[data-add-row]",
+    ]);
+    updateConfig({ rows: rows.filter((_, i) => i !== index) });
   }
 
   function addVariable() {
-    updateConfig({
-      variables: [...config.variables, ""],
-      labels: [...config.labels, ""],
-      subtexts: [...config.subtexts, ""],
-    });
+    const id = Math.max(-1, ...rows.map((row) => row.id)) + 1;
+    updateConfig({ rows: [...rows, { id, variable: "", label: "", subtext: "" }] });
   }
 
   function updateExtraArg(arg: string, value: string) {
@@ -113,60 +105,60 @@ export function BoxWidgetConfig({ config, updateConfig, availableVariables }: Bo
       </Stack>
 
       <Section as="h3" size="sm" title="Variables and Labels" className="gap-2">
-        {/* A container, so each row stacks when the builder is narrow instead of pushing Remove out of view. */}
-        <Stack gap={3} className="@container">
-          {config.variables.map((variable, index) => (
-            // eslint-disable-next-line react/no-array-index-key -- variables can be duplicated
-            <div key={index} className="flex flex-col gap-2 @md:flex-row @md:gap-3">
-              <div className="flex min-w-0 grow flex-col gap-2">
-                <div className="flex flex-col gap-2 @sm:flex-row @sm:gap-3">
-                  <Select value={variable} onValueChange={(value) => updateVariable(index, value)}>
-                    <SelectTrigger className="w-full @sm:w-1/2" aria-label={`Variable ${index + 1}`}>
-                      <SelectValue placeholder="Select a variable" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {availableVariables.map((v) => (
-                        <SelectItem key={v.name} value={v.name}>
-                          {v.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Input
-                    type="text"
-                    value={config.labels[index]}
-                    onChange={(e) => updateLabel(index, e.target.value)}
-                    className="w-full @sm:w-1/2"
-                    aria-label={`Label for variable ${index + 1}`}
-                    placeholder="Label (optional)"
-                  />
-                </div>
+        {/* A container, so the variable and its label stack when the builder is narrow. */}
+        <Stack ref={rowsRef} gap={3} className="@container">
+          {rows.map((row, index) => (
+            <div key={row.id} className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-2 gap-y-2 @md:gap-x-3">
+              <div className="flex flex-col gap-2 @sm:flex-row @sm:gap-3">
+                <Select value={row.variable} onValueChange={(value) => updateVariable(row.id, value)}>
+                  <SelectTrigger className="w-full @sm:w-1/2" aria-label={`Variable ${index + 1}`}>
+                    <SelectValue placeholder="Select a variable" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableVariables.map((v) => (
+                      <SelectItem key={v.name} value={v.name}>
+                        {v.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <Input
                   type="text"
-                  value={config.subtexts[index] ?? ""}
-                  onChange={(e) => updateSubtext(index, e.target.value)}
-                  aria-label={`Second line for variable ${index + 1}`}
-                  placeholder="Second line (optional), e.g. {rank_progress}"
+                  value={row.label}
+                  onChange={(e) => updateRow(row.id, { label: e.target.value })}
+                  className="w-full @sm:w-1/2"
+                  aria-label={`Label for variable ${index + 1}`}
+                  placeholder="Label (optional)"
                 />
               </div>
               <Button
-                variant="destructive"
-                className="self-end @md:self-start"
+                variant="ghost"
+                size="icon"
+                className="self-start"
+                data-remove-row={row.id}
                 onClick={() => removeVariable(index)}
                 aria-label={`Remove variable ${index + 1}`}
               >
-                Remove
+                <X aria-hidden="true" />
               </Button>
+              <Input
+                type="text"
+                value={row.subtext}
+                onChange={(e) => updateRow(row.id, { subtext: e.target.value })}
+                aria-label={`Second line for variable ${index + 1}`}
+                placeholder="Second line (optional), e.g. {rank_progress}"
+              />
             </div>
           ))}
           <ExtraArguments
             extraArgs={availableVariables
-              .filter((v) => config.variables.includes(v.name))
+              .filter((v) => rows.some((row) => row.variable === v.name))
               .flatMap((v) => v.extra_args ?? [])}
             extraValues={config.extraArgs || {}}
             onChange={updateExtraArg}
           />
-          <Button onClick={addVariable} className="self-start">
+          <Button variant="outline" data-add-row onClick={addVariable} className="self-start">
+            <Plus aria-hidden="true" />
             Add Variable
           </Button>
         </Stack>

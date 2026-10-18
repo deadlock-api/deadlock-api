@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import type { WidgetConfig } from "~/components/features/streamkit/widget-builder/widget-config";
+import { type WidgetConfig, widgetRows } from "~/components/features/streamkit/widget-builder/widget-config";
 import { widgetSearchParams } from "~/components/features/streamkit/widget-builder/widget-url";
 
 import { splitWidgetList } from "./streamkit-list";
@@ -10,13 +10,11 @@ import { readWidgetFlag, readWidgetInt, readWidgetSearch } from "./streamkit-wid
 const base: WidgetConfig = {
   widgetType: "raw",
   theme: "dark",
-  variables: [],
+  rows: [],
   variable: "wins_losses_today",
   prefix: "",
   suffix: "",
   fontColor: "#ffffff",
-  labels: [],
-  subtexts: [],
   extraArgs: {},
   showHeader: true,
   showBranding: true,
@@ -54,9 +52,7 @@ test("a box widget's labels and second lines come back exactly as typed", () => 
   const search = roundTrip({
     ...base,
     widgetType: "box",
-    variables: ["total_kd", "", "wins_today"],
-    labels: ['"KD" ', "dropped", "1.50"],
-    subtexts: ["null", "", " {rank_progress}"],
+    rows: widgetRows(["total_kd", "", "wins_today"], ['"KD" ', "dropped", "1.50"], ["null", "", " {rank_progress}"]),
   });
   assert.deepEqual(splitWidgetList(search.vars), ["total_kd", "wins_today"]);
   assert.deepEqual(splitWidgetList(search.labels), ['"KD" ', "1.50"]);
@@ -66,7 +62,7 @@ test("a box widget's labels and second lines come back exactly as typed", () => 
 });
 
 test("a box widget with every stat removed says so instead of leaving vars out", () => {
-  const search = roundTrip({ ...base, widgetType: "box", variables: [""], labels: ["Rank"] });
+  const search = roundTrip({ ...base, widgetType: "box", rows: widgetRows([""], ["Rank"], []) });
   assert.equal(search.vars, "");
   assert.equal(search.labels, undefined);
 });

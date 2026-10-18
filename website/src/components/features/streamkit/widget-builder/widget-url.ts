@@ -1,6 +1,6 @@
 import { joinWidgetList, withoutEmptyVariables } from "~/lib/streamkit-list";
 
-import type { WidgetConfig } from "./widget-config";
+import { type WidgetConfig, widgetColumns } from "./widget-config";
 
 /** The widget's settings as its query string; `readWidgetSearch` reads each value back unchanged. */
 export function widgetSearchParams(config: WidgetConfig): URLSearchParams | null {
@@ -10,7 +10,7 @@ export function widgetSearchParams(config: WidgetConfig): URLSearchParams | null
   }
   switch (config.widgetType) {
     case "box": {
-      const { variables, labels = [], subtexts = [] } = withoutEmptyVariables(config);
+      const { variables, labels = [], subtexts = [] } = withoutEmptyVariables(widgetColumns(config.rows));
       // Always written: without it the widget shows its five defaults, so an empty list means "no stats".
       params.set("vars", joinWidgetList(variables));
       if (labels.length > 0) params.set("labels", joinWidgetList(labels));
