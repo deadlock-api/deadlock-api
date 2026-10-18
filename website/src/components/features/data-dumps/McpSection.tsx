@@ -103,11 +103,6 @@ export function McpInstructions() {
   const [client, setClient] = useState(CLIENTS[0].id);
   return (
     <Stack gap={4}>
-      <Text as="p" className="leading-relaxed">
-        Connect your AI assistant and ask questions about the data in plain language. The server is read-only, free, and
-        needs no account or API key. It exposes every table in the snapshot and updates itself with each dump.
-      </Text>
-
       <CopyableUrl label="MCP URL" value={MCP_URL} />
 
       <Stack gap={2}>

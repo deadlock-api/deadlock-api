@@ -42,7 +42,6 @@ function IngestCache() {
       <PageHeader
         size="lg"
         title="Get your matches on Deadlock trackers"
-        description="Statlocker, Tracklock and other trackers can only show the matches someone has sent in. Install the background tool once and every match you play gets sent."
         actions={
           <>
             <InstallButton placement="ingest_header" />

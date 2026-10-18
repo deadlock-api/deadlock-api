@@ -73,12 +73,10 @@ function BotFriendCell({ botFriendQuery }: { botFriendQuery: BotFriendQuery }) {
   if (!status.is_friend) {
     return (
       <>
-        <Tooltip content="The bot needs to be your Steam friend to access your match history for priority ingestion">
-          <Button variant="destructive-soft" size="xs" onClick={() => setDialogOpen(true)}>
-            <AlertTriangle />
-            Add bot friend
-          </Button>
-        </Tooltip>
+        <Button variant="destructive-soft" size="xs" onClick={() => setDialogOpen(true)}>
+          <AlertTriangle />
+          Add bot friend
+        </Button>
         <AddBotDialog
           open={dialogOpen}
           onOpenChange={setDialogOpen}

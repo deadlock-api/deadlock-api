@@ -8,20 +8,11 @@ import { ResultGrid } from "~/components/patterns/data-table/ResultGrid";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { Button } from "~/components/ui/button";
 import { Card } from "~/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogStatus,
-  DialogTitle,
-} from "~/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogStatus, DialogTitle } from "~/components/ui/dialog";
 import { Heading } from "~/components/ui/heading";
-import { Kbd } from "~/components/ui/kbd";
 import { Spinner } from "~/components/ui/spinner";
 import { Inline, Stack } from "~/components/ui/stack";
 import { Text } from "~/components/ui/text";
-import { TextLink } from "~/components/ui/text-link";
 import {
   type DuckDbHandle,
   type QueryColumn,
@@ -213,19 +204,17 @@ export function SqlPlayground({ open, onOpenChange, tables, schemaByTable, query
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent size="full" className="h-7/8 grid-rows-[auto_1fr] gap-3 p-4" showCloseButton>
+      <DialogContent
+        size="full"
+        aria-describedby={undefined}
+        className="h-7/8 grid-rows-[auto_1fr] gap-3 p-4"
+        showCloseButton
+      >
         <DialogHeader className="gap-1">
           <Inline gap={3} align="baseline">
             <DialogTitle>SQL Playground</DialogTitle>
             <DialogStatus>{getInitMessage(initState, initError, tables.length)}</DialogStatus>
           </Inline>
-          <DialogDescription>
-            Run SQL against the parquet files directly in your browser via{" "}
-            <TextLink href="https://duckdb.org/docs/api/wasm/overview" target="_blank" rel="noopener noreferrer">
-              DuckDB-Wasm
-            </TextLink>
-            . Press <Kbd>⌘/Ctrl + Enter</Kbd> to run.
-          </DialogDescription>
         </DialogHeader>
 
         <div className="grid min-h-0 gap-3 lg:grid-cols-2">
@@ -273,7 +262,13 @@ export function SqlPlayground({ open, onOpenChange, tables, schemaByTable, query
                   Cancel
                 </Button>
               ) : (
-                <Button onClick={runQuery} disabled={initState !== "ready"} size="sm" className="gap-1.5">
+                <Button
+                  onClick={runQuery}
+                  disabled={initState !== "ready"}
+                  size="sm"
+                  aria-keyshortcuts="Control+Enter Meta+Enter"
+                  className="gap-1.5"
+                >
                   <Play className="size-3.5" />
                   Run query
                 </Button>
@@ -307,11 +302,6 @@ export function SqlPlayground({ open, onOpenChange, tables, schemaByTable, query
                 <Heading as="h3" size="sm">
                   Results
                 </Heading>
-                {result?.truncated && !queryError && (
-                  <Text variant="caption" tone="muted">
-                    Showing the first {RESULT_ROW_LIMIT} rows · add a LIMIT or aggregate to see the rest
-                  </Text>
-                )}
               </Inline>
               {result && !queryError && (
                 <Button

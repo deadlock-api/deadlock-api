@@ -128,11 +128,7 @@ function DataDumps() {
 
   return (
     <PageShell density="content" width="wide">
-      <PageHeader
-        size="lg"
-        title="MCP & Data Lake"
-        description="The public tables of the Deadlock API database are exported every hour to a public data lake. Query it from your AI assistant via MCP, attach it in DuckDB, or download the Parquet files for offline analysis, research, or community projects. No credentials needed."
-      />
+      <PageHeader size="lg" title="MCP & Data Lake" />
 
       <Stack gap={3}>
         <ManifestUrlBar onOpenPlayground={() => setPlaygroundOpen(true)} />

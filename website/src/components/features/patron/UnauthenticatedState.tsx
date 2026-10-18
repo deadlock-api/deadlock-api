@@ -54,7 +54,6 @@ export function UnauthenticatedState({ onLogin }: { onLogin: () => void }) {
               Your matches. Updated <span className="text-primary">faster</span>.
             </>
           }
-          description="Patron accounts get a dedicated queue with reserved resources, guaranteeing fast and reliable data fetching for your match history and stats. Data is upstreamed to Statlocker, Tracklock, Lockblaze, or your favorite stat tracking site."
         />
         <HeroActions>
           <Button size="lg" onClick={onLogin}>
