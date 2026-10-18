@@ -103,88 +103,93 @@ export default function GamesOverview({ params, prevParams, isStreetBrawl = fals
     ) : null;
 
   return (
-    <StaleOverlay
-      active={isRefetching || isRefetchingPrev}
-      label="game stats"
-      className="grid grid-cols-1 gap-4 lg:grid-cols-2"
-    >
-      {getFilteredCategories(isStreetBrawl).map((category) => {
-        const Icon = CATEGORY_ICONS[category.label];
-        // Fields the game stopped reporting still come back as an exact 0 average.
-        const stats = category.stats.filter((stat) => current[stat.key] !== 0);
-        if (stats.length === 0) return null;
-        const isWide = stats.length > 6;
+    <StaleOverlay active={isRefetching || isRefetchingPrev} label="game stats" className="@container/overview">
+      {/* Columns by the room the page has, not the screen: a third one on a wide page, so a label and its value sit
+          close instead of a whole half-screen apart. Panels in one row share its height. */}
+      <div className="grid grid-cols-1 gap-4 @2xl/overview:grid-cols-2 @7xl/overview:grid-cols-3">
+        {getFilteredCategories(isStreetBrawl).map((category) => {
+          const Icon = CATEGORY_ICONS[category.label];
+          // Fields the game stopped reporting still come back as an exact 0 average.
+          const stats = category.stats.filter((stat) => current[stat.key] !== 0);
+          if (stats.length === 0) return null;
+          const isWide = stats.length > 6;
 
-        return (
-          <Panel key={category.label} className={cn("@container", isWide && "lg:col-span-2")}>
-            <PanelHeader title={category.label} icon={Icon} size="sm" />
+          return (
+            <Panel
+              key={category.label}
+              className={cn("@container", isWide && "@2xl/overview:col-span-2 @7xl/overview:col-span-3")}
+            >
+              <PanelHeader title={category.label} icon={Icon} size="sm" />
 
-            <div className={cn(isWide && "@2xl:grid @2xl:grid-cols-2")}>
-              {stats.map((stat) => {
-                const value = current[stat.key];
-                const prevValue = TOTAL_STATS.has(stat.key) && !compareTotals ? undefined : prev?.[stat.key];
-                const inPoints = stat.format === "percent";
-                const delta = statDelta(stat.format, value, prevValue);
+              <div className={cn(isWide && "@2xl:grid @2xl:grid-cols-2 @6xl:grid-cols-3")}>
+                {stats.map((stat) => {
+                  const value = current[stat.key];
+                  const prevValue = TOTAL_STATS.has(stat.key) && !compareTotals ? undefined : prev?.[stat.key];
+                  const inPoints = stat.format === "percent";
+                  const delta = statDelta(stat.format, value, prevValue);
 
-                return (
-                  <Fragment key={stat.key}>
-                    <Tooltip
-                      variant="preview"
-                      // Beside the row, not below it: below, the card covered the next rows of the list.
-                      side="left"
-                      content={
-                        <Suspense
-                          fallback={<LoadingState label="trend" className="flex h-62.5 items-center justify-center" />}
-                        >
-                          <StatTrendChart params={params} stat={stat} />
-                        </Suspense>
-                      }
-                    >
-                      <Button
-                        variant="row"
-                        className="justify-between px-4 py-2.5"
-                        data-find={findKey.stat(stat.key)}
-                        asChild
+                  return (
+                    <Fragment key={stat.key}>
+                      <Tooltip
+                        variant="preview"
+                        // Beside the row, not below it: below, the card covered the next rows of the list.
+                        side="left"
+                        content={
+                          <Suspense
+                            fallback={
+                              <LoadingState label="trend" className="flex h-62.5 items-center justify-center" />
+                            }
+                          >
+                            <StatTrendChart params={params} stat={stat} />
+                          </Suspense>
+                        }
                       >
-                        {/* A link: the row opens this stat on the Over Time tab, in this tab or a new one. */}
-                        <Link
-                          to="/analytics/games/over-time"
-                          search={(prev: Record<string, unknown>) => ({ ...prev, tab: undefined, stat: stat.key })}
-                          resetScroll={false}
-                          preload="intent"
+                        <Button
+                          variant="row"
+                          className="justify-between px-4 py-2.5"
+                          data-find={findKey.stat(stat.key)}
+                          asChild
                         >
-                          <span className="text-start text-sm text-muted-foreground">{stat.label}</span>
-                          <span className="flex items-center gap-2.5">
-                            <span className="text-sm font-semibold tabular-nums">
-                              {/* A stat the game only records since an update has no value over older matches. */}
-                              {value == null && stat.recordedSince ? (
-                                <NoValue label={BUFF_TIMINGS_NOTE} />
-                              ) : (
-                                (formatStatValue(value, stat.format) ?? <NoValue label="No data" />)
+                          {/* A link: the row opens this stat on the Over Time tab, in this tab or a new one. */}
+                          <Link
+                            to="/analytics/games/over-time"
+                            search={(prev: Record<string, unknown>) => ({ ...prev, tab: undefined, stat: stat.key })}
+                            resetScroll={false}
+                            preload="intent"
+                          >
+                            <span className="text-start text-sm text-muted-foreground">{stat.label}</span>
+                            <span className="flex items-center gap-2.5">
+                              <span className="text-sm font-semibold tabular-nums">
+                                {/* A stat the game only records since an update has no value over older matches. */}
+                                {value == null && stat.recordedSince ? (
+                                  <NoValue label={BUFF_TIMINGS_NOTE} />
+                                ) : (
+                                  (formatStatValue(value, stat.format) ?? <NoValue label="No data" />)
+                                )}
+                              </span>
+                              {delta != null && (
+                                <Delta
+                                  value={delta}
+                                  unit={inPoints ? " pp" : undefined}
+                                  polarity={stat.polarity ?? "neutral"}
+                                  sign="arrow"
+                                  display="badge"
+                                  className="min-w-13 font-normal"
+                                />
                               )}
                             </span>
-                            {delta != null && (
-                              <Delta
-                                value={delta}
-                                unit={inPoints ? " pp" : undefined}
-                                polarity={stat.polarity ?? "neutral"}
-                                sign="arrow"
-                                display="badge"
-                                className="min-w-13 font-normal"
-                              />
-                            )}
-                          </span>
-                        </Link>
-                      </Button>
-                    </Tooltip>
-                    {stat.key === "total_players" && teamWinRow}
-                  </Fragment>
-                );
-              })}
-            </div>
-          </Panel>
-        );
-      })}
+                          </Link>
+                        </Button>
+                      </Tooltip>
+                      {stat.key === "total_players" && teamWinRow}
+                    </Fragment>
+                  );
+                })}
+              </div>
+            </Panel>
+          );
+        })}
+      </div>
     </StaleOverlay>
   );
 }
