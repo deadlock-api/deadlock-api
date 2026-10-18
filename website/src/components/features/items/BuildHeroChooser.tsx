@@ -15,14 +15,15 @@ export function BuildHeroChooser({ onPick }: { onPick: (heroId: number) => void 
     <Panel>
       <PanelHeader title="Pick a hero" icon={UserRound} size="sm" />
       <PanelBody size="sm">
-        {/* Portrait and name, in as many columns as fit: names a first-timer can read, three rows or so. */}
-        <ul aria-label="Heroes" className="grid grid-cols-[repeat(auto-fill,minmax(5.5rem,1fr))] gap-1">
+        {/* Portrait and name, in as many 4rem columns as fit: names a first-timer can read, three rows on a desktop and
+            four columns on a phone. */}
+        <ul aria-label="Heroes" className="grid grid-cols-[repeat(auto-fill,minmax(4rem,1fr))] gap-1">
           {heroes.map((hero) => (
             <li key={hero.id}>
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-auto w-full flex-col gap-1 py-1.5"
+                className="h-auto w-full flex-col gap-1 px-1 py-1.5"
                 onClick={() => onPick(hero.id)}
               >
                 <HeroImage heroId={hero.id} shape="circle" title="" className="size-8" />
