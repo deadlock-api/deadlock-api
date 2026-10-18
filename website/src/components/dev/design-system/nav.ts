@@ -174,7 +174,17 @@ export const NAV: readonly NavChapter[] = [
       },
       {
         title: "Content",
-        items: ["LinkCard", "CalloutCard", "Disclosure", "Prose", "Steps", "BulletList", "MetaList", "LogoWallItem"],
+        items: [
+          "LinkCard",
+          "CalloutCard",
+          "Disclosure",
+          "Prose",
+          "Steps",
+          "BulletList",
+          "MetaList",
+          "LogoWallItem",
+          "FitFrame",
+        ],
       },
       {
         title: "Navigation",

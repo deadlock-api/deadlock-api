@@ -3,6 +3,7 @@ import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useReducer, useRef } from "react";
 
 import { UrlDisplay } from "~/components/features/streamkit/command/UrlDisplay";
+import { FitFrame } from "~/components/patterns/content/FitFrame";
 import { Section } from "~/components/patterns/page/Section";
 import { Card } from "~/components/ui/card";
 import { CheckboxField } from "~/components/ui/checkbox-field";
@@ -143,8 +144,7 @@ export function WidgetBuilder({ region, accountId }: WidgetBuilderProps) {
                 tone="muted"
                 size="flush"
                 radius="lg"
-                // A widget wider than the column scrolls instead of being clipped on both sides by the centring.
-                className="items-center-safe justify-center overflow-x-auto p-4"
+                className="p-4"
                 style={
                   config.previewBackgroundImage
                     ? {
@@ -156,9 +156,12 @@ export function WidgetBuilder({ region, accountId }: WidgetBuilderProps) {
                     : { backgroundColor: config.previewBackgroundColor }
                 }
               >
-                <div ref={previewRef} className="flex w-fit">
-                  {widgetPreview}
-                </div>
+                {/* A widget wider than the column is shown whole, scaled down, rather than clipped or scrolled. */}
+                <FitFrame>
+                  <div ref={previewRef} className="flex w-fit">
+                    {widgetPreview}
+                  </div>
+                </FitFrame>
               </Card>
             )}
 

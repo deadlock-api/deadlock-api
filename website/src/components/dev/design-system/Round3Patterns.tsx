@@ -18,6 +18,7 @@ import { Specimen, Variants } from "~/components/dev/design-system/Specimen";
 import { BulletItem, BulletList } from "~/components/patterns/content/BulletList";
 import { CalloutCard } from "~/components/patterns/content/CalloutCard";
 import { Disclosure } from "~/components/patterns/content/Disclosure";
+import { FitFrame } from "~/components/patterns/content/FitFrame";
 import { LinkCard } from "~/components/patterns/content/LinkCard";
 import { LogoWallItem } from "~/components/patterns/content/LogoWall";
 import { MetaItem, MetaList } from "~/components/patterns/content/MetaList";
@@ -549,6 +550,26 @@ function ContentSpecimens() {
             </LogoWallItem>
           ))}
         </Inline>
+      </Specimen>
+
+      <Specimen
+        name="FitFrame"
+        source="patterns/content/FitFrame"
+        note="Content of a fixed design size (a stream overlay preview) shown whole: wider than the frame it is scaled down and centred, and the frame takes the scaled height; never scaled up. The content keeps its layout size, so measuring it reads the real size."
+      >
+        <Variants label="a 640px-wide block in a 280px and a 720px frame" className="items-start gap-6">
+          {[280, 720].map((width) => (
+            <div key={width} style={{ width }}>
+              <FitFrame>
+                <Card size="sm" className="w-160">
+                  <CardContent>
+                    <Text>A 640px design, shown whole.</Text>
+                  </CardContent>
+                </Card>
+              </FitFrame>
+            </div>
+          ))}
+        </Variants>
       </Specimen>
     </>
   );
