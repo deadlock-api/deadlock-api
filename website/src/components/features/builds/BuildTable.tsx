@@ -245,10 +245,10 @@ export function BuildTable({
         <SearchInput
           value={query}
           onValueChange={setQuery}
-          placeholder="Name, author or ID"
+          placeholder="Name or author"
           aria-label="Filter builds by name, author or ID"
           size="sm"
-          className="w-full @sm:ms-auto @sm:w-60"
+          className="w-full @sm:ms-auto @sm:w-44"
         />
         <Segmented size="sm" width="hug" value={view} onValueChange={setView} aria-label="Columns">
           <SegmentedItem value="overview">Overview</SegmentedItem>
