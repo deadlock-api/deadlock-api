@@ -78,7 +78,8 @@ export function HeroDetailsTooltip({
   const avgCreepDmg = row.total_creep_damage / row.matches;
   const avgNeutralDmg = row.total_neutral_damage / row.matches;
   const totalShots = row.total_shots_hit + row.total_shots_missed;
-  const accuracy = totalShots > 0 ? (row.total_shots_hit / totalShots) * 100 : 0;
+  // No shots recorded is no reading, not 0% accuracy.
+  const accuracy = totalShots > 0 ? (row.total_shots_hit / totalShots) * 100 : undefined;
   const mult = pickrateMultiplier ?? 1;
   const avgBuffs = row.permanent_buff_matches > 0 ? row.total_permanent_buffs / row.permanent_buff_matches : undefined;
   // Pickup times exist only for matches since the City Never Sleeps update: older ranges have none, not a zero.
@@ -153,7 +154,10 @@ export function HeroDetailsTooltip({
           </DetailGroup>
           <Separator />
           <DetailGroup title="Shooting">
-            <TooltipStat label="Accuracy" value={`${accuracy.toFixed(1)}%`} />
+            <TooltipStat
+              label="Accuracy"
+              value={accuracy === undefined ? <NoValue label="No shots recorded" /> : `${accuracy.toFixed(1)}%`}
+            />
             <TooltipStat label="Shots Hit" value={row.total_shots_hit.toLocaleString("en-US")} />
             <TooltipStat label="Shots Missed" value={row.total_shots_missed.toLocaleString("en-US")} />
           </DetailGroup>

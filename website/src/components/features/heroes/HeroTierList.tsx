@@ -51,7 +51,8 @@ function HeroTile({ hero, ranked, metric }: { hero: SlimHero; ranked: RankedHero
             <TooltipStat label="Tier score" value={ranked.score.toFixed(2)} />
             {!draft && (
               <TooltipStat
-                label={`${TIER_METRIC_DEFINITIONS[metric].label} per match`}
+                // KDA and accuracy are ratios over all matches, not per-match counts.
+                label={`${TIER_METRIC_DEFINITIONS[metric].label}${metric === "kda" || metric === "accuracy" ? "" : " per match"}`}
                 value={formatReading(metric, ranked.reading)}
               />
             )}

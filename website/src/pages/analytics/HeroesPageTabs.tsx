@@ -428,10 +428,9 @@ export function HeroScoreboardTab({ filters }: { filters: HeroFilters }) {
       <QueryRenderer
         query={scoreboardQuery}
         loadingFallback={<LoadingState label="hero scoreboard" align="center" />}
-        errorFallback={(error) => (
+        errorFallback={() => (
           <ErrorState
             title="Failed to load scoreboard"
-            description={error.message}
             onRetry={() => void scoreboardQuery.refetch()}
             retrying={scoreboardQuery.isFetching}
           />
