@@ -470,7 +470,7 @@ export function Patterns() {
       <Specimen
         name="PaginationControls"
         source="patterns/data-table/PaginationControls"
-        note='Rows per page and paging in one wrapping row; a SearchInput child takes the row it wraps onto. size="sm" shrinks every control for panels and dialogs. placement="footer" repeats only the paging under a long table.'
+        note='Rows per page and paging in one wrapping row: the children together at the start, the paging at the end; a SearchInput child takes the row it wraps onto. size="sm" shrinks every control for panels and dialogs. placement="footer" repeats only the paging under a long table.'
       >
         <Variants label="default" className="block">
           <PaginationControls

@@ -92,6 +92,14 @@ export function LeaderboardTable({ leaderboard, label, onHeroClick }: Leaderboar
     [filteredEntries, sortedEntries, itemsPerPage, setCurrentPage, setSearchQuery],
   );
 
+  // The page's rows split into two boards for a wide screen. The first takes an even count, so the stripes run on
+  // unbroken when the second continues it underneath.
+  const firstColumnSize = Math.ceil(paginatedEntries.length / 4) * 2;
+  const columns =
+    paginatedEntries.length > 1
+      ? [paginatedEntries.slice(0, firstColumnSize), paginatedEntries.slice(firstColumnSize)]
+      : [paginatedEntries];
+
   const controlProps = {
     onJumpToRank: jumpToRank,
     searchQuery,
@@ -113,31 +121,44 @@ export function LeaderboardTable({ leaderboard, label, onHeroClick }: Leaderboar
         noun="player"
         query={deferredSearchQuery}
       />
-      <Table density="compact" className="tabular-nums">
-        <TableCaption visibility="sr-only">{label}</TableCaption>
-        <TableHeader tone="muted">
-          <TableRow>
-            <TableHead className="w-12 text-end">
-              <span aria-hidden="true">#</span>
-              <span className="sr-only">Rank</span>
-            </TableHead>
-            <TableHead>Account Name</TableHead>
-            {shouldShowTopHeroesColumn && <TableHead className="min-w-28 text-end">Top Heroes</TableHead>}
-          </TableRow>
-        </TableHeader>
-        <TableBody aria-busy={searchQuery !== deferredSearchQuery}>
-          {paginatedEntries.map((entry) => (
-            <LeaderboardTableRow
-              key={`${entry.account_name}-${entry.rank}`}
-              entry={entry}
-              isHighlighted={entry.rank === highlightedRank}
-              shouldShowTopHeroesColumn={shouldShowTopHeroesColumn}
-              onHeroClick={onHeroClick}
-            />
+      {/* From a container of 80rem the page's rows flow into two side-by-side boards that share their row height, so a
+          wide screen shows twice the ranks and a hero sits beside its name instead of 2000px away. Narrower, the
+          second board continues the first under it, without a second head row. */}
+      <div className="@container">
+        <div className="grid gap-x-6 @7xl:grid-cols-2">
+          {columns.map((rows, column) => (
+            <Table key={column} density="compact" className="tabular-nums">
+              <TableCaption visibility="sr-only">
+                {columns.length > 1 && rows.length > 0
+                  ? `${label}, ranks ${rows[0].rank} to ${rows.at(-1)?.rank}`
+                  : label}
+              </TableCaption>
+              <TableHeader tone="muted" className={column > 0 ? "hidden @7xl:table-header-group" : undefined}>
+                <TableRow>
+                  <TableHead className="w-12 text-end">
+                    <span aria-hidden="true">#</span>
+                    <span className="sr-only">Rank</span>
+                  </TableHead>
+                  <TableHead>Account Name</TableHead>
+                  {shouldShowTopHeroesColumn && <TableHead className="min-w-28 text-end">Top Heroes</TableHead>}
+                </TableRow>
+              </TableHeader>
+              <TableBody aria-busy={searchQuery !== deferredSearchQuery}>
+                {rows.map((entry) => (
+                  <LeaderboardTableRow
+                    key={`${entry.account_name}-${entry.rank}`}
+                    entry={entry}
+                    isHighlighted={entry.rank === highlightedRank}
+                    shouldShowTopHeroesColumn={shouldShowTopHeroesColumn}
+                    onHeroClick={onHeroClick}
+                  />
+                ))}
+                {paginatedEntries.length === 0 && <TableEmptyRow colSpan={shouldShowTopHeroesColumn ? 3 : 2} />}
+              </TableBody>
+            </Table>
           ))}
-          {paginatedEntries.length === 0 && <TableEmptyRow colSpan={shouldShowTopHeroesColumn ? 3 : 2} />}
-        </TableBody>
-      </Table>
+        </div>
+      </div>
       <LeaderboardControls placement="footer" {...controlProps} />
     </div>
   );

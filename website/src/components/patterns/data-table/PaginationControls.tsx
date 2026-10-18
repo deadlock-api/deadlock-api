@@ -62,14 +62,15 @@ export function PaginationControls({
         // A search takes the rest of the row it wraps onto, rather than leaving a phone-wide gap beside it.
         "[&>:where([data-slot=search-input])]:flex-1 [&>:where([data-slot=search-input])]:basis-full @lg:[&>:where([data-slot=search-input])]:w-48 @lg:[&>:where([data-slot=search-input])]:flex-none @lg:[&>:where([data-slot=search-input])]:basis-auto",
         compact && "gap-x-2 gap-y-1 py-1",
-        footer && "justify-end",
         className,
       )}
       {...props}
     >
       {!footer && children}
+      {/* The paging cluster starts here and sits at the end (`ms-auto`); the children stay together at the start, so
+          on a wide table the controls do not spread across its whole width. */}
       {!footer && (
-        <div className={cn("flex items-center gap-2", compact && "gap-1")}>
+        <div className={cn("ms-auto flex items-center gap-2", compact && "gap-1")}>
           <span className={cn("text-sm text-muted-foreground", compact && "text-xs")}>
             {/* Short words and arrows below @md, so a phone fits the controls on one or two rows instead of five. */}
             {compact ? (
@@ -97,7 +98,13 @@ export function PaginationControls({
           </Select>
         </div>
       )}
-      <span className={cn("flex items-center text-sm text-muted-foreground", compact ? "gap-1 text-xs" : "gap-3")}>
+      <span
+        className={cn(
+          "flex items-center text-sm text-muted-foreground",
+          compact ? "gap-1 text-xs" : "gap-3",
+          footer && "ms-auto",
+        )}
+      >
         {!compact && <span className="hidden @md:inline">Page</span>}
         <span>
           <Input
