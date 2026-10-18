@@ -4,6 +4,8 @@ import { Lock, ShieldX } from "lucide-react";
 
 import { InstallButton } from "~/components/domain/ingest/InstallButton";
 import { INGEST_INSTALL_PATH, INGEST_TRACKER_WINDOW_DAYS } from "~/components/domain/ingest/links";
+import { PageHeader } from "~/components/patterns/page/PageHeader";
+import { PageShell } from "~/components/patterns/page/PageShell";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { Button } from "~/components/ui/button";
@@ -15,21 +17,36 @@ import { IS_DEV } from "~/lib/constants";
 import { steamAccountsQueryOptions } from "~/queries/patron-queries";
 import { trackerIngestStatusQueryOptions } from "~/queries/tracker-queries";
 
+/**
+ * What the page shows instead of the tracker: it still has the page's one h1, which the tracker's own header carries
+ * once it opens. The cards below title themselves at h2.
+ */
+function GateShell({ children }: { children: React.ReactNode }) {
+  return (
+    <PageShell>
+      <PageHeader title="Player tracker" className="sr-only" />
+      {children}
+    </PageShell>
+  );
+}
+
 function GateCard({ icon, title, children }: { icon: React.ReactNode; title: string; children: React.ReactNode }) {
   return (
-    <div className="mx-auto max-w-xl py-16">
-      <Card>
-        <CardContent className="flex flex-col items-center gap-4 p-8 text-center">
-          <IconTile shape="circle" size="lg" tone="primary">
-            {icon}
-          </IconTile>
-          <Heading as="h2" size="2xl">
-            {title}
-          </Heading>
-          {children}
-        </CardContent>
-      </Card>
-    </div>
+    <GateShell>
+      <div className="mx-auto max-w-xl py-16">
+        <Card>
+          <CardContent className="flex flex-col items-center gap-4 p-8 text-center">
+            <IconTile shape="circle" size="lg" tone="primary">
+              {icon}
+            </IconTile>
+            <Heading as="h2" size="2xl">
+              {title}
+            </Heading>
+            {children}
+          </CardContent>
+        </Card>
+      </div>
+    </GateShell>
   );
 }
 
@@ -64,20 +81,26 @@ export function TrackerGate({ accountId, children }: { accountId: number; childr
   // Until both answer, a visitor would see the sign-in gate flash before the profile. A failed ingest check falls back
   // to the Patreon gate rather than blocking it.
   if (ingestQuery.isPending || isLoading || !isResolved || (isAuthenticated && hasSlots && accountsQuery.isPending)) {
-    return <LoadingState label="player tracker" align="center" />;
+    return (
+      <GateShell>
+        <LoadingState label="player tracker" align="center" />
+      </GateShell>
+    );
   }
 
   // An outage is not a sign-out: offer a retry rather than the sign-in gate.
   if (statusError) {
     return (
-      <div className="mx-auto w-full max-w-xl py-16">
-        <ErrorState
-          title="Could not check your sign-in"
-          description="The Patreon status is temporarily unavailable. Try again in a moment."
-          onRetry={() => void refreshStatus()}
-          retrying={isRefreshingStatus}
-        />
-      </div>
+      <GateShell>
+        <div className="mx-auto w-full max-w-xl py-16">
+          <ErrorState
+            title="Could not check your sign-in"
+            description="The Patreon status is temporarily unavailable. Try again in a moment."
+            onRetry={() => void refreshStatus()}
+            retrying={isRefreshingStatus}
+          />
+        </div>
+      </GateShell>
     );
   }
 
@@ -120,14 +143,16 @@ export function TrackerGate({ accountId, children }: { accountId: number; childr
     false;
   if (accountsQuery.isError && !isOwnAccount) {
     return (
-      <div className="mx-auto max-w-xl py-16">
-        <ErrorState
-          title="Could not check your accounts"
-          description="We could not load your prioritized accounts. Try again to open this player's tracker."
-          onRetry={() => accountsQuery.refetch()}
-          retrying={accountsQuery.isFetching}
-        />
-      </div>
+      <GateShell>
+        <div className="mx-auto max-w-xl py-16">
+          <ErrorState
+            title="Could not check your accounts"
+            description="We could not load your prioritized accounts. Try again to open this player's tracker."
+            onRetry={() => accountsQuery.refetch()}
+            retrying={accountsQuery.isFetching}
+          />
+        </div>
+      </GateShell>
     );
   }
 
