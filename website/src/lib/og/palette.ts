@@ -19,18 +19,16 @@ export const OG = {
   primarySoft: "#25161d",
 } as const;
 
-/** `SERIES_COLORS` in the same order: a player's color on the card is their color on the page. */
-export const OG_SERIES = [
-  // ds-allow color-literal: --chart-1 (red-500)
+/** `COMPARE_COLORS` in the same order: a player's color on the compare card is their color on the page. */
+export const OG_COMPARE = [
+  // ds-allow color-literal: --compare-1 (red-500)
   "#fa4454",
-  // ds-allow color-literal: --chart-2 (series-green)
+  // ds-allow color-literal: --compare-2 (series-green)
   "#199e70",
-  // ds-allow color-literal: --chart-3 (series-yellow)
-  "#c98500",
-  // ds-allow color-literal: --chart-4 (series-blue)
-  "#3987e5",
-  // ds-allow color-literal: --chart-5 (series-orange)
-  "#d95926",
-  // ds-allow color-literal: --chart-6 (series-violet)
-  "#9085e9",
+  // ds-allow color-literal: --compare-3 (series-steel)
+  "#3d74b0",
+  // ds-allow color-literal: --compare-4 (series-purple)
+  "#a46bf5",
+  // ds-allow color-literal: --compare-5 (series-plum)
+  "#aa4a80",
 ] as const;

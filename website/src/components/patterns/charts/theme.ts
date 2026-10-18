@@ -73,6 +73,18 @@ export const SERIES_COLORS = [
   "var(--chart-8)",
 ] as const;
 
+/**
+ * The players of a comparison, one color a slot. Unlike `SERIES_COLORS` any two of them can share a chart (a player's
+ * slot is hashed from their account id), so every pair is told apart under color blindness, not only neighbours.
+ */
+export const COMPARE_COLORS = [
+  "var(--compare-1)",
+  "var(--compare-2)",
+  "var(--compare-3)",
+  "var(--compare-4)",
+  "var(--compare-5)",
+] as const;
+
 /** Series whose meaning is fixed across the site, so their color is too. */
 export const CHART_COLOR = {
   primary: "var(--primary)",

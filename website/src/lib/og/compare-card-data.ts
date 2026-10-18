@@ -29,7 +29,7 @@ import { ranksQueryOptions } from "~/queries/ranks-query";
 import { steamProfilesQueryOptions } from "~/queries/steam-queries";
 import { trackerHeroStatsQueryOptions } from "~/queries/tracker-queries";
 
-import { OG_SERIES } from "./palette";
+import { OG_COMPARE } from "./palette";
 
 /** The stats a card shows under each player: the ones people quote, with the label the card prints. */
 const HIGHLIGHTS: { key: CompareStatKey; short: string }[] = [
@@ -156,7 +156,7 @@ export async function loadCompareCardData(search: URLSearchParams): Promise<Comp
     return {
       name: profile?.personaname ?? `Player ${accountId}`,
       avatar: profile?.avatarfull || profile?.avatar,
-      color: OG_SERIES[colorIndexes[index] % OG_SERIES.length],
+      color: OG_COMPARE[colorIndexes[index] % OG_COMPARE.length],
       rankName: rank ? `${rank.name} ${rank.subtier}` : undefined,
       // The tier's badge straight from the assets CDN; the per-subrank images are served through the API.
       rankImage: badge

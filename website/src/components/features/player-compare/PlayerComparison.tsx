@@ -1,7 +1,7 @@
 import { keepPreviousData, useQueries, useQuery } from "@tanstack/react-query";
 import { GitCompareArrows } from "lucide-react";
 
-import { SERIES_COLORS } from "~/components/patterns/charts/theme";
+import { COMPARE_COLORS } from "~/components/patterns/charts/theme";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { Grid } from "~/components/ui/grid";
@@ -111,7 +111,7 @@ export function PlayerComparison({ filters }: { filters: CompareFilters }) {
       name: profile?.personaname ?? `Player ${accountId}`,
       avatar: profile?.avatarfull || profile?.avatar,
       profileLoading: (profileQueries[index]?.isPending ?? true) && !profile,
-      color: SERIES_COLORS[colorIndexes[index] % SERIES_COLORS.length],
+      color: COMPARE_COLORS[colorIndexes[index] % COMPARE_COLORS.length],
       playstyle: playstyleLabel(playstylePercentiles(metrics.population, metrics.own[index], filters.gameMode))?.label,
       rankBadge,
       aggregate: aggregate && {

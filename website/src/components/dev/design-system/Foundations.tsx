@@ -47,6 +47,11 @@ const COLOR_GROUPS: { name: string; note: string; tokens: string[] }[] = [
     ],
   },
   {
+    name: "Player comparison",
+    note: "COMPARE_COLORS: a player's color on the compare page. Slots are hashed from the account id, so every pair passes the colorblind check, not only neighbours.",
+    tokens: ["compare-1", "compare-2", "compare-3", "compare-4", "compare-5"],
+  },
+  {
     name: "Meters and heat",
     note: "meter-empty is an empty Pips mark (3:1 on the card). on-heat-muted is the quiet second line of a heat cell, 4.5:1 on the strongest fill.",
     tokens: ["meter-empty", "on-heat-muted"],

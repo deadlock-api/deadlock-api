@@ -225,6 +225,10 @@ for (const surface of ["muted", "card", "table-stripe"]) variant("chart-interval
 for (const series of ["chart-win-rate", "chart-share"]) {
   for (const surface of ["muted", "card"]) variant(series, surface, UI_MIN);
 }
+// The players of a comparison: lines, dots and legend keys on the card, the muted track and a hovered row.
+for (let slot = 1; slot <= 5; slot++) {
+  for (const surface of ["card", "muted", "accent"]) variant(`compare-${slot}`, surface, UI_MIN);
+}
 // The empty marks of Pips, non-text UI on the surfaces a meter sits on.
 for (const surface of ["card", "muted", "popover"]) variant("meter-empty", surface, UI_MIN);
 // The sample count on a team builder heat cell, on the ramp's strongest fill (heatBackground mixes up to 40%).

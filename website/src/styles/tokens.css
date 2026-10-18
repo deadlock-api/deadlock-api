@@ -35,6 +35,10 @@
   --series-violet: #9085e9;
   --series-forest: #008300;
   --series-magenta: #d55181;
+  /* Three more series hues for the player comparison set (see --compare-1): a steel blue, a purple and a plum. */
+  --series-steel: #3d74b0;
+  --series-purple: #a46bf5;
+  --series-plum: #aa4a80;
   /* Neutral greys for backdrops that stand in for the game world, not for UI surfaces */
   --grey-300: #c3cacf;
   --grey-500: #808080;
@@ -101,6 +105,14 @@
   --chart-6: var(--series-violet);
   --chart-7: var(--series-forest);
   --chart-8: var(--series-magenta);
+  /* The players of a comparison. A player's slot comes from a hash of their account id, so any two of the five can
+     meet: every pair, not only neighbours, clears the dataviz validator against --card, --muted and --accent
+     (OKLab dE x100 >= 8 under protanopia and deuteranopia, >= 8 under tritanopia, >= 15 in normal vision, 3:1). */
+  --compare-1: var(--red-500);
+  --compare-2: var(--series-green);
+  --compare-3: var(--series-steel);
+  --compare-4: var(--series-purple);
+  --compare-5: var(--series-plum);
   /* Fixed-meaning series and chart chrome */
   --chart-win-rate: var(--amber-500);
   --chart-share: var(--sky-600);
@@ -242,6 +254,11 @@
   --color-chart-6: var(--chart-6);
   --color-chart-7: var(--chart-7);
   --color-chart-8: var(--chart-8);
+  --color-compare-1: var(--compare-1);
+  --color-compare-2: var(--compare-2);
+  --color-compare-3: var(--compare-3);
+  --color-compare-4: var(--compare-4);
+  --color-compare-5: var(--compare-5);
   --color-chart-win-rate: var(--chart-win-rate);
   --color-chart-share: var(--chart-share);
   --color-chart-interval: var(--chart-interval);

@@ -6,11 +6,8 @@ import type { PlayerMetricFormat } from "~/lib/player-metrics";
 /** How many players one comparison holds. */
 export const MAX_COMPARE_PLAYERS = 5;
 
-/**
- * The palette entries a comparison draws its players in: red, green, yellow, blue and violet. Orange (the fifth) sits
- * out, since beside red it would be the one pair of players hard to tell apart.
- */
-const COMPARE_PALETTE = [0, 1, 2, 3, 5] as const;
+/** How many colors a comparison draws its players in: `COMPARE_COLORS`, one a player. */
+const COMPARE_SLOTS = 5;
 
 /** murmur3's finalizer: every input bit moves every output bit, so neighbouring ids (alt accounts) land apart. */
 function mix32(value: number): number {
@@ -24,20 +21,20 @@ function mix32(value: number): number {
 }
 
 /**
- * Each player's series color index, one of `COMPARE_PALETTE`. A player's color comes from their account id, so it
+ * Each player's color slot, an index into `COMPARE_COLORS`. A player's color comes from their account id, so it
  * follows the player: adding a player never recolors the others, and moving or removing one keeps every color unless
  * two of the players' ids want the same one. Such a pair is settled in the URL's order (a newly added player comes
  * last, so the players already on screen keep theirs and the newcomer takes the next free one); moving the pair swaps
  * them, and removing the first hands its color to the second.
  */
 export function compareColorIndexes(accountIds: readonly number[]): number[] {
-  const slots = COMPARE_PALETTE.length;
+  const slots = COMPARE_SLOTS;
   const taken = new Set<number>();
   return accountIds.map((accountId) => {
     let slot = mix32(accountId) % slots;
     while (taken.has(slot) && taken.size < slots) slot = (slot + 1) % slots;
     taken.add(slot);
-    return COMPARE_PALETTE[slot];
+    return slot;
   });
 }
 
