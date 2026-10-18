@@ -195,11 +195,7 @@ export function HeroStatsByDurationChart({
                   }
                 />
               ) : (
-                <ChartSurface
-                  variant="flush"
-                  size="xl"
-                  label={`Hero ${heroStat.replace(/_/g, " ")} by match duration chart`}
-                >
+                <ChartSurface variant="flush" size="xl" label={`${HERO_TREND_LABELS[heroStat]} by match duration`}>
                   <LineChart data={formattedData} margin={{ top: 16, right: 12, bottom: 8, left: 0 }}>
                     <CartesianGrid {...CHART_GRID} verticalCoordinatesGenerator={() => []} />
                     <XAxis

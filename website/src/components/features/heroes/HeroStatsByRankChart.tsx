@@ -412,7 +412,7 @@ export function HeroStatsByRankChart({
                 <ChartSurface
                   variant="flush"
                   size="xl"
-                  label={`Hero ${formatStatLabel(xStat)} vs ${formatStatLabel(yStat)} by rank chart`}
+                  label={`${formatStatLabel(yStat)} against ${formatStatLabel(xStat)} by rank`}
                 >
                   <ScatterChart margin={{ top: 20, right: 30, bottom: 8, left: 0 }}>
                     <CartesianGrid {...CHART_GRID} vertical />

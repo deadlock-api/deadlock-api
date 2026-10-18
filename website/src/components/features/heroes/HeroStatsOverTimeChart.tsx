@@ -546,7 +546,7 @@ export function HeroStatsOverTimeChart({
                   onResize={setChartWidth}
                   variant="flush"
                   size="xl"
-                  label={`Hero ${heroStat.replace(/_/g, " ")} over time chart`}
+                  label={`${statLabel} over time`}
                 >
                   <LineChart
                     data={formattedData}
