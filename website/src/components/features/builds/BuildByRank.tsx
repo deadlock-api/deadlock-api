@@ -101,16 +101,17 @@ export function BuildByRank({
     });
 
   return (
-    <section className="flex flex-col">
+    // The last section of its panel: the plot takes the height the row leaves it, from a compact minimum.
+    <section className="flex flex-1 flex-col">
       <PanelSection variant="label" title="By rank" />
       {query.isPending || ranksQuery.isPending ? (
-        <ChartLoading label="Win rate by rank" size="md" />
+        <ChartLoading label="Win rate by rank" size="grow" />
       ) : bars.length === 0 ? (
         <ChartEmpty label="ranks with enough matches of this build" />
       ) : (
         <WinRateBarChart
           variant="flush"
-          size="md"
+          size="grow"
           label={`The build's win rate by rank, from ${bars[0].name} (${formatPercent(bars[0].winRate)}) to ${bars[bars.length - 1].name} (${formatPercent(bars[bars.length - 1].winRate)})`}
           data={bars}
           xKey="tier"
