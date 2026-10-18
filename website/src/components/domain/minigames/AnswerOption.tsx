@@ -18,22 +18,24 @@ const answerOptionVariants = cva(
       state: {
         idle: "border-border bg-card/60 text-foreground enabled:not-aria-disabled:hover:border-primary/50 enabled:not-aria-disabled:hover:bg-primary/5 enabled:not-aria-disabled:hover:text-primary",
         selected: "border-primary/60 bg-primary/15 text-primary",
-        correct: "border-positive/60 bg-positive/10 text-positive",
-        wrong: "border-negative/60 bg-negative/10 text-negative",
+        // Full-strength edges: at 60% they fell under 3:1 against the card.
+        correct: "border-positive bg-positive/10 text-positive",
+        wrong: "border-negative bg-negative/10 text-negative",
         dimmed: "border-border/50 bg-card/40 text-muted-foreground",
       },
       variant: {
         /** A full-width answer with a trailing result mark. */
         row: "w-full justify-between gap-3 px-4 py-3 text-start text-sm font-medium",
-        /** One of a few short choices sharing a line. */
-        tile: "flex-1 justify-center px-2 py-2.5 text-center text-xs font-semibold",
+        /** One of a few short choices sharing a line; the result mark sits in the top-end corner, over the padding. */
+        tile: "relative flex-1 justify-center px-2 py-2.5 text-center text-xs font-semibold",
         /** One of two or three big choices sharing a line, the main action of a round, with a result mark. */
         choice: "min-h-11 min-w-0 flex-1 justify-center gap-2 px-3 py-3 text-center text-sm font-semibold text-balance",
         /**
          * A 44px square holding only an icon (Higher / Lower around a `VersusValue` in `VersusActions`). It needs an
-         * `aria-label`, draws no keycap, and after the reveal the icon gives way to the result mark.
+         * `aria-label`, draws no keycap, and keeps its icon after the reveal, with the result mark in the top-end
+         * corner and the result word added to its name.
          */
-        icon: "size-11 shrink-0 justify-center [&_svg]:size-5",
+        icon: "relative size-11 shrink-0 justify-center [&>svg]:size-5",
         /**
          * A whole card is the answer (a contender of `VersusChoice`): the children lay themselves out in a column, the
          * keycap and the result mark sit in the top corners over the padding, so neither moves the content.
@@ -81,8 +83,9 @@ type AnswerOptionProps = AnswerOptionBaseProps &
   ({ variant?: Exclude<AnswerOptionVariant, "icon"> } | { variant: "icon"; "aria-label": string });
 
 /**
- * One answer of a quiz, in every game. The result is carried by a mark as well as by color. `row` and `choice` keep the
- * mark's slot in every state, empty until the reveal, so revealing an answer never changes its width, height or wrap.
+ * One answer of a quiz, in every game. The result is carried by a mark as well as by color, in every variant. `row` and
+ * `choice` keep the mark's slot in every state, empty until the reveal; `tile`, `icon` and `card` draw it in the
+ * top-end corner, over the padding. So revealing an answer never changes its width, height or wrap.
  *
  * While an answer is revealed the options take `aria-disabled` rather than `disabled`: they stay focusable, so focus
  * stays on the answer just picked instead of falling to <body>, and a click or Enter on them does nothing.
@@ -99,6 +102,9 @@ export function AnswerOption({
   ...props
 }: AnswerOptionProps) {
   const locked = disabled || props["aria-disabled"] === true || props["aria-disabled"] === "true";
+  const result = state === "correct" ? "Correct" : state === "wrong" ? "Wrong" : null;
+  // An icon answer is named by its aria-label, which would hide the mark's own label: the result joins the name.
+  const name = variant === "icon" && result && props["aria-label"] ? `${props["aria-label"]}, ${result}` : undefined;
   return (
     // ds-allow raw-button: quiz answer tile, a bespoke hit area whose content ranges from a name to an item card
     <motion.button
@@ -112,13 +118,15 @@ export function AnswerOption({
       aria-keyshortcuts={shortcut}
       onClick={locked ? undefined : onClick}
       {...props}
+      aria-label={name ?? props["aria-label"]}
     >
-      {variant === "icon" ? (
-        state === "correct" || state === "wrong" ? (
-          <ResultMark state={state} />
-        ) : (
-          children
-        )
+      {variant === "icon" || variant === "tile" ? (
+        <>
+          {children}
+          <span aria-hidden={variant === "icon" || undefined} className="absolute inset-e-0.5 top-0.5 flex">
+            <ResultMark state={state ?? "idle"} className="size-3" />
+          </span>
+        </>
       ) : variant === "card" ? (
         <>
           {shortcut && (
@@ -141,7 +149,7 @@ export function AnswerOption({
           ) : (
             children
           )}
-          {variant !== "tile" && <ResultMark state={state ?? "idle"} />}
+          <ResultMark state={state ?? "idle"} />
         </>
       )}
     </motion.button>

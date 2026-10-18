@@ -75,7 +75,7 @@ export function DomainMinigames() {
       <Specimen
         name="AnswerOption"
         source="domain/minigames/AnswerOption"
-        note="One answer of a quiz, in every game. row is a full-width answer with a trailing result mark; tile is one of a few short choices on a line; choice is one of two big main actions; icon is a 44px square with only an icon and an aria-label (no keycap; the result mark replaces the icon on reveal), for Higher / Lower in VersusActions; card makes a whole card the answer (see VersusChoice). row and choice reserve the slot of the mark in every state, so the reveal never changes their width, height or wrap. After the reveal, revealedState() maps each option to correct, wrong or dimmed. shortcut draws the key that picks it as a keycap in front of the text (fine pointers only) and sets aria-keyshortcuts; the game listens for the key. During a reveal the options take aria-disabled rather than disabled: they stay focusable, so focus stays on the answer just picked, and ignore clicks and Enter."
+        note="One answer of a quiz, in every game. row is a full-width answer with a trailing result mark; tile is one of a few short choices on a line; choice is one of two big main actions; icon is a 44px square with only an icon and an aria-label (no keycap; on reveal the icon stays, the mark sits in its top-end corner and the result word joins the name), for Higher / Lower in VersusActions; card makes a whole card the answer (see VersusChoice). The result is never color alone: row and choice reserve the slot of the mark in every state, tile, icon and card draw it in the top-end corner over the padding, so the reveal never changes their width, height or wrap. Result edges are the full positive / negative tone (3:1 on the card). After the reveal, revealedState() maps each option to correct, wrong or dimmed. shortcut draws the key that picks it as a keycap in front of the text (fine pointers only) and sets aria-keyshortcuts; the game listens for the key. During a reveal the options take aria-disabled rather than disabled: they stay focusable, so focus stays on the answer just picked, and ignore clicks and Enter."
         className="theme-terminal"
       >
         <Variants label="row · idle, selected, correct, wrong, dimmed" className="max-w-lg flex-col items-stretch">
@@ -102,6 +102,22 @@ export function DomainMinigames() {
               disabled={state !== "idle" && state !== "selected"}
             >
               {state}
+            </AnswerOption>
+          ))}
+        </Variants>
+        <Variants
+          label="icon · idle, correct, wrong, dimmed (the icon stays; the mark joins the name)"
+          className="max-w-lg"
+        >
+          {ANSWER_STATES.filter((state) => state !== "selected").map((state) => (
+            <AnswerOption
+              key={state}
+              variant="icon"
+              aria-label={`Higher (${state})`}
+              state={state}
+              aria-disabled={state !== "idle" || undefined}
+            >
+              <ArrowUpIcon aria-hidden="true" />
             </AnswerOption>
           ))}
         </Variants>
