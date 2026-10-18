@@ -81,7 +81,6 @@ export function ParquetPreview({ urls }: { urls: string | string[] }) {
         columns={data.columns}
         rows={data.rows}
         formatCell={(v, j) => formatCell(v, data.columns[j]?.cell)}
-        nullLabel="—"
         label="Sample rows"
       />
     </Stack>

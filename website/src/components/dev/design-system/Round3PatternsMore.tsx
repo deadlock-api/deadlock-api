@@ -338,7 +338,7 @@ function DataTableSpecimens() {
       <Specimen
         name="ResultGrid"
         source="patterns/data-table/ResultGrid"
-        note="Rows of unknown shape, as a query or a file returned them: monospace, numbers end-aligned, NULL set apart, long values truncated with the full text on hover."
+        note="Rows of unknown shape, as a query or a file returned them: monospace, numbers end-aligned, NULL set apart as an italic NULL (distinct from an empty string), long values truncated with the full text on hover. A column type shows in the heading's hover title and is read with the name."
       >
         <Variants label='density="dense" (default)' className="block">
           <ResultGrid

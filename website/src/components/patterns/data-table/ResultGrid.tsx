@@ -71,6 +71,8 @@ export function ResultGrid({
                 )}
               >
                 {column.name}
+                {/* The type is in the hover title for the pointer; a screen reader hears it with the name. */}
+                {column.type && <span className="sr-only">, {column.type}</span>}
               </TableHead>
             ))}
           </TableRow>
