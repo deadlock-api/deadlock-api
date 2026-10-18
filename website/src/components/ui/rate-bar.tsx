@@ -38,7 +38,7 @@ export function DivergingBar({
           <span
             className={cn(
               "absolute top-1/2 size-2.5 -translate-1/2 rounded-full border-2 border-background",
-              TONE_BG[toneOf(t)],
+              TONE_BG[tone ?? toneOf(t)],
             )}
             style={{ insetInlineStart: `${50 + t * 50}%` }}
           />
