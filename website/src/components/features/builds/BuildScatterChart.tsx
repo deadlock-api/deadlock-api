@@ -146,6 +146,7 @@ export function BuildScatterChart({
   selectedId,
   highlightedId = null,
   onBuildIdChange,
+  onBuildHover,
   performance,
 }: {
   rows: readonly BuildRow[];
@@ -154,6 +155,8 @@ export function BuildScatterChart({
   /** The build the list's pointer is on, if any. */
   highlightedId?: number | null;
   onBuildIdChange: (buildId: number) => void;
+  /** The build whose dot the pointer is on, null when it leaves: the list marks its row. */
+  onBuildHover?: (buildId: number | null) => void;
   /** Every build's performance totals, by id, for the playstyle axes; until they load only matches is offered. */
   performance?: Readonly<Record<number, BuildPerformanceTotals>>;
 }) {
@@ -184,8 +187,9 @@ export function BuildScatterChart({
     }
     return row.matches;
   };
-  // The selected build is drawn last and the highlighted one before it, so no other dot covers them.
-  const rank = (point: Point) => (point.selected ? 2 : point.highlighted ? 1 : 0);
+  // The selected build is drawn last, so no other dot covers it. A hover never reorders the dots: the tooltip keeps the
+  // index of the dot under the pointer, and a reorder would hand it another build.
+  const rank = (point: Point) => (point.selected ? 1 : 0);
   const points: Point[] = rows
     .flatMap((row) => {
       const x = xValue(row);
@@ -322,6 +326,8 @@ export function BuildScatterChart({
             onClick={(point: { payload?: Point }) => {
               if (point.payload) onBuildIdChange(point.payload.id);
             }}
+            onMouseEnter={(point: { payload?: Point }) => onBuildHover?.(point.payload?.id ?? null)}
+            onMouseLeave={() => onBuildHover?.(null)}
           />
         </ScatterChart>
       </ChartSurface>

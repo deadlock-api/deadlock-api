@@ -142,6 +142,7 @@ export function BuildTable({
   selectedId,
   onBuildIdChange,
   onBuildHover,
+  highlightedId = null,
 }: {
   rows: readonly BuildRow[];
   /** Null while the recent window loads or when it has no matches. */
@@ -161,6 +162,8 @@ export function BuildTable({
   onBuildIdChange: (buildId: number) => void;
   /** The build under the pointer, null when it leaves the list: the chart lights its dot. */
   onBuildHover?: (buildId: number | null) => void;
+  /** The build whose dot the chart's pointer is on: its row is marked. */
+  highlightedId?: number | null;
 }) {
   const sort = useSort<SortKey>(
     sortParams(useQueryState("sort", parseSortKey), useQueryState("dir", parseSortDir), { history: "replace" }),
@@ -284,7 +287,7 @@ export function BuildTable({
               <TableRow
                 key={row.hero_build_id}
                 data-interactive=""
-                data-state={selected ? "active" : undefined}
+                data-state={selected ? "active" : row.hero_build_id === highlightedId ? "selected" : undefined}
                 onPointerEnter={() => onBuildHover?.(row.hero_build_id)}
                 onClick={(event) => {
                   onBuildIdChange(row.hero_build_id);

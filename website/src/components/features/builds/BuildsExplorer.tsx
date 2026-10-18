@@ -249,6 +249,7 @@ export function BuildsExplorer({
           selectedId={selected.hero_build_id}
           highlightedId={hoveredId}
           onBuildIdChange={onBuildIdChange}
+          onBuildHover={setHoveredId}
           performance={performance}
         />
         <BuildTable
@@ -266,6 +267,7 @@ export function BuildsExplorer({
           selectedId={selected.hero_build_id}
           onBuildIdChange={onBuildIdChange}
           onBuildHover={setHoveredId}
+          highlightedId={hoveredId}
         />
         <BuildDetailPanel
           row={selected}
