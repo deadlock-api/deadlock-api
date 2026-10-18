@@ -1,5 +1,5 @@
 import { cva, type VariantProps } from "class-variance-authority";
-import { XIcon } from "lucide-react";
+import { ChevronLeft, ChevronRight, XIcon } from "lucide-react";
 import { Dialog as DialogPrimitive } from "radix-ui";
 import * as React from "react";
 
@@ -127,6 +127,70 @@ function DialogFooter({
   );
 }
 
+/**
+ * Steps a dialog through a sequence (the next metric, the previous item) without closing it. It sits in the
+ * `DialogHeader` beside the title, so it takes header room and never covers the content. The arrow keys anywhere in
+ * the dialog step too (not from a text field or a slider, which use them), and a polite status announces `status`
+ * (the new title) after each step, since focus stays on the button while the content changes around it. Name the
+ * buttons by their target: "Next: Deaths".
+ */
+function DialogPager({
+  previousLabel,
+  nextLabel,
+  onPrevious,
+  onNext,
+  status,
+  className,
+  ...props
+}: Omit<React.ComponentProps<"div">, "children"> & {
+  /** The previous button's accessible name, naming where it goes: "Previous: Kills". */
+  previousLabel: string;
+  nextLabel: string;
+  onPrevious: () => void;
+  onNext: () => void;
+  /** What a step lands on, announced politely after it: the new title. */
+  status: string;
+}) {
+  const ref = React.useRef<HTMLDivElement>(null);
+  // Only the steps are announced: the status stays empty until the first one, as the title is read when it opens.
+  const [stepped, setStepped] = React.useState(false);
+  const previous = () => {
+    setStepped(true);
+    onPrevious();
+  };
+  const next = () => {
+    setStepped(true);
+    onNext();
+  };
+  const onKey = React.useEffectEvent((event: KeyboardEvent) => {
+    if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey) return;
+    const target = event.target as HTMLElement | null;
+    if (target?.closest("input, textarea, select, [contenteditable], [role=slider], [role=radiogroup]")) return;
+    if (event.key === "ArrowLeft") previous();
+    else if (event.key === "ArrowRight") next();
+    else return;
+    event.preventDefault();
+  });
+  React.useEffect(() => {
+    const content = ref.current?.closest<HTMLElement>("[data-slot=dialog-content]");
+    if (!content) return;
+    const listener = (event: KeyboardEvent) => onKey(event);
+    content.addEventListener("keydown", listener);
+    return () => content.removeEventListener("keydown", listener);
+  }, []);
+  return (
+    <div ref={ref} data-slot="dialog-pager" className={cn("flex shrink-0 items-center gap-1", className)} {...props}>
+      <Button variant="outline" size="icon-sm" aria-label={previousLabel} onClick={previous}>
+        <ChevronLeft aria-hidden="true" />
+      </Button>
+      <Button variant="outline" size="icon-sm" aria-label={nextLabel} onClick={next}>
+        <ChevronRight aria-hidden="true" />
+      </Button>
+      <output className="sr-only">{stepped ? status : ""}</output>
+    </div>
+  );
+}
+
 function DialogTitle({ className, ...props }: React.ComponentProps<typeof DialogPrimitive.Title>) {
   return (
     <DialogPrimitive.Title
@@ -148,6 +212,7 @@ function DialogDescription({ className, ...props }: React.ComponentProps<typeof 
 }
 
 export {
+  DialogPager,
   Dialog,
   DialogClose,
   DialogContent,

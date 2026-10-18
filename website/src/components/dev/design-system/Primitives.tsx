@@ -50,6 +50,7 @@ import {
   DialogDescription,
   DialogFooter,
   DialogHeader,
+  DialogPager,
   DialogTitle,
   DialogTrigger,
 } from "~/components/ui/dialog";
@@ -68,9 +69,11 @@ import { Skeleton } from "~/components/ui/skeleton";
 import { Slider } from "~/components/ui/slider";
 import { SortButton } from "~/components/ui/sort-button";
 import { Spinner } from "~/components/ui/spinner";
+import { Inline } from "~/components/ui/stack";
 import { Stat, StatGroup } from "~/components/ui/stat";
 import { Switch } from "~/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
+import { Text } from "~/components/ui/text";
 import { Textarea } from "~/components/ui/textarea";
 import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group";
 import { Tooltip, TooltipHeader, TooltipStat, TooltipStats, TooltipTarget } from "~/components/ui/tooltip";
@@ -114,6 +117,37 @@ const INTERVALS = (
 );
 
 /** A field that answers with a callout under it: Enter opens it, typing or Escape closes it. */
+const PAGER_DEMO = ["Kills", "Deaths", "Assists"];
+
+function DialogPagerDemo() {
+  const [index, setIndex] = useState(0);
+  const at = (i: number) => PAGER_DEMO[(i + PAGER_DEMO.length) % PAGER_DEMO.length];
+  return (
+    <Dialog>
+      <DialogTrigger asChild>
+        <Button variant="outline" size="sm">
+          Dialog with a pager
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <Inline justify="between" wrap="nowrap" gap={2} className="pe-8">
+            <DialogTitle>{at(index)}</DialogTitle>
+            <DialogPager
+              previousLabel={`Previous: ${at(index - 1)}`}
+              nextLabel={`Next: ${at(index + 1)}`}
+              onPrevious={() => setIndex(index - 1)}
+              onNext={() => setIndex(index + 1)}
+              status={at(index)}
+            />
+          </Inline>
+        </DialogHeader>
+        <Text tone="muted">The content of {at(index)}.</Text>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function CalloutDemo() {
   const [variant, setVariant] = useState<"info" | "warning" | "destructive">("info");
   const [open, setOpen] = useState(false);
@@ -734,8 +768,13 @@ export function Primitives() {
         </Variants>
       </Specimen>
 
-      <Specimen name="Dialog" source="ui/dialog" note="One task, then back to the page.">
+      <Specimen
+        name="Dialog"
+        source="ui/dialog"
+        note="One task, then back to the page. DialogPager steps through a sequence from the header, beside the title: its buttons are named by their target, the arrow keys step too, and a polite status announces the new title."
+      >
         <Variants>
+          <DialogPagerDemo />
           <Dialog>
             <DialogTrigger asChild>
               <Button variant="outline" size="sm">

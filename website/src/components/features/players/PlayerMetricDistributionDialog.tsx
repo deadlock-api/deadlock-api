@@ -1,13 +1,12 @@
 import type { HashMapValue } from "deadlock_api_client";
-import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useMemo } from "react";
 
 import { EmptyState } from "~/components/patterns/states/EmptyState";
-import { Button } from "~/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "~/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogPager, DialogTitle } from "~/components/ui/dialog";
 import { InlineStat } from "~/components/ui/inline-stat";
 import { Inline } from "~/components/ui/stack";
 import { buildDistributionCurve } from "~/lib/distribution-percentile";
+import { formatRange } from "~/lib/format";
 import { formatPlayerMetricValue, type PlayerMetricDefinition } from "~/lib/player-metrics";
 
 import { DistributionChart } from "./distribution-chart";
@@ -16,10 +15,15 @@ export function PlayerMetricDistributionDialog({
   metric,
   values,
   onClose,
+  previousMetric,
+  nextMetric,
   onPrev,
   onNext,
 }: {
   metric: PlayerMetricDefinition | null;
+  /** The metrics the pager steps to, for its buttons' names. */
+  previousMetric: PlayerMetricDefinition | null;
+  nextMetric: PlayerMetricDefinition | null;
   values: HashMapValue | undefined;
   onClose: () => void;
   onPrev: () => void;
@@ -30,39 +34,22 @@ export function PlayerMetricDistributionDialog({
 
   return (
     <Dialog open={metric != null} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent
-        className="sm:max-w-2xl"
-        onKeyDown={(e) => {
-          if (e.key === "ArrowLeft") onPrev();
-          else if (e.key === "ArrowRight") onNext();
-        }}
-      >
+      <DialogContent className="sm:max-w-2xl">
         {metric && (
           <>
             <DialogHeader>
-              <DialogTitle>{metric.label} distribution</DialogTitle>
+              {/* The pager shares the title's row, clear of the close button. */}
+              <Inline justify="between" wrap="nowrap" gap={2} className="pe-8">
+                <DialogTitle>{metric.label} distribution</DialogTitle>
+                <DialogPager
+                  previousLabel={`Previous: ${previousMetric?.label ?? "metric"}`}
+                  nextLabel={`Next: ${nextMetric?.label ?? "metric"}`}
+                  onPrevious={onPrev}
+                  onNext={onNext}
+                  status={`${metric.label} distribution`}
+                />
+              </Inline>
             </DialogHeader>
-
-            <Button
-              variant="secondary"
-              size="icon"
-              shape="pill"
-              onClick={onPrev}
-              aria-label="Previous metric"
-              className="absolute inset-s-2 top-1/2 z-10 -translate-y-1/2"
-            >
-              <ChevronLeft className="size-5" />
-            </Button>
-            <Button
-              variant="secondary"
-              size="icon"
-              shape="pill"
-              onClick={onNext}
-              aria-label="Next metric"
-              className="absolute inset-e-2 top-1/2 z-10 -translate-y-1/2"
-            >
-              <ChevronRight className="size-5" />
-            </Button>
 
             {values && curve.length >= 3 ? (
               <>
@@ -70,8 +57,8 @@ export function PlayerMetricDistributionDialog({
                 <Inline justify="center" gap={6} className="gap-y-1 text-xs">
                   <InlineStat label="Average" value={fmt(values.avg)} />
                   <InlineStat label="Median" value={fmt(values.percentile50)} />
-                  <InlineStat label="P25-P75" value={`${fmt(values.percentile25)} - ${fmt(values.percentile75)}`} />
-                  <InlineStat label="P1-P99" value={`${fmt(values.percentile1)} - ${fmt(values.percentile99)}`} />
+                  <InlineStat label="P25–P75" value={formatRange(fmt(values.percentile25), fmt(values.percentile75))} />
+                  <InlineStat label="P1–P99" value={formatRange(fmt(values.percentile1), fmt(values.percentile99))} />
                 </Inline>
               </>
             ) : (

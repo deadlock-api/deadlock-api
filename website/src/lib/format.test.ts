@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { fineShareDigits, formatCountNoun, formatFineShare, formatSignedPoints } from "./format";
+import { fineShareDigits, formatCountNoun, formatFineShare, formatRange, formatSignedPoints } from "./format";
 
 test("formatFineShare keeps two significant digits below 1%", () => {
   assert.equal(formatFineShare(0.000886), "0.089%");
@@ -32,4 +32,11 @@ test("formatCountNoun puts the noun in the count's number", () => {
   assert.equal(formatCountNoun(0, "pt"), "0 pts");
   assert.equal(formatCountNoun(5, "ability point"), "5 ability points");
   assert.equal(formatCountNoun(1200, "game"), "1,200 games");
+});
+
+test("formatRange: an en dash, spaced when an end has a sign or a space", () => {
+  assert.equal(formatRange("12", "34"), "12–34");
+  assert.equal(formatRange("1.2k", "3.4k"), "1.2k–3.4k");
+  assert.equal(formatRange("-3", "5"), "-3 – 5");
+  assert.equal(formatRange("1 min", "2 min"), "1 min – 2 min");
 });

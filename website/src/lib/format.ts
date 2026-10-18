@@ -124,3 +124,11 @@ const PLURAL = new Intl.PluralRules("en-US");
 export function formatCountNoun(count: number, singular: string, plural = `${singular}s`): string {
   return `${count.toLocaleString("en-US")} ${PLURAL.select(count) === "one" ? singular : plural}`;
 }
+
+/**
+ * A range of two formatted values with an en dash: "12–34". Spaced when either end has a space or a sign of its own
+ * ("−3 – 5", "1 min – 2 min"), so the dash never reads as a minus.
+ */
+export function formatRange(low: string, high: string): string {
+  return /[\s\-−]/.test(low + high) ? `${low} – ${high}` : `${low}–${high}`;
+}

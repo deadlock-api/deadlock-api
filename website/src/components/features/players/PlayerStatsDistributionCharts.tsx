@@ -115,6 +115,7 @@ export function PlayerStatsDistributionCharts({
     return <ErrorState title="Player stat distributions did not load" onRetry={() => void refetch()} />;
   }
 
+  const metricAt = (index: number) => metricsShown[(index + metricsShown.length) % metricsShown.length] ?? null;
   const step = (delta: number) =>
     setSelectedIndex((i) => (i == null ? i : (i + delta + metricsShown.length) % metricsShown.length));
 
@@ -189,6 +190,8 @@ export function PlayerStatsDistributionCharts({
       <PlayerMetricDistributionDialog
         metric={selectedMetric}
         values={selectedMetric ? valuesOf(selectedMetric) : undefined}
+        previousMetric={selectedIndex != null ? metricAt(selectedIndex - 1) : null}
+        nextMetric={selectedIndex != null ? metricAt(selectedIndex + 1) : null}
         onClose={() => setSelectedIndex(null)}
         onPrev={() => step(-1)}
         onNext={() => step(1)}
