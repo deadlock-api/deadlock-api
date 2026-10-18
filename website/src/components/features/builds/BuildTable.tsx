@@ -106,7 +106,7 @@ const COLUMNS: Column[] = [
     description: "How the build's share of the hero's build matches moved in the last 7 days, in points.",
     className: "hidden @lg/builds:table-cell",
   },
-  { key: "updated", label: "Updated", name: "last update", className: "hidden @xl/builds:table-cell" },
+  { key: "updated", label: "Updated", name: "last update", className: "hidden @3xl/builds:table-cell" },
 ];
 
 const sortValue: Record<string, (row: BuildRow, trend: BuildTrend | undefined) => number> = {
@@ -358,17 +358,20 @@ export function BuildTable({
                 {view === "overview" && (
                   <>
                     <TableCell className="hidden text-end @md/builds:table-cell">
-                      <div className="ms-auto flex w-20 flex-col items-end gap-1">
-                        <span className={cn("text-xs tabular-nums", TONE_TEXT[toneOf(verdictSign(row))])}>
-                          {formatSignedPoints(row.vsAverage)}
-                        </span>
+                      {/* The bar beside the number, so the number sits on the row's line with the others. */}
+                      <div className="ms-auto flex w-32 items-center justify-end gap-2">
                         <DivergingBar
                           value={row.vsAverage}
                           interval={[row.interval[0] - average, row.interval[1] - average]}
                           scale={VS_AVERAGE_SCALE}
                           tone={toneOf(verdictSign(row))}
-                          className="w-full"
+                          className="min-w-0 flex-1"
                         />
+                        <span
+                          className={cn("w-16 shrink-0 text-end tabular-nums", TONE_TEXT[toneOf(verdictSign(row))])}
+                        >
+                          {formatSignedPoints(row.vsAverage)}
+                        </span>
                       </div>
                     </TableCell>
                     <TableCell className="hidden text-end text-xs tabular-nums @lg/builds:table-cell">
@@ -384,7 +387,7 @@ export function BuildTable({
                         />
                       )}
                     </TableCell>
-                    <TableCell className="hidden text-end text-xs whitespace-nowrap text-muted-foreground tabular-nums @xl/builds:table-cell">
+                    <TableCell className="hidden text-end text-xs whitespace-nowrap text-muted-foreground tabular-nums @3xl/builds:table-cell">
                       {row.meta ? day.unix(row.meta.updatedAt).utc().format("MMM D, YYYY") : ""}
                     </TableCell>
                   </>
@@ -415,7 +418,7 @@ export function BuildTable({
                 <>
                   <TableCell className="hidden @md/builds:table-cell" />
                   <TableCell className="hidden @lg/builds:table-cell" />
-                  <TableCell className="hidden @xl/builds:table-cell" />
+                  <TableCell className="hidden @3xl/builds:table-cell" />
                 </>
               )}
             </TableRow>
