@@ -217,6 +217,8 @@ for (const tier of ["s", "a", "b", "c", "d"]) {
 for (const surface of ["background", "card", "popover", "muted", "secondary", "accent", "table-stripe"]) {
   variant("ring", surface, UI_MIN);
 }
+// The brand rule down a table's current row (--shadow-current-start), on the row's accent fill.
+variant("primary", "accent", UI_MIN);
 // The 95% range band of a DivergingBar, on its muted track and on the card around it.
 for (const surface of ["muted", "card", "table-stripe"]) variant("chart-interval", surface, UI_MIN);
 // The win rate and share series as bars (a GraphNodeCard's mini-bars) on their muted track and on the card.

@@ -627,7 +627,7 @@ export function Round3PrimitivesMore() {
       <Specimen
         name="TableRow states"
         source="ui/table"
-        note='data-interactive: the row is clickable. data-state="current": the row the page is about (you, the selected hero). data-plain: no rule and no hover, for a detail row under its parent.'
+        note='data-interactive: the row is clickable. data-state="current": the row the page is about (you, the selected hero), also aria-current, with a brand rule down its leading edge so the fill is not the only mark. data-plain: no rule and no hover, for a detail row under its parent.'
       >
         <Table density="compact" className="max-w-md">
           <TableHeader>

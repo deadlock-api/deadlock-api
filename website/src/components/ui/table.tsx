@@ -129,17 +129,20 @@ function TableHeader({
 
 /**
  * A row group. Several rows that are one record share their states through the group, so hovering or selecting any
- * of them lights all of them: set `data-interactive` for the hover fill and `data-state` for the standing one.
+ * of them lights all of them: set `data-interactive` for the hover fill and `data-state` for the standing one
+ * (`current` is also `aria-current`, with a brand rule down the leading edge).
  * `viewed` is the quiet brand tint of a record the reader has already opened.
  */
 function TableBody({ className, ...props }: React.ComponentProps<"tbody">) {
+  const current = (props as { "data-state"?: string })["data-state"] === "current";
   return (
     <tbody
       data-slot="table-body"
+      aria-current={current ? "true" : undefined}
       className={cn(
         "[&_tr:last-child]:border-0",
         "[&[data-interactive]_tr]:cursor-pointer [&[data-interactive]:hover_tr]:bg-muted/50",
-        "[&[data-state=current]_tr]:bg-accent [&[data-state=current]_tr]:font-medium",
+        "[&[data-state=current]_tr]:bg-accent [&[data-state=current]_tr]:font-medium [&[data-state=current]_tr>:first-child]:shadow-current-start",
         "[&[data-state=selected]_tr]:bg-muted",
         "[&[data-state=viewed]_tr]:bg-primary/10",
         className,
@@ -192,20 +195,27 @@ function TableFooter({
 /** `section`: the heading row of a group of rows, filled across its whole width like its pinned header cell. */
 const ROW_TONE = { default: "", section: "bg-muted even:bg-muted hover:bg-muted" } as const;
 
+/**
+ * A row's standing state is `data-state`: `current` (the row the page is about: you, the rank jumped to) is also
+ * `aria-current` and carries a brand rule down its leading edge, so it is marked by more than its fill.
+ */
 function TableRow({
   tone = "default",
   className,
   ...props
 }: React.ComponentProps<"tr"> & { tone?: keyof typeof ROW_TONE }) {
+  const current = (props as { "data-state"?: string })["data-state"] === "current";
   return (
     <tr
       data-slot="table-row"
       data-tone={tone}
+      aria-current={current ? "true" : undefined}
       className={cn(
         // `data-plain` drops the rule and the hover fill; `data-static` drops the hover fill and keeps the rule.
         // Even rows carry a faint translucent stripe, the same on a card or on glass; hover and the states come later
         // in the cascade and paint over it. A pinned cell draws the opaque twin of it (`table-stripe`).
         "border-b transition-colors even:bg-subtle hover:bg-muted/50 has-aria-expanded:bg-muted/50 data-interactive:cursor-pointer data-plain:border-0 data-plain:hover:bg-transparent data-static:hover:bg-transparent data-[state=current]:bg-accent data-[state=current]:font-medium data-[state=selected]:bg-muted",
+        "data-[state=current]:[&>:first-child]:shadow-current-start",
         // `active`: the row whose details are open beside the table, in a faint brand tint.
         "data-[state=active]:bg-primary/10 data-[state=active]:hover:bg-primary/15",
         ROW_TONE[tone],

@@ -190,6 +190,9 @@
   --shadow-active-underline: inset 0 -2px 0 0 var(--primary);
   /* The rule over a sticky table footer: a border would stay with the table grid while the cells stick. */
   --shadow-rule-top: inset 0 1px 0 0 var(--border);
+  /* The brand rule down the leading edge of a table's current row: a mark that is not only a fill. Physical (a shadow
+     has no logical form); the table marks the first cell, which is at the start in either direction only in LTR. */
+  --shadow-current-start: inset 2px 0 0 0 var(--primary);
 }
 
 /* Tier 3: the Tailwind theme. Every entry here becomes a utility. */
@@ -303,6 +306,7 @@
   --shadow-glow-primary: var(--shadow-glow-primary);
   --shadow-active-underline: var(--shadow-active-underline);
   --shadow-rule-top: var(--shadow-rule-top);
+  --shadow-current-start: var(--shadow-current-start);
 
   /* Container sizes below Tailwind's @3xs (16rem), for the parts of one slot in a dense board (a draft slot).
      Literal values: a container query cannot read a custom property, so these have no tier 1 or 2. */
