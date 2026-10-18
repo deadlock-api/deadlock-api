@@ -50,6 +50,8 @@ const highlight = syntaxHighlighting(
   ]),
 );
 
+const NO_EXTENSIONS: Extension[] = [];
+
 type CodeEditorName =
   | { "aria-label": string; "aria-labelledby"?: never }
   | { "aria-labelledby": string; "aria-label"?: never };
@@ -78,7 +80,7 @@ type CodeEditorProps = Omit<
 export function CodeEditor({
   value,
   onValueChange,
-  extensions = [],
+  extensions = NO_EXTENSIONS,
   gutter = "numbers",
   editorRef,
   "aria-label": ariaLabel,
