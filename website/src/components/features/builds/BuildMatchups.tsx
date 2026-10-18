@@ -47,8 +47,9 @@ function MatchupList({ title, matchups, build }: { title: string; matchups: Matc
                 value={formatPercent(matchup.winRate)}
               />
               <RankedEntityMetric
-                label="Diff"
-                labelDisplay="hidden"
+                // Against the build's own win rate, not the hero's: named on the first row like the win rate.
+                label="Vs. build"
+                labelDisplay={index === 0 ? "visible" : "hidden"}
                 width="wide"
                 value={formatSignedPoints(change)}
                 // Only a difference outside the matchup's noise takes a color.
