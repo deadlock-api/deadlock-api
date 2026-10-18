@@ -21,12 +21,7 @@ export function ScoreboardCompareButton({ accountIds }: { accountIds: readonly n
   );
   if (count === 0) {
     return (
-      <Button
-        size="xs"
-        disabled
-        aria-label="Compare picked players (none picked yet)"
-        title="Pick players with + to compare them"
-      >
+      <Button size="xs" disabled aria-label="Compare picked players (none picked yet)">
         {content}
       </Button>
     );

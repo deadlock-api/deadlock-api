@@ -107,12 +107,7 @@ export function PlayersPage({
 
   return (
     <PageShell>
-      <PageHeader title={ANALYTICS_VIEWS.players[tab].heading} description={ANALYTICS_VIEWS.players[tab].summary}>
-        <p>
-          Compare top player performances and view percentile distributions across a range of performance metrics.
-          Filter by hero, rank, and patch.
-        </p>
-      </PageHeader>
+      <PageHeader title={ANALYTICS_VIEWS.players[tab].heading} description={ANALYTICS_VIEWS.players[tab].summary} />
 
       <Filter.Root>
         <Filter.ModeWithRank

@@ -231,7 +231,7 @@ export const ANALYTICS_VIEWS: { [S in AnalyticsSection]: Record<AnalyticsTab<S>,
     scoreboard: {
       title: "Deadlock Player Scoreboard: Top Players",
       heading: "Deadlock Player Scoreboard",
-      summary: "The best player averages across the community.",
+      summary: "Top players by any stat, from kills to souls.",
       description: "Top Deadlock players by kills, win rate, souls, damage and more. Filter by hero, rank and patch.",
     },
     "stats-metrics": {

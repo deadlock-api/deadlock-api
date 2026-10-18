@@ -10,10 +10,8 @@ import { FilterBar } from "~/components/patterns/filter-bar/FilterBar";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { StaleOverlay } from "~/components/patterns/states/StaleOverlay";
-import { Text } from "~/components/ui/text";
 import type { Dayjs } from "~/dayjs";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
-import { BUFF_TIMINGS_NOTE } from "~/lib/buffs";
 import type { GameMode, MatchMode } from "~/lib/game-mode";
 import {
   PLAYER_BUFF_METRICS,
@@ -165,11 +163,6 @@ export function PlayerStatsDistributionCharts({
                 />
               ) : (
                 <div className="@container flex flex-col gap-3">
-                  {isBuffs && (
-                    <Text variant="caption" tone="muted">
-                      Golden statue pickups per match. {BUFF_TIMINGS_NOTE}
-                    </Text>
-                  )}
                   <div className="grid grid-cols-1 gap-3 @[18rem]:grid-cols-2 @[52rem]:grid-cols-4">
                     {metrics.map((def) => (
                       <PlayerMetricDistributionCard
