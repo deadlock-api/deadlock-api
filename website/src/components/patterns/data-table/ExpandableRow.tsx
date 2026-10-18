@@ -93,7 +93,7 @@ export function ExpandableRow({
   );
 }
 
-/** The chevron button of an `ExpandableRow`. `label` names what it expands: the row's title. */
+/** The chevron button of an `ExpandableRow`. `label` names what it expands (the row's title); `aria-expanded` its state. */
 export function ExpandableRowToggle({
   label,
   className,
@@ -108,7 +108,8 @@ export function ExpandableRowToggle({
       variant="ghost"
       size="icon-xs"
       aria-expanded={row.open}
-      aria-label={`${row.open ? "Collapse" : "Expand"} ${label}`}
+      // The name stays the row's; `aria-expanded` alone says whether it is open, so the state is not read twice.
+      aria-label={label}
       onClick={(event) => {
         onClick?.(event);
         if (event.defaultPrevented) return;

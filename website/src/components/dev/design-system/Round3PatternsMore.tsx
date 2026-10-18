@@ -393,7 +393,7 @@ function DataTableSpecimens() {
       <Specimen
         name="ExpandableRow"
         source="patterns/data-table/ExpandableRow"
-        note="A row that opens a full-width detail row. The whole row toggles on click, except links and buttons inside it; ExpandableRowToggle gives the keyboard the same. open / defaultOpen / onOpenChange. colSpan is the table's column count; the detail row spans only the columns the row shows, so the Size column hidden in a narrow container (resize below 36rem) adds no empty column."
+        note="A row that opens a full-width detail row. The whole row toggles on click, except links and buttons inside it; ExpandableRowToggle gives the keyboard the same, named by the row with aria-expanded carrying the state. open / defaultOpen / onOpenChange. colSpan is the table's column count; the detail row spans only the columns the row shows, so the Size column hidden in a narrow container (resize below 36rem) adds no empty column."
       >
         <div className="@container">
           <Table density="compact" className="table-fixed">

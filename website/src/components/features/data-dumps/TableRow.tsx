@@ -1,5 +1,5 @@
 import { Download, Eye, File, Layers } from "lucide-react";
-import { useState } from "react";
+import { useId, useState } from "react";
 
 import { ExpandableRow, ExpandableRowToggle } from "~/components/patterns/data-table/ExpandableRow";
 import { Badge } from "~/components/ui/badge";
@@ -29,6 +29,7 @@ const KIND_LABEL: Record<FileKind, string> = {
 
 export function LakeTableRow({ table, matchedColumns }: { table: LakeTable; matchedColumns: string[] }) {
   const [preview, setPreview] = useState(false);
+  const previewId = useId();
   const single = table.files.length === 1 ? table.files[0] : null;
   const building = table.status === "building";
 
@@ -59,9 +60,16 @@ export function LakeTableRow({ table, matchedColumns }: { table: LakeTable; matc
               <Inline justify="between">
                 <Text variant="eyebrow">Files ({table.files.length})</Text>
                 {table.files.length > 0 && (
-                  <Button type="button" variant="ghost" size="xs" onClick={() => setPreview(!preview)}>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="xs"
+                    aria-expanded={preview}
+                    aria-controls={preview ? previewId : undefined}
+                    onClick={() => setPreview(!preview)}
+                  >
                     <Eye />
-                    {preview ? "Hide sample rows" : "Sample rows"}
+                    Sample rows
                   </Button>
                 )}
               </Inline>
@@ -108,7 +116,11 @@ export function LakeTableRow({ table, matchedColumns }: { table: LakeTable; matc
               </Card>
             </Stack>
           </div>
-          {preview && table.files.length > 0 && <ParquetPreview urls={table.files.map((f) => f.url)} />}
+          {preview && table.files.length > 0 && (
+            <div id={previewId}>
+              <ParquetPreview urls={table.files.map((f) => f.url)} />
+            </div>
+          )}
         </Stack>
       }
     >
