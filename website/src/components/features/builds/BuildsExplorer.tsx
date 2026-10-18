@@ -6,6 +6,7 @@ import { BuildInMatches } from "~/components/features/builds/BuildInMatches";
 import { BuildItemsPanel } from "~/components/features/builds/BuildItemsPanel";
 import { BuildScatterChart } from "~/components/features/builds/BuildScatterChart";
 import { BuildTable } from "~/components/features/builds/BuildTable";
+import { Section } from "~/components/patterns/page/Section";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
@@ -273,18 +274,10 @@ function BuildsExplorerView({
   const performancePending = performanceQuery.isPending && performanceQuery.fetchStatus !== "idle";
 
   return (
+    // Overview first, details on demand: the list and the build picked from it, then what its players do in their
+    // matches, and last the chart and items that compare every build at once.
     <StaleOverlay active={stale} label="builds" className="@container flex flex-col gap-3">
       <div className="grid gap-3 @3xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
-        <BuildScatterChart
-          rows={rows}
-          average={summary.winRate}
-          selectedId={selected.hero_build_id}
-          highlightedId={hoveredId}
-          previewItemId={hoveredItemId}
-          onBuildIdChange={onBuildIdChange}
-          onBuildHover={setHoveredId}
-          performance={performance}
-        />
         <BuildTable
           rows={rows}
           trends={trends}
@@ -293,7 +286,7 @@ function BuildsExplorerView({
           averagePerformance={averagePerformance}
           summary={summary}
           heroWinRate={heroWinRate}
-          performancePending={performanceQuery.isPending && performanceQuery.fetchStatus !== "idle"}
+          performancePending={performancePending}
           profiles={profiles.byId}
           metaPending={meta.pending}
           profilesPending={profiles.pending}
@@ -321,13 +314,6 @@ function BuildsExplorerView({
           profilePending={profiles.pending}
           className="@3xl:h-0 @3xl:min-h-full"
         />
-        {/* Beside the chart on a wide screen; after the build on a narrow one, where the list comes first. */}
-        <BuildItemsPanel
-          rows={rows}
-          pending={meta.pending}
-          onItemHover={setHoveredItemId}
-          className="max-h-120 @3xl:col-start-2 @3xl:row-start-1 @3xl:h-0 @3xl:max-h-none @3xl:min-h-full"
-        />
       </div>
       <BuildInMatches
         heroId={heroId}
@@ -338,6 +324,26 @@ function BuildsExplorerView({
         averagePerformance={averagePerformance}
         performancePending={performancePending}
       />
+      <Section title="All builds compared" className="gap-3 pt-3">
+        <div className="grid gap-3 @3xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+          <BuildScatterChart
+            rows={rows}
+            average={summary.winRate}
+            selectedId={selected.hero_build_id}
+            highlightedId={hoveredId}
+            previewItemId={hoveredItemId}
+            onBuildIdChange={onBuildIdChange}
+            onBuildHover={setHoveredId}
+            performance={performance}
+          />
+          <BuildItemsPanel
+            rows={rows}
+            pending={meta.pending}
+            onItemHover={setHoveredItemId}
+            className="max-h-120 @3xl:h-0 @3xl:max-h-none @3xl:min-h-full"
+          />
+        </div>
+      </Section>
     </StaleOverlay>
   );
 }

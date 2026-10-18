@@ -37,9 +37,9 @@ const KEY_ITEM_SCALE = 0.15;
 const OFF_BUILD_SHOWN = 12;
 
 /**
- * What the selected build's players do in their matches, in four panels side by side: how they play against the hero's
- * average build and fare by match length, what they buy and when, how they keep to the skill order and who plays it
- * most, and whom they beat and at which ranks.
+ * What the selected build's players do in their matches: what they buy and when, how they keep to the skill order and
+ * who plays it most, whom they beat and at which ranks, and last how they play against the hero's average build and
+ * fare by match length.
  */
 export function BuildInMatches({
   heroId,
@@ -101,22 +101,10 @@ export function BuildInMatches({
         </span>
       }
     >
-      {/* Playstyle first: a row of its own while the others sit two or three abreast, two columns of five when all fit.
-          Two abreast, the purchases sit beside the matchups (whose rank plot grows to match) and the skill order, wide
-          by nature, takes the row under them. */}
-      <div className="grid gap-3 @2xl:grid-cols-2 @4xl:grid-cols-3 @8xl:grid-cols-5">
-        <Panel className="flex flex-col @2xl:col-span-2 @4xl:col-span-3 @8xl:col-span-2">
-          <PanelHeader title="Playstyle vs. average build" icon={Activity} size="sm" />
-          <BuildPlaystyle
-            totals={performance}
-            average={averagePerformance}
-            pending={performancePending}
-            distributions={distributions}
-            trailing={<BuildByDuration heroId={heroId} build={row} filters={filters} active={active} />}
-          >
-            <BuildSoulsByTime heroId={heroId} buildId={row.hero_build_id} filters={filters} active={active} />
-          </BuildPlaystyle>
-        </Panel>
+      {/* What to buy, which skills to take and whom it beats come first, three abreast; two abreast the purchases sit
+          beside the matchups and the skill order, wide by nature, takes the row under them. The playstyle's thirty
+          numbers, for a closer look, take the last row. */}
+      <div className="grid gap-3 @2xl:grid-cols-2 @4xl:grid-cols-3">
         <Panel className="flex flex-col">
           <PanelHeader title="Purchases" icon={ShoppingBag} size="sm" />
           {pending ? (
@@ -198,7 +186,7 @@ export function BuildInMatches({
             </StaleOverlay>
           )}
         </Panel>
-        <Panel className="flex flex-col @2xl:order-last @2xl:col-span-2 @4xl:order-none @4xl:col-span-1">
+        <Panel className="flex flex-col @2xl:order-1 @2xl:col-span-2 @4xl:order-none @4xl:col-span-1">
           <PanelHeader title="Skill order and players" icon={ListOrdered} size="sm" />
           {/* Across a whole row, the players sit beside the skill order instead of under it. */}
           <div className="@container">
@@ -232,6 +220,18 @@ export function BuildInMatches({
           />
           <BuildMatchups heroId={heroId} build={row} filters={filters} active={active} />
           <BuildByRank heroId={heroId} build={row} filters={filters} active={active} />
+        </Panel>
+        <Panel className="flex flex-col @2xl:order-2 @2xl:col-span-2 @4xl:col-span-3">
+          <PanelHeader title="Playstyle vs. average build" icon={Activity} size="sm" />
+          <BuildPlaystyle
+            totals={performance}
+            average={averagePerformance}
+            pending={performancePending}
+            distributions={distributions}
+            trailing={<BuildByDuration heroId={heroId} build={row} filters={filters} active={active} />}
+          >
+            <BuildSoulsByTime heroId={heroId} buildId={row.hero_build_id} filters={filters} active={active} />
+          </BuildPlaystyle>
         </Panel>
       </div>
     </Section>
