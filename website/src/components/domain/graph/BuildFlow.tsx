@@ -261,7 +261,14 @@ export function BuildChoice({
           VALUE_WIDTH,
         )}
       >
-        <span className={cn("type-label tabular-nums @md:w-12 @md:shrink-0 @md:text-end", TONE_TEXT[tone])}>
+        {/* Significance in weight as well as color, as Delta draws it: clear (toned) semibold, within noise regular. */}
+        <span
+          data-significance={change ? (tone === "positive" || tone === "negative" ? "clear" : "noise") : undefined}
+          className={cn(
+            "type-label tabular-nums data-[significance=noise]:font-normal @md:w-12 @md:shrink-0 @md:text-end",
+            TONE_TEXT[tone],
+          )}
+        >
           <span className="sr-only">, win rate </span>
           {value ?? <NoValue />}
           {change && TONE_WORDS[tone] && <span className="sr-only">, {TONE_WORDS[tone]}</span>}
