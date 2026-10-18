@@ -1,6 +1,6 @@
 import { HeroImage } from "~/components/domain/assets/HeroImage";
 import { HeroName } from "~/components/domain/assets/HeroName";
-import { Tooltip, TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
+import { Tooltip, TooltipHeader, TooltipStat, TooltipStats, TooltipTarget } from "~/components/ui/tooltip";
 import type { StatsIndex } from "~/lib/team-builder/analysis";
 import { deltaClass, formatCount, formatPoints, formatRate } from "~/lib/team-builder/format";
 
@@ -15,16 +15,23 @@ export function StatTooltip({
   leading,
   title,
   rows,
+  trigger = "hover",
   children,
 }: {
   leading?: React.ReactNode;
   title: React.ReactNode;
   rows: TooltipRow[];
+  /**
+   * `toggle` for a trigger that only holds data (a portrait, a margin, a heat cell): a tap opens the card, so a touch
+   * reader gets its numbers too. A trigger with its own action (a row that picks) stays `hover`.
+   */
+  trigger?: "hover" | "toggle";
   children: React.ReactNode;
 }) {
   return (
     <Tooltip
       side="right"
+      trigger={trigger}
       content={
         <>
           <TooltipHeader leading={leading} title={title} />
@@ -54,6 +61,7 @@ export function HeroTooltip({
   const sample = index.heroSample(heroId);
   return (
     <StatTooltip
+      trigger="toggle"
       // A name element rather than a string: the card renders on hover, so a grid full of portraits
       // does not each hold a hero-asset subscription just to label a tooltip nobody opened.
       leading={<HeroImage heroId={heroId} shape="circle" className="size-5 shrink-0" />}
@@ -69,8 +77,9 @@ export function HeroTooltip({
       ]}
     >
       {/* A real element for Radix to hold: `AssetImage` forwards neither ref nor pointer handlers,
-          so a portrait passed straight to the trigger drops them silently. */}
-      <span className="inline-flex">{children}</span>
+          so a portrait passed straight to the trigger drops them silently. Focusable, so the card opens from the
+          keyboard too. */}
+      <TooltipTarget>{children}</TooltipTarget>
     </StatTooltip>
   );
 }

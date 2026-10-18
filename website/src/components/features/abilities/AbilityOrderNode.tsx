@@ -163,7 +163,8 @@ export default function AbilityOrderNode({
       animate="show"
       transition={{ delay: index * 0.06 }}
     >
-      <Tooltip side="right" content={details}>
+      {/* A node without a press of its own opens its card on a tap, so a touch reader gets its numbers too. */}
+      <Tooltip side="right" content={details} trigger={isFocusable ? "hover" : "toggle"}>
         {isFocusable ? card : <TooltipTarget display="block">{card}</TooltipTarget>}
       </Tooltip>
 

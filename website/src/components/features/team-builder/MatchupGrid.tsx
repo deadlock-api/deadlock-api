@@ -7,6 +7,7 @@ import { HeatCell } from "~/components/ui/heat-cell";
 import { useGridNavigation } from "~/components/ui/hooks/use-grid-navigation";
 import { NoValue } from "~/components/ui/no-value";
 import { Separator } from "~/components/ui/separator";
+import { TooltipTarget } from "~/components/ui/tooltip";
 import { type MatchupCell, mean, type StatsIndex } from "~/lib/team-builder/analysis";
 import {
   compactNumber,
@@ -120,6 +121,7 @@ function GridCell({
   );
   return (
     <StatTooltip
+      trigger="toggle"
       // A name element rather than a string: the card renders on hover, so a full grid of cells
       // does not each hold a hero-asset subscription just to label a tooltip nobody opened.
       title={
@@ -136,7 +138,8 @@ function GridCell({
     >
       <HeatCell color={heatFill(cell.edge, scale)} label={label} title="" className={className} {...navigation}>
         <span>{gridPoints(cell.edge)}</span>
-        {/* A phone-width matrix has no room for a readable count under the edge; the tooltip and label keep it. */}
+        {/* A phone-width matrix has no room for a readable count under the edge; the card (a tap opens it) and the
+            label keep it. */}
         {showCounts && (
           <span className="hidden text-xs leading-none font-normal text-muted-foreground @sm:block">
             {compactCount(cell.matches)}
@@ -224,6 +227,7 @@ export function MatchupGrid({ cells, index, scale, columnMargins, variant }: Mat
           ))}
           {margins && (
             <StatTooltip
+              trigger="toggle"
               title="Average edge"
               rows={[
                 {
@@ -234,11 +238,13 @@ export function MatchupGrid({ cells, index, scale, columnMargins, variant }: Mat
                 { label: "Matchups", value: String(row.length) },
               ]}
             >
-              <Points
-                value={margins.rows[rowIndex]}
-                digits={gridDigits(margins.rows[rowIndex])}
-                className={MARGIN_CELL}
-              />
+              <TooltipTarget display="block" className={MARGIN_CELL}>
+                <Points
+                  value={margins.rows[rowIndex]}
+                  digits={gridDigits(margins.rows[rowIndex])}
+                  className="font-bold"
+                />
+              </TooltipTarget>
             </StatTooltip>
           )}
         </Fragment>
@@ -249,6 +255,7 @@ export function MatchupGrid({ cells, index, scale, columnMargins, variant }: Mat
           <div className="flex items-center justify-center self-stretch pt-1.5 text-xs text-muted-foreground">Avg</div>
           {margins.columns.map((value, columnIndex) => (
             <StatTooltip
+              trigger="toggle"
               key={columns[columnIndex]}
               title={<HeroName heroId={columns[columnIndex]} />}
               rows={[
@@ -257,17 +264,22 @@ export function MatchupGrid({ cells, index, scale, columnMargins, variant }: Mat
                 { label: "Matchups", value: String(cells.length) },
               ]}
             >
-              <Points value={value} digits={gridDigits(value)} className={cn("pt-1.5", MARGIN_CELL)} />
+              <TooltipTarget display="block" className={cn("pt-1.5", MARGIN_CELL)}>
+                <Points value={value} digits={gridDigits(value)} className="font-bold" />
+              </TooltipTarget>
             </StatTooltip>
           ))}
           <StatTooltip
+            trigger="toggle"
             title="Whole matchup"
             rows={[
               { label: "Edge", value: formatPoints(margins.corner), className: deltaClass(margins.corner) },
               { label: "Matchups", value: String(cells.length * columns.length) },
             ]}
           >
-            <Points value={margins.corner} digits={gridDigits(margins.corner)} className={cn("pt-1.5", MARGIN_CELL)} />
+            <TooltipTarget display="block" className={cn("pt-1.5", MARGIN_CELL)}>
+              <Points value={margins.corner} digits={gridDigits(margins.corner)} className="font-bold" />
+            </TooltipTarget>
           </StatTooltip>
 
           <div

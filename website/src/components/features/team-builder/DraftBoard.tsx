@@ -220,6 +220,7 @@ export function DraftBoard({ controls, analysis, imported, loading, swaps, laneS
           </div>
         ) : (
           <StatTooltip
+            trigger="toggle"
             title="How firm is this number?"
             rows={[
               {
@@ -244,6 +245,7 @@ export function DraftBoard({ controls, analysis, imported, loading, swaps, laneS
                 const filledPips = confidencePips(contribution.matches);
                 return (
                   <StatTooltip
+                    trigger="toggle"
                     key={contribution.key}
                     title={contribution.label}
                     rows={[
