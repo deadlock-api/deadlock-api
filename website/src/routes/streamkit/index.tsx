@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { CheckCircle, Layers, Terminal } from "lucide-react";
+import { AlertCircle, CheckCircle, Layers, Terminal } from "lucide-react";
 import { parseAsString, useQueryState } from "nuqs";
 import { type ReactNode, useEffect } from "react";
 
@@ -10,7 +10,6 @@ import { WidgetBuilder } from "~/components/features/streamkit/widget-builder";
 import { Hero } from "~/components/patterns/page/Hero";
 import { PageHeader } from "~/components/patterns/page/PageHeader";
 import { PageShell } from "~/components/patterns/page/PageShell";
-import { Alert, AlertDescription } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent } from "~/components/ui/card";
 import { Field } from "~/components/ui/field";
@@ -134,31 +133,37 @@ function StreamKit() {
               </Segmented>
             </Field>
 
-            {steamId && region && (
+            {/* One line of state, in one place, from the moment there is a Steam ID: it changes text but never size. */}
+            {steamId && (
               <>
                 <Separator />
-                {steamAccountLoading ? (
-                  <Inline>
-                    <Spinner />
-                    <Text tone="muted">Fetching Steam account...</Text>
-                  </Inline>
-                ) : steamAccountError || !steamAccountName ? (
-                  <Alert variant="destructive">
-                    <AlertDescription>
-                      Failed to fetch Steam account name. Please make sure you entered a valid Steam ID3 and region.
-                    </AlertDescription>
-                  </Alert>
-                ) : (
-                  <Inline wrap="nowrap">
-                    <CheckCircle className="size-4 shrink-0 text-positive" />
-                    <Text tone="muted">
-                      Found Steam account:{" "}
-                      <Text as="strong" variant="label" tone="default">
-                        {steamAccountName} ({steamId})
-                      </Text>
-                    </Text>
-                  </Inline>
-                )}
+                <Inline asChild wrap="nowrap" className="min-h-6">
+                  <output>
+                    {!region ? (
+                      <Text tone="muted">Select a region.</Text>
+                    ) : steamAccountLoading ? (
+                      <>
+                        <Spinner />
+                        <Text tone="muted">Fetching Steam account…</Text>
+                      </>
+                    ) : steamAccountError || !steamAccountName ? (
+                      <>
+                        <AlertCircle aria-hidden="true" className="size-4 shrink-0 text-destructive" />
+                        <Text tone="destructive">No Steam account found. Check the Steam ID and region.</Text>
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle aria-hidden="true" className="size-4 shrink-0 text-positive" />
+                        <Text tone="muted">
+                          Found Steam account:{" "}
+                          <Text as="strong" variant="label" tone="default">
+                            {steamAccountName} ({steamId})
+                          </Text>
+                        </Text>
+                      </>
+                    )}
+                  </output>
+                </Inline>
               </>
             )}
           </Stack>
