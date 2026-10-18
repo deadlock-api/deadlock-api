@@ -21,6 +21,7 @@ import { Separator } from "~/components/ui/separator";
 import { Spinner } from "~/components/ui/spinner";
 import { Inline, Stack } from "~/components/ui/stack";
 import { Text } from "~/components/ui/text";
+import { useSiteOrigin } from "~/hooks/useSiteOrigin";
 import { REGION_LABELS } from "~/lib/region";
 import { pageTitle, seo } from "~/lib/seo";
 import { parseSteamIdToId3, steamId64ToSteamId3 } from "~/lib/steam";
@@ -63,6 +64,13 @@ function StreamKit() {
     isLoading: steamAccountLoading,
     error: steamAccountError,
   } = useQuery(streamkitSteamNameQueryOptions(region, parseSteamIdToId3(steamId)));
+
+  // A real link, so it can open in a new tab; it comes back here with the region kept.
+  const origin = useSiteOrigin();
+  const steamAuthUrl = generateSteamAuthUrl({
+    returnPath: region ? `/streamkit?region=${encodeURIComponent(region)}` : "/streamkit",
+    origin,
+  });
 
   const isAccountConnected = steamAccountName && !steamAccountLoading && !steamAccountError;
 
@@ -107,17 +115,11 @@ function StreamKit() {
                 <Heading as="h2" size="default">
                   Quick Connect
                 </Heading>
-                <Button
-                  variant="steam"
-                  size="lg"
-                  className="w-full sm:w-auto"
-                  onClick={() => {
-                    const returnPath = region ? `/streamkit?region=${encodeURIComponent(region)}` : "/streamkit";
-                    window.location.href = generateSteamAuthUrl({ returnPath });
-                  }}
-                >
-                  <SteamIcon />
-                  Sign in with Steam
+                <Button variant="steam" size="lg" className="w-full sm:w-auto" asChild>
+                  <a href={steamAuthUrl}>
+                    <SteamIcon />
+                    Sign in with Steam
+                  </a>
                 </Button>
               </Stack>
             </div>

@@ -23,9 +23,12 @@ export function getCurrentDomain(): string {
  * @returns Steam authentication URL
  */
 export function generateSteamAuthUrl(action: "deletion" | "tracking"): string;
-export function generateSteamAuthUrl(options: { returnPath: string }): string;
-export function generateSteamAuthUrl(actionOrOptions: "deletion" | "tracking" | { returnPath: string }): string {
-  const currentDomain = getCurrentDomain();
+export function generateSteamAuthUrl(options: { returnPath: string; origin?: string }): string;
+export function generateSteamAuthUrl(
+  actionOrOptions: "deletion" | "tracking" | { returnPath: string; origin?: string },
+): string {
+  const currentDomain =
+    typeof actionOrOptions === "object" && actionOrOptions.origin ? actionOrOptions.origin : getCurrentDomain();
   const returnUrl =
     typeof actionOrOptions === "string"
       ? `${currentDomain}/data-privacy?action=${actionOrOptions}`
