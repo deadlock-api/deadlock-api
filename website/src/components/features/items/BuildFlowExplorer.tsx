@@ -2,7 +2,6 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { EllipsisVertical, Hourglass, Link, Plus, Route, TriangleAlert } from "lucide-react";
 import { parseAsArrayOf, parseAsInteger, parseAsString, parseAsStringLiteral, throttle, useQueryState } from "nuqs";
 import { memo, startTransition, useMemo, useRef, useState } from "react";
-import { toast } from "sonner";
 
 import { HeroName } from "~/components/domain/assets/HeroName";
 import { ITEM_SLOT_COLOR } from "~/components/domain/assets/item-slot-color";
@@ -55,6 +54,7 @@ import { ProgressBar, ProgressBarSegment } from "~/components/ui/progress-bar";
 import { Segmented, SegmentedItem } from "~/components/ui/segmented";
 import { Separator } from "~/components/ui/separator";
 import { Skeleton } from "~/components/ui/skeleton";
+import { toast } from "~/components/ui/sonner";
 import { SortButton } from "~/components/ui/sort-button";
 import { Inline, Stack } from "~/components/ui/stack";
 import { Stat, StatGroup } from "~/components/ui/stat";
@@ -1018,8 +1018,6 @@ export function BuildFlowExplorer({
               open.length > 0
                 ? `Too few games go on to ${open.map((stage) => stage.title).join(", ")} with this build`
                 : undefined,
-            // Gone after a few seconds rather than covering the board while the build is refined.
-            duration: 5000,
             action: { label: "Undo", onClick: undo },
           },
         );
@@ -1465,7 +1463,6 @@ export function BuildFlowExplorer({
                                           (board.bottom < 0 || board.top > window.innerHeight)
                                         ) {
                                           toast(`${nameOf.get(choice.itemId) ?? "Item"} added to ${stage.title}`, {
-                                            duration: 2500,
                                             action: { label: "Undo", onClick: () => toggle(choice.key) },
                                           });
                                         }

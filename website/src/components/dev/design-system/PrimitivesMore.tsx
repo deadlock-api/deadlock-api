@@ -1,7 +1,6 @@
 import { ExternalLink, FolderOpen } from "lucide-react";
 import { useState } from "react";
 import type { DateRange } from "react-day-picker";
-import { toast } from "sonner";
 
 import { Specimen, Variants } from "~/components/dev/design-system/Specimen";
 import { SmartLink } from "~/components/domain/navigation/SmartLink";
@@ -11,7 +10,7 @@ import { Heading } from "~/components/ui/heading";
 import { IconTile } from "~/components/ui/icon-tile";
 import { ImgWithSkeleton } from "~/components/ui/img-with-skeleton";
 import { Skeleton } from "~/components/ui/skeleton";
-import { Toaster } from "~/components/ui/sonner";
+import { Toaster, toast } from "~/components/ui/sonner";
 import { Video } from "~/components/ui/video";
 import { useHydrated } from "~/hooks/useHydrated";
 
@@ -178,7 +177,7 @@ export function PrimitivesMore() {
       <Specimen
         name="Sonner"
         source="ui/sonner"
-        note="Toasts for the result of an action that has no place on the page. The Toaster is mounted once in routes/__root.tsx; call toast() from sonner."
+        note="Toasts for the result of an action that has no place on the page. The Toaster is mounted once in routes/__root.tsx; call toast() from ui/sonner, which keeps a toast with an action (Undo) at least 10 seconds."
       >
         <Variants>
           <Button variant="outline" size="sm" onClick={() => toast("Removed saved match 38291204")}>
