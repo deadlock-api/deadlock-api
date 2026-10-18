@@ -142,12 +142,6 @@ export default function AbilityOrderTree({
     // `user`: the tree's entrance and expand animations follow the reduced-motion setting, like the games' Motion.
     <MotionConfig reducedMotion="user">
       <DragScroll ref={centerScroll} className="pb-4 text-center">
-        {gameMode === "street_brawl" && (
-          <p className="pb-2 text-sm text-balance text-muted-foreground">
-            In Street Brawl, you unlock multiple abilities at once per round. Since the order within each round doesn't
-            matter, paths that only differ in that order are shown as one.
-          </p>
-        )}
         <motion.div
           className="inline-flex min-w-max items-start gap-0.5 p-4"
           initial="hidden"

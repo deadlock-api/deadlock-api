@@ -59,7 +59,6 @@ export function MatchImportControl({
             label="Match ID"
             htmlFor={inputId}
             labelDisplay="hidden"
-            description="Load a played match to fill the draft with its heroes, lanes and players."
             error={invalid ? "Enter a match ID or paste a match link." : error}
           >
             <Inline gap={1.5} wrap="nowrap">

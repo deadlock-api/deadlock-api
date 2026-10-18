@@ -55,7 +55,6 @@ function SwapTooltip({ swap, gameMode, children }: { swap: Swap; gameMode: GameM
       rows={[
         { label: "Predicted win rate", value: formatPoints(swap.gain), className: deltaClass(swap.gain) },
         ...(lane ? [{ label: "Lane", value: lane.name }] : []),
-        { label: "Click to", value: "apply this swap" },
       ]}
     >
       {children}

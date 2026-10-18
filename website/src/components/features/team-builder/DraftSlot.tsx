@@ -160,7 +160,6 @@ export function DraftSlot({
           onDragEnd={onDragEnd}
           onClick={onPick}
           data-draft-slot={draftSlotKey({ side, slot })}
-          title={`${hero?.name ?? "Hero"}, click to replace or drag to another slot`}
           className="size-full"
         >
           <HeroImage heroId={heroId} shape="circle" ring={isOver ? "target" : "none"} className="size-full" />

@@ -85,12 +85,7 @@ export function PairDetailBody({
       />
 
       <Stack gap={3} className="p-5">
-        <Stack gap={1}>
-          <div className="text-sm font-semibold">How the two fare against each enemy pick</div>
-          <p className="text-xs text-muted-foreground">
-            Mean of the two heroes' matchup edge against that enemy, in win-rate points.
-          </p>
-        </Stack>
+        <div className="text-sm font-semibold">How the two fare against each enemy pick</div>
         {enemyRows.length === 0 ? (
           <p className="py-4 text-sm text-muted-foreground">Draft the enemy side to see matchups.</p>
         ) : (

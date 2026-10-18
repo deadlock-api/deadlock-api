@@ -1,7 +1,7 @@
 import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import type { AnalyticsApiHeroCountersStatsRequest } from "deadlock_api_client";
-import { DicesIcon, SearchIcon, TriangleAlertIcon, UsersRoundIcon } from "lucide-react";
+import { DicesIcon, SearchIcon, UsersRoundIcon } from "lucide-react";
 import { type Options, parseAsBoolean, parseAsInteger, useQueryState } from "nuqs";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
@@ -22,7 +22,6 @@ import { Panel } from "~/components/patterns/panel/Panel";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { combineQueryStates } from "~/components/patterns/states/QueryRenderer";
-import { Alert, AlertDescription } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
 import { useDateRangeState } from "~/hooks/useDateRangeState";
 import { useDraft, DRAFT_URL_UPDATES } from "~/hooks/useDraft";
@@ -214,7 +213,7 @@ function TeamBuilderPage() {
 
   // `heroesQuery` gates the candidate list, so leaving it out let the panels claim "no candidate
   // clears the minimum match count" while the roster was still loading.
-  const { isPending, isError, error } = combineQueryStates(
+  const { isPending, isError } = combineQueryStates(
     heroesQuery,
     heroStatsQuery,
     synergyQuery,
@@ -231,7 +230,6 @@ function TeamBuilderPage() {
     ]);
 
   const totalPicked = allyHeroes.length + enemyHeroes.length;
-  const incompleteLanes = analysis.lanes.filter((lane) => !lane.complete).length;
 
   const dateSummary = formatDateRange(startDate, endDate);
   const filterSummary = `${MODE_CONFIG[mode].label}${dateSummary ? ` · ${dateSummary}` : ""}`;
@@ -394,9 +392,7 @@ function TeamBuilderPage() {
       {isError && (
         <ErrorState
           title="Could not load the draft stats"
-          description={
-            <span title={error?.message}>Your draft is unchanged. The numbers below need the stats to load.</span>
-          }
+          description="Your draft is unchanged. The numbers below need the stats to load."
           onRetry={() => void refetchStats()}
         />
       )}
@@ -422,11 +418,6 @@ function TeamBuilderPage() {
             <EmptyState
               icon={UsersRoundIcon}
               title="Pick a hero to start"
-              description={
-                hasLanes
-                  ? "Win rate, synergy and lane matchups appear as soon as two heroes share a side. Lanes are optional; the team-wide numbers work without them."
-                  : "Win rate, synergy and counters appear as soon as two heroes share a side."
-              }
               action={
                 <div className="flex flex-wrap justify-center gap-2">
                   <Button shape="pill" onClick={() => openNextSlot("ally")}>
@@ -450,16 +441,6 @@ function TeamBuilderPage() {
                   soulCurves={soulCurves}
                   curveLoading={soulCurveQuery.isFetching}
                 />
-              )}
-
-              {incompleteLanes > 0 && (
-                <Alert variant="primary">
-                  <TriangleAlertIcon />
-                  <AlertDescription className="text-foreground">
-                    {incompleteLanes === 1 ? "One lane is" : `${incompleteLanes} lanes are`} still incomplete. Lane win
-                    rates stay blank until both slots on both sides of a lane are filled.
-                  </AlertDescription>
-                </Alert>
               )}
 
               {/* Equal-height columns: each panel is its own grid item, so the three stay level

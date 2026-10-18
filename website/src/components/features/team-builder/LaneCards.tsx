@@ -74,19 +74,9 @@ function LaneMatchupMatrix({ row, index }: { row: LaneRow; index: StatsIndex }) 
 function LaneSampleLabel({ row }: { row: LaneRow }) {
   const count = formatCount(row.matches);
   return row.source === "duo" ? (
-    <span
-      className="text-xs text-muted-foreground tabular-nums"
-      title={`${count} games with these two duos laning against each other`}
-    >
-      {count} lane games
-    </span>
+    <span className="text-xs text-muted-foreground tabular-nums">{count} lane games</span>
   ) : (
-    <span
-      className="truncate text-xs text-muted-foreground tabular-nums"
-      title={`Too few games of these two duos against each other, so this is the average of the four 1v1 lane matchups. The thinnest of them has ${count} games.`}
-    >
-      Estimate from 1v1s (min {count})
-    </span>
+    <span className="truncate text-xs text-muted-foreground tabular-nums">Estimate from 1v1s (min {count})</span>
   );
 }
 
@@ -150,14 +140,12 @@ export function LaneCards({
                           </>
                         )}
                       </Inline>
-                      <div title={`Each half is one duo's share, full at ±${LANE_BAR_SCALE} points`}>
-                        <SplitBar
-                          left={allyTrack(share)}
-                          right={1 - allyTrack(share)}
-                          leftColor={CHART_COLOR.positive}
-                          rightColor={CHART_COLOR.primary}
-                        />
-                      </div>
+                      <SplitBar
+                        left={allyTrack(share)}
+                        right={1 - allyTrack(share)}
+                        leftColor={CHART_COLOR.positive}
+                        rightColor={CHART_COLOR.primary}
+                      />
                     </>
                   )}
                 </Stack>
