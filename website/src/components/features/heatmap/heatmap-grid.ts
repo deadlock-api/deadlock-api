@@ -1,5 +1,7 @@
 import type { KillDeathStats } from "deadlock_api_client";
 
+import { chartRampColor } from "~/components/patterns/charts/theme";
+
 export const GRID_RES = 256;
 
 /** What the map shows: kill or death density, K/D, or a hero's share of the kills against all heroes. */
@@ -26,17 +28,6 @@ const DENSITY_GAMMA = 0.45;
 const SHARE_RANGE = 2;
 /** A cell where the hero would expect fewer kills than this (at their overall share) is mostly luck, so it stays empty. */
 const SHARE_MIN_EXPECTED = 5;
-
-export const GRADIENT_STOPS: { stop: number; r: number; g: number; b: number }[] = [
-  { stop: 0, r: 0, g: 0, b: 20 },
-  { stop: 0.15, r: 20, g: 0, b: 200 },
-  { stop: 0.3, r: 0, g: 100, b: 255 },
-  { stop: 0.45, r: 0, g: 230, b: 230 },
-  { stop: 0.6, r: 50, g: 255, b: 50 },
-  { stop: 0.75, r: 230, g: 255, b: 0 },
-  { stop: 0.88, r: 255, g: 130, b: 0 },
-  { stop: 1, r: 255, g: 0, b: 0 },
-];
 
 function buildRawGrid(data: KillDeathStats[], viewMode: "kills" | "deaths", radius: number): Float32Array {
   const grid = new Float32Array(GRID_RES * GRID_RES);
@@ -184,64 +175,29 @@ export function sampleBilinear(grid: Float32Array, gridW: number, gridH: number,
   return v00 * (1 - fx) * (1 - fy) + v10 * fx * (1 - fy) + v01 * (1 - fx) * fy + v11 * fx * fy;
 }
 
-function buildColorLUT(): Uint8Array {
+/**
+ * A ramp as RGBA per 0..255 step. The density view rises in opacity with the value too (step 0, "nothing", is clear),
+ * so a faint spot lets the map show through; the ratio view keeps one opacity, so "less" reads as clearly as "more".
+ */
+function buildLUT(scale: HeatScale): Uint8Array {
   const lut = new Uint8Array(256 * 4);
   for (let i = 0; i < 256; i++) {
     const t = i / 255;
-    let r = 0;
-    let g = 0;
-    let b = 0;
-    for (let s = 0; s < GRADIENT_STOPS.length - 1; s++) {
-      const c0 = GRADIENT_STOPS[s];
-      const c1 = GRADIENT_STOPS[s + 1];
-      if (t >= c0.stop && t <= c1.stop) {
-        const ratio = (t - c0.stop) / (c1.stop - c0.stop);
-        r = Math.round(c0.r + (c1.r - c0.r) * ratio);
-        g = Math.round(c0.g + (c1.g - c0.g) * ratio);
-        b = Math.round(c0.b + (c1.b - c0.b) * ratio);
-        break;
-      }
-    }
-    if (t > GRADIENT_STOPS[GRADIENT_STOPS.length - 1].stop) {
-      const last = GRADIENT_STOPS[GRADIENT_STOPS.length - 1];
-      r = last.r;
-      g = last.g;
-      b = last.b;
-    }
+    const [r, g, b] = chartRampColor(scale === "ratio" ? "diverging" : "sequential", t);
     lut[i * 4] = r;
     lut[i * 4 + 1] = g;
     lut[i * 4 + 2] = b;
-    lut[i * 4 + 3] = i === 0 ? 0 : Math.round(50 + t * 170);
+    lut[i * 4 + 3] = scale === "ratio" ? 166 : i === 0 ? 0 : Math.round(50 + t * 170);
   }
   return lut;
 }
 
-const COLOR_LUT = buildColorLUT();
-
-/**
- * The ratio ramp: the legend's colors (the density ramp without its near-black floor) evenly spaced, so 1x lands on
- * the green middle stop, at one opacity, so "less" reads as clearly as "more".
- */
-function buildRatioLUT(): Uint8Array {
-  const stops = GRADIENT_STOPS.slice(1);
-  const lut = new Uint8Array(256 * 4);
-  for (let i = 0; i < 256; i++) {
-    const position = (i / 255) * (stops.length - 1);
-    const s = Math.min(stops.length - 2, Math.floor(position));
-    const ratio = position - s;
-    lut[i * 4] = Math.round(stops[s].r + (stops[s + 1].r - stops[s].r) * ratio);
-    lut[i * 4 + 1] = Math.round(stops[s].g + (stops[s + 1].g - stops[s].g) * ratio);
-    lut[i * 4 + 2] = Math.round(stops[s].b + (stops[s + 1].b - stops[s].b) * ratio);
-    lut[i * 4 + 3] = 166;
-  }
-  return lut;
-}
-
-const RATIO_LUT = buildRatioLUT();
+/** Density in the sequential ramp (lighter is more), the share ratio in the diverging one (1x is the pale middle). */
+const LUTS: Record<HeatScale, Uint8Array> = { density: buildLUT("density"), ratio: buildLUT("ratio") };
 
 /** The colors (RGBA per 0..255 step) a grid's scale is drawn in. */
 export function heatLUT(scale: HeatScale): Uint8Array {
-  return scale === "ratio" ? RATIO_LUT : COLOR_LUT;
+  return LUTS[scale];
 }
 
 /**

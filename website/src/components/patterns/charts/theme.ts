@@ -159,3 +159,65 @@ export const CHART_AREA_NEUTRAL = {
   fill: CHART_COLOR.neutral,
   fillOpacity: 0.15,
 } as const;
+
+/** One stop of a canvas color ramp: where on the scale (0 to 1) it sits and its sRGB channels. */
+export interface ChartRampStop {
+  stop: number;
+  rgb: readonly [number, number, number];
+}
+
+/**
+ * The color ramps of plots drawn pixel by pixel (a canvas heatmap, a WebGL scene), which cannot read CSS variables.
+ * `sequential` (inferno) runs from near-black to pale yellow with lightness rising at every step, so more is always
+ * lighter, in every kind of color blindness and in grayscale: counts and rates. `diverging` (red-blue) has a neutral
+ * pale middle for "as usual" and darkens towards blue for less and red for more, two hues every color-blind eye
+ * tells apart: ratios against a baseline. Legends take the same stops through `chartRampCss`.
+ */
+// ds-allow color-literal: canvas/WebGL palettes, drawn pixel by pixel where CSS variables cannot reach
+export const CHART_RAMP = {
+  sequential: [
+    { stop: 0, rgb: [0, 0, 4] },
+    { stop: 0.125, rgb: [31, 12, 72] },
+    { stop: 0.25, rgb: [85, 15, 109] },
+    { stop: 0.375, rgb: [136, 34, 106] },
+    { stop: 0.5, rgb: [186, 54, 85] },
+    { stop: 0.625, rgb: [227, 89, 51] },
+    { stop: 0.75, rgb: [249, 140, 10] },
+    { stop: 0.875, rgb: [249, 201, 50] },
+    { stop: 1, rgb: [252, 255, 164] },
+  ],
+  diverging: [
+    { stop: 0, rgb: [33, 102, 172] },
+    { stop: 0.25, rgb: [103, 169, 207] },
+    { stop: 0.5, rgb: [247, 247, 247] },
+    { stop: 0.75, rgb: [244, 165, 130] },
+    { stop: 1, rgb: [178, 24, 43] },
+  ],
+} as const satisfies Record<string, readonly ChartRampStop[]>;
+
+export type ChartRamp = keyof typeof CHART_RAMP;
+
+/** The color at `t` (0 to 1) of a ramp, interpolated between its stops in sRGB. */
+export function chartRampColor(ramp: ChartRamp, t: number): [number, number, number] {
+  const stops: readonly ChartRampStop[] = CHART_RAMP[ramp];
+  const at = Math.min(1, Math.max(0, t));
+  for (let s = 0; s < stops.length - 1; s++) {
+    const low = stops[s];
+    const high = stops[s + 1];
+    if (at <= high.stop) {
+      const ratio = (at - low.stop) / (high.stop - low.stop);
+      return [0, 1, 2].map((c) => Math.round(low.rgb[c] + (high.rgb[c] - low.rgb[c]) * ratio)) as [
+        number,
+        number,
+        number,
+      ];
+    }
+  }
+  const last = stops[stops.length - 1].rgb;
+  return [last[0], last[1], last[2]];
+}
+
+/** A ramp's stops as CSS colors, low to high, for the `ChartGradientLegend` of a plot drawn in it. */
+export function chartRampCss(ramp: ChartRamp): string[] {
+  return CHART_RAMP[ramp].map(({ rgb: [r, g, b] }) => `rgb(${r} ${g} ${b})`);
+}

@@ -1,10 +1,8 @@
 import { ChartGradientLegend } from "~/components/patterns/charts/ChartLegend";
 import { ChartOverlayItem } from "~/components/patterns/charts/ChartOverlay";
+import { chartRampCss } from "~/components/patterns/charts/theme";
 
-import { GRADIENT_STOPS, type HeatmapViewMode } from "./heatmap-grid";
-
-// The first stop is the near-black the canvas draws as "no data", so the scale starts at the second.
-const LEGEND_STOPS = GRADIENT_STOPS.slice(1).map(({ r, g, b }) => `rgb(${r},${g},${b})`);
+import type { HeatmapViewMode } from "./heatmap-grid";
 
 interface HeatmapLegendProps {
   viewMode: HeatmapViewMode;
@@ -19,7 +17,7 @@ export function HeatmapLegend({ viewMode, maxValue }: HeatmapLegendProps) {
     return (
       <ChartOverlayItem>
         <ChartGradientLegend
-          stops={LEGEND_STOPS}
+          stops={chartRampCss("diverging")}
           label="Share of the kills against the hero's overall share"
           min={ratio(1 / maxValue)}
           max={ratio(maxValue)}
@@ -30,7 +28,7 @@ export function HeatmapLegend({ viewMode, maxValue }: HeatmapLegendProps) {
   return (
     <ChartOverlayItem>
       <ChartGradientLegend
-        stops={LEGEND_STOPS}
+        stops={chartRampCss("sequential")}
         min="0"
         max={viewMode === "kd" ? maxValue.toFixed(2) : Math.round(maxValue).toLocaleString("en-US")}
       />

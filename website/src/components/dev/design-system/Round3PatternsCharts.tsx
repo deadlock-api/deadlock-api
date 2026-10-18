@@ -10,7 +10,7 @@ import {
 } from "~/components/patterns/charts/ChartLegend";
 import { ChartOverlay, ChartOverlayItem, ChartStage, ChartStageFrame } from "~/components/patterns/charts/ChartOverlay";
 import { ChartReading, ChartReadings } from "~/components/patterns/charts/ChartReadings";
-import { SERIES_COLORS } from "~/components/patterns/charts/theme";
+import { chartRampCss, SERIES_COLORS } from "~/components/patterns/charts/theme";
 import { WinRateBarChart } from "~/components/patterns/charts/WinRateBarChart";
 import { Field } from "~/components/ui/field";
 import { Slider } from "~/components/ui/slider";
@@ -238,6 +238,17 @@ export function Round3PatternsCharts() {
             </div>
           </Variants>
         ))}
+      </Specimen>
+
+      <Specimen
+        name="Canvas ramps"
+        source="patterns/charts/theme"
+        note="CHART_RAMP for plots drawn pixel by pixel: sequential (inferno, lighter is more in every color vision) for counts and rates, diverging (blue, pale middle, red) for a ratio against a baseline. chartRampColor(ramp, t) reads a color; chartRampCss(ramp) gives the legend its stops."
+      >
+        <Variants label="sequential, diverging">
+          <ChartGradientLegend label="Kills" min="0" max="1,240" stops={chartRampCss("sequential")} />
+          <ChartGradientLegend label="Kill share" min="0.5×" max="2×" stops={chartRampCss("diverging")} />
+        </Variants>
       </Specimen>
     </>
   );
