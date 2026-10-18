@@ -8,7 +8,13 @@ import { BadgeImage } from "~/components/domain/assets/BadgeImage";
 import { HeroCell } from "~/components/domain/assets/HeroCell";
 import { HeroImage } from "~/components/domain/assets/HeroImage";
 import { ItemCell } from "~/components/domain/assets/ItemCell";
-import { RankedEntityList, RankedEntityMetric, RankedEntityRow } from "~/components/domain/assets/RankedEntityList";
+import {
+  RankedEntityList,
+  RankedEntityListHead,
+  RankedEntityListLabel,
+  RankedEntityMetric,
+  RankedEntityRow,
+} from "~/components/domain/assets/RankedEntityList";
 import { Inline } from "~/components/ui/stack";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { toneOf } from "~/lib/tone";
@@ -153,7 +159,7 @@ export function Round3DomainAssets() {
       <Specimen
         name="RankedEntityList"
         source="domain/assets/RankedEntityList"
-        note="A short leaderboard of heroes or items (best items of a hero, best heroes for an item): one RankedEntityRow per place with the rank, the art, the name linked to its page and a meta line, and RankedEntityMetric children for the numbers. A metric with share draws a bar under its value; tone colors a value that has a pivot; labelDisplay hidden leaves the label to screen readers, so a list can label only its first row. density compact (the item list here) draws smaller art and tighter rows. A metric with change draws a signed bar (DivergingBar) under its value: a gain right of the middle, a loss left, with an optional uncertainty interval; width wide makes room for a unit after the value. A metric with details opens a hover card from its value (reachable by keyboard; the first row of the third list here). One column in a narrow container, two (filled top to bottom) from @3xl; columns single keeps one (the third list here)."
+        note="A short leaderboard of heroes or items (best items of a hero, best heroes for an item): one RankedEntityRow per place with the rank, the art, the name linked to its page and a meta line, and RankedEntityMetric children for the numbers. A metric with share draws a bar under its value; tone colors a value that has a pivot; labelDisplay hidden leaves the label to screen readers; a single-column list then names its metric columns once in a RankedEntityListHead of RankedEntityListLabels (same width as their metric) passed as head (the last list here), so every row keeps one height. density compact (the item list here) draws smaller art and tighter rows. A metric with change draws a signed bar (DivergingBar) under its value: a gain right of the middle, a loss left, with an optional uncertainty interval; width wide makes room for a unit after the value. A metric with details opens a hover card from its value, underlined dashed (reachable by keyboard; the first row of the second list here). The meta line wraps rather than cutting off. One column in a narrow container, two (filled top to bottom) from @3xl; columns single keeps one."
       >
         <RankedEntityList density="compact">
           {RANKED_HEROES.map(({ heroId, winRate, usage }, index) => (
@@ -185,22 +191,21 @@ export function Round3DomainAssets() {
             </RankedEntityRow>
           ))}
         </RankedEntityList>
-        <RankedEntityList className="max-w-sm">
+        <RankedEntityList
+          columns="single"
+          className="max-w-sm"
+          head={
+            <RankedEntityListHead>
+              <RankedEntityListLabel>Win rate</RankedEntityListLabel>
+              <RankedEntityListLabel>Together</RankedEntityListLabel>
+            </RankedEntityListHead>
+          }
+        >
           {SAMPLE_ITEM_IDS.map((itemId, index) => (
             <RankedEntityRow key={itemId} rank={index + 1} entity={{ itemId }}>
-              {/* labelDisplay: the first row labels the columns, the rest stay one line tall. */}
-              <RankedEntityMetric
-                label="Win rate"
-                labelDisplay={index === 0 ? "visible" : "hidden"}
-                value="48.0%"
-                tone="negative"
-              />
-              <RankedEntityMetric
-                label="Together"
-                labelDisplay={index === 0 ? "visible" : "hidden"}
-                value="23%"
-                share={0.23}
-              />
+              {/* The head labels the columns once; each metric keeps its label for screen readers. */}
+              <RankedEntityMetric label="Win rate" labelDisplay="hidden" value="48.0%" tone="negative" />
+              <RankedEntityMetric label="Together" labelDisplay="hidden" value="23%" share={0.23} />
             </RankedEntityRow>
           ))}
         </RankedEntityList>

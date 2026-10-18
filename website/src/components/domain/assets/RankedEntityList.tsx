@@ -19,6 +19,7 @@ import type { SlimUpgrade } from "~/queries/asset-queries";
 export function RankedEntityList({
   density = "default",
   columns = "auto",
+  head,
   className,
   style,
   children,
@@ -28,6 +29,11 @@ export function RankedEntityList({
   density?: "default" | "compact";
   /** `auto`: two columns in a wide container. `single`: always one, for a list in a panel that is not the page's width. */
   columns?: "auto" | "single";
+  /**
+   * A `RankedEntityListHead` that names the metric columns once, above the rows, so every row keeps one height (its
+   * metrics then take `labelDisplay="hidden"`). For a `single` column list.
+   */
+  head?: React.ReactNode;
 }) {
   // Two columns fill down, not across, so the ranks read 1-4 then 5-8 like a printed table.
   const rows = columns === "single" ? Children.count(children) : Math.ceil(Children.count(children) / 2);
@@ -45,6 +51,7 @@ export function RankedEntityList({
       style={{ "--ranked-rows": `repeat(${rows}, auto)`, ...style } as React.CSSProperties}
       {...props}
     >
+      {head}
       <ol
         className={cn(
           "grid gap-x-8",
@@ -54,6 +61,38 @@ export function RankedEntityList({
         {items}
       </ol>
     </div>
+  );
+}
+
+const METRIC_WIDTH = { default: "w-12 @md:w-16", wide: "w-16 @md:w-20" } as const;
+
+/**
+ * The labels of a list's metric columns, once above its rows, lined up with the metrics at the row's end. Children
+ * are `RankedEntityListLabel`s in the order of the metrics. Hidden from screen readers: each metric keeps its own label
+ * for them (`labelDisplay="hidden"`).
+ */
+export function RankedEntityListHead({ className, ...props }: React.ComponentProps<"div">) {
+  return (
+    <div
+      data-slot="ranked-entity-list-head"
+      aria-hidden="true"
+      className={cn(
+        "flex justify-end gap-2 border-b border-hairline pb-1 type-caption text-muted-foreground @md:gap-4",
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
+/** One column label of a `RankedEntityListHead`: give it the `width` and width classes of its metric. */
+export function RankedEntityListLabel({
+  width = "default",
+  className,
+  ...props
+}: React.ComponentProps<"span"> & { width?: keyof typeof METRIC_WIDTH }) {
+  return (
+    <span data-slot="ranked-entity-list-label" className={cn("text-end", METRIC_WIDTH[width], className)} {...props} />
   );
 }
 
@@ -121,7 +160,7 @@ export function RankedEntityRow({
         ) : (
           <ItemName itemId={entity.itemId} linkToDetail className={NAME} />
         )}
-        {meta && <span className="truncate type-caption text-muted-foreground tabular-nums">{meta}</span>}
+        {meta && <span className="type-caption text-muted-foreground tabular-nums">{meta}</span>}
       </div>
       <dl className="flex shrink-0 items-start gap-2 @md:gap-4">{children}</dl>
     </li>
@@ -132,8 +171,7 @@ export function RankedEntityRow({
  * One number of a RankedEntityRow: the value over its label, and with `share` a thin bar under the value for a
  * number that is a part of a whole (how often it is bought). `tone` colors the value; the number itself still says
  * which side of the pivot it is on. With `change` the bar is signed: a gain right, a loss left. With `details` the value
- * opens a hover card. A
- * `tone` colors the signed bar too.
+ * opens a hover card, and is underlined dashed to say so. A `tone` colors the signed bar too.
  */
 export function RankedEntityMetric({
   label,
@@ -192,7 +230,7 @@ export function RankedEntityMetric({
   return (
     <div
       data-slot="ranked-entity-metric"
-      className={cn("flex flex-col items-end gap-1", width === "wide" ? "w-16 @md:w-20" : "w-12 @md:w-16", className)}
+      className={cn("flex flex-col items-end gap-1", METRIC_WIDTH[width], className)}
       {...props}
     >
       <dt className={cn("order-2 type-caption text-muted-foreground", labelDisplay === "hidden" && "sr-only")}>
@@ -201,7 +239,7 @@ export function RankedEntityMetric({
       <dd className="order-1 flex w-full flex-col items-end gap-1">
         {details ? (
           <Tooltip content={details}>
-            <TooltipTarget display="block" className="flex w-full flex-col items-end gap-1">
+            <TooltipTarget display="block" underline="dashed" className="flex w-full flex-col items-end gap-1">
               {body}
             </TooltipTarget>
           </Tooltip>

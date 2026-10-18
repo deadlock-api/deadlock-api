@@ -1,4 +1,10 @@
-import { RankedEntityList, RankedEntityMetric, RankedEntityRow } from "~/components/domain/assets/RankedEntityList";
+import {
+  RankedEntityList,
+  RankedEntityListHead,
+  RankedEntityListLabel,
+  RankedEntityMetric,
+  RankedEntityRow,
+} from "~/components/domain/assets/RankedEntityList";
 import { Panel, PanelBody, PanelHeader } from "~/components/patterns/panel/Panel";
 import { Delta } from "~/components/ui/delta";
 import { TooltipStat, TooltipStats } from "~/components/ui/tooltip";
@@ -95,7 +101,16 @@ export function PatchMoverPanel({
         {action}
       </PanelHeader>
       <PanelBody>
-        <RankedEntityList density="compact" columns="single">
+        <RankedEntityList
+          density="compact"
+          columns="single"
+          head={
+            <RankedEntityListHead>
+              <RankedEntityListLabel className="@md:w-32">Change</RankedEntityListLabel>
+              <RankedEntityListLabel>{keys.label}</RankedEntityListLabel>
+            </RankedEntityListHead>
+          }
+        >
           {rows.map(({ mover, delta, se }, index) => (
             <RankedEntityRow
               key={mover.id}
@@ -105,17 +120,13 @@ export function PatchMoverPanel({
             >
               <RankedEntityMetric
                 label="Change"
-                labelDisplay={index === 0 ? "visible" : "hidden"}
+                labelDisplay="hidden"
                 className="@md:w-32"
                 value={<Delta value={delta} unit=" pp" />}
                 change={{ value: delta, scale, interval: [delta - Z * se, delta + Z * se] }}
                 details={<MoverDetails mover={mover} metric={metric} delta={delta} se={se} />}
               />
-              <RankedEntityMetric
-                label={keys.label}
-                labelDisplay={index === 0 ? "visible" : "hidden"}
-                value={formatPercent(mover[keys.value])}
-              />
+              <RankedEntityMetric label={keys.label} labelDisplay="hidden" value={formatPercent(mover[keys.value])} />
             </RankedEntityRow>
           ))}
         </RankedEntityList>
