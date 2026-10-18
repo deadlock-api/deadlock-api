@@ -1,6 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
 import type { AnalyticsApiGameStatsRequest, GameStatsBucketEnum } from "deadlock_api_client";
-import { ChartNoAxesCombined } from "lucide-react";
 import { useMemo } from "react";
 import { CartesianGrid, Line, LineChart, Tooltip, XAxis, YAxis } from "recharts";
 
@@ -9,7 +8,6 @@ import { ChartCard } from "~/components/patterns/charts/ChartCard";
 import { ChartReading, ChartReadings } from "~/components/patterns/charts/ChartReadings";
 import { ChartLoading, ChartError, ChartEmpty } from "~/components/patterns/charts/ChartStates";
 import { ChartSurface } from "~/components/patterns/charts/ChartSurface";
-import { MetricSelect } from "~/components/patterns/charts/MetricSelect";
 import {
   CHART_GRID,
   CHART_MARGIN_MARKED,
@@ -18,8 +16,6 @@ import {
   CHART_COLOR,
 } from "~/components/patterns/charts/theme";
 import { TrendIntervalField } from "~/components/patterns/charts/TrendControls";
-import { FilterBar } from "~/components/patterns/filter-bar/FilterBar";
-import { Field } from "~/components/ui/field";
 import { NoValue } from "~/components/ui/no-value";
 import { SegmentedItem } from "~/components/ui/segmented";
 import { Stat, StatGroup } from "~/components/ui/stat";
@@ -29,13 +25,15 @@ import { formatAxisTick, formatStatValue, getStatDefinition, valueSpan } from "~
 import { wholeTimeBuckets } from "~/lib/time-buckets";
 import { gameStatsQueryOptions } from "~/queries/games-query";
 
-import { GameMetricOptions } from "./StatSelector";
+import { StatSelector } from "./StatSelector";
 
 const TIME_BUCKETS = [
-  { value: "start_time_day", label: "Day" },
-  { value: "start_time_week", label: "Week" },
-  { value: "start_time_month", label: "Month" },
+  { value: "start_time_day", label: "Day", one: "day", other: "days" },
+  { value: "start_time_week", label: "Week", one: "week", other: "weeks" },
+  { value: "start_time_month", label: "Month", one: "month", other: "months" },
 ] as const;
+
+const PLURAL = new Intl.PluralRules("en-US");
 
 interface GamesOverTimeChartProps {
   params: AnalyticsApiGameStatsRequest;
@@ -84,15 +82,12 @@ export default function GamesOverTimeChart({
   const matches = chartData.reduce((sum, entry) => sum + (entry.matches ?? 0), 0);
   const formatValue = (value: number) => (statDef ? formatStatValue(value, statDef.format) : String(value));
   const formatDate = (date: number) => day.utc(date).format("MMM D, YYYY");
+  const bucketDef = TIME_BUCKETS.find((b) => b.value === timeBucket) ?? TIME_BUCKETS[0];
+  const bucketUnit = bucketDef[PLURAL.select(chartData.length) === "one" ? "one" : "other"];
 
   return (
     <div className="@container flex flex-col gap-3">
-      <FilterBar variant="toolbar" title="Game trends" icon={ChartNoAxesCombined} aria-label="Trend controls">
-        <Field label="Metric" orientation="horizontal" className="w-full @sm:w-auto">
-          <MetricSelect value={stat} valueLabel={statDef?.label} onValueChange={onStatChange}>
-            <GameMetricOptions isStreetBrawl={isStreetBrawl} />
-          </MetricSelect>
-        </Field>
+      <StatSelector value={stat} onChange={onStatChange} isStreetBrawl={isStreetBrawl}>
         <TrendIntervalField
           value={timeBucket}
           onValueChange={(value) => onTimeBucketChange(value as GameStatsBucketEnum)}
@@ -103,7 +98,7 @@ export default function GamesOverTimeChart({
             </SegmentedItem>
           ))}
         </TrendIntervalField>
-      </FilterBar>
+      </StatSelector>
 
       {/* The plot's numbers as text; it stays while a new interval loads, so the plot below it does not move. */}
       <StatGroup variant="joined" size="sm" className="grid-cols-2 @2xl:grid-cols-4">
@@ -124,14 +119,9 @@ export default function GamesOverTimeChart({
         />
         <Stat
           label="Matches"
-          value={isPending ? undefined : matches.toLocaleString("en-US")}
-          sub={
-            isPending ? (
-              <NoValue />
-            ) : (
-              `${chartData.length.toLocaleString("en-US")} ${TIME_BUCKETS.find((b) => b.value === timeBucket)?.label.toLowerCase()}s`
-            )
-          }
+          // A failed load has no count either: not a 0.
+          value={isPending || isError ? undefined : matches.toLocaleString("en-US")}
+          sub={isPending || isError ? <NoValue /> : `${chartData.length.toLocaleString("en-US")} ${bucketUnit}`}
         />
       </StatGroup>
 

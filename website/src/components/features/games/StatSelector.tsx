@@ -3,9 +3,11 @@ import type React from "react";
 
 import { MetricSelect } from "~/components/patterns/charts/MetricSelect";
 import { FilterBar } from "~/components/patterns/filter-bar/FilterBar";
+import { Field } from "~/components/ui/field";
 import { SelectGroup, SelectItem, SelectLabel } from "~/components/ui/select";
 import { getFilteredCategories, getStatDefinition } from "~/lib/game-stat-definitions";
 
+/** The one picker of the `stat` URL parameter, on every tab that plots a game stat; `children` add more controls. */
 export function StatSelector({
   value,
   onChange,
@@ -19,14 +21,16 @@ export function StatSelector({
 }) {
   return (
     <FilterBar variant="toolbar" title="Game metrics" icon={ChartNoAxesCombined} aria-label="Metric controls">
-      <MetricSelect
-        value={value}
-        valueLabel={getStatDefinition(value)?.label}
-        onValueChange={onChange}
-        label="Game metric"
-      >
-        <GameMetricOptions isStreetBrawl={isStreetBrawl} />
-      </MetricSelect>
+      <Field label="Metric" orientation="horizontal" className="w-full @sm:w-auto">
+        <MetricSelect
+          value={value}
+          valueLabel={getStatDefinition(value)?.label}
+          onValueChange={onChange}
+          label="Game metric"
+        >
+          <GameMetricOptions isStreetBrawl={isStreetBrawl} />
+        </MetricSelect>
+      </Field>
       {children}
     </FilterBar>
   );
