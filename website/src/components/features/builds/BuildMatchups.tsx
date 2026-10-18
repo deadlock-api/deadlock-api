@@ -157,10 +157,13 @@ export function BuildMatchups({
       </StaleOverlay>
     );
   }
+  // Strong beside weak once both lists fit a name and their two numbers.
   return (
-    <StaleOverlay active={query.isPlaceholderData} label="matchups">
-      <MatchupList title="Strong against" matchups={sorted.slice(0, SHOWN)} build={answer?.row ?? build} />
-      <MatchupList title="Weak against" matchups={sorted.slice(-SHOWN).reverse()} build={answer?.row ?? build} />
-    </StaleOverlay>
+    <div className="@container">
+      <StaleOverlay active={query.isPlaceholderData} label="matchups" className="grid @lg:grid-cols-2">
+        <MatchupList title="Strong against" matchups={sorted.slice(0, SHOWN)} build={answer?.row ?? build} />
+        <MatchupList title="Weak against" matchups={sorted.slice(-SHOWN).reverse()} build={answer?.row ?? build} />
+      </StaleOverlay>
+    </div>
   );
 }
