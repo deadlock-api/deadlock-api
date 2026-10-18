@@ -1,10 +1,11 @@
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { Fragment, memo } from "react";
 
 import { ItemCell } from "~/components/domain/assets/ItemCell";
 import { CHART_COLOR } from "~/components/patterns/charts/theme";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
+import { StaleOverlay } from "~/components/patterns/states/StaleOverlay";
 import { ProgressBarWithLabel } from "~/components/ui/progress-bar";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { Tooltip, TooltipHeader, TooltipStat, TooltipStats, TooltipTarget } from "~/components/ui/tooltip";
@@ -103,14 +104,18 @@ export function ItemCombStatsTable({
     gameMode,
     matchMode,
   };
+  // A new combo size or filter keeps the last table on screen, washed out, until its answer lands: swapping it for a
+  // spinner collapsed the page.
   const {
     data: itemCombData,
     isLoading,
+    isPlaceholderData,
     isError,
     refetch,
-  } = useQuery(
-    itemPermutationStatsQueryOptions({ ...baseQuery, minUnixTimestamp: minUnixTimestamp ?? 0, maxUnixTimestamp }),
-  );
+  } = useQuery({
+    ...itemPermutationStatsQueryOptions({ ...baseQuery, minUnixTimestamp: minUnixTimestamp ?? 0, maxUnixTimestamp }),
+    placeholderData: keepPreviousData,
+  });
   const { data: prevItemCombData } = useQuery({
     ...itemPermutationStatsQueryOptions({
       ...baseQuery,
@@ -140,106 +145,108 @@ export function ItemCombStatsTable({
   ) : isError && !itemCombData ? (
     <ErrorState title="Item combinations did not load" onRetry={() => void refetch()} />
   ) : (
-    <Table>
-      {!hideHeader && (
-        <TableHeader tone="muted">
-          <TableRow>
-            {!hideIndex && <TableHead className="text-center">#</TableHead>}
-            <TableHead>Item Combination</TableHead>
-            {columns.includes("winRate") && (
-              <TableHead className="text-center">
-                Win Rate
-                <br />
-                (Confidence Ranked)
-              </TableHead>
-            )}
-            {columns.includes("pickRate") && (
-              <TableHead className="text-center">
-                Share of
-                <br />
-                Combo Matches
-              </TableHead>
-            )}
-            {columns.includes("totalMatches") && <TableHead className="text-center">Total Matches</TableHead>}
-          </TableRow>
-        </TableHeader>
-      )}
-      <TableBody>
-        {limitedData.map((row, index) => {
-          const prev = prevStatsMap?.get(combKey(row.item_ids));
-          const share = row.matches / sumMatches;
-          return (
-            <TableRow key={row.item_ids.join("-")}>
-              {!hideIndex && <TableCell className="text-center font-semibold">{index + 1}</TableCell>}
-              <ComboItems itemIds={row.item_ids} />
+    <StaleOverlay active={isPlaceholderData} label="item combinations">
+      <Table>
+        {!hideHeader && (
+          <TableHeader tone="muted">
+            <TableRow>
+              {!hideIndex && <TableHead className="text-center">#</TableHead>}
+              <TableHead>Item Combination</TableHead>
               {columns.includes("winRate") && (
-                <TableCell className="text-center">
-                  <Tooltip
-                    content={
-                      <>
-                        <TooltipHeader title="Win rate" />
-                        <TooltipStats>
-                          <TooltipStat label="Matches" value={row.matches.toLocaleString("en-US")} />
-                          <TooltipStat label="Wins" value={row.wins.toLocaleString("en-US")} />
-                          <TooltipStat label="Win rate" value={`${((row.wins / row.matches) * 100).toFixed(2)}%`} />
-                          {prev !== undefined && (
-                            <TooltipStat label="Previous" value={`${(prev.winrate * 100).toFixed(2)}%`} />
-                          )}
-                        </TooltipStats>
-                      </>
-                    }
-                  >
-                    <TooltipTarget display="block">
-                      <ProgressBarWithLabel
-                        min={minWinrate}
-                        max={maxWinrate}
-                        value={row.wins / row.matches}
-                        color={CHART_COLOR.primary}
-                        label={`${Math.round((row.wins / row.matches) * 100).toFixed(0)}% `}
-                        delta={prev !== undefined ? row.wins / row.matches - prev.winrate : undefined}
-                      />
-                    </TooltipTarget>
-                  </Tooltip>
-                </TableCell>
+                <TableHead className="text-center">
+                  Win Rate
+                  <br />
+                  (Confidence Ranked)
+                </TableHead>
               )}
               {columns.includes("pickRate") && (
-                <TableCell className="text-center">
-                  <Tooltip
-                    content={
-                      <>
-                        <TooltipHeader title="Share of combo matches" />
-                        <TooltipStats>
-                          <TooltipStat
-                            label="Matches"
-                            value={`${row.matches.toLocaleString("en-US")} of ${sumMatches.toLocaleString("en-US")}`}
-                          />
-                          <TooltipStat label="Share" value={formatFineShare(share)} />
-                          {prev !== undefined && <TooltipStat label="Previous" value={formatFineShare(prev.share)} />}
-                        </TooltipStats>
-                      </>
-                    }
-                  >
-                    <TooltipTarget display="block">
-                      <ProgressBarWithLabel
-                        min={0}
-                        max={maxShare}
-                        value={share}
-                        color={CHART_COLOR.pickRate}
-                        label={formatFineShare(share)}
-                        delta={prev !== undefined ? share - prev.share : undefined}
-                        deltaDigits={fineShareDigits(share)}
-                      />
-                    </TooltipTarget>
-                  </Tooltip>
-                </TableCell>
+                <TableHead className="text-center">
+                  Share of
+                  <br />
+                  Combo Matches
+                </TableHead>
               )}
-              {columns.includes("totalMatches") && (
-                <TableCell className="text-center">{row.matches.toLocaleString("en-US")}</TableCell>
-              )}
+              {columns.includes("totalMatches") && <TableHead className="text-center">Total Matches</TableHead>}
             </TableRow>
-          );
-        })}
-      </TableBody>
-    </Table>
+          </TableHeader>
+        )}
+        <TableBody>
+          {limitedData.map((row, index) => {
+            const prev = prevStatsMap?.get(combKey(row.item_ids));
+            const share = row.matches / sumMatches;
+            return (
+              <TableRow key={row.item_ids.join("-")}>
+                {!hideIndex && <TableCell className="text-center font-semibold">{index + 1}</TableCell>}
+                <ComboItems itemIds={row.item_ids} />
+                {columns.includes("winRate") && (
+                  <TableCell className="text-center">
+                    <Tooltip
+                      content={
+                        <>
+                          <TooltipHeader title="Win rate" />
+                          <TooltipStats>
+                            <TooltipStat label="Matches" value={row.matches.toLocaleString("en-US")} />
+                            <TooltipStat label="Wins" value={row.wins.toLocaleString("en-US")} />
+                            <TooltipStat label="Win rate" value={`${((row.wins / row.matches) * 100).toFixed(2)}%`} />
+                            {prev !== undefined && (
+                              <TooltipStat label="Previous" value={`${(prev.winrate * 100).toFixed(2)}%`} />
+                            )}
+                          </TooltipStats>
+                        </>
+                      }
+                    >
+                      <TooltipTarget display="block">
+                        <ProgressBarWithLabel
+                          min={minWinrate}
+                          max={maxWinrate}
+                          value={row.wins / row.matches}
+                          color={CHART_COLOR.primary}
+                          label={`${Math.round((row.wins / row.matches) * 100).toFixed(0)}% `}
+                          delta={prev !== undefined ? row.wins / row.matches - prev.winrate : undefined}
+                        />
+                      </TooltipTarget>
+                    </Tooltip>
+                  </TableCell>
+                )}
+                {columns.includes("pickRate") && (
+                  <TableCell className="text-center">
+                    <Tooltip
+                      content={
+                        <>
+                          <TooltipHeader title="Share of combo matches" />
+                          <TooltipStats>
+                            <TooltipStat
+                              label="Matches"
+                              value={`${row.matches.toLocaleString("en-US")} of ${sumMatches.toLocaleString("en-US")}`}
+                            />
+                            <TooltipStat label="Share" value={formatFineShare(share)} />
+                            {prev !== undefined && <TooltipStat label="Previous" value={formatFineShare(prev.share)} />}
+                          </TooltipStats>
+                        </>
+                      }
+                    >
+                      <TooltipTarget display="block">
+                        <ProgressBarWithLabel
+                          min={0}
+                          max={maxShare}
+                          value={share}
+                          color={CHART_COLOR.pickRate}
+                          label={formatFineShare(share)}
+                          delta={prev !== undefined ? share - prev.share : undefined}
+                          deltaDigits={fineShareDigits(share)}
+                        />
+                      </TooltipTarget>
+                    </Tooltip>
+                  </TableCell>
+                )}
+                {columns.includes("totalMatches") && (
+                  <TableCell className="text-center">{row.matches.toLocaleString("en-US")}</TableCell>
+                )}
+              </TableRow>
+            );
+          })}
+        </TableBody>
+      </Table>
+    </StaleOverlay>
   );
 }
