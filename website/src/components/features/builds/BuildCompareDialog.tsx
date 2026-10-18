@@ -129,14 +129,14 @@ export function BuildCompareDialog({
               <TableHeader>
                 <TableRow>
                   <TableHead tone="muted">Stat</TableHead>
-                  <TableHead className="text-end" title={nameOf(build)}>
-                    Selected
+                  <TableHead className="text-end">
+                    Selected<span className="sr-only">: {nameOf(build)}</span>
                   </TableHead>
-                  <TableHead className="text-end" title={nameOf(other)}>
-                    Compared
+                  <TableHead className="text-end">
+                    Compared<span className="sr-only">: {nameOf(other)}</span>
                   </TableHead>
                   <TableHead tone="muted" className="text-end">
-                    Difference
+                    Vs. selected
                   </TableHead>
                 </TableRow>
               </TableHeader>
@@ -185,14 +185,14 @@ export function BuildCompareDialog({
               <TableHeader>
                 <TableRow>
                   <TableHead tone="muted">Stat</TableHead>
-                  <TableHead className="text-end" title={nameOf(build)}>
-                    Selected
+                  <TableHead className="text-end">
+                    Selected<span className="sr-only">: {nameOf(build)}</span>
                   </TableHead>
-                  <TableHead className="text-end" title={nameOf(other)}>
-                    Compared
+                  <TableHead className="text-end">
+                    Compared<span className="sr-only">: {nameOf(other)}</span>
                   </TableHead>
                   <TableHead tone="muted" className="text-end">
-                    Difference
+                    Vs. selected
                   </TableHead>
                 </TableRow>
               </TableHeader>
