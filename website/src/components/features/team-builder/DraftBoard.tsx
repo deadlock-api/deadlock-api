@@ -260,12 +260,13 @@ export function DraftBoard({ controls, analysis, imported, loading, swaps, laneS
                       { label: "Confidence", value: `${filledPips} of ${MAX_CONFIDENCE_PIPS}` },
                     ]}
                   >
-                    <TooltipTarget className="flex w-full items-center gap-2 text-xs">
+                    <TooltipTarget size="row" className="flex w-full items-center gap-1.5 text-xs">
                       <span className="flex-1 text-start text-muted-foreground">{contribution.label}</span>
                       <Pips
                         value={filledPips}
                         max={MAX_CONFIDENCE_PIPS}
                         tone={pipTone(filledPips)}
+                        size="default"
                         label={`Confidence ${filledPips} of ${MAX_CONFIDENCE_PIPS}`}
                         className="shrink-0"
                       />

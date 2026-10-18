@@ -517,7 +517,7 @@ export function Round3Primitives() {
       <Specimen
         name="Pips"
         source="ui/pips"
-        note="A small count out of a small maximum: ability levels, confidence. The label replaces the marks for a screen reader."
+        note="A small count out of a small maximum: ability levels, confidence. The label replaces the marks for a screen reader. size sm (2 by 4px marks) for a dense scoreboard, default (4 by 8px) for a meter read on its own; empty marks are meter-empty, 3:1 on the card."
       >
         <Variants className="gap-6">
           <Pips value={3} max={4} label="Level 3 of 4" />
@@ -525,6 +525,7 @@ export function Round3Primitives() {
           <Pips value={2} max={3} tone="positive" label="Confidence 2 of 3" />
           <Pips value={1} max={3} tone="negative" label="Confidence 1 of 3" />
           <Pips value={2} max={5} tone="muted" label="2 of 5" />
+          <Pips value={2} max={5} tone="positive" size="default" label="Confidence 2 of 5" />
         </Variants>
       </Specimen>
 

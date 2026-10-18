@@ -223,6 +223,8 @@ for (const surface of ["muted", "card", "table-stripe"]) variant("chart-interval
 for (const series of ["chart-win-rate", "chart-share"]) {
   for (const surface of ["muted", "card"]) variant(series, surface, UI_MIN);
 }
+// The empty marks of Pips, non-text UI on the surfaces a meter sits on.
+for (const surface of ["card", "muted", "popover"]) variant("meter-empty", surface, UI_MIN);
 // A highlighted tier list tile: its reading stays readable on the brand tint.
 variant("muted-foreground", "primary/15 over card");
 variant("muted-foreground", "secondary");

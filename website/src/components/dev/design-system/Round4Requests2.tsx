@@ -374,6 +374,12 @@ export function Round4Requests2() {
           <Tooltip content="A distribution plot would open here.">
             <TooltipTarget underline="dashed">3.51</TooltipTarget>
           </Tooltip>
+          <Tooltip content="Thinnest sample 412 matches.">
+            <TooltipTarget size="row" display="block" className="flex w-60 items-center justify-between text-xs">
+              <span>A row target, 24px tall</span>
+              <span>+1.2</span>
+            </TooltipTarget>
+          </Tooltip>
         </Variants>
       </Specimen>
 

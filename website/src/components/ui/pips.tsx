@@ -2,12 +2,20 @@ import { NoValue } from "~/components/ui/no-value";
 import { TONE_BG, type Tone } from "~/lib/tone";
 import { cn } from "~/lib/utils";
 
+const MARK_SIZE = {
+  /** 2 by 4px marks, for a scoreboard row that holds many of them. */
+  sm: "h-0.5 w-1",
+  /** 4 by 8px marks, for a meter read on its own. */
+  default: "h-1 w-2",
+} as const;
+
 /** A small count out of a small maximum, as filled and empty marks: ability levels, confidence. */
 export function Pips({
   value,
   max,
   tone,
   label,
+  size = "sm",
   className,
   ...props
 }: Omit<React.ComponentProps<"span">, "children"> & {
@@ -17,6 +25,7 @@ export function Pips({
   tone?: Tone;
   /** Read out in place of the marks: "Level 3 of 4". */
   label: string;
+  size?: keyof typeof MARK_SIZE;
 }) {
   if (value == null || !Number.isFinite(value) || max <= 0) {
     return <NoValue className={className} {...props} />;
@@ -24,6 +33,7 @@ export function Pips({
   return (
     <span
       data-slot="pips"
+      data-size={size}
       // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- the marks are drawn with CSS; there is no image file
       role="img"
       aria-label={label}
@@ -34,8 +44,9 @@ export function Pips({
         <span
           key={index}
           className={cn(
-            "h-0.5 w-1 rounded-full",
-            index < value ? (tone ? TONE_BG[tone] : "bg-warning") : "bg-muted-foreground/30",
+            "rounded-full",
+            MARK_SIZE[size],
+            index < value ? (tone ? TONE_BG[tone] : "bg-warning") : "bg-meter-empty",
           )}
         />
       ))}

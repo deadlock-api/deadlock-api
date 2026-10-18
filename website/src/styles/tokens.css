@@ -106,6 +106,8 @@
   --chart-axis: var(--ink-400);
   /* The uncertainty band of a value (a 95% range) on a bar's muted track: 3:1 against the track and the card. */
   --chart-interval: var(--ink-500);
+  /* The empty marks of a meter (Pips): 3:1 against the card, so "2 of 5" still shows its five. */
+  --meter-empty: var(--ink-500);
   /* Tick and axis label size; `-sm` for plots under 100px tall. Auto-sized axes grow with it. */
   --chart-tick: var(--type-xs);
   --chart-tick-sm: var(--type-xs);
@@ -233,6 +235,7 @@
   --color-chart-win-rate: var(--chart-win-rate);
   --color-chart-share: var(--chart-share);
   --color-chart-interval: var(--chart-interval);
+  --color-meter-empty: var(--meter-empty);
 
   --color-item-weapon: var(--item-weapon);
   --color-item-vitality: var(--item-vitality);

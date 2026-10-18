@@ -180,12 +180,20 @@ const TOOLTIP_TARGET_DISPLAY = {
  * A focusable stand-in for an element that has a hover card but no control of its own: a value in a table, a
  * truncated name. It is in the tab order and carries the one focus treatment, so the card is reachable by keyboard.
  */
+const TOOLTIP_TARGET_SIZE = {
+  default: "",
+  /** A row of a list (a label, a meter and values): at least 24px tall, the smallest target (Law 18). */
+  row: "min-h-6",
+};
+
 function TooltipTarget({
   display = "inline-block",
   underline = "none",
+  size = "default",
   className,
   ...props
 }: ComponentProps<"span"> & {
+  size?: keyof typeof TOOLTIP_TARGET_SIZE;
   /**
    * `dashed`: the mark of a value with a hover card behind it (a plot, more numbers). Dashed, not the dotted rule of a
    * link that opens details, which a 1px dot line made too faint to find on a number.
@@ -210,6 +218,7 @@ function TooltipTarget({
         // The trigger of a toggletip is a button (`role` from `Tooltip trigger="toggle"`), and points like one.
         "cursor-default rounded-sm [&[role=button]]:cursor-pointer",
         TOOLTIP_TARGET_DISPLAY[display],
+        TOOLTIP_TARGET_SIZE[size],
         underline === "dashed" &&
           "underline decoration-muted-foreground decoration-dashed underline-offset-2 hover:decoration-current hover:decoration-solid focus-visible:decoration-current focus-visible:decoration-solid",
         className,
