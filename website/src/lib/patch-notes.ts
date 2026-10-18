@@ -5,13 +5,12 @@ export type NoteBlock =
   | { kind: "list"; items: string[] };
 
 export interface PatchNotes {
-  /** The announcement's opening lines, for the page header. Undefined for a changelog that is only a list. */
-  blurb?: string;
+  /** The announcement's opening paragraph, shown above the rest. Undefined for a changelog that is only a list. */
+  lead?: string;
   blocks: NoteBlock[];
 }
 
-const BLURB_MIN = 40;
-const BLURB_MAX = 320;
+const LEAD_MIN = 40;
 
 const ENTITIES: Record<string, string> = { amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", nbsp: " " };
 
@@ -82,18 +81,9 @@ export function parsePatchNotes(html: string): PatchNotes {
   }
   flush();
 
-  const lead = blocks.find((block) => block.kind === "paragraph" && block.text.length >= BLURB_MIN);
-  const blurb = lead?.kind === "paragraph" ? clip(lead.text) : undefined;
-  // An uncut blurb is already on the page; the notes carry the rest.
-  return {
-    blurb,
-    blocks: lead && blurb === (lead as { text: string }).text ? blocks.filter((block) => block !== lead) : blocks,
-  };
-}
-
-/** A paragraph cut at a word, with an ellipsis, when it is longer than a header should carry. */
-function clip(text: string): string {
-  if (text.length <= BLURB_MAX) return text;
-  const cut = text.slice(0, BLURB_MAX);
-  return `${cut.slice(0, cut.lastIndexOf(" "))}…`;
+  const lead = blocks.find((block) => block.kind === "paragraph" && block.text.length >= LEAD_MIN);
+  // The lead is shown in full above the notes, which carry the rest: it is never repeated.
+  return lead?.kind === "paragraph"
+    ? { lead: lead.text, blocks: blocks.filter((block) => block !== lead) }
+    : { lead: undefined, blocks };
 }

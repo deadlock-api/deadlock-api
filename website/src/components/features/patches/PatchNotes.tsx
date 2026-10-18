@@ -6,7 +6,7 @@ import type { PatchNotes as Notes } from "~/lib/patch-notes";
 import { cn } from "~/lib/utils";
 
 /**
- * What Valve wrote about a patch, as a panel: the opening lines of its announcement, then the full notes. Both are
+ * What Valve wrote about a patch, as a panel: the opening paragraph of its announcement, then the rest of the notes. Both are
  * plain text blocks, so nothing of the post's own markup reaches the page.
  */
 export function PatchNotes({
@@ -17,7 +17,7 @@ export function PatchNotes({
   /** `fit`: the notes scroll past a fixed height. `fill`: from a wide page on, the height of the block beside it. */
   layout?: "fit" | "fill";
 }) {
-  if (!notes.blurb && notes.blocks.length === 0) return null;
+  if (!notes.lead && notes.blocks.length === 0) return null;
   return (
     <Panel>
       <PanelHeader title="Patch Notes" size="sm" />
@@ -32,7 +32,7 @@ export function PatchNotes({
           )}
         >
           <PanelBody className="flex flex-col items-start gap-3">
-            {notes.blurb && <Text as="p">{notes.blurb}</Text>}
+            {notes.lead && <Text as="p">{notes.lead}</Text>}
             {notes.blocks.length > 0 && (
               <div
                 className={cn(
