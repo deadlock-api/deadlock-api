@@ -142,7 +142,7 @@ export function AiSearch({ size = "default", className }: AiSearchProps) {
   );
 
   const home = size === "default";
-  useSearchShortcut(input, home);
+  const ownsShortcut = useSearchShortcut(input, home);
 
   const question = last && last.version !== draft.version ? last.question : draft.text;
   const suggestions = useSuggestions(question, listOpen);
@@ -217,7 +217,10 @@ export function AiSearch({ size = "default", className }: AiSearchProps) {
   };
 
   return (
-    <search aria-label="Find a stat" className={cn("flex w-full flex-col gap-3", home && "max-w-2xl", className)}>
+    <search
+      aria-label={home ? ASK : "Site search"}
+      className={cn("flex w-full flex-col gap-3", home && "max-w-2xl", className)}
+    >
       <Callout open={notice !== null} onOpenChange={(open) => !open && setNotice(null)}>
         {/* The dropdown has its own popover root inside the callout's anchor: Radix binds an anchor to the nearest root,
             so nested the other way round the callout would claim the dropdown's anchor. */}
@@ -238,8 +241,8 @@ export function AiSearch({ size = "default", className }: AiSearchProps) {
                     size={size}
                     loading={!home && searching}
                     loadingLabel={FINDING}
-                    shortcut="/"
-                    aria-label="Ask for a stat"
+                    shortcut={ownsShortcut ? "/" : undefined}
+                    aria-label={home ? ASK : "Ask for a stat"}
                     // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- SearchInput renders a native text input; this is the WAI-ARIA combobox pattern
                     role="combobox"
                     aria-expanded={showList}
