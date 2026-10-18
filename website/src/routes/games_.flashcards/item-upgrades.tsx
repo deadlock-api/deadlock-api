@@ -20,7 +20,7 @@ import { pageTitle, seo } from "~/lib/seo";
 import { filterShopableItems, itemUpgradesQueryOptions, type SlimUpgrade } from "~/queries/asset-queries";
 
 const OPTION_COUNT = 4;
-const FEEDBACK_MS = { correct: 600, wrong: 1800 };
+const FEEDBACK_MS = { correct: 600 };
 
 interface UpgradePathEntry {
   id: number;

@@ -73,13 +73,16 @@ export interface FlashcardDeckOptions<Entry extends { id: number }, Option> {
   answerKey: (answer: Entry) => OptionKey;
   /** What the answer is called, for the verdict a screen reader hears ("Wrong. The answer was Haze."). */
   answerName: (answer: Entry) => string;
-  /** How long a verdict shows before the next card, in ms. */
-  feedbackMs?: { correct: number; wrong: number };
+  /**
+   * How long a right answer's verdict shows before the next card, in ms. A wrong answer waits for the player
+   * (`advance()`), so the correction stays up as long as they need to read it.
+   */
+  feedbackMs?: { correct: number };
   /** Changing this value draws a fresh card (stats and progress are kept). */
   reshuffleKey?: string;
 }
 
-const DEFAULT_FEEDBACK_MS = { correct: 500, wrong: 1500 };
+const DEFAULT_FEEDBACK_MS = { correct: 500 };
 
 /**
  * The behaviour of a flashcard deck, without its look: dealing cards (no repeats, or not the card just seen), picking
@@ -110,6 +113,8 @@ export function useFlashcardDeck<Entry extends { id: number }, Option>({
   }, [deck, deal.serial]);
   const { card, selected } = deal;
   const advanceTimer = useRef<number | null>(null);
+  // The deal that follows a wrong answer, taken when the player moves on.
+  const pendingNext = useRef<{ serial: number; exclude: Set<number> } | null>(null);
   const { markAnswered, focusFirstOption } = useNextCardFocus();
 
   /** Not the card just seen, unless it is the only one; with "No repeats" none already mastered. */
@@ -151,6 +156,12 @@ export function useFlashcardDeck<Entry extends { id: number }, Option>({
   // A filter or a patch can shrink the pool below cards already mastered; only the ones still in it count.
   const masteredInPool = pool.reduce((count, entry) => count + Number(seenIds.has(entry.id)), 0);
 
+  const moveOn = (serial: number, exclude: Set<number>) => {
+    // Drawn here, not in the updater: an updater must be pure (StrictMode runs it twice).
+    const next = drawFor(serial + 1, exclude);
+    setDeal((d) => (d.serial === serial ? { ...d, card: next, selected: null, serial: serial + 1 } : d));
+  };
+
   const choose = (option: Option) => {
     if (!card || selected !== null) return;
     const key = optionKey(option);
@@ -172,14 +183,19 @@ export function useFlashcardDeck<Entry extends { id: number }, Option>({
       trackFlashcards("deck_mastered", deck, { answered: stats.seen + 1, pool_size: pool.length });
     }
     const exclude = excludeAfter(card, nextSeen);
-    advanceTimer.current = window.setTimeout(
-      () => {
-        // Drawn here, not in the updater: an updater must be pure (StrictMode runs it twice).
-        const next = drawFor(serial + 1, exclude);
-        setDeal((d) => (d.serial === serial ? { ...d, card: next, selected: null, serial: serial + 1 } : d));
-      },
-      correct ? feedbackMs.correct : feedbackMs.wrong,
-    );
+    if (!correct) {
+      pendingNext.current = { serial, exclude };
+      return;
+    }
+    advanceTimer.current = window.setTimeout(() => moveOn(serial, exclude), feedbackMs.correct);
+  };
+
+  /** After a wrong answer: the next card, once the player has read the correction. */
+  const advance = () => {
+    const pending = pendingNext.current;
+    if (!pending) return;
+    pendingNext.current = null;
+    moveOn(pending.serial, pending.exclude);
   };
 
   useAnswerKeys(
@@ -201,6 +217,7 @@ export function useFlashcardDeck<Entry extends { id: number }, Option>({
   const reset = () => {
     trackFlashcards("progress_reset", deck, { answered: stats.seen, mastered: masteredInPool, pool_size: pool.length });
     clearAdvanceTimer();
+    pendingNext.current = null;
     resetProgress();
     dealNext(new Set());
   };
@@ -228,6 +245,9 @@ export function useFlashcardDeck<Entry extends { id: number }, Option>({
     verdict,
     /** True while the verdict of a pick shows. */
     revealed: selected !== null,
+    /** A wrong answer's correction is up, waiting for `advance()`. */
+    awaitingNext: verdict === "wrong",
+    advance,
     stateOf,
     choose,
     focusFirstOption,

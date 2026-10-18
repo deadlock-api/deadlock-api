@@ -3,6 +3,8 @@ import type { ReactNode } from "react";
 import { createContext, use, useId } from "react";
 
 import { AnswerOption } from "~/components/domain/minigames/AnswerOption";
+import { RevealActions } from "~/components/domain/minigames/RevealActions";
+import { TerminalButton } from "~/components/domain/minigames/TerminalButton";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
@@ -213,6 +215,12 @@ export function FlashcardBoard<Entry extends { id: number }, Option>({
             className="flex flex-col items-center gap-6"
           >
             <DeckContext value={deck as unknown as AnyDeck}>{children}</DeckContext>
+            {/* A wrong answer waits for the player; the row is laid out for every card, so it moves nothing. */}
+            <RevealActions revealed={deck.awaitingNext}>
+              <TerminalButton variant="soft" size="touch" onClick={deck.advance}>
+                Next card
+              </TerminalButton>
+            </RevealActions>
           </motion.div>
         </AnimatePresence>
       )}
