@@ -21,12 +21,13 @@ const segmentedItemVariants = cva(
   {
     variants: {
       size: {
-        // The basis is the equal share's starting point; the minimum width keeps an item at least square in a hugging
-        // group too (whose items drop the basis), so a one-character item such as "5" is still a 24px target.
+        // The basis is the equal share's starting point and keeps an item at least square, so a one-character item
+        // such as "5" is still a 24px target; a hugging group, which drops the basis, sets a square minimum instead
+        // (HUG_FLOOR). Not here: a fixed minimum would replace `min-w-fit` and let labels draw over each other.
         // 12px at every size: the site sets no text smaller.
-        sm: "h-6 min-w-6 basis-6 px-2 text-xs",
-        default: "h-7 min-w-7 basis-7 px-2.5 text-xs",
-        lg: "h-8 min-w-8 basis-8 px-3 text-sm",
+        sm: "h-6 basis-6 px-2 text-xs",
+        default: "h-7 basis-7 px-2.5 text-xs",
+        lg: "h-8 basis-8 px-3 text-sm",
       },
     },
     defaultVariants: { size: "default" },
@@ -34,6 +35,13 @@ const segmentedItemVariants = cva(
 );
 
 type SegmentedSize = NonNullable<VariantProps<typeof segmentedItemVariants>["size"]>;
+
+/** A hugging group's items are as wide as their labels, but never narrower than they are high. */
+const HUG_FLOOR: Record<SegmentedSize, string> = {
+  sm: "*:data-[slot=segmented-item]:min-w-6",
+  default: "*:data-[slot=segmented-item]:min-w-7",
+  lg: "*:data-[slot=segmented-item]:min-w-8",
+};
 
 const SegmentedSizeContext = createContext<SegmentedSize>("default");
 
@@ -91,7 +99,9 @@ function Segmented<T extends string>({
           size === "sm" && "min-h-8 items-center",
           // A hugging group sizes from its labels: with the items' square flex-basis as their width, "2 3 4 5 6" came
           // out too narrow and wrapped "6" below with room to spare. The row around it wraps whole controls instead.
-          width === "fill" ? "flex w-full" : "inline-flex w-fit shrink-0 *:data-[slot=segmented-item]:basis-auto",
+          width === "fill"
+            ? "flex w-full"
+            : cn("inline-flex w-fit shrink-0 *:data-[slot=segmented-item]:basis-auto", HUG_FLOOR[size]),
           className,
         )}
       >
