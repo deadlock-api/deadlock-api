@@ -257,7 +257,10 @@ SETTINGS log_comment = 'player_scoreboard', apply_patch_parts = 0, do_not_merge_
 /// full aggregation, so a client walking the unscoped scoreboard used to cost one 2s full scan
 /// per page and timed out when it fetched dozens in parallel. First pages keep their exact
 /// `LIMIT`: widening them to a block costs 10-35% more wall time (measured on 2026-10-04).
-const PAGE_BLOCK_SIZE: u32 = 10_000;
+/// A block spans five maximum-size pages: a client walking the all-time scoreboard 10k at a time
+/// ran one 60 CPU-s aggregation per page, and a 50k block costs the same as a 10k one (no
+/// significant wall or memory difference, measured on 2026-10-18).
+const PAGE_BLOCK_SIZE: u32 = 50_000;
 
 cached_ch_query! {
     fn run_query(1_000, 3600) -> Vec<PlayerEntry>;
@@ -380,15 +383,18 @@ mod tests {
             })]
         );
         assert!(inside[0].contains("rowNumberInAllBlocks() + 0 as rank"));
-        assert!(inside[0].contains("LIMIT 10000 OFFSET 0"));
+        assert!(inside[0].contains("LIMIT 50000 OFFSET 0"));
 
-        let straddling = build_block_queries(&query, 9_950, 100);
+        // Maximum-size pages 2-5 share the first block.
+        assert_eq!(build_block_queries(&query, 30_000, 10_000), inside);
+
+        let straddling = build_block_queries(&query, 49_950, 100);
         assert_eq!(straddling.len(), 2);
-        assert!(straddling[1].contains("rowNumberInAllBlocks() + 10000 as rank"));
-        assert!(straddling[1].contains("LIMIT 10000 OFFSET 10000"));
+        assert!(straddling[1].contains("rowNumberInAllBlocks() + 50000 as rank"));
+        assert!(straddling[1].contains("LIMIT 50000 OFFSET 50000"));
 
         assert_eq!(
-            build_block_queries(&query, 10_000, PAGE_BLOCK_SIZE).len(),
+            build_block_queries(&query, 50_000, PAGE_BLOCK_SIZE).len(),
             1
         );
         assert_eq!(
