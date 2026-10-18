@@ -171,7 +171,7 @@ export function BuildDetailPanel({
             <div className="grid @lg:grid-cols-2">
               {meta.categories
                 .filter((category) => category.itemIds.length > 0)
-                .map((category) => (
+                .map((category, index) => (
                   <section key={`${category.name}|${category.itemIds.join()}`} className="flex flex-col">
                     <PanelSection
                       variant="label"
@@ -181,7 +181,10 @@ export function BuildDetailPanel({
                           description={category.description}
                         />
                       }
-                    />
+                    >
+                      {/* What the numbers under the icons are, named once over the first group. */}
+                      {index === 0 && <span className="shrink-0 whitespace-nowrap">bought in % of matches</span>}
+                    </PanelSection>
                     <ul className="flex flex-wrap gap-1 px-3 py-1.5">
                       {category.itemIds.map((itemId) => (
                         <li key={itemId}>
