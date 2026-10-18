@@ -517,7 +517,7 @@ export function BuildPurchases({
               <TableHead className="hidden text-end @md/table:table-cell">Souls</TableHead>
               <TableHead className="text-end">Bought</TableHead>
               <TableHead className="text-end">Sold</TableHead>
-              <TableHead className="text-end">Buyers</TableHead>
+              <TableHead className="hidden text-end @md/table:table-cell">Buyers</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -538,7 +538,7 @@ export function BuildPurchases({
                 </TableCell>
                 <TableCell className="text-end">{p.boughtAt != null ? clock(p.boughtAt) : <NoValue />}</TableCell>
                 <TableCell className="text-end">{p.sold ? clock(p.sold.at) : <NoValue />}</TableCell>
-                <TableCell className="text-end text-muted-foreground">
+                <TableCell className="hidden text-end text-muted-foreground @md/table:table-cell">
                   {/* What its buyers do: the share of purchases the API reports sold (a component's sales count its
                       upgrades), else the average time of a sale. */}
                   {p.soldShare != null ? (
