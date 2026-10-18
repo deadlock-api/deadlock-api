@@ -174,8 +174,8 @@ function PickerBody({
     enterPicks: "always",
   });
 
-  // A sort whose every hero is n/a (no ally drafted yet, or no enemy) sorts nothing; it comes back with the first hero
-  // it can be measured against.
+  // A sort whose every hero is n/a (no ally drafted yet, or no enemy) sorts nothing: it stays in the row, disabled,
+  // until the first hero it can be measured against, so the control keeps its size while the picker stays open.
   const showSynergy = recommendations.some((r) => r.synergy !== undefined);
   const showCounter = recommendations.some((r) => r.counter !== undefined);
   const activeSort = (sort === "synergy" && !showSynergy) || (sort === "counter" && !showCounter) ? "score" : sort;
@@ -188,8 +188,12 @@ function PickerBody({
         <Field label="Sort" orientation="horizontal">
           <Segmented size="sm" value={activeSort} onValueChange={setSort}>
             <SegmentedItem value="score">{SORT_LABEL.score}</SegmentedItem>
-            {showSynergy && <SegmentedItem value="synergy">{SORT_LABEL.synergy}</SegmentedItem>}
-            {showCounter && <SegmentedItem value="counter">{SORT_LABEL.counter}</SegmentedItem>}
+            <SegmentedItem value="synergy" disabled={!showSynergy}>
+              {SORT_LABEL.synergy}
+            </SegmentedItem>
+            <SegmentedItem value="counter" disabled={!showCounter}>
+              {SORT_LABEL.counter}
+            </SegmentedItem>
             <SegmentedItem value="winRate">{SORT_LABEL.winRate}</SegmentedItem>
           </Segmented>
         </Field>
