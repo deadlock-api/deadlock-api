@@ -34,6 +34,7 @@ import { SkeletonMediaRow, SkeletonRows, SkeletonStatTiles } from "~/components/
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { Card } from "~/components/ui/card";
+import { Stack } from "~/components/ui/stack";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 
 const INSTALL =
@@ -105,13 +106,27 @@ function CodeSpecimens() {
       <Specimen
         name="CopyableCode"
         source="patterns/code/CopyableCode"
-        note="One command or path to copy, framed with its copy button. With a language it is highlighted; without one it is plain monospace for a path."
+        note="One command or path to copy, framed with its copy button. With a language it is highlighted; without one it is plain monospace for a path. overflow scroll (default) keeps one line; wrap shows all of it, a path breaking after its separators."
       >
         <Variants label="with a language; a long command scrolls" className="block">
           <CopyableCode language="bash" code={INSTALL} copyLabel="Copy command" />
         </Variants>
         <Variants label='a path, size="sm"' className="block">
           <CopyableCode size="sm" code="~/.local/share/Steam/appcache/httpcache" copyLabel="Copy path" />
+        </Variants>
+        <Variants
+          label='overflow="wrap" in a narrow column: a path breaks after its separators, a command between words'
+          className="block max-w-48"
+        >
+          <Stack gap={2}>
+            <CopyableCode
+              size="sm"
+              overflow="wrap"
+              code={"C:\\Program Files (x86)\\Steam\\appcache\\httpcache"}
+              copyLabel="Copy path"
+            />
+            <CopyableCode overflow="wrap" language="bash" code={INSTALL} copyLabel="Copy command" />
+          </Stack>
         </Variants>
       </Specimen>
 

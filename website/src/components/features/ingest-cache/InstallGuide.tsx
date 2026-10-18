@@ -28,7 +28,7 @@ function Uninstall({ code, children }: { code: string; children?: React.ReactNod
   return (
     <Disclosure variant="inline" title="Uninstall">
       {children}
-      <CopyableCode size="sm" language="bash" code={code} copyLabel="Copy uninstall command" />
+      <CopyableCode overflow="wrap" size="sm" language="bash" code={code} copyLabel="Copy uninstall command" />
     </Disclosure>
   );
 }
@@ -73,6 +73,7 @@ export function InstallGuide() {
                   <Step title="Open PowerShell as administrator: right-click Start, then Terminal (Admin) or Windows PowerShell (Admin)." />
                   <Step title="Paste the installer and press Enter.">
                     <CopyableCode
+                      overflow="wrap"
                       size="sm"
                       language="bash"
                       code={WINDOWS_INSTALL}
@@ -99,7 +100,12 @@ export function InstallGuide() {
             <TabsContent value="linux" className="flex flex-col gap-4">
               <Steps>
                 <Step title="Paste the installer into a terminal. It installs into your home folder and starts on login, no sudo needed.">
-                  <CopyableCode language="bash" code={LINUX_INSTALL} copyLabel="Copy Linux install command" />
+                  <CopyableCode
+                    overflow="wrap"
+                    language="bash"
+                    code={LINUX_INSTALL}
+                    copyLabel="Copy Linux install command"
+                  />
                 </Step>
                 <Step title="Play Deadlock. Your matches are sent while you play." />
                 <Step
@@ -122,7 +128,7 @@ export function InstallGuide() {
                     </>
                   }
                 >
-                  <CopyableCode language="bash" code={DOCKER_INSTALL} copyLabel="Copy Docker command" />
+                  <CopyableCode overflow="wrap" language="bash" code={DOCKER_INSTALL} copyLabel="Copy Docker command" />
                 </Step>
                 <Step title="Play Deadlock. Your matches are sent while you play." />
               </Steps>

@@ -70,7 +70,9 @@ export function HighlightedCode({
           SCROLLBAR_THIN,
           "overflow-x-auto rounded-md font-mono leading-relaxed",
           // Breaks between words first, and inside one only when it is longer than the line (a URL), not "--trans/port".
-          overflow === "wrap" && "wrap-break-word whitespace-pre-wrap",
+          // `anywhere` rather than `break-word`, so that word no longer sets the block's smallest width (min-content)
+          // and a code block inside a flex row (CopyableCode) wraps instead of spilling out.
+          overflow === "wrap" && "wrap-anywhere whitespace-pre-wrap",
         )}
       >
         {html ? (

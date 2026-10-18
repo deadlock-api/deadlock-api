@@ -21,7 +21,7 @@ import { useIsLinux } from "~/hooks/useIsLinux";
 import { STEAM_CACHE_PATHS } from "./faq";
 
 function CachePath({ path }: { path: string }) {
-  return <CopyableCode size="sm" code={path} copyLabel={`Copy ${path}`} />;
+  return <CopyableCode size="sm" overflow="wrap" code={path} copyLabel={`Copy ${path}`} />;
 }
 
 function CachePaths() {

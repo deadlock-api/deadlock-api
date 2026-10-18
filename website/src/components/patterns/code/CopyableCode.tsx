@@ -17,6 +17,7 @@ export function CopyableCode({
   code,
   language,
   size = "default",
+  overflow = "scroll",
   copyLabel = "Copy",
   className,
   ...props
@@ -24,6 +25,11 @@ export function CopyableCode({
   code: string;
   language?: HighlightLanguage;
   size?: "sm" | "default";
+  /**
+   * `scroll` keeps one line that scrolls sideways; `wrap` shows all of it on several lines, a path breaking after its
+   * separators (`/`, `\`), for a narrow column where a scroll box would show a fraction of it.
+   */
+  overflow?: "scroll" | "wrap";
   /** Names the copy button: "Copy command", "Copy path". */
   copyLabel?: string;
 }) {
@@ -31,6 +37,7 @@ export function CopyableCode({
     <Card
       data-slot="copyable-code"
       data-size={size}
+      data-overflow={overflow}
       tone="inset"
       size="xs"
       radius="md"
@@ -38,7 +45,24 @@ export function CopyableCode({
       {...props}
     >
       {language ? (
-        <HighlightedCode code={code} language={language} variant="plain" className="flex-1 self-center" />
+        <HighlightedCode
+          code={code}
+          language={language}
+          variant="plain"
+          overflow={overflow}
+          className="flex-1 self-center"
+        />
+      ) : overflow === "wrap" ? (
+        <code className="min-w-0 flex-1 self-center font-mono text-xs wrap-anywhere whitespace-pre-wrap text-foreground">
+          {/* A break opportunity after every path separator, so a long path wraps between its folders. */}
+          {code.split(/(?<=[\\/])/).map((part, index) => (
+            // oxlint-disable-next-line react/no-array-index-key -- the parts of one fixed string, in order
+            <span key={index}>
+              {part}
+              <wbr />
+            </span>
+          ))}
+        </code>
       ) : (
         <code
           // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- a scrollable region must be reachable by keyboard
