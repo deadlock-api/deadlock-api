@@ -301,10 +301,11 @@ export function OverviewTab({
             </div>
           </PanelBody>
         </Panel>
-        <Panel>
+        <Panel className="@container/habits">
           <PanelHeader title="Play habits" icon={Clock3} size="sm" />
           <PanelBody size="sm">
-            <StatGroup variant="plain" size="xs" className="grid-cols-3 gap-2 pb-2">
+            {/* Three labels like "Playtime / session" fit side by side only from a 20rem panel. */}
+            <StatGroup variant="plain" size="xs" className="grid-cols-2 gap-2 pb-2 @xs/habits:grid-cols-3">
               <Stat label="Sessions" value={integer(sessions.sessions)} />
               <Stat label="Games / session" value={decimal(sessions.avgMatchesPerSession)} />
               <Stat label="Playtime / session" value={formatPlaytime(sessions.avgSessionTimeS)} />

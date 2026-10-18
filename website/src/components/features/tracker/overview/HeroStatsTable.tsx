@@ -136,21 +136,21 @@ export function HeroStatsTable({
             <TableBody>
               {visible.map((row) => (
                 <TableRow key={row.heroId}>
-                  <TableRowHeader className="ps-0">
+                  {/* The name takes the width the numbers leave and shortens with an ellipsis, so on a phone the
+                      table keeps all its columns inside the panel. */}
+                  <TableRowHeader className="w-full max-w-0 ps-0">
                     <Tooltip content="Filter matches to this hero">
                       <Button
                         variant="ghost"
+                        fit="truncate"
                         onClick={() => onSelectHero(row.heroId)}
                         className="group h-auto gap-1.5 px-1 py-0.5"
                       >
-                        <span aria-hidden="true">
+                        <span aria-hidden="true" className="shrink-0">
                           <HeroImage heroId={row.heroId} shape="rounded" className="size-6" title="" />
                         </span>
-                        <HeroName
-                          heroId={row.heroId}
-                          className="max-w-24 text-xs font-medium group-hover:text-primary"
-                        />
-                        <ArrowUpRight aria-hidden="true" className="size-3 text-muted-foreground" />
+                        <HeroName heroId={row.heroId} className="text-xs font-medium group-hover:text-primary" />
+                        <ArrowUpRight aria-hidden="true" className="hidden size-3 text-muted-foreground @xs:block" />
                       </Button>
                     </Tooltip>
                   </TableRowHeader>
@@ -158,9 +158,15 @@ export function HeroStatsTable({
                     <span className="text-xs tabular-nums">{row.matches.toLocaleString("en-US")}</span>
                   </TableCell>
                   <TableCell className="text-end">
-                    <div className="ms-auto flex w-12 flex-col gap-1 text-xs tabular-nums">
+                    {/* On a phone the rate goes without its bar, which would take the name's room. */}
+                    <div className="ms-auto flex flex-col gap-1 text-xs tabular-nums @xs:w-12">
                       <span>{(row.winrate * 100).toFixed(0)}%</span>
-                      <ProgressBar variant="thin" color={CHART_COLOR.winRate} value={row.winrate} className="h-1" />
+                      <ProgressBar
+                        variant="thin"
+                        color={CHART_COLOR.winRate}
+                        value={row.winrate}
+                        className="hidden h-1 @xs:block"
+                      />
                     </div>
                   </TableCell>
                   <TableCell className="text-end">
