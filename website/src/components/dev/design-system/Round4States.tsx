@@ -647,7 +647,7 @@ export function Round4States() {
       <Specimen
         name="Delta states"
         source="ui/delta"
-        note="A change of zero at the displayed precision renders nothing; a missing or non-finite change renders NoValue rather than “NaN%”. The direction is a glyph or an arrow, never the color alone."
+        note="A change of zero at the displayed precision renders nothing; a missing or non-finite change renders NoValue rather than “NaN%”. The direction is a glyph or an arrow, never the color alone, and a toned change also says “better” or “worse” to screen readers (data-verdict)."
       >
         <Variants label="up, down, badge">
           <Delta value={0.031} />

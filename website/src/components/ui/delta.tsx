@@ -110,6 +110,8 @@ export function Delta({
       ? "muted"
       : toneOf(polarity === "lower-is-better" ? -rounded : rounded);
   const Arrow = rounded > 0 ? ArrowUp : ArrowDown;
+  // What the tone says, in words for screen readers: the color alone would leave "up" without its meaning.
+  const verdict = tone === "positive" ? "better" : tone === "negative" ? "worse" : undefined;
   const content = (
     <>
       {rounded === 0 ? null : arrow ? (
@@ -122,6 +124,7 @@ export function Delta({
       {arrow && rounded !== 0 && <span className="sr-only">{rounded > 0 ? "up" : "down"} </span>}
       {numberFormat(digits, fraction).format(Math.abs(rounded))}
       {unit ?? (format === "percent" ? "%" : "")}
+      {verdict && <span className="sr-only">, {verdict}</span>}
       {significance === "noise" && rounded !== 0 && <span className="sr-only">, within noise</span>}
     </>
   );
@@ -130,6 +133,7 @@ export function Delta({
       <Badge
         data-slot="delta"
         data-significance={significance}
+        data-verdict={verdict}
         variant={tone}
         shape="square"
         size={size}
@@ -144,6 +148,7 @@ export function Delta({
     <span
       data-slot="delta"
       data-significance={significance}
+      data-verdict={verdict}
       className={cn(
         "inline-flex items-center gap-0.5 whitespace-nowrap tabular-nums",
         SIGNIFICANCE_WEIGHT[significance],
