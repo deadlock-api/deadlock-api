@@ -773,7 +773,7 @@ export function Primitives() {
       <Specimen
         name="SortButton"
         source="ui/sort-button"
-        note='The button inside every sortable header. In a Table use SortableHeader, which also sets aria-sort. size="sm" is for dense tables.'
+        note='The button inside every sortable header. In a Table use SortableHeader, which also sets aria-sort. The sorted column reads in full ink with its direction; the others show the up/down mark, which also keeps the room of the arrow so sorting moves no column. size="sm" is for dense tables.'
       >
         <Variants className="gap-6 text-sm">
           <SortButton active sortDir="desc">

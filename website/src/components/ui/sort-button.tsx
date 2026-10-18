@@ -23,7 +23,7 @@ export function SortButton({
   active: boolean;
   sortDir: SortDir;
   align?: keyof typeof sortAlignClass;
-  /** `sm` is for dense tables: smaller arrows, and no arrow at all on columns that are not sorted. */
+  /** `sm` is for dense tables: smaller arrows. */
   size?: "default" | "sm";
 }) {
   const small = size === "sm";
@@ -33,10 +33,13 @@ export function SortButton({
       type="button"
       data-slot="sort-button"
       data-size={small ? "sm" : "default"}
+      data-active={active || undefined}
       className={cn(
         FOCUS_RING,
         DISABLED_STATE,
         "inline-flex min-h-6 min-w-6 items-center gap-1 rounded-sm transition-colors hover:text-foreground aria-disabled:pointer-events-none aria-disabled:opacity-50",
+        // The sorted column reads in full ink, so a press shows on its label and not only on a 12px arrow.
+        "data-active:text-foreground",
         sortAlignClass[align],
         className,
       )}
@@ -49,8 +52,9 @@ export function SortButton({
         ) : (
           <ArrowUp aria-hidden="true" className={iconClass} />
         )
-      ) : small ? null : (
-        <ArrowUpDown aria-hidden="true" className="size-3.5 text-muted-foreground" />
+      ) : (
+        // Every sortable header shows it sorts, and keeps the arrow's room: sorting by it moves no column.
+        <ArrowUpDown aria-hidden="true" className={cn(iconClass, "text-muted-foreground")} />
       )}
     </button>
   );
