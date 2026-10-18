@@ -96,7 +96,7 @@ impl Patch {
 
     /// The root `match_history` query, scoped to the matches started while
     /// this patch was live (`pub_date` until `end_date`).
-    #[graphql(complexity = "cost::match_history(where_.as_ref(), child_complexity)")]
+    #[graphql(complexity = "cost::match_history(where_.as_ref(), limit, child_complexity)")]
     async fn match_history(
         &self,
         ctx: &Context<'_>,

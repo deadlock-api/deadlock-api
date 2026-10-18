@@ -299,7 +299,7 @@ impl QueryRoot {
     /// stored `player_match_history` table (no on-demand Steam fetch). Filter on
     /// `account_id`: without it the query merges the whole table and exceeds the
     /// complexity limit.
-    #[graphql(complexity = "cost::match_history(where_.as_ref(), child_complexity)")]
+    #[graphql(complexity = "cost::match_history(where_.as_ref(), limit, child_complexity)")]
     async fn match_history(
         &self,
         ctx: &Context<'_>,
@@ -322,7 +322,7 @@ impl QueryRoot {
     /// `/v1/matches/{match_id}/salts` endpoint minus the on-demand Steam fetch.
     /// Ordered by match_id. Salts that failed verification are dropped after
     /// paging, so a page can hold slightly fewer than `limit` nodes.
-    #[graphql(complexity = "cost::rows(limit, cost::SALTS_LOOKUP_UNITS + child_complexity)")]
+    #[graphql(complexity = "cost::match_salts(where_.as_ref(), limit, child_complexity)")]
     async fn match_salts(
         &self,
         ctx: &Context<'_>,

@@ -5,14 +5,16 @@
 //! make it scan ([`Scan`]) plus `limit` times the per-row weight of the selected fields. Field
 //! weights are in row units ([`ROW_UNIT_US`]); unannotated fields count 1.
 //!
-//! Checked against 5,800 production requests on 2026-10-17 (predicted vs `system.query_log` CPU,
-//! joined on `request_logs.graphql_request_id`): no request above 1.6x its complexity.
+//! Checked against production requests (predicted vs `system.query_log` CPU, joined on
+//! `request_logs.graphql_request_id`): 5,800 on 2026-10-17 and 10,000 on 2026-10-18, none above
+//! 2x its complexity.
 //!
 //! Measured worst cases the model now rejects: `matches(limit: 10000) { players { items } }`
 //! (85 CPU-s), `match_history` without an account filter (14-32 CPU-s, a full-table merge) and
 //! `matches` ordered by `average_badge` without a time range (24 CPU-s).
 
 use crate::routes::v1::graphql::filters::{I64Filter, MatchHistoryWhere, MatchPlayerWhere};
+use crate::routes::v1::graphql::salts::MatchSaltsWhere;
 use crate::routes::v1::graphql::schema::{OrderByMatch, OrderByMatchPlayer};
 
 /// `GraphiQL`'s introspection query reaches 13 levels deep (4 outer + 9 nested
@@ -160,11 +162,13 @@ fn match_players_scan(scan: &Scan) -> usize {
     })
 }
 
-/// Two passes over `match_player` (pick the matches, then aggregate their players); unordered,
+/// Two passes over `match_player` (pick the matches, then aggregate their players); a pinned
+/// match opens every selected column of its part (one match with heavy players: 97 ms median,
+/// 323 max, 2026-10-18); unordered,
 /// the `GROUP BY match_id` of every scanned row costs ~5x the player-row sort.
 fn matches_scan(scan: &Scan) -> usize {
     scan.ms(ScanCosts {
-        pinned: 40,
+        pinned: 120,
         key_ordered: 600,
         base: 300,
         per_day: 160,
@@ -234,9 +238,14 @@ pub(super) fn patch_matches(
 
 /// `match_history` merges every row of the filtered accounts before it applies `limit`, so its
 /// cost is per account: 3.5 ms plus 1.65 ms per selected column, after 20 ms to plan and start
-/// the query (2026-10-17: 1-6 accounts of ~22 columns took up to 80-180 ms). Without an account
-/// filter it merges the whole table.
-pub(super) fn match_history(where_: Option<&MatchHistoryWhere>, columns: usize) -> usize {
+/// the query (2026-10-17: 1-6 accounts of ~22 columns took up to 80-180 ms), plus ~20 µs per
+/// returned row (2026-10-18: 3,000-row pages took 120 ms). Without an account filter it merges
+/// the whole table.
+pub(super) fn match_history(
+    where_: Option<&MatchHistoryWhere>,
+    limit: u32,
+    columns: usize,
+) -> usize {
     let accounts = where_.and_then(|w| w.account_id.as_ref()).map_or(0, |f| {
         usize::from(f.eq.is_some()) + f.r#in.as_ref().map_or(0, Vec::len)
     });
@@ -246,6 +255,26 @@ pub(super) fn match_history(where_: Option<&MatchHistoryWhere>, columns: usize) 
     20 + accounts
         .saturating_mul(3_500 + 1_650 * columns)
         .div_ceil(1000)
+        + rows(limit, 1)
+}
+
+/// `match_salts` (29M rows, unpartitioned) pages in `match_id` order until it has `limit` matches
+/// with salts, so a sparse range scans up to the whole table: ~0.5 CPU-s measured (2026-10-18).
+/// Pinned `match_id`s cost ~0.2 ms each to select and up to ~2.5 ms per returned row, whose
+/// `FINAL` merges a granule of its own when the ids are spread (1 / 10 / 100 / 3,364 spread ids:
+/// 14 / 59 / 246 / 2,157 ms).
+pub(super) fn match_salts(where_: Option<&MatchSaltsWhere>, limit: u32, row_units: usize) -> usize {
+    let ids = where_.and_then(|w| w.match_id.as_ref()).map_or(0, |f| {
+        usize::from(f.eq.is_some()) + f.r#in.as_ref().map_or(0, Vec::len)
+    });
+    if ids == 0 {
+        return 500 + rows(limit, SALTS_LOOKUP_UNITS + row_units);
+    }
+    let returned = limit.min(u32::try_from(ids).unwrap_or(u32::MAX));
+    let merges = (returned as usize).saturating_mul(5).div_ceil(2);
+    (20 + ids / 5)
+        .saturating_add(merges)
+        .saturating_add(rows(returned, SALTS_LOOKUP_UNITS + row_units))
 }
 
 #[cfg(test)]
@@ -356,6 +385,27 @@ mod tests {
         )
         .await;
         assert!(c < 50, "{c}");
+    }
+
+    #[tokio::test]
+    async fn match_salts_ranges_pay_for_their_scan() {
+        // A sparse `match_id` range read 5.9M rows for 30 salts (0.5 CPU-s, 2026-10-18).
+        let (range, _) = complexity(
+            "{ match_salts(where: {match_id: {gte: 60000000}}, limit: 30) { match_id demo_url } }",
+        )
+        .await;
+        assert!((500..1_000).contains(&range), "{range}");
+        // 3,364 pinned ids, default limit 100: 0.4-0.6 CPU-s.
+        let ids = (1..=3364)
+            .map(|i| i.to_string())
+            .collect::<Vec<_>>()
+            .join(",");
+        let (pinned, rejected) = complexity(&format!(
+            "{{ match_salts(where: {{match_id: {{in: [{ids}]}}}}) {{ match_id demo_url }} }}"
+        ))
+        .await;
+        assert!(!rejected);
+        assert!((600..1_500).contains(&pinned), "{pinned}");
     }
 
     #[tokio::test]
