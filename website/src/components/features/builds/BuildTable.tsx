@@ -24,7 +24,16 @@ import { DivergingBar } from "~/components/ui/rate-bar";
 import { SearchInput } from "~/components/ui/search-input";
 import { Segmented, SegmentedItem } from "~/components/ui/segmented";
 import { Skeleton } from "~/components/ui/skeleton";
-import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "~/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableFooter,
+  TableHead,
+  TableHeader,
+  TableRow,
+  TableRowHeader,
+} from "~/components/ui/table";
 import { day } from "~/dayjs";
 import { BUILD_METRICS, type BuildMetric, type BuildPerformanceTotals } from "~/lib/build-performance";
 import {
@@ -255,11 +264,13 @@ export function BuildTable({
           <SegmentedItem value="economy">Economy</SegmentedItem>
         </Segmented>
       </PanelHeader>
-      <Table density="dense" height="scroll" aria-label="Builds by matches and win rate">
+      <Table density="dense" height="scroll" aria-label={`Builds, ${view} columns`}>
         <TableHeader position="sticky">
           <TableRow>
-            <TableHead className="w-8 text-end text-xs text-muted-foreground">#</TableHead>
-            <TableHead className="text-xs text-muted-foreground">Build</TableHead>
+            <TableHead tone="muted" className="w-8 text-end">
+              #
+            </TableHead>
+            <TableHead tone="muted">Build</TableHead>
             {columns.map(({ key, label, description, className }) => (
               <SortableHeader
                 key={key}
@@ -269,7 +280,8 @@ export function BuildTable({
                 sortDir={sort.dir}
                 align="end"
                 size="sm"
-                className={cn("text-xs text-muted-foreground", className)}
+                tone="muted"
+                className={className}
                 description={description}
                 onSortChange={sort.toggle}
               />
@@ -294,7 +306,7 @@ export function BuildTable({
                 }}
               >
                 <TableCell className="text-end text-xs text-muted-foreground tabular-nums">{index + 1}</TableCell>
-                <TableCell className="w-full max-w-0">
+                <TableRowHeader className="w-full max-w-0">
                   <div className="flex min-w-0 flex-col">
                     {/* Always the button, so every row keeps its place in the list's keyboard model; while the
                         build's name loads, a skeleton stands in for it and the ID names it. */}
@@ -335,7 +347,7 @@ export function BuildTable({
                       )}
                     </span>
                   </div>
-                </TableCell>
+                </TableRowHeader>
                 <TableCell className="text-end tabular-nums">{row.matches.toLocaleString("en-US")}</TableCell>
                 {view === "overview" && (
                   <TableCell className="hidden text-end text-muted-foreground tabular-nums @2xl/builds:table-cell">

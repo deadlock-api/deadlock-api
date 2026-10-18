@@ -18,7 +18,7 @@ import { DivergingBar } from "~/components/ui/rate-bar";
 import { Segmented, SegmentedItem } from "~/components/ui/segmented";
 import { Slider } from "~/components/ui/slider";
 import { SortButton } from "~/components/ui/sort-button";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableRowHeader } from "~/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { Textarea } from "~/components/ui/textarea";
 
@@ -585,6 +585,34 @@ export function Round3PrimitivesMore() {
             </div>
           ))}
         </Variants>
+      </Specimen>
+
+      <Specimen
+        name="TableRowHeader"
+        source="ui/table"
+        note='The cell that names its row, a th with scope="row", set at the body density and weight, so a screen reader reads the row name with each value. TableHead and TableRowHeader take tone="muted" for a quiet label beside its values; a dense table is already text-xs.'
+      >
+        <Table density="dense" className="max-w-sm">
+          <TableHeader>
+            <TableRow>
+              <TableHead tone="muted">Stat</TableHead>
+              <TableHead className="text-end">Selected</TableHead>
+              <TableHead className="text-end">Compared</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            <TableRow>
+              <TableRowHeader tone="muted">Win rate</TableRowHeader>
+              <TableCell className="text-end tabular-nums">52.0%</TableCell>
+              <TableCell className="text-end tabular-nums">54.5%</TableCell>
+            </TableRow>
+            <TableRow>
+              <TableRowHeader tone="muted">KDA</TableRowHeader>
+              <TableCell className="text-end tabular-nums">3.1</TableCell>
+              <TableCell className="text-end tabular-nums">2.8</TableCell>
+            </TableRow>
+          </TableBody>
+        </Table>
       </Specimen>
 
       <Specimen

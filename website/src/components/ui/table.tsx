@@ -211,14 +211,49 @@ function TableRow({
   );
 }
 
-function TableHead({ className, ...props }: React.ComponentProps<"th">) {
+/** `muted`: a quiet column or row name, beside the values it names. */
+const HEAD_TONE = { default: "text-foreground", muted: "text-muted-foreground" } as const;
+
+function TableHead({
+  tone = "default",
+  className,
+  ...props
+}: React.ComponentProps<"th"> & { tone?: keyof typeof HEAD_TONE }) {
   const density = React.use(TableDensityContext);
   return (
     <th
       data-slot="table-head"
+      data-tone={tone}
       className={cn(
-        "text-start align-middle font-medium whitespace-nowrap text-foreground data-pinned:sticky data-pinned:inset-s-0 data-pinned:z-10 data-pinned:bg-muted [&:has([role=checkbox])]:pe-0 [&>[role=checkbox]]:translate-y-0.5",
+        "text-start align-middle font-medium whitespace-nowrap data-pinned:sticky data-pinned:inset-s-0 data-pinned:z-10 data-pinned:bg-muted [&:has([role=checkbox])]:pe-0 [&>[role=checkbox]]:translate-y-0.5",
+        HEAD_TONE[tone],
         HEAD_DENSITY[density],
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
+/**
+ * The cell that names its row (`<th scope="row">`): a stat's label, a build's name. Screen readers read it with every
+ * value of the row. Set like a body cell, at the body's density and weight; `tone="muted"` for a label beside values.
+ */
+function TableRowHeader({
+  tone = "default",
+  className,
+  ...props
+}: React.ComponentProps<"th"> & { tone?: keyof typeof HEAD_TONE }) {
+  const density = React.use(TableDensityContext);
+  return (
+    <th
+      data-slot="table-row-header"
+      data-tone={tone}
+      scope="row"
+      className={cn(
+        "text-start align-middle font-normal whitespace-nowrap data-pinned:sticky data-pinned:inset-s-0 data-pinned:z-10 data-pinned:bg-card [tr:nth-child(even)>&]:data-pinned:bg-table-stripe",
+        HEAD_TONE[tone],
+        CELL_DENSITY[density],
         className,
       )}
       {...props}
@@ -256,4 +291,4 @@ function TableCaption({ className, ...props }: React.ComponentProps<"caption">) 
   );
 }
 
-export { Table, TableHeader, TableBody, TableFooter, TableHead, TableRow, TableCell, TableCaption };
+export { Table, TableHeader, TableBody, TableFooter, TableHead, TableRow, TableRowHeader, TableCell, TableCaption };

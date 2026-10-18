@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Field } from "~/components/ui/field";
 import { NoValue } from "~/components/ui/no-value";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableRowHeader } from "~/components/ui/table";
 import {
   BUILD_METRICS,
   type BuildMetric,
@@ -128,14 +128,16 @@ export function BuildCompareDialog({
             <Table density="dense" aria-label={`${nameOf(build)} against ${nameOf(other)}: usage and combat`}>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="text-xs text-muted-foreground">Stat</TableHead>
-                  <TableHead className="text-end text-xs" title={nameOf(build)}>
+                  <TableHead tone="muted">Stat</TableHead>
+                  <TableHead className="text-end" title={nameOf(build)}>
                     Selected
                   </TableHead>
-                  <TableHead className="text-end text-xs" title={nameOf(other)}>
+                  <TableHead className="text-end" title={nameOf(other)}>
                     Compared
                   </TableHead>
-                  <TableHead className="text-end text-xs text-muted-foreground">Difference</TableHead>
+                  <TableHead tone="muted" className="text-end">
+                    Difference
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -144,7 +146,7 @@ export function BuildCompareDialog({
                   const b = row.value(other);
                   return (
                     <TableRow key={row.label}>
-                      <TableCell className="text-muted-foreground">{row.label}</TableCell>
+                      <TableRowHeader tone="muted">{row.label}</TableRowHeader>
                       <TableCell className="text-end tabular-nums">{row.format(a)}</TableCell>
                       <TableCell className="text-end tabular-nums">{row.format(b)}</TableCell>
                       <TableCell className="text-end">
@@ -163,7 +165,7 @@ export function BuildCompareDialog({
                   const b = totalsB ? metric.value(totalsB) : null;
                   return (
                     <TableRow key={metric.key}>
-                      <TableCell className="text-muted-foreground">{metric.label}</TableCell>
+                      <TableRowHeader tone="muted">{metric.label}</TableRowHeader>
                       <MetricCell metric={metric} totals={totalsA} />
                       <MetricCell metric={metric} totals={totalsB} />
                       <TableCell className="text-end">
@@ -182,14 +184,16 @@ export function BuildCompareDialog({
             <Table density="dense" aria-label={`${nameOf(build)} against ${nameOf(other)}: economy and survival`}>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="text-xs text-muted-foreground">Stat</TableHead>
-                  <TableHead className="text-end text-xs" title={nameOf(build)}>
+                  <TableHead tone="muted">Stat</TableHead>
+                  <TableHead className="text-end" title={nameOf(build)}>
                     Selected
                   </TableHead>
-                  <TableHead className="text-end text-xs" title={nameOf(other)}>
+                  <TableHead className="text-end" title={nameOf(other)}>
                     Compared
                   </TableHead>
-                  <TableHead className="text-end text-xs text-muted-foreground">Difference</TableHead>
+                  <TableHead tone="muted" className="text-end">
+                    Difference
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -198,7 +202,7 @@ export function BuildCompareDialog({
                   const b = totalsB ? metric.value(totalsB) : null;
                   return (
                     <TableRow key={metric.key}>
-                      <TableCell className="text-muted-foreground">{metric.label}</TableCell>
+                      <TableRowHeader tone="muted">{metric.label}</TableRowHeader>
                       <MetricCell metric={metric} totals={totalsA} />
                       <MetricCell metric={metric} totals={totalsB} />
                       <TableCell className="text-end">
@@ -217,7 +221,7 @@ export function BuildCompareDialog({
                   const b = slotsB && slotsB.bySlot[slot] / slotsB.total;
                   return (
                     <TableRow key={slot}>
-                      <TableCell className="text-muted-foreground">{BUILD_SLOT_LABEL[slot]} souls</TableCell>
+                      <TableRowHeader tone="muted">{BUILD_SLOT_LABEL[slot]} souls</TableRowHeader>
                       <TableCell className="text-end tabular-nums">
                         {a === null ? <NoValue /> : formatPercent(a, 0)}
                       </TableCell>
