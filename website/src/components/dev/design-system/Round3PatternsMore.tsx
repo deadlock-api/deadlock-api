@@ -370,9 +370,9 @@ function DataTableSpecimens() {
       <Specimen
         name="ComparisonTable"
         source="patterns/data-table/ComparisonTable"
-        note="Features down the side, plans across the top, composed from rows and cells. highlightedColumn tints one plan. A cell is a check or a dash."
+        note="Features down the side, plans across the top, composed from rows and cells. highlightedColumn tints one plan. A cell is a check or a dash. label names the table element itself, not the card around it."
       >
-        <ComparisonTable highlightedColumn={1} className="max-w-2xl">
+        <ComparisonTable highlightedColumn={1} label="Plans compared" className="max-w-2xl">
           <ComparisonHeader>
             <ComparisonColumn>Free</ComparisonColumn>
             <ComparisonColumn>Patron</ComparisonColumn>

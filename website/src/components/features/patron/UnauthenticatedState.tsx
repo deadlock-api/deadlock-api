@@ -73,7 +73,11 @@ export function UnauthenticatedState({ onLogin }: { onLogin: () => void }) {
         </Text>
       </Hero>
 
-      <ComparisonTable highlightedColumn={1} className="mx-auto w-full max-w-2xl">
+      <ComparisonTable
+        highlightedColumn={1}
+        label="Free and patron fetching compared"
+        className="mx-auto w-full max-w-2xl"
+      >
         <ComparisonHeader>
           <ComparisonColumn>Free</ComparisonColumn>
           <ComparisonColumn>Patron</ComparisonColumn>

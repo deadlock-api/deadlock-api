@@ -33,17 +33,22 @@ const columnClass = (highlighted: boolean) =>
  */
 export function ComparisonTable({
   highlightedColumn,
+  label,
   className,
   children,
   ...props
 }: Omit<React.ComponentProps<typeof Card>, "size" | "interaction" | "asChild"> & {
   /** The plan the page is selling, counted from 0 among the `ComparisonColumn`s. */
   highlightedColumn?: number;
+  /** Names the table for screen readers ("Plans compared"); it goes on the `<table>`, not the card around it. */
+  label?: string;
 }) {
   return (
     <Card data-slot="comparison-table" size="flush" className={cn("@container", className)} {...props}>
       <HighlightedColumnContext.Provider value={highlightedColumn}>
-        <Table className="table-fixed">{children}</Table>
+        <Table aria-label={label} className="table-fixed">
+          {children}
+        </Table>
       </HighlightedColumnContext.Provider>
     </Card>
   );

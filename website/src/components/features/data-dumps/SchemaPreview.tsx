@@ -3,12 +3,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~
 
 import type { ColumnInfo } from "./types";
 
-export function SchemaPreview({ columns }: { columns: ColumnInfo[] }) {
+/** `name` is the table's, so the columns table is named after it. */
+export function SchemaPreview({ name, columns }: { name: string; columns: ColumnInfo[] }) {
   const hasComments = columns.some((c) => c.comment);
   return (
     // The height limit sits on Table's own scroll container: the header sticks to its nearest scrolling ancestor.
     <Card tone="inset" size="flush" radius="lg" className="*:data-[slot=table-container]:max-h-72">
-      <Table density="dense">
+      <Table density="dense" aria-label={`${name} columns`}>
         <TableHeader position="sticky">
           <TableRow>
             <TableHead className="text-muted-foreground">Column</TableHead>

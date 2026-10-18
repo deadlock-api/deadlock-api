@@ -66,7 +66,7 @@ function IngestCache() {
       </Section>
 
       <Section title="Background tool or one-time upload">
-        <ComparisonTable highlightedColumn={0}>
+        <ComparisonTable highlightedColumn={0} label="Background tool and cache upload compared">
           <ComparisonHeader>
             <ComparisonColumn>Background tool</ComparisonColumn>
             <ComparisonColumn>Cache upload</ComparisonColumn>

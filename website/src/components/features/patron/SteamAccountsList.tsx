@@ -316,7 +316,7 @@ export function SteamAccountsList() {
             description="Add a Steam account above to get prioritized data fetching."
           />
         ) : (
-          <Table>
+          <Table aria-label="Prioritized accounts">
             <TableHeader>
               <TableRow>
                 <TableHead>SteamID3</TableHead>

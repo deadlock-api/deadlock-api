@@ -9,7 +9,7 @@ import { Code } from "~/components/ui/code";
 import { CopyButton } from "~/components/ui/copy-button";
 import { NoValue } from "~/components/ui/no-value";
 import { Inline, Stack } from "~/components/ui/stack";
-import { Table, TableBody, TableCell, TableRow } from "~/components/ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { Text } from "~/components/ui/text";
 import { TextLink } from "~/components/ui/text-link";
 import { formatCountNoun } from "~/lib/format";
@@ -54,7 +54,7 @@ export function LakeTableRow({ table, matchedColumns }: { table: LakeTable; matc
           <div className="grid gap-3 lg:grid-cols-2">
             <Stack gap={1}>
               <Text variant="eyebrow">Columns ({table.columns.length})</Text>
-              <SchemaPreview columns={table.columns} />
+              <SchemaPreview name={table.name} columns={table.columns} />
             </Stack>
             <Stack gap={1}>
               <Inline justify="between">
@@ -79,7 +79,15 @@ export function LakeTableRow({ table, matchedColumns }: { table: LakeTable; matc
                     No files published yet.
                   </Text>
                 ) : (
-                  <Table density="dense" className="text-xs">
+                  <Table density="dense" aria-label={`${table.name} files`}>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="px-3 text-muted-foreground">File</TableHead>
+                        <TableHead className="text-end">
+                          <span className="sr-only">Actions</span>
+                        </TableHead>
+                      </TableRow>
+                    </TableHeader>
                     <TableBody>
                       {table.files.map((f) => (
                         <TableRow key={f.key}>

@@ -187,7 +187,7 @@ function DataDumps() {
           />
         ) : (
           <Card size="flush" className="@container">
-            <Table className="table-fixed">
+            <Table aria-label="Data lake tables" className="table-fixed">
               <TableHeader>
                 <TableRow>
                   <TableHead>Table</TableHead>
