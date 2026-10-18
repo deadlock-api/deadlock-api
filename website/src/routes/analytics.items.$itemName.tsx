@@ -36,6 +36,7 @@ import { datasetJsonLd, pageTitle, seo } from "~/lib/seo";
 import { closestNameBySlug, findByIdSegment, slugify } from "~/lib/slug";
 import { formatStatValue } from "~/lib/stat-format";
 import { toneOf } from "~/lib/tone";
+import { cn } from "~/lib/utils";
 import {
   corruptionQueryOptions,
   filterShopableItems,
@@ -241,6 +242,11 @@ function ItemDetailPage() {
     [statsQuery.data, heroStatsQuery.data, itemId],
   );
   const hasEffect = (itemQuery.data?.tooltip_sections?.length ?? 0) > 0;
+  // An effect with words (an active or passive) stands beside the upgrade path; stat chips alone sit in a short row
+  // above it, rather than in a tall panel that is mostly empty.
+  const effectHasText = (itemQuery.data?.tooltip_sections ?? []).some((section) =>
+    section.section_attributes?.some((attr) => Boolean(attr.loc_string?.trim())),
+  );
 
   return (
     <PageShell density="content">
@@ -322,7 +328,7 @@ function ItemDetailPage() {
       </ProfileHeader>
 
       <Section title={`What ${itemName} Does`}>
-        <div className="grid gap-4 lg:grid-cols-2">
+        <div className={cn("grid gap-4", effectHasText && "lg:grid-cols-2")}>
           {hasEffect && itemQuery.data && (
             <Panel>
               <PanelHeader title="Effect" description={`Tier ${tier} ${slot}`} />
