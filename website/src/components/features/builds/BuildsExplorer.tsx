@@ -231,6 +231,8 @@ function BuildsExplorerView({
   const settled = restedId === selectedId || restedId === null;
   // The list row under the pointer, lit on the chart.
   const [hoveredId, setHoveredId] = useState<number | null>(null);
+  // The item under the pointer in the items panel: the chart fades the builds that do not list it.
+  const [hoveredItemId, setHoveredItemId] = useState<number | null>(null);
 
   if (statsQuery.isPending) return <LoadingState />;
   if (statsQuery.isError) {
@@ -278,6 +280,7 @@ function BuildsExplorerView({
           average={summary.winRate}
           selectedId={selected.hero_build_id}
           highlightedId={hoveredId}
+          previewItemId={hoveredItemId}
           onBuildIdChange={onBuildIdChange}
           onBuildHover={setHoveredId}
           performance={performance}
@@ -322,6 +325,7 @@ function BuildsExplorerView({
         <BuildItemsPanel
           rows={rows}
           pending={meta.pending}
+          onItemHover={setHoveredItemId}
           className="max-h-120 @3xl:col-start-2 @3xl:row-start-1 @3xl:h-0 @3xl:max-h-none @3xl:min-h-full"
         />
       </div>

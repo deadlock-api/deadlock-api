@@ -24,11 +24,14 @@ const CHANGE_SCALE = 0.1;
 export function BuildItemsPanel({
   rows,
   pending,
+  onItemHover,
   className,
 }: {
   rows: readonly BuildRow[];
   /** Build contents are still loading. */
   pending: boolean;
+  /** The item under the pointer, null when it leaves the list: the chart fades the builds without it. */
+  onItemHover?: (itemId: number | null) => void;
   className?: string;
 }) {
   const [side, setSide] = useState<"best" | "worst">("best");
@@ -64,12 +67,13 @@ export function BuildItemsPanel({
             title={side === "best" ? "No item comes with better builds" : "No item comes with worse builds"}
           />
         ) : (
-          <RankedEntityList density="compact" columns="single">
+          <RankedEntityList density="compact" columns="single" onPointerLeave={() => onItemHover?.(null)}>
             {items.map((item, index) => (
               <RankedEntityRow
                 key={item.itemId}
                 rank={index + 1}
                 entity={{ itemId: item.itemId }}
+                onPointerEnter={() => onItemHover?.(item.itemId)}
                 meta={`In ${item.builds} ${item.builds === 1 ? "build" : "builds"}`}
               >
                 <RankedEntityMetric

@@ -145,6 +145,7 @@ export function BuildScatterChart({
   average,
   selectedId,
   highlightedId = null,
+  previewItemId = null,
   onBuildIdChange,
   onBuildHover,
   performance,
@@ -154,6 +155,8 @@ export function BuildScatterChart({
   selectedId: number;
   /** The build the list's pointer is on, if any. */
   highlightedId?: number | null;
+  /** An item the pointer is on elsewhere: builds that do not list it are drawn faint, as the item filter draws them. */
+  previewItemId?: number | null;
   onBuildIdChange: (buildId: number) => void;
   /** The build whose dot the pointer is on, null when it leaves: the list marks its row. */
   onBuildHover?: (buildId: number | null) => void;
@@ -204,7 +207,9 @@ export function BuildScatterChart({
       row,
       selected: row.hero_build_id === selectedId,
       highlighted: row.hero_build_id === highlightedId,
-      dimmed: !buildMatchesItems(row.meta, itemParams.with_items, itemParams.without_items),
+      dimmed:
+        !buildMatchesItems(row.meta, itemParams.with_items, itemParams.without_items) ||
+        (previewItemId !== null && !buildMatchesItems(row.meta, [previewItemId], [])),
       labelSide: "end" as const,
     }))
     .sort((a, b) => rank(a) - rank(b));
