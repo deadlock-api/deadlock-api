@@ -67,16 +67,11 @@ export function TargetCursor({
     const cursor = cursorRef.current;
     const corners = cornerRefs.current.filter(Boolean) as HTMLDivElement[];
 
-    const originalCursor = document.body.style.cursor;
-    let styleEl: HTMLStyleElement | null = null;
-    if (hideDefaultCursor) {
-      document.body.style.cursor = "none";
-      // Override cursor:pointer / cursor:default on every element — a single
-      // body rule isn't enough because child rules have higher specificity.
-      styleEl = document.createElement("style");
-      styleEl.textContent = "* { cursor: none !important; }";
-      document.head.appendChild(styleEl);
-    }
+    // Hides the system cursor on every element through an unlayered rule in base.css (no injected !important).
+    const root = document.documentElement;
+    if (hideDefaultCursor) root.dataset.customCursor = "";
+    // Under reduced motion the reticle stays still: it follows the pointer and frames targets, but never spins.
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
     let activeTarget: Element | null = null;
     let currentLeaveHandler: (() => void) | null = null;
@@ -100,6 +95,10 @@ export function TargetCursor({
 
     const createSpinTimeline = () => {
       spinTl?.kill();
+      if (reducedMotion) {
+        spinTl = null;
+        return;
+      }
       spinTl = gsap.timeline({ repeat: -1 }).to(cursor, { rotation: "+=360", duration: spinDuration, ease: "none" });
     };
     createSpinTimeline();
@@ -251,8 +250,7 @@ export function TargetCursor({
       window.removeEventListener("mouseup", mouseUpHandler);
       if (activeTarget) cleanupTarget(activeTarget);
       spinTl?.kill();
-      document.body.style.cursor = originalCursor;
-      styleEl?.remove();
+      delete root.dataset.customCursor;
     };
   }, [targetSelector, spinDuration, hideDefaultCursor, isMobile, hoverDuration, parallaxOn]);
 

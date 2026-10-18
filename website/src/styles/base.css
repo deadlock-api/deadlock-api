@@ -39,6 +39,13 @@
   }
 }
 
+/* The games' custom cursor (TargetCursor) hides the system one while it runs, by setting data-custom-cursor on <html>.
+   Unlayered like the reset above, so it outranks every layered cursor utility on its own. */
+html[data-custom-cursor],
+html[data-custom-cursor] * {
+  cursor: none;
+}
+
 /* Below md the app bar covers the top of the viewport and the feedback button its bottom corner. Scrolling a focused
    element or an anchor into view keeps it clear of both (WCAG 2.4.11, focus not obscured). */
 @layer base {
