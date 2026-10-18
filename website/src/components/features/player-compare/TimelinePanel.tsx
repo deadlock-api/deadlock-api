@@ -1,6 +1,7 @@
 import { keepPreviousData, useQueries, useQuery } from "@tanstack/react-query";
 import type { PlayerPerformanceCurvePoint } from "deadlock_api_client";
 import { Hourglass } from "lucide-react";
+import { parseAsStringLiteral, useQueryState } from "nuqs";
 import { useState } from "react";
 import { Area, CartesianGrid, ComposedChart, Line, ReferenceLine, Tooltip, XAxis, YAxis } from "recharts";
 
@@ -134,7 +135,11 @@ export function TimelinePanel({
   /** Layout from the parent (grid placement). */
   className?: string;
 }) {
-  const [chosenMetric, setMetric] = useState<TimelineMetric>("souls");
+  // In the URL (`timeline=`), so a shared comparison opens on the same metric.
+  const [chosenMetric, setMetric] = useQueryState(
+    "timeline",
+    parseAsStringLiteral(Object.keys(METRICS) as TimelineMetric[]).withDefault("souls"),
+  );
   const [plotWidth, setPlotWidth] = useState(0);
   // Street Brawl hands every player the same souls each round: no souls line there, and kills stand in for it until
   // the mode changes back.
@@ -208,7 +213,7 @@ export function TimelinePanel({
         <MetricSelect
           value={metric}
           valueLabel={selected.label}
-          onValueChange={(next) => setMetric(next as TimelineMetric)}
+          onValueChange={(next) => void setMetric(next as TimelineMetric)}
           label="Timeline metric"
           className="w-auto @sm:min-w-40"
         >

@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import type { Rank } from "deadlock_api_client";
 import { Medal } from "lucide-react";
+import { parseAsStringLiteral, useQueryState } from "nuqs";
 import { useState } from "react";
 import { CartesianGrid, Line, LineChart, Tooltip, XAxis, YAxis } from "recharts";
 
@@ -77,7 +78,11 @@ export function RankHistoryPanel({
     filters.matchMode as MatchMode,
   );
   const { data: ranks } = useQuery(ranksQueryOptions);
-  const [axisBy, setAxisBy] = useState<"date" | "matches">("date");
+  // In the URL (`rank_by=`), so a shared comparison opens on the same axis.
+  const [axisBy, setAxisBy] = useQueryState(
+    "rank_by",
+    parseAsStringLiteral(["date", "matches"] as const).withDefault("date"),
+  );
   const showsRank = mode === "normal_all" || mode === "normal_ranked";
 
   const allFailed = histories.length > 0 && histories.every((history) => history.isError);
@@ -95,7 +100,13 @@ export function RankHistoryPanel({
       {/* As tall as the weekly trend's header beside it (which holds a select), so the two plots start level. */}
       <PanelHeader size="sm" title="Rank over time" icon={Medal} className="min-h-11">
         {/* By date: when each climbed. By matches: how many ranked matches each climb took. */}
-        <Segmented size="sm" width="hug" aria-label="Rank over" value={axisBy} onValueChange={setAxisBy}>
+        <Segmented
+          size="sm"
+          width="hug"
+          aria-label="Rank over"
+          value={axisBy}
+          onValueChange={(next) => void setAxisBy(next)}
+        >
           <SegmentedItem value="date">Date</SegmentedItem>
           <SegmentedItem value="matches">Matches</SegmentedItem>
         </Segmented>

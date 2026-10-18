@@ -1,8 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import type { PlayerScoreboardSortByEnum } from "deadlock_api_client";
 import { Trophy } from "lucide-react";
-import { parseAsInteger, parseAsStringLiteral, throttle, useQueryState } from "nuqs";
-import { type ComponentProps, type ComponentType, lazy, Suspense, useState } from "react";
+import { parseAsArrayOf, parseAsInteger, parseAsStringLiteral, throttle, useQueryState } from "nuqs";
+import { type ComponentProps, type ComponentType, lazy, Suspense } from "react";
 
 import { Filter } from "~/components/domain/filters";
 import { ScoreboardTable } from "~/components/domain/player-scoreboard/ScoreboardTable";
@@ -24,7 +24,7 @@ import { useModeState } from "~/hooks/useModeState";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { analyticsTabPath, ANALYTICS_VIEWS } from "~/lib/analytics-tabs";
 import { getEffectiveRankRange } from "~/lib/game-mode";
-import { MAX_COMPARE_PLAYERS } from "~/lib/player-compare";
+import { MAX_COMPARE_PLAYERS, parseCompareIds } from "~/lib/player-compare";
 import { MAX_BADGE } from "~/lib/rank-utils";
 import { ALL_SORT_BY_VALUES, sortByIn } from "~/lib/scoreboard-sorts";
 import type { CompareFilters } from "~/queries/player-compare-queries";
@@ -62,7 +62,10 @@ export function PlayersPage({
 } = {}) {
   const [tab, setTab] = useAnalyticsTab("players");
   // Players picked on the scoreboard for a comparison; they stay picked across sorts and pages.
-  const [picked, setPicked] = useState<number[]>([]);
+  // In the URL (`pick=`), so a reload or Back keeps them.
+  const [pickedRaw, setPickedRaw] = useQueryState("pick", parseAsArrayOf(parseAsInteger).withDefault([]));
+  const picked = parseCompareIds(pickedRaw);
+  const setPicked = (next: number[]) => void setPickedRaw(next.length > 0 ? next : null);
   const [chosenSortBy, setSortBy] = useQueryState(
     "sort_by",
     parseAsStringLiteral(ALL_SORT_BY_VALUES as [string, ...string[]]).withDefault("kills"),

@@ -7,8 +7,11 @@ import { SITE_URL } from "~/lib/seo";
 export const COMPARE_FILTER_KEYS = ["hero", "game_mode", "match_mode", "date_range"] as const;
 export type CompareFilterSearch = Partial<Record<(typeof COMPARE_FILTER_KEYS)[number], string>>;
 
-/** The search params that define a comparison: its players and its filters. Everything else is view state. */
-const SHARE_KEYS = ["players", ...COMPARE_FILTER_KEYS] as const;
+/** The charts' view of a comparison (trend metric, timeline metric, rank axis): kept in a shared link, not on the card. */
+export const COMPARE_VIEW_KEYS = ["trend", "timeline", "rank_by"] as const;
+
+/** The search params a shared comparison carries: its players, its filters and its charts' view. */
+const SHARE_KEYS = ["players", ...COMPARE_FILTER_KEYS, ...COMPARE_VIEW_KEYS] as const;
 
 /** The filter params of a search, as strings (a TanStack search holds the hero as a number). */
 export function compareFilterSearch(search: Record<string, unknown> | URLSearchParams): CompareFilterSearch {

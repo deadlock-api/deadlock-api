@@ -1,5 +1,5 @@
 import { ChartNoAxesCombined } from "lucide-react";
-import { useState } from "react";
+import { parseAsStringLiteral, useQueryState } from "nuqs";
 import { CartesianGrid, Line, LineChart, ReferenceLine, Tooltip, XAxis, YAxis } from "recharts";
 
 import { ChartDataTable } from "~/components/patterns/charts/ChartDataTable";
@@ -75,7 +75,11 @@ export function PerformanceTrendPanel({
   /** Layout from the parent (grid placement). */
   className?: string;
 }) {
-  const [chosenMetric, setMetric] = useState<TrendMetric>("winRate");
+  // In the URL (`trend=`), so a shared comparison opens on the same metric.
+  const [chosenMetric, setMetric] = useQueryState(
+    "trend",
+    parseAsStringLiteral(Object.keys(METRICS) as TrendMetric[]).withDefault("winRate"),
+  );
   const metrics = trendMetricsFor(gameMode);
   // Souls per minute, chosen before switching to Street Brawl, falls back to the win rate; the choice comes back with
   // the mode.
@@ -104,7 +108,7 @@ export function PerformanceTrendPanel({
         <MetricSelect
           value={metric}
           valueLabel={METRICS[metric].label}
-          onValueChange={(next) => setMetric(next as TrendMetric)}
+          onValueChange={(next) => void setMetric(next as TrendMetric)}
           label="Trend metric"
           className="w-auto @sm:min-w-40"
         >
