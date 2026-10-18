@@ -111,6 +111,7 @@ export function MatchTimeRangeSelector({
 
         {presets.length > 0 && (
           <Segmented
+            aria-label={`${label} presets`}
             value={activePreset}
             onValueChange={(name) => {
               const preset = presets.find((p) => p.label === name);

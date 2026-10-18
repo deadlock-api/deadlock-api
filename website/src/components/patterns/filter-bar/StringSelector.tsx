@@ -137,6 +137,7 @@ export function StringSelector({
     >
       {display === "segmented" ? (
         <Segmented
+          aria-label={label}
           value={current === "" ? (hasEmptyOption ? NULL_VALUE : "") : current}
           onValueChange={(next) => setCurrent(next === NULL_VALUE ? "" : next)}
         >

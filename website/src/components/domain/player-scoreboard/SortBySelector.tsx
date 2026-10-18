@@ -29,9 +29,9 @@ interface SortBySelectorProps extends Omit<
 }
 
 const VARIANT_OPTIONS: { value: SortVariant; label: string }[] = [
-  { value: "avg", label: "AVG" },
-  { value: "max", label: "MAX" },
-  { value: "total", label: "TOTAL" },
+  { value: "avg", label: "Avg" },
+  { value: "max", label: "Max" },
+  { value: "total", label: "Total" },
 ];
 
 export function SortBySelector({
@@ -53,7 +53,7 @@ export function SortBySelector({
   const hasVariants = categories.find((c) => c.key === key)?.variants != null;
 
   // A stat without variants is the whole choice, so the editor closes and hands focus back to its trigger; one with
-  // AVG / MAX / TOTAL stays open for that second pick.
+  // Avg / Max / Total stays open for that second pick.
   const [open, setOpen] = useState(false);
   const handleCategoryChange = (newKey: string) => {
     const cat = categories.find((c) => c.key === newKey);
@@ -81,7 +81,11 @@ export function SortBySelector({
       {...props}
     >
       {hasVariants && (
-        <Segmented value={variant ?? ""} onValueChange={(newVariant) => onChange(buildSortByValue(key, newVariant))}>
+        <Segmented
+          aria-label="Aggregate"
+          value={variant ?? ""}
+          onValueChange={(newVariant) => onChange(buildSortByValue(key, newVariant))}
+        >
           {VARIANT_OPTIONS.map((option) => (
             <SegmentedItem key={option.value} value={option.value}>
               {option.label}

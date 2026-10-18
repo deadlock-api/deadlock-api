@@ -288,7 +288,7 @@ export function Primitives() {
       <Specimen
         name="Segmented"
         source="ui/segmented"
-        note="One choice from a few short options, all visible at once. Replaces hand-rolled tab bars and single-select toggle groups. A radio group: Tab lands on the chosen item, the arrow keys move and choose."
+        note="One choice from a few short options, all visible at once. Replaces hand-rolled tab bars and single-select toggle groups. A radio group: Tab lands on the chosen item, the arrow keys move and choose. Inside a Field it is named by the Field's label; elsewhere it takes an aria-label."
       >
         <Variants label="size">
           {(["sm", "default", "lg"] as const).map((size) => (
@@ -308,6 +308,13 @@ export function Primitives() {
           <Segmented aria-label="Interval" value={interval} onValueChange={setInterval}>
             {INTERVALS}
           </Segmented>
+        </Variants>
+        <Variants label="in a Field (named by its label)">
+          <Field label="Interval" orientation="horizontal">
+            <Segmented width="hug" value={interval} onValueChange={setInterval}>
+              {INTERVALS}
+            </Segmented>
+          </Field>
         </Variants>
       </Specimen>
 

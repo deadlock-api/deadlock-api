@@ -3,6 +3,7 @@ import { RadioGroup as RadioGroupPrimitive } from "radix-ui";
 import { createContext, use } from "react";
 
 import { useControllableState } from "~/components/ui/hooks/use-controllable-state";
+import { FieldLabelContext } from "~/components/ui/hooks/use-field-control";
 import { DISABLED_STATE, FOCUS_RING, SELECTED_STATE } from "~/components/ui/recipes";
 import { cn } from "~/lib/utils";
 
@@ -52,7 +53,8 @@ interface SegmentedProps<T extends string> extends Omit<
  * A single choice from a few short options, all visible at once; the children are `SegmentedItem`s. For on/off
  * toggles of independent items use ToggleGroup.
  *
- * It is a WAI-ARIA radio group: Tab lands on the chosen item, and the arrow keys move and choose at once.
+ * It is a WAI-ARIA radio group: Tab lands on the chosen item, and the arrow keys move and choose at once. The group
+ * needs a name: inside a `Field` it takes the Field's label; anywhere else pass `aria-label` (or `aria-labelledby`).
  */
 function Segmented<T extends string>({
   value,
@@ -64,6 +66,9 @@ function Segmented<T extends string>({
   children,
   ...props
 }: SegmentedProps<T>) {
+  // Inside a Field the group is named by the Field's label, unless it brings a name of its own.
+  const fieldLabel = use(FieldLabelContext);
+  const labelledBy = props["aria-label"] || props["aria-labelledby"] ? undefined : (fieldLabel ?? undefined);
   const [current, setCurrent] = useControllableState<T | "">({
     value,
     defaultValue: defaultValue ?? "",
@@ -75,6 +80,7 @@ function Segmented<T extends string>({
         data-slot="segmented"
         data-size={size}
         data-width={width}
+        aria-labelledby={labelledBy}
         {...props}
         value={current}
         onValueChange={(next) => setCurrent(next as T)}

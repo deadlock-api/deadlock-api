@@ -174,6 +174,7 @@ export function RankRangeSelector({
           />
         </div>
         <Segmented
+          aria-label="Rank presets"
           value={activePreset}
           onValueChange={(name) => {
             const preset = presets.find((p) => p.label === name);
