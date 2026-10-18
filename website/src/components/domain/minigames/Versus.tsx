@@ -299,7 +299,7 @@ function CountUp({ value, format, from = 0, ...props }: CountUpProps) {
 }
 
 /** The "VS" between the sides. */
-function VersusDivider({ className, children = "VS", ...props }: React.ComponentProps<typeof TerminalBadge>) {
+function VersusDivider({ className, children = "VS", ...props }: React.ComponentProps<"span">) {
   return (
     <TerminalBadge
       data-slot="versus-divider"

@@ -469,7 +469,7 @@ export function DomainMinigames() {
       <Specimen
         name="TerminalBadge"
         source="domain/minigames/TerminalBadge"
-        note="Badge in the games' voice: square, monospace, uppercase. Run states, question categories and the archive marker. It takes every Badge prop."
+        note="Badge in the games' voice: square, monospace, uppercase. Run states, question categories and the archive marker. result (correct, wrong) marks a judged answer: it sets the tone and draws ✓ / ✗ before the text, read as Correct / Wrong, so a guess list never rests on color alone. It takes every Badge prop."
         className="theme-terminal"
       >
         <Variants>
@@ -486,6 +486,15 @@ export function DomainMinigames() {
             Failed
           </TerminalBadge>
           <TerminalBadge variant="warning">Archive · Day 212</TerminalBadge>
+        </Variants>
+        <Variants label="result · correct, wrong (a sign as well as the tone)">
+          <TerminalBadge result="correct" className="normal-case">
+            Haze
+          </TerminalBadge>
+          <TerminalBadge result="wrong" className="normal-case">
+            Abrams
+          </TerminalBadge>
+          <TerminalBadge result="wrong" size="sm" />
         </Variants>
       </Specimen>
 

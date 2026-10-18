@@ -564,10 +564,7 @@ function HigherLower() {
                     <li key={i}>
                       <Card size="xs">
                         <CardContent className="flex items-start gap-2">
-                          <TerminalBadge variant={correct ? "positive" : "negative"} size="sm">
-                            <span aria-hidden="true">{correct ? "✓" : "✗"}</span>
-                            <span className="sr-only">{correct ? "Correct" : "Wrong"}</span>
-                          </TerminalBadge>
+                          <TerminalBadge result={correct ? "correct" : "wrong"} size="sm" />
                           <Stack gap={0.5} className="flex-1">
                             <Text variant="caption" numeric="tabular" className="font-mono">
                               {r.kind === "head-to-head"

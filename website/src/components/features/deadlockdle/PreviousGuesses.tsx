@@ -13,7 +13,7 @@ export function PreviousGuesses({ guesses, answer }: { guesses: string[]; answer
         {guesses.map((guess) => (
           <TerminalBadge
             key={guess}
-            variant={guess.toLowerCase() === answer.toLowerCase() ? "positive" : "negative"}
+            result={guess.toLowerCase() === answer.toLowerCase() ? "correct" : "wrong"}
             className="normal-case"
           >
             {guess}
