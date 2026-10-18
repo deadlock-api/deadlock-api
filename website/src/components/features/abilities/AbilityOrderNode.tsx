@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { ChevronDown } from "lucide-react";
+import { useId } from "react";
 
 import { AbilityImage } from "~/components/domain/assets/AbilityImage";
 import { AbilityName } from "~/components/domain/assets/AbilityName";
@@ -73,6 +74,7 @@ export default function AbilityOrderNode({
   siblingCount,
   index,
 }: AbilityOrderNodeProps) {
+  const childrenId = useId();
   const slot = node.abilityId != null ? abilitySlotMap.get(node.abilityId) : undefined;
   const rawLevel = node.abilityId != null ? ancestorAbilityIds.filter((id) => id === node.abilityId).length : 0;
   const abilityLevel = isStreetBrawl ? rawLevel + 1 : rawLevel;
@@ -175,17 +177,34 @@ export default function AbilityOrderNode({
             size="xs"
             shape="pill"
             aria-expanded={isExpanded}
-            onClick={() => onToggleExpand(currentPath)}
+            aria-controls={childrenId}
+            onClick={(event) => {
+              // The tree is centred in its scroller, so a branch that opens or closes widens it on both sides; the
+              // scroll follows, so the pressed button stays where it was under the pointer.
+              const button = event.currentTarget;
+              const before = button.getBoundingClientRect().left;
+              onToggleExpand(currentPath);
+              requestAnimationFrame(() => {
+                const scroller = button.closest<HTMLElement>("[data-slot=drag-scroll]");
+                if (scroller) scroller.scrollLeft += button.getBoundingClientRect().left - before;
+              });
+            }}
           >
             <ChevronDown />
-            {isExpanded ? "Hide" : `${sortedChildren.length} ${sortedChildren.length === 1 ? "path" : "paths"}`}
+            {isExpanded ? "Hide" : formatCountNoun(sortedChildren.length, "path")}
+            {node.abilityId != null && (
+              <span className="sr-only">
+                {" "}
+                after <AbilityName abilityId={node.abilityId} />
+              </span>
+            )}
           </Button>
         </div>
       )}
 
       {/* Children (animated entry) */}
       {hasChildren && isExpanded && (
-        <div className="flex flex-col items-center">
+        <div id={childrenId} className="flex flex-col items-center">
           {/* Connector line down */}
           <div className="flex h-4 justify-center">
             <Separator orientation="vertical" />
