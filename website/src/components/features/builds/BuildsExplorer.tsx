@@ -248,13 +248,6 @@ export function BuildsExplorer({
           onBuildIdChange={onBuildIdChange}
           performance={performance}
         />
-        <BuildItemsPanel
-          rows={rows}
-          pending={meta.pending}
-          className="max-h-120 @3xl:h-0 @3xl:max-h-none @3xl:min-h-full"
-        />
-      </div>
-      <div className="grid gap-3 @3xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
         <BuildTable
           rows={rows}
           trends={trends}
@@ -288,6 +281,12 @@ export function BuildsExplorer({
           pending={meta.pending}
           profilePending={profiles.pending}
           className="@3xl:h-0 @3xl:min-h-full"
+        />
+        {/* Beside the chart on a wide screen; after the build on a narrow one, where the list comes first. */}
+        <BuildItemsPanel
+          rows={rows}
+          pending={meta.pending}
+          className="max-h-120 @3xl:col-start-2 @3xl:row-start-1 @3xl:h-0 @3xl:max-h-none @3xl:min-h-full"
         />
       </div>
       <BuildInMatches
