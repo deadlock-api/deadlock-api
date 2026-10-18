@@ -74,7 +74,8 @@ export function BuildItemTile({
             className="size-8"
           />
           {note && (
-            <CornerBadge tone="scrim" aria-hidden="true">
+            // Muted: a build may note nearly every item, and a row of bright marks would outshine the items.
+            <CornerBadge tone="muted" aria-hidden="true">
               <MessageSquareText className="size-3" />
             </CornerBadge>
           )}
