@@ -57,7 +57,7 @@ function BuildSlotSplit({ meta }: { meta: BuildMeta }) {
   return (
     <section className="flex flex-col">
       {/* No total: a build lists options beside what is bought, so its items' sum is no game's spending. */}
-      <PanelSection title="Souls by shop category" />
+      <PanelSection variant="label" title="Souls by shop category" />
       <div className="flex flex-col gap-1.5 px-3 py-1.5 @md:flex-row @md:items-center @md:gap-4">
         <ProgressBar variant="thin" max={Math.max(1, total)} className="@md:min-w-0 @md:flex-1">
           {BUILD_SLOTS.map((slot) => (
@@ -168,6 +168,7 @@ export function BuildDetailPanel({
               .map((category) => (
                 <section key={`${category.name}|${category.itemIds.join()}`} className="flex flex-col">
                   <PanelSection
+                    variant="label"
                     title={
                       <CategoryTitle
                         name={buildCategoryName(category.name) ?? "Items"}
@@ -193,7 +194,7 @@ export function BuildDetailPanel({
               ))}
             {skillOrder.length > 0 && slotAbilities.length > 0 && (
               <section className="flex flex-col">
-                <PanelSection title="Skill order" />
+                <PanelSection variant="label" title="Skill order" />
                 <div className="px-3 py-1.5">
                   <AbilityOrderGrid
                     size="sm"
@@ -205,7 +206,7 @@ export function BuildDetailPanel({
             )}
             {authorBuilds.length > 0 && (
               <section className="flex flex-col">
-                <PanelSection title="More by this author" />
+                <PanelSection variant="label" title="More by this author" />
                 <ul className="flex flex-col py-1">
                   {authorBuilds.map((build) => (
                     <li key={build.hero_build_id}>

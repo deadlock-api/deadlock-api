@@ -31,6 +31,12 @@ function DistributionCard({ title, distribution }: { title: string; distribution
   );
 }
 
+/**
+ * The smallest difference from the average build that takes a color: 5% of a count or rate, a point of a percentage.
+ * Smaller ones sit inside what two builds' players vary by from match to match.
+ */
+const NOTICEABLE = { relative: 0.05, points: 0.01 } as const;
+
 const NO_DISTRIBUTIONS: Partial<Record<string, EndOfMatchDistribution>> = {};
 
 const GROUPS: { group: MetricGroup; title: string }[] = [
@@ -62,7 +68,7 @@ export function BuildPlaystyle({
   if (!totals && !pending) return null;
   const section = ({ group, title }: (typeof GROUPS)[number]) => (
     <section key={group} className="flex flex-col">
-      <PanelSection title={title} />
+      <PanelSection variant="label" title={title} />
       <KeyValueList className="px-3 py-0.5">
         {BUILD_METRICS.filter((metric) => metric.group === group).map((metric) => {
           const value = totals ? metric.value(totals) : null;
@@ -93,6 +99,7 @@ export function BuildPlaystyle({
                         value={delta}
                         unit={metric.delta === "points" ? " pp" : undefined}
                         polarity={metric.polarity}
+                        threshold={metric.delta === "points" ? NOTICEABLE.points : NOTICEABLE.relative}
                       />
                     </span>
                   </span>

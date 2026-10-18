@@ -19,6 +19,7 @@ import type { BuildPerformanceTotals } from "~/lib/build-performance";
 import type { BuildRow } from "~/lib/build-stats";
 import { formatPercent, formatShare, formatSignedPercent } from "~/lib/format";
 import { toneOf } from "~/lib/tone";
+import { winRateNoise } from "~/lib/wilson";
 import type { BuildPurchaseFilters } from "~/queries/hero-build-stats-query";
 
 /** An item joins the purchase order when at least this share of the build's matches bought it. */
@@ -104,7 +105,7 @@ export function BuildInMatches({
           ) : (
             <>
               <section className="flex flex-col">
-                <PanelSection title="Bought in this order">
+                <PanelSection variant="label" title="Bought in this order">
                   <span className="tabular-nums">{buyOrder.length}</span>
                 </PanelSection>
                 <ol className="flex flex-wrap gap-1 px-3 py-1.5">
@@ -117,10 +118,11 @@ export function BuildInMatches({
               </section>
               {keyItems.length > 0 && (
                 <section className="flex flex-col">
-                  <PanelSection title="Key items" />
+                  <PanelSection variant="label" title="Key items" />
                   <RankedEntityList density="compact" columns="single" className="px-3">
                     {keyItems.map((item, index) => {
                       const change = item.winRate - item.winRateWithout!;
+                      const bought = Math.round(item.boughtRate * row.matches);
                       return (
                         <RankedEntityRow
                           key={item.itemId}
@@ -144,7 +146,11 @@ export function BuildInMatches({
                             label="Diff"
                             labelDisplay="hidden"
                             value={formatSignedPercent(change)}
-                            tone={toneOf(Math.round(change * 1000))}
+                            tone={
+                              Math.abs(change) < winRateNoise(bought, row.matches - bought)
+                                ? "muted"
+                                : toneOf(Math.round(change * 1000))
+                            }
                             change={{ value: change, scale: KEY_ITEM_SCALE }}
                           />
                         </RankedEntityRow>
@@ -155,7 +161,7 @@ export function BuildInMatches({
               )}
               {usage.offBuild.length > 0 && (
                 <section className="flex flex-col">
-                  <PanelSection title="Also bought" />
+                  <PanelSection variant="label" title="Also bought" />
                   <ul className="flex flex-wrap gap-1 px-3 py-1.5">
                     {usage.offBuild.slice(0, OFF_BUILD_SHOWN).map((item) => (
                       <li key={item.itemId}>
@@ -172,7 +178,7 @@ export function BuildInMatches({
           <PanelHeader title="Skill order and players" icon={ListOrdered} size="sm" />
           {skillOrder.length > 0 && slotAbilities.length > 0 && (
             <section className="flex flex-col">
-              <PanelSection title="Skill order followed" />
+              <PanelSection variant="label" title="Skill order followed" />
               <div className="px-3 py-1.5">
                 <BuildSkillAdherence
                   heroId={heroId}

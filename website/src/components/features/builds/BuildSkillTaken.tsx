@@ -45,7 +45,7 @@ export function BuildSkillTaken({
 
   return (
     <section className="flex flex-col">
-      <PanelSection title="Most taken skill order" />
+      <PanelSection variant="label" title="Most taken skill order" />
       <div className="flex flex-col gap-2 px-3 py-1.5">
         {!path ? (
           <LoadingState variant="skeleton" label="skill order" />

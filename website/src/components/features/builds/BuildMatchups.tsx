@@ -8,6 +8,7 @@ import { api } from "~/lib/api";
 import type { BuildRow } from "~/lib/build-stats";
 import { formatPercent, formatSignedPercent } from "~/lib/format";
 import { toneOf } from "~/lib/tone";
+import { winRateNoise } from "~/lib/wilson";
 import type { BuildPurchaseFilters } from "~/queries/hero-build-stats-query";
 import { queryKeys } from "~/queries/query-keys";
 
@@ -27,7 +28,7 @@ interface Matchup {
 function MatchupList({ title, matchups, build }: { title: string; matchups: Matchup[]; build: BuildRow }) {
   return (
     <section className="flex flex-col">
-      <PanelSection title={title} />
+      <PanelSection variant="label" title={title} />
       <RankedEntityList density="compact" columns="single" className="px-3">
         {matchups.map((matchup, index) => {
           const change = matchup.winRate - build.winRate;
@@ -47,7 +48,8 @@ function MatchupList({ title, matchups, build }: { title: string; matchups: Matc
                 label="Diff"
                 labelDisplay="hidden"
                 value={formatSignedPercent(change)}
-                tone={toneOf(Math.round(change * 1000))}
+                // Only a difference outside the matchup's noise takes a color.
+                tone={Math.abs(change) < winRateNoise(matchup.matches) ? "muted" : toneOf(Math.round(change * 1000))}
                 change={{ value: change, scale: CHANGE_SCALE }}
               />
             </RankedEntityRow>
@@ -109,7 +111,7 @@ export function BuildMatchups({
   if (!query.data) {
     return (
       <section className="flex flex-col">
-        <PanelSection title="Strong against" />
+        <PanelSection variant="label" title="Strong against" />
         <div className="flex flex-col gap-2 px-3 py-2">
           {Array.from({ length: SHOWN }, (_, index) => (
             <Skeleton key={index} className="h-8 w-full" />

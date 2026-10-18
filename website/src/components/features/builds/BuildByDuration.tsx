@@ -6,6 +6,7 @@ import { KeyValue, KeyValueList } from "~/components/ui/key-value";
 import { Skeleton } from "~/components/ui/skeleton";
 import type { BuildRow } from "~/lib/build-stats";
 import { formatPercent } from "~/lib/format";
+import { winRateNoise } from "~/lib/wilson";
 import { type BuildPurchaseFilters, buildBucketsQueryOptions } from "~/queries/hero-build-stats-query";
 import { heroStatsQueryOptions } from "~/queries/hero-stats-query";
 
@@ -84,7 +85,7 @@ export function BuildByDuration({
 
   return (
     <section className="flex flex-col">
-      <PanelSection title="By match length" />
+      <PanelSection variant="label" title="By match length" />
       <KeyValueList className="px-3 py-0.5">
         {LENGTHS.map((length, index) => {
           const stats = lengths[index];
@@ -103,7 +104,10 @@ export function BuildByDuration({
                     {formatPercent(stats.wins / stats.matches)}
                     <span className="w-14 text-end text-xs">
                       {hero && hero.matches > 0 && (
-                        <Delta value={stats.wins / stats.matches - hero.wins / hero.matches} />
+                        <Delta
+                          value={stats.wins / stats.matches - hero.wins / hero.matches}
+                          threshold={winRateNoise(stats.matches)}
+                        />
                       )}
                     </span>
                   </span>

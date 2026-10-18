@@ -55,7 +55,7 @@ export function BuildTopPlayers({
   if (playersQuery.isError || (players && players.length === 0)) return null;
   return (
     <section className="flex flex-col">
-      <PanelSection title="Most played by" />
+      <PanelSection variant="label" title="Most played by" />
       <KeyValueList className="px-3 py-0.5">
         {players
           ? players.map((player) => {

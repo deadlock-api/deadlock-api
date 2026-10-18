@@ -11,7 +11,6 @@ import { useState } from "react";
 
 import { ItemSelector } from "~/components/domain/selectors/ItemSelector";
 import { BuildSummaryStats } from "~/components/features/builds/BuildSummaryStats";
-import { CHART_COLOR } from "~/components/patterns/charts/theme";
 import { SortableHeader } from "~/components/patterns/data-table/SortableHeader";
 import { TableEmptyRow } from "~/components/patterns/data-table/TableEmptyRow";
 import type { TriState } from "~/components/patterns/filter-bar/TriStateSelector";
@@ -21,7 +20,6 @@ import { Delta } from "~/components/ui/delta";
 import { useListNavigation } from "~/components/ui/hooks/use-list-navigation";
 import { sortParams, useSort } from "~/components/ui/hooks/use-sort";
 import { NoValue } from "~/components/ui/no-value";
-import { ProgressBar } from "~/components/ui/progress-bar";
 import { DivergingBar } from "~/components/ui/rate-bar";
 import { SearchInput } from "~/components/ui/search-input";
 import { Segmented, SegmentedItem } from "~/components/ui/segmented";
@@ -36,7 +34,7 @@ import {
   type BuildTrend,
   buildLanguageName,
 } from "~/lib/build-stats";
-import { formatPercent, formatShare, formatSignedPercent } from "~/lib/format";
+import { formatPercent, formatSignedPercent } from "~/lib/format";
 import { TONE_TEXT, toneOf } from "~/lib/tone";
 import { cn } from "~/lib/utils";
 import type { SteamProfileMap } from "~/queries/steam-queries";
@@ -214,7 +212,6 @@ export function BuildTable({
   const sorted = [...shown].sort(
     (a, b) => sign * (value(a) - value(b)) || b.matches - a.matches || a.hero_build_id - b.hero_build_id,
   );
-  const maxShare = Math.max(...rows.map((row) => row.share));
   const navigation = useListNavigation({
     count: sorted.length,
     value: sorted.findIndex((row) => row.hero_build_id === selectedId),
@@ -325,18 +322,7 @@ export function BuildTable({
                     </span>
                   </div>
                 </TableCell>
-                <TableCell className="text-end">
-                  <div className="ms-auto flex w-16 flex-col items-end gap-1 tabular-nums">
-                    <span>{row.matches.toLocaleString("en-US")}</span>
-                    <ProgressBar
-                      variant="thin"
-                      value={maxShare > 0 ? row.share / maxShare : 0}
-                      color={CHART_COLOR.share}
-                      aria-label={`${formatShare(row.share)} of build matches`}
-                      className="w-full"
-                    />
-                  </div>
-                </TableCell>
+                <TableCell className="text-end tabular-nums">{row.matches.toLocaleString("en-US")}</TableCell>
                 {view === "overview" && (
                   <TableCell className="hidden text-end tabular-nums @lg/builds:table-cell">
                     {row.players.toLocaleString("en-US")}
@@ -363,6 +349,7 @@ export function BuildTable({
                           value={row.vsAverage}
                           interval={[row.interval[0] - average, row.interval[1] - average]}
                           scale={VS_AVERAGE_SCALE}
+                          tone={toneOf(verdictSign(row))}
                           className="w-full"
                         />
                       </div>

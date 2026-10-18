@@ -102,7 +102,7 @@ export function BuildByRank({
 
   return (
     <section className="flex flex-col">
-      <PanelSection title="By rank" />
+      <PanelSection variant="label" title="By rank" />
       {query.isPending || ranksQuery.isPending ? (
         <ChartLoading label="Win rate by rank" size="md" />
       ) : bars.length === 0 ? (
@@ -115,7 +115,6 @@ export function BuildByRank({
           data={bars}
           xKey="tier"
           valueKey="winRate"
-          colorKey="color"
           xAxisHeight={BADGE_AXIS_HEIGHT}
           xTick={<RankTierTick tiers={bars} />}
           tooltip={<RankBarTooltip />}

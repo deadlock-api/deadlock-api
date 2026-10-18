@@ -67,7 +67,7 @@ export function BuildSoulsByTime({
 
   return (
     <section className="flex flex-col">
-      <PanelSection title="Souls vs. hero average" />
+      <PanelSection variant="label" title="Souls vs. hero average" />
       {buildQuery.isPending || heroQuery.isPending ? (
         <ChartLoading label="Souls over the game" size="md" />
       ) : points.length < 3 ? (
