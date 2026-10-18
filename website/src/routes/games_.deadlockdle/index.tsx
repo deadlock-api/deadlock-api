@@ -15,6 +15,7 @@ import {
 import { useMemo } from "react";
 
 import { GameTile } from "~/components/domain/minigames/GameTile";
+import { RevealActions } from "~/components/domain/minigames/RevealActions";
 import { ShareButton } from "~/components/domain/minigames/ShareButton";
 import { TerminalButton } from "~/components/domain/minigames/TerminalButton";
 import { type DailyStatus, GameCard, getDailyResult, getDailyStatus } from "~/components/features/deadlockdle/GameCard";
@@ -235,11 +236,12 @@ function DeadlockdleHub() {
             <ChevronRight />
           </TerminalButton>
 
-          {isArchive && (
+          {/* Laid out on today's puzzle too, so the day buttons stay put when the archive's Today comes in. */}
+          <RevealActions revealed={isArchive} focusOnReveal={false}>
             <TerminalButton size="sm" onClick={() => goToDate(today)}>
               Today
             </TerminalButton>
-          )}
+          </RevealActions>
         </HeroActions>
       </Hero>
 
