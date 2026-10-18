@@ -578,7 +578,7 @@ export function Round3Primitives() {
       <Specimen
         name="DetailPopover"
         source="ui/detail-popover"
-        note="Details behind a small trigger: hover shows them as a preview, a click, tap or Enter pins the same content in a popover."
+        note="Details behind a small trigger: hover shows them as a preview, a click, tap or Enter pins the same content in a popover. The trigger is named by its content followed by an sr-only '{label} details', so a text trigger keeps its visible text in its name; an icon trigger is named by the label alone."
       >
         <Variants>
           <DetailPopover
@@ -601,6 +601,15 @@ export function Round3Primitives() {
             details={<p className="text-xs">412 matches in this bucket.</p>}
           >
             <InfoIcon />
+          </DetailPopover>
+          {/* Named "Kills 7.0 vs 6.4 benchmark details": the visible text first. */}
+          <DetailPopover
+            label="benchmark"
+            size="sm"
+            underline="dotted"
+            details={<p className="text-xs">Your average 7.0, lobby average 6.4.</p>}
+          >
+            Kills 7.0 vs 6.4
           </DetailPopover>
         </Variants>
       </Specimen>

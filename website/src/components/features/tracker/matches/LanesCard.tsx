@@ -30,7 +30,7 @@ function Laner({
 }) {
   return (
     <DetailPopover
-      label={`${name}'s lane stats`}
+      label="lane stats"
       size="xs"
       className="w-full min-w-0 justify-start px-0"
       details={

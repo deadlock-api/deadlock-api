@@ -251,7 +251,7 @@ function BenchmarkMetric({
   return (
     <Card tone="outline" size="xs" radius="md" className="gap-0 px-2 py-1">
       <DetailPopover
-        label={`${labels[def.key] ?? def.label} benchmark`}
+        label="benchmark"
         size="sm"
         className="h-auto w-full min-w-0 flex-col items-stretch gap-1 px-0 py-1 text-start whitespace-normal"
         details={

@@ -72,11 +72,12 @@ function ColumnSortButton({
       align="end"
       size="sm"
       onClick={onClick}
-      aria-label={`Sort scoreboard by ${label.toLowerCase()}, ${active && direction === "desc" ? "lowest" : "highest"} first`}
       title={label}
       className="gap-0.5 whitespace-nowrap"
     >
       {short}
+      {/* The header shows the short form; the name keeps it and adds the full one. The th carries aria-sort. */}
+      {short !== label && <span className="sr-only"> ({label})</span>}
     </SortButton>
   );
 }
@@ -125,7 +126,7 @@ function AbilityChip({ entry }: { entry: BuildAbility }) {
   const level = Math.min(MAX_ABILITY_LEVEL, entry.upgradedAt.length + 1);
   return (
     <DetailPopover
-      label={entry.ability.name}
+      label="ability"
       size="icon-xs"
       details={
         <>
@@ -158,7 +159,7 @@ function StackBadge({ stacks }: { stacks: number }) {
 function ItemChip({ item }: { item: BuildItem }) {
   return (
     <DetailPopover
-      label={item.upgrade.name}
+      label="item"
       size="icon-xs"
       details={
         <>
@@ -352,22 +353,7 @@ export function Scoreboard({
           <Stack key={team.key} gap={1.5} className="@container">
             <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
               <Heading as={headingLevel} size="sm">
-                <DetailPopover
-                  label={`${team.name} team totals`}
-                  size="sm"
-                  underline="dotted"
-                  className="h-6 px-1.5 text-sm font-semibold"
-                  details={
-                    <TeamStatsDetails
-                      name={team.name}
-                      players={teamPlayers}
-                      lobbyPlayers={match.players}
-                      columns={columns}
-                    />
-                  }
-                >
-                  {team.name}
-                </DetailPopover>
+                {team.name}
               </Heading>
               <span
                 className={cn("text-xs font-bold", TONE_TEXT[hasWinner ? (won ? "positive" : "negative") : "muted"])}
@@ -377,15 +363,30 @@ export function Scoreboard({
               {averageBadge != null && averageBadge > 0 && (
                 <BadgeImage badge={averageBadge} ranks={ranks} className="size-5" />
               )}
-              <span className="ms-auto text-xs whitespace-nowrap text-muted-foreground tabular-nums">
-                <span className="font-semibold text-foreground">{teamKills}</span> kills
+              {/* The team's totals open the rest of them. */}
+              <DetailPopover
+                label="team totals"
+                size="xs"
+                underline="dotted"
+                className="ms-auto gap-0 px-1.5 font-normal whitespace-nowrap text-muted-foreground tabular-nums"
+                details={
+                  <TeamStatsDetails
+                    name={team.name}
+                    players={teamPlayers}
+                    lobbyPlayers={match.players}
+                    columns={columns}
+                  />
+                }
+              >
+                <span className="font-semibold text-foreground">{teamKills}</span>&nbsp;kills
                 {soulEconomy && (
                   <>
-                    {" "}
-                    · <span className="font-semibold text-foreground">{teamSouls.toLocaleString("en-US")}</span> souls
+                    &nbsp;·&nbsp;
+                    <span className="font-semibold text-foreground">{teamSouls.toLocaleString("en-US")}</span>
+                    &nbsp;souls
                   </>
                 )}
-              </span>
+              </DetailPopover>
             </div>
             <Table>
               <TableCaption className="sr-only">{team.name} scoreboard</TableCaption>
@@ -396,12 +397,12 @@ export function Scoreboard({
                       variant="ghost"
                       size="xs"
                       aria-disabled={sortKey == null}
-                      aria-label={orderLabel}
                       title={orderLabel}
                       onClick={sortKey ? clearSort : undefined}
                       className="hidden font-normal @lg:inline-flex"
                     >
                       Player
+                      {sortKey && <span className="sr-only">, {orderLabel.toLowerCase()}</span>}
                       {sortKey && (
                         <span className="text-xs text-muted-foreground">
                           {sortLabel}

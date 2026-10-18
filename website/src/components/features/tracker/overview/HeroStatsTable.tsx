@@ -85,12 +85,9 @@ export function HeroStatsTable({
             aria-label="Minimum games per hero"
           >
             {MINIMUM_GAMES.map((minimum) => (
-              <SegmentedItem
-                key={minimum}
-                value={String(minimum)}
-                aria-label={minimum === 0 ? "Any number of games" : `At least ${minimum} games`}
-              >
+              <SegmentedItem key={minimum} value={String(minimum)}>
                 {minimum === 0 ? "All" : `${minimum}+`}
+                {minimum > 0 && <span className="sr-only"> games</span>}
               </SegmentedItem>
             ))}
           </Segmented>

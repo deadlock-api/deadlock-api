@@ -97,12 +97,13 @@ export function PerformanceTrendPanel({
           >
             {windows.map((choice) =>
               choice === "auto" ? (
-                <SegmentedItem key={choice} value={choice} aria-label="Automatic window size">
+                <SegmentedItem key={choice} value={choice}>
                   Auto
                 </SegmentedItem>
               ) : (
-                <SegmentedItem key={choice} value={choice} aria-label={`${choice} matches`}>
+                <SegmentedItem key={choice} value={choice}>
                   {choice}
+                  <span className="sr-only"> matches</span>
                 </SegmentedItem>
               ),
             )}

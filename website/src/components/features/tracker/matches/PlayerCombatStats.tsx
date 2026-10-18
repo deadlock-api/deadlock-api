@@ -30,7 +30,7 @@ export function PlayerCombatStats({
         return (
           <DetailPopover
             key={metric.label}
-            label={`${metric.label}: ${rate}`}
+            label={metric.label}
             size="xs"
             className="px-1"
             details={

@@ -1,4 +1,4 @@
-import { type ComponentProps, type ReactNode, useState } from "react";
+import { type ComponentProps, type ReactNode, useId, useState } from "react";
 
 import { Button } from "~/components/ui/button";
 import { useControllableState } from "~/components/ui/hooks/use-controllable-state";
@@ -6,7 +6,12 @@ import { Popover, PopoverContent, PopoverTrigger } from "~/components/ui/popover
 import { Tooltip } from "~/components/ui/tooltip";
 import { cn } from "~/lib/utils";
 
-/** Hover previews stay quick; a click, tap or Enter pins the same information for closer inspection. */
+/**
+ * Hover previews stay quick; a click, tap or Enter pins the same information for closer inspection. The trigger is
+ * named by its own content followed by "{label} details" (sr-only), so the visible text starts its accessible name
+ * (WCAG 2.5.3); an icon-only trigger is named by the label alone, so give it the full name ("Infernus"). The popover
+ * takes the trigger's name.
+ */
 export function DetailPopover({
   label,
   children,
@@ -17,8 +22,10 @@ export function DetailPopover({
   defaultOpen = false,
   onOpenChange,
   className,
+  id,
   ...props
 }: Omit<ComponentProps<typeof Button>, "children" | "size"> & {
+  /** What the details are about, read after the trigger's own text: "team totals", or "Infernus" on an icon. */
   label: string;
   children: ReactNode;
   details: ReactNode;
@@ -35,6 +42,8 @@ export function DetailPopover({
     onValueChange: onOpenChange,
   });
   const [previewOpen, setPreviewOpen] = useState(false);
+  const generatedId = useId();
+  const triggerId = id ?? generatedId;
   return (
     <Popover
       open={open}
@@ -50,7 +59,7 @@ export function DetailPopover({
             size={size}
             className={cn(underline === "dotted" && "underline decoration-dotted underline-offset-4", className)}
             type="button"
-            aria-label={`${label} details`}
+            id={triggerId}
             {...props}
             onClick={(event) => {
               event.stopPropagation();
@@ -58,11 +67,12 @@ export function DetailPopover({
             }}
           >
             {children}
+            <span className="sr-only"> {label} details</span>
           </Button>
         </PopoverTrigger>
       </Tooltip>
       <PopoverContent
-        aria-label={`${label} details`}
+        aria-labelledby={triggerId}
         collisionPadding={16}
         className="flex max-h-(--radix-popover-content-available-height) max-w-(--radix-popover-content-available-width) flex-col gap-2 overflow-y-auto overscroll-contain"
         onClick={(event) => event.stopPropagation()}
