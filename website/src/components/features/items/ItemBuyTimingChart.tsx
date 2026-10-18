@@ -260,7 +260,8 @@ export function ItemBuyTimingChart({ itemIds, baseQueryOptions, rowTotalMatches 
       <ChartCard title="Purchase Analysis" className="w-full">
         <PanelBody size="sm">
           <Inline className="gap-x-4 gap-y-2">
-            <Field label="View by" orientation="horizontal">
+            {/* The choices wrap under their label where the card is narrower than the row. */}
+            <Field label="View by" orientation="horizontal" className="flex-wrap">
               <Segmented value={bucketType} onValueChange={setBucketType} width="hug">
                 {viewOptions.map((option) => (
                   <SegmentedItem key={option.value} value={option.value}>
