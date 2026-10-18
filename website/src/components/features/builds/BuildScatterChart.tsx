@@ -32,7 +32,7 @@ const VERDICT_COLOR: Record<BuildRow["verdict"], string> = {
 const VERDICT_LABEL: Record<BuildRow["verdict"], string> = {
   above: "Above average",
   below: "Below average",
-  even: "Within noise",
+  even: "Close to average",
 };
 
 /** 1, 2 and 5 of every power of ten inside the domain: a log axis labelled at round numbers. */

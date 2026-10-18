@@ -101,7 +101,7 @@ const COLUMNS: Column[] = [
   },
   {
     key: "trend",
-    label: "7d share",
+    label: "Pick trend",
     name: "share change in the last 7 days",
     description: "How the build's share of the hero's build matches moved in the last 7 days, in points.",
     className: "hidden @lg/builds:table-cell",
@@ -248,7 +248,7 @@ export function BuildTable({
           placeholder="Name or author"
           aria-label="Filter builds by name, author or ID"
           size="sm"
-          className="w-full @sm:ms-auto @sm:w-44"
+          className="w-full @sm:ms-auto @sm:w-40"
         />
         <Segmented size="sm" width="hug" value={view} onValueChange={setView} aria-label="Columns">
           <SegmentedItem value="overview">Overview</SegmentedItem>
