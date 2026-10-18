@@ -5,9 +5,17 @@ import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } fro
 
 import { CodeEditor } from "~/components/patterns/code/CodeEditor";
 import { ResultGrid } from "~/components/patterns/data-table/ResultGrid";
+import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { Button } from "~/components/ui/button";
 import { Card } from "~/components/ui/card";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "~/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogStatus,
+  DialogTitle,
+} from "~/components/ui/dialog";
 import { Kbd } from "~/components/ui/kbd";
 import { Spinner } from "~/components/ui/spinner";
 import { Inline, Stack } from "~/components/ui/stack";
@@ -206,12 +214,10 @@ export function SqlPlayground({ open, onOpenChange, tables, schemaByTable, query
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent size="full" className="h-7/8 grid-rows-[auto_1fr] gap-3 p-4" showCloseButton>
         <DialogHeader className="gap-1">
-          <DialogTitle className="flex flex-wrap items-center gap-3">
-            SQL Playground
-            <Text variant="caption" tone="muted">
-              {getInitMessage(initState, initError, tables.length)}
-            </Text>
-          </DialogTitle>
+          <Inline gap={3} align="baseline">
+            <DialogTitle>SQL Playground</DialogTitle>
+            <DialogStatus>{getInitMessage(initState, initError, tables.length)}</DialogStatus>
+          </Inline>
           <DialogDescription className="text-xs">
             Run SQL against the parquet files directly in your browser via{" "}
             <TextLink href="https://duckdb.org/docs/api/wasm/overview" target="_blank" rel="noopener noreferrer">
@@ -285,6 +291,7 @@ export function SqlPlayground({ open, onOpenChange, tables, schemaByTable, query
                       · {Math.round(duration)} ms
                     </>
                   )}
+                  {!status && queryError && "Query failed"}
                   {!status && notice}
                 </Text>
               </output>
@@ -315,7 +322,13 @@ export function SqlPlayground({ open, onOpenChange, tables, schemaByTable, query
                 </Button>
               )}
             </Inline>
-            {result && !queryError ? (
+            {queryError ? (
+              <ErrorState
+                title="Query failed"
+                description={<Text className="font-mono whitespace-pre-wrap">{queryError}</Text>}
+                className="min-h-0 flex-1 content-start overflow-auto"
+              />
+            ) : result ? (
               <ResultGrid
                 columns={result.columns}
                 rows={result.rows}
@@ -327,21 +340,15 @@ export function SqlPlayground({ open, onOpenChange, tables, schemaByTable, query
               />
             ) : (
               <Card tone="glass" size="flush" radius="md" className="min-h-0 flex-1 overflow-auto">
-                {queryError ? (
-                  <Text as="div" tone="destructive" className="p-3 font-mono text-xs whitespace-pre-wrap">
-                    {queryError}
-                  </Text>
-                ) : (
-                  <Text
-                    as="div"
-                    variant="caption"
-                    tone="muted"
-                    align="center"
-                    className="flex h-full items-center justify-center p-6"
-                  >
-                    {notice ?? RESULT_PLACEHOLDER[initState]}
-                  </Text>
-                )}
+                <Text
+                  as="div"
+                  variant="caption"
+                  tone="muted"
+                  align="center"
+                  className="flex h-full items-center justify-center p-6"
+                >
+                  {notice ?? RESULT_PLACEHOLDER[initState]}
+                </Text>
               </Card>
             )}
           </Stack>

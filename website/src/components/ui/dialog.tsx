@@ -208,6 +208,16 @@ function DialogTitle({ className, ...props }: React.ComponentProps<typeof Dialog
   );
 }
 
+/**
+ * Status text beside a dialog's title: a tool loading, then ready. A polite live region (`<output>`) kept out of the
+ * title, so the dialog's name stays its title while the status changes. Set its tone with a `Text` inside.
+ */
+function DialogStatus({ className, ...props }: React.ComponentProps<"output">) {
+  return (
+    <output data-slot="dialog-status" className={cn("type-caption text-muted-foreground", className)} {...props} />
+  );
+}
+
 function DialogDescription({ className, ...props }: React.ComponentProps<typeof DialogPrimitive.Description>) {
   return (
     <DialogPrimitive.Description
@@ -226,6 +236,7 @@ export {
   DialogDescription,
   DialogFooter,
   DialogHeader,
+  DialogStatus,
   DialogTitle,
   DialogTrigger,
 };

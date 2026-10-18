@@ -51,6 +51,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogPager,
+  DialogStatus,
   DialogTitle,
   DialogTrigger,
 } from "~/components/ui/dialog";
@@ -144,6 +145,30 @@ function DialogPagerDemo() {
           </Inline>
         </DialogHeader>
         <Text tone="muted">The content of {at(index)}.</Text>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function DialogStatusDemo() {
+  const [ready, setReady] = useState(false);
+  return (
+    <Dialog>
+      <DialogTrigger asChild>
+        <Button variant="outline" size="sm">
+          Dialog with a status
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <Inline gap={3} align="baseline">
+            <DialogTitle>SQL Playground</DialogTitle>
+            <DialogStatus>{ready ? <Text tone="positive">Ready · 6 tables</Text> : "Loading DuckDB…"}</DialogStatus>
+          </Inline>
+        </DialogHeader>
+        <Button variant="outline" size="sm" className="self-start" onClick={() => setReady(!ready)}>
+          {ready ? "Reset status" : "Finish loading"}
+        </Button>
       </DialogContent>
     </Dialog>
   );
@@ -845,10 +870,11 @@ export function Primitives() {
       <Specimen
         name="Dialog"
         source="ui/dialog"
-        note="One task, then back to the page. DialogHeader keeps a long title clear of the close button by itself. DialogPager steps through a sequence from the header, beside the title: its buttons are named by their target, the arrow keys step too, and a polite status announces the new title."
+        note="One task, then back to the page. DialogHeader keeps a long title clear of the close button by itself. DialogPager steps through a sequence from the header, beside the title: its buttons are named by their target, the arrow keys step too, and a polite status announces the new title. DialogStatus is status text beside the title (an <output>), so the dialog's name stays its title while the status changes."
       >
         <Variants>
           <DialogPagerDemo />
+          <DialogStatusDemo />
           <Dialog>
             <DialogTrigger asChild>
               <Button variant="outline" size="sm">
