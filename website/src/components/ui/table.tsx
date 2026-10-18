@@ -10,7 +10,14 @@ type TableDensity = "default" | "compact" | "dense";
 const TableDensityContext = React.createContext<TableDensity>("default");
 
 const HEAD_DENSITY: Record<TableDensity, string> = { default: "h-10 px-2", compact: "h-9 px-2", dense: "h-7 px-1.5" };
-const CELL_DENSITY: Record<TableDensity, string> = { default: "p-2", compact: "px-2 py-1.5", dense: "px-1.5 py-1" };
+// A `compact` row is 36px whatever it holds: tall enough for a 24px control (`Button size="icon-xs"`) with its
+// padding and rule, so a row with inline buttons and a row of plain text, or a table with and without such a column,
+// keep one height. On a cell, `height` is the row's floor; taller content still grows it.
+const CELL_DENSITY: Record<TableDensity, string> = {
+  default: "p-2",
+  compact: "h-9 px-2 py-1",
+  dense: "px-1.5 py-1",
+};
 // A sticky head or foot row covers the edge of the scroll box. Scroll padding of the row's height keeps a row that
 // is scrolled into view (focus, `scrollIntoView`) clear of it (WCAG 2.4.11, focus not obscured).
 const STICKY_SCROLL_PADDING: Record<TableDensity, string> = {
@@ -21,8 +28,8 @@ const STICKY_SCROLL_PADDING: Record<TableDensity, string> = {
 };
 
 /**
- * `density` sets the row height of every cell at once: `default` for short lists, `compact` (about 40px rows) for
- * data tables, `dense` for tables inside panels and dialogs.
+ * `density` sets the row height of every cell at once: `default` for short lists, `compact` (36px rows, which fit a
+ * 24px inline control) for data tables, `dense` for tables inside panels and dialogs.
  *
  * A table wider than its container scrolls sideways inside it, and the edge with more columns past it fades out
  * (`scroll-fade-x`; with a pinned column only the end edge). A table with a pinned column is also the `table`

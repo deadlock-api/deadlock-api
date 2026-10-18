@@ -1,5 +1,14 @@
 import { Link } from "@tanstack/react-router";
-import { BarChart3Icon, CheckIcon, GlobeIcon, LayersIcon, MailIcon, SwordsIcon, UserIcon } from "lucide-react";
+import {
+  BarChart3Icon,
+  CheckIcon,
+  FilterIcon,
+  GlobeIcon,
+  LayersIcon,
+  MailIcon,
+  SwordsIcon,
+  UserIcon,
+} from "lucide-react";
 import { useState } from "react";
 
 import { Specimen, Variants } from "~/components/dev/design-system/Specimen";
@@ -643,6 +652,14 @@ export function Round3PrimitivesMore() {
             <TableRow>
               <TableCell>default</TableCell>
               <TableCell className="text-end tabular-nums">48.0%</TableCell>
+            </TableRow>
+            <TableRow>
+              <TableCell>a 24px control keeps the compact height</TableCell>
+              <TableCell className="text-end">
+                <Button variant="ghost" size="icon-xs" aria-label="Filter by this row">
+                  <FilterIcon aria-hidden="true" />
+                </Button>
+              </TableCell>
             </TableRow>
           </TableBody>
         </Table>

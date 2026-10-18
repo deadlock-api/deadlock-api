@@ -158,7 +158,7 @@ function LeaderboardTableRow({
       </TableCell>
       {shouldShowTopHeroesColumn && (
         <TableCell>
-          <div className="flex min-h-7 justify-end gap-1">
+          <div className="flex justify-end gap-1">
             {entry.top_hero_ids?.map((heroId) => (
               <TopHeroButton key={heroId} heroId={heroId} onClick={() => onHeroClick(heroId)} />
             ))}
@@ -174,8 +174,8 @@ function TopHeroButton({ heroId, onClick }: { heroId: number; onClick: () => voi
   const label = hero ? `Filter by ${hero.name}` : "Filter by hero";
   return (
     <Tooltip content={label}>
-      <Button variant="ghost" size="icon-sm" shape="pill" onClick={onClick} aria-label={label}>
-        <HeroImage hero={hero} loading={isLoading} shape="circle" ring="border" className="size-7" />
+      <Button variant="ghost" size="icon-xs" shape="pill" onClick={onClick} aria-label={label}>
+        <HeroImage hero={hero} loading={isLoading} shape="circle" ring="border" className="size-6" />
       </Button>
     </Tooltip>
   );
