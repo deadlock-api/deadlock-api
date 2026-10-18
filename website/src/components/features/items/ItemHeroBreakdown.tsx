@@ -87,10 +87,28 @@ export function ItemBestHeroes({
                 key={heroId}
                 rank={index + 1}
                 entity={{ heroId }}
-                meta={`${matches.toLocaleString("en-US")} matches`}
+                meta={
+                  // Rounded where the list is narrow, so the count stays whole under the name.
+                  <>
+                    <span className="@md:hidden">
+                      {matches.toLocaleString("en-US", { notation: "compact", maximumFractionDigits: 0 })} matches
+                    </span>
+                    <span className="hidden @md:inline">{matches.toLocaleString("en-US")} matches</span>
+                  </>
+                }
               >
-                <RankedEntityMetric label="Win rate" value={formatPercent(winRate)} tone={toneOf(winRate, 0.5)} />
-                <RankedEntityMetric label="Bought" value={formatShare(usage)} share={usage} />
+                <RankedEntityMetric
+                  label="Win rate"
+                  labelDisplay={index === 0 ? "visible" : "hidden"}
+                  value={formatPercent(winRate)}
+                  tone={toneOf(winRate, 0.5)}
+                />
+                <RankedEntityMetric
+                  label="Bought"
+                  labelDisplay={index === 0 ? "visible" : "hidden"}
+                  value={formatShare(usage)}
+                  share={usage}
+                />
               </RankedEntityRow>
             ))}
           </RankedEntityList>
@@ -144,8 +162,18 @@ export function ItemPairings({
           <RankedEntityList>
             {paired.map(({ item, winRate, pairRate }, index) => (
               <RankedEntityRow key={item.id} rank={index + 1} entity={{ itemId: item.id }}>
-                <RankedEntityMetric label="Win rate" value={formatPercent(winRate)} tone={toneOf(winRate, 0.5)} />
-                <RankedEntityMetric label="Together" value={formatShare(pairRate)} share={pairRate} />
+                <RankedEntityMetric
+                  label="Win rate"
+                  labelDisplay={index === 0 ? "visible" : "hidden"}
+                  value={formatPercent(winRate)}
+                  tone={toneOf(winRate, 0.5)}
+                />
+                <RankedEntityMetric
+                  label="Together"
+                  labelDisplay={index === 0 ? "visible" : "hidden"}
+                  value={formatShare(pairRate)}
+                  share={pairRate}
+                />
               </RankedEntityRow>
             ))}
           </RankedEntityList>
