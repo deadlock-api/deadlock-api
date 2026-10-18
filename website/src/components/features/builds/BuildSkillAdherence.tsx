@@ -1,5 +1,6 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 
+import { useAnswerWithRow } from "~/components/features/builds/build-hooks";
 import { StaleOverlay } from "~/components/patterns/states/StaleOverlay";
 import { Skeleton } from "~/components/ui/skeleton";
 import { Stat, StatGroup } from "~/components/ui/stat";
@@ -87,19 +88,23 @@ export function BuildSkillAdherence({
   const followed = (data: { wins: number; matches: number }[] | undefined) =>
     data && (data[0] ?? { wins: 0, matches: 0 });
 
+  // The last build's answers stay with its own row while the next build's load.
+  const unlock = useAnswerWithRow(unlockQuery.data, unlockQuery.isPlaceholderData, row);
+  const points = useAnswerWithRow(pointsQuery.data, pointsQuery.isPlaceholderData, row);
+
   return (
     <StaleOverlay active={unlockQuery.isPlaceholderData || pointsQuery.isPlaceholderData} label="skill order followed">
       <StatGroup size="xs" variant="joined" className="grid-cols-2">
         <AdherenceStat
           label="Same unlock order"
-          row={row}
-          followed={followed(unlockQuery.data)}
+          row={unlock?.row ?? row}
+          followed={followed(unlock?.data)}
           pending={unlockQuery.isPending && unlockOrder.length >= 2}
         />
         <AdherenceStat
           label={`Same first ${FIRST_POINTS} points`}
-          row={row}
-          followed={followed(pointsQuery.data)}
+          row={points?.row ?? row}
+          followed={followed(points?.data)}
           pending={pointsQuery.isPending && firstPoints.length === FIRST_POINTS}
         />
       </StatGroup>

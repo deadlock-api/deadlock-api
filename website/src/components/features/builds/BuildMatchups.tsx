@@ -1,6 +1,7 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 
 import { RankedEntityList, RankedEntityMetric, RankedEntityRow } from "~/components/domain/assets/RankedEntityList";
+import { useAnswerWithRow } from "~/components/features/builds/build-hooks";
 import { PanelSection } from "~/components/patterns/panel/Panel";
 import { StaleOverlay } from "~/components/patterns/states/StaleOverlay";
 import { Skeleton } from "~/components/ui/skeleton";
@@ -110,6 +111,8 @@ export function BuildMatchups({
     placeholderData: keepPreviousData,
   });
 
+  // The last build's matchups stay with its own win rate while the next build's load.
+  const answer = useAnswerWithRow(query.data, query.isPlaceholderData, build);
   if (query.isError) return null;
   if (!query.data) {
     return (
@@ -127,8 +130,8 @@ export function BuildMatchups({
   if (sorted.length < SHOWN * 2) return null;
   return (
     <StaleOverlay active={query.isPlaceholderData} label="matchups">
-      <MatchupList title="Strong against" matchups={sorted.slice(0, SHOWN)} build={build} />
-      <MatchupList title="Weak against" matchups={sorted.slice(-SHOWN).reverse()} build={build} />
+      <MatchupList title="Strong against" matchups={sorted.slice(0, SHOWN)} build={answer?.row ?? build} />
+      <MatchupList title="Weak against" matchups={sorted.slice(-SHOWN).reverse()} build={answer?.row ?? build} />
     </StaleOverlay>
   );
 }

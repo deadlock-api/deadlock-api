@@ -212,7 +212,7 @@ export function BuildInMatches({
           <BuildTopPlayers heroId={heroId} buildId={row.hero_build_id} filters={filters} active={active} />
         </Panel>
         <Panel className="flex flex-col">
-          <PanelHeader title="Where it wins" icon={Swords} size="sm" />
+          <PanelHeader title="Matchups and ranks" icon={Swords} size="sm" />
           <BuildMatchups heroId={heroId} build={row} filters={filters} active={active} />
           <BuildByRank heroId={heroId} build={row} filters={filters} active={active} />
         </Panel>

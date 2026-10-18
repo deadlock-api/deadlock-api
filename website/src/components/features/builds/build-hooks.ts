@@ -52,13 +52,10 @@ export function useBuildItemUsage({
     // The last build's purchases stay while the next one's load (marked stale), so the panels keep their height.
     placeholderData: keepPreviousData,
   });
-  // The purchases with the build they were asked for: while the next build's load, the last build's purchases stay with
-  // its own row, so its rates and buy order do not mix with the next build's match count.
-  const fresh = query.data !== undefined && !query.isPlaceholderData ? { purchases: query.data, row } : null;
-  const [kept, setKept] = useState(fresh);
-  if (fresh && (kept?.purchases !== fresh.purchases || kept.row !== fresh.row)) setKept(fresh);
-  const shown = fresh ?? (query.isPlaceholderData ? kept : null);
-  const shownPurchases = shown?.purchases;
+  // While the next build's purchases load, the last build's stay with its own row, so its rates and buy order do not
+  // mix with the next build's match count.
+  const shown = useAnswerWithRow(query.data, query.isPlaceholderData, row);
+  const shownPurchases = shown?.data;
   const shownRow = shown?.row;
   const usage = useMemo(
     () =>
@@ -70,6 +67,22 @@ export function useBuildItemUsage({
   // A failed request leaves the items without their rates rather than holding skeletons.
   const pending = query.isPending && meta != null && (!active || query.fetchStatus !== "idle");
   return { usage, pending, stale: query.isPlaceholderData, failed: query.isError };
+}
+
+/**
+ * A per-build answer with the build it was asked for. While the next build's request loads and the last answer stands
+ * in for it (`placeholder`), the last build stays with it, so numbers read against the build (its win rate, its match
+ * count) are the last build's too, not a mix of two builds. Null without an answer.
+ */
+export function useAnswerWithRow<T>(
+  data: T | undefined,
+  placeholder: boolean,
+  row: BuildRow,
+): { data: T; row: BuildRow } | null {
+  const fresh = data !== undefined && !placeholder ? { data, row } : null;
+  const [kept, setKept] = useState(fresh);
+  if (fresh && (kept?.data !== fresh.data || kept.row !== fresh.row)) setKept(fresh);
+  return fresh ?? (placeholder ? kept : null);
 }
 
 /**
