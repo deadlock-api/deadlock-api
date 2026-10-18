@@ -261,7 +261,7 @@ function classTokens(line) {
     // A lone bare word ("glass", "outline") is a value, not a class list, unless the line is about classes.
     if (/^[a-z]+$/.test(m[2]) && !aboutClasses) continue;
     for (const raw of m[2].split(/\s+/)) {
-      if (!/^[!\w@[\]():/.&>*=_'%,#+~-]+$/.test(raw) || !/[a-z]/.test(raw)) continue;
+      if (!/^[!\w@[\]():/.&>*=_'%,#+~$^|-]+$/.test(raw) || !/[a-z]/.test(raw)) continue;
       let base = raw.replace(/^!|!$/g, "");
       while (VARIANT_PREFIX.test(base)) base = base.replace(VARIANT_PREFIX, "");
       tokens.push([raw, base.replace(/^!|!$/g, "")]);

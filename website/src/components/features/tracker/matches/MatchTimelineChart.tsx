@@ -86,9 +86,12 @@ function ObjectiveMarker({
   level,
   plotLeft,
   plotRight,
+  onOpenChange,
 }: {
   cx?: number;
   cy?: number;
+  /** The mark's card opened or closed; the chart hides its own reading while one is open. */
+  onOpenChange: (open: boolean) => void;
   event: ObjectiveEvent;
   /** How many marks this one stacks in from the edge, where marks close in time would overlap. */
   level: number;
@@ -102,6 +105,7 @@ function ObjectiveMarker({
   const top = event.own ? cy + inset : cy - inset - size;
   return (
     <HoverTooltip
+      onOpenChange={onOpenChange}
       content={
         <>
           <TooltipHeader
@@ -281,11 +285,14 @@ function ChipMarker({
   cy = 0,
   event,
   level,
+  onOpenChange,
 }: {
   cx?: number;
   cy?: number;
   event: TimelineEvent;
   level: number;
+  /** The chip's card opened or closed; the chart hides its own reading while one is open. */
+  onOpenChange: (open: boolean) => void;
 }) {
   const direction = event.side === "gain" ? -1 : 1;
   const center = cy + direction * (STEM_PX + CHIP_PX / 2 + level * LEVEL_PX);
@@ -295,7 +302,7 @@ function ChipMarker({
     <g>
       <line x1={cx} y1={cy} x2={cx} y2={center - (direction * CHIP_PX) / 2} stroke={color} strokeOpacity={0.7} />
       <foreignObject x={cx - CHIP_PX / 2 - 2} y={center - CHIP_PX / 2 - 2} width={CHIP_PX + 4} height={CHIP_PX + 4}>
-        <HoverTooltip content={event.tooltip}>
+        <HoverTooltip content={event.tooltip} onOpenChange={onOpenChange}>
           <div className="p-0.5">
             {event.hero ? (
               <HeroImage heroId={event.hero.hero_id} shape="circle" ring={tone} className="size-5" title="" />
@@ -338,6 +345,9 @@ export function MatchTimelineChart({
 }) {
   const gradientId = useId();
   const [width, setWidth] = useState(0);
+  // How many marks have their card open: moving from one mark to the next opens the next before the last closes.
+  const [openMarks, setOpenMarks] = useState(0);
+  const markOpenChange = (open: boolean) => setOpenMarks((count) => Math.max(0, count + (open ? 1 : -1)));
 
   const points = lead?.points ?? [];
   const data = lead
@@ -400,8 +410,6 @@ export function MatchTimelineChart({
       variant="bare"
       style={{ height: plotPx + 2 * EDGE_PX + X_AXIS_PX }}
       onResize={setWidth}
-      // A marker's exact event tooltip takes precedence over the nearest soul sample.
-      className="[&:has([data-state$=open])_.recharts-tooltip-wrapper]:invisible!"
     >
       <AreaChart aria-label={label} data={data} margin={{ top: EDGE_PX, right: PLOT_END_PX, bottom: EDGE_PX, left: 0 }}>
         <defs>
@@ -442,7 +450,14 @@ export function MatchTimelineChart({
             ifOverflow="hidden"
           />
         ))}
-        {lead && <Tooltip cursor={CHART_CURSOR_LINE} content={<LeadTooltipContent sides={sides} />} />}
+        {lead && (
+          <Tooltip
+            // A mark's exact event card takes precedence over the nearest soul sample.
+            active={openMarks > 0 ? false : undefined}
+            cursor={CHART_CURSOR_LINE}
+            content={<LeadTooltipContent sides={sides} />}
+          />
+        )}
         <ReferenceLine y={0} stroke={CHART_COLOR.reference} />
         {width > LEAD_AXIS_PX + PLOT_END_PX &&
           objectives.map((event, index) => (
@@ -460,6 +475,7 @@ export function MatchTimelineChart({
                   level={objectiveLevels[index]}
                   plotLeft={LEAD_AXIS_PX}
                   plotRight={width - PLOT_END_PX}
+                  onOpenChange={markOpenChange}
                 />
               )}
             />
@@ -487,7 +503,9 @@ export function MatchTimelineChart({
               y={leadAt(points, event.time)}
               r={0}
               ifOverflow="visible"
-              shape={(props) => <ChipMarker cx={props.cx} cy={props.cy} event={event} level={level} />}
+              shape={(props) => (
+                <ChipMarker cx={props.cx} cy={props.cy} event={event} level={level} onOpenChange={markOpenChange} />
+              )}
             />
           ))}
       </AreaChart>
