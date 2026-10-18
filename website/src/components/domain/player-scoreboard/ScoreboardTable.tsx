@@ -197,7 +197,8 @@ export function ScoreboardTable({
     >
       <SearchInput
         size="sm"
-        placeholder="Search player..."
+        placeholder="Search player…"
+        kind="identifier"
         aria-label="Search player"
         value={searchQuery}
         onValueChange={handleSearchChange}

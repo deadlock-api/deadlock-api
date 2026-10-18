@@ -10,6 +10,7 @@ import { Button } from "~/components/ui/button";
 import { OptionRow } from "~/components/ui/option-row";
 import { Popover, PopoverContent, PopoverTrigger } from "~/components/ui/popover";
 import { SearchInput } from "~/components/ui/search-input";
+import { formatCountNoun } from "~/lib/format";
 import { parseSteamIdInput } from "~/lib/steam";
 import { useDebouncedState } from "~/lib/utils";
 import { steamSearchQueryOptions } from "~/queries/steam-queries";
@@ -124,6 +125,7 @@ export function PlayerSearch({
           onValueChange={setQuery}
           placeholder="Steam name or id…"
           size="sm"
+          kind="identifier"
           onKeyDown={(event) => {
             if (event.key === "ArrowDown") moveFocus(event, 1);
             else if (event.key === "Enter" && pickable[0]) {
@@ -132,6 +134,10 @@ export function PlayerSearch({
             }
           }}
         />
+        {/* The count of results, announced as they arrive; the empty, loading and error states announce themselves. */}
+        <output className="sr-only">
+          {!search.tooShort && options.length > 0 ? `${formatCountNoun(options.length, "player")} found` : ""}
+        </output>
         <div className="max-h-64 overflow-y-auto">
           {search.tooShort ? (
             <EmptyState variant="inline" title="Type a name or paste a Steam id." className="py-2 text-xs" />
@@ -155,7 +161,8 @@ export function PlayerSearch({
                     <OptionRow
                       disabled={taken}
                       hint={taken ? "Added" : option.name ? undefined : "Account id"}
-                      description={option.name ? undefined : String(option.accountId)}
+                      // Always the id: look-alike names ("lavabolt", "Lavavolt") are told apart by it.
+                      description={String(option.accountId)}
                       onClick={() => pick(option)}
                       onKeyDown={(event) => {
                         if (event.key === "ArrowDown") moveFocus(event, 1);

@@ -71,6 +71,15 @@ function SearchInputExamples() {
           className="w-full sm:w-56"
         />
       </Variants>
+      <Variants label='kind="identifier" (no spellcheck or autocomplete)' className="items-start">
+        <SearchInput
+          size="sm"
+          kind="identifier"
+          placeholder="Steam name or id…"
+          aria-label="Steam name or id"
+          className="w-full sm:w-56"
+        />
+      </Variants>
       <Variants label='variant="bar" with an action' className="items-start">
         <SearchInput
           variant="bar"
@@ -355,7 +364,7 @@ export function Round3Primitives() {
       <Specimen
         name="SearchInput"
         source="ui/search-input"
-        note="A text field that filters what is below it: leading icon, a clear button once it has text, a spinner in its place while loading, a shortcut key while empty. The bar variant is the main search of a page, its action inside. value / defaultValue / onValueChange; ref and input props reach the input, className sizes the row."
+        note="A text field that filters what is below it: leading icon, a clear button once it has text, a spinner in its place while loading, a shortcut key while empty. The bar variant is the main search of a page, its action inside. kind identifier is for names and ids: no spellcheck, autocomplete or autocorrect. value / defaultValue / onValueChange; ref and input props reach the input, className sizes the row."
       >
         <SearchInputExamples />
       </Specimen>

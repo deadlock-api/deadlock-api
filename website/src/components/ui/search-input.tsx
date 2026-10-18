@@ -36,6 +36,11 @@ interface SearchInputProps extends Omit<React.ComponentProps<"input">, "value" |
   loading?: boolean;
   /** What the spinner announces. */
   loadingLabel?: string;
+  /**
+   * `identifier`: the query is a name or an id (a Steam name, an account id, a link), not prose: no spellcheck
+   * underlines, autocomplete, autocorrect or autocapitalisation.
+   */
+  kind?: "text" | "identifier";
 }
 
 /**
@@ -51,6 +56,7 @@ export function SearchInput({
   variant = "default",
   loading = false,
   loadingLabel = "Searching",
+  kind = "text",
   action,
   placeholderContent,
   shortcut,
@@ -70,6 +76,9 @@ export function SearchInput({
     value,
     "aria-busy": loading || undefined,
     "aria-keyshortcuts": shortcut,
+    ...(kind === "identifier"
+      ? { spellCheck: false, autoComplete: "off", autoCorrect: "off", autoCapitalize: "off" }
+      : undefined),
     onChange: (event: React.ChangeEvent<HTMLInputElement>) => {
       onChange?.(event);
       setValue(event.target.value);
