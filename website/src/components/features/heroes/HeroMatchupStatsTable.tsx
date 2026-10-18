@@ -301,6 +301,7 @@ export function HeroMatchupStatsTable({
     isError: isHeroError,
     refetch: refetchHero,
     isPlaceholderData: isStaleHero,
+    isFetching: isFetchingHero,
   } = useQuery({ ...heroStatsQueryOptions({ ...heroStatsQuery, ...range }), placeholderData: keepPreviousData });
   const {
     data: synergyData,
@@ -308,6 +309,7 @@ export function HeroMatchupStatsTable({
     isError: isSynergyError,
     refetch: refetchSynergy,
     isPlaceholderData: isStaleSynergy,
+    isFetching: isFetchingSynergy,
   } = useQuery({ ...heroSynergyWinsQueryOptions({ ...matchupQuery, ...range }), placeholderData: keepPreviousData });
   const {
     data: counterData,
@@ -315,6 +317,7 @@ export function HeroMatchupStatsTable({
     isError: isCounterError,
     refetch: refetchCounter,
     isPlaceholderData: isStaleCounter,
+    isFetching: isFetchingCounter,
   } = useQuery({ ...heroCounterWinsQueryOptions({ ...matchupQuery, ...range }), placeholderData: keepPreviousData });
 
   const { data: prevHeroData } = useQuery({
@@ -406,17 +409,23 @@ export function HeroMatchupStatsTable({
     return <LoadingState label="hero matchups" align="center" />;
   }
 
-  if ((isHeroError || isSynergyError || isCounterError) && heroIds.length === 0) {
-    return (
-      <ErrorState
-        title="Hero matchups did not load"
-        onRetry={() => void Promise.all([refetchHero(), refetchSynergy(), refetchCounter()])}
-      />
-    );
+  const anyError = isHeroError || isSynergyError || isCounterError;
+  const retry = () => void Promise.all([refetchHero(), refetchSynergy(), refetchCounter()]);
+  if (anyError && heroIds.length === 0) {
+    return <ErrorState title="Hero matchups did not load" onRetry={retry} />;
   }
 
   return (
-    <StaleOverlay active={isStale} label="hero matchups">
+    <StaleOverlay active={isStale} label="hero matchups" className="flex flex-col gap-3">
+      {/* One query failing left its columns blank, which read as "no matchup". */}
+      {anyError && (
+        <ErrorState
+          title="Some matchup columns failed to load"
+          description="Their cells show no values. Try loading them again."
+          onRetry={retry}
+          retrying={isFetchingHero || isFetchingSynergy || isFetchingCounter}
+        />
+      )}
       <Table aria-label="Hero matchups">
         {!hideHeader && (
           <TableHeader tone="muted">
