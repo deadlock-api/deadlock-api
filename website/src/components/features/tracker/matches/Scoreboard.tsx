@@ -538,6 +538,7 @@ export function Scoreboard({
                           <Button
                             variant="text"
                             size="inline"
+                            fit="truncate"
                             type="button"
                             onClick={(event) => {
                               event.stopPropagation();
@@ -547,7 +548,7 @@ export function Scoreboard({
                             className="min-h-6 min-w-6 justify-start text-start"
                             title={`Show ${name}'s kills and deaths on the match timeline`}
                           >
-                            <span className="min-w-0 truncate">{name}</span>
+                            <span>{name}</span>
                           </Button>
                           {!isTracked && IS_DEV && !isDemoAccount(player.account_id) && (
                             <Link

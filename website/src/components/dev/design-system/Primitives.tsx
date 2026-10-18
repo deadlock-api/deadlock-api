@@ -266,6 +266,14 @@ export function Primitives() {
             </div>
           ))}
         </Variants>
+        <Variants label='fit="truncate": a name button in a narrow row ends in an ellipsis instead of overlapping the value beside it'>
+          <div className="flex w-full max-w-56 items-center gap-2 rounded-md border px-2 py-1 text-sm">
+            <Button variant="text" size="inline" fit="truncate" className="min-h-6">
+              <span>The_magnificent_deadlock_player</span>
+            </Button>
+            <span className="ms-auto shrink-0 text-muted-foreground tabular-nums">7 / 10 / 13</span>
+          </div>
+        </Variants>
         <Variants label='variant="row"' className="block max-w-sm overflow-hidden rounded-lg border">
           {["Infernus", "Haze", "Avg Damage Mitigated per Player per Match (a label that wraps)"].map((hero) => (
             <Button key={hero} variant="row" className="justify-between gap-3 border-b px-3 py-2 last:border-b-0">

@@ -67,6 +67,14 @@ const buttonVariants = cva(
         always: "",
         group: "[@media(hover:hover)]:[.group:not(:hover):not(:focus-within)_&]:opacity-0",
       },
+      /**
+       * `truncate` lets the button shrink below its label in a flex row (a name in a table cell): it gives up its
+       * `shrink-0` and its label, wrapped in a `<span>`, ends in an ellipsis instead of spilling into the next cell.
+       */
+      fit: {
+        content: "",
+        truncate: "max-w-full min-w-0 shrink overflow-hidden [&>span]:min-w-0 [&>span]:truncate",
+      },
       /** `raised` lifts a button that floats over page content, such as a launcher pinned to a corner. */
       elevation: {
         none: "",
@@ -122,6 +130,7 @@ const buttonVariants = cva(
       elevation: "none",
       scrim: "none",
       reveal: "always",
+      fit: "content",
     },
   },
 );
@@ -144,6 +153,7 @@ function Button({
   elevation = "none",
   scrim = "none",
   reveal = "always",
+  fit = "content",
   asChild = false,
   loading = false,
   loadingLabel = "Loading",
@@ -171,7 +181,7 @@ function Button({
       aria-busy={loading || undefined}
       aria-disabled={loading || undefined}
       className={cn(
-        buttonVariants({ variant, shape, size, elevation, scrim, reveal, className }),
+        buttonVariants({ variant, shape, size, elevation, scrim, reveal, fit, className }),
         loading && "cursor-progress",
       )}
       {...props}
