@@ -5,13 +5,16 @@ import { Specimen, Variants } from "~/components/dev/design-system/Specimen";
 import { TableEmptyRow } from "~/components/patterns/data-table/TableEmptyRow";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent } from "~/components/ui/card";
+import { FloatingBar } from "~/components/ui/floating-bar";
 import { moveItem, useReorder } from "~/components/ui/hooks/use-reorder";
 import { Input } from "~/components/ui/input";
+import { Kbd } from "~/components/ui/kbd";
 import { PixelImage, PixelStage } from "~/components/ui/pixel-stage";
 import { ReorderHandle, ReorderItem } from "~/components/ui/reorder-handle";
 import { SelectionBox } from "~/components/ui/selection-box";
 import { SharePreview } from "~/components/ui/share-preview";
 import { SliderField } from "~/components/ui/slider-field";
+import { Inline } from "~/components/ui/stack";
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 
 // A real crosshair render from the API (red pips at 1080p), copied from its test fixtures.
@@ -387,7 +390,7 @@ export function Round4Requests() {
       <Specimen
         name="SelectionBox"
         source="ui/selection-box"
-        note="The highlight drawn over an arbitrary element while the reader picks one. Position and size are measured geometry and arrive through `style`; the state carries the look. The marquee's dashed border keeps the three apart without color."
+        note="The highlight drawn over an arbitrary element while the reader picks one. Position and size are measured geometry and arrive through `style`; the state carries the look. The marquee's dashed border keeps the three apart without color. `hovered` is also the keyboard highlight: an element picker's arrow keys move it the way the pointer does."
       >
         <Variants className="items-stretch">
           <div className="relative h-40 w-full rounded-lg border border-dashed">
@@ -406,6 +409,36 @@ export function Round4Requests() {
               state="marquee"
               style={{ insetInlineStart: "14rem", top: "5.5rem", width: "10rem", height: "3.5rem" }}
             />
+          </div>
+        </Variants>
+      </Specimen>
+
+      <Specimen
+        name="FloatingBar"
+        source="ui/floating-bar"
+        note="A bar over the page while a mode is on (the feedback element picker). Fixed at the top or bottom, centred with inset-x and auto margins (no translate, so RTL holds), as wide as its content up to max-w-xl, and it wraps on a phone. Keep its controls' footprint fixed (a disabled Done instead of one that appears) so the bar never re-centres. Shown here in its frame with className absolute."
+      >
+        <Variants className="items-stretch">
+          <div className="relative h-32 w-full rounded-lg border border-dashed">
+            <FloatingBar className="absolute">
+              <span className="font-medium">Pick what your feedback is about</span>
+              <Inline gap={1.5} wrap="nowrap" className="text-muted-foreground" aria-hidden="true">
+                <Kbd>Space</Kbd>
+                <Kbd>Enter</Kbd>
+                <Kbd>Esc</Kbd>
+              </Inline>
+              <Inline gap={2} wrap="nowrap">
+                <Button variant="ghost" size="xs">
+                  Cancel
+                </Button>
+                <Button variant="secondary" size="xs" disabled>
+                  Done · 0/20
+                </Button>
+              </Inline>
+            </FloatingBar>
+            <FloatingBar position="bottom" className="absolute">
+              3 rows selected
+            </FloatingBar>
           </div>
         </Variants>
       </Specimen>

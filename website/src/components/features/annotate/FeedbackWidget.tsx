@@ -104,7 +104,8 @@ function TargetList({
 
 export function FeedbackWidget() {
   const [open, setOpen] = useState(false);
-  const [picking, setPicking] = useState(false);
+  /** `loading` while the source manifest the picker labels elements with loads: the launcher is already gone. */
+  const [picking, setPicking] = useState<"off" | "loading" | "on">("off");
   const [targets, setTargets] = useState<Target[]>([]);
   const [comment, setComment] = useState("");
   const [nickname, setNickname] = useState("");
@@ -123,8 +124,10 @@ export function FeedbackWidget() {
   }, []);
 
   const startPicking = useCallback(() => {
-    void prefetchManifest().then(() => setPicking(true));
+    setPicking("loading");
     setOpen(false);
+    const start = () => setPicking((current) => (current === "loading" ? "on" : current));
+    void prefetchManifest().then(start, start);
   }, []);
 
   const handlePick = useCallback((elements: HTMLElement[]) => {
@@ -136,12 +139,12 @@ export function FeedbackWidget() {
         elementText: (element.textContent ?? "").trim().slice(0, MAX_ELEMENT_TEXT_LENGTH),
       })),
     );
-    setPicking(false);
+    setPicking("off");
     setOpen(true);
   }, []);
 
   const cancelPicking = useCallback(() => {
-    setPicking(false);
+    setPicking("off");
     setOpen(true);
   }, []);
 
@@ -178,9 +181,8 @@ export function FeedbackWidget() {
     setSubmitting(false);
   };
 
-  if (picking) {
-    return <ElementPicker onPick={handlePick} onCancel={cancelPicking} />;
-  }
+  if (picking === "loading") return null;
+  if (picking === "on") return <ElementPicker onPick={handlePick} onCancel={cancelPicking} />;
 
   // The panel is a popover dialog over its launcher: Escape from any control closes it, Tab stays inside, and the
   // focus goes back to the launcher (Law 17).

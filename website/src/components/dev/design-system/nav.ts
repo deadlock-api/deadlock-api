@@ -147,6 +147,7 @@ export const NAV: readonly NavChapter[] = [
           "DetailPopover",
           "Details affordance",
           "SelectionBox",
+          "FloatingBar",
           "Popover",
           "Dialog",
           "AlertDialog",
