@@ -12,7 +12,7 @@ import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent } from "~/components/ui/card";
-import { Heading } from "~/components/ui/heading";
+import { Heading, useNextHeadingLevel } from "~/components/ui/heading";
 import { IconTile } from "~/components/ui/icon-tile";
 import { KeyValue, KeyValueList } from "~/components/ui/key-value";
 import { NoValue } from "~/components/ui/no-value";
@@ -374,9 +374,10 @@ export function OverviewTab({
 }
 
 function SplitRows({ label, rows }: { label: string; rows: OutcomeSplit[] }) {
+  const headingLevel = useNextHeadingLevel();
   return (
     <div className="min-w-0">
-      <Heading as="h4" size="eyebrow" className="pb-1">
+      <Heading as={headingLevel} size="eyebrow" className="pb-1">
         {label}
       </Heading>
       <div className="flex flex-col gap-1">

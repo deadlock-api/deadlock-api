@@ -1,6 +1,9 @@
+import { useId } from "react";
+
 import { HeroImage } from "~/components/domain/assets/HeroImage";
 import { Card } from "~/components/ui/card";
 import { DetailPopover } from "~/components/ui/detail-popover";
+import { Heading, useNextHeadingLevel } from "~/components/ui/heading";
 import { NoValue } from "~/components/ui/no-value";
 import { StatusDot } from "~/components/ui/status-dot";
 import { TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
@@ -85,74 +88,80 @@ export function LanesCard({
   trackedAccountId?: number;
   nameOf: (player: TrackerMatchPlayer) => string;
 }) {
+  const titleId = useId();
+  const headingLevel = useNextHeadingLevel();
   return (
-    <Card tone="inset" size="xs" className="px-3">
-      <div className="flex items-baseline gap-2">
-        <span className="text-sm font-semibold">Lanes</span>
-        <span className="text-xs text-muted-foreground tabular-nums">At {formatMatchDuration(matchups[0].time)}</span>
-      </div>
-      <div className="grid gap-2 @xl:grid-cols-3">
-        {matchups.map(({ lane, time, own, enemy, diff }) => {
-          const ownLane =
-            trackedAccountId !== undefined && own.some(({ player }) => player.account_id === trackedAccountId);
-          return (
-            <Card
-              key={lane.id}
-              tone={ownLane ? "primary" : "muted"}
-              size="xs"
-              radius="md"
-              className="gap-1 px-2 py-1.5"
-            >
-              <div className="flex items-center gap-1.5">
-                <StatusDot color={lane.color} />
-                <span className="text-sm font-medium">{lane.name}</span>
-                <span
-                  className={cn("ms-auto text-sm font-semibold tabular-nums", diff !== 0 && TONE_TEXT[toneOf(diff)])}
-                  title={
-                    diff == null
-                      ? "Lane soul comparison unavailable: missing player stats"
-                      : `Lane soul difference at ${formatMatchDuration(time)}`
-                  }
-                >
-                  {diff == null ? (
-                    <NoValue label="Unavailable" />
-                  ) : diff > 0 ? (
-                    `+${diff.toLocaleString("en-US")}`
-                  ) : (
-                    diff.toLocaleString("en-US")
-                  )}
-                </span>
-              </div>
-              <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-1.5">
-                <div className="flex min-w-0 flex-col gap-1">
-                  {own.map((laner) => (
-                    <Laner
-                      key={laner.player.account_id}
-                      laner={laner}
-                      tracked={laner.player.account_id === trackedAccountId}
-                      name={nameOf(laner.player)}
-                      time={time}
-                    />
-                  ))}
+    <Card asChild tone="inset" size="xs" className="px-3">
+      <section aria-labelledby={titleId}>
+        <div className="flex items-baseline gap-2">
+          <Heading id={titleId} as={headingLevel} size="sm">
+            Lanes
+          </Heading>
+          <span className="text-xs text-muted-foreground tabular-nums">At {formatMatchDuration(matchups[0].time)}</span>
+        </div>
+        <div className="grid gap-2 @xl:grid-cols-3">
+          {matchups.map(({ lane, time, own, enemy, diff }) => {
+            const ownLane =
+              trackedAccountId !== undefined && own.some(({ player }) => player.account_id === trackedAccountId);
+            return (
+              <Card
+                key={lane.id}
+                tone={ownLane ? "primary" : "muted"}
+                size="xs"
+                radius="md"
+                className="gap-1 px-2 py-1.5"
+              >
+                <div className="flex items-center gap-1.5">
+                  <StatusDot color={lane.color} />
+                  <span className="text-sm font-medium">{lane.name}</span>
+                  <span
+                    className={cn("ms-auto text-sm font-semibold tabular-nums", diff !== 0 && TONE_TEXT[toneOf(diff)])}
+                    title={
+                      diff == null
+                        ? "Lane soul comparison unavailable: missing player stats"
+                        : `Lane soul difference at ${formatMatchDuration(time)}`
+                    }
+                  >
+                    {diff == null ? (
+                      <NoValue label="Unavailable" />
+                    ) : diff > 0 ? (
+                      `+${diff.toLocaleString("en-US")}`
+                    ) : (
+                      diff.toLocaleString("en-US")
+                    )}
+                  </span>
                 </div>
-                <span className="eyebrow">vs</span>
-                <div className="flex min-w-0 flex-col gap-1">
-                  {enemy.map((laner) => (
-                    <Laner
-                      key={laner.player.account_id}
-                      laner={laner}
-                      tracked={false}
-                      name={nameOf(laner.player)}
-                      time={time}
-                      mirrored
-                    />
-                  ))}
+                <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-1.5">
+                  <div className="flex min-w-0 flex-col gap-1">
+                    {own.map((laner) => (
+                      <Laner
+                        key={laner.player.account_id}
+                        laner={laner}
+                        tracked={laner.player.account_id === trackedAccountId}
+                        name={nameOf(laner.player)}
+                        time={time}
+                      />
+                    ))}
+                  </div>
+                  <span className="eyebrow">vs</span>
+                  <div className="flex min-w-0 flex-col gap-1">
+                    {enemy.map((laner) => (
+                      <Laner
+                        key={laner.player.account_id}
+                        laner={laner}
+                        tracked={false}
+                        name={nameOf(laner.player)}
+                        time={time}
+                        mirrored
+                      />
+                    ))}
+                  </div>
                 </div>
-              </div>
-            </Card>
-          );
-        })}
-      </div>
+              </Card>
+            );
+          })}
+        </div>
+      </section>
     </Card>
   );
 }

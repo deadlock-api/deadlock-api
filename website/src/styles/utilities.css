@@ -96,6 +96,12 @@
   font-weight: 600;
   letter-spacing: -0.025em;
 }
+@utility type-heading-sm {
+  font-size: var(--text-lg);
+  line-height: 1.35;
+  font-weight: 600;
+  letter-spacing: -0.0125em;
+}
 @utility type-subheading {
   font-size: var(--text-base);
   line-height: 1.4;
@@ -104,6 +110,12 @@
 @utility type-label {
   font-size: var(--text-sm);
   line-height: 1.4;
+  font-weight: 600;
+}
+/* A label one step down: a sub-heading inside a panel, at the 12px floor. */
+@utility type-label-sm {
+  font-size: var(--text-xs);
+  line-height: 1.35;
   font-weight: 600;
 }
 @utility type-body {

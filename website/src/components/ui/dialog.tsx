@@ -4,6 +4,7 @@ import { Dialog as DialogPrimitive } from "radix-ui";
 import * as React from "react";
 
 import { Button } from "~/components/ui/button";
+import { HeadingLevel } from "~/components/ui/heading";
 import { FieldLabelContext } from "~/components/ui/hooks/use-field-control";
 import { DIALOG_CONTENT, DIALOG_OVERLAY } from "~/components/ui/recipes";
 import { cn } from "~/lib/utils";
@@ -77,7 +78,8 @@ function DialogContent({
           }}
           {...props}
         >
-          {children}
+          {/* The title is an h2, so a panel or a heading inside the dialog titles itself one level below it. */}
+          <HeadingLevel level={2}>{children}</HeadingLevel>
           {showCloseButton && (
             <DialogPrimitive.Close asChild>
               <Button data-slot="dialog-close" variant="ghost" size="icon-sm" className="absolute inset-e-2 top-2">

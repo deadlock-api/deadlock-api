@@ -1,10 +1,11 @@
 import { Flag, Skull } from "lucide-react";
-import { type ReactNode, type Ref, useState } from "react";
+import { type ReactNode, type Ref, useId, useState } from "react";
 
 import { HeroImage } from "~/components/domain/assets/HeroImage";
 import { ChartSwatch } from "~/components/patterns/charts/ChartLegend";
 import { CHART_COLOR } from "~/components/patterns/charts/theme";
 import { Card } from "~/components/ui/card";
+import { Heading, useNextHeadingLevel } from "~/components/ui/heading";
 import { IconTile } from "~/components/ui/icon-tile";
 import {
   Select,
@@ -75,6 +76,8 @@ export function MatchTimeline({
   sides?: MatchSides;
 }) {
   const [visibleLayers, setVisibleLayers] = useState(["kill", "death", "dead", "objective"]);
+  const titleId = useId();
+  const headingLevel = useNextHeadingLevel();
   const killTextClass = viewedIsAlly ? TONE_TEXT.positive : TONE_TEXT.negative;
   const deathTextClass = viewedIsAlly ? TONE_TEXT.negative : TONE_TEXT.positive;
   const viewedName = viewed ? nameOf(viewed) : "them";
@@ -145,9 +148,11 @@ export function MatchTimeline({
 
   return (
     <Card asChild tone="inset" size="xs" className="scroll-mt-4 gap-1 px-3 pt-2 pb-1">
-      <section ref={ref} aria-label="Match timeline" tabIndex={-1}>
+      <section ref={ref} aria-labelledby={titleId} tabIndex={-1}>
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground tabular-nums">
-          <span className="text-sm font-semibold text-foreground">Match timeline</span>
+          <Heading id={titleId} as={headingLevel} size="sm" className="text-foreground">
+            Match timeline
+          </Heading>
           {lead && (
             <span>
               {sides.neutral ? `${sides.own} ahead` : "Ahead"} for {Math.round(lead.aheadShare * 100)}% of the match

@@ -15,6 +15,7 @@ import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { Button } from "~/components/ui/button";
 import { CopyButton } from "~/components/ui/copy-button";
+import { Heading, HeadingLevel, useNextHeadingLevel } from "~/components/ui/heading";
 import { Spinner } from "~/components/ui/spinner";
 import { Stat, StatGroup } from "~/components/ui/stat";
 import { TextLink } from "~/components/ui/text-link";
@@ -150,6 +151,7 @@ function MatchHeader({
   const ranked = badge > 0;
   const calibration = entry.ranked_calibration_match != null && entry.ranked_calibration_match !== 0;
   const demotionProtected = entry.ranked_used_demotion_protection === true;
+  const headingLevel = useNextHeadingLevel();
 
   return (
     <div className="flex flex-col gap-2.5">
@@ -158,7 +160,9 @@ function MatchHeader({
           <HeroImage heroId={entry.hero_id} shape="circle" className="size-12 shrink-0" />
           <div className="flex min-w-0 flex-col gap-0.5 leading-tight">
             <div className="flex flex-wrap items-baseline gap-x-2">
-              <span className="text-lg font-semibold">{heroName}</span>
+              <Heading as={headingLevel} size="lg">
+                {heroName}
+              </Heading>
               <span className={cn("text-sm font-bold", TONE_TEXT[win ? "positive" : "negative"])}>
                 {win ? "Victory" : "Defeat"}
               </span>
@@ -447,6 +451,7 @@ export function MatchDetails({
   source?: MatchMetadataSource;
   unavailable?: ReactNode;
 }) {
+  const headingLevel = useNextHeadingLevel();
   return (
     <div className="@container flex flex-col gap-4">
       <MatchHeader
@@ -457,19 +462,22 @@ export function MatchDetails({
         records={records}
         matchLink={matchLink}
       />
-      {/* A new match or player starts over: the picked player must not carry over from the last one. */}
-      <MatchView
-        key={`${entry.match_id}-${accountId}`}
-        matchId={entry.match_id}
-        durationS={entry.match_duration_s}
-        gameMode={entryGameMode(entry)}
-        laned={hasLanes(entry)}
-        ranks={ranks}
-        accountId={accountId}
-        playerTeam={entry.player_team}
-        source={source}
-        unavailable={unavailable}
-      />
+      {/* The header titles the match, so the timeline, the teams and the lanes are titled one level below it. */}
+      <HeadingLevel level={Number(headingLevel.slice(1))}>
+        {/* A new match or player starts over: the picked player must not carry over from the last one. */}
+        <MatchView
+          key={`${entry.match_id}-${accountId}`}
+          matchId={entry.match_id}
+          durationS={entry.match_duration_s}
+          gameMode={entryGameMode(entry)}
+          laned={hasLanes(entry)}
+          ranks={ranks}
+          accountId={accountId}
+          playerTeam={entry.player_team}
+          source={source}
+          unavailable={unavailable}
+        />
+      </HeadingLevel>
     </div>
   );
 }
@@ -511,12 +519,15 @@ export function NeutralMatchDetails({
   unavailable?: ReactNode;
 }) {
   const winner = TEAMS.find((team) => team.key === winningTeam);
+  const headingLevel = useNextHeadingLevel();
   return (
     <div className="@container flex flex-col gap-4">
       <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
         <div className="flex min-w-64 flex-1 flex-col gap-0.5 leading-tight">
           <div className="flex flex-wrap items-baseline gap-x-2">
-            <span className="text-lg font-semibold">{winner ? `${winner.name} won` : "Match"}</span>
+            <Heading as={headingLevel} size="lg">
+              {winner ? `${winner.name} won` : "Match"}
+            </Heading>
             {teamScore && (
               <span className="text-sm text-muted-foreground tabular-nums">
                 {teamScore[0]}–{teamScore[1]} rounds
@@ -550,16 +561,18 @@ export function NeutralMatchDetails({
           </StatGroup>
         )}
       </div>
-      <MatchView
-        key={matchId}
-        matchId={matchId}
-        durationS={durationS}
-        gameMode={gameMode}
-        laned={laned}
-        ranks={ranks}
-        source="graphql"
-        unavailable={unavailable}
-      />
+      <HeadingLevel level={Number(headingLevel.slice(1))}>
+        <MatchView
+          key={matchId}
+          matchId={matchId}
+          durationS={durationS}
+          gameMode={gameMode}
+          laned={laned}
+          ranks={ranks}
+          source="graphql"
+          unavailable={unavailable}
+        />
+      </HeadingLevel>
     </div>
   );
 }

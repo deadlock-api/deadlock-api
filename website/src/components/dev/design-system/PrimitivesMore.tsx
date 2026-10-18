@@ -22,7 +22,7 @@ export function HeadingSpecimen() {
     <Specimen
       name="Heading"
       source="ui/heading"
-      note="A heading that is not the title of a page, section, panel or card: those come from PageHeader, Section, PanelHeader and CardTitle. as sets the level by outline, size sets the look."
+      note="A heading that is not the title of a page, section, panel or card: those come from PageHeader, Section, PanelHeader and CardTitle. as sets the level by outline, size sets the look. Inside a region take the level from useNextHeadingLevel(): Section, PanelBody and DialogContent each provide their own level (HeadingLevel), so a group title in a panel body or a dialog is one level below the panel or dialog title. xs is type-label-sm (12px semibold), lg is type-heading-sm (18px)."
     >
       <div className="flex flex-col gap-2">
         {HEADING_SIZES.map((size) => (

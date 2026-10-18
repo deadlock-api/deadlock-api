@@ -12,7 +12,7 @@ import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { SkeletonRows } from "~/components/patterns/states/Skeletons";
 import { Button } from "~/components/ui/button";
-import { Heading } from "~/components/ui/heading";
+import { Heading, useNextHeadingLevel } from "~/components/ui/heading";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { useSteamProfiles } from "~/hooks/useSteamProfiles";
 import { formatPercent } from "~/lib/format";
@@ -48,18 +48,12 @@ export function CompanionsPanel({
       onOpenChange={setOpen}
       details={
         <div className="grid gap-4 @4xl/stats-dialog:grid-cols-2">
-          <div className="flex min-w-0 flex-col gap-2">
-            <Heading as="h4" size="xs">
-              Teammates
-            </Heading>
+          <CompanionGroup title="Teammates">
             <MatesTab accountId={accountId} filters={filters} entries={entries} onOpenMatch={openMatchFromDialog} />
-          </div>
-          <div className="flex min-w-0 flex-col gap-2">
-            <Heading as="h4" size="xs">
-              Opponents
-            </Heading>
+          </CompanionGroup>
+          <CompanionGroup title="Opponents">
             <EnemiesTab accountId={accountId} filters={filters} entries={entries} onOpenMatch={openMatchFromDialog} />
-          </div>
+          </CompanionGroup>
           <div className="flex min-w-0 flex-col gap-2 @4xl/stats-dialog:col-span-2">
             <TeammatePairs
               pairs={pairs}
@@ -114,6 +108,19 @@ export function CompanionsPanel({
   );
 }
 
+/** One list of the dialog under its title, which takes the level below the dialog's own. */
+function CompanionGroup({ title, children }: { title: string; children: React.ReactNode }) {
+  const headingLevel = useNextHeadingLevel();
+  return (
+    <div className="flex min-w-0 flex-col gap-2">
+      <Heading as={headingLevel} size="xs">
+        {title}
+      </Heading>
+      {children}
+    </div>
+  );
+}
+
 function CompanionPreview({
   label,
   rows,
@@ -137,10 +144,11 @@ function CompanionPreview({
 }) {
   const visible = (rows ?? []).filter((row) => row.matches >= 2).slice(0, 3);
   const { profiles, isLoading } = useSteamProfiles(visible.map((row) => row.accountId));
+  const headingLevel = useNextHeadingLevel();
 
   return (
     <div className="flex min-w-0 flex-col gap-1">
-      <Heading as="h4" size="eyebrow">
+      <Heading as={headingLevel} size="eyebrow">
         {label}
       </Heading>
       {isPending ? (

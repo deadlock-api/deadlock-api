@@ -4,7 +4,7 @@ import { createContext, createElement, use } from "react";
 
 import { Button } from "~/components/ui/button";
 import { Card } from "~/components/ui/card";
-import { useNextHeadingLevel } from "~/components/ui/heading";
+import { HeadingLevel, useNextHeadingLevel } from "~/components/ui/heading";
 import { useControllableState } from "~/components/ui/hooks/use-controllable-state";
 import { SCROLLBAR_THIN } from "~/components/ui/recipes";
 import { Text } from "~/components/ui/text";
@@ -164,10 +164,15 @@ export function PanelHeader({
 export function PanelBody({
   size = "default",
   className,
+  children,
   ...props
 }: React.ComponentProps<"div"> & { size?: "sm" | "default" }) {
+  // The body sits under the panel's title, so a heading inside it (a group, a nested panel) is one level below it.
+  const titleLevel = useNextHeadingLevel();
   return (
-    <div data-slot="panel-body" className={cn("min-w-0", size === "sm" ? "px-3 py-2" : "p-4", className)} {...props} />
+    <div data-slot="panel-body" className={cn("min-w-0", size === "sm" ? "px-3 py-2" : "p-4", className)} {...props}>
+      <HeadingLevel level={Number(titleLevel.slice(1))}>{children}</HeadingLevel>
+    </div>
   );
 }
 

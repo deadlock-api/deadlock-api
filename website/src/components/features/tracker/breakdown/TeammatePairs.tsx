@@ -5,7 +5,7 @@ import { PlayerCell } from "~/components/domain/player/PlayerCell";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { SkeletonRows } from "~/components/patterns/states/Skeletons";
-import { Heading } from "~/components/ui/heading";
+import { Heading, useNextHeadingLevel } from "~/components/ui/heading";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { useSteamProfiles } from "~/hooks/useSteamProfiles";
 import { formatPercent } from "~/lib/format";
@@ -33,6 +33,7 @@ export function TeammatePairs({
   entries: PlayerMatchHistoryEntry[];
   onOpenMatch: (matchId: number) => void;
 }) {
+  const headingLevel = useNextHeadingLevel();
   if (isPending) return <SkeletonRows rows={3} size="sm" variant="solid" label="teammate pairs" className="py-2" />;
   if (!pairs)
     return isError ? (
@@ -40,7 +41,7 @@ export function TeammatePairs({
     ) : null;
   return (
     <div className="flex min-w-0 flex-col gap-1">
-      <Heading as="h4" size="eyebrow">
+      <Heading as={headingLevel} size="eyebrow">
         Teammate pairs
       </Heading>
       <PairsTable pairs={limit == null ? pairs : pairs.slice(0, limit)} entries={entries} onOpenMatch={onOpenMatch} />

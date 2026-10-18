@@ -14,6 +14,7 @@ import { Box } from "~/components/ui/box";
 import { Button } from "~/components/ui/button";
 import { CornerBadge } from "~/components/ui/corner-badge";
 import { DetailPopover } from "~/components/ui/detail-popover";
+import { Heading, useNextHeadingLevel } from "~/components/ui/heading";
 import { useSort } from "~/components/ui/hooks/use-sort";
 import { Pips } from "~/components/ui/pips";
 import { ProgressBar } from "~/components/ui/progress-bar";
@@ -335,6 +336,7 @@ export function Scoreboard({
   });
 
   const maxima = useMemo(() => statMaxima(match.players), [match]);
+  const headingLevel = useNextHeadingLevel();
   const hasWinner = TEAMS.some((team) => team.key === match.winning_team);
 
   return (
@@ -349,22 +351,24 @@ export function Scoreboard({
         return (
           <Stack key={team.key} gap={1.5} className="@container">
             <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-              <DetailPopover
-                label={`${team.name} team totals`}
-                size="sm"
-                underline="dotted"
-                className="h-6 px-1.5 text-sm font-semibold"
-                details={
-                  <TeamStatsDetails
-                    name={team.name}
-                    players={teamPlayers}
-                    lobbyPlayers={match.players}
-                    columns={columns}
-                  />
-                }
-              >
-                {team.name}
-              </DetailPopover>
+              <Heading as={headingLevel} size="sm">
+                <DetailPopover
+                  label={`${team.name} team totals`}
+                  size="sm"
+                  underline="dotted"
+                  className="h-6 px-1.5 text-sm font-semibold"
+                  details={
+                    <TeamStatsDetails
+                      name={team.name}
+                      players={teamPlayers}
+                      lobbyPlayers={match.players}
+                      columns={columns}
+                    />
+                  }
+                >
+                  {team.name}
+                </DetailPopover>
+              </Heading>
               <span
                 className={cn("text-xs font-bold", TONE_TEXT[hasWinner ? (won ? "positive" : "negative") : "muted"])}
               >
