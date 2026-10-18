@@ -221,6 +221,8 @@ for (const surface of ["background", "card", "popover", "muted", "secondary", "a
 variant("primary", "accent", UI_MIN);
 variant("primary", "muted", UI_MIN);
 variant("primary", "primary/10 over card", UI_MIN);
+// The start-edge mark of an OptionRow under a listbox cursor, on the accent fill of the row and the popover around it.
+variant("primary", "popover", UI_MIN);
 // The 95% range band of a DivergingBar, on its muted track and on the card around it.
 for (const surface of ["muted", "card", "table-stripe"]) variant("chart-interval", surface, UI_MIN);
 // The win rate and share series as bars (a GraphNodeCard's mini-bars) on their muted track and on the card.

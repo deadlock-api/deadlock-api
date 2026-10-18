@@ -605,7 +605,7 @@ export function Primitives() {
       <Specimen
         name="OptionRow"
         source="ui/option-row"
-        note="One choice in a popover or dialog list. hint and trailing add columns; active marks the keyboard cursor."
+        note="One choice in a popover or dialog list. hint and trailing add columns; active marks the keyboard cursor of a listbox whose field keeps the focus (an accent fill plus a primary mark down the start edge, 3:1 on the popover, so the cursor is not a fill alone). The edge is reserved on every row."
       >
         <Variants className="items-start gap-6">
           <div className="w-56 rounded-md border bg-popover p-2">
@@ -616,6 +616,13 @@ export function Primitives() {
             ].map(([value, label, hint]) => (
               <OptionRow key={value} selected={sort === value} onClick={() => setSort(value)} hint={hint || undefined}>
                 {label}
+              </OptionRow>
+            ))}
+          </div>
+          <div className="w-56 rounded-md border bg-popover p-2">
+            {["Haze", "Bebop", "Seven"].map((hero, index) => (
+              <OptionRow key={hero} active={index === 1} tabIndex={-1}>
+                {hero}
               </OptionRow>
             ))}
           </div>

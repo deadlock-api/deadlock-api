@@ -7,7 +7,8 @@ import { cn } from "~/lib/utils";
 
 interface OptionRowProps extends React.ComponentProps<"button"> {
   selected?: boolean;
-  /** The row the keyboard cursor is on, in a list that manages its own arrow-key navigation. */
+  /** The row the keyboard cursor is on, in a list that manages its own arrow-key navigation: an accent fill and a
+   * primary mark down its start edge. */
   active?: boolean;
   hint?: React.ReactNode;
   /** A quiet second line under the label. */
@@ -66,7 +67,9 @@ export function OptionRow({
     className: cn(
       FOCUS_RING,
       DISABLED_STATE,
-      "flex w-full items-center justify-between gap-3 rounded-sm px-2 py-1.5 text-start text-sm whitespace-nowrap hover:bg-accent focus-visible:bg-accent active:bg-accent aria-disabled:pointer-events-none aria-disabled:opacity-50 data-active:bg-accent",
+      // The cursor of a listbox whose field keeps the focus has no focus ring: a start-edge mark (logical, so it
+      // follows RTL) carries it beside the fill. The edge is reserved on every row so the mark never moves the label.
+      "flex w-full items-center justify-between gap-3 rounded-sm border-s-2 border-transparent py-1.5 ps-1.5 pe-2 text-start text-sm whitespace-nowrap hover:bg-accent focus-visible:bg-accent active:bg-accent aria-disabled:pointer-events-none aria-disabled:opacity-50 data-active:border-s-primary data-active:bg-accent",
       selected && "font-medium",
       className,
     ),
