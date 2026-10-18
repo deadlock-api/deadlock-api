@@ -399,7 +399,7 @@ export function BuildTable({
           )}
         </TableBody>
         {!needle && !filteringItems && (
-          <TableFooter>
+          <TableFooter position="sticky">
             <TableRow>
               <TableCell />
               <TableCell className="text-xs text-muted-foreground">All builds</TableCell>
