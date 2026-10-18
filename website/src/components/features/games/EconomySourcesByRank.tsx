@@ -102,7 +102,7 @@ export default function EconomySourcesByRank({ params }: EconomySourcesByRankPro
         <SegmentedItem value="souls">Souls</SegmentedItem>
       </Segmented>
 
-      <div aria-live="polite" aria-busy={isPending}>
+      <div>
         {isPending ? (
           <ChartLoading label="soul sources by rank" />
         ) : isError ? (

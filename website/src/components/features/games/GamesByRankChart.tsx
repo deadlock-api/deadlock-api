@@ -152,7 +152,7 @@ export default function GamesByRankChart({ params, stat, onStatChange, isStreetB
     <div className="@container flex flex-col gap-4">
       <StatSelector value={stat} onChange={onStatChange} isStreetBrawl={isStreetBrawl} />
 
-      <div aria-live="polite" aria-busy={isPending}>
+      <div>
         {isPending ? (
           <ChartLoading label="game rank data" />
         ) : isError ? (

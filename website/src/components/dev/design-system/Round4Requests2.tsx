@@ -426,7 +426,7 @@ export function Round4Requests2() {
       <Specimen
         name="StaleOverlay"
         source="patterns/states/StaleOverlay"
-        note="Keeps the previous answer on screen while the next one loads, washed out and announced busy. It is the alternative to throwing away what the reader was already reading."
+        note="Keeps the previous answer on screen while the next one loads, washed out and announced busy through a status line that is always mounted, so the change of its text is read. It is the alternative to throwing away what the reader was already reading."
       >
         <Variants className="items-stretch">
           <StaleTable />

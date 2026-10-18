@@ -107,7 +107,7 @@ export default function StatTrendChart({
         )}
       </div>
 
-      <div aria-live="polite" aria-busy={state === "loading"}>
+      <div>
         {state === "loading" ? (
           <ChartLoading label={`${stat.label} trend`} size="md" />
         ) : state === "error" ? (

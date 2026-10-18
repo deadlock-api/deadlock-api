@@ -24,7 +24,8 @@ export function StaleOverlay({ active = false, label = "content", className, chi
       )}
       {...props}
     >
-      {active && <output className="sr-only">Updating {label}</output>}
+      {/* Always mounted, only its text changes: a live region inserted already filled is skipped by many readers. */}
+      <output className="sr-only">{active ? `Updating ${label}` : ""}</output>
       {children}
     </div>
   );

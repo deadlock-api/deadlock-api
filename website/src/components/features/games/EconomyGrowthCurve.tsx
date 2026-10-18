@@ -113,7 +113,7 @@ export default function EconomyGrowthCurve({ params }: EconomyGrowthCurveProps) 
         <SegmentedItem value="by-source">By Source</SegmentedItem>
       </Segmented>
 
-      <div aria-live="polite" aria-busy={isPending} className="flex flex-col gap-3">
+      <div className="flex flex-col gap-3">
         {isPending ? (
           <ChartLoading label="net worth growth" />
         ) : isError ? (
