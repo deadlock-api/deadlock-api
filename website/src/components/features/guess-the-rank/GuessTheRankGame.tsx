@@ -1,3 +1,4 @@
+import { Link } from "@tanstack/react-router";
 import type { Rank } from "deadlock_api_client";
 import { AnimatePresence, motion } from "framer-motion";
 import { Clapperboard } from "lucide-react";
@@ -344,16 +345,20 @@ export function GuessTheRankGame({ date: dateParam }: { date?: string }) {
     );
   }
   if (roundsQuery.isPending || !ranks || !game.loaded) return <LoadingState label="clips" />;
+  // No feedback notice here: it would open over a page with no game.
   if (rounds.length === 0) {
-    return (
-      <>
-        {notice}
-        <EmptyState
-          icon={Clapperboard}
-          title="No clips for this day yet"
-          description="No clips are scheduled for this day yet. Check back tomorrow."
-        />
-      </>
+    return game.isArchive ? (
+      <EmptyState
+        icon={Clapperboard}
+        title="No clips for this day"
+        action={
+          <TerminalButton asChild variant="soft" size="touch">
+            <Link to="/games/guess-the-rank">Today's clips</Link>
+          </TerminalButton>
+        }
+      />
+    ) : (
+      <EmptyState icon={Clapperboard} title="No clips today yet" />
     );
   }
 
