@@ -1119,52 +1119,58 @@ export function BuildFlowExplorer({
                   })
                 }
               />
-              {path.length > 0 && (
-                <SaveBuildButton
-                  defaultName={`${hero?.name ?? "My"} build`}
-                  heroId={heroId}
-                  path={path}
-                  sells={[...sellOf].map(([key, column]) => `${key}:${column}`)}
-                  flex={flexMinutes}
-                  skills={storedSkills ?? undefined}
-                />
-              )}
-              {path.length > 0 && (
-                <>
-                  <CopyButton variant="ghost" size="xs" icon={Link} text={() => window.location.href}>
-                    Copy link
-                  </CopyButton>
-                  <Button
-                    variant="ghost"
-                    size="xs"
-                    // A completion running would write its build back over the cleared one.
-                    disabled={completing != null}
-                    onClick={() => {
-                      // A build is a few dozen presses of work: clearing it can be taken back.
-                      const before = { path, sells: storedSells, skills: storedSkills };
-                      changePath(null);
-                      startTransition(() => {
-                        void setSells(null, AT_ONCE);
-                        void setSkills(null, AT_ONCE);
-                      });
-                      toast("Cleared the build", {
-                        action: {
-                          label: "Undo",
-                          onClick: () => {
-                            changePath(before.path);
-                            startTransition(() => {
-                              void setSells(before.sells.length > 0 ? before.sells : null, AT_ONCE);
-                              void setSkills(before.skills, AT_ONCE);
-                            });
-                          },
-                        },
-                      });
-                    }}
-                  >
-                    Clear
-                  </Button>
-                </>
-              )}
+              {/* Always on the row, disabled while the build is empty, so the first pick does not reflow it. */}
+              <SaveBuildButton
+                disabled={path.length === 0}
+                defaultName={`${hero?.name ?? "My"} build`}
+                heroId={heroId}
+                path={path}
+                sells={[...sellOf].map(([key, column]) => `${key}:${column}`)}
+                flex={flexMinutes}
+                skills={storedSkills ?? undefined}
+              />
+              <CopyButton
+                variant="ghost"
+                size="xs"
+                icon={Link}
+                text={() => window.location.href}
+                disabled={path.length === 0}
+              >
+                Copy link
+              </CopyButton>
+              <Button
+                variant="ghost"
+                size="xs"
+                // A completion running would write its build back over the cleared one.
+                disabled={completing != null}
+                // Unavailable but focusable once the build is empty: a disabled button would drop the focus of the
+                // press that emptied it.
+                aria-disabled={path.length === 0 || undefined}
+                onClick={() => {
+                  if (path.length === 0) return;
+                  // A build is a few dozen presses of work: clearing it can be taken back.
+                  const before = { path, sells: storedSells, skills: storedSkills };
+                  changePath(null);
+                  startTransition(() => {
+                    void setSells(null, AT_ONCE);
+                    void setSkills(null, AT_ONCE);
+                  });
+                  toast("Cleared the build", {
+                    action: {
+                      label: "Undo",
+                      onClick: () => {
+                        changePath(before.path);
+                        startTransition(() => {
+                          void setSells(before.sells.length > 0 ? before.sells : null, AT_ONCE);
+                          void setSkills(before.skills, AT_ONCE);
+                        });
+                      },
+                    },
+                  });
+                }}
+              >
+                Clear
+              </Button>
             </Inline>
           </Inline>
         </PanelHeader>

@@ -16,6 +16,7 @@ const PREVIEW_ITEMS = 6;
 
 /** "Save": names the current build and keeps it in this browser. */
 export function SaveBuildButton({
+  disabled = false,
   defaultName,
   heroId,
   path,
@@ -23,6 +24,8 @@ export function SaveBuildButton({
   flex,
   skills,
 }: {
+  /** Nothing to save yet: the button keeps its place on the row. */
+  disabled?: boolean;
   defaultName: string;
   heroId: number | null;
   path: string[];
@@ -43,7 +46,7 @@ export function SaveBuildButton({
       }}
     >
       <PopoverTrigger asChild>
-        <Button variant="ghost" size="xs">
+        <Button variant="ghost" size="xs" disabled={disabled}>
           <Save />
           Save
         </Button>
