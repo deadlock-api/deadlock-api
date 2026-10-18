@@ -1,4 +1,4 @@
-import { AlertCircle, ArrowRight, CheckCircle, Clock, XCircle } from "lucide-react";
+import { AlertCircle, ArrowRight, CheckCircle, Clock, LogIn, XCircle } from "lucide-react";
 
 import { CalloutCard } from "~/components/patterns/content/CalloutCard";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
@@ -10,6 +10,7 @@ import { ProgressBar } from "~/components/ui/progress-bar";
 import { Skeleton } from "~/components/ui/skeleton";
 import { Inline, Stack } from "~/components/ui/stack";
 import { Stat, StatGroup } from "~/components/ui/stat";
+import { usePatronAuth } from "~/hooks/usePatronAuth";
 import { formatCurrency, formatDate } from "~/lib/format";
 import { usePatronStatus } from "~/queries/patron-queries";
 
@@ -48,6 +49,7 @@ function PatronStatusCardSkeleton() {
 
 export function PatronStatusCard() {
   const query = usePatronStatus();
+  const { login } = usePatronAuth();
   const status = query.data;
   const isLoading = query.isLoading;
   const isError = query.isError;
@@ -71,9 +73,15 @@ export function PatronStatusCard() {
   if (!status) {
     return (
       <Alert>
-        <AlertCircle className="h-4 w-4" />
+        <AlertCircle />
         <AlertTitle>Session expired</AlertTitle>
-        <AlertDescription>Please log in again to view your patron status.</AlertDescription>
+        <AlertDescription>
+          <p>Sign in again to see your patron status.</p>
+          <Button variant="outline" size="sm" onClick={login}>
+            <LogIn />
+            Sign in with Patreon
+          </Button>
+        </AlertDescription>
       </Alert>
     );
   }
