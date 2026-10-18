@@ -598,6 +598,14 @@ export function Primitives() {
             aria-label="Template input"
           />
         </Variants>
+        <Variants label='syntax="identifier": the same, for an ID, a code or a link'>
+          <Input
+            syntax="identifier"
+            placeholder="SteamID64, account ID or profile link"
+            className="w-72"
+            aria-label="Steam ID"
+          />
+        </Variants>
       </Specimen>
 
       <Specimen

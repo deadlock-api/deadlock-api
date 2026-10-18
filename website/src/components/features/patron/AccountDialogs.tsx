@@ -83,8 +83,8 @@ export function ReplaceAccountDialog({
     if (!open) steamId.reset();
   };
 
-  const handleReplace = (event: React.MouseEvent) => {
-    // The action would close the dialog at once; it closes only when the replacement is saved.
+  // A form, so Enter in the field submits; the dialog closes only when the replacement is saved.
+  const handleReplace = (event: React.SubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
     const steamId3 = steamId.parse();
     if (steamId3 === null) return;
@@ -104,32 +104,31 @@ export function ReplaceAccountDialog({
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Replace Steam Account</AlertDialogTitle>
-          <AlertDialogDescription asChild>
-            <Stack gap={3}>
-              <p>
-                Replace the removed account <span className="font-mono font-semibold">{oldSteamId3}</span> with a new
-                Steam ID.
-              </p>
-              <Field label="New Steam ID" labelDisplay="hidden" htmlFor={inputId} error={steamId.error}>
-                <Input
-                  id={inputId}
-                  type="text"
-                  placeholder="SteamID64, account ID, or profile link"
-                  value={steamId.value}
-                  onChange={(e) => steamId.change(e.target.value)}
-                  disabled={isReplacing}
-                />
-              </Field>
-            </Stack>
+          <AlertDialogDescription>
+            Replace the removed account <span className="font-mono font-semibold">{oldSteamId3}</span> with a new Steam
+            ID.
           </AlertDialogDescription>
         </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction onClick={handleReplace} disabled={!steamId.valid || isReplacing}>
-            {isReplacing ? <Spinner /> : null}
-            Replace Account
-          </AlertDialogAction>
-        </AlertDialogFooter>
+        <form onSubmit={handleReplace} className="flex flex-col gap-4">
+          <Field label="New Steam ID" labelDisplay="hidden" htmlFor={inputId} error={steamId.error}>
+            <Input
+              id={inputId}
+              type="text"
+              syntax="identifier"
+              placeholder="SteamID64, account ID, or profile link"
+              value={steamId.value}
+              onChange={(e) => steamId.change(e.target.value)}
+              disabled={isReplacing}
+            />
+          </Field>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <Button type="submit" disabled={isReplacing}>
+              {isReplacing ? <Spinner /> : null}
+              Replace Account
+            </Button>
+          </AlertDialogFooter>
+        </form>
       </AlertDialogContent>
     </AlertDialog>
   );

@@ -19,7 +19,7 @@ function Input({
   ...props
 }: Omit<React.ComponentProps<"input">, "size"> & {
   size?: "default" | "sm";
-  /** `template` for a value with `{placeholders}`: no spell check, autofill or autocorrect. */
+  /** `template` for a value with `{placeholders}`, `identifier` for an ID or link: no spell check, autofill or autocorrect. */
   syntax?: ControlSyntax;
   /** Only meaningful for `type="number"`: whether the browser's own stepper is drawn. */
   spinners?: "native" | "hidden";

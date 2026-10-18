@@ -91,7 +91,8 @@ export function AddSteamAccountForm({ onAdded }: { onAdded?: (steamId3: number) 
     });
   };
 
-  const canSubmit = steamId.valid && hasAvailableSlots && !addSteamAccountMutation.isPending;
+  // Submitting an unreadable ID shows why under the field, rather than a button that is off for no stated reason.
+  const canSubmit = hasAvailableSlots && !addSteamAccountMutation.isPending;
 
   return (
     <Card>
@@ -114,6 +115,7 @@ export function AddSteamAccountForm({ onAdded }: { onAdded?: (steamId3: number) 
             <Input
               id={inputId}
               type="text"
+              syntax="identifier"
               placeholder="SteamID64, account ID, or profile link"
               value={steamId.value}
               onChange={(e) => steamId.change(e.target.value)}

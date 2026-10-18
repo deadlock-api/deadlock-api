@@ -8,7 +8,7 @@ function Textarea({
   syntax = "text",
   ...props
 }: React.ComponentProps<"textarea"> & {
-  /** `template` for a value with `{placeholders}`: no spell check, autofill or autocorrect. */
+  /** `template` for a value with `{placeholders}`, `identifier` for an ID or link: no spell check, autofill or autocorrect. */
   syntax?: ControlSyntax;
 }) {
   const fieldProps = useFieldControlProps(props);
