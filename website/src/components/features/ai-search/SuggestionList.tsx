@@ -2,6 +2,7 @@ import { SparklesIcon, SwordsIcon } from "lucide-react";
 
 import { HeroImage } from "~/components/domain/assets/HeroImage";
 import { SteamAvatar } from "~/components/domain/player/SteamAvatar";
+import type { useListboxCursor } from "~/components/ui/hooks/use-listbox-cursor";
 import { OptionRow } from "~/components/ui/option-row";
 import { Skeleton } from "~/components/ui/skeleton";
 import { Inline, Stack } from "~/components/ui/stack";
@@ -62,17 +63,16 @@ function SuggestionSkeleton() {
 interface SuggestionListProps {
   id: string;
   suggestions: ReturnType<typeof useSuggestions>;
-  /** The row the keyboard cursor is on, as an index into `suggestions.all`. */
-  active: number;
+  /** The cursor's props for the option at an index into `suggestions.all`. */
+  getOptionProps: ReturnType<typeof useListboxCursor<Suggestion>>["getOptionProps"];
   onPick: (row: Suggestion) => void;
-  onHover: (index: number) => void;
 }
 
 /**
  * The listbox of the search's combobox: the page the question routes to, hero pages and players, in groups. The
- * field keeps the focus and the keyboard cursor; rows only take the mouse.
+ * field keeps the focus and the keyboard cursor; a row takes the cursor only when the pointer really moves over it.
  */
-export function SuggestionList({ id, suggestions, active, onPick, onHover }: SuggestionListProps) {
+export function SuggestionList({ id, suggestions, getOptionProps, onPick }: SuggestionListProps) {
   let index = 0;
   return (
     // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- the popup list of a custom combobox; a native select or datalist cannot carry it
@@ -95,18 +95,10 @@ export function SuggestionList({ id, suggestions, active, onPick, onHover }: Sug
               return (
                 <OptionRow
                   key={row.key}
-                  id={`${id}-${at}`}
-                  // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- an option of the ARIA listbox above; a native option only exists inside a native select
-                  role="option"
-                  aria-selected={at === active}
-                  tabIndex={-1}
-                  active={at === active}
+                  {...getOptionProps(at)}
                   leading={leadingOf(row)}
                   description={descriptionOf(row)}
                   hint={row.kind === "player" ? row.accountId : undefined}
-                  // Keeps the focus in the field, which owns the keyboard cursor of the list.
-                  onMouseDown={(event) => event.preventDefault()}
-                  onMouseEnter={() => onHover(at)}
                   onClick={() => onPick(row)}
                 >
                   {labelOf(row)}

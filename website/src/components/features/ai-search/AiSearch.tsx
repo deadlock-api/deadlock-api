@@ -6,6 +6,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import { useCloseSideNavDrawer } from "~/components/patterns/navigation/SideNavShell";
 import { Button } from "~/components/ui/button";
 import { Callout, CalloutAnchor, CalloutContent, CalloutDescription, CalloutTitle } from "~/components/ui/callout";
+import { useListboxCursor } from "~/components/ui/hooks/use-listbox-cursor";
 import { Popover, PopoverAnchor, PopoverContent } from "~/components/ui/popover";
 import { RollingText } from "~/components/ui/rolling-text";
 import { SearchInput } from "~/components/ui/search-input";
@@ -123,9 +124,6 @@ export function AiSearch({ size = "default", className }: AiSearchProps) {
   const input = useRef<HTMLInputElement>(null);
   /** The dropdown under the field: open while the field has focus and something typed, until Escape or a pick. */
   const [listOpen, setListOpen] = useState(false);
-  /** The row the keyboard cursor is on, and whether the arrow keys put it there. */
-  const [cursor, setCursor] = useState({ at: 0, moved: false });
-  const listId = useId();
 
   useEffect(
     () => () => {
@@ -140,9 +138,11 @@ export function AiSearch({ size = "default", className }: AiSearchProps) {
   const question = last && last.version !== draft.version ? last.question : draft.text;
   const suggestions = useSuggestions(question, listOpen);
   const rows = suggestions.all;
-  const active = Math.min(cursor.at, rows.length - 1);
   const showList =
     listOpen && !searching && question.trim().length >= 2 && (rows.length > 0 || suggestions.pagePending);
+  /** The row the keyboard cursor is on, and whether the reader put it there. */
+  const cursor = useListboxCursor(rows, { open: showList });
+  const active = cursor.active;
 
   const ask = (text: string, source: Source = home ? "home" : "sidebar") => {
     const trimmed = text.trim();
@@ -166,14 +166,9 @@ export function AiSearch({ size = "default", className }: AiSearchProps) {
           players: routed.kind === "not_understood" ? routed.players : undefined,
         });
         if (routed.kind === "not_understood" && routed.players > 0) {
-          // A name no page answers: the dropdown's players are the answer, with the cursor on the first one.
-          setCursor({
-            at: Math.max(
-              0,
-              suggestions.all.findIndex((row) => row.kind === "player"),
-            ),
-            moved: true,
-          });
+          // A name no page answers: the dropdown's players are the answer, with the cursor on the first one (once
+          // the players are in, if they are still loading).
+          cursor.preferFirst((row) => row.kind === "player");
           input.current?.focus();
           setListOpen(true);
           return undefined;
@@ -239,9 +234,9 @@ export function AiSearch({ size = "default", className }: AiSearchProps) {
                     // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- SearchInput renders a native text input; this is the WAI-ARIA combobox pattern
                     role="combobox"
                     aria-expanded={showList}
-                    aria-controls={listId}
+                    aria-controls={cursor.listId}
                     aria-autocomplete="list"
-                    aria-activedescendant={showList && rows.length > 0 ? `${listId}-${active}` : undefined}
+                    aria-activedescendant={cursor.activeId}
                     onFocus={() => setListOpen(true)}
                     onBlur={() => setListOpen(false)}
                     aria-invalid={notice === "not_understood" || undefined}
@@ -267,15 +262,10 @@ export function AiSearch({ size = "default", className }: AiSearchProps) {
                       setDraft({ text, version: last?.version ?? 0 });
                       setNotice(null);
                       setListOpen(true);
-                      setCursor({ at: 0, moved: false });
+                      cursor.reset();
                     }}
                     onKeyDown={(event) => {
-                      if (showList && rows.length > 0 && (event.key === "ArrowDown" || event.key === "ArrowUp")) {
-                        event.preventDefault();
-                        const step = event.key === "ArrowDown" ? 1 : -1;
-                        setCursor({ at: (active + step + rows.length) % rows.length, moved: true });
-                        return;
-                      }
+                      if (cursor.onKeyDown(event)) return;
                       // Enter opens the row under the cursor, the top one unless the arrows moved it. While the page for
                       // the question is still being worked out, the top row could be a hero the question merely names, so
                       // Enter asks as before.
@@ -319,11 +309,10 @@ export function AiSearch({ size = "default", className }: AiSearchProps) {
                 onInteractOutside={(event) => input.current?.contains(event.target as Node) && event.preventDefault()}
               >
                 <SuggestionList
-                  id={listId}
+                  id={cursor.listId}
                   suggestions={suggestions}
-                  active={active}
+                  getOptionProps={cursor.getOptionProps}
                   onPick={pick}
-                  onHover={(at) => setCursor({ at, moved: true })}
                 />
               </PopoverContent>
             </Popover>

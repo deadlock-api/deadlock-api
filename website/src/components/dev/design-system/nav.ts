@@ -124,6 +124,7 @@ export const NAV: readonly NavChapter[] = [
           "TableFooter",
           "TableBody group states",
           "useListNavigation",
+          "useListboxCursor",
           "useFocusAfterChange",
           "HeatCell",
           "StatusDot ring",

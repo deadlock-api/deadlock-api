@@ -51,7 +51,9 @@ import { Delta } from "~/components/ui/delta";
 import { Field } from "~/components/ui/field";
 import { useFocusAfterChange } from "~/components/ui/hooks/use-focus-after-change";
 import { useListNavigation } from "~/components/ui/hooks/use-list-navigation";
+import { useListboxCursor } from "~/components/ui/hooks/use-listbox-cursor";
 import { useSort } from "~/components/ui/hooks/use-sort";
+import { OptionRow } from "~/components/ui/option-row";
 import { SearchInput } from "~/components/ui/search-input";
 import { Segmented, SegmentedItem } from "~/components/ui/segmented";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
@@ -127,6 +129,43 @@ function FocusAfterChangeDemo() {
         Reset
       </Button>
     </Inline>
+  );
+}
+
+function ListboxCursorDemo() {
+  const [query, setQuery] = useState("");
+  const rows = LIST_DEMO.filter((name) => name.toLowerCase().includes(query.trim().toLowerCase()));
+  const cursor = useListboxCursor(rows);
+  return (
+    <div className="flex w-64 flex-col gap-1">
+      <SearchInput
+        size="sm"
+        aria-label="Find a build"
+        // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- SearchInput renders a native text input; this is the WAI-ARIA combobox pattern
+        role="combobox"
+        aria-expanded
+        aria-controls={cursor.listId}
+        aria-autocomplete="list"
+        aria-activedescendant={cursor.activeId}
+        value={query}
+        onValueChange={(text) => {
+          setQuery(text);
+          cursor.reset();
+        }}
+        onKeyDown={(event) => {
+          if (cursor.onKeyDown(event)) return;
+          if (event.key === "Enter" && rows[cursor.active]) setQuery(rows[cursor.active]);
+        }}
+      />
+      {/* oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- the popup list of a custom combobox */}
+      <div role="listbox" id={cursor.listId} aria-label="Builds" className="rounded-md border bg-popover p-1">
+        {rows.map((name, index) => (
+          <OptionRow key={name} {...cursor.getOptionProps(index)} onClick={() => setQuery(name)}>
+            {name}
+          </OptionRow>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -617,6 +656,14 @@ export function Patterns() {
         note="Rows a reader steps through with the keys: the list is one Tab stop (getItemProps puts tabIndex 0 on the selected row's control, -1 on the rest), the arrow keys, Page Up / Down, Home and End choose a row, focus its control and scroll the row into view, clear of a sticky head or foot."
       >
         <ListNavigationDemo />
+      </Specimen>
+
+      <Specimen
+        name="useListboxCursor"
+        source="ui/hooks/use-listbox-cursor"
+        note="The cursor of a combobox's popup list: focus stays in the field and aria-activedescendant names the active option. The arrow keys move it and wrap; the pointer moves it only when it really moves, so a row that slides under a still pointer while results load never takes it. preferFirst(match) rests it on the first matching row, also one that loads later."
+      >
+        <ListboxCursorDemo />
       </Specimen>
 
       <Specimen
