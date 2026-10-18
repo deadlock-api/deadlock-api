@@ -565,12 +565,19 @@ function ContentSpecimens() {
       <Specimen
         name="LogoWallItem"
         source="patterns/content/LogoWall"
-        note="A sponsor logo as a link, dimmed until hovered or focused. The wall is an Inline with justify center and gap 8."
+        note="A sponsor logo as a link, dimmed until hovered or focused. The wall is an Inline with justify center and gap 8. size icon is a square site icon in a grid of icons where some are unlinked: not dimmed, with the focus ring."
       >
         <Inline justify="center" gap={8}>
           {["One", "Two", "Three"].map((name) => (
             <LogoWallItem key={name} href="#logowall" title={`Sponsor ${name}`}>
               <img src="/logo/hexe.svg" alt={`Sponsor ${name} logo`} className="h-10 w-auto object-contain" />
+            </LogoWallItem>
+          ))}
+        </Inline>
+        <Inline justify="center" gap={1.5}>
+          {["One", "Two", "Three"].map((name) => (
+            <LogoWallItem key={name} size="icon" href="#logowall" title={`Site ${name}`}>
+              <img src="/logo/hexe.svg" alt={`Site ${name}`} width={28} height={28} className="size-7 object-contain" />
             </LogoWallItem>
           ))}
         </Inline>

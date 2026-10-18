@@ -255,7 +255,7 @@ function IndexRoute() {
                 src={mainSponsor.logo}
                 widths={[192, 240, 384, 480, 576, 720]}
                 sizes="(min-width: 1024px) 227px, 189px"
-                alt={`${mainSponsor.title} Logo`}
+                alt={mainSponsor.title}
                 width={600}
                 height={127}
                 className="h-auto w-47 object-contain lg:w-57"
@@ -289,12 +289,7 @@ function IndexRoute() {
         </HeroLead>
       </Hero>
 
-      <Section
-        size="lg"
-        align="center"
-        title="Deadlock Stats, Hero Win Rates & Leaderboards"
-        description="Dive into analytics, leaderboards, and visualizations powered by millions of tracked matches"
-      >
+      <Section size="lg" align="center" title="Deadlock Stats, Hero Win Rates & Leaderboards">
         <Grid columns={{ base: 2, xl: 5 }}>
           {analyticsLinks.map((item) => {
             const Icon = item.icon;
@@ -365,9 +360,9 @@ function IndexRoute() {
                   return (
                     <li key={site.name}>
                       {site.href ? (
-                        <a href={site.href} target="_blank" rel="sponsored noreferrer" className="flex">
+                        <LogoWallItem size="icon" href={site.href} target="_blank" rel="sponsored noreferrer">
                           {icon}
-                        </a>
+                        </LogoWallItem>
                       ) : (
                         icon
                       )}
@@ -380,12 +375,7 @@ function IndexRoute() {
         </CardContent>
       </Card>
 
-      <Section
-        size="lg"
-        align="center"
-        title="Developer Services"
-        description="APIs, tools, and data for the Deadlock community"
-      >
+      <Section size="lg" align="center" title="Developer Services">
         <Grid columns={{ base: 1, sm: 2, lg: 3 }} gap={4}>
           {services.map((service) => {
             const Icon = service.icon;
@@ -412,12 +402,7 @@ function IndexRoute() {
         </Grid>
       </Section>
 
-      <Section
-        size="lg"
-        align="center"
-        title="Our Sponsors"
-        description="Supporting the Deadlock API and the community"
-      >
+      <Section size="lg" align="center" title="Our Sponsors">
         <Inline justify="center" gap={8}>
           {[mainSponsor, ...sponsors].map((sponsor) => (
             <LogoWallItem
@@ -431,7 +416,7 @@ function IndexRoute() {
                 src={sponsor.logo}
                 widths={[140, 280, 420]}
                 sizes="140px"
-                alt={`${sponsor.title} Logo`}
+                alt={sponsor.title}
                 width={sponsor.width}
                 height={sponsor.height}
                 loading="lazy"
