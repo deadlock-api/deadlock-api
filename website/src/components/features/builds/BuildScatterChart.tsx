@@ -236,8 +236,12 @@ export function BuildScatterChart({
         <>
           {/* Always there, its playstyle options disabled until their numbers load, so the header never changes height. */}
           <Select value={xKey} onValueChange={(value) => void setX(value as XKey)}>
-            <SelectTrigger size="sm" aria-label="X axis" className="w-40">
-              <SelectValue />
+            <SelectTrigger size="sm" aria-label="X axis" className="w-52">
+              {/* Named on the control, as the item filter is, so it reads as the axis it sets. */}
+              <span className="flex min-w-0 items-center gap-1.5">
+                <span className="text-muted-foreground">X axis</span>
+                <SelectValue />
+              </span>
             </SelectTrigger>
             <SelectContent>
               {X_OPTIONS.map((option) => (
