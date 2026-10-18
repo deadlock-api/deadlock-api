@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link, createFileRoute, notFound, redirect, useRouter } from "@tanstack/react-router";
 import type { AnalyticsHeroStats, ItemStats } from "deadlock_api_client";
-import { BarChart3, Layers } from "lucide-react";
+import { BarChart3, Combine, Layers } from "lucide-react";
 import { lazy, Suspense, useMemo } from "react";
 
 import { EntityNotFound } from "~/components/app/EntityNotFound";
@@ -390,27 +390,39 @@ function ItemDetailPage() {
       </Section>
 
       <Section title={`More ${itemName} Stats`}>
-        <nav aria-label={`More ${itemName} stats`} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          <LinkCard
-            asChild
-            size="sm"
-            orientation="horizontal"
-            media={<Layers />}
-            title={`Builds with ${itemName}`}
-            description={`Every item's win rate in builds that include ${itemName}.`}
-          >
-            <Link to="/analytics/items" search={{ include_items: itemId, ...RANK_SEARCH }} preload="intent" />
-          </LinkCard>
-          <LinkCard
-            asChild
-            size="sm"
-            orientation="horizontal"
-            media={<BarChart3 />}
-            title="All Items"
-            description="Win and purchase rates of every item, side by side."
-          >
-            <Link to="/analytics/items" search={RANK_SEARCH} preload="intent" />
-          </LinkCard>
+        <nav aria-label={`More ${itemName} stats`} className="@container">
+          <div className="grid gap-3 @xl:grid-cols-2 @4xl:grid-cols-3">
+            <LinkCard
+              asChild
+              size="sm"
+              orientation="horizontal"
+              media={<Layers />}
+              title={`Builds with ${itemName}`}
+              description={`Every item's win rate in builds that include ${itemName}.`}
+            >
+              <Link to="/analytics/items" search={{ include_items: itemId, ...RANK_SEARCH }} preload="intent" />
+            </LinkCard>
+            <LinkCard
+              asChild
+              size="sm"
+              orientation="horizontal"
+              media={<BarChart3 />}
+              title="All Items"
+              description="Win and purchase rates of every item, side by side."
+            >
+              <Link to="/analytics/items" search={RANK_SEARCH} preload="intent" />
+            </LinkCard>
+            <LinkCard
+              asChild
+              size="sm"
+              orientation="horizontal"
+              media={<Combine />}
+              title="Item Combos"
+              description="The item pairs that win most often when bought together."
+            >
+              <Link to="/analytics/items/combos" search={RANK_SEARCH} preload="intent" />
+            </LinkCard>
+          </div>
         </nav>
       </Section>
     </PageShell>
