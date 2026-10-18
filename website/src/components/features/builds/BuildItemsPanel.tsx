@@ -11,6 +11,7 @@ import { type BuildRow, buildItemPresence, distinguishingItems } from "~/lib/bui
 import { formatShare, formatSignedPercent } from "~/lib/format";
 import { toneOf } from "~/lib/tone";
 import { cn } from "~/lib/utils";
+import { winRateNoise } from "~/lib/wilson";
 
 const ITEMS_SHOWN = 15;
 /** Where the win rate bar reaches its edge: ten points either way. */
@@ -37,6 +38,8 @@ export function BuildItemsPanel({
       ? ranked.filter((item) => item.vsWithout! > 0)
       : ranked.filter((item) => item.vsWithout! < 0).reverse()
   ).slice(0, ITEMS_SHOWN);
+  // The matches of the builds whose contents are known, which the shares are of.
+  const totalMatches = rows.reduce((sum, row) => sum + (row.meta ? row.matches : 0), 0);
   return (
     <Panel className={cn("flex flex-col", className)}>
       <PanelHeader title="Items that set builds apart" icon={ShoppingBag} size="sm">
@@ -67,19 +70,27 @@ export function BuildItemsPanel({
                 key={item.itemId}
                 rank={index + 1}
                 entity={{ itemId: item.itemId }}
-                meta={`${item.builds} ${item.builds === 1 ? "build" : "builds"}`}
+                meta={`In ${item.builds} ${item.builds === 1 ? "build" : "builds"}`}
               >
                 <RankedEntityMetric
-                  label="Played"
+                  label="Matches"
                   labelDisplay={index === 0 ? "visible" : "hidden"}
                   value={formatShare(item.share)}
                   share={item.share}
                 />
                 <RankedEntityMetric
-                  label="Win diff"
+                  label="Vs. rest"
                   labelDisplay={index === 0 ? "visible" : "hidden"}
                   value={item.vsWithout === null ? null : formatSignedPercent(item.vsWithout)}
-                  tone={item.vsWithout === null ? undefined : toneOf(Math.round(item.vsWithout * 1000))}
+                  tone={
+                    item.vsWithout === null
+                      ? undefined
+                      : // Only a difference outside the noise of the two groups of matches takes a color.
+                        Math.abs(item.vsWithout) <
+                          winRateNoise(item.share * totalMatches, (1 - item.share) * totalMatches)
+                        ? "muted"
+                        : toneOf(Math.round(item.vsWithout * 1000))
+                  }
                   change={{ value: item.vsWithout, scale: CHANGE_SCALE }}
                 />
               </RankedEntityRow>
