@@ -6,7 +6,7 @@ import { SplitBar } from "~/components/ui/rate-bar";
 import { Separator } from "~/components/ui/separator";
 import { Skeleton } from "~/components/ui/skeleton";
 import { Inline, Stack } from "~/components/ui/stack";
-import { type LaneRow, mean, type Side, type SoulCurves, type StatsIndex } from "~/lib/team-builder/analysis";
+import { type LaneRow, type Side, type SoulCurves, type StatsIndex } from "~/lib/team-builder/analysis";
 import { autoScale, formatCount, formatRate, NO_DATA } from "~/lib/team-builder/format";
 import { SIDE_RING } from "~/lib/team-builder/lanes";
 import { cn } from "~/lib/utils";
@@ -45,13 +45,6 @@ const LANE_BAR_SCALE = 10;
 const allyTrack = (share: number) => 0.5 + Math.max(-0.5, Math.min(0.5, ((share - 0.5) * 100) / LANE_BAR_SCALE / 2));
 
 function LaneMatchupMatrix({ row, index }: { row: LaneRow; index: StatsIndex }) {
-  // These edges are measured against an even lane rather than against each hero's own baseline, so
-  // the column hero's view really is the negation of the ally's.
-  const columnAverages = row.duel[0].map((_, column) => {
-    const allyView = mean(row.duel.map((cells) => cells[column].edge));
-    return allyView === undefined ? undefined : -allyView;
-  });
-
   return (
     <MatchupGrid
       cells={row.duel}
@@ -60,7 +53,7 @@ function LaneMatchupMatrix({ row, index }: { row: LaneRow; index: StatsIndex }) 
         row.duel.flat().map((cell) => cell.edge),
         3,
       )}
-      columnMargins={columnAverages}
+      margins
       variant="duel"
     />
   );

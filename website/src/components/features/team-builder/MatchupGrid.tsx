@@ -74,14 +74,11 @@ interface MatchupGridProps {
   /** Points of edge that saturate the colour ramp. */
   scale: number;
   /**
-   * Per-column averages, which turn on the trailing average row and column as a whole; the row
-   * averages and the corner are derived from the cells.
-   *
-   * Stated from the *column* hero's own side — the opposite direction to the cells and to the row
-   * averages — so green here means that column's hero is winning, while green in a cell means the
-   * ally row is.
+   * Adds the trailing average column and row: each row's, each column's and the whole grid's mean
+   * edge. All of them read from the row side, like the cells, so one colour means one thing across
+   * the grid.
    */
-  columnMargins?: (number | undefined)[];
+  margins?: boolean;
   variant: keyof typeof VARIANTS;
 }
 
@@ -151,7 +148,7 @@ function GridCell({
 }
 
 /** The ally-rows by enemy-columns heat grid, shared by the counter matrix and the lane deep dive. */
-export function MatchupGrid({ cells, index, scale, columnMargins, variant }: MatchupGridProps) {
+export function MatchupGrid({ cells, index, scale, margins: showMargins = false, variant }: MatchupGridProps) {
   const { cell: cellClass, cap, fill, portrait, track, showCounts } = VARIANTS[variant];
   const columns = cells[0]?.map((cell) => cell.enemy) ?? [];
   const { data: names } = useQuery({
@@ -170,8 +167,8 @@ export function MatchupGrid({ cells, index, scale, columnMargins, variant }: Mat
     onFocus: () => grid.setActiveIndex(cellIndex),
     onKeyDown: (event) => grid.onKeyDown(event, cellIndex),
   });
-  const margins = columnMargins && {
-    columns: columnMargins,
+  const margins = showMargins && {
+    columns: columns.map((_, column) => mean(cells.map((row) => row[column].edge))),
     rows: cells.map((row) => mean(row.map((cell) => cell.edge))),
     corner: mean(cells.flat().map((cell) => cell.edge)),
   };
@@ -257,10 +254,13 @@ export function MatchupGrid({ cells, index, scale, columnMargins, variant }: Mat
             <StatTooltip
               trigger="toggle"
               key={columns[columnIndex]}
-              title={<HeroName heroId={columns[columnIndex]} />}
+              title={
+                <span className="flex gap-1">
+                  Average edge vs. <HeroName heroId={columns[columnIndex]} />
+                </span>
+              }
               rows={[
-                { label: "Own edge in this lane", value: formatPoints(value) },
-                { label: "Measured from", value: "their side" },
+                { label: "Edge", value: formatPoints(value), className: deltaClass(value) },
                 { label: "Matchups", value: String(cells.length) },
               ]}
             >

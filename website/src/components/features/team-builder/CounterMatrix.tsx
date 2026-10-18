@@ -5,7 +5,7 @@ import { Panel, PanelBody, PanelHeader } from "~/components/patterns/panel/Panel
 import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { SkeletonRows } from "~/components/patterns/states/Skeletons";
 import { Button } from "~/components/ui/button";
-import { type DraftAnalysis, mean, type StatsIndex, transposeMatchups } from "~/lib/team-builder/analysis";
+import { type DraftAnalysis, type StatsIndex, transposeMatchups } from "~/lib/team-builder/analysis";
 import { autoScale } from "~/lib/team-builder/format";
 
 import { MatchupGrid } from "./MatchupGrid";
@@ -21,12 +21,9 @@ export function CounterMatrix({ analysis, index, loading }: CounterMatrixProps) 
   const { allyHeroes, enemyHeroes, counterMatrix } = analysis;
   const empty = allyHeroes.length === 0 || enemyHeroes.length === 0;
 
-  // The orientation not on screen is what the column margins are read from.
-  const transposed = transposeMatchups(counterMatrix, index);
-  const [cells, opposite] = swapped ? [transposed, counterMatrix] : [counterMatrix, transposed];
+  const cells = swapped ? transposeMatchups(counterMatrix, index) : counterMatrix;
   // Scaled to the draft in front of you: a fixed bound washes out a set of tight matchups.
   const scale = autoScale(cells.flat().map((cell) => cell.edge));
-  const columnAverages = opposite.map((row) => mean(row.map((cell) => cell.edge)));
 
   return (
     <Panel>
@@ -52,7 +49,7 @@ export function CounterMatrix({ analysis, index, loading }: CounterMatrixProps) 
       ) : (
         // `@container` so the grid can derive its column width, and with it its square cap.
         <PanelBody className="@container flex flex-1 flex-col">
-          <MatchupGrid cells={cells} index={index} scale={scale} columnMargins={columnAverages} variant="matrix" />
+          <MatchupGrid cells={cells} index={index} scale={scale} margins variant="matrix" />
         </PanelBody>
       )}
     </Panel>
