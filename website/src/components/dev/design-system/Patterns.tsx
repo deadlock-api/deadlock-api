@@ -352,7 +352,7 @@ export function Patterns() {
       <Specimen
         name="FilterBar cells"
         source="patterns/filter-bar/FilterBar · FilterCell · StringSelector · NumberSelector · TriStateSelector · DateRangePicker"
-        note="The filters of a page: two across on a phone, three on a tablet, one row on a desktop. A changed filter is underlined and gets a reset. StringSelector shows up to five options as segments, more as a list; StringOptionGroups put headings over a long list (Rank by)."
+        note="The filters of a page: two across on a phone, three on a tablet, one row on a desktop. A FilterToggleCell is as wide as its segments: where they do not fit beside the other cells it takes a row of its own rather than wrapping them. A changed filter is underlined and gets a reset. StringSelector shows up to five options as segments, more as a list; StringOptionGroups put headings over a long list (Rank by)."
       >
         <Variants className="block">
           <FilterBar>

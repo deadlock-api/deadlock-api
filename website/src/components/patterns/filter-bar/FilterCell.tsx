@@ -258,8 +258,10 @@ export function FilterToggleCell<T extends string>({
         cellBase,
         "relative",
         inRoot ? cellInRoot : cellStandalone,
-        // Long segment rows outgrow a half-width cell and a third-width cell.
-        inRoot && isWide && "basis-full @md:basis-3/5",
+        // A cell as wide as its segments, never a share narrower than them: where they do not fit beside the other
+        // cells, the cell takes a row of its own instead of wrapping its options. Long segment rows take a full row
+        // on a narrow bar.
+        inRoot && (isWide ? "basis-full @md:basis-3/5" : "basis-auto @md:basis-auto"),
         active && activeUnderline,
         className,
       )}
