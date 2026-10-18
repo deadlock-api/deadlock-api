@@ -43,6 +43,7 @@ const COLOR_GROUPS: { name: string; note: string; tokens: string[] }[] = [
       "chart-8",
       "chart-win-rate",
       "chart-share",
+      "chart-interval",
     ],
   },
   {

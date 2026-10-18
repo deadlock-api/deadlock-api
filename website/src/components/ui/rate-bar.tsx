@@ -10,6 +10,7 @@ export function DivergingBar({
   scale,
   interval,
   tone,
+  label,
   className,
   ...props
 }: Omit<React.ComponentProps<"div">, "children"> & {
@@ -19,6 +20,11 @@ export function DivergingBar({
   interval?: readonly [number, number];
   /** The fill's tone; by default the value's sign. `muted` for a difference within the noise. */
   tone?: Tone;
+  /**
+   * What the bar shows, as text for screen readers ("95% range −2.1 to +4.0 pp"): the drawing is hidden from them, so
+   * give one where the interval is not in the text beside the bar.
+   */
+  label?: string;
 }) {
   const at = (n: number) => (scale > 0 ? 50 + Math.max(-1, Math.min(1, n / scale)) * 50 : 50);
   const t = value == null || !Number.isFinite(value) || scale <= 0 ? 0 : Math.max(-1, Math.min(1, value / scale));
@@ -26,13 +32,14 @@ export function DivergingBar({
     <div
       data-slot="diverging-bar"
       className={cn("relative h-1.5 min-w-0 rounded-full bg-muted", className)}
-      aria-hidden="true"
+      aria-hidden={label ? undefined : true}
       {...props}
     >
+      {label && <span className="sr-only">{label}</span>}
       {interval ? (
         <>
           <div
-            className="absolute inset-y-0 rounded-full bg-foreground/25"
+            className="absolute inset-y-0 rounded-full bg-chart-interval"
             style={{ insetInlineStart: `${at(interval[0])}%`, width: `${at(interval[1]) - at(interval[0])}%` }}
           />
           <span

@@ -10,6 +10,8 @@
   --ink-880: #12161c;
   --ink-800: #1c2128;
   --ink-700: #21262d;
+  /* Between the surfaces and the muted text: the lightest grey that is still quiet, at 3:1 on the muted track. */
+  --ink-500: #656f7a;
   --ink-400: #8b949e;
   --ink-200: #d2d8de;
   --ink-100: #e6edf3;
@@ -102,6 +104,8 @@
   --chart-share: var(--sky-600);
   --chart-grid: var(--ink-700);
   --chart-axis: var(--ink-400);
+  /* The uncertainty band of a value (a 95% range) on a bar's muted track: 3:1 against the track and the card. */
+  --chart-interval: var(--ink-500);
   /* Tick and axis label size; `-sm` for plots under 100px tall. Auto-sized axes grow with it. */
   --chart-tick: var(--type-xs);
   --chart-tick-sm: var(--type-xs);
@@ -228,6 +232,7 @@
   --color-chart-8: var(--chart-8);
   --color-chart-win-rate: var(--chart-win-rate);
   --color-chart-share: var(--chart-share);
+  --color-chart-interval: var(--chart-interval);
 
   --color-item-weapon: var(--item-weapon);
   --color-item-vitality: var(--item-vitality);

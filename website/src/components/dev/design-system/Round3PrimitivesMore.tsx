@@ -563,7 +563,7 @@ export function Round3PrimitivesMore() {
       <Specimen
         name="DivergingBar interval"
         source="ui/rate-bar"
-        note="With interval the value becomes a marker on the band of its uncertainty, [low, high] on the same scale."
+        note="With interval the value becomes a marker on the band of its uncertainty, [low, high] on the same scale. The band is chart-interval, 3:1 on the track. label gives screen readers the range as text, since the drawing is hidden from them."
       >
         <Variants className="gap-6">
           {(
@@ -574,7 +574,13 @@ export function Round3PrimitivesMore() {
             ] as const
           ).map(({ value, interval }) => (
             <div key={value} className="flex items-center gap-2">
-              <DivergingBar value={value} scale={0.06} interval={interval} className="w-28" />
+              <DivergingBar
+                value={value}
+                scale={0.06}
+                interval={interval}
+                label={`95% range ${interval[0] * 100} to ${interval[1] * 100} pp`}
+                className="w-28"
+              />
               <Delta value={value} className="text-xs" />
             </div>
           ))}

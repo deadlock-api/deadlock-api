@@ -34,7 +34,7 @@ import {
   type BuildTrend,
   buildLanguageName,
 } from "~/lib/build-stats";
-import { formatPercent } from "~/lib/format";
+import { formatPercent, formatSignedPoints } from "~/lib/format";
 import { toneOf } from "~/lib/tone";
 import { cn } from "~/lib/utils";
 import type { SteamProfileMap } from "~/queries/steam-queries";
@@ -361,6 +361,7 @@ export function BuildTable({
                         <DivergingBar
                           value={row.vsAverage}
                           interval={[row.interval[0] - average, row.interval[1] - average]}
+                          label={`95% range ${formatSignedPoints(row.interval[0] - average)} to ${formatSignedPoints(row.interval[1] - average)}`}
                           scale={VS_AVERAGE_SCALE}
                           tone={toneOf(verdictSign(row))}
                           className="min-w-0 flex-1"
