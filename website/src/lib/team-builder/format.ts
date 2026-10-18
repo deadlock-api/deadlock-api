@@ -44,7 +44,10 @@ export function deltaBarColor(value: number | undefined): string {
   return TONE_COLOR[toneOf(Math.round(value * 10) / 10)];
 }
 
-/** Heat fill for matrix cells: positive above zero, negative below, opacity scaled by magnitude. */
+/**
+ * Heat fill for matrix cells: positive above zero, negative below, opacity scaled by magnitude. Up to 40%: the
+ * cell's second line (`on-heat-muted`) is checked at 4.5:1 on that fill in scripts/check-contrast.mjs.
+ */
 export function heatBackground(value: number | undefined, scale: number): string {
   if (value === undefined || !Number.isFinite(value)) {
     return "repeating-linear-gradient(45deg,var(--card),var(--card) 3px,var(--muted) 3px,var(--muted) 6px)";

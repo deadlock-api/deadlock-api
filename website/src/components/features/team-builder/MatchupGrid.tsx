@@ -141,7 +141,7 @@ function GridCell({
         {/* A phone-width matrix has no room for a readable count under the edge; the card (a tap opens it) and the
             label keep it. */}
         {showCounts && (
-          <span className="hidden text-xs leading-none font-normal text-muted-foreground @sm:block">
+          <span className="hidden text-xs leading-none font-normal text-on-heat-muted @sm:block">
             {compactCount(cell.matches)}
           </span>
         )}

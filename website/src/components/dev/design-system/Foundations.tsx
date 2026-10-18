@@ -47,6 +47,11 @@ const COLOR_GROUPS: { name: string; note: string; tokens: string[] }[] = [
     ],
   },
   {
+    name: "Meters and heat",
+    note: "meter-empty is an empty Pips mark (3:1 on the card). on-heat-muted is the quiet second line of a heat cell, 4.5:1 on the strongest fill.",
+    tokens: ["meter-empty", "on-heat-muted"],
+  },
+  {
     name: "Tiers",
     note: "S to D of a tier list, warm to cool. The letter names the tier; the color only repeats it.",
     tokens: ["tier-s", "tier-a", "tier-b", "tier-c", "tier-d"],
