@@ -1,5 +1,5 @@
 import { SearchIcon, XIcon } from "lucide-react";
-import { useRef } from "react";
+import { useRef, useState } from "react";
 
 import { Button } from "~/components/ui/button";
 import { assignRef } from "~/components/ui/hooks/assign-ref";
@@ -7,6 +7,7 @@ import { useControllableState } from "~/components/ui/hooks/use-controllable-sta
 import { Input } from "~/components/ui/input";
 import { Kbd } from "~/components/ui/kbd";
 import { CONTROL_SURFACE, DISABLED_STATE, FOCUS_RING } from "~/components/ui/recipes";
+import { RollingTextPausedContext } from "~/components/ui/rolling-text";
 import { Spinner } from "~/components/ui/spinner";
 import { cn } from "~/lib/utils";
 
@@ -27,7 +28,15 @@ interface SearchInputProps extends Omit<React.ComponentProps<"input">, "value" |
    * `RollingText` of examples. `placeholder` stays the field's accessible hint, drawn invisible.
    */
   placeholderContent?: React.ReactNode;
-  /** A key that focuses the field from anywhere ("/"), shown at its end while it is empty and not focused. */
+  /**
+   * A lead-in before `placeholderContent` ("Ask anything:"), dropped when the field is too narrow for both, so the
+   * content keeps the room. A `RollingText` in the content holds still while the field has the focus.
+   */
+  placeholderLead?: React.ReactNode;
+  /**
+   * A key that focuses the field from anywhere ("/"), shown at its end while it is empty and not focused, and not on
+   * a touch screen, which has no such key.
+   */
   shortcut?: string;
   /**
    * The search is running: a spinner takes the clear button's place, and the field says it is busy. The field stays
@@ -59,6 +68,7 @@ export function SearchInput({
   kind = "text",
   action,
   placeholderContent,
+  placeholderLead,
   shortcut,
   className,
   ref,
@@ -66,6 +76,8 @@ export function SearchInput({
 }: SearchInputProps) {
   const [value, setValue] = useControllableState({ value: valueProp, defaultValue, onValueChange });
   const inputRef = useRef<HTMLInputElement>(null);
+  /** Whether the bar has the focus, which holds its rolling placeholder still. */
+  const [focused, setFocused] = useState(false);
   const setRefs = (node: HTMLInputElement | null) => {
     inputRef.current = node;
     assignRef(ref, node);
@@ -110,7 +122,7 @@ export function SearchInput({
     </Button>
   ) : (
     shortcut && (
-      <Kbd aria-hidden="true" className="pointer-events-none group-focus-within:hidden">
+      <Kbd aria-hidden="true" className="pointer-events-none group-focus-within:hidden pointer-coarse:hidden">
         {shortcut}
       </Kbd>
     )
@@ -128,9 +140,11 @@ export function SearchInput({
           "group flex h-12 min-w-0 items-center gap-2 rounded-full ps-4 pe-1.5 hover:border-muted-foreground has-disabled:opacity-50 has-aria-invalid:border-destructive has-aria-invalid:ring-3 has-aria-invalid:ring-destructive/40",
           className,
         )}
+        onFocus={() => setFocused(true)}
+        onBlur={(event) => setFocused(event.currentTarget.contains(event.relatedTarget))}
       >
         <SearchIcon aria-hidden="true" className="size-5 shrink-0 text-muted-foreground" />
-        <span className="relative flex h-full min-w-0 flex-1 items-center">
+        <span className="@container relative flex h-full min-w-0 flex-1 items-center">
           <input
             data-slot="input"
             className={cn(
@@ -143,9 +157,14 @@ export function SearchInput({
           {placeholderContent !== undefined && value === "" && (
             <span
               data-slot="search-input-placeholder"
-              className="pointer-events-none absolute inset-0 flex items-center truncate text-base text-muted-foreground"
+              className="pointer-events-none absolute inset-0 flex min-w-0 items-center text-base whitespace-nowrap text-muted-foreground"
             >
-              {placeholderContent}
+              {placeholderLead != null && (
+                <span data-slot="search-input-placeholder-lead" className="hidden shrink-0 @xs:inline">
+                  {placeholderLead}&nbsp;
+                </span>
+              )}
+              <RollingTextPausedContext value={focused}>{placeholderContent}</RollingTextPausedContext>
             </span>
           )}
         </span>

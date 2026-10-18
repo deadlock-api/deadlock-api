@@ -105,19 +105,20 @@ function SearchInputExamples() {
           className="w-full sm:w-96"
         />
       </Variants>
-      <Variants label="placeholderContent with a RollingText" className="items-start">
+      <Variants
+        label="placeholderLead and a RollingText: the lead drops below 20rem of field, a long item ends in an ellipsis, the roll holds while focused"
+        className="items-start"
+      >
         <SearchInput
           variant="bar"
           placeholder="Ask anything"
+          placeholderLead="Ask anything:"
           placeholderContent={
-            <>
-              Ask anything:&nbsp;
-              <RollingText>
-                <span>who counters abrams</span>
-                <span>best heroes in eternus</span>
-                <span>when to buy toxic bullets</span>
-              </RollingText>
-            </>
+            <RollingText>
+              <span>who counters abrams</span>
+              <span>best heroes in eternus</span>
+              <span>when to buy toxic bullets</span>
+            </RollingText>
           }
           aria-label="Ask with rolling examples"
           action={
@@ -126,6 +127,25 @@ function SearchInputExamples() {
             </Button>
           }
           className="w-full sm:w-96"
+        />
+        <SearchInput
+          variant="bar"
+          placeholder="Ask anything"
+          placeholderLead="Ask anything:"
+          placeholderContent={
+            <RollingText>
+              <span>when to buy toxic bullets on haze</span>
+              <span>best heroes in eternus this patch</span>
+            </RollingText>
+          }
+          shortcut="/"
+          aria-label="Ask in a narrow field"
+          action={
+            <Button size="sm" shape="pill">
+              Search
+            </Button>
+          }
+          className="w-72"
         />
       </Variants>
       <Variants label='shortcut="/"' className="items-start">
@@ -372,7 +392,7 @@ export function Round3Primitives() {
       <Specimen
         name="RollingText"
         source="ui/rolling-text"
-        note="Text that cycles through items, each rolling up into place as the last rolls out above: examples in a search placeholder. Each child is one item. Decorative (aria-hidden); stays on the first item with reduced motion. interval sets how long each shows."
+        note="Text that cycles through items, each rolling up into place as the last rolls out above: examples in a search placeholder. Each child is one item. Decorative (aria-hidden); stays on the first item with reduced motion, and on the current one while paused (a SearchInput pauses it while focused, through RollingTextPausedContext). A long item ends in an ellipsis. interval sets how long each shows."
       >
         <Variants label="children, interval">
           <Text>

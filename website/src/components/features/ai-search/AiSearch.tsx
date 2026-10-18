@@ -254,16 +254,14 @@ export function AiSearch({ size = "default", className }: AiSearchProps) {
                     aria-invalid={notice === "not_understood" || undefined}
                     aria-describedby={notice ? noticeId : undefined}
                     placeholder={home ? ASK : "Ask for a stat"}
+                    placeholderLead={home ? `${ASK}:` : undefined}
                     placeholderContent={
                       home ? (
-                        <>
-                          {ASK}:&nbsp;
-                          <RollingText>
-                            {PLACEHOLDER_QUESTIONS.map((example) => (
-                              <span key={example}>{example}</span>
-                            ))}
-                          </RollingText>
-                        </>
+                        <RollingText>
+                          {PLACEHOLDER_QUESTIONS.map((example) => (
+                            <span key={example}>{example}</span>
+                          ))}
+                        </RollingText>
                       ) : undefined
                     }
                     autoComplete="off"
