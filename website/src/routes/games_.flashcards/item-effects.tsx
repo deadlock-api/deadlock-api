@@ -79,11 +79,8 @@ function ItemEffectFlashcards() {
   return (
     <FlashcardGame
       title="Item Effect Flashcards"
-      subtitle={
-        effectsToName
-          ? "Identify the shop item from its stats and effects. Pick the correct name."
-          : "Pick the stats and effects that belong to the named item."
-      }
+      // One line for both directions: a subtitle that changed with the switch moved the switch under the tap.
+      subtitle="Match shop items to their stats and effects."
       pool={pool}
       reshuffleKey={`${direction}:${excludeLegendary}`}
       controls={
