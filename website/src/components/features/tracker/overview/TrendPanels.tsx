@@ -99,7 +99,8 @@ export function TrendPanels({
         {ranks.length < 2 ? (
           <EmptyState
             variant="inline"
-            className="flex h-24 items-center justify-center py-0 text-xs"
+            size="compact"
+            className="flex h-24 items-center justify-center py-0"
             title="Needs 2 matches with rank badges"
           />
         ) : (

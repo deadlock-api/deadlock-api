@@ -122,13 +122,13 @@ export function RankBenchmarks({
         {filters.result !== "all" ? (
           <EmptyState
             variant="inline"
-            className="py-3 text-xs"
+            size="compact"
             title="Choose “All” results to compare performance. Rank benchmarks cannot be filtered to wins or losses."
           />
         ) : needsRank ? (
           <EmptyState
             variant="inline"
-            className="py-3 text-xs"
+            size="compact"
             title="No rank is recorded for this player. Choose a rank range above to compare against a lobby average."
           />
         ) : loading ? (
@@ -151,7 +151,7 @@ export function RankBenchmarks({
         ) : !hasData ? (
           <EmptyState
             variant="inline"
-            className="py-3 text-xs"
+            size="compact"
             title="No recorded match statistics are available for this comparison. Try another date or rank range."
           />
         ) : (

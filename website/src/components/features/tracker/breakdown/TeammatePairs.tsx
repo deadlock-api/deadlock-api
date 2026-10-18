@@ -63,9 +63,7 @@ function PairsTable({
   const nameOf = (accountId: number) => profiles[accountId]?.personaname ?? `Player ${accountId}`;
 
   if (pairs.length === 0)
-    return (
-      <EmptyState variant="inline" className="py-3 text-xs" title="No repeat teammate pairs in selected matches." />
-    );
+    return <EmptyState variant="inline" size="compact" title="No repeat teammate pairs in selected matches." />;
   return (
     <Table density="dense" aria-label="Teammate pairs in selected matches">
       <TableHeader>

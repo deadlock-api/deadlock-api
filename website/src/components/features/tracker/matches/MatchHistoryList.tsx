@@ -15,6 +15,7 @@ import {
 import { RankDelta } from "~/components/features/tracker/shared/RankDelta";
 import { useTrackerTime } from "~/components/features/tracker/shared/useTrackerTime";
 import { PanelSection } from "~/components/patterns/panel/Panel";
+import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { Button } from "~/components/ui/button";
 import { SCROLLBAR_THIN } from "~/components/ui/recipes";
 import type { Dayjs } from "~/dayjs";
@@ -215,14 +216,18 @@ export function MatchHistoryList({
       </ol>
       {entries.length === 0 &&
         (emptyState ?? (
-          <div className="flex flex-col items-center gap-3 px-3 py-8 text-center text-sm text-muted-foreground">
-            No matches found
-            {heroId != null && (
-              <Button variant="outline" size="sm" onClick={() => onHeroChange(null)}>
-                Show all heroes
-              </Button>
-            )}
-          </div>
+          <EmptyState
+            variant="plain"
+            className="px-3 py-8 md:p-3"
+            title="No matches found"
+            action={
+              heroId != null && (
+                <Button variant="outline" size="sm" onClick={() => onHeroChange(null)}>
+                  Show all heroes
+                </Button>
+              )
+            }
+          />
         ))}
     </nav>
   );

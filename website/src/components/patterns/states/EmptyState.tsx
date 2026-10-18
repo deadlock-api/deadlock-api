@@ -13,6 +13,11 @@ interface EmptyStateProps extends Omit<React.ComponentProps<"div">, "title" | "c
    * use inside a Card or Panel, `inline` is a single quiet line.
    */
   variant?: "panel" | "plain" | "inline";
+  /**
+   * For `inline`: `default` is a line in body text with room around it, `compact` a 12px line with little room, for a
+   * small panel or a slot beside other data (a preview table, a chart's place in a dense panel).
+   */
+  size?: "default" | "compact";
 }
 
 /** A query that succeeded with nothing to show. A query that failed is an ErrorState, never this. */
@@ -22,6 +27,7 @@ export function EmptyState({
   icon: Icon,
   action,
   variant = "panel",
+  size = "default",
   className,
   ...props
 }: EmptyStateProps) {
@@ -30,8 +36,13 @@ export function EmptyState({
       <div
         data-slot="empty-state"
         data-variant="inline"
+        data-size={size}
         aria-live="polite"
-        className={cn("py-8 text-center text-sm text-balance text-muted-foreground", className)}
+        className={cn(
+          "text-center text-balance text-muted-foreground",
+          size === "compact" ? "py-3 text-xs" : "py-8 text-sm",
+          className,
+        )}
         {...props}
       >
         <p>{title}</p>

@@ -161,11 +161,7 @@ function CompanionPreview({
           retrying={isFetching}
         />
       ) : visible.length === 0 ? (
-        <EmptyState
-          variant="inline"
-          className="py-3 text-xs"
-          title={`No repeat ${label.toLowerCase()} in selected matches.`}
-        />
+        <EmptyState variant="inline" size="compact" title={`No repeat ${label.toLowerCase()} in selected matches.`} />
       ) : (
         <Table density="dense" aria-label={`Frequent ${label.toLowerCase()} in selected matches`}>
           <TableHeader>

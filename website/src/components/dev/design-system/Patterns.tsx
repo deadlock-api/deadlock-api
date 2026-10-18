@@ -687,7 +687,7 @@ export function Patterns() {
       <Specimen
         name="EmptyState"
         source="patterns/states/EmptyState"
-        note="A query that succeeded with nothing to show. panel stands in for the content; inline is one quiet line."
+        note="A query that succeeded with nothing to show. panel stands in for the content; inline is one quiet line, and size=compact makes it a 12px line with little room (a preview table, a chart's slot in a dense panel)."
       >
         <Variants className="grid items-center md:grid-cols-2">
           <EmptyState
@@ -701,6 +701,7 @@ export function Patterns() {
             }
           />
           <EmptyState variant="inline" title="No data available." />
+          <EmptyState variant="inline" size="compact" title="No repeat teammates in selected matches." />
         </Variants>
       </Specimen>
 

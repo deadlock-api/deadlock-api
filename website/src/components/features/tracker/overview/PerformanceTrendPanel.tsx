@@ -119,7 +119,8 @@ export function PerformanceTrendPanel({
         {points.length === 0 ? (
           <EmptyState
             variant="inline"
-            className="flex min-h-24 items-center justify-center py-0 text-xs"
+            size="compact"
+            className="flex min-h-24 items-center justify-center py-0"
             title={`${entries.length} of ${window} matches available. Choose a smaller window or broaden your filters.`}
           />
         ) : (
