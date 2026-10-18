@@ -86,10 +86,11 @@ export function BuildByDuration({
   );
 
   return (
-    <section className="flex flex-col">
+    // Its own container: the column label shows where this column, not the panel, has room for it.
+    <section className="@container flex flex-col">
       {/* The three numbers of each row, named once over them. */}
       <PanelSection variant="label" title="By match length">
-        <span className="hidden whitespace-nowrap @sm:inline">Matches · win rate · vs. hero</span>
+        <span className="hidden whitespace-nowrap @xs:inline">Matches · win rate · vs. hero</span>
       </PanelSection>
       <StaleOverlay active={query.isPlaceholderData} label="win rate by match length">
         <KeyValueList className="px-3 py-0.5">
