@@ -59,7 +59,7 @@ export function ComparisonHeader({ children, ...props }: React.ComponentProps<ty
   return (
     <TableHeader tone="muted" {...props}>
       <TableRow className="hover:bg-transparent">
-        <TableHead className="px-4">
+        <TableHead className="px-3 @sm:px-4">
           <span className="sr-only">Feature</span>
         </TableHead>
         {withColumnIndex(children)}
@@ -75,7 +75,9 @@ export function ComparisonColumn({ className, ...props }: React.ComponentProps<t
       data-highlighted={highlighted || undefined}
       scope="col"
       className={cn(
-        "w-24 leading-tight whitespace-normal @md:w-36",
+        // A check or a dash needs little room: in a phone-width card a plan column is as narrow as one word of its name
+        // allows ("Background"), so the features keep room for their labels.
+        "w-22 px-0.5 leading-tight whitespace-normal @sm:w-24 @sm:px-2 @md:w-36",
         columnClass(highlighted),
         highlighted ? "font-semibold text-primary" : "text-muted-foreground",
         className,
@@ -94,7 +96,7 @@ export function ComparisonRow({
 }: Omit<React.ComponentProps<typeof TableRow>, "label"> & { label: React.ReactNode }) {
   return (
     <TableRow data-comparison-row className={cn("hover:bg-transparent", className)} {...props}>
-      <TableHead scope="row" className="h-auto px-4 py-3 font-normal whitespace-normal">
+      <TableHead scope="row" className="h-auto px-3 py-3 font-normal whitespace-normal @sm:px-4">
         {label}
       </TableHead>
       {withColumnIndex(children)}

@@ -370,7 +370,7 @@ function DataTableSpecimens() {
       <Specimen
         name="ComparisonTable"
         source="patterns/data-table/ComparisonTable"
-        note="Features down the side, plans across the top, composed from rows and cells. highlightedColumn tints one plan. A cell is a check or a dash. label names the table element itself, not the card around it."
+        note="Features down the side, plans across the top, composed from rows and cells. highlightedColumn tints one plan. A cell is a check or a dash. label names the table element itself, not the card around it. Below a 24rem card the plan columns narrow to one word of their names, so the features keep room."
       >
         <ComparisonTable highlightedColumn={1} label="Plans compared" className="max-w-2xl">
           <ComparisonHeader>
@@ -388,6 +388,20 @@ function DataTableSpecimens() {
             </ComparisonRow>
           </TableBody>
         </ComparisonTable>
+        <Variants label="in a 320px card: the plan columns narrow to one word of their names" className="block">
+          <ComparisonTable highlightedColumn={0} label="Tools compared" className="max-w-80">
+            <ComparisonHeader>
+              <ComparisonColumn>Background tool</ComparisonColumn>
+              <ComparisonColumn>Cache upload</ComparisonColumn>
+            </ComparisonHeader>
+            <TableBody>
+              <ComparisonRow label="Sends the matches already in your Steam cache">
+                <ComparisonCell included />
+                <ComparisonCell included />
+              </ComparisonRow>
+            </TableBody>
+          </ComparisonTable>
+        </Variants>
       </Specimen>
 
       <Specimen
