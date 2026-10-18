@@ -12,7 +12,7 @@ import { queryKeys } from "~/queries/query-keys";
 import { steamProfilesQueryOptions } from "~/queries/steam-queries";
 
 /** How many of the build's most frequent players the section lists. */
-const PLAYERS_SHOWN = 5;
+const PLAYERS_SHOWN = 8;
 
 /** The players who started the most matches with the build. */
 export function BuildTopPlayers({
