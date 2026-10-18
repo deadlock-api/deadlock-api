@@ -46,6 +46,7 @@ import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { Delta } from "~/components/ui/delta";
 import { Field } from "~/components/ui/field";
+import { useListNavigation } from "~/components/ui/hooks/use-list-navigation";
 import { useSort } from "~/components/ui/hooks/use-sort";
 import { SearchInput } from "~/components/ui/search-input";
 import { Segmented, SegmentedItem } from "~/components/ui/segmented";
@@ -77,6 +78,34 @@ const TAB_OPTIONS = [
 ];
 
 const pct = (n: number) => `${(n * 100).toFixed(1)}%`;
+
+const LIST_DEMO = ["Haze carry", "Haze support", "Bebop hook", "Infernus burn", "Seven ult"];
+
+function ListNavigationDemo() {
+  const [selected, setSelected] = useState(0);
+  const navigation = useListNavigation({ count: LIST_DEMO.length, value: selected, onValueChange: setSelected });
+  return (
+    <Table density="dense" aria-label="Builds" className="max-w-sm">
+      <TableBody onKeyDown={navigation.onKeyDown}>
+        {LIST_DEMO.map((name, index) => (
+          <TableRow key={name} data-interactive="" data-state={index === selected ? "active" : undefined}>
+            <TableCell>
+              <Button
+                variant="text"
+                size="inline"
+                aria-current={index === selected || undefined}
+                {...navigation.getItemProps(index)}
+                onClick={() => setSelected(index)}
+              >
+                {name}
+              </Button>
+            </TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
+  );
+}
 
 export function Patterns() {
   const { sortKey, dir: sortDir, toggle: onSort } = useSort<Key>({ defaultValue: { key: "winRate", dir: "desc" } });
@@ -503,6 +532,14 @@ export function Patterns() {
             <EmptyState variant="inline" className="px-4 py-6" title="Pick a hero to see who counters it." />
           </Panel>
         </Variants>
+      </Specimen>
+
+      <Specimen
+        name="useListNavigation"
+        source="ui/hooks/use-list-navigation"
+        note="Rows a reader steps through with the keys: the list is one Tab stop (getItemProps puts tabIndex 0 on the selected row's control, -1 on the rest), the arrow keys, Page Up / Down, Home and End choose a row, focus its control and scroll the row into view, clear of a sticky head or foot."
+      >
+        <ListNavigationDemo />
       </Specimen>
 
       <Specimen

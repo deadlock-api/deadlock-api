@@ -296,38 +296,34 @@ export function BuildTable({
                 <TableCell className="text-end text-xs text-muted-foreground tabular-nums">{index + 1}</TableCell>
                 <TableCell className="w-full max-w-0">
                   <div className="flex min-w-0 flex-col">
-                    {row.meta ? (
-                      <Button
-                        variant="text"
-                        size="inline"
-                        aria-current={selected || undefined}
-                        data-list-index={index}
-                        title={row.meta.name}
-                        className="block max-w-full justify-start truncate text-start font-medium"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          onBuildIdChange(row.hero_build_id);
-                        }}
-                      >
-                        {row.meta.name}
-                      </Button>
-                    ) : metaPending ? (
-                      <Skeleton className="h-5 w-40" />
-                    ) : (
-                      <Button
-                        variant="text"
-                        size="inline"
-                        aria-current={selected || undefined}
-                        data-list-index={index}
-                        className="justify-start text-muted-foreground"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          onBuildIdChange(row.hero_build_id);
-                        }}
-                      >
-                        Build {row.hero_build_id}
-                      </Button>
-                    )}
+                    {/* Always the button, so every row keeps its place in the list's keyboard model; while the
+                        build's name loads, a skeleton stands in for it and the ID names it. */}
+                    <Button
+                      variant="text"
+                      size="inline"
+                      aria-current={selected || undefined}
+                      {...navigation.getItemProps(index)}
+                      title={row.meta?.name}
+                      className={cn(
+                        "max-w-full justify-start text-start",
+                        row.meta ? "block truncate font-medium" : !metaPending && "text-muted-foreground",
+                      )}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        onBuildIdChange(row.hero_build_id);
+                      }}
+                    >
+                      {row.meta ? (
+                        row.meta.name
+                      ) : metaPending ? (
+                        <>
+                          <Skeleton className="h-5 w-40" />
+                          <span className="sr-only">Build {row.hero_build_id}</span>
+                        </>
+                      ) : (
+                        `Build ${row.hero_build_id}`
+                      )}
+                    </Button>
                     <span className="truncate text-xs text-muted-foreground">
                       {row.meta ? (
                         <>

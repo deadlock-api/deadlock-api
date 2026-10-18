@@ -26,7 +26,8 @@ export function nextListIndex(key: string, index: number, count: number, pageSiz
  * Headless keyboard selection for a vertical list whose rows each hold a focusable control (a table of rows that
  * open a detail view): the arrow keys, Page Up / Down, Home and End choose the row and move focus to its control,
  * found by its `data-list-index`, and scroll its row (`tr` or `li`) into view. Spread `onKeyDown` on the element that
- * holds the rows.
+ * holds the rows and `getItemProps(index)` on each row's control: the list is one Tab stop (a roving tabindex on the
+ * selected row, or the first while none is), and the arrow keys move within it.
  */
 export function useListNavigation({
   count,
@@ -41,7 +42,9 @@ export function useListNavigation({
   onValueChange: (index: number) => void;
   pageSize?: number;
 }) {
+  const tabStop = value >= 0 && value < count ? value : 0;
   return {
+    getItemProps: (index: number) => ({ "data-list-index": index, tabIndex: index === tabStop ? 0 : -1 }),
     onKeyDown: (event: React.KeyboardEvent<HTMLElement>) => {
       if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
       const next = nextListIndex(event.key, value, count, pageSize);
