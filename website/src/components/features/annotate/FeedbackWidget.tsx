@@ -253,7 +253,8 @@ export function FeedbackWidget() {
               id={commentId}
               ref={commentRef}
               value={comment}
-              onChange={(event) => setComment(event.target.value.slice(0, MAX_COMMENT_LENGTH))}
+              maxLength={MAX_COMMENT_LENGTH}
+              onChange={(event) => setComment(event.target.value)}
               placeholder={targets.length > 0 ? TARGET_PROMPT : GENERAL_PROMPT}
               rows={5}
               className="field-sizing-fixed resize-y"

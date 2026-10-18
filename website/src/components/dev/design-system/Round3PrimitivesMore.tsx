@@ -60,6 +60,7 @@ function SteamGlyph() {
 function FieldExamples() {
   const [steamId, setSteamId] = useState("not-a-number");
   const [note, setNote] = useState("Carried the mid lane.");
+  const [comment, setComment] = useState("");
   const invalid = !/^\d*$/.test(steamId);
   return (
     <>
@@ -101,6 +102,19 @@ function FieldExamples() {
           className="w-64"
         >
           <Textarea id="r3-field-note" value={note} onChange={(event) => setNote(event.target.value)} />
+        </Field>
+        <Field
+          label="Comment"
+          htmlFor="r3-field-comment"
+          counter={comment.length >= 40 ? `${60 - comment.length} characters left` : null}
+          className="w-64"
+        >
+          <Textarea
+            id="r3-field-comment"
+            maxLength={60}
+            value={comment}
+            onChange={(event) => setComment(event.target.value)}
+          />
         </Field>
       </Variants>
       <Variants label="horizontal: the message wraps under the row">
@@ -244,7 +258,7 @@ export function Round3PrimitivesMore() {
       <Specimen
         name="Field messages"
         source="ui/field"
-        note="icon leads the label; description sits under the control; error replaces it in the destructive tone and is announced; counter sits on the trailing edge. Input and Textarea take aria-describedby and aria-invalid from the Field around them."
+        note="icon leads the label; description sits under the control; error replaces it in the destructive tone and is announced; counter sits on the trailing edge, describes the control and is announced politely; passing counter at all (null until the count matters, as in Comment) reserves the footer row, so the count appearing moves nothing. Input and Textarea take aria-describedby and aria-invalid from the Field around them."
       >
         <FieldExamples />
       </Specimen>

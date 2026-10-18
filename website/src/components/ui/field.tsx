@@ -26,7 +26,11 @@ interface FieldProps extends React.ComponentProps<"div"> {
    * `aria-invalid` and `aria-describedby="<htmlFor>-error"` itself.
    */
   error?: React.ReactNode;
-  /** A count on the trailing edge under the control: "42 / 280". */
+  /**
+   * A count on the trailing edge under the control: "42 / 280". Passing the prop at all, even `null` while the count is
+   * not worth showing yet, reserves the footer row, so the count appearing never moves what follows. The count
+   * describes the control and is announced politely when it changes.
+   */
   counter?: React.ReactNode;
 }
 
@@ -48,9 +52,12 @@ export function Field({
   const LabelTag = htmlFor ? "label" : "span";
   const hasError = error != null && error !== false && error !== "";
   const message = hasError ? error : description;
-  const hasFooter = Boolean(message || counter);
+  const counted = counter !== undefined;
+  const hasFooter = Boolean(message) || counted;
   const messageId = `${htmlFor ?? labelId}-${hasError ? "error" : "description"}`;
-  const control = htmlFor ? { describedBy: message ? messageId : undefined, invalid: hasError } : null;
+  const counterId = `${htmlFor ?? labelId}-counter`;
+  const describedBy = [message ? messageId : undefined, counted ? counterId : undefined].filter(Boolean).join(" ");
+  const control = htmlFor ? { describedBy: describedBy || undefined, invalid: hasError } : null;
   return (
     <FieldControlContext value={control}>
       <FieldLabelContext value={htmlFor ? null : labelId}>
@@ -60,7 +67,7 @@ export function Field({
           data-invalid={hasError || undefined}
           role={htmlFor ? undefined : "group"}
           aria-labelledby={htmlFor ? undefined : labelId}
-          aria-describedby={!htmlFor && message ? messageId : undefined}
+          aria-describedby={!htmlFor && describedBy ? describedBy : undefined}
           className={cn(
             "flex min-w-0",
             orientation === "vertical" ? "flex-col gap-1.5" : "items-center gap-2",
@@ -89,7 +96,7 @@ export function Field({
           {hasFooter && (
             <div
               data-slot="field-footer"
-              className="flex min-w-0 basis-full items-start justify-between gap-3 type-caption"
+              className="flex min-h-lh min-w-0 basis-full items-start justify-between gap-3 type-caption"
             >
               <p
                 id={messageId}
@@ -105,8 +112,13 @@ export function Field({
                 {hasError && <TriangleAlertIcon aria-hidden="true" />}
                 {message}
               </p>
-              {counter && (
-                <span data-slot="field-counter" className="shrink-0 text-muted-foreground tabular-nums">
+              {counted && (
+                <span
+                  id={counterId}
+                  data-slot="field-counter"
+                  aria-live="polite"
+                  className="shrink-0 text-muted-foreground tabular-nums"
+                >
                   {counter}
                 </span>
               )}
