@@ -151,7 +151,7 @@ export function CommandBuilder({ region, accountId }: CommandBuilderProps) {
             errors={argErrors}
           />
         </div>
-        <div className="flex min-w-0 flex-col gap-6">
+        <div className="flex min-w-0 flex-col gap-6 @4xl:sticky @4xl:top-4">
           <UrlDisplay
             generatedUrl={generatedUrl}
             placeholder={
