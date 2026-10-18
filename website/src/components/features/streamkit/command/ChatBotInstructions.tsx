@@ -18,9 +18,6 @@ export function ChatBotInstructions({ generatedUrl }: ChatBotInstructionsProps) 
   return (
     <Disclosure variant="bordered" title="How to use?">
       <Stack gap={3}>
-        <Text as="p" tone="muted">
-          Use the generated URL in your favorite chat bot to create dynamic commands:
-        </Text>
         {/* No command to copy until the template makes a URL: a half-built one would answer chat with "{foo}". */}
         {!generatedUrl ? (
           <Text as="p" tone="muted">

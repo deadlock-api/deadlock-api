@@ -509,7 +509,7 @@ export function Round3Primitives() {
       <Specimen
         name="Separator"
         source="ui/separator"
-        note="A rule between groups that share one surface. Blocks of a page are spaced, not ruled."
+        note="A rule between groups that share one surface. Blocks of a page are spaced, not ruled. With children it is a labelled rule, the label in muted body type between two lines: 'or' between two ways to do one thing."
       >
         <div className="flex max-w-sm flex-col gap-2 text-sm">
           <span>Above</span>
@@ -521,6 +521,16 @@ export function Round3Primitives() {
           <Separator orientation="vertical" />
           <span>Right</span>
         </div>
+        <Variants label="labelled (children)" className="gap-6">
+          <div className="w-60">
+            <Separator>or</Separator>
+          </div>
+          <div className="flex h-24 gap-3 text-sm">
+            <span>Steam ID</span>
+            <Separator orientation="vertical">or</Separator>
+            <span>Sign in</span>
+          </div>
+        </Variants>
       </Specimen>
 
       <Specimen

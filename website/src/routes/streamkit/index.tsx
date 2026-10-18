@@ -82,19 +82,10 @@ function StreamKit() {
           <Stack gap={5}>
             <div className="grid grid-cols-1 gap-6 md:grid-cols-[1fr_auto_1fr]">
               <Stack gap={3}>
-                <Stack gap={1}>
-                  <Heading as="h2" size="default">
-                    Connect Your Account
-                  </Heading>
-                  <Text as="p" tone="muted">
-                    Enter your Steam ID manually
-                  </Text>
-                </Stack>
-                <Field
-                  label="Steam ID"
-                  htmlFor="steamid-input"
-                  description="Your SteamID64 from your profile URL, your account ID, or [U:1:…] / STEAM_0:… from a Steam ID finder."
-                >
+                <Heading as="h2" size="default">
+                  Connect Your Account
+                </Heading>
+                <Field label="Steam ID" htmlFor="steamid-input">
                   <Input
                     id="steamid-input"
                     type="text"
@@ -107,34 +98,15 @@ function StreamKit() {
                 </Field>
               </Stack>
 
-              <Stack gap={2} align="center" className="hidden md:flex">
-                <div className="flex flex-1">
-                  <Separator orientation="vertical" />
-                </div>
-                <Text variant="eyebrow">or</Text>
-                <div className="flex flex-1">
-                  <Separator orientation="vertical" />
-                </div>
-              </Stack>
-              <Inline wrap="nowrap" className="md:hidden">
-                <div className="flex-1">
-                  <Separator />
-                </div>
-                <Text variant="eyebrow">or</Text>
-                <div className="flex-1">
-                  <Separator />
-                </div>
-              </Inline>
+              <Separator orientation="vertical" className="hidden md:flex">
+                or
+              </Separator>
+              <Separator className="md:hidden">or</Separator>
 
               <Stack gap={3} justify="center" className="items-center md:items-start">
-                <Stack gap={1} className="text-center md:text-start">
-                  <Heading as="h2" size="default">
-                    Quick Connect
-                  </Heading>
-                  <Text as="p" tone="muted">
-                    Sign in directly with Steam
-                  </Text>
-                </Stack>
+                <Heading as="h2" size="default">
+                  Quick Connect
+                </Heading>
                 <Button
                   variant="steam"
                   size="lg"
@@ -199,11 +171,7 @@ function StreamKit() {
             <section>
               <CardContent>
                 <Stack gap={5}>
-                  <BuilderHeader
-                    icon={<Terminal />}
-                    title="Command Builder"
-                    description="Create dynamic chatbot commands"
-                  />
+                  <BuilderHeader icon={<Terminal />} title="Command Builder" />
                   <CommandBuilder region={region} accountId={parseSteamIdToId3(steamId)} />
                 </Stack>
               </CardContent>
@@ -214,11 +182,7 @@ function StreamKit() {
             <section>
               <CardContent>
                 <Stack gap={5}>
-                  <BuilderHeader
-                    icon={<Layers />}
-                    title="Widget Builder"
-                    description="Build OBS overlays for your stream"
-                  />
+                  <BuilderHeader icon={<Layers />} title="Widget Builder" />
                   <WidgetBuilder region={region} accountId={parseSteamIdToId3(steamId)} />
                 </Stack>
               </CardContent>
@@ -230,18 +194,13 @@ function StreamKit() {
   );
 }
 
-function BuilderHeader({ icon, title, description }: { icon: ReactNode; title: string; description: string }) {
+function BuilderHeader({ icon, title }: { icon: ReactNode; title: string }) {
   return (
-    <Inline gap={4} align="start" wrap="nowrap">
+    <Inline gap={3} wrap="nowrap">
       <IconTile>{icon}</IconTile>
-      <Stack gap={0.5}>
-        <Heading as="h2" size="default">
-          {title}
-        </Heading>
-        <Text as="p" tone="muted">
-          {description}
-        </Text>
-      </Stack>
+      <Heading as="h2" size="default">
+        {title}
+      </Heading>
     </Inline>
   );
 }

@@ -11,12 +11,7 @@ interface TemplateInputProps {
 
 export function TemplateInput({ template, onTemplateChange, error = null, ref }: TemplateInputProps) {
   return (
-    <Field
-      label="Command Template"
-      htmlFor="template"
-      description="Type the reply and add variables from the list below, at the cursor."
-      error={error}
-    >
+    <Field label="Command Template" htmlFor="template" error={error}>
       <Textarea
         ref={ref}
         id="template"
