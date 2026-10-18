@@ -3,7 +3,7 @@ import { useState } from "react";
 
 import { HeroImage } from "~/components/domain/assets/HeroImage";
 import { HeroName } from "~/components/domain/assets/HeroName";
-import { Panel, PanelBody, PanelHeader, PanelShowMore } from "~/components/patterns/panel/Panel";
+import { Panel, PanelBody, PanelHeader, PanelShowMore, PanelView, PanelViews } from "~/components/patterns/panel/Panel";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { SkeletonRows } from "~/components/patterns/states/Skeletons";
 import { Button } from "~/components/ui/button";
@@ -60,75 +60,80 @@ export function PairsPanel({ allyPairs, enemyPairs, index, loading, onOpen }: Pa
           className="px-4 py-6"
           title={`Pick at least two heroes on ${side === "ally" ? "your side" : "their side"} to compare pairings.`}
         />
-      ) : view === "chart" ? (
-        <PairsChart pairs={pairs} index={index} onOpen={onOpen} />
       ) : (
-        <>
-          <Table density="dense" aria-label="Pairs">
-            <TableHeader>
-              <TableRow>
-                <TableHead tone="muted">Pair</TableHead>
-                <TableHead tone="muted" className="text-end">
-                  Syn pts
-                </TableHead>
-                <TableHead tone="muted" className="text-end">
-                  Win rate
-                </TableHead>
-                <TableHead tone="muted" className="text-end">
-                  Games
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody onKeyDown={navigation.onKeyDown}>
-              {visible.map((pair, row) => (
-                <TableRow
-                  key={`${pair.a}-${pair.b}`}
-                  data-interactive=""
-                  onClick={(event) => {
-                    onOpen(pair);
-                    event.currentTarget.querySelector<HTMLElement>("[data-list-index]")?.focus({ preventScroll: true });
-                  }}
-                >
-                  <TableRowHeader className="w-full max-w-0">
-                    <PairTooltip pair={pair} index={index}>
-                      <Button
-                        variant="text"
-                        size="inline"
-                        {...navigation.getItemProps(row)}
-                        className="max-w-full justify-start gap-1.5"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          onOpen(pair);
-                        }}
-                      >
-                        {/* A narrow panel gives the portraits' width to the two names. */}
-                        <span className="hidden shrink-0 gap-0.5 @sm/pairs:flex">
-                          <HeroImage heroId={pair.a} shape="circle" decorative className="size-7" />
-                          <HeroImage heroId={pair.b} shape="circle" decorative className="size-7" />
-                        </span>
-                        <span className="flex min-w-0 flex-col text-start leading-tight">
-                          <HeroName heroId={pair.a} />
-                          <span className="sr-only"> and </span>
-                          <HeroName heroId={pair.b} />
-                        </span>
-                      </Button>
-                    </PairTooltip>
-                  </TableRowHeader>
-                  <TableCell className="text-end">
-                    <Points value={pair.delta} align="end" className="text-sm font-bold" />
-                  </TableCell>
-                  <TableCell className="text-end tabular-nums">{formatRate(pair.winRate)}</TableCell>
-                  <TableCell className="text-end text-muted-foreground tabular-nums">
-                    {formatCount(pair.matches)}
-                  </TableCell>
+        <PanelViews value={view}>
+          <PanelView value="chart">
+            <PairsChart pairs={pairs} index={index} onOpen={onOpen} />
+          </PanelView>
+          <PanelView value="list">
+            <Table density="dense" aria-label="Pairs">
+              <TableHeader>
+                <TableRow>
+                  <TableHead tone="muted">Pair</TableHead>
+                  <TableHead tone="muted" className="text-end">
+                    Syn pts
+                  </TableHead>
+                  <TableHead tone="muted" className="text-end">
+                    Win rate
+                  </TableHead>
+                  <TableHead tone="muted" className="text-end">
+                    Games
+                  </TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-          {pairs.length > COLLAPSED_ROWS && (
-            <PanelShowMore open={expanded} total={pairs.length} onOpenChange={setExpanded} />
-          )}
-        </>
+              </TableHeader>
+              <TableBody onKeyDown={navigation.onKeyDown}>
+                {visible.map((pair, row) => (
+                  <TableRow
+                    key={`${pair.a}-${pair.b}`}
+                    data-interactive=""
+                    onClick={(event) => {
+                      onOpen(pair);
+                      event.currentTarget
+                        .querySelector<HTMLElement>("[data-list-index]")
+                        ?.focus({ preventScroll: true });
+                    }}
+                  >
+                    <TableRowHeader className="w-full max-w-0">
+                      <PairTooltip pair={pair} index={index}>
+                        <Button
+                          variant="text"
+                          size="inline"
+                          {...navigation.getItemProps(row)}
+                          className="max-w-full justify-start gap-1.5"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            onOpen(pair);
+                          }}
+                        >
+                          {/* A narrow panel gives the portraits' width to the two names. */}
+                          <span className="hidden shrink-0 gap-0.5 @sm/pairs:flex">
+                            <HeroImage heroId={pair.a} shape="circle" decorative className="size-7" />
+                            <HeroImage heroId={pair.b} shape="circle" decorative className="size-7" />
+                          </span>
+                          <span className="flex min-w-0 flex-col text-start leading-tight">
+                            <HeroName heroId={pair.a} />
+                            <span className="sr-only"> and </span>
+                            <HeroName heroId={pair.b} />
+                          </span>
+                        </Button>
+                      </PairTooltip>
+                    </TableRowHeader>
+                    <TableCell className="text-end">
+                      <Points value={pair.delta} align="end" className="text-sm font-bold" />
+                    </TableCell>
+                    <TableCell className="text-end tabular-nums">{formatRate(pair.winRate)}</TableCell>
+                    <TableCell className="text-end text-muted-foreground tabular-nums">
+                      {formatCount(pair.matches)}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+            {pairs.length > COLLAPSED_ROWS && (
+              <PanelShowMore open={expanded} total={pairs.length} onOpenChange={setExpanded} />
+            )}
+          </PanelView>
+        </PanelViews>
       )}
     </Panel>
   );

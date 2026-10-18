@@ -1,5 +1,6 @@
 import { cva, type VariantProps } from "class-variance-authority";
 import { ChevronDownIcon, type LucideIcon } from "lucide-react";
+import { createContext, use } from "react";
 
 import { Button } from "~/components/ui/button";
 import { Card } from "~/components/ui/card";
@@ -54,6 +55,37 @@ export function PanelScrollArea({ className, ...props }: React.ComponentProps<"d
     <div
       data-slot="panel-scroll-area"
       className={cn(SCROLLBAR_THIN, "flex min-h-0 flex-1 scroll-fade-y flex-col overflow-y-auto", className)}
+      {...props}
+    />
+  );
+}
+
+const PanelViewsContext = createContext<string | null>(null);
+
+/**
+ * Two or more views of one panel body (a ranked list and a plot of the same rows) behind a view switch. Every view is
+ * laid out in the same cell, so the body is as tall as the tallest of them and switching never moves the page below;
+ * only the view named by `value` is visible, the others are `inert`. Children are `PanelView`s.
+ */
+export function PanelViews({ value, className, ...props }: React.ComponentProps<"div"> & { value: string }) {
+  return (
+    <PanelViewsContext value={value}>
+      <div data-slot="panel-views" className={cn("grid min-w-0 grid-cols-1", className)} {...props} />
+    </PanelViewsContext>
+  );
+}
+
+/** One view of `PanelViews`, shown while its `value` is the selected one. */
+export function PanelView({ value, className, ...props }: React.ComponentProps<"div"> & { value: string }) {
+  const selected = use(PanelViewsContext);
+  if (selected === null) throw new Error("PanelView must be used inside PanelViews");
+  const active = selected === value;
+  return (
+    <div
+      data-slot="panel-view"
+      data-state={active ? "active" : "inactive"}
+      inert={!active}
+      className={cn("col-start-1 row-start-1 min-w-0 data-[state=inactive]:invisible", className)}
       {...props}
     />
   );

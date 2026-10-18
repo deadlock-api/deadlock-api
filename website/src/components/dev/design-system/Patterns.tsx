@@ -36,6 +36,8 @@ import {
   PanelRow,
   PanelScrollArea,
   PanelShowMore,
+  PanelView,
+  PanelViews,
 } from "~/components/patterns/panel/Panel";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
@@ -80,6 +82,30 @@ const TAB_OPTIONS = [
 const pct = (n: number) => `${(n * 100).toFixed(1)}%`;
 
 const LIST_DEMO = ["Haze carry", "Haze support", "Bebop hook", "Infernus burn", "Seven ult"];
+
+function PanelViewsDemo() {
+  const [view, setView] = useState("list");
+  return (
+    <Panel className="max-w-sm">
+      <PanelHeader title="Candidates" size="sm">
+        <Segmented size="sm" width="hug" aria-label="View" value={view} onValueChange={setView}>
+          <SegmentedItem value="list">List</SegmentedItem>
+          <SegmentedItem value="summary">Summary</SegmentedItem>
+        </Segmented>
+      </PanelHeader>
+      <PanelViews value={view}>
+        <PanelView value="list">
+          <PanelBody size="sm">
+            <SkeletonRows rows={6} />
+          </PanelBody>
+        </PanelView>
+        <PanelView value="summary">
+          <EmptyState variant="inline" className="px-4 py-6" title="Nothing to summarise yet." />
+        </PanelView>
+      </PanelViews>
+    </Panel>
+  );
+}
 
 function ListNavigationDemo() {
   const [selected, setSelected] = useState(0);
@@ -540,6 +566,14 @@ export function Patterns() {
         note="Rows a reader steps through with the keys: the list is one Tab stop (getItemProps puts tabIndex 0 on the selected row's control, -1 on the rest), the arrow keys, Page Up / Down, Home and End choose a row, focus its control and scroll the row into view, clear of a sticky head or foot."
       >
         <ListNavigationDemo />
+      </Specimen>
+
+      <Specimen
+        name="PanelViews"
+        source="patterns/panel/Panel"
+        note="Views of one panel body behind a view switch (a list and a plot of the same rows). Every PanelView is laid out in the same cell, so the body is as tall as the tallest view and switching never moves the page below; the hidden views are inert."
+      >
+        <PanelViewsDemo />
       </Specimen>
 
       <Specimen

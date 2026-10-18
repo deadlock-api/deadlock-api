@@ -3,7 +3,7 @@ import { useState } from "react";
 
 import { HeroCell } from "~/components/domain/assets/HeroCell";
 import { HeroName } from "~/components/domain/assets/HeroName";
-import { Panel, PanelBody, PanelHeader, PanelShowMore } from "~/components/patterns/panel/Panel";
+import { Panel, PanelBody, PanelHeader, PanelShowMore, PanelView, PanelViews } from "~/components/patterns/panel/Panel";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { SkeletonRows } from "~/components/patterns/states/Skeletons";
 import { Button } from "~/components/ui/button";
@@ -94,7 +94,7 @@ export function NextPickPanel({
 
   // With every slot filled there is nothing to pick *into*, so the list switches to swaps: each row names the hero it
   // would replace and applies that exact change.
-  const showSwaps = !hasOpenSlot && view === "list";
+  const showSwaps = !hasOpenSlot;
   const navigation = useListNavigation({
     count: showSwaps ? topSwaps.length : top.length,
     value: cursor,
@@ -119,141 +119,152 @@ export function NextPickPanel({
         <PanelBody>
           <SkeletonRows rows={COLLAPSED_ROWS} />
         </PanelBody>
-      ) : showSwaps && topSwaps.length === 0 ? (
-        <EmptyState
-          variant="inline"
-          className="px-4 py-6"
-          title="No replacement improves this draft. Every slot is already the best fit found."
-        />
-      ) : showSwaps ? (
-        <>
-          <Table density="dense" aria-label={hasOpenSlot ? "Best next pick" : "Best replacement"}>
-            <TableHeader>
-              <TableRow>
-                <TableHead tone="muted" className={RANK_CELL}>
-                  #
-                </TableHead>
-                <TableHead tone="muted">Bring in</TableHead>
-                <TableHead tone="muted">Replaces</TableHead>
-                <TableHead tone="muted" className="text-end">
-                  Gain
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody onKeyDown={navigation.onKeyDown}>
-              {topSwaps.map((swap, index) => (
-                <TableRow
-                  key={`${swap.slot}-${swap.in}`}
-                  data-interactive=""
-                  onClick={rowClick(() => onApplySwap(side, swap))}
-                >
-                  <TableCell className={RANK_CELL}>{index + 1}</TableCell>
-                  <TableRowHeader className={HALF_NAME_CELL}>
-                    <SwapTooltip swap={swap} gameMode={gameMode}>
-                      <Button
-                        variant="text"
-                        size="inline"
-                        {...navigation.getItemProps(index)}
-                        className="max-w-full justify-start"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          onApplySwap(side, swap);
-                        }}
-                      >
-                        <span className="sr-only">Swap in </span>
-                        <HeroCell heroId={swap.in} shape="circle" size="sm" />
-                      </Button>
-                    </SwapTooltip>
-                  </TableRowHeader>
-                  <TableCell className={cn(HALF_NAME_CELL, "text-muted-foreground")}>
-                    <HeroCell heroId={swap.out} shape="circle" size="sm" />
-                  </TableCell>
-                  <TableCell className="text-end">
-                    <Points value={swap.gain} align="end" className="font-semibold" />
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-          {sideSwaps.length > COLLAPSED_ROWS && (
-            <PanelShowMore open={expanded} total={Math.min(sideSwaps.length, MAX_ROWS)} onOpenChange={setExpanded} />
-          )}
-        </>
-      ) : view === "plot" ? (
-        <PickExplorer recommendations={sideRecommendations} onPick={(heroId) => onPick(side, heroId)} />
-      ) : top.length === 0 ? (
-        <EmptyState
-          variant="inline"
-          className="px-4 py-6"
-          title="No candidate clears the minimum match count. Lower it in the filter bar."
-        />
       ) : (
-        <>
-          <Table density="dense" aria-label="Best next pick">
-            <TableHeader>
-              <TableRow>
-                <TableHead tone="muted" className={RANK_CELL}>
-                  #
-                </TableHead>
-                <TableHead tone="muted">Hero</TableHead>
-                <TableHead tone="muted" className="text-end">
-                  Gain
-                </TableHead>
-                <TableHead tone="muted" className="text-end">
-                  Syn pts
-                </TableHead>
-                <TableHead tone="muted" className="text-end">
-                  Vs pts
-                </TableHead>
-                <TableHead tone="muted" className="text-end">
-                  Win rate
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody onKeyDown={navigation.onKeyDown}>
-              {top.map((rec, index) => (
-                <TableRow key={rec.heroId} data-interactive="" onClick={rowClick(() => onPick(side, rec.heroId))}>
-                  <TableCell className={RANK_CELL}>{index + 1}</TableCell>
-                  <TableRowHeader className={NAME_CELL}>
-                    <RecommendationTooltip rec={rec}>
-                      <Button
-                        variant="text"
-                        size="inline"
-                        {...navigation.getItemProps(index)}
-                        className="max-w-full justify-start"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          onPick(side, rec.heroId);
-                        }}
+        <PanelViews value={view}>
+          <PanelView value="list">
+            {showSwaps && topSwaps.length === 0 ? (
+              <EmptyState
+                variant="inline"
+                className="px-4 py-6"
+                title="No replacement improves this draft. Every slot is already the best fit found."
+              />
+            ) : showSwaps ? (
+              <>
+                <Table density="dense" aria-label={hasOpenSlot ? "Best next pick" : "Best replacement"}>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead tone="muted" className={RANK_CELL}>
+                        #
+                      </TableHead>
+                      <TableHead tone="muted">Bring in</TableHead>
+                      <TableHead tone="muted">Replaces</TableHead>
+                      <TableHead tone="muted" className="text-end">
+                        Gain
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody onKeyDown={navigation.onKeyDown}>
+                    {topSwaps.map((swap, index) => (
+                      <TableRow
+                        key={`${swap.slot}-${swap.in}`}
+                        data-interactive=""
+                        onClick={rowClick(() => onApplySwap(side, swap))}
                       >
-                        <span className="sr-only">Pick </span>
-                        <HeroCell heroId={rec.heroId} shape="circle" size="sm" />
-                      </Button>
-                    </RecommendationTooltip>
-                  </TableRowHeader>
-                  {/* The column the list is ranked by. */}
-                  <TableCell className="text-end">
-                    <Points value={rec.gain} align="end" className="font-semibold" />
-                  </TableCell>
-                  <TableCell className="text-end">
-                    <Points value={rec.synergy} align="end" />
-                  </TableCell>
-                  <TableCell className="text-end">
-                    <Points value={rec.counter} align="end" />
-                  </TableCell>
-                  <TableCell className="text-end tabular-nums">{formatRate(rec.winRate)}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-          {sideRecommendations.length > COLLAPSED_ROWS && (
-            <PanelShowMore
-              open={expanded}
-              total={Math.min(sideRecommendations.length, MAX_ROWS)}
-              onOpenChange={setExpanded}
-            />
-          )}
-        </>
+                        <TableCell className={RANK_CELL}>{index + 1}</TableCell>
+                        <TableRowHeader className={HALF_NAME_CELL}>
+                          <SwapTooltip swap={swap} gameMode={gameMode}>
+                            <Button
+                              variant="text"
+                              size="inline"
+                              {...navigation.getItemProps(index)}
+                              className="max-w-full justify-start"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                onApplySwap(side, swap);
+                              }}
+                            >
+                              <span className="sr-only">Swap in </span>
+                              <HeroCell heroId={swap.in} shape="circle" size="sm" />
+                            </Button>
+                          </SwapTooltip>
+                        </TableRowHeader>
+                        <TableCell className={cn(HALF_NAME_CELL, "text-muted-foreground")}>
+                          <HeroCell heroId={swap.out} shape="circle" size="sm" />
+                        </TableCell>
+                        <TableCell className="text-end">
+                          <Points value={swap.gain} align="end" className="font-semibold" />
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+                {sideSwaps.length > COLLAPSED_ROWS && (
+                  <PanelShowMore
+                    open={expanded}
+                    total={Math.min(sideSwaps.length, MAX_ROWS)}
+                    onOpenChange={setExpanded}
+                  />
+                )}
+              </>
+            ) : top.length === 0 ? (
+              <EmptyState
+                variant="inline"
+                className="px-4 py-6"
+                title="No candidate clears the minimum match count. Lower it in the filter bar."
+              />
+            ) : (
+              <>
+                <Table density="dense" aria-label="Best next pick">
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead tone="muted" className={RANK_CELL}>
+                        #
+                      </TableHead>
+                      <TableHead tone="muted">Hero</TableHead>
+                      <TableHead tone="muted" className="text-end">
+                        Gain
+                      </TableHead>
+                      <TableHead tone="muted" className="text-end">
+                        Syn pts
+                      </TableHead>
+                      <TableHead tone="muted" className="text-end">
+                        Vs pts
+                      </TableHead>
+                      <TableHead tone="muted" className="text-end">
+                        Win rate
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody onKeyDown={navigation.onKeyDown}>
+                    {top.map((rec, index) => (
+                      <TableRow key={rec.heroId} data-interactive="" onClick={rowClick(() => onPick(side, rec.heroId))}>
+                        <TableCell className={RANK_CELL}>{index + 1}</TableCell>
+                        <TableRowHeader className={NAME_CELL}>
+                          <RecommendationTooltip rec={rec}>
+                            <Button
+                              variant="text"
+                              size="inline"
+                              {...navigation.getItemProps(index)}
+                              className="max-w-full justify-start"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                onPick(side, rec.heroId);
+                              }}
+                            >
+                              <span className="sr-only">Pick </span>
+                              <HeroCell heroId={rec.heroId} shape="circle" size="sm" />
+                            </Button>
+                          </RecommendationTooltip>
+                        </TableRowHeader>
+                        {/* The column the list is ranked by. */}
+                        <TableCell className="text-end">
+                          <Points value={rec.gain} align="end" className="font-semibold" />
+                        </TableCell>
+                        <TableCell className="text-end">
+                          <Points value={rec.synergy} align="end" />
+                        </TableCell>
+                        <TableCell className="text-end">
+                          <Points value={rec.counter} align="end" />
+                        </TableCell>
+                        <TableCell className="text-end tabular-nums">{formatRate(rec.winRate)}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+                {sideRecommendations.length > COLLAPSED_ROWS && (
+                  <PanelShowMore
+                    open={expanded}
+                    total={Math.min(sideRecommendations.length, MAX_ROWS)}
+                    onOpenChange={setExpanded}
+                  />
+                )}
+              </>
+            )}
+          </PanelView>
+          <PanelView value="plot">
+            <PickExplorer recommendations={sideRecommendations} onPick={(heroId) => onPick(side, heroId)} />
+          </PanelView>
+        </PanelViews>
       )}
     </Panel>
   );
