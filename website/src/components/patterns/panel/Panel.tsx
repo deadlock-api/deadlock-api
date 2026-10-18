@@ -1,9 +1,10 @@
 import { cva, type VariantProps } from "class-variance-authority";
 import { ChevronDownIcon, type LucideIcon } from "lucide-react";
-import { createContext, use } from "react";
+import { createContext, createElement, use } from "react";
 
 import { Button } from "~/components/ui/button";
 import { Card } from "~/components/ui/card";
+import { useNextHeadingLevel } from "~/components/ui/heading";
 import { useControllableState } from "~/components/ui/hooks/use-controllable-state";
 import { SCROLLBAR_THIN } from "~/components/ui/recipes";
 import { Text } from "~/components/ui/text";
@@ -102,12 +103,18 @@ export function PanelHeader({
   icon: Icon,
   size = "default",
   accent,
+  as,
   className,
   style,
   children,
   ...props
 }: Omit<React.ComponentProps<"div">, "title"> & {
   title: React.ReactNode;
+  /**
+   * The title's heading level. By default one below the enclosing region's (h2 under the page title, h3 inside a
+   * `Section`), so the outline never skips a level; set it only where the panel is titled from elsewhere.
+   */
+  as?: "h2" | "h3" | "h4";
   /** A quiet line beside the title: the date range, the sample size, the unit. */
   description?: React.ReactNode;
   icon?: LucideIcon;
@@ -117,6 +124,7 @@ export function PanelHeader({
   /** Controls, pushed to the trailing edge. */
   children?: React.ReactNode;
 }) {
+  const outlineLevel = useNextHeadingLevel();
   return (
     // A minimum height, not a fixed one: a wrapped title would overflow and be cut by the card's own
     // `overflow-hidden`. `@container` lets controls inside decide what they have room for.
@@ -131,16 +139,18 @@ export function PanelHeader({
       )}
       {...props}
     >
-      <h3 className="flex min-w-0 items-center gap-2 text-sm font-semibold">
-        {Icon && (
+      {createElement(
+        as ?? outlineLevel,
+        { className: "flex min-w-0 items-center gap-2 text-sm font-semibold" },
+        Icon && (
           <Icon
             aria-hidden="true"
             className="size-3.5 shrink-0 text-muted-foreground"
             style={accent ? { color: accent } : undefined}
           />
-        )}
-        <span className="truncate">{title}</span>
-      </h3>
+        ),
+        <span className="truncate">{title}</span>,
+      )}
       {description && (
         <Text data-slot="panel-header-description" variant="caption" tone="muted" numeric="tabular">
           {description}

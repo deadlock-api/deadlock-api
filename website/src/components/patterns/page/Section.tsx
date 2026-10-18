@@ -1,6 +1,7 @@
 import { cva, type VariantProps } from "class-variance-authority";
 import type { ReactNode } from "react";
 
+import { HeadingLevel } from "~/components/ui/heading";
 import { cn } from "~/lib/utils";
 
 const sectionTitleVariants = cva("font-semibold tracking-tight", {
@@ -75,7 +76,8 @@ export function Section({
       ) : (
         titleRow
       )}
-      {children}
+      {/* The panels inside title themselves one level below this heading. */}
+      <HeadingLevel level={Heading === "h2" ? 2 : 3}>{children}</HeadingLevel>
     </section>
   );
 }

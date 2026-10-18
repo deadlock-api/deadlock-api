@@ -2,6 +2,7 @@ import { HeroImage } from "~/components/domain/assets/HeroImage";
 import { HeroName } from "~/components/domain/assets/HeroName";
 import { Card } from "~/components/ui/card";
 import { DialogContent, DialogDescription, DialogHeader, DialogTitle } from "~/components/ui/dialog";
+import { Heading } from "~/components/ui/heading";
 import { DivergingBar } from "~/components/ui/rate-bar";
 import { Stack } from "~/components/ui/stack";
 import { Stat, StatGroup } from "~/components/ui/stat";
@@ -85,7 +86,9 @@ export function PairDetailBody({
       />
 
       <Stack gap={3} className="p-5">
-        <div className="text-sm font-semibold">How the two fare against each enemy pick</div>
+        <Heading as="h3" size="sm">
+          How the two fare against each enemy pick
+        </Heading>
         {enemyRows.length === 0 ? (
           <p className="py-4 text-sm text-muted-foreground">Draft the enemy side to see matchups.</p>
         ) : (

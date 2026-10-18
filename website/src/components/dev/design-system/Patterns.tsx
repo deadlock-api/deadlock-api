@@ -514,7 +514,7 @@ export function Patterns() {
       <Specimen
         name="Panel"
         source="patterns/panel/Panel"
-        note="A titled block of a dashboard. The parts bring their own padding, so a table or chart can run edge to edge."
+        note="A titled block of a dashboard. The parts bring their own padding, so a table or chart can run edge to edge. The title's level follows the outline: h2 under the page title, h3 inside a Section (as overrides it)."
       >
         <Variants className="grid items-start md:grid-cols-3">
           <Panel>
