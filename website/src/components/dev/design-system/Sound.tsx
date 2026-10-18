@@ -142,7 +142,7 @@ export function SoundSpecimens() {
       <Specimen
         name="LoadMore"
         source="patterns/data-table/LoadMore"
-        note="Infinite scroll for a long list: `useInfiniteItems(list, { step })` (ui/hooks/use-infinite-items) holds how many rows show, and `LoadMore` after the list presses its own Show more button as it comes within 800px of the viewport. Keyboard and screen reader users press it on purpose; it announces how many rows are shown and is gone once all are. Scroll the box."
+        note="Infinite scroll for a long list: `useInfiniteItems(list, { step })` (ui/hooks/use-infinite-items) holds how many rows show, and `LoadMore` after the list presses its own Show more button as it comes within 800px of the viewport; a list that starts (or starts over) short of that loads its next rows before the first paint, so it settles at its height in one frame. Keyboard and screen reader users press it on purpose; it announces how many rows are shown and is gone once all are. Scroll the box."
       >
         <LoadMoreSpecimen />
       </Specimen>

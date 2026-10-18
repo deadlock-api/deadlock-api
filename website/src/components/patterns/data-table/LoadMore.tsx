@@ -1,9 +1,10 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 
 import { Button } from "~/components/ui/button";
 import { cn } from "~/lib/utils";
 
-const LOOKAHEAD = "800px 0px";
+const LOOKAHEAD_PX = 800;
+const LOOKAHEAD = `${LOOKAHEAD_PX}px 0px`;
 
 interface LoadMoreProps extends Omit<React.ComponentProps<"div">, "children"> {
   /** Rows shown now. */
@@ -34,6 +35,16 @@ export function LoadMore({
 }: LoadMoreProps) {
   const buttonRef = useRef<HTMLButtonElement>(null);
   const hasMore = loaded < total;
+
+  // A list that starts (or starts over) short of the lookahead loads its next rows before the first paint, step after
+  // step, so a new list settles at its height in one frame instead of growing again right after it shows.
+  useLayoutEffect(() => {
+    const button = buttonRef.current;
+    if (!button || !hasMore) return;
+    const { top, bottom } = button.getBoundingClientRect();
+    if (top < window.innerHeight + LOOKAHEAD_PX && bottom > -LOOKAHEAD_PX) onLoadMore();
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies -- `loaded` is the re-measure trigger
+  }, [loaded, hasMore, onLoadMore]);
 
   // Re-observed after every load (`loaded`), so a button still in view after a short page loads again: an observer
   // only reports changes, and a button that never left the viewport would not report again.
