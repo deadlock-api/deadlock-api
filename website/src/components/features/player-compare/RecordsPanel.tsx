@@ -7,6 +7,7 @@ import { NoValue } from "~/components/ui/no-value";
 import { Skeleton } from "~/components/ui/skeleton";
 import { Inline } from "~/components/ui/stack";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableRowHeader } from "~/components/ui/table";
+import { Tooltip, TooltipHeader, TooltipTarget } from "~/components/ui/tooltip";
 import { day } from "~/dayjs";
 import { BEST_HERO_MIN_MATCHES, type PlayerRecords, playerRecords, type RecordMatch } from "~/lib/compare-records";
 import { type GameMode, hasSoulEconomy } from "~/lib/game-mode";
@@ -121,7 +122,7 @@ const ROWS: RecordRow[] = [
   },
 ];
 
-/** The hero a record was set on, beside the value; the match's UTC day shows on hover and to screen readers. */
+/** The hero a record was set on, beside the value; the match's UTC day shows on hover and focus, and to screen readers. */
 function RecordValue({
   match,
   heroId,
@@ -148,19 +149,30 @@ function RecordValue({
   if (shownHeroId == null) return value;
   // One match's record carries its date; a hero the value is about carries its detail instead.
   const date = heroId == null && match ? day.unix(match.startTime).utc().format("MMM D, YYYY") : undefined;
-  return (
-    <Inline gap={1.5} wrap="nowrap" justify="end" title={date ?? detail}>
-      {/* The image's alt and title name the hero. A narrow table keeps the numbers and gives the hero's room to the
+  const content = (
+    <Inline gap={1.5} wrap="nowrap" justify="end" asChild>
+      {/* A span, so it may sit in the tooltip's inline target. */}
+      <span>
+        {/* The image's alt and title name the hero. A narrow table keeps the numbers and gives the hero's room to the
           other players' columns; the hero sits right before a value of fixed width, so heroes and numbers each line
           up down the column. */}
-      <HeroImage
-        heroId={shownHeroId}
-        shape="circle"
-        className={crowded ? "hidden size-5 shrink-0 @2xl/table:block" : "hidden size-5 shrink-0 @xl/table:block"}
-      />
-      {value}
-      {date ? <span className="sr-only">on {date}</span> : detail && <span className="sr-only">{detail}</span>}
+        <HeroImage
+          heroId={shownHeroId}
+          shape="circle"
+          className={crowded ? "hidden size-5 shrink-0 @2xl/table:block" : "hidden size-5 shrink-0 @xl/table:block"}
+        />
+        {value}
+        {date ? <span className="sr-only">on {date}</span> : detail && <span className="sr-only">{detail}</span>}
+      </span>
     </Inline>
+  );
+  const note = date ?? detail;
+  if (!note) return content;
+  // The date (or the detail) on hover and on focus, so a keyboard or touch reader can reach it too.
+  return (
+    <Tooltip content={<TooltipHeader title={note} />}>
+      <TooltipTarget>{content}</TooltipTarget>
+    </Tooltip>
   );
 }
 
