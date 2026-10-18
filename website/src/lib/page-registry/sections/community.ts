@@ -66,8 +66,10 @@ export const COMMUNITY_PAGES: RegisteredPage[] = [
   },
   {
     id: "data_dumps",
-    title: "Data Dumps",
-    description: "download the raw match data or query it with SQL; the public data lake",
+    title: "MCP & Data Lake",
+    description:
+      "the MCP server or connector for Claude, ChatGPT, Cursor and other AI assistants; download the raw match data " +
+      "or query it with SQL or DuckDB; the public data lake and data dumps",
     path: "/data-dumps",
   },
   {
