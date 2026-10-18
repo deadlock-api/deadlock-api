@@ -1,4 +1,4 @@
-import { useQueries } from "@tanstack/react-query";
+import { keepPreviousData, useQueries } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { CartesianGrid, Line, LineChart, Tooltip, XAxis, YAxis } from "recharts";
 
@@ -12,6 +12,7 @@ import { ChartError, ChartLoading } from "~/components/patterns/charts/ChartStat
 import { ChartSurface } from "~/components/patterns/charts/ChartSurface";
 import { CHART_COLOR, CHART_GRID, CHART_X_AXIS, CHART_X_LABEL, CHART_Y_AXIS } from "~/components/patterns/charts/theme";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
+import { StaleOverlay } from "~/components/patterns/states/StaleOverlay";
 import type { Dayjs } from "~/dayjs";
 import { useHeroColorMap } from "~/hooks/useChartHeroVisibility";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
@@ -54,6 +55,7 @@ export function HeroStatsByDurationChart({
     isLoading: isLoadingBuckets,
     isError: isErrorBuckets,
     isFetching,
+    isPlaceholderData,
     refetch,
   } = useQueries({
     combine: (queries) => ({
@@ -61,6 +63,7 @@ export function HeroStatsByDurationChart({
       isLoading: queries.some((query) => query.isLoading),
       isError: queries.some((query) => query.isError),
       isFetching: queries.some((query) => query.isFetching),
+      isPlaceholderData: queries.some((query) => query.isPlaceholderData),
       refetch: () => Promise.all(queries.map((query) => query.refetch())),
     }),
     queries: DURATION_BUCKETS.map((bucket) => {
@@ -77,7 +80,11 @@ export function HeroStatsByDurationChart({
         gameMode,
         matchMode,
       };
-      return heroChartStatsQueryOptions("by-duration", heroStatsByDurationQuery);
+      // A changed filter keeps the old chart on screen, washed out, until the new one lands.
+      return {
+        ...heroChartStatsQueryOptions("by-duration", heroStatsByDurationQuery),
+        placeholderData: keepPreviousData,
+      };
     }),
   });
 
@@ -143,7 +150,7 @@ export function HeroStatsByDurationChart({
   }, [formattedData, selectedIds]);
 
   return (
-    <div aria-live="polite" aria-busy={isLoading}>
+    <StaleOverlay active={isPlaceholderData} label="hero duration data">
       {isLoading ? (
         <ChartLoading label="hero duration data" size="xl" />
       ) : isErrorBuckets || isErrorHeroes ? (
@@ -258,6 +265,6 @@ export function HeroStatsByDurationChart({
           )}
         </div>
       )}
-    </div>
+    </StaleOverlay>
   );
 }

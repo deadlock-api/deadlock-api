@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 
 import { HeroCell } from "~/components/domain/assets/HeroCell";
@@ -70,39 +70,47 @@ export function useHeroMatchupRows({
     isLoading: isLoadingHero,
     isError: isHeroError,
     refetch: refetchHero,
-  } = useQuery(
-    heroStatsQueryOptions({
+    isPlaceholderData: isStaleHero,
+  } = useQuery({
+    ...heroStatsQueryOptions({
       ...heroStatsQuery,
       ...range,
       // Stated although 0 is the default: the hero page asks for the same stats with it, and only an identical
       // query key shares the cached response instead of fetching /hero-stats a second time.
       minHeroMatchesTotal: 0,
     }),
-  );
+    // A changed filter keeps the old rankings on screen, washed out, until the new ones land.
+    placeholderData: keepPreviousData,
+  });
   const {
     data: synergyData,
     isLoading: isLoadingSynergy,
     isError: isSynergyError,
     refetch: refetchSynergy,
-  } = useQuery(heroSynergyWinsQueryOptions({ ...matchupQuery, ...range }));
+    isPlaceholderData: isStaleSynergy,
+  } = useQuery({ ...heroSynergyWinsQueryOptions({ ...matchupQuery, ...range }), placeholderData: keepPreviousData });
   const {
     data: counterData,
     isLoading: isLoadingCounter,
     isError: isCounterError,
     refetch: refetchCounter,
-  } = useQuery(heroCounterWinsQueryOptions({ ...matchupQuery, ...range }));
+    isPlaceholderData: isStaleCounter,
+  } = useQuery({ ...heroCounterWinsQueryOptions({ ...matchupQuery, ...range }), placeholderData: keepPreviousData });
 
   const { data: prevHeroData } = useQuery({
     ...heroStatsQueryOptions({ ...heroStatsQuery, ...prevRange }),
     enabled: hasPreviousInterval,
+    placeholderData: keepPreviousData,
   });
   const { data: prevSynergyData } = useQuery({
     ...heroSynergyWinsQueryOptions({ ...matchupQuery, ...prevRange }),
     enabled: hasPreviousInterval,
+    placeholderData: keepPreviousData,
   });
   const { data: prevCounterData } = useQuery({
     ...heroCounterWinsQueryOptions({ ...matchupQuery, ...prevRange }),
     enabled: hasPreviousInterval,
+    placeholderData: keepPreviousData,
   });
 
   const isLoading = isLoadingSynergy || isLoadingCounter || isLoadingHero;
@@ -123,6 +131,7 @@ export function useHeroMatchupRows({
     synergyRows,
     counterRows,
     isLoading,
+    isStale: isStaleHero || isStaleSynergy || isStaleCounter,
     heroStats: heroData?.find((hero) => hero.hero_id === heroId),
     isError: isHeroError || isSynergyError || isCounterError,
     retry: () => Promise.all([refetchHero(), refetchSynergy(), refetchCounter()]),

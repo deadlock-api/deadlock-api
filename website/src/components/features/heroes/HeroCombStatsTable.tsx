@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { parseAsStringLiteral, useQueryState } from "nuqs";
 
 import { HeroCell } from "~/components/domain/assets/HeroCell";
@@ -7,6 +7,7 @@ import { SortableHeader } from "~/components/patterns/data-table/SortableHeader"
 import { TableEmptyRow } from "~/components/patterns/data-table/TableEmptyRow";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
+import { StaleOverlay } from "~/components/patterns/states/StaleOverlay";
 import { sortParams, useSort } from "~/components/ui/hooks/use-sort";
 import { ProgressBarWithLabel } from "~/components/ui/progress-bar";
 import { Inline } from "~/components/ui/stack";
@@ -105,7 +106,12 @@ export function HeroCombStatsTable({
     isLoading,
     isError,
     refetch,
-  } = useQuery(heroCombStatsQueryOptions({ ...baseQuery, minUnixTimestamp: minUnixTimestamp ?? 0, maxUnixTimestamp }));
+    isPlaceholderData,
+  } = useQuery({
+    ...heroCombStatsQueryOptions({ ...baseQuery, minUnixTimestamp: minUnixTimestamp ?? 0, maxUnixTimestamp }),
+    // A changed filter keeps the old table on screen, washed out, until the new one lands.
+    placeholderData: keepPreviousData,
+  });
   const { data: prevHeroData } = useQuery({
     ...heroCombStatsQueryOptions({
       ...baseQuery,
@@ -113,6 +119,7 @@ export function HeroCombStatsTable({
       maxUnixTimestamp: prevMaxTimestamp,
     }),
     enabled: hasPreviousInterval,
+    placeholderData: keepPreviousData,
   });
 
   // A combination's share is its matches out of the matches of every listable combination, not only the rows shown,
@@ -154,157 +161,159 @@ export function HeroCombStatsTable({
       ) : isError && !heroData ? (
         <ErrorState title="Hero combinations did not load" onRetry={() => void refetch()} />
       ) : (
-        <Table>
-          {!hideHeader && (
-            <TableHeader tone="muted">
-              <TableRow>
-                {!hideIndex && <TableHead className="text-center">#</TableHead>}
-                <TableHead>Hero Combination</TableHead>
-                {columns.includes("winRate") && (
-                  <SortableHeader
-                    label="Win Rate"
-                    sortKey="winRate"
-                    activeSortKey={sortKey}
-                    sortDir={sortDir}
-                    onSortChange={handleSort}
-                    className="whitespace-normal"
-                    description="Sorted by a confidence-adjusted win rate: a combination with few matches is pulled toward the average, so a lucky 100% over a dozen games does not outrank one proven over thousands."
-                  />
-                )}
-                {columns.includes("pickRate") && (
-                  <SortableHeader
-                    label="Share of Combo Matches"
-                    sortKey="share"
-                    activeSortKey={sortKey}
-                    sortDir={sortDir}
-                    onSortChange={handleSort}
-                    className="hidden whitespace-normal sm:table-cell"
-                  />
-                )}
-                {columns.includes("totalMatches") && (
-                  <SortableHeader
-                    label="Total Matches"
-                    sortKey="matches"
-                    activeSortKey={sortKey}
-                    sortDir={sortDir}
-                    onSortChange={handleSort}
-                    className="hidden sm:table-cell"
-                  />
-                )}
-              </TableRow>
-            </TableHeader>
-          )}
-          <TableBody>
-            {limitedData.length === 0 && (
-              <TableEmptyRow
-                colSpan={
-                  (hideIndex ? 1 : 2) +
-                  ["winRate", "pickRate", "totalMatches"].filter((column) => columns.includes(column)).length
-                }
-              >
-                No hero combinations with enough matches for these filters
-              </TableEmptyRow>
-            )}
-            {limitedData.map((row, index) => {
-              const winRate = row.wins / row.matches;
-              const share = row.matches / sumMatches;
-              const prev = prevStatsMap?.get(combKey(row.hero_ids));
-              return (
-                <TableRow key={row.hero_ids.join("-")}>
-                  {!hideIndex && <TableCell className="text-center font-semibold">{index + 1}</TableCell>}
-                  {/* On a narrow screen the heroes fold onto more lines, so the rates stay in view. */}
-                  <TableCell className="whitespace-normal">
-                    <Inline gap={1.5}>
-                      {row.hero_ids.map((heroId, i) => (
-                        <Inline key={heroId} gap={1.5} wrap="nowrap">
-                          {i > 0 && (
-                            <span aria-hidden="true" className="text-lg text-muted-foreground">
-                              +
-                            </span>
-                          )}
-                          <HeroCell heroId={heroId} />
-                        </Inline>
-                      ))}
-                    </Inline>
-                  </TableCell>
+        <StaleOverlay active={isPlaceholderData} label="hero combinations">
+          <Table>
+            {!hideHeader && (
+              <TableHeader tone="muted">
+                <TableRow>
+                  {!hideIndex && <TableHead className="text-center">#</TableHead>}
+                  <TableHead>Hero Combination</TableHead>
                   {columns.includes("winRate") && (
-                    <TableCell className="text-center">
-                      <Tooltip
-                        content={
-                          <>
-                            <TooltipStats variant="plain">
-                              <TooltipStat label="Matches" value={row.matches.toLocaleString("en-US")} />
-                              <TooltipStat label="Wins" value={row.wins.toLocaleString("en-US")} />
-                              <TooltipStat label="Win rate" value={`${(winRate * 100).toFixed(2)}%`} />
-                            </TooltipStats>
-                            {prev !== undefined && (
-                              <TooltipStats>
-                                <TooltipStat label="Previous" value={`${(prev.winrate * 100).toFixed(2)}%`} />
-                              </TooltipStats>
-                            )}
-                          </>
-                        }
-                      >
-                        <TooltipTarget display="block">
-                          <ProgressBarWithLabel
-                            min={minWinrate}
-                            max={maxWinrate}
-                            value={winRate}
-                            color={CHART_COLOR.primary}
-                            label={`${Math.round(winRate * 100)}%`}
-                            delta={prev !== undefined ? winRate - prev.winrate : undefined}
-                          />
-                        </TooltipTarget>
-                      </Tooltip>
-                    </TableCell>
+                    <SortableHeader
+                      label="Win Rate"
+                      sortKey="winRate"
+                      activeSortKey={sortKey}
+                      sortDir={sortDir}
+                      onSortChange={handleSort}
+                      className="whitespace-normal"
+                      description="Sorted by a confidence-adjusted win rate: a combination with few matches is pulled toward the average, so a lucky 100% over a dozen games does not outrank one proven over thousands."
+                    />
                   )}
-                  {/* The share (matches of this combination out of the matches of every listed combination) and the matches
-                    are secondary (the win rate tooltip has the matches): on a phone they give
-                    their width to the heroes and the win rate. */}
                   {columns.includes("pickRate") && (
-                    <TableCell className="hidden text-center sm:table-cell">
-                      <Tooltip
-                        content={
-                          <>
-                            <TooltipStats variant="plain">
-                              <TooltipStat
-                                label="Matches"
-                                value={`${row.matches.toLocaleString("en-US")} of ${sumMatches.toLocaleString("en-US")}`}
-                              />
-                              <TooltipStat label="Share" value={formatFineShare(share)} />
-                            </TooltipStats>
-                            {prev !== undefined && (
-                              <TooltipStats>
-                                <TooltipStat label="Previous" value={formatFineShare(prev.share)} />
-                              </TooltipStats>
-                            )}
-                          </>
-                        }
-                      >
-                        <TooltipTarget display="block">
-                          <ProgressBarWithLabel
-                            min={0}
-                            max={maxShare}
-                            value={share}
-                            color={CHART_COLOR.pickRate}
-                            label={formatFineShare(share)}
-                            delta={prev !== undefined ? share - prev.share : undefined}
-                            deltaDigits={fineShareDigits(share)}
-                          />
-                        </TooltipTarget>
-                      </Tooltip>
-                    </TableCell>
+                    <SortableHeader
+                      label="Share of Combo Matches"
+                      sortKey="share"
+                      activeSortKey={sortKey}
+                      sortDir={sortDir}
+                      onSortChange={handleSort}
+                      className="hidden whitespace-normal sm:table-cell"
+                    />
                   )}
                   {columns.includes("totalMatches") && (
-                    <TableCell className="hidden text-center sm:table-cell">
-                      {row.matches.toLocaleString("en-US")}
-                    </TableCell>
+                    <SortableHeader
+                      label="Total Matches"
+                      sortKey="matches"
+                      activeSortKey={sortKey}
+                      sortDir={sortDir}
+                      onSortChange={handleSort}
+                      className="hidden sm:table-cell"
+                    />
                   )}
                 </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
+              </TableHeader>
+            )}
+            <TableBody>
+              {limitedData.length === 0 && (
+                <TableEmptyRow
+                  colSpan={
+                    (hideIndex ? 1 : 2) +
+                    ["winRate", "pickRate", "totalMatches"].filter((column) => columns.includes(column)).length
+                  }
+                >
+                  No hero combinations with enough matches for these filters
+                </TableEmptyRow>
+              )}
+              {limitedData.map((row, index) => {
+                const winRate = row.wins / row.matches;
+                const share = row.matches / sumMatches;
+                const prev = prevStatsMap?.get(combKey(row.hero_ids));
+                return (
+                  <TableRow key={row.hero_ids.join("-")}>
+                    {!hideIndex && <TableCell className="text-center font-semibold">{index + 1}</TableCell>}
+                    {/* On a narrow screen the heroes fold onto more lines, so the rates stay in view. */}
+                    <TableCell className="whitespace-normal">
+                      <Inline gap={1.5}>
+                        {row.hero_ids.map((heroId, i) => (
+                          <Inline key={heroId} gap={1.5} wrap="nowrap">
+                            {i > 0 && (
+                              <span aria-hidden="true" className="text-lg text-muted-foreground">
+                                +
+                              </span>
+                            )}
+                            <HeroCell heroId={heroId} />
+                          </Inline>
+                        ))}
+                      </Inline>
+                    </TableCell>
+                    {columns.includes("winRate") && (
+                      <TableCell className="text-center">
+                        <Tooltip
+                          content={
+                            <>
+                              <TooltipStats variant="plain">
+                                <TooltipStat label="Matches" value={row.matches.toLocaleString("en-US")} />
+                                <TooltipStat label="Wins" value={row.wins.toLocaleString("en-US")} />
+                                <TooltipStat label="Win rate" value={`${(winRate * 100).toFixed(2)}%`} />
+                              </TooltipStats>
+                              {prev !== undefined && (
+                                <TooltipStats>
+                                  <TooltipStat label="Previous" value={`${(prev.winrate * 100).toFixed(2)}%`} />
+                                </TooltipStats>
+                              )}
+                            </>
+                          }
+                        >
+                          <TooltipTarget display="block">
+                            <ProgressBarWithLabel
+                              min={minWinrate}
+                              max={maxWinrate}
+                              value={winRate}
+                              color={CHART_COLOR.primary}
+                              label={`${Math.round(winRate * 100)}%`}
+                              delta={prev !== undefined ? winRate - prev.winrate : undefined}
+                            />
+                          </TooltipTarget>
+                        </Tooltip>
+                      </TableCell>
+                    )}
+                    {/* The share (matches of this combination out of the matches of every listed combination) and the matches
+                    are secondary (the win rate tooltip has the matches): on a phone they give
+                    their width to the heroes and the win rate. */}
+                    {columns.includes("pickRate") && (
+                      <TableCell className="hidden text-center sm:table-cell">
+                        <Tooltip
+                          content={
+                            <>
+                              <TooltipStats variant="plain">
+                                <TooltipStat
+                                  label="Matches"
+                                  value={`${row.matches.toLocaleString("en-US")} of ${sumMatches.toLocaleString("en-US")}`}
+                                />
+                                <TooltipStat label="Share" value={formatFineShare(share)} />
+                              </TooltipStats>
+                              {prev !== undefined && (
+                                <TooltipStats>
+                                  <TooltipStat label="Previous" value={formatFineShare(prev.share)} />
+                                </TooltipStats>
+                              )}
+                            </>
+                          }
+                        >
+                          <TooltipTarget display="block">
+                            <ProgressBarWithLabel
+                              min={0}
+                              max={maxShare}
+                              value={share}
+                              color={CHART_COLOR.pickRate}
+                              label={formatFineShare(share)}
+                              delta={prev !== undefined ? share - prev.share : undefined}
+                              deltaDigits={fineShareDigits(share)}
+                            />
+                          </TooltipTarget>
+                        </Tooltip>
+                      </TableCell>
+                    )}
+                    {columns.includes("totalMatches") && (
+                      <TableCell className="hidden text-center sm:table-cell">
+                        {row.matches.toLocaleString("en-US")}
+                      </TableCell>
+                    )}
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </StaleOverlay>
       )}
     </>
   );

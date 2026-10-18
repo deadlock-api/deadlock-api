@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { CartesianGrid, Scatter, ScatterChart, type ScatterProps, Tooltip, XAxis, YAxis } from "recharts";
 
@@ -18,6 +18,7 @@ import {
   CHART_Y_LABEL,
 } from "~/components/patterns/charts/theme";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
+import { StaleOverlay } from "~/components/patterns/states/StaleOverlay";
 import { TooltipCard, TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
 import type { Dayjs } from "~/dayjs";
 import { useHeroColorMap } from "~/hooks/useChartHeroVisibility";
@@ -213,7 +214,12 @@ export function HeroStatsByRankChart({
     isError: isErrorHeroStats,
     isFetching: isFetchingHeroStats,
     refetch: refetchHeroStats,
-  } = useQuery(heroRankStatsQueryOptions(heroStatsByRankQuery));
+    isPlaceholderData: isStaleHeroStats,
+  } = useQuery({
+    ...heroRankStatsQueryOptions(heroStatsByRankQuery),
+    // A changed filter keeps the old chart on screen, washed out, until the new one lands.
+    placeholderData: keepPreviousData,
+  });
 
   const banStatsByRankQuery = {
     bucket: "avg_badge" as const,
@@ -229,7 +235,12 @@ export function HeroStatsByRankChart({
     isError: isErrorBanStats,
     isFetching: isFetchingBanStats,
     refetch: refetchBanStats,
-  } = useQuery({ ...heroBanStatsQueryOptions(banStatsByRankQuery), enabled: needsBanData });
+    isPlaceholderData: isStaleBanStats,
+  } = useQuery({
+    ...heroBanStatsQueryOptions(banStatsByRankQuery),
+    enabled: needsBanData,
+    placeholderData: keepPreviousData,
+  });
 
   const banRateByTier = useMemo(() => {
     if (!banData) return undefined;
@@ -351,7 +362,7 @@ export function HeroStatsByRankChart({
   const isLoading = isLoadingHeroStats || isLoadingRanks || isLoadingHeroes || isLoadingBanStats;
 
   return (
-    <div aria-live="polite" aria-busy={isLoading}>
+    <StaleOverlay active={isStaleHeroStats || (needsBanData && isStaleBanStats)} label="hero rank data">
       {isLoading ? (
         <ChartLoading label="hero rank data" size="xl" />
       ) : isErrorHeroStats || isErrorRanks || isErrorHeroes || (needsBanData && isErrorBanStats) ? (
@@ -453,6 +464,6 @@ export function HeroStatsByRankChart({
           )}
         </div>
       )}
-    </div>
+    </StaleOverlay>
   );
 }

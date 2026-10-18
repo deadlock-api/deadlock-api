@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import type { AnalyticsHeroStats } from "deadlock_api_client";
 import { parseAsStringLiteral, useQueryState } from "nuqs";
 
@@ -10,6 +10,7 @@ import { SortableHeader } from "~/components/patterns/data-table/SortableHeader"
 import { TableEmptyRow } from "~/components/patterns/data-table/TableEmptyRow";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
+import { StaleOverlay } from "~/components/patterns/states/StaleOverlay";
 import { Delta } from "~/components/ui/delta";
 import { sortParams, useSort } from "~/components/ui/hooks/use-sort";
 import { ProgressBarWithLabel } from "~/components/ui/progress-bar";
@@ -299,31 +300,37 @@ export function HeroMatchupStatsTable({
     isLoading: isLoadingHero,
     isError: isHeroError,
     refetch: refetchHero,
-  } = useQuery(heroStatsQueryOptions({ ...heroStatsQuery, ...range }));
+    isPlaceholderData: isStaleHero,
+  } = useQuery({ ...heroStatsQueryOptions({ ...heroStatsQuery, ...range }), placeholderData: keepPreviousData });
   const {
     data: synergyData,
     isLoading: isLoadingSynergy,
     isError: isSynergyError,
     refetch: refetchSynergy,
-  } = useQuery(heroSynergyWinsQueryOptions({ ...matchupQuery, ...range }));
+    isPlaceholderData: isStaleSynergy,
+  } = useQuery({ ...heroSynergyWinsQueryOptions({ ...matchupQuery, ...range }), placeholderData: keepPreviousData });
   const {
     data: counterData,
     isLoading: isLoadingCounter,
     isError: isCounterError,
     refetch: refetchCounter,
-  } = useQuery(heroCounterWinsQueryOptions({ ...matchupQuery, ...range }));
+    isPlaceholderData: isStaleCounter,
+  } = useQuery({ ...heroCounterWinsQueryOptions({ ...matchupQuery, ...range }), placeholderData: keepPreviousData });
 
   const { data: prevHeroData } = useQuery({
     ...heroStatsQueryOptions({ ...heroStatsQuery, ...prevRange }),
     enabled: hasPreviousInterval,
+    placeholderData: keepPreviousData,
   });
   const { data: prevSynergyData } = useQuery({
     ...heroSynergyWinsQueryOptions({ ...matchupQuery, ...prevRange }),
     enabled: hasPreviousInterval,
+    placeholderData: keepPreviousData,
   });
   const { data: prevCounterData } = useQuery({
     ...heroCounterWinsQueryOptions({ ...matchupQuery, ...prevRange }),
     enabled: hasPreviousInterval,
+    placeholderData: keepPreviousData,
   });
 
   const { data: heroes } = useQuery(heroesQueryOptions);
@@ -339,7 +346,9 @@ export function HeroMatchupStatsTable({
     firstDir: (key) => FIRST_DIR[key],
   });
 
+  // Only the first load shows a spinner; a changed filter keeps the old table on screen, washed out, until it lands.
   const isLoading = isLoadingSynergy || isLoadingCounter || isLoadingHero;
+  const isStale = isStaleHero || isStaleSynergy || isStaleCounter;
 
   const heroStatsMap = buildHeroStatsMap(heroData);
   const prevHeroStatsMap = buildHeroStatsMap(prevHeroData);
@@ -407,84 +416,86 @@ export function HeroMatchupStatsTable({
   }
 
   return (
-    <Table>
-      {!hideHeader && (
-        <TableHeader tone="muted">
-          <TableRow>
-            <TableHead>#</TableHead>
-            <SortableHeader label="Hero" sortKey="hero" {...sortProps} data-pinned />
-            <SortableHeader
-              label="Best Combination"
-              sortKey="bestCombination"
-              {...sortProps}
-              title="Win rate change with the best teammate"
-            />
-            <SortableHeader
-              label="Worst Combination"
-              sortKey="worstCombination"
-              {...sortProps}
-              title="Win rate change with the worst teammate"
-            />
-            <SortableHeader
-              label="Best Against"
-              sortKey="bestAgainst"
-              {...sortProps}
-              title="Win rate change against the easiest enemy"
-            />
-            <SortableHeader
-              label="Worst Against"
-              sortKey="worstAgainst"
-              {...sortProps}
-              title="Win rate change against the hardest enemy"
-            />
-          </TableRow>
-        </TableHeader>
-      )}
-      <TableBody>
-        {heroIds.length === 0 && (
-          <TableEmptyRow colSpan={6}>No matchups with enough matches for these filters</TableEmptyRow>
+    <StaleOverlay active={isStale} label="hero matchups">
+      <Table>
+        {!hideHeader && (
+          <TableHeader tone="muted">
+            <TableRow>
+              <TableHead>#</TableHead>
+              <SortableHeader label="Hero" sortKey="hero" {...sortProps} data-pinned />
+              <SortableHeader
+                label="Best Combination"
+                sortKey="bestCombination"
+                {...sortProps}
+                title="Win rate change with the best teammate"
+              />
+              <SortableHeader
+                label="Worst Combination"
+                sortKey="worstCombination"
+                {...sortProps}
+                title="Win rate change with the worst teammate"
+              />
+              <SortableHeader
+                label="Best Against"
+                sortKey="bestAgainst"
+                {...sortProps}
+                title="Win rate change against the easiest enemy"
+              />
+              <SortableHeader
+                label="Worst Against"
+                sortKey="worstAgainst"
+                {...sortProps}
+                title="Win rate change against the hardest enemy"
+              />
+            </TableRow>
+          </TableHeader>
         )}
-        {sortedHeroIds.map((heroId, index) => (
-          <TableRow key={heroId} data-find={findKey.hero(heroId)}>
-            <TableCell className="font-semibold">{index + 1}</TableCell>
-            <TableCell data-pinned>
-              <HeroCell heroId={heroId} />
-            </TableCell>
-            <MatchupCell
-              heroId={heroId}
-              matchup={synergyMatchup(heroBestSynergies[heroId])}
-              prevRelWinrates={prevSynergyRelWinrateMap[heroId]}
-              maxMagnitude={bestSynergyScale}
-              color={CHART_COLOR.primary}
-              separator="+"
-            />
-            <MatchupCell
-              heroId={heroId}
-              matchup={synergyMatchup(heroWorstSynergies[heroId])}
-              prevRelWinrates={prevSynergyRelWinrateMap[heroId]}
-              maxMagnitude={worstSynergyScale}
-              color={CHART_COLOR.primary}
-              separator="+"
-            />
-            <MatchupCell
-              heroId={heroId}
-              matchup={counterMatchup(heroBestAgainst[heroId])}
-              prevRelWinrates={prevCounterRelWinrateMap[heroId]}
-              maxMagnitude={bestAgainstScale}
-              color={CHART_COLOR.pickRate}
-              separator="vs"
-            />
-            <MatchupCell
-              heroId={heroId}
-              matchup={counterMatchup(heroWorstAgainst[heroId])}
-              prevRelWinrates={prevCounterRelWinrateMap[heroId]}
-              maxMagnitude={worstAgainstScale}
-              color={CHART_COLOR.pickRate}
-              separator="vs"
-            />
-          </TableRow>
-        ))}
-      </TableBody>
-    </Table>
+        <TableBody>
+          {heroIds.length === 0 && (
+            <TableEmptyRow colSpan={6}>No matchups with enough matches for these filters</TableEmptyRow>
+          )}
+          {sortedHeroIds.map((heroId, index) => (
+            <TableRow key={heroId} data-find={findKey.hero(heroId)}>
+              <TableCell className="font-semibold">{index + 1}</TableCell>
+              <TableCell data-pinned>
+                <HeroCell heroId={heroId} />
+              </TableCell>
+              <MatchupCell
+                heroId={heroId}
+                matchup={synergyMatchup(heroBestSynergies[heroId])}
+                prevRelWinrates={prevSynergyRelWinrateMap[heroId]}
+                maxMagnitude={bestSynergyScale}
+                color={CHART_COLOR.primary}
+                separator="+"
+              />
+              <MatchupCell
+                heroId={heroId}
+                matchup={synergyMatchup(heroWorstSynergies[heroId])}
+                prevRelWinrates={prevSynergyRelWinrateMap[heroId]}
+                maxMagnitude={worstSynergyScale}
+                color={CHART_COLOR.primary}
+                separator="+"
+              />
+              <MatchupCell
+                heroId={heroId}
+                matchup={counterMatchup(heroBestAgainst[heroId])}
+                prevRelWinrates={prevCounterRelWinrateMap[heroId]}
+                maxMagnitude={bestAgainstScale}
+                color={CHART_COLOR.pickRate}
+                separator="vs"
+              />
+              <MatchupCell
+                heroId={heroId}
+                matchup={counterMatchup(heroWorstAgainst[heroId])}
+                prevRelWinrates={prevCounterRelWinrateMap[heroId]}
+                maxMagnitude={worstAgainstScale}
+                color={CHART_COLOR.pickRate}
+                separator="vs"
+              />
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </StaleOverlay>
   );
 }

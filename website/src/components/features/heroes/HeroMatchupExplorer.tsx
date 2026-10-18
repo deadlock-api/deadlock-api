@@ -14,6 +14,7 @@ import { Panel, PanelHeader } from "~/components/patterns/panel/Panel";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
+import { StaleOverlay } from "~/components/patterns/states/StaleOverlay";
 import { Button } from "~/components/ui/button";
 import { DivergingBar } from "~/components/ui/rate-bar";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
@@ -128,7 +129,7 @@ export function HeroMatchupExplorer({
   onSameLaneFilterChange: (sameLane: boolean) => void;
 }) {
   const { data: heroAssets = [] } = useQuery(heroesQueryOptions);
-  const { synergyRows, counterRows, heroStats, isLoading, isError, retry } = useHeroMatchupRows(params);
+  const { synergyRows, counterRows, heroStats, isLoading, isStale, isError, retry } = useHeroMatchupRows(params);
   const heroes = new Map(heroAssets.map((hero) => [hero.id, hero]));
   const heroName = heroes.get(params.heroId)?.name ?? "Your hero";
   // An edited or stale ?hero_id= matched no hero and read as "no matchups for these filters".
@@ -189,7 +190,7 @@ export function HeroMatchupExplorer({
           onRetry={() => void retry()}
         />
       ) : (
-        <div className="grid items-start gap-3 xl:grid-cols-2">
+        <StaleOverlay active={isStale} label="hero matchups" className="grid items-start gap-3 xl:grid-cols-2">
           <MatchupRanking
             title="Allies"
             rows={synergyRows}
@@ -204,7 +205,7 @@ export function HeroMatchupExplorer({
             onSelect={selectFromRanking}
             scale={scale}
           />
-        </div>
+        </StaleOverlay>
       )}
     </div>
   );

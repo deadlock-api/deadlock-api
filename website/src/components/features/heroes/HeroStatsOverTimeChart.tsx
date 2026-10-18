@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import type { HeroStatsBucketEnum } from "deadlock_api_client";
 import {
   type CSSProperties,
@@ -44,6 +44,7 @@ import {
   CHART_Y_AXIS,
 } from "~/components/patterns/charts/theme";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
+import { StaleOverlay } from "~/components/patterns/states/StaleOverlay";
 import { Badge } from "~/components/ui/badge";
 import { type Dayjs, day } from "~/dayjs";
 import { useHeroColorMap } from "~/hooks/useChartHeroVisibility";
@@ -176,6 +177,8 @@ export function HeroStatsOverTimeChart({
   const heroQuery = useQuery({
     ...heroChartStatsQueryOptions("over-time", heroStatsOverTimeQuery),
     enabled: !isBanRate,
+    // A changed filter keeps the old chart on screen, washed out, until the new one lands.
+    placeholderData: keepPreviousData,
   });
 
   const banStatsOverTimeQuery = {
@@ -189,6 +192,7 @@ export function HeroStatsOverTimeChart({
   const banQuery = useQuery({
     ...heroBanStatsQueryOptions(banStatsOverTimeQuery),
     enabled: isBanRate && !unsupportedBanRate,
+    placeholderData: keepPreviousData,
   });
 
   const { data: heroData } = heroQuery;
@@ -482,7 +486,7 @@ export function HeroStatsOverTimeChart({
   }
 
   return (
-    <div aria-live="polite" aria-busy={isLoading}>
+    <StaleOverlay active={activeQuery.isPlaceholderData} label="hero trends">
       {isLoading ? (
         <ChartLoading label="hero trends" size="xl" />
       ) : (
@@ -580,6 +584,6 @@ export function HeroStatsOverTimeChart({
           )}
         </div>
       )}
-    </div>
+    </StaleOverlay>
   );
 }
