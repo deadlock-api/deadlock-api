@@ -57,6 +57,11 @@ const COLOR_GROUPS: { name: string; note: string; tokens: string[] }[] = [
     tokens: ["meter-empty", "on-heat-muted"],
   },
   {
+    name: "Code syntax",
+    note: "The syntax colors of a CodeEditor, each 4.5:1 on a text control over the page and the card.",
+    tokens: ["syntax-keyword", "syntax-string", "syntax-number", "syntax-type", "syntax-comment"],
+  },
+  {
     name: "Tiers",
     note: "S to D of a tier list, warm to cool. The letter names the tier; the color only repeats it.",
     tokens: ["tier-s", "tier-a", "tier-b", "tier-c", "tier-d"],

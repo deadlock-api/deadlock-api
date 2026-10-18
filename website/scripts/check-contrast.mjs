@@ -240,6 +240,10 @@ for (const surface of ["background", "card", "popover", "muted", "secondary"])
   variant("control-border", surface, UI_MIN);
 // The sample count on a team builder heat cell, on the ramp's strongest fill (heatBackground mixes up to 40%).
 for (const tone of ["positive", "negative"]) variant("on-heat-muted", `${tone}/40 over card`);
+// The syntax colors of a CodeEditor, text on a text control (input/30) over the page and over the card.
+for (const kind of ["keyword", "string", "number", "type", "comment"]) {
+  for (const surface of ["input/30 over background", "input/30 over card"]) variant(`syntax-${kind}`, surface);
+}
 // A highlighted tier list tile: its reading stays readable on the brand tint.
 variant("muted-foreground", "primary/15 over card");
 variant("muted-foreground", "secondary");

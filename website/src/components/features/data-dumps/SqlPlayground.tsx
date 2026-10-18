@@ -1,8 +1,9 @@
 import { sql } from "@codemirror/lang-sql";
-import CodeMirror, { EditorView, type ReactCodeMirrorRef } from "@uiw/react-codemirror";
+import { EditorView, type ReactCodeMirrorRef } from "@uiw/react-codemirror";
 import { Download, Play, Square } from "lucide-react";
 import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { CodeEditor } from "~/components/patterns/code/CodeEditor";
 import { ResultGrid } from "~/components/patterns/data-table/ResultGrid";
 import { Button } from "~/components/ui/button";
 import { Card } from "~/components/ui/card";
@@ -242,36 +243,18 @@ export function SqlPlayground({ open, onOpenChange, tables, schemaByTable, query
               </Stack>
             )}
 
-            <Card
-              tone="inset"
-              size="flush"
-              radius="md"
+            <CodeEditor
+              aria-label="SQL query"
+              editorRef={editorRef}
+              value={query}
+              onValueChange={onQueryChange}
+              extensions={cmExtensions}
               onKeyDownCapture={onEditorKeyDown}
               onFocusCapture={() => {
                 editorUsedRef.current = true;
               }}
-              className="min-h-0 flex-1"
-            >
-              <CodeMirror
-                ref={editorRef}
-                value={query}
-                onChange={onQueryChange}
-                extensions={cmExtensions}
-                theme="dark"
-                height="100%"
-                basicSetup={{
-                  lineNumbers: true,
-                  foldGutter: false,
-                  highlightActiveLine: true,
-                  autocompletion: true,
-                  bracketMatching: true,
-                  closeBrackets: true,
-                  indentOnInput: true,
-                  tabSize: 2,
-                }}
-                className="h-full text-xs"
-              />
-            </Card>
+              className="flex-1"
+            />
 
             <Inline justify="between" wrap="nowrap">
               {/* One button that turns into Cancel, so the focus stays on it while the query runs. */}

@@ -2,7 +2,7 @@ import path from "node:path";
 
 /**
  * Modules that only ever run in the browser, replaced by stubs in the server (Worker) build. A lazily imported module
- * still lands in the server bundle, and three.js, CodeMirror, DuckDB (with Arrow), PostHog and GSAP alone pushed the
+ * still lands in the server bundle, and three.js, CodeMirror (CodeEditor), DuckDB (with Arrow), PostHog and GSAP alone pushed the
  * Worker past the 3 MB (gzip) limit of the Workers Free plan.
  *
  * Only list a module here when the server can never execute it: a component rendered inside `<ClientOnly>`, or a
@@ -13,6 +13,7 @@ const STUBS = {
   // Components, by source path: each export renders nothing.
   "src/components/features/heatmap/Heatmap3D.tsx": "export default function Heatmap3D() { return null; }",
   "src/components/features/data-dumps/SqlPlayground.tsx": "export function SqlPlayground() { return null; }",
+  "src/components/patterns/code/CodeEditor.tsx": "export function CodeEditor() { return null; }",
   "src/components/features/deadlockdle/TargetCursor.tsx": "export function TargetCursor() { return null; }",
   // Packages only loaded with a dynamic `import()` from browser code.
   "posthog-js": "export default undefined;",

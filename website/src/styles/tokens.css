@@ -130,6 +130,13 @@
   /* The least OKLCH lightness of a mark drawn in an entity's own color (`chartMarkColor`): a dark rank color such as
      Initiate's brown lifted to it stands 3:1 off the plot surface. A light theme would cap lightness instead. */
   --chart-mark-floor-l: 0.52;
+  /* Code: the syntax colors of an editable code field (CodeEditor), each 4.5:1 on a text control over the page and
+     the card. Comments are quiet but still text. */
+  --syntax-keyword: var(--sky-400);
+  --syntax-string: var(--teal-500);
+  --syntax-number: var(--amber-400);
+  --syntax-type: var(--series-violet);
+  --syntax-comment: var(--ink-400);
   /* Tick and axis label size; `-sm` for plots under 100px tall. Auto-sized axes grow with it. */
   --chart-tick: var(--type-xs);
   --chart-tick-sm: var(--type-xs);
@@ -268,6 +275,11 @@
   --color-chart-interval: var(--chart-interval);
   --color-meter-empty: var(--meter-empty);
   --color-on-heat-muted: var(--on-heat-muted);
+  --color-syntax-keyword: var(--syntax-keyword);
+  --color-syntax-string: var(--syntax-string);
+  --color-syntax-number: var(--syntax-number);
+  --color-syntax-type: var(--syntax-type);
+  --color-syntax-comment: var(--syntax-comment);
 
   --color-item-weapon: var(--item-weapon);
   --color-item-vitality: var(--item-vitality);

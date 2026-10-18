@@ -242,7 +242,7 @@ export const NAV: readonly NavChapter[] = [
       },
       {
         title: "Code",
-        items: ["HighlightedCode", "HighlightedCode actions and overflow", "CopyableCode", "CopyableUrl"],
+        items: ["HighlightedCode", "HighlightedCode actions and overflow", "CodeEditor", "CopyableCode", "CopyableUrl"],
       },
     ],
   },

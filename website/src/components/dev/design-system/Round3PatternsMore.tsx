@@ -1,7 +1,10 @@
+import { sql } from "@codemirror/lang-sql";
+import { ClientOnly } from "@tanstack/react-router";
 import { Layers, Users } from "lucide-react";
 import { useState } from "react";
 
 import { Specimen, Variants } from "~/components/dev/design-system/Specimen";
+import { CodeEditor } from "~/components/patterns/code/CodeEditor";
 import { CopyableCode, CopyableUrl } from "~/components/patterns/code/CopyableCode";
 import { HighlightedCode } from "~/components/patterns/code/HighlightedCode";
 import {
@@ -47,9 +50,39 @@ const RESULT_ROWS = [
   [BigInt("105000044"), "A very long value that is truncated in its cell and shown in full on hover", 0, []],
 ];
 
+const SQL_EXTENSIONS = [sql({ upperCaseKeywords: true })];
+
+function CodeEditorSpecimen() {
+  const [query, setQuery] = useState(`-- Games per hero\n${SQL}`);
+  const [empty, setEmpty] = useState("");
+  return (
+    <Specimen
+      name="CodeEditor"
+      source="patterns/code/CodeEditor"
+      note="An editable block of code (CodeMirror) in a text control's box: the focus ring shows on the box, Tab moves on rather than indenting, and the syntax colors are the --syntax-* tokens (4.5:1 on the field). It must be named (aria-label or aria-labelledby), which goes to the editable area. value / onValueChange; extensions carry the language; gutter numbers | none; editorRef reaches the CodeMirror view. Browser only: render it inside ClientOnly."
+    >
+      <ClientOnly>
+        <Variants label='gutter="numbers" (default), SQL' className="block">
+          <CodeEditor
+            aria-label="SQL query"
+            value={query}
+            onValueChange={setQuery}
+            extensions={SQL_EXTENSIONS}
+            className="h-40"
+          />
+        </Variants>
+        <Variants label='gutter="none", empty' className="block">
+          <CodeEditor aria-label="Empty query" value={empty} onValueChange={setEmpty} gutter="none" className="h-20" />
+        </Variants>
+      </ClientOnly>
+    </Specimen>
+  );
+}
+
 function CodeSpecimens() {
   return (
     <>
+      <CodeEditorSpecimen />
       <Specimen
         name="HighlightedCode actions and overflow"
         source="patterns/code/HighlightedCode"
