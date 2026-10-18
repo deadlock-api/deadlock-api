@@ -21,6 +21,7 @@ import { useDropZone } from "~/components/ui/hooks/use-drop-zone";
 import { IconTile } from "~/components/ui/icon-tile";
 import { MaskedIcon } from "~/components/ui/masked-icon";
 import { NoValue } from "~/components/ui/no-value";
+import { ScrollArea } from "~/components/ui/scroll-area";
 import { StatusDot } from "~/components/ui/status-dot";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { TextLink } from "~/components/ui/text-link";
@@ -532,6 +533,25 @@ export function Round4Requests2() {
               ))}
             </div>
           </DragScroll>
+        </Variants>
+      </Specimen>
+
+      <Specimen
+        name="ScrollArea"
+        source="ui/scroll-area"
+        note="A box that scrolls on one axis (axis y | x) with the thin token scrollbar and a fade on the edge with more past it. While its content overflows it is a region named by label and a tab stop (focus it and scroll with the arrow keys); content that fits leaves no empty stop. The size limit comes from the caller."
+      >
+        <Variants label="overflowing: a named region in the tab order" className="items-stretch">
+          <ScrollArea label="Long notes" className="flex max-h-32 w-full max-w-md flex-col gap-2 text-sm">
+            {Array.from({ length: 10 }, (_, i) => (
+              <p key={i}>Line {i + 1} of a text that is taller than its box.</p>
+            ))}
+          </ScrollArea>
+        </Variants>
+        <Variants label="fits: no region, no tab stop" className="items-stretch">
+          <ScrollArea label="Short notes" className="max-h-32 w-full max-w-md text-sm">
+            <p>One line that fits.</p>
+          </ScrollArea>
         </Variants>
       </Specimen>
 

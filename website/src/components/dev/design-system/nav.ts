@@ -190,7 +190,7 @@ export const NAV: readonly NavChapter[] = [
       },
       {
         title: "Navigation",
-        items: ["SideNavShell", "SideNav", "Breadcrumb", "ResponsiveTabsList", "DragScroll"],
+        items: ["SideNavShell", "SideNav", "Breadcrumb", "ResponsiveTabsList", "DragScroll", "ScrollArea"],
       },
       {
         title: "Filter bar",
