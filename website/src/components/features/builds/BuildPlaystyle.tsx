@@ -7,7 +7,13 @@ import { KeyValue, KeyValueList } from "~/components/ui/key-value";
 import { NoValue } from "~/components/ui/no-value";
 import { Skeleton } from "~/components/ui/skeleton";
 import { Tooltip, TooltipHeader, TooltipTarget } from "~/components/ui/tooltip";
-import { BUILD_METRICS, type BuildPerformanceTotals, metricDelta, type MetricGroup } from "~/lib/build-performance";
+import {
+  BUILD_METRICS,
+  type BuildPerformanceTotals,
+  metricDelta,
+  type MetricGroup,
+  metricNoise,
+} from "~/lib/build-performance";
 
 /** A metric's spread at the end of the match: the build's curve over the hero's. */
 function DistributionCard({ title, distribution }: { title: string; distribution: EndOfMatchDistribution }) {
@@ -30,12 +36,6 @@ function DistributionCard({ title, distribution }: { title: string; distribution
     </div>
   );
 }
-
-/**
- * The smallest difference from the average build that takes a color: 5% of a count or rate, a point of a percentage.
- * Smaller ones sit inside what two builds' players vary by from match to match.
- */
-const NOTICEABLE = { relative: 0.05, points: 0.01 } as const;
 
 const NO_DISTRIBUTIONS: Partial<Record<string, EndOfMatchDistribution>> = {};
 
@@ -102,7 +102,7 @@ export function BuildPlaystyle({
                         value={delta}
                         unit={metric.delta === "points" ? " pp" : undefined}
                         polarity={metric.polarity}
-                        threshold={metric.delta === "points" ? NOTICEABLE.points : NOTICEABLE.relative}
+                        threshold={metricNoise(metric)}
                       />
                     </span>
                   </span>

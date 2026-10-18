@@ -9,9 +9,16 @@ import { Field } from "~/components/ui/field";
 import { NoValue } from "~/components/ui/no-value";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
-import { BUILD_METRICS, type BuildMetric, type BuildPerformanceTotals, metricDelta } from "~/lib/build-performance";
+import {
+  BUILD_METRICS,
+  type BuildMetric,
+  type BuildPerformanceTotals,
+  metricDelta,
+  metricNoise,
+} from "~/lib/build-performance";
 import { BUILD_SLOT_LABEL, BUILD_SLOTS, buildItemIds, type BuildRow, buildSlotCost } from "~/lib/build-stats";
 import { formatPercent } from "~/lib/format";
+import { winRateNoise } from "~/lib/wilson";
 
 const nameOf = (row: BuildRow) => row.meta?.name ?? `Build ${row.hero_build_id}`;
 
@@ -32,7 +39,7 @@ const BASE_ROWS: {
 function ItemRow({ title, itemIds }: { title: string; itemIds: readonly number[] }) {
   return (
     <section className="flex min-w-0 flex-col">
-      <PanelSection title={title}>
+      <PanelSection variant="label" title={title}>
         <span className="tabular-nums">{itemIds.length}</span>
       </PanelSection>
       {itemIds.length === 0 ? (
@@ -145,6 +152,7 @@ export function BuildCompareDialog({
                           value={row.rate ? b - a : a !== 0 ? b / a - 1 : null}
                           unit={row.rate ? " pp" : undefined}
                           polarity={row.label === "Win rate" ? "higher-is-better" : "neutral"}
+                          threshold={row.label === "Win rate" ? winRateNoise(build.matches, other.matches) : 0}
                         />
                       </TableCell>
                     </TableRow>
@@ -163,6 +171,7 @@ export function BuildCompareDialog({
                           value={metricDelta(metric, b, a)}
                           unit={metric.delta === "points" ? " pp" : undefined}
                           polarity={metric.polarity}
+                          threshold={metricNoise(metric)}
                         />
                       </TableCell>
                     </TableRow>
@@ -197,6 +206,7 @@ export function BuildCompareDialog({
                           value={metricDelta(metric, b, a)}
                           unit={metric.delta === "points" ? " pp" : undefined}
                           polarity={metric.polarity}
+                          threshold={metricNoise(metric)}
                         />
                       </TableCell>
                     </TableRow>

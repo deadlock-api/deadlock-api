@@ -276,6 +276,14 @@ export const BUILD_METRICS: readonly BuildMetric[] = [
 ];
 
 /** A metric's difference from the average: relative (0.12 for +12%) or in points of a rate (0.012). */
+/**
+ * The smallest metricDelta that counts as a difference between two builds: 5% of a count or rate, a point of a
+ * percentage. Smaller ones sit inside what players of one build vary by from match to match.
+ */
+export function metricNoise(metric: BuildMetric): number {
+  return metric.delta === "points" ? 0.01 : 0.05;
+}
+
 export function metricDelta(metric: BuildMetric, value: number | null, average: number | null): number | null {
   if (value === null || average === null) return null;
   if (metric.delta === "points") return value - average;
