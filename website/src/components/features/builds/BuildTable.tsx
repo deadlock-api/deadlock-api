@@ -141,6 +141,7 @@ export function BuildTable({
   profilesPending,
   selectedId,
   onBuildIdChange,
+  onBuildHover,
 }: {
   rows: readonly BuildRow[];
   /** Null while the recent window loads or when it has no matches. */
@@ -158,6 +159,8 @@ export function BuildTable({
   profilesPending: boolean;
   selectedId: number;
   onBuildIdChange: (buildId: number) => void;
+  /** The build under the pointer, null when it leaves the list: the chart lights its dot. */
+  onBuildHover?: (buildId: number | null) => void;
 }) {
   const sort = useSort<SortKey>(
     sortParams(useQueryState("sort", parseSortKey), useQueryState("dir", parseSortDir), { history: "replace" }),
@@ -272,7 +275,7 @@ export function BuildTable({
             ))}
           </TableRow>
         </TableHeader>
-        <TableBody onKeyDown={navigation.onKeyDown}>
+        <TableBody onKeyDown={navigation.onKeyDown} onPointerLeave={() => onBuildHover?.(null)}>
           {sorted.map((row, index) => {
             const selected = row.hero_build_id === selectedId;
             const author = row.meta ? profiles[row.meta.authorId] : undefined;
@@ -282,6 +285,7 @@ export function BuildTable({
                 key={row.hero_build_id}
                 data-interactive=""
                 data-state={selected ? "active" : undefined}
+                onPointerEnter={() => onBuildHover?.(row.hero_build_id)}
                 onClick={(event) => {
                   onBuildIdChange(row.hero_build_id);
                   // A click on the row's cells focuses its button, so the arrow keys go on from here.

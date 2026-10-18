@@ -1,5 +1,5 @@
 import { useQueries, useQuery } from "@tanstack/react-query";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 
 import { BuildDetailPanel } from "~/components/features/builds/BuildDetailPanel";
 import { BuildInMatches } from "~/components/features/builds/BuildInMatches";
@@ -199,6 +199,8 @@ export function BuildsExplorer({
   // The first build after the list loads is asked for at once: nothing was passed over to get to it.
   const restedId = useDebouncedValue(selectedId, SETTLE_MS);
   const settled = restedId === selectedId || restedId === null;
+  // The list row under the pointer, lit on the chart.
+  const [hoveredId, setHoveredId] = useState<number | null>(null);
 
   if (statsQuery.isPending) return <LoadingState />;
   if (statsQuery.isError) {
@@ -245,6 +247,7 @@ export function BuildsExplorer({
           rows={rows}
           average={summary.winRate}
           selectedId={selected.hero_build_id}
+          highlightedId={hoveredId}
           onBuildIdChange={onBuildIdChange}
           performance={performance}
         />
@@ -262,6 +265,7 @@ export function BuildsExplorer({
           profilesPending={profiles.pending}
           selectedId={selected.hero_build_id}
           onBuildIdChange={onBuildIdChange}
+          onBuildHover={setHoveredId}
         />
         <BuildDetailPanel
           row={selected}

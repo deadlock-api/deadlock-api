@@ -80,6 +80,8 @@ interface Point {
   winRate: number;
   row: BuildRow;
   selected: boolean;
+  /** Under the pointer in the list: drawn full and named like the selected one. */
+  highlighted: boolean;
   /** Left out by the list's item filter: drawn faint. */
   dimmed: boolean;
   /** Where the selected dot's name goes: away from the nearer edge of the plot. */
@@ -99,18 +101,18 @@ function BuildDot({ cx, cy, payload }: { cx?: number; cy?: number; payload?: Poi
     <circle
       cx={cx}
       cy={cy}
-      r={payload.selected ? 7 : 4.5}
+      r={payload.selected ? 7 : payload.highlighted ? 6 : 4.5}
       fill={VERDICT_COLOR[payload.row.verdict]}
-      fillOpacity={payload.selected ? 1 : payload.dimmed ? 0.12 : 0.75}
-      stroke={payload.selected ? CHART_COLOR.ink : CHART_COLOR.surface}
-      strokeOpacity={payload.dimmed && !payload.selected ? 0.3 : 1}
-      strokeWidth={payload.selected ? 2.5 : 1}
+      fillOpacity={payload.selected || payload.highlighted ? 1 : payload.dimmed ? 0.12 : 0.75}
+      stroke={payload.selected || payload.highlighted ? CHART_COLOR.ink : CHART_COLOR.surface}
+      strokeOpacity={payload.dimmed && !payload.selected && !payload.highlighted ? 0.3 : 1}
+      strokeWidth={payload.selected ? 2.5 : payload.highlighted ? 1.5 : 1}
       // A dot is pressable: it selects its build.
       style={{ cursor: "pointer" }}
     />
   );
-  if (!payload.selected) return dot;
-  // The selected build is named on the plot, so the eye finds it without the list or a hover.
+  if (!payload.selected && !payload.highlighted) return dot;
+  // The selected build and the one under the pointer in the list are named on the plot, so the eye finds them.
   const toEnd = payload.labelSide === "end";
   return (
     <g>
@@ -142,12 +144,15 @@ export function BuildScatterChart({
   rows,
   average,
   selectedId,
+  highlightedId = null,
   onBuildIdChange,
   performance,
 }: {
   rows: readonly BuildRow[];
   average: number;
   selectedId: number;
+  /** The build the list's pointer is on, if any. */
+  highlightedId?: number | null;
   onBuildIdChange: (buildId: number) => void;
   /** Every build's performance totals, by id, for the playstyle axes; until they load only matches is offered. */
   performance?: Readonly<Record<number, BuildPerformanceTotals>>;
@@ -179,7 +184,8 @@ export function BuildScatterChart({
     }
     return row.matches;
   };
-  // The selected build is drawn last, so no other dot covers it.
+  // The selected build is drawn last and the highlighted one before it, so no other dot covers them.
+  const rank = (point: Point) => (point.selected ? 2 : point.highlighted ? 1 : 0);
   const points: Point[] = rows
     .flatMap((row) => {
       const x = xValue(row);
@@ -193,10 +199,11 @@ export function BuildScatterChart({
       winRate: row.winRate,
       row,
       selected: row.hero_build_id === selectedId,
+      highlighted: row.hero_build_id === highlightedId,
       dimmed: !buildMatchesItems(row.meta, itemParams.with_items, itemParams.without_items),
       labelSide: "end" as const,
     }))
-    .sort((a, b) => Number(a.selected) - Number(b.selected));
+    .sort((a, b) => rank(a) - rank(b));
   const minX = Math.min(...points.map((point) => point.x));
   const maxX = Math.max(...points.map((point) => point.x));
   const linearTicks = niceTicks(minX, maxX, 5);
