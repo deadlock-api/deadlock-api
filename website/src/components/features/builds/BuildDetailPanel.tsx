@@ -121,14 +121,20 @@ export function BuildDetailPanel({
       <div className={cn(SCROLLBAR_THIN, "@container relative flex min-h-0 flex-1 flex-col overflow-y-auto")}>
         {meta ? (
           <>
-            {/* Two columns of groups once the panel is wide enough, so more of the build shows without a scroll. */}
+            {/* Two columns of groups once the panel is wide enough, so more of the build shows without a scroll. Each
+                group spans a name row and an icon row of the grid, so a name that wraps lowers its neighbour's icons
+                with its own and the two rows of icons stay level. */}
             <div className="grid @md:grid-cols-2">
               {meta.categories
                 .filter((category) => category.itemIds.length > 0)
                 .map((category, index) => (
-                  <section key={`${category.name}|${category.itemIds.join()}`} className="flex flex-col">
+                  <section
+                    key={`${category.name}|${category.itemIds.join()}`}
+                    className="row-span-2 grid grid-rows-subgrid"
+                  >
                     <PanelSection
                       variant="label"
+                      className="self-end"
                       title={
                         <CategoryTitle
                           name={buildCategoryName(category.name) ?? "Items"}
@@ -141,7 +147,7 @@ export function BuildDetailPanel({
                           "Early Game". */}
                       {index === 0 && <span className="min-w-0 grow basis-0 text-end">Bought in % of matches</span>}
                     </PanelSection>
-                    <ul className="flex flex-wrap gap-1 px-3 py-1.5">
+                    <ul className="flex flex-wrap content-start gap-1 px-3 py-1.5">
                       {category.itemIds.map((itemId) => (
                         <li key={itemId}>
                           <BuildItemTile
