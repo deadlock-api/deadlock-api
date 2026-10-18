@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { useId } from "react";
 import { CartesianGrid, Line, LineChart, ReferenceLine, Tooltip, XAxis, YAxis } from "recharts";
 
 import { performanceCurveParams } from "~/components/features/builds/build-hooks";
@@ -47,6 +48,7 @@ export function BuildSoulsByTime({
   /** False while the selection is still moving: nothing is asked for yet. */
   active?: boolean;
 }) {
+  const strokeId = useId();
   const params = performanceCurveParams(heroId, filters, 0);
   const buildQuery = useQuery({
     ...playerPerformanceCurveQueryOptions({ ...params, heroBuildId: buildId }),
@@ -64,6 +66,11 @@ export function BuildSoulsByTime({
   const extent = Math.max(0.02, ...points.map((point) => Math.abs(point.diff)));
   const yTicks = niceTicks(-extent, extent, 4);
   const domain: [number, number] = [yTicks[0], yTicks[yTicks.length - 1]];
+  // The line is green while the build is ahead of the hero and red while behind: the stops sit where it crosses 0, as
+  // a share of the line's own height (the gradient spans its bounding box).
+  const high = Math.max(...points.map((point) => point.diff));
+  const low = Math.min(...points.map((point) => point.diff));
+  const zeroAt = high <= 0 ? 0 : low >= 0 ? 1 : high / (high - low);
 
   return (
     <section className="flex flex-col">
@@ -79,6 +86,12 @@ export function BuildSoulsByTime({
           label={`The build's souls against the hero's average over the game, from ${formatSignedPercent(points[0].diff)} at ${points[0].minute} minutes to ${formatSignedPercent(points[points.length - 1].diff)} at ${points[points.length - 1].minute}`}
         >
           <LineChart data={points} margin={{ ...CHART_MARGIN, right: 12 }}>
+            <defs>
+              <linearGradient id={strokeId} x1="0" y1="0" x2="0" y2="1">
+                <stop offset={zeroAt} stopColor={CHART_COLOR.positive} />
+                <stop offset={zeroAt} stopColor={CHART_COLOR.negative} />
+              </linearGradient>
+            </defs>
             <CartesianGrid {...CHART_GRID} />
             <XAxis
               {...CHART_X_AXIS}
@@ -115,7 +128,7 @@ export function BuildSoulsByTime({
             <Line
               type="monotone"
               dataKey="diff"
-              stroke={CHART_COLOR.primary}
+              stroke={`url(#${strokeId})`}
               strokeWidth={2}
               dot={false}
               activeDot={CHART_ACTIVE_DOT}
