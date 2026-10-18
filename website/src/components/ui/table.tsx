@@ -98,6 +98,9 @@ const HEADER_TONE: Record<TableHeaderTone, string> = {
   card: "[&_th]:bg-card",
 };
 
+// Set by TableHeader: a TableHead inside it heads a column (`scope="col"`) without the caller saying so.
+const TableHeaderContext = React.createContext(false);
+
 function TableHeader({
   tone,
   position = "static",
@@ -111,19 +114,21 @@ function TableHeader({
 }) {
   const resolvedTone = tone ?? (position === "sticky" ? "card" : "none");
   return (
-    <thead
-      data-slot="table-header"
-      data-tone={resolvedTone}
-      data-position={position}
-      className={cn(
-        // A head row never answers to the pointer, so it keeps its rule without `data-plain`, which also drops it.
-        "[&_tr]:border-b [&_tr:hover]:bg-transparent",
-        HEADER_TONE[resolvedTone],
-        position === "sticky" && "[&_th]:sticky [&_th]:top-0 [&_th]:z-10",
-        className,
-      )}
-      {...props}
-    />
+    <TableHeaderContext value={true}>
+      <thead
+        data-slot="table-header"
+        data-tone={resolvedTone}
+        data-position={position}
+        className={cn(
+          // A head row never answers to the pointer, so it keeps its rule without `data-plain`, which also drops it.
+          "[&_tr]:border-b [&_tr:hover]:bg-transparent",
+          HEADER_TONE[resolvedTone],
+          position === "sticky" && "[&_th]:sticky [&_th]:top-0 [&_th]:z-10",
+          className,
+        )}
+        {...props}
+      />
+    </TableHeaderContext>
   );
 }
 
@@ -246,9 +251,12 @@ function TableHead({
   ...props
 }: React.ComponentProps<"th"> & { tone?: keyof typeof HEAD_TONE; width?: keyof typeof HEAD_WIDTH }) {
   const density = React.use(TableDensityContext);
+  const inHeader = React.use(TableHeaderContext);
   return (
     <th
       data-slot="table-head"
+      // In the head row it names its column for every cell under it; `scope` passed in still wins.
+      scope={inHeader ? "col" : undefined}
       data-tone={tone}
       data-width={width}
       className={cn(

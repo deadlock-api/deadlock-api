@@ -677,7 +677,7 @@ export function Round3PrimitivesMore() {
       <Specimen
         name="TableCaption"
         source="ui/table"
-        note='Names the table. visibility="sr-only" names it for screen readers only, where the heading above already says what it is: "Europe leaderboard".'
+        note='Names the table. visibility="sr-only" names it for screen readers only, where the heading above already says what it is: "Europe leaderboard". Every TableHead in the TableHeader below heads its column (scope="col") without being told.'
       >
         <Table density="compact" className="max-w-md">
           <TableCaption>visibility="visible" (default)</TableCaption>
