@@ -149,7 +149,7 @@ export function Round3DomainAssets() {
       <Specimen
         name="RankedEntityList"
         source="domain/assets/RankedEntityList"
-        note="A short leaderboard of heroes or items (best items of a hero, best heroes for an item): one RankedEntityRow per place with the rank, the art, the name linked to its page and a meta line, and RankedEntityMetric children for the numbers. A metric with share draws a bar under its value; tone colors a value that has a pivot; labelDisplay hidden leaves the label to screen readers, so a list can label only its first row. density compact (the item list here) draws smaller art and tighter rows. A metric with change draws a signed bar (DivergingBar) under its value: a gain right of the middle, a loss left, with an optional uncertainty interval. A metric with details opens a hover card from its value (reachable by keyboard; the first row of the third list here). One column in a narrow container, two (filled top to bottom) from @3xl; columns single keeps one (the third list here)."
+        note="A short leaderboard of heroes or items (best items of a hero, best heroes for an item): one RankedEntityRow per place with the rank, the art, the name linked to its page and a meta line, and RankedEntityMetric children for the numbers. A metric with share draws a bar under its value; tone colors a value that has a pivot; labelDisplay hidden leaves the label to screen readers, so a list can label only its first row. density compact (the item list here) draws smaller art and tighter rows. A metric with change draws a signed bar (DivergingBar) under its value: a gain right of the middle, a loss left, with an optional uncertainty interval; width wide makes room for a unit after the value. A metric with details opens a hover card from its value (reachable by keyboard; the first row of the third list here). One column in a narrow container, two (filled top to bottom) from @3xl; columns single keeps one (the third list here)."
       >
         <RankedEntityList density="compact">
           {RANKED_HEROES.map(({ heroId, winRate, usage }, index) => (
@@ -168,6 +168,7 @@ export function Round3DomainAssets() {
             <RankedEntityRow key={heroId} rank={index + 1} entity={{ heroId }} meta="12,345 matches">
               <RankedEntityMetric
                 label="Change"
+                width="wide"
                 value={`${winRate > 0.5 ? "+" : "−"}${Math.abs((winRate - 0.5) * 100).toFixed(1)} pp`}
                 tone={toneOf(winRate, 0.5)}
                 change={{

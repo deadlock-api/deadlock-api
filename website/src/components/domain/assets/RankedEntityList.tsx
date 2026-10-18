@@ -143,6 +143,7 @@ export function RankedEntityMetric({
   change,
   details,
   tone,
+  width = "default",
   className,
   ...props
 }: Omit<React.ComponentProps<"div">, "children"> & {
@@ -160,10 +161,14 @@ export function RankedEntityMetric({
   /** What stands behind the number (the numbers before and after, the sample): a hover card on the value, reachable by keyboard. */
   details?: React.ReactNode;
   tone?: Tone;
+  /** `wide` for a value with a unit after it ("+16.8 pp"), which the default column cuts. */
+  width?: "default" | "wide";
 }) {
   const body = (
     <>
-      <span className={cn("type-label tabular-nums", tone && TONE_TEXT[tone])}>{value ?? <NoValue />}</span>
+      <span className={cn("type-label whitespace-nowrap tabular-nums", tone && TONE_TEXT[tone])}>
+        {value ?? <NoValue />}
+      </span>
       {/* Every metric keeps the bar's row, so the labels of a row line up whether or not a value has a bar. */}
       {change ? (
         <DivergingBar
@@ -183,7 +188,7 @@ export function RankedEntityMetric({
   return (
     <div
       data-slot="ranked-entity-metric"
-      className={cn("flex w-12 flex-col items-end gap-1 @md:w-16", className)}
+      className={cn("flex flex-col items-end gap-1", width === "wide" ? "w-16 @md:w-20" : "w-12 @md:w-16", className)}
       {...props}
     >
       <dt className={cn("order-2 type-caption text-muted-foreground", labelDisplay === "hidden" && "sr-only")}>

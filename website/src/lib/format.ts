@@ -100,6 +100,14 @@ export function formatSignedPercent(ratio: number, digits = 1): string {
   return `${sign}${Math.abs(percent).toFixed(digits)}%`;
 }
 
+/**
+ * A difference of two rates in percentage points: 0.168 renders as +16.8 pp. Keeps a win rate's lead apart from a
+ * relative change ("+16.8%" of 52% would be 61%, not 69%).
+ */
+export function formatSignedPoints(difference: number, digits = 1): string {
+  return `${formatSignedPercent(difference, digits).slice(0, -1)}\u00a0pp`;
+}
+
 /** "Toxic Bullets'" rather than "Toxic Bullets's"; item names ending in s are mostly plurals. */
 export function possessive(name: string): string {
   return name.endsWith("s") ? `${name}'` : `${name}'s`;
