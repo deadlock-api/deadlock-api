@@ -85,7 +85,7 @@ function FlexSlot({ entry }: { entry: Extract<TimelineEntry, { kind: "flex" }> }
           </div>
         ))}
       </div>
-      <Text variant="eyebrow" tone="warning">
+      <Text variant="caption" tone="warning">
         1 of · {pct(entry.slotFrequency)}
       </Text>
     </Card>
@@ -100,7 +100,9 @@ function EntryView({ entry }: { entry: TimelineEntry }) {
 function PhaseRow({ label, entries }: { label: string; entries: TimelineEntry[] }) {
   return (
     <div className="flex flex-col gap-1.5">
-      <span className="eyebrow">{label}</span>
+      <Text variant="caption" tone="muted" className="font-semibold">
+        {label}
+      </Text>
       <div className="flex flex-wrap items-start gap-1.5">
         {entries.length > 0 ? (
           entries.map((entry) => (
@@ -132,7 +134,9 @@ function VariantBody({ variant }: { variant: BuildVariant }) {
         <Stack gap={2}>
           <Separator />
           <div className="flex flex-col gap-1">
-            <span className="eyebrow">Situational</span>
+            <Text variant="caption" tone="muted" className="font-semibold">
+              Situational
+            </Text>
             <div className="flex flex-wrap items-start gap-1.5">
               {variant.optionals.map((item) => (
                 <ItemIcon key={item.itemId} item={item} dim />
@@ -147,7 +151,7 @@ function VariantBody({ variant }: { variant: BuildVariant }) {
 
 function Legend() {
   return (
-    <ChartLegend size="sm" label="Build legend">
+    <ChartLegend label="Build legend">
       <ChartLegendItem color={CHART_COLOR.ink}>core</ChartLegendItem>
       <ChartLegendItem color={CHART_COLOR.neutral}>common</ChartLegendItem>
       <ChartLegendItem color={CHART_COLOR.caution} shape="ring">
@@ -156,7 +160,7 @@ function Legend() {
       <ChartLegendItem
         color={CHART_COLOR.negative}
         icon={
-          <Badge variant="negative" size="sm" shape="circle" aria-hidden="true">
+          <Badge variant="negative" shape="circle" aria-hidden="true">
             1
           </Badge>
         }

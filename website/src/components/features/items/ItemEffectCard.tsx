@@ -1,6 +1,7 @@
 import type { ItemProperty, Upgrade, UpgradeTooltipSection } from "deadlock_api_client";
 
 import { Badge } from "~/components/ui/badge";
+import { Text } from "~/components/ui/text";
 import { cn } from "~/lib/utils";
 
 // Property texts can be a full sentence; a Badge does not wrap by default and would overflow a narrow card.
@@ -71,7 +72,11 @@ function ItemEffectSection({
   const label = section.section_type;
   return (
     <div className="flex flex-col gap-1.5">
-      {label && label !== "innate" && <span className="font-mono eyebrow text-primary/70">{label}</span>}
+      {label && label !== "innate" && (
+        <Text variant="caption" tone="muted" className="font-mono font-semibold uppercase">
+          {label}
+        </Text>
+      )}
       {section.section_attributes?.map((attr) => {
         const emphasized = [...(attr.elevated_properties ?? []), ...(attr.important_properties ?? [])];
         const regular = attr.properties ?? [];

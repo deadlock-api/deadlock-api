@@ -77,7 +77,7 @@ export function ItemUpgradePath({
 
   const group = (list: SlimUpgrade[], label: string, current?: boolean) => (
     <div className="flex min-w-0 flex-col gap-2">
-      <Heading as="h4" size="eyebrow">
+      <Heading as="h4" size="sm">
         {label}
       </Heading>
       <ul className="grid gap-2 @md:grid-cols-2">

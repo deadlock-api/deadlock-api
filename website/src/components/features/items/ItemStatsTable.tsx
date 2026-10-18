@@ -68,11 +68,11 @@ function KeyedHeaderLabel({ normalColor = NORMAL_COLOR, children }: { normalColo
       <span>{children}</span>
       <span className="flex items-center gap-3 text-xs font-normal text-muted-foreground">
         <span className="flex items-center gap-1">
-          <ChartSwatch color={normalColor} size="sm" />
+          <ChartSwatch color={normalColor} />
           Normal
         </span>
         <span className="flex items-center gap-1">
-          <ChartSwatch color={CORRUPTED_COLOR} size="sm" />
+          <ChartSwatch color={CORRUPTED_COLOR} />
           Corrupted
         </span>
       </span>

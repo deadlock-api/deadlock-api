@@ -254,12 +254,8 @@ function ItemDetailPage() {
         }
         eyebrow={
           <>
-            <Badge variant="outline" size="sm">
-              {slot}
-            </Badge>
-            <Badge variant="outline" size="sm">
-              Tier {tier}
-            </Badge>
+            <Badge variant="outline">{slot}</Badge>
+            <Badge variant="outline">Tier {tier}</Badge>
             {cost !== null && <span className="tabular-nums">{cost.toLocaleString("en-US")} souls</span>}
             <span>
               {rankRange} · {period}
