@@ -735,7 +735,9 @@ export interface Recommendation {
   solo: number | undefined;
   winRate: number | undefined;
   matches: number;
-  /** Points the pick moves the prediction by for its side (in the next open slot), used for the ranking. */
+  /** Points the pick moves the prediction by for its side (in the next open slot); `undefined` with no prediction. */
+  gain: number | undefined;
+  /** The ranking: `gain` where there is one, otherwise the hero's own edges weighted like the model. */
   score: number;
 }
 
@@ -770,13 +772,14 @@ export function recommendPicks(draft: Draft, index: StatsIndex, side: Side, cand
         predicted = predictDraft(hypothetical, index);
       }
       const { weights } = index.model;
+      const gain = predicted !== undefined && baseline !== undefined ? (predicted - baseline) * sign : undefined;
       const score =
-        predicted !== undefined && baseline !== undefined
-          ? (predicted - baseline) * sign
-          : // Without a prediction to move (no data, or a full side), the hero's own edges, weighted like the model.
-            weights[0] * (index.heroEdge(heroId) * POINTS_PER_LOG_ODDS) +
-            weights[1] * (synergy ?? 0) +
-            weights[2] * (counter ?? 0);
+        gain ??
+        // Without a prediction to move (no data, a full side, or nobody to face yet), the hero's own edges, weighted
+        // like the model.
+        weights[0] * (index.heroEdge(heroId) * POINTS_PER_LOG_ODDS) +
+          weights[1] * (synergy ?? 0) +
+          weights[2] * (counter ?? 0);
       return {
         heroId,
         synergy,
@@ -784,6 +787,7 @@ export function recommendPicks(draft: Draft, index: StatsIndex, side: Side, cand
         solo,
         winRate: index.heroWinRate(heroId),
         matches: sample?.matches ?? 0,
+        gain,
         score,
       };
     })

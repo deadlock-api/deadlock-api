@@ -1,5 +1,5 @@
 import { ChartNoAxesGanttIcon, ListIcon } from "lucide-react";
-import { Fragment, useState } from "react";
+import { useState } from "react";
 
 import { HeroImage } from "~/components/domain/assets/HeroImage";
 import { HeroName } from "~/components/domain/assets/HeroName";
@@ -7,11 +7,11 @@ import { Panel, PanelBody, PanelHeader, PanelShowMore } from "~/components/patte
 import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { SkeletonRows } from "~/components/patterns/states/Skeletons";
 import { Button } from "~/components/ui/button";
+import { useListNavigation } from "~/components/ui/hooks/use-list-navigation";
 import { Segmented, SegmentedItem } from "~/components/ui/segmented";
-import { Separator } from "~/components/ui/separator";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableRowHeader } from "~/components/ui/table";
 import type { PairRow, Side, StatsIndex } from "~/lib/team-builder/analysis";
 import { formatCount, formatRate } from "~/lib/team-builder/format";
-import { cn } from "~/lib/utils";
 
 import { PairsChart } from "./PairsChart";
 import { PairTooltip } from "./PairTooltip";
@@ -20,13 +20,6 @@ import { SideToggle } from "./SideToggle";
 
 /** How many of the 15 pairings show before the list has to be expanded. */
 const COLLAPSED_ROWS = 8;
-
-/**
- * Header and rows share this template so the columns line up regardless of hero name length. The
- * name column carries a floor so it cannot be the one that collapses, and the trailing count track
- * fits four digits so a sample count can never lose a digit off the panel edge.
- */
-const COLUMNS = "grid grid-cols-[3.5rem_minmax(4rem,1fr)_2.75rem_3.25rem_3.5rem] items-center gap-x-1.5 px-3";
 
 interface PairsPanelProps {
   allyPairs: PairRow[];
@@ -42,8 +35,10 @@ export function PairsPanel({ allyPairs, enemyPairs, index, loading, onOpen }: Pa
   const [side, setSide] = useState<Side>("ally");
   const pairs = side === "ally" ? allyPairs : enemyPairs;
   const visible = expanded ? pairs : pairs.slice(0, COLLAPSED_ROWS);
+  const [cursor, setCursor] = useState(0);
+  const navigation = useListNavigation({ count: visible.length, value: cursor, onValueChange: setCursor });
   return (
-    <Panel>
+    <Panel className="@container/pairs">
       <PanelHeader title="Pairs">
         <SideToggle value={side} onValueChange={setSide} />
         <Segmented size="sm" width="hug" aria-label="View" value={view} onValueChange={setView}>
@@ -69,38 +64,67 @@ export function PairsPanel({ allyPairs, enemyPairs, index, loading, onOpen }: Pa
         <PairsChart pairs={pairs} index={index} onOpen={onOpen} />
       ) : (
         <>
-          <div className={cn(COLUMNS, "py-2 eyebrow")}>
-            <span>Pair</span>
-            <span />
-            <span className="text-end">Syn pts</span>
-            <span className="text-end">Win rate</span>
-            <span className="text-end">Games</span>
-          </div>
-          <Separator />
-          <div>
-            {visible.map((pair) => (
-              <Fragment key={`${pair.a}-${pair.b}`}>
-                <PairTooltip pair={pair} index={index}>
-                  <Button variant="row" onClick={() => onOpen(pair)} className={cn("h-11", COLUMNS)}>
-                    <span className="flex w-14 gap-0.5">
-                      <HeroImage heroId={pair.a} shape="circle" className="size-7 shrink-0" />
-                      <HeroImage heroId={pair.b} shape="circle" className="size-7 shrink-0" />
-                    </span>
-                    <span className="flex min-w-0 flex-col text-xs leading-tight">
-                      <HeroName heroId={pair.a} />
-                      <HeroName heroId={pair.b} />
-                    </span>
+          <Table density="dense" aria-label="Pairs">
+            <TableHeader>
+              <TableRow>
+                <TableHead tone="muted">Pair</TableHead>
+                <TableHead tone="muted" className="text-end">
+                  Syn pts
+                </TableHead>
+                <TableHead tone="muted" className="text-end">
+                  Win rate
+                </TableHead>
+                <TableHead tone="muted" className="text-end">
+                  Games
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody onKeyDown={navigation.onKeyDown}>
+              {visible.map((pair, row) => (
+                <TableRow
+                  key={`${pair.a}-${pair.b}`}
+                  data-interactive=""
+                  onClick={(event) => {
+                    onOpen(pair);
+                    event.currentTarget.querySelector<HTMLElement>("[data-list-index]")?.focus({ preventScroll: true });
+                  }}
+                >
+                  <TableRowHeader className="w-full max-w-0">
+                    <PairTooltip pair={pair} index={index}>
+                      <Button
+                        variant="text"
+                        size="inline"
+                        {...navigation.getItemProps(row)}
+                        className="max-w-full justify-start gap-1.5"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          onOpen(pair);
+                        }}
+                      >
+                        {/* A narrow panel gives the portraits' width to the two names. */}
+                        <span className="hidden shrink-0 gap-0.5 @sm/pairs:flex">
+                          <HeroImage heroId={pair.a} shape="circle" decorative className="size-7" />
+                          <HeroImage heroId={pair.b} shape="circle" decorative className="size-7" />
+                        </span>
+                        <span className="flex min-w-0 flex-col text-start leading-tight">
+                          <HeroName heroId={pair.a} />
+                          <span className="sr-only"> and </span>
+                          <HeroName heroId={pair.b} />
+                        </span>
+                      </Button>
+                    </PairTooltip>
+                  </TableRowHeader>
+                  <TableCell className="text-end">
                     <Points value={pair.delta} align="end" className="text-sm font-bold" />
-                    <span className="text-end text-xs tabular-nums">{formatRate(pair.winRate)}</span>
-                    <span className="text-end text-xs text-muted-foreground tabular-nums">
-                      {formatCount(pair.matches)}
-                    </span>
-                  </Button>
-                </PairTooltip>
-                <Separator />
-              </Fragment>
-            ))}
-          </div>
+                  </TableCell>
+                  <TableCell className="text-end tabular-nums">{formatRate(pair.winRate)}</TableCell>
+                  <TableCell className="text-end text-muted-foreground tabular-nums">
+                    {formatCount(pair.matches)}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
           {pairs.length > COLLAPSED_ROWS && (
             <PanelShowMore open={expanded} total={pairs.length} onOpenChange={setExpanded} />
           )}
