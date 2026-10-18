@@ -45,7 +45,7 @@ valveprotos = { workspace = true, features = ["gc-client", "serde", "user-msgs",
 prost = "0.14.4"
 base64 = "0.23.1"
 tryhard = "0.5.2"
-async-compression = { version = "0.4.50", features = ["bzip2", "zstd", "tokio"] }
+async-compression = { version = "0.4.51", features = ["bzip2", "zstd", "tokio"] }
 bzip2 = "0.6"
 zstd = "0.14"
 strum = { version = "0.28.0", features = ["derive"] }
@@ -69,8 +69,8 @@ hmac = "0.13"
 md5 = { package = "md-5", version = "0.11" }
 jsonwebtoken = { version = "11", features = ["rust_crypto"] }
 async-trait = "0.1.92"
-tantivy = { version = "0.26.2", features = ["zstd-compression"] }
-arc-swap = "1.9.2"
+tantivy = { version = "0.27.0", features = ["zstd-compression"] }
+arc-swap = "1.9.3"
 cssparser = "0.38"
 indexmap = { version = "2", features = ["serde"] }
 murmur2 = "0.1.0"
@@ -95,7 +95,7 @@ image = { version = "0.25.10", default-features = false, features = ["png", "web
 ab_glyph = "0.2.32"
 rmcp = { version = "3.5.1", default-features = false, features = ["macros", "server", "transport-streamable-http-server"] }
 schemars = "1.2.3"
-duckdb = { version = "1.10506.0", features = ["bundled", "parquet", "json"] }
+duckdb = { version = "1.10506.1", features = ["bundled", "parquet", "json"] }
 # DuckDB pins arrow 58; enables the JSON writer on that version for MCP result formatting.
 arrow_duckdb = { package = "arrow", version = "58", default-features = false, features = ["chrono-tz", "json"] }
 toon-format = { version = "0.7", default-features = false }

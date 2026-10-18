@@ -23,7 +23,7 @@ use tantivy::schema::{
     BytesOptions, FAST, Field, INDEXED, STORED, STRING, Schema, TEXT, TextOptions, Value,
 };
 use tantivy::store::{Compressor, ZstdCompressor};
-use tantivy::tokenizer::{LowerCaser, SimpleTokenizer, TextAnalyzer};
+use tantivy::tokenizer::{LowerCaser, RAW_TOKENIZER_NAME, SimpleTokenizer, TextAnalyzer};
 use tantivy::{
     DocAddress, Index, IndexReader, IndexSettings, Order, ReloadPolicy, TantivyDocument, Term,
 };
@@ -719,7 +719,7 @@ fn build_schema() -> Schema {
     let mut sb = Schema::builder();
     sb.add_u64_field("account_id", STORED | FAST | INDEXED);
     sb.add_text_field("personaname_search", TEXT);
-    sb.add_text_field("personaname_exact", STRING.set_fast(None));
+    sb.add_text_field("personaname_exact", STRING.set_fast(RAW_TOKENIZER_NAME));
     sb.add_text_field("personaname_nospace", STRING);
     sb.add_u64_field("matches_played", STORED | FAST | INDEXED);
     let stored_text = TextOptions::default().set_stored();
