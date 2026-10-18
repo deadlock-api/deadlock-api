@@ -6,6 +6,7 @@ import { RANK_ICON_NAME_AXIS_HEIGHT, RankTierIcons } from "~/components/domain/r
 import { ChartSurface } from "~/components/patterns/charts/ChartSurface";
 import {
   CHART_BASELINE,
+  CHART_CURSOR_BAND,
   CHART_GRID,
   CHART_TICK,
   CHART_X_AXIS,
@@ -37,18 +38,25 @@ const compactNumber = new Intl.NumberFormat("en-US", { notation: "compact" });
 interface ChartEntry {
   badge: number;
   tier: number;
+  /** Where the bar sits on the x axis: its tier's six subtiers, then one empty slot before the next tier. */
+  x: number;
   value: number;
   /** The bar's colour; Recharts reads it from the data point. */
   fill: string;
-  isSpacer?: boolean;
 }
 
-/** The badge at which half of the selected metric sits at or below it. */
-function medianBadgeOf(chartData: ChartEntry[], total: number): number | undefined {
+/**
+ * The bar's place on the numeric x axis. Seven slots a tier leave an empty one between tiers, so the tiers stand
+ * apart without blank data points, which the arrow keys would stop on.
+ */
+const slotOf = (tier: number, subtier: number) => tier * 7 + subtier;
+
+/** The entry at which half of the selected metric sits at or below it. */
+function medianEntryOf(chartData: ChartEntry[], total: number): ChartEntry | undefined {
   let running = 0;
   for (const entry of chartData) {
     running += entry.value;
-    if (!entry.isSpacer && running >= total / 2) return entry.badge;
+    if (running >= total / 2) return entry;
   }
   return undefined;
 }
@@ -74,15 +82,13 @@ export default function BadgeDistributionChart({
 
   const chartData: ChartEntry[] = [];
   for (const tier of tiers) {
-    if (tier > tiers[0]) {
-      chartData.push({ badge: tier * 10, tier, value: 0, fill: "transparent", isSpacer: true });
-    }
     const fill = tierData.get(tier)?.color ?? CHART_COLOR.fallback;
     for (let sub = 1; sub <= 6; sub++) {
       const badge = tier * 10 + sub;
-      chartData.push({ badge, tier, value: valuePerBadge.get(badge) ?? 0, fill });
+      chartData.push({ badge, tier, x: slotOf(tier, sub), value: valuePerBadge.get(badge) ?? 0, fill });
     }
   }
+  const slots = chartData.map((entry) => entry.x);
 
   const total = chartData.reduce((sum, entry) => sum + entry.value, 0);
   const atOrAbove = new Map<number, number>();
@@ -92,11 +98,11 @@ export default function BadgeDistributionChart({
     atOrAbove.set(entry.badge, aboveSum);
   }
 
-  const medianBadge = medianBadgeOf(chartData, total);
+  const median = medianEntryOf(chartData, total);
 
   const valueTicks = niceTicks(0, Math.max(0, ...chartData.map((entry) => entry.value)));
 
-  const tierCenters = tiers.map((tier) => ({ tier, firstBadge: tier * 10 + 1, lastBadge: tier * 10 + 6 }));
+  const tierCenters = tiers.map((tier) => ({ tier, firstBadge: slotOf(tier, 1), lastBadge: slotOf(tier, 6) }));
 
   return (
     <div className="flex h-full w-full flex-col">
@@ -110,12 +116,12 @@ export default function BadgeDistributionChart({
           <CartesianGrid {...CHART_GRID} />
           <Bar dataKey="value" fill={CHART_COLOR.fallback} radius={4} />
           <Tooltip
-            cursor={false}
+            // The column under the reading, by mouse or arrow keys, so the bar being read is marked.
+            cursor={CHART_CURSOR_BAND}
             isAnimationActive={false}
             content={({ active, payload }) => {
               if (!active || !payload?.length) return null;
               const entry = payload[0].payload as ChartEntry;
-              if (entry.isSpacer) return null;
               const rankName = tierData.get(entry.tier)?.name ?? "";
               const subtier = entry.badge % 10;
               const info = badgeMap.get(entry.badge);
@@ -143,7 +149,17 @@ export default function BadgeDistributionChart({
             }}
           />
           {/* The rank names are drawn by RankTierIcons, centred under each tier's badge. */}
-          <XAxis {...CHART_X_AXIS} dataKey="badge" tick={false} height={RANK_ICON_NAME_AXIS_HEIGHT} />
+          {/* Numeric, with a tick per bar: Recharts sizes the bars from the distance between ticks. */}
+          <XAxis
+            {...CHART_X_AXIS}
+            type="number"
+            dataKey="x"
+            domain={[Math.min(...slots) - 0.5, Math.max(...slots) + 0.5]}
+            ticks={slots}
+            interval={0}
+            tick={false}
+            height={RANK_ICON_NAME_AXIS_HEIGHT}
+          />
           <YAxis
             {...CHART_Y_AXIS}
             dataKey="value"
@@ -154,9 +170,9 @@ export default function BadgeDistributionChart({
             // As the `label` prop, not a <Label> child: only a prop title gets room from the auto-sized axis.
             label={{ ...CHART_Y_LABEL, value: BADGE_DISTRIBUTION_METRIC_LABEL[metric] }}
           />
-          {medianBadge !== undefined && (
+          {median !== undefined && (
             <ReferenceLine
-              x={medianBadge}
+              x={median.x}
               {...CHART_BASELINE}
               label={{ value: "Median", position: "insideTopLeft", ...CHART_TICK }}
             />
