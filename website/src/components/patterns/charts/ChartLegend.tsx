@@ -72,17 +72,39 @@ interface ChartLegendItemProps extends Omit<React.ComponentProps<"li">, "color">
   shape?: SwatchShape;
   /** Replaces the swatch, for a layer drawn with a glyph rather than a color. */
   icon?: React.ReactNode;
+  /**
+   * `pending`: the series is on its way (a reference refetching for new filters). The item stays, so the legend never
+   * re-wraps, with its swatch faded and "loading" for a screen reader.
+   */
+  state?: "ready" | "pending";
 }
 
 const LegendSizeContext = createContext<"sm" | "default">("default");
 
 /** One series of a `ChartLegend`; children are its label. */
-export function ChartLegendItem({ color, shape, icon, className, children, ...props }: ChartLegendItemProps) {
+export function ChartLegendItem({
+  color,
+  shape,
+  icon,
+  state = "ready",
+  className,
+  children,
+  ...props
+}: ChartLegendItemProps) {
   const size = useContext(LegendSizeContext);
   return (
-    <li data-slot="chart-legend-item" className={cn("flex items-center gap-1.5", className)} {...props}>
+    <li
+      data-slot="chart-legend-item"
+      data-state={state}
+      className={cn(
+        "flex items-center gap-1.5 data-[state=pending]:[&>[data-slot=chart-swatch]]:opacity-40",
+        className,
+      )}
+      {...props}
+    >
       {icon ?? <ChartSwatch color={color} shape={shape} size={size} />}
       {children}
+      {state === "pending" && <span className="sr-only"> (loading)</span>}
     </li>
   );
 }

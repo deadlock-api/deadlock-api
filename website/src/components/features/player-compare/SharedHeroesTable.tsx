@@ -6,6 +6,7 @@ import { useState } from "react";
 import { HeroCell } from "~/components/domain/assets/HeroCell";
 import { Panel, PanelHeader, PanelShowMore } from "~/components/patterns/panel/Panel";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
+import { SkeletonRows } from "~/components/patterns/states/Skeletons";
 import { NoValue } from "~/components/ui/no-value";
 import { Skeleton } from "~/components/ui/skeleton";
 import { Inline, Stack } from "~/components/ui/stack";
@@ -57,10 +58,9 @@ export function SharedHeroesTable({
       <PanelHeader size="sm" title="Shared heroes" />
       {/* A player just added has no rows yet: the old answer's "nothing in common" is not a verdict. */}
       {pending ? (
-        <Stack gap={2} className="p-2">
-          <Skeleton className="h-8 w-full" />
-          <Skeleton className="h-8 w-full" />
-        </Stack>
+        // The head row and the collapsed rows, at the loaded rows' height (two lines each), so the table drops in
+        // without moving what is below.
+        <SkeletonRows rows={COLLAPSED_ROWS + 1} size="lg" variant="solid" className="p-2" />
       ) : heroes.length === 0 ? (
         <EmptyState variant="plain" icon={UsersRound} title="No heroes in common" className="min-h-32" />
       ) : (

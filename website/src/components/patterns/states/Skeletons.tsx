@@ -18,7 +18,8 @@ function SkeletonLayout({ label, className, children, ...props }: SkeletonLayout
   );
 }
 
-const ROW_HEIGHT = { xs: "h-4", sm: "h-6", default: "h-8" };
+/** `lg`: a table row of two lines of dense text (a count over its rate), 40px plus the 8px gap. */
+const ROW_HEIGHT = { xs: "h-4", sm: "h-6", default: "h-8", lg: "h-10" };
 const FADE = ["opacity-100", "opacity-90", "opacity-80", "opacity-70", "opacity-60", "opacity-50", "opacity-40"];
 
 /** Stand-in for a list or a table body: full-width bars that fade out towards the bottom. */

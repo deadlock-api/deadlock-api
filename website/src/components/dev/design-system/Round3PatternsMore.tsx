@@ -205,12 +205,13 @@ function StatesSpecimens() {
         note="Stand-ins shaped like what is loading. label announces it once; leave it out when a parent already does. Inside a Panel, SkeletonRows sits in a PanelBody."
       >
         <Variants
-          label='SkeletonRows: size xs | sm | default, variant "fade" | "solid"'
-          className="grid items-start sm:grid-cols-3"
+          label='SkeletonRows: size xs | sm | default | lg (two-line table rows), variant "fade" | "solid"'
+          className="grid items-start sm:grid-cols-4"
         >
           <SkeletonRows size="xs" rows={4} label="rows" />
           <SkeletonRows size="sm" rows={3} variant="solid" />
           <SkeletonRows rows={3} />
+          <SkeletonRows size="lg" rows={3} variant="solid" />
         </Variants>
         <Variants label="SkeletonMediaRow" className="block">
           <SkeletonMediaRow rows={2} />

@@ -355,13 +355,15 @@ export function TimelinePanel({
           )}
           <ChartLegend label="Players">
             <PlayerLegendItems players={players} shape="line" />
-            {relative && (
-              <ChartLegendItem color={CHART_COLOR.reference} shape="dashed">
+            {/* Kept while a filter change refetches the field (pending), so the legend never re-wraps; gone only when the
+                field failed and the players' own averages are drawn. */}
+            {(field.data !== undefined || !field.isError) && (
+              <ChartLegendItem color={CHART_COLOR.reference} shape="dashed" state={relative ? "ready" : "pending"}>
                 Average player
               </ChartLegendItem>
             )}
-            {relative && (
-              <ChartLegendItem color={CHART_COLOR.neutral} shape="square">
+            {(field.data !== undefined || !field.isError) && (
+              <ChartLegendItem color={CHART_COLOR.neutral} shape="square" state={relative ? "ready" : "pending"}>
                 Spread (±1σ)
               </ChartLegendItem>
             )}

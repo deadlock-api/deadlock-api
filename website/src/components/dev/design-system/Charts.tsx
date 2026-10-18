@@ -292,9 +292,12 @@ export function Charts() {
       <Specimen
         name="ChartLegend"
         source="patterns/charts/ChartLegend"
-        note="Two or more series always get one. shape matches the mark: line, square or dot."
+        note="Two or more series always get one. shape matches the mark: line, square or dot. state pending keeps a series that is refetching in the legend, its swatch faded, so the legend never re-wraps."
       >
         <ChartLegend>
+          <ChartLegendItem color={CHART_COLOR.reference} shape="dashed" state="pending">
+            Pending reference
+          </ChartLegendItem>
           <ChartLegendItem color={SERIES_COLORS[0]} shape="line">
             Line series
           </ChartLegendItem>
