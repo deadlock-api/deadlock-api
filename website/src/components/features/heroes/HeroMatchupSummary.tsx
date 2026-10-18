@@ -24,7 +24,7 @@ function MatchupCard({ title, rows, accent }: { title: string; rows: MatchupRow[
             className="flex items-center gap-2"
             title={`${row.matches.toLocaleString("en-US")} matches`}
           >
-            <HeroImage heroId={row.heroId} shape="circle" ring="border" title="" className="size-8" />
+            <HeroImage heroId={row.heroId} shape="circle" ring="border" decorative className="size-8" />
             <HeroName heroId={row.heroId} linkToDetail className="min-w-0 text-sm" />
             <Delta value={row.relWinrate} className="ms-auto text-sm" />
           </li>

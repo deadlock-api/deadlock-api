@@ -39,7 +39,7 @@ function HeroTile({ hero, ranked, metric }: { hero: SlimHero; ranked: RankedHero
       content={
         <>
           <TooltipHeader
-            leading={<HeroImage hero={hero} shape="rounded" title="" className="size-8" />}
+            leading={<HeroImage hero={hero} shape="rounded" decorative className="size-8" />}
             title={hero.name}
             subtitle={`${ranked.tier.toUpperCase()} tier${hero.hero_type ? ` · ${capitalize(hero.hero_type)}` : ""}`}
           />
@@ -63,7 +63,7 @@ function HeroTile({ hero, ranked, metric }: { hero: SlimHero; ranked: RankedHero
         asChild
         data-find={findKey.hero(hero.id)}
         name={hero.name}
-        media={<HeroImage hero={hero} shape="rounded" title="" className="size-10" />}
+        media={<HeroImage hero={hero} shape="rounded" decorative className="size-10" />}
         meta={
           <>
             {formatReading(metric, ranked.reading)}

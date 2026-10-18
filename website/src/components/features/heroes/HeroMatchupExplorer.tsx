@@ -82,7 +82,7 @@ function MatchupRanking({
                       onClick={() => onSelect(row.heroId)}
                       aria-label={`Explore ${hero?.name ?? "hero"} matchups`}
                     >
-                      <HeroImage hero={hero} className="size-6 shrink-0" />
+                      <HeroImage hero={hero} decorative className="size-6 shrink-0" />
                       <span className="max-w-20 truncate sm:max-w-none">{hero?.name ?? "Unknown hero"}</span>
                     </Button>
                     <div className="ps-2 text-xs text-muted-foreground sm:hidden">
