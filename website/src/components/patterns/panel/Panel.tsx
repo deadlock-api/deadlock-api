@@ -54,7 +54,7 @@ export function PanelHeader({
       )}
       {...props}
     >
-      <h3 className={cn("flex min-w-0 items-center gap-2 font-semibold", size === "sm" ? "text-xs" : "text-sm")}>
+      <h3 className="flex min-w-0 items-center gap-2 text-sm font-semibold">
         {Icon && (
           <Icon
             aria-hidden="true"
