@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { fineShareDigits, formatFineShare } from "./format";
+import { fineShareDigits, formatFineShare, formatSignedPoints } from "./format";
 
 test("formatFineShare keeps two significant digits below 1%", () => {
   assert.equal(formatFineShare(0.000886), "0.089%");
@@ -19,4 +19,10 @@ test("formatFineShare prints one decimal from 1% up", () => {
 test("formatFineShare never prints a nonzero share as zero", () => {
   assert.equal(formatFineShare(0.000000001), "<0.000001%");
   assert.equal(fineShareDigits(0.000000001), 6);
+});
+
+test("formatSignedPoints prints a rate difference in percentage points that never breaks", () => {
+  assert.equal(formatSignedPoints(0.168), "+16.8\u00a0pp");
+  assert.equal(formatSignedPoints(-0.011), "\u22121.1\u00a0pp");
+  assert.equal(formatSignedPoints(0), "0.0\u00a0pp");
 });
