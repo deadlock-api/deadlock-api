@@ -60,5 +60,6 @@ export const DIALOG_OVERLAY =
 
 // Centred by the inline insets plus auto margins rather than `inset-s-1/2` and a translate, which would need a mirrored
 // translate in RTL. The insets are also the gutter on a narrow screen, so the width needs no viewport breakpoint.
-// It is the query container of its header and footer.
-export const DIALOG_CONTENT = `${FOCUS_RING} @container fixed inset-x-4 top-1/2 z-50 mx-auto grid max-h-dvh -translate-y-1/2 gap-4 overflow-y-auto rounded-lg border bg-background p-6 shadow-lg duration-normal data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95`;
+// It is the query container of its header and footer. A dialog that scrolls contains its overscroll, so scrolling past
+// its end on a touch screen never scrolls the page behind it.
+export const DIALOG_CONTENT = `${FOCUS_RING} @container fixed inset-x-4 top-1/2 z-50 mx-auto grid max-h-dvh -translate-y-1/2 gap-4 overflow-y-auto overscroll-contain rounded-lg border bg-background p-6 shadow-lg duration-normal data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95`;
