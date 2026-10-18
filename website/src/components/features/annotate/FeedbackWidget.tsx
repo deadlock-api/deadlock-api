@@ -65,7 +65,7 @@ function TargetList({
   return (
     <Card tone="primary" size="xs" className="p-2.5">
       <Stack gap={2} className="max-h-52 overflow-y-auto">
-        {targets.map((target) => (
+        {targets.map((target, index) => (
           <div key={target.id} className="flex items-start justify-between gap-2">
             <Stack gap={0.5}>
               <div className="flex items-center gap-1.5 text-sm font-medium">
@@ -79,7 +79,7 @@ function TargetList({
                 {target.source ? formatSource(target.source) : target.selector}
               </div>
               {target.elementText && (
-                <div className="truncate text-xs text-muted-foreground italic">"{target.elementText}"</div>
+                <div className="truncate text-xs text-muted-foreground italic">“{target.elementText}”</div>
               )}
             </Stack>
             <Button
@@ -87,7 +87,8 @@ function TargetList({
               size="icon-xs"
               className="shrink-0"
               onClick={() => onDetach(target.id)}
-              aria-label="Remove the attached element"
+              // Each remove button names its own target; a repeated component is told apart by its place.
+              aria-label={`Remove ${target.source?.component ?? "selected element"}${targets.length > 1 ? ` ${index + 1}` : ""}`}
             >
               <X className="size-3.5" />
             </Button>
@@ -229,40 +230,54 @@ export function FeedbackWidget() {
             </Button>
           )}
 
-          <Field
-            label="Your feedback"
-            labelDisplay="hidden"
-            htmlFor={commentId}
-            counter={
-              comment.length >= COUNTER_VISIBLE_FROM ? `${MAX_COMMENT_LENGTH - comment.length} characters left` : null
-            }
+          <form
+            className="flex flex-col gap-3"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void handleSubmit();
+            }}
           >
-            <Textarea
-              id={commentId}
-              ref={commentRef}
-              value={comment}
-              maxLength={MAX_COMMENT_LENGTH}
-              onChange={(event) => setComment(event.target.value)}
-              placeholder={targets.length > 0 ? TARGET_PROMPT : GENERAL_PROMPT}
-              rows={5}
-              className="field-sizing-fixed resize-y"
-            />
-          </Field>
-          <Field label="Name (optional)" orientation="horizontal" htmlFor={nameId}>
-            <Input
-              id={nameId}
-              name="nickname"
-              autoComplete="nickname"
-              spellCheck={false}
-              value={nickname}
-              onChange={(event) => setNickname(event.target.value)}
-              className="min-w-0 flex-1"
-            />
-          </Field>
+            <Field
+              label="Your feedback"
+              labelDisplay="hidden"
+              htmlFor={commentId}
+              counter={
+                comment.length >= COUNTER_VISIBLE_FROM ? `${MAX_COMMENT_LENGTH - comment.length} characters left` : null
+              }
+            >
+              <Textarea
+                id={commentId}
+                ref={commentRef}
+                value={comment}
+                maxLength={MAX_COMMENT_LENGTH}
+                onChange={(event) => setComment(event.target.value)}
+                placeholder={targets.length > 0 ? TARGET_PROMPT : GENERAL_PROMPT}
+                rows={5}
+                className="field-sizing-fixed resize-y"
+              />
+            </Field>
+            <Field label="Name (optional)" orientation="horizontal" htmlFor={nameId}>
+              <Input
+                id={nameId}
+                name="nickname"
+                autoComplete="nickname"
+                spellCheck={false}
+                value={nickname}
+                onChange={(event) => setNickname(event.target.value)}
+                className="min-w-0 flex-1"
+              />
+            </Field>
 
-          <Button className="w-full" disabled={!comment.trim() || submitting} onClick={() => void handleSubmit()}>
-            {submitting ? "Sending..." : "Send feedback"}
-          </Button>
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={!comment.trim()}
+              loading={submitting}
+              loadingLabel="Sending feedback"
+            >
+              Send feedback
+            </Button>
+          </form>
         </PopoverContent>
       </Popover>
     </div>
