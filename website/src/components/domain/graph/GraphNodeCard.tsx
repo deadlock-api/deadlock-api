@@ -33,7 +33,10 @@ const graphNodeCardVariants = cva(
 
 type Accent = NonNullable<VariantProps<typeof graphNodeCardVariants>["accent"]>;
 
-/** Opacity steps for `emphasis`, faintest first. They fade the image and bars; text stays at full contrast (Law 18). */
+/**
+ * Opacity steps for `emphasis`, faintest first. They fade the image only: the bars are data and the text is read, so
+ * both stay at full contrast (Law 18).
+ */
 const EMPHASIS = ["opacity-60", "opacity-70", "opacity-80", "opacity-90", "opacity-100"] as const;
 
 const ACCENT_TINT: Record<Accent, string> = {
@@ -52,20 +55,18 @@ function RateRow({
   rate,
   fill,
   color,
-  fade,
   className,
 }: {
   label: string;
   rate: number;
   fill: number;
   color: Color;
-  fade: string;
   className: string;
 }) {
   return (
     <div className="flex items-center gap-1.5 text-xs">
       <span className="w-4 shrink-0 font-medium text-muted-foreground">{label}</span>
-      <ProgressBar variant="thin" value={fill} color={color} className={cn("flex-1", fade)} />
+      <ProgressBar variant="thin" value={fill} color={color} className="flex-1" />
       <span className={cn("w-9 shrink-0 text-end font-semibold tabular-nums", className)}>
         {(rate * 100).toFixed(1)}%
       </span>
@@ -162,21 +163,21 @@ export function GraphNodeCard({
         </div>
       </div>
       <div className="flex flex-col gap-1">
+        {/* The fixed-meaning series colors: win rate and share read the same here as in every chart, and neither
+            borrows the red of a loss or the blue of an ability accent. */}
         <RateRow
           label="WR"
           rate={winRate}
           fill={winRateFill}
-          color="var(--primary)"
-          fade={fade}
+          color="var(--chart-win-rate)"
           className={TONE_TEXT[toneOf(winRate, 0.5)]}
         />
         <RateRow
           label="PR"
           rate={pickRate}
           fill={pickRateFill}
-          color="var(--chart-4)"
-          fade={fade}
-          className="text-chart-4"
+          color="var(--chart-share)"
+          className="text-foreground"
         />
       </div>
     </Comp>

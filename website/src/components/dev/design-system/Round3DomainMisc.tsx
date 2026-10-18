@@ -233,7 +233,7 @@ export function Round3DomainMisc() {
       <Specimen
         name="GraphNodeCard"
         source="domain/graph/GraphNodeCard"
-        note="One node of a build graph (item flow, ability order): image, name, meta line and win / pick rate mini-bars. The left edge carries the category. With onClick it is a button that can be selected; the graph places it through className and style. Details on hover are a Tooltip around it; a static node goes inside a TooltipTarget."
+        note="One node of a build graph (item flow, ability order): image, name, meta line and win / pick rate mini-bars. The left edge carries the category; the bars take the fixed win-rate and share series colors and never fade with emphasis (only the image does). With onClick it is a button that can be selected; the graph places it through className and style. Details on hover are a Tooltip around it; a static node goes inside a TooltipTarget."
       >
         <Variants
           label="accent: weapon, vitality, spirit · selectable (click: selected shows a pin) · status · tooltip · focus-visible"

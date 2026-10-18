@@ -219,6 +219,10 @@ for (const surface of ["background", "card", "popover", "muted", "secondary", "a
 }
 // The 95% range band of a DivergingBar, on its muted track and on the card around it.
 for (const surface of ["muted", "card", "table-stripe"]) variant("chart-interval", surface, UI_MIN);
+// The win rate and share series as bars (a GraphNodeCard's mini-bars) on their muted track and on the card.
+for (const series of ["chart-win-rate", "chart-share"]) {
+  for (const surface of ["muted", "card"]) variant(series, surface, UI_MIN);
+}
 // A highlighted tier list tile: its reading stays readable on the brand tint.
 variant("muted-foreground", "primary/15 over card");
 variant("muted-foreground", "secondary");
