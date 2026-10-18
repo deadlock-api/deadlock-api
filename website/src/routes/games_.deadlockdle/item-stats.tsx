@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AnimatePresence, motion } from "framer-motion";
-import { useCallback, useMemo, useRef } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 
 import { ItemImage } from "~/components/domain/assets/ItemImage";
 import { AnswerOption, type AnswerOptionState, revealedState } from "~/components/domain/minigames/AnswerOption";
@@ -95,6 +95,27 @@ function tileState(isSelected: boolean, isAnswer: boolean, revealed: boolean): A
   return isSelected ? "selected" : "idle";
 }
 
+/** The id of one item's answer group, which Submit All moves focus to when it is unanswered. */
+function fieldId(itemId: number, field: keyof ItemAnswer) {
+  return `item-${itemId}-${field}`;
+}
+
+/** The first unanswered group, in page order. */
+function firstMissing(
+  items: readonly { id: number }[],
+  answers: Record<number, ItemAnswer>,
+  statQuestions: ReadonlyMap<number, unknown>,
+): string | null {
+  for (const item of items) {
+    const answer = answers[item.id] ?? {};
+    for (const field of ["active", "tier", "slot", "stat"] as const) {
+      if (field === "stat" && !statQuestions.get(item.id)) continue;
+      if (answer[field] == null) return fieldId(item.id, field);
+    }
+  }
+  return null;
+}
+
 function ItemStatsQuiz() {
   const itemsQuery = useItems();
   const { data: items, isLoading } = itemsQuery;
@@ -173,8 +194,16 @@ function ItemStatsQuiz() {
     return results;
   }, [state.submitted, dailyItems, state.answers, statQuestions]);
 
+  // Submit All stays enabled: with answers missing it marks each unanswered group and moves focus to the first.
+  const [checkMissing, setCheckMissing] = useState(false);
   const handleSubmit = useCallback(() => {
-    if (!allFieldsFilled || state.submitted) return;
+    if (state.submitted) return;
+    if (!allFieldsFilled) {
+      setCheckMissing(true);
+      const first = firstMissing(dailyItems, state.answers, statQuestions);
+      if (first) document.querySelector<HTMLElement>(`#${first} [data-slot=answer-option]`)?.focus();
+      return;
+    }
     const score = dailyItems.reduce((total, item) => {
       const answer = state.answers[item.id];
       return (
@@ -273,6 +302,8 @@ function ItemStatsQuiz() {
                     <Field
                       label="Activation"
                       reserveMessage
+                      id={fieldId(item.id, "active")}
+                      error={checkMissing && answer.active == null ? "Pick one" : undefined}
                       description={
                         result && !result.active ? `Correct: ${item.is_active_item ? "Active" : "Passive"}` : undefined
                       }
@@ -300,6 +331,8 @@ function ItemStatsQuiz() {
                     <Field
                       label="Tier"
                       reserveMessage
+                      id={fieldId(item.id, "tier")}
+                      error={checkMissing && answer.tier == null ? "Pick one" : undefined}
                       description={result && !result.tier ? `Correct: T${item.item_tier}` : undefined}
                       className="font-mono"
                     >
@@ -325,6 +358,8 @@ function ItemStatsQuiz() {
                     <Field
                       label="Slot"
                       reserveMessage
+                      id={fieldId(item.id, "slot")}
+                      error={checkMissing && answer.slot == null ? "Pick one" : undefined}
                       description={result && !result.slot ? `Correct: ${capitalize(item.item_slot_type)}` : undefined}
                       className="font-mono"
                     >
@@ -352,6 +387,8 @@ function ItemStatsQuiz() {
                       <Field
                         label={statQuestion.label}
                         reserveMessage
+                        id={fieldId(item.id, "stat")}
+                        error={checkMissing && answer.stat == null ? "Pick one" : undefined}
                         description={result && !result.stat ? `Correct: ${statQuestion.answer}` : undefined}
                         className="font-mono"
                       >
@@ -389,7 +426,7 @@ function ItemStatsQuiz() {
           transition={{ delay: ITEMS_COUNT * 0.08 + 0.2 }}
           className="flex justify-center"
         >
-          <TerminalButton variant="soft" size="lg" onClick={handleSubmit} disabled={!allFieldsFilled}>
+          <TerminalButton variant="soft" size="lg" onClick={handleSubmit}>
             Submit All
           </TerminalButton>
         </motion.div>
