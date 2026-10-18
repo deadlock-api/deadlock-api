@@ -331,6 +331,9 @@ holds. See `docs/compact-data-ui.md` for data-view rules.
   provides the level of its panel's title and `DialogContent` level 2 (its title is an h2), so a group title inside
   either takes `useNextHeadingLevel()` and never skips a level. A part of a feature is titled by a `Heading`, never by
   a styled `<span>`.
+- Server HTML is never hidden for an entrance animation: a framer `initial` that starts at `opacity: 0` is gated on
+  `useHydrated()` (`initial={hydrated ? from : false}`, or `useEnterFrom(from)` in the games), so the server render
+  and hydration show the end state and only a client-side navigation animates in. No `whileInView` reveals.
 - Color is never the only signal: tones ship with a sign, an arrow or a label.
 - Focus is always visible: a focusable element starts its class list with `FOCUS_RING` (or `FOCUS_RING_BORDER` on a
   bordered control) from `ui/recipes.ts`; never remove `focus-visible` styles from a primitive.

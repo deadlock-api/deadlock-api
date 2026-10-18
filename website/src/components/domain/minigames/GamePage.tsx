@@ -4,6 +4,7 @@ import { ArrowLeft } from "lucide-react";
 
 import { PageHeader } from "~/components/patterns/page/PageHeader";
 import { PageShell } from "~/components/patterns/page/PageShell";
+import { useHydrated } from "~/hooks/useHydrated";
 import { cn } from "~/lib/utils";
 
 const MotionPageShell = motion.create(PageShell);
@@ -35,11 +36,13 @@ export function GamePage({
   className,
   ...props
 }: GamePageProps) {
+  const hydrated = useHydrated();
   return (
     <MotionPageShell
       density="content"
       width={width}
-      initial={{ opacity: 0, y: 12 }}
+      // Visible in the server HTML: only a page mounted by a client-side navigation slides in.
+      initial={hydrated ? { opacity: 0, y: 12 } : false}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.25, ease: "easeOut" }}
       {...props}

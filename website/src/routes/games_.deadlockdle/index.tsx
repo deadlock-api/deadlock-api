@@ -18,7 +18,7 @@ import { GameTile } from "~/components/domain/minigames/GameTile";
 import { ShareButton } from "~/components/domain/minigames/ShareButton";
 import { TerminalButton } from "~/components/domain/minigames/TerminalButton";
 import { type DailyStatus, GameCard, getDailyResult, getDailyStatus } from "~/components/features/deadlockdle/GameCard";
-import { DURATION, enter, fadeUp, stagger } from "~/components/features/deadlockdle/motion";
+import { DURATION, enter, fadeUp, stagger, useEnterFrom } from "~/components/features/deadlockdle/motion";
 import { Hero, HeroActions } from "~/components/patterns/page/Hero";
 import { PageHeader } from "~/components/patterns/page/PageHeader";
 import { PageShell } from "~/components/patterns/page/PageShell";
@@ -146,6 +146,8 @@ function buildShareText(date: string, statuses: Record<GameMode, DailyStatus>): 
 }
 
 function DeadlockdleHub() {
+  const enterHeader = useEnterFrom({ opacity: 0, scale: 0.95 });
+  const enterTiles = useEnterFrom("hidden");
   const { date: dateParam } = Route.useSearch();
   const navigate = useNavigate();
   const today = getTodayDate();
@@ -188,7 +190,7 @@ function DeadlockdleHub() {
   return (
     <PageShell density="marketing" className="theme-terminal">
       <Hero size="sm">
-        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={enter}>
+        <motion.div initial={enterHeader} animate={{ opacity: 1, scale: 1 }} transition={enter}>
           <PageHeader
             size="display"
             eyebrow={<span className="font-game text-sm font-semibold text-primary">Day {dayNum}</span>}
@@ -244,9 +246,8 @@ function DeadlockdleHub() {
       <section>
         <motion.div
           variants={stagger}
-          initial="hidden"
-          whileInView="show"
-          viewport={{ once: true, amount: 0.1 }}
+          initial={enterTiles}
+          animate="show"
           className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3"
         >
           {GAMES.map((game) => (

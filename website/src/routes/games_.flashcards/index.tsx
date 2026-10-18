@@ -4,7 +4,7 @@ import { GitBranch, ScrollText, ShoppingBag, Swords } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 import { GameTile } from "~/components/domain/minigames/GameTile";
-import { enter, fadeUp, stagger } from "~/components/features/deadlockdle/motion";
+import { enter, fadeUp, stagger, useEnterFrom } from "~/components/features/deadlockdle/motion";
 import { Hero } from "~/components/patterns/page/Hero";
 import { PageHeader } from "~/components/patterns/page/PageHeader";
 import { PageShell } from "~/components/patterns/page/PageShell";
@@ -54,10 +54,12 @@ const GAMES: {
 ];
 
 function FlashcardsHub() {
+  const enterHeader = useEnterFrom({ opacity: 0, scale: 0.95 });
+  const enterTiles = useEnterFrom("hidden");
   return (
     <PageShell density="marketing" className="theme-terminal">
       <Hero size="sm">
-        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={enter}>
+        <motion.div initial={enterHeader} animate={{ opacity: 1, scale: 1 }} transition={enter}>
           <PageHeader
             size="display"
             title={<span className="font-game font-normal">Flashcards</span>}
@@ -69,7 +71,7 @@ function FlashcardsHub() {
       <section className="mx-auto w-full max-w-5xl">
         <motion.div
           variants={stagger}
-          initial="hidden"
+          initial={enterTiles}
           animate="show"
           className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3"
         >
