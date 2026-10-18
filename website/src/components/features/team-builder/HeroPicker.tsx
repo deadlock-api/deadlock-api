@@ -1,10 +1,10 @@
-import { useMemo, useState } from "react";
+import { useLayoutEffect, useMemo, useState } from "react";
 
 import { HeroGrid, HeroGridSearch, HeroGridTile } from "~/components/domain/selectors/HeroGrid";
 import { useHeroPicker } from "~/components/domain/selectors/useHeroPicker";
 import { Field } from "~/components/ui/field";
 import { Popover, PopoverAnchor, PopoverContent } from "~/components/ui/popover";
-import { SCROLLBAR_THIN } from "~/components/ui/recipes";
+import { OVERLAY_SCROLL_AREA } from "~/components/ui/recipes";
 import { Segmented, SegmentedItem } from "~/components/ui/segmented";
 import { Separator } from "~/components/ui/separator";
 import type { Draft, Recommendation, Side, StatsIndex } from "~/lib/team-builder/analysis";
@@ -71,6 +71,12 @@ export function HeroPicker({ target, onClose, ...rest }: HeroPickerProps) {
     }),
     [target],
   );
+  // An opener away from the board (the empty state's "Add hero") targets a slot scrolled out of view, and the popover
+  // placed against that off-screen rect opened above the viewport with its search box out of reach. The slot is
+  // brought into view first; the popover follows the scroll.
+  useLayoutEffect(() => {
+    if (target) slotElement(target)?.scrollIntoView({ block: "nearest" });
+  }, [target]);
   return (
     <Popover
       open={target !== null}
@@ -189,7 +195,7 @@ function PickerBody({
         </Field>
       </div>
       <Separator />
-      <div className={cn(SCROLLBAR_THIN, "min-h-0 flex-1 overflow-y-auto p-2")}>
+      <div className={cn(OVERLAY_SCROLL_AREA, "flex-1 p-2")}>
         <HeroGrid picker={picker} aria-label="Heroes">
           {picker.matches.map((hero) => {
             const row = byId.get(hero.id);

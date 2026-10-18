@@ -299,7 +299,8 @@ holds. See `docs/compact-data-ui.md` for data-view rules.
 - Focus is always visible: a focusable element starts its class list with `FOCUS_RING` (or `FOCUS_RING_BORDER` on a
   bordered control) from `ui/recipes.ts`; never remove `focus-visible` styles from a primitive.
 - A scroll region takes `SCROLLBAR_THIN` from `ui/recipes.ts` (Tailwind's `scrollbar-thin` with the `--scrollbar` /
-  `--scrollbar-active` thumb tokens); popper content takes `POPPER_SCROLLBAR`. `scrollbar-none` hides one that has its
+  `--scrollbar-active` thumb tokens); popper content takes `POPPER_SCROLLBAR`, and the scrolling body inside an
+  overlay takes `OVERLAY_SCROLL_AREA` (it adds `overscroll-contain`). `scrollbar-none` hides one that has its
   own affordance. A bare `scrollbar-thin` has no token colour and is flagged outside the system.
 - Sortable headers carry `aria-sort`; icon buttons carry `aria-label`; charts carry a `label`.
 

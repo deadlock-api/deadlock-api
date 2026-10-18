@@ -55,6 +55,12 @@ export const SCROLLBAR_THIN =
  */
 export const POPPER_SCROLLBAR = `${SCROLLBAR_THIN} **:scrollbar-thin`;
 
+/**
+ * The scrolling body of an overlay (a popover's list, a dialog's pane). It contains its overscroll, so scrolling past
+ * the end on a touch screen never moves the page behind the overlay.
+ */
+export const OVERLAY_SCROLL_AREA = `${SCROLLBAR_THIN} min-h-0 overflow-y-auto overscroll-contain`;
+
 export const DIALOG_OVERLAY =
   "fixed inset-0 z-50 bg-scrim data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:animate-in data-[state=open]:fade-in-0";
 

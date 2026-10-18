@@ -21,7 +21,7 @@ const COLOR_GROUPS: { name: string; note: string; tokens: string[] }[] = [
   },
   {
     name: "Scrollbars",
-    note: "The thumb of SCROLLBAR_THIN on a transparent track: quiet at rest, active while its region is hovered or focused.",
+    note: "The thumb of SCROLLBAR_THIN on a transparent track: quiet at rest, active while its region is hovered or focused. OVERLAY_SCROLL_AREA adds overscroll containment for the body of a popover or dialog.",
     tokens: ["scrollbar", "scrollbar-active"],
   },
   {
