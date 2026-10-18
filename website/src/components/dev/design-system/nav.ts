@@ -308,6 +308,7 @@ export const NAV: readonly NavChapter[] = [
           "HeroSelector",
           "HeroGrid",
           "ChartHeroSelector",
+          "ExtraArgumentFields",
           "ItemSelector",
           "ItemGrid",
           "ItemSlotSelector and ItemTierSelector",

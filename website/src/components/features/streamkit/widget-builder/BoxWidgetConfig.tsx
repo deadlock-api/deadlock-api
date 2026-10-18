@@ -1,6 +1,6 @@
 import { Plus, X } from "lucide-react";
 
-import { ExtraArguments } from "~/components/features/streamkit/widgets/ExtraArguments";
+import { ExtraArgumentFields } from "~/components/domain/streamkit/ExtraArgumentFields";
 import { Section } from "~/components/patterns/page/Section";
 import { Button } from "~/components/ui/button";
 import { CheckboxField } from "~/components/ui/checkbox-field";
@@ -15,7 +15,7 @@ import { formatCountNoun } from "~/lib/format";
 import { snakeToPretty } from "~/lib/utils";
 import type { Variable } from "~/types/streamkit/command";
 
-import type { WidgetConfig, WidgetConfigAction, WidgetRow } from "./widget-config";
+import { missingArgErrors, type WidgetConfig, type WidgetConfigAction, type WidgetRow } from "./widget-config";
 
 interface BoxWidgetConfigProps {
   config: WidgetConfig;
@@ -151,12 +151,16 @@ export function BoxWidgetConfig({ config, updateConfig, availableVariables }: Bo
               />
             </div>
           ))}
-          <ExtraArguments
-            extraArgs={availableVariables
+          <ExtraArgumentFields
+            args={availableVariables
               .filter((v) => rows.some((row) => row.variable === v.name))
               .flatMap((v) => v.extra_args ?? [])}
-            extraValues={config.extraArgs || {}}
-            onChange={updateExtraArg}
+            values={config.extraArgs}
+            onValueChange={updateExtraArg}
+            errors={missingArgErrors(
+              availableVariables.filter((v) => rows.some((row) => row.variable === v.name)),
+              config.extraArgs,
+            )}
           />
           <Button variant="outline" data-add-row onClick={addVariable} className="self-start">
             <Plus aria-hidden="true" />

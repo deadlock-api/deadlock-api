@@ -1,4 +1,5 @@
 import type { Color } from "~/types/general";
+import type { Variable } from "~/types/streamkit/command";
 import type { Theme } from "~/types/streamkit/widget";
 
 export const widgetTypes: string[] = ["box", "raw"];
@@ -61,4 +62,20 @@ export type WidgetConfigAction = Partial<WidgetConfig>;
 
 export function widgetConfigReducer(state: WidgetConfig, action: WidgetConfigAction): WidgetConfig {
   return { ...state, ...action };
+}
+
+/** Per argument the shown variables take but that is still empty, what needs it: "{hero_kd} needs a hero." */
+export function missingArgErrors(shown: readonly Variable[], values: Readonly<Record<string, string>>) {
+  const needing = new Map<string, string[]>();
+  for (const variable of shown) {
+    for (const arg of variable.extra_args ?? []) {
+      if (!values[arg]) needing.set(arg, [...(needing.get(arg) ?? []), `{${variable.name}}`]);
+    }
+  }
+  return Object.fromEntries(
+    [...needing].map(([arg, names]) => [
+      arg,
+      `${names.join(", ")} ${names.length === 1 ? "needs" : "need"} ${arg === "hero_name" ? "a hero" : `a ${arg.replaceAll("_", " ")}`}.`,
+    ]),
+  );
 }

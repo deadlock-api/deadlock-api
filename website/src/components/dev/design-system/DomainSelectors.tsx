@@ -24,6 +24,7 @@ import { RankRangeSelector } from "~/components/domain/selectors/RankRangeSelect
 import { SeasonPatchDatePicker } from "~/components/domain/selectors/SeasonPatchDatePicker";
 import { type HeroSelectionProps, useHeroPicker } from "~/components/domain/selectors/useHeroPicker";
 import { type ItemSelectionProps, useItemPicker, useShopItems } from "~/components/domain/selectors/useItemPicker";
+import { ExtraArgumentFields } from "~/components/domain/streamkit/ExtraArgumentFields";
 import type { PickerTriState } from "~/components/patterns/picker/picker";
 import { Separator } from "~/components/ui/separator";
 import type { Dayjs } from "~/dayjs";
@@ -173,6 +174,8 @@ export function DomainSelectors() {
           <HeroSelector selection="tri-state" size="sm" label="Toolbar" defaultValue={heroStates} />
         </Variants>
       </Specimen>
+
+      <ExtraArgumentFieldsSpecimen />
 
       <Specimen
         name="HeroGrid"
@@ -342,5 +345,27 @@ export function DomainSelectors() {
         </Variants>
       </Specimen>
     </>
+  );
+}
+
+function ExtraArgumentFieldsSpecimen() {
+  const [values, setValues] = useState<Record<string, string>>({});
+  const onValueChange = (arg: string, value: string) => setValues((current) => ({ ...current, [arg]: value }));
+  return (
+    <Specimen
+      name="ExtraArgumentFields"
+      source="domain/streamkit/ExtraArgumentFields"
+      note="The extra arguments of Stream Kit variables (command and widget builders), one Field each, as many to a row as fit at 14rem. hero_name is a HeroSelector (its cell carries the visible Hero label); any other argument is a typed Input. errors puts a message under an argument. Renders nothing without arguments; the parent places it."
+    >
+      <Variants className="grid max-w-xl gap-4">
+        <ExtraArgumentFields args={["hero_name", "item_name"]} values={values} onValueChange={onValueChange} />
+        <ExtraArgumentFields
+          args={["hero_name"]}
+          values={{}}
+          onValueChange={() => {}}
+          errors={{ hero_name: "{hero_kd} needs a hero." }}
+        />
+      </Variants>
+    </Specimen>
   );
 }

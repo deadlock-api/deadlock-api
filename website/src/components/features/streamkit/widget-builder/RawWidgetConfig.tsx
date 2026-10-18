@@ -1,13 +1,13 @@
 import { useId } from "react";
 
-import { ExtraArguments } from "~/components/features/streamkit/widgets/ExtraArguments";
+import { ExtraArgumentFields } from "~/components/domain/streamkit/ExtraArgumentFields";
 import { Field } from "~/components/ui/field";
 import { Input } from "~/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
 import type { Color } from "~/types/general";
 import type { Variable } from "~/types/streamkit/command";
 
-import type { WidgetConfig, WidgetConfigAction } from "./widget-config";
+import { missingArgErrors, type WidgetConfig, type WidgetConfigAction } from "./widget-config";
 
 interface RawWidgetConfigProps {
   config: WidgetConfig;
@@ -67,10 +67,14 @@ export function RawWidgetConfig({ config, updateConfig, availableVariables }: Ra
           />
         </Field>
       </div>
-      <ExtraArguments
-        extraArgs={availableVariables.filter((v) => config.variable === v.name).flatMap((v) => v.extra_args ?? [])}
-        extraValues={config.extraArgs || {}}
-        onChange={updateExtraArg}
+      <ExtraArgumentFields
+        args={availableVariables.filter((v) => config.variable === v.name).flatMap((v) => v.extra_args ?? [])}
+        values={config.extraArgs}
+        onValueChange={updateExtraArg}
+        errors={missingArgErrors(
+          availableVariables.filter((v) => v.name === config.variable),
+          config.extraArgs,
+        )}
       />
     </>
   );
