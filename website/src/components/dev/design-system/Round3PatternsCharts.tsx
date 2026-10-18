@@ -8,12 +8,16 @@ import {
   ChartLegendItem,
   ChartSwatch,
 } from "~/components/patterns/charts/ChartLegend";
-import { ChartOverlay, ChartOverlayItem, ChartStage, ChartStageFrame } from "~/components/patterns/charts/ChartOverlay";
+import {
+  ChartOverlay,
+  ChartOverlayItem,
+  ChartOverlaySlider,
+  ChartStage,
+  ChartStageFrame,
+} from "~/components/patterns/charts/ChartOverlay";
 import { ChartReading, ChartReadings } from "~/components/patterns/charts/ChartReadings";
 import { chartRampCss, SERIES_COLORS } from "~/components/patterns/charts/theme";
 import { WinRateBarChart } from "~/components/patterns/charts/WinRateBarChart";
-import { Field } from "~/components/ui/field";
-import { Slider } from "~/components/ui/slider";
 import { TooltipCard, TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
 
 interface Bin {
@@ -174,25 +178,14 @@ export function Round3PatternsCharts() {
         note="Glass pills floating in a corner of a canvas, a map or a WebGL scene: ChartStage is the rounded, clipped box, ChartOverlay names the corner, ChartOverlayItem is one pill. ChartGradientLegend is the key to a continuous scale."
       >
         <ChartStage className="h-56 bg-muted">
-          <ChartOverlay position="top-start">Drag to rotate · Scroll to zoom</ChartOverlay>
+          <ChartOverlay position="top-start">
+            <ChartOverlayItem>top-start</ChartOverlayItem>
+          </ChartOverlay>
           <ChartOverlay position="top-end">
             <ChartOverlayItem>top-end</ChartOverlayItem>
           </ChartOverlay>
           <ChartOverlay position="bottom-start">
-            <ChartOverlayItem>
-              <Field orientation="horizontal" label={<span className="text-xs">Opacity</span>}>
-                <Slider
-                  aria-label="Opacity"
-                  min={10}
-                  max={100}
-                  value={[opacity]}
-                  onValueChange={([next]) => setOpacity(next)}
-                  getValueText={(next) => `${next}%`}
-                  className="w-20"
-                />
-                <span className="w-7 tabular-nums">{opacity}%</span>
-              </Field>
-            </ChartOverlayItem>
+            <ChartOverlayItem>bottom-start</ChartOverlayItem>
             <ChartOverlayItem>A second pill stacks under it</ChartOverlayItem>
           </ChartOverlay>
           <ChartOverlay>
@@ -204,6 +197,34 @@ export function Round3PatternsCharts() {
                 stops={["var(--chart-1)", "var(--chart-4)", "var(--chart-6)"]}
               />
             </ChartOverlayItem>
+          </ChartOverlay>
+        </ChartStage>
+      </Specimen>
+
+      <Specimen
+        name="ChartOverlaySlider"
+        source="patterns/charts/ChartOverlay"
+        note='A slider of a plot overlay: label, 80px track, value in a fixed column. In a ChartOverlay layout="rows" the pills share their columns, so the tracks line up. disabled keeps the row in place, out of the tab order and announced as unavailable, when the view has no use for it.'
+      >
+        <ChartStage className="h-32 bg-muted">
+          <ChartOverlay position="bottom-start" layout="rows">
+            <ChartOverlaySlider
+              label="Opacity"
+              min={10}
+              max={100}
+              value={opacity}
+              onValueChange={setOpacity}
+              format={(next) => `${next}%`}
+            />
+            <ChartOverlaySlider
+              label="Sensitivity"
+              min={800}
+              max={1000}
+              value={990}
+              onValueChange={() => {}}
+              format={(next) => `${(next / 10).toFixed(1)}%`}
+              disabled
+            />
           </ChartOverlay>
         </ChartStage>
       </Specimen>

@@ -309,9 +309,9 @@ export default function HeatmapCanvas({
           </TooltipCard>
         )}
       </div>
-      <ChartOverlay position="bottom-start" narrow="outside">
+      <ChartOverlay position="bottom-start" narrow="outside" layout="rows">
         {/* The share view's scale is fixed, so there is nothing to clip. */}
-        {viewMode !== "share" && <SensitivitySlider value={sensitivity} onChange={onSensitivityChange} />}
+        <SensitivitySlider value={sensitivity} onChange={onSensitivityChange} disabled={viewMode === "share"} />
       </ChartOverlay>
     </ChartStageFrame>
   );

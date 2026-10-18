@@ -4,11 +4,14 @@ import type { KillDeathStats, MapData, MapImages } from "deadlock_api_client";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 
-import { ChartOverlay, ChartOverlayItem, ChartStage, ChartStageFrame } from "~/components/patterns/charts/ChartOverlay";
+import {
+  ChartOverlay,
+  ChartOverlaySlider,
+  ChartStage,
+  ChartStageFrame,
+} from "~/components/patterns/charts/ChartOverlay";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
-import { Field } from "~/components/ui/field";
-import { Slider } from "~/components/ui/slider";
 
 import {
   buildHeatGrids,
@@ -299,26 +302,18 @@ export default function Heatmap3D({
             />
           </div>
         )}
-
-        <ChartOverlay position="top-start">Drag to rotate · Scroll to zoom · Right-click to pan</ChartOverlay>
       </ChartStage>
 
-      <ChartOverlay position="bottom-start" narrow="outside">
-        <ChartOverlayItem>
-          <Field orientation="horizontal" label={<span className="text-xs">Opacity</span>}>
-            <Slider
-              aria-label="Opacity"
-              min={10}
-              max={100}
-              value={[Math.round(opacity * 100)]}
-              onValueChange={([next]) => setOpacity(next / 100)}
-              getValueText={(next) => `${next}%`}
-              className="w-20"
-            />
-            <span className="w-9 text-xs text-muted-foreground tabular-nums">{Math.round(opacity * 100)}%</span>
-          </Field>
-        </ChartOverlayItem>
-        {viewMode !== "share" && <SensitivitySlider value={sensitivity} onChange={onSensitivityChange} />}
+      <ChartOverlay position="bottom-start" narrow="outside" layout="rows">
+        <ChartOverlaySlider
+          label="Opacity"
+          min={10}
+          max={100}
+          value={Math.round(opacity * 100)}
+          onValueChange={(next) => setOpacity(next / 100)}
+          format={(next) => `${next}%`}
+        />
+        <SensitivitySlider value={sensitivity} onChange={onSensitivityChange} disabled={viewMode === "share"} />
       </ChartOverlay>
     </ChartStageFrame>
   );

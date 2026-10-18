@@ -64,6 +64,8 @@ function Slider({
           // Radix puts role="slider" on the thumb, so a label on the root never reaches assistive technology.
           aria-label={thumbLabels?.[index] ?? ariaLabel}
           aria-valuetext={getValueText?.(values[index] ?? min, index)}
+          // Radix only marks the root; on the thumb, which has the slider role, a disabled slider is announced as such.
+          aria-disabled={props.disabled || undefined}
           // Radix marks a disabled thumb with `data-disabled`, not the `:disabled` of a form control.
           className={cn(
             FOCUS_RING_BORDER,

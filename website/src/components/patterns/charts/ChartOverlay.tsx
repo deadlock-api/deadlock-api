@@ -1,5 +1,7 @@
 import { cva, type VariantProps } from "class-variance-authority";
 
+import { Field } from "~/components/ui/field";
+import { Slider } from "~/components/ui/slider";
 import { cn } from "~/lib/utils";
 
 /**
@@ -49,19 +51,28 @@ const chartOverlayVariants = cva("z-10 flex max-w-full flex-col gap-1.5", {
       // A square map in a frame narrower than 48rem fills its width, so a floating key or slider covered its lanes.
       outside: "static @3xl/chart-stage:absolute",
     },
+    /**
+     * `stack`: items one under another, each as wide as it needs. `rows`: a grid whose `ChartOverlaySlider`s share
+     * their label, track and value columns, so the tracks line up.
+     */
+    layout: {
+      stack: "",
+      rows: "grid grid-cols-[auto_auto_auto]",
+    },
   },
-  defaultVariants: { position: "bottom-end", narrow: "over" },
+  defaultVariants: { position: "bottom-end", narrow: "over", layout: "stack" },
 });
 
 /**
  * A stack of controls or keys floating in a corner of a plot. It is an overlay, so it is absolute by nature: its
  * parent is a `ChartStage` (or any `relative` box) and `position` names the corner; in a `ChartStageFrame`,
- * `narrow="outside"` moves it out of a plot too narrow to share. Put
- * each control in a `ChartOverlayItem`; a bare line of text is a hint such as "Drag to rotate".
+ * `narrow="outside"` moves it out of a plot too narrow to share. Put each key in a `ChartOverlayItem` and each slider
+ * in a `ChartOverlaySlider` (with `layout="rows"`). It holds keys and controls only, never a line of how-to text.
  */
 export function ChartOverlay({
   position = "bottom-end",
   narrow = "over",
+  layout = "stack",
   className,
   ...props
 }: React.ComponentProps<"div"> & VariantProps<typeof chartOverlayVariants>) {
@@ -69,7 +80,8 @@ export function ChartOverlay({
     <div
       data-slot="chart-overlay"
       data-narrow={narrow}
-      className={cn(chartOverlayVariants({ position, narrow }), "text-xs text-muted-foreground", className)}
+      data-layout={layout}
+      className={cn(chartOverlayVariants({ position, narrow, layout }), "text-xs text-muted-foreground", className)}
       {...props}
     />
   );
@@ -171,5 +183,66 @@ export function ChartOverlayItem({ className, ...props }: React.ComponentProps<"
       className={cn("glass flex min-w-0 items-center gap-1.5 rounded-lg px-3 py-1.5", className)}
       {...props}
     />
+  );
+}
+
+interface ChartOverlaySliderProps extends Omit<React.ComponentProps<"div">, "onChange" | "defaultValue"> {
+  /** Names the slider and is printed before its track. */
+  label: string;
+  value: number;
+  onValueChange: (value: number) => void;
+  min: number;
+  max: number;
+  step?: number;
+  /** The value as printed after the track and announced: "99.0%". */
+  format: (value: number) => string;
+  /**
+   * Shown but not in use, as when the view has no use for it: out of the tab order, announced as unavailable, its
+   * label and value dimmed. The row keeps its place, so the plot does not move when the view switches.
+   */
+  disabled?: boolean;
+}
+
+/**
+ * One slider of a plot overlay in its own glass pill: the label, an 80px track and the value in a fixed column. In a
+ * `ChartOverlay layout="rows"` the pills share their columns, so their tracks line up.
+ */
+export function ChartOverlaySlider({
+  label,
+  value,
+  onValueChange,
+  min,
+  max,
+  step = 1,
+  format,
+  disabled = false,
+  className,
+  ...props
+}: ChartOverlaySliderProps) {
+  return (
+    <ChartOverlayItem className={cn("col-span-3 grid grid-cols-subgrid", className)} {...props}>
+      <Field
+        orientation="horizontal"
+        label={label}
+        aria-disabled={disabled || undefined}
+        data-disabled={disabled || undefined}
+        className="col-span-3 grid grid-cols-subgrid data-disabled:[&>:not([data-slot=slider])]:opacity-50"
+      >
+        <Slider
+          aria-label={label}
+          min={min}
+          max={max}
+          step={step}
+          disabled={disabled}
+          value={[value]}
+          onValueChange={([next]) => onValueChange(next)}
+          getValueText={format}
+          className="w-20"
+        />
+        <span data-slot="chart-overlay-slider-value" className="w-12 text-end tabular-nums">
+          {format(value)}
+        </span>
+      </Field>
+    </ChartOverlayItem>
   );
 }
