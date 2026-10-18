@@ -302,6 +302,7 @@ function ChipMarker({
     <g>
       <line x1={cx} y1={cy} x2={cx} y2={center - (direction * CHIP_PX) / 2} stroke={color} strokeOpacity={0.7} />
       <foreignObject x={cx - CHIP_PX / 2 - 2} y={center - CHIP_PX / 2 - 2} width={CHIP_PX + 4} height={CHIP_PX + 4}>
+        {/* ds-allow tooltip-target: a chart mark's hit area; the event list below the chart lists every event. */}
         <HoverTooltip content={event.tooltip} onOpenChange={onOpenChange}>
           <div className="p-0.5">
             {event.hero ? (

@@ -22,6 +22,7 @@ import { NoValue } from "~/components/ui/no-value";
 import {
   Tooltip as HoverTooltip,
   TooltipCard,
+  TooltipTarget,
   TooltipHeader,
   TooltipStat,
   TooltipStats,
@@ -90,7 +91,9 @@ export function TrendPanels({
         }
       >
         <HoverTooltip content={<TooltipHeader title={latestRankName} subtitle="Latest recorded rank" />}>
-          <div className="truncate text-lg font-semibold">{latestRankName}</div>
+          <TooltipTarget display="block" className="truncate text-lg font-semibold">
+            {latestRankName}
+          </TooltipTarget>
         </HoverTooltip>
         {ranks.length < 2 ? (
           <EmptyState

@@ -427,6 +427,48 @@ for (const file of walk(SRC)) {
   });
 }
 
+// Law 17: a hover card on a plain element (a span, a div, an svg) opens for the pointer only; keyboard focus never
+// reaches it. Its trigger is a TooltipTarget, a control, or an element that takes focus itself (`tabIndex`).
+const PLAIN_TRIGGER = /^<(span|div|svg|p|img|strong|em|li)\b([^>]*)>/;
+for (const file of walk(SRC)) {
+  const rel = path.relative(ROOT, file);
+  if (EXEMPT.some((re) => re.test(rel)) || !rel.endsWith(".tsx") || rel === "src/components/ui/tooltip.tsx") continue;
+  const source = fs.readFileSync(file, "utf8");
+  const lines = source.split("\n");
+  const opener = /<(?:Tooltip|HoverTooltip)(?=[\s>])/g;
+  for (let m = opener.exec(source); m; m = opener.exec(source)) {
+    // The end of the opening tag: the first `>` outside braces and strings (props hold JSX and arrows).
+    let i = m.index + m[0].length;
+    let depth = 0;
+    let quote = null;
+    for (; i < source.length; i++) {
+      const c = source[i];
+      if (quote) {
+        if (c === quote) quote = null;
+      } else if (c === '"' || (depth > 0 && (c === "'" || c === "`"))) quote = c;
+      else if (c === "{") depth++;
+      else if (c === "}") depth--;
+      else if (c === ">" && depth === 0) break;
+    }
+    if (source[i - 1] === "/") continue;
+    const child = PLAIN_TRIGGER.exec(source.slice(i + 1).replace(/^\s*(?:\{\/\*[\s\S]*?\*\/\}\s*)*/, ""));
+    if (!child || /\b(?:tabIndex|role)=/.test(child[2])) continue;
+    const line = source.slice(0, m.index).split("\n").length - 1;
+    const allowedHere = [line - 3, line - 2, line - 1, line].some((k) =>
+      /ds-allow\s+tooltip-target:\s*\S/.test(lines[k] ?? ""),
+    );
+    if (!allowedHere)
+      findings.push({
+        rel,
+        line: line + 1,
+        rule: "tooltip-target",
+        text: `<Tooltip> around <${child[1]}>`,
+        message:
+          "Law 17: a hover card on a plain element is out of keyboard reach; make the trigger a TooltipTarget or a control, or drop a tooltip that repeats what is shown",
+      });
+  }
+}
+
 // Everything in the design system is shown on the dev page: a component nobody can see gets reinvented.
 const SHOWCASE = "src/components/dev/design-system";
 const showcaseSource = walk(path.join(ROOT, SHOWCASE))

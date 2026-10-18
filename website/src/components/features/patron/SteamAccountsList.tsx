@@ -21,7 +21,7 @@ import { Spinner } from "~/components/ui/spinner";
 import { Stack } from "~/components/ui/stack";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { TextLink } from "~/components/ui/text-link";
-import { Tooltip } from "~/components/ui/tooltip";
+import { Tooltip, TooltipTarget } from "~/components/ui/tooltip";
 import { formatCooldownRemaining, formatDate, formatRelativeTime } from "~/lib/format";
 import { type SteamAccount, steamId3ToSteamId64 } from "~/lib/patron-api";
 import {
@@ -188,7 +188,7 @@ function AccountRow({
       </TableCell>
       <TableCell>
         <Tooltip content={formatDate(account.created_at)}>
-          <span>{formatRelativeTime(account.created_at)}</span>
+          <TooltipTarget>{formatRelativeTime(account.created_at)}</TooltipTarget>
         </Tooltip>
       </TableCell>
       <TableCell>

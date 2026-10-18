@@ -15,7 +15,7 @@ import { Input } from "~/components/ui/input";
 import { ProgressBar } from "~/components/ui/progress-bar";
 import { SearchInput } from "~/components/ui/search-input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
-import { Tooltip } from "~/components/ui/tooltip";
+import { Tooltip, TooltipTarget } from "~/components/ui/tooltip";
 import { useSteamProfiles } from "~/hooks/useSteamProfiles";
 import { formatPercent } from "~/lib/format";
 import { type CompanionRow, type CompanionSort, sortCompanionRows } from "~/lib/tracker/companions";
@@ -215,7 +215,7 @@ function CompanionTable({
                 </TableCell>
                 <TableCell className="hidden text-end whitespace-nowrap text-muted-foreground @lg:table-cell">
                   <Tooltip content={toTime(row.lastPlayedUnix).format("MMM D, YYYY HH:mm")}>
-                    <span>{fromNow(row.lastPlayedUnix)}</span>
+                    <TooltipTarget>{fromNow(row.lastPlayedUnix)}</TooltipTarget>
                   </Tooltip>
                 </TableCell>
               </TableRow>

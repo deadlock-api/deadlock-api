@@ -12,7 +12,7 @@ import { Segmented, SegmentedItem } from "~/components/ui/segmented";
 import { Separator } from "~/components/ui/separator";
 import { Stack } from "~/components/ui/stack";
 import { Text } from "~/components/ui/text";
-import { Tooltip } from "~/components/ui/tooltip";
+import { Tooltip, TooltipTarget } from "~/components/ui/tooltip";
 import type { AverageBuild, AverageBuildItem, BuildPhase, BuildVariant, TimelineEntry } from "~/lib/average-build";
 import { TONE_TEXT, toneOf } from "~/lib/tone";
 import { cn } from "~/lib/utils";
@@ -59,7 +59,7 @@ function ItemIcon({ item, dim, badge }: { item: AverageBuildItem; dim?: boolean;
         </>
       }
     >
-      <div className="relative">
+      <TooltipTarget display="block" className="relative">
         <ItemImage itemId={item.itemId} emphasis={dim ? "dim" : "normal"} className="size-7" />
         <CornerBadge corner="bottom-end" tone="scrim" className="inset-e-0 bottom-0 z-10">
           {badge ?? pct(item.frequency)}
@@ -69,7 +69,7 @@ function ItemIcon({ item, dim, badge }: { item: AverageBuildItem; dim?: boolean;
             {item.sellOrder}
           </CornerBadge>
         )}
-      </div>
+      </TooltipTarget>
     </Tooltip>
   );
 }

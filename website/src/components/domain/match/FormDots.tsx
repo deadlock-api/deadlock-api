@@ -1,4 +1,4 @@
-import { Tooltip, TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
+import { Tooltip, TooltipHeader, TooltipStat, TooltipStats, TooltipTarget } from "~/components/ui/tooltip";
 import { TONE_BG } from "~/lib/tone";
 import type { FormResult } from "~/lib/tracker/compute";
 import { cn } from "~/lib/utils";
@@ -8,7 +8,7 @@ export function FormDots({
   form,
   className,
   ...props
-}: Omit<React.ComponentProps<"div">, "children"> & { form: FormResult[] }) {
+}: Omit<React.ComponentProps<typeof TooltipTarget>, "children" | "display"> & { form: FormResult[] }) {
   if (form.length === 0) return null;
   const wins = form.filter((result) => result === "win").length;
   const summary = `Last ${form.length}: ${wins} wins, ${form.length - wins} losses, newest first`;
@@ -24,7 +24,12 @@ export function FormDots({
         </>
       }
     >
-      <div data-slot="form-dots" className={cn("flex items-center gap-1", className)} {...props}>
+      <TooltipTarget
+        display="block"
+        data-slot="form-dots"
+        className={cn("flex items-center gap-1", className)}
+        {...props}
+      >
         <span className="sr-only">
           {summary}. {form.map((result) => (result === "win" ? "Win" : "Loss")).join(", ")}.
         </span>
@@ -40,7 +45,7 @@ export function FormDots({
             )}
           />
         ))}
-      </div>
+      </TooltipTarget>
     </Tooltip>
   );
 }
