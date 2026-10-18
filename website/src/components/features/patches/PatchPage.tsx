@@ -87,6 +87,15 @@ export function PatchPage({
   // The statistics need the report; the notes are shown without it.
   const statChanges = ready && stats;
   const movers = ready && (heroes || items) ? report : undefined;
+  // The panels of what moved, two across: an odd one out at the end takes the whole row instead of leaving half empty.
+  const moverPanels = [
+    movers && heroes && "heroes",
+    movers && items && "items",
+    newHeroes && "new",
+    ranks && "ranks",
+  ].filter((panel): panel is string => !!panel);
+  const span = (panel: string) =>
+    moverPanels.length % 2 === 1 && moverPanels.at(-1) === panel ? "@2xl:col-span-2" : undefined;
 
   return (
     <>
@@ -139,9 +148,10 @@ export function PatchPage({
           {/* Every panel of what moved in one grid, two across, so a list on its own sits beside the next panel. */}
           {(movers || newHeroes || ranks) && (
             <div className="@container">
-              <div className="grid items-stretch gap-6 @3xl:grid-cols-2">
+              <div className="grid items-stretch gap-6 @2xl:grid-cols-2">
                 {movers && heroes && (
                   <PatchMoverPanel
+                    className={span("heroes")}
                     title="Hero Win Rate Changes"
                     gains={movers.heroMovers.gains}
                     drops={movers.heroMovers.drops}
@@ -151,6 +161,7 @@ export function PatchPage({
                 )}
                 {movers && items && (
                   <PatchMoverPanel
+                    className={span("items")}
                     title="Item Build Changes"
                     gains={movers.itemMovers.gains}
                     drops={movers.itemMovers.drops}
@@ -160,7 +171,7 @@ export function PatchPage({
                 )}
 
                 {newHeroes && (
-                  <Panel>
+                  <Panel className={span("new")}>
                     <PanelHeader title="New Heroes" size="sm" />
                     <PanelBody>
                       <RankedEntityList density="compact" columns="single">
@@ -185,7 +196,7 @@ export function PatchPage({
                 )}
 
                 {ranks && (
-                  <Panel>
+                  <Panel className={span("ranks")}>
                     <PanelHeader title="Low vs High Ranks" size="sm">
                       <Button asChild variant="ghost" size="xs">
                         <Link
