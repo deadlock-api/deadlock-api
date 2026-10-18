@@ -15,6 +15,17 @@ import {
   CHART_COLOR,
   chartMarkColor,
 } from "~/components/patterns/charts/theme";
+import { NoValue } from "~/components/ui/no-value";
+import {
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  TableRowHeader,
+} from "~/components/ui/table";
 import { TooltipCard, TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
 import { niceTicks } from "~/lib/chart-axis";
 import { extractBadgeMap } from "~/lib/leaderboard";
@@ -106,82 +117,130 @@ export default function BadgeDistributionChart({
 
   const tierCenters = tiers.map((tier) => ({ tier, firstBadge: slotOf(tier, 1), lastBadge: slotOf(tier, 6) }));
 
+  // One row per tier: the numbers the bars stand for, readable without hovering (and by screen readers).
+  const tierRows = tiers.map((tier) => {
+    let value = 0;
+    for (let sub = 1; sub <= 6; sub++) value += valuePerBadge.get(tier * 10 + sub) ?? 0;
+    const rank = tierData.get(tier);
+    return {
+      tier,
+      name: rank?.name ?? `Tier ${tier}`,
+      image: rank?.images?.large_webp ?? rank?.images?.large,
+      value,
+      top: atOrAbove.get(tier * 10 + 1) ?? 0,
+    };
+  });
+
   return (
-    <div className="flex h-full w-full flex-col">
-      <ChartSurface
-        label={`Rank badge distribution chart showing ${metric} per rank`}
-        size="fill"
-        variant="bare"
-        className="min-h-0 w-full flex-1"
-      >
-        <BarChart accessibilityLayer data={chartData}>
-          <CartesianGrid {...CHART_GRID} />
-          <Bar dataKey="value" fill={CHART_COLOR.fallback} radius={4} />
-          <Tooltip
-            // The column under the reading, by mouse or arrow keys, so the bar being read is marked.
-            cursor={CHART_CURSOR_BAND}
-            isAnimationActive={false}
-            content={({ active, payload }) => {
-              if (!active || !payload?.length) return null;
-              const entry = payload[0].payload as ChartEntry;
-              const rankName = tierData.get(entry.tier)?.name ?? "";
-              const subtier = entry.badge % 10;
-              const info = badgeMap.get(entry.badge);
-              const imageUrl = info?.large_webp ?? info?.large;
-              return (
-                <TooltipCard>
-                  <TooltipHeader
-                    leading={imageUrl && <img src={imageUrl} alt="" className="size-5" />}
-                    title={`${rankName} ${subtier}`}
-                  />
-                  <TooltipStats>
-                    <TooltipStat
-                      label={BADGE_DISTRIBUTION_METRIC_LABEL[metric]}
-                      value={entry.value.toLocaleString("en-US")}
+    // From a 56rem container the per-tier numbers sit beside the plot; narrower they are a table for screen readers
+    // only, and the plot keeps the room.
+    <div className="@container size-full">
+      <div className="grid size-full gap-4 @4xl:grid-cols-[minmax(0,1fr)_auto]">
+        <ChartSurface
+          label={`Rank badge distribution chart showing ${metric} per rank`}
+          size="fill"
+          variant="bare"
+          className="min-h-0 w-full"
+        >
+          <BarChart accessibilityLayer data={chartData}>
+            <CartesianGrid {...CHART_GRID} />
+            <Bar dataKey="value" fill={CHART_COLOR.fallback} radius={4} />
+            <Tooltip
+              // The column under the reading, by mouse or arrow keys, so the bar being read is marked.
+              cursor={CHART_CURSOR_BAND}
+              isAnimationActive={false}
+              content={({ active, payload }) => {
+                if (!active || !payload?.length) return null;
+                const entry = payload[0].payload as ChartEntry;
+                const rankName = tierData.get(entry.tier)?.name ?? "";
+                const subtier = entry.badge % 10;
+                const info = badgeMap.get(entry.badge);
+                const imageUrl = info?.large_webp ?? info?.large;
+                return (
+                  <TooltipCard>
+                    <TooltipHeader
+                      leading={imageUrl && <img src={imageUrl} alt="" className="size-5" />}
+                      title={`${rankName} ${subtier}`}
                     />
-                    {total > 0 && (
-                      <>
-                        <TooltipStat label={`Share of ${metric}`} value={formatPercent(entry.value / total)} />
-                        <TooltipStat label="Top" value={formatPercent((atOrAbove.get(entry.badge) ?? 0) / total)} />
-                      </>
-                    )}
-                  </TooltipStats>
-                </TooltipCard>
-              );
-            }}
-          />
-          {/* The rank names are drawn by RankTierIcons, centred under each tier's badge. */}
-          {/* Numeric, with a tick per bar: Recharts sizes the bars from the distance between ticks. */}
-          <XAxis
-            {...CHART_X_AXIS}
-            type="number"
-            dataKey="x"
-            domain={[Math.min(...slots) - 0.5, Math.max(...slots) + 0.5]}
-            ticks={slots}
-            interval={0}
-            tick={false}
-            height={RANK_ICON_NAME_AXIS_HEIGHT}
-          />
-          <YAxis
-            {...CHART_Y_AXIS}
-            dataKey="value"
-            ticks={valueTicks}
-            domain={[0, valueTicks[valueTicks.length - 1]]}
-            tickFormatter={(value: number) => compactNumber.format(value)}
-            textAnchor="end"
-            // As the `label` prop, not a <Label> child: only a prop title gets room from the auto-sized axis.
-            label={{ ...CHART_Y_LABEL, value: BADGE_DISTRIBUTION_METRIC_LABEL[metric] }}
-          />
-          {median !== undefined && (
-            <ReferenceLine
-              x={median.x}
-              {...CHART_BASELINE}
-              label={{ value: "Median", position: "insideTopLeft", ...CHART_TICK }}
+                    <TooltipStats>
+                      <TooltipStat
+                        label={BADGE_DISTRIBUTION_METRIC_LABEL[metric]}
+                        value={entry.value.toLocaleString("en-US")}
+                      />
+                      {total > 0 && (
+                        <>
+                          <TooltipStat label={`Share of ${metric}`} value={formatPercent(entry.value / total)} />
+                          <TooltipStat label="Top" value={formatPercent((atOrAbove.get(entry.badge) ?? 0) / total)} />
+                        </>
+                      )}
+                    </TooltipStats>
+                  </TooltipCard>
+                );
+              }}
             />
-          )}
-          <RankTierIcons tiers={tierCenters} ranks={tierData} display="icon-name" />
-        </BarChart>
-      </ChartSurface>
+            {/* The rank names are drawn by RankTierIcons, centred under each tier's badge. */}
+            {/* Numeric, with a tick per bar: Recharts sizes the bars from the distance between ticks. */}
+            <XAxis
+              {...CHART_X_AXIS}
+              type="number"
+              dataKey="x"
+              domain={[Math.min(...slots) - 0.5, Math.max(...slots) + 0.5]}
+              ticks={slots}
+              interval={0}
+              tick={false}
+              height={RANK_ICON_NAME_AXIS_HEIGHT}
+            />
+            <YAxis
+              {...CHART_Y_AXIS}
+              dataKey="value"
+              ticks={valueTicks}
+              domain={[0, valueTicks[valueTicks.length - 1]]}
+              tickFormatter={(value: number) => compactNumber.format(value)}
+              textAnchor="end"
+              // As the `label` prop, not a <Label> child: only a prop title gets room from the auto-sized axis.
+              label={{ ...CHART_Y_LABEL, value: BADGE_DISTRIBUTION_METRIC_LABEL[metric] }}
+            />
+            {median !== undefined && (
+              <ReferenceLine
+                x={median.x}
+                {...CHART_BASELINE}
+                label={{ value: "Median", position: "insideTopLeft", ...CHART_TICK }}
+              />
+            )}
+            <RankTierIcons tiers={tierCenters} ranks={tierData} display="icon-name" />
+          </BarChart>
+        </ChartSurface>
+        <div className="sr-only self-center @4xl:not-sr-only">
+          <Table density="compact" width="hug" className="tabular-nums">
+            <TableCaption visibility="sr-only">{`${BADGE_DISTRIBUTION_METRIC_LABEL[metric]} per rank`}</TableCaption>
+            <TableHeader tone="muted">
+              <TableRow>
+                <TableHead>Rank</TableHead>
+                <TableHead className="text-end">{BADGE_DISTRIBUTION_METRIC_LABEL[metric]}</TableHead>
+                <TableHead className="text-end">Share</TableHead>
+                <TableHead className="text-end">Top</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {tierRows.map((row) => (
+                <TableRow key={row.tier}>
+                  <TableRowHeader>
+                    <span className="flex items-center gap-2">
+                      {row.image && <img src={row.image} alt="" className="size-5" />}
+                      {row.name}
+                    </span>
+                  </TableRowHeader>
+                  <TableCell className="text-end">{compactNumber.format(row.value)}</TableCell>
+                  <TableCell className="text-end">
+                    {total > 0 ? formatPercent(row.value / total) : <NoValue />}
+                  </TableCell>
+                  <TableCell className="text-end">{total > 0 ? formatPercent(row.top / total) : <NoValue />}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      </div>
     </div>
   );
 }
