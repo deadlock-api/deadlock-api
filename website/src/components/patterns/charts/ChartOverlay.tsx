@@ -132,6 +132,37 @@ export function ChartRegion({
   );
 }
 
+const chartAxisTitleVariants = cva("text-xs text-muted-foreground", {
+  variants: {
+    /** `x` runs under the plot, centred. `y` runs up the start edge, read from bottom to top. */
+    axis: {
+      x: "text-center",
+      y: "flex rotate-180 items-center justify-center self-stretch [writing-mode:vertical-rl]",
+    },
+  },
+  defaultVariants: { axis: "x" },
+});
+
+/**
+ * What an axis of a bespoke plot (a `ChartStage` of positioned marks) measures: "Synergy with your picks →". Recharts
+ * charts take theirs from `CHART_X_LABEL` / `CHART_Y_LABEL`. Place an `x` title under the tick labels and a `y` title
+ * in a column beside the stage; the arrow says which way is more.
+ */
+export function ChartAxisTitle({
+  axis = "x",
+  className,
+  ...props
+}: React.ComponentProps<"div"> & VariantProps<typeof chartAxisTitleVariants>) {
+  return (
+    <div
+      data-slot="chart-axis-title"
+      data-axis={axis}
+      className={cn(chartAxisTitleVariants({ axis }), className)}
+      {...props}
+    />
+  );
+}
+
 /** One glass pill of an overlay: a legend, a slider with its label and value. */
 export function ChartOverlayItem({ className, ...props }: React.ComponentProps<"div">) {
   return (

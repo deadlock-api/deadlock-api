@@ -9,7 +9,7 @@ import { AnswerOption } from "~/components/domain/minigames/AnswerOption";
 import { PlayButton } from "~/components/domain/minigames/PlayButton";
 import { SilhouetteFrame } from "~/components/domain/minigames/SilhouetteFrame";
 import { StateFlash } from "~/components/domain/minigames/StateFlash";
-import { ChartRegion, ChartStage } from "~/components/patterns/charts/ChartOverlay";
+import { ChartAxisTitle, ChartRegion, ChartStage } from "~/components/patterns/charts/ChartOverlay";
 import { PanelSection } from "~/components/patterns/panel/Panel";
 import { StaleOverlay } from "~/components/patterns/states/StaleOverlay";
 import { Button } from "~/components/ui/button";
@@ -482,6 +482,21 @@ export function Round4Requests2() {
             <ChartRegion tone="negative" end={50} top={50} bottom={0} label="Rare and losing" />
           </ChartStage>
         </Variants>
+      </Specimen>
+
+      <Specimen
+        name="ChartAxisTitle"
+        source="patterns/charts/ChartOverlay"
+        note="What an axis of a bespoke plot measures, with an arrow toward more. x sits under the tick labels, y in a column beside the stage and reads bottom to top. Recharts charts use CHART_X_LABEL and CHART_Y_LABEL instead."
+      >
+        <div className="grid w-full grid-cols-[auto_minmax(0,1fr)] gap-1">
+          <ChartAxisTitle axis="y">Matchup →</ChartAxisTitle>
+          <ChartStage className="h-40 border">
+            <ChartRegion tone="positive" start={50} top={0} bottom={50} label="Strong pick" />
+          </ChartStage>
+          <span />
+          <ChartAxisTitle axis="x">Synergy →</ChartAxisTitle>
+        </div>
       </Specimen>
 
       <Specimen
