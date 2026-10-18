@@ -34,6 +34,7 @@ const createStatDisplays = (
   return variables.map((variable, index) => ({
     variable,
     value: stats[variable],
+    imageAlt: variable.endsWith("_img") ? stats[variable.slice(0, -"_img".length)] : undefined,
     label: displayLabels[index] || variableLabel(variable),
     subtext: subtexts[index] ? resolveTemplate(subtexts[index], stats) : undefined,
     opacity,
@@ -69,6 +70,11 @@ export const BoxWidget = ({
 }: BoxWidgetProps) => {
   const auxiliaryVariables = useMemo(() => {
     const vars = new Set(templateVariables(subtexts).filter((v) => !variables.includes(v)));
+    // An image stat is named by its value in words: `rank` for `rank_img`.
+    for (const v of variables) {
+      const base = v.slice(0, -"_img".length);
+      if (v.endsWith("_img") && !variables.includes(base)) vars.add(base);
+    }
     if (showHeader) vars.add("steam_account_name");
     if (matchHistoryShowsToday) vars.add("matches_today");
     return [...vars];

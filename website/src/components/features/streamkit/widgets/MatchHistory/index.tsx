@@ -31,14 +31,22 @@ export const MatchHistory = ({
   if (!matches || matches.length === 0) return null;
   if (!heroes || heroes.size === 0) return null;
 
-  return (
-    <div style={style} className={stripClasses}>
-      {matches.map((match) => {
-        const heroImage = heroes.get(match.hero_id);
-        if (!heroImage) return null;
+  const shown = matches.flatMap((match) => {
+    const hero = heroes.get(match.hero_id);
+    return hero ? [{ match, hero }] : [];
+  });
+  const wins = shown.filter(({ match }) => match.match_result === match.player_team).length;
 
-        return <MatchItem key={match.match_id} match={match} heroImage={heroImage} theme={theme} />;
-      })}
-    </div>
+  // A list, so a screen reader hears how many matches, in which order, and the tally before the items.
+  return (
+    <ol
+      style={style}
+      className={stripClasses}
+      aria-label={`Last ${shown.length} ${shown.length === 1 ? "match" : "matches"}, newest first: ${wins}W ${shown.length - wins}L`}
+    >
+      {shown.map(({ match, hero }) => (
+        <MatchItem key={match.match_id} match={match} hero={hero} theme={theme} />
+      ))}
+    </ol>
   );
 };

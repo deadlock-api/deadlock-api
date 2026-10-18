@@ -3,6 +3,7 @@ import { type FC } from "react";
 
 import { Spinner } from "~/components/ui/spinner";
 import { UPDATE_INTERVAL_MS } from "~/constants/streamkit/widget";
+import { variableLabel } from "~/lib/streamkit-command";
 import { cn } from "~/lib/utils";
 import { streamkitStatsQueryOptions } from "~/queries/streamkit-queries";
 import type { RawWidgetProps } from "~/types/streamkit/widget";
@@ -48,7 +49,7 @@ export const RawWidget: FC<RawWidgetProps> = ({
         <div className="flex w-fit items-center gap-2">
           <div className={cn("text-4xl font-bold", haloFor(fontColor))} style={{ color: fontColor }}>
             {variable.endsWith("img") ? (
-              <img src={stat} alt={variable} className="h-20 rounded-full" />
+              <img src={stat} alt={variableLabel(variable)} className="h-20 rounded-full" />
             ) : (
               prefix + stat + suffix
             )}

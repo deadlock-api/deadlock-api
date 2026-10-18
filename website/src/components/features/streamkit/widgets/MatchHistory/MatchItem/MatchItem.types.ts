@@ -1,8 +1,8 @@
-import type { Match } from "~/hooks/streamkit/useMatchHistory";
+import type { Match, MatchHero } from "~/hooks/streamkit/useMatchHistory";
 import type { Theme } from "~/types/streamkit/widget";
 
 export interface MatchItemProps {
   match: Match;
-  heroImage: string;
+  hero: MatchHero;
   theme: Theme;
 }

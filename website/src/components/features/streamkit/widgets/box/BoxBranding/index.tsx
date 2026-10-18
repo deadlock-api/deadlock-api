@@ -8,12 +8,10 @@ export const BoxBranding = ({ themeClasses }: BoxBrandingProps) => {
         target="_blank"
         rel="noopener noreferrer"
         className={themeClasses.brandingLinkClasses}
-        aria-label="Visit deadlock-api.com"
-        tabIndex={0}
       >
         <span className={themeClasses.brandingTextClasses.primary}>Powered by</span>
         <span className={themeClasses.brandingTextClasses.secondary}>deadlock-api.com</span>
-        <img src="/streamkit/icon-small.png" alt="Deadlock API Logo" className="ms-2 h-5 w-5 align-middle" />
+        <img src="/streamkit/icon-small.png" alt="" className="ms-2 h-5 w-5 align-middle" />
       </a>
     </div>
   );

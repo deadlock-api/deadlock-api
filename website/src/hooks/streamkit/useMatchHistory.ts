@@ -12,9 +12,14 @@ export interface Match {
   player_team: number;
 }
 
+export interface MatchHero {
+  name: string;
+  image: string;
+}
+
 interface UseMatchHistoryResult {
   matches: Match[];
-  heroes: Map<number, string>;
+  heroes: Map<number, MatchHero>;
   loading: boolean;
 }
 
@@ -23,7 +28,7 @@ interface UseMatchHistoryParams {
   numMatches?: number;
 }
 
-const EMPTY_HEROES = new Map<number, string>();
+const EMPTY_HEROES = new Map<number, MatchHero>();
 
 export const useMatchHistory = ({ accountId, numMatches = 10 }: UseMatchHistoryParams): UseMatchHistoryResult => {
   const { data: heroes = EMPTY_HEROES, isLoading: loadingHeroes } = useQuery({
@@ -33,7 +38,7 @@ export const useMatchHistory = ({ accountId, numMatches = 10 }: UseMatchHistoryP
     select: (heroesData) =>
       new Map(
         heroesData.flatMap((h) =>
-          h.images.icon_hero_card_webp ? [[h.id, h.images.icon_hero_card_webp] as const] : [],
+          h.images.icon_hero_card_webp ? [[h.id, { name: h.name, image: h.images.icon_hero_card_webp }] as const] : [],
         ),
       ),
   });

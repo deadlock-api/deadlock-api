@@ -7,6 +7,8 @@ export type Stat = {
   value: StatValue;
   label: string;
   subtext?: string;
+  /** What an image stat shows, in words (the rank's name for `rank_img`). */
+  imageAlt?: string;
   icon?: string;
   color?: string;
   prefix?: string;

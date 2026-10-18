@@ -5,15 +5,15 @@ import type { StatTextProps } from "./StatText.types";
 export const StatText = ({ label, value, prefix, suffix, theme }: StatTextProps) => {
   return (
     <>
-      <span
+      <dt
         className={cn(
           "text-center text-xs font-medium tracking-wide text-nowrap uppercase",
           theme === "light" ? "text-gray-800" : "text-white/60",
         )}
       >
         {label}
-      </span>
-      <div className={cn("mt-0.5 flex items-baseline justify-center gap-1")}>
+      </dt>
+      <dd className={cn("mt-0.5 flex items-baseline justify-center gap-1")}>
         {prefix && (
           <span className={cn("text-xs font-medium", theme === "light" ? "text-gray-500" : "text-white/60")}>
             {prefix}
@@ -27,7 +27,7 @@ export const StatText = ({ label, value, prefix, suffix, theme }: StatTextProps)
             {suffix}
           </span>
         )}
-      </div>
+      </dd>
     </>
   );
 };
