@@ -15,14 +15,20 @@ import { useAnalyticsTab } from "~/hooks/useAnalyticsTab";
 import { useDateRangeState } from "~/hooks/useDateRangeState";
 import { useModeState } from "~/hooks/useModeState";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
-import { analyticsTabPath, ANALYTICS_VIEWS } from "~/lib/analytics-tabs";
+import { analyticsTabPath, ANALYTICS_VIEWS, type AnalyticsTab } from "~/lib/analytics-tabs";
 import { getEffectiveRankRange } from "~/lib/game-mode";
 import { ALL_STAT_KEYS, getFilteredCategories, isGameStatKey } from "~/lib/game-stat-definitions";
 import { MAX_BADGE } from "~/lib/rank-utils";
 
-import { BuffsTab, CombatTab, EconomyTab, GamesByRankChart, GamesOverTimeChart } from "./games-views";
+import { BuffsTab, CombatTab, EconomyTab, GamesByRankChart, GamesOverTimeChart, preloadGamesView } from "./games-views";
 
 const STREET_BRAWL_ONLY = ["street_brawl"] as const;
+
+/** A view's code starts loading when its tab is pointed at or focused, before the click. */
+function preloadOnIntent(tab: AnalyticsTab<"games">) {
+  const preload = () => void preloadGamesView(tab);
+  return { onPointerEnter: preload, onFocus: preload };
+}
 
 /**
  * The games analytics page with its six views, one component for all of their routes, so a tab click keeps the page
@@ -126,19 +132,23 @@ export function Games() {
           <ResponsiveTab value="overview" href={analyticsTabPath("games", "overview")}>
             Overview
           </ResponsiveTab>
-          <ResponsiveTab value="over-time" href={analyticsTabPath("games", "over-time")}>
+          <ResponsiveTab
+            value="over-time"
+            href={analyticsTabPath("games", "over-time")}
+            {...preloadOnIntent("over-time")}
+          >
             Over Time
           </ResponsiveTab>
-          <ResponsiveTab value="by-rank" href={analyticsTabPath("games", "by-rank")}>
+          <ResponsiveTab value="by-rank" href={analyticsTabPath("games", "by-rank")} {...preloadOnIntent("by-rank")}>
             By Rank
           </ResponsiveTab>
-          <ResponsiveTab value="economy" href={analyticsTabPath("games", "economy")}>
+          <ResponsiveTab value="economy" href={analyticsTabPath("games", "economy")} {...preloadOnIntent("economy")}>
             Economy
           </ResponsiveTab>
-          <ResponsiveTab value="combat" href={analyticsTabPath("games", "combat")}>
+          <ResponsiveTab value="combat" href={analyticsTabPath("games", "combat")} {...preloadOnIntent("combat")}>
             Combat
           </ResponsiveTab>
-          <ResponsiveTab value="buffs" href={analyticsTabPath("games", "buffs")}>
+          <ResponsiveTab value="buffs" href={analyticsTabPath("games", "buffs")} {...preloadOnIntent("buffs")}>
             Buffs
           </ResponsiveTab>
         </ResponsiveTabsList>

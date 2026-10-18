@@ -71,10 +71,14 @@ export const gamesPageOptions = {
     }
     // The server waits, so its HTML carries the numbers. In the browser a tab click does not: the view shows its own
     // loading state instead of the navigation waiting on the API.
+    const { preloadGamesView } = await import("./games-views");
     if (typeof window === "undefined") {
       // The view's code too: a lazy view would suspend and stream its loading state ahead of the numbers.
-      const { preloadGamesView } = await import("./games-views");
       await Promise.all([...prefetches, preloadGamesView(tab)]);
+    } else {
+      // A tab click waits for the view's code only (usually already loaded on hover or focus of the tab), so the old
+      // panel stays until the new one can render, rather than collapsing to the chunk's fallback first.
+      await preloadGamesView(tab);
     }
     return { coverage: defaultTemporalCoverage(seasons, preferences.dateFilter) };
   },
