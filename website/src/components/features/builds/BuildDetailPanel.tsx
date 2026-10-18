@@ -6,13 +6,12 @@ import { PlayerCell } from "~/components/domain/player/PlayerCell";
 import { useBuildItemUsage, useSkillOrder } from "~/components/features/builds/build-hooks";
 import { BuildCompareDialog } from "~/components/features/builds/BuildCompareDialog";
 import { BuildItemTile } from "~/components/features/builds/BuildItemTile";
-import { Panel, PanelHeader, PanelSection } from "~/components/patterns/panel/Panel";
+import { Panel, PanelHeader, PanelScrollArea, PanelSection } from "~/components/patterns/panel/Panel";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { Button } from "~/components/ui/button";
 import { CopyButton } from "~/components/ui/copy-button";
 import { InfoTip } from "~/components/ui/info-tip";
-import { SCROLLBAR_THIN } from "~/components/ui/recipes";
 import { day } from "~/dayjs";
 import type { BuildPerformanceTotals } from "~/lib/build-performance";
 import { type BuildRow, buildCategoryName, buildLanguageName } from "~/lib/build-stats";
@@ -80,7 +79,7 @@ export function BuildDetailPanel({
   const name = meta?.name ?? `Build ${row.hero_build_id}`;
 
   return (
-    <Panel className={cn("flex h-120 flex-col", className)}>
+    <Panel className={cn("flex flex-col", className)}>
       <PanelHeader title={name} icon={Hammer} size="sm">
         {meta && (
           <span className="flex min-w-0 items-center gap-2 text-xs text-muted-foreground">
@@ -114,7 +113,7 @@ export function BuildDetailPanel({
           <span className="tabular-nums">ID {row.hero_build_id}</span>
         </CopyButton>
       </PanelHeader>
-      <div className={cn(SCROLLBAR_THIN, "@container relative flex min-h-0 flex-1 flex-col overflow-y-auto")}>
+      <PanelScrollArea className="@container relative">
         {meta ? (
           <>
             {/* Two columns of groups once the panel is wide enough, so more of the build shows without a scroll. Each
@@ -198,7 +197,7 @@ export function BuildDetailPanel({
         ) : (
           <EmptyState variant="plain" title="This build is no longer published" />
         )}
-      </div>
+      </PanelScrollArea>
       {comparing && (
         <BuildCompareDialog
           open={comparing}

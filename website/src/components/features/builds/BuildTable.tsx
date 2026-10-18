@@ -237,7 +237,7 @@ export function BuildTable({
 
   return (
     // The table scrolls inside the panel, so the panel keeps one height beside the build details.
-    <Panel className={cn("@container/builds flex flex-col *:data-[slot=table-container]:max-h-136", className)}>
+    <Panel className={cn("@container/builds flex flex-col", className)}>
       <PanelHeader title="Builds" icon={ListOrdered} size="sm">
         <BuildSummaryStats summary={summary} heroWinRate={heroWinRate} />
         <ItemSelector selection="tri-state" size="sm" value={itemStates} onValueChange={setItemStates} />
@@ -255,7 +255,7 @@ export function BuildTable({
           <SegmentedItem value="economy">Economy</SegmentedItem>
         </Segmented>
       </PanelHeader>
-      <Table density="dense" aria-label="Builds by matches and win rate">
+      <Table density="dense" height="scroll" aria-label="Builds by matches and win rate">
         <TableHeader position="sticky">
           <TableRow>
             <TableHead className="w-8 text-end text-xs text-muted-foreground">#</TableHead>
@@ -404,29 +404,28 @@ export function BuildTable({
             </TableEmptyRow>
           )}
         </TableBody>
-        {!needle && !filteringItems && (
-          <TableFooter position="sticky">
-            <TableRow>
-              <TableCell />
-              <TableCell className="text-xs text-muted-foreground">All builds</TableCell>
-              <TableCell className="text-end tabular-nums">{summary.matches.toLocaleString("en-US")}</TableCell>
-              {view === "overview" && <TableCell className="hidden @2xl/builds:table-cell" />}
-              <TableCell className="text-end tabular-nums">{formatPercent(summary.winRate)}</TableCell>
-              {metricColumns.map(({ metric, hide }) => (
-                <TableCell key={metric.key} className={cn("text-end tabular-nums", hide && HIDE_BELOW[hide])}>
-                  <MetricValue metric={metric} totals={averagePerformance ?? undefined} pending={performancePending} />
-                </TableCell>
-              ))}
-              {view === "overview" && (
-                <>
-                  <TableCell className="hidden @md/builds:table-cell" />
-                  <TableCell className="hidden @2xl/builds:table-cell" />
-                  <TableCell className="hidden @3xl/builds:table-cell" />
-                </>
-              )}
-            </TableRow>
-          </TableFooter>
-        )}
+        {/* Also while searching or filtering: the totals stay the baseline, and the table keeps its chrome. */}
+        <TableFooter position="sticky">
+          <TableRow>
+            <TableCell />
+            <TableCell className="text-xs text-muted-foreground">All builds</TableCell>
+            <TableCell className="text-end tabular-nums">{summary.matches.toLocaleString("en-US")}</TableCell>
+            {view === "overview" && <TableCell className="hidden @2xl/builds:table-cell" />}
+            <TableCell className="text-end tabular-nums">{formatPercent(summary.winRate)}</TableCell>
+            {metricColumns.map(({ metric, hide }) => (
+              <TableCell key={metric.key} className={cn("text-end tabular-nums", hide && HIDE_BELOW[hide])}>
+                <MetricValue metric={metric} totals={averagePerformance ?? undefined} pending={performancePending} />
+              </TableCell>
+            ))}
+            {view === "overview" && (
+              <>
+                <TableCell className="hidden @md/builds:table-cell" />
+                <TableCell className="hidden @2xl/builds:table-cell" />
+                <TableCell className="hidden @3xl/builds:table-cell" />
+              </>
+            )}
+          </TableRow>
+        </TableFooter>
       </Table>
     </Panel>
   );

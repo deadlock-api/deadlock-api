@@ -8,6 +8,7 @@ import { BuildItemsPanel } from "~/components/features/builds/BuildItemsPanel";
 import { BuildScatterChart } from "~/components/features/builds/BuildScatterChart";
 import { BuildTable } from "~/components/features/builds/BuildTable";
 import { Section } from "~/components/patterns/page/Section";
+import { PanelRow } from "~/components/patterns/panel/Panel";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
@@ -295,7 +296,7 @@ function BuildsExplorerView({
           </AlertDescription>
         </Alert>
       )}
-      <div className="grid gap-3 @3xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+      <PanelRow at="3xl">
         <BuildTable
           rows={rows}
           trends={trends}
@@ -312,8 +313,9 @@ function BuildsExplorerView({
           onBuildIdChange={onBuildIdChange}
           onBuildHover={setHoveredId}
           highlightedId={hoveredId}
-          // A list of a few builds keeps the build beside it from being squeezed to its height.
-          className="@3xl:min-h-120"
+          // Stacked, the list keeps one height too: it scrolls inside it rather than pushing the build below away,
+          // and a search that empties it moves nothing.
+          className="h-list-pane"
         />
         <BuildDetailPanel
           row={selected}
@@ -332,9 +334,8 @@ function BuildsExplorerView({
           profile={selected.meta ? profiles.byId[selected.meta.authorId] : undefined}
           pending={meta.pending}
           profilePending={profiles.pending}
-          className="@3xl:h-0 @3xl:min-h-full"
         />
-      </div>
+      </PanelRow>
       <BuildInMatches
         heroId={heroId}
         row={selected}
@@ -361,7 +362,8 @@ function BuildsExplorerView({
             rows={rows}
             pending={meta.pending}
             onItemHover={setHoveredItemId}
-            className="max-h-120 @5xl:h-0 @5xl:max-h-none @5xl:min-h-full"
+            // Beside the chart it takes the chart's height and scrolls; stacked it grows with its list.
+            className="@5xl:h-0 @5xl:min-h-full"
           />
         </div>
       </Section>

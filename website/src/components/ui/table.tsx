@@ -33,8 +33,12 @@ function Table({
 }: React.ComponentProps<"table"> & {
   density?: TableDensity;
   width?: "fill" | "hug";
-  /** `fill` grows the table to the height of a flex-column parent (a stretched panel), its rows sharing the extra. */
-  height?: "auto" | "fill";
+  /**
+   * `fill` grows the table to the height of a flex-column parent (a stretched panel), its rows sharing the extra.
+   * `scroll` takes the room left in a flex-column parent of fixed height (a panel in a `PanelRow`) and scrolls inside
+   * it; the rows keep their height, and a short list leaves the room below it empty.
+   */
+  height?: "auto" | "fill" | "scroll";
 }) {
   return (
     <TableDensityContext value={density}>
@@ -47,6 +51,7 @@ function Table({
           "relative w-full scroll-fade-x overflow-x-auto",
           width === "fill" && "has-data-pinned:@container/table",
           height === "fill" && "flex-1",
+          height === "scroll" && "min-h-0 flex-1",
         )}
       >
         <table

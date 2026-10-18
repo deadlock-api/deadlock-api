@@ -152,6 +152,9 @@
 
   /* A list beside its details that keeps one height, however long the details are (`h-list-pane`). */
   --list-pane-height: 80vh;
+  /* Panels side by side in a `PanelRow` share this one height, so a search or a filter that changes one panel's
+     content never moves the page below the row. Stacked, they grow with their content instead. */
+  --panel-aligned-height: clamp(32rem, 70vh, 48rem);
 
   /* Overflow cue: how far the fade at the edge of a scrolling list or table reaches (`scroll-fade-*`). */
   --scroll-fade-size: 3rem;
@@ -269,6 +272,7 @@
   --spacing-app-bar: var(--app-bar-height);
   --spacing-floating-clearance: var(--floating-control-clearance);
   --spacing-list-pane: var(--list-pane-height);
+  --spacing-panel-aligned: var(--panel-aligned-height);
   --ease-standard: var(--ease-standard);
   --default-transition-duration: var(--duration-fast);
   --default-transition-timing-function: var(--ease-standard);

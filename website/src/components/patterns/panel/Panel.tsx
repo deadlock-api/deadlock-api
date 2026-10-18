@@ -1,8 +1,10 @@
+import { cva, type VariantProps } from "class-variance-authority";
 import { ChevronDownIcon, type LucideIcon } from "lucide-react";
 
 import { Button } from "~/components/ui/button";
 import { Card } from "~/components/ui/card";
 import { useControllableState } from "~/components/ui/hooks/use-controllable-state";
+import { SCROLLBAR_THIN } from "~/components/ui/recipes";
 import { Text } from "~/components/ui/text";
 import { cn } from "~/lib/utils";
 
@@ -12,6 +14,49 @@ import { cn } from "~/lib/utils";
  */
 export function Panel({ className, ...props }: React.ComponentProps<typeof Card>) {
   return <Card size="flush" className={className} {...props} />;
+}
+
+const panelRowVariants = cva("grid gap-3", {
+  variants: {
+    /** The container width from which the panels sit side by side, two thirds and one third. */
+    at: {
+      "3xl": "@3xl/panel-row:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] @3xl/panel-row:*:h-panel-aligned",
+      "5xl": "@5xl/panel-row:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] @5xl/panel-row:*:h-panel-aligned",
+    },
+  },
+  defaultVariants: { at: "3xl" },
+});
+
+/**
+ * Panels side by side that share one fixed height (`--panel-aligned-height`), whatever their content: a search
+ * that empties a list or a selection with longer details never moves the page below. Each panel scrolls its own body
+ * (`Table height="scroll"`, `PanelScrollArea`). In a narrower container they stack and each grows with its content.
+ */
+export function PanelRow({
+  at = "3xl",
+  className,
+  children,
+  ...props
+}: React.ComponentProps<"div"> & VariantProps<typeof panelRowVariants>) {
+  return (
+    <div data-slot="panel-row" className="@container/panel-row" {...props}>
+      <div className={cn(panelRowVariants({ at }), className)}>{children}</div>
+    </div>
+  );
+}
+
+/**
+ * The body of a panel that scrolls once the panel has a fixed height (in a `PanelRow`): it takes the room under the
+ * header, and an edge with more content past it fades (`scroll-fade-y`), so a cut reads as a scroll.
+ */
+export function PanelScrollArea({ className, ...props }: React.ComponentProps<"div">) {
+  return (
+    <div
+      data-slot="panel-scroll-area"
+      className={cn(SCROLLBAR_THIN, "flex min-h-0 flex-1 scroll-fade-y flex-col overflow-y-auto", className)}
+      {...props}
+    />
+  );
 }
 
 const panelHeaderSizes = {

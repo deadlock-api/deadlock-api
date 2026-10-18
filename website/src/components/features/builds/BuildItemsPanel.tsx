@@ -2,10 +2,9 @@ import { ShoppingBag } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { RankedEntityList, RankedEntityMetric, RankedEntityRow } from "~/components/domain/assets/RankedEntityList";
-import { Panel, PanelHeader } from "~/components/patterns/panel/Panel";
+import { Panel, PanelHeader, PanelScrollArea } from "~/components/patterns/panel/Panel";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
-import { SCROLLBAR_THIN } from "~/components/ui/recipes";
 import { Segmented, SegmentedItem } from "~/components/ui/segmented";
 import { type BuildRow, buildItemPresence, distinguishingItems } from "~/lib/build-stats";
 import { formatShare, formatSignedPoints } from "~/lib/format";
@@ -58,7 +57,7 @@ export function BuildItemsPanel({
           <SegmentedItem value="worst">Worst</SegmentedItem>
         </Segmented>
       </PanelHeader>
-      <div className={cn(SCROLLBAR_THIN, "relative min-h-0 flex-1 overflow-y-auto px-3")}>
+      <PanelScrollArea className="relative px-3">
         {pending ? (
           <LoadingState variant="skeleton" size="sm" />
         ) : items.length === 0 ? (
@@ -102,7 +101,7 @@ export function BuildItemsPanel({
             ))}
           </RankedEntityList>
         )}
-      </div>
+      </PanelScrollArea>
     </Panel>
   );
 }

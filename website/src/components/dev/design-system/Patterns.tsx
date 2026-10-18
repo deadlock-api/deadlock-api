@@ -28,7 +28,15 @@ import { ResponsiveTab, ResponsiveTabsList } from "~/components/patterns/navigat
 import { PageHeader } from "~/components/patterns/page/PageHeader";
 import { ProfileHeader, ProfileHeaderMedia } from "~/components/patterns/page/ProfileHeader";
 import { Section } from "~/components/patterns/page/Section";
-import { Panel, PanelBody, PanelFooter, PanelHeader, PanelShowMore } from "~/components/patterns/panel/Panel";
+import {
+  Panel,
+  PanelBody,
+  PanelFooter,
+  PanelHeader,
+  PanelRow,
+  PanelScrollArea,
+  PanelShowMore,
+} from "~/components/patterns/panel/Panel";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
@@ -495,6 +503,42 @@ export function Patterns() {
             <EmptyState variant="inline" className="px-4 py-6" title="Pick a hero to see who counters it." />
           </Panel>
         </Variants>
+      </Specimen>
+
+      <Specimen
+        name="PanelRow"
+        source="patterns/panel/Panel"
+        note='Panels side by side, two thirds and one third from the container width at (3xl, 5xl), sharing one fixed height (--panel-aligned-height), so a search that shortens one never moves the page below. Each scrolls its own body: Table height="scroll", or PanelScrollArea, whose cut edge fades (scroll-fade-y). In a narrower container they stack and grow with their content.'
+      >
+        <PanelRow at="3xl">
+          <Panel className="flex flex-col">
+            <PanelHeader title="Builds" size="sm" />
+            <Table density="dense" height="scroll">
+              <TableHeader position="sticky">
+                <TableRow>
+                  <TableHead>Build</TableHead>
+                  <TableHead className="text-end">Matches</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {Array.from({ length: 40 }, (_, index) => (
+                  <TableRow key={index}>
+                    <TableCell>Build {index + 1}</TableCell>
+                    <TableCell className="text-end tabular-nums">{(40 - index) * 12}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </Panel>
+          <Panel className="flex flex-col">
+            <PanelHeader title="Details" size="sm" />
+            <PanelScrollArea>
+              <PanelBody size="sm">
+                <SkeletonRows rows={30} />
+              </PanelBody>
+            </PanelScrollArea>
+          </Panel>
+        </PanelRow>
       </Specimen>
 
       <Specimen
