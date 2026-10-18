@@ -10,6 +10,7 @@ import {
   CHART_COLOR,
   CHART_GRID,
   CHART_MARGIN,
+  CHART_TICK,
   CHART_X_AXIS,
   CHART_X_LABEL,
   CHART_Y_AXIS,
@@ -81,11 +82,20 @@ interface Point {
   selected: boolean;
   /** Left out by the list's item filter: drawn faint. */
   dimmed: boolean;
+  /** Where the selected dot's name goes: away from the nearer edge of the plot. */
+  labelSide: "start" | "end";
+}
+
+/** A selected build's name longer than this is cut, so its label stays clear of the plot's far side. */
+const LABEL_MAX_CHARS = 28;
+
+function shortName(name: string): string {
+  return name.length > LABEL_MAX_CHARS ? `${name.slice(0, LABEL_MAX_CHARS - 1).trimEnd()}…` : name;
 }
 
 function BuildDot({ cx, cy, payload }: { cx?: number; cy?: number; payload?: Point }) {
   if (cx === undefined || cy === undefined || !payload) return null;
-  return (
+  const dot = (
     <circle
       cx={cx}
       cy={cy}
@@ -98,6 +108,29 @@ function BuildDot({ cx, cy, payload }: { cx?: number; cy?: number; payload?: Poi
       // A dot is pressable: it selects its build.
       style={{ cursor: "pointer" }}
     />
+  );
+  if (!payload.selected) return dot;
+  // The selected build is named on the plot, so the eye finds it without the list or a hover.
+  const toEnd = payload.labelSide === "end";
+  return (
+    <g>
+      {dot}
+      <text
+        x={cx + (toEnd ? 12 : -12)}
+        y={cy}
+        dy="0.35em"
+        textAnchor={toEnd ? "start" : "end"}
+        fontSize={CHART_TICK.fontSize}
+        fontWeight={600}
+        fill={CHART_COLOR.ink}
+        stroke={CHART_COLOR.surface}
+        strokeWidth={4}
+        paintOrder="stroke"
+        pointerEvents="none"
+      >
+        {shortName(payload.name)}
+      </text>
+    </g>
   );
 }
 
@@ -161,6 +194,7 @@ export function BuildScatterChart({
       row,
       selected: row.hero_build_id === selectedId,
       dimmed: !buildMatchesItems(row.meta, itemParams.with_items, itemParams.without_items),
+      labelSide: "end" as const,
     }))
     .sort((a, b) => Number(a.selected) - Number(b.selected));
   const minX = Math.min(...points.map((point) => point.x));
@@ -169,6 +203,12 @@ export function BuildScatterChart({
   const xDomain: [number, number] = linear
     ? [linearTicks[0], linearTicks[linearTicks.length - 1]]
     : [minX * 0.9, maxX * 1.1];
+  // The selected dot's name runs toward the plot's middle: left of a dot in the right half, right of one in the left.
+  const position = (x: number) =>
+    linear
+      ? (x - xDomain[0]) / (xDomain[1] - xDomain[0])
+      : Math.log(x / xDomain[0]) / Math.log(xDomain[1] / xDomain[0]);
+  for (const point of points) point.labelSide = position(point.x) > 0.5 ? "start" : "end";
   const yDomain = winRateDomain([...points.map((point) => point.winRate), average]);
   const above = rows.filter((row) => row.verdict === "above").length;
   const below = rows.filter((row) => row.verdict === "below").length;
