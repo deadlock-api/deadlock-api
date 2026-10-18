@@ -7,9 +7,12 @@ import { CHART_COLOR } from "~/components/patterns/charts/theme";
 import { WinRateBarChart } from "~/components/patterns/charts/WinRateBarChart";
 import { PanelSection } from "~/components/patterns/panel/Panel";
 import { StaleOverlay } from "~/components/patterns/states/StaleOverlay";
+import { Delta } from "~/components/ui/delta";
+import { KeyValue, KeyValueList } from "~/components/ui/key-value";
 import { TooltipCard, TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
 import { badgeTiers, type BuildRow } from "~/lib/build-stats";
 import { formatPercent, formatSignedPoints } from "~/lib/format";
+import { cn } from "~/lib/utils";
 import { winRateNoise } from "~/lib/wilson";
 import { type BuildPurchaseFilters, buildBucketsQueryOptions } from "~/queries/hero-build-stats-query";
 import { heroStatsQueryOptions } from "~/queries/hero-stats-query";
@@ -114,13 +117,48 @@ export function BuildByRank({
     });
 
   return (
-    // The last section of its panel: the plot takes the height the row leaves it, from a compact minimum.
-    <section className="flex flex-1 flex-col">
+    // The last section of its panel: the plot takes the height the row leaves it, from a compact minimum. A single
+    // rank's line leaves it to the matchups.
+    <section className={cn("flex flex-col", bars.length !== 1 && "flex-1")}>
       <PanelSection variant="label" title="By rank" />
       {query.isPending || ranksQuery.isPending ? (
         <ChartLoading label="Win rate by rank" size="grow" />
       ) : bars.length === 0 ? (
         <ChartEmpty label="ranks with enough matches of this build" />
+      ) : bars.length === 1 ? (
+        // One rank is no breakdown: a line, not a lone bar across the panel.
+        <StaleOverlay active={query.isPlaceholderData} label="win rate by rank">
+          <KeyValueList className="px-3 py-1.5">
+            {bars.map((bar) => (
+              <KeyValue
+                key={bar.tier}
+                label={
+                  <span className="flex items-center gap-2">
+                    {bar.image && <img src={bar.image} alt="" className="size-6" />}
+                    {bar.name}
+                  </span>
+                }
+                value={
+                  <span className="inline-flex items-baseline gap-3">
+                    <span className="text-xs font-normal text-muted-foreground">
+                      {bar.matches.toLocaleString("en-US")} matches
+                    </span>
+                    {formatPercent(bar.winRate)}
+                    {bar.heroWinRate !== undefined && (
+                      <span className="text-xs">
+                        <Delta
+                          value={bar.winRate - bar.heroWinRate}
+                          unit=" pp vs. hero"
+                          threshold={winRateNoise(bar.matches)}
+                        />
+                      </span>
+                    )}
+                  </span>
+                }
+              />
+            ))}
+          </KeyValueList>
+        </StaleOverlay>
       ) : (
         <StaleOverlay active={query.isPlaceholderData} label="win rate by rank" className="flex flex-1 flex-col">
           <WinRateBarChart
