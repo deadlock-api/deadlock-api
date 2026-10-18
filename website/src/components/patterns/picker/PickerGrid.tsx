@@ -156,7 +156,7 @@ export function PickerGridGroup({
           // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- names the tiles below it, like a table's header cell
           role="columnheader"
           aria-colspan={PICKER_COLUMNS}
-          className="flex items-baseline gap-1.5 px-1 eyebrow"
+          className="flex items-baseline gap-1.5 px-1 type-caption font-semibold text-muted-foreground"
         >
           {label}
           {hint !== undefined && <span className="text-muted-foreground tabular-nums">{hint}</span>}
