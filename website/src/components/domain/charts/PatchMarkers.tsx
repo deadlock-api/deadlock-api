@@ -5,6 +5,7 @@ import { PATCHES } from "~/lib/constants";
 export const PATCH_MARKERS: readonly ChartMarker[] = PATCHES.map((patch) => ({
   at: patch.startDate.valueOf(),
   label: patch.name,
+  shortLabel: patch.shortName,
 }));
 
 /** The same markers labelled with each patch's `shortName`, for small charts such as the ones in hover cards. */

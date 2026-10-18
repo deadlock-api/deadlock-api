@@ -7,6 +7,8 @@ export interface ChartMarker {
   at: number;
   /** The text drawn beside the line. */
   label: string;
+  /** Drawn instead when `label` fits on neither side of the line (a narrow plot). */
+  shortLabel?: string;
 }
 
 // Tick text is `--chart-tick` (0.75rem); a character is at most ~0.6em wide, so 7.5px keeps estimates on the safe side.
@@ -24,30 +26,39 @@ interface PlacedMarker {
   /** Where the text is drawn from: its start on the right of the line, its end on the left so it meets the line. */
   textX?: number;
   textAnchor?: "start" | "end";
+  /** The text drawn: the label, or the short label when only that fits. */
+  text?: string;
 }
 
 /**
  * Puts each label beside its line, on the right unless it would leave the plot, in the first row where it collides
- * with no other label. Rows past `maxRows` would bury the series; those markers keep their line alone.
+ * with no other label. A label that fits on neither side falls back to its short label, and without one the line
+ * stays unlabelled: a label is never drawn away from its line. Rows past `maxRows` would bury the series; those
+ * markers keep their line alone.
  */
 function placeLabels(markers: PlacedMarker[], minX: number, maxX: number, maxRows: number): PlacedMarker[] {
   const rows: [number, number][][] = [];
   for (const placed of [...markers].sort((a, b) => a.x - b.x)) {
-    const width = placed.marker.label.length * CHAR_WIDTH;
-    const onRight = placed.x + LABEL_INSET + width <= maxX;
-    const clamped = !onRight && placed.x - LABEL_INSET - width < minX;
-    const left = onRight ? placed.x + LABEL_INSET : Math.max(minX, placed.x - LABEL_INSET - width);
-    const right = left + width;
+    const side = (text: string) => {
+      const width = text.length * CHAR_WIDTH;
+      if (placed.x + LABEL_INSET + width <= maxX) return { text, width, onRight: true };
+      if (placed.x - LABEL_INSET - width >= minX) return { text, width, onRight: false };
+      return undefined;
+    };
+    const fit = side(placed.marker.label) ?? (placed.marker.shortLabel ? side(placed.marker.shortLabel) : undefined);
+    if (!fit) continue;
+    const left = fit.onRight ? placed.x + LABEL_INSET : placed.x - LABEL_INSET - fit.width;
+    const right = left + fit.width;
     let row = rows.findIndex((taken) => !taken.some(([l, r]) => left < r + LABEL_GAP && right + LABEL_GAP > l));
     if (row < 0) row = rows.push([]) - 1;
     if (row >= maxRows) continue;
     rows[row].push([left, right]);
     placed.left = left;
     placed.row = row;
+    placed.text = fit.text;
     // The width is an upper bound, so a label left of its line ends at the line rather than starting at the estimate.
-    const endAnchored = !onRight && !clamped;
-    placed.textX = endAnchored ? placed.x - LABEL_INSET : left;
-    placed.textAnchor = endAnchored ? "end" : "start";
+    placed.textX = fit.onRight ? left : placed.x - LABEL_INSET;
+    placed.textAnchor = fit.onRight ? "start" : "end";
   }
   return markers;
 }
@@ -81,7 +92,7 @@ export function ChartMarkers({ markers, labels = true }: { markers: readonly Cha
       {/* Above the series and their dots, so a label in a lower row stays readable on its halo. */}
       <ZIndexLayer zIndex={DefaultZIndexes.scatter + 1}>
         <g data-slot="chart-marker-labels" pointerEvents="none">
-          {placed.map(({ marker, textX, textAnchor, row }) =>
+          {placed.map(({ marker, text, textX, textAnchor, row }) =>
             textX == null || row == null ? null : (
               <text
                 key={marker.at}
@@ -90,7 +101,7 @@ export function ChartMarkers({ markers, labels = true }: { markers: readonly Cha
                 {...CHART_MARKER_LABEL}
                 textAnchor={textAnchor}
               >
-                {marker.label}
+                {text}
               </text>
             ),
           )}

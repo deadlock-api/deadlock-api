@@ -95,9 +95,9 @@ const WEEKS: WeekEntry[] = Array.from({ length: 10 }, (_, i) => {
 
 const DAY = 24 * HOUR;
 const MARKERS: ChartMarker[] = [
-  { at: FIRST_BUCKET + 9 * DAY, label: "Gameplay Update (2026-07-15)" },
-  { at: FIRST_BUCKET + 11 * DAY, label: "Minor Update (2026-07-17)" },
-  { at: FIRST_BUCKET + 40 * DAY, label: "Minor Update (2026-08-15)" },
+  { at: FIRST_BUCKET + 9 * DAY, label: "Gameplay Update (2026-07-15)", shortLabel: "Gameplay" },
+  { at: FIRST_BUCKET + 11 * DAY, label: "Minor Update (2026-07-17)", shortLabel: "Patch" },
+  { at: FIRST_BUCKET + 40 * DAY, label: "Minor Update (2026-08-15)", shortLabel: "Patch" },
 ];
 const MARKED_WEEKS = WEEKS.map((week) => ({ ...week, date: week.weekStart * 1000 }));
 
@@ -258,25 +258,44 @@ export function ChartsMore() {
       <Specimen
         name="ChartMarkers"
         source="patterns/charts/ChartMarkers"
-        note="Events on a time axis (patches) as dotted vertical lines, each labelled beside its line in the top margin (CHART_MARGIN_MARKED). Colliding labels stack into further rows over the plot on a halo, up to a third of its height. labels={false} for the lower plots of a stack. Features pass PATCH_MARKERS or render PatchMarkers from domain/charts."
+        note="Events on a time axis (patches) as dotted vertical lines, each labelled beside its line in the top margin (CHART_MARGIN_MARKED). Colliding labels stack into further rows over the plot on a halo, up to a third of its height. A label that fits on neither side of its line falls back to shortLabel, else the line stays unlabelled; a label is never drawn away from its line. labels={false} for the lower plots of a stack. Features pass PATCH_MARKERS or render PatchMarkers from domain/charts."
       >
-        <ChartSurface label="Win rate by week with patch markers" size="md">
-          <LineChart data={MARKED_WEEKS} margin={CHART_MARGIN_MARKED}>
-            <CartesianGrid {...CHART_GRID} />
-            <XAxis
-              dataKey="date"
-              type="number"
-              scale="time"
-              domain={["dataMin", "dataMax"]}
-              ticks={MARKED_WEEKS.map((week) => week.date)}
-              tickFormatter={(date: number) => MARKED_WEEKS.find((week) => week.date === date)?.label ?? ""}
-              {...CHART_X_AXIS}
-            />
-            <YAxis domain={[0.46, 0.54]} tickFormatter={percent} {...CHART_Y_AXIS} />
-            <ChartMarkers markers={MARKERS} />
-            <Line dataKey="winRate" stroke={SERIES_COLORS[0]} strokeWidth={2} dot={false} isAnimationActive={false} />
-          </LineChart>
-        </ChartSurface>
+        <Variants className="flex-col items-stretch">
+          <ChartSurface label="Win rate by week with patch markers" size="md">
+            <LineChart data={MARKED_WEEKS} margin={CHART_MARGIN_MARKED}>
+              <CartesianGrid {...CHART_GRID} />
+              <XAxis
+                dataKey="date"
+                type="number"
+                scale="time"
+                domain={["dataMin", "dataMax"]}
+                ticks={MARKED_WEEKS.map((week) => week.date)}
+                tickFormatter={(date: number) => MARKED_WEEKS.find((week) => week.date === date)?.label ?? ""}
+                {...CHART_X_AXIS}
+              />
+              <YAxis domain={[0.46, 0.54]} tickFormatter={percent} {...CHART_Y_AXIS} />
+              <ChartMarkers markers={MARKERS} />
+              <Line dataKey="winRate" stroke={SERIES_COLORS[0]} strokeWidth={2} dot={false} isAnimationActive={false} />
+            </LineChart>
+          </ChartSurface>
+          <ChartSurface label="Narrow plot: short labels" size="md" className="w-60">
+            <LineChart data={MARKED_WEEKS} margin={CHART_MARGIN_MARKED}>
+              <CartesianGrid {...CHART_GRID} />
+              <XAxis
+                dataKey="date"
+                type="number"
+                scale="time"
+                domain={["dataMin", "dataMax"]}
+                ticks={MARKED_WEEKS.map((week) => week.date)}
+                tickFormatter={(date: number) => MARKED_WEEKS.find((week) => week.date === date)?.label ?? ""}
+                {...CHART_X_AXIS}
+              />
+              <YAxis domain={[0.46, 0.54]} tickFormatter={percent} {...CHART_Y_AXIS} />
+              <ChartMarkers markers={MARKERS} />
+              <Line dataKey="winRate" stroke={SERIES_COLORS[0]} strokeWidth={2} dot={false} isAnimationActive={false} />
+            </LineChart>
+          </ChartSurface>
+        </Variants>
       </Specimen>
 
       <Specimen
