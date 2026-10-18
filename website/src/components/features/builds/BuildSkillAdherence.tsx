@@ -32,7 +32,10 @@ function AdherenceStat({
       label={label}
       value={formatShare(adherence.share)}
       sub={
-        adherence.winRate !== null && (
+        // Too few followed it for a win rate: said, so the card does not stand half empty beside its neighbour.
+        adherence.winRate === null ? (
+          "Too few matches for a win rate"
+        ) : (
           <>
             {formatPercent(adherence.winRate)} win rate
             {adherence.otherWinRate !== null && ` · ${formatPercent(adherence.otherWinRate)} without`}
