@@ -26,6 +26,12 @@ interface SectionProps
   align?: "start" | "center";
   /** A control for the whole section ("Import code"), at the trailing end of the title row. */
   action?: ReactNode;
+  /**
+   * `sticky` keeps the title row at the top of the window, on a frosted strip, while the rest of a long section scrolls
+   * under it, so its panels keep their subject in view. From a 64rem window: on a phone or tablet it would cover too
+   * much.
+   */
+  header?: "static" | "sticky";
 }
 
 /** A titled region of a page. Every block under a PageHeader that has a name is one of these. */
@@ -37,6 +43,7 @@ export function Section({
   titleDisplay = "visible",
   align = "start",
   action,
+  header = "static",
   className,
   children,
   ...props
@@ -47,9 +54,13 @@ export function Section({
         <Heading className="sr-only">{title}</Heading>
       ) : (
         <div
+          data-slot="section-header"
+          data-header={header}
           className={cn(
             "flex flex-wrap items-end gap-x-4 gap-y-2",
             align === "center" ? "justify-center text-center" : "justify-between",
+            header === "sticky" &&
+              "lg:sticky lg:top-0 lg:z-10 lg:rounded-b-lg lg:bg-background/80 lg:py-2 lg:backdrop-blur-md",
           )}
         >
           <div className={cn("flex min-w-0 flex-col gap-1", align === "center" && "items-center")}>

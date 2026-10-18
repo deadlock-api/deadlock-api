@@ -206,7 +206,7 @@ export function Patterns() {
       <Specimen
         name="Section"
         source="patterns/page/Section"
-        note="A named block. as picks the heading level by outline; size picks the look; action puts a control for the whole section at the end of the title row."
+        note="A named block. as picks the heading level by outline; size picks the look; action puts a control for the whole section at the end of the title row; header=sticky keeps the title row at the window top while a long section scrolls by (from 64rem)."
       >
         <Section
           title="Win rate by rank"
