@@ -117,3 +117,10 @@ export function possessive(name: string): string {
 export function capitalize(text: string): string {
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
+
+const PLURAL = new Intl.PluralRules("en-US");
+
+/** A count with its noun in the right number: "1 point", "3 points", "0 points". `plural` defaults to `singular` + s. */
+export function formatCountNoun(count: number, singular: string, plural = `${singular}s`): string {
+  return `${count.toLocaleString("en-US")} ${PLURAL.select(count) === "one" ? singular : plural}`;
+}

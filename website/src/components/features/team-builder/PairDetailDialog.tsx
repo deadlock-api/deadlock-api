@@ -67,7 +67,7 @@ export function PairDetailBody({
           {
             label: "Win rate together",
             value: formatRate(pair.winRate),
-            note: `${formatPoints(pair.delta)} above expected`,
+            note: `${formatPoints(pair.delta)} vs. expected`,
             noteClassName: deltaClass(pair.delta),
           },
           {
@@ -95,14 +95,14 @@ export function PairDetailBody({
           <Stack gap={2}>
             {enemyRows.map((row) => (
               <Card key={row.enemy} tone="inset" size="xs" className="flex-row items-center gap-3 p-2.5">
-                <HeroImage heroId={row.enemy} shape="circle" className="size-7.5 shrink-0" />
+                <HeroImage heroId={row.enemy} shape="circle" decorative className="size-7.5 shrink-0" />
                 <span className="flex min-w-0 flex-1 gap-1 truncate text-sm">
                   vs. <HeroName heroId={row.enemy} />
                 </span>
                 <DivergingBar value={row.edge} scale={4} className="hidden w-40 sm:block" />
                 <Points value={row.edge} align="end" className="w-14 text-sm font-bold" />
-                <span className="w-16 text-end text-xs text-muted-foreground tabular-nums">
-                  {formatCount(row.matches)}
+                <span className="w-24 text-end text-xs text-muted-foreground tabular-nums">
+                  {formatCount(row.matches)} games
                 </span>
               </Card>
             ))}

@@ -187,11 +187,7 @@ export function NextPickPanel({
                 )}
               </>
             ) : top.length === 0 ? (
-              <EmptyState
-                variant="inline"
-                className="px-4 py-6"
-                title="No candidate clears the minimum match count. Lower it in the filter bar."
-              />
+              <EmptyState variant="inline" className="px-4 py-6" title="No candidate has data for these filters." />
             ) : (
               <>
                 <Table density="dense" aria-label="Best next pick">

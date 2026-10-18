@@ -10,6 +10,7 @@ import { Separator } from "~/components/ui/separator";
 import { Tooltip, TooltipHeader, TooltipStat, TooltipStats, TooltipTarget } from "~/components/ui/tooltip";
 import type { AbilityTrieNode } from "~/lib/ability-order-utils";
 import { getPickRate, getSortedChildren, getWinRate } from "~/lib/ability-order-utils";
+import { formatCountNoun } from "~/lib/format";
 import { TONE_TEXT, toneOf } from "~/lib/tone";
 
 interface AbilitySlotMap {
@@ -106,7 +107,7 @@ export default function AbilityOrderNode({
 
   const details = (
     <>
-      <TooltipHeader title={`T${abilityLevel} · ${cumulativePoints} ability points spent`} />
+      <TooltipHeader title={`T${abilityLevel} · ${formatCountNoun(cumulativePoints, "ability point")} spent`} />
       <TooltipStats>
         <TooltipStat label="Win Rate" value={`${wrPercent.toFixed(1)}%`} className={TONE_TEXT[toneOf(winRate, 0.5)]} />
         <TooltipStat label="Pick Rate" value={`${prPercent.toFixed(1)}%`} />
@@ -147,7 +148,7 @@ export default function AbilityOrderNode({
           <Badge variant="muted" size="sm">
             T{abilityLevel}
           </Badge>
-          <span>{cumulativePoints} pts</span>
+          <span>{formatCountNoun(cumulativePoints, "pt")}</span>
         </>
       }
       winRate={winRate}

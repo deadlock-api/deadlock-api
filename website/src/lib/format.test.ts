@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { fineShareDigits, formatFineShare, formatSignedPoints } from "./format";
+import { fineShareDigits, formatCountNoun, formatFineShare, formatSignedPoints } from "./format";
 
 test("formatFineShare keeps two significant digits below 1%", () => {
   assert.equal(formatFineShare(0.000886), "0.089%");
@@ -25,4 +25,11 @@ test("formatSignedPoints prints a rate difference in percentage points that neve
   assert.equal(formatSignedPoints(0.168), "+16.8\u00a0pp");
   assert.equal(formatSignedPoints(-0.011), "\u22121.1\u00a0pp");
   assert.equal(formatSignedPoints(0), "0.0\u00a0pp");
+});
+
+test("formatCountNoun puts the noun in the count's number", () => {
+  assert.equal(formatCountNoun(1, "pt"), "1 pt");
+  assert.equal(formatCountNoun(0, "pt"), "0 pts");
+  assert.equal(formatCountNoun(5, "ability point"), "5 ability points");
+  assert.equal(formatCountNoun(1200, "game"), "1,200 games");
 });
