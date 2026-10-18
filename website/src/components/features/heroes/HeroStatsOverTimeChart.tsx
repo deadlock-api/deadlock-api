@@ -33,7 +33,7 @@ import { HeroTrendTooltip } from "~/components/features/heroes/HeroTrendTooltip"
 import { ChartCard } from "~/components/patterns/charts/ChartCard";
 import { ChartLegend, ChartLegendItem } from "~/components/patterns/charts/ChartLegend";
 import { ChartSidebarLayout } from "~/components/patterns/charts/ChartSidebarLayout";
-import { ChartError, ChartLoading } from "~/components/patterns/charts/ChartStates";
+import { ChartEmpty, ChartError, ChartLoading } from "~/components/patterns/charts/ChartStates";
 import { ChartSurface } from "~/components/patterns/charts/ChartSurface";
 import {
   CHART_BASELINE,
@@ -529,8 +529,9 @@ export function HeroStatsOverTimeChart({
                 </ChartLegend>
               )}
               {visibleHeroIds.length === 0 ? (
-                <EmptyState
-                  variant="plain"
+                <ChartEmpty
+                  size="xl"
+                  label="hero trends"
                   title={
                     effectiveVisibleSet.size === 0
                       ? "Choose heroes to compare"

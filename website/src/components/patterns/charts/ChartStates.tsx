@@ -46,20 +46,38 @@ export function ChartError({ label, onRetry, retrying = false, className, ...pro
   );
 }
 
-interface ChartEmptyProps extends ChartStateProps {
+interface ChartEmptyProps extends Omit<ChartStateProps, "title"> {
   /** Why there is nothing, or what to try. Say so when the data only begins at some date. */
   description?: React.ReactNode;
+  /** Replaces "No {label} for these filters" when the plot is empty for another reason (no series chosen). */
+  title?: React.ReactNode;
+  /**
+   * The plot's `size`: the state stands in the plot's place at the plot's height, borderless, so a chart card, and a
+   * picker beside it that follows its height, keep their size when the plot empties. Without it, a bordered block.
+   */
+  size?: ChartSize;
 }
 
 export function ChartEmpty({
   label,
   description = "Try a wider date range or fewer filters.",
+  title = `No ${label} for these filters`,
+  size,
   className,
   ...props
 }: ChartEmptyProps) {
+  if (size) {
+    return (
+      <div data-slot="chart-empty" className={cn(stateRoot, chartFrameHeight(size), className)} {...props}>
+        <div className={cn(chartSizeVariants({ size }), "flex flex-col justify-center")}>
+          <EmptyState variant="plain" title={title} description={description} />
+        </div>
+      </div>
+    );
+  }
   return (
     <div data-slot="chart-empty" className={cn(stateRoot, className)} {...props}>
-      <EmptyState title={`No ${label} for these filters`} description={description} />
+      <EmptyState title={title} description={description} />
     </div>
   );
 }

@@ -7,7 +7,7 @@ import { type HeroBucketRow, HeroBucketTable } from "~/components/features/heroe
 import { ChartCard } from "~/components/patterns/charts/ChartCard";
 import { ChartLegend, ChartLegendItem, ChartSwatch } from "~/components/patterns/charts/ChartLegend";
 import { ChartSidebarLayout } from "~/components/patterns/charts/ChartSidebarLayout";
-import { ChartError, ChartLoading } from "~/components/patterns/charts/ChartStates";
+import { ChartEmpty, ChartError, ChartLoading } from "~/components/patterns/charts/ChartStates";
 import { ChartSurface } from "~/components/patterns/charts/ChartSurface";
 import {
   CHART_COLOR,
@@ -17,7 +17,6 @@ import {
   CHART_Y_AXIS,
   CHART_Y_LABEL,
 } from "~/components/patterns/charts/theme";
-import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { StaleOverlay } from "~/components/patterns/states/StaleOverlay";
 import { TooltipCard, TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
 import type { Dayjs } from "~/dayjs";
@@ -399,8 +398,9 @@ export function HeroStatsByRankChart({
                 </ChartLegend>
               )}
               {selectedIds.length === 0 ? (
-                <EmptyState
-                  variant="plain"
+                <ChartEmpty
+                  size="xl"
+                  label="rank data"
                   title={allHeroIds.length ? "Choose heroes to compare" : "No rank data for these filters"}
                   description={
                     allHeroIds.length

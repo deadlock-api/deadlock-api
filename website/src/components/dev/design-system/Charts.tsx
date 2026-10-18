@@ -458,6 +458,12 @@ export function Charts() {
           <ChartError label="hero trends" onRetry={() => {}} retrying={false} />
           <ChartEmpty label="hero trends" />
           <ChartEmpty label="buff pickup times" description="Pickup times are recorded since the September update." />
+          <ChartEmpty
+            size="md"
+            label="hero trends"
+            title="Choose heroes to compare"
+            description="Select heroes in the picker or use Show all to display their trends."
+          />
         </Variants>
       </Specimen>
 

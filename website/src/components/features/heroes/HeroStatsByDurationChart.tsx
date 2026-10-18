@@ -8,10 +8,9 @@ import { ChartCard } from "~/components/patterns/charts/ChartCard";
 import { ChartLegend, ChartLegendItem } from "~/components/patterns/charts/ChartLegend";
 import { ChartReading, ChartReadings } from "~/components/patterns/charts/ChartReadings";
 import { ChartSidebarLayout } from "~/components/patterns/charts/ChartSidebarLayout";
-import { ChartError, ChartLoading } from "~/components/patterns/charts/ChartStates";
+import { ChartEmpty, ChartError, ChartLoading } from "~/components/patterns/charts/ChartStates";
 import { ChartSurface } from "~/components/patterns/charts/ChartSurface";
 import { CHART_COLOR, CHART_GRID, CHART_X_AXIS, CHART_X_LABEL, CHART_Y_AXIS } from "~/components/patterns/charts/theme";
-import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { StaleOverlay } from "~/components/patterns/states/StaleOverlay";
 import type { Dayjs } from "~/dayjs";
 import { useHeroColorMap } from "~/hooks/useChartHeroVisibility";
@@ -185,8 +184,9 @@ export function HeroStatsByDurationChart({
                 </ChartLegend>
               )}
               {selectedIds.length === 0 ? (
-                <EmptyState
-                  variant="plain"
+                <ChartEmpty
+                  size="xl"
+                  label="duration data"
                   title={allHeroIds.length ? "Choose heroes to compare" : "No duration data for these filters"}
                   description={
                     allHeroIds.length
