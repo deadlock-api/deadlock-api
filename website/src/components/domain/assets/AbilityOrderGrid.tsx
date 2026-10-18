@@ -139,7 +139,13 @@ export function AbilityOrderGrid({
               const taken = step.abilityId === abilityId;
               const cell = cn(
                 "flex aspect-square items-center justify-center rounded-md border type-caption font-semibold tabular-nums",
-                taken ? cn("text-foreground", SLOT_CELL[slot % SLOT_CELL.length]) : "border-hairline bg-subtle",
+                // A read-only grid's empty cells are a faint fill without an outline, so the taken points stand out;
+                // an editor's keep the outline of a pressable target.
+                taken
+                  ? cn("text-foreground", SLOT_CELL[slot % SLOT_CELL.length])
+                  : editable
+                    ? "border-hairline bg-subtle"
+                    : "border-transparent bg-subtle",
               );
               if (!editable) {
                 return (
