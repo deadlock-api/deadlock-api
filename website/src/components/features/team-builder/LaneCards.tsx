@@ -98,7 +98,6 @@ export function LaneCards({
     <div className="grid items-start gap-3 lg:grid-cols-3">
       {lanes.map((row) => {
         const pending = loading || !row.complete || row.winRate === undefined;
-        const share = row.winRate ?? 0.5;
         const curve = row.complete ? soulCurves.get(row.lane.id, row.ally, row.enemy) : undefined;
         return (
           <Card
@@ -141,8 +140,8 @@ export function LaneCards({
                         )}
                       </Inline>
                       <SplitBar
-                        left={allyTrack(share)}
-                        right={1 - allyTrack(share)}
+                        left={row.winRate === undefined ? undefined : allyTrack(row.winRate)}
+                        right={row.winRate === undefined ? undefined : 1 - allyTrack(row.winRate)}
                         leftColor={CHART_COLOR.positive}
                         rightColor={CHART_COLOR.primary}
                       />

@@ -61,7 +61,10 @@ export function DivergingBar({
   );
 }
 
-/** Two sides of one whole, meeting where the shares say: allies against enemies, this lane against that one. */
+/**
+ * Two sides of one whole, meeting where the shares say: allies against enemies, this lane against that one. Without
+ * both shares (a lane not measured yet) it is the empty track with its even tick, never a made-up even split.
+ */
 export function SplitBar({
   left,
   right,
@@ -70,22 +73,27 @@ export function SplitBar({
   className,
   ...props
 }: Omit<React.ComponentProps<"div">, "children"> & {
-  left: number;
-  right: number;
+  left: number | undefined;
+  right: number | undefined;
   leftColor?: string;
   rightColor?: string;
 }) {
-  const total = left + right;
-  const share = total > 0 ? left / total : 0.5;
+  const empty = left === undefined || right === undefined || left + right <= 0;
+  const share = empty ? 0.5 : left / (left + right);
   return (
     <div
       data-slot="split-bar"
+      data-state={empty ? "empty" : "filled"}
       className={cn("relative flex h-1.5 min-w-0 gap-px overflow-hidden rounded-full bg-muted", className)}
       aria-hidden="true"
       {...props}
     >
-      <div className="h-full opacity-70" style={{ width: `${share * 100}%`, backgroundColor: leftColor }} />
-      <div className="h-full flex-1 opacity-70" style={{ backgroundColor: rightColor }} />
+      {!empty && (
+        <>
+          <div className="h-full" style={{ width: `${share * 100}%`, backgroundColor: leftColor }} />
+          <div className="h-full flex-1" style={{ backgroundColor: rightColor }} />
+        </>
+      )}
       <span className="absolute inset-s-1/2 -top-0.5 h-2.5 w-px bg-foreground/60" />
     </div>
   );

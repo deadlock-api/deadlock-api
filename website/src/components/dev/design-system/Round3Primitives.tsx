@@ -598,7 +598,7 @@ export function Round3Primitives() {
       <Specimen
         name="SplitBar"
         source="ui/rate-bar"
-        note="Two sides of one whole, meeting where the shares say; the tick marks the even split."
+        note="Two sides of one whole, meeting where the shares say; the tick marks the even split. Without both shares it is the empty track and its tick."
       >
         <Variants className="gap-6">
           <SplitBar left={62} right={38} className="w-40" />
@@ -610,6 +610,7 @@ export function Round3Primitives() {
             rightColor="var(--lane-blue)"
             className="w-40"
           />
+          <SplitBar left={undefined} right={undefined} className="w-40" />
         </Variants>
       </Specimen>
     </>
