@@ -217,7 +217,7 @@ export function ScoreboardTable({
         noun="player"
         query={deferredSearchQuery}
       />
-      <Table density="compact" className="tabular-nums">
+      <Table density="compact" className="tabular-nums" aria-label="Player scoreboard">
         <TableHeader tone="muted">
           <TableRow>
             <TableHead className="min-w-8 text-end sm:min-w-12">#</TableHead>
