@@ -138,7 +138,7 @@ export function BuildInMatches({
                           key={item.itemId}
                           rank={index + 1}
                           entity={{ itemId: item.itemId }}
-                          meta={`Bought in ${formatShare(item.boughtRate)}`}
+                          meta={`${formatShare(item.boughtRate)} bought it`}
                         >
                           {/* The two rates step back: the gap between them is what a key item is read for. */}
                           <RankedEntityMetric
