@@ -17,11 +17,11 @@ export function BuildSummaryStats({
   heroWinRate?: number;
 }) {
   return (
-    <div className="flex min-w-0 flex-wrap items-baseline gap-x-4 gap-y-1 text-xs">
+    <div className="flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-1 text-xs">
       <InlineStat value={count(summary.builds)} label={summary.builds === 1 ? "build" : "builds"} />
       {/* There from the first paint, a placeholder until it loads, so the strip does not reflow. */}
       <InlineStat value={heroWinRate === undefined ? null : formatPercent(heroWinRate)} label="hero win rate" />
-      <InlineStat value={formatPercent(summary.topShare)} label="on top build" />
+      <InlineStat value={formatPercent(summary.topShare)} label="top build share" />
     </div>
   );
 }

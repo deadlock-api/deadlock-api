@@ -77,7 +77,7 @@ export function BuildItemsPanel({
                 meta={`In ${item.builds} ${item.builds === 1 ? "build" : "builds"}`}
               >
                 <RankedEntityMetric
-                  label="Matches"
+                  label="Of matches"
                   labelDisplay={index === 0 ? "visible" : "hidden"}
                   value={formatShare(item.share)}
                   share={item.share}
