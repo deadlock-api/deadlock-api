@@ -21,9 +21,15 @@ const tooltipContentClassName = cn(
 const tooltipArrowClassName =
   "relative bottom-0.5 z-50 size-2.5 -translate-y-1/2 rotate-45 rounded-xs bg-foreground fill-foreground";
 
-/** The tooltip surface for chart tooltips, which are positioned by Recharts. */
-function TooltipCard({ className, ...props }: ComponentProps<"div">) {
-  return <div data-slot="tooltip-card" className={cn(tooltipSurfaceClassName, className)} {...props} />;
+/**
+ * The tooltip surface for chart tooltips, which are positioned by Recharts. A polite live region: the arrow keys move
+ * a chart's reading (Recharts' accessibility layer), and each new reading is read out, as Recharts' own tooltip does.
+ */
+function TooltipCard({ className, ...props }: ComponentProps<"output">) {
+  // An <output> is a polite status region (role="status") by itself.
+  return (
+    <output data-slot="tooltip-card" aria-atomic="true" className={cn(tooltipSurfaceClassName, className)} {...props} />
+  );
 }
 
 /**

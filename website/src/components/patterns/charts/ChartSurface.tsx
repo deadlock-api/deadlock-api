@@ -1,5 +1,5 @@
 import { cva, type VariantProps } from "class-variance-authority";
-import type { ComponentProps } from "react";
+import { cloneElement, type ComponentProps, isValidElement, type ReactElement } from "react";
 import { ResponsiveContainer } from "recharts";
 
 import { cn } from "~/lib/utils";
@@ -60,8 +60,8 @@ interface ChartSurfaceProps
   /** Describes the plot to assistive technology: "Win rate by rank". */
   label: string;
   /**
-   * What assistive technology reads. `plot` (default): the label names the figure and the plot's own text (ticks,
-   * keyboard readings) stays reachable. `label`: the label is a full summary that stands in for the plot, whose tick
+   * What assistive technology reads. `plot` (default): the label names the figure and the chart's focusable svg, and
+   * the plot's own text (ticks, keyboard readings, announced through `TooltipCard`'s live region) stays reachable. `label`: the label is a full summary that stands in for the plot, whose tick
    * text would otherwise be read as one run-together string; the plot is hidden from assistive technology, so it must
    * not be focusable (`accessibilityLayer={false}`).
    */
@@ -76,6 +76,15 @@ export function chartFrameHeight(size: ChartSize | null | undefined): string | u
   if (size === "fill") return "h-full";
   if (size === "grow") return "min-h-32 flex-1";
   return undefined;
+}
+
+/**
+ * Names the chart's own svg too: with Recharts' accessibility layer it is a focusable `application`, and focus lands
+ * on it rather than on the figure, so an unnamed one would be read as nothing. A chart that names itself keeps its name.
+ */
+function namePlot(children: ChartSurfaceProps["children"], label: string): ChartSurfaceProps["children"] {
+  if (!isValidElement<{ "aria-label"?: string }>(children) || children.props["aria-label"]) return children;
+  return cloneElement(children as ReactElement<{ "aria-label"?: string }>, { "aria-label": label });
 }
 
 /** The frame every Recharts plot sits in: a labelled figure of a named height with a responsive container. */
@@ -113,7 +122,7 @@ export function ChartSurface({
         )}
       >
         <ResponsiveContainer width="100%" height="100%" onResize={onResize}>
-          {children}
+          {announce === "plot" ? namePlot(children, label) : children}
         </ResponsiveContainer>
       </div>
     </figure>

@@ -139,7 +139,7 @@ export function Charts() {
       <Specimen
         name="ChartSurface"
         source="patterns/charts/ChartSurface"
-        note="size: xs, sm, md, default, lg, xl (the main plot of a page), fill (the parent sets the height), grow (grows in a stretched panel from a compact minimum; its loading skeleton too). variant: card, flush, bare. The loading skeleton takes the same size. announce: plot (the label names it) or label (the label summarises a small plot, which is hidden from screen readers; the bare one here)."
+        note="size: xs, sm, md, default, lg, xl (the main plot of a page), fill (the parent sets the height), grow (grows in a stretched panel from a compact minimum; its loading skeleton too). variant: card, flush, bare. The loading skeleton takes the same size. announce: plot (the label names the figure and the focusable chart svg; keyboard readings in TooltipCard are announced politely) or label (the label summarises a small plot, which is hidden from screen readers; the bare one here)."
       >
         <Variants className="grid items-start md:grid-cols-2">
           <ChartSurface label="Win rate by rank" size="md">
