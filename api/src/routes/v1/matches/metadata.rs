@@ -15,8 +15,9 @@ use futures::future::join;
 use futures::stream::BoxStream;
 use metrics::counter;
 use object_store::aws::AmazonS3;
+use object_store::local::LocalFileSystem;
 use object_store::path::Path as S3Path;
-use object_store::{GetResult, ObjectStoreExt};
+use object_store::{GetResult, ObjectStore, ObjectStoreExt};
 use prost::Message;
 use serde::Deserialize;
 use tokio::io::AsyncReadExt;
@@ -119,7 +120,10 @@ pub(super) struct MetadataQuery {
     disable_steam: Option<bool>,
 }
 
-async fn fetch_from_s3<T: Into<S3Path>>(s3: &AmazonS3, key: T) -> object_store::Result<Bytes> {
+async fn fetch_from_s3<T: Into<S3Path>>(
+    s3: &impl ObjectStore,
+    key: T,
+) -> object_store::Result<Bytes> {
     s3.get(&key.into()).await?.bytes().await
 }
 
@@ -159,7 +163,7 @@ async fn fetch_match_metadata_raw(
     state: &AppState,
     rate_limit_key: &RateLimitKey,
     s3: &AmazonS3,
-    s3_cache: Option<&AmazonS3>,
+    file_cache: Option<&LocalFileSystem>,
     match_id: u64,
     is_custom: bool,
     disable_steam: bool,
@@ -176,11 +180,14 @@ async fn fetch_match_metadata_raw(
         ));
     }
 
-    // Try to fetch from the cache first
+    // Try to fetch from the cache first. The `s3-cache` metric label predates the file cache and is
+    // kept so dashboards keep their history.
     if match_id >= *min_cache_match_id(&state.ch_client).await
-        && let Some(s3_cache) = s3_cache
-        && let Some(data) =
-            fetch_salt_or_hltv(match_id, "", "s3-cache", |key| fetch_from_s3(s3_cache, key)).await
+        && let Some(file_cache) = file_cache
+        && let Some(data) = fetch_salt_or_hltv(match_id, "", "s3-cache", |key| {
+            fetch_from_s3(file_cache, key)
+        })
+        .await
     {
         return Ok(data);
     }
@@ -296,15 +303,16 @@ pub(super) async fn metadata_raw(
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
     async fn fetch_from_s3_stream<T: Into<S3Path>>(
-        s3: &AmazonS3,
+        s3: &impl ObjectStore,
         key: T,
     ) -> object_store::Result<BoxStream<'static, object_store::Result<Bytes>>> {
         s3.get(&key.into()).await.map(GetResult::into_stream)
     }
 
-    if match_id >= *min_cache_match_id(&state.ch_client).await
+    if let Some(file_cache) = &state.file_cache
+        && match_id >= *min_cache_match_id(&state.ch_client).await
         && let Some(data) = fetch_salt_or_hltv(match_id, "", "s3-cache", |key| {
-            fetch_from_s3_stream(&state.s3_cache_client, key)
+            fetch_from_s3_stream(file_cache, key)
         })
         .await
     {
@@ -373,7 +381,7 @@ pub(super) async fn metadata(
         &state,
         &rate_limit_key,
         &state.s3_client,
-        Some(&state.s3_cache_client),
+        state.file_cache.as_ref(),
         match_id,
         is_custom.unwrap_or_default(),
         disable_steam.unwrap_or_default(),

@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use serde::Deserialize;
 
 use crate::utils::parse::default_true;
@@ -228,7 +230,10 @@ pub(crate) struct Config {
     pub(super) steam: SteamConfig,
     pub(super) redis: RedisConfig,
     pub(super) s3: S3Config,
-    pub(super) s3_cache: S3Config,
+    /// Directory of the match metadata file cache that `matchdata-downloader` fills
+    /// (`FILE_CACHE_DIR`). Without it, metadata is always read from `s3`.
+    #[serde(default)]
+    pub(super) file_cache_dir: Option<PathBuf>,
     pub(super) r2: R2Config,
     /// Public R2 bucket for demo query extracts. Reuses the `R2_*` account credentials.
     #[serde(default = "default_demo_extracts_bucket")]

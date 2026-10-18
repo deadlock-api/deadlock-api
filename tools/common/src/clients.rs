@@ -7,6 +7,7 @@ use fred::clients::Client as RedisClient;
 use fred::interfaces::{ClientLike, FredResult};
 use fred::prelude::{Config as RedisConfig, ReconnectPolicy};
 use object_store::aws::AmazonS3Builder;
+use object_store::local::LocalFileSystem;
 use sqlx::postgres::{PgConnectOptions, PgPoolOptions};
 use sqlx::{ConnectOptions, Pool, Postgres};
 use tracing::log::LevelFilter;
@@ -63,14 +64,12 @@ pub fn get_store() -> Result<impl object_store::ObjectStore, ClientError> {
     )
 }
 
+/// The metadata file cache the API serves recent matches from: a directory shared with the API
+/// container (`FILE_CACHE_DIR`), keyed like the bucket it replaced. A host cron deletes files
+/// older than 7 days.
 pub fn get_cache_store() -> Result<impl object_store::ObjectStore, ClientError> {
-    build_s3_client(
-        "S3_CACHE_REGION",
-        "S3_CACHE_BUCKET_NAME",
-        "S3_CACHE_ACCESS_KEY_ID",
-        "S3_CACHE_SECRET_ACCESS_KEY",
-        "S3_CACHE_ENDPOINT_URL",
-    )
+    let dir = env::var("FILE_CACHE_DIR")?;
+    Ok(LocalFileSystem::new_with_prefix(dir)?)
 }
 
 pub async fn get_pg_client() -> Result<Pool<Postgres>, ClientError> {

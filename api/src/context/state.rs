@@ -5,12 +5,13 @@ use std::io;
 use std::sync::Arc;
 
 use object_store::aws::{AmazonS3, AmazonS3Builder};
+use object_store::local::LocalFileSystem;
 use object_store::{BackoffConfig, RetryConfig};
 use serde::Deserialize;
 use sqlx::postgres::{PgConnectOptions, PgPoolOptions};
 use sqlx::{Pool, Postgres};
 use thiserror::Error;
-use tracing::{debug, warn};
+use tracing::{debug, error, warn};
 
 use crate::context::batchers::Batchers;
 use crate::context::config::Config;
@@ -71,7 +72,7 @@ pub(crate) struct AppStateInner {
     /// different deadline override it per request with `RequestBuilder::timeout`.
     pub(crate) http_client: reqwest::Client,
     pub(crate) s3_client: AmazonS3,
-    pub(crate) s3_cache_client: AmazonS3,
+    pub(crate) file_cache: Option<LocalFileSystem>,
     pub(crate) r2_client: AmazonS3,
     pub(crate) redis_client: redis::aio::MultiplexedConnection,
     pub(crate) ch_client: clickhouse::Client,
@@ -112,19 +113,13 @@ impl AppState {
             retry_config(Duration::from_secs(5)),
         )?;
 
-        // Create an S3 cache client
-        debug!("Creating S3 cache client");
-        let s3_cache_client = s3_store(
-            &config.s3_cache.region,
-            &config.s3_cache.bucket,
-            &config.s3_cache.access_key_id,
-            &config.s3_cache.secret_access_key,
-            &config.s3_cache.endpoint,
-            RetryConfig {
-                max_retries: 0,
-                ..Default::default()
-            },
-        )?;
+        // The metadata file cache is optional: a missing directory (e.g. a lost mount) must not
+        // take the API down, the reads only fall back to S3.
+        let file_cache = config.file_cache_dir.as_ref().and_then(|dir| {
+            LocalFileSystem::new_with_prefix(dir)
+                .inspect_err(|e| error!("Metadata file cache disabled, {}: {e}", dir.display()))
+                .ok()
+        });
 
         // Create a Cloudflare R2 client (S3-compatible)
         debug!("Creating Cloudflare R2 client");
@@ -287,7 +282,7 @@ impl AppState {
             config,
             http_client,
             s3_client,
-            s3_cache_client,
+            file_cache,
             r2_client,
             redis_client,
             ch_client,
