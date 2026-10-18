@@ -34,8 +34,8 @@ import {
   type BuildTrend,
   buildLanguageName,
 } from "~/lib/build-stats";
-import { formatPercent, formatSignedPoints } from "~/lib/format";
-import { TONE_TEXT, toneOf } from "~/lib/tone";
+import { formatPercent } from "~/lib/format";
+import { toneOf } from "~/lib/tone";
 import { cn } from "~/lib/utils";
 import type { SteamProfileMap } from "~/queries/steam-queries";
 
@@ -369,11 +369,13 @@ export function BuildTable({
                           tone={toneOf(verdictSign(row))}
                           className="min-w-0 flex-1"
                         />
-                        <span
-                          className={cn("w-16 shrink-0 text-end tabular-nums", TONE_TEXT[toneOf(verdictSign(row))])}
-                        >
-                          {formatSignedPoints(row.vsAverage)}
-                        </span>
+                        <Delta
+                          value={row.vsAverage}
+                          unit=" pp"
+                          significant={row.verdict !== "even"}
+                          zero="visible"
+                          className="w-16 shrink-0 justify-end"
+                        />
                       </div>
                     </TableCell>
                     <TableCell className="hidden text-end text-xs tabular-nums @2xl/builds:table-cell">

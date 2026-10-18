@@ -42,6 +42,11 @@ interface DeltaBaseProps extends Omit<React.ComponentProps<"span">, "children"> 
    */
   threshold?: number;
   /**
+   * Whether the change stands out of the noise, where the caller has a better test than a threshold (a confidence
+   * interval that lies wholly on one side). Overrides `threshold`.
+   */
+  significant?: boolean;
+  /**
    * A change that rounds to zero renders nothing by default; `visible` prints it unsigned and muted ("0.0 pp"), for a
    * column where a blank would read as missing data.
    */
@@ -51,7 +56,23 @@ interface DeltaBaseProps extends Omit<React.ComponentProps<"span">, "children"> 
 /** `badge` draws it as a square Badge in the tone's color, for table cells and stat rows; only a badge has a `size`. */
 type DeltaProps = DeltaBaseProps & ({ display?: "text"; size?: never } | { display: "badge"; size?: "sm" | "default" });
 
-/** A signed change, colored by direction. Zero at the displayed precision renders nothing unless `zero="visible"`. */
+/**
+ * Whether a change stands out of the noise. `clear` and `noise` are told apart by more than color (WCAG 1.4.1): a
+ * clear change is set semibold, a change within the noise regular weight and muted, with "within noise" for screen
+ * readers. `none`: no test was given.
+ */
+export type DeltaSignificance = "clear" | "noise" | "none";
+
+const SIGNIFICANCE_WEIGHT: Record<DeltaSignificance, string> = {
+  clear: "font-semibold",
+  noise: "font-normal",
+  none: "font-medium",
+};
+
+/**
+ * A signed change, colored by direction. Zero at the displayed precision renders nothing unless `zero="visible"`.
+ * With a `threshold` or `significant`, a change within the noise is muted and set lighter than a clear one.
+ */
 export function Delta({
   value,
   format = "percent",
@@ -63,6 +84,7 @@ export function Delta({
   fraction = "fixed",
   size = "default",
   threshold = 0,
+  significant,
   zero = "hidden",
   className,
   ...props
@@ -73,8 +95,18 @@ export function Delta({
   // Round first so a change too small to display is hidden rather than shown as "-0.0%".
   const rounded = Math.round((format === "percent" ? value * 100 : value) * scale) / scale;
   if (rounded === 0 && zero === "hidden") return null;
+  const significance: DeltaSignificance =
+    significant !== undefined
+      ? significant
+        ? "clear"
+        : "noise"
+      : threshold > 0
+        ? Math.abs(value) < threshold
+          ? "noise"
+          : "clear"
+        : "none";
   const tone =
-    rounded === 0 || polarity === "neutral" || Math.abs(value) < threshold
+    rounded === 0 || polarity === "neutral" || significance === "noise"
       ? "muted"
       : toneOf(polarity === "lower-is-better" ? -rounded : rounded);
   const Arrow = rounded > 0 ? ArrowUp : ArrowDown;
@@ -90,11 +122,20 @@ export function Delta({
       {arrow && rounded !== 0 && <span className="sr-only">{rounded > 0 ? "up" : "down"} </span>}
       {numberFormat(digits, fraction).format(Math.abs(rounded))}
       {unit ?? (format === "percent" ? "%" : "")}
+      {significance === "noise" && rounded !== 0 && <span className="sr-only">, within noise</span>}
     </>
   );
   if (display === "badge") {
     return (
-      <Badge data-slot="delta" variant={tone} shape="square" size={size} className={className} {...props}>
+      <Badge
+        data-slot="delta"
+        data-significance={significance}
+        variant={tone}
+        shape="square"
+        size={size}
+        className={className}
+        {...props}
+      >
         {content}
       </Badge>
     );
@@ -102,8 +143,10 @@ export function Delta({
   return (
     <span
       data-slot="delta"
+      data-significance={significance}
       className={cn(
-        "inline-flex items-center gap-0.5 font-medium whitespace-nowrap tabular-nums",
+        "inline-flex items-center gap-0.5 whitespace-nowrap tabular-nums",
+        SIGNIFICANCE_WEIGHT[significance],
         TONE_TEXT[tone],
         className,
       )}

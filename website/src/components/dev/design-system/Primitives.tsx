@@ -421,7 +421,7 @@ export function Primitives() {
       <Specimen
         name="Delta"
         source="ui/delta · lib/tone"
-        note="A signed change, colored by direction. polarity lower-is-better when a rise is bad news, neutral when it is neither; a change under threshold is muted, so only real differences take a color. For other good/bad values use toneOf() with TONE_TEXT."
+        note="A signed change, colored by direction. polarity lower-is-better when a rise is bad news, neutral when it is neither; a change under threshold (or significant={false}, for an interval test) is muted and set in regular weight, a clear one semibold, and a screen reader hears within noise, so the verdict never rests on color alone. For other good/bad values use toneOf() with TONE_TEXT."
       >
         <Variants>
           <Delta value={0.031} />
@@ -429,7 +429,12 @@ export function Primitives() {
           <Delta value={1.4} format="number" />
           <Delta value={0.6} format="number" polarity="lower-is-better" />
           <Delta value={0.6} format="number" polarity="neutral" />
+          <span className="text-xs text-muted-foreground">threshold: clear, then within noise:</span>
+          <Delta value={0.042} threshold={0.03} />
           <Delta value={0.004} threshold={0.03} />
+          <span className="text-xs text-muted-foreground">significant (an interval test):</span>
+          <Delta value={-0.021} unit=" pp" significant />
+          <Delta value={-0.021} unit=" pp" significant={false} />
           <span className="text-xs text-muted-foreground">zero renders nothing:</span>
           <Delta value={0.0001} />
           <span className="text-xs text-muted-foreground">unless zero=&quot;visible&quot;:</span>
