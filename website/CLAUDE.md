@@ -141,6 +141,12 @@ Read `docs/design-system.md` before touching anything under `src/components`, `s
    canvas/WebGL palettes, and hit areas of bespoke visualisations.
 8. Finish with `pnpm typecheck && pnpm lint && pnpm fmt`.
 
+Vendored UI skills in `.claude/skills/` (`impeccable`, `web-design-guidelines`, `a11y-core`, `contrast-master`,
+`data-visualization-accessibility`, `design-system-auditor`, `accessibility-regression-detector`) are kept byte-identical
+to upstream and excluded from oxlint/oxfmt. They rank below the 20 Laws and `docs/design-system.md`: a finding is fixed by
+extending the design system, never by restyling at a call site. Ignore their advice to pick a new palette or fonts, add
+hint text or descriptions, or write a PRODUCT.md / DESIGN.md (`docs/design-system.md` is the design document).
+
 ## Conventions
 
 - React Compiler runs in every build, dev included, via `@vitejs/plugin-react`'s `compiler` option — backed by `oxc-transform-react` (the Rust port), which shares the oxc pass with the TypeScript and JSX transforms and so needs no production-only gate.

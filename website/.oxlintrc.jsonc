@@ -76,5 +76,20 @@
     // Recommended-latest rules (from LintRulePreset.RecommendedLatest)
     "react-hooks-js/void-use-memo": "error",
   },
-  "ignorePatterns": ["node_modules", "dist", ".output", ".tanstack", ".vinxi", ".wrangler", "src/routeTree.gen.ts"],
+  "ignorePatterns": [
+    "node_modules",
+    "dist",
+    ".output",
+    ".tanstack",
+    ".vinxi",
+    ".wrangler",
+    "src/routeTree.gen.ts",
+    ".claude/skills/impeccable",
+    ".claude/skills/web-design-guidelines",
+    ".claude/skills/a11y-core",
+    ".claude/skills/contrast-master",
+    ".claude/skills/data-visualization-accessibility",
+    ".claude/skills/design-system-auditor",
+    ".claude/skills/accessibility-regression-detector",
+  ],
 }

@@ -19,6 +19,13 @@
     ".vinxi",
     ".wrangler",
     "src/routeTree.gen.ts",
-    "wrangler.jsonc"
+    "wrangler.jsonc",
+    ".claude/skills/impeccable",
+    ".claude/skills/web-design-guidelines",
+    ".claude/skills/a11y-core",
+    ".claude/skills/contrast-master",
+    ".claude/skills/data-visualization-accessibility",
+    ".claude/skills/design-system-auditor",
+    ".claude/skills/accessibility-regression-detector"
   ]
 }
