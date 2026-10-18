@@ -118,13 +118,10 @@ export function CommandBuilder({ region, accountId }: CommandBuilderProps) {
     data: previewData,
     error: previewRequestError,
     isLoading: previewLoading,
+    refetch: refetchPreview,
   } = useQuery(commandPreviewQueryOptions(debouncedGeneratedUrl));
 
-  const previewError = previewData
-    ? null
-    : previewRequestError
-      ? "Failed to load preview. Please check the generated URL."
-      : null;
+  const previewError = previewData ? null : previewRequestError ? "The preview did not load." : null;
 
   const handleExtraArgChange = (arg: string, value: string) => {
     setExtraArgs({ ...extraArgs, [arg]: value });
@@ -164,6 +161,7 @@ export function CommandBuilder({ region, accountId }: CommandBuilderProps) {
             preview={debouncedGeneratedUrl ? previewData || null : null}
             previewError={debouncedGeneratedUrl ? previewError : null}
             loading={debouncedGeneratedUrl !== "" && previewLoading}
+            onRetry={() => void refetchPreview()}
           />
           <ChatBotInstructions generatedUrl={generatedUrl} />
         </div>

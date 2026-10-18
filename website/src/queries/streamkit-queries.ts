@@ -75,10 +75,11 @@ export function streamkitSteamNameQueryOptions(region: string, accountId: string
   });
 }
 
-/** What the chat bot would answer for a generated command URL. */
+/** What the chat bot would answer for a generated command URL. A changed URL keeps the last answer until its own. */
 export function commandPreviewQueryOptions(url: string) {
   return queryOptions({
     queryKey: queryKeys.streamkit.preview(url),
+    placeholderData: keepPreviousData,
     queryFn: async ({ signal }) =>
       (await api.client.get<string>(url, { responseType: "text", signal, headers: { Accept: "*/*" } })).data,
     enabled: url !== "",
