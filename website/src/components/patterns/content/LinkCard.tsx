@@ -61,6 +61,11 @@ interface LinkCardProps extends Omit<React.ComponentProps<"a">, "title" | "media
   ctaPosition?: "start" | "end";
   /** `sm` for a dense grid of destinations, `default` for a feature card, `lg` for an entry of a list of articles. */
   size?: "sm" | "default" | "lg";
+  /**
+   * `compact` drops the description and the bottom row when the card itself is narrower than `@card-detail` (11rem),
+   * so a directory fits two cards a row on a phone: media and title only. The text stays in the markup.
+   */
+  density?: "default" | "compact";
   /** `horizontal` puts the media beside the whole text block instead of beside the title. */
   orientation?: "vertical" | "horizontal";
   /** `end` mirrors a horizontal card: the media on the trailing edge, the text end-aligned. For "next" links. */
@@ -85,6 +90,7 @@ export function LinkCard({
   footer,
   ctaPosition = "start",
   size = "default",
+  density = "default",
   orientation = "vertical",
   mediaPosition = "start",
   external = false,
@@ -101,6 +107,9 @@ export function LinkCard({
   const body = link ? link.props.children : children;
   const cardSize = size === "sm" ? "sm" : "default";
   const horizontal = orientation === "horizontal";
+  const compact = density === "compact";
+  /** What a compact card drops when it is narrow. */
+  const detail = compact && "@max-card-detail/link-card:hidden";
 
   const mediaSlot = media && (
     <span
@@ -142,6 +151,7 @@ export function LinkCard({
       className={cn(
         "leading-relaxed text-muted-foreground",
         size === "default" || size === "lg" ? "text-sm" : "text-xs",
+        detail,
         clamp === 2 && "line-clamp-2",
         clamp === 3 && "line-clamp-3",
       )}
@@ -153,7 +163,7 @@ export function LinkCard({
   const bottomRow = (cta || footer) && (
     <div
       data-slot="link-card-footer"
-      className="mt-auto flex flex-wrap items-center justify-between gap-x-4 gap-y-2 pt-1"
+      className={cn("mt-auto flex flex-wrap items-center justify-between gap-x-4 gap-y-2 pt-1", detail)}
     >
       {ctaPosition === "start" && ctaSlot}
       {footer && <div className="flex min-w-0 flex-wrap items-center gap-2">{footer}</div>}
@@ -164,8 +174,14 @@ export function LinkCard({
   const rootProps = {
     "data-slot": "link-card",
     "data-size": cardSize,
+    "data-density": density,
     "data-interaction": "pressable",
-    className: cn(cardVariants({ tone, size: cardSize, interaction: "pressable" }), "h-full", className),
+    className: cn(
+      cardVariants({ tone, size: cardSize, interaction: "pressable" }),
+      "h-full",
+      compact && "@container/link-card",
+      className,
+    ),
     ...(external && { target: "_blank", rel: "noopener noreferrer" }),
     ...props,
   };

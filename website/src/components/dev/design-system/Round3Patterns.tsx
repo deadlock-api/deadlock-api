@@ -334,6 +334,30 @@ function ContentSpecimens() {
             ctaPosition="end"
           />
         </Variants>
+        <Variants
+          label='density="compact": two narrow cards drop the description and the call to action'
+          className="grid w-80 grid-cols-2"
+        >
+          {[
+            { title: "Hero Stats", icon: <BarChart3 /> },
+            { title: "Game Data API", icon: <Code2 /> },
+          ].map(({ title, icon }) => (
+            <LinkCard
+              key={title}
+              href="#linkcard"
+              size="sm"
+              density="compact"
+              media={
+                <IconTile size="sm" hover="card">
+                  {icon}
+                </IconTile>
+              }
+              title={title}
+              description="Win rates, pick rates and trends for every hero."
+              cta="View"
+            />
+          ))}
+        </Variants>
         <Variants label='orientation="horizontal", mediaPosition="start" | "end"' className="grid sm:grid-cols-2">
           <LinkCard
             href="#linkcard"

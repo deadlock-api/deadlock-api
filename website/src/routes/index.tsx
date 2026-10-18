@@ -241,53 +241,51 @@ function IndexRoute() {
   const heroInstallVariant = useExperiment("exp-home-hero-install-cta");
   return (
     <PageShell density="marketing">
-      {/* The search belongs to the hero: it sits right under it, not a section's distance away. */}
-      <Stack gap={4}>
-        <Hero size="sm">
-          <Stack gap={2} align="center">
-            <PageHeader size="display" title="Deadlock API" />
-            <Text variant="eyebrow">sponsored by</Text>
-            <Card asChild tone="primary" size="sm" interaction="pressable" className="px-4">
-              <a href={mainSponsor.href} title={mainSponsor.title} target="_blank" rel="sponsored noreferrer">
-                <OptimizedImage
-                  src={mainSponsor.logo}
-                  widths={[192, 240, 384, 480, 576, 720]}
-                  sizes="(min-width: 1024px) 227px, 189px"
-                  alt={`${mainSponsor.title} Logo`}
-                  width={600}
-                  height={127}
-                  className="h-auto w-47 object-contain lg:w-57"
-                />
-              </a>
-            </Card>
-          </Stack>
+      {/* The search is the page's main action: right under the title, ahead of the pills and the lead, so a phone
+          reaches it without scrolling. */}
+      <Hero size="sm">
+        <Stack gap={2} align="center">
+          <PageHeader size="display" title="Deadlock API" />
+          <Text variant="eyebrow">sponsored by</Text>
+          <Card asChild tone="primary" size="sm" interaction="pressable" className="px-4">
+            <a href={mainSponsor.href} title={mainSponsor.title} target="_blank" rel="sponsored noreferrer">
+              <OptimizedImage
+                src={mainSponsor.logo}
+                widths={[192, 240, 384, 480, 576, 720]}
+                sizes="(min-width: 1024px) 227px, 189px"
+                alt={`${mainSponsor.title} Logo`}
+                width={600}
+                height={127}
+                className="h-auto w-47 object-contain lg:w-57"
+              />
+            </a>
+          </Card>
+        </Stack>
 
-          <HeroActions>
-            {heroInstallVariant === "test" && (
-              <InstallButton shape="pill" size="default" installHref={INGEST_INSTALL_PATH} placement="home_hero" />
-            )}
-            {(heroInstallVariant === "test"
-              ? valueProps.filter((prop) => prop.label !== "Open Source")
-              : valueProps
-            ).map((prop) => (
+        <AiSearch />
+
+        <HeroActions>
+          {heroInstallVariant === "test" && (
+            <InstallButton shape="pill" size="default" installHref={INGEST_INSTALL_PATH} placement="home_hero" />
+          )}
+          {(heroInstallVariant === "test" ? valueProps.filter((prop) => prop.label !== "Open Source") : valueProps).map(
+            (prop) => (
               <Button key={prop.label} asChild variant="outline" shape="pill">
                 <SmartLink href={prop.href} external={prop.external} title={prop.title}>
                   <prop.icon className="size-3.5" />
                   {prop.label}
                 </SmartLink>
               </Button>
-            ))}
-          </HeroActions>
+            ),
+          )}
+        </HeroActions>
 
-          <HeroLead>
-            Track Deadlock stats: hero win rates, pick rates, item analytics, rank distribution, and leaderboards,
-            updated live from Valve's servers. A comprehensive set of endpoints also gives developers access to Deadlock
-            game data, match history, player statistics, hero analytics, and more.
-          </HeroLead>
-        </Hero>
-
-        <AiSearch className="self-center" />
-      </Stack>
+        <HeroLead>
+          Track Deadlock stats: hero win rates, pick rates, item analytics, rank distribution, and leaderboards, updated
+          live from Valve's servers. A comprehensive set of endpoints also gives developers access to Deadlock game
+          data, match history, player statistics, hero analytics, and more.
+        </HeroLead>
+      </Hero>
 
       <Section
         size="lg"
@@ -295,7 +293,7 @@ function IndexRoute() {
         title="Deadlock Stats, Hero Win Rates & Leaderboards"
         description="Dive into analytics, leaderboards, and visualizations powered by millions of tracked matches"
       >
-        <Grid columns={{ base: 1, sm: 2, xl: 5 }}>
+        <Grid columns={{ base: 2, xl: 5 }}>
           {analyticsLinks.map((item) => {
             const Icon = item.icon;
             return (
@@ -303,6 +301,7 @@ function IndexRoute() {
                 key={item.title}
                 asChild
                 size="sm"
+                density="compact"
                 title={item.title}
                 description={item.description}
                 cta="View"
