@@ -48,7 +48,6 @@ function CategoryTitle({ name, description }: { name: string; description: strin
   );
 }
 
-/** One build as written: who made it, how it did, the items of each of its categories and its skill order. */
 /** How the build's souls split over the three shop categories: a gun build leans weapon, a caster build spirit. */
 function BuildSlotSplit({ meta }: { meta: BuildMeta }) {
   const items = useItemPrices();
@@ -79,6 +78,7 @@ function BuildSlotSplit({ meta }: { meta: BuildMeta }) {
   );
 }
 
+/** One build as written: who made it, the items of each of its categories, its soul split and its skill order. */
 export function BuildDetailPanel({
   row,
   rows,
@@ -166,8 +166,8 @@ export function BuildDetailPanel({
       <div className={cn(SCROLLBAR_THIN, "@container relative flex min-h-0 flex-1 flex-col overflow-y-auto")}>
         {meta ? (
           <>
-            <BuildSlotSplit meta={meta} />
-            {/* Two columns of groups once the panel is wide enough, so more of the build shows without a scroll. */}
+            {/* The items lead, as they are the build; how their souls split over the shop follows them. Two columns of
+                groups once the panel is wide enough, so more of the build shows without a scroll. */}
             <div className="grid @md:grid-cols-2">
               {meta.categories
                 .filter((category) => category.itemIds.length > 0)
@@ -201,6 +201,7 @@ export function BuildDetailPanel({
                   </section>
                 ))}
             </div>
+            <BuildSlotSplit meta={meta} />
             {skillOrder.length > 0 && slotAbilities.length > 0 && (
               <section className="flex flex-col">
                 <PanelSection variant="label" title="Skill order" />

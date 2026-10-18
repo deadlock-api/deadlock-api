@@ -72,7 +72,9 @@ test("category keys read as the game names them", () => {
   assert.equal(buildCategoryName("#Citadel_HeroBuilds_Lane"), "Laning");
   assert.equal(buildCategoryName("#Citadel_HeroBuilds_SomethingNew"), "Something New");
   assert.equal(buildCategoryName("  "), null);
-  assert.equal(buildCategoryName("CORE"), "CORE");
+  assert.equal(buildCategoryName("CORE ITEMS"), "Core items");
+  assert.equal(buildCategoryName("DPS"), "DPS");
+  assert.equal(buildCategoryName("Ult build finish L->R"), "Ult build finish L->R");
 });
 
 test("a refund takes back the ability's last point", () => {

@@ -331,11 +331,22 @@ const CATEGORY_KEYS: Record<string, string> = {
 };
 
 /** A category's name as the game shows it: "#Citadel_HeroBuilds_EarlyGame" is "Early Game". Unnamed is null. */
+/**
+ * An author's name in capitals reads as shouting beside the others: "CORE ITEMS" is "Core items". A short one stays,
+ * since it is likely an abbreviation ("DPS").
+ */
+function calmCapitals(name: string): string {
+  const letters = name.replace(/[^\p{L}]/gu, "");
+  if (letters.length < 4 || letters !== letters.toUpperCase() || letters === letters.toLowerCase()) return name;
+  const lower = name.toLocaleLowerCase("en-US");
+  return lower.charAt(0).toLocaleUpperCase("en-US") + lower.slice(1);
+}
+
 export function buildCategoryName(name: string): string | null {
   const trimmed = name.trim();
   if (!trimmed) return null;
   const key = /^#Citadel_HeroBuilds_(\w+)$/.exec(trimmed)?.[1];
-  if (!key) return trimmed;
+  if (!key) return calmCapitals(trimmed);
   return CATEGORY_KEYS[key.toLowerCase()] ?? key.replace(/([a-z])([A-Z])/g, "$1 $2");
 }
 
