@@ -3,7 +3,6 @@ import { Activity, ListOrdered, ShoppingBag, Swords } from "lucide-react";
 import { RankedEntityList, RankedEntityMetric, RankedEntityRow } from "~/components/domain/assets/RankedEntityList";
 import { useBuildItemUsage, useEndOfMatchDistributions, useSkillOrder } from "~/components/features/builds/build-hooks";
 import { BuildByDuration } from "~/components/features/builds/BuildByDuration";
-import { BuildByRank } from "~/components/features/builds/BuildByRank";
 import { BuildItemTile } from "~/components/features/builds/BuildItemTile";
 import { BuildMatchups } from "~/components/features/builds/BuildMatchups";
 import { BuildPlaystyle } from "~/components/features/builds/BuildPlaystyle";
@@ -38,8 +37,7 @@ const OFF_BUILD_SHOWN = 12;
 
 /**
  * What the selected build's players do in their matches: what they buy and when, how they keep to the skill order and
- * who plays it most, whom they beat and at which ranks, and last how they play against the hero's average build and
- * fare by match length.
+ * who plays it most, whom they beat, and last how they play against all of the hero's builds and fare by match length.
  */
 export function BuildInMatches({
   heroId,
@@ -104,11 +102,12 @@ export function BuildInMatches({
         </span>
       }
     >
-      {/* What to buy, which skills to take and whom it beats come first, three abreast; two abreast the purchases sit
-          beside the matchups and the skill order, wide by nature, takes the row under them. The playstyle's thirty
-          numbers, for a closer look, take the last row. */}
+      {/* What to buy, which skills to take and whom it beats come first: on a wide screen the purchases, the tallest,
+          sit beside the skill order and the matchups stacked two columns wide; two abreast the purchases sit beside
+          the matchups and the skill order, wide by nature, takes the row under them. The playstyle's thirty numbers,
+          for a closer look, take the last row. */}
       <div className="grid gap-3 @2xl:grid-cols-2 @4xl:grid-cols-3">
-        <Panel className="flex flex-col">
+        <Panel className="flex flex-col @4xl:row-span-2">
           <PanelHeader title="Purchases" icon={ShoppingBag} size="sm" />
           {pending ? (
             <LoadingState variant="skeleton" size="sm" />
@@ -192,7 +191,7 @@ export function BuildInMatches({
             </StaleOverlay>
           )}
         </Panel>
-        <Panel className="flex flex-col @2xl:order-1 @2xl:col-span-2 @4xl:order-none @4xl:col-span-1">
+        <Panel className="flex flex-col @2xl:order-1 @2xl:col-span-2 @4xl:order-none">
           <PanelHeader title="Skill order and players" icon={ListOrdered} size="sm" />
           {/* Across a whole row, the players sit beside the skill order instead of under it. */}
           <div className="@container">
@@ -218,14 +217,9 @@ export function BuildInMatches({
             </div>
           </div>
         </Panel>
-        <Panel className="flex flex-col">
-          <PanelHeader
-            title={filters.matchMode === "unranked" ? "Matchups" : "Matchups and ranks"}
-            icon={Swords}
-            size="sm"
-          />
+        <Panel className="flex flex-col @4xl:col-span-2">
+          <PanelHeader title="Matchups" icon={Swords} size="sm" />
           <BuildMatchups heroId={heroId} build={row} filters={filters} active={active} />
-          <BuildByRank heroId={heroId} build={row} filters={filters} active={active} />
         </Panel>
         <Panel className="flex flex-col @2xl:order-2 @2xl:col-span-2 @4xl:col-span-3">
           <PanelHeader title="Playstyle vs. all builds" icon={Activity} size="sm" />

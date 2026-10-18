@@ -137,10 +137,9 @@ function BuildsPage() {
           matches for every published build of a hero: how often it was played, by how many players, and how it won
           against the hero&apos;s other builds. For each build it shows what its players really buy and when, how
           closely they keep to its skill order, which enemy heroes it beats, and how they play against all of the
-          hero&apos;s builds. Its win rate at each rank is read against every player of the hero at that rank, leaving
-          out matches without an average rank. Only matches with a processed replay record the build. A difference takes
-          a color only where it stands out of the noise of its sample, and the gap between two win rates is in
-          percentage points (pp).
+          hero&apos;s builds. Only matches with a processed replay record the build. A difference takes a color only
+          where it stands out of the noise of its sample, and the gap between two win rates is in percentage points
+          (pp).
         </p>
       </PageHeader>
 
