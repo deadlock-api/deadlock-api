@@ -1,6 +1,17 @@
 import { Check, RotateCcw, X } from "lucide-react";
 
 import { GamePage } from "~/components/domain/minigames/GamePage";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "~/components/ui/alert-dialog";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent } from "~/components/ui/card";
 import { CheckboxField } from "~/components/ui/checkbox-field";
@@ -46,10 +57,27 @@ export function FlashcardStatStrip({ stats, onReset }: { stats: FlashcardStats; 
         <Stat label="Streak" value={stats.streak} tone={stats.streak >= 3 ? "positive" : undefined} />
         <Stat label="Best" value={stats.bestStreak} />
       </StatGroup>
-      <Button variant="ghost" size="sm" onClick={onReset} disabled={stats.seen === 0}>
-        <RotateCcw />
-        Reset
-      </Button>
+      {/* The stats and mastered cards are all the deck remembers: clearing them takes a second, deliberate step. */}
+      <AlertDialog>
+        <AlertDialogTrigger asChild>
+          <Button variant="ghost" size="sm" disabled={stats.seen === 0}>
+            <RotateCcw />
+            Reset
+          </Button>
+        </AlertDialogTrigger>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Reset this deck?</AlertDialogTitle>
+            <AlertDialogDescription>Your stats and mastered cards for this deck are cleared.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction variant="destructive" onClick={onReset}>
+              Reset
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
