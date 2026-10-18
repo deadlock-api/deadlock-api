@@ -409,7 +409,7 @@ export function Primitives() {
       <Specimen
         name="Tabs"
         source="ui/tabs"
-        note="nav: top-level sections of a page. line: sections of one block. default: views inside a panel or dialog. TabsPanels around the TabsContents keeps them all mounted in one cell (inactive ones invisible), for panels of different heights or a default tab picked after hydration."
+        note="nav: top-level sections of a page. line: sections of one block, its tabs as wide as their labels (mixed lengths stay evenly spaced). default: views inside a panel or dialog. TabsPanels around the TabsContents keeps them all mounted in one cell (inactive ones invisible), for panels of different heights or a default tab picked after hydration."
       >
         {(["nav", "line", "default"] as const).map((variant) => (
           <Variants key={variant} label={variant} className="block">

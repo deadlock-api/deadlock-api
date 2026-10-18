@@ -29,7 +29,7 @@ function Tabs({ className, orientation = "horizontal", ...props }: React.Compone
 
 /**
  * - `default`: a filled track, for switching views inside a panel or dialog.
- * - `line`: an underline, for sections of one piece of content.
+ * - `line`: an underline, for sections of one piece of content. Its tabs are as wide as their labels, from the start.
  * - `nav`: a full-width underline with a bottom rule, for the top-level sections of a page.
  */
 // `justify-center-safe`: a list wider than its container scrolls from its first tab instead of cutting it off.
@@ -37,7 +37,8 @@ const tabsListVariants = cva("inline-flex w-fit max-w-full items-center justify-
   variants: {
     variant: {
       default: "rounded-lg bg-muted p-1",
-      line: "gap-1 rounded-none bg-transparent p-1",
+      // Content-sized tabs from the start edge: stretched tabs of mixed lengths read as unevenly spaced.
+      line: "justify-start gap-1 rounded-none bg-transparent p-1",
       nav: "w-full gap-0 rounded-none border-b border-hairline bg-transparent p-0",
     },
     orientation: {
@@ -50,6 +51,8 @@ const tabsListVariants = cva("inline-flex w-fit max-w-full items-center justify-
     // than running out of their card, where a parent's clipping made the last ones unreachable.
     { orientation: "horizontal", variant: ["default", "line"], class: `h-9 ${SCROLLBAR_THIN} overflow-x-auto` },
     { orientation: "horizontal", variant: "nav", class: "h-11" },
+    // Content-sized line tabs side by side keep a clear gap between labels.
+    { orientation: "horizontal", variant: "line", class: "gap-4" },
   ],
   defaultVariants: {
     variant: "default",
@@ -88,7 +91,7 @@ const tabsTriggerVariants = cva(
     variants: {
       variant: {
         default: "data-[state=active]:border-input data-[state=active]:bg-input/30 data-[state=active]:shadow-sm",
-        line: "data-[state=active]:after:opacity-100",
+        line: "flex-none data-[state=active]:after:opacity-100",
         nav: "rounded-none px-4 hover:bg-subtle-hover data-[state=active]:after:opacity-100 data-[state=active]:after:shadow-glow-primary",
       },
       orientation: {
