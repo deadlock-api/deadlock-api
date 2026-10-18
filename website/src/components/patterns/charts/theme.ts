@@ -25,13 +25,20 @@ export const CHART_Y_AXIS_SM = { ...CHART_Y_AXIS, tick: CHART_TICK_SM } as const
 /**
  * Axis titles, spread into the axis' `label` next to `value`. They sit inside the auto-sized axis, which makes room
  * for them, so the chart needs no extra margin on that side. The y title is centred on the plot at the outer edge.
+ * They take the tick size (`--chart-tick`), not the SVG default of 16px.
  */
-export const CHART_X_LABEL = { position: "insideBottom", offset: 0, fill: "var(--chart-axis)" } as const;
+export const CHART_X_LABEL = {
+  position: "insideBottom",
+  offset: 0,
+  fontSize: "var(--chart-tick)",
+  fill: "var(--chart-axis)",
+} as const;
 export const CHART_Y_LABEL = {
   angle: -90,
   position: "insideLeft",
   textAnchor: "middle",
   offset: 12,
+  fontSize: "var(--chart-tick)",
   fill: "var(--chart-axis)",
 } as const;
 
