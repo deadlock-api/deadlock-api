@@ -1,5 +1,7 @@
 import { useState } from "react";
 
+import { ChartGradientLegend } from "~/components/patterns/charts/ChartLegend";
+import { chartRampColor } from "~/components/patterns/charts/theme";
 import {
   HeatGrid,
   HeatGridBody,
@@ -23,6 +25,17 @@ const hours = Array.from({ length: columns }, (_, index) => index * PLAYTIME_BUC
 const hourLabel = (hour: number) => `${String(hour % 24).padStart(2, "0")}:00`;
 const describeCell = (cell: PlaytimeCell) =>
   `${weekdays[cell.weekday]} ${hourLabel(cell.hour)}–${hourLabel(cell.hour + PLAYTIME_BUCKET_HOURS)} · ${cell.matches} ${cell.matches === 1 ? "match" : "matches"}${cell.matches > 0 ? ` · ${Math.round((cell.wins / cell.matches) * 100)}% wins` : ""}`;
+
+/**
+ * Where on the sequential ramp the fewest matches start: its first step stands 3.6:1 off an empty (muted) cell, so a
+ * single match never reads as no match. Counts run from there to the ramp's light end.
+ */
+const RAMP_FLOOR = 0.55;
+const rampAt = (t: number) => {
+  const [r, g, b] = chartRampColor("sequential", RAMP_FLOOR + (1 - RAMP_FLOOR) * t);
+  return `rgb(${r} ${g} ${b})`;
+};
+const RAMP_STOPS = [0, 0.25, 0.5, 0.75, 1].map(rampAt);
 
 export function PlaytimeHeatmap({ habits }: { habits: PlaytimeHabits }) {
   const [inspectedCell, setInspectedCell] = useState<number | null>(null);
@@ -50,11 +63,7 @@ export function PlaytimeHeatmap({ habits }: { habits: PlaytimeHabits }) {
                   key={cell.hour}
                   index={row * columns + column}
                   label={describeCell(cell)}
-                  color={
-                    cell.matches
-                      ? `color-mix(in srgb, var(--positive) ${20 + (cell.matches / habits.maxMatches) * 80}%, var(--muted))`
-                      : undefined
-                  }
+                  color={cell.matches ? rampAt((cell.matches - 1) / Math.max(1, habits.maxMatches - 1)) : undefined}
                   tooltip={
                     <>
                       <TooltipHeader
@@ -83,7 +92,7 @@ export function PlaytimeHeatmap({ habits }: { habits: PlaytimeHabits }) {
           ))}
         </HeatGridBody>
       </HeatGrid>
-      <div className="flex flex-wrap justify-between gap-1 text-xs text-muted-foreground">
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-xs text-muted-foreground">
         <span>
           {inspected ? (
             describeCell(inspected)
@@ -95,6 +104,14 @@ export function PlaytimeHeatmap({ habits }: { habits: PlaytimeHabits }) {
             </>
           )}
         </span>
+        {habits.maxMatches > 0 && (
+          <ChartGradientLegend
+            stops={RAMP_STOPS}
+            label="Matches"
+            min="1"
+            max={habits.maxMatches.toLocaleString("en-US")}
+          />
+        )}
       </div>
     </div>
   );
