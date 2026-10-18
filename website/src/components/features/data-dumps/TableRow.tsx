@@ -98,7 +98,7 @@ export function LakeTableRow({ table, matchedColumns }: { table: LakeTable; matc
                             </div>
                           </TableCell>
                           <TableCell className="text-end">
-                            <FileActions url={f.url} />
+                            <FileActions url={f.url} name={f.key.split("/").slice(-2).join("/")} />
                           </TableCell>
                         </TableRow>
                       ))}
@@ -153,17 +153,18 @@ export function LakeTableRow({ table, matchedColumns }: { table: LakeTable; matc
       <TableCell className="hidden text-muted-foreground tabular-nums @4xl:table-cell">
         {table.watermark_hi ? formatUnix(table.watermark_hi) : <NoValue />}
       </TableCell>
-      <TableCell className="text-end">{single && <FileActions url={single.url} />}</TableCell>
+      <TableCell className="text-end">{single && <FileActions url={single.url} name={table.name} />}</TableCell>
     </ExpandableRow>
   );
 }
 
-function FileActions({ url }: { url: string }) {
+/** `name` is the file or table the actions are for: every row's buttons are told apart by it. */
+function FileActions({ url, name }: { url: string; name: string }) {
   return (
     <Inline gap={1} justify="end" wrap="nowrap">
-      <CopyButton size="icon-sm" text={url} title="Copy URL" />
+      <CopyButton size="icon-sm" text={url} aria-label={`Copy URL of ${name}`} title="Copy URL" />
       <Button asChild variant="ghost" size="icon-sm">
-        <a href={url} target="_blank" rel="noopener noreferrer" title="Download" aria-label="Download" download>
+        <a href={url} title="Download" aria-label={`Download ${name}`} download>
           <Download className="size-3.5" />
         </a>
       </Button>

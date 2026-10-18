@@ -33,7 +33,7 @@ export function DeleteAccountDialog({
   return (
     <AlertDialog>
       <AlertDialogTrigger asChild>
-        <Button variant="ghost" size="icon-sm" aria-label="Remove account" disabled={isDeleting}>
+        <Button variant="ghost" size="icon-sm" aria-label={`Remove account ${steamId3}`} disabled={isDeleting}>
           {isDeleting ? <Spinner /> : <Trash2 />}
         </Button>
       </AlertDialogTrigger>
@@ -97,7 +97,7 @@ export function ReplaceAccountDialog({
   return (
     <AlertDialog open={isOpen} onOpenChange={handleOpenChange}>
       <AlertDialogTrigger asChild>
-        <Button variant="ghost" size="icon-sm" aria-label="Replace account" disabled={isReplacing}>
+        <Button variant="ghost" size="icon-sm" aria-label={`Replace account ${oldSteamId3}`} disabled={isReplacing}>
           {isReplacing ? <Spinner /> : <RefreshCw />}
         </Button>
       </AlertDialogTrigger>
@@ -146,7 +146,7 @@ export function ReactivateAccountDialog({
   return (
     <AlertDialog>
       <AlertDialogTrigger asChild>
-        <Button variant="ghost" size="icon-sm" aria-label="Reactivate account" disabled={isReactivating}>
+        <Button variant="ghost" size="icon-sm" aria-label={`Reactivate account ${steamId3}`} disabled={isReactivating}>
           {isReactivating ? <Spinner /> : <RotateCcw />}
         </Button>
       </AlertDialogTrigger>
