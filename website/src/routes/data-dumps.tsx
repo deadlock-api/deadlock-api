@@ -237,10 +237,10 @@ function ManifestUrlBar({ onOpenPlayground }: { onOpenPlayground: () => void }) 
         onClick={onOpenPlayground}
         onMouseEnter={prewarmDuckDb}
         onFocus={prewarmDuckDb}
-        className="shrink-0 text-xs"
+        className="shrink-0"
         title="Open SQL Playground"
       >
-        <Terminal className="size-3.5" />
+        <Terminal />
         SQL Playground
       </Button>
     </CopyableUrl>

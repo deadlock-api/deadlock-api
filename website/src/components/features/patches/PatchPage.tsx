@@ -93,7 +93,7 @@ export function PatchPage({
       <PageHeader
         align="start"
         title={`${label}: What Changed`}
-        eyebrow={
+        description={
           <span className="tabular-nums">
             {patchDate(patch)} · Phantom+ · {beforeDays} {beforeDays === 1 ? "day" : "days"} before vs {afterDays}{" "}
             {afterDays === 1 ? "day" : "days"} after

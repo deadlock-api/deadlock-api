@@ -5,6 +5,7 @@ import { ResultGrid } from "~/components/patterns/data-table/ResultGrid";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { Button } from "~/components/ui/button";
+import { Heading, useNextHeadingLevel } from "~/components/ui/heading";
 import { Inline, Stack } from "~/components/ui/stack";
 import { Text } from "~/components/ui/text";
 import { initDuckDb, readParquetExpr, runDuckDbQuery } from "~/lib/duckdb-client";
@@ -13,6 +14,7 @@ import { deriveCsvFilename, downloadCsv, formatCell, toCsv } from "./utils";
 
 export function ParquetPreview({ urls }: { urls: string | string[] }) {
   const list = Array.isArray(urls) ? urls : [urls];
+  const headingLevel = useNextHeadingLevel();
   const cacheKey = list.join("|");
   const { data, isPending, isError, error, isFetching, refetch } = useQuery({
     queryKey: ["parquet-preview", cacheKey],
@@ -55,11 +57,11 @@ export function ParquetPreview({ urls }: { urls: string | string[] }) {
   return (
     <Stack gap={2}>
       <Inline justify="between" wrap="nowrap">
-        <Text variant="eyebrow">
+        <Heading as={headingLevel} size="sm">
           Sample · first {data.rows.length} row{data.rows.length === 1 ? "" : "s"}
-        </Text>
+        </Heading>
         <Inline wrap="nowrap">
-          <Text variant="meta" tone="muted">
+          <Text variant="caption" tone="muted" numeric="tabular">
             {data.columns.length} columns
           </Text>
           <Button

@@ -6,7 +6,7 @@ export function ColumnMatchBadge({ cols }: { cols: string[] }) {
   const shown = cols.slice(0, 3);
   const more = cols.length - shown.length;
   return (
-    <Badge variant="soft" size="sm" title={cols.join(", ")}>
+    <Badge variant="soft" title={cols.join(", ")}>
       <Search />
       {shown.join(", ")}
       {more > 0 && ` +${more}`}

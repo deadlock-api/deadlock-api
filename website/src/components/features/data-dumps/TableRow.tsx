@@ -7,6 +7,7 @@ import { Button } from "~/components/ui/button";
 import { Card } from "~/components/ui/card";
 import { Code } from "~/components/ui/code";
 import { CopyButton } from "~/components/ui/copy-button";
+import { Heading, useNextHeadingLevel } from "~/components/ui/heading";
 import { NoValue } from "~/components/ui/no-value";
 import { Inline, Stack } from "~/components/ui/stack";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
@@ -30,6 +31,7 @@ const KIND_LABEL: Record<FileKind, string> = {
 export function LakeTableRow({ table, matchedColumns }: { table: LakeTable; matchedColumns: string[] }) {
   const [preview, setPreview] = useState(false);
   const previewId = useId();
+  const headingLevel = useNextHeadingLevel();
   const single = table.files.length === 1 ? table.files[0] : null;
   const building = table.status === "building";
 
@@ -53,12 +55,16 @@ export function LakeTableRow({ table, matchedColumns }: { table: LakeTable; matc
           )}
           <div className="grid gap-3 lg:grid-cols-2">
             <Stack gap={1}>
-              <Text variant="eyebrow">Columns ({table.columns.length})</Text>
+              <Heading as={headingLevel} size="sm">
+                Columns ({table.columns.length})
+              </Heading>
               <SchemaPreview name={table.name} columns={table.columns} />
             </Stack>
             <Stack gap={1}>
               <Inline justify="between">
-                <Text variant="eyebrow">Files ({table.files.length})</Text>
+                <Heading as={headingLevel} size="sm">
+                  Files ({table.files.length})
+                </Heading>
                 {table.files.length > 0 && (
                   <Button
                     type="button"
@@ -75,7 +81,7 @@ export function LakeTableRow({ table, matchedColumns }: { table: LakeTable; matc
               </Inline>
               <Card tone="inset" size="flush" radius="lg" className="max-h-72 overflow-auto">
                 {table.files.length === 0 ? (
-                  <Text as="div" className="px-3 py-2 text-xs" tone="muted">
+                  <Text as="div" variant="caption" tone="muted" className="px-3 py-2">
                     No files published yet.
                   </Text>
                 ) : (
@@ -102,7 +108,7 @@ export function LakeTableRow({ table, matchedColumns }: { table: LakeTable; matc
                             >
                               {f.key.split("/").slice(-2).join("/")}
                             </TextLink>
-                            <div className="text-xs text-muted-foreground">
+                            <Text as="div" variant="caption" tone="muted">
                               {KIND_LABEL[f.kind]}
                               {f.partition !== undefined && ` · partition ${f.partition}`}
                               {f.lo !== undefined &&
@@ -111,7 +117,7 @@ export function LakeTableRow({ table, matchedColumns }: { table: LakeTable; matc
                               {f.kind === "base" && f.hi !== undefined && ` · up to ${formatUnix(f.hi)}`}
                               {" · "}
                               {formatRows(f.rows)} rows · {formatBytes(f.bytes)} · built {formatTimestamp(f.built_at)}
-                            </div>
+                            </Text>
                           </TableCell>
                           <TableCell className="text-end">
                             <FileActions url={f.url} name={f.key.split("/").slice(-2).join("/")} />
@@ -143,11 +149,11 @@ export function LakeTableRow({ table, matchedColumns }: { table: LakeTable; matc
             )}
             <span className="min-w-0 wrap-anywhere">{table.name}</span>
           </span>
-          <Badge variant="muted" size="sm" className="font-mono">
+          <Badge variant="muted" className="font-mono">
             {table.policy === "incremental" ? "hourly incremental" : "hourly snapshot"}
           </Badge>
           {building && (
-            <Badge variant="warning" size="sm" className="font-mono">
+            <Badge variant="warning" className="font-mono">
               building
             </Badge>
           )}

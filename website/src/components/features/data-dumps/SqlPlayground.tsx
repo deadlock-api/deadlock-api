@@ -16,6 +16,7 @@ import {
   DialogStatus,
   DialogTitle,
 } from "~/components/ui/dialog";
+import { Heading } from "~/components/ui/heading";
 import { Kbd } from "~/components/ui/kbd";
 import { Spinner } from "~/components/ui/spinner";
 import { Inline, Stack } from "~/components/ui/stack";
@@ -218,7 +219,7 @@ export function SqlPlayground({ open, onOpenChange, tables, schemaByTable, query
             <DialogTitle>SQL Playground</DialogTitle>
             <DialogStatus>{getInitMessage(initState, initError, tables.length)}</DialogStatus>
           </Inline>
-          <DialogDescription className="text-xs">
+          <DialogDescription>
             Run SQL against the parquet files directly in your browser via{" "}
             <TextLink href="https://duckdb.org/docs/api/wasm/overview" target="_blank" rel="noopener noreferrer">
               DuckDB-Wasm
@@ -231,7 +232,9 @@ export function SqlPlayground({ open, onOpenChange, tables, schemaByTable, query
           <Stack gap={2} className="min-h-0">
             {tables.length > 0 && (
               <Stack gap={1}>
-                <Text variant="eyebrow">Tables ({tables.length})</Text>
+                <Heading as="h3" size="sm">
+                  Tables ({tables.length})
+                </Heading>
                 <Inline gap={1} className="max-h-24 overflow-y-auto">
                   {tables.map((t) => (
                     <Button
@@ -301,7 +304,9 @@ export function SqlPlayground({ open, onOpenChange, tables, schemaByTable, query
           <Stack gap={2} className="min-h-0">
             <Inline justify="between" wrap="nowrap">
               <Inline gap={2}>
-                <Text variant="eyebrow">Results</Text>
+                <Heading as="h3" size="sm">
+                  Results
+                </Heading>
                 {result?.truncated && !queryError && (
                   <Text variant="caption" tone="muted">
                     Showing the first {RESULT_ROW_LIMIT} rows · add a LIMIT or aggregate to see the rest
