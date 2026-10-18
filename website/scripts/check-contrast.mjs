@@ -235,6 +235,9 @@ for (let slot = 1; slot <= 5; slot++) {
 }
 // The empty marks of Pips, non-text UI on the surfaces a meter sits on.
 for (const surface of ["card", "muted", "popover"]) variant("meter-empty", surface, UI_MIN);
+// The edge of a text control or a checkbox (CONTROL_SURFACE), on every surface a control sits on.
+for (const surface of ["background", "card", "popover", "muted", "secondary"])
+  variant("control-border", surface, UI_MIN);
 // The sample count on a team builder heat cell, on the ramp's strongest fill (heatBackground mixes up to 40%).
 for (const tone of ["positive", "negative"]) variant("on-heat-muted", `${tone}/40 over card`);
 // A highlighted tier list tile: its reading stays readable on the brand tint.

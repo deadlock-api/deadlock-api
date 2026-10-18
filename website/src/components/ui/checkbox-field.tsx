@@ -15,7 +15,7 @@ function Checkbox({ className, ...props }: React.ComponentProps<typeof CheckboxP
         FOCUS_RING_BORDER,
         INVALID_STATE,
         DISABLED_STATE,
-        "peer relative size-4 shrink-0 rounded-xs border border-input bg-input/30 shadow-xs transition-shadow after:absolute after:-inset-1 hover:border-muted-foreground data-[state=checked]:border-primary data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground",
+        "peer relative size-4 shrink-0 rounded-xs border border-control-border bg-input/30 shadow-xs transition-shadow after:absolute after:-inset-1 hover:border-muted-foreground data-[state=checked]:border-primary data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground",
         className,
       )}
       {...props}

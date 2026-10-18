@@ -26,9 +26,9 @@ export const SELECTED_STATE = [
   "data-[state=checked]:bg-primary/15 data-[state=checked]:text-foreground data-[state=checked]:ring-1 data-[state=checked]:ring-primary/40 data-[state=checked]:ring-inset",
 ].join(" ");
 
-/** The box of a text control: Input, Textarea and the Select trigger. */
+/** The box of a text control: Input, Textarea and the Select trigger. Its edge is --control-border, 3:1 on every surface. */
 export const CONTROL_SURFACE =
-  "rounded-md border border-input bg-input/30 text-sm shadow-xs transition-[color,box-shadow]";
+  "rounded-md border border-control-border bg-input/30 text-sm shadow-xs transition-[color,box-shadow]";
 
 // Read-only keeps the focus ring and the text at full strength and drops the fill: the value can be read and copied,
 // not edited. `[readonly]` rather than `:read-only`, which also matches a disabled input.

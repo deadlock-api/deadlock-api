@@ -6,8 +6,8 @@ import { cn } from "~/lib/utils";
 const COLOR_GROUPS: { name: string; note: string; tokens: string[] }[] = [
   {
     name: "Surfaces",
-    note: "Darkest to most raised. Text on them is foreground or muted-foreground.",
-    tokens: ["background", "card", "popover", "muted", "secondary", "accent", "border", "input"],
+    note: "Darkest to most raised. Text on them is foreground or muted-foreground. border is a decorative hairline; control-border is the edge of a text control or checkbox, 3:1 on every surface.",
+    tokens: ["background", "card", "popover", "muted", "secondary", "accent", "border", "input", "control-border"],
   },
   {
     name: "Translucent layers",

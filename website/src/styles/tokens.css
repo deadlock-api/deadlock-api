@@ -81,6 +81,9 @@
   --primary-foreground: var(--ink-950);
   --border: var(--ink-700);
   --input: var(--ink-700);
+  /* The edge of a text control and a checkbox, the only thing that shows where the field is: 3:1 on every surface a
+     control sits on (WCAG 1.4.11). --border stays the quiet hairline of decoration. */
+  --control-border: var(--ink-500);
   --ring: var(--red-500);
   /* Scrollbar thumb on a transparent track: quiet at rest, full strength while its region is hovered or focused. */
   --scrollbar: color-mix(in oklch, var(--muted-foreground) 55%, transparent);
@@ -235,6 +238,7 @@
   --color-primary-foreground: var(--primary-foreground);
   --color-border: var(--border);
   --color-input: var(--input);
+  --color-control-border: var(--control-border);
   --color-ring: var(--ring);
   --color-scrollbar: var(--scrollbar);
   --color-scrollbar-active: var(--scrollbar-active);
