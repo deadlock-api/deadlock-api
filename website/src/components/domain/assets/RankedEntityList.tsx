@@ -93,7 +93,9 @@ export function RankedEntityRow({
         data-slot="ranked-entity-rank"
         className={cn(
           "w-5 shrink-0 text-center type-label tabular-nums",
-          rank === 1 ? "text-primary" : "text-muted-foreground",
+          // The first place stands out in ink, not in the brand red: red is the tone of a loss, and a "Weak against" list
+          // would read its top as bad twice over.
+          rank === 1 ? "text-foreground" : "text-muted-foreground",
         )}
       >
         {rank}
