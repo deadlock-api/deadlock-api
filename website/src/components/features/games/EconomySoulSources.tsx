@@ -90,8 +90,14 @@ export default function EconomySoulSources({ params }: EconomySoulSourcesProps) 
 
       <div className="flex flex-col items-center gap-6 @md:flex-row">
         <div className="relative mx-auto aspect-square w-full max-w-52.5 shrink-0">
-          <ChartSurface label="Soul income by source" size="fill" variant="bare">
-            <PieChart>
+          {/* A decorative ring: the list beside it carries the numbers, so the ring takes no tab stops. */}
+          <ChartSurface
+            label={`Soul income by source: ${breakdown.map((row) => `${row.label} ${formatPercent(row.share)}`).join(", ")}`}
+            announce="label"
+            size="fill"
+            variant="bare"
+          >
+            <PieChart accessibilityLayer={false}>
               <Pie
                 // Recharts colours each sector from its data point's `fill`.
                 data={breakdown.map((row) => ({ ...row, fill: row.color }))}
@@ -102,7 +108,7 @@ export default function EconomySoulSources({ params }: EconomySoulSourcesProps) 
                 paddingAngle={2}
                 stroke="none"
                 isAnimationActive={false}
-                tabIndex={-1}
+                rootTabIndex={-1}
               />
             </PieChart>
           </ChartSurface>
