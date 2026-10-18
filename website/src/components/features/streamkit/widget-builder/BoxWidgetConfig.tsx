@@ -82,7 +82,7 @@ export function BoxWidgetConfig({ config, updateConfig, availableVariables }: Bo
         />
         <Stack gap={2} className="ps-6">
           <CheckboxField
-            label="Show Todays Matches"
+            label="Show Today’s Matches"
             checked={config.matchHistoryShowsToday}
             disabled={!config.showMatchHistory}
             onCheckedChange={(checked) => updateConfig({ matchHistoryShowsToday: checked === true })}

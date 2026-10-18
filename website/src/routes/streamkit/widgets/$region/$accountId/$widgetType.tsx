@@ -82,7 +82,7 @@ function Widget() {
   if (!region || !accountId) {
     return (
       <Text as="div" tone="destructive">
-        Region and Account ID are required
+        This widget URL has no region or account. Rebuild it at deadlock-api.com/streamkit.
       </Text>
     );
   }
@@ -140,7 +140,7 @@ function Widget() {
       if (!variable)
         return (
           <Text as="div" tone="destructive">
-            Variable is required
+            This widget URL has no variable. Rebuild it at deadlock-api.com/streamkit.
           </Text>
         );
       return (
@@ -158,7 +158,7 @@ function Widget() {
     default:
       return (
         <Text as="div" tone="destructive">
-          Invalid widget type
+          This widget URL has an unknown widget type. Rebuild it at deadlock-api.com/streamkit.
         </Text>
       );
   }
