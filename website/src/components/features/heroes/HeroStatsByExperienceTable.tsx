@@ -15,7 +15,7 @@ import { NoValue } from "~/components/ui/no-value";
 import { SortButton, ariaSort } from "~/components/ui/sort-button";
 import { Stack } from "~/components/ui/stack";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
-import { Tooltip, TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
+import { Tooltip, TooltipHeader, TooltipStat, TooltipStats, TooltipTarget } from "~/components/ui/tooltip";
 import type { Dayjs } from "~/dayjs";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { EXPERIENCE_BUCKETS } from "~/lib/constants";
@@ -440,7 +440,7 @@ function BucketTooltip({
         </>
       }
     >
-      <span>{children}</span>
+      <TooltipTarget>{children}</TooltipTarget>
     </Tooltip>
   );
 }
@@ -498,7 +498,7 @@ function DeltaTooltip({
         </>
       }
     >
-      <span>{children}</span>
+      <TooltipTarget>{children}</TooltipTarget>
     </Tooltip>
   );
 }
