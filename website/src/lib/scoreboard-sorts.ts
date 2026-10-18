@@ -51,7 +51,7 @@ const CATEGORIES = [
   { label: "Peak Rank", key: "peak_rank", playersOnly: true },
   { label: "Wins", key: "wins" },
   { label: "Losses", key: "losses" },
-  { label: "Winrate", key: "winrate" },
+  { label: "Win Rate", key: "winrate" },
   { label: "Kills", key: "kills", variants: ALL_VARIANTS },
   { label: "Deaths", key: "deaths", variants: ALL_VARIANTS },
   { label: "Assists", key: "assists", variants: ALL_VARIANTS },
@@ -117,7 +117,7 @@ export function formatScoreboardValue(value: number, sortBy: string): string {
   return value.toLocaleString("en-US", { maximumFractionDigits: 2 });
 }
 
-/** The name of a sort as a column shows it: "Avg Player Damage", "Max Kills", "Winrate". */
+/** The name of a sort as a column shows it: "Avg Player Damage", "Max Kills", "Win Rate". */
 export function sortByLabel(sortBy: string): string {
   const { key, variant } = parseSortByValue(sortBy);
   const label = SORT_CATEGORIES.find((cat) => cat.key === key)?.label ?? key;
