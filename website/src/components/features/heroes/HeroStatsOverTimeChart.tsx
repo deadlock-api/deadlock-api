@@ -556,6 +556,9 @@ export function HeroStatsOverTimeChart({
                     {chartAxes}
                     <Tooltip
                       isAnimationActive={false}
+                      // A bucket where no selected hero met the match floor still gets a reading: without one,
+                      // the keyboard cursor landed on the early, empty buckets and showed nothing.
+                      filterNull={false}
                       wrapperStyle={{ pointerEvents: "auto" }}
                       position={chartWidth < 360 ? { x: 8 } : undefined}
                       content={(props) => (

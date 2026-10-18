@@ -24,10 +24,15 @@ export function HeroTrendTooltip({
       if (Number(b.dataKey) === highlightedHeroId) return 1;
       return String(a.name).localeCompare(String(b.name));
     });
-  if (!entries.length) return null;
+  const date = day.utc(Number(label)).format(hourly ? "MMM D, YYYY · HH:mm [UTC]" : "MMM D, YYYY [UTC]");
+  // The chart passes its gaps too (filterNull off), so a keyboard step onto one still reads out, not nothing.
+  if (!entries.length) {
+    return (
+      <ChartReadings size="lg" title={date} summary="No hero has enough matches" label={`Hero values for ${date}`} />
+    );
+  }
   const showMatches =
     stat !== "matches" && entries.some((item) => item.payload?.[`${String(item.dataKey)}_matches`] != null);
-  const date = day.utc(Number(label)).format(hourly ? "MMM D, YYYY · HH:mm [UTC]" : "MMM D, YYYY [UTC]");
 
   return (
     <ChartReadings
