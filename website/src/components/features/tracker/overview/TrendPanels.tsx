@@ -13,7 +13,7 @@ import {
   CHART_CURSOR_LINE,
   CHART_GRID,
   CHART_STACK_SEGMENT,
-  CHART_X_AXIS_SM,
+  CHART_X_AXIS,
   SERIES_COLORS,
 } from "~/components/patterns/charts/theme";
 import { PanelWithDetails } from "~/components/patterns/panel/PanelWithDetails";
@@ -110,7 +110,7 @@ export function TrendPanels({
               aria-label="Rank progression over recorded matches"
             >
               <CartesianGrid {...CHART_GRID} />
-              <XAxis {...CHART_X_AXIS_SM} dataKey="time" tickFormatter={dateLabel} minTickGap={35} />
+              <XAxis {...CHART_X_AXIS} dataKey="time" tickFormatter={dateLabel} minTickGap={35} />
               <YAxis domain={["dataMin - 1", "dataMax + 1"]} hide />
               <Tooltip cursor={CHART_CURSOR_LINE} content={<RankTooltip rankName={rankName} />} />
               <Area
@@ -167,7 +167,7 @@ export function TrendPanels({
             aria-label="Wins and losses by activity period"
           >
             <CartesianGrid {...CHART_GRID} />
-            <XAxis {...CHART_X_AXIS_SM} dataKey="bucketStartUnix" tickFormatter={dateLabel} minTickGap={35} />
+            <XAxis {...CHART_X_AXIS} dataKey="bucketStartUnix" tickFormatter={dateLabel} minTickGap={35} />
             <YAxis hide />
             <Tooltip cursor={CHART_CURSOR_BAND} content={<ActivityTooltip granularity={activity.granularity} />} />
             <Bar

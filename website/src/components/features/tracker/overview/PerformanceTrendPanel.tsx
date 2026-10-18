@@ -10,7 +10,7 @@ import {
   CHART_COLOR,
   CHART_CURSOR_LINE,
   CHART_GRID,
-  CHART_X_AXIS_SM,
+  CHART_X_AXIS,
   SERIES_COLORS,
 } from "~/components/patterns/charts/theme";
 import { Panel, PanelBody, PanelHeader } from "~/components/patterns/panel/Panel";
@@ -132,7 +132,7 @@ export function PerformanceTrendPanel({
             >
               <CartesianGrid {...CHART_GRID} />
               <XAxis
-                {...CHART_X_AXIS_SM}
+                {...CHART_X_AXIS}
                 dataKey="time"
                 tickFormatter={(time: number) => day.unix(time).format("MMM D")}
                 minTickGap={35}
