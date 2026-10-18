@@ -6,7 +6,7 @@ import { Disclosure } from "~/components/patterns/content/Disclosure";
 import { Step, Steps } from "~/components/patterns/content/Steps";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent } from "~/components/ui/card";
-import { DropZone } from "~/components/ui/drop-zone";
+import { DropZone, DropZoneStatus } from "~/components/ui/drop-zone";
 import { useDropZone } from "~/components/ui/hooks/use-drop-zone";
 import { IconTile } from "~/components/ui/icon-tile";
 import { Input } from "~/components/ui/input";
@@ -110,56 +110,56 @@ export function CacheUpload() {
               }}
             />
             <DropZone state={over ? "over" : "idle"} aria-busy={state.isLoading} {...dropZoneProps}>
-              <Stack asChild align="center" gap={3} className="w-full">
-                <output>
-                  {state.isLoading ? (
-                    <>
-                      <Spinner size="lg" />
-                      {state.phase === "uploading" ? (
-                        <Stack align="center" gap={2} className="w-full max-w-xs">
-                          <Text variant="label" numeric="tabular">
-                            Sending {count.format(state.uploadHandled)} of {count.format(state.uploadTotal)} matches
-                          </Text>
-                          <ProgressBar value={state.uploadHandled} max={state.uploadTotal} />
-                        </Stack>
-                      ) : (
-                        <Text variant="label" numeric="tabular">
-                          Scanning, {count.format(state.saltsFound)} found
-                        </Text>
-                      )}
-                    </>
-                  ) : over ? (
-                    <>
-                      <IconTile tone="primary" shape="circle" size="lg">
-                        <Upload />
-                      </IconTile>
-                      <Text variant="label">Drop to scan and upload</Text>
-                    </>
-                  ) : result ? (
-                    <>
-                      {RESULT_ICON[result.type]}
-                      <Stack align="center" gap={1}>
-                        <Text variant="label">{result.title}</Text>
-                        <Text as="p" variant="caption" tone="muted" className="max-w-md text-balance">
-                          {result.description}
-                        </Text>
-                      </Stack>
-                      <Button variant="outline" size="sm" onClick={openDirectoryPicker}>
-                        <FolderOpen aria-hidden="true" />
-                        {result.type === "success" ? "Upload another folder" : "Choose the folder again"}
-                      </Button>
-                    </>
-                  ) : (
-                    <>
-                      <IconTile tone="muted" shape="circle" size="lg">
-                        <FolderOpen />
-                      </IconTile>
-                      <Text variant="label">Drop the httpcache folder here</Text>
-                      <Button onClick={openDirectoryPicker}>Choose folder</Button>
-                    </>
-                  )}
-                </output>
-              </Stack>
+              {state.isLoading ? (
+                <Spinner size="lg" aria-hidden="true" />
+              ) : over ? (
+                <IconTile tone="primary" shape="circle" size="lg">
+                  <Upload />
+                </IconTile>
+              ) : result ? (
+                RESULT_ICON[result.type]
+              ) : (
+                <IconTile tone="muted" shape="circle" size="lg">
+                  <FolderOpen />
+                </IconTile>
+              )}
+              <DropZoneStatus>
+                {state.isLoading ? (
+                  <Text variant="label" numeric="tabular">
+                    {state.phase === "uploading"
+                      ? `Sending ${count.format(state.uploadHandled)} of ${count.format(state.uploadTotal)} matches`
+                      : `Scanning, ${count.format(state.saltsFound)} found`}
+                  </Text>
+                ) : over ? (
+                  <Text variant="label">Drop to scan and upload</Text>
+                ) : result ? (
+                  <>
+                    <Text variant="label">{result.title}</Text>
+                    <Text as="p" variant="caption" tone="muted" className="max-w-md text-balance">
+                      {result.description}
+                    </Text>
+                  </>
+                ) : (
+                  <Text variant="label">Drop the httpcache folder here</Text>
+                )}
+              </DropZoneStatus>
+              {state.isLoading && state.phase === "uploading" && (
+                <ProgressBar value={state.uploadHandled} max={state.uploadTotal} className="w-full max-w-xs" />
+              )}
+              {!state.isLoading && !over && (
+                <Button
+                  variant={result ? "outline" : "default"}
+                  size={result ? "sm" : "default"}
+                  onClick={openDirectoryPicker}
+                >
+                  {result && <FolderOpen aria-hidden="true" />}
+                  {result
+                    ? result.type === "success"
+                      ? "Upload another folder"
+                      : "Choose the folder again"
+                    : "Choose folder"}
+                </Button>
+              )}
             </DropZone>
           </Step>
         </Steps>

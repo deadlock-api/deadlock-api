@@ -15,7 +15,7 @@ import { StaleOverlay } from "~/components/patterns/states/StaleOverlay";
 import { Button } from "~/components/ui/button";
 import { DetailPopover } from "~/components/ui/detail-popover";
 import { DragScroll } from "~/components/ui/drag-scroll";
-import { DropZone } from "~/components/ui/drop-zone";
+import { DropZone, DropZoneStatus } from "~/components/ui/drop-zone";
 import { HeatCell } from "~/components/ui/heat-cell";
 import { useDropZone } from "~/components/ui/hooks/use-drop-zone";
 import { IconTile } from "~/components/ui/icon-tile";
@@ -199,7 +199,7 @@ function DropZoneDemo() {
       <IconTile tone={over ? "primary" : "muted"} shape="circle">
         <FolderOpen />
       </IconTile>
-      <span className="text-sm">{dropped ? `Dropped ${dropped}` : "Drop a file here"}</span>
+      <DropZoneStatus className="text-sm">{dropped ? `Dropped ${dropped}` : "Drop a file here"}</DropZoneStatus>
       <Button size="sm">Choose file</Button>
     </DropZone>
   );
@@ -212,7 +212,7 @@ export function Round4Requests2() {
       <Specimen
         name="DropZone"
         source="ui/drop-zone"
-        note="A target to drop files or a folder onto, at a fixed height so its states (idle, busy, a result) never move the page. `useDropZone` (`ui/hooks/use-drop-zone`) holds the behavior: spread its `dropZoneProps` on the zone and pass `over` as `state`; crossing children does not flicker it, and `disabled` refuses drops while busy. Always put a Button that opens the picker inside, for keyboard and touch."
+        note="A target to drop files or a folder onto, at a fixed height so its states (idle, busy, a result) never move the page. `useDropZone` (`ui/hooks/use-drop-zone`) holds the behavior: spread its `dropZoneProps` on the zone and pass `over` as `state`; crossing children does not flicker it, and `disabled` refuses drops while busy. Always put a Button that opens the picker inside, for keyboard and touch. DropZoneStatus holds only the text that changes (a polite output); icons and the button sit beside it, so a change never re-reads them."
       >
         <Variants label="interactive">
           <DropZoneDemo />
