@@ -75,8 +75,10 @@ export function MatchImportControl({
                 size="sm"
                 className="font-mono text-xs"
               />
-              <Button type="submit" size="sm" disabled={isLoading}>
-                <DownloadIcon className="size-3.5" />
+              {/* Busy rather than disabled: the button keeps the focus and says it is loading. The spinner takes
+                  the icon's place, so the button keeps its width. */}
+              <Button type="submit" size="sm" loading={isLoading} loadingLabel="Loading match">
+                {!isLoading && <DownloadIcon className="size-3.5" />}
                 Load
               </Button>
             </Inline>

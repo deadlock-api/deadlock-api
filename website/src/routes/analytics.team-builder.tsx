@@ -424,8 +424,14 @@ function TeamBuilderPage() {
                     <SearchIcon className="size-3.5" />
                     Add hero
                   </Button>
-                  <Button variant="secondary" shape="pill" disabled={importing} onClick={() => void randomComp()}>
-                    <DicesIcon className="size-3.5" />
+                  <Button
+                    variant="secondary"
+                    shape="pill"
+                    loading={importing}
+                    loadingLabel="Loading a random match"
+                    onClick={() => void randomComp()}
+                  >
+                    {!importing && <DicesIcon className="size-4" />}
                     Random comp
                   </Button>
                 </div>
