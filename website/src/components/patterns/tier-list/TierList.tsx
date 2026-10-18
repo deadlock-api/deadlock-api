@@ -259,11 +259,20 @@ function TierItem({
           {media}
         </span>
       )}
-      <Text variant="caption" tone="default" align="center" wrap="truncate" className="w-full">
+      {/* Two balanced lines, so a two-word name (Deadman Danny) reads whole instead of truncating. */}
+      <Text variant="caption" tone="default" align="center" wrap="clamp-2" className="w-full text-balance hyphens-auto">
         {name}
       </Text>
       {meta != null && (
-        <Text variant="caption" tone="muted" align="center" numeric="tabular" wrap="truncate" className="w-full">
+        // At the tile's foot, so the readings of a row line up when a neighbour's name takes two lines.
+        <Text
+          variant="caption"
+          tone="muted"
+          align="center"
+          numeric="tabular"
+          wrap="truncate"
+          className="mt-auto w-full"
+        >
           {meta}
         </Text>
       )}
