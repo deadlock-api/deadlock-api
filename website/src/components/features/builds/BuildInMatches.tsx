@@ -126,7 +126,9 @@ export function BuildInMatches({
           ) : (
             <StaleOverlay active={stale} label="purchases">
               <section className="flex flex-col">
-                <PanelSection variant="label" title="Bought in this order" />
+                <PanelSection variant="label" title="Bought in this order">
+                  <span className="whitespace-nowrap">average buy time</span>
+                </PanelSection>
                 <ol className="flex flex-wrap gap-1 px-3 py-1.5">
                   {buyOrder.map((item) => (
                     <li key={item.itemId}>
@@ -181,7 +183,9 @@ export function BuildInMatches({
               )}
               {usage.offBuild.length > 0 && (
                 <section className="flex flex-col">
-                  <PanelSection variant="label" title="Also bought" />
+                  <PanelSection variant="label" title="Also bought">
+                    <span className="whitespace-nowrap">bought in % of matches</span>
+                  </PanelSection>
                   <ul className="flex flex-wrap gap-1 px-3 py-1.5">
                     {usage.offBuild.slice(0, OFF_BUILD_SHOWN).map((item) => (
                       <li key={item.itemId}>
