@@ -18,6 +18,7 @@ import { Round3PatternsCharts } from "~/components/dev/design-system/Round3Patte
 import { percent } from "~/components/dev/design-system/samples";
 import { Chapter, Specimen, Variants } from "~/components/dev/design-system/Specimen";
 import { ChartCard } from "~/components/patterns/charts/ChartCard";
+import { ChartDataTable } from "~/components/patterns/charts/ChartDataTable";
 import { ChartLegend, ChartLegendItem } from "~/components/patterns/charts/ChartLegend";
 import { ChartReading, ChartReadingList, ChartReadings } from "~/components/patterns/charts/ChartReadings";
 import { ChartReveal, ChartRevealBack, ChartRevealFront } from "~/components/patterns/charts/ChartReveal";
@@ -48,6 +49,20 @@ const WEEKS = Array.from({ length: 10 }, (_, week) => ({
   label: `W${week + 1}`,
   ...Object.fromEntries(SERIES.map((name, i) => [name, 0.5 + Math.sin((week + i * 2) / 2.2) * 0.03 + i * 0.006])),
 }));
+function InfernusWeeks({ className }: { className?: string }) {
+  return (
+    <ChartDataTable
+      caption="Infernus win rate by week"
+      head={["Week", "Infernus"]}
+      rows={WEEKS.map((week) => ({
+        key: week.label,
+        cells: [week.label, percent((week as Record<string, number | string>).Infernus as number)],
+      }))}
+      className={className}
+    />
+  );
+}
+
 const BY_RANK = ["Initiate", "Seeker", "Alchemist", "Arcanist", "Ritualist", "Emissary", "Archon", "Oracle"].map(
   (rank, i) => {
     const winRate = 0.47 + i * 0.009 + (i % 3) * 0.004;
@@ -183,6 +198,7 @@ export function Charts() {
               announce="label"
               size="sm"
               variant="bare"
+              dataTable={<InfernusWeeks />}
             >
               <AreaChart data={WEEKS} margin={{ top: 4, right: 4, bottom: 0, left: 4 }} accessibilityLayer={false}>
                 <CartesianGrid {...CHART_GRID} />
@@ -237,6 +253,16 @@ export function Charts() {
               </div>
             ))}
           </div>
+        </Variants>
+      </Specimen>
+
+      <Specimen
+        name="ChartDataTable"
+        source="patterns/charts/ChartDataTable"
+        note="The numbers behind a plot that announce=label hides from screen readers: ChartSurface's dataTable slot, one row a point (its name is the row header), one column a series. Visually hidden; shown here with not-sr-only."
+      >
+        <Variants>
+          <InfernusWeeks className="not-sr-only text-xs" />
         </Variants>
       </Specimen>
 

@@ -4,6 +4,7 @@ import { Hourglass } from "lucide-react";
 import { useState } from "react";
 import { Area, CartesianGrid, ComposedChart, Line, ReferenceLine, Tooltip, XAxis, YAxis } from "recharts";
 
+import { ChartDataTable } from "~/components/patterns/charts/ChartDataTable";
 import { ChartLegend, ChartLegendItem } from "~/components/patterns/charts/ChartLegend";
 import { ChartReading, ChartReadings } from "~/components/patterns/charts/ChartReadings";
 import { ChartEmpty, ChartError, ChartLoading } from "~/components/patterns/charts/ChartStates";
@@ -228,7 +229,33 @@ export function TimelinePanel({
               className="min-h-32 flex-1"
             />
           ) : (
-            <ChartSurface label={summary} announce="label" size="grow" variant="flush">
+            <ChartSurface
+              label={summary}
+              announce="label"
+              size="grow"
+              variant="flush"
+              dataTable={
+                <ChartDataTable
+                  caption={`${selected.label} by game minute`}
+                  head={["Minute", ...players.map((player) => player.name), "Average player"]}
+                  rows={rows.map((row) => ({
+                    key: row.time,
+                    cells: [
+                      minuteLabel(row.time),
+                      ...keys.map((key) => {
+                        const value = row.value[key];
+                        if (value == null) return null;
+                        const lead = row.lead[key];
+                        return relative && lead != null
+                          ? `${formatValue(value, selected.digits)} (${formatLead(lead, selected.digits)})`
+                          : formatValue(value, selected.digits);
+                      }),
+                      row.value[FIELD] == null ? null : formatValue(row.value[FIELD], selected.digits),
+                    ],
+                  }))}
+                />
+              }
+            >
               <ComposedChart data={rows} margin={CHART_MARGIN} accessibilityLayer={false}>
                 <CartesianGrid {...CHART_GRID} />
                 <XAxis

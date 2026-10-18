@@ -1,6 +1,7 @@
 import { CalendarDays, Clock } from "lucide-react";
 import { CartesianGrid, Line, LineChart, Tooltip, XAxis, YAxis } from "recharts";
 
+import { ChartDataTable } from "~/components/patterns/charts/ChartDataTable";
 import { ChartLegend } from "~/components/patterns/charts/ChartLegend";
 import { ChartReading, ChartReadings } from "~/components/patterns/charts/ChartReadings";
 import { ChartError, ChartLoading } from "~/components/patterns/charts/ChartStates";
@@ -172,7 +173,28 @@ function ShareChart({
   const domain: [number, number] = [0, top];
   const yTicks = [0, top / 2, top];
   return (
-    <ChartSurface label={summary} announce="label" size="md" variant="flush">
+    <ChartSurface
+      label={summary}
+      announce="label"
+      size="md"
+      variant="flush"
+      dataTable={
+        <ChartDataTable
+          caption="Share of matches, local time"
+          head={["When", ...players.map((player) => player.name)]}
+          rows={points.map((entry) => ({
+            key: entry.label,
+            cells: [
+              entry.title,
+              ...keys.map((key) => {
+                const share = entry.share[key];
+                return share == null ? null : `${formatPercent(share)} (${entry.matches[key] ?? 0} matches)`;
+              }),
+            ],
+          }))}
+        />
+      }
+    >
       <LineChart data={points} margin={CHART_MARGIN} accessibilityLayer={false}>
         <CartesianGrid {...CHART_GRID} />
         <XAxis {...CHART_X_AXIS} dataKey="label" ticks={ticks} interval="preserveStartEnd" minTickGap={16} />

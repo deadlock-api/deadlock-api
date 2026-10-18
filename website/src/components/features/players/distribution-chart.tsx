@@ -1,10 +1,14 @@
 import type { HashMapValue } from "deadlock_api_client";
 import { Area, AreaChart, ReferenceLine, Tooltip, XAxis, YAxis } from "recharts";
 
+import { ChartDataTable } from "~/components/patterns/charts/ChartDataTable";
 import { ChartReading, ChartReadings } from "~/components/patterns/charts/ChartReadings";
 import { ChartSurface } from "~/components/patterns/charts/ChartSurface";
 import { CHART_COLOR, CHART_CURSOR_LINE, CHART_X_AXIS_SM, CHART_MEDIAN_LINE } from "~/components/patterns/charts/theme";
 import { approxPercentile, type CurvePoint, formatPercentile } from "~/lib/distribution-percentile";
+
+/** The percentiles the API reports, read out in the chart's data table. */
+const PERCENTILES = [1, 5, 10, 25, 50, 75, 90, 95, 99] as const;
 
 function DistributionTooltip({
   point,
@@ -57,7 +61,22 @@ export function DistributionChart({
   return (
     <div style={{ height }}>
       {/* Read piecemeal, the tick labels ran together into "0.06.022.2"; the summary says what the lines mark. */}
-      <ChartSurface label={distributionSummary(label, values, fmt)} announce="label" size="fill" variant="bare">
+      <ChartSurface
+        label={distributionSummary(label, values, fmt)}
+        announce="label"
+        size="fill"
+        variant="bare"
+        dataTable={
+          <ChartDataTable
+            caption={`${label} percentiles`}
+            head={["Percentile", label]}
+            rows={PERCENTILES.map((percentile) => ({
+              key: percentile,
+              cells: [`P${percentile}`, fmt(values[`percentile${percentile}`])],
+            }))}
+          />
+        }
+      >
         <AreaChart data={curve} margin={{ top: 4, right: 16, bottom: 0, left: 16 }} accessibilityLayer={false}>
           <XAxis
             type="number"

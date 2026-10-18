@@ -5,6 +5,7 @@ import { useState } from "react";
 import { CartesianGrid, Line, LineChart, Tooltip, XAxis, YAxis } from "recharts";
 
 import { RANK_BADGE_NAME_AXIS_WIDTH, RankBadgeTick } from "~/components/domain/rank/RankBadgeTick";
+import { ChartDataTable } from "~/components/patterns/charts/ChartDataTable";
 import { ChartLegend, ChartLegendItem } from "~/components/patterns/charts/ChartLegend";
 import { ChartReading, ChartReadings } from "~/components/patterns/charts/ChartReadings";
 import { ChartError, ChartLoading } from "~/components/patterns/charts/ChartStates";
@@ -175,7 +176,28 @@ function RankHistoryChart({
 
   return (
     <Stack gap={2} className="flex-1">
-      <ChartSurface label={summary} announce="label" size="grow" variant="flush">
+      <ChartSurface
+        label={summary}
+        announce="label"
+        size="grow"
+        variant="flush"
+        dataTable={
+          <ChartDataTable
+            caption="Rank by day"
+            head={["Day", ...ranked.map((player) => player.name)]}
+            rows={rows.map((row) => ({
+              key: row.day,
+              cells: [
+                longDate(row.day),
+                ...ranked.map((player) => {
+                  const badge = row.badge[String(player.accountId)];
+                  return badge == null ? null : rankName(badge);
+                }),
+              ],
+            }))}
+          />
+        }
+      >
         <LineChart data={rows} margin={CHART_MARGIN} accessibilityLayer={false}>
           <CartesianGrid {...CHART_GRID} />
           <XAxis
@@ -274,7 +296,28 @@ function RankByMatchChart({
 
   return (
     <Stack gap={2} className="flex-1">
-      <ChartSurface label={summary} announce="label" size="grow" variant="flush">
+      <ChartSurface
+        label={summary}
+        announce="label"
+        size="grow"
+        variant="flush"
+        dataTable={
+          <ChartDataTable
+            caption="Rank after each ranked match"
+            head={["Ranked match", ...ranked.map((player) => player.name)]}
+            rows={rows.map((row) => ({
+              key: row.match,
+              cells: [
+                formatStatValue(row.match, "integer") ?? String(row.match),
+                ...ranked.map((player) => {
+                  const badge = row.badge[String(player.accountId)];
+                  return badge == null ? null : rankName(badge);
+                }),
+              ],
+            }))}
+          />
+        }
+      >
         <LineChart data={rows} margin={CHART_MARGIN} accessibilityLayer={false}>
           <CartesianGrid {...CHART_GRID} />
           <XAxis

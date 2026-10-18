@@ -1,5 +1,5 @@
 import { cva, type VariantProps } from "class-variance-authority";
-import { cloneElement, type ComponentProps, isValidElement, type ReactElement } from "react";
+import { cloneElement, type ComponentProps, isValidElement, type ReactElement, type ReactNode } from "react";
 import { ResponsiveContainer } from "recharts";
 
 import { cn } from "~/lib/utils";
@@ -72,6 +72,10 @@ interface ChartSurfaceProps
    * not be focusable (`accessibilityLayer={false}`).
    */
   announce?: "plot" | "label";
+  /**
+   * With `announce="label"`: the plot's numbers for assistive technology, a `ChartDataTable`, read after the summary.
+   */
+  dataTable?: ReactNode;
   /** The plot's size in pixels, for ticks and tooltips that must adapt to it. */
   onResize?: ComponentProps<typeof ResponsiveContainer>["onResize"];
   children: ComponentProps<typeof ResponsiveContainer>["children"];
@@ -98,6 +102,7 @@ function namePlot(children: ChartSurfaceProps["children"], label: string): Chart
 export function ChartSurface({
   label,
   announce = "plot",
+  dataTable,
   size = "default",
   variant = "card",
   className,
@@ -118,6 +123,7 @@ export function ChartSurface({
           {label}
         </figcaption>
       )}
+      {announce === "label" && dataTable}
       {/* The figure is the container the height steps query, so the height sits on its child. */}
       <div
         data-slot="chart-surface-plot"

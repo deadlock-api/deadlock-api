@@ -2,6 +2,7 @@ import { ChartNoAxesCombined } from "lucide-react";
 import { useState } from "react";
 import { CartesianGrid, Line, LineChart, ReferenceLine, Tooltip, XAxis, YAxis } from "recharts";
 
+import { ChartDataTable } from "~/components/patterns/charts/ChartDataTable";
 import { ChartLegend } from "~/components/patterns/charts/ChartLegend";
 import { ChartReading, ChartReadings } from "~/components/patterns/charts/ChartReadings";
 import { ChartError, ChartLoading } from "~/components/patterns/charts/ChartStates";
@@ -193,7 +194,28 @@ function PerformanceTrendChart({
   const summary = `${selected.label} by ${period} (UTC), from ${longDate(first.week)} to ${longDate(last.week)}, periods with ${MIN_WEEK_MATCHES} or more matches. Latest: ${latest.join("; ")}.`;
 
   return (
-    <ChartSurface label={summary} announce="label" size="grow" variant="flush">
+    <ChartSurface
+      label={summary}
+      announce="label"
+      size="grow"
+      variant="flush"
+      dataTable={
+        <ChartDataTable
+          caption={`${selected.label} by ${period}`}
+          head={[bucket === 1 ? "Week of" : "Weeks from", ...players.map((player) => player.name)]}
+          rows={rows.map((row) => ({
+            key: row.week,
+            cells: [
+              longDate(row.week),
+              ...keys.map((key) => {
+                const value = row.value[key];
+                return value == null ? null : `${selected.format(value)} (${row.matches[key] ?? 0} matches)`;
+              }),
+            ],
+          }))}
+        />
+      }
+    >
       <LineChart data={rows} margin={CHART_MARGIN} accessibilityLayer={false}>
         <CartesianGrid {...CHART_GRID} />
         <XAxis
