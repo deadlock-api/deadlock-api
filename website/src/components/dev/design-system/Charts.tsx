@@ -139,7 +139,7 @@ export function Charts() {
       <Specimen
         name="ChartSurface"
         source="patterns/charts/ChartSurface"
-        note="size: xs, sm, md, default, lg, xl (the main plot of a page), fill (the parent sets the height), grow (grows in a stretched panel from a compact minimum; its loading skeleton too). variant: card, flush, bare. The loading skeleton takes the same size. announce: plot (the label names the figure and the focusable chart svg; keyboard readings in TooltipCard are announced politely) or label (the label summarises a small plot, which is hidden from screen readers; the bare one here)."
+        note="size: xs, sm, md, default, lg, xl (the main plot of a page), fill (the parent sets the height), grow (grows in a stretched panel from a compact minimum; its loading skeleton too), stretch (the default height as a floor, grown to a stretched panel: two panels side by side keep their x-axes on one line when one has a taller header). variant: card, flush, bare. The loading skeleton takes the same size. announce: plot (the label names the figure and the focusable chart svg; keyboard readings in TooltipCard are announced politely) or label (the label summarises a small plot, which is hidden from screen readers; the bare one here)."
       >
         <Variants className="grid items-start md:grid-cols-2">
           <ChartSurface label="Win rate by rank" size="md">
@@ -205,6 +205,26 @@ export function Charts() {
               </BarChart>
             </ChartSurface>
             <ChartLoading label="grown plot" size="grow" />
+          </div>
+          {/* Two panels in one row, one with a picker above its plot: stretch keeps their x-axes level. */}
+          <div className="grid grid-cols-2 items-stretch gap-2">
+            {[false, true].map((picker) => (
+              <div key={String(picker)} className="flex flex-col gap-2">
+                {picker && <span className="text-xs text-muted-foreground">A taller header</span>}
+                <ChartSurface label="Win rate by rank, stretched" size="stretch" variant="flush">
+                  <BarChart data={BY_RANK} margin={CHART_MARGIN}>
+                    <XAxis
+                      dataKey="rank"
+                      {...CHART_X_AXIS}
+                      interval={0}
+                      tickFormatter={(rank: string) => rank.slice(0, 3)}
+                    />
+                    <YAxis domain={[0.44, 0.56]} tickFormatter={percent} {...CHART_Y_AXIS} />
+                    <Bar dataKey="winRate" radius={4} isAnimationActive={false} />
+                  </BarChart>
+                </ChartSurface>
+              </div>
+            ))}
           </div>
         </Variants>
       </Specimen>

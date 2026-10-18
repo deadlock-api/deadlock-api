@@ -26,6 +26,12 @@ export const chartSizeVariants = cva("", {
        * its row gives the panel.
        */
       grow: "h-full",
+      /**
+       * `default`'s height as a floor, growing in a flex column like `grow`: the main plot of a panel that sits beside
+       * another. A taller header or a picker in one panel then takes height from the plot, not from its position, so
+       * the neighbours' x-axes stay on one line; alone or stacked, the plot keeps the default height.
+       */
+      stretch: "h-full",
     },
   },
   defaultVariants: { size: "default" },
@@ -71,10 +77,11 @@ interface ChartSurfaceProps
   children: ComponentProps<typeof ResponsiveContainer>["children"];
 }
 
-/** The classes a `fill` or `grow` plot's outer element takes; the other sizes set the height on the plot itself. */
+/** The classes a `fill`, `grow` or `stretch` plot's outer element takes; the other sizes set the height on the plot. */
 export function chartFrameHeight(size: ChartSize | null | undefined): string | undefined {
   if (size === "fill") return "h-full";
   if (size === "grow") return "min-h-32 flex-1";
+  if (size === "stretch") return "min-h-70 flex-1";
   return undefined;
 }
 
@@ -117,7 +124,7 @@ export function ChartSurface({
         aria-hidden={announce === "label" || undefined}
         className={cn(
           "min-w-0",
-          size === "fill" || size === "grow" ? "min-h-0" : chartSizeVariants({ size }),
+          size === "fill" || size === "grow" || size === "stretch" ? "min-h-0" : chartSizeVariants({ size }),
           variant !== "bare" && "p-2",
         )}
       >
