@@ -202,7 +202,8 @@ const nameVariants = cva("w-full text-center text-xs leading-tight text-muted-fo
   variants: {
     size: {
       default: "text-balance break-words hyphens-auto",
-      sm: "line-clamp-2 break-words",
+      // Hyphenated at a syllable before a long word is cut mid-letter ("Extende d").
+      sm: "line-clamp-2 break-words hyphens-auto",
       lg: "line-clamp-2 break-words hyphens-auto",
     },
   },
