@@ -190,7 +190,7 @@ function DataDumps() {
                   <TableHead className="hidden w-16 text-end @xl:table-cell">Files</TableHead>
                   <TableHead className="hidden w-20 text-end @xl:table-cell">Rows</TableHead>
                   <TableHead className="hidden w-24 text-end @xl:table-cell">Size</TableHead>
-                  <TableHead className="hidden w-40 @4xl:table-cell">Data up to</TableHead>
+                  <TableHead className="hidden w-44 @4xl:table-cell">Data up to</TableHead>
                   <TableHead className="w-20 text-end">Actions</TableHead>
                 </TableRow>
               </TableHeader>

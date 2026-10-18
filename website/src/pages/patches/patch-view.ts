@@ -1,7 +1,7 @@
 import type { QueryClient } from "@tanstack/react-query";
 import { notFound } from "@tanstack/react-router";
 
-import { formatPercent } from "~/lib/format";
+import { formatSignedPoints } from "~/lib/format";
 import { fetchPatchNotes } from "~/lib/patch-list-fns";
 import { fetchPatchReport } from "~/lib/patch-report-fns";
 import {
@@ -20,11 +20,6 @@ import { patchListQueryOptions } from "~/queries/patch-list-query";
 
 /** Below this many Phantom+ matches since the patch, the page shows an empty state and stays out of search. */
 const MIN_MATCHES = 1_000;
-
-/** "+3.1 pp" for a win rate change. */
-function points(delta: number): string {
-  return `${delta > 0 ? "+" : "−"}${formatPercent(Math.abs(delta)).replace("%", " pp")}`;
-}
 
 /** The patch list, cached for the whole session: the sidebar and every patch view read it. */
 export function loadPatchList(queryClient: QueryClient): Promise<PatchEntry[]> {
@@ -72,7 +67,10 @@ export type PatchView = Awaited<ReturnType<typeof loadPatchView>>;
 export function patchHead(view: PatchView, title?: string) {
   const label = patchLabel(view.patch);
   const { gain, drop } = view;
-  const movers = [gain && `${gain.name} ${points(gain.delta)}`, drop && `${drop.name} ${points(drop.delta)}`]
+  const movers = [
+    gain && `${gain.name} ${formatSignedPoints(gain.delta)}`,
+    drop && `${drop.name} ${formatSignedPoints(drop.delta)}`,
+  ]
     .filter(Boolean)
     .join(", ");
   const description = movers

@@ -1,7 +1,18 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { fineShareDigits, formatCountNoun, formatFineShare, formatRange, formatSignedPoints } from "./format";
+import {
+  fineShareDigits,
+  formatCountNoun,
+  formatFineShare,
+  formatRange,
+  formatSignedPoints,
+  formatUtcDateTime,
+} from "./format";
+
+test("formatUtcDateTime prints the moment in UTC with the zone", () => {
+  assert.equal(formatUtcDateTime(new Date(Date.UTC(2026, 9, 18, 22, 15, 42))), "2026-10-18 22:15 UTC");
+});
 
 test("formatFineShare keeps two significant digits below 1%", () => {
   assert.equal(formatFineShare(0.000886), "0.089%");

@@ -8,7 +8,7 @@ import {
 import { Panel, PanelBody, PanelHeader } from "~/components/patterns/panel/Panel";
 import { Delta } from "~/components/ui/delta";
 import { TooltipStat, TooltipStats } from "~/components/ui/tooltip";
-import { formatPercent } from "~/lib/format";
+import { formatPercent, formatSignedPoints } from "~/lib/format";
 import type { EntityChange } from "~/lib/patch-deltas";
 import type { SlimUpgrade } from "~/queries/asset-queries";
 
@@ -28,11 +28,6 @@ const MAX_ROWS = 6;
 /** z of a 95% interval. */
 const Z = 1.96;
 
-/** A change in points, signed: "+5.4 pp". */
-function points(delta: number): string {
-  return `${delta > 0 ? "+" : delta < 0 ? "−" : ""}${Math.abs(delta * 100).toFixed(1)} pp`;
-}
-
 /** The numbers behind a row's bar: its value on both sides of the patch, the change with its 95% range, the sample. */
 function MoverDetails({
   mover,
@@ -51,8 +46,11 @@ function MoverDetails({
     <TooltipStats variant="plain">
       <TooltipStat label={`${keys.label} before`} value={formatPercent(after - delta)} />
       <TooltipStat label={`${keys.label} after`} value={formatPercent(after)} />
-      <TooltipStat label="Change" value={points(delta)} />
-      <TooltipStat label="95% range" value={`${points(delta - Z * se)} to ${points(delta + Z * se)}`} />
+      <TooltipStat label="Change" value={formatSignedPoints(delta)} />
+      <TooltipStat
+        label="95% range"
+        value={`${formatSignedPoints(delta - Z * se)} to ${formatSignedPoints(delta + Z * se)}`}
+      />
       <TooltipStat
         label="Matches before, after"
         value={`${COMPACT.format(mover.prevMatches)}, ${COMPACT.format(mover.matches)}`}

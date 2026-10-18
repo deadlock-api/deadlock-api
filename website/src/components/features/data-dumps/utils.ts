@@ -1,16 +1,18 @@
 import { day } from "~/dayjs";
 import { type CellType, formatDuckDbValue } from "~/lib/duckdb-format";
+import { formatUtcDateTime } from "~/lib/format";
 
 export const LAKE_URL = "https://data.deadlock-api.com";
 export const MANIFEST_URL = `${LAKE_URL}/v1/manifest.json`;
 export const CATALOG_URL = `${LAKE_URL}/v1/catalog.ducklake`;
 
+/** A manifest timestamp (UTC, with or without its zone) in UTC: the same text on the server and in the browser. */
 export function formatTimestamp(s: string | null | undefined): string {
-  return s ? day.utc(s).local().format("YYYY-MM-DD HH:mm") : "—";
+  return s ? formatUtcDateTime(day.utc(s).toDate()) : "—";
 }
 
 export function formatUnix(seconds: number | null | undefined): string {
-  return seconds ? day.unix(seconds).local().format("YYYY-MM-DD HH:mm") : "—";
+  return seconds ? formatUtcDateTime(new Date(seconds * 1000)) : "—";
 }
 
 export function formatBytes(n: number): string {

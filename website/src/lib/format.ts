@@ -9,6 +9,14 @@ export function formatDate(dateString: string): string {
   return DATE_TIME.format(new Date(dateString));
 }
 
+/**
+ * A moment as "2026-10-18 22:15 UTC": the same text on the server (which renders in UTC) and in every reader's
+ * browser, with the zone said, for timestamps of data rather than of the reader's day.
+ */
+export function formatUtcDateTime(date: Date): string {
+  return `${date.toISOString().slice(0, 16).replace("T", " ")} UTC`;
+}
+
 export function formatRelativeTime(dateString: string): string {
   const date = new Date(dateString);
   const now = new Date();
