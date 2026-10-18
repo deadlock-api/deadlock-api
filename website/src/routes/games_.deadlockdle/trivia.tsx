@@ -9,6 +9,7 @@ import { ScoreSummary } from "~/components/domain/minigames/ScoreSummary";
 import { ShareButton } from "~/components/domain/minigames/ShareButton";
 import { TerminalBadge } from "~/components/domain/minigames/TerminalBadge";
 import { TerminalButton } from "~/components/domain/minigames/TerminalButton";
+import { useAnswerKeys } from "~/components/domain/minigames/use-answer-keys";
 import { GameShell, GameShellError, GameShellLoading } from "~/components/features/deadlockdle/GameShell";
 import { GuessFeedback } from "~/components/features/deadlockdle/GuessFeedback";
 import { NextGameButton } from "~/components/features/deadlockdle/NextGameButton";
@@ -159,6 +160,9 @@ function Trivia() {
     [state, isRevealed, currentQ, saveState, showFeedback, date, isArchive],
   );
 
+  // Number keys pick an answer, as in Higher or Lower and the flashcards.
+  useAnswerKeys(currentQ?.options.length ?? 0, handleAnswer, !isRevealed && !state.completed);
+
   const advance = useCallback(() => {
     setSelectedAnswer(null);
     setRevealing(null);
@@ -244,6 +248,7 @@ function Trivia() {
               {currentQ.options.map((option, i) => (
                 <AnswerOption
                   key={`${shownIndex}-opt-${option}`}
+                  shortcut={String(i + 1)}
                   state={isRevealed ? revealedState(i === currentQ.correctIndex, i === selectedAnswer) : "idle"}
                   onClick={() => handleAnswer(i)}
                   aria-disabled={isRevealed || undefined}
@@ -295,7 +300,7 @@ function Trivia() {
                       <Text tone={tone} variant="caption" align="center" className="w-4 shrink-0">
                         {tone === "positive" ? "✓" : "✗"}
                       </Text>
-                      <Text tone={tone} variant="caption" wrap="truncate" className="flex-1">
+                      <Text tone={tone} variant="caption" className="flex-1">
                         {q.question}
                       </Text>
                       {tone === "negative" && (

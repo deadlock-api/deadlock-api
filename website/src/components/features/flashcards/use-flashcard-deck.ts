@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 
 import { type AnswerOptionState, revealedState } from "~/components/domain/minigames/AnswerOption";
+import { useAnswerKeys } from "~/components/domain/minigames/use-answer-keys";
 import { seededRandom } from "~/lib/deadlockdle/seed";
 
 import { trackFlashcardAnswer, trackFlashcards } from "./analytics";
-import { useAnswerKeys } from "./use-answer-keys";
 import { useFlashcardProgress } from "./use-flashcard-progress";
 import { useNextCardFocus } from "./use-next-card-focus";
 
