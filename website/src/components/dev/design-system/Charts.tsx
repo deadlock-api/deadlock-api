@@ -283,7 +283,7 @@ export function Charts() {
       <Specimen
         name="Category and thinned axes"
         source="patterns/charts/theme"
-        note="CHART_X_AXIS_CATEGORY labels every category (Recharts would drop some from the end on a narrow plot). thinTicks(ticks, plotWidth) keeps every k-th tick so a long axis stays evenly labelled; pass interval={0} and the width from ChartSurface onResize."
+        note="CHART_X_AXIS_CATEGORY labels every category (Recharts would drop some from the end on a narrow plot). thinTicks(ticks, plotWidth) keeps every k-th tick so a long axis stays evenly labelled; pass interval={0} and the width from ChartSurface onResize. spacedTicks([min, median, max]) drops an inner value tick that would print on an edge one (a median next to the minimum)."
       >
         <Variants className="grid items-start md:grid-cols-2">
           <ChartSurface label="Win rate by rank, every rank labelled" size="sm">

@@ -10,7 +10,8 @@ import {
   CHART_CURSOR_LINE,
   CHART_MEDIAN_LINE,
   CHART_QUARTILE_LINE,
-  CHART_X_AXIS_SM,
+  CHART_X_AXIS,
+  spacedTicks,
 } from "~/components/patterns/charts/theme";
 import { approxPercentile, type CurvePoint, formatPercentile } from "~/lib/distribution-percentile";
 
@@ -62,8 +63,9 @@ export function DistributionChart({
 }) {
   const domainMin = curve[0]?.x ?? 0;
   const domainMax = curve[curve.length - 1]?.x ?? 1;
-  // A metric that is mostly zero has its median on the minimum; a repeated tick prints twice and collides as a key.
-  const ticks = [...new Set([domainMin, values.percentile50, domainMax])];
+  // A metric that is mostly zero, or a ratio with a long tail, has its median at or near the minimum: its label would
+  // print on top of the minimum's, so it is left to the median line and the reading.
+  const ticks = spacedTicks([domainMin, values.percentile50, domainMax]);
 
   return (
     <div style={{ height }}>
@@ -91,7 +93,7 @@ export function DistributionChart({
             domain={["dataMin", "dataMax"]}
             ticks={ticks}
             tickFormatter={(v) => fmt(v as number)}
-            {...CHART_X_AXIS_SM}
+            {...CHART_X_AXIS}
             axisLine={{ stroke: CHART_COLOR.grid }}
           />
           <YAxis type="number" domain={[0, "dataMax"]} hide />

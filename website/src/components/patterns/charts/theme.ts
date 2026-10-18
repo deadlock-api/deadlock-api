@@ -78,6 +78,25 @@ export function thinTicks<T>(ticks: readonly T[], width: number, minGap = 44): T
   return ticks.filter((_, index) => index % step === 0);
 }
 
+/**
+ * Ticks on a value axis whose inner marks (a median) can fall next to an edge (the minimum): keeps the first and last,
+ * and drops an inner tick closer than `minShare` of the span to a kept one, so two labels never touch. Without a span
+ * (one value) only the first is kept.
+ */
+export function spacedTicks(ticks: readonly number[], minShare = 0.18): number[] {
+  const sorted = [...new Set(ticks)].sort((a, b) => a - b);
+  const first = sorted[0];
+  const last = sorted.at(-1);
+  if (first === undefined || last === undefined || last === first) return first === undefined ? [] : [first];
+  const gap = (last - first) * minShare;
+  const kept = [first];
+  for (const tick of sorted.slice(1, -1)) {
+    if (tick - kept[kept.length - 1] >= gap && last - tick >= gap) kept.push(tick);
+  }
+  kept.push(last);
+  return kept;
+}
+
 /** Categorical series colors. Assign by index in this order and never cycle; fold a 9th series into "Other". */
 export const SERIES_COLORS = [
   "var(--chart-1)",
