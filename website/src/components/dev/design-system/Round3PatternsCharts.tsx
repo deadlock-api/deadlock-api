@@ -57,12 +57,13 @@ export function Round3PatternsCharts() {
       <Specimen
         name="WinRateBarChart"
         source="patterns/charts/WinRateBarChart"
-        note="Win rate per category, each bar drawn from the 50% line: up is better than even, down is worse. Bars take the positive or negative tone, or a color from the data with colorKey. The tooltip is a slot element that receives the hovered entry."
+        note="Win rate per category, each bar drawn from the 50% line: up is better than even, down is worse. Bars take the positive or negative tone, or a color from the data with colorKey. The tooltip is a slot element that receives the hovered entry. values visible prints each rate at its bar's end (the first one here)."
       >
-        <Variants label="tone by baseline (default)" className="block">
+        <Variants label='tone by baseline (default), values="visible"' className="block">
           <WinRateBarChart
             label="Win rate by purchase time"
             size="md"
+            values="visible"
             data={BINS}
             xKey="tick"
             valueKey="winRate"

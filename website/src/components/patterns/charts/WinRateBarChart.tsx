@@ -1,12 +1,14 @@
 import { cloneElement, type ComponentProps, type ReactElement } from "react";
-import { Bar, BarChart, CartesianGrid, ReferenceLine, Tooltip, XAxis, YAxis } from "recharts";
+import { Bar, BarChart, CartesianGrid, LabelList, ReferenceLine, Tooltip, XAxis, YAxis } from "recharts";
 
 import { ChartSurface } from "~/components/patterns/charts/ChartSurface";
 import {
   CHART_BASELINE,
+  CHART_COLOR,
   CHART_CURSOR_BAND,
   CHART_GRID,
   CHART_MARGIN,
+  CHART_TICK,
   CHART_X_AXIS,
   CHART_Y_AXIS,
 } from "~/components/patterns/charts/theme";
@@ -35,6 +37,43 @@ interface WinRateBarChartProps<T> extends Omit<ComponentProps<typeof ChartSurfac
   xAxisHeight?: number;
   /** The rate that means "even". */
   baseline?: number;
+  /** `visible` prints each bar's rate at its far end, for a few bars that should read without a hover. */
+  values?: "hidden" | "visible";
+}
+
+/** A bar's rate at its far end: over a bar that rises from the baseline, under one that falls. */
+function BarValue({
+  x = 0,
+  y = 0,
+  width = 0,
+  height = 0,
+  value,
+  baseline,
+}: {
+  x?: number;
+  y?: number;
+  width?: number;
+  height?: number;
+  value?: number;
+  baseline: number;
+}) {
+  if (value === undefined) return null;
+  const top = Math.min(y, y + height);
+  const bottom = Math.max(y, y + height);
+  const above = value >= baseline;
+  return (
+    <text
+      x={x + width / 2}
+      y={above ? top - 4 : bottom + 4}
+      dominantBaseline={above ? "auto" : "hanging"}
+      textAnchor="middle"
+      fontSize={CHART_TICK.fontSize}
+      fill={CHART_COLOR.ink}
+      className="tabular-nums"
+    >
+      {`${(value * 100).toFixed(1)}%`}
+    </text>
+  );
 }
 
 /**
@@ -51,10 +90,14 @@ export function WinRateBarChart<T>({
   xTick,
   xAxisHeight,
   baseline = 0.5,
+  values = "hidden",
   ...surfaceProps
 }: WinRateBarChartProps<T>) {
   const rate = (entry: T) => entry[valueKey] as number;
-  const domain = winRateDomain([baseline, ...data.map(rate)]);
+  const fitted = winRateDomain([baseline, ...data.map(rate)]);
+  // Printed values need a line of room past the longest bars on either side.
+  const room = values === "visible" ? (fitted[1] - fitted[0]) * 0.15 : 0;
+  const domain: [number, number] = [fitted[0] - room, fitted[1] + room];
   // Recharts colours each bar from its data point's `fill`.
   const bars = data.map((entry) => ({
     ...entry,
@@ -84,7 +127,23 @@ export function WinRateBarChart<T>({
             active && payload?.length ? cloneElement(tooltip, { entry: payload[0].payload as T }) : null
           }
         />
-        <Bar dataKey={(entry: T) => [baseline, rate(entry)]} radius={4} />
+        <Bar dataKey={(entry: T) => [baseline, rate(entry)]} radius={4}>
+          {values === "visible" && (
+            <LabelList
+              dataKey={(entry: T) => rate(entry)}
+              content={(props) => (
+                <BarValue
+                  x={Number(props.x)}
+                  y={Number(props.y)}
+                  width={Number(props.width)}
+                  height={Number(props.height)}
+                  value={typeof props.value === "number" ? props.value : undefined}
+                  baseline={baseline}
+                />
+              )}
+            />
+          )}
+        </Bar>
       </BarChart>
     </ChartSurface>
   );
