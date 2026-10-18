@@ -4,7 +4,7 @@ import type { AnalyticsApiItemStatsRequest } from "deadlock_api_client";
 import { ArrowDown } from "lucide-react";
 
 import { ItemImage } from "~/components/domain/assets/ItemImage";
-import { Panel, PanelBody, PanelFooter, PanelHeader } from "~/components/patterns/panel/Panel";
+import { Panel, PanelBody, PanelHeader } from "~/components/patterns/panel/Panel";
 import { Card } from "~/components/ui/card";
 import { Heading } from "~/components/ui/heading";
 import { Stack } from "~/components/ui/stack";
@@ -14,8 +14,6 @@ import { formatPercent } from "~/lib/format";
 import { itemSlug } from "~/lib/item-slug";
 import { filterShopableItems, itemUpgradesQueryOptions, type SlimUpgrade } from "~/queries/asset-queries";
 import { itemStatsQueryOptions } from "~/queries/item-stats-query";
-
-const listFormat = new Intl.ListFormat("en-US", { style: "long", type: "conjunction" });
 
 function UpgradeTile({ item, winRate, current }: { item: SlimUpgrade; winRate?: number; current?: boolean }) {
   return (
@@ -54,14 +52,12 @@ function PathArrow() {
 
 export function ItemUpgradePath({
   itemId,
-  itemName,
   request,
   rankRange,
   className,
 }: {
   className?: string;
   itemId: number;
-  itemName: string;
   request: AnalyticsApiItemStatsRequest;
   /** The request's rank range in words, such as "Phantom 1+". */
   rankRange: string;
@@ -78,13 +74,6 @@ export function ItemUpgradePath({
   if (components.length === 0 && upgrades.length === 0) return null;
 
   const winRates = new Map(stats?.map((row) => [row.item_id, row.wins / row.matches]));
-  const names = (list: SlimUpgrade[]) => listFormat.format(list.map((entry) => entry.name));
-  const summary = [
-    components.length > 0 && `builds from ${names(components)}`,
-    upgrades.length > 0 && `upgrades into ${names(upgrades)}`,
-  ]
-    .filter(Boolean)
-    .join(" and ");
 
   const group = (list: SlimUpgrade[], label: string, current?: boolean) => (
     <div className="flex min-w-0 flex-col gap-2">
@@ -101,7 +90,7 @@ export function ItemUpgradePath({
 
   return (
     <Panel className={className}>
-      <PanelHeader title="Upgrade Path" description={`Win rates · ${rankRange}`} />
+      <PanelHeader title="Upgrade Path" description={`Win rates · ${rankRange} · ${period}`} />
       <PanelBody className="@container flex flex-1 flex-col gap-2">
         {components.length > 0 && (
           <>
@@ -117,9 +106,6 @@ export function ItemUpgradePath({
           </>
         )}
       </PanelBody>
-      <PanelFooter>
-        {itemName} {summary}. Win rates are for {rankRange} matches in {period}.
-      </PanelFooter>
     </Panel>
   );
 }

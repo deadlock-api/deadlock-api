@@ -8,11 +8,10 @@ import { Panel, PanelHeader } from "~/components/patterns/panel/Panel";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
-import { Card } from "~/components/ui/card";
 import { Delta } from "~/components/ui/delta";
 import { Grid } from "~/components/ui/grid";
 import { NoValue } from "~/components/ui/no-value";
-import { Stack } from "~/components/ui/stack";
+import { Inline, Stack } from "~/components/ui/stack";
 import { Stat, StatGroup } from "~/components/ui/stat";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { Text } from "~/components/ui/text";
@@ -54,25 +53,11 @@ export function ItemCorruption({
   const stats = corruptedStats(item.properties, info.property_upgrades);
 
   return (
-    <Section
-      title={`Corrupted ${itemName}`}
-      description={`The Broker trades ${itemName} for a corrupted version: stronger stats, plus penalties rolled once per match.`}
-    >
-      <Card size="sm" className="max-w-3xl flex-row items-start gap-4 p-4">
+    <Section title={`Corrupted ${itemName}`}>
+      <Inline gap={4}>
         <CorruptedItemImage item={item} frame="active" className="size-16" />
-        <Stack gap={2}>
-          <Text as="p" variant="caption" tone="muted">
-            The Broker is a merchant who shows up around minute 30 of a normal match and again roughly every 15 minutes
-            after. He swaps a tier 3 or 4 item for its corrupted version. In Street Brawl, every player gets to corrupt
-            an item after the round {corruption?.streetBrawlRound ?? 5} item draft.
-          </Text>
-          <Text as="p" variant="caption" tone="muted">
-            A corrupted item keeps its effect with stronger stats, and takes on penalties from a fixed set. They are
-            rolled once per match, so every corrupted item in that match carries the same ones.
-            <CorruptionPrice corruption={corruption} tier={item.item_tier} />
-          </Text>
-        </Stack>
-      </Card>
+        <CorruptionPrice corruption={corruption} tier={item.item_tier} />
+      </Inline>
 
       <Grid columns={{ base: 1, lg: 2 }} gap={4} className="items-start">
         {stats.length > 0 && (
@@ -114,7 +99,11 @@ export function ItemCorruption({
 function CorruptionPrice({ corruption, tier }: { corruption: CorruptionData | undefined; tier: number }) {
   const price = corruption?.pricePerTier[tier] ?? 0;
   if (price <= 0) return null;
-  return <> Corrupting it costs {price.toLocaleString("en-US")} souls.</>;
+  return (
+    <StatGroup variant="plain" size="sm">
+      <Stat label="Corruption cost" value={`${price.toLocaleString("en-US")} souls`} />
+    </StatGroup>
+  );
 }
 
 function PenaltyPanel({
@@ -214,9 +203,7 @@ function CorruptionPerformance({
 
   const heading = (
     <Text as="p" variant="caption" tone="muted" className="max-w-3xl">
-      Win rates of players who bought each version, in {rankRange} matches since the City Never Sleeps update (September
-      29, 2026). The Broker only trades from about minute 30, so corrupted items only show up in longer matches; read
-      the difference with that in mind.
+      {rankRange} matches since September 29, 2026
     </Text>
   );
 

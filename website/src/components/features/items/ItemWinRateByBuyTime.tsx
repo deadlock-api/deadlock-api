@@ -102,8 +102,7 @@ export function ItemWinRateByBuyTime({
           <>
             {/* The largest bucket is often well under half of all purchases, so it is "most often", not "most players". */}
             Bought most often at {peak.label} ({formatPercent(peak.share, 0)} of purchases). Buyers at {early.label} win{" "}
-            {formatPercent(early.winRate)}, versus {formatPercent(late.winRate)} at {late.label}. An early buy partly
-            reflects a team already ahead, so read it as when the item pays off, not proof that rushing it wins.
+            {formatPercent(early.winRate)}, versus {formatPercent(late.winRate)} at {late.label}.
           </>
         )
       }

@@ -3,7 +3,7 @@ import type { AnalyticsApiItemStatsRequest } from "deadlock_api_client";
 import { useMemo } from "react";
 
 import { RankedEntityList, RankedEntityMetric, RankedEntityRow } from "~/components/domain/assets/RankedEntityList";
-import { Panel, PanelBody, PanelFooter, PanelHeader } from "~/components/patterns/panel/Panel";
+import { Panel, PanelBody, PanelHeader } from "~/components/patterns/panel/Panel";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
@@ -96,10 +96,6 @@ export function ItemBestHeroes({
           </RankedEntityList>
         )}
       </PanelBody>
-      <PanelFooter>
-        Ranked by the low end of each win rate&apos;s confidence interval. &quot;Bought&quot; is the share of the
-        hero&apos;s matches with {itemName}.
-      </PanelFooter>
     </Panel>
   );
 }
@@ -155,10 +151,6 @@ export function ItemPairings({
           </RankedEntityList>
         )}
       </PanelBody>
-      <PanelFooter>
-        &quot;Together&quot; is the share of {itemName} buyers who also bought the item; the win rate counts only builds
-        with both. Its own components and upgrades are left out.
-      </PanelFooter>
     </Panel>
   );
 }

@@ -275,10 +275,6 @@ function ConfidenceTierBadge({ row }: { row: DisplayItemStats }) {
             />
             <TooltipStat label="Matches" value={row.matches.toLocaleString("en-US")} />
           </TooltipStats>
-          <p className="max-w-64 text-xs text-muted-foreground">
-            How far the true win rate could sit from the one shown, given the matches behind it: the narrower the range
-            compared with the most bought item's, the higher the confidence.
-          </p>
         </>
       }
     >
@@ -724,11 +720,6 @@ export function ItemStatsTable({
                         "Win Rate"
                       )
                     }
-                    description={
-                      corruptedMode === "include"
-                        ? "The bar is the normal purchases’ win rate; the tick marks the corrupted purchases’ win rate, with the difference beside it (corrupted match count in brackets)."
-                        : undefined
-                    }
                     sortKey="winRate"
                     activeSortKey={sort.sortKey}
                     sortDir={sort.dir}
@@ -744,11 +735,6 @@ export function ItemStatsTable({
                       ) : (
                         "Pick Rate (Normalized)"
                       )
-                    }
-                    description={
-                      corruptedMode === "include"
-                        ? "Relative to the most bought item, split into normal and corrupted purchases."
-                        : undefined
                     }
                     sortKey="matches"
                     activeSortKey={sort.sortKey}

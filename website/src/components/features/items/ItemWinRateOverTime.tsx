@@ -91,8 +91,7 @@ export function ItemWinRateOverTime({
         weeks.length >= 2 && (
           <>
             {possessive(itemName)} win rate {movement}, from {formatPercent(first.winRate)} in the week of {first.label}{" "}
-            to {formatPercent(last.winRate)} in the week of {last.label}, in {period}. The lower line is how often it is
-            bought.
+            to {formatPercent(last.winRate)} in the week of {last.label}, in {period}.
           </>
         )
       }

@@ -28,14 +28,7 @@ import { Segmented, SegmentedItem } from "~/components/ui/segmented";
 import { Separator } from "~/components/ui/separator";
 import { Inline } from "~/components/ui/stack";
 import { SwitchField } from "~/components/ui/switch-field";
-import {
-  Tooltip as HoverTooltip,
-  TooltipCard,
-  TooltipHeader,
-  TooltipProvider,
-  TooltipStat,
-  TooltipStats,
-} from "~/components/ui/tooltip";
+import { TooltipCard, TooltipHeader, TooltipProvider, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
 import { hasSoulEconomy } from "~/lib/game-mode";
 import { wilsonScoreInterval } from "~/lib/wilson";
 import { itemUpgradesQueryOptions } from "~/queries/asset-queries";
@@ -264,7 +257,7 @@ export function ItemBuyTimingChart({ itemIds, baseQueryOptions, rowTotalMatches 
 
   return (
     <TooltipProvider>
-      <ChartCard title="Purchase Analysis" description={`Win rate by ${purchaseAxis}`} className="w-full">
+      <ChartCard title="Purchase Analysis" className="w-full">
         <PanelBody size="sm">
           <Inline className="gap-x-4 gap-y-2">
             <Field label="View by" orientation="horizontal">
@@ -281,21 +274,7 @@ export function ItemBuyTimingChart({ itemIds, baseQueryOptions, rowTotalMatches 
               checked={useWilsonInterval}
               onCheckedChange={setUseWilsonInterval}
               className="items-center"
-              label={
-                <>
-                  Use conservative win-rate estimate based on volume
-                  <HoverTooltip
-                    content={
-                      <p>
-                        Less matches played for a datapoint means we're less confident in the win rate, so we reduce it
-                        a bit to compensate.
-                      </p>
-                    }
-                  >
-                    <span className="icon-[material-symbols--info] size-4 text-muted-foreground" />
-                  </HoverTooltip>
-                </>
-              }
+              label="Conservative win rate"
             />
             {rowTotalMatches && (
               <SwitchField
@@ -312,11 +291,7 @@ export function ItemBuyTimingChart({ itemIds, baseQueryOptions, rowTotalMatches 
         {/* Nothing picked needs no data: the server, which never fetches it here, shows the same prompt. */}
         <div aria-live="polite" aria-busy={isLoading && itemIds.length > 0}>
           {itemIds.length === 0 ? (
-            <EmptyState
-              variant="plain"
-              title="Pick one or more items above"
-              description="to compare how their win rate changes with when they are bought."
-            />
+            <EmptyState variant="plain" title="Pick one or more items above" />
           ) : isLoading ? (
             <div className="p-2">
               <ChartLoading label="purchase analysis" size="lg" />

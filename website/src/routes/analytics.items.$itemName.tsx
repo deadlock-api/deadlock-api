@@ -325,10 +325,7 @@ function ItemDetailPage() {
         )}
       </ProfileHeader>
 
-      <Section
-        title={`What ${itemName} Does`}
-        description="Its effect in the shop, and where it sits in the upgrade tree."
-      >
+      <Section title={`What ${itemName} Does`}>
         <div className="grid gap-4 lg:grid-cols-2">
           {hasEffect && itemQuery.data && (
             <Panel>
@@ -338,7 +335,7 @@ function ItemDetailPage() {
               </PanelBody>
             </Panel>
           )}
-          <ItemUpgradePath itemId={itemId} itemName={itemName} request={itemRequest} rankRange={rankRange} />
+          <ItemUpgradePath itemId={itemId} request={itemRequest} rankRange={rankRange} />
         </div>
       </Section>
 
@@ -346,17 +343,14 @@ function ItemDetailPage() {
         <ItemCorruption item={itemQuery.data} request={itemRequest} rankRange={rankRange} />
       )}
 
-      <Section
-        title={`Who Should Buy ${itemName}`}
-        description={`The heroes it works best on, and the items it is built with, in ${rankRange} matches.`}
-      >
+      <Section title={`Who Should Buy ${itemName}`} description={`${rankRange} matches`}>
         <div className="grid gap-4 lg:grid-cols-2">
           <ItemBestHeroes itemName={itemName} bestHeroes={bestHeroes} onRetry={() => void router.invalidate()} />
           <ItemPairings itemId={itemId} itemName={itemName} itemRequest={itemRequest} />
         </div>
       </Section>
 
-      <Section title={`${itemName} Win Rate Trends`} description="Over time, by rank, and by the minute it is bought.">
+      <Section title={`${itemName} Win Rate Trends`}>
         <div className="grid gap-4 lg:grid-cols-2">
           <ChunkErrorBoundary>
             <Suspense
@@ -392,34 +386,13 @@ function ItemDetailPage() {
       <Section title={`More ${itemName} Stats`}>
         <nav aria-label={`More ${itemName} stats`} className="@container">
           <div className="grid gap-3 @xl:grid-cols-2 @4xl:grid-cols-3">
-            <LinkCard
-              asChild
-              size="sm"
-              orientation="horizontal"
-              media={<Layers />}
-              title={`Builds with ${itemName}`}
-              description={`Every item's win rate in builds that include ${itemName}.`}
-            >
+            <LinkCard asChild size="sm" orientation="horizontal" media={<Layers />} title={`Builds with ${itemName}`}>
               <Link to="/analytics/items" search={{ include_items: itemId, ...RANK_SEARCH }} preload="intent" />
             </LinkCard>
-            <LinkCard
-              asChild
-              size="sm"
-              orientation="horizontal"
-              media={<BarChart3 />}
-              title="All Items"
-              description="Win and purchase rates of every item, side by side."
-            >
+            <LinkCard asChild size="sm" orientation="horizontal" media={<BarChart3 />} title="All Items">
               <Link to="/analytics/items" search={RANK_SEARCH} preload="intent" />
             </LinkCard>
-            <LinkCard
-              asChild
-              size="sm"
-              orientation="horizontal"
-              media={<Combine />}
-              title="Item Combos"
-              description="The item pairs that win most often when bought together."
-            >
+            <LinkCard asChild size="sm" orientation="horizontal" media={<Combine />} title="Item Combos">
               <Link to="/analytics/items/combos" search={RANK_SEARCH} preload="intent" />
             </LinkCard>
           </div>
