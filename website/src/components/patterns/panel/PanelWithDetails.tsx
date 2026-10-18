@@ -63,9 +63,11 @@ export function PanelWithDetails({
         <PanelHeader title={title} description={description} icon={icon} size="sm">
           {trailing}
         </PanelHeader>
-        <PanelBody size="sm" className="flex flex-col gap-1">
+        {/* In a row of panels stretched to one height the body takes the slack, and "Show more" stays at the foot, so
+            the buttons of neighbouring panels line up. */}
+        <PanelBody size="sm" className="flex flex-1 flex-col gap-1">
           {children}
-          <div className="flex flex-wrap items-center justify-end gap-x-3 gap-y-1">
+          <div className="mt-auto flex flex-wrap items-center justify-end gap-x-3 gap-y-1">
             {footer && <div className="min-w-0 flex-1 text-xs text-muted-foreground">{footer}</div>}
             <DialogTrigger asChild>
               <Button variant="ghost" size="xs" aria-label={`Show more ${title.toLowerCase()}`}>

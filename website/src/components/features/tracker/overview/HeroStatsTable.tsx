@@ -62,7 +62,8 @@ export function HeroStatsTable({
         b.matches - a.matches ||
         a.heroId - b.heroId,
     );
-  const visible = sorted.slice(0, 3);
+  // Five rows: the panel sits beside the teammates and opponents, which are about that tall.
+  const visible = sorted.slice(0, 5);
   const sortDir = direction === "descending" ? "desc" : "asc";
   return (
     <PanelWithDetails

@@ -260,7 +260,7 @@ export function OverviewTab({
         }
       />
 
-      <div className="grid items-start gap-2 @2xl/overview:grid-cols-2">
+      <div className="grid gap-2 @2xl/overview:grid-cols-2">
         <HeroStatsTable
           rows={data.heroes}
           gameMode={gameMode}
@@ -312,10 +312,11 @@ export function OverviewTab({
             <PlaytimeHeatmap habits={habits} />
           </PanelBody>
         </Panel>
-        <Panel className="@container/records">
+        {/* Alone on its row in the two-column step, it takes the whole row rather than half of it. */}
+        <Panel className="@container/records @2xl/overview:col-span-2 @5xl/overview:col-span-1">
           <PanelHeader title="Personal bests" icon={Trophy} size="sm" />
           <PanelBody size="sm" className="flex flex-col gap-2">
-            <div className="grid grid-cols-2 gap-1.5 @xs/records:grid-cols-3">
+            <div className="grid grid-cols-2 gap-1.5 @xs/records:grid-cols-3 @3xl/records:grid-cols-6">
               {recordKindsFor(gameMode).map(({ key, label, format }) => {
                 const record = data.records[key];
                 return (
