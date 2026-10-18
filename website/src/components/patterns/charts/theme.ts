@@ -96,6 +96,11 @@ export const CHART_COLOR = {
 export const CHART_ACTIVE_DOT = { r: 4, stroke: CHART_COLOR.surface, strokeWidth: 2 } as const;
 
 export const CHART_MARGIN = { top: 8, right: 8, bottom: 8, left: 0 } as const;
+/**
+ * A scatter plot's margin: room on the sides without an axis for the largest point mark (a selected point of radius 7
+ * and its stroke), so a point on the domain's edge is drawn whole. Do not clip the plot (`allowDataOverflow`) either.
+ */
+export const CHART_MARGIN_POINTS = { top: 12, right: 12, bottom: 8, left: 0 } as const;
 /** `CHART_MARGIN` with a lane at the top for the labels of `ChartMarkers`. */
 export const CHART_MARGIN_MARKED = { ...CHART_MARGIN, top: 24 } as const;
 

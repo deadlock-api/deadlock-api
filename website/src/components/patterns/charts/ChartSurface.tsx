@@ -33,7 +33,8 @@ export const chartSizeVariants = cva("", {
 
 // Recharts focuses its marks on click, which would outline them; keyboard focus (`accessibilityLayer`) keeps its outline.
 const chartSurfaceVariants = cva(
-  "@container grid min-w-0 grid-cols-1 select-none [&_*:focus:not(:focus-visible)]:outline-none",
+  // A pressable mark (`ChartPointMark pressable`) takes the pointer cursor here, not from an inline style.
+  "@container grid min-w-0 grid-cols-1 select-none [&_*:focus:not(:focus-visible)]:outline-none [&_[data-pressable]]:cursor-pointer",
   {
     variants: {
       variant: {

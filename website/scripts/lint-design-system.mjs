@@ -283,7 +283,7 @@ function drawingTokens(line) {
 }
 
 const VISUAL_STYLE_KEY =
-  /\b(?:color|background(?:Color|Image)?|border(?:Color|Width|Radius|Style|Top\w*|Bottom\w*|Left\w*|Right\w*|Inline\w*|Block\w*)?|boxShadow|outline\w*|opacity|filter|backdropFilter|fill|stroke)\s*:/;
+  /\b(?:color|background(?:Color|Image)?|border(?:Color|Width|Radius|Style|Top\w*|Bottom\w*|Left\w*|Right\w*|Inline\w*|Block\w*)?|boxShadow|outline\w*|opacity|filter|backdropFilter|fill|stroke|cursor)\s*:/;
 
 function walk(dir, out = []) {
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {

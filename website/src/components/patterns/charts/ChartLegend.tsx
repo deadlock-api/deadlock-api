@@ -3,7 +3,7 @@ import { createContext, useContext } from "react";
 import { Button } from "~/components/ui/button";
 import { cn } from "~/lib/utils";
 
-type SwatchShape = "line" | "dashed" | "square" | "dot" | "ring";
+type SwatchShape = "line" | "dashed" | "square" | "dot" | "ring" | "triangle-up" | "triangle-down";
 
 const shapeClass: Record<SwatchShape, string> = {
   line: "h-0.5 w-4 rounded-full",
@@ -11,6 +11,8 @@ const shapeClass: Record<SwatchShape, string> = {
   square: "size-2.5 rounded-xs",
   dot: "size-2 rounded-full",
   ring: "size-2.5 rounded-full border-2 bg-transparent",
+  "triangle-up": "size-2.5 [clip-path:polygon(50%_0,100%_100%,0_100%)]",
+  "triangle-down": "size-2.5 [clip-path:polygon(0_0,100%_0,50%_100%)]",
 };
 const smallShapeClass: Record<SwatchShape, string> = {
   line: "h-0.5 w-3 rounded-full",
@@ -18,11 +20,13 @@ const smallShapeClass: Record<SwatchShape, string> = {
   square: "size-2 rounded-xs",
   dot: "size-1.5 rounded-full",
   ring: "size-2 rounded-full border-2 bg-transparent",
+  "triangle-up": "size-2 [clip-path:polygon(50%_0,100%_100%,0_100%)]",
+  "triangle-down": "size-2 [clip-path:polygon(0_0,100%_0,50%_100%)]",
 };
 
 /**
  * The mark of one series, wherever it is named: a legend, a tooltip row, a table cell. Match the shape to the mark:
- * `line` for lines and areas, `dashed` for a dashed reference line (a median, an average), `square` for bars and stacks, `dot` for points, `ring` for hollow points.
+ * `line` for lines and areas, `dashed` for a dashed reference line (a median, an average), `square` for bars and stacks, `dot` for points, `ring` for hollow points, `triangle-up` / `triangle-down` for the points of `VERDICT_MARK`.
  */
 export function ChartSwatch({
   color,

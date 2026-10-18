@@ -248,6 +248,7 @@ export const NAV: readonly NavChapter[] = [
           "ChartStageFrame",
           "ChartRegion",
           "ChartMarkers",
+          "ChartPointMark",
         ],
       },
       { title: "Controls and layout", items: ["MetricSelect", "Trend fields", "ChartSidebarLayout"] },

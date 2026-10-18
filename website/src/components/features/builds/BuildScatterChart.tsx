@@ -4,12 +4,13 @@ import { CartesianGrid, ReferenceLine, Scatter, ScatterChart, Tooltip, XAxis, YA
 import { useItemPrices } from "~/components/features/builds/build-hooks";
 import { ChartCard } from "~/components/patterns/charts/ChartCard";
 import { ChartLegend, ChartLegendItem } from "~/components/patterns/charts/ChartLegend";
+import { ChartPointMark, VERDICT_MARK } from "~/components/patterns/charts/ChartPointMark";
 import { ChartSurface } from "~/components/patterns/charts/ChartSurface";
 import {
   CHART_BASELINE,
   CHART_COLOR,
   CHART_GRID,
-  CHART_MARGIN,
+  CHART_MARGIN_POINTS,
   CHART_TICK,
   CHART_X_AXIS,
   CHART_X_LABEL,
@@ -22,12 +23,6 @@ import { BUILD_METRICS, type BuildPerformanceTotals } from "~/lib/build-performa
 import { buildMatchesItems, type BuildRow, type BuildSlot, buildSlotCost } from "~/lib/build-stats";
 import { niceTicks, percentTicks, winRateDomain } from "~/lib/chart-axis";
 import { formatPercent, formatSignedPoints } from "~/lib/format";
-
-const VERDICT_COLOR: Record<BuildRow["verdict"], string> = {
-  above: CHART_COLOR.positive,
-  below: CHART_COLOR.negative,
-  even: CHART_COLOR.neutral,
-};
 
 const VERDICT_LABEL: Record<BuildRow["verdict"], string> = {
   above: "Above average",
@@ -97,18 +92,20 @@ function shortName(name: string): string {
 
 function BuildDot({ cx, cy, payload }: { cx?: number; cy?: number; payload?: Point }) {
   if (cx === undefined || cy === undefined || !payload) return null;
+  const mark = VERDICT_MARK[payload.row.verdict];
   const dot = (
-    <circle
+    // Pressable: it selects its build.
+    <ChartPointMark
       cx={cx}
       cy={cy}
       r={payload.selected ? 7 : payload.highlighted ? 6 : 4.5}
-      fill={VERDICT_COLOR[payload.row.verdict]}
+      shape={mark.shape}
+      pressable
+      fill={mark.color}
       fillOpacity={payload.selected || payload.highlighted ? 1 : payload.dimmed ? 0.12 : 0.75}
       stroke={payload.selected || payload.highlighted ? CHART_COLOR.ink : CHART_COLOR.surface}
       strokeOpacity={payload.dimmed && !payload.selected && !payload.highlighted ? 0.3 : 1}
       strokeWidth={payload.selected ? 2.5 : payload.highlighted ? 1.5 : 1}
-      // A dot is pressable: it selects its build.
-      style={{ cursor: "pointer" }}
     />
   );
   if (!payload.selected && !payload.highlighted) return dot;
@@ -138,7 +135,8 @@ function BuildDot({ cx, cy, payload }: { cx?: number; cy?: number; payload?: Poi
 
 /**
  * Every build as one dot: how often it was played (log scale) against how it won, over the pooled win rate of all
- * builds. A dot is colored by whether its whole 95% interval clears that line. A press selects the build.
+ * builds. A point is colored and shaped (up, round, down) by whether its whole 95% interval clears that line. A press
+ * selects the build.
  */
 export function BuildScatterChart({
   rows,
@@ -252,9 +250,13 @@ export function BuildScatterChart({
             </SelectContent>
           </Select>
 
-          <ChartLegend label="Dot colors">
+          <ChartLegend label="Point marks">
             {(["above", "even", "below"] as const).map((verdict) => (
-              <ChartLegendItem key={verdict} color={VERDICT_COLOR[verdict]} shape="dot">
+              <ChartLegendItem
+                key={verdict}
+                color={VERDICT_MARK[verdict].color}
+                shape={VERDICT_MARK[verdict].shape === "circle" ? "dot" : VERDICT_MARK[verdict].shape}
+              >
                 {VERDICT_LABEL[verdict]}
               </ChartLegendItem>
             ))}
@@ -271,7 +273,7 @@ export function BuildScatterChart({
         announce="label"
         label={`${points.length} builds by ${xLabel.toLowerCase()} and win rate: ${above} win confidently above the average of ${formatPercent(average)}, ${below} below it.`}
       >
-        <ScatterChart margin={{ ...CHART_MARGIN, bottom: 16 }} accessibilityLayer={false}>
+        <ScatterChart margin={{ ...CHART_MARGIN_POINTS, bottom: 16 }} accessibilityLayer={false}>
           <CartesianGrid {...CHART_GRID} vertical />
           <XAxis
             {...CHART_X_AXIS}
@@ -282,7 +284,6 @@ export function BuildScatterChart({
             domain={xDomain}
             ticks={linear ? linearTicks : logTicks(xDomain[0], xDomain[1])}
             tickFormatter={xFormat}
-            allowDataOverflow
             label={{ ...CHART_X_LABEL, value: linear ? xLabel : "Matches (log scale)", offset: -8 }}
           />
           <YAxis

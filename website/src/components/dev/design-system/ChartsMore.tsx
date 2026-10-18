@@ -5,13 +5,16 @@ import { CartesianGrid, Line, LineChart, ReferenceLine, XAxis, YAxis } from "rec
 import { percent } from "~/components/dev/design-system/samples";
 import { Specimen, Variants } from "~/components/dev/design-system/Specimen";
 import { ChartCard } from "~/components/patterns/charts/ChartCard";
+import { ChartLegend, ChartLegendItem } from "~/components/patterns/charts/ChartLegend";
 import { type ChartMarker, ChartMarkers } from "~/components/patterns/charts/ChartMarkers";
+import { ChartPointMark, VERDICT_MARK } from "~/components/patterns/charts/ChartPointMark";
 import { ChartSidebarLayout } from "~/components/patterns/charts/ChartSidebarLayout";
 import { ChartSurface } from "~/components/patterns/charts/ChartSurface";
 import { MetricSelect } from "~/components/patterns/charts/MetricSelect";
 import StatTrendChart, { type StatTrendBucket } from "~/components/patterns/charts/StatTrendChart";
 import {
   CHART_BASELINE,
+  CHART_COLOR,
   CHART_GRID,
   CHART_MARGIN,
   CHART_MARGIN_MARKED,
@@ -268,6 +271,40 @@ export function ChartsMore() {
             <Line dataKey="winRate" stroke={SERIES_COLORS[0]} strokeWidth={2} dot={false} isAnimationActive={false} />
           </LineChart>
         </ChartSurface>
+      </Specimen>
+
+      <Specimen
+        name="ChartPointMark"
+        source="patterns/charts/ChartPointMark"
+        note="A scatter point as a Recharts shape: circle, triangle-up or triangle-down. VERDICT_MARK pairs a shape with each color (above, close to, below a reference), so the verdict is not color alone; the legend uses the same ChartSwatch shapes. pressable lays an invisible 24px hit circle under a small dot and takes the pointer cursor from ChartSurface. Scatter plots use CHART_MARGIN_POINTS and no allowDataOverflow, so an edge point is drawn whole."
+      >
+        <Variants className="flex-col items-start">
+          <svg width={180} height={40} aria-hidden="true">
+            {(["above", "even", "below"] as const).map((verdict, index) => (
+              <ChartPointMark
+                key={verdict}
+                cx={30 + index * 60}
+                cy={20}
+                r={index === 1 ? 7 : 4.5}
+                shape={VERDICT_MARK[verdict].shape}
+                pressable
+                fill={VERDICT_MARK[verdict].color}
+                stroke={CHART_COLOR.surface}
+              />
+            ))}
+          </svg>
+          <ChartLegend label="Point marks">
+            <ChartLegendItem color={VERDICT_MARK.above.color} shape="triangle-up">
+              Above average
+            </ChartLegendItem>
+            <ChartLegendItem color={VERDICT_MARK.even.color} shape="dot">
+              Close to average
+            </ChartLegendItem>
+            <ChartLegendItem color={VERDICT_MARK.below.color} shape="triangle-down">
+              Below average
+            </ChartLegendItem>
+          </ChartLegend>
+        </Variants>
       </Specimen>
 
       <Specimen
