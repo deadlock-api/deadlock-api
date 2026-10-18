@@ -133,29 +133,41 @@ export function CommandBuilder({ region, accountId }: CommandBuilderProps) {
   const invalid = !isCommandTemplateValid(check);
 
   return (
-    <div className="flex flex-col gap-6">
-      <TemplateInput ref={templateRef} template={template} onTemplateChange={changeTemplate} error={templateError} />
-      <VariablesList variables={variables} onVariableClick={insertVariable} />
-      <ExtraArguments
-        extraArgs={extraArgs}
-        usedArgs={usedArgs}
-        onExtraArgChange={handleExtraArgChange}
-        errors={argErrors}
-      />
-      <UrlDisplay
-        generatedUrl={generatedUrl}
-        placeholder={
-          invalid && !check.empty
-            ? "No URL until the template above is fixed."
-            : "No URL available yet. Write a template to generate one."
-        }
-      />
-      <CommandPreview
-        preview={debouncedGeneratedUrl ? previewData || null : null}
-        previewError={debouncedGeneratedUrl ? previewError : null}
-        loading={debouncedGeneratedUrl !== "" && previewLoading}
-      />
-      <ChatBotInstructions generatedUrl={generatedUrl} />
+    // Two columns once the card has room: the template and its parts, then what they make.
+    <div className="@container">
+      <div className="grid grid-cols-1 items-start gap-6 @4xl:grid-cols-2">
+        <div className="flex min-w-0 flex-col gap-6">
+          <TemplateInput
+            ref={templateRef}
+            template={template}
+            onTemplateChange={changeTemplate}
+            error={templateError}
+          />
+          <VariablesList variables={variables} onVariableClick={insertVariable} />
+          <ExtraArguments
+            extraArgs={extraArgs}
+            usedArgs={usedArgs}
+            onExtraArgChange={handleExtraArgChange}
+            errors={argErrors}
+          />
+        </div>
+        <div className="flex min-w-0 flex-col gap-6">
+          <UrlDisplay
+            generatedUrl={generatedUrl}
+            placeholder={
+              invalid && !check.empty
+                ? "No URL until the template above is fixed."
+                : "No URL available yet. Write a template to generate one."
+            }
+          />
+          <CommandPreview
+            preview={debouncedGeneratedUrl ? previewData || null : null}
+            previewError={debouncedGeneratedUrl ? previewError : null}
+            loading={debouncedGeneratedUrl !== "" && previewLoading}
+          />
+          <ChatBotInstructions generatedUrl={generatedUrl} />
+        </div>
+      </div>
     </div>
   );
 }

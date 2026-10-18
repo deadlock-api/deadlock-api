@@ -77,108 +77,116 @@ export function WidgetBuilder({ region, accountId }: WidgetBuilderProps) {
       : null;
 
   return (
-    <Stack gap={6}>
-      <div className="grid grid-cols-2 gap-4">
-        <Field label="Type">
-          <Select
-            value={config.widgetType}
-            onValueChange={(v) => {
-              updateConfig({ widgetType: v });
-              // The type is kept in the page URL, so a reload or a shared link opens the same builder.
-              void navigate({
-                to: ".",
-                search: (prev) => ({ ...prev, "widget-type": v }),
-                replace: true,
-                resetScroll: false,
-              });
-            }}
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {widgetTypes.map(({ value, label }) => (
-                <SelectItem key={value} value={value}>
-                  {label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </Field>
-
-        {config.widgetType === "box" && (
-          <Field label="Theme">
-            <Select value={config.theme} onValueChange={(v) => updateConfig({ theme: v as Theme })}>
-              <SelectTrigger className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {themes.map(({ value, label }) => (
-                  <SelectItem key={value} value={value}>
-                    {label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </Field>
-        )}
-      </div>
-
-      {config.widgetType === "raw" && (
-        <RawWidgetConfig config={config} updateConfig={updateConfig} availableVariables={availableVariables} />
-      )}
-
-      {config.widgetType === "box" && (
-        <BoxWidgetConfig config={config} updateConfig={updateConfig} availableVariables={availableVariables} />
-      )}
-
-      <Section as="h3" size="sm" title="Preview" className="gap-2">
-        {widgetPreview && (
-          <Card
-            tone="muted"
-            size="flush"
-            radius="lg"
-            // A widget wider than the column scrolls instead of being clipped on both sides by the centring.
-            className="items-center-safe justify-center overflow-x-auto p-4"
-            style={
-              config.previewBackgroundImage
-                ? {
-                    background: "url('/streamkit/deadlock-background.webp'), url('/streamkit/deadlock-background.png')",
-                    backgroundSize: "cover",
-                    backgroundRepeat: "no-repeat",
-                  }
-                : { backgroundColor: config.previewBackgroundColor }
-            }
-          >
-            <div ref={previewRef} className="flex w-fit">
-              {widgetPreview}
-            </div>
-          </Card>
-        )}
-
-        <Inline gap={4} justify="between">
-          <Inline gap={4} wrap="nowrap">
-            <CheckboxField
-              label="Show Image"
-              checked={config.previewBackgroundImage}
-              onCheckedChange={(checked) => updateConfig({ previewBackgroundImage: checked === true })}
-            />
-            {/* Disabled under the image rather than removed, so turning the image off moves nothing. */}
-            <Field label="Background Color" orientation="horizontal">
-              <Input
-                type="color"
-                aria-label="Background Color"
-                disabled={config.previewBackgroundImage}
-                value={config.previewBackgroundColor}
-                onChange={(e) => updateConfig({ previewBackgroundColor: e.target.value as PreviewBackgroundColor })}
-              />
+    // Two columns once the card has room: the settings, and beside them the preview and URL, which stay in view
+    // while the settings scroll.
+    <div className="@container">
+      <div className="grid grid-cols-1 items-start gap-6 @4xl:grid-cols-2">
+        <Stack gap={6} className="min-w-0">
+          <div className="grid grid-cols-2 gap-4">
+            <Field label="Type">
+              <Select
+                value={config.widgetType}
+                onValueChange={(v) => {
+                  updateConfig({ widgetType: v });
+                  // The type is kept in the page URL, so a reload or a shared link opens the same builder.
+                  void navigate({
+                    to: ".",
+                    search: (prev) => ({ ...prev, "widget-type": v }),
+                    replace: true,
+                    resetScroll: false,
+                  });
+                }}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {widgetTypes.map(({ value, label }) => (
+                    <SelectItem key={value} value={value}>
+                      {label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </Field>
-          </Inline>
-          {sourceSize && <InlineStat value={sourceSize} label="OBS browser source" />}
-        </Inline>
-      </Section>
 
-      <UrlDisplay generatedUrl={widgetUrl ?? ""} />
-    </Stack>
+            {config.widgetType === "box" && (
+              <Field label="Theme">
+                <Select value={config.theme} onValueChange={(v) => updateConfig({ theme: v as Theme })}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {themes.map(({ value, label }) => (
+                      <SelectItem key={value} value={value}>
+                        {label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </Field>
+            )}
+          </div>
+
+          {config.widgetType === "raw" && (
+            <RawWidgetConfig config={config} updateConfig={updateConfig} availableVariables={availableVariables} />
+          )}
+
+          {config.widgetType === "box" && (
+            <BoxWidgetConfig config={config} updateConfig={updateConfig} availableVariables={availableVariables} />
+          )}
+        </Stack>
+        <Stack gap={6} className="min-w-0 @4xl:sticky @4xl:top-4">
+          <Section as="h3" size="sm" title="Preview" className="gap-2">
+            {widgetPreview && (
+              <Card
+                tone="muted"
+                size="flush"
+                radius="lg"
+                // A widget wider than the column scrolls instead of being clipped on both sides by the centring.
+                className="items-center-safe justify-center overflow-x-auto p-4"
+                style={
+                  config.previewBackgroundImage
+                    ? {
+                        background:
+                          "url('/streamkit/deadlock-background.webp'), url('/streamkit/deadlock-background.png')",
+                        backgroundSize: "cover",
+                        backgroundRepeat: "no-repeat",
+                      }
+                    : { backgroundColor: config.previewBackgroundColor }
+                }
+              >
+                <div ref={previewRef} className="flex w-fit">
+                  {widgetPreview}
+                </div>
+              </Card>
+            )}
+
+            <Inline gap={4} justify="between">
+              <Inline gap={4} wrap="nowrap">
+                <CheckboxField
+                  label="Show Image"
+                  checked={config.previewBackgroundImage}
+                  onCheckedChange={(checked) => updateConfig({ previewBackgroundImage: checked === true })}
+                />
+                {/* Disabled under the image rather than removed, so turning the image off moves nothing. */}
+                <Field label="Background Color" orientation="horizontal">
+                  <Input
+                    type="color"
+                    aria-label="Background Color"
+                    disabled={config.previewBackgroundImage}
+                    value={config.previewBackgroundColor}
+                    onChange={(e) => updateConfig({ previewBackgroundColor: e.target.value as PreviewBackgroundColor })}
+                  />
+                </Field>
+              </Inline>
+              {sourceSize && <InlineStat value={sourceSize} label="OBS browser source" />}
+            </Inline>
+          </Section>
+
+          <UrlDisplay generatedUrl={widgetUrl ?? ""} />
+        </Stack>
+      </div>
+    </div>
   );
 }

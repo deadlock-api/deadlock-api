@@ -76,10 +76,11 @@ function StreamKit() {
         />
       </Hero>
 
-      <Card>
+      <Card size="sm">
         <CardContent>
-          <Stack gap={5}>
-            <div className="grid grid-cols-1 gap-6 md:grid-cols-[1fr_auto_1fr]">
+          <Stack gap={4}>
+            {/* The Steam ID is short: its column stops at 28rem rather than stretching across a wide screen. */}
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-[minmax(0,28rem)_auto_minmax(0,1fr)] md:gap-6">
               <Stack gap={3}>
                 <Heading as="h2" size="default">
                   Connect Your Account
@@ -124,7 +125,7 @@ function StreamKit() {
             <Separator />
 
             <Field label="Region">
-              <Segmented aria-label="Region" size="lg" value={region} onValueChange={setRegion}>
+              <Segmented aria-label="Region" size="lg" width="hug" value={region} onValueChange={setRegion}>
                 {regions.map((r) => (
                   <SegmentedItem key={r} value={r}>
                     {REGION_LABELS[r]}
@@ -171,11 +172,13 @@ function StreamKit() {
       </Card>
 
       {isAccountConnected && (
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          <Card asChild>
+        // One builder above the other, each as wide as the page with its own columns inside (what you set beside what
+        // you get), so neither stands half empty beside the other.
+        <>
+          <Card size="sm" asChild>
             <section>
               <CardContent>
-                <Stack gap={5}>
+                <Stack gap={4}>
                   <BuilderHeader icon={<Terminal />} title="Command Builder" />
                   <CommandBuilder region={region} accountId={parseSteamIdToId3(steamId)} />
                 </Stack>
@@ -183,17 +186,17 @@ function StreamKit() {
             </section>
           </Card>
 
-          <Card asChild>
+          <Card size="sm" asChild>
             <section>
               <CardContent>
-                <Stack gap={5}>
+                <Stack gap={4}>
                   <BuilderHeader icon={<Layers />} title="Widget Builder" />
                   <WidgetBuilder region={region} accountId={parseSteamIdToId3(steamId)} />
                 </Stack>
               </CardContent>
             </section>
           </Card>
-        </div>
+        </>
       )}
     </PageShell>
   );
