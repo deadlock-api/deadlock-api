@@ -362,7 +362,7 @@ export function BuildTable({
                   <>
                     <TableCell className="hidden text-end @md/builds:table-cell">
                       {/* The bar beside the number, so the number sits on the row's line with the others. */}
-                      <div className="ms-auto flex w-32 items-center justify-end gap-2">
+                      <div className="ms-auto flex w-32 items-center justify-end gap-2 @5xl/builds:w-44">
                         <DivergingBar
                           value={row.vsAverage}
                           interval={[row.interval[0] - average, row.interval[1] - average]}
