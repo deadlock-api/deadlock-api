@@ -1,9 +1,11 @@
 import { Link } from "@tanstack/react-router";
 import type { HeroStats } from "deadlock_api_client";
+import { UsersRound } from "lucide-react";
 import { useState } from "react";
 
 import { HeroCell } from "~/components/domain/assets/HeroCell";
 import { Panel, PanelHeader, PanelShowMore } from "~/components/patterns/panel/Panel";
+import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { NoValue } from "~/components/ui/no-value";
 import { Skeleton } from "~/components/ui/skeleton";
 import { Inline, Stack } from "~/components/ui/stack";
@@ -49,8 +51,6 @@ export function SharedHeroesTable({
   const heroes = sharedHeroes(rows, accountIds);
   const shown = expanded ? heroes : heroes.slice(0, COLLAPSED_ROWS);
   const pending = loading || (heroes.length === 0 && players.some((player) => player.aggregate === undefined));
-  // Nothing in common: no panel.
-  if (!pending && heroes.length === 0) return null;
 
   return (
     <Panel className={className}>
@@ -61,6 +61,8 @@ export function SharedHeroesTable({
           <Skeleton className="h-8 w-full" />
           <Skeleton className="h-8 w-full" />
         </Stack>
+      ) : heroes.length === 0 ? (
+        <EmptyState variant="plain" icon={UsersRound} title="No heroes in common" className="min-h-32" />
       ) : (
         <>
           <Table density="dense" className="tabular-nums">

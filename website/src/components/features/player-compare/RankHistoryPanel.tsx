@@ -76,13 +76,11 @@ export function RankHistoryPanel({
   const [axisBy, setAxisBy] = useState<"date" | "matches">("date");
   const showsRank = mode === "normal_all" || mode === "normal_ranked";
 
-  // Hidden without ranks to draw: a mode that moves no rank, or nobody ranked on these dates.
   const allFailed = histories.length > 0 && histories.every((history) => history.isError);
   const settled = !histories.some((history) => history.isPending);
-  const anyRanked = histories.some((history) =>
-    (history.matches ?? []).some((match) => (match.ranked_display_badge ?? 0) > 0),
-  );
-  if (!showsRank || (settled && !allFailed && !anyRanked)) return null;
+  // Known before the matches load: a mode that moves no rank has no panel. Nobody ranked shows the empty state, so
+  // the trend beside it keeps its neighbour.
+  if (!showsRank) return null;
   const daysByPlayer = histories.map((history) => dailyRanks(history.matches ?? []));
   // Oldest first, the rank after each ranked match: for the by-matches axis.
   const pointsByPlayer =

@@ -81,8 +81,6 @@ export function ItemPreferencesPanel({
     };
   });
 
-  if (columns.every((column) => column.state === "ready" && column.items.length === 0)) return null;
-
   const count = Math.min(Math.max(players.length, 2), 5) as keyof typeof COLUMNS;
   const longest = Math.max(0, ...columns.map((column) => (column.state === "ready" ? column.items.length : 0)));
   return (

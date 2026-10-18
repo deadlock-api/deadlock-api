@@ -5,7 +5,7 @@ import { ChartDataTable } from "~/components/patterns/charts/ChartDataTable";
 import { ChartLegend } from "~/components/patterns/charts/ChartLegend";
 import { ChartReading, ChartReadings } from "~/components/patterns/charts/ChartReadings";
 import { ChartError, ChartLoading } from "~/components/patterns/charts/ChartStates";
-import { ChartSurface } from "~/components/patterns/charts/ChartSurface";
+import { ChartSurface, chartSizeVariants } from "~/components/patterns/charts/ChartSurface";
 import {
   CHART_CURSOR_LINE,
   CHART_GRID,
@@ -15,6 +15,7 @@ import {
   CHART_ACTIVE_DOT,
 } from "~/components/patterns/charts/theme";
 import { Panel, PanelBody, PanelHeader } from "~/components/patterns/panel/Panel";
+import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { NoValue } from "~/components/ui/no-value";
 import { Stack } from "~/components/ui/stack";
 import { day } from "~/dayjs";
@@ -63,7 +64,7 @@ export function ActivityPanel({
   const settled = !histories.some((history) => history.isPending);
   const pending = !hydrated || !settled;
   const allFailed = histories.length > 0 && histories.every((history) => history.isError);
-  if (settled && !allFailed && histories.every((history) => (history.heroMatches?.length ?? 0) === 0)) return null;
+  const noMatches = settled && histories.every((history) => (history.heroMatches?.length ?? 0) === 0);
 
   const keys = players.map((player) => String(player.accountId));
   const totals = histories.map((history) => history.heroMatches?.length ?? 0);
@@ -118,6 +119,13 @@ export function ActivityPanel({
             />
           ) : pending ? (
             <ChartLoading label={title} size="md" />
+          ) : noMatches ? (
+            <EmptyState
+              variant="plain"
+              icon={by === "hour" ? Clock : CalendarDays}
+              title="No matches on these filters"
+              className={chartSizeVariants({ size: "md" })}
+            />
           ) : (
             <ShareChart
               players={players}

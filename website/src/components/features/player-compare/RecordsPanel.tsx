@@ -1,5 +1,8 @@
+import { Trophy } from "lucide-react";
+
 import { HeroImage } from "~/components/domain/assets/HeroImage";
 import { Panel, PanelHeader } from "~/components/patterns/panel/Panel";
+import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { NoValue } from "~/components/ui/no-value";
 import { Skeleton } from "~/components/ui/skeleton";
 import { Inline } from "~/components/ui/stack";
@@ -189,60 +192,64 @@ export function RecordsPanel({
   const showSouls = hasSoulEconomy(gameMode);
   const rows = ROWS.filter((row) => (!heroFiltered || row.key !== "bestHero") && (showSouls || !row.souls));
   // Nothing to show once loaded: nobody has a match on the filters (failures show in together & against).
-  if (settled && records.every((record) => record === null)) return null;
+  const noMatches = settled && records.every((record) => record === null);
 
   return (
     <Panel className={className}>
       <PanelHeader size="sm" title="Records" />
-      <Table density="dense" height="fill" className="tabular-nums">
-        <TableHeader tone="muted">
-          <TableRow>
-            <TableHead data-pinned>Record</TableHead>
-            {players.map((player) => (
-              <PlayerColumnHead key={player.accountId} player={player} />
-            ))}
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {rows.map((row) => {
-            const values = records.map((record) => (record ? row.value(record) : null));
-            const winners = statWinners(values, "higher");
-            return (
-              <TableRow key={row.key}>
-                <TableCell data-pinned className="text-muted-foreground">
-                  <span className="block max-w-24 whitespace-normal @md/table:max-w-none @md/table:whitespace-nowrap">
-                    {row.label}
-                  </span>
-                </TableCell>
-                {players.map((player, index) => {
-                  const history = histories[index];
-                  const record = records[index];
-                  const value = values[index];
-                  return (
-                    <TableCell key={player.accountId} className="text-end">
-                      {history?.isPending ? (
-                        <Skeleton className="ms-auto h-5 w-12" />
-                      ) : !record || value == null ? (
-                        <NoValue />
-                      ) : (
-                        <RecordValue
-                          match={row.match?.(record)}
-                          heroId={row.hero?.(record)}
-                          detail={row.detail?.(record)}
-                          crowded={players.length >= 4}
-                          won={winners.includes(index)}
-                        >
-                          {row.format(value, record)}
-                        </RecordValue>
-                      )}
-                    </TableCell>
-                  );
-                })}
-              </TableRow>
-            );
-          })}
-        </TableBody>
-      </Table>
+      {noMatches ? (
+        <EmptyState variant="plain" icon={Trophy} title="No matches on these filters" className="min-h-32 flex-1" />
+      ) : (
+        <Table density="dense" height="fill" className="tabular-nums">
+          <TableHeader tone="muted">
+            <TableRow>
+              <TableHead data-pinned>Record</TableHead>
+              {players.map((player) => (
+                <PlayerColumnHead key={player.accountId} player={player} />
+              ))}
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {rows.map((row) => {
+              const values = records.map((record) => (record ? row.value(record) : null));
+              const winners = statWinners(values, "higher");
+              return (
+                <TableRow key={row.key}>
+                  <TableCell data-pinned className="text-muted-foreground">
+                    <span className="block max-w-24 whitespace-normal @md/table:max-w-none @md/table:whitespace-nowrap">
+                      {row.label}
+                    </span>
+                  </TableCell>
+                  {players.map((player, index) => {
+                    const history = histories[index];
+                    const record = records[index];
+                    const value = values[index];
+                    return (
+                      <TableCell key={player.accountId} className="text-end">
+                        {history?.isPending ? (
+                          <Skeleton className="ms-auto h-5 w-12" />
+                        ) : !record || value == null ? (
+                          <NoValue />
+                        ) : (
+                          <RecordValue
+                            match={row.match?.(record)}
+                            heroId={row.hero?.(record)}
+                            detail={row.detail?.(record)}
+                            crowded={players.length >= 4}
+                            won={winners.includes(index)}
+                          >
+                            {row.format(value, record)}
+                          </RecordValue>
+                        )}
+                      </TableCell>
+                    );
+                  })}
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+      )}
     </Panel>
   );
 }

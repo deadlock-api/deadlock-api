@@ -14,6 +14,7 @@ import {
   CHART_Y_AXIS,
 } from "~/components/patterns/charts/theme";
 import { Panel, PanelBody, PanelHeader } from "~/components/patterns/panel/Panel";
+import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { NoValue } from "~/components/ui/no-value";
 import { Stack } from "~/components/ui/stack";
 import { type BracketResult, DURATION_BRACKETS, MIN_BRACKET_MATCHES, winRateByDuration } from "~/lib/compare-records";
@@ -55,8 +56,6 @@ export function MatchLengthPanel({
     results: Object.fromEntries(keys.map((key, at) => [key, byPlayer[at][index]])),
   }));
   const values = byPlayer.flatMap((brackets) => brackets.flatMap((result) => result.winRate ?? []));
-  // Hidden once loaded when no player has a bracket with enough matches.
-  if (!pending && !allFailed && values.length === 0) return null;
 
   // Symmetric around 50%, so a bar's length reads as its distance from an even record either way.
   const reach = Math.max(0.1, Math.ceil(Math.max(0, ...values.map((value) => Math.abs(value - 0.5))) * 10) / 10);
@@ -94,6 +93,13 @@ export function MatchLengthPanel({
             />
           ) : pending ? (
             <ChartLoading label={LABEL} size="grow" />
+          ) : values.length === 0 ? (
+            <EmptyState
+              variant="plain"
+              icon={Timer}
+              title={`No length with ${MIN_BRACKET_MATCHES} or more matches`}
+              className="min-h-32 flex-1"
+            />
           ) : (
             <ChartSurface label={summary} announce="label" size="grow" variant="flush">
               <BarChart data={rows} margin={CHART_MARGIN} accessibilityLayer={false} barGap={2}>

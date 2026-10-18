@@ -80,7 +80,6 @@ export function PerformanceTrendPanel({
   // Souls per minute, chosen before switching to Street Brawl, falls back to the win rate; the choice comes back with
   // the mode.
   const metric = metrics.includes(chosenMetric) ? chosenMetric : "winRate";
-  // Hidden once loaded when no player has a week with enough matches to plot.
   const settled = !histories.some((history) => history.isPending);
   const allFailed = histories.length > 0 && histories.every((history) => history.isError);
   // A long range sums blocks of weeks, so the lines stay readable (about 26 points at most).
@@ -97,13 +96,6 @@ export function PerformanceTrendPanel({
   // Summed once per render and shared with the chart: up to five histories of thousands of matches.
   // On the page's hero, as the head-to-head.
   const weeksByPlayer = histories.map((history) => weeklyTotals(history.heroMatches ?? [], bucket));
-  const plottable = mergeWeeklyTrend(
-    histories.map((history, index) => ({ key: String(history.accountId), weeks: weeksByPlayer[index] })),
-    "winRate",
-    MIN_WEEK_MATCHES,
-    bucket,
-  );
-  if (settled && !allFailed && plottable.length === 0) return null;
 
   return (
     <Panel className={className}>
