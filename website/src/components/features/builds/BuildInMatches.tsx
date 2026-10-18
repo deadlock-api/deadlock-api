@@ -101,9 +101,11 @@ export function BuildInMatches({
         </span>
       }
     >
-      {/* Playstyle first: a row of its own while three panels fit beside each other, two columns of five when all do. */}
-      <div className="grid gap-3 @4xl:grid-cols-3 @8xl:grid-cols-5">
-        <Panel className="flex flex-col @4xl:col-span-3 @8xl:col-span-2">
+      {/* Playstyle first: a row of its own while the others sit two or three abreast, two columns of five when all fit.
+          Two abreast, the purchases sit beside the matchups (whose rank plot grows to match) and the skill order, wide
+          by nature, takes the row under them. */}
+      <div className="grid gap-3 @2xl:grid-cols-2 @4xl:grid-cols-3 @8xl:grid-cols-5">
+        <Panel className="flex flex-col @2xl:col-span-2 @4xl:col-span-3 @8xl:col-span-2">
           <PanelHeader title="Playstyle vs. average build" icon={Activity} size="sm" />
           <BuildPlaystyle
             totals={performance}
@@ -192,7 +194,7 @@ export function BuildInMatches({
             </StaleOverlay>
           )}
         </Panel>
-        <Panel className="flex flex-col">
+        <Panel className="flex flex-col @2xl:order-last @2xl:col-span-2 @4xl:order-none @4xl:col-span-1">
           <PanelHeader title="Skill order and players" icon={ListOrdered} size="sm" />
           {skillOrder.length > 0 && slotAbilities.length > 0 && (
             <section className="flex flex-col">
