@@ -1,8 +1,10 @@
+import { JumpInput } from "~/components/patterns/data-table/JumpInput";
 import { PaginationControls } from "~/components/patterns/data-table/PaginationControls";
-import { Input } from "~/components/ui/input";
 import { SearchInput } from "~/components/ui/search-input";
 
 export interface LeaderboardControlsProps {
+  /** `header`: search, jump and paging above the rows. `footer`: only the paging, under them. */
+  placement: "header" | "footer";
   searchQuery: string;
   setSearchQuery: (query: string) => void;
   itemsPerPage: number;
@@ -14,6 +16,7 @@ export interface LeaderboardControlsProps {
 }
 
 export function LeaderboardControls({
+  placement,
   searchQuery,
   setSearchQuery,
   itemsPerPage,
@@ -25,6 +28,7 @@ export function LeaderboardControls({
 }: LeaderboardControlsProps) {
   return (
     <PaginationControls
+      placement={placement}
       page={currentPage}
       onPageChange={(page) => setCurrentPage(page)}
       pageSize={itemsPerPage}
@@ -36,7 +40,7 @@ export function LeaderboardControls({
     >
       <SearchInput
         size="sm"
-        placeholder="Search player..."
+        placeholder="Search player…"
         aria-label="Search player"
         value={searchQuery}
         onValueChange={(query) => {
@@ -44,16 +48,13 @@ export function LeaderboardControls({
           if (query.length > 0) setCurrentPage(0);
         }}
       />
-      <Input
-        type="number"
+      <JumpInput
         min={1}
         placeholder="Jump to rank"
         aria-label="Jump to rank"
-        onChange={(e) => {
-          const rank = parseInt(e.target.value, 10);
-          if (!Number.isNaN(rank)) onJumpToRank(rank);
-        }}
-        className="h-8 w-36"
+        onCommit={onJumpToRank}
+        size="sm"
+        className="w-36"
       />
     </PaginationControls>
   );

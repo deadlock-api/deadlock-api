@@ -113,7 +113,8 @@ function LeaderboardPage() {
           />
         ) : leaderboardQuery.data ? (
           <StaleOverlay active={leaderboardQuery.isPlaceholderData} label="leaderboard">
-            <LeaderboardTable leaderboard={leaderboardQuery.data} onHeroClick={setHeroId} />
+            {/* Keyed by the board, so a jump or a highlighted rank from another board does not carry over. */}
+            <LeaderboardTable key={`${region}-${heroId}`} leaderboard={leaderboardQuery.data} onHeroClick={setHeroId} />
           </StaleOverlay>
         ) : null}
       </div>

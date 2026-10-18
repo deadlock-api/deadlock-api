@@ -90,22 +90,20 @@ export function LeaderboardTable({ leaderboard, onHeroClick }: LeaderboardTableP
     [filteredEntries, sortedEntries, itemsPerPage, setCurrentPage, setSearchQuery],
   );
 
-  const controls = (
-    <LeaderboardControls
-      onJumpToRank={jumpToRank}
-      searchQuery={searchQuery}
-      setSearchQuery={setSearchQuery}
-      itemsPerPage={itemsPerPage}
-      setItemsPerPage={setItemsPerPage}
-      currentPage={currentPage}
-      setCurrentPage={setCurrentPage}
-      totalPages={totalPages}
-    />
-  );
+  const controlProps = {
+    onJumpToRank: jumpToRank,
+    searchQuery,
+    setSearchQuery,
+    itemsPerPage,
+    setItemsPerPage,
+    currentPage,
+    setCurrentPage,
+    totalPages,
+  };
 
   return (
     <div>
-      {controls}
+      <LeaderboardControls placement="header" {...controlProps} />
       <PaginationStatus
         page={currentPage}
         totalPages={totalPages}
@@ -134,7 +132,7 @@ export function LeaderboardTable({ leaderboard, onHeroClick }: LeaderboardTableP
           {paginatedEntries.length === 0 && <TableEmptyRow colSpan={shouldShowTopHeroesColumn ? 3 : 2} />}
         </TableBody>
       </Table>
-      {controls}
+      <LeaderboardControls placement="footer" {...controlProps} />
     </div>
   );
 }

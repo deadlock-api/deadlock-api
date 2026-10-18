@@ -15,6 +15,7 @@ import { Round3Patterns } from "~/components/dev/design-system/Round3Patterns";
 import { Round3PatternsMore } from "~/components/dev/design-system/Round3PatternsMore";
 import { Chapter, Specimen, Variants } from "~/components/dev/design-system/Specimen";
 import { HighlightedCode } from "~/components/patterns/code/HighlightedCode";
+import { JumpInput } from "~/components/patterns/data-table/JumpInput";
 import { PaginationControls, PaginationStatus } from "~/components/patterns/data-table/PaginationControls";
 import { SortableHeader } from "~/components/patterns/data-table/SortableHeader";
 import { TableEmptyRow } from "~/components/patterns/data-table/TableEmptyRow";
@@ -138,6 +139,7 @@ export function Patterns() {
   const [density, setDensity] = useState<"default" | "compact" | "dense">("compact");
   const [tableWidth, setTableWidth] = useState<"full" | "narrow">("full");
   const [page, setPage] = useState(1);
+  const [jumped, setJumped] = useState<number | null>(null);
   const [perPage, setPerPage] = useState(25);
   const [search, setSearch] = useState("");
   const [side, setSide] = useState<Side>("all");
@@ -468,7 +470,7 @@ export function Patterns() {
       <Specimen
         name="PaginationControls"
         source="patterns/data-table/PaginationControls"
-        note='Rows per page and paging in one wrapping row; a SearchInput child takes the row it wraps onto. size="sm" shrinks every control for panels and dialogs.'
+        note='Rows per page and paging in one wrapping row; a SearchInput child takes the row it wraps onto. size="sm" shrinks every control for panels and dialogs. placement="footer" repeats only the paging under a long table.'
       >
         <Variants label="default" className="block">
           <PaginationControls
@@ -487,6 +489,16 @@ export function Patterns() {
             />
           </PaginationControls>
         </Variants>
+        <Variants label='placement="footer": only the paging, under a long table' className="block">
+          <PaginationControls
+            placement="footer"
+            page={page}
+            onPageChange={setPage}
+            pageSize={perPage}
+            onPageSizeChange={setPerPage}
+            totalPages={3}
+          />
+        </Variants>
         <Variants label='size="sm"' className="block">
           <PaginationControls
             size="sm"
@@ -495,6 +507,23 @@ export function Patterns() {
             pageSize={perPage}
             onPageSizeChange={setPerPage}
             totalPages={3}
+          />
+        </Variants>
+      </Specimen>
+
+      <Specimen
+        name="JumpInput"
+        source="patterns/data-table/JumpInput"
+        note="A number field that jumps once the number is complete: Enter, or leaving it with a changed number. Typing 126 never visits 1 and 12 on the way. Uncontrolled; a key clears it when the list it jumps through changes."
+      >
+        <Variants label={jumped == null ? "type a rank, press Enter" : `jumped to ${jumped}`}>
+          <JumpInput
+            min={1}
+            placeholder="Jump to rank"
+            aria-label="Jump to rank"
+            size="sm"
+            className="w-36"
+            onCommit={setJumped}
           />
         </Variants>
       </Specimen>

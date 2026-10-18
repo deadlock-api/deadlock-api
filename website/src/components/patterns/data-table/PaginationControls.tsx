@@ -16,6 +16,11 @@ interface PaginationControlsProps extends React.ComponentProps<"div"> {
   totalPages: number;
   /** `sm` is one tight row with icon buttons, for a table inside a panel. */
   size?: "sm" | "default";
+  /**
+   * `header` (above the rows): the children, rows per page and paging. `footer` (under a long table): only the paging,
+   * so a search or a jump field exists once, above the rows, and two copies never disagree.
+   */
+  placement?: "header" | "footer";
 }
 
 /**
@@ -30,10 +35,12 @@ export function PaginationControls({
   totalPages,
   children,
   size = "default",
+  placement = "header",
   className,
   ...props
 }: PaginationControlsProps) {
   const compact = size === "sm";
+  const footer = placement === "footer";
   // What is typed, while it is typed: an empty field or a number on its way to a valid one ("2" on the way to "25"
   // of 30 pages) must not snap back to the current page under the cursor. The draft belongs to the page it left the
   // table on, so a page change from elsewhere (a filter reset, the back button) shows the new page instead.
@@ -49,43 +56,47 @@ export function PaginationControls({
     <div
       data-slot="pagination-controls"
       data-size={compact ? "sm" : "default"}
+      data-placement={placement}
       className={cn(
         "@container flex flex-wrap items-center justify-between gap-x-4 gap-y-2 py-3",
         // A search takes the rest of the row it wraps onto, rather than leaving a phone-wide gap beside it.
         "[&>:where([data-slot=search-input])]:flex-1 [&>:where([data-slot=search-input])]:basis-full @lg:[&>:where([data-slot=search-input])]:w-48 @lg:[&>:where([data-slot=search-input])]:flex-none @lg:[&>:where([data-slot=search-input])]:basis-auto",
         compact && "gap-x-2 gap-y-1 py-1",
+        footer && "justify-end",
         className,
       )}
       {...props}
     >
-      {children}
-      <div className={cn("flex items-center gap-2", compact && "gap-1")}>
-        <span className={cn("text-sm text-muted-foreground", compact && "text-xs")}>
-          {/* Short words and arrows below @md, so a phone fits the controls on one or two rows instead of five. */}
-          {compact ? (
-            "Rows"
-          ) : (
-            <>
-              <span className="@md:hidden">Rows</span>
-              <span className="hidden @md:inline">Rows per page</span>
-            </>
-          )}
-        </span>
-        <Select value={String(pageSize)} onValueChange={(value) => onPageSizeChange(Number(value))}>
-          <SelectTrigger size="sm" className={compact ? "w-16 gap-1 px-2" : "w-20"} aria-label="Rows per page">
-            <SelectValue placeholder={pageSize} />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectGroup>
-              {[10, 25, 50, 100].map((size) => (
-                <SelectItem key={size} value={String(size)}>
-                  {size}
-                </SelectItem>
-              ))}
-            </SelectGroup>
-          </SelectContent>
-        </Select>
-      </div>
+      {!footer && children}
+      {!footer && (
+        <div className={cn("flex items-center gap-2", compact && "gap-1")}>
+          <span className={cn("text-sm text-muted-foreground", compact && "text-xs")}>
+            {/* Short words and arrows below @md, so a phone fits the controls on one or two rows instead of five. */}
+            {compact ? (
+              "Rows"
+            ) : (
+              <>
+                <span className="@md:hidden">Rows</span>
+                <span className="hidden @md:inline">Rows per page</span>
+              </>
+            )}
+          </span>
+          <Select value={String(pageSize)} onValueChange={(value) => onPageSizeChange(Number(value))}>
+            <SelectTrigger size="sm" className={compact ? "w-16 gap-1 px-2" : "w-20"} aria-label="Rows per page">
+              <SelectValue placeholder={pageSize} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                {[10, 25, 50, 100].map((size) => (
+                  <SelectItem key={size} value={String(size)}>
+                    {size}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+        </div>
+      )}
       <span className={cn("flex items-center text-sm text-muted-foreground", compact ? "gap-1 text-xs" : "gap-3")}>
         {!compact && <span className="hidden @md:inline">Page</span>}
         <span>
