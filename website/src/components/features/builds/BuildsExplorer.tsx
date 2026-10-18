@@ -294,6 +294,8 @@ function BuildsExplorerView({
           onBuildIdChange={onBuildIdChange}
           onBuildHover={setHoveredId}
           highlightedId={hoveredId}
+          // A list of a few builds keeps the build beside it from being squeezed to its height.
+          className="@3xl:min-h-120"
         />
         <BuildDetailPanel
           row={selected}

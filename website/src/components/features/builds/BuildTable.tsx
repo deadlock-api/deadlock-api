@@ -143,6 +143,7 @@ export function BuildTable({
   onBuildIdChange,
   onBuildHover,
   highlightedId = null,
+  className,
 }: {
   rows: readonly BuildRow[];
   /** Null while the recent window loads or when it has no matches. */
@@ -164,6 +165,7 @@ export function BuildTable({
   onBuildHover?: (buildId: number | null) => void;
   /** The build whose dot the chart's pointer is on: its row is marked. */
   highlightedId?: number | null;
+  className?: string;
 }) {
   const sort = useSort<SortKey>(
     sortParams(useQueryState("sort", parseSortKey), useQueryState("dir", parseSortDir), { history: "replace" }),
@@ -238,7 +240,7 @@ export function BuildTable({
 
   return (
     // The table scrolls inside the panel, so the panel keeps one height beside the build details.
-    <Panel className="@container/builds flex flex-col *:data-[slot=table-container]:max-h-136">
+    <Panel className={cn("@container/builds flex flex-col *:data-[slot=table-container]:max-h-136", className)}>
       <PanelHeader title="Builds" icon={ListOrdered} size="sm">
         <BuildSummaryStats summary={summary} heroWinRate={heroWinRate} />
         <ItemSelector selection="tri-state" size="sm" value={itemStates} onValueChange={setItemStates} />
