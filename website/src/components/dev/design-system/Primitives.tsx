@@ -706,12 +706,27 @@ export function Primitives() {
         </Variants>
       </Specimen>
 
-      <Specimen name="DivergingBar" source="ui/rate-bar" note="Draws a signed value from the centre of its track.">
+      <Specimen
+        name="DivergingBar"
+        source="ui/rate-bar"
+        note="Draws a signed value from the centre of its track. Its color follows polarity through deltaTone (~/lib/tone), as Delta's does, so the bar never contradicts the number beside it."
+      >
         <Variants label="DivergingBar: a signed value from the centre" className="gap-6">
           {[0.042, -0.018, 0.009, -0.06].map((value) => (
             <span key={value} className="flex items-center gap-2 text-xs tabular-nums">
               <Delta value={value} className="w-12 text-end" />
               <DivergingBar value={value} scale={0.06} className="w-28" />
+            </span>
+          ))}
+        </Variants>
+        <Variants
+          label='polarity: "lower-is-better" (a fall is good) and "neutral" (a figure that only describes), matching Delta'
+          className="gap-6"
+        >
+          {(["lower-is-better", "neutral"] as const).map((polarity) => (
+            <span key={polarity} className="flex items-center gap-2 text-xs tabular-nums">
+              <Delta value={-0.03} polarity={polarity} className="w-12 text-end" />
+              <DivergingBar value={-0.03} scale={0.06} polarity={polarity} className="w-28" />
             </span>
           ))}
         </Variants>

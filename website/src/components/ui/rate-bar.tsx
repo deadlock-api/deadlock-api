@@ -1,15 +1,17 @@
-import { TONE_BG, type Tone, toneOf } from "~/lib/tone";
+import { deltaTone, type Polarity, TONE_BG, type Tone } from "~/lib/tone";
 import { cn } from "~/lib/utils";
 
 /**
  * A signed value drawn from the middle of its track: right and positive for a gain, left and negative for a loss,
- * so the sign reads before the magnitude. `scale` is the value at which the bar reaches the edge.
+ * so the sign reads before the magnitude. `scale` is the value at which the bar reaches the edge. Its color follows
+ * `polarity` as `Delta`'s does, so the bar beside a number never says the opposite.
  */
 export function DivergingBar({
   value,
   scale,
   interval,
   tone,
+  polarity = "higher-is-better",
   label,
   className,
   ...props
@@ -18,8 +20,10 @@ export function DivergingBar({
   scale: number;
   /** The uncertainty around the value, as `[low, high]` on the same scale. The value then becomes a marker. */
   interval?: readonly [number, number];
-  /** The fill's tone; by default the value's sign. `muted` for a difference within the noise. */
+  /** The fill's tone; by default the value's sign read through `polarity`. `muted` for a difference within the noise. */
   tone?: Tone;
+  /** What a rise means, as on `Delta`: `lower-is-better` turns a fall positive, `neutral` mutes the fill. */
+  polarity?: Polarity;
   /**
    * What the bar shows, as text for screen readers ("95% range −2.1 to +4.0 pp"): the drawing is hidden from them, so
    * give one where the interval is not in the text beside the bar.
@@ -28,6 +32,7 @@ export function DivergingBar({
 }) {
   const at = (n: number) => (scale > 0 ? 50 + Math.max(-1, Math.min(1, n / scale)) * 50 : 50);
   const t = value == null || !Number.isFinite(value) || scale <= 0 ? 0 : Math.max(-1, Math.min(1, value / scale));
+  const fill = TONE_BG[tone ?? deltaTone(t, polarity)];
   return (
     <div
       data-slot="diverging-bar"
@@ -43,16 +48,13 @@ export function DivergingBar({
             style={{ insetInlineStart: `${at(interval[0])}%`, width: `${at(interval[1]) - at(interval[0])}%` }}
           />
           <span
-            className={cn(
-              "absolute top-1/2 size-2.5 -translate-1/2 rounded-full border-2 border-background",
-              TONE_BG[tone ?? toneOf(t)],
-            )}
+            className={cn("absolute top-1/2 size-2.5 -translate-1/2 rounded-full border-2 border-background", fill)}
             style={{ insetInlineStart: `${50 + t * 50}%` }}
           />
         </>
       ) : (
         <div
-          className={cn("absolute inset-y-0 rounded-full", TONE_BG[tone ?? toneOf(t)])}
+          className={cn("absolute inset-y-0 rounded-full", fill)}
           style={{ insetInlineStart: t >= 0 ? "50%" : `${50 + t * 50}%`, width: `${Math.abs(t) * 50}%` }}
         />
       )}

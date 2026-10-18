@@ -8,8 +8,8 @@ import { formatStatValue, getStatDefinition } from "~/lib/game-stat-definitions"
 import type { StatChange } from "~/lib/patch-deltas";
 
 /**
- * The game stats the patch moved beyond their day-to-day swing, before and after. Beside a wide table the change is
- * drawn as a signed bar, on one scale per column of units; on a phone before and after sit under the stat's name so the
+ * The game stats the patch moved beyond their day-to-day swing, before and after. In a wide table the change is also
+ * drawn as a signed bar in its cell, on one scale per column of units; on a phone before and after sit under the stat's name so the
  * change keeps its column.
  */
 export function PatchStatChanges({ changes }: { changes: readonly StatChange<keyof AnalyticsGameStats>[] }) {
@@ -30,9 +30,6 @@ export function PatchStatChanges({ changes }: { changes: readonly StatChange<key
           <TableHead scope="col" className="text-end">
             Change
           </TableHead>
-          <TableHead scope="col" className="hidden w-40 @xl/table:table-cell">
-            <span className="sr-only">Change as a bar</span>
-          </TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -51,15 +48,23 @@ export function PatchStatChanges({ changes }: { changes: readonly StatChange<key
               </TableCell>
               <TableCell className="hidden text-end tabular-nums @md/table:table-cell">{beforeText}</TableCell>
               <TableCell className="hidden text-end tabular-nums @md/table:table-cell">{afterText}</TableCell>
-              <TableCell className="text-end">
-                <Delta
-                  value={delta}
-                  unit={stat.format === "percent" ? " pp" : undefined}
-                  polarity={stat.polarity ?? "neutral"}
-                />
-              </TableCell>
-              <TableCell className="hidden @xl/table:table-cell">
-                <DivergingBar value={delta} scale={scale} />
+              <TableCell>
+                {/* The bar is a drawing of the change beside it, in the same cell (it is hidden from screen readers). */}
+                <span className="flex items-center justify-end gap-3">
+                  <DivergingBar
+                    value={delta}
+                    scale={scale}
+                    polarity={stat.polarity ?? "neutral"}
+                    className="hidden w-40 @xl/table:block"
+                  />
+                  <span className="min-w-20 text-end">
+                    <Delta
+                      value={delta}
+                      unit={stat.format === "percent" ? " pp" : undefined}
+                      polarity={stat.polarity ?? "neutral"}
+                    />
+                  </span>
+                </span>
               </TableCell>
             </TableRow>
           );

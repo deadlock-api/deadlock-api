@@ -6,6 +6,18 @@ export function toneOf(value: number | null | undefined, pivot = 0): Tone {
   return value > pivot ? "positive" : "negative";
 }
 
+/** What a rise means: good news, bad news (deaths, time to first item), or neither (a figure that only describes). */
+export type Polarity = "higher-is-better" | "lower-is-better" | "neutral";
+
+/**
+ * The tone of a change read through its polarity: a fall is good news when lower is better, and a neutral figure is
+ * never colored. Delta and DivergingBar both take their tone from here, so a bar never contradicts the number beside it.
+ */
+export function deltaTone(value: number | null | undefined, polarity: Polarity = "higher-is-better"): Tone {
+  if (polarity === "neutral" || value == null) return "muted";
+  return toneOf(polarity === "lower-is-better" ? -value : value);
+}
+
 export const TONE_TEXT: Record<Tone, string> = {
   positive: "text-positive",
   negative: "text-negative",

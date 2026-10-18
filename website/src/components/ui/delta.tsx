@@ -2,7 +2,7 @@ import { ArrowDown, ArrowUp } from "lucide-react";
 
 import { Badge } from "~/components/ui/badge";
 import { NoValue } from "~/components/ui/no-value";
-import { TONE_TEXT, toneOf } from "~/lib/tone";
+import { deltaTone, type Polarity, TONE_TEXT } from "~/lib/tone";
 import { cn } from "~/lib/utils";
 
 // A fixed locale, so the server and the browser print the same digits; thousands are grouped ("1,234").
@@ -31,7 +31,7 @@ interface DeltaBaseProps extends Omit<React.ComponentProps<"span">, "children"> 
    * What a rise means: good news (the default), bad news (deaths, time to first item), or neither, for a figure that
    * only describes (a game-wide average of kills); a neutral change keeps its arrow and loses its color.
    */
-  polarity?: "higher-is-better" | "lower-is-better" | "neutral";
+  polarity?: Polarity;
   /** `arrow` draws an arrow instead of the plus or minus glyph, which reads faster in dense rows. */
   sign?: "glyph" | "arrow";
   /** `fixed` always prints `digits` decimals (+3.0%); `trim` drops trailing zeros (+1,234, +12.5). */
@@ -105,10 +105,7 @@ export function Delta({
           ? "noise"
           : "clear"
         : "none";
-  const tone =
-    rounded === 0 || polarity === "neutral" || significance === "noise"
-      ? "muted"
-      : toneOf(polarity === "lower-is-better" ? -rounded : rounded);
+  const tone = rounded === 0 || significance === "noise" ? "muted" : deltaTone(rounded, polarity);
   const Arrow = rounded > 0 ? ArrowUp : ArrowDown;
   // What the tone says, in words for screen readers: the color alone would leave "up" without its meaning.
   const verdict = tone === "positive" ? "better" : tone === "negative" ? "worse" : undefined;
