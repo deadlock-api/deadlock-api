@@ -140,18 +140,12 @@ export function BuildDetailPanel({
             </span>
           </span>
         )}
+        {/* Named, not an icon alone: comparing two builds is the way into the details for those who want them. */}
         {rows.length > 1 && (
-          <Tooltip content="Compare with another build">
-            <Button
-              variant="ghost"
-              size="icon-xs"
-              aria-label="Compare with another build"
-              className="ms-auto"
-              onClick={() => setComparing(true)}
-            >
-              <GitCompareArrows aria-hidden="true" />
-            </Button>
-          </Tooltip>
+          <Button variant="ghost" size="xs" className="ms-auto" onClick={() => setComparing(true)}>
+            <GitCompareArrows aria-hidden="true" />
+            Compare
+          </Button>
         )}
         <CopyButton
           text={String(row.hero_build_id)}
