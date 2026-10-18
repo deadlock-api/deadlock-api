@@ -21,12 +21,12 @@ const segmentedItemVariants = cva(
   {
     variants: {
       size: {
-        // The basis is the equal share's starting point and keeps an item at least square, so a one-character item
-        // such as "5" is still a 24px target.
+        // The basis is the equal share's starting point; the minimum width keeps an item at least square in a hugging
+        // group too (whose items drop the basis), so a one-character item such as "5" is still a 24px target.
         // 12px at every size: the site sets no text smaller.
-        sm: "h-6 basis-6 px-2 text-xs",
-        default: "h-7 basis-7 px-2.5 text-xs",
-        lg: "h-8 basis-8 px-3 text-sm",
+        sm: "h-6 min-w-6 basis-6 px-2 text-xs",
+        default: "h-7 min-w-7 basis-7 px-2.5 text-xs",
+        lg: "h-8 min-w-8 basis-8 px-3 text-sm",
       },
     },
     defaultVariants: { size: "default" },

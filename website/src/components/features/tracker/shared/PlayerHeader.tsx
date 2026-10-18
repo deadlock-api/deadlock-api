@@ -10,7 +10,6 @@ import { PageHeader } from "~/components/patterns/page/PageHeader";
 import { Button } from "~/components/ui/button";
 import { InlineStat } from "~/components/ui/inline-stat";
 import { Skeleton } from "~/components/ui/skeleton";
-import { TextLink } from "~/components/ui/text-link";
 import { Tooltip, TooltipTarget } from "~/components/ui/tooltip";
 import { formatPercent } from "~/lib/format";
 import { extractBadgeMap } from "~/lib/leaderboard";
@@ -76,16 +75,19 @@ export function PlayerHeader({
               <span className="flex min-w-0 items-center gap-2">
                 <span className="truncate">{profile?.personaname ?? `Player ${accountId}`}</span>
                 {profile?.profileurl && (
-                  <TextLink
-                    href={profile.profileurl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    tone="muted"
-                    aria-label="Open Steam profile"
-                    title="Open Steam profile"
-                  >
-                    <ExternalLink aria-hidden="true" className="size-4" />
-                  </TextLink>
+                  // A 24px target around the 16px icon.
+                  <Button variant="ghost" size="icon-xs" asChild>
+                    <a
+                      href={profile.profileurl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label="Open Steam profile"
+                      title="Open Steam profile"
+                      className="text-muted-foreground"
+                    >
+                      <ExternalLink aria-hidden="true" className="size-4" />
+                    </a>
+                  </Button>
                 )}
               </span>
             }
