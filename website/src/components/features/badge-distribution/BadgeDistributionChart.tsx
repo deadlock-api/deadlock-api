@@ -13,6 +13,7 @@ import {
   CHART_Y_AXIS,
   CHART_Y_LABEL,
   CHART_COLOR,
+  chartMarkColor,
 } from "~/components/patterns/charts/theme";
 import { TooltipCard, TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
 import { niceTicks } from "~/lib/chart-axis";
@@ -82,7 +83,8 @@ export default function BadgeDistributionChart({
 
   const chartData: ChartEntry[] = [];
   for (const tier of tiers) {
-    const fill = tierData.get(tier)?.color ?? CHART_COLOR.fallback;
+    // Lifted to the mark lightness floor: Initiate and Seeker, the tallest bars, were about 2.3:1 on the surface.
+    const fill = chartMarkColor(tierData.get(tier)?.color);
     for (let sub = 1; sub <= 6; sub++) {
       const badge = tier * 10 + sub;
       chartData.push({ badge, tier, x: slotOf(tier, sub), value: valuePerBadge.get(badge) ?? 0, fill });

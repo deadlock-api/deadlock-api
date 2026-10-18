@@ -3,7 +3,7 @@ import type { Rank } from "deadlock_api_client";
 import { RankTierTick } from "~/components/domain/rank/RankTierTick";
 import { ChartCard } from "~/components/patterns/charts/ChartCard";
 import { ChartEmpty, ChartError, ChartLoading } from "~/components/patterns/charts/ChartStates";
-import { CHART_COLOR } from "~/components/patterns/charts/theme";
+import { CHART_COLOR, chartMarkColor } from "~/components/patterns/charts/theme";
 import { WinRateBarChart } from "~/components/patterns/charts/WinRateBarChart";
 import { PanelBody } from "~/components/patterns/panel/Panel";
 import { TooltipCard, TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
@@ -29,7 +29,8 @@ export function rankTierLook(
   return {
     tier,
     name: rank?.name ?? `Tier ${tier}`,
-    color: rank?.color ?? CHART_COLOR.primary,
+    // Lifted to the mark lightness floor, so a dark rank color still stands 3:1 off the plot.
+    color: rank?.color ? chartMarkColor(rank.color) : CHART_COLOR.primary,
     image: rank?.images.large_webp ?? rank?.images.large ?? undefined,
   };
 }

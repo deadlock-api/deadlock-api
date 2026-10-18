@@ -99,6 +99,16 @@ export const CHART_COLOR = {
   surface: "var(--card)",
 } as const;
 
+/**
+ * A data-driven mark color (a rank's or a hero's color from the assets API) lifted to the lightness floor
+ * `--chart-mark-floor-l`, so a dark entity color still stands 3:1 off the plot surface (WCAG 1.4.11). Hue and chroma
+ * stay; a color already lighter is unchanged. A missing color is `CHART_COLOR.fallback`.
+ */
+export function chartMarkColor(color: string | null | undefined): string {
+  if (!color) return CHART_COLOR.fallback;
+  return `oklch(from ${color} max(l, var(--chart-mark-floor-l)) c h)`;
+}
+
 /** The dot on a line under the tooltip cursor: rimmed in the surface color so it reads over the line. */
 export const CHART_ACTIVE_DOT = { r: 4, stroke: CHART_COLOR.surface, strokeWidth: 2 } as const;
 

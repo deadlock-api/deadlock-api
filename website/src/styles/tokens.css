@@ -112,6 +112,9 @@
   --meter-empty: var(--ink-500);
   /* The second line of a heat cell (a sample count): quiet, but 4.5:1 on the strongest positive or negative fill. */
   --on-heat-muted: var(--ink-300);
+  /* The least OKLCH lightness of a mark drawn in an entity's own color (`chartMarkColor`): a dark rank color such as
+     Initiate's brown lifted to it stands 3:1 off the plot surface. A light theme would cap lightness instead. */
+  --chart-mark-floor-l: 0.52;
   /* Tick and axis label size; `-sm` for plots under 100px tall. Auto-sized axes grow with it. */
   --chart-tick: var(--type-xs);
   --chart-tick-sm: var(--type-xs);

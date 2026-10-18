@@ -27,6 +27,7 @@ import { GaussianComparison } from "~/components/patterns/charts/GaussianCompari
 import {
   CHART_BASELINE,
   CHART_COLOR,
+  chartMarkColor,
   CHART_CURSOR_BAND,
   CHART_CURSOR_LINE,
   CHART_GRID,
@@ -38,6 +39,9 @@ import {
   SERIES_COLORS,
 } from "~/components/patterns/charts/theme";
 import { TONE_COLOR, toneOf } from "~/lib/tone";
+
+/** A dark entity color, the kind a rank can have (Initiate is a deep brown). */
+const MARK_DARK = "var(--ink-700)";
 
 const SERIES = ["Infernus", "Haze", "Seven", "Paradox"];
 const WEEKS = Array.from({ length: 10 }, (_, week) => ({
@@ -61,7 +65,7 @@ export function Charts() {
       <Specimen
         name="Series palette"
         source="patterns/charts/theme · SERIES_COLORS"
-        note="Assigned by fixed index and never cycled. The order is validated for colorblind separation between neighbours."
+        note="Assigned by fixed index and never cycled. The order is validated for colorblind separation between neighbours. A bar filled with an entity color (a rank, a hero) goes through chartMarkColor, which lifts a dark color to the 3:1 lightness floor."
       >
         <ChartLegend>
           {SERIES_COLORS.map((color, i) => (
@@ -78,6 +82,12 @@ export function Charts() {
           </ChartLegendItem>
           <ChartLegendItem color={CHART_COLOR.negative} shape="dot">
             negative
+          </ChartLegendItem>
+          <ChartLegendItem color={MARK_DARK} shape="square">
+            a dark entity color
+          </ChartLegendItem>
+          <ChartLegendItem color={chartMarkColor(MARK_DARK)} shape="square">
+            chartMarkColor(it)
           </ChartLegendItem>
         </ChartLegend>
       </Specimen>
