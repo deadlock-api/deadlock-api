@@ -91,8 +91,6 @@ function metricByKey(key: string): BuildMetric {
 interface Column {
   key: SortKey;
   label: string;
-  /** What the column means, behind an info button in its header. */
-  description?: string;
   className?: string;
 }
 
@@ -103,14 +101,11 @@ const COLUMNS: Column[] = [
   {
     key: "lowerBound",
     label: "Vs. all builds",
-    description:
-      "Win rate against the hero's builds pooled. The bar is its 95% range: colored only when the whole range is on one side.",
     className: "hidden @md/builds:table-cell",
   },
   {
     key: "trend",
-    label: "Pick trend",
-    description: "How the build's share of the hero's build matches moved in the last 7 days, in points.",
+    label: "Pick trend 7d",
     className: "hidden @2xl/builds:table-cell",
   },
   { key: "updated", label: "Updated", className: "hidden @3xl/builds:table-cell" },
@@ -271,7 +266,7 @@ export function BuildTable({
               #
             </TableHead>
             <TableHead tone="muted">Build</TableHead>
-            {columns.map(({ key, label, description, className }) => (
+            {columns.map(({ key, label, className }) => (
               <SortableHeader
                 key={key}
                 label={label}
@@ -282,7 +277,6 @@ export function BuildTable({
                 size="sm"
                 tone="muted"
                 className={className}
-                description={description}
                 onSortChange={sort.toggle}
               />
             ))}
