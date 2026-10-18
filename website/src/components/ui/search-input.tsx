@@ -115,7 +115,7 @@ export function SearchInput({
         className={cn(
           CONTROL_SURFACE,
           // The frame draws the field's focus, for the input only: the action inside has a ring of its own.
-          "has-[input:focus-visible]:border-ring has-[input:focus-visible]:ring-3 has-[input:focus-visible]:ring-ring/50",
+          "has-[input:focus-visible]:border-ring has-[input:focus-visible]:ring-2 has-[input:focus-visible]:ring-ring",
           "group flex h-12 min-w-0 items-center gap-2 rounded-full ps-4 pe-1.5 hover:border-muted-foreground has-disabled:opacity-50 has-aria-invalid:border-destructive has-aria-invalid:ring-3 has-aria-invalid:ring-destructive/40",
           className,
         )}

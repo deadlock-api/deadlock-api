@@ -1,15 +1,17 @@
 // Class lists shared by several components. They are plain Tailwind classes, so a class passed later through `cn()`
 // still overrides any of them. Written out in full so Tailwind can see every class.
 
-/** The one focus treatment (Law 17). Put it first in a class list. */
-export const FOCUS_RING = "outline-none focus-visible:ring-3 focus-visible:ring-ring/50";
+/**
+ * The one focus treatment (Law 17). Put it first in a class list. A 2px ring in the full `--ring` color, which
+ * reaches 3:1 on every surface (checked in scripts/check-contrast.mjs); a translucent ring would not.
+ */
+export const FOCUS_RING = "outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
 /** The focus treatment of a bordered control: the border takes the ring color too. */
-export const FOCUS_RING_BORDER =
-  "outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
+export const FOCUS_RING_BORDER = "outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring";
 
 /** A bordered group of controls shows the focus of whichever control inside it has it. */
-export const FOCUS_WITHIN_RING = "focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50";
+export const FOCUS_WITHIN_RING = "focus-within:border-ring focus-within:ring-2 focus-within:ring-ring";
 
 export const INVALID_STATE = "aria-invalid:border-destructive aria-invalid:ring-destructive/40";
 

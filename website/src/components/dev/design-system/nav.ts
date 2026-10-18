@@ -29,7 +29,7 @@ export const NAV: readonly NavChapter[] = [
           "Game and third-party",
         ],
       },
-      { title: "Scales", items: ["Type scale", "Radius", "Shadow", "Control height"] },
+      { title: "Scales", items: ["Type scale", "Radius", "Shadow", "Focus ring", "Control height"] },
     ],
   },
   {

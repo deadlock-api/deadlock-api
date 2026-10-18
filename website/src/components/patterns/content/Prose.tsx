@@ -33,7 +33,7 @@ export function Prose({
         proseTokens,
         // ds-allow law4-outer-margin: the vertical rhythm between the elements inside the prose, not around its root
         "prose-headings:font-semibold prose-headings:tracking-tight prose-h2:mt-10 prose-h2:mb-4 prose-h2:text-2xl prose-h3:mt-7 prose-h3:mb-3 prose-h3:text-lg",
-        "prose-p:leading-relaxed prose-p:text-pretty prose-a:rounded-sm prose-a:no-underline prose-a:outline-none prose-a:hover:underline prose-a:focus-visible:ring-3 prose-a:focus-visible:ring-ring/50",
+        "prose-p:leading-relaxed prose-p:text-pretty prose-a:rounded-sm prose-a:no-underline prose-a:outline-none prose-a:hover:underline prose-a:focus-visible:ring-2 prose-a:focus-visible:ring-ring",
         "prose-code:before:content-none prose-code:after:content-none prose-pre:border prose-img:rounded-lg prose-img:border",
         // ds-allow law4-outer-margin: removes the top margin the plugin gives the first element, so the root has none
         "[&>:first-child]:mt-0 [&>section:first-child>:first-child]:mt-0",

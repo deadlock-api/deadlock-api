@@ -213,6 +213,10 @@ for (const tier of ["s", "a", "b", "c", "d"]) {
   variant("foreground", `tier-${tier}/15 over card`);
   variant(`tier-${tier}`, "card", UI_MIN);
 }
+// The focus ring (FOCUS_RING, the base outline) is non-text UI on every surface a control sits on (WCAG 1.4.11).
+for (const surface of ["background", "card", "popover", "muted", "secondary", "accent", "table-stripe"]) {
+  variant("ring", surface, UI_MIN);
+}
 // A highlighted tier list tile: its reading stays readable on the brand tint.
 variant("muted-foreground", "primary/15 over card");
 variant("muted-foreground", "secondary");

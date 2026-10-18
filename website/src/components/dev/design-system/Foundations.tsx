@@ -104,6 +104,8 @@ const RADII = [
 
 const SHADOWS = ["shadow-xs", "shadow-sm", "shadow-md", "shadow-lg", "shadow-xl"] as const;
 
+const FOCUS_SURFACES = ["bg-background", "bg-card", "bg-muted", "bg-secondary", "bg-accent"] as const;
+
 const HEIGHTS = [
   ["h-6", "xs · inside dense panels"],
   ["h-7", "Segmented default"],
@@ -173,6 +175,21 @@ export function Foundations() {
             <div key={cls} className="flex flex-col items-center gap-1">
               <div className={cn("size-14 rounded-lg border bg-card", cls)} />
               <code className="font-mono text-xs">{cls}</code>
+            </div>
+          ))}
+        </Variants>
+      </Specimen>
+
+      <Specimen
+        name="Focus ring"
+        source="ui/recipes"
+        note="FOCUS_RING: a 2px ring in the full ring color, at least 3:1 on every surface (scripts/check-contrast.mjs). Drawn here as it shows under the keyboard."
+      >
+        <Variants>
+          {FOCUS_SURFACES.map((surface) => (
+            <div key={surface} className={cn("flex flex-col items-center gap-2 rounded-lg border p-3", surface)}>
+              <div className="h-8 w-20 rounded-md border bg-card ring-2 ring-ring" />
+              <code className="font-mono text-xs">{surface}</code>
             </div>
           ))}
         </Variants>
