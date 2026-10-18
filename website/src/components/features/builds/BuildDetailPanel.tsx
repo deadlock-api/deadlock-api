@@ -175,9 +175,7 @@ export function BuildDetailPanel({
                         description={category.description}
                       />
                     }
-                  >
-                    <span className="tabular-nums">{category.itemIds.length}</span>
-                  </PanelSection>
+                  />
                   <ul className="flex flex-wrap gap-1 px-3 py-1.5">
                     {category.itemIds.map((itemId) => (
                       <li key={itemId}>

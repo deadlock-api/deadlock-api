@@ -123,9 +123,7 @@ export function BuildInMatches({
           ) : (
             <>
               <section className="flex flex-col">
-                <PanelSection variant="label" title="Bought in this order">
-                  <span className="tabular-nums">{buyOrder.length}</span>
-                </PanelSection>
+                <PanelSection variant="label" title="Bought in this order" />
                 <ol className="flex flex-wrap gap-1 px-3 py-1.5">
                   {buyOrder.map((item) => (
                     <li key={item.itemId}>
@@ -149,7 +147,7 @@ export function BuildInMatches({
                           meta={`Bought in ${formatShare(item.boughtRate)}`}
                         >
                           <RankedEntityMetric
-                            label="Bought"
+                            label="With it"
                             labelDisplay={index === 0 ? "visible" : "hidden"}
                             value={formatPercent(item.winRate)}
                           />
