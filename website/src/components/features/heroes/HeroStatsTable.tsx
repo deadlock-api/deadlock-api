@@ -95,7 +95,7 @@ export function HeroStatsTable({
 
   return (
     <StaleOverlay active={table.isStale} label="hero stats" className="flex flex-col gap-3">
-      <Table>
+      <Table aria-label="Hero stats">
         <HeroStatsHeader table={table} />
         <TableBody>
           {table.rows.map(({ rank, hero }) => (
@@ -158,7 +158,7 @@ function HeroTypeGroup({ group, table }: { group: HeroTypeGroupData; table: Hero
           )}
         </div>
       </PanelHeader>
-      <Table>
+      <Table aria-label={`${config.label} hero stats`}>
         <HeroStatsHeader table={table} />
         <TableBody>
           {group.visible.map(({ rank, hero }) => (

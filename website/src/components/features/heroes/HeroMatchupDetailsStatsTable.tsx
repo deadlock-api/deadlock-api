@@ -167,7 +167,7 @@ export function HeroMatchupDetailsStatsTable({
 
   return (
     <>
-      <Table>
+      <Table aria-label={isSynergy ? "Win rate change with each teammate" : "Win rate change against each enemy"}>
         <TableHeader tone="muted">
           <TableRow>
             <TableHead className="text-center">#</TableHead>

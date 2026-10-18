@@ -285,7 +285,7 @@ export function HeroStatsByExperienceTable({
         />
       )}
       <StaleOverlay active={buckets.stale} label="hero experience stats">
-        <Table>
+        <Table aria-label="Hero stats by experience">
           <TableHeader tone="muted">
             <TableRow>
               <TableHead className="w-10 text-center">#</TableHead>

@@ -417,7 +417,7 @@ export function HeroMatchupStatsTable({
 
   return (
     <StaleOverlay active={isStale} label="hero matchups">
-      <Table>
+      <Table aria-label="Hero matchups">
         {!hideHeader && (
           <TableHeader tone="muted">
             <TableRow>

@@ -162,7 +162,7 @@ export function HeroCombStatsTable({
         <ErrorState title="Hero combinations did not load" onRetry={() => void refetch()} />
       ) : (
         <StaleOverlay active={isPlaceholderData} label="hero combinations">
-          <Table>
+          <Table aria-label="Hero combinations">
             {!hideHeader && (
               <TableHeader tone="muted">
                 <TableRow>

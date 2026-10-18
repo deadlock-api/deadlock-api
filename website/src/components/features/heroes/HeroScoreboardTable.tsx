@@ -24,7 +24,7 @@ export function HeroScoreboardTable({ entries, sortBy, sortDirection, onSortChan
   });
 
   return (
-    <Table>
+    <Table aria-label="Hero scoreboard">
       <TableHeader tone="muted">
         <TableRow>
           <TableHead className="w-10 text-end">#</TableHead>
