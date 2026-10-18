@@ -57,8 +57,15 @@ const VIEWS = ["overview", "combat", "economy"] as const;
 type View = (typeof VIEWS)[number];
 const parseView = parseAsStringLiteral(VIEWS).withDefault("overview");
 
-/** Where a column that gives way first is hidden: `narrow` below a mid-size table, `wide` below a wide one. */
-const HIDE_BELOW = { narrow: "hidden @lg/builds:table-cell", wide: "hidden @3xl/builds:table-cell" } as const;
+/**
+ * Where a column that gives way is hidden: `compact` below a phone-wide table (all but one metric of a view go, so a
+ * build's name keeps its room), `narrow` below a mid-size table, `wide` below a wide one.
+ */
+const HIDE_BELOW = {
+  compact: "hidden @sm/builds:table-cell",
+  narrow: "hidden @lg/builds:table-cell",
+  wide: "hidden @3xl/builds:table-cell",
+} as const;
 
 /** The metric columns of the two performance views; `hide` columns give way as the table narrows. */
 const VIEW_METRICS: Record<
@@ -69,14 +76,14 @@ const VIEW_METRICS: Record<
     { metric: metricByKey("kda"), label: "KDA" },
     // Sorted by kills; the cell shows the K / D / A triple.
     { metric: metricByKey("kills"), label: "Kills", hide: "wide" },
-    { metric: metricByKey("damagePerMin"), label: "Dmg/min" },
+    { metric: metricByKey("damagePerMin"), label: "Dmg/min", hide: "compact" },
     { metric: metricByKey("accuracy"), label: "Accuracy", hide: "narrow" },
     { metric: metricByKey("critRate"), label: "Headshots", hide: "narrow" },
   ],
   economy: [
     { metric: metricByKey("soulsPerMin"), label: "Souls/min" },
-    { metric: metricByKey("lastHits"), label: "Last hits" },
-    { metric: metricByKey("objectiveDamage"), label: "Obj. dmg" },
+    { metric: metricByKey("lastHits"), label: "Last hits", hide: "compact" },
+    { metric: metricByKey("objectiveDamage"), label: "Obj. dmg", hide: "compact" },
     { metric: metricByKey("level"), label: "Level", hide: "narrow" },
     { metric: metricByKey("duration"), label: "Length", hide: "narrow" },
   ],
@@ -262,7 +269,8 @@ export function BuildTable({
       <Table density="dense" height="scroll" aria-label={`Builds, ${view} columns`}>
         <TableHeader position="sticky">
           <TableRow>
-            <TableHead tone="muted" className="w-8 text-end">
+            {/* The rank gives way first on a phone: the order already says it. */}
+            <TableHead tone="muted" className={cn("w-8 text-end", HIDE_BELOW.compact)}>
               #
             </TableHead>
             <TableHead tone="muted">Build</TableHead>
@@ -299,7 +307,9 @@ export function BuildTable({
                   event.currentTarget.querySelector<HTMLElement>("[data-list-index]")?.focus({ preventScroll: true });
                 }}
               >
-                <TableCell className="text-end text-xs text-muted-foreground tabular-nums">{index + 1}</TableCell>
+                <TableCell className={cn("text-end text-xs text-muted-foreground tabular-nums", HIDE_BELOW.compact)}>
+                  {index + 1}
+                </TableCell>
                 <TableRowHeader className="w-full max-w-0">
                   <div className="flex min-w-0 flex-col">
                     {/* Always the button, so every row keeps its place in the list's keyboard model; while the
@@ -412,7 +422,7 @@ export function BuildTable({
         {/* Also while searching or filtering: the totals stay the baseline, and the table keeps its chrome. */}
         <TableFooter position="sticky">
           <TableRow>
-            <TableCell />
+            <TableCell className={HIDE_BELOW.compact} />
             <TableCell className="text-xs text-muted-foreground">All builds</TableCell>
             <TableCell className="text-end tabular-nums">{summary.matches.toLocaleString("en-US")}</TableCell>
             {view === "overview" && <TableCell className="hidden @2xl/builds:table-cell" />}
