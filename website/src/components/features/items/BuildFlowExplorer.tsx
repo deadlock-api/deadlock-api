@@ -48,6 +48,7 @@ import { Button } from "~/components/ui/button";
 import { CopyButton } from "~/components/ui/copy-button";
 import { Delta } from "~/components/ui/delta";
 import { Field } from "~/components/ui/field";
+import { useFocusAfterChange } from "~/components/ui/hooks/use-focus-after-change";
 import { OptionRow } from "~/components/ui/option-row";
 import { Popover, PopoverContent, PopoverTrigger } from "~/components/ui/popover";
 import { ProgressBar, ProgressBarSegment } from "~/components/ui/progress-bar";
@@ -271,12 +272,18 @@ const StagePicker = memo(function StagePicker({
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         {display === "row" ? (
-          <Button variant="ghost" size="xs" className="w-full" aria-label={`Add item, ${stage.title}`}>
+          <Button
+            variant="ghost"
+            size="xs"
+            className="w-full"
+            aria-label={`Add item, ${stage.title}`}
+            data-stage-add={stage.column}
+          >
             <Plus />
             Add item
           </Button>
         ) : (
-          <Button variant="ghost" size="icon-xs" aria-label={`Add item, ${stage.title}`}>
+          <Button variant="ghost" size="icon-xs" aria-label={`Add item, ${stage.title}`} data-stage-add={stage.column}>
             <Plus />
           </Button>
         )}
@@ -338,6 +345,7 @@ const SWAP_MIN_SHARE = 0.1;
  * it, every other item's numbers would come from players who bought both.
  */
 function ItemPlan({
+  itemKey,
   name,
   column,
   stages,
@@ -351,6 +359,8 @@ function ItemPlan({
   onSwap,
   onRemove,
 }: {
+  /** The pick's `${column}:${itemId}`, on the menu button so focus can find it again after a change. */
+  itemKey: string;
   name: string;
   column: number;
   stages: Stage[];
@@ -397,7 +407,7 @@ function ItemPlan({
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button variant="ghost" size="icon-xs" aria-label={`Plan for ${name}`}>
+        <Button variant="ghost" size="icon-xs" aria-label={`Plan for ${name}`} data-plan={itemKey}>
           <EllipsisVertical />
         </Button>
       </PopoverTrigger>
@@ -549,6 +559,9 @@ export function BuildFlowExplorer({
     [storedPath, columnCount],
   );
   const pathSet = useMemo(() => new Set(path), [path]);
+  // A press that takes its own control off the page (a pick leaves its list, a move re-keys the item, the hero chooser
+  // goes once a hero is set) hands keyboard focus on to the control that takes its place.
+  const { ref: focusRef, focusAfterChange } = useFocusAfterChange(`${heroId ?? ""}|${path.join()}`);
   // A change of the build re-renders every stage in a transition, so the press paints first (312 ms on a 4x-throttled
   // phone before). The URL update is throttled rather than debounced, which would hold the value outside the
   // transition (see ItemsPage).
@@ -1030,12 +1043,24 @@ export function BuildFlowExplorer({
   const noGames = summary.matches === 0;
 
   return (
-    <Stack gap={4}>
-      {heroId == null && <BuildHeroChooser onPick={(next) => startTransition(() => void setHero(next, AT_ONCE))} />}
+    <Stack gap={4} ref={focusRef}>
+      {heroId == null && (
+        <BuildHeroChooser
+          onPick={(next) => {
+            focusAfterChange(["[data-build-title]"]);
+            startTransition(() => void setHero(next, AT_ONCE));
+          }}
+        />
+      )}
       <Panel>
-        {/* Named for its hero, so a build over every hero's games does not pass for one hero's. */}
+        {/* Named for its hero, so a build over every hero's games does not pass for one hero's. Focus lands on it once
+            the hero chooser above gives way. */}
         <PanelHeader
-          title={heroId != null ? <>Your {<HeroName heroId={heroId} />} build</> : "Your build · all heroes"}
+          title={
+            <span tabIndex={-1} data-build-title="">
+              {heroId != null ? <>Your {<HeroName heroId={heroId} />} build</> : "Your build · all heroes"}
+            </span>
+          }
           icon={Route}
           size="sm"
         >
@@ -1422,9 +1447,18 @@ export function BuildFlowExplorer({
                                         ],
                                       }}
                                       selected={choice.selected}
+                                      data-choice={choice.key}
                                       aria-label={`${nameOf.get(choice.itemId) ?? "Item"}: bought ${percent(choice.pickRate)}, win rate ${percent(choice.winRate)}`}
                                       relation={!near ? "none" : link ? "linked" : "unlinked"}
                                       onClick={() => {
+                                        // The pick leaves this list: focus moves on to the row after it (or before it),
+                                        // else to the item's menu on the board.
+                                        const at = stage.choices.indexOf(choice);
+                                        focusAfterChange(
+                                          [stage.choices[at + 1], stage.choices[at - 1]]
+                                            .flatMap((c) => (c ? [`[data-choice="${c.key}"]`] : []))
+                                            .concat(`[data-plan="${choice.key}"]`),
+                                        );
                                         toggle(choice.key);
                                         // Far down a list the build is out of sight: say where the item went.
                                         const board = boardRef.current?.getBoundingClientRect();
@@ -1499,13 +1533,19 @@ export function BuildFlowExplorer({
                           }
                           actions={
                             <ItemPlan
+                              itemKey={key}
                               name={name}
                               column={stage.column}
                               without={flowQuery(path.filter((k) => k !== key))}
                               taken={heldItems}
                               moveTo={view.stages.filter((s) => s.column !== stage.column)}
-                              onMove={(column) => move(key, column)}
+                              onMove={(column) => {
+                                // The moved item is a new row in another stage: its menu button keeps the focus.
+                                focusAfterChange([`[data-plan="${column}:${itemId}"]`]);
+                                move(key, column);
+                              }}
                               onSwap={(next) => {
+                                focusAfterChange([`[data-plan="${stage.column}:${next}"]`]);
                                 planSale(key, null);
                                 changePath((prev) => [...prev.filter((k) => k !== key), `${stage.column}:${next}`]);
                               }}
@@ -1514,6 +1554,13 @@ export function BuildFlowExplorer({
                               sellColumn={sellColumn ?? null}
                               onSell={(column) => planSale(key, column)}
                               onRemove={() => {
+                                // The next item of the stage, the one before it, else the stage's add button.
+                                const at = held.indexOf(key);
+                                focusAfterChange(
+                                  [held[at + 1], held[at - 1]]
+                                    .flatMap((k) => (k ? [`[data-plan="${k}"]`] : []))
+                                    .concat(`[data-stage-add="${stage.column}"]`),
+                                );
                                 planSale(key, null);
                                 toggle(key);
                               }}

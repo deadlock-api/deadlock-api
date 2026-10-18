@@ -5,6 +5,7 @@ import { HeroImage } from "~/components/domain/assets/HeroImage";
 import { ItemImage } from "~/components/domain/assets/ItemImage";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { Button } from "~/components/ui/button";
+import { useFocusAfterChange } from "~/components/ui/hooks/use-focus-after-change";
 import { Input } from "~/components/ui/input";
 import { OptionRow } from "~/components/ui/option-row";
 import { Popover, PopoverContent, PopoverTrigger } from "~/components/ui/popover";
@@ -79,6 +80,8 @@ export function SaveBuildButton({
 export function SavedBuildsMenu({ onOpen }: { onOpen: (build: SavedBuild) => void }) {
   const { builds, remove } = useSavedBuilds();
   const [open, setOpen] = useState(false);
+  // A deleted build takes its row, and the focused Delete button, with it: focus moves to the next build's row.
+  const { ref: focusRef, focusAfterChange } = useFocusAfterChange(builds.map((build) => build.id).join());
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
@@ -88,6 +91,7 @@ export function SavedBuildsMenu({ onOpen }: { onOpen: (build: SavedBuild) => voi
         </Button>
       </PopoverTrigger>
       <PopoverContent
+        ref={focusRef}
         align="end"
         aria-label="Saved builds"
         className="flex max-h-96 w-80 max-w-(--radix-popover-content-available-width) flex-col gap-1 overflow-y-auto p-1"
@@ -95,11 +99,12 @@ export function SavedBuildsMenu({ onOpen }: { onOpen: (build: SavedBuild) => voi
         {builds.length === 0 ? (
           <EmptyState variant="inline" title="No saved builds" />
         ) : (
-          builds.map((build) => (
+          builds.map((build, index) => (
             <div key={build.id} className="flex items-center gap-1">
               <OptionRow
                 className="flex-1"
                 aria-label={`Open ${build.name}`}
+                data-build-id={build.id}
                 trailing={<span className="text-xs text-muted-foreground tabular-nums">{build.path.length} items</span>}
                 leading={
                   build.heroId != null ? (
@@ -124,7 +129,15 @@ export function SavedBuildsMenu({ onOpen }: { onOpen: (build: SavedBuild) => voi
                 variant="ghost"
                 size="icon-xs"
                 aria-label={`Delete ${build.name}`}
-                onClick={() => remove(build.id)}
+                onClick={() => {
+                  // The last build gone, the menu closes and focus goes back to its button.
+                  if (builds.length === 1) setOpen(false);
+                  else
+                    focusAfterChange(
+                      [builds[index + 1], builds[index - 1]].flatMap((b) => (b ? [`[data-build-id="${b.id}"]`] : [])),
+                    );
+                  remove(build.id);
+                }}
               >
                 <Trash2 />
               </Button>
