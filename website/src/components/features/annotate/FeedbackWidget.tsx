@@ -10,7 +10,6 @@ import { Heading } from "~/components/ui/heading";
 import { Input } from "~/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "~/components/ui/popover";
 import { Inline, Stack } from "~/components/ui/stack";
-import { Text } from "~/components/ui/text";
 import { Textarea } from "~/components/ui/textarea";
 import {
   BUILD_ID,
@@ -30,15 +29,8 @@ const MAX_URL_LENGTH = 500;
 const COUNTER_VISIBLE_FROM = 1800;
 const NICKNAME_STORAGE_KEY = "feedback-nickname";
 
-// Textareas render newlines in a placeholder, so the prompts can ask for more
-// than bug reports without turning into one long sentence.
-const TARGET_PROMPT = `What is wrong with this part?
-What would you change about it?
-What would you like to see here instead?`;
-
-const GENERAL_PROMPT = `What could be better?
-Which feature are you missing?
-What would make this site more useful to you?`;
+const TARGET_PROMPT = "What would you change about this part?";
+const GENERAL_PROMPT = "What could be better?";
 
 interface Target {
   id: string;
@@ -118,6 +110,7 @@ export function FeedbackWidget() {
   const [submitting, setSubmitting] = useState(false);
   const commentId = useId();
   const titleId = useId();
+  const nameId = useId();
   const commentRef = useRef<HTMLTextAreaElement>(null);
 
   const closePanel = useCallback(() => setOpen(false), []);
@@ -214,19 +207,14 @@ export function FeedbackWidget() {
           }}
           className="z-90 flex max-h-(--radix-popover-content-available-height) w-92 max-w-(--radix-popover-content-available-width) flex-col gap-3 overflow-y-auto"
         >
-          <Stack gap={1}>
-            <Inline justify="between" wrap="nowrap">
-              <Heading as="h2" id={titleId}>
-                Help improve this site
-              </Heading>
-              <Button variant="ghost" size="icon-sm" onClick={closePanel} aria-label="Close">
-                <X className="size-4" />
-              </Button>
-            </Inline>
-            <Text as="p" variant="caption" tone="muted">
-              Tell us what is off. Attach a component and we will know exactly which part of the code to look at.
-            </Text>
-          </Stack>
+          <Inline justify="between" wrap="nowrap">
+            <Heading as="h2" id={titleId}>
+              Help improve this site
+            </Heading>
+            <Button variant="ghost" size="icon-sm" onClick={closePanel} aria-label="Close">
+              <X className="size-4" />
+            </Button>
+          </Inline>
 
           {targets.length > 0 ? (
             <TargetList
@@ -260,12 +248,17 @@ export function FeedbackWidget() {
               className="field-sizing-fixed resize-y"
             />
           </Field>
-          <Input
-            aria-label="Name (optional)"
-            value={nickname}
-            onChange={(event) => setNickname(event.target.value)}
-            placeholder="Name (optional, so we can credit you)"
-          />
+          <Field label="Name (optional)" orientation="horizontal" htmlFor={nameId}>
+            <Input
+              id={nameId}
+              name="nickname"
+              autoComplete="nickname"
+              spellCheck={false}
+              value={nickname}
+              onChange={(event) => setNickname(event.target.value)}
+              className="min-w-0 flex-1"
+            />
+          </Field>
 
           <Button className="w-full" disabled={!comment.trim() || submitting} onClick={() => void handleSubmit()}>
             {submitting ? "Sending..." : "Send feedback"}
