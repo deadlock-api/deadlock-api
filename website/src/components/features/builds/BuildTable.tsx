@@ -89,7 +89,7 @@ interface Column {
 
 const COLUMNS: Column[] = [
   { key: "matches", label: "Matches", name: "matches" },
-  { key: "players", label: "Players", name: "players", className: "hidden @lg/builds:table-cell" },
+  { key: "players", label: "Players", name: "players", className: "hidden @2xl/builds:table-cell" },
   { key: "winRate", label: "Win rate", name: "win rate" },
   {
     key: "lowerBound",
@@ -104,7 +104,7 @@ const COLUMNS: Column[] = [
     label: "Pick trend",
     name: "share change in the last 7 days",
     description: "How the build's share of the hero's build matches moved in the last 7 days, in points.",
-    className: "hidden @lg/builds:table-cell",
+    className: "hidden @2xl/builds:table-cell",
   },
   { key: "updated", label: "Updated", name: "last update", className: "hidden @3xl/builds:table-cell" },
 ];
@@ -344,7 +344,7 @@ export function BuildTable({
                 </TableCell>
                 <TableCell className="text-end tabular-nums">{row.matches.toLocaleString("en-US")}</TableCell>
                 {view === "overview" && (
-                  <TableCell className="hidden text-end text-muted-foreground tabular-nums @lg/builds:table-cell">
+                  <TableCell className="hidden text-end text-muted-foreground tabular-nums @2xl/builds:table-cell">
                     {row.players.toLocaleString("en-US")}
                   </TableCell>
                 )}
@@ -378,7 +378,7 @@ export function BuildTable({
                         </span>
                       </div>
                     </TableCell>
-                    <TableCell className="hidden text-end text-xs tabular-nums @lg/builds:table-cell">
+                    <TableCell className="hidden text-end text-xs tabular-nums @2xl/builds:table-cell">
                       {trendsPending ? (
                         <Skeleton className="ms-auto h-4 w-12" />
                       ) : (
@@ -412,7 +412,7 @@ export function BuildTable({
               <TableCell />
               <TableCell className="text-xs text-muted-foreground">All builds</TableCell>
               <TableCell className="text-end tabular-nums">{summary.matches.toLocaleString("en-US")}</TableCell>
-              {view === "overview" && <TableCell className="hidden @lg/builds:table-cell" />}
+              {view === "overview" && <TableCell className="hidden @2xl/builds:table-cell" />}
               <TableCell className="text-end tabular-nums">{formatPercent(summary.winRate)}</TableCell>
               {metricColumns.map(({ metric, hide }) => (
                 <TableCell key={metric.key} className={cn("text-end tabular-nums", hide && HIDE_BELOW[hide])}>
@@ -422,7 +422,7 @@ export function BuildTable({
               {view === "overview" && (
                 <>
                   <TableCell className="hidden @md/builds:table-cell" />
-                  <TableCell className="hidden @lg/builds:table-cell" />
+                  <TableCell className="hidden @2xl/builds:table-cell" />
                   <TableCell className="hidden @3xl/builds:table-cell" />
                 </>
               )}
