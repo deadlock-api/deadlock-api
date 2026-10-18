@@ -146,15 +146,7 @@ export function Games() {
         <TabsContent value="overview">
           <ChunkErrorBoundary>
             <Suspense fallback={<LoadingState />}>
-              <GamesOverview
-                params={baseParams}
-                prevParams={prevParams}
-                isStreetBrawl={isStreetBrawl}
-                onStatClick={async (key) => {
-                  await chooseStat(key);
-                  await setTab("over-time");
-                }}
-              />
+              <GamesOverview params={baseParams} prevParams={prevParams} isStreetBrawl={isStreetBrawl} />
             </Suspense>
           </ChunkErrorBoundary>
         </TabsContent>

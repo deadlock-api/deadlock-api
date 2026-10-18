@@ -222,6 +222,13 @@ export function Primitives() {
               <span className="text-xs text-muted-foreground tabular-nums">52.4%</span>
             </Button>
           ))}
+          {/* A row that opens a page is a link (asChild), so it opens in a new tab too. */}
+          <Button variant="row" asChild className="justify-between gap-3 px-3 py-2">
+            <Link to="/">
+              <span>A row that is a link</span>
+              <span className="text-xs text-muted-foreground tabular-nums">52.4%</span>
+            </Link>
+          </Button>
         </Variants>
       </Specimen>
 

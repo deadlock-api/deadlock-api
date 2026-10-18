@@ -1,4 +1,5 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
 import type { AnalyticsApiGameStatsRequest, AnalyticsGameStats } from "deadlock_api_client";
 import { Fragment, lazy, Suspense } from "react";
 
@@ -41,11 +42,10 @@ function totalsComparable(params: AnalyticsApiGameStatsRequest, prevParams: Anal
 interface GamesOverviewProps {
   params: AnalyticsApiGameStatsRequest;
   prevParams: AnalyticsApiGameStatsRequest | null;
-  onStatClick?: (statKey: string) => void;
   isStreetBrawl?: boolean;
 }
 
-export default function GamesOverview({ params, prevParams, onStatClick, isStreetBrawl = false }: GamesOverviewProps) {
+export default function GamesOverview({ params, prevParams, isStreetBrawl = false }: GamesOverviewProps) {
   const {
     data: currentData,
     isPending,
@@ -144,29 +144,37 @@ export default function GamesOverview({ params, prevParams, onStatClick, isStree
                         variant="row"
                         className="justify-between px-4 py-2.5"
                         data-find={findKey.stat(stat.key)}
-                        onClick={() => onStatClick?.(stat.key)}
+                        asChild
                       >
-                        <span className="text-start text-sm text-muted-foreground">{stat.label}</span>
-                        <div className="flex items-center gap-2.5">
-                          <span className="text-sm font-semibold tabular-nums">
-                            {/* A stat the game only records since an update has no value over older matches. */}
-                            {value == null && stat.recordedSince ? (
-                              <NoValue label={BUFF_TIMINGS_NOTE} />
-                            ) : (
-                              (formatStatValue(value, stat.format) ?? <NoValue label="No data" />)
+                        {/* A link: the row opens this stat on the Over Time tab, in this tab or a new one. */}
+                        <Link
+                          to="/analytics/games/over-time"
+                          search={(prev: Record<string, unknown>) => ({ ...prev, tab: undefined, stat: stat.key })}
+                          resetScroll={false}
+                          preload="intent"
+                        >
+                          <span className="text-start text-sm text-muted-foreground">{stat.label}</span>
+                          <span className="flex items-center gap-2.5">
+                            <span className="text-sm font-semibold tabular-nums">
+                              {/* A stat the game only records since an update has no value over older matches. */}
+                              {value == null && stat.recordedSince ? (
+                                <NoValue label={BUFF_TIMINGS_NOTE} />
+                              ) : (
+                                (formatStatValue(value, stat.format) ?? <NoValue label="No data" />)
+                              )}
+                            </span>
+                            {delta != null && (
+                              <Delta
+                                value={delta}
+                                unit={inPoints ? " pp" : undefined}
+                                polarity={stat.polarity ?? "neutral"}
+                                sign="arrow"
+                                display="badge"
+                                className="min-w-13 font-normal"
+                              />
                             )}
                           </span>
-                          {delta != null && (
-                            <Delta
-                              value={delta}
-                              unit={inPoints ? " pp" : undefined}
-                              polarity={stat.polarity ?? "neutral"}
-                              sign="arrow"
-                              display="badge"
-                              className="min-w-13 font-normal"
-                            />
-                          )}
-                        </div>
+                        </Link>
                       </Button>
                     </Tooltip>
                     {stat.key === "total_players" && teamWinRow}
