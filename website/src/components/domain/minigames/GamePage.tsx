@@ -57,7 +57,8 @@ export function GamePage({
               to={hub}
               search={hubSearch}
               activeOptions={{ exact: true }}
-              className="cursor-target inline-flex items-center gap-1.5 font-mono tracking-wider uppercase transition-colors hover:text-primary"
+              // min-h-6: a 24px target, though the eyebrow's text is 12px.
+              className="cursor-target inline-flex min-h-6 items-center gap-1.5 font-mono tracking-wider uppercase transition-colors hover:text-primary"
             >
               <ArrowLeft className="size-3" />
               Back to Hub
