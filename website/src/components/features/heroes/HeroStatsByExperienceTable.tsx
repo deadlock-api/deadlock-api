@@ -266,8 +266,19 @@ export function HeroStatsByExperienceTable({
           </TableCell>
         ))}
         <TableCell className="text-center">
-          <div className="flex items-center justify-center">
+          {/* The sort key, printed: the line alone gave the direction by color only. */}
+          <div className="flex flex-col items-center gap-1">
             <Sparkline values={row.bucketValues} trend={row.trend} />
+            {row.trend !== null && (
+              <Delta
+                value={row.trend}
+                format="number"
+                unit={isPercentStat ? "%" : undefined}
+                sign="arrow"
+                display="badge"
+                fraction={isPercentStat ? "fixed" : "trim"}
+              />
+            )}
           </div>
         </TableCell>
       </>,
@@ -386,9 +397,9 @@ function Sparkline({ values, trend }: { values: (number | null)[]; trend: number
       height={h}
       viewBox={`0 0 ${w} ${h}`}
       className={TONE_TEXT[toneOf(trend)]}
-      aria-label="Stat trajectory across experience tiers"
+      // The row's cells hold every value and the change beside it; the line adds nothing to read out.
+      aria-hidden="true"
     >
-      <title>Stat trajectory across experience tiers</title>
       <path d={area} fill="currentColor" fillOpacity={0.12} stroke="none" />
       <path d={line} fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinejoin="round" strokeLinecap="round" />
       {points.map((p) => (
