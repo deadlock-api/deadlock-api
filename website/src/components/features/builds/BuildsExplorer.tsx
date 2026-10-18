@@ -9,6 +9,7 @@ import { BuildTable } from "~/components/features/builds/BuildTable";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
+import { StaleOverlay } from "~/components/patterns/states/StaleOverlay";
 import { Button } from "~/components/ui/button";
 import { day, type Dayjs } from "~/dayjs";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
@@ -89,7 +90,32 @@ function combineProfiles(results: { data?: SteamProfileMap; isPending: boolean }
   return { byId, pending: results.some((result) => result.isPending) };
 }
 
-export function BuildsExplorer({
+/** The filters an answer was asked with: while the next filters' builds load, the last ones stay on screen with them. */
+type ExplorerFilters = Pick<
+  BuildsExplorerProps,
+  "heroId" | "minRankId" | "maxRankId" | "minDate" | "maxDate" | "minMatches" | "matchMode"
+>;
+
+/**
+ * Every build of a hero under the page's filters. A changed filter keeps the last builds on screen, washed out and
+ * announced busy, until the new ones arrive, instead of dropping the page to a loading state and growing it back.
+ */
+export function BuildsExplorer(props: BuildsExplorerProps) {
+  const { minUnixTimestamp, maxUnixTimestamp } = useNormalizedTimeRange(props.minDate, props.maxDate);
+  const request = heroBuildStatsRequest({ ...props, minUnixTimestamp, maxUnixTimestamp });
+  const statsQuery = useQuery(heroBuildStatsQueryOptions(request));
+  const key = JSON.stringify(request);
+  const answered = statsQuery.data !== undefined || statsQuery.isError;
+  const [settled, setSettled] = useState<{ key: string; filters: ExplorerFilters } | null>(null);
+  if (answered && settled?.key !== key) {
+    const { heroId, minRankId, maxRankId, minDate, maxDate, minMatches, matchMode } = props;
+    setSettled({ key, filters: { heroId, minRankId, maxRankId, minDate, maxDate, minMatches, matchMode } });
+  }
+  const stale = !answered && settled !== null;
+  return <BuildsExplorerView {...props} {...(stale ? settled.filters : {})} stale={stale} />;
+}
+
+function BuildsExplorerView({
   heroId,
   minRankId,
   maxRankId,
@@ -100,7 +126,11 @@ export function BuildsExplorer({
   buildId,
   onBuildIdChange,
   onMinMatchesChange,
-}: BuildsExplorerProps) {
+  stale,
+}: BuildsExplorerProps & {
+  /** The last filters' builds, shown while the page's filters load. */
+  stale: boolean;
+}) {
   const { minUnixTimestamp, maxUnixTimestamp } = useNormalizedTimeRange(minDate, maxDate);
   const statsQuery = useQuery(
     heroBuildStatsQueryOptions(
@@ -241,7 +271,7 @@ export function BuildsExplorer({
   const performancePending = performanceQuery.isPending && performanceQuery.fetchStatus !== "idle";
 
   return (
-    <div className="@container flex flex-col gap-3">
+    <StaleOverlay active={stale} label="builds" className="@container flex flex-col gap-3">
       <div className="grid gap-3 @3xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
         <BuildScatterChart
           rows={rows}
@@ -304,6 +334,6 @@ export function BuildsExplorer({
         averagePerformance={averagePerformance}
         performancePending={performancePending}
       />
-    </div>
+    </StaleOverlay>
   );
 }
