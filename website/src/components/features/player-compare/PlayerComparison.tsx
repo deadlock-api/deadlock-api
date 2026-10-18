@@ -5,6 +5,7 @@ import { COMPARE_COLORS } from "~/components/patterns/charts/theme";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { Grid } from "~/components/ui/grid";
+import { useFocusAfterChange } from "~/components/ui/hooks/use-focus-after-change";
 import { Stack } from "~/components/ui/stack";
 import { aggregateHeroStats, compareColorIndexes } from "~/lib/player-compare";
 import { playerPairs, splitPairs } from "~/lib/player-compare-pairs";
@@ -61,7 +62,21 @@ const WIDE_LAYOUT = {
 
 /** The compare tab: pick up to five players, then see who wins which stat on the page's filters. */
 export function PlayerComparison({ filters }: { filters: CompareFilters }) {
-  const { accountIds, add, remove, move } = usePlayerCompareState();
+  const { accountIds, add: addPlayer, remove: removePlayer, move } = usePlayerCompareState();
+  // Adding or removing a player unmounts what held focus (a suggestion, the empty state, a card): focus moves to a
+  // neighbour's remove button, else the add slot's search, so it never falls back to the page.
+  const { ref: focusRef, focusAfterChange } = useFocusAfterChange(accountIds.join());
+  const removeButton = (accountId: number | undefined) => `[data-remove-player="${accountId}"]`;
+  const addSearch = "[data-add-slot] button";
+  const add = (accountId: number) => {
+    focusAfterChange([addSearch, removeButton(accountId)]);
+    addPlayer(accountId);
+  };
+  const remove = (accountId: number) => {
+    const index = accountIds.indexOf(accountId);
+    focusAfterChange([removeButton(accountIds[index + 1]), removeButton(accountIds[index - 1]), addSearch]);
+    removePlayer(accountId);
+  };
   // One query a player, shared with the tracker: adding or reordering players never refetches (and blanks) the names
   // already on screen.
   const profileQueries = useQueries({ queries: accountIds.map((accountId) => steamProfileQueryOptions(accountId)) });
@@ -134,7 +149,7 @@ export function PlayerComparison({ filters }: { filters: CompareFilters }) {
   const threeUp = showSharedHeroes && players.length < 4 && !nobodyMet;
 
   return (
-    <Stack gap={4} className="@container">
+    <Stack ref={focusRef} gap={4} className="@container">
       {heroStats.isError && !heroStats.data && (
         <ErrorState
           title="Could not load the players' stats"

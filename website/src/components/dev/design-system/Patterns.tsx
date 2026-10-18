@@ -49,6 +49,7 @@ import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { Delta } from "~/components/ui/delta";
 import { Field } from "~/components/ui/field";
+import { useFocusAfterChange } from "~/components/ui/hooks/use-focus-after-change";
 import { useListNavigation } from "~/components/ui/hooks/use-list-navigation";
 import { useSort } from "~/components/ui/hooks/use-sort";
 import { SearchInput } from "~/components/ui/search-input";
@@ -105,6 +106,27 @@ function PanelViewsDemo() {
         </PanelView>
       </PanelViews>
     </Panel>
+  );
+}
+
+function FocusAfterChangeDemo() {
+  const [items, setItems] = useState(LIST_DEMO.slice(0, 3));
+  const { ref: focusRef, focusAfterChange } = useFocusAfterChange(items.join());
+  const remove = (index: number) => {
+    focusAfterChange([`[data-demo-item="${index + 1}"]`, `[data-demo-item="${index - 1}"]`, "[data-demo-add]"]);
+    setItems(items.filter((_, i) => i !== index));
+  };
+  return (
+    <Inline ref={focusRef} gap={2}>
+      {items.map((name, index) => (
+        <Button key={name} variant="outline" size="sm" data-demo-item={index} onClick={() => remove(index)}>
+          Remove {name}
+        </Button>
+      ))}
+      <Button variant="ghost" size="sm" data-demo-add="" onClick={() => setItems(LIST_DEMO.slice(0, 3))}>
+        Reset
+      </Button>
+    </Inline>
   );
 }
 
@@ -595,6 +617,14 @@ export function Patterns() {
         note="Rows a reader steps through with the keys: the list is one Tab stop (getItemProps puts tabIndex 0 on the selected row's control, -1 on the rest), the arrow keys, Page Up / Down, Home and End choose a row, focus its control and scroll the row into view, clear of a sticky head or foot."
       >
         <ListNavigationDemo />
+      </Specimen>
+
+      <Specimen
+        name="useFocusAfterChange"
+        source="ui/hooks/use-focus-after-change"
+        note="Adding or removing an item unmounts the control that had focus. Call focusAfterChange(candidates) before the change: once the version changes, focus stays put if its element survived, else goes to the next item, then the previous one, then a fallback (the add control), never to the page."
+      >
+        <FocusAfterChangeDemo />
       </Specimen>
 
       <Specimen

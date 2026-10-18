@@ -1,7 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import type { HeroStats } from "deadlock_api_client";
 import { CrownIcon, XIcon } from "lucide-react";
-import { useRef } from "react";
 
 import { BadgeImage } from "~/components/domain/assets/BadgeImage";
 import { HeroImage } from "~/components/domain/assets/HeroImage";
@@ -94,32 +93,12 @@ export function PlayerCards({
   const hasSlot = players.length < MAX_COMPARE_PLAYERS;
   // Two players with matches make a contest; until then a card shows its matches instead of stats won.
   const contest = players.filter((player) => player.aggregate !== null).length >= 2;
-  const listRef = useRef<HTMLUListElement>(null);
-  /** Removes a player and hands focus to the next card's remove button (the previous one's at the end), which is
-   * there before and after the change, so focus never falls back to the page. */
-  const removeAt = (index: number) => {
-    const neighbour = players[index + 1] ?? players[index - 1];
-    if (neighbour) {
-      listRef.current?.querySelector<HTMLElement>(`[data-remove-player="${neighbour.accountId}"]`)?.focus();
-    }
-    onRemove(players[index].accountId);
-  };
-  /** Adds a suggested player; the suggestion goes away, so focus moves to the slot's search (to the last card's remove
-   * button once the slot fills up), which is there before and after the change. */
-  const addFromSlot = (accountId: number) => {
-    const target =
-      players.length + 1 >= MAX_COMPARE_PLAYERS
-        ? listRef.current?.querySelector<HTMLElement>(`[data-remove-player="${players.at(-1)?.accountId}"]`)
-        : listRef.current?.querySelector<HTMLElement>("[data-add-slot] button");
-    target?.focus();
-    onAdd(accountId);
-  };
   const slots = Math.min(MAX_COMPARE_PLAYERS, players.length + (hasSlot ? 1 : 0)) as 2 | 3 | 4 | 5;
 
   return (
     <>
       <Grid columns={{ base: 1, sm: 2, lg: Math.min(slots, 3) as 2 | 3, xl: slots }} gap={2} asChild>
-        <ul ref={listRef}>
+        <ul>
           {players.map((player, index) => {
             const aggregate = player.aggregate;
             const leads = settled && leaders.includes(index);
@@ -173,7 +152,7 @@ export function PlayerCards({
                                   aria-label={`Remove ${player.name}`}
                                   title={`Remove ${player.name}`}
                                   data-remove-player={player.accountId}
-                                  onClick={() => removeAt(index)}
+                                  onClick={() => onRemove(player.accountId)}
                                 >
                                   <XIcon aria-hidden="true" />
                                 </Button>
@@ -392,7 +371,7 @@ export function PlayerCards({
                     <QuickAddSuggestions
                       accountIds={players.map((player) => player.accountId)}
                       filters={filters}
-                      onAdd={addFromSlot}
+                      onAdd={onAdd}
                     />
                   </Stack>
                 </CardContent>

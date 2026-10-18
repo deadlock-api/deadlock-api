@@ -22,7 +22,8 @@ export function AddPlayerControls({
 }) {
   const top = useTopPlayerSuggestion(filters, accountIds);
   return (
-    <Inline gap={2} justify="center">
+    // data-add-slot: where focus goes once a player is added or the last one removed.
+    <Inline gap={2} justify="center" data-add-slot="">
       <PlayerSearch
         label="Search a player"
         align="center"
