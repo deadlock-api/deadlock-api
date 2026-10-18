@@ -72,7 +72,7 @@ function PatreonCallbackPage() {
     <PageShell width="narrow" density="content" height="fill" className="justify-center">
       <PageHeader title="Patreon Authentication" />
       {!errorMessage && (
-        <Alert>
+        <Alert live="polite">
           <CheckCircle className="size-4" />
           <AlertTitle>Success!</AlertTitle>
           <AlertDescription>You have been authenticated. Redirecting...</AlertDescription>

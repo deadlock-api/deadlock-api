@@ -204,7 +204,10 @@ function DataPrivacy() {
       />
 
       {message && (
-        <Alert variant={message.type === "success" ? "positive" : "destructive"}>
+        <Alert
+          variant={message.type === "success" ? "positive" : "destructive"}
+          live={message.type === "success" ? "polite" : "assertive"}
+        >
           <AlertTitle>{message.text}</AlertTitle>
         </Alert>
       )}

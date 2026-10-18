@@ -835,7 +835,7 @@ export function Primitives() {
       <Specimen
         name="Alert"
         source="ui/alert"
-        note="A message in the flow of the page. For a failed request use ErrorState, which adds the retry."
+        note="A message in the flow of the page. For a failed request use ErrorState, which adds the retry. live: assertive (role=alert, the default for destructive), polite (role=status, a result that just arrived), off (no role, the default for every other variant: a notice that is always there)."
       >
         <Variants className="grid items-start md:grid-cols-2">
           {(["default", "primary", "info", "warning", "positive", "destructive"] as const).map((variant) => (

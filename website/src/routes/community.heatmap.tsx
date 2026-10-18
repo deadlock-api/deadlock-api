@@ -231,7 +231,7 @@ function HeatmapPage() {
 
       {spansRework && (
         // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- Alert contains block content; a filter hint is announced politely, not as an alert.
-        <Alert variant="info" role="status">
+        <Alert variant="info" live="polite">
           <MapIcon aria-hidden="true" />
           <AlertTitle>This range covers two map layouts</AlertTitle>
           <AlertDescription>

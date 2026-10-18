@@ -283,7 +283,7 @@ function BuildsExplorerView({
       {/* A build asked for by its ID that these filters leave out: the list shows another, and says why. Not while the
           last filters' builds stand in for the next ones, which may well hold it. */}
       {!stale && buildId !== null && selected.hero_build_id !== buildId && (
-        <Alert variant="info">
+        <Alert variant="info" live="polite">
           <SearchX aria-hidden="true" />
           <AlertTitle>Build {buildId} is not in this list</AlertTitle>
           <AlertDescription>

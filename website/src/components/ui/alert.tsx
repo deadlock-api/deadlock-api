@@ -23,8 +23,30 @@ const alertVariants = cva(
   },
 );
 
-function Alert({ className, variant, ...props }: React.ComponentProps<"div"> & VariantProps<typeof alertVariants>) {
-  return <div data-slot="alert" role="alert" className={cn(alertVariants({ variant }), className)} {...props} />;
+const ALERT_ROLE = { assertive: "alert", polite: "status", off: undefined } as const;
+
+type AlertLive = keyof typeof ALERT_ROLE;
+
+/**
+ * `live` says how the alert is announced when it appears: `assertive` (role=alert) interrupts, `polite` (role=status)
+ * waits, `off` is a static notice read in the page flow. A destructive alert defaults to assertive, every other variant
+ * to off, so a notice that is always on the page never interrupts.
+ */
+function Alert({
+  className,
+  variant,
+  live = variant === "destructive" ? "assertive" : "off",
+  ...props
+}: React.ComponentProps<"div"> & VariantProps<typeof alertVariants> & { live?: AlertLive }) {
+  return (
+    <div
+      data-slot="alert"
+      data-live={live}
+      role={ALERT_ROLE[live]}
+      className={cn(alertVariants({ variant }), className)}
+      {...props}
+    />
+  );
 }
 
 function AlertTitle({ className, ...props }: React.ComponentProps<"div">) {
@@ -51,3 +73,4 @@ function AlertDescription({ className, ...props }: React.ComponentProps<"div">) 
 }
 
 export { Alert, AlertTitle, AlertDescription };
+export type { AlertLive };

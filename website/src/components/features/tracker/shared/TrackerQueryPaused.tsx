@@ -6,7 +6,7 @@ import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 export function TrackerQueryPaused({ description }: { description: string }) {
   return (
     // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- Alert contains block content; this informational state should be announced politely.
-    <Alert role="status">
+    <Alert live="polite">
       <WifiOff aria-hidden="true" />
       <AlertTitle>Waiting for connection</AlertTitle>
       <AlertDescription>{description}</AlertDescription>
