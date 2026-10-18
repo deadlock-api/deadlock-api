@@ -2,7 +2,7 @@ import type { MapData } from "deadlock_api_client";
 import type { KillDeathStats } from "deadlock_api_client";
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 
-import { ChartOverlay, ChartStage, ChartStageFrame } from "~/components/patterns/charts/ChartOverlay";
+import { ChartOverlay, ChartOverlayItem, ChartStage, ChartStageFrame } from "~/components/patterns/charts/ChartOverlay";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { useElementSize } from "~/components/ui/hooks/use-element-size";
@@ -51,6 +51,11 @@ interface HeatmapCanvasProps {
   onSensitivityChange: (value: number) => void;
   /** The filters the events are drawn from, in words, for the map's accessible name: "The Hidden King, Haze". */
   scope?: string;
+  /**
+   * A choice the view still needs, shown over the bare map in place of the heat (the share view without a hero), so
+   * the map keeps its place and size.
+   */
+  prompt?: string;
 }
 
 export default function HeatmapCanvas({
@@ -63,6 +68,7 @@ export default function HeatmapCanvas({
   baseline,
   onSensitivityChange,
   scope,
+  prompt,
 }: HeatmapCanvasProps) {
   const summaryId = useId();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -196,7 +202,7 @@ export default function HeatmapCanvas({
 
   const handleMouseMove = useCallback(
     (e: React.MouseEvent<HTMLCanvasElement>) => {
-      if (!rawGrids) return;
+      if (!rawGrids || prompt) return;
       const canvas = heatCanvasRef.current;
       const container = containerRef.current;
       if (!canvas || !container) return;
@@ -232,7 +238,7 @@ export default function HeatmapCanvas({
         allKills: allKills === undefined ? undefined : Math.round(allKills),
       });
     },
-    [rawGrids, baselineGrids],
+    [rawGrids, baselineGrids, prompt],
   );
 
   const handleMouseLeave = useCallback(() => setTooltip(null), []);
@@ -263,8 +269,13 @@ export default function HeatmapCanvas({
             onMouseLeave={handleMouseLeave}
           />
           <p id={summaryId} className="sr-only">
-            {summary}
+            {prompt ?? summary}
           </p>
+          {prompt && (
+            <ChartOverlay position="center">
+              <ChartOverlayItem>{prompt}</ChartOverlayItem>
+            </ChartOverlay>
+          )}
           {mapImages === "loading" && (
             <LoadingState size="sm" text="Loading map…" label="map" className="absolute inset-0" />
           )}

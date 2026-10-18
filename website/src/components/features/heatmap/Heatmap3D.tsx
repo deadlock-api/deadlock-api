@@ -6,6 +6,7 @@ import * as THREE from "three";
 
 import {
   ChartOverlay,
+  ChartOverlayItem,
   ChartOverlaySlider,
   ChartStage,
   ChartStageFrame,
@@ -45,6 +46,11 @@ interface Heatmap3DProps {
   onSensitivityChange: (value: number) => void;
   /** The filters the events are drawn from, in words, for the map's accessible name: "The Hidden King, Haze". */
   scope?: string;
+  /**
+   * A choice the view still needs, shown over the bare map in place of the heat (the share view without a hero), so
+   * the map keeps its place and size.
+   */
+  prompt?: string;
 }
 
 const HEAT_THRESHOLD = 0.005;
@@ -224,6 +230,7 @@ export default function Heatmap3D({
   baseline,
   onSensitivityChange,
   scope,
+  prompt,
 }: Heatmap3DProps) {
   const summaryId = useId();
   const radius = mapData.radius ?? 10752;
@@ -287,8 +294,13 @@ export default function Heatmap3D({
           />
         </Canvas>
         <p id={summaryId} className="sr-only">
-          {summary}
+          {prompt ?? summary}
         </p>
+        {prompt && (
+          <ChartOverlay position="center">
+            <ChartOverlayItem>{prompt}</ChartOverlayItem>
+          </ChartOverlay>
+        )}
 
         {mapStatus === "loading" && (
           <LoadingState size="sm" text="Loading map…" label="map" className="absolute inset-0" />

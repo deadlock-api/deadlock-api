@@ -41,6 +41,8 @@ const chartOverlayVariants = cva("z-10 flex max-w-full flex-col gap-1.5", {
       "top-end": "inset-e-3 top-3 items-end self-end",
       "bottom-start": "inset-s-3 bottom-3 items-start self-start",
       "bottom-end": "inset-e-3 bottom-3 items-end self-end",
+      /** Over the whole stage, centred: a state the plot is in, such as a choice it still needs. */
+      center: "inset-0 items-center justify-center p-3 text-center",
     },
     /**
      * What the overlay does in a narrow plot. `over` always floats in its corner. `outside` floats from `@3xl` of the
@@ -81,7 +83,11 @@ export function ChartOverlay({
       data-slot="chart-overlay"
       data-narrow={narrow}
       data-layout={layout}
-      className={cn(chartOverlayVariants({ position, narrow, layout }), "text-xs text-muted-foreground", className)}
+      className={cn(
+        chartOverlayVariants({ position, narrow, layout }),
+        position === "center" ? "text-sm text-foreground" : "text-xs text-muted-foreground",
+        className,
+      )}
       {...props}
     />
   );

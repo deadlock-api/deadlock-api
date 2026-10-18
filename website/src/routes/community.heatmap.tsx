@@ -159,6 +159,7 @@ function HeatmapPage() {
           baseline: baselineQuery.data,
           onSensitivityChange: (v: number) => setOutlierSensitivity(Math.round(v * 10000)),
           scope,
+          prompt: viewMode === "share" && heroId == null ? "Pick a hero to see their share of the kills" : undefined,
         }
       : null;
 
@@ -259,8 +260,6 @@ function HeatmapPage() {
               if (baselineQuery.isError) void baselineQuery.refetch();
             }}
           />
-        ) : viewMode === "share" && heroId == null ? (
-          <EmptyState title="Pick a hero to see their share of the kills" />
         ) : killDeathQuery.data?.length === 0 ? (
           <EmptyState
             title="No kills or deaths for these filters"

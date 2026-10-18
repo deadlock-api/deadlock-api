@@ -181,6 +181,9 @@ export function Round3PatternsCharts() {
           <ChartOverlay position="top-start">
             <ChartOverlayItem>top-start</ChartOverlayItem>
           </ChartOverlay>
+          <ChartOverlay position="center">
+            <ChartOverlayItem>center: a choice the plot still needs</ChartOverlayItem>
+          </ChartOverlay>
           <ChartOverlay position="top-end">
             <ChartOverlayItem>top-end</ChartOverlayItem>
           </ChartOverlay>
