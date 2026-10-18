@@ -167,34 +167,37 @@ export function BuildDetailPanel({
         {meta ? (
           <>
             <BuildSlotSplit meta={meta} />
-            {meta.categories
-              .filter((category) => category.itemIds.length > 0)
-              .map((category) => (
-                <section key={`${category.name}|${category.itemIds.join()}`} className="flex flex-col">
-                  <PanelSection
-                    variant="label"
-                    title={
-                      <CategoryTitle
-                        name={buildCategoryName(category.name) ?? "Items"}
-                        description={category.description}
-                      />
-                    }
-                  />
-                  <ul className="flex flex-wrap gap-1 px-3 py-1.5">
-                    {category.itemIds.map((itemId) => (
-                      <li key={itemId}>
-                        <BuildItemTile
-                          itemId={itemId}
-                          usage={usage?.byItem.get(itemId)}
-                          // The last build's rates are of other items: its tiles wait under skeletons instead.
-                          pending={purchasesPending || purchasesStale}
-                          note={category.notes[itemId]}
+            {/* Two columns of groups once the panel is wide enough, so more of the build shows without a scroll. */}
+            <div className="grid @lg:grid-cols-2">
+              {meta.categories
+                .filter((category) => category.itemIds.length > 0)
+                .map((category) => (
+                  <section key={`${category.name}|${category.itemIds.join()}`} className="flex flex-col">
+                    <PanelSection
+                      variant="label"
+                      title={
+                        <CategoryTitle
+                          name={buildCategoryName(category.name) ?? "Items"}
+                          description={category.description}
                         />
-                      </li>
-                    ))}
-                  </ul>
-                </section>
-              ))}
+                      }
+                    />
+                    <ul className="flex flex-wrap gap-1 px-3 py-1.5">
+                      {category.itemIds.map((itemId) => (
+                        <li key={itemId}>
+                          <BuildItemTile
+                            itemId={itemId}
+                            usage={usage?.byItem.get(itemId)}
+                            // The last build's rates are of other items: its tiles wait under skeletons instead.
+                            pending={purchasesPending || purchasesStale}
+                            note={category.notes[itemId]}
+                          />
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
+                ))}
+            </div>
             {skillOrder.length > 0 && slotAbilities.length > 0 && (
               <section className="flex flex-col">
                 <PanelSection variant="label" title="Skill order" />
