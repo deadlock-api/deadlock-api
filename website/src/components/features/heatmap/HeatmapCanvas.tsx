@@ -3,10 +3,12 @@ import type { KillDeathStats } from "deadlock_api_client";
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 
 import { ChartOverlay, ChartOverlayItem, ChartStage, ChartStageFrame } from "~/components/patterns/charts/ChartOverlay";
+import { ChartProbeCard, useChartProbe } from "~/components/patterns/charts/ChartProbe";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { useElementSize } from "~/components/ui/hooks/use-element-size";
-import { TooltipCard, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
+import { TooltipStat, TooltipStats } from "~/components/ui/tooltip";
+import { cn } from "~/lib/utils";
 
 import {
   buildHeatGrids,
@@ -28,9 +30,7 @@ const UNSIZED = { width: 0, height: 0 };
 
 type ViewMode = HeatmapViewMode;
 
-interface TooltipState {
-  x: number;
-  y: number;
+interface Reading {
   kills: number;
   deaths: number;
   /** All heroes' kills under the cursor, in the share view. */
@@ -78,7 +78,7 @@ export default function HeatmapCanvas({
   const [mapAttempt, setMapAttempt] = useState(0);
   const mapImagesLoaded = mapImages === "ready";
   const compositeRef = useRef<HTMLCanvasElement | null>(null);
-  const [tooltip, setTooltip] = useState<TooltipState | null>(null);
+  const probe = useChartProbe(containerRef);
 
   const radius = mapData.radius ?? 10752;
 
@@ -200,48 +200,40 @@ export default function HeatmapCanvas({
     if (mapImagesLoaded && containerSize.width > 0) renderHeatmap();
   }, [mapImagesLoaded, containerSize, renderHeatmap]);
 
-  const handleMouseMove = useCallback(
-    (e: React.MouseEvent<HTMLCanvasElement>) => {
-      if (!rawGrids || prompt) return;
-      const canvas = heatCanvasRef.current;
-      const container = containerRef.current;
-      if (!canvas || !container) return;
-
-      const canvasRect = canvas.getBoundingClientRect();
-      const containerRect = container.getBoundingClientRect();
-      const relX = (e.clientX - canvasRect.left) / canvasRect.width;
-      const relY = (e.clientY - canvasRect.top) / canvasRect.height;
-
-      if (relX < 0 || relX > 1 || relY < 0 || relY > 1) {
-        setTooltip(null);
-        return;
-      }
-
-      const gx = relX * (GRID_RES - 1);
-      const gy = relY * (GRID_RES - 1);
-
-      const kills = sampleBilinear(rawGrids.killsRaw, GRID_RES, GRID_RES, gx, gy);
-      const deaths = sampleBilinear(rawGrids.deathsRaw, GRID_RES, GRID_RES, gx, gy);
-
-      const allKills = baselineGrids ? sampleBilinear(baselineGrids.killsRaw, GRID_RES, GRID_RES, gx, gy) : undefined;
-
-      if (kills < 0.5 && deaths < 0.5 && (allKills ?? 0) < 0.5) {
-        setTooltip(null);
-        return;
-      }
-
-      setTooltip({
-        x: e.clientX - containerRect.left + 12,
-        y: e.clientY - containerRect.top - 10,
-        kills: Math.round(kills),
-        deaths: Math.round(deaths),
-        allKills: allKills === undefined ? undefined : Math.round(allKills),
-      });
-    },
-    [rawGrids, baselineGrids, prompt],
-  );
-
-  const handleMouseLeave = useCallback(() => setTooltip(null), []);
+  // The counts under the probe, read straight from the raw grids: derived, not stored.
+  const reading = useMemo((): Reading | null => {
+    const at = probe.point?.rel;
+    if (!at || !rawGrids || prompt) return null;
+    const gx = at.x * (GRID_RES - 1);
+    const gy = at.y * (GRID_RES - 1);
+    const kills = sampleBilinear(rawGrids.killsRaw, GRID_RES, GRID_RES, gx, gy);
+    const deaths = sampleBilinear(rawGrids.deathsRaw, GRID_RES, GRID_RES, gx, gy);
+    const allKills = baselineGrids ? sampleBilinear(baselineGrids.killsRaw, GRID_RES, GRID_RES, gx, gy) : undefined;
+    if (kills < 0.5 && deaths < 0.5 && (allKills ?? 0) < 0.5) return null;
+    return {
+      kills: Math.round(kills),
+      deaths: Math.round(deaths),
+      allKills: allKills === undefined ? undefined : Math.round(allKills),
+    };
+  }, [probe.point, rawGrids, baselineGrids, prompt]);
+  const share = reading?.allKills
+    ? `${((Math.min(reading.kills, reading.allKills) / reading.allKills) * 100).toFixed(1)}%`
+    : null;
+  const kd =
+    reading && reading.allKills === undefined && reading.deaths > 0
+      ? (reading.kills / reading.deaths).toFixed(2)
+      : null;
+  const announce = reading
+    ? [
+        `${reading.kills.toLocaleString("en-US")} kills`,
+        `${reading.deaths.toLocaleString("en-US")} deaths`,
+        kd && `K/D ${kd}`,
+        reading.allKills !== undefined && `${reading.allKills.toLocaleString("en-US")} by all heroes`,
+        share && `share ${share}`,
+      ]
+        .filter(Boolean)
+        .join(", ")
+    : "No kills or deaths here";
 
   return (
     // On a phone the map fills the width, so the legend and the slider leave it (above and below) instead of
@@ -259,14 +251,13 @@ export default function HeatmapCanvas({
           {/* The heat layer stands for the whole map: named, and described by the sentence under it. */}
           <canvas
             ref={heatCanvasRef}
-            // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- a drawn canvas, not an image file an <img> could show
-            role="img"
+            {...probe.targetProps}
+            // The drawn map, named and described by the sentence under it; focusable, so the arrow keys step a probe
+            // over it. Browsers expose a named canvas as an image, so it takes no role of its own.
             aria-label={heatmapName(viewMode, scope)}
             aria-describedby={summaryId}
-            className="absolute"
+            className={cn("absolute", probe.targetProps.className)}
             style={UNSIZED}
-            onMouseMove={handleMouseMove}
-            onMouseLeave={handleMouseLeave}
           />
           <p id={summaryId} className="sr-only">
             {prompt ?? summary}
@@ -292,33 +283,19 @@ export default function HeatmapCanvas({
             </div>
           )}
         </ChartStage>
-        {tooltip && (
-          <TooltipCard
-            className="pointer-events-none absolute z-50"
-            style={{
-              left: tooltip.x,
-              top: tooltip.y,
-            }}
-          >
+        <ChartProbeCard point={probe.point} announce={announce}>
+          {reading && (
             <TooltipStats variant="plain">
-              <TooltipStat label="Kills" value={tooltip.kills.toLocaleString("en-US")} className="text-negative" />
-              <TooltipStat label="Deaths" value={tooltip.deaths.toLocaleString("en-US")} className="text-info" />
-              {tooltip.allKills === undefined ? (
-                tooltip.deaths > 0 && <TooltipStat label="K/D" value={(tooltip.kills / tooltip.deaths).toFixed(2)} />
-              ) : (
-                <>
-                  <TooltipStat label="All heroes" value={tooltip.allKills.toLocaleString("en-US")} />
-                  {tooltip.allKills > 0 && (
-                    <TooltipStat
-                      label="Share"
-                      value={`${((Math.min(tooltip.kills, tooltip.allKills) / tooltip.allKills) * 100).toFixed(1)}%`}
-                    />
-                  )}
-                </>
+              <TooltipStat label="Kills" value={reading.kills.toLocaleString("en-US")} className="text-negative" />
+              <TooltipStat label="Deaths" value={reading.deaths.toLocaleString("en-US")} className="text-info" />
+              {kd && <TooltipStat label="K/D" value={kd} />}
+              {reading.allKills !== undefined && (
+                <TooltipStat label="All heroes" value={reading.allKills.toLocaleString("en-US")} />
               )}
+              {share && <TooltipStat label="Share" value={share} />}
             </TooltipStats>
-          </TooltipCard>
-        )}
+          )}
+        </ChartProbeCard>
       </div>
       <ChartOverlay position="bottom-start" narrow="outside" layout="rows">
         {/* The share view's scale is fixed, so there is nothing to clip. */}

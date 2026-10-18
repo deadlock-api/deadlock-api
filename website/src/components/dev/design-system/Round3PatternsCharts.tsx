@@ -1,5 +1,5 @@
 import { Flag } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 import { Specimen, Variants } from "~/components/dev/design-system/Specimen";
 import {
@@ -15,10 +15,12 @@ import {
   ChartStage,
   ChartStageFrame,
 } from "~/components/patterns/charts/ChartOverlay";
+import { ChartProbeCard, useChartProbe } from "~/components/patterns/charts/ChartProbe";
 import { ChartReading, ChartReadings } from "~/components/patterns/charts/ChartReadings";
 import { chartRampCss, SERIES_COLORS } from "~/components/patterns/charts/theme";
 import { WinRateBarChart } from "~/components/patterns/charts/WinRateBarChart";
 import { TooltipCard, TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
+import { cn } from "~/lib/utils";
 
 interface Bin {
   tick: string;
@@ -232,6 +234,8 @@ export function Round3PatternsCharts() {
         </ChartStage>
       </Specimen>
 
+      <ChartProbeSpecimen />
+
       <Specimen
         name="ChartStageFrame"
         source="patterns/charts/ChartOverlay"
@@ -301,5 +305,40 @@ export function Round3PatternsCharts() {
         </Variants>
       </Specimen>
     </>
+  );
+}
+
+/** A probe over a plain canvas: the reading is the point's position. */
+function ChartProbeSpecimen() {
+  const boxRef = useRef<HTMLDivElement>(null);
+  const probe = useChartProbe(boxRef);
+  const reading = probe.point && {
+    x: Math.round(probe.point.rel.x * 100),
+    y: Math.round(probe.point.rel.y * 100),
+  };
+  return (
+    <Specimen
+      name="ChartProbe"
+      source="patterns/charts/ChartProbe"
+      note="useChartProbe(boxRef) reads a canvas plot by every input: the mouse moves the probe, a tap places it, and on the focused target the arrow keys step it (Shift: bigger steps, Home: centre, Escape: off). ChartProbeCard opens towards the side with more room, so it stays inside the box, rings a keyboard probe's point, and reads a tap or key reading out politely through announce."
+    >
+      <div ref={boxRef} className="relative h-48 min-w-0">
+        <ChartStage className="bg-muted">
+          <canvas
+            {...probe.targetProps}
+            aria-label="Probe demo plot"
+            className={cn("absolute inset-0 size-full", probe.targetProps.className)}
+          />
+        </ChartStage>
+        <ChartProbeCard point={probe.point} announce={reading ? `x ${reading.x}, y ${reading.y}` : ""}>
+          {reading && (
+            <TooltipStats variant="plain">
+              <TooltipStat label="x" value={`${reading.x}%`} />
+              <TooltipStat label="y" value={`${reading.y}%`} />
+            </TooltipStats>
+          )}
+        </ChartProbeCard>
+      </div>
+    </Specimen>
   );
 }
