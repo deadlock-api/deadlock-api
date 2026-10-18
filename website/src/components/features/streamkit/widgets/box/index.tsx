@@ -106,13 +106,11 @@ export const BoxWidget = ({
   const shouldShowHeader = showHeader && stats?.steam_account_name;
 
   return (
-    <div className="inline-block" style={themeStyles.cssVariables}>
+    // A column whose width is the wider of the match strip and the stats: every match the URL asks for is shown, and
+    // the box stretches under a strip longer than its stats.
+    <div className="inline-flex flex-col" style={themeStyles.cssVariables}>
       {showMatchHistory && (
-        <div className="flex">
-          <div className="w-0 grow overflow-clip">
-            <MatchHistory theme={theme} numMatches={numMatchesToShow} accountId={accountId} opacity={opacity} />
-          </div>
-        </div>
+        <MatchHistory theme={theme} numMatches={numMatchesToShow} accountId={accountId} opacity={opacity} />
       )}
       <div className={themeStyles.containerClasses(showMatchHistory)}>
         {shouldShowHeader && (
@@ -123,7 +121,7 @@ export const BoxWidget = ({
           />
         )}
 
-        <div className="w-fit space-y-1 p-2">
+        <div className="space-y-1 p-2">
           <BoxStats stats={statDisplays} theme={theme} loading={loading} />
 
           {showBranding && <BoxBranding themeClasses={themeStyles} />}

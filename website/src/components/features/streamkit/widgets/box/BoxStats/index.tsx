@@ -22,7 +22,7 @@ export const BoxStats = ({ stats, theme, loading }: BoxStatsProps) => {
   }
 
   return (
-    <div className="flex flex-nowrap items-stretch gap-1 p-1">
+    <div className="flex flex-nowrap items-stretch justify-center gap-1 p-1">
       {stats.map((stat, index) => (
         // eslint-disable-next-line react/no-array-index-key -- stats can have duplicate variables, no natural unique key
         <Fragment key={`${stat.variable}-${index}`}>
@@ -30,7 +30,7 @@ export const BoxStats = ({ stats, theme, loading }: BoxStatsProps) => {
           {index < stats.length - 1 && (
             <div
               className={cn(
-                "w-px flex-1 bg-gradient-to-b from-transparent to-transparent",
+                "w-px shrink-0 bg-gradient-to-b from-transparent to-transparent",
                 theme === "light" ? "via-black/50" : "via-white/50",
               )}
             />

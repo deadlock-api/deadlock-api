@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~
 import { Slider } from "~/components/ui/slider";
 import { Inline, Stack } from "~/components/ui/stack";
 import { Text } from "~/components/ui/text";
+import { formatCountNoun } from "~/lib/format";
 import { snakeToPretty } from "~/lib/utils";
 import type { Variable } from "~/types/streamkit/command";
 
@@ -94,11 +95,11 @@ export function BoxWidgetConfig({ config, updateConfig, availableVariables }: Bo
               disabled={!config.showMatchHistory || config.matchHistoryShowsToday}
               value={[config.numMatches]}
               onValueChange={([v]) => updateConfig({ numMatches: v })}
-              getValueText={(v) => `${v} matches`}
+              getValueText={(v) => formatCountNoun(v, "match", "matches")}
               className="w-32"
             />
             <Text variant="label" tone="default" className="font-medium">
-              {config.numMatches} Matches
+              {formatCountNoun(config.numMatches, "Match", "Matches")}
             </Text>
           </Inline>
         </Stack>
