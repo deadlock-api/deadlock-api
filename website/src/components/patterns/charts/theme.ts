@@ -214,6 +214,17 @@ export const CHART_SPREAD_BAND = {
   activeDot: false,
 } as const;
 
+/**
+ * A shaded span of the x axis (a respawn wait, a phase): the spread band's faint fill with a thin edge in the same
+ * color, so the span still shows where the fill alone is too faint to see. Spread it on a `ReferenceArea` with `fill`
+ * and `stroke` set to the color; its legend key is `ChartSwatch shape="band"` in that color.
+ */
+export const CHART_SHADED_WINDOW = {
+  fillOpacity: CHART_SPREAD_BAND.fillOpacity,
+  strokeOpacity: 0.6,
+  strokeWidth: 1,
+} as const;
+
 /** A population's distribution under the players drawn on it: a faint neutral area with a thin edge. */
 export const CHART_AREA_NEUTRAL = {
   stroke: CHART_COLOR.neutral,

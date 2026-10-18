@@ -164,7 +164,7 @@ export function RankBenchmarks({
                     <ChartLegendItem color={SERIES_COLORS[3]} shape="line">
                       Player
                     </ChartLegendItem>
-                    <ChartLegendItem color={CHART_COLOR.neutral} shape="line">
+                    <ChartLegendItem color={CHART_COLOR.neutral} shape="dashed">
                       Lobby
                     </ChartLegendItem>
                   </ChartLegend>

@@ -238,7 +238,7 @@ export function MatchTimeline({
               </LayerToggle>
               {deadWindows.length > 0 && (
                 <LayerToggle value="dead" layer="time dead">
-                  <ChartSwatch color={`color-mix(in srgb, ${deathColor} 20%, transparent)`} />
+                  <ChartSwatch color={deathColor} shape="band" />
                   Dead
                 </LayerToggle>
               )}

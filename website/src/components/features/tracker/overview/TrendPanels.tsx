@@ -12,6 +12,7 @@ import {
   CHART_CURSOR_BAND,
   CHART_CURSOR_LINE,
   CHART_GRID,
+  CHART_STACK_SEGMENT,
   CHART_X_AXIS_SM,
   SERIES_COLORS,
 } from "~/components/patterns/charts/theme";
@@ -173,6 +174,7 @@ export function TrendPanels({
               dataKey="wins"
               stackId="activity"
               fill={CHART_COLOR.positive}
+              {...CHART_STACK_SEGMENT}
               maxBarSize={20}
               isAnimationActive={false}
             />
@@ -180,6 +182,7 @@ export function TrendPanels({
               dataKey="losses"
               stackId="activity"
               fill={CHART_COLOR.negative}
+              {...CHART_STACK_SEGMENT}
               radius={[2, 2, 0, 0]}
               maxBarSize={20}
               isAnimationActive={false}

@@ -7,6 +7,7 @@ import {
   CartesianGrid,
   Line,
   LineChart,
+  ReferenceArea,
   ReferenceLine,
   Tooltip,
   XAxis,
@@ -34,6 +35,7 @@ import {
   CHART_CURSOR_LINE,
   CHART_GRID,
   CHART_MARGIN,
+  CHART_SHADED_WINDOW,
   CHART_STACK_SEGMENT,
   CHART_X_AXIS,
   CHART_X_AXIS_CATEGORY,
@@ -327,6 +329,45 @@ export function Charts() {
             ))}
           </BarChart>
         </ChartSurface>
+      </Specimen>
+
+      <Specimen
+        name="Shaded window"
+        source="patterns/charts/theme · CHART_SHADED_WINDOW"
+        note="A span of the x axis (a respawn wait): ReferenceArea with fill and stroke in one color and CHART_SHADED_WINDOW spread on it, a faint fill edged in the color. Its legend key is ChartSwatch shape=band in the same color, so key and mark match."
+      >
+        <Variants className="flex-col items-start gap-2">
+          <ChartSurface
+            label="Win rate by rank with two shaded windows"
+            size="sm"
+            variant="flush"
+            className="w-full max-w-md"
+          >
+            <LineChart data={BY_RANK} margin={CHART_MARGIN}>
+              <XAxis dataKey="rank" {...CHART_X_AXIS} interval={0} tickFormatter={(rank: string) => rank.slice(0, 3)} />
+              <YAxis {...CHART_Y_AXIS} hide domain={["dataMin", "dataMax"]} />
+              {[
+                ["Seeker", "Alchemist"],
+                ["Archon", "Oracle"],
+              ].map(([x1, x2]) => (
+                <ReferenceArea
+                  key={x1}
+                  x1={x1}
+                  x2={x2}
+                  fill={CHART_COLOR.negative}
+                  stroke={CHART_COLOR.negative}
+                  {...CHART_SHADED_WINDOW}
+                />
+              ))}
+              <Line dataKey="winRate" stroke={SERIES_COLORS[3]} dot={false} isAnimationActive={false} />
+            </LineChart>
+          </ChartSurface>
+          <ChartLegend>
+            <ChartLegendItem color={CHART_COLOR.negative} shape="band">
+              Dead
+            </ChartLegendItem>
+          </ChartLegend>
+        </Variants>
       </Specimen>
 
       <Specimen

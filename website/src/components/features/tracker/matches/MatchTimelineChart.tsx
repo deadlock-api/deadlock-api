@@ -17,6 +17,7 @@ import { ChartSurface } from "~/components/patterns/charts/ChartSurface";
 import {
   CHART_COLOR,
   CHART_CURSOR_LINE,
+  CHART_SHADED_WINDOW,
   CHART_X_AXIS,
   CHART_Y_AXIS,
   CHART_ACTIVE_DOT,
@@ -447,7 +448,8 @@ export function MatchTimelineChart({
             x1={window.start}
             x2={Math.min(window.end, durationS)}
             fill={deadWindowColor}
-            fillOpacity={0.07}
+            stroke={deadWindowColor}
+            {...CHART_SHADED_WINDOW}
             ifOverflow="hidden"
           />
         ))}
