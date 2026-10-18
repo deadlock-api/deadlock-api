@@ -272,7 +272,8 @@ export function PickerGridTile({
         aria-pressed={pressable ? state === "selected" : undefined}
         aria-disabled={disabled || undefined}
         aria-describedby={[hasMeta && metaId, reason && reasonId].filter(Boolean).join(" ") || undefined}
-        title={title ?? choice.name}
+        // No native tooltip of its own: hover text a keyboard or touch never sees. `title` is a disabled choice's reason.
+        title={title}
         className={cn(tileVariants({ state, size }), className)}
         onClick={(event) => {
           onClick?.(event);

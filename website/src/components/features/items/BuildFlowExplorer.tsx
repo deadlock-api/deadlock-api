@@ -228,13 +228,7 @@ function StagePickerBody({
               {group.items.map((item) => {
                 const c = stats.get(item.id);
                 return (
-                  <ItemGridTile
-                    key={item.id}
-                    item={item}
-                    title={
-                      c ? `${item.name}: ${percent(c.winRate)} win rate, ${percent(c.pickRate)} bought` : undefined
-                    }
-                  >
+                  <ItemGridTile key={item.id} item={item}>
                     {/* Colored only from a sample that can carry it: a rate from a dozen games stays quiet. */}
                     {c && (
                       <span
