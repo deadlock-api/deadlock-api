@@ -245,7 +245,7 @@ export function BuildTable({
         <SearchInput
           value={query}
           onValueChange={setQuery}
-          placeholder="Name or author"
+          placeholder="Search builds"
           aria-label="Filter builds by name, author or ID"
           size="sm"
           className="w-full @sm:ms-auto @sm:w-40"
@@ -344,11 +344,12 @@ export function BuildTable({
                 </TableCell>
                 <TableCell className="text-end tabular-nums">{row.matches.toLocaleString("en-US")}</TableCell>
                 {view === "overview" && (
-                  <TableCell className="hidden text-end tabular-nums @lg/builds:table-cell">
+                  <TableCell className="hidden text-end text-muted-foreground tabular-nums @lg/builds:table-cell">
                     {row.players.toLocaleString("en-US")}
                   </TableCell>
                 )}
-                <TableCell className="text-end tabular-nums">{formatPercent(row.winRate)}</TableCell>
+                {/* The number a row is read for: the rest of the row supports it. */}
+                <TableCell className="text-end font-semibold tabular-nums">{formatPercent(row.winRate)}</TableCell>
                 {metricColumns.map(({ metric, hide }) => (
                   <TableCell key={metric.key} className={cn("text-end tabular-nums", hide && HIDE_BELOW[hide])}>
                     <MetricValue
