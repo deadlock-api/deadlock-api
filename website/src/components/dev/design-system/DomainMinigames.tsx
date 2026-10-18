@@ -17,6 +17,7 @@ import { HeroImage } from "~/components/domain/assets/HeroImage";
 import { AnswerOption, type AnswerOptionState, revealedState } from "~/components/domain/minigames/AnswerOption";
 import { GamePage } from "~/components/domain/minigames/GamePage";
 import { GameTile } from "~/components/domain/minigames/GameTile";
+import { QuizQuestion } from "~/components/domain/minigames/QuizQuestion";
 import { RevealActions } from "~/components/domain/minigames/RevealActions";
 import { ScoreSummary } from "~/components/domain/minigames/ScoreSummary";
 import { ShareButton } from "~/components/domain/minigames/ShareButton";
@@ -31,6 +32,7 @@ import {
   VersusDivider,
   VersusName,
   VersusSide,
+  VersusStat,
   VersusSubject,
   VersusValue,
 } from "~/components/domain/minigames/Versus";
@@ -155,7 +157,7 @@ export function DomainMinigames() {
       <Specimen
         name="Versus"
         source="domain/minigames/Versus"
-        note="Two contenders side by side for a game that compares them: VersusSide, VersusDivider, VersusSide. Each side is VersusArt, VersusName, VersusValue, or VersusActions holding the value between two icon answers (one line from a 32rem board, the answers under the value when narrower); the sides share the board's rows through CSS subgrid, so the values line up even when only one name wraps. VersusSide emphasis: none, target (the side being judged, primary tone). outcome after the reveal: higher (full contrast, an up arrow in the corner and the word Higher for screen readers), lower (muted value); once set it wins over emphasis. VersusValue state: shown, hidden (a muted placeholder, ? by default; screen readers hear Hidden), revealed (pops in). children is the formatted value in every state and is laid out invisibly under the placeholder, so the value's box has its final size before the reveal. countTo counts a revealed value up (0.6s; the final value at once under reduced motion). The art box shrinks with the board (2.5rem to 5rem); the image inside takes versusArtImageVariants({ fit }): fill, or icon (three quarters, letterboxed). The class goes on the image rather than a child selector on VersusArt, so the image's own default size is replaced by cn() instead of overridden by variant order."
+        note="Two contenders side by side for a game that compares them: VersusSide, VersusDivider, VersusSide. Each side is VersusArt, VersusName, VersusValue, or VersusActions holding the value between two icon answers (one line from a 32rem board, the answers under the value when narrower); the sides share the board's rows through CSS subgrid, so the values line up even when only one name wraps. VersusSide emphasis: none, target (the side being judged, primary tone). outcome after the reveal: higher (full contrast, an up arrow in the corner and the word Higher for screen readers), lower (muted value); once set it wins over emphasis. VersusValue state: shown, hidden (a muted placeholder, ? by default; screen readers hear Hidden), revealed (pops in). children is the formatted value in every state and is laid out invisibly under the placeholder, so the value's box has its final size before the reveal. countTo counts a revealed value up (0.6s; the final value at once under reduced motion). The art box shrinks with the board (2.5rem to 5rem); the image inside takes versusArtImageVariants({ fit }): fill, or icon (three quarters, letterboxed). The class goes on the image rather than a child selector on VersusArt, so the image's own default size is replaced by cn() instead of overridden by variant order. Every round has the same board height: VersusSubject spans the board above the sides, either with art, a name and a VersusStat (whose numbers they are) or with only a VersusStat (what a plain matchup measures), and holds the height of its art box; below a 28rem board the name row holds two lines."
         className="theme-terminal"
       >
         <Variants
@@ -239,7 +241,7 @@ export function DomainMinigames() {
               </VersusArt>
               <div className="flex min-w-0 flex-col gap-1">
                 <VersusName>Calico</VersusName>
-                <span className="font-mono eyebrow">Players who max it first</span>
+                <VersusStat>Players who max it first</VersusStat>
               </div>
             </VersusSubject>
             <VersusSide outcome={hlGuess === null ? "none" : "higher"}>
@@ -290,7 +292,7 @@ export function DomainMinigames() {
       <Specimen
         name="VersusChoice"
         source="domain/minigames/Versus"
-        note="A side the player picks by clicking it, for a round that asks which of two contenders wins: the whole card is one button (AnswerOption variant card) and the target. state follows AnswerOption: idle, then revealedState() after the answer; correct and wrong carry a ✓ / ✗ mark with a label in the top-end corner, shortcut a keycap in the top-start corner (fine pointers only) plus aria-keyshortcuts; the game listens for the key. While revealed the cards take aria-disabled, not disabled, so focus stays on the pick. Both values are hidden until the answer, then count up; nothing changes size."
+        note="A side the player picks by clicking it, for a round that asks which of two contenders wins: the whole card is one button (AnswerOption variant card) and the target. state follows AnswerOption: idle, then revealedState() after the answer; correct and wrong carry a ✓ / ✗ mark with a label in the top-end corner, shortcut a keycap in the top-start corner (fine pointers only) plus aria-keyshortcuts; the game listens for the key. While revealed the cards take aria-disabled, not disabled, so focus stays on the pick. Both values are hidden until the answer, then count up; nothing changes size. The value row holds the height of a judged side's VersusActions row, and a stat-only VersusSubject names the measure, so this board is exactly as tall as the Higher / Lower board above."
         className="theme-terminal"
       >
         <Variants
@@ -298,6 +300,9 @@ export function DomainMinigames() {
           className="max-w-xl flex-col flex-nowrap items-stretch"
         >
           <Versus data-demo="head-to-head">
+            <VersusSubject>
+              <VersusStat>Matchup win rate</VersusStat>
+            </VersusSubject>
             {MATCHUP.map(({ name, value, fit }, i) => (
               <Fragment key={name}>
                 {i === 1 && <VersusDivider />}
@@ -462,6 +467,20 @@ export function DomainMinigames() {
             Failed
           </TerminalBadge>
           <TerminalBadge variant="warning">Archive · Day 212</TerminalBadge>
+        </Variants>
+      </Specimen>
+
+      <Specimen
+        name="QuizQuestion"
+        source="domain/minigames/QuizQuestion"
+        note="The question of a quiz round in the heading-sm step, centred. It holds three lines on a column narrower than 28rem and two from there, with shorter questions centred in that space, so the next question never moves the answers under it. It is focusable (tabIndex -1): the game moves focus here when a round comes in. Every p prop forwards, ref included."
+        className="theme-terminal"
+      >
+        <Variants label="one line and three lines hold the same height" className="grid grid-cols-2 items-start">
+          <QuizQuestion>Is Haze's win rate higher or lower than Seven's?</QuizQuestion>
+          <QuizQuestion>
+            Is Deadman Danny's hero damage per match higher or lower than Grey Talon's hero damage per match?
+          </QuizQuestion>
         </Variants>
       </Specimen>
 

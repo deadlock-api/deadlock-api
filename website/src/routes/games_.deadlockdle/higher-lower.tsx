@@ -1,12 +1,13 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowDown, ArrowUp, type LucideIcon } from "lucide-react";
+import { ArrowDown, ArrowUp, Flame, type LucideIcon } from "lucide-react";
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { AbilityImage } from "~/components/domain/assets/AbilityImage";
 import { AssetImage } from "~/components/domain/assets/AssetImage";
 import { HeroImage } from "~/components/domain/assets/HeroImage";
 import { AnswerOption, revealedState } from "~/components/domain/minigames/AnswerOption";
+import { QuizQuestion } from "~/components/domain/minigames/QuizQuestion";
 import { RevealActions } from "~/components/domain/minigames/RevealActions";
 import { ScoreSummary } from "~/components/domain/minigames/ScoreSummary";
 import { ShareButton } from "~/components/domain/minigames/ShareButton";
@@ -21,6 +22,7 @@ import {
   VersusDivider,
   VersusName,
   VersusSide,
+  VersusStat,
   VersusSubject,
   VersusValue,
 } from "~/components/domain/minigames/Versus";
@@ -377,12 +379,15 @@ function HigherLower() {
           >
             <Inline justify="between" wrap="nowrap">
               <Inline gap={2} wrap="nowrap">
-                <Text as="p" variant="eyebrow" className="font-mono">
+                <Text as="p" variant="eyebrow" className="font-mono whitespace-nowrap">
                   Round {shownIndex + 1}/{total}
                 </Text>
                 {streak >= 2 && (
+                  // A flame and the count: the words would wrap the round label on a 320px screen.
                   <TerminalBadge variant="positive" size="sm">
-                    {streak} in a row
+                    <Flame aria-hidden="true" />
+                    {streak}
+                    <span className="sr-only"> in a row</span>
                   </TerminalBadge>
                 )}
               </Inline>
@@ -391,109 +396,103 @@ function HigherLower() {
               </TerminalBadge>
             </Inline>
 
-            <p ref={focusQuestion} tabIndex={-1} className="px-2 text-center text-lg font-semibold tracking-tight">
-              {round.question}
-            </p>
+            <QuizQuestion ref={focusQuestion}>{round.question}</QuizQuestion>
 
-            <Stack gap={2}>
-              {!round.subject && (
-                <Text as="p" variant="eyebrow" align="center" className="font-mono">
-                  {round.stat}
-                </Text>
-              )}
-              {round.kind === "head-to-head" ? (
-                <Versus>
-                  {([round.left, round.right] as const).map((contender, i) => {
-                    const guess = guessOf(i === 0 ? 0 : 1);
-                    return (
-                      <Fragment key={contender.name}>
-                        {i === 1 && <VersusDivider />}
-                        <VersusChoice
-                          shortcut={String(i + 1)}
-                          state={isRevealed ? revealedState(guess === correctGuess(round), guess === picked) : "idle"}
-                          onClick={() => handleGuess(guess)}
-                          aria-disabled={isRevealed || undefined}
+            {round.kind === "head-to-head" ? (
+              <Versus>
+                <VersusSubject>
+                  <VersusStat>{round.stat}</VersusStat>
+                </VersusSubject>
+                {([round.left, round.right] as const).map((contender, i) => {
+                  const guess = guessOf(i === 0 ? 0 : 1);
+                  return (
+                    <Fragment key={contender.name}>
+                      {i === 1 && <VersusDivider />}
+                      <VersusChoice
+                        shortcut={String(i + 1)}
+                        state={isRevealed ? revealedState(guess === correctGuess(round), guess === picked) : "idle"}
+                        onClick={() => handleGuess(guess)}
+                        aria-disabled={isRevealed || undefined}
+                      >
+                        <VersusArt>
+                          <ContenderArt contender={contender} />
+                        </VersusArt>
+                        <VersusName>{contender.name}</VersusName>
+                        <VersusValue
+                          state={isRevealed ? "revealed" : "hidden"}
+                          countTo={{ value: contender.value, format: (n) => formatValue(n, round.format) }}
                         >
-                          <VersusArt>
-                            <ContenderArt contender={contender} />
-                          </VersusArt>
-                          <VersusName>{contender.name}</VersusName>
-                          <VersusValue
-                            state={isRevealed ? "revealed" : "hidden"}
-                            countTo={{ value: contender.value, format: (n) => formatValue(n, round.format) }}
-                          >
-                            {formatValue(contender.value, round.format)}
-                          </VersusValue>
-                        </VersusChoice>
-                      </Fragment>
-                    );
-                  })}
-                </Versus>
-              ) : (
-                <Versus>
-                  {round.subject && (
-                    <VersusSubject>
+                          {formatValue(contender.value, round.format)}
+                        </VersusValue>
+                      </VersusChoice>
+                    </Fragment>
+                  );
+                })}
+              </Versus>
+            ) : (
+              <Versus>
+                <VersusSubject>
+                  {round.subject ? (
+                    <>
                       <VersusArt>
                         <HeroImage heroId={round.subject.heroId} title="" className={versusArtImageVariants()} />
                       </VersusArt>
                       <div className="flex min-w-0 flex-col gap-1 text-start">
                         <VersusName>{round.subject.name}</VersusName>
-                        <Text variant="eyebrow" className="font-mono">
-                          {round.stat}
-                        </Text>
+                        <VersusStat>{round.stat}</VersusStat>
                       </div>
-                    </VersusSubject>
+                    </>
+                  ) : (
+                    <VersusStat>{round.stat}</VersusStat>
                   )}
-                  <VersusSide
-                    outcome={isRevealed ? (round.left.value > round.right.value ? "higher" : "lower") : "none"}
-                  >
-                    <VersusArt>
-                      <ContenderArt contender={round.left} />
-                    </VersusArt>
-                    <VersusName>{round.left.name}</VersusName>
-                    <VersusValue>{formatValue(round.left.value, round.format)}</VersusValue>
-                  </VersusSide>
-                  <VersusDivider>{round.subject ? "OR" : "VS"}</VersusDivider>
-                  <VersusSide
-                    emphasis="target"
-                    outcome={isRevealed ? (round.right.value > round.left.value ? "higher" : "lower") : "none"}
-                  >
-                    <VersusArt>
-                      <ContenderArt contender={round.right} />
-                    </VersusArt>
-                    <VersusName>{round.right.name}</VersusName>
-                    <VersusActions>
-                      {choicesFor(round).map(({ guess, label, icon: Icon, key }, i) => (
-                        <Fragment key={guess}>
-                          {i === 1 && (
-                            <VersusValue
-                              state={isRevealed ? "revealed" : "hidden"}
-                              countTo={{
-                                value: round.right.value,
-                                format: (n) => formatValue(n, round.format),
-                                from: round.left.value,
-                              }}
-                            >
-                              {formatValue(round.right.value, round.format)}
-                            </VersusValue>
-                          )}
-                          <AnswerOption
-                            variant="icon"
-                            aria-label={label}
-                            shortcut={key}
-                            state={isRevealed ? revealedState(guess === correctGuess(round), guess === picked) : "idle"}
-                            onClick={() => handleGuess(guess)}
-                            aria-disabled={isRevealed || undefined}
+                </VersusSubject>
+                <VersusSide outcome={isRevealed ? (round.left.value > round.right.value ? "higher" : "lower") : "none"}>
+                  <VersusArt>
+                    <ContenderArt contender={round.left} />
+                  </VersusArt>
+                  <VersusName>{round.left.name}</VersusName>
+                  <VersusValue>{formatValue(round.left.value, round.format)}</VersusValue>
+                </VersusSide>
+                <VersusDivider>{round.subject ? "OR" : "VS"}</VersusDivider>
+                <VersusSide
+                  emphasis="target"
+                  outcome={isRevealed ? (round.right.value > round.left.value ? "higher" : "lower") : "none"}
+                >
+                  <VersusArt>
+                    <ContenderArt contender={round.right} />
+                  </VersusArt>
+                  <VersusName>{round.right.name}</VersusName>
+                  <VersusActions>
+                    {choicesFor(round).map(({ guess, label, icon: Icon, key }, i) => (
+                      <Fragment key={guess}>
+                        {i === 1 && (
+                          <VersusValue
+                            state={isRevealed ? "revealed" : "hidden"}
+                            countTo={{
+                              value: round.right.value,
+                              format: (n) => formatValue(n, round.format),
+                              from: round.left.value,
+                            }}
                           >
-                            {Icon && <Icon aria-hidden="true" />}
-                          </AnswerOption>
-                        </Fragment>
-                      ))}
-                    </VersusActions>
-                  </VersusSide>
-                </Versus>
-              )}
-            </Stack>
+                            {formatValue(round.right.value, round.format)}
+                          </VersusValue>
+                        )}
+                        <AnswerOption
+                          variant="icon"
+                          aria-label={label}
+                          shortcut={key}
+                          state={isRevealed ? revealedState(guess === correctGuess(round), guess === picked) : "idle"}
+                          onClick={() => handleGuess(guess)}
+                          aria-disabled={isRevealed || undefined}
+                        >
+                          {Icon && <Icon aria-hidden="true" />}
+                        </AnswerOption>
+                      </Fragment>
+                    ))}
+                  </VersusActions>
+                </VersusSide>
+              </Versus>
+            )}
 
             <RevealActions revealed={isRevealed}>
               <StatSourceLink source={round.source} date={date} aria-label="See stats (opens in a new tab)">

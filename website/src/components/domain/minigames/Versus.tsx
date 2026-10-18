@@ -31,22 +31,27 @@ function Versus({ className, ...props }: React.ComponentProps<"div">) {
   );
 }
 
-/** The rows a side spans on the board: art, name, value. */
-const SIDE_ROWS = "grid grid-cols-1 grid-rows-subgrid row-span-3 justify-items-center gap-3";
+/**
+ * The rows a side spans on the board: art, name, value. On a board narrower than 28rem the name row holds two lines,
+ * so a round whose names wrap is as tall as one whose names do not.
+ */
+const SIDE_ROWS =
+  "grid grid-cols-1 grid-rows-subgrid row-span-3 justify-items-center gap-3 @max-md/versus:*:data-[slot=versus-name]:min-h-two-lines";
 
 /**
- * Whose numbers the two sides are: `VersusArt`, `VersusName` and a line saying what is measured. It spans the board
- * above the sides; pair it with `<VersusDivider>OR</VersusDivider>`, since the sides are alternatives, not opponents.
+ * What the board measures, spanning it above the sides. With `VersusArt` + `VersusName` + a stat line it says whose
+ * numbers the sides are (pair it with `<VersusDivider>OR</VersusDivider>`, since the sides are alternatives); with
+ * only the stat line it names the measure of a plain matchup. Either way it is as tall as its art box, so every kind
+ * of round has the same board height and the next round does not move the actions under it. The height (3.5rem, its
+ * art at most that size) fits a name and a stat of up to two lines.
  */
-function VersusSubject({ className, ...props }: React.ComponentProps<"div">) {
+function VersusSubject({ className, children, ...props }: React.ComponentProps<"div">) {
   return (
-    <Card
-      data-slot="versus-subject"
-      tone="primary"
-      size="sm"
-      className={cn("col-span-3 flex-row items-center justify-center gap-3 px-3", className)}
-      {...props}
-    />
+    <Card data-slot="versus-subject" tone="primary" size="sm" className={cn("col-span-3 px-3", className)} {...props}>
+      <div className="flex min-h-14 items-center justify-center gap-3 @md/versus:*:data-[slot=versus-art]:size-14">
+        {children}
+      </div>
+    </Card>
   );
 }
 
@@ -107,7 +112,13 @@ function VersusChoice({ className, ...props }: Omit<React.ComponentProps<typeof 
     <AnswerOption
       data-slot="versus-choice"
       variant="card"
-      className={cn(SIDE_ROWS, "items-stretch font-sans @max-2xs/versus:px-1 @md/versus:px-4", className)}
+      className={cn(
+        SIDE_ROWS,
+        "items-stretch font-sans @max-2xs/versus:px-1 @md/versus:px-4",
+        // The value holds the height of a judged side's `VersusActions` row, so this board is as tall as that one.
+        "*:data-[slot=versus-value]:min-h-versus-actions *:data-[slot=versus-value]:content-center @lg/versus:*:data-[slot=versus-value]:min-h-11",
+        className,
+      )}
       {...props}
     />
   );
@@ -169,6 +180,23 @@ const versusArtImageVariants = cva("", {
   },
   defaultVariants: { fit: "fill" },
 });
+
+/**
+ * What is measured, inside `VersusSubject`: a muted caption under the subject's name, or, alone for a plain matchup,
+ * a label in the foreground.
+ */
+function VersusStat({ className, ...props }: React.ComponentProps<"p">) {
+  return (
+    <p
+      data-slot="versus-stat"
+      className={cn(
+        "font-mono type-caption text-balance text-muted-foreground only:type-label only:text-foreground",
+        className,
+      )}
+      {...props}
+    />
+  );
+}
 
 function VersusName({ className, ...props }: React.ComponentProps<"p">) {
   return <p data-slot="versus-name" className={cn("type-label text-balance", className)} {...props} />;
@@ -294,6 +322,7 @@ export {
   VersusArt,
   versusArtImageVariants,
   VersusName,
+  VersusStat,
   VersusValue,
   VersusDivider,
 };

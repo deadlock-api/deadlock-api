@@ -49,6 +49,17 @@
   min-height: 2lh;
 }
 
+/* Text that may wrap to three lines on a narrow container, holding all three from the start (`QuizQuestion`). */
+@utility min-h-three-lines {
+  min-height: 3lh;
+}
+
+/* The height of a narrow `VersusActions` row: the value's line over the 44px answers, 4px apart. A head-to-head value
+   (`VersusChoice`) holds it, so both kinds of Versus board are one height. */
+@utility min-h-versus-actions {
+  min-height: calc(1lh + --spacing(12));
+}
+
 /* The mini-games' terminal sub-theme: every radius inside the scope collapses to square corners
    (rounded-full stays round). Portalled content (dialogs, popovers) needs the class on its own root. */
 .theme-terminal {

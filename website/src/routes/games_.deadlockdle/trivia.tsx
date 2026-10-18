@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useCallback, useMemo, useRef, useState } from "react";
 
 import { AnswerOption, revealedState } from "~/components/domain/minigames/AnswerOption";
+import { QuizQuestion } from "~/components/domain/minigames/QuizQuestion";
 import { RevealActions } from "~/components/domain/minigames/RevealActions";
 import { ScoreSummary } from "~/components/domain/minigames/ScoreSummary";
 import { ShareButton } from "~/components/domain/minigames/ShareButton";
@@ -233,9 +234,7 @@ function Trivia() {
               </TerminalBadge>
             </div>
 
-            <p ref={focusQuestion} tabIndex={-1} className="px-2 text-center text-lg font-semibold tracking-tight">
-              {currentQ.question}
-            </p>
+            <QuizQuestion ref={focusQuestion}>{currentQ.question}</QuizQuestion>
 
             <Stack gap={2.5} className="mx-auto w-full max-w-lg">
               {currentQ.options.map((option, i) => (
