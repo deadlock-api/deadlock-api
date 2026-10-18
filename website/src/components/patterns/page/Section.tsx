@@ -48,27 +48,32 @@ export function Section({
   children,
   ...props
 }: SectionProps) {
+  const titleRow = (
+    <div
+      data-slot="section-header"
+      data-header={header}
+      className={cn(
+        "flex flex-wrap items-end gap-x-4 gap-y-2",
+        align === "center" ? "justify-center text-center" : "justify-between",
+        header === "sticky" && "lg:rounded-b-lg lg:stuck-surface lg:py-2",
+      )}
+    >
+      <div className={cn("flex min-w-0 flex-col gap-1", align === "center" && "items-center")}>
+        <Heading className={sectionTitleVariants({ size })}>{title}</Heading>
+        {description && <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">{description}</p>}
+      </div>
+      {action && <div data-slot="section-action">{action}</div>}
+    </div>
+  );
   return (
     <section data-slot="section" className={cn("flex min-w-0 flex-col gap-4", className)} {...props}>
       {titleDisplay === "hidden" ? (
         <Heading className="sr-only">{title}</Heading>
+      ) : header === "sticky" ? (
+        // The sticky box can tell when it is stuck, so the title row's surface shows only then.
+        <div className="lg:stuck-container lg:sticky lg:top-0 lg:z-10">{titleRow}</div>
       ) : (
-        <div
-          data-slot="section-header"
-          data-header={header}
-          className={cn(
-            "flex flex-wrap items-end gap-x-4 gap-y-2",
-            align === "center" ? "justify-center text-center" : "justify-between",
-            header === "sticky" &&
-              "lg:sticky lg:top-0 lg:z-10 lg:rounded-b-lg lg:bg-background/80 lg:py-2 lg:backdrop-blur-md",
-          )}
-        >
-          <div className={cn("flex min-w-0 flex-col gap-1", align === "center" && "items-center")}>
-            <Heading className={sectionTitleVariants({ size })}>{title}</Heading>
-            {description && <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">{description}</p>}
-          </div>
-          {action && <div data-slot="section-action">{action}</div>}
-        </div>
+        titleRow
       )}
       {children}
     </section>

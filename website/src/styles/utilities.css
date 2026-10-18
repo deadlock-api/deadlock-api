@@ -247,3 +247,22 @@
     }
   }
 }
+
+/* A sticky bar (Section header="sticky"): `stuck-container` on the sticky element, `stuck-surface` on its content. The
+   frosted surface is drawn only while the bar is stuck where the browser can tell (scroll-state queries), so in place
+   the bar reads as a plain heading; a browser without them always draws it, so stuck content never shows through. */
+@utility stuck-container {
+  container-type: scroll-state;
+}
+@utility stuck-surface {
+  background-color: --alpha(var(--color-background) / 80%);
+  backdrop-filter: blur(--theme(--blur-md));
+  @supports (container-type: scroll-state) {
+    background-color: transparent;
+    backdrop-filter: none;
+    @container scroll-state(stuck: top) {
+      background-color: --alpha(var(--color-background) / 80%);
+      backdrop-filter: blur(--theme(--blur-md));
+    }
+  }
+}
