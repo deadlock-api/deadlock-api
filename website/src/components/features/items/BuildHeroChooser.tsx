@@ -26,7 +26,7 @@ export function BuildHeroChooser({ onPick }: { onPick: (heroId: number) => void 
                 className="h-auto w-full flex-col gap-1 px-1 py-1.5"
                 onClick={() => onPick(hero.id)}
               >
-                <HeroImage heroId={hero.id} shape="circle" title="" className="size-8" />
+                <HeroImage heroId={hero.id} shape="circle" decorative className="size-8" />
                 <span className="w-full truncate text-xs">{hero.name}</span>
               </Button>
             </li>
