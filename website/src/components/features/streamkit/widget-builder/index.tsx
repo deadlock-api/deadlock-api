@@ -33,7 +33,7 @@ export function WidgetBuilder({ region, accountId }: WidgetBuilderProps) {
   const navigate = useNavigate();
 
   const [config, updateConfig] = useReducer(widgetConfigReducer, {
-    widgetType: widgetTypes.includes(search["widget-type"] ?? "") ? (search["widget-type"] as string) : widgetTypes[0],
+    widgetType: widgetTypes.find(({ value }) => value === search["widget-type"])?.value ?? widgetTypes[0].value,
     theme: "dark",
     rows: widgetRows(DEFAULT_VARIABLES, DEFAULT_LABELS, DEFAULT_SUBTEXTS),
     variable: "wins_losses_today",
@@ -97,9 +97,9 @@ export function WidgetBuilder({ region, accountId }: WidgetBuilderProps) {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {widgetTypes.map((w) => (
-                <SelectItem key={w} value={w}>
-                  {w}
+              {widgetTypes.map(({ value, label }) => (
+                <SelectItem key={value} value={value}>
+                  {label}
                 </SelectItem>
               ))}
             </SelectContent>

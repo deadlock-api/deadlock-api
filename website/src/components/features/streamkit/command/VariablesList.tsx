@@ -2,7 +2,7 @@ import { Section } from "~/components/patterns/page/Section";
 import { Button } from "~/components/ui/button";
 import { Heading } from "~/components/ui/heading";
 import { Inline, Stack } from "~/components/ui/stack";
-import { snakeToPretty } from "~/lib/utils";
+import { variableLabel } from "~/lib/streamkit-command";
 import type { Variable } from "~/types/streamkit/command";
 
 interface VariablesListProps {
@@ -56,9 +56,9 @@ export function VariablesList({ variables, onVariableClick }: VariablesListProps
                     size="xs"
                     shape="pill"
                     onClick={() => onVariableClick(variable.name)}
-                    title={variable.description}
+                    aria-description={variable.description || undefined}
                   >
-                    {snakeToPretty(variable.name)}
+                    {variableLabel(variable.name)}
                   </Button>
                 ))}
               </Inline>

@@ -6,9 +6,9 @@ import { BoxWidget } from "~/components/features/streamkit/widgets/box";
 import { RawWidget } from "~/components/features/streamkit/widgets/raw";
 import { Text } from "~/components/ui/text";
 import { WIDGET_SCALE } from "~/constants/streamkit/widget";
+import { variableLabel } from "~/lib/streamkit-command";
 import { splitWidgetList, withoutEmptyVariables } from "~/lib/streamkit-list";
 import { readWidgetFlag, readWidgetInt, readWidgetSearch } from "~/lib/streamkit-widget-search";
-import { snakeToPretty } from "~/lib/utils";
 import { widgetVersionsQueryOptions } from "~/queries/streamkit-queries";
 import type { Color } from "~/types/general";
 import type { Region, Theme } from "~/types/streamkit/widget";
@@ -99,7 +99,7 @@ function Widget() {
             })
           : undefined;
       const variables = columns?.variables;
-      const labels = columns?.labels ?? variables?.map(snakeToPretty);
+      const labels = columns?.labels ?? variables?.map(variableLabel);
       const subtexts = columns?.subtexts;
       // An edited URL ("?theme=Dark") must not crash the overlay on stream: unknown themes fall back to dark.
       const theme = THEMES.find((known) => known === search.theme) ?? "dark";

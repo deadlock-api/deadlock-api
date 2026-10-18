@@ -12,7 +12,7 @@ import { Slider } from "~/components/ui/slider";
 import { Inline, Stack } from "~/components/ui/stack";
 import { Text } from "~/components/ui/text";
 import { formatCountNoun } from "~/lib/format";
-import { snakeToPretty } from "~/lib/utils";
+import { variableLabel } from "~/lib/streamkit-command";
 import type { Variable } from "~/types/streamkit/command";
 
 import { missingArgErrors, type WidgetConfig, type WidgetConfigAction, type WidgetRow } from "./widget-config";
@@ -34,7 +34,7 @@ export function BoxWidgetConfig({ config, updateConfig, availableVariables }: Bo
 
   function updateVariable(id: number, value: string) {
     const availableVariable = availableVariables.find((v) => v.name === value);
-    updateRow(id, { variable: value, label: value ? (availableVariable?.default_label ?? snakeToPretty(value)) : "" });
+    updateRow(id, { variable: value, label: value ? (availableVariable?.default_label ?? variableLabel(value)) : "" });
   }
 
   function removeVariable(index: number) {
@@ -118,7 +118,7 @@ export function BoxWidgetConfig({ config, updateConfig, availableVariables }: Bo
                   <SelectContent>
                     {availableVariables.map((v) => (
                       <SelectItem key={v.name} value={v.name}>
-                        {v.name}
+                        {variableLabel(v.name)}
                       </SelectItem>
                     ))}
                   </SelectContent>

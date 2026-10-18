@@ -2,6 +2,21 @@ import type { Variable } from "~/types/streamkit/command";
 
 const PLACEHOLDER = /\{([^{}]+)\}/g;
 
+// Words of a variable name that read as something else spelled out.
+const VARIABLE_WORDS: Record<string, string> = { kd: "K/D", img: "Image" };
+
+/**
+ * A variable's name as the builders show it, the same in every list: `total_kd` → "Total K/D", `rank_img` → "Rank
+ * Image". Not its `default_label`, which can hold a placeholder ("{hero_name} Kd").
+ */
+export function variableLabel(name: string): string {
+  return name
+    .split("_")
+    .filter(Boolean)
+    .map((word) => VARIABLE_WORDS[word] ?? word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+}
+
 /** The variable names a command template uses, in order and without repeats: `{wins_today}` → `wins_today`. */
 export function commandTemplateVariables(template: string): string[] {
   return [...new Set([...template.matchAll(PLACEHOLDER)].map(([, name]) => name))];

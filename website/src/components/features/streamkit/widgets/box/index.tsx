@@ -4,7 +4,7 @@ import { MatchHistory } from "~/components/features/streamkit/widgets/MatchHisto
 import { DEFAULT_LABELS, DEFAULT_VARIABLES, UPDATE_INTERVAL_MS } from "~/constants/streamkit/widget";
 import { useStats } from "~/hooks/streamkit/useStats";
 import { useWidgetTheme } from "~/hooks/streamkit/useWidgetTheme";
-import { snakeToPretty } from "~/lib/utils";
+import { variableLabel } from "~/lib/streamkit-command";
 import type { BoxWidgetProps, Stat } from "~/types/streamkit/widget";
 
 import { BoxBranding } from "./BoxBranding";
@@ -34,7 +34,7 @@ const createStatDisplays = (
   return variables.map((variable, index) => ({
     variable,
     value: stats[variable],
-    label: displayLabels[index] || snakeToPretty(variable),
+    label: displayLabels[index] || variableLabel(variable),
     subtext: subtexts[index] ? resolveTemplate(subtexts[index], stats) : undefined,
     opacity,
   }));

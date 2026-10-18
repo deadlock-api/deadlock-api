@@ -2,12 +2,15 @@ import type { Color } from "~/types/general";
 import type { Variable } from "~/types/streamkit/command";
 import type { Theme } from "~/types/streamkit/widget";
 
-export const widgetTypes: string[] = ["box", "raw"];
+export const widgetTypes: { value: string; label: string }[] = [
+  { value: "box", label: "Box" },
+  { value: "raw", label: "Raw Value" },
+];
 
 export const themes: { value: Theme; label: string }[] = [
-  { value: "dark", label: "Dark Theme" },
-  { value: "light", label: "Light Theme" },
-  { value: "glass", label: "Glass Theme" },
+  { value: "dark", label: "Dark" },
+  { value: "light", label: "Light" },
+  { value: "glass", label: "Glass" },
 ];
 
 export type PreviewBackgroundColor = Color;

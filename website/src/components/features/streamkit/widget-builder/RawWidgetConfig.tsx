@@ -4,6 +4,7 @@ import { ExtraArgumentFields } from "~/components/domain/streamkit/ExtraArgument
 import { Field } from "~/components/ui/field";
 import { Input } from "~/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
+import { variableLabel } from "~/lib/streamkit-command";
 import type { Color } from "~/types/general";
 import type { Variable } from "~/types/streamkit/command";
 
@@ -34,7 +35,7 @@ export function RawWidgetConfig({ config, updateConfig, availableVariables }: Ra
             <SelectContent>
               {availableVariables.map((v) => (
                 <SelectItem key={v.name} value={v.name}>
-                  {v.name}
+                  {variableLabel(v.name)}
                 </SelectItem>
               ))}
             </SelectContent>

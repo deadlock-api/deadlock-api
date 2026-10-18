@@ -9,6 +9,7 @@ import {
   commandTemplateVariables,
   insertCommandVariable,
   isCommandTemplateValid,
+  variableLabel,
 } from "./streamkit-command";
 
 const variables: Variable[] = [
@@ -45,4 +46,10 @@ test("a variable goes in at the caret, replacing the selection", () => {
   assert.deepEqual(insertCommandVariable("a  b", "x", 2), { template: "a {x} b", caret: 5 });
   assert.deepEqual(insertCommandVariable("a XX b", "x", 2, 4), { template: "a {x} b", caret: 5 });
   assert.deepEqual(insertCommandVariable("", "x", 0), { template: "{x}", caret: 3 });
+});
+
+test("variable names read as words, with K/D and Image spelled out", () => {
+  assert.equal(variableLabel("total_kd"), "Total K/D");
+  assert.equal(variableLabel("rank_img"), "Rank Image");
+  assert.equal(variableLabel("leaderboard_place"), "Leaderboard Place");
 });
