@@ -181,7 +181,7 @@ export default function EconomySourcesByRank({ params }: EconomySourcesByRankPro
         )}
       </div>
 
-      <ChartLegend className="justify-center">
+      <ChartLegend label="Soul sources" className="justify-center">
         {SOUL_SOURCE_GROUPS.map((group) => (
           <ChartLegendItem key={group.key} color={group.color}>
             {group.label}

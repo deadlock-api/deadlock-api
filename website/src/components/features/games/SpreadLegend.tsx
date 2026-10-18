@@ -9,15 +9,17 @@ export function SpreadLegend({
   label,
   average,
   color = CHART_COLOR.primary,
+  className,
 }: {
   /** What the chart shows, the name of the legend. */
   label: string;
   /** The average line's name. */
   average: string;
   color?: string;
+  className?: string;
 }) {
   return (
-    <ChartLegend label={`${label.charAt(0).toUpperCase()}${label.slice(1)} key`}>
+    <ChartLegend label={`${label.charAt(0).toUpperCase()}${label.slice(1)} key`} className={className}>
       <ChartLegendItem color={color} shape="line">
         {average}
       </ChartLegendItem>

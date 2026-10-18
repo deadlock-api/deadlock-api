@@ -3,7 +3,7 @@ import type { AnalyticsApiPlayerPerformanceCurveRequest } from "deadlock_api_cli
 import { useMemo, useState } from "react";
 import { Area, CartesianGrid, ComposedChart, Line, LineChart, ReferenceArea, Tooltip, XAxis, YAxis } from "recharts";
 
-import { ChartLegend, ChartLegendItem, ChartSwatch } from "~/components/patterns/charts/ChartLegend";
+import { ChartLegend, ChartLegendItem } from "~/components/patterns/charts/ChartLegend";
 import { ChartReading, ChartReadings } from "~/components/patterns/charts/ChartReadings";
 import { ChartEmpty, ChartError, ChartLoading } from "~/components/patterns/charts/ChartStates";
 import { ChartSurface } from "~/components/patterns/charts/ChartSurface";
@@ -20,10 +20,11 @@ import {
 } from "~/components/patterns/charts/theme";
 import { NoValue } from "~/components/ui/no-value";
 import { Segmented, SegmentedItem } from "~/components/ui/segmented";
-import { TooltipCard, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
+import { cn } from "~/lib/utils";
 import { playerPerformanceCurveQueryOptions } from "~/queries/player-performance-curve-query";
 
 import { curveGroupSouls, formatSouls, formatSoulsCompact, SOUL_SOURCE_GROUPS } from "./economy-definitions";
+import { SpreadLegend } from "./SpreadLegend";
 
 interface EconomyGrowthCurveProps {
   params: AnalyticsApiPlayerPerformanceCurveRequest;
@@ -182,25 +183,15 @@ export default function EconomyGrowthCurve({ params }: EconomyGrowthCurveProps) 
                   if (!active || !payload?.length) return null;
                   const row = payload[0].payload as (typeof chartData)[number];
                   return (
-                    <TooltipCard>
-                      <div className="text-xs font-semibold">{label}% into the match</div>
-                      <TooltipStats>
-                        {[...SOUL_SOURCE_GROUPS]
-                          .sort((a, b) => row[b.key] - row[a.key])
-                          .map((group) => (
-                            <TooltipStat
-                              key={group.key}
-                              label={
-                                <span className="flex items-center gap-1.5">
-                                  <ChartSwatch color={group.color} shape="line" size="sm" />
-                                  {group.label}
-                                </span>
-                              }
-                              value={formatSouls(row[group.key]) ?? <NoValue />}
-                            />
-                          ))}
-                      </TooltipStats>
-                    </TooltipCard>
+                    <ChartReadings title={`${label}% into the match`} valueLabel="Souls">
+                      {[...SOUL_SOURCE_GROUPS]
+                        .sort((a, b) => row[b.key] - row[a.key])
+                        .map((group) => (
+                          <ChartReading key={group.key} label={group.label} color={group.color}>
+                            {formatSouls(row[group.key]) ?? <NoValue />}
+                          </ChartReading>
+                        ))}
+                    </ChartReadings>
                   );
                 }}
               />
@@ -221,15 +212,21 @@ export default function EconomyGrowthCurve({ params }: EconomyGrowthCurveProps) 
           </ChartSurface>
         )}
 
-        {mode === "by-source" && (
-          <ChartLegend className="justify-center">
+        {/* Both keys share one cell and the hidden one keeps its room, so switching modes never moves the page. */}
+        <div className="grid *:col-start-1 *:row-start-1">
+          <SpreadLegend
+            label="Net worth"
+            average="Avg net worth"
+            className={cn("justify-center", mode !== "total" && "invisible")}
+          />
+          <ChartLegend label="Soul sources" className={cn("justify-center", mode !== "by-source" && "invisible")}>
             {SOUL_SOURCE_GROUPS.map((group) => (
               <ChartLegendItem key={group.key} color={group.color} shape="line">
                 {group.label}
               </ChartLegendItem>
             ))}
           </ChartLegend>
-        )}
+        </div>
       </div>
     </div>
   );
