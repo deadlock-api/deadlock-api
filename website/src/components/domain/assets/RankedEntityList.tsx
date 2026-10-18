@@ -130,7 +130,8 @@ export function RankedEntityRow({
  * One number of a RankedEntityRow: the value over its label, and with `share` a thin bar under the value for a
  * number that is a part of a whole (how often it is bought). `tone` colors the value; the number itself still says
  * which side of the pivot it is on. With `change` the bar is signed: a gain right, a loss left. With `details` the value
- * opens a hover card.
+ * opens a hover card. A
+ * `tone` colors the signed bar too.
  */
 export function RankedEntityMetric({
   label,
@@ -163,7 +164,13 @@ export function RankedEntityMetric({
       <span className={cn("type-label tabular-nums", tone && TONE_TEXT[tone])}>{value ?? <NoValue />}</span>
       {/* Every metric keeps the bar's row, so the labels of a row line up whether or not a value has a bar. */}
       {change ? (
-        <DivergingBar value={change.value} scale={change.scale} interval={change.interval} className="w-full" />
+        <DivergingBar
+          value={change.value}
+          scale={change.scale}
+          interval={change.interval}
+          tone={tone}
+          className="w-full"
+        />
       ) : share !== undefined ? (
         <ProgressBar variant="thin" value={share} color="var(--chart-share)" className="w-full" />
       ) : (

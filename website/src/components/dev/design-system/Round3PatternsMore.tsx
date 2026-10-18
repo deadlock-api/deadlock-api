@@ -152,7 +152,7 @@ function PanelSpecimens() {
       <Specimen
         name="PanelSection"
         source="patterns/panel/Panel"
-        note="A titled strip that divides the rows of a panel or list into groups. Children sit on the trailing edge. Also here: PanelShowMore as a row button."
+        note="A titled strip that divides the rows of a panel or list into groups. Children sit on the trailing edge. variant=label drops the band for a quiet sentence-case label, for panels with many small groups. Also here: PanelShowMore as a row button."
       >
         <Panel>
           <PanelHeader title="Match history" icon={Layers} />
@@ -166,6 +166,15 @@ function PanelSpecimens() {
           <PanelBody size="sm">Rows of yesterday</PanelBody>
           {expanded && <PanelBody size="sm">More rows</PanelBody>}
           <PanelShowMore open={expanded} total={24} onOpenChange={setExpanded} />
+        </Panel>
+        <Panel>
+          <PanelHeader title="Build" icon={Layers} size="sm" />
+          <PanelSection variant="label" title="Laning">
+            <span className="tabular-nums">9</span>
+          </PanelSection>
+          <PanelBody size="sm">Items of the laning phase</PanelBody>
+          <PanelSection variant="label" title="Core items" />
+          <PanelBody size="sm">Items of the mid game</PanelBody>
         </Panel>
       </Specimen>
     </>

@@ -138,20 +138,52 @@ export function PanelShowMore({
   );
 }
 
+type PanelSectionProps = Omit<React.ComponentProps<"div">, "title"> & {
+  title: React.ReactNode;
+  /** Counts or controls on the trailing edge. */
+  children?: React.ReactNode;
+} & (
+    | {
+        /** `strip`: a filled, ruled band with an uppercase label, for groups of rows that scroll or need a hard edge. */
+        variant?: "strip";
+        /** `subtle` is the translucent strip; `opaque` is the panel's own surface, for a strip that rows scroll under. */
+        tone?: "subtle" | "opaque";
+      }
+    | {
+        /**
+         * `label`: a quiet sentence-case label set close above its group and away from the one before, so whitespace
+         * does the dividing. For panels with many small groups, where a band per group turns into stripes.
+         */
+        variant: "label";
+        tone?: never;
+      }
+  );
+
 /** A titled strip that divides the rows of a panel or list into groups: "Today", "Core items". */
 export function PanelSection({
   title,
+  variant = "strip",
   tone = "subtle",
   className,
   children,
   ...props
-}: Omit<React.ComponentProps<"div">, "title"> & {
-  title: React.ReactNode;
-  /** `subtle` is the translucent strip; `opaque` is the panel's own surface, for a strip that rows scroll under. */
-  tone?: "subtle" | "opaque";
-  /** Counts or controls on the trailing edge of the strip. */
-  children?: React.ReactNode;
-}) {
+}: PanelSectionProps) {
+  if (variant === "label") {
+    return (
+      <div
+        data-slot="panel-section"
+        data-variant="label"
+        className={cn(
+          "flex min-w-0 items-center justify-between gap-2 px-3 pt-3 pb-1 text-xs text-muted-foreground",
+          className,
+        )}
+        {...props}
+      >
+        <div className="truncate font-semibold text-foreground">{title}</div>
+        {children}
+      </div>
+    );
+  }
   return (
     <div
       data-slot="panel-section"

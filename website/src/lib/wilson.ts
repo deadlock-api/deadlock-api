@@ -17,3 +17,13 @@ export function wilsonScoreInterval(wins: number, matches: number, z = 1.96): [n
 
   return [(center - margin) / denominator, (center + margin) / denominator];
 }
+
+/**
+ * How far a win rate from `matches` games can land from a known one by chance alone (95%, at a coin-flip rate), or
+ * from another sample's of `otherMatches` games: a difference smaller than this is noise. 100 matches give ±9.8
+ * points, 1,000 give ±3.1.
+ */
+export function winRateNoise(matches: number, otherMatches?: number, z = 1.96): number {
+  if (matches <= 0 || otherMatches === 0) return 1;
+  return z * Math.sqrt(0.25 / matches + (otherMatches === undefined ? 0 : 0.25 / otherMatches));
+}

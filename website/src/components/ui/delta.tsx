@@ -36,6 +36,11 @@ interface DeltaBaseProps extends Omit<React.ComponentProps<"span">, "children"> 
   sign?: "glyph" | "arrow";
   /** `fixed` always prints `digits` decimals (+3.0%); `trim` drops trailing zeros (+1,234, +12.5). */
   fraction?: "fixed" | "trim";
+  /**
+   * The smallest change, in `value`'s units, that counts as a difference: a smaller one is printed muted, so only the
+   * changes that stand out of the noise take a color.
+   */
+  threshold?: number;
 }
 
 /** `badge` draws it as a square Badge in the tone's color, for table cells and stat rows; only a badge has a `size`. */
@@ -52,6 +57,7 @@ export function Delta({
   display = "text",
   fraction = "fixed",
   size = "default",
+  threshold = 0,
   className,
   ...props
 }: DeltaProps) {
@@ -61,7 +67,10 @@ export function Delta({
   // Round first so a change too small to display is hidden rather than shown as "-0.0%".
   const rounded = Math.round((format === "percent" ? value * 100 : value) * scale) / scale;
   if (rounded === 0) return null;
-  const tone = polarity === "neutral" ? "muted" : toneOf(polarity === "lower-is-better" ? -rounded : rounded);
+  const tone =
+    polarity === "neutral" || Math.abs(value) < threshold
+      ? "muted"
+      : toneOf(polarity === "lower-is-better" ? -rounded : rounded);
   const Arrow = rounded > 0 ? ArrowUp : ArrowDown;
   const content = (
     <>

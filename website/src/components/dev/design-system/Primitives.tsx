@@ -420,7 +420,7 @@ export function Primitives() {
       <Specimen
         name="Delta"
         source="ui/delta · lib/tone"
-        note="A signed change, colored by direction. polarity lower-is-better when a rise is bad news, neutral when it is neither. For other good/bad values use toneOf() with TONE_TEXT."
+        note="A signed change, colored by direction. polarity lower-is-better when a rise is bad news, neutral when it is neither; a change under threshold is muted, so only real differences take a color. For other good/bad values use toneOf() with TONE_TEXT."
       >
         <Variants>
           <Delta value={0.031} />
@@ -428,6 +428,7 @@ export function Primitives() {
           <Delta value={1.4} format="number" />
           <Delta value={0.6} format="number" polarity="lower-is-better" />
           <Delta value={0.6} format="number" polarity="neutral" />
+          <Delta value={0.004} threshold={0.03} />
           <span className="text-xs text-muted-foreground">zero renders nothing:</span>
           <Delta value={0.0001} />
         </Variants>

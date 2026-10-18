@@ -1,4 +1,4 @@
-import { TONE_BG, toneOf } from "~/lib/tone";
+import { TONE_BG, type Tone, toneOf } from "~/lib/tone";
 import { cn } from "~/lib/utils";
 
 /**
@@ -9,6 +9,7 @@ export function DivergingBar({
   value,
   scale,
   interval,
+  tone,
   className,
   ...props
 }: Omit<React.ComponentProps<"div">, "children"> & {
@@ -16,6 +17,8 @@ export function DivergingBar({
   scale: number;
   /** The uncertainty around the value, as `[low, high]` on the same scale. The value then becomes a marker. */
   interval?: readonly [number, number];
+  /** The fill's tone; by default the value's sign. `muted` for a difference within the noise. */
+  tone?: Tone;
 }) {
   const at = (n: number) => (scale > 0 ? 50 + Math.max(-1, Math.min(1, n / scale)) * 50 : 50);
   const t = value == null || !Number.isFinite(value) || scale <= 0 ? 0 : Math.max(-1, Math.min(1, value / scale));
@@ -42,7 +45,7 @@ export function DivergingBar({
         </>
       ) : (
         <div
-          className={cn("absolute inset-y-0 rounded-full", TONE_BG[toneOf(t)])}
+          className={cn("absolute inset-y-0 rounded-full", TONE_BG[tone ?? toneOf(t)])}
           style={{ insetInlineStart: t >= 0 ? "50%" : `${50 + t * 50}%`, width: `${Math.abs(t) * 50}%` }}
         />
       )}
