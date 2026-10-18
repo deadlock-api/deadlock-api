@@ -8,3 +8,17 @@
   -webkit-user-select: none;
   user-select: none;
 }
+/* Forced colors (Windows high contrast): SVG text and rules keep their authored fills, so map the chart chrome to the
+   system colors. The series keep their hues, as their legend swatches do (forced-color-adjust: none). */
+@media (forced-colors: active) {
+  [data-slot="chart-surface"] .recharts-cartesian-axis-tick-value,
+  [data-slot="chart-surface"] .recharts-label,
+  [data-slot="chart-surface"] .recharts-polar-angle-axis-tick-value {
+    fill: CanvasText;
+  }
+  [data-slot="chart-surface"] .recharts-cartesian-grid line,
+  [data-slot="chart-surface"] .recharts-polar-grid line,
+  [data-slot="chart-surface"] .recharts-polar-grid path {
+    stroke: GrayText;
+  }
+}

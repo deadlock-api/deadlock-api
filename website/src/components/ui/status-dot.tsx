@@ -2,7 +2,8 @@ import { cva, type VariantProps } from "class-variance-authority";
 
 import { cn } from "~/lib/utils";
 
-const statusDotVariants = cva("inline-block size-2 shrink-0 rounded-full", {
+// `forced-color-adjust-none`: in Windows high contrast the dot keeps its color, as the series it keys does on the plot.
+const statusDotVariants = cva("inline-block size-2 shrink-0 rounded-full forced-color-adjust-none", {
   variants: {
     tone: {
       muted: "bg-muted-foreground",

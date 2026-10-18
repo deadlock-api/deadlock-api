@@ -48,7 +48,12 @@ export function ChartSwatch({
     <span
       data-slot="chart-swatch"
       aria-hidden="true"
-      className={cn("inline-block shrink-0", (size === "sm" ? smallShapeClass : shapeClass)[shape], className)}
+      // In forced colors (Windows high contrast) the swatch keeps its color, as the plotted series does.
+      className={cn(
+        "inline-block shrink-0 forced-color-adjust-none",
+        (size === "sm" ? smallShapeClass : shapeClass)[shape],
+        className,
+      )}
       style={
         shape === "ring" || shape === "dashed"
           ? { borderColor: color, ...style }
