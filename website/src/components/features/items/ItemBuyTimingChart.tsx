@@ -1,7 +1,7 @@
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import type { AnalyticsApiItemStatsRequest } from "deadlock_api_client";
 import { parseAsBoolean, parseAsStringLiteral, useQueryState } from "nuqs";
-import { Fragment, useMemo } from "react";
+import { Fragment, useMemo, useState } from "react";
 import { CartesianGrid, Line, LineChart, Tooltip, XAxis, YAxis } from "recharts";
 
 import { ChartCard } from "~/components/patterns/charts/ChartCard";
@@ -22,6 +22,7 @@ import {
 } from "~/components/patterns/charts/theme";
 import { PanelBody } from "~/components/patterns/panel/Panel";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
+import { StaleOverlay } from "~/components/patterns/states/StaleOverlay";
 import { Field } from "~/components/ui/field";
 import { NoValue } from "~/components/ui/no-value";
 import { Segmented, SegmentedItem } from "~/components/ui/segmented";
@@ -215,22 +216,33 @@ export function ItemBuyTimingChart({ itemIds, baseQueryOptions, rowTotalMatches 
     [baseQueryOptions, bucketType, minMatches],
   );
 
-  const { data, isLoading } = useQuery(itemStatsQueryOptions(queryOptions));
+  // Another view keeps the last chart on screen, washed out, until its answer lands: the legend and plot no longer give
+  // way to a spinner. The chart is drawn from the view its data answers, not the one just picked.
+  const {
+    data: fresh,
+    isLoading,
+    isPlaceholderData,
+  } = useQuery({ ...itemStatsQueryOptions(queryOptions), placeholderData: keepPreviousData });
+  const [shown, setShown] = useState({ data: fresh, bucketType });
+  if (!isPlaceholderData && (fresh !== shown.data || bucketType !== shown.bucketType)) {
+    setShown({ data: fresh, bucketType });
+  }
+  const { data } = shown;
 
   const chartData: ChartData = useMemo(
     () =>
       buildChartData({
         data,
         itemIds,
-        bucketType,
+        bucketType: shown.bucketType,
         useWilsonInterval,
         minAvgThreshold,
         rowTotalMatches,
       }),
-    [data, itemIds, bucketType, useWilsonInterval, minAvgThreshold, rowTotalMatches],
+    [data, itemIds, shown.bucketType, useWilsonInterval, minAvgThreshold, rowTotalMatches],
   );
 
-  const config = BUCKET_CONFIG[bucketType];
+  const config = BUCKET_CONFIG[shown.bucketType];
 
   const dataRange = useMemo<[number, number]>(() => {
     const allPoints = Object.values(chartData).flat();
@@ -238,9 +250,9 @@ export function ItemBuyTimingChart({ itemIds, baseQueryOptions, rowTotalMatches 
     if (!valid.length) return [0, 1];
     const min = Math.min(...valid.map((d) => d.displayBucket));
     const max = Math.max(...valid.map((d) => d.displayBucket));
-    const adjustmentFactor = bucketType === "net_worth_by_1000" ? 1000 : 1;
+    const adjustmentFactor = shown.bucketType === "net_worth_by_1000" ? 1000 : 1;
     return [Math.max(0, min - adjustmentFactor), max + adjustmentFactor];
-  }, [chartData, bucketType]);
+  }, [chartData, shown.bucketType]);
 
   const hasValidData =
     !isLoading &&
@@ -252,7 +264,7 @@ export function ItemBuyTimingChart({ itemIds, baseQueryOptions, rowTotalMatches 
     game_time_min: "purchase time",
     game_time_normalized_percentage: "purchase time relative to match length",
     net_worth_by_1000: "net worth at purchase",
-  }[bucketType];
+  }[shown.bucketType];
   const seriesColor = (index: number) => SERIES_COLORS[index] ?? CHART_COLOR.neutral;
 
   return (
@@ -277,7 +289,7 @@ export function ItemBuyTimingChart({ itemIds, baseQueryOptions, rowTotalMatches 
               className="items-center"
               label="Conservative win rate"
             />
-            {rowTotalMatches && (
+            {rowTotalMatches != null && rowTotalMatches > 0 && (
               <SwitchField
                 size="sm"
                 checked={showFineGrainedIntervals}
@@ -290,7 +302,17 @@ export function ItemBuyTimingChart({ itemIds, baseQueryOptions, rowTotalMatches 
         </PanelBody>
         <Separator />
         {/* Nothing picked needs no data: the server, which never fetches it here, shows the same prompt. */}
-        <div aria-live="polite" aria-busy={isLoading && itemIds.length > 0}>
+        {/* The legend names the picked items whatever the chart's state, so it stays put while the chart loads. */}
+        {itemIds.length > 0 && (
+          <ChartLegend className="px-3 pt-2">
+            {itemIds.map((itemId, index) => (
+              <ChartLegendItem key={itemId} color={seriesColor(index)} shape="line">
+                {itemNameMap?.get(itemId) ?? `Item ${itemId}`}
+              </ChartLegendItem>
+            ))}
+          </ChartLegend>
+        )}
+        <div>
           {itemIds.length === 0 ? (
             <EmptyState variant="plain" title="Pick one or more items above" />
           ) : isLoading ? (
@@ -300,16 +322,7 @@ export function ItemBuyTimingChart({ itemIds, baseQueryOptions, rowTotalMatches 
           ) : !hasValidData ? (
             <EmptyState variant="plain" title="No data available" />
           ) : (
-            <>
-              {itemIds.length > 1 && (
-                <ChartLegend className="px-3 pt-2">
-                  {itemIds.map((itemId, index) => (
-                    <ChartLegendItem key={itemId} color={seriesColor(index)} shape="line">
-                      {itemNameMap?.get(itemId) ?? `Item ${itemId}`}
-                    </ChartLegendItem>
-                  ))}
-                </ChartLegend>
-              )}
+            <StaleOverlay active={isPlaceholderData} label="purchase analysis">
               <ChartSurface label={`Item win rate by ${purchaseAxis} chart`} size="lg" variant="flush">
                 <LineChart margin={{ ...CHART_MARGIN, right: 16 }}>
                   <CartesianGrid {...CHART_GRID} />
@@ -387,7 +400,7 @@ export function ItemBuyTimingChart({ itemIds, baseQueryOptions, rowTotalMatches 
                   ))}
                 </LineChart>
               </ChartSurface>
-            </>
+            </StaleOverlay>
           )}
         </div>
       </ChartCard>
