@@ -33,12 +33,15 @@ import { cn } from "~/lib/utils";
 import type { BuildPurchaseFilters } from "~/queries/hero-build-stats-query";
 import type { SteamProfile } from "~/queries/steam-queries";
 
-/** A category's name, and what its author wrote about it behind an info mark. */
+/**
+ * A category's name, and what its author wrote about it behind an info mark. A long name wraps to a second line
+ * instead of being cut: authors put what to do in it ("Ordered of importance, buy what you need").
+ */
 function CategoryTitle({ name, description }: { name: string; description: string | null }) {
-  if (!description) return name;
+  if (!description) return <span className="whitespace-normal">{name}</span>;
   return (
-    <span className="inline-flex max-w-full items-center gap-1">
-      <span className="truncate">{name}</span>
+    <span className="inline-flex max-w-full items-center gap-1 whitespace-normal">
+      <span className="min-w-0">{name}</span>
       <Tooltip content={description}>
         <TooltipTarget aria-label={`About ${name}`} className="inline-flex shrink-0 items-center">
           <Info aria-hidden="true" className="size-3.5" />
