@@ -8,6 +8,7 @@ import { DivergingBar } from "~/components/ui/rate-bar";
 import { Separator } from "~/components/ui/separator";
 import { Skeleton } from "~/components/ui/skeleton";
 import { Inline, Stack } from "~/components/ui/stack";
+import { Text } from "~/components/ui/text";
 import { TooltipTarget } from "~/components/ui/tooltip";
 import type { DraftControls } from "~/hooks/useDraft";
 import { useSteamProfiles } from "~/hooks/useSteamProfiles";
@@ -186,7 +187,9 @@ export function DraftBoard({ controls, analysis, imported, loading, swaps, laneS
 
       <Stack gap={2.5} align="center" className="flex-none px-3 text-center">
         <Stack gap={0} align="center">
-          <div className="eyebrow">Predicted</div>
+          <Text variant="caption" tone="muted">
+            Predicted
+          </Text>
           {loading ? (
             // One line of `text-4xl`, so the number replaces it without moving the board.
             <Skeleton className="h-10 w-28" />

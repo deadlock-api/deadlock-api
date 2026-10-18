@@ -6,8 +6,8 @@ import {
   CHART_BASELINE,
   CHART_COLOR,
   CHART_CURSOR_LINE,
-  CHART_X_AXIS_SM,
-  CHART_Y_AXIS_SM,
+  CHART_X_AXIS,
+  CHART_Y_AXIS,
 } from "~/components/patterns/charts/theme";
 import { TooltipCard, TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
 import type { LaneSoulPoint } from "~/lib/team-builder/analysis";
@@ -74,7 +74,7 @@ export function LaneSoulCurve({ points }: { points: LaneSoulPoint[] }) {
         </defs>
 
         <XAxis
-          {...CHART_X_AXIS_SM}
+          {...CHART_X_AXIS}
           dataKey="timeS"
           type="number"
           domain={[points[0].timeS, points[points.length - 1].timeS]}
@@ -84,7 +84,7 @@ export function LaneSoulCurve({ points }: { points: LaneSoulPoint[] }) {
           minTickGap={2}
         />
         <YAxis
-          {...CHART_Y_AXIS_SM}
+          {...CHART_Y_AXIS}
           orientation="right"
           domain={[-bound, bound]}
           ticks={[-bound, 0, bound]}

@@ -145,9 +145,7 @@ export default function AbilityOrderNode({
       name={node.abilityId != null ? <AbilityName abilityId={node.abilityId} /> : "Root"}
       meta={
         <>
-          <Badge variant="muted" size="sm">
-            T{abilityLevel}
-          </Badge>
+          <Badge variant="muted">T{abilityLevel}</Badge>
           <span>{formatCountNoun(cumulativePoints, "pt")}</span>
         </>
       }

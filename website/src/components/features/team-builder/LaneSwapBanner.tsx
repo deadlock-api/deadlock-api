@@ -17,10 +17,10 @@ function LaneName({ slot }: { slot: number }) {
 function Move({ heroId, fromSlot, toSlot }: { heroId: number; fromSlot: number; toSlot: number }) {
   const { hero } = useHeroById(heroId);
   return (
-    <Badge variant="muted" size="sm" className="ps-px pe-1.5" title={hero?.name}>
+    <Badge variant="muted" className="ps-px pe-1.5" title={hero?.name}>
       <HeroImage heroId={heroId} shape="circle" className="size-4 shrink-0" />
       <LaneName slot={fromSlot} />
-      <ArrowRightIcon className="size-2.5 text-muted-foreground" />
+      <ArrowRightIcon className="size-3 text-muted-foreground" />
       <LaneName slot={toSlot} />
     </Badge>
   );

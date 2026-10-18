@@ -59,7 +59,7 @@ function SwapHint({ heroId, gain, side, onApply }: { heroId: number; gain: numbe
     >
       {/* The pill fits its slot: a narrow slot (a phone, or both sides side by side) drops the arrow, then the
           number, which the label and title still carry. Wider pills collided with the neighbouring slot's. */}
-      <ArrowRightIcon className="hidden size-2.5 @4xs:block" />
+      <ArrowRightIcon className="hidden size-3 @4xs:block" />
       <HeroImage heroId={heroId} shape="circle" className="size-4 shrink-0" />
       <span className="hidden @5xs:inline">{formatPoints(gain)}</span>
     </Button>
