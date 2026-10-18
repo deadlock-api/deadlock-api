@@ -93,7 +93,7 @@ const COLUMNS: Column[] = [
   { key: "winRate", label: "Win rate", name: "win rate" },
   {
     key: "lowerBound",
-    label: "Vs. avg",
+    label: "Vs. all builds",
     name: "confidence above the average",
     description:
       "Win rate against the hero's builds pooled. The bar is its 95% range: colored only when the whole range is on one side.",
@@ -101,7 +101,7 @@ const COLUMNS: Column[] = [
   },
   {
     key: "trend",
-    label: "7d trend",
+    label: "7d share",
     name: "share change in the last 7 days",
     description: "How the build's share of the hero's build matches moved in the last 7 days, in points.",
     className: "hidden @lg/builds:table-cell",
