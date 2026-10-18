@@ -319,10 +319,22 @@ const ItemStatsTableRow = memo(function ItemStatsTableRow({
       )}
       <TableCell className="hidden text-center font-semibold @md:table-cell">{index + 1}</TableCell>
       <TableCell data-pinned>
-        <Stack gap={1}>
-          <ItemCell item={row.item} linkToDetail variant={itemVariant} className="max-w-44 sm:max-w-64" />
-          <p className="text-xs text-muted-foreground tabular-nums">{row.matches.toLocaleString("en-US")} matches</p>
-        </Stack>
+        {/* Narrow in a phone-sized table, so the win rate beside it stays on screen. */}
+        <ItemCell
+          item={row.item}
+          linkToDetail
+          variant={itemVariant}
+          meta={
+            // Rounded where the cell is narrow, so the count stays whole beside the name.
+            <>
+              <span className="@md:hidden">
+                {row.matches.toLocaleString("en-US", { notation: "compact", maximumFractionDigits: 0 })} matches
+              </span>
+              <span className="hidden @md:inline">{row.matches.toLocaleString("en-US")} matches</span>
+            </>
+          }
+          className="max-w-30 @md:max-w-64"
+        />
       </TableCell>
       <TableCell className="hidden @md:table-cell">
         <div className="flex items-center gap-2">{row.item?.item_tier ?? "?"}</div>
@@ -678,7 +690,7 @@ export function ItemStatsTable({
           {/* A size container, so a phone drops the rank, tier and confidence columns (row order is the rank, the tier
               a filter above) and keeps the win rate, which the table is sorted by, on screen. */}
           <div className="@container">
-            <Table aria-label="Item statistics" className="tabular-nums">
+            <Table aria-label="Item statistics" density="compact" className="tabular-nums">
               <TableHeader tone="muted">
                 <TableRow>
                   {details !== undefined && (
