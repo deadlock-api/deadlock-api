@@ -86,6 +86,8 @@ export function BuildInMatches({
   return (
     <Section
       title={`${name} in matches`}
+      // The build's name and numbers stay in view down its panels.
+      header="sticky"
       className="gap-3 pt-3"
       description={
         // The build's own headline, so the panels below read against it without a look back up at the list.
