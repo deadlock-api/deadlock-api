@@ -147,13 +147,14 @@ export function GraphNodeCard({
       )}
       {...props}
     >
-      {(status || selected) && (
-        <div className="absolute inset-e-1.5 top-1.5 flex items-center gap-1">
-          {selected && <PinIcon aria-hidden="true" className="size-3 text-primary" />}
-          {status}
-        </div>
+      {status && <div className="absolute inset-e-1.5 top-1.5 flex items-center gap-1">{status}</div>}
+      {/* On the frame's corner, out of the text's way: pinning changes the frame and the mark, never the layout. */}
+      {selected && (
+        <span className="absolute -inset-e-1.5 -top-1.5 flex size-5 items-center justify-center rounded-full border border-primary bg-card">
+          <PinIcon aria-hidden="true" className="size-3 text-primary" />
+        </span>
       )}
-      <div className={cn("flex items-center gap-2", (status || selected) && "pe-9")}>
+      <div className={cn("flex items-center gap-2", status && "pe-9")}>
         <div className={cn("shrink-0", fade)}>{media ?? <div className="size-10 rounded-lg bg-muted" />}</div>
         <div className="flex min-w-0 flex-1 flex-col gap-0.5 text-xs leading-tight font-semibold">
           {name}
