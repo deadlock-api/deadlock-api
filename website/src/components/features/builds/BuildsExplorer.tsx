@@ -1,4 +1,5 @@
 import { useQueries, useQuery } from "@tanstack/react-query";
+import { SearchX } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { BuildDetailPanel } from "~/components/features/builds/BuildDetailPanel";
@@ -11,6 +12,7 @@ import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { StaleOverlay } from "~/components/patterns/states/StaleOverlay";
+import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
 import { day, type Dayjs } from "~/dayjs";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
@@ -277,6 +279,21 @@ function BuildsExplorerView({
     // Overview first, details on demand: the list and the build picked from it, then what its players do in their
     // matches, and last the chart and items that compare every build at once.
     <StaleOverlay active={stale} label="builds" className="@container flex flex-col gap-3">
+      {/* A build asked for by its ID that these filters leave out: the list shows another, and says why. */}
+      {buildId !== null && selected.hero_build_id !== buildId && (
+        <Alert variant="info">
+          <SearchX aria-hidden="true" />
+          <AlertTitle>Build {buildId} is not in this list</AlertTitle>
+          <AlertDescription>
+            It has fewer than {minMatches} matches under these filters, or none.
+            {onMinMatchesChange && minMatches > 1 && (
+              <Button variant="outline" size="sm" onClick={() => onMinMatchesChange(1)}>
+                Show builds with 1+ matches
+              </Button>
+            )}
+          </AlertDescription>
+        </Alert>
+      )}
       <div className="grid gap-3 @3xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
         <BuildTable
           rows={rows}

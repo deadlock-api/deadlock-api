@@ -155,6 +155,15 @@ function BuildsPage() {
             });
           }}
         />
+        <Filter.BuildId
+          value={buildId}
+          onValueChange={(choice) =>
+            startTransition(() => {
+              void setHero(choice.heroId, together);
+              void setBuildId(choice.buildId, together);
+            })
+          }
+        />
         <Filter.ModeWithRank
           value={{ mode, rank: [minRankId, maxRankId] }}
           defaultValue={{ mode: DEFAULT_MODE, rank: [DEFAULT_RANK_RANGE.min, DEFAULT_RANK_RANGE.max] }}
