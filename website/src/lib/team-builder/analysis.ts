@@ -367,6 +367,10 @@ export interface DraftAnalysis {
  * Each term is given as the means it is made of: solo and synergy are "ally mean minus enemy mean", so each side
  * is averaged over its own cells and the two variances add. Pooling both sides into one mean divided by the total
  * count squared, which made those terms' margin about half what it is.
+ *
+ * Each list holds a cell for every slot, pair or matchup a full draft has. An empty slot is a hero not yet known, a
+ * cell with no games behind it, so a half-drafted board widens the interval instead of being called firm on the
+ * few cells it has.
  */
 function predictionMargin(termMeans: number[][][], model: DraftModel, logOdds: number): number | undefined {
   let variance = 0;
@@ -416,7 +420,9 @@ function draftTerms(draft: Draft, index: StatsIndex) {
     soloEnemy,
     synergyAlly,
     synergyEnemy,
-    empty: !allyHeroes.length && !enemyHeroes.length,
+    // The weights were fit on two full teams, so with one side still empty a lone hero's edge would be read as a
+    // whole team's: one pick against nothing showed a confident 78%.
+    unopposed: !allyHeroes.length || !enemyHeroes.length,
   };
 }
 
@@ -442,7 +448,7 @@ function draftLogOdds(terms: ReturnType<typeof draftTerms>, model: DraftModel): 
 }
 
 function predictedFrom(terms: ReturnType<typeof draftTerms>, model: DraftModel) {
-  return terms.empty ? undefined : 100 * sigmoid(draftLogOdds(terms, model));
+  return terms.unopposed ? undefined : 100 * sigmoid(draftLogOdds(terms, model));
 }
 
 /** Predicted ally win rate for a draft, in percent. */
@@ -595,6 +601,14 @@ export function analyzeDraft(draft: Draft, index: StatsIndex): DraftAnalysis {
   const residual = residualTerms(terms, model);
 
   const minOf = (values: number[]) => (values.length ? Math.min(...values) : 0);
+  const predicted = index.hasData ? predictedFrom(terms, model) : undefined;
+  const size = TEAM_SIZE[draft.gameMode];
+  const pairsOf = (n: number) => (n * (n - 1)) / 2;
+  /** The cells a full draft has, the ones not drafted yet counted as unmeasured. */
+  const padded = (matches: number[], cells: number) => [
+    ...matches,
+    ...Array.from({ length: Math.max(0, cells - matches.length) }, () => 0),
+  ];
   const pairMatches = [...allyPairs, ...enemyPairs].map((p) => p.matches);
   const counterMatches = counterMatrix.flat().map((c) => c.matches);
   const heroMatches = [...allyHeroes, ...enemyHeroes].map((h) => index.heroSample(h)?.matches ?? 0);
@@ -647,17 +661,30 @@ export function analyzeDraft(draft: Draft, index: StatsIndex): DraftAnalysis {
   return {
     allyHeroes,
     enemyHeroes,
-    predicted: index.hasData ? predictedFrom(terms, model) : undefined,
-    margin: predictionMargin(
-      [
-        [allyHeroes, enemyHeroes].map((side) => side.map((h) => index.heroSample(h)?.matches ?? 0)),
-        [allyPairs, enemyPairs].map((side) => side.map((p) => p.matches)),
-        [counterMatches],
-        ...(terms.hasLanes ? [[duelMatches]] : []),
-      ],
-      model,
-      draftLogOdds(terms, model),
-    ),
+    predicted,
+    margin:
+      predicted === undefined
+        ? undefined
+        : predictionMargin(
+            [
+              [allyHeroes, enemyHeroes].map((side) =>
+                padded(
+                  side.map((h) => index.heroSample(h)?.matches ?? 0),
+                  size,
+                ),
+              ),
+              [allyPairs, enemyPairs].map((side) =>
+                padded(
+                  side.map((p) => p.matches),
+                  pairsOf(size),
+                ),
+              ),
+              [padded(counterMatches, size * size)],
+              ...(terms.hasLanes ? [[padded(duelMatches, lanes.length * 4)]] : []),
+            ],
+            model,
+            draftLogOdds(terms, model),
+          ),
     contributions,
     allyPairs,
     enemyPairs,
