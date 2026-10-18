@@ -349,6 +349,7 @@ function HigherLower() {
   const sentence = round ? revealSentence(round) : "";
   const stepState = (r: HigherLowerRound, i: number) =>
     state.answers[i] == null ? "empty" : state.answers[i] === correctGuess(r) ? "correct" : "wrong";
+  const correctSoFar = rounds.filter((r, i) => stepState(r, i) === "correct").length;
 
   return (
     <GameShell
@@ -503,7 +504,10 @@ function HigherLower() {
               </TerminalButton>
             </RevealActions>
 
-            <StepMeter label={`Round ${shownIndex + 1} of ${total}`} className="justify-center pt-2">
+            <StepMeter
+              label={`Round ${shownIndex + 1} of ${total}, ${correctSoFar} correct`}
+              className="justify-center pt-2"
+            >
               {rounds.map((r, i) => (
                 <StepMeterStep
                   // oxlint-disable-next-line react/no-array-index-key -- rounds are a fixed list for the day

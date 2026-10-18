@@ -164,6 +164,10 @@ function Trivia() {
     setRevealing(null);
   }, []);
 
+  const stepState = (q: TriviaQuestion, i: number) =>
+    state.answers[i] == null ? "empty" : state.answers[i] === q.correctIndex ? "correct" : "wrong";
+  const correctSoFar = questions.filter((q, i) => stepState(q, i) === "correct").length;
+
   const shareText = useMemo(() => {
     const dayNum = getDayNumber(date);
     return `Deadlockdle #${dayNum} - Trivia ${state.score}/${QUESTION_COUNT}\n${puzzleShareUrl(date)}`;
@@ -255,20 +259,13 @@ function Trivia() {
               </TerminalButton>
             </RevealActions>
 
-            <StepMeter label={`Question ${shownIndex + 1} of ${QUESTION_COUNT}`} className="justify-center pt-2">
+            <StepMeter
+              label={`Question ${shownIndex + 1} of ${QUESTION_COUNT}, ${correctSoFar} correct`}
+              className="justify-center pt-2"
+            >
               {questions.map((q, i) => (
-                <StepMeterStep
-                  key={q.question}
-                  state={
-                    i === shownIndex
-                      ? "current"
-                      : state.answers[i] === null
-                        ? "empty"
-                        : state.answers[i] === q.correctIndex
-                          ? "correct"
-                          : "wrong"
-                  }
-                />
+                // The question on screen is current until it is answered, then shows its result, as in Higher or Lower.
+                <StepMeterStep key={q.question} state={i === shownIndex && !isRevealed ? "current" : stepState(q, i)} />
               ))}
             </StepMeter>
           </motion.div>

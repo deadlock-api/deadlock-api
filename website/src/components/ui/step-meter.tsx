@@ -25,13 +25,14 @@ const STEP_SHAPE: Record<StepMeterVariant, string> = {
   track: "h-1.5 flex-1 rounded-full border",
 };
 
-// Correct and wrong never differ by color alone: a mark carries a check or a cross, a track segment is full or thin.
+// Correct and wrong never differ by color alone: a mark carries a check or a cross, a track segment is tall, full or
+// thin. The current step is a thick ring (no pulse, which dimmed it under 3:1), an empty one the meter-empty edge.
 const STEP_STATE: Record<StepState, string> = {
   done: "border-primary bg-primary",
-  current: "animate-pulse border-primary motion-reduce:animate-none",
+  current: "border-2 border-primary",
   correct: "border-positive bg-positive text-background",
   wrong: "border-negative bg-negative text-background",
-  empty: "border-muted-foreground/40",
+  empty: "border-meter-empty",
 };
 
 const StepMeterVariantContext = createContext<StepMeterVariant>("dots");
@@ -82,6 +83,7 @@ function StepMeterStep({
         STEP_SHAPE[variant],
         STEP_STATE[state],
         variant === "track" && state === "wrong" && "h-0.5",
+        variant === "track" && state === "correct" && "h-2.5",
         className,
       )}
       {...props}

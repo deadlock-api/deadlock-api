@@ -409,7 +409,7 @@ export function Round3Primitives() {
       <Specimen
         name="StepMeter"
         source="ui/step-meter"
-        note="A few discrete steps and the state of each: quiz attempts, questions of a round, stages of a flow. StepMeterStep children carry the state; label is what a screen reader hears."
+        note="A few discrete steps and the state of each: quiz attempts, questions of a round, stages of a flow. StepMeterStep children carry the state; label is what a screen reader hears, so a game puts the history in it too (Round 5 of 10, 3 correct). Every mark is 3:1 on its surface: empty steps take the meter-empty edge, the current step a thick primary ring (no pulse)."
       >
         {STEP_VARIANTS.map((variant) => (
           <Variants key={variant} label={`variant="${variant}"`} className="gap-6">
@@ -429,7 +429,7 @@ export function Round3Primitives() {
           </Variants>
         ))}
         <Variants
-          label="state: a check or a cross, or a thin segment, so correct and wrong never differ by color alone"
+          label="state: a check or a cross, or a tall or thin segment, so correct, wrong and done never differ by color alone"
           className="gap-4"
         >
           {STEP_STATES.map((state) => (
