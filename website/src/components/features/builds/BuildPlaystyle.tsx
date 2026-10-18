@@ -3,7 +3,7 @@ import { ChartLegend, ChartLegendItem } from "~/components/patterns/charts/Chart
 import { GAUSSIAN_COLORS, GaussianComparison } from "~/components/patterns/charts/GaussianComparison";
 import { PanelSection } from "~/components/patterns/panel/Panel";
 import { Delta } from "~/components/ui/delta";
-import { KeyValue, KeyValueList } from "~/components/ui/key-value";
+import { KeyValue, KeyValueCell, KeyValueList } from "~/components/ui/key-value";
 import { NoValue } from "~/components/ui/no-value";
 import { Skeleton } from "~/components/ui/skeleton";
 import { Tooltip, TooltipHeader, TooltipTarget } from "~/components/ui/tooltip";
@@ -98,14 +98,14 @@ export function BuildPlaystyle({
                     ) : (
                       metric.format(value)
                     )}
-                    <span className="w-14 text-end text-xs">
+                    <KeyValueCell label="Vs. all builds" className="w-14 text-end text-xs">
                       <Delta
                         value={delta}
                         unit={metric.delta === "points" ? " pp" : undefined}
                         polarity={metric.polarity}
                         threshold={metricNoise(metric)}
                       />
-                    </span>
+                    </KeyValueCell>
                   </span>
                 )
               }

@@ -12,7 +12,7 @@ import { CornerBadge } from "~/components/ui/corner-badge";
 import { DetailPopover } from "~/components/ui/detail-popover";
 import { InlineStat } from "~/components/ui/inline-stat";
 import { Kbd } from "~/components/ui/kbd";
-import { KeyValue, KeyValueList } from "~/components/ui/key-value";
+import { KeyValue, KeyValueCell, KeyValueList } from "~/components/ui/key-value";
 import { NoValue } from "~/components/ui/no-value";
 import { Pips } from "~/components/ui/pips";
 import { SplitBar } from "~/components/ui/rate-bar";
@@ -439,7 +439,7 @@ export function Round3Primitives() {
       <Specimen
         name="KeyValueList"
         source="ui/key-value"
-        note="Labelled values, one per row, numbers aligned. Inside a tooltip use TooltipStats."
+        note="Labelled values, one per row, numbers aligned. Inside a tooltip use TooltipStats. Several values in one row each sit in a KeyValueCell, named for screen readers; their column names show once over the list."
       >
         <Variants className="items-start gap-6">
           <div className="flex w-56 flex-col gap-1.5">
@@ -456,6 +456,25 @@ export function Round3Primitives() {
               <KeyValue label="Matches" value="4,120" />
               <KeyValue label="Win rate" value="52.4%" />
               <KeyValue label="Avg. duration" value="32:10" />
+            </KeyValueList>
+          </div>
+          <div className="flex w-64 flex-col gap-1.5">
+            <span className="flex justify-between text-xs text-muted-foreground">
+              <span>KeyValueCell</span>
+              <span>Matches · win rate</span>
+            </span>
+            <KeyValueList>
+              <KeyValue
+                label="Under 25 min"
+                value={
+                  <span className="inline-flex gap-2">
+                    <KeyValueCell label="Matches" className="font-normal text-muted-foreground">
+                      1,204
+                    </KeyValueCell>
+                    <KeyValueCell label="Win rate">53.1%</KeyValueCell>
+                  </span>
+                }
+              />
             </KeyValueList>
           </div>
         </Variants>

@@ -4,7 +4,7 @@ import { BuildSectionError } from "~/components/features/builds/BuildSectionErro
 import { PanelSection } from "~/components/patterns/panel/Panel";
 import { StaleOverlay } from "~/components/patterns/states/StaleOverlay";
 import { Delta } from "~/components/ui/delta";
-import { KeyValue, KeyValueList } from "~/components/ui/key-value";
+import { KeyValue, KeyValueCell, KeyValueList } from "~/components/ui/key-value";
 import { Skeleton } from "~/components/ui/skeleton";
 import type { BuildRow } from "~/lib/build-stats";
 import { formatPercent } from "~/lib/format";
@@ -100,7 +100,8 @@ export function BuildByDuration({
     <section className="@container flex flex-col">
       {/* The three numbers of each row, named once over them. */}
       <PanelSection variant="label" title="By match length">
-        <span className="hidden whitespace-nowrap @xs:inline">Matches · win rate · vs. hero</span>
+        {/* Wraps in a narrow column rather than hiding: it names the baseline of the differences. */}
+        <span className="min-w-0 grow basis-0 text-end">Matches · win rate · vs. hero</span>
       </PanelSection>
       <StaleOverlay active={query.isPlaceholderData} label="win rate by match length">
         <KeyValueList className="px-3 py-0.5">
@@ -117,9 +118,11 @@ export function BuildByDuration({
                     <Skeleton className="ms-auto h-4 w-24" />
                   ) : enough ? (
                     <span className="inline-flex items-baseline gap-2">
-                      <span className="font-normal text-muted-foreground">{stats.matches.toLocaleString("en-US")}</span>
-                      {formatPercent(stats.wins / stats.matches)}
-                      <span className="w-14 text-end text-xs">
+                      <KeyValueCell label="Matches" className="font-normal text-muted-foreground">
+                        {stats.matches.toLocaleString("en-US")}
+                      </KeyValueCell>
+                      <KeyValueCell label="Win rate">{formatPercent(stats.wins / stats.matches)}</KeyValueCell>
+                      <KeyValueCell label="Vs. hero" className="w-14 text-end text-xs">
                         {hero && hero.matches > 0 && (
                           <Delta
                             value={stats.wins / stats.matches - hero.wins / hero.matches}
@@ -127,7 +130,7 @@ export function BuildByDuration({
                             unit=" pp"
                           />
                         )}
-                      </span>
+                      </KeyValueCell>
                     </span>
                   ) : null
                 }

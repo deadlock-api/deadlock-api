@@ -40,4 +40,25 @@ function KeyValue({
   );
 }
 
-export { KeyValue, KeyValueList };
+/**
+ * One of several values in a `KeyValue`'s value, named for screen readers ("Matches: 1,234"). The column names show
+ * once, over the list; each value carries its own, so a row read alone still says what its numbers are.
+ */
+function KeyValueCell({
+  label,
+  className,
+  children,
+  ...props
+}: React.ComponentProps<"span"> & {
+  /** The value's column name, read before it. */
+  label: string;
+}) {
+  return (
+    <span data-slot="key-value-cell" className={className} {...props}>
+      <span className="sr-only">{label}: </span>
+      {children}
+    </span>
+  );
+}
+
+export { KeyValue, KeyValueCell, KeyValueList };
