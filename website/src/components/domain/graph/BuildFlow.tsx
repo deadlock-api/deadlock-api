@@ -120,12 +120,16 @@ const buildChoiceVariants = cva(
     variants: {
       /**
        * How the row stands to the choice under the pointer in a neighbouring stage: `linked` was bought with it,
-       * `unlinked` was not and fades back, `none` while nothing is pointed at.
+       * `unlinked` was not and steps back: its art and bars fade and its name turns muted, while every figure keeps
+       * its text contrast. `none` while nothing is pointed at.
        */
       relation: {
         none: "",
         linked: "border-info/50 bg-subtle-hover",
-        unlinked: "opacity-40",
+        unlinked: [
+          "text-muted-foreground",
+          "[&_[data-slot=build-choice-media]]:opacity-40 [&_[data-slot=diverging-bar]]:opacity-40 [&_[data-slot=progress-bar]]:opacity-40",
+        ],
       },
     },
     defaultVariants: { relation: "none" },
@@ -196,7 +200,7 @@ export function BuildChoice({
       className={cn(buildChoiceVariants({ relation }), className)}
       {...props}
     >
-      <span aria-hidden="true" className="relative shrink-0">
+      <span aria-hidden="true" data-slot="build-choice-media" className="relative shrink-0">
         {media}
         {/* A check on a chosen row; a plus on the row under the pointer or the keyboard, which it would add. */}
         <span
