@@ -157,13 +157,6 @@ function RoundView({
             }}
             disabled={game.submitting}
           />
-          {game.submitError && (
-            <ErrorState
-              variant="inline"
-              title="Your guess did not go through"
-              description="Nothing was counted. Try again."
-            />
-          )}
           <div className="flex justify-center">
             <TerminalButton
               variant="soft"
@@ -183,6 +176,14 @@ function RoundView({
               Lock in guess
             </TerminalButton>
           </div>
+          {/* Under the button it refers to, so the retry stays where the player just clicked. */}
+          {game.submitError && (
+            <ErrorState
+              variant="inline"
+              title="Your guess did not go through"
+              description="Nothing was counted. Try again."
+            />
+          )}
         </Stack>
       )}
     </Stack>
