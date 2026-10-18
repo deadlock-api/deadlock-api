@@ -26,6 +26,7 @@ import { NoValue } from "~/components/ui/no-value";
 import { Slider } from "~/components/ui/slider";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { SELL_REFUND } from "~/lib/build-completer";
+import { formatCountNoun } from "~/lib/format";
 import type { GameMode, MatchMode } from "~/lib/game-mode";
 import { itemUpgradesQueryOptions } from "~/queries/asset-queries";
 import { itemStatsQueryOptions } from "~/queries/item-stats-query";
@@ -306,8 +307,19 @@ export function BuildEconomy({
           <>
             {/* At least the large plot's height, more where the panel beside it is taller. */}
             <div ref={plotRef} className="flex min-h-90 flex-1 flex-col @xl:min-h-105">
-              <ChartSurface label="Average net worth over the game, with the build's items" variant="flush" size="grow">
-                <ComposedChart data={plot.series} margin={{ top: 20, right: 16, bottom: 0, left: 0 }}>
+              {/* No tooltip to reach here (the Build Designer has none): the plot is not a tab stop, its summary is read
+                  instead, and the Buy order table beside it holds every mark's numbers. */}
+              <ChartSurface
+                label={`Average net worth over the game, with the build's ${formatCountNoun(plot.placed.filter((p) => p.boughtAt != null).length, "item")} bought and ${plot.placed.filter((p) => p.sold).length} sold`}
+                announce="label"
+                variant="flush"
+                size="grow"
+              >
+                <ComposedChart
+                  data={plot.series}
+                  accessibilityLayer={false}
+                  margin={{ top: 20, right: 16, bottom: 0, left: 0 }}
+                >
                   {STAGE_STARTS.map((start, i) => (
                     <ReferenceArea
                       key={start}
