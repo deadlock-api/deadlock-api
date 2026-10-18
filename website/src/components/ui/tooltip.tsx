@@ -1,5 +1,5 @@
 import { HoverCard as HoverCardPrimitive, Tooltip as TooltipPrimitive } from "radix-ui";
-import { type ComponentProps, type ReactNode, useRef } from "react";
+import { type ComponentProps, createContext, type ReactNode, use, useRef } from "react";
 
 import { useControllableState } from "~/components/ui/hooks/use-controllable-state";
 import { FOCUS_RING, POPPER_MOTION } from "~/components/ui/recipes";
@@ -74,6 +74,10 @@ function useToggleTrigger(open: boolean, setOpen: (open: boolean) => void) {
   } as const;
 }
 
+// Set by Tooltip: whether it has no content. A TooltipTarget under an empty Tooltip (content still loading) leaves the
+// tab order, so it is never a focus stop that opens nothing.
+const TooltipEmptyContext = createContext(false);
+
 /**
  * The one hover surface: a hint for an action, the details behind a value, a preview. The child is the trigger and
  * the root: `ref`, `aria-*`, `data-*` and handlers reach it. `open`, `defaultOpen` and `onOpenChange` control it.
@@ -118,56 +122,60 @@ function Tooltip({
   const triggerProps = trigger === "toggle" && !empty ? { ...props, ...toggleProps } : props;
   if (variant === "preview") {
     return (
-      <HoverCardPrimitive.Root openDelay={150} closeDelay={100} open={open} onOpenChange={setOpen}>
-        {/* Radix types this trigger as an anchor; with `asChild` the props land on the child, whatever it is. */}
-        <HoverCardPrimitive.Trigger
-          data-slot="tooltip-trigger"
-          asChild
-          {...(triggerProps as ComponentProps<typeof HoverCardPrimitive.Trigger>)}
-        >
+      <TooltipEmptyContext value={empty}>
+        <HoverCardPrimitive.Root openDelay={150} closeDelay={100} open={open} onOpenChange={setOpen}>
+          {/* Radix types this trigger as an anchor; with `asChild` the props land on the child, whatever it is. */}
+          <HoverCardPrimitive.Trigger
+            data-slot="tooltip-trigger"
+            asChild
+            {...(triggerProps as ComponentProps<typeof HoverCardPrimitive.Trigger>)}
+          >
+            {children}
+          </HoverCardPrimitive.Trigger>
+          {!empty && (
+            <HoverCardPrimitive.Portal>
+              <HoverCardPrimitive.Content
+                data-slot="tooltip-content"
+                data-variant={variant}
+                side={side}
+                align={align}
+                collisionPadding={16}
+                className={cn(
+                  tooltipContentClassName,
+                  "w-112 max-w-(--radix-hover-card-content-available-width) origin-(--radix-hover-card-content-transform-origin)",
+                )}
+              >
+                {content}
+                <HoverCardPrimitive.Arrow className={tooltipArrowClassName} />
+              </HoverCardPrimitive.Content>
+            </HoverCardPrimitive.Portal>
+          )}
+        </HoverCardPrimitive.Root>
+      </TooltipEmptyContext>
+    );
+  }
+  return (
+    <TooltipEmptyContext value={empty}>
+      <TooltipPrimitive.Root data-slot="tooltip" open={open} onOpenChange={setOpen}>
+        <TooltipPrimitive.Trigger data-slot="tooltip-trigger" asChild {...triggerProps}>
           {children}
-        </HoverCardPrimitive.Trigger>
+        </TooltipPrimitive.Trigger>
         {!empty && (
-          <HoverCardPrimitive.Portal>
-            <HoverCardPrimitive.Content
+          <TooltipPrimitive.Portal>
+            <TooltipPrimitive.Content
               data-slot="tooltip-content"
               data-variant={variant}
               side={side}
               align={align}
-              collisionPadding={16}
-              className={cn(
-                tooltipContentClassName,
-                "w-112 max-w-(--radix-hover-card-content-available-width) origin-(--radix-hover-card-content-transform-origin)",
-              )}
+              className={cn(tooltipContentClassName, "origin-(--radix-tooltip-content-transform-origin)")}
             >
               {content}
-              <HoverCardPrimitive.Arrow className={tooltipArrowClassName} />
-            </HoverCardPrimitive.Content>
-          </HoverCardPrimitive.Portal>
+              <TooltipPrimitive.Arrow className={tooltipArrowClassName} />
+            </TooltipPrimitive.Content>
+          </TooltipPrimitive.Portal>
         )}
-      </HoverCardPrimitive.Root>
-    );
-  }
-  return (
-    <TooltipPrimitive.Root data-slot="tooltip" open={open} onOpenChange={setOpen}>
-      <TooltipPrimitive.Trigger data-slot="tooltip-trigger" asChild {...triggerProps}>
-        {children}
-      </TooltipPrimitive.Trigger>
-      {!empty && (
-        <TooltipPrimitive.Portal>
-          <TooltipPrimitive.Content
-            data-slot="tooltip-content"
-            data-variant={variant}
-            side={side}
-            align={align}
-            className={cn(tooltipContentClassName, "origin-(--radix-tooltip-content-transform-origin)")}
-          >
-            {content}
-            <TooltipPrimitive.Arrow className={tooltipArrowClassName} />
-          </TooltipPrimitive.Content>
-        </TooltipPrimitive.Portal>
-      )}
-    </TooltipPrimitive.Root>
+      </TooltipPrimitive.Root>
+    </TooltipEmptyContext>
   );
 }
 
@@ -179,6 +187,7 @@ const TOOLTIP_TARGET_DISPLAY = {
 /**
  * A focusable stand-in for an element that has a hover card but no control of its own: a value in a table, a
  * truncated name. It is in the tab order and carries the one focus treatment, so the card is reachable by keyboard.
+ * While its Tooltip has no content (still loading), it leaves the tab order: no focus stop that opens nothing.
  */
 const TOOLTIP_TARGET_SIZE = {
   default: "",
@@ -207,12 +216,13 @@ function TooltipTarget({
 }) {
   // A block target may hold block content (a bar, a row), which a span may not.
   const Tag = (display === "block" ? "div" : "span") as "span";
+  const empty = use(TooltipEmptyContext);
   return (
     <Tag
       data-slot="tooltip-target"
       data-display={display}
       // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- the span exists to make a hover card reachable by keyboard
-      tabIndex={0}
+      tabIndex={empty ? undefined : 0}
       className={cn(
         FOCUS_RING,
         // The trigger of a toggletip is a button (`role` from `Tooltip trigger="toggle"`), and points like one.

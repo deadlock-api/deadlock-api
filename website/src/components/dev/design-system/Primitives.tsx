@@ -767,7 +767,7 @@ export function Primitives() {
       <Specimen
         name="Tooltip"
         source="ui/tooltip"
-        note='The one hover surface: a hint that names an icon-only button, the details behind a value, a preview. The child is the trigger. variant="preview" is for heavy or interactive content such as a chart: it renders once, opens after a short delay and is not read out as a description. TooltipCard is the same surface for Recharts. TooltipTarget makes a plain value focusable so its tooltip is reachable by keyboard; its display prop decides how it sits in the line, and defaults to inline-block so the focus ring boxes the whole trigger.'
+        note='The one hover surface: a hint that names an icon-only button, the details behind a value, a preview. The child is the trigger. variant="preview" is for heavy or interactive content such as a chart: it renders once, opens after a short delay and is not read out as a description. TooltipCard is the same surface for Recharts. TooltipTarget makes a plain value focusable so its tooltip is reachable by keyboard; its display prop decides how it sits in the line, and defaults to inline-block so the focus ring boxes the whole trigger. Under a Tooltip with empty content (still loading) a TooltipTarget is not a tab stop.'
       >
         <Variants label='variant="hint" (default)'>
           <Tooltip content="Add to comparison">
@@ -797,6 +797,11 @@ export function Primitives() {
               </Button>
             </Tooltip>
           ))}
+        </Variants>
+        <Variants label="empty content (still loading): the TooltipTarget leaves the tab order">
+          <Tooltip content={null}>
+            <TooltipTarget>Mid ranks</TooltipTarget>
+          </Tooltip>
         </Variants>
         <Variants label='variant="preview"'>
           <Tooltip variant="preview" content="Room for a chart and its controls.">
