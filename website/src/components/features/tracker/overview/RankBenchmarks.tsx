@@ -15,6 +15,7 @@ import { DetailPopover } from "~/components/ui/detail-popover";
 import { NoValue } from "~/components/ui/no-value";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
 import { Skeleton } from "~/components/ui/skeleton";
+import { Text } from "~/components/ui/text";
 import { TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
 import { MODE_CONFIG } from "~/lib/game-mode";
 import {
@@ -131,9 +132,10 @@ export function RankBenchmarks({
             title="No rank is recorded for this player. Choose a rank range above to compare against a lobby average."
           />
         ) : loading ? (
+          // The loaded tiles themselves, with their labels and placeholder values, so nothing below moves on load.
           <output aria-label="Loading rank benchmarks" className={gridClassName}>
-            {metrics.map(({ key }) => (
-              <Skeleton key={key} className={cn("w-full", expanded ? "h-32" : "h-14")} />
+            {metrics.map((def) => (
+              <BenchmarkMetric key={def.key} def={def} showDistribution={expanded} loading />
             ))}
           </output>
         ) : failed ? (
@@ -235,11 +237,14 @@ function BenchmarkMetric({
   player,
   cohort,
   showDistribution,
+  loading = false,
 }: {
   def: PlayerMetricDefinition;
   showDistribution: boolean;
-  player: HashMapValue | undefined;
-  cohort: HashMapValue | undefined;
+  player?: HashMapValue;
+  cohort?: HashMapValue;
+  /** Placeholder values in the loaded tile's shape. */
+  loading?: boolean;
 }) {
   const comparison = compareBenchmark(player?.avg, cohort?.avg);
   const known = (value: number | null | undefined): value is number => value != null && Number.isFinite(value);
@@ -248,12 +253,37 @@ function BenchmarkMetric({
   // Damage taken is contextual: a higher value alone is neither better nor worse.
   const neutral = def.key === "player_damage_taken_per_min";
   const relativePercent = comparison?.relativeDelta == null ? null : Math.round(comparison.relativeDelta * 100);
+  // Two lines held in the two-tile rows of a phone, where labels wrap, so a loading tile and a loaded one (and the
+  // tiles of one row) are the same height.
+  const label = (
+    <Text variant="caption" tone="muted" wrap="clamp-2" className="min-h-two-lines @xl/overview:min-h-0">
+      {labels[def.key] ?? def.label}
+    </Text>
+  );
+  if (loading) {
+    return (
+      <Card tone="outline" size="xs" radius="md" className="gap-0 px-2 py-1" aria-hidden="true">
+        <div className="flex flex-1 flex-col gap-1 py-1">
+          {/* The change's room too: the label wraps where the loaded tile's does. */}
+          <div className="flex w-full items-start justify-between gap-2">
+            {label}
+            <Skeleton className="h-4 w-8 shrink-0" />
+          </div>
+          <div className="mt-auto flex w-full items-center justify-between gap-2">
+            <Skeleton className="h-4 w-10" />
+            <Skeleton className="h-4 w-10" />
+          </div>
+        </div>
+        {showDistribution && <Skeleton className="h-20 w-full" />}
+      </Card>
+    );
+  }
   return (
     <Card tone="outline" size="xs" radius="md" className="gap-0 px-2 py-1">
       <DetailPopover
         label="benchmark"
         size="sm"
-        className="h-auto w-full min-w-0 flex-col items-stretch gap-1 px-0 py-1 text-start whitespace-normal"
+        className="h-auto w-full min-w-0 flex-1 flex-col items-stretch gap-1 px-0 py-1 text-start whitespace-normal"
         details={
           <>
             <TooltipHeader title={def.label} subtitle="Per-match averages" />
@@ -275,9 +305,10 @@ function BenchmarkMetric({
           </>
         }
       >
-        {/* The label wraps instead of truncating: two tiles a row leave "Objective dmg / min" no room on a phone. */}
+        {/* The label wraps instead of truncating: two tiles a row leave "Objective dmg / min" no room on a phone. The
+            values sit at the tile's foot, so across a row of tiles stretched to one height they line up. */}
         <div className="flex w-full items-start justify-between gap-2">
-          <span className="min-w-0 text-xs text-muted-foreground">{labels[def.key] ?? def.label}</span>
+          {label}
           {relativePercent != null &&
             (relativePercent === 0 || neutral ? (
               <span className="text-xs text-muted-foreground tabular-nums">
@@ -295,7 +326,7 @@ function BenchmarkMetric({
               />
             ))}
         </div>
-        <div className="flex w-full items-center justify-between gap-2">
+        <div className="mt-auto flex w-full items-center justify-between gap-2">
           <span className="shrink-0 text-xs font-semibold tabular-nums">{format(player?.avg)}</span>
           <span className="shrink-0 text-end text-xs text-muted-foreground tabular-nums">{format(cohort?.avg)}</span>
         </div>
