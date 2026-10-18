@@ -85,8 +85,7 @@ export function BuildInMatches({
   return (
     <Section
       title={`${name} in matches`}
-      size="sm"
-      className="gap-2"
+      className="gap-3 pt-3"
       description={
         // The build's own headline, so the panels below read against it without a look back up at the list.
         <span className="flex flex-wrap items-baseline gap-x-4 gap-y-1 text-xs">
