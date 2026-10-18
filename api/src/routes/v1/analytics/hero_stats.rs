@@ -417,7 +417,7 @@ fn build_mv_query(query: &HeroStatsQuery) -> Option<String> {
     FROM {source}
     GROUP BY hero_id, bucket
     ORDER BY hero_id, bucket
-    SETTINGS log_comment = '{mv_log_comment}'
+    SETTINGS log_comment = '{mv_log_comment}', apply_patch_parts = 0
     "
     ))
 }

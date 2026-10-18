@@ -324,7 +324,7 @@ fn build_query(hero_id: u32, query: &HeroBuildStatsQuery) -> String {
     GROUP BY hero_id, hero_build_id, bucket
     HAVING matches >= {min_matches}
     ORDER BY matches DESC, bucket
-    SETTINGS log_comment = 'hero_build_stats'
+    SETTINGS log_comment = 'hero_build_stats', apply_patch_parts = 0
     "
     )
 }

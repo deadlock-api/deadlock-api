@@ -137,7 +137,7 @@ fn build_query(query: &HeroSwapStatsQuery) -> String {
     ARRAY JOIN arrayDistinct([hero_id, pregame_hero_id]) AS h
     GROUP BY hero_id, bucket
     ORDER BY hero_id, bucket
-    SETTINGS log_comment = 'hero_swap_stats'
+    SETTINGS log_comment = 'hero_swap_stats', apply_patch_parts = 0
     "
     )
 }

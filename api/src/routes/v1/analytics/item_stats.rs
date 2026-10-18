@@ -508,7 +508,7 @@ FROM {source}
 GROUP BY item_id, bucket
 {having_clause}
 ORDER BY item_id, bucket
-SETTINGS log_comment = '{log_comment}'
+SETTINGS log_comment = '{log_comment}', apply_patch_parts = 0
         "
     )
 }

@@ -313,7 +313,7 @@ pub(super) fn built_days_query(from: i64, to: i64) -> String {
     format!(
         "SELECT count() FROM {state} FINAL
         WHERE table_name = '{AGG_TABLE}' AND day >= toDate({from}) AND day < toDate({to})
-        SETTINGS log_comment = 'player_performance_curve_agg_coverage'",
+        SETTINGS log_comment = 'player_performance_curve_agg_coverage', apply_patch_parts = 0",
         state = crate::services::cohort_agg_refresh::STATE_TABLE,
     )
 }

@@ -342,7 +342,7 @@ WITH lane_duos AS (
     PREWHERE {table_filters}
 )
 {matchup_select}
-SETTINGS log_comment = 'lane_matchup_stats_table', do_not_merge_across_partitions_select_final = 1
+SETTINGS log_comment = 'lane_matchup_stats_table', apply_patch_parts = 0, do_not_merge_across_partitions_select_final = 1
     "
     ))
 }

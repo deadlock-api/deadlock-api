@@ -527,7 +527,7 @@ lane_samples AS (
     WHERE true{time_bounds}
 ),
 {curve_select}
-SETTINGS log_comment = 'lane_soul_curve_table', do_not_merge_across_partitions_select_final = 1
+SETTINGS log_comment = 'lane_soul_curve_table', apply_patch_parts = 0, do_not_merge_across_partitions_select_final = 1
     "
     ))
 }
