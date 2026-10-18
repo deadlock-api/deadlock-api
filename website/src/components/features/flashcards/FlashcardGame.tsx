@@ -263,7 +263,14 @@ export function FlashcardPrompt({
         className={cn("size-full", mark === "inline" && "flex-row items-center gap-4 p-4")}
       >
         <EntryContext value={card.answer}>{children}</EntryContext>
-        {mark === "inline" && <AnimatePresence>{revealed && <PromptMark correct={correct} />}</AnimatePresence>}
+        {mark === "inline" && (
+          // The mark's box is laid out before the reveal (an invisible mark sizes it), so the text beside it keeps its
+          // width and wrap when the verdict comes in.
+          <div className="grid shrink-0 *:col-start-1 *:row-start-1">
+            <ResultMark correct aria-hidden="true" className="invisible" />
+            <AnimatePresence>{revealed && <PromptMark correct={correct} />}</AnimatePresence>
+          </div>
+        )}
       </PromptFrame>
       {mark === "corner" && (
         <AnimatePresence>

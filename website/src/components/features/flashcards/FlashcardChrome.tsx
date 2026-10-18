@@ -119,9 +119,13 @@ export function FlashcardMastered({
 }
 
 /** The verdict stamped on the prompt once an answer is picked. */
-export function ResultMark({ correct, className }: { correct: boolean; className?: string }) {
+export function ResultMark({
+  correct,
+  className,
+  ...props
+}: { correct: boolean } & Omit<React.ComponentProps<typeof IconTile>, "tone" | "shape" | "size">) {
   return (
-    <IconTile tone={correct ? "positive" : "negative"} shape="circle" size="sm" className={className}>
+    <IconTile tone={correct ? "positive" : "negative"} shape="circle" size="sm" className={className} {...props}>
       {correct ? <Check /> : <X />}
     </IconTile>
   );
