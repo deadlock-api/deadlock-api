@@ -6,7 +6,7 @@ import { HeroImage } from "~/components/domain/assets/HeroImage";
 import { PaginationStatus } from "~/components/patterns/data-table/PaginationControls";
 import { TableEmptyRow } from "~/components/patterns/data-table/TableEmptyRow";
 import { Button } from "~/components/ui/button";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
+import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { Tooltip } from "~/components/ui/tooltip";
 import { useHeroById } from "~/hooks/useAssetById";
 import { usePaginationQueryState } from "~/hooks/usePaginationQueryState";
@@ -15,6 +15,8 @@ import { LeaderboardControls } from "./LeaderboardControls";
 
 export interface LeaderboardTableProps {
   leaderboard: Leaderboard;
+  /** Names the table for assistive technology: "Europe leaderboard". */
+  label: string;
   onHeroClick: (heroId: number) => void;
 }
 
@@ -25,7 +27,7 @@ interface LeaderboardTableRowProps {
   onHeroClick: (heroId: number) => void;
 }
 
-export function LeaderboardTable({ leaderboard, onHeroClick }: LeaderboardTableProps) {
+export function LeaderboardTable({ leaderboard, label, onHeroClick }: LeaderboardTableProps) {
   const {
     searchQuery,
     setSearchQuery,
@@ -112,9 +114,13 @@ export function LeaderboardTable({ leaderboard, onHeroClick }: LeaderboardTableP
         query={deferredSearchQuery}
       />
       <Table density="compact" className="tabular-nums">
+        <TableCaption visibility="sr-only">{label}</TableCaption>
         <TableHeader tone="muted">
           <TableRow>
-            <TableHead className="w-12 text-end">#</TableHead>
+            <TableHead className="w-12 text-end">
+              <span aria-hidden="true">#</span>
+              <span className="sr-only">Rank</span>
+            </TableHead>
             <TableHead>Account Name</TableHead>
             {shouldShowTopHeroesColumn && <TableHead className="min-w-28 text-end">Top Heroes</TableHead>}
           </TableRow>

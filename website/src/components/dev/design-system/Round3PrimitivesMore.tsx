@@ -27,7 +27,16 @@ import { DivergingBar } from "~/components/ui/rate-bar";
 import { Segmented, SegmentedItem } from "~/components/ui/segmented";
 import { Slider } from "~/components/ui/slider";
 import { SortButton } from "~/components/ui/sort-button";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableRowHeader } from "~/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  TableRowHeader,
+} from "~/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { Textarea } from "~/components/ui/textarea";
 
@@ -660,6 +669,31 @@ export function Round3PrimitivesMore() {
                   <FilterIcon aria-hidden="true" />
                 </Button>
               </TableCell>
+            </TableRow>
+          </TableBody>
+        </Table>
+      </Specimen>
+
+      <Specimen
+        name="TableCaption"
+        source="ui/table"
+        note='Names the table. visibility="sr-only" names it for screen readers only, where the heading above already says what it is: "Europe leaderboard".'
+      >
+        <Table density="compact" className="max-w-md">
+          <TableCaption>visibility="visible" (default)</TableCaption>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-12 text-end">
+                <span aria-hidden="true">#</span>
+                <span className="sr-only">Rank</span>
+              </TableHead>
+              <TableHead>Player</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            <TableRow>
+              <TableCell className="text-end tabular-nums">1</TableCell>
+              <TableCell>Player one</TableCell>
             </TableRow>
           </TableBody>
         </Table>

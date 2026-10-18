@@ -302,9 +302,22 @@ function TableCell({
   );
 }
 
-function TableCaption({ className, ...props }: React.ComponentProps<"caption">) {
+/**
+ * Names the table. `visibility="sr-only"` names it for assistive technology only, where the heading and filters above
+ * already say what it is to the eye: "Europe leaderboard".
+ */
+function TableCaption({
+  visibility = "visible",
+  className,
+  ...props
+}: React.ComponentProps<"caption"> & { visibility?: "visible" | "sr-only" }) {
   return (
-    <caption data-slot="table-caption" className={cn("pt-4 text-sm text-muted-foreground", className)} {...props} />
+    <caption
+      data-slot="table-caption"
+      data-visibility={visibility}
+      className={cn(visibility === "sr-only" ? "sr-only" : "pt-4 text-sm text-muted-foreground", className)}
+      {...props}
+    />
   );
 }
 

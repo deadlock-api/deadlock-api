@@ -117,6 +117,7 @@ export const NAV: readonly NavChapter[] = [
           "Pips",
           "StepMeter",
           "TableRow states",
+          "TableCaption",
           "TableRowHeader",
           "TableHeader tone and position",
           "Table width",

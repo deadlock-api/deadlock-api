@@ -13,6 +13,7 @@ import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { StaleOverlay } from "~/components/patterns/states/StaleOverlay";
 import { SegmentedItem } from "~/components/ui/segmented";
+import { useHeroById } from "~/hooks/useAssetById";
 import { prefetchCached } from "~/lib/prefetch-safe";
 import { getDefaultRegion, REGION_LABELS } from "~/lib/region";
 import { fetchDefaultRegion } from "~/lib/region-fns";
@@ -81,6 +82,7 @@ function LeaderboardPage() {
   // `useQuery`, not `useQueries`: the latter starts a new observer for the new key, which has no previous data.
   const leaderboardQuery = useQuery({ ...leaderboardQueryOptions(region, heroId), placeholderData: keepPreviousData });
   const { isPending, isError, error } = leaderboardQuery;
+  const { hero } = useHeroById(heroId ?? -1);
 
   return (
     <PageShell>
@@ -114,7 +116,12 @@ function LeaderboardPage() {
         ) : leaderboardQuery.data ? (
           <StaleOverlay active={leaderboardQuery.isPlaceholderData} label="leaderboard">
             {/* Keyed by the board, so a jump or a highlighted rank from another board does not carry over. */}
-            <LeaderboardTable key={`${region}-${heroId}`} leaderboard={leaderboardQuery.data} onHeroClick={setHeroId} />
+            <LeaderboardTable
+              key={`${region}-${heroId}`}
+              leaderboard={leaderboardQuery.data}
+              label={`${REGION_LABELS[region]} leaderboard${hero?.name ? ` for ${hero.name}` : ""}`}
+              onHeroClick={setHeroId}
+            />
           </StaleOverlay>
         ) : null}
       </div>
