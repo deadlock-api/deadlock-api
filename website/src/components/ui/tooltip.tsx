@@ -32,44 +32,96 @@ function TooltipCard({ className, ...props }: ComponentProps<"output">) {
   );
 }
 
+/** Closes the card a click pinned open, if any: one pinned card at a time, and a card opening elsewhere closes it. */
+let pinnedCard: { owner: object; close: () => void } | null = null;
+
+function closeOtherPinned(owner: object) {
+  if (pinnedCard && pinnedCard.owner !== owner) pinnedCard.close();
+}
+
 /**
  * What makes a trigger a toggletip: a press toggles the card, so a tap opens it on a touch screen, where hover never
  * happens. The trigger becomes a button (`role`, `aria-expanded`; Enter and Space on a non-native one), which also
  * makes an `aria-label` on a `TooltipTarget` span a valid name.
+ *
+ * A mouse click pins the card: hover opens it on the way to the click, and a click that closed it again read as a dead
+ * click. A pinned card stays open when the pointer leaves, and closes on a second click, Escape, a press outside it,
+ * or another card opening. `onOpenChange` and `contentProps` go to the Radix root and content; `owner` names the card.
  */
 function useToggleTrigger(open: boolean, setOpen: (open: boolean) => void) {
-  // Whether the card was open when the press began: hover or focus may open it on the way to the click.
+  // Whether the card was open, and pinned, when the press began: hover or focus may open it on the way to the click.
   const openAtPress = useRef(false);
+  const pinnedAtPress = useRef(false);
   // A touch press toggles on pointer up: a hover card cancels the touch's click.
   const touchHandled = useRef(false);
+  const pinned = useRef(false);
+  const triggerElement = useRef<Element | null>(null);
+  const unpin = () => {
+    pinned.current = false;
+    if (pinnedCard?.owner === pinned) pinnedCard = null;
+  };
+  const close = () => {
+    unpin();
+    setOpen(false);
+  };
+  const pin = () => {
+    closeOtherPinned(pinned);
+    pinned.current = true;
+    pinnedCard = { owner: pinned, close };
+    setOpen(true);
+  };
   return {
-    role: "button",
-    "aria-expanded": open,
-    // Default prevented, so Radix does not close the card on the press, and the press does not move focus.
-    onPointerDown: (event: React.PointerEvent) => {
-      openAtPress.current = open;
-      touchHandled.current = false;
-      event.preventDefault();
-    },
-    onPointerUp: (event: React.PointerEvent) => {
-      if (event.pointerType !== "touch") return;
-      touchHandled.current = true;
-      setOpen(!openAtPress.current);
-    },
-    onClick: (event: React.MouseEvent) => {
-      event.preventDefault();
-      if (touchHandled.current) {
+    owner: pinned,
+    triggerProps: {
+      role: "button",
+      "aria-expanded": open,
+      // Default prevented, so Radix does not close the card on the press, and the press does not move focus.
+      onPointerDown: (event: React.PointerEvent) => {
+        triggerElement.current = event.currentTarget;
+        openAtPress.current = open;
+        pinnedAtPress.current = pinned.current;
         touchHandled.current = false;
-        return;
-      }
-      // `detail` is 0 for a click from the keyboard (Enter or Space on a native button).
-      setOpen(event.detail > 0 ? !openAtPress.current : !open);
+        event.preventDefault();
+      },
+      onPointerUp: (event: React.PointerEvent) => {
+        if (event.pointerType !== "touch") return;
+        touchHandled.current = true;
+        if (openAtPress.current) close();
+        else setOpen(true);
+      },
+      onClick: (event: React.MouseEvent) => {
+        event.preventDefault();
+        if (touchHandled.current) {
+          touchHandled.current = false;
+          return;
+        }
+        // `detail` is 0 for a click from the keyboard (Enter or Space on a native button), which toggles.
+        if (event.detail === 0) {
+          if (open) close();
+          else setOpen(true);
+        } else if (pinnedAtPress.current) close();
+        else pin();
+      },
+      onKeyDown: (event: React.KeyboardEvent) => {
+        if (event.currentTarget instanceof HTMLButtonElement) return;
+        if (event.key !== "Enter" && event.key !== " ") return;
+        event.preventDefault();
+        if (open) close();
+        else setOpen(true);
+      },
     },
-    onKeyDown: (event: React.KeyboardEvent) => {
-      if (event.currentTarget instanceof HTMLButtonElement) return;
-      if (event.key !== "Enter" && event.key !== " ") return;
-      event.preventDefault();
-      setOpen(!open);
+    // Radix asks to close when the pointer leaves or another tooltip opens: a pinned card stays.
+    onOpenChange: (next: boolean) => {
+      if (!next && pinned.current) return;
+      setOpen(next);
+    },
+    contentProps: {
+      onEscapeKeyDown: unpin,
+      onPointerDownOutside: (event: CustomEvent<{ originalEvent: PointerEvent }>) => {
+        // A press on the trigger is the trigger's own: its click closes a pinned card.
+        const target = event.detail.originalEvent.target;
+        if (!(target instanceof Node && triggerElement.current?.contains(target))) unpin();
+      },
     },
   } as const;
 }
@@ -118,12 +170,19 @@ function Tooltip({
     defaultValue: defaultOpen,
     onValueChange: onOpenChange,
   });
-  const toggleProps = useToggleTrigger(open, setOpen);
-  const triggerProps = trigger === "toggle" && !empty ? { ...props, ...toggleProps } : props;
+  const toggle = useToggleTrigger(open, setOpen);
+  const toggles = trigger === "toggle" && !empty;
+  const triggerProps = toggles ? { ...props, ...toggle.triggerProps } : props;
+  const onRootOpenChange = (next: boolean) => {
+    if (next) closeOtherPinned(toggle.owner);
+    if (toggles) toggle.onOpenChange(next);
+    else setOpen(next);
+  };
+  const contentProps = toggles ? toggle.contentProps : undefined;
   if (variant === "preview") {
     return (
       <TooltipEmptyContext value={empty}>
-        <HoverCardPrimitive.Root openDelay={150} closeDelay={100} open={open} onOpenChange={setOpen}>
+        <HoverCardPrimitive.Root openDelay={150} closeDelay={100} open={open} onOpenChange={onRootOpenChange}>
           {/* Radix types this trigger as an anchor; with `asChild` the props land on the child, whatever it is. */}
           <HoverCardPrimitive.Trigger
             data-slot="tooltip-trigger"
@@ -135,6 +194,7 @@ function Tooltip({
           {!empty && (
             <HoverCardPrimitive.Portal>
               <HoverCardPrimitive.Content
+                {...contentProps}
                 data-slot="tooltip-content"
                 data-variant={variant}
                 side={side}
@@ -156,13 +216,14 @@ function Tooltip({
   }
   return (
     <TooltipEmptyContext value={empty}>
-      <TooltipPrimitive.Root data-slot="tooltip" open={open} onOpenChange={setOpen}>
+      <TooltipPrimitive.Root data-slot="tooltip" open={open} onOpenChange={onRootOpenChange}>
         <TooltipPrimitive.Trigger data-slot="tooltip-trigger" asChild {...triggerProps}>
           {children}
         </TooltipPrimitive.Trigger>
         {!empty && (
           <TooltipPrimitive.Portal>
             <TooltipPrimitive.Content
+              {...contentProps}
               data-slot="tooltip-content"
               data-variant={variant}
               side={side}

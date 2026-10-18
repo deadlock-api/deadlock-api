@@ -840,7 +840,7 @@ export function Primitives() {
             </Button>
           </Tooltip>
         </Variants>
-        <Variants label='trigger="toggle": hover or focus opens it, a click or tap toggles it (aria-expanded)'>
+        <Variants label='trigger="toggle": hover or focus opens it, a tap or key toggles it, a click pins it open (aria-expanded)'>
           <Tooltip
             trigger="toggle"
             content={
@@ -874,7 +874,7 @@ export function Primitives() {
       <Specimen
         name="InfoTip"
         source="ui/info-tip"
-        note="An info mark beside a label, for what an author wrote about it. A toggletip: hover and focus open it, a click or tap toggles it, Escape closes it. A 16px glyph with a 24px hit area; the parent keeps a gap of at least 4px."
+        note="An info mark beside a label, for what an author wrote about it. A toggletip: hover and focus open it, a tap toggles it, a click pins it open until a second click, a press outside or Escape. A 16px glyph with a 24px hit area; the parent keeps a gap of at least 4px."
       >
         <Variants>
           <span className="inline-flex items-center gap-1.5 text-xs font-semibold">
