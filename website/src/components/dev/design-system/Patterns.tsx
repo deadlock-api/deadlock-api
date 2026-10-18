@@ -313,7 +313,7 @@ export function Patterns() {
       <Specimen
         name="Data table"
         source="ui/table · patterns/data-table/*"
-        note='SortableHeader carries aria-sort; size="sm" drops the idle arrows for dense tables, sortLabel names the button when the visible label is not enough, label takes a node, and description explains the column behind a focusable info button ("About Win rate"). data-pinned pins the identity column while the rest scrolls; a table wider than its container fades the edge with more columns past it (only the end edge with a pinned column), and a pinned table is the "table" container, so its pinned cell can shrink with @md/table: variants. Tones come from toneOf(). The sort is useSort: a press on the active column flips it, another column starts in its first direction.'
+        note='SortableHeader carries aria-sort; size="sm" drops the idle arrows for dense tables, the button is named by its visible label (aria-sort on the cell gives the state), label takes a node, and description explains the column behind a focusable info button ("About Win rate"). data-pinned pins the identity column while the rest scrolls; a table wider than its container fades the edge with more columns past it (only the end edge with a pinned column), and a pinned table is the "table" container, so its pinned cell can shrink with @md/table: variants. Tones come from toneOf(). The sort is useSort: a press on the active column flips it, another column starts in its first direction.'
       >
         <Inline gap={2}>
           <Segmented size="sm" width="hug" aria-label="Density" value={density} onValueChange={setDensity}>
@@ -353,7 +353,6 @@ export function Patterns() {
                   label="Pick rate"
                   align="end"
                   size="sm"
-                  sortLabel={`Sort by pick rate, ${sortKey === "pickRate" && sortDir === "desc" ? "ascending" : "descending"}`}
                   sortKey="pickRate"
                   activeSortKey={sortKey}
                   sortDir={sortDir}

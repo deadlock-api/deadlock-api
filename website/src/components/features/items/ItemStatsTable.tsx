@@ -722,7 +722,6 @@ export function ItemStatsTable({
                         "Win Rate"
                       )
                     }
-                    sortLabel={corruptedMode === "include" ? "Win Rate" : undefined}
                     description={
                       corruptedMode === "include"
                         ? "The bar is the normal purchases’ win rate; the tick marks the corrupted purchases’ win rate, with the difference beside it (corrupted match count in brackets)."
@@ -744,7 +743,6 @@ export function ItemStatsTable({
                         "Pick Rate (Normalized)"
                       )
                     }
-                    sortLabel={corruptedMode === "include" ? "Pick Rate (Normalized)" : undefined}
                     description={
                       corruptedMode === "include"
                         ? "Relative to the most bought item, split into normal and corrupted purchases."

@@ -11,6 +11,8 @@ const cellAlignClass = { start: "text-start", center: "text-center", end: "text-
 
 /**
  * A sortable column of a `Table`. Where the header cell is not a `TableHead`, use `SortButton` and `ariaSort()`.
+ * The button is named by its visible label alone (WCAG 2.5.3, label in name) and the cell's `aria-sort` gives the
+ * state, so there is no separate accessible name to drift from what the reader sees.
  * A `description` explains the column behind an info button beside the sort button, so it is reachable by keyboard.
  */
 export function SortableHeader<Key extends string>({
@@ -21,7 +23,6 @@ export function SortableHeader<Key extends string>({
   onSortChange,
   align = "center",
   size = "default",
-  sortLabel,
   description,
   children,
   className,
@@ -34,8 +35,6 @@ export function SortableHeader<Key extends string>({
   onSortChange: (key: Key) => void;
   align?: "start" | "center" | "end";
   size?: React.ComponentProps<typeof SortButton>["size"];
-  /** Accessible name of the button where the visible label is not enough, such as "Sort by win rate, descending". */
-  sortLabel?: string;
   /**
    * What the column means, shown on hover and focus of an info button after the sort button ("About <label>"). Not
    * an icon in `children`: that is inside the sort button, where neither the keyboard nor a screen reader finds it.
@@ -49,14 +48,7 @@ export function SortableHeader<Key extends string>({
   // swallowed (a press closed it, and a touch never opened it).
   const [infoOpen, setInfoOpen] = useState(false);
   const sortButton = (
-    <SortButton
-      active={isActive}
-      sortDir={sortDir}
-      align={align}
-      size={size}
-      aria-label={sortLabel}
-      onClick={() => onSortChange(sortKey)}
-    >
+    <SortButton active={isActive} sortDir={sortDir} align={align} size={size} onClick={() => onSortChange(sortKey)}>
       <span>{label}</span>
       {children}
     </SortButton>

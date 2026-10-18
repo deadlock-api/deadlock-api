@@ -294,7 +294,6 @@ export function HeroesTab({
                         sortDir={sortDir}
                         align="end"
                         className={showAllStats ? undefined : column.className}
-                        sortLabel={`Sort by ${column.label.toLowerCase()}, ${sortKey === column.key && sortDir === "desc" ? "ascending" : "descending"}`}
                         onSortChange={handleSort}
                       />
                     ))}

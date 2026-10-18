@@ -58,7 +58,8 @@ const VIEW_METRICS: Record<
 > = {
   combat: [
     { metric: metricByKey("kda"), label: "KDA" },
-    { metric: metricByKey("kills"), label: "K / D / A", hide: "wide" },
+    // Sorted by kills; the cell shows the K / D / A triple.
+    { metric: metricByKey("kills"), label: "Kills", hide: "wide" },
     { metric: metricByKey("damagePerMin"), label: "Dmg/min" },
     { metric: metricByKey("accuracy"), label: "Accuracy", hide: "narrow" },
     { metric: metricByKey("critRate"), label: "Headshots", hide: "narrow" },
@@ -81,20 +82,18 @@ function metricByKey(key: string): BuildMetric {
 interface Column {
   key: SortKey;
   label: string;
-  name: string;
   /** What the column means, behind an info button in its header. */
   description?: string;
   className?: string;
 }
 
 const COLUMNS: Column[] = [
-  { key: "matches", label: "Matches", name: "matches" },
-  { key: "players", label: "Players", name: "players", className: "hidden @2xl/builds:table-cell" },
-  { key: "winRate", label: "Win rate", name: "win rate" },
+  { key: "matches", label: "Matches" },
+  { key: "players", label: "Players", className: "hidden @2xl/builds:table-cell" },
+  { key: "winRate", label: "Win rate" },
   {
     key: "lowerBound",
     label: "Vs. all builds",
-    name: "confidence above the average",
     description:
       "Win rate against the hero's builds pooled. The bar is its 95% range: colored only when the whole range is on one side.",
     className: "hidden @md/builds:table-cell",
@@ -102,11 +101,10 @@ const COLUMNS: Column[] = [
   {
     key: "trend",
     label: "Pick trend",
-    name: "share change in the last 7 days",
     description: "How the build's share of the hero's build matches moved in the last 7 days, in points.",
     className: "hidden @2xl/builds:table-cell",
   },
-  { key: "updated", label: "Updated", name: "last update", className: "hidden @3xl/builds:table-cell" },
+  { key: "updated", label: "Updated", className: "hidden @3xl/builds:table-cell" },
 ];
 
 const sortValue: Record<string, (row: BuildRow, trend: BuildTrend | undefined) => number> = {
@@ -201,7 +199,6 @@ export function BuildTable({
           ...metricColumns.map(({ metric, label, hide }) => ({
             key: `m:${metric.key}`,
             label,
-            name: metric.label.toLowerCase(),
             className: hide ? HIDE_BELOW[hide] : undefined,
           })),
         ];
@@ -263,7 +260,7 @@ export function BuildTable({
           <TableRow>
             <TableHead className="w-8 text-end text-xs text-muted-foreground">#</TableHead>
             <TableHead className="text-xs text-muted-foreground">Build</TableHead>
-            {columns.map(({ key, label, name, description, className }) => (
+            {columns.map(({ key, label, description, className }) => (
               <SortableHeader
                 key={key}
                 label={label}
@@ -273,7 +270,6 @@ export function BuildTable({
                 align="end"
                 size="sm"
                 className={cn("text-xs text-muted-foreground", className)}
-                sortLabel={`Sort by ${name}`}
                 description={description}
                 onSortChange={sort.toggle}
               />

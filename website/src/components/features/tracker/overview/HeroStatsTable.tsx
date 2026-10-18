@@ -20,11 +20,11 @@ type Sort = "matches" | "winrate" | "kdaRatio" | "soulsPerMin";
 // Hidden in a narrow card (a phone), where the extra column cut the hero names to "Cel…".
 const NARROW_HIDDEN = "hidden @sm:table-cell";
 
-const columns: { key: Sort; label: string; name: string; className?: string }[] = [
-  { key: "matches", label: "Games", name: "games played" },
-  { key: "winrate", label: "Win %", name: "win rate" },
-  { key: "kdaRatio", label: "KDA", name: "KDA ratio" },
-  { key: "soulsPerMin", label: "S/min", name: "souls per minute", className: NARROW_HIDDEN },
+const columns: { key: Sort; label: string; className?: string }[] = [
+  { key: "matches", label: "Games" },
+  { key: "winrate", label: "Win %" },
+  { key: "kdaRatio", label: "KDA" },
+  { key: "soulsPerMin", label: "S/min", className: NARROW_HIDDEN },
 ];
 const MINIMUM_GAMES = [0, 5, 10] as const;
 
@@ -116,7 +116,7 @@ export function HeroStatsTable({
                 <TableHead className="ps-0">
                   <span className="text-xs text-muted-foreground">Hero</span>
                 </TableHead>
-                {shownColumns.map(({ key, label, name, className }) => (
+                {shownColumns.map(({ key, label, className }) => (
                   <SortableHeader
                     key={key}
                     label={label}
@@ -126,7 +126,6 @@ export function HeroStatsTable({
                     align="end"
                     size="sm"
                     className={cn("text-xs text-muted-foreground", className)}
-                    sortLabel={`Sort by ${name}, ${sort === key && direction === "descending" ? "ascending" : "descending"}`}
                     onSortChange={(next) => {
                       setDirection(sort === next && direction === "descending" ? "ascending" : "descending");
                       setSort(next);
