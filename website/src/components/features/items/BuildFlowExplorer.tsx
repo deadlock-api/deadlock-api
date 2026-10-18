@@ -945,8 +945,15 @@ export function BuildFlowExplorer({
   const complete = async (focus: BuildFocus, goal: BuildGoal, from: string[] = path, control = "complete") => {
     if (!budgets) return;
     setCompleting(control);
+    // The build as it was, for Undo after the completion or after a step that failed.
+    const before = path;
+    const beforeSells = storedSells;
+    const undo = () => {
+      changePath(before.length > 0 ? before : null);
+      startTransition(() => void setSells(beforeSells.length > 0 ? beforeSells : null, AT_ONCE));
+    };
+    const current = [...from];
     try {
-      const current = [...from];
       // The build's sales: the reader's plans stay when their build is completed, and a one-press build starts without.
       const sales = new Map(from.length > 0 ? sellOf : []);
       let sold = 0;
@@ -1006,8 +1013,6 @@ export function BuildFlowExplorer({
         );
       }
       if (current.length > from.length) {
-        const before = path;
-        const beforeSells = storedSells;
         const soldNote = sold > 0 ? `, sold ${sold}` : "";
         const open = view.stages.filter((stage) => !current.some((key) => parseKey(key).column === stage.column));
         toast(
@@ -1021,18 +1026,17 @@ export function BuildFlowExplorer({
                 : undefined,
             // Gone after a few seconds rather than covering the board while the build is refined.
             duration: 5000,
-            action: {
-              label: "Undo",
-              onClick: () => {
-                changePath(before.length > 0 ? before : null);
-                startTransition(() => void setSells(beforeSells.length > 0 ? beforeSells : null, AT_ONCE));
-              },
-            },
+            action: { label: "Undo", onClick: undo },
           },
         );
       } else {
         toast("No item to add: too few players of this build bought more");
       }
+    } catch {
+      // A step's request failed: the board keeps the items found so far, with Undo back to the build before.
+      toast.error("Could not complete the build", {
+        action: current.length > from.length ? { label: "Undo", onClick: undo } : undefined,
+      });
     } finally {
       setCompleting(null);
     }
