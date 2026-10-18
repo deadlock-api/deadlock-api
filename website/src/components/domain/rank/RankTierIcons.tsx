@@ -42,9 +42,10 @@ export function RankTierIcons({ tiers, ranks }: { tiers: TierSpan[]; ranks: Read
           const imageUrl = rank?.images?.large_webp ?? rank?.images?.large;
           if (first == null || last == null || !imageUrl) return null;
 
-          // Shrink to the tier's width on narrow charts; the higher tiers' source images carry more transparent padding.
+          // Shrink to the tier's width on narrow charts. The source images carry different transparent padding: the
+          // factors bring each badge's art to about the same size (measured 2026-10; Oracle's art fills its image).
           const baseSize = Math.min(ICON_SIZE, (last - first) * 1.2);
-          const size = baseSize * (tier === 8 || tier === 9 ? 1.6 : tier >= 10 ? 1.4 : 1);
+          const size = baseSize * (tier === 8 ? 1 : tier === 9 ? 1.6 : tier >= 10 ? 1.4 : 1);
           const centerY = axisY + AXIS_GAP + baseSize / 2;
           return (
             <image
@@ -55,7 +56,9 @@ export function RankTierIcons({ tiers, ranks }: { tiers: TierSpan[]; ranks: Read
               width={size}
               height={size}
               filter={`url(#${filterId})`}
-            />
+            >
+              <title>{rank?.name ?? `Rank ${tier}`}</title>
+            </image>
           );
         })}
       </g>
