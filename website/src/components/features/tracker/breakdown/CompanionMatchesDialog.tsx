@@ -147,7 +147,7 @@ export function CompanionMatchesDialog({
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button
-          variant="link"
+          variant="drilldown"
           size="inline"
           className={cn("min-h-6 min-w-6", className)}
           aria-label={`View ${row.matches} ${row.matches === 1 ? "match" : "matches"} ${relation} ${name}`}

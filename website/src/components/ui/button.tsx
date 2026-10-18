@@ -44,6 +44,12 @@ const buttonVariants = cva(
           "border border-transparent text-muted-foreground hover:bg-accent/50 hover:text-foreground aria-pressed:border-border aria-pressed:bg-accent aria-pressed:text-foreground",
         /** "Sign in through Steam" only: Valve's brand surface, the same in both themes. */
         steam: "border border-steam-border bg-steam-bg font-semibold text-foreground hover:bg-steam-bg-hover",
+        /**
+         * A number that opens what it counts (the matches behind "23 games"): ink, not the brand red that means a loss
+         * beside it, with a dotted underline at rest so it reads as pressable without color. Pair with `size="inline"`.
+         */
+        drilldown:
+          "text-foreground tabular-nums underline decoration-muted-foreground decoration-dotted underline-offset-4 hover:text-primary hover:decoration-current",
         /** A name inside a clickable row: no box of its own, it keeps the surrounding type and only recolors. */
         text: "h-auto rounded-sm p-0 text-inherit hover:text-primary",
         /**

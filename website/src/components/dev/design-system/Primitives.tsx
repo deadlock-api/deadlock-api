@@ -92,6 +92,7 @@ const BUTTON_VARIANTS = [
   "negative-soft",
   "toggle",
   "dismiss",
+  "drilldown",
 ] as const;
 const BUTTON_SIZES = ["xs", "sm", "sm-tight", "default", "lg", "touch"] as const;
 const ICON_SIZES = ["icon-xs", "icon-sm", "icon", "icon-lg"] as const;
