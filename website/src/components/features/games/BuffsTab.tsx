@@ -29,7 +29,6 @@ import { NoValue } from "~/components/ui/no-value";
 import { ProgressBar } from "~/components/ui/progress-bar";
 import { Stat, StatGroup } from "~/components/ui/stat";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
-import { Text } from "~/components/ui/text";
 import {
   BUFF_TIMINGS_NOTE,
   type BuffInfo,
@@ -47,6 +46,7 @@ import { gameStatsQueryOptions } from "~/queries/games-query";
 import { playerPerformanceCurveQueryOptions } from "~/queries/player-performance-curve-query";
 
 import { LAST_MINUTE, matchFilters, minuteLabel } from "./match-filters";
+import { SpreadLegend } from "./SpreadLegend";
 
 function Timing({ seconds }: { seconds: number | null | undefined }) {
   return seconds == null ? (
@@ -98,31 +98,16 @@ export default function BuffsTab({ params }: BuffsTabProps) {
     <StaleOverlay active={buffQuery.isPlaceholderData} label="buff stats" className="flex flex-col gap-4">
       <div className="grid grid-cols-1 items-stretch gap-4 lg:grid-cols-2">
         <Panel className="h-full">
-          <PanelHeader
-            title="Pickups by Stat"
-            icon={Sparkles}
-            description="Golden statue buffs per player and match, all levels together"
-          />
+          <PanelHeader title="Pickups by Stat" icon={Sparkles} />
           <PanelBody className="@container flex flex-1 flex-col gap-5">
             <StatGroup variant="joined" size="sm" className="grid-cols-1 @sm:grid-cols-3">
-              <Stat
-                label="Pickups / Match"
-                value={pickupsPerMatch.toFixed(1)}
-                align="center"
-                title="Permanent buffs one player picks up in an average match"
-              />
+              <Stat label="Pickups / Match" value={pickupsPerMatch.toFixed(1)} align="center" />
               <Stat
                 label="First Pickup"
                 value={<Timing seconds={gameStats?.[0]?.avg_first_permanent_buff_time_s} />}
                 align="center"
-                title="Average game time of a player's first permanent buff"
               />
-              <Stat
-                label="Timed Matches"
-                value={timedMatches.toLocaleString("en-US")}
-                align="center"
-                title="Player-matches with pickup times, which the stat gains below are averaged over"
-              />
+              <Stat label="Timed Matches" value={timedMatches.toLocaleString("en-US")} align="center" />
             </StatGroup>
 
             <ul className="flex flex-col gap-3" aria-label="Buff pickups per match by stat">
@@ -131,11 +116,7 @@ export default function BuffsTab({ params }: BuffsTabProps) {
                   <div className="flex items-center gap-2">
                     <ChartSwatch color={stat.color ?? CHART_COLOR.fallback} />
                     <span className="min-w-0 flex-1 truncate text-sm">{stat.name}</span>
-                    {stat.levels.every(isBuffAddedWithTimings) && (
-                      <Badge variant="muted" size="sm" title="Rates over matches since the update that added this buff">
-                        New
-                      </Badge>
-                    )}
+                    {stat.levels.every(isBuffAddedWithTimings) && <Badge variant="muted">New</Badge>}
                     <span className="text-xs text-muted-foreground tabular-nums">
                       {stat.valuePerMatch == null ? (
                         <NoValue label={BUFF_TIMINGS_NOTE} />
@@ -151,27 +132,19 @@ export default function BuffsTab({ params }: BuffsTabProps) {
                 </li>
               ))}
             </ul>
-            <Text variant="caption" tone="muted">
-              Each row shows the stat gained per match (+), then the pickups per match the bar draws.{" "}
-              {BUFF_TIMINGS_NOTE}
-            </Text>
           </PanelBody>
         </Panel>
 
         <Panel className="h-full">
-          <PanelHeader
-            title="Buffs Over the Match"
-            icon={Hourglass}
-            description="Average permanent buffs collected by each game minute, ±1 std dev shaded"
-          />
-          <PanelBody className="flex flex-1 flex-col justify-center">
+          <PanelHeader title="Buffs Over the Match" icon={Hourglass} />
+          <PanelBody className="flex flex-1 flex-col justify-center gap-3">
             <BuffCurve params={params} />
           </PanelBody>
         </Panel>
       </div>
 
       <Panel>
-        <PanelHeader title="Every Buff Level" icon={ListOrdered} description={BUFF_TIMINGS_NOTE} />
+        <PanelHeader title="Every Buff Level" icon={ListOrdered} />
         <BuffLevelTable stats={stats} temporary={temporary} info={info} />
       </Panel>
     </StaleOverlay>
@@ -231,11 +204,7 @@ function BuffLevelTable({
                 <span className="flex items-center gap-2">
                   <ChartSwatch color={stat.color ?? CHART_COLOR.fallback} />
                   {stat.name}
-                  {stat.levels.every(isBuffAddedWithTimings) && (
-                    <Badge variant="muted" size="sm" title="Rates over matches since the update that added this buff">
-                      New since Sep 29
-                    </Badge>
-                  )}
+                  {stat.levels.every(isBuffAddedWithTimings) && <Badge variant="muted">New</Badge>}
                 </span>
               </TableCell>
             </TableRow>
@@ -283,52 +252,67 @@ function BuffCurve({ params }: { params: AnalyticsApiGameStatsRequest }) {
       return [{ time: point.game_time, buffs, std, band: [Math.max(0, buffs - std), buffs + std] }];
     });
   const label = "buffs over the match";
+  const legend = <SpreadLegend label={label} average="Avg buffs" />;
 
-  if (isPending) return <ChartLoading label={label} />;
-  if (isError) return <ChartError label={label} retrying={isFetching} onRetry={() => void refetch()} />;
-  if (points.length === 0) return <ChartEmpty label={label} description={BUFF_TIMINGS_NOTE} />;
+  if (isPending || isError || points.length === 0) {
+    return (
+      <>
+        {isPending ? (
+          <ChartLoading label={label} />
+        ) : isError ? (
+          <ChartError label={label} retrying={isFetching} onRetry={() => void refetch()} />
+        ) : (
+          <ChartEmpty label={label} description={BUFF_TIMINGS_NOTE} />
+        )}
+        {legend}
+      </>
+    );
+  }
 
   return (
-    <ChartSurface
-      label="Average permanent buffs collected by game minute, with the spread between players"
-      variant="bare"
-    >
-      <ComposedChart data={points} margin={{ ...CHART_MARGIN, top: 16, right: 16 }}>
-        <CartesianGrid {...CHART_GRID} />
-        <XAxis
-          {...CHART_X_AXIS}
-          dataKey="time"
-          type="number"
-          domain={["dataMin", "dataMax"]}
-          tickFormatter={minuteLabel}
-          label={{ ...CHART_X_LABEL, value: "Game Time" }}
-        />
-        <YAxis {...CHART_Y_AXIS} label={{ ...CHART_Y_LABEL, value: "Avg Buffs" }} />
-        <Tooltip
-          cursor={CHART_CURSOR_LINE}
-          isAnimationActive={false}
-          content={({ active, payload }) => {
-            const point = payload?.[0]?.payload as (typeof points)[number] | undefined;
-            if (!active || !point) return null;
-            return (
-              <ChartReadings title={`At ${minuteLabel(point.time)}`}>
-                <ChartReading label="Buffs collected">{point.buffs.toFixed(1)}</ChartReading>
-                <ChartReading label="Std dev">± {point.std.toFixed(1)}</ChartReading>
-              </ChartReadings>
-            );
-          }}
-        />
-        <Area type="monotone" dataKey="band" fill={CHART_COLOR.primary} {...CHART_SPREAD_BAND} />
-        <Line
-          type="monotone"
-          dataKey="buffs"
-          stroke={CHART_COLOR.primary}
-          strokeWidth={2}
-          dot={false}
-          activeDot={{ r: 4 }}
-          isAnimationActive={false}
-        />
-      </ComposedChart>
-    </ChartSurface>
+    <>
+      <ChartSurface
+        label="Average permanent buffs collected by game minute, with the spread between players"
+        variant="bare"
+      >
+        <ComposedChart data={points} margin={{ ...CHART_MARGIN, top: 16, right: 16 }}>
+          <CartesianGrid {...CHART_GRID} />
+          <XAxis
+            {...CHART_X_AXIS}
+            dataKey="time"
+            type="number"
+            domain={["dataMin", "dataMax"]}
+            tickFormatter={minuteLabel}
+            label={{ ...CHART_X_LABEL, value: "Game Time" }}
+          />
+          <YAxis {...CHART_Y_AXIS} label={{ ...CHART_Y_LABEL, value: "Avg Buffs" }} />
+          <Tooltip
+            cursor={CHART_CURSOR_LINE}
+            isAnimationActive={false}
+            content={({ active, payload }) => {
+              const point = payload?.[0]?.payload as (typeof points)[number] | undefined;
+              if (!active || !point) return null;
+              return (
+                <ChartReadings title={`At ${minuteLabel(point.time)}`}>
+                  <ChartReading label="Buffs collected">{point.buffs.toFixed(1)}</ChartReading>
+                  <ChartReading label="Std dev">± {point.std.toFixed(1)}</ChartReading>
+                </ChartReadings>
+              );
+            }}
+          />
+          <Area type="monotone" dataKey="band" fill={CHART_COLOR.primary} {...CHART_SPREAD_BAND} />
+          <Line
+            type="monotone"
+            dataKey="buffs"
+            stroke={CHART_COLOR.primary}
+            strokeWidth={2}
+            dot={false}
+            activeDot={{ r: 4 }}
+            isAnimationActive={false}
+          />
+        </ComposedChart>
+      </ChartSurface>
+      {legend}
+    </>
   );
 }

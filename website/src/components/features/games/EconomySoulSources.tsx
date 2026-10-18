@@ -72,27 +72,19 @@ export default function EconomySoulSources({ params }: EconomySoulSourcesProps) 
   const soulsPerMin = durationS > 0 ? netWorth / (durationS / 60) : 0;
 
   const tiles = [
-    { label: "Net Worth", value: formatSouls(netWorth), hint: "Average final net worth per player" },
-    { label: "Souls / Min", value: formatSouls(soulsPerMin), hint: "Average net worth divided by match length" },
-    { label: "Match Length", value: formatStatValue(durationS, "duration"), hint: "Average match duration" },
-    { label: "Orb-Secured", value: formatPercent(orbSecured), hint: "Share of soul income secured from soul orbs" },
-    {
-      label: "Denied to Enemies",
-      value: formatSouls(stats.avg_gold_denied ?? 0),
-      hint: "Souls you shot away so the enemy couldn't secure them",
-    },
-    {
-      label: "Lost on Death",
-      value: formatSouls(stats.avg_gold_death_loss ?? 0),
-      hint: "Souls dropped to the enemy when you died",
-    },
+    { label: "Net Worth", value: formatSouls(netWorth) },
+    { label: "Souls / Min", value: formatSouls(soulsPerMin) },
+    { label: "Match Length", value: formatStatValue(durationS, "duration") },
+    { label: "From Orbs", value: formatPercent(orbSecured) },
+    { label: "Souls Denied", value: formatSouls(stats.avg_gold_denied ?? 0) },
+    { label: "Lost on Death", value: formatSouls(stats.avg_gold_death_loss ?? 0) },
   ];
 
   return (
     <div className="@container flex h-full flex-col justify-between gap-5">
       <StatGroup variant="joined" size="sm" className="grid-cols-2 sm:grid-cols-3">
         {tiles.map((tile) => (
-          <Stat key={tile.label} label={tile.label} value={tile.value} align="center" title={tile.hint} />
+          <Stat key={tile.label} label={tile.label} value={tile.value} align="center" />
         ))}
       </StatGroup>
 

@@ -25,8 +25,6 @@ export interface StatDefinition {
 export interface StatCategory {
   label: string;
   stats: StatDefinition[];
-  /** A line under the category's title: what its numbers cover. */
-  note?: string;
 }
 
 export const GAME_STAT_CATEGORIES: StatCategory[] = [
@@ -90,7 +88,6 @@ export const GAME_STAT_CATEGORIES: StatCategory[] = [
   },
   {
     label: "Permanent Buffs",
-    note: "Pickup times since the September 29, 2026 update",
     stats: [
       { key: "avg_permanent_buffs", label: "Avg Buff Pickups", format: "decimal1" },
       { key: "avg_permanent_buffs_per_min", label: "Avg Buff Pickups / Min", format: "decimal2" },

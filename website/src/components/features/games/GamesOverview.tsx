@@ -117,12 +117,7 @@ export default function GamesOverview({ params, prevParams, onStatClick, isStree
 
         return (
           <Panel key={category.label} className={cn("@container", isWide && "lg:col-span-2")}>
-            <PanelHeader
-              title={category.label}
-              icon={Icon}
-              size="sm"
-              description={category.stats.some((stat) => stat.recordedSince) ? category.note : undefined}
-            />
+            <PanelHeader title={category.label} icon={Icon} size="sm" />
 
             <div className={cn(isWide && "@2xl:grid @2xl:grid-cols-2")}>
               {stats.map((stat) => {

@@ -62,7 +62,8 @@ function StatGroup({
   );
 }
 
-interface StatProps extends Omit<React.ComponentProps<"div">, "children"> {
+// No `title`: a native tooltip is hint text a touch screen never shows. A Stat says what it is through its label.
+interface StatProps extends Omit<React.ComponentProps<"div">, "children" | "title"> {
   label: React.ReactNode;
   value: React.ReactNode;
   /** A supporting line under the value: a sample size, a comparison, a Delta. */

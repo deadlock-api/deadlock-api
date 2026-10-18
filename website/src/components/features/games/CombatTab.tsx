@@ -1,13 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 import type { AnalyticsApiGameStatsRequest, PlayerPerformanceCurvePoint } from "deadlock_api_client";
-import { Crosshair, HeartPulse, Swords } from "lucide-react";
+import { Crosshair, HeartPulse, type LucideIcon, Swords } from "lucide-react";
 import { useState } from "react";
 import { Area, CartesianGrid, ComposedChart, Line, LineChart, Tooltip, XAxis, YAxis } from "recharts";
 
 import { ChartLegend, ChartLegendItem } from "~/components/patterns/charts/ChartLegend";
 import { ChartReading, ChartReadings } from "~/components/patterns/charts/ChartReadings";
 import { ChartEmpty, ChartError, ChartLoading } from "~/components/patterns/charts/ChartStates";
-import { ChartSurface } from "~/components/patterns/charts/ChartSurface";
+import { type ChartSize, ChartSurface } from "~/components/patterns/charts/ChartSurface";
 import {
   CHART_COLOR,
   CHART_CURSOR_LINE,
@@ -26,9 +26,11 @@ import { NoValue } from "~/components/ui/no-value";
 import { Segmented, SegmentedItem } from "~/components/ui/segmented";
 import { formatCompactAxisTick } from "~/lib/chart-axis";
 import { formatStatValue } from "~/lib/stat-format";
+import { cn } from "~/lib/utils";
 import { playerPerformanceCurveQueryOptions } from "~/queries/player-performance-curve-query";
 
 import { LAST_MINUTE, matchFilters, minuteLabel } from "./match-filters";
+import { SpreadLegend } from "./SpreadLegend";
 
 type CurveKey = keyof PlayerPerformanceCurvePoint;
 
@@ -119,49 +121,34 @@ export default function CombatTab({ params }: CombatTabProps) {
   return (
     <div className="grid grid-cols-1 items-stretch gap-4 lg:grid-cols-2">
       <Panel className="h-full">
-        <PanelHeader
-          title="Damage Dealt"
-          icon={Swords}
-          description="Average damage one player has dealt by each game minute"
-        />
+        <PanelHeader title="Damage Dealt" icon={Swords} />
         <PanelBody className="flex flex-1 flex-col gap-3">
           <DamageCurve points={points} query={query} />
         </PanelBody>
       </Panel>
-      <Panel className="h-full">
-        <PanelHeader
-          title="Kills by Target"
-          icon={Crosshair}
-          description="Average kills one player has by each game minute"
-        />
-        <PanelBody className="flex flex-1 flex-col gap-3">
-          <SpreadCurve
-            metrics={KILL_TARGETS}
-            initial="heroes"
-            label="kills over the match"
-            pickerLabel="Kill target"
-            points={points}
-            query={query}
-          />
-        </PanelBody>
-      </Panel>
-      <Panel className="h-full lg:col-span-2">
-        <PanelHeader
-          title="Healing & Self Damage"
-          icon={HeartPulse}
-          description="Average healing, barriers and self-inflicted damage one player has by each game minute"
-        />
-        <PanelBody className="flex flex-1 flex-col gap-3">
-          <SpreadCurve
-            metrics={SUSTAIN_METRICS}
-            initial="healing"
-            label="healing over the match"
-            pickerLabel="Sustain metric"
-            points={points}
-            query={query}
-          />
-        </PanelBody>
-      </Panel>
+      <SpreadPanel
+        title="Kills by Target"
+        icon={Crosshair}
+        metrics={KILL_TARGETS}
+        initial="heroes"
+        label="kills over the match"
+        pickerLabel="Kill target"
+        points={points}
+        query={query}
+      />
+      <SpreadPanel
+        title="Healing & Self Damage"
+        icon={HeartPulse}
+        className="lg:col-span-2"
+        // Alone in its row: the plot keeps the default height, which steps up on a wide panel.
+        size="default"
+        metrics={SUSTAIN_METRICS}
+        initial="healing"
+        label="healing over the match"
+        pickerLabel="Sustain metric"
+        points={points}
+        query={query}
+      />
     </div>
   );
 }
@@ -171,12 +158,36 @@ interface CurveProps {
   query: { isPending: boolean; isError: boolean; isFetching: boolean; refetch: () => unknown };
 }
 
+/** The damage targets' key, shown in every state, so the panel keeps its height while the chart loads. */
+function DamageLegend() {
+  return (
+    <ChartLegend label="Damage targets">
+      {DAMAGE_TARGETS.map((target) => (
+        <ChartLegendItem key={target.key} color={target.color} shape="line">
+          {target.label}
+        </ChartLegendItem>
+      ))}
+    </ChartLegend>
+  );
+}
+
 function DamageCurve({ points, query }: CurveProps) {
   const label = "damage over the match";
-  if (query.isPending) return <ChartLoading label={label} />;
-  if (query.isError)
-    return <ChartError label={label} retrying={query.isFetching} onRetry={() => void query.refetch()} />;
-  if (points.length === 0) return <ChartEmpty label={label} />;
+  const state = query.isPending ? (
+    <ChartLoading label={label} size="stretch" />
+  ) : query.isError ? (
+    <ChartError label={label} retrying={query.isFetching} onRetry={() => void query.refetch()} />
+  ) : points.length === 0 ? (
+    <ChartEmpty label={label} />
+  ) : null;
+  if (state) {
+    return (
+      <>
+        {state}
+        <DamageLegend />
+      </>
+    );
+  }
 
   const last = points.at(-1);
   const summary = `Average damage dealt by game minute, per target.${
@@ -190,7 +201,7 @@ function DamageCurve({ points, query }: CurveProps) {
 
   return (
     <>
-      <ChartSurface label={summary} variant="bare">
+      <ChartSurface label={summary} size="stretch" variant="bare">
         <LineChart data={points} margin={{ ...CHART_MARGIN, top: 16, right: 16 }}>
           <CartesianGrid {...CHART_GRID} />
           <XAxis
@@ -238,18 +249,17 @@ function DamageCurve({ points, query }: CurveProps) {
           ))}
         </LineChart>
       </ChartSurface>
-      <ChartLegend label="Damage targets">
-        {DAMAGE_TARGETS.map((target) => (
-          <ChartLegendItem key={target.key} color={target.color} shape="line">
-            {target.label}
-          </ChartLegendItem>
-        ))}
-      </ChartLegend>
+      <DamageLegend />
     </>
   );
 }
 
-interface SpreadCurveProps<K extends string> extends CurveProps {
+interface SpreadPanelProps<K extends string> extends CurveProps {
+  title: string;
+  icon: LucideIcon;
+  className?: string;
+  /** `stretch` beside another panel, so the two x-axes stay level. */
+  size?: ChartSize;
   metrics: Record<K, CurveMetric>;
   initial: K;
   /** What the chart shows, for its loading, empty and error states. */
@@ -258,10 +268,49 @@ interface SpreadCurveProps<K extends string> extends CurveProps {
   pickerLabel: string;
 }
 
-/** One metric by game minute, picked with a segmented control, with the spread between players shaded. */
-function SpreadCurve<K extends string>({ metrics, initial, label, pickerLabel, points, query }: SpreadCurveProps<K>) {
+/**
+ * A panel of one metric by game minute, picked in the header, so its plot starts where the plot of the panel beside
+ * it does.
+ */
+function SpreadPanel<K extends string>({
+  title,
+  icon,
+  className,
+  size = "stretch",
+  metrics,
+  initial,
+  label,
+  pickerLabel,
+  points,
+  query,
+}: SpreadPanelProps<K>) {
   const [metric, setMetric] = useState<K>(initial);
-  const selected = metrics[metric];
+  return (
+    <Panel className={cn("h-full", className)}>
+      <PanelHeader title={title} icon={icon}>
+        <Segmented size="sm" width="hug" aria-label={pickerLabel} value={metric} onValueChange={setMetric}>
+          {(Object.keys(metrics) as K[]).map((key) => (
+            <SegmentedItem key={key} value={key}>
+              {metrics[key].label}
+            </SegmentedItem>
+          ))}
+        </Segmented>
+      </PanelHeader>
+      <PanelBody className="flex flex-1 flex-col gap-3">
+        <SpreadCurve selected={metrics[metric]} label={label} size={size} points={points} query={query} />
+      </PanelBody>
+    </Panel>
+  );
+}
+
+/** One metric by game minute, with the spread between players shaded. */
+function SpreadCurve({
+  selected,
+  label,
+  size,
+  points,
+  query,
+}: CurveProps & { selected: CurveMetric; label: string; size: ChartSize }) {
   const rows = points.map((point) => {
     const value = point[selected.avg];
     const std = point[selected.std];
@@ -271,22 +320,8 @@ function SpreadCurve<K extends string>({ metrics, initial, label, pickerLabel, p
 
   return (
     <>
-      <Segmented
-        size="sm"
-        width="hug"
-        aria-label={pickerLabel}
-        className="self-end"
-        value={metric}
-        onValueChange={setMetric}
-      >
-        {(Object.keys(metrics) as K[]).map((key) => (
-          <SegmentedItem key={key} value={key}>
-            {metrics[key].label}
-          </SegmentedItem>
-        ))}
-      </Segmented>
       {query.isPending ? (
-        <ChartLoading label={label} />
+        <ChartLoading label={label} size={size} />
       ) : query.isError ? (
         <ChartError label={label} retrying={query.isFetching} onRetry={() => void query.refetch()} />
       ) : rows.length === 0 ? (
@@ -298,6 +333,7 @@ function SpreadCurve<K extends string>({ metrics, initial, label, pickerLabel, p
               ? ` At ${minuteLabel(last.time)}: ${formatValue(last.value, selected.digits)}.`
               : ""
           }`}
+          size={size}
           variant="bare"
         >
           <ComposedChart data={rows} margin={{ ...CHART_MARGIN, top: 16, right: 16 }}>
@@ -350,6 +386,7 @@ function SpreadCurve<K extends string>({ metrics, initial, label, pickerLabel, p
           </ComposedChart>
         </ChartSurface>
       )}
+      <SpreadLegend label={label} average={`Avg ${selected.reading.toLowerCase()}`} />
     </>
   );
 }
