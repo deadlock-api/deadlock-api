@@ -216,8 +216,8 @@ export function Primitives() {
           </Button>
         </Variants>
         <Variants label='variant="row"' className="block max-w-sm overflow-hidden rounded-lg border">
-          {["Infernus", "Haze"].map((hero) => (
-            <Button key={hero} variant="row" className="justify-between border-b px-3 py-2 last:border-b-0">
+          {["Infernus", "Haze", "Avg Damage Mitigated per Player per Match (a label that wraps)"].map((hero) => (
+            <Button key={hero} variant="row" className="justify-between gap-3 border-b px-3 py-2 last:border-b-0">
               <span>{hero}</span>
               <span className="text-xs text-muted-foreground tabular-nums">52.4%</span>
             </Button>

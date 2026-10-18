@@ -96,7 +96,11 @@ const buttonVariants = cva(
     },
     // `shape` owns the radius, so a pill stays a pill at every size. A size that wants its own default radius says
     // so here, against `shape="default"` only.
-    compoundVariants: [{ size: "inline", shape: "default", class: "rounded-sm" }],
+    compoundVariants: [
+      { size: "inline", shape: "default", class: "rounded-sm" },
+      // A row grows with its content: a label that wraps to two lines must not spill out of the default 36px.
+      { variant: "row", size: "default", class: "h-auto min-h-9" },
+    ],
     defaultVariants: {
       variant: "default",
       shape: "default",
