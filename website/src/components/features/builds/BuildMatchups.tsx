@@ -1,7 +1,8 @@
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 
 import { RankedEntityList, RankedEntityMetric, RankedEntityRow } from "~/components/domain/assets/RankedEntityList";
 import { PanelSection } from "~/components/patterns/panel/Panel";
+import { StaleOverlay } from "~/components/patterns/states/StaleOverlay";
 import { Skeleton } from "~/components/ui/skeleton";
 import { CACHE_DURATIONS } from "~/constants/cache";
 import { api } from "~/lib/api";
@@ -105,6 +106,7 @@ export function BuildMatchups({
     },
     staleTime: CACHE_DURATIONS.ONE_HOUR,
     enabled: active,
+    placeholderData: keepPreviousData,
   });
 
   if (query.isError) return null;
@@ -123,9 +125,9 @@ export function BuildMatchups({
   const sorted = [...query.data].sort((a, b) => b.winRate - a.winRate || b.matches - a.matches);
   if (sorted.length < SHOWN * 2) return null;
   return (
-    <>
+    <StaleOverlay active={query.isPlaceholderData} label="matchups">
       <MatchupList title="Strong against" matchups={sorted.slice(0, SHOWN)} build={build} />
       <MatchupList title="Weak against" matchups={sorted.slice(-SHOWN).reverse()} build={build} />
-    </>
+    </StaleOverlay>
   );
 }

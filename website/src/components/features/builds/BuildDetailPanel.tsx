@@ -114,7 +114,11 @@ export function BuildDetailPanel({
 }) {
   const [comparing, setComparing] = useState(false);
   const { meta } = row;
-  const { usage, pending: purchasesPending } = useBuildItemUsage({ heroId, row, filters: purchaseFilters, active });
+  const {
+    usage,
+    pending: purchasesPending,
+    stale: purchasesStale,
+  } = useBuildItemUsage({ heroId, row, filters: purchaseFilters, active });
   const { slotAbilities, skillOrder } = useSkillOrder(heroId, row);
   const name = meta?.name ?? `Build ${row.hero_build_id}`;
 
@@ -182,7 +186,8 @@ export function BuildDetailPanel({
                         <BuildItemTile
                           itemId={itemId}
                           usage={usage?.byItem.get(itemId)}
-                          pending={purchasesPending}
+                          // The last build's rates are of other items: its tiles wait under skeletons instead.
+                          pending={purchasesPending || purchasesStale}
                           note={category.notes[itemId]}
                         />
                       </li>

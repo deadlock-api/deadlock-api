@@ -1,6 +1,7 @@
-import { useQueries, useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQueries, useQuery } from "@tanstack/react-query";
 
 import { PanelSection } from "~/components/patterns/panel/Panel";
+import { StaleOverlay } from "~/components/patterns/states/StaleOverlay";
 import { Delta } from "~/components/ui/delta";
 import { KeyValue, KeyValueList } from "~/components/ui/key-value";
 import { Skeleton } from "~/components/ui/skeleton";
@@ -53,6 +54,7 @@ export function BuildByDuration({
       "duration",
     ),
     enabled: active,
+    placeholderData: keepPreviousData,
   });
   // The hero's win rate per length: one request each (hero stats have no duration buckets), the same for every build,
   // so they stay cached while the selection moves.
@@ -86,37 +88,39 @@ export function BuildByDuration({
   return (
     <section className="flex flex-col">
       <PanelSection variant="label" title="By match length" />
-      <KeyValueList className="px-3 py-0.5">
-        {LENGTHS.map((length, index) => {
-          const stats = lengths[index];
-          const hero = heroLengths[index].data;
-          const enough = stats && stats.matches >= MIN_MATCHES;
-          return (
-            <KeyValue
-              key={length.label}
-              label={length.label}
-              value={
-                query.isPending ? (
-                  <Skeleton className="ms-auto h-4 w-24" />
-                ) : enough ? (
-                  <span className="inline-flex items-baseline gap-2">
-                    <span className="font-normal text-muted-foreground">{stats.matches.toLocaleString("en-US")}</span>
-                    {formatPercent(stats.wins / stats.matches)}
-                    <span className="w-14 text-end text-xs">
-                      {hero && hero.matches > 0 && (
-                        <Delta
-                          value={stats.wins / stats.matches - hero.wins / hero.matches}
-                          threshold={winRateNoise(stats.matches)}
-                        />
-                      )}
+      <StaleOverlay active={query.isPlaceholderData} label="win rate by match length">
+        <KeyValueList className="px-3 py-0.5">
+          {LENGTHS.map((length, index) => {
+            const stats = lengths[index];
+            const hero = heroLengths[index].data;
+            const enough = stats && stats.matches >= MIN_MATCHES;
+            return (
+              <KeyValue
+                key={length.label}
+                label={length.label}
+                value={
+                  query.isPending ? (
+                    <Skeleton className="ms-auto h-4 w-24" />
+                  ) : enough ? (
+                    <span className="inline-flex items-baseline gap-2">
+                      <span className="font-normal text-muted-foreground">{stats.matches.toLocaleString("en-US")}</span>
+                      {formatPercent(stats.wins / stats.matches)}
+                      <span className="w-14 text-end text-xs">
+                        {hero && hero.matches > 0 && (
+                          <Delta
+                            value={stats.wins / stats.matches - hero.wins / hero.matches}
+                            threshold={winRateNoise(stats.matches)}
+                          />
+                        )}
+                      </span>
                     </span>
-                  </span>
-                ) : null
-              }
-            />
-          );
-        })}
-      </KeyValueList>
+                  ) : null
+                }
+              />
+            );
+          })}
+        </KeyValueList>
+      </StaleOverlay>
     </section>
   );
 }

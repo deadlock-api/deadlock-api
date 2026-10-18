@@ -1,10 +1,11 @@
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 
 import { RankTierTick } from "~/components/domain/rank/RankTierTick";
 import { type RankTierWinRate, rankTierLook } from "~/components/domain/rank/RankTierWinRateChart";
 import { ChartEmpty, ChartLoading } from "~/components/patterns/charts/ChartStates";
 import { WinRateBarChart } from "~/components/patterns/charts/WinRateBarChart";
 import { PanelSection } from "~/components/patterns/panel/Panel";
+import { StaleOverlay } from "~/components/patterns/states/StaleOverlay";
 import { TooltipCard, TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
 import { badgeTiers, type BuildRow } from "~/lib/build-stats";
 import { formatPercent, formatSignedPercent } from "~/lib/format";
@@ -70,6 +71,7 @@ export function BuildByRank({
       "avg_badge",
     ),
     enabled: active,
+    placeholderData: keepPreviousData,
   });
   const heroQuery = useQuery({
     ...heroStatsQueryOptions({
@@ -109,17 +111,19 @@ export function BuildByRank({
       ) : bars.length === 0 ? (
         <ChartEmpty label="ranks with enough matches of this build" />
       ) : (
-        <WinRateBarChart
-          variant="flush"
-          size="grow"
-          label={`The build's win rate by rank, from ${bars[0].name} (${formatPercent(bars[0].winRate)}) to ${bars[bars.length - 1].name} (${formatPercent(bars[bars.length - 1].winRate)})`}
-          data={bars}
-          xKey="tier"
-          valueKey="winRate"
-          xAxisHeight={BADGE_AXIS_HEIGHT}
-          xTick={<RankTierTick tiers={bars} />}
-          tooltip={<RankBarTooltip />}
-        />
+        <StaleOverlay active={query.isPlaceholderData} label="win rate by rank" className="flex flex-1 flex-col">
+          <WinRateBarChart
+            variant="flush"
+            size="grow"
+            label={`The build's win rate by rank, from ${bars[0].name} (${formatPercent(bars[0].winRate)}) to ${bars[bars.length - 1].name} (${formatPercent(bars[bars.length - 1].winRate)})`}
+            data={bars}
+            xKey="tier"
+            valueKey="winRate"
+            xAxisHeight={BADGE_AXIS_HEIGHT}
+            xTick={<RankTierTick tiers={bars} />}
+            tooltip={<RankBarTooltip />}
+          />
+        </StaleOverlay>
       )}
     </section>
   );

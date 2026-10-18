@@ -15,6 +15,7 @@ import { Section } from "~/components/patterns/page/Section";
 import { Panel, PanelHeader, PanelSection } from "~/components/patterns/panel/Panel";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
+import { StaleOverlay } from "~/components/patterns/states/StaleOverlay";
 import { InlineStat } from "~/components/ui/inline-stat";
 import type { BuildPerformanceTotals } from "~/lib/build-performance";
 import type { BuildRow } from "~/lib/build-stats";
@@ -58,7 +59,7 @@ export function BuildInMatches({
   averagePerformance: BuildPerformanceTotals | null;
   performancePending: boolean;
 }) {
-  const { usage, pending } = useBuildItemUsage({ heroId, row, filters, active });
+  const { usage, pending, stale } = useBuildItemUsage({ heroId, row, filters, active });
   const { slotAbilities, skillOrder } = useSkillOrder(heroId, row);
   const distributions = useEndOfMatchDistributions({ heroId, buildId: row.hero_build_id, filters, active });
   // The items most of the build's players buy, listed or not, by when they buy them on average.
@@ -121,7 +122,7 @@ export function BuildInMatches({
           ) : !usage ? (
             <EmptyState variant="plain" title="No purchases" />
           ) : (
-            <>
+            <StaleOverlay active={stale} label="purchases">
               <section className="flex flex-col">
                 <PanelSection variant="label" title="Bought in this order" />
                 <ol className="flex flex-wrap gap-1 px-3 py-1.5">
@@ -187,7 +188,7 @@ export function BuildInMatches({
                   </ul>
                 </section>
               )}
-            </>
+            </StaleOverlay>
           )}
         </Panel>
         <Panel className="flex flex-col">

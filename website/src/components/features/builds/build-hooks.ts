@@ -1,5 +1,5 @@
-import { useQuery } from "@tanstack/react-query";
-import { useMemo } from "react";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { useMemo, useState } from "react";
 
 import { buildItemIds, buildItemUsage, type BuildRow } from "~/lib/build-stats";
 import type { GaussianStats } from "~/lib/gaussian";
@@ -49,15 +49,27 @@ export function useBuildItemUsage({
   const query = useQuery({
     ...buildItemPurchasesQueryOptions(row.hero_build_id, filters, heroId),
     enabled: meta != null && active,
+    // The last build's purchases stay while the next one's load (marked stale), so the panels keep their height.
+    placeholderData: keepPreviousData,
   });
-  const purchases = query.data;
+  // The purchases with the build they were asked for: while the next build's load, the last build's purchases stay with
+  // its own row, so its rates and buy order do not mix with the next build's match count.
+  const fresh = query.data !== undefined && !query.isPlaceholderData ? { purchases: query.data, row } : null;
+  const [kept, setKept] = useState(fresh);
+  if (fresh && (kept?.purchases !== fresh.purchases || kept.row !== fresh.row)) setKept(fresh);
+  const shown = fresh ?? (query.isPlaceholderData ? kept : null);
+  const shownPurchases = shown?.purchases;
+  const shownRow = shown?.row;
   const usage = useMemo(
-    () => (purchases && meta ? buildItemUsage(purchases, row, buildItemIds(meta)) : undefined),
-    [purchases, meta, row],
+    () =>
+      shownPurchases && shownRow?.meta
+        ? buildItemUsage(shownPurchases, shownRow, buildItemIds(shownRow.meta))
+        : undefined,
+    [shownPurchases, shownRow],
   );
   // A failed request leaves the items without their rates rather than holding skeletons.
   const pending = query.isPending && meta != null && (!active || query.fetchStatus !== "idle");
-  return { usage, pending, failed: query.isError };
+  return { usage, pending, stale: query.isPlaceholderData, failed: query.isError };
 }
 
 /**

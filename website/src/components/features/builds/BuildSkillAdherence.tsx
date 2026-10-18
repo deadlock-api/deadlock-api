@@ -1,5 +1,6 @@
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 
+import { StaleOverlay } from "~/components/patterns/states/StaleOverlay";
 import { Skeleton } from "~/components/ui/skeleton";
 import { Stat, StatGroup } from "~/components/ui/stat";
 import { buildAdherence, type BuildRow, buildUnlockOrder } from "~/lib/build-stats";
@@ -75,29 +76,33 @@ export function BuildSkillAdherence({
   const unlockQuery = useQuery({
     ...heroBuildStatsQueryOptions({ ...base, abilityUnlockOrderPrefix: unlockOrder }),
     enabled: active && unlockOrder.length >= 2,
+    placeholderData: keepPreviousData,
   });
   const pointsQuery = useQuery({
     ...heroBuildStatsQueryOptions({ ...base, abilityOrderPrefix: firstPoints }),
     enabled: active && firstPoints.length === FIRST_POINTS,
+    placeholderData: keepPreviousData,
   });
   // No row is an answer: none of the build's matches followed it.
   const followed = (data: { wins: number; matches: number }[] | undefined) =>
     data && (data[0] ?? { wins: 0, matches: 0 });
 
   return (
-    <StatGroup size="xs" variant="joined" className="grid-cols-2">
-      <AdherenceStat
-        label="Same unlock order"
-        row={row}
-        followed={followed(unlockQuery.data)}
-        pending={unlockQuery.isPending && unlockOrder.length >= 2}
-      />
-      <AdherenceStat
-        label={`Same first ${FIRST_POINTS} points`}
-        row={row}
-        followed={followed(pointsQuery.data)}
-        pending={pointsQuery.isPending && firstPoints.length === FIRST_POINTS}
-      />
-    </StatGroup>
+    <StaleOverlay active={unlockQuery.isPlaceholderData || pointsQuery.isPlaceholderData} label="skill order followed">
+      <StatGroup size="xs" variant="joined" className="grid-cols-2">
+        <AdherenceStat
+          label="Same unlock order"
+          row={row}
+          followed={followed(unlockQuery.data)}
+          pending={unlockQuery.isPending && unlockOrder.length >= 2}
+        />
+        <AdherenceStat
+          label={`Same first ${FIRST_POINTS} points`}
+          row={row}
+          followed={followed(pointsQuery.data)}
+          pending={pointsQuery.isPending && firstPoints.length === FIRST_POINTS}
+        />
+      </StatGroup>
+    </StaleOverlay>
   );
 }

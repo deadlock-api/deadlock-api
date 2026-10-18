@@ -1,7 +1,8 @@
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 
 import { PlayerCell } from "~/components/domain/player/PlayerCell";
 import { PanelSection } from "~/components/patterns/panel/Panel";
+import { StaleOverlay } from "~/components/patterns/states/StaleOverlay";
 import { KeyValue, KeyValueList } from "~/components/ui/key-value";
 import { Skeleton } from "~/components/ui/skeleton";
 import { CACHE_DURATIONS } from "~/constants/cache";
@@ -47,43 +48,50 @@ export function BuildTopPlayers({
     },
     staleTime: CACHE_DURATIONS.ONE_HOUR,
     enabled: active,
+    placeholderData: keepPreviousData,
   });
   const players = playersQuery.data;
   const accountIds = (players ?? []).map((player) => player.accountId).sort((a, b) => a - b);
-  const profilesQuery = useQuery({ ...steamProfilesQueryOptions(accountIds), enabled: accountIds.length > 0 });
+  const profilesQuery = useQuery({
+    ...steamProfilesQueryOptions(accountIds),
+    enabled: accountIds.length > 0,
+    placeholderData: keepPreviousData,
+  });
 
   if (playersQuery.isError || (players && players.length === 0)) return null;
   return (
     <section className="flex flex-col">
       <PanelSection variant="label" title="Most played by" />
-      <KeyValueList className="px-3 py-0.5">
-        {players
-          ? players.map((player) => {
-              const profile = profilesQuery.data?.[player.accountId];
-              return (
+      <StaleOverlay active={playersQuery.isPlaceholderData} label="players">
+        <KeyValueList className="px-3 py-0.5">
+          {players
+            ? players.map((player) => {
+                const profile = profilesQuery.data?.[player.accountId];
+                return (
+                  <KeyValue
+                    key={player.accountId}
+                    label={
+                      <PlayerCell
+                        size="sm"
+                        accountId={player.accountId}
+                        name={profile?.personaname}
+                        avatar={profile?.avatar}
+                        loading={profilesQuery.isPending}
+                      />
+                    }
+                    value={`${player.matches.toLocaleString("en-US")} ${player.matches === 1 ? "match" : "matches"}`}
+                  />
+                );
+              })
+            : Array.from({ length: PLAYERS_SHOWN }, (_, index) => (
                 <KeyValue
-                  key={player.accountId}
-                  label={
-                    <PlayerCell
-                      size="sm"
-                      accountId={player.accountId}
-                      name={profile?.personaname}
-                      avatar={profile?.avatar}
-                      loading={profilesQuery.isPending}
-                    />
-                  }
-                  value={`${player.matches.toLocaleString("en-US")} ${player.matches === 1 ? "match" : "matches"}`}
+                  key={index}
+                  label={<Skeleton className="h-5 w-32" />}
+                  value={<Skeleton className="h-4 w-16" />}
                 />
-              );
-            })
-          : Array.from({ length: PLAYERS_SHOWN }, (_, index) => (
-              <KeyValue
-                key={index}
-                label={<Skeleton className="h-5 w-32" />}
-                value={<Skeleton className="h-4 w-16" />}
-              />
-            ))}
-      </KeyValueList>
+              ))}
+        </KeyValueList>
+      </StaleOverlay>
     </section>
   );
 }

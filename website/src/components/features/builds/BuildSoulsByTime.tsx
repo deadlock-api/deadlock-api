@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useId } from "react";
 import { CartesianGrid, Line, LineChart, ReferenceLine, Tooltip, XAxis, YAxis } from "recharts";
 
@@ -15,6 +15,7 @@ import {
   CHART_Y_AXIS,
 } from "~/components/patterns/charts/theme";
 import { PanelSection } from "~/components/patterns/panel/Panel";
+import { StaleOverlay } from "~/components/patterns/states/StaleOverlay";
 import { TooltipCard, TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
 import { niceTicks } from "~/lib/chart-axis";
 import { formatSignedPercent } from "~/lib/format";
@@ -53,6 +54,7 @@ export function BuildSoulsByTime({
   const buildQuery = useQuery({
     ...playerPerformanceCurveQueryOptions({ ...params, heroBuildId: buildId }),
     enabled: active,
+    placeholderData: keepPreviousData,
   });
   const heroQuery = useQuery(playerPerformanceCurveQueryOptions(params));
   if (buildQuery.isError || heroQuery.isError) return null;
@@ -80,62 +82,64 @@ export function BuildSoulsByTime({
       ) : points.length < 3 ? (
         <ChartEmpty label="game times with souls of this build" />
       ) : (
-        <ChartSurface
-          variant="flush"
-          size="md"
-          label={`The build's souls against the hero's average over the game, from ${formatSignedPercent(points[0].diff)} at ${points[0].minute} minutes to ${formatSignedPercent(points[points.length - 1].diff)} at ${points[points.length - 1].minute}`}
-        >
-          <LineChart data={points} margin={{ ...CHART_MARGIN, right: 12 }}>
-            <defs>
-              <linearGradient id={strokeId} x1="0" y1="0" x2="0" y2="1">
-                <stop offset={zeroAt} stopColor={CHART_COLOR.positive} />
-                <stop offset={zeroAt} stopColor={CHART_COLOR.negative} />
-              </linearGradient>
-            </defs>
-            <CartesianGrid {...CHART_GRID} />
-            <XAxis
-              {...CHART_X_AXIS}
-              dataKey="minute"
-              type="number"
-              domain={[points[0].minute, points[points.length - 1].minute]}
-              ticks={[5, 10, 15, 20, 25, 30, 35, 40].filter((minute) => minute <= points[points.length - 1].minute)}
-              tickFormatter={(minute: number) => `${minute}m`}
-            />
-            <YAxis
-              {...CHART_Y_AXIS}
-              domain={domain}
-              ticks={yTicks}
-              tickFormatter={(value: number) => formatSignedPercent(value, 0)}
-            />
-            <ReferenceLine y={0} {...CHART_BASELINE} />
-            <Tooltip
-              isAnimationActive={false}
-              content={({ active: shown, payload }) => {
-                const point = shown ? (payload?.[0]?.payload as Point | undefined) : undefined;
-                if (!point) return null;
-                return (
-                  <TooltipCard>
-                    <TooltipHeader title={`${point.minute} minutes in`} />
-                    <TooltipStats>
-                      <TooltipStat label="This build" value={Math.round(point.build).toLocaleString("en-US")} />
-                      <TooltipStat label="Hero average" value={Math.round(point.hero).toLocaleString("en-US")} />
-                      <TooltipStat label="Difference" value={formatSignedPercent(point.diff)} />
-                    </TooltipStats>
-                  </TooltipCard>
-                );
-              }}
-            />
-            <Line
-              type="monotone"
-              dataKey="diff"
-              stroke={`url(#${strokeId})`}
-              strokeWidth={2}
-              dot={false}
-              activeDot={CHART_ACTIVE_DOT}
-              isAnimationActive={false}
-            />
-          </LineChart>
-        </ChartSurface>
+        <StaleOverlay active={buildQuery.isPlaceholderData} label="souls over the game">
+          <ChartSurface
+            variant="flush"
+            size="md"
+            label={`The build's souls against the hero's average over the game, from ${formatSignedPercent(points[0].diff)} at ${points[0].minute} minutes to ${formatSignedPercent(points[points.length - 1].diff)} at ${points[points.length - 1].minute}`}
+          >
+            <LineChart data={points} margin={{ ...CHART_MARGIN, right: 12 }}>
+              <defs>
+                <linearGradient id={strokeId} x1="0" y1="0" x2="0" y2="1">
+                  <stop offset={zeroAt} stopColor={CHART_COLOR.positive} />
+                  <stop offset={zeroAt} stopColor={CHART_COLOR.negative} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid {...CHART_GRID} />
+              <XAxis
+                {...CHART_X_AXIS}
+                dataKey="minute"
+                type="number"
+                domain={[points[0].minute, points[points.length - 1].minute]}
+                ticks={[5, 10, 15, 20, 25, 30, 35, 40].filter((minute) => minute <= points[points.length - 1].minute)}
+                tickFormatter={(minute: number) => `${minute}m`}
+              />
+              <YAxis
+                {...CHART_Y_AXIS}
+                domain={domain}
+                ticks={yTicks}
+                tickFormatter={(value: number) => formatSignedPercent(value, 0)}
+              />
+              <ReferenceLine y={0} {...CHART_BASELINE} />
+              <Tooltip
+                isAnimationActive={false}
+                content={({ active: shown, payload }) => {
+                  const point = shown ? (payload?.[0]?.payload as Point | undefined) : undefined;
+                  if (!point) return null;
+                  return (
+                    <TooltipCard>
+                      <TooltipHeader title={`${point.minute} minutes in`} />
+                      <TooltipStats>
+                        <TooltipStat label="This build" value={Math.round(point.build).toLocaleString("en-US")} />
+                        <TooltipStat label="Hero average" value={Math.round(point.hero).toLocaleString("en-US")} />
+                        <TooltipStat label="Difference" value={formatSignedPercent(point.diff)} />
+                      </TooltipStats>
+                    </TooltipCard>
+                  );
+                }}
+              />
+              <Line
+                type="monotone"
+                dataKey="diff"
+                stroke={`url(#${strokeId})`}
+                strokeWidth={2}
+                dot={false}
+                activeDot={CHART_ACTIVE_DOT}
+                isAnimationActive={false}
+              />
+            </LineChart>
+          </ChartSurface>
+        </StaleOverlay>
       )}
     </section>
   );
