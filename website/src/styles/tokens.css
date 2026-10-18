@@ -175,6 +175,8 @@
      filter that differs from its default. */
   --shadow-glow-primary: 0 1px 6px color-mix(in srgb, var(--primary) 50%, transparent);
   --shadow-active-underline: inset 0 -2px 0 0 var(--primary);
+  /* The rule over a sticky table footer: a border would stay with the table grid while the cells stick. */
+  --shadow-rule-top: inset 0 1px 0 0 var(--border);
 }
 
 /* Tier 3: the Tailwind theme. Every entry here becomes a utility. */
@@ -283,6 +285,7 @@
   --shadow-2xl: var(--shadow-2xl);
   --shadow-glow-primary: var(--shadow-glow-primary);
   --shadow-active-underline: var(--shadow-active-underline);
+  --shadow-rule-top: var(--shadow-rule-top);
 
   /* Container sizes below Tailwind's @3xs (16rem), for the parts of one slot in a dense board (a draft slot).
      Literal values: a container query cannot read a custom property, so these have no tier 1 or 2. */

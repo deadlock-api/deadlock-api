@@ -140,14 +140,29 @@ const FOOTER_TONE = {
  */
 function TableFooter({
   tone = "default",
+  position = "static",
   className,
   ...props
-}: React.ComponentProps<"tfoot"> & { tone?: keyof typeof FOOTER_TONE }) {
+}: React.ComponentProps<"tfoot"> & {
+  tone?: keyof typeof FOOTER_TONE;
+  /**
+   * `sticky` keeps the footer rows at the bottom of the table's own scroll container, on an opaque fill with their
+   * rule drawn on the cells, so the totals stay beside the rows they sum.
+   */
+  position?: "static" | "sticky";
+}) {
   return (
     <tfoot
       data-slot="table-footer"
       data-tone={tone}
-      className={cn("[&_tr]:border-0 [&_tr:hover]:bg-transparent", FOOTER_TONE[tone], className)}
+      data-position={position}
+      className={cn(
+        "[&_tr]:border-0 [&_tr:hover]:bg-transparent",
+        FOOTER_TONE[tone],
+        position === "sticky" && "[&_td]:sticky [&_td]:bottom-0 [&_td]:z-10 [&_td]:shadow-rule-top",
+        position === "sticky" && tone === "default" && "[&_td]:bg-card",
+        className,
+      )}
       {...props}
     />
   );
