@@ -34,7 +34,7 @@ function AdherenceStat({
       sub={
         adherence.winRate !== null && (
           <>
-            {formatPercent(adherence.winRate)} wins
+            {formatPercent(adherence.winRate)} win rate
             {adherence.otherWinRate !== null && ` · ${formatPercent(adherence.otherWinRate)} without`}
           </>
         )
