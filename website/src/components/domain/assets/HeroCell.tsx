@@ -43,7 +43,7 @@ export function HeroCell({
         hero={hero}
         loading={isLoading}
         shape={shape}
-        title=""
+        decorative
         className={cn("shrink-0", IMAGE_SIZE[size ?? "default"])}
       />
       <HeroName hero={hero} loading={isLoading} linkToDetail={linkToDetail} />

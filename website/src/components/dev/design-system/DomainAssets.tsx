@@ -33,12 +33,12 @@ export function DomainAssets() {
       <Specimen
         name="HeroImage and HeroName"
         source="domain/assets/HeroImage · domain/assets/HeroName"
-        note="A hero anywhere outside a chart: pass the id, the component reads the cached hero list. Pass hero instead of heroId to render a hero the parent already holds, without one query subscription per row."
+        note="A hero anywhere outside a chart: pass the id, the component reads the cached hero list. Pass hero instead of heroId to render a hero the parent already holds, without one query subscription per row. Beside a printed name the portrait is decorative (empty alt), so the name is read once."
       >
-        <Variants label="Image + name">
+        <Variants label="Image (decorative) + name">
           {HERO_IDS.map((id) => (
             <span key={id} className="flex items-center gap-2 text-sm">
-              <HeroImage heroId={id} className="size-8" />
+              <HeroImage heroId={id} decorative className="size-8" />
               <HeroName heroId={id} />
             </span>
           ))}
@@ -65,7 +65,7 @@ export function DomainAssets() {
         source="domain/assets/ItemImage · domain/assets/ItemName"
         note="A shop item by id. In tables that already hold the item list, pass item instead of itemId to skip the per-image subscription."
       >
-        <Variants label="Image + name">
+        <Variants label="Image (decorative) + name">
           {SAMPLE_ITEM_IDS.map((id) => (
             <span key={id} className="flex items-center gap-2 text-sm">
               <ItemImage itemId={id} className="size-8" />
@@ -113,7 +113,7 @@ export function DomainAssets() {
         source="domain/assets/AbilityImage · domain/assets/AbilityName"
         note="A hero ability by id, in skill orders and ability analytics. The icons are single-color art, inverted to ink in the dark theme."
       >
-        <Variants label="Image + name">
+        <Variants label="Image (decorative) + name">
           {SAMPLE_ABILITY_IDS.map((id) => (
             <span key={id} className="flex items-center gap-2 text-sm">
               <AbilityImage abilityId={id} />

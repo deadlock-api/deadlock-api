@@ -40,6 +40,11 @@ type HeroImageLook = HeroImageVariants &
     ringColor?: string;
     /** Native hover title, the name by default; pass "" where a tooltip already names the image. */
     title?: string;
+    /**
+     * The hero's name is printed beside the portrait, so the image is decoration: an empty `alt` and no title, and a
+     * screen reader reads the name once instead of twice.
+     */
+    decorative?: boolean;
   };
 
 /** Pass `hero` to render a hero already read by the parent without another query subscription. */
@@ -62,6 +67,7 @@ function HeroImageView({
   ringColor,
   className,
   title,
+  decorative = false,
   style,
   ...props
 }: HeroImageLook & { hero: SlimHero | undefined; loading?: boolean }) {
@@ -88,8 +94,8 @@ function HeroImageView({
               webp,
               png,
               fallbackSrc: webp ?? png,
-              alt: hero.name ?? "Unknown Hero",
-              title,
+              alt: decorative ? "" : (hero.name ?? "Unknown Hero"),
+              title: decorative ? "" : title,
             }
           : undefined
       }
