@@ -115,10 +115,12 @@ export function BuildPlaystyle({
     </section>
   );
   // Two columns and two rows: combat beside economy, then the per-time souls beside survival and support with the
-  // trailing sections under it. A panel with the page's full width puts all four in one row.
+  // trailing sections under it. A panel with the page's full width puts all four in one row, and from 72rem the souls
+  // take the most of it, so no list is wide enough to set its numbers far from their labels; survival and support keeps
+  // room for its match length table's column names.
   return (
     <div className="@container">
-      <div className="grid @lg:grid-cols-2 @4xl:grid-cols-4">
+      <div className="grid @lg:grid-cols-2 @4xl:grid-cols-4 @6xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,2fr)_minmax(0,1.25fr)]">
         {section(GROUPS[0])}
         {section(GROUPS[1])}
         {children && <div className="flex flex-col">{children}</div>}
