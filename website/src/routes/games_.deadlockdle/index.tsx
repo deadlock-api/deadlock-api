@@ -246,11 +246,12 @@ function DeadlockdleHub() {
       </Hero>
 
       <section>
+        {/* Eight games, two full rows of four on a wide screen: the modes, then Guess the Rank (not a Deadlockdle mode). */}
         <motion.div
           variants={stagger}
           initial={enterTiles}
           animate="show"
-          className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3"
+          className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4"
         >
           {GAMES.map((game) => (
             <motion.div key={game.mode} variants={fadeUp}>
@@ -262,19 +263,15 @@ function DeadlockdleHub() {
               />
             </motion.div>
           ))}
+          <motion.div variants={fadeUp}>
+            <GameTile
+              to="/games/guess-the-rank"
+              title="Guess the Rank"
+              description="Watch three gameplay clips a day and guess each player's rank, then see how everyone guessed."
+              icon={Clapperboard}
+            />
+          </motion.div>
         </motion.div>
-      </section>
-
-      {/* Another daily game, not a Deadlockdle mode: its own tile after the modes. */}
-      <section aria-label="More daily games">
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3">
-          <GameTile
-            to="/games/guess-the-rank"
-            title="Guess the Rank"
-            description="Watch three gameplay clips a day and guess each player's rank, then see how everyone guessed."
-            icon={Clapperboard}
-          />
-        </div>
       </section>
 
       <AnimatePresence>
