@@ -14,6 +14,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "~/components/ui/dialog";
+import { InlineStat } from "~/components/ui/inline-stat";
 import { formatPercent } from "~/lib/format";
 import type { CompanionRow } from "~/lib/tracker/companions";
 import { sortMatches } from "~/lib/tracker/compute";
@@ -159,9 +160,10 @@ export function CompanionMatchesDialog({
           <DialogTitle className="pe-5 break-words">
             Matches {relation} {name}
           </DialogTitle>
-          <DialogDescription>
-            Your results in the current filters: {row.wins} wins · {row.matches - row.wins} losses ·{" "}
-            {formatPercent(row.wins / row.matches)} win rate. Select a match to open its details.
+          <DialogDescription className="flex flex-wrap gap-x-3 gap-y-0.5 text-sm">
+            <InlineStat value={row.wins.toLocaleString("en-US")} label="wins" />
+            <InlineStat value={(row.matches - row.wins).toLocaleString("en-US")} label="losses" />
+            <InlineStat value={formatPercent(row.wins / row.matches)} label="win rate" />
           </DialogDescription>
         </DialogHeader>
         <SharedMatches

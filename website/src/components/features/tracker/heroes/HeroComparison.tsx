@@ -43,14 +43,6 @@ export function HeroComparison({
             <TooltipStat label={`${bracketLabel} average`} value={format(averageValue)} />
             <TooltipStat label="Difference" value={difference} />
           </TooltipStats>
-          <p className="text-xs text-muted-foreground">
-            Same hero, mode and selected date range. Both wins and losses are included.
-          </p>
-          <p className="text-xs text-muted-foreground">
-            {isWinrate
-              ? "pp means percentage points: the difference between the two win rates."
-              : "KDA is total kills plus assists divided by total deaths. With no deaths, kills plus assists are shown."}
-          </p>
         </>
       }
     >

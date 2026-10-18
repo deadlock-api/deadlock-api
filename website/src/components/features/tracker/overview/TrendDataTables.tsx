@@ -59,17 +59,12 @@ export function RankHistoryTable({
   }
   return (
     <div ref={tableRef} className="flex flex-col gap-3">
-      <p className="text-sm text-muted-foreground">
-        Recorded badges and progress in the selected matches. Select a date to open its match.
-      </p>
       <p id={keyboardHelpId} className="sr-only">
         Use the up and down arrow keys to browse recorded ranks, or Home and End for the first and last shown match.
         Press Enter to open a match.
       </p>
       <Table density="dense">
-        <TableCaption>
-          Newest first. Rank progress is shown only when recorded; missing progress is marked with a dash.
-        </TableCaption>
+        <TableCaption>Rank history, newest first</TableCaption>
         <TableHeader>
           <TableRow>
             <TableHead>Date</TableHead>
@@ -147,10 +142,7 @@ export function ActivityTable({
   const { toTime } = useTrackerTime();
   return (
     <Table>
-      <TableCaption>
-        Selected matches, newest period first. Empty periods are included to show breaks in activity. Dates use your
-        local time. Select a period to show its matches.
-      </TableCaption>
+      <TableCaption>Matches by {activity.granularity}, newest first</TableCaption>
       <TableHeader>
         <TableRow>
           <TableHead>{activity.granularity === "week" ? "Week of" : "Month"}</TableHead>

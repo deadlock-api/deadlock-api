@@ -25,7 +25,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~
 import { formatPercent } from "~/lib/format";
 import { type GameMode, hasSoulEconomy } from "~/lib/game-mode";
 import { benchmarkRankRange } from "~/lib/tracker/benchmarks";
-import { recentFormByHero, type ResultFilter } from "~/lib/tracker/compute";
+import { recentFormByHero } from "~/lib/tracker/compute";
 import { type HeroRow, type HeroSortKey, sortHeroRows, toHeroRow } from "~/lib/tracker/hero-performance";
 import { cn } from "~/lib/utils";
 import { heroStatsQueryOptions } from "~/queries/hero-stats-query";
@@ -114,7 +114,6 @@ export function HeroesTab({
   minUnixTimestamp,
   maxUnixTimestamp,
   entries,
-  result = "all",
   onSelectHero,
   minimumMatches = 0,
   initialSortKey = "matches",
@@ -129,8 +128,6 @@ export function HeroesTab({
   maxUnixTimestamp?: number | null;
   /** Match history under the same filters, newest first; feeds the per-hero form column. */
   entries: PlayerMatchHistoryEntry[];
-  /** Detailed API aggregates include both outcomes; disclose this when the match list is filtered. */
-  result?: ResultFilter;
   onSelectHero: (heroId: number) => void;
   minimumMatches?: number;
   /** Start with the overview preview's ordering when opened in a dialog. */
@@ -216,11 +213,6 @@ export function HeroesTab({
 
   return (
     <div className="flex flex-col gap-2">
-      {result !== "all" && (
-        <p className="text-xs text-muted-foreground">
-          Detailed hero stats include both wins and losses. Hero, mode and date filters still apply.
-        </p>
-      )}
       {query.fetchStatus === "paused" ? (
         <TrackerQueryPaused
           description={
@@ -265,9 +257,7 @@ export function HeroesTab({
                     checked={showAllStats}
                     onCheckedChange={setShowAllStats}
                   />
-                  {showAllStats ? (
-                    <span className="text-xs text-muted-foreground">Scroll for more columns →</span>
-                  ) : sortColumn?.className ? (
+                  {!showAllStats && sortColumn?.className ? (
                     <span className="text-xs text-muted-foreground">
                       Sorted by {sortColumn.label} {sortDir === "desc" ? "↓" : "↑"}
                     </span>
@@ -391,12 +381,6 @@ export function HeroesTab({
                   retrying={averagesQuery.isFetching}
                 />
               ) : null}
-              {averages && rows.length > 0 && (
-                <p className={cn("text-xs text-muted-foreground", !showAllStats && "hidden @lg:block")}>
-                  Compared with {bracketLabel} on the same hero in the selected range. Win-rate differences are in
-                  percentage points (pp).
-                </p>
-              )}
             </div>
           );
         }}

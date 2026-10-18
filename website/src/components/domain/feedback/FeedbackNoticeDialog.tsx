@@ -18,13 +18,13 @@ import { readLocalStorage, writeLocalStorage } from "~/lib/local-storage";
  * spotlights while open. It opens on every visit until the visitor closes it with "Don't show again" checked, which is
  * remembered under `storageKey`: each page has its own key, so dismissing one page's notice leaves the others.
  * `ready` holds it back until the page is at a pause (a game between rounds); once open it stays until closed.
- * Children are the description's paragraphs.
+ * Children are the description's paragraphs; without them the notice is its title and its actions.
  */
 export function FeedbackNoticeDialog({
   storageKey,
   title = "Help shape this page",
   ready = true,
-  children = "This page is brand new and we need a lot of feedback to make it better. Use the feedback button in the bottom-right corner to tell us what you think.",
+  children,
 }: {
   /** Where "Don't show again" is remembered; one per page. */
   storageKey: string;
@@ -55,10 +55,16 @@ export function FeedbackNoticeDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent data-slot="feedback-notice-dialog" className="sm:max-w-md">
+      <DialogContent
+        data-slot="feedback-notice-dialog"
+        className="sm:max-w-md"
+        {...(children == null && { "aria-describedby": undefined })}
+      >
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
-          <DialogDescription className="flex flex-col gap-2 pt-1 text-start">{children}</DialogDescription>
+          {children != null && (
+            <DialogDescription className="flex flex-col gap-2 pt-1 text-start">{children}</DialogDescription>
+          )}
         </DialogHeader>
         <DialogFooter className="items-center gap-3 sm:justify-between">
           <CheckboxField

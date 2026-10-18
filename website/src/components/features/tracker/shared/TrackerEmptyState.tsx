@@ -39,7 +39,6 @@ export function TrackerEmptyState({
                 <span className="ms-auto tabular-nums">{recovery.matches.toLocaleString("en-US")}</span>
               </Button>
             ))}
-            <p className="text-xs text-muted-foreground">Match counts preview each change.</p>
           </>
         )
       }

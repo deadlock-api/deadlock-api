@@ -277,7 +277,6 @@ export function OverviewTab({
           details={({ minimumMatches, close, sort, direction }) => (
             <div className="flex flex-col gap-2">
               <HeroesTab
-                result={filters.result}
                 minimumMatches={minimumMatches}
                 initialSortKey={sort === "kdaRatio" ? "kda" : sort}
                 initialSortDir={direction === "descending" ? "desc" : "asc"}

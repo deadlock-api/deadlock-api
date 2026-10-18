@@ -17,13 +17,7 @@ import { Panel, PanelBody, PanelHeader } from "~/components/patterns/panel/Panel
 import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { InlineStat } from "~/components/ui/inline-stat";
 import { Segmented, SegmentedItem } from "~/components/ui/segmented";
-import {
-  Tooltip as HoverTooltip,
-  TooltipCard,
-  TooltipHeader,
-  TooltipStat,
-  TooltipStats,
-} from "~/components/ui/tooltip";
+import { TooltipCard, TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
 import { day } from "~/dayjs";
 import { formatPercent } from "~/lib/format";
 import { type GameMode, hasSoulEconomy } from "~/lib/game-mode";
@@ -103,11 +97,9 @@ export function PerformanceTrendPanel({
           >
             {windows.map((choice) =>
               choice === "auto" ? (
-                <HoverTooltip key={choice} content="Window grows with your selected match history">
-                  <SegmentedItem value={choice} aria-label="Automatic window size">
-                    Auto
-                  </SegmentedItem>
-                </HoverTooltip>
+                <SegmentedItem key={choice} value={choice} aria-label="Automatic window size">
+                  Auto
+                </SegmentedItem>
               ) : (
                 <SegmentedItem key={choice} value={choice} aria-label={`${choice} matches`}>
                   {choice}

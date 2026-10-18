@@ -156,12 +156,6 @@ export function RankBenchmarks({
           <div className="flex flex-col gap-3">
             {expanded && (
               <div className="flex flex-col gap-2 text-xs text-muted-foreground">
-                <p>
-                  Averages use the selected hero, mode and date range.
-                  {mode.supportsRank &&
-                    selection === "auto" &&
-                    " Auto chooses your latest recorded rank across all dates and heroes."}
-                </p>
                 <div className="flex flex-wrap items-center justify-between gap-1">
                   <span>Player averages vs. {cohortLabel} lobby averages</span>
                   <ChartLegend className="px-0">
@@ -278,12 +272,6 @@ function BenchmarkMetric({
                 }
               />
             </TooltipStats>
-            {def.key === "deaths" && <p className="text-xs text-muted-foreground">Fewer deaths is better.</p>}
-            {def.key === "kda" && (
-              <p className="text-xs text-muted-foreground">
-                Mean of each match’s KDA; differs from the overall KDA ratio above.
-              </p>
-            )}
           </>
         }
       >

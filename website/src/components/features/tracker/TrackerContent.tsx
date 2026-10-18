@@ -293,7 +293,6 @@ export function TrackerContent({
             minUnixTimestamp={minUnixTimestamp}
             maxUnixTimestamp={maxUnixTimestamp}
             entries={formEntries}
-            result={result}
             onSelectHero={(id) => {
               void setHeroId(id);
               void setExpandedMatchId(null);
