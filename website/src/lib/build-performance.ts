@@ -287,5 +287,7 @@ export function metricNoise(metric: BuildMetric): number {
 export function metricDelta(metric: BuildMetric, value: number | null, average: number | null): number | null {
   if (value === null || average === null) return null;
   if (metric.delta === "points") return value - average;
-  return average !== 0 ? value / average - 1 : null;
+  // Against a base that prints as zero ("0" team healing for a hero without any) a relative change is noise of any
+  // size: +665% from 0.4 to 3. It has none.
+  return metric.format(average) !== metric.format(0) ? value / average - 1 : null;
 }
