@@ -4,6 +4,7 @@ import { useCallback, useMemo, useRef } from "react";
 
 import { ItemImage } from "~/components/domain/assets/ItemImage";
 import { AnswerOption, type AnswerOptionState, revealedState } from "~/components/domain/minigames/AnswerOption";
+import { RevealActions } from "~/components/domain/minigames/RevealActions";
 import { ScoreSummary } from "~/components/domain/minigames/ScoreSummary";
 import { ShareButton } from "~/components/domain/minigames/ShareButton";
 import { TerminalButton } from "~/components/domain/minigames/TerminalButton";
@@ -263,15 +264,20 @@ function ItemStatsQuiz() {
                         Item {index + 1} of {ITEMS_COUNT}
                       </Text>
                     </div>
-                    {revealed && (
-                      <div className="ms-auto">
-                        <AnswerStatsLink mode="item-stats" date={date} isArchive={isArchive} item={item.name} />
-                      </div>
-                    )}
+                    <RevealActions revealed={revealed} focusOnReveal={false} className="ms-auto">
+                      <AnswerStatsLink mode="item-stats" date={date} isArchive={isArchive} item={item.name} />
+                    </RevealActions>
                   </div>
 
                   <div className="flex flex-wrap gap-x-5 gap-y-3">
-                    <Field label="Activation" className="font-mono">
+                    <Field
+                      label="Activation"
+                      reserveMessage
+                      description={
+                        result && !result.active ? `Correct: ${item.is_active_item ? "Active" : "Passive"}` : undefined
+                      }
+                      className="font-mono"
+                    >
                       <div className="flex gap-1.5">
                         {([true, false] as const).map((isActive) => {
                           const isSelected = answer.active === isActive;
@@ -289,12 +295,14 @@ function ItemStatsQuiz() {
                           );
                         })}
                       </div>
-                      {result && !result.active && (
-                        <p className="text-xs text-negative">Correct: {item.is_active_item ? "Active" : "Passive"}</p>
-                      )}
                     </Field>
 
-                    <Field label="Tier" className="font-mono">
+                    <Field
+                      label="Tier"
+                      reserveMessage
+                      description={result && !result.tier ? `Correct: T${item.item_tier}` : undefined}
+                      className="font-mono"
+                    >
                       <div className="flex gap-1.5">
                         {[1, 2, 3, 4].map((tier) => {
                           const isSelected = answer.tier === tier;
@@ -312,10 +320,14 @@ function ItemStatsQuiz() {
                           );
                         })}
                       </div>
-                      {result && !result.tier && <p className="text-xs text-negative">Correct: T{item.item_tier}</p>}
                     </Field>
 
-                    <Field label="Slot" className="font-mono">
+                    <Field
+                      label="Slot"
+                      reserveMessage
+                      description={result && !result.slot ? `Correct: ${capitalize(item.item_slot_type)}` : undefined}
+                      className="font-mono"
+                    >
                       <div className="flex gap-1.5">
                         {SLOT_TYPES.map((slot) => {
                           const isSelected = answer.slot === slot;
@@ -334,13 +346,15 @@ function ItemStatsQuiz() {
                           );
                         })}
                       </div>
-                      {result && !result.slot && (
-                        <p className="text-xs text-negative">Correct: {capitalize(item.item_slot_type)}</p>
-                      )}
                     </Field>
 
                     {statQuestion && (
-                      <Field label={statQuestion.label} className="font-mono">
+                      <Field
+                        label={statQuestion.label}
+                        reserveMessage
+                        description={result && !result.stat ? `Correct: ${statQuestion.answer}` : undefined}
+                        className="font-mono"
+                      >
                         <div className="flex gap-1.5">
                           {statQuestion.options.map((option) => {
                             const isSelected = answer.stat === option;
@@ -358,9 +372,6 @@ function ItemStatsQuiz() {
                             );
                           })}
                         </div>
-                        {result && !result.stat && (
-                          <p className="text-xs text-negative">Correct: {statQuestion.answer}</p>
-                        )}
                       </Field>
                     )}
                   </div>

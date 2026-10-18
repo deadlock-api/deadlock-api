@@ -490,7 +490,7 @@ export function DomainMinigames() {
       <Specimen
         name="RevealActions"
         source="domain/minigames/RevealActions"
-        note="The actions that follow an answer (Next round, See stats). The row is always laid out, so the reveal moves nothing below it: until revealed it is invisible, inert and aria-hidden. When it goes live, focus moves to the control marked data-autofocus (else the first one) without scrolling. justify defaults to center; it takes every Inline prop."
+        note="The actions that follow an answer (Next round, See stats). The row is always laid out, so the reveal moves nothing below it: until revealed it is invisible, inert and aria-hidden. When it goes live, focus moves to the control marked data-autofocus (else the first one) without scrolling; focusOnReveal={false} skips that for actions that only follow along (one per card of a quiz page). justify defaults to center; it takes every Inline prop."
         className="theme-terminal"
       >
         <Variants label="hidden, then revealed (the rule under it never moves)" className="flex-col items-stretch">

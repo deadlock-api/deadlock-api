@@ -66,11 +66,12 @@ import { DivergingBar } from "~/components/ui/rate-bar";
 import { SearchInput } from "~/components/ui/search-input";
 import { Segmented, SegmentedItem } from "~/components/ui/segmented";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
+import { Separator } from "~/components/ui/separator";
 import { Skeleton } from "~/components/ui/skeleton";
 import { Slider } from "~/components/ui/slider";
 import { SortButton } from "~/components/ui/sort-button";
 import { Spinner } from "~/components/ui/spinner";
-import { Inline } from "~/components/ui/stack";
+import { Inline, Stack } from "~/components/ui/stack";
 import { Stat, StatGroup } from "~/components/ui/stat";
 import { Switch } from "~/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsPanels, TabsTrigger } from "~/components/ui/tabs";
@@ -212,6 +213,7 @@ function CalloutDemo() {
 
 export function Primitives() {
   const [interval, setInterval] = useState<"day" | "week" | "month">("week");
+  const [fieldChecked, setFieldChecked] = useState(false);
   const [views, setViews] = useState(["grid"]);
   const [sort, setSort] = useState("winrate");
   const [range, setRange] = useState([20, 80]);
@@ -383,6 +385,20 @@ export function Primitives() {
               {INTERVALS}
             </Segmented>
           </Field>
+          <Stack gap={2} className="w-48">
+            <Field
+              label="Reserved message"
+              htmlFor="ds-field-r"
+              reserveMessage
+              description={fieldChecked ? "Correct: Tier 3" : undefined}
+            >
+              <Input id="ds-field-r" defaultValue="Tier 2" readOnly />
+            </Field>
+            <Separator />
+            <Button variant="outline" size="sm" aria-pressed={fieldChecked} onClick={() => setFieldChecked((c) => !c)}>
+              {fieldChecked ? "Clear" : "Check"}
+            </Button>
+          </Stack>
         </Variants>
       </Specimen>
 
@@ -566,7 +582,7 @@ export function Primitives() {
       <Specimen
         name="Field"
         source="ui/field"
-        note="A label tied to a control, outside a FilterBar. vertical for forms, horizontal for toolbars."
+        note="A label tied to a control, outside a FilterBar. vertical for forms, horizontal for toolbars. reserveMessage keeps the footer row before there is a message, so a description or error that arrives later (a quiz correction, a check on submit) moves nothing: the rule under the third field stays put."
       >
         <Variants className="items-end gap-6">
           <Field label="Vertical" htmlFor="ds-field-v" className="w-48">
@@ -577,6 +593,20 @@ export function Primitives() {
               {INTERVALS}
             </Segmented>
           </Field>
+          <Stack gap={2} className="w-48">
+            <Field
+              label="Reserved message"
+              htmlFor="ds-field-r"
+              reserveMessage
+              description={fieldChecked ? "Correct: Tier 3" : undefined}
+            >
+              <Input id="ds-field-r" defaultValue="Tier 2" readOnly />
+            </Field>
+            <Separator />
+            <Button variant="outline" size="sm" aria-pressed={fieldChecked} onClick={() => setFieldChecked((c) => !c)}>
+              {fieldChecked ? "Clear" : "Check"}
+            </Button>
+          </Stack>
         </Variants>
       </Specimen>
 

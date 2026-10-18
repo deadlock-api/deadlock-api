@@ -32,6 +32,11 @@ interface FieldProps extends React.ComponentProps<"div"> {
    * describes the control and is announced politely when it changes.
    */
   counter?: React.ReactNode;
+  /**
+   * Reserves the footer row before there is a message, so a description or an error that comes in later (a quiz's
+   * correction after submitting, a check on submit) never moves what follows.
+   */
+  reserveMessage?: boolean;
 }
 
 /** A label tied to its control. Every labelled control outside a FilterBar goes through this. */
@@ -44,6 +49,7 @@ export function Field({
   description,
   error,
   counter,
+  reserveMessage = false,
   className,
   children,
   ...props
@@ -53,7 +59,7 @@ export function Field({
   const hasError = error != null && error !== false && error !== "";
   const message = hasError ? error : description;
   const counted = counter !== undefined;
-  const hasFooter = Boolean(message) || counted;
+  const hasFooter = Boolean(message) || counted || reserveMessage;
   const messageId = `${htmlFor ?? labelId}-${hasError ? "error" : "description"}`;
   const counterId = `${htmlFor ?? labelId}-counter`;
   const describedBy = [message ? messageId : undefined, counted ? counterId : undefined].filter(Boolean).join(" ");
