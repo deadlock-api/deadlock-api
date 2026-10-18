@@ -135,7 +135,23 @@ export default function GamesOverTimeChart({
         />
       </StatGroup>
 
-      <div aria-live="polite" aria-busy={isPending}>
+      {/* The card and its title stay in every state, so a new interval or metric never moves the plot. */}
+      <ChartCard
+        title={`${statDef?.label ?? stat} over time`}
+        description={
+          chartData.length > 0 ? (
+            `${formatDate(chartData[0].date)} – ${formatDate(chartData.at(-1)!.date)} · UTC`
+          ) : (
+            // Until the buckets arrive, a hidden line of the same length keeps the header's height (it wraps on a phone).
+            <>
+              <NoValue />
+              <span aria-hidden className="invisible">
+                MMM 00, 0000 – MMM 00, 0000 · UTC
+              </span>
+            </>
+          )
+        }
+      >
         {isPending ? (
           <ChartLoading label="game trends" />
         ) : isError ? (
@@ -143,63 +159,58 @@ export default function GamesOverTimeChart({
         ) : chartData.every((entry) => entry.value == null) ? (
           <ChartEmpty label="game trends" description={statDef?.recordedSince ? BUFF_TIMINGS_NOTE : undefined} />
         ) : (
-          <ChartCard
-            title={`${statDef?.label ?? stat} over time`}
-            description={`${day.utc(chartData[0].date).format("MMM D, YYYY")} – ${day.utc(chartData.at(-1)!.date).format("MMM D, YYYY")} · UTC`}
-          >
-            <ChartSurface label={`${statDef?.label ?? stat} over time chart`} variant="flush">
-              <LineChart data={chartData} margin={{ ...CHART_MARGIN_MARKED, right: 12 }}>
-                <CartesianGrid {...CHART_GRID} verticalCoordinatesGenerator={() => []} />
-                <XAxis
-                  dataKey="date"
-                  type="number"
-                  scale="time"
-                  domain={["dataMin", "dataMax"]}
-                  tickFormatter={(ts) => day.utc(ts).format("MMM D")}
-                  {...CHART_X_AXIS}
-                  minTickGap={28}
-                />
-                <YAxis
-                  domain={["dataMin", "auto"]}
-                  tickFormatter={(v) => (statDef ? formatAxisTick(v, statDef.format, span) : String(v))}
-                  {...CHART_Y_AXIS}
-                />
-                <PatchMarkers />
-                <Tooltip
-                  wrapperStyle={{ pointerEvents: "auto" }}
-                  isAnimationActive={false}
-                  content={({ active, payload, label }) => {
-                    if (!active || !payload?.length) return null;
-                    const entry = payload[0].payload;
-                    return (
-                      <ChartReadings title={day.utc(Number(label)).format("MMM D, YYYY [UTC]")}>
-                        <ChartReading label={statDef?.label ?? stat}>
-                          {statDef
-                            ? (formatStatValue(entry.value, statDef.format) ?? <NoValue label="No data" />)
-                            : entry.value}
-                        </ChartReading>
-                        {stat !== "total_matches" && (
-                          <ChartReading label="Matches">{entry.matches.toLocaleString("en-US")}</ChartReading>
-                        )}
-                      </ChartReadings>
-                    );
-                  }}
-                />
-                <Line
-                  type="linear"
-                  dataKey="value"
-                  stroke={CHART_COLOR.primary}
-                  dot={chartData.length <= 100 ? { r: 2.5 } : false}
-                  isAnimationActive={false}
-                  activeDot={{ r: 5 }}
-                  strokeWidth={2}
-                  name={statDef?.label}
-                />
-              </LineChart>
-            </ChartSurface>
-          </ChartCard>
+          <ChartSurface label={`${statDef?.label ?? stat} over time chart`} variant="flush">
+            <LineChart data={chartData} margin={{ ...CHART_MARGIN_MARKED, right: 12 }}>
+              <CartesianGrid {...CHART_GRID} verticalCoordinatesGenerator={() => []} />
+              <XAxis
+                dataKey="date"
+                type="number"
+                scale="time"
+                domain={["dataMin", "dataMax"]}
+                tickFormatter={(ts) => day.utc(ts).format("MMM D")}
+                {...CHART_X_AXIS}
+                minTickGap={28}
+              />
+              <YAxis
+                domain={["dataMin", "auto"]}
+                tickFormatter={(v) => (statDef ? formatAxisTick(v, statDef.format, span) : String(v))}
+                {...CHART_Y_AXIS}
+              />
+              <PatchMarkers />
+              <Tooltip
+                wrapperStyle={{ pointerEvents: "auto" }}
+                isAnimationActive={false}
+                content={({ active, payload, label }) => {
+                  if (!active || !payload?.length) return null;
+                  const entry = payload[0].payload;
+                  return (
+                    <ChartReadings title={day.utc(Number(label)).format("MMM D, YYYY [UTC]")}>
+                      <ChartReading label={statDef?.label ?? stat}>
+                        {statDef
+                          ? (formatStatValue(entry.value, statDef.format) ?? <NoValue label="No data" />)
+                          : entry.value}
+                      </ChartReading>
+                      {stat !== "total_matches" && (
+                        <ChartReading label="Matches">{entry.matches.toLocaleString("en-US")}</ChartReading>
+                      )}
+                    </ChartReadings>
+                  );
+                }}
+              />
+              <Line
+                type="linear"
+                dataKey="value"
+                stroke={CHART_COLOR.primary}
+                dot={chartData.length <= 100 ? { r: 2.5 } : false}
+                isAnimationActive={false}
+                activeDot={{ r: 5 }}
+                strokeWidth={2}
+                name={statDef?.label}
+              />
+            </LineChart>
+          </ChartSurface>
         )}
-      </div>
+      </ChartCard>
     </div>
   );
 }
