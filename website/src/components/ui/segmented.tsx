@@ -80,6 +80,9 @@ function Segmented<T extends string>({
         onValueChange={(next) => setCurrent(next as T)}
         className={cn(
           "flex-wrap gap-0.5 rounded-lg border bg-secondary p-0.5",
+          // Small, it stands as high as the other small controls (Input, Select, a toolbar FilterCell: 32px) so a
+          // toolbar of them lines up; its items stay 24px, centred.
+          size === "sm" && "min-h-8 items-center",
           // A hugging group sizes from its labels: with the items' square flex-basis as their width, "2 3 4 5 6" came
           // out too narrow and wrapped "6" below with room to spare. The row around it wraps whole controls instead.
           width === "fill" ? "flex w-full" : "inline-flex w-fit shrink-0 *:data-[slot=segmented-item]:basis-auto",
