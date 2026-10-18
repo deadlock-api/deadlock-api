@@ -17,8 +17,9 @@ const GROUPS = [
 ] as const;
 
 function leadingOf(row: Suggestion) {
-  if (row.kind === "hero") return <HeroImage heroId={row.id} className="size-6" />;
-  if (row.kind === "page" && row.heroId !== undefined) return <HeroImage heroId={row.heroId} className="size-6" />;
+  if (row.kind === "hero") return <HeroImage heroId={row.id} decorative className="size-6" />;
+  if (row.kind === "page" && row.heroId !== undefined)
+    return <HeroImage heroId={row.heroId} decorative className="size-6" />;
   if (row.kind === "player") return <SteamAvatar src={row.avatar} size="sm" />;
   if (row.kind === "match") return <SwordsIcon aria-hidden="true" className="size-4 text-muted-foreground" />;
   return <SparklesIcon aria-hidden="true" className="size-4 text-primary" />;
