@@ -47,7 +47,7 @@ export function SoundSpecimens() {
       <Specimen
         name="SoundButton"
         source="ui/sound-button"
-        note="Plays a clip or a sequence and stops it while it plays, driven by the headless `useSoundPlayer` (ui/hooks/use-sound-player: `play(id, urls)`, `toggle`, `stop`, `stateOf(id)`, `playback`). Each state has its own glyph: play, spinner (loading), stop with a fill running over the clip's `duration` (playing), warning (error, press to retry). It is a toggle (`aria-pressed`) and its name is the action plus `label`. Children are a short visible label such as a take number; without children it is an icon button."
+        note="Plays a clip or a sequence and stops it while it plays, driven by the headless `useSoundPlayer` (ui/hooks/use-sound-player: `play(id, urls)`, `toggle`, `stop`, `stateOf(id)`, `playback`). Each state has its own glyph: play, spinner (loading), stop with a fill running over the clip's `duration` (playing), warning (error, press to retry). It is a toggle (`aria-pressed`) and its name is the action plus `label`; `action` replaces the verb when the visible text is the action (Play all), so the name starts with the words shown. Children are a short visible label such as a take number; without children it is an icon button."
       >
         <Variants label="live (press them)">
           <SoundButton {...button(CAST, "Abrams charge cast")} />
@@ -56,7 +56,10 @@ export function SoundSpecimens() {
               {i + 1}
             </SoundButton>
           ))}
-          <SoundButton {...button("convo", "conversation", CONVO)}>
+          <SoundButton
+            {...button("convo", "conversation", CONVO)}
+            action={player.stateOf("convo") === "playing" ? "Stop" : "Play all"}
+          >
             {player.stateOf("convo") === "playing" ? "Stop" : "Play all"}
           </SoundButton>
           <SoundButton {...button(MISSING, "a missing clip")}>Missing file</SoundButton>

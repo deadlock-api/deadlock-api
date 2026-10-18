@@ -18,6 +18,11 @@ interface SoundButtonProps extends Omit<React.ComponentProps<typeof Button>, "va
   state?: SoundState;
   /** What it plays, for assistive technology: "kill Trapper, take 2". The action is put in front of it. */
   label: string;
+  /**
+   * The verb the name starts with, by default the state's own (Play, Loading, Stop, Retry). Give it when the visible
+   * label is itself the action ("Play all"), so the name starts with the words on the button (WCAG 2.5.3).
+   */
+  action?: string;
   /** Seconds the playing clip lasts: a fill runs along the bottom edge over that time. */
   duration?: number;
 }
@@ -30,6 +35,7 @@ interface SoundButtonProps extends Omit<React.ComponentProps<typeof Button>, "va
 export function SoundButton({
   state = "idle",
   label,
+  action,
   duration,
   size,
   className,
@@ -48,7 +54,7 @@ export function SoundButton({
       loading={state === "loading"}
       loadingLabel={`Loading ${label}`}
       aria-pressed={playing}
-      aria-label={`${ACTION[state]} ${label}`}
+      aria-label={`${action ?? ACTION[state]} ${label}`}
       className={cn("relative overflow-hidden tabular-nums", className)}
       style={duration ? ({ "--sound-duration": `${duration}s`, ...style } as React.CSSProperties) : style}
       {...props}

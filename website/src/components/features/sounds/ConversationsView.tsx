@@ -91,6 +91,7 @@ function ConversationItem({
   const id = `convo:${conversation.id}`;
   const title = `${conversation.label} #${conversation.part}`;
   const sequenceState = player.stateOf(id);
+  const allAction = sequenceState === "playing" ? "Stop" : "Play all";
   const playingLine = player.playback?.id === id ? player.playback.index : -1;
   const urls = conversation.lines.map((line) => line.takes[0].url);
   const files: SoundFile[] = conversation.lines.flatMap((line, index) => {
@@ -144,8 +145,13 @@ function ConversationItem({
           );
         });
       })}
-      <SoundButton state={sequenceState} label={`conversation ${title}`} onClick={() => player.toggle(id, urls)}>
-        {sequenceState === "playing" ? "Stop" : "Play all"}
+      <SoundButton
+        state={sequenceState}
+        action={allAction}
+        label={`conversation ${title}`}
+        onClick={() => player.toggle(id, urls)}
+      >
+        {allAction}
       </SoundButton>
     </SoundListItem>
   );
