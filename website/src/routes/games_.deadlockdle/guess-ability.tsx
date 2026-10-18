@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { motion } from "framer-motion";
 import { useMemo } from "react";
 
+import { RevealCaption } from "~/components/domain/minigames/RevealCaption";
 import { AnswerStatsLink } from "~/components/features/deadlockdle/AnswerStatsLink";
 import { GameShell, GameShellError, GameShellLoading } from "~/components/features/deadlockdle/GameShell";
 import { GuessFeedback } from "~/components/features/deadlockdle/GuessFeedback";
@@ -11,6 +12,7 @@ import { PreviousGuesses } from "~/components/features/deadlockdle/PreviousGuess
 import { ResultModal } from "~/components/features/deadlockdle/ResultModal";
 import { useDailyGuess } from "~/components/features/deadlockdle/use-daily-guess";
 import { Stack } from "~/components/ui/stack";
+import { Text } from "~/components/ui/text";
 import { abilityHints, buildGuessableAbilities } from "~/lib/deadlockdle/hints";
 import { useAbilities, useHeroes, puzzleLoadError } from "~/lib/deadlockdle/queries";
 import { validatePuzzleDateSearch } from "~/lib/deadlockdle/seed";
@@ -112,12 +114,14 @@ function GuessAbility() {
               draggable={false}
             />
           </picture>
-          {isFinished && (
-            <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="text-center">
-              <p className="font-mono text-sm font-semibold text-foreground">{ability.name}</p>
-              <p className="font-mono text-xs text-muted-foreground">{hero.name}</p>
-            </motion.div>
-          )}
+          <RevealCaption revealed={isFinished}>
+            <Text as="p" variant="label">
+              {ability.name}
+            </Text>
+            <Text as="p" variant="caption" tone="muted">
+              {hero.name}
+            </Text>
+          </RevealCaption>
         </Stack>
       </motion.div>
 

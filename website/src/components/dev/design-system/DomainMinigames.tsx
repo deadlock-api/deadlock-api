@@ -19,6 +19,7 @@ import { GamePage } from "~/components/domain/minigames/GamePage";
 import { GameTile } from "~/components/domain/minigames/GameTile";
 import { QuizQuestion } from "~/components/domain/minigames/QuizQuestion";
 import { RevealActions } from "~/components/domain/minigames/RevealActions";
+import { RevealCaption } from "~/components/domain/minigames/RevealCaption";
 import { ScoreSummary } from "~/components/domain/minigames/ScoreSummary";
 import { ShareButton } from "~/components/domain/minigames/ShareButton";
 import { TerminalBadge } from "~/components/domain/minigames/TerminalBadge";
@@ -39,6 +40,7 @@ import {
 import { Card, CardContent } from "~/components/ui/card";
 import { Separator } from "~/components/ui/separator";
 import { Stack } from "~/components/ui/stack";
+import { Text } from "~/components/ui/text";
 
 const ANSWER_STATES: AnswerOptionState[] = ["idle", "selected", "correct", "wrong", "dimmed"];
 const QUIZ_OPTIONS = ["Infernus", "Seven", "Haze", "Paradox"];
@@ -66,6 +68,7 @@ export function DomainMinigames() {
   const [hlGuess, setHlGuess] = useState<string | null>(null);
   const [h2hPick, setH2hPick] = useState<number | null>(null);
   const [revealed, setRevealed] = useState(false);
+  const [captionShown, setCaptionShown] = useState(false);
 
   return (
     <>
@@ -502,6 +505,28 @@ export function DomainMinigames() {
               Next round
             </TerminalButton>
           </RevealActions>
+          <Separator />
+        </Variants>
+      </Specimen>
+
+      <Specimen
+        name="RevealCaption"
+        source="domain/minigames/RevealCaption"
+        note="The answer's name under the art of a guessing round. It is laid out from the start, invisible and aria-hidden until revealed, then fades in, so revealing the answer moves nothing. Children are its lines: the name (Text label), then what it belongs to (Text caption, muted)."
+        className="theme-terminal"
+      >
+        <Variants label="hidden, then revealed (the rule under it never moves)" className="flex-col items-center">
+          <TerminalButton variant="outline" aria-pressed={captionShown} onClick={() => setCaptionShown((r) => !r)}>
+            {captionShown ? "Hide" : "Reveal"}
+          </TerminalButton>
+          <RevealCaption revealed={captionShown}>
+            <Text as="p" variant="label">
+              Binding Word
+            </Text>
+            <Text as="p" variant="caption" tone="muted">
+              Lady Geist
+            </Text>
+          </RevealCaption>
           <Separator />
         </Variants>
       </Specimen>

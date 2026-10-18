@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { motion } from "framer-motion";
 import { useMemo } from "react";
 
+import { RevealCaption } from "~/components/domain/minigames/RevealCaption";
 import { SilhouetteFrame } from "~/components/domain/minigames/SilhouetteFrame";
 import { AnswerStatsLink } from "~/components/features/deadlockdle/AnswerStatsLink";
 import { GameShell, GameShellError, GameShellLoading } from "~/components/features/deadlockdle/GameShell";
@@ -12,6 +13,7 @@ import { PreviousGuesses } from "~/components/features/deadlockdle/PreviousGuess
 import { ResultModal } from "~/components/features/deadlockdle/ResultModal";
 import { useDailyGuess } from "~/components/features/deadlockdle/use-daily-guess";
 import { Stack } from "~/components/ui/stack";
+import { Text } from "~/components/ui/text";
 import { heroHints } from "~/lib/deadlockdle/hints";
 import { useHeroes, puzzleLoadError } from "~/lib/deadlockdle/queries";
 import { getModeSeed, seededRandom, validatePuzzleDateSearch } from "~/lib/deadlockdle/seed";
@@ -165,15 +167,11 @@ function GuessHero() {
               draggable={false}
             />
           </SilhouetteFrame>
-          {isFinished && (
-            <motion.p
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="text-center font-mono text-sm font-semibold text-foreground"
-            >
+          <RevealCaption revealed={isFinished}>
+            <Text as="p" variant="label">
               {dailyHero.name}
-            </motion.p>
-          )}
+            </Text>
+          </RevealCaption>
         </Stack>
       </motion.div>
 

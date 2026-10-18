@@ -5,6 +5,7 @@ import { Volume2, VolumeX } from "lucide-react";
 import { type RefObject, useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 
 import { PlayButton } from "~/components/domain/minigames/PlayButton";
+import { RevealCaption } from "~/components/domain/minigames/RevealCaption";
 import { AnswerStatsLink } from "~/components/features/deadlockdle/AnswerStatsLink";
 import { GameShell, GameShellError, GameShellLoading } from "~/components/features/deadlockdle/GameShell";
 import { GuessFeedback, wrongGuessMessage } from "~/components/features/deadlockdle/GuessFeedback";
@@ -571,12 +572,14 @@ function GuessSound() {
           </span>
         </Field>
 
-        {isFinished && (
-          <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="text-center">
-            <p className="font-mono text-sm font-semibold text-foreground">{dailySound.abilityName}</p>
-            <p className="font-mono text-xs text-muted-foreground">{dailySound.heroName}</p>
-          </motion.div>
-        )}
+        <RevealCaption revealed={isFinished}>
+          <Text as="p" variant="label">
+            {dailySound.abilityName}
+          </Text>
+          <Text as="p" variant="caption" tone="muted">
+            {dailySound.heroName}
+          </Text>
+        </RevealCaption>
       </motion.div>
 
       {hints.length > 0 && <HintReveal hints={hints} revealedCount={gameState.hintsRevealed} />}

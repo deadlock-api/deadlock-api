@@ -366,6 +366,7 @@ export const NAV: readonly NavChapter[] = [
           "TerminalBadge",
           "QuizQuestion",
           "RevealActions",
+          "RevealCaption",
           "ScoreSummary",
           "ShareButton",
           "Mini-game states",
