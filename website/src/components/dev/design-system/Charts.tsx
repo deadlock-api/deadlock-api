@@ -347,6 +347,15 @@ export function Charts() {
           <ChartLegendItem color={SERIES_COLORS[2]} shape="dot">
             Point series
           </ChartLegendItem>
+          <ChartLegendItem color={CHART_COLOR.reference} shape="dashed">
+            Median (CHART_MEDIAN_LINE)
+          </ChartLegendItem>
+          <ChartLegendItem color={CHART_COLOR.reference} shape="dotted">
+            Quartiles (CHART_QUARTILE_LINE)
+          </ChartLegendItem>
+          <ChartLegendItem color={CHART_COLOR.neutral} shape="band">
+            Spread band
+          </ChartLegendItem>
         </ChartLegend>
       </Specimen>
 

@@ -4,11 +4,12 @@ import { CHART_SPREAD_BAND } from "~/components/patterns/charts/theme";
 import { Button } from "~/components/ui/button";
 import { cn } from "~/lib/utils";
 
-type SwatchShape = "line" | "dashed" | "square" | "band" | "dot" | "ring" | "triangle-up" | "triangle-down";
+type SwatchShape = "line" | "dashed" | "dotted" | "square" | "band" | "dot" | "ring" | "triangle-up" | "triangle-down";
 
 const shapeClass: Record<SwatchShape, string> = {
   line: "h-0.5 w-4 rounded-full",
   dashed: "h-0 w-4 border-t-2 border-dashed bg-transparent",
+  dotted: "h-0 w-4 border-t-2 border-dotted bg-transparent",
   square: "size-2.5 rounded-xs",
   band: "h-2.5 w-4 rounded-xs border",
   dot: "size-2 rounded-full",
@@ -19,6 +20,7 @@ const shapeClass: Record<SwatchShape, string> = {
 const smallShapeClass: Record<SwatchShape, string> = {
   line: "h-0.5 w-3 rounded-full",
   dashed: "h-0 w-3 border-t-2 border-dashed bg-transparent",
+  dotted: "h-0 w-3 border-t-2 border-dotted bg-transparent",
   square: "size-2 rounded-xs",
   band: "h-2 w-3 rounded-xs border",
   dot: "size-1.5 rounded-full",
@@ -29,7 +31,7 @@ const smallShapeClass: Record<SwatchShape, string> = {
 
 /**
  * The mark of one series, wherever it is named: a legend, a tooltip row, a table cell. Match the shape to the mark:
- * `line` for lines and areas, `dashed` for a dashed reference line (a median, an average), `square` for bars and stacks, `band` for a shaded range (the `CHART_SPREAD_BAND` around an average: its fill, edged in the color), `dot` for points, `ring` for hollow points, `triangle-up` / `triangle-down` for the points of `VERDICT_MARK`.
+ * `line` for lines and areas, `dashed` for a dashed reference line (a median, an average), `dotted` for a dotted one (the quartiles, `CHART_QUARTILE_LINE`), `square` for bars and stacks, `band` for a shaded range (the `CHART_SPREAD_BAND` around an average: its fill, edged in the color), `dot` for points, `ring` for hollow points, `triangle-up` / `triangle-down` for the points of `VERDICT_MARK`.
  */
 export function ChartSwatch({
   color,
@@ -55,7 +57,7 @@ export function ChartSwatch({
         className,
       )}
       style={
-        shape === "ring" || shape === "dashed"
+        shape === "ring" || shape === "dashed" || shape === "dotted"
           ? { borderColor: color, ...style }
           : shape === "band"
             ? {

@@ -378,7 +378,7 @@ export function TimelinePanel({
               </ChartLegendItem>
             )}
             {(field.data !== undefined || !field.isError) && (
-              <ChartLegendItem color={CHART_COLOR.neutral} shape="square" state={relative ? "ready" : "pending"}>
+              <ChartLegendItem color={CHART_COLOR.neutral} shape="band" state={relative ? "ready" : "pending"}>
                 Spread (±1σ)
               </ChartLegendItem>
             )}

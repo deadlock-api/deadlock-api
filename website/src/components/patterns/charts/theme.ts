@@ -171,8 +171,12 @@ export const CHART_X_AXIS_CUSTOM_TICK = {
 /** How far below the tick mark a custom tick's text sits, in px from the axis line. */
 export const CHART_CUSTOM_TICK_DY = 14;
 
-/** The median of a population, drawn on its distribution: finer than the baseline dash. */
+/** The median of a population, drawn on its distribution: finer than the baseline dash. Its legend key is `dashed`. */
 export const CHART_MEDIAN_LINE = { stroke: "var(--chart-axis)", strokeDasharray: "2 2", strokeWidth: 1 } as const;
+/** The quartiles (P25, P75) around a median: dotted, so they read apart from it. Their legend key is `dotted`. */
+export const CHART_QUARTILE_LINE = { stroke: "var(--chart-axis)", strokeDasharray: "1 3", strokeWidth: 1 } as const;
+/** A population's average on its distribution, in the brand color, a longer dash. Its legend key is `dashed`. */
+export const CHART_AVERAGE_LINE = { stroke: "var(--primary)", strokeDasharray: "3 3", strokeWidth: 1.5 } as const;
 
 /**
  * The rim between the segments of a stacked bar, in the surface color: neighbouring segments whose hues are close for

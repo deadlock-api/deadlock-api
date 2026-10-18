@@ -4,7 +4,14 @@ import { Area, AreaChart, ReferenceLine, Tooltip, XAxis, YAxis } from "recharts"
 import { ChartDataTable } from "~/components/patterns/charts/ChartDataTable";
 import { ChartReading, ChartReadings } from "~/components/patterns/charts/ChartReadings";
 import { ChartSurface } from "~/components/patterns/charts/ChartSurface";
-import { CHART_COLOR, CHART_CURSOR_LINE, CHART_X_AXIS_SM, CHART_MEDIAN_LINE } from "~/components/patterns/charts/theme";
+import {
+  CHART_AVERAGE_LINE,
+  CHART_COLOR,
+  CHART_CURSOR_LINE,
+  CHART_MEDIAN_LINE,
+  CHART_QUARTILE_LINE,
+  CHART_X_AXIS_SM,
+} from "~/components/patterns/charts/theme";
 import { approxPercentile, type CurvePoint, formatPercentile } from "~/lib/distribution-percentile";
 
 /** The percentiles the API reports, read out in the chart's data table. */
@@ -99,10 +106,10 @@ export function DistributionChart({
               />
             )}
           />
-          <ReferenceLine x={values.percentile25} {...CHART_MEDIAN_LINE} />
-          <ReferenceLine x={values.percentile50} stroke={CHART_COLOR.neutral} strokeDasharray="2 2" strokeWidth={1} />
-          <ReferenceLine x={values.percentile75} {...CHART_MEDIAN_LINE} />
-          <ReferenceLine x={values.avg} stroke={CHART_COLOR.primary} strokeDasharray="3 3" strokeWidth={1.5} />
+          <ReferenceLine x={values.percentile25} {...CHART_QUARTILE_LINE} />
+          <ReferenceLine x={values.percentile50} {...CHART_MEDIAN_LINE} />
+          <ReferenceLine x={values.percentile75} {...CHART_QUARTILE_LINE} />
+          <ReferenceLine x={values.avg} {...CHART_AVERAGE_LINE} />
           <Area
             type="monotone"
             dataKey="y"

@@ -121,14 +121,17 @@ export function PlayerStatsDistributionCharts({
     <div className="flex flex-col gap-6">
       <FilterBar variant="toolbar" title="Stat distributions" icon={ChartArea} aria-label="Stat distribution legend">
         <ChartLegend>
-          <ChartLegendItem color={CHART_COLOR.primary} shape="square">
+          <ChartLegendItem color={CHART_COLOR.primary} shape="band">
             Approximate distribution shape
           </ChartLegendItem>
-          <ChartLegendItem color={CHART_COLOR.primary} shape="line">
+          <ChartLegendItem color={CHART_COLOR.primary} shape="dashed">
             Average
           </ChartLegendItem>
-          <ChartLegendItem color={CHART_COLOR.neutral} shape="line">
-            P25 / Median / P75
+          <ChartLegendItem color={CHART_COLOR.reference} shape="dashed">
+            Median
+          </ChartLegendItem>
+          <ChartLegendItem color={CHART_COLOR.reference} shape="dotted">
+            P25 / P75
           </ChartLegendItem>
         </ChartLegend>
       </FilterBar>
