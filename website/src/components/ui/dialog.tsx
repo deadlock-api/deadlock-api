@@ -64,6 +64,7 @@ function DialogContent({
         <DialogPrimitive.Content
           data-slot="dialog-content"
           data-size={size}
+          data-close-button={showCloseButton || undefined}
           className={cn(dialogContentVariants({ size }), className)}
           onOpenAutoFocus={(event) => {
             opener.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
@@ -98,7 +99,11 @@ function DialogHeader({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="dialog-header"
-      className={cn("flex flex-col gap-2 text-center @sm:text-start", className)}
+      // Clear of the close button in the corner, whenever the dialog shows one.
+      className={cn(
+        "flex flex-col gap-2 text-center in-data-close-button:px-8 @sm:text-start @sm:in-data-close-button:ps-0",
+        className,
+      )}
       {...props}
     />
   );

@@ -787,7 +787,7 @@ export function Primitives() {
       <Specimen
         name="Dialog"
         source="ui/dialog"
-        note="One task, then back to the page. DialogPager steps through a sequence from the header, beside the title: its buttons are named by their target, the arrow keys step too, and a polite status announces the new title."
+        note="One task, then back to the page. DialogHeader keeps a long title clear of the close button by itself. DialogPager steps through a sequence from the header, beside the title: its buttons are named by their target, the arrow keys step too, and a polite status announces the new title."
       >
         <Variants>
           <DialogPagerDemo />

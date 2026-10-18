@@ -84,7 +84,7 @@ export function PanelWithDetails({
         className={cn("flex max-h-[calc(100dvh-2rem)] flex-col gap-3 overflow-hidden p-4", dialogWidths[dialogSize])}
       >
         <DialogHeader className="shrink-0">
-          <div className="flex flex-wrap items-center justify-between gap-3 pe-8">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <DialogTitle>{title}</DialogTitle>
             {description && (
               <Text variant="caption" tone="muted" numeric="tabular">

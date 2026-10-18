@@ -38,8 +38,8 @@ export function PlayerMetricDistributionDialog({
         {metric && (
           <>
             <DialogHeader>
-              {/* The pager shares the title's row, clear of the close button. */}
-              <Inline justify="between" wrap="nowrap" gap={2} className="pe-8">
+              {/* The pager shares the title's row; the header keeps it clear of the close button. */}
+              <Inline justify="between" wrap="nowrap" gap={2}>
                 <DialogTitle>{metric.label} distribution</DialogTitle>
                 <DialogPager
                   previousLabel={`Previous: ${previousMetric?.label ?? "metric"}`}

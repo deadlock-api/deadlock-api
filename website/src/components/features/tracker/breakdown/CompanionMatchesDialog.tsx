@@ -157,7 +157,7 @@ export function CompanionMatchesDialog({
       </DialogTrigger>
       <DialogContent className="flex flex-col">
         <DialogHeader className="shrink-0">
-          <DialogTitle className="pe-5 break-words">
+          <DialogTitle className="break-words">
             Matches {relation} {name}
           </DialogTitle>
           <DialogDescription className="flex flex-wrap gap-x-3 gap-y-0.5 text-sm">

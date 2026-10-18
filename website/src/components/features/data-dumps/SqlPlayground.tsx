@@ -204,7 +204,7 @@ export function SqlPlayground({ open, onOpenChange, tables, schemaByTable, query
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent size="full" className="h-7/8 grid-rows-[auto_1fr] gap-3 p-4" showCloseButton>
-        <DialogHeader className="gap-1 pe-8">
+        <DialogHeader className="gap-1">
           <DialogTitle className="flex flex-wrap items-center gap-3">
             SQL Playground
             <Text variant="caption" tone="muted">

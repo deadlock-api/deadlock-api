@@ -174,7 +174,7 @@ export function BuildTimelineDialog({ build, playerName }: { build: PlayerBuild;
         </Button>
       </DialogTrigger>
       <DialogContent size="full" className="flex flex-col gap-2 p-3" onClick={(event) => event.stopPropagation()}>
-        <DialogHeader className="pe-6">
+        <DialogHeader>
           <DialogTitle>Build timeline</DialogTitle>
           <DialogDescription className="wrap-anywhere">
             {playerName} · {events.length} events · match time
