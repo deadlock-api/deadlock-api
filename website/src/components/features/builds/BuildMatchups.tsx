@@ -132,15 +132,23 @@ export function BuildMatchups({
     );
   }
   if (!query.data) {
+    // The shape most builds end in: both lists, side by side where they fit, as the loaded lists sit.
     return (
-      <section className="flex flex-col">
-        <PanelSection variant="label" title="Strong against" />
-        <div className="flex flex-col gap-2 px-3 py-2">
-          {Array.from({ length: SHOWN }, (_, index) => (
-            <Skeleton key={index} className="h-8 w-full" />
+      <div className="@container">
+        <div className="grid @lg:grid-cols-2">
+          {["Strong against", "Weak against"].map((title) => (
+            <section key={title} className="flex flex-col">
+              <PanelSection variant="label" title={title} />
+              {/* Rows of a compact RankedEntityRow's height (its 32px art and padding), so the lists land in place. */}
+              <div className="flex flex-col gap-2 px-3 py-2">
+                {Array.from({ length: SHOWN }, (_, index) => (
+                  <Skeleton key={index} className="h-11 w-full" />
+                ))}
+              </div>
+            </section>
           ))}
         </div>
-      </section>
+      </div>
     );
   }
   const often = query.data.filter((matchup) => matchup.matches >= MIN_MATCHUP_MATCHES);

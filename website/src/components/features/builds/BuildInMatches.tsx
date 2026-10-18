@@ -197,7 +197,8 @@ export function BuildInMatches({
           <div className="@container">
             <div className="grid @2xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
               <div className="flex min-w-0 flex-col">
-                {skillOrder.length > 0 && slotAbilities.length > 0 && (
+                {/* Also while the hero's abilities load (the written order is known), so the panel does not grow. */}
+                {(row.meta?.abilityOrder.length ?? 0) > 0 && (slotAbilities.length === 0 || skillOrder.length > 0) && (
                   <section className="flex flex-col">
                     <PanelSection variant="label" title="Skill order followed" />
                     <div className="px-3 py-1.5">
@@ -211,9 +212,21 @@ export function BuildInMatches({
                     </div>
                   </section>
                 )}
-                <BuildSkillTaken heroId={heroId} build={row} filters={filters} active={active} />
+                <BuildSkillTaken
+                  heroId={heroId}
+                  build={row}
+                  stepsHint={skillOrder.length}
+                  filters={filters}
+                  active={active}
+                />
               </div>
-              <BuildTopPlayers heroId={heroId} buildId={row.hero_build_id} filters={filters} active={active} />
+              <BuildTopPlayers
+                heroId={heroId}
+                buildId={row.hero_build_id}
+                playerCount={row.players}
+                filters={filters}
+                active={active}
+              />
             </div>
           </div>
         </Panel>

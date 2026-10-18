@@ -581,7 +581,7 @@ export function Patterns() {
       <Specimen
         name="LoadingState"
         source="patterns/states/LoadingState"
-        note="The brand loader, with an optional line of text under it. sm fits a panel, popover or row. skeleton holds the final height of a block so the layout does not jump. A busy control uses Spinner instead."
+        note="The brand loader, with an optional line of text under it. sm fits a panel, popover or row. skeleton holds the final height of a block so the layout does not jump: reserve the final shape (the rows it will show, at their height, side by side where the result is), and end an empty section in an EmptyState rather than removing it. A busy control uses Spinner instead."
       >
         <Variants className="grid items-center md:grid-cols-4">
           <LoadingState label="hero stats" />
