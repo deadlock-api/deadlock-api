@@ -1,8 +1,10 @@
-import { Fragment } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { Fragment, type KeyboardEvent } from "react";
 
 import { HeroImage } from "~/components/domain/assets/HeroImage";
 import { HeroName } from "~/components/domain/assets/HeroName";
 import { HeatCell } from "~/components/ui/heat-cell";
+import { useGridNavigation } from "~/components/ui/hooks/use-grid-navigation";
 import { NoValue } from "~/components/ui/no-value";
 import { Separator } from "~/components/ui/separator";
 import { type MatchupCell, mean, type StatsIndex } from "~/lib/team-builder/analysis";
@@ -15,6 +17,7 @@ import {
   heatBackground,
 } from "~/lib/team-builder/format";
 import { cn } from "~/lib/utils";
+import { heroesQueryOptions } from "~/queries/asset-queries";
 
 import { Points } from "./Points";
 import { HeroTooltip, StatTooltip } from "./StatTooltip";
@@ -81,18 +84,29 @@ interface MatchupGridProps {
   variant: keyof typeof VARIANTS;
 }
 
+/** What a cell is named by: the cell grid is one tab stop, so each cell says which two heroes it is. */
+interface CellNavigation {
+  label: string;
+  tabIndex: number;
+  ref: (cell: HTMLButtonElement | null) => void;
+  onFocus: () => void;
+  onKeyDown: (event: KeyboardEvent<HTMLButtonElement>) => void;
+}
+
 function GridCell({
   cell,
   index,
   scale,
   showCounts,
   cellClass,
+  navigation: { label, ...navigation },
 }: {
   cell: MatchupCell;
   index: StatsIndex;
   scale: number;
   showCounts: boolean;
   cellClass: string;
+  navigation: CellNavigation;
 }) {
   // The styling lives on the trigger element itself: a `display: contents` wrapper has no box, so
   // Radix could not measure it and parked the card in the page corner.
@@ -104,8 +118,6 @@ function GridCell({
     cell.edge === undefined ? "text-muted-foreground" : "text-foreground",
     cellClass,
   );
-  const label = `Edge ${gridPoints(cell.edge)}, ${formatCount(cell.matches)} matches`;
-
   return (
     <StatTooltip
       // A name element rather than a string: the card renders on hover, so a full grid of cells
@@ -122,7 +134,7 @@ function GridCell({
         { label: "Matches", value: formatCount(cell.matches) },
       ]}
     >
-      <HeatCell color={heatFill(cell.edge, scale)} label={label} title="" className={className}>
+      <HeatCell color={heatFill(cell.edge, scale)} label={label} title="" className={className} {...navigation}>
         <span>{gridPoints(cell.edge)}</span>
         {/* A phone-width matrix has no room for a readable count under the edge; the tooltip and label keep it. */}
         {showCounts && (
@@ -139,6 +151,22 @@ function GridCell({
 export function MatchupGrid({ cells, index, scale, columnMargins, variant }: MatchupGridProps) {
   const { cell: cellClass, cap, fill, portrait, track, showCounts } = VARIANTS[variant];
   const columns = cells[0]?.map((cell) => cell.enemy) ?? [];
+  const { data: names } = useQuery({
+    ...heroesQueryOptions,
+    select: (heroes) => new Map(heroes.map((hero) => [hero.id, hero.name])),
+  });
+  const nameOf = (heroId: number) => names?.get(heroId) ?? `Hero ${heroId}`;
+  // One tab stop for the whole grid, the arrow keys move between its cells (WAI-ARIA grid keys).
+  const grid = useGridNavigation<HTMLButtonElement>(columns.length);
+  // A smaller draft can leave the last focused cell out of the grid; the first cell is the tab stop then.
+  const tabStop = grid.activeIndex < cells.length * columns.length ? grid.activeIndex : 0;
+  const cellNavigation = (cell: MatchupCell, cellIndex: number): CellNavigation => ({
+    label: `${nameOf(cell.hero)} vs. ${nameOf(cell.enemy)}: edge ${gridPoints(cell.edge)}, ${formatCount(cell.matches)} matches`,
+    tabIndex: tabStop === cellIndex ? 0 : -1,
+    ref: grid.register(cellIndex),
+    onFocus: () => grid.setActiveIndex(cellIndex),
+    onKeyDown: (event) => grid.onKeyDown(event, cellIndex),
+  });
   const margins = columnMargins && {
     columns: columnMargins,
     rows: cells.map((row) => mean(row.map((cell) => cell.edge))),
@@ -183,9 +211,10 @@ export function MatchupGrid({ cells, index, scale, columnMargins, variant }: Mat
               <HeroImage heroId={row[0].hero} shape="circle" className={cn("shrink-0", portrait)} />
             </HeroTooltip>
           </div>
-          {row.map((cell) => (
+          {row.map((cell, columnIndex) => (
             <GridCell
               key={cell.enemy}
+              navigation={cellNavigation(cell, rowIndex * columns.length + columnIndex)}
               cell={cell}
               index={index}
               scale={scale}
