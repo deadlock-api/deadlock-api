@@ -4,20 +4,42 @@ import { Field } from "~/components/ui/field";
 import { Slider } from "~/components/ui/slider";
 import { cn } from "~/lib/utils";
 
+const chartStageFrameVariants = cva(
+  "@container/chart-stage relative flex size-full min-w-0 flex-col gap-2 *:not-data-[slot=chart-overlay]:min-h-0 *:not-data-[slot=chart-overlay]:flex-1",
+  {
+    variants: {
+      /**
+       * How the stage is sized. `fill`: it takes the height the overlays leave. `square`: the same from `@3xl`; below
+       * it (a phone, where the page scrolls anyway) it is as tall as it is wide, so a round map fills the width
+       * instead of shrinking to the height left under the filters.
+       */
+      fit: {
+        fill: "",
+        square:
+          "@max-3xl/chart-stage:*:not-data-[slot=chart-overlay]:aspect-square @max-3xl/chart-stage:*:not-data-[slot=chart-overlay]:h-auto @max-3xl/chart-stage:*:not-data-[slot=chart-overlay]:flex-none",
+      },
+    },
+    defaultVariants: { fit: "fill" },
+  },
+);
+
 /**
  * The box around a `ChartStage` whose overlays leave the plot when it is narrow. Its children are, in order, the
  * top overlays, the stage and the bottom overlays, each overlay with `narrow="outside"`: from `@3xl` they float over
  * the stage as usual; below it they stack above and below it, so a legend or a slider never covers a map that fills
- * a phone's width. The stage (or the one box that holds it) takes the height the overlays leave.
+ * a phone's width. The stage (or the one box that holds it) takes the height the overlays leave, or with
+ * `fit="square"` its own width below `@3xl`.
  */
-export function ChartStageFrame({ className, ...props }: React.ComponentProps<"div">) {
+export function ChartStageFrame({
+  fit = "fill",
+  className,
+  ...props
+}: React.ComponentProps<"div"> & VariantProps<typeof chartStageFrameVariants>) {
   return (
     <div
       data-slot="chart-stage-frame"
-      className={cn(
-        "@container/chart-stage relative flex size-full min-w-0 flex-col gap-2 *:not-data-[slot=chart-overlay]:min-h-0 *:not-data-[slot=chart-overlay]:flex-1",
-        className,
-      )}
+      data-fit={fit}
+      className={cn(chartStageFrameVariants({ fit }), className)}
       {...props}
     />
   );

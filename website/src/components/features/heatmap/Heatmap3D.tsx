@@ -257,7 +257,7 @@ export default function Heatmap3D({
 
   return (
     // On a phone the map fills the width, so the legend and the sliders leave it instead of covering it.
-    <ChartStageFrame>
+    <ChartStageFrame fit="square">
       <ChartOverlay position="top-end" narrow="outside">
         <HeatmapLegend viewMode={viewMode} maxValue={heat.maxValue} />
       </ChartOverlay>

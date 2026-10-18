@@ -235,7 +235,7 @@ export function Round3PatternsCharts() {
       <Specimen
         name="ChartStageFrame"
         source="patterns/charts/ChartOverlay"
-        note='Holds the top overlays, the stage and the bottom overlays. With narrow="outside" an overlay floats over the stage from @lg of the frame and below it stacks above or below the stage, so a map that fills a phone stays uncovered. The stage takes the height left.'
+        note='Holds the top overlays, the stage and the bottom overlays. fit="square" makes the stage as tall as it is wide below @3xl, for a round map on a phone. With narrow="outside" an overlay floats over the stage from @lg of the frame and below it stacks above or below the stage, so a map that fills a phone stays uncovered. The stage takes the height left.'
       >
         {(["h-64 w-72", "h-64 w-full"] as const).map((box) => (
           <Variants
@@ -262,6 +262,18 @@ export function Round3PatternsCharts() {
             </div>
           </Variants>
         ))}
+        <Variants label='narrow frame, fit="square": the stage is as tall as it is wide' className="block">
+          <div className="w-72">
+            <ChartStageFrame fit="square">
+              <ChartOverlay position="top-end" narrow="outside">
+                <ChartOverlayItem>
+                  <ChartGradientLegend min="0" max="1,240" stops={chartRampCss("sequential")} />
+                </ChartOverlayItem>
+              </ChartOverlay>
+              <ChartStage className="bg-muted" />
+            </ChartStageFrame>
+          </div>
+        </Variants>
       </Specimen>
 
       <Specimen

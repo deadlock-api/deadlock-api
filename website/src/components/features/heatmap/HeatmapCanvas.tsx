@@ -246,7 +246,7 @@ export default function HeatmapCanvas({
   return (
     // On a phone the map fills the width, so the legend and the slider leave it (above and below) instead of
     // covering its top and its bottom lane.
-    <ChartStageFrame>
+    <ChartStageFrame fit="square">
       <ChartOverlay position="top-end" narrow="outside">
         <HeatmapLegend viewMode={viewMode} maxValue={legendMax} />
       </ChartOverlay>
