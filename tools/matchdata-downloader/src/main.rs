@@ -655,6 +655,7 @@ where
     let cache_key = cache_metadata_key(salts.match_id);
     let processed_key = processed_metadata_key(salts.match_id);
     let outdated_hltv_key = outdated_hltv_metadata_key(salts.match_id);
+    let outdated_cache_hltv_key = outdated_cache_hltv_metadata_key(salts.match_id);
 
     // The ingest worker moves the file to `processed/`, so `ingest/` alone misses every match
     // that was ingested before a restart emptied [`State::uploaded`].
@@ -678,7 +679,7 @@ where
         upload_object(bucket, &main_key, bytes.clone()),
         upload_object(cache_bucket, &cache_key, bytes),
         delete_object(bucket, &outdated_hltv_key),
-        delete_object(cache_bucket, &outdated_hltv_key),
+        delete_object(cache_bucket, &outdated_cache_hltv_key),
     );
     up_main.map_err(DownloadError::UploadMain)?;
     up_cache.map_err(DownloadError::UploadCache)?;
@@ -719,6 +720,11 @@ fn cache_metadata_key(match_id: u64) -> Path {
 
 fn outdated_hltv_metadata_key(match_id: u64) -> Path {
     Path::from(format!("/processed/metadata/{match_id}.meta_hltv.bz2"))
+}
+
+/// The cache is flat, so hltv-scraper's copy sits beside [`cache_metadata_key`].
+fn outdated_cache_hltv_metadata_key(match_id: u64) -> Path {
+    Path::from(format!("{match_id}.meta_hltv.bz2"))
 }
 
 fn metadata_url(salts: &MatchSalts) -> String {
