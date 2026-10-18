@@ -360,40 +360,46 @@ function DataTableSpecimens() {
       <Specimen
         name="ExpandableRow"
         source="patterns/data-table/ExpandableRow"
-        note="A row that opens a full-width detail row. The whole row toggles on click, except links and buttons inside it; ExpandableRowToggle gives the keyboard the same. open / defaultOpen / onOpenChange."
+        note="A row that opens a full-width detail row. The whole row toggles on click, except links and buttons inside it; ExpandableRowToggle gives the keyboard the same. open / defaultOpen / onOpenChange. colSpan is the table's column count; the detail row spans only the columns the row shows, so the Size column hidden in a narrow container (resize below 36rem) adds no empty column."
       >
-        <Table density="compact">
-          <TableHeader>
-            <TableRow>
-              <TableHead>Table</TableHead>
-              <TableHead className="text-end">Rows</TableHead>
-              <TableHead className="text-end">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {["match_player", "leaderboard"].map((name, i) => (
-              <ExpandableRow
-                key={name}
-                colSpan={3}
-                defaultOpen={i === 0}
-                details={<p className="text-xs text-muted-foreground">Columns and files of {name}.</p>}
-              >
-                <TableCell>
-                  <span className="flex items-center gap-2 font-medium">
-                    <ExpandableRowToggle label={name} />
-                    {name}
-                  </span>
-                </TableCell>
-                <TableCell className="text-end tabular-nums">{(1_200_000 * (i + 1)).toLocaleString("en-US")}</TableCell>
-                <TableCell className="text-end">
-                  <Button variant="ghost" size="xs">
-                    Does not toggle
-                  </Button>
-                </TableCell>
-              </ExpandableRow>
-            ))}
-          </TableBody>
-        </Table>
+        <div className="@container">
+          <Table density="compact" className="table-fixed">
+            <TableHeader>
+              <TableRow>
+                <TableHead>Table</TableHead>
+                <TableHead className="w-24 text-end">Rows</TableHead>
+                <TableHead className="hidden w-24 text-end @xl:table-cell">Size</TableHead>
+                <TableHead className="text-end">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {["match_player", "leaderboard"].map((name, i) => (
+                <ExpandableRow
+                  key={name}
+                  colSpan={4}
+                  defaultOpen={i === 0}
+                  details={<p className="text-xs text-muted-foreground">Columns and files of {name}.</p>}
+                >
+                  <TableCell>
+                    <span className="flex items-center gap-2 font-medium">
+                      <ExpandableRowToggle label={name} />
+                      {name}
+                    </span>
+                  </TableCell>
+                  <TableCell className="text-end tabular-nums">
+                    {(1_200_000 * (i + 1)).toLocaleString("en-US")}
+                  </TableCell>
+                  <TableCell className="hidden text-end tabular-nums @xl:table-cell">{60 * (i + 1)} MB</TableCell>
+                  <TableCell className="text-end">
+                    <Button variant="ghost" size="xs">
+                      Does not toggle
+                    </Button>
+                  </TableCell>
+                </ExpandableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       </Specimen>
 
       <Specimen

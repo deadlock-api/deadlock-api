@@ -12,6 +12,7 @@ import { Inline, Stack } from "~/components/ui/stack";
 import { Table, TableBody, TableCell, TableRow } from "~/components/ui/table";
 import { Text } from "~/components/ui/text";
 import { TextLink } from "~/components/ui/text-link";
+import { formatCountNoun } from "~/lib/format";
 
 import { ColumnMatchBadge } from "./ColumnMatchBadge";
 import { ParquetPreview } from "./ParquetPreview";
@@ -132,17 +133,24 @@ export function LakeTableRow({ table, matchedColumns }: { table: LakeTable; matc
           )}
           {matchedColumns.length > 0 && <ColumnMatchBadge cols={matchedColumns} />}
         </span>
+        {/* The Files, Rows and Size columns are hidden in a narrow table: their values go under the name. */}
+        {!building && (
+          <Text as="div" variant="caption" tone="muted" numeric="tabular" className="@xl:hidden">
+            {formatRows(table.totalRows)} rows · {formatBytes(table.totalBytes)} ·{" "}
+            {formatCountNoun(table.files.length, "file")}
+          </Text>
+        )}
       </TableCell>
-      <TableCell className="hidden text-end text-muted-foreground tabular-nums sm:table-cell">
+      <TableCell className="hidden text-end text-muted-foreground tabular-nums @xl:table-cell">
         {building ? <NoValue /> : `${table.files.length}`}
       </TableCell>
-      <TableCell className="hidden text-end text-muted-foreground tabular-nums md:table-cell">
+      <TableCell className="hidden text-end text-muted-foreground tabular-nums @xl:table-cell">
         {building ? <NoValue /> : formatRows(table.totalRows)}
       </TableCell>
-      <TableCell className="hidden text-end text-muted-foreground tabular-nums sm:table-cell">
+      <TableCell className="hidden text-end text-muted-foreground tabular-nums @xl:table-cell">
         {building ? <NoValue /> : formatBytes(table.totalBytes)}
       </TableCell>
-      <TableCell className="hidden text-muted-foreground tabular-nums lg:table-cell">
+      <TableCell className="hidden text-muted-foreground tabular-nums @4xl:table-cell">
         {table.watermark_hi ? formatUnix(table.watermark_hi) : <NoValue />}
       </TableCell>
       <TableCell className="text-end">{single && <FileActions url={single.url} />}</TableCell>

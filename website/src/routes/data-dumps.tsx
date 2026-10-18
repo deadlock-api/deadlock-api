@@ -186,15 +186,15 @@ function DataDumps() {
             onRetry={() => void manifest.refetch()}
           />
         ) : (
-          <Card size="flush">
+          <Card size="flush" className="@container">
             <Table className="table-fixed">
               <TableHeader>
                 <TableRow>
                   <TableHead>Table</TableHead>
-                  <TableHead className="hidden w-16 text-end sm:table-cell">Files</TableHead>
-                  <TableHead className="hidden w-20 text-end md:table-cell">Rows</TableHead>
-                  <TableHead className="hidden w-24 text-end sm:table-cell">Size</TableHead>
-                  <TableHead className="hidden w-40 lg:table-cell">Data up to</TableHead>
+                  <TableHead className="hidden w-16 text-end @xl:table-cell">Files</TableHead>
+                  <TableHead className="hidden w-20 text-end @xl:table-cell">Rows</TableHead>
+                  <TableHead className="hidden w-24 text-end @xl:table-cell">Size</TableHead>
+                  <TableHead className="hidden w-40 @4xl:table-cell">Data up to</TableHead>
                   <TableHead className="w-20 text-end">Actions</TableHead>
                 </TableRow>
               </TableHeader>
