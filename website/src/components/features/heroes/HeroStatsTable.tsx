@@ -3,6 +3,7 @@ import { Crosshair, Skull, Sparkles, Swords, type LucideIcon } from "lucide-reac
 import { HeroCell } from "~/components/domain/assets/HeroCell";
 import { HeroDetailsTooltip } from "~/components/features/heroes/HeroDetailsTooltip";
 import { HeroStatTrend } from "~/components/features/heroes/HeroStatTrend";
+import { ChartSwatch } from "~/components/patterns/charts/ChartLegend";
 import { CHART_COLOR, SERIES_COLORS } from "~/components/patterns/charts/theme";
 import { SortableHeader } from "~/components/patterns/data-table/SortableHeader";
 import { Panel, PanelHeader } from "~/components/patterns/panel/Panel";
@@ -126,6 +127,9 @@ function GroupStat({
   );
 }
 
+/** What every change in the table compares against, read before it by screen readers. */
+const PREVIOUS_PERIOD = "change versus the previous period";
+
 /** The panel of one hero type: its share of picks (or bans, or presence) and win rate, over its heroes' table. */
 function HeroTypeGroup({ group, table }: { group: HeroTypeGroupData; table: HeroStatsTableState }) {
   const config = HERO_TYPE_CONFIG[group.type];
@@ -206,10 +210,13 @@ function HeroStatsHeader({ table }: { table: HeroStatsTableState }) {
                 value={pickRateMode}
                 onValueChange={table.onPickRateModeChange}
               >
+                {/* The swatches are the key to the presence bar's two colors. */}
                 <SegmentedItem value="pickRate" onClick={() => table.onPickRateModeClick("pickRate")}>
+                  <ChartSwatch color={CHART_COLOR.pickRate} size="sm" />
                   {normalized ? "Pick Rate (Norm.)" : "Pick Rate"}
                 </SegmentedItem>
                 <SegmentedItem value="banRate" onClick={() => table.onPickRateModeClick("banRate")}>
+                  <ChartSwatch color={CHART_COLOR.comparison} size="sm" />
                   Ban Rate
                 </SegmentedItem>
                 <SegmentedItem value="presence" onClick={() => table.onPickRateModeClick("presence")}>
@@ -270,6 +277,7 @@ function HeroStatsRow({ rank, hero, table }: { rank: number; hero: HeroStatsRowD
     ...trend,
     heroId: row.hero_id,
     heroName: heroName ?? `Hero ${row.hero_id}`,
+    deltaLabel: PREVIOUS_PERIOD,
   };
   return (
     <TableRow data-find={findKey.hero(row.hero_id)}>
@@ -311,13 +319,29 @@ function HeroStatsRow({ rank, hero, table }: { rank: number; hero: HeroStatsRowD
             label={
               <span className="flex flex-wrap items-baseline gap-x-1 gap-y-0.5">
                 <span className="flex items-baseline gap-1">
-                  <span className="text-chart-4">{(hero.pickRate * 100).toFixed(1)}%</span>
-                  {hero.pickRateDelta !== undefined && <Delta value={hero.pickRateDelta} className="text-xs" />}
+                  <span className="text-chart-4">
+                    {(hero.pickRate * 100).toFixed(1)}%<span className="sr-only"> pick rate</span>
+                  </span>
+                  {hero.pickRateDelta !== undefined && (
+                    <>
+                      <span className="sr-only">{PREVIOUS_PERIOD}</span>
+                      <Delta value={hero.pickRateDelta} className="text-xs" />
+                    </>
+                  )}
                 </span>
-                <span className="text-muted-foreground">+</span>
+                <span className="text-muted-foreground" aria-hidden="true">
+                  +
+                </span>
                 <span className="flex items-baseline gap-1">
-                  <span className="text-chart-5">{(hero.banRate * 100).toFixed(1)}%</span>
-                  {hero.banRateDelta !== undefined && <Delta value={hero.banRateDelta} className="text-xs" />}
+                  <span className="text-chart-5">
+                    {(hero.banRate * 100).toFixed(1)}%<span className="sr-only"> ban rate</span>
+                  </span>
+                  {hero.banRateDelta !== undefined && (
+                    <>
+                      <span className="sr-only">{PREVIOUS_PERIOD}</span>
+                      <Delta value={hero.banRateDelta} className="text-xs" />
+                    </>
+                  )}
                 </span>
               </span>
             }

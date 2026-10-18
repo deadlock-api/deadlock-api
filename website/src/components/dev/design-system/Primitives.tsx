@@ -607,7 +607,14 @@ export function Primitives() {
       >
         <Variants className="items-start gap-6">
           <div className="flex w-56 flex-col gap-3">
-            <ProgressBarWithLabel value={0.524} min={0.4} max={0.6} label="52.4%" delta={0.012} />
+            <ProgressBarWithLabel
+              value={0.524}
+              min={0.4}
+              max={0.6}
+              label="52.4%"
+              delta={0.012}
+              deltaLabel="change versus the previous period"
+            />
             <ProgressBarWithLabel value={0.081} max={0.2} color="var(--chart-4)" label="8.1%" delta={-0.004} />
             <ProgressBarWithLabel
               value={0.000886}
