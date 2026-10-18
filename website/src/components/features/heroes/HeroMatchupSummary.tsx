@@ -4,7 +4,6 @@ import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { Card } from "~/components/ui/card";
 import { Delta } from "~/components/ui/delta";
 import { Heading } from "~/components/ui/heading";
-import { Stack } from "~/components/ui/stack";
 import type { HeroMatchups, MatchupRow } from "~/lib/matchup-stats";
 import { TONE_COLOR } from "~/lib/tone";
 
@@ -12,25 +11,12 @@ const SUMMARY_COUNT = 3;
 /** Pairings seen in fewer matches than this swing too much to headline. */
 const MIN_MATCHES = 100;
 
-function MatchupCard({
-  title,
-  caption,
-  rows,
-  accent,
-}: {
-  title: string;
-  caption: string;
-  rows: MatchupRow[];
-  accent: string;
-}) {
+function MatchupCard({ title, rows, accent }: { title: string; rows: MatchupRow[]; accent: string }) {
   return (
     <Card size="sm" accent={accent} className="px-4">
-      <Stack gap={0.5}>
-        <Heading as="h3" size="default">
-          {title}
-        </Heading>
-        <p className="text-xs text-muted-foreground">{caption}</p>
-      </Stack>
+      <Heading as="h3" size="default">
+        {title}
+      </Heading>
       <ol className="flex flex-col gap-2">
         {rows.map((row) => (
           <li
@@ -79,19 +65,16 @@ export function HeroMatchupSummary({
   const cards = [
     {
       title: "Best Teammates",
-      caption: `How much better the pair wins than ${heroName} and the teammate do on average.`,
       rows: teammates,
       accent: TONE_COLOR.positive,
     },
     {
       title: "Strong Against",
-      caption: `How much more often ${heroName} wins with this hero on the enemy team.`,
       rows: strongAgainst,
       accent: TONE_COLOR.positive,
     },
     {
       title: `Counters ${heroName}`,
-      caption: `How much less often ${heroName} wins with this hero on the enemy team.`,
       rows: counteredBy,
       accent: TONE_COLOR.negative,
     },

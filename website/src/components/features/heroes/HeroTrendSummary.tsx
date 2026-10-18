@@ -5,7 +5,7 @@ import { HeroImage } from "~/components/domain/assets/HeroImage";
 import { ChartSwatch } from "~/components/patterns/charts/ChartLegend";
 import { SortableHeader } from "~/components/patterns/data-table/SortableHeader";
 import { Button } from "~/components/ui/button";
-import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
+import { Card, CardAction, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { Heading } from "~/components/ui/heading";
 import { useSort } from "~/components/ui/hooks/use-sort";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "~/components/ui/table";
@@ -89,7 +89,6 @@ export function HeroTrendSummary({
         <CardTitle>
           <Heading as="h3">Selected hero comparison</Heading>
         </CardTitle>
-        <CardDescription>First → latest available bucket · UTC</CardDescription>
         <CardAction>
           <Button variant="outline" size="sm" onClick={exportCsv}>
             <Download data-icon="inline-start" /> Export CSV
@@ -181,10 +180,6 @@ export function HeroTrendSummary({
             })}
           </TableBody>
         </Table>
-        <p className="text-xs leading-relaxed text-muted-foreground">
-          {isPercentageTrend(stat) && "pp = percentage points. "}
-          Changes compare individual buckets; available dates may differ by hero. CSV includes all selected data points.
-        </p>
       </CardContent>
     </Card>
   );

@@ -111,10 +111,7 @@ export function HeroTopItems({
           </RankedEntityList>
         )}
       </PanelBody>
-      <PanelFooter className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
-        <span>
-          Ranked by the low end of each win rate&apos;s confidence interval, so a few lucky games can&apos;t top it.
-        </span>
+      <PanelFooter className="flex flex-wrap items-center justify-end gap-x-4 gap-y-1">
         <span className="flex flex-wrap gap-x-4 gap-y-1">
           <TextLink asChild>
             <Link

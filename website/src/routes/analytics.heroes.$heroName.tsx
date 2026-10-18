@@ -373,11 +373,7 @@ function HeroDetailPage() {
         }
         eyebrow={
           <>
-            {heroType && (
-              <Badge variant="outline" size="sm">
-                {HERO_TYPE_LABEL[heroType]}
-              </Badge>
-            )}
+            {heroType && <Badge variant="outline">{HERO_TYPE_LABEL[heroType]}</Badge>}
             {complexity > 0 && (
               <Inline gap={1.5} align="center">
                 Complexity
@@ -463,7 +459,7 @@ function HeroDetailPage() {
       </ProfileHeader>
 
       {summary && (
-        <Section title={`${heroName} Builds`} description={`What ${heroName} buys and levels first.`}>
+        <Section title={`${heroName} Builds`}>
           <div className="grid gap-4">
             <HeroTopItems
               heroId={heroId}
@@ -484,10 +480,7 @@ function HeroDetailPage() {
       )}
 
       {summary && (
-        <Section
-          title={`${heroName} Win Rate Trends`}
-          description={`How ${heroName} performs over time, by rank and by match length.`}
-        >
+        <Section title={`${heroName} Win Rate Trends`}>
           <div className="grid gap-4 lg:grid-cols-2">
             <ChunkErrorBoundary>
               <Suspense fallback={<ChartLoading label="win rate over time" size="lg" className="lg:col-span-2" />}>
@@ -523,18 +516,15 @@ function HeroDetailPage() {
         </Section>
       )}
 
-      <Section
-        title={`${heroName} Matchups & Synergies`}
-        description={`Who ${heroName} beats, who beats ${heroName}, and the teammates that lift both, in ${rankRange} matches.`}
-      >
+      <Section title={`${heroName} Matchups & Synergies`} description={rankRange}>
         <HeroMatchupSummary heroName={heroName} matchups={matchups} onRetry={retryMatchups} />
         <div className="grid items-start gap-4 lg:grid-cols-2">
           <Panel>
-            <PanelHeader title={`${heroName} with Teammates`} description="Win rate change as allies" />
+            <PanelHeader title={`${heroName} with Teammates`} />
             <HeroMatchupDetailsStatsTable stat={0} matchups={matchups} onRetry={retryMatchups} linkHeroes />
           </Panel>
           <Panel>
-            <PanelHeader title={`${heroName} against Enemies`} description="Win rate change as opponents" />
+            <PanelHeader title={`${heroName} against Enemies`} />
             <HeroMatchupDetailsStatsTable stat={1} matchups={matchups} onRetry={retryMatchups} linkHeroes />
           </Panel>
         </div>

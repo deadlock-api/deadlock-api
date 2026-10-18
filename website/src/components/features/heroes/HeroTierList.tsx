@@ -8,8 +8,6 @@ import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { StaleOverlay } from "~/components/patterns/states/StaleOverlay";
 import { TierGroup, TierItem, TierList, TierListHead, TierRow } from "~/components/patterns/tier-list/TierList";
-import { Stack } from "~/components/ui/stack";
-import { Text } from "~/components/ui/text";
 import { Tooltip, TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
 import type { Dayjs } from "~/dayjs";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
@@ -22,14 +20,6 @@ import { heroSlug } from "~/lib/hero-slug";
 import { rankHeroes, type RankedHero, TIER_METRIC_DEFINITIONS, type TierMetric, TIERS } from "~/lib/hero-tiers";
 import { heroesQueryOptions, type SlimHero } from "~/queries/asset-queries";
 import { heroTierInputsQueryOptions } from "~/queries/hero-tier-query";
-
-/** "win rate", "deaths per match (fewest first)". */
-function metricNote(metric: TierMetric): string {
-  const definition: { label: string; group: string; lowerIsBetter?: boolean } = TIER_METRIC_DEFINITIONS[metric];
-  const name = definition.label === "KDA" ? "KDA" : definition.label.toLowerCase();
-  const perMatch = definition.group === "Draft" || metric === "kda" || metric === "accuracy" ? "" : " per match";
-  return `${name}${perMatch}${definition.lowerIsBetter ? " (fewest first)" : ""}`;
-}
 
 const COMPACT = new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 1 });
 
@@ -177,45 +167,37 @@ export function HeroTierList({
   const tile = (entry: RankedHero) => (
     <HeroTile key={entry.heroId} hero={heroById.get(entry.heroId)!} ranked={entry} metric={metric} />
   );
-  const scoreParts = banData ? "60% win rate, 25% pick rate and 15% ban rate" : "71% win rate and 29% pick rate";
 
   return (
-    <Stack gap={2}>
-      <StaleOverlay active={inputsQuery.isPlaceholderData} label="hero tier list">
-        <TierList aria-label={groupByType ? "Hero tier list by hero type" : "Hero tier list"}>
-          {types.length > 0 && (
-            <TierListHead columns={columnCount}>
-              {types.map((type) => (
-                <span key={type}>{capitalize(type)}</span>
-              ))}
-            </TierListHead>
-          )}
-          {TIERS.map((tier) => {
-            const inTier = shown.filter((entry) => entry.tier === tier);
-            if (types.length === 0) {
-              return (
-                <TierRow key={tier} tier={tier} labelAs="h3">
-                  {inTier.map(tile)}
-                </TierRow>
-              );
-            }
+    <StaleOverlay active={inputsQuery.isPlaceholderData} label="hero tier list">
+      <TierList aria-label={groupByType ? "Hero tier list by hero type" : "Hero tier list"}>
+        {types.length > 0 && (
+          <TierListHead columns={columnCount}>
+            {types.map((type) => (
+              <span key={type}>{capitalize(type)}</span>
+            ))}
+          </TierListHead>
+        )}
+        {TIERS.map((tier) => {
+          const inTier = shown.filter((entry) => entry.tier === tier);
+          if (types.length === 0) {
             return (
-              <TierRow key={tier} tier={tier} labelAs="h3" columns={columnCount}>
-                {types.map((type) => (
-                  <TierGroup key={type} label={capitalize(type)}>
-                    {inTier.filter((entry) => heroById.get(entry.heroId)?.hero_type === type).map(tile)}
-                  </TierGroup>
-                ))}
+              <TierRow key={tier} tier={tier} labelAs="h3">
+                {inTier.map(tile)}
               </TierRow>
             );
-          })}
-        </TierList>
-      </StaleOverlay>
-      <Text as="p" variant="caption" tone="muted">
-        {metric === "score" || (metric === "banRate" && !banRates)
-          ? `Sorted by tier score: ${scoreParts}, each measured against the average hero. Within a tier, the highest score comes first.`
-          : `Ranked by ${metricNote(metric)}: tiers mark how far a hero sits from the average hero. Within a tier, the best comes first.`}
-      </Text>
-    </Stack>
+          }
+          return (
+            <TierRow key={tier} tier={tier} labelAs="h3" columns={columnCount}>
+              {types.map((type) => (
+                <TierGroup key={type} label={capitalize(type)}>
+                  {inTier.filter((entry) => heroById.get(entry.heroId)?.hero_type === type).map(tile)}
+                </TierGroup>
+              ))}
+            </TierRow>
+          );
+        })}
+      </TierList>
+    </StaleOverlay>
   );
 }

@@ -10,7 +10,6 @@ import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { InlineStat } from "~/components/ui/inline-stat";
 import { TextLink } from "~/components/ui/text-link";
-import { useDefaultPeriodLabel } from "~/hooks/useDefaultPeriodLabel";
 import { type AbilityTrieNode, avgTimeS, buildAbilityTrie, getSortedChildren } from "~/lib/ability-order-utils";
 import { formatPercent, possessive } from "~/lib/format";
 import { abilityOrderQueryOptions } from "~/queries/ability-order-query";
@@ -120,7 +119,6 @@ export function HeroSkillOrder({
    * every share. */
   totalMatches?: number;
 }) {
-  const period = useDefaultPeriodLabel();
   const { orderQuery, heroesQuery, abilitiesQuery, slotAbilities, path } = useHeroSkillPath(
     heroId,
     request,
@@ -156,14 +154,9 @@ export function HeroSkillOrder({
               <InlineStat value={opener.join(" → ")} label="opener" />
               <InlineStat value={formatPercent(path.winRate)} label="win rate" />
               <InlineStat value={formatPercent(path.share, 0)} label="of players" />
+              <InlineStat value={path.matches.toLocaleString("en-US")} label="matches" />
             </div>
             <AbilityOrderGrid abilityIds={slotAbilities} steps={path.steps} />
-            <p className="text-xs leading-relaxed text-muted-foreground">
-              {formatPercent(path.share, 0)} of {rankRange} {heroName} players in {period} take exactly these first{" "}
-              {path.steps.length} upgrades, winning {formatPercent(path.winRate)} of{" "}
-              {path.matches.toLocaleString("en-US")} matches. The bottom row is how many players at each step took that
-              upgrade next.
-            </p>
           </>
         )}
       </PanelBody>

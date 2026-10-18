@@ -59,11 +59,9 @@ export function HeroPreRelease({ heroId, heroName, accent, complexity, tags, upc
         }
         eyebrow={
           <>
-            <Badge variant="warning" size="sm">
-              Pre-release
-            </Badge>
+            <Badge variant="warning">Pre-release</Badge>
             {tags.map((tag) => (
-              <Badge key={tag} variant="outline" size="sm">
+              <Badge key={tag} variant="outline">
                 {tag}
               </Badge>
             ))}
