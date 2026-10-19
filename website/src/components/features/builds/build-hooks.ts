@@ -98,6 +98,8 @@ export function performanceCurveParams(heroId: number, filters: BuildPurchaseFil
     maxAverageBadge: filters.maxAverageBadge,
     minUnixTimestamp: filters.minUnixTimestamp,
     maxUnixTimestamp: filters.maxUnixTimestamp,
+    minDurationS: filters.minDurationS,
+    maxDurationS: filters.maxDurationS,
     resolution,
   };
 }

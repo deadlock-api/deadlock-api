@@ -20,6 +20,16 @@ const LENGTHS = [
   { label: "Over 40 min", from: 2400, to: Infinity },
 ] as const;
 
+/** A length's range of seconds inside the page's duration filter, as the request's bounds; none where open. */
+function lengthWithin(
+  length: (typeof LENGTHS)[number],
+  filters: Pick<BuildPurchaseFilters, "minDurationS" | "maxDurationS">,
+): { minDurationS?: number; maxDurationS?: number } {
+  const from = Math.max(length.from, filters.minDurationS ?? 0);
+  const to = Math.min(length.to - 1, filters.maxDurationS ?? Number.POSITIVE_INFINITY);
+  return { minDurationS: from > 0 ? from : undefined, maxDurationS: Number.isFinite(to) ? to : undefined };
+}
+
 /** A length needs this many of the build's matches for its win rate to be shown. */
 const MIN_MATCHES = 20;
 
@@ -50,6 +60,8 @@ export function BuildByDuration({
         maxAverageBadge: filters.maxAverageBadge,
         minUnixTimestamp: filters.minUnixTimestamp,
         maxUnixTimestamp: filters.maxUnixTimestamp,
+        minDurationS: filters.minDurationS,
+        maxDurationS: filters.maxDurationS,
         minMatches: 1,
       },
       "duration",
@@ -68,8 +80,7 @@ export function BuildByDuration({
         maxAverageBadge: filters.maxAverageBadge,
         minUnixTimestamp: filters.minUnixTimestamp,
         maxUnixTimestamp: filters.maxUnixTimestamp,
-        minDurationS: length.from > 0 ? length.from : undefined,
-        maxDurationS: Number.isFinite(length.to) ? length.to - 1 : undefined,
+        ...lengthWithin(length, filters),
       }),
       select: (rows: { hero_id: number; wins: number; matches: number }[]) =>
         rows.find((row) => row.hero_id === heroId),

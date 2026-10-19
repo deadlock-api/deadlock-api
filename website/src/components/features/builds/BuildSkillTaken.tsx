@@ -42,6 +42,8 @@ export function BuildSkillTaken({
       maxAverageBadge: filters.maxAverageBadge,
       minUnixTimestamp: filters.minUnixTimestamp,
       maxUnixTimestamp: filters.maxUnixTimestamp,
+      minDurationS: filters.minDurationS,
+      maxDurationS: filters.maxDurationS,
       minMatches: MIN_ORDER_MATCHES,
     },
     build.matches,

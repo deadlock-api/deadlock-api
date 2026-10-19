@@ -75,6 +75,8 @@ export function BuildSkillAdherence({
     maxAverageBadge: filters.maxAverageBadge,
     minUnixTimestamp: filters.minUnixTimestamp,
     maxUnixTimestamp: filters.maxUnixTimestamp,
+    minDurationS: filters.minDurationS,
+    maxDurationS: filters.maxDurationS,
     minMatches: 1,
   };
   const unlockQuery = useQuery({

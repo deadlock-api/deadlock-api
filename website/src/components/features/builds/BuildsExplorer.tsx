@@ -55,6 +55,9 @@ export interface BuildsExplorerProps {
   maxRankId?: number;
   minDate?: Dayjs;
   maxDate?: Dayjs;
+  /** Match length in seconds; undefined for no bound. */
+  minDurationS?: number;
+  maxDurationS?: number;
   minMatches: number;
   /** Builds played by fewer players are left out; counted here, the endpoint has no such filter. */
   minPlayers: number;
@@ -75,9 +78,14 @@ export function heroBuildStatsRequest({
   maxRankId,
   minUnixTimestamp,
   maxUnixTimestamp,
+  minDurationS,
+  maxDurationS,
   minMatches,
   matchMode,
-}: Pick<BuildsExplorerProps, "heroId" | "minRankId" | "maxRankId" | "minMatches" | "matchMode"> & {
+}: Pick<
+  BuildsExplorerProps,
+  "heroId" | "minRankId" | "maxRankId" | "minDurationS" | "maxDurationS" | "minMatches" | "matchMode"
+> & {
   minUnixTimestamp?: number;
   maxUnixTimestamp?: number;
 }) {
@@ -88,6 +96,8 @@ export function heroBuildStatsRequest({
     maxAverageBadge: maxRankId,
     minUnixTimestamp,
     maxUnixTimestamp,
+    minDurationS,
+    maxDurationS,
     minMatches,
   };
 }
@@ -121,7 +131,16 @@ function combineProfiles(results: { data?: SteamProfileMap; isPending: boolean }
 export function useBuildFacets(
   props: Pick<
     BuildsExplorerProps,
-    "heroId" | "minRankId" | "maxRankId" | "minDate" | "maxDate" | "minMatches" | "minPlayers" | "matchMode"
+    | "heroId"
+    | "minRankId"
+    | "maxRankId"
+    | "minDate"
+    | "maxDate"
+    | "minDurationS"
+    | "maxDurationS"
+    | "minMatches"
+    | "minPlayers"
+    | "matchMode"
   >,
 ): { tagIds: number[]; languages: number[] } {
   const { minUnixTimestamp, maxUnixTimestamp } = useNormalizedTimeRange(props.minDate, props.maxDate);
@@ -147,7 +166,15 @@ export function useBuildFacets(
 /** The filters an answer was asked with: while the next filters' builds load, the last ones stay on screen with them. */
 type ExplorerFilters = Pick<
   BuildsExplorerProps,
-  "heroId" | "minRankId" | "maxRankId" | "minDate" | "maxDate" | "minMatches" | "matchMode"
+  | "heroId"
+  | "minRankId"
+  | "maxRankId"
+  | "minDate"
+  | "maxDate"
+  | "minDurationS"
+  | "maxDurationS"
+  | "minMatches"
+  | "matchMode"
 >;
 
 /**
@@ -168,8 +195,11 @@ export function BuildsExplorer(props: BuildsExplorerProps) {
   const answered = (statsQuery.data !== undefined && !metaPending) || statsQuery.isError;
   const [settled, setSettled] = useState<{ key: string; filters: ExplorerFilters } | null>(null);
   if (answered && settled?.key !== key) {
-    const { heroId, minRankId, maxRankId, minDate, maxDate, minMatches, matchMode } = props;
-    setSettled({ key, filters: { heroId, minRankId, maxRankId, minDate, maxDate, minMatches, matchMode } });
+    const { heroId, minRankId, maxRankId, minDate, maxDate, minDurationS, maxDurationS, minMatches, matchMode } = props;
+    setSettled({
+      key,
+      filters: { heroId, minRankId, maxRankId, minDate, maxDate, minDurationS, maxDurationS, minMatches, matchMode },
+    });
   }
   const stale = !answered && settled !== null;
   return <BuildsExplorerView {...props} {...(stale ? settled.filters : {})} stale={stale} />;
@@ -181,6 +211,8 @@ function BuildsExplorerView({
   maxRankId,
   minDate,
   maxDate,
+  minDurationS,
+  maxDurationS,
   minMatches,
   minPlayers,
   metaFilters = NO_BUILD_META_FILTERS,
@@ -204,6 +236,8 @@ function BuildsExplorerView({
         maxUnixTimestamp,
         minMatches,
         matchMode,
+        minDurationS,
+        maxDurationS,
       }),
     ),
   );
@@ -236,6 +270,8 @@ function BuildsExplorerView({
         // out cuts the answer by about 70% for a share change of under a tenth of a point.
         minMatches: 3,
         matchMode,
+        minDurationS,
+        maxDurationS,
       }),
     ),
     enabled: stats !== undefined,
@@ -253,6 +289,8 @@ function BuildsExplorerView({
         maxUnixTimestamp,
         minMatches,
         matchMode,
+        minDurationS,
+        maxDurationS,
       }),
     ),
     enabled: stats !== undefined,
@@ -277,6 +315,8 @@ function BuildsExplorerView({
       maxAverageBadge: maxRankId,
       minUnixTimestamp,
       maxUnixTimestamp,
+      minDurationS,
+      maxDurationS,
     }),
     select: (rows) => rows.find((row) => row.hero_id === heroId),
   });
@@ -309,6 +349,8 @@ function BuildsExplorerView({
     maxRankId,
     minUnixTimestamp,
     maxUnixTimestamp,
+    minDurationS,
+    maxDurationS,
     minMatches,
     minPlayers,
     metaFilters,
@@ -368,6 +410,8 @@ function BuildsExplorerView({
     maxAverageBadge: maxRankId,
     minUnixTimestamp,
     maxUnixTimestamp,
+    minDurationS,
+    maxDurationS,
   };
   const performancePending = performanceQuery.isPending && performanceQuery.fetchStatus !== "idle";
 

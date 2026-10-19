@@ -95,6 +95,8 @@ export function BuildMatchups({
     maxAverageBadge: filters.maxAverageBadge,
     minUnixTimestamp: filters.minUnixTimestamp,
     maxUnixTimestamp: filters.maxUnixTimestamp,
+    minDurationS: filters.minDurationS,
+    maxDurationS: filters.maxDurationS,
     sameLaneFilter: false,
     minMatches: FEW_MATCHUP_MATCHES,
     heroBuildId: build.hero_build_id,

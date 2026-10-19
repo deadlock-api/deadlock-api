@@ -200,7 +200,14 @@ export function heroBuildLookupQueryOptions(buildId: number) {
  */
 export type BuildPurchaseFilters = Pick<
   AnalyticsApiItemStatsRequest,
-  "gameMode" | "matchMode" | "minAverageBadge" | "maxAverageBadge" | "minUnixTimestamp" | "maxUnixTimestamp"
+  | "gameMode"
+  | "matchMode"
+  | "minAverageBadge"
+  | "maxAverageBadge"
+  | "minUnixTimestamp"
+  | "maxUnixTimestamp"
+  | "minDurationS"
+  | "maxDurationS"
 >;
 
 export function buildItemPurchasesQueryOptions(buildId: number, params: BuildPurchaseFilters, heroId: number) {

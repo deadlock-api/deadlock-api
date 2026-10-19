@@ -50,11 +50,9 @@ export const Route = createFileRoute("/analytics/builds")({
   // The filters live in the URL under nuqs; read them here so the loader warms the request the page will make, and a
   // shared link with a rank or mode renders its builds on the server too. A custom date range is left to the browser.
   loaderDeps: ({ search }) => {
-    const { hero, min_rank, max_rank, min_matches, game_mode, match_mode, date_range } = search as Record<
-      string,
-      unknown
-    >;
-    const integer = (value: unknown, fallback: number) =>
+    const { hero, min_rank, max_rank, min_matches, min_duration_s, max_duration_s, game_mode, match_mode, date_range } =
+      search as Record<string, unknown>;
+    const integer = <T,>(value: unknown, fallback: T) =>
       typeof value === "number" && Number.isInteger(value) ? value : fallback;
     const urlMode = modeFromParams(
       game_mode === "street_brawl" ? "street_brawl" : "normal",
@@ -71,6 +69,8 @@ export const Route = createFileRoute("/analytics/builds")({
       minRankId: effectiveMinRankId,
       maxRankId: effectiveMaxRankId,
       minMatches: integer(min_matches, DEFAULT_MIN_MATCHES),
+      minDurationS: integer(min_duration_s, undefined),
+      maxDurationS: integer(max_duration_s, undefined),
       matchMode: MODE_CONFIG[mode].matchMode,
       customDates: date_range !== undefined,
     };
@@ -87,6 +87,8 @@ export const Route = createFileRoute("/analytics/builds")({
           minRankId: deps.minRankId,
           maxRankId: deps.maxRankId,
           ...range,
+          minDurationS: deps.minDurationS,
+          maxDurationS: deps.maxDurationS,
           minMatches: deps.minMatches,
           matchMode: deps.matchMode,
         }),
@@ -133,6 +135,9 @@ function BuildsPage() {
   const mode = urlMode === "street_brawl" ? DEFAULT_MODE : urlMode;
   const { startDate, endDate, handleDateChange, defaultRange } = useDateRangeState();
   const { effectiveMinRankId, effectiveMaxRankId } = getEffectiveRankRange(mode, minRankId, maxRankId);
+  const [duration, setDuration] = useQueryStates({ min_duration_s: parseAsInteger, max_duration_s: parseAsInteger });
+  const minDurationS = duration.min_duration_s ?? undefined;
+  const maxDurationS = duration.max_duration_s ?? undefined;
   // What a build is rather than how its matches went: one update sets both tag lists.
   const [tagParams, setTagParams] = useQueryStates({
     with_tags: parseAsArrayOf(parseAsInteger).withDefault([]),
@@ -157,6 +162,8 @@ function BuildsPage() {
     maxRankId: effectiveMaxRankId,
     minDate: startDate,
     maxDate: endDate,
+    minDurationS,
+    maxDurationS,
     minMatches,
     minPlayers,
     matchMode: MODE_CONFIG[mode].matchMode,
@@ -246,6 +253,14 @@ function BuildsPage() {
           onValueChange={(next) => startTransition(() => void setMinPlayers(next, together))}
           defaultValue={DEFAULT_MIN_PLAYERS}
         />
+        <Filter.MatchDuration
+          value={[minDurationS, maxDurationS]}
+          onValueChange={([min, max]) =>
+            startTransition(
+              () => void setDuration({ min_duration_s: min ?? null, max_duration_s: max ?? null }, together),
+            )
+          }
+        />
         <Filter.SeasonPatchDate
           value={{ startDate, endDate }}
           onValueChange={(next) => handleDateChange(next.startDate, next.endDate, next.action)}
@@ -261,6 +276,8 @@ function BuildsPage() {
             maxRankId={effectiveMaxRankId}
             minDate={startDate}
             maxDate={endDate}
+            minDurationS={minDurationS}
+            maxDurationS={maxDurationS}
             minMatches={minMatches}
             minPlayers={minPlayers}
             metaFilters={metaFilters}
