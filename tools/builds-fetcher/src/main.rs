@@ -24,7 +24,9 @@ use sqlx::{Pool, Postgres, QueryBuilder};
 use time::OffsetDateTime;
 use tokio::time::sleep;
 use tracing::{debug, info, instrument, warn};
-use valveprotos::deadlock::c_msg_client_to_gc_find_hero_builds_response::HeroBuildResult;
+use valveprotos::deadlock::c_msg_client_to_gc_find_hero_builds_response::{
+    EResponse, HeroBuildResult,
+};
 use valveprotos::deadlock::{
     CMsgClientToGcFindHeroBuilds, CMsgClientToGcFindHeroBuildsResponse, EgcCitadelClientMessages,
 };
@@ -45,6 +47,15 @@ enum Error {
     Env(#[from] std::env::VarError),
     #[error(transparent)]
     Client(#[from] common::ClientError),
+}
+
+#[derive(Debug, thiserror::Error)]
+enum FetchBuildsError {
+    #[error(transparent)]
+    SteamProxy(#[from] common::SteamProxyError),
+    /// An empty result from a busy or failing GC says nothing about the build.
+    #[error("The GC could not answer: response {0}")]
+    Unanswered(i32),
 }
 
 #[tokio::main]
@@ -301,7 +312,7 @@ async fn fetch_builds(
     langs: &[i32],
     search: Option<&str>,
     hero_build_id: Option<u32>,
-) -> Result<Vec<HeroBuildResult>, common::SteamProxyError> {
+) -> Result<Vec<HeroBuildResult>, FetchBuildsError> {
     let msg = CMsgClientToGcFindHeroBuilds {
         hero_id: hero_id.into(),
         language: langs.to_vec(),
@@ -325,6 +336,12 @@ async fn fetch_builds(
         },
     )
     .await?;
+    // Only a busy or failing GC is retried; any other answer, or none, is taken as before.
+    if let Some(code) = response.response
+        && (code == EResponse::KEInternalError as i32 || code == EResponse::KETooBusy as i32)
+    {
+        return Err(FetchBuildsError::Unanswered(code));
+    }
     Ok(response.results)
 }
 
