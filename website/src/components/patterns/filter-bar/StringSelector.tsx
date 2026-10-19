@@ -116,9 +116,8 @@ export function StringSelector({
   const hasEmptyOption = optionElements.some((child) => child.props.value === "");
   const display = !grouped && optionElements.length <= SEGMENTED_MAX_OPTIONS ? "segmented" : "list";
 
-  const displayValue = current
-    ? optionElements.find((child) => child.props.value === current)?.props.children
-    : undefined;
+  // The empty option names itself ("Any") when it is the choice.
+  const displayValue = optionElements.find((child) => child.props.value === current)?.props.children;
   const resetValue = defaultValue ?? (hasEmptyOption ? "" : undefined);
   const active = resetValue != null ? current !== resetValue : current !== "";
 
