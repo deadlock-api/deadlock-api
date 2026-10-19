@@ -1,10 +1,7 @@
-use cached::CachedExt;
 use chrono::{DateTime, Duration, Utc};
 use sqlx::{Pool, Postgres};
 use thiserror::Error;
 use uuid::Uuid;
-
-use crate::services::patreon::IS_ACCOUNT_PRIORITIZED;
 
 /// Error type for steam accounts repository operations
 #[derive(Debug, Error)]
@@ -191,8 +188,6 @@ impl SteamAccountsRepository {
         .fetch_one(&self.pg_client)
         .await?;
 
-        IS_ACCOUNT_PRIORITIZED.write().await.remove(&steam_id3);
-
         Ok(row)
     }
 
@@ -220,10 +215,7 @@ impl SteamAccountsRepository {
 
         match result {
             None => Err(SteamAccountsRepositoryError::AccountNotFound),
-            Some(row) => {
-                IS_ACCOUNT_PRIORITIZED.write().await.remove(&row.steam_id3);
-                Ok(())
-            }
+            Some(_) => Ok(()),
         }
     }
 
@@ -249,10 +241,7 @@ impl SteamAccountsRepository {
 
         match result {
             None => Err(SteamAccountsRepositoryError::AccountNotFound),
-            Some(row) => {
-                IS_ACCOUNT_PRIORITIZED.write().await.remove(&row.steam_id3);
-                Ok(())
-            }
+            Some(_) => Ok(()),
         }
     }
 
@@ -280,10 +269,7 @@ impl SteamAccountsRepository {
         .await?;
 
         match row {
-            Some(row) => {
-                IS_ACCOUNT_PRIORITIZED.write().await.remove(&row.steam_id3);
-                Ok(row)
-            }
+            Some(row) => Ok(row),
             None => Err(SteamAccountsRepositoryError::AccountNotFound),
         }
     }
@@ -373,11 +359,6 @@ impl SteamAccountsRepository {
         .fetch_all(&self.pg_client)
         .await?;
 
-        let mut prioritized_cache = IS_ACCOUNT_PRIORITIZED.write().await;
-        for row in &result {
-            prioritized_cache.remove(&row.steam_id3);
-        }
-
         Ok(result.len() as u64)
     }
 
@@ -394,11 +375,6 @@ impl SteamAccountsRepository {
         )
         .fetch_all(&self.pg_client)
         .await?;
-
-        let mut prioritized_cache = IS_ACCOUNT_PRIORITIZED.write().await;
-        for row in &result {
-            prioritized_cache.remove(&row.steam_id3);
-        }
 
         Ok(result.len() as u64)
     }
@@ -429,11 +405,6 @@ impl SteamAccountsRepository {
         )
         .fetch_all(&self.pg_client)
         .await?;
-
-        let mut prioritized_cache = IS_ACCOUNT_PRIORITIZED.write().await;
-        for row in &result {
-            prioritized_cache.remove(&row.steam_id3);
-        }
 
         Ok(result.len() as u64)
     }
