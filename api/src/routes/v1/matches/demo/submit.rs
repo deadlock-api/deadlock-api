@@ -103,10 +103,10 @@ pub(super) async fn submit(
 
     let id = job_id(req.match_id, &req.query, req.format);
 
-    // Dedup / cache: a queued/running/done job short-circuits. A failed job does not —
-    // re-submitting the same triple re-runs it.
+    // Dedup / cache: a queued/running/done job short-circuits. A failed or abandoned job does
+    // not: re-submitting the same triple re-runs it.
     if let Some(existing) = job::load(&mut state.redis_client.clone(), &id).await?
-        && existing.status != JobStatus::Failed
+        && !existing.needs_rerun(chrono::Utc::now().timestamp())
     {
         return Ok((
             StatusCode::OK,
