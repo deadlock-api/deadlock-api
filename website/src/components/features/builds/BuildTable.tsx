@@ -256,8 +256,10 @@ export function BuildTable({
         <SearchInput
           value={query}
           onValueChange={setQuery}
-          placeholder="Search builds"
+          placeholder="Search builds…"
           aria-label="Filter builds by name, author or ID"
+          // Names, handles and IDs, not prose: no autocorrect or spellcheck.
+          kind="identifier"
           size="sm"
           className="w-full @sm:ms-auto @sm:w-40"
         />
