@@ -1,7 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import {
   BarChart3,
-  Code,
   Database,
   Download,
   HardDrive,
@@ -41,7 +40,6 @@ import { Text } from "~/components/ui/text";
 import { TextLink } from "~/components/ui/text-link";
 import { useIsWindows } from "~/hooks/useIsWindows";
 import { API_ORIGIN } from "~/lib/constants";
-import { useExperiment } from "~/lib/experiments";
 import { ORGANIZATION, pageTitle, seo, SITE_URL } from "~/lib/seo";
 import { TRACKER_SITES } from "~/lib/tracker-sites";
 
@@ -90,13 +88,6 @@ export const Route = createFileRoute("/")({
 });
 
 const valueProps = [
-  {
-    label: "Open Source",
-    href: "https://github.com/deadlock-api/",
-    icon: Code,
-    title: "Visit our GitHub Organization",
-    external: true,
-  },
   {
     label: "Open Data",
     href: "/data-dumps",
@@ -238,7 +229,6 @@ const sponsors = [
 function IndexRoute() {
   const isWindows = useIsWindows();
   const installTracking = useInstallCtaTracking("home", isWindows ? "download" : "install_steps");
-  const heroInstallVariant = useExperiment("exp-home-hero-install-cta");
   return (
     <PageShell density="marketing">
       {/* The search is the page's main action: right under the title, ahead of the pills and the lead, so a phone
@@ -267,19 +257,15 @@ function IndexRoute() {
         <AiSearch />
 
         <HeroActions>
-          {heroInstallVariant === "test" && (
-            <InstallButton shape="pill" size="default" installHref={INGEST_INSTALL_PATH} placement="home_hero" />
-          )}
-          {(heroInstallVariant === "test" ? valueProps.filter((prop) => prop.label !== "Open Source") : valueProps).map(
-            (prop) => (
-              <Button key={prop.label} asChild variant="outline" shape="pill">
-                <SmartLink href={prop.href} external={prop.external} title={prop.title}>
-                  <prop.icon className="size-3.5" />
-                  {prop.label}
-                </SmartLink>
-              </Button>
-            ),
-          )}
+          <InstallButton shape="pill" size="default" installHref={INGEST_INSTALL_PATH} placement="home_hero" />
+          {valueProps.map((prop) => (
+            <Button key={prop.label} asChild variant="outline" shape="pill">
+              <SmartLink href={prop.href} external={prop.external} title={prop.title}>
+                <prop.icon className="size-3.5" />
+                {prop.label}
+              </SmartLink>
+            </Button>
+          ))}
         </HeroActions>
 
         <HeroLead>
