@@ -1,5 +1,7 @@
 use core::time::Duration;
 use std::collections::HashSet;
+use std::sync::LazyLock;
+use std::time::Instant;
 
 use axum::Json;
 use axum::extract::State;
@@ -8,8 +10,9 @@ use axum_extra::extract::Query;
 use base64::Engine;
 use base64::prelude::BASE64_STANDARD;
 use bytes::Bytes;
-use cached::macros::cached;
 use itertools::Itertools;
+use moka::Expiry;
+use moka::future::Cache;
 use prost::Message;
 use serde::Deserialize;
 use utoipa::IntoParams;
@@ -21,7 +24,7 @@ use valveprotos::deadlock::{
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::matches::types::ActiveMatch;
-use crate::services::steam::types::SteamProxyQuery;
+use crate::services::steam::types::{SteamProxyQuery, SteamProxyResult};
 use crate::utils::parse::{comma_separated_steam_ids_option, parse_steam_id_option};
 
 #[derive(Deserialize, IntoParams)]
@@ -36,22 +39,54 @@ pub(super) struct ActiveMatchesQuery {
     account_ids: Option<Vec<u32>>,
 }
 
-#[cached(ttl_secs = 60, convert = "{ 0 }", key = "u8", sync_writes = "default")]
-async fn fetch_active_matches_raw(state: &AppState) -> Result<Bytes, APIError> {
-    let steam_response = state
-        .steam_client
-        .call_steam_proxy_raw(SteamProxyQuery {
-            msg_type: EgcCitadelClientMessages::KEMsgClientToGcGetActiveMatches,
-            msg: CMsgClientToGcGetActiveMatches::default(),
-            in_all_groups: Some(vec!["LowRateLimitApis".to_owned()]),
-            in_any_groups: None,
-            cooldown_time: Duration::from_mins(10),
-            request_timeout: Duration::from_secs(2),
-            username: None,
-            soft_cooldown_millis: None,
+/// How long a fetched list is served.
+const ACTIVE_MATCHES_TTL: Duration = Duration::from_mins(1);
+
+/// Serves a fetched list for [`ACTIVE_MATCHES_TTL`] and a failure for 5–10 s (longer when Steam
+/// asks for a longer wait), so requests during an outage fail fast instead of each retrying Steam.
+struct ActiveMatchesExpiry;
+
+impl Expiry<(), SteamProxyResult<Bytes>> for ActiveMatchesExpiry {
+    fn expire_after_create(
+        &self,
+        (): &(),
+        value: &SteamProxyResult<Bytes>,
+        _: Instant,
+    ) -> Option<Duration> {
+        Some(match value {
+            Ok(_) => ACTIVE_MATCHES_TTL,
+            Err(e) => Duration::from_secs(e.retry_after_secs().unwrap_or(0).clamp(5, 10)),
         })
-        .await?;
-    Ok(BASE64_STANDARD.decode(&steam_response.data)?.into())
+    }
+}
+
+static ACTIVE_MATCHES: LazyLock<Cache<(), SteamProxyResult<Bytes>>> = LazyLock::new(|| {
+    Cache::builder()
+        .max_capacity(1)
+        .expire_after(ActiveMatchesExpiry)
+        .build()
+});
+
+/// The cached active matches. Concurrent misses share a single Steam call and its outcome.
+async fn fetch_active_matches_raw(state: &AppState) -> SteamProxyResult<Bytes> {
+    ACTIVE_MATCHES
+        .get_with((), async {
+            let steam_response = state
+                .steam_client
+                .call_steam_proxy_raw(SteamProxyQuery {
+                    msg_type: EgcCitadelClientMessages::KEMsgClientToGcGetActiveMatches,
+                    msg: CMsgClientToGcGetActiveMatches::default(),
+                    in_all_groups: Some(vec!["LowRateLimitApis".to_owned()]),
+                    in_any_groups: None,
+                    cooldown_time: Duration::from_mins(10),
+                    request_timeout: Duration::from_secs(2),
+                    username: None,
+                    soft_cooldown_millis: None,
+                })
+                .await?;
+            Ok(BASE64_STANDARD.decode(&steam_response.data)?.into())
+        })
+        .await
 }
 
 fn parse_active_matches_raw(raw_data: &[u8]) -> APIResult<Vec<ActiveMatch>> {
@@ -101,7 +136,7 @@ Relevant Protobuf Message:
 pub(super) async fn active_matches_raw(
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
-    fetch_active_matches_raw(&state).await
+    Ok(fetch_active_matches_raw(&state).await?)
 }
 
 #[utoipa::path(

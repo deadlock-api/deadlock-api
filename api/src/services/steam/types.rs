@@ -1,4 +1,5 @@
 use core::time::Duration;
+use std::sync::Arc;
 
 use base64::Engine;
 use base64::prelude::BASE64_STANDARD;
@@ -77,17 +78,17 @@ pub(super) struct PlayerSummary {
 
 pub(crate) type SteamProxyResult<T> = Result<T, SteamProxyError>;
 
-/// Error type for Steam proxy calls
-#[derive(Debug, Error)]
+/// Error type for Steam proxy calls. Cloneable, so a cached failure can be replayed.
+#[derive(Debug, Clone, Error)]
 pub(crate) enum SteamProxyError {
     #[error("no proxy base url configured")]
     NoBaseUrl,
     #[error("request timed out: {0}")]
-    Timeout(reqwest::Error),
+    Timeout(Arc<reqwest::Error>),
     #[error("failed to decode proxy response: {0}")]
-    Decode(reqwest::Error),
+    Decode(Arc<reqwest::Error>),
     #[error("request failed: {0}")]
-    Request(reqwest::Error),
+    Request(Arc<reqwest::Error>),
     /// Every bot that could serve the request is on cooldown (429).
     #[error("all bots are on cooldown: {message}")]
     Cooldown {
@@ -113,11 +114,11 @@ pub(crate) enum SteamProxyError {
 impl From<reqwest::Error> for SteamProxyError {
     fn from(e: reqwest::Error) -> Self {
         if e.is_timeout() {
-            Self::Timeout(e)
+            Self::Timeout(Arc::new(e))
         } else if e.is_decode() {
-            Self::Decode(e)
+            Self::Decode(Arc::new(e))
         } else {
-            Self::Request(e)
+            Self::Request(Arc::new(e))
         }
     }
 }
