@@ -44,6 +44,7 @@ import { cn } from "~/lib/utils";
 
 import { CompanionsPanel } from "./CompanionsPanel";
 import { HeroStatsTable } from "./HeroStatsTable";
+import { MatchStatsPanels } from "./MatchStatsPanels";
 import { PerformanceInsights } from "./PerformanceInsights";
 import { PlaytimeHeatmap } from "./PlaytimeHeatmap";
 import { RankBenchmarks } from "./RankBenchmarks";
@@ -247,6 +248,8 @@ export function OverviewTab({
       />
 
       <RankBenchmarks key={accountId} accountId={accountId} filters={filters} latestBadge={latestBadge} />
+
+      <MatchStatsPanels accountId={accountId} filters={filters} entries={sorted} />
 
       <TrendPanels
         entries={sorted}
