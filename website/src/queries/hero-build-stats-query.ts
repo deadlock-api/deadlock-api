@@ -7,6 +7,7 @@ import { type BuildPerformanceTotals, PERFORMANCE_TOTAL_KEYS } from "~/lib/build
 import { buildAbilityOrder, type BuildItemPurchase, type BuildMeta, type BuildStatRow } from "~/lib/build-stats";
 import { API_ORIGIN } from "~/lib/constants";
 import { GraphqlHttpError } from "~/lib/graphql";
+import { serverApiKeyHeaders } from "~/lib/server-api-key";
 
 import { queryKeys } from "./query-keys";
 
@@ -123,7 +124,7 @@ export function heroBuildMetaQueryOptions(heroId: number, buildIds: readonly num
       );
       const response = await fetch(`${API_ORIGIN}/v1/graphql`, {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: { "content-type": "application/json", ...serverApiKeyHeaders() },
         body: JSON.stringify({ query: `query HeroBuildMeta {${fields.join(" ")}}` }),
         signal,
       });
@@ -175,7 +176,7 @@ export function heroBuildLookupQueryOptions(buildId: number) {
     queryFn: async ({ signal }): Promise<{ buildId: number; heroId: number; name: string } | null> => {
       const response = await fetch(`${API_ORIGIN}/v1/graphql`, {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: { "content-type": "application/json", ...serverApiKeyHeaders() },
         body: JSON.stringify({
           query: `query HeroBuildLookup { hero_builds(where: {build_id: ${buildId}, only_latest: true}, limit: 1) { hero_build { hero_id hero_build_id name } } }`,
         }),

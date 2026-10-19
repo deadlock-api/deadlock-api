@@ -2,6 +2,7 @@ import { createClient } from "deadlock_api_graphql_client";
 
 import { API_ORIGIN } from "~/lib/constants";
 import { ApiError } from "~/lib/http";
+import { serverApiKeyHeaders } from "~/lib/server-api-key";
 
 /** A non-2xx GraphQL response. The generated client keeps only the status text, which HTTP/2 leaves empty. */
 export class GraphqlHttpError extends ApiError {
@@ -14,7 +15,9 @@ export class GraphqlHttpError extends ApiError {
 export const graphql = createClient({
   url: `${API_ORIGIN}/v1/graphql`,
   fetch: async (input: RequestInfo | URL, init?: RequestInit) => {
-    const response = await fetch(input, init);
+    const headers = new Headers(init?.headers);
+    for (const [name, value] of Object.entries(serverApiKeyHeaders())) headers.set(name, value);
+    const response = await fetch(input, { ...init, headers });
     if (!response.ok) throw new GraphqlHttpError(response.status, `${response.status}: ${await response.text()}`);
     return response;
   },
