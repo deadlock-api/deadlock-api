@@ -1518,6 +1518,7 @@ mod proptests {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::routes::v1::analytics::rollup_window::UNBUILT_SPLITS_DAYS;
     use crate::utils::proptest_utils::assert_valid_sql;
 
     #[test]
@@ -1603,8 +1604,11 @@ mod tests {
             assert_valid_sql(&sql);
             assert!(sql.contains(&day_filter), "{sql}");
             // The built days, the days the rollup lacks with the partial days, and the matches
-            // ingested after their day was built.
-            assert_eq!(sql.matches("UNION ALL").count(), 2);
+            // ingested after their day was built, in one scan per range of days.
+            assert_eq!(
+                sql.matches("UNION ALL").count(),
+                UNBUILT_SPLITS_DAYS.len() + 2
+            );
             assert!(sql.contains(&format!(
                 "((start_time >= {min} AND start_time <= {}) OR (start_time >= {end_day} AND start_time <= {max}) OR ",
                 first_day - 1

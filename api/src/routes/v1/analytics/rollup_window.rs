@@ -172,9 +172,10 @@ impl Rollup<'_> {
     ///
     /// The base-table rows cover the partial days. For a [`Coverage::Incremental`] rollup they
     /// also cover the whole days it lacks, in one scan, and the matches ingested after their day
-    /// was built, in another: the two filter on different skip indexes (`start_time`,
-    /// `created_at`), and one `OR`ed scan could prune with neither. The rollup's state is read
-    /// in the same query, so a day it rebuilds in between is never counted twice.
+    /// was built, in a few others (see [`BuiltDays::unbuilt_rows`]): the two filter on different
+    /// skip indexes (`start_time`, `created_at`), and one `OR`ed scan could prune with neither.
+    /// The rollup's state is read in the same query, so a day it rebuilds in between is never
+    /// counted twice.
     ///
     /// It yields the measures and only the grain columns that `filters` or `outer` (the
     /// expressions of the query reading the source, e.g. its bucket) reference. `edge` must return
@@ -259,7 +260,7 @@ impl Rollup<'_> {
             Coverage::Incremental { .. } => {
                 let built = BuiltDays::new(table, split);
                 windows.extend(built.missing_windows(split));
-                parts.push(edge_rows(&built.unbuilt_rows()));
+                parts.extend(built.unbuilt_rows().iter().map(|rows| edge_rows(rows)));
             }
         }
         if !windows.is_empty() {
@@ -268,6 +269,15 @@ impl Rollup<'_> {
         format!("(\n{}\n)", parts.join("\nUNION ALL\n"))
     }
 }
+
+/// Days before today at which [`BuiltDays::unbuilt_rows`] splits the built run. The refresh job
+/// rebuilds the newest days every run but older ones only once they gain ~2% more matches, so
+/// [`BUILT_THROUGH`] lags further behind the older a day is: on 2026-10-19 the days 22-30 days
+/// old were built 117 h before, and pruning the whole run by that read every match ingested
+/// since. Against that, on 30-day `item_stats_agg_v2` and cohort windows with identical results:
+/// rows -56..-70%, CPU -13..-25%, wall time +2..4%. Splitting at 11, 5 and 2 days saved ~5% CPU;
+/// one scan per day prunes rows 10x but doubles CPU, every scan building its own aggregate states.
+pub(super) const UNBUILT_SPLITS_DAYS: [u32; 2] = [21, 11];
 
 /// Scalar subqueries over the days an incremental rollup has built within a window, from which
 /// the base-table scans of [`Rollup::source`] select what the rollup lacks. The built days are
@@ -281,10 +291,11 @@ struct BuiltDays {
     /// `Map(Date, DateTime)` of each built day to its [`BUILT_THROUGH`] time. Missing days read
     /// as 0, so all of their rows count as unbuilt.
     built_through: String,
-    /// The oldest [`BUILT_THROUGH`] time if every day of `[start, end)` is built, else 0. A
-    /// constant lower bound on `created_at`, so the `idx_created_at` minmax index prunes the
-    /// built days' scan.
-    oldest_built_through: String,
+    /// `start_time` filters of the ranges of days between [`UNBUILT_SPLITS_DAYS`].
+    ranges: Vec<String>,
+    /// `Array(DateTime)` of each range's oldest [`BUILT_THROUGH`] time, or 0 when the range lacks
+    /// a day of the run. One subquery for all ranges: each costs a scan of the rollup's parts.
+    ranges_built_through: String,
 }
 
 impl BuiltDays {
@@ -299,6 +310,37 @@ impl BuiltDays {
         );
         let first_day = split.first_day;
         let scalar = |expr: &str| format!("(SELECT {expr} FROM ({days}))");
+        // The ranges are relative to `today()` rather than fetched from the rollup, so the SQL,
+        // and with it the result cache key, does not change with every refresh.
+        let splits = UNBUILT_SPLITS_DAYS.map(|days| format!("today() - {days}"));
+        let lows = core::iter::once(None).chain(splits.iter().map(Some));
+        let highs = splits.iter().map(Some).chain(core::iter::once(None));
+        let (ranges, ranges_built_through): (Vec<_>, Vec<_>) = lows
+            .zip(highs)
+            .map(|(low, high)| {
+                let mut rows = vec![];
+                let mut in_range = vec![];
+                // The run's days within the range, `[from, to)`.
+                let (mut from, mut to) = ("min(day)".to_owned(), "max(day) + 1".to_owned());
+                if let Some(low) = low {
+                    rows.push(format!("start_time >= toDateTime({low})"));
+                    in_range.push(format!("day >= {low}"));
+                    from = format!("greatest({from}, {low})");
+                }
+                if let Some(high) = high {
+                    rows.push(format!("start_time < toDateTime({high})"));
+                    in_range.push(format!("day < {high}"));
+                    to = format!("least({to}, {high})");
+                }
+                let in_range = in_range.join(" AND ");
+                (
+                    rows.join(" AND "),
+                    format!(
+                        "if(countIf({in_range}) = dateDiff('day', {from}, {to}), minIf(built_through, {in_range}), toDateTime(0))"
+                    ),
+                )
+            })
+            .unzip();
         Self {
             start: scalar(&format!(
                 "toDateTime(ifNull(minOrNull(day), toDate({first_day})))"
@@ -309,9 +351,8 @@ impl BuiltDays {
             built_through: scalar(
                 "CAST((groupArray(day), groupArray(built_through)), 'Map(Date, DateTime)')",
             ),
-            oldest_built_through: scalar(
-                "if(count() = dateDiff('day', min(day), max(day)) + 1, min(built_through), toDateTime(0))",
-            ),
+            ranges,
+            ranges_built_through: scalar(&format!("[{}]", ranges_built_through.join(", "))),
         }
     }
 
@@ -329,18 +370,28 @@ impl BuiltDays {
         [before, after]
     }
 
-    /// The matches of the built run ingested after their day was built.
-    fn unbuilt_rows(&self) -> String {
+    /// The matches of the built run ingested after their day was built, one scan per range of
+    /// days between [`UNBUILT_SPLITS_DAYS`]. Each scan bounds `created_at` below by its range's
+    /// oldest [`BUILT_THROUGH`] time, a constant the `idx_created_at` minmax index prunes on.
+    fn unbuilt_rows(&self) -> Vec<String> {
         let Self {
             start,
             end,
             built_through,
-            oldest_built_through,
+            ranges,
+            ranges_built_through,
         } = self;
-        format!(
-            "start_time >= {start} AND start_time < {end} AND created_at > {oldest_built_through} \
-             AND created_at > {built_through}[toDate(start_time)]"
-        )
+        ranges
+            .iter()
+            .enumerate()
+            .map(|(i, range)| {
+                format!(
+                    "start_time >= {start} AND start_time < {end} AND {range} AND created_at > {ranges_built_through}[{}] \
+                     AND created_at > {built_through}[toDate(start_time)]",
+                    i + 1
+                )
+            })
+            .collect()
     }
 }
 
@@ -501,9 +552,12 @@ mod tests {
         };
         let split = DaySplit::new(Some(DAY + 14 * H), Some(DAY + 3 * DAY_S + 14 * H)).unwrap();
         let source = rollup.source(&split, &filters, "toUInt32(0)", edge);
-        // The built days, the matches ingested after their day was built, and one scan of the
-        // partial days with the days the rollup lacks.
-        assert_eq!(source.matches("UNION ALL").count(), 2);
+        // The built days, the matches ingested after their day was built in one scan per range of
+        // days, and one scan of the partial days with the days the rollup lacks.
+        assert_eq!(
+            source.matches("UNION ALL").count(),
+            UNBUILT_SPLITS_DAYS.len() + 2
+        );
         assert!(source.contains(&format!(
             "FROM t_agg WHERE game_mode = 1 AND day >= toDate({}) AND day < toDate({}) AND built_through > 0",
             DAY + DAY_S,
@@ -520,8 +574,20 @@ mod tests {
             DAY + DAY_S,
             DAY + 3 * DAY_S
         )));
-        assert!(source.contains("AND start_time < "));
-        assert!(source.contains("AND created_at > (SELECT if(count() = dateDiff('day', min(day), max(day)) + 1, min(built_through), toDateTime(0))"));
+        // Each range is pruned by its own oldest built_through, or by 0 when it lacks a day.
+        let ranges_built_through = "(SELECT [if(countIf(day < today() - 21) = dateDiff('day', min(day), least(max(day) + 1, today() - 21)), minIf(built_through, day < today() - 21), toDateTime(0)), \
+             if(countIf(day >= today() - 21 AND day < today() - 11) = dateDiff('day', greatest(min(day), today() - 21), least(max(day) + 1, today() - 11)), minIf(built_through, day >= today() - 21 AND day < today() - 11), toDateTime(0)), \
+             if(countIf(day >= today() - 11) = dateDiff('day', greatest(min(day), today() - 11), max(day) + 1), minIf(built_through, day >= today() - 11), toDateTime(0))] FROM (SELECT day, ";
+        for range in [
+            "start_time < toDateTime(today() - 21)",
+            "start_time >= toDateTime(today() - 21) AND start_time < toDateTime(today() - 11)",
+            "start_time >= toDateTime(today() - 11)",
+        ] {
+            assert!(source.contains(&format!(
+                " AND {range} AND created_at > {ranges_built_through}"
+            )));
+        }
+        assert!(source.contains("HAVING built_through > 0))[3] AND created_at > (SELECT CAST("));
         assert!(source.contains("[toDate(start_time)]) AND game_mode = 1"));
         assert_valid_sql(&format!("SELECT sum(n) FROM {source}"));
 
