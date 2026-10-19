@@ -101,10 +101,11 @@ function BuildDot({ cx, cy, payload }: { cx?: number; cy?: number; payload?: Poi
       r={payload.selected ? 7 : payload.highlighted ? 6 : 4.5}
       shape={mark.shape}
       pressable
+      // A build the item filter or the hovered item leaves out stays on the plot as an outline.
+      emphasis={payload.dimmed && !payload.selected && !payload.highlighted ? "faded" : "default"}
       fill={mark.color}
-      fillOpacity={payload.selected || payload.highlighted ? 1 : payload.dimmed ? 0.12 : 0.75}
+      fillOpacity={payload.selected || payload.highlighted ? 1 : 0.75}
       stroke={payload.selected || payload.highlighted ? CHART_COLOR.ink : CHART_COLOR.surface}
-      strokeOpacity={payload.dimmed && !payload.selected && !payload.highlighted ? 0.3 : 1}
       strokeWidth={payload.selected ? 2.5 : payload.highlighted ? 1.5 : 1}
     />
   );

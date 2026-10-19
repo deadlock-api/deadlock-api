@@ -120,6 +120,8 @@ const hex = ({ rgb }) =>
 // ---- Pairs ----------------------------------------------------------------------------------------------------
 // A surface is `token`, `token/NN` (a Tailwind alpha tint) or `token/NN over base`.
 const SURFACE = /^([\w-]+)(?:\/(\d+))?(?:\s+over\s+([\w-]+))?$/;
+// A foreground is `token` or `token/NN`, composited over the surface it is judged on.
+const FOREGROUND = /^([\w-]+)(?:\/(\d+))?$/;
 
 function surfaceColor(vars, spec) {
   const [, token, percent, base] = SURFACE.exec(spec);
@@ -233,6 +235,8 @@ for (const series of ["chart-win-rate", "chart-share"]) {
 for (let slot = 1; slot <= 5; slot++) {
   for (const surface of ["card", "muted", "accent"]) variant(`compare-${slot}`, surface, UI_MIN);
 }
+// A chart point a filter leaves out (CHART_FADED_MARK): an outline in its verdict color at 70%, on the card.
+for (const verdict of ["positive", "muted-foreground", "negative"]) variant(`${verdict}/70`, "card", UI_MIN);
 // The empty marks of Pips, non-text UI on the surfaces a meter sits on.
 for (const surface of ["card", "muted", "popover"]) variant("meter-empty", surface, UI_MIN);
 // The edge of a text control or a checkbox (CONTROL_SURFACE), on every surface a control sits on.
@@ -263,9 +267,11 @@ const themes = readThemes(fs.readFileSync(TOKENS, "utf8"));
 const rows = [];
 for (const [selector, vars] of themes) {
   for (const { text, surface, min } of unique) {
-    const fg = tokenColor(vars, text);
+    // A foreground may carry an opacity too (`token/NN`): a mark drawn faded on its surface.
+    const [, textToken, textPercent] = FOREGROUND.exec(text);
+    const fg = tokenColor(vars, textToken);
     const bg = surfaceColor(vars, surface);
-    const over = fg.alpha < 1 ? composite(fg, bg) : fg;
+    const over = textPercent ? composite(fg, bg, Number(textPercent) / 100) : fg.alpha < 1 ? composite(fg, bg) : fg;
     const ratio = contrast(over, bg);
     rows.push({
       theme: selector,

@@ -225,6 +225,13 @@ export const CHART_SHADED_WINDOW = {
   strokeWidth: 1,
 } as const;
 
+/**
+ * A point that a filter or a hover leaves out (`ChartPointMark emphasis="faded"`): no fill, a 1px outline in its own
+ * color at the lowest opacity at which positive, neutral and negative still reach 3:1 on the card (checked by
+ * scripts/check-contrast.mjs), so it recedes behind the full points without vanishing.
+ */
+export const CHART_FADED_MARK = { fill: "none", strokeOpacity: 0.7, strokeWidth: 1 } as const;
+
 /** A population's distribution under the players drawn on it: a faint neutral area with a thin edge. */
 export const CHART_AREA_NEUTRAL = {
   stroke: CHART_COLOR.neutral,

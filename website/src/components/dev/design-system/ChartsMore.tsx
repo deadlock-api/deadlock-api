@@ -301,7 +301,7 @@ export function ChartsMore() {
       <Specimen
         name="ChartPointMark"
         source="patterns/charts/ChartPointMark"
-        note="A scatter point as a Recharts shape: circle, triangle-up or triangle-down. VERDICT_MARK pairs a shape with each color (above, close to, below a reference), so the verdict is not color alone; the legend uses the same ChartSwatch shapes. pressable lays an invisible 24px hit circle under a small dot and takes the pointer cursor from ChartSurface. Scatter plots use CHART_MARGIN_POINTS and no allowDataOverflow, so an edge point is drawn whole."
+        note="A scatter point as a Recharts shape: circle, triangle-up or triangle-down. VERDICT_MARK pairs a shape with each color (above, close to, below a reference), so the verdict is not color alone; the legend uses the same ChartSwatch shapes. pressable lays an invisible 24px hit circle under a small dot and takes the pointer cursor from ChartSurface. emphasis faded (second row) draws a point a filter or hover leaves out as an outline in its color (CHART_FADED_MARK), still 3:1 on the card. Scatter plots use CHART_MARGIN_POINTS and no allowDataOverflow, so an edge point is drawn whole."
       >
         <Variants className="flex-col items-start">
           <svg width={180} height={40} aria-hidden="true">
@@ -315,6 +315,20 @@ export function ChartsMore() {
                 pressable
                 fill={VERDICT_MARK[verdict].color}
                 stroke={CHART_COLOR.surface}
+              />
+            ))}
+          </svg>
+          {/* The same points left out by a filter: outlines that recede but stay at 3:1. */}
+          <svg width={180} height={40} aria-hidden="true">
+            {(["above", "even", "below"] as const).map((verdict, index) => (
+              <ChartPointMark
+                key={verdict}
+                cx={30 + index * 60}
+                cy={20}
+                r={4.5}
+                shape={VERDICT_MARK[verdict].shape}
+                emphasis="faded"
+                fill={VERDICT_MARK[verdict].color}
               />
             ))}
           </svg>
