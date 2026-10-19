@@ -58,13 +58,15 @@ pub(super) struct LeaderboardIdQuery {
     leaderboard_id: Option<u32>,
 }
 
-/// Fetches a leaderboard from Steam, at most every ten minutes per variant. Each fetch of the
+/// Fetches a leaderboard from Steam, at most every ten minutes per variant; concurrent misses on
+/// the same variant wait for one Steam call instead of each making their own. Each fetch of the
 /// current leaderboard is also snapshotted: here, not in the callers, so cache hits do not store
 /// the same entries again.
 #[cached(
     ttl_secs = 600,
     convert = "{ (region, hero_id, leaderboard_id) }",
-    key = "(LeaderboardRegion, Option<u32>, Option<u32>)"
+    key = "(LeaderboardRegion, Option<u32>, Option<u32>)",
+    sync_writes = "by_key"
 )]
 pub(crate) async fn fetch_leaderboard_raw(
     state: &AppState,
