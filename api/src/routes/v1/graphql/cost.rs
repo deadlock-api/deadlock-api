@@ -141,7 +141,7 @@ fn days_spanned(f: &I64Filter) -> Option<usize> {
     let lower = f.gt.max(f.gte)?;
     let now = chrono::Utc::now().timestamp();
     let upper = f.lt.into_iter().chain(f.lte).fold(now, i64::min);
-    usize::try_from((upper - lower).max(0) / SECONDS_PER_DAY + 1).ok()
+    usize::try_from(upper.saturating_sub(lower).max(0) / SECONDS_PER_DAY + 1).ok()
 }
 
 /// Milliseconds of `limit` rows of `row_units` each.
@@ -358,6 +358,13 @@ mod tests {
         .await;
         assert!(!rejected);
         assert!(c < 1_000, "{c}");
+
+        // A lower bound far in the past must not wrap the span into one day.
+        let (_, rejected) = complexity(
+            "{ matches(where: {start_time: {gte: -9223372036854775808}}, order_by: AVERAGE_BADGE, limit: 100) { match_id } }",
+        )
+        .await;
+        assert!(rejected);
     }
 
     #[tokio::test]
