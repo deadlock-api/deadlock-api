@@ -1,7 +1,5 @@
 import type { ComponentProps, ReactNode } from "react";
 
-import { cn } from "~/lib/utils";
-
 /**
  * The numbers behind a plot as a table for assistive technology: one row a point (a week, an hour, a rank step), one
  * column a series. Put it in `ChartSurface`'s `dataTable` slot on a plot whose `announce="label"` hides it from
@@ -23,27 +21,31 @@ export function ChartDataTable({
   rows: readonly { key: string | number; cells: readonly [ReactNode, ...ReactNode[]] }[];
 }) {
   return (
-    <table data-slot="chart-data-table" className={cn("sr-only", className)} {...props}>
-      <caption>{caption}</caption>
-      <thead>
-        <tr>
-          {head.map((name) => (
-            <th key={name} scope="col">
-              {name}
-            </th>
-          ))}
-        </tr>
-      </thead>
-      <tbody>
-        {rows.map(({ key, cells: [name, ...values] }) => (
-          <tr key={key}>
-            <th scope="row">{name}</th>
-            {values.map((value, index) => (
-              <td key={head[index + 1] ?? index}>{value ?? "–"}</td>
+    // Hidden by a wrapper: a table grows past the 1px box of `sr-only` to fit its cells, and its clipped box could
+    // still stretch the page's scroll height.
+    <div className="sr-only">
+      <table data-slot="chart-data-table" className={className} {...props}>
+        <caption>{caption}</caption>
+        <thead>
+          <tr>
+            {head.map((name) => (
+              <th key={name} scope="col">
+                {name}
+              </th>
             ))}
           </tr>
-        ))}
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          {rows.map(({ key, cells: [name, ...values] }) => (
+            <tr key={key}>
+              <th scope="row">{name}</th>
+              {values.map((value, index) => (
+                <td key={head[index + 1] ?? index}>{value ?? "–"}</td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }

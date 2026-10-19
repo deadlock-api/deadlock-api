@@ -3,6 +3,7 @@ import { CartesianGrid, ReferenceLine, Scatter, ScatterChart, Tooltip, XAxis, YA
 
 import { useItemPrices } from "~/components/features/builds/build-hooks";
 import { ChartCard } from "~/components/patterns/charts/ChartCard";
+import { ChartDataTable } from "~/components/patterns/charts/ChartDataTable";
 import { ChartLegend, ChartLegendItem } from "~/components/patterns/charts/ChartLegend";
 import { ChartPointMark, VERDICT_MARK } from "~/components/patterns/charts/ChartPointMark";
 import { ChartSurface } from "~/components/patterns/charts/ChartSurface";
@@ -273,6 +274,18 @@ export function BuildScatterChart({
         size="default"
         announce="label"
         label={`${points.length} builds by ${xLabel.toLowerCase()} and win rate: ${above} win confidently above the average of ${formatPercent(average)}, ${below} below it.`}
+        // Every dot's numbers, which the hover tooltip shows, for those who do not hover: the playstyle and share axes
+        // are in no other table.
+        dataTable={
+          <ChartDataTable
+            caption={`Builds by ${xLabel.toLowerCase()} and win rate`}
+            head={["Build", xLabel, "Win rate", "Vs. average"]}
+            rows={points.map((point) => ({
+              key: point.id,
+              cells: [point.name, xFormat(point.x), formatPercent(point.winRate), VERDICT_LABEL[point.row.verdict]],
+            }))}
+          />
+        }
       >
         <ScatterChart margin={{ ...CHART_MARGIN_POINTS, bottom: 16 }} accessibilityLayer={false}>
           <CartesianGrid {...CHART_GRID} vertical />
