@@ -64,7 +64,8 @@ const parseView = parseAsStringLiteral(VIEWS).withDefault("overview");
  */
 const HIDE_BELOW = {
   compact: "hidden @sm/builds:table-cell",
-  narrow: "hidden @lg/builds:table-cell",
+  // From 42rem: below it a desktop's two-thirds list (~35rem) kept five metrics and cut the build names to "Parzeli…".
+  narrow: "hidden @2xl/builds:table-cell",
   wide: "hidden @3xl/builds:table-cell",
 } as const;
 
@@ -216,7 +217,8 @@ export function BuildTable({
     view === "overview"
       ? COLUMNS
       : [
-          COLUMNS[0],
+          // A metric view on a phone keeps the win rate and its one metric beside the name: the matches give way.
+          { ...COLUMNS[0], className: HIDE_BELOW.compact },
           COLUMNS[2],
           ...metricColumns.map(({ metric, label, hide }) => ({
             key: `m:${metric.key}`,
@@ -381,7 +383,9 @@ export function BuildTable({
                     </span>
                   </div>
                 </TableRowHeader>
-                <TableCell className="text-end tabular-nums">{row.matches.toLocaleString("en-US")}</TableCell>
+                <TableCell className={cn("text-end tabular-nums", view !== "overview" && HIDE_BELOW.compact)}>
+                  {row.matches.toLocaleString("en-US")}
+                </TableCell>
                 {view === "overview" && (
                   <TableCell className="hidden text-end text-muted-foreground tabular-nums @2xl/builds:table-cell">
                     {row.players.toLocaleString("en-US")}
@@ -453,7 +457,9 @@ export function BuildTable({
           <TableRow>
             <TableCell className={HIDE_BELOW.compact} />
             <TableCell className="text-xs text-muted-foreground">All builds</TableCell>
-            <TableCell className="text-end tabular-nums">{summary.matches.toLocaleString("en-US")}</TableCell>
+            <TableCell className={cn("text-end tabular-nums", view !== "overview" && HIDE_BELOW.compact)}>
+              {summary.matches.toLocaleString("en-US")}
+            </TableCell>
             {view === "overview" && <TableCell className="hidden @2xl/builds:table-cell" />}
             <TableCell className="text-end tabular-nums">{formatPercent(summary.winRate)}</TableCell>
             {metricColumns.map(({ metric, hide }) => (
