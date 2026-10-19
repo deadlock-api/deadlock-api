@@ -267,7 +267,15 @@ export function BuildTable({
     >
       <PanelHeader title="Builds" icon={ListOrdered} size="sm">
         <BuildSummaryStats summary={summary} heroWinRate={heroWinRate} />
-        <ItemSelector selection="tri-state" size="sm" value={itemStates} onValueChange={setItemStates} />
+        {/* One width whatever it holds, like the search: a pick that widened it re-wrapped the header under the
+            open menu. A longer summary truncates. */}
+        <ItemSelector
+          selection="tri-state"
+          size="sm"
+          value={itemStates}
+          onValueChange={setItemStates}
+          className="w-36"
+        />
         <SearchInput
           value={query}
           onValueChange={(next) => {
