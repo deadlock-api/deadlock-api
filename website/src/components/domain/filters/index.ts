@@ -1,4 +1,7 @@
 import { BuildIdFilter } from "~/components/domain/filters/BuildIdFilter";
+import { BuildLanguageFilter } from "~/components/domain/filters/BuildLanguageFilter";
+import { BuildTagFilter } from "~/components/domain/filters/BuildTagFilter";
+import { BuildUpdatedFilter } from "~/components/domain/filters/BuildUpdatedFilter";
 import { MatchDurationFilter } from "~/components/domain/filters/MatchDurationFilter";
 import { MinMatchesFilter } from "~/components/domain/filters/MinMatchesFilter";
 import { ModeWithRankFilter } from "~/components/domain/filters/ModeWithRankFilter";
@@ -18,4 +21,7 @@ export const Filter = {
   MatchDuration: MatchDurationFilter,
   TimeRange: MatchTimeRangeSelector,
   BuildId: BuildIdFilter,
+  BuildTags: BuildTagFilter,
+  BuildLanguage: BuildLanguageFilter,
+  BuildUpdated: BuildUpdatedFilter,
 };

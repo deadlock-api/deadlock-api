@@ -27,6 +27,8 @@ export interface BuildMeta {
   /** Unix seconds. */
   updatedAt: number;
   language: number;
+  /** The author's tags: style tag ids (`/v1/assets/build-tags`) and the ids of the items and abilities it is about. */
+  tags: number[];
   categories: BuildCategory[];
   /** Ability ids, one per point spent, unlocks included: the columns of a skill order grid. */
   abilityOrder: number[];
@@ -275,6 +277,48 @@ export function buildMatchesItems(
   if (!meta) return false;
   const listed = new Set(buildItemIds(meta));
   return withItems.every((id) => listed.has(id)) && !withoutItems.some((id) => listed.has(id));
+}
+
+/** The page's filters on what a build is, rather than on its matches. */
+export interface BuildMetaFilters {
+  withTags: readonly number[];
+  withoutTags: readonly number[];
+  /** Null for any language. */
+  language: number | null;
+  /** Unix seconds: builds last updated before it are left out. Null for any. */
+  updatedSince: number | null;
+}
+
+export const NO_BUILD_META_FILTERS: BuildMetaFilters = {
+  withTags: [],
+  withoutTags: [],
+  language: null,
+  updatedSince: null,
+};
+
+export function hasBuildMetaFilters(filters: BuildMetaFilters): boolean {
+  return (
+    filters.withTags.length > 0 ||
+    filters.withoutTags.length > 0 ||
+    filters.language !== null ||
+    filters.updatedSince !== null
+  );
+}
+
+/**
+ * Whether a build carries every tag of `withTags` and none of `withoutTags`, is in `language` and was updated since
+ * `updatedSince`. A build whose contents are not known (`meta` missing) cannot qualify while a filter is set.
+ */
+export function buildMatchesMeta(meta: BuildMeta | null | undefined, filters: BuildMetaFilters): boolean {
+  if (!hasBuildMetaFilters(filters)) return true;
+  if (!meta) return false;
+  const tags = new Set(meta.tags);
+  return (
+    filters.withTags.every((tag) => tags.has(tag)) &&
+    !filters.withoutTags.some((tag) => tags.has(tag)) &&
+    (filters.language === null || meta.language === filters.language) &&
+    (filters.updatedSince === null || meta.updatedAt >= filters.updatedSince)
+  );
 }
 
 /** The shop categories, in the shop's order. */

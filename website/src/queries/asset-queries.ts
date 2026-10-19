@@ -133,6 +133,13 @@ export const itemPricePerTierQueryOptions = queryOptions({
   staleTime: CACHE_DURATIONS.FOREVER,
 });
 
+/** The style tags an author can give a build ("Spirit", "For New Players"); a build's other tags are item and ability ids. */
+export const buildTagsQueryOptions = queryOptions({
+  queryKey: queryKeys.assets.buildTags(),
+  queryFn: async () => (await api.build_tags_api.listBuildTags()).data,
+  staleTime: CACHE_DURATIONS.FOREVER,
+});
+
 export const rankedSeasonsQueryOptions = queryOptions({
   queryKey: queryKeys.assets.rankedSeasons(),
   queryFn: async () => {

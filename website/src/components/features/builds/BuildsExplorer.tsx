@@ -18,7 +18,16 @@ import { Button } from "~/components/ui/button";
 import { day, type Dayjs } from "~/dayjs";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { poolPerformance } from "~/lib/build-performance";
-import { type BuildMeta, buildRows, buildTrends, summarizeBuilds } from "~/lib/build-stats";
+import {
+  type BuildMeta,
+  buildMatchesMeta,
+  type BuildMetaFilters,
+  buildRows,
+  buildTrends,
+  hasBuildMetaFilters,
+  NO_BUILD_META_FILTERS,
+  summarizeBuilds,
+} from "~/lib/build-stats";
 import type { MatchMode } from "~/lib/game-mode";
 import { useDebouncedValue } from "~/lib/utils";
 import {
@@ -49,6 +58,8 @@ export interface BuildsExplorerProps {
   minMatches: number;
   /** Builds played by fewer players are left out; counted here, the endpoint has no such filter. */
   minPlayers: number;
+  /** Tags, language and last update: builds that miss them are left out, like those under the minimum players. */
+  metaFilters?: BuildMetaFilters;
   matchMode: MatchMode;
   /** The build the detail panel shows; the most played one when null or not in the results. */
   buildId: number | null;
@@ -103,6 +114,36 @@ function combineProfiles(results: { data?: SteamProfileMap; isPending: boolean }
   return { byId, pending: results.some((result) => result.isPending) };
 }
 
+/**
+ * The tags and languages of the builds the filters other than tags, language and update leave: what the build filters
+ * offer, most used first. The same requests the explorer makes, so they come from its cache.
+ */
+export function useBuildFacets(
+  props: Pick<
+    BuildsExplorerProps,
+    "heroId" | "minRankId" | "maxRankId" | "minDate" | "maxDate" | "minMatches" | "minPlayers" | "matchMode"
+  >,
+): { tagIds: number[]; languages: number[] } {
+  const { minUnixTimestamp, maxUnixTimestamp } = useNormalizedTimeRange(props.minDate, props.maxDate);
+  const statsQuery = useQuery(
+    heroBuildStatsQueryOptions(heroBuildStatsRequest({ ...props, minUnixTimestamp, maxUnixTimestamp })),
+  );
+  const meta = useQueries({ queries: metaQueries(props.heroId, statsQuery.data), combine: combineMeta });
+  return useMemo(() => {
+    const tags = new Map<number, number>();
+    const languages = new Map<number, number>();
+    for (const row of statsQuery.data ?? []) {
+      const build = meta.builds.get(row.hero_build_id);
+      if (!build || row.players < props.minPlayers) continue;
+      for (const tag of build.tags) tags.set(tag, (tags.get(tag) ?? 0) + 1);
+      languages.set(build.language, (languages.get(build.language) ?? 0) + 1);
+    }
+    const byCount = (counts: Map<number, number>) =>
+      [...counts].sort((a, b) => b[1] - a[1] || a[0] - b[0]).map(([id]) => id);
+    return { tagIds: byCount(tags), languages: byCount(languages) };
+  }, [statsQuery.data, meta.builds, props.minPlayers]);
+}
+
 /** The filters an answer was asked with: while the next filters' builds load, the last ones stay on screen with them. */
 type ExplorerFilters = Pick<
   BuildsExplorerProps,
@@ -142,6 +183,7 @@ function BuildsExplorerView({
   maxDate,
   minMatches,
   minPlayers,
+  metaFilters = NO_BUILD_META_FILTERS,
   matchMode,
   buildId,
   onBuildIdChange,
@@ -165,11 +207,19 @@ function BuildsExplorerView({
       }),
     ),
   );
+  // Asked for every build of the answer, not only those past the minimum players: the same batches the loader warms.
+  const meta = useQueries({
+    queries: metaQueries(heroId, statsQuery.data),
+    combine: combineMeta,
+  });
   // Left out before anything is counted, as the minimum matches is: the totals and the average stay those of the
   // listed builds.
   const stats = useMemo(
-    () => statsQuery.data?.filter((row) => row.players >= minPlayers),
-    [statsQuery.data, minPlayers],
+    () =>
+      statsQuery.data?.filter(
+        (row) => row.players >= minPlayers && buildMatchesMeta(meta.builds.get(row.hero_build_id), metaFilters),
+      ),
+    [statsQuery.data, minPlayers, meta.builds, metaFilters],
   );
 
   // The range's last days, against which each build's share is compared. An open range ends today (UTC).
@@ -189,12 +239,6 @@ function BuildsExplorerView({
       }),
     ),
     enabled: stats !== undefined,
-  });
-
-  // Asked for every build of the answer, not only those past the minimum players: the same batches the loader warms.
-  const meta = useQueries({
-    queries: metaQueries(heroId, statsQuery.data),
-    combine: combineMeta,
   });
 
   const rows = useMemo(() => (stats ? buildRows(stats, meta.builds) : []), [stats, meta.builds]);
@@ -267,6 +311,7 @@ function BuildsExplorerView({
     maxUnixTimestamp,
     minMatches,
     minPlayers,
+    metaFilters,
     matchMode,
   ]);
   const rowRef = useRef<HTMLDivElement>(null);
@@ -283,7 +328,8 @@ function BuildsExplorerView({
     onBuildIdChange(id);
   };
 
-  if (statsQuery.isPending) return <LoadingState />;
+  // The build filters read the builds' contents: until they arrive every build would fail them.
+  if (statsQuery.isPending || (hasBuildMetaFilters(metaFilters) && meta.pending)) return <LoadingState />;
   if (statsQuery.isError) {
     return (
       <ErrorState
@@ -297,7 +343,11 @@ function BuildsExplorerView({
     return (
       <EmptyState
         title="No builds in these matches"
-        description="No published build reached the minimum matches and players. Lower a minimum or widen the filters."
+        description={
+          hasBuildMetaFilters(metaFilters)
+            ? "No build with these tags, language and update date reached the minimum matches and players. Lower a minimum or widen the filters."
+            : "No published build reached the minimum matches and players. Lower a minimum or widen the filters."
+        }
         action={
           onMinMatchesChange &&
           minMatches > LOW_MIN_MATCHES && (
@@ -332,8 +382,9 @@ function BuildsExplorerView({
           <SearchX aria-hidden="true" />
           <AlertTitle>Build {buildId} is not in this list</AlertTitle>
           <AlertDescription>
-            It has fewer than {minMatches} matches{minPlayers > 1 && ` or ${minPlayers} players`} under these filters,
-            or none.
+            {hasBuildMetaFilters(metaFilters)
+              ? `Its tags, language or update date do not match, or it has fewer than ${minMatches} matches${minPlayers > 1 ? ` or ${minPlayers} players` : ""} under these filters.`
+              : `It has fewer than ${minMatches} matches${minPlayers > 1 ? ` or ${minPlayers} players` : ""} under these filters, or none.`}
             {onMinMatchesChange && minMatches > 1 && (
               <Button variant="outline" size="sm" onClick={() => onMinMatchesChange(1)}>
                 Show builds with 1+ matches

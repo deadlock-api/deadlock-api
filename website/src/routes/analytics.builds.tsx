@@ -1,13 +1,15 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { parseAsInteger, throttle, useQueryState } from "nuqs";
+import { parseAsArrayOf, parseAsInteger, throttle, useQueryState, useQueryStates } from "nuqs";
 import { startTransition, Suspense } from "react";
 
 import { Filter } from "~/components/domain/filters";
-import { BuildsExplorer, heroBuildStatsRequest } from "~/components/features/builds/BuildsExplorer";
+import { BuildsExplorer, heroBuildStatsRequest, useBuildFacets } from "~/components/features/builds/BuildsExplorer";
+import type { TriState } from "~/components/patterns/filter-bar/TriStateSelector";
 import { PageHeader } from "~/components/patterns/page/PageHeader";
 import { PageShell } from "~/components/patterns/page/PageShell";
 import { ChunkErrorBoundary } from "~/components/patterns/states/ChunkErrorBoundary";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
+import { day } from "~/dayjs";
 import { useKnownHeroId } from "~/hooks/useAssetById";
 import { useDateRangeState } from "~/hooks/useDateRangeState";
 import { useModeState } from "~/hooks/useModeState";
@@ -131,6 +133,34 @@ function BuildsPage() {
   const mode = urlMode === "street_brawl" ? DEFAULT_MODE : urlMode;
   const { startDate, endDate, handleDateChange, defaultRange } = useDateRangeState();
   const { effectiveMinRankId, effectiveMaxRankId } = getEffectiveRankRange(mode, minRankId, maxRankId);
+  // What a build is rather than how its matches went: one update sets both tag lists.
+  const [tagParams, setTagParams] = useQueryStates({
+    with_tags: parseAsArrayOf(parseAsInteger).withDefault([]),
+    without_tags: parseAsArrayOf(parseAsInteger).withDefault([]),
+  });
+  const [language, setLanguage] = useQueryState("lang", parseAsInteger);
+  const [updatedDays, setUpdatedDays] = useQueryState("updated", parseAsInteger);
+  const tagStates = new Map<number, TriState>([
+    ...tagParams.with_tags.map((id): [number, TriState] => [id, "included"]),
+    ...tagParams.without_tags.map((id): [number, TriState] => [id, "excluded"]),
+  ]);
+  const metaFilters = {
+    withTags: tagParams.with_tags,
+    withoutTags: tagParams.without_tags,
+    language,
+    // From the start of the day (UTC), so the server and the browser draw the same list.
+    updatedSince: updatedDays === null ? null : day.utc().startOf("day").subtract(updatedDays, "day").unix(),
+  };
+  const facets = useBuildFacets({
+    heroId,
+    minRankId: effectiveMinRankId,
+    maxRankId: effectiveMaxRankId,
+    minDate: startDate,
+    maxDate: endDate,
+    minMatches,
+    minPlayers,
+    matchMode: MODE_CONFIG[mode].matchMode,
+  });
 
   return (
     <PageShell>
@@ -181,6 +211,28 @@ function BuildsPage() {
             }
           }}
         />
+        <Filter.BuildTags
+          tagIds={facets.tagIds}
+          value={tagStates}
+          onValueChange={(next) => {
+            const ids = (state: TriState) => {
+              const matching = [...next].filter(([, s]) => s === state).map(([id]) => id);
+              return matching.length > 0 ? matching : null;
+            };
+            startTransition(
+              () => void setTagParams({ with_tags: ids("included"), without_tags: ids("excluded") }, together),
+            );
+          }}
+        />
+        <Filter.BuildLanguage
+          languages={facets.languages}
+          value={language}
+          onValueChange={(next) => startTransition(() => void setLanguage(next, together))}
+        />
+        <Filter.BuildUpdated
+          value={updatedDays}
+          onValueChange={(next) => startTransition(() => void setUpdatedDays(next, together))}
+        />
         <Filter.MinMatches
           value={minMatches}
           onValueChange={(next) => startTransition(() => void setMinMatches(next, together))}
@@ -211,6 +263,7 @@ function BuildsPage() {
             maxDate={endDate}
             minMatches={minMatches}
             minPlayers={minPlayers}
+            metaFilters={metaFilters}
             matchMode={MODE_CONFIG[mode].matchMode}
             buildId={buildId}
             onBuildIdChange={(id) => void setBuildId(id)}

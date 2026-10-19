@@ -8,6 +8,7 @@ import {
   buildItemPresence,
   buildItemUsage,
   buildMatchesItems,
+  buildMatchesMeta,
   type BuildMeta,
   buildRows,
   buildSlotCost,
@@ -32,6 +33,7 @@ const meta = (buildId: number, itemIds: number[]): BuildMeta => ({
   version: 1,
   updatedAt: 0,
   language: 0,
+  tags: [],
   categories: [{ name: "", description: null, itemIds, notes: {} }],
   abilityOrder: [],
 });
@@ -175,4 +177,18 @@ test("a build matches an item filter by what it lists", () => {
   assert.equal(buildMatchesItems(build, [], [20]), false);
   assert.equal(buildMatchesItems(undefined, [10], []), false);
   assert.equal(buildMatchesItems(undefined, [], []), true);
+});
+
+test("a build passes the tag, language and update filters only with all of them", () => {
+  const build = { ...meta(1, []), tags: [7, 8], language: 8, updatedAt: 1_000 };
+  const none = { withTags: [], withoutTags: [], language: null, updatedSince: null };
+  assert.equal(buildMatchesMeta(build, { ...none, withTags: [7, 8] }), true);
+  assert.equal(buildMatchesMeta(build, { ...none, withTags: [7, 9] }), false);
+  assert.equal(buildMatchesMeta(build, { ...none, withoutTags: [8] }), false);
+  assert.equal(buildMatchesMeta(build, { ...none, language: 8 }), true);
+  assert.equal(buildMatchesMeta(build, { ...none, language: 0 }), false);
+  assert.equal(buildMatchesMeta(build, { ...none, updatedSince: 1_000 }), true);
+  assert.equal(buildMatchesMeta(build, { ...none, updatedSince: 1_001 }), false);
+  assert.equal(buildMatchesMeta(undefined, { ...none, language: 0 }), false);
+  assert.equal(buildMatchesMeta(undefined, none), true);
 });

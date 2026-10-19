@@ -91,6 +91,7 @@ interface GraphqlBuild {
     version: number;
     last_updated_timestamp: number;
     language: number;
+    tags: number[] | null;
     details: {
       mod_categories:
         | {
@@ -105,7 +106,7 @@ interface GraphqlBuild {
 }
 
 const BUILD_FIELDS =
-  "hero_build{hero_build_id name author_account_id version last_updated_timestamp language " +
+  "hero_build{hero_build_id name author_account_id version last_updated_timestamp language tags " +
   "details{mod_categories{name description mods{ability_id annotation}} ability_order{currency_changes{ability_id currency_type delta}}}}";
 
 /**
@@ -143,6 +144,8 @@ export function heroBuildMetaQueryOptions(heroId: number, buildIds: readonly num
               version: build.version,
               updatedAt: build.last_updated_timestamp,
               language: build.language,
+              // The game pads the list with zeros.
+              tags: [...new Set((build.tags ?? []).filter((tag) => tag !== 0))],
               categories: (build.details?.mod_categories ?? []).map((category) => ({
                 name: category.name ?? "",
                 description: category.description?.trim() || null,

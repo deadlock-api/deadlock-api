@@ -2,6 +2,7 @@ import { type AxiosInstance, type AxiosResponse, isAxiosError, type RawAxiosRequ
 import {
   AnalyticsApi,
   AssetsBucketApi,
+  BuildTagsApi,
   CommandsApi,
   CrosshairApi,
   GenericDataApi,
@@ -47,6 +48,7 @@ export class Api {
   public map_api: MapApi;
   public misc_entities_api: MiscEntitiesApi;
   public assets_bucket_api: AssetsBucketApi;
+  public build_tags_api: BuildTagsApi;
   public generic_data_api: GenericDataApi;
   public crosshair_api: CrosshairApi;
   public commands_api: CommandsApi;
@@ -70,6 +72,7 @@ export class Api {
     this.map_api = new MapApi(undefined, API_ORIGIN, axios_client);
     this.misc_entities_api = new MiscEntitiesApi(undefined, API_ORIGIN, axios_client);
     this.assets_bucket_api = new AssetsBucketApi(undefined, API_ORIGIN, axios_client);
+    this.build_tags_api = new BuildTagsApi(undefined, API_ORIGIN, axios_client);
     this.generic_data_api = new GenericDataApi(undefined, API_ORIGIN, axios_client);
     this.crosshair_api = new CrosshairApi(undefined, API_ORIGIN, axios_client);
     this.commands_api = new CommandsApi(undefined, API_ORIGIN, axios_client);

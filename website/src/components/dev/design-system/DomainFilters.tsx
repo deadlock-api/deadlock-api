@@ -18,6 +18,9 @@ export function DomainFilters() {
   const [ranks, setRanks] = useState<[number, number]>([0, 116]);
   const [minMatches, setMinMatches] = useState(20);
   const [itemStates, setItemStates] = useState(new Map<number, TriState>());
+  const [tagStates, setTagStates] = useState(new Map<number, TriState>());
+  const [language, setLanguage] = useState<number | null>(null);
+  const [updated, setUpdated] = useState<number | null>(null);
   const [dates, setDates] = useState<DateRange>(DEFAULT_DATES);
   const [duration, setDuration] = useState<TimeRange>([undefined, undefined]);
 
@@ -27,7 +30,7 @@ export function DomainFilters() {
     <Specimen
       name="Filter namespace"
       source="domain/filters"
-      note="Filter.Root is FilterBar; the members are the game's filters, each a FilterCell. Pages own the URL state and pass value and onValueChange. Filter.ModeWithRank hides the rank range in Brawl, which is never ranked. Filter.BuildId looks a published build up by its ID and hands back the build and its hero."
+      note="Filter.Root is FilterBar; the members are the game's filters, each a FilterCell. Pages own the URL state and pass value and onValueChange. Filter.ModeWithRank hides the rank range in Brawl, which is never ranked. Filter.BuildId looks a published build up by its ID and hands back the build and its hero. Filter.BuildTags, BuildLanguage and BuildUpdated filter builds by what they are; the page passes the tags and languages its builds use, most used first."
     >
       <Variants label="Hero · BuildId · ModeWithRank · MinMatches · Item (tri-state) · SeasonPatchDate · MatchDuration">
         <Filter.Root>
@@ -54,6 +57,14 @@ export function DomainFilters() {
             defaultValue={{ startDate: DEFAULT_DATES[0], endDate: DEFAULT_DATES[1] }}
           />
           <Filter.MatchDuration value={duration} onValueChange={([min, max]) => setDuration([min, max])} />
+        </Filter.Root>
+      </Variants>
+      <Variants label="BuildTags · BuildLanguage · BuildUpdated">
+        <Filter.Root>
+          {/* Power Surge (an ability) and Toxic Bullets (an item), as a Seven build tags them. */}
+          <Filter.BuildTags tagIds={[539192269, 3696726732]} value={tagStates} onValueChange={setTagStates} />
+          <Filter.BuildLanguage languages={[0, 8, 6]} value={language} onValueChange={setLanguage} />
+          <Filter.BuildUpdated value={updated} onValueChange={setUpdated} />
         </Filter.Root>
       </Variants>
       <Variants label="TimeRange (the kill heatmap's bar)">
