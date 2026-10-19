@@ -47,6 +47,8 @@ export interface BuildsExplorerProps {
   minDate?: Dayjs;
   maxDate?: Dayjs;
   minMatches: number;
+  /** Builds played by fewer players are left out; counted here, the endpoint has no such filter. */
+  minPlayers: number;
   matchMode: MatchMode;
   /** The build the detail panel shows; the most played one when null or not in the results. */
   buildId: number | null;
@@ -126,6 +128,7 @@ function BuildsExplorerView({
   minDate,
   maxDate,
   minMatches,
+  minPlayers,
   matchMode,
   buildId,
   onBuildIdChange,
@@ -149,7 +152,12 @@ function BuildsExplorerView({
       }),
     ),
   );
-  const stats = statsQuery.data;
+  // Left out before anything is counted, as the minimum matches is: the totals and the average stay those of the
+  // listed builds.
+  const stats = useMemo(
+    () => statsQuery.data?.filter((row) => row.players >= minPlayers),
+    [statsQuery.data, minPlayers],
+  );
 
   // The range's last days, against which each build's share is compared. An open range ends today (UTC).
   const windowEnd = maxUnixTimestamp ?? day.utc().startOf("day").add(1, "day").unix();
@@ -252,7 +260,7 @@ function BuildsExplorerView({
     return (
       <EmptyState
         title="No builds in these matches"
-        description="No published build reached the minimum number of matches. Lower the minimum or widen the filters."
+        description="No published build reached the minimum matches and players. Lower a minimum or widen the filters."
         action={
           onMinMatchesChange &&
           minMatches > LOW_MIN_MATCHES && (
@@ -287,7 +295,8 @@ function BuildsExplorerView({
           <SearchX aria-hidden="true" />
           <AlertTitle>Build {buildId} is not in this list</AlertTitle>
           <AlertDescription>
-            It has fewer than {minMatches} matches under these filters, or none.
+            It has fewer than {minMatches} matches{minPlayers > 1 && ` or ${minPlayers} players`} under these filters,
+            or none.
             {onMinMatchesChange && minMatches > 1 && (
               <Button variant="outline" size="sm" onClick={() => onMinMatchesChange(1)}>
                 Show builds with 1+ matches

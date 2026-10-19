@@ -32,6 +32,7 @@ import {
 
 const DEFAULT_HERO_ID = 2;
 const DEFAULT_MIN_MATCHES = 20;
+const DEFAULT_MIN_PLAYERS = 1;
 const TITLE = "Deadlock Build Stats: Best Hero Builds by Win Rate";
 const DESCRIPTION =
   "Win rates of the published Deadlock hero builds players start their matches with: how popular each is, its items and skill order, by rank and patch.";
@@ -123,6 +124,7 @@ function BuildsPage() {
   const [minRankId, setMinRankId] = useQueryState("min_rank", parseAsInteger.withDefault(DEFAULT_RANK_RANGE.min));
   const [maxRankId, setMaxRankId] = useQueryState("max_rank", parseAsInteger.withDefault(DEFAULT_RANK_RANGE.max));
   const [minMatches, setMinMatches] = useQueryState("min_matches", parseAsInteger.withDefault(DEFAULT_MIN_MATCHES));
+  const [minPlayers, setMinPlayers] = useQueryState("min_players", parseAsInteger.withDefault(DEFAULT_MIN_PLAYERS));
   const { mode: urlMode, setMode } = useModeState();
   // A Street Brawl link from another page reads as all normal matches here.
   const mode = urlMode === "street_brawl" ? DEFAULT_MODE : urlMode;
@@ -183,6 +185,14 @@ function BuildsPage() {
           onValueChange={(next) => startTransition(() => void setMinMatches(next, together))}
           defaultValue={DEFAULT_MIN_MATCHES}
         />
+        <Filter.MinMatches
+          label="Min Players"
+          step={5}
+          min={DEFAULT_MIN_PLAYERS}
+          value={minPlayers}
+          onValueChange={(next) => startTransition(() => void setMinPlayers(next, together))}
+          defaultValue={DEFAULT_MIN_PLAYERS}
+        />
         <Filter.SeasonPatchDate
           value={{ startDate, endDate }}
           onValueChange={(next) => handleDateChange(next.startDate, next.endDate, next.action)}
@@ -199,6 +209,7 @@ function BuildsPage() {
             minDate={startDate}
             maxDate={endDate}
             minMatches={minMatches}
+            minPlayers={minPlayers}
             matchMode={MODE_CONFIG[mode].matchMode}
             buildId={buildId}
             onBuildIdChange={(id) => void setBuildId(id)}
