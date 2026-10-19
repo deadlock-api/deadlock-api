@@ -18,6 +18,7 @@ import {
 } from "~/lib/build-performance";
 import { BUILD_SLOT_LABEL, BUILD_SLOTS, buildItemIds, type BuildRow, buildSlotCost } from "~/lib/build-stats";
 import { formatPercent } from "~/lib/format";
+import { cn } from "~/lib/utils";
 import { winRateNoise } from "~/lib/wilson";
 
 const nameOf = (row: BuildRow) => row.meta?.name ?? `Build ${row.hero_build_id}`;
@@ -57,9 +58,29 @@ function ItemRow({ title, itemIds }: { title: string; itemIds: readonly number[]
   );
 }
 
-function MetricCell({ metric, totals }: { metric: BuildMetric; totals: BuildPerformanceTotals | undefined }) {
+/**
+ * On a phone-wide dialog (below `@sm`) the selected build's column gives way: the comparison is the compared build's
+ * number and its difference, and the selected build's numbers are on the page behind the dialog.
+ */
+const SELECTED_COLUMN = "hidden @sm:table-cell";
+/** A stat's name wraps rather than widening its column past the dialog. */
+const STAT_NAME = "whitespace-normal";
+
+function MetricCell({
+  metric,
+  totals,
+  className,
+}: {
+  metric: BuildMetric;
+  totals: BuildPerformanceTotals | undefined;
+  className?: string;
+}) {
   const value = totals ? metric.value(totals) : null;
-  return <TableCell className="text-end tabular-nums">{value === null ? <NoValue /> : metric.format(value)}</TableCell>;
+  return (
+    <TableCell className={cn("text-end tabular-nums", className)}>
+      {value === null ? <NoValue /> : metric.format(value)}
+    </TableCell>
+  );
 }
 
 /**
@@ -129,7 +150,7 @@ export function BuildCompareDialog({
               <TableHeader>
                 <TableRow>
                   <TableHead tone="muted">Stat</TableHead>
-                  <TableHead className="text-end">
+                  <TableHead className={cn("text-end", SELECTED_COLUMN)}>
                     Selected<span className="sr-only">: {nameOf(build)}</span>
                   </TableHead>
                   <TableHead className="text-end">
@@ -146,8 +167,10 @@ export function BuildCompareDialog({
                   const b = row.value(other);
                   return (
                     <TableRow key={row.label}>
-                      <TableRowHeader tone="muted">{row.label}</TableRowHeader>
-                      <TableCell className="text-end tabular-nums">{row.format(a)}</TableCell>
+                      <TableRowHeader tone="muted" className={STAT_NAME}>
+                        {row.label}
+                      </TableRowHeader>
+                      <TableCell className={cn("text-end tabular-nums", SELECTED_COLUMN)}>{row.format(a)}</TableCell>
                       <TableCell className="text-end tabular-nums">{row.format(b)}</TableCell>
                       <TableCell className="text-end">
                         <Delta
@@ -165,8 +188,10 @@ export function BuildCompareDialog({
                   const b = totalsB ? metric.value(totalsB) : null;
                   return (
                     <TableRow key={metric.key}>
-                      <TableRowHeader tone="muted">{metric.label}</TableRowHeader>
-                      <MetricCell metric={metric} totals={totalsA} />
+                      <TableRowHeader tone="muted" className={STAT_NAME}>
+                        {metric.label}
+                      </TableRowHeader>
+                      <MetricCell metric={metric} totals={totalsA} className={SELECTED_COLUMN} />
                       <MetricCell metric={metric} totals={totalsB} />
                       <TableCell className="text-end">
                         <Delta
@@ -185,7 +210,7 @@ export function BuildCompareDialog({
               <TableHeader>
                 <TableRow>
                   <TableHead tone="muted">Stat</TableHead>
-                  <TableHead className="text-end">
+                  <TableHead className={cn("text-end", SELECTED_COLUMN)}>
                     Selected<span className="sr-only">: {nameOf(build)}</span>
                   </TableHead>
                   <TableHead className="text-end">
@@ -202,8 +227,10 @@ export function BuildCompareDialog({
                   const b = totalsB ? metric.value(totalsB) : null;
                   return (
                     <TableRow key={metric.key}>
-                      <TableRowHeader tone="muted">{metric.label}</TableRowHeader>
-                      <MetricCell metric={metric} totals={totalsA} />
+                      <TableRowHeader tone="muted" className={STAT_NAME}>
+                        {metric.label}
+                      </TableRowHeader>
+                      <MetricCell metric={metric} totals={totalsA} className={SELECTED_COLUMN} />
                       <MetricCell metric={metric} totals={totalsB} />
                       <TableCell className="text-end">
                         <Delta
@@ -221,8 +248,10 @@ export function BuildCompareDialog({
                   const b = slotsB && slotsB.bySlot[slot] / slotsB.total;
                   return (
                     <TableRow key={slot}>
-                      <TableRowHeader tone="muted">{BUILD_SLOT_LABEL[slot]} souls</TableRowHeader>
-                      <TableCell className="text-end tabular-nums">
+                      <TableRowHeader tone="muted" className={STAT_NAME}>
+                        {BUILD_SLOT_LABEL[slot]} souls
+                      </TableRowHeader>
+                      <TableCell className={cn("text-end tabular-nums", SELECTED_COLUMN)}>
                         {a === null ? <NoValue /> : formatPercent(a, 0)}
                       </TableCell>
                       <TableCell className="text-end tabular-nums">
