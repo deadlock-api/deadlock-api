@@ -18,7 +18,7 @@ use futures::StreamExt;
 use metrics::{counter, gauge};
 use models::{MatchSalt, PendingMatch};
 use tracing::{debug, error, info, instrument, warn};
-use valveprotos::deadlock::c_msg_client_to_gc_get_match_meta_data_response::EResult::KEResultRateLimited;
+use valveprotos::deadlock::c_msg_client_to_gc_get_match_meta_data_response::EResult;
 use valveprotos::deadlock::{
     CMsgClientToGcGetMatchMetaData, CMsgClientToGcGetMatchMetaDataResponse,
     EgcCitadelClientMessages,
@@ -41,8 +41,8 @@ enum Error {
 enum FetchError {
     #[error(transparent)]
     SteamProxy(#[from] common::SteamProxyError),
-    #[error("Got a rate limited response: {0:?}")]
-    RateLimited(CMsgClientToGcGetMatchMetaDataResponse),
+    #[error("The GC could not answer: {0:?}")]
+    Unanswered(CMsgClientToGcGetMatchMetaDataResponse),
     #[error(transparent)]
     Ingest(#[from] clickhouse::error::Error),
 }
@@ -225,7 +225,9 @@ async fn fetch_prioritized_match(
     Ok(())
 }
 
-/// Fetches a match's salts from the GC, failing on a rate limited response.
+/// Fetches a match's salts from the GC, failing when the GC could not answer (rate limited,
+/// busy, timed out, ...). Whatever is stored marks the match as covered for good, so only
+/// final answers may pass.
 async fn fetch_match_salts(
     http_client: &reqwest::Client,
     match_id: u64,
@@ -243,13 +245,23 @@ async fn fetch_match_salts(
         }
     };
 
-    if salts.result == Some(KEResultRateLimited as i32) {
+    if !is_final(salts.result) {
         counter!("salt_scraper.parse_salt.failure").increment(1);
-        return Err(FetchError::RateLimited(salts));
+        return Err(FetchError::Unanswered(salts));
     }
     counter!("salt_scraper.parse_salt.success").increment(1);
     debug!("Parsed salts");
     Ok((username, salts))
+}
+
+/// `Success` carries the salts. `InvalidMatch` and `InvalidPermission` are stored too: the empty
+/// row keeps the match covered, so the bots are not asked again about a match they can't read.
+fn is_final(result: Option<i32>) -> bool {
+    result.is_some_and(|r| {
+        r == EResult::KEResultSuccess as i32
+            || r == EResult::KEResultInvalidMatch as i32
+            || r == EResult::KEResultInvalidPermission as i32
+    })
 }
 
 async fn fetch_salts(
