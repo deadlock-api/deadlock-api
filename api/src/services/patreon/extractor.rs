@@ -46,7 +46,7 @@ impl FromRequestParts<AppState> for PatronSession {
         let api_key = parse_api_key(&parts.headers);
 
         if let Some(api_key) = api_key
-            && let Some(patron_id) = get_patron_id_for_api_key(&state.pg_client, api_key).await
+            && let Some(patron_id) = get_patron_id_for_api_key(&state.pg_client, api_key).await?
         {
             return Ok(PatronSession { patron_id });
         }
@@ -76,27 +76,24 @@ fn extract_token_from_auth_header(headers: &axum::http::HeaderMap) -> Option<&st
 
 /// Looks up the `patron_id` linked to an API key.
 /// Returns `None` if the API key is not found, is disabled, or has no patron linked.
-/// Results are cached for 10 minutes.
+/// Answers are cached for 10 minutes; database errors are not.
 #[cached(
     max_size = 10_000,
     ttl_secs = 600,
     convert = "{ api_key }",
-    key = "Uuid",
-    cache_none = true
+    key = "Uuid"
 )]
 pub(crate) async fn get_patron_id_for_api_key(
     pg_client: &Pool<Postgres>,
     api_key: Uuid,
-) -> Option<Uuid> {
+) -> Result<Option<Uuid>, sqlx::Error> {
     sqlx::query_scalar!(
         "SELECT patron_id FROM api_keys WHERE key = $1 AND disabled IS false AND patron_id IS NOT NULL",
         api_key
     )
     .fetch_optional(pg_client)
     .await
-    .ok()
-    .flatten()
-    .flatten()
+    .map(Option::flatten)
 }
 
 #[cfg(test)]
