@@ -22,27 +22,46 @@ const panelRowVariants = cva("grid gap-3", {
   variants: {
     /** The container width from which the panels sit side by side, two thirds and one third. */
     at: {
-      "3xl": "@3xl/panel-row:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] @3xl/panel-row:*:h-panel-aligned",
-      "5xl": "@5xl/panel-row:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] @5xl/panel-row:*:h-panel-aligned",
+      "3xl": "@3xl/panel-row:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]",
+      "5xl": "@5xl/panel-row:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]",
     },
+    /**
+     * `fixed`: side by side, every panel takes `--panel-aligned-height`, whatever its content. `fit`: the row is as
+     * tall as its tallest panel's content, up to `--panel-aligned-height`, and the others stretch to it: no empty room
+     * under both panels when neither fills the fixed height. A caller whose content changes on a pick holds the row's
+     * height (`style` min-height) so the pick does not shrink it.
+     */
+    height: { fixed: "", fit: "" },
   },
-  defaultVariants: { at: "3xl" },
+  compoundVariants: [
+    { at: "3xl", height: "fixed", className: "@3xl/panel-row:*:h-panel-aligned" },
+    { at: "5xl", height: "fixed", className: "@5xl/panel-row:*:h-panel-aligned" },
+    { at: "3xl", height: "fit", className: "@3xl/panel-row:*:max-h-panel-aligned" },
+    { at: "5xl", height: "fit", className: "@5xl/panel-row:*:max-h-panel-aligned" },
+  ],
+  defaultVariants: { at: "3xl", height: "fixed" },
 });
 
 /**
- * Panels side by side that share one fixed height (`--panel-aligned-height`), whatever their content: a search
- * that empties a list or a selection with longer details never moves the page below. Each panel scrolls its own body
- * (`Table height="scroll"`, `PanelScrollArea`). In a narrower container they stack and each grows with its content.
+ * Panels side by side that share one height: by default the fixed `--panel-aligned-height`, whatever their content,
+ * so a search that empties a list or a selection with longer details never moves the page below; with
+ * `height="fit"` the tallest panel's content, capped by it. Each panel scrolls its own body (`Table height="scroll"`,
+ * `PanelScrollArea`). In a narrower container they stack and each grows with its content.
  */
 export function PanelRow({
   at = "3xl",
+  height = "fixed",
   className,
+  style,
   children,
   ...props
 }: React.ComponentProps<"div"> & VariantProps<typeof panelRowVariants>) {
   return (
-    <div data-slot="panel-row" className="@container/panel-row" {...props}>
-      <div className={cn(panelRowVariants({ at }), className)}>{children}</div>
+    <div data-slot="panel-row" data-height={height} className="@container/panel-row" {...props}>
+      {/* `className` and `style` reach the grid of the panels: a held min-height has to be the grid's. */}
+      <div className={cn(panelRowVariants({ at, height }), className)} style={style}>
+        {children}
+      </div>
     </div>
   );
 }

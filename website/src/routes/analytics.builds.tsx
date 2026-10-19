@@ -90,8 +90,9 @@ export const Route = createFileRoute("/analytics/builds")({
         }),
       ),
     );
-    // The build names are the page's content: the server waits for them so its HTML carries them.
-    if (stats && typeof window === "undefined") {
+    // The build names are the page's content: the server waits for them so its HTML carries them, and a navigation
+    // in the browser too, so the build panel shows whole instead of growing its row under a skeleton.
+    if (stats) {
       await Promise.all(
         buildMetaBatches(stats.map((row) => row.hero_build_id)).map((batch) =>
           prefetchCached(queryClient, heroBuildMetaQueryOptions(deps.heroId, batch)),

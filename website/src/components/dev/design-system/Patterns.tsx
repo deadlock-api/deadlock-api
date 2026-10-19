@@ -685,7 +685,7 @@ export function Patterns() {
       <Specimen
         name="PanelRow"
         source="patterns/panel/Panel"
-        note='Panels side by side, two thirds and one third from the container width at (3xl, 5xl), sharing one fixed height (--panel-aligned-height), so a search that shortens one never moves the page below. Each scrolls its own body: Table height="scroll", or PanelScrollArea, whose cut edge fades (scroll-fade-y). In a narrower container they stack and grow with their content.'
+        note='Panels side by side, two thirds and one third from the container width at (3xl, 5xl), sharing one fixed height (--panel-aligned-height), so a search that shortens one never moves the page below. height fit (the second row) makes the row as tall as its taller panel, up to that height, so a short list leaves no empty room under both; its caller holds the row height on a pick (style min-height). Each scrolls its own body: Table height="scroll", or PanelScrollArea, whose cut edge fades (scroll-fade-y). In a narrower container they stack and grow with their content.'
       >
         <PanelRow at="3xl">
           <Panel className="flex flex-col">
@@ -712,6 +712,35 @@ export function Patterns() {
             <PanelScrollArea>
               <PanelBody size="sm">
                 <SkeletonRows rows={30} />
+              </PanelBody>
+            </PanelScrollArea>
+          </Panel>
+        </PanelRow>
+        <PanelRow at="3xl" height="fit">
+          <Panel className="flex flex-col">
+            <PanelHeader title="Builds" size="sm" />
+            <Table density="dense" height="scroll">
+              <TableHeader position="sticky">
+                <TableRow>
+                  <TableHead>Build</TableHead>
+                  <TableHead className="text-end">Matches</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {Array.from({ length: 4 }, (_, index) => (
+                  <TableRow key={index}>
+                    <TableCell>Build {index + 1}</TableCell>
+                    <TableCell className="text-end tabular-nums">{(4 - index) * 12}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </Panel>
+          <Panel className="flex flex-col">
+            <PanelHeader title="Details" size="sm" />
+            <PanelScrollArea>
+              <PanelBody size="sm">
+                <SkeletonRows rows={6} />
               </PanelBody>
             </PanelScrollArea>
           </Panel>

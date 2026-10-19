@@ -1,6 +1,6 @@
 import { useQueries, useQuery } from "@tanstack/react-query";
 import { SearchX } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 
 import { BuildDetailPanel } from "~/components/features/builds/BuildDetailPanel";
 import { BuildInMatches } from "~/components/features/builds/BuildInMatches";
@@ -81,6 +81,13 @@ export function heroBuildStatsRequest({
   };
 }
 
+/** The content requests of an answer's builds, in the loader's batches. */
+function metaQueries(heroId: number, stats: readonly { hero_build_id: number }[] | undefined) {
+  return buildMetaBatches(stats?.map((row) => row.hero_build_id) ?? []).map((batch) =>
+    heroBuildMetaQueryOptions(heroId, batch),
+  );
+}
+
 // Module level, so useQueries keeps the combined value while no batch changes.
 function combineMeta(results: { data?: Record<number, BuildMeta | null>; isPending: boolean }[]) {
   const builds = new Map<number, BuildMeta | null>();
@@ -111,7 +118,13 @@ export function BuildsExplorer(props: BuildsExplorerProps) {
   const request = heroBuildStatsRequest({ ...props, minUnixTimestamp, maxUnixTimestamp });
   const statsQuery = useQuery(heroBuildStatsQueryOptions(request));
   const key = JSON.stringify(request);
-  const answered = statsQuery.data !== undefined || statsQuery.isError;
+  // The builds' names and contents too: the build panel's height follows them, so the last answer stays until the new
+  // one can show whole rather than grow under a skeleton.
+  const metaPending = useQueries({
+    queries: metaQueries(props.heroId, statsQuery.data),
+    combine: (results) => results.some((result) => result.isPending),
+  });
+  const answered = (statsQuery.data !== undefined && !metaPending) || statsQuery.isError;
   const [settled, setSettled] = useState<{ key: string; filters: ExplorerFilters } | null>(null);
   if (answered && settled?.key !== key) {
     const { heroId, minRankId, maxRankId, minDate, maxDate, minMatches, matchMode } = props;
@@ -178,10 +191,9 @@ function BuildsExplorerView({
     enabled: stats !== undefined,
   });
 
+  // Asked for every build of the answer, not only those past the minimum players: the same batches the loader warms.
   const meta = useQueries({
-    queries: buildMetaBatches(stats?.map((row) => row.hero_build_id) ?? []).map((batch) =>
-      heroBuildMetaQueryOptions(heroId, batch),
-    ),
+    queries: metaQueries(heroId, statsQuery.data),
     combine: combineMeta,
   });
 
@@ -245,6 +257,31 @@ function BuildsExplorerView({
   const [hoveredId, setHoveredId] = useState<number | null>(null);
   // The item under the pointer in the items panel: the chart fades the builds that do not list it.
   const [hoveredItemId, setHoveredItemId] = useState<number | null>(null);
+  // The list and the build sit in a row as tall as the taller of them: a pick holds the row's height until the filters
+  // change, so a build with shorter details never pulls the page below up. Read in the handler, not while rendering.
+  const answerKey = JSON.stringify([
+    heroId,
+    minRankId,
+    maxRankId,
+    minUnixTimestamp,
+    maxUnixTimestamp,
+    minMatches,
+    minPlayers,
+    matchMode,
+  ]);
+  const rowRef = useRef<HTMLDivElement>(null);
+  const [heldRow, setHeldRow] = useState<{ key: string; height: number } | null>(null);
+  const pickBuild = (id: number) => {
+    // Side by side only: stacked, the build sits under the list and a held height would stretch the list instead.
+    const [list, build] = rowRef.current?.firstElementChild?.children ?? [];
+    const sideBySide = list && build && build.getBoundingClientRect().top === list.getBoundingClientRect().top;
+    const height = sideBySide ? rowRef.current?.getBoundingClientRect().height : undefined;
+    if (height !== undefined) {
+      const held = heldRow?.key === answerKey ? heldRow.height : 0;
+      setHeldRow({ key: answerKey, height: Math.max(height, held) });
+    }
+    onBuildIdChange(id);
+  };
 
   if (statsQuery.isPending) return <LoadingState />;
   if (statsQuery.isError) {
@@ -305,7 +342,13 @@ function BuildsExplorerView({
           </AlertDescription>
         </Alert>
       )}
-      <PanelRow at="3xl">
+      {/* As tall as the taller of the two, up to a cap: no empty room under both when the builds are few. */}
+      <PanelRow
+        ref={rowRef}
+        at="3xl"
+        height="fit"
+        style={heldRow?.key === answerKey ? { minHeight: heldRow.height } : undefined}
+      >
         <BuildTable
           rows={rows}
           trends={trends}
@@ -319,12 +362,12 @@ function BuildsExplorerView({
           metaPending={meta.pending}
           profilesPending={profiles.pending}
           selectedId={selected.hero_build_id}
-          onBuildIdChange={onBuildIdChange}
+          onBuildIdChange={pickBuild}
           onBuildHover={setHoveredId}
           highlightedId={hoveredId}
-          // Stacked, the list keeps one height too: it scrolls inside it rather than pushing the build below away,
-          // and a search that empties it moves nothing.
-          className="h-list-pane"
+          // Stacked, the list grows with its builds up to one height and scrolls inside it rather than pushing the
+          // build below away; a search holds its height, so emptying it moves nothing.
+          className="max-h-list-pane"
         />
         <BuildDetailPanel
           row={selected}
@@ -336,7 +379,7 @@ function BuildsExplorerView({
               row.meta != null &&
               row.meta.authorId === selected.meta?.authorId,
           )}
-          onBuildIdChange={onBuildIdChange}
+          onBuildIdChange={pickBuild}
           purchaseFilters={purchaseFilters}
           active={settled}
           heroId={heroId}
@@ -363,7 +406,7 @@ function BuildsExplorerView({
             selectedId={selected.hero_build_id}
             highlightedId={hoveredId}
             previewItemId={hoveredItemId}
-            onBuildIdChange={onBuildIdChange}
+            onBuildIdChange={pickBuild}
             onBuildHover={setHoveredId}
             performance={performance}
           />

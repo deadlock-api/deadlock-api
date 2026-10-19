@@ -7,6 +7,7 @@ import {
   useQueryState,
   useQueryStates,
 } from "nuqs";
+import { useRef, useState } from "react";
 
 import { ItemSelector } from "~/components/domain/selectors/ItemSelector";
 import { BuildSummaryStats } from "~/components/features/builds/BuildSummaryStats";
@@ -198,7 +199,16 @@ export function BuildTable({
       const matching = [...next].filter(([, s]) => s === state).map(([id]) => id);
       return matching.length > 0 ? matching : null;
     };
+    holdHeight(next.size > 0 || query.trim() !== "");
     void setItemParams({ with_items: ids("included"), without_items: ids("excluded") });
+  };
+  // A search or an item filter keeps the list as tall as it was without them: the list's height sets its row's, and a
+  // narrowing that shrank it would move the page below with every key. Read once, in the handler that starts it.
+  const panelRef = useRef<HTMLDivElement>(null);
+  const [heldHeight, setHeldHeight] = useState<number | null>(null);
+  const holdHeight = (narrowing: boolean) => {
+    if (!narrowing) setHeldHeight(null);
+    else if (heldHeight === null && panelRef.current) setHeldHeight(panelRef.current.getBoundingClientRect().height);
   };
   const [view, setView] = useQueryState("columns", parseView.withOptions({ history: "replace" }));
   const metricColumns = view === "overview" ? [] : VIEW_METRICS[view];
@@ -248,14 +258,22 @@ export function BuildTable({
   });
 
   return (
-    // The table scrolls inside the panel, so the panel keeps one height beside the build details.
-    <Panel className={cn("@container/builds flex flex-col", className)}>
+    // The table scrolls inside the panel once the list passes the row's cap; beside it the build details take its
+    // height.
+    <Panel
+      ref={panelRef}
+      className={cn("@container/builds flex flex-col", className)}
+      style={heldHeight === null ? undefined : { minHeight: heldHeight }}
+    >
       <PanelHeader title="Builds" icon={ListOrdered} size="sm">
         <BuildSummaryStats summary={summary} heroWinRate={heroWinRate} />
         <ItemSelector selection="tri-state" size="sm" value={itemStates} onValueChange={setItemStates} />
         <SearchInput
           value={query}
-          onValueChange={setQuery}
+          onValueChange={(next) => {
+            holdHeight(next.trim() !== "" || filteringItems);
+            void setQuery(next);
+          }}
           placeholder="Search builds…"
           aria-label="Filter builds by name, author or ID"
           // Names, handles and IDs, not prose: no autocorrect or spellcheck.

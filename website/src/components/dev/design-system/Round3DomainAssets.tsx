@@ -239,7 +239,7 @@ export function Round3DomainAssets() {
       <Specimen
         name="AbilityOrderGrid"
         source="domain/assets/AbilityOrderGrid"
-        note="A skill order: a row per ability in slot order, a column per upgrade, the upgrade's number in its slot color where the ability was taken. pickRate on the steps adds the row of how many players took each step, from @lg. Below @md the upgrades fold into bands of eight, so a cell never gets narrower than its number. Screen readers get a numbered list of the upgrades instead of the grid. With onValueChange it is an editor: every cell is a toggle button labelled with its upgrade and ability (abilityNames); pressing a cell of an ability at maxPerAbility (4) points moves its last point there, the left upgrade taking the pressed one's ability."
+        note="A skill order: a row per ability in slot order, a column per upgrade, the upgrade's number in its slot color where the ability was taken. pickRate on the steps adds the row of how many players took each step, from @lg. Below @md the upgrades fold into bands of eight, so a cell never gets narrower than its number. loading draws the empty grid at its final size (steps.length columns, four rows of skeleton icons) while the abilities load. Screen readers get a numbered list of the upgrades instead of the grid. With onValueChange it is an editor: every cell is a toggle button labelled with its upgrade and ability (abilityNames); pressing a cell of an ability at maxPerAbility (4) points moves its last point there, the left upgrade taking the pressed one's ability."
       >
         <AbilityOrderGrid
           abilityIds={SAMPLE_ABILITY_IDS}
@@ -256,6 +256,14 @@ export function Round3DomainAssets() {
             size="sm"
             abilityIds={SAMPLE_ABILITY_IDS}
             steps={[0, 1, 0, 2, 0, 3, 1, 1, 2, 2, 3, 0].map((slot) => ({ abilityId: SAMPLE_ABILITY_IDS[slot] }))}
+          />
+        </Variants>
+        <Variants label="loading: the hero's abilities are still loading, so the grid waits at its final size">
+          <AbilityOrderGrid
+            size="sm"
+            loading
+            abilityIds={[]}
+            steps={Array.from({ length: 16 }, () => ({ abilityId: 0 }))}
           />
         </Variants>
         <Variants label="a container under @md (a phone's panel): the upgrades fold into bands of eight">

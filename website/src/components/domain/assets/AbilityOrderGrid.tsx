@@ -1,6 +1,7 @@
 import { AbilityImage } from "~/components/domain/assets/AbilityImage";
 import { AbilityName } from "~/components/domain/assets/AbilityName";
 import { FOCUS_RING } from "~/components/ui/recipes";
+import { Skeleton } from "~/components/ui/skeleton";
 import { cn } from "~/lib/utils";
 
 /** The colors of the four ability slots, the same in every skill-order view. */
@@ -90,15 +91,27 @@ function ReadOnlyCell({ taken, slot, level }: { taken: boolean; slot: number; le
   return <div className={cellClassName(taken, slot, false)}>{taken ? level : null}</div>;
 }
 
-/** A row's ability: its icon, and its name where the grid is wide (@3xl). */
-function AbilityRowHead({ abilityId }: { abilityId: number }) {
+/** A row's ability: its icon, and its name where the grid is wide (@3xl); a skeleton of both while it loads. */
+function AbilityRowHead({ abilityId, loading = false }: { abilityId: number; loading?: boolean }) {
   return (
     <div className="flex min-w-0 items-center gap-2 pe-1 @3xl:pe-3">
-      <AbilityImage abilityId={abilityId} className="size-6 shrink-0 @md:size-8" />
-      <AbilityName abilityId={abilityId} className="hidden w-32 type-caption text-muted-foreground @3xl:block" />
+      {loading ? (
+        <>
+          <Skeleton className="size-6 shrink-0 @md:size-8" />
+          <Skeleton className="hidden h-4 w-32 @3xl:block" />
+        </>
+      ) : (
+        <>
+          <AbilityImage abilityId={abilityId} className="size-6 shrink-0 @md:size-8" />
+          <AbilityName abilityId={abilityId} className="hidden w-32 type-caption text-muted-foreground @3xl:block" />
+        </>
+      )}
     </div>
   );
 }
+
+/** The rows a loading grid draws: the four ability slots of every hero. */
+const LOADING_ROWS = [-1, -2, -3, -4];
 
 export interface AbilityOrderStep {
   abilityId: number;
@@ -125,11 +138,17 @@ export function AbilityOrderGrid({
   abilityNames,
   maxPerAbility = 4,
   size = "default",
+  loading = false,
   className,
   ...props
 }: Omit<React.ComponentProps<"div">, "children"> & {
   /** `sm`: cells up to 32px rather than 40px, for a grid in a dense panel. */
   size?: "sm" | "default";
+  /**
+   * The abilities are still loading: the grid is drawn at its final size, `steps.length` columns of four empty rows
+   * with skeleton icons, so the order fills it in place instead of growing the page. Read-only grids only.
+   */
+  loading?: boolean;
   /** Makes the grid an editor of the order: called with the order after a cell press, ability ids by upgrade. */
   /** The abilities' names in slot order, for the editor's cell labels ("Upgrade 3: Fixation"). */
   abilityNames?: readonly string[];
@@ -144,15 +163,17 @@ export function AbilityOrderGrid({
 }) {
   const hasRates = steps.some((step) => step.pickRate !== undefined);
   const editable = onValueChange !== undefined;
+  const rows = loading ? LOADING_ROWS : abilityIds;
   return (
     <div
       data-slot="ability-order-grid"
       data-size={size}
+      aria-busy={loading || undefined}
       // A size container takes no width from its content: it fills its parent, also as a flex item.
       className={cn("@container w-full min-w-0", editable && "overflow-x-auto pb-1", className)}
       {...props}
     >
-      <ol className={editable ? "hidden" : "sr-only"}>
+      <ol className={editable || loading ? "hidden" : "sr-only"}>
         {steps.map((step, index) => (
           <li key={index}>
             <AbilityName abilityId={step.abilityId} />
@@ -167,9 +188,9 @@ export function AbilityOrderGrid({
           // An editor's cells keep a 24px target (Law 18) and the grid scrolls sideways where they do not fit.
           style={{ gridTemplateColumns: gridColumns(steps.length, "1.5rem", size) }}
         >
-          {abilityIds.map((abilityId, slot) => (
+          {rows.map((abilityId, slot) => (
             <div key={abilityId} className="contents">
-              <AbilityRowHead abilityId={abilityId} />
+              <AbilityRowHead abilityId={abilityId} loading={loading} />
               {steps.map((step, index) => {
                 const taken = step.abilityId === abilityId;
                 return (
@@ -201,9 +222,9 @@ export function AbilityOrderGrid({
             className={cn(GRID, "hidden @md:grid")}
             style={{ gridTemplateColumns: gridColumns(steps.length, "0", size) }}
           >
-            {abilityIds.map((abilityId, slot) => (
+            {rows.map((abilityId, slot) => (
               <div key={abilityId} className="contents">
-                <AbilityRowHead abilityId={abilityId} />
+                <AbilityRowHead abilityId={abilityId} loading={loading} />
                 {steps.map((step, index) => (
                   <ReadOnlyCell key={index} taken={step.abilityId === abilityId} slot={slot} level={index + 1} />
                 ))}
@@ -228,9 +249,9 @@ export function AbilityOrderGrid({
           <div aria-hidden="true" className="flex flex-col gap-2 @md:hidden">
             {bands(steps.length).map((from) => (
               <div key={from} className={GRID} style={{ gridTemplateColumns: gridColumns(BAND_STEPS, "0", size) }}>
-                {abilityIds.map((abilityId, slot) => (
+                {rows.map((abilityId, slot) => (
                   <div key={abilityId} className="contents">
-                    <AbilityRowHead abilityId={abilityId} />
+                    <AbilityRowHead abilityId={abilityId} loading={loading} />
                     {Array.from({ length: BAND_STEPS }, (_, index) => {
                       const step = steps[from + index];
                       // A short last band keeps its row's columns: the steps it lacks are empty slots.

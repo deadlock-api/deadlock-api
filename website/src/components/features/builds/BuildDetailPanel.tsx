@@ -158,14 +158,19 @@ export function BuildDetailPanel({
                   </section>
                 ))}
             </div>
-            {skillOrder.length > 0 && slotAbilities.length > 0 && (
+            {/* There from the first paint where the build has an order: while the hero's abilities load, the grid
+                waits at its final size, so the panel (and the row it sets the height of) does not grow. */}
+            {(slotAbilities.length > 0 ? skillOrder.length > 0 : meta.abilityOrder.length > 0) && (
               <section className="flex flex-col">
                 <PanelSection variant="label" title="Skill order" />
                 <div className="px-3 py-1.5">
                   <AbilityOrderGrid
                     size="sm"
+                    loading={slotAbilities.length === 0}
                     abilityIds={slotAbilities}
-                    steps={skillOrder.map((abilityId) => ({ abilityId }))}
+                    steps={(slotAbilities.length > 0 ? skillOrder : meta.abilityOrder).map((abilityId) => ({
+                      abilityId,
+                    }))}
                   />
                 </div>
               </section>

@@ -188,7 +188,8 @@
   /* A list beside its details that keeps one height, however long the details are (`h-list-pane`). */
   --list-pane-height: 80vh;
   /* Panels side by side in a `PanelRow` share this one height, so a search or a filter that changes one panel's
-     content never moves the page below the row. Stacked, they grow with their content instead. */
+     content never moves the page below the row; with `height="fit"` it is the most they grow to. Stacked, they grow
+     with their content instead. */
   --panel-aligned-height: clamp(32rem, 70vh, 48rem);
 
   /* Overflow cue: how far the fade at the edge of a scrolling list or table reaches (`scroll-fade-*`). */
