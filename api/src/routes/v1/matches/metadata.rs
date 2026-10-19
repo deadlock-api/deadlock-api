@@ -102,6 +102,22 @@ static METADATA_FETCH_FAILURES: LazyLock<Mutex<TtlCache<u64, ()>>> = LazyLock::n
     )
 });
 
+/// Negative cache of match IDs whose metadata Valve's replay CDN answered with 404. Unlike
+/// transient failures, these rarely resolve quickly, so they are remembered for longer.
+static METADATA_NOT_FOUND: LazyLock<Mutex<TtlCache<u64, ()>>> = LazyLock::new(|| {
+    Mutex::new(
+        TtlCache::<u64, ()>::builder()
+            .ttl(Duration::from_hours(1))
+            .initial_capacity(100_000)
+            .build()
+            .expect("ttl is set"),
+    )
+});
+
+fn metadata_not_found() -> APIError {
+    APIError::status_msg(StatusCode::NOT_FOUND, "Match metadata not found.")
+}
+
 async fn min_cache_match_id(ch_client: &clickhouse::Client) -> &u64 {
     MIN_MATCH_ID_IN_CACHE
         .get_or_init(|| async { ch_client
@@ -168,6 +184,14 @@ async fn fetch_match_metadata_raw(
     is_custom: bool,
     disable_steam: bool,
 ) -> APIResult<Bytes> {
+    if METADATA_NOT_FOUND
+        .lock()
+        .await
+        .cache_get(&match_id)
+        .is_some()
+    {
+        return Err(metadata_not_found());
+    }
     if METADATA_FETCH_FAILURES
         .lock()
         .await
@@ -224,6 +248,10 @@ async fn fetch_match_metadata_raw(
         .await
     {
         Ok(metadata) => Ok(metadata.into()),
+        Err(e) if e.status() == Some(StatusCode::NOT_FOUND) => {
+            METADATA_NOT_FOUND.lock().await.cache_set(match_id, ());
+            Err(metadata_not_found())
+        }
         Err(e) => {
             METADATA_FETCH_FAILURES.lock().await.cache_set(match_id, ());
             Err(e.into())
