@@ -18,6 +18,7 @@ use futures::{Stream, StreamExt};
 use reqwest::StatusCode;
 use serde::Deserialize;
 use tokio::sync::mpsc::{UnboundedReceiver, unbounded_channel};
+use tokio::time::Instant;
 use utoipa::IntoParams;
 
 use super::demofusion;
@@ -27,6 +28,10 @@ use crate::routes::v1::matches::live_url::resolve_broadcast_url;
 use crate::services::rate_limiter::Quota;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::utils::broadcast_url::validate_broadcast_url;
+
+/// How long one live query may stream, from the request on. Long enough for the longest match plus
+/// the broadcast delay; past it the query is cut off so a stuck or runaway one cannot run forever.
+const LIVE_QUERY_TIMEOUT: Duration = Duration::from_hours(2);
 
 #[derive(Deserialize, IntoParams)]
 pub(super) struct LiveQueryParams {
@@ -137,14 +142,15 @@ pub(super) async fn live_query(
 /// event followed by the terminal `end`. Concurrently, any progress messages `query_live` reports
 /// while retrying the initial connection are forwarded as `status` events.
 fn live_sse(broadcast_url: String, query: String) -> impl Stream<Item = Result<Event, Infallible>> {
+    let deadline = Instant::now() + LIVE_QUERY_TIMEOUT;
     let (status_tx, status_rx) = unbounded_channel::<String>();
     let status_stream = receiver_stream(status_rx).map(|msg| Ok(status_event(&msg)));
 
     let result_stream = futures::stream::once(async move {
         demofusion::query_live(&broadcast_url, &query, status_tx).await
     })
-    .flat_map(|res| match res {
-        Ok(rows) => sse_rows(rows).left_stream(),
+    .flat_map(move |res| match res {
+        Ok(rows) => sse_rows(rows, deadline).left_stream(),
         Err(e) => {
             // Reuse the same status classification as the non-live `/demo/query` path (e.g. a
             // relay fetch failure is a 502) instead of leaking whatever raw status Valve's relay
@@ -170,19 +176,35 @@ fn receiver_stream<T>(rx: UnboundedReceiver<T>) -> impl Stream<Item = T> {
 
 /// Adapt a result-batch stream into an SSE row stream: one `message` event per row, a terminal
 /// `end` event, and an inline `error` event if a batch fails to decode or serialize mid-stream.
-fn sse_rows(stream: SendableRecordBatchStream) -> impl Stream<Item = Result<Event, Infallible>> {
-    stream
-        .flat_map(|item| {
-            let events = match item {
-                Ok(batch) => batch_to_row_events(&batch),
-                Err(e) => vec![error_event(
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    &e.to_string(),
-                )],
-            };
-            futures::stream::iter(events.into_iter().map(Ok))
-        })
-        .chain(futures::stream::once(async { Ok(end_event()) }))
+/// At `deadline` the query is dropped (stopping the broadcast parse) and a timeout `error` sent.
+fn sse_rows(
+    stream: SendableRecordBatchStream,
+    deadline: Instant,
+) -> impl Stream<Item = Result<Event, Infallible>> {
+    futures::stream::unfold(Some(stream), move |stream| async move {
+        let mut stream = stream?;
+        let events = match tokio::time::timeout_at(deadline, stream.next()).await {
+            Ok(Some(Ok(batch))) => batch_to_row_events(&batch),
+            Ok(Some(Err(e))) => vec![error_event(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                &e.to_string(),
+            )],
+            Ok(None) => return None,
+            Err(_) => {
+                let message = format!(
+                    "Live query timed out after {} min",
+                    LIVE_QUERY_TIMEOUT.as_secs() / 60
+                );
+                return Some((
+                    vec![error_event(StatusCode::REQUEST_TIMEOUT, &message)],
+                    None,
+                ));
+            }
+        };
+        Some((events, Some(stream)))
+    })
+    .flat_map(|events| futures::stream::iter(events.into_iter().map(Ok)))
+    .chain(futures::stream::once(async { Ok(end_event()) }))
 }
 
 fn end_event() -> Event {
@@ -216,4 +238,29 @@ fn error_event(status: StatusCode, msg: &str) -> Event {
     Event::default()
         .event("error")
         .data(serde_json::json!({ "status": status.as_u16(), "error": msg }).to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use std::sync::Arc;
+
+    use datafusion::arrow::datatypes::Schema;
+    use datafusion::physical_plan::stream::RecordBatchStreamAdapter;
+
+    use super::*;
+
+    #[tokio::test]
+    async fn sse_rows_ends_with_a_timeout_error_at_the_deadline() {
+        let silent: SendableRecordBatchStream = Box::pin(RecordBatchStreamAdapter::new(
+            Arc::new(Schema::empty()),
+            futures::stream::pending(),
+        ));
+        let events: Vec<String> = sse_rows(silent, Instant::now())
+            .map(|event| format!("{:?}", event.unwrap()))
+            .collect()
+            .await;
+        assert_eq!(events.len(), 2, "{events:?}");
+        assert!(events[0].contains("timed out"), "{events:?}");
+        assert!(events[1].contains("end"), "{events:?}");
+    }
 }

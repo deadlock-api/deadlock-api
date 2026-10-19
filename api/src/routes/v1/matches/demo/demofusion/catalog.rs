@@ -9,11 +9,12 @@ use std::sync::Arc;
 use bytes::Bytes;
 use datafusion::arrow::datatypes::SchemaRef;
 use datafusion::datasource::MemTable;
-use datafusion::prelude::SessionContext;
+use datafusion::prelude::SessionConfig;
 
 use super::error::Result;
 use super::events::{EventType, event_schema};
 use super::query::read_only_sql;
+use super::session::session_context;
 use super::table_extractor::extract_table_names;
 use super::visitor::{SyncDemoStream, discover_all_schemas_from_demo};
 
@@ -93,7 +94,7 @@ pub(crate) fn schema(demo: Bytes) -> Result<Vec<TableSchema>> {
 pub(crate) async fn validate(query: &str, tables: &[TableSchema]) -> Result<()> {
     extract_table_names(query)?;
 
-    let ctx = SessionContext::new();
+    let ctx = session_context(SessionConfig::new());
     for table in tables {
         let mem = MemTable::try_new(table.schema.clone(), vec![vec![]])?;
         ctx.register_table(&*table.name, Arc::new(mem))?;
