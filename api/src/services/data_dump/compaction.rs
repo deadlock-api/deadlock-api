@@ -15,6 +15,9 @@ pub(crate) struct Params {
     /// Rebuild once pending rows exceed `max(base.rows / threshold_divisor, threshold_min)`.
     pub(crate) threshold_divisor: u64,
     pub(crate) threshold_min: u64,
+    /// The newest this many partitions never rebuild for backlog: they keep taking rows, and
+    /// the hourly deltas already cover them. They still rebuild when missing, drifted or old.
+    pub(crate) skip_pending_newest: usize,
     /// Rolling refresh: rebuild bases older than this (seconds of watermark time).
     pub(crate) max_base_age_secs: i64,
 }
@@ -67,17 +70,24 @@ pub(crate) fn plan_rebuilds(
         }
     }
     // Largest backlog first so hot partitions never starve behind cold ones.
-    let mut by_pending: Vec<(u64, u64, u64)> = actual
-        .iter()
-        .filter_map(|(&p, &rows)| {
+    let newest: Vec<u64> = actual
+        .keys()
+        .rev()
+        .take(params.skip_pending_newest)
+        .copied()
+        .collect();
+    let mut by_pending: Vec<(u64, u64)> = actual
+        .keys()
+        .filter(|p| !newest.contains(p))
+        .filter_map(|&p| {
             let base = table.base(generation, p)?;
             let pending = pending_rows(table, generation, p);
             let threshold = (base.rows / params.threshold_divisor).max(params.threshold_min);
-            (pending >= threshold).then_some((pending, p, rows))
+            (pending >= threshold).then_some((pending, p))
         })
         .collect();
     by_pending.sort_by_key(|a| core::cmp::Reverse(a.0));
-    for (_, p, _) in by_pending {
+    for (_, p) in by_pending {
         push(p, Reason::Pending);
     }
     // Safety net: ClickHouse holds noticeably more rows for the partition than the lake
@@ -170,6 +180,7 @@ mod tests {
             budget: 2,
             threshold_divisor: 100,
             threshold_min: 20_000,
+            skip_pending_newest: 0,
             max_base_age_secs: 30 * 86_400,
         }
     }
@@ -236,6 +247,37 @@ mod tests {
             Rebuild {
                 partition: 1,
                 reason: Reason::Pending
+            }
+        );
+    }
+
+    #[test]
+    fn newest_partitions_skip_pending_but_not_drift() {
+        let t = table(vec![
+            file(FileKind::Base, Some(1), 0, 100, 1_000),
+            file(FileKind::Delta, Some(1), 100, 200, 50_000),
+            file(FileKind::Base, Some(2), 0, 100, 1_000),
+            file(FileKind::Delta, Some(2), 100, 200, 50_000),
+        ]);
+        let actual = BTreeMap::from([(1, 51_000), (2, 51_000)]);
+        let params = Params {
+            skip_pending_newest: 1,
+            ..params()
+        };
+        assert_eq!(
+            plan_rebuilds(&t, 1, &actual, 200, &params),
+            vec![Rebuild {
+                partition: 1,
+                reason: Reason::Pending
+            }]
+        );
+
+        let drifted = BTreeMap::from([(1, 51_000), (2, 100_000)]);
+        assert_eq!(
+            plan_rebuilds(&t, 1, &drifted, 200, &params)[1],
+            Rebuild {
+                partition: 2,
+                reason: Reason::Drift
             }
         );
     }

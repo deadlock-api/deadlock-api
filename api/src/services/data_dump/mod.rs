@@ -494,6 +494,7 @@ impl DataDump {
             budget: self.config.rebuild_per_tick,
             threshold_divisor: 100,
             threshold_min: 20_000,
+            skip_pending_newest: 3,
             max_base_age_secs: self.config.max_base_age_secs,
         };
         let plan = compaction::plan_rebuilds(state, target_gen, &actual, watermark_hi, &params);
