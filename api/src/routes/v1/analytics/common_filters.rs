@@ -235,12 +235,15 @@ pub(super) fn account_match_prefilter(
     if !has_account_filter {
         return None;
     }
+    // Only the filters on columns `player_match_stats` has.
     let stats_filters = PlayerFilters {
-        include_item_ids: None,
-        exclude_item_ids: None,
-        ability_order_prefix: None,
-        ability_unlock_order_prefix: None,
-        ..player_filters
+        account_id: player_filters.account_id,
+        account_ids: player_filters.account_ids,
+        hero_id: player_filters.hero_id,
+        hero_ids: player_filters.hero_ids,
+        min_networth: player_filters.min_networth,
+        max_networth: player_filters.max_networth,
+        ..Default::default()
     }
     .build();
     Some(format!(
@@ -475,6 +478,19 @@ pub(super) async fn filter_protected_accounts(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn account_prefilter_has_no_hero_build_filter() {
+        // `player_match_stats` has no `hero_build_id` column, so the filter would fail the query.
+        let filters = PlayerFilters {
+            account_id: Some(1),
+            hero_build_id: Some(2),
+            ..Default::default()
+        };
+        let prefilter =
+            account_match_prefilter(filters, &MatchInfoFilters::default(), "true", "true").unwrap();
+        assert!(!prefilter.contains("hero_build_id"), "{prefilter}");
+    }
 
     #[test]
     fn test_round_timestamps() {
