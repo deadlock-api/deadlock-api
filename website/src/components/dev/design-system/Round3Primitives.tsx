@@ -512,7 +512,7 @@ export function Round3Primitives() {
       <Specimen
         name="InlineStat"
         source="ui/inline-stat"
-        note='A value and its unit on one line of text; the value is in ink. size="lg" is the lead number of a panel with its caption on the same baseline; tone colors the value by its verdict, beside a sign or a word.'
+        note='A value and its unit on one line of text; the value is in ink. size="lg" is the lead number of a panel with its caption on the same baseline; tone colors the value by its verdict, beside a sign or a word. reserve keeps the room of its widest value while it loads or changes, so a line that wraps by its width does not reflow.'
       >
         <Variants className="gap-4 text-sm">
           <InlineStat value="412" label="matches" />
@@ -523,6 +523,10 @@ export function Round3Primitives() {
           <InlineStat size="lg" value="1,204" label="matches played" />
           <InlineStat size="lg" tone="positive" value="57%" label="12W / 9L" />
           <InlineStat size="lg" value={null} label="KDA · latest 20 selected matches" />
+        </Variants>
+        <Variants label='reserve="00.0%": loading, then loaded, at one width' className="gap-6 text-sm">
+          <InlineStat value={null} label="hero win rate" reserve="00.0%" />
+          <InlineStat value="53.0%" label="hero win rate" reserve="00.0%" />
         </Variants>
       </Specimen>
 

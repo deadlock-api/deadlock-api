@@ -15,12 +15,18 @@ export function InlineStat({
   label,
   size = "default",
   tone,
+  reserve,
   className,
   ...props
 }: Omit<React.ComponentProps<"span">, "children"> & {
   value: React.ReactNode;
   label: React.ReactNode;
   size?: keyof typeof INLINE_STAT_SIZE;
+  /**
+   * The widest value it shows ("00.0%"): its room is kept, so a value that loads or changes does not reflow the line
+   * around it (a toolbar that wraps by the width of its stats).
+   */
+  reserve?: string;
   /** Colors the value by its verdict; keep a sign or a word beside it, never the color alone. */
   tone?: Tone;
 }) {
@@ -40,7 +46,17 @@ export function InlineStat({
           tone && TONE_TEXT[tone],
         )}
       >
-        {value ?? <NoValue />}
+        {reserve === undefined ? (
+          (value ?? <NoValue />)
+        ) : (
+          // The reserved width under the value, invisible and out of the accessibility tree.
+          <span className="inline-grid">
+            <span aria-hidden="true" className="invisible col-start-1 row-start-1">
+              {reserve}
+            </span>
+            <span className="col-start-1 row-start-1">{value ?? <NoValue />}</span>
+          </span>
+        )}
       </span>{" "}
       <span className={sizes.label}>{label}</span>
     </span>
