@@ -370,13 +370,28 @@ pub(super) const TIMESTAMP_ALIGNMENT_S: i64 = 3600;
 
 /// Widens a time range to whole hours for cache-friendliness: clients mostly send "now minus
 /// 30 days" to the second, which would otherwise make every query string distinct. The minimum is
-/// floored and the maximum ceiled; an already aligned bound stays where it is.
+/// floored and the maximum ceiled; an already aligned bound stays where it is. A maximum at or
+/// after now is dropped: no match starts in the future, so it filters nothing, and requests
+/// sending one share a cache key with those sending none.
 pub(super) fn round_timestamps(
     min_unix_timestamp: &mut Option<i64>,
     max_unix_timestamp: &mut Option<i64>,
 ) {
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_or(0, |d| d.as_secs().cast_signed());
+    round_timestamps_at(min_unix_timestamp, max_unix_timestamp, now);
+}
+
+fn round_timestamps_at(
+    min_unix_timestamp: &mut Option<i64>,
+    max_unix_timestamp: &mut Option<i64>,
+    now: i64,
+) {
     *min_unix_timestamp = min_unix_timestamp.map(floor_to_hour);
-    *max_unix_timestamp = max_unix_timestamp.map(ceil_to_hour);
+    *max_unix_timestamp = max_unix_timestamp
+        .map(ceil_to_hour)
+        .filter(|&max| max < now);
 }
 
 /// [`round_timestamps`] for endpoints reading demo-derived data, which does not exist before
@@ -479,7 +494,7 @@ mod tests {
         // Extremes neither overflow nor round the wrong way.
         let mut min = Some(-1_i64);
         let mut max = Some(i64::MAX);
-        round_timestamps(&mut min, &mut max);
+        round_timestamps_at(&mut min, &mut max, i64::MAX);
         assert_eq!(min, Some(-3600));
         assert_eq!(max, Some(i64::MAX.div_euclid(3600) * 3600));
         let mut min = Some(i64::MIN);
@@ -493,6 +508,25 @@ mod tests {
         round_timestamps(&mut min_none, &mut max_none);
         assert_eq!(min_none, None);
         assert_eq!(max_none, None);
+
+        // A maximum at or after now, once ceiled, is dropped; one before it is kept.
+        let now = 1_672_534_800;
+        for (max, expected) in [
+            (now - 3600, Some(now - 3600)),
+            (now - 3599, None),
+            (now, None),
+            (now + 86_400, None),
+        ] {
+            let mut min = Some(now - 86_400);
+            let mut max = Some(max);
+            round_timestamps_at(&mut min, &mut max, now);
+            assert_eq!(min, Some(now - 86_400));
+            assert_eq!(max, expected);
+        }
+        let mut min = Some(1_672_531_400_i64);
+        let mut max = Some(i64::MAX);
+        round_timestamps(&mut min, &mut max);
+        assert_eq!(max, None);
     }
 }
 
