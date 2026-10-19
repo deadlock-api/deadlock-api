@@ -51,7 +51,7 @@ impl Patch {
     /// The root `matches` query, scoped to the matches started while this
     /// patch was live (`pub_date` until `end_date`).
     #[graphql(
-        complexity = "cost::patch_matches(where_.as_ref(), order_by, limit, child_complexity)"
+        complexity = "cost::patch_matches(where_.as_ref(), order_by, limit, offset, child_complexity)"
     )]
     async fn matches(
         &self,
@@ -74,7 +74,7 @@ impl Patch {
     /// The root `match_players` query, scoped to the matches started while
     /// this patch was live (`pub_date` until `end_date`).
     #[graphql(
-        complexity = "cost::patch_match_players(where_.as_ref(), order_by, limit, child_complexity)"
+        complexity = "cost::patch_match_players(where_.as_ref(), order_by, limit, offset, child_complexity)"
     )]
     async fn match_players(
         &self,

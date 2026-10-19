@@ -2,8 +2,9 @@
 //!
 //! One complexity point is about 1 ms of `ClickHouse` CPU in the worst case the arguments allow,
 //! calibrated against production on 2026-10-16. A list query costs what its `where` / `order_by`
-//! make it scan ([`Scan`]) plus `limit` times the per-row weight of the selected fields. Field
-//! weights are in row units ([`ROW_UNIT_US`]); unannotated fields count 1.
+//! make it scan ([`Scan`]), including the `offset` rows it reads past, plus `limit` times the
+//! per-row weight of the selected fields. Field weights are in row units ([`ROW_UNIT_US`]);
+//! unannotated fields count 1.
 //!
 //! Checked against production requests (predicted vs `system.query_log` CPU, joined on
 //! `request_logs.graphql_request_id`): 5,800 on 2026-10-17 and 10,000 on 2026-10-18, none above
@@ -11,7 +12,8 @@
 //!
 //! Measured worst cases the model now rejects: `matches(limit: 10000) { players { items } }`
 //! (85 CPU-s), `match_history` without an account filter (14-32 CPU-s, a full-table merge) and
-//! `matches` ordered by `average_badge` without a time range (24 CPU-s).
+//! `matches` ordered by `average_badge` without a time range (24 CPU-s), and `matches` in
+//! `match_id` order skipping 20M matches (10 CPU-s, priced 601 before `offset` counted).
 
 use crate::routes::v1::graphql::filters::{I64Filter, MatchHistoryWhere, MatchPlayerWhere};
 use crate::routes::v1::graphql::salts::MatchSaltsWhere;
@@ -89,21 +91,26 @@ impl Scan {
         Self::Days(days)
     }
 
-    /// `per_day` / `full`: the cost of sorting one day of rows / the whole table.
-    fn ms(&self, costs: ScanCosts) -> usize {
+    /// `per_day` / `full`: the cost of sorting one day of rows / the whole table. `offset` adds
+    /// the nodes the scan reads or sorts past; pinned matches and account rows bound it.
+    fn ms(&self, costs: ScanCosts, offset: u32) -> usize {
         let ScanCosts {
             pinned,
             key_ordered,
             base,
             per_day,
             full,
+            skip_ns,
+            sorted_skip_ns,
         } = costs;
         match *self {
             Self::Accounts { accounts, .. } => 100 + accounts / 20,
             Self::Matches(_) => pinned,
-            Self::KeyOrdered => key_ordered,
-            Self::Days(Some(days)) => (base + per_day * days).min(full),
-            Self::Days(None) => full,
+            Self::KeyOrdered => key_ordered.saturating_add(skipped(offset, skip_ns)),
+            Self::Days(Some(days)) => (base + per_day * days)
+                .min(full)
+                .saturating_add(skipped(offset, sorted_skip_ns)),
+            Self::Days(None) => full.saturating_add(skipped(offset, sorted_skip_ns)),
         }
     }
 
@@ -131,6 +138,14 @@ struct ScanCosts {
     base: usize,
     per_day: usize,
     full: usize,
+    /// CPU per node `offset` skips in a key-ordered read / a sort.
+    skip_ns: usize,
+    sorted_skip_ns: usize,
+}
+
+/// Milliseconds of `offset` skipped nodes of `ns` each.
+fn skipped(offset: u32, ns: usize) -> usize {
+    (offset as usize).saturating_mul(ns).div_ceil(1_000_000)
 }
 
 /// Days of `start_time` a filter keeps, `None` without a lower bound.
@@ -152,28 +167,45 @@ pub(super) fn rows(limit: u32, row_units: usize) -> usize {
         .div_ceil(1000)
 }
 
-fn match_players_scan(scan: &Scan) -> usize {
-    scan.ms(ScanCosts {
-        pinned: 20,
-        key_ordered: 300,
-        base: 200,
-        per_day: 25,
-        full: 5_400,
-    })
+/// A skipped player row reads only the key and filter columns (lazy materialization covers every
+/// `limit` up to [`MAX_LIMIT`]): 0.63 / 1.5-2.0 / 7.2 CPU-s at offset 1M / 10M / 60M in `match_id`
+/// order. Sorting past them over 7 days of `start_time` took 1.1 / 1.5 / 2.0 CPU-s at offset 1M /
+/// 5M / 30M, 0.4 at 0 (2026-10-19).
+fn match_players_scan(scan: &Scan, offset: u32) -> usize {
+    scan.ms(
+        ScanCosts {
+            pinned: 20,
+            key_ordered: 300,
+            base: 200,
+            per_day: 25,
+            full: 5_400,
+            skip_ns: 150,
+            sorted_skip_ns: 150,
+        },
+        offset,
+    )
 }
 
 /// Two passes over `match_player` (pick the matches, then aggregate their players); a pinned
 /// match opens every selected column of its part (one match with heavy players: 97 ms median,
 /// 323 max, 2026-10-18); unordered,
-/// the `GROUP BY match_id` of every scanned row costs ~5x the player-row sort.
-fn matches_scan(scan: &Scan) -> usize {
-    scan.ms(ScanCosts {
-        pinned: 120,
-        key_ordered: 600,
-        base: 300,
-        per_day: 160,
-        full: 24_000,
-    })
+/// the `GROUP BY match_id` of every scanned row costs ~5x the player-row sort. A skipped match
+/// in `match_id` order reads its 12 player rows and the threads read ahead of them: 2.0 / 5.2 /
+/// 10.3 CPU-s at offset 1M / 5M / 20M (2026-10-19). The `GROUP BY` already aggregates every row of
+/// an unordered scan, so skipping its groups is free (7 days: 1.8 CPU-s at offset 0 and 1M).
+fn matches_scan(scan: &Scan, offset: u32) -> usize {
+    scan.ms(
+        ScanCosts {
+            pinned: 120,
+            key_ordered: 600,
+            base: 300,
+            per_day: 160,
+            full: 24_000,
+            skip_ns: 1_000,
+            sorted_skip_ns: 0,
+        },
+        offset,
+    )
 }
 
 fn match_players_key_ordered(order_by: Option<OrderByMatchPlayer>) -> bool {
@@ -188,10 +220,11 @@ pub(super) fn match_players(
     where_: Option<&MatchPlayerWhere>,
     order_by: Option<OrderByMatchPlayer>,
     limit: u32,
+    offset: u32,
     row_units: usize,
 ) -> usize {
     let scan = Scan::of(where_, match_players_key_ordered(order_by), None);
-    match_players_scan(&scan).saturating_add(scan.rows(
+    match_players_scan(&scan, offset).saturating_add(scan.rows(
         limit,
         ROW_BASE_UNITS + row_units,
         PLAYERS_PER_MATCH,
@@ -202,6 +235,7 @@ pub(super) fn patch_match_players(
     where_: Option<&MatchPlayerWhere>,
     order_by: Option<OrderByMatchPlayer>,
     limit: u32,
+    offset: u32,
     row_units: usize,
 ) -> usize {
     let scan = Scan::of(
@@ -209,7 +243,7 @@ pub(super) fn patch_match_players(
         match_players_key_ordered(order_by),
         Some(PATCH_DAYS),
     );
-    match_players_scan(&scan).saturating_add(scan.rows(
+    match_players_scan(&scan, offset).saturating_add(scan.rows(
         limit,
         ROW_BASE_UNITS + row_units,
         PLAYERS_PER_MATCH,
@@ -220,20 +254,22 @@ pub(super) fn matches(
     where_: Option<&MatchPlayerWhere>,
     order_by: Option<OrderByMatch>,
     limit: u32,
+    offset: u32,
     row_units: usize,
 ) -> usize {
     let scan = Scan::of(where_, matches_key_ordered(order_by), None);
-    matches_scan(&scan).saturating_add(scan.rows(limit, ROW_BASE_UNITS + row_units, 1))
+    matches_scan(&scan, offset).saturating_add(scan.rows(limit, ROW_BASE_UNITS + row_units, 1))
 }
 
 pub(super) fn patch_matches(
     where_: Option<&MatchPlayerWhere>,
     order_by: Option<OrderByMatch>,
     limit: u32,
+    offset: u32,
     row_units: usize,
 ) -> usize {
     let scan = Scan::of(where_, matches_key_ordered(order_by), Some(PATCH_DAYS));
-    matches_scan(&scan).saturating_add(scan.rows(limit, ROW_BASE_UNITS + row_units, 1))
+    matches_scan(&scan, offset).saturating_add(scan.rows(limit, ROW_BASE_UNITS + row_units, 1))
 }
 
 /// `match_history` merges every row of the filtered accounts before it applies `limit`, so its
@@ -420,5 +456,40 @@ mod tests {
         let (c, rejected) = complexity("{ match_players(limit: 100) { match_id kills } }").await;
         assert!(!rejected);
         assert!(c < 1_000, "{c}");
+    }
+
+    #[tokio::test]
+    async fn offsets_pay_for_skipped_rows() {
+        // `match_id` order, limit 1: 0.1 / 2.0 / 5.2 / 10.3 CPU-s at offset 0 / 1M / 5M / 20M.
+        let matches = |offset| {
+            format!("{{ matches(order_by: MATCH_ID, limit: 1, offset: {offset}) {{ match_id }} }}")
+        };
+        let (c, _) = complexity(&matches(0)).await;
+        assert!(c < 1_000, "{c}");
+        let (c, _) = complexity(&matches(1_000_000)).await;
+        assert!((1_000..4_000).contains(&c), "{c}");
+        let (c, rejected) = complexity(&matches(5_000_000)).await;
+        assert!(!rejected, "{c}");
+        let (_, rejected) = complexity(&matches(30_000_000)).await;
+        assert!(rejected);
+
+        // 1.5-2.0 CPU-s at offset 10M.
+        let (c, _) = complexity(
+            "{ match_players(limit: 1, offset: 10000000) { match_id account_id kills } }",
+        )
+        .await;
+        assert!((1_000..4_000).contains(&c), "{c}");
+
+        // An account scan sorts all of the accounts' rows whatever the offset.
+        let account = |offset| {
+            format!(
+                "{{ match_players(where: {{account_id: {{eq: 1}}}}, order_by: START_TIME, limit: 10, \
+                 offset: {offset}) {{ match_id }} }}"
+            )
+        };
+        assert_eq!(
+            complexity(&account(0)).await.0,
+            complexity(&account(1_000_000)).await.0
+        );
     }
 }

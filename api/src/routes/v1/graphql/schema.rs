@@ -254,7 +254,9 @@ pub(crate) struct QueryRoot;
 #[Object(rename_fields = "snake_case", rename_args = "snake_case")]
 impl QueryRoot {
     /// Match-grouped query — one node per match_id with players aggregated.
-    #[graphql(complexity = "cost::matches(where_.as_ref(), order_by, limit, child_complexity)")]
+    #[graphql(
+        complexity = "cost::matches(where_.as_ref(), order_by, limit, offset, child_complexity)"
+    )]
     async fn matches(
         &self,
         ctx: &Context<'_>,
@@ -275,7 +277,7 @@ impl QueryRoot {
 
     /// Player-row query — one node per (match_id, account_id).
     #[graphql(
-        complexity = "cost::match_players(where_.as_ref(), order_by, limit, child_complexity)"
+        complexity = "cost::match_players(where_.as_ref(), order_by, limit, offset, child_complexity)"
     )]
     async fn match_players(
         &self,
