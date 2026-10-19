@@ -136,8 +136,10 @@ export function FilterCell({
         data-active={active || undefined}
         data-size={compact ? "sm" : "default"}
         className={cn(
-          "grid min-w-0",
-          inRoot ? cn(cellInRoot, "static @2xl:relative") : cn(cellStandalone, "relative"),
+          "grid",
+          // In a bar a cell is never narrower than its longest word: the value wraps between words, and a share of a
+          // phone-wide bar cut "Ascendant 1+" to "Ascendan".
+          inRoot ? cn(cellInRoot, "static min-w-min @2xl:relative") : cn(cellStandalone, "relative min-w-0"),
           compact && "h-8 rounded-md",
           active && activeUnderline,
           className,
@@ -152,6 +154,8 @@ export function FilterCell({
               cellBase,
               FOCUS_RING,
               "col-start-1 row-start-1 hover:bg-accent focus-visible:bg-accent focus-visible:ring-inset data-[state=open]:bg-accent",
+              // The cell's grid takes the button's minimum: its longest word, not 0.
+              inRoot && "min-w-min",
               compact && "flex-row items-center justify-start gap-2 rounded-md px-3 py-0",
               // The reset's room is kept while there is nothing to reset: setting the filter must not widen the
               // control and re-wrap the toolbar around it.
