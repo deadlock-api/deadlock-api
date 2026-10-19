@@ -2,7 +2,7 @@ use core::time::Duration;
 
 use axum::Json;
 use axum::extract::{Path, State};
-use axum::http::StatusCode;
+use axum::http::{StatusCode, header};
 use axum::response::IntoResponse;
 use axum_extra::extract::Query;
 use cached::macros::cached;
@@ -29,11 +29,23 @@ use crate::utils::types::MatchIdQuery;
 /// Bot cooldown after a `GetMatchMetaData` job, i.e. 50 of them per bot per day.
 const SALTS_JOB_COOLDOWN: Duration = Duration::from_secs(24 * 60 * 60 / 50);
 
+/// `Cache-Control` of a response whose salts can no longer change: one week, as for metadata.
+const SETTLED_CACHE_CONTROL: &str = "public, max-age=604800";
+
+#[derive(Debug, Clone, Row, Deserialize)]
+pub(crate) struct StoredSaltsRow {
+    pub(crate) match_id: u64,
+    pub(crate) cluster_id: Option<u32>,
+    pub(crate) metadata_salt: Option<u32>,
+    pub(crate) replay_salt: Option<u32>,
+    pub(crate) verified: bool,
+}
+
 pub(crate) struct MatchSaltsReadQuery;
 
 impl BatchQuery for MatchSaltsReadQuery {
     type Key = u64;
-    type Value = ClickhouseSalts;
+    type Value = StoredSaltsRow;
 
     fn build_query(keys: &[u64]) -> String {
         // Coalescing is done by hand instead of with FINAL, which was ~6x the rows and ~7x the
@@ -54,12 +66,12 @@ impl BatchQuery for MatchSaltsReadQuery {
             "SELECT ?fields FROM ( \
                  SELECT match_id, cluster_id, metadata_salt, \
                      max(replay_salt) AS replay_salt, \
-                     argMaxIf(username, block, username IS NOT NULL) AS username, \
                      argMax(created_at, block) AS created_at, \
                      max(verified_at) AS verified_at, \
-                     max(failed_at) AS failed_at \
+                     max(failed_at) AS failed_at, \
+                     verified_at IS NOT NULL AS verified \
                  FROM ( \
-                     SELECT match_id, cluster_id, metadata_salt, replay_salt, username, \
+                     SELECT match_id, cluster_id, metadata_salt, replay_salt, \
                          created_at, verified_at, failed_at, \
                          toUInt64(splitByChar('_', _part)[3]) AS block \
                      FROM match_salts \
@@ -74,7 +86,7 @@ impl BatchQuery for MatchSaltsReadQuery {
         )
     }
 
-    fn key_of(value: &ClickhouseSalts) -> u64 {
+    fn key_of(value: &StoredSaltsRow) -> u64 {
         value.match_id
     }
 }
@@ -203,6 +215,42 @@ fn is_proxy_exhausted(e: &SteamProxyError) -> bool {
     )
 }
 
+/// Salts for a match, and whether they are known to be its real ones.
+#[derive(Debug, Clone)]
+pub(crate) struct MatchSalts {
+    pub(crate) salts: CMsgClientToGcGetMatchMetaDataResponse,
+    /// Answered by Steam, or verified by the downloader fetching the metadata file with them.
+    /// `POST /v1/matches/salts` takes unverified uploads, and a later candidate can replace an
+    /// unproven one once the downloader writes it off.
+    pub(crate) proven: bool,
+}
+
+impl MatchSalts {
+    /// Proven salts for both files never change.
+    fn is_settled(&self) -> bool {
+        self.proven
+            && self.salts.replay_group_id.is_some_and(|c| c > 0)
+            && self.salts.metadata_salt.is_some_and(|s| s > 0)
+            && self.salts.replay_salt.is_some_and(|s| s > 0)
+    }
+}
+
+impl From<StoredSaltsRow> for MatchSalts {
+    fn from(row: StoredSaltsRow) -> Self {
+        Self {
+            salts: CMsgClientToGcGetMatchMetaDataResponse {
+                result: None,
+                metadata_salt: row.metadata_salt,
+                replay_salt: row.replay_salt,
+                replay_group_id: row.cluster_id,
+                replay_valid_through: None,
+                replay_processing_through: None,
+            },
+            proven: row.verified,
+        }
+    }
+}
+
 fn not_found(match_id: u64) -> APIError {
     APIError::status_msg(
         StatusCode::NOT_FOUND,
@@ -222,7 +270,7 @@ pub(super) async fn fetch_match_salts(
     match_id: u64,
     is_custom: bool,
     disable_steam: bool,
-) -> Result<CMsgClientToGcGetMatchMetaDataResponse, APIError> {
+) -> Result<MatchSalts, APIError> {
     // Try fetch from Clickhouse via batcher
     if let Ok(salts) = state.batchers.match_salts_read.load(match_id).await {
         debug!("Match salts found in Clickhouse");
@@ -324,7 +372,10 @@ pub(super) async fn fetch_match_salts(
     if salts.replay_group_id.is_some() && salts.metadata_salt.unwrap_or_default() != 0 {
         insert_salts(&state.ch_client, &[(match_id, salts, username).into()]).await?;
         debug!("Match salts fetched from Steam");
-        return Ok(salts);
+        return Ok(MatchSalts {
+            salts,
+            proven: true,
+        });
     }
     Err(not_found(match_id))
 }
@@ -375,5 +426,13 @@ pub(super) async fn salts(
         disable_steam.unwrap_or_default(),
     )
     .await
-    .map(|salts| Json(MatchSaltsResponse::from((match_id, salts))))
+    .map(|salts| {
+        // Unsettled salts keep the global default max-age.
+        (
+            salts
+                .is_settled()
+                .then_some([(header::CACHE_CONTROL, SETTLED_CACHE_CONTROL)]),
+            Json(MatchSaltsResponse::from((match_id, salts.salts))),
+        )
+    })
 }

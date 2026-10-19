@@ -114,7 +114,9 @@ pub(super) async fn schema(
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
     let (match_id, cluster_id, replay_salt) = if let Some(match_id) = match_id {
-        let salts = fetch_match_salts(&state, &rate_limit_key, match_id, false, false).await?;
+        let salts = fetch_match_salts(&state, &rate_limit_key, match_id, false, false)
+            .await?
+            .salts;
         (match_id, salts.replay_group_id, salts.replay_salt)
     } else {
         // Only verified salts: `POST /v1/matches/salts` accepts unverified submissions, and

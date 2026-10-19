@@ -462,19 +462,6 @@ pub(crate) struct ClickhouseSalts {
     pub(crate) username: Option<String>,
 }
 
-impl From<ClickhouseSalts> for CMsgClientToGcGetMatchMetaDataResponse {
-    fn from(value: ClickhouseSalts) -> Self {
-        Self {
-            result: None,
-            metadata_salt: value.metadata_salt,
-            replay_salt: value.replay_salt,
-            replay_group_id: value.cluster_id,
-            replay_valid_through: None,
-            replay_processing_through: None,
-        }
-    }
-}
-
 impl From<(u64, CMsgClientToGcGetMatchMetaDataResponse)> for ClickhouseSalts {
     fn from((match_id, salts): (u64, CMsgClientToGcGetMatchMetaDataResponse)) -> Self {
         Self {

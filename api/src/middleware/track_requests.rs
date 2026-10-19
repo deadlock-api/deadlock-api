@@ -2,6 +2,7 @@ use std::borrow::ToOwned;
 use std::collections::HashMap;
 use std::time::Instant;
 
+use axum::body::HttpBody;
 use axum::extract::{MatchedPath, Request, State};
 use axum::http::HeaderMap;
 use axum::http::header::{self, AsHeaderName};
@@ -62,8 +63,14 @@ pub(crate) async fn track_requests(
     let rate_limit_remaining = get_header_u64(headers, "ratelimit-remaining");
     let rate_limit_reset = get_header_u64(headers, "ratelimit-reset");
 
-    // Use Content-Length header for response size instead of buffering the entire body
-    let response_size = get_header_u64(headers, header::CONTENT_LENGTH).unwrap_or(0);
+    // Content-Length is only set later by hyper, so read the body's exact size hint (known for
+    // buffered bodies). Streaming bodies have no exact hint; fall back to an explicit header.
+    let response_size = response
+        .body()
+        .size_hint()
+        .exact()
+        .or_else(|| get_header_u64(headers, header::CONTENT_LENGTH))
+        .unwrap_or(0);
 
     // Create metrics labels. Keep these bounded: a raw user agent label would create a new
     // series per distinct client string.

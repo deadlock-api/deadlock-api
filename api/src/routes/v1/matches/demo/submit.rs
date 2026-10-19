@@ -118,7 +118,9 @@ pub(super) async fn submit(
     }
 
     // Resolve salts here, while we hold the rate-limit key; the background worker cannot.
-    let salts = fetch_match_salts(&state, &rate_limit_key, req.match_id, false, false).await?;
+    let salts = fetch_match_salts(&state, &rate_limit_key, req.match_id, false, false)
+        .await?
+        .salts;
     let (Some(cluster_id), Some(replay_salt)) = (salts.replay_group_id, salts.replay_salt) else {
         return Err(APIError::status_msg(
             StatusCode::NOT_FOUND,
