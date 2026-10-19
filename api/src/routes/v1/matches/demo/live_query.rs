@@ -76,8 +76,10 @@ hero id or pawn entity index rather than through `m_hPawn`.
 | Type | Limit |
 | ---- | ----- |
 | IP | With broadcast_url: 20req/m<br>With match_id: 6req/h |
-| Key | With broadcast_url: -<br>With match_id: 20req/10m, 100req/h |
-| Global | With broadcast_url: 100req/m<br>With match_id: 100req/10m, 500req/h |
+| Key | With broadcast_url: -<br>With match_id: 10req/10m, 50req/h |
+| Global | With broadcast_url: 100req/m<br>With match_id, without API key: 60req/10m, 300req/h<br>With match_id, with API key: 20req/10m, 100req/h |
+
+With `match_id`, only spectating counts against the limits; a match spectated within the last hour is served from cache.
 "
 )]
 pub(super) async fn live_query(

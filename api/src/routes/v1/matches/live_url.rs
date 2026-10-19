@@ -159,12 +159,15 @@ Example Parsers:
 - [Demofile-Net](https://github.com/saul/demofile-net)
 - [Haste](https://github.com/blukai/haste/)
 
+Only spectating counts against these limits; a match spectated within the last hour is served from cache.
+
 ### Rate Limits:
 | Type | Limit |
 | ---- | ----- |
 | IP | 6req/h |
-| Key | 20req/10m, 100req/h |
-| Global | 100req/10m, 500req/h |
+| Key | 10req/10m, 50req/h |
+| Global (without API key) | 60req/10m, 300req/h |
+| Global (with API key) | 20req/10m, 100req/h |
     "
 )]
 pub(super) async fn url(
@@ -240,19 +243,32 @@ pub(super) async fn resolve_broadcast_url(
         ));
     }
 
-    state
-        .rate_limit_client
-        .apply_limits(
-            rate_limit_key,
+    // Anonymous callers (thousands of IPs spectating one match each) and API keys draw from
+    // separate global pools, so anonymous demand cannot starve keyed clients. Keys with custom
+    // `spectate` limits in `api_key_limits` replace these quotas, global pool included.
+    let (pool, quotas) = if rate_limit_key.api_key.is_some() {
+        (
             "spectate",
-            &[
-                Quota::ip_limit(6, Duration::from_hours(1)),
-                Quota::key_limit(20, Duration::from_mins(10)),
-                Quota::key_limit(100, Duration::from_hours(1)),
-                Quota::global_limit(100, Duration::from_mins(10)),
-                Quota::global_limit(500, Duration::from_hours(1)),
+            vec![
+                Quota::key_limit(10, Duration::from_mins(10)),
+                Quota::key_limit(50, Duration::from_hours(1)),
+                Quota::global_limit(20, Duration::from_mins(10)),
+                Quota::global_limit(100, Duration::from_hours(1)),
             ],
         )
+    } else {
+        (
+            "spectate_anon",
+            vec![
+                Quota::ip_limit(6, Duration::from_hours(1)),
+                Quota::global_limit(60, Duration::from_mins(10)),
+                Quota::global_limit(300, Duration::from_hours(1)),
+            ],
+        )
+    };
+    state
+        .rate_limit_client
+        .apply_limits(rate_limit_key, pool, &quotas)
         .await?;
 
     let live_events_pool = match rate_limit_key.api_key {
