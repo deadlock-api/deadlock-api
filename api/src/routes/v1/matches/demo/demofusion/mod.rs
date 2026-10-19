@@ -16,6 +16,7 @@ mod events;
 mod live;
 mod query;
 mod schema;
+mod session;
 mod table_extractor;
 mod visitor;
 

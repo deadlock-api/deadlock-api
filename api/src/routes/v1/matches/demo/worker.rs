@@ -6,6 +6,7 @@
 //! public `demo-extracts` R2 bucket.
 
 use core::sync::atomic::{AtomicU64, Ordering};
+use core::time::Duration;
 use std::sync::Arc;
 use std::time::Instant;
 
@@ -13,13 +14,14 @@ use object_store::aws::AmazonS3;
 use object_store::path::Path;
 use object_store::{ObjectStoreExt, WriteMultipart};
 use redis::aio::MultiplexedConnection;
+use reqwest::StatusCode;
 use tokio::sync::{Semaphore, mpsc};
 use tracing::{error, info};
 
 use super::format::ArtifactStream;
 use super::job::{JobRecord, JobStatus, store as store_job};
 use super::{OutputFormat, download, format};
-use crate::error::APIResult;
+use crate::error::{APIError, APIResult};
 use crate::utils::compression::is_zstd;
 
 /// Max jobs waiting in the channel before submits get a 429.
@@ -28,6 +30,10 @@ const MAX_QUEUE_DEPTH: usize = 128;
 /// memory (~350 MB decompressed), so keep this small. Jobs spend most of their time
 /// downloading from Valve, so a few more slots add throughput without contending for CPU.
 pub(super) const MAX_CONCURRENT: usize = 4;
+/// Wall-time budget for one job, download through upload, so a pathological query cannot hold
+/// one of the [`MAX_CONCURRENT`] slots indefinitely. Real jobs finish in under 5 minutes (p99
+/// ~1 min; the slowest are a 4 min download or a 2 min query).
+const JOB_TIMEOUT: Duration = Duration::from_mins(10);
 /// Rough per-job duration used purely for the status endpoint's wait estimate.
 pub(super) const AVG_JOB_SECONDS: u64 = 20;
 /// Multipart part size. A whole-artifact `put` cannot finish inside the `object_store`
@@ -147,7 +153,19 @@ async fn run_job(mut redis: MultiplexedConnection, r2: &AmazonS3, public_url: &s
 
     let started = Instant::now();
     let mut timings = PhaseTimings::default();
-    match process(r2, public_url, &job, &mut timings).await {
+    let outcome = tokio::time::timeout(JOB_TIMEOUT, process(r2, public_url, &job, &mut timings))
+        .await
+        .unwrap_or_else(|_| {
+            Err(APIError::status_msg(
+                StatusCode::REQUEST_TIMEOUT,
+                format!(
+                    "Demo query job timed out after {} s (during {})",
+                    JOB_TIMEOUT.as_secs(),
+                    timings.phase
+                ),
+            ))
+        });
+    match outcome {
         Ok(result_url) => {
             record.status = JobStatus::Done;
             record.result_url = Some(result_url);

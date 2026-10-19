@@ -52,17 +52,24 @@ pub(super) async fn decompress(compressed: Bytes) -> APIResult<Bytes> {
 /// An artifact being serialized in the background. [`ArtifactStream::chunks`] yields
 /// upload-ready pieces; [`ArtifactStream::finish`] reports the pipeline's terminal result
 /// and must be awaited once the chunks are drained, since a mid-stream query or
-/// serialization failure can only surface there.
+/// serialization failure can only surface there. Dropping it aborts the query, which would
+/// otherwise run on in its task (a `GROUP BY` produces nothing to back-pressure until it ends).
 pub(super) struct ArtifactStream {
     pub(super) chunks: mpsc::Receiver<Bytes>,
     pipeline: JoinHandle<APIResult<()>>,
 }
 
 impl ArtifactStream {
-    pub(super) async fn finish(self) -> APIResult<()> {
-        self.pipeline
+    pub(super) async fn finish(mut self) -> APIResult<()> {
+        (&mut self.pipeline)
             .await
             .map_err(|e| APIError::internal(format!("Serialize task panicked: {e}")))?
+    }
+}
+
+impl Drop for ArtifactStream {
+    fn drop(&mut self) {
+        self.pipeline.abort();
     }
 }
 
@@ -266,6 +273,16 @@ mod tests {
     use rstest::rstest;
 
     use super::*;
+
+    #[tokio::test]
+    async fn dropping_the_artifact_stream_aborts_the_query() {
+        let (_chunk_tx, chunks) = mpsc::channel(1);
+        let pipeline = tokio::spawn(futures::future::pending());
+        let handle = pipeline.abort_handle();
+        drop(ArtifactStream { chunks, pipeline });
+        tokio::task::yield_now().await;
+        assert!(handle.is_finished());
+    }
 
     const ROWS_PER_BATCH: i32 = 64;
     const BATCHES: i32 = 5;

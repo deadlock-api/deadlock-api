@@ -26,12 +26,13 @@ use datafusion::datasource::MemTable;
 use datafusion::execution::SendableRecordBatchStream;
 use datafusion::execution::context::SQLOptions;
 use datafusion::logical_expr::LogicalPlan;
-use datafusion::prelude::SessionContext;
+use datafusion::prelude::SessionConfig;
 use rayon::prelude::*;
 
 use super::error::Result;
 use super::events::{EventType, event_schema};
 use super::schema::EntitySchema;
+use super::session::session_context;
 use super::table_extractor::extract_table_names;
 use super::visitor::{
     BuildStream, CollectedBatches, CollectingVisitor, SyncDemoStream, discover_schemas_from_demo,
@@ -78,7 +79,7 @@ async fn query_stream<D: BuildStream>(
 
     let collected = parse_and_collect::<D>(&demo, &entity_specs, &event_types)?;
 
-    let ctx = SessionContext::new();
+    let ctx = session_context(SessionConfig::new());
 
     for schema in &referenced_entities {
         let arrow_schema = projected_entity_schema(schema, &projections)?;
@@ -178,7 +179,7 @@ pub(crate) async fn discover_entity_projections(
     entities: &[EntitySchema],
     event_types: &[EventType],
 ) -> Result<HashMap<Arc<str>, EntityProjection>> {
-    let ctx = SessionContext::new();
+    let ctx = session_context(SessionConfig::new());
     // DataFusion normalizes unquoted identifiers to lowercase in the plan, so
     // key the lookup by the lowercased table name.
     let mut entity_keys: HashMap<String, Arc<str>> = HashMap::with_capacity(entities.len());
@@ -323,7 +324,7 @@ mod tests {
 
     #[tokio::test]
     async fn read_only_sql_rejects_side_effects() {
-        let ctx = SessionContext::new();
+        let ctx = session_context(SessionConfig::new());
         for sql in [
             "CREATE EXTERNAL TABLE t (a INT) STORED AS CSV LOCATION '/etc/passwd'",
             "CREATE TABLE t AS SELECT 1",

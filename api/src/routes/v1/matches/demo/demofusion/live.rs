@@ -36,6 +36,7 @@ use super::query::{
     Schemas, build_entity_specs, discover_entity_projections, projected_entity_schema,
     read_only_sql, resolve_referenced,
 };
+use super::session::session_context;
 use super::table_extractor::extract_table_names;
 use super::visitor::{BroadcastDemoStream, discover_schemas_from_demo};
 
@@ -96,7 +97,7 @@ pub(crate) async fn query_live(
     // Every live table is a single channel, so repartitioning buys no parallelism — and
     // `RepartitionExec` coalesces batches from bounded inputs, which would hold decoded rows
     // back until the broadcast ends instead of streaming them as they arrive.
-    let ctx = SessionContext::new_with_config(SessionConfig::new().with_target_partitions(1));
+    let ctx = session_context(SessionConfig::new().with_target_partitions(1));
     let mut entities: HashMap<u64, Channel<EntityBatchBuilder>> = HashMap::new();
     for (schema, projection) in &entity_specs {
         let (tx, rx) = unbounded_channel();
