@@ -78,7 +78,7 @@ fn build_otel_providers(
 
 fn init_tracing() -> Option<OtelGuard> {
     let env_filter = EnvFilter::try_from_default_env().unwrap_or(EnvFilter::new(
-        "debug,hyper_util=warn,tower_http=info,reqwest=warn,rustls=warn,sqlx=warn,h2=warn,datafusion=warn,datafusion_optimizer=warn",
+        "debug,hyper_util=warn,tower_http=info,reqwest=warn,rustls=warn,sqlx=warn,h2=warn,datafusion=warn,datafusion_optimizer=warn,sqlparser=info,haste_broadcast=info",
     ));
     let fmt_layer = tracing_subscriber::fmt::layer().fmt_fields(ConsoleFields::default());
 
