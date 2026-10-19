@@ -179,7 +179,6 @@ pub(super) const MATCH_HISTORY_COLUMNS: &[Column] = &[
     col("denies"),
     col("net_worth"),
     col("last_hits"),
-    col("team_abandoned"),
     col("abandoned_time_s"),
     col("match_duration_s"),
     col("match_result"),

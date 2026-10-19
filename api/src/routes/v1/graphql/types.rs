@@ -246,7 +246,6 @@ pub(super) struct MatchHistoryEntry {
     pub(super) denies: Option<u32>,
     pub(super) net_worth: Option<u32>,
     pub(super) last_hits: Option<u32>,
-    pub(super) team_abandoned: Option<bool>,
     pub(super) abandoned_time_s: Option<u32>,
     pub(super) match_duration_s: Option<u32>,
     /// The winning team id.

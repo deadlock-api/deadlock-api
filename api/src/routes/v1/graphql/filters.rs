@@ -360,7 +360,6 @@ pub(super) struct MatchHistoryWhere {
     pub(super) denies: Option<U32Filter>,
     pub(super) net_worth: Option<U32Filter>,
     pub(super) last_hits: Option<U32Filter>,
-    pub(super) team_abandoned: Option<BoolFilter>,
     pub(super) match_duration_s: Option<U32Filter>,
     pub(super) match_result: Option<U32Filter>,
     pub(super) won: Option<BoolFilter>,
@@ -430,7 +429,6 @@ impl MatchHistoryWhere {
         push!(denies);
         push!(net_worth);
         push!(last_hits);
-        push!(team_abandoned);
         push!(match_duration_s);
         push!(match_result);
         push!(won);

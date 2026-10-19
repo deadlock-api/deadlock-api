@@ -33,7 +33,6 @@ pub(crate) struct PlayerMatchHistoryEntry {
     pub denies: u32,
     pub net_worth: u32,
     pub last_hits: u32,
-    pub team_abandoned: Option<bool>,
     pub abandoned_time_s: Option<u32>,
     pub match_duration_s: u32,
     pub match_result: u32,
@@ -126,7 +125,6 @@ impl PlayerMatchHistoryEntry {
             denies: player.denies?,
             net_worth: player.net_worth?,
             last_hits: player.last_hits?,
-            team_abandoned: Some(false), // Not available by Valve
             abandoned_time_s: player.abandon_match_time_s,
             match_duration_s: match_info.duration_s?,
             match_result: match_info.winning_team? as u32,
