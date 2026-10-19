@@ -83,6 +83,8 @@ export interface AnalyticsViewCopy {
   summary: string;
   /** Meta description, and the Dataset JSON-LD description. */
   description: string;
+  /** Kept out of the index and the sitemap: with nothing picked, the view's canonical URL shows only a prompt. */
+  noindex?: true;
 }
 
 export const ANALYTICS_VIEWS: { [S in AnalyticsSection]: Record<AnalyticsTab<S>, AnalyticsViewCopy> } = {
@@ -168,6 +170,7 @@ export const ANALYTICS_VIEWS: { [S in AnalyticsSection]: Record<AnalyticsTab<S>,
       heading: "When to Buy Deadlock Items",
       summary: "How an item's win rate changes with when it is bought.",
       description: "When to buy each Deadlock item: win rate by purchase time, per hero and rank, from live matches.",
+      noindex: true,
     },
     "build-flow": {
       title: "Deadlock Build Designer: Item Build Orders",

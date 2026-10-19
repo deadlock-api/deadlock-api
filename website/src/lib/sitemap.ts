@@ -1,7 +1,7 @@
 import type { Upgrade } from "deadlock_api_client";
 
 import { day } from "~/dayjs";
-import { ANALYTICS_TABS } from "~/lib/analytics-tabs";
+import { ANALYTICS_TABS, type AnalyticsSection, analyticsView } from "~/lib/analytics-tabs";
 import { api } from "~/lib/api";
 import { fetchPatchList } from "~/lib/patch-list-fns";
 import { INDEXED_PATCHES, isSettled, patchWindows } from "~/lib/patches";
@@ -54,10 +54,12 @@ const STATIC_ENTRIES: SitemapEntry[] = [
   { path: "/sounds" },
 ];
 
-const ANALYTICS_VIEW_ENTRIES: SitemapEntry[] = Object.entries(ANALYTICS_TABS).flatMap(([section, tabs]) =>
-  Object.values(tabs)
+const ANALYTICS_VIEW_ENTRIES: SitemapEntry[] = (Object.keys(ANALYTICS_TABS) as AnalyticsSection[]).flatMap((section) =>
+  Object.values(ANALYTICS_TABS[section])
     .filter(Boolean)
-    .map((view) => ({ path: `/analytics/${section}/${view}` })),
+    .map((view) => `/analytics/${section}/${view}`)
+    .filter((path) => !analyticsView(section, path).noindex)
+    .map((path) => ({ path })),
 );
 
 // Load blog markdown files from content/blog/ at build time via Vite glob.

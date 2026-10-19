@@ -199,7 +199,7 @@ export const itemsPageOptions = {
     const leader = tab === "item-stats" ? loaderData?.leader : null;
     const lead = leader ? ` Most reliable this patch: ${leader.name}, ${formatPercent(leader.winRate)}.` : "";
     const path = match.pathname.replace(/\/$/, "");
-    return seo({
+    const base = seo({
       title: pageTitle(view.title),
       description: view.description + lead,
       path,
@@ -214,5 +214,6 @@ export const itemsPageOptions = {
         temporalCoverage: tab === "item-stats" ? loaderData?.coverage : undefined,
       }),
     });
+    return view.noindex ? { ...base, meta: [...base.meta, { name: "robots", content: "noindex, follow" }] } : base;
   },
 };
