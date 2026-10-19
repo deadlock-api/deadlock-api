@@ -24,7 +24,9 @@ use haste_core::demostream::{CmdFormat, CmdHeader, DemoStream, ReadCmdError, Rea
 use haste_core::entities::{DeltaHeader, Entity};
 use haste_core::parser::{Context, Parser, Visitor};
 use haste_core::valveprotos::common::EDemoCommands;
+use serde::Deserialize;
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender, unbounded_channel};
+use tracing::{info, warn};
 
 use super::entity_batch_builder::EntityBatchBuilder;
 use super::error::{Error, Result};
@@ -67,7 +69,7 @@ pub(crate) async fn query_live(
 
     // The `/start` signon fragment carries the send-tables the schema is built from, and also seeds
     // the parser so serializers/class-info are in place before deltas.
-    let (mut http, signon) = connect_with_retry(base_url, &status_tx).await?;
+    let (http, signon) = connect_with_retry(base_url, &status_tx).await?;
 
     // Schema discovery is CPU-bound haste parsing; run it off the async runtime, and catch a panic
     // on malformed/stale relay bytes as a Broadcast error rather than letting it reset the connection.
@@ -139,14 +141,7 @@ pub(crate) async fn query_live(
         );
     }
 
-    // Producer: forward each remaining fragment; dropping the sender on exit signals EOF to the parser.
-    tokio::spawn(async move {
-        while let Some(Ok(bytes)) = http.next_packet().await {
-            if bytes_tx.send(bytes).is_err() {
-                break;
-            }
-        }
-    });
+    spawn_producer(http, bytes_tx, base_url.to_owned());
 
     let visitor = StreamingCollector { entities, events };
     tokio::task::spawn_blocking(move || {
@@ -165,6 +160,44 @@ pub(crate) async fn query_live(
         .await?)
 }
 
+/// Forward each remaining fragment to the parser; dropping the sender on exit signals EOF to it.
+/// Why the broadcast stopped is logged with the relay's `/sync` answer at that moment, telling a
+/// finished match apart from a relay that was still serving when haste gave up on it.
+fn spawn_producer(
+    mut http: BroadcastHttp<'static, reqwest::Client>,
+    bytes_tx: std::sync::mpsc::Sender<Bytes>,
+    broadcast_url: String,
+) {
+    tokio::spawn(async move {
+        let mut fragments = 0u64;
+        let error = loop {
+            match http.next_packet().await {
+                Some(Ok(bytes)) => {
+                    if bytes_tx.send(bytes).is_err() {
+                        // The query finished or the client went away.
+                        return;
+                    }
+                    fragments += 1;
+                }
+                Some(Err(e)) => break Some(e),
+                None => break None,
+            }
+        };
+        drop(bytes_tx);
+        let relay_sync = relay_sync_status(&broadcast_url).await;
+        match error {
+            None => info!(broadcast_url, fragments, relay_sync, "Live broadcast ended"),
+            Some(e) => warn!(
+                broadcast_url,
+                fragments,
+                relay_sync,
+                error = %e,
+                "Live broadcast stopped on a relay error"
+            ),
+        }
+    });
+}
+
 /// Connect to the broadcast relay and fetch the signon fragment, retrying on failure for
 /// [`CONNECT_RETRY_BUDGET`]. A newly-spectated match's relay routinely answers 404 (nothing synced
 /// yet) or 405 (relay still connecting to the game server) for several seconds before it starts
@@ -177,17 +210,83 @@ async fn connect_with_retry(
     let mut attempt = 0u32;
     loop {
         attempt += 1;
-        match try_connect(base_url).await {
+        let error = match try_connect(base_url).await {
             Ok(connected) => return Ok(connected),
-            Err(e) if tokio::time::Instant::now() < deadline => {
-                let _ = status_tx.send(format!(
-                    "Broadcast relay not ready yet (attempt {attempt}: {e}), retrying..."
-                ));
-                tokio::time::sleep(CONNECT_RETRY_INTERVAL).await;
-            }
-            Err(e) => return Err(Error::Broadcast(e.to_string())),
+            Err(e) => e,
+        };
+        // haste only reports the status code; the relay's message tells a broadcast that is still
+        // spinning up apart from one Valve never started (`Broadcast has not started yet` for the
+        // whole match, even though spectating succeeded).
+        let refusal = match error {
+            BroadcastHttpClientError::StatusCode(_) => relay_refusal(base_url).await,
+            _ => None,
+        };
+        let reason = refusal
+            .as_deref()
+            .map_or_else(|| error.to_string(), |m| format!("Valve relay: {m}"));
+        if tokio::time::Instant::now() >= deadline {
+            return Err(Error::Broadcast(match refusal.as_deref() {
+                Some(BROADCAST_NOT_STARTED) => format!(
+                    "Valve's relay never started this match's broadcast (still \"{BROADCAST_NOT_STARTED}\" \
+                     after {}s). This happens for some matches on Valve's side, and spectating \
+                     again returns the same broadcast.",
+                    CONNECT_RETRY_BUDGET.as_secs()
+                ),
+                _ => reason,
+            }));
         }
+        let _ = status_tx.send(format!(
+            "Broadcast relay not ready yet (attempt {attempt}: {reason}), retrying..."
+        ));
+        tokio::time::sleep(CONNECT_RETRY_INTERVAL).await;
     }
+}
+
+/// The relay's answer to `/sync` for a broadcast Valve assigned but never started streaming.
+const BROADCAST_NOT_STARTED: &str = "Broadcast has not started yet";
+
+/// Bounds the diagnostic `/sync` probes, which only add context to an error or log line.
+const RELAY_PROBE_TIMEOUT: Duration = Duration::from_secs(5);
+
+/// The relay's error body, e.g. `{"statusCode":404,"message":"Broadcast has not started yet"}`.
+#[derive(Deserialize)]
+struct RelayError {
+    message: String,
+}
+
+/// Fetches the relay's `/sync` status, plus its message if it refuses.
+async fn probe_sync(base_url: &str) -> reqwest::Result<(reqwest::StatusCode, Option<String>)> {
+    let response = BROADCAST_CLIENT
+        .get(sync_url(base_url))
+        .timeout(RELAY_PROBE_TIMEOUT)
+        .send()
+        .await?;
+    let status = response.status();
+    if status.is_success() {
+        return Ok((status, None));
+    }
+    Ok((
+        status,
+        response.json::<RelayError>().await.ok().map(|e| e.message),
+    ))
+}
+
+/// The message the relay gives for refusing `/sync`, or `None` if it serves it or gives no reason.
+async fn relay_refusal(base_url: &str) -> Option<String> {
+    probe_sync(base_url).await.ok()?.1
+}
+
+/// The relay's `/sync` status (and message, if it refuses) for logging.
+async fn relay_sync_status(base_url: &str) -> String {
+    match probe_sync(base_url).await {
+        Ok((status, Some(message))) => format!("{status}: {message}"),
+        Ok((status, None)) => status.to_string(),
+        Err(e) => format!("unreachable: {e}"),
+    }
+}
+
+fn sync_url(base_url: &str) -> String {
+    format!("{}/sync", base_url.trim_end_matches('/'))
 }
 
 /// Broadcast fetch client. Redirects are only followed to hosts that pass the broadcast URL
