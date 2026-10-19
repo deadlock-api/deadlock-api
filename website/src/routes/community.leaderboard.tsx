@@ -15,22 +15,26 @@ import { StaleOverlay } from "~/components/patterns/states/StaleOverlay";
 import { SegmentedItem } from "~/components/ui/segmented";
 import { useHeroById } from "~/hooks/useAssetById";
 import { prefetchCached } from "~/lib/prefetch-safe";
-import { getDefaultRegion, REGION_LABELS } from "~/lib/region";
+import { getDefaultRegion, isLeaderboardRegion, REGION_LABELS } from "~/lib/region";
 import { fetchDefaultRegion } from "~/lib/region-fns";
 import { datasetJsonLd, pageTitle, seo } from "~/lib/seo";
 import { leaderboardQueryOptions } from "~/queries/leaderboard-queries";
 
 export const Route = createFileRoute("/community/leaderboard")({
   component: LeaderboardPage,
-  // The hero filter lives in the URL under nuqs; read it here so the loader warms the board the page will show.
+  // The region and hero filters live in the URL under nuqs; read them here so the loader warms the board the page will
+  // show.
   loaderDeps: ({ search }) => {
-    const heroId = (search as { hero_id?: unknown }).hero_id;
-    return { heroId: typeof heroId === "number" && Number.isInteger(heroId) ? heroId : null };
+    const { region, hero_id: heroId } = search as { region?: unknown; hero_id?: unknown };
+    return {
+      region: isLeaderboardRegion(region) ? region : null,
+      heroId: typeof heroId === "number" && Number.isInteger(heroId) ? heroId : null,
+    };
   },
   loader: async ({ context: { queryClient }, deps }) => {
     // Resolve the default on the server so the client hydrates with the same region.
     const defaultRegion = typeof window === "undefined" ? await fetchDefaultRegion() : getDefaultRegion();
-    await prefetchCached(queryClient, leaderboardQueryOptions(defaultRegion, deps.heroId));
+    await prefetchCached(queryClient, leaderboardQueryOptions(deps.region ?? defaultRegion, deps.heroId));
     return { defaultRegion };
   },
   head: () =>

@@ -152,3 +152,8 @@ export const REGION_LABELS: Record<LeaderboardRegionEnum, string> = {
   SAmerica: "South America",
   Oceania: "Oceania",
 };
+
+/** Whether `value` names a leaderboard region, as the `region` URL param must. */
+export function isLeaderboardRegion(value: unknown): value is LeaderboardRegionEnum {
+  return typeof value === "string" && Object.hasOwn(REGION_LABELS, value);
+}
