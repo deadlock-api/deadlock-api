@@ -4,7 +4,7 @@ import type { TrackerMatchPlayer, TrackerMatchStat } from "~/queries/tracker-que
 import { TEAMS } from "./teams";
 
 /** The laning phase has no fixed end in game; nine minutes is where this compares lanes. */
-const LANE_PHASE_END_S = 540;
+export const LANE_PHASE_END_S = 540;
 
 export interface LanePlayer {
   player: TrackerMatchPlayer;
@@ -23,10 +23,10 @@ export interface LaneMatchup {
   diff: number | null;
 }
 
-/** A missing sample says nothing about how many souls a player had. */
-function statAt(player: TrackerMatchPlayer, time: number): TrackerMatchStat | null {
+/** The latest sample at or before `time`. A missing sample says nothing about how many souls a player had. */
+export function statAt(stats: readonly TrackerMatchStat[], time: number): TrackerMatchStat | null {
   let latest: TrackerMatchStat | undefined;
-  for (const stat of player.stats) {
+  for (const stat of stats) {
     if (stat.time_stamp_s <= time && (!latest || stat.time_stamp_s > latest.time_stamp_s)) latest = stat;
   }
   return latest ?? null;
@@ -50,7 +50,7 @@ export function computeLaneMatchups(players: TrackerMatchPlayer[], accountId?: n
   if (lastSample === 0) return [];
   const time = Math.min(LANE_PHASE_END_S, lastSample);
 
-  const withStat = (player: TrackerMatchPlayer): LanePlayer => ({ player, stat: statAt(player, time) });
+  const withStat = (player: TrackerMatchPlayer): LanePlayer => ({ player, stat: statAt(player.stats, time) });
   const total = (list: LanePlayer[]) => {
     let souls = 0;
     for (const entry of list) {

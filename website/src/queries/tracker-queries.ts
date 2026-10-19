@@ -7,6 +7,7 @@ import type {
 
 import { CACHE_DURATIONS } from "~/constants/cache";
 import { api } from "~/lib/api";
+import type { GameMode, MatchMode } from "~/lib/game-mode";
 import { graphql, isGraphqlRateLimited } from "~/lib/graphql";
 import { ensureCached } from "~/lib/prefetch-safe";
 import { combatStats, type CombatStats } from "~/lib/tracker/combat-stats";
@@ -25,6 +26,7 @@ import {
   toTrackerStat,
   trackerMatchFromRawMetadata,
 } from "~/lib/tracker/match-metadata";
+import { type LaneTimeline, laneStateOf, type TrackerMatchStats } from "~/lib/tracker/match-stats";
 
 import { abilitiesQueryOptions, heroesQueryOptions, itemUpgradesQueryOptions } from "./asset-queries";
 import { trackerMatchHistoryQueryOptions } from "./match-history-queries";
@@ -209,6 +211,149 @@ async function unlessRateLimited<T>(query: Promise<T>): Promise<T | null> {
     if (isGraphqlRateLimited(error)) return null;
     throw error;
   }
+}
+
+export interface TrackerMatchStatsParams {
+  accountId: number;
+  gameMode: GameMode;
+  matchMode: MatchMode;
+  heroId: number | null;
+  minUnixTimestamp?: number | null;
+  maxUnixTimestamp?: number | null;
+}
+
+/** The most recent matches the stat trends read: enough for every rolling window, light enough for a phone. */
+export const MATCH_STATS_LIMIT = 500;
+/** Two laners a side; the limit leaves room for a lane the game filled unevenly. */
+const LANERS_PER_MATCH = 6;
+
+/**
+ * The tracked player's stored stats per match, latest first, each with how their lane stood at the laning phase end.
+ * Only stored matches: what Steam has not sent us yet has no row.
+ */
+export function trackerMatchStatsQueryOptions(params: TrackerMatchStatsParams) {
+  return queryOptions({
+    queryKey: queryKeys.players.matchStats(params),
+    queryFn: async ({ client }): Promise<TrackerMatchStats[]> => {
+      const { accountId, gameMode, matchMode, heroId, minUnixTimestamp, maxUnixTimestamp } = params;
+      if (isDemoAccount(accountId)) {
+        const [{ demoMatchStats }, history, heroes] = await Promise.all([
+          loadDemoData(),
+          demoHistory(client),
+          ensureCached(client, heroesQueryOptions),
+        ]);
+        return demoMatchStats(history, params, heroes, MATCH_STATS_LIMIT);
+      }
+      const { match_players: rows } = await graphql.query({
+        match_players: {
+          __args: {
+            where: {
+              account_id: { eq: accountId },
+              game_mode: { eq: gameMode === "street_brawl" ? "StreetBrawl" : "Normal" },
+              match_mode: { in: matchMode.split(",").map((mode) => (mode === "ranked" ? "Ranked" : "Unranked")) },
+              ...(heroId == null ? {} : { hero_id: { eq: heroId } }),
+              start_time: {
+                ...(minUnixTimestamp == null ? {} : { gte: minUnixTimestamp }),
+                ...(maxUnixTimestamp == null ? {} : { lte: maxUnixTimestamp }),
+              },
+            },
+            order_by: "START_TIME",
+            order_direction: "DESC",
+            limit: MATCH_STATS_LIMIT,
+          },
+          match_id: true,
+          duration_s: true,
+          assigned_lane: true,
+          max_player_damage: true,
+          max_player_damage_taken: true,
+          max_boss_damage: true,
+          max_player_healing: true,
+          max_shots_hit: true,
+          max_shots_missed: true,
+          max_hero_bullets_hit: true,
+          max_hero_bullets_hit_crit: true,
+          max_gold_neutral_creep: true,
+          max_gold_death_loss: true,
+        },
+      });
+
+      const matchesByLane = new Map<number, number[]>();
+      for (const row of rows) {
+        const lane = row.assigned_lane ?? 0;
+        if (lane === 0 || row.match_id == null) continue;
+        const ids = matchesByLane.get(lane);
+        if (ids) ids.push(row.match_id);
+        else matchesByLane.set(lane, [row.match_id]);
+      }
+      // One request per lane fetches only the players who shared it, a third of each match's timelines.
+      const laners = new Map<number, LaneTimeline[]>();
+      await Promise.all(
+        [...matchesByLane].map(async ([lane, matchIds]) => {
+          const { match_players: lanePlayers } = await graphql.query({
+            match_players: {
+              __args: {
+                where: { match_id: { in: matchIds }, assigned_lane: { eq: lane } },
+                limit: matchIds.length * LANERS_PER_MATCH,
+              },
+              match_id: true,
+              account_id: true,
+              team: true,
+              hero_id: true,
+              stats: {
+                time_stamp_s: true,
+                net_worth: true,
+                kills: true,
+                deaths: true,
+                assists: true,
+                creep_kills: true,
+                denies: true,
+                player_damage: true,
+              },
+            },
+          });
+          for (const player of lanePlayers) {
+            if (player.match_id == null) continue;
+            const timeline: LaneTimeline = {
+              account_id: player.account_id ?? 0,
+              team: player.team ?? "",
+              hero_id: player.hero_id ?? 0,
+              stats: (player.stats ?? []).map(toTrackerStat),
+            };
+            const list = laners.get(player.match_id);
+            if (list) list.push(timeline);
+            else laners.set(player.match_id, [timeline]);
+          }
+        }),
+      );
+
+      return rows.flatMap((row) =>
+        row.match_id == null
+          ? []
+          : [
+              {
+                match_id: row.match_id,
+                player_damage: row.max_player_damage ?? 0,
+                player_damage_taken: row.max_player_damage_taken ?? 0,
+                boss_damage: row.max_boss_damage ?? 0,
+                healing: row.max_player_healing ?? 0,
+                shots_hit: row.max_shots_hit ?? 0,
+                shots_missed: row.max_shots_missed ?? 0,
+                hero_bullets_hit: row.max_hero_bullets_hit ?? 0,
+                hero_bullets_hit_crit: row.max_hero_bullets_hit_crit ?? 0,
+                neutral_souls: row.max_gold_neutral_creep ?? 0,
+                souls_lost: row.max_gold_death_loss ?? 0,
+                lane: laneStateOf(
+                  laners.get(row.match_id) ?? [],
+                  accountId,
+                  row.assigned_lane ?? 0,
+                  row.duration_s ?? 0,
+                ),
+              },
+            ],
+      );
+    },
+    staleTime: CACHE_DURATIONS.FIVE_MINUTES,
+  });
 }
 
 /** A stored match's headline facts, for its own page. */

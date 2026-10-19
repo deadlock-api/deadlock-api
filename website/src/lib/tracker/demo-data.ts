@@ -16,6 +16,7 @@ import type {
   TrackerMatchMetadata,
   TrackerMatchPlayer,
   TrackerMatchStat,
+  TrackerMatchStatsParams,
   TrackerObjective,
   TrackerObjectiveKind,
   TrackerPlayerDeaths,
@@ -24,6 +25,8 @@ import type {
 import { combatStats } from "./combat-stats";
 import { badgeToLinear, isWin, linearToBadge } from "./compute";
 import { DEMO_ACCOUNT_ID, demoMatchId, demoMatchIndex } from "./demo";
+import { LANE_PHASE_END_S } from "./lane-matchup";
+import type { TrackerMatchStats } from "./match-stats";
 import { TEAMS } from "./teams";
 
 const GAME_MODE_NORMAL = 1;
@@ -663,4 +666,67 @@ export function demoMatchMetadata(
     })),
     deaths: deathDetails,
   };
+}
+
+/**
+ * Per-match stats for the generated matches a filter keeps, latest first, up to `limit`. A won match leans towards a
+ * won lane, as real ones do, so the laning splits have something to show.
+ */
+export function demoMatchStats(
+  history: readonly PlayerMatchHistoryEntry[],
+  params: TrackerMatchStatsParams,
+  heroes: readonly SlimHero[],
+  limit: number,
+): TrackerMatchStats[] {
+  const filter: HistoryFilter = {
+    gameMode: params.gameMode,
+    matchMode: params.matchMode,
+    heroIds: params.heroId == null ? null : String(params.heroId),
+    minUnixTimestamp: params.minUnixTimestamp,
+    maxUnixTimestamp: params.maxUnixTimestamp,
+  };
+  const opponents = heroes.filter(isPlayableHero).map((hero) => hero.id);
+  return history
+    .filter((entry) => matchesFilter(entry, filter))
+    .toSorted((a, b) => b.start_time - a.start_time)
+    .slice(0, limit)
+    .map((entry) => {
+      const rng = mulberry32(demoMatchIndex(entry.match_id) + 0x57a75);
+      const lean = isWin(entry) ? 450 : -450;
+      const laned = entry.game_mode === GAME_MODE_NORMAL && entry.match_duration_s >= LANE_PHASE_END_S;
+      const shots = intBetween(rng, 900, 2600);
+      const shotsHit = Math.round(shots * between(rng, 0.35, 0.6));
+      const bulletsHit = Math.round(shotsHit * between(rng, 0.5, 0.8));
+      const minutes = entry.match_duration_s / 60;
+      return {
+        match_id: entry.match_id,
+        player_damage: Math.round(minutes * between(rng, 600, 1100)),
+        player_damage_taken: Math.round(minutes * between(rng, 600, 1200)),
+        boss_damage: Math.round(minutes * between(rng, 80, 400)),
+        healing: Math.round(minutes * between(rng, 20, 220)),
+        shots_hit: shotsHit,
+        shots_missed: shots - shotsHit,
+        hero_bullets_hit: bulletsHit,
+        hero_bullets_hit_crit: Math.round(bulletsHit * between(rng, 0.08, 0.25)),
+        neutral_souls: Math.round(minutes * between(rng, 80, 260)),
+        souls_lost: Math.round(entry.player_deaths * between(rng, 150, 450)),
+        lane: laned
+          ? {
+              lane: pick(rng, LANE_IDS),
+              diff: Math.round(between(rng, -2400, 2400) + lean),
+              own: {
+                time_stamp_s: LANE_PHASE_END_S,
+                net_worth: Math.round(between(rng, 4300, 6600)),
+                kills: intBetween(rng, 0, 2),
+                deaths: intBetween(rng, 0, 2),
+                assists: intBetween(rng, 0, 2),
+                creep_kills: intBetween(rng, 18, 36),
+                denies: intBetween(rng, 0, 6),
+                player_damage: Math.round(between(rng, 1400, 4600)),
+              },
+              enemyHeroIds: opponents.length ? [pick(rng, opponents), pick(rng, opponents)] : [],
+            }
+          : null,
+      };
+    });
 }

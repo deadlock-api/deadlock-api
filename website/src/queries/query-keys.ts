@@ -25,6 +25,8 @@ import type {
   PlayersApiPlayerHeroStatsRequest,
 } from "deadlock_api_client";
 
+import type { TrackerMatchStatsParams } from "./tracker-queries";
+
 /** Where match metadata may come from: GraphQL with the REST endpoint as fallback, or GraphQL alone. */
 export type MatchMetadataSource = "any" | "graphql";
 
@@ -130,6 +132,7 @@ export const queryKeys = {
     matchMetadata: (matchId: number, source: MatchMetadataSource = "any") =>
       ["api-tracker-match-metadata", matchId, source] as const,
     matchSummary: (matchId: number) => ["api-match-summary", matchId] as const,
+    matchStats: (params: TrackerMatchStatsParams) => ["api-tracker-match-stats", params] as const,
     abilities: () => ["api-tracker-abilities"] as const,
     ingestStatus: (accountId: number) => ["api-player-ingest-status", accountId] as const,
   },
