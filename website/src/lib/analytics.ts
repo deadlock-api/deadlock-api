@@ -10,7 +10,13 @@ let client: Promise<PostHog | null> | undefined;
 export function getAnalytics(): Promise<PostHog | null> {
   client ??= (async () => {
     if (!import.meta.env.PROD) return null;
-    const { default: posthog } = await import("posthog-js");
+    // A chunk that fails to load (flaky network, a blocker) only turns analytics off. Left rejected, this cached
+    // promise would reach the stale-chunk handler (src/lib/chunk-reload.ts) on every later capture and reload the page.
+    const posthog = await import("posthog-js").then(
+      (module) => module.default,
+      () => null,
+    );
+    if (!posthog) return null;
     posthog.init(token, {
       api_host: "https://e.deadlock-api.com",
       ui_host: "https://eu.posthog.com",
