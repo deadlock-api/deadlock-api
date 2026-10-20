@@ -213,7 +213,7 @@ fn build_query(query: &ItemPermutationStatsQuery) -> String {
         format!(
             "
         SELECT
-            arrayIntersect({owned_items}, {items_list}) AS item_ids,
+            arraySort(arrayIntersect({owned_items}, {items_list})) AS item_ids,
             countIf(won)      AS wins,
             countIf(not won)  AS losses,
             wins + losses AS matches
@@ -232,8 +232,9 @@ fn build_query(query: &ItemPermutationStatsQuery) -> String {
         if comb_size < 2 {
             return String::new();
         }
-        // Only increasing index tuples, so each combination is built once in purchase order rather
-        // than all `n^k` tuples filtered down to `i0_index < i1_index < ...`.
+        // Only increasing index tuples, so each combination is built once rather than all `n^k`
+        // tuples filtered down to `i0_index < i1_index < ...`. `p_items` is sorted by id, so a
+        // combination is one row whatever order its items were bought in.
         let joins = (0..comb_size)
             .map(|i| {
                 if i == 0 {
@@ -251,10 +252,10 @@ fn build_query(query: &ItemPermutationStatsQuery) -> String {
             .join("\n");
         let intersect_array = (0..comb_size).map(|i| format!("i{i}")).join(", ");
         let owned_items = if include_corrupted {
-            "arrayFilter(x -> x IN t_upgrades, arrayDistinct(items.item_id))".to_owned()
+            "arraySort(arrayFilter(x -> x IN t_upgrades, arrayDistinct(items.item_id)))".to_owned()
         } else {
             format!(
-                "arrayDistinct(arrayFilter((x, u) -> x IN t_upgrades AND {}, items.item_id, items.upgrade_info))",
+                "arraySort(arrayDistinct(arrayFilter((x, u) -> x IN t_upgrades AND {}, items.item_id, items.upgrade_info)))",
                 not_corrupted_sql("u")
             )
         };
@@ -382,7 +383,7 @@ mod tests {
     fn corrupted_items_are_excluded_by_default() {
         let combos = build_query(&ItemPermutationStatsQuery::default());
         assert!(combos.contains(
-            "arrayDistinct(arrayFilter((x, u) -> x IN t_upgrades AND bitAnd(u, 8388608) = 0, items.item_id, items.upgrade_info))"
+            "arraySort(arrayDistinct(arrayFilter((x, u) -> x IN t_upgrades AND bitAnd(u, 8388608) = 0, items.item_id, items.upgrade_info)))"
         ));
         let intersect = build_query(&ItemPermutationStatsQuery {
             item_ids: Some(vec![1, 2]),
@@ -390,7 +391,9 @@ mod tests {
         });
         let owned =
             "arrayFilter((x, u) -> bitAnd(u, 8388608) = 0, items.item_id, items.upgrade_info)";
-        assert!(intersect.contains(&format!("arrayIntersect({owned}, [1, 2]) AS item_ids")));
+        assert!(intersect.contains(&format!(
+            "arraySort(arrayIntersect({owned}, [1, 2])) AS item_ids"
+        )));
         assert!(intersect.contains(&format!(
             "WHERE hasAll(items.item_id, [1, 2])\n            AND hasAll({owned}, [1, 2])"
         )));
@@ -402,14 +405,16 @@ mod tests {
             include_corrupted_items: Some(true),
             ..Default::default()
         });
-        assert!(combos.contains("arrayFilter(x -> x IN t_upgrades, arrayDistinct(items.item_id))"));
+        assert!(combos.contains(
+            "arraySort(arrayFilter(x -> x IN t_upgrades, arrayDistinct(items.item_id)))"
+        ));
         assert!(!combos.contains("upgrade_info"));
         let intersect = build_query(&ItemPermutationStatsQuery {
             item_ids: Some(vec![1, 2]),
             include_corrupted_items: Some(true),
             ..Default::default()
         });
-        assert!(intersect.contains("arrayIntersect(items.item_id, [1, 2]) AS item_ids"));
+        assert!(intersect.contains("arraySort(arrayIntersect(items.item_id, [1, 2])) AS item_ids"));
         assert!(!intersect.contains("upgrade_info"));
     }
 
