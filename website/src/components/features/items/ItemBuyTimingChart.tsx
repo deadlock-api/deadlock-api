@@ -98,6 +98,7 @@ function buildChartData({
   useWilsonInterval,
   minAvgThreshold,
   rowTotalMatches,
+  mergedMinMatches,
 }: {
   data?: Array<{ item_id: number; bucket: number | null; matches: number; wins: number }>;
   itemIds: number[];
@@ -105,6 +106,8 @@ function buildChartData({
   useWilsonInterval: boolean;
   minAvgThreshold: number;
   rowTotalMatches?: number;
+  /** Merged intervals with fewer matches are left out. */
+  mergedMinMatches?: number;
 }): ChartData {
   const result: Record<string, ChartPoint[]> = {};
 
@@ -117,8 +120,12 @@ function buildChartData({
 
     let increment = rowTotalMatches ? bucketIncrements[bucketIncrements.length - 1] : bucketIncrements[0];
     if (rowTotalMatches) {
+      // Sized on the buckets that pass the floor by themselves: the many thin tail buckets would make every width look
+      // sparse and pick a coarser one.
+      const sizingData =
+        mergedMinMatches == null ? itemData : itemData.filter((point) => point.matches >= mergedMinMatches);
       for (const inc of bucketIncrements) {
-        const avgMatches = computeAverageMatchCount(itemData, inc);
+        const avgMatches = computeAverageMatchCount(sizingData, inc);
         const avgPercent = avgMatches / rowTotalMatches;
         if (avgPercent >= minAvgThreshold) {
           increment = inc;
@@ -141,7 +148,7 @@ function buildChartData({
 
     for (const key of keys) {
       const group = groups.get(key);
-      if (!group) continue;
+      if (!group || (mergedMinMatches != null && group.matches < mergedMinMatches)) continue;
 
       const bucketStart = key;
       const bucketEnd = key + increment;
@@ -177,9 +184,8 @@ function buildChartData({
   return result;
 }
 
-/** The matches a point needs: an item table row's chart scales it with the row, elsewhere the page's Min Matches. */
-function pointMinMatches(rowTotalMatches: number | undefined, pageMinMatches: number | null | undefined) {
-  if (!rowTotalMatches) return pageMinMatches ?? 2;
+/** The matches a merged point of an item table row's chart needs, scaled with the row. */
+function rowPointMinMatches(rowTotalMatches: number) {
   if (rowTotalMatches > 500) return 20;
   if (rowTotalMatches > 250) return 10;
   return 2;
@@ -219,7 +225,11 @@ export function ItemBuyTimingChart({
 
   const baseMinAvgThreshold = rowTotalMatches && rowTotalMatches > 200 ? MIN_AVG_THRESHOLD : MIN_AVG_THRESHOLD * 1.5;
   const minAvgThreshold = showFineGrainedIntervals ? baseMinAvgThreshold / 2 : baseMinAvgThreshold;
-  const minMatches = pointMinMatches(rowTotalMatches, baseQueryOptions.minMatches);
+  // A table row's chart merges the fine buckets into wider intervals, so its floor applies to the merged points: on the
+  // fine buckets it dropped whole tail intervals that together had enough matches. Elsewhere each bucket is a point and
+  // takes the page's Min Matches.
+  const mergedMinMatches = rowTotalMatches ? rowPointMinMatches(rowTotalMatches) : undefined;
+  const minMatches = rowTotalMatches ? 2 : (baseQueryOptions.minMatches ?? 2);
 
   const { data: itemsData } = useQuery(itemUpgradesQueryOptions);
   const itemNameMap = useMemo(
@@ -254,8 +264,9 @@ export function ItemBuyTimingChart({
         useWilsonInterval,
         minAvgThreshold,
         rowTotalMatches,
+        mergedMinMatches,
       }),
-    [data, itemIds, shown.bucketType, useWilsonInterval, minAvgThreshold, rowTotalMatches],
+    [data, itemIds, shown.bucketType, useWilsonInterval, minAvgThreshold, rowTotalMatches, mergedMinMatches],
   );
 
   const config = BUCKET_CONFIG[shown.bucketType];
