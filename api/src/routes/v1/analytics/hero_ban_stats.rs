@@ -5,36 +5,15 @@ use axum_extra::extract::Query;
 use clickhouse::Row;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use strum::Display;
 use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
 
-use super::common_filters::round_demo_timestamps;
+use super::common_filters::{BucketQuery, round_demo_timestamps};
 use crate::context::AppState;
 use crate::error::APIResult;
 use crate::routes::v1::matches::types::MatchMode;
 use crate::utils::parse::{comma_separated_deserialize_option, default_last_month_timestamp};
 use crate::utils::sql::{cached_ch_query, impl_match_info};
-
-#[derive(Debug, Clone, Copy, Deserialize, ToSchema, Default, Display, PartialEq, Eq, Hash)]
-#[cfg_attr(test, derive(proptest_derive::Arbitrary))]
-#[serde(rename_all = "snake_case")]
-#[strum(serialize_all = "snake_case")]
-pub enum BucketQuery {
-    /// No Bucketing
-    #[default]
-    NoBucket,
-    /// Bucket Hero Ban Stats By Max Average Badge Level (tier = first digits, subtier = last digit) of both teams involved. See more: <https://api.deadlock-api.com/v1/assets/ranks>
-    AvgBadge,
-    /// Bucket Hero Ban Stats By Start Time (Hour)
-    StartTimeHour,
-    /// Bucket Hero Ban Stats By Start Time (Day)
-    StartTimeDay,
-    /// Bucket Hero Ban Stats By Start Time (Week)
-    StartTimeWeek,
-    /// Bucket Hero Ban Stats By Start Time (Month)
-    StartTimeMonth,
-}
 
 #[derive(Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash, Default)]
 #[cfg_attr(test, derive(proptest_derive::Arbitrary))]
@@ -92,14 +71,7 @@ pub struct HeroBanStats {
 fn build_query(query: &HeroBanStatsQuery) -> String {
     let info_filters = query.match_info().build();
     let match_mode_filter = MatchMode::sql_filter(query.match_mode.as_deref());
-    let bucket_expr = match query.bucket {
-        BucketQuery::NoBucket => "toUInt32(0)",
-        BucketQuery::StartTimeHour => "toStartOfHour(start_time)",
-        BucketQuery::StartTimeDay => "toStartOfDay(start_time)",
-        BucketQuery::StartTimeWeek => "toDateTime(toStartOfWeek(start_time))",
-        BucketQuery::StartTimeMonth => "toDateTime(toStartOfMonth(start_time))",
-        BucketQuery::AvgBadge => "toUInt32(assumeNotNull(coalesce(average_badge, 0)))",
-    };
+    let bucket_expr = query.bucket.base_expr();
     format!(
         "
     SELECT arrayJoin(banned_hero_ids) AS hero_id,
