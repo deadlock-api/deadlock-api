@@ -1,5 +1,7 @@
 import { parseAsStringLiteral } from "nuqs";
 
+import { DEFAULT_RANK_RANGE } from "~/lib/rank-utils";
+
 const GAME_MODES = ["normal", "street_brawl"] as const;
 export type GameMode = (typeof GAME_MODES)[number];
 
@@ -16,34 +18,45 @@ export const parseAsMatchMode = parseAsStringLiteral(MATCH_MODES).withDefault(DE
  * Game mode and match mode as one choice: Street Brawl is never played ranked, so the pairs
  * offered here are exactly the ones that can return data. `supportsRank` says whether a rank range
  * can narrow the mode; where it cannot, the rank filter is hidden and dropped from requests.
+ * `hasRankedMatches` says whether the mode holds any matches with a rank, so a breakdown by rank or
+ * a rank cohort has something to show.
+ *
+ * Only ranked lobbies carry an average badge: any rank bound drops every unranked match. A range is
+ * therefore offered in Ranked alone, and All stays all of ranked and unranked.
  */
 export const MODE_CONFIG = {
   normal_all: {
     label: "All",
     gameMode: "normal",
     matchMode: "ranked,unranked",
-    supportsRank: true,
+    supportsRank: false,
+    hasRankedMatches: true,
   },
   normal_ranked: {
     label: "Ranked",
     gameMode: "normal",
     matchMode: "ranked",
     supportsRank: true,
+    hasRankedMatches: true,
   },
   normal_unranked: {
     label: "Unranked",
     gameMode: "normal",
     matchMode: "unranked",
-    // Unranked lobbies carry no average badge, so any rank bound filters every match out.
     supportsRank: false,
+    hasRankedMatches: false,
   },
   street_brawl: {
     label: "Brawl",
     gameMode: "street_brawl",
     matchMode: "unranked",
     supportsRank: false,
+    hasRankedMatches: false,
   },
-} satisfies Record<string, { label: string; gameMode: GameMode; matchMode: MatchMode; supportsRank: boolean }>;
+} satisfies Record<
+  string,
+  { label: string; gameMode: GameMode; matchMode: MatchMode; supportsRank: boolean; hasRankedMatches: boolean }
+>;
 
 export type Mode = keyof typeof MODE_CONFIG;
 
@@ -77,6 +90,19 @@ export function getEffectiveRankRange(
     effectiveMaxRankId: maxRankId ?? undefined,
   };
 }
+
+/**
+ * The average badge bounds of a page's defaults (mode All, rank range Phantom 1+), as the pages put them into their
+ * requests: none, since All has no rank range. Server prefetches spread this so their query keys match.
+ */
+export const DEFAULT_BADGES = (() => {
+  const { effectiveMinRankId, effectiveMaxRankId } = getEffectiveRankRange(
+    DEFAULT_MODE,
+    DEFAULT_RANK_RANGE.min,
+    DEFAULT_RANK_RANGE.max,
+  );
+  return { minAverageBadge: effectiveMinRankId, maxAverageBadge: effectiveMaxRankId };
+})();
 
 /**
  * Street Brawl hands out fixed souls each round instead of a soul economy, so net worth, souls per minute and soul

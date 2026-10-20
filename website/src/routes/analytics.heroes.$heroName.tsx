@@ -40,13 +40,12 @@ import { getPickrateMultiplier } from "~/lib/constants";
 import type { DateFilterPreference } from "~/lib/date-filter-preference";
 import { findKey } from "~/lib/find-keys";
 import { formatPercent } from "~/lib/format";
-import { DEFAULT_MATCH_MODE } from "~/lib/game-mode";
+import { DEFAULT_BADGES, DEFAULT_MATCH_MODE } from "~/lib/game-mode";
 import { fetchHeroMatchups, type HeroMatchupsRequest } from "~/lib/hero-matchup-fns";
 import { isPreReleaseHero } from "~/lib/hero-roster";
 import { findHeroBySlug, heroSlug } from "~/lib/hero-slug";
 import { catchPrefetch, ensureCached, prefetchCached, requireOnServer } from "~/lib/prefetch-safe";
 import { rankOf } from "~/lib/rank-of";
-import { DEFAULT_RANK_RANGE, rankRangeLabel } from "~/lib/rank-utils";
 import {
   defaultPeriodLabel,
   defaultPrevUnixRange,
@@ -83,8 +82,8 @@ const HeroWinRateByRank = lazy(() =>
 );
 
 const GAME_MODE = "normal" as const;
-/** The rank range as the analytics pages read it from the URL, so a link lands on the numbers this page quotes. */
-const RANK_SEARCH = { min_rank: DEFAULT_RANK_RANGE.min, max_rank: DEFAULT_RANK_RANGE.max };
+/** What the numbers here cover, as the list pages show by default (mode All): ranked and unranked matches. */
+const MATCH_SCOPE = "Ranked and unranked";
 
 // No `minHeroMatches` / `minHeroMatchesTotal`, not even 0: either one sends the request to the exact-timestamp base
 // table, while item stats come from day-grained rollups that start at midnight. Right after a mid-day patch the item
@@ -92,8 +91,7 @@ const RANK_SEARCH = { min_rank: DEFAULT_RANK_RANGE.min, max_rank: DEFAULT_RANK_R
 // from the rollups over the same days.
 function currentStatsParams(seasons: readonly SeasonInfo[], preference: DateFilterPreference = "season") {
   return {
-    minAverageBadge: DEFAULT_RANK_RANGE.min,
-    maxAverageBadge: DEFAULT_RANK_RANGE.max,
+    ...DEFAULT_BADGES,
     gameMode: GAME_MODE,
     matchMode: DEFAULT_MATCH_MODE,
     ...defaultUnixRange(seasons, preference),
@@ -119,8 +117,7 @@ function currentAbilityOrderParams(seasons: readonly SeasonInfo[], preference: D
 function currentBanParams(seasons: readonly SeasonInfo[], preference: DateFilterPreference = "season") {
   return {
     matchMode: DEFAULT_MATCH_MODE,
-    minAverageBadge: DEFAULT_RANK_RANGE.min,
-    maxAverageBadge: DEFAULT_RANK_RANGE.max,
+    ...DEFAULT_BADGES,
     ...defaultUnixRange(seasons, preference),
   };
 }
@@ -133,8 +130,7 @@ function matchupsRequest(
   const prev = defaultPrevUnixRange(seasons, preference);
   return {
     heroId,
-    minAverageBadge: DEFAULT_RANK_RANGE.min,
-    maxAverageBadge: DEFAULT_RANK_RANGE.max,
+    ...DEFAULT_BADGES,
     ...defaultUnixRange(seasons, preference),
     prevMinUnixTimestamp: prev.minUnixTimestamp,
     prevMaxUnixTimestamp: prev.maxUnixTimestamp,
@@ -206,7 +202,7 @@ export const Route = createFileRoute("/analytics/heroes/$heroName")({
       }
       throw notFound({ data: { suggestion: closestNameBySlug(playable, params.heroName)?.name } });
     }
-    const [stats, ranks, , , , matchups] = await Promise.all([
+    const [stats, , , , , matchups] = await Promise.all([
       prefetchCached(queryClient, heroStatsQueryOptions(currentStatsParams(seasons, preferences.dateFilter))),
       prefetchCached(queryClient, ranksQueryOptions),
       prefetchCached(queryClient, heroBanStatsQueryOptions(currentBanParams(seasons, preferences.dateFilter))),
@@ -234,7 +230,7 @@ export const Route = createFileRoute("/analytics/heroes/$heroName")({
       cardImage,
       breadcrumb: hero.name,
       matchups,
-      rankRange: rankRangeLabel(ranks, DEFAULT_RANK_RANGE.min, DEFAULT_RANK_RANGE.max),
+      rankRange: MATCH_SCOPE,
       coverage: defaultTemporalCoverage(seasons, preferences.dateFilter),
       summary: summary && {
         winRate: summary.winRate,
@@ -258,9 +254,9 @@ export const Route = createFileRoute("/analytics/heroes/$heroName")({
         ogImageKind: cardImage ? "thumbnail" : "card",
       });
     }
-    const { heroName, slug, cardImage, rankRange, coverage, summary } = loaderData;
+    const { heroName, slug, cardImage, coverage, summary } = loaderData;
     const description = summary
-      ? `${heroName} holds a ${formatPercent(summary.winRate)} win rate (#${summary.rank} of ${summary.heroCount} heroes) and a ${formatPercent(summary.pickRate)} pick rate in ${rankRange} Deadlock matches. Live matchups, synergies, and counters, updated daily.`
+      ? `${heroName} holds a ${formatPercent(summary.winRate)} win rate (#${summary.rank} of ${summary.heroCount} heroes) and a ${formatPercent(summary.pickRate)} pick rate in ranked and unranked Deadlock matches. Live matchups, synergies, and counters, updated daily.`
       : `${heroName} win rate, pick rate, best items, and matchups in Deadlock. Live stats from tracked matches, updated daily.`;
     return seo({
       title: pageTitle(`${heroName} Win Rate & Pick Rate`),
@@ -270,7 +266,7 @@ export const Route = createFileRoute("/analytics/heroes/$heroName")({
       ogImageKind: cardImage ? "thumbnail" : "card",
       jsonLd: datasetJsonLd({
         name: `Deadlock ${heroName} Win Rate & Pick Rate`,
-        description: `Win rate, pick rate, ban rate, and matchup statistics for ${heroName} in Deadlock, calculated from tracked ${rankRange} matches and updated daily.`,
+        description: `Win rate, pick rate, ban rate, and matchup statistics for ${heroName} in Deadlock, calculated from tracked ranked and unranked matches and updated daily.`,
         path: `/analytics/heroes/${slug}`,
         keywords: ["Deadlock", heroName, "win rate", "pick rate", "matchups"],
         variableMeasured: ["win rate", "pick rate", "ban rate", "matchup win rate"],
@@ -396,11 +392,11 @@ function HeroDetailPage() {
           summary ? (
             <>
               {heroName} wins <span className="font-semibold text-foreground">{formatPercent(summary.winRate)}</span> of{" "}
-              {summary.matches.toLocaleString("en-US")} tracked {rankRange} matches in {period}. Best items, skill
-              order, matchups and trends below, refreshed daily from live match data.
+              {summary.matches.toLocaleString("en-US")} tracked ranked and unranked matches in {period}. Best items,
+              skill order, matchups and trends below, refreshed daily from live match data.
             </>
           ) : (
-            `Live win rate, pick rate, builds and matchups for ${heroName} in Deadlock, from tracked ${rankRange} matches and updated daily.`
+            `Live win rate, pick rate, builds and matchups for ${heroName} in Deadlock, from tracked ranked and unranked matches and updated daily.`
           )
         }
       >
@@ -552,35 +548,35 @@ function HeroDetailPage() {
           <div className="grid gap-3 @xl:grid-cols-2 @4xl:grid-cols-3">
             <HeroLinkCard
               to="/analytics/heroes/matchup-details"
-              search={{ hero_id: heroId, ...RANK_SEARCH }}
+              search={{ hero_id: heroId }}
               icon={Swords}
               title="Counters"
               description={`Every hero ${heroName} beats or loses to, with the win rate swing.`}
             />
             <HeroLinkCard
               to="/analytics/heroes/combos"
-              search={{ comb_include_heroes: heroId, ...RANK_SEARCH }}
+              search={{ comb_include_heroes: heroId }}
               icon={UsersRound}
               title="Best Duos"
               description={`The teammates that win most often next to ${heroName}.`}
             />
             <HeroLinkCard
               to="/analytics/builds"
-              search={{ hero: heroId, ...RANK_SEARCH }}
+              search={{ hero: heroId }}
               icon={Hammer}
               title="Popular Builds"
               description={`The published ${heroName} builds players start with, and how each one wins.`}
             />
             <HeroLinkCard
               to="/analytics/items"
-              search={{ hero: heroId, ...RANK_SEARCH }}
+              search={{ hero: heroId }}
               icon={ShoppingBag}
               title="Item Builds"
               description={`Win rates, buy timings, and combos for every item on ${heroName}.`}
             />
             <HeroLinkCard
               to="/analytics/abilities"
-              search={{ hero_id: heroId, ...RANK_SEARCH }}
+              search={{ hero_id: heroId }}
               icon={ListOrdered}
               title="Ability Builds"
               description={`The most common ${heroName} skill orders and how often they win.`}
@@ -594,14 +590,14 @@ function HeroDetailPage() {
             />
             <HeroLinkCard
               to="/analytics/players"
-              search={{ hero: heroId, ...RANK_SEARCH }}
+              search={{ hero: heroId }}
               icon={Users}
               title="Player Scoreboard"
               description={`Who racks up the most kills, souls, and damage on ${heroName}.`}
             />
             <HeroLinkCard
               to="/community/heatmap"
-              search={{ hero_id: heroId, ...RANK_SEARCH }}
+              search={{ hero_id: heroId }}
               icon={Map}
               title="Kill Heatmap"
               description={`Where ${heroName} gets kills and dies across the map.`}

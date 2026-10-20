@@ -4,9 +4,8 @@ import { ITEM_COMBS_TO_SHOW } from "~/components/features/items/useItemCombFilte
 import { analyticsTabFromPath, ANALYTICS_VIEWS, redirectAnalyticsTab } from "~/lib/analytics-tabs";
 import { enemyHeroFilter, parseEnemyParam } from "~/lib/enemy-heroes";
 import { formatPercent } from "~/lib/format";
-import { DEFAULT_MATCH_MODE } from "~/lib/game-mode";
+import { DEFAULT_BADGES, DEFAULT_MATCH_MODE } from "~/lib/game-mode";
 import { prefetchCached, prefetchSeed } from "~/lib/prefetch-safe";
-import { DEFAULT_RANK_RANGE } from "~/lib/rank-utils";
 import { defaultPrevUnixRange, defaultTemporalCoverage, defaultUnixRange } from "~/lib/seasons";
 import { datasetJsonLd, pageTitle, seo } from "~/lib/seo";
 import { wilsonScoreInterval } from "~/lib/wilson";
@@ -70,8 +69,7 @@ export const itemsPageOptions = {
     const common = {
       minMatches: 10,
       heroId: deps.heroId,
-      minAverageBadge: DEFAULT_RANK_RANGE.min,
-      maxAverageBadge: DEFAULT_RANK_RANGE.max,
+      ...DEFAULT_BADGES,
       gameMode: "normal" as const,
       matchMode: DEFAULT_MATCH_MODE,
     };

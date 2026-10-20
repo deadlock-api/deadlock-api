@@ -25,12 +25,11 @@ import { useSeasons } from "~/hooks/useSeasons";
 import type { DateFilterPreference } from "~/lib/date-filter-preference";
 import { findKey } from "~/lib/find-keys";
 import { formatPercent } from "~/lib/format";
-import { DEFAULT_MATCH_MODE } from "~/lib/game-mode";
+import { DEFAULT_BADGES, DEFAULT_MATCH_MODE } from "~/lib/game-mode";
 import { fetchItemBestHeroes } from "~/lib/item-hero-fns";
 import { findItemBySlug, findRenamedItem, itemSlug } from "~/lib/item-slug";
 import { catchPrefetch, ensureCached, prefetchCached, requireOnServer } from "~/lib/prefetch-safe";
 import { rankOf } from "~/lib/rank-of";
-import { DEFAULT_RANK_RANGE, rankRangeLabel } from "~/lib/rank-utils";
 import { defaultPeriodLabel, defaultTemporalCoverage, defaultUnixRange, type SeasonInfo } from "~/lib/seasons";
 import { datasetJsonLd, pageTitle, seo } from "~/lib/seo";
 import { closestNameBySlug, findByIdSegment, slugify } from "~/lib/slug";
@@ -61,8 +60,8 @@ const ItemWinRateByBuyTime = lazy(() =>
 );
 
 const GAME_MODE = "normal" as const;
-/** The rank range as the items page reads it from the URL, so a link lands on the numbers this page quotes. */
-const RANK_SEARCH = { min_rank: DEFAULT_RANK_RANGE.min, max_rank: DEFAULT_RANK_RANGE.max };
+/** What the numbers here cover, as the list pages show by default (mode All): ranked and unranked matches. */
+const MATCH_SCOPE = "Ranked and unranked";
 
 const SLOT_LABEL = { weapon: "Weapon", spirit: "Spirit", vitality: "Vitality" } as const;
 
@@ -71,8 +70,7 @@ function currentItemStatsParams(seasons: readonly SeasonInfo[], preference: Date
   return {
     minMatches: 10,
     heroId: null,
-    minAverageBadge: DEFAULT_RANK_RANGE.min,
-    maxAverageBadge: DEFAULT_RANK_RANGE.max,
+    ...DEFAULT_BADGES,
     minBoughtAtS: undefined,
     maxBoughtAtS: undefined,
     gameMode: GAME_MODE,
@@ -95,8 +93,7 @@ function byRankItemStatsParams(seasons: readonly SeasonInfo[], preference: DateF
 // mid-day patch the shares passed 100%. Without them both come from the rollups over the same days.
 function currentHeroStatsParams(seasons: readonly SeasonInfo[], preference: DateFilterPreference = "season") {
   return {
-    minAverageBadge: DEFAULT_RANK_RANGE.min,
-    maxAverageBadge: DEFAULT_RANK_RANGE.max,
+    ...DEFAULT_BADGES,
     gameMode: GAME_MODE,
     matchMode: DEFAULT_MATCH_MODE,
     ...defaultUnixRange(seasons, preference),
@@ -151,7 +148,7 @@ export const Route = createFileRoute("/analytics/items/$itemName")({
       }
       throw notFound({ data: { suggestion: closestNameBySlug(shopable, params.itemName)?.name } });
     }
-    const [stats, heroStats, ranks, , , bestHeroes] = await Promise.all([
+    const [stats, heroStats, , , , bestHeroes] = await Promise.all([
       prefetchCached(queryClient, itemStatsQueryOptions(currentItemStatsParams(seasons, preferences.dateFilter))),
       prefetchCached(queryClient, heroStatsQueryOptions(currentHeroStatsParams(seasons, preferences.dateFilter))),
       prefetchCached(queryClient, ranksQueryOptions),
@@ -162,8 +159,7 @@ export const Route = createFileRoute("/analytics/items/$itemName")({
         fetchItemBestHeroes({
           data: {
             itemId: item.id,
-            minAverageBadge: DEFAULT_RANK_RANGE.min,
-            maxAverageBadge: DEFAULT_RANK_RANGE.max,
+            ...DEFAULT_BADGES,
             gameMode: GAME_MODE,
             matchMode: DEFAULT_MATCH_MODE,
             ...defaultUnixRange(seasons, preferences.dateFilter),
@@ -187,7 +183,7 @@ export const Route = createFileRoute("/analytics/items/$itemName")({
       cost: item.cost ?? null,
       breadcrumb: item.name,
       bestHeroes,
-      rankRange: rankRangeLabel(ranks, DEFAULT_RANK_RANGE.min, DEFAULT_RANK_RANGE.max),
+      rankRange: MATCH_SCOPE,
       coverage: defaultTemporalCoverage(seasons, preferences.dateFilter),
       summary: summary && {
         winRate: summary.winRate,
@@ -201,10 +197,10 @@ export const Route = createFileRoute("/analytics/items/$itemName")({
   head: ({ loaderData }) => {
     // The not-found page sets its own title and noindex; a second title and a canonical to the section came first.
     if (!loaderData) return {};
-    const { itemName, slug, image, tier, slot, rankRange, coverage, summary } = loaderData;
+    const { itemName, slug, image, tier, slot, coverage, summary } = loaderData;
     const usage = summary?.usage !== undefined ? ` and shows up in ${formatPercent(summary.usage)} of builds` : "";
     const description = summary
-      ? `${itemName} wins ${formatPercent(summary.winRate)} of ${rankRange} Deadlock matches (#${summary.rank} of ${summary.itemCount} items)${usage}. Best heroes, common pairings, and buy timing, updated daily.`
+      ? `${itemName} wins ${formatPercent(summary.winRate)} of ranked and unranked Deadlock matches (#${summary.rank} of ${summary.itemCount} items)${usage}. Best heroes, common pairings, and buy timing, updated daily.`
       : `${itemName} win rate, best heroes, common pairings, and buy timing in Deadlock. Live stats from tracked matches, updated daily.`;
     return seo({
       title: pageTitle(`${itemName} Win Rate & Best Heroes`),
@@ -214,7 +210,7 @@ export const Route = createFileRoute("/analytics/items/$itemName")({
       ogImageKind: image ? "thumbnail" : "card",
       jsonLd: datasetJsonLd({
         name: `Deadlock ${itemName} Win Rate & Best Heroes`,
-        description: `Win rate, purchase rate, buy timing, best heroes, and common pairings for the tier ${tier} ${slot} item ${itemName} in Deadlock, calculated from tracked ${rankRange} matches and updated daily.`,
+        description: `Win rate, purchase rate, buy timing, best heroes, and common pairings for the tier ${tier} ${slot} item ${itemName} in Deadlock, calculated from tracked ranked and unranked matches and updated daily.`,
         path: `/analytics/items/${slug}`,
         keywords: ["Deadlock", itemName, "item", "win rate", "build"],
         variableMeasured: ["win rate", "purchase rate", "buy time"],
@@ -278,12 +274,12 @@ function ItemDetailPage() {
             <>
               Players who buy {itemName} win{" "}
               <span className="font-semibold text-foreground">{formatPercent(summary.winRate)}</span> of{" "}
-              {summary.matches.toLocaleString("en-US")} tracked {rankRange} matches in {period}
+              {summary.matches.toLocaleString("en-US")} tracked ranked and unranked matches in {period}
               {summary.usage !== undefined && <>, and it shows up in {formatPercent(summary.usage)} of all builds</>}.
               Refreshed daily from live match data.
             </>
           ) : (
-            `Live win rate, purchase rate and best heroes for ${itemName} in Deadlock, from tracked ${rankRange} matches and updated daily.`
+            `Live win rate, purchase rate and best heroes for ${itemName} in Deadlock, from tracked ranked and unranked matches and updated daily.`
           )
         }
       >
@@ -389,13 +385,13 @@ function ItemDetailPage() {
         <nav aria-label={`More ${itemName} stats`} className="@container">
           <div className="grid gap-3 @xl:grid-cols-2 @4xl:grid-cols-3">
             <LinkCard asChild size="sm" orientation="horizontal" media={<Layers />} title={`Builds with ${itemName}`}>
-              <Link to="/analytics/items" search={{ include_items: itemId, ...RANK_SEARCH }} preload="intent" />
+              <Link to="/analytics/items" search={{ include_items: itemId }} preload="intent" />
             </LinkCard>
             <LinkCard asChild size="sm" orientation="horizontal" media={<BarChart3 />} title="All Items">
-              <Link to="/analytics/items" search={RANK_SEARCH} preload="intent" />
+              <Link to="/analytics/items" preload="intent" />
             </LinkCard>
             <LinkCard asChild size="sm" orientation="horizontal" media={<Combine />} title="Item Combos">
-              <Link to="/analytics/items/combos" search={RANK_SEARCH} preload="intent" />
+              <Link to="/analytics/items/combos" preload="intent" />
             </LinkCard>
           </div>
         </nav>

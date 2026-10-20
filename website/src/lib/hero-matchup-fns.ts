@@ -6,8 +6,8 @@ import { heroMatchups, type MatchupPeriod } from "~/lib/matchup-stats";
 
 export interface HeroMatchupsRequest {
   heroId: number;
-  minAverageBadge: number;
-  maxAverageBadge: number;
+  minAverageBadge?: number;
+  maxAverageBadge?: number;
   minUnixTimestamp: number;
   maxUnixTimestamp?: number;
   prevMinUnixTimestamp: number;

@@ -193,12 +193,14 @@ test("the example questions land on their pages", () => {
   assert.equal(url({ ...NO_FILTERS, page: null }), undefined);
 });
 
-test("rank tiers become a badge range, a one-sided one open at the other end", () => {
+test("rank tiers become a badge range of ranked matches, a one-sided one open at the other end", () => {
   const search = (rank_min: string | null, rank_max: string | null) =>
     searchOf(intent("hero_stats", { rank_min, rank_max }));
-  assert.deepEqual(search("Phantom", null), { min_rank: 91, max_rank: 116 });
-  assert.deepEqual(search(null, "Phantom"), { min_rank: 0, max_rank: 96 });
-  assert.deepEqual(search("Eternus", "Phantom"), { min_rank: 91, max_rank: 116 });
+  // All keeps unranked matches, which have no rank, so a rank asked for picks the Ranked mode.
+  const ranked = { game_mode: "normal", match_mode: "ranked" };
+  assert.deepEqual(search("Phantom", null), { ...ranked, min_rank: 91, max_rank: 116 });
+  assert.deepEqual(search(null, "Phantom"), { ...ranked, min_rank: 0, max_rank: 96 });
+  assert.deepEqual(search("Eternus", "Phantom"), { ...ranked, min_rank: 91, max_rank: 116 });
   assert.deepEqual(search(null, null), {});
 });
 

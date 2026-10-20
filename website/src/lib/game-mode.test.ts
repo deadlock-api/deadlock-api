@@ -4,8 +4,14 @@ import { test } from "node:test";
 import { getEffectiveRankRange, hasSoulEconomy } from "./game-mode";
 
 test("a backwards rank pair from the URL is put in order", () => {
-  assert.deepEqual(getEffectiveRankRange("normal_all", 116, 91), { effectiveMinRankId: 91, effectiveMaxRankId: 116 });
-  assert.deepEqual(getEffectiveRankRange("normal_all", 91, 116), { effectiveMinRankId: 91, effectiveMaxRankId: 116 });
+  assert.deepEqual(getEffectiveRankRange("normal_ranked", 116, 91), {
+    effectiveMinRankId: 91,
+    effectiveMaxRankId: 116,
+  });
+  assert.deepEqual(getEffectiveRankRange("normal_ranked", 91, 116), {
+    effectiveMinRankId: 91,
+    effectiveMaxRankId: 116,
+  });
 });
 
 test("modes without ranks drop the range", () => {
@@ -14,6 +20,13 @@ test("modes without ranks drop the range", () => {
     effectiveMaxRankId: undefined,
   });
   assert.deepEqual(getEffectiveRankRange("normal_unranked", 91, 116), {
+    effectiveMinRankId: undefined,
+    effectiveMaxRankId: undefined,
+  });
+});
+
+test("All keeps its unranked matches: a rank range would drop every one of them", () => {
+  assert.deepEqual(getEffectiveRankRange("normal_all", 91, 116), {
     effectiveMinRankId: undefined,
     effectiveMaxRankId: undefined,
   });

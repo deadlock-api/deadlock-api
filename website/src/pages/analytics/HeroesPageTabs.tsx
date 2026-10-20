@@ -230,7 +230,7 @@ export function HeroByRankTab({ filters }: { filters: HeroFilters }) {
   const mode = MODE_CONFIG[filters.mode];
   return (
     <Section titleDisplay="hidden" title="Hero Stats by Rank">
-      {mode.supportsRank ? (
+      {mode.hasRankedMatches ? (
         <>
           <FilterBar variant="toolbar" title="Rank comparison" icon={ChartNoAxesCombined} aria-label="Chart controls">
             <Field label="X Axis" orientation="horizontal" className="w-full sm:w-auto">
@@ -264,12 +264,12 @@ export function HeroByRankTab({ filters }: { filters: HeroFilters }) {
       ) : (
         <EmptyState
           title={`Rank breakdown is unavailable for ${mode.label}`}
-          description={`${mode.label} matches have no rank. Explore their overall stats or switch to all normal matches to compare ranks.`}
+          description={`${mode.label} matches have no rank. Explore their overall stats or switch to ranked matches to compare ranks.`}
           action={
             <>
               <Button onClick={() => filters.setTab("stats")}>View {mode.label} stats</Button>
-              <Button variant="outline" onClick={() => filters.setMode("normal_all")}>
-                Switch to all normal matches
+              <Button variant="outline" onClick={() => filters.setMode("normal_ranked")}>
+                Switch to ranked matches
               </Button>
             </>
           }

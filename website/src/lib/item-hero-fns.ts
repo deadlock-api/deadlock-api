@@ -11,8 +11,8 @@ const MIN_HERO_MATCHES = 30;
 
 export interface ItemBestHeroesRequest {
   itemId: number;
-  minAverageBadge: number;
-  maxAverageBadge: number;
+  minAverageBadge?: number;
+  maxAverageBadge?: number;
   minUnixTimestamp: number;
   maxUnixTimestamp?: number;
   gameMode: GameMode;

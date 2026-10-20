@@ -55,8 +55,10 @@ export function sharedFilterParams(
   context: ResolveContext,
 ): Record<string, SearchValue> {
   const params: Record<string, SearchValue> = {};
-  const config = MODE_CONFIG[selection.mode ? MODE_BY_SELECTION[selection.mode] : "normal_all"];
-  if (filters.includes("mode") && selection.mode) {
+  // A rank asked for without a mode means ranked matches: All keeps unranked ones, which have no rank to narrow.
+  const mode = selection.mode ?? (selection.rank && filters.includes("rank") ? "ranked" : undefined);
+  const config = MODE_CONFIG[mode ? MODE_BY_SELECTION[mode] : "normal_all"];
+  if (filters.includes("mode") && mode) {
     params.game_mode = config.gameMode;
     params.match_mode = config.matchMode;
   }
