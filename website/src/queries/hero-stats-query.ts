@@ -61,6 +61,8 @@ function unpackHeroRankStats(packed: PackedColumns<HeroRankField>): HeroRankStat
 function sumByRank(rows: readonly AnalyticsHeroStats[]): Record<HeroRankField, number>[] {
   const byRank = new Map<string, Record<HeroRankField, number>>();
   for (const row of rows) {
+    // Bucket 0 holds the matches without a badge: every unranked one. Read as a rank it would be Obscurus.
+    if (row.bucket <= 0) continue;
     const rank = Math.floor(row.bucket / 10);
     const key = `${row.hero_id}:${rank}`;
     let sum = byRank.get(key);
