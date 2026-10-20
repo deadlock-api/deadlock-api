@@ -554,7 +554,7 @@ async fn get_player_performance_curve(
     description = "
 Retrieves player performance statistics (net worth, kills, deaths, assists, souls per source, damage and kills per target, healing, barriers and self damage) over time throughout matches.
 
-Results are cached for **12 hours** based on the unique combination of query parameters provided.
+Results are cached for **1 hour** based on the unique combination of query parameters provided.
 
 ### Rate Limits:
 > The rate limits below are **shared across all analytics endpoints**.

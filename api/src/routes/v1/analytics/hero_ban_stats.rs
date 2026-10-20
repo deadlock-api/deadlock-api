@@ -129,7 +129,7 @@ Retrieves ban statistics for each hero based on historical match data from demo 
 Only matches with successfully extracted ban data are included. `matches` counts them per bucket, so a hero's ban rate
 is `bans / matches`. Matches where ban extraction failed (empty `banned_hero_ids`) are excluded entirely.
 
-Results are cached for **6 hours** based on the combination of query parameters provided.
+Results are cached for **1 hour** based on the combination of query parameters provided.
 
 ### Rate Limits:
 > The rate limits below are **shared across all analytics endpoints**.
