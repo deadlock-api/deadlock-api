@@ -34,7 +34,7 @@ export const GAME_STAT_CATEGORIES: StatCategory[] = [
       { key: "total_matches", label: "Total Matches", format: "integer", polarity: "higher-is-better" },
       { key: "total_players", label: "Total Players", format: "integer", polarity: "higher-is-better" },
       { key: "avg_duration_s", label: "Avg Duration", format: "duration" },
-      { key: "abandon_rate", label: "Abandon Rate", format: "percent", polarity: "lower-is-better" },
+      { key: "abandon_rate", label: "Player Abandon Rate", format: "percent", polarity: "lower-is-better" },
       { key: "mid_boss_kill_rate", label: "Mid Boss Kill Rate", format: "percent" },
       { key: "avg_first_mid_boss_time_s", label: "Avg First Mid Boss", format: "duration" },
       {

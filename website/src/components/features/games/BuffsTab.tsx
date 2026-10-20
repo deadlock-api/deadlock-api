@@ -107,7 +107,7 @@ export default function BuffsTab({ params }: BuffsTabProps) {
                 value={<Timing seconds={gameStats?.[0]?.avg_first_permanent_buff_time_s} />}
                 align="center"
               />
-              <Stat label="Timed Matches" value={timedMatches.toLocaleString("en-US")} align="center" />
+              <Stat label="Timed Player-Matches" value={timedMatches.toLocaleString("en-US")} align="center" />
             </StatGroup>
 
             <ul className="flex flex-col gap-3" aria-label="Buff pickups per match by stat">
