@@ -2,6 +2,7 @@ use core::time::Duration;
 use std::sync::{Arc, LazyLock};
 
 use axum::extract::FromRequestParts;
+use chrono::{DateTime, Utc};
 use rmcp::handler::server::router::tool::ToolRouter;
 use rmcp::handler::server::tool::ToolCallContext;
 use rmcp::handler::server::wrapper::Parameters;
@@ -25,6 +26,7 @@ use crate::services::assets::versions::items::types::{ItemSlotType, ItemType};
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::rate_limiter::{Quota, RateLimitClient};
 use crate::services::steam::client::SteamClient;
+use crate::services::steam::patch_windows::live_windows;
 use crate::services::steam::types::FeedItem;
 
 const INSTRUCTIONS: &str = "\
@@ -416,14 +418,15 @@ impl McpServer {
 
     #[tool(
         title = "List Patches",
-        description = "List the game patches, newest first, from the official forum changelog (`forum`) and the Steam news feed (`steam`), with `title`, `link`, `pubDate` and `endDate`: when the next patch of the same source was published, null for the live one. Matches with `start_time` in [`pubDate`, `endDate`) were played on that patch. Pass `link` to get the full notes of one patch instead."
+        description = "List the game patches, newest first, from the official forum changelog (`forum`) and the Steam news feed (`steam`), with `title`, `link`, `pubDate`, `startDate` and `endDate`. `startDate` is when the patch went live and `endDate` when the next patch of the same source did, null for the live one: matches with `start_time` in [`startDate`, `endDate`) were played on that patch. `pubDate` is when the post was published; a forum thread's is when it was last edited, often weeks after the patch. Pass `link` to get the full notes of one patch instead."
     )]
     async fn list_patches(&self, Parameters(args): Parameters<ListPatchesArgs>) -> CallToolResult {
         let feed = match self.steam.fetch_combined_patch_feed().await {
             Ok(feed) => feed,
             Err(e) => return patches_error(&e),
         };
-        let patches = patch_summaries(&feed);
+        let builds = self.assets.build_times().await;
+        let patches = patch_summaries(&feed, &builds);
         if let Some(link) = args.link {
             return match feed.iter().zip(patches).find(|(_, p)| p["link"] == link) {
                 Some((item, mut patch)) => {
@@ -453,22 +456,21 @@ fn patch_source(item: &FeedItem) -> PatchSource {
     }
 }
 
-/// One summary per feed item, which is sorted newest first. A patch is live until the next
-/// patch of the same source is published.
-fn patch_summaries(feed: &[FeedItem]) -> Vec<Value> {
-    let (mut next_forum, mut next_steam) = (None, None);
+/// One summary per feed item. `builds` are the client build times, oldest first.
+fn patch_summaries(feed: &[FeedItem], builds: &[DateTime<Utc>]) -> Vec<Value> {
     feed.iter()
-        .map(|item| {
-            let pub_date = item.pub_date().to_utc();
-            let (source, title, link, end_date) = match item {
-                FeedItem::Forum(p) => ("forum", &p.title, &p.link, next_forum.replace(pub_date)),
-                FeedItem::Steam(p) => ("steam", &p.title, &p.link, next_steam.replace(pub_date)),
+        .zip(live_windows(feed, builds))
+        .map(|(item, window)| {
+            let (source, title, link) = match item {
+                FeedItem::Forum(p) => ("forum", &p.title, &p.link),
+                FeedItem::Steam(p) => ("steam", &p.title, &p.link),
             };
             json!({
                 "source": source,
                 "title": title.trim(),
-                "pubDate": pub_date,
-                "endDate": end_date,
+                "pubDate": item.pub_date().to_utc(),
+                "startDate": window.start,
+                "endDate": window.end,
                 "link": link,
             })
         })
@@ -727,7 +729,7 @@ mod tests {
 
     #[test]
     fn a_patch_ends_at_the_next_patch_of_the_same_source() {
-        let summaries = patch_summaries(&[steam(400), forum(300), steam(200), forum(100)]);
+        let summaries = patch_summaries(&[steam(400), forum(300), steam(200), forum(100)], &[]);
         let end_dates: Vec<_> = summaries.iter().map(|p| &p["endDate"]).collect();
         assert_eq!(
             end_dates,
@@ -740,5 +742,6 @@ mod tests {
         );
         assert_eq!(summaries[0]["title"], "steam");
         assert_eq!(summaries[3]["pubDate"], "1970-01-01T00:01:40Z");
+        assert_eq!(summaries[3]["startDate"], "1970-01-01T00:01:40Z");
     }
 }

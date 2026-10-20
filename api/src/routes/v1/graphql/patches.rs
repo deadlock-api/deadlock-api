@@ -1,6 +1,7 @@
 //! The `patches` root query and the `Patch`-scoped match queries.
 
 use async_graphql::{ComplexObject, Context, InputObject, Result as GqlResult, SimpleObject};
+use chrono::{DateTime, Utc};
 
 use crate::context::AppState;
 use crate::routes::v1::graphql::cost;
@@ -12,6 +13,7 @@ use crate::routes::v1::graphql::schema::{
     load_match_history, load_match_players, load_matches,
 };
 use crate::routes::v1::graphql::types::{Match, MatchHistoryEntry, MatchPlayer};
+use crate::services::steam::patch_windows::live_windows;
 use crate::services::steam::types::FeedItem;
 
 /// One entry of the patch feed — the same data as the REST `/v2/patches`
@@ -22,9 +24,13 @@ pub(super) struct Patch {
     /// `forum` (official forum changelog) or `steam` (Steam news feed).
     source: &'static str,
     title: String,
-    /// When the patch was published, as a unix timestamp.
+    /// When the patch was published, as a unix timestamp. For `forum` patches
+    /// this is when the thread was last edited, often weeks after the patch.
     pub_date: i64,
-    /// When the next patch of the same `source` was published, as a unix
+    /// When the patch went live, as a unix timestamp: the `pub_date` of a
+    /// `steam` post, the release build on the date in a `forum` thread's title.
+    start_date: i64,
+    /// When the next patch of the same `source` went live, as a unix
     /// timestamp. `null` for the patch that is currently live.
     end_date: Option<i64>,
     link: String,
@@ -38,7 +44,7 @@ impl Patch {
     /// SQL predicate selecting the matches started while this patch was live.
     fn live_scope(&self) -> Option<String> {
         I64Filter {
-            gte: Some(self.pub_date),
+            gte: Some(self.start_date),
             lt: self.end_date,
             ..Default::default()
         }
@@ -49,7 +55,7 @@ impl Patch {
 #[ComplexObject(rename_fields = "snake_case", rename_args = "snake_case")]
 impl Patch {
     /// The root `matches` query, scoped to the matches started while this
-    /// patch was live (`pub_date` until `end_date`).
+    /// patch was live (`start_date` until `end_date`).
     #[graphql(
         complexity = "cost::patch_matches(where_.as_ref(), order_by, limit, offset, child_complexity)"
     )]
@@ -72,7 +78,7 @@ impl Patch {
     }
 
     /// The root `match_players` query, scoped to the matches started while
-    /// this patch was live (`pub_date` until `end_date`).
+    /// this patch was live (`start_date` until `end_date`).
     #[graphql(
         complexity = "cost::patch_match_players(where_.as_ref(), order_by, limit, offset, child_complexity)"
     )]
@@ -95,7 +101,7 @@ impl Patch {
     }
 
     /// The root `match_history` query, scoped to the matches started while
-    /// this patch was live (`pub_date` until `end_date`).
+    /// this patch was live (`start_date` until `end_date`).
     #[graphql(complexity = "cost::match_history(where_.as_ref(), limit, child_complexity)")]
     async fn match_history(
         &self,
@@ -123,6 +129,7 @@ pub(super) struct PatchWhere {
     source: Option<StringFilter>,
     category: Option<StringFilter>,
     pub_date: Option<I64Filter>,
+    start_date: Option<I64Filter>,
     /// `{is_null: true}` selects the patches that are currently live.
     end_date: Option<I64Filter>,
 }
@@ -140,6 +147,10 @@ impl PatchWhere {
                 .pub_date
                 .as_ref()
                 .is_none_or(|f| f.matches(Some(patch.pub_date)))
+            && self
+                .start_date
+                .as_ref()
+                .is_none_or(|f| f.matches(Some(patch.start_date)))
             && self
                 .end_date
                 .as_ref()
@@ -181,18 +192,22 @@ impl StringFilter {
     }
 }
 
-/// `feed` must be sorted newest first, as `fetch_combined_patch_feed` returns it.
-fn to_patches(feed: Vec<FeedItem>) -> Vec<Patch> {
-    let (mut next_forum, mut next_steam) = (None, None);
+/// `builds` are the client build times, oldest first.
+fn to_patches(feed: Vec<FeedItem>, builds: &[DateTime<Utc>]) -> Vec<Patch> {
+    let windows = live_windows(&feed, builds);
     feed.into_iter()
-        .map(|item| {
+        .zip(windows)
+        .map(|(item, window)| {
             let pub_date = item.pub_date().timestamp();
+            let start_date = window.start.timestamp();
+            let end_date = window.end.map(|t| t.timestamp());
             match item {
                 FeedItem::Forum(p) => Patch {
                     source: "forum",
                     title: p.title,
                     pub_date,
-                    end_date: next_forum.replace(pub_date),
+                    start_date,
+                    end_date,
                     link: p.link,
                     guid: p.guid.text,
                     category: Some(p.category.text),
@@ -202,7 +217,8 @@ fn to_patches(feed: Vec<FeedItem>) -> Vec<Patch> {
                     source: "steam",
                     title: p.title,
                     pub_date,
-                    end_date: next_steam.replace(pub_date),
+                    start_date,
+                    end_date,
                     link: p.link,
                     guid: p.guid.text,
                     category: None,
@@ -225,7 +241,8 @@ pub(super) async fn load_patches(
         .fetch_combined_patch_feed()
         .await
         .map_err(|e| async_graphql::Error::new(e.to_string()))?;
-    let mut patches = to_patches(feed);
+    let builds = state.assets_client.build_times().await;
+    let mut patches = to_patches(feed, &builds);
     patches.retain(|p| where_.is_none_or(|w| w.matches(p)));
     if order_direction == OrderDirection::Asc {
         patches.reverse();
@@ -277,10 +294,10 @@ mod tests {
 
     #[test]
     fn end_date_is_the_next_patch_of_the_same_source() {
-        let patches = to_patches(vec![forum(400), steam(300), forum(200), steam(100)]);
+        let patches = to_patches(vec![forum(400), steam(300), forum(200), steam(100)], &[]);
         let windows: Vec<_> = patches
             .iter()
-            .map(|p| (p.source, p.pub_date, p.end_date))
+            .map(|p| (p.source, p.start_date, p.end_date))
             .collect();
         assert_eq!(
             windows,
@@ -295,7 +312,7 @@ mod tests {
 
     #[test]
     fn live_scope_is_open_ended_for_the_live_patch() {
-        let patches = to_patches(vec![forum(400), forum(200)]);
+        let patches = to_patches(vec![forum(400), forum(200)], &[]);
         assert_eq!(
             patches[0].live_scope().unwrap(),
             "start_time >= toDateTime(400)"
@@ -308,7 +325,7 @@ mod tests {
 
     #[test]
     fn where_filters_in_memory() {
-        let patches = to_patches(vec![forum(400), steam(300), forum(200)]);
+        let patches = to_patches(vec![forum(400), steam(300), forum(200)], &[]);
         let live_forum = PatchWhere {
             source: Some(StringFilter {
                 eq: Some("forum".into()),

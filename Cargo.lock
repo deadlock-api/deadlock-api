@@ -2882,6 +2882,7 @@ dependencies = [
  "bzip2",
  "cached",
  "chrono",
+ "chrono-tz",
  "clickhouse",
  "clickhouse-sql-parser",
  "crc32fast",
