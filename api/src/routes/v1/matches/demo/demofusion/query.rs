@@ -29,7 +29,7 @@ use datafusion::logical_expr::LogicalPlan;
 use datafusion::prelude::SessionConfig;
 use rayon::prelude::*;
 
-use super::error::Result;
+use super::error::{Error, Result};
 use super::events::{EventType, event_schema};
 use super::schema::EntitySchema;
 use super::session::session_context;
@@ -61,13 +61,17 @@ pub(crate) async fn query(demo: Bytes, query: &str) -> Result<SendableRecordBatc
 /// The shared batch pipeline, generic over the demo stream format `D` (a `.dem` file or a buffered
 /// broadcast). The bytes are parsed once; only the columns the query references are decoded, and
 /// only the entity types it references have Arrow schemas built (a demo defines hundreds).
-async fn query_stream<D: BuildStream>(
+async fn query_stream<D: BuildStream + 'static>(
     demo: Bytes,
     query: &str,
 ) -> Result<SendableRecordBatchStream> {
     let referenced: HashSet<String> = extract_table_names(query)?.into_iter().collect();
 
-    let entity_schemas: Schemas = discover_schemas_from_demo::<D>(demo.clone(), &referenced)?
+    let discovered = {
+        let (demo, referenced) = (demo.clone(), referenced.clone());
+        off_runtime(move || discover_schemas_from_demo::<D>(demo, &referenced)).await?
+    };
+    let entity_schemas: Schemas = discovered
         .into_iter()
         .map(|s| (Arc::clone(&s.serializer_name), s))
         .collect();
@@ -77,7 +81,10 @@ async fn query_stream<D: BuildStream>(
         discover_entity_projections(query, &referenced_entities, &event_types).await?;
     let entity_specs = build_entity_specs(&referenced_entities, &projections);
 
-    let collected = parse_and_collect::<D>(&demo, &entity_specs, &event_types)?;
+    let collected = {
+        let event_types = event_types.clone();
+        off_runtime(move || parse_and_collect::<D>(&demo, &entity_specs, &event_types)).await?
+    };
 
     let ctx = session_context(SessionConfig::new());
 
@@ -104,6 +111,16 @@ async fn query_stream<D: BuildStream>(
         .await?
         .execute_stream()
         .await?)
+}
+
+/// Runs CPU-bound haste parsing on a blocking thread, so a long demo does not stall the async
+/// runtime; a panic on malformed demo bytes becomes an error instead of killing the job.
+async fn off_runtime<T: Send + 'static>(
+    parse: impl FnOnce() -> Result<T> + Send + 'static,
+) -> Result<T> {
+    tokio::task::spawn_blocking(parse)
+        .await
+        .map_err(|e| Error::ParseTask(e.to_string()))?
 }
 
 /// User SQL may only read: DDL (`CREATE EXTERNAL TABLE` would reach the local file store), DML

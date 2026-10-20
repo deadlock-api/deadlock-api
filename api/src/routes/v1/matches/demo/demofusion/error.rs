@@ -24,6 +24,10 @@ pub(crate) enum Error {
     /// A live broadcast could not be fetched from its relay (see [`super::query_live`]).
     #[error("live broadcast error: {0}")]
     Broadcast(String),
+
+    /// The blocking demo parse task panicked or was cancelled.
+    #[error("demo parse task failed: {0}")]
+    ParseTask(String),
 }
 
 pub(crate) type Result<T> = core::result::Result<T, Error>;
