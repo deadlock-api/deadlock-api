@@ -21,7 +21,7 @@ use super::format::format_query_output;
 use crate::error::APIError;
 use crate::services::assets::client::AssetsClient;
 use crate::services::assets::versions::items::Item;
-use crate::services::assets::versions::items::types::ItemType;
+use crate::services::assets::versions::items::types::{ItemSlotType, ItemType};
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::rate_limiter::{Quota, RateLimitClient};
 use crate::services::steam::client::SteamClient;
@@ -386,7 +386,7 @@ impl McpServer {
 
     #[tool(
         title = "List Items",
-        description = "List the items of one type in the current game version with their `id` (the item id in the tables), `name` and `className`; abilities and weapons also list their `heroes`, upgrades their `slot`, `tier`, `cost` and whether they are still `shopable`. Pass `id` to get the full details of one item instead: description, properties, upgrades, images."
+        description = "List the items of one type in the current game version with their `id` (the item id in the tables), `name` (null for internal items) and `className`; upgrades also list their `slot`, `tier`, `cost` and whether they are still `shopable`. Pass `id` to get the full details of one item instead: description, properties, heroes, upgrades, images. A hero's own abilities and weapon are listed by class name in `list_heroes` for that hero's `id`."
     )]
     async fn list_items(&self, Parameters(args): Parameters<ListItemsArgs>) -> CallToolResult {
         let items = match self.assets.items().await {
@@ -481,29 +481,48 @@ fn patches_error(error: &impl core::fmt::Display) -> CallToolResult {
     ))])
 }
 
-fn item_summary(item: &Item) -> Value {
-    let (name, class_name) = match item {
-        Item::Ability(a) => (&a.name, &a.class_name),
-        Item::Weapon(w) => (&w.name, &w.class_name),
-        Item::Upgrade(u) => (&u.name, &u.class_name),
+/// One row of the `list_items` table. Every field is always written, so all summaries of a type
+/// have the same primitive fields and TOON writes the list as a header plus one line per item.
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ItemSummary<'a> {
+    id: u32,
+    /// `None` for internal items, which have no localized name.
+    name: Option<&'a str>,
+    class_name: &'a str,
+    #[serde(flatten)]
+    upgrade: Option<UpgradeSummary>,
+}
+
+#[derive(Serialize)]
+struct UpgradeSummary {
+    slot: ItemSlotType,
+    tier: u8,
+    cost: Option<u32>,
+    shopable: bool,
+}
+
+fn item_summary(item: &Item) -> ItemSummary<'_> {
+    let (name, upgrade) = match item {
+        Item::Ability(a) => (&a.name, None),
+        Item::Weapon(w) => (&w.name, None),
+        Item::Upgrade(u) => (
+            &u.name,
+            Some(UpgradeSummary {
+                slot: u.item_slot_type,
+                tier: u.item_tier,
+                cost: u.cost,
+                shopable: u.shopable,
+            }),
+        ),
     };
-    let mut summary = json!({ "id": item.id() });
-    // Internal items have no localized name; it falls back to the class name.
-    if name != class_name {
-        summary["name"] = json!(name);
+    ItemSummary {
+        id: item.id(),
+        // Internal items have no localized name; it falls back to the class name.
+        name: (name != item.class_name()).then_some(name.as_str()),
+        class_name: item.class_name(),
+        upgrade,
     }
-    summary["className"] = json!(class_name);
-    match item {
-        Item::Ability(a) => summary["heroes"] = json!(a.heroes),
-        Item::Weapon(w) => summary["heroes"] = json!(w.heroes),
-        Item::Upgrade(u) => {
-            summary["slot"] = json!(u.item_slot_type);
-            summary["tier"] = json!(u.item_tier);
-            summary["cost"] = json!(u.cost);
-            summary["shopable"] = json!(u.shopable);
-        }
-    }
-    summary
 }
 
 fn assets_error(tool: &str, error: &impl core::fmt::Display) -> CallToolResult {
@@ -683,6 +702,26 @@ mod tests {
                 json!(["result"])
             );
         }
+    }
+
+    #[test]
+    fn items_without_a_name_keep_the_table_form() {
+        let upgrade = |name| ItemSummary {
+            id: 1,
+            name,
+            class_name: "upgrade_x",
+            upgrade: Some(UpgradeSummary {
+                slot: ItemSlotType::Spirit,
+                tier: 1,
+                cost: None,
+                shopable: true,
+            }),
+        };
+        let text = toon(&json!({ "items": [upgrade(Some("X")), upgrade(None)] }));
+        assert!(
+            text.contains("items[2]{id,name,className,slot,tier,cost,shopable}:"),
+            "{text}"
+        );
     }
 
     #[test]
