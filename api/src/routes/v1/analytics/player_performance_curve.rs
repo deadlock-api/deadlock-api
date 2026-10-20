@@ -362,6 +362,16 @@ pub struct PlayerPerformanceCurvePoint {
     /// Standard deviation of `permanent_buffs_avg` at this time point; `null` when there are
     /// no players with timed permanent pickups.
     pub permanent_buffs_std: Option<f64>,
+    /// Where in the match the stats snapshots of this point were taken on average, in the
+    /// unit of `game_time`. Snapshots are taken every few minutes and at the end of the match,
+    /// so with `resolution` > 0 a point holds the snapshots from `game_time` up to the next
+    /// point and this is usually about half a bucket later than `game_time`. Percentages are
+    /// averaged from whole percents, so they can be off by a few tenths.
+    pub game_time_avg: f64,
+    /// Number of stats snapshots (one per player per snapshot time) averaged in this point.
+    /// Each match has a snapshot at 100%, but only some matches have one in any earlier
+    /// bucket, and longer matches more often.
+    pub samples: u64,
 }
 
 /// Hero-filtered requests read the hero-led `player_performance_curve_by_hero` projection
@@ -415,15 +425,19 @@ fn build_query(query: &PlayerPerformanceCurveQuery) -> String {
     let player_filters = player_filters(query);
 
     let resolution = query.resolution.unwrap_or(10);
-    let (game_time_selection, additional_filter) = if resolution == 0 {
+    let (game_time_selection, position, additional_filter) = if resolution == 0 {
         (
             "toUInt32(timestamp_s)".to_string(),
+            "timestamp_s".to_string(),
             "WHERE (timestamp_s >= 180) AND ((timestamp_s <= 900 AND timestamp_s % 180 = 0) OR (timestamp_s > 900 AND timestamp_s % 300 = 0))",
         )
     } else {
         (
             format!(
                 "toUInt32(floor((timestamp_s / duration_s) * (100 / {resolution})) * {resolution})"
+            ),
+            player_performance_curve_agg::percent_position(
+                &player_performance_curve_agg::percent_of_match("timestamp_s"),
             ),
             "",
         )
@@ -485,7 +499,9 @@ fn build_query(query: &PlayerPerformanceCurveQuery) -> String {
         avg(assists) AS assists_avg,
         std(assists) AS assists_std{select_sources},
         avgOrNullIf(permanent_buffs, has_buff_timings) AS permanent_buffs_avg,
-        stddevPopOrNullIf(permanent_buffs, has_buff_timings) AS permanent_buffs_std
+        stddevPopOrNullIf(permanent_buffs, has_buff_timings) AS permanent_buffs_std,
+        avg({position}) AS game_time_avg,
+        count() AS samples
     FROM t_data
     {additional_filter}
     GROUP BY game_time

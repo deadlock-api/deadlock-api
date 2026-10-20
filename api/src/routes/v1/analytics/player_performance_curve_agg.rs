@@ -35,8 +35,15 @@ fn absolute_time_filter(t: &str) -> String {
 
 /// Percent of the match a stats tick falls into, 0-100. Bucketing it with
 /// `intDiv(pct, resolution) * resolution` gives the base query's buckets.
-fn percent_of_match(t: &str) -> String {
+pub(super) fn percent_of_match(t: &str) -> String {
     format!("toUInt32(floor({t} / duration_s * 100))")
+}
+
+/// Position of a tick in the match from its whole percent `pct`: the middle of that percent,
+/// except for the final tick, which is at exactly 100. The agg table only keeps whole percents,
+/// so the base query uses this as well to give the same `game_time_avg`.
+pub(super) fn percent_position(pct: &str) -> String {
+    format!("if({pct} = 100, 100, {pct} + 0.5)")
 }
 
 /// Per tick metric arrays and buff counts of one `match_player` row, plus `extra` columns.
@@ -203,13 +210,8 @@ fn agg_filters(query: &PlayerPerformanceCurveQuery) -> String {
     filters
 }
 
-/// Builds the curve from the agg table's full days plus `match_player` for the edge windows.
-/// Same output columns as the base query.
-pub(super) fn build_agg_query(query: &PlayerPerformanceCurveQuery, plan: &AggPlan) -> String {
-    let resolution = query.resolution.unwrap_or(10);
-    let game_mode_filter = GameMode::sql_filter(query.game_mode);
-    let match_mode_filter = MatchMode::sql_filter(query.match_mode.as_deref());
-
+/// Re-summed agg columns, and the avg and std of every metric computed from them.
+fn summed_and_output() -> (String, String) {
     let mut summed = String::from("sum(n) AS n");
     let mut output = String::new();
     for (name, _) in curve_metrics() {
@@ -227,16 +229,30 @@ pub(super) fn build_agg_query(query: &PlayerPerformanceCurveQuery, plan: &AggPla
         ", sum(permanent_buffs_n) AS permanent_buffs_n, \
          sum(permanent_buffs_sum) AS permanent_buffs_sum, sum(permanent_buffs_sq) AS permanent_buffs_sq",
     );
+    (summed, output)
+}
 
-    let agg_time = if resolution == 0 {
-        "game_time".to_string()
+/// Builds the curve from the agg table's full days plus `match_player` for the edge windows.
+/// Same output columns as the base query.
+pub(super) fn build_agg_query(query: &PlayerPerformanceCurveQuery, plan: &AggPlan) -> String {
+    let resolution = query.resolution.unwrap_or(10);
+    let game_mode_filter = GameMode::sql_filter(query.game_mode);
+    let match_mode_filter = MatchMode::sql_filter(query.match_mode.as_deref());
+
+    let (summed, output) = summed_and_output();
+
+    let (agg_time, agg_position) = if resolution == 0 {
+        ("game_time".to_string(), "game_time".to_string())
     } else {
-        format!("intDiv(game_time, {resolution}) * {resolution}")
+        (
+            format!("intDiv(game_time, {resolution}) * {resolution}"),
+            percent_position("game_time"),
+        )
     };
     let relative = resolution != 0;
     let mut parts = vec![format!(
-        "SELECT toUInt32({agg_time}) AS gt, {summed}
-        FROM {AGG_TABLE}
+        "SELECT toUInt32({agg_time}) AS gt, {summed}, sum(agg.n * {agg_position}) AS position_sum
+        FROM {AGG_TABLE} AS agg
         WHERE relative = {relative}
             AND day >= toDate({first_day}) AND day < toDate({end_day})
             AND {match_mode_filter}
@@ -247,8 +263,9 @@ pub(super) fn build_agg_query(query: &PlayerPerformanceCurveQuery, plan: &AggPla
         filters = agg_filters(query),
     )];
 
-    let (edge_time, edge_filter) = if resolution == 0 {
+    let (edge_time, edge_position, edge_filter) = if resolution == 0 {
         (
+            "timestamp_s".to_string(),
             "timestamp_s".to_string(),
             format!("WHERE {}", absolute_time_filter("timestamp_s")),
         )
@@ -258,6 +275,7 @@ pub(super) fn build_agg_query(query: &PlayerPerformanceCurveQuery, plan: &AggPla
                 "intDiv({}, {resolution}) * {resolution}",
                 percent_of_match("timestamp_s")
             ),
+            percent_position(&percent_of_match("timestamp_s")),
             String::new(),
         )
     };
@@ -274,7 +292,7 @@ pub(super) fn build_agg_query(query: &PlayerPerformanceCurveQuery, plan: &AggPla
         }
         .build();
         parts.push(format!(
-            "SELECT toUInt32({edge_time}) AS gt, {sums}
+            "SELECT toUInt32({edge_time}) AS gt, {sums}, sum({edge_position}) AS position_sum
         FROM (
             SELECT duration_s{arrays}
             FROM match_player
@@ -293,9 +311,11 @@ pub(super) fn build_agg_query(query: &PlayerPerformanceCurveQuery, plan: &AggPla
     SELECT
     toUInt32(gt) AS game_time{output},
     if(permanent_buffs_n = 0, NULL, permanent_buffs_sum / permanent_buffs_n) AS permanent_buffs_avg,
-    if(permanent_buffs_n = 0, NULL, sqrt(greatest(permanent_buffs_sq / permanent_buffs_n - pow(permanent_buffs_sum / permanent_buffs_n, 2), 0))) AS permanent_buffs_std
+    if(permanent_buffs_n = 0, NULL, sqrt(greatest(permanent_buffs_sq / permanent_buffs_n - pow(permanent_buffs_sum / permanent_buffs_n, 2), 0))) AS permanent_buffs_std,
+    position_sum / n AS game_time_avg,
+    n AS samples
     FROM (
-        SELECT gt, {summed}
+        SELECT gt, {summed}, sum(position_sum) AS position_sum
         FROM (
         {parts}
         )
