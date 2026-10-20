@@ -795,11 +795,11 @@ async fn get_item_flow_stats(
     description = "
 Retrieves item build-flow statistics: per-phase item win/pick rates and the transitions between them.
 
-Items are grouped into columns by the in-match phase they were bought in (controlled by
-`phase_interval_s` and `phase_count`). The response contains `nodes` (items aggregated within a phase)
-and `edges` (transitions between an item and items in the next phase). A locked build path can be
-supplied via `locked_item_ids` / `locked_columns` to restrict the population to players who bought
-those items in the given stage columns.
+Items are grouped into columns by the in-match phase they were bought in: fixed time phases (0-9m,
+9-20m, 20-30m, 30m+) for `normal`, `phase_count` rounds for `street_brawl`. The response contains
+`nodes` (items aggregated within a phase) and `edges` (transitions between an item and items in the
+next phase). A locked build path can be supplied via `locked_item_ids` / `locked_columns` to
+restrict the population to players who bought those items in the given stage columns.
 
 Each node also carries `adjusted_win_rate`: the item's win rate standardized to the stage's
 net-worth-at-buy distribution. Because players who are already ahead have more souls and buy items
