@@ -49,7 +49,7 @@ import { Badge } from "~/components/ui/badge";
 import { type Dayjs, day } from "~/dayjs";
 import { useHeroColorMap } from "~/hooks/useChartHeroVisibility";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
-import { BANS_PER_MATCH, computeBanRatesByBucket } from "~/lib/ban-rate";
+import { banMatchesByBucket, computeBanRatesByBucket } from "~/lib/ban-rate";
 import { formatCompactAxisTick, niceTicks } from "~/lib/chart-axis";
 import { getPickrateMultiplier, MIN_MATCHES_PER_BUCKET } from "~/lib/constants";
 import type { GameMode, MatchMode } from "~/lib/game-mode";
@@ -217,10 +217,7 @@ export function HeroStatsOverTimeChart({
       const ratesByBucket = computeBanRatesByBucket(rows);
       // Like the heroes table's trend: a bucket with only a handful of matches is left out (two bans in six matches
       // plotted 33% and stretched the axis), and a hero nobody banned in a bucket is 0%, not a gap.
-      const matchesByBucket = new Map<number, number>();
-      for (const row of rows) {
-        matchesByBucket.set(row.bucket, (matchesByBucket.get(row.bucket) ?? 0) + row.bans / BANS_PER_MATCH);
-      }
+      const matchesByBucket = banMatchesByBucket(rows);
       const bannedHeroes = new Set(rows.map((row) => row.hero_id));
       const map: Record<number, [number, number, number?][]> = {};
       for (const [bucket, heroRates] of ratesByBucket) {

@@ -6,7 +6,7 @@ import { startTransition, useMemo } from "react";
 import { sortParams, useSort } from "~/components/ui/hooks/use-sort";
 import type { Dayjs } from "~/dayjs";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
-import { BANS_PER_MATCH, computeBanRates } from "~/lib/ban-rate";
+import { computeBanRates, totalBanMatches } from "~/lib/ban-rate";
 import { getPickrateMultiplier } from "~/lib/constants";
 import type { GameMode, MatchMode } from "~/lib/game-mode";
 import { computeResiduals, computeZScores } from "~/lib/hero-scoring";
@@ -232,9 +232,13 @@ export function useHeroStatsTable({
     return { heroNameMap: names, heroTypeMap: types };
   }, [heroes]);
 
-  const { banStatsMap, sumBans } = useMemo(() => {
-    if (!banData || banData.length === 0) return { banStatsMap: new Map<number, number>(), sumBans: 0 };
-    return { banStatsMap: computeBanRates(banData), sumBans: banData.reduce((sum, row) => sum + row.bans, 0) };
+  const { banStatsMap, sumBans, banMatches } = useMemo(() => {
+    if (!banData || banData.length === 0) return { banStatsMap: new Map<number, number>(), sumBans: 0, banMatches: 0 };
+    return {
+      banStatsMap: computeBanRates(banData),
+      sumBans: banData.reduce((sum, row) => sum + row.bans, 0),
+      banMatches: totalBanMatches(banData),
+    };
   }, [banData]);
   const hasBans = banStatsMap.size > 0;
   const swapData = supportsBans ? normalSwapData : undefined;
@@ -396,15 +400,14 @@ export function useHeroStatsTable({
       const hasPrev = prev !== undefined && prevSumMatches > 0 && prev.matches > 0;
 
       const typeBans = bansByType.get(type) ?? 0;
-      const banTotalMatches = sumBans / BANS_PER_MATCH;
-      const banRate = banTotalMatches > 0 ? typeBans / banTotalMatches : 0;
+      const banRate = banMatches > 0 ? typeBans / banMatches : 0;
       const prevTypeBans = prevBansByType.get(type);
-      const prevBanTotalMatches = prevSumBans / BANS_PER_MATCH;
+      const prevBanTotalMatches = totalBanMatches(prevBanData ?? []);
       const prevBanRate =
         prevTypeBans !== undefined && prevBanTotalMatches > 0 ? prevTypeBans / prevBanTotalMatches : undefined;
 
       // A type's share of all picks and bans. Summing its pick share (types add up to 1) with its ban rate (bans per
-      // match, types add up to 2) would weigh the two on different scales.
+      // match, types add up to 2 or 3) would weigh the two on different scales.
       const presenceShare = sumMatches + sumBans > 0 ? (totalMatches + typeBans) / (sumMatches + sumBans) : 0;
       const prevPresenceShare =
         prev && prevSumMatches > 0 && prevSumBans > 0
@@ -425,7 +428,18 @@ export function useHeroStatsTable({
         presenceShareDelta: deltaOf(presenceShare, prevPresenceShare),
       };
     }).filter((group) => group.matches > 0);
-  }, [groupByType, heroData, prevHeroData, banData, prevBanData, heroTypeMap, sortedRows, sumMatches, sumBans]);
+  }, [
+    groupByType,
+    heroData,
+    prevHeroData,
+    banData,
+    prevBanData,
+    heroTypeMap,
+    sortedRows,
+    sumMatches,
+    sumBans,
+    banMatches,
+  ]);
   const groups = allGroups?.map((group): HeroTypeGroupData =>
     Object.assign({}, group, { visible: group.heroes.filter(({ hero }) => matchesName(hero)) }),
   );

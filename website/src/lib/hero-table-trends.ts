@@ -1,6 +1,6 @@
 import type { AnalyticsHeroStats, HeroBanStats } from "deadlock_api_client";
 
-import { BANS_PER_MATCH, computeBanRatesByBucket } from "~/lib/ban-rate";
+import { banMatchesByBucket, computeBanRatesByBucket } from "~/lib/ban-rate";
 import { computeResiduals, computeZScores } from "~/lib/hero-scoring";
 import type { StatFormat, StatTrendPoint } from "~/lib/stat-format";
 
@@ -34,9 +34,7 @@ export function buildHeroTableTrend({
   minMatchesPerBucket?: number;
 }): StatTrendPoint[] {
   const banRates = computeBanRatesByBucket(bans);
-  const banSamples = new Map<number, number>();
-  for (const row of bans) banSamples.set(row.bucket, (banSamples.get(row.bucket) ?? 0) + row.bans / BANS_PER_MATCH);
-  for (const [bucket, matches] of banSamples) {
+  for (const [bucket, matches] of banMatchesByBucket(bans)) {
     if (matches < minMatchesPerBucket) banRates.delete(bucket);
   }
   if (stat === "banRate") {

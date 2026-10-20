@@ -22,7 +22,7 @@ import { TooltipCard, TooltipHeader, TooltipStat, TooltipStats } from "~/compone
 import type { Dayjs } from "~/dayjs";
 import { useHeroColorMap } from "~/hooks/useChartHeroVisibility";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
-import { BANS_PER_MATCH } from "~/lib/ban-rate";
+import { banMatchesByBucket } from "~/lib/ban-rate";
 import { niceTicks } from "~/lib/chart-axis";
 import { getPickrateMultiplier } from "~/lib/constants";
 import type { GameMode, MatchMode } from "~/lib/game-mode";
@@ -250,18 +250,21 @@ export function HeroStatsByRankChart({
   const banRateByTier = useMemo(() => {
     if (!banData) return undefined;
     // Aggregate subtier buckets into tiers before computing rates
-    const tierTotals = new Map<number, number>();
+    const tierMatches = new Map<number, number>();
+    for (const [bucket, matches] of banMatchesByBucket(banData)) {
+      const tier = Math.floor(bucket / 10);
+      tierMatches.set(tier, (tierMatches.get(tier) ?? 0) + matches);
+    }
     const tierHeroBans = new Map<number, Map<number, number>>();
     for (const row of banData) {
       const tier = Math.floor(row.bucket / 10);
-      tierTotals.set(tier, (tierTotals.get(tier) ?? 0) + row.bans);
       if (!tierHeroBans.has(tier)) tierHeroBans.set(tier, new Map());
       const heroMap = tierHeroBans.get(tier)!;
       heroMap.set(row.hero_id, (heroMap.get(row.hero_id) ?? 0) + row.bans);
     }
     const result = new Map<number, Map<number, number>>();
     for (const [tier, heroMap] of tierHeroBans) {
-      const totalMatches = (tierTotals.get(tier) ?? 0) / BANS_PER_MATCH;
+      const totalMatches = tierMatches.get(tier) ?? 0;
       const rateMap = new Map<number, number>();
       for (const [heroId, bans] of heroMap) {
         rateMap.set(heroId, totalMatches > 0 ? (bans / totalMatches) * 100 : 0);

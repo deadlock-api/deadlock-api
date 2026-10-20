@@ -7,8 +7,9 @@ export type Tier = (typeof TIERS)[number];
 
 /**
  * The lowest tier score of each tier but the last. The score is the Overall table's (`computeZScores`), a weighted sum
- * of standardized win, pick and ban rates, so the cuts sit in standard deviations around the average hero: a balanced
- * patch puts most heroes in B and only real outliers in S and D.
+ * of standardized win, pick and ban rates. A weighted sum of z-scores does not have a spread of 1 (about 0.84 in
+ * October 2026), so the cuts are in score units, not standard deviations: a balanced patch puts most heroes in B and
+ * only real outliers in S and D, and fewer heroes reach S by score than by win rate alone.
  */
 const TIER_FLOORS: readonly [Tier, number][] = [
   ["s", 1],

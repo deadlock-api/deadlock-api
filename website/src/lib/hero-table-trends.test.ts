@@ -10,8 +10,8 @@ const row = (bucket: number, hero_id: number, matches: number, wins: number) =>
 const options = {
   heroes: [row(2000, 1, 100, 60), row(1000, 1, 20, 10), row(1000, 2, 80, 30), row(2000, 2, 100, 40)],
   bans: [
-    { bucket: 1000, hero_id: 1, bans: 10 },
-    { bucket: 1000, hero_id: 2, bans: 30 },
+    { bucket: 1000, hero_id: 1, bans: 10, matches: 20 },
+    { bucket: 1000, hero_id: 2, bans: 30, matches: 20 },
   ],
   heroId: 1,
   pickrateMultiplier: 2,
