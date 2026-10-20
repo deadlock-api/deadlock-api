@@ -20,7 +20,7 @@ use crate::utils::parse::{
     comma_separated_deserialize_option, comma_separated_steam_ids_option,
     default_last_month_timestamp, parse_steam_id_option,
 };
-use crate::utils::sql::{cached_ch_query, impl_match_info};
+use crate::utils::sql::{MatchInfoFilters, cached_ch_query, impl_match_info};
 
 #[derive(Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash, Default)]
 #[cfg_attr(test, derive(proptest_derive::Arbitrary))]
@@ -72,13 +72,13 @@ pub(crate) struct HeroStatsQuery {
     min_match_id: Option<u64>,
     /// Filter matches based on their ID.
     max_match_id: Option<u64>,
-    /// Filter players based on the number of matches they have played with a specific hero within the filtered time range.
+    /// Filter players based on the number of matches they have played with a specific hero within the filtered time range (all durations, even with a duration filter).
     min_hero_matches: Option<u64>,
-    /// Filter players based on the number of matches they have played with a specific hero within the filtered time range.
+    /// Filter players based on the number of matches they have played with a specific hero within the filtered time range (all durations, even with a duration filter).
     max_hero_matches: Option<u64>,
-    /// Filter players based on the number of matches they have played with a specific hero in their entire history.
+    /// Filter players based on the number of matches they have played with a specific hero in their entire history, counting only matches of the selected `game_mode`.
     min_hero_matches_total: Option<u64>,
-    /// Filter players based on the number of matches they have played with a specific hero in their entire history.
+    /// Filter players based on the number of matches they have played with a specific hero in their entire history, counting only matches of the selected `game_mode`.
     max_hero_matches_total: Option<u64>,
     /// Comma separated list of item ids to include (only players who have purchased these items). See more: <https://api.deadlock-api.com/v1/assets/items>
     #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
@@ -394,12 +394,27 @@ fn build_query(query: &HeroStatsQuery) -> String {
     // Only used by the CTEs below, which exist only when a bound is set.
     let player_hero_filters =
         range_filters("uniq(match_id)", min_hero_matches, max_hero_matches).join(" AND ");
-    let player_hero_total_filters =
-        range_filters("count()", min_hero_matches_total, max_hero_matches_total).join(" AND ");
+    // player_match_history holds a match twice until both sources' inserts merge.
+    let player_hero_total_filters = range_filters(
+        "uniqExact(match_id)",
+        min_hero_matches_total,
+        max_hero_matches_total,
+    )
+    .join(" AND ");
     let bucket = query.bucket.base_expr();
     let game_mode_filter = GameMode::sql_filter(query.game_mode);
     let match_mode_filter = MatchMode::sql_filter(query.match_mode.as_deref());
     let match_filters = format!("AND {match_mode_filter} AND {game_mode_filter} {info_filters}");
+    // The in-window hero match count spans the whole window: a duration filter (one bucket of the
+    // by-duration chart) must not narrow it to the player's matches of that duration.
+    let window_info_filters = MatchInfoFilters {
+        min_duration_s: None,
+        max_duration_s: None,
+        ..query.match_info()
+    }
+    .build();
+    let window_match_filters =
+        format!("AND {match_mode_filter} AND {game_mode_filter} {window_info_filters}");
     let has_player_hero_cte = min_hero_matches.is_some() || max_hero_matches.is_some();
     let has_player_hero_total_cte =
         min_hero_matches_total.is_some() || max_hero_matches_total.is_some();
@@ -448,7 +463,7 @@ fn build_query(query: &HeroStatsQuery) -> String {
             FROM {source_table}
             WHERE TRUE
                 {player_filters}
-                {match_filters}
+                {window_match_filters}
             GROUP BY account_id, hero_id
             HAVING {player_hero_filters}
         )"
@@ -456,13 +471,14 @@ fn build_query(query: &HeroStatsQuery) -> String {
     }
     // Only the accounts in the window can pass the filter, so the history count is limited to
     // them: a primary-key range on player_match_history instead of grouping all of it (500M rows
-    // into a 2-4 GiB hash table).
+    // into a 2-4 GiB hash table). Experience counts in the selected game mode only, so Street
+    // Brawl or bot games don't lift a player into a higher bucket of the normal-mode stats.
     if has_player_hero_total_cte {
         ctes.push(format!(
             "t_players2 AS (
             SELECT account_id, hero_id
             FROM player_match_history
-            WHERE account_id IN (
+            WHERE {game_mode_filter} AND account_id IN (
                 SELECT account_id
                 FROM {source_table}
                 WHERE TRUE
@@ -764,7 +780,7 @@ mod tests {
         let sql = build_query(&query);
         assert_valid_sql(&sql);
         assert!(sql.contains("HAVING uniq(match_id) <= 5\n"));
-        assert!(sql.contains("HAVING count() <= 24\n"));
+        assert!(sql.contains("HAVING uniqExact(match_id) <= 24\n"));
         assert!(sql.contains("IN t_players\n"));
         assert!(sql.contains("IN t_players2\n"));
     }
@@ -774,12 +790,31 @@ mod tests {
         let sql = build_query(&HeroStatsQuery {
             min_unix_timestamp: Some(1_786_147_200),
             max_hero_matches_total: Some(24),
+            game_mode: Some(GameMode::Normal),
             ..Default::default()
         });
         assert_valid_sql(&sql);
-        assert!(sql.contains("FROM player_match_history\n            WHERE account_id IN ("));
+        assert!(sql.contains(
+            "FROM player_match_history\n            WHERE game_mode = 1 AND account_id IN ("
+        ));
         assert!(sql.contains("FROM match_player FINAL"));
         assert!(!sql.contains("LIMIT 1 BY"));
+    }
+
+    #[test]
+    fn hero_match_count_spans_every_duration() {
+        let sql = build_query(&HeroStatsQuery {
+            min_unix_timestamp: Some(1_786_147_200),
+            min_duration_s: Some(2700),
+            max_duration_s: Some(3000),
+            min_hero_matches: Some(10),
+            ..Default::default()
+        });
+        assert_valid_sql(&sql);
+        let (t_players, mp) = sql.split_once("mp AS (").expect("mp CTE");
+        assert!(t_players.contains("start_time >= 1786147200"));
+        assert!(!t_players.contains("duration_s"));
+        assert!(mp.contains("duration_s >= 2700"));
     }
 
     #[test]
