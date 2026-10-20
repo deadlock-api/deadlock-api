@@ -236,10 +236,8 @@ fn build_query(query: &HeroStatsQuery) -> String {
         sumIf(max_shots_hit / (max_shots_hit + max_shots_missed), max_shots_hit + \
          max_shots_missed > 0)
             / greatest(1, countIf(max_shots_hit + max_shots_missed > 0)) AS accuracy,
-        sumIf(max_hero_bullets_hit_crit / (max_hero_bullets_hit_crit + max_hero_bullets_hit), \
-         max_hero_bullets_hit_crit + max_hero_bullets_hit > 0)
-            / greatest(1, countIf(max_hero_bullets_hit_crit + max_hero_bullets_hit > 0)) AS \
-         crit_shot_rate,
+        sumIf(max_hero_bullets_hit_crit / max_hero_bullets_hit, max_hero_bullets_hit > 0)
+            / greatest(1, countIf(max_hero_bullets_hit > 0)) AS crit_shot_rate,
         [countIf(mvp_rank = 1), countIf(mvp_rank = 2), countIf(mvp_rank = 3)] AS mvp_rank_counts,
         countIf(match_id >= {MVP_RANK_SINCE_MATCH_ID}) AS mvp_rated_matches,
         groupUniqArray(match_id) as matches,

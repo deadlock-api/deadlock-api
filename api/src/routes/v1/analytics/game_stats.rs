@@ -221,9 +221,10 @@ const AVERAGES: &[(&str, &str)] = &[
         "accuracy",
         "max_shots_hit / greatest(1, max_shots_hit + max_shots_missed)",
     ),
+    // `hero_bullets_hit` already counts the crits.
     (
         "crit_rate",
-        "max_hero_bullets_hit_crit / greatest(1, max_hero_bullets_hit_crit + max_hero_bullets_hit)",
+        "max_hero_bullets_hit_crit / greatest(1, max_hero_bullets_hit)",
     ),
     ("ending_level", "max_level"),
     ("gold_player", "max_gold_player"),
