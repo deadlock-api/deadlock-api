@@ -194,7 +194,9 @@ impl ScoreboardQuerySortBy {
             Self::Matches => "uniq(match_id)",
             Self::Wins => "countIf(won)",
             Self::Losses => "countIf(not won)",
-            Self::Winrate => "countIf(won) / uniq(match_id)",
+            // Wins over the same rows: `uniq(match_id)` is approximate past 65,536 matches (a
+            // hero's), which reordered heroes a few hundredths apart.
+            Self::Winrate => "avg(won)",
             Self::MaxKillsPerMatch => "max(kills)",
             Self::AvgKillsPerMatch => "avg(kills)",
             Self::Kills => "sum(kills)",
