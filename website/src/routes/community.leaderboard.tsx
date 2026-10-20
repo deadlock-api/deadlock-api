@@ -15,7 +15,7 @@ import { StaleOverlay } from "~/components/patterns/states/StaleOverlay";
 import { SegmentedItem } from "~/components/ui/segmented";
 import { useHeroById } from "~/hooks/useAssetById";
 import { prefetchCached } from "~/lib/prefetch-safe";
-import { getDefaultRegion, isLeaderboardRegion, REGION_LABELS } from "~/lib/region";
+import { isLeaderboardRegion, REGION_LABELS } from "~/lib/region";
 import { fetchDefaultRegion } from "~/lib/region-fns";
 import { datasetJsonLd, pageTitle, seo } from "~/lib/seo";
 import { leaderboardQueryOptions } from "~/queries/leaderboard-queries";
@@ -32,8 +32,9 @@ export const Route = createFileRoute("/community/leaderboard")({
     };
   },
   loader: async ({ context: { queryClient }, deps }) => {
-    // Resolve the default on the server so the client hydrates with the same region.
-    const defaultRegion = typeof window === "undefined" ? await fetchDefaultRegion() : getDefaultRegion();
+    // Resolved on the server on every visit, client-side navigations included, so the default follows the
+    // visitor's location the same way each time.
+    const defaultRegion = await fetchDefaultRegion();
     await prefetchCached(queryClient, leaderboardQueryOptions(deps.region ?? defaultRegion, deps.heroId));
     return { defaultRegion };
   },
