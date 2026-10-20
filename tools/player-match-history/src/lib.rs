@@ -94,7 +94,8 @@ impl PlayerMatchHistoryEntry {
             ranked_delta: entry.ranked_delta,
             ranked_calibration_match: entry.ranked_calibration_match,
             ranked_used_demotion_protection: entry.ranked_used_demotion_protection,
-            low_pri_pool: entry.low_pri_pool,
+            // The GC omits the field unless it is true.
+            low_pri_pool: Some(entry.low_pri_pool.unwrap_or_default()),
         })
     }
 
@@ -169,6 +170,14 @@ mod tests {
         assert_eq!(row.ranked_display_badge, Some(ETERNUS_MAX_BADGE));
         assert_eq!(row.low_pri_pool, Some(true));
         assert!(row.won());
+    }
+
+    #[test]
+    fn missing_low_pri_pool_means_normal_pool() {
+        let mut e = entry();
+        e.low_pri_pool = None;
+        let row = PlayerMatchHistoryEntry::from_protobuf(42, e).unwrap();
+        assert_eq!(row.low_pri_pool, Some(false));
     }
 
     #[test]
