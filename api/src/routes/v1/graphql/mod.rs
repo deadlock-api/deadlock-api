@@ -3,7 +3,6 @@ mod builds;
 mod cost;
 mod filters;
 mod metrics_ext;
-mod patches;
 mod projection;
 pub(crate) mod salts;
 mod schema;

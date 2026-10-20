@@ -2,7 +2,6 @@ use core::time::Duration;
 use std::sync::{Arc, LazyLock};
 
 use axum::extract::FromRequestParts;
-use chrono::{DateTime, Utc};
 use rmcp::handler::server::router::tool::ToolRouter;
 use rmcp::handler::server::tool::ToolCallContext;
 use rmcp::handler::server::wrapper::Parameters;
@@ -26,7 +25,6 @@ use crate::services::assets::versions::items::types::{ItemSlotType, ItemType};
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::rate_limiter::{Quota, RateLimitClient};
 use crate::services::steam::client::SteamClient;
-use crate::services::steam::patch_windows::live_windows;
 use crate::services::steam::types::FeedItem;
 
 const INSTRUCTIONS: &str = "\
@@ -45,7 +43,7 @@ Read-only SQL access to hourly parquet snapshots of the Deadlock API database (h
 - Schema exploration: `SHOW TABLES`, `DESCRIBE match_player`, `SUMMARIZE match_salts`, `duckdb_columns()`.
 - DuckDB extras: `SELECT * EXCLUDE (col)`, `GROUP BY ALL`, `QUALIFY`, `arg_max(x, y)`, list/struct literals, `strftime`/`date_trunc`.
 - Heroes and items (abilities, weapons, shop upgrades) are stored as numeric ids. `list_heroes` and `list_items` map them to names; pass an `id` to get the full details of one hero or item.
-- `list_patches` lists the game patches with the time range each was live; use it to scope `start_time` filters to a patch. Pass a patch `link` to get its full notes.";
+- `list_patches` lists the patch notes of the official forum changelog and the Steam news feed (the REST `/v2/patches` feed). Pass a patch `link` to get its full notes.";
 
 pub(super) struct McpServer {
     pub(super) catalog: Arc<SnapshotCatalog>,
@@ -418,15 +416,14 @@ impl McpServer {
 
     #[tool(
         title = "List Patches",
-        description = "List the game patches, newest first, from the official forum changelog (`forum`) and the Steam news feed (`steam`), with `title`, `link`, `pubDate`, `startDate` and `endDate`. `startDate` is when the patch went live and `endDate` when the next patch of the same source did, null for the live one: matches with `start_time` in [`startDate`, `endDate`) were played on that patch. `pubDate` is when the post was published; a forum thread's is when it was last edited, often weeks after the patch. Pass `link` to get the full notes of one patch instead."
+        description = "List the game patches, newest first, from the official forum changelog (`forum`) and the Steam news feed (`steam`), with `title`, `link` and `pubDate` (when the post was published; a forum thread's is when it was last edited). Pass `link` to get the full notes of one patch instead."
     )]
     async fn list_patches(&self, Parameters(args): Parameters<ListPatchesArgs>) -> CallToolResult {
         let feed = match self.steam.fetch_combined_patch_feed().await {
             Ok(feed) => feed,
             Err(e) => return patches_error(&e),
         };
-        let builds = self.assets.build_times().await;
-        let patches = patch_summaries(&feed, &builds);
+        let patches = patch_summaries(&feed);
         if let Some(link) = args.link {
             return match feed.iter().zip(patches).find(|(_, p)| p["link"] == link) {
                 Some((item, mut patch)) => {
@@ -456,11 +453,10 @@ fn patch_source(item: &FeedItem) -> PatchSource {
     }
 }
 
-/// One summary per feed item. `builds` are the client build times, oldest first.
-fn patch_summaries(feed: &[FeedItem], builds: &[DateTime<Utc>]) -> Vec<Value> {
+/// One summary per feed item, without the notes.
+fn patch_summaries(feed: &[FeedItem]) -> Vec<Value> {
     feed.iter()
-        .zip(live_windows(feed, builds))
-        .map(|(item, window)| {
+        .map(|item| {
             let (source, title, link) = match item {
                 FeedItem::Forum(p) => ("forum", &p.title, &p.link),
                 FeedItem::Steam(p) => ("steam", &p.title, &p.link),
@@ -469,8 +465,6 @@ fn patch_summaries(feed: &[FeedItem], builds: &[DateTime<Utc>]) -> Vec<Value> {
                 "source": source,
                 "title": title.trim(),
                 "pubDate": item.pub_date().to_utc(),
-                "startDate": window.start,
-                "endDate": window.end,
                 "link": link,
             })
         })
@@ -728,20 +722,17 @@ mod tests {
     }
 
     #[test]
-    fn a_patch_ends_at_the_next_patch_of_the_same_source() {
-        let summaries = patch_summaries(&[steam(400), forum(300), steam(200), forum(100)], &[]);
-        let end_dates: Vec<_> = summaries.iter().map(|p| &p["endDate"]).collect();
+    fn patch_summaries_list_the_feed_as_published() {
+        let summaries = patch_summaries(&[steam(400), forum(100)]);
         assert_eq!(
-            end_dates,
-            [
-                &Value::Null,
-                &Value::Null,
-                &json!("1970-01-01T00:06:40Z"),
-                &json!("1970-01-01T00:05:00Z"),
-            ]
+            summaries[0],
+            json!({
+                "source": "steam",
+                "title": "steam",
+                "pubDate": "1970-01-01T00:06:40Z",
+                "link": "steam/400",
+            })
         );
-        assert_eq!(summaries[0]["title"], "steam");
-        assert_eq!(summaries[3]["pubDate"], "1970-01-01T00:01:40Z");
-        assert_eq!(summaries[3]["startDate"], "1970-01-01T00:01:40Z");
+        assert_eq!(summaries[1]["pubDate"], "1970-01-01T00:01:40Z");
     }
 }

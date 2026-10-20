@@ -50,8 +50,6 @@ pub(super) const SALTS_LOOKUP_UNITS: usize = 8;
 /// Postgres CPU (44 µs per key) plus decoding the ~8 KB of build JSON per row.
 pub(super) const HERO_BUILD_LOOKUP_UNITS: usize = 4;
 
-/// The time a patch-scoped query covers: a patch is live for a few weeks.
-const PATCH_DAYS: usize = 30;
 const SECONDS_PER_DAY: i64 = 86_400;
 
 /// What the `where` / `order_by` of a `matches` or `match_players` query make it scan.
@@ -68,11 +66,10 @@ enum Scan {
 }
 
 impl Scan {
-    fn of(where_: Option<&MatchPlayerWhere>, key_ordered: bool, scope_days: Option<usize>) -> Self {
+    fn of(where_: Option<&MatchPlayerWhere>, key_ordered: bool) -> Self {
         let days = where_
             .and_then(|w| w.start_time.as_ref())
-            .and_then(days_spanned)
-            .or(scope_days);
+            .and_then(days_spanned);
         if let Some(accounts) = where_.and_then(MatchPlayerWhere::player_match_stats_accounts) {
             return Self::Accounts {
                 accounts: accounts.len(),
@@ -223,26 +220,7 @@ pub(super) fn match_players(
     offset: u32,
     row_units: usize,
 ) -> usize {
-    let scan = Scan::of(where_, match_players_key_ordered(order_by), None);
-    match_players_scan(&scan, offset).saturating_add(scan.rows(
-        limit,
-        ROW_BASE_UNITS + row_units,
-        PLAYERS_PER_MATCH,
-    ))
-}
-
-pub(super) fn patch_match_players(
-    where_: Option<&MatchPlayerWhere>,
-    order_by: Option<OrderByMatchPlayer>,
-    limit: u32,
-    offset: u32,
-    row_units: usize,
-) -> usize {
-    let scan = Scan::of(
-        where_,
-        match_players_key_ordered(order_by),
-        Some(PATCH_DAYS),
-    );
+    let scan = Scan::of(where_, match_players_key_ordered(order_by));
     match_players_scan(&scan, offset).saturating_add(scan.rows(
         limit,
         ROW_BASE_UNITS + row_units,
@@ -257,18 +235,7 @@ pub(super) fn matches(
     offset: u32,
     row_units: usize,
 ) -> usize {
-    let scan = Scan::of(where_, matches_key_ordered(order_by), None);
-    matches_scan(&scan, offset).saturating_add(scan.rows(limit, ROW_BASE_UNITS + row_units, 1))
-}
-
-pub(super) fn patch_matches(
-    where_: Option<&MatchPlayerWhere>,
-    order_by: Option<OrderByMatch>,
-    limit: u32,
-    offset: u32,
-    row_units: usize,
-) -> usize {
-    let scan = Scan::of(where_, matches_key_ordered(order_by), Some(PATCH_DAYS));
+    let scan = Scan::of(where_, matches_key_ordered(order_by));
     matches_scan(&scan, offset).saturating_add(scan.rows(limit, ROW_BASE_UNITS + row_units, 1))
 }
 

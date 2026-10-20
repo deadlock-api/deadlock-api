@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use chrono::{DateTime, Utc};
 use object_store::aws::AmazonS3;
 use tracing::{debug, warn};
 
@@ -10,7 +9,6 @@ use crate::services::assets::types::{AssetsHero, AssetsRanks};
 use crate::services::assets::versions::heroes::{Hero, fetch_heroes as build_heroes};
 use crate::services::assets::versions::items::{Item, fetch_items as build_items};
 use crate::services::assets::versions::ranks::{Rank, RankImages, fetch_ranks as build_ranks};
-use crate::services::assets::versions::steam_info::fetch_build_times;
 use crate::services::assets::versions::store::VersionStore;
 
 /// Language the internal lookups resolve hero/rank names in. The streamkit
@@ -124,17 +122,6 @@ impl AssetsClient {
         build_items(&self.r2_client, version, DEFAULT_LANGUAGE)
             .await
             .map_err(|e| APIError::internal(format!("building items: {e}")))
-    }
-
-    /// When every known client version was built, oldest first. Empty if the listing can't be
-    /// loaded, since the patch windows that need it fall back to a day's precision.
-    pub(crate) async fn build_times(&self) -> Arc<Vec<DateTime<Utc>>> {
-        fetch_build_times(&self.r2_client)
-            .await
-            .unwrap_or_else(|e| {
-                warn!("Failed to load client build times: {e}");
-                Arc::default()
-            })
     }
 
     /// Resolve the latest known client version, loading the listing on demand.

@@ -8,10 +8,9 @@ use std::sync::Arc;
 
 use bytes::Bytes;
 use cached::macros::cached;
-use chrono::{DateTime, NaiveDate, NaiveDateTime, NaiveTime, Utc};
-use chrono_tz::America::Los_Angeles;
+use chrono::{NaiveDate, NaiveDateTime, NaiveTime};
 use object_store::aws::AmazonS3;
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use utoipa::ToSchema;
 
 use crate::services::assets::versions::error::AssetsError;
@@ -116,39 +115,6 @@ pub(crate) async fn fetch_all_steam_info(r2: &AmazonS3) -> Result<Bytes, AssetsE
     Ok(store::fetch_zst(r2, ALL_STEAM_INFO_KEY).await?)
 }
 
-/// When every known client version was built, oldest first.
-///
-/// `version_datetime` is Valve's local (Pacific) time. A release build is made 5 to 30 minutes
-/// before the patch goes live; the builds in between are hotfixes.
-#[cached(
-    ttl_secs = 900,
-    convert = "{ 0_u8 }",
-    key = "u8",
-    result_fallback = true
-)]
-pub(crate) async fn fetch_build_times(
-    r2: &AmazonS3,
-) -> Result<Arc<Vec<DateTime<Utc>>>, AssetsError> {
-    let all = fetch_all_steam_info(r2).await?;
-    Ok(Arc::new(parse_build_times(&all)?))
-}
-
-fn parse_build_times(all: &[u8]) -> Result<Vec<DateTime<Utc>>, AssetsError> {
-    #[derive(Deserialize)]
-    struct Build {
-        version_datetime: NaiveDateTime,
-    }
-    let builds: Vec<Build> = serde_json::from_slice(all)?;
-    let mut times: Vec<_> = builds
-        .into_iter()
-        // A time skipped by a DST change can't be built; one repeated by it is ambiguous.
-        .filter_map(|b| b.version_datetime.and_local_timezone(Los_Angeles).earliest())
-        .map(|t| t.to_utc())
-        .collect();
-    times.sort_unstable();
-    Ok(times)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -174,23 +140,6 @@ mod tests {
     fn version_datetime_is_naive_iso8601() {
         let data = build_steam_info(&fixture()).expect("builds");
         assert_eq!(data.version_datetime, "2026-05-22T14:44:16");
-    }
-
-    #[test]
-    fn build_times_are_pacific_and_sorted() {
-        let all = br#"[
-            {"client_version": 6359, "version_datetime": "2026-03-06T13:30:44"},
-            {"client_version": 6127, "version_datetime": "2026-01-22T14:51:14"}
-        ]"#;
-        let times: Vec<_> = parse_build_times(all)
-            .expect("parses")
-            .iter()
-            .map(DateTime::to_rfc3339)
-            .collect();
-        assert_eq!(
-            times,
-            ["2026-01-22T22:51:14+00:00", "2026-03-06T21:30:44+00:00"]
-        );
     }
 
     #[test]

@@ -22,7 +22,6 @@ use crate::routes::v1::graphql::builds::{HeroBuildWhere, HeroBuildsArgs, load_he
 use crate::routes::v1::graphql::cost::{self, DEPTH_LIMIT, MAX_LIMIT};
 use crate::routes::v1::graphql::filters::{MatchHistoryWhere, MatchPlayerWhere};
 use crate::routes::v1::graphql::metrics_ext::MetricsExtension;
-use crate::routes::v1::graphql::patches::{Patch, PatchWhere, load_patches};
 use crate::routes::v1::graphql::projection::{
     project_match_history, project_match_players, project_matches,
 };
@@ -159,96 +158,6 @@ impl From<OrderDirection> for OrderDir {
     }
 }
 
-/// Ordering / paging arguments of a list query.
-pub(super) struct Page<O> {
-    pub(super) order_by: Option<O>,
-    pub(super) order_direction: Option<OrderDirection>,
-    pub(super) limit: u32,
-    pub(super) offset: u32,
-}
-
-/// `scope` is an extra SQL predicate AND-ed to the `where_` filters.
-pub(super) async fn load_matches(
-    ctx: &Context<'_>,
-    where_: Option<MatchPlayerWhere>,
-    page: Page<OrderByMatch>,
-    scope: Option<String>,
-) -> GqlResult<Vec<Match>> {
-    let state = app_state(ctx)?;
-    let projection = project_matches(&ctx.look_ahead());
-    let excluded_accounts = protected_accounts(state).await?;
-    let via_player_match_stats = where_
-        .as_ref()
-        .and_then(MatchPlayerWhere::player_match_stats_accounts)
-        .is_some();
-    let mut filters = where_.map_or_default(|w| w.to_sql_filters());
-    filters.extend(scope);
-    let sql = build_matches_query(&BuildArgs {
-        projection: &projection,
-        filters: &filters,
-        order_by: page.order_by.unwrap_or(OrderByMatch::MatchId).into(),
-        order_dir: page.order_direction.unwrap_or_default().into(),
-        limit: page.limit.clamp(1, MAX_LIMIT),
-        offset: page.offset,
-        via_player_match_stats,
-        excluded_accounts: &excluded_accounts,
-    });
-    run_built_query(ctx, "matches", sql).await
-}
-
-/// `scope` is an extra SQL predicate AND-ed to the `where_` filters.
-pub(super) async fn load_match_players(
-    ctx: &Context<'_>,
-    where_: Option<MatchPlayerWhere>,
-    page: Page<OrderByMatchPlayer>,
-    scope: Option<String>,
-) -> GqlResult<Vec<MatchPlayer>> {
-    let state = app_state(ctx)?;
-    let projection = project_match_players(&ctx.look_ahead());
-    let excluded_accounts = protected_accounts(state).await?;
-    let via_player_match_stats = where_
-        .as_ref()
-        .and_then(MatchPlayerWhere::player_match_stats_accounts)
-        .is_some();
-    let mut filters = where_.map_or_default(|w| w.to_sql_filters());
-    filters.extend(scope);
-    let sql = build_match_players_query(&BuildArgs {
-        projection: &projection,
-        filters: &filters,
-        order_by: page.order_by.unwrap_or(OrderByMatchPlayer::MatchId).into(),
-        order_dir: page.order_direction.unwrap_or_default().into(),
-        limit: page.limit.clamp(1, MAX_LIMIT),
-        offset: page.offset,
-        via_player_match_stats,
-        excluded_accounts: &excluded_accounts,
-    });
-    run_built_query(ctx, "match_players", sql).await
-}
-
-/// `scope` is an extra SQL predicate AND-ed to the `where_` filters.
-pub(super) async fn load_match_history(
-    ctx: &Context<'_>,
-    where_: Option<MatchHistoryWhere>,
-    page: Page<OrderByMatchHistory>,
-    scope: Option<String>,
-) -> GqlResult<Vec<MatchHistoryEntry>> {
-    let state = app_state(ctx)?;
-    let columns = project_match_history(&ctx.look_ahead());
-    let excluded_accounts = protected_accounts(state).await?;
-    let mut filters = where_.map_or_default(|w| w.to_sql_filters());
-    filters.where_.extend(scope);
-    let sql = build_match_history_query(&MatchHistoryBuildArgs {
-        columns: &columns,
-        filters: &filters,
-        order_by: page.order_by.unwrap_or(OrderByMatchHistory::MatchId).into(),
-        order_dir: page.order_direction.unwrap_or_default().into(),
-        limit: page.limit.clamp(1, MAX_LIMIT),
-        offset: page.offset,
-        excluded_accounts: &excluded_accounts,
-    });
-    run_built_query(ctx, "match_history", sql).await
-}
-
 pub(crate) struct QueryRoot;
 
 #[Object(rename_fields = "snake_case", rename_args = "snake_case")]
@@ -266,13 +175,25 @@ impl QueryRoot {
         #[graphql(default = 100)] limit: u32,
         #[graphql(default = 0)] offset: u32,
     ) -> GqlResult<Vec<Match>> {
-        let page = Page {
-            order_by,
-            order_direction,
-            limit,
+        let state = app_state(ctx)?;
+        let projection = project_matches(&ctx.look_ahead());
+        let excluded_accounts = protected_accounts(state).await?;
+        let via_player_match_stats = where_
+            .as_ref()
+            .and_then(MatchPlayerWhere::player_match_stats_accounts)
+            .is_some();
+        let filters = where_.map_or_default(|w| w.to_sql_filters());
+        let sql = build_matches_query(&BuildArgs {
+            projection: &projection,
+            filters: &filters,
+            order_by: order_by.unwrap_or(OrderByMatch::MatchId).into(),
+            order_dir: order_direction.unwrap_or_default().into(),
+            limit: limit.clamp(1, MAX_LIMIT),
             offset,
-        };
-        load_matches(ctx, where_, page, None).await
+            via_player_match_stats,
+            excluded_accounts: &excluded_accounts,
+        });
+        run_built_query(ctx, "matches", sql).await
     }
 
     /// Player-row query — one node per (match_id, account_id).
@@ -288,13 +209,25 @@ impl QueryRoot {
         #[graphql(default = 100)] limit: u32,
         #[graphql(default = 0)] offset: u32,
     ) -> GqlResult<Vec<MatchPlayer>> {
-        let page = Page {
-            order_by,
-            order_direction,
-            limit,
+        let state = app_state(ctx)?;
+        let projection = project_match_players(&ctx.look_ahead());
+        let excluded_accounts = protected_accounts(state).await?;
+        let via_player_match_stats = where_
+            .as_ref()
+            .and_then(MatchPlayerWhere::player_match_stats_accounts)
+            .is_some();
+        let filters = where_.map_or_default(|w| w.to_sql_filters());
+        let sql = build_match_players_query(&BuildArgs {
+            projection: &projection,
+            filters: &filters,
+            order_by: order_by.unwrap_or(OrderByMatchPlayer::MatchId).into(),
+            order_dir: order_direction.unwrap_or_default().into(),
+            limit: limit.clamp(1, MAX_LIMIT),
             offset,
-        };
-        load_match_players(ctx, where_, page, None).await
+            via_player_match_stats,
+            excluded_accounts: &excluded_accounts,
+        });
+        run_built_query(ctx, "match_players", sql).await
     }
 
     /// Player match history — one node per (account_id, match_id), from the
@@ -311,13 +244,20 @@ impl QueryRoot {
         #[graphql(default = 100)] limit: u32,
         #[graphql(default = 0)] offset: u32,
     ) -> GqlResult<Vec<MatchHistoryEntry>> {
-        let page = Page {
-            order_by,
-            order_direction,
-            limit,
+        let state = app_state(ctx)?;
+        let columns = project_match_history(&ctx.look_ahead());
+        let excluded_accounts = protected_accounts(state).await?;
+        let filters = where_.map_or_default(|w| w.to_sql_filters());
+        let sql = build_match_history_query(&MatchHistoryBuildArgs {
+            columns: &columns,
+            filters: &filters,
+            order_by: order_by.unwrap_or(OrderByMatchHistory::MatchId).into(),
+            order_dir: order_direction.unwrap_or_default().into(),
+            limit: limit.clamp(1, MAX_LIMIT),
             offset,
-        };
-        load_match_history(ctx, where_, page, None).await
+            excluded_accounts: &excluded_accounts,
+        });
+        run_built_query(ctx, "match_history", sql).await
     }
 
     /// Stored match salts — one node per match_id, the same data as the REST
@@ -338,29 +278,6 @@ impl QueryRoot {
             where_,
             order_direction.unwrap_or_default().into(),
             limit.clamp(1, MAX_LIMIT),
-            offset,
-        )
-        .await
-    }
-
-    /// Patch notes from the official forum changelog and the Steam news feed —
-    /// the same data as the REST `/v2/patches` feed, so only as far back as
-    /// those RSS feeds reach. Ordered by `pub_date`. Every patch can scope the
-    /// match queries to the time it was live.
-    #[graphql(complexity = "1 + (limit as usize).saturating_mul(child_complexity)")]
-    async fn patches(
-        &self,
-        ctx: &Context<'_>,
-        #[graphql(name = "where")] where_: Option<PatchWhere>,
-        order_direction: Option<OrderDirection>,
-        #[graphql(default = 10)] limit: u32,
-        #[graphql(default = 0)] offset: u32,
-    ) -> GqlResult<Vec<Patch>> {
-        load_patches(
-            app_state(ctx)?,
-            where_.as_ref(),
-            order_direction.unwrap_or_default(),
-            limit,
             offset,
         )
         .await
@@ -534,7 +451,5 @@ mod tests {
         assert!(sdl.contains("type MatchSalts"));
         assert!(sdl.contains("match_salts("));
         assert!(sdl.contains("salts:")); // Match / MatchPlayer.salts enrichment
-        assert!(sdl.contains("type Patch"));
-        assert!(sdl.contains("patches("));
     }
 }
