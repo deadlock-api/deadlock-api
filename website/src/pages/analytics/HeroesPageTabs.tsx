@@ -341,7 +341,7 @@ export function HeroCombosTab({ filters }: { filters: HeroFilters }) {
   return (
     <Section titleDisplay="hidden" title="Hero Combos">
       <FilterBar variant="toolbar" title="Combinations" icon={UsersRound} aria-label="Combination table controls">
-        <HeroCombFilters />
+        <HeroCombFilters gameMode={filters.gameMode} />
       </FilterBar>
       <LazyTab>
         <HeroCombStatsTable
