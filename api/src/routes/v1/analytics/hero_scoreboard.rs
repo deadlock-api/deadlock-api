@@ -120,16 +120,24 @@ fn build_query(query: &HeroScoreboardQuery) -> String {
         .build(),
     );
     let player_filters = player_filters.join(" AND ");
+    // A hero has one row per pick: `count()` is exact where `uniq(match_id)` is approximate past
+    // 65,536 matches (every hero's), and it never reads `match_id` (~6x less CPU all-time). It
+    // counts both picks of a mirror match, like `/hero-stats`, and relies on duplicate
+    // `ReplacingMergeTree` rows being merged away (none in 3 days measured on 2026-10-20).
     let player_having = query.min_matches.map_or_else(String::new, |min_matches| {
-        format!("HAVING uniq(match_id) >= {min_matches}")
+        format!("HAVING count() >= {min_matches}")
     });
+    let value = match query.sort_by {
+        ScoreboardQuerySortBy::Matches => "count()".to_owned(),
+        sort_by => sort_by.get_select_clause(),
+    };
     // No `optimize_use_projections = 0`: with skip indexes evaluated at planning time
     // (`use_skip_indexes_on_data_read = 0` on the clients) the planner picks the hero-led
     // projection only when it prunes better. Measured on production shapes: identical results,
     // 55% of the CPU and 57% of the wall time.
     format!(
         "
-SELECT rowNumberInAllBlocks() + 1 as rank, hero_id, toFloat64({}) as value, uniq(match_id) as matches
+SELECT rowNumberInAllBlocks() + 1 as rank, hero_id, toFloat64({value}) as value, count() as matches
 FROM match_player
 WHERE {player_filters}
 GROUP BY hero_id
@@ -137,7 +145,6 @@ GROUP BY hero_id
 ORDER BY value {}
 SETTINGS log_comment = 'hero_scoreboard', apply_patch_parts = 0, max_threads = 32
     ",
-        query.sort_by.get_select_clause(),
         query.sort_direction,
     )
 }
@@ -220,6 +227,24 @@ mod tests {
         assert_valid_sql(&sql);
         assert!(sql.contains("toFloat64(avg(permanent_buffs)) as value"));
         assert!(!sql.contains("optimize_use_projections"));
+    }
+
+    #[test]
+    fn match_counts_are_exact_row_counts() {
+        for sort_by in [
+            ScoreboardQuerySortBy::Matches,
+            ScoreboardQuerySortBy::Winrate,
+        ] {
+            let sql = build_query(&HeroScoreboardQuery {
+                sort_by,
+                min_matches: Some(10),
+                ..Default::default()
+            });
+            assert_valid_sql(&sql);
+            assert!(!sql.contains("uniq"));
+            assert!(sql.contains("count() as matches"));
+            assert!(sql.contains("HAVING count() >= 10"));
+        }
     }
 }
 
