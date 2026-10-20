@@ -248,6 +248,9 @@ const STREET_BRAWL_BLOCKS: &str = "arrayFold(
 
 /// Aggregates the players per order first (few distinct orders), then fans each order out into its prefixes, so
 /// `min_matches` applies per node instead of dropping every player whose full order is rare.
+///
+/// `abilities` was materialized with the ability dict of its insert, and today's dict finds other upgrades in a few old
+/// rows (mostly empty orders; 34 non-empty ones this season), so the upgrade times are resized to the order's length.
 fn build_tree_query(query: &AbilityOrderStatsQuery) -> String {
     let where_clause = where_clause(query);
     let (upgrade_order, upgrade_time_sums) = if query.game_mode == Some(GameMode::StreetBrawl) {
@@ -282,11 +285,11 @@ fn build_tree_query(query: &AbilityOrderStatsQuery) -> String {
         FROM (
             SELECT
                 abilities AS full_order,
-                sumForEach(arrayFilter(
+                sumForEach(arrayResize(arrayFilter(
                     (t, x) -> dictHas('default.ability_items_dict', toUInt64(x)),
                     items.game_time_s,
                     items.item_id
-                )) AS time_sums,
+                ), length(abilities))) AS time_sums,
                 countIf(won) AS order_wins,
                 countIf(not won) AS order_losses,
                 uniqExactState(account_id) AS order_players,
