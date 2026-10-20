@@ -219,11 +219,13 @@ fn build_query(query: &PlayerScoreboardQuery) -> String {
         ""
     };
 
-    let having_clause = having_clause(&range_filters(
-        matches_expr,
-        query.min_matches,
-        query.max_matches,
-    ));
+    let mut having_filters = range_filters(matches_expr, query.min_matches, query.max_matches);
+    // Players without a ranked match in range have badge 0 and value 0: they are not listed,
+    // or an ascending rank sort would start with all of them.
+    if query.sort_by.is_rank_sort() {
+        having_filters.push("badge > 0".to_owned());
+    }
+    let having_clause = having_clause(&having_filters);
     let offset = query.start.unwrap_or(1).max(1) - 1;
     let select_clause = if query.sort_by.dedup_free() {
         matches_expr.to_owned()
@@ -231,13 +233,6 @@ fn build_query(query: &PlayerScoreboardQuery) -> String {
         query.sort_by.get_select_clause()
     };
     let sort_direction = query.sort_direction;
-    // Players without a ranked match in range have badge 0 and value 0: an ascending rank sort
-    // would list all of them before the lowest ranked player, so they go last either way.
-    let order_by = if query.sort_by.is_rank_sort() {
-        format!("badge = 0, value {sort_direction}")
-    } else {
-        format!("value {sort_direction}")
-    };
     let (badge_clause, badge_progress_clause) = query.sort_by.badge_columns().map_or_else(
         || ("NULL".to_owned(), "NULL".to_owned()),
         |c| (c.badge, c.badge_progress),
@@ -254,7 +249,7 @@ SELECT rowNumberInAllBlocks() + {first_rank} as rank, account_id, toFloat64({sel
 {outer_where}
 GROUP BY account_id
 {having_clause}
-ORDER BY {order_by}
+ORDER BY value {sort_direction}
 LIMIT {limit} OFFSET {offset}
 SETTINGS log_comment = 'player_scoreboard', apply_patch_parts = 0, do_not_merge_across_partitions_select_final = 1
     "
@@ -578,7 +573,7 @@ mod tests {
     }
 
     #[test]
-    fn rank_sorts_list_unranked_players_last_in_both_directions() {
+    fn rank_sorts_do_not_list_unranked_players() {
         for sort_by in [ScoreboardQuerySortBy::Rank, ScoreboardQuerySortBy::PeakRank] {
             for sort_direction in [SortDirectionDesc::Asc, SortDirectionDesc::Desc] {
                 let sql = build_query(&PlayerScoreboardQuery {
@@ -587,14 +582,15 @@ mod tests {
                     ..Default::default()
                 });
                 assert_valid_sql(&sql);
-                assert!(sql.contains(&format!("ORDER BY badge = 0, value {sort_direction}")));
+                assert!(sql.contains("HAVING badge > 0"));
+                assert!(sql.contains(&format!("ORDER BY value {sort_direction}")));
             }
         }
         let kills = build_query(&PlayerScoreboardQuery {
             sort_by: ScoreboardQuerySortBy::Kills,
             ..Default::default()
         });
-        assert!(kills.contains("ORDER BY value desc"));
+        assert!(!kills.contains("badge > 0"));
     }
 
     #[test]

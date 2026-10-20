@@ -14,12 +14,12 @@ pub enum ScoreboardQuerySortBy {
     Matches,
     /// Sort by the rank progress the player ended their latest ranked match in range on, which
     /// also orders players within Eternus. The entry's `badge` is the matching rank badge.
-    /// Players without a ranked match in range (`badge` 0) come last in either direction.
+    /// Players without a ranked match in range are not listed.
     /// Player scoreboard only.
     Rank,
     /// Sort by the highest rank progress the player ended any ranked match in range on. The
-    /// entry's `badge` is the matching rank badge. Players without a ranked match in range
-    /// (`badge` 0) come last in either direction. Player scoreboard only.
+    /// entry's `badge` is the matching rank badge. Players without a ranked match in range are
+    /// not listed. Player scoreboard only.
     PeakRank,
     /// Sort by the number of wins
     Wins,
