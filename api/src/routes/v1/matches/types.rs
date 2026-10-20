@@ -3,7 +3,7 @@ use itertools::Itertools;
 use serde::{Deserialize, Deserializer, Serialize};
 use strum::{Display, EnumString, FromRepr};
 use utoipa::{IntoParams, ToSchema};
-use valveprotos::deadlock::c_msg_dev_match_info::MatchPlayer;
+use valveprotos::deadlock::c_msg_dev_match_info::{MatchPlayer, Team};
 use valveprotos::deadlock::{CMsgClientToGcGetMatchMetaDataResponse, CMsgDevMatchInfo};
 
 #[derive(FromRepr, Debug, Clone, Copy, Serialize, ToSchema, Default)]
@@ -399,6 +399,27 @@ impl From<MatchPlayer> for ActiveMatchPlayer {
     }
 }
 
+#[derive(Debug, Clone, Copy, Serialize, ToSchema)]
+pub(super) struct ActiveMatchTeamStats {
+    team: Option<i32>,
+    team_parsed: Option<ActiveMatchTeam>,
+    net_worth: Option<u32>,
+    objectives_mask: Option<u64>,
+    brawl_score: Option<u32>,
+}
+
+impl From<Team> for ActiveMatchTeamStats {
+    fn from(value: Team) -> Self {
+        Self {
+            team: value.team,
+            team_parsed: value.team.map(Into::into),
+            net_worth: value.net_worth,
+            objectives_mask: value.objectives_mask,
+            brawl_score: value.brawl_score,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, ToSchema)]
 #[serde(rename_all(deserialize = "camelCase"))]
 pub(super) struct ActiveMatch {
@@ -424,6 +445,8 @@ pub(super) struct ActiveMatch {
     region_mode: Option<i32>,
     region_mode_parsed: Option<RegionMode>,
     compat_version: Option<u32>,
+    low_pri_pool: Option<bool>,
+    team_stats: Vec<ActiveMatchTeamStats>,
 }
 
 impl From<CMsgDevMatchInfo> for ActiveMatch {
@@ -451,6 +474,8 @@ impl From<CMsgDevMatchInfo> for ActiveMatch {
             region_mode: value.region_mode,
             region_mode_parsed: value.region_mode.map(Into::into),
             compat_version: value.compat_version,
+            low_pri_pool: value.low_pri_pool,
+            team_stats: value.team_stats.into_iter().map_into().collect(),
         }
     }
 }
@@ -505,5 +530,25 @@ mod tests {
         );
         assert_eq!(MatchMode::agg_sql_filter(Some(&[])), None);
         assert_eq!(MatchMode::agg_sql_filter(None), None);
+    }
+
+    #[test]
+    fn active_match_keeps_team_stats_and_low_priority_pool() {
+        let info = CMsgDevMatchInfo {
+            low_pri_pool: Some(true),
+            team_stats: vec![Team {
+                team: Some(1),
+                net_worth: Some(42_000),
+                objectives_mask: Some(3),
+                brawl_score: Some(2),
+            }],
+            ..Default::default()
+        };
+        let json = serde_json::to_value(ActiveMatch::from(info)).unwrap();
+        assert_eq!(json["low_pri_pool"], true);
+        assert_eq!(json["team_stats"][0]["team"], 1);
+        assert_eq!(json["team_stats"][0]["net_worth"], 42_000);
+        assert_eq!(json["team_stats"][0]["objectives_mask"], 3);
+        assert_eq!(json["team_stats"][0]["brawl_score"], 2);
     }
 }
