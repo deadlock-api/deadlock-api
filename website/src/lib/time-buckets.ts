@@ -36,7 +36,8 @@ export function completeTimeBuckets<T extends { bucket: number }>(
 ): T[] {
   const unit = BUCKET_UNIT[interval as keyof typeof BUCKET_UNIT];
   if (!unit) return rows;
-  const end = Math.min(maxUnixTimestamp ?? Infinity, Date.now() / 1000);
+  // The API counts the max in, so a range that ends at 23:59:59 covers that whole day.
+  const end = Math.min((maxUnixTimestamp ?? Infinity) + 1, Date.now() / 1000);
   const complete = new Map<number, boolean>();
   return rows.filter(({ bucket }) => {
     if (!complete.has(bucket)) {
