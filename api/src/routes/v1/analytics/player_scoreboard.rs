@@ -230,11 +230,18 @@ fn build_query(query: &PlayerScoreboardQuery) -> String {
     } else {
         query.sort_by.get_select_clause()
     };
+    let sort_direction = query.sort_direction;
+    // Players without a ranked match in range have badge 0 and value 0: an ascending rank sort
+    // would list all of them before the lowest ranked player, so they go last either way.
+    let order_by = if query.sort_by.is_rank_sort() {
+        format!("badge = 0, value {sort_direction}")
+    } else {
+        format!("value {sort_direction}")
+    };
     let (badge_clause, badge_progress_clause) = query.sort_by.badge_columns().map_or_else(
         || ("NULL".to_owned(), "NULL".to_owned()),
         |c| (c.badge, c.badge_progress),
     );
-    let sort_direction = query.sort_direction;
     let limit = query.limit.unwrap_or_default();
     let first_rank = offset + 1;
 
@@ -247,7 +254,7 @@ SELECT rowNumberInAllBlocks() + {first_rank} as rank, account_id, toFloat64({sel
 {outer_where}
 GROUP BY account_id
 {having_clause}
-ORDER BY value {sort_direction}
+ORDER BY {order_by}
 LIMIT {limit} OFFSET {offset}
 SETTINGS log_comment = 'player_scoreboard', apply_patch_parts = 0, do_not_merge_across_partitions_select_final = 1
     "
@@ -568,6 +575,26 @@ mod tests {
              ifNull(player_rank_initial_display_rank, 0) > 0), 0)) as value"
         ));
         assert!(sql.contains("IS NULL, 0,"));
+    }
+
+    #[test]
+    fn rank_sorts_list_unranked_players_last_in_both_directions() {
+        for sort_by in [ScoreboardQuerySortBy::Rank, ScoreboardQuerySortBy::PeakRank] {
+            for sort_direction in [SortDirectionDesc::Asc, SortDirectionDesc::Desc] {
+                let sql = build_query(&PlayerScoreboardQuery {
+                    sort_by,
+                    sort_direction,
+                    ..Default::default()
+                });
+                assert_valid_sql(&sql);
+                assert!(sql.contains(&format!("ORDER BY badge = 0, value {sort_direction}")));
+            }
+        }
+        let kills = build_query(&PlayerScoreboardQuery {
+            sort_by: ScoreboardQuerySortBy::Kills,
+            ..Default::default()
+        });
+        assert!(kills.contains("ORDER BY value desc"));
     }
 
     #[test]
