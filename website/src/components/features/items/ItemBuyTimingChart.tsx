@@ -45,7 +45,7 @@ const VIEW_OPTIONS = [
 type BucketType = Exclude<AnalyticsApiItemStatsRequest["bucket"], undefined>;
 type ChartData = Record<string, ChartPoint[]>;
 
-const MIN_AVG_THRESHOLD = 0.1; // 5 %
+const MIN_AVG_THRESHOLD = 0.1; // 10 %
 const BUCKET_INCREMENTS = [1000, 2000, 3000, 5000, 7000, 10000] as const;
 
 interface ChartPoint {
@@ -177,6 +177,14 @@ function buildChartData({
   return result;
 }
 
+/** The matches a point needs: an item table row's chart scales it with the row, elsewhere the page's Min Matches. */
+function pointMinMatches(rowTotalMatches: number | undefined, pageMinMatches: number | null | undefined) {
+  if (!rowTotalMatches) return pageMinMatches ?? 2;
+  if (rowTotalMatches > 500) return 20;
+  if (rowTotalMatches > 250) return 10;
+  return 2;
+}
+
 interface ItemBuyTimingChartProps {
   itemIds: number[];
   baseQueryOptions: Omit<AnalyticsApiItemStatsRequest, "bucket">;
@@ -211,7 +219,7 @@ export function ItemBuyTimingChart({
 
   const baseMinAvgThreshold = rowTotalMatches && rowTotalMatches > 200 ? MIN_AVG_THRESHOLD : MIN_AVG_THRESHOLD * 1.5;
   const minAvgThreshold = showFineGrainedIntervals ? baseMinAvgThreshold / 2 : baseMinAvgThreshold;
-  const minMatches = rowTotalMatches && rowTotalMatches > 500 ? 20 : rowTotalMatches && rowTotalMatches > 250 ? 10 : 2;
+  const minMatches = pointMinMatches(rowTotalMatches, baseQueryOptions.minMatches);
 
   const { data: itemsData } = useQuery(itemUpgradesQueryOptions);
   const itemNameMap = useMemo(
