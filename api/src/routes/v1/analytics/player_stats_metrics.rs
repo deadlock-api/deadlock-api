@@ -81,6 +81,12 @@ pub(crate) struct PlayerStatsMetricsQuery {
     #[serde(default)]
     #[param(minimum = 1)]
     max_matches: Option<u32>,
+    /// The minimum number of matches a player needs on the filters to count. Players with few
+    /// matches have noisy averages that widen the distribution. **Default:** 10, or 1 when
+    /// `account_ids` is set.
+    #[serde(default)]
+    #[param(minimum = 1)]
+    min_matches: Option<u32>,
     /// Comma separated list of item ids to include (only players who have purchased these items). See more: <https://api.deadlock-api.com/v1/assets/items>
     #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
     #[cfg_attr(
@@ -319,9 +325,12 @@ metrics_row! {
     FirstPermanentBuffTimeS => avg_first_permanent_buff_time_s, std_first_permanent_buff_time_s, quantiles_first_permanent_buff_time_s;
 }
 
+/// Players with fewer matches are left out of the distribution unless `account_ids` names them.
+const DEFAULT_MIN_MATCHES: u32 = 10;
+
 /// SELECT list entry for one metric. Buff metrics that were not requested get typed
 /// placeholders (their columns must still exist for the row struct) and are dropped from the
-/// response. `avg`/`std` of the nullable first-pickup time are `NULL` when no row has
+/// response. `avg`/`std` of the nullable first-pickup time are `NULL` when no player has
 /// timings, so they fall back to `nan` (serialized as `null`).
 fn metric_select(metric: Metric, include_buff_metrics: bool) -> String {
     const QUANTILES: &str = "quantilesDD(0.01, 0.01, 0.05, 0.1, 0.25, 0.5, 0.75, 0.9, 0.95, 0.99)";
@@ -331,7 +340,7 @@ fn metric_select(metric: Metric, include_buff_metrics: bool) -> String {
              emptyArrayFloat64() AS quantiles_{metric}"
         );
     }
-    let expr = metric.get_select_clause();
+    let expr = format!("player_{metric}");
     if metric == Metric::FirstPermanentBuffTimeS {
         return format!(
             "ifNull(avg({expr}), nan) AS avg_{metric}, ifNull(std({expr}), nan) AS std_{metric}, \
@@ -344,26 +353,59 @@ fn metric_select(metric: Metric, include_buff_metrics: bool) -> String {
     )
 }
 
+/// One in how many accounts the distribution is taken over. Without a hero or account filter a
+/// long window holds millions of players, and their per-player states outgrow memory (all time:
+/// 20 GiB, spilled to disk, 89 s). One account in `days / 15` is kept, at most 1 in 8: 30 days
+/// keep half, all time an eighth (7 s), and windows under 30 days stay exact. The share is a
+/// fixed hash of the account, so every metric and request sees the same players.
+fn account_sample(query: &PlayerStatsMetricsQuery, now: i64) -> i64 {
+    if query.hero_ids.is_some() || query.account_ids.is_some() {
+        return 1;
+    }
+    let days = query
+        .max_unix_timestamp
+        .unwrap_or(now)
+        .saturating_sub(query.min_unix_timestamp.unwrap_or(0))
+        / 86_400;
+    (days / 15).clamp(1, 8)
+}
+
 fn build_query(query: &PlayerStatsMetricsQuery) -> String {
     let info_filters = query.match_info().build();
-    let player_filters = join_filters(
-        &PlayerFilters {
-            hero_ids: query.hero_ids.as_deref(),
-            account_ids: query.account_ids.as_deref(),
-            min_networth: query.min_networth,
-            max_networth: query.max_networth,
-            include_item_ids: query.include_item_ids.as_deref(),
-            exclude_item_ids: query.exclude_item_ids.as_deref(),
-            ability_order_prefix: query.ability_order_prefix.as_deref(),
-            ability_unlock_order_prefix: query.ability_unlock_order_prefix.as_deref(),
-            ..Default::default()
-        }
-        .build(),
-    );
+    let mut player_filters = PlayerFilters {
+        hero_ids: query.hero_ids.as_deref(),
+        account_ids: query.account_ids.as_deref(),
+        min_networth: query.min_networth,
+        max_networth: query.max_networth,
+        include_item_ids: query.include_item_ids.as_deref(),
+        exclude_item_ids: query.exclude_item_ids.as_deref(),
+        ability_order_prefix: query.ability_order_prefix.as_deref(),
+        ability_unlock_order_prefix: query.ability_unlock_order_prefix.as_deref(),
+        ..Default::default()
+    }
+    .build();
+    let now = chrono::Utc::now().timestamp();
+    let sample = account_sample(query, now);
+    if sample > 1 {
+        player_filters.push(format!("intHash32(account_id) % {sample} = 0"));
+    }
+    let player_filters = join_filters(&player_filters);
     let selects = Metric::VARIANTS
         .iter()
         .map(|metric| metric_select(*metric, query.include_buff_metrics))
         .join(",\n");
+    // Each player's average of every metric, the values the distribution is taken over. The
+    // first pickup time averages to NULL for a player without timings, who then drops out of it.
+    let player_selects = Metric::VARIANTS
+        .iter()
+        .filter(|metric| query.include_buff_metrics || !metric.is_buff())
+        .map(|metric| format!("avg({}) AS player_{metric}", metric.get_select_clause()))
+        .join(",\n");
+    let min_matches = query.min_matches.unwrap_or(if query.account_ids.is_some() {
+        1
+    } else {
+        DEFAULT_MIN_MATCHES
+    });
     let game_mode_filter = GameMode::sql_filter(query.game_mode);
     let match_mode_filter = MatchMode::sql_filter(query.match_mode.as_deref());
     // `duration_s` is denormalized onto every player row and is constant within
@@ -379,7 +421,7 @@ fn build_query(query: &PlayerStatsMetricsQuery) -> String {
     };
     let data_columns = format!(
         "
-                kills, deaths, assists, net_worth, denies, last_hits,
+                account_id, kills, deaths, assists, net_worth, denies, last_hits,
                 max_hero_bullets_hit_crit, max_hero_bullets_hit,
                 max_shots_hit, max_shots_missed,
                 max_player_damage, max_max_health, max_player_damage_taken,
@@ -431,7 +473,12 @@ fn build_query(query: &PlayerStatsMetricsQuery) -> String {
     format!(
         "
     SELECT {selects}
-    FROM {t_data}
+    FROM (
+        SELECT {player_selects}
+        FROM {t_data}
+        GROUP BY account_id
+        HAVING count() >= {min_matches}
+    )
     SETTINGS log_comment = 'player_stats_metrics', apply_patch_parts = 0, max_threads = 32
     "
     )
@@ -473,6 +520,10 @@ async fn get_player_stats_metrics(
     summary = "Player Stats Metrics",
     description = "
 Returns comprehensive statistical analysis of player performance.
+
+Every metric is first averaged per player over the matching matches; `avg`, `std` and the
+percentiles describe the distribution of those player averages, not of single matches. Players
+with fewer than `min_matches` matches (default 10, or 1 when `account_ids` is set) are left out.
 
 Results are cached for **1 hour** based on the unique combination of query parameters provided. Subsequent identical requests within this timeframe will receive the cached response.
 
@@ -565,9 +616,60 @@ mod tests {
         });
         assert_valid_sql(&sql);
         assert!(sql.contains("permanent_buffs, first_permanent_buff_time_s"));
-        assert!(sql.contains("avg(permanent_buffs / duration_m) AS avg_permanent_buffs_per_min"));
-        assert!(sql.contains("ifNull(avg(first_permanent_buff_time_s), nan)"));
+        assert!(
+            sql.contains("avg(permanent_buffs / duration_m) AS player_permanent_buffs_per_min")
+        );
+        assert!(sql.contains("avg(player_permanent_buffs_per_min) AS avg_permanent_buffs_per_min"));
+        assert!(sql.contains("ifNull(avg(player_first_permanent_buff_time_s), nan)"));
         assert!(sql.contains("AS quantiles_permanent_buffs_per_min"));
+    }
+
+    #[test]
+    fn named_accounts_count_from_one_match() {
+        let population = build_query(&PlayerStatsMetricsQuery::default());
+        assert!(population.contains("GROUP BY account_id"));
+        assert!(population.contains("HAVING count() >= 10"));
+        let own = build_query(&PlayerStatsMetricsQuery {
+            account_ids: Some(vec![18_373_975]),
+            ..Default::default()
+        });
+        assert!(own.contains("HAVING count() >= 1\n"));
+        let explicit = build_query(&PlayerStatsMetricsQuery {
+            account_ids: Some(vec![18_373_975]),
+            min_matches: Some(5),
+            ..Default::default()
+        });
+        assert!(explicit.contains("HAVING count() >= 5"));
+    }
+
+    #[test]
+    fn long_unfiltered_windows_sample_accounts() {
+        let now = 1_800_000_000;
+        let window = |days: i64| PlayerStatsMetricsQuery {
+            min_unix_timestamp: Some(now - days * 86_400),
+            ..Default::default()
+        };
+        assert_eq!(account_sample(&window(7), now), 1);
+        assert_eq!(account_sample(&window(30), now), 2);
+        assert_eq!(account_sample(&window(365), now), 8);
+        let all_time = PlayerStatsMetricsQuery {
+            min_unix_timestamp: Some(0),
+            ..Default::default()
+        };
+        assert_eq!(account_sample(&all_time, now), 8);
+        let hero = PlayerStatsMetricsQuery {
+            hero_ids: Some(vec![15]),
+            ..all_time.clone()
+        };
+        assert_eq!(account_sample(&hero, now), 1);
+        let own = PlayerStatsMetricsQuery {
+            account_ids: Some(vec![18_373_975]),
+            ..all_time.clone()
+        };
+        assert_eq!(account_sample(&own, now), 1);
+        let sql = build_query(&all_time);
+        assert_valid_sql(&sql);
+        assert!(sql.contains("intHash32(account_id) % 8 = 0"));
     }
 
     #[test]
