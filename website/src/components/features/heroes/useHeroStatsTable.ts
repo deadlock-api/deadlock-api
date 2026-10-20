@@ -9,7 +9,7 @@ import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { computeBanRates, totalBanMatches } from "~/lib/ban-rate";
 import { getPickrateMultiplier } from "~/lib/constants";
 import type { GameMode, MatchMode } from "~/lib/game-mode";
-import { computeResiduals, computeZScores } from "~/lib/hero-scoring";
+import { computeResiduals, computeZScores, scoringInputs } from "~/lib/hero-scoring";
 import { computeSwapRates, type HeroSwapRates } from "~/lib/swap-rate";
 import { heroesQueryOptions } from "~/queries/asset-queries";
 import { heroBanStatsQueryOptions } from "~/queries/hero-ban-stats-query";
@@ -247,18 +247,8 @@ export function useHeroStatsTable({
   const prevStatsMap = useMemo(() => {
     if (!prevHeroData) return undefined;
     const prevBanStatsMap = prevBanData ? computeBanRates(prevBanData) : undefined;
-    let prevSumMatches = 0;
-    let prevMaxMatches = 0;
-    for (const row of prevHeroData) {
-      prevSumMatches += row.matches;
-      if (row.matches > prevMaxMatches) prevMaxMatches = row.matches;
-    }
-    const inputs = prevHeroData.map((row) => ({
-      winrate: row.wins / row.matches,
-      pickrate: pickrateMultiplier * (row.matches / prevSumMatches),
-      banrate: prevBanStatsMap?.get(row.hero_id),
-      matches: row.matches,
-    }));
+    const prevMaxMatches = range(prevHeroData.map((row) => row.matches)).max;
+    const inputs = scoringInputs(prevHeroData, pickrateMultiplier, prevBanStatsMap);
     const zScores = computeZScores(inputs);
     const { residuals } = computeResiduals(inputs);
     const map = new Map<number, PrevHeroStats>();
@@ -280,12 +270,7 @@ export function useHeroStatsTable({
     const rows = heroData ?? [];
     const sum = rows.reduce((acc, row) => acc + row.matches, 0);
     const maxMatches = range(rows.map((row) => row.matches)).max;
-    const inputs = rows.map((row) => ({
-      winrate: row.wins / row.matches,
-      pickrate: pickrateMultiplier * (row.matches / sum),
-      banrate: hasBans ? (banStatsMap.get(row.hero_id) ?? 0) : undefined,
-      matches: row.matches,
-    }));
+    const inputs = scoringInputs(rows, pickrateMultiplier, banStatsMap);
     const zScores = sum ? computeZScores(inputs) : [];
     const { residuals } = sum ? computeResiduals(inputs) : { residuals: [] as number[] };
     const data = rows.map((row, i): HeroStatsRowData => {

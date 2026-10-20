@@ -3,6 +3,26 @@ export const Z_SCORE_PR_WEIGHT = 0.25;
 export const Z_SCORE_BR_WEIGHT = 0.15;
 
 /**
+ * One period's heroes as `computeZScores` and `computeResiduals` take them. With ban data, every hero gets a ban rate
+ * (0 for a hero no one banned; some heroes can't be banned), so one unbanned hero doesn't switch the whole period to
+ * the formula without bans, and two periods compare by the same formula.
+ */
+export function scoringInputs(
+  rows: readonly { hero_id: number; wins: number; matches: number }[],
+  pickrateMultiplier: number,
+  banRates?: ReadonlyMap<number, number>,
+) {
+  const sum = rows.reduce((acc, row) => acc + row.matches, 0);
+  const withBans = banRates != null && banRates.size > 0;
+  return rows.map((row) => ({
+    winrate: row.wins / row.matches,
+    pickrate: pickrateMultiplier * (row.matches / sum),
+    banrate: withBans ? (banRates.get(row.hero_id) ?? 0) : undefined,
+    matches: row.matches,
+  }));
+}
+
+/**
  * Computes z-score based tier score from arrays of hero winrates, pickrates,
  * and (optionally) banrates. When banrates are present on every hero, they are
  * folded in as a third standardized term using brWeight; otherwise the
