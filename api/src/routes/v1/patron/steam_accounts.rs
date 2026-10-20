@@ -164,20 +164,19 @@ pub(crate) async fn add_steam_account(
             "Failed to check account status",
         )?;
 
-    // An entry still in cooldown already holds its slot; anything else needs a free one.
-    if !existing_deleted
+    // An entry still in cooldown is already counted in the used slots, so it doesn't need an
+    // additional one, but it still has to fit within the slot limit.
+    let holds_slot = existing_deleted
         .as_ref()
-        .is_some_and(|account| in_cooldown(account.deleted_at))
-    {
-        let used_slots = used_slots(&repo, session.patron_id).await?;
-        if used_slots >= slot_limit {
-            return Err(APIError::status_msg(
-                StatusCode::BAD_REQUEST,
-                format!(
-                    "Cannot add account: slot limit exceeded (using {used_slots} of {slot_limit} slots)",
-                ),
-            ));
-        }
+        .is_some_and(|account| in_cooldown(account.deleted_at));
+    let used_slots = used_slots(&repo, session.patron_id).await? - i32::from(holds_slot);
+    if used_slots >= slot_limit {
+        return Err(APIError::status_msg(
+            StatusCode::BAD_REQUEST,
+            format!(
+                "Cannot add account: slot limit exceeded (using {used_slots} of {slot_limit} slots)",
+            ),
+        ));
     }
 
     let account = if let Some(deleted_account) = existing_deleted {
