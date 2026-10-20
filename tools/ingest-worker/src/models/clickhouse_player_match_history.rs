@@ -46,6 +46,7 @@ pub(crate) struct PlayerMatchHistoryEntry {
     pub ranked_delta: Option<i32>,
     pub ranked_calibration_match: Option<u32>,
     pub ranked_used_demotion_protection: Option<bool>,
+    pub low_pri_pool: Option<bool>,
     pub source: Source,
 }
 
@@ -150,6 +151,7 @@ impl PlayerMatchHistoryEntry {
             ranked_used_demotion_protection: rank
                 .as_ref()
                 .and_then(derived_used_demotion_protection),
+            low_pri_pool: match_info.low_pri_pool,
             source: Source::MatchPlayer,
         })
     }

@@ -266,6 +266,8 @@ pub(super) struct MatchHistoryEntry {
     pub(super) ranked_calibration_match: Option<u32>,
     /// Whether the player's demotion protection absorbed a loss in this match.
     pub(super) ranked_used_demotion_protection: Option<bool>,
+    /// Whether the match was played in the low priority pool. Null for entries stored before this was recorded.
+    pub(super) low_pri_pool: Option<bool>,
 }
 
 /// Stored Steam profile of a player, from the `steam_profiles` table (no live

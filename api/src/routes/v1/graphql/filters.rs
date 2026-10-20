@@ -368,11 +368,12 @@ pub(super) struct MatchHistoryWhere {
     pub(super) ranked_delta: Option<I32Filter>,
     pub(super) ranked_calibration_match: Option<U32Filter>,
     pub(super) ranked_used_demotion_protection: Option<BoolFilter>,
+    pub(super) low_pri_pool: Option<BoolFilter>,
 }
 
 /// Compiled `match_history` filters. `player_match_history` is a
 /// `CoalescingMergeTree` the query merges via `GROUP BY (account_id, match_id)`,
-/// so filters on the coalesced `ranked_*` columns must run post-merge: they land
+/// so filters on the coalesced columns (`ranked_*`, `low_pri_pool`) must run post-merge: they land
 /// in `having` (compiled against the merged aggregate expression), while every
 /// other column is identical across duplicate rows and filters pre-merge in
 /// `where_`.
@@ -437,6 +438,7 @@ impl MatchHistoryWhere {
         push_having!(ranked_delta);
         push_having!(ranked_calibration_match);
         push_having!(ranked_used_demotion_protection);
+        push_having!(low_pri_pool);
         out
     }
 }

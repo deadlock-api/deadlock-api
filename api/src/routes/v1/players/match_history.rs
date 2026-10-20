@@ -46,11 +46,12 @@ const ETERNUS_MIN_BADGE: u32 = 111;
 
 /// Columns the table coalesces to the latest non-NULL value; every other column
 /// takes the latest row's value.
-pub(crate) const COALESCED_COLUMNS: [&str; 4] = [
+pub(crate) const COALESCED_COLUMNS: [&str; 5] = [
     "ranked_display_badge",
     "ranked_delta",
     "ranked_calibration_match",
     "ranked_used_demotion_protection",
+    "low_pri_pool",
 ];
 
 pub(crate) struct MatchHistoryReadQuery;

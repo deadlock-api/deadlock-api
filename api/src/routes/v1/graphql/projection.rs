@@ -193,6 +193,7 @@ pub(super) const MATCH_HISTORY_COLUMNS: &[Column] = &[
     col("ranked_delta"),
     col("ranked_calibration_match"),
     col("ranked_used_demotion_protection"),
+    col("low_pri_pool"),
 ];
 
 /// Sub-fields of the `items` Nested column. All `UInt32`.

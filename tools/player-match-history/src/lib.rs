@@ -51,6 +51,8 @@ pub struct PlayerMatchHistoryEntry {
     pub ranked_calibration_match: Option<u32>,
     /// Whether the player's demotion protection absorbed a loss in this match.
     pub ranked_used_demotion_protection: Option<bool>,
+    /// Whether the match was played in the low priority pool. `None` for entries stored before this was recorded.
+    pub low_pri_pool: Option<bool>,
 }
 
 impl PlayerMatchHistoryEntry {
@@ -92,6 +94,7 @@ impl PlayerMatchHistoryEntry {
             ranked_delta: entry.ranked_delta,
             ranked_calibration_match: entry.ranked_calibration_match,
             ranked_used_demotion_protection: entry.ranked_used_demotion_protection,
+            low_pri_pool: entry.low_pri_pool,
         })
     }
 
@@ -108,7 +111,7 @@ impl PlayerMatchHistoryEntry {
             || self.ranked_used_demotion_protection.is_some()
     }
 
-    /// Fills unset ranked fields from `fallback`, mirroring the table's
+    /// Fills unset ranked and `low_pri_pool` fields from `fallback`, mirroring the table's
     /// `CoalescingMergeTree` merge.
     #[must_use]
     pub fn coalesce_ranked(mut self, fallback: &Self) -> Self {
@@ -120,6 +123,7 @@ impl PlayerMatchHistoryEntry {
         self.ranked_used_demotion_protection = self
             .ranked_used_demotion_protection
             .or(fallback.ranked_used_demotion_protection);
+        self.low_pri_pool = self.low_pri_pool.or(fallback.low_pri_pool);
         self
     }
 }
@@ -151,6 +155,7 @@ mod tests {
             brawl_score_team1: Some(3),
             brawl_avg_round_time_s: Some(120),
             ranked_display_badge: Some(118),
+            low_pri_pool: Some(true),
             ..Default::default()
         }
     }
@@ -162,6 +167,7 @@ mod tests {
         assert_eq!(row.brawl_score_team1, Some(3));
         assert_eq!(row.brawl_avg_round_time_s, Some(120));
         assert_eq!(row.ranked_display_badge, Some(ETERNUS_MAX_BADGE));
+        assert_eq!(row.low_pri_pool, Some(true));
         assert!(row.won());
     }
 
