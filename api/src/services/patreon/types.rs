@@ -168,20 +168,22 @@ impl Patron {
     ///
     /// Uses `slot_override` if set, otherwise calculates from `pledge_amount_cents / 150` capped at 50.
     pub(crate) fn slot_limit(&self) -> i32 {
-        calculate_slot_limit(self.slot_override, self.pledge_amount_cents)
+        calculate_slot_limit(self.slot_override, self.pledge_amount_cents, self.is_active)
     }
 }
 
 /// Calculates the number of Steam account slots from raw values.
 ///
 /// Uses `slot_override` if set, otherwise calculates from `pledge_amount_cents / 150` capped at 50.
+/// An inactive membership has no slots unless an override grants them.
 pub(crate) fn calculate_slot_limit(
     slot_override: Option<i32>,
     pledge_amount_cents: Option<i32>,
+    is_active: bool,
 ) -> i32 {
     slot_override.unwrap_or_else(|| {
         let pledge_amount_cents = pledge_amount_cents.unwrap_or_default();
-        if pledge_amount_cents <= 0 {
+        if !is_active || pledge_amount_cents <= 0 {
             0
         } else {
             #[expect(clippy::cast_possible_truncation)]
@@ -197,33 +199,39 @@ mod tests {
 
     #[test]
     fn test_slot_limit_with_override_ignores_pledge() {
-        assert_eq!(calculate_slot_limit(Some(5), Some(0)), 5);
-        assert_eq!(calculate_slot_limit(Some(5), None), 5);
-        assert_eq!(calculate_slot_limit(Some(3), Some(10000)), 3);
+        assert_eq!(calculate_slot_limit(Some(5), Some(0), true), 5);
+        assert_eq!(calculate_slot_limit(Some(5), None, true), 5);
+        assert_eq!(calculate_slot_limit(Some(3), Some(10000), true), 3);
     }
 
     #[test]
     fn test_slot_limit_without_override_uses_pledge() {
-        assert_eq!(calculate_slot_limit(None, Some(500)), 3);
-        assert_eq!(calculate_slot_limit(None, Some(250)), 2);
-        assert_eq!(calculate_slot_limit(None, Some(150)), 1);
-        assert_eq!(calculate_slot_limit(None, Some(1500)), 10);
-        assert_eq!(calculate_slot_limit(None, Some(3000)), 20);
+        assert_eq!(calculate_slot_limit(None, Some(500), true), 3);
+        assert_eq!(calculate_slot_limit(None, Some(250), true), 2);
+        assert_eq!(calculate_slot_limit(None, Some(150), true), 1);
+        assert_eq!(calculate_slot_limit(None, Some(1500), true), 10);
+        assert_eq!(calculate_slot_limit(None, Some(3000), true), 20);
         // Capped at 50
-        assert_eq!(calculate_slot_limit(None, Some(7500)), 50);
-        assert_eq!(calculate_slot_limit(None, Some(10000)), 50);
+        assert_eq!(calculate_slot_limit(None, Some(7500), true), 50);
+        assert_eq!(calculate_slot_limit(None, Some(10000), true), 50);
+    }
+
+    #[test]
+    fn test_slot_limit_inactive_needs_override() {
+        assert_eq!(calculate_slot_limit(None, Some(1500), false), 0);
+        assert_eq!(calculate_slot_limit(Some(5), Some(1500), false), 5);
     }
 
     #[test]
     fn test_slot_limit_no_override_no_pledge() {
-        assert_eq!(calculate_slot_limit(None, None), 0);
-        assert_eq!(calculate_slot_limit(None, Some(0)), 0);
+        assert_eq!(calculate_slot_limit(None, None, true), 0);
+        assert_eq!(calculate_slot_limit(None, Some(0), true), 0);
     }
 
     #[test]
     fn test_slot_limit_override_zero() {
         // slot_override of 0 means explicitly set to 0 slots
-        assert_eq!(calculate_slot_limit(Some(0), Some(500)), 0);
+        assert_eq!(calculate_slot_limit(Some(0), Some(500), true), 0);
     }
 }
 

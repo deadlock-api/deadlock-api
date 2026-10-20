@@ -15,11 +15,7 @@ pub(crate) async fn handle_reactivation(
     is_active: bool,
     slot_override: Option<i32>,
 ) -> Result<(), String> {
-    if !is_active && slot_override.is_none_or(|s| s <= 0) {
-        return Ok(());
-    }
-
-    let slot_limit = calculate_slot_limit(slot_override, pledge_amount_cents);
+    let slot_limit = calculate_slot_limit(slot_override, pledge_amount_cents, is_active);
 
     let active_count = steam_accounts_repository
         .count_active_accounts(patron_id)
@@ -62,9 +58,8 @@ pub(crate) async fn handle_reactivation(
 
 /// Handle patron downgrade or cancellation by soft-deleting excess Steam accounts.
 ///
-/// - If `is_active` is false and patron has no slot override, soft-delete ALL accounts
-/// - If patron has a slot override, respect that limit even when subscription is inactive
-/// - If new slot limit < active accounts count, soft-delete oldest accounts first
+/// Soft-deletes the oldest accounts beyond the slot limit; without an active membership or a
+/// slot override that is every account.
 #[expect(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
 pub(crate) async fn handle_downgrade_or_cancellation(
     steam_accounts_repository: &SteamAccountsRepository,
@@ -84,36 +79,19 @@ pub(crate) async fn handle_downgrade_or_cancellation(
         return Ok(());
     }
 
-    let accounts_to_delete = if is_active || slot_override.is_some_and(|s| s > 0) {
-        let new_slot_limit = calculate_slot_limit(slot_override, pledge_amount_cents);
-        // Safe cast: practical slot limits will never exceed i32::MAX
-        let active_count = active_accounts.len() as i32;
-
-        if active_count <= new_slot_limit {
-            // No downgrade needed
-            return Ok(());
-        }
-
-        // Downgrade: soft-delete excess accounts (oldest first, they're already ordered by created_at ASC)
-        // Safe: we've verified active_count > new_slot_limit, so this is positive
-        let excess_count = (active_count - new_slot_limit).unsigned_abs() as usize;
-        info!(
-            "Patron {patreon_user_id} downgraded: {} active accounts, {} slots allowed, soft-deleting {} oldest",
-            active_count, new_slot_limit, excess_count
-        );
-        active_accounts.into_iter().take(excess_count).collect()
-    } else {
-        // Patron cancelled with no slot override: soft-delete ALL accounts
-        info!(
-            "Patron {patreon_user_id} cancelled, soft-deleting all {} accounts",
-            active_accounts.len()
-        );
-        active_accounts
-    };
-
-    if accounts_to_delete.is_empty() {
+    let slot_limit = calculate_slot_limit(slot_override, pledge_amount_cents, is_active);
+    // Safe cast: practical slot limits will never exceed i32::MAX
+    let active_count = active_accounts.len() as i32;
+    if active_count <= slot_limit {
         return Ok(());
     }
+
+    // Oldest first: the accounts are already ordered by created_at ASC.
+    let excess_count = (active_count - slot_limit.max(0)).unsigned_abs() as usize;
+    info!(
+        "Patron {patreon_user_id} has {slot_limit} slots for {active_count} active accounts, soft-deleting {excess_count} oldest"
+    );
+    let accounts_to_delete: Vec<_> = active_accounts.into_iter().take(excess_count).collect();
 
     let account_ids: Vec<uuid::Uuid> = accounts_to_delete.iter().map(|a| a.id).collect();
     let deleted_count = steam_accounts_repository
