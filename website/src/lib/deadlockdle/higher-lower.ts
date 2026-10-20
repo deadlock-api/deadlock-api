@@ -1,5 +1,5 @@
 import type {
-  AnalyticsAbilityOrderStats,
+  AnalyticsAbilityOrderTreeNode,
   AnalyticsGameStats,
   AnalyticsHeroStats,
   HeroCounterStats,
@@ -139,7 +139,8 @@ export interface HigherLowerData {
   counters: readonly HeroCounterStats[];
   gameStats: AnalyticsGameStats | undefined;
   /** Ability orders of `pickAbilityHeroes()`, in the same order. */
-  abilityOrders: readonly { heroId: number; rows: readonly AnalyticsAbilityOrderStats[] }[];
+  /** Per hero, the nodes of its ability order tree: one per order prefix. */
+  abilityOrders: readonly { heroId: number; rows: readonly AnalyticsAbilityOrderTreeNode[] }[];
 }
 
 /** Heroes with fewer games in the window are left out, so a value is never the noise of a small sample. */
@@ -480,8 +481,8 @@ const MAXED_COUNT = 4;
 type AbilityOrderDefinition = {
   topic: string;
   stat: string;
-  /** The abilities a row counts for. */
-  count: (order: readonly number[]) => number[];
+  /** The abilities a node decides: each player-match counts once, at the node of the upgrade that decides it. */
+  count: (prefix: readonly number[]) => number[];
   question: (hero: string, left: string, right: string) => string;
 };
 
@@ -489,12 +490,12 @@ const ABILITY_ORDER_STATS: AbilityOrderDefinition[] = [
   {
     topic: "maxed-first",
     stat: "Share of players who max it first",
-    count: (order) => {
+    count: (prefix) => {
       const counts = new Map<number, number>();
-      for (const id of order) {
+      for (const [i, id] of prefix.entries()) {
         const count = (counts.get(id) ?? 0) + 1;
         counts.set(id, count);
-        if (count === MAXED_COUNT) return [id];
+        if (count === MAXED_COUNT) return i === prefix.length - 1 ? [id] : [];
       }
       return [];
     },
@@ -516,7 +517,8 @@ function abilityRound(
   const abilityIds = [...data.abilities]
     .filter(([id, ability]) => ability.hero === order.heroId && levelled.has(id))
     .map(([id]) => id);
-  const total = order.rows.reduce((sum, row) => sum + row.matches, 0);
+  // Every player-match passes one first upgrade.
+  const total = order.rows.reduce((sum, row) => sum + (row.abilities.length === 1 ? row.matches : 0), 0);
   if (!hero || abilityIds.length < 2 || total < MIN_ABILITY_ORDER_MATCHES) return null;
 
   for (const definition of seededShuffle([...ABILITY_ORDER_STATS], picker.rng)) {

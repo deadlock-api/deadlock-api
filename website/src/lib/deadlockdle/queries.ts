@@ -1,7 +1,7 @@
 import { type UseQueryResult, useQueries, useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 
-import { abilityOrderQueryOptions } from "~/queries/ability-order-query";
+import { abilityOrderTreeQueryOptions } from "~/queries/ability-order-query";
 import {
   abilitiesQueryOptions,
   filterPlayableHeroes,
@@ -51,8 +51,8 @@ export function puzzleLoadError(...queries: Pick<UseQueryResult, "data" | "isErr
 }
 
 /**
- * Everything a day of Higher or Lower is built from: the heroes and their abilities, then the hero, matchup, economy
- * and ability order stats of the day's fixed window (`statsWindow`). `rounds` is empty until every query is in.
+ * Everything a day of Higher or Lower is built from: the heroes and their abilities, then the hero, matchup and economy
+ * stats and ability order trees of the day's fixed window (`statsWindow`). `rounds` is empty until every query is in.
  */
 export function useHigherLowerRounds(date: string) {
   const heroesQuery = useHeroes();
@@ -80,7 +80,7 @@ export function useHigherLowerRounds(date: string) {
   const countersQuery = useQuery(draftCounterStatsQueryOptions({ ...range, sameLaneFilter: false }));
   const gameStatsQuery = useQuery(gameStatsQueryOptions({ ...range, bucket: "no_bucket" }));
   const abilityOrderQueries = useQueries({
-    queries: abilityHeroes.map((heroId) => abilityOrderQueryOptions({ heroId, ...range, minMatches: 20 })),
+    queries: abilityHeroes.map((heroId) => abilityOrderTreeQueryOptions({ heroId, ...range, minMatches: 20 })),
   });
 
   const queries = [heroesQuery, abilitiesQuery, heroStatsQuery, countersQuery, gameStatsQuery, ...abilityOrderQueries];

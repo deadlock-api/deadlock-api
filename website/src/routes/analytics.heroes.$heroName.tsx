@@ -17,7 +17,7 @@ import { lazy, Suspense, useMemo, useState } from "react";
 
 import { EntityNotFound } from "~/components/app/EntityNotFound";
 import { HeroImage } from "~/components/domain/assets/HeroImage";
-import { HeroSkillOrder } from "~/components/domain/graph/HeroSkillOrder";
+import { HeroSkillOrder, skillPathMinMatches } from "~/components/domain/graph/HeroSkillOrder";
 import { HeroMatchupDetailsStatsTable } from "~/components/features/heroes/HeroMatchupDetailsStatsTable";
 import { HeroMatchupSummary } from "~/components/features/heroes/HeroMatchupSummary";
 import { HeroPreRelease } from "~/components/features/heroes/HeroPreRelease";
@@ -110,8 +110,12 @@ function currentItemStatsParams(seasons: readonly SeasonInfo[], preference: Date
   return { minMatches: 10, ...currentStatsParams(seasons, preference) };
 }
 
-function currentAbilityOrderParams(seasons: readonly SeasonInfo[], preference: DateFilterPreference = "season") {
-  return { minMatches: 20, ...currentStatsParams(seasons, preference) };
+function currentAbilityOrderParams(
+  seasons: readonly SeasonInfo[],
+  heroMatches: number,
+  preference: DateFilterPreference = "season",
+) {
+  return { minMatches: Math.max(20, skillPathMinMatches(heroMatches)), ...currentStatsParams(seasons, preference) };
 }
 
 function currentBanParams(seasons: readonly SeasonInfo[], preference: DateFilterPreference = "season") {
@@ -469,9 +473,8 @@ function HeroDetailPage() {
             <HeroSkillOrder
               heroId={heroId}
               heroName={heroName}
-              request={currentAbilityOrderParams(seasons, preferences.dateFilter)}
+              request={currentAbilityOrderParams(seasons, summary.matches, preferences.dateFilter)}
               rankRange={rankRange}
-              totalMatches={summary.matches}
             />
           </div>
         </Section>

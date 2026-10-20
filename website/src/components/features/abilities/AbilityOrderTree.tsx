@@ -9,10 +9,10 @@ import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { DragScroll } from "~/components/ui/drag-scroll";
 import type { Dayjs } from "~/dayjs";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
-import { buildAbilityTrie, getSortedChildren, mergeStreetBrawlRows } from "~/lib/ability-order-utils";
+import { buildAbilityTrie, getSortedChildren } from "~/lib/ability-order-utils";
 import { getHeroAbilityMetadata } from "~/lib/build-transform";
 import type { MatchMode } from "~/lib/game-mode";
-import { abilityOrderQueryOptions } from "~/queries/ability-order-query";
+import { abilityOrderTreeQueryOptions } from "~/queries/ability-order-query";
 import { abilitiesQueryOptions, heroesQueryOptions } from "~/queries/asset-queries";
 
 import AbilityOrderNode from "./AbilityOrderNode";
@@ -49,7 +49,7 @@ export default function AbilityOrderTree({
 
   const { minUnixTimestamp, maxUnixTimestamp } = useNormalizedTimeRange(minDate, maxDate);
 
-  const abilityOrderStatsQuery = {
+  const treeRequest = {
     heroId,
     minAverageBadge: minRankId,
     maxAverageBadge: maxRankId,
@@ -67,7 +67,7 @@ export default function AbilityOrderTree({
     isLoading: isLoadingOrder,
     isError: isOrderError,
     refetch: refetchOrder,
-  } = useQuery(abilityOrderQueryOptions(abilityOrderStatsQuery));
+  } = useQuery(abilityOrderTreeQueryOptions(treeRequest));
 
   // The cached hero list already holds the signature ability slots.
   const { data: hero } = useQuery({
@@ -82,11 +82,8 @@ export default function AbilityOrderTree({
     [hero, abilityItems],
   );
 
-  const trie = useMemo(() => {
-    if (!abilityOrderData) return null;
-    const rows = gameMode === "street_brawl" ? mergeStreetBrawlRows(abilityOrderData) : abilityOrderData;
-    return buildAbilityTrie(rows);
-  }, [abilityOrderData, gameMode]);
+  // In Street Brawl the API sorts the upgrades within each block of points, which players spend at once.
+  const trie = useMemo(() => (abilityOrderData ? buildAbilityTrie(abilityOrderData) : null), [abilityOrderData]);
 
   // The first node sits over the middle of a tree wider than a phone; start the scroll there, not at the left edge,
   // where it showed half cut off.

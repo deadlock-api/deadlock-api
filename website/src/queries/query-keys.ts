@@ -1,5 +1,6 @@
 import type {
   AnalyticsApiAbilityOrderStatsRequest,
+  AnalyticsApiAbilityOrderTreeRequest,
   AnalyticsApiBadgeDistributionRequest,
   AnalyticsApiBuffStatsRequest,
   AnalyticsApiGameStatsRequest,
@@ -55,6 +56,7 @@ export const queryKeys = {
   analytics: {
     badgeDistribution: (filter: AnalyticsApiBadgeDistributionRequest) => ["api-badge-distribution", filter] as const,
     abilityOrderStats: (params: AnalyticsApiAbilityOrderStatsRequest) => ["api-ability-order-stats", params] as const,
+    abilityOrderTree: (params: AnalyticsApiAbilityOrderTreeRequest) => ["api-ability-order-tree", params] as const,
     itemFlowStats: (params: unknown) => ["api-item-flow-stats", params] as const,
     killDeathStats: (filter: AnalyticsApiKillDeathStatsRequest) => ["api-kill-death-stats", filter] as const,
     itemStats: (filter: AnalyticsApiItemStatsRequest) => ["api-item-stats", filter] as const,

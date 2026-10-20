@@ -319,7 +319,7 @@ export function Round3DomainMisc() {
       <Specimen
         name="HeroSkillOrder"
         source="domain/graph/HeroSkillOrder"
-        note="A hero's most common skill order as an AbilityOrderGrid in a Panel, from the ability order stats of `request` (filters such as includeItemIds narrow it to a build's players), with its opener, win rate and share, and a link to the ability page. Loading, error and too-few-games states are its own."
+        note="A hero's most common skill order as an AbilityOrderGrid in a Panel, from the ability order tree of `request` (filters such as includeItemIds narrow it to a build's players), with its opener, win rate and share, and a link to the ability page. Loading, error and too-few-games states are its own."
       >
         <Variants label="Haze, Phantom+ (live data)">
           <HeroSkillOrder

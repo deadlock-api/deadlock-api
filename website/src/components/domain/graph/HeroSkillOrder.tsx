@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import type { AnalyticsApiAbilityOrderStatsRequest } from "deadlock_api_client";
+import type { AnalyticsApiAbilityOrderTreeRequest } from "deadlock_api_client";
 import { useMemo } from "react";
 
 import { AbilityOrderGrid } from "~/components/domain/assets/AbilityOrderGrid";
@@ -10,15 +10,25 @@ import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { InlineStat } from "~/components/ui/inline-stat";
 import { TextLink } from "~/components/ui/text-link";
-import { type AbilityTrieNode, avgTimeS, buildAbilityTrie, getSortedChildren } from "~/lib/ability-order-utils";
+import { type AbilityTrieNode, buildAbilityTrie, getSortedChildren } from "~/lib/ability-order-utils";
 import { formatPercent, possessive } from "~/lib/format";
-import { abilityOrderQueryOptions } from "~/queries/ability-order-query";
+import { abilityOrderTreeQueryOptions } from "~/queries/ability-order-query";
 import { abilitiesQueryOptions, heroesQueryOptions } from "~/queries/asset-queries";
 
 const MAX_STEPS = 12;
 /** Stop following the path once fewer than this share of the hero's players are still on it. */
 const MIN_PATH_SHARE = 0.05;
 const HERO_ABILITY_SLOTS = ["signature1", "signature2", "signature3", "signature4"] as const;
+
+/**
+ * The `minMatches` that still answers every node the path can reach, for a request over `heroMatches` matches: the
+ * path stops below `MIN_PATH_SHARE` of them, so smaller nodes only grow the answer (a season's tree for a popular
+ * hero has tens of thousands of nodes of 20 matches). Half the share, as `heroMatches` may count players the tree
+ * has not (no upgrade).
+ */
+export function skillPathMinMatches(heroMatches: number): number {
+  return Math.floor((heroMatches * MIN_PATH_SHARE) / 2);
+}
 
 export interface SkillStep {
   level: number;
@@ -39,7 +49,7 @@ function mostCommonPath(root: AbilityTrieNode): { steps: SkillStep[]; leaf: Abil
       level: steps.length + 1,
       abilityId: next.abilityId,
       pickRate: next.matches / node.matches,
-      at: avgTimeS(next),
+      at: next.avgTimeS,
     });
     node = next;
   }
@@ -47,13 +57,12 @@ function mostCommonPath(root: AbilityTrieNode): { steps: SkillStep[]; leaf: Abil
 }
 
 /**
- * A hero's most common skill order from the ability order stats of `request`: the hero's four abilities in slot order,
+ * A hero's most common skill order from the ability order tree of `request`: the hero's four abilities in slot order,
  * the path's steps (with each upgrade's average time) and its share and win rate, and the three queries behind it.
  */
 export function useHeroSkillPath(
   heroId: number,
-  request: Omit<AnalyticsApiAbilityOrderStatsRequest, "heroId">,
-  totalMatches?: number,
+  request: Omit<AnalyticsApiAbilityOrderTreeRequest, "heroId">,
   /** Off while there is no hero to ask about. */
   enabled = true,
   /**
@@ -63,7 +72,7 @@ export function useHeroSkillPath(
   keepWhileLoading = false,
 ) {
   const orderQuery = useQuery({
-    ...abilityOrderQueryOptions({ ...request, heroId }),
+    ...abilityOrderTreeQueryOptions({ ...request, heroId }),
     enabled,
     placeholderData: keepWhileLoading
       ? (previous, previousQuery) =>
@@ -90,16 +99,14 @@ export function useHeroSkillPath(
     const root = buildAbilityTrie(orderQuery.data);
     const { steps, leaf } = mostCommonPath(root);
     if (steps.length < 4) return null;
-    const players = Math.max(root.matches, totalMatches ?? 0);
-    return { steps, share: leaf.matches / players, winRate: leaf.wins / leaf.matches, matches: leaf.matches };
-  }, [orderQuery.data, totalMatches]);
+    return { steps, share: leaf.matches / root.matches, winRate: leaf.wins / leaf.matches, matches: leaf.matches };
+  }, [orderQuery.data]);
 
   return { orderQuery, heroesQuery, abilitiesQuery, slotAbilities, path };
 }
 
 export function HeroSkillOrder({
   heroId,
-  totalMatches,
   heroName,
   request,
   rankRange,
@@ -109,21 +116,13 @@ export function HeroSkillOrder({
   className?: string;
   heroId: number;
   heroName: string;
-  request: Omit<AnalyticsApiAbilityOrderStatsRequest, "heroId">;
+  request: Omit<AnalyticsApiAbilityOrderTreeRequest, "heroId">;
   /** What the order is, before the rank range in the header: "Most common", "Most common with this build". */
   scope?: string;
   /** The request's rank range in words, such as "Phantom 1+". */
   rankRange: string;
-  /** The hero's matches over the same filters. The orders only cover sequences played at least `minMatches` times,
-   * which leaves out about half the hero's matches (most full sequences are unique), so their own total overstates
-   * every share. */
-  totalMatches?: number;
 }) {
-  const { orderQuery, heroesQuery, abilitiesQuery, slotAbilities, path } = useHeroSkillPath(
-    heroId,
-    request,
-    totalMatches,
-  );
+  const { orderQuery, heroesQuery, abilitiesQuery, slotAbilities, path } = useHeroSkillPath(heroId, request);
 
   // The grid's rows need the hero and ability lists too; without them it would wait forever, so a failure of any of
   // the three is the panel's error.

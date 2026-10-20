@@ -1,4 +1,4 @@
-import type { AnalyticsAbilityOrderStats } from "deadlock_api_client";
+import type { AnalyticsAbilityOrderTreeNode } from "deadlock_api_client";
 
 export interface AbilityTrieNode {
   abilityId: number | null;
@@ -6,20 +6,14 @@ export interface AbilityTrieNode {
   wins: number;
   losses: number;
   matches: number;
+  /** Distinct players on the node. On the root, the sum of the first upgrades': a player with two openers counts twice. */
   players: number;
   totalKills: number;
   totalDeaths: number;
   totalAssists: number;
-  /** Sum of the step's average upgrade time (seconds) weighted by matches; `avgTimeS` divides it out. */
-  timeWeight: number;
-  /** Matches whose order reported a time for this step. */
-  timedMatches: number;
+  /** When the players on this node took its upgrade, on average (seconds); null on the root. */
+  avgTimeS: number | null;
   children: Map<number, AbilityTrieNode>;
-}
-
-/** When the players on this node took its upgrade, on average (seconds), or null without times. */
-export function avgTimeS(node: AbilityTrieNode): number | null {
-  return node.timedMatches > 0 ? node.timeWeight / node.timedMatches : null;
 }
 
 function createNode(abilityId: number | null, depth: number): AbilityTrieNode {
@@ -33,124 +27,49 @@ function createNode(abilityId: number | null, depth: number): AbilityTrieNode {
     totalKills: 0,
     totalDeaths: 0,
     totalAssists: 0,
-    timeWeight: 0,
-    timedMatches: 0,
+    avgTimeS: null,
     children: new Map(),
   };
 }
 
-export function buildAbilityTrie(data: AnalyticsAbilityOrderStats[]): AbilityTrieNode {
+/**
+ * The tree of the API's order prefixes: each row is one node, with the stats of every player whose order starts with
+ * it. The API keeps a node's parent whenever it keeps the node; the root sums the first upgrades.
+ */
+export function buildAbilityTrie(rows: readonly AnalyticsAbilityOrderTreeNode[]): AbilityTrieNode {
   const root = createNode(null, 0);
 
-  for (const row of data) {
-    let current = root;
-    // Aggregate stats at root level too
-    root.wins += row.wins;
-    root.losses += row.losses;
-    root.matches += row.matches;
-    root.players += row.players;
-    root.totalKills += row.total_kills;
-    root.totalDeaths += row.total_deaths;
-    root.totalAssists += row.total_assists;
-
-    for (let i = 0; i < row.abilities.length; i++) {
-      const abilityId = row.abilities[i];
-      let child = current.children.get(abilityId);
+  for (const row of rows) {
+    let node = root;
+    for (const [i, abilityId] of row.abilities.entries()) {
+      let child = node.children.get(abilityId);
       if (!child) {
         child = createNode(abilityId, i + 1);
-        current.children.set(abilityId, child);
+        node.children.set(abilityId, child);
       }
-      child.wins += row.wins;
-      child.losses += row.losses;
-      child.matches += row.matches;
-      child.players += row.players;
-      child.totalKills += row.total_kills;
-      child.totalDeaths += row.total_deaths;
-      child.totalAssists += row.total_assists;
-      const time = row.avg_upgrade_times_s?.[i];
-      if (time != null && Number.isFinite(time) && time > 0) {
-        child.timeWeight += time * row.matches;
-        child.timedMatches += row.matches;
-      }
-      current = child;
+      node = child;
+    }
+    if (node === root) continue;
+    node.wins = row.wins;
+    node.losses = row.losses;
+    node.matches = row.matches;
+    node.players = row.players;
+    node.totalKills = row.total_kills;
+    node.totalDeaths = row.total_deaths;
+    node.totalAssists = row.total_assists;
+    node.avgTimeS = Number.isFinite(row.avg_upgrade_time_s) ? row.avg_upgrade_time_s : null;
+    if (row.abilities.length === 1) {
+      root.wins += row.wins;
+      root.losses += row.losses;
+      root.matches += row.matches;
+      root.players += row.players;
+      root.totalKills += row.total_kills;
+      root.totalDeaths += row.total_deaths;
+      root.totalAssists += row.total_assists;
     }
   }
 
   return root;
-}
-
-const BLOCK_BUDGETS = [6, 6]; // first two blocks; then 5 repeating
-const ABILITY_COST_TABLE = [1, 2, 5]; // cost indexed by prior purchases of that ability
-
-export function splitIntoPointBlocks(abilities: number[]): number[][] {
-  const blocks: number[][] = [];
-  let currentBlock: number[] = [];
-  let blockIndex = 0;
-  let blockCost = 0;
-  const buyCounts = new Map<number, number>();
-
-  const getBudget = (idx: number) => (idx < BLOCK_BUDGETS.length ? BLOCK_BUDGETS[idx] : 5);
-
-  for (const ability of abilities) {
-    const timesBought = buyCounts.get(ability) ?? 0;
-    const cost = ABILITY_COST_TABLE[Math.min(timesBought, ABILITY_COST_TABLE.length - 1)];
-    buyCounts.set(ability, timesBought + 1);
-
-    currentBlock.push(ability);
-    blockCost += cost;
-
-    if (blockCost >= getBudget(blockIndex)) {
-      blocks.push(currentBlock);
-      currentBlock = [];
-      blockIndex++;
-      blockCost = 0;
-    }
-  }
-
-  if (currentBlock.length > 0) {
-    blocks.push(currentBlock);
-  }
-
-  return blocks;
-}
-
-export function normalizeStreetBrawlAbilities(abilities: number[]): number[] {
-  const blocks = splitIntoPointBlocks(abilities);
-  return blocks.flatMap((block) => [...block].sort((a, b) => a - b));
-}
-
-export function mergeStreetBrawlRows(data: AnalyticsAbilityOrderStats[]): AnalyticsAbilityOrderStats[] {
-  const groups = new Map<string, AnalyticsAbilityOrderStats>();
-
-  for (const row of data) {
-    const normalized = normalizeStreetBrawlAbilities(row.abilities);
-    const key = JSON.stringify(normalized);
-    const existing = groups.get(key);
-
-    if (existing) {
-      existing.wins += row.wins;
-      existing.losses += row.losses;
-      existing.matches += row.matches;
-      existing.players += row.players;
-      existing.total_kills += row.total_kills;
-      existing.total_deaths += row.total_deaths;
-      existing.total_assists += row.total_assists;
-    } else {
-      groups.set(key, {
-        ...row,
-        abilities: normalized,
-        wins: row.wins,
-        losses: row.losses,
-        matches: row.matches,
-        players: row.players,
-        total_kills: row.total_kills,
-        total_deaths: row.total_deaths,
-        total_assists: row.total_assists,
-      });
-    }
-  }
-
-  return Array.from(groups.values());
 }
 
 export function getWinRate(node: AbilityTrieNode): number {
@@ -167,10 +86,11 @@ export function getSortedChildren(node: AbilityTrieNode): AbilityTrieNode[] {
   return Array.from(node.children.values()).sort((a, b) => b.matches - a.matches);
 }
 
-/** Ability order rows packed by column: each order is a string of base-36 indexes into `ids`. A hero's orders use
- * four ability ids 15 times over, so this is about a seventh of the row JSON, and it is what the server dehydrates
- * into the page (1.5k rows on /analytics/abilities). `matches` is left out: the API computes it as wins + losses. */
-export interface PackedAbilityOrders {
+/** Ability order tree nodes packed by column: each node's order prefix is a string of base-36 indexes into `ids`. A
+ * hero's orders use four ability ids 15 times over, so this is a fraction of the row JSON, and it is what the server
+ * dehydrates into the page (thousands of nodes on /analytics/abilities). `matches` is left out: the API computes it as
+ * wins + losses. */
+export interface PackedAbilityOrderTree {
   ids: number[];
   orders: string[];
   wins: number[];
@@ -179,13 +99,13 @@ export interface PackedAbilityOrders {
   kills: number[];
   deaths: number[];
   assists: number[];
-  /** Per order its upgrades' average times in whole seconds; absent in answers from before the API had them. */
-  times?: number[][];
+  /** Each node's average upgrade time in whole seconds. */
+  times: number[];
 }
 
-export function packAbilityOrders(
-  rows: AnalyticsAbilityOrderStats[],
-): PackedAbilityOrders | AnalyticsAbilityOrderStats[] {
+export function packAbilityOrderTree(
+  rows: AnalyticsAbilityOrderTreeNode[],
+): PackedAbilityOrderTree | AnalyticsAbilityOrderTreeNode[] {
   const ids = [...new Set(rows.flatMap((row) => row.abilities))];
   // One base-36 digit per ability; a set this large is not a hero's kit, so leave it as it is.
   if (ids.length > 36) return rows;
@@ -199,13 +119,13 @@ export function packAbilityOrders(
     kills: rows.map((row) => row.total_kills),
     deaths: rows.map((row) => row.total_deaths),
     assists: rows.map((row) => row.total_assists),
-    times: rows.map((row) => (row.avg_upgrade_times_s ?? []).map((t) => Math.round(t))),
+    times: rows.map((row) => Math.round(row.avg_upgrade_time_s)),
   };
 }
 
-export function unpackAbilityOrders(
-  packed: PackedAbilityOrders | AnalyticsAbilityOrderStats[],
-): AnalyticsAbilityOrderStats[] {
+export function unpackAbilityOrderTree(
+  packed: PackedAbilityOrderTree | AnalyticsAbilityOrderTreeNode[],
+): AnalyticsAbilityOrderTreeNode[] {
   if (Array.isArray(packed)) return packed;
   return packed.orders.map((order, i) => ({
     abilities: Array.from(order, (digit) => packed.ids[Number.parseInt(digit, 36)]),
@@ -216,6 +136,6 @@ export function unpackAbilityOrders(
     total_kills: packed.kills[i],
     total_deaths: packed.deaths[i],
     total_assists: packed.assists[i],
-    avg_upgrade_times_s: packed.times?.[i] ?? [],
+    avg_upgrade_time_s: packed.times[i],
   }));
 }

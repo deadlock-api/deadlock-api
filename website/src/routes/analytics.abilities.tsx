@@ -17,11 +17,12 @@ import { prefetchCached } from "~/lib/prefetch-safe";
 import { MAX_BADGE } from "~/lib/rank-utils";
 import { defaultUnixRange } from "~/lib/seasons";
 import { pageTitle, seo } from "~/lib/seo";
-import { abilityOrderQueryOptions } from "~/queries/ability-order-query";
+import { abilityOrderTreeQueryOptions } from "~/queries/ability-order-query";
 import { loadSeasons } from "~/queries/asset-queries";
 
 const DEFAULT_HERO_ID = 2;
-const DEFAULT_MIN_MATCHES = 20;
+/** Per node of the tree: a branch with fewer matches is noise, and a season's tree for a popular hero stays near 8k nodes. */
+const DEFAULT_MIN_MATCHES = 100;
 
 export const Route = createFileRoute("/analytics/abilities")({
   component: AbilitiesPage,
@@ -34,7 +35,7 @@ export const Route = createFileRoute("/analytics/abilities")({
     const range = defaultUnixRange(await loadSeasons(queryClient), preferences.dateFilter);
     await prefetchCached(
       queryClient,
-      abilityOrderQueryOptions({
+      abilityOrderTreeQueryOptions({
         heroId: deps.heroId,
         gameMode: "normal",
         matchMode: DEFAULT_MATCH_MODE,

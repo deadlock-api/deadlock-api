@@ -1,5 +1,5 @@
 import { AbilityOrderGrid } from "~/components/domain/assets/AbilityOrderGrid";
-import { useHeroSkillPath } from "~/components/domain/graph/HeroSkillOrder";
+import { skillPathMinMatches, useHeroSkillPath } from "~/components/domain/graph/HeroSkillOrder";
 import { BuildSectionError } from "~/components/features/builds/BuildSectionError";
 import { PanelSection } from "~/components/patterns/panel/Panel";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
@@ -44,9 +44,8 @@ export function BuildSkillTaken({
       maxUnixTimestamp: filters.maxUnixTimestamp,
       minDurationS: filters.minDurationS,
       maxDurationS: filters.maxDurationS,
-      minMatches: MIN_ORDER_MATCHES,
+      minMatches: Math.max(MIN_ORDER_MATCHES, skillPathMinMatches(build.matches)),
     },
-    build.matches,
     active,
     true,
   );

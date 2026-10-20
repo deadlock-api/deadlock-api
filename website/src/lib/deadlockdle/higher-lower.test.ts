@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import type { AnalyticsHeroStats, HeroCounterStats } from "deadlock_api_client";
+import type { AnalyticsAbilityOrderTreeNode, AnalyticsHeroStats, HeroCounterStats } from "deadlock_api_client";
 
 import { possessive } from "~/lib/format";
 
@@ -65,6 +65,30 @@ function counterRow(hero: number, enemy: number): HeroCounterStats {
   } as HeroCounterStats;
 }
 
+/** The ability order tree of whole orders: one node per prefix, with the matches of every order that starts with it. */
+function treeNodes(orders: { order: number[]; matches: number }[]): AnalyticsAbilityOrderTreeNode[] {
+  const nodes = new Map<string, AnalyticsAbilityOrderTreeNode>();
+  for (const { order, matches } of orders) {
+    for (let depth = 1; depth <= order.length; depth++) {
+      const abilities = order.slice(0, depth);
+      const node = nodes.get(abilities.join()) ?? {
+        abilities,
+        avg_upgrade_time_s: 0,
+        wins: 0,
+        losses: 0,
+        matches: 0,
+        players: 0,
+        total_kills: 0,
+        total_deaths: 0,
+        total_assists: 0,
+      };
+      node.matches += matches;
+      nodes.set(abilities.join(), node);
+    }
+  }
+  return [...nodes.values()];
+}
+
 function data(date: string): HigherLowerData {
   const abilityHeroes = pickAbilityHeroes(HERO_IDS, date);
   const abilities = new Map<number, { name: string; hero: number }>();
@@ -93,10 +117,10 @@ function data(date: string): HigherLowerData {
       const [a, b, c, d] = [1, 2, 3, 4].map((slot) => heroId * 10 + slot);
       return {
         heroId,
-        rows: [
-          { abilities: [a, a, b, b, c, a, d, a, c, b, c, c, b, d, d], matches: 900, wins: 0, losses: 0, players: 0 },
-          { abilities: [b, b, a, a, c, b, d, b, c, a, a, c, c, d, d], matches: 300, wins: 0, losses: 0, players: 0 },
-        ].map((row) => ({ ...row, total_kills: 0, total_deaths: 0, total_assists: 0, avg_upgrade_times_s: [] })),
+        rows: treeNodes([
+          { order: [a, a, b, b, c, a, d, a, c, b, c, c, b, d, d], matches: 900 },
+          { order: [b, b, a, a, c, b, d, b, c, a, a, c, c, d, d], matches: 300 },
+        ]),
       };
     }),
   };
@@ -211,6 +235,11 @@ test("ability rounds only ask about maxing first, and only about abilities someo
       if (round.category !== "abilities") continue;
       assert.equal(round.stat, "Share of players who max it first");
       assert.ok(round.left.value >= 0.03 && round.right.value >= 0.03);
+      // Each match counts once, at the node that maxes its first ability: 900 of 1,200 max `a` first, 300 `b`.
+      assert.deepEqual(
+        [round.left.value, round.right.value].sort((a, b) => a - b),
+        [0.25, 0.75],
+      );
     }
   }
 });
