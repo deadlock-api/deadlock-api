@@ -4,8 +4,11 @@ use axum::response::IntoResponse;
 use crate::error::APIResult;
 
 const BIG_PATCH_DAYS: &[&str] = &[
-    "2026-03-11T04:39:40Z",
-    "2026-01-21T02:10:58Z",
+    "2026-09-29T20:25:11Z",
+    "2026-05-22T21:51:02Z",
+    "2026-04-30T23:45:43Z",
+    "2026-03-06T21:37:00Z",
+    "2026-01-22T22:56:33Z",
     "2025-08-18T20:43:52Z",
     "2025-07-29T22:22:52Z",
     "2025-07-04T20:03:43Z",
@@ -29,7 +32,7 @@ const BIG_PATCH_DAYS: &[&str] = &[
     summary = "Big Days",
     description = r#"
 Returns a list of dates where Deadlock's "big" patch days were, usually bi-weekly.
-The exact date is the time when the announcement forum post was published.
+The exact date is the time when the update was announced.
 
 This list is manually maintained, and so new patch dates may be delayed by a few hours.
 
