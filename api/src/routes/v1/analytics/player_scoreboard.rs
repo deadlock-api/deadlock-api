@@ -91,7 +91,7 @@ pub(crate) struct PlayerScoreboardQuery {
     min_match_id: Option<u64>,
     /// Filter matches based on their ID.
     max_match_id: Option<u64>,
-    /// The offset to start fetching players from.
+    /// The rank to start fetching players from (1-based, like `rank`).
     start: Option<u32>,
     /// The maximum number of players to fetch.
     #[serde(default = "default_limit")]
@@ -236,10 +236,11 @@ fn build_query(query: &PlayerScoreboardQuery) -> String {
     );
     let sort_direction = query.sort_direction;
     let limit = query.limit.unwrap_or_default();
+    let first_rank = offset + 1;
 
     format!(
         "
-SELECT rowNumberInAllBlocks() + {offset} as rank, account_id, toFloat64({select_clause}) as \
+SELECT rowNumberInAllBlocks() + {first_rank} as rank, account_id, toFloat64({select_clause}) as \
          value, {matches_expr} as matches, CAST({badge_clause}, 'Nullable(UInt32)') as badge, \
          CAST({badge_progress_clause}, 'Nullable(UInt32)') as badge_progress
 {from_clause}
@@ -270,7 +271,7 @@ cached_ch_query! {
     fn run_block_query(100, 3600) -> Vec<PlayerEntry>;
 }
 
-/// The block-aligned queries covering ranks `offset..offset + limit`: at most two, as
+/// The block-aligned queries covering ranks `offset + 1..=offset + limit`: at most two, as
 /// `limit <= PAGE_BLOCK_SIZE`.
 fn build_block_queries(query: &PlayerScoreboardQuery, offset: u32, limit: u32) -> Vec<String> {
     let first_block = offset / PAGE_BLOCK_SIZE;
@@ -301,7 +302,7 @@ async fn get_player_scoreboard(
         return Ok(run_query(ch_client, &query).await?);
     }
 
-    let wanted = u64::from(offset)..u64::from(offset) + u64::from(limit);
+    let wanted = u64::from(offset) + 1..=u64::from(offset) + u64::from(limit);
     let mut entries = Vec::with_capacity(limit as usize);
     for block_query in build_block_queries(&query, offset, limit) {
         debug!(?block_query);
@@ -382,7 +383,7 @@ mod tests {
                 ..query.clone()
             })]
         );
-        assert!(inside[0].contains("rowNumberInAllBlocks() + 0 as rank"));
+        assert!(inside[0].contains("rowNumberInAllBlocks() + 1 as rank"));
         assert!(inside[0].contains("LIMIT 50000 OFFSET 0"));
 
         // Maximum-size pages 2-5 share the first block.
@@ -390,7 +391,7 @@ mod tests {
 
         let straddling = build_block_queries(&query, 49_950, 100);
         assert_eq!(straddling.len(), 2);
-        assert!(straddling[1].contains("rowNumberInAllBlocks() + 50000 as rank"));
+        assert!(straddling[1].contains("rowNumberInAllBlocks() + 50001 as rank"));
         assert!(straddling[1].contains("LIMIT 50000 OFFSET 50000"));
 
         assert_eq!(

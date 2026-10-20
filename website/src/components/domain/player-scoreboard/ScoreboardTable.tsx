@@ -258,12 +258,12 @@ export function ScoreboardTable({
             return (
               // oxlint-disable-next-line react/no-array-index-key
               <TableRow key={`${accountId ?? i}-${entry.rank}`}>
-                <TableCell className="text-end">{entry.rank + 1}</TableCell>
+                <TableCell className="text-end">{entry.rank}</TableCell>
                 {/* The head's `fill` hands this column whatever the others leave; `max-w-0` truncates the name in it. */}
                 <TableCell className="max-w-0">
                   <PlayerCell
                     accountId={accountId}
-                    name={profile?.personaname ?? (accountId == null ? `#${entry.rank + 1}` : undefined)}
+                    name={profile?.personaname ?? (accountId == null ? `#${entry.rank}` : undefined)}
                     avatar={profile?.avatar}
                     loading={isLoadingProfiles && !profile}
                     showAccountId
