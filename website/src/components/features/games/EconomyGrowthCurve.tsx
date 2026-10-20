@@ -56,14 +56,17 @@ export default function EconomyGrowthCurve({ params }: EconomyGrowthCurveProps) 
 
   const chartData = useMemo(() => {
     if (!data) return [];
+    // Every match has a snapshot at exactly 100%, but only some, mostly longer ones, have one in each earlier bucket.
+    // The 100% point averages other matches than the line before it, so it is left out. The other points are drawn
+    // where their snapshots were taken, not at the start of their bucket.
     return data
-      .slice()
-      .sort((a, b) => a.game_time - b.game_time)
+      .filter((point) => point.game_time < 100)
+      .sort((a, b) => a.game_time_avg - b.game_time_avg)
       .map((point): CurvePoint => {
         const lower = Math.max(0, point.net_worth_avg - point.net_worth_std);
         const upper = point.net_worth_avg + point.net_worth_std;
         const curvePoint: CurvePoint = {
-          t: point.game_time,
+          t: point.game_time_avg,
           avg: point.net_worth_avg,
           std: point.net_worth_std,
           lower,
@@ -137,7 +140,7 @@ export default function EconomyGrowthCurve({ params }: EconomyGrowthCurveProps) 
                   if (!active || !payload?.length) return null;
                   const p = payload[0].payload as (typeof chartData)[number];
                   return (
-                    <ChartReadings title={`${label}% into the match`}>
+                    <ChartReadings title={`${Math.round(Number(label))}% into the match`}>
                       <ChartReading label="Net worth">{formatSouls(p.avg) ?? <NoValue label="No data" />}</ChartReading>
                       <ChartReading label="Std dev">
                         {formatSouls(p.std) == null ? <NoValue label="No data" /> : `± ${formatSouls(p.std)}`}
@@ -183,7 +186,7 @@ export default function EconomyGrowthCurve({ params }: EconomyGrowthCurveProps) 
                   if (!active || !payload?.length) return null;
                   const row = payload[0].payload as (typeof chartData)[number];
                   return (
-                    <ChartReadings title={`${label}% into the match`} valueLabel="Souls">
+                    <ChartReadings title={`${Math.round(Number(label))}% into the match`} valueLabel="Souls">
                       {[...SOUL_SOURCE_GROUPS]
                         .sort((a, b) => row[b.key] - row[a.key])
                         .map((group) => (
