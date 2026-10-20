@@ -74,7 +74,10 @@ export function HeroWinRateByDuration({
       if (!row || row.matches < MIN_BUCKET_MATCHES) return [];
       const entry: DurationEntry = {
         label: bucket.label,
-        tick: i === 0 ? `<${bucket.maxS / 60}m` : `${bucket.minS / 60}m${i === DURATION_BUCKETS.length - 1 ? "+" : ""}`,
+        tick:
+          i === 0
+            ? `<${DURATION_BUCKETS[1].minS / 60}m`
+            : `${bucket.minS / 60}m${i === DURATION_BUCKETS.length - 1 ? "+" : ""}`,
         winRate: row.wins / row.matches,
         matches: row.matches,
         share: row.matches / total,

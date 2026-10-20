@@ -156,13 +156,14 @@ export function getPickrateMultiplier(gameMode?: "normal" | "street_brawl"): num
   return gameMode === "street_brawl" ? 8 : 12;
 }
 
+// The API counts both ends in, so each bucket ends a second before the next starts: a 25:00 game is no "< 25m" one.
 export const DURATION_BUCKETS = [
-  { label: "< 25m", minS: 0, maxS: 1500 },
-  { label: "25–30m", minS: 1500, maxS: 1800 },
-  { label: "30–35m", minS: 1800, maxS: 2100 },
-  { label: "35–40m", minS: 2100, maxS: 2400 },
-  { label: "40–45m", minS: 2400, maxS: 2700 },
-  { label: "45–50m", minS: 2700, maxS: 3000 },
+  { label: "< 25m", minS: 0, maxS: 1499 },
+  { label: "25–30m", minS: 1500, maxS: 1799 },
+  { label: "30–35m", minS: 1800, maxS: 2099 },
+  { label: "35–40m", minS: 2100, maxS: 2399 },
+  { label: "40–45m", minS: 2400, maxS: 2699 },
+  { label: "45–50m", minS: 2700, maxS: 2999 },
   { label: "50m+", minS: 3000, maxS: 7000 },
 ] as const;
 
