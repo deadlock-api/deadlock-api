@@ -7,7 +7,9 @@ use tokio::time::interval;
 use tracing::{debug, error, info};
 
 use crate::routes::v1::analytics::rollup_window::BUILT_THROUGH;
-use crate::routes::v1::analytics::{game_stats, item_stats, player_performance_curve_agg};
+use crate::routes::v1::analytics::{
+    game_stats, hero_pair_agg, item_stats, player_performance_curve_agg,
+};
 use crate::services::lease::Lease;
 
 const REFRESH_INTERVAL_SECS: u64 = 30 * 60;
@@ -99,12 +101,14 @@ enum Source {
     ItemStats,
     /// Sums every player row's stats per match-level grain (`game_stats_agg`).
     GameStats,
+    /// Sums the stats of every pair of players per match-level grain (`hero_pair_stats_agg`).
+    HeroPairs,
 }
 
 // The _v2 tables carry uniqCombined(14) player states (migration 40); the plain uniq states
 // of the v1 tables were ~90% of item_stats_cohort_mv's CPU. Pointing the job here builds them
 // from scratch while the API keeps reading v1 until they cover the horizon.
-fn cohort_specs() -> [CohortSpec; 6] {
+fn cohort_specs() -> [CohortSpec; 7] {
     [
         // Replaces the `item_stats_agg` refreshable MV, which recomputed all 65 days every hour.
         CohortSpec {
@@ -151,7 +155,7 @@ fn cohort_specs() -> [CohortSpec; 6] {
             horizon_days: player_performance_curve_agg::AGG_HORIZON_DAYS,
             history: None,
         },
-        // Last: its first runs build all of history, up to `max_days_per_run` days each.
+        // Last: their first runs build all of history, up to `max_days_per_run` days each.
         CohortSpec {
             table: game_stats::AGG_TABLE,
             staging: game_stats::AGG_STAGING,
@@ -159,6 +163,17 @@ fn cohort_specs() -> [CohortSpec; 6] {
             horizon_days: game_stats::AGG_HORIZON_DAYS,
             history: Some(History {
                 first_day: game_stats::AGG_FIRST_DAY,
+                rebuild_after_days: 7,
+                max_days_per_run: 300,
+            }),
+        },
+        CohortSpec {
+            table: hero_pair_agg::AGG_TABLE,
+            staging: hero_pair_agg::AGG_STAGING,
+            source: Source::HeroPairs,
+            horizon_days: hero_pair_agg::AGG_HORIZON_DAYS,
+            history: Some(History {
+                first_day: hero_pair_agg::AGG_FIRST_DAY,
                 rebuild_after_days: 7,
                 max_days_per_run: 300,
             }),
@@ -193,6 +208,7 @@ fn select_body(spec: &CohortSpec, since_clause: &str) -> String {
         }
         Source::ItemStats => return item_stats::item_stats_agg_select_body(since_clause),
         Source::GameStats => return game_stats::agg_select_body(since_clause),
+        Source::HeroPairs => return hero_pair_agg::agg_select_body(since_clause),
     };
     format!(
         "SELECT

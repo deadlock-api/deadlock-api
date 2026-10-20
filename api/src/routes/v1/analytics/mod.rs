@@ -8,6 +8,7 @@ pub mod hero_ban_stats;
 pub mod hero_build_stats;
 pub mod hero_comb_stats;
 pub mod hero_counters_stats;
+pub(crate) mod hero_pair_agg;
 pub mod hero_scoreboard;
 pub mod hero_stats;
 pub mod hero_swap_stats;

@@ -9,9 +9,10 @@ use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
 
 use super::common_filters::{
-    PlayerFilters, default_min_matches_u64, filter_protected_accounts, join_filters, range_filters,
-    round_timestamps,
+    PlayerFilters, default_min_matches_u64, filter_protected_accounts, is_non_empty, join_filters,
+    range_filters, round_timestamps,
 };
+use super::hero_pair_agg::{PairRequest, Pairs, pair_source};
 use crate::context::AppState;
 use crate::error::APIResult;
 use crate::routes::v1::matches::types::{GameMode, MatchMode, reject_brawl_badge_filter};
@@ -270,6 +271,71 @@ fn build_query(query: &HeroCounterStatsQuery) -> String {
     )
 }
 
+/// Builds a query against the hero-pair rollup when the request only filters on what its grain
+/// covers (game mode, match mode, badge, time), else `None` (the caller then uses
+/// [`build_query`]). Per-player filters (account, build, net worth), duration and match id need
+/// `match_player`.
+fn build_mv_query(query: &HeroCounterStatsQuery) -> Option<String> {
+    #[expect(deprecated)]
+    let personalized = query.account_id.is_some()
+        || is_non_empty(query.account_ids.as_deref())
+        || query.hero_build_id.is_some();
+    let unsupported_filter = query.min_networth.is_some()
+        || query.max_networth.is_some()
+        || query.min_enemy_networth.is_some()
+        || query.max_enemy_networth.is_some()
+        || query.min_duration_s.is_some()
+        || query.max_duration_s.is_some()
+        || query.min_match_id.is_some()
+        || query.max_match_id.is_some();
+    if personalized || unsupported_filter {
+        return None;
+    }
+    let source = pair_source(&PairRequest {
+        pairs: Pairs::Enemies,
+        game_mode: query.game_mode,
+        match_mode: query.match_mode.as_deref(),
+        min_unix_timestamp: query.min_unix_timestamp,
+        max_unix_timestamp: query.max_unix_timestamp,
+        min_average_badge: query.min_average_badge,
+        max_average_badge: query.max_average_badge,
+        same_lane: query.same_lane_filter.unwrap_or(true),
+    })?;
+    let having_clause = having_clause(&range_filters(
+        "matches_played",
+        query.min_matches,
+        query.max_matches,
+    ));
+    Some(format!(
+        "
+    SELECT hero_id,
+           other_hero_id AS enemy_hero_id,
+           sum(wins) AS wins,
+           sum(n_pairs) AS matches_played,
+           sum(kills) AS kills,
+           sum(other_kills) AS enemy_kills,
+           sum(deaths) AS deaths,
+           sum(other_deaths) AS enemy_deaths,
+           sum(assists) AS assists,
+           sum(other_assists) AS enemy_assists,
+           sum(denies) AS denies,
+           sum(other_denies) AS enemy_denies,
+           sum(last_hits) AS last_hits,
+           sum(other_last_hits) AS enemy_last_hits,
+           sum(net_worth) AS networth,
+           sum(other_net_worth) AS enemy_networth,
+           sum(obj_damage) AS obj_damage,
+           sum(other_obj_damage) AS enemy_obj_damage,
+           sum(creeps) AS creeps,
+           sum(other_creeps) AS enemy_creeps
+    FROM {source}
+    GROUP BY hero_id, enemy_hero_id
+    {having_clause}
+    SETTINGS log_comment = 'hero_counters_stats_mv', apply_patch_parts = 0, do_not_merge_across_partitions_select_final = 1
+    "
+    ))
+}
+
 // Concurrent misses of one query share a single run. by_key holds a hashed bucket lock (hits
 // included) for the whole query; this endpoint runs few queries at once, so collisions are rare.
 cached_ch_query! {
@@ -281,7 +347,7 @@ async fn get_hero_counter_stats(
     mut query: HeroCounterStatsQuery,
 ) -> APIResult<Arc<Vec<HeroCounterStats>>> {
     round_timestamps(&mut query.min_unix_timestamp, &mut query.max_unix_timestamp);
-    let query = build_query(&query);
+    let query = build_mv_query(&query).unwrap_or_else(|| build_query(&query));
     debug!(?query);
     Ok(run_query(ch_client, &query).await?)
 }
