@@ -223,9 +223,8 @@ impl Metric {
             Self::NetWorthPerMin => "net_worth / duration_m",
             Self::Denies => "denies",
             Self::LastHits => "last_hits",
-            Self::CritShotRate => {
-                "max_hero_bullets_hit_crit / greatest(1, max_hero_bullets_hit_crit + max_hero_bullets_hit)"
-            }
+            // `hero_bullets_hit` already counts the crits.
+            Self::CritShotRate => "max_hero_bullets_hit_crit / greatest(1, max_hero_bullets_hit)",
             Self::Accuracy => "max_shots_hit / greatest(1, max_shots_hit + max_shots_missed)",
             Self::Kd => "kills / greatest(1, deaths)",
             Self::Kda => "(kills + assists) / greatest(1, deaths)",
