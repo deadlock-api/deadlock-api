@@ -4,13 +4,15 @@ use axum::response::IntoResponse;
 use axum_extra::extract::Query;
 use clickhouse::Row;
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
+use std::sync::{Arc, LazyLock};
 use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
 
 use super::common_filters::{
-    BucketQuery, PlayerFilters, filter_protected_accounts, join_filters, round_timestamps,
+    BucketQuery, PlayerFilters, filter_protected_accounts, is_non_empty, join_filters,
+    round_timestamps,
 };
+use super::rollup_window::{Coverage, DaySplit, EdgeRows, Rollup, RollupFilters};
 use crate::context::AppState;
 use crate::error::APIResult;
 use crate::routes::v1::matches::types::{GameMode, MatchMode, reject_brawl_badge_filter};
@@ -199,6 +201,74 @@ pub struct AnalyticsGameStats {
     pub avg_first_permanent_buff_time_s: Option<f64>,
 }
 
+/// The `avg_*` response fields from `avg_duration_s` to `avg_tech_power`, in order, each with
+/// the per-player-row `match_player` expression it averages. None of them is Nullable, so every
+/// row counts: the rollup keeps their sums as `sum_*` and divides by its row count `n_rows`.
+const AVERAGES: &[(&str, &str)] = &[
+    ("duration_s", "duration_s"),
+    ("kills", "kills"),
+    ("deaths", "deaths"),
+    ("assists", "assists"),
+    ("kd_ratio", "kills / greatest(1, deaths)"),
+    ("net_worth", "net_worth"),
+    ("last_hits", "last_hits"),
+    ("denies", "denies"),
+    ("player_damage", "max_player_damage"),
+    ("player_damage_taken", "max_player_damage_taken"),
+    ("boss_damage", "max_boss_damage"),
+    ("player_healing", "max_player_healing"),
+    (
+        "accuracy",
+        "max_shots_hit / greatest(1, max_shots_hit + max_shots_missed)",
+    ),
+    (
+        "crit_rate",
+        "max_hero_bullets_hit_crit / greatest(1, max_hero_bullets_hit_crit + max_hero_bullets_hit)",
+    ),
+    ("ending_level", "max_level"),
+    ("gold_player", "max_gold_player"),
+    ("gold_player_orbs", "max_gold_player_orbs"),
+    ("gold_lane_creep", "max_gold_lane_creep"),
+    ("gold_lane_creep_orbs", "max_gold_lane_creep_orbs"),
+    ("gold_neutral_creep", "max_gold_neutral_creep"),
+    ("gold_neutral_creep_orbs", "max_gold_neutral_creep_orbs"),
+    ("gold_boss", "max_gold_boss"),
+    ("gold_boss_orb", "max_gold_boss_orb"),
+    ("gold_treasure", "max_gold_treasure"),
+    ("gold_denied", "max_gold_denied"),
+    ("gold_death_loss", "max_gold_death_loss"),
+    ("gold_assists", "max_gold_assists"),
+    ("gold_team_bonus", "max_gold_team_bonus"),
+    ("gold_breakable", "max_gold_breakable"),
+    ("gold_ability_assassinate", "max_gold_ability_assassinate"),
+    (
+        "gold_item_trophy_collector",
+        "max_gold_item_trophy_collector",
+    ),
+    (
+        "gold_item_cultist_sacrifice",
+        "max_gold_item_cultist_sacrifice",
+    ),
+    ("gold_item_goose_egg", "max_gold_item_goose_egg"),
+    ("creep_damage", "max_creep_damage"),
+    ("neutral_damage", "max_neutral_damage"),
+    ("self_healing", "max_self_healing"),
+    ("damage_mitigated", "max_damage_mitigated"),
+    ("damage_absorbed", "max_absorption_provided"),
+    ("heal_prevented", "max_heal_prevented"),
+    ("creep_kills", "max_creep_kills"),
+    ("neutral_kills", "max_neutral_kills"),
+    ("possible_creeps", "max_possible_creeps"),
+    ("max_health", "max_max_health"),
+    ("weapon_power", "max_weapon_power"),
+    ("tech_power", "max_tech_power"),
+];
+
+/// The Nullable columns averaged over their non-NULL rows: the response fields
+/// `avg_{column}`, which follow [`AVERAGES`] in this order. The rollup keeps their sums as
+/// `sum_*` and their non-NULL counts as `n_*`.
+const NULLABLE_AVERAGES: [&str; 2] = ["first_mid_boss_time_s", "first_objective_destroyed_time_s"];
+
 /// `preferred_block_size_bytes = 0`: the ~50 numeric columns make rows ~240 bytes wide, so the
 /// default 1 MB block budget shrinks every read to one granule and multiplies the per-read
 /// overhead. Full 65,536-row blocks cut wall time by 16% at +25% peak memory (~750 MB).
@@ -221,60 +291,22 @@ fn build_query(query: &GameStatsQuery) -> String {
     let bucket = query.bucket.base_expr();
     let game_mode_filter = GameMode::sql_filter(query.game_mode);
     let match_mode_filter = MatchMode::sql_filter(query.match_mode.as_deref());
+    let averages =
+        AVERAGES
+            .iter()
+            .map(|(name, expr)| format!("avg({expr}) AS avg_{name},\n        "))
+            .chain(NULLABLE_AVERAGES.iter().map(|col| {
+                format!("assumeNotNull(coalesce(avg({col}), 0)) AS avg_{col},\n        ")
+            }))
+            .collect::<Vec<_>>()
+            .concat();
     format!(
         "
     SELECT
         {bucket} AS bucket,
         uniq(match_id) AS total_matches,
         uniq(account_id) AS total_players,
-        avg(duration_s) AS avg_duration_s,
-        avg(kills) AS avg_kills,
-        avg(deaths) AS avg_deaths,
-        avg(assists) AS avg_assists,
-        avg(kills / greatest(1, deaths)) AS avg_kd_ratio,
-        avg(net_worth) AS avg_net_worth,
-        avg(last_hits) AS avg_last_hits,
-        avg(denies) AS avg_denies,
-        assumeNotNull(coalesce(avg(max_player_damage), 0)) AS avg_player_damage,
-        assumeNotNull(coalesce(avg(max_player_damage_taken), 0)) AS avg_player_damage_taken,
-        assumeNotNull(coalesce(avg(max_boss_damage), 0)) AS avg_boss_damage,
-        assumeNotNull(coalesce(avg(max_player_healing), 0)) AS avg_player_healing,
-        assumeNotNull(coalesce(avg(max_shots_hit / greatest(1, max_shots_hit + max_shots_missed)), 0)) AS avg_accuracy,
-        assumeNotNull(coalesce(avg(max_hero_bullets_hit_crit / greatest(1, max_hero_bullets_hit_crit + max_hero_bullets_hit)), 0)) AS avg_crit_rate,
-        assumeNotNull(coalesce(avg(max_level), 0)) AS avg_ending_level,
-        assumeNotNull(coalesce(avg(max_gold_player), 0)) AS avg_gold_player,
-        assumeNotNull(coalesce(avg(max_gold_player_orbs), 0)) AS avg_gold_player_orbs,
-        assumeNotNull(coalesce(avg(max_gold_lane_creep), 0)) AS avg_gold_lane_creep,
-        assumeNotNull(coalesce(avg(max_gold_lane_creep_orbs), 0)) AS avg_gold_lane_creep_orbs,
-        assumeNotNull(coalesce(avg(max_gold_neutral_creep), 0)) AS avg_gold_neutral_creep,
-        assumeNotNull(coalesce(avg(max_gold_neutral_creep_orbs), 0)) AS avg_gold_neutral_creep_orbs,
-        assumeNotNull(coalesce(avg(max_gold_boss), 0)) AS avg_gold_boss,
-        assumeNotNull(coalesce(avg(max_gold_boss_orb), 0)) AS avg_gold_boss_orb,
-        assumeNotNull(coalesce(avg(max_gold_treasure), 0)) AS avg_gold_treasure,
-        assumeNotNull(coalesce(avg(max_gold_denied), 0)) AS avg_gold_denied,
-        assumeNotNull(coalesce(avg(max_gold_death_loss), 0)) AS avg_gold_death_loss,
-        assumeNotNull(coalesce(avg(max_gold_assists), 0)) AS avg_gold_assists,
-        assumeNotNull(coalesce(avg(max_gold_team_bonus), 0)) AS avg_gold_team_bonus,
-        assumeNotNull(coalesce(avg(max_gold_breakable), 0)) AS avg_gold_breakable,
-        assumeNotNull(coalesce(avg(max_gold_ability_assassinate), 0)) AS avg_gold_ability_assassinate,
-        assumeNotNull(coalesce(avg(max_gold_item_trophy_collector), 0)) AS avg_gold_item_trophy_collector,
-        assumeNotNull(coalesce(avg(max_gold_item_cultist_sacrifice), 0)) AS avg_gold_item_cultist_sacrifice,
-        assumeNotNull(coalesce(avg(max_gold_item_goose_egg), 0)) AS avg_gold_item_goose_egg,
-        assumeNotNull(coalesce(avg(max_creep_damage), 0)) AS avg_creep_damage,
-        assumeNotNull(coalesce(avg(max_neutral_damage), 0)) AS avg_neutral_damage,
-        assumeNotNull(coalesce(avg(max_self_healing), 0)) AS avg_self_healing,
-        assumeNotNull(coalesce(avg(max_damage_mitigated), 0)) AS avg_damage_mitigated,
-        assumeNotNull(coalesce(avg(max_absorption_provided), 0)) AS avg_damage_absorbed,
-        assumeNotNull(coalesce(avg(max_heal_prevented), 0)) AS avg_heal_prevented,
-        assumeNotNull(coalesce(avg(max_creep_kills), 0)) AS avg_creep_kills,
-        assumeNotNull(coalesce(avg(max_neutral_kills), 0)) AS avg_neutral_kills,
-        assumeNotNull(coalesce(avg(max_possible_creeps), 0)) AS avg_possible_creeps,
-        assumeNotNull(coalesce(avg(max_max_health), 0)) AS avg_max_health,
-        assumeNotNull(coalesce(avg(max_weapon_power), 0)) AS avg_weapon_power,
-        assumeNotNull(coalesce(avg(max_tech_power), 0)) AS avg_tech_power,
-        assumeNotNull(coalesce(avg(first_mid_boss_time_s), 0)) AS avg_first_mid_boss_time_s,
-        assumeNotNull(coalesce(avg(first_objective_destroyed_time_s), 0)) AS avg_first_objective_destroyed_time_s,
-        uniqIf(match_id, length(`mid_boss.destroyed_time_s`) > 0) / greatest(1, uniq(match_id)) AS mid_boss_kill_rate,
+        {averages}uniqIf(match_id, length(`mid_boss.destroyed_time_s`) > 0) / greatest(1, uniq(match_id)) AS mid_boss_kill_rate,
         avg(abandon_match_time_s > 0) AS abandon_rate,
         uniqIf(match_id, winning_team = 'Team0') AS team0_wins,
         uniqIf(match_id, winning_team = 'Team1') AS team1_wins,
@@ -293,6 +325,218 @@ fn build_query(query: &GameStatsQuery) -> String {
     )
 }
 
+/// The game-stats rollup, rebuilt per day by `services/cohort_agg_refresh.rs` from
+/// [`agg_select_body`]. Its columns are [`AGG_GRAIN`], then [`agg_measures`], then
+/// `built_through`.
+pub(crate) const AGG_TABLE: &str = "default.game_stats_agg";
+pub(crate) const AGG_STAGING: &str = "default.game_stats_agg_staging";
+/// Days the refresh job checks for new matches every run. It keeps every day of the data, not
+/// just these: the rest it rebuilds once their build is a week old (see
+/// `cohort_agg_refresh::History`), so all-time windows are served too.
+pub(crate) const AGG_HORIZON_DAYS: u32 = 120;
+/// The first day the rollup keeps. Reads prune the base-table scans for matches ingested after
+/// a build only while the built days form one run (see `rollup_window::BuiltDays`), and the data
+/// has no matches from 2024-04-30 to 2024-05-17, so the few matches before are read from
+/// `match_player`.
+pub(crate) const AGG_FIRST_DAY: &str = "2024-05-18";
+
+/// Every column of the grain is match-level, so each match falls into exactly one row and the
+/// match counts (`n_matches`, the wins, `n_mid_boss_matches`) add up exactly across rows.
+const AGG_GRAIN: &[(&str, &str)] = &[
+    ("game_mode", "game_mode"),
+    ("match_mode", "match_mode"),
+    ("least_badge", "ifNull(average_badge, 0)"),
+    ("greatest_badge", "ifNull(average_badge, 65535)"),
+    ("day", "toDate(start_time)"),
+];
+
+/// The rollup's measures, `(column, aggregate over match_player rows)`, in table order.
+/// `players_state` is a `uniqCombined(14)` state like the item rollups'. On a 30-day window,
+/// `total_players` is off by ~0.5% overall and up to ~3% in single badge buckets, where the base
+/// query's `uniq` is exact (under 65,536 players). Plain `uniq` states would match it, but cost
+/// 3.5-5x the merge CPU (7.4 vs 1.4 CPU-s all-time) and 5x the storage.
+fn agg_measures() -> &'static [(String, String)] {
+    static MEASURES: LazyLock<Vec<(String, String)>> = LazyLock::new(|| {
+        let mut measures = vec![
+            ("n_rows", "count()".to_owned()),
+            ("n_matches", "uniqExact(match_id)".to_owned()),
+            (
+                "n_mid_boss_matches",
+                "uniqExactIf(match_id, length(`mid_boss.destroyed_time_s`) > 0)".to_owned(),
+            ),
+            (
+                "n_team0_wins",
+                "uniqExactIf(match_id, winning_team = 'Team0')".to_owned(),
+            ),
+            (
+                "n_team1_wins",
+                "uniqExactIf(match_id, winning_team = 'Team1')".to_owned(),
+            ),
+            (
+                "players_state",
+                "uniqCombinedState(14)(account_id)".to_owned(),
+            ),
+            ("n_abandons", "countIf(abandon_match_time_s > 0)".to_owned()),
+        ]
+        .into_iter()
+        .map(|(col, expr)| (col.to_owned(), expr))
+        .collect::<Vec<_>>();
+        measures.extend(
+            AVERAGES
+                .iter()
+                .map(|(name, expr)| (format!("sum_{name}"), format!("sum({expr})"))),
+        );
+        for col in NULLABLE_AVERAGES
+            .iter()
+            .chain(&["first_permanent_buff_time_s"])
+        {
+            measures.push((format!("sum_{col}"), format!("sum(ifNull({col}, 0))")));
+            measures.push((format!("n_{col}"), format!("count({col})")));
+        }
+        measures.push((
+            "sum_permanent_buffs".to_owned(),
+            "sum(permanent_buffs)".to_owned(),
+        ));
+        measures.push((
+            "sum_permanent_buffs_per_min".to_owned(),
+            "sum(permanent_buffs * 60 / greatest(1, duration_s))".to_owned(),
+        ));
+        measures
+    });
+    &MEASURES
+}
+
+fn game_stats_agg() -> Rollup<'static> {
+    static COLUMNS: LazyLock<String> = LazyLock::new(|| {
+        agg_measures()
+            .iter()
+            .map(|(col, _)| col.as_str())
+            .collect::<Vec<_>>()
+            .join(", ")
+    });
+    Rollup {
+        table: AGG_TABLE,
+        grain: AGG_GRAIN,
+        measures: &COLUMNS,
+        // The table keeps every day; the horizon only matters for `Reach::Days`, which no
+        // game-stats request uses.
+        coverage: Coverage::Incremental {
+            horizon_days: u32::MAX,
+        },
+    }
+}
+
+/// The `game_stats_agg` rows of the matches `where_clause` selects, grouped by the grain columns
+/// of `grain_select`/`group_by`: a window's partial days, or a whole rollup day.
+fn agg_rows(
+    EdgeRows {
+        where_clause,
+        grain_select,
+        group_by,
+    }: &EdgeRows,
+) -> String {
+    let measures = agg_measures()
+        .iter()
+        .map(|(col, expr)| format!("{expr} AS {col}"))
+        .collect::<Vec<_>>()
+        .join(",\n    ");
+    // A request filtering and bucketing on no grain column needs one row of totals.
+    let group_by = if group_by.is_empty() {
+        String::new()
+    } else {
+        format!("\nGROUP BY {group_by}")
+    };
+    format!(
+        "SELECT
+    {grain_select}{measures}
+FROM default.match_player
+WHERE match_mode IN ('Ranked', 'Unranked') AND {where_clause}{group_by}"
+    )
+}
+
+/// The `game_stats_agg` rows of the matches selected by `since_clause`, at the full grain and
+/// in the table's column order. The refresh job builds the rollup's days with it.
+pub(crate) fn agg_select_body(since_clause: &str) -> String {
+    agg_rows(&EdgeRows {
+        where_clause: since_clause.to_owned(),
+        grain_select: AGG_GRAIN
+            .iter()
+            .map(|(col, expr)| format!("{expr} AS {col},\n    "))
+            .collect::<Vec<_>>()
+            .concat(),
+        group_by: AGG_GRAIN
+            .iter()
+            .map(|(col, _)| *col)
+            .collect::<Vec<_>>()
+            .join(", "),
+    })
+}
+
+/// Builds a query against `game_stats_agg` when the request falls within the subset its grain
+/// covers, else `None` (the caller then uses the base-table query). The grain serves game mode,
+/// match mode, badge and time-range filters and the non-hourly buckets; per-player filters
+/// (account, hero, net worth, items, ability order), duration, match id and hourly buckets need
+/// the base table. Only the window's whole days come from the rollup, its partial days and the
+/// matches ingested since a day was built from `match_player` (see
+/// [`rollup_window`](super::rollup_window)). A window without a whole day uses the base table.
+fn build_mv_query(query: &GameStatsQuery) -> Option<String> {
+    let bucket_expr = query.bucket.mv_bucket_expr()?;
+    let personalized = is_non_empty(query.account_ids.as_deref())
+        || is_non_empty(query.hero_ids.as_deref())
+        || is_non_empty(query.include_item_ids.as_deref())
+        || is_non_empty(query.exclude_item_ids.as_deref())
+        || is_non_empty(query.ability_order_prefix.as_deref())
+        || is_non_empty(query.ability_unlock_order_prefix.as_deref());
+    let unsupported_filter = query.min_networth.is_some()
+        || query.max_networth.is_some()
+        || query.min_duration_s.is_some()
+        || query.max_duration_s.is_some()
+        || query.min_match_id.is_some()
+        || query.max_match_id.is_some()
+        || !MatchMode::is_agg_servable(query.match_mode.as_deref());
+    if personalized || unsupported_filter {
+        return None;
+    }
+    let split = DaySplit::new(query.min_unix_timestamp, query.max_unix_timestamp)?;
+    let filters = RollupFilters::new(
+        query.game_mode,
+        query.match_mode.as_deref(),
+        query.min_average_badge,
+        query.max_average_badge,
+    );
+    let source = game_stats_agg().source(&split, &filters, bucket_expr, agg_rows);
+    let averages = AVERAGES
+        .iter()
+        .map(|(name, _)| format!("sum(sum_{name}) / sum(n_rows) AS avg_{name},\n        "))
+        .chain(NULLABLE_AVERAGES.iter().map(|col| {
+            format!(
+                "if(sum(n_{col}) = 0, 0, sum(sum_{col}) / sum(n_{col})) AS avg_{col},\n        "
+            )
+        }))
+        .collect::<Vec<_>>()
+        .concat();
+    Some(format!(
+        "
+    SELECT
+        {bucket_expr} AS bucket,
+        sum(n_matches) AS total_matches,
+        uniqCombinedMerge(14)(players_state) AS total_players,
+        {averages}sum(n_mid_boss_matches) / greatest(1, sum(n_matches)) AS mid_boss_kill_rate,
+        sum(n_abandons) / sum(n_rows) AS abandon_rate,
+        sum(n_team0_wins) AS team0_wins,
+        sum(n_team1_wins) AS team1_wins,
+        sum(sum_permanent_buffs) / sum(n_rows) AS avg_permanent_buffs,
+        sum(sum_permanent_buffs_per_min) / sum(n_rows) AS avg_permanent_buffs_per_min,
+        if(sum(n_first_permanent_buff_time_s) = 0, NULL, sum(sum_first_permanent_buff_time_s) / sum(n_first_permanent_buff_time_s)) AS avg_first_permanent_buff_time_s
+    FROM {source}
+    GROUP BY bucket
+    HAVING sum(n_rows) > 0
+    ORDER BY bucket
+    SETTINGS log_comment = 'game_stats_mv', apply_patch_parts = 0, preferred_block_size_bytes = 0
+    "
+    ))
+}
+
 // Concurrent misses of one query share a single run. by_key holds a hashed bucket lock (hits
 // included) for the whole query; this endpoint runs few queries at once, so collisions are rare.
 cached_ch_query! {
@@ -304,7 +548,7 @@ async fn get_game_stats(
     mut query: GameStatsQuery,
 ) -> APIResult<Arc<Vec<AnalyticsGameStats>>> {
     round_timestamps(&mut query.min_unix_timestamp, &mut query.max_unix_timestamp);
-    let query_str = build_query(&query);
+    let query_str = build_mv_query(&query).unwrap_or_else(|| build_query(&query));
     debug!(?query_str);
     Ok(run_query(ch_client, &query_str).await?)
 }
@@ -350,6 +594,7 @@ pub(crate) async fn game_stats(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::utils::proptest_utils::assert_valid_sql;
 
     #[test]
     fn buff_averages_read_the_scalar_columns() {
@@ -362,6 +607,144 @@ mod tests {
             sql.contains("avg(first_permanent_buff_time_s) AS avg_first_permanent_buff_time_s")
         );
         assert!(!sql.contains("power_up_buffs"));
+    }
+
+    /// The `AS` aliases of the outer `SELECT`, in order.
+    fn output_columns(sql: &str) -> Vec<String> {
+        let select = sql.split("\n    FROM ").next().expect("a FROM");
+        select
+            .lines()
+            .filter_map(|line| line.trim().trim_end_matches(',').rsplit_once(" AS "))
+            .map(|(_, alias)| alias.to_owned())
+            .collect()
+    }
+
+    #[test]
+    fn rollup_selects_the_columns_of_the_base_query() {
+        for bucket in [
+            BucketQuery::NoBucket,
+            BucketQuery::AvgBadge,
+            BucketQuery::StartTimeDay,
+            BucketQuery::StartTimeWeek,
+            BucketQuery::StartTimeMonth,
+        ] {
+            let query = GameStatsQuery {
+                bucket,
+                min_unix_timestamp: Some(1_790_121_600),
+                min_average_badge: Some(50),
+                game_mode: Some(GameMode::Normal),
+                ..Default::default()
+            };
+            let mv = build_mv_query(&query).expect("routes to the rollup");
+            assert_valid_sql(&mv);
+            assert!(mv.contains("FROM default.game_stats_agg"));
+            let columns = output_columns(&mv);
+            assert_eq!(columns, output_columns(&build_query(&query)));
+            // Every field of `AnalyticsGameStats`.
+            assert_eq!(columns.len(), 57);
+        }
+    }
+
+    #[test]
+    fn rollup_skips_requests_its_grain_cannot_serve() {
+        let base = GameStatsQuery {
+            min_unix_timestamp: Some(1_790_121_600),
+            ..Default::default()
+        };
+        assert!(build_mv_query(&base).is_some());
+        for query in [
+            GameStatsQuery {
+                bucket: BucketQuery::StartTimeHour,
+                ..base.clone()
+            },
+            GameStatsQuery {
+                hero_ids: Some(vec![1]),
+                ..base.clone()
+            },
+            GameStatsQuery {
+                account_ids: Some(vec![1]),
+                ..base.clone()
+            },
+            GameStatsQuery {
+                min_networth: Some(1),
+                ..base.clone()
+            },
+            GameStatsQuery {
+                max_duration_s: Some(1800),
+                ..base.clone()
+            },
+            GameStatsQuery {
+                min_match_id: Some(1),
+                ..base.clone()
+            },
+            GameStatsQuery {
+                include_item_ids: Some(vec![1]),
+                ..base.clone()
+            },
+            GameStatsQuery {
+                ability_order_prefix: Some(vec![1]),
+                ..base.clone()
+            },
+            GameStatsQuery {
+                match_mode: Some(vec![MatchMode::PrivateLobby]),
+                ..base.clone()
+            },
+            // No whole day.
+            GameStatsQuery {
+                min_unix_timestamp: Some(1_790_121_600 + 3600),
+                max_unix_timestamp: Some(1_790_121_600 + 7200),
+                ..base.clone()
+            },
+        ] {
+            assert!(build_mv_query(&query).is_none(), "{query:?}");
+        }
+    }
+
+    #[test]
+    fn rollup_reads_partial_days_from_match_player() {
+        // 2026-10-05 14:00 to 2026-10-08 14:00 UTC.
+        let sql = build_mv_query(&GameStatsQuery {
+            min_unix_timestamp: Some(1_791_208_800),
+            max_unix_timestamp: Some(1_791_468_000),
+            ..Default::default()
+        })
+        .expect("routes to the rollup");
+        assert!(sql.contains("day >= toDate(1791244800) AND day < toDate(1791417600)"));
+        assert!(sql.contains(
+            "((start_time >= 1791208800 AND start_time <= 1791244799) OR \
+             (start_time >= 1791417600 AND start_time <= 1791468000)"
+        ));
+        // Neither the bucket nor a filter needs a grain column: one row of totals per scan.
+        let sql = build_mv_query(&GameStatsQuery {
+            min_unix_timestamp: Some(1_791_208_800),
+            game_mode: None,
+            ..Default::default()
+        })
+        .expect("routes to the rollup");
+        assert_valid_sql(&sql);
+        assert!(!sql.contains("GROUP BY \n"));
+        assert!(sql.contains("HAVING sum(n_rows) > 0"));
+    }
+
+    #[test]
+    fn rollup_rows_have_the_table_column_order() {
+        let body = agg_select_body("TRUE");
+        assert_valid_sql(&body);
+        let columns = body
+            .lines()
+            .filter_map(|line| line.trim().trim_end_matches(',').rsplit_once(" AS "))
+            .map(|(_, col)| col)
+            .collect::<Vec<_>>();
+        let expected = AGG_GRAIN
+            .iter()
+            .map(|(col, _)| *col)
+            .chain(agg_measures().iter().map(|(col, _)| col.as_str()))
+            .collect::<Vec<_>>();
+        assert_eq!(columns, expected);
+        assert_eq!(
+            game_stats_agg().measures.split(", ").count(),
+            agg_measures().len()
+        );
     }
 }
 
@@ -381,9 +764,15 @@ mod proptests {
             // exhaust the default test thread's 2 MiB stack inside the parser.
             // Validate on a thread with a larger stack instead.
             let sql = build_query(&query);
+            let mv = build_mv_query(&query);
             match std::thread::Builder::new()
                 .stack_size(16 * 1024 * 1024)
-                .spawn(move || assert_valid_sql(&sql))
+                .spawn(move || {
+                    assert_valid_sql(&sql);
+                    if let Some(mv) = mv {
+                        assert_valid_sql(&mv);
+                    }
+                })
             {
                 Ok(handle) => {
                     if let Err(panic) = handle.join() {

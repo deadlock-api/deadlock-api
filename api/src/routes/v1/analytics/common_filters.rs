@@ -93,6 +93,22 @@ impl BucketQuery {
             Self::StartTimeMonth => "toDateTime(toStartOfMonth(start_time))",
         }
     }
+
+    /// The bucket expression against a day-grained rollup with `least_badge`/`greatest_badge`
+    /// columns (`hero_stats_agg_v2`, `game_stats_agg`), or `None` for `StartTimeHour`, which
+    /// needs the sub-day resolution a `day` grain does not keep. `AvgBadge` buckets by the
+    /// per-match `greatest_badge`, stored as 65535 when NULL, which maps back to 0 to mirror
+    /// [`Self::base_expr`]'s `coalesce(..., 0)`.
+    pub(super) fn mv_bucket_expr(self) -> Option<&'static str> {
+        match self {
+            Self::NoBucket => Some("toUInt32(0)"),
+            Self::AvgBadge => Some("toUInt32(if(greatest_badge = 65535, 0, greatest_badge))"),
+            Self::StartTimeDay => Some("toStartOfDay(toDateTime(day))"),
+            Self::StartTimeWeek => Some("toDateTime(toStartOfWeek(day))"),
+            Self::StartTimeMonth => Some("toDateTime(toStartOfMonth(day))"),
+            Self::StartTimeHour => None,
+        }
+    }
 }
 
 /// Common player-level filters shared across analytics queries.

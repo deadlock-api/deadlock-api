@@ -22,24 +22,6 @@ use crate::utils::parse::{
 };
 use crate::utils::sql::{cached_ch_query, impl_match_info};
 
-impl BucketQuery {
-    /// Bucket expression against the pre-aggregated `hero_stats_agg` view, or `None`
-    /// for buckets it cannot serve. The view is grained on `day` (a `Date`), so
-    /// `StartTimeHour` needs sub-day resolution it does not keep and runs against the
-    /// base table. `AvgBadge` buckets by the per-match `greatest_badge` (stored as
-    /// 65535 when null, which we map back to 0 to mirror `coalesce(..., 0)`).
-    fn mv_bucket_expr(self) -> Option<&'static str> {
-        match self {
-            Self::NoBucket => Some("toUInt32(0)"),
-            Self::AvgBadge => Some("toUInt32(if(greatest_badge = 65535, 0, greatest_badge))"),
-            Self::StartTimeDay => Some("toStartOfDay(toDateTime(day))"),
-            Self::StartTimeWeek => Some("toDateTime(toStartOfWeek(day))"),
-            Self::StartTimeMonth => Some("toDateTime(toStartOfMonth(day))"),
-            Self::StartTimeHour => None,
-        }
-    }
-}
-
 #[derive(Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash, Default)]
 #[cfg_attr(test, derive(proptest_derive::Arbitrary))]
 pub(crate) struct HeroStatsQuery {

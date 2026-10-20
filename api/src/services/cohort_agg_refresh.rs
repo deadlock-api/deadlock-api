@@ -7,7 +7,7 @@ use tokio::time::interval;
 use tracing::{debug, error, info};
 
 use crate::routes::v1::analytics::rollup_window::BUILT_THROUGH;
-use crate::routes::v1::analytics::{item_stats, player_performance_curve_agg};
+use crate::routes::v1::analytics::{game_stats, item_stats, player_performance_curve_agg};
 use crate::services::lease::Lease;
 
 const REFRESH_INTERVAL_SECS: u64 = 30 * 60;
@@ -61,8 +61,27 @@ struct CohortSpec {
     table: &'static str,
     staging: &'static str,
     source: Source,
-    /// Days kept; older day partitions are dropped.
+    /// Days checked for new matches every run. Older day partitions are dropped, unless
+    /// `history` keeps them.
     horizon_days: u32,
+    history: Option<History>,
+}
+
+/// Keeps every day from `first_day` on, not just the horizon, and rebuilds any day whose build
+/// is older than `rebuild_after_days`, whether or not it gained matches.
+///
+/// A read takes the matches ingested after a day was built from `match_player`, pruning by the
+/// oldest [`BUILT_THROUGH`] of a range of days (see `rollup_window::BuiltDays`). A day that never
+/// grows enough to be rebuilt keeps its old build time, and the range it falls into then rereads
+/// everything ingested since. Rebuilding every day within a week bounds that to a week of late
+/// matches, for one scan of the source per week. Its days are built up to `now() -`
+/// [`BUILT_THROUGH_LAG`], not their newest match, so a rebuild moves the bound forward even on
+/// a day without new matches.
+struct History {
+    first_day: &'static str,
+    rebuild_after_days: u32,
+    /// Bounds the work of a run, e.g. the first ones, which build every day.
+    max_days_per_run: usize,
 }
 
 enum Source {
@@ -78,12 +97,14 @@ enum Source {
     PerformanceCurve,
     /// One row per purchase, at the `item_stats_agg_v2` grain.
     ItemStats,
+    /// Sums every player row's stats per match-level grain (`game_stats_agg`).
+    GameStats,
 }
 
 // The _v2 tables carry uniqCombined(14) player states (migration 40); the plain uniq states
 // of the v1 tables were ~90% of item_stats_cohort_mv's CPU. Pointing the job here builds them
 // from scratch while the API keeps reading v1 until they cover the horizon.
-fn cohort_specs() -> [CohortSpec; 5] {
+fn cohort_specs() -> [CohortSpec; 6] {
     [
         // Replaces the `item_stats_agg` refreshable MV, which recomputed all 65 days every hour.
         CohortSpec {
@@ -91,6 +112,7 @@ fn cohort_specs() -> [CohortSpec; 5] {
             staging: item_stats::ITEM_STATS_AGG_STAGING,
             source: Source::ItemStats,
             horizon_days: HORIZON_DAYS,
+            history: None,
         },
         CohortSpec {
             table: "default.item_cohort_stats_time_agg_v2",
@@ -101,6 +123,7 @@ fn cohort_specs() -> [CohortSpec; 5] {
                 extra_array_join: "",
             },
             horizon_days: HORIZON_DAYS,
+            history: None,
         },
         CohortSpec {
             table: "default.item_cohort_stats_net_worth_agg_v2",
@@ -111,12 +134,14 @@ fn cohort_specs() -> [CohortSpec; 5] {
                 extra_array_join: ",\n    `upgrades.net_worth_at_buy` AS net_worth_at_buy",
             },
             horizon_days: HORIZON_DAYS,
+            history: None,
         },
         CohortSpec {
             table: "default.item_enemy_stats_agg",
             staging: "default.item_enemy_stats_agg_staging",
             source: Source::EnemyHero,
             horizon_days: HORIZON_DAYS,
+            history: None,
         },
         // The curve's default window is the season, so it keeps a longer horizon.
         CohortSpec {
@@ -124,6 +149,19 @@ fn cohort_specs() -> [CohortSpec; 5] {
             staging: player_performance_curve_agg::AGG_STAGING,
             source: Source::PerformanceCurve,
             horizon_days: player_performance_curve_agg::AGG_HORIZON_DAYS,
+            history: None,
+        },
+        // Last: its first runs build all of history, up to `max_days_per_run` days each.
+        CohortSpec {
+            table: game_stats::AGG_TABLE,
+            staging: game_stats::AGG_STAGING,
+            source: Source::GameStats,
+            horizon_days: game_stats::AGG_HORIZON_DAYS,
+            history: Some(History {
+                first_day: game_stats::AGG_FIRST_DAY,
+                rebuild_after_days: 7,
+                max_days_per_run: 300,
+            }),
         },
     ]
 }
@@ -154,6 +192,7 @@ fn select_body(spec: &CohortSpec, since_clause: &str) -> String {
             return player_performance_curve_agg::agg_select_body(since_clause);
         }
         Source::ItemStats => return item_stats::item_stats_agg_select_body(since_clause),
+        Source::GameStats => return game_stats::agg_select_body(since_clause),
     };
     format!(
         "SELECT
@@ -321,10 +360,11 @@ ORDER BY day DESC"
         .await
 }
 
-async fn stored_match_counts(
+/// Each recorded day's `(built_through, match count)`.
+async fn stored_builds(
     ch_client: &clickhouse::Client,
     table: &str,
-) -> Result<HashMap<String, u64>, clickhouse::error::Error> {
+) -> Result<HashMap<String, (u32, u64)>, clickhouse::error::Error> {
     let rows = ch_client
         .query(&format!(
             "SELECT toString(day) AS day, toUnixTimestamp(source_max_created_at) AS max_created, source_match_count AS n_matches
@@ -333,7 +373,10 @@ WHERE table_name = '{table}'"
         ))
         .fetch_all::<WatermarkRow>()
         .await?;
-    Ok(rows.into_iter().map(|r| (r.day, r.n_matches)).collect())
+    Ok(rows
+        .into_iter()
+        .map(|r| (r.day, (r.max_created, r.n_matches)))
+        .collect())
 }
 
 async fn record_watermark(
@@ -386,8 +429,93 @@ async fn rebuild_day(
     Ok(())
 }
 
+#[derive(Row, Deserialize)]
+struct CapRow {
+    cap: u32,
+}
+
+/// The days a [`History`] spec rebuilds this run, as `(day, built_through, match count)`. See
+/// [`history_due`].
+async fn history_rebuilds(
+    ch_client: &clickhouse::Client,
+    history: &History,
+    source: &[WatermarkRow],
+    grown: Vec<(String, u32, u64)>,
+    stored: &HashMap<String, (u32, u64)>,
+) -> Result<Vec<(String, u32, u64)>, clickhouse::error::Error> {
+    let first_day = history.first_day;
+    let days = ch_client
+        .query(&format!(
+            "SELECT toString(toDate('{first_day}') + number) AS day \
+             FROM numbers(toUInt64(dateDiff('day', toDate('{first_day}'), today()) + 1))"
+        ))
+        .fetch_all::<DayRow>()
+        .await?;
+    let cap = ch_client
+        .query(&format!(
+            "SELECT toUnixTimestamp(now() - {BUILT_THROUGH_LAG}) AS cap"
+        ))
+        .fetch_one::<CapRow>()
+        .await?
+        .cap;
+    let days = days.into_iter().map(|row| row.day).collect::<Vec<_>>();
+    Ok(history_due(history, &days, cap, source, grown, stored))
+}
+
+/// The `grown` days of the horizon, then, up to `max_days_per_run`, the `days` (oldest first)
+/// never built, newest first so the built days stay one run, and those built before `cap` minus
+/// `rebuild_after_days`, oldest build first. All of them are built up to `cap`.
+fn history_due(
+    history: &History,
+    days: &[String],
+    cap: u32,
+    source: &[WatermarkRow],
+    grown: Vec<(String, u32, u64)>,
+    stored: &HashMap<String, (u32, u64)>,
+) -> Vec<(String, u32, u64)> {
+    let aged_before = cap.saturating_sub(history.rebuild_after_days * 86_400);
+    let grown_days: HashSet<&str> = grown.iter().map(|(day, ..)| day.as_str()).collect();
+    let mut missing = vec![];
+    let mut aged = vec![];
+    for day in days.iter().rev() {
+        if grown_days.contains(day.as_str()) {
+            continue;
+        }
+        match stored.get(day) {
+            None => missing.push(day),
+            Some(&(built_through, _)) if built_through < aged_before => {
+                aged.push((built_through, day));
+            }
+            Some(_) => {}
+        }
+    }
+    aged.sort_unstable();
+    // Days past the horizon have no fresh count; they keep their recorded one, which no growth
+    // check reads again.
+    let n_matches = |day: &str| {
+        source
+            .iter()
+            .find(|row| row.day == day)
+            .map(|row| row.n_matches)
+            .or_else(|| stored.get(day).map(|&(_, n_matches)| n_matches))
+            .unwrap_or(0)
+    };
+    let due = missing
+        .into_iter()
+        .chain(aged.into_iter().map(|(_, day)| day))
+        .take(history.max_days_per_run)
+        .map(|day| (day.clone(), n_matches(day)));
+    grown
+        .into_iter()
+        .map(|(day, _, n_matches)| (day, n_matches))
+        .chain(due)
+        .map(|(day, n_matches)| (day, cap, n_matches))
+        .collect()
+}
+
 /// Rebuilds only the day partitions whose source watermark advanced since the
-/// last run, then prunes agg days that fell out of the horizon. On a cold start
+/// last run (and, for a [`History`] spec, the days due by age), then prunes agg days that fell
+/// out of the horizon unless the spec keeps its history. On a cold start
 /// (no recorded state) every source day is "stale", so this also serves as the
 /// initial full build — without ever scanning the full horizon when warm.
 async fn refresh(
@@ -396,7 +524,7 @@ async fn refresh(
 ) -> Result<(), clickhouse::error::Error> {
     let log_comment = format!("{}_refresh", spec.table);
     let source = source_watermarks(ch_client, spec.horizon_days).await?;
-    let stored = stored_match_counts(ch_client, spec.table).await?;
+    let stored = stored_builds(ch_client, spec.table).await?;
     // A day only counts as built while its partition exists: the state outlives the partitions
     // dropped past the horizon, so a day that re-enters a grown horizon would never be rebuilt.
     let built_days = distinct_days(ch_client, spec.table).await?;
@@ -406,7 +534,7 @@ async fn refresh(
         .iter()
         .filter(|row| {
             let prev = if built.contains(row.day.as_str()) {
-                stored.get(&row.day).copied().unwrap_or(0)
+                stored.get(&row.day).map_or(0, |&(_, n_matches)| n_matches)
             } else {
                 0
             };
@@ -414,6 +542,10 @@ async fn refresh(
         })
         .map(|row| (row.day.clone(), row.max_created, row.n_matches))
         .collect();
+    let stale = match &spec.history {
+        Some(history) => history_rebuilds(ch_client, history, &source, stale, &stored).await?,
+        None => stale,
+    };
     // Newest first: recent days are read the most, and fill in from `match_player` until built.
     // Each day is recorded as soon as it is built, so a pass cut short (an error, a deploy) keeps
     // its progress instead of rebuilding every day again.
@@ -422,7 +554,9 @@ async fn refresh(
         record_watermark(ch_client, spec.table, day, *built_through, *n_matches).await?;
     }
 
-    let dropped = if let Some(oldest_fresh) = source.iter().map(|r| &r.day).min() {
+    let dropped = if spec.history.is_some() {
+        0
+    } else if let Some(oldest_fresh) = source.iter().map(|r| &r.day).min() {
         let stale_partitions: Vec<&String> = built_days
             .iter()
             .filter(|d| d.as_str() < oldest_fresh.as_str())
@@ -492,4 +626,51 @@ pub(crate) fn spawn_cohort_agg_refresh(
             lease.hold_for(hold).await;
         }
     });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const DAY: u32 = 86_400;
+
+    fn days(names: &[&str]) -> Vec<String> {
+        names.iter().map(|&d| d.to_owned()).collect()
+    }
+
+    #[test]
+    fn history_rebuilds_grown_then_missing_then_oldest_builds() {
+        let history = History {
+            first_day: "2026-01-01",
+            rebuild_after_days: 7,
+            max_days_per_run: 3,
+        };
+        let cap = 100 * DAY;
+        let all = days(&["d1", "d2", "d3", "d4", "d5", "d6"]);
+        let source = vec![WatermarkRow {
+            day: "d6".to_owned(),
+            max_created: 99 * DAY,
+            n_matches: 60,
+        }];
+        let grown = vec![("d6".to_owned(), 99 * DAY, 60)];
+        let stored = HashMap::from([
+            ("d1".to_owned(), (80 * DAY, 10)),
+            ("d2".to_owned(), (85 * DAY, 20)),
+            ("d4".to_owned(), (95 * DAY, 40)),
+            ("d6".to_owned(), (98 * DAY, 50)),
+        ]);
+        let due = history_due(&history, &all, cap, &source, grown, &stored);
+        assert_eq!(
+            due,
+            vec![
+                // Grown, built up to the cap rather than its newest match.
+                ("d6".to_owned(), cap, 60),
+                // Never built, newest first.
+                ("d5".to_owned(), cap, 0),
+                ("d3".to_owned(), cap, 0),
+                // Built over a week ago, oldest first, up to `max_days_per_run`: d2 waits.
+                ("d1".to_owned(), cap, 10),
+            ]
+        );
+    }
 }
