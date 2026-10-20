@@ -18,7 +18,11 @@ import {
 import { ItemCell } from "~/components/domain/assets/ItemCell";
 import { ItemSelector } from "~/components/domain/selectors/ItemSelector";
 import { ITEM_SLOTS, ItemSlotSelector } from "~/components/domain/selectors/ItemSlotSelector";
-import { ItemTierSelector } from "~/components/domain/selectors/ItemTierSelector";
+import {
+  ItemTierSelector,
+  NORMAL_ITEM_TIERS,
+  STREET_BRAWL_ITEM_TIERS,
+} from "~/components/domain/selectors/ItemTierSelector";
 import { ItemStatTrend } from "~/components/features/items/ItemStatTrend";
 import { useCorruptedItemMode } from "~/components/features/items/useCorruptedItemMode";
 import { ChartSwatch } from "~/components/patterns/charts/ChartLegend";
@@ -33,6 +37,7 @@ import { StaleOverlay } from "~/components/patterns/states/StaleOverlay";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { Field } from "~/components/ui/field";
+import { anyValue } from "~/components/ui/hooks/any-selection";
 import { sortParams, useSort } from "~/components/ui/hooks/use-sort";
 import { ProgressBarMarker, ProgressBarSegment } from "~/components/ui/progress-bar";
 import { SearchInput } from "~/components/ui/search-input";
@@ -511,10 +516,9 @@ export function ItemStatsTable({
   });
   const toggleSort = (field: SortField) => startTransition(() => sort.toggle(field));
 
-  const [itemTiers, setItemTiers] = useQueryState(
-    "item_tiers",
-    parseAsArrayOf(parseAsInteger).withDefault([1, 2, 3, 4]),
-  );
+  const [itemTiers, setItemTiers] = useQueryState("item_tiers", parseAsArrayOf(parseAsInteger).withDefault([]));
+  // Only Street Brawl sells tier 5 items, so the tier filter offers 5 when the answer has one.
+  const offeredTiers = data?.some((row) => row.itemTier === 5) ? STREET_BRAWL_ITEM_TIERS : NORMAL_ITEM_TIERS;
 
   const [itemSlots, setItemSlots] = useQueryState(
     "item_slots",
@@ -619,9 +623,10 @@ export function ItemStatsTable({
   // Echo keystrokes before filtering and rendering the rows.
   const nameTerm = useDeferredValue(nameQuery).trim().toLowerCase();
 
+  const shownTiers = anyValue(offeredTiers, rowTiers);
   const visibleData = processedData.filter(
     (row) =>
-      (rowTiers.length === 0 || rowTiers.includes(row.itemTier)) &&
+      shownTiers.includes(row.itemTier) &&
       (rowSlots.length === 0 || !row.item || rowSlots.includes(row.item.item_slot_type)) &&
       (!nameTerm || (row.item?.name ?? "").toLowerCase().includes(nameTerm)),
   );
@@ -665,8 +670,12 @@ export function ItemStatsTable({
         />
         <ItemTierSelector
           orientation="horizontal"
+          tiers={offeredTiers}
           value={itemTiers}
-          onValueChange={(tiers) => startTransition(() => void setItemTiers(tiers, together))}
+          // Every tier is the default: left out of the URL, so a link from Normal still shows Street Brawl's tier 5.
+          onValueChange={(tiers) =>
+            startTransition(() => void setItemTiers(tiers.length === offeredTiers.length ? null : tiers, together))
+          }
         />
         <Field label="Purchases" orientation="horizontal">
           <Segmented

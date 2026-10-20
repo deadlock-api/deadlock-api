@@ -17,7 +17,7 @@ import {
 } from "~/components/domain/selectors/ItemGrid";
 import { ItemSelector } from "~/components/domain/selectors/ItemSelector";
 import { ItemSlotSelector } from "~/components/domain/selectors/ItemSlotSelector";
-import { ItemTierSelector } from "~/components/domain/selectors/ItemTierSelector";
+import { ItemTierSelector, STREET_BRAWL_ITEM_TIERS } from "~/components/domain/selectors/ItemTierSelector";
 import { MatchTimeRangeSelector } from "~/components/domain/selectors/MatchTimeRangeSelector";
 import { ModeSelector } from "~/components/domain/selectors/ModeSelector";
 import { RankRangeSelector } from "~/components/domain/selectors/RankRangeSelector";
@@ -278,11 +278,14 @@ export function DomainSelectors() {
       <Specimen
         name="ItemSlotSelector and ItemTierSelector"
         source="domain/selectors/ItemSlotSelector · domain/selectors/ItemTierSelector"
-        note="Multi-select chips that narrow an item table by slot and by tier. With every chip on, pressing one keeps only that chip; releasing the last chip turns all back on. Each brings its own Field label."
+        note="Multi-select chips that narrow an item table by slot and by tier (tiers: the tiers offered, 1 to 4 by default; Street Brawl adds 5). With every chip on, pressing one keeps only that chip; releasing the last chip turns all back on. Each brings its own Field label."
       >
         <Variants className="items-start gap-4">
           <ItemSlotSelector value={slots} onValueChange={setSlots} />
           <ItemTierSelector value={itemTiers} onValueChange={setItemTiers} />
+        </Variants>
+        <Variants label="Street Brawl tiers" className="items-start">
+          <ItemTierSelector tiers={STREET_BRAWL_ITEM_TIERS} />
         </Variants>
       </Specimen>
 
