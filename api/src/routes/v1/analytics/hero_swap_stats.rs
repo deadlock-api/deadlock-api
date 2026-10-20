@@ -148,7 +148,7 @@ A player swapped when the hero they had locked before the pre-game swap window (
 - **Swap-in win rate:** `swapped_in_wins / swapped_in`.
 - **Swap-away rate:** `swapped_away / pregame_picks`, the share of players who had this hero locked and swapped away from it.
 
-Results are cached for **6 hours** based on the combination of query parameters provided.
+Results are cached for **1 hour** based on the combination of query parameters provided.
 
 ### Rate Limits:
 > The rate limits below are **shared across all analytics endpoints**.

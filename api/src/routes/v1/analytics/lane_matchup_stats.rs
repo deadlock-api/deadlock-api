@@ -481,7 +481,7 @@ Only lanes where *both* sides fielded exactly two players are counted, and each 
 
 Pass `hero_ids` and `enemy_hero_ids` to scope the response to the duos you care about. Without them the full duo-versus-duo matrix is computed, which is a considerably more expensive query.
 
-Results are cached for **6 hours**. The cache key is determined by the specific combination of filter parameters used in the query. Subsequent requests using the exact same filters within this timeframe will receive the cached response.
+Results are cached for **1 hour**. The cache key is determined by the specific combination of filter parameters used in the query. Subsequent requests using the exact same filters within this timeframe will receive the cached response.
 
 ### Rate Limits:
 > The rate limits below are **shared across all analytics endpoints**.

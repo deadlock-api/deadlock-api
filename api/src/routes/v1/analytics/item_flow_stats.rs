@@ -813,7 +813,7 @@ ones among them, the win rate a build ending in that stage should be compared wi
 Corrupted items (build 6712+, same item id as the normal item) are not counted as purchases; the
 normal item they replaced still is.
 
-Results are cached for **6 hours** based on the unique combination of query parameters provided.
+Results are cached for **1 hour** based on the unique combination of query parameters provided.
 
 ### Rate Limits:
 > The rate limits below are **shared across all analytics endpoints**.

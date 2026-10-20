@@ -295,7 +295,7 @@ those matches. Temporary power-ups have no timings.
 
 Buff display names, value units and graph colors: <https://api.deadlock-api.com/v1/assets/misc-entities>
 
-Results are cached for **6 hours** based on the unique combination of query parameters provided.
+Results are cached for **1 hour** based on the unique combination of query parameters provided.
 
 ### Rate Limits:
 > The rate limits below are **shared across all analytics endpoints**.
