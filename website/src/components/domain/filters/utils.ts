@@ -5,18 +5,13 @@ import type { Dayjs } from "~/dayjs";
  * "until Mar 3, 2026". Each case carries its own preposition, since only the two-ended one takes
  * "between".
  *
- * The locale is pinned: this phrase sits in English copy, and an implicit locale would also render
- * differently on the server than in the browser.
+ * Dayjs formats in English (no other locale is loaded), the same on the server as in the browser.
  */
 export function formatDateRange(startDate: Dayjs | null | undefined, endDate: Dayjs | null | undefined): string | null {
   if (!startDate && !endDate) return null;
-  const fmt = (d: Dayjs) =>
-    d.toDate().toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
-  const fmtShort = (d: Dayjs) => d.toDate().toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  // Dayjs formats in the date's own mode: a whole UTC day from the URL stays that day west of UTC.
+  const fmt = (d: Dayjs) => d.format("MMM D, YYYY");
+  const fmtShort = (d: Dayjs) => d.format("MMM D");
 
   if (startDate && endDate) {
     const sameYear = startDate.year() === endDate.year();
