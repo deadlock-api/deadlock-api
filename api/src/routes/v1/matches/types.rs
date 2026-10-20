@@ -303,7 +303,9 @@ impl MatchMode {
     /// valid rollup predicate.
     pub(crate) fn agg_sql_filter(match_modes: Option<&[Self]>) -> Option<String> {
         let modes = match_modes?;
-        let narrows = matches!(modes, [Self::Ranked | Self::Unranked]);
+        // A list may repeat a mode (`Ranked,Ranked`); it narrows unless it names both.
+        let names_both = modes.contains(&Self::Ranked) && modes.contains(&Self::Unranked);
+        let narrows = !modes.is_empty() && !names_both;
         narrows.then(|| Self::sql_filter(Some(modes)))
     }
 }
@@ -482,5 +484,26 @@ impl From<(u64, CMsgClientToGcGetMatchMetaDataResponse, String)> for ClickhouseS
             username: Some(username),
             ..(match_id, salts).into()
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn agg_filter_narrows_unless_both_modes_are_named() {
+        let ranked = Some("match_mode = 'Ranked'".to_owned());
+        assert_eq!(
+            MatchMode::agg_sql_filter(Some(&[MatchMode::Ranked])),
+            ranked
+        );
+        assert!(MatchMode::agg_sql_filter(Some(&[MatchMode::Ranked, MatchMode::Ranked])).is_some());
+        assert_eq!(
+            MatchMode::agg_sql_filter(Some(&[MatchMode::Ranked, MatchMode::Unranked])),
+            None
+        );
+        assert_eq!(MatchMode::agg_sql_filter(Some(&[])), None);
+        assert_eq!(MatchMode::agg_sql_filter(None), None);
     }
 }
