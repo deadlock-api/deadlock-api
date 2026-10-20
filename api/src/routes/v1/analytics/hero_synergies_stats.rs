@@ -10,6 +10,7 @@ use utoipa::{IntoParams, ToSchema};
 
 use super::common_filters::{
     default_min_matches_u64, filter_protected_accounts, range_filters, round_timestamps,
+    with_legacy_id,
 };
 use crate::context::AppState;
 use crate::error::APIResult;
@@ -170,23 +171,21 @@ fn build_query(query: &HeroSynergyStatsQuery) -> String {
     ));
     let where_clause = where_filters.join(" AND ");
 
-    // The original query applied account filters only to p1 (the lower-hero-id
-    // side of the pair). Replicate that asymmetry on `pair.1` post-arrayJoin.
+    // A pair is kept when a filtered account played either of its heroes: `(p.1).1 < (p.2).1`
+    // orders each pair by hero id, so filtering only `p.1` would drop every pair where the
+    // account had the higher hero id.
     #[expect(deprecated)]
-    let needs_account_id = query.account_id.is_some() || query.account_ids.is_some();
-    let account_col = if needs_account_id {
-        ",\n                   account_id"
-    } else {
+    let account_ids = with_legacy_id(query.account_ids.as_deref(), query.account_id);
+    let account_col = if account_ids.is_empty() {
         ""
+    } else {
+        ",\n                   account_id"
     };
 
     let mut pair_filters = vec!["(p.1).1 < (p.2).1".to_owned()];
-    #[expect(deprecated)]
-    if let Some(account_id) = query.account_id {
-        pair_filters.push(format!("(p.1).11 = {account_id}"));
-    }
-    if let Some(account_ids) = &query.account_ids {
-        pair_filters.push(format!("(p.1).11 IN ({})", id_list(account_ids)));
+    if !account_ids.is_empty() {
+        let ids = id_list(&account_ids);
+        pair_filters.push(format!("((p.1).11 IN ({ids}) OR (p.2).11 IN ({ids}))"));
     }
     let pair_predicate = pair_filters.join(" AND ");
 
@@ -303,6 +302,20 @@ pub(super) async fn hero_synergies_stats(
     get_hero_synergy_stats(&state.ch_client_ro, query)
         .await
         .map(Json)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn account_filter_keeps_pairs_on_either_side() {
+        let query = HeroSynergyStatsQuery {
+            account_ids: Some(vec![7]),
+            ..Default::default()
+        };
+        assert!(build_query(&query).contains("(p.2).11 IN (7)"));
+    }
 }
 
 #[cfg(test)]
