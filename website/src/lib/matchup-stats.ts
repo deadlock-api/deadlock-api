@@ -1,13 +1,30 @@
+import { shrunkWinRate } from "~/lib/shrinkage";
+
 interface WinRecord {
   wins: number;
   matches: number;
 }
 
-/** Difference in win probability; allies use the mean of both heroes' baselines. */
+/** Matches at the expected rate added to every sample, so a pairing seen a few times reads as no effect. */
+const PRIOR_MATCHES = 100;
+
+const logit = (p: number) => Math.log(p / (1 - p));
+const sigmoid = (z: number) => 1 / (1 + Math.exp(-z));
+
+/**
+ * How far a pairing's win rate sits from what the two heroes' own strength predicts, in win probability.
+ *
+ * The prediction adds the heroes' strength in log-odds: a teammate's to the hero's, an enemy's taken from it. Comparing
+ * with the hero's own rate alone would make every strong enemy look like a counter, and the mean of two teammates'
+ * rates leaves half of their combined strength in the change. The pairing's rate is shrunk toward the prediction, and
+ * both heroes' rates toward 50%, so thin samples move little.
+ */
 export function matchupWinRateChange(
   wins: number,
   matches: number,
-  baselines: (WinRecord | undefined)[],
+  hero: WinRecord | undefined,
+  other: WinRecord | undefined,
+  side: "ally" | "enemy",
 ): number | undefined {
   const valid = (record: WinRecord | undefined): record is WinRecord =>
     record !== undefined &&
@@ -17,8 +34,10 @@ export function matchupWinRateChange(
     record.wins >= 0 &&
     record.wins <= record.matches;
 
-  if (!valid({ wins, matches }) || baselines.length === 0 || !baselines.every(valid)) return undefined;
-  return wins / matches - baselines.reduce((sum, hero) => sum + hero.wins / hero.matches, 0) / baselines.length;
+  if (!valid({ wins, matches }) || !valid(hero) || !valid(other)) return undefined;
+  const strength = (record: WinRecord) => logit(shrunkWinRate(record.wins, record.matches, PRIOR_MATCHES));
+  const expected = sigmoid(strength(hero) + (side === "ally" ? 1 : -1) * strength(other));
+  return shrunkWinRate(wins, matches, PRIOR_MATCHES, expected) - expected;
 }
 
 export interface MatchupRow {
@@ -49,19 +68,28 @@ function periodRows(heroId: number, period: MatchupPeriod) {
   for (const synergy of period.synergies) {
     if (synergy.hero_id1 !== heroId && synergy.hero_id2 !== heroId) continue;
     const other = synergy.hero_id1 === heroId ? synergy.hero_id2 : synergy.hero_id1;
-    const relWinrate = matchupWinRateChange(synergy.wins, synergy.matches_played, [
+    const relWinrate = matchupWinRateChange(
+      synergy.wins,
+      synergy.matches_played,
       baselines.get(heroId),
       baselines.get(other),
-    ]);
+      "ally",
+    );
     if (relWinrate === undefined) continue;
     synergies.set(other, { heroId: other, matches: synergy.matches_played, wins: synergy.wins, relWinrate });
   }
   const counters = new Map<number, MatchupRow>();
   for (const counter of period.counters) {
     if (counter.hero_id !== heroId) continue;
-    const relWinrate = matchupWinRateChange(counter.wins, counter.matches_played, [baselines.get(heroId)]);
-    if (relWinrate === undefined) continue;
     const other = counter.enemy_hero_id;
+    const relWinrate = matchupWinRateChange(
+      counter.wins,
+      counter.matches_played,
+      baselines.get(heroId),
+      baselines.get(other),
+      "enemy",
+    );
+    if (relWinrate === undefined) continue;
     counters.set(other, { heroId: other, matches: counter.matches_played, wins: counter.wins, relWinrate });
   }
   return { synergies, counters };

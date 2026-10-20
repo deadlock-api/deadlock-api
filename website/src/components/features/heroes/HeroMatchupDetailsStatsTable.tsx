@@ -182,7 +182,12 @@ export function HeroMatchupDetailsStatsTable({
           <TableRow>
             <TableHead className="text-center">#</TableHead>
             <TableHead data-pinned>Hero</TableHead>
-            <TableHead className="whitespace-normal">Win Rate Change</TableHead>
+            <TableHead
+              className="whitespace-normal"
+              title="Win rate change beyond what both heroes' own strength predicts"
+            >
+              Win Rate Change
+            </TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>

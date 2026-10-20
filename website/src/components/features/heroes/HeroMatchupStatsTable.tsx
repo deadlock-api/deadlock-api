@@ -23,6 +23,7 @@ import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { findKey } from "~/lib/find-keys";
 import { formatSignedPercent } from "~/lib/format";
 import type { GameMode, MatchMode } from "~/lib/game-mode";
+import { matchupWinRateChange } from "~/lib/matchup-stats";
 import { heroesQueryOptions } from "~/queries/asset-queries";
 import {
   type HeroCounterWins,
@@ -42,7 +43,7 @@ type CounterEntry = HeroCounterWins & { rel_winrate: number };
 function buildHeroStatsMap(data: AnalyticsHeroStats[] | undefined): Record<number, AnalyticsHeroStats> {
   const map: Record<number, AnalyticsHeroStats> = {};
   for (const hero of data || []) {
-    if (!hero?.matches || !hero?.wins) continue;
+    if (!hero?.matches) continue;
     map[hero.hero_id] = hero;
   }
   return map;
@@ -55,14 +56,16 @@ function buildSynergyMap(
   const synergyMap: Record<number, SynergyEntry[]> = {};
   for (const synergy of synergyData || []) {
     if (!synergy?.matches_played || synergy.wins == null) continue;
-    if (!heroStatsMap[synergy.hero_id2]?.matches || !heroStatsMap[synergy.hero_id1]?.matches) continue;
+    const rel_winrate = matchupWinRateChange(
+      synergy.wins,
+      synergy.matches_played,
+      heroStatsMap[synergy.hero_id1],
+      heroStatsMap[synergy.hero_id2],
+      "ally",
+    );
+    if (rel_winrate === undefined) continue;
     if (!synergyMap[synergy.hero_id1]) synergyMap[synergy.hero_id1] = [];
     if (!synergyMap[synergy.hero_id2]) synergyMap[synergy.hero_id2] = [];
-    const rel_winrate =
-      synergy.wins / synergy.matches_played -
-      (heroStatsMap[synergy.hero_id1].wins / heroStatsMap[synergy.hero_id1].matches +
-        heroStatsMap[synergy.hero_id2].wins / heroStatsMap[synergy.hero_id2].matches) /
-        2;
     synergyMap[synergy.hero_id1].push({ ...synergy, rel_winrate });
     synergyMap[synergy.hero_id2].push({
       hero_id1: synergy.hero_id2,
@@ -112,14 +115,16 @@ function buildCounterMap(
   const counterMap: Record<number, CounterEntry[]> = {};
   for (const counter of counterData || []) {
     if (!counter?.matches_played || counter.wins == null) continue;
-    if (!heroStatsMap[counter.hero_id]?.matches || !heroStatsMap[counter.hero_id]?.wins) continue;
+    const rel_winrate = matchupWinRateChange(
+      counter.wins,
+      counter.matches_played,
+      heroStatsMap[counter.hero_id],
+      heroStatsMap[counter.enemy_hero_id],
+      "enemy",
+    );
+    if (rel_winrate === undefined) continue;
     if (!counterMap[counter.hero_id]) counterMap[counter.hero_id] = [];
-    counterMap[counter.hero_id].push({
-      ...counter,
-      rel_winrate:
-        counter.wins / counter.matches_played -
-        heroStatsMap[counter.hero_id].wins / heroStatsMap[counter.hero_id].matches,
-    });
+    counterMap[counter.hero_id].push({ ...counter, rel_winrate });
   }
   return counterMap;
 }
@@ -436,25 +441,25 @@ export function HeroMatchupStatsTable({
                 label="Best Combination"
                 sortKey="bestCombination"
                 {...sortProps}
-                title="Win rate change with the best teammate"
+                title="Win rate change with the best teammate, beyond what both heroes' own strength predicts"
               />
               <SortableHeader
                 label="Worst Combination"
                 sortKey="worstCombination"
                 {...sortProps}
-                title="Win rate change with the worst teammate"
+                title="Win rate change with the worst teammate, beyond what both heroes' own strength predicts"
               />
               <SortableHeader
                 label="Best Against"
                 sortKey="bestAgainst"
                 {...sortProps}
-                title="Win rate change against the easiest enemy"
+                title="Win rate change against the easiest enemy, beyond what both heroes' own strength predicts"
               />
               <SortableHeader
                 label="Worst Against"
                 sortKey="worstAgainst"
                 {...sortProps}
-                title="Win rate change against the hardest enemy"
+                title="Win rate change against the hardest enemy, beyond what both heroes' own strength predicts"
               />
             </TableRow>
           </TableHeader>
