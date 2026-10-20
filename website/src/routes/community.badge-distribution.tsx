@@ -125,10 +125,10 @@ function BadgeDistributionPage() {
     <PageShell height="viewport">
       <PageHeader
         title="Deadlock Rank Distribution"
-        // Follows the metric: "players" counts players per badge of their matches' average rank, not matches.
+        // Follows the metric: "players" counts each player once, at their own rank after their latest ranked match.
         description={
           metric === "players"
-            ? "Players by the average rank of their matches, badge by badge"
+            ? "Players by their rank after their latest ranked match, badge by badge"
             : "Matches by their average rank, badge by badge"
         }
       >
