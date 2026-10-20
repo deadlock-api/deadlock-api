@@ -74,3 +74,11 @@ test("complete monthly buckets use UTC calendar boundaries, including leap years
     [rows[1]],
   );
 });
+
+test("a range that ends on a date keeps that date's bucket", (context) => {
+  context.mock.timers.enable({ apis: ["Date"], now });
+  const rows = [16, 17, 18].map((date) => ({ bucket: unix(`2026-09-${date}T00:00:00Z`) }));
+  // A `date_range` ending 2026-09-18 reaches the API as that day's last second.
+  const range = { minUnixTimestamp: rows[0].bucket, maxUnixTimestamp: unix("2026-09-18T23:59:59Z") };
+  assert.deepEqual(completeTimeBuckets(rows, "start_time_day", range), rows);
+});
