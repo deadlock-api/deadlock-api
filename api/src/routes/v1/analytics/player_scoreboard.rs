@@ -219,22 +219,24 @@ fn build_query(query: &PlayerScoreboardQuery) -> String {
         ""
     };
 
-    let having_clause = having_clause(&range_filters(
-        matches_expr,
-        query.min_matches,
-        query.max_matches,
-    ));
+    let mut having_filters = range_filters(matches_expr, query.min_matches, query.max_matches);
+    // Players without a ranked match in range have badge 0 and value 0: they are not listed,
+    // or an ascending rank sort would start with all of them.
+    if query.sort_by.is_rank_sort() {
+        having_filters.push("badge > 0".to_owned());
+    }
+    let having_clause = having_clause(&having_filters);
     let offset = query.start.unwrap_or(1).max(1) - 1;
     let select_clause = if query.sort_by.dedup_free() {
         matches_expr.to_owned()
     } else {
         query.sort_by.get_select_clause()
     };
+    let sort_direction = query.sort_direction;
     let (badge_clause, badge_progress_clause) = query.sort_by.badge_columns().map_or_else(
         || ("NULL".to_owned(), "NULL".to_owned()),
         |c| (c.badge, c.badge_progress),
     );
-    let sort_direction = query.sort_direction;
     let limit = query.limit.unwrap_or_default();
     let first_rank = offset + 1;
 
@@ -568,6 +570,27 @@ mod tests {
              ifNull(player_rank_initial_display_rank, 0) > 0), 0)) as value"
         ));
         assert!(sql.contains("IS NULL, 0,"));
+    }
+
+    #[test]
+    fn rank_sorts_do_not_list_unranked_players() {
+        for sort_by in [ScoreboardQuerySortBy::Rank, ScoreboardQuerySortBy::PeakRank] {
+            for sort_direction in [SortDirectionDesc::Asc, SortDirectionDesc::Desc] {
+                let sql = build_query(&PlayerScoreboardQuery {
+                    sort_by,
+                    sort_direction,
+                    ..Default::default()
+                });
+                assert_valid_sql(&sql);
+                assert!(sql.contains("HAVING badge > 0"));
+                assert!(sql.contains(&format!("ORDER BY value {sort_direction}")));
+            }
+        }
+        let kills = build_query(&PlayerScoreboardQuery {
+            sort_by: ScoreboardQuerySortBy::Kills,
+            ..Default::default()
+        });
+        assert!(!kills.contains("badge > 0"));
     }
 
     #[test]
