@@ -43,7 +43,7 @@ function DistributionTooltip({
 function distributionSummary(label: string, values: HashMapValue, fmt: (v: number) => string): string {
   return (
     `${label} distribution: average ${fmt(values.avg)}, median ${fmt(values.percentile50)}, ` +
-    `middle half of players (P25 to P75) ${fmt(values.percentile25)} to ${fmt(values.percentile75)}.`
+    `middle half of player matches (P25 to P75) ${fmt(values.percentile25)} to ${fmt(values.percentile75)}.`
   );
 }
 

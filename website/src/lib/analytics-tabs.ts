@@ -240,7 +240,7 @@ export const ANALYTICS_VIEWS: { [S in AnalyticsSection]: Record<AnalyticsTab<S>,
     "stats-metrics": {
       title: "Deadlock Player Stat Distributions",
       heading: "Deadlock Player Stat Distributions",
-      summary: "Where a stat line sits among all players.",
+      summary: "Where one match's stat line sits among all player matches.",
       description: "Percentile distributions of Deadlock player stats: see where your kills, souls and damage rank.",
     },
     compare: {
