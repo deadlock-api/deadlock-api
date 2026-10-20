@@ -20,7 +20,7 @@ pub(super) const MIN_LIMIT: usize = 128;
 const QUEUE_TIMEOUT: Duration = Duration::from_secs(3);
 /// At most this many waiters per slot; further queries are rejected right away.
 const MAX_WAITERS_PER_SLOT: usize = 4;
-/// A client without an API key may hold at most `1 / MAX_CLIENT_SHARE` of the slots. API keys
+/// A client without a valid API key may hold at most `1 / MAX_CLIENT_SHARE` of the slots. API keys
 /// are exempt: they are identified and have their own rate limits.
 const MAX_CLIENT_SHARE: usize = 2;
 
@@ -88,7 +88,7 @@ impl Default for ChAdmission {
 #[derive(Debug, Clone)]
 pub(crate) struct ChClient {
     pub(crate) id: Arc<str>,
-    /// Whether the client's share of the slots is capped (it is unless it has an API key).
+    /// Whether the client's share of the slots is capped (it is unless it has a valid API key).
     pub(crate) capped: bool,
 }
 

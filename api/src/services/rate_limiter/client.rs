@@ -188,7 +188,7 @@ impl RateLimitClient {
         key = "Uuid",
         in_impl = true
     )]
-    async fn is_api_key_valid(&self, api_key: Uuid) -> Result<bool, sqlx::Error> {
+    pub(crate) async fn is_api_key_valid(&self, api_key: Uuid) -> Result<bool, sqlx::Error> {
         let row = sqlx::query!(
             "SELECT COUNT(*) FROM api_keys WHERE key = $1 AND disabled IS false",
             api_key

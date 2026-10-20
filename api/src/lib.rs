@@ -177,7 +177,7 @@ pub async fn router(port: u16) -> Result<NormalizePath<Router>, StartupError> {
         // Add Middlewares
         .layer(from_fn_with_state(state.clone(), feature_flags))
         .layer(from_fn(reject_cache_busts))
-        .layer(from_fn(scope_ch_client))
+        .layer(from_fn_with_state(state.clone(), scope_ch_client))
         .layer(from_fn_with_state(state.clone(), track_requests))
         .layer(
             CacheControlMiddleware::new(Duration::from_secs(DEFAULT_CACHE_TIME))

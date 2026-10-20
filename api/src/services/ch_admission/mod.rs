@@ -18,7 +18,7 @@ use thiserror::Error;
 
 tokio::task_local! {
     /// The client (API key, IP or Cloudflare worker) the current request comes from, set by
-    /// [`crate::middleware::ch_client::scope_ch_client`]. Unless it has an API key, its share
+    /// [`crate::middleware::ch_client::scope_ch_client`]. Unless it has a valid API key, its share
     /// of the slots is capped, so one client cannot take all of them.
     pub(crate) static CH_CLIENT: ChClient;
 }
