@@ -80,7 +80,7 @@ pub(super) struct AbilityOrderStatsQuery {
     min_match_id: Option<u64>,
     /// Filter matches based on their ID.
     max_match_id: Option<u64>,
-    /// The minimum number of matches played for an ability order to be included in the response.
+    /// The minimum number of matches played for an ability order (on `/ability-order-tree`: an order prefix) to be included in the response.
     #[serde(default = "default_min_matches")]
     #[param(minimum = 1, default = 10)]
     min_matches: Option<u32>,
@@ -150,7 +150,26 @@ pub struct AnalyticsAbilityOrderStats {
     pub total_assists: u64,
 }
 
-fn build_query(query: &AbilityOrderStatsQuery) -> String {
+/// One node of the ability order tree: the players whose upgrade order starts with `abilities`.
+#[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
+pub struct AnalyticsAbilityOrderTreeNode {
+    /// The order prefix: one entry per ability point spent, unlocks included. Its parent node is the prefix one
+    /// entry shorter. See more: <https://api.deadlock-api.com/v1/assets/heroes>
+    pub abilities: Vec<u32>,
+    /// Average game time (in seconds) at which the last upgrade in `abilities` was bought.
+    pub avg_upgrade_time_s: f64,
+    pub wins: u64,
+    pub losses: u64,
+    pub matches: u64,
+    /// Distinct players, counted exactly.
+    players: u64,
+    pub total_kills: u64,
+    pub total_deaths: u64,
+    pub total_assists: u64,
+}
+
+/// The `WHERE` clause of both endpoints: the hero's matches and players that pass the filters.
+fn where_clause(query: &AbilityOrderStatsQuery) -> String {
     let info_filters = query.match_info();
     let game_mode_filter = GameMode::sql_filter(query.game_mode);
     let match_mode_filter = MatchMode::sql_filter(query.match_mode.as_deref());
@@ -181,7 +200,14 @@ fn build_query(query: &AbilityOrderStatsQuery) -> String {
         query.min_ability_upgrades,
         query.max_ability_upgrades,
     ));
-    let player_filters = join_filters(&player_filters);
+    format!(
+        "{match_mode_filter} AND {game_mode_filter} {info_filters} {}",
+        join_filters(&player_filters)
+    )
+}
+
+fn build_query(query: &AbilityOrderStatsQuery) -> String {
+    let where_clause = where_clause(query);
     format!(
         "
     SELECT
@@ -199,10 +225,7 @@ fn build_query(query: &AbilityOrderStatsQuery) -> String {
         sum(deaths) AS total_deaths,
         sum(assists) AS total_assists
     FROM match_player
-    WHERE {match_mode_filter}
-        AND {game_mode_filter}
-        {info_filters}
-        {player_filters}
+    WHERE {where_clause}
     GROUP BY abilities
     HAVING matches >= {}
     ORDER BY matches DESC
@@ -212,8 +235,85 @@ fn build_query(query: &AbilityOrderStatsQuery) -> String {
     )
 }
 
+/// Street brawl hands out ability points in blocks (6, 6, then 5 each); an upgrade costs 1, 2 then 5 points. The
+/// order within a block is the player's click order, not a choice, so each block is sorted by ability id. Yields the
+/// block index of each upgrade in `full_order`.
+const STREET_BRAWL_BLOCKS: &str = "arrayFold(
+    (acc, cost) -> if(acc.2 + cost >= if(acc.1 < 2, 6, 5),
+        (toUInt32(acc.1 + 1), toUInt32(0), arrayPushBack(acc.3, acc.1)),
+        (acc.1, toUInt32(acc.2 + cost), arrayPushBack(acc.3, acc.1))),
+    arrayMap(i -> [1, 2, 5][least(countEqual(arraySlice(full_order, 1, i - 1), full_order[i]), 2) + 1], arrayEnumerate(full_order)),
+    (toUInt32(0), toUInt32(0), CAST([], 'Array(UInt32)'))
+).3";
+
+/// Aggregates the players per order first (few distinct orders), then fans each order out into its prefixes, so
+/// `min_matches` applies per node instead of dropping every player whose full order is rare.
+fn build_tree_query(query: &AbilityOrderStatsQuery) -> String {
+    let where_clause = where_clause(query);
+    let (upgrade_order, upgrade_time_sums) = if query.game_mode == Some(GameMode::StreetBrawl) {
+        (
+            format!(
+                "arraySort((x, b, i) -> (b, x, i), full_order, {STREET_BRAWL_BLOCKS}, arrayEnumerate(full_order))"
+            ),
+            format!(
+                "arraySort((t, x, b, i) -> (b, x, i), time_sums, full_order, {STREET_BRAWL_BLOCKS}, arrayEnumerate(full_order))"
+            ),
+        )
+    } else {
+        ("full_order".to_owned(), "time_sums".to_owned())
+    };
+    format!(
+        "
+    SELECT
+        arraySlice(upgrade_order, 1, depth) AS abilities,
+        sum(upgrade_time_sums[depth]) / matches AS avg_upgrade_time_s,
+        sum(order_wins) AS wins,
+        sum(order_losses) AS losses,
+        wins + losses AS matches,
+        uniqExactMerge(order_players) AS players,
+        sum(order_kills) AS total_kills,
+        sum(order_deaths) AS total_deaths,
+        sum(order_assists) AS total_assists
+    FROM (
+        SELECT
+            {upgrade_order} AS upgrade_order,
+            {upgrade_time_sums} AS upgrade_time_sums,
+            order_wins, order_losses, order_players, order_kills, order_deaths, order_assists
+        FROM (
+            SELECT
+                abilities AS full_order,
+                sumForEach(arrayFilter(
+                    (t, x) -> dictHas('default.ability_items_dict', toUInt64(x)),
+                    items.game_time_s,
+                    items.item_id
+                )) AS time_sums,
+                countIf(won) AS order_wins,
+                countIf(not won) AS order_losses,
+                uniqExactState(account_id) AS order_players,
+                sum(kills) AS order_kills,
+                sum(deaths) AS order_deaths,
+                sum(assists) AS order_assists
+            FROM match_player
+            WHERE {where_clause}
+            GROUP BY full_order
+        )
+    )
+    ARRAY JOIN arrayEnumerate(upgrade_order) AS depth
+    GROUP BY abilities
+    HAVING matches >= {}
+    ORDER BY matches DESC
+    SETTINGS log_comment = 'ability_order_tree', apply_patch_parts = 0
+    ",
+        query.min_matches.unwrap_or_default()
+    )
+}
+
 cached_ch_query! {
     fn run_query(5_000, 3600) -> Vec<AnalyticsAbilityOrderStats>;
+}
+
+cached_ch_query! {
+    fn run_tree_query(1_000, 3600) -> Vec<AnalyticsAbilityOrderTreeNode>;
 }
 
 async fn get_ability_order_stats(
@@ -224,6 +324,23 @@ async fn get_ability_order_stats(
     let query_str = build_query(&query);
     debug!(?query_str);
     Ok(run_query(ch_client, &query_str).await?)
+}
+
+async fn validate_query(state: &AppState, query: &mut AbilityOrderStatsQuery) -> APIResult<()> {
+    reject_brawl_badge_filter(
+        query.game_mode,
+        query.min_average_badge,
+        query.max_average_badge,
+    )?;
+    #[expect(deprecated)]
+    filter_protected_accounts(state, &mut query.account_ids, query.account_id).await?;
+    if !state.assets_client.validate_hero_id(query.hero_id).await {
+        return Err(APIError::status_msg(
+            StatusCode::BAD_REQUEST,
+            format!("Invalid hero_id: {}", query.hero_id),
+        ));
+    }
+    Ok(())
 }
 
 #[utoipa::path(
@@ -254,22 +371,49 @@ pub(super) async fn ability_order_stats(
     Query(mut query): Query<AbilityOrderStatsQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
-    reject_brawl_badge_filter(
-        query.game_mode,
-        query.min_average_badge,
-        query.max_average_badge,
-    )?;
-    #[expect(deprecated)]
-    filter_protected_accounts(&state, &mut query.account_ids, query.account_id).await?;
-    if !state.assets_client.validate_hero_id(query.hero_id).await {
-        return Err(APIError::status_msg(
-            StatusCode::BAD_REQUEST,
-            format!("Invalid hero_id: {}", query.hero_id),
-        ));
-    }
+    validate_query(&state, &mut query).await?;
     get_ability_order_stats(&state.ch_client_ro, query)
         .await
         .map(Json)
+}
+
+#[utoipa::path(
+    get,
+    path = "/ability-order-tree",
+    params(AbilityOrderStatsQuery),
+    responses(
+        (status = OK, description = "Ability Order Tree", body = [AnalyticsAbilityOrderTreeNode]),
+        (status = BAD_REQUEST, description = "Provided parameters are invalid."),
+        (status = INTERNAL_SERVER_ERROR, description = "Failed to fetch the ability order tree")
+    ),
+    tags = ["Analytics"],
+    summary = "Ability Order Tree",
+    description = "
+Retrieves the ability upgrade orders of a hero as a tree: one node per order prefix, with the stats of every player
+whose order starts with it. `min_matches` applies to each node, so a node counts all its players even when their full
+orders are rare (which `/ability-order-stats`, grouping by full order, leaves out). A node's parent is always present.
+
+In `street_brawl`, ability points come in blocks, and the upgrades within one block are sorted by ability id.
+
+### Rate Limits:
+> The rate limits below are **shared across all analytics endpoints**.
+
+| Type | Limit |
+| ---- | ----- |
+| IP | 200req/min |
+| Key | 400req/min |
+| Global | 2000req/min |
+    "
+)]
+pub(super) async fn ability_order_tree(
+    Query(mut query): Query<AbilityOrderStatsQuery>,
+    State(state): State<AppState>,
+) -> APIResult<impl IntoResponse> {
+    validate_query(&state, &mut query).await?;
+    round_timestamps(&mut query.min_unix_timestamp, &mut query.max_unix_timestamp);
+    let query_str = build_tree_query(&query);
+    debug!(?query_str);
+    Ok(Json(run_tree_query(&state.ch_client_ro, &query_str).await?))
 }
 
 #[cfg(test)]
@@ -285,6 +429,11 @@ mod proptests {
         #[test]
         fn ability_order_stats_build_query_is_valid_sql(query: AbilityOrderStatsQuery) {
             assert_valid_sql(&build_query(&query));
+        }
+
+        #[test]
+        fn ability_order_tree_build_query_is_valid_sql(query: AbilityOrderStatsQuery) {
+            assert_valid_sql(&build_tree_query(&query));
         }
     }
 }
