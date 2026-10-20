@@ -1,19 +1,20 @@
 import { HeroSelector } from "~/components/domain/selectors/HeroSelector";
 import { Field } from "~/components/ui/field";
 import { Segmented, SegmentedItem } from "~/components/ui/segmented";
+import type { GameMode } from "~/lib/game-mode";
 
-import { HERO_COMB_SIZES, HERO_COMBS_TO_SHOW, useHeroCombFilters } from "./useHeroCombFilters";
+import { HERO_COMBS_TO_SHOW, useHeroCombFilters } from "./useHeroCombFilters";
 
 /** The combination table's own controls, for its toolbar: size, how many to show, heroes to include or leave out. */
-export function HeroCombFilters() {
-  const { combSize, setCombSize, combsToShow, setCombsToShow, heroSelections, setHeroSelections } =
-    useHeroCombFilters();
+export function HeroCombFilters({ gameMode }: { gameMode?: GameMode }) {
+  const { combSizes, combSize, setCombSize, combsToShow, setCombsToShow, heroSelections, setHeroSelections } =
+    useHeroCombFilters(gameMode);
 
   return (
     <>
       <Field label="Combo size" orientation="horizontal">
         <Segmented value={String(combSize)} onValueChange={(v) => void setCombSize(Number(v))} width="hug">
-          {HERO_COMB_SIZES.map((n) => (
+          {combSizes.map((n) => (
             <SegmentedItem key={n} value={String(n)}>
               {String(n)}
             </SegmentedItem>
