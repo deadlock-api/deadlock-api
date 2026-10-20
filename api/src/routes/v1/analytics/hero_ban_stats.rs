@@ -66,6 +66,9 @@ pub struct HeroBanStats {
     pub bucket: u32,
     /// The number of matches in which this hero was banned.
     pub bans: u64,
+    /// The number of matches with ban data in this bucket. A hero's ban rate is `bans / matches`; a ranked match has 3
+    /// bans and an unranked match 2, so the bans of all heroes do not divide into matches by a fixed count.
+    pub matches: u64,
 }
 
 fn build_query(query: &HeroBanStatsQuery) -> String {
@@ -74,12 +77,20 @@ fn build_query(query: &HeroBanStatsQuery) -> String {
     let bucket_expr = query.bucket.base_expr();
     format!(
         "
-    SELECT arrayJoin(banned_hero_ids) AS hero_id,
-           {bucket_expr} AS bucket,
-           uniq(match_id) AS bans
-    FROM match_player
-    WHERE notEmpty(banned_hero_ids)
-      AND {match_mode_filter} AND game_mode = 1 {info_filters}
+    SELECT arrayJoin(banned) AS hero_id,
+           bucket,
+           count() AS bans,
+           any(matches) AS matches
+    FROM (
+        SELECT banned, bucket, count() OVER (PARTITION BY bucket) AS matches
+        FROM (
+            SELECT any(banned_hero_ids) AS banned, any({bucket_expr}) AS bucket
+            FROM match_player
+            WHERE notEmpty(banned_hero_ids)
+              AND {match_mode_filter} AND game_mode = 1 {info_filters}
+            GROUP BY match_id
+        )
+    )
     GROUP BY hero_id, bucket
     ORDER BY hero_id, bucket
     SETTINGS log_comment = 'hero_ban_stats', apply_patch_parts = 0
@@ -115,7 +126,8 @@ async fn get_hero_ban_stats(
     description = "
 Retrieves ban statistics for each hero based on historical match data from demo analysis.
 
-Only matches with successfully extracted ban data are included. Matches where ban extraction failed (empty `banned_hero_ids`) are excluded entirely.
+Only matches with successfully extracted ban data are included. `matches` counts them per bucket, so a hero's ban rate
+is `bans / matches`. Matches where ban extraction failed (empty `banned_hero_ids`) are excluded entirely.
 
 Results are cached for **6 hours** based on the combination of query parameters provided.
 
