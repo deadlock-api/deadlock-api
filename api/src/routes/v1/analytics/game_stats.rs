@@ -5,12 +5,11 @@ use axum_extra::extract::Query;
 use clickhouse::Row;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use strum::Display;
 use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
 
 use super::common_filters::{
-    PlayerFilters, filter_protected_accounts, join_filters, round_timestamps,
+    BucketQuery, PlayerFilters, filter_protected_accounts, join_filters, round_timestamps,
 };
 use crate::context::AppState;
 use crate::error::APIResult;
@@ -20,39 +19,6 @@ use crate::utils::parse::{
     default_last_month_timestamp,
 };
 use crate::utils::sql::{cached_ch_query, impl_match_info};
-
-#[derive(Debug, Clone, Copy, Deserialize, ToSchema, Default, Display, PartialEq, Eq, Hash)]
-#[cfg_attr(test, derive(proptest_derive::Arbitrary))]
-#[serde(rename_all = "snake_case")]
-#[strum(serialize_all = "snake_case")]
-pub enum BucketQuery {
-    /// No Bucketing
-    #[default]
-    NoBucket,
-    /// Bucket Game Stats By Max Average Badge Level (tier = first digits, subtier = last digit) of both teams involved. See more: <https://api.deadlock-api.com/v1/assets/ranks>
-    AvgBadge,
-    /// Bucket Game Stats By Start Time (Hour)
-    StartTimeHour,
-    /// Bucket Game Stats By Start Time (Day)
-    StartTimeDay,
-    /// Bucket Game Stats By Start Time (Week)
-    StartTimeWeek,
-    /// Bucket Game Stats By Start Time (Month)
-    StartTimeMonth,
-}
-
-impl BucketQuery {
-    fn get_select_clause(self) -> &'static str {
-        match self {
-            Self::NoBucket => "toUInt32(0)",
-            Self::AvgBadge => "toUInt32(assumeNotNull(coalesce(average_badge, 0)))",
-            Self::StartTimeHour => "toStartOfHour(start_time)",
-            Self::StartTimeDay => "toStartOfDay(start_time)",
-            Self::StartTimeWeek => "toDateTime(toStartOfWeek(start_time))",
-            Self::StartTimeMonth => "toDateTime(toStartOfMonth(start_time))",
-        }
-    }
-}
 
 #[derive(Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash, Default)]
 #[cfg_attr(test, derive(proptest_derive::Arbitrary))]
@@ -252,7 +218,7 @@ fn build_query(query: &GameStatsQuery) -> String {
         }
         .build(),
     );
-    let bucket = query.bucket.get_select_clause();
+    let bucket = query.bucket.base_expr();
     let game_mode_filter = GameMode::sql_filter(query.game_mode);
     let match_mode_filter = MatchMode::sql_filter(query.match_mode.as_deref());
     format!(

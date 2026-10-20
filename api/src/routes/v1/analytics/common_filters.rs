@@ -4,6 +4,9 @@ use crate::utils::parse::MIN_DEMO_PLAYER_TIMESTAMP;
 use crate::utils::sql::{MAX_FILTERING_AVERAGE_BADGE, MIN_FILTERING_AVERAGE_BADGE};
 pub(super) use crate::utils::sql::{MatchInfoFilters, id_list, join_filters};
 use itertools::Itertools;
+use serde::Deserialize;
+use strum::Display;
+use utoipa::ToSchema;
 
 /// Bit of `items.upgrade_info` marking a corrupted item (build 6712+): the Broker swaps
 /// a T3/T4 upgrade for a corrupted version that keeps the normal item's `item_id`. Only
@@ -56,6 +59,41 @@ pub(super) const ENHANCED_ITEMS_MIN_UNIX_TIMESTAMP: i64 = 1_775_685_600;
 /// Lower bound on the match id of any match with a known enhanced flag: the first id of
 /// partition 74 (see [`CORRUPTED_ITEMS_MIN_MATCH_ID`]).
 pub(super) const ENHANCED_ITEMS_MIN_MATCH_ID: u64 = 74_000_000;
+
+/// How the match-level analytics group their rows: by the match's start time or badge.
+#[derive(Debug, Clone, Copy, Deserialize, ToSchema, Default, Display, PartialEq, Eq, Hash)]
+#[cfg_attr(test, derive(proptest_derive::Arbitrary))]
+#[serde(rename_all = "snake_case")]
+#[strum(serialize_all = "snake_case")]
+pub(crate) enum BucketQuery {
+    /// No Bucketing
+    #[default]
+    NoBucket,
+    /// Bucket By Max Average Badge Level (tier = first digits, subtier = last digit) of both teams involved. See more: <https://api.deadlock-api.com/v1/assets/ranks>
+    AvgBadge,
+    /// Bucket By Start Time (Hour)
+    StartTimeHour,
+    /// Bucket By Start Time (Day)
+    StartTimeDay,
+    /// Bucket By Start Time (Week)
+    StartTimeWeek,
+    /// Bucket By Start Time (Month)
+    StartTimeMonth,
+}
+
+impl BucketQuery {
+    /// The bucket expression against `match_player` (or a table with its column names).
+    pub(crate) fn base_expr(self) -> &'static str {
+        match self {
+            Self::NoBucket => "toUInt32(0)",
+            Self::AvgBadge => "toUInt32(assumeNotNull(coalesce(average_badge, 0)))",
+            Self::StartTimeHour => "toStartOfHour(start_time)",
+            Self::StartTimeDay => "toStartOfDay(start_time)",
+            Self::StartTimeWeek => "toDateTime(toStartOfWeek(start_time))",
+            Self::StartTimeMonth => "toDateTime(toStartOfMonth(start_time))",
+        }
+    }
+}
 
 /// Common player-level filters shared across analytics queries.
 /// Returns a `Vec<String>` so callers can extend with file-specific filters

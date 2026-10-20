@@ -5,36 +5,15 @@ use axum_extra::extract::Query;
 use clickhouse::Row;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use strum::Display;
 use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
 
-use super::common_filters::round_demo_timestamps;
+use super::common_filters::{BucketQuery, round_demo_timestamps};
 use crate::context::AppState;
 use crate::error::APIResult;
 use crate::routes::v1::matches::types::MatchMode;
 use crate::utils::parse::{comma_separated_deserialize_option, default_last_month_timestamp};
 use crate::utils::sql::{cached_ch_query, impl_match_info};
-
-#[derive(Debug, Clone, Copy, Deserialize, ToSchema, Default, Display, PartialEq, Eq, Hash)]
-#[cfg_attr(test, derive(proptest_derive::Arbitrary))]
-#[serde(rename_all = "snake_case")]
-#[strum(serialize_all = "snake_case")]
-pub enum BucketQuery {
-    /// No Bucketing
-    #[default]
-    NoBucket,
-    /// Bucket Hero Swap Stats By Max Average Badge Level (tier = first digits, subtier = last digit) of both teams involved. See more: <https://api.deadlock-api.com/v1/assets/ranks>
-    AvgBadge,
-    /// Bucket Hero Swap Stats By Start Time (Hour)
-    StartTimeHour,
-    /// Bucket Hero Swap Stats By Start Time (Day)
-    StartTimeDay,
-    /// Bucket Hero Swap Stats By Start Time (Week)
-    StartTimeWeek,
-    /// Bucket Hero Swap Stats By Start Time (Month)
-    StartTimeMonth,
-}
 
 #[derive(Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash, Default)]
 #[cfg_attr(test, derive(proptest_derive::Arbitrary))]
@@ -100,14 +79,7 @@ pub struct HeroSwapStats {
 fn build_query(query: &HeroSwapStatsQuery) -> String {
     let info_filters = query.match_info().build();
     let match_mode_filter = MatchMode::sql_filter(query.match_mode.as_deref());
-    let bucket_expr = match query.bucket {
-        BucketQuery::NoBucket => "toUInt32(0)",
-        BucketQuery::StartTimeHour => "toStartOfHour(start_time)",
-        BucketQuery::StartTimeDay => "toStartOfDay(start_time)",
-        BucketQuery::StartTimeWeek => "toDateTime(toStartOfWeek(start_time))",
-        BucketQuery::StartTimeMonth => "toDateTime(toStartOfMonth(start_time))",
-        BucketQuery::AvgBadge => "toUInt32(assumeNotNull(coalesce(average_badge, 0)))",
-    };
+    let bucket_expr = query.bucket.base_expr();
     // A pre-game hero of 0 (or NULL) is unknown: the demo did not carry it, for whole matches at
     // a time. Those players count in neither the numerator nor the denominator. The filter is in
     // PREWHERE because only ~1.5% of rows have one; `LIMIT 1 BY` instead of FINAL then dedups the

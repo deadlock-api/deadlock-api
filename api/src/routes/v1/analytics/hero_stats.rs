@@ -5,13 +5,12 @@ use axum_extra::extract::Query;
 use clickhouse::Row;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use strum::Display;
 use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
 
 use super::common_filters::{
-    PlayerFilters, filter_protected_accounts, is_non_empty, join_filters, range_filters,
-    rollup_oldest_servable, round_timestamps,
+    BucketQuery, PlayerFilters, filter_protected_accounts, is_non_empty, join_filters,
+    range_filters, rollup_oldest_servable, round_timestamps,
 };
 use super::rollup_window::{Coverage, DaySplit, EdgeRows, Rollup, RollupFilters};
 use crate::context::AppState;
@@ -23,38 +22,7 @@ use crate::utils::parse::{
 };
 use crate::utils::sql::{cached_ch_query, impl_match_info};
 
-#[derive(Debug, Clone, Copy, Deserialize, ToSchema, Default, Display, PartialEq, Eq, Hash)]
-#[cfg_attr(test, derive(proptest_derive::Arbitrary))]
-#[serde(rename_all = "snake_case")]
-#[strum(serialize_all = "snake_case")]
-pub enum BucketQuery {
-    /// No Bucketing
-    #[default]
-    NoBucket,
-    /// Bucket Hero Stats By Max Average Badge Level (tier = first digits, subtier = last digit) of both teams involved. See more: <https://api.deadlock-api.com/v1/assets/ranks>
-    AvgBadge,
-    /// Bucket Hero Stats By Start Time (Hour)
-    StartTimeHour,
-    /// Bucket Hero Stats By Start Time (Day)
-    StartTimeDay,
-    /// Bucket Hero Stats By Start Time (Week)
-    StartTimeWeek,
-    /// Bucket Hero Stats By Start Time (Month)
-    StartTimeMonth,
-}
-
 impl BucketQuery {
-    fn get_select_clause(self) -> &'static str {
-        match self {
-            Self::NoBucket => "toUInt32(0)",
-            Self::AvgBadge => "toUInt32(assumeNotNull(coalesce(average_badge, 0)))",
-            Self::StartTimeHour => "toStartOfHour(start_time)",
-            Self::StartTimeDay => "toStartOfDay(start_time)",
-            Self::StartTimeWeek => "toDateTime(toStartOfWeek(start_time))",
-            Self::StartTimeMonth => "toDateTime(toStartOfMonth(start_time))",
-        }
-    }
-
     /// Bucket expression against the pre-aggregated `hero_stats_agg` view, or `None`
     /// for buckets it cannot serve. The view is grained on `day` (a `Date`), so
     /// `StartTimeHour` needs sub-day resolution it does not keep and runs against the
@@ -446,7 +414,7 @@ fn build_query(query: &HeroStatsQuery) -> String {
         range_filters("uniq(match_id)", min_hero_matches, max_hero_matches).join(" AND ");
     let player_hero_total_filters =
         range_filters("count()", min_hero_matches_total, max_hero_matches_total).join(" AND ");
-    let bucket = query.bucket.get_select_clause();
+    let bucket = query.bucket.base_expr();
     let game_mode_filter = GameMode::sql_filter(query.game_mode);
     let match_mode_filter = MatchMode::sql_filter(query.match_mode.as_deref());
     let match_filters = format!("AND {match_mode_filter} AND {game_mode_filter} {info_filters}");
