@@ -87,6 +87,7 @@ function ObjectiveMarker({
   level,
   plotLeft,
   plotRight,
+  sides,
   onOpenChange,
 }: {
   cx?: number;
@@ -99,6 +100,7 @@ function ObjectiveMarker({
   /** The plot's horizontal extent; a mark at the match's start or end is kept whole inside it. */
   plotLeft: number;
   plotRight: number;
+  sides: MatchSides;
 }) {
   const { src, size } = objectiveIcon(event);
   const color = event.own ? CHART_COLOR.positive : CHART_COLOR.negative;
@@ -113,7 +115,7 @@ function ObjectiveMarker({
             title={OBJECTIVE_LABELS[event.kind]}
             subtitle={
               <span className={event.own ? TONE_TEXT.positive : TONE_TEXT.negative}>
-                {describeObjectiveOutcome(event)}
+                {describeObjectiveOutcome(event, sides)}
               </span>
             }
           />
@@ -478,6 +480,7 @@ export function MatchTimelineChart({
                   level={objectiveLevels[index]}
                   plotLeft={LEAD_AXIS_PX}
                   plotRight={width - PLOT_END_PX}
+                  sides={sides}
                   onOpenChange={markOpenChange}
                 />
               )}

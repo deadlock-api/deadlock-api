@@ -12,6 +12,7 @@ import { Separator } from "~/components/ui/separator";
 import { TONE_TEXT } from "~/lib/tone";
 import { formatMatchDuration } from "~/lib/tracker/compute";
 import { describeObjectiveOutcome, OBJECTIVE_LABELS, type ObjectiveEvent } from "~/lib/tracker/objectives";
+import type { MatchSides } from "~/lib/tracker/teams";
 import { cn } from "~/lib/utils";
 
 import type { TimelineEvent } from "./MatchTimelineChart";
@@ -21,10 +22,13 @@ export function MatchEventList({
   combat,
   objectives,
   playerName,
+  sides,
 }: {
   combat: TimelineEvent[];
   objectives: ObjectiveEvent[];
   playerName: string;
+  /** How the objective outcomes name the two sides. */
+  sides: MatchSides;
 }) {
   const [filter, setFilter] = useState("all");
   const [latestFirst, setLatestFirst] = useState(false);
@@ -34,7 +38,7 @@ export function MatchEventList({
       time: event.time,
       kind: "objective" as const,
       title: OBJECTIVE_LABELS[event.kind],
-      description: describeObjectiveOutcome(event),
+      description: describeObjectiveOutcome(event, sides),
       side: event.own ? ("gain" as const) : ("loss" as const),
       hero: null,
     })),

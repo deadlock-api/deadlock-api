@@ -1,3 +1,4 @@
+import type { MatchSides } from "~/lib/tracker/teams";
 import type { TrackerMatchMetadata, TrackerObjectiveKind } from "~/queries/tracker-queries";
 
 export type ObjectiveEventKind = TrackerObjectiveKind | "midBoss";
@@ -22,7 +23,10 @@ export const OBJECTIVE_LABELS: Record<ObjectiveEventKind, string> = {
   midBoss: "Mid Boss",
 };
 
-export function describeObjectiveOutcome(event: ObjectiveEvent): string {
+/** A match seen on its own has no "your team": its events name the team that took the objective. */
+export function describeObjectiveOutcome(event: ObjectiveEvent, sides: MatchSides): string {
+  const verb = event.kind === "midBoss" ? "Claimed" : "Destroyed";
+  if (sides.neutral) return `${verb} by ${event.own ? sides.own : sides.enemy}`;
   if (event.kind === "midBoss") return event.own ? "Claimed by your team" : "Claimed by the enemy";
   return event.own ? "Destroyed by your team" : "Lost to the enemy";
 }
