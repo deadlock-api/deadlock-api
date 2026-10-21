@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { EllipsisVertical, Hourglass, Link, Plus, Route, TriangleAlert } from "lucide-react";
 import { parseAsArrayOf, parseAsInteger, parseAsString, parseAsStringLiteral, throttle, useQueryState } from "nuqs";
-import { memo, startTransition, useMemo, useRef, useState } from "react";
+import { memo, startTransition, useEffect, useMemo, useRef, useState } from "react";
 
 import { HeroName } from "~/components/domain/assets/HeroName";
 import { ITEM_SLOT_COLOR } from "~/components/domain/assets/item-slot-color";
@@ -509,8 +509,30 @@ function ItemPlan({
   );
 }
 
-export function BuildFlowExplorer({
+/**
+ * The Build Designer, once a hero is picked: every answer it reads is the hero's, so without one the page offers only
+ * the hero chooser and asks the API nothing.
+ */
+export function BuildFlowExplorer({ heroId, ...props }: BuildFlowExplorerProps) {
+  const [, setHero] = useQueryState("hero", parseAsInteger);
+  // Set by a pick from the chooser: the designer then focuses its title once loaded, as the chooser's buttons are gone.
+  const [picked, setPicked] = useState(false);
+  if (heroId == null) {
+    return (
+      <BuildHeroChooser
+        onPick={(next) => {
+          setPicked(true);
+          startTransition(() => void setHero(next, AT_ONCE));
+        }}
+      />
+    );
+  }
+  return <BuildDesigner heroId={heroId} focusTitle={picked} {...props} />;
+}
+
+function BuildDesigner({
   heroId,
+  focusTitle,
   minRankId,
   maxRankId,
   minDate,
@@ -518,7 +540,7 @@ export function BuildFlowExplorer({
   minMatches,
   gameMode,
   matchMode,
-}: BuildFlowExplorerProps) {
+}: BuildFlowExplorerProps & { heroId: number; focusTitle: boolean }) {
   // View controls persisted in the URL (shareable), prefixed `flow_` to avoid clashing with the page's other filters.
   // Items each stage lists; the rest are a search away in its picker.
   const perColumn = PER_STAGE;
@@ -549,7 +571,7 @@ export function BuildFlowExplorer({
   const [storedSells, setSells] = useQueryState("build_sell", parseAsArrayOf(parseAsString).withDefault([]));
   // The page's hero filter, set when a saved build of another hero is opened.
   const [, setHero] = useQueryState("hero", parseAsInteger);
-  const { hero } = useHeroById(heroId ?? -1);
+  const { hero } = useHeroById(heroId);
   const [storedFlex, setFlex] = useQueryState(
     "build_flex",
     parseAsArrayOf(parseAsInteger).withDefault(DEFAULT_FLEX_MINUTES),
@@ -581,9 +603,9 @@ export function BuildFlowExplorer({
     [storedPath, columnCount],
   );
   const pathSet = useMemo(() => new Set(path), [path]);
-  // A press that takes its own control off the page (a pick leaves its list, a move re-keys the item, the hero chooser
-  // goes once a hero is set) hands keyboard focus on to the control that takes its place.
-  const { ref: focusRef, focusAfterChange } = useFocusAfterChange(`${heroId ?? ""}|${path.join()}`);
+  // A press that takes its own control off the page (a pick leaves its list, a move re-keys the item) hands keyboard
+  // focus on to the control that takes its place.
+  const { ref: focusRef, focusAfterChange } = useFocusAfterChange(`${heroId}|${path.join()}`);
   // A change of the build re-renders every stage in a transition, so the press paints first (312 ms on a 4x-throttled
   // phone before). The URL update is throttled rather than debounced, which would hold the value outside the
   // transition (see ItemsPage).
@@ -638,7 +660,7 @@ export function BuildFlowExplorer({
   // The build flow answer for a build path, with the page's filters.
   const flowQuery = (keys: string[]) =>
     itemFlowQueryOptions({
-      heroIds: heroId != null ? String(heroId) : undefined,
+      heroIds: String(heroId),
       gameMode,
       matchMode,
       minAverageBadge: minRankId,
@@ -741,7 +763,7 @@ export function BuildFlowExplorer({
   };
   const { data: itemStats } = useQuery(
     itemStatsQueryOptions({
-      heroIds: heroId != null ? String(heroId) : undefined,
+      heroIds: String(heroId),
       gameMode,
       matchMode,
       minAverageBadge: minRankId,
@@ -838,7 +860,7 @@ export function BuildFlowExplorer({
     path: skillPath,
     slotAbilities,
     orderQuery: skillQuery,
-  } = useHeroSkillPath(heroId ?? 0, skillRequest, heroId != null && !isStreetBrawl, true);
+  } = useHeroSkillPath(heroId, skillRequest, !isStreetBrawl, true);
   // The build's skill order: the reader's (`build_skills`, abilities of this hero only) or the most common one.
   const commonSkills = useMemo(() => skillPath?.steps.map((step) => step.abilityId) ?? [], [skillPath]);
   const skillOrder = useMemo(
@@ -848,6 +870,15 @@ export function BuildFlowExplorer({
         : commonSkills,
     [storedSkills, slotAbilities, commonSkills],
   );
+
+  // After a pick from the hero chooser, focus goes to the title once, when the designer has loaded and shows it.
+  const loaded = data != null;
+  const titleFocused = useRef(false);
+  useEffect(() => {
+    if (!focusTitle || !loaded || titleFocused.current) return;
+    titleFocused.current = true;
+    focusRef.current?.querySelector<HTMLElement>("[data-build-title]")?.focus();
+  }, [focusTitle, loaded, focusRef]);
 
   // Dim the stages only while another build's answer loads; a refresh of the shown one keeps them as they are.
   const switching = isFetching && isPlaceholderData;
@@ -1070,21 +1101,12 @@ export function BuildFlowExplorer({
 
   return (
     <Stack gap={4} ref={focusRef}>
-      {heroId == null && (
-        <BuildHeroChooser
-          onPick={(next) => {
-            focusAfterChange(["[data-build-title]"]);
-            startTransition(() => void setHero(next, AT_ONCE));
-          }}
-        />
-      )}
       <Panel>
-        {/* Named for its hero, so a build over every hero's games does not pass for one hero's. Focus lands on it once
-            the hero chooser above gives way. */}
+        {/* Named for its hero. Focus lands on it once the hero chooser gives way. */}
         <PanelHeader
           title={
             <span tabIndex={-1} data-build-title="">
-              {heroId != null ? <>Your {<HeroName heroId={heroId} />} build</> : "Your build · all heroes"}
+              Your {<HeroName heroId={heroId} />} build
             </span>
           }
           icon={Route}
@@ -1685,20 +1707,18 @@ export function BuildFlowExplorer({
           {!isStreetBrawl && (
             // Under the chart, side by side where there is room; beside it, one over the other.
             <div className="flex min-w-0 flex-col gap-4 @4xl:grid @4xl:grid-cols-2 @7xl:flex">
-              {heroId != null && (
-                // The build's skill order, starting from the most common one of its players.
-                <BuildSkillOrder
-                  heroId={heroId}
-                  slotAbilities={slotAbilities}
-                  order={skillOrder}
-                  common={skillPath?.steps ?? []}
-                  scope={path.length > 0 ? "most common with these items" : "most common"}
-                  commonStats={skillPath ? { winRate: skillPath.winRate, matches: skillPath.matches } : null}
-                  request={skillRequest}
-                  loading={skillQuery.isPending}
-                  onValueChange={(next) => startTransition(() => void setSkills(next, AT_ONCE))}
-                />
-              )}
+              {/* The build's skill order, starting from the most common one of its players. */}
+              <BuildSkillOrder
+                heroId={heroId}
+                slotAbilities={slotAbilities}
+                order={skillOrder}
+                common={skillPath?.steps ?? []}
+                scope={path.length > 0 ? "most common with these items" : "most common"}
+                commonStats={skillPath ? { winRate: skillPath.winRate, matches: skillPath.matches } : null}
+                request={skillRequest}
+                loading={skillQuery.isPending}
+                onValueChange={(next) => startTransition(() => void setSkills(next, AT_ONCE))}
+              />
               {economyItems.length > 0 && <BuildPurchases economy={economy} className="flex-1 only:col-span-2" />}
             </div>
           )}

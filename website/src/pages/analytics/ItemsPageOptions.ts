@@ -80,11 +80,13 @@ export const itemsPageOptions = {
     // the view shows its own loading state instead of the navigation waiting on the API.
     const isServer = typeof window === "undefined";
 
+    // Without a hero the designer shows only its hero chooser, which asks the API nothing.
+    if (tab === "build-flow" && deps.heroId === null) return { leader: null, coverage };
     if (tab === "build-flow") {
       const flowSeed = prefetchSeed(
         queryClient,
         flow.itemFlowQueryOptions({
-          heroIds: deps.heroId !== null ? String(deps.heroId) : undefined,
+          heroIds: String(deps.heroId),
           gameMode: common.gameMode,
           matchMode: common.matchMode,
           minAverageBadge: common.minAverageBadge,
@@ -101,7 +103,7 @@ export const itemsPageOptions = {
       // The designer's budgets and souls panel read the hero's item sales and soul curve; both answers are small, so
       // the page carries them instead of drawing skeletons until the browser asks. The keys match the designer's.
       const economy = {
-        heroIds: deps.heroId !== null ? String(deps.heroId) : undefined,
+        heroIds: String(deps.heroId),
         gameMode: common.gameMode,
         matchMode: common.matchMode,
         minAverageBadge: common.minAverageBadge,
