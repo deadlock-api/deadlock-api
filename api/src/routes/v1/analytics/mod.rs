@@ -63,6 +63,7 @@ pub(super) fn router(state: &AppState) -> OpenApiRouter<AppState> {
         OpenApiRouter::new()
             .routes(routes!(ability_order_stats::ability_order_stats))
             .routes(routes!(ability_order_stats::ability_order_tree))
+            .routes(routes!(ability_order_stats::ability_max_first_stats))
             .routes(routes!(player_stats_metrics::player_stats_metrics))
             .routes(routes!(kill_death_stats::kill_death_stats))
             .routes(routes!(hero_stats::hero_stats))

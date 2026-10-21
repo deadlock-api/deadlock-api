@@ -80,7 +80,7 @@ pub(super) struct AbilityOrderStatsQuery {
     min_match_id: Option<u64>,
     /// Filter matches based on their ID.
     max_match_id: Option<u64>,
-    /// The minimum number of matches played for an ability order (on `/ability-order-tree`: an order prefix) to be included in the response.
+    /// The minimum number of matches played for an ability order (on `/ability-order-tree`: an order prefix, on `/ability-max-first-stats`: an ability) to be included in the response.
     #[serde(default = "default_min_matches")]
     #[param(minimum = 1, default = 10)]
     min_matches: Option<u32>,
@@ -168,7 +168,20 @@ pub struct AnalyticsAbilityOrderTreeNode {
     pub total_assists: u64,
 }
 
-/// The `WHERE` clause of both endpoints: the hero's matches and players that pass the filters.
+/// The players who maxed one ability first, or (`ability_id` null) none.
+#[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
+pub struct AnalyticsAbilityMaxFirstStats {
+    /// The ability these players maxed first (unlocked and upgraded three times before any other), null for the
+    /// players who maxed none. See more: <https://api.deadlock-api.com/v1/assets/heroes>
+    pub ability_id: Option<u32>,
+    pub wins: u64,
+    pub losses: u64,
+    pub matches: u64,
+    /// Distinct players, counted exactly.
+    players: u64,
+}
+
+/// The `WHERE` clause of all three endpoints: the hero's matches and players that pass the filters.
 fn where_clause(query: &AbilityOrderStatsQuery) -> String {
     let info_filters = query.match_info();
     let game_mode_filter = GameMode::sql_filter(query.game_mode);
@@ -246,6 +259,17 @@ const STREET_BRAWL_BLOCKS: &str = "arrayFold(
     (toUInt32(0), toUInt32(0), CAST([], 'Array(UInt32)'))
 ).3";
 
+/// The player's upgrade order `full_order`, with street brawl's blocks sorted.
+fn upgrade_order(query: &AbilityOrderStatsQuery) -> String {
+    if query.game_mode == Some(GameMode::StreetBrawl) {
+        format!(
+            "arraySort((x, b, i) -> (b, x, i), full_order, {STREET_BRAWL_BLOCKS}, arrayEnumerate(full_order))"
+        )
+    } else {
+        "full_order".to_owned()
+    }
+}
+
 /// Aggregates the players per order first (few distinct orders), then fans each order out into its prefixes, so
 /// `min_matches` applies per node instead of dropping every player whose full order is rare.
 ///
@@ -253,17 +277,13 @@ const STREET_BRAWL_BLOCKS: &str = "arrayFold(
 /// rows (mostly empty orders; 34 non-empty ones this season), so the upgrade times are resized to the order's length.
 fn build_tree_query(query: &AbilityOrderStatsQuery) -> String {
     let where_clause = where_clause(query);
-    let (upgrade_order, upgrade_time_sums) = if query.game_mode == Some(GameMode::StreetBrawl) {
-        (
-            format!(
-                "arraySort((x, b, i) -> (b, x, i), full_order, {STREET_BRAWL_BLOCKS}, arrayEnumerate(full_order))"
-            ),
-            format!(
-                "arraySort((t, x, b, i) -> (b, x, i), time_sums, full_order, {STREET_BRAWL_BLOCKS}, arrayEnumerate(full_order))"
-            ),
+    let upgrade_order = upgrade_order(query);
+    let upgrade_time_sums = if query.game_mode == Some(GameMode::StreetBrawl) {
+        format!(
+            "arraySort((t, x, b, i) -> (b, x, i), time_sums, full_order, {STREET_BRAWL_BLOCKS}, arrayEnumerate(full_order))"
         )
     } else {
-        ("full_order".to_owned(), "time_sums".to_owned())
+        "time_sums".to_owned()
     };
     format!(
         "
@@ -311,8 +331,56 @@ fn build_tree_query(query: &AbilityOrderStatsQuery) -> String {
     )
 }
 
+/// Aggregates the players per order first, then finds the ability each order maxes first: the first one whose upgrade
+/// is its fourth (unlock and three upgrades). Every player counts, in one row: `min_matches` never drops the players
+/// who maxed none.
+fn build_max_first_query(query: &AbilityOrderStatsQuery) -> String {
+    let where_clause = where_clause(query);
+    let upgrade_order = upgrade_order(query);
+    format!(
+        "
+    SELECT
+        nullIf(upgrade_order[arrayFirstIndex(
+            i -> countEqual(arraySlice(upgrade_order, 1, i), upgrade_order[i]) = {MAXED_UPGRADES},
+            arrayEnumerate(upgrade_order)
+        )], 0) AS ability_id,
+        sum(order_wins) AS wins,
+        sum(order_losses) AS losses,
+        wins + losses AS matches,
+        uniqExactMerge(order_players) AS players
+    FROM (
+        SELECT
+            {upgrade_order} AS upgrade_order,
+            order_wins, order_losses, order_players
+        FROM (
+            SELECT
+                abilities AS full_order,
+                countIf(won) AS order_wins,
+                countIf(not won) AS order_losses,
+                uniqExactState(account_id) AS order_players
+            FROM match_player
+            WHERE {where_clause}
+            GROUP BY full_order
+        )
+    )
+    GROUP BY ability_id
+    HAVING matches >= {} OR ability_id IS NULL
+    ORDER BY matches DESC
+    SETTINGS log_comment = 'ability_max_first_stats', apply_patch_parts = 0
+    ",
+        query.min_matches.unwrap_or_default()
+    )
+}
+
+/// An ability is maxed by its unlock and three upgrades.
+const MAXED_UPGRADES: u32 = 4;
+
 cached_ch_query! {
     fn run_query(5_000, 3600) -> Vec<AnalyticsAbilityOrderStats>;
+}
+
+cached_ch_query! {
+    fn run_max_first_query(1_000, 3600) -> Vec<AnalyticsAbilityMaxFirstStats>;
 }
 
 cached_ch_query! {
@@ -419,6 +487,48 @@ pub(super) async fn ability_order_tree(
     Ok(Json(run_tree_query(&state.ch_client_ro, &query_str).await?))
 }
 
+#[utoipa::path(
+    get,
+    path = "/ability-max-first-stats",
+    params(AbilityOrderStatsQuery),
+    responses(
+        (status = OK, description = "Ability Max First Stats", body = [AnalyticsAbilityMaxFirstStats]),
+        (status = BAD_REQUEST, description = "Provided parameters are invalid."),
+        (status = INTERNAL_SERVER_ERROR, description = "Failed to fetch ability max first stats")
+    ),
+    tags = ["Analytics"],
+    summary = "Ability Max First Stats",
+    description = "
+Retrieves which ability the players of a hero max first: one row per ability, with every player whose upgrade order
+unlocks and upgrades it three times before any other ability, and one row (`ability_id` null) for the players who maxed
+none. Every player is in exactly one row, so the rows add up to all the hero's players, and `min_matches` never drops
+the null row. Unlike summing `/ability-order-tree` nodes, no player is lost to `min_matches` on a rare order.
+
+In `street_brawl`, ability points come in blocks, and the upgrades within one block are sorted by ability id.
+
+### Rate Limits:
+> The rate limits below are **shared across all analytics endpoints**.
+
+| Type | Limit |
+| ---- | ----- |
+| IP | 200req/min |
+| Key | 400req/min |
+| Global | 2000req/min |
+    "
+)]
+pub(super) async fn ability_max_first_stats(
+    Query(mut query): Query<AbilityOrderStatsQuery>,
+    State(state): State<AppState>,
+) -> APIResult<impl IntoResponse> {
+    validate_query(&state, &mut query).await?;
+    round_timestamps(&mut query.min_unix_timestamp, &mut query.max_unix_timestamp);
+    let query_str = build_max_first_query(&query);
+    debug!(?query_str);
+    Ok(Json(
+        run_max_first_query(&state.ch_client_ro, &query_str).await?,
+    ))
+}
+
 #[cfg(test)]
 mod proptests {
     use proptest::prelude::*;
@@ -437,6 +547,11 @@ mod proptests {
         #[test]
         fn ability_order_tree_build_query_is_valid_sql(query: AbilityOrderStatsQuery) {
             assert_valid_sql(&build_tree_query(&query));
+        }
+
+        #[test]
+        fn ability_max_first_build_query_is_valid_sql(query: AbilityOrderStatsQuery) {
+            assert_valid_sql(&build_max_first_query(&query));
         }
     }
 }
