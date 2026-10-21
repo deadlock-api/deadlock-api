@@ -79,8 +79,11 @@ export function patchNotesContent(feed: readonly PatchFeedItem[], id: string): s
   return pool.toSorted((a, b) => (b.content?.length ?? 0) - (a.content?.length ?? 0))[0]?.content;
 }
 
-/** A hero's announcement post ships the hero: "Deadman Danny, available in-game now!" */
-const HERO_RELEASE = /\bavailable (?:in-game |to play )?now\b/i;
+/**
+ * A hero's announcement post ships the hero: "Deadman Danny, available in-game now!", "Nurse Harrow, who now joins us".
+ * Present tense only: a teaser "joins us next week" or "will be joining us today".
+ */
+const HERO_RELEASE = /\b(?:available (?:in-game |to play )?now|now joins|(?<!be )(?:joins|joining) us today)\b/i;
 
 /** Whether a post announces a hero going live the day it went up, which is a game update of its own. */
 function isHeroRelease(post: PatchFeedItem): boolean {
@@ -101,7 +104,7 @@ const USUAL_RELEASE_HOUR_UTC = 20;
 /**
  * Every patch the feed knows, newest first, one entry per release day. The forum and Steam announce most patches
  * twice: the forum by its date ("09-16-2026 Update"), Steam by its date or its name ("City Never Sleeps"). A Steam post
- * without a date counts only when it is an update, ships a hero ("available in-game now") or the forum has a patch
+ * without a date counts only when it is an update, ships a hero ("available in-game now", "now joins us") or the forum has a patch
  * that day, which leaves out the hero teasers. A curated patch keeps its name and exact start, and stays even when
  * the feed no longer reaches back to it.
  */

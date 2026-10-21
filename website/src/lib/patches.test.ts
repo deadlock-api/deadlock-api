@@ -83,6 +83,30 @@ test("merge: a hero going live is a patch of its own, named by its post, a tease
   assert.equal(patches[1].endUnix, unix("2026-10-13T20:59:55Z"));
 });
 
+test("merge: a hero joining us now is a release, one joining us later is a teaser", () => {
+  const feed: PatchFeedItem[] = [
+    {
+      source: "steam",
+      pub_date: "2026-10-20T20:59:53Z",
+      title: "Shh... This Won't Hurt a Bit.",
+      content: "<p>Nurse Harrow, who <i>now joins</i> us on the streets of Manhattan.</p>",
+    },
+    {
+      source: "steam",
+      pub_date: "2026-10-18T20:00:00Z",
+      title: "Almost Here",
+      content: "<p>Nurse Harrow joins us next week, and will be joining us today in spirit.</p>",
+    },
+    ...FEED,
+  ];
+  assert.deepEqual(
+    mergePatchFeed(feed, [])
+      .slice(0, 2)
+      .map((p) => p.id),
+    ["2026-10-20", "2026-10-05"],
+  );
+});
+
 test("merge keeps curated patches the feed no longer reaches", () => {
   const patches = mergePatchFeed(FEED.slice(0, 2), [entry("2025-02-25", "2025-02-25T21:51:13Z", "Map Rework")]);
   assert.deepEqual(
