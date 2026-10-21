@@ -66,7 +66,12 @@ import type { GameMode, MatchMode } from "~/lib/game-mode";
 import { TONE_TEXT, toneOf, type Tone } from "~/lib/tone";
 import { wilsonScoreInterval } from "~/lib/wilson";
 import { itemPricePerTierQueryOptions, itemUpgradesQueryOptions } from "~/queries/asset-queries";
-import { ITEM_FLOW_DEFAULT_PER_COLUMN, itemFlowQueryOptions, type ItemFlowStats } from "~/queries/item-flow-query";
+import {
+  ITEM_FLOW_DEFAULT_PER_COLUMN,
+  ITEM_FLOW_NEXT_MIN_SHARE,
+  itemFlowQueryOptions,
+  type ItemFlowStats,
+} from "~/queries/item-flow-query";
 import { itemStatsQueryOptions } from "~/queries/item-stats-query";
 
 const PHASE_INTERVAL_S = 600;
@@ -317,16 +322,20 @@ const StagePicker = memo(function StagePicker({
   );
 });
 
-// The item an empty stage of the build suggests is bought by at least this share of the build's players.
-const NEXT_MIN_SHARE = 0.1;
-// Street Brawl spreads its purchases over more rounds, so a late round rarely has an item a tenth of players buy.
+// Street Brawl spreads its purchases over more rounds, so a late round rarely has an item a tenth of players buy
+// (`ITEM_FLOW_NEXT_MIN_SHARE` is the normal mode's share; the server trim only renders normal mode).
 const NEXT_MIN_SHARE_BRAWL = 0.05;
 
 /**
  * The item an empty stage of the build suggests: the best win rate by the least it may be (`Choice.confident`) among the items a good part of the build's players buy there, other than those in `taken` (an item is owned
  * once).
  */
-function nextPick(view: View, column: number, taken: Set<number>, minShare = NEXT_MIN_SHARE): Choice | undefined {
+function nextPick(
+  view: View,
+  column: number,
+  taken: Set<number>,
+  minShare = ITEM_FLOW_NEXT_MIN_SHARE,
+): Choice | undefined {
   let best: Choice | undefined;
   for (const choice of view.byKey.values()) {
     if (choice.column !== column || taken.has(choice.itemId) || choice.pickRate < minShare) continue;
@@ -933,7 +942,7 @@ export function BuildFlowExplorer({
   const taken = new Set(path.map((key) => parseKey(key).itemId));
   for (const stage of view.stages) {
     if (path.some((key) => parseKey(key).column === stage.column)) continue;
-    const next = nextPick(view, stage.column, taken, isStreetBrawl ? NEXT_MIN_SHARE_BRAWL : NEXT_MIN_SHARE);
+    const next = nextPick(view, stage.column, taken, isStreetBrawl ? NEXT_MIN_SHARE_BRAWL : ITEM_FLOW_NEXT_MIN_SHARE);
     if (next) {
       nextPicks.set(stage.column, next);
       taken.add(next.itemId);
