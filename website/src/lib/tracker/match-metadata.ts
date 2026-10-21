@@ -60,6 +60,7 @@ export interface RawMatchMetadata {
         sold_time_s?: number;
         upgrade_id?: number;
         imbued_ability_id?: number;
+        flags?: number;
       }[];
       death_details?: RawDeath[] | null;
       stats?: {
@@ -136,6 +137,7 @@ export function toTrackerItem(item: { [key in keyof TrackerMatchItem]?: number |
     sold_time_s: item.sold_time_s ?? 0,
     upgrade_id: item.upgrade_id ?? 0,
     imbued_ability_id: item.imbued_ability_id ?? 0,
+    flags: item.flags ?? 0,
   };
 }
 
