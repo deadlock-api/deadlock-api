@@ -162,8 +162,9 @@ export function HeroesTab({
 
   const rankQuery = useQuery(trackerRankQueryOptions(accountId));
   const rank = rankQuery.data;
-  // Unranked and Brawl lobbies have no average badge, so they compare against all players.
-  const ranked = gameMode === "normal" && matchMode !== "unranked";
+  // Only ranked lobbies have an average badge: in All a rank cohort would drop the unranked matches the player's
+  // side keeps, so like Unranked and Brawl it compares against all players.
+  const ranked = gameMode === "normal" && matchMode === "ranked";
   // A successful unranked lookup can compare all players; an unavailable rank cannot choose a cohort.
   const needsRank = ranked;
   const rankReady = !needsRank || rank !== undefined;
