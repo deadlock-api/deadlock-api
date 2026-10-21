@@ -1,15 +1,15 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { buildHeatGrids, GRID_RES, normalizeHeatGrids, summarizeHeatmap } from "./heatmap-grid";
+import { buildHeatGrids, GRID_RES, normalizeHeatGrids, sampleBilinear, summarizeHeatmap } from "./heatmap-grid";
 
-const RADIUS = 1000;
+const RADIUS = 10752;
 const point = (x: number, y: number, kills: number, deaths: number) =>
   ({ position_x: x, position_y: y, kills, deaths }) as Parameters<typeof buildHeatGrids>[0][number];
 
 test("summarizeHeatmap counts the events and names the hottest ninth of the map", () => {
   // Kills gather in the top left (high y is the top of the drawn map), deaths in the bottom right.
-  const data = [point(-800, 800, 5, 0), point(-790, 790, 4, 1), point(800, -800, 0, 7), point(0, 0, 1, 1)];
+  const data = [point(-8000, 8000, 5, 0), point(-7900, 7900, 4, 1), point(8000, -8000, 0, 7), point(0, 0, 1, 1)];
   const grids = buildHeatGrids(data, RADIUS);
   assert.equal(
     summarizeHeatmap(data, grids, "kills"),
@@ -53,4 +53,18 @@ test("normalizeHeatGrids share puts the hero's even share mid-ramp and a lopside
     normalizeHeatGrids(hero, "share", 1).grid.some((value) => value > 0),
     false,
   );
+});
+
+test("buildHeatGrids reads in events per API square", () => {
+  // A 3 km field where every 128-unit square holds 10 kills: the middle of it reads 10, not the kernel's sum.
+  const data = [];
+  for (let x = -1536; x < 1536; x += 128) for (let y = -1536; y < 1536; y += 128) data.push(point(x, y, 10, 0));
+  const { killsRaw } = buildHeatGrids(data, RADIUS);
+  const middle = (GRID_RES - 1) / 2;
+  const reading = sampleBilinear(killsRaw, GRID_RES, GRID_RES, middle, middle);
+  assert.ok(Math.abs(reading - 10) < 0.5, `reading ${reading}`);
+  // The grid holds every kill once, counted in the cells a square covers.
+  const cellSize = (2 * RADIUS) / (GRID_RES - 1);
+  const total = killsRaw.reduce((sum, value) => sum + value, 0) / (128 / cellSize) ** 2;
+  assert.ok(Math.abs(total / (data.length * 10) - 1) < 0.01, `total ${total}`);
 });

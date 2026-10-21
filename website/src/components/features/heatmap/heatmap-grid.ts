@@ -26,20 +26,34 @@ export interface NormalizedHeatGrid {
 const DENSITY_GAMMA = 0.45;
 /** The share view's scale ends: half and twice the hero's overall share. */
 const SHARE_RANGE = 2;
-/** A cell where the hero would expect fewer kills than this (at their overall share) is mostly luck, so it stays empty. */
+/**
+ * A cell where the hero would expect less heat than this many lone kills leave at their peak (at their overall share)
+ * is mostly luck, so it stays empty.
+ */
 const SHARE_MIN_EXPECTED = 5;
+/** The side of the squares the API counts events in, in map units; a point's position is its square's corner. */
+const API_BIN = 128;
+/** How far, in grid cells, a point's events spread: a cone falling from its center to 0 at this distance. */
+const SPLAT_RADIUS = 3;
+/** The volume under the cone, which its weights add up to: a third of its base times its height of 1. */
+const KERNEL_MASS = (Math.PI * SPLAT_RADIUS ** 2) / 3;
 
-function buildRawGrid(data: KillDeathStats[], viewMode: "kills" | "deaths", radius: number): Float32Array {
+function buildRawGrid(
+  data: KillDeathStats[],
+  viewMode: "kills" | "deaths",
+  radius: number,
+  eventPeak: number,
+): Float32Array {
   const grid = new Float32Array(GRID_RES * GRID_RES);
   const diameter = 2 * radius;
-  const splatRadius = 3;
+  const splatRadius = SPLAT_RADIUS;
 
   for (const point of data) {
     const value = viewMode === "kills" ? point.kills : point.deaths;
     if (value === 0) continue;
 
-    const gx = ((point.position_x + radius) / diameter) * (GRID_RES - 1);
-    const gy = ((radius - point.position_y) / diameter) * (GRID_RES - 1);
+    const gx = ((point.position_x + API_BIN / 2 + radius) / diameter) * (GRID_RES - 1);
+    const gy = ((radius - point.position_y - API_BIN / 2) / diameter) * (GRID_RES - 1);
 
     const x0 = Math.max(0, Math.floor(gx) - splatRadius);
     const x1 = Math.min(GRID_RES - 1, Math.ceil(gx) + splatRadius);
@@ -52,7 +66,7 @@ function buildRawGrid(data: KillDeathStats[], viewMode: "kills" | "deaths", radi
         const dy = iy - gy;
         const dist = Math.sqrt(dx * dx + dy * dy);
         if (dist <= splatRadius) {
-          const weight = 1 - dist / splatRadius;
+          const weight = (1 - dist / splatRadius) * eventPeak;
           grid[iy * GRID_RES + ix] += value * weight;
         }
       }
@@ -79,7 +93,12 @@ function clampAndNormalize(grid: Float32Array, percentile = 0.99): NormalizedHea
  * are filtered on the expected kills, never on the hero's own: hiding the cells the hero scored little in would only
  * hide the "less" side.
  */
-function normalizeShare(hero: Float32Array, all: Float32Array, minEvents: number): NormalizedHeatGrid {
+function normalizeShare(
+  hero: Float32Array,
+  all: Float32Array,
+  minEvents: number,
+  eventPeak: number,
+): NormalizedHeatGrid {
   const grid = new Float32Array(GRID_RES * GRID_RES);
   let heroTotal = 0;
   let allTotal = 0;
@@ -91,7 +110,7 @@ function normalizeShare(hero: Float32Array, all: Float32Array, minEvents: number
   if (heroTotal <= 0 || allTotal <= 0) return result;
 
   const share = heroTotal / allTotal;
-  const minExpected = Math.max(SHARE_MIN_EXPECTED, minEvents);
+  const minExpected = Math.max(SHARE_MIN_EXPECTED * eventPeak, minEvents);
   const span = Math.log2(SHARE_RANGE);
   for (let i = 0; i < grid.length; i++) {
     const expected = all[i] * share;
@@ -105,12 +124,12 @@ function normalizeShare(hero: Float32Array, all: Float32Array, minEvents: number
 
 /**
  * Normalize a copy so cached raw counts remain usable by tooltips and other views. A cell with fewer than `minEvents`
- * events (kills and deaths together for K/D, all heroes' kills for the share) stays empty, so a spot with two kills and
- * a death does not top the K/D map. The share view compares against `baseline`, the same filters for all heroes, on a
- * fixed scale that `sensitivity` does not stretch.
+ * events per API square (kills and deaths together for K/D, all heroes' kills for the share) stays empty, so a spot with
+ * two kills and a death does not top the K/D map. The share view compares against `baseline`, the same filters for all
+ * heroes, on a fixed scale that `sensitivity` does not stretch.
  */
 export function normalizeHeatGrids(
-  { killsRaw, deathsRaw }: HeatGrids,
+  { killsRaw, deathsRaw, eventPeak }: HeatGrids,
   viewMode: HeatmapViewMode,
   sensitivity = 0.99,
   minEvents = 0,
@@ -118,16 +137,17 @@ export function normalizeHeatGrids(
 ): NormalizedHeatGrid {
   if (viewMode === "share") {
     if (!baseline) return { grid: new Float32Array(GRID_RES * GRID_RES), maxValue: SHARE_RANGE, scale: "ratio" };
-    return normalizeShare(killsRaw, baseline.killsRaw, minEvents);
+    return normalizeShare(killsRaw, baseline.killsRaw, minEvents, eventPeak);
   }
 
   if (viewMode === "kd") {
     const grid = new Float32Array(GRID_RES * GRID_RES);
 
-    const minActivity = Math.max(1, minEvents);
+    // At least the peak of one lone event; fewer than half a lone death's peak count as no deaths.
+    const minActivity = Math.max(eventPeak, minEvents);
     for (let i = 0; i < grid.length; i++) {
       if (killsRaw[i] + deathsRaw[i] >= minActivity) {
-        grid[i] = deathsRaw[i] > 0.5 ? killsRaw[i] / deathsRaw[i] : killsRaw[i];
+        grid[i] = deathsRaw[i] > eventPeak / 2 ? killsRaw[i] / deathsRaw[i] : killsRaw[i];
       }
     }
 
@@ -143,16 +163,26 @@ export function normalizeHeatGrids(
   return clampAndNormalize(grid, sensitivity);
 }
 
+/**
+ * Kill and death density, in events per API square: each point's events spread over the grid adding up to the cells
+ * one square covers, so a cell reads how many events a square around it holds, smoothed. Where the squares around it
+ * are as busy as it, that is the square's own count; a lone busy square spreads thinner.
+ */
 export function buildHeatGrids(
   data: KillDeathStats[],
   radius: number,
 ): {
   killsRaw: Float32Array;
   deathsRaw: Float32Array;
+  /** What one lone event adds to the cell under it, in the grid's units: the floor the views' cutoffs build on. */
+  eventPeak: number;
 } {
+  const cellSize = (2 * radius) / (GRID_RES - 1);
+  const eventPeak = (API_BIN / cellSize) ** 2 / KERNEL_MASS;
   return {
-    killsRaw: buildRawGrid(data, "kills", radius),
-    deathsRaw: buildRawGrid(data, "deaths", radius),
+    killsRaw: buildRawGrid(data, "kills", radius, eventPeak),
+    deathsRaw: buildRawGrid(data, "deaths", radius, eventPeak),
+    eventPeak,
   };
 }
 

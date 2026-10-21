@@ -200,7 +200,7 @@ export default function HeatmapCanvas({
     if (mapImagesLoaded && containerSize.width > 0) renderHeatmap();
   }, [mapImagesLoaded, containerSize, renderHeatmap]);
 
-  // The counts under the probe, read straight from the raw grids: derived, not stored.
+  // The events under the probe, per API square, read straight from the raw grids: derived, not stored.
   const reading = useMemo((): Reading | null => {
     const at = probe.point?.rel;
     if (!at || !rawGrids || prompt) return null;
