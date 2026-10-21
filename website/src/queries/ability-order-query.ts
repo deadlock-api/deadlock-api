@@ -1,5 +1,9 @@
 import { queryOptions } from "@tanstack/react-query";
-import type { AnalyticsApiAbilityOrderStatsRequest, AnalyticsApiAbilityOrderTreeRequest } from "deadlock_api_client";
+import type {
+  AnalyticsApiAbilityMaxFirstStatsRequest,
+  AnalyticsApiAbilityOrderStatsRequest,
+  AnalyticsApiAbilityOrderTreeRequest,
+} from "deadlock_api_client";
 
 import { CACHE_DURATIONS } from "~/constants/cache";
 import { packAbilityOrderTree, unpackAbilityOrderTree } from "~/lib/ability-order-utils";
@@ -26,6 +30,15 @@ export function abilityOrderTreeQueryOptions(params: AnalyticsApiAbilityOrderTre
       return packAbilityOrderTree(response.data);
     },
     select: unpackAbilityOrderTree,
+    staleTime: CACHE_DURATIONS.ONE_HOUR,
+  });
+}
+
+/** Per ability, the players who max it first, and (`ability_id` null) those who max none: every player once. */
+export function abilityMaxFirstQueryOptions(params: AnalyticsApiAbilityMaxFirstStatsRequest) {
+  return queryOptions({
+    queryKey: queryKeys.analytics.abilityMaxFirstStats(params),
+    queryFn: async () => (await api.analytics_api.abilityMaxFirstStats(params)).data,
     staleTime: CACHE_DURATIONS.ONE_HOUR,
   });
 }

@@ -1,5 +1,5 @@
 import type {
-  AnalyticsAbilityOrderTreeNode,
+  AnalyticsAbilityMaxFirstStats,
   AnalyticsGameStats,
   AnalyticsHeroStats,
   HeroCounterStats,
@@ -138,9 +138,9 @@ export interface HigherLowerData {
   heroStats: readonly AnalyticsHeroStats[];
   counters: readonly HeroCounterStats[];
   gameStats: AnalyticsGameStats | undefined;
-  /** Ability orders of `pickAbilityHeroes()`, in the same order. */
-  /** Per hero, the nodes of its ability order tree: one per order prefix. */
-  abilityOrders: readonly { heroId: number; rows: readonly AnalyticsAbilityOrderTreeNode[] }[];
+  /** Per hero of `pickAbilityHeroes()`, in the same order: the players who max each ability first, and (`ability_id`
+   * null) those who max none. */
+  maxFirst: readonly { heroId: number; rows: readonly AnalyticsAbilityMaxFirstStats[] }[];
 }
 
 /** Heroes with fewer games in the window are left out, so a value is never the noise of a small sample. */
@@ -475,82 +475,41 @@ function economyRound(data: HigherLowerData, picker: Picker): HigherLowerRound |
  */
 const MIN_ABILITY_SHARE = 0.03;
 
-/** An ability is maxed once it is unlocked and upgraded three times. */
-const MAXED_COUNT = 4;
-
-type AbilityOrderDefinition = {
-  topic: string;
-  stat: string;
-  /** The abilities a node decides: each player-match counts once, at the node of the upgrade that decides it. */
-  count: (prefix: readonly number[]) => number[];
-  question: (hero: string, left: string, right: string) => string;
-};
-
-const ABILITY_ORDER_STATS: AbilityOrderDefinition[] = [
-  {
-    topic: "maxed-first",
-    stat: "Share of players who max it first",
-    count: (prefix) => {
-      const counts = new Map<number, number>();
-      for (const [i, id] of prefix.entries()) {
-        const count = (counts.get(id) ?? 0) + 1;
-        counts.set(id, count);
-        if (count === MAXED_COUNT) return i === prefix.length - 1 ? [id] : [];
-      }
-      return [];
-    },
-    // The hero is on the card above the board; naming it here too wrapped the question to four lines on a phone.
-    question: (_hero, left, right) =>
-      `Is ${possessive(right)} max-first share higher or lower than ${possessive(left)}?`,
-  },
-];
-
 function abilityRound(
   data: HigherLowerData,
-  order: HigherLowerData["abilityOrders"][number] | undefined,
+  maxFirst: HigherLowerData["maxFirst"][number] | undefined,
   picker: Picker,
 ): HigherLowerRound | null {
-  if (!order) return null;
-  const hero = data.heroes.find((candidate) => candidate.id === order.heroId);
-  // Only the abilities that are levelled: an innate one never shows up in an order and would always be a free 0%.
-  const levelled = new Set(order.rows.flatMap((row) => row.abilities));
-  const abilityIds = [...data.abilities]
-    .filter(([id, ability]) => ability.hero === order.heroId && levelled.has(id))
-    .map(([id]) => id);
-  // Every player-match passes one first upgrade.
-  const total = order.rows.reduce((sum, row) => sum + (row.abilities.length === 1 ? row.matches : 0), 0);
-  if (!hero || abilityIds.length < 2 || total < MIN_ABILITY_ORDER_MATCHES) return null;
+  if (!maxFirst) return null;
+  const hero = data.heroes.find((candidate) => candidate.id === maxFirst.heroId);
+  // Every player-match is in one row, the players who max no ability included.
+  const total = maxFirst.rows.reduce((sum, row) => sum + row.matches, 0);
+  if (!hero || total < MIN_ABILITY_ORDER_MATCHES) return null;
 
-  for (const definition of seededShuffle([...ABILITY_ORDER_STATS], picker.rng)) {
-    const matches = new Map<number, number>();
-    for (const row of order.rows) {
-      for (const id of definition.count(row.abilities)) matches.set(id, (matches.get(id) ?? 0) + row.matches);
-    }
-    const contenders: Contender[] = abilityIds
-      .map((abilityId): Contender => ({
-        kind: "ability",
-        abilityId,
-        name: data.abilities.get(abilityId)?.name ?? "",
-        value: (matches.get(abilityId) ?? 0) / total,
-        sample: total,
-      }))
-      .filter((contender) => contender.value >= MIN_ABILITY_SHARE);
-    const pair = pickPair(pairsOf(contenders), `${definition.topic}:${order.heroId}`, picker);
-    if (!pair) continue;
-    const [left, right] = pair;
-    return {
-      category: "abilities",
-      kind: "higher-lower",
-      source: { page: "abilities", heroId: hero.id },
-      subject: { heroId: hero.id, name: hero.name },
-      stat: definition.stat,
-      question: definition.question(hero.name, left.name, right.name),
-      format: "percent",
-      left,
-      right,
-    };
-  }
-  return null;
+  const contenders: Contender[] = maxFirst.rows
+    .flatMap((row): Contender[] => {
+      const ability = row.ability_id == null ? undefined : data.abilities.get(row.ability_id);
+      if (row.ability_id == null || ability?.hero !== hero.id) return [];
+      return [
+        { kind: "ability", abilityId: row.ability_id, name: ability.name, value: row.matches / total, sample: total },
+      ];
+    })
+    .filter((contender) => contender.value >= MIN_ABILITY_SHARE);
+  const pair = pickPair(pairsOf(contenders), `maxed-first:${hero.id}`, picker);
+  if (!pair) return null;
+  const [left, right] = pair;
+  return {
+    category: "abilities",
+    kind: "higher-lower",
+    source: { page: "abilities", heroId: hero.id },
+    subject: { heroId: hero.id, name: hero.name },
+    stat: "Share of players who max it first",
+    // The hero is on the card above the board; naming it here too wrapped the question to four lines on a phone.
+    question: `Is ${possessive(right.name)} max-first share higher or lower than ${possessive(left.name)}?`,
+    format: "percent",
+    left,
+    right,
+  };
 }
 
 /**
@@ -574,7 +533,7 @@ export function buildRounds(data: HigherLowerData, date: string): HigherLowerRou
     if (category === "heroes") round = heroStatRound(data, "heroes", HERO_META_STATS, picker);
     else if (category === "matchups") round = matchupRound(data, picker);
     else if (category === "economy") round = economyRound(data, picker);
-    else round = abilityRound(data, data.abilityOrders[abilityIndex++], picker);
+    else round = abilityRound(data, data.maxFirst[abilityIndex++], picker);
     round ??= heroStatRound(data, "heroes", HERO_META_STATS, picker);
     if (round) rounds.push(round);
   }

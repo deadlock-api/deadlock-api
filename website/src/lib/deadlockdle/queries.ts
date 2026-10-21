@@ -1,7 +1,7 @@
 import { type UseQueryResult, useQueries, useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 
-import { abilityOrderTreeQueryOptions } from "~/queries/ability-order-query";
+import { abilityMaxFirstQueryOptions } from "~/queries/ability-order-query";
 import {
   abilitiesQueryOptions,
   filterPlayableHeroes,
@@ -52,7 +52,7 @@ export function puzzleLoadError(...queries: Pick<UseQueryResult, "data" | "isErr
 
 /**
  * Everything a day of Higher or Lower is built from: the heroes and their abilities, then the hero, matchup and economy
- * stats and ability order trees of the day's fixed window (`statsWindow`). `rounds` is empty until every query is in.
+ * stats and max-first abilities of the day's fixed window (`statsWindow`). `rounds` is empty until every query is in.
  */
 export function useHigherLowerRounds(date: string) {
   const heroesQuery = useHeroes();
@@ -79,19 +79,20 @@ export function useHigherLowerRounds(date: string) {
   const heroStatsQuery = useQuery(heroStatsQueryOptions({ ...range }));
   const countersQuery = useQuery(draftCounterStatsQueryOptions({ ...range, sameLaneFilter: false }));
   const gameStatsQuery = useQuery(gameStatsQueryOptions({ ...range, bucket: "no_bucket" }));
-  const abilityOrderQueries = useQueries({
-    queries: abilityHeroes.map((heroId) => abilityOrderTreeQueryOptions({ heroId, ...range, minMatches: 20 })),
+  // min_matches 1: a share counts every player, so no ability is cut short.
+  const maxFirstQueries = useQueries({
+    queries: abilityHeroes.map((heroId) => abilityMaxFirstQueryOptions({ heroId, ...range, minMatches: 1 })),
   });
 
-  const queries = [heroesQuery, abilitiesQuery, heroStatsQuery, countersQuery, gameStatsQuery, ...abilityOrderQueries];
-  const abilityOrdersReady = abilityOrderQueries.length > 0 && abilityOrderQueries.every((query) => query.data);
+  const queries = [heroesQuery, abilitiesQuery, heroStatsQuery, countersQuery, gameStatsQuery, ...maxFirstQueries];
+  const maxFirstReady = maxFirstQueries.length > 0 && maxFirstQueries.every((query) => query.data);
 
   const rounds = useMemo(() => {
     const { data: rawAbilities } = abilitiesQuery;
     const { data: heroStats } = heroStatsQuery;
     const { data: counters } = countersQuery;
     const { data: gameStats } = gameStatsQuery;
-    if (heroes.length === 0 || !rawAbilities || !heroStats || !counters || !gameStats || !abilityOrdersReady) return [];
+    if (heroes.length === 0 || !rawAbilities || !heroStats || !counters || !gameStats || !maxFirstReady) return [];
 
     const abilities = new Map<number, { name: string; hero: number }>();
     for (const ability of rawAbilities) {
@@ -106,21 +107,13 @@ export function useHigherLowerRounds(date: string) {
         heroStats,
         counters,
         gameStats: gameStats[0],
-        abilityOrders: abilityHeroes.map((heroId, i) => ({ heroId, rows: abilityOrderQueries[i]?.data ?? [] })),
+        maxFirst: abilityHeroes.map((heroId, i) => ({ heroId, rows: maxFirstQueries[i]?.data ?? [] })),
       },
       date,
     );
-    // The ability order queries are a fresh array each render; their data is read once all are in.
+    // The max-first queries are a fresh array each render; their data is read once all are in.
     // oxlint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    heroes,
-    abilitiesQuery.data,
-    heroStatsQuery.data,
-    countersQuery.data,
-    gameStatsQuery.data,
-    abilityOrdersReady,
-    date,
-  ]);
+  }, [heroes, abilitiesQuery.data, heroStatsQuery.data, countersQuery.data, gameStatsQuery.data, maxFirstReady, date]);
 
   return { rounds, queries, isLoading: queries.some((query) => query.isLoading) };
 }
