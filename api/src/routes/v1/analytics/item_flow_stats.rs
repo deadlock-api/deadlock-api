@@ -23,6 +23,8 @@ use crate::utils::parse::{
 };
 use crate::utils::sql::{cached_ch_query, impl_match_info};
 
+pub(crate) mod agg;
+
 fn default_phase_interval_s() -> Option<u32> {
     600.into()
 }
@@ -263,6 +265,18 @@ const TIME_PHASE_BOUNDARIES: &[u32] = &[540, 1200, 1800];
 /// Number of normal-mode columns (`TIME_PHASE_BOUNDARIES.len() + 1`).
 const TIME_PHASE_COLUMNS: u8 = 4;
 
+/// The 0-based normal-mode column of a purchase at `buy_time_expr`. `b <= buy_time` puts a
+/// boundary minute into the *later* phase (e.g. 9:00 → 9-20m), so a 12-minute purchase lands in
+/// 9-20m, never in 0-9m. One comparison per boundary (never above `TIME_PHASE_COLUMNS - 1`)
+/// instead of a lambda: it runs once per purchase, ~100M times a week.
+fn time_phase_expr(buy_time_expr: &str) -> String {
+    let raw = TIME_PHASE_BOUNDARIES
+        .iter()
+        .map(|b| format!("({buy_time_expr} >= {b})"))
+        .join(" + ");
+    format!("toUInt8({raw})")
+}
+
 /// `WITH` aliases for the upgrade purchases (upgrade-only, `buy_time > 0`, corrupted purchases
 /// excluded; migration 42) and the settings that go with them.
 ///
@@ -369,9 +383,6 @@ fn query_parts(query: &ItemFlowStatsQuery) -> QueryParts {
         TIME_PHASE_COLUMNS
     };
     // The 0-based column (clamped) a purchase at `buy_time_expr` falls into, matching node placement.
-    // `b <= buy_time` puts a boundary minute into the *later* phase (e.g. 9:00 → 9-20m), so a
-    // 12-minute purchase lands in 9-20m, never in 0-9m. Normal mode sums one comparison per boundary
-    // (never above `count - 1`) instead of a lambda: it runs once per purchase, ~100M times a week.
     let column_of = |buy_time_expr: &str, round_durations_expr: &str| -> String {
         if is_brawl {
             format!(
@@ -380,11 +391,7 @@ fn query_parts(query: &ItemFlowStatsQuery) -> QueryParts {
                 count - 1
             )
         } else {
-            let raw = TIME_PHASE_BOUNDARIES
-                .iter()
-                .map(|b| format!("({buy_time_expr} >= {b})"))
-                .join(" + ");
-            format!("toUInt8({raw})")
+            time_phase_expr(buy_time_expr)
         }
     };
 
@@ -571,23 +578,8 @@ fn build_nodes_query(query: &ItemFlowStatsQuery, parts: &QueryParts) -> String {
         extra_settings,
         ..
     } = parts;
-    let min_matches = query.min_matches.unwrap_or(20);
-    // Net worth resets each round in street brawl, so net-worth-at-buy is not a meaningful
-    // "ahead-ness" measure there — fall back to the raw win rate for the adjusted field.
-    let adjusted_win_rate_expr = if query.game_mode == Some(GameMode::StreetBrawl) {
-        "sum(cwins) / sum(cm)"
-    } else {
-        "sum(w * (cwins / cm)) / sum(w)"
-    };
-    // Per (column, item) stats plus a net-worth-standardized win rate: each item's win rate is
-    // re-weighted across net-worth-at-buy buckets to the stage-wide net-worth distribution (`ref`),
-    // so the "richer buyers win more" confound is removed. Raw wins/matches are kept for pick rate
-    // and Wilson CIs. `ref` is a window over `cells`: a join with a second CTE reference would scan
-    // `match_player` twice.
-    format!(
-        "
-    WITH cells AS (
-        SELECT
+    let cells = format!(
+        "SELECT
             column,
             item_id,
             intDiv(nw, {NW_BUCKET}) AS nb,
@@ -624,7 +616,56 @@ fn build_nodes_query(query: &ItemFlowStatsQuery, parts: &QueryParts) -> String {
                     AND buy_time > 0 AND nw > 0
             ) e
         )
-        GROUP BY column, item_id, nb
+        GROUP BY column, item_id, nb"
+    );
+    nodes_from_cells(query, &cells, "item_flow_stats_nodes", extra_settings)
+}
+
+/// The nodes rows from the rollup source of [`agg::sources`].
+fn build_nodes_agg_query(query: &ItemFlowStatsQuery, source: &str) -> String {
+    let cells = format!(
+        "SELECT
+            phase AS column,
+            item_id,
+            nw_bucket AS nb,
+            sum(n_wins) AS cwins,
+            sum(n_buys) AS cm,
+            sum(n_players) AS cpl,
+            sum(sum_kills) AS ck,
+            sum(sum_deaths) AS cd,
+            sum(sum_assists) AS ca,
+            sum(sum_net_worth_at_buy) AS cnw
+        FROM {source}
+        GROUP BY column, item_id, nb"
+    );
+    nodes_from_cells(query, &cells, "item_flow_stats_nodes_agg", "")
+}
+
+/// The nodes query over `cells`, a `SELECT` of per (column, item, net-worth-at-buy bucket `nb`)
+/// sums: `cwins`, `cm` (purchases), `cpl` (first purchases), `ck`, `cd`, `ca` and `cnw`.
+fn nodes_from_cells(
+    query: &ItemFlowStatsQuery,
+    cells: &str,
+    log_comment: &str,
+    extra_settings: &str,
+) -> String {
+    let min_matches = query.min_matches.unwrap_or(20);
+    // Net worth resets each round in street brawl, so net-worth-at-buy is not a meaningful
+    // "ahead-ness" measure there — fall back to the raw win rate for the adjusted field.
+    let adjusted_win_rate_expr = if query.game_mode == Some(GameMode::StreetBrawl) {
+        "sum(cwins) / sum(cm)"
+    } else {
+        "sum(w * (cwins / cm)) / sum(w)"
+    };
+    // Per (column, item) stats plus a net-worth-standardized win rate: each item's win rate is
+    // re-weighted across net-worth-at-buy buckets to the stage-wide net-worth distribution (`ref`),
+    // so the "richer buyers win more" confound is removed. Raw wins/matches are kept for pick rate
+    // and Wilson CIs. `ref` is a window over `cells`: a join with a second CTE reference would scan
+    // `match_player` twice.
+    format!(
+        "
+    WITH cells AS (
+        {cells}
     )
     SELECT
         column,
@@ -642,7 +683,7 @@ fn build_nodes_query(query: &ItemFlowStatsQuery, parts: &QueryParts) -> String {
     GROUP BY column, item_id
     HAVING matches >= {min_matches}
     ORDER BY column ASC, matches DESC
-    SETTINGS log_comment = 'item_flow_stats_nodes', apply_patch_parts = 0{extra_settings}
+    SETTINGS log_comment = '{log_comment}', apply_patch_parts = 0{extra_settings}
     "
     )
 }
@@ -683,6 +724,70 @@ fn build_edges_query(query: &ItemFlowStatsQuery, parts: &QueryParts) -> String {
     HAVING matches >= {min_matches}
     ORDER BY matches DESC
     SETTINGS log_comment = 'item_flow_stats_edges', apply_patch_parts = 0{extra_settings}
+    "
+    )
+}
+
+/// The edges query over the rollup source of [`agg::sources`].
+fn build_edges_agg_query(query: &ItemFlowStatsQuery, source: &str) -> String {
+    let min_matches = query.min_matches.unwrap_or(20);
+    format!(
+        "
+    SELECT
+        from_column,
+        from_item_id,
+        to_item_id,
+        sum(n_wins)                           AS wins,
+        toUInt64(sum(n_matches) - wins)       AS losses,
+        sum(n_matches)                        AS matches
+    FROM {source}
+    GROUP BY from_column, from_item_id, to_item_id
+    HAVING matches >= {min_matches}
+    ORDER BY matches DESC
+    SETTINGS log_comment = 'item_flow_stats_edges_agg', apply_patch_parts = 0
+    "
+    )
+}
+
+/// The totals query over the rollup source of [`agg::sources`]. Without locks, the locked build
+/// path is the baseline, so `summary` repeats it.
+fn build_totals_agg_query(source: &str) -> String {
+    let reached = |name: &str| {
+        (0..TIME_PHASE_COLUMNS)
+            .map(|c| format!("sum({name}_{c})"))
+            .join(", ")
+    };
+    let reached_cols = reached("n_reached");
+    let reached_win_cols = reached("n_reached_wins");
+    format!(
+        "
+    SELECT
+        sum(n_wins)                              AS s_wins,
+        toUInt64(sum(n_rows) - s_wins)           AS s_losses,
+        s_wins + s_losses                        AS s_matches,
+        uniqCombinedMerge(14)(players_state)     AS s_players,
+        sum(sum_kills)                           AS s_total_kills,
+        sum(sum_deaths)                          AS s_total_deaths,
+        sum(sum_assists)                         AS s_total_assists,
+        s_wins                                   AS b_wins,
+        s_losses                                 AS b_losses,
+        s_matches                                AS b_matches,
+        s_players                                AS b_players,
+        s_total_kills                            AS b_total_kills,
+        s_total_deaths                           AS b_total_deaths,
+        s_total_assists                          AS b_total_assists,
+        sum(sum_net_worth) / sum(n_rows)         AS s_avg_net_worth,
+        sum(sum_duration_s) / sum(n_rows)        AS s_avg_duration_s,
+        s_avg_net_worth                          AS b_avg_net_worth,
+        s_avg_duration_s                         AS b_avg_duration_s,
+        [{reached_cols}] AS reached_per_column,
+        [{reached_win_cols}] AS reached_wins_per_column,
+        reached_per_column                       AS summary_reached_per_column,
+        reached_wins_per_column                  AS summary_reached_wins_per_column,
+        CAST([], 'Array(UInt64)') AS loo_wins,
+        CAST([], 'Array(UInt64)') AS loo_matches
+    FROM {source}
+    SETTINGS log_comment = 'item_flow_stats_totals_agg', apply_patch_parts = 0
     "
     )
 }
@@ -749,13 +854,24 @@ async fn get_item_flow_stats(
     mut query: ItemFlowStatsQuery,
 ) -> APIResult<ItemFlowStats> {
     round_timestamps(&mut query.min_unix_timestamp, &mut query.max_unix_timestamp);
-    let parts = query_parts(&query);
     // The locks in request order, which `leave_one_out` follows.
     let locked_ids = query.locked_item_ids.clone().unwrap_or_default();
     let locked_columns = query.locked_columns.clone().unwrap_or_default();
-    let nodes_query = build_nodes_query(&query, &parts);
-    let edges_query = build_edges_query(&query, &parts);
-    let totals_query = build_totals_query(&parts);
+    let (nodes_query, edges_query, totals_query) =
+        if let Some([nodes, edges, totals]) = agg::sources(&query) {
+            (
+                build_nodes_agg_query(&query, &nodes),
+                build_edges_agg_query(&query, &edges),
+                build_totals_agg_query(&totals),
+            )
+        } else {
+            let parts = query_parts(&query);
+            (
+                build_nodes_query(&query, &parts),
+                build_edges_query(&query, &parts),
+                build_totals_query(&parts),
+            )
+        };
     debug!(?nodes_query, ?edges_query, ?totals_query);
     let (nodes, edges, totals) = tokio::try_join!(
         run_nodes_query(ch_client, &nodes_query),

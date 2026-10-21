@@ -6,6 +6,7 @@ use serde::Deserialize;
 use tokio::time::interval;
 use tracing::{debug, error, info};
 
+use crate::routes::v1::analytics::item_flow_stats::agg as item_flow_agg;
 use crate::routes::v1::analytics::rollup_window::BUILT_THROUGH;
 use crate::routes::v1::analytics::{
     game_stats, hero_pair_agg, item_stats, player_performance_curve_agg,
@@ -103,12 +104,21 @@ enum Source {
     GameStats,
     /// Sums the stats of every pair of players per match-level grain (`hero_pair_stats_agg`).
     HeroPairs,
+    /// One of the item build-flow rollups (`item_flow_*_agg`).
+    ItemFlow(item_flow_agg::Kind),
 }
 
 // The _v2 tables carry uniqCombined(14) player states (migration 40); the plain uniq states
 // of the v1 tables were ~90% of item_stats_cohort_mv's CPU. Pointing the job here builds them
 // from scratch while the API keeps reading v1 until they cover the horizon.
-fn cohort_specs() -> [CohortSpec; 7] {
+fn cohort_specs() -> [CohortSpec; 10] {
+    let item_flow = |kind: item_flow_agg::Kind| CohortSpec {
+        table: kind.table(),
+        staging: kind.staging(),
+        source: Source::ItemFlow(kind),
+        horizon_days: HORIZON_DAYS,
+        history: None,
+    };
     [
         // Replaces the `item_stats_agg` refreshable MV, which recomputed all 65 days every hour.
         CohortSpec {
@@ -155,6 +165,9 @@ fn cohort_specs() -> [CohortSpec; 7] {
             horizon_days: player_performance_curve_agg::AGG_HORIZON_DAYS,
             history: None,
         },
+        item_flow(item_flow_agg::Kind::Nodes),
+        item_flow(item_flow_agg::Kind::Edges),
+        item_flow(item_flow_agg::Kind::Totals),
         // Last: their first runs build all of history, up to `max_days_per_run` days each.
         CohortSpec {
             table: game_stats::AGG_TABLE,
@@ -209,6 +222,7 @@ fn select_body(spec: &CohortSpec, since_clause: &str) -> String {
         Source::ItemStats => return item_stats::item_stats_agg_select_body(since_clause),
         Source::GameStats => return game_stats::agg_select_body(since_clause),
         Source::HeroPairs => return hero_pair_agg::agg_select_body(since_clause),
+        Source::ItemFlow(kind) => return item_flow_agg::agg_select_body(kind, since_clause),
     };
     format!(
         "SELECT
