@@ -1736,6 +1736,13 @@ function buildView(
   const reference = data.summary.matches > 0 ? data.summary.wins / data.summary.matches : 0.5;
   const allGames = Math.max(1, data.baseline.matches);
   const shrink = Math.max(SHRINK_MIN_GAMES, data.summary.matches * SHRINK_SHARE);
+  // An item bought in a late stage comes only from the build's games that got that far, and long games win less: it
+  // is compared with the win rate of those games, not with the build's over all of them.
+  const stageReference = (column: number) => {
+    const games = data.summary_reached_per_column?.[column];
+    const wins = data.summary_reached_wins_per_column?.[column];
+    return games && wins != null ? wins / games : reference;
+  };
 
   const toChoice = (node: ItemFlowStats["nodes"][number]): Choice => {
     const key = `${node.column}:${node.item_id}`;
@@ -1745,8 +1752,9 @@ function buildView(
     const winRate = isStreetBrawl || path.has(key) ? raw : node.adjusted_win_rate;
     const [low, high] = wilsonScoreInterval(node.wins, node.matches);
     const interval = [low + winRate - raw, high + winRate - raw] as const;
-    // Colored only when the interval clears the build's own win rate: a choice that may well be even stays neutral.
-    const tone: Tone = interval[0] > reference ? "positive" : interval[1] < reference ? "negative" : "muted";
+    // Colored only when the interval clears the stage's win rate: a choice that may well be even stays neutral.
+    const stageRate = stageReference(node.column);
+    const tone: Tone = interval[0] > stageRate ? "positive" : interval[1] < stageRate ? "negative" : "muted";
     return {
       key,
       column: node.column,
