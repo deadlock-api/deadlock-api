@@ -241,6 +241,13 @@ pub struct ItemFlowStats {
     /// is the win rate of games that got that far, the fair baseline for a build ending there.
     #[serde(default)]
     pub reached_wins_per_column: Vec<u64>,
+    /// `reached_per_column` for the locked build path's games (`summary`). Late stages hold long
+    /// games only, so an item bought there is compared with the build's games that got that far.
+    #[serde(default)]
+    pub summary_reached_per_column: Vec<u64>,
+    /// Of `summary_reached_per_column`, the games that were won (index = column).
+    #[serde(default)]
+    pub summary_reached_wins_per_column: Vec<u64>,
     /// One entry per locked item, in request order: the totals of the locked build path without that
     /// item. `summary` against an entry is what that one item adds to the build. Empty without locks.
     pub leave_one_out: Vec<ItemFlowLeaveOneOut>,
@@ -317,7 +324,8 @@ struct QueryParts {
     by_column_select: String,
     /// `WITH` entry: the columns of the player's purchases, for the totals query.
     bought_columns: String,
-    /// `[countIf(...), ...] AS reached_per_column` over the baseline population for the totals query.
+    /// `[countIf(...), ...] AS reached_per_column` over the baseline population for the totals query,
+    /// and the same over the locked build path (`summary_reached_*`).
     reached_select: String,
     /// `loo_wins` / `loo_matches` arrays for the totals query: per locked item, the locked population
     /// with every lock but that one.
@@ -468,8 +476,22 @@ fn query_parts(query: &ItemFlowStatsQuery) -> QueryParts {
     let reached_win_cols = (0..count)
         .map(|c| format!("countIf(won AND has(bought_columns, {c}))"))
         .join(", ");
+    // Without locks the build's games are the baseline's, and the same text lets ClickHouse count them once.
+    let locked_and = if locked_clauses.is_empty() {
+        String::new()
+    } else {
+        format!("({locked_predicate}) AND ")
+    };
+    let summary_reached_cols = (0..count)
+        .map(|c| format!("countIf({locked_and}has(bought_columns, {c}))"))
+        .join(", ");
+    let summary_reached_win_cols = (0..count)
+        .map(|c| format!("countIf(won AND {locked_and}has(bought_columns, {c}))"))
+        .join(", ");
     let reached_select = format!(
-        "[{reached_cols}] AS reached_per_column, [{reached_win_cols}] AS reached_wins_per_column"
+        "[{reached_cols}] AS reached_per_column, [{reached_win_cols}] AS reached_wins_per_column, \
+         [{summary_reached_cols}] AS summary_reached_per_column, \
+         [{summary_reached_win_cols}] AS summary_reached_wins_per_column"
     );
     let (upgrades_with, extra_settings) = upgrades_source(query, is_brawl);
 
@@ -697,6 +719,10 @@ struct ItemFlowTotalsRow {
     reached_per_column: Vec<u64>,
     #[serde(default)]
     reached_wins_per_column: Vec<u64>,
+    #[serde(default)]
+    summary_reached_per_column: Vec<u64>,
+    #[serde(default)]
+    summary_reached_wins_per_column: Vec<u64>,
     loo_wins: Vec<u64>,
     loo_matches: Vec<u64>,
 }
@@ -778,6 +804,8 @@ async fn get_item_flow_stats(
             .collect(),
         reached_per_column: totals.reached_per_column,
         reached_wins_per_column: totals.reached_wins_per_column,
+        summary_reached_per_column: totals.summary_reached_per_column,
+        summary_reached_wins_per_column: totals.summary_reached_wins_per_column,
     })
 }
 
@@ -809,6 +837,8 @@ the buyer's lead. It is still observational, not a controlled/causal estimate. `
 gives the distinct baseline games that bought any upgrade in each column, so consumers can show how
 survivorship-selected (e.g. long-game-only) a late stage is; `reached_wins_per_column` counts the won
 ones among them, the win rate a build ending in that stage should be compared with.
+`summary_reached_per_column` and `summary_reached_wins_per_column` count the same over the locked
+build path's games, the win rate an item bought in that stage should be compared with.
 
 Corrupted items (build 6712+, same item id as the normal item) are not counted as purchases; the
 normal item they replaced still is.
