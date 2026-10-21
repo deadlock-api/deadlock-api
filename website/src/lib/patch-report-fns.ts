@@ -37,6 +37,17 @@ const MOVERS = 5;
 /** How many game stats are listed, at most. */
 const STAT_CHANGES = 8;
 const DAY_S = 86_400;
+const HOUR_S = 3_600;
+
+/**
+ * A window as the API is asked for it. The API floors a start and ceils an end to the hour, so an end at the next
+ * patch took in that patch's first hour, the one a hero launches in: Violet's first hour put about 6,000 of her
+ * matches before her own patch, and she was missing from its new heroes. Ending a second before that hour leaves it
+ * to the next window only.
+ */
+function requested(window: UnixWindow): UnixWindow {
+  return { ...window, maxUnixTimestamp: Math.floor(window.maxUnixTimestamp / HOUR_S) * HOUR_S - 1 };
+}
 
 /** Totals only compare per day (the window after a patch can be shorter), which the headline does. */
 const COMPARABLE_STATS = GAME_STAT_CATEGORIES.flatMap((category) => category.stats).filter(
@@ -90,7 +101,7 @@ export interface PatchReport {
 async function heroRows(window: UnixWindow) {
   const { data } = await api.analytics_api.heroStats({
     ...BASE,
-    ...window,
+    ...requested(window),
     bucket: "avg_badge",
     minAverageBadge: 0,
     maxAverageBadge: MAX_BADGE,
@@ -101,7 +112,7 @@ async function heroRows(window: UnixWindow) {
 async function itemRows(window: UnixWindow) {
   const { data } = await api.analytics_api.itemStats({
     ...BASE,
-    ...window,
+    ...requested(window),
     minAverageBadge: PHANTOM_UP.min,
     maxAverageBadge: PHANTOM_UP.max,
   });
@@ -112,7 +123,7 @@ async function itemRows(window: UnixWindow) {
 async function gameDays(window: UnixWindow) {
   const { data } = await api.analytics_api.gameStats({
     ...BASE,
-    ...window,
+    ...requested(window),
     bucket: "start_time_day",
     minAverageBadge: PHANTOM_UP.min,
     maxAverageBadge: PHANTOM_UP.max,
