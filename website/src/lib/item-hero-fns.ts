@@ -3,7 +3,7 @@ import type { AnalyticsHeroStats } from "deadlock_api_client";
 
 import { api } from "~/lib/api";
 import type { GameMode, MatchMode } from "~/lib/game-mode";
-import { wilsonScoreInterval } from "~/lib/wilson";
+import { expectedPairingWinRate, matchupWinRateChange } from "~/lib/matchup-stats";
 
 const TOP_COUNT = 8;
 /** Heroes with fewer purchases than this have too few games for the ranking to mean much. */
@@ -22,6 +22,10 @@ export interface ItemBestHeroesRequest {
 export interface ItemBestHero {
   heroId: number;
   winRate: number;
+  /** What the hero's own win rate and the item's over all heroes predict together (`expectedPairingWinRate`). */
+  expectedWinRate: number;
+  /** The win rate after buying the item, shrunk toward `expectedWinRate`, minus it: what the list ranks by. */
+  winRateChange: number;
   /** Share of the hero's matches in which it bought the item. */
   usage: number;
   matches: number;
@@ -34,30 +38,44 @@ interface HeroBucketRow {
   matches: number;
 }
 
-/** Ranks by the Wilson lower bound so a few lucky matches can't put a rarely picked hero on top. */
+/**
+ * Ranks by how much better a hero does with the item than its own strength and the item's predict, as the hero matchups
+ * do: a hero's win rate after buying the item is mostly the hero's own win rate, so ranking by it lists the
+ * strongest heroes on nearly every item. The item's rate over all heroes is taken out too, so a late buy that comes
+ * with a won game does not count for the hero.
+ */
 function pickTopHeroes(
   rows: readonly HeroBucketRow[],
   heroStats: readonly AnalyticsHeroStats[],
   itemId: number,
 ): ItemBestHero[] {
-  const heroMatches = new Map(heroStats.map((row) => [row.hero_id, row.matches]));
-  return rows
+  const heroRecords = new Map(heroStats.map((row) => [row.hero_id, row]));
+  const itemRows = rows.filter((row) => row.item_id === itemId);
+  const item = {
+    wins: itemRows.reduce((sum, row) => sum + row.wins, 0),
+    matches: itemRows.reduce((sum, row) => sum + row.matches, 0),
+  };
+  return itemRows
     .flatMap((row) => {
-      const total = heroMatches.get(row.bucket);
-      if (row.item_id !== itemId || row.matches < MIN_HERO_MATCHES || !total) return [];
-      const [lowerBound] = wilsonScoreInterval(row.wins, row.matches);
-      const hero = {
-        heroId: row.bucket,
-        winRate: row.wins / row.matches,
-        // Purchases, not matches: an item sold and bought back counts twice, so the share is capped at all of them.
-        usage: Math.min(1, row.matches / total),
-        matches: row.matches,
-      };
-      return [{ hero, lowerBound }];
+      const hero = heroRecords.get(row.bucket);
+      if (row.matches < MIN_HERO_MATCHES || !hero?.matches) return [];
+      const expectedWinRate = expectedPairingWinRate(hero, item, "ally");
+      const winRateChange = matchupWinRateChange(row.wins, row.matches, hero, item, "ally");
+      if (expectedWinRate === undefined || winRateChange === undefined) return [];
+      return [
+        {
+          heroId: row.bucket,
+          winRate: row.wins / row.matches,
+          expectedWinRate,
+          winRateChange,
+          // Purchases, not matches: an item sold and bought back counts twice, so the share is capped at all of them.
+          usage: Math.min(1, row.matches / hero.matches),
+          matches: row.matches,
+        },
+      ];
     })
-    .sort((a, b) => b.lowerBound - a.lowerBound)
-    .slice(0, TOP_COUNT)
-    .map(({ hero }) => hero);
+    .sort((a, b) => b.winRateChange - a.winRateChange)
+    .slice(0, TOP_COUNT);
 }
 
 /**

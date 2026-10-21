@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { heroMatchups, matchupWinRateChange } from "./matchup-stats";
+import { expectedPairingWinRate, heroMatchups, matchupWinRateChange } from "./matchup-stats";
 
 /** A rate measured over so many matches that the shrinkage toward 50% is negligible. */
 const exact = (rate: number) => ({ wins: rate * 1e9, matches: 1e9 });
@@ -97,4 +97,12 @@ test("the previous period only annotates pairings it also saw", () => {
   });
   assert.ok(Math.abs(heroMatchups(1, period(60), period(40)).counterRows[0].prevRelWinrate! + 0.05) < 1e-10);
   assert.equal(heroMatchups(1, period(60), { ...period(40), counters: [] }).counterRows[0].prevRelWinrate, undefined);
+});
+
+test("the expected rate adds an ally's strength and takes an enemy's away", () => {
+  const pair = 0.36 / (0.36 + 0.16);
+  assert.ok(Math.abs(expectedPairingWinRate(exact(0.6), exact(0.6), "ally")! - pair) < 1e-6);
+  assert.ok(Math.abs(expectedPairingWinRate(exact(0.6), exact(0.6), "enemy")! - 0.5) < 1e-6);
+  assert.equal(expectedPairingWinRate(exact(0.6), undefined, "ally"), undefined);
+  assert.equal(expectedPairingWinRate({ wins: 11, matches: 10 }, exact(0.5), "ally"), undefined);
 });

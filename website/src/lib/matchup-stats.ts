@@ -11,6 +11,29 @@ const PRIOR_MATCHES = 100;
 const logit = (p: number) => Math.log(p / (1 - p));
 const sigmoid = (z: number) => 1 / (1 + Math.exp(-z));
 
+const validRecord = (record: WinRecord | undefined): record is WinRecord =>
+  record !== undefined &&
+  Number.isFinite(record.matches) &&
+  Number.isFinite(record.wins) &&
+  record.matches > 0 &&
+  record.wins >= 0 &&
+  record.wins <= record.matches;
+
+/**
+ * The win rate two records' own strength predicts for their pairing: both shrunk toward 50%, then added in log-odds for
+ * an ally (a teammate, or an item the hero buys) or the other's taken from the hero's for an enemy. Undefined when a
+ * record is missing or impossible.
+ */
+export function expectedPairingWinRate(
+  hero: WinRecord | undefined,
+  other: WinRecord | undefined,
+  side: "ally" | "enemy",
+): number | undefined {
+  if (!validRecord(hero) || !validRecord(other)) return undefined;
+  const strength = (record: WinRecord) => logit(shrunkWinRate(record.wins, record.matches, PRIOR_MATCHES));
+  return sigmoid(strength(hero) + (side === "ally" ? 1 : -1) * strength(other));
+}
+
 /**
  * How far a pairing's win rate sits from what the two heroes' own strength predicts, in win probability.
  *
@@ -26,17 +49,8 @@ export function matchupWinRateChange(
   other: WinRecord | undefined,
   side: "ally" | "enemy",
 ): number | undefined {
-  const valid = (record: WinRecord | undefined): record is WinRecord =>
-    record !== undefined &&
-    Number.isFinite(record.matches) &&
-    Number.isFinite(record.wins) &&
-    record.matches > 0 &&
-    record.wins >= 0 &&
-    record.wins <= record.matches;
-
-  if (!valid({ wins, matches }) || !valid(hero) || !valid(other)) return undefined;
-  const strength = (record: WinRecord) => logit(shrunkWinRate(record.wins, record.matches, PRIOR_MATCHES));
-  const expected = sigmoid(strength(hero) + (side === "ally" ? 1 : -1) * strength(other));
+  const expected = expectedPairingWinRate(hero, other, side);
+  if (!validRecord({ wins, matches }) || expected === undefined) return undefined;
   return shrunkWinRate(wins, matches, PRIOR_MATCHES, expected) - expected;
 }
 

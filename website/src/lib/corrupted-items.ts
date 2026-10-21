@@ -15,6 +15,15 @@ import type {
 /** The first day with corrupted items in tracked matches (2026-09-29, UTC). */
 export const CORRUPTED_ITEMS_SINCE_UNIX = Date.UTC(2026, 8, 29) / 1000;
 
+/**
+ * The hour after the last corrupted purchase in tracked matches (2026-10-02 21:00 UTC): from then on no match has one,
+ * and no other `upgrade_info` value showed up in their place. Move it, or drop it, if they come back.
+ */
+export const CORRUPTED_ITEMS_UNTIL_UNIX = Date.UTC(2026, 9, 2, 21) / 1000;
+
+/** The days with corrupted purchases, in words: "September 29 to October 2, 2026". */
+export const CORRUPTED_ITEMS_PERIOD = "September 29 to October 2, 2026";
+
 /** How the item stats count corrupted purchases: `exclude` (the API default), `include` as the normal item, `only`. */
 export const CORRUPTED_ITEM_MODES = ["exclude", "only", "include"] as const;
 export type CorruptedItemMode = (typeof CORRUPTED_ITEM_MODES)[number];

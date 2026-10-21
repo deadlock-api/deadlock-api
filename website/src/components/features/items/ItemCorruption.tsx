@@ -16,7 +16,9 @@ import { Stat, StatGroup } from "~/components/ui/stat";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { Text } from "~/components/ui/text";
 import {
+  CORRUPTED_ITEMS_PERIOD,
   CORRUPTED_ITEMS_SINCE_UNIX,
+  CORRUPTED_ITEMS_UNTIL_UNIX,
   corruptedStats,
   penaltiesForTier,
   type CorruptionData,
@@ -41,7 +43,7 @@ export function ItemCorruption({
 }: {
   /** The item with its properties (`itemQueryOptions`), which the list queries strip. */
   item: Upgrade;
-  /** The page's item stats request; the comparison narrows it to the matches since the update. */
+  /** The page's item stats request; the comparison keeps its filters but not its dates (`CORRUPTED_ITEMS_PERIOD`). */
   request: AnalyticsApiItemStatsRequest;
   /** The request's rank range in words, such as "Phantom 1+". */
   rankRange: string;
@@ -194,16 +196,18 @@ function CorruptionPerformance({
   request: AnalyticsApiItemStatsRequest;
   rankRange: string;
 }) {
-  // Both versions over the same matches: the normal item since the update too, or a season of normal purchases would
-  // stand against a few days of corrupted ones. `only` itself ignores bounds before the update.
-  const since = Math.max(request.minUnixTimestamp ?? 0, CORRUPTED_ITEMS_SINCE_UNIX);
-  const normalQuery = useQuery(itemStatsQueryOptions({ ...request, minUnixTimestamp: since }));
-  const corruptedQuery = useQuery(itemStatsQueryOptions({ ...request, corruptedItems: "only" }));
+  // Both versions over the same matches, the days corrupted items were bought, whatever the page's dates: the page's
+  // weeks of normal purchases would stand against a few days of corrupted ones, and a range after the last corrupted
+  // purchase would leave nothing to compare.
+  const period = { minUnixTimestamp: CORRUPTED_ITEMS_SINCE_UNIX, maxUnixTimestamp: CORRUPTED_ITEMS_UNTIL_UNIX };
+  const normalQuery = useQuery(itemStatsQueryOptions({ ...request, ...period }));
+  const corruptedQuery = useQuery(itemStatsQueryOptions({ ...request, ...period, corruptedItems: "only" }));
   const minMatches = request.minMatches ?? 0;
 
   const heading = (
     <Text as="p" variant="caption" tone="muted" className="max-w-3xl">
-      {rankRange} matches since September 29, 2026
+      Both versions in {rankRange} matches from {CORRUPTED_ITEMS_PERIOD}, the only days with corrupted purchases in
+      tracked matches
     </Text>
   );
 
@@ -238,8 +242,8 @@ function CorruptionPerformance({
           variant="inline"
           title={
             minMatches > 1
-              ? `Fewer than ${minMatches} tracked matches with a corrupted ${itemName} so far`
-              : `No tracked matches with a corrupted ${itemName} yet`
+              ? `Fewer than ${minMatches} tracked matches with a corrupted ${itemName}`
+              : `No tracked matches with a corrupted ${itemName}`
           }
         />
       </Stack>

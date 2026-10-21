@@ -7,10 +7,12 @@ import { Panel, PanelBody, PanelHeader } from "~/components/patterns/panel/Panel
 import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
+import { TooltipStat, TooltipStats } from "~/components/ui/tooltip";
 import { buildComponentImplications } from "~/lib/build-transform";
-import { formatPercent, formatShare, possessive } from "~/lib/format";
+import { formatPercent, formatShare, formatSignedPoints, possessive } from "~/lib/format";
 import type { ItemBestHero } from "~/lib/item-hero-fns";
 import { toneOf } from "~/lib/tone";
+import { winRateNoise } from "~/lib/wilson";
 import { filterShopableItems, itemUpgradesQueryOptions, type SlimUpgrade } from "~/queries/asset-queries";
 import { itemStatsQueryOptions } from "~/queries/item-stats-query";
 
@@ -72,9 +74,14 @@ export function ItemBestHeroes({
   onRetry?: () => void;
   className?: string;
 }) {
+  // The bars reach the edge at the list's largest change, never below a point, so a flat list stays short.
+  const changeScale = Math.max(0.01, ...(bestHeroes ?? []).map((hero) => Math.abs(hero.winRateChange)));
   return (
     <Panel className={className}>
-      <PanelHeader title={`Best Heroes for ${itemName}`} description="by win rate after buying it" />
+      <PanelHeader
+        title={`Best Heroes for ${itemName}`}
+        description="vs. what the hero's and the item's usual win rates predict"
+      />
       <PanelBody className="flex-1">
         {bestHeroes === undefined ? (
           <ErrorState variant="inline" title={`Could not load ${possessive(itemName)} best heroes`} onRetry={onRetry} />
@@ -82,7 +89,7 @@ export function ItemBestHeroes({
           <EmptyState variant="inline" title={`No hero buys ${itemName} often enough to rank yet`} />
         ) : (
           <RankedEntityList>
-            {bestHeroes.map(({ heroId, winRate, usage, matches }, index) => (
+            {bestHeroes.map(({ heroId, winRate, expectedWinRate, winRateChange, usage, matches }, index) => (
               <RankedEntityRow
                 key={heroId}
                 rank={index + 1}
@@ -98,14 +105,33 @@ export function ItemBestHeroes({
                 }
               >
                 <RankedEntityMetric
+                  label="Vs. expected"
+                  labelDisplay={index === 0 ? "visible" : "hidden"}
+                  width="wide"
+                  value={formatSignedPoints(winRateChange)}
+                  tone={toneOf(Math.round(winRateChange * 1000))}
+                  // Only a difference outside the sample's noise takes a color.
+                  significant={Math.abs(winRateChange) >= winRateNoise(matches)}
+                  change={{ value: winRateChange, scale: changeScale }}
+                  details={
+                    <TooltipStats variant="plain">
+                      <TooltipStat label="Win rate after buying it" value={formatPercent(winRate)} />
+                      <TooltipStat label="Expected from hero and item" value={formatPercent(expectedWinRate)} />
+                      <TooltipStat label="Change, toward expected" value={formatSignedPoints(winRateChange, 2)} />
+                    </TooltipStats>
+                  }
+                />
+                <RankedEntityMetric
                   label="Win rate"
                   labelDisplay={index === 0 ? "visible" : "hidden"}
+                  priority="secondary"
                   value={formatPercent(winRate)}
                   tone={toneOf(winRate, 0.5)}
                 />
                 <RankedEntityMetric
                   label="Bought"
                   labelDisplay={index === 0 ? "visible" : "hidden"}
+                  priority="secondary"
                   value={formatShare(usage)}
                   share={usage}
                 />
