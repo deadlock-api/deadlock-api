@@ -260,7 +260,7 @@ export function MatchTimeline({
           durationS={durationS}
           sides={sides}
         />
-        <MatchEventList combat={events} objectives={objectives} playerName={viewedName} />
+        <MatchEventList combat={events} objectives={objectives} playerName={viewedName} sides={sides} />
       </section>
     </Card>
   );
