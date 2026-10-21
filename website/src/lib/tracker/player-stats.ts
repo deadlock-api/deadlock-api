@@ -141,7 +141,7 @@ export function statMaxima(players: TrackerMatchPlayer[]): Record<string, number
 /** What a player did that no single column holds, worked out against their team and the match length. */
 export interface PlayerContext {
   /** Share of the team's kills the player took part in, in `[0,1]`. */
-  killShare: number;
+  killParticipation: number;
   /** Share of the team's hero damage, in `[0,1]`. */
   damageShare: number;
   soulsPerMin: number;
@@ -163,7 +163,7 @@ export function playerContext(
   }
   const deaths = match.deaths.find((row) => row.account_id === player.account_id);
   return {
-    killShare: teamKills > 0 ? (player.kills + player.assists) / teamKills : 0,
+    killParticipation: teamKills > 0 ? (player.kills + player.assists) / teamKills : 0,
     damageShare: teamDamage > 0 ? player.player_damage / teamDamage : 0,
     soulsPerMin: durationS > 0 ? player.net_worth / (durationS / 60) : 0,
     deadForS: deaths ? deaths.death_details.reduce((sum, death) => sum + timeDeadInMatch(death, durationS), 0) : null,
