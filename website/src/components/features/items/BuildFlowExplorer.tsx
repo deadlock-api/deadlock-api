@@ -163,12 +163,13 @@ interface Choice {
   winRate: number;
   /** The 95% interval of `winRate`: the raw Wilson interval moved by the adjustment. */
   interval: readonly [number, number];
-  /** `winRate` pulled toward the build's own by a share of its games: what the win rate sort ranks by. */
+  /** `winRate` pulled toward its stage's by a share of the build's games: what the win rate sort ranks by. */
   score: number;
   /**
-   * The least `score` may be: the low end of its 95% interval. A perfect record from a dozen games is pulled to the
+   * The least `winRate` may be: the low end of its 95% interval. A perfect record from a dozen games is pulled to the
    * build's rate before the interval is taken, so it does not outrank a good one from hundreds (12 of 12 ranks at 49%,
-   * 66% of 300 at 58%). Suggestions, swaps and the confident completion rank by it.
+   * 66% of 300 at 58%). The build's, not the stage's as in `score`: the confident completion compares items of
+   * different stages. Suggestions, swaps and the confident completion rank by it.
    */
   confident: number;
   tone: Tone;
@@ -1763,7 +1764,7 @@ function buildView(
       wins: node.wins,
       winRate,
       interval,
-      score: (winRate * node.matches + reference * shrink) / (node.matches + shrink),
+      score: (winRate * node.matches + stageRate * shrink) / (node.matches + shrink),
       confident: confidentRate(winRate * node.matches, node.matches, reference, shrink),
       tone,
       pickRate: node.matches / population,
