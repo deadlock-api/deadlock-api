@@ -18,8 +18,9 @@ export const parseAsMatchMode = parseAsStringLiteral(MATCH_MODES).withDefault(DE
  * Game mode and match mode as one choice: Street Brawl is never played ranked, so the pairs
  * offered here are exactly the ones that can return data. `supportsRank` says whether a rank range
  * can narrow the mode; where it cannot, the rank filter is hidden and dropped from requests.
- * `hasRankedMatches` says whether the mode holds any matches with a rank, so a breakdown by rank or
- * a rank cohort has something to show.
+ * `hasRankedMatches` says whether the mode holds any matches with a rank, so a breakdown by rank has
+ * something to show. A rank cohort set against a player's matches needs `supportsRank`: in All it
+ * would drop the unranked matches the player's side keeps.
  *
  * Only ranked lobbies carry an average badge: any rank bound drops every unranked match. A range is
  * therefore offered in Ranked alone, and All stays all of ranked and unranked.

@@ -71,16 +71,16 @@ export function RankBenchmarks({
   const mode = MODE_CONFIG[filters.mode];
   const autoRange = benchmarkRankRange(latestBadge);
   const range =
-    mode.hasRankedMatches && selection !== "all"
+    mode.supportsRank && selection !== "all"
       ? selection === "auto"
         ? autoRange
         : benchmarkRankRange(Number(selection) * 10 + 1)
       : null;
-  const needsRank = mode.hasRankedMatches && selection === "auto" && !autoRange;
+  const needsRank = mode.supportsRank && selection === "auto" && !autoRange;
   const tierName = (tier: number) => ranks.find((r) => r.tier === tier)?.name ?? `Tier ${tier}`;
   const cohortLabel = range
     ? `${tierName(range.tier)} 1–6`
-    : mode.hasRankedMatches
+    : mode.supportsRank
       ? "All ranks"
       : mode.gameMode === "street_brawl"
         ? "Street Brawl"
@@ -195,7 +195,7 @@ export function RankBenchmarks({
       footer="Your average / lobby average"
       icon={ChartNoAxesCombined}
       actions={
-        mode.hasRankedMatches ? (
+        mode.supportsRank ? (
           <Select
             value={selection}
             onValueChange={(value) => {
@@ -223,7 +223,7 @@ export function RankBenchmarks({
             </SelectContent>
           </Select>
         ) : (
-          "Street Brawl · all players"
+          `${cohortLabel} · all players`
         )
       }
     >
