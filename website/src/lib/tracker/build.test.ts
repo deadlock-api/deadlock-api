@@ -2,15 +2,16 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 
 import type { SlimUpgrade } from "~/queries/asset-queries";
-import type { TrackerAbility } from "~/queries/tracker-queries";
+import type { TrackerAbility, TrackerMatchItem } from "~/queries/tracker-queries";
 
-import { type BuildItem, buildTimeline, type PlayerBuild } from "./build";
+import { type BuildItem, buildTimeline, type PlayerBuild, playerBuild } from "./build";
 
 const ability: TrackerAbility = { id: 1, name: "Charge", class_name: "charge", image: null, image_webp: null };
-const item = (boughtAt: number, soldAt: number | null): BuildItem => ({
+const item = (boughtAt: number, soldAt: number | null, builtIntoUpgrade = false): BuildItem => ({
   upgrade: { id: 2, name: "Sprint Boots" } as SlimUpgrade,
   boughtAt,
   soldAt,
+  builtIntoUpgrade,
   imbuedInto: undefined,
   stacks: undefined,
 });
@@ -79,5 +80,53 @@ test("slot order and out-of-order source arrays do not override recorded chronol
   assert.deepEqual(
     events.map((event) => event.time),
     [0, 60, 100, 200, 300, 400, 450, 500],
+  );
+});
+
+// A component built into its upgrade leaves with a sold time too (flags bit 1): in match 121335607, 72 of the 76
+// "sales" were upgrades, each at the second the upgrade was bought.
+test("build timeline shows no sale for a component built into an upgrade", () => {
+  const build: PlayerBuild = { abilities: [], items: [item(59, 870, true), item(300, 600)] };
+  assert.deepEqual(
+    buildTimeline(build).map((event) => [event.kind, event.time]),
+    [
+      ["purchase", 59],
+      ["purchase", 300],
+      ["sale", 600],
+    ],
+  );
+});
+
+test("a build reads flags bit 1 as built into an upgrade and keeps a real sale", () => {
+  const shopItem = (item_id: number, game_time_s: number, sold_time_s: number, flags: number): TrackerMatchItem => ({
+    item_id,
+    game_time_s,
+    sold_time_s,
+    upgrade_id: 0,
+    imbued_ability_id: 0,
+    flags,
+  });
+  const itemsById = new Map(
+    [
+      { id: 968099481, name: "Extra Spirit" },
+      { id: 7409189, name: "Improved Spirit" },
+      { id: 2, name: "Sprint Boots" },
+    ].map((upgrade) => [upgrade.id, upgrade as SlimUpgrade]),
+  );
+  const build = playerBuild(
+    [shopItem(968099481, 59, 870, 1), shopItem(7409189, 870, 0, 0), shopItem(2, 300, 600, 0)],
+    itemsById,
+    new Map(),
+    undefined,
+    {},
+  );
+  assert.deepEqual(
+    buildTimeline(build).map((event) => [event.kind, event.time]),
+    [
+      ["purchase", 59],
+      ["purchase", 300],
+      ["sale", 600],
+      ["purchase", 870],
+    ],
   );
 });

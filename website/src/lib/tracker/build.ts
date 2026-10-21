@@ -1,12 +1,17 @@
 import type { SlimHero, SlimUpgrade } from "~/queries/asset-queries";
 import type { TrackerAbility, TrackerMatchItem } from "~/queries/tracker-queries";
 
+/** `TrackerMatchItem.flags` bit of a component built into an upgrade: its `sold_time_s` is the upgrade's purchase. */
+export const ITEM_FLAG_BUILT_INTO_UPGRADE = 1;
+
 export interface BuildItem {
   upgrade: SlimUpgrade;
   /** Seconds into the match. */
   boughtAt: number;
-  /** Seconds into the match, or null when held to the end. */
+  /** Seconds into the match it left the inventory, or null when held to the end. */
   soldAt: number | null;
+  /** It left by being built into an upgrade at `soldAt`, not by a sale. */
+  builtIntoUpgrade: boolean;
   imbuedInto: TrackerAbility | undefined;
   /** Stacks the item built up, for items that stack. */
   stacks: number | undefined;
@@ -42,7 +47,7 @@ export function buildTimeline(build: PlayerBuild): BuildEvent[] {
   }
   for (const item of build.items) {
     events.push({ kind: "purchase", time: item.boughtAt, item });
-    if (item.soldAt != null) events.push({ kind: "sale", time: item.soldAt, item });
+    if (item.soldAt != null && !item.builtIntoUpgrade) events.push({ kind: "sale", time: item.soldAt, item });
   }
   return events.sort((a, b) => a.time - b.time);
 }
@@ -85,6 +90,7 @@ export function playerBuild(
       upgrade,
       boughtAt: item.game_time_s,
       soldAt: item.sold_time_s > 0 ? item.sold_time_s : null,
+      builtIntoUpgrade: (item.flags & ITEM_FLAG_BUILT_INTO_UPGRADE) !== 0,
       imbuedInto: abilitiesById.get(item.imbued_ability_id),
       stacks: undefined,
     };

@@ -410,6 +410,7 @@ function demoItems(rng: Rng, hero: SlimHero | undefined, assets: DemoAssets, dur
       sold_time_s: 0,
       upgrade_id: upgradeId,
       imbued_ability_id: 0,
+      flags: 0,
     });
 
   const signatures = ["signature1", "signature2", "signature3", "signature4"].flatMap((slot) => {

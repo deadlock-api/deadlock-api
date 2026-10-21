@@ -110,6 +110,8 @@ export interface TrackerMatchItem {
   upgrade_id: number;
   /** The ability a shop item was imbued into, or 0. */
   imbued_ability_id: number;
+  /** Bit 1 (`ITEM_FLAG_BUILT_INTO_UPGRADE`): the item was built into an upgrade at `sold_time_s`, not sold. */
+  flags: number;
 }
 
 /** One stats sample; every count is cumulative from the match start. */
@@ -525,7 +527,14 @@ export function trackerMatchMetadataQueryOptions(matchId: number, source: MatchM
             player_rank_final_flat_progress: true,
             player_rank_consumed_demotion_protection: true,
             ability_stats: true,
-            items: { item_id: true, game_time_s: true, sold_time_s: true, upgrade_id: true, imbued_ability_id: true },
+            items: {
+              item_id: true,
+              game_time_s: true,
+              sold_time_s: true,
+              upgrade_id: true,
+              imbued_ability_id: true,
+              flags: true,
+            },
             stats: {
               custom_user_stats: true,
               time_stamp_s: true,
