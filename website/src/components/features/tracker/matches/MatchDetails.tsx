@@ -519,6 +519,8 @@ export function NeutralMatchDetails({
   unavailable?: ReactNode;
 }) {
   const winner = TEAMS.find((team) => team.key === winningTeam);
+  // "The Archmother won 3–2 rounds": the winner's rounds first, as the heading names the winner.
+  const rounds = teamScore && winningTeam === TEAMS[1].key ? [teamScore[1], teamScore[0]] : teamScore;
   const headingLevel = useNextHeadingLevel();
   return (
     <div className="@container flex flex-col gap-4">
@@ -528,9 +530,9 @@ export function NeutralMatchDetails({
             <Heading as={headingLevel} size="lg">
               {winner ? `${winner.name} won` : "Match"}
             </Heading>
-            {teamScore && (
+            {rounds && (
               <span className="text-sm text-muted-foreground tabular-nums">
-                {teamScore[0]}–{teamScore[1]} rounds
+                {rounds[0]}–{rounds[1]} rounds
               </span>
             )}
           </div>
