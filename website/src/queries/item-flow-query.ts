@@ -41,15 +41,17 @@ export function itemFlowQueryOptions(params: AnalyticsApiItemFlowStatsRequest) {
 export const ITEM_FLOW_PER_COLUMN_OPTIONS = [8, 12, 20] as const;
 /** Items per stage the build flow shows until the reader picks another count. */
 export const ITEM_FLOW_DEFAULT_PER_COLUMN = ITEM_FLOW_PER_COLUMN_OPTIONS[0];
+/** The item an empty stage of the build suggests is bought by at least this share of the build's players. */
+export const ITEM_FLOW_NEXT_MIN_SHARE = 0.1;
 
 /**
  * The part of a build flow answer its default view reads: per stage the most-bought items (the default sort and
- * count), the links between shown items and the totals. Several megabytes shrink to a few kilobytes; the order of what
- * is kept is unchanged.
+ * count) and the items an empty stage may suggest, the links between kept items and the totals. Several megabytes
+ * shrink to a few dozen kilobytes; the order of what is kept is unchanged.
  */
 export function trimItemFlowForDefaultView(data: ItemFlowStats): ItemFlowStats {
   const keep = new Set<ItemFlowNode>();
-  const shown = new Set<string>();
+  const keptKeys = new Set<string>();
   const columns = new Map<number, ItemFlowNode[]>();
   for (const node of data.nodes) {
     const column = columns.get(node.column);
@@ -58,9 +60,10 @@ export function trimItemFlowForDefaultView(data: ItemFlowStats): ItemFlowStats {
   }
   for (const [column, nodes] of columns) {
     const byMatches = nodes.slice().sort((a, b) => b.matches - a.matches);
-    for (const node of byMatches.slice(0, ITEM_FLOW_DEFAULT_PER_COLUMN)) {
+    const suggestable = byMatches.filter((node) => node.matches >= data.summary.matches * ITEM_FLOW_NEXT_MIN_SHARE);
+    for (const node of [...byMatches.slice(0, ITEM_FLOW_DEFAULT_PER_COLUMN), ...suggestable]) {
       keep.add(node);
-      shown.add(`${column}:${node.item_id}`);
+      keptKeys.add(`${column}:${node.item_id}`);
     }
   }
   return {
@@ -68,8 +71,8 @@ export function trimItemFlowForDefaultView(data: ItemFlowStats): ItemFlowStats {
     nodes: data.nodes.filter((node) => keep.has(node)),
     edges: data.edges.filter(
       (edge) =>
-        shown.has(`${edge.from_column}:${edge.from_item_id}`) &&
-        shown.has(`${edge.from_column + 1}:${edge.to_item_id}`),
+        keptKeys.has(`${edge.from_column}:${edge.from_item_id}`) &&
+        keptKeys.has(`${edge.from_column + 1}:${edge.to_item_id}`),
     ),
   };
 }
