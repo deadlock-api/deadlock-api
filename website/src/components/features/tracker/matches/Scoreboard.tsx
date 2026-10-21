@@ -253,7 +253,7 @@ function PlayerStatStrip({
         </span>
       ))}
       <span className="truncate">
-        <span className="text-foreground">{formatShare(context.killShare)}</span> kill share
+        <span className="text-foreground">{formatShare(context.killParticipation)}</span> kill participation
       </span>
       {slots.dead &&
         (context.deadForS != null ? (
@@ -304,7 +304,7 @@ function PlayerStatsDetails({
           label="Kills / deaths / assists"
           value={`${player.kills} / ${player.deaths} / ${player.assists}`}
         />
-        <TooltipStat label="Kill share" value={formatShare(context.killShare)} />
+        <TooltipStat label="Kill participation" value={formatShare(context.killParticipation)} />
         {soulEconomy && <TooltipStat label="Souls" value={whole(player.net_worth)} />}
         {soulEconomy && <TooltipStat label="Souls per minute" value={whole(Math.round(context.soulsPerMin))} />}
         <TooltipStat label="Last hits" value={whole(player.last_hits)} />
