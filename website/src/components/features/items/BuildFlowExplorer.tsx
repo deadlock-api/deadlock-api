@@ -182,8 +182,11 @@ interface Stage {
   /** Share of all games that bought anything in the stage. */
   reached: number;
   choices: Choice[];
-  /** Every item of the stage that is not in the build, for the full picker. */
-  candidates: { id: number; winRate: number; pickRate: number; matches: number }[];
+  /**
+   * Every item of the stage that is not in the build, for the full picker. `allGames` marks one the build's games never
+   * bought here, whose rate is over all the hero's games instead.
+   */
+  candidates: { id: number; winRate: number; pickRate: number; matches: number; allGames?: boolean }[];
 }
 
 interface Link {
@@ -206,6 +209,7 @@ function StagePickerBody({
     return candidates.flatMap((c) => byId.get(c.id) ?? []);
   }, [upgrades, candidates]);
   const stats = useMemo(() => new Map(candidates.map((c) => [c.id, c])), [candidates]);
+  const anyAllGames = candidates.some((c) => c.allGames);
   const picker = useItemPicker({
     items,
     value: null,
@@ -235,6 +239,12 @@ function StagePickerBody({
                         className={c.matches >= FEW_GAMES ? TONE_TEXT[toneOf(c.winRate, 0.5)] : "text-muted-foreground"}
                       >
                         {percent(c.winRate)} WR
+                        {c.allGames && (
+                          <>
+                            <span aria-hidden="true">*</span>
+                            <span className="sr-only">, all games</span>
+                          </>
+                        )}
                       </span>
                     )}
                   </ItemGridTile>
@@ -244,6 +254,14 @@ function StagePickerBody({
           ))}
         </ItemGrid>
       </ItemSlotTabs>
+      {anyAllGames && (
+        <>
+          <Separator />
+          <p className="px-3 py-2 text-xs text-muted-foreground">
+            * Not bought in this stage by the build's games: win rate over all the hero's games.
+          </p>
+        </>
+      )}
     </>
   );
 }
@@ -635,14 +653,16 @@ export function BuildFlowExplorer({
       const list = byColumn.get(node.column) ?? [];
       list.push({
         id: node.item_id,
-        winRate: node.wins / Math.max(1, node.matches),
+        // The same rate as the build's own candidates: net-worth adjusted, raw in Street Brawl.
+        winRate: isStreetBrawl ? node.wins / Math.max(1, node.matches) : node.adjusted_win_rate,
         pickRate: node.matches / games,
         matches: node.matches,
+        allGames: true,
       });
       byColumn.set(node.column, list);
     }
     return byColumn;
-  }, [unbuilt]);
+  }, [unbuilt, isStreetBrawl]);
   const { data: upgrades } = useQuery(itemUpgradesQueryOptions);
   const { data: pricePerTier } = useQuery(itemPricePerTierQueryOptions);
   // The shop price of the item's tier, from the generic data; the item's own cost until that list is loaded.
@@ -1574,8 +1594,10 @@ export function BuildFlowExplorer({
                             state="suggested"
                             media={<ItemImage itemId={next.itemId} className="size-8" />}
                             name={<ItemName itemId={next.itemId} />}
-                            // The games beside the rate: a suggestion's rate from a few hundred games swings as the build changes.
-                            meta={`${percent(next.wins / Math.max(1, next.matches))} WR · ${count(next.matches)} games`}
+                            // The rate it was picked by and its stage list prints (adjusted, not the build's raw rate
+                            // once picked), and the games beside it: a rate from a few hundred games swings as the build
+                            // changes.
+                            meta={`${percent(next.winRate)} WR · ${count(next.matches)} games`}
                             actions={
                               <Button
                                 variant="ghost"
