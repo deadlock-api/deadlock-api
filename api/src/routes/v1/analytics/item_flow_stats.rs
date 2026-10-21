@@ -293,7 +293,7 @@ fn upgrades_source(query: &ItemFlowStatsQuery, is_brawl: bool) -> (String, &'sta
         arrayFilter((x, t, u) -> {keep}, items.item_id, items.game_time_s, items.upgrade_info) AS upgrade_item_ids,
         arrayFilter((t, x, u) -> {keep}, items.game_time_s, items.item_id, items.upgrade_info) AS upgrade_buy_times,
         arrayMap(
-            bt -> coalesce(arrayElementOrNull(stats.net_worth, arrayFirstIndex(ts -> ts >= bt, stats.time_stamp_s) - 1), net_worth),
+            bt -> coalesce(arrayElementOrNull(stats.net_worth, arrayFirstIndex(ts -> ts >= bt, stats.time_stamp_s) - 1), arrayElementOrNull(stats.net_worth, 1), net_worth),
             upgrade_buy_times
         ) AS upgrade_net_worths"
         ),

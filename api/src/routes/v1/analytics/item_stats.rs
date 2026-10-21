@@ -98,7 +98,9 @@ const NET_WORTH_AT_BUY_EXPR: &str = "net_worth_at_buy";
 // stores `stats.*` but not `items.net_worth_at_buy`, so referencing the column pushes
 // hero-filtered net-worth queries onto a full base-table scan of the window. Measured on
 // production shapes: 5.8-11.8 GB read -> 0.18-0.38 GB, 13-45 CPU-s -> 1.3 CPU-s, same rows.
-const NET_WORTH_AT_BUY_INLINE_EXPR: &str = "coalesce(arrayElementOrNull(stats.net_worth, arrayFirstIndex(ts -> ts >= buy_time, stats.time_stamp_s) - 1), net_worth)";
+// A purchase before the first snapshot (180 s) takes that snapshot; it used to fall through to
+// the player's final net worth (#575, migration 56).
+const NET_WORTH_AT_BUY_INLINE_EXPR: &str = "coalesce(arrayElementOrNull(stats.net_worth, arrayFirstIndex(ts -> ts >= buy_time, stats.time_stamp_s) - 1), arrayElementOrNull(stats.net_worth, 1), net_worth)";
 
 /// `expr` floored to a multiple of `step`.
 fn net_worth_bucket(expr: &str, step: u32) -> String {
