@@ -10,7 +10,7 @@ license = "MIT"
 reqwest = { version = "0.13.5", features = ["json", "http2", "zstd", "gzip", "form", "stream"] }
 wreq = { version = "6.0.0-rc.31", features = ["cookies"] }
 wreq-util = "3.0.0-rc.14"
-tokio = { version = "1.53.3", features = ["macros", "rt-multi-thread", "signal", "time"] }
+tokio = { version = "1.54.0", features = ["macros", "rt-multi-thread", "signal", "time"] }
 tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
 opentelemetry = { version = "0.33", features = ["logs", "trace"] }
 opentelemetry_sdk = { version = "0.33", features = ["logs", "trace"] }
@@ -93,7 +93,7 @@ rayon = "1"
 tokio-util = { version = "0.7.20", features = ["io", "rt"] }
 image = { version = "0.25.10", default-features = false, features = ["png", "webp"] }
 ab_glyph = "0.2.32"
-rmcp = { version = "3.5.1", default-features = false, features = ["macros", "server", "transport-streamable-http-server"] }
+rmcp = { version = "3.6.0", default-features = false, features = ["macros", "server", "transport-streamable-http-server"] }
 schemars = "1.2.3"
 duckdb = { version = "1.10506.1", features = ["bundled", "parquet", "json"] }
 # DuckDB pins arrow 58; enables the JSON writer on that version for MCP result formatting.
@@ -110,7 +110,7 @@ heck = "0.5"
 clickhouse-sql-parser = { git = "https://github.com/raimannma/clickhouse-antlr4", version = "0.1.0" }
 proptest = "1"
 proptest-derive = "0.9"
-rstest = "0.27.0"
+rstest = "0.28.0"
 insta = { version = "1", features = ["json"] }
 tempfile = "3.27.0"
 
