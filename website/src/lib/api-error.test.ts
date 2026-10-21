@@ -32,9 +32,20 @@ test("a busy API is retried in the browser but not on the server", () => {
   );
 });
 
+test("a timeout is retried in the browser but not on the server", () => {
+  const clientTimeout = { isAxiosError: true, code: "ECONNABORTED" };
+  for (const timeout of [clientTimeout, axiosError(504), new ApiError(504, "timeout")]) {
+    assert.equal(shouldRetry(0, timeout), false);
+    assert.equal(
+      inBrowser(() => shouldRetry(0, timeout)),
+      true,
+    );
+  }
+});
+
 test("other server errors are retried everywhere, client errors nowhere", () => {
   assert.equal(shouldRetry(0, axiosError(500)), true);
-  assert.equal(shouldRetry(0, new ApiError(504, "timeout")), true);
+  assert.equal(shouldRetry(0, { isAxiosError: true, code: "ERR_NETWORK" }), true);
   assert.equal(shouldRetry(0, axiosError(404)), false);
   assert.equal(
     inBrowser(() => shouldRetry(0, axiosError(429, { "retry-after": "10" }))),

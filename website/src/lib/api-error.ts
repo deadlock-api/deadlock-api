@@ -51,13 +51,26 @@ export function retryAfterMs(error: unknown): number | undefined {
 }
 
 /**
+ * Whether `error` is a query that ran out of time: the API's 504, or the client's own timeout (Axios's `ECONNABORTED`
+ * / `ETIMEDOUT`, with no response).
+ */
+export function isTimeout(error: unknown): boolean {
+  if (errorStatus(error) === 504) return true;
+  if (typeof error !== "object" || error === null || !("isAxiosError" in error)) return false;
+  const { code, response } = error as { code?: string; response?: unknown };
+  return response === undefined && (code === "ECONNABORTED" || code === "ETIMEDOUT");
+}
+
+/**
  * React Query's retry policy for API calls: up to 3 retries, none for a 4xx a retry won't fix. On the server a busy
  * API is not retried either: that held the page for many seconds and added load while the API sheds it; the page
- * renders without that data (or the edge keeps its last good copy) and the browser fetches it after hydration.
+ * renders without that data (or the edge keeps its last good copy) and the browser fetches it after hydration. Nor is
+ * a timeout: the same query runs out of time again, so one slow query held a page's HTML for 4 x 20 s, and every
+ * timeout shrinks the API's ClickHouse admission limit.
  */
 export function shouldRetry(failureCount: number, error: unknown): boolean {
   if (failureCount >= 3 || isClientError(error)) return false;
-  return typeof window !== "undefined" || !isServiceBusy(error);
+  return typeof window !== "undefined" || !(isServiceBusy(error) || isTimeout(error));
 }
 
 /** React Query's default exponential backoff, but never sooner than the API's `Retry-After`. */
