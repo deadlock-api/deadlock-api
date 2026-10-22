@@ -7,12 +7,16 @@ on:
     paths:
       - 'website/**'
       - '.github/workflows/website-ci.yml'
+      # The tracker demo ports its metric formulas (website/src/lib/tracker/player-metric-formulas.ts).
+      - 'api/src/routes/v1/analytics/player_stats_metrics.rs'
   pull_request:
     branches:
       - master
     paths:
       - 'website/**'
       - '.github/workflows/website-ci.yml'
+      # The tracker demo ports its metric formulas (website/src/lib/tracker/player-metric-formulas.ts).
+      - 'api/src/routes/v1/analytics/player_stats_metrics.rs'
   workflow_dispatch:
 
 jobs:

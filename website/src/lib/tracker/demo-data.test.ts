@@ -4,7 +4,15 @@ import { test } from "node:test";
 import type { SlimHero } from "~/queries/asset-queries";
 
 import { DEMO_ACCOUNT_ID, isDemoAccount, isDemoMatch } from "./demo";
-import { demoEnemyStats, demoHeroStats, demoMatchHistory, demoMatchMetadata, demoMateStats } from "./demo-data";
+import {
+  demoEnemyStats,
+  demoHeroStats,
+  demoMatchHistory,
+  demoMatchMetadata,
+  demoMatchStats,
+  demoMateStats,
+  demoPlayerMetrics,
+} from "./demo-data";
 
 const HERO_IDS = Array.from({ length: 20 }, (_, i) => i + 1);
 const NOW_S = 1_790_000_000;
@@ -72,4 +80,35 @@ test("match details agree with the history row and with the companion stats", ()
     }
   }
   assert.equal(demoMatchMetadata(1, history, assets), null);
+});
+
+test("the demo's benchmark averages come from the same matches and numbers as the rest of the page", () => {
+  const history = demoMatchHistory(HERO_IDS, NOW_S);
+  const filter = { gameMode: "normal", matchMode: "ranked,unranked", minUnixTimestamp: NOW_S - 30 * 86_400 };
+  const kept = history.filter((entry) => entry.game_mode === 1 && entry.start_time >= filter.minUnixTimestamp);
+  const stats = demoMatchStats(
+    history,
+    {
+      accountId: DEMO_ACCOUNT_ID,
+      gameMode: "normal",
+      matchMode: "ranked,unranked",
+      heroId: null,
+      minUnixTimestamp: filter.minUnixTimestamp,
+    },
+    heroes,
+    Infinity,
+  );
+  const metrics = demoPlayerMetrics(history, filter);
+  const mean = (values: number[]) => values.reduce((sum, value) => sum + value, 0) / values.length;
+  const close = (a: number, b: number) => assert.ok(Math.abs(a - b) < 1e-9, `${a} != ${b}`);
+
+  assert.equal(stats.length, kept.length);
+  close(metrics.denies.avg, mean(kept.map((entry) => entry.denies)));
+  close(metrics.kills.avg, mean(kept.map((entry) => entry.player_kills)));
+  const minutes = new Map(kept.map((entry) => [entry.match_id, entry.match_duration_s / 60]));
+  close(metrics.player_healing_per_min.avg, mean(stats.map((s) => s.healing / minutes.get(s.match_id)!)));
+  close(metrics.accuracy.avg, mean(stats.map((s) => s.shots_hit / (s.shots_hit + s.shots_missed))));
+  // No generated numbers, no "your average".
+  assert.equal(metrics.neutral_damage, undefined);
+  assert.deepEqual(demoPlayerMetrics(history, { ...filter, minUnixTimestamp: NOW_S + 86_400 }), {});
 });
