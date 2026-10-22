@@ -132,7 +132,7 @@ export function PlayerComparison({ filters }: { filters: CompareFilters }) {
       aggregate: aggregate && {
         ...aggregate,
         rankBadge,
-        healingPerMin: metricAverage(index, "healing_per_min"),
+        healingPerMin: metricAverage(index, "player_healing_per_min"),
         healPreventedPerMatch: metricAverage(index, "heal_prevented"),
       },
     };

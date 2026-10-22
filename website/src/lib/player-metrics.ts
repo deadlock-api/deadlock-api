@@ -44,10 +44,9 @@ export const PLAYER_METRICS: PlayerMetricDefinition[] = [
   { key: "boss_damage_per_min", label: "Objective Damage / Min", format: "integer", category: "Damage" },
   { key: "self_healing", label: "Self Healing", format: "integer", category: "Healing" },
   { key: "self_healing_per_min", label: "Self Healing / Min", format: "integer", category: "Healing" },
-  { key: "player_healing", label: "Player Healing", format: "integer", category: "Healing" },
-  { key: "player_healing_per_min", label: "Player Healing / Min", format: "integer", category: "Healing" },
-  { key: "healing", label: "Total Healing", format: "integer", category: "Healing" },
-  { key: "healing_per_min", label: "Total Healing / Min", format: "integer", category: "Healing" },
+  // `player_healing` already includes self healing; the API's `healing` keys are deprecated aliases of these.
+  { key: "player_healing", label: "Healing", format: "integer", category: "Healing" },
+  { key: "player_healing_per_min", label: "Healing / Min", format: "integer", category: "Healing" },
   { key: "teammate_healing", label: "Teammate Healing", format: "integer", category: "Healing" },
   { key: "teammate_barriering", label: "Teammate Barriering", format: "integer", category: "Healing" },
   { key: "heal_prevented", label: "Heal Prevented", format: "integer", category: "Healing" },

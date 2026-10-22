@@ -41,7 +41,7 @@ const PRIMARY_METRICS = [
   "accuracy",
   "player_damage_per_min",
   "boss_damage_per_min",
-  "healing_per_min",
+  "player_healing_per_min",
   "crit_shot_rate",
 ];
 const RANK_SELECTIONS = ["auto", "all", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11"] as const;
@@ -50,7 +50,7 @@ const labels: Record<string, string> = {
   net_worth_per_min: "Souls / min",
   player_damage_per_min: "Hero damage / min",
   boss_damage_per_min: "Objective dmg / min",
-  healing_per_min: "Healing / min",
+  player_healing_per_min: "Healing / min",
   crit_shot_rate: "Critical shot rate",
 };
 

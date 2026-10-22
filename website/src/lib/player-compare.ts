@@ -396,7 +396,7 @@ export function settledAggregates(
     return {
       ...aggregate,
       rankBadge: badge || null,
-      healingPerMin: metrics?.healing_per_min?.avg ?? null,
+      healingPerMin: metrics?.player_healing_per_min?.avg ?? null,
       healPreventedPerMatch: metrics?.heal_prevented?.avg ?? null,
     };
   });
