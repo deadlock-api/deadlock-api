@@ -197,25 +197,30 @@ pub struct AnalyticsHeroStats {
     /// per match. The hero's first day counts whole, so it still includes the hours before its
     /// first match.
     bucket_matches_since_first_day: u64,
+    /// Start (UTC midnight, Unix timestamp) of the first UTC day with a match of this hero in the
+    /// response, across all buckets. Later than the requested `min_unix_timestamp` for a hero
+    /// released within the range: compare it with other heroes' records from this day on.
+    first_day: u32,
 }
 
 /// Groups `days`, rows per `hero_id`, `bucket` and `day` with an `n_matches` column, into the
 /// response rows that `columns` (aggregates over those rows) select, and adds
-/// `bucket_matches_since_first_day` from the same rows: a hero's first day across all buckets,
-/// and each bucket's matches per day. Grouping by day first reads no more rows; it only adds a
-/// few thousand groups (heroes × days) to the aggregation.
+/// `bucket_matches_since_first_day` and `first_day` from the same rows: a hero's first day across
+/// all buckets, and each bucket's matches per day. Grouping by day first reads no more rows; it
+/// only adds a few thousand groups (heroes × days) to the aggregation.
 fn group_hero_days(columns: &str, days: &str, log_comment: &str) -> String {
     format!(
         "
-    SELECT * EXCEPT (first_day, day_matches),
-        arraySum(mapValues(mapFilter((d, n) -> d >= first_day, day_matches)))
-            AS bucket_matches_since_first_day
+    SELECT * EXCEPT (hero_first_day, day_matches),
+        arraySum(mapValues(mapFilter((d, n) -> d >= hero_first_day, day_matches)))
+            AS bucket_matches_since_first_day,
+        toUInt32(toDateTime(hero_first_day, 'UTC')) AS first_day
     FROM (
         SELECT
             hero_id,
             bucket,
             {columns},
-            min(min(day)) OVER (PARTITION BY hero_id) AS first_day,
+            min(min(day)) OVER (PARTITION BY hero_id) AS hero_first_day,
             sumMap(sumMap(map(day, n_matches))) OVER (PARTITION BY bucket) AS day_matches
         FROM ({days}
         )
@@ -779,6 +784,19 @@ mod tests {
         assert!(mv.contains("FROM hero_stats_agg_all_v2"));
         assert!(mv.contains("sum(n_matches) AS permanent_buff_matches"));
         assert!(mv.contains("GROUP BY hero_id, bucket, day"));
+    }
+
+    #[test]
+    fn first_day_comes_from_the_hero_days_on_every_path() {
+        let query = HeroStatsQuery {
+            min_unix_timestamp: Some(1_790_713_511),
+            ..Default::default()
+        };
+        let mv = build_mv_query(&query).expect("routes to a rollup");
+        for sql in [mv, build_query(&query)] {
+            assert_valid_sql(&sql);
+            assert!(sql.contains("toUInt32(toDateTime(hero_first_day, 'UTC')) AS first_day"));
+        }
     }
 
     #[test]
