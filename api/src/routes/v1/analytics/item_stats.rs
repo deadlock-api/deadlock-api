@@ -15,8 +15,8 @@ use super::common_filters::{
     CORRUPTED_ITEMS_MIN_MATCH_ID, CORRUPTED_ITEMS_MIN_UNIX_TIMESTAMP, ENHANCED_ITEMS_MIN_MATCH_ID,
     ENHANCED_ITEMS_MIN_UNIX_TIMESTAMP, MatchInfoFilters, PlayerFilters, account_match_prefilter,
     corrupted_sql, default_min_matches_u32, enhanced_sql, filter_protected_accounts, is_non_empty,
-    join_filters, not_corrupted_sql, not_enhanced_sql, range_filters, round_timestamps,
-    with_legacy_id,
+    item_first_buy_sql, item_owned_sql, join_filters, not_corrupted_sql, not_enhanced_sql,
+    range_filters, round_timestamps, with_legacy_id,
 };
 use super::rollup_window::{Coverage, DaySplit, EdgeRows, Reach, Rollup, RollupFilters};
 use crate::context::AppState;
@@ -990,18 +990,35 @@ fn cohort_mv_skip_reason(query: &ItemStatsQuery) -> &'static str {
 /// equal first-purchase times (`<=`) are not treated as a violation. `indexOf` returns
 /// the first occurrence, so the comparison is on each item's *first* purchase time; the
 /// `NOT has(...)` guards make the absent-item case (where `indexOf` is 0) pass.
-fn item_order_predicate(chain: &[u32]) -> Option<String> {
+///
+/// `from_upgrades` reads shop items from `upgrades.*` ([`item_owned_sql`]); only for scans that
+/// never use a projection.
+fn item_order_predicate(chain: &[u32], from_upgrades: bool) -> Option<String> {
     if chain.len() < 2 {
         return None;
     }
-    let first_buy =
-        |id: u32| format!("arrayElement(items.game_time_s, indexOf(items.item_id, {id}))");
+    let owned = |id: u32| {
+        if from_upgrades {
+            item_owned_sql(id)
+        } else {
+            format!("has(items.item_id, {id})")
+        }
+    };
+    let first_buy = |id: u32| {
+        if from_upgrades {
+            item_first_buy_sql(id)
+        } else {
+            format!("arrayElement(items.game_time_s, indexOf(items.item_id, {id}))")
+        }
+    };
     let clause = chain
         .windows(2)
         .map(|w| {
             let (a, b) = (w[0], w[1]);
             format!(
-                "(NOT has(items.item_id, {a}) OR NOT has(items.item_id, {b}) OR {} <= {})",
+                "(NOT {} OR NOT {} OR {} <= {})",
+                owned(a),
+                owned(b),
                 first_buy(a),
                 first_buy(b),
             )
@@ -1076,6 +1093,10 @@ fn build_query(query: &ItemStatsQuery) -> String {
     /* ---------- match_player filters ---------- */
     let hero_ids = query.all_hero_ids();
     let has_buyer_hero_filter = !hero_ids.is_empty();
+    // Whether the main scan reads `items.*` rather than the materialized `upgrades.*`; see the
+    // projection notes below.
+    let use_items_arrays =
+        has_buyer_hero_filter || query.reads_corrupted() || query.filters_enhanced();
     #[expect(deprecated)]
     let player_filter_inputs = PlayerFilters {
         hero_ids: Some(&hero_ids),
@@ -1085,6 +1106,7 @@ fn build_query(query: &ItemStatsQuery) -> String {
         max_networth: query.max_networth,
         include_item_ids: query.include_item_ids.as_deref(),
         exclude_item_ids: query.exclude_item_ids.as_deref(),
+        items_from_upgrades: !use_items_arrays,
         ability_order_prefix: query.ability_order_prefix.as_deref(),
         ability_unlock_order_prefix: query.ability_unlock_order_prefix.as_deref(),
         hero_build_id: query.hero_build_id,
@@ -1104,7 +1126,11 @@ fn build_query(query: &ItemStatsQuery) -> String {
         query.max_bought_at_s,
     ));
     if let Some(chains) = &query.item_order {
-        player_filters.extend(chains.iter().filter_map(|c| item_order_predicate(c)));
+        player_filters.extend(
+            chains
+                .iter()
+                .filter_map(|c| item_order_predicate(c, !use_items_arrays)),
+        );
     }
     let player_filters = join_filters(&player_filters);
 
@@ -1216,8 +1242,6 @@ fn build_query(query: &ItemStatsQuery) -> String {
      * scan). Projections therefore stay off for those opt-in cases, and for `enhanced_items`
      * `exclude`/`only`, which read `items.*` too.
      */
-    let use_items_arrays =
-        has_buyer_hero_filter || query.reads_corrupted() || query.filters_enhanced();
     if !has_buyer_hero_filter && (enemy_hero_ids.is_none() || use_items_arrays) {
         settings.push("optimize_use_projections = 0");
     }
@@ -2310,15 +2334,15 @@ mod tests {
 
     #[test]
     fn item_order_predicate_is_noop_for_short_chains() {
-        assert!(item_order_predicate(&[]).is_none());
-        assert!(item_order_predicate(&[5]).is_none());
+        assert!(item_order_predicate(&[], false).is_none());
+        assert!(item_order_predicate(&[5], false).is_none());
     }
 
     #[test]
     fn item_order_predicate_pair_is_conditional() {
         // A build missing either item must pass, so the clause is OR-guarded on
         // presence — never a bare `has(a) AND has(b) AND ...` presence requirement.
-        let pred = item_order_predicate(&[1, 2]).unwrap();
+        let pred = item_order_predicate(&[1, 2], false).unwrap();
         assert_eq!(
             pred,
             "(NOT has(items.item_id, 1) OR NOT has(items.item_id, 2) OR \
@@ -2330,7 +2354,7 @@ mod tests {
 
     #[test]
     fn item_order_predicate_chain_and_adjacent_pairs() {
-        let pred = item_order_predicate(&[1, 2, 3]).unwrap();
+        let pred = item_order_predicate(&[1, 2, 3], false).unwrap();
         // Two adjacent pairs (1,2) and (2,3), AND-joined into one clause.
         assert_eq!(pred.matches(" AND ").count(), 1);
         for id in [1, 2, 3] {
@@ -2340,8 +2364,36 @@ mod tests {
 
     #[test]
     fn item_order_predicate_emits_valid_sql() {
-        let pred = item_order_predicate(&[1, 2, 3]).unwrap();
-        assert_valid_sql(&format!("SELECT * FROM match_player WHERE {pred}"));
+        for from_upgrades in [false, true] {
+            let pred = item_order_predicate(&[1, 2, 3], from_upgrades).unwrap();
+            assert_valid_sql(&format!("SELECT * FROM match_player WHERE {pred}"));
+        }
+    }
+
+    #[test]
+    fn item_filters_read_upgrades_only_off_the_projection() {
+        let query = ItemStatsQuery {
+            min_unix_timestamp: Some(1_790_035_200),
+            include_item_ids: Some(vec![1]),
+            exclude_item_ids: Some(vec![2]),
+            item_order: Some(vec![vec![1, 3]]),
+            ..Default::default()
+        };
+        let sql = build_query(&query);
+        assert!(sql.contains("has(upgrades.item_id, 1)"));
+        assert!(sql.contains("not if(dictHas('default.upgrade_items_dict', toUInt64(2))"));
+        assert!(sql.contains("indexOf(upgrades.item_id, 3)"));
+        assert!(!sql.contains("hasAll(items.item_id"));
+        assert_valid_sql(&sql);
+
+        // The hero-filtered scan is served by a projection without `upgrades.*`.
+        let sql = build_query(&ItemStatsQuery {
+            hero_ids: Some(vec![15]),
+            ..query
+        });
+        assert!(sql.contains("hasAll(items.item_id, [1])"));
+        assert!(!sql.contains("upgrades.item_id"));
+        assert_valid_sql(&sql);
     }
 
     #[test]

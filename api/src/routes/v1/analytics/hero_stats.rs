@@ -414,20 +414,6 @@ fn build_mv_query(query: &HeroStatsQuery) -> Option<String> {
 #[expect(clippy::too_many_lines)]
 fn build_query(query: &HeroStatsQuery) -> String {
     let info_filters = query.match_info().build();
-    #[expect(deprecated)]
-    let player_filters = PlayerFilters {
-        account_id: query.account_id,
-        account_ids: query.account_ids.as_deref(),
-        min_networth: query.min_networth,
-        max_networth: query.max_networth,
-        include_item_ids: query.include_item_ids.as_deref(),
-        exclude_item_ids: query.exclude_item_ids.as_deref(),
-        ability_order_prefix: query.ability_order_prefix.as_deref(),
-        ability_unlock_order_prefix: query.ability_unlock_order_prefix.as_deref(),
-        ..Default::default()
-    }
-    .build();
-    let player_filters = join_filters(&player_filters);
     let (min_hero_matches, max_hero_matches) = query.hero_matches_bounds();
     let (min_hero_matches_total, max_hero_matches_total) = query.hero_matches_total_bounds();
     // Only used by the CTEs below, which exist only when a bound is set.
@@ -479,6 +465,23 @@ fn build_query(query: &HeroStatsQuery) -> String {
     // `LIMIT 1 BY`. The entire-history CTE is a set filter on the window-wide read, so it takes
     // FINAL too (measured 56-90% less wall time than `LIMIT 1 BY` on a 10-week window).
     let use_final = !has_account_filter && !has_player_hero_cte;
+    #[expect(deprecated)]
+    let player_filters = PlayerFilters {
+        account_id: query.account_id,
+        account_ids: query.account_ids.as_deref(),
+        min_networth: query.min_networth,
+        max_networth: query.max_networth,
+        include_item_ids: query.include_item_ids.as_deref(),
+        exclude_item_ids: query.exclude_item_ids.as_deref(),
+        // FINAL keeps every read off the projections; the `LIMIT 1 BY` reads could pick the item
+        // projection, which has `items.item_id` but no `upgrades.*`.
+        items_from_upgrades: use_final,
+        ability_order_prefix: query.ability_order_prefix.as_deref(),
+        ability_unlock_order_prefix: query.ability_unlock_order_prefix.as_deref(),
+        ..Default::default()
+    }
+    .build();
+    let player_filters = join_filters(&player_filters);
     let (final_clause, dedup_clause) = if use_final {
         (" FINAL", "")
     } else {
@@ -709,6 +712,31 @@ mod tests {
         let (where_clause, _) = rest.split_once("SELECT").expect("the CTE, then its query");
         assert!(prewhere.contains("start_time >= 1786147200"));
         assert!(!where_clause.contains("start_time"));
+    }
+
+    #[test]
+    fn item_filters_read_upgrades_only_under_final() {
+        let query = HeroStatsQuery {
+            min_unix_timestamp: Some(1_786_147_200),
+            include_item_ids: Some(vec![1]),
+            exclude_item_ids: Some(vec![2]),
+            ..Default::default()
+        };
+        let sql = build_query(&query);
+        assert_valid_sql(&sql);
+        assert!(sql.contains("FROM match_player FINAL"));
+        assert!(sql.contains("has(upgrades.item_id, 1)"));
+        assert!(sql.contains("has(upgrades.item_id, 2)"));
+        assert!(!sql.contains("hasAll(items.item_id"));
+
+        // `LIMIT 1 BY` reads may be served by a projection without `upgrades.*`.
+        let sql = build_query(&HeroStatsQuery {
+            min_hero_matches: Some(5),
+            ..query
+        });
+        assert_valid_sql(&sql);
+        assert!(sql.contains("hasAll(items.item_id, [1])"));
+        assert!(!sql.contains("upgrades.item_id"));
     }
 
     #[test]

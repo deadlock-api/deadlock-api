@@ -111,6 +111,32 @@ impl BucketQuery {
     }
 }
 
+/// SQL predicate that is true when the player owned item `id`.
+///
+/// For shop items it reads `upgrades.item_id`, the shop-item subset of `items.item_id`, which is
+/// 2.3x smaller (bytes read -26..-51%, CPU -29..-47% on 30-day item-filtered scans). It drops
+/// corrupted and `game_time_s = 0` entries, which almost never come without a regular entry of the
+/// same id: 42 of 391M rows on 2026-10-22, 40 of them private lobbies handing out items at 0 s.
+/// First purchase times agreed on every row. Other ids (abilities) keep `items.item_id`.
+/// `dictHas` on a constant folds at analysis, so only the chosen column is read. No projection
+/// carries `upgrades.*`: only use this where projections are off.
+pub(super) fn item_owned_sql(id: u32) -> String {
+    format!(
+        "if(dictHas('default.upgrade_items_dict', toUInt64({id})), has(upgrades.item_id, {id}), \
+         has(items.item_id, {id}))"
+    )
+}
+
+/// SQL expression for the player's first purchase time of item `id` (0 if never bought), read
+/// like [`item_owned_sql`].
+pub(super) fn item_first_buy_sql(id: u32) -> String {
+    format!(
+        "if(dictHas('default.upgrade_items_dict', toUInt64({id})), \
+         arrayElement(upgrades.game_time_s, indexOf(upgrades.item_id, {id})), \
+         arrayElement(items.game_time_s, indexOf(items.item_id, {id})))"
+    )
+}
+
 /// Common player-level filters shared across analytics queries.
 /// Returns a `Vec<String>` so callers can extend with file-specific filters
 /// before formatting.
@@ -124,6 +150,10 @@ pub(super) struct PlayerFilters<'a> {
     pub max_networth: Option<u64>,
     pub include_item_ids: Option<&'a [u32]>,
     pub exclude_item_ids: Option<&'a [u32]>,
+    /// Test item ownership with [`item_owned_sql`] instead of `items.item_id`. Only for queries
+    /// that never read a projection (FINAL or `optimize_use_projections = 0`): the projections
+    /// carry `items.item_id` but no `upgrades.*`.
+    pub items_from_upgrades: bool,
     pub ability_order_prefix: Option<&'a [u32]>,
     pub ability_unlock_order_prefix: Option<&'a [u32]>,
     /// The hero build the player had selected when the match started. Only demo-processed matches record one, and the
@@ -154,10 +184,18 @@ impl PlayerFilters<'_> {
             self.max_networth,
         ));
         if let Some(ids) = self.include_item_ids {
-            filters.push(format!("hasAll(items.item_id, [{}])", id_list(ids)));
+            if self.items_from_upgrades {
+                filters.extend(ids.iter().map(|&id| item_owned_sql(id)));
+            } else {
+                filters.push(format!("hasAll(items.item_id, [{}])", id_list(ids)));
+            }
         }
         if let Some(ids) = self.exclude_item_ids {
-            filters.push(format!("not hasAny(items.item_id, [{}])", id_list(ids)));
+            if self.items_from_upgrades {
+                filters.extend(ids.iter().map(|&id| format!("not {}", item_owned_sql(id))));
+            } else {
+                filters.push(format!("not hasAny(items.item_id, [{}])", id_list(ids)));
+            }
         }
         if let Some(ids) = self.ability_order_prefix
             && !ids.is_empty()
@@ -645,6 +683,8 @@ mod proptests {
                 max_networth,
                 include_item_ids: include_item_ids.as_deref(),
                 exclude_item_ids: exclude_item_ids.as_deref(),
+                // Both item sources; the inputs already vary an option.
+                items_from_upgrades: hero_id.is_some(),
                 ability_order_prefix: ability_order_prefix.as_deref(),
                 ability_unlock_order_prefix: ability_unlock_order_prefix.as_deref(),
                 // Any present or absent number; the inputs already vary one.

@@ -277,6 +277,12 @@ fn time_phase_expr(buy_time_expr: &str) -> String {
     format!("toUInt8({raw})")
 }
 
+/// Whether the query reads the materialized `upgrades.*` from the base table with projections off,
+/// see [`upgrades_source`].
+fn reads_base_upgrades(query: &ItemFlowStatsQuery, is_brawl: bool) -> bool {
+    is_brawl || !is_non_empty(query.hero_ids.as_deref())
+}
+
 /// `WITH` aliases for the upgrade purchases (upgrade-only, `buy_time > 0`, corrupted purchases
 /// excluded; migration 42) and the settings that go with them.
 ///
@@ -287,7 +293,7 @@ fn time_phase_expr(buy_time_expr: &str) -> String {
 /// projection can't prune and the rebuild is 25-40% dearer, and street brawl never uses it
 /// (`street_brawl_rounds.*` isn't in it), so those read `upgrades.*` from the base table.
 fn upgrades_source(query: &ItemFlowStatsQuery, is_brawl: bool) -> (String, &'static str) {
-    if is_brawl || !is_non_empty(query.hero_ids.as_deref()) {
+    if reads_base_upgrades(query, is_brawl) {
         return (
             "WITH
         upgrades.item_id AS upgrade_item_ids,
@@ -367,16 +373,17 @@ fn query_parts(query: &ItemFlowStatsQuery) -> QueryParts {
         ..Default::default()
     }
     .build();
+    // In street brawl, stages are rounds (variable per match) rather than fixed time phases.
+    let is_brawl = query.game_mode == Some(GameMode::StreetBrawl);
     let base_filter_vec = PlayerFilters {
         include_item_ids: query.include_item_ids.as_deref(),
         exclude_item_ids: query.exclude_item_ids.as_deref(),
+        items_from_upgrades: reads_base_upgrades(query, is_brawl),
         ability_order_prefix: query.ability_order_prefix.as_deref(),
         ability_unlock_order_prefix: query.ability_unlock_order_prefix.as_deref(),
         ..Default::default()
     }
     .build();
-    // In street brawl, stages are rounds (variable per match) rather than fixed time phases.
-    let is_brawl = query.game_mode == Some(GameMode::StreetBrawl);
     let count = if is_brawl {
         query.phase_count.unwrap_or(4).clamp(2, 12)
     } else {
@@ -992,6 +999,37 @@ pub(super) async fn item_flow_stats(
     get_item_flow_stats(&state.ch_client_ro, query)
         .await
         .map(Json)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::utils::proptest_utils::assert_valid_sql;
+
+    #[test]
+    fn item_filters_read_upgrades_only_off_the_projection() {
+        let query = ItemFlowStatsQuery {
+            min_unix_timestamp: Some(1_790_035_200),
+            include_item_ids: Some(vec![1]),
+            exclude_item_ids: Some(vec![2]),
+            ..Default::default()
+        };
+        let sql = build_edges_query(&query, &query_parts(&query));
+        assert_valid_sql(&sql);
+        assert!(sql.contains("has(upgrades.item_id, 1)"));
+        assert!(sql.contains("has(upgrades.item_id, 2)"));
+        assert!(!sql.contains("hasAll(items.item_id"));
+
+        // Hero-filtered queries are served by a projection without `upgrades.*`.
+        let hero = ItemFlowStatsQuery {
+            hero_ids: Some(vec![15]),
+            ..query
+        };
+        let sql = build_edges_query(&hero, &query_parts(&hero));
+        assert_valid_sql(&sql);
+        assert!(sql.contains("hasAll(items.item_id, [1])"));
+        assert!(!sql.contains("upgrades.item_id"));
+    }
 }
 
 #[cfg(test)]
