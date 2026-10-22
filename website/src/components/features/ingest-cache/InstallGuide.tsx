@@ -20,7 +20,7 @@ const WINDOWS_UNINSTALL = `& "$env:LOCALAPPDATA\\deadlock-api-ingest\\uninstall-
 const LINUX_INSTALL = `curl -fsSL https://raw.githubusercontent.com/deadlock-api/deadlock-api-ingest/master/install-linux.sh | bash`;
 const LINUX_UNINSTALL = "~/.local/share/deadlock-api-ingest/uninstall-linux.sh";
 const DOCKER_INSTALL = `docker run -d --restart unless-stopped --name deadlock-api-ingest \\
-  -v ~/.steam/steam/appcache/httpcache:/root/.steam/steam/appcache/httpcache \\
+  -v ~/.steam/steam:/root/.steam/steam:ro \\
   ghcr.io/deadlock-api/deadlock-api-ingest:latest`;
 const DOCKER_UNINSTALL = "docker rm -f deadlock-api-ingest";
 
