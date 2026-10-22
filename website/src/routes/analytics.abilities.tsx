@@ -47,9 +47,9 @@ export const Route = createFileRoute("/analytics/abilities")({
   },
   head: () =>
     seo({
-      title: pageTitle("Deadlock Ability Builds & Upgrade Win Rates"),
+      title: pageTitle("Deadlock Ability Point Order: Win Rates by Hero"),
       description:
-        "Deadlock ability upgrade path analytics: which skill orders win the most? Win rates by ability level order for every hero, filtered by rank and patch.",
+        "The best ability point order for every Deadlock hero: which ability to level first and which upgrade paths win the most, by rank and patch.",
       path: "/analytics/abilities",
     }),
 });
@@ -90,7 +90,10 @@ function AbilitiesPage() {
 
   return (
     <PageShell>
-      <PageHeader title="Ability Stats" description="Explore the most common ability upgrade paths and their win rates">
+      <PageHeader
+        title="Deadlock Ability Order by Hero"
+        description="Explore the most common ability upgrade paths and their win rates"
+      >
         <p>
           Analyze the most popular and highest win rate ability upgrade paths for every Deadlock hero. See which skill
           orders are favored at different rank brackets, and how item choices affect optimal ability leveling.
