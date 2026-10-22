@@ -197,10 +197,15 @@ pub(super) enum Metric {
     BossDamage,
     BossDamagePerMin,
     SelfHealing,
+    /// All healing the player did, self healing included (Valve's `player_healing` is
+    /// `self_healing + teammate_healing`).
     PlayerHealing,
+    /// Deprecated: the same values as `player_healing`. It used to add `self_healing` to
+    /// `player_healing`, which counted self healing twice.
     Healing,
     SelfHealingPerMin,
     PlayerHealingPerMin,
+    /// Deprecated: the same values as `player_healing_per_min` (see `healing`).
     HealingPerMin,
     TeammateHealing,
     TeammateBarriering,
@@ -238,17 +243,25 @@ impl Metric {
             Self::BossDamage => "max_boss_damage",
             Self::BossDamagePerMin => "max_boss_damage / duration_m",
             Self::SelfHealing => "max_self_healing",
-            Self::PlayerHealing => "max_player_healing",
-            Self::Healing => "max_self_healing + max_player_healing",
+            Self::PlayerHealing | Self::Healing => "max_player_healing",
             Self::SelfHealingPerMin => "max_self_healing / duration_m",
-            Self::PlayerHealingPerMin => "max_player_healing / duration_m",
-            Self::HealingPerMin => "(max_self_healing + max_player_healing) / duration_m",
+            Self::PlayerHealingPerMin | Self::HealingPerMin => "max_player_healing / duration_m",
             Self::TeammateHealing => "max_teammate_healing",
             Self::TeammateBarriering => "max_teammate_barriering",
             Self::HealPrevented => "max_heal_prevented",
             Self::PermanentBuffs => "permanent_buffs",
             Self::PermanentBuffsPerMin => "permanent_buffs / duration_m",
             Self::FirstPermanentBuffTimeS => "first_permanent_buff_time_s",
+        }
+    }
+
+    /// The metric whose columns a deprecated alias reads, `None` for a metric with its own.
+    /// Aliases are not computed, only answered from their target.
+    pub(super) fn alias_of(self) -> Option<Self> {
+        match self {
+            Self::Healing => Some(Self::PlayerHealing),
+            Self::HealingPerMin => Some(Self::PlayerHealingPerMin),
+            _ => None,
         }
     }
 
@@ -266,9 +279,13 @@ pub(super) type AnalyticsPlayerStatsMetrics = HashMap<Metric, MetricValues>;
 
 /// Declares [`AnalyticsPlayerStatsMetricsRow`], with an `avg_*`, `std_*` and `quantiles_*` column
 /// per metric in [`Metric::VARIANTS`] order (the order [`build_query`] selects them in), and
-/// [`Metric::extract_values`], which reads one metric's three columns.
+/// [`Metric::extract_values`], which reads one metric's three columns, or for an alias
+/// ([`Metric::alias_of`]) its target's.
 macro_rules! metrics_row {
-    ($($metric:ident => $avg:ident, $std:ident, $quantiles:ident;)*) => {
+    (
+        aliases { $($alias:ident => $target:ident;)* }
+        $($metric:ident => $avg:ident, $std:ident, $quantiles:ident;)*
+    ) => {
         #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
         pub(super) struct AnalyticsPlayerStatsMetricsRow {
             $($avg: f64, $std: f64, $quantiles: Vec<f64>,)*
@@ -278,6 +295,7 @@ macro_rules! metrics_row {
             pub(super) fn extract_values(self, row: &AnalyticsPlayerStatsMetricsRow) -> MetricValues {
                 match self {
                     $(Self::$metric => MetricValues::from_stats(row.$avg, row.$std, &row.$quantiles),)*
+                    $(Self::$alias => Self::$target.extract_values(row),)*
                 }
             }
         }
@@ -285,6 +303,10 @@ macro_rules! metrics_row {
 }
 
 metrics_row! {
+    aliases {
+        Healing => PlayerHealing;
+        HealingPerMin => PlayerHealingPerMin;
+    }
     Kills => avg_kills, std_kills, quantiles_kills;
     Deaths => avg_deaths, std_deaths, quantiles_deaths;
     Assists => avg_assists, std_assists, quantiles_assists;
@@ -307,10 +329,8 @@ metrics_row! {
     BossDamagePerMin => avg_boss_damage_per_min, std_boss_damage_per_min, quantiles_boss_damage_per_min;
     SelfHealing => avg_self_healing, std_self_healing, quantiles_self_healing;
     PlayerHealing => avg_player_healing, std_player_healing, quantiles_player_healing;
-    Healing => avg_healing, std_healing, quantiles_healing;
     SelfHealingPerMin => avg_self_healing_per_min, std_self_healing_per_min, quantiles_self_healing_per_min;
     PlayerHealingPerMin => avg_player_healing_per_min, std_player_healing_per_min, quantiles_player_healing_per_min;
-    HealingPerMin => avg_healing_per_min, std_healing_per_min, quantiles_healing_per_min;
     TeammateHealing => avg_teammate_healing, std_teammate_healing, quantiles_teammate_healing;
     TeammateBarriering => avg_teammate_barriering, std_teammate_barriering, quantiles_teammate_barriering;
     HealPrevented => avg_heal_prevented, std_heal_prevented, quantiles_heal_prevented;
@@ -362,6 +382,7 @@ fn build_query(query: &PlayerStatsMetricsQuery) -> String {
     );
     let selects = Metric::VARIANTS
         .iter()
+        .filter(|metric| metric.alias_of().is_none())
         .map(|metric| metric_select(*metric, query.include_buff_metrics))
         .join(",\n");
     let game_mode_filter = GameMode::sql_filter(query.game_mode);
@@ -537,6 +558,7 @@ mod tests {
     fn row_columns_follow_the_metric_order() {
         let expected = Metric::VARIANTS
             .iter()
+            .filter(|m| m.alias_of().is_none())
             .flat_map(|m| {
                 [
                     format!("avg_{m}"),
@@ -549,6 +571,34 @@ mod tests {
             <AnalyticsPlayerStatsMetricsRow as Row>::COLUMN_NAMES,
             expected.as_slice()
         );
+    }
+
+    #[test]
+    fn healing_aliases_read_player_healing_without_computing_it_twice() {
+        let sql = build_query(&PlayerStatsMetricsQuery::default());
+        assert_valid_sql(&sql);
+        assert!(!sql.contains("max_self_healing + max_player_healing"));
+        assert!(!sql.contains("AS avg_healing"));
+        assert!(!sql.contains("AS avg_healing_per_min"));
+        assert_eq!(sql.matches("avg(max_player_healing) AS").count(), 1);
+
+        let row = AnalyticsPlayerStatsMetricsRow::deserialize(serde_json::Value::Object(
+            <AnalyticsPlayerStatsMetricsRow as Row>::COLUMN_NAMES
+                .iter()
+                .map(|column| {
+                    let value = match *column {
+                        "avg_player_healing" => serde_json::json!(434.0),
+                        "avg_player_healing_per_min" => serde_json::json!(12.5),
+                        c if c.starts_with("quantiles_") => serde_json::json!([]),
+                        _ => serde_json::json!(0.0),
+                    };
+                    ((*column).to_owned(), value)
+                })
+                .collect(),
+        ))
+        .unwrap();
+        assert!((Metric::Healing.extract_values(&row).avg - 434.0).abs() < f64::EPSILON);
+        assert!((Metric::HealingPerMin.extract_values(&row).avg - 12.5).abs() < f64::EPSILON);
     }
 
     #[test]
