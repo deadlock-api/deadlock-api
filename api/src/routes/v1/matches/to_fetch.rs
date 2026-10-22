@@ -23,7 +23,7 @@ use crate::utils::parse::parse_steam_id_option;
 use crate::utils::request::header_str;
 use crate::utils::sql::id_list;
 
-const BATCH_SIZE: usize = 100;
+const BATCH_SIZE: usize = 50;
 const CLAIM_TTL_SECS: u64 = 15 * 60;
 const POOL_LIMIT: usize = 200_000;
 const MIN_MATCH_ID: u64 = 31_247_321;
@@ -389,7 +389,7 @@ async fn pending_pool_for_account(
          WHERE state = 'pending' AND match_id >= {MIN_MATCH_ID} \
            AND match_id IN (SELECT match_id FROM player_match_history \
                WHERE account_id = {account_id} AND match_id >= {MIN_MATCH_ID}) \
-         ORDER BY match_id DESC LIMIT {POOL_LIMIT} \
+         ORDER BY match_id DESC LIMIT {BATCH_SIZE} \
          SETTINGS log_comment = 'matches_to_fetch_pool_account', use_statistics = 0"
     );
     let ids: Vec<u64> = ch_client.query(&query).fetch_all().await?;
