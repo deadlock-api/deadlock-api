@@ -12,7 +12,7 @@ import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { useKnownHeroId } from "~/hooks/useAssetById";
 import { useDateRangeState } from "~/hooks/useDateRangeState";
 import { useModeState } from "~/hooks/useModeState";
-import { DEFAULT_MATCH_MODE, getEffectiveRankRange } from "~/lib/game-mode";
+import { DEFAULT_BADGES, DEFAULT_MATCH_MODE, getEffectiveRankRange } from "~/lib/game-mode";
 import { prefetchCached } from "~/lib/prefetch-safe";
 import { MAX_BADGE } from "~/lib/rank-utils";
 import { defaultUnixRange } from "~/lib/seasons";
@@ -39,8 +39,7 @@ export const Route = createFileRoute("/analytics/abilities")({
         heroId: deps.heroId,
         gameMode: "normal",
         matchMode: DEFAULT_MATCH_MODE,
-        minAverageBadge: 0,
-        maxAverageBadge: MAX_BADGE,
+        ...DEFAULT_BADGES,
         ...range,
         minMatches: DEFAULT_MIN_MATCHES,
       }),

@@ -2,10 +2,9 @@ import { lazyRouteComponent } from "@tanstack/react-router";
 
 import { analyticsView, redirectAnalyticsTab } from "~/lib/analytics-tabs";
 import { compareCardUrl, compareFilterSearch, type CompareFilterSearch, compareShareParams } from "~/lib/compare-share";
-import { DEFAULT_MATCH_MODE } from "~/lib/game-mode";
+import { DEFAULT_BADGES, DEFAULT_MATCH_MODE } from "~/lib/game-mode";
 import { comparisonVerdict, parseCompareIds, SCORED_STAT_COUNT, settledAggregates } from "~/lib/player-compare";
 import { prefetchCached } from "~/lib/prefetch-safe";
-import { MAX_BADGE } from "~/lib/rank-utils";
 import { defaultUnixRange } from "~/lib/seasons";
 import { pageTitle, seo, SITE_URL } from "~/lib/seo";
 import type { RouterContext } from "~/router";
@@ -45,8 +44,7 @@ export const playersPageOptions = {
         matchMode: DEFAULT_MATCH_MODE,
         heroId: deps.heroId,
         minMatches: DEFAULT_MIN_MATCHES,
-        minAverageBadge: 0,
-        maxAverageBadge: MAX_BADGE,
+        ...DEFAULT_BADGES,
         ...range,
         start: 0,
         limit: MAX_ENTRIES,
@@ -92,8 +90,7 @@ export const statsMetricsPageOptions = {
         heroIds: deps.heroId != null ? String(deps.heroId) : undefined,
         gameMode: "normal",
         matchMode: DEFAULT_MATCH_MODE,
-        minAverageBadge: 0,
-        maxAverageBadge: MAX_BADGE,
+        ...DEFAULT_BADGES,
         ...range,
       }),
     );

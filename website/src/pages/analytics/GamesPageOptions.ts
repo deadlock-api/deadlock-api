@@ -2,9 +2,8 @@ import { lazyRouteComponent } from "@tanstack/react-router";
 import type { AnalyticsApiGameStatsRequest } from "deadlock_api_client";
 
 import { analyticsTabFromPath, ANALYTICS_VIEWS, redirectAnalyticsTab } from "~/lib/analytics-tabs";
-import { DEFAULT_MATCH_MODE } from "~/lib/game-mode";
+import { DEFAULT_BADGES, DEFAULT_MATCH_MODE } from "~/lib/game-mode";
 import { prefetchCached } from "~/lib/prefetch-safe";
-import { MAX_BADGE } from "~/lib/rank-utils";
 import { defaultPrevUnixRange, defaultTemporalCoverage, defaultUnixRange } from "~/lib/seasons";
 import { datasetJsonLd, pageTitle, seo } from "~/lib/seo";
 import type { RouterContext } from "~/router";
@@ -31,8 +30,7 @@ export const gamesPageOptions = {
       gameMode: "normal",
       matchMode: DEFAULT_MATCH_MODE,
       ...range,
-      minAverageBadge: 0,
-      maxAverageBadge: MAX_BADGE,
+      ...DEFAULT_BADGES,
     } as const;
     const baseParams: AnalyticsApiGameStatsRequest = filters;
     const gameStats = (params: AnalyticsApiGameStatsRequest) =>
