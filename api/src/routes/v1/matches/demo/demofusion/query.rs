@@ -16,7 +16,7 @@
 //! ```
 
 use std::collections::{BTreeSet, HashMap, HashSet};
-use std::sync::Arc;
+use std::sync::{Arc, LazyLock};
 
 use bytes::Bytes;
 use datafusion::arrow::datatypes::SchemaRef;
@@ -38,6 +38,22 @@ use super::visitor::{
     BuildStream, CollectedBatches, CollectingVisitor, SyncDemoStream, discover_schemas_from_demo,
     parse_shared_state, scan_full_packet_ticks, sync_parser,
 };
+
+/// Threads parsing demo segments, shared by every concurrent demo query. The API shares the host
+/// with `ClickHouse`, so a query must not fan out over every core the way rayon's global pool does.
+const PARSE_THREADS: usize = 8;
+
+/// `DataFusion` partitions per demo query. Its operators run on the API's tokio workers, so the
+/// default (one per core) lets a single query crowd out request handling.
+const QUERY_PARTITIONS: usize = 4;
+
+static PARSE_POOL: LazyLock<rayon::ThreadPool> = LazyLock::new(|| {
+    rayon::ThreadPoolBuilder::new()
+        .num_threads(PARSE_THREADS)
+        .thread_name(|i| format!("demo-parse-{i}"))
+        .build()
+        .expect("demo parse pool builds")
+});
 
 /// Run `query` against a single parse of `demo` and return a stream of its
 /// result batches. The demo is parsed exactly once; only the columns the query
@@ -86,7 +102,7 @@ async fn query_stream<D: BuildStream + 'static>(
         off_runtime(move || parse_and_collect::<D>(&demo, &entity_specs, &event_types)).await?
     };
 
-    let ctx = session_context(SessionConfig::new());
+    let ctx = session_context(SessionConfig::new().with_target_partitions(QUERY_PARTITIONS));
 
     for schema in &referenced_entities {
         let arrow_schema = projected_entity_schema(schema, &projections)?;
@@ -245,7 +261,7 @@ struct CollectedTables {
 ///
 /// The demo is split into one segment per full packet — each full packet is a complete state
 /// snapshot, so a segment can be parsed independently — and the segments are parsed in parallel on
-/// rayon's pool, which load-balances them across idle workers. Each segment's output batches are
+/// [`PARSE_POOL`], which load-balances them across idle workers. Each segment's output batches are
 /// concatenated in tick (segment) order, which reproduces a single end-to-end parse exactly.
 fn parse_and_collect<D: BuildStream>(
     demo_bytes: &Bytes,
@@ -267,20 +283,22 @@ fn parse_and_collect<D: BuildStream>(
     // signon, and the final segment (`end == None`) runs to EOF. With no full packets there is a
     // single whole-demo segment.
     let num_segments = num_full_packets.max(1);
-    let collected: Vec<CollectedBatches> = (0..num_segments)
-        .into_par_iter()
-        .map(|ordinal| -> Result<CollectedBatches> {
-            let visitor = CollectingVisitor::new(entity_specs, event_types);
-            let mut parser = sync_parser::<D, _>(demo_bytes.clone(), visitor)?;
-            if let Some(shared_state) = &shared_state {
-                parser.set_shared_state(shared_state.clone());
-            }
-            // Mirrors the single-threaded path: parse errors (e.g. a truncated tail) are
-            // tolerated and whatever was collected so far is kept.
-            let _ = parser.run_full_packet(ordinal);
-            parser.into_visitor().finish()
-        })
-        .collect::<Result<Vec<_>>>()?;
+    let collected: Vec<CollectedBatches> = PARSE_POOL.install(|| {
+        (0..num_segments)
+            .into_par_iter()
+            .map(|ordinal| -> Result<CollectedBatches> {
+                let visitor = CollectingVisitor::new(entity_specs, event_types);
+                let mut parser = sync_parser::<D, _>(demo_bytes.clone(), visitor)?;
+                if let Some(shared_state) = &shared_state {
+                    parser.set_shared_state(shared_state.clone());
+                }
+                // Mirrors the single-threaded path: parse errors (e.g. a truncated tail) are
+                // tolerated and whatever was collected so far is kept.
+                let _ = parser.run_full_packet(ordinal);
+                parser.into_visitor().finish()
+            })
+            .collect::<Result<Vec<_>>>()
+    })?;
 
     // Concatenate the per-segment batches in tick order.
     let mut entities: HashMap<Arc<str>, Vec<RecordBatch>> = HashMap::new();

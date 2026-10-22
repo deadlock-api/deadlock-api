@@ -1,7 +1,7 @@
 //! In-process job queue + background worker for demo query extraction.
 //!
 //! Single instance: a bounded `mpsc` channel feeds a dispatcher that runs jobs under
-//! a small `Semaphore` (these jobs saturate every core via rayon and hold the whole
+//! a small `Semaphore` (these jobs parse on a shared rayon pool and hold the whole
 //! demo in memory). Job status lives in Redis; the result artifact is uploaded to the
 //! public `demo-extracts` R2 bucket.
 
@@ -26,10 +26,10 @@ use crate::utils::compression::is_zstd;
 
 /// Max jobs waiting in the channel before submits get a 429.
 const MAX_QUEUE_DEPTH: usize = 128;
-/// Concurrent jobs. Each one uses all cores via rayon and holds the full demo in
-/// memory (~350 MB decompressed), so keep this small. Jobs spend most of their time
-/// downloading from Valve, so a few more slots add throughput without contending for CPU.
-pub(super) const MAX_CONCURRENT: usize = 4;
+/// Concurrent jobs. Each one holds the full demo in memory (~350 MB decompressed) and
+/// competes for the shared demo parse pool, so keep this small. Jobs spend most of their
+/// time downloading from Valve, so a second slot overlaps a download with a parse.
+pub(super) const MAX_CONCURRENT: usize = 2;
 /// Wall-time budget for one job, download through upload, so a pathological query cannot hold
 /// one of the [`MAX_CONCURRENT`] slots indefinitely. Real jobs finish in under 5 minutes (p99
 /// ~1 min; the slowest are a 4 min download or a 2 min query).
