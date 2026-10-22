@@ -191,6 +191,40 @@ pub struct AnalyticsHeroStats {
     /// Matches with pickup timings. Only matches since build 6712 (2026-09-29) record pickup
     /// times, and only players with at least one permanent pickup count here.
     permanent_buff_timing_matches: u64,
+    /// Sum of `matches` over all heroes in this bucket, counting only the UTC days from this
+    /// hero's first match in the response on. A pick rate that leaves out the part of the range
+    /// before the hero's release: `matches / bucket_matches_since_first_day` times the players
+    /// per match. The hero's first day counts whole, so it still includes the hours before its
+    /// first match.
+    bucket_matches_since_first_day: u64,
+}
+
+/// Groups `days`, rows per `hero_id`, `bucket` and `day` with an `n_matches` column, into the
+/// response rows that `columns` (aggregates over those rows) select, and adds
+/// `bucket_matches_since_first_day` from the same rows: a hero's first day across all buckets,
+/// and each bucket's matches per day. Grouping by day first reads no more rows; it only adds a
+/// few thousand groups (heroes × days) to the aggregation.
+fn group_hero_days(columns: &str, days: &str, log_comment: &str) -> String {
+    format!(
+        "
+    SELECT * EXCEPT (first_day, day_matches),
+        arraySum(mapValues(mapFilter((d, n) -> d >= first_day, day_matches)))
+            AS bucket_matches_since_first_day
+    FROM (
+        SELECT
+            hero_id,
+            bucket,
+            {columns},
+            min(min(day)) OVER (PARTITION BY hero_id) AS first_day,
+            sumMap(sumMap(map(day, n_matches))) OVER (PARTITION BY bucket) AS day_matches
+        FROM ({days}
+        )
+        GROUP BY hero_id, bucket
+    )
+    ORDER BY hero_id, bucket
+    SETTINGS log_comment = '{log_comment}', apply_patch_parts = 0
+    "
+    )
 }
 
 /// Horizon of the `hero_stats_agg_v2` materialized view, in days. Keep in sync with
@@ -327,9 +361,14 @@ fn build_mv_query(query: &HeroStatsQuery) -> Option<String> {
     let source = rollup.source(
         &split,
         &filters,
-        &format!("hero_id, {bucket_expr}"),
+        &format!("hero_id, {bucket_expr}, day"),
         mv_rows,
     );
+    let day_sums = MV_MEASURES
+        .split(',')
+        .map(|measure| format!("sum({0}) AS {0}", measure.trim()))
+        .collect::<Vec<_>>()
+        .join(", ");
 
     let matches_per_bucket = if query.bucket == BucketQuery::NoBucket {
         "matches"
@@ -337,38 +376,38 @@ fn build_mv_query(query: &HeroStatsQuery) -> Option<String> {
         "sum(sum(n_matches)) OVER (PARTITION BY bucket)"
     };
 
-    Some(format!(
-        "
-    SELECT
-        hero_id,
-        {bucket_expr} AS bucket,
-        sum(n_wins) AS wins,
-        toUInt64(sum(n_matches) - sum(n_wins)) AS losses,
-        sum(n_matches) AS matches,
-        {matches_per_bucket} AS matches_per_bucket,
-        sum(sum_kills) AS total_kills,
-        sum(sum_deaths) AS total_deaths,
-        sum(sum_assists) AS total_assists,
-        sum(sum_net_worth) AS total_net_worth,
-        sum(sum_last_hits) AS total_last_hits,
-        sum(sum_denies) AS total_denies,
-        sum(sum_player_damage) AS total_player_damage,
-        sum(sum_player_damage_taken) AS total_player_damage_taken,
-        sum(sum_boss_damage) AS total_boss_damage,
-        sum(sum_creep_damage) AS total_creep_damage,
-        sum(sum_neutral_damage) AS total_neutral_damage,
-        sum(sum_max_health) AS total_max_health,
-        sum(sum_shots_hit) AS total_shots_hit,
-        sum(sum_shots_missed) AS total_shots_missed,
-        sum(sum_permanent_buffs) AS total_permanent_buffs,
-        sum(n_matches) AS permanent_buff_matches,
-        sum(sum_first_permanent_buff_time_s) AS total_first_permanent_buff_time_s,
-        sum(n_permanent_buff_timing_matches) AS permanent_buff_timing_matches
-    FROM {source}
-    GROUP BY hero_id, bucket
-    ORDER BY hero_id, bucket
-    SETTINGS log_comment = '{mv_log_comment}', apply_patch_parts = 0
-    "
+    Some(group_hero_days(
+        &format!(
+            "sum(n_wins) AS wins,
+            toUInt64(sum(n_matches) - sum(n_wins)) AS losses,
+            sum(n_matches) AS matches,
+            {matches_per_bucket} AS matches_per_bucket,
+            sum(sum_kills) AS total_kills,
+            sum(sum_deaths) AS total_deaths,
+            sum(sum_assists) AS total_assists,
+            sum(sum_net_worth) AS total_net_worth,
+            sum(sum_last_hits) AS total_last_hits,
+            sum(sum_denies) AS total_denies,
+            sum(sum_player_damage) AS total_player_damage,
+            sum(sum_player_damage_taken) AS total_player_damage_taken,
+            sum(sum_boss_damage) AS total_boss_damage,
+            sum(sum_creep_damage) AS total_creep_damage,
+            sum(sum_neutral_damage) AS total_neutral_damage,
+            sum(sum_max_health) AS total_max_health,
+            sum(sum_shots_hit) AS total_shots_hit,
+            sum(sum_shots_missed) AS total_shots_missed,
+            sum(sum_permanent_buffs) AS total_permanent_buffs,
+            sum(n_matches) AS permanent_buff_matches,
+            sum(sum_first_permanent_buff_time_s) AS total_first_permanent_buff_time_s,
+            sum(n_permanent_buff_timing_matches) AS permanent_buff_timing_matches"
+        ),
+        &format!(
+            "
+        SELECT hero_id, {bucket_expr} AS bucket, day, {day_sums}
+        FROM {source}
+        GROUP BY hero_id, bucket, day"
+        ),
+        mv_log_comment,
     ))
 }
 
@@ -521,45 +560,74 @@ fn build_query(query: &HeroStatsQuery) -> String {
     )"
     ));
     let with_clause = ctes.join(",\n    ");
-    let matches_per_bucket = if query.bucket == BucketQuery::NoBucket {
-        "matches".to_owned()
+    // The distinct count only where a bucket reads it: it costs more than the rest of the aggregation.
+    let (matches_per_bucket, distinct_matches) = if query.bucket == BucketQuery::NoBucket {
+        ("matches", "")
     } else {
-        format!("sum(count(distinct match_id)) OVER (PARTITION BY {bucket})")
+        (
+            "sum(sum(n_distinct_matches)) OVER (PARTITION BY bucket)",
+            "count(distinct match_id) AS n_distinct_matches,",
+        )
     };
 
-    format!(
-        "
-    WITH {with_clause}
-    SELECT
-        hero_id,
-        {bucket} AS bucket,
-        countIf(won) AS wins,
-        countIf(not won) AS losses,
-        wins + losses AS matches,
-        {matches_per_bucket} AS matches_per_bucket,
-        sum(kills) AS total_kills,
-        sum(deaths) AS total_deaths,
-        sum(assists) AS total_assists,
-        sum(net_worth) AS total_net_worth,
-        sum(last_hits) AS total_last_hits,
-        sum(denies) AS total_denies,
-        sum(max_player_damage) AS total_player_damage,
-        sum(max_player_damage_taken) AS total_player_damage_taken,
-        sum(max_boss_damage) AS total_boss_damage,
-        sum(max_creep_damage) AS total_creep_damage,
-        sum(max_neutral_damage) AS total_neutral_damage,
-        sum(max_max_health) AS total_max_health,
-        sum(max_shots_hit) AS total_shots_hit,
-        sum(max_shots_missed) AS total_shots_missed,
-        toUInt64(sum(ifNull(permanent_buffs, 0))) AS total_permanent_buffs,
-        count(permanent_buffs) AS permanent_buff_matches,
-        toUInt64(sum(ifNull(first_permanent_buff_time_s, 0))) AS total_first_permanent_buff_time_s,
-        count(first_permanent_buff_time_s) AS permanent_buff_timing_matches
-    FROM mp
-    GROUP BY hero_id, bucket
-    ORDER BY hero_id, bucket
-    SETTINGS log_comment = 'hero_stats', apply_patch_parts = 0
-    "
+    group_hero_days(
+        &format!(
+            "sum(n_wins) AS wins,
+            sum(n_losses) AS losses,
+            wins + losses AS matches,
+            {matches_per_bucket} AS matches_per_bucket,
+            sum(sum_kills) AS total_kills,
+            sum(sum_deaths) AS total_deaths,
+            sum(sum_assists) AS total_assists,
+            sum(sum_net_worth) AS total_net_worth,
+            sum(sum_last_hits) AS total_last_hits,
+            sum(sum_denies) AS total_denies,
+            sum(sum_player_damage) AS total_player_damage,
+            sum(sum_player_damage_taken) AS total_player_damage_taken,
+            sum(sum_boss_damage) AS total_boss_damage,
+            sum(sum_creep_damage) AS total_creep_damage,
+            sum(sum_neutral_damage) AS total_neutral_damage,
+            sum(sum_max_health) AS total_max_health,
+            sum(sum_shots_hit) AS total_shots_hit,
+            sum(sum_shots_missed) AS total_shots_missed,
+            sum(sum_permanent_buffs) AS total_permanent_buffs,
+            sum(n_permanent_buff_matches) AS permanent_buff_matches,
+            sum(sum_first_permanent_buff_time_s) AS total_first_permanent_buff_time_s,
+            sum(n_permanent_buff_timing_matches) AS permanent_buff_timing_matches"
+        ),
+        &format!(
+            "
+        WITH {with_clause}
+        SELECT
+            hero_id,
+            {bucket} AS bucket,
+            toDate(start_time) AS day,
+            countIf(won) AS n_wins,
+            countIf(not won) AS n_losses,
+            n_wins + n_losses AS n_matches,
+            {distinct_matches}
+            sum(kills) AS sum_kills,
+            sum(deaths) AS sum_deaths,
+            sum(assists) AS sum_assists,
+            sum(net_worth) AS sum_net_worth,
+            sum(last_hits) AS sum_last_hits,
+            sum(denies) AS sum_denies,
+            sum(max_player_damage) AS sum_player_damage,
+            sum(max_player_damage_taken) AS sum_player_damage_taken,
+            sum(max_boss_damage) AS sum_boss_damage,
+            sum(max_creep_damage) AS sum_creep_damage,
+            sum(max_neutral_damage) AS sum_neutral_damage,
+            sum(max_max_health) AS sum_max_health,
+            sum(max_shots_hit) AS sum_shots_hit,
+            sum(max_shots_missed) AS sum_shots_missed,
+            toUInt64(sum(ifNull(permanent_buffs, 0))) AS sum_permanent_buffs,
+            count(permanent_buffs) AS n_permanent_buff_matches,
+            toUInt64(sum(ifNull(first_permanent_buff_time_s, 0))) AS sum_first_permanent_buff_time_s,
+            count(first_permanent_buff_time_s) AS n_permanent_buff_timing_matches
+        FROM mp
+        GROUP BY hero_id, bucket, day"
+        ),
+        "hero_stats",
     )
 }
 
@@ -637,7 +705,8 @@ mod tests {
             .split("PREWHERE")
             .nth(1)
             .expect("FINAL read has a PREWHERE");
-        let (prewhere, where_clause) = prewhere.split_once("WHERE").expect("PREWHERE then WHERE");
+        let (prewhere, rest) = prewhere.split_once("WHERE").expect("PREWHERE then WHERE");
+        let (where_clause, _) = rest.split_once("SELECT").expect("the CTE, then its query");
         assert!(prewhere.contains("start_time >= 1786147200"));
         assert!(!where_clause.contains("start_time"));
     }
@@ -670,7 +739,7 @@ mod tests {
             let sql = build_query(&query);
             assert_valid_sql(&sql);
             assert!(sql.contains("average_badge, permanent_buffs, first_permanent_buff_time_s"));
-            assert!(sql.contains("count(permanent_buffs) AS permanent_buff_matches"));
+            assert!(sql.contains("count(permanent_buffs) AS n_permanent_buff_matches"));
             assert!(!sql.contains("power_up_buffs"));
         }
         let mv = build_mv_query(&HeroStatsQuery {
@@ -681,6 +750,7 @@ mod tests {
         assert_valid_sql(&mv);
         assert!(mv.contains("FROM hero_stats_agg_all_v2"));
         assert!(mv.contains("sum(n_matches) AS permanent_buff_matches"));
+        assert!(mv.contains("GROUP BY hero_id, bucket, day"));
     }
 
     #[test]
