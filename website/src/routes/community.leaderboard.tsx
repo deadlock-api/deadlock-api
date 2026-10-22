@@ -40,17 +40,17 @@ export const Route = createFileRoute("/community/leaderboard")({
   },
   head: () =>
     seo({
-      title: pageTitle("Deadlock Leaderboard: Top Players by Region"),
+      title: pageTitle("Deadlock Leaderboards: Top Ranked Players by Region"),
       description:
-        "Browse the Deadlock ranked leaderboard across all regions. Filter by hero, search for any player and jump to any rank.",
+        "Deadlock ranked leaderboards for every region: the top players and the heroes they play most. Filter by hero or search for any player.",
       path: "/community/leaderboard",
       jsonLd: datasetJsonLd({
-        name: "Deadlock Leaderboard: Top Ranked Players by Region",
+        name: "Deadlock Leaderboards: Top Ranked Players by Region",
         description:
           "Ranked player standings for Deadlock across all regions, sortable by matchmaking rating and filterable by hero.",
         path: "/community/leaderboard",
         keywords: ["Deadlock", "leaderboard", "leaderboards", "top players", "ranked ladder"],
-        variableMeasured: ["leaderboard rank", "rank badge", "most played heroes"],
+        variableMeasured: ["leaderboard rank", "most played heroes"],
         apiPath: "/v1/leaderboard/Europe",
       }),
     }),
@@ -91,7 +91,7 @@ function LeaderboardPage() {
 
   return (
     <PageShell>
-      <PageHeader title="Deadlock Leaderboard" description="Ranked player standings across all regions">
+      <PageHeader title="Deadlock Leaderboards" description="Ranked player standings across all regions">
         <p>
           Browse the top-ranked Deadlock players by region. Filter by hero to see who dominates with specific
           characters, search for any player, and jump to any rank to see where you stand on the competitive ladder.
