@@ -47,6 +47,7 @@ import { isPreReleaseHero } from "~/lib/hero-roster";
 import { findHeroBySlug, heroSlug } from "~/lib/hero-slug";
 import { catchPrefetch, ensureCached, prefetchCached, requireOnServer } from "~/lib/prefetch-safe";
 import { rankOf } from "~/lib/rank-of";
+import { DEFAULT_RANK_RANGE, rankRangeLabel } from "~/lib/rank-utils";
 import {
   defaultPeriodLabel,
   defaultPrevUnixRange,
@@ -83,8 +84,6 @@ const HeroWinRateByRank = lazy(() =>
 );
 
 const GAME_MODE = "normal" as const;
-/** What the numbers here cover, as the list pages show by default (mode All): ranked and unranked matches. */
-const MATCH_SCOPE = "Ranked and unranked";
 
 // No `minHeroMatches` / `minHeroMatchesTotal`, not even 0: either one sends the request to the exact-timestamp base
 // table, while item stats come from day-grained rollups that start at midnight. Right after a mid-day patch the item
@@ -207,7 +206,7 @@ export const Route = createFileRoute("/analytics/heroes/$heroName")({
       }
       throw notFound({ data: { suggestion: closestNameBySlug(playable, params.heroName)?.name } });
     }
-    const [stats, , , , , matchups] = await Promise.all([
+    const [stats, ranks, , , , matchups] = await Promise.all([
       prefetchCached(queryClient, heroStatsQueryOptions(currentStatsParams(seasons, preferences.dateFilter))),
       prefetchCached(queryClient, ranksQueryOptions),
       prefetchCached(queryClient, heroBanStatsQueryOptions(currentBanParams(seasons, preferences.dateFilter))),
@@ -235,7 +234,7 @@ export const Route = createFileRoute("/analytics/heroes/$heroName")({
       cardImage,
       breadcrumb: hero.name,
       matchups,
-      rankRange: MATCH_SCOPE,
+      rankRange: rankRangeLabel(ranks, DEFAULT_RANK_RANGE.min, DEFAULT_RANK_RANGE.max),
       coverage: defaultTemporalCoverage(seasons, preferences.dateFilter),
       summary: summary && {
         winRate: summary.winRate,
@@ -259,9 +258,9 @@ export const Route = createFileRoute("/analytics/heroes/$heroName")({
         ogImageKind: cardImage ? "thumbnail" : "card",
       });
     }
-    const { heroName, slug, cardImage, coverage, summary } = loaderData;
+    const { heroName, slug, cardImage, rankRange, coverage, summary } = loaderData;
     const description = summary
-      ? `${heroName} holds a ${formatPercent(summary.winRate)} win rate (#${summary.rank} of ${summary.heroCount} heroes) and a ${formatPercent(summary.pickRate)} pick rate in ranked and unranked Deadlock matches. Live matchups, synergies, and counters, updated daily.`
+      ? `${heroName} holds a ${formatPercent(summary.winRate)} win rate (#${summary.rank} of ${summary.heroCount} heroes) and a ${formatPercent(summary.pickRate)} pick rate in ${rankRange} Deadlock matches. Live matchups, synergies, and counters, updated daily.`
       : `${heroName} win rate, pick rate, best items, and matchups in Deadlock. Live stats from tracked matches, updated daily.`;
     return seo({
       title: pageTitle(`${heroName} Win Rate & Pick Rate`),
@@ -271,7 +270,7 @@ export const Route = createFileRoute("/analytics/heroes/$heroName")({
       ogImageKind: cardImage ? "thumbnail" : "card",
       jsonLd: datasetJsonLd({
         name: `Deadlock ${heroName} Win Rate & Pick Rate`,
-        description: `Win rate, pick rate, ban rate, and matchup statistics for ${heroName} in Deadlock, calculated from tracked ranked and unranked matches and updated daily.`,
+        description: `Win rate, pick rate, ban rate, and matchup statistics for ${heroName} in Deadlock, calculated from tracked ${rankRange} matches and updated daily.`,
         path: `/analytics/heroes/${slug}`,
         keywords: ["Deadlock", heroName, "win rate", "pick rate", "matchups"],
         variableMeasured: ["win rate", "pick rate", "ban rate", "matchup win rate"],
@@ -397,11 +396,11 @@ function HeroDetailPage() {
           summary ? (
             <>
               {heroName} wins <span className="font-semibold text-foreground">{formatPercent(summary.winRate)}</span> of{" "}
-              {summary.matches.toLocaleString("en-US")} tracked ranked and unranked matches in {period}. Best items,
-              skill order, matchups and trends below, refreshed daily from live match data.
+              {summary.matches.toLocaleString("en-US")} tracked {rankRange} matches in {period}. Best items, skill
+              order, matchups and trends below, refreshed daily from live match data.
             </>
           ) : (
-            `Live win rate, pick rate, builds and matchups for ${heroName} in Deadlock, from tracked ranked and unranked matches and updated daily.`
+            `Live win rate, pick rate, builds and matchups for ${heroName} in Deadlock, from tracked ${rankRange} matches and updated daily.`
           )
         }
       >

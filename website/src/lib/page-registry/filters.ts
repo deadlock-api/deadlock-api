@@ -1,5 +1,5 @@
 import { day } from "~/dayjs";
-import { MODE_CONFIG, type Mode } from "~/lib/game-mode";
+import { DEFAULT_MODE, MODE_CONFIG, type Mode } from "~/lib/game-mode";
 import { parseAsDayjsRange } from "~/lib/nuqs-parsers";
 import { patchDateRange } from "~/lib/patches";
 
@@ -55,9 +55,8 @@ export function sharedFilterParams(
   context: ResolveContext,
 ): Record<string, SearchValue> {
   const params: Record<string, SearchValue> = {};
-  // A rank asked for without a mode means ranked matches: All keeps unranked ones, which have no rank to narrow.
-  const mode = selection.mode ?? (selection.rank && filters.includes("rank") ? "ranked" : undefined);
-  const config = MODE_CONFIG[mode ? MODE_BY_SELECTION[mode] : "normal_all"];
+  const mode = selection.mode;
+  const config = MODE_CONFIG[mode ? MODE_BY_SELECTION[mode] : DEFAULT_MODE];
   if (filters.includes("mode") && mode) {
     params.game_mode = config.gameMode;
     params.match_mode = config.matchMode;

@@ -11,8 +11,10 @@ export const parseAsGameMode = parseAsStringLiteral(GAME_MODES).withDefault("nor
 export const MATCH_MODES = ["ranked,unranked", "ranked", "unranked"] as const;
 export type MatchMode = (typeof MATCH_MODES)[number];
 
-export const DEFAULT_MATCH_MODE: MatchMode = "ranked,unranked";
+export const DEFAULT_MATCH_MODE: MatchMode = "ranked";
 export const parseAsMatchMode = parseAsStringLiteral(MATCH_MODES).withDefault(DEFAULT_MATCH_MODE);
+/** The tracker's `match_mode`: its default is All, ranked and unranked together. */
+export const parseAsTrackerMatchMode = parseAsStringLiteral(MATCH_MODES).withDefault("ranked,unranked");
 
 /**
  * Game mode and match mode as one choice: Street Brawl is never played ranked, so the pairs
@@ -23,7 +25,8 @@ export const parseAsMatchMode = parseAsStringLiteral(MATCH_MODES).withDefault(DE
  * would drop the unranked matches the player's side keeps.
  *
  * Only ranked lobbies carry an average badge: any rank bound drops every unranked match. A range is
- * therefore offered in Ranked alone, and All stays all of ranked and unranked.
+ * therefore offered in Ranked alone. All, ranked and unranked together, is offered on the tracker
+ * only (`TRACKER_MODES`); the analytics pages offer `MODES`.
  */
 export const MODE_CONFIG = {
   normal_all: {
@@ -61,7 +64,13 @@ export const MODE_CONFIG = {
 
 export type Mode = keyof typeof MODE_CONFIG;
 
-export const DEFAULT_MODE: Mode = "normal_all";
+/** The modes the analytics pages offer, in order. */
+export const MODES: readonly Mode[] = ["normal_ranked", "normal_unranked", "street_brawl"];
+export const DEFAULT_MODE: Mode = "normal_ranked";
+
+/** A player's own match history keeps All, so a player who plays unranked does not land on an empty tracker. */
+export const TRACKER_MODES: readonly Mode[] = ["normal_all", "normal_ranked", "normal_unranked", "street_brawl"];
+export const TRACKER_DEFAULT_MODE: Mode = "normal_all";
 
 const NORMAL_MODE_BY_MATCH_MODE: Record<MatchMode, Mode> = {
   "ranked,unranked": "normal_all",
@@ -69,9 +78,18 @@ const NORMAL_MODE_BY_MATCH_MODE: Record<MatchMode, Mode> = {
   unranked: "normal_unranked",
 };
 
-/** The one Mode the long-standing `game_mode` / `match_mode` search params stand for. */
-export function modeFromParams(gameMode: GameMode, matchMode: MatchMode): Mode {
-  return gameMode === "street_brawl" ? "street_brawl" : NORMAL_MODE_BY_MATCH_MODE[matchMode];
+/**
+ * The one Mode the long-standing `game_mode` / `match_mode` search params stand for, among `modes`. A pair outside them
+ * (an old link to All on an analytics page) falls back to `fallback`.
+ */
+export function modeFromParams(
+  gameMode: GameMode,
+  matchMode: MatchMode,
+  modes: readonly Mode[] = MODES,
+  fallback: Mode = DEFAULT_MODE,
+): Mode {
+  const mode = gameMode === "street_brawl" ? "street_brawl" : NORMAL_MODE_BY_MATCH_MODE[matchMode];
+  return modes.includes(mode) ? mode : fallback;
 }
 
 export function getEffectiveRankRange(
@@ -93,8 +111,8 @@ export function getEffectiveRankRange(
 }
 
 /**
- * The average badge bounds of a page's defaults (mode All, rank range Phantom 1+), as the pages put them into their
- * requests: none, since All has no rank range. Server prefetches spread this so their query keys match.
+ * The average badge bounds of a page's defaults (mode Ranked, rank range Phantom 1+), as the pages put them into their
+ * requests. Server prefetches spread this so their query keys match.
  */
 export const DEFAULT_BADGES = (() => {
   const { effectiveMinRankId, effectiveMaxRankId } = getEffectiveRankRange(

@@ -27,7 +27,7 @@ import { useDateRangeState } from "~/hooks/useDateRangeState";
 import { useDraft, DRAFT_URL_UPDATES } from "~/hooks/useDraft";
 import { useModeState } from "~/hooks/useModeState";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
-import { type Mode, MODE_CONFIG, modeFromParams } from "~/lib/game-mode";
+import { DEFAULT_MATCH_MODE, type Mode, MODE_CONFIG, modeFromParams } from "~/lib/game-mode";
 import { MAX_BADGE } from "~/lib/rank-utils";
 import { pageTitle, seo } from "~/lib/seo";
 import {
@@ -252,14 +252,14 @@ function TeamBuilderPage() {
   useEffect(() => {
     if (imported === null || totalPicked > 0) return;
     const replace = { history: "replace" } as const;
-    if (imported.gameMode !== gameMode) setMode(modeFromParams(imported.gameMode, "ranked,unranked"), replace);
+    if (imported.gameMode !== gameMode) setMode(modeFromParams(imported.gameMode, DEFAULT_MATCH_MODE), replace);
     draftFromMatch(imported, replace);
   }, [imported, totalPicked, gameMode, setMode, draftFromMatch]);
 
   /** Puts a fetched match on the board, moving the page to that match's game mode if it is in the other one. */
   const adoptMatch = (matchId: number, metadata: RawMatchMetadata) => {
     const match = parseImportedMatch(metadata, 0);
-    if (match.gameMode !== gameMode) setMode(modeFromParams(match.gameMode, "ranked,unranked"));
+    if (match.gameMode !== gameMode) setMode(modeFromParams(match.gameMode, DEFAULT_MATCH_MODE));
     void setSidesSwapped(null);
     void setImportedMatchId(matchId);
     draftFromMatch(match);

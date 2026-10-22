@@ -154,7 +154,7 @@ test("a page points at the spot that shows the asked stat", () => {
   assert.deepEqual(resolvePage(games, below, context), {
     page: games,
     path: "/analytics/games",
-    search: { game_mode: "normal", match_mode: "ranked", min_rank: 0, max_rank: 86 },
+    search: { min_rank: 0, max_rank: 86 },
     find: "stat-avg_duration_s",
   });
   assert.equal(resolvePage(games, empty, context).find, undefined);

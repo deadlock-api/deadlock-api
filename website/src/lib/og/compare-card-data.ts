@@ -178,7 +178,7 @@ export async function loadCompareCardData(search: URLSearchParams): Promise<Comp
   return {
     players,
     scoredCount: scored.length,
-    context: [hero?.name ?? "All heroes", ...(mode === "normal_all" ? [] : [MODE_CONFIG[mode].label]), dateLabel],
+    context: [hero?.name ?? "All heroes", MODE_CONFIG[mode].label, dateLabel],
     partial: failed.any,
   };
 }

@@ -29,7 +29,7 @@ import type { PickerTriState } from "~/components/patterns/picker/picker";
 import { Separator } from "~/components/ui/separator";
 import type { Dayjs } from "~/dayjs";
 import { PATCHES } from "~/lib/constants";
-import type { Mode } from "~/lib/game-mode";
+import { type Mode, TRACKER_DEFAULT_MODE, TRACKER_MODES } from "~/lib/game-mode";
 import { isPlayableHero } from "~/lib/hero-roster";
 import { heroesQueryOptions, type SlimUpgrade } from "~/queries/asset-queries";
 
@@ -143,7 +143,7 @@ export function DomainSelectors() {
   );
   const [slots, setSlots] = useState<ItemSlotType[]>(["weapon"]);
   const [itemTiers, setItemTiers] = useState<number[]>([1, 2]);
-  const [mode, setMode] = useState<Mode>("normal_all");
+  const [mode, setMode] = useState<Mode>("normal_ranked");
   const [ranks, setRanks] = useState<[number, number]>([0, 116]);
   const [highRanks, setHighRanks] = useState<[number, number]>([91, 116]);
   const [matchTime, setMatchTime] = useState<TimeRange>([undefined, undefined]);
@@ -292,11 +292,12 @@ export function DomainSelectors() {
       <Specimen
         name="ModeSelector"
         source="domain/selectors/ModeSelector"
-        note="Game mode and match mode as one choice, so only pairs that return data are offered. MODE_CONFIG maps the value to the API's game_mode and match_mode. With a rank range beside it, use Filter.ModeWithRank. disabledModes keeps a mode visible but unselectable on a view without data in it (Brawl on the Economy tab)."
+        note="Game mode and match mode as one choice, so only pairs that return data are offered. MODE_CONFIG maps the value to the API's game_mode and match_mode. The tracker passes TRACKER_MODES, which adds All (ranked and unranked) for a player's own matches. With a rank range beside it, use Filter.ModeWithRank. disabledModes keeps a mode visible but unselectable on a view without data in it (Brawl on the Economy tab)."
       >
         <Variants>
           <ModeSelector value={mode} onValueChange={setMode} />
-          <ModeSelector defaultValue="normal_all" disabledModes={["street_brawl"]} />
+          <ModeSelector defaultValue="normal_unranked" disabledModes={["street_brawl"]} />
+          <ModeSelector modes={TRACKER_MODES} defaultValue={TRACKER_DEFAULT_MODE} />
         </Variants>
       </Specimen>
 

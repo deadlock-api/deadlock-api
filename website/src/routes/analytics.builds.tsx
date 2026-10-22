@@ -40,7 +40,7 @@ const DESCRIPTION =
   "Win rates of the published Deadlock hero builds players start their matches with: how popular each is, its items and skill order, by rank and patch.";
 
 /** The hero builds analytics endpoint counts normal matches only; Street Brawl has no build to choose. */
-const MODES = ["normal_all", "normal_ranked", "normal_unranked"] as const;
+const MODES = ["normal_ranked", "normal_unranked"] as const;
 
 /** A choice re-renders the page in a transition, so the tap paints first; one choice is one history entry. */
 const together = { limitUrlUpdates: throttle(50) };
@@ -131,7 +131,7 @@ function BuildsPage() {
   const [minMatches, setMinMatches] = useQueryState("min_matches", parseAsInteger.withDefault(DEFAULT_MIN_MATCHES));
   const [minPlayers, setMinPlayers] = useQueryState("min_players", parseAsInteger.withDefault(DEFAULT_MIN_PLAYERS));
   const { mode: urlMode, setMode } = useModeState();
-  // A Street Brawl link from another page reads as all normal matches here.
+  // A Street Brawl link from another page reads as the default mode here.
   const mode = urlMode === "street_brawl" ? DEFAULT_MODE : urlMode;
   const { startDate, endDate, handleDateChange, defaultRange } = useDateRangeState();
   const { effectiveMinRankId, effectiveMaxRankId } = getEffectiveRankRange(mode, minRankId, maxRankId);

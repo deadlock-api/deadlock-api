@@ -1,8 +1,6 @@
 import { FilterToggleCell } from "~/components/patterns/filter-bar/FilterCell";
 import { SegmentedItem } from "~/components/ui/segmented";
-import { DEFAULT_MODE, type Mode, MODE_CONFIG } from "~/lib/game-mode";
-
-const MODES = Object.keys(MODE_CONFIG) as Mode[];
+import { DEFAULT_MODE, type Mode, MODE_CONFIG, MODES } from "~/lib/game-mode";
 
 export function ModeSelector({
   value,
@@ -19,7 +17,10 @@ export function ModeSelector({
   /** The mode it starts in when uncontrolled, and the one the reset returns to. */
   defaultValue?: Mode;
   onValueChange?: (mode: Mode) => void;
-  /** The modes offered, in this order; all of them by default. Leave out a mode a page can never show data for. */
+  /**
+   * The modes offered, in this order; the analytics ones (`MODES`) by default. The tracker passes `TRACKER_MODES`,
+   * which adds All. Leave out a mode a page can never show data for.
+   */
   modes?: readonly Mode[];
   /** Modes shown but not selectable, for views that have no data in them (no soul economy in Street Brawl). */
   disabledModes?: readonly Mode[];

@@ -5,7 +5,7 @@ import { day } from "~/dayjs";
 import { useDateRangeState } from "~/hooks/useDateRangeState";
 import { useModeState } from "~/hooks/useModeState";
 import type { DateRange } from "~/lib/date-filter-preference";
-import { MODE_CONFIG, parseAsGameMode, parseAsMatchMode } from "~/lib/game-mode";
+import { MODE_CONFIG, parseAsGameMode, parseAsTrackerMatchMode } from "~/lib/game-mode";
 import { parseAsDayjsRange } from "~/lib/nuqs-parsers";
 import type { TrackerFilterValues } from "~/lib/tracker/compute";
 
@@ -16,7 +16,7 @@ const TRACKER_SELECTION_PARSERS = {
   hero: parseAsInteger,
   result: parseAsStringLiteral(RESULT_FILTERS).withDefault("all"),
   game_mode: parseAsGameMode,
-  match_mode: parseAsMatchMode,
+  match_mode: parseAsTrackerMatchMode,
   date_range: parseAsDayjsRange,
   "pd-picker-tab": parseAsString,
   match: parseAsInteger,
@@ -24,7 +24,7 @@ const TRACKER_SELECTION_PARSERS = {
 
 export function useTrackerFilters(defaultDateRange?: DateRange) {
   const [tab, setTab] = useQueryState("tab", parseAsStringLiteral(TRACKER_TABS).withDefault("matches"));
-  const { mode, setMode, gameMode, matchMode } = useModeState();
+  const { mode, setMode, gameMode, matchMode } = useModeState({ scope: "tracker" });
   const [heroId, setHeroId] = useQueryState("hero", parseAsInteger);
   const [result, setResult] = useQueryState("result", parseAsStringLiteral(RESULT_FILTERS).withDefault("all"));
   const { startDate, endDate, handleDateChange, defaultRange } = useDateRangeState(defaultDateRange);
