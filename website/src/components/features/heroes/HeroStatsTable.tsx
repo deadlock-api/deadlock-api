@@ -403,8 +403,7 @@ function HeroStatsRow({ rank, hero, table }: { rank: number; hero: HeroStatsRowD
         <HeroDetailsTooltip
           row={row}
           heroName={heroName}
-          sumMatches={table.sumMatches}
-          pickrateMultiplier={table.pickrateMultiplier}
+          pickRate={hero.pickRate}
           gameMode={table.gameMode}
           swap={hero.swap}
         />

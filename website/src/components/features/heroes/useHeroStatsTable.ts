@@ -9,6 +9,7 @@ import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { computeBanRates, totalBanMatches } from "~/lib/ban-rate";
 import { getPickrateMultiplier } from "~/lib/constants";
 import type { GameMode, MatchMode } from "~/lib/game-mode";
+import { heroPickRate } from "~/lib/hero-pick-rate";
 import { computeResiduals, computeZScores, scoringInputs } from "~/lib/hero-scoring";
 import { computeSwapRates, type HeroSwapRates } from "~/lib/swap-rate";
 import { heroesQueryOptions } from "~/queries/asset-queries";
@@ -276,7 +277,7 @@ export function useHeroStatsTable({
     const data = rows.map((row, i): HeroStatsRowData => {
       const prev = prevStatsMap?.get(row.hero_id);
       const winRate = row.wins / row.matches;
-      const pickRate = pickrateMultiplier * (row.matches / sum);
+      const pickRate = heroPickRate(row, pickrateMultiplier);
       const normalizedPickRate = row.matches / maxMatches;
       const banRate = banStatsMap.get(row.hero_id) ?? 0;
       const zScore = zScores[i] ?? 0;

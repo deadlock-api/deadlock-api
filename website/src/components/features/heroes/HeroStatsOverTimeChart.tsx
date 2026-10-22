@@ -53,6 +53,7 @@ import { banMatchesByBucket, computeBanRatesByBucket } from "~/lib/ban-rate";
 import { formatCompactAxisTick, niceTicks } from "~/lib/chart-axis";
 import { getPickrateMultiplier, MIN_MATCHES_PER_BUCKET } from "~/lib/constants";
 import type { GameMode, MatchMode } from "~/lib/game-mode";
+import { heroPickRate } from "~/lib/hero-pick-rate";
 import {
   buildHeroTrendPoints,
   HERO_TREND_LABELS,
@@ -62,7 +63,7 @@ import {
 } from "~/lib/hero-trends";
 import { wholeTimeBuckets } from "~/lib/time-buckets";
 import { heroBanStatsQueryOptions } from "~/queries/hero-ban-stats-query";
-import { heroChartStatsQueryOptions } from "~/queries/hero-stats-query";
+import { type HeroChartStats, heroChartStatsQueryOptions } from "~/queries/hero-stats-query";
 import { hero_stats_transform } from "~/types/api_hero_stats";
 
 import { useHeroChartSelection } from "./useHeroChartSelection";
@@ -230,22 +231,23 @@ export function HeroStatsOverTimeChart({
       if (!heroData) return {};
       const rows = wholeTimeBuckets(heroData, heroTimeInterval, { minUnixTimestamp, maxUnixTimestamp });
       const multiplier = getPickrateMultiplier(gameMode);
-      // Every match has one pick per player slot, so a bucket's matches are its picks over the slots. Like ban rate:
-      // a bucket with only a handful of matches is left out, and a hero nobody picked in a bucket is 0%, not a gap.
-      const matchesByBucket = new Map<number, Map<number, number>>();
+      // Every match has one pick per player slot, so a bucket's matches are its picks over the slots, counted from each
+      // hero's first day (`heroPickRate`): the bucket a hero came out in does not average in the days before. Like ban
+      // rate: a bucket with only a handful of matches is left out, and a hero nobody picked in a bucket is 0%, not a gap.
+      const rowsByBucket = new Map<number, Map<number, HeroChartStats>>();
       for (const row of rows) {
-        const heroMatches = matchesByBucket.get(row.bucket) ?? new Map<number, number>();
-        heroMatches.set(row.hero_id, row.matches);
-        matchesByBucket.set(row.bucket, heroMatches);
+        const heroRows = rowsByBucket.get(row.bucket) ?? new Map<number, HeroChartStats>();
+        heroRows.set(row.hero_id, row);
+        rowsByBucket.set(row.bucket, heroRows);
       }
       const heroIds = [...new Set(rows.map((row) => row.hero_id))];
       const map: Record<number, [number, number, number?][]> = {};
-      for (const [bucket, heroMatches] of matchesByBucket) {
-        const picks = [...heroMatches.values()].reduce((sum, matches) => sum + matches, 0);
+      for (const [bucket, heroRows] of rowsByBucket) {
+        const picks = [...heroRows.values()].reduce((sum, row) => sum + row.matches, 0);
         if (bucket < (minUnixTimestamp ?? 0) || picks / multiplier < MIN_MATCHES_PER_BUCKET) continue;
         map[bucket] = heroIds.map((heroId) => {
-          const matches = heroMatches.get(heroId) ?? 0;
-          return [heroId, (100 * multiplier * matches) / picks, matches];
+          const row = heroRows.get(heroId);
+          return [heroId, row ? 100 * heroPickRate(row, multiplier) : 0, row?.matches ?? 0];
         });
       }
       return map;

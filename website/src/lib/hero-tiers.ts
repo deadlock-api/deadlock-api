@@ -1,5 +1,6 @@
 import type { AnalyticsHeroStats } from "deadlock_api_client";
 
+import { heroPickRate } from "~/lib/hero-pick-rate";
 import { computeZScores } from "~/lib/hero-scoring";
 
 export const TIERS = ["s", "a", "b", "c", "d"] as const;
@@ -27,6 +28,7 @@ export type HeroTierInput = { heroId: number } & Pick<
   AnalyticsHeroStats,
   | "wins"
   | "matches"
+  | "bucket_matches_since_first_day"
   | "total_kills"
   | "total_deaths"
   | "total_assists"
@@ -134,8 +136,8 @@ function standardize(values: readonly number[]): number[] {
 }
 
 /**
- * Every hero with its tier, best first. Pick rates are per match, `pickRateMultiplier` heroes a match (12, or 8 in
- * Street Brawl); `banRates` joins the score only when it has a rate for every hero, as in the Overall table.
+ * Every hero with its tier, best first. Pick rates are per match since the hero's first day in the range
+ * (`heroPickRate`), `pickRateMultiplier` heroes a match (12, or 8 in Street Brawl); `banRates` joins the score only when it has a rate for every hero, as in the Overall table.
  * `metric` ranks by one rate or per-match average alone, standardized so the same tier cuts apply; ban rate without
  * bans falls back to the tier score.
  */
@@ -151,7 +153,7 @@ export function rankHeroes(
   const withBans = banRates != null && banRates.size > 0;
   const inputs = played.map((row) => ({
     winrate: row.wins / row.matches,
-    pickrate: (pickRateMultiplier * row.matches) / total,
+    pickrate: heroPickRate(row, pickRateMultiplier),
     banrate: withBans ? (banRates.get(row.heroId) ?? 0) : undefined,
   }));
   const scores = computeZScores(inputs);

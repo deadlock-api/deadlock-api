@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import type { AnalyticsApiHeroStatsRequest } from "deadlock_api_client";
+import type { AnalyticsApiHeroStatsRequest, AnalyticsHeroStats } from "deadlock_api_client";
 import { useMemo } from "react";
 
 import { PATCH_MARKERS } from "~/components/domain/charts/PatchMarkers";
@@ -13,6 +13,7 @@ import { useDefaultPeriodLabel } from "~/hooks/useDefaultPeriodLabel";
 import { getPickrateMultiplier } from "~/lib/constants";
 import { formatPercent, possessive } from "~/lib/format";
 import type { GameMode } from "~/lib/game-mode";
+import { heroPickRate } from "~/lib/hero-pick-rate";
 import { withoutOpenTimeBucket } from "~/lib/time-buckets";
 import { heroStatsQueryOptions } from "~/queries/hero-stats-query";
 
@@ -38,11 +39,9 @@ export function HeroWinRateOverTime({
 
   const weeks = useMemo(() => {
     if (!data) return [];
-    const hero = new Map<number, { wins: number; matches: number }>();
-    const all = new Map<number, number>();
+    const hero = new Map<number, AnalyticsHeroStats>();
     for (const row of withoutOpenTimeBucket(data, "start_time_week")) {
-      all.set(row.bucket, (all.get(row.bucket) ?? 0) + row.matches);
-      if (row.hero_id === heroId) hero.set(row.bucket, { wins: row.wins, matches: row.matches });
+      if (row.hero_id === heroId) hero.set(row.bucket, row);
     }
     const multiplier = getPickrateMultiplier(request.gameMode);
     // The API's daily rollups count the whole start day, so a week that begins before the range would mix in the
@@ -55,7 +54,8 @@ export function HeroWinRateOverTime({
         weekStart,
         label: day.unix(weekStart).utc().format("MMM D"),
         winRate: agg.wins / agg.matches,
-        share: (multiplier * agg.matches) / (all.get(weekStart) ?? agg.matches),
+        // From the hero's first day: the week it came out in does not average in the days before.
+        share: heroPickRate(agg, multiplier),
         matches: agg.matches,
       }));
   }, [data, heroId, request.gameMode, request.minUnixTimestamp]);

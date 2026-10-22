@@ -1,3 +1,5 @@
+import { heroPickRate } from "~/lib/hero-pick-rate";
+
 export const Z_SCORE_WR_WEIGHT = 0.6;
 export const Z_SCORE_PR_WEIGHT = 0.25;
 export const Z_SCORE_BR_WEIGHT = 0.15;
@@ -8,15 +10,14 @@ export const Z_SCORE_BR_WEIGHT = 0.15;
  * the formula without bans, and two periods compare by the same formula.
  */
 export function scoringInputs(
-  rows: readonly { hero_id: number; wins: number; matches: number }[],
+  rows: readonly { hero_id: number; wins: number; matches: number; bucket_matches_since_first_day: number }[],
   pickrateMultiplier: number,
   banRates?: ReadonlyMap<number, number>,
 ) {
-  const sum = rows.reduce((acc, row) => acc + row.matches, 0);
   const withBans = banRates != null && banRates.size > 0;
   return rows.map((row) => ({
     winrate: row.wins / row.matches,
-    pickrate: pickrateMultiplier * (row.matches / sum),
+    pickrate: heroPickRate(row, pickrateMultiplier),
     banrate: withBans ? (banRates.get(row.hero_id) ?? 0) : undefined,
     matches: row.matches,
   }));

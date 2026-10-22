@@ -47,9 +47,8 @@ function DetailGroup({ title, children }: { title: string; children: React.React
 
 export function HeroDetailsTooltip({
   row,
-  sumMatches,
+  pickRate,
   pickrateLabel,
-  pickrateMultiplier,
   heroName,
   gameMode,
   swap,
@@ -57,9 +56,9 @@ export function HeroDetailsTooltip({
   row: HeroDetailsRow;
   /** Names the button: a table of them all read "Show hero details". */
   heroName?: string;
-  sumMatches: number;
+  /** The row's pick rate as the table shows it (`heroPickRate`). */
+  pickRate: number;
   pickrateLabel?: string;
-  pickrateMultiplier?: number;
   /** Street Brawl has no soul economy, so its details leave out net worth. */
   gameMode?: GameMode;
   /** Pre-game swaps; left out when the demos recorded none for the filters. */
@@ -80,7 +79,6 @@ export function HeroDetailsTooltip({
   const totalShots = row.total_shots_hit + row.total_shots_missed;
   // No shots recorded is no reading, not 0% accuracy.
   const accuracy = totalShots > 0 ? (row.total_shots_hit / totalShots) * 100 : undefined;
-  const mult = pickrateMultiplier ?? 1;
   const avgBuffs = row.permanent_buff_matches > 0 ? row.total_permanent_buffs / row.permanent_buff_matches : undefined;
   // Pickup times exist only for matches since the City Never Sleeps update: older ranges have none, not a zero.
   const avgFirstBuff =
@@ -109,10 +107,7 @@ export function HeroDetailsTooltip({
               value={`${row.wins.toLocaleString("en-US")} / ${row.losses.toLocaleString("en-US")}`}
             />
             <TooltipStat label="Win Rate" value={`${((row.wins / row.matches) * 100).toFixed(2)}%`} />
-            <TooltipStat
-              label={pickrateLabel ?? "Pick Rate"}
-              value={`${(mult * (row.matches / sumMatches) * 100).toFixed(2)}%`}
-            />
+            <TooltipStat label={pickrateLabel ?? "Pick Rate"} value={`${(pickRate * 100).toFixed(2)}%`} />
           </DetailGroup>
           <Separator />
           <DetailGroup title="KDA (avg per match)">

@@ -4,9 +4,9 @@ import { test } from "node:test";
 import { computeZScores, scoringInputs } from "./hero-scoring";
 
 const rows = [
-  { hero_id: 1, wins: 55, matches: 100 },
-  { hero_id: 2, wins: 50, matches: 100 },
-  { hero_id: 3, wins: 45, matches: 100 },
+  { hero_id: 1, wins: 55, matches: 100, bucket_matches_since_first_day: 300 },
+  { hero_id: 2, wins: 50, matches: 100, bucket_matches_since_first_day: 300 },
+  { hero_id: 3, wins: 45, matches: 100, bucket_matches_since_first_day: 300 },
 ];
 
 test("a hero no one banned keeps its period on the formula with bans", () => {

@@ -19,8 +19,8 @@ export function heroStatsQueryOptions(params: AnalyticsApiHeroStatsRequest) {
 }
 
 /**
- * The fields the hero charts and the experience table read (`hero_stats_transform`'s and the bucket). `matches` is
- * left out: the API computes it as wins + losses, so unpacking derives it.
+ * The fields the hero charts and the experience table read (`hero_stats_transform`'s, the bucket and the base of the pick
+ * rate, `heroPickRate`). `matches` is left out: the API computes it as wins + losses, so unpacking derives it.
  */
 const HERO_CHART_FIELDS = [
   "hero_id",
@@ -35,31 +35,23 @@ const HERO_CHART_FIELDS = [
   "total_denies",
   "total_permanent_buffs",
   "permanent_buff_matches",
+  "bucket_matches_since_first_day",
 ] as const satisfies readonly (keyof AnalyticsHeroStats)[];
 
 type HeroChartField = (typeof HERO_CHART_FIELDS)[number];
 export type HeroChartStats = Pick<AnalyticsHeroStats, HeroChartField | "matches">;
-/** By rank also reads each bucket's match count, the base of its pick rates. */
-export type HeroRankStats = HeroChartStats & Pick<AnalyticsHeroStats, "matches_per_bucket">;
-
-const HERO_RANK_FIELDS = [...HERO_CHART_FIELDS, "matches_per_bucket"] as const;
-type HeroRankField = (typeof HERO_RANK_FIELDS)[number];
 
 function unpackHeroChartStats(packed: PackedColumns<HeroChartField>): HeroChartStats[] {
-  return unpackColumns(packed).map((row) => Object.assign(row, { matches: row.wins + row.losses }));
-}
-
-function unpackHeroRankStats(packed: PackedColumns<HeroRankField>): HeroRankStats[] {
   return unpackColumns(packed).map((row) => Object.assign(row, { matches: row.wins + row.losses }));
 }
 
 /**
  * The by-rank view adds a hero's subtiers (Seeker 1-6) into their rank before it reads anything, so the cache keeps
  * one row per hero and rank, `bucket` being the rank times ten: a sixth of the 2,500 subtier rows. Every field is a
- * sum, `matches_per_bucket` included (the view adds it over the subtiers the hero was played in, as here).
+ * sum, `bucket_matches_since_first_day` included (the view adds it over the subtiers the hero was played in, as here).
  */
-function sumByRank(rows: readonly AnalyticsHeroStats[]): Record<HeroRankField, number>[] {
-  const byRank = new Map<string, Record<HeroRankField, number>>();
+function sumByRank(rows: readonly AnalyticsHeroStats[]): Record<HeroChartField, number>[] {
+  const byRank = new Map<string, Record<HeroChartField, number>>();
   for (const row of rows) {
     // Bucket 0 holds the matches without a badge: every unranked one. Read as a rank it would be Obscurus.
     if (row.bucket <= 0) continue;
@@ -67,12 +59,12 @@ function sumByRank(rows: readonly AnalyticsHeroStats[]): Record<HeroRankField, n
     const key = `${row.hero_id}:${rank}`;
     let sum = byRank.get(key);
     if (!sum) {
-      sum = Object.fromEntries(HERO_RANK_FIELDS.map((field) => [field, 0])) as Record<HeroRankField, number>;
+      sum = Object.fromEntries(HERO_CHART_FIELDS.map((field) => [field, 0])) as Record<HeroChartField, number>;
       sum.hero_id = row.hero_id;
       sum.bucket = rank * 10;
       byRank.set(key, sum);
     }
-    for (const field of HERO_RANK_FIELDS) {
+    for (const field of HERO_CHART_FIELDS) {
       if (field !== "hero_id" && field !== "bucket") sum[field] += row[field];
     }
   }
@@ -104,9 +96,9 @@ export function heroRankStatsQueryOptions(params: AnalyticsApiHeroStatsRequest) 
     queryKey: queryKeys.analytics.heroChartStats("by-rank", params),
     queryFn: async () => {
       const response = await api.analytics_api.heroStats(params);
-      return packColumns(sumByRank(response.data), HERO_RANK_FIELDS);
+      return packColumns(sumByRank(response.data), HERO_CHART_FIELDS);
     },
-    select: unpackHeroRankStats,
+    select: unpackHeroChartStats,
     staleTime: CACHE_DURATIONS.ONE_DAY,
   });
 }

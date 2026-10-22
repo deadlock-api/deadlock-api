@@ -7,6 +7,7 @@ import type {
 
 import { day } from "~/dayjs";
 import { formatPercent, possessive } from "~/lib/format";
+import { heroPickRate } from "~/lib/hero-pick-rate";
 
 import { getModeSeed, seededRandom, seededShuffle } from "./seed";
 
@@ -257,9 +258,9 @@ type HeroStatDefinition = {
   source: StatSource;
   stat: string;
   format: ValueFormat;
-  value: (row: AnalyticsHeroStats, totalMatches: number) => number;
+  value: (row: AnalyticsHeroStats) => number;
   /** For a rate, the matches it is measured over. */
-  sample?: (row: AnalyticsHeroStats, totalMatches: number) => number;
+  sample?: (row: AnalyticsHeroStats) => number;
   question: (left: string, right: string) => string;
 };
 
@@ -278,9 +279,10 @@ const HERO_META_STATS: HeroStatDefinition[] = [
     source: { page: "hero-stats" },
     stat: "Pick rate",
     format: "percent",
-    // Twelve heroes per match, none twice: the share of matches a hero appears in.
-    value: (row, total) => (12 * row.matches) / total,
-    sample: (_, total) => total / 12,
+    // Twelve heroes per match, none twice: the share of matches a hero appears in, from its first day on, so a hero
+    // released within the window is not measured over days it could not be picked.
+    value: (row) => heroPickRate(row, 12),
+    sample: (row) => row.bucket_matches_since_first_day / 12,
     question: (left, right) => `Is ${possessive(right)} pick rate higher or lower than ${possessive(left)}?`,
   },
   {
@@ -356,7 +358,6 @@ function soulPhrase(name: string): string {
 
 function heroContenders(data: HigherLowerData, definition: HeroStatDefinition): Contender[] {
   const names = new Map(data.heroes.map((hero) => [hero.id, hero.name]));
-  const totalMatches = data.heroStats.reduce((sum, row) => sum + row.matches, 0);
   const contenders: Contender[] = [];
   for (const row of data.heroStats) {
     const name = names.get(row.hero_id);
@@ -365,8 +366,8 @@ function heroContenders(data: HigherLowerData, definition: HeroStatDefinition): 
       kind: "hero",
       heroId: row.hero_id,
       name,
-      value: definition.value(row, totalMatches),
-      sample: definition.sample?.(row, totalMatches),
+      value: definition.value(row),
+      sample: definition.sample?.(row),
     });
   }
   return contenders;

@@ -26,10 +26,11 @@ import { banMatchesByBucket } from "~/lib/ban-rate";
 import { niceTicks } from "~/lib/chart-axis";
 import { getPickrateMultiplier } from "~/lib/constants";
 import type { GameMode, MatchMode } from "~/lib/game-mode";
+import { heroPickRate } from "~/lib/hero-pick-rate";
 import { HERO_TREND_LABELS } from "~/lib/hero-trends";
 import { getRankImageUrl } from "~/lib/rank-utils";
 import { heroBanStatsQueryOptions } from "~/queries/hero-ban-stats-query";
-import { type HeroRankStats, heroRankStatsQueryOptions } from "~/queries/hero-stats-query";
+import { type HeroChartStats, heroRankStatsQueryOptions } from "~/queries/hero-stats-query";
 import { ranksQueryOptions } from "~/queries/ranks-query";
 import { type ByRankStat, hero_stats_transform } from "~/types/api_hero_stats";
 
@@ -137,7 +138,7 @@ function getStatValue(
   tier: number,
 ): number {
   if (stat === "ban_rate") return banRateByTier?.get(tier)?.get(heroId) ?? 0;
-  if (stat === "pickrate") return (agg.matches / agg.matchesPerBucket) * 100 * getPickrateMultiplier(gameMode);
+  if (stat === "pickrate") return heroPickRate(agg, getPickrateMultiplier(gameMode)) * 100;
   return hero_stats_transform(agg, stat);
 }
 
@@ -145,7 +146,7 @@ interface AggregatedTier {
   wins: number;
   losses: number;
   matches: number;
-  matchesPerBucket: number;
+  bucket_matches_since_first_day: number;
   players: number;
   total_kills: number;
   total_deaths: number;
@@ -162,7 +163,7 @@ function newAggregatedTier(): AggregatedTier {
     wins: 0,
     losses: 0,
     matches: 0,
-    matchesPerBucket: 0,
+    bucket_matches_since_first_day: 0,
     players: 0,
     total_kills: 0,
     total_deaths: 0,
@@ -175,11 +176,11 @@ function newAggregatedTier(): AggregatedTier {
   };
 }
 
-function addToAggregatedTier(agg: AggregatedTier, entry: HeroRankStats): void {
+function addToAggregatedTier(agg: AggregatedTier, entry: HeroChartStats): void {
   agg.wins += entry.wins;
   agg.losses += entry.losses;
   agg.matches += entry.matches;
-  agg.matchesPerBucket += entry.matches_per_bucket;
+  agg.bucket_matches_since_first_day += entry.bucket_matches_since_first_day;
   agg.total_kills += entry.total_kills;
   agg.total_deaths += entry.total_deaths;
   agg.total_assists += entry.total_assists;

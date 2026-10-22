@@ -160,3 +160,24 @@ test("compareTallies with a base: a share of player-matches, capped at all of th
   assert.equal(changes.get(1)?.pickRateDelta, 0.5);
   assert.equal(changes.get(2)?.pickRate, 1);
 });
+
+test("compareTallies takes a hero's own base when its rows carry one", () => {
+  const since = (hero_id: number, bucket: number, wins: number, matches: number, base: number) => ({
+    ...row(hero_id, bucket, wins, matches),
+    bucket_matches_since_first_day: base,
+  });
+  // Hero 2 came out late in the window: 60 of the 120 picks since its first day, not 60 of all 1,200.
+  const before = tallyBy([since(1, 50, 50, 100, 1200)], (r) => r.hero_id);
+  const after = tallyBy(
+    [since(1, 50, 50, 100, 1000), since(1, 90, 50, 100, 200), since(2, 90, 30, 60, 120)],
+    (r) => r.hero_id,
+  );
+  assert.deepEqual(after.byId.get(1), { wins: 100, matches: 200, base: 1200 });
+  const changes = new Map(
+    compareTallies(before, after, { minMatches: 1, pickRateMultiplier: 12 }).map((c) => [c.id, c]),
+  );
+  assert.equal(changes.get(1)?.pickRate, 2);
+  assert.equal(changes.get(1)?.pickRateDelta, 1);
+  assert.equal(changes.get(2)?.pickRate, 6);
+  assert.equal(changes.get(2)?.isNew, true);
+});

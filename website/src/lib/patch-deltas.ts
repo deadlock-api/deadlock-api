@@ -22,6 +22,8 @@ interface WinRow {
   matches: number;
   /** The average badge bucket of a bucketed answer; absent rows count for every range. */
   bucket?: number | null;
+  /** Hero rows: the base of the hero's pick rate (`heroPickRate`), counted from its first day in the window. */
+  bucket_matches_since_first_day?: number;
 }
 
 function inRange(row: { bucket?: number | null }, range: BadgeRange | undefined): boolean {
@@ -32,6 +34,8 @@ function inRange(row: { bucket?: number | null }, range: BadgeRange | undefined)
 interface Tally {
   wins: number;
   matches: number;
+  /** The entity's own pick rate base, when its rows carry one (`WinRow.bucket_matches_since_first_day`). */
+  base?: number;
 }
 
 /** Wins and matches per entity, summed over the rank buckets inside `range`. */
@@ -48,6 +52,9 @@ export function tallyBy<T extends WinRow>(
     const tally = byId.get(id) ?? { wins: 0, matches: 0 };
     tally.wins += row.wins;
     tally.matches += row.matches;
+    if (row.bucket_matches_since_first_day != null) {
+      tally.base = (tally.base ?? 0) + row.bucket_matches_since_first_day;
+    }
     byId.set(id, tally);
     total += row.matches;
   }
@@ -92,22 +99,25 @@ export function compareTallies(
   after: ReturnType<typeof tallyBy>,
   { minMatches, pickRateMultiplier, include, base }: CompareOptions,
 ): EntityChange[] {
-  const beforeTotal = base?.before ?? before.total;
-  const afterTotal = base?.after ?? after.total;
+  // A hero's own base when its rows carry one: a hero released in a window is not measured over the days before.
+  const beforeTotal = (tally: Tally) => base?.before ?? tally.base ?? before.total;
+  const afterTotal = (tally: Tally) => base?.after ?? tally.base ?? after.total;
   // Purchases, not builds: an item sold and bought back counts twice, so a share of builds is capped at all of them.
   const rate = (matches: number, total: number) => Math.min(pickRateMultiplier, (pickRateMultiplier * matches) / total);
   const changes: EntityChange[] = [];
   for (const [id, now] of after.byId) {
     if (include && !include(id)) continue;
-    if (now.matches < minMatches || afterTotal === 0) continue;
+    const nowTotal = afterTotal(now);
+    if (now.matches < minMatches || nowTotal === 0) continue;
     const prev = before.byId.get(id);
+    const prevTotal = prev ? beforeTotal(prev) : 0;
     const winRate = now.wins / now.matches;
-    const pickRate = rate(now.matches, afterTotal);
-    const comparable = prev !== undefined && prev.matches >= minMatches && beforeTotal > 0;
+    const pickRate = rate(now.matches, nowTotal);
+    const comparable = prev !== undefined && prev.matches >= minMatches && prevTotal > 0;
     const prevWinRate = comparable ? prev.wins / prev.matches : 0;
     // The pick rate is a share of all picks (or builds) scaled by the multiplier; its error scales the same way.
-    const share = Math.min(1, now.matches / afterTotal);
-    const prevShare = comparable ? Math.min(1, prev.matches / beforeTotal) : 0;
+    const share = Math.min(1, now.matches / nowTotal);
+    const prevShare = comparable ? Math.min(1, prev.matches / prevTotal) : 0;
     changes.push({
       id,
       matches: now.matches,
@@ -115,9 +125,9 @@ export function compareTallies(
       winRate,
       pickRate,
       winRateDelta: comparable ? round(winRate - prevWinRate) : null,
-      pickRateDelta: comparable ? round(pickRate - rate(prev.matches, beforeTotal)) : null,
+      pickRateDelta: comparable ? round(pickRate - rate(prev.matches, prevTotal)) : null,
       winRateSE: comparable ? proportionsSE(winRate, now.matches, prevWinRate, prev.matches) : null,
-      pickRateSE: comparable ? pickRateMultiplier * proportionsSE(share, afterTotal, prevShare, beforeTotal) : null,
+      pickRateSE: comparable ? pickRateMultiplier * proportionsSE(share, nowTotal, prevShare, prevTotal) : null,
       isNew: prev === undefined || prev.matches === 0,
     });
   }

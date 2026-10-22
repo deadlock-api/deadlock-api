@@ -7,6 +7,7 @@ const totals = {
   bucket: 91,
   players: 100,
   matches_per_bucket: 300,
+  bucket_matches_since_first_day: 300,
   total_max_health: 100000,
   total_kills: 500,
   total_deaths: 400,

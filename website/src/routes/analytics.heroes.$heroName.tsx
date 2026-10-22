@@ -42,6 +42,7 @@ import { findKey } from "~/lib/find-keys";
 import { formatPercent } from "~/lib/format";
 import { DEFAULT_BADGES, DEFAULT_MATCH_MODE } from "~/lib/game-mode";
 import { fetchHeroMatchups, type HeroMatchupsRequest } from "~/lib/hero-matchup-fns";
+import { heroPickRate } from "~/lib/hero-pick-rate";
 import { isPreReleaseHero } from "~/lib/hero-roster";
 import { findHeroBySlug, heroSlug } from "~/lib/hero-slug";
 import { catchPrefetch, ensureCached, prefetchCached, requireOnServer } from "~/lib/prefetch-safe";
@@ -147,21 +148,21 @@ function summarizeHeroStats(rows: readonly AnalyticsHeroStats[] | undefined, her
   if (!rows || rows.length === 0) return null;
   const row = rows.find((r) => r.hero_id === heroId);
   if (!row || row.matches === 0) return null;
-  let sumMatches = 0;
-  for (const r of rows) sumMatches += r.matches;
   const played = rows.filter((r) => r.matches > 0);
+  const multiplier = getPickrateMultiplier(GAME_MODE);
   return {
     winRate: row.wins / row.matches,
-    pickRate: sumMatches > 0 ? getPickrateMultiplier(GAME_MODE) * (row.matches / sumMatches) : 0,
+    pickRate: heroPickRate(row, multiplier),
     matches: row.matches,
     heroCount: played.length,
     winRateRank: rankOf(
       row.wins / row.matches,
       played.map((r) => r.wins / r.matches),
     ),
+    // By rate, not matches: a hero out for part of the range has fewer matches at the same rate.
     pickRateRank: rankOf(
-      row.matches,
-      played.map((r) => r.matches),
+      heroPickRate(row, multiplier),
+      played.map((r) => heroPickRate(r, multiplier)),
     ),
   };
 }

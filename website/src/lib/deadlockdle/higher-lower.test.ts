@@ -32,6 +32,8 @@ function heroRow(id: number): AnalyticsHeroStats {
     hero_id: id,
     matches,
     matches_per_bucket: 50_000,
+    // Every hero out for the whole window: all twelve heroes' matches.
+    bucket_matches_since_first_day: HERO_IDS.reduce((sum, heroId) => sum + 10_000 + heroId * 700, 0),
     wins: Math.round(matches * (0.42 + id * 0.013)),
     losses: 0,
     total_kills: matches * (5 + id * 0.3),

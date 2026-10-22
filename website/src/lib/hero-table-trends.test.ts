@@ -7,8 +7,14 @@ import { buildHeroTableTrend } from "./hero-table-trends";
 
 const row = (bucket: number, hero_id: number, matches: number, wins: number) =>
   ({ bucket, hero_id, matches, wins }) as AnalyticsHeroStats;
+/** Every hero out for each whole bucket: each one's pick rate base is all heroes' matches in it. */
+const outAllBucket = (rows: AnalyticsHeroStats[]) => {
+  const totals = new Map<number, number>();
+  for (const r of rows) totals.set(r.bucket, (totals.get(r.bucket) ?? 0) + r.matches);
+  return rows.map((r) => ({ ...r, bucket_matches_since_first_day: totals.get(r.bucket) ?? 0 }));
+};
 const options = {
-  heroes: [row(2000, 1, 100, 60), row(1000, 1, 20, 10), row(1000, 2, 80, 30), row(2000, 2, 100, 40)],
+  heroes: outAllBucket([row(2000, 1, 100, 60), row(1000, 1, 20, 10), row(1000, 2, 80, 30), row(2000, 2, 100, 40)]),
   bans: [
     { bucket: 1000, hero_id: 1, bans: 10, matches: 20 },
     { bucket: 1000, hero_id: 2, bans: 30, matches: 20 },
@@ -39,7 +45,12 @@ test("rates use each bucket's full roster, with normalized pick rates using its 
 });
 
 test("low-sample and missing heroes produce gaps instead of spiking to 0 or 100 percent", () => {
-  const heroes = [row(1000, 1, 1, 1), row(1000, 2, 100, 50), row(2000, 2, 100, 50), row(3000, 1, 100, 55)];
+  const heroes = outAllBucket([
+    row(1000, 1, 1, 1),
+    row(1000, 2, 100, 50),
+    row(2000, 2, 100, 50),
+    row(3000, 1, 100, 55),
+  ]);
   const points = buildHeroTableTrend({ ...options, heroes, stat: "winRate", minMatchesPerBucket: 10 });
   assert.deepEqual(
     points.map((p) => p.value),
@@ -51,7 +62,7 @@ test("low-sample and missing heroes produce gaps instead of spiking to 0 or 100 
 
 test("zero bans are valid when the bucket has enough matches, and score trends work without bans", () => {
   assert.equal(buildHeroTableTrend({ ...options, heroId: 3, stat: "banRate", minMatchesPerBucket: 10 })[0].value, 0);
-  const heroes = [row(1000, 1, 100, 60), row(1000, 2, 100, 40)];
+  const heroes = outAllBucket([row(1000, 1, 100, 60), row(1000, 2, 100, 40)]);
   const scores = buildHeroTableTrend({ ...options, heroes, bans: [], stat: "zScore" });
   assert.ok(Math.abs(scores[0].value! - 0.6 / 0.85) < 1e-10);
   assert.ok(Number.isFinite(buildHeroTableTrend({ ...options, heroes, bans: [], stat: "residual" })[0].value));

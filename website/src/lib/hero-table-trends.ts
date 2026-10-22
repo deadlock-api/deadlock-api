@@ -1,6 +1,7 @@
 import type { AnalyticsHeroStats, HeroBanStats } from "deadlock_api_client";
 
 import { banMatchesByBucket, computeBanRatesByBucket } from "~/lib/ban-rate";
+import { heroPickRate } from "~/lib/hero-pick-rate";
 import { computeResiduals, computeZScores } from "~/lib/hero-scoring";
 import type { StatFormat, StatTrendPoint } from "~/lib/stat-format";
 
@@ -57,9 +58,8 @@ export function buildHeroTableTrend({
       const index = rows.findIndex((row) => row.hero_id === heroId);
       const row = rows[index];
       if (!row || row.matches < minMatchesPerBucket) return { date: bucket * 1000, value: null };
-      const totalMatches = rows.reduce((total, hero) => total + hero.matches, 0);
       const rates = banRates.get(bucket);
-      const pickrate = (pickrateMultiplier * row.matches) / totalMatches;
+      const pickrate = heroPickRate(row, pickrateMultiplier);
       let value: number | null;
       switch (stat) {
         case "winRate":
@@ -77,7 +77,7 @@ export function buildHeroTableTrend({
         case "residual": {
           const inputs = rows.map((hero) => ({
             winrate: hero.wins / hero.matches,
-            pickrate: (pickrateMultiplier * hero.matches) / totalMatches,
+            pickrate: heroPickRate(hero, pickrateMultiplier),
             banrate: rates ? (rates.get(hero.hero_id) ?? 0) : undefined,
             matches: hero.matches,
           }));

@@ -10,6 +10,7 @@ import {
 import { useDefaultPeriodLabel } from "~/hooks/useDefaultPeriodLabel";
 import { getPickrateMultiplier } from "~/lib/constants";
 import type { GameMode } from "~/lib/game-mode";
+import { heroPickRate } from "~/lib/hero-pick-rate";
 import { heroStatsQueryOptions } from "~/queries/hero-stats-query";
 import { ranksQueryOptions } from "~/queries/ranks-query";
 
@@ -35,16 +36,14 @@ export function HeroWinRateByRank({
   const tiers = useMemo(() => {
     if (!data || !ranks) return [];
     const rankByTier = new Map<number, Rank>(ranks.map((r) => [r.tier, r]));
-    const hero = new Map<number, { wins: number; matches: number }>();
-    const all = new Map<number, number>();
+    const hero = new Map<number, { wins: number; matches: number; bucket_matches_since_first_day: number }>();
     for (const row of data) {
-      if (row.bucket <= 0) continue;
+      if (row.bucket <= 0 || row.hero_id !== heroId) continue;
       const tier = Math.floor(row.bucket / 10);
-      all.set(tier, (all.get(tier) ?? 0) + row.matches);
-      if (row.hero_id !== heroId) continue;
-      const agg = hero.get(tier) ?? { wins: 0, matches: 0 };
+      const agg = hero.get(tier) ?? { wins: 0, matches: 0, bucket_matches_since_first_day: 0 };
       agg.wins += row.wins;
       agg.matches += row.matches;
+      agg.bucket_matches_since_first_day += row.bucket_matches_since_first_day;
       hero.set(tier, agg);
     }
     const multiplier = getPickrateMultiplier(request.gameMode);
@@ -54,7 +53,7 @@ export function HeroWinRateByRank({
       .map(([tier, agg]): RankTierWinRate =>
         Object.assign(rankTierLook(tier, rankByTier.get(tier)), {
           winRate: agg.wins / agg.matches,
-          pickRate: (multiplier * agg.matches) / (all.get(tier) ?? agg.matches),
+          pickRate: heroPickRate(agg, multiplier),
           matches: agg.matches,
         }),
       );
