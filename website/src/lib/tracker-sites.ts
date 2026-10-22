@@ -34,7 +34,6 @@ export const TRACKER_SITES: readonly TrackerSite[] = [
     icon: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230a0d0f'/%3E%3Cpath d='M16 5l9 5v12l-9 5-9-5V10z' fill='none' stroke='%23d4ae62' stroke-width='2.5'/%3E%3Ccircle cx='16' cy='16' r='3.5' fill='%23d4ae62'/%3E%3C/svg%3E",
   },
   { name: "VP Esports", icon: "/tracker-sites/vp-esports.webp" },
-  { name: "Deadlocker", icon: "/tracker-sites/deadlocker.webp" },
   { name: "Deadlock Labs", icon: "/tracker-sites/deadlock-labs.webp" },
   { name: "Soultracker", icon: "/tracker-sites/soultracker.webp" },
   { name: "Rankalytics", icon: "/tracker-sites/rankalytics.webp" },
