@@ -35,7 +35,7 @@ use axum_prometheus::PrometheusMetricLayer;
 pub use error::*;
 use tower::limit::ConcurrencyLimitLayer;
 use tower_http::compression::predicate::NotForContentType;
-use tower_http::compression::{CompressionLayer, DefaultPredicate, Predicate};
+use tower_http::compression::{CompressionLayer, CompressionLevel, DefaultPredicate, Predicate};
 use tower_http::limit::RequestBodyLimitLayer;
 use tower_http::normalize_path::{NormalizePath, NormalizePathLayer};
 use tower_http::trace::TraceLayer;
@@ -183,7 +183,14 @@ pub async fn router(port: u16) -> Result<NormalizePath<Router>, StartupError> {
             CacheControlMiddleware::new(Duration::from_secs(DEFAULT_CACHE_TIME))
                 .with_stale_while_revalidate(Duration::from_secs(DEFAULT_CACHE_TIME)),
         )
-        .layer(CompressionLayer::new().compress_when(DefaultPredicate::new().and(NotForContentType::new("text/event-stream"))))
+        // Level 1: Cloudflare always asks for brotli, and tower-http's default brotli quality 4
+        // zero-fills ~16 MiB of hash tables per large body, about half the API's CPU. Quality 1
+        // costs ~3x less CPU for ~15% bigger metadata and match-history bodies.
+        .layer(
+            CompressionLayer::new()
+                .quality(CompressionLevel::Precise(1))
+                .compress_when(DefaultPredicate::new().and(NotForContentType::new("text/event-stream"))),
+        )
         .layer(RequestBodyLimitLayer::new(10 * 1024 * 1024)) // 10MB limit
         .layer(ConcurrencyLimitLayer::new(1000))
         .layer(from_fn(no_store_on_error))
