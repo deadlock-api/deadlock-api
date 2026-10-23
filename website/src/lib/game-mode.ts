@@ -1,6 +1,6 @@
 import { parseAsStringLiteral } from "nuqs";
 
-import { DEFAULT_RANK_RANGE } from "~/lib/rank-utils";
+import { DEFAULT_RANK_RANGE, MAX_BADGE } from "~/lib/rank-utils";
 
 const GAME_MODES = ["normal", "street_brawl"] as const;
 export type GameMode = (typeof GAME_MODES)[number];
@@ -100,17 +100,19 @@ export function getEffectiveRankRange(
 }
 
 /**
- * The average badge bounds of a page's defaults (mode Ranked, rank range Phantom 1+), as the pages put them into their
- * requests. Server prefetches spread this so their query keys match.
+ * The average badge bounds a page asks for on its defaults: the default mode and the page's own default rank range.
+ * Server prefetches spread this so their query keys match the page's first request.
  */
-export const DEFAULT_BADGES = (() => {
-  const { effectiveMinRankId, effectiveMaxRankId } = getEffectiveRankRange(
-    DEFAULT_MODE,
-    DEFAULT_RANK_RANGE.min,
-    DEFAULT_RANK_RANGE.max,
-  );
+function defaultBadges(minRankId: number, maxRankId: number) {
+  const { effectiveMinRankId, effectiveMaxRankId } = getEffectiveRankRange(DEFAULT_MODE, minRankId, maxRankId);
   return { minAverageBadge: effectiveMinRankId, maxAverageBadge: effectiveMaxRankId };
-})();
+}
+
+/** The bounds of the hero, item and build pages, which default to Phantom 1+. */
+export const DEFAULT_BADGES = defaultBadges(DEFAULT_RANK_RANGE.min, DEFAULT_RANK_RANGE.max);
+
+/** The bounds of the game, player and ability pages, which default to every rank. */
+export const ALL_RANKS_BADGES = defaultBadges(0, MAX_BADGE);
 
 /**
  * Street Brawl hands out fixed souls each round instead of a soul economy, so net worth, souls per minute and soul
