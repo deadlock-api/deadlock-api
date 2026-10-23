@@ -128,11 +128,13 @@ pub(super) fn item_owned_sql(id: u32) -> String {
 }
 
 /// SQL expression for the player's first purchase time of item `id` (0 if never bought), read
-/// like [`item_owned_sql`].
+/// like [`item_owned_sql`]. `upgrades.game_time_s` is `UInt16` and `items.game_time_s` `UInt32`
+/// (migration 58); with different branch types the constant `if` no longer folds and both
+/// columns are read (12 GB instead of 4.5 GB on a 30-day scan), so the upgrades branch is cast.
 pub(super) fn item_first_buy_sql(id: u32) -> String {
     format!(
         "if(dictHas('default.upgrade_items_dict', toUInt64({id})), \
-         arrayElement(upgrades.game_time_s, indexOf(upgrades.item_id, {id})), \
+         toUInt32(arrayElement(upgrades.game_time_s, indexOf(upgrades.item_id, {id}))), \
          arrayElement(items.game_time_s, indexOf(items.item_id, {id})))"
     )
 }
@@ -582,6 +584,18 @@ mod tests {
         let prefilter =
             account_match_prefilter(filters, &MatchInfoFilters::default(), "true", "true").unwrap();
         assert!(!prefilter.contains("hero_build_id"), "{prefilter}");
+    }
+
+    #[test]
+    fn first_buy_branches_share_a_type() {
+        // UInt16 vs UInt32 branches keep the constant `if` from folding, so both arrays are read.
+        let sql = item_first_buy_sql(7);
+        assert!(
+            sql.contains(
+                "toUInt32(arrayElement(upgrades.game_time_s, indexOf(upgrades.item_id, 7)))"
+            ),
+            "{sql}"
+        );
     }
 
     #[test]
