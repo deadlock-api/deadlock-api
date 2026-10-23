@@ -40,7 +40,7 @@ const DESCRIPTION =
   "Win rates of the published Deadlock hero builds players start their matches with: how popular each is, its items and skill order, by rank and patch.";
 
 /** The hero builds analytics endpoint counts normal matches only; Street Brawl has no build to choose. */
-const MODES = ["normal_ranked", "normal_unranked"] as const;
+const MODES = ["normal_all", "normal_ranked", "normal_unranked"] as const;
 
 /** A choice re-renders the page in a transition, so the tap paints first; one choice is one history entry. */
 const together = { limitUrlUpdates: throttle(50) };

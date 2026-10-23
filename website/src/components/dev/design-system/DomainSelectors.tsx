@@ -29,7 +29,7 @@ import type { PickerTriState } from "~/components/patterns/picker/picker";
 import { Separator } from "~/components/ui/separator";
 import type { Dayjs } from "~/dayjs";
 import { PATCHES } from "~/lib/constants";
-import { type Mode, TRACKER_DEFAULT_MODE, TRACKER_MODES } from "~/lib/game-mode";
+import { type Mode, TRACKER_DEFAULT_MODE } from "~/lib/game-mode";
 import { isPlayableHero } from "~/lib/hero-roster";
 import { heroesQueryOptions, type SlimUpgrade } from "~/queries/asset-queries";
 
@@ -292,12 +292,12 @@ export function DomainSelectors() {
       <Specimen
         name="ModeSelector"
         source="domain/selectors/ModeSelector"
-        note="Game mode and match mode as one choice, so only pairs that return data are offered. MODE_CONFIG maps the value to the API's game_mode and match_mode. The tracker passes TRACKER_MODES, which adds All (ranked and unranked) for a player's own matches. With a rank range beside it, use Filter.ModeWithRank. disabledModes keeps a mode visible but unselectable on a view without data in it (Brawl on the Economy tab)."
+        note="Game mode and match mode as one choice, so only pairs that return data are offered. MODE_CONFIG maps the value to the API's game_mode and match_mode. The analytics pages start in Ranked (DEFAULT_MODE), the tracker in All (TRACKER_DEFAULT_MODE). With a rank range beside it, use Filter.ModeWithRank. disabledModes keeps a mode visible but unselectable on a view without data in it (Brawl on the Economy tab)."
       >
         <Variants>
           <ModeSelector value={mode} onValueChange={setMode} />
           <ModeSelector defaultValue="normal_unranked" disabledModes={["street_brawl"]} />
-          <ModeSelector modes={TRACKER_MODES} defaultValue={TRACKER_DEFAULT_MODE} />
+          <ModeSelector defaultValue={TRACKER_DEFAULT_MODE} />
         </Variants>
       </Specimen>
 

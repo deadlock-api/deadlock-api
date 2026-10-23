@@ -347,7 +347,7 @@ export function Round3DomainMisc() {
         <Variants label="Uncontrolled filter cells: HeroSelector, ModeSelector (all modes, and modes without Brawl), RankRangeSelector, MatchTimeRangeSelector">
           <HeroSelector allowNull />
           <ModeSelector defaultValue="normal_ranked" />
-          <ModeSelector modes={["normal_ranked", "normal_unranked"]} />
+          <ModeSelector modes={["normal_all", "normal_ranked", "normal_unranked"]} />
           <RankRangeSelector />
           <MatchTimeRangeSelector defaultValue={[600, undefined]} />
         </Variants>

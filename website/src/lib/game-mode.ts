@@ -25,8 +25,7 @@ export const parseAsTrackerMatchMode = parseAsStringLiteral(MATCH_MODES).withDef
  * would drop the unranked matches the player's side keeps.
  *
  * Only ranked lobbies carry an average badge: any rank bound drops every unranked match. A range is
- * therefore offered in Ranked alone. All, ranked and unranked together, is offered on the tracker
- * only (`TRACKER_MODES`); the analytics pages offer `MODES`.
+ * therefore offered in Ranked alone, and All stays all of ranked and unranked.
  */
 export const MODE_CONFIG = {
   normal_all: {
@@ -64,12 +63,11 @@ export const MODE_CONFIG = {
 
 export type Mode = keyof typeof MODE_CONFIG;
 
-/** The modes the analytics pages offer, in order. */
-export const MODES: readonly Mode[] = ["normal_ranked", "normal_unranked", "street_brawl"];
+export const MODES = Object.keys(MODE_CONFIG) as Mode[];
+/** The analytics pages start in Ranked, where the rank range applies. */
 export const DEFAULT_MODE: Mode = "normal_ranked";
 
-/** A player's own match history keeps All, so a player who plays unranked does not land on an empty tracker. */
-export const TRACKER_MODES: readonly Mode[] = ["normal_all", "normal_ranked", "normal_unranked", "street_brawl"];
+/** A player's own match history starts in All, so a player who plays unranked does not land on an empty tracker. */
 export const TRACKER_DEFAULT_MODE: Mode = "normal_all";
 
 const NORMAL_MODE_BY_MATCH_MODE: Record<MatchMode, Mode> = {
@@ -78,18 +76,9 @@ const NORMAL_MODE_BY_MATCH_MODE: Record<MatchMode, Mode> = {
   unranked: "normal_unranked",
 };
 
-/**
- * The one Mode the long-standing `game_mode` / `match_mode` search params stand for, among `modes`. A pair outside them
- * (an old link to All on an analytics page) falls back to `fallback`.
- */
-export function modeFromParams(
-  gameMode: GameMode,
-  matchMode: MatchMode,
-  modes: readonly Mode[] = MODES,
-  fallback: Mode = DEFAULT_MODE,
-): Mode {
-  const mode = gameMode === "street_brawl" ? "street_brawl" : NORMAL_MODE_BY_MATCH_MODE[matchMode];
-  return modes.includes(mode) ? mode : fallback;
+/** The one Mode the long-standing `game_mode` / `match_mode` search params stand for. */
+export function modeFromParams(gameMode: GameMode, matchMode: MatchMode): Mode {
+  return gameMode === "street_brawl" ? "street_brawl" : NORMAL_MODE_BY_MATCH_MODE[matchMode];
 }
 
 export function getEffectiveRankRange(

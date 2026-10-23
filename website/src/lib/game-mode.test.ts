@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { getEffectiveRankRange, hasSoulEconomy, modeFromParams, TRACKER_MODES } from "./game-mode";
+import { getEffectiveRankRange, hasSoulEconomy, modeFromParams } from "./game-mode";
 
 test("a backwards rank pair from the URL is put in order", () => {
   assert.deepEqual(getEffectiveRankRange("normal_ranked", 116, 91), {
@@ -32,11 +32,11 @@ test("All keeps its unranked matches: a rank range would drop every one of them"
   });
 });
 
-test("All is a tracker mode: an analytics link to it opens Ranked", () => {
-  assert.equal(modeFromParams("normal", "ranked,unranked"), "normal_ranked");
+test("the game_mode / match_mode params name one mode, All among them", () => {
+  assert.equal(modeFromParams("normal", "ranked,unranked"), "normal_all");
+  assert.equal(modeFromParams("normal", "ranked"), "normal_ranked");
   assert.equal(modeFromParams("normal", "unranked"), "normal_unranked");
   assert.equal(modeFromParams("street_brawl", "ranked"), "street_brawl");
-  assert.equal(modeFromParams("normal", "ranked,unranked", TRACKER_MODES), "normal_all");
 });
 
 test("only Street Brawl lacks a soul economy", () => {

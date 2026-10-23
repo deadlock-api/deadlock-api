@@ -12,7 +12,7 @@ import { useHeroById } from "~/hooks/useAssetById";
 import { useSeasons } from "~/hooks/useSeasons";
 import { PATCHES } from "~/lib/constants";
 import type { DateFilterAction, DateRange } from "~/lib/date-filter-preference";
-import { type Mode, MODE_CONFIG, TRACKER_DEFAULT_MODE, TRACKER_MODES } from "~/lib/game-mode";
+import { type Mode, MODE_CONFIG, TRACKER_DEFAULT_MODE } from "~/lib/game-mode";
 import { dateRangeLabel } from "~/lib/seasons";
 import type { ResultFilter } from "~/lib/tracker/compute";
 
@@ -87,12 +87,7 @@ export function TrackerFilterBar({
               defaultValue={{ startDate: resetRange[0], endDate: resetRange[1] }}
             />
             <Filter.Hero value={heroId} onValueChange={onHeroChange} allowNull />
-            <ModeSelector
-              value={mode}
-              onValueChange={onModeChange}
-              modes={TRACKER_MODES}
-              defaultValue={TRACKER_DEFAULT_MODE}
-            />
+            <ModeSelector value={mode} onValueChange={onModeChange} defaultValue={TRACKER_DEFAULT_MODE} />
             <FilterToggleCell
               label="Result"
               value={result}
