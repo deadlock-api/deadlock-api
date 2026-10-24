@@ -22,10 +22,6 @@ use crate::utils::parse::{
 };
 use crate::utils::sql::{cached_ch_query, id_list, impl_match_info};
 
-fn default_comb_size() -> Option<u8> {
-    2.into()
-}
-
 #[derive(Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash, Default)]
 #[cfg_attr(test, derive(proptest_derive::Arbitrary))]
 pub(super) struct ItemPermutationStatsQuery {
@@ -194,9 +190,6 @@ fn build_query(query: &ItemPermutationStatsQuery) -> String {
         ""
     };
     if let Some(item_ids) = &query.item_ids {
-        if item_ids.len() < 2 {
-            return String::new();
-        }
         let items_list = format!("[{}]", id_list(item_ids));
         // `hasAll(items.item_id, ...)` stays as-is so the bf_items_item_id skip index still
         // prunes; the corruption-aware check is an extra predicate on the surviving rows.
@@ -228,10 +221,7 @@ fn build_query(query: &ItemPermutationStatsQuery) -> String {
         "
         )
     } else {
-        let comb_size = query.comb_size.or(default_comb_size()).unwrap_or(2);
-        if comb_size < 2 {
-            return String::new();
-        }
+        let comb_size = query.comb_size.unwrap_or(2);
         // Only increasing index tuples, so each combination is built once rather than all `n^k`
         // tuples filtered down to `i0_index < i1_index < ...`. `p_items` is sorted by id, so a
         // combination is one row whatever order its items were bought in.
@@ -310,6 +300,19 @@ async fn get_item_permutation_stats(
         .collect())
 }
 
+/// Rejects what `build_query` can't turn into a query: a combination needs at least two items.
+fn validate_query(query: &ItemPermutationStatsQuery) -> APIResult<()> {
+    let message = match (&query.item_ids, query.comb_size) {
+        (Some(_), Some(_)) => "Cannot specify both comb_size and item_ids",
+        (Some(item_ids), None) if item_ids.len() < 2 => "At least two item ids are needed",
+        (None, Some(comb_size)) if !(2..=12).contains(&comb_size) => {
+            "Combination size must be between 2 and 12"
+        }
+        _ => return Ok(()),
+    };
+    Err(APIError::status_msg(StatusCode::BAD_REQUEST, message))
+}
+
 #[utoipa::path(
     get,
     path = "/item-permutation-stats",
@@ -347,18 +350,7 @@ pub(super) async fn item_permutation_stats(
     )?;
     #[expect(deprecated)]
     filter_protected_accounts(&state, &mut query.account_ids, query.account_id).await?;
-    if query.comb_size.is_some() && query.item_ids.is_some() {
-        return Err(APIError::status_msg(
-            StatusCode::BAD_REQUEST,
-            "Cannot specify both comb_size and item_ids",
-        ));
-    }
-    if query.item_ids.as_ref().is_some_and(Vec::is_empty) {
-        return Err(APIError::status_msg(
-            StatusCode::BAD_REQUEST,
-            "No item ids provided",
-        ));
-    }
+    validate_query(&query)?;
     get_item_permutation_stats(&state.ch_client_ro, query)
         .await
         .map(Json)
@@ -374,6 +366,27 @@ mod tests {
             max_matches,
             ..Default::default()
         })
+    }
+
+    #[test]
+    fn combinations_need_two_items() {
+        let comb = |comb_size| ItemPermutationStatsQuery {
+            comb_size: Some(comb_size),
+            ..Default::default()
+        };
+        let items = |item_ids: &[u32]| ItemPermutationStatsQuery {
+            item_ids: Some(item_ids.to_vec()),
+            ..Default::default()
+        };
+        // These built an empty query, which ClickHouse rejected with a 500.
+        assert!(validate_query(&comb(0)).is_err());
+        assert!(validate_query(&comb(1)).is_err());
+        assert!(validate_query(&items(&[1])).is_err());
+        assert!(validate_query(&comb(13)).is_err());
+        assert!(validate_query(&comb(2)).is_ok());
+        assert!(validate_query(&comb(12)).is_ok());
+        assert!(validate_query(&items(&[1, 2])).is_ok());
+        assert!(validate_query(&ItemPermutationStatsQuery::default()).is_ok());
     }
 
     #[test]
@@ -482,9 +495,8 @@ mod proptests {
 
         #[test]
         fn item_permutation_stats_build_query_is_valid_sql(query: ItemPermutationStatsQuery) {
-            let sql = build_query(&query);
-            if !sql.is_empty() {
-                assert_valid_sql(&sql);
+            if validate_query(&query).is_ok() {
+                assert_valid_sql(&build_query(&query));
             }
         }
     }
