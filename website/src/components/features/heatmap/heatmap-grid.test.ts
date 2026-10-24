@@ -37,6 +37,20 @@ test("normalizeHeatGrids leaves cells with fewer events than the minimum empty",
   assert.ok(lit(filtered, row + GRID_RES / 2, row + GRID_RES));
 });
 
+test("normalizeHeatGrids K/D never rises with more deaths", () => {
+  // Same kills, more deaths from left to right. A cell with a fraction of a death read up to 8x one with none.
+  const killsRaw = new Float32Array(GRID_RES * GRID_RES);
+  const deathsRaw = new Float32Array(GRID_RES * GRID_RES);
+  const deaths = [0, 0.13, 0.5, 1, 2];
+  deaths.forEach((d, i) => {
+    killsRaw[i] = 4;
+    deathsRaw[i] = d;
+  });
+  const { grid } = normalizeHeatGrids({ killsRaw, deathsRaw, eventPeak: 0.25 }, "kd", 1);
+  for (let i = 1; i < deaths.length; i++)
+    assert.ok(grid[i] <= grid[i - 1], `${deaths[i]} deaths beat ${deaths[i - 1]}`);
+});
+
 test("normalizeHeatGrids share puts the hero's even share mid-ramp and a lopsided spot at the top", () => {
   // Everyone kills 40 at each spot; the hero takes 30 of the left one (1.5x their half overall), 10 of the right (0.5x).
   const all = buildHeatGrids([point(-500, 0, 40, 0), point(500, 0, 40, 0)], RADIUS);
