@@ -480,6 +480,7 @@ fn build_query(query: &PlayerPerformanceCurveQuery) -> String {
             FROM match_player
             WHERE {match_mode_filter}
                 AND {game_mode_filter}
+                AND duration_s > 0
                 {info_filters}
                 {player_filters}
         ),
