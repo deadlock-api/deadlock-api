@@ -367,13 +367,13 @@ fn project_players(look: &Lookahead<'_>, projection: &mut Projection) {
         }
     }
     ensure_player_identity(&mut projection.player_columns);
-    ensure_hero_build_keys(look, &mut projection.player_columns);
     collect_subfields(
         look,
         "items",
         ITEM_SUBFIELDS,
         &mut projection.items_subfields,
     );
+    ensure_resolver_keys(look, projection);
     collect_subfields(
         look,
         "upgrades",
@@ -421,11 +421,24 @@ fn collect_subfields(
     }
 }
 
-/// The nested `hero_build` resolver reads `hero_id` + `hero_build_id` from the row.
-fn ensure_hero_build_keys(look: &Lookahead<'_>, cols: &mut Vec<Column>) {
+/// The columns the nested resolvers of `MatchPlayer` read from the row, so they are selected
+/// even when the query doesn't ask for them: without them those fields come back `null`.
+fn ensure_resolver_keys(look: &Lookahead<'_>, projection: &mut Projection) {
+    let cols = &mut projection.player_columns;
+    if look.field("hero").exists() {
+        ensure_present(cols, PLAYER_COLUMNS, "hero_id");
+    }
     if look.field("hero_build").exists() {
         ensure_present(cols, PLAYER_COLUMNS, "hero_id");
         ensure_present(cols, PLAYER_COLUMNS, "hero_build_id");
+    }
+    // `items.asset` looks the item up by `item_id`, then `upgrade_id`.
+    if look.field("items").field("asset").exists() {
+        for key in ["item_id", "upgrade_id"] {
+            if !projection.items_subfields.contains(&key) {
+                projection.items_subfields.push(key);
+            }
+        }
     }
 }
 
@@ -445,7 +458,46 @@ fn ensure_present(cols: &mut Vec<Column>, registry: &[Column], gql: &str) {
 
 #[cfg(test)]
 mod tests {
+    use std::sync::{Arc, Mutex};
+
+    use async_graphql::{Context, EmptyMutation, EmptySubscription, Object, Schema};
+
     use super::*;
+    use crate::routes::v1::graphql::types::MatchPlayer;
+
+    type Seen = Arc<Mutex<Option<Projection>>>;
+
+    /// Records the projection of its `players` selection and returns no player.
+    struct ProbeQuery;
+
+    #[Object]
+    impl ProbeQuery {
+        async fn players(&self, ctx: &Context<'_>) -> Option<MatchPlayer> {
+            *ctx.data_unchecked::<Seen>().lock().unwrap() =
+                Some(project_match_players(&ctx.look_ahead()));
+            None
+        }
+    }
+
+    async fn projection_of(selection: &str) -> Projection {
+        let seen = Seen::default();
+        let schema = Schema::build(ProbeQuery, EmptyMutation, EmptySubscription)
+            .data(seen.clone())
+            .finish();
+        let resp = schema.execute(format!("{{ players {selection} }}")).await;
+        assert!(resp.errors.is_empty(), "{:?}", resp.errors);
+        seen.lock().unwrap().take().unwrap()
+    }
+
+    #[tokio::test]
+    async fn nested_resolvers_select_the_keys_they_read() {
+        // `hero` and `items.asset` came back null when hero_id / item_id weren't selected too.
+        let projection =
+            projection_of("{ hero { __typename } items { asset { __typename } } }").await;
+        assert!(projection.player_columns.iter().any(|c| c.gql == "hero_id"));
+        assert!(projection.items_subfields.contains(&"item_id"));
+        assert!(projection.items_subfields.contains(&"upgrade_id"));
+    }
 
     #[test]
     fn no_duplicate_gql_names() {
