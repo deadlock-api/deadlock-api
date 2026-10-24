@@ -320,8 +320,13 @@ impl GameMode {
     /// If a specific game mode is provided, returns `game_mode = {value}`.
     /// If None, no filter is applied.
     pub fn sql_filter(game_mode: Option<Self>) -> String {
+        Self::sql_filter_with_prefix(game_mode, "")
+    }
+
+    /// Same as [`Self::sql_filter`] but qualifies the column reference with the given prefix.
+    pub(crate) fn sql_filter_with_prefix(game_mode: Option<Self>, prefix: &str) -> String {
         match game_mode {
-            Some(mode) => format!("game_mode = {}", mode as i32),
+            Some(mode) => format!("{prefix}game_mode = {}", mode as i32),
             None => "1=1".to_string(),
         }
     }

@@ -1,10 +1,7 @@
 #![expect(clippy::struct_excessive_bools)]
 
 use crate::services::ch_admission;
-use crate::utils::sql::{
-    MAX_FILTERING_AVERAGE_BADGE, MIN_FILTERING_AVERAGE_BADGE, MatchPoolFilters,
-    average_badge_filter, id_list,
-};
+use crate::utils::sql::{DURATION_COLUMN, MatchInfoFilters, MatchPoolFilters, id_list};
 use core::time::Duration;
 use std::collections::HashSet;
 
@@ -258,31 +255,37 @@ pub(super) struct BulkMatchMetadataQuery {
     format: ResponseFormat,
 }
 
-/// Prepends `match_player.` to a filter whose leading token is a bare column
-/// name, preventing `ClickHouse` alias substitution when the same name appears
-/// as an aggregate alias in the outer SELECT (e.g. `any(match_mode) AS match_mode`
-/// would otherwise shadow `match_mode` in a sibling WHERE clause).
-///
-/// Only the outermost token is qualified; subquery interiors are left as-is,
-/// which is correct because subqueries have their own resolution scope.
-fn qualify_match_player_filter(filter: &str) -> String {
-    const COLS: &[&str] = &[
-        "match_mode",
-        "game_mode",
-        "start_time",
-        "duration_s",
-        "match_id",
-        "average_badge_team0",
-        "average_badge_team1",
-        "average_badge",
-        "is_high_skill_range_parties",
-        "low_pri_pool",
-        "new_player_pool",
+/// The match-level filters of `query`, with every column qualified by `prefix`.
+fn match_filters(query: &BulkMatchMetadataQuery, prefix: &str) -> Vec<String> {
+    let mut filters = vec![
+        MatchMode::sql_filter_with_prefix(query.match_mode.as_deref(), prefix),
+        GameMode::sql_filter_with_prefix(query.game_mode, prefix),
     ];
-    if COLS.iter().any(|col| filter.starts_with(col)) {
-        format!("match_player.{filter}")
-    } else {
-        filter.to_owned()
+    let match_info = MatchInfoFilters {
+        min_unix_timestamp: query.min_unix_timestamp,
+        max_unix_timestamp: query.max_unix_timestamp,
+        min_match_id: query.min_match_id.filter(|&id| id > 0),
+        max_match_id: query.max_match_id,
+        min_average_badge: query.min_average_badge,
+        max_average_badge: query.max_average_badge,
+        min_duration_s: query.min_duration_s.filter(|&s| s > 0),
+        max_duration_s: query.max_duration_s,
+    };
+    filters.extend(match_info.predicates(prefix, DURATION_COLUMN));
+    if let Some(match_ids) = &query.match_ids
+        && !match_ids.is_empty()
+    {
+        filters.push(format!("{prefix}match_id IN ({})", id_list(match_ids)));
+    }
+    filters.extend(pool_filters(query).predicates_with_prefix(prefix));
+    filters
+}
+
+fn pool_filters(query: &BulkMatchMetadataQuery) -> MatchPoolFilters {
+    MatchPoolFilters {
+        is_high_skill_range_parties: query.is_high_skill_range_parties,
+        is_low_pri_pool: query.is_low_pri_pool,
+        is_new_player_pool: query.is_new_player_pool,
     }
 }
 
@@ -602,54 +605,12 @@ fn build_query(
         || query.min_unix_timestamp.is_some()
         || query.min_match_id.is_some_and(|id| id > 0);
 
-    let mut info_filters = vec![];
-    info_filters.push(MatchMode::sql_filter(query.match_mode.as_deref()));
-    info_filters.push(GameMode::sql_filter(query.game_mode));
-    if let Some(min_unix_timestamp) = query.min_unix_timestamp {
-        info_filters.push(format!("start_time >= {min_unix_timestamp}"));
-    }
-    if let Some(max_unix_timestamp) = query.max_unix_timestamp {
-        info_filters.push(format!("start_time <= {max_unix_timestamp}"));
-    }
-    if let Some(min_match_id) = query.min_match_id
-        && min_match_id > 0
-    {
-        info_filters.push(format!("match_id >= {min_match_id}"));
-    }
-    if let Some(max_match_id) = query.max_match_id {
-        info_filters.push(format!("match_id <= {max_match_id}"));
-    }
-    if let Some(match_ids) = query.match_ids
-        && !match_ids.is_empty()
-    {
-        info_filters.push(format!("match_id IN ({})", id_list(&match_ids)));
-    }
-    if let Some(min_duration_s) = query.min_duration_s
-        && min_duration_s > 0
-    {
-        info_filters.push(format!("duration_s >= {min_duration_s}"));
-    }
-    if let Some(max_duration_s) = query.max_duration_s {
-        info_filters.push(format!("duration_s <= {max_duration_s}"));
-    }
-    if let Some(min_badge_level) = query.min_average_badge
-        && min_badge_level > MIN_FILTERING_AVERAGE_BADGE
-    {
-        info_filters.push(average_badge_filter("average_badge", ">=", min_badge_level));
-    }
-    if let Some(max_badge_level) = query.max_average_badge
-        && max_badge_level < MAX_FILTERING_AVERAGE_BADGE
-    {
-        info_filters.push(average_badge_filter("average_badge", "<=", max_badge_level));
-    }
+    let info_filters = match_filters(&query, "");
+    // The flat path selects aggregates named like their columns (`any(average_badge) AS
+    // average_badge`), so its WHERE needs table-qualified columns or they bind to the aliases.
+    let flat_info_filters = match_filters(&query, "match_player.");
     // Pool flags exist only on match_player, not on player_match_stats.
-    let pool_filters = MatchPoolFilters {
-        is_high_skill_range_parties: query.is_high_skill_range_parties,
-        is_low_pri_pool: query.is_low_pri_pool,
-        is_new_player_pool: query.is_new_player_pool,
-    };
-    let wide_only_filter = !pool_filters.is_empty();
-    info_filters.extend(pool_filters.predicates());
+    let wide_only_filter = !pool_filters(&query).is_empty();
 
     // Player filters - conditions that require subqueries on match_player
     let mut player_filters = vec![];
@@ -718,9 +679,6 @@ fn build_query(
             player_filters.join(" AND ")
         ))
     };
-    let player_filter_in = player_filter_subquery
-        .as_ref()
-        .map(|sub| format!("match_id IN ({sub})"));
 
     // Inner CTE groups by match_id — non-key columns must be aggregated.
     let inner_order_expr = match query.order_by {
@@ -760,13 +718,13 @@ fn build_query(
         // Flat single-scan path: when match_ids are explicit, skip the CTE.
         // The literal IN list lets ClickHouse apply primary-key granule pruning
         // (−85% parts, −63% read_rows, −15% peak memory vs the CTE path).
-        // Filters use qualify_match_player_filter so that table-qualified column
-        // references prevent ClickHouse alias substitution (e.g. SELECT any(match_mode)
-        // AS match_mode would otherwise shadow match_mode in WHERE).
-        let qualified: Vec<String> = info_filters
-            .iter()
-            .chain(player_filter_in.as_ref())
-            .map(|f| qualify_match_player_filter(f))
+        let qualified: Vec<String> = flat_info_filters
+            .into_iter()
+            .chain(
+                player_filter_subquery
+                    .as_ref()
+                    .map(|sub| format!("match_player.match_id IN ({sub})")),
+            )
             .chain(players_filter)
             .collect();
         let outer_where = if qualified.is_empty() {
@@ -1169,5 +1127,35 @@ mod proptests {
         assert!(sql.contains(
             "SELECT match_id FROM match_player WHERE match_mode IN ('Ranked', 'Unranked') AND game_mode = 1 AND start_time >= 1780256805 AND start_time <= 1780270000 AND average_badge >= 101 AND ifNull(average_badge, 0) >= 101 AND hero_id IN (7) AND hero_id = 7 AND hasAll(items.item_id, [1282141666])"
         ));
+    }
+
+    #[test]
+    fn badge_filter_with_explicit_match_ids_is_table_qualified() {
+        // On the flat path `any(average_badge) AS average_badge` is in scope, so an
+        // unqualified second reference in the badge filter is an aggregate in WHERE.
+        let sql = build_query(
+            BulkMatchMetadataQuery {
+                include_info: true,
+                match_ids: Some(vec![123_305_948, 123_280_294]),
+                min_unix_timestamp: Some(1_792_800_000),
+                min_average_badge: Some(100),
+                max_average_badge: Some(110),
+                is_low_pri_pool: Some(false),
+                limit: 10,
+                ..BulkMatchMetadataQuery::default()
+            },
+            None,
+        )
+        .expect("query should build");
+        assert_valid_sql(&sql);
+        assert!(sql.contains(
+            "match_player.average_badge >= 100 AND ifNull(match_player.average_badge, 0) >= 100"
+        ));
+        assert!(sql.contains(
+            "match_player.average_badge <= 110 AND ifNull(match_player.average_badge, 0) <= 110"
+        ));
+        assert!(sql.contains("match_player.start_time >= 1792800000"));
+        assert!(sql.contains("match_player.low_pri_pool = false"));
+        assert!(sql.contains("match_player.match_id IN (123305948, 123280294)"));
     }
 }
