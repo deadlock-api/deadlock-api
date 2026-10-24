@@ -354,6 +354,12 @@ impl<'a> Parser<'a> {
             b'[' => self.parse_array(),
             b'"' => self.parse_string().map(Kv3Value::Str),
             b'-' | b'0'..=b'9' => self.parse_number(),
+            // These end a token, so a bare value would read nothing and leave the caller on the
+            // same byte; an array (`[ } ]`) then loops there.
+            b @ (b'}' | b']' | b',') => Err(self.err(format!(
+                "unexpected `{}` where a value was expected",
+                char::from(b)
+            ))),
             _ => Ok(self.parse_keyword_or_resource()),
         }
     }
@@ -647,6 +653,12 @@ mod tests {
         assert_eq!(v["c"], serde_json::json!([1, 2, 3]));
         assert_eq!(v["d"], true);
         assert_eq!(v["e"], Value::Null);
+    }
+
+    #[test]
+    fn stray_brace_in_array_is_an_error() {
+        // The array pushed an empty string without moving past `}` and grew until memory ran out.
+        assert!(parse_to_json("{ a = [ } ] }").is_err());
     }
 
     #[test]
