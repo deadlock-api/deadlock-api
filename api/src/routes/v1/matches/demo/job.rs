@@ -2,7 +2,7 @@
 //! status pointer with a 24h TTL — the durable result lives in R2.
 
 use redis::AsyncCommands;
-use redis::aio::MultiplexedConnection;
+use redis::aio::ConnectionManager;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
@@ -61,7 +61,7 @@ fn key(job_id: &str) -> String {
 }
 
 pub(crate) async fn load(
-    redis: &mut MultiplexedConnection,
+    redis: &mut ConnectionManager,
     job_id: &str,
 ) -> APIResult<Option<JobRecord>> {
     let raw: Option<String> = redis.get(key(job_id)).await?;
@@ -69,7 +69,7 @@ pub(crate) async fn load(
 }
 
 pub(crate) async fn store(
-    redis: &mut MultiplexedConnection,
+    redis: &mut ConnectionManager,
     job_id: &str,
     record: &JobRecord,
 ) -> APIResult<()> {

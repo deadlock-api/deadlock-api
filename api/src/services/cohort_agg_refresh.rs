@@ -614,7 +614,7 @@ async fn refresh(
 
 pub(crate) fn spawn_cohort_agg_refresh(
     ch_client: clickhouse::Client,
-    redis: redis::aio::MultiplexedConnection,
+    redis: redis::aio::ConnectionManager,
 ) {
     // Each per-day insert sets its own log_comment, overriding this one.
     let ch_client = ch_client

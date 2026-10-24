@@ -259,7 +259,7 @@ fn claim_cookie(token: Option<Uuid>) -> HeaderValue {
 /// Releases the claims of the list handed out with `token`, leaving matches other workers
 /// have claimed since alone.
 async fn release_claim_list(
-    conn: &mut redis::aio::MultiplexedConnection,
+    conn: &mut redis::aio::ConnectionManager,
     token: Uuid,
 ) -> redis::RedisResult<()> {
     let list_key = format!("{CLAIM_LIST_PREFIX}{token}");
@@ -278,7 +278,7 @@ async fn release_claim_list(
 
 /// Remembers which matches `token` claimed, so [`release_claim_list`] can release them.
 async fn store_claim_list(
-    conn: &mut redis::aio::MultiplexedConnection,
+    conn: &mut redis::aio::ConnectionManager,
     token: Uuid,
     ids: &[u64],
 ) -> redis::RedisResult<()> {
@@ -504,7 +504,7 @@ pub(super) async fn release_matches_to_fetch(
 }
 
 /// Best effort: releases the claims of `ids` that hold `token`, leaving other workers' alone.
-async fn release_claims(conn: &mut redis::aio::MultiplexedConnection, ids: &[u64], token: &str) {
+async fn release_claims(conn: &mut redis::aio::ConnectionManager, ids: &[u64], token: &str) {
     let mut pipe = redis::pipe();
     for id in ids {
         pipe.cmd("EVAL")
@@ -576,7 +576,7 @@ mod tests {
     async fn release_claim_list_releases_only_own_claims() {
         let url = std::env::var("TEST_REDIS_URL").expect("TEST_REDIS_URL");
         let client = redis::Client::open(url).unwrap();
-        let mut conn = client.get_multiplexed_async_connection().await.unwrap();
+        let mut conn = client.get_connection_manager().await.unwrap();
         let (mine, theirs) = (Uuid::new_v4(), Uuid::new_v4());
         let ids = [1_u64, 2, 3].map(|i| u64::from(u32::MAX) + i);
         for id in ids {
