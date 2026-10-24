@@ -105,9 +105,11 @@ impl<P: PacketSource> AsyncDemoStream for PacketChannelBroadcastStream<P> {
     async fn read_cmd_header(&mut self) -> Result<CmdHeader, ReadCmdHeaderError> {
         self.ensure_data().await?;
 
+        // The parser treats `UnexpectedEof` as the end of the stream, which only a closed source
+        // is allowed to mean. A packet that stops inside a header is broken.
         let Some(&header) = self.current[self.offset..].first_chunk() else {
             return Err(ReadCmdHeaderError::IoError(io::Error::new(
-                io::ErrorKind::UnexpectedEof,
+                io::ErrorKind::InvalidData,
                 "incomplete command header in packet",
             )));
         };
@@ -132,5 +134,48 @@ impl<P: PacketSource> AsyncDemoStream for PacketChannelBroadcastStream<P> {
 
     fn start_position(&self) -> u64 {
         0 // No demo header in broadcasts
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use core::pin::pin;
+    use core::task::{Context, Poll, Waker};
+
+    use super::*;
+    use crate::parser::{AsyncStreamingParser, AsyncVisitor};
+
+    /// One packet, then nothing yet: a live broadcast whose next fragment hasn't arrived.
+    struct LiveSource(Option<Bytes>);
+
+    impl PacketSource for LiveSource {
+        async fn recv(&mut self) -> Option<Bytes> {
+            match self.0.take() {
+                Some(packet) => Some(packet),
+                None => core::future::pending().await,
+            }
+        }
+    }
+
+    struct NoopVisitor;
+
+    impl AsyncVisitor for NoopVisitor {
+        type Error = core::convert::Infallible;
+    }
+
+    #[test]
+    fn truncated_header_is_an_error_not_the_end_of_the_stream() {
+        // A clean end here made live-events wait for a pump that never finishes.
+        let stream =
+            PacketChannelBroadcastStream::new(LiveSource(Some(Bytes::from_static(&[1, 2, 3]))));
+        let mut parser =
+            AsyncStreamingParser::from_stream_with_visitor(stream, NoopVisitor).unwrap();
+        let mut run = pin!(parser.run_to_end());
+        match run.as_mut().poll(&mut Context::from_waker(Waker::noop())) {
+            Poll::Ready(result) => {
+                assert!(result.is_err(), "a broken packet ended the parse cleanly");
+            }
+            Poll::Pending => panic!("the parser waited for more packets after a broken one"),
+        }
     }
 }
