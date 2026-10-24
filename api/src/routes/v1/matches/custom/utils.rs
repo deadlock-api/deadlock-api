@@ -37,14 +37,14 @@ pub(super) fn build_proxy_query<M: prost::Message>(
 }
 
 pub(super) async fn get_party_info(
-    redis_client: &mut redis::aio::MultiplexedConnection,
+    redis_client: &mut redis::aio::ConnectionManager,
     lobby_id: u64,
 ) -> RedisResult<Option<String>> {
     redis_client.get(lobby_id.to_string()).await
 }
 
 pub(super) async fn get_party_info_with_retries(
-    redis_client: &mut redis::aio::MultiplexedConnection,
+    redis_client: &mut redis::aio::ConnectionManager,
     lobby_id: u64,
 ) -> RedisResult<Option<String>> {
     let mut attempts_left = 100;

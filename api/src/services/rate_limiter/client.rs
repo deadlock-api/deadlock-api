@@ -4,7 +4,7 @@ use axum::http::StatusCode;
 use cached::macros::cached;
 use chrono::{DateTime, Utc};
 use redis::RedisResult;
-use redis::aio::MultiplexedConnection;
+use redis::aio::ConnectionManager;
 use sqlx::{Pool, Postgres};
 use tracing::warn;
 use uuid::Uuid;
@@ -16,14 +16,14 @@ use crate::services::rate_limiter::{Quota, Status};
 
 #[derive(Clone)]
 pub(crate) struct RateLimitClient {
-    redis_client: MultiplexedConnection,
+    redis_client: ConnectionManager,
     pg_client: Pool<Postgres>,
     emergency_mode: bool,
 }
 
 impl RateLimitClient {
     pub(crate) fn new(
-        redis_client: MultiplexedConnection,
+        redis_client: ConnectionManager,
         pg_client: Pool<Postgres>,
         emergency_mode: bool,
     ) -> Self {

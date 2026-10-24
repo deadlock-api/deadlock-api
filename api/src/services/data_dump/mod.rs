@@ -18,7 +18,7 @@ use std::sync::Arc;
 use chrono::{DateTime, Utc};
 use object_store::path::Path;
 use object_store::{Attribute, Attributes, ObjectStore, PutOptions, PutPayload};
-use redis::aio::MultiplexedConnection;
+use redis::aio::ConnectionManager;
 use sqlx::{Pool, Postgres};
 use tracing::{error, info, warn};
 
@@ -77,7 +77,7 @@ pub(crate) struct DataDump {
     /// Admin client for the GDPR row policies.
     pub(crate) ch_admin: clickhouse::Client,
     pub(crate) pg: Pool<Postgres>,
-    pub(crate) redis: MultiplexedConnection,
+    pub(crate) redis: ConnectionManager,
     pub(crate) store: Arc<dyn ObjectStore>,
     pub(crate) work_dir: PathBuf,
 }

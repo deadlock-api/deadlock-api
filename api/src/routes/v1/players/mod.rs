@@ -84,7 +84,7 @@ pub(crate) async fn lookup_bot_for_friend(
 /// a bot friend yet.
 pub(crate) async fn collect_invite_links(
     pg: &sqlx::PgPool,
-    redis: &mut redis::aio::MultiplexedConnection,
+    redis: &mut redis::aio::ConnectionManager,
 ) -> APIResult<Vec<String>> {
     let mut invite_keys_set: std::collections::HashSet<String> = std::collections::HashSet::new();
     let mut cursor: u64 = 0;

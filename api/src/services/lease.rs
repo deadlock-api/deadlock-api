@@ -3,7 +3,7 @@
 use core::time::Duration;
 
 use redis::AsyncCommands;
-use redis::aio::MultiplexedConnection;
+use redis::aio::ConnectionManager;
 use tokio::task::JoinHandle;
 use tracing::warn;
 
@@ -25,7 +25,7 @@ fn millis(d: Duration) -> i64 {
 
 /// Runs one of the `*_IF_OWNED` scripts against `key`, with `ttl_ms` as its `ARGV[2]` if given.
 async fn eval_if_owned(
-    redis: &mut MultiplexedConnection,
+    redis: &mut ConnectionManager,
     script: &str,
     key: &str,
     token: &str,
@@ -40,7 +40,7 @@ async fn eval_if_owned(
 }
 
 pub(crate) struct Lease {
-    redis: MultiplexedConnection,
+    redis: ConnectionManager,
     key: String,
     token: String,
     heartbeat: JoinHandle<()>,
@@ -49,7 +49,7 @@ pub(crate) struct Lease {
 impl Lease {
     /// Returns `None` when another replica holds the lease.
     pub(crate) async fn acquire(
-        mut redis: MultiplexedConnection,
+        mut redis: ConnectionManager,
         key: &str,
         token: &str,
         ttl: Duration,

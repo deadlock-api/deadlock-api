@@ -38,7 +38,7 @@ pub struct Status {
 async fn check_health(
     ch_client: clickhouse::Client,
     pg_client: Pool<Postgres>,
-    redis_client: &mut redis::aio::MultiplexedConnection,
+    redis_client: &mut redis::aio::ConnectionManager,
 ) -> Result<Status, APIError> {
     // Check Clickhouse and Redis concurrently
     let (clickhouse, redis) = tokio::join!(
