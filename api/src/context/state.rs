@@ -355,7 +355,12 @@ impl ClickhouseClients {
             .clone()
             .with_setting("readonly", "2")
             .with_setting("allow_ddl", "0")
-            .with_setting("allow_introspection_functions", "0");
+            .with_setting("allow_introspection_functions", "0")
+            // Keep deserialized columns of `match_player` in memory (ClickHouse 26.10, experimental).
+            // The analytics endpoints re-read the same window's item arrays on every request, and
+            // decompressing them dominates their CPU. Measured on the top production shapes: identical
+            // results, -35% to -65% CPU once warm (hero_stats, item_flow_stats, item_stats).
+            .with_setting("use_columns_cache", "1");
 
         tokio::try_join!(
             ch_health_check(&ch_client, CH_HEALTH_CHECK),
