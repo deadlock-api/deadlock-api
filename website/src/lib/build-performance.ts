@@ -1,3 +1,5 @@
+import { formatClock } from "~/lib/stat-format";
+
 /** The performance totals the hero build stats return with `include_performance`, one build's or many pooled. */
 export interface BuildPerformanceTotals {
   matches: number;
@@ -98,7 +100,6 @@ const fixed = (digits: number) => (value: number) =>
   value.toLocaleString("en-US", { minimumFractionDigits: digits, maximumFractionDigits: digits });
 const whole = (value: number) => Math.round(value).toLocaleString("en-US");
 const percent = (value: number) => `${(value * 100).toFixed(1)}%`;
-const minutes = (seconds: number) => `${Math.floor(seconds / 60)}:${String(Math.round(seconds % 60)).padStart(2, "0")}`;
 
 /** Every number the page derives from a build's performance totals, in the order it lists them. */
 export const BUILD_METRICS: readonly BuildMetric[] = [
@@ -233,7 +234,7 @@ export const BUILD_METRICS: readonly BuildMetric[] = [
     label: "Match length",
     group: "economy",
     value: (t) => perMatch(t.total_duration_s, t),
-    format: minutes,
+    format: formatClock,
     polarity: "neutral",
     delta: "relative",
   },

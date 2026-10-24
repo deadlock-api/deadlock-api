@@ -12,6 +12,7 @@ import { NoValue } from "~/components/ui/no-value";
 import { FOCUS_RING } from "~/components/ui/recipes";
 import { Tooltip } from "~/components/ui/tooltip";
 import type { FullBuildItem } from "~/lib/build-transform";
+import { formatClock } from "~/lib/stat-format";
 import { TONE_BORDER, TONE_TEXT } from "~/lib/tone";
 import { cn } from "~/lib/utils";
 import { steamProfileQueryOptions } from "~/queries/steam-queries";
@@ -37,12 +38,6 @@ interface MatchHistoryCardProps extends Omit<React.ComponentProps<typeof Card>, 
   ranks?: Rank[];
   /** When provided, the player's name becomes a button that invokes this with the resolved persona name. */
   onPlayerClick?: (name?: string) => void;
-}
-
-function formatDuration(seconds: number): string {
-  const m = Math.floor(seconds / 60);
-  const s = seconds % 60;
-  return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
 function computeKDA(kills: number, deaths: number, assists: number): string {
@@ -157,7 +152,7 @@ export default function MatchHistoryCard({
                 <BadgeImage badge={averageBadge} ranks={ranks} className="size-6 shrink-0" />
               )}
             </div>
-            <div className="text-xs text-muted-foreground">{formatDuration(durationSeconds)}</div>
+            <div className="text-xs text-muted-foreground">{formatClock(durationSeconds)}</div>
             <div className="text-xs text-muted-foreground">{timeAgo}</div>
             <div className="text-xs text-muted-foreground">{matchId}</div>
           </div>
