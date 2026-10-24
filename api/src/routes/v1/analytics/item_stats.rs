@@ -1344,6 +1344,9 @@ fn build_query(query: &ItemStatsQuery) -> String {
     // `avgIf` over zero rows is NaN, not NULL, so `coalesce` did not catch it. Groups with no
     // sale (common for `corrupted_items=only`) then came out as JSON `null`. `ifNotFinite`
     // returns 0 like the rollup queries do (`if(sum(n_sold) = 0, 0, ...)`).
+    // `players` uses the rollups' `uniqCombined(14)`: plain `uniq` was ~90% of this query's CPU
+    // and memory. Measured on the top production shape: -47% CPU, -95% memory, error vs
+    // `uniqExact` 0.48% (`uniq`: 0.38%).
     format!(
         "
 {with_clause}
@@ -1353,7 +1356,7 @@ SELECT
     countIf(won)         AS wins,
     countIf(not won)     AS losses,
     wins + losses    AS matches,
-    uniq(account_id) AS players,
+    uniqCombined(14)(account_id) AS players,
     avg(buy_time) AS avg_buy_time_s,
     ifNotFinite(avgIf(sold_time, sold_time > 0), 0) AS avg_sell_time_s,
     avg((buy_time / duration_s) * 100) AS avg_buy_time_relative,
