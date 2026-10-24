@@ -362,7 +362,9 @@ impl SteamAccountsRepository {
         Ok(result.len() as u64)
     }
 
-    /// Hard-deletes all Steam accounts that have been soft-deleted for over 24 hours.
+    /// Hard-deletes the Steam accounts the patron removed themselves, once their 24-hour cooldown
+    /// is over. Accounts removed by a downgrade or a lapsed membership stay, so
+    /// `handle_reactivation` can restore them when the patron pays again.
     /// Returns the number of accounts that were permanently removed.
     pub(crate) async fn hard_delete_expired_accounts(&self) -> SteamAccountsRepositoryResult<u64> {
         let result = sqlx::query!(
@@ -370,6 +372,7 @@ impl SteamAccountsRepository {
             DELETE FROM prioritized_steam_accounts
             WHERE deleted_at IS NOT NULL
               AND deleted_at <= NOW() - INTERVAL '1 day'
+              AND user_deleted
             RETURNING steam_id3
             "#,
         )
