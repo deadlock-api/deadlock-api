@@ -373,6 +373,8 @@ mod tests {
         )]);
         let (rows, missing) = build_insert_rows(vec![player(1), player(2)], &mut friends);
         assert_eq!(rows[0].friends_account_id, vec![3]);
+        assert_eq!(rows[1].account_id, 2);
+        assert_eq!(rows[1].friends_account_id, Vec::<u32>::new());
         assert_eq!(missing, HashSet::from([2]));
     }
 }
