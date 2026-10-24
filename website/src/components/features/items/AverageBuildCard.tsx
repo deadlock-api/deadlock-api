@@ -14,6 +14,7 @@ import { Stack } from "~/components/ui/stack";
 import { Text } from "~/components/ui/text";
 import { Tooltip, TooltipTarget } from "~/components/ui/tooltip";
 import type { AverageBuild, AverageBuildItem, BuildPhase, BuildVariant, TimelineEntry } from "~/lib/average-build";
+import { formatClock } from "~/lib/stat-format";
 import { TONE_TEXT, toneOf } from "~/lib/tone";
 import { cn } from "~/lib/utils";
 
@@ -33,13 +34,6 @@ function WinRate({ wins, games, className }: { wins: number; games: number; clas
   return <span className={cn("font-semibold", TONE_TEXT[toneOf(wr, 0.5)], className)}>{Math.round(wr * 100)}% WR</span>;
 }
 
-function fmtTime(s: number): string {
-  const whole = Math.round(s);
-  const m = Math.floor(whole / 60);
-  const sec = whole % 60;
-  return `${m}:${sec.toString().padStart(2, "0")}`;
-}
-
 function ItemIcon({ item, dim, badge }: { item: AverageBuildItem; dim?: boolean; badge?: string }) {
   return (
     <Tooltip
@@ -49,7 +43,7 @@ function ItemIcon({ item, dim, badge }: { item: AverageBuildItem; dim?: boolean;
           <div>
             In {item.count} game{item.count === 1 ? "" : "s"} ({pct(item.frequency)})
           </div>
-          <div className="text-muted-foreground">typically ~{fmtTime(item.medianTimeS)}</div>
+          <div className="text-muted-foreground">typically ~{formatClock(item.medianTimeS)}</div>
           {item.sellOrder != null && (
             <div className="text-negative">
               Usually sold {item.sellOrder === 1 ? "first" : item.sellOrder === 2 ? "second" : "third"} when

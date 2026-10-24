@@ -28,6 +28,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~
 import { SELL_REFUND } from "~/lib/build-completer";
 import { formatCountNoun } from "~/lib/format";
 import type { GameMode, MatchMode } from "~/lib/game-mode";
+import { formatClock } from "~/lib/stat-format";
 import { itemUpgradesQueryOptions } from "~/queries/asset-queries";
 import { itemStatsQueryOptions } from "~/queries/item-stats-query";
 import { playerPerformanceCurveQueryOptions } from "~/queries/player-performance-curve-query";
@@ -125,10 +126,6 @@ export function soulsAt(points: CurvePoint[], t: number): number {
 export const compactSouls = (n: number) =>
   n >= 1000 ? `${(n / 1000).toFixed(n >= 10000 ? 0 : 1)}k` : String(Math.round(n));
 
-/** A game time in seconds as "12:05". */
-export const gameClock = (s: number) => `${Math.floor(s / 60)}:${String(Math.round(s) % 60).padStart(2, "0")}`;
-
-const clock = gameClock;
 const compact = compactSouls;
 
 interface BuildEconomyOptions extends SoulCurveFilters {
@@ -423,7 +420,7 @@ export function BuildEconomy({
                           style={{ insetInlineStart: `${mark.position * 100}%` }}
                         >
                           <AbilityLevelMark level={mark.level} abilitySlot={lane.slot} />
-                          <span className="sr-only">at {gameClock(mark.at)}</span>
+                          <span className="sr-only">at {formatClock(mark.at)}</span>
                         </li>
                       ))}
                     </ol>
@@ -536,15 +533,15 @@ export function BuildPurchases({
                 <TableCell className="hidden text-end @md/table:table-cell">
                   {p.netWorthAtBuy != null ? compact(p.netWorthAtBuy) : <NoValue />}
                 </TableCell>
-                <TableCell className="text-end">{p.boughtAt != null ? clock(p.boughtAt) : <NoValue />}</TableCell>
-                <TableCell className="text-end">{p.sold ? clock(p.sold.at) : <NoValue />}</TableCell>
+                <TableCell className="text-end">{p.boughtAt != null ? formatClock(p.boughtAt) : <NoValue />}</TableCell>
+                <TableCell className="text-end">{p.sold ? formatClock(p.sold.at) : <NoValue />}</TableCell>
                 <TableCell className="hidden text-end text-muted-foreground @md/table:table-cell">
                   {/* What its buyers do: the share of purchases the API reports sold (a component's sales count its
                       upgrades), else the average time of a sale. */}
                   {p.soldShare != null ? (
                     `${Math.round(p.soldShare * 100)}% ${isComponent.has(p.itemId) ? "upgrade" : "sell"}`
                   ) : p.avgSellAt != null ? (
-                    `sell ${clock(p.avgSellAt)}`
+                    `sell ${formatClock(p.avgSellAt)}`
                   ) : (
                     <NoValue />
                   )}
