@@ -516,17 +516,25 @@ pub(super) async fn rank_avg_image(
     .map(|m| m.badge())
     .collect();
 
+    serve_rank_image(&state, average_badge(&badges), RankImageQuery { format }).await
+}
+
+/// The average of the ranked badges, or 0 when there are none. Badge 0 (still in placement) is
+/// no rank, so it is left out instead of counting as an index below Initiate I.
+fn average_badge(badges: &[u32]) -> u32 {
+    let indices: Vec<i32> = badges
+        .iter()
+        .filter(|&&b| b > 0)
+        .map(|&b| badge_to_idx(b.cast_signed()))
+        .collect();
+    if indices.is_empty() {
+        return 0;
+    }
     // Badge values are not contiguous (16 is followed by 21), so the average is taken over the
     // badge index rather than the badge itself.
     #[expect(clippy::cast_precision_loss, clippy::cast_possible_truncation)]
-    let avg_badge = if badges.is_empty() {
-        0
-    } else {
-        let sum: i32 = badges.iter().map(|&b| badge_to_idx(b.cast_signed())).sum();
-        idx_to_badge((f64::from(sum) / badges.len() as f64).round() as i32).cast_unsigned()
-    };
-
-    serve_rank_image(&state, avg_badge, RankImageQuery { format }).await
+    let avg_idx = (f64::from(indices.iter().sum::<i32>()) / indices.len() as f64).round() as i32;
+    idx_to_badge(avg_idx).cast_unsigned()
 }
 
 #[utoipa::path(
@@ -625,6 +633,16 @@ mod tests {
         assert_eq!(badge_to_idx(21), 7);
         assert_eq!(badge_to_idx(82), 44);
         assert_eq!(badge_to_idx(116), 66);
+    }
+
+    #[test]
+    fn test_average_badge_leaves_out_placement() {
+        // Eternus 6 with a placement player read as badge 56 when 0 counted as index -6.
+        assert_eq!(average_badge(&[116, 0]), 116);
+        assert_eq!(average_badge(&[11, 12, 0]), 12);
+        assert_eq!(average_badge(&[0]), 0);
+        assert_eq!(average_badge(&[]), 0);
+        assert_eq!(average_badge(&[11, 21]), 14);
     }
 
     #[test]
