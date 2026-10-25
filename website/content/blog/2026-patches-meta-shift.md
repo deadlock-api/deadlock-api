@@ -35,7 +35,7 @@ Holliday is the mirror case. She was the worst-winrate hero in our January windo
 
 ## The map patch made games longer and fights messier
 
-The 03-06 patch touched almost every hero, but its fingerprints are clearer in the game-level stats than in any one hero's numbers. Matches went from averaging 33 minutes 17 seconds to 35 minutes 58 seconds, **roughly a 2.7 minute increase**. Average end-game net worth jumped from 32,640 souls to 37,531. Average max health climbed **10%** to 2,652. Spirit power averages rose **25%**, from 81.7 to 101.9.
+The 03-06 patch touched almost every hero, but its fingerprints are clearer in the game-level stats than in any one hero's numbers. Matches went from averaging 33 minutes 17 seconds to 35 minutes 58 seconds, **roughly a 2.7 minute increase**. Average end-game [net worth](/analytics/games/economy) jumped from 32,640 souls to 37,531. Average max health climbed **10%** to 2,652. Spirit power averages rose **25%**, from 81.7 to 101.9.
 
 ![Average match duration, health, spirit, and assists across three key windows](/blog/images/game_metrics_shift.png)
 

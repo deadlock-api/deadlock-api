@@ -75,4 +75,4 @@ The Urn is still a small line item. About one soul in twenty comes from it, well
 
 So the size of the prize is essentially where it was in April. Everything around it moved: one player collects it instead of six, and losing it costs a leading team twice what it used to. Six weeks of patches, and the interesting part is the part that stayed still.
 
-You can pull the same soul-source breakdowns for any hero or time window through our [analytics endpoints](https://api.deadlock-api.com/docs). If you want to dig into this with other people who like Deadlock numbers, our [Discord](https://discord.gg/pqWQfTPQJu) is open.
+Today's split, rank by rank, is on our [soul economy page](/analytics/games/economy). You can pull the same soul-source breakdowns for any hero or time window through our [analytics endpoints](https://api.deadlock-api.com/docs). If you want to dig into this with other people who like Deadlock numbers, our [Discord](https://discord.gg/pqWQfTPQJu) is open.
