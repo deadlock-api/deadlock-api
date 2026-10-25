@@ -15,15 +15,15 @@ interface PatronAuthProviderProps {
 
 function deriveAuthState(
   data: PatronStatus | null | undefined,
-  isQueryLoading: boolean,
-): Omit<PatronAuthState, "isLoggingOut" | "isResolved" | "statusError" | "isRefreshingStatus"> {
-  if (isQueryLoading || !data) {
+  isQueryPending: boolean,
+): Omit<PatronAuthState, "isLoggingOut" | "statusError" | "isRefreshingStatus"> {
+  if (isQueryPending || !data) {
     return {
       isAuthenticated: false,
       isActive: false,
       pledgeAmountCents: null,
       totalSlots: 0,
-      isLoading: isQueryLoading,
+      isLoading: isQueryPending,
     };
   }
 
@@ -38,18 +38,17 @@ function deriveAuthState(
 
 export function PatronAuthProvider({ children }: PatronAuthProviderProps) {
   const queryClient = useQueryClient();
-  const { data, isLoading: isQueryLoading, isFetched, isError, isFetching } = usePatronStatus();
+  const { data, isPending: isQueryPending, isError, isFetching } = usePatronStatus();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const authState = useMemo(
     () => ({
-      ...deriveAuthState(data, isQueryLoading),
-      isResolved: isFetched,
+      ...deriveAuthState(data, isQueryPending),
       statusError: isError && !data,
       isRefreshingStatus: isFetching,
       isLoggingOut,
     }),
-    [data, isQueryLoading, isFetched, isError, isFetching, isLoggingOut],
+    [data, isQueryPending, isError, isFetching, isLoggingOut],
   );
 
   const login = useCallback(() => {

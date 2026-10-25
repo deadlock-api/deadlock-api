@@ -51,17 +51,8 @@ function GateCard({ icon, title, children }: { icon: React.ReactNode; title: str
 }
 
 export function TrackerGate({ accountId, children }: { accountId: number; children: React.ReactNode }) {
-  const {
-    isAuthenticated,
-    isActive,
-    isLoading,
-    isResolved,
-    statusError,
-    isRefreshingStatus,
-    refreshStatus,
-    login,
-    totalSlots,
-  } = usePatronAuth();
+  const { isAuthenticated, isActive, isLoading, statusError, isRefreshingStatus, refreshStatus, login, totalSlots } =
+    usePatronAuth();
   // An inactive membership can still hold prioritized account slots (e.g. a slot override).
   const hasSlots = isActive || totalSlots > 0;
 
@@ -80,7 +71,7 @@ export function TrackerGate({ accountId, children }: { accountId: number; childr
 
   // Until both answer, a visitor would see the sign-in gate flash before the profile. A failed ingest check falls back
   // to the Patreon gate rather than blocking it.
-  if (ingestQuery.isPending || isLoading || !isResolved || (isAuthenticated && hasSlots && accountsQuery.isPending)) {
+  if (ingestQuery.isPending || isLoading || (isAuthenticated && hasSlots && accountsQuery.isPending)) {
     return (
       <GateShell>
         <LoadingState label="player tracker" align="center" />
