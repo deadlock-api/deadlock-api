@@ -89,7 +89,9 @@ pub async fn get_redis_client() -> FredResult<RedisClient> {
     let config = RedisConfig::from_url(
         &env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1".to_owned()),
     )?;
-    let reconnect_policy = ReconnectPolicy::new_linear(10, 10000, 100);
+    // 0 attempts retries forever: with a cap the client stays disconnected once Redis is down
+    // longer than the retries last (about 6 s), and commands then never complete.
+    let reconnect_policy = ReconnectPolicy::new_linear(0, 10000, 100);
     let redis = RedisClient::new(config, None, None, reconnect_policy.into());
     redis.connect();
     redis.wait_for_connect().await?;
