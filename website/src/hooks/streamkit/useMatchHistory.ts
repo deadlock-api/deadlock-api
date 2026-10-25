@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 
 import { UPDATE_INTERVAL_MS } from "~/constants/streamkit/widget";
+import { parseSteamIdToId3 } from "~/lib/steam";
 import { heroesQueryOptions } from "~/queries/asset-queries";
 import { trackerMatchHistoryQueryOptions } from "~/queries/match-history-queries";
 
@@ -43,9 +44,10 @@ export const useMatchHistory = ({ accountId, numMatches = 10 }: UseMatchHistoryP
       ),
   });
 
-  // The tracker's cache entry, polled while the overlay is on stream.
+  // The tracker's cache entry, polled while the overlay is on stream. A SteamID64 in a hand-written widget URL is
+  // read exactly, as for the stats, not through a lossy Number().
   const { data: matchesData, isLoading: loadingMatches } = useQuery({
-    ...trackerMatchHistoryQueryOptions(Number(accountId)),
+    ...trackerMatchHistoryQueryOptions(Number(parseSteamIdToId3(accountId))),
     refetchInterval: UPDATE_INTERVAL_MS,
     refetchIntervalInBackground: true,
   });
