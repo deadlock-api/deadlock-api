@@ -143,11 +143,12 @@ export function normalizeHeatGrids(
   if (viewMode === "kd") {
     const grid = new Float32Array(GRID_RES * GRID_RES);
 
-    // At least the peak of one lone event; fewer than half a lone death's peak count as no deaths.
+    // At least the peak of one lone event. Both sides get one lone event's peak, so K/D is continuous, never rises with
+    // deaths, and stays finite without them; a cell with deaths and no kills sits at the bottom of the ramp.
     const minActivity = Math.max(eventPeak, minEvents);
     for (let i = 0; i < grid.length; i++) {
       if (killsRaw[i] + deathsRaw[i] >= minActivity) {
-        grid[i] = deathsRaw[i] > eventPeak / 2 ? killsRaw[i] / deathsRaw[i] : killsRaw[i];
+        grid[i] = (killsRaw[i] + eventPeak) / (deathsRaw[i] + eventPeak);
       }
     }
 
