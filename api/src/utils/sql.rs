@@ -234,15 +234,21 @@ impl MatchPoolFilters {
     }
 
     pub(crate) fn predicates(self) -> Vec<String> {
+        self.predicates_with_prefix("")
+    }
+
+    /// Same as [`Self::predicates`] but qualifies every column reference with the given
+    /// prefix (e.g. `"mp."`).
+    pub(crate) fn predicates_with_prefix(self, prefix: &str) -> Vec<String> {
         let mut filters = Vec::new();
         if let Some(v) = self.is_high_skill_range_parties {
-            filters.push(format!("is_high_skill_range_parties = {v}"));
+            filters.push(format!("{prefix}is_high_skill_range_parties = {v}"));
         }
         if let Some(v) = self.is_low_pri_pool {
-            filters.push(format!("low_pri_pool = {v}"));
+            filters.push(format!("{prefix}low_pri_pool = {v}"));
         }
         if let Some(v) = self.is_new_player_pool {
-            filters.push(format!("new_player_pool = {v}"));
+            filters.push(format!("{prefix}new_player_pool = {v}"));
         }
         filters
     }
