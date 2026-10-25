@@ -1,3 +1,4 @@
+import type { MatchEntry } from "~/hooks/streamkit/useMatchHistory";
 import type { Theme } from "~/types/streamkit/widget";
 
 export interface Hero {
@@ -9,9 +10,9 @@ export interface Hero {
 
 export interface MatchHistoryProps {
   theme: Theme;
-  numMatches?: number;
-  accountId: string;
-  /** The number of matches is not known yet (today's count still loading): the strip keeps its place. */
+  /** The matches to show, newest first (`useMatchHistory`). */
+  entries: MatchEntry[];
+  /** The matches, or how many to show, are not known yet: the strip keeps its place. */
   pending?: boolean;
   opacity?: number;
 }

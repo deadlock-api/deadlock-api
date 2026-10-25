@@ -2,6 +2,7 @@ import { useMemo } from "react";
 
 import { MatchHistory } from "~/components/features/streamkit/widgets/MatchHistory";
 import { DEFAULT_LABELS, DEFAULT_VARIABLES, UPDATE_INTERVAL_MS } from "~/constants/streamkit/widget";
+import { useMatchHistory } from "~/hooks/streamkit/useMatchHistory";
 import { useStats } from "~/hooks/streamkit/useStats";
 import { useWidgetTheme } from "~/hooks/streamkit/useWidgetTheme";
 import { variableLabel } from "~/lib/streamkit-command";
@@ -104,6 +105,12 @@ export const BoxWidget = ({
     return calculateMatchesToShow(numMatches, matchHistoryShowsToday, stats);
   }, [numMatches, matchHistoryShowsToday, stats]);
 
+  const matchHistory = useMatchHistory({ accountId, numMatches: numMatchesToShow, enabled: showMatchHistory });
+  const stripPending = (matchHistoryShowsToday && !stats) || matchHistory.loading;
+  // The box joins the strip only while the strip is drawn: with no matches (none today yet, or the count failed) the
+  // strip is gone and the box keeps its own top edge and rounding.
+  const showStrip = showMatchHistory && (stripPending || matchHistory.entries.length > 0);
+
   const statDisplays = useMemo(() => {
     if (!stats) return [];
     return createStatDisplays(stats, variables, displayLabels, subtexts, opacity);
@@ -115,20 +122,14 @@ export const BoxWidget = ({
     // A column whose width is the wider of the match strip and the stats: every match the URL asks for is shown, and
     // the box stretches under a strip longer than its stats.
     <div className="inline-flex flex-col" style={themeStyles.cssVariables}>
-      {showMatchHistory && (
-        <MatchHistory
-          theme={theme}
-          numMatches={numMatchesToShow}
-          accountId={accountId}
-          pending={matchHistoryShowsToday && !stats}
-          opacity={opacity}
-        />
+      {showStrip && (
+        <MatchHistory theme={theme} entries={matchHistory.entries} pending={stripPending} opacity={opacity} />
       )}
-      <div className={themeStyles.containerClasses(showMatchHistory)}>
+      <div className={themeStyles.containerClasses(showStrip)}>
         {shouldShowHeader && (
           <BoxHeader
             userName={stats?.steam_account_name || ""}
-            showMatchHistory={showMatchHistory}
+            showMatchHistory={showStrip}
             themeClasses={themeStyles}
           />
         )}

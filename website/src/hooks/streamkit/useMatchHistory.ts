@@ -18,22 +18,33 @@ export interface MatchHero {
   image: string;
 }
 
+export interface MatchEntry {
+  match: Match;
+  hero: MatchHero;
+}
+
 interface UseMatchHistoryResult {
-  matches: Match[];
-  heroes: Map<number, MatchHero>;
+  /** The newest matches whose hero is known, newest first. */
+  entries: MatchEntry[];
   loading: boolean;
 }
 
 interface UseMatchHistoryParams {
   accountId: string;
   numMatches?: number;
+  enabled?: boolean;
 }
 
 const EMPTY_HEROES = new Map<number, MatchHero>();
 
-export const useMatchHistory = ({ accountId, numMatches = 10 }: UseMatchHistoryParams): UseMatchHistoryResult => {
+export const useMatchHistory = ({
+  accountId,
+  numMatches = 10,
+  enabled = true,
+}: UseMatchHistoryParams): UseMatchHistoryResult => {
   const { data: heroes = EMPTY_HEROES, isLoading: loadingHeroes } = useQuery({
     ...heroesQueryOptions,
+    enabled,
     // An OBS source never refocuses or remounts, so a failed first load would hide the strip for the whole stream.
     refetchInterval: (query) => (query.state.status === "error" ? 60_000 : false),
     select: (heroesData) =>
@@ -48,11 +59,19 @@ export const useMatchHistory = ({ accountId, numMatches = 10 }: UseMatchHistoryP
   // read exactly, as for the stats, not through a lossy Number().
   const { data: matchesData, isLoading: loadingMatches } = useQuery({
     ...trackerMatchHistoryQueryOptions(Number(parseSteamIdToId3(accountId))),
+    enabled,
     refetchInterval: UPDATE_INTERVAL_MS,
     refetchIntervalInBackground: true,
   });
 
-  const matches = useMemo(() => matchesData?.slice(0, numMatches) ?? [], [matchesData, numMatches]);
+  const entries = useMemo(
+    () =>
+      (matchesData ?? []).slice(0, numMatches).flatMap((match) => {
+        const hero = heroes.get(match.hero_id);
+        return hero ? [{ match, hero }] : [];
+      }),
+    [matchesData, numMatches, heroes],
+  );
 
-  return { matches, heroes, loading: loadingHeroes || loadingMatches };
+  return { entries, loading: loadingHeroes || loadingMatches };
 };
