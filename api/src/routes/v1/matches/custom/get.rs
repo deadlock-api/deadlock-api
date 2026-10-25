@@ -21,7 +21,7 @@ pub(super) struct PartyIdQuery {
 }
 
 async fn get_party_match_id(
-    redis_client: &mut redis::aio::MultiplexedConnection,
+    redis_client: &mut redis::aio::ConnectionManager,
     party_id: u64,
 ) -> APIResult<u64> {
     let match_id: String = redis_client

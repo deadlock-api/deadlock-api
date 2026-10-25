@@ -74,7 +74,7 @@ pub(crate) struct AppStateInner {
     pub(crate) s3_client: AmazonS3,
     pub(crate) file_cache: Option<LocalFileSystem>,
     pub(crate) r2_client: AmazonS3,
-    pub(crate) redis_client: redis::aio::MultiplexedConnection,
+    pub(crate) redis_client: redis::aio::ConnectionManager,
     pub(crate) ch_client: clickhouse::Client,
     pub(crate) ch_client_ro: clickhouse::Client,
     pub(crate) pg_client: Pool<Postgres>,
@@ -146,10 +146,14 @@ impl AppState {
             retry_config(Duration::from_mins(3)),
         )?;
 
-        // Create a Redis connection pool
+        // A plain multiplexed connection never reconnects, so a Redis restart would break
+        // every command until the API restarts. One retry keeps commands failing fast while
+        // Redis is down; the default of six makes each one wait ~9.5 s.
         debug!("Creating Redis client");
         let redis_client = redis::Client::open(config.redis.url.clone())?
-            .get_multiplexed_async_connection()
+            .get_connection_manager_with_config(
+                redis::aio::ConnectionManagerConfig::new().set_number_of_retries(1),
+            )
             .await?;
 
         debug!("Creating Clickhouse clients");
@@ -374,7 +378,7 @@ fn spawn_data_dump(
     config: &Config,
     ch_client: &clickhouse::Client,
     pg_client: &Pool<Postgres>,
-    redis_client: &redis::aio::MultiplexedConnection,
+    redis_client: &redis::aio::ConnectionManager,
 ) -> Result<(), object_store::Error> {
     let lake_store = s3_store(
         "auto",

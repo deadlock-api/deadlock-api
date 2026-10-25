@@ -3,13 +3,18 @@
 use core::time::Duration;
 
 use redis::AsyncCommands;
-use redis::aio::MultiplexedConnection;
+use redis::aio::ConnectionManager;
 use tokio::task::JoinHandle;
 use tracing::warn;
 
+/// Also takes the key back when it is gone, e.g. after Redis restarted empty, so another
+/// replica can't acquire the lease while its holder is still working.
 const RENEW_IF_OWNED: &str = r"
 if redis.call('get', KEYS[1]) == ARGV[1] then
     return redis.call('pexpire', KEYS[1], ARGV[2])
+end
+if redis.call('set', KEYS[1], ARGV[1], 'PX', ARGV[2], 'NX') then
+    return 1
 end
 return 0";
 
@@ -25,7 +30,7 @@ fn millis(d: Duration) -> i64 {
 
 /// Runs one of the `*_IF_OWNED` scripts against `key`, with `ttl_ms` as its `ARGV[2]` if given.
 async fn eval_if_owned(
-    redis: &mut MultiplexedConnection,
+    redis: &mut ConnectionManager,
     script: &str,
     key: &str,
     token: &str,
@@ -40,7 +45,7 @@ async fn eval_if_owned(
 }
 
 pub(crate) struct Lease {
-    redis: MultiplexedConnection,
+    redis: ConnectionManager,
     key: String,
     token: String,
     heartbeat: JoinHandle<()>,
@@ -49,7 +54,7 @@ pub(crate) struct Lease {
 impl Lease {
     /// Returns `None` when another replica holds the lease.
     pub(crate) async fn acquire(
-        mut redis: MultiplexedConnection,
+        mut redis: ConnectionManager,
         key: &str,
         token: &str,
         ttl: Duration,

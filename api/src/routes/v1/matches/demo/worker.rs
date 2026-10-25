@@ -13,7 +13,7 @@ use std::time::Instant;
 use object_store::aws::AmazonS3;
 use object_store::path::Path;
 use object_store::{ObjectStoreExt, WriteMultipart};
-use redis::aio::MultiplexedConnection;
+use redis::aio::ConnectionManager;
 use reqwest::StatusCode;
 use tokio::sync::{Semaphore, mpsc};
 use tracing::{error, info};
@@ -62,7 +62,7 @@ pub(crate) struct DemoQueryQueue {
 }
 
 impl DemoQueryQueue {
-    pub(crate) fn spawn(redis: MultiplexedConnection, r2: AmazonS3, public_url: &str) -> Self {
+    pub(crate) fn spawn(redis: ConnectionManager, r2: AmazonS3, public_url: &str) -> Self {
         let (tx, mut rx) = mpsc::channel::<QueryJob>(MAX_QUEUE_DEPTH);
         let completed = Arc::new(AtomicU64::new(0));
         let public_url = Arc::<str>::from(public_url.trim_end_matches('/'));
@@ -125,7 +125,7 @@ impl QuerySlot {
     }
 }
 
-async fn run_job(mut redis: MultiplexedConnection, r2: &AmazonS3, public_url: &str, job: QueryJob) {
+async fn run_job(mut redis: ConnectionManager, r2: &AmazonS3, public_url: &str, job: QueryJob) {
     info!(
         job_id = %job.job_id,
         match_id = job.match_id,
