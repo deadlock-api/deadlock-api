@@ -7,14 +7,10 @@ import { Tooltip, TooltipHeader, TooltipStat, TooltipStats, TooltipTarget } from
 import { useItemById } from "~/hooks/useAssetById";
 import type { BuildItemUsage } from "~/lib/build-stats";
 import { formatPercent, formatShare } from "~/lib/format";
+import { formatClock } from "~/lib/stat-format";
 
 /** Below this share of the build's matches an item is drawn dimmed: listed, but seldom bought. */
 const RARELY_BOUGHT = 0.25;
-
-function clock(seconds: number): string {
-  const whole = Math.round(seconds);
-  return `${Math.floor(whole / 60)}:${String(whole % 60).padStart(2, "0")}`;
-}
 
 /**
  * One item of a build, with how often the build's players bought it under the icon. Its tooltip names the item, holds
@@ -49,11 +45,11 @@ export function BuildItemTile({
           {!pending && (
             <TooltipStats>
               <TooltipStat label="Bought in" value={`${formatShare(rate)} of matches`} />
-              {usage && <TooltipStat label="Bought at" value={clock(usage.avgBuyTimeS)} />}
+              {usage && <TooltipStat label="Bought at" value={formatClock(usage.avgBuyTimeS)} />}
               {usage && usage.soldRate > 0 && (
                 <TooltipStat
                   label="Sold"
-                  value={`${formatShare(usage.soldRate)} of buys, at ${clock(usage.avgSellTimeS)}`}
+                  value={`${formatShare(usage.soldRate)} of buys, at ${formatClock(usage.avgSellTimeS)}`}
                 />
               )}
               {usage && <TooltipStat label="Win rate when bought" value={formatPercent(usage.winRate)} />}
@@ -91,7 +87,7 @@ export function BuildItemTile({
           <Skeleton className="h-4 w-8" />
         ) : (
           <span className="text-xs text-muted-foreground tabular-nums">
-            {byTime ? clock(usage.avgBuyTimeS) : formatShare(rate)}
+            {byTime ? formatClock(usage.avgBuyTimeS) : formatShare(rate)}
           </span>
         )}
       </TooltipTarget>

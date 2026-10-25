@@ -29,18 +29,20 @@ export function formatAxisTick(value: number, format: StatFormat, span: number):
   return format === "percent" ? `${text}%` : text;
 }
 
+/** Seconds as m:ss, e.g. `12:05`. Rounds first, so 359.6 is `6:00`, not `5:00` or `5:60`. */
+export function formatClock(seconds: number): string {
+  const whole = Math.round(seconds);
+  return `${Math.floor(whole / 60)}:${(whole % 60).toString().padStart(2, "0")}`;
+}
+
 /** A stat as its format prints it; null for a missing reading, which the caller shows as `NoValue`. */
 export function formatStatValue(value: number | undefined | null, format: StatFormat): string | null {
   if (value == null || Number.isNaN(value)) return null;
   switch (format) {
     case "integer":
       return Math.round(value).toLocaleString("en-US");
-    case "duration": {
-      const whole = Math.round(value);
-      const minutes = Math.floor(whole / 60);
-      const seconds = whole % 60;
-      return `${minutes}:${seconds.toString().padStart(2, "0")}`;
-    }
+    case "duration":
+      return formatClock(value);
     case "hours": {
       // Tenths under ten hours, whole hours above: "4.5 h", "132 h".
       const hours = value / 3600;

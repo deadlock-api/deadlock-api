@@ -55,3 +55,11 @@ test("a difference is relative for amounts and in points for rates", () => {
   assert.equal(metricDelta(metric("teammateHealing"), 0.4, 3), null);
   assert.equal(metricDelta(metric("kills"), null, 5), null);
 });
+
+test("match length rounds before splitting minutes and seconds", () => {
+  const duration = BUILD_METRICS.find((m) => m.key === "duration");
+  assert.ok(duration);
+  // 1859.7 s once printed as "30:60": minutes were floored and the seconds rounded on their own.
+  assert.equal(duration.format(1859.7), "31:00");
+  assert.equal(duration.format(359.6), "6:00");
+});

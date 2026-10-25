@@ -63,6 +63,7 @@ import { useHeroById } from "~/hooks/useAssetById";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { type BuildFocus, type BuildGoal, type CompleterStep, completeBuild, SELL_REFUND } from "~/lib/build-completer";
 import type { GameMode, MatchMode } from "~/lib/game-mode";
+import { formatClock } from "~/lib/stat-format";
 import { TONE_TEXT, toneOf, type Tone } from "~/lib/tone";
 import { wilsonScoreInterval } from "~/lib/wilson";
 import { itemPricePerTierQueryOptions, itemUpgradesQueryOptions } from "~/queries/asset-queries";
@@ -921,7 +922,6 @@ function BuildDesigner({
     const slot = slotOf.get(itemId);
     if (slot) categoryCost.set(slot, (categoryCost.get(slot) ?? 0) + payOf(key));
   }
-  const duration = Math.round(summary.avg_duration_s);
   // Without a build the win rate is read against 50%. With one, against all games, colored only when its 95% interval
   // clears them; the ± beside the change says how sure it is (115 games at 80.9% are +30 points, but ±7).
   const buildTone: Tone =
@@ -1277,11 +1277,7 @@ function BuildDesigner({
                 <Stat
                   label="Game length"
                   value={
-                    switching ? (
-                      <Skeleton className="h-6 w-12" />
-                    ) : noGames ? null : (
-                      `${Math.floor(duration / 60)}:${String(duration % 60).padStart(2, "0")}`
-                    )
+                    switching ? <Skeleton className="h-6 w-12" /> : noGames ? null : formatClock(summary.avg_duration_s)
                   }
                 />
                 {/* The cost is the picked items' own, known before the build's games load. */}
