@@ -36,11 +36,6 @@ export function patronStatusQueryOptions() {
     queryFn: getPatronStatus,
     staleTime: PATRON_STALE_TIME,
     refetchOnWindowFocus: true,
-    // Avoids isLoading: true → false transition on every mount (which re-renders the
-    // entire PatronAuthProvider subtree). The fetch still fires; once resolved the
-    // auth state updates normally.
-    initialData: null,
-    initialDataUpdatedAt: 0,
   });
 }
 
