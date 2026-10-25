@@ -588,6 +588,14 @@ function BuildDesigner({
   const [pointed, setPointed] = useState<string | null>(null);
   // The completion running, by the control that started it: "complete", or a one-press build's label.
   const [completing, setCompleting] = useState<string | null>(null);
+  // Counts completions: a run writes the build only while it is the latest. Leaving the page, changing the hero, a
+  // filter or the mode, or opening a saved build starts a new count, so the run stops instead of writing over what
+  // came after (its URL setters still hold the page it started on, and would bring the reader back to it).
+  const completionRun = useRef(0);
+  const stopCompletion = () => {
+    completionRun.current += 1;
+    setCompleting(null);
+  };
   const boardRef = useRef<HTMLOListElement>(null);
   // The reader's skill order, ability ids by upgrade; without it the build takes its players' most common one.
   const [storedSkills, setSkills] = useQueryState("build_skills", parseAsArrayOf(parseAsInteger));
@@ -658,6 +666,16 @@ function BuildDesigner({
   };
 
   const { minUnixTimestamp, maxUnixTimestamp } = useNormalizedTimeRange(minDate, maxDate);
+  // A completion reads the answers of the hero, filters and mode it started with: it stops when they change or the
+  // designer goes.
+  useEffect(
+    () => () => {
+      completionRun.current += 1;
+      setCompleting(null);
+    },
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies -- what the completion read: a change stops it
+    [heroId, gameMode, matchMode, minRankId, maxRankId, minUnixTimestamp, maxUnixTimestamp, minMatches],
+  );
   // The build flow answer for a build path, with the page's filters.
   const flowQuery = (keys: string[]) =>
     itemFlowQueryOptions({
@@ -999,6 +1017,9 @@ function BuildDesigner({
   // the button pressed, which shows the work.
   const complete = async (focus: BuildFocus, goal: BuildGoal, from: string[] = path, control = "complete") => {
     if (!budgets) return;
+    completionRun.current += 1;
+    const run = completionRun.current;
+    const stopped = () => completionRun.current !== run;
     setCompleting(control);
     // The build as it was, for Undo after the completion or after a step that failed.
     const before = path;
@@ -1015,6 +1036,7 @@ function BuildDesigner({
       for (let step = 0; step < COMPLETE_MAX_ITEMS; step++) {
         // oxlint-disable-next-line no-await-in-loop -- each step reads the answer for the build the last step made
         const answer = await queryClient.query(flowQuery(current));
+        if (stopped()) return;
         const stepView = buildView(answer, {
           path: new Set(current),
           columnCount,
@@ -1086,12 +1108,14 @@ function BuildDesigner({
         toast("No item to add: too few players of this build bought more");
       }
     } catch {
+      if (stopped()) return;
       // A step's request failed: the board keeps the items found so far, with Undo back to the build before.
       toast.error("Could not complete the build", {
         action: current.length > from.length ? { label: "Undo", onClick: undo } : undefined,
       });
     } finally {
-      setCompleting(null);
+      // A stopped run's control is already free, and may be another run's by now.
+      if (!stopped()) setCompleting(null);
     }
   };
   // A win rate from a handful of games (13, 1) reads like a fact; under this many it is not shown.
@@ -1157,15 +1181,17 @@ function BuildDesigner({
             </Inline>
             <Inline gap={1}>
               <SavedBuildsMenu
-                onOpen={(build) =>
+                onOpen={(build) => {
+                  // A completion running would write its build over the opened one.
+                  stopCompletion();
                   startTransition(() => {
                     if (build.heroId !== heroId) void setHero(build.heroId, AT_ONCE);
                     setPath(build.path.length > 0 ? build.path : null, AT_ONCE);
                     void setSells(build.sells.length > 0 ? build.sells : null, AT_ONCE);
                     void setFlex(build.flex ?? null, AT_ONCE);
                     void setSkills(build.skills ?? null, AT_ONCE);
-                  })
-                }
+                  });
+                }}
               />
               {/* Always on the row, disabled while the build is empty, so the first pick does not reflow it. */}
               <SaveBuildButton
