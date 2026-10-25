@@ -9,6 +9,9 @@ on:
       - '.github/workflows/website-ci.yml'
       # The tracker demo ports its metric formulas (website/src/lib/tracker/player-metric-formulas.ts).
       - 'api/src/routes/v1/analytics/player_stats_metrics.rs'
+      # The crosshair editor ports the renderer (website/src/lib/crosshair-render.ts), tested against its PNGs.
+      - 'api/src/services/crosshair/render.rs'
+      - 'api/src/services/crosshair/fixtures/**'
   pull_request:
     branches:
       - master
@@ -17,6 +20,9 @@ on:
       - '.github/workflows/website-ci.yml'
       # The tracker demo ports its metric formulas (website/src/lib/tracker/player-metric-formulas.ts).
       - 'api/src/routes/v1/analytics/player_stats_metrics.rs'
+      # The crosshair editor ports the renderer (website/src/lib/crosshair-render.ts), tested against its PNGs.
+      - 'api/src/services/crosshair/render.rs'
+      - 'api/src/services/crosshair/fixtures/**'
   workflow_dispatch:
 
 jobs:
