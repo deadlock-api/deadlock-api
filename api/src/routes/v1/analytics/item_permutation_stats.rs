@@ -194,9 +194,6 @@ fn build_query(query: &ItemPermutationStatsQuery) -> String {
         ""
     };
     if let Some(item_ids) = &query.item_ids {
-        if item_ids.len() < 2 {
-            return String::new();
-        }
         let items_list = format!("[{}]", id_list(item_ids));
         // `hasAll(items.item_id, ...)` stays as-is so the bf_items_item_id skip index still
         // prunes; the corruption-aware check is an extra predicate on the surviving rows.
@@ -229,9 +226,6 @@ fn build_query(query: &ItemPermutationStatsQuery) -> String {
         )
     } else {
         let comb_size = query.comb_size.or(default_comb_size()).unwrap_or(2);
-        if comb_size < 2 {
-            return String::new();
-        }
         // Only increasing index tuples, so each combination is built once rather than all `n^k`
         // tuples filtered down to `i0_index < i1_index < ...`. `p_items` is sorted by id, so a
         // combination is one row whatever order its items were bought in.
@@ -286,6 +280,33 @@ fn build_query(query: &ItemPermutationStatsQuery) -> String {
         "
         )
     }
+}
+
+/// Rejects queries `build_query` can't serve: a combination needs at least two items.
+fn validate_query(query: &ItemPermutationStatsQuery) -> APIResult<()> {
+    if query.comb_size.is_some() && query.item_ids.is_some() {
+        return Err(APIError::status_msg(
+            StatusCode::BAD_REQUEST,
+            "Cannot specify both comb_size and item_ids",
+        ));
+    }
+    if query.comb_size.is_some_and(|x| !(2..=12).contains(&x)) {
+        return Err(APIError::status_msg(
+            StatusCode::BAD_REQUEST,
+            "Combination size must be between 2 and 12",
+        ));
+    }
+    if query
+        .item_ids
+        .as_ref()
+        .is_some_and(|ids| ids.iter().unique().count() < 2)
+    {
+        return Err(APIError::status_msg(
+            StatusCode::BAD_REQUEST,
+            "At least two distinct item ids must be provided",
+        ));
+    }
+    Ok(())
 }
 
 cached_ch_query! {
@@ -345,20 +366,9 @@ pub(super) async fn item_permutation_stats(
         query.min_average_badge,
         query.max_average_badge,
     )?;
+    validate_query(&query)?;
     #[expect(deprecated)]
     filter_protected_accounts(&state, &mut query.account_ids, query.account_id).await?;
-    if query.comb_size.is_some() && query.item_ids.is_some() {
-        return Err(APIError::status_msg(
-            StatusCode::BAD_REQUEST,
-            "Cannot specify both comb_size and item_ids",
-        ));
-    }
-    if query.item_ids.as_ref().is_some_and(Vec::is_empty) {
-        return Err(APIError::status_msg(
-            StatusCode::BAD_REQUEST,
-            "No item ids provided",
-        ));
-    }
     get_item_permutation_stats(&state.ch_client_ro, query)
         .await
         .map(Json)
@@ -463,6 +473,29 @@ mod tests {
     }
 
     #[test]
+    fn query_validation() {
+        let valid = |comb_size, item_ids| {
+            validate_query(&ItemPermutationStatsQuery {
+                item_ids,
+                comb_size,
+                ..Default::default()
+            })
+            .is_ok()
+        };
+        assert!(valid(None, None));
+        assert!(valid(Some(2), None));
+        assert!(valid(Some(12), None));
+        assert!(!valid(Some(0), None));
+        assert!(!valid(Some(1), None));
+        assert!(!valid(Some(13), None));
+        assert!(valid(None, Some(vec![1, 2])));
+        assert!(!valid(None, Some(vec![])));
+        assert!(!valid(None, Some(vec![1])));
+        assert!(!valid(None, Some(vec![1, 1])));
+        assert!(!valid(Some(2), Some(vec![1, 2])));
+    }
+
+    #[test]
     fn min_matches_below_the_default_lowers_the_sql_floor() {
         let looser = query_with(Some(5), None);
         assert!(looser.contains("matches >= 5"));
@@ -482,10 +515,8 @@ mod proptests {
 
         #[test]
         fn item_permutation_stats_build_query_is_valid_sql(query: ItemPermutationStatsQuery) {
-            let sql = build_query(&query);
-            if !sql.is_empty() {
-                assert_valid_sql(&sql);
-            }
+            prop_assume!(validate_query(&query).is_ok());
+            assert_valid_sql(&build_query(&query));
         }
     }
 }
