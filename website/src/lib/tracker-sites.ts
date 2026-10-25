@@ -57,4 +57,5 @@ export const TRACKER_SITES: readonly TrackerSite[] = [
   { name: "Deadlock Sensei", icon: "/tracker-sites/deadlock-sensei.webp" },
   { name: "Deadlock Meta", icon: "/tracker-sites/deadlock-meta.webp" },
   { name: "Deadlock Mods", icon: "/tracker-sites/deadlock-mods.webp" },
+  { name: "DraftMeta", icon: "/tracker-sites/draftmeta.webp" },
 ];
