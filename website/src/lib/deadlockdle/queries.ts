@@ -4,7 +4,6 @@ import { useMemo } from "react";
 import { abilityMaxFirstQueryOptions } from "~/queries/ability-order-query";
 import {
   abilitiesQueryOptions,
-  filterPlayableHeroes,
   heroesFullQueryOptions,
   itemUpgradesFullQueryOptions,
   npcUnitsQueryOptions,
@@ -15,6 +14,7 @@ import { soundIndexQueryOptions } from "~/queries/sound-queries";
 import { draftCounterStatsQueryOptions } from "~/queries/team-builder-queries";
 
 import { buildRounds, pickAbilityHeroes, STATS_RANKS, statsWindow } from "./higher-lower";
+import { heroPoolOn } from "./roster";
 import { hasDisplayName } from "./trivia-questions";
 
 export function useHeroes() {
@@ -64,8 +64,8 @@ export function useHigherLowerRounds(date: string) {
   };
 
   const heroes = useMemo(
-    () => (heroesQuery.data ? filterPlayableHeroes(heroesQuery.data).map(({ id, name }) => ({ id, name })) : []),
-    [heroesQuery.data],
+    () => (heroesQuery.data ? heroPoolOn(heroesQuery.data, date).map(({ id, name }) => ({ id, name })) : []),
+    [heroesQuery.data, date],
   );
   const abilityHeroes = useMemo(
     () =>

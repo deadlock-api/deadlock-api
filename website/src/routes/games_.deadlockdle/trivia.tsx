@@ -20,6 +20,7 @@ import { StepMeter, StepMeterStep } from "~/components/ui/step-meter";
 import { Text } from "~/components/ui/text";
 import { trackDeadlockdle, trackQuizAnswer } from "~/lib/deadlockdle/analytics";
 import { useAbilities, useHeroes, useItems, useNpcUnits, puzzleLoadError } from "~/lib/deadlockdle/queries";
+import { heroPoolOn, itemPoolOn } from "~/lib/deadlockdle/roster";
 import {
   getDayNumber,
   getModeSeed,
@@ -39,7 +40,6 @@ import { useCountdown } from "~/lib/deadlockdle/use-countdown";
 import { useResultsRef } from "~/lib/deadlockdle/use-results-ref";
 import { pageTitle, seo } from "~/lib/seo";
 import { useStoredDailyState } from "~/lib/use-stored-state";
-import { filterPlayableHeroes } from "~/queries/asset-queries";
 
 export const Route = createFileRoute("/games_/deadlockdle/trivia")({
   component: Trivia,
@@ -103,15 +103,21 @@ function Trivia() {
 
   const abilitiesWithHeroes = useMemo(() => {
     if (!rawAbilities || !heroes) return [];
-    return buildAbilitiesWithHeroes(rawAbilities, filterPlayableHeroes(heroes));
-  }, [rawAbilities, heroes]);
+    return buildAbilitiesWithHeroes(rawAbilities, heroPoolOn(heroes, date));
+  }, [rawAbilities, heroes, date]);
 
   const questions: TriviaQuestion[] = useMemo(() => {
     if (!heroes || !items || !npcUnits) return [];
 
     const seed = getModeSeed(date, "trivia");
     const rng = seededRandom(seed);
-    return generateDailyQuestions(heroes, items, npcUnits, abilitiesWithHeroes, rng);
+    return generateDailyQuestions(
+      heroPoolOn(heroes, date),
+      itemPoolOn(items, date),
+      npcUnits,
+      abilitiesWithHeroes,
+      rng,
+    );
   }, [heroes, items, npcUnits, abilitiesWithHeroes, date]);
 
   const shownIndex = revealing ?? state.currentQuestion;

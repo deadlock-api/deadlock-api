@@ -15,9 +15,9 @@ import { Stack } from "~/components/ui/stack";
 import { Text } from "~/components/ui/text";
 import { abilityHints, buildGuessableAbilities } from "~/lib/deadlockdle/hints";
 import { useAbilities, useHeroes, puzzleLoadError } from "~/lib/deadlockdle/queries";
-import { validatePuzzleDateSearch } from "~/lib/deadlockdle/seed";
+import { heroPoolOn } from "~/lib/deadlockdle/roster";
+import { resolvePuzzleDate, validatePuzzleDateSearch } from "~/lib/deadlockdle/seed";
 import { pageTitle, seo } from "~/lib/seo";
-import { filterPlayableHeroes } from "~/queries/asset-queries";
 
 export const Route = createFileRoute("/games_/deadlockdle/guess-ability")({
   component: GuessAbility,
@@ -38,9 +38,10 @@ function GuessAbility() {
   const abilitiesQuery = useAbilities();
   const { data: abilities, isLoading: abilitiesLoading } = abilitiesQuery;
   const { date: dateParam } = Route.useSearch();
+  const puzzleDate = resolvePuzzleDate(dateParam);
   const guessableAbilities = useMemo(
-    () => (abilities && heroes ? buildGuessableAbilities(abilities, filterPlayableHeroes(heroes)) : []),
-    [abilities, heroes],
+    () => (abilities && heroes ? buildGuessableAbilities(abilities, heroPoolOn(heroes, puzzleDate)) : []),
+    [abilities, heroes, puzzleDate],
   );
   const {
     gameState,

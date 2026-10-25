@@ -16,9 +16,9 @@ import { Stack } from "~/components/ui/stack";
 import { Text } from "~/components/ui/text";
 import { itemHints } from "~/lib/deadlockdle/hints";
 import { useItems, puzzleLoadError } from "~/lib/deadlockdle/queries";
-import { validatePuzzleDateSearch } from "~/lib/deadlockdle/seed";
+import { itemPoolOn } from "~/lib/deadlockdle/roster";
+import { resolvePuzzleDate, validatePuzzleDateSearch } from "~/lib/deadlockdle/seed";
 import { pageTitle, seo } from "~/lib/seo";
-import { filterShopableItems } from "~/queries/asset-queries";
 
 export const Route = createFileRoute("/games_/deadlockdle/guess-item")({
   component: GuessItem,
@@ -45,7 +45,8 @@ function GuessItem() {
   const itemsQuery = useItems();
   const { data: items, isLoading } = itemsQuery;
   const { date: dateParam } = Route.useSearch();
-  const shopableItems = useMemo(() => (items ? filterShopableItems(items) : []), [items]);
+  const puzzleDate = resolvePuzzleDate(dateParam);
+  const dayItems = useMemo(() => (items ? itemPoolOn(items, puzzleDate) : []), [items, puzzleDate]);
   const {
     gameState,
     streakState,
@@ -61,7 +62,7 @@ function GuessItem() {
     feedbackMessage,
   } = useDailyGuess({
     mode: "guess-item",
-    pool: shopableItems,
+    pool: dayItems,
     maxAttempts: MAX_ATTEMPTS,
     date: dateParam,
     hintsOf: itemHints,

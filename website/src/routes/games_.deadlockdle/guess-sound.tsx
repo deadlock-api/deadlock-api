@@ -21,6 +21,7 @@ import { Slider } from "~/components/ui/slider";
 import { Stack } from "~/components/ui/stack";
 import { Text } from "~/components/ui/text";
 import { useAbilities, useHeroes, useSounds, puzzleLoadError } from "~/lib/deadlockdle/queries";
+import { heroPoolOn } from "~/lib/deadlockdle/roster";
 import { getModeSeed, seededPick, seededRandom, validatePuzzleDateSearch } from "~/lib/deadlockdle/seed";
 import { hasDisplayName } from "~/lib/deadlockdle/trivia-questions";
 import { useDailyGame } from "~/lib/deadlockdle/use-daily-game";
@@ -28,7 +29,6 @@ import { capitalize } from "~/lib/format";
 import { heroCodename } from "~/lib/hero-roster";
 import { pageTitle, seo } from "~/lib/seo";
 import { useStoredState } from "~/lib/use-stored-state";
-import { filterPlayableHeroes } from "~/queries/asset-queries";
 
 export const Route = createFileRoute("/games_/deadlockdle/guess-sound")({
   component: GuessSound,
@@ -381,7 +381,7 @@ function GuessSound() {
   const playErrorId = useId();
   const [feedbackType, showFeedback] = useGuessFeedback();
 
-  const playableHeroes = useMemo(() => (heroes ? filterPlayableHeroes(heroes) : []), [heroes]);
+  const playableHeroes = useMemo(() => (heroes ? heroPoolOn(heroes, date) : []), [heroes, date]);
 
   const codenameMap = useMemo(() => buildCodenameMap(playableHeroes), [playableHeroes]);
 

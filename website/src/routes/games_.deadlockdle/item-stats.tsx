@@ -18,6 +18,7 @@ import { Text } from "~/components/ui/text";
 import { trackDeadlockdle } from "~/lib/deadlockdle/analytics";
 import { itemStatQuestion } from "~/lib/deadlockdle/item-stat";
 import { useItems, puzzleLoadError } from "~/lib/deadlockdle/queries";
+import { itemPoolOn } from "~/lib/deadlockdle/roster";
 import {
   getDayNumber,
   getModeSeed,
@@ -34,7 +35,6 @@ import { useResultsRef } from "~/lib/deadlockdle/use-results-ref";
 import { capitalize } from "~/lib/format";
 import { pageTitle, seo } from "~/lib/seo";
 import { useStoredDailyState } from "~/lib/use-stored-state";
-import { filterShopableItems } from "~/queries/asset-queries";
 
 export const Route = createFileRoute("/games_/deadlockdle/item-stats")({
   component: ItemStatsQuiz,
@@ -130,9 +130,9 @@ function ItemStatsQuiz() {
   const shopableItems = useMemo(
     () =>
       items
-        ? filterShopableItems(items).filter((item) => item.cost != null && item.item_tier >= 1 && item.item_tier <= 4)
+        ? itemPoolOn(items, date).filter((item) => item.cost != null && item.item_tier >= 1 && item.item_tier <= 4)
         : [],
-    [items],
+    [items, date],
   );
 
   const dailyItems = useMemo(() => {

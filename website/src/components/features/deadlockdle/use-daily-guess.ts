@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 
 import type { Hint } from "~/lib/deadlockdle/hints";
+import { currentName } from "~/lib/deadlockdle/roster";
 import { getModeSeed, seededPick, seededRandom } from "~/lib/deadlockdle/seed";
 import type { GameMode } from "~/lib/deadlockdle/types";
 import { useDailyGame } from "~/lib/deadlockdle/use-daily-game";
@@ -28,7 +29,12 @@ export function useDailyGuess<T extends { id: number; name: string }>({
   hintsOf: (answer: T) => Hint[];
 }) {
   const game = useDailyGame(mode, maxAttempts, dateParam);
-  const { gameState, isFinished, submitGuess, date } = game;
+  const { isFinished, submitGuess, date } = game;
+  // A guess saved before its answer was renamed still names the answer.
+  const gameState = useMemo(
+    () => ({ ...game.gameState, guesses: game.gameState.guesses.map(currentName) }),
+    [game.gameState],
+  );
   const [shakeKey, setShakeKey] = useState(0);
   const [feedbackType, showFeedback] = useGuessFeedback();
 
@@ -61,6 +67,7 @@ export function useDailyGuess<T extends { id: number; name: string }>({
 
   return {
     ...game,
+    gameState,
     answer,
     hints,
     guessOptions,

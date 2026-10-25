@@ -16,9 +16,9 @@ import { Stack } from "~/components/ui/stack";
 import { Text } from "~/components/ui/text";
 import { heroHints } from "~/lib/deadlockdle/hints";
 import { useHeroes, puzzleLoadError } from "~/lib/deadlockdle/queries";
-import { getModeSeed, seededRandom, validatePuzzleDateSearch } from "~/lib/deadlockdle/seed";
+import { heroPoolOn } from "~/lib/deadlockdle/roster";
+import { getModeSeed, resolvePuzzleDate, seededRandom, validatePuzzleDateSearch } from "~/lib/deadlockdle/seed";
 import { pageTitle, seo } from "~/lib/seo";
-import { filterPlayableHeroes } from "~/queries/asset-queries";
 
 export const Route = createFileRoute("/games_/deadlockdle/guess-hero")({
   component: GuessHero,
@@ -90,10 +90,8 @@ function GuessHero() {
   const heroesQuery = useHeroes();
   const { data: heroes, isLoading } = heroesQuery;
   const { date: dateParam } = Route.useSearch();
-  const playableHeroes = useMemo(
-    () => (heroes ? filterPlayableHeroes(heroes).filter((h) => h.hero_type) : []),
-    [heroes],
-  );
+  const puzzleDate = resolvePuzzleDate(dateParam);
+  const dayHeroes = useMemo(() => (heroes ? heroPoolOn(heroes, puzzleDate) : []), [heroes, puzzleDate]);
   const {
     gameState,
     streakState,
@@ -109,7 +107,7 @@ function GuessHero() {
     feedbackMessage,
   } = useDailyGuess({
     mode: "guess-hero",
-    pool: playableHeroes,
+    pool: dayHeroes,
     maxAttempts: MAX_ATTEMPTS,
     date: dateParam,
     hintsOf: heroHints,
