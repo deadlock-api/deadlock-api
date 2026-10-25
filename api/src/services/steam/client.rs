@@ -245,12 +245,15 @@ impl SteamClient {
 /// Build the Chrome-emulating client used for the forum RSS feed. The feed is behind the `stile`
 /// bot challenge, which redirects any request it deems suspect to an HTML challenge page (breaking
 /// XML parsing). A Chrome `ClientHello` no longer clears the wall on its own, so the client also
-/// needs to follow redirects into the challenge and keep the cookies it hands out.
+/// needs to follow redirects into the challenge and keep the cookies it hands out. wreq has no
+/// timeout by default, so a stalled hop hung the fetch; a hop takes about a second.
 fn build_forum_client() -> wreq::Client {
     wreq::Client::builder()
         .emulation(Emulation::Chrome137)
         .cookie_store(true)
         .redirect(redirect::Policy::limited(10))
+        .connect_timeout(Duration::from_secs(5))
+        .timeout(Duration::from_secs(10))
         .build()
         .unwrap_or_else(|e| {
             warn!("Failed to build forum emulation client, using default: {e}");
