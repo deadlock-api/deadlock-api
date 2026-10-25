@@ -157,14 +157,19 @@ async fn fetch_steam_summaries(
     let url = format!(
         "https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key={api_key}&steamids={steamids}"
     );
-    let response: SteamPlayerSummariesResponse = http_client
-        .get(&url)
-        .timeout(Duration::from_secs(10))
-        .send()
-        .await?
-        .error_for_status()?
-        .json()
-        .await?;
+    // Errors drop the URL: it carries the API key and they get logged.
+    let response: SteamPlayerSummariesResponse = async {
+        http_client
+            .get(&url)
+            .timeout(Duration::from_secs(10))
+            .send()
+            .await?
+            .error_for_status()?
+            .json()
+            .await
+    }
+    .await
+    .map_err(reqwest::Error::without_url)?;
     Ok(response.response.players)
 }
 
@@ -205,19 +210,24 @@ async fn fetch_friends_for_account(
     let url = format!(
         "https://api.steampowered.com/ISteamUser/GetFriendList/v1/?key={api_key}&steamid={steam_id64}&relationship=friend"
     );
-    let response = http_client
-        .get(&url)
-        .timeout(Duration::from_secs(10))
-        .send()
-        .await?;
-    if matches!(
-        response.status(),
-        reqwest::StatusCode::UNAUTHORIZED | reqwest::StatusCode::FORBIDDEN
-    ) {
-        return Ok(Vec::new());
+    // Errors drop the URL: it carries the API key and they get logged.
+    async {
+        let response = http_client
+            .get(&url)
+            .timeout(Duration::from_secs(10))
+            .send()
+            .await?;
+        if matches!(
+            response.status(),
+            reqwest::StatusCode::UNAUTHORIZED | reqwest::StatusCode::FORBIDDEN
+        ) {
+            return Ok(Vec::new());
+        }
+        let body: SteamFriendListResponse = response.error_for_status()?.json().await?;
+        Ok(body.friendslist.friends)
     }
-    let body: SteamFriendListResponse = response.error_for_status()?.json().await?;
-    Ok(body.friendslist.friends)
+    .await
+    .map_err(reqwest::Error::without_url)
 }
 
 fn build_insert_rows(

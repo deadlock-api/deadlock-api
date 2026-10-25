@@ -477,19 +477,20 @@ async fn fetch_steam_account_name_cached(
         .await
         .map_err(|e| SteamAccountNameError::RateLimitExceeded(e.to_string()))?;
     let steamid64 = crate::utils::parse::steamid3_to_steamid64(steam_id);
-    let response = http_client
-        .get(format!(
-            "https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/?key={steam_api_key}&steamids={steamid64}",
-        ))
-        .send()
-        .await
-        .and_then(Response::error_for_status)
-        .map_err(|e| SteamAccountNameError::FetchError(e.to_string()))?;
-
-    let player_summaries = response
-        .json::<GetPlayerSummariesResponse>()
-        .await
-        .map_err(|e| SteamAccountNameError::FetchError(e.to_string()))?;
+    // Errors drop the URL: it carries the API key and they get logged.
+    let player_summaries: GetPlayerSummariesResponse = async {
+        http_client
+            .get(format!(
+                "https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/?key={steam_api_key}&steamids={steamid64}",
+            ))
+            .send()
+            .await?
+            .error_for_status()?
+            .json()
+            .await
+    }
+    .await
+    .map_err(|e| SteamAccountNameError::FetchError(e.without_url().to_string()))?;
 
     player_summaries
         .response
