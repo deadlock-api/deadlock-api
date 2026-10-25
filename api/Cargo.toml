@@ -17,7 +17,7 @@ opentelemetry_sdk = { version = "0.33", features = ["logs", "trace"] }
 opentelemetry-otlp = { version = "0.33", features = ["grpc-tonic", "logs", "trace"] }
 opentelemetry-appender-tracing = { version = "0.33", features = ["experimental_metadata_attributes", "experimental_span_attributes"] }
 tracing-opentelemetry = "0.34"
-redis = { version = "1.7.1", default-features = false, features = ["tokio-comp", "connection-manager"] }
+redis = { workspace = true }
 clickhouse = { version = "0.15.3", features = ["chrono", "uuid", "zstd"] }
 sqlx = { version = "0.9.0", features = ["chrono", "derive", "postgres", "runtime-tokio", "sqlx-toml", "uuid"] }
 uuid = { version = "1.28.0", features = ["serde", "v4"] }

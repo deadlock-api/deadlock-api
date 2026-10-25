@@ -9,12 +9,12 @@ use axum::extract::State;
 use axum::routing::{get, post};
 use axum::{Json, Router};
 use base64::prelude::*;
-use fred::interfaces::HashesInterface;
-use fred::prelude::Client as RedisClient;
 use itertools::Itertools;
 use jiff::{Timestamp, ToSpan as _};
 use lru::LruCache;
 use prost::Message;
+use redis::aio::ConnectionManager;
+use redis::{AsyncCommands, ExpireOption};
 use reqwest::{Client, StatusCode};
 use serde::{Deserialize, Serialize};
 use tokio::time::sleep;
@@ -51,7 +51,7 @@ static DISABLE_GAP_SPECTATING: LazyLock<bool> = LazyLock::new(|| {
 #[derive(Debug, thiserror::Error)]
 pub(crate) enum SpectateBotError {
     #[error(transparent)]
-    Redis(#[from] fred::error::Error),
+    Redis(#[from] redis::RedisError),
     #[error(transparent)]
     Http(#[from] reqwest::Error),
     #[error(transparent)]
@@ -138,7 +138,7 @@ impl SpectatedMatchInfo {
 
 struct SpectatorBot {
     client: Client,
-    redis: RedisClient,
+    redis: ConnectionManager,
     api_token: String,
     proxy_url: String,
     failed_spectates: Mutex<LruCache<u64, bool>>,
@@ -162,13 +162,14 @@ impl SpectatorBot {
     }
 
     async fn is_recently_spectated(&self, key: &str, match_id: u64) -> Result<bool> {
-        let exists: Option<String> = self.redis.hget(key, match_id.to_string()).await?;
+        let exists: Option<String> = self.redis.clone().hget(key, match_id).await?;
         Ok(exists.is_some())
     }
     async fn update_spectated(&self, key: &str, match_id: u64, expiry_seconds: i64) -> Result<()> {
         let _: () = self
             .redis
-            .hexpire(key, expiry_seconds, None, &[match_id])
+            .clone()
+            .hexpire(key, expiry_seconds, ExpireOption::NONE, match_id)
             .await?;
 
         Ok(())
@@ -195,14 +196,14 @@ impl SpectatorBot {
             .iter()
             .filter_map(|x| serde_json::to_string(&x).ok().map(|s| (x.match_id, s)))
             .collect();
-        self.redis.hset::<(), _, _>(key, payload).await?;
-
-        self.redis
-            .hexpire::<(), _, _>(
+        let mut redis = self.redis.clone();
+        let _: () = redis.hset_multiple(key, &payload).await?;
+        let _: () = redis
+            .hexpire(
                 key,
                 expiry_seconds,
-                None,
-                matches.iter().map(|x| x.match_id.to_string()).collect_vec(),
+                ExpireOption::NONE,
+                matches.iter().map(|x| x.match_id).collect_vec(),
             )
             .await?;
 
@@ -210,9 +211,7 @@ impl SpectatorBot {
     }
 
     async fn mark_ended(&self, match_ids: &[u64]) -> Result<()> {
-        self.redis
-            .hdel::<(), _, _>(REDIS_SPEC_KEY, match_ids.to_vec())
-            .await?;
+        let _: () = self.redis.clone().hdel(REDIS_SPEC_KEY, match_ids).await?;
         Ok(())
     }
 
@@ -220,7 +219,7 @@ impl SpectatorBot {
         &self,
         key: &str,
     ) -> Result<HashMap<u64, SpectatedMatchInfo>> {
-        let members: Vec<String> = self.redis.hvals(key).await?;
+        let members: Vec<String> = self.redis.clone().hvals(key).await?;
         Ok(members
             .into_iter()
             .filter_map(|s| serde_json::from_str::<SpectatedMatchInfo>(&s).ok())

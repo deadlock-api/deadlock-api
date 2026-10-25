@@ -42,7 +42,6 @@ base64 = "0.23.1"
 cached = "4.0"
 clap = { version = "4.6.7", features = ["derive", "env"] }
 clickhouse = { version = "0.15.3", features = ["zstd"] }
-fred = { version = "10.1.0", features = ["i-hexpire"] }
 futures = "0.3.34"
 itertools = "0.15.0"
 metrics = "0.24.6"
@@ -53,6 +52,7 @@ opentelemetry-otlp = { version = "0.33", features = ["grpc-tonic", "logs", "trac
 opentelemetry-appender-tracing = { version = "0.33", features = ["experimental_metadata_attributes"] }
 prost = "0.14.4"
 rand = "0.10.3"
+redis = { version = "1.7.1", default-features = false, features = ["tokio-comp", "connection-manager"] }
 reqwest = "0.13.5"
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1.0.154"

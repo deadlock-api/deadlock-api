@@ -3,11 +3,10 @@ use std::env;
 use std::env::VarError;
 
 use clickhouse::Compression;
-use fred::clients::Client as RedisClient;
-use fred::interfaces::{ClientLike, FredResult};
-use fred::prelude::{Config as RedisConfig, ReconnectPolicy};
 use object_store::aws::AmazonS3Builder;
 use object_store::local::LocalFileSystem;
+use redis::RedisResult;
+use redis::aio::{ConnectionManager, ConnectionManagerConfig};
 use sqlx::postgres::{PgConnectOptions, PgPoolOptions};
 use sqlx::{ConnectOptions, Pool, Postgres};
 use tracing::log::LevelFilter;
@@ -85,15 +84,11 @@ pub async fn get_pg_client() -> Result<Pool<Postgres>, ClientError> {
         .await?)
 }
 
-pub async fn get_redis_client() -> FredResult<RedisClient> {
-    let config = RedisConfig::from_url(
-        &env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1".to_owned()),
-    )?;
-    // 0 attempts retries forever: with a cap, fred stops reconnecting after a short outage
-    // and later commands hang. Startup still fails at once if Redis is down.
-    let reconnect_policy = ReconnectPolicy::new_linear(0, 10000, 100);
-    let redis = RedisClient::new(config, None, None, reconnect_policy.into());
-    redis.connect();
-    redis.wait_for_connect().await?;
-    Ok(redis)
+/// Same setup as the API's connection: it reconnects after Redis restarts, and one retry keeps
+/// commands failing fast while Redis is down (the default of six makes each one wait ~9.5 s).
+/// Startup still fails at once if Redis is down.
+pub async fn get_redis_client() -> RedisResult<ConnectionManager> {
+    redis::Client::open(env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1".to_owned()))?
+        .get_connection_manager_with_config(ConnectionManagerConfig::new().set_number_of_retries(1))
+        .await
 }
