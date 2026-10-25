@@ -7,6 +7,7 @@
 use core::time::Duration;
 use std::io::Read;
 use std::sync::Arc;
+use std::time::Instant;
 
 use arc_swap::ArcSwap;
 use bytes::Bytes;
@@ -42,13 +43,18 @@ impl VersionStoreError {
     }
 }
 
+/// Shortest gap between a listing and one triggered by a request for an
+/// unknown version. Caps what made-up `client_version`s cost in R2 LISTs, at
+/// the price of a fresh patch 404ing for up to this long after its upload.
+const ON_DEMAND_COOLDOWN: Duration = Duration::from_mins(1);
+
 /// Cached listing of versions plus the latest one. Refreshed in the background.
 #[derive(Clone, Default)]
 pub(crate) struct VersionStore {
     versions: Arc<ArcSwap<Vec<u32>>>,
     /// Singleflight guard: any task that wants to hit R2 for a fresh listing
-    /// must hold this lock. Concurrent first-callers collapse into one fetch.
-    refresh_lock: Arc<Mutex<()>>,
+    /// must hold this lock. Holds the time of the last successful listing.
+    refresh_lock: Arc<Mutex<Option<Instant>>>,
 }
 
 impl VersionStore {
@@ -75,31 +81,51 @@ impl VersionStore {
         if !self.versions.load().is_empty() {
             return Ok(());
         }
-        let _guard = self.refresh_lock.lock().await;
+        let mut last_listed = self.refresh_lock.lock().await;
         // Re-check now that we hold the lock: another task may have filled
         // the list while we waited.
         if !self.versions.load().is_empty() {
             return Ok(());
         }
-        self.load_locked(r2).await
+        self.load_locked(r2, &mut last_listed).await
     }
 
-    /// Force a fresh listing from R2. Singleflighted with `ensure_loaded` so
-    /// a burst of cache misses for a just-published version collapses to one
-    /// R2 list call. Returns the (possibly updated) state.
+    /// Force a fresh listing from R2. Used by the background refresh loop.
     pub(crate) async fn refresh_now(&self, r2: &AmazonS3) -> Result<(), VersionStoreError> {
-        let _guard = self.refresh_lock.lock().await;
-        self.load_locked(r2).await
+        let mut last_listed = self.refresh_lock.lock().await;
+        self.load_locked(r2, &mut last_listed).await
     }
 
-    /// Caller must hold `refresh_lock`. Lists R2 and swaps the cached list.
-    async fn load_locked(&self, r2: &AmazonS3) -> Result<(), VersionStoreError> {
+    /// Refresh for a request naming `version`, which isn't in the cached list,
+    /// so a freshly published patch doesn't 404 until the next scheduled
+    /// refresh. Lists R2 only if [`needs_listing`] says so; callers that waited
+    /// behind a listing reuse its result.
+    pub(crate) async fn refresh_for(
+        &self,
+        r2: &AmazonS3,
+        version: u32,
+    ) -> Result<(), VersionStoreError> {
+        let mut last_listed = self.refresh_lock.lock().await;
+        if !needs_listing(self.latest(), *last_listed, version, Instant::now()) {
+            return Ok(());
+        }
+        self.load_locked(r2, &mut last_listed).await
+    }
+
+    /// Caller must hold `refresh_lock`. Lists R2, swaps the cached list and
+    /// records the time of the listing in `last_listed`.
+    async fn load_locked(
+        &self,
+        r2: &AmazonS3,
+        last_listed: &mut Option<Instant>,
+    ) -> Result<(), VersionStoreError> {
         let v = list_versions_raw(r2).await?;
         if v.is_empty() {
             return Err(VersionStoreError::NoVersions);
         }
         debug!("Refreshed version list: {} versions", v.len());
         self.versions.store(Arc::new(v));
+        *last_listed = Some(Instant::now());
         Ok(())
     }
 
@@ -114,6 +140,20 @@ impl VersionStore {
     pub(crate) fn contains(&self, v: u32) -> bool {
         self.versions.load().contains(&v)
     }
+}
+
+/// Whether a request for the unlisted `version` should list R2. Only versions
+/// above the latest can still appear: the upload pipeline uploads the current
+/// Steam build and never backfills older ones. Even those list at most once
+/// per [`ON_DEMAND_COOLDOWN`], since a made-up number can be above the latest.
+fn needs_listing(
+    latest: Option<u32>,
+    last_listed: Option<Instant>,
+    version: u32,
+    now: Instant,
+) -> bool {
+    latest.is_none_or(|latest| version > latest)
+        && last_listed.is_none_or(|t| now.duration_since(t) >= ON_DEMAND_COOLDOWN)
 }
 
 async fn list_versions_raw(r2: &AmazonS3) -> Result<Vec<u32>, VersionStoreError> {
@@ -186,4 +226,41 @@ pub(crate) async fn fetch_text(
 ) -> Result<String, VersionStoreError> {
     let bytes = fetch_decompressed(r2, version, rel_path).await?;
     Ok(String::from_utf8(bytes.to_vec())?)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn versions_at_or_below_latest_never_list() {
+        let now = Instant::now();
+        assert!(!needs_listing(Some(5263), None, 1, now));
+        assert!(!needs_listing(Some(5263), None, 5045, now));
+        assert!(!needs_listing(Some(5263), None, 5263, now));
+    }
+
+    #[test]
+    fn newer_versions_list_once_per_cooldown() {
+        let last = Instant::now();
+        assert!(needs_listing(Some(5263), None, 5264, last));
+        assert!(!needs_listing(Some(5263), Some(last), 5264, last));
+        assert!(!needs_listing(
+            Some(5263),
+            Some(last),
+            99_999_999,
+            last + ON_DEMAND_COOLDOWN / 2
+        ));
+        assert!(needs_listing(
+            Some(5263),
+            Some(last),
+            5264,
+            last + ON_DEMAND_COOLDOWN
+        ));
+    }
+
+    #[test]
+    fn empty_listing_always_lists() {
+        assert!(needs_listing(None, None, 1, Instant::now()));
+    }
 }

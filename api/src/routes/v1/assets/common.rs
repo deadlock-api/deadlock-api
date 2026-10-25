@@ -93,9 +93,8 @@ impl Language {
 }
 
 /// Resolve the caller's requested `client_version`, falling back to the latest
-/// known version. Triggers a singleflighted on-demand refresh if an unknown
-/// version is requested, so freshly-published patches don't 404 until the
-/// next scheduled refresh.
+/// known version. An unknown version may trigger an on-demand refresh, see
+/// [`VersionStore::refresh_for`](crate::services::assets::versions::store::VersionStore::refresh_for).
 pub(crate) async fn resolve_version(
     state: &AppState,
     client_version: Option<u32>,
@@ -109,7 +108,7 @@ pub(crate) async fn resolve_version(
     match client_version {
         Some(v) => {
             if !state.version_store.contains(v) {
-                if let Err(e) = state.version_store.refresh_now(&state.r2_client).await {
+                if let Err(e) = state.version_store.refresh_for(&state.r2_client, v).await {
                     tracing::warn!("On-demand version refresh failed: {e}");
                 }
                 if !state.version_store.contains(v) {
