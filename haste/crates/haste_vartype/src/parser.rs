@@ -1,5 +1,11 @@
 use crate::{Error, Token, TokenKind, Tokenizer};
 
+/// Most templates, arrays and pointers one type may wrap, counted over the whole type. A live
+/// match's send tables use at most two; the nested `Expr` is built, dropped and walked
+/// recursively, so an unbounded one from a broken send table would overflow the stack and abort
+/// the process.
+pub(crate) const MAX_NESTING: usize = 32;
+
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Lit<'a> {
     Str(&'a str),
@@ -25,6 +31,7 @@ pub enum Expr<'a> {
 struct Parser<'a> {
     tokenizer: Tokenizer<'a>,
     prev_token: Option<Token<'a>>,
+    wraps: usize,
 }
 
 impl<'a> Parser<'a> {
@@ -32,7 +39,17 @@ impl<'a> Parser<'a> {
         Self {
             tokenizer: Tokenizer::new(input),
             prev_token: None,
+            wraps: 0,
         }
+    }
+
+    /// Counts one more template, array or pointer around an expression.
+    fn wrap(&mut self) -> Result<(), Error> {
+        self.wraps += 1;
+        if self.wraps > MAX_NESTING {
+            return Err(Error::TooDeep);
+        }
+        Ok(())
     }
 
     fn next_token(&mut self) -> Result<Option<Token<'a>>, Error> {
@@ -63,6 +80,7 @@ impl<'a> Parser<'a> {
         while let Some(next) = self.next_token()? {
             match next.kind {
                 TokenKind::LAngle => {
+                    self.wrap()?;
                     let arg = self.parse()?;
 
                     let _rangle = self.expect_token(|k| matches!(k, TokenKind::RAngle))?;
@@ -72,6 +90,7 @@ impl<'a> Parser<'a> {
                     };
                 }
                 TokenKind::LSquare => {
+                    self.wrap()?;
                     let identorlit = self.expect_token(|_| true)?;
                     let len = match identorlit.kind {
                         TokenKind::Ident(ident) => Expr::Ident(ident),
@@ -91,6 +110,7 @@ impl<'a> Parser<'a> {
                     };
                 }
                 TokenKind::Asterisk => {
+                    self.wrap()?;
                     expr = Expr::Pointer(Box::new(expr));
                 }
                 TokenKind::RAngle | TokenKind::RSquare => {
@@ -114,6 +134,20 @@ mod tests {
     use expect_test::expect;
 
     use super::*;
+
+    #[test]
+    fn too_deep_nesting_is_an_error() {
+        // Each of these overflowed the stack (parsing, dropping or walking the nested Expr).
+        let n = 10_000;
+        for input in [
+            "A<".repeat(n) + "B" + &">".repeat(n),
+            "A".to_owned() + &"*".repeat(n),
+            "A".to_owned() + &"[1]".repeat(n),
+        ] {
+            assert!(matches!(parse(&input), Err(Error::TooDeep)));
+        }
+        assert!(parse("CNetworkUtlVectorBase< CHandle< CBaseEntity > >").is_ok());
+    }
 
     #[test]
     fn unexpected_eof() {
