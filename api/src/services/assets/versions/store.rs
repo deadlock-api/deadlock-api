@@ -230,6 +230,9 @@ pub(crate) async fn fetch_text(
 
 #[cfg(test)]
 mod tests {
+    use core::fmt::Write as _;
+    use core::sync::atomic::{AtomicUsize, Ordering};
+
     use super::*;
 
     #[test]
@@ -262,5 +265,68 @@ mod tests {
     #[test]
     fn empty_listing_always_lists() {
         assert!(needs_listing(None, None, 1, Instant::now()));
+    }
+
+    /// Fake S3 that answers every request with a slow listing of `versions`
+    /// and counts the requests.
+    async fn fake_r2(versions: Arc<std::sync::Mutex<Vec<u32>>>) -> (AmazonS3, Arc<AtomicUsize>) {
+        let lists = Arc::new(AtomicUsize::new(0));
+        let counter = lists.clone();
+        let app = axum::Router::new().fallback(move || {
+            let versions = versions.clone();
+            let counter = counter.clone();
+            async move {
+                counter.fetch_add(1, Ordering::SeqCst);
+                let mut body = String::from("<ListBucketResult><IsTruncated>false</IsTruncated>");
+                for v in versions.lock().unwrap().iter() {
+                    write!(
+                        body,
+                        "<CommonPrefixes><Prefix>{VERSIONS_PREFIX}/{v}/</Prefix></CommonPrefixes>"
+                    )
+                    .unwrap();
+                }
+                body += "</ListBucketResult>";
+                tokio::time::sleep(Duration::from_millis(200)).await;
+                body
+            }
+        });
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let endpoint = format!("http://{}", listener.local_addr().unwrap());
+        tokio::spawn(async move { axum::serve(listener, app).await });
+        let r2 = object_store::aws::AmazonS3Builder::new()
+            .with_region("auto")
+            .with_bucket_name("test")
+            .with_access_key_id("test")
+            .with_secret_access_key("test")
+            .with_endpoint(endpoint)
+            .with_allow_http(true)
+            .build()
+            .unwrap();
+        (r2, lists)
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+    async fn concurrent_misses_for_a_new_version_share_one_listing() {
+        let versions = Arc::new(std::sync::Mutex::new(vec![100]));
+        let (r2, lists) = fake_r2(versions.clone()).await;
+        let store = VersionStore::new();
+        store.ensure_loaded(&r2).await.unwrap();
+        assert_eq!(lists.load(Ordering::SeqCst), 1);
+        // Let the on-demand cooldown run out.
+        *store.refresh_lock.lock().await = Instant::now().checked_sub(ON_DEMAND_COOLDOWN);
+
+        versions.lock().unwrap().push(101);
+        let tasks: Vec<_> = (0..20)
+            .map(|_| {
+                let (store, r2) = (store.clone(), r2.clone());
+                tokio::spawn(async move { store.refresh_for(&r2, 101).await })
+            })
+            .collect();
+        for t in tasks {
+            t.await.unwrap().unwrap();
+        }
+
+        assert!(store.contains(101));
+        assert_eq!(lists.load(Ordering::SeqCst), 2);
     }
 }
