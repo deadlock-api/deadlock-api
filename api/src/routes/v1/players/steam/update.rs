@@ -129,7 +129,10 @@ pub(super) async fn refresh_steam_profiles(
         )
     })?;
 
-    let rows = build_insert_rows(summaries, &mut friends_by_account);
+    let (mut rows, missing_friends) = build_insert_rows(summaries, &mut friends_by_account);
+    if !missing_friends.is_empty() {
+        keep_stored_friends(&state.ch_client_ro, &mut rows, &missing_friends).await;
+    }
     if !rows.is_empty() {
         insert_profiles(&state.ch_client, &rows)
             .await
@@ -230,19 +233,26 @@ async fn fetch_friends_for_account(
     .map_err(reqwest::Error::without_url)
 }
 
+/// Also returns the accounts whose friends list could not be fetched; their rows carry an
+/// empty list until [`keep_stored_friends`] fills it in.
 fn build_insert_rows(
     summaries: Vec<SteamPlayer>,
     friends_by_account: &mut HashMap<u32, Vec<SteamFriend>>,
-) -> Vec<SteamProfileInsertRow> {
+) -> (Vec<SteamProfileInsertRow>, HashSet<u32>) {
     let mut rows = Vec::with_capacity(summaries.len());
     let mut seen = HashSet::with_capacity(summaries.len());
+    let mut missing_friends = HashSet::new();
     for player in summaries {
         if !seen.insert(player.steamid) {
             continue;
         }
-        let (friends_account_id, friends_friend_since): (Vec<u32>, Vec<u32>) = friends_by_account
+        let friends = friends_by_account
             .remove(&player.steamid)
-            .unwrap_or_default()
+            .unwrap_or_else(|| {
+                missing_friends.insert(player.steamid);
+                Vec::new()
+            });
+        let (friends_account_id, friends_friend_since): (Vec<u32>, Vec<u32>) = friends
             .into_iter()
             .map(|f| (f.steamid, f.friend_since))
             .unzip();
@@ -260,7 +270,65 @@ fn build_insert_rows(
             friends_friend_since,
         });
     }
-    rows
+    (rows, missing_friends)
+}
+
+/// `steam_profiles` is a `ReplacingMergeTree` without a version column, so a new row
+/// replaces the stored one whole. For accounts whose friends fetch failed, carry the
+/// stored friends list over instead of overwriting it with an empty one; if even that
+/// lookup fails, those profiles are not saved (the caller serves their stored profile).
+#[instrument(skip_all, fields(accounts = missing.len()))]
+async fn keep_stored_friends(
+    ch_client: &clickhouse::Client,
+    rows: &mut Vec<SteamProfileInsertRow>,
+    missing: &HashSet<u32>,
+) {
+    let account_ids = missing.iter().copied().collect_vec();
+    match stored_friends(ch_client, &account_ids).await {
+        Ok(stored) => {
+            let mut stored: HashMap<u32, StoredFriends> =
+                stored.into_iter().map(|f| (f.account_id, f)).collect();
+            for row in rows.iter_mut() {
+                if let Some(f) = stored.remove(&row.account_id) {
+                    row.friends_account_id = f.friends_account_id;
+                    row.friends_friend_since = f.friends_friend_since;
+                }
+            }
+        }
+        Err(e) => {
+            warn!(
+                "Failed to look up stored friends, not saving {} profiles: {e}",
+                missing.len()
+            );
+            rows.retain(|r| !missing.contains(&r.account_id));
+        }
+    }
+}
+
+#[derive(Row, Deserialize)]
+struct StoredFriends {
+    account_id: u32,
+    #[serde(rename = "friends.account_id")]
+    friends_account_id: Vec<u32>,
+    #[serde(rename = "friends.friend_since")]
+    friends_friend_since: Vec<u32>,
+}
+
+async fn stored_friends(
+    ch_client: &clickhouse::Client,
+    account_ids: &[u32],
+) -> clickhouse::error::Result<Vec<StoredFriends>> {
+    ch_client
+        .query(
+            "SELECT account_id, \
+                 argMax(friends.account_id, last_updated) AS `friends.account_id`, \
+                 argMax(friends.friend_since, last_updated) AS `friends.friend_since` \
+             FROM steam_profiles WHERE account_id IN ? GROUP BY account_id \
+             SETTINGS log_comment = 'steam_refresh_stored_friends'",
+        )
+        .bind(account_ids)
+        .fetch_all()
+        .await
 }
 
 #[instrument(skip_all, fields(rows = rows.len()))]
@@ -275,4 +343,47 @@ async fn insert_profiles(
         inserter.write(row).await?;
     }
     inserter.end().await
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn player(steamid: u32) -> SteamPlayer {
+        SteamPlayer {
+            steamid,
+            personaname: String::new(),
+            profileurl: String::new(),
+            avatar: String::new(),
+            avatarmedium: String::new(),
+            avatarfull: String::new(),
+            personastate: 0,
+            realname: None,
+            loccountrycode: None,
+        }
+    }
+
+    #[test]
+    fn build_insert_rows_reports_failed_friends_fetches() {
+        let mut friends_by_account = HashMap::from([
+            (
+                1,
+                vec![SteamFriend {
+                    steamid: 7,
+                    friend_since: 100,
+                }],
+            ),
+            // A private profile: fetched fine, with no friends.
+            (2, Vec::new()),
+        ]);
+        let (rows, missing) = build_insert_rows(
+            vec![player(1), player(2), player(3), player(3)],
+            &mut friends_by_account,
+        );
+
+        assert_eq!(rows.iter().map(|r| r.account_id).collect_vec(), [1, 2, 3]);
+        assert_eq!(rows[0].friends_account_id, [7]);
+        assert_eq!(rows[0].friends_friend_since, [100]);
+        assert_eq!(missing, HashSet::from([3]));
+    }
 }
