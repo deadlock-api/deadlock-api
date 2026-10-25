@@ -12,20 +12,22 @@ import {
   SideNavShell,
 } from "~/components/patterns/navigation/SideNavShell";
 import { Button } from "~/components/ui/button";
+import { TRACKER_DEMO_PATH, useTrackerHome } from "~/hooks/useTrackerHome";
 import { API_ORIGIN } from "~/lib/constants";
 import { bottomNavLinks, type NavLink, navGroups, topLinks } from "~/lib/site-nav";
 
 function isActive(pathname: string, to: string) {
   if (to === "/") return pathname === "/";
   // Tracker profiles belong to the tracker hub's navigation entry.
-  if (/^\/tracker\/players\/\d+/.test(pathname)) return to === "/tracker/demo";
+  if (/^\/tracker\/players\/\d+/.test(pathname)) return to === TRACKER_DEMO_PATH;
   // The entry's own page or one beneath it: `/analytics/players` is not active on a `/analytics/playersX`.
   return pathname === to || pathname.startsWith(`${to}/`);
 }
 
-function NavItem({ link }: { link: NavLink }) {
+/** `href` is where the entry leads when that differs from the section it stands for (the tracker's own profile). */
+function NavItem({ link, href = link.to }: { link: NavLink; href?: string }) {
   const active = useLocation({ select: (location) => isActive(location.pathname, link.to) });
-  const exact = useLocation({ select: (location) => (location.pathname.replace(/\/$/, "") || "/") === link.to });
+  const exact = useLocation({ select: (location) => (location.pathname.replace(/\/$/, "") || "/") === href });
   const Icon = link.icon;
   return (
     // The entry of the section a page is in is current, but only the page's own entry is that page.
@@ -35,7 +37,7 @@ function NavItem({ link }: { link: NavLink }) {
       aria-current={active ? (exact ? "page" : "true") : undefined}
       variant={link.special ? "highlight" : "default"}
     >
-      <SmartLink href={link.to}>
+      <SmartLink href={href}>
         <Icon />
         <span className="truncate">{link.label}</span>
       </SmartLink>
@@ -44,6 +46,7 @@ function NavItem({ link }: { link: NavLink }) {
 }
 
 function SidebarContent() {
+  const trackerHome = useTrackerHome();
   return (
     <>
       <SideNavHeader>
@@ -72,7 +75,7 @@ function SidebarContent() {
         {navGroups.map((group) => (
           <SideNavGroup key={group.label} label={group.label}>
             {group.links.map((link) => (
-              <NavItem key={link.to} link={link} />
+              <NavItem key={link.to} link={link} href={link.to === TRACKER_DEMO_PATH ? trackerHome : link.to} />
             ))}
           </SideNavGroup>
         ))}
