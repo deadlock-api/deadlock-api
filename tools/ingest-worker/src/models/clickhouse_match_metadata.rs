@@ -221,9 +221,12 @@ pub(crate) struct ClickhouseMatchPlayer {
     pub stats_ability_kills: Vec<u32>,
     #[serde(rename = "stats.headshot_kills")]
     pub stats_headshot_kills: Vec<u32>,
+    /// Custom stat names, sorted; `custom_user_stats_values` holds their deltas at the same
+    /// positions.
+    pub custom_user_stats_keys: Vec<String>,
     /// Per custom stat, its value at every stats tick as deltas: the first element is the
     /// value itself, each later one the change since the previous tick.
-    pub custom_user_stats_deltas: Vec<(String, Vec<i32>)>,
+    pub custom_user_stats_values: Vec<Vec<i32>>,
     #[serde(rename = "stats.gold_source_players_kills")]
     pub stats_gold_source_players_kills: Vec<u32>,
     #[serde(rename = "stats.gold_source_players_damage")]
@@ -618,6 +621,10 @@ impl From<(&MatchShared<'_>, bool, &Players)> for ClickhouseMatchPlayer {
             .iter()
             .filter(|(_, v)| v.vote_player_slot() == value.player_slot())
             .collect();
+        let (custom_user_stats_keys, custom_user_stats_values) =
+            custom_user_stats_deltas(match_info, &value.stats)
+                .into_iter()
+                .unzip();
         Self {
             match_id: match_info.match_id(),
             start_time: match_info.start_time(),
@@ -753,7 +760,8 @@ impl From<(&MatchShared<'_>, bool, &Players)> for ClickhouseMatchPlayer {
             stats_melee_kills: stat(PlayerStats::melee_kills),
             stats_ability_kills: stat(PlayerStats::ability_kills),
             stats_headshot_kills: stat(PlayerStats::headshot_kills),
-            custom_user_stats_deltas: custom_user_stats_deltas(match_info, &value.stats),
+            custom_user_stats_keys,
+            custom_user_stats_values,
             stats_gold_source_players_kills: gold(EGoldSource::KEPlayers, GoldSource::kills),
             stats_gold_source_players_damage: gold(EGoldSource::KEPlayers, GoldSource::damage),
             stats_gold_source_players_gold: gold(EGoldSource::KEPlayers, GoldSource::gold),
@@ -1027,9 +1035,10 @@ impl From<(&MatchShared<'_>, bool, &Players)> for ClickhouseMatchPlayer {
     }
 }
 
-/// Custom stats keyed by name (the id when the match has no name for it), in order of first
-/// appearance, each with one delta-encoded value per stats tick, 0 on ticks without an entry.
-/// Deltas wrap at 32 bits, so a cumulative sum truncated to `UInt32` restores every value.
+/// Custom stats keyed by name (the id when the match has no name for it), sorted by name, each
+/// with one delta-encoded value per stats tick, 0 on ticks without an entry. Deltas wrap at 32
+/// bits, so a cumulative sum truncated to `UInt32` restores every value. Sorted names repeat
+/// the same key sequence row after row, which compresses better than first-appearance order.
 fn custom_user_stats_deltas(
     match_info: &MatchInfo,
     stats: &[PlayerStats],
@@ -1040,7 +1049,8 @@ fn custom_user_stats_deltas(
             ids.push(v.id());
         }
     }
-    ids.into_iter()
+    let mut deltas: Vec<(String, Vec<i32>)> = ids
+        .into_iter()
         .map(|id| {
             let name = match_info
                 .custom_user_stats
@@ -1064,7 +1074,9 @@ fn custom_user_stats_deltas(
                 .collect();
             (name, deltas)
         })
-        .collect()
+        .collect();
+    deltas.sort_by(|a, b| a.0.cmp(&b.0));
+    deltas
 }
 
 /// One value per stats tick for `source`, 0 on ticks without an entry for it.
@@ -1109,7 +1121,7 @@ mod tests {
     }
 
     #[test]
-    fn custom_user_stats_are_delta_encoded_per_stat() {
+    fn custom_user_stats_are_delta_encoded_per_stat_sorted_by_name() {
         use valveprotos::deadlock::c_msg_match_meta_data_contents::CustomUserStatInfo;
 
         let stat = |id, value| CustomUserStat {
@@ -1136,14 +1148,14 @@ mod tests {
         assert_eq!(
             deltas,
             vec![
-                ("Shots".to_owned(), vec![10, 15, -5]),
                 ("2".to_owned(), vec![-1, 4, -3]),
                 ("3".to_owned(), vec![0, 0, 7]),
+                ("Shots".to_owned(), vec![10, 15, -5]),
             ]
         );
         // A cumulative sum truncated to 32 bits restores the values (ClickHouse:
         // toUInt32(arrayCumSum(deltas))).
-        let restored: Vec<u32> = deltas[1]
+        let restored: Vec<u32> = deltas[0]
             .1
             .iter()
             .scan(0i64, |sum, d| {
