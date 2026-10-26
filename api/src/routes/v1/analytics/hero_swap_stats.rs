@@ -86,6 +86,14 @@ fn build_query(query: &HeroSwapStatsQuery) -> String {
     // few rows left (FINAL cannot move it to PREWHERE: measured 2x the CPU, same result).
     // Each player row counts once for the hero played and once for the pre-game hero, when it
     // differs.
+    // With a badge filter on top, the rows left are scattered over the granules, and the columns
+    // cache then costs more in repeated lookups than it saves (see `hero_stats`): measured -20%
+    // CPU and -26% wall time without it, identical results; without a badge filter, no change.
+    let extra_settings = if query.match_info().has_badge_filter() {
+        ", use_columns_cache = 0"
+    } else {
+        ""
+    };
     format!(
         "
     SELECT h AS hero_id,
@@ -109,7 +117,7 @@ fn build_query(query: &HeroSwapStatsQuery) -> String {
     ARRAY JOIN arrayDistinct([hero_id, pregame_hero_id]) AS h
     GROUP BY hero_id, bucket
     ORDER BY hero_id, bucket
-    SETTINGS log_comment = 'hero_swap_stats', apply_patch_parts = 0
+    SETTINGS log_comment = 'hero_swap_stats', apply_patch_parts = 0{extra_settings}
     "
     )
 }
@@ -183,5 +191,20 @@ mod proptests {
         fn hero_swap_stats_build_query_is_valid_sql(query: HeroSwapStatsQuery) {
             assert_valid_sql(&build_query(&query));
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn badge_filter_skips_the_columns_cache() {
+        let badge = build_query(&HeroSwapStatsQuery {
+            min_average_badge: Some(91),
+            ..Default::default()
+        });
+        assert!(badge.contains("use_columns_cache = 0"));
+        assert!(!build_query(&HeroSwapStatsQuery::default()).contains("use_columns_cache"));
     }
 }

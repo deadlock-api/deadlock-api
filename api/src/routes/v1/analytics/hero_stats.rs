@@ -20,10 +20,7 @@ use crate::utils::parse::{
     comma_separated_deserialize_option, comma_separated_steam_ids_option,
     default_last_month_timestamp, parse_steam_id_option,
 };
-use crate::utils::sql::{
-    MAX_FILTERING_AVERAGE_BADGE, MIN_FILTERING_AVERAGE_BADGE, MatchInfoFilters, cached_ch_query,
-    impl_match_info,
-};
+use crate::utils::sql::{MatchInfoFilters, cached_ch_query, impl_match_info};
 
 #[derive(Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash, Default)]
 #[cfg_attr(test, derive(proptest_derive::Arbitrary))]
@@ -492,18 +489,13 @@ fn build_query(query: &HeroStatsQuery) -> String {
     } else {
         ("", "LIMIT 1 BY match_id, account_id")
     };
-    // A badge filter under FINAL leaves rows scattered across most granules, and the columns
-    // cache then costs more in per-range lookups (ClickHouse 26.10) than the decompression it
-    // saves. Measured on 39 CPU-weighted production queries, identical results: with a badge
-    // filter, 24% less CPU and 36% less wall time (91+ over 88 days: CPU 40 -> 20 s, wall -75%);
-    // without one (duration-only, nearly every row passes), the cache saves 40% of CPU.
-    let has_badge_filter = query
-        .min_average_badge
-        .is_some_and(|v| v > MIN_FILTERING_AVERAGE_BADGE)
-        || query
-            .max_average_badge
-            .is_some_and(|v| v < MAX_FILTERING_AVERAGE_BADGE);
-    let extra_settings = if use_final && has_badge_filter {
+    // A badge filter under FINAL leaves the passing rows scattered over most granules, and every
+    // gap makes the reader look up the columns cache again for the rest of the range (ClickHouse
+    // 26.10), which costs more than the decompression the cache saves. Measured on 39
+    // CPU-weighted production queries, identical results: with a badge filter, 24% less CPU and
+    // 36% less wall time (91+ over 88 days: CPU 40 -> 20 s, wall -75%); without one
+    // (duration-only, nearly every row passes), the cache saves 40% of CPU.
+    let extra_settings = if use_final && query.match_info().has_badge_filter() {
         ", use_columns_cache = 0"
     } else {
         ""
@@ -714,6 +706,7 @@ pub(crate) async fn hero_stats(
 mod tests {
     use super::*;
     use crate::utils::proptest_utils::assert_valid_sql;
+    use crate::utils::sql::{MAX_FILTERING_AVERAGE_BADGE, MIN_FILTERING_AVERAGE_BADGE};
 
     #[test]
     fn window_wide_read_dedups_with_final() {

@@ -41,6 +41,15 @@ pub(crate) struct MatchInfoFilters {
 }
 
 impl MatchInfoFilters {
+    /// Whether an average badge bound narrows the matches, i.e. emits a predicate.
+    pub(crate) fn has_badge_filter(&self) -> bool {
+        self.min_average_badge
+            .is_some_and(|v| v > MIN_FILTERING_AVERAGE_BADGE)
+            || self
+                .max_average_badge
+                .is_some_and(|v| v < MAX_FILTERING_AVERAGE_BADGE)
+    }
+
     /// Builds the SQL `AND ...` clause for `match_info` filters.
     /// Returns an empty string when no filters are set.
     pub(crate) fn build(&self) -> String {
