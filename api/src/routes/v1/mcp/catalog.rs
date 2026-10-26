@@ -1,7 +1,7 @@
 use core::sync::atomic::{AtomicBool, Ordering};
 use core::time::Duration;
 use std::collections::{BTreeMap, HashMap};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::{Arc, LazyLock, Mutex};
 
 use arc_swap::ArcSwapOption;
@@ -35,6 +35,14 @@ const MEMORY_LIMIT: &str = "6GB";
 /// Remote parquet scans wait on R2, not the CPU: more threads mean more requests in flight.
 const THREADS: i64 = 16;
 const MAX_TEMP_DIRECTORY_SIZE: &str = "8GB";
+/// Where httpfs looks for the system CA bundle (Debian's first).
+const CA_BUNDLES: [&str; 5] = [
+    "/etc/ssl/certs/ca-certificates.crt",
+    "/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem",
+    "/etc/pki/tls/certs/ca-bundle.crt",
+    "/etc/ssl/ca-bundle.pem",
+    "/etc/ssl/cert.pem",
+];
 
 static IDENT: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^[A-Za-z_][A-Za-z0-9_]*$").unwrap());
 
@@ -399,8 +407,17 @@ impl Database {
                 .lake_path
                 .parent()
                 .map_or_default(|p| format!("{}/", p.to_string_lossy()));
+            // httpfs reads the system CA bundle on the first HTTPS request, through the
+            // restricted file system.
+            let ca_bundles = CA_BUNDLES
+                .iter()
+                .filter(|p| Path::new(p).is_file())
+                .map(|p| sql_str(p))
+                .collect::<Vec<_>>()
+                .join(", ");
             conn.execute_batch(&format!(
                 "SET allowed_directories = [{}, {}, {}, {}];
+                 SET allowed_paths = [{ca_bundles}];
                  SET enable_external_access = false;
                  SET lock_configuration = true;",
                 sql_str(&format!("{}/", self.dir("tmp"))),
