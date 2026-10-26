@@ -4,8 +4,9 @@ import type { AnalyticsApiGameStatsRequest } from "deadlock_api_client";
 import { analyticsTabFromPath, ANALYTICS_VIEWS, redirectAnalyticsTab } from "~/lib/analytics-tabs";
 import { ALL_RANKS_BADGES, DEFAULT_MATCH_MODE } from "~/lib/game-mode";
 import { prefetchCached } from "~/lib/prefetch-safe";
-import { defaultPrevUnixRange, defaultTemporalCoverage, defaultUnixRange } from "~/lib/seasons";
+import { defaultPeriodLabel, defaultPrevUnixRange, defaultTemporalCoverage, defaultUnixRange } from "~/lib/seasons";
 import { datasetJsonLd, pageTitle, seo } from "~/lib/seo";
+import { formatClock } from "~/lib/stat-format";
 import type { RouterContext } from "~/router";
 
 export const gamesPageOptions = {
@@ -38,12 +39,12 @@ export const gamesPageOptions = {
     // What each view's first render reads, on its default filters (the page's own defaults: this metric, this
     // interval), so the server HTML carries the numbers rather than the views' loading states.
     const prefetches: Promise<unknown>[] = [];
+    // The overview's headline game length, which its meta description quotes.
+    let overall: ReturnType<typeof gameStats> | undefined;
     if (tab === "overview") {
       const prevRange = defaultPrevUnixRange(seasons, preferences.dateFilter);
-      prefetches.push(
-        gameStats({ ...baseParams, bucket: "no_bucket" }),
-        gameStats({ ...baseParams, ...prevRange, bucket: "no_bucket" }),
-      );
+      overall = gameStats({ ...baseParams, bucket: "no_bucket" });
+      prefetches.push(overall, gameStats({ ...baseParams, ...prevRange, bucket: "no_bucket" }));
     } else if (tab === "over-time") {
       prefetches.push(gameStats({ ...baseParams, bucket: "start_time_day" }));
     } else if (tab === "by-rank") {
@@ -78,11 +79,25 @@ export const gamesPageOptions = {
       // panel stays until the new one can render, rather than collapsing to the chunk's fallback first.
       await preloadGamesView(tab);
     }
-    return { coverage: defaultTemporalCoverage(seasons, preferences.dateFilter) };
+    // Read on the server only, where the stats were awaited above; the browser keeps the server's head.
+    const avgDurationS = typeof window === "undefined" ? (await overall)?.[0]?.avg_duration_s : undefined;
+    return {
+      coverage: defaultTemporalCoverage(seasons, preferences.dateFilter),
+      avgDurationS,
+      period: defaultPeriodLabel(seasons, preferences.dateFilter),
+    };
   },
-  head: ({ loaderData, match }: { loaderData?: { coverage?: string }; match: { pathname: string } }) => {
+  head: ({
+    loaderData,
+    match,
+  }: {
+    loaderData?: { coverage?: string; avgDurationS?: number; period: string };
+    match: { pathname: string };
+  }) => {
     const tab = analyticsTabFromPath("games", match.pathname);
     const view = ANALYTICS_VIEWS.games[tab];
+    const avgDurationS = tab === "overview" ? loaderData?.avgDurationS : undefined;
+    const lead = avgDurationS ? ` The average game lasts ${formatClock(avgDurationS)} ${loaderData?.period}.` : "";
     const path = match.pathname.replace(/\/$/, "");
     const dataset = datasetJsonLd({
       name: view.title,
@@ -96,7 +111,7 @@ export const gamesPageOptions = {
     });
     return seo({
       title: pageTitle(view.title),
-      description: view.description,
+      description: view.description + lead,
       path,
       jsonLd: dataset,
     });

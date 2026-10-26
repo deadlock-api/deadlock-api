@@ -189,11 +189,10 @@ export const ANALYTICS_VIEWS: { [S in AnalyticsSection]: Record<AnalyticsTab<S>,
   },
   games: {
     overview: {
-      title: "Deadlock Match Stats: Length, Kills & Souls",
-      heading: "Deadlock Match Stats",
+      title: "Average Deadlock Game Length & Match Stats",
+      heading: "Deadlock Game Length & Match Stats",
       summary: "Aggregate match statistics.",
-      description:
-        "Deadlock match stats: average match length, kills, souls and objective timings. See how long a typical game lasts.",
+      description: "How long a Deadlock game lasts, with kills, souls and objective timings per match, updated daily.",
     },
     "over-time": {
       title: "Deadlock Match Trends Over Time",
