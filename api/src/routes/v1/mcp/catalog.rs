@@ -35,6 +35,8 @@ const MEMORY_LIMIT: &str = "6GB";
 /// Remote parquet scans wait on R2, not the CPU: more threads mean more requests in flight.
 const THREADS: i64 = 16;
 const MAX_TEMP_DIRECTORY_SIZE: &str = "8GB";
+const PROBE_SQL: &str =
+    "SELECT match_id FROM match_player WHERE start_time >= now() - INTERVAL 7 DAY LIMIT 1";
 /// Where httpfs looks for the system CA bundle (Debian's first).
 const CA_BUNDLES: [&str; 5] = [
     "/etc/ssl/certs/ca-certificates.crt",
@@ -176,6 +178,11 @@ impl SnapshotCatalog {
                     Ok(false) => debug!("MCP snapshot catalog unchanged"),
                     Err(e) => warn!("MCP snapshot catalog refresh failed: {e}"),
                 }
+                // Grafana alerts when these lines stop or turn into failures.
+                match self.probe().await {
+                    Ok(()) => info!("MCP probe ok"),
+                    Err(e) => warn!("MCP probe failed: {e}"),
+                }
                 tokio::time::sleep(REFRESH_INTERVAL).await;
             }
         });
@@ -227,6 +234,19 @@ impl SnapshotCatalog {
         cancelled.store(true, Ordering::Relaxed);
         interrupt.interrupt();
         Err(error)
+    }
+
+    /// Runs a query that reads a remote `match_player` parquet file, as most user queries do.
+    async fn probe(&self) -> Result<(), QueryError> {
+        let output = self
+            .query(PROBE_SQL.to_owned(), 1, CancellationToken::new())
+            .await?;
+        if output.batches.iter().all(|b| b.num_rows() == 0) {
+            return Err(QueryError::Internal(
+                "no match_player rows in the last 7 days".to_owned(),
+            ));
+        }
+        Ok(())
     }
 
     async fn acquire_slot(&self) -> Result<OwnedSemaphorePermit, QueryError> {
