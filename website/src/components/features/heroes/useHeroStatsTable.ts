@@ -45,6 +45,9 @@ export interface HeroStatsTableFilters {
   /** Shows only the heroes whose name contains it. */
   nameQuery?: string;
   groupByType?: boolean;
+  /** The column the table opens sorted by while the URL names none; "pickRate" also opens the pick rate column on
+   * plain pick rate instead of presence. */
+  defaultSortKey?: "winrate" | "pickRate";
 }
 
 /** One hero's numbers as its row shows them; deltas are against the previous interval, when there is one. */
@@ -137,12 +140,13 @@ export function useHeroStatsTable({
   matchMode,
   nameQuery,
   groupByType = false,
+  defaultSortKey = "winrate",
 }: HeroStatsTableFilters) {
-  const [sortKey, setSortKey] = useQueryState("hero_sort_key", parseAsSortKey.withDefault("winrate"));
+  const [sortKey, setSortKey] = useQueryState("hero_sort_key", parseAsSortKey.withDefault(defaultSortKey));
   const [sortDir, setSortDir] = useQueryState("hero_sort_dir", parseAsSortDir.withDefault("desc"));
   const [pickRateMode, setPickRateMode] = useQueryState(
     "pick_rate_mode",
-    parseAsStringLiteral(PICK_RATE_MODES).withDefault("presence"),
+    parseAsStringLiteral(PICK_RATE_MODES).withDefault(defaultSortKey === "pickRate" ? "pickRate" : "presence"),
   );
 
   const sort = useSort(sortParams([sortKey, setSortKey], [sortDir, setSortDir], together));

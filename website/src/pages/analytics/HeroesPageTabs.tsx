@@ -25,6 +25,7 @@ import { SearchInput } from "~/components/ui/search-input";
 import { Switch } from "~/components/ui/switch";
 import type { useHeroFilters } from "~/hooks/useHeroFilters";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
+import { useExperiment } from "~/lib/experiments";
 import { hasSoulEconomy, MODE_CONFIG } from "~/lib/game-mode";
 import { TIER_METRIC_DEFINITIONS, TIER_METRICS, type TierMetric, type TierMetricDefinition } from "~/lib/hero-tiers";
 import { HERO_SORT_BY_VALUES, sortByIn } from "~/lib/scoreboard-sorts";
@@ -70,6 +71,8 @@ export function HeroOverallStatsTab({ filters }: { filters: HeroFilters }) {
     "hero_q",
     parseAsString.withDefault("").withOptions({ history: "replace" }),
   );
+  // Half the page's search clicks ask for pick rates: the test variant opens the table on pick rate.
+  const sortExperiment = useExperiment("exp-heroes-pickrate-default");
   return (
     <Section titleDisplay="hidden" title="Overall Hero Stats">
       <FilterBar variant="toolbar" title="Overall stats" icon={Table2} aria-label="Hero table controls">
@@ -99,6 +102,7 @@ export function HeroOverallStatsTab({ filters }: { filters: HeroFilters }) {
         prevMaxDate={filters.prevEndDate}
         gameMode={filters.gameMode}
         matchMode={filters.matchMode}
+        defaultSortKey={sortExperiment === "test" ? "pickRate" : "winrate"}
       />
     </Section>
   );
