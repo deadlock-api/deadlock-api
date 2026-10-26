@@ -21,6 +21,8 @@ export const TRACKER_SITES: readonly TrackerSite[] = [
     icon: "/tracker-sites/statlocker.webp",
     href: "https://statlocker.gg/?ref=deadlock-api.com",
   },
+  { name: "Buildlock", icon: "/tracker-sites/buildlock.svg", href: "https://buildlock.net/?ref=deadlock-api.com" },
+  { name: "DLTV", icon: "/tracker-sites/dltv.webp", href: "https://dltv.gg/?ref=deadlock-api.com" },
   { name: "EDL", icon: "/tracker-sites/edl.webp", href: "https://edl.gg" },
   { name: "Tracklock", icon: "/tracker-sites/tracklock.webp" },
   { name: "LockBlaze", icon: "/tracker-sites/lockblaze.webp" },
@@ -41,7 +43,6 @@ export const TRACKER_SITES: readonly TrackerSite[] = [
   { name: "LockCodex", icon: "/tracker-sites/lockcodex.webp" },
   { name: "Deadlock Builds", icon: "/tracker-sites/deadlock-builds.webp" },
   { name: "Urnlock", icon: "/tracker-sites/urnlock.webp" },
-  { name: "Buildlock", icon: "/tracker-sites/buildlock.svg" },
   { name: "DeadUnlock", icon: "/tracker-sites/deadunlock.svg" },
   { name: "LiveLock", icon: "/tracker-sites/livelock.webp" },
   { name: "Statlocked", icon: "/tracker-sites/statlocked.webp" },
@@ -59,5 +60,4 @@ export const TRACKER_SITES: readonly TrackerSite[] = [
   { name: "Deadlock Mods", icon: "/tracker-sites/deadlock-mods.webp" },
   { name: "DraftMeta", icon: "/tracker-sites/draftmeta.webp" },
   { name: "Buildlock.io", icon: "/tracker-sites/buildlock-io.webp" },
-  { name: "DLTV", icon: "/tracker-sites/dltv.webp" },
 ];
