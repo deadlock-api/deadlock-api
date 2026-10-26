@@ -20,7 +20,10 @@ use crate::utils::parse::{
     comma_separated_deserialize_option, comma_separated_steam_ids_option,
     default_last_month_timestamp, parse_steam_id_option,
 };
-use crate::utils::sql::{MatchInfoFilters, cached_ch_query, impl_match_info};
+use crate::utils::sql::{
+    MAX_FILTERING_AVERAGE_BADGE, MIN_FILTERING_AVERAGE_BADGE, MatchInfoFilters, cached_ch_query,
+    impl_match_info,
+};
 
 #[derive(Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash, Default)]
 #[cfg_attr(test, derive(proptest_derive::Arbitrary))]
@@ -203,8 +206,9 @@ pub struct AnalyticsHeroStats {
 /// response rows that `columns` (aggregates over those rows) select, and adds
 /// `bucket_matches_since_first_day` from the same rows: a hero's first day across all buckets,
 /// and each bucket's matches per day. Grouping by day first reads no more rows; it only adds a
-/// few thousand groups (heroes × days) to the aggregation.
-fn group_hero_days(columns: &str, days: &str, log_comment: &str) -> String {
+/// few thousand groups (heroes × days) to the aggregation. `extra_settings` is appended to the
+/// `SETTINGS` clause (empty or starting with a comma).
+fn group_hero_days(columns: &str, days: &str, log_comment: &str, extra_settings: &str) -> String {
     format!(
         "
     SELECT * EXCEPT (first_day, day_matches),
@@ -222,7 +226,7 @@ fn group_hero_days(columns: &str, days: &str, log_comment: &str) -> String {
         GROUP BY hero_id, bucket
     )
     ORDER BY hero_id, bucket
-    SETTINGS log_comment = '{log_comment}', apply_patch_parts = 0
+    SETTINGS log_comment = '{log_comment}', apply_patch_parts = 0{extra_settings}
     "
     )
 }
@@ -408,6 +412,7 @@ fn build_mv_query(query: &HeroStatsQuery) -> Option<String> {
         GROUP BY hero_id, bucket, day"
         ),
         mv_log_comment,
+        "",
     ))
 }
 
@@ -486,6 +491,22 @@ fn build_query(query: &HeroStatsQuery) -> String {
         (" FINAL", "")
     } else {
         ("", "LIMIT 1 BY match_id, account_id")
+    };
+    // A badge filter under FINAL leaves rows scattered across most granules, and the columns
+    // cache then costs more in per-range lookups (ClickHouse 26.10) than the decompression it
+    // saves. Measured on 39 CPU-weighted production queries, identical results: with a badge
+    // filter, 24% less CPU and 36% less wall time (91+ over 88 days: CPU 40 -> 20 s, wall -75%);
+    // without one (duration-only, nearly every row passes), the cache saves 40% of CPU.
+    let has_badge_filter = query
+        .min_average_badge
+        .is_some_and(|v| v > MIN_FILTERING_AVERAGE_BADGE)
+        || query
+            .max_average_badge
+            .is_some_and(|v| v < MAX_FILTERING_AVERAGE_BADGE);
+    let extra_settings = if use_final && has_badge_filter {
+        ", use_columns_cache = 0"
+    } else {
+        ""
     };
     // Under FINAL, ClickHouse only moves sorting-key conditions to PREWHERE, so the match-level
     // filters would otherwise be applied after reading every column of every row. Duplicate
@@ -631,6 +652,7 @@ fn build_query(query: &HeroStatsQuery) -> String {
         GROUP BY hero_id, bucket, day"
         ),
         "hero_stats",
+        extra_settings,
     )
 }
 
@@ -712,6 +734,39 @@ mod tests {
         let (where_clause, _) = rest.split_once("SELECT").expect("the CTE, then its query");
         assert!(prewhere.contains("start_time >= 1786147200"));
         assert!(!where_clause.contains("start_time"));
+    }
+
+    #[test]
+    fn badge_filtered_final_read_skips_the_columns_cache() {
+        let window = HeroStatsQuery {
+            min_unix_timestamp: Some(1_786_147_200),
+            min_duration_s: Some(1800),
+            ..Default::default()
+        };
+        let badge = build_query(&HeroStatsQuery {
+            min_average_badge: Some(91),
+            ..window.clone()
+        });
+        assert_valid_sql(&badge);
+        assert!(badge.contains("FINAL"));
+        assert!(badge.contains("use_columns_cache = 0"));
+        // Duration-only and all-badge bounds keep the cache.
+        assert!(!build_query(&window).contains("use_columns_cache"));
+        let all_badges = build_query(&HeroStatsQuery {
+            min_average_badge: Some(MIN_FILTERING_AVERAGE_BADGE),
+            max_average_badge: Some(MAX_FILTERING_AVERAGE_BADGE),
+            ..window.clone()
+        });
+        assert!(!all_badges.contains("use_columns_cache"));
+        // Account-scoped reads dedup with `LIMIT 1 BY` and keep the cache.
+        #[expect(deprecated)]
+        let account = build_query(&HeroStatsQuery {
+            min_average_badge: Some(91),
+            account_id: Some(1),
+            ..window
+        });
+        assert!(!account.contains("FINAL"));
+        assert!(!account.contains("use_columns_cache"));
     }
 
     #[test]
