@@ -121,7 +121,8 @@ pub(crate) fn query_cache_key(query_str: &str) -> u128 {
 /// share a single run, a miss reads the shared disk tier before querying `ClickHouse`, and a query
 /// first takes a slot from the `ClickHouse` admission limiter ([`crate::services::ch_admission`]).
 /// Errors, including [`ChQueryError::Busy`](crate::services::ch_admission::ChQueryError), are not
-/// cached. The cache is named after the function's path, which keeps its disk entries across
+/// cached, except that a query that timed out fails fast with the same error for 10 minutes. The
+/// cache is named after the function's path, which keeps its disk entries across
 /// releases; renaming or moving the function starts it empty.
 ///
 /// `fn name(max_size, ttl_secs) -> Vec<Row>;` fetches all rows and returns them in an `Arc`, so a
