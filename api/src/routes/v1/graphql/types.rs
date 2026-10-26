@@ -377,8 +377,8 @@ pub(super) struct Stat {
     pub(super) melee_kills: Option<u32>,
     pub(super) ability_kills: Option<u32>,
     pub(super) headshot_kills: Option<u32>,
-    /// Rebuilt from the delta-encoded `custom_user_stats_deltas` column, one cumulative sum per
-    /// time stamp: measured 1.7-5 ms per row, ~40x a plain subfield.
+    /// Rebuilt from the delta-encoded `custom_user_stats_keys`/`_values` columns, one cumulative
+    /// sum per time stamp: measured 1.7-5 ms per row, ~40x a plain subfield.
     #[graphql(complexity = 40)]
     pub(super) custom_user_stats: Option<JsonScalar>,
     pub(super) gold_source_players_kills: Option<u32>,

@@ -73,12 +73,14 @@ fn nested_array_expr(parent: &str, subfields: &[&str]) -> String {
 }
 
 /// The array a `Nested` subfield is read from. `stats.custom_user_stats` is stored transposed
-/// and delta-encoded in `custom_user_stats_deltas` (stat -> deltas per stats tick); it is
-/// rebuilt into one map per tick, the shape the API serves.
+/// and delta-encoded in `custom_user_stats_keys` (stat names) and `custom_user_stats_values`
+/// (deltas per stats tick, one array per name); it is rebuilt into one map per tick, the shape
+/// the API serves.
 fn nested_subfield_source(parent: &str, subfield: &str) -> String {
     if parent == "stats" && subfield == "custom_user_stats" {
-        return "arrayMap(i -> mapApply((k, v) -> (k, toUInt32(arrayCumSum(v)[i])), \
-                custom_user_stats_deltas), arrayEnumerate(stats.time_stamp_s))"
+        return "arrayMap(i -> mapFromArrays(custom_user_stats_keys, \
+                arrayMap(v -> toUInt32(arrayCumSum(v)[i]), custom_user_stats_values)), \
+                arrayEnumerate(stats.time_stamp_s))"
             .to_owned();
     }
     format!("{parent}.{subfield}")
@@ -549,7 +551,7 @@ mod tests {
         })
         .unwrap();
         assert!(sql.contains(
-            "arrayMap((time_stamp_s, custom_user_stats) -> tuple(time_stamp_s, custom_user_stats), stats.time_stamp_s, arrayMap(i -> mapApply((k, v) -> (k, toUInt32(arrayCumSum(v)[i])), custom_user_stats_deltas), arrayEnumerate(stats.time_stamp_s))) AS stats"
+            "arrayMap((time_stamp_s, custom_user_stats) -> tuple(time_stamp_s, custom_user_stats), stats.time_stamp_s, arrayMap(i -> mapFromArrays(custom_user_stats_keys, arrayMap(v -> toUInt32(arrayCumSum(v)[i]), custom_user_stats_values)), arrayEnumerate(stats.time_stamp_s))) AS stats"
         ));
         crate::utils::proptest_utils::assert_valid_sql(&sql);
     }
