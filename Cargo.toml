@@ -17,6 +17,7 @@ members = [
     "tools/steam-profile-fetcher",
     "tools/update-assets-tables",
     "valveprotos",
+    "website/wasm/*",
 ]
 resolver = "3"
 
@@ -28,6 +29,7 @@ edition = "2024"
 common = { version = "0.1.0", path = "tools/common" }
 player-match-history = { path = "tools/player-match-history" }
 valveprotos = { path = "valveprotos" }
+wasm-abi = { path = "website/wasm/abi" }
 haste = { path = "haste" }
 haste_broadcast = { path = "haste/crates/haste_broadcast" }
 haste_core = { path = "haste/crates/haste_core" }
@@ -74,6 +76,15 @@ http = "1.5.0"
 log = "0.4.34"
 nohash = "0.2.0"
 snap = "1.1.2"
+
+# The website's wasm modules (website/wasm/*, built by website/scripts/build-wasm.mjs): small over fast.
+[profile.wasm]
+inherits = "release"
+opt-level = "z"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true
 
 [profile.dev]
 debug = "line-tables-only"

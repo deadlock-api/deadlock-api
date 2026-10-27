@@ -1,8 +1,9 @@
 name: Crates CI
 
 # Checks for the library crates imported into the workspace (valveprotos, and
-# haste with its dungers crates). Their consumers (api, tools, live-events) are
-# checked by their own workflows, which also trigger on changes to these crates.
+# haste with its dungers crates) and the website's wasm modules (website/wasm/*).
+# Their consumers (api, tools, live-events, website) are checked by their own
+# workflows, which also trigger on changes to these crates.
 
 on:
   push:
@@ -11,6 +12,7 @@ on:
     paths:
       - 'valveprotos/**'
       - 'haste/**'
+      - 'website/wasm/**'
       - 'Cargo.toml'
       - 'Cargo.lock'
       - 'rust-toolchain.toml'
@@ -23,6 +25,7 @@ on:
     paths:
       - 'valveprotos/**'
       - 'haste/**'
+      - 'website/wasm/**'
       - 'Cargo.toml'
       - 'Cargo.lock'
       - 'rust-toolchain.toml'
@@ -73,3 +76,12 @@ jobs:
           save-if: ${{ github.ref == 'refs/heads/master' }}
       - name: Tests
         run: cargo test --locked -p valveprotos -p haste -p haste_core -p haste_broadcast -p haste_vartype -p dungers -p dungers_bitbuf -p dungers_charsor -p dungers_varint --all-features
+
+  website-wasm:
+    uses: ./.github/workflows/rust-ci-checks.yml
+    with:
+      working-directory: website/wasm
+      packages: hero-build wasm-abi
+      typos: false
+      lint-extra-apt-packages: clang mold
+      rust-cache-shared-key: website-wasm-build-cache

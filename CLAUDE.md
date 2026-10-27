@@ -9,6 +9,7 @@ live-events/ # rust service for live match event streaming
 valveprotos/ # rust protobuf bindings for steam/deadlock (formerly valveprotos-rs)
 haste/ # source 2 demo/broadcast parser (formerly deadlock-api/haste); crates/dungers* are its bitbuf/varint/charsor primitives (formerly deadlock-api/dungers)
 website/ # tanstack start website, using generated openapi SDKs hitting the api
+website/wasm/ # rust crates compiled to wasm for the website (hero build codes on valveprotos); abi/ is their shared ABI
 ```
 
 All Rust crates form one cargo workspace rooted at `Cargo.toml` (single `Cargo.lock`, `target/`,

@@ -1,0 +1,17 @@
+[package]
+name = "hero-build"
+version = "0.1.0"
+edition.workspace = true
+description = "Decodes and encodes Deadlock's in-game hero build codes, compiled to wasm for the website"
+
+[lib]
+# cdylib is the .wasm the website loads, rlib keeps the crate testable natively.
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+base64.workspace = true
+prost.workspace = true
+ruzstd = "0.9.1"
+serde_json.workspace = true
+valveprotos = { workspace = true, features = ["gc-common", "serde"] }
+wasm-abi.workspace = true
