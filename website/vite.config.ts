@@ -91,26 +91,28 @@ export default defineConfig({
         filter: ({ path }) =>
           // Query variants share one output file; crawling them overwrites the default page's HTML.
           !path.includes("?") &&
-          !/^\/(deadlockdle|flashcards)(\/|$)/.test(path) &&
           // Dev-only pages answer 404 in a production build, which the prerenderer treats as a failure.
           !/^\/dev(\/|$)/.test(path) &&
-          // Filtered pages and their legacy redirects need request-specific server rendering.
+          // Filtered pages need request-specific server rendering; tracker pages are also patron-gated and per-user.
           !/^\/(analytics|community|tracker)(\/|$)/.test(path) &&
           // Patch pages compare live match data; a build-time copy would freeze the newest patch's numbers.
           !/^\/patches(\/|$)/.test(path) &&
-          !/^\/(games|heroes|items|abilities|players|team-builder|leaderboard|badge-distribution|heatmap)(\/|$)/.test(
-            path,
-          ) &&
+          // Legacy paths only redirect (src/lib/site-route-migration.ts). The prerenderer follows a redirect and saves
+          // the destination's HTML under the old path, which would then be served there instead of the 301.
+          !/^\/(heroes|items|abilities|players|team-builder|leaderboard|badge-distribution|heatmap)(\/|$)/.test(path) &&
+          !/^\/(deadlockdle|flashcards)(\/|$)/.test(path) &&
+          // `/games` is a legacy redirect too, and the games under it are dealt per visit (today's puzzle, a shuffled
+          // deck), which a build-time copy would freeze.
+          !/^\/games(\/|$)/.test(path) &&
           // They render their query string (a shared ?sql= query, the Steam sign-in return): a static copy without it
           // failed hydration (React #418) and re-rendered the whole page on the client.
           !/^\/(data-dumps|streamkit)(\/|$)/.test(path) &&
           // A shared crosshair link previews that crosshair (its og:image comes from ?code=), which a static copy
           // would replace with the generic page's.
           path !== "/crosshair" &&
-          // Tracker pages are patron-gated and per-user; prerendering them would bake gate HTML.
+          // The Patreon callback's breadcrumbs link its parent segments, which have no page and answer 404.
           path !== "/auth" &&
-          path !== "/auth/patreon" &&
-          !/^\/players\/\d+$/.test(path),
+          path !== "/auth/patreon",
       },
       pages: [{ path: "/" }, { path: "/blog" }, { path: "/sitemap.xml" }, { path: "/sitemap_index.xml" }],
     }),
