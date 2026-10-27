@@ -168,6 +168,35 @@ impl Default for McpSnapshotConfig {
     }
 }
 
+/// Limits of the live demo query stream (`/v1/matches/demo/live/query`): `LIVE_QUERY_STREAMS_PER_CLIENT`,
+/// `LIVE_QUERY_STREAMS_PER_REPLICA`, `LIVE_QUERY_QUEUE_LIMIT_MIB`.
+#[derive(Deserialize, Debug, Clone)]
+#[serde(default)]
+pub(crate) struct LiveQueryConfig {
+    /// Live queries one client (API key, Cloudflare Worker or IP) may stream at once; a new one
+    /// past it ends the client's oldest. Every stream runs its own broadcast fetch and parse, and
+    /// behind Cloudflare a client's disconnect often never reaches the server, so without it a
+    /// client that keeps reconnecting stacks hundreds of parses (host OOM kills, Oct 2026). Sites
+    /// behind one key or Worker serve many viewers: one client opens 7 streams per match.
+    pub(crate) streams_per_client: usize,
+    /// Live queries one replica streams at once; past it new ones get a 429. Times
+    /// `queue_limit_mib` this bounds the memory of all-unread streams, so keep the product under
+    /// the API container's memory limit (32 GiB).
+    pub(crate) streams_per_replica: usize,
+    /// Unread result rows (MiB) one live query may queue before it is stopped with an error.
+    pub(crate) queue_limit_mib: usize,
+}
+
+impl Default for LiveQueryConfig {
+    fn default() -> Self {
+        Self {
+            streams_per_client: 16,
+            streams_per_replica: 192,
+            queue_limit_mib: 128,
+        }
+    }
+}
+
 /// Hourly dump of the public tables to the R2 data lake (`services::data_dump`).
 /// Env prefix `DATA_DUMP_`; disabled unless `DATA_DUMP_ENABLED=true`.
 #[derive(Deserialize, Debug, Clone)]
@@ -252,10 +281,45 @@ pub(crate) struct Config {
     pub(crate) mcp_snapshot: McpSnapshotConfig,
     #[serde(default)]
     pub(crate) data_dump: DataDumpConfig,
+    #[serde(default)]
+    pub(crate) live_query: LiveQueryConfig,
 }
 
 impl Config {
     pub(super) fn from_env() -> Result<Self, serde_env::Error> {
         serde_env::from_env()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[derive(Deserialize)]
+    struct Wrapper {
+        #[serde(default)]
+        live_query: LiveQueryConfig,
+    }
+
+    #[test]
+    fn live_query_limits_come_from_env() {
+        let config: Wrapper = serde_env::from_iter([
+            ("LIVE_QUERY_STREAMS_PER_CLIENT", "3"),
+            ("LIVE_QUERY_STREAMS_PER_REPLICA", "50"),
+            ("LIVE_QUERY_QUEUE_LIMIT_MIB", "64"),
+        ])
+        .unwrap();
+        assert_eq!(config.live_query.streams_per_client, 3);
+        assert_eq!(config.live_query.streams_per_replica, 50);
+        assert_eq!(config.live_query.queue_limit_mib, 64);
+    }
+
+    #[test]
+    fn live_query_limits_default_when_unset() {
+        let config: Wrapper =
+            serde_env::from_iter([("LIVE_QUERY_STREAMS_PER_CLIENT", "3")]).unwrap();
+        assert_eq!(config.live_query.streams_per_client, 3);
+        assert_eq!(config.live_query.streams_per_replica, 192);
+        assert_eq!(config.live_query.queue_limit_mib, 128);
     }
 }

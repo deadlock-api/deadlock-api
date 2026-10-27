@@ -47,9 +47,6 @@ use super::visitor::{BroadcastDemoStream, discover_schemas_from_demo};
 /// broadcast, so the initial connect retries for at least this long before giving up.
 const CONNECT_RETRY_BUDGET: Duration = Duration::from_mins(1);
 const CONNECT_RETRY_INTERVAL: Duration = Duration::from_secs(2);
-/// Decoded rows one live query may hold queued for its consumer before it is stopped. Rows queue up
-/// when the client stops reading the stream, or for joins/aggregations that only emit at the end.
-const MAX_QUEUED_BYTES: usize = 128 << 20;
 /// Fetched broadcast fragments queued ahead of the parser; beyond it the fetch waits for the parse.
 const MAX_QUEUED_FRAGMENTS: usize = 64;
 
@@ -65,6 +62,9 @@ const MAX_QUEUED_FRAGMENTS: usize = 64;
 /// `status_tx` receives human-readable progress messages while the initial connection is retried, so
 /// a caller streaming this over SSE can surface them to a waiting client instead of going quiet.
 ///
+/// Decoded rows queue up for the consumer when the client stops reading the stream, or for
+/// joins/aggregations that only emit at the end; past `queue_limit_bytes` the query is stopped.
+///
 /// Cancelling `cancel` stops the broadcast fetch, which ends the parse even if nobody polls the
 /// returned stream any more (a disconnect the server never saw).
 ///
@@ -77,6 +77,7 @@ pub(crate) async fn query_live(
     query: &str,
     status_tx: UnboundedSender<String>,
     cancel: CancellationToken,
+    queue_limit_bytes: usize,
 ) -> Result<SendableRecordBatchStream> {
     let referenced: HashSet<String> = extract_table_names(query)?.into_iter().collect();
 
@@ -109,7 +110,7 @@ pub(crate) async fn query_live(
     bytes_tx
         .try_send(signon)
         .map_err(|e| DemoError::Broadcast(format!("failed to queue the signon fragment: {e}")))?;
-    let budget = QueueBudget::default();
+    let budget = QueueBudget::new(queue_limit_bytes);
 
     // Every live table is a single channel, so repartitioning buys no parallelism — and
     // `RepartitionExec` coalesces batches from bounded inputs, which would hold decoded rows
@@ -403,24 +404,34 @@ struct Channel<B> {
 }
 
 /// Bytes of decoded batches one live query has queued but its tables have not yet handed out.
-#[derive(Clone, Default)]
-struct QueueBudget(Arc<AtomicUsize>);
+#[derive(Clone)]
+struct QueueBudget {
+    queued: Arc<AtomicUsize>,
+    limit: usize,
+}
 
 impl QueueBudget {
-    /// Counts `bytes` as queued; `false` once the query holds more than [`MAX_QUEUED_BYTES`].
+    fn new(limit: usize) -> Self {
+        Self {
+            queued: Arc::default(),
+            limit,
+        }
+    }
+
+    /// Counts `bytes` as queued; `false` once the query holds more than its limit.
     fn reserve(&self, bytes: usize) -> bool {
-        let queued = self.0.fetch_add(bytes, Ordering::Relaxed);
-        queued.saturating_add(bytes) <= MAX_QUEUED_BYTES
+        let queued = self.queued.fetch_add(bytes, Ordering::Relaxed);
+        queued.saturating_add(bytes) <= self.limit
     }
 
     /// Undoes the [`reserve`](Self::reserve) of a batch its table handed out. Only ever called with
     /// the size of a batch that was reserved, so the count cannot underflow.
     fn release(&self, bytes: usize) {
-        self.0.fetch_sub(bytes, Ordering::Relaxed);
+        self.queued.fetch_sub(bytes, Ordering::Relaxed);
     }
 }
 
-/// Queue `batch` for its table. Past the query's [`MAX_QUEUED_BYTES`] the table gets an error
+/// Queue `batch` for its table. Past the query's queue limit the table gets an error
 /// instead, which ends the query, and the parse is stopped.
 fn send_batch(
     batch: RecordBatch,
@@ -434,7 +445,7 @@ fn send_batch(
         let message = format!(
             "Live query stopped: more than {} MiB of result rows are queued unread. Read the stream \
              as it arrives, and avoid joins or aggregations that hold rows until the broadcast ends.",
-            MAX_QUEUED_BYTES >> 20
+            budget.limit >> 20
         );
         if tx
             .send(Err(DataFusionError::Execution(message.clone())))
@@ -684,7 +695,7 @@ mod tests {
         let ctx = SessionContext::new_with_config(SessionConfig::new().with_target_partitions(1));
         let ctrl = schema(("m_steamID", DataType::UInt64));
         let pawn = schema(("CBodyComponent__m_cellX", DataType::UInt32));
-        let budget = QueueBudget::default();
+        let budget = QueueBudget::new(1 << 20);
         let (ctrl_tx, rx) = unbounded_channel();
         register_streaming_table(
             &ctx,
@@ -759,7 +770,7 @@ mod tests {
             batch.unwrap();
         }
         assert_eq!(
-            budget.0.load(Ordering::Relaxed),
+            budget.queued.load(Ordering::Relaxed),
             0,
             "read batches must free the budget"
         );
@@ -783,7 +794,7 @@ mod tests {
     async fn queue_limit_stops_the_query_with_an_error() {
         let ctx = SessionContext::new_with_config(SessionConfig::new().with_target_partitions(1));
         let ctrl = schema(("m_steamID", DataType::UInt64));
-        let budget = QueueBudget::default();
+        let budget = QueueBudget::new(1 << 20);
         let (tx, rx) = unbounded_channel();
         register_streaming_table(
             &ctx,
@@ -802,7 +813,7 @@ mod tests {
             .unwrap();
 
         send_batch(one_row(&ctrl), &tx, &budget).unwrap();
-        budget.0.fetch_add(MAX_QUEUED_BYTES, Ordering::Relaxed);
+        budget.queued.fetch_add(budget.limit, Ordering::Relaxed);
         let err = send_batch(one_row(&ctrl), &tx, &budget).unwrap_err();
         assert!(err.to_string().contains("queued unread"), "{err}");
 
