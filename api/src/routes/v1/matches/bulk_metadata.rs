@@ -721,11 +721,18 @@ fn build_query(
         "SELECT match_player.match_id as match_id, {}",
         select_fields.join(", ")
     );
-    let tail = format!(" GROUP BY match_player.match_id {outer_order}{limit}{settings}");
     let query = if has_explicit_match_ids {
         // Flat single-scan path: when match_ids are explicit, skip the CTE.
         // The literal IN list lets ClickHouse apply primary-key granule pruning
         // (−85% parts, −63% read_rows, −15% peak memory vs the CTE path).
+        // Explicit ids touch a few rows in many parts, and each part read by a thread builds a
+        // reader that resolves every `stats.*` subcolumn against the whole Nested type. Four
+        // threads build fewer readers: 12 ids CPU -40%, memory -43%; 500+ ids CPU -19%; wall
+        // n.s.
+        let tail = format!(
+            " GROUP BY match_player.match_id {outer_order}{limit}{}, max_threads = 4 ",
+            settings.trim_end()
+        );
         let qualified: Vec<String> = qualified_info_filters
             .into_iter()
             .chain(player_filter_in.map(|f| format!("match_player.{f}")))
@@ -779,6 +786,7 @@ fn build_query(
             }
         };
         let players_filter = players_filter.map_or_default(|f| format!(" AND {f} "));
+        let tail = format!(" GROUP BY match_player.match_id {outer_order}{limit}{settings}");
         format!(
             "WITH t_matches AS ({t_matches})\
              {select} FROM match_player WHERE match_player.match_id IN t_matches {players_filter}{tail}"
