@@ -232,7 +232,7 @@ impl McpServer {
                      (https://api.deadlock-api.com/docs).",
                     status.quota.limit,
                     status.quota.period.as_secs(),
-                    status.next_request_in().as_secs(),
+                    status.retry_after_secs(),
                 ),
                 "RateLimitError".to_owned(),
             )),

@@ -11,7 +11,9 @@
 //!
 //! Errors are not cached, except that a query which ran into the timeout fails fast with the same
 //! error for [`TIMEOUT_COOLDOWN`] instead of running again. Clients retry timed-out queries, and
-//! every retry burns the same CPU and times out again under the load it adds to.
+//! every retry burns the same CPU and times out again under the load it adds to. Both the timeout
+//! and the fail-fast answers carry the time left until the query runs again
+//! ([`ChQueryError::TimedOut`]), which the API sends as `Retry-After`.
 
 pub(crate) mod disk;
 
@@ -83,8 +85,10 @@ pub(crate) struct ChCache<T> {
     name: String,
     ttl: Duration,
     memory: moka::future::Cache<u128, Entry<T>>,
-    /// The timeout errors of recently timed-out queries, see [`TIMEOUT_COOLDOWN`].
-    timed_out: moka::future::Cache<u128, Arc<clickhouse::error::Error>>,
+    timeout_cooldown: Duration,
+    /// The timeout errors of recently timed-out queries and when their cooldown ends, see
+    /// [`TIMEOUT_COOLDOWN`].
+    timed_out: moka::future::Cache<u128, (Arc<clickhouse::error::Error>, Instant)>,
     disk: DiskSource,
 }
 
@@ -113,6 +117,7 @@ where
                 .max_capacity(max_entries)
                 .expire_after(UntilDeadline)
                 .build(),
+            timeout_cooldown,
             timed_out: moka::future::Cache::builder()
                 .max_capacity(TIMEOUT_COOLDOWN_ENTRIES)
                 .time_to_live(timeout_cooldown)
@@ -130,7 +135,7 @@ where
 
     /// The cached result of `query_str`, else the disk tier's, else `fetch`'s. Concurrent misses
     /// of one query share a single lookup and fetch. Errors are not cached, but a query that
-    /// timed out returns the same timeout error without running for [`TIMEOUT_COOLDOWN`].
+    /// timed out returns [`ChQueryError::TimedOut`] without running for [`TIMEOUT_COOLDOWN`].
     pub(crate) async fn get_or_fetch<F>(
         &self,
         query_str: &str,
@@ -141,10 +146,13 @@ where
     {
         let key = query_cache_key(query_str);
         if !self.memory.contains_key(&key)
-            && let Some(e) = self.timed_out.get(&key).await
+            && let Some((error, until)) = self.timed_out.get(&key).await
         {
             metrics::counter!("ch_cache_timeout_fail_fast").increment(1);
-            return Err(ChQueryError::Clickhouse(e));
+            return Err(ChQueryError::TimedOut {
+                error,
+                retry_after: until.saturating_duration_since(Instant::now()),
+            });
         }
         let result = self
             .memory
@@ -172,12 +180,22 @@ where
             .await
             .map(|entry| entry.value)
             .map_err(|e: Arc<ChQueryError>| (*e).clone());
-        if let Err(ChQueryError::Clickhouse(e)) = &result
-            && is_query_timeout(e)
-        {
-            self.timed_out.insert(key, Arc::clone(e)).await;
+        match result {
+            Err(ChQueryError::Clickhouse(error)) if is_query_timeout(&error) => {
+                // A cooldown past `Instant`'s range (absurd) ends right away, like the moka TTL.
+                let until = Instant::now()
+                    .checked_add(self.timeout_cooldown)
+                    .unwrap_or_else(Instant::now);
+                self.timed_out
+                    .insert(key, (Arc::clone(&error), until))
+                    .await;
+                Err(ChQueryError::TimedOut {
+                    error,
+                    retry_after: self.timeout_cooldown,
+                })
+            }
+            result => result,
         }
-        result
     }
 }
 
@@ -257,13 +275,21 @@ mod tests {
         let first = cache
             .get_or_fetch("SELECT 1", async { Err(timeout()) })
             .await;
-        assert!(matches!(first, Err(ChQueryError::Clickhouse(ref e)) if is_query_timeout(e)));
+        assert!(matches!(
+            first,
+            Err(ChQueryError::TimedOut { ref error, retry_after })
+                if is_query_timeout(error) && retry_after == Duration::from_millis(100)
+        ));
 
         // The same query fails with the same error without running; other queries still run.
         let again = cache
             .get_or_fetch("SELECT 1", fetch_counted(&calls, vec![1]))
             .await;
-        assert!(matches!(again, Err(ChQueryError::Clickhouse(ref e)) if is_query_timeout(e)));
+        assert!(matches!(
+            again,
+            Err(ChQueryError::TimedOut { ref error, retry_after })
+                if is_query_timeout(error) && retry_after <= Duration::from_millis(100)
+        ));
         assert_eq!(calls.load(Ordering::Relaxed), 0);
         let other = cache
             .get_or_fetch("SELECT 2", fetch_counted(&calls, vec![2]))

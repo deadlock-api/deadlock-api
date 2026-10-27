@@ -4,7 +4,7 @@ use axum::http::HeaderMap;
 use chrono::{DateTime, Utc};
 use strum::{EnumIs, IntoStaticStr};
 
-use crate::error::{APIError, APIResult};
+use crate::error::{APIError, APIResult, retry_after_secs};
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, EnumIs, IntoStaticStr)]
 pub(super) enum QuotaType {
@@ -66,7 +66,7 @@ impl Status {
         self.remaining() == 0
     }
 
-    pub(crate) fn next_request_in(&self) -> Duration {
+    fn next_request_in(&self) -> Duration {
         // If the quota is not exceeded, then there is no need to wait
         if !self.is_exceeded() {
             return Duration::from_millis(0);
@@ -80,15 +80,28 @@ impl Status {
             .unwrap_or_default()
     }
 
+    /// Whole seconds until the next request is allowed: 0 while the quota has requests left,
+    /// else rounded up to at least 1, so a client waiting this long is not rejected again.
+    pub(crate) fn retry_after_secs(&self) -> u64 {
+        if self.is_exceeded() {
+            retry_after_secs(self.next_request_in())
+        } else {
+            0
+        }
+    }
+
     pub(crate) fn response_headers(&self) -> HeaderMap {
         // Computed once so `RateLimit-Reset` and `Retry-After` always agree.
-        let next_request_in = self.next_request_in().as_secs();
+        let retry_after = self.retry_after_secs();
         let mut headers = HeaderMap::with_capacity(5);
         headers.append("RateLimit-Limit", self.quota.limit.into());
         headers.append("RateLimit-Period", self.quota.period.as_secs().into());
         headers.append("RateLimit-Remaining", self.remaining().into());
-        headers.append("RateLimit-Reset", next_request_in.into());
-        headers.append("Retry-After", next_request_in.into());
+        headers.append("RateLimit-Reset", retry_after.into());
+        // Only on rejections: these headers are on every rate-limited response.
+        if self.is_exceeded() {
+            headers.append("Retry-After", retry_after.into());
+        }
         headers
     }
 
@@ -99,5 +112,40 @@ impl Status {
             });
         }
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn status(requests: usize, oldest_request: DateTime<Utc>) -> Status {
+        Status {
+            quota: Quota::ip_limit(10, Duration::from_mins(1)),
+            requests,
+            oldest_request,
+        }
+    }
+
+    #[test]
+    fn retry_after_rounds_up_the_wait() {
+        let oldest = Utc::now() - chrono::TimeDelta::milliseconds(59_500);
+        let headers = status(10, oldest).response_headers();
+        assert_eq!(headers["Retry-After"], "1");
+        assert_eq!(headers["RateLimit-Reset"], "1");
+    }
+
+    #[test]
+    fn retry_after_is_at_least_a_second_once_the_window_passed() {
+        let oldest = Utc::now() - chrono::TimeDelta::minutes(2);
+        assert_eq!(status(10, oldest).response_headers()["Retry-After"], "1");
+    }
+
+    #[test]
+    fn no_retry_after_while_requests_are_left() {
+        let headers = status(3, Utc::now()).response_headers();
+        assert!(headers.get("Retry-After").is_none());
+        assert_eq!(headers["RateLimit-Reset"], "0");
+        assert_eq!(headers["RateLimit-Remaining"], "7");
     }
 }

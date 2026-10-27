@@ -1404,7 +1404,11 @@ cached_ch_query! {
 /// base table reads more than the rollup for the same request, so the retry would only time
 /// out as well, after spending another full query budget on a loaded server.
 fn retry_on_base_table(e: &ChQueryError) -> bool {
-    !matches!(e, ChQueryError::Clickhouse(e) if is_query_timeout(e))
+    match e {
+        ChQueryError::Busy(_) => true,
+        ChQueryError::Clickhouse(e) => !is_query_timeout(e),
+        ChQueryError::TimedOut { .. } => false,
+    }
 }
 
 async fn get_item_stats(
@@ -1567,6 +1571,10 @@ mod tests {
         assert!(!retry_on_base_table(&ChQueryError::from(
             clickhouse::error::Error::TimedOut
         )));
+        assert!(!retry_on_base_table(&ChQueryError::TimedOut {
+            error: Arc::new(clickhouse::error::Error::TimedOut),
+            retry_after: core::time::Duration::from_mins(10),
+        }));
         let missing_table = ChQueryError::from(clickhouse::error::Error::BadResponse(
             "Code: 60. DB::Exception: Unknown table expression identifier (UNKNOWN_TABLE)"
                 .to_owned(),

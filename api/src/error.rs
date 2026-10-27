@@ -1,3 +1,4 @@
+use core::time::Duration;
 use std::sync::Arc;
 
 use axum::body::Body;
@@ -49,6 +50,11 @@ pub(super) enum APIError {
     Request(#[from] reqwest::Error),
     #[error("Clickhouse Error: {0}")]
     Clickhouse(Arc<clickhouse::error::Error>),
+    #[error("Clickhouse Error: {error}")]
+    ClickhouseTimedOut {
+        error: Arc<clickhouse::error::Error>,
+        retry_after: Duration,
+    },
     #[error("{0}")]
     ClickhouseBusy(crate::services::ch_admission::Busy),
     #[error("PostgreSQL Error: {0}")]
@@ -110,6 +116,9 @@ impl From<ChQueryError> for APIError {
         match e {
             ChQueryError::Busy(busy) => Self::ClickhouseBusy(busy),
             ChQueryError::Clickhouse(e) => Self::Clickhouse(e),
+            ChQueryError::TimedOut { error, retry_after } => {
+                Self::ClickhouseTimedOut { error, retry_after }
+            }
         }
     }
 }
@@ -157,6 +166,18 @@ pub(crate) fn is_query_timeout(e: &clickhouse::error::Error) -> bool {
     }
 }
 
+/// `wait` in whole seconds for a `Retry-After` header: rounded up and at least 1, as a client
+/// that retries after `0` comes back before the wait is over.
+pub(crate) fn retry_after_secs(wait: Duration) -> u64 {
+    let secs = wait.as_secs();
+    let secs = if wait.subsec_nanos() > 0 {
+        secs.saturating_add(1)
+    } else {
+        secs
+    };
+    secs.max(1)
+}
+
 fn query_timeout_response() -> Response<Body> {
     build_error_response(
         StatusCode::GATEWAY_TIMEOUT,
@@ -199,7 +220,7 @@ impl IntoResponse for APIError {
                         },
                         "requests": status.requests,
                         "remaining": status.remaining(),
-                        "next_request_in": status.next_request_in().as_secs(),
+                        "next_request_in": status.retry_after_secs(),
                     }),
                 );
                 res.headers_mut().extend(status.response_headers());
@@ -251,6 +272,13 @@ impl IntoResponse for APIError {
                     error!("Clickhouse error: {e}");
                     Self::internal("Database error.").into_response()
                 }
+            }
+            Self::ClickhouseTimedOut { error, retry_after } => {
+                warn!("Database query timed out: {error}");
+                let mut res = query_timeout_response();
+                res.headers_mut()
+                    .insert(header::RETRY_AFTER, retry_after_secs(retry_after).into());
+                res
             }
             Self::ClickhouseBusy(busy) => {
                 warn!("Rejected query: {busy}");
@@ -326,6 +354,25 @@ mod tests {
         let response = error.into_response();
         assert_eq!(response.status(), StatusCode::SERVICE_UNAVAILABLE);
         assert_eq!(response.headers()[header::RETRY_AFTER], "5");
+    }
+
+    #[test]
+    fn retry_after_secs_rounds_up_to_at_least_one() {
+        assert_eq!(retry_after_secs(Duration::ZERO), 1);
+        assert_eq!(retry_after_secs(Duration::from_millis(1)), 1);
+        assert_eq!(retry_after_secs(Duration::from_secs(5)), 5);
+        assert_eq!(retry_after_secs(Duration::from_millis(5_001)), 6);
+    }
+
+    #[test]
+    fn clickhouse_timeout_cooldown_is_504_with_retry_after() {
+        let error = APIError::from(ChQueryError::TimedOut {
+            error: Arc::new(clickhouse::error::Error::TimedOut),
+            retry_after: Duration::from_millis(299_400),
+        });
+        let response = error.into_response();
+        assert_eq!(response.status(), StatusCode::GATEWAY_TIMEOUT);
+        assert_eq!(response.headers()[header::RETRY_AFTER], "300");
     }
 
     fn steam_proxy_status(status: StatusCode, body: &str) -> Response<Body> {

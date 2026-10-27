@@ -10,6 +10,7 @@
 mod controller;
 mod limiter;
 
+use core::time::Duration;
 use std::sync::{Arc, LazyLock};
 
 pub(crate) use controller::spawn_controller;
@@ -45,6 +46,13 @@ pub(crate) enum ChQueryError {
     Busy(#[from] Busy),
     #[error("{0}")]
     Clickhouse(Arc<clickhouse::error::Error>),
+    /// The query ran into the timeout, now or within the cooldown of
+    /// [`crate::services::ch_cache`], and fails fast until `retry_after` has passed.
+    #[error("{error}")]
+    TimedOut {
+        error: Arc<clickhouse::error::Error>,
+        retry_after: Duration,
+    },
 }
 
 impl From<clickhouse::error::Error> for ChQueryError {
