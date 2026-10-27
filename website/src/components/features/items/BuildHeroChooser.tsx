@@ -9,11 +9,20 @@ import { Button } from "~/components/ui/button";
  * The Build Designer without a hero: every hero's portrait and name to pick from, since a build over all heroes'
  * games is rarely the one wanted. Picking sets the page's hero filter, which also holds the full searchable picker.
  */
-export function BuildHeroChooser({ onPick }: { onPick: (heroId: number) => void }) {
+export function BuildHeroChooser({
+  onPick,
+  children,
+}: {
+  onPick: (heroId: number) => void;
+  /** Actions in the header, such as importing a build. */
+  children?: React.ReactNode;
+}) {
   const { heroes } = useHeroRoster();
   return (
     <Panel>
-      <PanelHeader title="Pick a hero" icon={UserRound} size="sm" />
+      <PanelHeader title="Pick a hero" icon={UserRound} size="sm">
+        {children}
+      </PanelHeader>
       <PanelBody size="sm">
         {/* Portrait and name, in as many 4rem columns as fit: names a first-timer can read, three rows on a desktop and
             four columns on a phone. */}

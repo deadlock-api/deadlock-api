@@ -35,6 +35,7 @@ import {
   soulsAt,
   useBuildEconomy,
 } from "~/components/features/items/BuildEconomy";
+import { CopyGameBuildButton, ImportGameBuildButton } from "~/components/features/items/BuildGameCode";
 import { BuildHeroChooser } from "~/components/features/items/BuildHeroChooser";
 import { SavedBuildsMenu, SaveBuildButton } from "~/components/features/items/BuildSaves";
 import { BuildSkillOrder } from "~/components/features/items/BuildSkillOrder";
@@ -62,6 +63,7 @@ import type { Dayjs } from "~/dayjs";
 import { useHeroById } from "~/hooks/useAssetById";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { type BuildFocus, type BuildGoal, type CompleterStep, completeBuild, SELL_REFUND } from "~/lib/build-completer";
+import { PHASE_COUNT, STREET_BRAWL_ROUNDS, stageLabel, stageNames } from "~/lib/build-designer-code";
 import type { GameMode, MatchMode } from "~/lib/game-mode";
 import { formatClock } from "~/lib/stat-format";
 import { TONE_TEXT, toneOf, type Tone } from "~/lib/tone";
@@ -76,11 +78,6 @@ import {
 import { itemStatsQueryOptions } from "~/queries/item-stats-query";
 
 const PHASE_INTERVAL_S = 600;
-const PHASE_COUNT = 4;
-// Street brawl stages are rounds rather than time phases.
-const STREET_BRAWL_ROUNDS = 8;
-// Must match TIME_PHASE_BOUNDARIES on the API (0-9m, 9-20m, 20-30m, 30m+).
-const TIME_PHASE_LABELS = ["0–9m", "9–20m", "20–30m", "30m+"] as const;
 // Where the win rate bar under each choice reaches its end, in points from the build's own win rate.
 const CHANGE_SCALE = 10;
 // Below this share of games reaching a stage, its header marks the stage as one of long games.
@@ -121,15 +118,6 @@ const EMPTY_PATH: string[] = [];
 const PER_STAGE = ITEM_FLOW_DEFAULT_PER_COLUMN;
 const AT_ONCE = { limitUrlUpdates: throttle(50) };
 
-function stageLabel(column: number, isStreetBrawl: boolean): string {
-  if (isStreetBrawl) return `Round ${column + 1}`;
-  return TIME_PHASE_LABELS[column] ?? `Stage ${column + 1}`;
-}
-
-/**
- * The low end of a win rate's 95% interval once `shrink` games at `reference` are added to its own: the least it may
- * be, with a small sample pulled toward the reference first. `wins` may be fractional (an adjusted rate's).
- */
 function confidentRate(wins: number, matches: number, reference: number, shrink: number): number {
   return wilsonScoreInterval(wins + reference * shrink, matches + shrink)[0];
 }
@@ -516,16 +504,36 @@ function ItemPlan({
  */
 export function BuildFlowExplorer({ heroId, ...props }: BuildFlowExplorerProps) {
   const [, setHero] = useQueryState("hero", parseAsInteger);
+  // What a game build imported before picking a hero sets, as the designer would (its `setPath`).
+  const [, setPath] = useQueryState("build_path", parseAsArrayOf(parseAsString));
+  const [, setBuildMode] = useQueryState("build_mode", parseAsString);
+  const [, setSkills] = useQueryState("build_skills", parseAsArrayOf(parseAsInteger));
   // Set by a pick from the chooser: the designer then focuses its title once loaded, as the chooser's buttons are gone.
   const [picked, setPicked] = useState(false);
   if (heroId == null) {
+    const isStreetBrawl = props.gameMode === "street_brawl";
     return (
       <BuildHeroChooser
         onPick={(next) => {
           setPicked(true);
           startTransition(() => void setHero(next, AT_ONCE));
         }}
-      />
+      >
+        <ImportGameBuildButton
+          stageNames={stageNames(isStreetBrawl)}
+          onImport={(build) => {
+            if (build.heroId == null) return;
+            setPicked(true);
+            startTransition(() => {
+              void setHero(build.heroId, AT_ONCE);
+              void setPath(build.path.length > 0 ? build.path : null, AT_ONCE);
+              void setBuildMode(isStreetBrawl ? "street_brawl" : null, AT_ONCE);
+              void setSkills(build.skills.length > 0 ? build.skills : null, AT_ONCE);
+            });
+            toast(`Imported "${build.name || "game build"}"`);
+          }}
+        />
+      </BuildHeroChooser>
     );
   }
   return <BuildDesigner heroId={heroId} focusTitle={picked} {...props} />;
@@ -1180,6 +1188,20 @@ function BuildDesigner({
               ))}
             </Inline>
             <Inline gap={1}>
+              <ImportGameBuildButton
+                stageNames={stageNames(isStreetBrawl)}
+                onImport={(build) => {
+                  // A completion running would write its build over the imported one.
+                  stopCompletion();
+                  startTransition(() => {
+                    if (build.heroId != null && build.heroId !== heroId) void setHero(build.heroId, AT_ONCE);
+                    setPath(build.path.length > 0 ? build.path : null, AT_ONCE);
+                    void setSells(null, AT_ONCE);
+                    void setSkills(build.skills.length > 0 ? build.skills : null, AT_ONCE);
+                  });
+                  toast(`Imported "${build.name || "game build"}"`);
+                }}
+              />
               <SavedBuildsMenu
                 onOpen={(build) => {
                   // A completion running would write its build over the opened one.
@@ -1212,6 +1234,15 @@ function BuildDesigner({
               >
                 Copy link
               </CopyButton>
+              <CopyGameBuildButton
+                disabled={path.length === 0}
+                heroId={heroId}
+                name={`${hero?.name ?? "My"} build`}
+                path={path}
+                skills={skillOrder}
+                abilities={slotAbilities}
+                stageNames={stageNames(isStreetBrawl)}
+              />
               <Button
                 variant="ghost"
                 size="xs"
