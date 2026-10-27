@@ -67,7 +67,7 @@ aes-gcm = "0.11"
 hex = "0.4"
 hmac = "0.13"
 md5 = { package = "md-5", version = "0.11" }
-jsonwebtoken = { version = "11", features = ["rust_crypto"] }
+jsonwebtoken = { version = "11", features = ["aws_lc_rs"] }
 async-trait = "0.1.92"
 tantivy = { version = "0.27.0", features = ["zstd-compression"] }
 arc-swap = "1.9.3"

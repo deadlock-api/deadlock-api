@@ -57,3 +57,20 @@ pub(crate) fn validate_session_token(token: &str, secret: &str) -> JwtResult<Pat
 
     Ok(token_data.claims)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_session_token_roundtrip() {
+        let patron_id = Uuid::new_v4();
+        let token = create_session_token(patron_id, "secret").unwrap();
+        let claims = validate_session_token(&token, "secret").unwrap();
+        assert_eq!(claims.patron_id, patron_id);
+        assert!(matches!(
+            validate_session_token(&token, "other"),
+            Err(JwtError::InvalidToken)
+        ));
+    }
+}

@@ -1,6 +1,12 @@
 [advisories]
+# zstd 0.13 / zstd-safe 7 are pinned by arrow-ipc + parquet 59 (datafusion 55), clickhouse 0.15 and
+# wreq-util 3.0.0-rc.14, all on their latest releases. None of them reach the affected functions:
+# arrow/parquet use only zstd::bulk, clickhouse uses raw::Decoder::new into a zeroed buffer, and the
+# seekable feature is off. Drop these once those crates move to zstd >= 0.14.3.
 ignore = [
-    "RUSTSEC-2023-0071", # rsa: potential key recovery through timing sidechannels
+    "RUSTSEC-2026-0391", # zstd: raw Encoder/Decoder::with_context reuse leak
+    "RUSTSEC-2026-0398", # zstd-safe: Seekable::decompress set_len past capacity
+    "RUSTSEC-2026-0403", # zstd-safe: decompress_stream over uninitialized Vec on legacy frame error
 ]
 informational_warnings = ["unmaintained"] # warn for categories of informational advisories
 severity_threshold = "low" # CVSS severity ("none", "low", "medium", "high", "critical")
