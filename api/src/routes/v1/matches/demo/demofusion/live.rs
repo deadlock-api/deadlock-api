@@ -28,6 +28,7 @@ use haste_core::parser::{Context, Parser, Visitor};
 use haste_core::valveprotos::common::EDemoCommands;
 use serde::Deserialize;
 use tokio::sync::mpsc::{Receiver, Sender, UnboundedReceiver, UnboundedSender, unbounded_channel};
+use tokio_util::sync::CancellationToken;
 use tracing::{debug, info, warn};
 
 use super::entity_batch_builder::EntityBatchBuilder;
@@ -64,6 +65,9 @@ const MAX_QUEUED_FRAGMENTS: usize = 64;
 /// `status_tx` receives human-readable progress messages while the initial connection is retried, so
 /// a caller streaming this over SSE can surface them to a waiting client instead of going quiet.
 ///
+/// Cancelling `cancel` stops the broadcast fetch, which ends the parse even if nobody polls the
+/// returned stream any more (a disconnect the server never saw).
+///
 /// # Errors
 ///
 /// Returns an error if the broadcast cannot be started or its schema decoded, or for the same
@@ -72,6 +76,7 @@ pub(crate) async fn query_live(
     base_url: &str,
     query: &str,
     status_tx: UnboundedSender<String>,
+    cancel: CancellationToken,
 ) -> Result<SendableRecordBatchStream> {
     let referenced: HashSet<String> = extract_table_names(query)?.into_iter().collect();
 
@@ -155,7 +160,7 @@ pub(crate) async fn query_live(
         );
     }
 
-    spawn_producer(client, http, bytes_tx, base_url.to_owned());
+    spawn_producer(client, http, bytes_tx, base_url.to_owned(), cancel);
 
     let visitor = StreamingCollector {
         entities,
@@ -183,7 +188,8 @@ pub(crate) async fn query_live(
         .await?)
 }
 
-/// Forward each remaining fragment to the parser; dropping the sender on exit signals EOF to it.
+/// Forward each remaining fragment to the parser until the broadcast ends or `cancel` fires;
+/// dropping the sender on exit signals EOF to it.
 /// Why the broadcast stopped is logged with the relay's `/sync` answer at that moment, telling a
 /// finished match apart from a relay that was still serving when haste gave up on it.
 fn spawn_producer(
@@ -191,11 +197,19 @@ fn spawn_producer(
     mut http: BroadcastHttp<'static, reqwest::Client>,
     bytes_tx: Sender<Bytes>,
     broadcast_url: String,
+    cancel: CancellationToken,
 ) {
     tokio::spawn(async move {
         let mut fragments = 0u64;
         let error = loop {
-            match http.next_packet().await {
+            let packet = tokio::select! {
+                () = cancel.cancelled() => {
+                    debug!(broadcast_url, fragments, "Live broadcast fetch cancelled");
+                    return;
+                }
+                packet = http.next_packet() => packet,
+            };
+            match packet {
                 Some(Ok(bytes)) => {
                     if bytes_tx.send(bytes).await.is_err() {
                         // The query finished or the client went away.

@@ -8,7 +8,7 @@
 use core::convert::Infallible;
 use core::task::Poll;
 use core::time::Duration;
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 use std::sync::{LazyLock, Mutex, PoisonError};
 
 use axum::extract::{Query, State};
@@ -22,6 +22,7 @@ use reqwest::StatusCode;
 use serde::Deserialize;
 use tokio::sync::mpsc::{UnboundedReceiver, unbounded_channel};
 use tokio::time::Instant;
+use tokio_util::sync::CancellationToken;
 use utoipa::IntoParams;
 
 use super::demofusion;
@@ -37,53 +38,77 @@ use crate::utils::broadcast_url::validate_broadcast_url;
 const LIVE_QUERY_TIMEOUT: Duration = Duration::from_hours(2);
 /// Live queries one client (API key, Cloudflare Worker or IP) may stream at once. Every stream runs
 /// its own broadcast fetch and parse, so a client that reconnects without closing its old streams
-/// would otherwise stack hundreds of parses of the same match (host OOM kills, Oct 2026).
+/// would otherwise stack hundreds of parses of the same match (host OOM kills, Oct 2026). Behind
+/// Cloudflare a client's disconnect often never reaches the server, so a new stream past the limit
+/// ends the client's oldest one instead of being turned away.
 const MAX_STREAMS_PER_CLIENT: usize = 4;
 /// Live queries this replica streams at once, across all clients.
 const MAX_STREAMS: usize = 48;
 
-/// Concurrent live queries per client id, plus their total.
+/// Running live queries per client id, oldest first, plus their total.
 #[derive(Default)]
 struct StreamSlots {
-    per_client: HashMap<String, usize>,
+    per_client: HashMap<String, VecDeque<(u64, CancellationToken)>>,
     total: usize,
+    next_id: u64,
 }
 
 static STREAM_SLOTS: LazyLock<Mutex<StreamSlots>> = LazyLock::new(Mutex::default);
 
-/// One running live query; frees its slot on drop.
+/// One running live query; frees its slot on drop unless a newer stream of the same client
+/// already took it over.
 struct StreamSlot {
     client_id: String,
+    id: u64,
+    /// Cancelled when a newer stream of the same client evicts this one.
+    evicted: CancellationToken,
 }
 
 impl StreamSlot {
-    /// Takes a slot for `client_id`, or explains which limit is reached.
+    /// Takes a slot for `client_id`, ending the client's oldest stream if it is at its limit.
+    /// Fails only when the replica as a whole is full.
     fn acquire(client_id: String) -> Result<Self, &'static str> {
-        let mut slots = STREAM_SLOTS.lock().unwrap_or_else(PoisonError::into_inner);
-        if slots.total >= MAX_STREAMS {
+        let mut guard = STREAM_SLOTS.lock().unwrap_or_else(PoisonError::into_inner);
+        let slots = &mut *guard;
+        let streams = slots.per_client.entry(client_id.clone()).or_default();
+        if streams.len() >= MAX_STREAMS_PER_CLIENT {
+            if let Some((_, oldest)) = streams.pop_front() {
+                oldest.cancel();
+                slots.total = slots.total.saturating_sub(1);
+            }
+        } else if slots.total >= MAX_STREAMS {
+            if streams.is_empty() {
+                slots.per_client.remove(&client_id);
+            }
             return Err("Too many live queries are running on the server, try again later");
         }
-        let count = slots.per_client.entry(client_id.clone()).or_default();
-        if *count >= MAX_STREAMS_PER_CLIENT {
-            return Err(
-                "Too many concurrent live queries for this client: close a running stream first",
-            );
-        }
-        *count = count.saturating_add(1);
+        let id = slots.next_id;
+        slots.next_id = slots.next_id.wrapping_add(1);
+        let evicted = CancellationToken::new();
+        streams.push_back((id, evicted.clone()));
         slots.total = slots.total.saturating_add(1);
-        Ok(Self { client_id })
+        Ok(Self {
+            client_id,
+            id,
+            evicted,
+        })
     }
 }
 
 impl Drop for StreamSlot {
     fn drop(&mut self) {
-        let mut slots = STREAM_SLOTS.lock().unwrap_or_else(PoisonError::into_inner);
-        slots.total = slots.total.saturating_sub(1);
-        if let Some(count) = slots.per_client.get_mut(&self.client_id) {
-            *count = count.saturating_sub(1);
-            if *count == 0 {
-                slots.per_client.remove(&self.client_id);
-            }
+        let mut guard = STREAM_SLOTS.lock().unwrap_or_else(PoisonError::into_inner);
+        let slots = &mut *guard;
+        let Some(streams) = slots.per_client.get_mut(&self.client_id) else {
+            return;
+        };
+        let before = streams.len();
+        streams.retain(|(id, _)| *id != self.id);
+        if streams.len() < before {
+            slots.total = slots.total.saturating_sub(1);
+        }
+        if streams.is_empty() {
+            slots.per_client.remove(&self.client_id);
         }
     }
 }
@@ -141,8 +166,9 @@ hero id or pawn entity index rather than through `m_hPawn`.
 
 With `match_id`, only spectating counts against the limits; a match spectated within the last hour is served from cache.
 
-At most 4 live queries per client (API key, or IP without one) stream at once; further requests get a
-`429` until a stream ends or its connection is closed. Close streams you no longer read.
+At most 4 live queries per client (API key, or IP without one) stream at once. A 5th ends the
+client's oldest stream with an `error` event (status 409), so open a new stream only when you no
+longer need an old one. A `429` means the server as a whole is at its live query limit.
 
 A query whose result rows queue up unread (a client not reading the stream, or a join/aggregation
 that holds rows until the broadcast ends) is stopped with an `error` event once it buffers 256 MiB.
@@ -164,7 +190,7 @@ pub(super) async fn live_query(
             ],
         )
         .await?;
-    // Taken before spectating so a client at its stream limit doesn't spend spectate quota.
+    // Taken before spectating so a full server doesn't spend spectate quota.
     let slot = StreamSlot::acquire(rate_limit_key.client_id())
         .map_err(|reason| APIError::status_msg(StatusCode::TOO_MANY_REQUESTS, reason))?;
 
@@ -192,8 +218,11 @@ pub(super) async fn live_query(
     // runs lazily inside the stream so a stale/unavailable relay surfaces as a terminal `error`
     // event rather than a pre-response gateway error, and the keep-alive ping holds the connection
     // open through the wait for the signon fragment.
-    let stream = live_sse(broadcast_url, params.query)
-        .take_until(crate::SHUTDOWN_TOKEN.clone().cancelled_owned());
+    let evicted = slot.evicted.clone();
+    let stream = live_sse(broadcast_url, params.query, evicted.clone())
+        .take_until(crate::SHUTDOWN_TOKEN.clone().cancelled_owned())
+        .take_until(evicted.clone().cancelled_owned())
+        .chain(evicted_event(evicted));
     Ok(Sse::new(release_on_end(stream, slot)).keep_alive(
         KeepAlive::new()
             .interval(Duration::from_secs(15))
@@ -205,7 +234,11 @@ pub(super) async fn live_query(
 /// before it completes. On success, stream result rows; on setup failure, emit a single `error`
 /// event followed by the terminal `end`. Concurrently, any progress messages `query_live` reports
 /// while retrying the initial connection are forwarded as `status` events.
-fn live_sse(broadcast_url: String, query: String) -> impl Stream<Item = Result<Event, Infallible>> {
+fn live_sse(
+    broadcast_url: String,
+    query: String,
+    cancel: CancellationToken,
+) -> impl Stream<Item = Result<Event, Infallible>> {
     let now = Instant::now();
     // Adding a constant timeout of minutes to the current instant cannot overflow.
     let deadline = now.checked_add(LIVE_QUERY_TIMEOUT).unwrap_or(now);
@@ -213,7 +246,7 @@ fn live_sse(broadcast_url: String, query: String) -> impl Stream<Item = Result<E
     let status_stream = receiver_stream(status_rx).map(|msg| Ok(status_event(&msg)));
 
     let result_stream = futures::stream::once(async move {
-        demofusion::query_live(&broadcast_url, &query, status_tx).await
+        demofusion::query_live(&broadcast_url, &query, status_tx, cancel).await
     })
     .flat_map(move |res| match res {
         Ok(rows) => sse_rows(rows, deadline).left_stream(),
@@ -230,6 +263,25 @@ fn live_sse(broadcast_url: String, query: String) -> impl Stream<Item = Result<E
     });
 
     futures::stream::select(status_stream, result_stream)
+}
+
+/// The `error` and `end` events of a stream a newer one of the same client evicted; nothing for a
+/// stream that ended on its own.
+fn evicted_event(evicted: CancellationToken) -> impl Stream<Item = Result<Event, Infallible>> {
+    futures::stream::once(async move { evicted.is_cancelled() }).flat_map(|was_evicted| {
+        let events = if was_evicted {
+            vec![
+                Ok(error_event(
+                    StatusCode::CONFLICT,
+                    "Ended by a newer live query from the same client (at most 4 run at once)",
+                )),
+                Ok(end_event()),
+            ]
+        } else {
+            Vec::new()
+        };
+        futures::stream::iter(events)
+    })
 }
 
 /// Holds `slot` until `stream` yields its last item or is dropped, so a finished live query frees
@@ -341,21 +393,27 @@ mod tests {
     }
 
     #[test]
-    fn stream_slots_cap_each_client() {
-        let client = "test:stream_slots_cap_each_client".to_owned();
-        let slots: Vec<_> = (0..MAX_STREAMS_PER_CLIENT)
+    fn a_new_stream_past_the_limit_evicts_the_oldest() {
+        let client = "test:evicts_the_oldest".to_owned();
+        let mut slots: VecDeque<_> = (0..MAX_STREAMS_PER_CLIENT)
             .map(|_| StreamSlot::acquire(client.clone()).unwrap())
             .collect();
-        assert!(StreamSlot::acquire(client.clone()).is_err());
-        StreamSlot::acquire("test:other_client".to_owned()).unwrap();
-        drop(slots);
-        StreamSlot::acquire(client).unwrap();
+        slots.push_back(StreamSlot::acquire(client.clone()).unwrap());
+        let evicted = slots.pop_front().unwrap();
+        assert!(evicted.evicted.is_cancelled());
+        assert!(slots.iter().all(|s| !s.evicted.is_cancelled()));
+
+        // The evicted stream going away must not free a slot the newer streams hold.
+        drop(evicted);
+        slots.push_back(StreamSlot::acquire(client).unwrap());
+        assert!(slots.front().unwrap().evicted.is_cancelled());
+        assert_eq!(slots.iter().filter(|s| s.evicted.is_cancelled()).count(), 1);
     }
 
     #[tokio::test]
     async fn finished_stream_frees_its_slot_before_being_dropped() {
         let client = "test:finished_stream_frees_its_slot".to_owned();
-        let slots: Vec<_> = (1..MAX_STREAMS_PER_CLIENT)
+        let others: Vec<_> = (1..MAX_STREAMS_PER_CLIENT)
             .map(|_| StreamSlot::acquire(client.clone()).unwrap())
             .collect();
         let mut stream = Box::pin(release_on_end(
@@ -363,11 +421,28 @@ mod tests {
             StreamSlot::acquire(client.clone()).unwrap(),
         ));
         assert_eq!(stream.next().await, Some(1));
-        assert!(StreamSlot::acquire(client.clone()).is_err());
         assert_eq!(stream.next().await, Some(2));
         assert_eq!(stream.next().await, None);
-        // The ended stream (still alive here) must not hold its slot any more.
-        StreamSlot::acquire(client).unwrap();
-        drop(slots);
+        // The ended stream (still alive here) no longer counts, so no other stream is evicted.
+        let _new = StreamSlot::acquire(client).unwrap();
+        assert!(others.iter().all(|s| !s.evicted.is_cancelled()));
+    }
+
+    #[tokio::test]
+    async fn evicted_stream_ends_with_an_error() {
+        let token = CancellationToken::new();
+        let events: Vec<String> = evicted_event(token.clone())
+            .map(|event| format!("{:?}", event.unwrap()))
+            .collect()
+            .await;
+        assert!(events.is_empty(), "{events:?}");
+
+        token.cancel();
+        let events: Vec<String> = evicted_event(token)
+            .map(|event| format!("{:?}", event.unwrap()))
+            .collect()
+            .await;
+        assert_eq!(events.len(), 2, "{events:?}");
+        assert!(events[0].contains("newer live query"), "{events:?}");
     }
 }
