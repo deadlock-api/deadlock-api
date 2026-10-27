@@ -64,6 +64,15 @@ const GAME_MODE = "normal" as const;
 
 const SLOT_LABEL = { weapon: "Weapon", spirit: "Spirit", vitality: "Vitality" } as const;
 
+// SEO title test (seo-reports/LOG.md 2026-10-27): almost every search reaching an item page is the bare item name
+// ("fortitude deadlock"), so items with an odd id lead with what the item does; even ids keep the old title as the
+// control group. The win rate stays in the description. Roll the winner out to every item after the verdict.
+function itemTitle(itemId: number, itemName: string): string {
+  if (itemId % 2 === 0) return pageTitle(`${itemName} Win Rate & Best Heroes`);
+  const title = `${itemName} in Deadlock: What It Does & Best Heroes`;
+  return title.length <= 60 ? title : `${itemName} in Deadlock: What It Does`;
+}
+
 // Mirrors the items page's default request so both pages share one cache entry.
 function currentItemStatsParams(seasons: readonly SeasonInfo[], preference: DateFilterPreference = "season") {
   return {
@@ -202,7 +211,7 @@ export const Route = createFileRoute("/analytics/items/$itemName")({
       ? `${itemName} wins ${formatPercent(summary.winRate)} of ${rankRange} Deadlock matches (#${summary.rank} of ${summary.itemCount} items)${usage}. Best heroes, common pairings, and buy timing, updated daily.`
       : `${itemName} win rate, best heroes, common pairings, and buy timing in Deadlock. Live stats from tracked matches, updated daily.`;
     return seo({
-      title: pageTitle(`${itemName} Win Rate & Best Heroes`),
+      title: itemTitle(loaderData.itemId, itemName),
       description,
       path: `/analytics/items/${slug}`,
       ogImage: image ?? undefined,
