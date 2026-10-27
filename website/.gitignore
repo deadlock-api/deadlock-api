@@ -5,6 +5,8 @@ dist
 .tanstack
 .wrangler
 *.tsbuildinfo
+# Built from wasm/ by scripts/build-wasm.mjs
+src/wasm/
 .env
 .env.local
 # Secrets for `wrangler dev`, like .env for the Vite dev server.
