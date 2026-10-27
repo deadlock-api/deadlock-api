@@ -12,6 +12,7 @@ use std::sync::Arc;
 
 use datafusion::arrow::array::{ArrayRef, Int32Builder, StringBuilder};
 use datafusion::arrow::datatypes::SchemaRef;
+use datafusion::arrow::error::ArrowError;
 use datafusion::arrow::record_batch::{RecordBatch, RecordBatchOptions};
 
 use super::dynamic_builder::DynamicBuilder;
@@ -63,25 +64,19 @@ pub(super) struct EntityBatchBuilder {
 impl EntityBatchBuilder {
     /// Build for a projection — `projection` is a list of column indices into the
     /// full entity schema, in output order (matching `DataFusion`'s `scan` contract).
-    /// `None` means all columns.
+    /// `None` means all columns. Fails if a projected column is not in the entity schema.
     pub(super) fn new_projected(
         entity_schema: &EntitySchema,
         projection: Option<&[usize]>,
-    ) -> Self {
+    ) -> Result<Self, ArrowError> {
         let batch_size = INITIAL_CAPACITY;
         let full_schema = &entity_schema.arrow_schema;
         let total_cols = full_schema.fields().len();
 
-        let proj: Vec<usize> = match projection {
-            Some(p) => p.to_vec(),
-            None => (0..total_cols).collect(),
-        };
+        let proj: Vec<usize> =
+            projection.map_or_else(|| (0..total_cols).collect(), <[usize]>::to_vec);
 
-        let output_schema: SchemaRef = Arc::new(
-            full_schema
-                .project(&proj)
-                .expect("projection indices valid for entity schema"),
-        );
+        let output_schema: SchemaRef = Arc::new(full_schema.project(&proj)?);
 
         // Map each entity-field Arrow column (index >= 3) to (field_index, offset).
         let field_col_info = build_field_col_info(&entity_schema.field_column_counts);
@@ -116,16 +111,25 @@ impl EntityBatchBuilder {
                     out_cols.push(OutCol::DeltaType);
                 }
                 c => {
-                    let (field_index, offset) = field_col_info[c - 3];
+                    let unknown_column = || {
+                        ArrowError::SchemaError(format!("Column {c} is not in the entity schema"))
+                    };
+                    let (field_index, offset) = c
+                        .checked_sub(3)
+                        .and_then(|i| field_col_info.get(i).copied())
+                        .ok_or_else(unknown_column)?;
+                    let (Some(field), Some(&key), Some(kind)) = (
+                        full_schema.fields().get(c),
+                        entity_schema.field_keys.get(field_index),
+                        entity_schema.field_kinds.get(field_index),
+                    ) else {
+                        return Err(unknown_column());
+                    };
                     let fb_idx = field_builders.len();
-                    field_builders.push(DynamicBuilder::new(
-                        full_schema.field(c).data_type(),
-                        batch_size,
-                    ));
+                    field_builders.push(DynamicBuilder::new(field.data_type(), batch_size));
                     out_cols.push(OutCol::Field(fb_idx));
 
-                    let key = entity_schema.field_keys[field_index];
-                    match &entity_schema.field_kinds[field_index] {
+                    match kind {
                         FieldKind::Plain => {
                             let pf_idx =
                                 *proj_field_index.entry(field_index).or_insert_with(|| {
@@ -133,11 +137,15 @@ impl EntityBatchBuilder {
                                         key,
                                         subcols: Vec::new(),
                                     });
-                                    proj_fields.len() - 1
+                                    proj_fields.len().saturating_sub(1)
                                 });
-                            proj_fields[pf_idx].subcols.push((offset, fb_idx));
+                            if let Some(pf) = proj_fields.get_mut(pf_idx) {
+                                pf.subcols.push((offset, fb_idx));
+                            }
                         }
                         FieldKind::DynList { extracts, len } => {
+                            let extract =
+                                extracts.get(offset).cloned().ok_or_else(unknown_column)?;
                             let af_idx =
                                 *array_field_index.entry(field_index).or_insert_with(|| {
                                     array_fields.push(ArrayField {
@@ -145,18 +153,18 @@ impl EntityBatchBuilder {
                                         len: *len,
                                         cols: Vec::new(),
                                     });
-                                    array_fields.len() - 1
+                                    array_fields.len().saturating_sub(1)
                                 });
-                            array_fields[af_idx]
-                                .cols
-                                .push((extracts[offset].clone(), fb_idx));
+                            if let Some(af) = array_fields.get_mut(af_idx) {
+                                af.cols.push((extract, fb_idx));
+                            }
                         }
                     }
                 }
             }
         }
 
-        Self {
+        Ok(Self {
             schema: output_schema,
             out_cols,
             proj_fields,
@@ -166,7 +174,7 @@ impl EntityBatchBuilder {
             delta_type_builder,
             field_builders,
             row_count: 0,
-        }
+        })
     }
 
     pub(super) fn append_entity(
@@ -195,11 +203,15 @@ impl EntityBatchBuilder {
             for pf in &self.proj_fields {
                 if let Some(value) = entity.get_field_value(&pf.key) {
                     for &(offset, fb_idx) in &pf.subcols {
-                        append_subcol(&mut self.field_builders[fb_idx], value, offset);
+                        if let Some(builder) = self.field_builders.get_mut(fb_idx) {
+                            append_subcol(builder, value, offset);
+                        }
                     }
                 } else {
                     for &(_, fb_idx) in &pf.subcols {
-                        self.field_builders[fb_idx].append_null();
+                        if let Some(builder) = self.field_builders.get_mut(fb_idx) {
+                            builder.append_null();
+                        }
                     }
                 }
             }
@@ -214,7 +226,9 @@ impl EntityBatchBuilder {
                     ArrayLen::Fixed(n) => (n as u64, true),
                 };
                 for (extract, fb_idx) in &af.cols {
-                    let builder = &mut self.field_builders[*fb_idx];
+                    let Some(builder) = self.field_builders.get_mut(*fb_idx) else {
+                        continue;
+                    };
                     for i in 0..count {
                         let elem_key = add_u64_to_hash(af.base_key, add_u64_to_hash(0, i));
                         match extract {
@@ -244,11 +258,11 @@ impl EntityBatchBuilder {
             }
         }
 
-        self.row_count += 1;
+        self.row_count = self.row_count.saturating_add(1);
     }
 
     /// Finish all builders into the table's single `RecordBatch`.
-    pub(super) fn finish(&mut self) -> Result<RecordBatch, datafusion::arrow::error::ArrowError> {
+    pub(super) fn finish(&mut self) -> Result<RecordBatch, ArrowError> {
         let row_count = self.row_count;
         let mut field_arrays: Vec<Option<ArrayRef>> = self
             .field_builders
@@ -268,20 +282,27 @@ impl EntityBatchBuilder {
             .as_mut()
             .map(datafusion::arrow::array::GenericByteBuilder::finish);
 
+        // Every output column has exactly one builder, set up together in `new_projected`.
+        let missing =
+            || ArrowError::InvalidArgumentError("Output column has no builder".to_owned());
         let mut arrays: Vec<ArrayRef> = Vec::with_capacity(self.out_cols.len());
         for out in &self.out_cols {
-            match out {
-                OutCol::Tick => arrays.push(Arc::new(tick.take().unwrap())),
-                OutCol::EntityIndex => arrays.push(Arc::new(entity_index.take().unwrap())),
-                OutCol::DeltaType => arrays.push(Arc::new(delta_type.take().unwrap())),
-                OutCol::Field(idx) => arrays.push(field_arrays[*idx].take().unwrap()),
-            }
+            let array: ArrayRef = match out {
+                OutCol::Tick => Arc::new(tick.take().ok_or_else(missing)?),
+                OutCol::EntityIndex => Arc::new(entity_index.take().ok_or_else(missing)?),
+                OutCol::DeltaType => Arc::new(delta_type.take().ok_or_else(missing)?),
+                OutCol::Field(idx) => field_arrays
+                    .get_mut(*idx)
+                    .and_then(Option::take)
+                    .ok_or_else(missing)?,
+            };
+            arrays.push(array);
         }
 
         self.row_count = 0;
 
         RecordBatch::try_new_with_options(
-            self.schema.clone(),
+            Arc::clone(&self.schema),
             arrays,
             &RecordBatchOptions::new().with_row_count(Some(row_count)),
         )
@@ -309,19 +330,16 @@ fn vector_slice(value: &FieldValue) -> Option<&[f32]> {
 
 /// Extract component `c` of a vector-valued field, or `None` if the value isn't a vector.
 fn vector_component(value: &FieldValue, c: usize) -> Option<f32> {
-    vector_slice(value).and_then(|a| a.get(c).copied())
+    let a = vector_slice(value)?;
+    a.get(c).copied()
 }
 
 fn append_subcol(builder: &mut DynamicBuilder, value: &FieldValue, offset: usize) {
     match vector_slice(value) {
         // Scalar value: append it directly.
-        None => {
-            let _ = builder.append_field_value(value);
-        }
+        None => builder.append_field_value(value),
         Some(arr) => match arr.get(offset).copied() {
-            Some(v) => {
-                let _ = builder.append_field_value(&FieldValue::F32(v));
-            }
+            Some(v) => builder.append_field_value(&FieldValue::F32(v)),
             None => builder.append_null(),
         },
     }
@@ -337,7 +355,7 @@ fn build_field_col_info(field_column_counts: &[usize]) -> Vec<(usize, usize)> {
         .collect()
 }
 
-fn delta_header_to_str(delta: DeltaHeader) -> &'static str {
+const fn delta_header_to_str(delta: DeltaHeader) -> &'static str {
     match delta {
         DeltaHeader::CREATE => "create",
         DeltaHeader::UPDATE => "update",
@@ -373,7 +391,7 @@ mod tests {
     #[test]
     fn test_new_creates_empty_builder() {
         let schema = make_simple_entity_schema();
-        let builder = EntityBatchBuilder::new_projected(&schema, None);
+        let builder = EntityBatchBuilder::new_projected(&schema, None).unwrap();
 
         assert_eq!(builder.row_count, 0);
     }
@@ -382,7 +400,7 @@ mod tests {
     fn test_projection_subset_and_order() {
         let schema = make_simple_entity_schema();
         // Project delta_type (2), tick (0) — reordered subset, omitting health.
-        let builder = EntityBatchBuilder::new_projected(&schema, Some(&[2, 0]));
+        let builder = EntityBatchBuilder::new_projected(&schema, Some(&[2, 0])).unwrap();
 
         assert_eq!(builder.schema.fields().len(), 2);
         assert_eq!(builder.schema.field(0).name(), "delta_type");

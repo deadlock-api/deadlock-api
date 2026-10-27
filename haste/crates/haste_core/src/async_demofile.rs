@@ -1,4 +1,4 @@
-use tokio::io::{AsyncRead, AsyncReadExt};
+use tokio::io::{AsyncRead, AsyncReadExt as _};
 
 use crate::async_demostream::{AsyncDemoStream, read_cmd_header_async};
 use crate::demofile::{
@@ -48,7 +48,7 @@ impl<R: AsyncRead + Unpin> AsyncDemoFile<R> {
         })
     }
 
-    pub fn demo_header(&self) -> &DemoHeader {
+    pub const fn demo_header(&self) -> &DemoHeader {
         &self.demo_header
     }
 }

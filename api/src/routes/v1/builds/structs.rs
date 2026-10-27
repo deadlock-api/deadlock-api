@@ -1,3 +1,8 @@
+#![expect(
+    clippy::same_name_method,
+    reason = "`SimpleObject` generates a `name` getter for the `name` field, which `ToSchema::name` shadows"
+)]
+
 use async_graphql::SimpleObject;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;

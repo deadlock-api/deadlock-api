@@ -69,10 +69,6 @@ where
     let steam_id64 = str_deserialized
         .parse::<u64>()
         .map_err(serde::de::Error::custom)?;
-    // Defensive: if the field is already an account_id, return as-is.
-    Ok(if steam_id64 < common::STEAM_ID_IDENT {
-        steam_id64 as u32
-    } else {
-        common::steam_id64_to_account_id(steam_id64)
-    })
+    // The account id is the low 32 bits, so a field that already is an account id is kept as-is.
+    Ok(common::steam_id64_to_account_id(steam_id64))
 }

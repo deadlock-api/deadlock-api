@@ -37,7 +37,6 @@ pub(crate) async fn run_cli() -> Result<(), crate::Error> {
         } => {
             common::init_metrics().map_err(crate::Error::InitMetrics)?;
             common::run_until_shutdown(crate::cmd::scrape_hltv::run(spectate_server_url)).await?;
-            Ok(())
         }
         Commands::RunSpectateBot {
             proxy_url,
@@ -50,7 +49,7 @@ pub(crate) async fn run_cli() -> Result<(), crate::Error> {
                 max_spectating_matches,
             )
             .await?;
-            Ok(())
         }
     }
+    Ok(())
 }

@@ -5,35 +5,22 @@ use datafusion::arrow::datatypes::{DataType, Field};
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) enum FieldType {
     Scalar(DataType),
-    Vector2 {
-        base: DataType,
-    },
-    Vector3 {
-        base: DataType,
-    },
-    Vector4 {
-        base: DataType,
-    },
-    FixedArray {
-        element: Box<FieldType>,
-        length: usize,
-    },
-    DynamicArray {
-        element: Box<FieldType>,
-    },
-    Nested {
-        serializer_name: String,
-    },
+    Vector2 { base: DataType },
+    Vector3 { base: DataType },
+    Vector4 { base: DataType },
+    FixedArray { element: Box<Self>, length: usize },
+    DynamicArray { element: Box<Self> },
+    Nested { serializer_name: String },
 }
 
 impl FieldType {
     pub(crate) fn to_arrow_type(&self) -> DataType {
         match self {
-            FieldType::Scalar(dt) => dt.clone(),
-            FieldType::Vector2 { base }
-            | FieldType::Vector3 { base }
-            | FieldType::Vector4 { base } => base.clone(),
-            FieldType::FixedArray { element, length } => {
+            Self::Scalar(dt) => dt.clone(),
+            Self::Vector2 { base } | Self::Vector3 { base } | Self::Vector4 { base } => {
+                base.clone()
+            }
+            Self::FixedArray { element, length } => {
                 #[expect(
                     clippy::cast_possible_truncation,
                     clippy::cast_possible_wrap,
@@ -45,18 +32,18 @@ impl FieldType {
                     length,
                 )
             }
-            FieldType::DynamicArray { element } => {
+            Self::DynamicArray { element } => {
                 DataType::List(Arc::new(Field::new("item", element.to_arrow_type(), true)))
             }
-            FieldType::Nested { .. } => DataType::Null,
+            Self::Nested { .. } => DataType::Null,
         }
     }
 
-    pub(crate) fn component_suffixes(&self) -> &'static [&'static str] {
+    pub(crate) const fn component_suffixes(&self) -> &'static [&'static str] {
         match self {
-            FieldType::Vector2 { .. } => &["__x", "__y"],
-            FieldType::Vector3 { .. } => &["__x", "__y", "__z"],
-            FieldType::Vector4 { .. } => &["__x", "__y", "__z", "__w"],
+            Self::Vector2 { .. } => &["__x", "__y"],
+            Self::Vector3 { .. } => &["__x", "__y", "__z"],
+            Self::Vector4 { .. } => &["__x", "__y", "__z", "__w"],
             _ => &[""],
         }
     }
@@ -138,7 +125,7 @@ pub(crate) fn parse_var_type(var_type: &str) -> FieldType {
             if var_type.starts_with('C') && var_type.chars().nth(1).is_some_and(char::is_uppercase)
             {
                 FieldType::Nested {
-                    serializer_name: var_type.to_string(),
+                    serializer_name: var_type.to_owned(),
                 }
             } else {
                 FieldType::Scalar(DataType::Binary)
@@ -148,26 +135,18 @@ pub(crate) fn parse_var_type(var_type: &str) -> FieldType {
 }
 
 fn extract_generic<'a>(var_type: &'a str, generic_name: &str) -> Option<&'a str> {
-    if var_type.starts_with(generic_name) && var_type.contains('<') {
-        let start = var_type.find('<')? + 1;
-        let end = var_type.rfind('>')?;
-        if start < end {
-            return Some(&var_type[start..end]);
-        }
+    if !var_type.starts_with(generic_name) {
+        return None;
     }
-    None
+    let (_, rest) = var_type.split_once('<')?;
+    let (inner, _) = rest.rsplit_once('>')?;
+    (!inner.is_empty()).then_some(inner)
 }
 
 fn extract_fixed_array(var_type: &str) -> Option<(&str, usize)> {
-    if var_type.ends_with(']') {
-        let bracket_start = var_type.rfind('[')?;
-        let element_type = &var_type[..bracket_start];
-        let length_str = &var_type[bracket_start + 1..var_type.len() - 1];
-        let length = length_str.parse().ok()?;
-        Some((element_type, length))
-    } else {
-        None
-    }
+    let (element_type, length_str) = var_type.strip_suffix(']')?.rsplit_once('[')?;
+    let length = length_str.parse().ok()?;
+    Some((element_type, length))
 }
 
 #[cfg(test)]

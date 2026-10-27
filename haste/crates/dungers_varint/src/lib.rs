@@ -1,17 +1,23 @@
 #![forbid(unsafe_code)]
-#![deny(clippy::all)]
-#![deny(unreachable_pub)]
-#![deny(clippy::correctness)]
-#![deny(clippy::suspicious)]
-#![deny(clippy::style)]
-#![deny(clippy::complexity)]
-#![deny(clippy::perf)]
-#![deny(clippy::pedantic)]
-#![deny(clippy::std_instead_of_core)]
-#![allow(clippy::missing_errors_doc)]
-#![allow(clippy::cast_possible_truncation)]
-#![allow(clippy::cast_possible_wrap)]
-#![allow(clippy::cast_sign_loss)]
+#![cfg_attr(
+    test,
+    allow(
+        clippy::arithmetic_side_effects,
+        clippy::disallowed_macros,
+        clippy::disallowed_methods,
+        clippy::expect_used,
+        clippy::indexing_slicing,
+        clippy::panic,
+        clippy::panic_in_result_fn,
+        clippy::print_stderr,
+        clippy::print_stdout,
+        clippy::string_slice,
+        clippy::unreachable,
+        clippy::unwrap_in_result,
+        clippy::unwrap_used,
+        reason = "tests may panic"
+    )
+)]
 
 use std::io;
 
@@ -50,25 +56,25 @@ pub enum VarintError {
 //        << decode <<
 #[must_use]
 #[inline]
-pub fn zigzag_encode64(n: i64) -> u64 {
-    ((n << 1) ^ (n >> 63)) as u64
+pub const fn zigzag_encode64(n: i64) -> u64 {
+    ((n << 1) ^ (n >> 63)).cast_unsigned()
 }
 #[must_use]
 #[inline]
-pub fn zigzag_decode64(n: u64) -> i64 {
-    (n >> 1) as i64 ^ -((n & 1) as i64)
-}
-
-#[must_use]
-#[inline]
-pub fn zigzag_encode32(n: i32) -> u32 {
-    ((n << 1) ^ (n >> 31)) as u32
+pub const fn zigzag_decode64(n: u64) -> i64 {
+    (n >> 1).cast_signed() ^ (n & 1).cast_signed().wrapping_neg()
 }
 
 #[must_use]
 #[inline]
-pub fn zigzag_decode32(n: u32) -> i32 {
-    (n >> 1) as i32 ^ -((n & 1) as i32)
+pub const fn zigzag_encode32(n: i32) -> u32 {
+    ((n << 1) ^ (n >> 31)).cast_unsigned()
+}
+
+#[must_use]
+#[inline]
+pub const fn zigzag_decode32(n: u32) -> i32 {
+    (n >> 1).cast_signed() ^ (n & 1).cast_signed().wrapping_neg()
 }
 
 // Each byte in the varint has a continuation bit that indicates if the byte
@@ -90,29 +96,32 @@ pub fn zigzag_decode32(n: u32) -> i32 {
 #[inline]
 pub const fn max_varint_size<T>() -> usize {
     // The longest varint encoding for an integer uses 7 bits per byte.
-    (size_of::<T>() * 8).div_ceil(7)
+    size_of::<T>().saturating_mul(8).div_ceil(7)
 }
 
 #[inline]
 pub fn write_uvarint64<W: io::Write>(mut w: W, mut value: u64) -> Result<usize, VarintError> {
     let mut buf = [0u8; max_varint_size::<u64>()];
-    let mut count = 0;
+    let mut len = None;
 
-    loop {
+    // a u64 always fits into `buf`, so the loop always sets `len`.
+    for (count, slot) in (1_usize..).zip(&mut buf) {
+        let [low, ..] = value.to_le_bytes();
         if value < u64::from(CONTINUE_BIT) {
-            *buf.get_mut(count).ok_or(VarintError::MalformedVarint)? = value as u8;
-            count += 1;
+            *slot = low;
+            len = Some(count);
             break;
         }
 
-        *buf.get_mut(count).ok_or(VarintError::MalformedVarint)? =
-            ((value & u64::from(PAYLOAD_BITS)) | u64::from(CONTINUE_BIT)) as u8;
+        *slot = (low & PAYLOAD_BITS) | CONTINUE_BIT;
         value >>= 7;
-        count += 1;
     }
 
-    w.write_all(&buf[..count])?;
-    Ok(count)
+    let encoded = len
+        .and_then(|len| buf.get(..len))
+        .ok_or(VarintError::MalformedVarint)?;
+    w.write_all(encoded)?;
+    Ok(encoded.len())
 }
 
 #[inline]
@@ -120,11 +129,30 @@ pub fn write_varint64<W: io::Write>(w: W, value: i64) -> Result<usize, VarintErr
     write_uvarint64(w, zigzag_encode64(value))
 }
 
+/// unsigned integer types that varints can be decoded into.
+pub trait VarintInt: From<u8> + core::ops::BitOrAssign {
+    /// shifts left, dropping bits shifted past the type's width. `shift` is always below the
+    /// type's bit width (see [`max_varint_size`]).
+    #[must_use]
+    fn wrapping_shl(self, shift: u32) -> Self;
+}
+
+impl VarintInt for u32 {
+    #[inline]
+    fn wrapping_shl(self, shift: u32) -> Self {
+        Self::wrapping_shl(self, shift)
+    }
+}
+
+impl VarintInt for u64 {
+    #[inline]
+    fn wrapping_shl(self, shift: u32) -> Self {
+        Self::wrapping_shl(self, shift)
+    }
+}
+
 #[inline]
-fn read_uvarint<R: io::Read, T>(rdr: &mut R) -> Result<(T, usize), VarintError>
-where
-    T: From<u8> + core::ops::BitOrAssign + core::ops::Shl<usize, Output = T>,
-{
+fn read_uvarint<R: io::Read, T: VarintInt>(rdr: &mut R) -> Result<(T, usize), VarintError> {
     let mut buf = [0u8; 1];
 
     // NOTE: small values are more common then large ones, this is a performance win.
@@ -135,12 +163,13 @@ where
     }
 
     let mut value = T::from(byte & PAYLOAD_BITS);
-    for count in 1..max_varint_size::<T>() {
+    // `len` is the number of bytes read including this one, `shift` the payload offset.
+    for (len, shift) in (2..=max_varint_size::<T>()).zip((7_u32..).step_by(7)) {
         rdr.read_exact(&mut buf)?;
         let [byte] = buf;
-        value |= (T::from(byte & PAYLOAD_BITS)) << (count * 7);
+        value |= T::from(byte & PAYLOAD_BITS).wrapping_shl(shift);
         if (byte & CONTINUE_BIT) == 0 {
-            return Ok((value, count + 1));
+            return Ok((value, len));
         }
     }
 

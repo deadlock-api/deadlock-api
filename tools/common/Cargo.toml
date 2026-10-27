@@ -31,3 +31,6 @@ valveprotos = { workspace = true, features = ["gc-client", "serde"] }
 [dev-dependencies]
 clickhouse = { workspace = true, features = ["test-util"] }
 tokio = { workspace = true, features = ["sync", "time", "macros", "rt-multi-thread"] }
+
+[lints]
+workspace = true

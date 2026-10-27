@@ -5,7 +5,7 @@ use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
 use crate::context::AppState;
-use crate::error::{APIError, LogInternal};
+use crate::error::{APIError, LogInternal as _};
 use crate::middleware::cache::CacheControlMiddleware;
 use crate::services::patreon::repository::PatronRepository;
 use crate::services::patreon::steam_accounts_repository::SteamAccountsRepository;

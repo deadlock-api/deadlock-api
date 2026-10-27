@@ -30,7 +30,7 @@ pub async fn get_all_prioritized_accounts_with_bots(
     pool: &Pool<Postgres>,
 ) -> sqlx::Result<Vec<(i64, String)>> {
     let rows: Vec<(i64, String)> = sqlx::query_as(
-        r"
+        "
         SELECT psa.steam_id3, bf.bot_id
         FROM prioritized_steam_accounts psa
         INNER JOIN bot_friends bf ON bf.friend_id = psa.steam_id3

@@ -10,7 +10,7 @@ mod worker;
 
 use core::time::Duration;
 
-use md5::{Digest, Md5};
+use md5::{Digest as _, Md5};
 use serde::{Deserialize, Serialize};
 use utoipa::{OpenApi, ToSchema};
 use utoipa_axum::router::OpenApiRouter;
@@ -32,7 +32,7 @@ pub(crate) enum OutputFormat {
 }
 
 impl OutputFormat {
-    pub(crate) fn extension(self) -> &'static str {
+    pub(crate) const fn extension(self) -> &'static str {
         match self {
             Self::Parquet => "parquet",
             Self::Ndjson => "ndjson",
@@ -41,7 +41,7 @@ impl OutputFormat {
 
     /// Suffix of the uploaded object. NDJSON is zstd-compressed on upload; Parquet
     /// already compresses internally and is stored as-is.
-    pub(crate) fn object_extension(self) -> &'static str {
+    pub(crate) const fn object_extension(self) -> &'static str {
         match self {
             Self::Parquet => "parquet",
             Self::Ndjson => "ndjson.zst",

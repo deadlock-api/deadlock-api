@@ -12,21 +12,21 @@ pub(super) enum RosterSide {
 }
 
 impl RosterSide {
-    fn id_column(self) -> &'static str {
+    const fn id_column(self) -> &'static str {
         match self {
             Self::Enemy => "enemy_id",
             Self::Mate => "mate_id",
         }
     }
 
-    fn array_column(self) -> &'static str {
+    const fn array_column(self) -> &'static str {
         match self {
             Self::Enemy => "enemy_ids",
             Self::Mate => "mate_ids",
         }
     }
 
-    fn log_comment(self) -> &'static str {
+    const fn log_comment(self) -> &'static str {
         match self {
             Self::Enemy => "enemy_stats",
             Self::Mate => "mate_stats",

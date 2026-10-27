@@ -1,5 +1,4 @@
 use core::fmt;
-use core::fmt::Write as _;
 use core::time::Duration;
 
 use axum::extract::MatchedPath;
@@ -47,8 +46,12 @@ pub(crate) fn make_request_span<B>(request: &Request<B>) -> Span {
     let mut query = String::new();
     for (k, v) in parse::querify(uri.query().unwrap_or_default()) {
         if k != "api_key" {
-            let sep = if query.is_empty() { "" } else { "&" };
-            let _ = write!(query, "{sep}{k}={v}");
+            if !query.is_empty() {
+                query.push('&');
+            }
+            query.push_str(k);
+            query.push('=');
+            query.push_str(v);
         }
     }
 

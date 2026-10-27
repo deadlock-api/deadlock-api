@@ -938,7 +938,7 @@ fn unit_icon_urls(v: Option<&str>) -> Option<(String, String)> {
     ))
 }
 
-#[expect(clippy::too_many_lines)]
+#[expect(clippy::too_many_lines, reason = "one flat field-by-field mapping")]
 fn transform(
     class_name: String,
     mut r: RawNpcUnit,
@@ -1110,38 +1110,38 @@ fn transform(
     }
 }
 
-fn empowered_out(r: RawEmpoweredModifierLevel) -> EmpoweredModifierLevel {
+const fn empowered_out(r: RawEmpoweredModifierLevel) -> EmpoweredModifierLevel {
     EmpoweredModifierLevel {
         max_health: r.max_health,
         transition_duration: r.transition_duration,
         model_scale: r.model_scale,
     }
 }
-fn bullet_resist_out(r: RawBulletResistModifier) -> BulletResistModifier {
+const fn bullet_resist_out(r: RawBulletResistModifier) -> BulletResistModifier {
     BulletResistModifier {
         bullet_resist: r.bullet_resist,
         bullet_resist_reduction_per_hero: r.bullet_resist_reduction_per_hero,
     }
 }
-fn trooper_dmg_out(r: RawTrooperDamageReduction) -> TrooperDamageReduction {
+const fn trooper_dmg_out(r: RawTrooperDamageReduction) -> TrooperDamageReduction {
     TrooperDamageReduction {
         damage_reduction_for_troopers: r.damage_reduction_for_troopers,
     }
 }
-fn ranged_armor_out(r: RawRangedArmorModifier) -> RangedArmorModifier {
+const fn ranged_armor_out(r: RawRangedArmorModifier) -> RangedArmorModifier {
     RangedArmorModifier {
         range_min: r.range_min,
         range_max: r.range_max,
         invuln_range: r.invuln_range,
     }
 }
-fn objective_regen_out(r: RawObjectiveRegen) -> ObjectiveRegen {
+const fn objective_regen_out(r: RawObjectiveRegen) -> ObjectiveRegen {
     ObjectiveRegen {
         out_of_combat_health_regen: r.out_of_combat_health_regen,
         out_of_combat_regen_delay: r.out_of_combat_regen_delay,
     }
 }
-fn obj_health_phase_out(r: RawObjectiveHealthGrowthPhase) -> ObjectiveHealthGrowthPhase {
+const fn obj_health_phase_out(r: RawObjectiveHealthGrowthPhase) -> ObjectiveHealthGrowthPhase {
     ObjectiveHealthGrowthPhase {
         growth_per_minute: r.growth_per_minute,
         tick_rate: r.tick_rate,
@@ -1149,7 +1149,11 @@ fn obj_health_phase_out(r: RawObjectiveHealthGrowthPhase) -> ObjectiveHealthGrow
     }
 }
 
-#[expect(clippy::too_many_lines)]
+#[expect(
+    clippy::too_many_lines,
+    clippy::cast_precision_loss,
+    reason = "one flat mapping; shot/clip counts are far below f64's exact-integer range"
+)]
 fn weapon_info_out(r: RawWeaponInfo) -> WeaponInfo {
     let reload_duration = r.reload_duration_a.or(r.reload_duration_b);
     let cycle_time = r.cycle_time;
@@ -1161,7 +1165,6 @@ fn weapon_info_out(r: RawWeaponInfo) -> WeaponInfo {
     let bullet_damage = r.bullet_damage;
 
     let shots_per_second = cycle_time.map(|ct| {
-        #[expect(clippy::cast_precision_loss)]
         let bc = burst_shot_count.unwrap_or(1) as f64;
         let ib = intra_burst.unwrap_or(0.0);
         let adjusted = bc * ib + ct;
@@ -1171,25 +1174,20 @@ fn weapon_info_out(r: RawWeaponInfo) -> WeaponInfo {
     let shots_per_second_with_reload = match (cycle_time, reload_duration, clip_size) {
         (Some(ct), Some(reload), Some(cs)) => {
             let bc_i = burst_shot_count.unwrap_or(1);
-            #[expect(clippy::cast_precision_loss)]
             let bc = bc_i as f64;
             let ib = intra_burst.unwrap_or(0.0);
             let recoil = recoil_recov.unwrap_or(0.0);
             let full_bursts = if bc_i == 0 { 0 } else { cs.div_euclid(bc_i) };
             let remaining = if bc_i == 0 { 0 } else { cs.rem_euclid(bc_i) };
-            #[expect(clippy::cast_precision_loss)]
             let total_burst = (full_bursts as f64) * (bc * ib + ct) - ib;
-            #[expect(clippy::cast_precision_loss)]
             let total_remaining = (remaining as f64) * ib;
             let total = total_burst + total_remaining + reload + recoil;
-            #[expect(clippy::cast_precision_loss)]
             let cs_f = cs as f64;
             Some(if total == 0.0 { 0.0 } else { cs_f / total })
         }
         _ => None,
     };
 
-    #[expect(clippy::cast_precision_loss)]
     let bullets_f = bullets.map(|b| b as f64);
     let bps = match (shots_per_second, bullets_f) {
         (Some(s), Some(b)) if s != 0.0 && b != 0.0 => Some(s * b),
@@ -1212,11 +1210,7 @@ fn weapon_info_out(r: RawWeaponInfo) -> WeaponInfo {
         _ => None,
     };
     let dmg_per_mag = match (clip_size, dmg_per_shot) {
-        (Some(cs), Some(d)) if cs > 0 && d != 0.0 =>
-        {
-            #[expect(clippy::cast_precision_loss)]
-            Some((cs as f64) * d)
-        }
+        (Some(cs), Some(d)) if cs > 0 && d != 0.0 => Some((cs as f64) * d),
         _ => None,
     };
 
@@ -1378,7 +1372,7 @@ mod tests {
         .map(|p| {
             (
                 p.to_owned(),
-                [("idle".to_owned(), idle(p))].into_iter().collect(),
+                core::iter::once(("idle".to_owned(), idle(p))).collect(),
             )
         })
         .collect();
@@ -1436,13 +1430,10 @@ mod tests {
         let underhand_idle = format!(
             "{MODELS_BASE_URL}/npc_units/neutral_underhand_01/neutral_underhand_01/idle.glb"
         );
-        let models: ModelsByPath = [(
+        let models: ModelsByPath = core::iter::once((
             "npc_units/neutral_underhand_01/neutral_underhand_01".to_owned(),
-            [("idle".to_owned(), underhand_idle.clone())]
-                .into_iter()
-                .collect(),
-        )]
-        .into_iter()
+            core::iter::once(("idle".to_owned(), underhand_idle.clone())).collect(),
+        ))
         .collect();
         let units = build_npc_units(&vdata, &loc_6712(), &models).expect("builds");
         let underhand = units

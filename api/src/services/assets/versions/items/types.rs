@@ -1,7 +1,15 @@
 //! Public `/v1/assets/items` JSON types. Field order matches the legacy
 //! `/v2/items` output so existing clients keep working.
 
-#![expect(clippy::large_enum_variant, clippy::struct_field_names)]
+#![expect(
+    clippy::large_enum_variant,
+    clippy::struct_field_names,
+    reason = "item variants and field names mirror the public `/v2/items` schema"
+)]
+#![expect(
+    clippy::same_name_method,
+    reason = "`SimpleObject` derives resolvers named like fields that `ToSchema` also defines"
+)]
 
 use async_graphql::{ComplexObject, Enum, Json, SimpleObject, Union};
 use indexmap::IndexMap;
@@ -673,7 +681,7 @@ pub(crate) enum Item {
 }
 
 impl Item {
-    pub(crate) fn id(&self) -> u32 {
+    pub(crate) const fn id(&self) -> u32 {
         match self {
             Self::Ability(a) => a.id,
             Self::Weapon(w) => w.id,
@@ -694,7 +702,7 @@ impl Item {
             Self::Upgrade(u) => u.heroes.as_deref(),
         }
     }
-    pub(crate) fn item_type(&self) -> ItemType {
+    pub(crate) const fn item_type(&self) -> ItemType {
         match self {
             Self::Ability(_) => ItemType::Ability,
             Self::Weapon(_) => ItemType::Weapon,

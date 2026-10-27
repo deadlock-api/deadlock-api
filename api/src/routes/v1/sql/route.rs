@@ -12,7 +12,7 @@ use tracing::{debug, warn};
 use utoipa::IntoParams;
 
 use crate::context::AppState;
-use crate::error::{APIError, APIResult, LogInternal};
+use crate::error::{APIError, APIResult, LogInternal as _};
 use crate::routes::v1::mcp::{QueryError, write_json};
 use crate::services::rate_limiter::Quota;
 use crate::services::rate_limiter::extractor::RateLimitKey;

@@ -1,7 +1,7 @@
 //! `match_salts` for GraphQL: the `match_salts` root query and the nested
 //! `salts` enrichment on matches. Only ever reads what `ClickHouse` has stored.
 
-use core::fmt::Write;
+use core::fmt::Write as _;
 
 use async_graphql::{ComplexObject, Context, InputObject, Result as GqlResult, SimpleObject};
 use clickhouse::Row;

@@ -5,6 +5,7 @@ use datafusion::arrow::array::{
     UInt32Builder, UInt64Builder,
 };
 use datafusion::arrow::datatypes::{DataType, Fields, Schema, SchemaRef};
+use datafusion::arrow::error::ArrowError;
 use std::sync::Arc;
 
 use super::events::{DecodedEvent, EventType, append_event_to_builders, event_schema};
@@ -19,29 +20,33 @@ pub(super) struct EventBatchBuilder {
 }
 
 impl EventBatchBuilder {
-    pub(super) fn new(event_type: EventType) -> Self {
-        let schema = event_schema(event_type.table_name()).expect("schema not found");
+    pub(super) fn new(event_type: EventType) -> Result<Self, ArrowError> {
+        let table_name = event_type.table_name();
+        let schema = event_schema(table_name).ok_or_else(|| {
+            ArrowError::SchemaError(format!("No schema for event table {table_name}"))
+        })?;
         let field_builders = create_field_builders(&schema, INITIAL_CAPACITY);
-        Self {
+        Ok(Self {
             schema,
             tick_builder: Int32Builder::with_capacity(INITIAL_CAPACITY),
             field_builders,
-        }
+        })
     }
 
-    pub(super) fn append(&mut self, tick: i32, event: &DecodedEvent) {
+    pub(super) fn append(&mut self, tick: i32, event: &DecodedEvent) -> Result<(), ArrowError> {
         self.tick_builder.append_value(tick);
-        append_event_to_builders(event, &mut self.field_builders);
+        append_event_to_builders(event, &mut self.field_builders)
     }
 
     /// Finish all builders into the table's single `RecordBatch`.
-    pub(super) fn finish(&mut self) -> Result<RecordBatch, datafusion::arrow::error::ArrowError> {
-        let mut columns: Vec<ArrayRef> = Vec::with_capacity(self.field_builders.len() + 1);
+    pub(super) fn finish(&mut self) -> Result<RecordBatch, ArrowError> {
+        let mut columns: Vec<ArrayRef> =
+            Vec::with_capacity(self.field_builders.len().saturating_add(1));
         columns.push(Arc::new(self.tick_builder.finish()));
         for builder in &mut self.field_builders {
             columns.push(builder.finish());
         }
-        RecordBatch::try_new(self.schema.clone(), columns)
+        RecordBatch::try_new(Arc::clone(&self.schema), columns)
     }
 }
 
@@ -62,8 +67,14 @@ fn create_builder_for_type(data_type: &DataType, capacity: usize) -> Box<dyn Arr
         DataType::Float32 => Box::new(Float32Builder::with_capacity(capacity)),
         DataType::Float64 => Box::new(Float64Builder::with_capacity(capacity)),
         DataType::Boolean => Box::new(BooleanBuilder::with_capacity(capacity)),
-        DataType::Utf8 => Box::new(StringBuilder::with_capacity(capacity, capacity * 32)),
-        DataType::Binary => Box::new(BinaryBuilder::with_capacity(capacity, capacity * 32)),
+        DataType::Utf8 => Box::new(StringBuilder::with_capacity(
+            capacity,
+            capacity.saturating_mul(32),
+        )),
+        DataType::Binary => Box::new(BinaryBuilder::with_capacity(
+            capacity,
+            capacity.saturating_mul(32),
+        )),
         DataType::List(inner) => match inner.data_type() {
             DataType::Int8 => Box::new(ListBuilder::new(Int8Builder::new())),
             DataType::Int16 => Box::new(ListBuilder::new(Int16Builder::new())),
@@ -131,7 +142,7 @@ mod tests {
     fn test_event_batch_builder_append_and_finish() {
         use valveprotos::deadlock::CCitadelUserMsgBossDamaged;
 
-        let mut builder = EventBatchBuilder::new(EventType::BossDamaged);
+        let mut builder = EventBatchBuilder::new(EventType::BossDamaged).unwrap();
 
         let msg = CCitadelUserMsgBossDamaged {
             objective_team: Some(1),
@@ -140,14 +151,28 @@ mod tests {
         };
         let event = DecodedEvent::BossDamaged(msg);
 
-        builder.append(1000, &event);
-        builder.append(2000, &event);
+        builder.append(1000, &event).unwrap();
+        builder.append(2000, &event).unwrap();
 
         let batch = builder.finish().expect("finish should succeed");
         assert_eq!(batch.num_rows(), 2);
-        assert!(batch.schema().field_with_name("tick").is_ok());
-        assert!(batch.schema().field_with_name("objective_team").is_ok());
-        assert!(batch.schema().field_with_name("entity_damaged").is_ok());
+        batch.schema().field_with_name("tick").unwrap();
+        batch.schema().field_with_name("objective_team").unwrap();
+        batch.schema().field_with_name("entity_damaged").unwrap();
+    }
+
+    #[test]
+    fn test_event_batch_builder_null_nested_struct() {
+        use valveprotos::deadlock::CCitadelUserMsgMapPing;
+
+        // ping_data is a message holding another message (ping_location); a missing
+        // ping_data must still null the inner struct's children or finish() panics.
+        let mut builder = EventBatchBuilder::new(EventType::MapPing).unwrap();
+        let event = DecodedEvent::MapPing(CCitadelUserMsgMapPing::default());
+        builder.append(1000, &event).unwrap();
+
+        let batch = builder.finish().expect("finish should succeed");
+        assert_eq!(batch.num_rows(), 1);
     }
 
     #[test]
@@ -157,7 +182,7 @@ mod tests {
             DamageRecord, ModifierRecord,
         };
 
-        let mut builder = EventBatchBuilder::new(EventType::RecentDamageSummary);
+        let mut builder = EventBatchBuilder::new(EventType::RecentDamageSummary).unwrap();
 
         let msg = CCitadelUserMsgRecentDamageSummary {
             player_slot: Some(3),
@@ -173,11 +198,11 @@ mod tests {
         };
         let event = DecodedEvent::RecentDamageSummary(msg);
 
-        builder.append(1000, &event);
+        builder.append(1000, &event).unwrap();
 
         let batch = builder.finish().expect("finish should succeed");
         assert_eq!(batch.num_rows(), 1);
-        assert!(batch.schema().field_with_name("damage_records").is_ok());
-        assert!(batch.schema().field_with_name("modifier_records").is_ok());
+        batch.schema().field_with_name("damage_records").unwrap();
+        batch.schema().field_with_name("modifier_records").unwrap();
     }
 }

@@ -41,7 +41,7 @@ impl<P: PacketSource> PacketChannelBroadcastStream<P> {
     ///
     /// The stream starts with an empty buffer and will await the first packet
     /// when `read_cmd_header` is called.
-    pub fn new(source: P) -> Self {
+    pub const fn new(source: P) -> Self {
         Self {
             source,
             current: Bytes::new(),
@@ -53,7 +53,7 @@ impl<P: PacketSource> PacketChannelBroadcastStream<P> {
     ///
     /// Useful when the `/start` packet was fetched separately for schema
     /// discovery and should be reused for parsing.
-    pub fn with_initial_packet(source: P, initial: Bytes) -> Self {
+    pub const fn with_initial_packet(source: P, initial: Bytes) -> Self {
         Self {
             source,
             current: initial,
@@ -79,19 +79,14 @@ impl<P: PacketSource> PacketChannelBroadcastStream<P> {
         Ok(())
     }
 
-    /// Read exactly `n` bytes from the current packet.
+    /// Read exactly `n` bytes from the current packet; `None` if it has fewer bytes left.
     ///
     /// Returns a slice into the packet (zero-copy via Bytes).
-    /// Panics if there aren't enough bytes - callers must ensure data is available.
-    fn read_bytes(&mut self, n: usize) -> &[u8] {
-        let slice = &self.current[self.offset..self.offset + n];
-        self.offset += n;
-        slice
-    }
-
-    /// Check if enough bytes are available in the current packet.
-    fn has_bytes(&self, n: usize) -> bool {
-        self.offset + n <= self.current.len()
+    fn read_bytes(&mut self, n: usize) -> Option<&[u8]> {
+        let end = self.offset.checked_add(n)?;
+        let slice = self.current.get(self.offset..end)?;
+        self.offset = end;
+        Some(slice)
     }
 }
 
@@ -104,13 +99,17 @@ impl<P: PacketSource> AsyncDemoStream for PacketChannelBroadcastStream<P> {
         // NOTE: commands don't span packets, so a packet that stops inside a header is broken.
         // this must not be `UnexpectedEof`: the parser takes that as the end of the stream while
         // the source is still open.
-        let Some(&header) = self.current[self.offset..].first_chunk() else {
+        let Some(&header) = self
+            .current
+            .get(self.offset..)
+            .and_then(<[u8]>::first_chunk)
+        else {
             return Err(ReadCmdHeaderError::IoError(io::Error::new(
                 io::ErrorKind::InvalidData,
                 "incomplete command header in packet",
             )));
         };
-        self.offset += BROADCAST_CMD_HEADER_SIZE;
+        self.offset = self.offset.saturating_add(BROADCAST_CMD_HEADER_SIZE);
         parse_broadcast_cmd_header(header)
     }
 
@@ -119,14 +118,12 @@ impl<P: PacketSource> AsyncDemoStream for PacketChannelBroadcastStream<P> {
         cmd_header: &CmdHeader,
     ) -> impl Future<Output = Result<&[u8], ReadCmdError>> + Send {
         let size = cmd_header.body_size as usize;
-        core::future::ready(if self.has_bytes(size) {
-            Ok(self.read_bytes(size))
-        } else {
-            Err(ReadCmdError::IoError(io::Error::new(
+        core::future::ready(self.read_bytes(size).ok_or_else(|| {
+            ReadCmdError::IoError(io::Error::new(
                 io::ErrorKind::UnexpectedEof,
                 "incomplete command body in packet",
-            )))
-        })
+            ))
+        }))
     }
 
     fn start_position(&self) -> u64 {

@@ -51,10 +51,7 @@ pub(super) async fn get_item(
     let needle_id: Option<u32> = id_or_class_name.parse().ok();
     find_or_404(
         &items,
-        |i| match needle_id {
-            Some(id) => i.id() == id,
-            None => i.class_name() == id_or_class_name,
-        },
+        |i| needle_id.map_or_else(|| i.class_name() == id_or_class_name, |id| i.id() == id),
         "Item not found",
     )
 }

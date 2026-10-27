@@ -84,6 +84,21 @@ impl<'a> Parser<'a> {
         self.bytes.get(self.idx).copied()
     }
 
+    #[inline]
+    const fn advance(&mut self, n: usize) {
+        self.idx = self.idx.saturating_add(n);
+    }
+
+    /// `src[start..end]`. Callers only cut at ASCII delimiters, so both ends are char
+    /// boundaries.
+    #[inline]
+    fn slice(&self, start: usize, end: usize) -> Result<&'a str, LocError> {
+        self.src
+            .get(start..end)
+            .ok_or_else(|| self.err("token ends inside a UTF-8 character"))
+    }
+
+    #[cold]
     fn err(&self, msg: impl Into<String>) -> LocError {
         let (line, col) = self.line_col();
         LocError::Parse {
@@ -94,29 +109,29 @@ impl<'a> Parser<'a> {
     }
 
     fn line_col(&self) -> (usize, usize) {
-        let upto = &self.bytes[..self.idx.min(self.bytes.len())];
-        let line = 1 + memchr::memchr_iter(b'\n', upto).count();
+        let upto = self.bytes.get(..self.idx).unwrap_or(self.bytes);
+        let line = memchr::memchr_iter(b'\n', upto).count().saturating_add(1);
         let col = upto
-            .iter()
-            .rposition(|&b| b == b'\n')
-            .map_or(self.idx, |p| self.idx - p - 1)
-            + 1;
+            .rsplit(|&b| b == b'\n')
+            .next()
+            .map_or(0, <[u8]>::len)
+            .saturating_add(1);
         (line, col)
     }
 
     fn skip_ws_and_comments(&mut self) {
         loop {
-            while let Some(b) = self.bytes.get(self.idx) {
-                if b.is_ascii_whitespace() {
-                    self.idx += 1;
-                } else {
-                    break;
-                }
+            while self.peek().is_some_and(|b| b.is_ascii_whitespace()) {
+                self.advance(1);
             }
-            if self.bytes.get(self.idx..self.idx + 2) == Some(b"//") {
-                self.idx += 2;
-                while let Some(&b) = self.bytes.get(self.idx) {
-                    self.idx += 1;
+            if self
+                .bytes
+                .get(self.idx..)
+                .is_some_and(|rest| rest.starts_with(b"//"))
+            {
+                self.advance(2);
+                while let Some(b) = self.peek() {
+                    self.advance(1);
                     if b == b'\n' {
                         break;
                     }
@@ -129,7 +144,7 @@ impl<'a> Parser<'a> {
 
     fn expect(&mut self, b: u8) -> Result<(), LocError> {
         if self.peek() == Some(b) {
-            self.idx += 1;
+            self.advance(1);
             Ok(())
         } else {
             Err(self.err(format!("expected '{}'", b as char)))
@@ -145,37 +160,35 @@ impl<'a> Parser<'a> {
         };
 
         if b == b'"' {
-            self.idx += 1;
+            self.advance(1);
             let start = self.idx;
             // Fast path: scan for `"` or `\\`.
-            let bytes = self.bytes;
-            match memchr::memchr2(b'"', b'\\', &bytes[self.idx..]) {
-                None => return Err(self.err("unterminated string")),
-                Some(off) => {
-                    let pos = self.idx + off;
-                    if bytes[pos] == b'"' {
-                        let s = &self.src[start..pos];
-                        self.idx = pos + 1;
-                        return Ok(Cow::Borrowed(s));
-                    }
-                    // Escape found — switch to the slow path that allocates.
-                    return self.read_quoted_with_escapes(start, pos);
-                }
+            let rest = self.bytes.get(start..).unwrap_or_default();
+            let Some(off) = memchr::memchr2(b'"', b'\\', rest) else {
+                return Err(self.err("unterminated string"));
+            };
+            let pos = start.saturating_add(off);
+            if rest.get(off) == Some(&b'"') {
+                let s = self.slice(start, pos)?;
+                self.idx = pos.saturating_add(1);
+                return Ok(Cow::Borrowed(s));
             }
+            // Escape found — switch to the slow path that allocates.
+            return self.read_quoted_with_escapes(start, pos);
         }
 
         // Unquoted bareword.
         let start = self.idx;
-        while let Some(&b) = self.bytes.get(self.idx) {
-            if b.is_ascii_whitespace() || matches!(b, b'{' | b'}' | b'"') {
-                break;
-            }
-            self.idx += 1;
+        while self
+            .peek()
+            .is_some_and(|b| !(b.is_ascii_whitespace() || matches!(b, b'{' | b'}' | b'"')))
+        {
+            self.advance(1);
         }
         if self.idx == start {
             return Err(self.err("expected token"));
         }
-        Ok(Cow::Borrowed(&self.src[start..self.idx]))
+        Ok(Cow::Borrowed(self.slice(start, self.idx)?))
     }
 
     /// Slow path for escaped strings: copy the borrowed prefix up to
@@ -185,21 +198,22 @@ impl<'a> Parser<'a> {
         start: usize,
         escape_pos: usize,
     ) -> Result<Cow<'a, str>, LocError> {
-        let mut out = String::with_capacity(escape_pos - start + 16);
-        out.push_str(&self.src[start..escape_pos]);
+        let prefix = self.slice(start, escape_pos)?;
+        let mut out = String::with_capacity(prefix.len().saturating_add(16));
+        out.push_str(prefix);
         self.idx = escape_pos;
-        while let Some(&b) = self.bytes.get(self.idx) {
+        while let Some(b) = self.peek() {
             match b {
                 b'"' => {
-                    self.idx += 1;
+                    self.advance(1);
                     return Ok(Cow::Owned(out));
                 }
                 b'\\' => {
-                    self.idx += 1;
-                    let Some(&esc) = self.bytes.get(self.idx) else {
+                    self.advance(1);
+                    let Some(esc) = self.peek() else {
                         return Err(self.err("trailing backslash"));
                     };
-                    self.idx += 1;
+                    self.advance(1);
                     match esc {
                         b'n' => out.push('\n'),
                         b't' => out.push('\t'),
@@ -217,11 +231,11 @@ impl<'a> Parser<'a> {
                 _ => {
                     // Copy a run of plain bytes in one shot.
                     let run_start = self.idx;
-                    let rest = &self.bytes[self.idx..];
+                    let rest = self.bytes.get(run_start..).unwrap_or_default();
                     let next = memchr::memchr2(b'"', b'\\', rest)
                         .ok_or_else(|| self.err("unterminated string"))?;
-                    self.idx += next;
-                    out.push_str(&self.src[run_start..self.idx]);
+                    self.advance(next);
+                    out.push_str(self.slice(run_start, self.idx)?);
                 }
             }
         }
@@ -235,7 +249,7 @@ impl<'a> Parser<'a> {
             self.skip_ws_and_comments();
             match self.peek() {
                 Some(b'}') => {
-                    self.idx += 1;
+                    self.advance(1);
                     return Ok(());
                 }
                 None => return Err(self.err("unterminated block")),
@@ -246,7 +260,7 @@ impl<'a> Parser<'a> {
             self.skip_ws_and_comments();
             match self.peek() {
                 Some(b'{') => {
-                    self.idx += 1;
+                    self.advance(1);
                     self.skip_block()?;
                 }
                 _ => {
@@ -263,7 +277,7 @@ impl<'a> Parser<'a> {
             self.skip_ws_and_comments();
             match self.peek() {
                 Some(b'}') => {
-                    self.idx += 1;
+                    self.advance(1);
                     return Ok(());
                 }
                 None => return Err(self.err("unterminated block")),
@@ -273,8 +287,8 @@ impl<'a> Parser<'a> {
             let key = self.read_string()?;
             self.skip_ws_and_comments();
 
-            if let Some(b'{') = self.peek() {
-                self.idx += 1;
+            if self.peek() == Some(b'{') {
+                self.advance(1);
                 if key.eq_ignore_ascii_case("Tokens") {
                     self.parse_block_into(out)?;
                 } else {
@@ -338,7 +352,7 @@ mod tests {
     #[test]
     fn rejects_trailing_content() {
         let src = "\"lang\" { \"Language\" \"English\" } garbage";
-        assert!(parse(src).is_err());
+        parse(src).unwrap_err();
     }
 
     #[test]

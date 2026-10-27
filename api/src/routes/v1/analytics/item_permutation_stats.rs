@@ -4,7 +4,7 @@ use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum_extra::extract::Query;
 use clickhouse::Row;
-use itertools::Itertools;
+use itertools::Itertools as _;
 use serde::{Deserialize, Serialize};
 use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
@@ -148,12 +148,16 @@ struct ItemPermutationStats {
     matches: u64,
 }
 
-#[expect(clippy::too_many_lines)]
+#[expect(
+    clippy::too_many_lines,
+    clippy::option_if_let_else,
+    reason = "one linear query builder with two long query shapes reads clearer than split helpers"
+)]
 fn build_query(query: &ItemPermutationStatsQuery) -> String {
     let info_filters = query.match_info().build();
-    #[expect(deprecated)]
+    #[expect(deprecated, reason = "reads the deprecated legacy query parameters")]
     let hero_ids = with_legacy_id(query.hero_ids.as_deref(), query.hero_id);
-    #[expect(deprecated)]
+    #[expect(deprecated, reason = "reads the deprecated legacy query parameters")]
     let player_filters = join_filters(
         &PlayerFilters {
             hero_ids: Some(&hero_ids),
@@ -173,10 +177,12 @@ fn build_query(query: &ItemPermutationStatsQuery) -> String {
     // SQL lets every value share one cached result instead of triggering a fresh multi-second
     // scan per value. The floor is clamped rather than dropped so the cached superset stays no
     // larger than the default query already returns; the exact bounds are applied in Rust.
-    let having_clause = match query.min_matches.min(default_min_matches_u32()) {
-        Some(min_matches) => format!("HAVING matches >= {min_matches}"),
-        None => String::new(),
-    };
+    let having_clause = query
+        .min_matches
+        .min(default_min_matches_u32())
+        .map_or_else(String::new, |min_matches| {
+            format!("HAVING matches >= {min_matches}")
+        });
     // Corrupted purchases keep the normal item's id; only `items.upgrade_info` tells them
     // apart. The swapped-out normal purchase stays in `items`, so a player who had an item
     // corrupted still counts as owning the normal item.
@@ -225,22 +231,21 @@ fn build_query(query: &ItemPermutationStatsQuery) -> String {
         "
         )
     } else {
-        let comb_size = query.comb_size.or(default_comb_size()).unwrap_or(2);
+        let comb_size = query.comb_size.or_else(default_comb_size).unwrap_or(2);
         // Only increasing index tuples, so each combination is built once rather than all `n^k`
         // tuples filtered down to `i0_index < i1_index < ...`. `p_items` is sorted by id, so a
         // combination is one row whatever order its items were bought in.
         let joins = (0..comb_size)
             .map(|i| {
-                if i == 0 {
-                    " ARRAY JOIN p_items AS i0, arrayEnumerate(p_items) AS j0".to_owned()
-                } else {
-                    let prev = i - 1;
-                    let index = if i + 1 < comb_size {
+                if let Some(prev) = i.checked_sub(1) {
+                    let index = if i.saturating_add(1) < comb_size {
                         format!(", arraySlice(arrayEnumerate(p_items), j{prev} + 1) AS j{i}")
                     } else {
                         String::new()
                     };
                     format!(" ARRAY JOIN arraySlice(p_items, j{prev} + 1) AS i{i}{index}")
+                } else {
+                    " ARRAY JOIN p_items AS i0, arrayEnumerate(p_items) AS j0".to_owned()
                 }
             })
             .join("\n");
@@ -367,7 +372,7 @@ pub(super) async fn item_permutation_stats(
         query.max_average_badge,
     )?;
     validate_query(&query)?;
-    #[expect(deprecated)]
+    #[expect(deprecated, reason = "reads the deprecated legacy query parameters")]
     filter_protected_accounts(&state, &mut query.account_ids, query.account_id).await?;
     get_item_permutation_stats(&state.ch_client_ro, query)
         .await
@@ -460,7 +465,7 @@ mod tests {
                 });
                 assert!(hero.contains("hero_id IN (7)"));
                 assert!(!hero.contains("optimize_use_projections"), "{hero}");
-                #[expect(deprecated)]
+                #[expect(deprecated, reason = "reads the deprecated legacy query parameters")]
                 let legacy_hero = build_query(&ItemPermutationStatsQuery {
                     item_ids: item_ids.clone(),
                     include_corrupted_items,

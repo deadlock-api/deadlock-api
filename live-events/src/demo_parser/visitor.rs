@@ -8,7 +8,7 @@ use haste::demostream::CmdHeader;
 use haste::entities::{DeltaHeader, Entity};
 use haste::parser::{AsyncVisitor, Context};
 use haste::stringtables::StringTableItem;
-use prost::Message;
+use prost::Message as _;
 use tokio::sync::mpsc::Sender;
 use tracing::debug;
 use valveprotos::common::{CMsgPlayerInfo, EDemoCommands};
@@ -21,7 +21,7 @@ use valveprotos::deadlock::{
 
 use crate::demo_parser::broker::BrokerStock;
 use crate::demo_parser::entity_events::{
-    EntityType, EntityUpdateEvent, EntityUpdateEvents, GameRulesProxyEvent,
+    EntityType, EntityUpdateEvent as _, EntityUpdateEvents, GameRulesProxyEvent,
     banned_heroes_from_game_rules, corrupted_item,
 };
 use crate::demo_parser::error::DemoParseError;
@@ -394,9 +394,14 @@ impl SendingVisitor {
             self.tick_interval = ctx.tick_interval();
         }
 
-        #[expect(clippy::cast_precision_loss)]
+        #[expect(
+            clippy::cast_precision_loss,
+            reason = "tick counts stay far below 2^24"
+        )]
         {
-            let ticks = ctx.tick() - self.rules.total_paused_ticks.unwrap_or_default();
+            let ticks = ctx
+                .tick()
+                .saturating_sub(self.rules.total_paused_ticks.unwrap_or_default());
             let total_time = ticks as f32 * self.tick_interval;
             self.game_time = total_time - self.rules.game_start_time.unwrap_or_default();
         }
@@ -405,7 +410,7 @@ impl SendingVisitor {
     }
 }
 
-fn music_queue_name(queue: CitadelMusicMsgType) -> &'static str {
+const fn music_queue_name(queue: CitadelMusicMsgType) -> &'static str {
     match queue {
         CitadelMusicMsgType::KEMusicQueueInvalid => "invalid",
         CitadelMusicMsgType::KEMusicQueueIdolAnnounce => "idol_announce",

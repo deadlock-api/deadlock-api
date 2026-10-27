@@ -1,7 +1,5 @@
-use core::fmt::Write as _;
-
 use axum::http::StatusCode;
-use itertools::Itertools;
+use itertools::Itertools as _;
 use serde::{Deserialize, Serialize};
 use strum::{Display, EnumString};
 use utoipa::ToSchema;
@@ -16,7 +14,7 @@ use crate::utils::sql::having_clause;
 pub(super) const SAMPLE_GRID_FILTER: &str = "((time_stamp_s <= 900 AND time_stamp_s % 180 = 0) OR (time_stamp_s > 900 AND time_stamp_s % 300 = 0))";
 
 /// Whether `time_s` is a sample [`SAMPLE_GRID_FILTER`] keeps, i.e. one `lane_matchups` stores.
-pub(super) fn is_grid_sample(time_s: u32) -> bool {
+pub(super) const fn is_grid_sample(time_s: u32) -> bool {
     time_s > 0
         && ((time_s <= 900 && time_s.is_multiple_of(180))
             || (time_s > 900 && time_s.is_multiple_of(300)))
@@ -109,8 +107,7 @@ impl LaneStats {
                 format!("At most {MAX_STATS} stats can be requested at once"),
             ));
         }
-        let computed = [LaneStat::NetWorth]
-            .into_iter()
+        let computed = core::iter::once(LaneStat::NetWorth)
             .chain(requested.iter().copied())
             .unique()
             .collect();
@@ -125,37 +122,40 @@ impl LaneStats {
     /// value, because `0` kills is a real reading. Out-of-range indexing yields `0`, so players
     /// whose match ended earlier read as unsampled.
     pub(super) fn sample_bindings(&self, at_time_s: u32) -> String {
-        [format!(
+        core::iter::once(format!(
             "arrayFirstIndex(t -> t >= {at_time_s}, stats.time_stamp_s) AS sample_index"
-        )]
-        .into_iter()
+        ))
         .chain(
             self.computed
                 .iter()
                 .map(|stat| format!("stats.{stat}[sample_index] AS {stat}_sample")),
         )
-        .chain(["sample_index > 0 AS has_sample".to_string()])
+        .chain(core::iter::once(
+            "sample_index > 0 AS has_sample".to_owned(),
+        ))
         .join(",\n        ")
     }
 
     pub(super) fn side_totals(&self) -> String {
-        self.computed.iter().fold(String::new(), |mut acc, stat| {
-            let _ = write!(
-                acc,
-                ",\n        toFloat64(sumIf({stat}_sample, team = 'Team0')) AS {stat}_t0,\n        toFloat64(sumIf({stat}_sample, team = 'Team1')) AS {stat}_t1"
-            );
-            acc
-        })
+        self.computed
+            .iter()
+            .format_with("", |stat, f| {
+                f(&format_args!(
+                    ",\n        toFloat64(sumIf({stat}_sample, team = 'Team0')) AS {stat}_t0,\n        toFloat64(sumIf({stat}_sample, team = 'Team1')) AS {stat}_t1"
+                ))
+            })
+            .to_string()
     }
 
     pub(super) fn side_swap(&self) -> String {
-        self.computed.iter().fold(String::new(), |mut acc, stat| {
-            let _ = write!(
-                acc,
-                ",\n    [{stat}_t0, {stat}_t1] AS x_{stat}_value,\n    [{stat}_t0 - {stat}_t1, {stat}_t1 - {stat}_t0] AS x_{stat}_diff"
-            );
-            acc
-        })
+        self.computed
+            .iter()
+            .format_with("", |stat, f| {
+                f(&format_args!(
+                    ",\n    [{stat}_t0, {stat}_t1] AS x_{stat}_value,\n    [{stat}_t0 - {stat}_t1, {stat}_t1 - {stat}_t0] AS x_{stat}_diff"
+                ))
+            })
+            .to_string()
     }
 }
 
@@ -186,7 +186,7 @@ impl LaneGroupBy {
     /// Fixed, so column order never depends on the order the caller asked for.
     const ALL: [Self; 3] = [Self::AssignedLane, Self::HeroIds, Self::EnemyHeroIds];
 
-    fn name(self) -> &'static str {
+    const fn column_name(self) -> &'static str {
         match self {
             Self::AssignedLane => "assigned_lane",
             Self::HeroIds => "hero_ids",
@@ -194,7 +194,7 @@ impl LaneGroupBy {
         }
     }
 
-    fn definition(self) -> &'static str {
+    const fn definition(self) -> &'static str {
         match self {
             Self::AssignedLane => "assigned_lane",
             Self::HeroIds => "arrayMap(h -> toUInt32(h), duo) AS hero_ids",
@@ -205,7 +205,7 @@ impl LaneGroupBy {
     /// Grouping column on `lane_matchups`, whose `UInt8` hero ids pack a sorted duo into one
     /// `UInt16`. Grouping the per-sample pass on the duo arrays instead cost ~4x the CPU over a
     /// season (`lane_soul_curve`, 2026-10-13); wider integer keys were as slow as the arrays.
-    fn packed_definition(self) -> &'static str {
+    const fn packed_definition(self) -> &'static str {
         match self {
             Self::AssignedLane => "assigned_lane",
             Self::HeroIds => "toUInt16(duo[1] * 256 + duo[2]) AS hero_key",
@@ -213,7 +213,7 @@ impl LaneGroupBy {
         }
     }
 
-    fn packed_name(self) -> &'static str {
+    const fn packed_name(self) -> &'static str {
         match self {
             Self::AssignedLane => "assigned_lane",
             Self::HeroIds => "hero_key",
@@ -222,7 +222,7 @@ impl LaneGroupBy {
     }
 
     /// The output column of [`Self::packed_definition`].
-    fn unpacked(self) -> &'static str {
+    const fn unpacked(self) -> &'static str {
         match self {
             Self::AssignedLane => "assigned_lane",
             Self::HeroIds => {
@@ -236,7 +236,7 @@ impl LaneGroupBy {
 
     /// Stand-in for a folded dimension. `0` is free for `assigned_lane`: unassigned players are
     /// filtered out before grouping.
-    fn folded(self) -> &'static str {
+    const fn folded(self) -> &'static str {
         match self {
             Self::AssignedLane => "toUInt32(0) AS assigned_lane",
             Self::HeroIds => "CAST([], 'Array(UInt32)') AS hero_ids",
@@ -288,7 +288,7 @@ impl LaneGrouping {
     }
 
     pub(super) fn select_all_by_name(&self) -> String {
-        self.select_all(LaneGroupBy::name)
+        self.select_all(LaneGroupBy::column_name)
     }
 
     pub(super) fn select_all_unpacked(&self) -> String {
@@ -310,7 +310,7 @@ impl LaneGrouping {
 
     /// Empty when nothing is grouped, collapsing the query to a single row.
     pub(super) fn group_by_clause(&self, extra: &[&str]) -> String {
-        self.group_by_names(LaneGroupBy::name, extra)
+        self.group_by_names(LaneGroupBy::column_name, extra)
     }
 
     pub(super) fn packed_group_by_clause(&self, extra: &[&str]) -> String {

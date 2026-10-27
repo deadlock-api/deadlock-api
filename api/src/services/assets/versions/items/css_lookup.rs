@@ -2,13 +2,13 @@
 //! Returns intermediate panorama-style URL strings that the pipeline then
 //! runs through `parse_img_path` to produce public URLs.
 
-#![expect(clippy::doc_markdown)]
-
 use std::collections::HashMap;
 
 use cssparser::{Delimiter, Parser, Token};
 
-/// Each CSS file is parsed once and the extracted (selector, bg, wash_color)
+use crate::services::assets::versions::css::skip_malformed;
+
+/// Each CSS file is parsed once and the extracted (selector, bg, `wash_color`)
 /// list is reused across lookups. Builds aren't cheap, but each file is at
 /// most a few hundred kB so we keep the whole tree resident.
 #[derive(Debug)]
@@ -54,12 +54,12 @@ impl CssIndex {
                                 {
                                     at_define = Some(name.to_string());
                                     // Skip the colon.
-                                    let _ = p.next_including_whitespace_and_comments();
+                                    skip_malformed(p.next_including_whitespace_and_comments());
                                 }
                             }
                             Ok(Token::Ident(name)) => {
                                 at_define = Some(name.to_string());
-                                let _ = p.next_including_whitespace_and_comments();
+                                skip_malformed(p.next_including_whitespace_and_comments());
                             }
                             _ => {}
                         }
@@ -167,13 +167,14 @@ impl CssIndex {
     /// rules), but keep the `@define` table from the full source so wash-color
     /// names declared earlier still resolve.
     pub(super) fn parse_from_anchor(css: &str, anchor: &str) -> Self {
-        let trimmed = match css.find(anchor) {
-            Some(pos) => {
-                let line_start = css[..pos].rfind('\n').map_or(0, |n| n + 1);
-                &css[line_start..]
-            }
-            None => css,
-        };
+        // Start at the beginning of the anchor's line.
+        let trimmed = css.find(anchor).map_or(css, |pos| {
+            let line_start = css
+                .get(..pos)
+                .and_then(|before| before.rfind('\n'))
+                .map_or(0, |n| n.saturating_add(1));
+            css.get(line_start..).unwrap_or(css)
+        });
         let full = Self::parse(css);
         let mut anchored = Self::parse(trimmed);
         anchored.defines = full.defines;
@@ -195,32 +196,34 @@ fn scan_block(p: &mut Parser<'_>) -> (Option<String>, Option<String>) {
     let mut bg: Option<String> = None;
     let mut wash: Option<String> = None;
     while !p.is_exhausted() {
-        let _ = p.parse_until_after::<_, _, ()>(Delimiter::Semicolon, |inner| {
-            if let Ok(name_tok) = inner.next().cloned() {
-                let name = match name_tok {
-                    Token::Ident(s) => s.to_string(),
-                    _ => return Ok(()),
-                };
-                if inner.expect_colon().is_err() {
-                    return Ok(());
+        skip_malformed(
+            p.parse_until_after::<_, _, ()>(Delimiter::Semicolon, |inner| {
+                if let Ok(name_tok) = inner.next().cloned() {
+                    let name = match name_tok {
+                        Token::Ident(s) => s.to_string(),
+                        _ => return Ok(()),
+                    };
+                    if inner.expect_colon().is_err() {
+                        return Ok(());
+                    }
+                    if name == "background-image" {
+                        if let Some(url) = read_url_value(inner) {
+                            bg = Some(url);
+                        }
+                    } else if name == "wash-color" {
+                        let mut buf = String::new();
+                        while let Ok(t) = inner.next_including_whitespace_and_comments().cloned() {
+                            write_token(&mut buf, &t);
+                        }
+                        let trimmed = buf.trim();
+                        if !trimmed.is_empty() {
+                            wash = Some(trimmed.to_owned());
+                        }
+                    }
                 }
-                if name == "background-image" {
-                    if let Some(url) = read_url_value(inner) {
-                        bg = Some(url);
-                    }
-                } else if name == "wash-color" {
-                    let mut buf = String::new();
-                    while let Ok(t) = inner.next_including_whitespace_and_comments().cloned() {
-                        write_token(&mut buf, &t);
-                    }
-                    let trimmed = buf.trim();
-                    if !trimmed.is_empty() {
-                        wash = Some(trimmed.to_owned());
-                    }
-                }
-            }
-            Ok(())
-        });
+                Ok(())
+            }),
+        );
     }
     (bg, wash)
 }
@@ -249,7 +252,6 @@ fn read_url_value(p: &mut Parser<'_>) -> Option<String> {
 }
 
 fn write_token(buf: &mut String, t: &Token<'_>) {
-    use core::fmt::Write;
     match t {
         Token::Ident(s) => buf.push_str(s),
         Token::AtKeyword(s) => {
@@ -267,10 +269,10 @@ fn write_token(buf: &mut String, t: &Token<'_>) {
         Token::Number {
             int_value: Some(i), ..
         } => {
-            let _ = write!(buf, "{i}");
+            buf.push_str(&i.to_string());
         }
         Token::Number { value, .. } => {
-            let _ = write!(buf, "{value}");
+            buf.push_str(&value.to_string());
         }
         Token::QuotedString(s) => {
             buf.push('"');

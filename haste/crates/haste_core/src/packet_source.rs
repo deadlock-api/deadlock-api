@@ -21,6 +21,6 @@ pub trait PacketSource: Send {
 
 impl PacketSource for mpsc::Receiver<Bytes> {
     async fn recv(&mut self) -> Option<Bytes> {
-        mpsc::Receiver::recv(self).await
+        Self::recv(self).await
     }
 }

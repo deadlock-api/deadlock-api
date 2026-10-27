@@ -380,7 +380,7 @@ GROUP BY {group_by}"
 fn build_mv_query(query: &HeroStatsQuery) -> Option<String> {
     let bucket_expr = query.bucket.mv_bucket_expr()?;
     // Per-player / per-row filters the grain cannot express → base table.
-    #[expect(deprecated)]
+    #[expect(deprecated, reason = "reads the deprecated legacy query parameters")]
     let personalized = query.account_id.is_some()
         || is_non_empty(query.account_ids.as_deref())
         || is_non_empty(query.include_item_ids.as_deref())
@@ -481,7 +481,10 @@ fn build_mv_query(query: &HeroStatsQuery) -> Option<String> {
     ))
 }
 
-#[expect(clippy::too_many_lines)]
+#[expect(
+    clippy::too_many_lines,
+    reason = "one linear query builder reads clearer than split helpers"
+)]
 fn build_query(query: &HeroStatsQuery) -> String {
     let info_filters = query.match_info().build();
     let (min_hero_matches, max_hero_matches) = query.hero_matches_bounds();
@@ -514,7 +517,7 @@ fn build_query(query: &HeroStatsQuery) -> String {
     let has_player_hero_cte = min_hero_matches.is_some() || max_hero_matches.is_some();
     let has_player_hero_total_cte =
         min_hero_matches_total.is_some() || max_hero_matches_total.is_some() || bucket_by_total;
-    #[expect(deprecated)]
+    #[expect(deprecated, reason = "reads the deprecated legacy query parameters")]
     let has_account_filter =
         query.account_id.is_some() || is_non_empty(query.account_ids.as_deref());
     let has_item_filter = is_non_empty(query.include_item_ids.as_deref())
@@ -536,7 +539,7 @@ fn build_query(query: &HeroStatsQuery) -> String {
     // `LIMIT 1 BY`. The entire-history CTE is a set filter on the window-wide read, so it takes
     // FINAL too (measured 56-90% less wall time than `LIMIT 1 BY` on a 10-week window).
     let use_final = !has_account_filter && !has_player_hero_cte;
-    #[expect(deprecated)]
+    #[expect(deprecated, reason = "reads the deprecated legacy query parameters")]
     let player_filters = PlayerFilters {
         account_id: query.account_id,
         account_ids: query.account_ids.as_deref(),
@@ -782,7 +785,7 @@ pub(crate) async fn hero_stats(
         query.max_average_badge,
     )?;
     validate_hero_matches_total_buckets(&query)?;
-    #[expect(deprecated)]
+    #[expect(deprecated, reason = "reads the deprecated legacy query parameters")]
     filter_protected_accounts(&state, &mut query.account_ids, query.account_id).await?;
     get_hero_stats(&state.ch_client_ro, query).await.map(Json)
 }
@@ -837,7 +840,7 @@ mod tests {
         });
         assert!(!all_badges.contains("use_columns_cache"));
         // Account-scoped reads dedup with `LIMIT 1 BY` and keep the cache.
-        #[expect(deprecated)]
+        #[expect(deprecated, reason = "reads the deprecated legacy query parameters")]
         let account = build_query(&HeroStatsQuery {
             min_average_badge: Some(91),
             account_id: Some(1),
@@ -1073,7 +1076,7 @@ mod tests {
             hero_matches_total_buckets: Some(vec![1, 25, 100]),
             ..Default::default()
         };
-        assert!(validate_hero_matches_total_buckets(&query).is_ok());
+        validate_hero_matches_total_buckets(&query).unwrap();
         assert!(
             validate_hero_matches_total_buckets(&HeroStatsQuery {
                 bucket: BucketQuery::StartTimeDay,
@@ -1163,7 +1166,7 @@ mod proptests {
         fn hero_stats_build_mv_query_is_valid_sql(mut query: HeroStatsQuery) {
             // Force routing into the MV path: clear the filters that disqualify it
             // and pick a min timestamp comfortably inside the horizon.
-            #[expect(deprecated)]
+            #[expect(deprecated, reason = "reads the deprecated legacy query parameters")]
             {
                 query.account_id = None;
             }

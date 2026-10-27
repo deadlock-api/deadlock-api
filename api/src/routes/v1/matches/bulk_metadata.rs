@@ -1,5 +1,3 @@
-#![expect(clippy::struct_excessive_bools)]
-
 use crate::services::ch_admission;
 use crate::utils::sql::{DURATION_COLUMN, MatchInfoFilters, MatchPoolFilters, id_list};
 use core::time::Duration;
@@ -11,7 +9,7 @@ use axum::response::IntoResponse;
 use axum_extra::extract::Query;
 use cached::macros::cached;
 use clickhouse::query::BytesCursor;
-use itertools::Itertools;
+use itertools::Itertools as _;
 use serde::Deserialize;
 use strum::Display;
 use tokio::io::Lines;
@@ -31,7 +29,7 @@ use crate::utils::parse::{
 };
 use crate::utils::types::SortDirectionAsc;
 
-fn default_limit() -> u32 {
+const fn default_limit() -> u32 {
     1000
 }
 
@@ -84,6 +82,10 @@ pub(super) enum SortKey {
 
 #[derive(Debug, Clone, Deserialize, IntoParams, Default)]
 #[cfg_attr(test, derive(proptest_derive::Arbitrary))]
+#[expect(
+    clippy::struct_excessive_bools,
+    reason = "each bool is a public `include_*` query parameter"
+)]
 pub(super) struct BulkMatchMetadataQuery {
     // Parameters that influence what data is included in the response (SELECT)
     /// Include match info in the response.
@@ -361,15 +363,17 @@ fn strip_low_cardinality(ch_type: &str) -> String {
     const MARKER: &str = "LowCardinality(";
     let mut out = ch_type.to_owned();
     while let Some(start) = out.find(MARKER) {
-        let open = start + MARKER.len();
+        let open = start.saturating_add(MARKER.len());
         let mut depth = 1usize;
-        let Some(close) = out[open..].char_indices().find_map(|(idx, c)| {
-            match c {
-                '(' => depth += 1,
-                ')' => depth -= 1,
-                _ => {}
-            }
-            (depth == 0).then_some(open + idx)
+        let Some(close) = out.get(open..).and_then(|rest| {
+            rest.char_indices().find_map(|(idx, c)| {
+                match c {
+                    '(' => depth = depth.saturating_add(1),
+                    ')' => depth = depth.saturating_sub(1),
+                    _ => {}
+                }
+                (depth == 0).then_some(open.saturating_add(idx))
+            })
         }) else {
             break;
         };
@@ -446,7 +450,10 @@ async fn players_tuple_type(
     Some(format!("Tuple({fields})"))
 }
 
-#[expect(clippy::too_many_lines)]
+#[expect(
+    clippy::too_many_lines,
+    reason = "one linear query builder reads clearer than split helpers"
+)]
 fn build_query(
     query: BulkMatchMetadataQuery,
     players_tuple_type: Option<&str>,
@@ -631,24 +638,26 @@ fn build_query(
     if let Some(item_filter_hero_id) = query.item_filter_hero_id {
         player_filters.push(format!("hero_id = {item_filter_hero_id}"));
     }
-    let mut advanced_player_filters = false;
-    if let Some(include_item_ids) = &query.include_item_ids
-        && !include_item_ids.is_empty()
-    {
+    let include_item_ids = query
+        .include_item_ids
+        .as_deref()
+        .filter(|ids| !ids.is_empty());
+    let exclude_item_ids = query
+        .exclude_item_ids
+        .as_deref()
+        .filter(|ids| !ids.is_empty());
+    let advanced_player_filters = include_item_ids.is_some() || exclude_item_ids.is_some();
+    if let Some(include_item_ids) = include_item_ids {
         player_filters.push(format!(
             "hasAll(items.item_id, [{}])",
             id_list(include_item_ids)
         ));
-        advanced_player_filters = true;
     }
-    if let Some(exclude_item_ids) = &query.exclude_item_ids
-        && !exclude_item_ids.is_empty()
-    {
+    if let Some(exclude_item_ids) = exclude_item_ids {
         player_filters.push(format!(
             "NOT hasAny(items.item_id, [{}])",
             id_list(exclude_item_ids)
         ));
-        advanced_player_filters = true;
     }
 
     // The flat path applies the player filters as `match_id IN (...)`. The CTE path joins
@@ -1067,7 +1076,7 @@ mod proptests {
             },
             None,
         );
-        assert!(result.is_err());
+        result.unwrap_err();
     }
 
     #[test]

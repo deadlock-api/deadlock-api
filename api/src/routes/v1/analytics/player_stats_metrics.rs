@@ -5,7 +5,7 @@ use axum::extract::State;
 use axum::response::IntoResponse;
 use axum_extra::extract::Query;
 use clickhouse::Row;
-use itertools::Itertools;
+use itertools::Itertools as _;
 use serde::{Deserialize, Serialize};
 use strum::{Display, VariantArray};
 use tracing::debug;
@@ -219,7 +219,7 @@ pub(super) enum Metric {
 }
 
 impl Metric {
-    pub(super) fn get_select_clause(self) -> &'static str {
+    pub(super) const fn get_select_clause(self) -> &'static str {
         match self {
             Self::Kills => "kills",
             Self::Deaths => "deaths",
@@ -257,7 +257,7 @@ impl Metric {
 
     /// The metric whose columns a deprecated alias reads, `None` for a metric with its own.
     /// Aliases are not computed, only answered from their target.
-    pub(super) fn alias_of(self) -> Option<Self> {
+    pub(super) const fn alias_of(self) -> Option<Self> {
         match self {
             Self::Healing => Some(Self::PlayerHealing),
             Self::HealingPerMin => Some(Self::PlayerHealingPerMin),
@@ -267,7 +267,7 @@ impl Metric {
 
     /// Buff metrics read the buff pickup columns, which no `match_player` projection carries,
     /// so they are only computed on request (`include_buff_metrics`).
-    pub(super) fn is_buff(self) -> bool {
+    pub(super) const fn is_buff(self) -> bool {
         matches!(
             self,
             Self::PermanentBuffs | Self::PermanentBuffsPerMin | Self::FirstPermanentBuffTimeS
@@ -415,9 +415,22 @@ fn build_query(query: &PlayerStatsMetricsQuery) -> String {
     // CTE), and is cheap because `ORDER BY match_id DESC LIMIT n` rides the
     // table's `match_id` sort key. The player-level filters are then applied
     // to the rows of those matches.
-    let t_data = if let Some(n) = query.max_matches {
-        format!(
-            "(
+    let t_data = query.max_matches.map_or_else(
+        || {
+            format!(
+                "(
+                SELECT {data_columns}
+                FROM match_player
+                WHERE {match_mode_filter}
+                    AND {game_mode_filter}
+                    {info_filters}
+                    {player_filters}
+            )"
+            )
+        },
+        |n| {
+            format!(
+                "(
                 SELECT {data_columns}
                 FROM match_player
                 WHERE match_id IN (
@@ -432,19 +445,9 @@ fn build_query(query: &PlayerStatsMetricsQuery) -> String {
                 )
                 {player_filters}
             )"
-        )
-    } else {
-        format!(
-            "(
-                SELECT {data_columns}
-                FROM match_player
-                WHERE {match_mode_filter}
-                    AND {game_mode_filter}
-                    {info_filters}
-                    {player_filters}
-            )"
-        )
-    };
+            )
+        },
+    );
     // No `optimize_use_projections = 0` here: with skip indexes evaluated at planning time
     // (`use_skip_indexes_on_data_read = 0` on the clients) the hero-led projection is pruned
     // by start_time, so the planner may pick it even without a hero filter. Measured on

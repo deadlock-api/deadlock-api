@@ -95,7 +95,7 @@ impl EntityUpdateEvent for GameRulesProxyEvent {
 }
 
 /// Key of element `i` of the dynamic array field `array`.
-fn array_element_key(array: u64, i: u64) -> u64 {
+const fn array_element_key(array: u64, i: u64) -> u64 {
     add_u64_to_hash(array, add_u64_to_hash(0, i))
 }
 
@@ -112,9 +112,8 @@ pub(super) fn banned_heroes_from_game_rules(entity: &Entity) -> Option<Vec<u32>>
     let len: u64 = entity.get_value(&BANNED_HEROES_HASH)?;
     (0..len)
         .map(|i| {
-            entity
-                .get_value::<u64>(&array_element_key(BANNED_HEROES_HASH, i))
-                .and_then(|id| u32::try_from(id).ok())
+            let id = entity.get_value::<u64>(&array_element_key(BANNED_HEROES_HASH, i))?;
+            u32::try_from(id).ok()
         })
         .collect()
 }
@@ -173,7 +172,7 @@ struct AbilityUpgrade {
 }
 
 impl AbilityUpgrade {
-    fn new(ability_id: u32, upgrade_info: u32) -> Self {
+    const fn new(ability_id: u32, upgrade_info: u32) -> Self {
         // The upper 16 bits contain the unlock bit followed by upgrade-star bits.
         // Preserve the packed value so consumers can inspect other flags as well.
         Self {

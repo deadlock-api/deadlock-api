@@ -26,3 +26,6 @@ async-stream = "0.3.6"
 thiserror = "2.0.21"
 serde-env = "0.3.0"
 bytes = "1.12.1"
+
+[lints]
+workspace = true

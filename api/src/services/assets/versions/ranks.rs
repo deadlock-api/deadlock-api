@@ -1,5 +1,10 @@
 //! `/v1/assets/ranks` data layer — build per-version rank metadata.
 
+#![expect(
+    clippy::same_name_method,
+    reason = "`SimpleObject` derives resolvers named like fields that `ToSchema` also defines"
+)]
+
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -275,12 +280,14 @@ pub(crate) fn build_ranks(
     loc: &HashMap<String, String>,
     english: &HashMap<String, String>,
 ) -> Vec<Rank> {
-    (0..NUM_TIERS)
-        .map(|tier| Rank {
+    RANK_COLORS
+        .into_iter()
+        .zip(0..NUM_TIERS)
+        .map(|(color, tier)| Rank {
             tier,
             name: rank_name(loc, english, tier),
             images: RankImages::from_tier(tier),
-            color: RANK_COLORS[tier as usize],
+            color,
         })
         .collect()
 }
@@ -298,7 +305,7 @@ pub(crate) async fn fetch_ranks(
 ) -> Result<Arc<Vec<Rank>>, AssetsError> {
     let loc = localization::fetch_localization(r2, version, language).await?;
     let english = if language == "english" {
-        loc.clone()
+        Arc::clone(&loc)
     } else {
         localization::fetch_localization(r2, version, "english").await?
     };

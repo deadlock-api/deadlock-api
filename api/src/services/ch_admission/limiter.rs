@@ -34,7 +34,7 @@ pub(crate) enum Busy {
 }
 
 impl Busy {
-    fn reason(self) -> &'static str {
+    const fn reason(self) -> &'static str {
         match self {
             Self::QueueFull => "queue_full",
             Self::Timeout => "timeout",
@@ -60,8 +60,9 @@ impl State {
         if self.in_flight >= self.limit || (client.capped && held >= self.client_cap()) {
             return false;
         }
-        self.in_flight += 1;
-        *self.per_client.entry(Arc::clone(&client.id)).or_default() += 1;
+        self.in_flight = self.in_flight.saturating_add(1);
+        let held = self.per_client.entry(Arc::clone(&client.id)).or_default();
+        *held = held.saturating_add(1);
         true
     }
 }
@@ -167,14 +168,15 @@ impl ChAdmission {
                 return Ok(());
             }
             self.saturated.store(true, Ordering::Relaxed);
-            if state.waiting >= state.limit * MAX_WAITERS_PER_SLOT {
+            if state.waiting >= state.limit.saturating_mul(MAX_WAITERS_PER_SLOT) {
                 return Err(Busy::QueueFull);
             }
-            state.waiting += 1;
+            state.waiting = state.waiting.saturating_add(1);
         }
         let _waiting = WaitingGuard(self);
         let start = Instant::now();
-        let deadline = start + QUEUE_TIMEOUT;
+        // Unrepresentable only far in the future; timing out at once then is the safe side.
+        let deadline = start.checked_add(QUEUE_TIMEOUT).unwrap_or(start);
         loop {
             // Register for the wake-up before checking, so a release between the check and
             // the await is not missed.
@@ -197,7 +199,7 @@ impl ChAdmission {
             let mut state = self.state();
             state.in_flight = state.in_flight.saturating_sub(1);
             if let Some(held) = state.per_client.get_mut(client) {
-                *held -= 1;
+                *held = held.saturating_sub(1);
                 if *held == 0 {
                     state.per_client.remove(client);
                 }

@@ -8,6 +8,12 @@ use crate::services::assets::versions::common::Color;
 
 type ParseErr = cssparser::ParseError<()>;
 
+/// Discards the outcome of a cssparser step on purpose. A failed step only means a malformed
+/// rule or token is skipped; cssparser has already moved past it.
+pub(crate) fn skip_malformed<T, E>(step: Result<T, E>) {
+    drop(step);
+}
+
 /// Walk every `@define <ident>: #<hex>;` rule whose value is a single hex hash
 /// (no trailing tokens). Calls `f(name, hex_without_hash)` for each match.
 fn walk_define_hex_rules<F: FnMut(&str, &str)>(css: &str, mut f: F) {
@@ -15,15 +21,17 @@ fn walk_define_hex_rules<F: FnMut(&str, &str)>(css: &str, mut f: F) {
     while let Ok(tok) = p.next().cloned() {
         match tok {
             Token::AtKeyword(kw) if kw.as_ref() == "define" => {
-                let _ = p.parse_until_after::<_, _, ()>(Delimiter::Semicolon, |inner| {
-                    if let Some((name, hex)) = capture_define_hex(inner) {
-                        f(&name, &hex);
-                    }
-                    Ok(())
-                });
+                skip_malformed(
+                    p.parse_until_after::<_, _, ()>(Delimiter::Semicolon, |inner| {
+                        if let Some((name, hex)) = capture_define_hex(inner) {
+                            f(&name, &hex);
+                        }
+                        Ok(())
+                    }),
+                );
             }
             Token::CurlyBracketBlock => {
-                let _ = p.parse_nested_block::<_, (), ()>(|_| Ok(()));
+                skip_malformed(p.parse_nested_block::<_, (), ()>(|_| Ok(())));
             }
             _ => {}
         }
@@ -59,7 +67,7 @@ pub(crate) fn parse_define_colors(css: &str) -> BTreeMap<String, Color> {
 }
 
 fn to_snake_case(name: &str) -> String {
-    let mut out = String::with_capacity(name.len() + 4);
+    let mut out = String::with_capacity(name.len().saturating_add(4));
     for (i, c) in name.chars().enumerate() {
         if c.is_ascii_uppercase() {
             if i > 0 {
@@ -127,35 +135,39 @@ pub(crate) fn parse_hero_backgrounds(css: &str) -> HashMap<String, String> {
 fn find_background_image(p: &mut Parser<'_>) -> Option<String> {
     let mut found: Option<String> = None;
     while !p.is_exhausted() {
-        let _ = p.parse_until_after::<_, _, ()>(Delimiter::Semicolon, |inner| {
-            if let Ok(Token::Ident(name)) = inner.next().cloned()
-                && name.as_ref() == "background-image"
-                && inner.expect_colon().is_ok()
-            {
-                while let Ok(t) = inner.next().cloned() {
-                    match t {
-                        Token::UnquotedUrl(u) => {
-                            found = Some(u.to_string());
-                            break;
-                        }
-                        Token::Function(fname) if fname.as_ref() == "url" => {
-                            let captured = inner.parse_nested_block::<_, Option<String>, ()>(|b| {
-                                match b.next().cloned() {
-                                    Ok(Token::QuotedString(s)) => Ok(Some(s.to_string())),
-                                    _ => Ok(None),
-                                }
-                            });
-                            if let Ok(Some(s)) = captured {
-                                found = Some(s);
+        skip_malformed(
+            p.parse_until_after::<_, _, ()>(Delimiter::Semicolon, |inner| {
+                if let Ok(Token::Ident(name)) = inner.next().cloned()
+                    && name.as_ref() == "background-image"
+                    && inner.expect_colon().is_ok()
+                {
+                    while let Ok(t) = inner.next().cloned() {
+                        match t {
+                            Token::UnquotedUrl(u) => {
+                                found = Some(u.to_string());
+                                break;
                             }
-                            break;
+                            Token::Function(fname) if fname.as_ref() == "url" => {
+                                let captured =
+                                    inner.parse_nested_block::<_, Option<String>, ()>(|b| match b
+                                        .next()
+                                        .cloned()
+                                    {
+                                        Ok(Token::QuotedString(s)) => Ok(Some(s.to_string())),
+                                        _ => Ok(None),
+                                    });
+                                if let Ok(Some(s)) = captured {
+                                    found = Some(s);
+                                }
+                                break;
+                            }
+                            _ => {}
                         }
-                        _ => {}
                     }
                 }
-            }
-            Ok::<(), ParseErr>(())
-        });
+                Ok::<(), ParseErr>(())
+            }),
+        );
     }
     found
 }
@@ -200,30 +212,33 @@ fn find_margins(p: &mut Parser<'_>) -> (Option<f64>, Option<f64>) {
     let mut left = None;
     let mut top = None;
     while !p.is_exhausted() {
-        let _ = p.parse_until_after::<_, _, ()>(Delimiter::Semicolon, |inner| {
-            if let Ok(Token::Ident(name)) = inner.next().cloned() {
-                let slot = match name.as_ref() {
-                    "margin-left" => Some(&mut left),
-                    "margin-top" => Some(&mut top),
-                    _ => None,
-                };
-                if let Some(slot) = slot
-                    && inner.expect_colon().is_ok()
-                    && let Ok(Token::Percentage {
-                        unit_value,
-                        int_value,
-                        ..
-                    }) = inner.next().cloned()
-                {
-                    // Prefer the integer source value for an exact f64; fall
-                    // back to the f32 fraction only for fractional percentages.
-                    *slot = Some(
-                        int_value.map_or_else(|| f64::from(unit_value), |i| f64::from(i) / 100.0),
-                    );
+        skip_malformed(
+            p.parse_until_after::<_, _, ()>(Delimiter::Semicolon, |inner| {
+                if let Ok(Token::Ident(name)) = inner.next().cloned() {
+                    let slot = match name.as_ref() {
+                        "margin-left" => Some(&mut left),
+                        "margin-top" => Some(&mut top),
+                        _ => None,
+                    };
+                    if let Some(slot) = slot
+                        && inner.expect_colon().is_ok()
+                        && let Ok(Token::Percentage {
+                            unit_value,
+                            int_value,
+                            ..
+                        }) = inner.next().cloned()
+                    {
+                        // Prefer the integer source value for an exact f64; fall
+                        // back to the f32 fraction only for fractional percentages.
+                        *slot = Some(
+                            int_value
+                                .map_or_else(|| f64::from(unit_value), |i| f64::from(i) / 100.0),
+                        );
+                    }
                 }
-            }
-            Ok::<(), ParseErr>(())
-        });
+                Ok::<(), ParseErr>(())
+            }),
+        );
     }
     (left, top)
 }
@@ -235,7 +250,6 @@ fn normalize_selector(selector: &str) -> String {
 }
 
 fn write_token(buf: &mut String, t: &Token<'_>) {
-    use core::fmt::Write;
     match t {
         Token::Ident(s) => buf.push_str(s),
         Token::AtKeyword(s) => {
@@ -253,10 +267,10 @@ fn write_token(buf: &mut String, t: &Token<'_>) {
         Token::Number {
             int_value: Some(i), ..
         } => {
-            let _ = write!(buf, "{i}");
+            buf.push_str(&i.to_string());
         }
         Token::Number { value, .. } => {
-            let _ = write!(buf, "{value}");
+            buf.push_str(&value.to_string());
         }
         _ => {}
     }

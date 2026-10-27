@@ -24,7 +24,7 @@ impl TryFrom<DemoEvent> for Event {
     type Error = axum::Error;
 
     fn try_from(event: DemoEvent) -> Result<Self, Self::Error> {
-        Event::default()
+        Self::default()
             .event(event.event.to_string())
             .json_data(event)
     }

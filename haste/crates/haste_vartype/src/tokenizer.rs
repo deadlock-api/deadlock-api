@@ -1,6 +1,6 @@
 use dungers::charsor::Charsor;
 
-use crate::{Error, Span};
+use crate::{Span, VarTypeError};
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum TokenKind<'a> {
@@ -20,7 +20,7 @@ pub struct Token<'a> {
 }
 
 impl<'a> Token<'a> {
-    fn new(kind: TokenKind<'a>, span: Span) -> Self {
+    const fn new(kind: TokenKind<'a>, span: Span) -> Self {
         Self { kind, span }
     }
 }
@@ -30,80 +30,86 @@ pub struct Tokenizer<'a> {
     cursor: Charsor<'a>,
 }
 
-fn is_ident_start(ch: char) -> bool {
+const fn is_ident_start(ch: char) -> bool {
     ch.is_ascii_alphabetic()
 }
 
-fn is_ident_continue(ch: char) -> bool {
+const fn is_ident_continue(ch: char) -> bool {
     ch.is_ascii_alphanumeric() || matches!(ch, '_' | ':')
 }
 
 impl<'a> Tokenizer<'a> {
     #[must_use]
-    pub fn new(input: &'a str) -> Self {
+    pub const fn new(input: &'a str) -> Self {
         Self {
             cursor: Charsor::new(input),
         }
     }
 
-    fn emit(&mut self, kind: TokenKind<'a>) -> Token<'a> {
-        let start = self.cursor.prev_offset();
-        let end = self.cursor.offset();
-
-        Token::new(kind, Span::new(start as u16, end as u16))
+    fn span(start: usize, end: usize) -> Result<Span, VarTypeError> {
+        Ok(Span::new(u16::try_from(start)?, u16::try_from(end)?))
     }
 
-    fn emit_ident(&mut self) -> Token<'a> {
+    fn emit(&self, kind: TokenKind<'a>) -> Result<Token<'a>, VarTypeError> {
         let start = self.cursor.prev_offset();
-        self.cursor.eat_while(is_ident_continue);
         let end = self.cursor.offset();
 
-        Token::new(
-            TokenKind::Ident(self.cursor.slice_range(start..end)),
-            Span::new(start as u16, end as u16),
-        )
+        Ok(Token::new(kind, Self::span(start, end)?))
     }
 
-    fn emit_lit(&mut self) -> Token<'a> {
+    /// emits the token that starts at the previous char and spans all following chars that
+    /// satisfy `continues`.
+    fn emit_run(
+        &mut self,
+        continues: impl Fn(char) -> bool,
+        kind: impl FnOnce(&'a str) -> TokenKind<'a>,
+    ) -> Result<Token<'a>, VarTypeError> {
         let start = self.cursor.prev_offset();
-        self.cursor.eat_while(|ch| ch.is_ascii_digit());
+        self.cursor.eat_while(continues);
         let end = self.cursor.offset();
 
-        Token::new(
-            TokenKind::Lit(self.cursor.slice_range(start..end)),
-            Span::new(start as u16, end as u16),
-        )
+        let span = Self::span(start, end)?;
+        // `start..end` was just walked by the cursor, so it lies on char boundaries.
+        let text = self
+            .cursor
+            .slice_range(start..end)
+            .ok_or(VarTypeError::UnexpectedToken(span.start))?;
+        Ok(Token::new(kind(text), span))
     }
 
     fn eat_whitespace(&mut self) {
         self.cursor.eat_while(char::is_whitespace);
     }
 
-    fn next_token(&mut self) -> Option<Result<Token<'a>, Error>> {
+    fn next_token(&mut self) -> Option<Result<Token<'a>, VarTypeError>> {
         loop {
             let Some(ch) = self.cursor.next() else {
                 break None;
             };
 
             match ch {
-                '<' => break Some(Ok(self.emit(TokenKind::LAngle))),
-                '>' => break Some(Ok(self.emit(TokenKind::RAngle))),
-                '[' => break Some(Ok(self.emit(TokenKind::LSquare))),
-                ']' => break Some(Ok(self.emit(TokenKind::RSquare))),
-                '*' => break Some(Ok(self.emit(TokenKind::Asterisk))),
-                ch if is_ident_start(ch) => break Some(Ok(self.emit_ident())),
-                ch if ch.is_ascii_digit() => break Some(Ok(self.emit_lit())),
+                '<' => break Some(self.emit(TokenKind::LAngle)),
+                '>' => break Some(self.emit(TokenKind::RAngle)),
+                '[' => break Some(self.emit(TokenKind::LSquare)),
+                ']' => break Some(self.emit(TokenKind::RSquare)),
+                '*' => break Some(self.emit(TokenKind::Asterisk)),
+                ch if is_ident_start(ch) => {
+                    break Some(self.emit_run(is_ident_continue, TokenKind::Ident));
+                }
+                ch if ch.is_ascii_digit() => {
+                    break Some(self.emit_run(|ch| ch.is_ascii_digit(), TokenKind::Lit));
+                }
                 ch if ch.is_whitespace() => {
                     self.eat_whitespace();
                 }
-                _ => break Some(Err(Error::UnknownChar(ch))),
+                _ => break Some(Err(VarTypeError::UnknownChar(ch))),
             }
         }
     }
 }
 
 impl<'a> Iterator for Tokenizer<'a> {
-    type Item = Result<Token<'a>, Error>;
+    type Item = Result<Token<'a>, VarTypeError>;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.next_token()
@@ -116,10 +122,10 @@ mod tests {
 
     use super::*;
 
-    #[allow(clippy::too_many_lines)]
+    #[expect(clippy::too_many_lines, reason = "one expected snapshot")]
     #[test]
     fn it_works() {
-        const INPUT: &str = r"
+        const INPUT: &str = "
 uint64[256]
 CDOTAGameManager*
 CNetworkUtlVectorBase< CHandle< CBasePlayerController > >
@@ -128,7 +134,7 @@ CDOTA_AbilityDraftAbilityState[MAX_ABILITY_DRAFT_ABILITIES]
             ";
 
         let tokenizer = Tokenizer::new(INPUT);
-        let tokens: Vec<Result<Token, Error>> = tokenizer.collect();
+        let tokens: Vec<Result<Token, VarTypeError>> = tokenizer.collect();
 
         let expected = expect![[r#"
             [

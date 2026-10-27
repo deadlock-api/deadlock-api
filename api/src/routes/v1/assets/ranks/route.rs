@@ -89,6 +89,11 @@ pub(super) async fn subrank_image(
             format!("Unknown rank division: {tier}-{subrank}"),
         ));
     }
-    let bytes = rank_image::render(&state, tier * 10 + subrank, query.format).await?;
+    let bytes = rank_image::render(
+        &state,
+        tier.saturating_mul(10).saturating_add(subrank),
+        query.format,
+    )
+    .await?;
     Ok(([(header::CONTENT_TYPE, query.format.content_type())], bytes))
 }

@@ -56,7 +56,8 @@ impl<P: PacketSource> PacketChannelDemoStream<P> {
                     if self.offset > 0 {
                         // Compact: move remaining data to start
                         let remaining = self.current.slice(self.offset..);
-                        let mut new_buf = Vec::with_capacity(remaining.len() + bytes.len());
+                        let mut new_buf =
+                            Vec::with_capacity(remaining.len().saturating_add(bytes.len()));
                         new_buf.extend_from_slice(&remaining);
                         new_buf.extend_from_slice(&bytes);
                         self.current = Bytes::from(new_buf);
@@ -64,7 +65,8 @@ impl<P: PacketSource> PacketChannelDemoStream<P> {
                     } else if self.current.is_empty() {
                         self.current = bytes;
                     } else {
-                        let mut new_buf = Vec::with_capacity(self.current.len() + bytes.len());
+                        let mut new_buf =
+                            Vec::with_capacity(self.current.len().saturating_add(bytes.len()));
                         new_buf.extend_from_slice(&self.current);
                         new_buf.extend_from_slice(&bytes);
                         self.current = Bytes::from(new_buf);
@@ -89,65 +91,58 @@ impl<P: PacketSource> PacketChannelDemoStream<P> {
     async fn ensure_varint(&mut self) -> Result<(), ReadCmdHeaderError> {
         const MAX_VARINT32_SIZE: usize = 5;
         loop {
-            let available = &self.current[self.offset..];
+            let available = self.current.get(self.offset..).unwrap_or_default();
             if available.len() >= MAX_VARINT32_SIZE || available.iter().any(|b| b & 0x80 == 0) {
                 return Ok(());
             }
-            self.ensure_bytes(available.len() + 1).await?;
+            self.ensure_bytes(available.len().saturating_add(1)).await?;
         }
     }
 
-    fn remaining(&self) -> usize {
+    const fn remaining(&self) -> usize {
         self.current.len().saturating_sub(self.offset)
     }
 
-    fn read_bytes(&mut self, n: usize) -> &[u8] {
-        let slice = &self.current[self.offset..self.offset + n];
-        self.offset += n;
-        slice
+    fn read_byte(&mut self) -> Option<u8> {
+        let byte = *self.current.get(self.offset)?;
+        self.offset = self.offset.saturating_add(1);
+        Some(byte)
     }
 
-    /// Read a varint from the current position.
-    fn read_varint(&mut self) -> Result<(u32, usize), ReadCmdHeaderError> {
+    /// Read a varint from the current position; returns the value and its size in bytes.
+    fn read_varint(&mut self) -> Result<(u32, u8), ReadCmdHeaderError> {
         const CONTINUE_BIT: u8 = 0x80;
         const PAYLOAD_BITS: u8 = 0x7F;
 
         let mut value: u32 = 0;
-        let mut shift = 0;
-        let mut bytes_read = 0;
 
-        loop {
-            if self.remaining() == 0 {
+        // a u32 takes at most 5 bytes (payload shifts 0, 7, .., 28).
+        for (bytes_read, shift) in (1_u8..).zip((0_u32..32).step_by(7)) {
+            let Some(byte) = self.read_byte() else {
                 return Err(ReadCmdHeaderError::IoError(io::Error::new(
                     io::ErrorKind::UnexpectedEof,
                     "incomplete varint",
                 )));
-            }
-
-            let byte = self.read_bytes(1)[0];
-            bytes_read += 1;
+            };
 
             value |= (u32::from(byte & PAYLOAD_BITS)) << shift;
 
             if (byte & CONTINUE_BIT) == 0 {
                 return Ok((value, bytes_read));
             }
-
-            shift += 7;
-            if shift >= 32 {
-                return Err(ReadCmdHeaderError::IoError(io::Error::new(
-                    io::ErrorKind::InvalidData,
-                    "varint too large",
-                )));
-            }
         }
+
+        Err(ReadCmdHeaderError::IoError(io::Error::new(
+            io::ErrorKind::InvalidData,
+            "varint too large",
+        )))
     }
 
     /// Skip the demo file header if we haven't already.
     async fn skip_header_if_needed(&mut self) -> Result<(), ReadCmdHeaderError> {
         if !self.header_skipped {
             self.ensure_bytes(DEMO_HEADER_SIZE).await?;
-            self.offset += DEMO_HEADER_SIZE;
+            self.offset = self.offset.saturating_add(DEMO_HEADER_SIZE);
             self.header_skipped = true;
         }
         Ok(())
@@ -169,13 +164,16 @@ impl<P: PacketSource> AsyncDemoStream for PacketChannelDemoStream<P> {
         // Read tick (varint, signed stored as unsigned)
         self.ensure_varint().await?;
         let (tick_raw, tick_size) = self.read_varint()?;
-        let tick = tick_raw as i32;
+        let tick = tick_raw.cast_signed();
 
         // Read body size (varint)
         self.ensure_varint().await?;
         let (body_size, body_size_size) = self.read_varint()?;
 
-        let header_size = (cmd_size + tick_size + body_size_size) as u8;
+        // at most 3 * 5 bytes.
+        let header_size = cmd_size
+            .saturating_add(tick_size)
+            .saturating_add(body_size_size);
 
         Ok(CmdHeader {
             cmd,
@@ -196,8 +194,14 @@ impl<P: PacketSource> AsyncDemoStream for PacketChannelDemoStream<P> {
 
         // the body is borrowed straight from the current packet; only a compressed body needs a
         // buffer of its own.
-        let body = &self.current[self.offset..self.offset + size];
-        self.offset += size;
+        let end = self.offset.saturating_add(size);
+        let body = self.current.get(self.offset..end).ok_or_else(|| {
+            ReadCmdError::IoError(io::Error::new(
+                io::ErrorKind::UnexpectedEof,
+                "cmd body is out of bounds",
+            ))
+        })?;
+        self.offset = end;
         if !cmd_header.body_compressed {
             return Ok(body);
         }
@@ -308,17 +312,18 @@ mod tests {
         let mut body = Vec::new();
         let mut len = 1u32 << 30;
         while len >= 0x80 {
-            body.push((len as u8) | 0x80);
+            let [low, ..] = len.to_le_bytes();
+            body.push(low | 0x80);
             len >>= 7;
         }
-        body.push(len as u8);
+        body.push(u8::try_from(len).unwrap());
         let cmd = PACKET | EDemoCommands::DemIsCompressed as u8;
-        let mut bytes = vec![cmd, 0, body.len() as u8];
+        let mut bytes = vec![cmd, 0, u8::try_from(body.len()).unwrap()];
         bytes.extend_from_slice(&body);
         let mut s = stream(&[&bytes]);
         let header = block_on(s.read_cmd_header()).unwrap();
         assert!(header.body_compressed);
-        assert!(block_on(s.read_cmd(&header)).is_err());
+        block_on(s.read_cmd(&header)).unwrap_err();
         assert!(s.decompress_buf.len() <= DEMO_RECORD_BUFFER_SIZE);
     }
 }

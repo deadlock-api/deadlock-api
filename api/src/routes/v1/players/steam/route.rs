@@ -462,7 +462,7 @@ async fn fetch_matches_played_last_30d(
         Err(e) => {
             warn!("Failed to fetch matches_played_last_30d: {e}");
             Err(APIError::InternalError {
-                message: "Failed to fetch matches_played_last_30d".to_string(),
+                message: "Failed to fetch matches_played_last_30d".to_owned(),
             })
         }
     }
@@ -498,7 +498,7 @@ async fn search_steam(
         Err(e) => {
             warn!("Steam search index query failed: {e}");
             return Err(APIError::InternalError {
-                message: "Failed to query steam search index".to_string(),
+                message: "Failed to query steam search index".to_owned(),
             });
         }
     };

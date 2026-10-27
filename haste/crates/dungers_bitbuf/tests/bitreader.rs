@@ -1,3 +1,22 @@
+#![cfg_attr(
+    test,
+    allow(
+        clippy::arithmetic_side_effects,
+        clippy::disallowed_macros,
+        clippy::disallowed_methods,
+        clippy::expect_used,
+        clippy::indexing_slicing,
+        clippy::panic,
+        clippy::panic_in_result_fn,
+        clippy::print_stderr,
+        clippy::print_stdout,
+        clippy::string_slice,
+        clippy::unreachable,
+        clippy::unwrap_in_result,
+        clippy::unwrap_used,
+        reason = "tests may panic"
+    )
+)]
 use dungers_bitbuf::BitReader;
 
 #[test]
@@ -5,8 +24,8 @@ fn test_read_ubit64_overflow() {
     let buf = [0xffu8; 8];
     let mut br = BitReader::new(&buf);
 
-    assert!(br.read_ubit64(u64::BITS as usize).is_ok());
-    assert!(br.read_ubit64(1).is_err());
+    br.read_ubit64(u64::BITS as usize).unwrap();
+    br.read_ubit64(1).unwrap_err();
 }
 
 #[test]
@@ -102,8 +121,9 @@ fn naive_read(buf: &[u8], bit: usize, num_bits: usize) -> u64 {
 fn test_read_ubit64_matches_reference_at_every_offset() {
     // odd-sized buffers make sure that reads near the tail do not touch bytes past the end.
     for len in [1usize, 3, 7, 8, 9, 13, 17] {
-        let buf: Vec<u8> = (0..len)
-            .map(|i| (i as u8).wrapping_mul(0x9d).wrapping_add(0x5b))
+        let buf: Vec<u8> = (0_u8..)
+            .take(len)
+            .map(|i| i.wrapping_mul(0x9d).wrapping_add(0x5b))
             .collect();
         let total_bits = len * 8;
         for start in 0..total_bits {
@@ -119,7 +139,7 @@ fn test_read_ubit64_matches_reference_at_every_offset() {
             }
             let mut br = BitReader::new(&buf);
             br.seek(start).unwrap();
-            assert!(br.read_ubit64(total_bits - start + 1).is_err());
+            br.read_ubit64(total_bits - start + 1).unwrap_err();
         }
     }
 }
@@ -130,7 +150,7 @@ fn test_read_bool_at_end() {
     let mut br = BitReader::new(&buf);
     br.seek(7).unwrap();
     assert!(br.read_bool().unwrap());
-    assert!(br.read_bool().is_err());
+    br.read_bool().unwrap_err();
 }
 
 #[test]
@@ -153,9 +173,7 @@ fn test_read_bits_matches_reference() {
 
 #[test]
 fn test_read_bits_matches_read_ubit64_at_every_offset() {
-    let buf: Vec<u8> = (0..64u32)
-        .map(|i| (i.wrapping_mul(0x9d) ^ 0x5a) as u8)
-        .collect();
+    let buf: Vec<u8> = (0..64u8).map(|i| i.wrapping_mul(0x9d) ^ 0x5a).collect();
     for offset in 0..16 {
         for num_bits in 0..=(buf.len() * 8 - offset) {
             let mut br = BitReader::new(&buf);

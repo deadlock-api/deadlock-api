@@ -134,11 +134,23 @@ pub(crate) struct WrapSubclass<T> {
     pub(crate) subclass: T,
 }
 
-/// Serializes back as `{"subclass": ...}` to preserve the KV3 wrapper shape in
-/// JSON output.
-#[derive(Debug, Serialize, Clone, ToSchema)]
-pub(crate) struct Subclass<T: Serialize> {
-    pub(crate) subclass: T,
+pub(crate) use subclass::Subclass;
+
+mod subclass {
+    #![expect(
+        clippy::option_if_let_else,
+        reason = "emitted by utoipa's `ToSchema` derive for a generic field"
+    )]
+
+    use serde::Serialize;
+    use utoipa::ToSchema;
+
+    /// Serializes back as `{"subclass": ...}` to preserve the KV3 wrapper shape in
+    /// JSON output.
+    #[derive(Debug, Serialize, Clone, ToSchema)]
+    pub(crate) struct Subclass<T> {
+        pub(crate) subclass: T,
+    }
 }
 
 /// Slot used by `m_mapBoundAbilities` on heroes and NPC units. Parses from
@@ -204,14 +216,14 @@ impl Color {
     /// Parse a `#RRGGBB` or `#RRGGBBAA` hex string (with or without the `#`).
     pub(crate) fn from_hex(hex: &str) -> Option<Self> {
         let h = hex.strip_prefix('#').unwrap_or(hex);
-        let (rgb, alpha) = match h.len() {
-            6 => (h, 255),
-            8 => (&h[..6], u8::from_str_radix(&h[6..8], 16).ok()?),
+        let alpha = match h.len() {
+            6 => 255,
+            8 => u8::from_str_radix(h.get(6..8)?, 16).ok()?,
             _ => return None,
         };
-        let red = u8::from_str_radix(&rgb[0..2], 16).ok()?;
-        let green = u8::from_str_radix(&rgb[2..4], 16).ok()?;
-        let blue = u8::from_str_radix(&rgb[4..6], 16).ok()?;
+        let red = u8::from_str_radix(h.get(0..2)?, 16).ok()?;
+        let green = u8::from_str_radix(h.get(2..4)?, 16).ok()?;
+        let blue = u8::from_str_radix(h.get(4..6)?, 16).ok()?;
         Some(Self {
             red,
             green,

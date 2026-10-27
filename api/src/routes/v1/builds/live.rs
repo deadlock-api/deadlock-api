@@ -45,7 +45,7 @@ async fn fetch_build_from_db(
     hero_id: u32,
     build_id: u32,
 ) -> sqlx::Result<Option<Build>> {
-    #[expect(clippy::cast_possible_wrap)]
+    #[expect(clippy::cast_possible_wrap, reason = "ids fit in the signed Postgres column type")]
     let row: Option<sqlx::types::Json<Build>> = sqlx::query_scalar(
         "SELECT data FROM hero_builds WHERE hero = $1 AND build_id = $2 ORDER BY version DESC LIMIT 1",
     )
@@ -60,7 +60,10 @@ fn ts_to_pg(unix_ts: u32) -> Option<NaiveDateTime> {
     DateTime::from_timestamp(i64::from(unix_ts), 0).map(|d| d.naive_utc())
 }
 
-#[expect(clippy::cast_possible_wrap)]
+#[expect(
+    clippy::cast_possible_wrap,
+    reason = "ids fit in the signed Postgres column type"
+)]
 async fn insert_builds(
     pg_client: &sqlx::Pool<sqlx::Postgres>,
     builds: &[HeroBuildResult],
@@ -224,7 +227,10 @@ pub(super) async fn fetch_build_live(
     let build = results
         .iter()
         .filter(|b| b.hero_build.is_some())
-        .max_by_key(|b| b.hero_build.as_ref().and_then(|h| h.version))
+        .max_by_key(|b| {
+            let h = b.hero_build.as_ref()?;
+            h.version
+        })
         .ok_or_else(|| APIError::status_msg(StatusCode::NOT_FOUND, "Build not found"))?;
     Ok(Json(to_build(build)?))
 }

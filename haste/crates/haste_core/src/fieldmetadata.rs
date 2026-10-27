@@ -5,7 +5,7 @@ use crate::vartype::{self, Expr, Lit};
 #[derive(thiserror::Error, Debug)]
 pub enum FieldMetadataError {
     #[error(transparent)]
-    VarTypeParseError(#[from] vartype::Error),
+    VarTypeParseError(#[from] vartype::VarTypeError),
     #[error(transparent)]
     FieldDecoderConstructionError(#[from] DecoderError),
     #[error("unknown array length ident: {0}")]
@@ -68,18 +68,18 @@ pub(crate) enum FieldSpecialDescriptor {
 }
 
 impl FieldSpecialDescriptor {
-    pub(crate) fn is_dynamic_array(&self) -> bool {
+    pub(crate) const fn is_dynamic_array(&self) -> bool {
         matches!(
             self,
             Self::DynamicArray { .. } | Self::DynamicSerializerArray
         )
     }
 
-    pub(crate) fn is_fixed_array(&self) -> bool {
+    pub(crate) const fn is_fixed_array(&self) -> bool {
         matches!(self, Self::FixedArray { .. })
     }
 
-    pub(crate) fn is_pointer(&self) -> bool {
+    pub(crate) const fn is_pointer(&self) -> bool {
         matches!(self, Self::Pointer)
     }
 }
@@ -118,7 +118,10 @@ fn visit_ident(
         };
     }
 
-    #[allow(clippy::match_same_arms)]
+    #[expect(
+        clippy::match_same_arms,
+        reason = "one arm per var type, like valve's table"
+    )]
     match ident {
         // primitives
         "int8" | "int16" | "int32" | "int64" => non_special!(FieldDecoder::new_i64(field)),
@@ -287,8 +290,8 @@ mod tests {
                 "{var_type}"
             );
         }
-        assert!(get_field_metadata(&field, "CUtlVector< int32 >").is_ok());
-        assert!(get_field_metadata(&field, "uint8[4]").is_ok());
-        assert!(get_field_metadata(&field, "CBodyComponent*").is_ok());
+        get_field_metadata(&field, "CUtlVector< int32 >").unwrap();
+        get_field_metadata(&field, "uint8[4]").unwrap();
+        get_field_metadata(&field, "CBodyComponent*").unwrap();
     }
 }

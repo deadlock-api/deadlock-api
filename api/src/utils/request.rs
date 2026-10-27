@@ -6,7 +6,8 @@ use uuid::Uuid;
 
 /// A header's value, if present and valid visible ASCII.
 pub(crate) fn header_str(headers: &HeaderMap, name: impl AsHeaderName) -> Option<&str> {
-    headers.get(name).and_then(|v| v.to_str().ok())
+    let v = headers.get(name)?;
+    v.to_str().ok()
 }
 
 /// Parses an API key, with or without the `HEXE-` prefix, into its UUID.

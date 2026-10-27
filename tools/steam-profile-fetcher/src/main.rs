@@ -1,23 +1,31 @@
 #![forbid(unsafe_code)]
-#![deny(clippy::all)]
-#![deny(unreachable_pub)]
-#![deny(clippy::correctness)]
-#![deny(clippy::suspicious)]
-#![deny(clippy::style)]
-#![deny(clippy::complexity)]
-#![deny(clippy::perf)]
-#![deny(clippy::pedantic)]
-#![deny(clippy::std_instead_of_core)]
-#![expect(clippy::cast_precision_loss)]
-#![expect(clippy::cast_possible_truncation)]
+#![cfg_attr(
+    test,
+    allow(
+        clippy::arithmetic_side_effects,
+        clippy::disallowed_macros,
+        clippy::disallowed_methods,
+        clippy::expect_used,
+        clippy::indexing_slicing,
+        clippy::panic,
+        clippy::panic_in_result_fn,
+        clippy::print_stderr,
+        clippy::print_stdout,
+        clippy::string_slice,
+        clippy::unreachable,
+        clippy::unwrap_in_result,
+        clippy::unwrap_used,
+        reason = "tests may panic"
+    )
+)]
 
 use core::time::Duration;
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::time::Instant;
 
 use cached::macros::cached;
-use futures::stream::StreamExt;
-use itertools::Itertools;
+use futures::stream::StreamExt as _;
+use itertools::Itertools as _;
 use metrics::{counter, gauge};
 use models::{SteamFriend, SteamPlayerSummary};
 use tracing::{error, info, instrument, warn};
@@ -69,17 +77,23 @@ enum Error {
     #[error(transparent)]
     ClickHouse(#[from] clickhouse::error::Error),
     #[error(transparent)]
-    SteamApi(#[from] steam_api::Error),
+    SteamApi(#[from] steam_api::SteamApiError),
+    #[error(transparent)]
+    Http(#[from] reqwest::Error),
 }
 
 #[tokio::main]
+#[expect(
+    clippy::infinite_loop,
+    reason = "the service runs until run_until_shutdown drops the loop on a shutdown signal"
+)]
 async fn main() -> Result<(), Error> {
     let _otel_guard = common::init_tracing(env!("CARGO_PKG_NAME"));
     common::init_metrics()?;
 
     info!("Starting Steam Profile Fetcher");
 
-    let http_client = common::http_client();
+    let http_client = common::http_client()?;
     let ch_client = common::get_ch_client()?;
     let pg_client = common::get_pg_client().await?;
 
@@ -111,6 +125,10 @@ async fn main() -> Result<(), Error> {
 }
 
 #[instrument(skip_all)]
+#[expect(
+    clippy::cast_precision_loss,
+    reason = "account counts stay far below 2^53"
+)]
 async fn fetch_and_update_profiles(
     http_client: &reqwest::Client,
     ch_client: &clickhouse::Client,
@@ -202,6 +220,10 @@ async fn fetch_and_update_profiles(
 }
 
 #[instrument(skip_all)]
+#[expect(
+    clippy::cast_precision_loss,
+    reason = "account counts stay far below 2^53"
+)]
 async fn queue_unavailable_profiles(
     ch_client: &clickhouse::Client,
     batch_ids: &[u32],
@@ -290,10 +312,10 @@ async fn fetch_friends_for_accounts(
         .collect()
         .await;
 
-    let success = results.iter().filter(|(_, r)| r.is_ok()).count() as u64;
-    let failure = results.len() as u64 - success;
-    counter!("steam_profile_fetcher.fetched_friends.success").increment(success);
-    counter!("steam_profile_fetcher.fetched_friends.failure").increment(failure);
+    let success = results.iter().filter(|(_, r)| r.is_ok()).count();
+    let failure = results.len().saturating_sub(success);
+    counter!("steam_profile_fetcher.fetched_friends.success").increment(success as u64);
+    counter!("steam_profile_fetcher.fetched_friends.failure").increment(failure as u64);
 
     results
         .into_iter()
@@ -403,7 +425,7 @@ async fn get_account_ids_to_update(
 ) -> clickhouse::error::Result<Vec<u32>> {
     let limit_clause = limit.map_or_else(String::new, |limit| format!("LIMIT {limit}"));
     let query = format!(
-        r"
+        "
 SELECT account_id
 FROM (
     SELECT

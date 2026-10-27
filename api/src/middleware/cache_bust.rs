@@ -1,6 +1,6 @@
 use axum::extract::Request;
 use axum::middleware::Next;
-use axum::response::{IntoResponse, Response};
+use axum::response::{IntoResponse as _, Response};
 use reqwest::StatusCode;
 
 use crate::error::APIError;
@@ -59,7 +59,7 @@ mod tests {
     use axum::http::{Request, StatusCode};
     use axum::routing::get;
     use rstest::rstest;
-    use tower::ServiceExt;
+    use tower::ServiceExt as _;
 
     use super::*;
 

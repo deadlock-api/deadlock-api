@@ -1,26 +1,35 @@
 #![forbid(unsafe_code)]
-#![deny(clippy::all)]
-#![deny(unreachable_pub)]
-#![deny(clippy::correctness)]
-#![deny(clippy::suspicious)]
-#![deny(clippy::style)]
-#![deny(clippy::complexity)]
-#![deny(clippy::perf)]
-#![deny(clippy::pedantic)]
-#![deny(clippy::std_instead_of_core)]
-#![expect(clippy::cast_precision_loss)]
+#![cfg_attr(
+    test,
+    allow(
+        clippy::arithmetic_side_effects,
+        clippy::disallowed_macros,
+        clippy::disallowed_methods,
+        clippy::expect_used,
+        clippy::indexing_slicing,
+        clippy::panic,
+        clippy::panic_in_result_fn,
+        clippy::print_stderr,
+        clippy::print_stdout,
+        clippy::string_slice,
+        clippy::unreachable,
+        clippy::unwrap_in_result,
+        clippy::unwrap_used,
+        reason = "tests may panic"
+    )
+)]
 
 use core::time::Duration;
 use std::collections::{HashMap, HashSet};
-use std::sync::{Arc, LazyLock, Mutex};
+use std::sync::{Arc, LazyLock, Mutex, OnceLock, PoisonError};
 
 use clap::Parser;
 use clickhouse::Client;
-use futures::StreamExt;
+use futures::StreamExt as _;
 use metrics::{counter, gauge};
 use models::{MatchCandidates, MatchSalts};
 use object_store::path::Path;
-use object_store::{ObjectStore, ObjectStoreExt, PutPayload};
+use object_store::{ObjectStore, ObjectStoreExt as _, PutPayload};
 use tokio::time::sleep;
 use tokio_util::bytes::Bytes;
 use tracing::{debug, error, info, instrument, warn};
@@ -140,14 +149,21 @@ static CONCURRENCY: LazyLock<usize> = LazyLock::new(|| {
 /// rebuilds the connection pool and TLS config each time, and — more importantly —
 /// carries no timeout, so a stalled replay server can hold a concurrency slot
 /// forever.
-static HTTP_CLIENT: LazyLock<reqwest::Client> = LazyLock::new(|| {
-    reqwest::Client::builder()
+static HTTP_CLIENT: OnceLock<reqwest::Client> = OnceLock::new();
+
+/// [`HTTP_CLIENT`], built on first use. Racing first calls may each build one; all but the
+/// first are dropped.
+fn http_client() -> reqwest::Result<&'static reqwest::Client> {
+    if let Some(client) = HTTP_CLIENT.get() {
+        return Ok(client);
+    }
+    let client = reqwest::Client::builder()
         .connect_timeout(CONNECT_TIMEOUT)
         .timeout(REQUEST_TIMEOUT)
         .pool_max_idle_per_host(*CONCURRENCY)
-        .build()
-        .expect("building the HTTP client")
-});
+        .build()?;
+    Ok(HTTP_CLIENT.get_or_init(|| client))
+}
 
 /// Salts of 0 are placeholders that can never resolve to a replay URL.
 const VALID_SALTS: &str = "cluster_id > 0 AND metadata_salt > 0";
@@ -226,8 +242,11 @@ fn group_by_match(rows: Vec<MatchSalts>) -> Vec<MatchCandidates> {
     let mut grouped: Vec<MatchCandidates> = Vec::new();
     let mut position: HashMap<u64, usize> = HashMap::new();
     for row in rows {
-        if let Some(&i) = position.get(&row.match_id) {
-            grouped[i].candidates.push(row);
+        if let Some(group) = position
+            .get(&row.match_id)
+            .and_then(|&i| grouped.get_mut(i))
+        {
+            group.candidates.push(row);
         } else {
             position.insert(row.match_id, grouped.len());
             grouped.push(MatchCandidates {
@@ -249,6 +268,10 @@ struct Cli {
 }
 
 #[tokio::main]
+#[expect(
+    clippy::infinite_loop,
+    reason = "the service runs until run_until_shutdown drops the loop on a shutdown signal"
+)]
 async fn main() -> Result<(), Error> {
     let _otel_guard = common::init_tracing(env!("CARGO_PKG_NAME"));
     common::init_metrics()?;
@@ -333,7 +356,7 @@ async fn download_from_file(
         "Downloading {} of {} requested matches; {} have no usable salts",
         salts.len(),
         match_ids.len(),
-        match_ids.len() - salts.len(),
+        match_ids.len().saturating_sub(salts.len()),
     );
 
     let results = process_batch(store.as_ref(), cache_store.as_ref(), &salts).await;
@@ -348,7 +371,7 @@ async fn download_from_file(
     stamp(ch_client, &verdicts).await?;
     info!(
         "Downloaded {} matches, {failed} failed",
-        salts.len() - failed
+        salts.len().saturating_sub(failed)
     );
     Ok(())
 }
@@ -361,6 +384,10 @@ struct Scan {
     incremental_min_match_id: u64,
 }
 
+#[expect(
+    clippy::cast_precision_loss,
+    reason = "match counts stay far below 2^53"
+)]
 async fn run_iteration(
     ch_client: &Client,
     store: &Arc<dyn ObjectStore>,
@@ -401,7 +428,7 @@ async fn run_iteration(
         state.prune(&pending.iter().map(|s| s.match_id).collect());
     }
     let (mut to_fetch, retries) = state.select_eligible(pending);
-    let eligible = to_fetch.len() + retries.len();
+    let eligible = to_fetch.len().saturating_add(retries.len());
     gauge!("matchdata_downloader.matches_eligible_now").set(eligible as f64);
     gauge!("matchdata_downloader.matches_retryable_now").set(retries.len() as f64);
 
@@ -418,7 +445,7 @@ async fn run_iteration(
     info!(
         "Downloading {} of {eligible} eligible matches ({n_fresh} fresh, {} retries, newest first)",
         to_fetch.len(),
-        to_fetch.len() - n_fresh,
+        to_fetch.len().saturating_sub(n_fresh),
     );
 
     let results = process_batch(store.as_ref(), cache_store.as_ref(), &to_fetch).await;
@@ -564,6 +591,19 @@ enum GaveUp {
     No,
 }
 
+/// Counts a failed attempt at `id` and schedules its retry; returns the attempts so far.
+fn record_attempt(failed: &mut HashMap<u64, Attempt>, id: u64) -> u32 {
+    let now = tokio::time::Instant::now();
+    let attempt = failed.entry(id).or_insert_with(|| Attempt {
+        next: now,
+        count: 0,
+    });
+    attempt.count = attempt.count.saturating_add(1);
+    // Cannot overflow: the delay is capped at `RETRY_MAX_INTERVAL`.
+    attempt.next = now.checked_add(retry_delay(attempt.count)).unwrap_or(now);
+    attempt.count
+}
+
 struct State {
     /// Uploaded (or found already uploaded) without a verdict being stamped, e.g. the
     /// file was already in the ingest prefix; the SQL query keeps returning these.
@@ -580,19 +620,22 @@ impl State {
     }
 
     fn mark_uploaded(&self, id: u64) {
-        self.uploaded.lock().unwrap().insert(id);
-        self.failed.lock().unwrap().remove(&id);
+        self.uploaded
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .insert(id);
+        self.failed
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .remove(&id);
     }
 
     fn back_off(&self, id: u64) -> GaveUp {
-        let mut failed = self.failed.lock().unwrap();
-        let attempt = failed.entry(id).or_insert(Attempt {
-            next: tokio::time::Instant::now(),
-            count: 0,
-        });
-        attempt.count += 1;
-        attempt.next = tokio::time::Instant::now() + retry_delay(attempt.count);
-        if attempt.count == MAX_ATTEMPTS {
+        let count = record_attempt(
+            &mut self.failed.lock().unwrap_or_else(PoisonError::into_inner),
+            id,
+        );
+        if count == MAX_ATTEMPTS {
             debug!("Giving up on match {id} after {MAX_ATTEMPTS} attempts");
             counter!("matchdata_downloader.match.given_up").increment(1);
             return GaveUp::Yes;
@@ -605,11 +648,11 @@ impl State {
     fn prune(&self, valid: &HashSet<u64>) {
         self.uploaded
             .lock()
-            .unwrap()
+            .unwrap_or_else(PoisonError::into_inner)
             .retain(|id| valid.contains(id));
         self.failed
             .lock()
-            .unwrap()
+            .unwrap_or_else(PoisonError::into_inner)
             .retain(|id, _| valid.contains(id));
     }
 
@@ -621,8 +664,8 @@ impl State {
         pending: Vec<MatchCandidates>,
     ) -> (Vec<MatchCandidates>, Vec<MatchCandidates>) {
         let now = tokio::time::Instant::now();
-        let uploaded = self.uploaded.lock().unwrap();
-        let failed = self.failed.lock().unwrap();
+        let uploaded = self.uploaded.lock().unwrap_or_else(PoisonError::into_inner);
+        let failed = self.failed.lock().unwrap_or_else(PoisonError::into_inner);
         let mut fresh = Vec::new();
         let mut retries = Vec::new();
         for s in pending {
@@ -635,6 +678,8 @@ impl State {
                 Some(_) => {}
             }
         }
+        drop(uploaded);
+        drop(failed);
         (fresh, retries)
     }
 }
@@ -700,10 +745,7 @@ async fn fetch_first_working(candidates: &[MatchSalts]) -> Result<(MatchSalts, B
             Err(e) => last_err = Some(e),
         }
     }
-    match last_err {
-        Some(e) => Err(FetchError::AllCandidatesFailed(e)),
-        None => Err(FetchError::NoCandidates),
-    }
+    Err(last_err.map_or(FetchError::NoCandidates, FetchError::AllCandidatesFailed))
 }
 
 fn main_metadata_key(match_id: u64) -> Path {
@@ -739,7 +781,7 @@ fn metadata_url(salts: &MatchSalts) -> String {
 async fn fetch_metadata(salts: &MatchSalts) -> reqwest::Result<Bytes> {
     let url = metadata_url(salts);
     let bytes = async {
-        HTTP_CLIENT
+        http_client()?
             .get(&url)
             .send()
             .await?

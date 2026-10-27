@@ -5,10 +5,10 @@ use axum::extract::State;
 use axum::extract::rejection::JsonRejection;
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
-use base64::Engine;
+use base64::Engine as _;
 use base64::prelude::BASE64_URL_SAFE;
-use itertools::Itertools;
-use rand::Rng;
+use itertools::Itertools as _;
+use rand::Rng as _;
 use rand::prelude::ThreadRng;
 use reqwest::Url;
 use serde::{Deserialize, Serialize};
@@ -251,7 +251,7 @@ pub(super) async fn create_custom(
         .retries(5)
         .custom_backoff(|attempt, e: &APIError| {
             if e.is_retryable() {
-                RetryPolicy::Delay(Duration::from_millis(100) * attempt)
+                RetryPolicy::Delay(Duration::from_millis(100).saturating_mul(attempt))
             } else {
                 RetryPolicy::Break
             }
@@ -322,7 +322,7 @@ pub(super) async fn create_custom(
 
     let account_id = account_id
         .parse()
-        .map_err(|_| APIError::internal("Failed to parse account id".to_owned()))?;
+        .map_err(|e| APIError::internal(format!("Failed to parse account id: {e}")))?;
 
     switch_to_spectator_slot(&state.steam_client, username.clone(), party_id, account_id).await?;
 

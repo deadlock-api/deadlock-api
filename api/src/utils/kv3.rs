@@ -12,7 +12,7 @@ use std::borrow::Cow;
 
 use memchr::memchr2;
 use serde::de::{
-    self, DeserializeOwned, Deserializer, IntoDeserializer, MapAccess, SeqAccess, Visitor,
+    self, DeserializeOwned, Deserializer, IntoDeserializer as _, MapAccess, SeqAccess, Visitor,
 };
 use serde_json::{Map, Number, Value};
 
@@ -50,8 +50,8 @@ pub enum Kv3Value<'a> {
     Int(i64),
     Float(f64),
     Str(Cow<'a, str>),
-    Array(Vec<Kv3Value<'a>>),
-    Object(Vec<(Cow<'a, str>, Kv3Value<'a>)>),
+    Array(Vec<Self>),
+    Object(Vec<(Cow<'a, str>, Self)>),
 }
 
 /// Parse a KV3 document, borrowing from `content` where possible.
@@ -133,23 +133,20 @@ impl<'de> Deserializer<'de> for &'de Kv3Value<'de> {
     ) -> Result<V::Value, Self::Error> {
         // Strings -> unit variant; single-entry objects -> { variant: data }.
         let access = match self {
-            Kv3Value::Str(s) => VariantEnum {
+            Kv3Value::Str(s) => Some(VariantEnum {
                 tag: s.as_ref(),
                 value: None,
-            },
-            Kv3Value::Object(obj) if obj.len() == 1 => {
-                let (k, v) = &obj[0];
-                VariantEnum {
+            }),
+            Kv3Value::Object(obj) => match obj.as_slice() {
+                [(k, v)] => Some(VariantEnum {
                     tag: k.as_ref(),
                     value: Some(v),
-                }
-            }
-            _ => {
-                return Err(de::Error::custom(
-                    "expected string or single-key object for enum",
-                ));
-            }
-        };
+                }),
+                _ => None,
+            },
+            _ => None,
+        }
+        .ok_or_else(|| de::Error::custom("expected string or single-key object for enum"))?;
         visitor.visit_enum(access)
     }
 
@@ -236,30 +233,30 @@ impl<'de> de::VariantAccess<'de> for VariantEnum<'de> {
         self,
         seed: T,
     ) -> Result<T::Value, Self::Error> {
-        match self.value {
-            Some(v) => seed.deserialize(v),
-            None => Err(de::Error::custom("expected newtype variant payload")),
-        }
+        self.value.map_or_else(
+            || Err(de::Error::custom("expected newtype variant payload")),
+            |v| seed.deserialize(v),
+        )
     }
     fn tuple_variant<V: Visitor<'de>>(
         self,
         _len: usize,
         visitor: V,
     ) -> Result<V::Value, Self::Error> {
-        match self.value {
-            Some(v) => v.deserialize_any(visitor),
-            None => Err(de::Error::custom("expected tuple variant payload")),
-        }
+        self.value.map_or_else(
+            || Err(de::Error::custom("expected tuple variant payload")),
+            |v| v.deserialize_any(visitor),
+        )
     }
     fn struct_variant<V: Visitor<'de>>(
         self,
         _fields: &'static [&'static str],
         visitor: V,
     ) -> Result<V::Value, Self::Error> {
-        match self.value {
-            Some(v) => v.deserialize_any(visitor),
-            None => Err(de::Error::custom("expected struct variant payload")),
-        }
+        self.value.map_or_else(
+            || Err(de::Error::custom("expected struct variant payload")),
+            |v| v.deserialize_any(visitor),
+        )
     }
 }
 
@@ -271,19 +268,24 @@ struct Parser<'a> {
 }
 
 impl<'a> Parser<'a> {
-    fn new(src: &'a str) -> Self {
+    const fn new(src: &'a str) -> Self {
         Self { src, idx: 0 }
     }
 
     #[inline]
-    fn bytes(&self) -> &'a [u8] {
+    const fn bytes(&self) -> &'a [u8] {
         self.src.as_bytes()
     }
 
+    #[cold]
     fn err(&self, msg: impl Into<String>) -> Kv3Error {
-        let prefix = &self.src[..self.idx.min(self.src.len())];
-        let line = prefix.bytes().filter(|b| *b == b'\n').count() + 1;
-        let col = prefix.rsplit('\n').next().map_or(0, str::len) + 1;
+        let prefix = self.bytes().get(..self.idx).unwrap_or_else(|| self.bytes());
+        let line = memchr::memchr_iter(b'\n', prefix).count().saturating_add(1);
+        let col = prefix
+            .rsplit(|b| *b == b'\n')
+            .next()
+            .map_or(0, <[u8]>::len)
+            .saturating_add(1);
         Kv3Error::Parse {
             msg: msg.into(),
             line,
@@ -291,19 +293,61 @@ impl<'a> Parser<'a> {
         }
     }
 
+    /// Unparsed input; empty once the cursor is at (or past) the end.
+    #[inline]
+    fn rest(&self) -> &'a [u8] {
+        self.bytes().get(self.idx..).unwrap_or_default()
+    }
+
+    /// Unparsed input as text. The cursor only stops after ASCII bytes or whole chars, so it
+    /// is always on a char boundary.
+    #[inline]
+    fn rest_str(&self) -> &'a str {
+        self.src.get(self.idx..).unwrap_or_default()
+    }
+
+    /// The next `len` bytes as text, without consuming them. Callers end tokens on ASCII
+    /// delimiters, so the end is a char boundary too.
+    #[inline]
+    fn take_str(&self, len: usize) -> Result<&'a str, Kv3Error> {
+        self.idx
+            .checked_add(len)
+            .and_then(|end| self.src.get(self.idx..end))
+            .ok_or_else(|| self.boundary_err())
+    }
+
+    /// Input from `start` up to the cursor.
+    #[inline]
+    fn slice_from(&self, start: usize) -> Result<&'a str, Kv3Error> {
+        self.src
+            .get(start..self.idx)
+            .ok_or_else(|| self.boundary_err())
+    }
+
+    #[cold]
+    #[inline(never)]
+    fn boundary_err(&self) -> Kv3Error {
+        self.err("token ends inside a UTF-8 character")
+    }
+
+    #[inline]
+    const fn advance(&mut self, n: usize) {
+        self.idx = self.idx.saturating_add(n);
+    }
+
     fn peek(&self) -> Option<u8> {
-        self.bytes().get(self.idx).copied()
+        self.rest().first().copied()
     }
 
     fn starts_with(&self, s: &str) -> bool {
-        self.bytes()[self.idx..].starts_with(s.as_bytes())
+        self.rest().starts_with(s.as_bytes())
     }
 
     fn skip_header(&mut self) {
         if self.starts_with("<!--")
-            && let Some(end) = self.src[self.idx..].find("-->")
+            && let Some(end) = memchr::memmem::find(self.rest(), b"-->")
         {
-            self.idx += end + 3;
+            self.advance(end.saturating_add(3));
         }
         self.skip_whitespace();
     }
@@ -311,45 +355,34 @@ impl<'a> Parser<'a> {
     #[inline]
     fn skip_whitespace(&mut self) {
         let bytes = self.bytes();
-        let len = bytes.len();
         loop {
-            while self.idx < len && matches!(bytes[self.idx], b' ' | b'\t' | b'\n' | b'\r') {
-                self.idx += 1;
+            while let Some(b' ' | b'\t' | b'\n' | b'\r') = bytes.get(self.idx) {
+                self.advance(1);
             }
-            if self.idx >= len {
-                return;
-            }
-            let b = bytes[self.idx];
-            if b == b'/' && self.idx + 1 < len {
-                match bytes[self.idx + 1] {
-                    b'/' => match memchr::memchr(b'\n', &bytes[self.idx + 2..]) {
-                        Some(n) => self.idx += n + 3,
-                        None => self.idx = len,
-                    },
-                    b'*' => match memchr::memmem::find(&bytes[self.idx + 2..], b"*/") {
-                        Some(n) => self.idx += n + 4,
-                        None => self.idx = len,
-                    },
-                    _ => return,
-                }
-            } else if b.is_ascii_whitespace() {
-                self.idx += 1;
-            } else {
-                return;
+            match bytes.get(self.idx..).unwrap_or_default() {
+                [b'/', b'/', tail @ ..] => match memchr::memchr(b'\n', tail) {
+                    Some(n) => self.advance(n.saturating_add(3)),
+                    None => self.idx = self.src.len(),
+                },
+                [b'/', b'*', tail @ ..] => match memchr::memmem::find(tail, b"*/") {
+                    Some(n) => self.advance(n.saturating_add(4)),
+                    None => self.idx = self.src.len(),
+                },
+                [b, ..] if b.is_ascii_whitespace() => self.advance(1),
+                _ => return,
             }
         }
     }
 
     fn parse_value(&mut self) -> Result<Kv3Value<'a>, Kv3Error> {
         self.skip_whitespace();
-        let bytes = self.bytes();
-        if self.idx >= bytes.len() {
+        let Some(first) = self.peek() else {
             return Err(self.err("unexpected end of input"));
-        }
+        };
         if self.starts_with("subclass") {
             return self.parse_subclass();
         }
-        match bytes[self.idx] {
+        match first {
             b'{' => self.parse_object(),
             b'[' => self.parse_array(),
             b'"' => self.parse_string().map(Kv3Value::Str),
@@ -360,17 +393,17 @@ impl<'a> Parser<'a> {
                 "unexpected `{}` where a value was expected",
                 char::from(b)
             ))),
-            _ => Ok(self.parse_keyword_or_resource()),
+            _ => self.parse_keyword_or_resource(),
         }
     }
 
     fn parse_subclass(&mut self) -> Result<Kv3Value<'a>, Kv3Error> {
-        self.idx += "subclass".len();
+        self.advance("subclass".len());
         self.skip_whitespace();
         if self.peek() != Some(b':') {
             return Err(self.err("expected ':' after 'subclass'"));
         }
-        self.idx += 1;
+        self.advance(1);
         self.skip_whitespace();
         if self.peek() != Some(b'{') {
             return Err(self.err("expected '{' after 'subclass:'"));
@@ -381,16 +414,16 @@ impl<'a> Parser<'a> {
 
     fn parse_object(&mut self) -> Result<Kv3Value<'a>, Kv3Error> {
         let mut out: Vec<(Cow<'a, str>, Kv3Value<'a>)> = Vec::new();
-        self.idx += 1; // skip '{'
+        self.advance(1); // skip '{'
         loop {
             self.skip_whitespace();
-            let bytes = self.bytes();
-            if self.idx >= bytes.len() {
-                return Err(self.err("unexpected end of input in object"));
-            }
-            if bytes[self.idx] == b'}' {
-                self.idx += 1;
-                return Ok(Kv3Value::Object(out));
+            match self.peek() {
+                None => return Err(self.err("unexpected end of input in object")),
+                Some(b'}') => {
+                    self.advance(1);
+                    return Ok(Kv3Value::Object(out));
+                }
+                Some(_) => {}
             }
 
             let (key, flag) = self.parse_key()?;
@@ -398,7 +431,7 @@ impl<'a> Parser<'a> {
 
             let value = match self.peek() {
                 Some(b'=') => {
-                    self.idx += 1;
+                    self.advance(1);
                     self.parse_value()?
                 }
                 Some(b'{') => self.parse_object()?,
@@ -418,28 +451,28 @@ impl<'a> Parser<'a> {
 
             self.skip_whitespace();
             if self.peek() == Some(b',') {
-                self.idx += 1;
+                self.advance(1);
             }
         }
     }
 
     fn parse_array(&mut self) -> Result<Kv3Value<'a>, Kv3Error> {
         let mut out = Vec::new();
-        self.idx += 1; // skip '['
+        self.advance(1); // skip '['
         loop {
             self.skip_whitespace();
-            let bytes = self.bytes();
-            if self.idx >= bytes.len() {
-                return Err(self.err("unexpected end of input in array"));
-            }
-            if bytes[self.idx] == b']' {
-                self.idx += 1;
-                return Ok(Kv3Value::Array(out));
+            match self.peek() {
+                None => return Err(self.err("unexpected end of input in array")),
+                Some(b']') => {
+                    self.advance(1);
+                    return Ok(Kv3Value::Array(out));
+                }
+                Some(_) => {}
             }
             out.push(self.parse_value()?);
             self.skip_whitespace();
             if self.peek() == Some(b',') {
-                self.idx += 1;
+                self.advance(1);
             }
         }
     }
@@ -448,17 +481,16 @@ impl<'a> Parser<'a> {
         if self.starts_with("\"\"\"") {
             return self.parse_multiline_string();
         }
-        self.idx += 1; // skip opening "
+        self.advance(1); // skip opening "
 
         // Fast path: scan ahead for the closing quote or first backslash.
         // If we hit a quote with no backslash before it, return a borrowed slice.
-        let bytes = self.bytes();
-        let tail = &bytes[self.idx..];
+        let tail = self.rest();
         match memchr2(b'"', b'\\', tail) {
             None => return Err(self.err("unterminated string")),
-            Some(rel) if tail[rel] == b'"' => {
-                let s = &self.src[self.idx..self.idx + rel];
-                self.idx += rel + 1;
+            Some(rel) if tail.get(rel) == Some(&b'"') => {
+                let s = self.take_str(rel)?;
+                self.advance(rel.saturating_add(1));
                 return Ok(Cow::Borrowed(s));
             }
             Some(_) => { /* backslash found; fall through to slow path */ }
@@ -468,19 +500,18 @@ impl<'a> Parser<'a> {
         // escapes via slice append, then handle each escape.
         let mut out = String::new();
         loop {
-            let bytes = self.bytes();
-            let tail = &bytes[self.idx..];
+            let tail = self.rest();
             let Some(rel) = memchr2(b'"', b'\\', tail) else {
                 return Err(self.err("unterminated string"));
             };
-            out.push_str(&self.src[self.idx..self.idx + rel]);
-            self.idx += rel;
-            if bytes[self.idx] == b'"' {
-                self.idx += 1;
+            out.push_str(self.take_str(rel)?);
+            self.advance(rel);
+            if tail.get(rel) == Some(&b'"') {
+                self.advance(1);
                 return Ok(Cow::Owned(out));
             }
-            self.idx += 1;
-            let Some(&esc) = bytes.get(self.idx) else {
+            self.advance(1);
+            let Some(esc) = self.peek() else {
                 return Err(self.err("unexpected end of input in string"));
             };
             match esc {
@@ -491,50 +522,48 @@ impl<'a> Parser<'a> {
                 _ => {
                     // Escaped multi-byte UTF-8 char: copy the whole char, not just its lead
                     // byte (which would also leave `idx` off a char boundary).
-                    let ch = self.src[self.idx..]
+                    let ch = self
+                        .rest_str()
                         .chars()
                         .next()
                         .ok_or_else(|| self.err("unexpected end of input in string"))?;
                     out.push(ch);
-                    self.idx += ch.len_utf8();
+                    self.advance(ch.len_utf8());
                     continue;
                 }
             }
-            self.idx += 1;
+            self.advance(1);
         }
     }
 
     fn parse_multiline_string(&mut self) -> Result<Cow<'a, str>, Kv3Error> {
-        self.idx += 3;
+        self.advance(3);
         if self.peek() == Some(b'\n') {
-            self.idx += 1;
+            self.advance(1);
         }
-        let start = self.idx;
-        let Some(len) = memchr::memmem::find(&self.bytes()[start..], b"\n\"\"\"") else {
+        let Some(len) = memchr::memmem::find(self.rest(), b"\n\"\"\"") else {
             self.idx = self.src.len();
             return Err(self.err("unterminated multi-line string"));
         };
-        let s = &self.src[start..start + len];
-        self.idx = start + len + 4;
+        let s = self.take_str(len)?;
+        self.advance(len.saturating_add(4));
         Ok(Cow::Borrowed(s))
     }
 
     fn parse_number(&mut self) -> Result<Kv3Value<'a>, Kv3Error> {
-        let bytes = self.bytes();
         let start = self.idx;
         let mut is_float = false;
-        while self.idx < bytes.len() {
-            let b = bytes[self.idx];
+        while let Some(&b) = self.bytes().get(self.idx) {
             if b.is_ascii_digit() || b == b'-' || b == b'+' {
-                self.idx += 1;
+                self.advance(1);
             } else if matches!(b, b'.' | b'e' | b'E') {
                 is_float = true;
-                self.idx += 1;
+                self.advance(1);
             } else {
                 break;
             }
         }
-        let text = &self.src[start..self.idx];
+        let text = self.slice_from(start)?;
         if !is_float && let Ok(i) = text.parse::<i64>() {
             return Ok(Kv3Value::Int(i));
         }
@@ -549,12 +578,10 @@ impl<'a> Parser<'a> {
     /// verbatim (prefix and quotes included). Unquoted whitespace or `,` ends
     /// the token, so array elements (`[ resource_name:"a", resource_name:"b" ]`) don't
     /// swallow their separator.
-    fn parse_keyword_or_resource(&mut self) -> Kv3Value<'a> {
-        let bytes = self.bytes();
+    fn parse_keyword_or_resource(&mut self) -> Result<Kv3Value<'a>, Kv3Error> {
         let start = self.idx;
         let mut in_quotes = false;
-        while self.idx < bytes.len() {
-            let b = bytes[self.idx];
+        while let Some(&b) = self.bytes().get(self.idx) {
             if b == b'"' {
                 in_quotes = !in_quotes;
             } else if !in_quotes
@@ -562,51 +589,46 @@ impl<'a> Parser<'a> {
             {
                 break;
             }
-            self.idx += 1;
+            self.advance(1);
         }
         // Loop breaks on unquoted whitespace before advancing, so the slice
         // never has leading/trailing whitespace — no trim needed.
-        let kw = &self.src[start..self.idx];
-        match kw {
+        let kw = self.slice_from(start)?;
+        Ok(match kw {
             "true" => Kv3Value::Bool(true),
             "false" => Kv3Value::Bool(false),
             "null" => Kv3Value::Null,
             other => Kv3Value::Str(Cow::Borrowed(other)),
-        }
+        })
     }
 
     fn parse_key(&mut self) -> Result<(Cow<'a, str>, Option<&'a str>), Kv3Error> {
         self.skip_whitespace();
-        let bytes = self.bytes();
-        if self.idx >= bytes.len() {
-            return Err(self.err("unexpected end of input in key"));
-        }
-        let key = if bytes[self.idx] == b'"' {
-            self.parse_string()?
-        } else {
-            let start = self.idx;
-            while self.idx < bytes.len() {
-                let b = bytes[self.idx];
-                if b.is_ascii_alphanumeric() || b == b'_' {
-                    self.idx += 1;
-                } else {
-                    break;
+        let key = match self.peek() {
+            None => return Err(self.err("unexpected end of input in key")),
+            Some(b'"') => self.parse_string()?,
+            Some(_) => {
+                let start = self.idx;
+                while let Some(b) = self.bytes().get(self.idx)
+                    && (b.is_ascii_alphanumeric() || *b == b'_')
+                {
+                    self.advance(1);
                 }
+                if start == self.idx {
+                    return Err(self.err("invalid key"));
+                }
+                Cow::Borrowed(self.slice_from(start)?)
             }
-            if start == self.idx {
-                return Err(self.err("invalid key"));
-            }
-            Cow::Borrowed(&self.src[start..self.idx])
         };
 
         self.skip_whitespace();
         let flag = if self.peek() == Some(b':') {
-            self.idx += 1;
+            self.advance(1);
             let fstart = self.idx;
-            while self.idx < self.bytes().len() && self.bytes()[self.idx].is_ascii_alphabetic() {
-                self.idx += 1;
+            while self.peek().is_some_and(|b| b.is_ascii_alphabetic()) {
+                self.advance(1);
             }
-            let f = &self.src[fstart..self.idx];
+            let f = self.slice_from(fstart)?;
             if !FLAGS.contains(&f) {
                 return Err(self.err(format!("invalid flag: {f}")));
             }
@@ -658,7 +680,7 @@ mod tests {
     #[test]
     fn stray_brace_in_array_is_an_error() {
         // The array pushed an empty string without moving past `}` and grew until memory ran out.
-        assert!(parse_to_json("{ a = [ } ] }").is_err());
+        parse_to_json("{ a = [ } ] }").unwrap_err();
     }
 
     #[test]
@@ -770,7 +792,7 @@ mod tests {
                 f();
             }
             let avg: Duration = t0.elapsed() / n;
-            #[expect(clippy::cast_precision_loss)]
+            #[expect(clippy::cast_precision_loss, reason = "MB/s readout")]
             let mb = (len as f64) / avg.as_secs_f64() / 1024.0 / 1024.0;
             println!("{label:>32}: {len} bytes, avg {avg:?}, {mb:.1} MB/s");
         }

@@ -1,9 +1,25 @@
 #![forbid(unsafe_code)]
-#![deny(clippy::all)]
-#![deny(unreachable_pub)]
-#![deny(clippy::pedantic)]
+#![cfg_attr(
+    test,
+    allow(
+        clippy::arithmetic_side_effects,
+        clippy::disallowed_macros,
+        clippy::disallowed_methods,
+        clippy::expect_used,
+        clippy::indexing_slicing,
+        clippy::panic,
+        clippy::panic_in_result_fn,
+        clippy::print_stderr,
+        clippy::print_stdout,
+        clippy::string_slice,
+        clippy::unreachable,
+        clippy::unwrap_in_result,
+        clippy::unwrap_used,
+        reason = "tests may panic"
+    )
+)]
 
-use std::net::{Ipv4Addr, SocketAddr};
+use core::net::{Ipv4Addr, SocketAddr};
 
 use axum::ServiceExt;
 use axum::extract::Request;
@@ -11,18 +27,18 @@ use deadlock_api_rust::{ConsoleFields, StartupError, router};
 use mimalloc::MiMalloc;
 use opentelemetry::trace::TracerProvider as _;
 use opentelemetry_appender_tracing::layer::{OpenTelemetryTracingBridge, TracingSpanAttributes};
-use opentelemetry_otlp::{LogExporter, SpanExporter, WithExportConfig};
+use opentelemetry_otlp::{LogExporter, SpanExporter, WithExportConfig as _};
 use opentelemetry_sdk::Resource;
 use opentelemetry_sdk::logs::SdkLoggerProvider;
 use opentelemetry_sdk::propagation::TraceContextPropagator;
 use opentelemetry_sdk::trace::SdkTracerProvider;
 use tokio::signal::unix::{SignalKind, signal};
-use tracing::info;
+use tracing::{error, info};
 use tracing_subscriber::EnvFilter;
-use tracing_subscriber::Layer;
+use tracing_subscriber::Layer as _;
 use tracing_subscriber::filter::filter_fn;
-use tracing_subscriber::layer::SubscriberExt;
-use tracing_subscriber::util::SubscriberInitExt;
+use tracing_subscriber::layer::SubscriberExt as _;
+use tracing_subscriber::util::SubscriberInitExt as _;
 
 #[global_allocator]
 static GLOBAL: MiMalloc = MiMalloc;
@@ -40,6 +56,10 @@ struct OtelGuard {
 }
 
 impl Drop for OtelGuard {
+    #[expect(
+        clippy::print_stderr,
+        reason = "the pipeline being shut down may be the one carrying tracing output"
+    )]
     fn drop(&mut self) {
         if let Err(err) = self.tracer_provider.shutdown() {
             eprintln!("Failed to shut down OpenTelemetry tracer provider: {err}");
@@ -76,10 +96,16 @@ fn build_otel_providers(
     Ok((tracer_provider, logger_provider))
 }
 
+#[expect(
+    clippy::print_stderr,
+    reason = "runs before the tracing subscriber exists"
+)]
 fn init_tracing() -> Option<OtelGuard> {
-    let env_filter = EnvFilter::try_from_default_env().unwrap_or(EnvFilter::new(
-        "debug,hyper_util=warn,tower_http=info,reqwest=warn,rustls=warn,sqlx=warn,h2=warn,datafusion=warn,datafusion_optimizer=warn,sqlparser=info,haste_broadcast=info",
-    ));
+    let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| {
+        EnvFilter::new(
+            "debug,hyper_util=warn,tower_http=info,reqwest=warn,rustls=warn,sqlx=warn,h2=warn,datafusion=warn,datafusion_optimizer=warn,sqlparser=info,haste_broadcast=info",
+        )
+    });
     let fmt_layer = tracing_subscriber::fmt::layer().fmt_fields(ConsoleFields::default());
 
     let providers = std::env::var("OTEL_EXPORTER_OTLP_ENDPOINT")
@@ -139,20 +165,22 @@ fn init_tracing() -> Option<OtelGuard> {
     guard
 }
 
-async fn shutdown_signal() {
-    let interrupt = async {
-        signal(SignalKind::interrupt())
-            .expect("failed to install signal handler")
-            .recv()
-            .await;
-    };
+/// Resolves on the first `kind` signal; never, when its handler can't be installed.
+async fn wait_for_signal(kind: SignalKind, name: &str) {
+    match signal(kind) {
+        Ok(mut stream) => {
+            stream.recv().await;
+        }
+        Err(e) => {
+            error!("Failed to install the {name} handler: {e}");
+            core::future::pending::<()>().await;
+        }
+    }
+}
 
-    let terminate = async {
-        signal(SignalKind::terminate())
-            .expect("failed to install signal handler")
-            .recv()
-            .await;
-    };
+async fn shutdown_signal() {
+    let interrupt = wait_for_signal(SignalKind::interrupt(), "SIGINT");
+    let terminate = wait_for_signal(SignalKind::terminate(), "SIGTERM");
 
     tokio::select! {
         () = interrupt => {},

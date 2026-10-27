@@ -76,7 +76,7 @@ pub(crate) struct UpsertPatronParams {
 }
 
 impl PatronRepository {
-    pub(crate) fn new(pg_client: Pool<Postgres>, encryption_key: String) -> Self {
+    pub(crate) const fn new(pg_client: Pool<Postgres>, encryption_key: String) -> Self {
         Self {
             pg_client,
             encryption_key,

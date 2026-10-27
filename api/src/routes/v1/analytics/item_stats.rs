@@ -4,7 +4,7 @@ use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum_extra::extract::Query;
 use clickhouse::Row;
-use itertools::Itertools;
+use itertools::Itertools as _;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use strum::Display;
@@ -132,7 +132,7 @@ impl BucketQuery {
 
     /// Whether this bucket's select clause references the net worth at buy time, so the
     /// base query knows to ARRAY JOIN the precomputed `items.net_worth_at_buy` or compute it.
-    fn needs_net_worth_at_buy(self) -> bool {
+    const fn needs_net_worth_at_buy(self) -> bool {
         matches!(
             self,
             Self::NetWorthBy1000
@@ -147,7 +147,7 @@ impl BucketQuery {
     /// `None` for buckets the view cannot serve. Net-worth and game-time buckets
     /// need per-purchase data, and `StartTimeHour` needs sub-day resolution the
     /// day-grained view does not keep; those run against the base table.
-    fn mv_bucket_expr(self) -> Option<&'static str> {
+    const fn mv_bucket_expr(self) -> Option<&'static str> {
         match self {
             Self::NoBucket => Some("toUInt32(0)"),
             Self::Hero => Some("toUInt32(hero_id)"),
@@ -368,14 +368,15 @@ pub(crate) struct ItemStatsQuery {
 impl_match_info!(ItemStatsQuery);
 
 impl ItemStatsQuery {
-    #[expect(deprecated)]
+    #[expect(deprecated, reason = "reads the deprecated legacy query parameters")]
     fn corrupted_items(&self) -> CorruptedItemsFilter {
-        self.corrupted_items
-            .unwrap_or(if self.include_corrupted_items == Some(true) {
+        self.corrupted_items.unwrap_or_else(|| {
+            if self.include_corrupted_items == Some(true) {
                 CorruptedItemsFilter::Include
             } else {
                 CorruptedItemsFilter::Exclude
-            })
+            }
+        })
     }
 
     /// Whether corrupted purchases are counted at all. The rollups are built from
@@ -385,7 +386,7 @@ impl ItemStatsQuery {
     }
 
     /// Whether the request is scoped to one or more accounts.
-    #[expect(deprecated)]
+    #[expect(deprecated, reason = "reads the deprecated legacy query parameters")]
     fn filters_accounts(&self) -> bool {
         self.account_id.is_some() || is_non_empty(self.account_ids.as_deref())
     }
@@ -427,7 +428,7 @@ impl ItemStatsQuery {
 
     /// `hero_ids` with the deprecated single `hero_id` folded in.
     fn all_hero_ids(&self) -> Vec<u32> {
-        #[expect(deprecated)]
+        #[expect(deprecated, reason = "reads the deprecated legacy query parameters")]
         with_legacy_id(self.hero_ids.as_deref(), self.hero_id)
     }
 
@@ -589,7 +590,7 @@ fn build_mv_query(query: &ItemStatsQuery) -> Option<String> {
     // per-purchase data, item-set membership, per-account/enemy context, or a
     // dimension not in the grain (sub-day time, match_id, duration, final net
     // worth, buy time), or a match mode the view does not ingest, must use the base table.
-    #[expect(deprecated)]
+    #[expect(deprecated, reason = "reads the deprecated legacy query parameters")]
     let personalized = query.account_id.is_some()
         || is_non_empty(query.account_ids.as_deref())
         || is_non_empty(query.enemy_hero_ids.as_deref())
@@ -758,7 +759,7 @@ fn build_cohort_mv_query(query: &ItemStatsQuery) -> Option<String> {
     // outside it falls back. Badge bounds use the same >11 / <116 no-op guards
     // as MatchInfoFilters. Hero-filtered cohort queries are deliberately
     // excluded: they are served fast by the base-table projection.
-    #[expect(deprecated)]
+    #[expect(deprecated, reason = "reads the deprecated legacy query parameters")]
     let unsupported = query.hero_id.is_some()
         || is_non_empty(query.hero_ids.as_deref())
         || query.account_id.is_some()
@@ -805,11 +806,12 @@ fn build_cohort_mv_query(query: &ItemStatsQuery) -> Option<String> {
     filters
         .base
         .push(format!("has(items.item_id, {cohort_item_id})"));
+    let rollup_rows = cohort_rollup_rows(rollup.table)?;
     let source = rollup.source(
         &split,
         &filters,
         &format!("item_id, {bucket_expr}"),
-        |edge| cohort_rollup_rows(rollup.table, &edge.where_clause),
+        |edge| rollup_rows(&edge.where_clause),
     );
 
     Some(rollup_query(
@@ -826,7 +828,7 @@ fn build_cohort_mv_query(query: &ItemStatsQuery) -> Option<String> {
 /// the enemy hero is in ~20% of matches, spread evenly, so no granule is skipped.
 fn build_enemy_mv_query(query: &ItemStatsQuery) -> Option<String> {
     let enemy_hero_id = match query.enemy_hero_ids.as_deref() {
-        Some(ids) if !ids.is_empty() && ids.iter().all_equal() => ids[0],
+        Some([first, rest @ ..]) if rest.iter().all(|id| id == first) => *first,
         _ => return None,
     };
     // Hero/team are not in the rollup grain; hero-filtered enemy queries are
@@ -836,7 +838,7 @@ fn build_enemy_mv_query(query: &ItemStatsQuery) -> Option<String> {
         bucket => bucket.mv_bucket_expr()?,
     };
 
-    #[expect(deprecated)]
+    #[expect(deprecated, reason = "reads the deprecated legacy query parameters")]
     let unsupported = query.hero_id.is_some()
         || is_non_empty(query.hero_ids.as_deref())
         || query.account_id.is_some()
@@ -901,7 +903,7 @@ fn build_enemy_mv_query(query: &ItemStatsQuery) -> Option<String> {
 /// `item_cohort_stats_*_agg` rollups. `"eligible"` means the rollup was not declined
 /// (so a routed query must have errored and fallen back). Keep the checks in sync with
 /// `build_cohort_mv_query`'s `None` branches; diagnostic only, no effect on results.
-#[expect(deprecated)]
+#[expect(deprecated, reason = "reads the deprecated legacy query parameters")]
 fn cohort_mv_skip_reason(query: &ItemStatsQuery) -> &'static str {
     let reasons = [
         (
@@ -1012,9 +1014,9 @@ fn item_order_predicate(chain: &[u32], from_upgrades: bool) -> Option<String> {
         }
     };
     let clause = chain
-        .windows(2)
-        .map(|w| {
-            let (a, b) = (w[0], w[1]);
+        .iter()
+        .tuple_windows()
+        .map(|(&a, &b)| {
             format!(
                 "(NOT {} OR NOT {} OR {} <= {})",
                 owned(a),
@@ -1047,7 +1049,7 @@ fn validate_item_order(chains: Option<&[Vec<u32>]>) -> APIResult<()> {
         if chain.len() > MAX_ITEM_ORDER_LEN {
             return Err(bad_request("An item_order chain has too many item ids"));
         }
-        if chain.iter().all(|&id| id == chain[0]) {
+        if chain.iter().all_equal() {
             return Err(bad_request(
                 "An item_order chain must use distinct item ids",
             ));
@@ -1056,7 +1058,11 @@ fn validate_item_order(chains: Option<&[Vec<u32>]>) -> APIResult<()> {
     Ok(())
 }
 
-#[expect(clippy::too_many_lines)]
+#[expect(
+    clippy::too_many_lines,
+    clippy::option_if_let_else,
+    reason = "one linear query builder with long optional CTEs reads clearer than split helpers"
+)]
 fn build_query(query: &ItemStatsQuery) -> String {
     let corrupted_items = query.corrupted_items();
     let only_corrupted = corrupted_items == CorruptedItemsFilter::Only;
@@ -1097,7 +1103,7 @@ fn build_query(query: &ItemStatsQuery) -> String {
     // projection notes below.
     let use_items_arrays =
         has_buyer_hero_filter || query.reads_corrupted() || query.filters_enhanced();
-    #[expect(deprecated)]
+    #[expect(deprecated, reason = "reads the deprecated legacy query parameters")]
     let player_filter_inputs = PlayerFilters {
         hero_ids: Some(&hero_ids),
         account_id: query.account_id,
@@ -1501,7 +1507,7 @@ pub(crate) async fn item_stats(
             "enhanced_items=exclude/only requires game_mode=street_brawl",
         ));
     }
-    #[expect(deprecated)]
+    #[expect(deprecated, reason = "reads the deprecated legacy query parameters")]
     filter_protected_accounts(&state, &mut query.account_ids, query.account_id).await?;
     get_item_stats(&state.ch_client_ro, query).await.map(Json)
 }
@@ -1623,7 +1629,7 @@ mod tests {
             (
                 build_enemy_mv_query(&ItemStatsQuery {
                     enemy_hero_ids: Some(vec![66]),
-                    ..window.clone()
+                    ..window
                 }),
                 "HAVING has(enemy_hero_ids, 66)",
             ),
@@ -1984,7 +1990,7 @@ mod tests {
     }
 
     #[test]
-    #[expect(deprecated)]
+    #[expect(deprecated, reason = "reads the deprecated legacy query parameters")]
     fn include_corrupted_items_reads_raw_items_without_the_bit_filter() {
         for hero_ids in [None, Some(vec![7])] {
             let has_hero = hero_ids.is_some();
@@ -2033,7 +2039,7 @@ mod tests {
     }
 
     #[test]
-    #[expect(deprecated)]
+    #[expect(deprecated, reason = "reads the deprecated legacy query parameters")]
     fn include_corrupted_items_declines_every_rollup() {
         let recent = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
@@ -2071,7 +2077,7 @@ mod tests {
     }
 
     #[test]
-    #[expect(deprecated)]
+    #[expect(deprecated, reason = "reads the deprecated legacy query parameters")]
     fn corrupted_items_param_aliases_the_legacy_flag() {
         let with = |corrupted_items, include_corrupted_items| {
             build_query(&ItemStatsQuery {
@@ -2332,7 +2338,7 @@ mod tests {
         ] {
             assert_eq!(parse(qs).corrupted_items(), expected, "{qs}");
         }
-        assert!(try_parse("corrupted_items=maybe").is_err());
+        try_parse("corrupted_items=maybe").unwrap_err();
     }
 
     #[test]
@@ -2401,9 +2407,9 @@ mod tests {
 
     #[test]
     fn validate_item_order_accepts_valid() {
-        assert!(validate_item_order(None).is_ok());
-        assert!(validate_item_order(Some(&[vec![1, 2]])).is_ok());
-        assert!(validate_item_order(Some(&[vec![1, 2, 3], vec![4, 5]])).is_ok());
+        validate_item_order(None).unwrap();
+        validate_item_order(Some(&[vec![1, 2]])).unwrap();
+        validate_item_order(Some(&[vec![1, 2, 3], vec![4, 5]])).unwrap();
     }
 
     #[test]

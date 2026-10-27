@@ -1,7 +1,10 @@
 //! GraphQL schema entry point: `QueryRoot.matches`, `QueryRoot.match_players`
 //! and friends.
 
-#![expect(clippy::doc_markdown)]
+#![expect(
+    clippy::unused_async_trait_impl,
+    reason = "fires on the async fns the `async_graphql::Enum` derive generates"
+)]
 
 use std::sync::Arc;
 
@@ -162,7 +165,7 @@ pub(crate) struct QueryRoot;
 
 #[Object(rename_fields = "snake_case", rename_args = "snake_case")]
 impl QueryRoot {
-    /// Match-grouped query — one node per match_id with players aggregated.
+    /// Match-grouped query — one node per `match_id` with players aggregated.
     #[graphql(
         complexity = "cost::matches(where_.as_ref(), order_by, limit, offset, child_complexity)"
     )]
@@ -196,7 +199,7 @@ impl QueryRoot {
         run_built_query(ctx, "matches", sql).await
     }
 
-    /// Player-row query — one node per (match_id, account_id).
+    /// Player-row query — one node per (`match_id`, `account_id`).
     #[graphql(
         complexity = "cost::match_players(where_.as_ref(), order_by, limit, offset, child_complexity)"
     )]
@@ -230,7 +233,7 @@ impl QueryRoot {
         run_built_query(ctx, "match_players", sql).await
     }
 
-    /// Player match history — one node per (account_id, match_id), from the
+    /// Player match history — one node per (`account_id`, `match_id`), from the
     /// stored `player_match_history` table (no on-demand Steam fetch). Filter on
     /// `account_id`: without it the query merges the whole table and exceeds the
     /// complexity limit.
@@ -260,9 +263,9 @@ impl QueryRoot {
         run_built_query(ctx, "match_history", sql).await
     }
 
-    /// Stored match salts — one node per match_id, the same data as the REST
+    /// Stored match salts — one node per `match_id`, the same data as the REST
     /// `/v1/matches/{match_id}/salts` endpoint minus the on-demand Steam fetch.
-    /// Ordered by match_id. Salts that failed verification are dropped after
+    /// Ordered by `match_id`. Salts that failed verification are dropped after
     /// paging, so a page can hold slightly fewer than `limit` nodes.
     #[graphql(complexity = "cost::match_salts(where_.as_ref(), limit, child_complexity)")]
     async fn match_salts(
@@ -311,7 +314,7 @@ impl QueryRoot {
 
     /// All heroes for the given client version (defaults to latest), localized
     /// to `language` (defaults to English). Sourced from the versioned assets,
-    /// not ClickHouse.
+    /// not `ClickHouse`.
     #[graphql(complexity = "1 + child_complexity / 10")]
     async fn heroes(
         &self,
@@ -384,7 +387,10 @@ where
 }
 
 pub(super) fn record_rows_returned(operation: &'static str, rows: usize) {
-    #[expect(clippy::cast_precision_loss)]
+    #[expect(
+        clippy::cast_precision_loss,
+        reason = "metric/ratio values are far below f64 precision limits"
+    )]
     metrics::histogram!("graphql_rows_returned", "operation" => operation).record(rows as f64);
 }
 

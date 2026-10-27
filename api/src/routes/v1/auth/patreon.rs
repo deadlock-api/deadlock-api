@@ -4,7 +4,7 @@ use axum::http::header::{COOKIE, LOCATION, SET_COOKIE};
 use axum::http::{HeaderMap, HeaderValue, StatusCode};
 use axum::response::{IntoResponse, Response};
 use chrono::{Duration, Utc};
-use rand::RngExt;
+use rand::RngExt as _;
 use serde::Deserialize;
 
 use crate::context::AppState;
@@ -54,9 +54,19 @@ pub(crate) async fn login(State(state): State<AppState>) -> impl IntoResponse {
         "patreon_oauth_state={oauth_state}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=600"
     );
 
-    // oauth_state is hex-encoded (only [0-9a-f]), so this cannot fail
-    let cookie_header = HeaderValue::from_str(&cookie_value)
-        .expect("hex-encoded oauth state is always a valid header value");
+    // oauth_state is hex-encoded (only [0-9a-f]), so this does not fail in practice
+    let cookie_header = match HeaderValue::from_str(&cookie_value) {
+        Ok(cookie_header) => cookie_header,
+        Err(e) => {
+            let (status, message) = logged_failure(
+                "Failed to build OAuth state cookie",
+                e,
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Failed to start Patreon login",
+            );
+            return plain_response(status, message);
+        }
+    };
 
     let mut response = redirect(&auth_url);
 
@@ -76,14 +86,10 @@ pub(crate) struct CallbackParams {
 
 /// Extracts the OAuth state from the `patreon_oauth_state` cookie
 fn extract_state_from_cookie(headers: &HeaderMap) -> Option<&str> {
-    headers
-        .get(COOKIE)
-        .and_then(|v| v.to_str().ok())
-        .and_then(|cookies| {
-            cookies
-                .split(';')
-                .find_map(|cookie| cookie.trim().strip_prefix("patreon_oauth_state="))
-        })
+    let cookies = headers.get(COOKIE).and_then(|v| v.to_str().ok())?;
+    cookies
+        .split(';')
+        .find_map(|cookie| cookie.trim().strip_prefix("patreon_oauth_state="))
 }
 
 /// POST /v1/auth/patreon/logout
@@ -238,7 +244,16 @@ async fn upsert_patron_from_code(
     };
 
     // Step 4: Create or update patron record
-    let token_expires_at = Utc::now() + Duration::seconds(token_response.expires_in);
+    let token_expires_at = Duration::try_seconds(token_response.expires_in)
+        .and_then(|expires_in| Utc::now().checked_add_signed(expires_in))
+        .ok_or_else(|| {
+            logged_failure(
+                "Invalid token expiry",
+                token_response.expires_in,
+                StatusCode::BAD_GATEWAY,
+                "Failed to authenticate with Patreon",
+            )
+        })?;
     PatronRepository::new(
         app_state.pg_client.clone(),
         app_state.config.patron_encryption_key.clone(),

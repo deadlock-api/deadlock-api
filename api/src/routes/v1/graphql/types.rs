@@ -8,7 +8,6 @@
 //! passthrough — clients still get column-level projection (the SELECT only
 //! includes the requested column) without us having to model dozens of nested
 //! `ClickHouse` types as GraphQL objects in v1.
-#![expect(clippy::struct_field_names)]
 
 use async_graphql::SimpleObject;
 use serde::{Deserialize, Serialize};
@@ -22,6 +21,10 @@ pub(super) struct JsonScalar(pub serde_json::Value);
 
 async_graphql::scalar!(JsonScalar);
 
+#[expect(
+    clippy::struct_field_names,
+    reason = "field names are the public GraphQL fields and ClickHouse columns"
+)]
 #[derive(Clone, Debug, Default, Deserialize, SimpleObject)]
 /// Field weights are row units per match (see `cost.rs`): `players` are a match's ~12 adjacent
 /// rows, read and JSON-encoded in one `groupArray`.
@@ -302,6 +305,10 @@ impl From<SteamProfileRow> for SteamProfile {
     }
 }
 
+#[expect(
+    clippy::struct_field_names,
+    reason = "field names are the public GraphQL fields and ClickHouse columns"
+)]
 #[derive(Clone, Debug, Default, Deserialize, SimpleObject)]
 #[graphql(complex, rename_fields = "snake_case")]
 pub(super) struct Item {

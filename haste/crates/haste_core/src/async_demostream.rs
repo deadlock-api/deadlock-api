@@ -1,10 +1,11 @@
 use core::future::Future;
 use dungers::varint::{CONTINUE_BIT, PAYLOAD_BITS, VarintError, max_varint_size};
-use tokio::io::{AsyncRead, AsyncReadExt};
+use tokio::io::{AsyncRead, AsyncReadExt as _};
 use valveprotos::common::{CDemoClassInfo, CDemoFullPacket, CDemoSendTables};
 
 use crate::demostream::{
     self, CmdFormat, CmdHeader, DecodeCmdError, ReadCmdError, ReadCmdHeaderError, decode_demo_cmd,
+    demo_cmd_header_size,
 };
 
 async fn read_uvarint_async<R>(rdr: &mut R) -> Result<(u32, usize), VarintError>
@@ -20,12 +21,13 @@ where
     }
 
     let mut value = u32::from(byte & PAYLOAD_BITS);
-    for count in 1..max_varint_size::<u32>() {
+    // `len` is the number of bytes read including this one, `shift` the payload offset (< 32).
+    for (len, shift) in (2..=max_varint_size::<u32>()).zip((7_u32..).step_by(7)) {
         rdr.read_exact(&mut buf).await?;
         let byte = buf[0];
-        value |= u32::from(byte & PAYLOAD_BITS) << (count * 7);
+        value |= u32::from(byte & PAYLOAD_BITS) << shift;
         if (byte & CONTINUE_BIT) == 0 {
-            return Ok((value, count + 1));
+            return Ok((value, len));
         }
     }
 
@@ -77,8 +79,9 @@ where
     Ok(CmdHeader {
         cmd,
         body_compressed,
-        tick: tick as i32,
+        // NOTE: see `DemoFile::read_cmd_header` on the tick.
+        tick: tick.cast_signed(),
         body_size,
-        size: (cmd_n + tick_n + body_size_n) as u8,
+        size: demo_cmd_header_size(cmd_n, tick_n, body_size_n)?,
     })
 }

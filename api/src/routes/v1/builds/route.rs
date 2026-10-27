@@ -2,7 +2,7 @@ use axum::Json;
 use axum::extract::State;
 use axum::response::IntoResponse;
 use axum_extra::extract::Query;
-use sqlx::Row;
+use sqlx::Row as _;
 use tracing::debug;
 
 use crate::context::AppState;

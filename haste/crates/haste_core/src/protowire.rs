@@ -6,7 +6,7 @@
 //! semantics match prost's generated decoders: unknown fields are skipped, and for a scalar or
 //! bytes field that appears more than once the last occurrence wins (message fields merge).
 
-use prost::Message;
+use prost::Message as _;
 use prost::encoding::{
     DecodeContext, WireType, check_wire_type, decode_key, decode_varint, skip_field,
 };
@@ -19,7 +19,7 @@ struct FieldReader<'a> {
 }
 
 impl<'a> FieldReader<'a> {
-    fn new(buf: &'a [u8]) -> Self {
+    const fn new(buf: &'a [u8]) -> Self {
         Self { buf }
     }
 
@@ -33,11 +33,10 @@ impl<'a> FieldReader<'a> {
     fn read_bytes(&mut self, wire_type: WireType) -> Result<&'a [u8], DecodeCmdError> {
         check_wire_type(WireType::LengthDelimited, wire_type)?;
         let len = decode_varint(&mut self.buf)?;
-        let len = usize::try_from(len)
+        let (value, rest) = usize::try_from(len)
             .ok()
-            .filter(|len| *len <= self.buf.len())
+            .and_then(|len| self.buf.split_at_checked(len))
             .ok_or(DecodeCmdError::Malformed)?;
-        let (value, rest) = self.buf.split_at(len);
         self.buf = rest;
         Ok(value)
     }
@@ -104,7 +103,7 @@ pub(crate) fn decode_packet_entities(data: &[u8]) -> Result<PacketEntities<'_>, 
     while let Some((tag, wire_type)) = rdr.next_key()? {
         match tag {
             // NOTE: int32 is truncated from the 64 bit varint, as prost does.
-            2 => out.updated_entries = rdr.read_varint(wire_type)? as i32,
+            2 => out.updated_entries = truncate_to_i32(rdr.read_varint(wire_type)?),
             7 => out.entity_data = rdr.read_bytes(wire_type)?,
             _ => rdr.skip(tag, wire_type)?,
         }
@@ -112,9 +111,17 @@ pub(crate) fn decode_packet_entities(data: &[u8]) -> Result<PacketEntities<'_>, 
     Ok(out)
 }
 
+/// the low 32 bits, reinterpreted; what prost does for int32 fields.
+#[expect(
+    clippy::cast_possible_truncation,
+    reason = "int32 fields are truncated varints"
+)]
+const fn truncate_to_i32(value: u64) -> i32 {
+    value as i32
+}
+
 #[cfg(test)]
 mod tests {
-    use prost::Message;
     use valveprotos::common::{CDemoPacket, CsvcMsgPacketEntities};
 
     use super::*;
@@ -189,7 +196,7 @@ mod tests {
             data: Some(vec![1, 2, 3]),
         }
         .encode_to_vec();
-        assert!(decode_cmd_packet_data(&buf[..buf.len() - 1]).is_err());
-        assert!(CDemoPacket::decode(&buf[..buf.len() - 1]).is_err());
+        decode_cmd_packet_data(&buf[..buf.len() - 1]).unwrap_err();
+        CDemoPacket::decode(&buf[..buf.len() - 1]).unwrap_err();
     }
 }

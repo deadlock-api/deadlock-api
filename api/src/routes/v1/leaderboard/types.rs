@@ -1,5 +1,5 @@
 use clickhouse::Row;
-use itertools::Itertools;
+use itertools::Itertools as _;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use valveprotos::deadlock::{

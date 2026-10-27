@@ -9,16 +9,37 @@
 //!    on failure. It stays valid until the next call.
 //!
 //! A module declares its functions with [`export!`].
+#![cfg_attr(
+    test,
+    allow(
+        clippy::arithmetic_side_effects,
+        clippy::disallowed_macros,
+        clippy::disallowed_methods,
+        clippy::expect_used,
+        clippy::indexing_slicing,
+        clippy::panic,
+        clippy::panic_in_result_fn,
+        clippy::print_stderr,
+        clippy::print_stdout,
+        clippy::string_slice,
+        clippy::unreachable,
+        clippy::unwrap_in_result,
+        clippy::unwrap_used,
+        reason = "tests may panic"
+    )
+)]
 
-use std::cell::RefCell;
+use core::cell::RefCell;
 
 thread_local! {
     static OUTPUT: RefCell<Vec<u8>> = const { RefCell::new(Vec::new()) };
 }
 
 /// Exports the ABI's `alloc`, `output_ptr` and `output_len`, and one function per `name =>
-/// handler`, where a handler is a `fn(&str) -> Result<String, String>`. Call it once per module,
-/// inside a module of its own so the exported names do not clash with the crate's:
+/// handler`.
+///
+/// A handler is a `fn(&str) -> Result<String, String>`. Call it once per module, inside a module
+/// of its own so the exported names do not clash with the crate's:
 ///
 /// ```ignore
 /// #[cfg(target_arch = "wasm32")]
@@ -57,11 +78,9 @@ macro_rules! export {
 }
 
 #[doc(hidden)]
+#[must_use]
 pub fn alloc(len: usize) -> *mut u8 {
-    let mut buffer = Vec::<u8>::with_capacity(len);
-    let ptr = buffer.as_mut_ptr();
-    std::mem::forget(buffer);
-    ptr
+    Box::into_raw(Box::<[u8]>::new_uninit_slice(len)).cast::<u8>()
 }
 
 /// Takes back the buffer [`alloc`] handed out, with the `len` bytes the caller wrote into it.
@@ -69,12 +88,13 @@ pub fn alloc(len: usize) -> *mut u8 {
 /// # Safety `ptr` must come from `alloc(len)`, with `len` bytes written.
 #[doc(hidden)]
 pub unsafe fn take_input(ptr: *mut u8, len: usize) -> String {
-    // SAFETY: as the caller promises.
-    let bytes = unsafe { Vec::from_raw_parts(ptr, len, len) };
+    // SAFETY: as the caller promises, so this is the boxed slice `alloc` leaked, now initialized.
+    let bytes: Box<[u8]> = unsafe { Box::from_raw(core::ptr::slice_from_raw_parts_mut(ptr, len)) };
     String::from_utf8_lossy(&bytes).into_owned()
 }
 
 #[doc(hidden)]
+#[must_use]
 pub fn answer(result: Result<String, String>) -> u32 {
     let (ok, text) = match result {
         Ok(text) => (1, text),

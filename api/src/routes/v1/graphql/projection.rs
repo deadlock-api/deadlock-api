@@ -334,7 +334,7 @@ pub(super) struct Projection {
 }
 
 impl Projection {
-    pub(super) fn include_players(&self) -> bool {
+    pub(super) const fn include_players(&self) -> bool {
         !self.player_columns.is_empty()
     }
 }
@@ -482,7 +482,7 @@ mod tests {
     async fn projection_of(selection: &str) -> Projection {
         let seen = Seen::default();
         let schema = Schema::build(ProbeQuery, EmptyMutation, EmptySubscription)
-            .data(seen.clone())
+            .data(Arc::clone(&seen))
             .finish();
         let resp = schema.execute(format!("{{ players {selection} }}")).await;
         assert!(resp.errors.is_empty(), "{:?}", resp.errors);

@@ -2,12 +2,12 @@ use core::time::Duration;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
-use base64::Engine;
+use base64::Engine as _;
 use base64::prelude::BASE64_STANDARD;
 use cached::macros::cached;
 use metrics::counter;
 use prost::Message;
-use rand::prelude::IndexedRandom;
+use rand::prelude::IndexedRandom as _;
 use reqwest::Response;
 use serde_json::json;
 use tracing::{debug, warn};
@@ -77,8 +77,8 @@ impl SteamClient {
         let body = json!({
             "message_kind": query.msg_type as i32,
             "job_cooldown_millis": query.cooldown_time.as_millis(),
-            "rate_limit_cooldown_millis": 2 * query.cooldown_time.as_millis(),
-            "soft_cooldown_millis": query.soft_cooldown_millis.unwrap_or_else(|| query.cooldown_time / 2).as_millis(),
+            "rate_limit_cooldown_millis": query.cooldown_time.as_millis().saturating_mul(2),
+            "soft_cooldown_millis": query.soft_cooldown_millis.unwrap_or_else(|| query.cooldown_time.checked_div(2).unwrap_or_default()).as_millis(),
             "bot_in_all_groups": query.in_all_groups,
             "bot_in_any_groups": query.in_any_groups,
             "data": encoded_message,
@@ -94,7 +94,7 @@ impl SteamClient {
         result
     }
 
-    async fn call_proxy<M: Message, T: serde::Serialize + ?Sized>(
+    async fn call_proxy<M: Message, T: serde::Serialize + Sync + ?Sized>(
         &self,
         query: &SteamProxyQuery<M>,
         body: &T,
@@ -125,7 +125,7 @@ impl SteamClient {
         get_current_client_version(&self.http_client).await
     }
 
-    pub(crate) fn http_client(&self) -> &reqwest::Client {
+    pub(crate) const fn http_client(&self) -> &reqwest::Client {
         &self.http_client
     }
 
@@ -291,7 +291,7 @@ async fn fetch_rss_text(http_client: &wreq::Client, url: &str) -> APIResult<Stri
                     "RSS fetch from {url} failed (attempt {attempt}/{RSS_FETCH_ATTEMPTS}): {e}; retrying"
                 );
                 tokio::time::sleep(Duration::from_millis(200 * u64::from(attempt))).await;
-                attempt += 1;
+                attempt = attempt.saturating_add(1);
             }
             Err(e) => return Err(e),
         }
@@ -448,7 +448,7 @@ async fn get_client_version_from_github(http_client: &reqwest::Client) -> APIRes
         .ok_or_else(|| APIError::internal("Failed to fetch client version"))?;
     version
         .parse()
-        .map_err(|_| APIError::internal("Failed to parse client version"))
+        .map_err(|_not_a_number| APIError::internal("Failed to parse client version"))
 }
 
 #[cached(

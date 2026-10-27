@@ -3127,7 +3127,6 @@ dependencies = [
 name = "dungers_bitbuf"
 version = "0.0.0"
 dependencies = [
- "bytemuck",
  "dungers_varint",
  "thiserror",
 ]

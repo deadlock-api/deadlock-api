@@ -9,7 +9,7 @@ use datafusion::sql::sqlparser::ast::{
 use datafusion::sql::sqlparser::dialect::GenericDialect;
 use datafusion::sql::sqlparser::parser::Parser;
 
-use super::error::{Error, Result};
+use super::error::{DemoError, Result};
 
 /// Extract all table names referenced in a SQL query.
 ///
@@ -33,12 +33,12 @@ use super::error::{Error, Result};
 pub(super) fn extract_table_names(sql: &str) -> Result<Vec<String>> {
     let dialect = GenericDialect {};
     let statements = Parser::parse_sql(&dialect, sql)
-        .map_err(|e| Error::Schema(format!("SQL parse error: {e}")))?;
+        .map_err(|e| DemoError::Schema(format!("SQL parse error: {e}")))?;
 
     // Only a single read-only query may run: DDL, DML, `COPY`, `SET` and friends would act on the
     // session (and its file store) rather than read the demo tables.
     let [Statement::Query(query)] = statements.as_slice() else {
-        return Err(Error::Schema(
+        return Err(DemoError::Schema(
             "only a single SELECT query is allowed".to_owned(),
         ));
     };

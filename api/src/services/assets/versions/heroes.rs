@@ -1,3 +1,8 @@
+#![expect(
+    clippy::same_name_method,
+    reason = "`SimpleObject` derives resolvers named like fields that `ToSchema` also defines"
+)]
+
 use std::collections::HashMap as StdMap;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
@@ -23,7 +28,10 @@ const IMAGE_BASE_URL: &str = "https://assets-bucket.deadlock-api.com/assets-api-
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "PascalCase")]
-#[expect(clippy::struct_field_names)]
+#[expect(
+    clippy::struct_field_names,
+    reason = "field names mirror the game data / public API schema"
+)]
 struct RawStartingStats {
     #[serde(rename = "EMaxMoveSpeed")]
     e_max_move_speed: f64,
@@ -125,7 +133,10 @@ struct RawShopWeaponStatsDisplay {
 }
 
 #[derive(Debug, Deserialize)]
-#[expect(clippy::struct_field_names)]
+#[expect(
+    clippy::struct_field_names,
+    reason = "field names mirror the game data / public API schema"
+)]
 struct RawShopStatDisplay {
     #[serde(rename = "m_eSpiritStatsDisplay")]
     e_spirit_stats_display: RawShopSpiritStatsDisplay,
@@ -136,7 +147,10 @@ struct RawShopStatDisplay {
 }
 
 #[derive(Debug, Deserialize)]
-#[expect(clippy::struct_field_names)]
+#[expect(
+    clippy::struct_field_names,
+    reason = "field names mirror the game data / public API schema"
+)]
 struct RawHeroStatsDisplay {
     #[serde(rename = "m_vecHealthHeaderStats", default)]
     health_header_stats: Vec<String>,
@@ -222,7 +236,10 @@ pub(crate) struct DraftBucketing {
 }
 
 #[derive(Debug, Deserialize)]
-#[expect(clippy::struct_excessive_bools)]
+#[expect(
+    clippy::struct_excessive_bools,
+    reason = "mirrors the hero vdata flags"
+)]
 struct RawHero {
     #[serde(rename = "m_HeroID")]
     id: u32,
@@ -342,7 +359,11 @@ struct RawHero {
 
 #[derive(Debug, Serialize, Clone, ToSchema, SimpleObject)]
 #[graphql(complex, rename_fields = "snake_case")]
-#[expect(clippy::struct_excessive_bools, clippy::struct_field_names)]
+#[expect(
+    clippy::struct_excessive_bools,
+    clippy::struct_field_names,
+    reason = "mirrors the hero vdata flags and the public API schema"
+)]
 pub(crate) struct Hero {
     pub id: u32,
     pub class_name: String,
@@ -600,7 +621,10 @@ pub(crate) struct HeroColors {
 
 #[derive(Debug, Serialize, Clone, ToSchema, SimpleObject)]
 #[graphql(rename_fields = "snake_case")]
-#[expect(clippy::struct_field_names)]
+#[expect(
+    clippy::struct_field_names,
+    reason = "field names mirror the game data / public API schema"
+)]
 pub(crate) struct ShopStatDisplay {
     pub spirit_stats_display: ShopSpiritStatsDisplay,
     pub vitality_stats_display: ShopVitalityStatsDisplay,
@@ -633,7 +657,10 @@ pub(crate) struct ShopWeaponStatsDisplay {
 
 #[derive(Debug, Serialize, Clone, ToSchema, SimpleObject)]
 #[graphql(rename_fields = "snake_case")]
-#[expect(clippy::struct_field_names)]
+#[expect(
+    clippy::struct_field_names,
+    reason = "field names mirror the game data / public API schema"
+)]
 pub(crate) struct StatsDisplay {
     pub health_header_stats: Vec<String>,
     pub health_stats: Vec<String>,
@@ -828,7 +855,8 @@ fn transform_root(
 }
 
 fn parse_development_state(r: &RawHero) -> Option<HeroDevelopmentState> {
-    r.development_state.as_deref().and_then(|s| s.parse().ok())
+    let s = r.development_state.as_deref()?;
+    s.parse().ok()
 }
 
 /// Builds before 6711 carry `m_bPlayerSelectable`; newer ones only expose
@@ -848,13 +876,13 @@ fn is_active(
     disabled: bool,
     in_development: bool,
 ) -> bool {
-    match player_selectable {
-        Some(selectable) => selectable && !disabled && !in_development,
-        None => development_state == Some(HeroDevelopmentState::Release) && !disabled,
-    }
+    player_selectable.map_or_else(
+        || development_state == Some(HeroDevelopmentState::Release) && !disabled,
+        |selectable| selectable && !disabled && !in_development,
+    )
 }
 
-#[expect(clippy::too_many_lines)]
+#[expect(clippy::too_many_lines, reason = "one flat field-by-field mapping")]
 fn transform(
     class_name: &str,
     r: RawHero,
@@ -1112,7 +1140,11 @@ fn build_shop_stat_display(
     }
 }
 
-#[expect(clippy::cast_precision_loss, clippy::cast_possible_truncation)]
+#[expect(
+    clippy::cast_precision_loss,
+    clippy::cast_possible_truncation,
+    reason = "stat values are small; whole floats are shown as integers"
+)]
 fn build_starting_stats(s: &RawStartingStats) -> StartingStats {
     macro_rules! mk {
         ($v:expr, $name:literal) => {
@@ -1253,12 +1285,9 @@ fn png_to_webp(s: &str) -> String {
 
 fn hex_to_rgb(h: &str) -> Option<[u8; 3]> {
     let h = h.trim_start_matches('#');
-    if h.len() < 6 {
-        return None;
-    }
-    let r = u8::from_str_radix(&h[0..2], 16).ok()?;
-    let g = u8::from_str_radix(&h[2..4], 16).ok()?;
-    let b = u8::from_str_radix(&h[4..6], 16).ok()?;
+    let r = u8::from_str_radix(h.get(0..2)?, 16).ok()?;
+    let g = u8::from_str_radix(h.get(2..4)?, 16).ok()?;
+    let b = u8::from_str_radix(h.get(4..6)?, 16).ok()?;
     Some([r, g, b])
 }
 
@@ -1267,14 +1296,14 @@ fn extract_image_url(v: Option<&str>) -> Option<String> {
     if v.is_empty() {
         return None;
     }
-    let split_index = ["abilities/", "upgrades/", "hud/", "heroes/"]
+    let tail = ["abilities/", "upgrades/", "hud/", "heroes/"]
         .iter()
-        .find_map(|p| v.find(p))
-        .unwrap_or(0);
-    Some(format!(
-        "{IMAGE_BASE_URL}/{}",
-        normalize_image_suffix(&v[split_index..])
-    ))
+        .find_map(|p| {
+            let i = v.find(p)?;
+            v.get(i..)
+        })
+        .unwrap_or(v);
+    Some(format!("{IMAGE_BASE_URL}/{}", normalize_image_suffix(tail)))
 }
 
 /// Collapse Source 2's `_psd.vtex` / `_png.vtex` panorama suffixes down to the
@@ -1310,11 +1339,11 @@ fn parse_img_path(v: &str) -> Option<String> {
     // Prefer the longest meaningful tail: an `abilities/`, `upgrades/`, or
     // `hud/` prefix anywhere in the path; failing that, the segment after the
     // *last* `{images}/` placeholder.
-    let tail: &str = if let Some(i) = ["abilities/", "upgrades/", "hud/"]
-        .iter()
-        .find_map(|p| v.find(p))
-    {
-        &v[i..]
+    let tail: &str = if let Some(t) = ["abilities/", "upgrades/", "hud/"].iter().find_map(|p| {
+        let i = v.find(p)?;
+        v.get(i..)
+    }) {
+        t
     } else if let Some((_, t)) = v.rsplit_once("{images}/") {
         t
     } else {
@@ -1377,12 +1406,13 @@ async fn fetch_known_assets(r2: &AmazonS3) -> Option<HashSet<String>> {
             _ => {}
         }
     }
-    let (images, icons) = tokio::join!(
+    let indexes: [_; 2] = tokio::join!(
         fetch_index(r2, IndexFolder::Images),
         fetch_index(r2, IndexFolder::Icons),
-    );
+    )
+    .into();
     let mut out = HashSet::new();
-    for index in [images, icons] {
+    for index in indexes {
         let parsed = index
             .map_err(|e| e.to_string())
             .and_then(|b| serde_json::from_slice(&b).map_err(|e| e.to_string()));

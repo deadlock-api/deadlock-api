@@ -1,15 +1,23 @@
 #![forbid(unsafe_code)]
-#![deny(clippy::all)]
-#![deny(unreachable_pub)]
-#![deny(clippy::correctness)]
-#![deny(clippy::suspicious)]
-#![deny(clippy::style)]
-#![deny(clippy::complexity)]
-#![deny(clippy::perf)]
-#![deny(clippy::pedantic)]
-#![deny(clippy::std_instead_of_core)]
-#![expect(clippy::unreadable_literal)]
-#![expect(clippy::missing_errors_doc)]
+#![cfg_attr(
+    test,
+    allow(
+        clippy::arithmetic_side_effects,
+        clippy::disallowed_macros,
+        clippy::disallowed_methods,
+        clippy::expect_used,
+        clippy::indexing_slicing,
+        clippy::panic,
+        clippy::panic_in_result_fn,
+        clippy::print_stderr,
+        clippy::print_stdout,
+        clippy::string_slice,
+        clippy::unreachable,
+        clippy::unwrap_in_result,
+        clippy::unwrap_used,
+        reason = "tests may panic"
+    )
+)]
 
 mod demo;
 mod demo_parser;
@@ -23,7 +31,7 @@ use axum::routing::get;
 pub use error::*;
 use tower_http::cors::CorsLayer;
 use tower_http::normalize_path::{NormalizePath, NormalizePathLayer};
-use tower_layer::Layer;
+use tower_layer::Layer as _;
 use tracing::debug;
 
 use crate::state::AppState;

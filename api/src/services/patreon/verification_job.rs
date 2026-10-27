@@ -122,22 +122,24 @@ impl PatreonVerificationJob {
 
         info!("Found {} patrons to verify", patrons.len());
 
-        let mut refreshed_count = 0;
-        let mut membership_synced_count = 0;
-        let mut failed_count = 0;
-        let mut skipped_count = 0;
-        let mut api_error_count = 0;
+        let mut refreshed_count = 0_usize;
+        let mut membership_synced_count = 0_usize;
+        let mut failed_count = 0_usize;
+        let mut skipped_count = 0_usize;
+        let mut api_error_count = 0_usize;
 
         for patron in patrons {
             match self.verify_patron(&patron).await {
                 VerificationResult::RefreshedAndSynced => {
-                    refreshed_count += 1;
-                    membership_synced_count += 1;
+                    refreshed_count = refreshed_count.saturating_add(1);
+                    membership_synced_count = membership_synced_count.saturating_add(1);
                 }
-                VerificationResult::Synced => membership_synced_count += 1,
-                VerificationResult::Failed => failed_count += 1,
-                VerificationResult::Skipped => skipped_count += 1,
-                VerificationResult::ApiError => api_error_count += 1,
+                VerificationResult::Synced => {
+                    membership_synced_count = membership_synced_count.saturating_add(1);
+                }
+                VerificationResult::Failed => failed_count = failed_count.saturating_add(1),
+                VerificationResult::Skipped => skipped_count = skipped_count.saturating_add(1),
+                VerificationResult::ApiError => api_error_count = api_error_count.saturating_add(1),
             }
         }
 
@@ -208,9 +210,11 @@ impl PatreonVerificationJob {
 
     /// Refresh token if expired or expiring soon
     async fn maybe_refresh_token(&self, patron: &Patron) -> TokenRefreshResult {
-        let needs_refresh = patron
-            .token_expires_at
-            .is_none_or(|expires_at| expires_at <= Utc::now() + TimeDelta::hours(1));
+        let needs_refresh = patron.token_expires_at.is_none_or(|expires_at| {
+            Utc::now()
+                .checked_add_signed(TimeDelta::hours(1))
+                .is_none_or(|soon| expires_at <= soon)
+        });
 
         if !needs_refresh {
             return TokenRefreshResult::NotNeeded;
@@ -231,7 +235,11 @@ impl PatreonVerificationJob {
 
         match self.patreon_client.refresh_token(refresh_token).await {
             Ok(token_response) => {
-                let new_expires_at = Utc::now() + TimeDelta::seconds(token_response.expires_in);
+                // An out-of-range lifetime is stored as already expired, so the next run refreshes.
+                let now = Utc::now();
+                let new_expires_at = TimeDelta::try_seconds(token_response.expires_in)
+                    .and_then(|lifetime| now.checked_add_signed(lifetime))
+                    .unwrap_or(now);
 
                 if let Err(e) = self
                     .patron_repository
@@ -373,8 +381,8 @@ impl PatreonVerificationJob {
             patrons_to_retry.len()
         );
 
-        let mut success_count = 0;
-        let mut requeued_count = 0;
+        let mut success_count = 0_usize;
+        let mut requeued_count = 0_usize;
 
         for retry_patron in patrons_to_retry {
             match self
@@ -391,7 +399,7 @@ impl PatreonVerificationJob {
                         "Retry successful: synced membership for patron {}",
                         retry_patron.patreon_user_id
                     );
-                    success_count += 1;
+                    success_count = success_count.saturating_add(1);
                 }
                 MembershipSyncResult::ApiError => {
                     warn!(
@@ -399,7 +407,7 @@ impl PatreonVerificationJob {
                         retry_patron.patreon_user_id
                     );
                     self.queue_for_retry(retry_patron);
-                    requeued_count += 1;
+                    requeued_count = requeued_count.saturating_add(1);
                 }
                 MembershipSyncResult::DbError => {
                     // DB error already logged in sync_membership

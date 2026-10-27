@@ -1,4 +1,3 @@
-use core::fmt::Write as _;
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -7,7 +6,7 @@ use axum::extract::State;
 use axum::response::IntoResponse;
 use axum_extra::extract::Query;
 use clickhouse::Row;
-use itertools::{Itertools, izip};
+use itertools::{Itertools as _, izip};
 use serde::{Deserialize, Serialize};
 use tracing::{debug, warn};
 use utoipa::{IntoParams, ToSchema};
@@ -39,8 +38,11 @@ const CURVE_TUPLE_LEADING: usize = 2;
 /// The team flag and sample times lead every player tuple; each stat then contributes its samples.
 const PLAYER_TUPLE_LEADING: usize = 2;
 
-#[expect(clippy::unnecessary_wraps)]
-fn default_min_time_s() -> Option<u32> {
+#[expect(
+    clippy::unnecessary_wraps,
+    reason = "serde default fn must return the field type"
+)]
+const fn default_min_time_s() -> Option<u32> {
     Some(FIRST_SAMPLE_S)
 }
 
@@ -222,7 +224,10 @@ fn tuple_index(stats: &LaneStats, stat: LaneStat, slot: usize) -> usize {
         .iter()
         .position(|s| *s == stat)
         .unwrap_or_default();
-    CURVE_TUPLE_LEADING + 1 + 4 * stat_pos + slot
+    CURVE_TUPLE_LEADING
+        .saturating_add(1)
+        .saturating_add(stat_pos.saturating_mul(4))
+        .saturating_add(slot)
 }
 
 fn curve_columns(stats: &LaneStats, slot: usize) -> String {
@@ -233,24 +238,29 @@ fn curve_columns(stats: &LaneStats, slot: usize) -> String {
 
 /// One player's on-grid samples: `(is_team0, times, <one array per stat>)`.
 fn player_tuple(stats: &LaneStats) -> String {
-    stats.computed.iter().fold(
-        "team = 'Team0', arrayFilter((v, k) -> k, stats.time_stamp_s, on_grid)".to_string(),
-        |mut acc, stat| {
-            let _ = write!(acc, ", arrayFilter((v, k) -> k, stats.{stat}, on_grid)");
-            acc
-        },
+    core::iter::once(
+        "team = 'Team0', arrayFilter((v, k) -> k, stats.time_stamp_s, on_grid)".to_owned(),
     )
+    .chain(
+        stats
+            .computed
+            .iter()
+            .map(|stat| format!(", arrayFilter((v, k) -> k, stats.{stat}, on_grid)")),
+    )
+    .collect()
 }
 
 /// Each side's total of every stat at sample `t`, one player-sample row at a time.
 fn side_totals(stats: &LaneStats) -> String {
-    stats.computed.iter().fold(String::new(), |mut acc, stat| {
-        let _ = write!(
-            acc,
-            ",\n        toFloat64(sumIf({stat}_sample, p.1)) AS {stat}_t0,\n        toFloat64(sumIf({stat}_sample, NOT p.1)) AS {stat}_t1"
-        );
-        acc
-    })
+    stats
+        .computed
+        .iter()
+        .format_with("", |stat, f| {
+            f(&format_args!(
+                ",\n        toFloat64(sumIf({stat}_sample, p.1)) AS {stat}_t0,\n        toFloat64(sumIf({stat}_sample, NOT p.1)) AS {stat}_t1"
+            ))
+        })
+        .to_string()
 }
 
 /// Unrolls a player tuple's sample arrays alongside its times.
@@ -259,33 +269,35 @@ fn sample_array_join(stats: &LaneStats) -> String {
         .computed
         .iter()
         .enumerate()
-        .fold(String::new(), |mut acc, (i, stat)| {
-            let _ = write!(acc, ", p.{} AS {stat}_sample", PLAYER_TUPLE_LEADING + 1 + i);
-            acc
+        .format_with("", |(i, stat), f| {
+            f(&format_args!(
+                ", p.{} AS {stat}_sample",
+                PLAYER_TUPLE_LEADING.saturating_add(1).saturating_add(i)
+            ))
         })
+        .to_string()
 }
 
 fn sample_aggregates(stats: &LaneStats) -> String {
-    stats.computed.iter().fold(String::new(), |mut acc, stat| {
-        let _ = write!(
-            acc,
-            ",\n        round(avg(x_{stat}_value), 1) AS x_{stat}_value_avg,\n        round(stddevPop(x_{stat}_value), 1) AS x_{stat}_value_std,\n        round(avg(x_{stat}_diff), 1) AS x_{stat}_diff_avg,\n        round(stddevPop(x_{stat}_diff), 1) AS x_{stat}_diff_std"
-        );
-        acc
-    })
-}
-
-fn sample_tuple(stats: &LaneStats) -> String {
     stats
         .computed
         .iter()
-        .fold("t, sample_matchups".to_string(), |mut acc, stat| {
-            let _ = write!(
-                acc,
-                ", x_{stat}_value_avg, x_{stat}_value_std, x_{stat}_diff_avg, x_{stat}_diff_std"
-            );
-            acc
+        .format_with("", |stat, f| {
+            f(&format_args!(
+                ",\n        round(avg(x_{stat}_value), 1) AS x_{stat}_value_avg,\n        round(stddevPop(x_{stat}_value), 1) AS x_{stat}_value_std,\n        round(avg(x_{stat}_diff), 1) AS x_{stat}_diff_avg,\n        round(stddevPop(x_{stat}_diff), 1) AS x_{stat}_diff_std"
+            ))
         })
+        .to_string()
+}
+
+fn sample_tuple(stats: &LaneStats) -> String {
+    core::iter::once("t, sample_matchups".to_owned())
+        .chain(stats.computed.iter().map(|stat| {
+            format!(
+                ", x_{stat}_value_avg, x_{stat}_value_std, x_{stat}_diff_avg, x_{stat}_diff_std"
+            )
+        }))
+        .collect()
 }
 
 /// Drops matches that cannot clear `min_matches` before the per-sample pass runs. Only a few
@@ -350,7 +362,7 @@ kept_matches AS (
     );
     MinMatchesPushdown {
         cte,
-        filter: " AND match_id IN (SELECT match_id FROM kept_matches)".to_string(),
+        filter: " AND match_id IN (SELECT match_id FROM kept_matches)".to_owned(),
     }
 }
 
@@ -501,7 +513,10 @@ frequent_matchups AS (
         }
         _ => (String::new(), String::new()),
     };
-    let duo_filters = duo_filters.side_filters("duo", "enemy_duo") + &prune_filter;
+    let duo_filters = format!(
+        "{}{prune_filter}",
+        duo_filters.side_filters("duo", "enemy_duo")
+    );
     let curve_select = curve_select(query, stats, &duo_filters, true);
     // PREWHERE: under FINAL, ClickHouse only moves sorting-key conditions there itself, so the
     // other filters would run after reading every column. Duplicate versions of a row never

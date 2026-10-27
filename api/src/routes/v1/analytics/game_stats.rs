@@ -694,7 +694,7 @@ mod tests {
             GameStatsQuery {
                 min_unix_timestamp: Some(1_790_121_600 + 3600),
                 max_unix_timestamp: Some(1_790_121_600 + 7200),
-                ..base.clone()
+                ..base
             },
         ] {
             assert!(build_mv_query(&query).is_none(), "{query:?}");

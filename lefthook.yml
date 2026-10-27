@@ -46,7 +46,7 @@ pre-push:
   parallel: true
   commands:
     rust-clippy:
-      glob: "{*.rs,**/Cargo.toml,Cargo.lock}"
+      glob: "{*.rs,**/Cargo.toml,Cargo.lock,clippy.toml}"
       run: SQLX_OFFLINE=true cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
       fail_text: "Clippy warnings in the cargo workspace"
 

@@ -7,13 +7,13 @@ use axum::Json;
 use axum::extract::State;
 use axum::response::IntoResponse;
 use axum_extra::extract::Query;
-use base64::Engine;
+use base64::Engine as _;
 use base64::prelude::BASE64_STANDARD;
 use bytes::Bytes;
-use itertools::Itertools;
+use itertools::Itertools as _;
 use moka::Expiry;
 use moka::future::Cache;
-use prost::Message;
+use prost::Message as _;
 use serde::Deserialize;
 use utoipa::IntoParams;
 use valveprotos::deadlock::{
@@ -90,11 +90,10 @@ async fn fetch_active_matches_raw(state: &AppState) -> SteamProxyResult<Bytes> {
 }
 
 fn parse_active_matches_raw(raw_data: &[u8]) -> APIResult<Vec<ActiveMatch>> {
-    if raw_data.len() < 7 {
+    let Some(compressed) = raw_data.get(7..) else {
         return Err(APIError::internal("Invalid active matches data"));
-    }
-    #[expect(clippy::indexing_slicing)]
-    let decompressed_data = snap::raw::Decoder::new().decompress_vec(&raw_data[7..])?;
+    };
+    let decompressed_data = snap::raw::Decoder::new().decompress_vec(compressed)?;
     let decoded_message =
         CMsgClientToGcGetActiveMatchesResponse::decode(decompressed_data.as_ref())?;
     Ok(decoded_message
@@ -171,7 +170,7 @@ pub(super) async fn active_matches(
     let mut active_matches = parse_active_matches_raw(&raw_data)?;
 
     // Filter by account id if provided
-    #[expect(deprecated)]
+    #[expect(deprecated, reason = "reads the deprecated legacy query parameters")]
     if let Some(account_id) = query.account_id {
         active_matches.retain(|m| m.players.iter().any(|p| p.account_id == Some(account_id)));
     }

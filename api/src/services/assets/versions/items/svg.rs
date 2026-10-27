@@ -5,7 +5,7 @@
 //! cached in-process. Negative responses are cached too so we don't refetch.
 
 use core::time::Duration;
-use std::sync::{Arc, OnceLock};
+use std::sync::{Arc, LazyLock, OnceLock};
 
 use cached::macros::cached;
 use regex::Regex;
@@ -51,19 +51,14 @@ pub(super) async fn fetch_svg(name: &str) -> Arc<Option<String>> {
 /// Shortens `#RRGGBB` to `#RGB` when each channel has matching hex digits.
 /// Non-matching or non-hex strings are returned unchanged.
 pub(super) fn shorten_hex(s: &str) -> std::borrow::Cow<'_, str> {
-    let bytes = s.as_bytes();
-    if bytes.len() == 7 && bytes[0] == b'#' {
-        let hex = &bytes[1..];
-        if hex.iter().all(u8::is_ascii_hexdigit)
-            && hex[0].eq_ignore_ascii_case(&hex[1])
-            && hex[2].eq_ignore_ascii_case(&hex[3])
-            && hex[4].eq_ignore_ascii_case(&hex[5])
-        {
-            return std::borrow::Cow::Owned(format!(
-                "#{}{}{}",
-                hex[0] as char, hex[2] as char, hex[4] as char
-            ));
-        }
+    if let [b'#', hex @ ..] = s.as_bytes()
+        && let [r1, r2, g1, g2, b1, b2] = *hex
+        && hex.iter().all(u8::is_ascii_hexdigit)
+        && r1.eq_ignore_ascii_case(&r2)
+        && g1.eq_ignore_ascii_case(&g2)
+        && b1.eq_ignore_ascii_case(&b2)
+    {
+        return std::borrow::Cow::Owned(format!("#{}{}{}", r1 as char, g1 as char, b1 as char));
     }
     std::borrow::Cow::Borrowed(s)
 }
@@ -78,9 +73,27 @@ pub(super) fn add_fill_to_svg(svg: &str, fill: Option<&str>) -> String {
     let fill_raw = fill.unwrap_or("white");
     let fill = shorten_hex(fill_raw);
     if svg.contains("fill") {
-        static FILL: OnceLock<Regex> = OnceLock::new();
-        let re = FILL.get_or_init(|| Regex::new(r#"fill="[^"]+""#).expect("valid regex"));
+        /// `None` only if the pattern fails to compile, which the tests below rule out.
+        static FILL: LazyLock<Option<Regex>> = LazyLock::new(|| Regex::new(r#"fill="[^"]+""#).ok());
+        let Some(re) = FILL.as_ref() else {
+            tracing::error!("svg fill regex failed to compile; leaving fills unchanged");
+            return svg.to_owned();
+        };
         return re.replace_all(svg, format!("fill=\"{fill}\"")).into_owned();
     }
     svg.replacen("<svg", &format!("<svg fill=\"{fill}\""), 1)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn rewrites_fill_and_shortens_hex() {
+        assert_eq!(
+            add_fill_to_svg(r##"<svg><path fill="#000"/></svg>"##, Some("#aabbcc")),
+            r##"<svg><path fill="#abc"/></svg>"##
+        );
+        assert_eq!(shorten_hex("#aabbcd"), "#aabbcd");
+    }
 }

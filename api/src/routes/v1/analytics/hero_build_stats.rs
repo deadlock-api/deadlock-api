@@ -44,7 +44,7 @@ pub enum BucketQuery {
 }
 
 impl BucketQuery {
-    fn select_expr(self) -> &'static str {
+    const fn select_expr(self) -> &'static str {
         match self {
             Self::NoBucket => "toUInt32(0)",
             Self::AvgBadge => "toUInt32(assumeNotNull(coalesce(mp.average_badge, 0)))",
@@ -282,7 +282,7 @@ fn build_query(hero_id: u32, query: &HeroBuildStatsQuery) -> String {
     let info_filters = query.match_info().build_with_prefix("mp.");
     let match_mode_filter = MatchMode::sql_filter_with_prefix(query.match_mode.as_deref(), "mp.");
     let mut player_filters = vec![format!("mp.hero_id = {hero_id}")];
-    #[expect(deprecated)]
+    #[expect(deprecated, reason = "reads the deprecated legacy query parameters")]
     if let Some(account_id) = query.account_id {
         player_filters.push(format!("mp.account_id = {account_id}"));
     }
@@ -410,7 +410,7 @@ pub(super) async fn hero_build_stats(
     Query(mut query): Query<HeroBuildStatsQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
-    #[expect(deprecated)]
+    #[expect(deprecated, reason = "reads the deprecated legacy query parameters")]
     filter_protected_accounts(&state, &mut query.account_ids, query.account_id).await?;
     let valid_build_ids = fetch_valid_build_ids(&state.pg_client, hero_id).await?;
     get_hero_build_stats(&state.ch_client_ro, hero_id, &valid_build_ids, query)

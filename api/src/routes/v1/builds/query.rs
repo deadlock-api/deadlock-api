@@ -1,3 +1,8 @@
+#![expect(
+    clippy::unused_async_trait_impl,
+    reason = "fires on the async fns the `async_graphql::Enum` derive generates"
+)]
+
 use serde::Deserialize;
 use sqlx::QueryBuilder;
 use strum::Display;
@@ -124,7 +129,7 @@ impl Default for BuildsSearchQuery {
             search_name: None,
             search_description: None,
             only_latest: None,
-            #[expect(deprecated)]
+            #[expect(deprecated, reason = "reads the deprecated legacy query parameters")]
             language: None,
             build_language: None,
             build_id: None,
@@ -150,17 +155,17 @@ pub(crate) fn search_query(params: &BuildsSearchQuery) -> QueryBuilder<sqlx::Pos
         query_builder.push(format_args!(" AND data->'hero_build'->'tags' @> '{tag}'"));
     }
     if let Some(search_name) = &params.search_name {
-        let search_name = urlencoding::decode(search_name).unwrap_or(search_name.into());
+        let search_name = urlencoding::decode(search_name).unwrap_or_else(|_| search_name.into());
         query_builder.push(" AND lower(data->'hero_build'->>'name') LIKE ");
         query_builder.push_bind(format!("%{}%", search_name.to_lowercase()));
     }
     if let Some(search_description) = &params.search_description {
         let search_description =
-            urlencoding::decode(search_description).unwrap_or(search_description.into());
+            urlencoding::decode(search_description).unwrap_or_else(|_| search_description.into());
         query_builder.push(" AND lower(data->'hero_build'->>'description') LIKE ");
         query_builder.push_bind(format!("%{}%", search_description.to_lowercase()));
     }
-    #[expect(deprecated)]
+    #[expect(deprecated, reason = "reads the deprecated legacy query parameters")]
     let language = params.language;
     for (condition, value) in [
         (" AND language = ", language),

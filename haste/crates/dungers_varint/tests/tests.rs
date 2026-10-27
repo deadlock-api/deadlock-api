@@ -1,4 +1,23 @@
-use std::io;
+#![cfg_attr(
+    test,
+    allow(
+        clippy::arithmetic_side_effects,
+        clippy::disallowed_macros,
+        clippy::disallowed_methods,
+        clippy::expect_used,
+        clippy::indexing_slicing,
+        clippy::panic,
+        clippy::panic_in_result_fn,
+        clippy::print_stderr,
+        clippy::print_stdout,
+        clippy::string_slice,
+        clippy::unreachable,
+        clippy::unwrap_in_result,
+        clippy::unwrap_used,
+        reason = "tests may panic"
+    )
+)]
+use std::io::{self, Seek as _};
 
 use dungers_varint::{read_uvarint64, read_varint64, write_uvarint64, write_varint64};
 
@@ -6,7 +25,7 @@ use dungers_varint::{read_uvarint64, read_varint64, write_uvarint64, write_varin
 // https://github.com/rust-lang/rust/blob/e5b3e68abf170556b9d56c6f9028318e53c9f06b/compiler/rustc_serialize/tests/leb128.rs
 
 #[test]
-pub fn test_uvarint64() {
+fn test_uvarint64() {
     // test 256 evenly spaced values of integer range, integer max value, and some "random"
     // numbers.
     let mut values = Vec::new();
@@ -16,16 +35,19 @@ pub fn test_uvarint64() {
 
     values.push(u64::MAX);
 
-    values.extend((-500..500).map(|i| (i as u64).wrapping_mul(0x12345789ABCDEFu64)));
+    values.extend((-500..500).map(|i| {
+        i64::from(i)
+            .cast_unsigned()
+            .wrapping_mul(0x12345789ABCDEFu64)
+    }));
 
-    let mut buf = [0u8; 1 << 20];
-    let mut cursor = io::Cursor::new(&mut buf[..]);
+    let mut buf = vec![0u8; 1 << 20];
+    let mut cursor = io::Cursor::new(buf.as_mut_slice());
 
     for x in &values {
         write_uvarint64(&mut cursor, *x).unwrap();
     }
 
-    use io::Seek;
     cursor.seek(io::SeekFrom::Start(0)).unwrap();
 
     for want in &values {
@@ -35,7 +57,7 @@ pub fn test_uvarint64() {
 }
 
 #[test]
-pub fn test_varint64() {
+fn test_varint64() {
     // test 256 evenly spaced values of integer range, integer max value, and some "random"
     // numbers.
     let mut values = Vec::new();
@@ -51,16 +73,15 @@ pub fn test_varint64() {
 
     values.push(i64::MAX);
 
-    values.extend((-500..500).map(|i| (i as i64).wrapping_mul(0x12345789ABCDEFi64)));
+    values.extend((-500..500).map(|i| i64::from(i).wrapping_mul(0x12345789ABCDEFi64)));
 
-    let mut buf = [0u8; 1 << 20];
-    let mut cursor = io::Cursor::new(&mut buf[..]);
+    let mut buf = vec![0u8; 1 << 20];
+    let mut cursor = io::Cursor::new(buf.as_mut_slice());
 
     for x in &values {
         write_varint64(&mut cursor, *x).unwrap();
     }
 
-    use io::Seek;
     cursor.seek(io::SeekFrom::Start(0)).unwrap();
 
     for want in &values {

@@ -8,7 +8,7 @@ use core::time::Duration;
 use std::sync::LazyLock;
 
 use bytes::{Bytes, BytesMut};
-use futures::stream::{self, StreamExt};
+use futures::stream::{self, StreamExt as _};
 use reqwest::StatusCode;
 use reqwest::header::{CONTENT_RANGE, RANGE};
 
@@ -17,14 +17,19 @@ use crate::error::{APIError, APIResult};
 /// Shared HTTP client for pulling demos (and demo prefixes, see `schema`) off Valve's replay
 /// servers. The read timeout resets per chunk, so it bounds a stalled server without capping
 /// large downloads; there is deliberately no total timeout.
-pub(super) static HTTP_CLIENT: LazyLock<reqwest::Client> = LazyLock::new(|| {
+static HTTP_CLIENT: LazyLock<reqwest::Result<reqwest::Client>> = LazyLock::new(|| {
     reqwest::Client::builder()
         .connect_timeout(Duration::from_secs(5))
         .read_timeout(Duration::from_secs(30))
         .build()
-        // Same failure mode as `reqwest::Client::new()`, which panics on TLS backend init errors.
-        .expect("failed to build replay HTTP client")
 });
+
+/// The shared replay HTTP client; building it only fails when the TLS backend cannot start.
+pub(super) fn http_client() -> APIResult<&'static reqwest::Client> {
+    HTTP_CLIENT
+        .as_ref()
+        .map_err(|e| APIError::internal(format!("Failed to build replay HTTP client: {e}")))
+}
 
 const WORKERS: usize = 8;
 /// Below this size the probe overhead isn't worth it — just stream sequentially.
@@ -45,7 +50,7 @@ pub(super) async fn download_demo(url: &str) -> APIResult<Bytes> {
 /// Returns `Some(total_len)` when the server answers a 1-byte range request with a
 /// `206` and a parseable total size; `None` means "ranges not supported, stream it".
 async fn probe_ranges(url: &str) -> APIResult<Option<u64>> {
-    let resp = HTTP_CLIENT
+    let resp = http_client()?
         .get(url)
         .header(RANGE, "bytes=0-0")
         .send()
@@ -71,17 +76,17 @@ async fn download_ranged(url: &str, len: u64) -> APIResult<Bytes> {
     let chunk = len.div_ceil(WORKERS as u64);
     let ranges: Vec<(usize, u64, u64)> = (0..WORKERS)
         .map(|idx| {
-            let start = idx as u64 * chunk;
-            (idx, start, (start + chunk).min(len))
+            let start = (idx as u64).saturating_mul(chunk);
+            (idx, start, start.saturating_add(chunk).min(len))
         })
         .filter(|(_, start, end)| start < end)
         .collect();
 
     let mut slots: Vec<Option<Bytes>> = vec![None; ranges.len()];
     let mut tasks = stream::iter(ranges.into_iter().map(|(idx, start, end)| async move {
-        let resp = HTTP_CLIENT
+        let resp = http_client()?
             .get(url)
-            .header(RANGE, format!("bytes={start}-{}", end - 1))
+            .header(RANGE, format!("bytes={start}-{}", end.saturating_sub(1)))
             .send()
             .await?
             .error_for_status()?;
@@ -90,7 +95,7 @@ async fn download_ranged(url: &str, len: u64) -> APIResult<Bytes> {
             return Err(APIError::internal("range not honored mid-download"));
         }
         let body = resp.bytes().await?;
-        if body.len() as u64 != end - start {
+        if body.len() as u64 != end.saturating_sub(start) {
             return Err(APIError::internal("short range read"));
         }
         Ok::<_, APIError>((idx, body))
@@ -99,7 +104,10 @@ async fn download_ranged(url: &str, len: u64) -> APIResult<Bytes> {
 
     while let Some(res) = tasks.next().await {
         let (idx, body) = res?;
-        slots[idx] = Some(body);
+        // `idx` indexes `ranges`, which `slots` mirrors; a stray one surfaces as a missing chunk.
+        if let Some(slot) = slots.get_mut(idx) {
+            *slot = Some(body);
+        }
     }
 
     let mut out = BytesMut::with_capacity(usize::try_from(len).unwrap_or(usize::MAX));
@@ -110,7 +118,7 @@ async fn download_ranged(url: &str, len: u64) -> APIResult<Bytes> {
 }
 
 async fn download_sequential(url: &str) -> APIResult<Bytes> {
-    Ok(HTTP_CLIENT
+    Ok(http_client()?
         .get(url)
         .send()
         .await?

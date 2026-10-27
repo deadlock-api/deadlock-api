@@ -1,7 +1,7 @@
 use axum::body::Bytes;
 use axum::extract::State;
 use axum::http::{HeaderMap, StatusCode};
-use hmac::{Hmac, KeyInit, Mac};
+use hmac::{Hmac, KeyInit as _, Mac as _};
 use md5::Md5;
 use tracing::{error, info, warn};
 

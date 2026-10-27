@@ -1,7 +1,7 @@
 use core::time::Duration;
 use std::sync::{Arc, LazyLock};
 
-use axum::extract::FromRequestParts;
+use axum::extract::FromRequestParts as _;
 use rmcp::handler::server::router::tool::ToolRouter;
 use rmcp::handler::server::tool::ToolCallContext;
 use rmcp::handler::server::wrapper::Parameters;
@@ -14,7 +14,7 @@ use rmcp::{ServerHandler, tool, tool_handler, tool_router};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
-use tracing::{Instrument, debug, info_span, warn};
+use tracing::{Instrument as _, debug, info_span, warn};
 
 use super::catalog::{DATABASE, MAX_ROWS, QueryError, SCHEMA, SnapshotCatalog};
 use super::format::format_query_output;
@@ -83,6 +83,10 @@ static TOOL_ROUTER: LazyLock<ToolRouter<McpServer>> = LazyLock::new(|| {
     router
 });
 
+#[expect(
+    clippy::unused_async_trait_impl,
+    reason = "fires on the async fns `tool_handler` generates"
+)]
 #[tool_handler(router = TOOL_ROUTER)]
 impl ServerHandler for McpServer {
     fn get_info(&self) -> ServerConfig {
@@ -364,10 +368,10 @@ impl McpServer {
             Err(e) => return assets_error("list_heroes", &e),
         };
         if let Some(id) = args.id {
-            return match heroes.iter().find(|h| h.id == id) {
-                Some(hero) => success(hero),
-                None => lookup_not_found(format!("Hero not found: {id}")),
-            };
+            return heroes.iter().find(|h| h.id == id).map_or_else(
+                || lookup_not_found(format!("Hero not found: {id}")),
+                success,
+            );
         }
         let heroes: Vec<_> = heroes
             .iter()
@@ -395,10 +399,10 @@ impl McpServer {
             Err(e) => return assets_error("list_items", &e),
         };
         if let Some(id) = args.id {
-            return match items.iter().find(|i| i.id() == id) {
-                Some(item) => success(item),
-                None => lookup_not_found(format!("Item not found: {id}")),
-            };
+            return items.iter().find(|i| i.id() == id).map_or_else(
+                || lookup_not_found(format!("Item not found: {id}")),
+                success,
+            );
         }
         let Some(item_type) = args.r#type else {
             return lookup_not_found(
@@ -427,10 +431,15 @@ impl McpServer {
         if let Some(link) = args.link {
             return match feed.iter().zip(patches).find(|(_, p)| p["link"] == link) {
                 Some((item, mut patch)) => {
-                    patch["content"] = json!(match item {
-                        FeedItem::Forum(p) => &p.content,
-                        FeedItem::Steam(p) => &p.content,
-                    });
+                    if let Some(patch) = patch.as_object_mut() {
+                        patch.insert(
+                            "content".to_owned(),
+                            json!(match item {
+                                FeedItem::Forum(p) => &p.content,
+                                FeedItem::Steam(p) => &p.content,
+                            }),
+                        );
+                    }
                     success(&patch)
                 }
                 None => lookup_not_found(format!("Patch not found: {link}")),
@@ -446,7 +455,7 @@ impl McpServer {
     }
 }
 
-fn patch_source(item: &FeedItem) -> PatchSource {
+const fn patch_source(item: &FeedItem) -> PatchSource {
     match item {
         FeedItem::Forum(_) => PatchSource::Forum,
         FeedItem::Steam(_) => PatchSource::Steam,

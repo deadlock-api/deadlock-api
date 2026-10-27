@@ -1,7 +1,7 @@
 //! Job state persisted in Redis. Jobs are reproducible, so the record is purely a
 //! status pointer with a 24h TTL — the durable result lives in R2.
 
-use redis::AsyncCommands;
+use redis::AsyncCommands as _;
 use redis::aio::ConnectionManager;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;

@@ -134,8 +134,8 @@ pub(crate) enum UsageFlagsField {
 }
 
 impl<'de> Deserialize<'de> for UsageFlagsField {
-    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
-        let v = serde_json::Value::deserialize(d)?;
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let v = serde_json::Value::deserialize(deserializer)?;
         match v {
             serde_json::Value::String(s) => Ok(Self::Pipe(s)),
             serde_json::Value::Array(a) => Ok(Self::List(
@@ -193,7 +193,7 @@ fn deserialize_lenient_opt_f64<'de, D: serde::Deserializer<'de>>(
         Some(serde_json::Value::String(s)) => s
             .parse::<f64>()
             .map(Some)
-            .map_err(|_| serde::de::Error::custom(format!("invalid f64 string {s}"))),
+            .map_err(|e| serde::de::Error::custom(format!("invalid f64 string {s}: {e}"))),
         Some(other) => Err(serde::de::Error::custom(format!(
             "unexpected f64 value {other}"
         ))),
@@ -264,8 +264,8 @@ pub(crate) enum BonusValue {
 }
 
 impl<'de> Deserialize<'de> for BonusValue {
-    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
-        let v = serde_json::Value::deserialize(d)?;
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let v = serde_json::Value::deserialize(deserializer)?;
         match v {
             serde_json::Value::String(s) => Ok(Self::Str(s)),
             serde_json::Value::Number(n) => n
@@ -344,13 +344,13 @@ pub(crate) struct DependantAbilities {
 }
 
 impl<'de> Deserialize<'de> for DependantAbilities {
-    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         #[derive(Deserialize)]
         struct Helper {
             #[serde(default, rename = "m_eFlags")]
             flags: Option<serde_json::Value>,
         }
-        let h = Helper::deserialize(d)?;
+        let h = Helper::deserialize(deserializer)?;
         let flags = match h.flags {
             Some(serde_json::Value::String(s)) => {
                 Some(s.split('|').map(|p| p.trim().to_owned()).collect())

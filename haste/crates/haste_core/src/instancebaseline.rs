@@ -65,8 +65,9 @@ impl InstanceBaseline {
     /// from-the-start parse would have cached.
     #[inline]
     pub(crate) fn by_id(&self, class_id: i32) -> &[u8] {
-        self.data
-            .get(class_id as usize)
+        usize::try_from(class_id)
+            .ok()
+            .and_then(|class_id| self.data.get(class_id))
             .and_then(Option::as_deref)
             .unwrap_or_default()
     }

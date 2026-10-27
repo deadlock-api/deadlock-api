@@ -4,14 +4,33 @@
 //!
 //! [`decode`] and [`encode`] work on the protobuf type of `valveprotos`; on `wasm32` the crate
 //! exports them to the website as `decode` / `encode` over JSON of the same type (see `wasm-abi`).
+#![cfg_attr(
+    test,
+    allow(
+        clippy::arithmetic_side_effects,
+        clippy::disallowed_macros,
+        clippy::disallowed_methods,
+        clippy::expect_used,
+        clippy::indexing_slicing,
+        clippy::panic,
+        clippy::panic_in_result_fn,
+        clippy::print_stderr,
+        clippy::print_stdout,
+        clippy::string_slice,
+        clippy::unreachable,
+        clippy::unwrap_in_result,
+        clippy::unwrap_used,
+        reason = "tests may panic"
+    )
+)]
 
 use std::fmt;
-use std::io::Read;
+use std::io::Read as _;
 
-use base64::Engine;
+use base64::Engine as _;
 use base64::engine::general_purpose::{GeneralPurpose, GeneralPurposeConfig};
 use base64::engine::{DecodePaddingMode, general_purpose};
-use prost::Message;
+use prost::Message as _;
 use ruzstd::decoding::StreamingDecoder;
 use ruzstd::encoding::{CompressionLevel, compress_to_vec};
 use valveprotos::deadlock::CMsgHeroBuild;
@@ -32,14 +51,14 @@ const BASE64: GeneralPurpose = GeneralPurpose::new(
 );
 
 #[derive(Debug)]
-pub enum Error {
+pub enum DecodeError {
     Base64(base64::DecodeError),
     Zstd(String),
     TooLarge,
     Protobuf(prost::DecodeError),
 }
 
-impl fmt::Display for Error {
+impl fmt::Display for DecodeError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Base64(e) => write!(f, "not a build code (base64: {e})"),
@@ -53,23 +72,23 @@ impl fmt::Display for Error {
     }
 }
 
-impl std::error::Error for Error {}
+impl core::error::Error for DecodeError {}
 
 /// Reads a build code as copied in game. Whitespace anywhere in it (a wrapped paste) is ignored.
-pub fn decode(code: &str) -> Result<CMsgHeroBuild, Error> {
+pub fn decode(code: &str) -> Result<CMsgHeroBuild, DecodeError> {
     let compact: String = code.chars().filter(|c| !c.is_whitespace()).collect();
-    let compressed = BASE64.decode(compact).map_err(Error::Base64)?;
-    let decoder =
-        StreamingDecoder::new(compressed.as_slice()).map_err(|e| Error::Zstd(e.to_string()))?;
+    let compressed = BASE64.decode(compact).map_err(DecodeError::Base64)?;
+    let decoder = StreamingDecoder::new(compressed.as_slice())
+        .map_err(|e| DecodeError::Zstd(e.to_string()))?;
     let mut bytes = Vec::new();
     decoder
         .take(MAX_DECODED_BYTES + 1)
         .read_to_end(&mut bytes)
-        .map_err(|e| Error::Zstd(e.to_string()))?;
+        .map_err(|e| DecodeError::Zstd(e.to_string()))?;
     if bytes.len() as u64 > MAX_DECODED_BYTES {
-        return Err(Error::TooLarge);
+        return Err(DecodeError::TooLarge);
     }
-    CMsgHeroBuild::decode(bytes.as_slice()).map_err(Error::Protobuf)
+    CMsgHeroBuild::decode(bytes.as_slice()).map_err(DecodeError::Protobuf)
 }
 
 /// Writes a build as a code the game accepts on paste.
@@ -86,23 +105,36 @@ pub fn encode(build: &CMsgHeroBuild) -> String {
 fn with_content_size(mut frame: Vec<u8>, size: u64) -> Vec<u8> {
     // https://github.com/facebook/zstd/blob/dev/doc/zstd_compression_format.md#frame_header
     const DESCRIPTOR: usize = 4;
-    let descriptor = frame[DESCRIPTOR];
+    // The size field follows the descriptor, the one window byte, and the dictionary id.
+    const AFTER_WINDOW: usize = DESCRIPTOR + 2;
+    let Some(&descriptor) = frame.get(DESCRIPTOR) else {
+        return frame;
+    };
     let has_size = descriptor >> 6 != 0 || descriptor & 0b0010_0000 != 0;
     if has_size {
         return frame;
     }
-    let window_bytes = 1;
-    let dictionary_bytes = [0, 1, 2, 4][usize::from(descriptor & 0b11)];
-    // Flag 1 stores the size less 256 in two bytes, flag 2 four bytes, flag 3 eight.
-    let (flag, field) = if (256..=65_791).contains(&size) {
-        (1, ((size - 256) as u16).to_le_bytes().to_vec())
-    } else if let Ok(size) = u32::try_from(size) {
-        (2, size.to_le_bytes().to_vec())
-    } else {
-        (3, size.to_le_bytes().to_vec())
+    let at = match descriptor & 0b11 {
+        0 => AFTER_WINDOW,
+        1 => AFTER_WINDOW + 1,
+        2 => AFTER_WINDOW + 2,
+        _ => AFTER_WINDOW + 4,
     };
-    frame[DESCRIPTOR] = descriptor | (flag << 6);
-    let at = DESCRIPTOR + 1 + window_bytes + dictionary_bytes;
+    if at > frame.len() {
+        return frame;
+    }
+    // Flag 1 stores the size less 256 in two bytes, flag 2 four bytes, flag 3 eight.
+    let less_256 = size
+        .checked_sub(256)
+        .and_then(|less| u16::try_from(less).ok());
+    let (flag, field) = match (less_256, u32::try_from(size)) {
+        (Some(less_256), _) => (1, less_256.to_le_bytes().to_vec()),
+        (None, Ok(size)) => (2, size.to_le_bytes().to_vec()),
+        (None, Err(_)) => (3, size.to_le_bytes().to_vec()),
+    };
+    if let Some(byte) = frame.get_mut(DESCRIPTOR) {
+        *byte = descriptor | (flag << 6);
+    }
     frame.splice(at..at, field);
     frame
 }

@@ -5,9 +5,9 @@ use axum::response::IntoResponse;
 use axum_extra::extract::Query;
 use bytes::Bytes;
 use clickhouse::Row;
-use futures::TryStreamExt;
+use futures::TryStreamExt as _;
 use serde::{Deserialize, Serialize};
-use tokio::io::{AsyncRead, AsyncReadExt};
+use tokio::io::{AsyncRead, AsyncReadExt as _};
 use tokio_util::io::StreamReader;
 use utoipa::{IntoParams, ToSchema};
 
@@ -15,14 +15,14 @@ use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::matches::demo::demofusion;
 use crate::routes::v1::matches::demo::demofusion::{TableKind, TableSchema};
-use crate::routes::v1::matches::demo::download::HTTP_CLIENT;
+use crate::routes::v1::matches::demo::download::http_client;
 use crate::routes::v1::matches::salts::{fetch_match_salts, replay_file_url};
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::utils::compression::ZSTD_MAGIC;
 
 /// Decompressed bytes to pull per growth step while hunting for the send-tables.
 /// One pull is normally enough — the send-tables sit within the first bzip2 block.
-const STEP: usize = 1 << 20; // 1 MiB
+const STEP: u64 = 1 << 20; // 1 MiB
 
 #[derive(Debug, Clone, Row, Deserialize)]
 struct LastDemoSalts {
@@ -157,7 +157,7 @@ pub(super) async fn schema(
 ///
 /// Nothing is cached here; the schema endpoint's 24h `Cache-Control` covers repeat requests.
 pub(super) async fn fetch_demo_schema(url: &str) -> Result<Vec<TableSchema>, APIError> {
-    let response = HTTP_CLIENT
+    let response = http_client()?
         .get(url)
         .send()
         .await?
@@ -187,11 +187,14 @@ pub(super) async fn fetch_demo_schema(url: &str) -> Result<Vec<TableSchema>, API
     };
 
     let mut demo_prefix: Vec<u8> = Vec::new();
-    let mut step = vec![0u8; STEP];
 
     loop {
-        let n = fill(&mut decoder, &mut step).await?;
-        demo_prefix.extend_from_slice(&step[..n]);
+        // Reads until `STEP` more bytes arrived or the stream ended, coalescing short reads so
+        // each growth step adds a meaningful chunk.
+        let n = (&mut decoder)
+            .take(STEP)
+            .read_to_end(&mut demo_prefix)
+            .await?;
 
         let prefix = Bytes::from(demo_prefix.clone());
         let result = tokio::task::spawn_blocking(move || demofusion::schema(prefix))
@@ -201,8 +204,8 @@ pub(super) async fn fetch_demo_schema(url: &str) -> Result<Vec<TableSchema>, API
         match result {
             Ok(tables) => return Ok(tables),
             // Send-tables not in the prefix yet — pull more, unless the stream ended.
-            Err(demofusion::Error::IncompleteDemo) if n > 0 => {}
-            Err(demofusion::Error::IncompleteDemo) => {
+            Err(demofusion::DemoError::IncompleteDemo) if n > 0 => {}
+            Err(demofusion::DemoError::IncompleteDemo) => {
                 return Err(APIError::internal(
                     "Demo ended before its send-tables were available",
                 ));
@@ -214,17 +217,4 @@ pub(super) async fn fetch_demo_schema(url: &str) -> Result<Vec<TableSchema>, API
             }
         }
     }
-}
-
-/// Read until `buf` is full or the reader is exhausted, coalescing short reads so each
-/// growth step adds a meaningful chunk.
-async fn fill<R: AsyncRead + Unpin>(reader: &mut R, buf: &mut [u8]) -> std::io::Result<usize> {
-    let mut total = 0;
-    while total < buf.len() {
-        match reader.read(&mut buf[total..]).await? {
-            0 => break,
-            n => total += n,
-        }
-    }
-    Ok(total)
 }

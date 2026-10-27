@@ -31,8 +31,10 @@ impl DaySplit {
     /// `min` means the start of the data.
     pub(super) fn new(min: Option<i64>, max: Option<i64>) -> Option<Self> {
         let min = min.unwrap_or(0).max(0);
-        let first_day =
-            (min.div_euclid(DAY_S) + i64::from(min.rem_euclid(DAY_S) != 0)).saturating_mul(DAY_S);
+        let first_day = min
+            .div_euclid(DAY_S)
+            .saturating_add(i64::from(min.rem_euclid(DAY_S) != 0))
+            .saturating_mul(DAY_S);
         // `start_time <= max` is inclusive: a day is whole when its last second is in the window.
         let end_day = max.map(|max| {
             max.saturating_add(1)
@@ -44,7 +46,7 @@ impl DaySplit {
         }
         let mut edges = Vec::new();
         if min < first_day {
-            edges.push((min, first_day - 1));
+            edges.push((min, first_day.saturating_sub(1)));
         }
         if let (Some(max), Some(end_day)) = (max, end_day)
             && max >= end_day
@@ -159,9 +161,19 @@ impl Rollup<'_> {
                 else {
                     return false;
                 };
-                let today = now.as_secs().cast_signed().div_euclid(DAY_S) * DAY_S;
-                let first_built = today - (i64::from(horizon_days) - 1) * DAY_S;
-                min_unix_timestamp.is_some_and(|min| min >= first_built - days * DAY_S)
+                let today = now
+                    .as_secs()
+                    .cast_signed()
+                    .div_euclid(DAY_S)
+                    .saturating_mul(DAY_S);
+                let first_built = today.saturating_sub(
+                    i64::from(horizon_days)
+                        .saturating_sub(1)
+                        .saturating_mul(DAY_S),
+                );
+                min_unix_timestamp.is_some_and(|min| {
+                    min >= first_built.saturating_sub(days.saturating_mul(DAY_S))
+                })
             }
         }
     }
@@ -225,8 +237,7 @@ impl Rollup<'_> {
             format!(" WHERE {filters}")
         };
         let edge_rows = |windows: &str| {
-            let where_clause = [format!("({windows})")]
-                .into_iter()
+            let where_clause = core::iter::once(format!("({windows})"))
                 .chain(base_filters.iter().cloned())
                 .collect::<Vec<_>>()
                 .join(" AND ");
@@ -363,10 +374,10 @@ impl BuiltDays {
             "(start_time >= {} AND start_time < {start})",
             split.first_day
         );
-        let after = match split.end_day {
-            Some(end_day) => format!("(start_time >= {end} AND start_time < {end_day})"),
-            None => format!("(start_time >= {end})"),
-        };
+        let after = split.end_day.map_or_else(
+            || format!("(start_time >= {end})"),
+            |end_day| format!("(start_time >= {end} AND start_time < {end_day})"),
+        );
         [before, after]
     }
 
@@ -388,7 +399,7 @@ impl BuiltDays {
                 format!(
                     "start_time >= {start} AND start_time < {end} AND {range} AND created_at > {ranges_built_through}[{}] \
                      AND created_at > {built_through}[toDate(start_time)]",
-                    i + 1
+                    i.saturating_add(1)
                 )
             })
             .collect()
@@ -399,7 +410,12 @@ impl BuiltDays {
 fn references(sql: &str, column: &str) -> bool {
     let is_ident = |c: char| c.is_ascii_alphanumeric() || c == '_';
     sql.match_indices(column).any(|(i, _)| {
-        !sql[..i].ends_with(is_ident) && !sql[i + column.len()..].starts_with(is_ident)
+        sql.split_at_checked(i).is_some_and(|(before, rest)| {
+            !before.ends_with(is_ident)
+                && rest
+                    .strip_prefix(column)
+                    .is_some_and(|after| !after.starts_with(is_ident))
+        })
     })
 }
 

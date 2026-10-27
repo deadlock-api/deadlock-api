@@ -84,7 +84,7 @@ impl APIError {
     }
 
     /// Whether the same call can succeed when repeated right away.
-    pub(crate) fn is_retryable(&self) -> bool {
+    pub(crate) const fn is_retryable(&self) -> bool {
         match self {
             Self::SteamProxy(e) => e.is_retryable(),
             _ => true,
@@ -176,7 +176,7 @@ fn log_status(status: StatusCode, message: &dyn core::fmt::Debug) {
 }
 
 impl IntoResponse for APIError {
-    #[expect(clippy::too_many_lines)]
+    #[expect(clippy::too_many_lines, reason = "one match arm per error variant")]
     fn into_response(self) -> Response<Body> {
         match self {
             Self::StatusMsg { status, message } => {

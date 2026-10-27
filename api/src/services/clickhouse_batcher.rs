@@ -7,7 +7,7 @@ use axum::http::StatusCode;
 use clickhouse::{RowOwned, RowRead};
 use metrics::{counter, gauge, histogram};
 use tokio::sync::{mpsc, oneshot};
-use tracing::warn;
+use tracing::{debug, warn};
 
 use crate::error::{APIError, APIResult};
 use crate::utils::sql::join_display;
@@ -193,14 +193,14 @@ impl<I: BatcherInner> BatchEngine<I> {
                 response_tx,
             })
             .await
-            .map_err(|_| APIError::internal("Batcher unavailable"))?;
+            .map_err(|_closed| APIError::internal("Batcher unavailable"))?;
         Ok(response_rx)
     }
 }
 
 async fn await_response<V>(rx: oneshot::Receiver<APIResult<Vec<V>>>) -> APIResult<Vec<V>> {
     rx.await
-        .map_err(|_| APIError::internal("Batcher dropped response"))?
+        .map_err(|_closed| APIError::internal("Batcher dropped response"))?
 }
 
 fn next_window<I: BatcherInner>(prev_batch_size: usize) -> Duration {
@@ -221,7 +221,8 @@ async fn batch_loop<I: BatcherInner>(
         let mut pending = vec![first];
 
         let window = next_window::<I>(prev_batch_size);
-        let deadline = tokio::time::Instant::now() + window;
+        let now = tokio::time::Instant::now();
+        let deadline = now.checked_add(window).unwrap_or(now);
         loop {
             if pending.len() >= I::max_batch_size() {
                 break;
@@ -246,7 +247,10 @@ async fn batch_loop<I: BatcherInner>(
     }
 }
 
-#[expect(clippy::cast_precision_loss)]
+#[expect(
+    clippy::cast_precision_loss,
+    reason = "batch sizes recorded as metrics"
+)]
 async fn execute_batch<I: BatcherInner>(
     ch_client: &clickhouse::Client,
     group: &I::Group,
@@ -283,7 +287,12 @@ async fn execute_batch<I: BatcherInner>(
             warn!("Batch query failed: {e}");
             for (_, txs) in senders {
                 for tx in txs {
-                    let _ = tx.send(Err(APIError::internal("Batch query failed")));
+                    if tx
+                        .send(Err(APIError::internal("Batch query failed")))
+                        .is_err()
+                    {
+                        debug!("Batch waiter went away before its error");
+                    }
                 }
             }
             return;
@@ -301,10 +310,14 @@ async fn execute_batch<I: BatcherInner>(
         let mut txs = txs.into_iter();
         let last = txs.next_back();
         for tx in txs {
-            let _ = tx.send(Ok(values.clone()));
+            if tx.send(Ok(values.clone())).is_err() {
+                debug!("Batch waiter went away before its rows");
+            }
         }
-        if let Some(tx) = last {
-            let _ = tx.send(Ok(values));
+        if let Some(tx) = last
+            && tx.send(Ok(values)).is_err()
+        {
+            debug!("Batch waiter went away before its rows");
         }
     }
 }
@@ -334,12 +347,10 @@ impl<T: BatchQuery> ClickhouseBatcher<T> {
         let rx = self.engine.enqueue((), key).await?;
         counter!("clickhouse_batcher.requests").increment(1);
         let rows = await_response(rx).await?;
-        if let Some(row) = rows.into_iter().next() {
-            Ok(row)
-        } else {
+        rows.into_iter().next().ok_or_else(|| {
             counter!("clickhouse_batcher.not_found").increment(1);
-            Err(APIError::status_msg(StatusCode::NOT_FOUND, "Not found"))
-        }
+            APIError::status_msg(StatusCode::NOT_FOUND, "Not found")
+        })
     }
 
     pub(crate) async fn load_many(&self, keys: &[T::Key]) -> APIResult<Vec<T::Value>> {
@@ -355,7 +366,7 @@ impl<T: BatchQuery> ClickhouseBatcher<T> {
             if let Some(row) = await_response(rx).await?.into_iter().next() {
                 results.push(row);
             } else {
-                not_found += 1;
+                not_found = not_found.saturating_add(1);
             }
         }
         if not_found > 0 {

@@ -34,7 +34,7 @@ pub(super) fn build_field_name(send_node: Option<&str>, var_name: &str) -> Strin
         Some(sn) if !sn.is_empty() => {
             format!("{}__{}", sn.replace('.', "__"), var_name)
         }
-        _ => var_name.to_string(),
+        _ => var_name.to_owned(),
     }
 }
 
@@ -42,14 +42,12 @@ pub(crate) fn compute_field_key(send_node: Option<&str>, var_name: &str) -> u64 
     let var_name_hash = hash_bytes(var_name.as_bytes());
 
     match send_node {
-        Some(sn) if !sn.is_empty() => {
-            let mut parts = sn.split('.');
-            let mut hash = hash_bytes(parts.next().unwrap().as_bytes());
-            for part in parts {
-                hash = add_u64_to_hash(hash, hash_bytes(part.as_bytes()));
-            }
-            add_u64_to_hash(hash, var_name_hash)
-        }
+        // `split` yields at least one part, so `reduce` always has a hash to extend.
+        Some(sn) if !sn.is_empty() => sn
+            .split('.')
+            .map(|part| hash_bytes(part.as_bytes()))
+            .reduce(add_u64_to_hash)
+            .map_or(var_name_hash, |hash| add_u64_to_hash(hash, var_name_hash)),
         _ => var_name_hash,
     }
 }
@@ -61,9 +59,9 @@ mod tests {
     #[test]
     fn test_symbol_table_resolve() {
         let symbols = vec![
-            "m_iHealth".to_string(),
-            "m_vecOrigin".to_string(),
-            "CCitadelPlayerPawn".to_string(),
+            "m_iHealth".to_owned(),
+            "m_vecOrigin".to_owned(),
+            "CCitadelPlayerPawn".to_owned(),
         ];
         let table = SymbolTable::new(symbols);
 

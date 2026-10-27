@@ -1,7 +1,7 @@
 use std::io::{self, SeekFrom};
 
 use dungers::varint;
-use prost::Message;
+use prost::Message as _;
 use valveprotos::common::{
     CDemoClassInfo, CDemoFullPacket, CDemoPacket, CDemoSendTables, EDemoCommands,
 };
@@ -56,15 +56,31 @@ pub(crate) fn decode_demo_cmd(cmd_raw: u32) -> Result<(EDemoCommands, bool), Rea
     } else {
         cmd_raw
     };
-    let cmd = EDemoCommands::try_from(cmd as i32).map_err(|_| ReadCmdHeaderError::UnknownCmd {
-        raw: cmd_raw,
-        uncompressed: cmd,
-    })?;
-    Ok((cmd, body_compressed))
+    let Ok(cmd_enum) = EDemoCommands::try_from(cmd.cast_signed()) else {
+        return Err(ReadCmdHeaderError::UnknownCmd {
+            raw: cmd_raw,
+            uncompressed: cmd,
+        });
+    };
+    Ok((cmd_enum, body_compressed))
+}
+
+/// size of a demo file cmd header, the sum of the sizes of its three varints (at most 5 bytes
+/// each).
+pub(crate) fn demo_cmd_header_size(
+    cmd_n: usize,
+    tick_n: usize,
+    body_size_n: usize,
+) -> Result<u8, ReadCmdHeaderError> {
+    let Ok(size) = u8::try_from(cmd_n.saturating_add(tick_n).saturating_add(body_size_n)) else {
+        return Err(varint::VarintError::MalformedVarint.into());
+    };
+    Ok(size)
 }
 
 /// size of a broadcast cmd header: 1 byte cmd, 4 bytes tick, 1 unknown byte and 4 bytes body size.
-pub const BROADCAST_CMD_HEADER_SIZE: usize = 10;
+pub const BROADCAST_CMD_HEADER_SIZE: usize = BROADCAST_CMD_HEADER_SIZE_U8 as usize;
+const BROADCAST_CMD_HEADER_SIZE_U8: u8 = 10;
 
 /// parses a broadcast cmd header. broadcast cmd headers carry the same values as demo file cmd
 /// headers, but in fixed size little-endian fields instead of varints, and bodies are never
@@ -76,17 +92,18 @@ pub fn parse_broadcast_cmd_header(
     buf: [u8; BROADCAST_CMD_HEADER_SIZE],
 ) -> Result<CmdHeader, ReadCmdHeaderError> {
     let [cmd, t0, t1, t2, t3, _unknown, s0, s1, s2, s3] = buf;
-    let cmd =
-        EDemoCommands::try_from(i32::from(cmd)).map_err(|_| ReadCmdHeaderError::UnknownCmd {
+    let Ok(cmd_enum) = EDemoCommands::try_from(i32::from(cmd)) else {
+        return Err(ReadCmdHeaderError::UnknownCmd {
             raw: u32::from(cmd),
             uncompressed: u32::from(cmd),
-        })?;
+        });
+    };
     Ok(CmdHeader {
-        cmd,
+        cmd: cmd_enum,
         body_compressed: false,
         tick: i32::from_le_bytes([t0, t1, t2, t3]),
         body_size: u32::from_le_bytes([s0, s1, s2, s3]),
-        size: BROADCAST_CMD_HEADER_SIZE as u8,
+        size: BROADCAST_CMD_HEADER_SIZE_U8,
     })
 }
 
@@ -97,16 +114,13 @@ pub fn split_cmd_buf<'b>(
     cmd_header: &CmdHeader,
 ) -> Result<(&'b mut [u8], &'b mut [u8]), ReadCmdError> {
     let body_size = cmd_header.body_size as usize;
-    if body_size > buf.len() {
-        return Err(ReadCmdError::IoError(io::Error::new(
+    let buf_len = buf.len();
+    buf.split_at_mut_checked(body_size).ok_or_else(|| {
+        ReadCmdError::IoError(io::Error::new(
             io::ErrorKind::InvalidData,
-            format!(
-                "cmd body of {body_size} bytes exceeds the {} byte buffer",
-                buf.len()
-            ),
-        )));
-    }
-    Ok(buf.split_at_mut(body_size))
+            format!("cmd body of {body_size} bytes exceeds the {buf_len} byte buffer"),
+        ))
+    })
 }
 
 /// the cmd body that was read into `body`, decompressed into `scratch` if it is compressed.
@@ -118,7 +132,12 @@ pub(crate) fn decompress_cmd_body<'b>(
     if cmd_header.body_compressed {
         let len = snap::raw::Decoder::new().decompress(body, scratch)?;
         // NOTE: we need to slice stuff up, because prost's decode can't determine when to stop.
-        Ok(&scratch[..len])
+        scratch.get(..len).ok_or_else(|| {
+            ReadCmdError::IoError(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "decompressed cmd body exceeds the buffer",
+            ))
+        })
     } else {
         Ok(body)
     }
@@ -239,8 +258,10 @@ pub trait SeekableDemoStream: DemoStream {
     }
 
     fn unread_cmd_header(&mut self, cmd_header: &CmdHeader) -> Result<(), io::Error> {
-        self.seek(SeekFrom::Current(-i64::from(cmd_header.size)))
-            .map(|_| ())
+        self.seek(SeekFrom::Current(
+            i64::from(cmd_header.size).saturating_neg(),
+        ))
+        .map(|_| ())
     }
 
     fn start_position(&self) -> u64;

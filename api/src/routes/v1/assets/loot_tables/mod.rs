@@ -14,7 +14,7 @@ use crate::context::AppState;
 )))]
 struct ApiDoc;
 
-#[expect(deprecated)]
+#[expect(deprecated, reason = "registers deprecated handlers")]
 pub(super) fn router() -> OpenApiRouter<AppState> {
     OpenApiRouter::with_openapi(ApiDoc::openapi()).routes(routes!(route::list_loot_tables))
 }

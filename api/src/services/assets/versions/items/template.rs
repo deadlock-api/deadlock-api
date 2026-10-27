@@ -2,10 +2,8 @@
 //! Async because keybind and inline-attribute icons are fetched lazily from
 //! the public asset bucket.
 
-#![expect(clippy::too_many_lines)]
-
 use std::collections::HashMap;
-use std::sync::OnceLock;
+use std::sync::LazyLock;
 
 use regex::Regex;
 
@@ -44,10 +42,9 @@ fn keybind_svg_name(key: &str) -> Option<&'static str> {
     })
 }
 
-fn template_re() -> &'static Regex {
-    static RE: OnceLock<Regex> = OnceLock::new();
-    RE.get_or_init(|| Regex::new(r"<?\{[sig]:([^}]+)\}").expect("valid regex"))
-}
+/// `None` only if the pattern fails to compile, which the tests below rule out.
+static TEMPLATE_RE: LazyLock<Option<Regex>> =
+    LazyLock::new(|| Regex::new(r"<?\{[sig]:([^}]+)\}").ok());
 
 pub(super) async fn replace_templates(
     ctx: &TemplateCtx<'_>,
@@ -56,20 +53,25 @@ pub(super) async fn replace_templates(
     tier: Option<usize>,
 ) -> Option<String> {
     let input = input?;
-    let re = template_re();
+    let Some(re) = TEMPLATE_RE.as_ref() else {
+        tracing::error!("template regex failed to compile; leaving markers unresolved");
+        return Some(input.replace("  ", " "));
+    };
     let mut out = String::with_capacity(input.len());
     let mut last = 0usize;
     for caps in re.captures_iter(input) {
-        let m = caps.get(0).expect("group 0");
-        out.push_str(&input[last..m.start()]);
+        let (Some(m), Some(raw_var)) = (caps.get(0), caps.get(1)) else {
+            continue;
+        };
+        // Match bounds are char boundaries, so the gap slice always exists.
+        out.push_str(input.get(last..m.start()).unwrap_or_default());
         last = m.end();
-        let raw_var = caps.get(1).expect("group 1").as_str();
-        match resolve_one(ctx, item, raw_var, tier).await {
+        match resolve_one(ctx, item, raw_var.as_str(), tier).await {
             Some(s) if !s.is_empty() => out.push_str(&s),
             _ => out.push_str(m.as_str()),
         }
     }
-    out.push_str(&input[last..]);
+    out.push_str(input.get(last..).unwrap_or_default());
     Some(out.replace("  ", " "))
 }
 
@@ -108,17 +110,15 @@ async fn resolve_one(
         })
         .unwrap_or_default();
 
-    let mut replaced: Option<String> = None;
-
-    if let Some(ability) = item.ability {
-        replaced = ability
+    let mut replaced = item.ability.and_then(|ability| {
+        ability
             .upgrades
             .iter()
             .flatten()
             .flat_map(|u| &u.property_upgrades)
             .find(|p| p.name.eq_ignore_ascii_case(&var_n) || p.name.eq_ignore_ascii_case(&prop_key))
-            .map(|b| bonus_to_string(&b.bonus));
-    }
+            .map(|b| bonus_to_string(&b.bonus))
+    });
 
     if replaced.is_none()
         && let Some(props) = props_opt
@@ -137,9 +137,8 @@ async fn resolve_one(
 
     if let Some(ability) = item.ability
         && let Some(upgrades) = ability.upgrades.as_deref()
-        && let Some(t) = tier
-        && upgrades.len() >= t
-        && let Some(b) = upgrades[t - 1].property_upgrades.iter().find(|pp| {
+        && let Some(upgrade) = tier.and_then(|t| upgrades.get(t.checked_sub(1)?))
+        && let Some(b) = upgrade.property_upgrades.iter().find(|pp| {
             pp.name.eq_ignore_ascii_case(&var_n) || pp.name.eq_ignore_ascii_case(&prop_key)
         })
         && matches!(b.bonus, BonusValue::Str(_))
@@ -283,17 +282,20 @@ async fn resolve_inline_attribute(ctx: &TemplateCtx<'_>, css_class: &str) -> Str
                     .strip_prefix(SVGS_BASE_URL)
                     .map_or(bg_url, |p| p.trim_start_matches('/'))
             });
-            if let Some(svg) = fetch_svg(svg_name).await.as_deref() {
-                add_fill_to_svg(svg, wash.as_deref())
-            } else if wash.is_some() {
-                format!(
-                    "<img src=\"{bg_url}\" class=\"inline-attribute {css_class}\" alt=\"{label}\"/>"
-                )
-            } else {
-                format!(
-                    "<object data=\"{bg_url}\" class=\"inline-attribute {css_class}\" alt=\"{label}\"/>"
-                )
-            }
+            fetch_svg(svg_name).await.as_deref().map_or_else(
+                || {
+                    if wash.is_some() {
+                        format!(
+                            "<img src=\"{bg_url}\" class=\"inline-attribute {css_class}\" alt=\"{label}\"/>"
+                        )
+                    } else {
+                        format!(
+                            "<object data=\"{bg_url}\" class=\"inline-attribute {css_class}\" alt=\"{label}\"/>"
+                        )
+                    }
+                },
+                |svg| add_fill_to_svg(svg, wash.as_deref()),
+            )
         }
         Some(bg_url) => {
             format!(
@@ -303,13 +305,15 @@ async fn resolve_inline_attribute(ctx: &TemplateCtx<'_>, css_class: &str) -> Str
         None => format!("<img src=\"\" class=\"inline-attribute {css_class}\" alt=\"{label}\"/>"),
     };
 
-    let label_tag = match &wash {
-        Some(wc) => format!(
-            "<span class=\"inline-attribute-label {css_class}\" style=\"color: {wc};\">{label}</span>",
-            wc = shorten_hex(wc)
-        ),
-        None => format!("<span class=\"inline-attribute-label {css_class}\">{label}</span>"),
-    };
+    let label_tag = wash.as_ref().map_or_else(
+        || format!("<span class=\"inline-attribute-label {css_class}\">{label}</span>"),
+        |wc| {
+            format!(
+                "<span class=\"inline-attribute-label {css_class}\" style=\"color: {wc};\">{label}</span>",
+                wc = shorten_hex(wc)
+            )
+        },
+    );
 
     if css_class.to_ascii_lowercase().ends_with("icon") {
         img_tag
@@ -357,4 +361,20 @@ fn ability_index(slot: &str) -> Option<u8> {
         "ESlot_Signature_4" => 4,
         _ => return None,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    #[expect(
+        clippy::literal_string_with_formatting_args,
+        reason = "template markers look like format args"
+    )]
+    fn template_regex_compiles() {
+        let re = TEMPLATE_RE.as_ref().expect("regex compiles");
+        let caps = re.captures("a <{s:Damage} b").expect("matches");
+        assert_eq!(caps.get(1).map(|m| m.as_str()), Some("Damage"));
+    }
 }

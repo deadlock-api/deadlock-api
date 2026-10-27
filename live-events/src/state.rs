@@ -24,7 +24,7 @@ pub(crate) struct AppState {
 }
 
 impl AppState {
-    pub(crate) fn from_env() -> Result<AppState, AppStateError> {
+    pub(crate) fn from_env() -> Result<Self, AppStateError> {
         let config = serde_env::from_env()?;
         // Broadcasts stream for as long as their match runs, so bound connects and the
         // silence between reads rather than each request's total time.

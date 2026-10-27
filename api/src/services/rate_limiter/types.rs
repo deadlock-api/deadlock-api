@@ -29,7 +29,7 @@ impl Quota {
         }
     }
 
-    pub(crate) fn key_limit(limit: usize, period: Duration) -> Self {
+    pub(crate) const fn key_limit(limit: usize, period: Duration) -> Self {
         Self {
             limit,
             period,
@@ -37,7 +37,7 @@ impl Quota {
         }
     }
 
-    pub(crate) fn global_limit(limit: usize, period: Duration) -> Self {
+    pub(crate) const fn global_limit(limit: usize, period: Duration) -> Self {
         Self {
             limit,
             period,
@@ -54,7 +54,7 @@ pub(crate) struct Status {
 }
 
 impl Status {
-    pub(crate) fn remaining(&self) -> usize {
+    pub(crate) const fn remaining(&self) -> usize {
         self.quota.limit.saturating_sub(self.requests)
     }
 
@@ -62,7 +62,7 @@ impl Status {
         self.quota.r#type.into()
     }
 
-    fn is_exceeded(&self) -> bool {
+    const fn is_exceeded(&self) -> bool {
         self.remaining() == 0
     }
 
@@ -73,8 +73,10 @@ impl Status {
         }
 
         // How long it takes until the oldest request is outside the quota period?
-        (self.oldest_request + self.quota.period - Utc::now())
-            .to_std()
+        chrono::TimeDelta::from_std(self.quota.period)
+            .ok()
+            .and_then(|period| self.oldest_request.checked_add_signed(period))
+            .and_then(|end| end.signed_duration_since(Utc::now()).to_std().ok())
             .unwrap_or_default()
     }
 

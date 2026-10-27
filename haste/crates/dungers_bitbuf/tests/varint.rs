@@ -1,3 +1,22 @@
+#![cfg_attr(
+    test,
+    allow(
+        clippy::arithmetic_side_effects,
+        clippy::disallowed_macros,
+        clippy::disallowed_methods,
+        clippy::expect_used,
+        clippy::indexing_slicing,
+        clippy::panic,
+        clippy::panic_in_result_fn,
+        clippy::print_stderr,
+        clippy::print_stdout,
+        clippy::string_slice,
+        clippy::unreachable,
+        clippy::unwrap_in_result,
+        clippy::unwrap_used,
+        reason = "tests may panic"
+    )
+)]
 use dungers_bitbuf::{BitReader, BitWriter};
 
 // NOTE: tests are stolen from
@@ -14,9 +33,13 @@ fn test_varuint64() {
 
     values.push(u64::MAX);
 
-    values.extend((-500..500).map(|i| (i as u64).wrapping_mul(0x12345789abcdefu64)));
+    values.extend((-500..500).map(|i| {
+        i64::from(i)
+            .cast_unsigned()
+            .wrapping_mul(0x12345789abcdefu64)
+    }));
 
-    let mut buf = [0u8; 1 << 20];
+    let mut buf = vec![0u8; 1 << 20];
 
     let mut bw = BitWriter::new(&mut buf);
     for x in &values {
@@ -47,9 +70,9 @@ fn test_varint64() {
 
     values.push(i64::MAX);
 
-    values.extend((-500..500).map(|i| (i as i64).wrapping_mul(0x12345789abcdefi64)));
+    values.extend((-500..500).map(|i| i64::from(i).wrapping_mul(0x12345789abcdefi64)));
 
-    let mut buf = [0u8; 1 << 20];
+    let mut buf = vec![0u8; 1 << 20];
 
     let mut bw = BitWriter::new(&mut buf);
     for x in &values {
@@ -69,7 +92,7 @@ fn test_uvarint32_rejects_overlong() {
     // reader must not consume a 6th byte.
     let buf = [0xff, 0xff, 0xff, 0xff, 0xff, 0x01];
     let mut br = BitReader::new(&buf);
-    assert!(br.read_uvarint32().is_err());
+    br.read_uvarint32().unwrap_err();
     assert_eq!(br.num_bits_read(), 5 * 8);
 
     let buf = [0xff, 0xff, 0xff, 0xff, 0x0f];
@@ -122,5 +145,5 @@ fn test_varuint_unaligned_and_truncated() {
     // too many continuation bytes for a u32.
     let buf = [0xffu8; 16];
     let mut br = BitReader::new(&buf);
-    assert!(br.read_uvarint::<u32>().is_err());
+    br.read_uvarint::<u32>().unwrap_err();
 }

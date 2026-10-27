@@ -26,8 +26,9 @@ pub fn shutdown_token() -> CancellationToken {
         .clone()
 }
 
-/// Runs `fut` until it finishes or a shutdown signal arrives, whichever is first. For
-/// loops that keep no state worth flushing: on shutdown the work in progress is dropped
+/// Runs `fut` until it finishes or a shutdown signal arrives, whichever is first.
+///
+/// For loops that keep no state worth flushing: on shutdown the work in progress is dropped
 /// and `Ok(())` is returned, so `main` returns and the telemetry guards flush.
 pub async fn run_until_shutdown<F, E>(fut: F) -> Result<(), E>
 where

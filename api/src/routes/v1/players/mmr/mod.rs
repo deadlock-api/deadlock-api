@@ -96,7 +96,7 @@ pub(super) async fn apply_mmr_distribution_rate_limits(
     Ok(())
 }
 
-#[expect(deprecated)]
+#[expect(deprecated, reason = "registers deprecated handlers")]
 pub(super) fn router() -> OpenApiRouter<AppState> {
     OpenApiRouter::with_openapi(ApiDoc::openapi())
         .routes(routes!(distribution::mmr_distribution))

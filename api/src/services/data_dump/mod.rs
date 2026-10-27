@@ -117,7 +117,12 @@ impl DataDump {
     }
 
     async fn tick(&self) {
-        let run_id = uuid::Uuid::new_v4().simple().to_string()[..12].to_owned();
+        let run_id: String = uuid::Uuid::new_v4()
+            .simple()
+            .to_string()
+            .chars()
+            .take(12)
+            .collect();
         let lease = match Lease::acquire(
             self.redis.clone(),
             LEASE_KEY,
@@ -156,7 +161,7 @@ impl DataDump {
     async fn run(&self, run_id: &str) -> Result<(), DumpError> {
         let exporter = Exporter {
             ch: self.ch_dump.clone(),
-            store: self.store.clone(),
+            store: Arc::clone(&self.store),
             named_collection: self.config.named_collection.clone(),
             run_id: run_id.to_owned(),
         };
@@ -187,7 +192,7 @@ impl DataDump {
             .await?;
         let fold_due = manifest
             .last_fold_at
-            .is_none_or(|t| Utc::now() - t > FOLD_EVERY);
+            .is_none_or(|t| Utc::now().signed_duration_since(t) > FOLD_EVERY);
 
         let mut first_error: Option<DumpError> = None;
         for table in TABLES {
@@ -214,7 +219,7 @@ impl DataDump {
             manifest.last_fold_at = Some(Utc::now());
         }
 
-        let next_version = manifest.version + 1;
+        let next_version = manifest.version.saturating_add(1);
         if manifest
             .tables
             .values()
@@ -335,7 +340,7 @@ impl DataDump {
         Ok(())
     }
 
-    #[expect(clippy::too_many_lines)]
+    #[expect(clippy::too_many_lines, reason = "one sequential export pipeline")]
     async fn export_incremental(
         &self,
         exporter: &Exporter,
@@ -373,7 +378,7 @@ impl DataDump {
                     state.generation
                 );
             } else if state.building.is_none() {
-                let next = state.generation + 1;
+                let next = state.generation.saturating_add(1);
                 warn!("data dump: {name} schema changed incompatibly; building generation {next}");
                 state.building = Some(next);
             } else {
@@ -397,7 +402,7 @@ impl DataDump {
             Some(mut lo) => {
                 while lo < now_hi {
                     shutdown_check()?;
-                    let hi = (lo + HOUR).min(now_hi);
+                    let hi = lo.saturating_add(HOUR).min(now_hi);
                     let mut entries = Vec::new();
                     for &generation in &generations {
                         let key = self.key(&format!(
@@ -443,7 +448,7 @@ impl DataDump {
                 let Some(fold) = compaction::plan_fold(
                     state,
                     generation,
-                    watermark_hi - self.config.fold_after_secs,
+                    watermark_hi.saturating_sub(self.config.fold_after_secs),
                 ) else {
                     continue;
                 };
@@ -597,7 +602,9 @@ impl DataDump {
             Ok((versioned, built.duckdb_version))
         }
         .await;
-        let _ = tokio::fs::remove_dir_all(&dir).await;
+        if let Err(e) = tokio::fs::remove_dir_all(&dir).await {
+            warn!("data dump: failed to remove {dir:?}: {e}");
+        }
         result
     }
 }

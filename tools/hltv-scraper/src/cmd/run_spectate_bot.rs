@@ -9,12 +9,12 @@ use axum::extract::State;
 use axum::routing::{get, post};
 use axum::{Json, Router};
 use base64::prelude::*;
-use itertools::Itertools;
+use itertools::Itertools as _;
 use jiff::{Timestamp, ToSpan as _};
 use lru::LruCache;
-use prost::Message;
+use prost::Message as _;
 use redis::aio::ConnectionManager;
-use redis::{AsyncCommands, ExpireOption};
+use redis::{AsyncCommands as _, ExpireOption};
 use reqwest::{Client, StatusCode};
 use serde::{Deserialize, Serialize};
 use tokio::time::sleep;
@@ -66,8 +66,8 @@ pub(crate) enum SpectateBotError {
     Timestamp(#[from] jiff::Error),
     #[error("Failed to parse client version")]
     ParseClientVersion,
-    #[error("current_patch mutex poisoned")]
-    PatchMutexPoisoned,
+    #[error("current_patch mutex poisoned: {0}")]
+    PatchMutexPoisoned(String),
     #[error("No current patch version available")]
     NoPatchVersion,
     #[error("Spectate bot server stopped")]
@@ -99,10 +99,10 @@ pub(crate) enum SpectatedMatchType {
 }
 
 impl SpectatedMatchType {
-    pub(crate) fn label(&self) -> &'static str {
+    pub(crate) const fn label(&self) -> &'static str {
         match self {
-            SpectatedMatchType::ActiveMatch => "ACT",
-            SpectatedMatchType::GapMatch => "GAP",
+            Self::ActiveMatch => "ACT",
+            Self::GapMatch => "GAP",
         }
     }
 }
@@ -119,7 +119,7 @@ pub(crate) struct SpectatedMatchInfo {
 }
 
 impl SpectatedMatchInfo {
-    pub(crate) fn new(
+    pub(crate) const fn new(
         match_type: SpectatedMatchType,
         match_id: u64,
         broadcast_url: String,
@@ -142,7 +142,7 @@ struct SpectatorBot {
     api_token: String,
     proxy_url: String,
     failed_spectates: Mutex<LruCache<u64, bool>>,
-    current_patch: Mutex<Option<u64>>,
+    current_patch: Mutex<Option<u32>>,
 }
 
 impl SpectatorBot {
@@ -150,7 +150,7 @@ impl SpectatorBot {
         let redis = common::get_redis_client().await?;
 
         Ok(Self {
-            client: common::http_client(),
+            client: common::http_client()?,
             redis,
             api_token,
             proxy_url: proxy_api_url,
@@ -240,9 +240,15 @@ impl SpectatorBot {
             return vec![];
         };
 
-        let span = max_id - min_id;
-        let start = min_id + ((span as f64) * *GAP_PERCENTILE) as u64;
-        assert!(start <= max_id);
+        let span = max_id.saturating_sub(min_id);
+        #[expect(
+            clippy::cast_precision_loss,
+            clippy::cast_possible_truncation,
+            clippy::cast_sign_loss,
+            reason = "a fraction in [0, 1] of the id span, which stays far below 2^53"
+        )]
+        let offset = (span as f64 * *GAP_PERCENTILE) as u64;
+        let start = min_id.saturating_add(offset).min(max_id);
 
         let active_set: std::collections::HashSet<u64> = active_match_ids.iter().copied().collect();
 
@@ -261,7 +267,7 @@ impl SpectatorBot {
         let version = steam_inf
             .split_once("ClientVersion=")
             .and_then(|(_, rest)| rest.split_once('\n'))
-            .and_then(|(v, _)| v.trim().parse::<u64>().ok())
+            .and_then(|(v, _)| v.trim().parse::<u32>().ok())
             .ok_or(SpectateBotError::ParseClientVersion)?;
 
         if let Ok(mut current) = self.current_patch.lock() {
@@ -272,6 +278,7 @@ impl SpectatorBot {
     }
 
     #[tracing::instrument(skip(self), fields(account = field::Empty, ready_bots = field::Empty))]
+    #[expect(clippy::too_many_lines, reason = "one request flow from start to end")]
     async fn spectate_match(
         &self,
         match_type: SpectatedMatchType,
@@ -287,12 +294,12 @@ impl SpectatorBot {
         let current_patch = self
             .current_patch
             .lock()
-            .map_err(|_| SpectateBotError::PatchMutexPoisoned)?
+            .map_err(|e| SpectateBotError::PatchMutexPoisoned(e.to_string()))?
             .ok_or(SpectateBotError::NoPatchVersion)?;
 
         let spectate_message = CMsgClientToGcSpectateLobby {
             match_id: Some(match_id),
-            client_version: Some(current_patch as u32),
+            client_version: Some(current_patch),
             client_platform: Some(EgcPlatform::KEGcPlatformPc as i32),
             lobby_id,
         };
@@ -403,11 +410,15 @@ impl SpectatorBot {
         }
     }
 
+    #[expect(
+        clippy::too_many_lines,
+        reason = "the bot's main loop reads best in one piece"
+    )]
     async fn run(&self, max_spectating_matches: Option<usize>) -> Result<()> {
         let start_time = Instant::now();
 
         let (abort_handle, steam_inf) = start_polling_text(
-            "https://raw.githubusercontent.com/SteamDatabase/GameTracking-Deadlock/refs/heads/master/game/citadel/steam.inf".to_string(),
+            "https://raw.githubusercontent.com/SteamDatabase/GameTracking-Deadlock/refs/heads/master/game/citadel/steam.inf".to_owned(),
             Duration::from_mins(5),
         ).await?;
         // Stops the poller however this run ends, including the early `?` returns.
@@ -484,9 +495,9 @@ impl SpectatorBot {
                 let match_ids: Vec<u64> = live_matches
                     .iter()
                     .filter(|x| {
-                        x.start_time.is_some_and(|x| {
-                            x <= fifteen_min_ago as u64 && x > fifty_min_ago as u64
-                        })
+                        x.start_time
+                            .and_then(|x| i64::try_from(x).ok())
+                            .is_some_and(|x| x <= fifteen_min_ago && x > fifty_min_ago)
                     })
                     .map(|m| m.match_id)
                     .sorted()
@@ -603,7 +614,7 @@ pub(crate) async fn run_bot(
     max_spectating_matches: Option<usize>,
 ) -> Result<()> {
     let bot = Arc::new(SpectatorBot::new(proxy_url, proxy_api_token).await?);
-    let mut server = tokio::spawn(run_server(bot.clone()));
+    let mut server = tokio::spawn(run_server(Arc::clone(&bot)));
     let shutdown = common::shutdown_token();
 
     let bot_loop = async {

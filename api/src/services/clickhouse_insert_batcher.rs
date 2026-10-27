@@ -58,7 +58,7 @@ impl<T: BatchInsert> ClickhouseInsertBatcher<T> {
                 "Insert batcher buffer full for {}, dropping oldest entries",
                 T::table_name()
             );
-            let excess = buffer.len() - max;
+            let excess = buffer.len().saturating_sub(max);
             buffer.drain(0..excess);
         }
     }
@@ -89,7 +89,7 @@ impl<T: BatchInsert> ClickhouseInsertBatcher<T> {
         });
     }
 
-    #[expect(clippy::cast_precision_loss)]
+    #[expect(clippy::cast_precision_loss, reason = "row counts recorded as metrics")]
     async fn flush(&self) {
         let rows: Vec<T::Row> = {
             let mut buffer = self.buffer.lock().await;

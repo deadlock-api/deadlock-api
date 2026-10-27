@@ -7,7 +7,7 @@ use dungers::varint::VarintError;
 use hashbrown::HashMap;
 use hashbrown::hash_map::Values;
 use nohash::NoHashHasher;
-use prost::Message;
+use prost::Message as _;
 use valveprotos::common::proto_flattened_serializer_field_t::ProtoEnumInfoT;
 use valveprotos::common::{
     CDemoSendTables, CsvcMsgFlattenedSerializer, ProtoCoordSizeParamsT,
@@ -95,8 +95,10 @@ impl CoordSizeParams {
         };
         // NOTE: all of these are read with read_ubit64 which supports at most 64 bits; anything
         // outside of 1..=32 is nonsensical for coords / normals / angles.
-        let bits = |value: Option<i32>, default: usize| match value {
-            Some(v @ 1..=32) => v as usize,
+        let bits = |value: Option<i32>, default: usize| match value
+            .and_then(|v| usize::try_from(v).ok())
+        {
+            Some(v @ 1..=32) => v,
             _ => default,
         };
         Self {
@@ -125,6 +127,8 @@ impl CoordSizeParams {
 // TODO: do not clone strings, but reference them instead -> introduce lifetimes
 // or build a symbol table from symbols (string cache?)
 
+/// a field of a flattened serializer.
+///
 /// note about missing `field_serializer_version` field (from
 /// [`valveprotos::common::ProtoFlattenedSerializerFieldT`]): i did not find any evidence of it
 /// being used nor any breakage or data corruptions. it is possible that i missed something. but
@@ -164,7 +168,7 @@ impl FlattenedSerializerField {
         coord_size_params: CoordSizeParams,
         quantized_float_encoder_aliases: &[QuantizedFloatEncoderAliasT],
     ) -> Result<Self, FieldMetadataError> {
-        let resolve_sym = |i: i32| msg.symbols.get(i as usize);
+        let resolve_sym = |i: i32| msg.symbols.get(usize::try_from(i).ok()?);
 
         let var_type = field
             .var_type_sym
@@ -270,9 +274,8 @@ impl FlattenedSerializerField {
 
     #[must_use]
     pub fn get_child(&self, index: usize) -> Option<&Self> {
-        self.field_serializer
-            .as_ref()
-            .and_then(|fs| fs.get_child(index))
+        let fs = self.field_serializer.as_ref()?;
+        fs.get_child(index)
     }
 
     pub(crate) fn var_encoder_heq(&self, rhs: u64) -> bool {
@@ -310,6 +313,8 @@ impl FlattenedSerializerField {
     }
 }
 
+/// a serializer with all of its fields resolved.
+///
 /// note about missing `serializer_version` field (from
 /// [`valveprotos::common::ProtoFlattenedSerializerT`]): entities resolve their serializers by
 /// looking up their class info within the [`crate::entityclasses::EntityClasses`] struct (which i
@@ -332,7 +337,7 @@ impl FlattenedSerializer {
         msg: &CsvcMsgFlattenedSerializer,
         fs: &ProtoFlattenedSerializerT,
     ) -> Result<Self, FlattenedSerializersError> {
-        let resolve_sym = |i: i32| msg.symbols.get(i as usize);
+        let resolve_sym = |i: i32| msg.symbols.get(usize::try_from(i).ok()?);
         let serializer_name = fs
             .serializer_name_sym
             .and_then(resolve_sym)
@@ -383,7 +388,7 @@ impl FlattenedSerializerContainer {
             //
             // NOTE: calling unwrap_or_default is for some reason faster then
             // relying on prost's default unwrapping by calling .data().
-            let mut data = &cmd.data.unwrap_or_default()[..];
+            let mut data = &*cmd.data.unwrap_or_default();
             // NOTE: count is useless because read_uvarint32 will "consume"
             // bytes that it'll read from data; size is useless because data
             // supposedly contains only one message.
@@ -410,7 +415,7 @@ impl FlattenedSerializerContainer {
 
             for field_index in &serializer.fields_index {
                 if let Some(field) = field_map.get(field_index) {
-                    flattened_serializer.fields.push(field.clone());
+                    flattened_serializer.fields.push(Arc::clone(field));
                     continue;
                 }
 
@@ -463,7 +468,7 @@ impl FlattenedSerializerContainer {
                 };
 
                 let field = Arc::new(field);
-                field_map.insert(*field_index, field.clone());
+                field_map.insert(*field_index, Arc::clone(&field));
                 flattened_serializer.fields.push(field);
             }
 
@@ -480,7 +485,7 @@ impl FlattenedSerializerContainer {
     }
 
     #[must_use]
-    pub fn coord_size_params(&self) -> CoordSizeParams {
+    pub const fn coord_size_params(&self) -> CoordSizeParams {
         self.coord_size_params
     }
 

@@ -1,6 +1,10 @@
 //! `/v1/assets/generic-data` data layer — fetch + parse + transform.
 
-#![expect(clippy::struct_field_names, clippy::needless_pass_by_value)]
+#![expect(
+    clippy::struct_field_names,
+    clippy::needless_pass_by_value,
+    reason = "field names mirror the game data; transforms consume their raw input"
+)]
 
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -467,18 +471,18 @@ pub(crate) enum ItemTier {
 }
 
 impl Serialize for ItemTier {
-    fn serialize<S: serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
-        s.serialize_u8(*self as u8)
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_u8(*self as u8)
     }
 }
 
 impl<'de> Deserialize<'de> for ItemTier {
-    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         struct V;
         impl serde::de::Visitor<'_> for V {
             type Value = ItemTier;
-            fn expecting(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-                f.write_str("int 1-5 or 'EModTier_N' string")
+            fn expecting(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+                formatter.write_str("int 1-5 or 'EModTier_N' string")
             }
             fn visit_u64<E: serde::de::Error>(self, v: u64) -> Result<ItemTier, E> {
                 u8::try_from(v)
@@ -496,7 +500,7 @@ impl<'de> Deserialize<'de> for ItemTier {
                 v.parse().map_err(E::custom)
             }
         }
-        d.deserialize_any(V)
+        deserializer.deserialize_any(V)
     }
 }
 
@@ -1041,7 +1045,7 @@ fn damage_flash_out(r: RawDamageFlash) -> DamageFlash {
     }
 }
 
-fn glitch_out(r: RawGlitchSettings) -> GlitchSettings {
+const fn glitch_out(r: RawGlitchSettings) -> GlitchSettings {
     GlitchSettings {
         strength: r.strength,
         uantize_type: r.uantize_type,
@@ -1176,7 +1180,7 @@ fn new_player_metrics_out(r: RawNewPlayerMetrics) -> NewPlayerMetrics {
     }
 }
 
-fn objective_params_out(r: RawObjectiveParams) -> ObjectiveParams {
+const fn objective_params_out(r: RawObjectiveParams) -> ObjectiveParams {
     ObjectiveParams {
         gold_per_orb: r.gold_per_orb,
         near_player_split_pct: r.near_player_split_pct,
@@ -1220,7 +1224,7 @@ fn item_group_out(r: RawItemGroup) -> ItemGroup {
     }
 }
 
-fn draft_bucket_out(r: RawDraftBucket) -> DraftBucket {
+const fn draft_bucket_out(r: RawDraftBucket) -> DraftBucket {
     DraftBucket {
         normal: r.normal,
         good: r.good,

@@ -120,7 +120,7 @@ async fn fetch_ch_info(ch_client: &clickhouse::Client) -> APIInfo {
         .inspect_err(|e| warn!("Failed to fetch table sizes from ClickHouse: {e}"))
         .ok()
         .map(|v| v.into_iter().map(TableSizeRow::into_entry).collect());
-    #[expect(deprecated)]
+    #[expect(deprecated, reason = "reads the deprecated legacy query parameters")]
     APIInfo {
         fetched_matches_per_day,
         table_sizes,

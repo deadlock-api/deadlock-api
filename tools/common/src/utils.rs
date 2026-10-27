@@ -2,7 +2,7 @@ use core::str::FromStr;
 use core::time::Duration;
 use std::sync::LazyLock;
 
-use base64::Engine;
+use base64::Engine as _;
 use base64::prelude::BASE64_STANDARD;
 use metrics::counter;
 use prost::Message;
@@ -111,7 +111,7 @@ pub async fn call_steam_proxy<T: Message + Default>(
         .json(&json!({
             "message_kind": msg_type as i32,
             "job_cooldown_millis": cooldown.as_millis(),
-            "rate_limit_cooldown_millis": 4 * cooldown.as_millis(),
+            "rate_limit_cooldown_millis": cooldown.as_millis().saturating_mul(4),
             "soft_cooldown_millis": soft_cooldown.map_or(5 * 60 * 1000, |d| d.as_millis()),
             "bot_in_all_groups": in_all_groups,
             "bot_in_any_groups": in_any_groups,

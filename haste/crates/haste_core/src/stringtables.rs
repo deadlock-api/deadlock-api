@@ -103,6 +103,10 @@ impl StringTable {
     //
     // some pieces are ported from csgo, some are stolen from butterfly, some
     // comments are stolen from manta.
+    #[expect(
+        clippy::too_many_lines,
+        reason = "line by line port of valve's ParseUpdate"
+    )]
     pub fn parse_update(
         &mut self,
         br: &mut BitReader,
@@ -136,27 +140,27 @@ impl StringTable {
         // Key may be omitted (will be represented here as "")
         //
         // Value may be omitted
-        for _ in 0..num_entries as usize {
+        for _ in 0..num_entries {
             // Read a boolean to determine whether the operation is an increment
             // or has a fixed index position. A fixed index position of zero
             // should be the last data in the buffer, and indicates that all
             // data has been read.
+            //
+            // NOTE: indices are valve's (wrapping) ints.
             entry_index = if br.read_bool()? {
-                entry_index + 1
+                entry_index.wrapping_add(1)
             } else {
-                br.read_uvarint32()? as i32 + 1
+                br.read_uvarint32()?.cast_signed().wrapping_add(1)
             };
 
             let has_string = br.read_bool()?;
             let string = if has_string {
-                let mut size: usize = 0;
-
                 // Some entries use reference a position in the key history for
                 // part of the key. If referencing the history, read the
                 // position and size from the buffer, then use those to build
                 // the string combined with an extra string read (null
                 // terminated). Alternatively, just read the string.
-                if br.read_bool()? {
+                let size = if br.read_bool()? {
                     // NOTE: valve uses their CUtlVector which shifts elements
                     // to the left on delete. they maintain max len of 32. they
                     // don't allow history to grow beyond 32 elements, once it
@@ -164,29 +168,41 @@ impl StringTable {
                     // stealing following approach from butterfly, even thought
                     // rust's Vec has remove method which does exactly same
                     // thing, butterfly's way is more efficient, thanks!
-                    let mut history_delta_zero = 0;
-                    if history_delta_index > HISTORY_SIZE {
-                        history_delta_zero = history_delta_index & HISTORY_BITMASK;
+                    let history_delta_zero = if history_delta_index > HISTORY_SIZE {
+                        history_delta_index & HISTORY_BITMASK
+                    } else {
+                        0
+                    };
+
+                    let delta = usize::try_from(br.read_ubit64(5)?).map_err(BitError::from)?;
+                    let index = history_delta_zero.wrapping_add(delta) & HISTORY_BITMASK;
+                    let bytestocopy = usize::try_from(br.read_ubit64(MAX_STRING_BITS)?)
+                        .map_err(BitError::from)?;
+
+                    let (prefix, rest) = string_buf
+                        .split_at_mut_checked(bytestocopy)
+                        .ok_or(BitError::BufferTooSmall)?;
+                    let src = history
+                        .get(index)
+                        .and_then(|entry| entry.string.get(..bytestocopy))
+                        .ok_or(BitError::BufferTooSmall)?;
+                    for (dst, &src) in prefix.iter_mut().zip(src) {
+                        *dst = src;
                     }
-
-                    let index =
-                        (history_delta_zero + br.read_ubit64(5)? as usize) & HISTORY_BITMASK;
-                    let bytestocopy = br.read_ubit64(MAX_STRING_BITS)? as usize;
-                    size += bytestocopy;
-
-                    string_buf[..bytestocopy]
-                        .copy_from_slice(&history[index].string[..bytestocopy]);
-                    size += br.read_string(&mut string_buf[bytestocopy..], false)?;
+                    bytestocopy.saturating_add(br.read_string(rest, false)?)
                 } else {
-                    size += br.read_string(string_buf, false)?;
+                    br.read_string(string_buf, false)?
+                };
+
+                let entry = history
+                    .get_mut(history_delta_index & HISTORY_BITMASK)
+                    .ok_or(BitError::BufferTooSmall)?;
+                if let Some(src) = string_buf.first_chunk::<MAX_STRING_SIZE>() {
+                    entry.string = *src;
                 }
+                history_delta_index = history_delta_index.saturating_add(1);
 
-                history[history_delta_index & HISTORY_BITMASK]
-                    .string
-                    .copy_from_slice(&string_buf[..MAX_STRING_SIZE]);
-                history_delta_index += 1;
-
-                Some(&string_buf[..size])
+                Some(string_buf.get(..size).ok_or(BitError::BufferTooSmall)?)
             } else {
                 None
             };
@@ -195,17 +211,17 @@ impl StringTable {
             let user_data = if has_user_data {
                 if self.user_data_fixed_size {
                     // Don't need to read length, it's fixed length and the length was networked down already.
-                    br.read_bits(user_data_buf, self.user_data_size_bits as usize)?;
-                    Some(
-                        user_data_buf
-                            .get(..self.user_data_size as usize)
-                            .ok_or(BitError::BufferTooSmall)?,
-                    )
+                    let size_bits =
+                        usize::try_from(self.user_data_size_bits).map_err(BitError::from)?;
+                    let size = usize::try_from(self.user_data_size).map_err(BitError::from)?;
+                    br.read_bits(user_data_buf, size_bits)?;
+                    Some(user_data_buf.get(..size).ok_or(BitError::BufferTooSmall)?)
                 } else {
-                    let mut is_compressed = false;
-                    if (self.flags & 0x1) != 0 {
-                        is_compressed = br.read_bool()?;
-                    }
+                    let is_compressed = if (self.flags & 0x1) != 0 {
+                        br.read_bool()?
+                    } else {
+                        false
+                    };
 
                     // NOTE: using_varint_bitcounts bool was introduced in the
                     // new frontiers update on smaypril twemmieth of 2023,
@@ -213,7 +229,8 @@ impl StringTable {
                     let size = if self.using_varint_bitcounts {
                         br.read_ubitvar()? as usize
                     } else {
-                        br.read_ubit64(MAX_USERDATA_BITS)? as usize
+                        usize::try_from(br.read_ubit64(MAX_USERDATA_BITS)?)
+                            .map_err(BitError::from)?
                     };
 
                     let user_data_buf = user_data_buf
@@ -224,7 +241,11 @@ impl StringTable {
                     if is_compressed {
                         let size = snap::raw::Decoder::new()
                             .decompress(user_data_buf, user_data_uncompressed_buf)?;
-                        Some(&user_data_uncompressed_buf[..size])
+                        Some(
+                            user_data_uncompressed_buf
+                                .get(..size)
+                                .ok_or(BitError::BufferTooSmall)?,
+                        )
                     } else {
                         Some(&*user_data_buf)
                     }
@@ -250,21 +271,13 @@ impl StringTable {
         Ok(())
     }
 
+    /// `table` must be the full state of this table (the same name). entries are never removed,
+    /// like in clarity's
+    /// src/main/java/skadistats/clarity/processor/stringtables/BaseStringTableEmitter.java
     pub fn do_full_update(&mut self, table: &c_demo_string_tables::TableT) {
-        debug_assert!(
-            self.name.as_ref().eq(table.table_name()),
-            "trying to do a full update on the wrong table"
-        );
-        // copying clarity's behaviour
-        // src/main/java/skadistats/clarity/processor/stringtables/BaseStringTableEmitter.java
-        debug_assert!(
-            table.items.len() >= self.items.len(),
-            "removing entries is not supported"
-        );
-
-        for (i, incoming) in table.items.iter().enumerate() {
+        for (i, incoming) in (0_i32..).zip(&table.items) {
             self.items
-                .entry(i as i32)
+                .entry(i)
                 .and_modify(|existing| {
                     existing.user_data = incoming.data.as_deref().map(Arc::from);
                 })
@@ -312,11 +325,6 @@ impl StringTableContainer {
         flags: i32,
         using_varint_bitcounts: bool,
     ) -> &mut StringTable {
-        debug_assert!(
-            self.find_table(name).is_none(),
-            "tried to create string table '{name}' twice",
-        );
-
         let table = StringTable::new(
             name,
             user_data_fixed_size,
@@ -326,9 +334,7 @@ impl StringTableContainer {
             using_varint_bitcounts,
         );
 
-        let len = self.tables.len();
-        self.tables.push(table);
-        &mut self.tables[len]
+        self.tables.push_mut(table)
     }
 
     pub fn do_full_update(&mut self, cmd: &CDemoStringTables) {
@@ -388,7 +394,7 @@ impl StringTableContainer {
     //
     // int                  GetNumTables( void ) const;
     #[must_use]
-    pub fn is_empty(&self) -> bool {
+    pub const fn is_empty(&self) -> bool {
         self.tables.is_empty()
     }
 

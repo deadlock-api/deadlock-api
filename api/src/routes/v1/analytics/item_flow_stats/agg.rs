@@ -37,7 +37,7 @@ impl Kind {
 
     /// The rollup, rebuilt per day by `services/cohort_agg_refresh.rs` from [`agg_select_body`].
     /// Its columns are its grain, then its measures, then `built_through`.
-    pub(crate) fn table(self) -> &'static str {
+    pub(crate) const fn table(self) -> &'static str {
         match self {
             Self::Nodes => "default.item_flow_nodes_agg",
             Self::Edges => "default.item_flow_edges_agg",
@@ -45,7 +45,7 @@ impl Kind {
         }
     }
 
-    pub(crate) fn staging(self) -> &'static str {
+    pub(crate) const fn staging(self) -> &'static str {
         match self {
             Self::Nodes => "default.item_flow_nodes_agg_staging",
             Self::Edges => "default.item_flow_edges_agg_staging",
@@ -55,7 +55,7 @@ impl Kind {
 
     /// `(column, expression)` over the rows of [`agg_rows`], which carry the match columns of
     /// `match_player` under their names.
-    fn grain(self) -> &'static [(&'static str, &'static str)] {
+    const fn grain(self) -> &'static [(&'static str, &'static str)] {
         match self {
             Self::Nodes => &[
                 ("game_mode", "game_mode"),
@@ -134,7 +134,7 @@ impl Kind {
         }
     }
 
-    fn rollup(self, measures: &str) -> Rollup<'_> {
+    const fn rollup(self, measures: &str) -> Rollup<'_> {
         Rollup {
             table: self.table(),
             grain: self.grain(),

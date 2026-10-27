@@ -77,7 +77,7 @@ impl Scan {
             };
         }
         let matches = where_.and_then(|w| w.match_id.as_ref()).map_or(0, |f| {
-            usize::from(f.eq.is_some()) + f.r#in.as_ref().map_or(0, Vec::len)
+            usize::from(f.eq.is_some()).saturating_add(f.r#in.as_ref().map_or(0, Vec::len))
         });
         if matches > 0 {
             return Self::Matches(matches);
@@ -101,10 +101,11 @@ impl Scan {
             sorted_skip_ns,
         } = costs;
         match *self {
-            Self::Accounts { accounts, .. } => 100 + accounts / 20,
+            Self::Accounts { accounts, .. } => (accounts / 20).saturating_add(100),
             Self::Matches(_) => pinned,
             Self::KeyOrdered => key_ordered.saturating_add(skipped(offset, skip_ns)),
-            Self::Days(Some(days)) => (base + per_day * days)
+            Self::Days(Some(days)) => base
+                .saturating_add(per_day.saturating_mul(days))
                 .min(full)
                 .saturating_add(skipped(offset, sorted_skip_ns)),
             Self::Days(None) => full.saturating_add(skipped(offset, sorted_skip_ns)),
@@ -141,7 +142,7 @@ struct ScanCosts {
 }
 
 /// Milliseconds of `offset` skipped nodes of `ns` each.
-fn skipped(offset: u32, ns: usize) -> usize {
+const fn skipped(offset: u32, ns: usize) -> usize {
     (offset as usize).saturating_mul(ns).div_ceil(1_000_000)
 }
 
@@ -153,7 +154,7 @@ fn days_spanned(f: &I64Filter) -> Option<usize> {
     let lower = f.gt.max(f.gte)?;
     let now = chrono::Utc::now().timestamp();
     let upper = f.lt.into_iter().chain(f.lte).fold(now, i64::min);
-    usize::try_from(upper.saturating_sub(lower).max(0) / SECONDS_PER_DAY + 1).ok()
+    usize::try_from((upper.saturating_sub(lower).max(0) / SECONDS_PER_DAY).saturating_add(1)).ok()
 }
 
 /// Milliseconds of `limit` rows of `row_units` each.
@@ -223,7 +224,7 @@ pub(super) fn match_players(
     let scan = Scan::of(where_, match_players_key_ordered(order_by));
     match_players_scan(&scan, offset).saturating_add(scan.rows(
         limit,
-        ROW_BASE_UNITS + row_units,
+        ROW_BASE_UNITS.saturating_add(row_units),
         PLAYERS_PER_MATCH,
     ))
 }
@@ -236,7 +237,11 @@ pub(super) fn matches(
     row_units: usize,
 ) -> usize {
     let scan = Scan::of(where_, matches_key_ordered(order_by));
-    matches_scan(&scan, offset).saturating_add(scan.rows(limit, ROW_BASE_UNITS + row_units, 1))
+    matches_scan(&scan, offset).saturating_add(scan.rows(
+        limit,
+        ROW_BASE_UNITS.saturating_add(row_units),
+        1,
+    ))
 }
 
 /// `match_history` merges every row of the filtered accounts before it applies `limit`, so its
@@ -250,15 +255,16 @@ pub(super) fn match_history(
     columns: usize,
 ) -> usize {
     let accounts = where_.and_then(|w| w.account_id.as_ref()).map_or(0, |f| {
-        usize::from(f.eq.is_some()) + f.r#in.as_ref().map_or(0, Vec::len)
+        usize::from(f.eq.is_some()).saturating_add(f.r#in.as_ref().map_or(0, Vec::len))
     });
     if accounts == 0 {
         return 20_000;
     }
-    20 + accounts
-        .saturating_mul(3_500 + 1_650 * columns)
+    accounts
+        .saturating_mul(columns.saturating_mul(1_650).saturating_add(3_500))
         .div_ceil(1000)
-        + rows(limit, 1)
+        .saturating_add(20)
+        .saturating_add(rows(limit, 1))
 }
 
 /// `match_salts` (29M rows, unpartitioned) pages in `match_id` order until it has `limit` matches
@@ -268,16 +274,17 @@ pub(super) fn match_history(
 /// 14 / 59 / 246 / 2,157 ms).
 pub(super) fn match_salts(where_: Option<&MatchSaltsWhere>, limit: u32, row_units: usize) -> usize {
     let ids = where_.and_then(|w| w.match_id.as_ref()).map_or(0, |f| {
-        usize::from(f.eq.is_some()) + f.r#in.as_ref().map_or(0, Vec::len)
+        usize::from(f.eq.is_some()).saturating_add(f.r#in.as_ref().map_or(0, Vec::len))
     });
     if ids == 0 {
-        return 500 + rows(limit, SALTS_LOOKUP_UNITS + row_units);
+        return rows(limit, SALTS_LOOKUP_UNITS.saturating_add(row_units)).saturating_add(500);
     }
     let returned = limit.min(u32::try_from(ids).unwrap_or(u32::MAX));
     let merges = (returned as usize).saturating_mul(5).div_ceil(2);
-    (20 + ids / 5)
+    (ids / 5)
+        .saturating_add(20)
         .saturating_add(merges)
-        .saturating_add(rows(returned, SALTS_LOOKUP_UNITS + row_units))
+        .saturating_add(rows(returned, SALTS_LOOKUP_UNITS.saturating_add(row_units)))
 }
 
 #[cfg(test)]

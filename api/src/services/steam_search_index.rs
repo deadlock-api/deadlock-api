@@ -1,7 +1,10 @@
-// Casts in this module either round-trip u32 through Tantivy's u64 FAST fields
-// (safe by construction) or feed jaro-winkler math that doesn't care about
-// sub-f64 precision on tiny strings.
-#![expect(clippy::cast_precision_loss, clippy::cast_possible_truncation)]
+#![expect(
+    clippy::cast_precision_loss,
+    clippy::cast_possible_truncation,
+    reason = "casts either round-trip u32 through Tantivy's u64 FAST fields (safe by \
+              construction) or feed jaro-winkler math that doesn't care about sub-f64 \
+              precision on tiny strings"
+)]
 
 use core::fmt::Display;
 use core::ops::Bound;
@@ -20,7 +23,7 @@ use tantivy::columnar::StrColumn;
 use tantivy::directory::MmapDirectory;
 use tantivy::query::{BooleanQuery, FuzzyTermQuery, Occur, Query, RangeQuery, TermQuery};
 use tantivy::schema::{
-    BytesOptions, FAST, Field, INDEXED, STORED, STRING, Schema, TEXT, TextOptions, Value,
+    BytesOptions, FAST, Field, INDEXED, STORED, STRING, Schema, TEXT, TextOptions, Value as _,
 };
 use tantivy::store::{Compressor, ZstdCompressor};
 use tantivy::tokenizer::{LowerCaser, RAW_TOKENIZER_NAME, SimpleTokenizer, TextAnalyzer};
@@ -151,8 +154,7 @@ pub(crate) struct IndexedProfile {
 
 impl SteamSearchIndex {
     pub(crate) fn new(root_path: PathBuf) -> Self {
-        let schema = build_schema();
-        let fields = lookup_fields(&schema);
+        let (_, fields) = build_schema();
         let base_path = root_path.join(format!("{INSTANCE_DIR_PREFIX}{}", instance_id()));
         Self {
             inner: Arc::new(Inner {
@@ -255,7 +257,7 @@ impl SteamSearchIndex {
                         .writer(WRITER_HEAP_MB * 1024 * 1024)
                         .map_err(tantivy_err)?;
                     let mut max_ts: u32 = 0;
-                    let mut fetched = 0;
+                    let mut fetched = 0_usize;
                     // Commit only on the explicit end marker. A stream error (`Err` row) or a
                     // closed channel (rebuild cancelled) bails out without committing or writing
                     // a watermark, so a partial index is never persisted or swapped in (its dir
@@ -264,7 +266,7 @@ impl SteamSearchIndex {
                         match rx.blocking_recv() {
                             Some(RebuildFeed::Row(row)) => {
                                 max_ts = max_ts.max(add_row(&writer, inner.fields, &row?)?);
-                                fetched += 1;
+                                fetched = fetched.saturating_add(1);
                             }
                             Some(RebuildFeed::Done) => break,
                             None => return Err(RebuildError::Cancelled),
@@ -286,13 +288,11 @@ impl SteamSearchIndex {
 
         loop {
             let row = cursor.next().await.transpose();
-            let Some(row) = row else {
-                // A send error means the writer gave up; its error surfaces from `builder`.
-                let _ = tx.send(RebuildFeed::Done).await;
-                break;
-            };
-            let failed = row.is_err();
-            if tx.send(RebuildFeed::Row(row)).await.is_err() || failed {
+            // Stop after the end marker or the first error row. A send error means the writer
+            // gave up; its error surfaces from `builder`.
+            let last = row.as_ref().is_none_or(Result::is_err);
+            let feed = row.map_or(RebuildFeed::Done, RebuildFeed::Row);
+            if tx.send(feed).await.is_err() || last {
                 break;
             }
         }
@@ -426,7 +426,10 @@ impl SteamSearchIndex {
         .await?
     }
 
-    #[expect(clippy::too_many_lines)]
+    #[expect(
+        clippy::too_many_lines,
+        reason = "one query pipeline: build, collect, rescore, pin"
+    )]
     fn search_blocking(
         &self,
         query: &str,
@@ -540,8 +543,9 @@ impl SteamSearchIndex {
                 .get(doc_address.segment_ord as usize)
                 .and_then(Option::as_ref)
                 && let Some(ord) = col.term_ords(doc_address.doc_id).next()
+                && col.ord_to_str(ord, &mut name).is_err()
             {
-                let _ = col.ord_to_str(ord, &mut name);
+                name.clear();
             }
             let mp = matches_played.unwrap_or(0);
             // Score against both the raw lowercase form and the
@@ -567,7 +571,7 @@ impl SteamSearchIndex {
 
         // Pin the ID-match profile (if any) at the front, removing it from
         // its current position if also in the scored list.
-        let mut hits: Vec<IndexedProfile> = Vec::with_capacity(scored.len() + 1);
+        let mut hits: Vec<IndexedProfile> = Vec::with_capacity(scored.len().saturating_add(1));
         let pinned =
             pinned_id.and_then(|id| self.lookup_by_account_id(&searcher, id).ok().flatten());
         let pinned_account = pinned.as_ref().map(|p| u64::from(p.account_id));
@@ -673,10 +677,8 @@ fn parse_id_query(q: &str) -> Option<u32> {
     if let Ok(account_id) = q.parse::<u32>() {
         return Some(account_id);
     }
-    q.parse::<u64>()
-        .ok()?
-        .checked_sub(STEAM_ID64_OFFSET)
-        .and_then(|account_id| u32::try_from(account_id).ok())
+    let account_id = q.parse::<u64>().ok()?.checked_sub(STEAM_ID64_OFFSET)?;
+    u32::try_from(account_id).ok()
 }
 
 fn profile_from_doc(doc: &TantivyDocument, f: SearchFields, matches_played: u64) -> IndexedProfile {
@@ -715,75 +717,75 @@ fn profile_from_doc(doc: &TantivyDocument, f: SearchFields, matches_played: u64)
     }
 }
 
-fn build_schema() -> Schema {
+fn build_schema() -> (Schema, SearchFields) {
     let mut sb = Schema::builder();
-    sb.add_u64_field("account_id", STORED | FAST | INDEXED);
-    sb.add_text_field("personaname_search", TEXT);
-    sb.add_text_field("personaname_exact", STRING.set_fast(RAW_TOKENIZER_NAME));
-    sb.add_text_field("personaname_nospace", STRING);
-    sb.add_u64_field("matches_played", STORED | FAST | INDEXED);
+    let account_id = sb.add_u64_field("account_id", STORED | FAST | INDEXED);
+    let personaname_search = sb.add_text_field("personaname_search", TEXT);
+    let personaname_exact =
+        sb.add_text_field("personaname_exact", STRING.set_fast(RAW_TOKENIZER_NAME));
+    let personaname_nospace = sb.add_text_field("personaname_nospace", STRING);
+    let matches_played = sb.add_u64_field("matches_played", STORED | FAST | INDEXED);
     let stored_text = TextOptions::default().set_stored();
-    sb.add_text_field("personaname", stored_text.clone());
-    sb.add_text_field("profileurl", stored_text.clone());
-    sb.add_text_field("avatar", stored_text.clone());
-    sb.add_text_field("avatarmedium", stored_text.clone());
-    sb.add_text_field("avatarfull", stored_text.clone());
-    sb.add_text_field("realname", stored_text.clone());
-    sb.add_text_field("countrycode", stored_text);
-    sb.add_u64_field("last_updated", STORED | FAST);
-    sb.add_u64_field("last_team_avg_badge", STORED | FAST | INDEXED);
-    sb.add_bytes_field("friends_blob", BytesOptions::default().set_stored());
-    sb.build()
-}
-
-fn lookup_fields(schema: &Schema) -> SearchFields {
-    let f = |name: &str| schema.get_field(name).expect(name);
-    SearchFields {
-        account_id: f("account_id"),
-        personaname_search: f("personaname_search"),
-        personaname_exact: f("personaname_exact"),
-        personaname_nospace: f("personaname_nospace"),
-        matches_played: f("matches_played"),
-        personaname: f("personaname"),
-        profileurl: f("profileurl"),
-        avatar: f("avatar"),
-        avatarmedium: f("avatarmedium"),
-        avatarfull: f("avatarfull"),
-        realname: f("realname"),
-        countrycode: f("countrycode"),
-        last_updated: f("last_updated"),
-        last_team_avg_badge: f("last_team_avg_badge"),
-        friends_blob: f("friends_blob"),
-    }
+    let personaname = sb.add_text_field("personaname", stored_text.clone());
+    let profileurl = sb.add_text_field("profileurl", stored_text.clone());
+    let avatar = sb.add_text_field("avatar", stored_text.clone());
+    let avatarmedium = sb.add_text_field("avatarmedium", stored_text.clone());
+    let avatarfull = sb.add_text_field("avatarfull", stored_text.clone());
+    let realname = sb.add_text_field("realname", stored_text.clone());
+    let countrycode = sb.add_text_field("countrycode", stored_text);
+    let last_updated = sb.add_u64_field("last_updated", STORED | FAST);
+    let last_team_avg_badge = sb.add_u64_field("last_team_avg_badge", STORED | FAST | INDEXED);
+    let friends_blob = sb.add_bytes_field("friends_blob", BytesOptions::default().set_stored());
+    let fields = SearchFields {
+        account_id,
+        personaname_search,
+        personaname_exact,
+        personaname_nospace,
+        matches_played,
+        personaname,
+        profileurl,
+        avatar,
+        avatarmedium,
+        avatarfull,
+        realname,
+        countrycode,
+        last_updated,
+        last_team_avg_badge,
+        friends_blob,
+    };
+    (sb.build(), fields)
 }
 
 fn encode_friends(account_ids: &[u32], friend_since: &[u32]) -> Vec<u8> {
     let count = account_ids.len().min(friend_since.len());
-    let mut buf = Vec::with_capacity(4 + count * 8);
+    let mut buf = Vec::with_capacity(count.saturating_mul(8).saturating_add(4));
     buf.extend_from_slice(&(count as u32).to_le_bytes());
-    for i in 0..count {
-        buf.extend_from_slice(&account_ids[i].to_le_bytes());
-        buf.extend_from_slice(&friend_since[i].to_le_bytes());
+    for (account_id, since) in account_ids.iter().zip(friend_since) {
+        buf.extend_from_slice(&account_id.to_le_bytes());
+        buf.extend_from_slice(&since.to_le_bytes());
     }
     buf
 }
 
 fn decode_friends(bytes: &[u8]) -> Vec<(u32, u32)> {
-    if bytes.len() < 4 {
+    let Some((count, body)) = bytes.split_first_chunk::<4>() else {
+        return Vec::new();
+    };
+    let count = u32::from_le_bytes(*count) as usize;
+    let (chunks, _) = body.as_chunks::<8>();
+    if chunks.len() < count {
         return Vec::new();
     }
-    let count = u32::from_le_bytes(bytes[..4].try_into().unwrap_or([0; 4])) as usize;
-    let body = &bytes[4..];
-    if body.len() < count * 8 {
-        return Vec::new();
-    }
-    let mut out = Vec::with_capacity(count);
-    for chunk in body.as_chunks::<8>().0.iter().take(count) {
-        let aid = u32::from_le_bytes(chunk[..4].try_into().unwrap_or([0; 4]));
-        let ts = u32::from_le_bytes(chunk[4..8].try_into().unwrap_or([0; 4]));
-        out.push((aid, ts));
-    }
-    out
+    chunks
+        .iter()
+        .take(count)
+        .map(|&[a0, a1, a2, a3, t0, t1, t2, t3]| {
+            (
+                u32::from_le_bytes([a0, a1, a2, a3]),
+                u32::from_le_bytes([t0, t1, t2, t3]),
+            )
+        })
+        .collect()
 }
 
 /// Edit distance a fuzzy term query allows for `term`: none for very short terms.
@@ -829,36 +831,27 @@ fn jaro(s1: &str, s2: &str) -> f64 {
     let mut s1_matches = vec![false; len1];
     let mut s2_matches = vec![false; len2];
     let mut matches = 0usize;
-    for i in 0..len1 {
+    for (i, (c1, m1)) in s1.iter().zip(&mut s1_matches).enumerate() {
         let start = i.saturating_sub(match_distance);
-        let end = (i + match_distance + 1).min(len2);
-        for j in start..end {
-            if s2_matches[j] || s1[i] != s2[j] {
+        let end = i.saturating_add(match_distance).saturating_add(1);
+        let window = s2.iter().zip(&mut s2_matches).take(end).skip(start);
+        for (c2, m2) in window {
+            if *m2 || c1 != c2 {
                 continue;
             }
-            s1_matches[i] = true;
-            s2_matches[j] = true;
-            matches += 1;
+            *m1 = true;
+            *m2 = true;
+            matches = matches.saturating_add(1);
             break;
         }
     }
     if matches == 0 {
         return 0.0;
     }
-    let mut transpositions = 0usize;
-    let mut k = 0usize;
-    for i in 0..len1 {
-        if !s1_matches[i] {
-            continue;
-        }
-        while !s2_matches[k] {
-            k += 1;
-        }
-        if s1[i] != s2[k] {
-            transpositions += 1;
-        }
-        k += 1;
-    }
+    // Pair the k-th matched char of s1 with the k-th matched char of s2.
+    let left = s1.iter().zip(&s1_matches).filter(|(_, m)| **m);
+    let right = s2.iter().zip(&s2_matches).filter(|(_, m)| **m);
+    let transpositions = left.zip(right).filter(|((a, _), (b, _))| a != b).count();
     let m = matches as f64;
     let t = (transpositions as f64) / 2.0;
     (m / len1 as f64 + m / len2 as f64 + (m - t) / m) / 3.0
@@ -897,7 +890,7 @@ SELECT sp.account_id AS account_id,
        ifNull(mp.last_team_avg_badge, toUInt32(0)) AS last_team_avg_badge";
 
 fn open_index_at(path: &Path, create_if_missing: bool) -> Result<Index, RebuildError> {
-    let schema = build_schema();
+    let (schema, _) = build_schema();
     let settings = IndexSettings {
         docstore_compression: Compressor::Zstd(ZstdCompressor::default()),
         ..Default::default()
@@ -1036,9 +1029,8 @@ fn newest_child_age(dir: &Path, now: SystemTime) -> Option<Duration> {
 }
 
 fn read_watermark(dir: &Path) -> Option<u32> {
-    std::fs::read_to_string(dir.join(WATERMARK_FILENAME))
-        .ok()
-        .and_then(|s| s.trim().parse().ok())
+    let s = std::fs::read_to_string(dir.join(WATERMARK_FILENAME)).ok()?;
+    s.trim().parse().ok()
 }
 
 fn write_watermark(dir: &Path, ts: u32) {

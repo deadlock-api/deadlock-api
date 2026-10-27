@@ -55,7 +55,7 @@ pub(crate) fn spawn_controller(ch_client: clickhouse::Client) {
             // A failed or timed-out poll counts as full pressure: the server is unreachable or
             // too slow to answer a trivial query.
             window.push_back(reading.unwrap_or(1.0));
-            #[expect(clippy::cast_precision_loss)]
+            #[expect(clippy::cast_precision_loss, reason = "window length is tiny")]
             let pressure = window.iter().sum::<f64>() / window.len() as f64;
 
             let limit = CH_ADMISSION.limit();
@@ -71,7 +71,7 @@ pub(crate) fn spawn_controller(ch_client: clickhouse::Client) {
             }
 
             let (in_flight, waiting) = CH_ADMISSION.load();
-            #[expect(clippy::cast_precision_loss)]
+            #[expect(clippy::cast_precision_loss, reason = "gauges take f64")]
             {
                 metrics::gauge!("ch_admission_limit").set(next as f64);
                 metrics::gauge!("ch_admission_in_flight").set(in_flight as f64);
@@ -87,9 +87,9 @@ pub(crate) fn spawn_controller(ch_client: clickhouse::Client) {
 /// and stays within `MIN_LIMIT..=MAX_LIMIT`.
 fn next_limit(limit: usize, pressure: f64, congested: bool, saturated: bool) -> usize {
     if pressure > DECREASE_PRESSURE || congested {
-        (limit * 9 / 10).max(MIN_LIMIT)
+        (limit.saturating_mul(9) / 10).max(MIN_LIMIT)
     } else if pressure < INCREASE_PRESSURE && saturated {
-        (limit + (limit / 8).max(1)).min(MAX_LIMIT)
+        limit.saturating_add((limit / 8).max(1)).min(MAX_LIMIT)
     } else {
         limit
     }

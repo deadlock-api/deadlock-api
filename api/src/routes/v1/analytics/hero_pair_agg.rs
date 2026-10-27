@@ -54,7 +54,7 @@ const PAIR_STATS: &[(&str, &str)] = &[
 /// [`PAIR_STATS`] for `hero_id`'s player and `other_` for the other one.
 const AGG_MEASURES: &str = "n_pairs, wins, kills, other_kills, deaths, other_deaths, assists, other_assists, denies, other_denies, last_hits, other_last_hits, net_worth, other_net_worth, obj_damage, other_obj_damage, creeps, other_creeps";
 
-fn hero_pair_agg() -> Rollup<'static> {
+const fn hero_pair_agg() -> Rollup<'static> {
     Rollup {
         table: AGG_TABLE,
         grain: AGG_GRAIN,
@@ -95,7 +95,7 @@ fn agg_rows(
         .iter()
         .enumerate()
         .map(|(i, (name, _))| {
-            let pos = i + 5;
+            let pos = i.saturating_add(5);
             format!("(pair.1).{pos} AS {name}, (pair.2).{pos} AS other_{name},\n        ")
         })
         .collect::<Vec<_>>()

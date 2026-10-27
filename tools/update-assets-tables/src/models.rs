@@ -62,17 +62,21 @@ pub(crate) struct ChItem {
     pub cost: Option<u32>,
 }
 
-impl From<Item> for ChItem {
-    fn from(value: Item) -> Self {
-        Self {
+/// Fails, handing the item back, for an item of unknown type.
+impl TryFrom<Item> for ChItem {
+    type Error = Item;
+
+    fn try_from(value: Item) -> Result<Self, Item> {
+        let r#type = match value.r#type {
+            ItemType::Upgrade => CHItemType::Upgrade,
+            ItemType::Ability => CHItemType::Ability,
+            ItemType::Unknown => return Err(value),
+        };
+        Ok(Self {
             id: value.id,
             name: value.name,
             tier: value.tier,
-            r#type: match value.r#type {
-                ItemType::Upgrade => CHItemType::Upgrade,
-                ItemType::Ability => CHItemType::Ability,
-                ItemType::Unknown => unreachable!(),
-            },
+            r#type,
             slot_type: match value.slot_type {
                 Some(SlotType::Weapon) => Some(CHSlotType::Weapon),
                 Some(SlotType::Vitality) => Some(CHSlotType::Vitality),
@@ -80,7 +84,7 @@ impl From<Item> for ChItem {
                 None => None,
             },
             cost: value.cost,
-        }
+        })
     }
 }
 

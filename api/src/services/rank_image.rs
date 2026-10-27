@@ -15,12 +15,12 @@
 use core::time::Duration;
 use std::sync::Arc;
 
-use ab_glyph::{Font, FontVec, Glyph, PxScale, ScaleFont, point};
+use ab_glyph::{Font as _, FontVec, Glyph, PxScale, ScaleFont as _, point};
 use axum::body::Bytes;
 use axum::http::StatusCode;
 use cached::macros::cached;
-use image::{ImageEncoder, Rgba, RgbaImage};
-use object_store::ObjectStoreExt;
+use image::{ImageEncoder as _, Rgba, RgbaImage};
+use object_store::ObjectStoreExt as _;
 use object_store::path::Path as ObjectPath;
 use serde::Deserialize;
 use utoipa::ToSchema;
@@ -102,7 +102,7 @@ impl RankImageFormat {
         }
     }
 
-    pub(crate) fn content_type(self) -> &'static str {
+    pub(crate) const fn content_type(self) -> &'static str {
         match self {
             Self::Png => "image/png",
             Self::Webp => "image/webp",
@@ -292,7 +292,10 @@ impl Text {
             let bounds = outline.px_bounds();
             let (min_x, min_y) = (bounds.min.x as i32, bounds.min.y as i32);
             outline.draw(|x, y, value| {
-                let (x, y) = (min_x + x as i32, min_y + y as i32);
+                let (x, y) = (
+                    min_x.saturating_add_unsigned(x),
+                    min_y.saturating_add_unsigned(y),
+                );
                 if x >= 0 && y >= 0 && x < width && y < height {
                     blend(
                         canvas.get_pixel_mut(x as u32, y as u32),

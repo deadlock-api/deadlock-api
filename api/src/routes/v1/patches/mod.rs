@@ -17,7 +17,7 @@ use crate::middleware::cache::CacheControlMiddleware;
 )))]
 struct ApiDoc;
 
-#[expect(deprecated)]
+#[expect(deprecated, reason = "registers deprecated handlers")]
 pub(super) fn router() -> OpenApiRouter<AppState> {
     OpenApiRouter::with_openapi(ApiDoc::openapi())
         .routes(routes!(big_patch_days::big_patch_days))

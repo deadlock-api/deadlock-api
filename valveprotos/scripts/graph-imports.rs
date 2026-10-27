@@ -4,10 +4,33 @@
 //!
 //! this is not a part of "cargo" project (yet). to run this you'll need pre-rfc rust-script thing
 //! <https://rust-script.org/>.
+#![cfg_attr(
+    test,
+    allow(
+        clippy::arithmetic_side_effects,
+        clippy::disallowed_macros,
+        clippy::disallowed_methods,
+        clippy::expect_used,
+        clippy::indexing_slicing,
+        clippy::panic,
+        clippy::panic_in_result_fn,
+        clippy::print_stderr,
+        clippy::print_stdout,
+        clippy::string_slice,
+        clippy::unreachable,
+        clippy::unwrap_in_result,
+        clippy::unwrap_used,
+        reason = "tests may panic"
+    )
+)]
 use std::{fs, io, path::Path};
 
 const PROTO_DIRS: &[&str] = &["common", "gcsdk", "deadlock"];
 
+#[expect(
+    clippy::print_stdout,
+    reason = "a CLI script whose output is the graph"
+)]
 fn main() -> io::Result<()> {
     println!("digraph ImportGraph {{");
     println!("  ranksep = 2;");
@@ -20,8 +43,12 @@ fn main() -> io::Result<()> {
 
         for file_entry in fs::read_dir(Path::new("protos").join(proto_dir))? {
             let file_path = file_entry?.path();
-            assert!(file_path.is_file());
-            assert!(file_path.extension().is_some_and(|ext| ext == "proto"));
+            if !file_path.is_file() || file_path.extension().is_none_or(|ext| ext != "proto") {
+                return Err(io::Error::other(format!(
+                    "{} is not a .proto file",
+                    file_path.display()
+                )));
+            }
 
             let file_name = file_path
                 .file_name()
@@ -36,7 +63,7 @@ fn main() -> io::Result<()> {
                 let import = line
                     .trim_start_matches("import \"")
                     .trim_end_matches("\";")
-                    .to_string();
+                    .to_owned();
 
                 println!("    \"{file_name}\" -> \"{import}\";");
             }

@@ -12,3 +12,6 @@ dungers_varint = { workspace = true, optional = true }
 bitbuf = ["dep:dungers_bitbuf"]
 charsor = ["dep:dungers_charsor"]
 varint = ["dep:dungers_varint", "dungers_bitbuf?/varint"]
+
+[lints]
+workspace = true

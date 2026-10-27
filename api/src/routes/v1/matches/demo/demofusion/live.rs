@@ -26,10 +26,10 @@ use haste_core::parser::{Context, Parser, Visitor};
 use haste_core::valveprotos::common::EDemoCommands;
 use serde::Deserialize;
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender, unbounded_channel};
-use tracing::{info, warn};
+use tracing::{debug, info, warn};
 
 use super::entity_batch_builder::EntityBatchBuilder;
-use super::error::{Error, Result};
+use super::error::{DemoError, Result};
 use super::event_batch_builder::EventBatchBuilder;
 use super::events::{decode_event, event_schema};
 use super::query::{
@@ -70,7 +70,8 @@ pub(crate) async fn query_live(
 
     // The `/start` signon fragment carries the send-tables the schema is built from, and also seeds
     // the parser so serializers/class-info are in place before deltas.
-    let (http, signon) = connect_with_retry(base_url, &status_tx).await?;
+    let client = broadcast_client()?;
+    let (http, signon) = connect_with_retry(client, base_url, &status_tx).await?;
 
     // Schema discovery is CPU-bound haste parsing; run it off the async runtime, and catch a panic
     // on malformed/stale relay bytes as a Broadcast error rather than letting it reset the connection.
@@ -80,7 +81,7 @@ pub(crate) async fn query_live(
         discover_schemas_from_demo::<BroadcastDemoStream>(signon_for_schema, &referenced_for_schema)
     })
     .await
-    .map_err(|e| Error::Broadcast(format!("schema discovery task failed: {e}")))??;
+    .map_err(|e| DemoError::Broadcast(format!("schema discovery task failed: {e}")))??;
     let entity_schemas: Schemas = discovered
         .into_iter()
         .map(|s| (Arc::clone(&s.serializer_name), s))
@@ -92,12 +93,15 @@ pub(crate) async fn query_live(
     let entity_specs = build_entity_specs(&referenced_entities, &projections);
 
     let (bytes_tx, bytes_rx) = std::sync::mpsc::channel::<Bytes>();
-    let _ = bytes_tx.send(signon);
+    // `bytes_rx` is alive right here, so this only fails if the channel itself is broken.
+    bytes_tx
+        .send(signon)
+        .map_err(|e| DemoError::Broadcast(format!("failed to queue the signon fragment: {e}")))?;
 
     // Every live table is a single channel, so repartitioning buys no parallelism — and
     // `RepartitionExec` coalesces batches from bounded inputs, which would hold decoded rows
     // back until the broadcast ends instead of streaming them as they arrive.
-    let ctx = session_context(SessionConfig::new().with_target_partitions(1));
+    let ctx = session_context(SessionConfig::new().with_target_partitions(1))?;
     let mut entities: HashMap<u64, Channel<EntityBatchBuilder>> = HashMap::new();
     for (schema, projection) in &entity_specs {
         let (tx, rx) = unbounded_channel();
@@ -110,7 +114,7 @@ pub(crate) async fn query_live(
         entities.insert(
             schema.serializer_hash,
             Channel {
-                builder: EntityBatchBuilder::new_projected(schema, projection.as_deref()),
+                builder: EntityBatchBuilder::new_projected(schema, projection.as_deref())?,
                 tx,
             },
         );
@@ -120,7 +124,7 @@ pub(crate) async fn query_live(
     // still resolves.
     for schema in &referenced_entities {
         if !entities.contains_key(&schema.serializer_hash) {
-            let table = MemTable::try_new(schema.arrow_schema.clone(), vec![vec![]])?;
+            let table = MemTable::try_new(Arc::clone(&schema.arrow_schema), vec![vec![]])?;
             ctx.register_table(&*schema.serializer_name, Arc::new(table))?;
         }
     }
@@ -136,21 +140,25 @@ pub(crate) async fn query_live(
         events.insert(
             event_type.message_id(),
             Channel {
-                builder: EventBatchBuilder::new(*event_type),
+                builder: EventBatchBuilder::new(*event_type)?,
                 tx,
             },
         );
     }
 
-    spawn_producer(http, bytes_tx, base_url.to_owned());
+    spawn_producer(client, http, bytes_tx, base_url.to_owned());
 
     let visitor = StreamingCollector { entities, events };
     tokio::task::spawn_blocking(move || {
         let stream = LiveBroadcastStream::new(bytes_rx);
         if let Ok(mut parser) = Parser::from_stream_with_visitor(stream, visitor) {
             // A parse error (truncated tail) or a closed result stream just ends the live query.
-            let _ = parser.run_to_end();
-            let _ = parser.into_visitor().flush();
+            if let Err(e) = parser.run_to_end() {
+                debug!("Live broadcast parse ended: {e}");
+            }
+            if let Err(e) = parser.into_visitor().flush() {
+                debug!("Live broadcast final flush failed: {e}");
+            }
         }
     });
 
@@ -165,6 +173,7 @@ pub(crate) async fn query_live(
 /// Why the broadcast stopped is logged with the relay's `/sync` answer at that moment, telling a
 /// finished match apart from a relay that was still serving when haste gave up on it.
 fn spawn_producer(
+    client: &'static reqwest::Client,
     mut http: BroadcastHttp<'static, reqwest::Client>,
     bytes_tx: std::sync::mpsc::Sender<Bytes>,
     broadcast_url: String,
@@ -178,14 +187,14 @@ fn spawn_producer(
                         // The query finished or the client went away.
                         return;
                     }
-                    fragments += 1;
+                    fragments = fragments.saturating_add(1);
                 }
                 Some(Err(e)) => break Some(e),
                 None => break None,
             }
         };
         drop(bytes_tx);
-        let relay_sync = relay_sync_status(&broadcast_url).await;
+        let relay_sync = relay_sync_status(client, &broadcast_url).await;
         match error {
             None => info!(broadcast_url, fragments, relay_sync, "Live broadcast ended"),
             Some(e) => warn!(
@@ -204,14 +213,17 @@ fn spawn_producer(
 /// yet) or 405 (relay still connecting to the game server) for several seconds before it starts
 /// serving fragments, so a single failed attempt does not mean the broadcast is unavailable.
 async fn connect_with_retry(
+    client: &reqwest::Client,
     base_url: &str,
     status_tx: &UnboundedSender<String>,
 ) -> Result<(BroadcastHttp<'static, reqwest::Client>, Bytes)> {
-    let deadline = tokio::time::Instant::now() + CONNECT_RETRY_BUDGET;
+    let now = tokio::time::Instant::now();
+    // Adding a constant budget of a minute to the current instant cannot overflow.
+    let deadline = now.checked_add(CONNECT_RETRY_BUDGET).unwrap_or(now);
     let mut attempt = 0u32;
     loop {
-        attempt += 1;
-        let error = match try_connect(base_url).await {
+        attempt = attempt.saturating_add(1);
+        let error = match try_connect(client, base_url).await {
             Ok(connected) => return Ok(connected),
             Err(e) => e,
         };
@@ -219,14 +231,14 @@ async fn connect_with_retry(
         // spinning up apart from one Valve never started (`Broadcast has not started yet` for the
         // whole match, even though spectating succeeded).
         let refusal = match error {
-            BroadcastHttpClientError::StatusCode(_) => relay_refusal(base_url).await,
+            BroadcastHttpClientError::StatusCode(_) => relay_refusal(client, base_url).await,
             _ => None,
         };
         let reason = refusal
             .as_deref()
             .map_or_else(|| error.to_string(), |m| format!("Valve relay: {m}"));
         if tokio::time::Instant::now() >= deadline {
-            return Err(Error::Broadcast(match refusal.as_deref() {
+            return Err(DemoError::Broadcast(match refusal.as_deref() {
                 Some(BROADCAST_NOT_STARTED) => format!(
                     "Valve's relay never started this match's broadcast (still \"{BROADCAST_NOT_STARTED}\" \
                      after {}s). This happens for some matches on Valve's side, and spectating \
@@ -236,9 +248,15 @@ async fn connect_with_retry(
                 _ => reason,
             }));
         }
-        let _ = status_tx.send(format!(
-            "Broadcast relay not ready yet (attempt {attempt}: {reason}), retrying..."
-        ));
+        // Progress messages are best effort; without a listener the retries simply go unreported.
+        if status_tx
+            .send(format!(
+                "Broadcast relay not ready yet (attempt {attempt}: {reason}), retrying..."
+            ))
+            .is_err()
+        {
+            debug!("Live query status listener is gone");
+        }
         tokio::time::sleep(CONNECT_RETRY_INTERVAL).await;
     }
 }
@@ -256,8 +274,11 @@ struct RelayError {
 }
 
 /// Fetches the relay's `/sync` status, plus its message if it refuses.
-async fn probe_sync(base_url: &str) -> reqwest::Result<(reqwest::StatusCode, Option<String>)> {
-    let response = BROADCAST_CLIENT
+async fn probe_sync(
+    client: &reqwest::Client,
+    base_url: &str,
+) -> reqwest::Result<(reqwest::StatusCode, Option<String>)> {
+    let response = client
         .get(sync_url(base_url))
         .timeout(RELAY_PROBE_TIMEOUT)
         .send()
@@ -273,13 +294,13 @@ async fn probe_sync(base_url: &str) -> reqwest::Result<(reqwest::StatusCode, Opt
 }
 
 /// The message the relay gives for refusing `/sync`, or `None` if it serves it or gives no reason.
-async fn relay_refusal(base_url: &str) -> Option<String> {
-    probe_sync(base_url).await.ok()?.1
+async fn relay_refusal(client: &reqwest::Client, base_url: &str) -> Option<String> {
+    probe_sync(client, base_url).await.ok()?.1
 }
 
 /// The relay's `/sync` status (and message, if it refuses) for logging.
-async fn relay_sync_status(base_url: &str) -> String {
-    match probe_sync(base_url).await {
+async fn relay_sync_status(client: &reqwest::Client, base_url: &str) -> String {
+    match probe_sync(client, base_url).await {
         Ok((status, Some(message))) => format!("{status}: {message}"),
         Ok((status, None)) => status.to_string(),
         Err(e) => format!("unreachable: {e}"),
@@ -294,24 +315,29 @@ fn sync_url(base_url: &str) -> String {
 /// allow-list, so a relay cannot bounce the server elsewhere. The timeouts match live-events'
 /// client for the same relays: haste retries a timed-out fetch and then ends the stream, where a
 /// stalled relay would otherwise hold the producer and the parser thread forever.
-static BROADCAST_CLIENT: LazyLock<reqwest::Client> = LazyLock::new(|| {
+static BROADCAST_CLIENT: LazyLock<reqwest::Result<reqwest::Client>> = LazyLock::new(|| {
     reqwest::Client::builder()
         .connect_timeout(Duration::from_secs(10))
         .read_timeout(Duration::from_secs(60))
         .redirect(crate::utils::broadcast_url::redirect_policy())
         .build()
-        // Same failure mode as `reqwest::Client::new()`, which panics on TLS backend init errors.
-        .expect("failed to build broadcast HTTP client")
 });
 
+/// The shared broadcast client; building it only fails when the TLS backend cannot start.
+fn broadcast_client() -> Result<&'static reqwest::Client> {
+    BROADCAST_CLIENT
+        .as_ref()
+        .map_err(|e| DemoError::Broadcast(format!("failed to build broadcast HTTP client: {e}")))
+}
+
 async fn try_connect(
+    client: &reqwest::Client,
     base_url: &str,
 ) -> core::result::Result<
     (BroadcastHttp<'static, reqwest::Client>, Bytes),
     BroadcastHttpClientError<reqwest::Error>,
 > {
-    let client = BROADCAST_CLIENT.clone();
-    let mut http = BroadcastHttp::start_streaming(client, base_url.to_string()).await?;
+    let mut http = BroadcastHttp::start_streaming(client.clone(), base_url.to_owned()).await?;
     match http.next_packet().await {
         Some(Ok(bytes)) => Ok((http, bytes)),
         Some(Err(e)) => Err(e),
@@ -345,7 +371,7 @@ struct Channel<B> {
 
 fn send_batch(batch: RecordBatch, tx: &UnboundedSender<RecordBatch>) -> Result<()> {
     if batch.num_rows() > 0 && tx.send(batch).is_err() {
-        return Err(Error::Broadcast("live result stream closed".into()));
+        return Err(DemoError::Broadcast("live result stream closed".into()));
     }
     Ok(())
 }
@@ -405,19 +431,24 @@ impl StreamingCollector {
 }
 
 impl Visitor for StreamingCollector {
-    type Error = Error;
+    type Error = DemoError;
 
     fn should_track_entity(&self, serializer_name_hash: u64) -> bool {
         self.entities.contains_key(&serializer_name_hash)
     }
 
-    fn on_entity(&mut self, ctx: &Context, delta: DeltaHeader, entity: &Entity) -> Result<()> {
+    fn on_entity(
+        &mut self,
+        ctx: &Context,
+        delta_header: DeltaHeader,
+        entity: &Entity,
+    ) -> Result<()> {
         if let Some(ch) = self
             .entities
             .get_mut(&entity.serializer().serializer_name.hash)
         {
             ch.builder
-                .append_entity(ctx.tick(), entity.index(), delta, entity);
+                .append_entity(ctx.tick(), entity.index(), delta_header, entity);
         }
         Ok(())
     }
@@ -426,7 +457,7 @@ impl Visitor for StreamingCollector {
         if let Some(ch) = self.events.get_mut(&packet_type)
             && let Some(event) = decode_event(packet_type, data)
         {
-            ch.builder.append(ctx.tick(), &event);
+            ch.builder.append(ctx.tick(), &event)?;
         }
         Ok(())
     }
@@ -446,7 +477,7 @@ struct ChannelReader {
 }
 
 impl Read for ChannelReader {
-    fn read(&mut self, out: &mut [u8]) -> io::Result<usize> {
+    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
         while self.pos >= self.current.len() {
             match self.rx.recv() {
                 Ok(bytes) => {
@@ -456,9 +487,12 @@ impl Read for ChannelReader {
                 Err(_) => return Ok(0),
             }
         }
-        let n = (self.current.len() - self.pos).min(out.len());
-        out[..n].copy_from_slice(&self.current[self.pos..self.pos + n]);
-        self.pos += n;
+        // The loop above leaves `pos` inside `current`.
+        let Some(mut rest) = self.current.get(self.pos..) else {
+            return Ok(0);
+        };
+        let n = rest.read(buf)?;
+        self.pos = self.pos.saturating_add(n);
         Ok(n)
     }
 }
@@ -474,7 +508,7 @@ struct LiveBroadcastStream {
 }
 
 impl LiveBroadcastStream {
-    fn new(rx: std::sync::mpsc::Receiver<Bytes>) -> Self {
+    const fn new(rx: std::sync::mpsc::Receiver<Bytes>) -> Self {
         Self {
             reader: ChannelReader {
                 rx,
@@ -501,12 +535,12 @@ impl DemoStream for LiveBroadcastStream {
             return Err(ReadCmdHeaderError::IoError(e));
         }
 
-        let cmd = EDemoCommands::try_from(i32::from(header[0])).map_err(|_| {
-            ReadCmdHeaderError::UnknownCmd {
+        let Ok(cmd) = EDemoCommands::try_from(i32::from(header[0])) else {
+            return Err(ReadCmdHeaderError::UnknownCmd {
                 raw: u32::from(header[0]),
                 uncompressed: u32::from(header[0]),
-            }
-        })?;
+            });
+        };
         Ok(CmdHeader {
             cmd,
             body_compressed: false,
@@ -533,7 +567,7 @@ impl DemoStream for LiveBroadcastStream {
 mod tests {
     use datafusion::arrow::array::{Int32Array, StringArray, UInt32Array, UInt64Array};
     use datafusion::arrow::datatypes::{DataType, Field, Schema};
-    use futures::StreamExt;
+    use futures::StreamExt as _;
 
     use super::*;
 

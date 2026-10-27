@@ -4,7 +4,7 @@ use std::sync::Arc;
 use axum::extract::{Request, State};
 use axum::http::StatusCode;
 use axum::middleware::Next;
-use axum::response::{IntoResponse, Response};
+use axum::response::{IntoResponse as _, Response};
 use tracing::warn;
 use uuid::Uuid;
 

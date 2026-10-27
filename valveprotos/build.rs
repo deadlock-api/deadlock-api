@@ -41,8 +41,12 @@ fn collect_protos(dir: &str) -> io::Result<Vec<PathBuf>> {
     let mut paths = vec![];
     for dir_entry in fs::read_dir(dir)? {
         let path = dir_entry?.path();
-        assert!(path.is_file());
-        assert!(path.extension().is_some_and(|ext| ext == "proto"));
+        if !path.is_file() || path.extension().is_none_or(|ext| ext != "proto") {
+            return Err(io::Error::other(format!(
+                "{} is not a .proto file",
+                path.display()
+            )));
+        }
         if path
             .file_name()
             .and_then(|name| name.to_str())
@@ -67,7 +71,7 @@ fn new_config(package: &str) -> Config {
 
 type ExternDefs<'a> = (&'a Option<FileDescriptorSet>, &'static str);
 
-/// declares all enums and messages from ExternDefs' [`FileDescriptorSet`] as external. more info
+/// declares all enums and messages from `ExternDefs`' [`FileDescriptorSet`] as external. more info
 /// is available in documentation of [`prost_build::config::Config::extern_path`].
 fn decl_externs(externs: &[ExternDefs], config: &mut Config) {
     use std::collections::HashSet;
@@ -75,7 +79,7 @@ fn decl_externs(externs: &[ExternDefs], config: &mut Config) {
     // NOTE: prost runs heck's upper camel case transformer on all idents. valve-defined names such
     // as EGCPlatform will be transformed into EgcPlatform, etc.
     // see https://github.com/tokio-rs/prost/blob/9ed944eb633480079037dfceeee61aac6cd0c94f/prost-build/src/ident.rs#L30
-    use heck::ToUpperCamelCase;
+    use heck::ToUpperCamelCase as _;
 
     let mut declared: HashSet<&str> = HashSet::new();
     for (fds, rust_path) in externs {
@@ -85,11 +89,11 @@ fn decl_externs(externs: &[ExternDefs], config: &mut Config) {
         for file in &fds.file {
             file.enum_type
                 .iter()
-                .map(|enum_type| enum_type.name())
+                .map(prost_types::EnumDescriptorProto::name)
                 .chain(
                     file.message_type
                         .iter()
-                        .map(|message_type| message_type.name()),
+                        .map(prost_types::DescriptorProto::name),
                 )
                 .for_each(|name| {
                     if declared.insert(name) {
@@ -119,14 +123,13 @@ fn load_protos(package: &str) -> io::Result<Option<FileDescriptorSet>> {
 }
 
 fn compile_deadlock_protos(externs: &[ExternDefs]) -> io::Result<()> {
-    let out = PathBuf::from(std::env::var("OUT_DIR").unwrap());
-
-    #[allow(unused)]
-    let descriptor_file = out.join("descriptors.bin");
+    // reflect (prost-reflect) needs the descriptor set on disk.
+    #[cfg(feature = "reflect")]
+    let descriptor_file =
+        PathBuf::from(std::env::var("OUT_DIR").map_err(io::Error::other)?).join("descriptors.bin");
 
     let mut config = new_config("deadlock");
 
-    // reflect (prost-reflect) needs the descriptor set on disk.
     #[cfg(feature = "reflect")]
     {
         config.file_descriptor_set_path(&descriptor_file);

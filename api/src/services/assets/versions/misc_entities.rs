@@ -567,7 +567,7 @@ fn modifier_values_out(v: Vec<RawModifierValue>) -> Vec<ModifierValue> {
         .collect()
 }
 
-fn curve_or_float_out(r: RawCurveOrFloat) -> CurveOrFloat {
+const fn curve_or_float_out(r: RawCurveOrFloat) -> CurveOrFloat {
     match r {
         RawCurveOrFloat::Curve(c) => CurveOrFloat::Curve(Curve {
             base: c.base,
@@ -829,7 +829,7 @@ mod tests {
 
     #[test]
     fn roll_type_schema_is_plain_string() {
-        use utoipa::PartialSchema;
+        use utoipa::PartialSchema as _;
         let schema = serde_json::to_value(RollType::schema()).expect("serializes");
         assert_eq!(schema["type"], "string");
         assert!(

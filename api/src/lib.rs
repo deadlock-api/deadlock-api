@@ -1,17 +1,28 @@
 #![recursion_limit = "256"]
 #![forbid(unsafe_code)]
-#![deny(clippy::all)]
-#![deny(unreachable_pub)]
-#![deny(clippy::correctness)]
-#![deny(clippy::suspicious)]
-#![deny(clippy::style)]
-#![deny(clippy::complexity)]
-#![deny(clippy::perf)]
-#![deny(clippy::pedantic)]
-#![deny(clippy::std_instead_of_core)]
-#![expect(clippy::unreadable_literal)]
-#![expect(clippy::missing_errors_doc)]
-#![expect(clippy::unused_async_trait_impl)]
+#![cfg_attr(
+    test,
+    allow(
+        clippy::arithmetic_side_effects,
+        clippy::disallowed_macros,
+        clippy::disallowed_methods,
+        clippy::expect_used,
+        clippy::indexing_slicing,
+        clippy::panic,
+        clippy::panic_in_result_fn,
+        clippy::print_stderr,
+        clippy::print_stdout,
+        clippy::string_slice,
+        clippy::unreachable,
+        clippy::unwrap_in_result,
+        clippy::unwrap_used,
+        reason = "tests may panic"
+    )
+)]
+#![expect(
+    clippy::unused_async_trait_impl,
+    reason = "async-graphql's `Enum` derive emits async resolvers without `.await`"
+)]
 
 mod api_doc;
 mod context;
@@ -35,16 +46,18 @@ use axum_prometheus::PrometheusMetricLayer;
 pub use error::*;
 use tower::limit::ConcurrencyLimitLayer;
 use tower_http::compression::predicate::NotForContentType;
-use tower_http::compression::{CompressionLayer, CompressionLevel, DefaultPredicate, Predicate};
+use tower_http::compression::{
+    CompressionLayer, CompressionLevel, DefaultPredicate, Predicate as _,
+};
 use tower_http::limit::RequestBodyLimitLayer;
 use tower_http::normalize_path::{NormalizePath, NormalizePathLayer};
 use tower_http::trace::TraceLayer;
-use tower_layer::Layer;
+use tower_layer::Layer as _;
 use tracing::debug;
 pub use utils::observability::ConsoleFields;
-use utoipa::OpenApi;
+use utoipa::OpenApi as _;
 use utoipa_axum::router::OpenApiRouter;
-use utoipa_scalar::{Scalar, Servable};
+use utoipa_scalar::{Scalar, Servable as _};
 
 use crate::api_doc::ApiDoc;
 use crate::context::AppState;
@@ -93,7 +106,7 @@ pub async fn shutdown_background_tasks(timeout: Duration) {
     }
 }
 
-const ROBOTS_TXT: &str = r"
+const ROBOTS_TXT: &str = "
 User-agent: *
 Disallow: /
 Allow: /$
@@ -128,7 +141,7 @@ pub async fn router(port: u16) -> Result<NormalizePath<Router>, StartupError> {
     debug!("Application state loaded");
 
     // Start the background request logger flush task
-    state.request_logger.clone().start_background_flush();
+    std::sync::Arc::clone(&state.request_logger).start_background_flush();
 
     // Start background flush tasks for all insert batchers
     state.batchers.start_background_flushes();

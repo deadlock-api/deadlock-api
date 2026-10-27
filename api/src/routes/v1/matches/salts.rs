@@ -208,7 +208,7 @@ pub(crate) fn replay_file_url(
 
 /// Whether the Steam proxy turned the request away for want of a bot: all bots of the group
 /// are on cooldown (429) or none is alive (503).
-fn is_proxy_exhausted(e: &SteamProxyError) -> bool {
+const fn is_proxy_exhausted(e: &SteamProxyError) -> bool {
     matches!(
         e,
         SteamProxyError::Cooldown { .. } | SteamProxyError::NoAliveBots(_)
@@ -336,7 +336,7 @@ pub(super) async fn fetch_match_salts(
             // source. `None` is not the strict choice here: the client substitutes
             // `cooldown_time / 2`.
             soft_cooldown_millis: Some(if is_custom {
-                SALTS_JOB_COOLDOWN / 2
+                Duration::from_secs(SALTS_JOB_COOLDOWN.as_secs() / 2)
             } else {
                 Duration::ZERO
             }),

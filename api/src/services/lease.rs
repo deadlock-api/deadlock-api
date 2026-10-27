@@ -2,14 +2,14 @@
 
 use core::time::Duration;
 
-use redis::AsyncCommands;
+use redis::AsyncCommands as _;
 use redis::aio::ConnectionManager;
 use tokio::task::JoinHandle;
 use tracing::warn;
 
 /// Also takes the key back when it is gone, e.g. after Redis restarted empty, so another
 /// replica can't acquire the lease while its holder is still working.
-const RENEW_IF_OWNED: &str = r"
+const RENEW_IF_OWNED: &str = "
 if redis.call('get', KEYS[1]) == ARGV[1] then
     return redis.call('pexpire', KEYS[1], ARGV[2])
 end
@@ -18,7 +18,7 @@ if redis.call('set', KEYS[1], ARGV[1], 'PX', ARGV[2], 'NX') then
 end
 return 0";
 
-pub(crate) const RELEASE_IF_OWNED: &str = r"
+pub(crate) const RELEASE_IF_OWNED: &str = "
 if redis.call('get', KEYS[1]) == ARGV[1] then
     return redis.call('del', KEYS[1])
 end
@@ -79,7 +79,12 @@ impl Lease {
             let token = token.to_owned();
             let ttl_ms = millis(ttl);
             async move {
-                let mut tick = tokio::time::interval(ttl / 3);
+                // `interval` rejects a zero period.
+                let period = ttl
+                    .checked_div(3)
+                    .unwrap_or_default()
+                    .max(Duration::from_millis(1));
+                let mut tick = tokio::time::interval(period);
                 tick.tick().await;
                 loop {
                     tick.tick().await;

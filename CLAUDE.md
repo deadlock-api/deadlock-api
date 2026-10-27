@@ -16,6 +16,16 @@ All Rust crates form one cargo workspace rooted at `Cargo.toml` (single `Cargo.l
 `.cargo/`, `rust-toolchain.toml`, `rustfmt.toml`, sqlx offline cache in `.sqlx/`). Rust Dockerfiles
 build with the repo root as context.
 
+## Rust lints: no panics
+
+All crates inherit the strict `[workspace.lints]` in `Cargo.toml`. Every level is `deny`, so `cargo clippy` fails
+without `-D warnings`. `clippy.toml` also bans the `assert!` macros and panicking std methods. Production code
+must not be able to panic: no `unwrap`/`expect`, `panic!`-family macros, indexing/slicing, unchecked arithmetic or
+asserts. Use `?`, `get`, slice patterns, and `checked_`/`saturating_`/`wrapping_` ops. Never silence a panic lint with
+`allow`/`expect`. Tests are exempt through the `#![cfg_attr(test, allow(...))]` block at each crate root, which every
+new crate root needs too. Other lints may get an item-level `#[expect(lint, reason = "...")]`. Every allow/expect needs
+a `reason`.
+
 ## Twin implementations
 
 The crosshair renderer exists twice, in Rust (`api/src/services/crosshair/render.rs`, used by the API) and as a

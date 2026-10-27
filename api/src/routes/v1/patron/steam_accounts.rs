@@ -8,7 +8,7 @@ use utoipa::ToSchema;
 use uuid::Uuid;
 
 use crate::context::AppState;
-use crate::error::{APIError, LogInternal};
+use crate::error::{APIError, LogInternal as _};
 use crate::routes::v1::patron::{account_counts, fetch_patron};
 use crate::routes::v1::players::{collect_invite_links, lookup_bot_for_friend};
 use crate::services::patreon::extractor::PatronSession;
@@ -71,7 +71,9 @@ pub(crate) struct ListSteamAccountsResponse {
 
 /// A removed account holds its slot for 24 hours after its removal.
 fn in_cooldown(deleted_at: Option<DateTime<Utc>>) -> bool {
-    let cooldown_threshold = Utc::now() - Duration::hours(24);
+    let Some(cooldown_threshold) = Utc::now().checked_sub_signed(Duration::hours(24)) else {
+        return false;
+    };
     deleted_at.is_some_and(|deleted| deleted > cooldown_threshold)
 }
 
@@ -96,7 +98,7 @@ fn account_not_found() -> APIError {
 async fn used_slots(repo: &SteamAccountsRepository, patron_id: Uuid) -> Result<i32, APIError> {
     let (active_count, cooldown_count) =
         account_counts(repo, patron_id, "Failed to count accounts").await?;
-    Ok(active_count + cooldown_count)
+    Ok(active_count.saturating_add(cooldown_count))
 }
 
 /// The patron's account entry `account_id`.
@@ -169,7 +171,9 @@ pub(crate) async fn add_steam_account(
     let holds_slot = existing_deleted
         .as_ref()
         .is_some_and(|account| in_cooldown(account.deleted_at));
-    let used_slots = used_slots(&repo, session.patron_id).await? - i32::from(holds_slot);
+    let used_slots = used_slots(&repo, session.patron_id)
+        .await?
+        .saturating_sub(i32::from(holds_slot));
     if used_slots >= slot_limit {
         return Err(APIError::status_msg(
             StatusCode::BAD_REQUEST,
@@ -252,9 +256,9 @@ pub(crate) async fn list_steam_accounts(
 
             // Count active and cooldown slots
             if account.deleted_at.is_none() {
-                active_count += 1;
+                active_count = active_count.saturating_add(1);
             } else if is_in_cooldown {
-                cooldown_count += 1;
+                cooldown_count = cooldown_count.saturating_add(1);
             }
 
             SteamAccountListItem {
@@ -267,8 +271,8 @@ pub(crate) async fn list_steam_accounts(
         })
         .collect();
 
-    let used_slots = active_count + cooldown_count;
-    let available_slots = (total_slots - used_slots).max(0);
+    let used_slots = active_count.saturating_add(cooldown_count);
+    let available_slots = total_slots.saturating_sub(used_slots).max(0);
 
     let response = ListSteamAccountsResponse {
         accounts: account_items,
@@ -296,12 +300,12 @@ async fn resolve_account_id(
     if let Ok(id) = Uuid::parse_str(account) {
         return Ok(id);
     }
-    let steam_id3 = account.parse::<u32>().map_err(|_| {
-        APIError::status_msg(
+    let Ok(steam_id3) = account.parse::<u32>() else {
+        return Err(APIError::status_msg(
             StatusCode::BAD_REQUEST,
             "Invalid account: must be a steam_id3 or an account entry id",
-        )
-    })?;
+        ));
+    };
     let accounts = repo.get_accounts_for_patron(patron_id).await.log_internal(
         "Failed to get accounts for patron",
         "Failed to fetch Steam accounts",
@@ -357,7 +361,7 @@ pub(crate) async fn delete_steam_account(
     // This also verifies the account belongs to the authenticated patron
     match repo.soft_delete_account(account_id, session.patron_id).await {
         Ok(()) => Ok(Json(DeleteSteamAccountResponse {
-            message: "Steam account removed. The slot will be available for reuse after a 24-hour cooldown period.".to_string(),
+            message: "Steam account removed. The slot will be available for reuse after a 24-hour cooldown period.".to_owned(),
         })),
         Err(SteamAccountsRepositoryError::AccountNotFound) => Err(account_not_found()),
         Err(e) => {
@@ -507,8 +511,9 @@ pub(crate) async fn reactivate_steam_account(
     // Step 2: Check if reactivation would exceed slot_limit
     // If the account is still in cooldown, it's already counted in the used slots,
     // so reactivating it doesn't consume an additional slot — subtract 1.
-    let used_slots =
-        used_slots(&repo, session.patron_id).await? - i32::from(in_cooldown(account.deleted_at));
+    let used_slots = used_slots(&repo, session.patron_id)
+        .await?
+        .saturating_sub(i32::from(in_cooldown(account.deleted_at)));
     if used_slots >= slot_limit {
         return Err(APIError::status_msg(
             StatusCode::BAD_REQUEST,
@@ -575,7 +580,7 @@ pub(crate) async fn bot_friend_status(
     let account_id = resolve_account_id(&repo, session.patron_id, &account).await?;
     let account = get_owned_account(&repo, account_id, session.patron_id).await?;
     let steam_id3 = u32::try_from(account.steam_id3)
-        .map_err(|_| APIError::internal("Stored steam_id3 is out of range"))?;
+        .map_err(|e| APIError::internal(format!("Stored steam_id3 is out of range: {e}")))?;
 
     if lookup_bot_for_friend(&app_state.pg_client, steam_id3)
         .await?

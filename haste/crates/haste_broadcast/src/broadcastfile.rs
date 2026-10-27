@@ -64,7 +64,13 @@ impl<R: Read + Seek> DemoStream for BroadcastFile<R> {
     // ----
 
     fn read_cmd(&mut self, cmd_header: &CmdHeader) -> Result<&[u8], ReadCmdError> {
-        assert!(!cmd_header.body_compressed);
+        if cmd_header.body_compressed {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "broadcast cmd bodies are never compressed",
+            )
+            .into());
+        }
 
         let (data, _) = split_cmd_buf(&mut self.buf, cmd_header)?;
         self.rdr.read_exact(data)?;
@@ -101,9 +107,11 @@ impl<R: Read + Seek> SeekableDemoStream for BroadcastFile<R> {
     }
 
     fn total_ticks(&mut self) -> Result<i32, ReadCmdHeaderError> {
-        if self.total_ticks.is_none() {
-            self.total_ticks = Some(scan_for_last_tick(self)?);
+        if let Some(total_ticks) = self.total_ticks {
+            return Ok(total_ticks);
         }
-        Ok(self.total_ticks.unwrap())
+        let total_ticks = scan_for_last_tick(self)?;
+        self.total_ticks = Some(total_ticks);
+        Ok(total_ticks)
     }
 }

@@ -9,7 +9,7 @@
 //!
 //! The table is rebuilt day by day by [`crate::services::cohort_agg_refresh`].
 
-use core::fmt::Write as _;
+use itertools::Itertools as _;
 
 use super::common_filters::{MatchInfoFilters, is_non_empty, join_filters, rollup_badge_filters};
 use super::player_performance_curve::{PlayerPerformanceCurveQuery, curve_metrics};
@@ -48,10 +48,11 @@ pub(super) fn percent_position(pct: &str) -> String {
 
 /// Per tick metric arrays and buff counts of one `match_player` row, plus `extra` columns.
 fn tick_arrays(extra: &str) -> String {
-    let mut arrays = String::new();
-    for (name, column) in curve_metrics() {
-        let _ = write!(arrays, ", {column} AS {name}_arr");
-    }
+    let arrays: String = curve_metrics()
+        .format_with("", |(name, column), f| {
+            f(&format_args!(", {column} AS {name}_arr"))
+        })
+        .to_string();
     format!(
         "{extra}{arrays},
         {PERMANENT_BUFF_TIMES} AS buff_times, notEmpty(buff_times) AS has_buff_timings,
@@ -61,22 +62,23 @@ fn tick_arrays(extra: &str) -> String {
 
 /// `ARRAY JOIN` list zipping the metric arrays into one row per tick.
 fn tick_array_join() -> String {
-    let mut join = String::new();
-    for (name, _) in curve_metrics() {
-        let _ = write!(join, ", {name}_arr AS {name}");
-    }
+    let join: String = curve_metrics()
+        .format_with("", |(name, _), f| {
+            f(&format_args!(", {name}_arr AS {name}"))
+        })
+        .to_string();
     format!("{join}, permanent_buffs_arr AS permanent_buffs")
 }
 
 /// Sum, sum of squares and count aggregates, in the column order of the agg table.
 fn sum_aggregates() -> String {
-    let mut sums = String::from("count() AS n");
-    for (name, _) in curve_metrics() {
-        let _ = write!(
-            sums,
-            ",\n    sum(toUInt64({name})) AS {name}_sum, sum(toUInt64({name}) * {name}) AS {name}_sq"
-        );
-    }
+    let mut sums: String = core::iter::once("count() AS n".to_owned())
+        .chain(curve_metrics().map(|(name, _)| {
+            format!(
+                ",\n    sum(toUInt64({name})) AS {name}_sum, sum(toUInt64({name}) * {name}) AS {name}_sq"
+            )
+        }))
+        .collect();
     sums.push_str(
         ",\n    countIf(has_buff_timings) AS permanent_buffs_n,
     sumIf(toUInt64(permanent_buffs), has_buff_timings) AS permanent_buffs_sum,
@@ -140,7 +142,8 @@ impl AggPlan {
     pub(super) fn required_days(&self, now: i64) -> (i64, i64) {
         (
             self.first_day,
-            self.end_day.min(now - now.rem_euclid(DAY_S)),
+            self.end_day
+                .min(now.div_euclid(DAY_S).saturating_mul(DAY_S)),
         )
     }
 }
@@ -174,9 +177,10 @@ pub(super) fn plan(query: &PlayerPerformanceCurveQuery, now: i64) -> Option<AggP
         end_day,
         edges,
     } = DaySplit::new(query.min_unix_timestamp, query.max_unix_timestamp)?;
-    let today = now - now.rem_euclid(DAY_S);
-    let horizon_start = today - (i64::from(AGG_HORIZON_DAYS) - 1) * DAY_S;
-    let end_day = end_day.unwrap_or(today + DAY_S);
+    let today = now.div_euclid(DAY_S).saturating_mul(DAY_S);
+    let horizon_start =
+        today.saturating_sub(i64::from(AGG_HORIZON_DAYS.saturating_sub(1)).saturating_mul(DAY_S));
+    let end_day = end_day.unwrap_or_else(|| today.saturating_add(DAY_S));
     if first_day < horizon_start || end_day <= first_day {
         return None;
     }
@@ -189,42 +193,41 @@ pub(super) fn plan(query: &PlayerPerformanceCurveQuery, now: i64) -> Option<AggP
 
 /// The base query's badge and duration filters, rewritten for the agg table's columns.
 fn agg_filters(query: &PlayerPerformanceCurveQuery) -> String {
-    let mut filters = join_filters(&rollup_badge_filters(
+    let badge_filters = join_filters(&rollup_badge_filters(
         query.min_average_badge,
         query.max_average_badge,
     ));
-    if let Some(min) = query.min_duration_s {
-        let _ = write!(
-            filters,
-            " AND duration_bucket >= {}",
-            min / DURATION_BUCKET_S
-        );
-    }
-    if let Some(max) = query.max_duration_s {
-        let bucket = max / DURATION_BUCKET_S;
-        let _ = write!(
-            filters,
-            " AND (duration_bucket < {bucket} OR (duration_bucket = {bucket} AND duration_on_edge))"
-        );
-    }
-    filters
+    let min_filter = query
+        .min_duration_s
+        .map(|min| format!(" AND duration_bucket >= {}", min / DURATION_BUCKET_S))
+        .unwrap_or_default();
+    let max_filter = query
+        .max_duration_s
+        .map(|max| {
+            let bucket = max / DURATION_BUCKET_S;
+            format!(
+                " AND (duration_bucket < {bucket} OR (duration_bucket = {bucket} AND duration_on_edge))"
+            )
+        })
+        .unwrap_or_default();
+    format!("{badge_filters}{min_filter}{max_filter}")
 }
 
 /// Re-summed agg columns, and the avg and std of every metric computed from them.
 fn summed_and_output() -> (String, String) {
-    let mut summed = String::from("sum(n) AS n");
-    let mut output = String::new();
-    for (name, _) in curve_metrics() {
-        let _ = write!(
-            summed,
-            ", sum({name}_sum) AS {name}_sum, sum({name}_sq) AS {name}_sq"
-        );
-        let _ = write!(
-            output,
-            ",\n    {name}_sum / n AS {name}_avg,\n    \
-             sqrt(greatest({name}_sq / n - pow({name}_sum / n, 2), 0)) AS {name}_std"
-        );
-    }
+    let mut summed: String = core::iter::once("sum(n) AS n".to_owned())
+        .chain(curve_metrics().map(|(name, _)| {
+            format!(", sum({name}_sum) AS {name}_sum, sum({name}_sq) AS {name}_sq")
+        }))
+        .collect();
+    let output: String = curve_metrics()
+        .format_with("", |(name, _), f| {
+            f(&format_args!(
+                ",\n    {name}_sum / n AS {name}_avg,\n    \
+                 sqrt(greatest({name}_sq / n - pow({name}_sum / n, 2), 0)) AS {name}_std"
+            ))
+        })
+        .to_string();
     summed.push_str(
         ", sum(permanent_buffs_n) AS permanent_buffs_n, \
          sum(permanent_buffs_sum) AS permanent_buffs_sum, sum(permanent_buffs_sq) AS permanent_buffs_sq",
@@ -242,7 +245,7 @@ pub(super) fn build_agg_query(query: &PlayerPerformanceCurveQuery, plan: &AggPla
     let (summed, output) = summed_and_output();
 
     let (agg_time, agg_position) = if resolution == 0 {
-        ("game_time".to_string(), "game_time".to_string())
+        ("game_time".to_owned(), "game_time".to_owned())
     } else {
         (
             format!("intDiv(game_time, {resolution}) * {resolution}"),
@@ -265,8 +268,8 @@ pub(super) fn build_agg_query(query: &PlayerPerformanceCurveQuery, plan: &AggPla
 
     let (edge_time, edge_position, edge_filter) = if resolution == 0 {
         (
-            "timestamp_s".to_string(),
-            "timestamp_s".to_string(),
+            "timestamp_s".to_owned(),
+            "timestamp_s".to_owned(),
             format!("WHERE {}", absolute_time_filter("timestamp_s")),
         )
     } else {

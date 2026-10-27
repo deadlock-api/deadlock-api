@@ -51,12 +51,12 @@ pub(crate) struct TableSchema {
 ///
 /// Only the demo's prefix is read — the parse stops as soon as the send-tables
 /// have been decoded — so a partial download is enough as long as it contains the
-/// send-tables. If it doesn't, this returns [`Error::IncompleteDemo`](super::Error::IncompleteDemo).
+/// send-tables. If it doesn't, this returns [`DemoError::IncompleteDemo`](super::DemoError::IncompleteDemo).
 ///
 /// # Errors
 ///
 /// Returns an error if the demo header cannot be parsed or the send-tables are
-/// missing or malformed (see [`Error`](super::Error)).
+/// missing or malformed (see [`DemoError`](super::DemoError)).
 pub(crate) fn schema(demo: Bytes) -> Result<Vec<TableSchema>> {
     let mut tables = Vec::new();
 
@@ -74,7 +74,7 @@ pub(crate) fn schema(demo: Bytes) -> Result<Vec<TableSchema>> {
             continue;
         };
         tables.push(TableSchema {
-            name: name.to_string(),
+            name: name.to_owned(),
             kind: TableKind::Event,
             schema,
         });
@@ -94,9 +94,9 @@ pub(crate) fn schema(demo: Bytes) -> Result<Vec<TableSchema>> {
 pub(crate) async fn validate(query: &str, tables: &[TableSchema]) -> Result<()> {
     extract_table_names(query)?;
 
-    let ctx = session_context(SessionConfig::new());
+    let ctx = session_context(SessionConfig::new())?;
     for table in tables {
-        let mem = MemTable::try_new(table.schema.clone(), vec![vec![]])?;
+        let mem = MemTable::try_new(Arc::clone(&table.schema), vec![vec![]])?;
         ctx.register_table(&*table.name, Arc::new(mem))?;
     }
 

@@ -58,7 +58,9 @@ fn derived_badge(rank: &CMsgMatchPlayerRankData) -> Option<u32> {
         return Some(0);
     }
     let idx = rank.final_flat_progress? / 1000;
-    Some((idx / 7 + 1) * 10 + (idx % 7 + 1).min(6))
+    let tier = (idx / 7).saturating_add(1);
+    let subtier = (idx % 7).saturating_add(1).min(6);
+    Some(tier.saturating_mul(10).saturating_add(subtier))
 }
 
 /// The GC (and the in-game history screen) reports `desired_progress_change` on the
@@ -76,7 +78,7 @@ fn derived_delta(rank: &CMsgMatchPlayerRankData, in_calibration: bool) -> Option
     }
     let final_progress = i32::try_from(rank.final_flat_progress?).ok()?;
     let initial = i32::try_from(rank.initial_flat_progress?).ok()?;
-    Some(final_progress - initial)
+    final_progress.checked_sub(initial)
 }
 
 /// The GC only flags demotion protection while protection games remain; on the
@@ -102,24 +104,26 @@ impl PlayerMatchHistoryEntry {
         let in_calibration = calibration_left > 0;
         let rounds = &match_info.street_brawl_rounds;
         let brawl_score = |team: Team| {
-            let team = team as u8;
-            (!rounds.is_empty()).then(|| {
-                rounds
-                    .iter()
-                    .filter_map(|r| r.winning_team)
-                    .filter(|&r| r as u8 == team)
-                    .count() as u32
-            })
+            let team = i32::from(team as i8);
+            if rounds.is_empty() {
+                return None;
+            }
+            let won = rounds
+                .iter()
+                .filter_map(|r| r.winning_team)
+                .filter(|&r| r == team)
+                .count();
+            u32::try_from(won).ok()
         };
         Some(Self {
             account_id: player.account_id?,
             match_id: match_info.match_id?,
-            hero_id: player.hero_id? as u8,
+            hero_id: u8::try_from(player.hero_id?).ok()?,
             hero_level: player.level?,
             start_time: match_info.start_time?,
-            game_mode: match_info.game_mode? as i8,
-            match_mode: match_info.match_mode? as i8,
-            player_team: player.team? as i8,
+            game_mode: i8::try_from(match_info.game_mode?).ok()?,
+            match_mode: i8::try_from(match_info.match_mode?).ok()?,
+            player_team: i8::try_from(player.team?).ok()?,
             player_kills: player.kills?,
             player_deaths: player.deaths?,
             player_assists: player.assists?,
@@ -128,23 +132,25 @@ impl PlayerMatchHistoryEntry {
             last_hits: player.last_hits?,
             abandoned_time_s: player.abandon_match_time_s,
             match_duration_s: match_info.duration_s?,
-            match_result: match_info.winning_team? as u32,
-            objectives_mask_team0: match_info.objectives_mask_team0? as u32,
-            objectives_mask_team1: match_info.objectives_mask_team1? as u32,
+            match_result: match_info.winning_team?.cast_unsigned(),
+            objectives_mask_team0: u32::try_from(match_info.objectives_mask_team0?).ok()?,
+            objectives_mask_team1: u32::try_from(match_info.objectives_mask_team1?).ok()?,
             brawl_score_team0: brawl_score(Team::Team0),
             brawl_score_team1: brawl_score(Team::Team1),
-            brawl_avg_round_time_s: (!rounds.is_empty()).then(|| {
+            // `None` without rounds
+            brawl_avg_round_time_s: u32::try_from(rounds.len()).ok().and_then(|n| {
                 rounds
                     .iter()
                     .filter_map(|r| r.round_duration_s)
-                    .sum::<u32>()
-                    / rounds.len() as u32
+                    .fold(0, u32::saturating_add)
+                    .checked_div(n)
             }),
             player_match_outcome: PlayerMatchOutcome::from(player.player_match_outcome()),
             ranked_display_badge: rank.as_ref().and_then(derived_badge),
             ranked_delta: rank.as_ref().and_then(|r| derived_delta(r, in_calibration)),
             ranked_calibration_match: if in_calibration {
-                calibration_matches.map(|total| (total + 1).saturating_sub(calibration_left))
+                calibration_matches
+                    .map(|total| total.saturating_add(1).saturating_sub(calibration_left))
             } else {
                 Some(0)
             },

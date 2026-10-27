@@ -1,0 +1,32 @@
+# Production code must not panic (see [workspace.lints] in Cargo.toml); tests are exempt via
+# `#![cfg_attr(test, allow(...))]` in each crate root.
+disallowed-macros = [
+    { path = "std::assert", reason = "panics; return an error instead" },
+    { path = "std::assert_eq", reason = "panics; return an error instead" },
+    { path = "std::assert_ne", reason = "panics; return an error instead" },
+    { path = "std::debug_assert", reason = "panics in debug builds; return an error instead" },
+    { path = "std::debug_assert_eq", reason = "panics in debug builds; return an error instead" },
+    { path = "std::debug_assert_ne", reason = "panics in debug builds; return an error instead" },
+]
+disallowed-methods = [
+    { path = "std::vec::Vec::insert", reason = "panics when index > len" },
+    { path = "std::vec::Vec::remove", reason = "panics when out of bounds; use get + Vec::retain or a checked index" },
+    { path = "std::vec::Vec::swap_remove", reason = "panics when out of bounds" },
+    { path = "std::vec::Vec::split_off", reason = "panics when at > len" },
+    { path = "std::string::String::insert", reason = "panics off a char boundary" },
+    { path = "std::string::String::insert_str", reason = "panics off a char boundary" },
+    { path = "std::string::String::remove", reason = "panics off a char boundary" },
+    { path = "std::string::String::truncate", reason = "panics off a char boundary" },
+    { path = "std::string::String::split_off", reason = "panics off a char boundary" },
+    { path = "str::split_at", reason = "panics off a char boundary; use split_at_checked" },
+    { path = "slice::split_at", reason = "panics when mid > len; use split_at_checked" },
+    { path = "slice::split_at_mut", reason = "panics when mid > len; use split_at_mut_checked" },
+    { path = "slice::copy_from_slice", reason = "panics on length mismatch" },
+    { path = "slice::clone_from_slice", reason = "panics on length mismatch" },
+    { path = "slice::swap", reason = "panics when out of bounds" },
+    { path = "std::cell::RefCell::borrow", reason = "panics when mutably borrowed; use try_borrow" },
+    { path = "std::cell::RefCell::borrow_mut", reason = "panics when borrowed; use try_borrow_mut" },
+    { path = "std::time::Duration::from_secs_f32", reason = "panics on negative/NaN/overflow; use try_from_secs_f32" },
+    { path = "std::time::Duration::from_secs_f64", reason = "panics on negative/NaN/overflow; use try_from_secs_f64" },
+    { path = "std::thread::spawn", reason = "panics when the OS cannot spawn; use std::thread::Builder::spawn" },
+]

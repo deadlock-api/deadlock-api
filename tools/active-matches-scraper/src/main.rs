@@ -1,14 +1,23 @@
 #![forbid(unsafe_code)]
-#![deny(clippy::all)]
-#![deny(unreachable_pub)]
-#![deny(clippy::correctness)]
-#![deny(clippy::suspicious)]
-#![deny(clippy::style)]
-#![deny(clippy::complexity)]
-#![deny(clippy::perf)]
-#![deny(clippy::pedantic)]
-#![deny(clippy::std_instead_of_core)]
-#![expect(clippy::cast_precision_loss)]
+#![cfg_attr(
+    test,
+    allow(
+        clippy::arithmetic_side_effects,
+        clippy::disallowed_macros,
+        clippy::disallowed_methods,
+        clippy::expect_used,
+        clippy::indexing_slicing,
+        clippy::panic,
+        clippy::panic_in_result_fn,
+        clippy::print_stderr,
+        clippy::print_stdout,
+        clippy::string_slice,
+        clippy::unreachable,
+        clippy::unwrap_in_result,
+        clippy::unwrap_used,
+        reason = "tests may panic"
+    )
+)]
 
 mod models;
 
@@ -32,13 +41,19 @@ enum Error {
     Metrics(#[from] common::MetricsError),
     #[error(transparent)]
     Env(#[from] std::env::VarError),
+    #[error(transparent)]
+    Http(#[from] reqwest::Error),
 }
 
 #[tokio::main]
+#[expect(
+    clippy::infinite_loop,
+    reason = "the service runs until run_until_shutdown drops the loop on a shutdown signal"
+)]
 async fn main() -> Result<(), Error> {
     let _otel_guard = common::init_tracing(env!("CARGO_PKG_NAME"));
     common::init_metrics()?;
-    let http_client = common::http_client();
+    let http_client = common::http_client()?;
     let ch_client = common::get_ch_client()?;
 
     // Snapshots inserted on the previous tick. Ticks are ~2 min apart, so this
@@ -63,6 +78,10 @@ type SnapshotKey = (u64, u32, u32, u16, u16, u16, u16);
 /// Returns the snapshot keys inserted on this tick (the previous tick's keys if fetching
 /// failed).
 #[instrument(skip(http_client, ch_client, previous_tick))]
+#[expect(
+    clippy::cast_precision_loss,
+    reason = "match counts stay far below 2^53"
+)]
 async fn fetch_insert_active_matches(
     http_client: &reqwest::Client,
     ch_client: &clickhouse::Client,

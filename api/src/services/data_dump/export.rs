@@ -6,7 +6,7 @@ use std::sync::Arc;
 use chrono::Utc;
 use clickhouse::Row;
 use object_store::path::Path;
-use object_store::{ObjectStore, ObjectStoreExt};
+use object_store::{ObjectStore, ObjectStoreExt as _};
 use serde::Deserialize;
 use tracing::info;
 

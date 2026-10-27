@@ -1,16 +1,23 @@
 #![forbid(unsafe_code)]
-#![deny(clippy::all)]
-#![deny(unreachable_pub)]
-#![deny(clippy::correctness)]
-#![deny(clippy::suspicious)]
-#![deny(clippy::style)]
-#![deny(clippy::complexity)]
-#![deny(clippy::perf)]
-#![deny(clippy::pedantic)]
-#![deny(clippy::std_instead_of_core)]
-#![expect(clippy::cast_sign_loss)]
-#![expect(clippy::cast_precision_loss)]
-#![expect(clippy::cast_possible_truncation)]
+#![cfg_attr(
+    test,
+    allow(
+        clippy::arithmetic_side_effects,
+        clippy::disallowed_macros,
+        clippy::disallowed_methods,
+        clippy::expect_used,
+        clippy::indexing_slicing,
+        clippy::panic,
+        clippy::panic_in_result_fn,
+        clippy::print_stderr,
+        clippy::print_stdout,
+        clippy::string_slice,
+        clippy::unreachable,
+        clippy::unwrap_in_result,
+        clippy::unwrap_used,
+        reason = "tests may panic"
+    )
+)]
 
 use core::sync::atomic::{AtomicU32, AtomicUsize, Ordering};
 use core::time::Duration;
@@ -21,11 +28,11 @@ use std::sync::{Arc, Mutex};
 use bytes::Bytes;
 use clap::Parser;
 use common::{BatchInserter, BatchInserterConfig};
-use futures::StreamExt;
+use futures::StreamExt as _;
 use metrics::{counter, gauge};
 use object_store::path::Path;
-use object_store::{GetResult, ObjectStore, ObjectStoreExt};
-use prost::Message;
+use object_store::{GetResult, ObjectStore, ObjectStoreExt as _};
+use prost::Message as _;
 use tokio::sync::Semaphore;
 use tokio::time::timeout;
 use tokio_util::task::TaskTracker;
@@ -48,7 +55,7 @@ fn calibration_matches() -> Option<u32> {
     Some(CALIBRATION_MATCHES.load(Ordering::Relaxed)).filter(|v| *v > 0)
 }
 
-fn spawn_season_refresh_task() {
+fn spawn_season_refresh_task() -> Result<(), common::ClientError> {
     common::spawn_season_refresh_task(|season| {
         if let Some(s) = season {
             debug!(
@@ -59,7 +66,7 @@ fn spawn_season_refresh_task() {
         } else {
             debug!("No ranked season in progress");
         }
-    });
+    })
 }
 
 #[derive(Parser)]
@@ -135,7 +142,7 @@ struct ParseError;
 
 impl UnreadableData {
     /// Metric label for why the data is unreadable.
-    fn reason(&self) -> &'static str {
+    const fn reason(&self) -> &'static str {
         match self {
             Self::Decompress(_) => "decompress",
             Self::TooLarge => "too_large",
@@ -250,7 +257,7 @@ async fn main() -> Result<(), Error> {
 
     let cli = Cli::parse();
 
-    spawn_season_refresh_task();
+    spawn_season_refresh_task()?;
 
     let ch_client = common::get_ch_client()?;
     let store = Arc::new(common::get_store()?);
@@ -279,6 +286,10 @@ async fn main() -> Result<(), Error> {
     .await
 }
 
+#[expect(
+    clippy::cast_precision_loss,
+    reason = "object counts stay far below 2^53"
+)]
 async fn run_ingest_loop<S>(
     store: Arc<S>,
     ch_client: &clickhouse::Client,
@@ -557,12 +568,16 @@ async fn reingest_from_file(
                             warn!("Batch inserters have shut down — stopping producers");
                             return;
                         }
-                        let done = success_count.fetch_add(1, Ordering::Relaxed) + 1;
+                        let done = success_count
+                            .fetch_add(1, Ordering::Relaxed)
+                            .saturating_add(1);
                         let failed = failure_count.load(Ordering::Relaxed);
                         info!("[{done}/{total} ok, {failed} failed] Parsed match {match_id}");
                     }
                     Err(e) => {
-                        let failed = failure_count.fetch_add(1, Ordering::Relaxed) + 1;
+                        let failed = failure_count
+                            .fetch_add(1, Ordering::Relaxed)
+                            .saturating_add(1);
                         let done = success_count.load(Ordering::Relaxed);
                         error!("[{done}/{total} ok, {failed} failed] Failed match {match_id}: {e}");
                     }
@@ -739,7 +754,7 @@ fn decompress(data: &[u8]) -> Result<Cow<'_, [u8]>, UnreadableData> {
 
 /// Reads `reader` to the end, failing once it yields more than [`MAX_DECOMPRESSED_BYTES`].
 fn read_capped(reader: impl std::io::Read) -> Result<Vec<u8>, UnreadableData> {
-    use std::io::Read;
+    use std::io::Read as _;
 
     let mut buf = vec![];
     reader
@@ -757,24 +772,23 @@ fn parse_match_data(buf: &[u8]) -> Result<MatchInfo, ParseError> {
         .and_then(|m| m.match_details);
     let data = details.as_deref().unwrap_or(buf);
     let data = if let Ok(m) = CMsgMatchMetaDataContents::decode(data).or_else(|_| {
-        CMsgMatchMetaDataContentsPatched::decode(data)
+        let p = CMsgMatchMetaDataContentsPatched::decode(data)
             .or_else(|_| CMsgMatchMetaDataContentsPatched::decode(buf))
-            .map(|p| p.encode_to_vec())
-            .and_then(|p| CMsgMatchMetaDataContents::decode(p.as_slice()))
+            .map(|p| p.encode_to_vec())?;
+        CMsgMatchMetaDataContents::decode(p.as_slice())
     }) {
         m.match_info
     } else {
         MatchInfo::decode(data).ok()
     };
-    if let Some(m) = data {
-        counter!("ingest_worker.parse_match_data.success").increment(1);
-        debug!("Parsed match data");
-        Ok(m)
-    } else {
+    let Some(m) = data else {
         counter!("ingest_worker.parse_match_data.failure").increment(1);
         error!("Error parsing match data");
-        Err(ParseError)
-    }
+        return Err(ParseError);
+    };
+    counter!("ingest_worker.parse_match_data.success").increment(1);
+    debug!("Parsed match data");
+    Ok(m)
 }
 
 async fn move_object(

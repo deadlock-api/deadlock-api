@@ -96,7 +96,9 @@ impl GraphQLRequestLog {
 }
 
 fn truncated(text: &str) -> String {
-    text[..text.floor_char_boundary(MAX_LOGGED_TEXT_BYTES)].to_owned()
+    text.get(..text.floor_char_boundary(MAX_LOGGED_TEXT_BYTES))
+        .unwrap_or(text)
+        .to_owned()
 }
 
 fn shared_schema() -> &'static GraphQLSchema {

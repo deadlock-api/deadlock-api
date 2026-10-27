@@ -5,7 +5,7 @@
 //! memory. Listing the version directory yields the set of known patches.
 
 use core::time::Duration;
-use std::io::Read;
+use std::io::Read as _;
 use std::sync::Arc;
 use std::time::Instant;
 
@@ -13,7 +13,7 @@ use arc_swap::ArcSwap;
 use bytes::Bytes;
 use cached::macros::cached;
 use object_store::aws::AmazonS3;
-use object_store::{ObjectStore, ObjectStoreExt, path::Path as ObjectPath};
+use object_store::{ObjectStore as _, ObjectStoreExt as _, path::Path as ObjectPath};
 use thiserror::Error;
 use tokio::sync::Mutex;
 use tracing::debug;
@@ -35,7 +35,7 @@ pub(crate) enum VersionStoreError {
 
 impl VersionStoreError {
     /// Whether the requested object doesn't exist in the bucket.
-    pub(crate) fn is_not_found(&self) -> bool {
+    pub(crate) const fn is_not_found(&self) -> bool {
         matches!(
             self,
             Self::ObjectStore(object_store::Error::NotFound { .. })
@@ -106,10 +106,11 @@ impl VersionStore {
         version: u32,
     ) -> Result<(), VersionStoreError> {
         let mut last_listed = self.refresh_lock.lock().await;
-        if !needs_listing(self.latest(), *last_listed, version, Instant::now()) {
-            return Ok(());
+        if needs_listing(self.latest(), *last_listed, version, Instant::now()) {
+            self.load_locked(r2, &mut last_listed).await
+        } else {
+            Ok(())
         }
-        self.load_locked(r2, &mut last_listed).await
     }
 
     /// Caller must hold `refresh_lock`. Lists R2, swaps the cached list and
@@ -211,7 +212,7 @@ pub(crate) async fn fetch_zst(r2: &AmazonS3, key: &str) -> Result<Bytes, Version
 
 /// Decompresses the first zstd frame of `compressed`.
 fn decompress_zst(compressed: &[u8]) -> std::io::Result<Bytes> {
-    let mut out = Vec::with_capacity(compressed.len() * 4);
+    let mut out = Vec::with_capacity(compressed.len().saturating_mul(4));
     zstd::stream::read::Decoder::new(compressed)?
         .single_frame()
         .read_to_end(&mut out)?;
@@ -271,10 +272,10 @@ mod tests {
     /// and counts the requests.
     async fn fake_r2(versions: Arc<std::sync::Mutex<Vec<u32>>>) -> (AmazonS3, Arc<AtomicUsize>) {
         let lists = Arc::new(AtomicUsize::new(0));
-        let counter = lists.clone();
+        let counter = Arc::clone(&lists);
         let app = axum::Router::new().fallback(move || {
-            let versions = versions.clone();
-            let counter = counter.clone();
+            let versions = Arc::clone(&versions);
+            let counter = Arc::clone(&counter);
             async move {
                 counter.fetch_add(1, Ordering::SeqCst);
                 let mut body = String::from("<ListBucketResult><IsTruncated>false</IsTruncated>");
@@ -308,7 +309,7 @@ mod tests {
     #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
     async fn concurrent_misses_for_a_new_version_share_one_listing() {
         let versions = Arc::new(std::sync::Mutex::new(vec![100]));
-        let (r2, lists) = fake_r2(versions.clone()).await;
+        let (r2, lists) = fake_r2(Arc::clone(&versions)).await;
         let store = VersionStore::new();
         store.ensure_loaded(&r2).await.unwrap();
         assert_eq!(lists.load(Ordering::SeqCst), 1);

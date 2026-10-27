@@ -15,13 +15,15 @@ use bytes::Bytes;
 //
 // pub type BoxFuture<'a, T> = Pin<Box<dyn Future<Output = T> + Send + 'a>>;
 
-pub trait HttpClient {
+/// clients are shared by the (`Send`) futures of [`crate::BroadcastHttp`], so they must be `Send`
+/// and `Sync` and return `Send` futures.
+pub trait HttpClient: Send + Sync {
     type Error: Error + Send + Sync + 'static;
 
     fn execute(
         &self,
         request: http::Request<Bytes>,
-    ) -> impl Future<Output = Result<http::Response<Result<Bytes, Self::Error>>, Self::Error>>;
+    ) -> impl Future<Output = Result<http::Response<Result<Bytes, Self::Error>>, Self::Error>> + Send;
 }
 
 // reqwest impl
@@ -52,20 +54,18 @@ mod reqwest_impl {
             // reqwest's Response is so fucking obnoxiously gate keeping
             let mut response = request.send().await?;
 
-            let mut result = http::Response::builder().status(response.status());
+            let status = response.status();
+            #[cfg(not(target_arch = "wasm32"))]
+            let version = response.version();
+            let headers = core::mem::take(response.headers_mut());
+
+            let mut result = http::Response::new(response.bytes().await);
+            *result.status_mut() = status;
             #[cfg(not(target_arch = "wasm32"))]
             {
-                result = result.version(response.version());
+                *result.version_mut() = version;
             }
-            // NOTE: expects should never be called - otherwise this is either http or reqwest
-            // library error.
-            core::mem::swap(
-                response.headers_mut(),
-                result.headers_mut().expect("could not get result headers"),
-            );
-            let result = result
-                .body(response.bytes().await)
-                .expect("could not transpose body");
+            *result.headers_mut() = headers;
             Ok(result)
         }
     }

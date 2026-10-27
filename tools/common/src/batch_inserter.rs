@@ -65,8 +65,9 @@ struct Stats {
     failed_rows: AtomicUsize,
 }
 
-/// Accumulates rows from many producers and writes them to one table in batches,
-/// flushing on size, on an interval, and on [`BatchInserter::shutdown`]. Each flush is
+/// Accumulates rows from many producers and writes them to one table in batches.
+///
+/// It flushes on size, on an interval, and on [`BatchInserter::shutdown`]. Each flush is
 /// retried with backoff; on persistent failure the batch is dropped and its acks
 /// report `false`.
 pub struct BatchInserter<T> {
@@ -176,9 +177,11 @@ async fn run_worker<T>(
 {
     let max_rows = worker.config.max_rows.max(1);
     let mut pending: Vec<Request<T>> = Vec::new();
-    let mut pending_rows = 0;
+    let mut pending_rows: usize = 0;
     let mut flush_timer = worker.config.flush_interval.map(|interval| {
-        let mut timer = tokio::time::interval_at(tokio::time::Instant::now() + interval, interval);
+        let mut timer = tokio::time::interval(interval);
+        // The first tick one interval from now, not at once.
+        timer.reset();
         timer.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
         timer
     });
@@ -188,14 +191,15 @@ async fn run_worker<T>(
         let received = async {
             let mut rx = rx.lock().await;
             let first = rx.recv().await?;
+            let mut rows = first.rows.len();
             let mut batch = vec![first];
-            let mut rows = batch[0].rows.len();
             // Take whatever else is already queued, up to the batch size.
-            while already + rows < max_rows {
+            while already.saturating_add(rows) < max_rows {
                 let Ok(next) = rx.try_recv() else { break };
-                rows += next.rows.len();
+                rows = rows.saturating_add(next.rows.len());
                 batch.push(next);
             }
+            drop(rx);
             Some((batch, rows))
         };
         let tick = async {
@@ -212,7 +216,7 @@ async fn run_worker<T>(
                 let mut rx = rx.lock().await;
                 rx.close();
                 while let Some(req) = rx.recv().await {
-                    pending_rows += req.rows.len();
+                    pending_rows = pending_rows.saturating_add(req.rows.len());
                     pending.push(req);
                     if pending_rows >= max_rows {
                         worker.flush(&mut pending).await;
@@ -232,7 +236,7 @@ async fn run_worker<T>(
                     return;
                 };
                 pending.extend(batch);
-                pending_rows += rows;
+                pending_rows = pending_rows.saturating_add(rows);
                 if pending_rows >= max_rows {
                     worker.flush(&mut pending).await;
                     pending_rows = 0;
@@ -288,7 +292,8 @@ impl Worker {
             }
         };
         for req in pending.drain(..) {
-            let _ = req.ack.send(success);
+            // An error only means the caller dropped its `InsertAck` without waiting.
+            _ = req.ack.send(success);
         }
     }
 }

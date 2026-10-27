@@ -1,14 +1,23 @@
 #![forbid(unsafe_code)]
-#![deny(clippy::all)]
-#![deny(unreachable_pub)]
-#![deny(clippy::correctness)]
-#![deny(clippy::suspicious)]
-#![deny(clippy::style)]
-#![deny(clippy::complexity)]
-#![deny(clippy::perf)]
-#![deny(clippy::pedantic)]
-#![deny(clippy::std_instead_of_core)]
-#![expect(clippy::cast_precision_loss)]
+#![cfg_attr(
+    test,
+    allow(
+        clippy::arithmetic_side_effects,
+        clippy::disallowed_macros,
+        clippy::disallowed_methods,
+        clippy::expect_used,
+        clippy::indexing_slicing,
+        clippy::panic,
+        clippy::panic_in_result_fn,
+        clippy::print_stderr,
+        clippy::print_stdout,
+        clippy::string_slice,
+        clippy::unreachable,
+        clippy::unwrap_in_result,
+        clippy::unwrap_used,
+        reason = "tests may panic"
+    )
+)]
 
 use core::time::Duration;
 use std::collections::{HashMap, HashSet};
@@ -17,12 +26,12 @@ use std::time::Instant;
 
 use async_compression::tokio::bufread::{BzDecoder, ZstdDecoder};
 use clap::Parser;
-use futures::{StreamExt, TryStreamExt};
+use futures::{StreamExt as _, TryStreamExt as _};
 use haste::async_demofile::AsyncDemoFile;
 use haste::demofile::DemoHeaderError;
 use haste::parser::{AsyncStreamingParser, ParserError};
 use metrics::{counter, gauge};
-use tokio::io::AsyncReadExt;
+use tokio::io::AsyncReadExt as _;
 use tokio_util::io::StreamReader;
 use tracing::{debug, error, info, warn};
 
@@ -56,23 +65,26 @@ const MAX_RETRY_DELAY: Duration = Duration::from_hours(12);
 /// Concurrent `UPDATE`s when applying a batch.
 const UPDATE_CONCURRENCY: usize = 4;
 
-/// Matches whose processing failed, with when to try them again.
+/// Matches whose processing failed, with how often and when they last failed.
 #[derive(Default)]
 struct FailedMatches(HashMap<u64, (u32, Instant)>);
 
 impl FailedMatches {
     fn record_failure(&mut self, match_id: u64, now: Instant) {
-        let attempts = self.0.get(&match_id).map_or(1, |(a, _)| a + 1);
-        let delay = BASE_RETRY_DELAY
-            .saturating_mul(1 << (attempts - 1).min(16))
-            .min(MAX_RETRY_DELAY);
-        self.0.insert(match_id, (attempts, now + delay));
+        let attempts = self
+            .0
+            .get(&match_id)
+            .map_or(1, |(a, _)| a.saturating_add(1));
+        self.0.insert(match_id, (attempts, now));
     }
 
     fn is_backing_off(&self, match_id: u64, now: Instant) -> bool {
-        self.0
-            .get(&match_id)
-            .is_some_and(|(_, retry_at)| now < *retry_at)
+        self.0.get(&match_id).is_some_and(|&(attempts, failed_at)| {
+            let delay = BASE_RETRY_DELAY
+                .saturating_mul(2u32.saturating_pow(attempts.saturating_sub(1).min(16)))
+                .min(MAX_RETRY_DELAY);
+            now.saturating_duration_since(failed_at) < delay
+        })
     }
 
     fn len(&self) -> usize {
@@ -197,8 +209,14 @@ async fn main() -> Result<(), Error> {
                 matches.len(),
                 failed_matches.len()
             );
-            gauge!("demo_analyzer.pending_matches").set(matches.len() as f64);
-            gauge!("demo_analyzer.failed_matches").set(failed_matches.len() as f64);
+            #[expect(
+                clippy::cast_precision_loss,
+                reason = "match counts stay far below 2^53"
+            )]
+            {
+                gauge!("demo_analyzer.pending_matches").set(matches.len() as f64);
+                gauge!("demo_analyzer.failed_matches").set(failed_matches.len() as f64);
+            }
 
             let failed = process_matches(
                 &http_client,
@@ -391,10 +409,12 @@ async fn process_demo(
         Err(e) => return Err(e.into()),
     }
 
-    let state = state
-        .lock()
-        .map_err(|e| DemoError::LockPoisoned(e.to_string()))?;
-    let update = correlate(match_info, &state);
+    let update = correlate(
+        match_info,
+        &*state
+            .lock()
+            .map_err(|e| DemoError::LockPoisoned(e.to_string()))?,
+    );
 
     info!(
         "Match {match_id}: extracted {} players, {} bans",
@@ -579,17 +599,8 @@ fn normalize_observed_name(name: &str) -> Option<String> {
 }
 
 fn format_array<T: core::fmt::Display>(values: impl IntoIterator<Item = T>) -> String {
-    use core::fmt::Write;
-
-    let mut out = String::from("[");
-    for (i, v) in values.into_iter().enumerate() {
-        if i > 0 {
-            out.push(',');
-        }
-        let _ = write!(out, "{v}");
-    }
-    out.push(']');
-    out
+    let values: Vec<String> = values.into_iter().map(|v| v.to_string()).collect();
+    format!("[{}]", values.join(","))
 }
 
 #[cfg(test)]

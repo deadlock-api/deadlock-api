@@ -26,16 +26,14 @@ pub(super) trait BuildStream: SeekableDemoStream + Sized {
 
 impl BuildStream for SyncDemoStream {
     fn build(bytes: Bytes) -> Result<Self, DemoHeaderError> {
-        DemoFile::start_reading(Cursor::new(bytes))
+        Self::start_reading(Cursor::new(bytes))
     }
 }
 
 impl BuildStream for BroadcastDemoStream {
     fn build(bytes: Bytes) -> Result<Self, DemoHeaderError> {
         // Broadcasts carry no demo header, so reading never fails on one.
-        Ok(haste_broadcast::BroadcastFile::start_reading(Cursor::new(
-            bytes,
-        )))
+        Ok(Self::start_reading(Cursor::new(bytes)))
     }
 }
 
@@ -74,6 +72,6 @@ pub(super) fn parse_shared_state<D: BuildStream>(
     parser.parse_shared_state().map_err(schema_err)
 }
 
-fn schema_err(e: impl core::fmt::Display) -> super::error::Error {
-    super::error::Error::Schema(e.to_string())
+fn schema_err(e: impl core::fmt::Display) -> super::error::DemoError {
+    super::error::DemoError::Schema(e.to_string())
 }

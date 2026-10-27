@@ -7,8 +7,8 @@ use axum::http::{HeaderMap, HeaderValue, StatusCode};
 use axum_extra::extract::Query;
 use cached::macros::cached;
 use chrono::Utc;
-use clickhouse::Row;
-use itertools::{Itertools, chain};
+use clickhouse::Row as _;
+use itertools::{Itertools as _, chain};
 use serde::Deserialize;
 use tracing::{debug, warn};
 use utoipa::IntoParams;
@@ -294,9 +294,9 @@ pub(crate) async fn fetch_steam_match_history(
     debug!("Fetching match history from Steam for account_id {account_id}");
     let mut continue_cursor = None;
     let mut all_matches = vec![];
-    let mut iterations = 0;
+    let mut iterations: i32 = 0;
     loop {
-        iterations += 1;
+        iterations = iterations.saturating_add(1);
         let (matches, next_cursor) = fetch_match_history_raw(
             steam_client,
             account_id,

@@ -24,7 +24,7 @@ pub struct BitReader<'a> {
 impl<'a> BitReader<'a> {
     #[must_use]
     #[inline]
-    pub fn new(data: &'a [u8]) -> Self {
+    pub const fn new(data: &'a [u8]) -> Self {
         Self {
             inner: bitbuf::BitReader::new(data),
         }
@@ -33,7 +33,7 @@ impl<'a> BitReader<'a> {
     /// delegated from [`dungers::bitbuf::BitReader`].
     #[must_use]
     #[inline]
-    pub fn num_bits_left(&self) -> usize {
+    pub const fn num_bits_left(&self) -> usize {
         self.inner.num_bits_left()
     }
 
@@ -69,7 +69,7 @@ impl<'a> BitReader<'a> {
 
     /// delegated from [`dungers::bitbuf::BitReader`].
     #[inline]
-    pub fn skip_bits(&mut self, num_bits: usize) -> Result<(), BitError> {
+    pub const fn skip_bits(&mut self, num_bits: usize) -> Result<(), BitError> {
         self.inner.skip(num_bits)
     }
 
@@ -82,7 +82,7 @@ impl<'a> BitReader<'a> {
 
     #[must_use]
     #[inline]
-    pub fn num_bits_read(&self) -> usize {
+    pub const fn num_bits_read(&self) -> usize {
         self.inner.num_bits_read()
     }
 
@@ -151,6 +151,10 @@ impl<'a> BitReader<'a> {
     /// same as [`Self::read_bitcoord`], but with custom integer / fractional bit counts (see
     /// `ProtoCoordSizeParams_t`).
     #[inline]
+    #[expect(
+        clippy::cast_precision_loss,
+        reason = "coords are f32 by definition; the bit counts keep the parts exact"
+    )]
     pub fn read_bitcoord_with(
         &mut self,
         integer_bits: usize,
@@ -168,20 +172,22 @@ impl<'a> BitReader<'a> {
             let signbit = self.read_bool()?;
 
             // If there's an integer, read it in
-            let mut intval = 0;
-            if has_intval {
+            let intval = if has_intval {
                 // Adjust the integers from [0..MAX_COORD_VALUE-1] to [1..MAX_COORD_VALUE]
-                intval = self.read_ubit64(integer_bits)? + 1;
-            }
+                self.read_ubit64(integer_bits)?.saturating_add(1)
+            } else {
+                0
+            };
 
             // If there's a fraction, read it in
-            let mut fractval = 0;
-            if has_fractval {
-                fractval = self.read_ubit64(fractional_bits)?;
-            }
+            let fractval = if has_fractval {
+                self.read_ubit64(fractional_bits)?
+            } else {
+                0
+            };
 
             // Calculate the correct floating point value
-            let resolution = 1.0 / (1u64 << fractional_bits) as f32;
+            let resolution = 1.0 / bitbuf::get_bit_for_bit_num(fractional_bits) as f32;
             value = intval as f32 + (fractval as f32 * resolution);
 
             // Fixup the sign if negative.
@@ -201,6 +207,10 @@ impl<'a> BitReader<'a> {
     /// same as [`Self::read_bitnormal`], but with a custom fractional bit count (see
     /// `ProtoCoordSizeParams_t`).
     #[inline]
+    #[expect(
+        clippy::cast_precision_loss,
+        reason = "normals are f32 by definition; the bit count keeps the fraction exact"
+    )]
     pub fn read_bitnormal_with(&mut self, fractional_bits: usize) -> Result<f32, BitError> {
         // read the sign bit
         let signbit = self.read_bool()?;
@@ -209,7 +219,8 @@ impl<'a> BitReader<'a> {
         let fractval = self.read_ubit64(fractional_bits)?;
 
         // calculate the correct floating point value
-        let resolution = 1.0 / ((1u64 << fractional_bits) - 1) as f32;
+        let resolution =
+            1.0 / bitbuf::get_bit_for_bit_num(fractional_bits).saturating_sub(1) as f32;
         let mut value = fractval as f32 * resolution;
 
         // fixup the sign if negative.
@@ -288,6 +299,10 @@ impl<'a> BitReader<'a> {
     }
 
     #[inline]
+    #[expect(
+        clippy::cast_precision_loss,
+        reason = "angles are f32 by definition; the bit count keeps the value exact"
+    )]
     pub fn read_bitangle(&mut self, num_bits: usize) -> Result<f32, BitError> {
         let shift = bitbuf::get_bit_for_bit_num(num_bits) as f32;
 
@@ -307,31 +322,30 @@ impl<'a> BitReader<'a> {
     // exceed buf.len()-1).
     #[inline]
     pub fn read_string(&mut self, buf: &mut [u8], line: bool) -> Result<usize, BitError> {
-        if buf.is_empty() {
+        // one byte is reserved for the null-terminator.
+        let Some(max_chars) = buf.len().checked_sub(1) else {
             return Err(BitError::BufferTooSmall);
-        }
+        };
 
         let mut too_small = false;
-        let mut num_chars = 0;
+        let mut num_chars: usize = 0;
         loop {
             let val = self.read_byte()?;
             if val == 0 || (line && val == b'\n') {
                 break;
             }
 
-            if num_chars < (buf.len() - 1) {
-                buf[num_chars] = val;
-                num_chars += 1;
-            } else {
-                too_small = true;
+            match buf.get_mut(num_chars) {
+                Some(slot) if num_chars < max_chars => {
+                    *slot = val;
+                    num_chars = num_chars.saturating_add(1);
+                }
+                _ => too_small = true,
             }
         }
 
         // make sure it's null-terminated.
-        if num_chars >= buf.len() {
-            return Err(BitError::BufferTooSmall);
-        }
-        buf[num_chars] = 0;
+        *buf.get_mut(num_chars).ok_or(BitError::BufferTooSmall)? = 0;
 
         // did it fit?
         if too_small {
@@ -343,21 +357,24 @@ impl<'a> BitReader<'a> {
 
     #[inline]
     pub fn read_string_to_end(&mut self, buf: &mut Vec<u8>, line: bool) -> Result<usize, BitError> {
-        let mut num_chars = 0;
+        let mut num_chars: usize = 0;
         loop {
             let val = self.read_byte()?;
             if val == 0 || (line && val == b'\n') {
                 break;
             }
             buf.push(val);
-            num_chars += 1;
+            num_chars = num_chars.saturating_add(1);
         }
         Ok(num_chars)
     }
 
     #[inline]
     pub fn read_ubitvarfp(&mut self) -> Result<u32, BitError> {
-        #[allow(clippy::same_functions_in_if_condition)]
+        #[expect(
+            clippy::same_functions_in_if_condition,
+            reason = "every read_bool consumes the next bit"
+        )]
         let ret = if self.read_bool()? {
             self.read_ubit64(2)?
         } else if self.read_bool()? {
@@ -375,7 +392,10 @@ impl<'a> BitReader<'a> {
 
 #[cfg(test)]
 // NOTE: the values compared below are exactly representable.
-#[allow(clippy::float_cmp)]
+#[allow(
+    clippy::float_cmp,
+    reason = "the compared values are exactly representable"
+)]
 mod test {
     use super::*;
 
@@ -390,6 +410,12 @@ mod test {
         assert_eq!(num_chars, buf.len() - 1);
     }
 
+    #[expect(
+        clippy::cast_possible_truncation,
+        clippy::cast_precision_loss,
+        clippy::cast_sign_loss,
+        reason = "splits a small test coord into its bit fields"
+    )]
     fn write_bitcoord(
         bw: &mut bitbuf::BitWriter,
         value: f32,

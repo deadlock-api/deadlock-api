@@ -10,7 +10,7 @@
 
 use core::sync::atomic::{AtomicU64, Ordering};
 use core::time::Duration;
-use std::io::{ErrorKind, Read};
+use std::io::{ErrorKind, Read as _};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, OnceLock};
 use std::time::SystemTime;
@@ -126,6 +126,10 @@ impl DiskTier {
         self.tasks.reopen();
     }
 
+    #[expect(
+        clippy::infinite_loop,
+        reason = "prunes for the lifetime of the process"
+    )]
     async fn prune_loop(&'static self) {
         let mut interval = tokio::time::interval(PRUNE_INTERVAL);
         loop {
@@ -157,7 +161,7 @@ fn parse_header(header: &[u8; HEADER_LEN]) -> Option<SystemTime> {
         return None;
     }
     let secs = u64::from_le_bytes(header[1..].try_into().ok()?);
-    Some(SystemTime::UNIX_EPOCH + Duration::from_secs(secs))
+    SystemTime::UNIX_EPOCH.checked_add(Duration::from_secs(secs))
 }
 
 fn invalid_data(e: impl core::error::Error + Send + Sync + 'static) -> std::io::Error {
@@ -202,7 +206,10 @@ fn write_entry<T: Serialize>(
     ));
     std::fs::write(&tmp, contents)?;
     std::fs::rename(&tmp, path).inspect_err(|_| {
-        let _ = std::fs::remove_file(&tmp);
+        // Best effort; the rename error is the one worth reporting.
+        if let Err(e) = std::fs::remove_file(&tmp) {
+            debug!("Failed to remove query cache temp file {tmp:?}: {e}");
+        }
     })
 }
 
@@ -229,7 +236,7 @@ fn prune(dir: &Path, now: SystemTime) -> usize {
     let Ok(caches) = std::fs::read_dir(dir) else {
         return 0;
     };
-    let mut removed = 0;
+    let mut removed = 0_usize;
     for cache in caches.flatten().filter(|e| e.path().is_dir()) {
         let Ok(files) = std::fs::read_dir(cache.path()) else {
             continue;
@@ -237,7 +244,7 @@ fn prune(dir: &Path, now: SystemTime) -> usize {
         for file in files.flatten() {
             let path = file.path();
             if is_prunable(&path, now) && std::fs::remove_file(&path).is_ok() {
-                removed += 1;
+                removed = removed.saturating_add(1);
             }
         }
     }
@@ -284,7 +291,7 @@ mod tests {
             wins: u32,
         }
         #[derive(serde::Deserialize, Debug)]
-        #[expect(dead_code)]
+        #[expect(dead_code, reason = "only decoded to check the failure")]
         struct New {
             wins: u32,
             losses: u32,

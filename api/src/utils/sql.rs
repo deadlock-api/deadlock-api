@@ -193,7 +193,7 @@ pub(crate) use cached_ch_query;
 macro_rules! impl_match_info {
     ($ty:ty) => {
         impl $ty {
-            pub(crate) fn match_info(&self) -> $crate::utils::sql::MatchInfoFilters {
+            pub(crate) const fn match_info(&self) -> $crate::utils::sql::MatchInfoFilters {
                 $crate::utils::sql::MatchInfoFilters {
                     min_unix_timestamp: self.min_unix_timestamp,
                     max_unix_timestamp: self.max_unix_timestamp,
@@ -209,7 +209,7 @@ macro_rules! impl_match_info {
     };
     ($ty:ty,without_badge) => {
         impl $ty {
-            pub(crate) fn match_info(&self) -> $crate::utils::sql::MatchInfoFilters {
+            pub(crate) const fn match_info(&self) -> $crate::utils::sql::MatchInfoFilters {
                 $crate::utils::sql::MatchInfoFilters {
                     min_unix_timestamp: self.min_unix_timestamp,
                     max_unix_timestamp: self.max_unix_timestamp,
@@ -229,7 +229,10 @@ pub(crate) use impl_match_info;
 /// Matchmaking pool flags of `match_player`/`match_info`.
 #[derive(Default, Clone, Copy)]
 #[cfg_attr(test, derive(Debug, proptest_derive::Arbitrary))]
-#[expect(clippy::struct_field_names)]
+#[expect(
+    clippy::struct_field_names,
+    reason = "field names mirror the query parameters"
+)]
 pub(crate) struct MatchPoolFilters {
     pub is_high_skill_range_parties: Option<bool>,
     pub is_low_pri_pool: Option<bool>,
@@ -237,7 +240,7 @@ pub(crate) struct MatchPoolFilters {
 }
 
 impl MatchPoolFilters {
-    pub(crate) fn is_empty(self) -> bool {
+    pub(crate) const fn is_empty(self) -> bool {
         self.is_high_skill_range_parties.is_none()
             && self.is_low_pri_pool.is_none()
             && self.is_new_player_pool.is_none()
@@ -271,15 +274,7 @@ pub(crate) fn id_list<T: core::fmt::Display>(ids: &[T]) -> String {
 
 /// Formats every item with `Display`, joined by `sep`, without an intermediate `Vec<String>`.
 pub(crate) fn join_display<T: core::fmt::Display>(items: &[T], sep: &str) -> String {
-    use core::fmt::Write;
-    let mut out = String::new();
-    for (i, item) in items.iter().enumerate() {
-        if i > 0 {
-            out.push_str(sep);
-        }
-        let _ = write!(out, "{item}");
-    }
-    out
+    itertools::Itertools::join(&mut items.iter(), sep)
 }
 
 /// Formats `filters` as `HAVING ... AND ...`, or an empty string when there are none.

@@ -54,7 +54,7 @@ const NUM_NETWORKED_EHANDLE_BITS: u32 = MAX_EDICT_BITS + NUM_NETWORKED_EHANDLE_S
 const INVALID_NETWORKED_EHANDLE_VALUE: u32 = (1 << NUM_NETWORKED_EHANDLE_BITS) - 1;
 
 #[must_use]
-pub fn is_ehandle_valid(handle: u32) -> bool {
+pub const fn is_ehandle_valid(handle: u32) -> bool {
     handle != INVALID_NETWORKED_EHANDLE_VALUE
 }
 
@@ -64,8 +64,9 @@ pub fn is_ehandle_valid(handle: u32) -> bool {
 // int iSerialNum = pData->m_Value.m_Int >> MAX_EDICT_BITS;
 
 #[must_use]
-pub fn ehandle_to_index(handle: u32) -> i32 {
-    (handle & ((1 << MAX_EDICT_BITS) - 1)) as i32
+pub const fn ehandle_to_index(handle: u32) -> i32 {
+    // the mask leaves MAX_EDICT_BITS bits, so this never wraps.
+    (handle & ((1 << MAX_EDICT_BITS) - 1)).cast_signed()
 }
 
 // TODO(blukai): investigate this (from public/basehandle.h):
@@ -78,15 +79,19 @@ pub fn ehandle_to_index(handle: u32) -> i32 {
 
 // NOTE: rust want that coord_from_cell is never used, but that is because there are no default
 // features that indicate otherwise (both deadlock and dota2 features are not active by default).
-#[allow(dead_code)]
 /// given a cell and an offset in that cell, reconstruct the world coord.
 ///
 /// game/shared/cellcoord.h
+#[expect(
+    clippy::cast_possible_truncation,
+    reason = "an integral world coord, f32 like valve's"
+)]
 fn coord_from_cell(cell_width: u32, max_coord: u32, cell: u16, vec: f32) -> f32 {
-    let cell_pos = u32::from(cell) * cell_width;
+    let cell_pos = u32::from(cell).saturating_mul(cell_width);
     // nanitfi is r, what does it stand for in this context? (copypasting from valve)
 
-    (cell_pos as i32 - max_coord as i32) as f32 + vec
+    // NOTE: f64 holds both u32s and their difference exactly.
+    (f64::from(cell_pos) - f64::from(max_coord)) as f32 + vec
 }
 
 mod deadlock {
@@ -139,6 +144,11 @@ mod deadlock {
     /// given a cell and an offset in that cell, reconstruct the world coord using `max_coord`
     /// from `CSVCMsg_GameSessionConfiguration` (falls back to [`DEFAULT_MAX_COORD`] when `None`).
     #[must_use]
+    #[expect(
+        clippy::cast_possible_truncation,
+        clippy::cast_sign_loss,
+        reason = "the announced max coord is a positive integer; `as` saturates anything else"
+    )]
     pub fn coord_from_cell_with_max_coord(cell: u16, vec: f32, max_coord: Option<f32>) -> f32 {
         let max_coord = max_coord.map_or(DEFAULT_MAX_COORD, |max_coord| max_coord as u32);
         super::coord_from_cell(CELL_WIDTH, max_coord, cell, vec)
@@ -152,6 +162,7 @@ pub use deadlock::coord_from_cell as deadlock_coord_from_cell;
 pub use deadlock::coord_from_cell_with_max_coord as deadlock_coord_from_cell_with_max_coord;
 
 /// generates field key from given path. can and recommended to be called from a const context.
+///
 /// when called from a const context, the function is interpreted by the compiler at compile time
 /// meaning that there's no const of generating key for given path at runtime.
 #[must_use]
@@ -162,14 +173,18 @@ pub const fn fkey_from_path(path: &[&str]) -> u64 {
     //   this function needs to be const.
     //   it cannot be generalized into something that would handle all cases where field key needs
     //   to be constructed.
-    let seed = fxhash::hash_bytes(path[0].as_bytes());
-    let mut hash = seed;
+    //
+    // an empty path has no key; it yields 0.
+    let [first, rest @ ..] = path else {
+        return 0;
+    };
+    let mut rest = rest;
+    let mut hash = fxhash::hash_bytes(first.as_bytes());
 
-    let mut i = 1;
-    while i < path.len() {
-        let part_hash = fxhash::hash_bytes(path[i].as_bytes());
+    while let [part, tail @ ..] = rest {
+        let part_hash = fxhash::hash_bytes(part.as_bytes());
         hash = fxhash::add_u64_to_hash(hash, part_hash);
-        i += 1;
+        rest = tail;
     }
 
     hash
@@ -213,7 +228,8 @@ impl DeltaHeader {
     pub const DELETE: Self = Self(0b11);
 
     pub(crate) fn from_bit_reader(br: &mut BitReader) -> Result<Self, BitError> {
-        Ok(Self(br.read_ubit64(2)? as u8))
+        let [bits, ..] = br.read_ubit64(2)?.to_le_bytes();
+        Ok(Self(bits))
     }
 }
 
@@ -235,7 +251,7 @@ impl Entity {
         // eprintln!("-- {:?}", self.serializer.serializer_name);
 
         let fp_count = fieldpath::read_field_paths(br, fps)?;
-        for fp in &fps[..fp_count] {
+        for fp in fps.iter().take(fp_count) {
             // eprint!("{:?} ", &fp.data[..=fp.last]);
 
             // Field-path components index `data[0..=last]`, always in bounds (`data: [u8; 7]`,
@@ -251,7 +267,11 @@ impl Entity {
                 .ok_or(EntityParseError::FieldNotFound)?;
             // NOTE: field_key construction logic needs to match what `fkey_from_path` does.
             let mut field_key = field.key;
-            for &idx in &fp.data[1..=fp.last] {
+            let rest = fp
+                .data
+                .get(1..=fp.last)
+                .ok_or(EntityParseError::FieldNotFound)?;
+            for &idx in rest {
                 if field.is_dynamic_array() {
                     field = field.get_child(0).ok_or(EntityParseError::FieldNotFound)?;
                     // NOTE: it's sort of weird to hash index, yup. but it simplifies things
@@ -318,9 +338,8 @@ impl Entity {
     where
         T: for<'a> TryFrom<&'a FieldValue, Error = FieldValueConversionError>,
     {
-        self.fields
-            .get(key)
-            .and_then(|value| T::try_from(value).ok())
+        let value = self.fields.get(key)?;
+        T::try_from(value).ok()
     }
 
     /// get the value of the field with the provided key, and attempt to convert it.
@@ -350,12 +369,13 @@ impl Entity {
     pub fn get_serializer_field(&self, path: &FieldPath) -> Option<&FlattenedSerializerField> {
         let first = path.get(0).and_then(|i| self.serializer.get_child(i));
         path.iter().skip(1).fold(first, |field, i| {
-            field.and_then(|f| f.get_child(*i as usize))
+            let f = field?;
+            f.get_child(*i as usize)
         })
     }
 
     #[must_use]
-    pub fn index(&self) -> i32 {
+    pub const fn index(&self) -> i32 {
         self.index
     }
 }
@@ -366,14 +386,18 @@ fn skip_entity_fields(
     fps: &mut [FieldPath],
 ) -> Result<(), EntityParseError> {
     let fp_count = fieldpath::read_field_paths(br, fps)?;
-    for fp in &fps[..fp_count] {
+    for fp in fps.iter().take(fp_count) {
         // Field-path components index `data[0..=last]`, always in bounds (`data: [u8; 7]`,
         // `last < 7`), so they need no `Option` handling; only `get_child` can legitimately miss.
         let mut field = serializer
             .get_child(fp.data[0] as usize)
             .ok_or(EntityParseError::FieldNotFound)?;
 
-        for &idx in &fp.data[1..=fp.last] {
+        let rest = fp
+            .data
+            .get(1..=fp.last)
+            .ok_or(EntityParseError::FieldNotFound)?;
+        for &idx in rest {
             if field.is_dynamic_array() {
                 field = field.get_child(0).ok_or(EntityParseError::FieldNotFound)?;
             } else {
@@ -429,7 +453,10 @@ impl EntityContainer {
         }
     }
 
-    #[allow(clippy::too_many_arguments)]
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "the parser's disjoint state, borrowed separately"
+    )]
     pub(crate) fn handle_create_with_filter<F>(
         &mut self,
         index: i32,
@@ -573,7 +600,10 @@ impl EntityContainer {
 
 #[cfg(test)]
 // NOTE: the values compared below are exactly representable.
-#[allow(clippy::float_cmp)]
+#[allow(
+    clippy::float_cmp,
+    reason = "the compared values are exactly representable"
+)]
 mod tests {
     use super::*;
 

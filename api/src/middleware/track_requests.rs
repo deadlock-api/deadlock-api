@@ -2,7 +2,7 @@ use std::borrow::ToOwned;
 use std::collections::HashMap;
 use std::time::Instant;
 
-use axum::body::HttpBody;
+use axum::body::HttpBody as _;
 use axum::extract::{MatchedPath, Request, State};
 use axum::http::HeaderMap;
 use axum::http::header::{self, AsHeaderName};

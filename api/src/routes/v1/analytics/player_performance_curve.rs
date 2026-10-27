@@ -1,4 +1,3 @@
-use core::fmt::Write as _;
 use std::sync::Arc;
 
 use axum::Json;
@@ -7,6 +6,7 @@ use axum::response::IntoResponse;
 use axum_extra::extract::Query;
 use cached::macros::cached;
 use clickhouse::Row;
+use itertools::Itertools as _;
 use serde::{Deserialize, Serialize};
 use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
@@ -427,8 +427,8 @@ fn build_query(query: &PlayerPerformanceCurveQuery) -> String {
     let resolution = query.resolution.unwrap_or(10);
     let (game_time_selection, position, additional_filter) = if resolution == 0 {
         (
-            "toUInt32(timestamp_s)".to_string(),
-            "timestamp_s".to_string(),
+            "toUInt32(timestamp_s)".to_owned(),
+            "timestamp_s".to_owned(),
             "WHERE (timestamp_s >= 180) AND ((timestamp_s <= 900 AND timestamp_s % 180 = 0) OR (timestamp_s > 900 AND timestamp_s % 300 = 0))",
         )
     } else {
@@ -443,24 +443,31 @@ fn build_query(query: &PlayerPerformanceCurveQuery) -> String {
         )
     };
 
-    let mut players_sources = String::new();
-    let mut data_sources = String::new();
-    let mut array_join_sources = String::new();
-    let mut select_sources = String::new();
-    for (s, column) in GOLD_SOURCES
-        .into_iter()
-        .chain(DAMAGE_SOURCES)
-        .chain(KILL_SOURCES)
-        .chain(HEALTH_SOURCES)
-    {
-        let _ = write!(players_sources, ", {column} as {s}_arr");
-        let _ = write!(data_sources, ", {s}_arr as {s}");
-        let _ = write!(array_join_sources, ", {s}_arr");
-        let _ = write!(
-            select_sources,
-            ",\n        avg({s}) AS {s}_avg,\n        std({s}) AS {s}_std"
-        );
-    }
+    let sources = || {
+        GOLD_SOURCES
+            .into_iter()
+            .chain(DAMAGE_SOURCES)
+            .chain(KILL_SOURCES)
+            .chain(HEALTH_SOURCES)
+    };
+    let players_sources: String = sources()
+        .format_with("", |(s, column), f| {
+            f(&format_args!(", {column} as {s}_arr"))
+        })
+        .to_string();
+    let data_sources: String = sources()
+        .format_with("", |(s, _), f| f(&format_args!(", {s}_arr as {s}")))
+        .to_string();
+    let array_join_sources: String = sources()
+        .format_with("", |(s, _), f| f(&format_args!(", {s}_arr")))
+        .to_string();
+    let select_sources: String = sources()
+        .format_with("", |(s, _), f| {
+            f(&format_args!(
+                ",\n        avg({s}) AS {s}_avg,\n        std({s}) AS {s}_std"
+            ))
+        })
+        .to_string();
 
     let game_mode_filter = GameMode::sql_filter(query.game_mode);
     let match_mode_filter = MatchMode::sql_filter(query.match_mode.as_deref());
@@ -532,7 +539,7 @@ async fn agg_days_built(
         .query(&player_performance_curve_agg::built_days_query(from, to))
         .fetch_one()
         .await?;
-    Ok(i64::try_from(built).is_ok_and(|built| built == (to - from) / 86_400))
+    Ok(i64::try_from(built).is_ok_and(|built| built == to.saturating_sub(from) / 86_400))
 }
 
 cached_ch_query! {
@@ -549,10 +556,10 @@ async fn get_player_performance_curve(
         Some(plan) if agg_days_built(ch_client, plan.required_days(now)).await? => Some(plan),
         _ => None,
     };
-    let query_str = match agg_plan {
-        Some(plan) => player_performance_curve_agg::build_agg_query(&query, &plan),
-        None => build_query(&query),
-    };
+    let query_str = agg_plan.map_or_else(
+        || build_query(&query),
+        |plan| player_performance_curve_agg::build_agg_query(&query, &plan),
+    );
     debug!(?query_str);
     Ok(run_query(ch_client, &query_str).await?)
 }

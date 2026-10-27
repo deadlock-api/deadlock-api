@@ -186,7 +186,7 @@ fn where_clause(query: &AbilityOrderStatsQuery) -> String {
     let info_filters = query.match_info();
     let game_mode_filter = GameMode::sql_filter(query.game_mode);
     let match_mode_filter = MatchMode::sql_filter(query.match_mode.as_deref());
-    #[expect(deprecated)]
+    #[expect(deprecated, reason = "reads the deprecated legacy query parameters")]
     let player_filter_inputs = PlayerFilters {
         hero_id: Some(query.hero_id),
         account_id: query.account_id,
@@ -403,7 +403,7 @@ async fn validate_query(state: &AppState, query: &mut AbilityOrderStatsQuery) ->
         query.min_average_badge,
         query.max_average_badge,
     )?;
-    #[expect(deprecated)]
+    #[expect(deprecated, reason = "reads the deprecated legacy query parameters")]
     filter_protected_accounts(state, &mut query.account_ids, query.account_id).await?;
     if !state.assets_client.validate_hero_id(query.hero_id).await {
         return Err(APIError::status_msg(

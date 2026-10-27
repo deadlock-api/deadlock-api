@@ -14,7 +14,7 @@ use axum::response::sse::{Event, KeepAlive, Sse};
 use datafusion::arrow::json::LineDelimitedWriter;
 use datafusion::arrow::record_batch::RecordBatch;
 use datafusion::execution::SendableRecordBatchStream;
-use futures::{Stream, StreamExt};
+use futures::{Stream, StreamExt as _};
 use reqwest::StatusCode;
 use serde::Deserialize;
 use tokio::sync::mpsc::{UnboundedReceiver, unbounded_channel};
@@ -142,7 +142,9 @@ pub(super) async fn live_query(
 /// event followed by the terminal `end`. Concurrently, any progress messages `query_live` reports
 /// while retrying the initial connection are forwarded as `status` events.
 fn live_sse(broadcast_url: String, query: String) -> impl Stream<Item = Result<Event, Infallible>> {
-    let deadline = Instant::now() + LIVE_QUERY_TIMEOUT;
+    let now = Instant::now();
+    // Adding a constant timeout of minutes to the current instant cannot overflow.
+    let deadline = now.checked_add(LIVE_QUERY_TIMEOUT).unwrap_or(now);
     let (status_tx, status_rx) = unbounded_channel::<String>();
     let status_stream = receiver_stream(status_rx).map(|msg| Ok(status_event(&msg)));
 

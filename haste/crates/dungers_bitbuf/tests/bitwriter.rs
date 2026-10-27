@@ -1,3 +1,22 @@
+#![cfg_attr(
+    test,
+    allow(
+        clippy::arithmetic_side_effects,
+        clippy::disallowed_macros,
+        clippy::disallowed_methods,
+        clippy::expect_used,
+        clippy::indexing_slicing,
+        clippy::panic,
+        clippy::panic_in_result_fn,
+        clippy::print_stderr,
+        clippy::print_stdout,
+        clippy::string_slice,
+        clippy::unreachable,
+        clippy::unwrap_in_result,
+        clippy::unwrap_used,
+        reason = "tests may panic"
+    )
+)]
 use dungers_bitbuf::BitWriter;
 
 #[test]
@@ -15,7 +34,7 @@ fn test_write_ubit64_overflow() {
     let mut buf = [0u8; 8];
     let mut bw = BitWriter::new(&mut buf);
 
-    assert!(bw.write_ubit64(u64::MAX, u64::BITS as usize).is_ok());
+    bw.write_ubit64(u64::MAX, u64::BITS as usize).unwrap();
     assert!(bw.write_ubit64(0b1, 1).is_err());
 }
 

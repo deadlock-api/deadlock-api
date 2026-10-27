@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use axum::extract::{Request, State};
 use axum::middleware::Next;
-use axum::response::{IntoResponse, Response};
+use axum::response::{IntoResponse as _, Response};
 
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::rate_limiter::{Quota, RateLimitClient};

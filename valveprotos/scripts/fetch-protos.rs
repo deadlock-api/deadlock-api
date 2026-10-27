@@ -8,6 +8,25 @@
 //! [dependencies]
 //! ureq = "2.10.1"
 //! ```
+#![cfg_attr(
+    test,
+    allow(
+        clippy::arithmetic_side_effects,
+        clippy::disallowed_macros,
+        clippy::disallowed_methods,
+        clippy::expect_used,
+        clippy::indexing_slicing,
+        clippy::panic,
+        clippy::panic_in_result_fn,
+        clippy::print_stderr,
+        clippy::print_stdout,
+        clippy::string_slice,
+        clippy::unreachable,
+        clippy::unwrap_in_result,
+        clippy::unwrap_used,
+        reason = "tests may panic"
+    )
+)]
 use std::{fs, path::Path};
 
 // (local dir, remote dir)
@@ -21,12 +40,17 @@ const PROTO_DIR_PAIRS: &[(&str, &str)] = &[
     ("deadlock", "deadlock"),
 ];
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+#[expect(
+    clippy::print_stderr,
+    reason = "a CLI script that reports its progress on stderr"
+)]
+fn main() -> Result<(), Box<dyn core::error::Error>> {
     for (local_dir, remote_dir) in PROTO_DIR_PAIRS {
         for file_entry in fs::read_dir(Path::new("protos").join(local_dir))? {
             let file_path = file_entry?.path();
-            assert!(file_path.is_file());
-            assert!(file_path.extension().is_some_and(|ext| ext == "proto"));
+            if !file_path.is_file() || file_path.extension().is_none_or(|ext| ext != "proto") {
+                return Err(format!("{} is not a .proto file", file_path.display()).into());
+            }
 
             let file_name = file_path
                 .file_name()
@@ -53,11 +77,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Add contents of patch.proto to citadel_gcmessages_common.proto
     let patch = fs::read_to_string("patch.proto")?;
-    let common = fs::read_to_string("protos/deadlock/citadel_gcmessages_common.proto")?;
-    fs::write(
-        "protos/deadlock/citadel_gcmessages_common.proto",
-        common + &patch,
-    )?;
+    let mut common = fs::read_to_string("protos/deadlock/citadel_gcmessages_common.proto")?;
+    common.push_str(&patch);
+    fs::write("protos/deadlock/citadel_gcmessages_common.proto", common)?;
 
     eprintln!("done");
 
@@ -88,30 +110,28 @@ fn strip_codegen_options(body: &str) -> String {
 
 fn strip_field_options(line: &str) -> String {
     let (Some(open), Some(close)) = (line.find(" ["), line.rfind("];")) else {
-        return line.to_string();
+        return line.to_owned();
     };
-    if close < open {
-        return line.to_string();
-    }
+    // `None` when the list closes before it opens
+    let (Some(head), Some(list), Some(rest)) = (
+        line.get(..open),
+        line.get(open..close)
+            .and_then(|list| list.strip_prefix(" [")),
+        line.get(close..).and_then(|rest| rest.strip_prefix(']')),
+    ) else {
+        return line.to_owned();
+    };
 
     // split the option list on commas outside of string literals
-    let list = &line[open + 2..close];
-    let mut entries = vec![];
-    let (mut start, mut in_str) = (0, false);
-    for (i, c) in list.char_indices() {
-        match c {
-            '"' => in_str = !in_str,
-            ',' if !in_str => {
-                entries.push(list[start..i].trim());
-                start = i + 1;
+    let mut in_str = false;
+    let kept: Vec<_> = list
+        .split(|c| {
+            if c == '"' {
+                in_str = !in_str;
             }
-            _ => {}
-        }
-    }
-    entries.push(list[start..].trim());
-
-    let kept: Vec<_> = entries
-        .into_iter()
+            c == ',' && !in_str
+        })
+        .map(str::trim)
         .filter(|entry| {
             !UNDECLARED_FIELD_OPTIONS.iter().any(|opt| {
                 entry
@@ -120,10 +140,9 @@ fn strip_field_options(line: &str) -> String {
             })
         })
         .collect();
-    let rest = &line[close + 1..];
     if kept.is_empty() {
-        format!("{}{rest}", &line[..open])
+        format!("{head}{rest}")
     } else {
-        format!("{} [{}]{rest}", &line[..open], kept.join(", "))
+        format!("{head} [{}]{rest}", kept.join(", "))
     }
 }

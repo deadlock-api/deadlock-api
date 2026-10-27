@@ -108,7 +108,7 @@ fn build_query(query: &HeroScoreboardQuery) -> String {
     let mut player_filters = vec![format!(
         "{match_mode_filter} AND {game_mode_filter} {match_info_filters}"
     )];
-    #[expect(deprecated)]
+    #[expect(deprecated, reason = "reads the deprecated legacy query parameters")]
     player_filters.extend(
         PlayerFilters {
             account_id: query.account_id,
@@ -205,7 +205,7 @@ pub(super) async fn hero_scoreboard(
             ),
         ));
     }
-    #[expect(deprecated)]
+    #[expect(deprecated, reason = "reads the deprecated legacy query parameters")]
     filter_protected_accounts(&state, &mut query.account_ids, query.account_id).await?;
     get_hero_scoreboard(&state.ch_client_ro, query)
         .await

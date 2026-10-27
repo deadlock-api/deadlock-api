@@ -175,7 +175,7 @@ fn build_query(query: &HeroSynergyStatsQuery) -> String {
     // A pair is kept when a filtered account played either of its heroes: `(p.1).1 < (p.2).1`
     // orders each pair by hero id, so filtering only `p.1` would drop every pair where the
     // account had the higher hero id.
-    #[expect(deprecated)]
+    #[expect(deprecated, reason = "reads the deprecated legacy query parameters")]
     let account_ids = with_legacy_id(query.account_ids.as_deref(), query.account_id);
     let account_col = if account_ids.is_empty() {
         ""
@@ -249,7 +249,7 @@ fn build_query(query: &HeroSynergyStatsQuery) -> String {
 /// covers (game mode, match mode, badge, time), else `None` (the caller then uses
 /// [`build_query`]). Account, net worth, duration and match id filters need `match_player`.
 fn build_mv_query(query: &HeroSynergyStatsQuery) -> Option<String> {
-    #[expect(deprecated)]
+    #[expect(deprecated, reason = "reads the deprecated legacy query parameters")]
     let personalized = query.account_id.is_some() || is_non_empty(query.account_ids.as_deref());
     let unsupported_filter = query.min_networth.is_some()
         || query.max_networth.is_some()
@@ -358,7 +358,7 @@ pub(super) async fn hero_synergies_stats(
         query.min_average_badge,
         query.max_average_badge,
     )?;
-    #[expect(deprecated)]
+    #[expect(deprecated, reason = "reads the deprecated legacy query parameters")]
     filter_protected_accounts(&state, &mut query.account_ids, query.account_id).await?;
     get_hero_synergy_stats(&state.ch_client_ro, query)
         .await

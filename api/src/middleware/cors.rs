@@ -1,7 +1,7 @@
 use axum::extract::Request;
 use axum::http::{HeaderMap, HeaderName, HeaderValue, header};
 use axum::middleware::Next;
-use axum::response::{IntoResponse, Response};
+use axum::response::{IntoResponse as _, Response};
 use reqwest::StatusCode;
 use tower_http::cors::{AllowCredentials, AllowHeaders, Any, CorsLayer};
 

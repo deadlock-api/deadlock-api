@@ -49,7 +49,7 @@ impl Batchers {
 
     /// Spawn background flush tasks for all insert batchers.
     pub(crate) fn start_background_flushes(&self) {
-        self.match_history_insert.clone().start_background_flush();
-        self.pending_match_insert.clone().start_background_flush();
+        Arc::clone(&self.match_history_insert).start_background_flush();
+        Arc::clone(&self.pending_match_insert).start_background_flush();
     }
 }

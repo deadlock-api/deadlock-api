@@ -77,9 +77,9 @@ pub(crate) fn build_schema(
     arrow_fields.push(Field::new("tick", DataType::Int32, false));
     arrow_fields.push(Field::new("entity_index", DataType::Int32, false));
     arrow_fields.push(Field::new("delta_type", DataType::Utf8, false));
-    seen_names.insert("tick".to_string());
-    seen_names.insert("entity_index".to_string());
-    seen_names.insert("delta_type".to_string());
+    seen_names.insert("tick".to_owned());
+    seen_names.insert("entity_index".to_owned());
+    seen_names.insert("delta_type".to_owned());
 
     for field_info in fields {
         let base_name = super::symbol_table::build_field_name(
@@ -186,7 +186,7 @@ pub(crate) struct ArrayColumn {
 }
 
 impl FieldInfo {
-    pub(crate) fn new(
+    pub(crate) const fn new(
         var_name: String,
         var_type: String,
         send_node: Option<String>,
@@ -209,8 +209,8 @@ mod tests {
     #[test]
     fn test_build_simple_schema() {
         let fields = vec![
-            FieldInfo::new("m_iHealth".to_string(), "int32".to_string(), None, 1),
-            FieldInfo::new("m_vecOrigin".to_string(), "Vector".to_string(), None, 2),
+            FieldInfo::new("m_iHealth".to_owned(), "int32".to_owned(), None, 1),
+            FieldInfo::new("m_vecOrigin".to_owned(), "Vector".to_owned(), None, 2),
         ];
 
         let schema = build_schema("TestEntity", 12345, &fields);
@@ -237,42 +237,41 @@ mod tests {
     #[test]
     fn test_schema_with_send_node() {
         let fields = vec![FieldInfo::new(
-            "m_nHeroID".to_string(),
-            "int32".to_string(),
-            Some("m_CCitadelHeroComponent.m_loadingHero".to_string()),
+            "m_nHeroID".to_owned(),
+            "int32".to_owned(),
+            Some("m_CCitadelHeroComponent.m_loadingHero".to_owned()),
             1,
         )];
 
         let schema = build_schema("CCitadelPlayerPawn", 12345, &fields);
 
-        let field_names: Vec<_> = schema
-            .arrow_schema
-            .fields()
-            .iter()
-            .map(|f| f.name().as_str())
-            .collect();
-
-        assert!(field_names.contains(&"m_CCitadelHeroComponent__m_loadingHero__m_nHeroID"));
+        assert!(
+            schema
+                .arrow_schema
+                .fields()
+                .iter()
+                .any(|f| f.name() == "m_CCitadelHeroComponent__m_loadingHero__m_nHeroID")
+        );
     }
 
     #[test]
     fn test_array_field_expands_to_list_columns() {
         // A vector array expands into one List<Float32> column per component.
         let mut field = FieldInfo::new(
-            "m_PathNodes".to_string(),
-            "CNetworkUtlVectorBase< Vector >".to_string(),
+            "m_PathNodes".to_owned(),
+            "CNetworkUtlVectorBase< Vector >".to_owned(),
             None,
             42,
         );
         field.array = Some(ArrayInfo {
             columns: vec![
                 ArrayColumn {
-                    suffix: "__x".to_string(),
+                    suffix: "__x".to_owned(),
                     element_type: DataType::Float32,
                     extract: ElemExtract::Component(0),
                 },
                 ArrayColumn {
-                    suffix: "__y".to_string(),
+                    suffix: "__y".to_owned(),
                     element_type: DataType::Float32,
                     extract: ElemExtract::Component(1),
                 },
@@ -288,12 +287,10 @@ mod tests {
             .field_with_name("m_PathNodes__x")
             .unwrap();
         assert_eq!(x.data_type(), &list_f32);
-        assert!(
-            schema
-                .arrow_schema
-                .field_with_name("m_PathNodes__y")
-                .is_ok()
-        );
+        schema
+            .arrow_schema
+            .field_with_name("m_PathNodes__y")
+            .unwrap();
 
         // One entity field, two columns, keyed at the base, materialized as a dynamic list.
         assert_eq!(schema.field_keys, vec![42]);

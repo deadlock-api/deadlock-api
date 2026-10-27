@@ -99,10 +99,8 @@ impl F32Decoder {
             };
         }
 
+        // NOTE: bit counts other than these are rejected by `QuantizedFloat::new`.
         let bit_count = field.bit_count.unwrap_or_default();
-        // NOTE: that would mean that something is seriously wrong - in that case yell at me
-        // loudly.
-        debug_assert!((0..=32).contains(&bit_count));
         if bit_count == 0 || bit_count == 32 {
             return Ok(Self::NoScale);
         }
@@ -116,6 +114,10 @@ impl F32Decoder {
     }
 
     #[inline]
+    #[expect(
+        clippy::cast_precision_loss,
+        reason = "simulation time is a tick count scaled into an f32, like valve's"
+    )]
     fn decode(&self, ctx: &FieldDecodeContext, br: &mut BitReader) -> Result<f32, BitError> {
         match self {
             Self::SimulationTime => Ok(br.read_uvarint32()? as f32 * ctx.tick_interval),
@@ -134,7 +136,7 @@ impl F32Decoder {
             Self::SimulationTime => {
                 let start = br.num_bits_read();
                 br.read_uvarint32()?;
-                Ok(br.num_bits_read() - start)
+                Ok(br.num_bits_read().saturating_sub(start))
             }
             Self::Coord {
                 integer_bits,
@@ -142,11 +144,11 @@ impl F32Decoder {
             } => {
                 let start = br.num_bits_read();
                 br.read_bitcoord_with(*integer_bits, *fractional_bits)?;
-                Ok(br.num_bits_read() - start)
+                Ok(br.num_bits_read().saturating_sub(start))
             }
             Self::Normal { fractional_bits } => {
                 // sign bit + fractional part
-                let bits = 1 + fractional_bits;
+                let bits = fractional_bits.saturating_add(1);
                 br.skip_bits(bits)?;
                 Ok(bits)
             }
@@ -265,7 +267,8 @@ impl FieldDecoder {
     }
 
     pub(crate) fn new_qangle(field: &FlattenedSerializerField) -> Result<Self, DecoderError> {
-        let bit_count = field.bit_count.unwrap_or_default() as usize;
+        let bit_count =
+            usize::try_from(field.bit_count.unwrap_or_default()).map_err(BitError::from)?;
 
         if let Some(var_encoder) = field.var_encoder.as_ref() {
             match var_encoder.hash {
@@ -307,7 +310,7 @@ impl FieldDecoder {
             Self::None => return Err(DecoderError::NoDecoder),
 
             Self::I64 => FieldValue::I64(br.read_varint64()?),
-            Self::I64Fixed8 => FieldValue::I64(i64::from(br.read_byte()? as i8)),
+            Self::I64Fixed8 => FieldValue::I64(i64::from(br.read_byte()?.cast_signed())),
 
             Self::U64 => FieldValue::U64(br.read_uvarint64()?),
             Self::U64Fixed64 => {
@@ -322,8 +325,8 @@ impl FieldDecoder {
                 // NOTE: cleared up front, so that a read that failed halfway can not leak bytes
                 // into the next string.
                 ctx.string_buf.clear();
-                let n = br.read_string_to_end(&mut ctx.string_buf, false)?;
-                FieldValue::String(Arc::from(&ctx.string_buf[..n]))
+                br.read_string_to_end(&mut ctx.string_buf, false)?;
+                FieldValue::String(Arc::from(ctx.string_buf.as_slice()))
             }
             Self::BinaryBlock => {
                 let len = br.read_uvarint32()? as usize;
@@ -412,25 +415,29 @@ impl FieldDecoder {
             Self::String => while br.read_byte()? != 0 {},
             Self::BinaryBlock => {
                 let len = br.read_uvarint32()? as usize;
-                br.skip_bits(len * 8)?;
+                br.skip_bits(len.saturating_mul(8))?;
             }
 
             Self::F32(d) => return Ok(d.skip_bits(br)?),
-            Self::Vector2(d) => return Ok(d.skip_bits(br)? + d.skip_bits(br)?),
+            Self::Vector2(d) => return Ok(d.skip_bits(br)?.saturating_add(d.skip_bits(br)?)),
             Self::Vector3(d) => {
-                return Ok(d.skip_bits(br)? + d.skip_bits(br)? + d.skip_bits(br)?);
+                return Ok(d
+                    .skip_bits(br)?
+                    .saturating_add(d.skip_bits(br)?)
+                    .saturating_add(d.skip_bits(br)?));
             }
             Self::Vector3Normal { fractional_bits } => {
                 br.read_bitvec3normal_with(*fractional_bits)?;
             }
             Self::Vector4(d) => {
-                return Ok(d.skip_bits(br)?
-                    + d.skip_bits(br)?
-                    + d.skip_bits(br)?
-                    + d.skip_bits(br)?);
+                return Ok(d
+                    .skip_bits(br)?
+                    .saturating_add(d.skip_bits(br)?)
+                    .saturating_add(d.skip_bits(br)?)
+                    .saturating_add(d.skip_bits(br)?));
             }
 
-            Self::QAnglePitchYaw { bit_count } => return fixed(br, bit_count * 2),
+            Self::QAnglePitchYaw { bit_count } => return fixed(br, bit_count.saturating_mul(2)),
             Self::QAngleNoBitCount {
                 integer_bits,
                 fractional_bits,
@@ -441,12 +448,13 @@ impl FieldDecoder {
                 let rx = br.read_bool()?;
                 let ry = br.read_bool()?;
                 let rz = br.read_bool()?;
-                let value_bits = angle_bits * (usize::from(rx) + usize::from(ry) + usize::from(rz));
+                let num_values = [rx, ry, rz].into_iter().filter(|&r| r).count();
+                let value_bits = angle_bits.saturating_mul(num_values);
                 br.skip_bits(value_bits)?;
             }
-            Self::QAngleBitCount { bit_count } => return fixed(br, bit_count * 3),
+            Self::QAngleBitCount { bit_count } => return fixed(br, bit_count.saturating_mul(3)),
         }
-        Ok(br.num_bits_read() - start)
+        Ok(br.num_bits_read().saturating_sub(start))
     }
 }
 
@@ -504,7 +512,7 @@ mod tests {
         let FieldValue::String(bytes) = value else {
             panic!("unexpected value type");
         };
-        assert_eq!(&bytes[..], &[0xaa, 0x00, 0xbb]);
+        assert_eq!(&*bytes, &[0xaa, 0x00, 0xbb]);
         assert_eq!(bits, 32);
     }
 
@@ -526,7 +534,7 @@ mod tests {
         let FieldValue::String(bytes) = value else {
             panic!("unexpected value type");
         };
-        assert_eq!(&bytes[..], b"abc");
+        assert_eq!(&*bytes, b"abc");
         assert_eq!(bits, 32);
     }
 

@@ -246,17 +246,14 @@ GROUP BY game_mode, match_mode, day, cohort_item_id, item_id, {bucket_col}"
     )
 }
 
-/// The rows of the cohort rollup `table` for the matches selected by `since_clause`. The
-/// item-stats rollup readers aggregate a window's partial days with it.
-///
-/// # Panics
-/// When this job does not build `table` as a cohort rollup.
-pub(crate) fn cohort_rollup_rows(table: &str, since_clause: &str) -> String {
+/// Builds the rows of the cohort rollup `table` for the matches selected by a since-clause.
+/// The item-stats rollup readers aggregate a window's partial days with it. `None` when this
+/// job does not build `table` as a cohort rollup.
+pub(crate) fn cohort_rollup_rows(table: &str) -> Option<impl Fn(&str) -> String> {
     let spec = cohort_specs()
         .into_iter()
-        .find(|spec| spec.table == table && matches!(spec.source, Source::Cohort { .. }))
-        .unwrap_or_else(|| panic!("{table} is not a cohort rollup"));
-    select_body(&spec, since_clause)
+        .find(|spec| spec.table == table && matches!(spec.source, Source::Cohort { .. }))?;
+    Some(move |since_clause: &str| select_body(&spec, since_clause))
 }
 
 /// Keep in sync with the backfill in
@@ -503,7 +500,7 @@ fn history_due(
     grown: Vec<(String, u32, u64)>,
     stored: &HashMap<String, (u32, u64)>,
 ) -> Vec<(String, u32, u64)> {
-    let aged_before = cap.saturating_sub(history.rebuild_after_days * 86_400);
+    let aged_before = cap.saturating_sub(history.rebuild_after_days.saturating_mul(86_400));
     let grown_days: HashSet<&str> = grown.iter().map(|(day, ..)| day.as_str()).collect();
     let mut missing = vec![];
     let mut aged = vec![];
@@ -568,7 +565,7 @@ async fn refresh(
             } else {
                 0
             };
-            row.n_matches > prev + rebuild_threshold(row.n_matches)
+            row.n_matches > prev.saturating_add(rebuild_threshold(row.n_matches))
         })
         .map(|row| (row.day.clone(), row.max_created, row.n_matches))
         .collect();

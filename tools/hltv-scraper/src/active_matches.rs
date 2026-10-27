@@ -29,7 +29,7 @@ impl ActiveMatch {
             .any(|mask| SHIELD_GENERATORS.iter().any(|&o| !has_objective(mask, o)))
     }
 
-    fn team_masks(&self) -> [u32; 2] {
+    const fn team_masks(&self) -> [u32; 2] {
         [self.objectives_mask_team0, self.objectives_mask_team1]
     }
 }
@@ -39,13 +39,13 @@ const SHIELD_GENERATORS: [ECitadelTeamObjective; 2] = [
     ECitadelTeamObjective::KECitadelTeamObjectiveTitanShieldGenerator2,
 ];
 
-fn has_objective(mask: u32, objective: ECitadelTeamObjective) -> bool {
+const fn has_objective(mask: u32, objective: ECitadelTeamObjective) -> bool {
     mask & (1 << (objective as u32)) != 0
 }
 
 #[cached(ttl_secs = 60, convert = "{ 0 }", key = "u8", sync_writes = "default")]
 pub(crate) async fn fetch_active_matches_cached() -> reqwest::Result<Vec<ActiveMatch>> {
-    let res = common::http_client()
+    let res = common::http_client()?
         .get("https://api.deadlock-api.com/v1/matches/active")
         .send()
         .await?

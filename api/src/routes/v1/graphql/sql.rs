@@ -1,7 +1,7 @@
 //! SQL assembly for the GraphQL `matches`, `match_players` and `match_history`
 //! resolvers.
 
-use core::fmt::Write;
+use core::fmt::Write as _;
 
 use crate::routes::v1::graphql::filters::MatchHistorySqlFilters;
 use crate::routes::v1::graphql::projection::{Column, MATCH_HISTORY_COLUMNS, Projection};
@@ -27,7 +27,7 @@ pub(super) enum OrderDir {
 }
 
 impl OrderDir {
-    pub(super) fn as_sql(self) -> &'static str {
+    pub(super) const fn as_sql(self) -> &'static str {
         match self {
             Self::Asc => "ASC",
             Self::Desc => "DESC",

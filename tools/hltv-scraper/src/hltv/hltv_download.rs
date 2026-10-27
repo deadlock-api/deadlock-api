@@ -181,7 +181,7 @@ async fn fragment_fetching_loop(
         };
 
         for &fragment_type in fragment_types {
-            let mut retry_count = 0;
+            let mut retry_count: u64 = 0;
             loop {
                 match download_match_fragment(client, &broadcast_url, fragment_n, fragment_type)
                     .await
@@ -202,10 +202,9 @@ async fn fragment_fetching_loop(
                             match_meta: analysis.meta,
                         };
 
-                        sender
-                            .send(hltv_fragment)
-                            .await
-                            .map_err(|_| DownloadError::ReceiverDropped)?;
+                        if sender.send(hltv_fragment).await.is_err() {
+                            return Err(DownloadError::ReceiverDropped);
+                        }
 
                         if is_last || has_meta {
                             return Ok(());
@@ -225,10 +224,10 @@ async fn fragment_fetching_loop(
                                 counter!("hltv.fragment.error.temporary").increment(1);
                                 error!("[{match_id} {fragment_n}] {e}, retrying");
                             }
-                            retry_count += 1;
+                            retry_count = retry_count.saturating_add(1);
 
                             // minimum 4 sec wait time
-                            sleep(Duration::from_secs((2 * retry_count).max(4))).await;
+                            sleep(Duration::from_secs(retry_count.saturating_mul(2).max(4))).await;
 
                             if retry_count > 1 {
                                 trace!("Retry #{retry_count} - checking sync availability...");
@@ -265,7 +264,7 @@ async fn fragment_fetching_loop(
             }
         }
 
-        fragment_n += 1;
+        fragment_n = fragment_n.saturating_add(1);
     }
 
     Ok(())

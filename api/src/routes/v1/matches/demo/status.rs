@@ -86,8 +86,10 @@ fn estimate(record: &JobRecord, completed: u64, now: i64) -> Option<u64> {
     match record.status {
         JobStatus::Queued => {
             let ahead = record.queue_ticket.saturating_sub(completed);
-            let total =
-                ahead.saturating_add(1).saturating_mul(AVG_JOB_SECONDS) / MAX_CONCURRENT as u64;
+            let total = ahead
+                .saturating_add(1)
+                .saturating_mul(AVG_JOB_SECONDS)
+                .checked_div(MAX_CONCURRENT as u64)?;
             let elapsed = u64::try_from(now.saturating_sub(record.enqueued_at)).unwrap_or(0);
             Some(total.saturating_sub(elapsed))
         }

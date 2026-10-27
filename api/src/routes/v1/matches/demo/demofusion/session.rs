@@ -9,11 +9,14 @@ use core::num::NonZeroUsize;
 use std::collections::HashMap;
 use std::sync::{Arc, LazyLock};
 
+use datafusion::error::DataFusionError;
 use datafusion::execution::SessionStateBuilder;
 use datafusion::execution::disk_manager::{DiskManagerBuilder, DiskManagerMode};
 use datafusion::execution::memory_pool::{GreedyMemoryPool, TrackConsumersPool};
 use datafusion::execution::runtime_env::{RuntimeEnv, RuntimeEnvBuilder};
 use datafusion::prelude::{SessionConfig, SessionContext};
+
+use super::error::Result;
 
 /// Operator memory shared by all demo queries in the process. The parsed demo tables are
 /// `MemTable`s outside the pool, so this bounds only what the query itself allocates on top of
@@ -29,7 +32,7 @@ const ARRAY_GENERATORS: [&str; 4] = ["range", "generate_series", "array_repeat",
 /// Consumers named in a `Resources exhausted` error, so a failed query says what used the memory.
 const REPORTED_CONSUMERS: NonZeroUsize = NonZeroUsize::new(3).unwrap();
 
-static RUNTIME: LazyLock<Arc<RuntimeEnv>> = LazyLock::new(|| {
+static RUNTIME: LazyLock<datafusion::error::Result<Arc<RuntimeEnv>>> = LazyLock::new(|| {
     let pool =
         TrackConsumersPool::new(GreedyMemoryPool::new(MEMORY_POOL_BYTES), REPORTED_CONSUMERS);
     // Spilling would only move an oversized query from memory onto the API's disk.
@@ -39,15 +42,19 @@ static RUNTIME: LazyLock<Arc<RuntimeEnv>> = LazyLock::new(|| {
             DiskManagerBuilder::default().with_mode(DiskManagerMode::Disabled),
         )
         .build_arc()
-        .expect("demo query runtime builds")
 });
 
 /// A session with `DataFusion`'s default functions minus its table functions (`range`,
 /// `generate_series`) and [`ARRAY_GENERATORS`], running on the shared demo-query runtime.
-pub(crate) fn session_context(config: SessionConfig) -> SessionContext {
+///
+/// Fails only if the shared runtime could not be built.
+pub(crate) fn session_context(config: SessionConfig) -> Result<SessionContext> {
+    let runtime = RUNTIME.as_ref().map_err(|e| {
+        DataFusionError::Execution(format!("demo query runtime failed to build: {e}"))
+    })?;
     let state = SessionStateBuilder::new()
         .with_config(config)
-        .with_runtime_env(Arc::clone(&RUNTIME))
+        .with_runtime_env(Arc::clone(runtime))
         .with_default_features()
         .with_table_functions(HashMap::new())
         .build();
@@ -55,7 +62,7 @@ pub(crate) fn session_context(config: SessionConfig) -> SessionContext {
     for name in ARRAY_GENERATORS {
         ctx.deregister_udf(name);
     }
-    ctx
+    Ok(ctx)
 }
 
 #[cfg(test)]
@@ -66,7 +73,7 @@ mod tests {
 
     #[tokio::test]
     async fn generators_are_not_plannable() {
-        let ctx = session_context(SessionConfig::new());
+        let ctx = session_context(SessionConfig::new()).unwrap();
         for sql in [
             "SELECT count(*) FROM range(100000000000)",
             "SELECT count(*) FROM generate_series(1, 100000000000)",
@@ -78,13 +85,13 @@ mod tests {
         ] {
             assert!(ctx.sql(sql).await.is_err(), "{sql}");
         }
-        assert!(ctx.sql("SELECT make_array(1, 2)").await.is_ok());
+        ctx.sql("SELECT make_array(1, 2)").await.unwrap();
     }
 
     #[test]
     fn sessions_share_one_bounded_pool() {
-        let a = session_context(SessionConfig::new()).runtime_env();
-        let b = session_context(SessionConfig::new()).runtime_env();
+        let a = session_context(SessionConfig::new()).unwrap().runtime_env();
+        let b = session_context(SessionConfig::new()).unwrap().runtime_env();
         assert!(Arc::ptr_eq(&a, &b));
         assert!(matches!(
             a.memory_pool.memory_limit(),

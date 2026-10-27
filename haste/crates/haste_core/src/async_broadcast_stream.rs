@@ -5,11 +5,10 @@
 //! - Broadcast: fixed-size 1 byte `cmd` + 4 bytes `tick` + 1 byte unknown + 4 bytes `body_size`
 
 // `core::io::Cursor` is unstable on stable toolchains, so std imports are used here.
-#![allow(clippy::std_instead_of_core)]
 
 use std::io::Cursor;
 
-use tokio::io::{AsyncRead, AsyncReadExt};
+use tokio::io::{AsyncRead, AsyncReadExt as _};
 
 use crate::async_demostream::AsyncDemoStream;
 use crate::demostream::{

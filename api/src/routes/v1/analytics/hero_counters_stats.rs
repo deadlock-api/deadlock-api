@@ -160,7 +160,7 @@ fn match_filters(query: &HeroCounterStatsQuery) -> String {
     // whole window. Restricting both sides to the matches the filter can hold lets the match_id
     // key prune them (build: 5.8 -> 2.1 GB read, -55% CPU; account: -95% rows), with identical
     // results: the set is read without FINAL, so it is a superset of p1's matches.
-    #[expect(deprecated)]
+    #[expect(deprecated, reason = "reads the deprecated legacy query parameters")]
     let selective_filters = PlayerFilters {
         account_id: query.account_id,
         account_ids: query.account_ids.as_deref(),
@@ -186,7 +186,7 @@ fn build_query(query: &HeroCounterStatsQuery) -> String {
             join_filters(&filters.build())
         )
     };
-    #[expect(deprecated)]
+    #[expect(deprecated, reason = "reads the deprecated legacy query parameters")]
     let p1_where = side_where(PlayerFilters {
         account_id: query.account_id,
         account_ids: query.account_ids.as_deref(),
@@ -210,7 +210,7 @@ fn build_query(query: &HeroCounterStatsQuery) -> String {
     } else {
         "ON p1.match_id = p2.match_id AND p1.team != p2.team"
     };
-    #[expect(deprecated)]
+    #[expect(deprecated, reason = "reads the deprecated legacy query parameters")]
     let needs_account_id = query.account_id.is_some() || query.account_ids.is_some();
     let p1_account_col = if needs_account_id { "account_id, " } else { "" };
     let p1_cols = format!(
@@ -276,7 +276,7 @@ fn build_query(query: &HeroCounterStatsQuery) -> String {
 /// [`build_query`]). Per-player filters (account, build, net worth), duration and match id need
 /// `match_player`.
 fn build_mv_query(query: &HeroCounterStatsQuery) -> Option<String> {
-    #[expect(deprecated)]
+    #[expect(deprecated, reason = "reads the deprecated legacy query parameters")]
     let personalized = query.account_id.is_some()
         || is_non_empty(query.account_ids.as_deref())
         || query.hero_build_id.is_some();
@@ -389,7 +389,7 @@ pub(super) async fn hero_counters_stats(
         query.min_average_badge,
         query.max_average_badge,
     )?;
-    #[expect(deprecated)]
+    #[expect(deprecated, reason = "reads the deprecated legacy query parameters")]
     filter_protected_accounts(&state, &mut query.account_ids, query.account_id).await?;
     get_hero_counter_stats(&state.ch_client_ro, query)
         .await

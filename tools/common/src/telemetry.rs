@@ -3,15 +3,15 @@ use core::net::SocketAddrV4;
 use metrics_exporter_prometheus::PrometheusBuilder;
 use opentelemetry::trace::TracerProvider as _;
 use opentelemetry_appender_tracing::layer::OpenTelemetryTracingBridge;
-use opentelemetry_otlp::{LogExporter, SpanExporter, WithExportConfig};
+use opentelemetry_otlp::{LogExporter, SpanExporter, WithExportConfig as _};
 use opentelemetry_sdk::Resource;
 use opentelemetry_sdk::logs::SdkLoggerProvider;
 use opentelemetry_sdk::propagation::TraceContextPropagator;
 use opentelemetry_sdk::trace::SdkTracerProvider;
 use tracing_subscriber::filter::filter_fn;
-use tracing_subscriber::layer::SubscriberExt;
-use tracing_subscriber::util::SubscriberInitExt;
-use tracing_subscriber::{EnvFilter, Layer};
+use tracing_subscriber::layer::SubscriberExt as _;
+use tracing_subscriber::util::SubscriberInitExt as _;
+use tracing_subscriber::{EnvFilter, Layer as _};
 
 pub struct OtelGuard {
     tracer_provider: SdkTracerProvider,
@@ -20,11 +20,12 @@ pub struct OtelGuard {
 
 impl Drop for OtelGuard {
     fn drop(&mut self) {
+        // The console layer of the global subscriber still logs these.
         if let Err(err) = self.tracer_provider.shutdown() {
-            eprintln!("Failed to shut down OpenTelemetry tracer provider: {err}");
+            tracing::error!("Failed to shut down OpenTelemetry tracer provider: {err}");
         }
         if let Err(err) = self.logger_provider.shutdown() {
-            eprintln!("Failed to shut down OpenTelemetry logger provider: {err}");
+            tracing::error!("Failed to shut down OpenTelemetry logger provider: {err}");
         }
     }
 }
@@ -60,19 +61,23 @@ fn build_otel_providers(
 
 #[must_use]
 pub fn init_tracing(service_name: &str) -> Option<OtelGuard> {
-    let env_filter = EnvFilter::try_from_default_env().unwrap_or(EnvFilter::new(
-        "debug,h2=warn,hyper_util=warn,reqwest=warn,rustls=warn,sqlx=warn,steam_vent=info,\
-         opentelemetry_sdk=info,tower=info,opentelemetry-otlp=info",
-    ));
+    let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| {
+        EnvFilter::new(
+            "debug,h2=warn,hyper_util=warn,reqwest=warn,rustls=warn,sqlx=warn,steam_vent=info,\
+             opentelemetry_sdk=info,tower=info,opentelemetry-otlp=info",
+        )
+    });
     let fmt_layer = tracing_subscriber::fmt::layer();
 
+    // Logged once the subscriber is up.
+    let mut otel_error = None;
     let providers = std::env::var("OTEL_EXPORTER_OTLP_ENDPOINT")
         .ok()
         .and_then(
             |endpoint| match build_otel_providers(&endpoint, service_name) {
                 Ok(providers) => Some((endpoint, providers)),
                 Err(err) => {
-                    eprintln!("Failed to initialize OpenTelemetry OTLP export: {err}");
+                    otel_error = Some(err);
                     None
                 }
             },
@@ -108,6 +113,9 @@ pub fn init_tracing(service_name: &str) -> Option<OtelGuard> {
         .with(log_layer)
         .init();
 
+    if let Some(err) = otel_error {
+        tracing::error!("Failed to initialize OpenTelemetry OTLP export: {err}");
+    }
     if let Some(endpoint) = enabled_endpoint {
         tracing::info!(
             "OpenTelemetry OTLP export enabled for {service_name}, sending traces and logs to \

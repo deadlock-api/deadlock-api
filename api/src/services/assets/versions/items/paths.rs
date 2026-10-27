@@ -21,13 +21,13 @@ pub(super) fn parse_img_path(v: Option<&str>) -> Option<String> {
     if trimmed.ends_with(".svg") || trimmed.ends_with(".vsvg") {
         return Some(svg_icon_url(v));
     }
-    let split_index = v
-        .find("abilities/")
-        .or_else(|| v.find("upgrades/"))
-        .or_else(|| v.find("hud/"));
+    let split_tail = ["abilities/", "upgrades/", "hud/"].iter().find_map(|p| {
+        let i = v.find(p)?;
+        v.get(i..)
+    });
 
-    let slice: String = if let Some(idx) = split_index {
-        v[idx..].to_owned()
+    let slice: String = if let Some(tail) = split_tail {
+        tail.to_owned()
     } else {
         let parts: Vec<&str> = v.split("{images}/").collect();
         if parts.len() != 2 {
@@ -58,7 +58,7 @@ pub(super) fn extract_video_url(v: Option<&str>) -> Option<String> {
 }
 
 fn pascal_to(s: &str, sep: char) -> String {
-    let mut out = String::with_capacity(s.len() + 4);
+    let mut out = String::with_capacity(s.len().saturating_add(4));
     for (i, c) in s.chars().enumerate() {
         if i > 0 && c.is_ascii_uppercase() {
             out.push(sep);

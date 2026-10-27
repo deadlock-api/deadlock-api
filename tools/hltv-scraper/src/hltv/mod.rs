@@ -9,8 +9,8 @@ pub(crate) enum FragmentType {
 impl Display for FragmentType {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
-            FragmentType::Full => write!(f, "full"),
-            FragmentType::Delta => write!(f, "delta"),
+            Self::Full => write!(f, "full"),
+            Self::Delta => write!(f, "delta"),
         }
     }
 }

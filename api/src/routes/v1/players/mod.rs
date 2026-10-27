@@ -12,7 +12,7 @@ pub mod steam;
 use core::time::Duration;
 
 use axum::http::StatusCode;
-use rand::seq::SliceRandom;
+use rand::seq::SliceRandom as _;
 use redis::AsyncTypedCommands;
 use utoipa::OpenApi;
 use utoipa_axum::router::OpenApiRouter;
@@ -64,9 +64,12 @@ pub(crate) async fn lookup_bot_for_friend(
     pg: &sqlx::PgPool,
     account_id: u32,
 ) -> APIResult<Option<String>> {
-    let friend_id = i32::try_from(account_id).map_err(|_| {
-        APIError::status_msg(StatusCode::BAD_REQUEST, "Invalid account ID".to_owned())
-    })?;
+    let Ok(friend_id) = i32::try_from(account_id) else {
+        return Err(APIError::status_msg(
+            StatusCode::BAD_REQUEST,
+            "Invalid account ID".to_owned(),
+        ));
+    };
     match sqlx::query!(
         "SELECT bot_id FROM bot_friends WHERE friend_id = $1",
         friend_id
@@ -134,7 +137,7 @@ pub(crate) async fn collect_invite_links(
     Ok(results.into_iter().flatten().collect())
 }
 
-#[expect(deprecated)]
+#[expect(deprecated, reason = "registers deprecated handlers")]
 pub(super) fn router() -> OpenApiRouter<AppState> {
     OpenApiRouter::with_openapi(ApiDoc::openapi())
         .routes(routes!(match_history::match_history))

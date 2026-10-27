@@ -8,7 +8,8 @@
     clippy::cast_possible_truncation,
     clippy::cast_lossless,
     clippy::similar_names,
-    clippy::if_not_else
+    clippy::if_not_else,
+    reason = "port of the legacy item pipeline; mirrors its field-by-field mapping"
 )]
 
 use std::sync::Arc;

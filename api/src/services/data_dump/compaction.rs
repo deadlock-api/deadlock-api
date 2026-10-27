@@ -82,7 +82,11 @@ pub(crate) fn plan_rebuilds(
         .filter_map(|&p| {
             let base = table.base(generation, p)?;
             let pending = pending_rows(table, generation, p);
-            let threshold = (base.rows / params.threshold_divisor).max(params.threshold_min);
+            let threshold = base
+                .rows
+                .checked_div(params.threshold_divisor)
+                .unwrap_or(0)
+                .max(params.threshold_min);
             (pending >= threshold).then_some((pending, p))
         })
         .collect();
@@ -97,8 +101,8 @@ pub(crate) fn plan_rebuilds(
         let Some(base) = table.base(generation, p) else {
             continue;
         };
-        let expected = base.rows + pending_rows(table, generation, p);
-        if rows > expected + expected / 20 + 1000 {
+        let expected = base.rows.saturating_add(pending_rows(table, generation, p));
+        if rows > expected.saturating_add(expected / 20).saturating_add(1000) {
             push(p, Reason::Drift);
         }
     }
@@ -106,7 +110,7 @@ pub(crate) fn plan_rebuilds(
         .keys()
         .filter_map(|&p| {
             let hi = table.base(generation, p)?.hi?;
-            (watermark_hi - hi > params.max_base_age_secs).then_some((hi, p))
+            (watermark_hi.saturating_sub(hi) > params.max_base_age_secs).then_some((hi, p))
         })
         .collect();
     by_age.sort_unstable();

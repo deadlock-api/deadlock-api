@@ -1,20 +1,29 @@
 #![forbid(unsafe_code)]
-#![deny(clippy::all)]
-#![deny(unreachable_pub)]
-#![deny(clippy::correctness)]
-#![deny(clippy::suspicious)]
-#![deny(clippy::style)]
-#![deny(clippy::complexity)]
-#![deny(clippy::perf)]
-#![deny(clippy::pedantic)]
-#![deny(clippy::std_instead_of_core)]
-#![expect(clippy::cast_precision_loss)]
+#![cfg_attr(
+    test,
+    allow(
+        clippy::arithmetic_side_effects,
+        clippy::disallowed_macros,
+        clippy::disallowed_methods,
+        clippy::expect_used,
+        clippy::indexing_slicing,
+        clippy::panic,
+        clippy::panic_in_result_fn,
+        clippy::print_stderr,
+        clippy::print_stdout,
+        clippy::string_slice,
+        clippy::unreachable,
+        clippy::unwrap_in_result,
+        clippy::unwrap_used,
+        reason = "tests may panic"
+    )
+)]
 
 use core::time::Duration;
 use std::sync::LazyLock;
 
 use clickhouse::Client;
-use futures::StreamExt;
+use futures::StreamExt as _;
 use metrics::{counter, gauge};
 use models::{MatchSalt, PendingMatch};
 use tracing::{debug, error, info, instrument, warn};
@@ -34,6 +43,8 @@ enum Error {
     Env(#[from] std::env::VarError),
     #[error(transparent)]
     Client(#[from] common::ClientError),
+    #[error(transparent)]
+    Http(#[from] reqwest::Error),
 }
 
 /// Why a single match's salts could not be fetched and stored.
@@ -62,14 +73,25 @@ static PRIORITIZATION_MAX_RETRIES: LazyLock<u32> =
     LazyLock::new(|| common::env_or("PRIORITIZATION_MAX_RETRIES", 5));
 
 #[tokio::main]
-#[expect(clippy::too_many_lines)]
+#[expect(
+    clippy::too_many_lines,
+    reason = "the service loop reads best in one piece"
+)]
+#[expect(
+    clippy::infinite_loop,
+    reason = "the service runs until run_until_shutdown drops the loop on a shutdown signal"
+)]
+#[expect(
+    clippy::cast_precision_loss,
+    reason = "match counts stay far below 2^53"
+)]
 async fn main() -> Result<(), Error> {
     let _otel_guard = common::init_tracing(env!("CARGO_PKG_NAME"));
     common::init_metrics()?;
 
     let ch_client = common::get_ch_client()?;
 
-    let http_client = common::http_client();
+    let http_client = common::http_client()?;
 
     // Initialize PostgreSQL connection pool for prioritization queries
     let pg_pool = common::get_pg_client()
@@ -105,7 +127,7 @@ async fn main() -> Result<(), Error> {
             // so the join side stays dense. A match whose every candidate salt has been written off
             // counts as uncovered: the GC is the only source that can replace them.
             let prio_query = format!(
-                r"
+                "
             SELECT pmh.match_id, groupArray(pmh.account_id) AS participants
             FROM player_match_history pmh
             LEFT ANTI JOIN (
@@ -183,7 +205,7 @@ async fn main() -> Result<(), Error> {
                     failed.len(),
                 );
             }
-            tokio::time::sleep_until(cycle_start + MIN_CYCLE_INTERVAL).await;
+            tokio::time::sleep(MIN_CYCLE_INTERVAL.saturating_sub(cycle_start.elapsed())).await;
         }
     })
     .await
@@ -206,7 +228,7 @@ async fn fetch_prioritized_match(
         if attempts > 0 {
             counter!("salt_scraper.prioritized_fetch.retry").increment(1);
         }
-        attempts += 1;
+        attempts = attempts.saturating_add(1);
         fetch_match_salts(http_client, match_id)
     })
     .await?;

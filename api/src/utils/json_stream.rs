@@ -14,7 +14,7 @@ pub(crate) enum ResponseFormat {
 }
 
 impl ResponseFormat {
-    pub(crate) fn content_type(self) -> &'static str {
+    pub(crate) const fn content_type(self) -> &'static str {
         match self {
             Self::Json => "application/json",
             Self::Ndjson => "application/x-ndjson",
@@ -24,7 +24,7 @@ impl ResponseFormat {
 
 /// `line` wrapped in an optional one-byte prefix and suffix, in a single allocation.
 fn chunk(prefix: Option<u8>, line: &str, suffix: Option<u8>) -> Bytes {
-    let mut buf = Vec::with_capacity(line.len() + 2);
+    let mut buf = Vec::with_capacity(line.len().saturating_add(2));
     buf.extend(prefix);
     buf.extend_from_slice(line.as_bytes());
     buf.extend(suffix);

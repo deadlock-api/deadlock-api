@@ -156,7 +156,7 @@ impl Modify for TagGroupsAddon {
         openapi
             .extensions
             .get_or_insert_with(Extensions::default)
-            .insert("x-tagGroups".to_string(), tag_groups);
+            .insert("x-tagGroups".to_owned(), tag_groups);
     }
 }
 
@@ -184,12 +184,12 @@ pub(super) fn fill_missing_response_descriptions(openapi: &mut utoipa::openapi::
                 if let RefOr::T(response) = response
                     && response.description.is_empty()
                 {
-                    response.description = status
+                    status
                         .parse::<axum::http::StatusCode>()
                         .ok()
                         .and_then(|s| s.canonical_reason())
                         .unwrap_or("Response")
-                        .to_string();
+                        .clone_into(&mut response.description);
                 }
             }
         }
@@ -237,7 +237,7 @@ mod tests {
     fn collect_grouped_tags() -> HashSet<String> {
         TAG_GROUPS
             .iter()
-            .flat_map(|(_, ts)| ts.iter().map(|t| (*t).to_string()))
+            .flat_map(|(_, ts)| ts.iter().map(|t| (*t).to_owned()))
             .collect()
     }
 

@@ -28,7 +28,10 @@ pub(super) struct NeutralCampSource {
 
 /// A base objective's world position as extracted from the map entity lump.
 /// `source` and `name` record where the position came from and are not read.
-#[expect(dead_code)]
+#[expect(
+    dead_code,
+    reason = "`source` and `name` document provenance and are not read"
+)]
 pub(super) struct ObjectiveSource {
     /// `objective_positions` key, e.g. `team0_tier1_3`.
     pub(super) key: &'static str,

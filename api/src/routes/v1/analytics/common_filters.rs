@@ -3,7 +3,7 @@ use core::fmt::Display;
 use crate::utils::parse::MIN_DEMO_PLAYER_TIMESTAMP;
 use crate::utils::sql::{MAX_FILTERING_AVERAGE_BADGE, MIN_FILTERING_AVERAGE_BADGE};
 pub(super) use crate::utils::sql::{MatchInfoFilters, id_list, join_filters};
-use itertools::Itertools;
+use itertools::Itertools as _;
 use serde::Deserialize;
 use strum::Display;
 use utoipa::ToSchema;
@@ -83,7 +83,7 @@ pub(crate) enum BucketQuery {
 
 impl BucketQuery {
     /// The bucket expression against `match_player` (or a table with its column names).
-    pub(crate) fn base_expr(self) -> &'static str {
+    pub(crate) const fn base_expr(self) -> &'static str {
         match self {
             Self::NoBucket => "toUInt32(0)",
             Self::AvgBadge => "toUInt32(assumeNotNull(coalesce(average_badge, 0)))",
@@ -99,7 +99,7 @@ impl BucketQuery {
     /// needs the sub-day resolution a `day` grain does not keep. `AvgBadge` buckets by the
     /// per-match `greatest_badge`, stored as 65535 when NULL, which maps back to 0 to mirror
     /// [`Self::base_expr`]'s `coalesce(..., 0)`.
-    pub(super) fn mv_bucket_expr(self) -> Option<&'static str> {
+    pub(super) const fn mv_bucket_expr(self) -> Option<&'static str> {
         match self {
             Self::NoBucket => Some("toUInt32(0)"),
             Self::AvgBadge => Some("toUInt32(if(greatest_badge = 65535, 0, greatest_badge))"),
@@ -259,7 +259,13 @@ pub(super) fn rollup_oldest_servable(horizon_days: i64) -> Option<i64> {
         .ok()?
         .as_secs()
         .cast_signed();
-    Some(now - (horizon_days - ROLLUP_ROUTING_MARGIN_DAYS) * 86_400)
+    Some(
+        now.saturating_sub(
+            horizon_days
+                .saturating_sub(ROLLUP_ROUTING_MARGIN_DAYS)
+                .saturating_mul(86_400),
+        ),
+    )
 }
 
 /// Badge filters on a rollup's per-match `least_badge`/`greatest_badge` columns. They mirror the
@@ -503,24 +509,31 @@ pub(super) fn round_demo_timestamps(
     }));
 }
 
-pub(super) fn floor_to_hour(v: i64) -> i64 {
+pub(super) const fn floor_to_hour(v: i64) -> i64 {
     v.div_euclid(TIMESTAMP_ALIGNMENT_S)
         .saturating_mul(TIMESTAMP_ALIGNMENT_S)
 }
 
-pub(super) fn ceil_to_hour(v: i64) -> i64 {
+pub(super) const fn ceil_to_hour(v: i64) -> i64 {
     floor_to_hour(v.saturating_add(TIMESTAMP_ALIGNMENT_S - 1))
 }
 
 pub(super) const DEFAULT_MIN_MATCHES: u64 = 20;
 
-#[expect(clippy::unnecessary_wraps, clippy::cast_possible_truncation)]
-pub(super) fn default_min_matches_u32() -> Option<u32> {
+#[expect(
+    clippy::unnecessary_wraps,
+    clippy::cast_possible_truncation,
+    reason = "serde default fn must return the field type; DEFAULT_MIN_MATCHES is 20"
+)]
+pub(super) const fn default_min_matches_u32() -> Option<u32> {
     Some(DEFAULT_MIN_MATCHES as u32)
 }
 
-#[expect(clippy::unnecessary_wraps)]
-pub(super) fn default_min_matches_u64() -> Option<u64> {
+#[expect(
+    clippy::unnecessary_wraps,
+    reason = "serde default fn must return the field type"
+)]
+pub(super) const fn default_min_matches_u64() -> Option<u64> {
     Some(DEFAULT_MIN_MATCHES)
 }
 

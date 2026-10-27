@@ -4,7 +4,7 @@ use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum_extra::extract::Query;
 use clickhouse::Row;
-use itertools::Itertools;
+use itertools::Itertools as _;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tracing::debug;
@@ -371,7 +371,10 @@ fn brawl_round_expr(buy_time_expr: &str, round_durations_expr: &str) -> String {
     format!("arrayCount(s -> s < {buy_time_expr}, arrayCumSum({round_durations_expr}))")
 }
 
-#[allow(clippy::too_many_lines)]
+#[allow(
+    clippy::too_many_lines,
+    reason = "one linear query builder reads clearer than split helpers"
+)]
 fn query_parts(query: &ItemFlowStatsQuery) -> QueryParts {
     let info_filters = query.match_info().build();
     let scalar_filter_vec = PlayerFilters {
@@ -404,7 +407,7 @@ fn query_parts(query: &ItemFlowStatsQuery) -> QueryParts {
             format!(
                 "toUInt8(least({}, {}))",
                 brawl_round_expr(buy_time_expr, round_durations_expr),
-                count - 1
+                count.saturating_sub(1)
             )
         } else {
             time_phase_expr(buy_time_expr)
@@ -469,7 +472,7 @@ fn query_parts(query: &ItemFlowStatsQuery) -> QueryParts {
         locked_names.join(" AND ")
     };
     let base_player_filters = join_filters(&base_filter_vec);
-    let player_filters = base_player_filters.clone() + &join_filters(&locked_clauses);
+    let player_filters = format!("{base_player_filters}{}", join_filters(&locked_clauses));
     let game_mode_filter = GameMode::sql_filter(query.game_mode);
     let match_mode_filter = MatchMode::sql_filter(query.match_mode.as_deref());
     let prewhere = format!(

@@ -2,7 +2,7 @@ use axum::Json;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
-use redis::AsyncCommands;
+use redis::AsyncCommands as _;
 use serde::{Deserialize, Serialize};
 use tracing::warn;
 use utoipa::{IntoParams, ToSchema};
@@ -31,8 +31,8 @@ async fn get_party_match_id(
             warn!("Failed to get match id from redis: {e}");
             APIError::status_msg(StatusCode::NOT_FOUND, "Can't find match id")
         })?;
-    match_id.parse::<u64>().map_err(|_| {
-        warn!("Failed to parse match id from redis");
+    match_id.parse::<u64>().map_err(|e| {
+        warn!("Failed to parse match id from redis: {e}");
         APIError::status_msg(StatusCode::NOT_FOUND, "Can't find match id")
     })
 }

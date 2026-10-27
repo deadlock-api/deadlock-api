@@ -1,5 +1,5 @@
 use aes_gcm::Aes256Gcm;
-use aes_gcm::aead::{Aead, Generate, Key, KeyInit, Nonce};
+use aes_gcm::aead::{Aead as _, Generate as _, Key, KeyInit as _, Nonce};
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
 use thiserror::Error;
@@ -186,7 +186,10 @@ pub(crate) fn calculate_slot_limit(
         if !is_active || pledge_amount_cents <= 0 {
             0
         } else {
-            #[expect(clippy::cast_possible_truncation)]
+            #[expect(
+                clippy::cast_possible_truncation,
+                reason = "saturating cast, clamped to 1..=50 right after"
+            )]
             let slots = (f64::from(pledge_amount_cents) / 150.0).round() as i32;
             slots.clamp(1, 50)
         }
@@ -252,7 +255,7 @@ pub(crate) enum TokenCryptoError {
 fn token_cipher(key_hex: &str) -> Result<Aes256Gcm, TokenCryptoError> {
     let key_bytes = hex::decode(key_hex)
         .map_err(|e| TokenCryptoError::InvalidKey(format!("Invalid hex key: {e}")))?;
-    let key = Key::<Aes256Gcm>::try_from(key_bytes.as_slice()).map_err(|_| {
+    let key = Key::<Aes256Gcm>::try_from(key_bytes.as_slice()).map_err(|_wrong_len| {
         TokenCryptoError::InvalidKey(format!("Key must be 32 bytes, got {}", key_bytes.len()))
     })?;
     Ok(Aes256Gcm::new(&key))
@@ -267,7 +270,7 @@ pub(crate) fn encrypt_token(plaintext: &str, key_hex: &str) -> Result<String, To
 
     let ciphertext = cipher
         .encrypt(&nonce, plaintext.as_bytes())
-        .map_err(|_| TokenCryptoError::EncryptionFailed)?;
+        .map_err(|_opaque| TokenCryptoError::EncryptionFailed)?;
 
     // Combine nonce + ciphertext and base64 encode
     let mut combined = nonce.to_vec();
@@ -284,18 +287,16 @@ pub(crate) fn decrypt_token(encrypted: &str, key_hex: &str) -> Result<String, To
     let cipher = token_cipher(key_hex)?;
 
     let combined = base64::Engine::decode(&base64::engine::general_purpose::STANDARD, encrypted)
-        .map_err(|_| TokenCryptoError::InvalidFormat)?;
+        .map_err(|_not_base64| TokenCryptoError::InvalidFormat)?;
 
-    if combined.len() < 12 {
+    let Some((nonce_bytes, ciphertext)) = combined.split_first_chunk::<12>() else {
         return Err(TokenCryptoError::InvalidFormat);
-    }
-
-    let (nonce_bytes, ciphertext) = combined.split_at(12);
-    let nonce = Nonce::<Aes256Gcm>::try_from(nonce_bytes).expect("split at 12 bytes");
+    };
+    let nonce = Nonce::<Aes256Gcm>::from(*nonce_bytes);
 
     let plaintext = cipher
         .decrypt(&nonce, ciphertext)
-        .map_err(|_| TokenCryptoError::DecryptionFailed)?;
+        .map_err(|_opaque| TokenCryptoError::DecryptionFailed)?;
 
-    String::from_utf8(plaintext).map_err(|_| TokenCryptoError::DecryptionFailed)
+    String::from_utf8(plaintext).map_err(|_not_utf8| TokenCryptoError::DecryptionFailed)
 }

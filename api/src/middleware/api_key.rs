@@ -37,30 +37,30 @@ fn extract_api_key(request: &Request) -> Option<HeaderValue> {
 
 #[cfg(test)]
 mod tests {
-    use core::str::FromStr;
+    use core::str::FromStr as _;
 
     use axum::Router;
     use axum::body::Body;
     use axum::http::{Request, StatusCode};
     use axum::response::IntoResponse;
     use axum::routing::get;
-    use tower::ServiceExt;
+    use tower::ServiceExt as _;
     use uuid::Uuid;
 
     use super::*;
 
     async fn test_handler(req: Request<Body>) -> impl IntoResponse {
         // Simple handler that returns the request headers as a response
-        let api_key_value = req
-            .headers()
-            .get("x-api-key")
-            .and_then(|v| v.to_str().ok().and_then(|s| Uuid::from_str(s).ok()));
+        let api_key_value = req.headers().get("x-api-key").and_then(|v| {
+            let s = v.to_str().ok()?;
+            Uuid::from_str(s).ok()
+        });
         let has_api_key = api_key_value.is_some();
         format!(
             "has_api_key={has_api_key}, value={}",
             api_key_value
                 .as_ref()
-                .map_or("none".to_string(), ToString::to_string)
+                .map_or_else(|| "none".to_owned(), ToString::to_string)
         )
     }
 

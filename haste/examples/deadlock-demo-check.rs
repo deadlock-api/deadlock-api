@@ -15,7 +15,7 @@ use haste::entities::{DeltaHeader, Entity, fkey_from_path};
 use haste::fxhash;
 use haste::parser::{Context, Parser, ParserError, Visitor};
 use haste::valveprotos::common::{CsvcMsgServerInfo, SvcMessages};
-use prost::Message;
+use prost::Message as _;
 
 const CELL_X: u64 = fkey_from_path(&["CBodyComponent", "m_cellX"]);
 const CELL_Y: u64 = fkey_from_path(&["CBodyComponent", "m_cellY"]);
@@ -41,6 +41,7 @@ struct MyVisitor {
 }
 
 impl MyVisitor {
+    #[expect(clippy::print_stdout, reason = "printing is the job of this example")]
     fn print_players(ctx: &Context) {
         let Some(entities) = ctx.entities() else {
             return;
@@ -79,6 +80,7 @@ impl MyVisitor {
 impl Visitor for MyVisitor {
     type Error = std::io::Error;
 
+    #[expect(clippy::print_stdout, reason = "printing is the job of this example")]
     fn on_packet(
         &mut self,
         _ctx: &Context,
@@ -86,8 +88,8 @@ impl Visitor for MyVisitor {
         data: &[u8],
     ) -> Result<(), Self::Error> {
         let entry = self.packets.entry(packet_type).or_default();
-        entry.0 += 1;
-        entry.1 += data.len();
+        entry.0 = entry.0.saturating_add(1);
+        entry.1 = entry.1.saturating_add(data.len());
 
         if packet_type == SvcMessages::SvcServerInfo as u32 {
             let msg = CsvcMsgServerInfo::decode(data).map_err(std::io::Error::other)?;
@@ -107,15 +109,22 @@ impl Visitor for MyVisitor {
         _delta_header: DeltaHeader,
         _entity: &Entity,
     ) -> Result<(), Self::Error> {
-        self.entity_updates += 1;
+        self.entity_updates = self.entity_updates.saturating_add(1);
         Ok(())
     }
 
+    #[expect(clippy::print_stdout, reason = "printing is the job of this example")]
     fn on_tick_end(&mut self, ctx: &Context) -> Result<(), Self::Error> {
         // NOTE: the tick rate is announced by the server (1 / 64 in build 6712 replays).
-        #[expect(clippy::cast_possible_truncation)]
+        #[expect(
+            clippy::cast_possible_truncation,
+            reason = "a tick count of a few ten thousands"
+        )]
         let report_interval_ticks = (REPORT_INTERVAL_SECS / ctx.tick_interval()).round() as i32;
-        if ctx.tick() > 0 && report_interval_ticks > 0 && ctx.tick() % report_interval_ticks == 0 {
+        if ctx.tick() > 0
+            && report_interval_ticks > 0
+            && ctx.tick().checked_rem(report_interval_ticks) == Some(0)
+        {
             if let Some(serializers) = ctx.serializers()
                 && ctx.tick() == report_interval_ticks
             {
@@ -139,6 +148,7 @@ enum CheckError {
     Parser(#[from] ParserError<std::io::Error>),
 }
 
+#[expect(clippy::print_stdout, reason = "printing is the job of this example")]
 fn main() -> Result<(), CheckError> {
     let path = std::env::args().nth(1).ok_or(CheckError::Usage)?;
     let demo_file = DemoFile::start_reading(BufReader::new(File::open(path)?))?;

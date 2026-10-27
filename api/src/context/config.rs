@@ -83,7 +83,7 @@ fn default_clickhouse_host() -> String {
     "localhost".to_owned()
 }
 
-fn default_clickhouse_http_port() -> u16 {
+const fn default_clickhouse_http_port() -> u16 {
     8123
 }
 
@@ -121,7 +121,7 @@ fn default_postgres_host() -> String {
     "localhost".to_owned()
 }
 
-fn default_postgres_port() -> u16 {
+const fn default_postgres_port() -> u16 {
     5432
 }
 
@@ -133,7 +133,7 @@ fn default_postgres_dbname() -> String {
     "postgres".to_owned()
 }
 
-fn default_postgres_pool_size() -> u32 {
+const fn default_postgres_pool_size() -> u32 {
     10
 }
 

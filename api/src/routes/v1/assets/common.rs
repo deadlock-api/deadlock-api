@@ -1,5 +1,10 @@
 //! Shared query types and helpers for `/v1/assets/*` endpoints.
 
+#![expect(
+    clippy::unused_async_trait_impl,
+    reason = "fires on the async fns the `async_graphql::Enum` derive generates"
+)]
+
 use axum::Json;
 use object_store::aws::AmazonS3;
 use reqwest::StatusCode;

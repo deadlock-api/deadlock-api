@@ -1,7 +1,7 @@
 use core::time::Duration;
 use std::sync::Arc;
 
-use base64::Engine;
+use base64::Engine as _;
 use base64::prelude::BASE64_STANDARD;
 use chrono::{DateTime, FixedOffset};
 use prost::Message;
@@ -57,7 +57,7 @@ impl<M: Message + Default> TryFrom<SteamProxyRawResponse> for SteamProxyResponse
     ) -> Result<Self, Self::Error> {
         let decoded_data = BASE64_STANDARD.decode(&data)?;
         let msg = M::decode(decoded_data.as_slice())?;
-        Ok(SteamProxyResponse { msg, username })
+        Ok(Self { msg, username })
     }
 }
 
@@ -145,7 +145,7 @@ impl SteamProxyError {
     }
 
     /// Status for the API's own response.
-    pub(crate) fn response_status(&self) -> StatusCode {
+    pub(crate) const fn response_status(&self) -> StatusCode {
         match self {
             Self::Cooldown { .. } | Self::NoAliveBots(_) | Self::Request(_) => {
                 StatusCode::SERVICE_UNAVAILABLE
@@ -162,7 +162,7 @@ impl SteamProxyError {
 
     /// Message for the API's own response, telling the client to retry only when a later
     /// attempt can succeed.
-    pub(crate) fn response_message(&self) -> &'static str {
+    pub(crate) const fn response_message(&self) -> &'static str {
         match self {
             Self::Cooldown { .. } | Self::NoAliveBots(_) => {
                 "Steam is busy. Retry after the delay in the Retry-After header."
@@ -183,14 +183,16 @@ impl SteamProxyError {
     }
 
     /// Whether the same call can succeed when repeated right away.
-    pub(crate) fn is_retryable(&self) -> bool {
+    pub(crate) const fn is_retryable(&self) -> bool {
         matches!(self, Self::Request(_) | Self::Timeout(_) | Self::Failed(..))
     }
 
     /// Seconds the client should wait before retrying, when the proxy's bot pool is drained.
     pub(crate) fn retry_after_secs(&self) -> Option<u64> {
         match self {
-            Self::Cooldown { wait_for, .. } => Some(wait_for.map_or(10, |w| w.as_secs() + 1)),
+            Self::Cooldown { wait_for, .. } => {
+                Some(wait_for.map_or(10, |w| w.as_secs().saturating_add(1)))
+            }
             // Bots come back as they reconnect.
             Self::NoAliveBots(_) => Some(60),
             _ => None,
@@ -320,7 +322,7 @@ pub(crate) enum FeedItem {
 }
 
 impl FeedItem {
-    pub(crate) fn pub_date(&self) -> DateTime<FixedOffset> {
+    pub(crate) const fn pub_date(&self) -> DateTime<FixedOffset> {
         match self {
             Self::Forum(p) => p.pub_date,
             Self::Steam(p) => p.pub_date,

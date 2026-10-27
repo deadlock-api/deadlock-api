@@ -1,11 +1,9 @@
-use core::fmt::Write;
-
 use axum::Json;
 use axum::extract::State;
 use axum::response::IntoResponse;
 use axum_extra::extract::Query;
 use serde::{Deserialize, Serialize};
-use sqlx::{Pool, Postgres, Row};
+use sqlx::{Pool, Postgres, Row as _};
 use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
 
@@ -42,15 +40,18 @@ fn build_query(query: &BuildItemStatsQuery) -> String {
     WHERE TRUE
     "
     .to_owned();
-    if let Some(hero_id) = query.hero_id {
-        let _ = write!(sql, " AND hero = {hero_id}");
-    }
-    if let Some(min) = query.min_last_updated_unix_timestamp {
-        let _ = write!(sql, " AND updated_at > to_timestamp({min})");
-    }
-    if let Some(max) = query.max_last_updated_unix_timestamp {
-        let _ = write!(sql, " AND updated_at < to_timestamp({max})");
-    }
+    let filters = [
+        query
+            .hero_id
+            .map(|hero_id| format!(" AND hero = {hero_id}")),
+        query
+            .min_last_updated_unix_timestamp
+            .map(|min| format!(" AND updated_at > to_timestamp({min})")),
+        query
+            .max_last_updated_unix_timestamp
+            .map(|max| format!(" AND updated_at < to_timestamp({max})")),
+    ];
+    sql.extend(filters.into_iter().flatten());
     sql.push_str(" GROUP BY item_id ORDER BY num_builds DESC");
     sql
 }

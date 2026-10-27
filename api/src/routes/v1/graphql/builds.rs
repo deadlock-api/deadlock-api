@@ -67,7 +67,7 @@ pub(super) async fn load_hero_builds(
     args: HeroBuildsArgs,
 ) -> GqlResult<Vec<Build>> {
     let w = args.where_.unwrap_or_default();
-    #[expect(deprecated)]
+    #[expect(deprecated, reason = "reads the deprecated legacy query parameters")]
     let query = BuildsSearchQuery {
         hero_id: w.hero_id,
         build_id: w.build_id,
@@ -107,7 +107,7 @@ pub(super) struct HeroBuildLoader {
 }
 
 impl HeroBuildLoader {
-    pub(super) fn new(pg_client: Pool<Postgres>) -> Self {
+    pub(super) const fn new(pg_client: Pool<Postgres>) -> Self {
         Self { pg_client }
     }
 }
@@ -120,7 +120,10 @@ impl Loader<(u32, u32)> for HeroBuildLoader {
         let mut qb: QueryBuilder<Postgres> = QueryBuilder::new(
             "SELECT DISTINCT ON (hero, build_id) data FROM hero_builds WHERE (hero, build_id) IN ",
         );
-        #[expect(clippy::cast_possible_wrap)]
+        #[expect(
+            clippy::cast_possible_wrap,
+            reason = "ids fit in the signed Postgres column type"
+        )]
         qb.push_tuples(keys, |mut b, (hero_id, build_id)| {
             b.push_bind(*hero_id as i32).push_bind(*build_id as i32);
         });

@@ -1,11 +1,12 @@
 //! Decompress a demo, run the SQL query, and stream the serialized result.
 
-use std::io::{Read, Write};
+use std::io::{Read as _, Write};
+use std::sync::Arc;
 
 use bytes::{Bytes, BytesMut};
 use datafusion::arrow::datatypes::SchemaRef;
 use datafusion::arrow::record_batch::RecordBatch;
-use futures::StreamExt;
+use futures::StreamExt as _;
 use reqwest::StatusCode;
 use tokio::sync::mpsc;
 use tokio::task::JoinHandle;
@@ -36,11 +37,11 @@ const MAX_ARTIFACT_BYTES: u64 = 8 << 30;
 /// switched newer matches' actual compression to zstd.
 pub(super) async fn decompress(compressed: Bytes) -> APIResult<Bytes> {
     tokio::task::spawn_blocking(move || {
-        let mut out = Vec::with_capacity(compressed.len() * 5);
+        let mut out = Vec::with_capacity(compressed.len().saturating_mul(5));
         if compressed.starts_with(&ZSTD_MAGIC) {
-            zstd::stream::read::Decoder::new(&compressed[..])?.read_to_end(&mut out)?;
+            zstd::stream::read::Decoder::new(&*compressed)?.read_to_end(&mut out)?;
         } else {
-            bzip2::read::BzDecoder::new(&compressed[..]).read_to_end(&mut out)?;
+            bzip2::read::BzDecoder::new(&*compressed).read_to_end(&mut out)?;
         }
         Ok::<_, std::io::Error>(Bytes::from(out))
     })
@@ -136,7 +137,7 @@ fn serialize(
         OutputFormat::Parquet => {
             use datafusion::parquet::arrow::ArrowWriter;
 
-            let mut writer = ArrowWriter::try_new(sink, schema.clone(), None)
+            let mut writer = ArrowWriter::try_new(sink, Arc::clone(schema), None)
                 .map_err(|e| APIError::internal(format!("Parquet writer init failed: {e}")))?;
             drain(batches, |batch| {
                 writer
@@ -208,10 +209,10 @@ impl ChunkSink {
         }
     }
 
-    fn send(&mut self, chunk: Bytes) -> std::io::Result<()> {
+    fn send(&self, chunk: Bytes) -> std::io::Result<()> {
         self.tx
             .blocking_send(chunk)
-            .map_err(|_| std::io::Error::other("artifact upload stopped"))
+            .map_err(|e| std::io::Error::other(format!("artifact upload stopped: {e}")))
     }
 
     /// Emit the partial chunk left over once the format writer has been closed.
@@ -225,20 +226,20 @@ impl ChunkSink {
 }
 
 impl Write for ChunkSink {
-    fn write(&mut self, data: &[u8]) -> std::io::Result<usize> {
-        self.written += data.len() as u64;
+    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+        self.written = self.written.saturating_add(buf.len() as u64);
         if self.written > MAX_ARTIFACT_BYTES {
             return Err(std::io::Error::other(format!(
                 "result exceeds the {} GiB extract limit; narrow the projection or filter it",
                 MAX_ARTIFACT_BYTES >> 30
             )));
         }
-        self.buf.extend_from_slice(data);
+        self.buf.extend_from_slice(buf);
         while self.buf.len() >= self.chunk_size {
             let chunk = self.buf.split_to(self.chunk_size).freeze();
             self.send(chunk)?;
         }
-        Ok(data.len())
+        Ok(buf.len())
     }
 
     fn flush(&mut self) -> std::io::Result<()> {
@@ -250,13 +251,13 @@ impl Write for ChunkSink {
 /// the bulk, and the higher levels cost far more CPU than the upload saves.
 const ZSTD_LEVEL: i32 = 3;
 
-pub(super) fn map_demofusion_err(e: &demofusion::Error) -> APIError {
+pub(super) fn map_demofusion_err(e: &demofusion::DemoError) -> APIError {
     match e {
-        demofusion::Error::DataFusion(_) | demofusion::Error::Schema(_) => {
+        demofusion::DemoError::DataFusion(_) | demofusion::DemoError::Schema(_) => {
             APIError::status_msg(StatusCode::BAD_REQUEST, format!("Invalid query: {e}"))
         }
         // Only the live-broadcast path produces this; a relay fetch failure is an upstream 502.
-        demofusion::Error::Broadcast(_) => APIError::status_msg(
+        demofusion::DemoError::Broadcast(_) => APIError::status_msg(
             StatusCode::BAD_GATEWAY,
             format!("Live broadcast error: {e}"),
         ),
@@ -299,7 +300,7 @@ mod tests {
                     .collect();
                 let names: Vec<String> = ticks.iter().map(|t| format!("player-{t}")).collect();
                 RecordBatch::try_new(
-                    schema.clone(),
+                    Arc::clone(&schema),
                     vec![
                         Arc::new(Int32Array::from(ticks)),
                         Arc::new(StringArray::from(names)),
@@ -346,7 +347,7 @@ mod tests {
         let artifact = serialize_to_bytes(OutputFormat::Ndjson, chunk_size)
             .await
             .unwrap();
-        let raw = zstd::stream::decode_all(&artifact[..]).expect("valid zstd frame");
+        let raw = zstd::stream::decode_all(&*artifact).expect("valid zstd frame");
         let lines: Vec<&str> = core::str::from_utf8(&raw)
             .unwrap()
             .lines()

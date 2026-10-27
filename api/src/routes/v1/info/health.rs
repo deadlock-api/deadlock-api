@@ -2,7 +2,7 @@ use axum::Json;
 use axum::extract::State;
 use axum::http::StatusCode;
 use cached::macros::cached;
-use redis::AsyncCommands;
+use redis::AsyncCommands as _;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use sqlx::{Pool, Postgres};
@@ -23,7 +23,7 @@ pub struct StatusServices {
 
 impl StatusServices {
     #[must_use]
-    pub fn all_ok(&self) -> bool {
+    pub const fn all_ok(&self) -> bool {
         self.clickhouse && self.postgres && self.redis
     }
 }

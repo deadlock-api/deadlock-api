@@ -7,6 +7,8 @@ use tracing::warn;
 
 #[derive(Debug, thiserror::Error)]
 pub(crate) enum PollError {
+    #[error("Failed to build the HTTP client")]
+    Client(#[source] reqwest::Error),
     #[error("Initial poll request failed")]
     Request(#[source] reqwest::Error),
     #[error("Initial poll request returned error status")]
@@ -22,7 +24,7 @@ pub(crate) async fn start_polling_text(
     url: String,
     interval_duration: Duration,
 ) -> Result<(AbortHandle, Arc<RwLock<String>>), PollError> {
-    let client = common::http_client();
+    let client = common::http_client().map_err(PollError::Client)?;
 
     let initial = client
         .get(&url)

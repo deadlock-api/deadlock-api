@@ -7,11 +7,11 @@ use std::sync::Arc;
 use async_compression::tokio::write::BzEncoder;
 use bytes::Bytes;
 use dashmap::DashSet;
-use jiff::{Timestamp, ToSpan};
+use jiff::{SignedDuration, Timestamp};
 use lru::LruCache;
 use metrics::gauge;
-use object_store::{ObjectStore, ObjectStoreExt};
-use prost::Message;
+use object_store::{ObjectStore, ObjectStoreExt as _};
+use prost::Message as _;
 use reqwest::Url;
 use serde_json::json;
 use tokio::io::AsyncWriteExt as _;
@@ -24,6 +24,10 @@ use crate::cmd::run_spectate_bot::{SpectatedMatchInfo, SpectatedMatchType};
 
 /// Fallback for metadata the object store rejected; docker-compose mounts `./local-store` here.
 const LOCAL_STORE_ROOT: &str = "/matches";
+/// A match is scraped once it started this long ago, or, without a start time, was last
+/// updated [`MIN_UPDATED_AGE`] ago.
+const MIN_STARTED_AGE: SignedDuration = SignedDuration::from_mins(15);
+const MIN_UPDATED_AGE: SignedDuration = SignedDuration::from_mins(1);
 
 #[derive(Debug, thiserror::Error)]
 pub(crate) enum ScrapeHltvError {
@@ -33,6 +37,8 @@ pub(crate) enum ScrapeHltvError {
     JoinUrl(url::ParseError),
     #[error(transparent)]
     Client(#[from] common::ClientError),
+    #[error("Building the HTTP client")]
+    HttpClient(#[source] reqwest::Error),
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -45,8 +51,16 @@ enum CompressError {
     Finish(#[source] std::io::Error),
 }
 
+#[expect(
+    clippy::infinite_loop,
+    reason = "the scraper runs until run_until_shutdown drops it on a shutdown signal"
+)]
+#[expect(
+    clippy::cast_precision_loss,
+    reason = "match counts stay far below 2^53"
+)]
 pub(crate) async fn run(spectate_server_url: String) -> Result<(), ScrapeHltvError> {
-    let spec_client = common::http_client();
+    let spec_client = common::http_client().map_err(ScrapeHltvError::HttpClient)?;
     let base_url = Url::parse(&spectate_server_url).map_err(ScrapeHltvError::ParseBaseUrl)?;
 
     let currently_downloading: Arc<DashSet<u64>> = Arc::new(DashSet::new());
@@ -80,15 +94,15 @@ pub(crate) async fn run(spectate_server_url: String) -> Result<(), ScrapeHltvErr
 
         let total_available_matches = matches.len();
         let now = Timestamp::now();
-        let started_before = now.saturating_sub(15.minutes()).unwrap();
-        let updated_before = now.saturating_sub(1.minutes()).unwrap();
         let chosen_match = matches
             .into_iter()
             .filter(|x| !already_downloaded.contains(&x.match_id))
             .filter(|x| !currently_downloading.contains(&x.match_id))
-            .filter(|x| match x.started_at {
-                Some(started) => started < started_before,
-                None => x.updated_at < updated_before,
+            .filter(|x| {
+                x.started_at.map_or_else(
+                    || now.duration_since(x.updated_at) > MIN_UPDATED_AGE,
+                    |started| now.duration_since(started) > MIN_STARTED_AGE,
+                )
             })
             .min_by_key(|x| x.match_id);
 
@@ -119,9 +133,9 @@ pub(crate) async fn run(spectate_server_url: String) -> Result<(), ScrapeHltvErr
         download_task(
             base_url.clone(),
             spec_client.clone(),
-            store.clone(),
-            cache_store.clone(),
-            currently_downloading.clone(),
+            Arc::clone(&store),
+            Arc::clone(&cache_store),
+            Arc::clone(&currently_downloading),
             smi,
         );
 

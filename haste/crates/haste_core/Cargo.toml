@@ -20,3 +20,6 @@ valveprotos = { workspace = true, features = ["user-msgs"] }
 
 bytes = { workspace = true, optional = true }
 tokio = { workspace = true, features = ["io-util", "sync"], optional = true }
+
+[lints]
+workspace = true

@@ -14,7 +14,7 @@ const MAX_REDIRECTS: usize = 5;
 /// internal or arbitrary hosts (SSRF). Only http(s) URLs without credentials on a subdomain of a
 /// Valve broadcast domain are accepted; IP literals are rejected. Returns the reason on failure.
 pub(crate) fn validate_broadcast_url(broadcast_url: &str) -> Result<(), &'static str> {
-    let url = Url::parse(broadcast_url).map_err(|_| "Invalid broadcast_url")?;
+    let url = Url::parse(broadcast_url).map_err(|_unparsable| "Invalid broadcast_url")?;
     validate_url(&url)
 }
 

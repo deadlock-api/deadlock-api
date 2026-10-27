@@ -35,13 +35,13 @@ impl From<ECitadelGameMode> for GameMode {
 impl From<u8> for GameMode {
     fn from(value: u8) -> Self {
         match value {
-            1 => GameMode::Normal,
-            2 => GameMode::OnevOneTest,
-            3 => GameMode::Sandbox,
-            4 => GameMode::StreetBrawl,
-            5 => GameMode::ExploreNYC,
-            6 => GameMode::Internal,
-            _ => GameMode::Invalid,
+            1 => Self::Normal,
+            2 => Self::OnevOneTest,
+            3 => Self::Sandbox,
+            4 => Self::StreetBrawl,
+            5 => Self::ExploreNYC,
+            6 => Self::Internal,
+            _ => Self::Invalid,
         }
     }
 }
@@ -73,12 +73,12 @@ impl From<ECitadelBotDifficulty> for BotDifficulty {
 impl From<u8> for BotDifficulty {
     fn from(value: u8) -> Self {
         match value {
-            1 => BotDifficulty::Easy,
-            2 => BotDifficulty::Medium,
-            3 => BotDifficulty::Hard,
-            4 => BotDifficulty::Nightmare,
-            5 => BotDifficulty::Guided,
-            _ => BotDifficulty::None,
+            1 => Self::Easy,
+            2 => Self::Medium,
+            3 => Self::Hard,
+            4 => Self::Nightmare,
+            5 => Self::Guided,
+            _ => Self::None,
         }
     }
 }
@@ -116,14 +116,14 @@ impl From<ECitadelMatchMode> for MatchMode {
 impl From<u8> for MatchMode {
     fn from(value: u8) -> Self {
         match value {
-            1 => MatchMode::Unranked,
-            2 => MatchMode::PrivateLobby,
-            3 => MatchMode::CoopBot,
-            4 => MatchMode::Ranked,
-            5 => MatchMode::ServerTest,
-            6 => MatchMode::Tutorial,
-            7 => MatchMode::HeroLabs,
-            _ => MatchMode::Invalid,
+            1 => Self::Unranked,
+            2 => Self::PrivateLobby,
+            3 => Self::CoopBot,
+            4 => Self::Ranked,
+            5 => Self::ServerTest,
+            6 => Self::Tutorial,
+            7 => Self::HeroLabs,
+            _ => Self::Invalid,
         }
     }
 }
@@ -215,9 +215,9 @@ pub(crate) enum MatchOutcome {
 impl From<EMatchOutcome> for MatchOutcome {
     fn from(value: EMatchOutcome) -> Self {
         match value {
-            EMatchOutcome::KEOutcomeTeamWin => MatchOutcome::TeamWin,
-            EMatchOutcome::KEOutcomeError => MatchOutcome::Error,
-            EMatchOutcome::KEOutcomeMatchDraw => MatchOutcome::Draw,
+            EMatchOutcome::KEOutcomeTeamWin => Self::TeamWin,
+            EMatchOutcome::KEOutcomeError => Self::Error,
+            EMatchOutcome::KEOutcomeMatchDraw => Self::Draw,
         }
     }
 }
@@ -243,9 +243,9 @@ impl From<ECitadelLobbyTeam> for Team {
 impl From<u8> for Team {
     fn from(value: u8) -> Self {
         match value {
-            0 => Team::Team0,
-            1 => Team::Team1,
-            _ => Team::Spectator,
+            0 => Self::Team0,
+            1 => Self::Team1,
+            _ => Self::Spectator,
         }
     }
 }

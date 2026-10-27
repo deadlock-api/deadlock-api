@@ -15,3 +15,6 @@ ruzstd = "0.9.1"
 serde_json.workspace = true
 valveprotos = { workspace = true, features = ["gc-common", "serde"] }
 wasm-abi.workspace = true
+
+[lints]
+workspace = true

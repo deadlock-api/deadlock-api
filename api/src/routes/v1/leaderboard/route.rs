@@ -8,13 +8,13 @@ use axum::Json;
 use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
-use base64::Engine;
+use base64::Engine as _;
 use base64::prelude::BASE64_STANDARD;
 use cached::macros::cached;
 use clickhouse::{Row, RowOwned, RowWrite};
 use futures::join;
-use itertools::Itertools;
-use prost::Message;
+use itertools::Itertools as _;
+use prost::Message as _;
 use serde::Deserialize;
 use tracing::warn;
 use utoipa::IntoParams;
@@ -146,7 +146,10 @@ fn spawn_snapshot(
     entries: Vec<c_msg_client_to_gc_get_leaderboard_response::LeaderboardEntry>,
 ) {
     tokio::spawn(async move {
-        #[expect(clippy::cast_possible_truncation)]
+        #[expect(
+            clippy::cast_possible_truncation,
+            reason = "unix seconds fit in u32 until 2106"
+        )]
         let Ok(now) = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .map(|d| d.as_secs() as u32)
@@ -156,11 +159,14 @@ fn spawn_snapshot(
         };
 
         // Positions count every entry, also those without a rank, which are not stored.
-        #[expect(clippy::cast_possible_truncation)]
+        #[expect(
+            clippy::cast_possible_truncation,
+            reason = "leaderboards hold far fewer than u32::MAX entries"
+        )]
         let ranked = entries
             .iter()
             .enumerate()
-            .filter_map(|(i, entry)| Some(((i as u32) + 1, entry.rank?, entry)));
+            .filter_map(|(i, entry)| Some(((i as u32).saturating_add(1), entry.rank?, entry)));
         let top_hero_ids =
             |entry: &c_msg_client_to_gc_get_leaderboard_response::LeaderboardEntry| {
                 entry

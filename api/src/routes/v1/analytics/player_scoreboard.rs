@@ -6,7 +6,7 @@ use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum_extra::extract::Query;
 use clickhouse::Row;
-use itertools::Itertools;
+use itertools::Itertools as _;
 use serde::{Deserialize, Serialize};
 use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
@@ -226,7 +226,7 @@ fn build_query(query: &PlayerScoreboardQuery) -> String {
         having_filters.push("badge > 0".to_owned());
     }
     let having_clause = having_clause(&having_filters);
-    let offset = query.start.unwrap_or(1).max(1) - 1;
+    let offset = query.start.unwrap_or(1).saturating_sub(1);
     let select_clause = if query.sort_by.dedup_free() {
         matches_expr.to_owned()
     } else {
@@ -238,7 +238,7 @@ fn build_query(query: &PlayerScoreboardQuery) -> String {
         |c| (c.badge, c.badge_progress),
     );
     let limit = query.limit.unwrap_or_default();
-    let first_rank = offset + 1;
+    let first_rank = offset.saturating_add(1);
 
     format!(
         "
@@ -277,11 +277,11 @@ cached_ch_query! {
 /// `limit <= PAGE_BLOCK_SIZE`.
 fn build_block_queries(query: &PlayerScoreboardQuery, offset: u32, limit: u32) -> Vec<String> {
     let first_block = offset / PAGE_BLOCK_SIZE;
-    let last_block = (offset.saturating_add(limit) - 1) / PAGE_BLOCK_SIZE;
+    let last_block = offset.saturating_add(limit).saturating_sub(1) / PAGE_BLOCK_SIZE;
     (first_block..=last_block)
         .map(|block| {
             build_query(&PlayerScoreboardQuery {
-                start: Some(block * PAGE_BLOCK_SIZE + 1),
+                start: Some(block.saturating_mul(PAGE_BLOCK_SIZE).saturating_add(1)),
                 limit: Some(PAGE_BLOCK_SIZE),
                 ..query.clone()
             })
@@ -294,7 +294,7 @@ async fn get_player_scoreboard(
     mut query: PlayerScoreboardQuery,
 ) -> APIResult<Arc<Vec<PlayerEntry>>> {
     round_timestamps(&mut query.min_unix_timestamp, &mut query.max_unix_timestamp);
-    let offset = query.start.unwrap_or(1).max(1) - 1;
+    let offset = query.start.unwrap_or(1).saturating_sub(1);
     let limit = query.limit.unwrap_or_default();
     // `limit` is unbounded, so a page wider than a block reads directly instead of walking
     // up to every block of the scoreboard.
@@ -304,7 +304,8 @@ async fn get_player_scoreboard(
         return Ok(run_query(ch_client, &query).await?);
     }
 
-    let wanted = u64::from(offset) + 1..=u64::from(offset) + u64::from(limit);
+    let wanted =
+        u64::from(offset).saturating_add(1)..=u64::from(offset).saturating_add(u64::from(limit));
     let mut entries = Vec::with_capacity(limit as usize);
     for block_query in build_block_queries(&query, offset, limit) {
         debug!(?block_query);

@@ -103,8 +103,9 @@ impl FeedbackSubmission {
         }
 
         check_len("page_url", &self.page_url, MAX_URL_LEN)?;
-        let url = url::Url::parse(&self.page_url)
-            .map_err(|_| bad_request("`page_url` is not a valid URL"))?;
+        let Ok(url) = url::Url::parse(&self.page_url) else {
+            return Err(bad_request("`page_url` is not a valid URL"));
+        };
         let host = url.host_str().unwrap_or_default();
         let host_allowed =
             ALLOWED_HOSTS.contains(&host) || (cfg!(debug_assertions) && host == "localhost");
@@ -202,7 +203,7 @@ mod tests {
     #[case("hi", "https://evil.example.com/")]
     #[case("hi", "not-a-url")]
     fn validate_rejects_bad_input(#[case] comment: &str, #[case] page_url: &str) {
-        assert!(submission(comment, page_url).validate().is_err());
+        submission(comment, page_url).validate().unwrap_err();
     }
 
     #[test]
@@ -211,7 +212,7 @@ mod tests {
             &"a".repeat(MAX_COMMENT_LEN + 1),
             "https://deadlock-api.com/",
         );
-        assert!(s.validate().is_err());
+        s.validate().unwrap_err();
     }
 
     #[test]
@@ -237,7 +238,7 @@ mod tests {
                 element_text: None,
             })
             .collect();
-        assert!(s.validate().is_err());
+        s.validate().unwrap_err();
     }
 
     #[test]

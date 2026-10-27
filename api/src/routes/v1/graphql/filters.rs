@@ -8,7 +8,7 @@
 //! Multiple field filters on a `MatchWhere` / `MatchPlayerWhere` are AND-ed.
 
 use async_graphql::InputObject;
-use itertools::Itertools;
+use itertools::Itertools as _;
 
 use crate::routes::v1::graphql::projection::{
     MATCH_HISTORY_COLUMNS, SQL_AVG_BADGE, SQL_AVG_BADGE_T0, SQL_AVG_BADGE_T1, SQL_START_TIME_UNIX,
@@ -281,6 +281,10 @@ impl MatchPlayerWhere {
 
     /// Account ids pinned by `account_id` `eq` / `in`, if every set filter is on
     /// a column `player_match_stats` also has.
+    #[expect(
+        clippy::unneeded_field_pattern,
+        reason = "listing every field makes a new filter a compile error until it is classified here"
+    )]
     pub(super) fn player_match_stats_accounts(&self) -> Option<Vec<u32>> {
         let Self {
             match_id: _,
@@ -555,7 +559,7 @@ mod tests {
                 eq: Some("Team0".into()),
                 ..Default::default()
             }),
-            ..accounts.clone()
+            ..accounts
         };
         assert_eq!(with_team.player_match_stats_accounts(), None);
 

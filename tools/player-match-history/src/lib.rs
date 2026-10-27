@@ -1,16 +1,34 @@
 //! The `player_match_history` `ClickHouse` row and its conversion from the GC's
 //! match history response, shared by the API and history-fetcher so both write
 //! the same values.
-
+#![cfg_attr(
+    test,
+    allow(
+        clippy::arithmetic_side_effects,
+        clippy::disallowed_macros,
+        clippy::disallowed_methods,
+        clippy::expect_used,
+        clippy::indexing_slicing,
+        clippy::panic,
+        clippy::panic_in_result_fn,
+        clippy::print_stderr,
+        clippy::print_stdout,
+        clippy::string_slice,
+        clippy::unreachable,
+        clippy::unwrap_in_result,
+        clippy::unwrap_used,
+        reason = "tests may panic"
+    )
+)]
 #![forbid(unsafe_code)]
-#![deny(clippy::all)]
-#![deny(clippy::pedantic)]
 
 use clickhouse::Row;
 use serde::{Deserialize, Serialize};
 use valveprotos::deadlock::c_msg_client_to_gc_get_match_history_response;
 
-/// Highest Eternus badge (tier 11, subrank 6). The GC's after-match `ranked_display_badge`
+/// Highest Eternus badge (tier 11, subrank 6).
+///
+/// The GC's after-match `ranked_display_badge`
 /// keeps extending the flat-progress ladder past it, yielding subranks Valve never displays,
 /// so stored badges are capped here.
 pub const ETERNUS_MAX_BADGE: u32 = 116;
@@ -105,7 +123,7 @@ impl PlayerMatchHistoryEntry {
     }
 
     #[must_use]
-    pub fn has_ranked_data(&self) -> bool {
+    pub const fn has_ranked_data(&self) -> bool {
         self.ranked_display_badge.is_some()
             || self.ranked_delta.is_some()
             || self.ranked_calibration_match.is_some()

@@ -79,10 +79,10 @@ pub const fn add_u64_to_hash(hash: u64, value: u64) -> u64 {
 pub const fn hash_bytes(bytes: &[u8]) -> u64 {
     let mut hash = 0;
 
-    let mut i = 0;
-    while i < bytes.len() {
-        hash = add_u64_to_hash(hash, bytes[i] as u64);
-        i += 1;
+    let mut rest = bytes;
+    while let [byte, tail @ ..] = rest {
+        hash = add_u64_to_hash(hash, *byte as u64);
+        rest = tail;
     }
 
     hash

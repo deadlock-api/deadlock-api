@@ -8,8 +8,6 @@ use datafusion::arrow::array::{
 use datafusion::arrow::datatypes::{DataType, Field};
 use haste_core::fieldvalue::FieldValue;
 
-use super::error::Result;
-
 #[expect(
     clippy::cast_possible_truncation,
     reason = "dynamic FieldValue coerced to the column's declared i32 type"
@@ -120,17 +118,16 @@ macro_rules! dynamic_builder {
                     $(Self::$s(b) => b.append_null(),)*
                     $(Self::$l(b) => b.append_null(),)*
                     Self::ListNull(b) => b.append_null(),
-                    Self::AllNull { len, .. } => *len += 1,
+                    Self::AllNull { len, .. } => *len = len.saturating_add(1),
                 }
             }
 
-            pub(super)  fn append_field_value(&mut self, value: &FieldValue) -> Result<()> {
+            pub(super)  fn append_field_value(&mut self, value: &FieldValue) {
                 let v = Some(value);
                 match self {
                     $(Self::$s(b) => $sp(b, v),)*
                     _ => self.append_null(),
                 }
-                Ok(())
             }
 
             /// Append one element to the inner builder of a `List` column. No-op for non-list builders.
@@ -264,9 +261,9 @@ mod tests {
     #[test]
     fn test_int64_builder() {
         let mut builder = DynamicBuilder::new(&DataType::Int64, 10);
-        builder.append_field_value(&FieldValue::I64(42)).unwrap();
+        builder.append_field_value(&FieldValue::I64(42));
         builder.append_null();
-        builder.append_field_value(&FieldValue::I64(-100)).unwrap();
+        builder.append_field_value(&FieldValue::I64(-100));
 
         let array = builder.finish();
         assert_eq!(array.len(), 3);
@@ -275,7 +272,7 @@ mod tests {
     #[test]
     fn test_float32_builder() {
         let mut builder = DynamicBuilder::new(&DataType::Float32, 10);
-        builder.append_field_value(&FieldValue::F32(1.5)).unwrap();
+        builder.append_field_value(&FieldValue::F32(1.5));
         builder.append_null();
 
         let array = builder.finish();
@@ -295,7 +292,7 @@ mod tests {
 
     #[test]
     fn test_list_builder_appends_values() {
-        use datafusion::arrow::array::{Array, ListArray};
+        use datafusion::arrow::array::{Array as _, ListArray};
 
         let list_type = DataType::List(Arc::new(Field::new("item", DataType::Int64, true)));
         let mut builder = DynamicBuilder::new(&list_type, 4);
@@ -319,7 +316,7 @@ mod tests {
 
     #[test]
     fn test_list_builder_component() {
-        use datafusion::arrow::array::{Array, ListArray};
+        use datafusion::arrow::array::{Array as _, ListArray};
 
         let list_type = DataType::List(Arc::new(Field::new("item", DataType::Float32, true)));
         let mut builder = DynamicBuilder::new(&list_type, 4);

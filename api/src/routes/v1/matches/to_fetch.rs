@@ -9,14 +9,14 @@ use axum::response::{IntoResponse, Response};
 use axum_extra::extract::Query;
 use cached::macros::cached;
 use clickhouse::Row;
-use itertools::Itertools;
+use itertools::Itertools as _;
 use serde::{Deserialize, Serialize};
 use sqlx::{Pool, Postgres};
 use tracing::{debug, warn};
 use uuid::Uuid;
 
 use crate::context::AppState;
-use crate::error::APIResult;
+use crate::error::{APIError, APIResult};
 use crate::services::clickhouse_insert_batcher::{BatchInsert, ClickhouseInsertBatcher};
 use crate::services::lease::RELEASE_IF_OWNED;
 use crate::utils::parse::parse_steam_id_option;
@@ -61,7 +61,7 @@ pub(crate) struct PendingMatchRow {
 }
 
 impl PendingMatchRow {
-    fn requested(match_id: u64, start_time: u32) -> Self {
+    const fn requested(match_id: u64, start_time: u32) -> Self {
         Self {
             match_id,
             state: 0,
@@ -183,7 +183,13 @@ pub(crate) async fn queue_requested_matches(state: &AppState, match_ids: &[u64])
     let start_times = estimate_start_times(&state.ch_client_ro, &trackable).await;
     let rows = trackable
         .into_iter()
-        .map(|match_id| PendingMatchRow::requested(match_id, start_times[&match_id]))
+        // `estimate_start_times` has an entry for every id.
+        .filter_map(|match_id| {
+            Some(PendingMatchRow::requested(
+                match_id,
+                *start_times.get(&match_id)?,
+            ))
+        })
         .collect();
     state.batchers.pending_match_insert.insert(rows).await;
 }
@@ -247,13 +253,13 @@ fn claim_token(headers: &HeaderMap) -> Option<Uuid> {
 
 /// The `Set-Cookie` value handing out `token`, or clearing the cookie if `None`. Scoped to
 /// the to-fetch routes and living as long as the claims it releases.
-fn claim_cookie(token: Option<Uuid>) -> HeaderValue {
+fn claim_cookie(token: Option<Uuid>) -> APIResult<HeaderValue> {
     let (value, max_age) = token.map_or((String::new(), 0), |t| (t.to_string(), CLAIM_TTL_SECS));
     HeaderValue::from_str(&format!(
         "{CLAIM_COOKIE}={value}; Path=/v1/matches/to-fetch; Max-Age={max_age}; HttpOnly; Secure; \
          SameSite=Strict"
     ))
-    .expect("a UUID is always a valid cookie value")
+    .map_err(|e| APIError::internal(format!("Invalid claim cookie: {e}")))
 }
 
 /// Releases the claims of the list handed out with `token`, leaving matches other workers
@@ -318,7 +324,7 @@ async fn prioritized_account_ids(pg_client: &Pool<Postgres>) -> Arc<Vec<u32>> {
 
 /// Cache key of [`pending_pool`]: the pool depends on the prioritized accounts.
 fn pool_key(prioritized: &[u32]) -> u64 {
-    use core::hash::{BuildHasher, BuildHasherDefault};
+    use core::hash::{BuildHasher as _, BuildHasherDefault};
     BuildHasherDefault::<std::hash::DefaultHasher>::default().hash_one(prioritized)
 }
 
@@ -441,8 +447,12 @@ pub(super) async fn matches_to_fetch(
     let mut claimed: Vec<u64> = Vec::with_capacity(BATCH_SIZE);
     let mut scanned = 0usize;
     while claimed.len() < BATCH_SIZE && scanned < n {
-        let chunk = (BATCH_SIZE - claimed.len()).min(n - scanned);
-        let ids = &pool[scanned..scanned + chunk];
+        let chunk = BATCH_SIZE
+            .saturating_sub(claimed.len())
+            .min(n.saturating_sub(scanned));
+        let Some(ids) = pool.get(scanned..scanned.saturating_add(chunk)) else {
+            break;
+        };
 
         let mut pipe = redis::pipe();
         for id in ids {
@@ -473,7 +483,7 @@ pub(super) async fn matches_to_fetch(
                 claimed.push(*id);
             }
         }
-        scanned += chunk;
+        scanned = scanned.saturating_add(chunk);
     }
 
     if claimed.is_empty() {
@@ -486,7 +496,7 @@ pub(super) async fn matches_to_fetch(
     let mut response = worklist(claimed);
     response
         .headers_mut()
-        .insert(SET_COOKIE, claim_cookie(Some(token_id)));
+        .insert(SET_COOKIE, claim_cookie(Some(token_id))?);
     Ok(response)
 }
 
@@ -500,7 +510,7 @@ pub(super) async fn release_matches_to_fetch(
         let mut conn = state.redis_client.clone();
         release_claim_list(&mut conn, token).await?;
     }
-    Ok((StatusCode::NO_CONTENT, [(SET_COOKIE, claim_cookie(None))]))
+    Ok((StatusCode::NO_CONTENT, [(SET_COOKIE, claim_cookie(None)?)]))
 }
 
 /// Best effort: releases the claims of `ids` that hold `token`, leaving other workers' alone.
@@ -548,7 +558,7 @@ mod tests {
     #[test]
     fn claim_cookie_round_trips_and_clears() {
         let token = Uuid::new_v4();
-        let set = claim_cookie(Some(token));
+        let set = claim_cookie(Some(token)).unwrap();
         let set = set.to_str().unwrap();
         assert!(set.starts_with(&format!(
             "{CLAIM_COOKIE}={token}; Path=/v1/matches/to-fetch;"
@@ -561,7 +571,7 @@ mod tests {
         );
         assert_eq!(claim_token(&headers), Some(token));
 
-        let clear = claim_cookie(None);
+        let clear = claim_cookie(None).unwrap();
         assert!(
             clear
                 .to_str()

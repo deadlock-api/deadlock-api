@@ -9,7 +9,7 @@ pub async fn insert_rows<T>(
     rows: &[T],
 ) -> clickhouse::error::Result<()>
 where
-    T: RowOwned + RowWrite,
+    T: RowOwned + RowWrite + Sync,
 {
     let mut insert = client.insert::<T>(table).await?;
     for row in rows {
@@ -19,8 +19,10 @@ where
 }
 
 /// The smallest `match_id` of a match started within `max_age` (a `ClickHouse` interval such
-/// as `"7 DAY"`), or 0 if there is none: a `match_id` bound that both `match_player` and
-/// `match_salts` prune on by primary key. Read in key order, so it stops at the first granule
+/// as `"7 DAY"`), or 0 if there is none.
+///
+/// It is a `match_id` bound that both `match_player` and `match_salts` prune on by primary
+/// key. Read in key order, so it stops at the first granule
 /// that matches instead of scanning all of `max_age` by `start_time`.
 pub async fn fetch_min_match_id_started_within(
     client: &clickhouse::Client,

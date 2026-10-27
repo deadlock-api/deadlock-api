@@ -50,8 +50,8 @@ pub(crate) async fn get_patron_status(
 
     let total_slots = patron.slot_limit();
 
-    let used_slots = active_count + cooldown_count;
-    let available_slots = (total_slots - used_slots).max(0);
+    let used_slots = active_count.saturating_add(cooldown_count);
+    let available_slots = total_slots.saturating_sub(used_slots).max(0);
 
     Ok(Json(PatronStatusResponse {
         tier_id: patron.tier_id,

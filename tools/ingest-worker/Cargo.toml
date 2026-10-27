@@ -21,3 +21,6 @@ tokio = { workspace = true }
 tokio-util = { workspace = true, features = ["rt"] }
 tracing = { workspace = true }
 valveprotos = { workspace = true, features = ["gc-client"] }
+
+[lints]
+workspace = true

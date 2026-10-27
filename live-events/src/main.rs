@@ -1,18 +1,34 @@
 #![forbid(unsafe_code)]
-#![deny(clippy::all)]
-#![deny(unreachable_pub)]
-#![deny(clippy::pedantic)]
+#![cfg_attr(
+    test,
+    allow(
+        clippy::arithmetic_side_effects,
+        clippy::disallowed_macros,
+        clippy::disallowed_methods,
+        clippy::expect_used,
+        clippy::indexing_slicing,
+        clippy::panic,
+        clippy::panic_in_result_fn,
+        clippy::print_stderr,
+        clippy::print_stdout,
+        clippy::string_slice,
+        clippy::unreachable,
+        clippy::unwrap_in_result,
+        clippy::unwrap_used,
+        reason = "tests may panic"
+    )
+)]
 
+use core::net::{Ipv4Addr, SocketAddr};
 use core::time::Duration;
-use std::net::{Ipv4Addr, SocketAddr};
 
 use axum::ServiceExt;
 use axum::extract::Request;
 use deadlock_live_events::{StartupError, router};
 use tracing::{error, info, warn};
 use tracing_subscriber::EnvFilter;
-use tracing_subscriber::layer::SubscriberExt;
-use tracing_subscriber::util::SubscriberInitExt;
+use tracing_subscriber::layer::SubscriberExt as _;
+use tracing_subscriber::util::SubscriberInitExt as _;
 
 const PORT: u16 = 3000;
 
@@ -21,9 +37,11 @@ const PORT: u16 = 3000;
 const SHUTDOWN_GRACE: Duration = Duration::from_secs(5);
 
 fn init_tracing() {
-    let env_filter = EnvFilter::try_from_default_env().unwrap_or(EnvFilter::new(
-        "debug,hyper_util=warn,tower_http=info,reqwest=warn,rustls=warn,sqlx=warn,h2=warn",
-    ));
+    let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| {
+        EnvFilter::new(
+            "debug,hyper_util=warn,tower_http=info,reqwest=warn,rustls=warn,sqlx=warn,h2=warn",
+        )
+    });
     let fmt_layer = tracing_subscriber::fmt::layer();
 
     tracing_subscriber::registry()
@@ -46,7 +64,8 @@ async fn main() -> Result<(), StartupError> {
         .with_graceful_shutdown(async move {
             shutdown_signal().await;
             info!("Shutdown signal received, no longer accepting connections");
-            let _ = signalled_tx.send(());
+            // Fails only once `main` stopped waiting, when nothing needs the signal any more.
+            _ = signalled_tx.send(());
         })
         .into_future();
     let grace_over = async {

@@ -42,11 +42,9 @@ where
         CommaSeparated::List(vec) => Some(vec),
         CommaSeparated::Single(val) => Some(vec![val]),
         CommaSeparated::StringList(val) => {
-            let out = val
-                .iter()
-                .map(|s| s.parse())
-                .collect::<Result<Vec<_>, _>>()
-                .map_err(|_| serde::de::Error::custom("Failed to parse list item"))?;
+            let Ok(out) = val.iter().map(|s| s.parse()).collect::<Result<Vec<_>, _>>() else {
+                return Err(serde::de::Error::custom("Failed to parse list item"));
+            };
             (!out.is_empty()).then_some(out)
         }
         CommaSeparated::CommaStringList(str) => {
@@ -58,14 +56,16 @@ where
             }
 
             // `split` yields at least one item, so the list is never empty.
-            Some(
-                str.split(',')
-                    .map(|s| s.trim().parse())
-                    .collect::<Result<Vec<_>, _>>()
-                    .map_err(|_| {
-                        serde::de::Error::custom("Failed to parse comma separated list")
-                    })?,
-            )
+            let Ok(out) = str
+                .split(',')
+                .map(|s| s.trim().parse())
+                .collect::<Result<Vec<_>, _>>()
+            else {
+                return Err(serde::de::Error::custom(
+                    "Failed to parse comma separated list",
+                ));
+            };
+            Some(out)
         }
     })
 }
@@ -155,7 +155,9 @@ pub(crate) fn validate_broadcast_url(broadcast_url: &str) -> Result<(), APIError
         status: StatusCode::BAD_REQUEST,
         message: message.to_owned(),
     };
-    let url = Url::parse(broadcast_url).map_err(|_| bad_request("Invalid broadcast_url"))?;
+    let Ok(url) = Url::parse(broadcast_url) else {
+        return Err(bad_request("Invalid broadcast_url"));
+    };
     if !matches!(url.scheme(), "http" | "https") {
         return Err(bad_request("broadcast_url must be an http(s) URL"));
     }
@@ -180,9 +182,12 @@ pub(crate) fn validate_broadcast_url(broadcast_url: &str) -> Result<(), APIError
 /// caller. It is still checked, since the API's cached value is outside this service's control;
 /// a URL that fails is the upstream's fault, hence a 500 rather than a 400.
 pub(crate) fn validate_upstream_broadcast_url(broadcast_url: &str) -> Result<(), APIError> {
-    validate_broadcast_url(broadcast_url).map_err(|_| {
-        APIError::internal("The API returned a broadcast URL outside Valve's broadcast hosts")
-    })
+    if validate_broadcast_url(broadcast_url).is_err() {
+        return Err(APIError::internal(
+            "The API returned a broadcast URL outside Valve's broadcast hosts",
+        ));
+    }
+    Ok(())
 }
 
 /// Redirect hops a request may take.

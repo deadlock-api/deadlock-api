@@ -1,4 +1,3 @@
-use core::fmt::Write;
 use core::future::Future;
 use core::pin::Pin;
 use core::task::{Context, Poll};
@@ -24,7 +23,7 @@ pub(crate) struct CacheControlMiddleware {
 }
 
 impl CacheControlMiddleware {
-    pub(crate) fn new(max_age: Duration) -> Self {
+    pub(crate) const fn new(max_age: Duration) -> Self {
         Self {
             max_age,
             stale_while_revalidate: None,
@@ -33,49 +32,41 @@ impl CacheControlMiddleware {
         }
     }
 
-    pub(crate) fn private(mut self) -> Self {
+    pub(crate) const fn private(mut self) -> Self {
         self.is_private = true;
         self
     }
 
-    pub(crate) fn with_stale_while_revalidate(mut self, stale_while_revalidate: Duration) -> Self {
+    pub(crate) const fn with_stale_while_revalidate(
+        mut self,
+        stale_while_revalidate: Duration,
+    ) -> Self {
         self.stale_while_revalidate = Some(stale_while_revalidate);
         self
     }
 
-    pub(crate) fn with_stale_if_error(mut self, stale_if_error: Duration) -> Self {
+    pub(crate) const fn with_stale_if_error(mut self, stale_if_error: Duration) -> Self {
         self.stale_if_error = Some(stale_if_error);
         self
     }
 
     fn header_value(&self) -> Result<HeaderValue, InvalidHeaderValue> {
-        let mut header_value = String::new();
         if self.max_age.as_secs() == 0 {
             return Ok(HeaderValue::from_static("no-cache"));
         }
-        if self.is_private {
-            write!(&mut header_value, "private").ok();
-        } else {
-            write!(&mut header_value, "public").ok();
-        }
-        write!(&mut header_value, ", max-age={}", self.max_age.as_secs()).ok();
-        if let Some(stale_while_revalidate) = self.stale_while_revalidate {
-            write!(
-                &mut header_value,
-                ", stale-while-revalidate={}",
-                stale_while_revalidate.as_secs()
-            )
-            .ok();
-        }
-        if let Some(stale_if_error) = self.stale_if_error {
-            write!(
-                &mut header_value,
-                ", stale-if-error={}",
-                stale_if_error.as_secs()
-            )
-            .ok();
-        }
-        HeaderValue::from_str(&header_value)
+        let visibility = if self.is_private { "private" } else { "public" };
+        let stale_while_revalidate = self
+            .stale_while_revalidate
+            .map(|d| format!(", stale-while-revalidate={}", d.as_secs()))
+            .unwrap_or_default();
+        let stale_if_error = self
+            .stale_if_error
+            .map(|d| format!(", stale-if-error={}", d.as_secs()))
+            .unwrap_or_default();
+        HeaderValue::from_str(&format!(
+            "{visibility}, max-age={}{stale_while_revalidate}{stale_if_error}",
+            self.max_age.as_secs()
+        ))
     }
 }
 
@@ -136,7 +127,7 @@ mod tests {
     use axum::body::Body;
     use axum::http::{Request, StatusCode};
     use axum::routing::get;
-    use tower::ServiceExt;
+    use tower::ServiceExt as _;
 
     use super::*;
 

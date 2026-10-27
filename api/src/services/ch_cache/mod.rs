@@ -58,9 +58,9 @@ impl<T> Clone for Entry<T> {
 struct UntilDeadline;
 
 impl<T> Expiry<u128, Entry<T>> for UntilDeadline {
-    fn expire_after_create(&self, _: &u128, entry: &Entry<T>, _: Instant) -> Option<Duration> {
+    fn expire_after_create(&self, _: &u128, value: &Entry<T>, _: Instant) -> Option<Duration> {
         Some(
-            entry
+            value
                 .expires_at
                 .duration_since(SystemTime::now())
                 .unwrap_or_default(),
@@ -73,7 +73,7 @@ enum DiskSource {
     /// The process-wide tier configured at startup ([`disk::init`]), if any.
     Global,
     /// A fixed tier, for tests.
-    #[cfg_attr(not(test), expect(dead_code))]
+    #[cfg_attr(not(test), expect(dead_code, reason = "only tests build fixed tiers"))]
     Fixed(Option<Arc<disk::DiskTier>>),
 }
 
@@ -159,7 +159,10 @@ where
                 }
                 let entry = Entry {
                     value: Arc::new(fetch.await?),
-                    expires_at: SystemTime::now() + self.ttl,
+                    // A deadline past `SystemTime`'s range (absurd ttl) caches nothing.
+                    expires_at: SystemTime::now()
+                        .checked_add(self.ttl)
+                        .unwrap_or_else(SystemTime::now),
                 };
                 if let Some(tier) = self.disk() {
                     tier.store(&self.name, key, entry.expires_at, Arc::clone(&entry.value));
@@ -288,7 +291,7 @@ mod tests {
                 )
             })
             .await;
-        assert!(error.is_err());
+        error.unwrap_err();
         let ok = cache
             .get_or_fetch("SELECT 1", async { Ok(vec![7]) })
             .await

@@ -3,8 +3,8 @@ use std::collections::{HashMap, HashSet};
 
 use axum::http::StatusCode;
 use clickhouse::Row;
-use futures::StreamExt;
-use itertools::Itertools;
+use futures::StreamExt as _;
+use itertools::Itertools as _;
 use serde::{Deserialize, Serialize};
 use tracing::{instrument, warn};
 

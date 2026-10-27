@@ -28,7 +28,9 @@ pub(crate) type JwtResult<T> = Result<T, JwtError>;
 ///
 /// Tokens are valid for 7 days from creation.
 pub(crate) fn create_session_token(patron_id: Uuid, secret: &str) -> JwtResult<String> {
-    let expiration = Utc::now() + Duration::days(7);
+    // Out of `DateTime` range only in the far future; an already-expired token fails closed.
+    let now = Utc::now();
+    let expiration = now.checked_add_signed(Duration::days(7)).unwrap_or(now);
 
     let claims = PatronClaims {
         patron_id,
@@ -53,7 +55,7 @@ pub(crate) fn validate_session_token(token: &str, secret: &str) -> JwtResult<Pat
         &DecodingKey::from_secret(secret.as_bytes()),
         &Validation::default(),
     )
-    .map_err(|_| JwtError::InvalidToken)?;
+    .map_err(|_invalid| JwtError::InvalidToken)?;
 
     Ok(token_data.claims)
 }

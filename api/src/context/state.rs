@@ -91,8 +91,8 @@ pub(crate) struct AppStateInner {
 }
 
 impl AppState {
-    #[expect(clippy::too_many_lines)]
-    pub(crate) async fn from_env() -> Result<AppState, AppStateError> {
+    #[expect(clippy::too_many_lines, reason = "wires up every service in one place")]
+    pub(crate) async fn from_env() -> Result<Self, AppStateError> {
         let config = Config::from_env()?;
 
         // Create an HTTP client
@@ -275,7 +275,7 @@ impl AppState {
 
         debug!("Creating MCP snapshot catalog");
         let mcp_catalog = Arc::new(SnapshotCatalog::new(&config.mcp_snapshot)?);
-        mcp_catalog.clone().spawn_refresh_loop();
+        Arc::clone(&mcp_catalog).spawn_refresh_loop();
 
         if config.data_dump.enabled {
             debug!("Starting data dump");
@@ -420,7 +420,7 @@ async fn ch_health_check(
 }
 
 /// Exponential backoff (200ms..3s, 3 retries) giving up after `retry_timeout`.
-fn retry_config(retry_timeout: Duration) -> RetryConfig {
+const fn retry_config(retry_timeout: Duration) -> RetryConfig {
     RetryConfig {
         backoff: BackoffConfig {
             init_backoff: Duration::from_millis(200),

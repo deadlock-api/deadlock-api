@@ -6,7 +6,7 @@ mod render;
 mod settings;
 
 use axum::body::Bytes;
-use image::ImageEncoder;
+use image::ImageEncoder as _;
 use image::codecs::png::PngEncoder;
 
 pub(crate) use self::code::encode;
@@ -86,12 +86,15 @@ pub(crate) fn render_png(
         reason = "screen heights are far below f32's exact integer range"
     )]
     let mut image = render::render(settings, screen_height as f32)?;
-    let scale = scale.min(MAX_SCALED_SIZE / image.width().max(1)).max(1);
+    let fit = MAX_SCALED_SIZE
+        .checked_div(image.width())
+        .unwrap_or(MAX_SCALED_SIZE);
+    let scale = scale.min(fit).max(1);
     if scale > 1 {
         image = image::imageops::resize(
             &image,
-            image.width() * scale,
-            image.height() * scale,
+            image.width().saturating_mul(scale),
+            image.height().saturating_mul(scale),
             image::imageops::FilterType::Nearest,
         );
     }

@@ -7,7 +7,7 @@ use axum::response::IntoResponse;
 use axum_extra::extract::Query;
 use cached::macros::cached;
 use clickhouse::Row;
-use itertools::Itertools;
+use itertools::Itertools as _;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
@@ -25,8 +25,11 @@ use crate::utils::types::AccountIdQuery;
 ///
 /// Formula: `(badge / 10 - 1) * 6 + badge % 10`
 /// e.g. badge 82 → (8-1)*6 + 2 = 44
-fn badge_to_idx(badge: i32) -> i32 {
-    (badge / 10 - 1) * 6 + badge % 10
+const fn badge_to_idx(badge: i32) -> i32 {
+    (badge / 10)
+        .saturating_sub(1)
+        .saturating_mul(6)
+        .saturating_add(badge % 10)
 }
 
 /// Convert a badge index (1..=66) back to a badge ID.
@@ -35,7 +38,11 @@ fn badge_to_idx(badge: i32) -> i32 {
 /// Out-of-range values are clamped.
 fn idx_to_badge(idx: i32) -> i32 {
     let idx = idx.clamp(1, 66);
-    10 * ((idx - 1) / 6) + 11 + (idx - 1) % 6
+    let zero_based = idx.saturating_sub(1);
+    (zero_based / 6)
+        .saturating_mul(10)
+        .saturating_add(11)
+        .saturating_add(zero_based % 6)
 }
 
 /// Progress at which Eternus I starts. Progress keeps accumulating past it without a ceiling.
@@ -53,15 +60,18 @@ fn badge_from_flat_progress(flat_progress: u32, initial_display_rank: u32) -> u3
         return initial_display_rank.max(111);
     }
     let idx = flat_progress / 1000;
-    (idx / 7 + 1) * 10 + (idx % 7 + 1).min(6)
+    (idx / 7)
+        .saturating_add(1)
+        .saturating_mul(10)
+        .saturating_add((idx % 7).saturating_add(1).min(6))
 }
 
 /// Progress into the current subrank and the width of that subrank, both in progress points.
 ///
 /// The sixth subtier spans two of the 1000-point steps, so it is 2000 wide.
-fn subrank_progress(flat_progress: u32) -> (u32, u32) {
+const fn subrank_progress(flat_progress: u32) -> (u32, u32) {
     let step = flat_progress / 1000 % 7;
-    let progress = flat_progress % 1000 + if step == 6 { 1000 } else { 0 };
+    let progress = (flat_progress % 1000).saturating_add(if step == 6 { 1000 } else { 0 });
     let width = if step >= 5 { 2000 } else { 1000 };
     (progress, width)
 }
@@ -532,7 +542,11 @@ fn average_badge(badges: &[u32]) -> u32 {
     }
     // Badge values are not contiguous (16 is followed by 21), so the average is taken over the
     // badge index rather than the badge itself.
-    #[expect(clippy::cast_precision_loss, clippy::cast_possible_truncation)]
+    #[expect(
+        clippy::cast_precision_loss,
+        clippy::cast_possible_truncation,
+        reason = "badge indices are small, so the rounded mean fits i32 exactly"
+    )]
     let avg_idx = (f64::from(indices.iter().sum::<i32>()) / indices.len() as f64).round() as i32;
     idx_to_badge(avg_idx).cast_unsigned()
 }
@@ -755,8 +769,8 @@ mod tests {
             parse("123456, 76561198123456789,").unwrap(),
             vec![123456, 163191061]
         );
-        assert!(parse("123456,76561197960265728").is_err()); // Steam ID 64 of account 0
-        assert!(parse("123456,0").is_err()); // Account 0
-        assert!(parse("4294967296").is_err());
+        parse("123456,76561197960265728").unwrap_err(); // Steam ID 64 of account 0
+        parse("123456,0").unwrap_err(); // Account 0
+        parse("4294967296").unwrap_err();
     }
 }

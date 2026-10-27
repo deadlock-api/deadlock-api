@@ -1,14 +1,23 @@
 #![forbid(unsafe_code)]
-#![deny(clippy::all)]
-#![deny(unreachable_pub)]
-#![deny(clippy::correctness)]
-#![deny(clippy::suspicious)]
-#![deny(clippy::style)]
-#![deny(clippy::complexity)]
-#![deny(clippy::perf)]
-#![deny(clippy::pedantic)]
-#![deny(clippy::std_instead_of_core)]
-#![allow(clippy::should_implement_trait)]
+#![cfg_attr(
+    test,
+    allow(
+        clippy::arithmetic_side_effects,
+        clippy::disallowed_macros,
+        clippy::disallowed_methods,
+        clippy::expect_used,
+        clippy::indexing_slicing,
+        clippy::panic,
+        clippy::panic_in_result_fn,
+        clippy::print_stderr,
+        clippy::print_stdout,
+        clippy::string_slice,
+        clippy::unreachable,
+        clippy::unwrap_in_result,
+        clippy::unwrap_used,
+        reason = "tests may panic"
+    )
+)]
 
 use core::ops::Range;
 
@@ -22,39 +31,32 @@ pub struct Charsor<'a> {
 
 impl<'a> Charsor<'a> {
     #[must_use]
-    pub fn new(input: &'a str) -> Self {
+    pub const fn new(input: &'a str) -> Self {
         Self { input, offset: 0 }
     }
 
     /// peek returns but does not consume the next char in the input.
     #[must_use]
     pub fn peek(&self) -> Option<char> {
-        self.input[self.offset..].chars().next()
-    }
-
-    /// next advances the offset and returns the next char.
-    pub fn next(&mut self) -> Option<char> {
-        self.peek().inspect(|ch| {
-            self.offset += ch.len_utf8();
-        })
+        self.input.get(self.offset..)?.chars().next()
     }
 
     /// prev returns the previous char in the input, without modifying the offset.
     #[must_use]
     pub fn prev(&self) -> Option<char> {
-        self.input[..self.offset].chars().next_back()
+        self.input.get(..self.offset)?.chars().next_back()
     }
 
     /// `eat_while` advances the offset and skips over chars while the given closure returns true.
     /// returns the number of chars skipped.
     pub fn eat_while(&mut self, func: impl Fn(char) -> bool) -> usize {
-        let mut n = 0;
+        let mut n: usize = 0;
         while let Some(ch) = self.peek() {
             if !func(ch) {
                 break;
             }
-            n += 1;
-            self.offset += ch.len_utf8();
+            n = n.saturating_add(1);
+            self.offset = self.offset.saturating_add(ch.len_utf8());
         }
         n
     }
@@ -62,20 +64,32 @@ impl<'a> Charsor<'a> {
     /// returns the byte position of the next char, relative to the beginning of the input, or the
     /// length of the underlying str if there are no more characters.
     #[must_use]
-    pub fn offset(&self) -> usize {
+    pub const fn offset(&self) -> usize {
         self.offset
     }
 
     /// returns the byte position of the prev char, relative to the beginning of the input.
     pub fn prev_offset(&self) -> usize {
-        self.offset - self.prev().map_or(0, char::len_utf8)
+        self.offset
+            .saturating_sub(self.prev().map_or(0, char::len_utf8))
     }
 
-    /// returns a slice of the input str at the specified byte range. panics if the range extends
-    /// beyond the length of the input str.
+    /// returns a slice of the input str at the specified byte range, or `None` if the range
+    /// extends beyond the length of the input str or does not fall on char boundaries.
     #[must_use]
-    pub fn slice_range(&self, range: Range<usize>) -> &'a str {
-        &self.input[range]
+    pub fn slice_range(&self, range: Range<usize>) -> Option<&'a str> {
+        self.input.get(range)
+    }
+}
+
+impl Iterator for Charsor<'_> {
+    type Item = char;
+
+    /// next advances the offset and returns the next char.
+    fn next(&mut self) -> Option<char> {
+        self.peek().inspect(|ch| {
+            self.offset = self.offset.saturating_add(ch.len_utf8());
+        })
     }
 }
 
@@ -147,6 +161,9 @@ mod tests {
             start: 0,
             end: INPUT_CHARS[0].len_utf8(),
         };
-        assert_eq!(cc.slice_range(range), INPUT_CHARS[0].to_string());
+        assert_eq!(
+            cc.slice_range(range),
+            Some(INPUT_CHARS[0].to_string().as_str())
+        );
     }
 }

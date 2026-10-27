@@ -2,7 +2,7 @@ use thiserror::Error;
 
 /// Anything that can go wrong while answering a [`super::query`].
 #[derive(Error, Debug)]
-pub(crate) enum Error {
+pub(crate) enum DemoError {
     #[error("Arrow error: {0}")]
     Arrow(#[from] datafusion::arrow::error::ArrowError),
 
@@ -30,4 +30,4 @@ pub(crate) enum Error {
     ParseTask(String),
 }
 
-pub(crate) type Result<T> = core::result::Result<T, Error>;
+pub(crate) type Result<T> = core::result::Result<T, DemoError>;

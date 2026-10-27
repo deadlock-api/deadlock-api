@@ -8,7 +8,7 @@ use object_store::local::LocalFileSystem;
 use redis::RedisResult;
 use redis::aio::{ConnectionManager, ConnectionManagerConfig};
 use sqlx::postgres::{PgConnectOptions, PgPoolOptions};
-use sqlx::{ConnectOptions, Pool, Postgres};
+use sqlx::{ConnectOptions as _, Pool, Postgres};
 use tracing::log::LevelFilter;
 
 #[derive(Debug, thiserror::Error)]
@@ -19,6 +19,8 @@ pub enum ClientError {
     ObjectStore(#[from] object_store::Error),
     #[error(transparent)]
     Postgres(#[from] sqlx::Error),
+    #[error(transparent)]
+    Http(#[from] reqwest::Error),
 }
 
 pub fn get_ch_client() -> Result<clickhouse::Client, VarError> {
@@ -84,8 +86,9 @@ pub async fn get_pg_client() -> Result<Pool<Postgres>, ClientError> {
         .await?)
 }
 
-/// Same setup as the API's connection: it reconnects after Redis restarts, and one retry keeps
-/// commands failing fast while Redis is down (the default of six makes each one wait ~9.5 s).
+/// Same setup as the API's connection.
+///
+/// It reconnects after Redis restarts, and one retry keeps commands failing fast while Redis is down (the default of six makes each one wait ~9.5 s).
 /// Startup still fails at once if Redis is down.
 pub async fn get_redis_client() -> RedisResult<ConnectionManager> {
     redis::Client::open(env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1".to_owned()))?

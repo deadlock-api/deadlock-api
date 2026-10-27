@@ -7,7 +7,7 @@ use axum::response::IntoResponse;
 use uuid::Uuid;
 
 use crate::context::AppState;
-use crate::error::{APIResult, LogInternal};
+use crate::error::{APIResult, LogInternal as _};
 use crate::routes::v1::feedback::structs::{FeedbackSubmission, truncate_user_agent};
 use crate::services::rate_limiter::Quota;
 use crate::services::rate_limiter::extractor::RateLimitKey;

@@ -20,7 +20,10 @@ impl EntityClasses {
 
         // bits is the number of bits to read for entity classes. stolen from
         // butterfly's entity_classes.hpp.
-        let bits = (class_count as f32).log2().ceil() as usize;
+        // that is ceil(log2(class_count)), the number of bits that can address every class.
+        let bits = class_count
+            .checked_next_power_of_two()
+            .map_or(usize::BITS, usize::trailing_zeros) as usize;
 
         let class_infos: Vec<ClassInfo> = cmd
             .classes
@@ -39,6 +42,6 @@ impl EntityClasses {
 
     #[must_use]
     pub fn by_id(&self, class_id: i32) -> Option<&ClassInfo> {
-        self.class_infos.get(class_id as usize)
+        self.class_infos.get(usize::try_from(class_id).ok()?)
     }
 }

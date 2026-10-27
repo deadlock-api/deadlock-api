@@ -8,6 +8,10 @@ use crate::cmd::run_spectate_bot::SpectatedMatchType;
 use crate::hltv::hltv_download;
 use crate::hltv::hltv_download::DownloadError;
 
+#[expect(
+    clippy::cast_precision_loss,
+    reason = "fragment numbers, durations and sizes stay far below 2^53"
+)]
 pub(crate) async fn download_single_hltv_meta(
     match_type: SpectatedMatchType,
     match_id: u64,
@@ -17,13 +21,13 @@ pub(crate) async fn download_single_hltv_meta(
     let label = match_type.label();
 
     // Fragments are fetched for as long as the match runs; bound each read, not the total.
-    let client = common::streaming_http_client();
+    let client = common::streaming_http_client()?;
     let mut recv = hltv_download::download_match_mpsc(client, match_id, broadcast_url).await?;
 
-    let mut fragment_count = 0;
+    let mut fragment_count: u32 = 0;
     let mut did_receive_last_fragment = false;
 
-    let mut total_byte_size = 0;
+    let mut total_byte_size: usize = 0;
 
     let mut seen_first_fragment = false;
 
@@ -59,8 +63,8 @@ pub(crate) async fn download_single_hltv_meta(
                 match_id: Some(match_id),
             });
         }
-        fragment_count += 1;
-        total_byte_size += byte_size;
+        fragment_count = fragment_count.saturating_add(1);
+        total_byte_size = total_byte_size.saturating_add(byte_size);
     }
     let diff_secs = start.elapsed().as_secs();
     let dur = format_duration(diff_secs);

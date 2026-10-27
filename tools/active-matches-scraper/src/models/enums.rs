@@ -40,15 +40,15 @@ pub(crate) enum RegionMode {
 impl From<u8> for MatchMode {
     fn from(value: u8) -> Self {
         match value {
-            1 => MatchMode::Unranked,
-            2 => MatchMode::PrivateLobby,
-            3 => MatchMode::CoopBot,
-            4 => MatchMode::Ranked,
-            5 => MatchMode::ServerTest,
-            6 => MatchMode::Tutorial,
-            7 => MatchMode::HeroLabs,
-            8 => MatchMode::NewPlayerPlacement,
-            _ => MatchMode::Invalid,
+            1 => Self::Unranked,
+            2 => Self::PrivateLobby,
+            3 => Self::CoopBot,
+            4 => Self::Ranked,
+            5 => Self::ServerTest,
+            6 => Self::Tutorial,
+            7 => Self::HeroLabs,
+            8 => Self::NewPlayerPlacement,
+            _ => Self::Invalid,
         }
     }
 }
@@ -56,11 +56,11 @@ impl From<u8> for MatchMode {
 impl From<u8> for GameMode {
     fn from(value: u8) -> Self {
         match value {
-            1 => GameMode::Normal,
-            2 => GameMode::OneVsOneTest,
-            3 => GameMode::Sandbox,
-            4 => GameMode::StreetBrawl,
-            _ => GameMode::Invalid,
+            1 => Self::Normal,
+            2 => Self::OneVsOneTest,
+            3 => Self::Sandbox,
+            4 => Self::StreetBrawl,
+            _ => Self::Invalid,
         }
     }
 }
@@ -68,12 +68,12 @@ impl From<u8> for GameMode {
 impl From<u8> for RegionMode {
     fn from(value: u8) -> Self {
         match value {
-            1 => RegionMode::Europe,
-            2 => RegionMode::SEAsia,
-            3 => RegionMode::SAmerica,
-            4 => RegionMode::Russia,
-            5 => RegionMode::Oceania,
-            _ => RegionMode::Row,
+            1 => Self::Europe,
+            2 => Self::SEAsia,
+            3 => Self::SAmerica,
+            4 => Self::Russia,
+            5 => Self::Oceania,
+            _ => Self::Row,
         }
     }
 }

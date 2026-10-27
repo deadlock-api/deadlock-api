@@ -67,9 +67,9 @@ pub(crate) fn render(settings: &Settings, screen_height: f32) -> Result<RgbaImag
     if extent > (MAX_IMAGE_SIZE / 2 - PADDING) as f32 {
         return Err(CrosshairError::TooLarge);
     }
-    let grid = Grid::new(extent as usize + PADDING, scale);
+    let grid = Grid::new((extent as usize).saturating_add(PADDING), scale);
 
-    let mut canvas = vec![[0.0f32; 4]; grid.size * grid.size];
+    let mut canvas = vec![[0.0f32; 4]; grid.size.saturating_mul(grid.size)];
     for shape in shapes
         .iter()
         .filter(|s| s.opacity > 0.0 && s.size.0 > 0.0 && s.size.1 > 0.0)
@@ -169,9 +169,9 @@ struct Grid {
 }
 
 impl Grid {
-    fn new(half: usize, scale: f32) -> Self {
+    const fn new(half: usize, scale: f32) -> Self {
         Self {
-            size: 2 * half,
+            size: half.saturating_mul(2),
             half: half as f32,
             scale,
         }
@@ -205,13 +205,20 @@ fn paint(canvas: &mut [[f32; 4]], grid: &Grid, shape: &Shape) {
         rect_coverage(grid, shape, &columns, &rows)
     };
 
-    for (y, row) in rows.clone().zip(coverage.chunks_exact(columns.len())) {
-        for (x, &hits) in columns.clone().zip(row) {
+    // `span` keeps both ranges inside the grid; an empty one has nothing to paint.
+    if columns.is_empty() {
+        return;
+    }
+    let canvas_rows = canvas.chunks_exact_mut(grid.size).skip(rows.start);
+    for (canvas_row, row) in canvas_rows.zip(coverage.chunks_exact(columns.len())) {
+        let Some(pixels) = canvas_row.get_mut(columns.clone()) else {
+            continue;
+        };
+        for (pixel, &hits) in pixels.iter_mut().zip(row) {
             if hits == 0 {
                 continue;
             }
             let alpha = shape.opacity * f32::from(hits) / SAMPLES;
-            let pixel = &mut canvas[y * grid.size + x];
             for (channel, color) in pixel.iter_mut().zip(shape.color) {
                 *channel = color * alpha + *channel * (1.0 - alpha);
             }
@@ -240,8 +247,9 @@ fn rect_coverage(
                 for sub in 0..SUBSAMPLES {
                     let v = grid.sample(pixel, sub, center).abs();
                     if v <= outer / 2.0 {
-                        inside += 1;
-                        in_hole += u16::from(hole.is_some_and(|hole| v <= hole / 2.0));
+                        inside = inside.saturating_add(1);
+                        in_hole = in_hole
+                            .saturating_add(u16::from(hole.is_some_and(|hole| v <= hole / 2.0)));
                     }
                 }
                 (inside, in_hole)
@@ -251,7 +259,12 @@ fn rect_coverage(
     let xs = axis(columns, shape.center.0, w, hole_w);
     let ys = axis(rows, shape.center.1, h, hole_h);
     ys.iter()
-        .flat_map(|&(y, y_hole)| xs.iter().map(move |&(x, x_hole)| x * y - x_hole * y_hole))
+        .flat_map(|&(y, y_hole)| {
+            xs.iter().map(move |&(x, x_hole)| {
+                x.saturating_mul(y)
+                    .saturating_sub(x_hole.saturating_mul(y_hole))
+            })
+        })
         .collect()
 }
 
@@ -313,14 +326,18 @@ fn round_coverage(
                 ) {
                     (Some(0), _) => return 0,
                     // Every sample is inside the circle, so the hole's samples are all it loses.
-                    (Some(inside), Some(in_hole)) => return (inside - in_hole) as u16,
+                    (Some(inside), Some(in_hole)) => {
+                        return inside.saturating_sub(in_hole) as u16;
+                    }
                     _ => {}
                 }
                 let mut hits = 0u16;
                 for &yy in &y.values {
                     for &xx in &x.values {
                         let d = xx + yy;
-                        hits += u16::from(d <= radius_sq && !hole_sq.is_some_and(|hole| d <= hole));
+                        hits = hits.saturating_add(u16::from(
+                            d <= radius_sq && !hole_sq.is_some_and(|hole| d <= hole),
+                        ));
                     }
                 }
                 hits

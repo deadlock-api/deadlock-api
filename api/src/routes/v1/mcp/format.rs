@@ -4,7 +4,7 @@ use std::sync::Arc;
 use arrow_duckdb::compute::cast;
 use arrow_duckdb::json::WriterBuilder;
 use arrow_duckdb::json::writer::{JsonArray, JsonFormat};
-use duckdb::arrow::array::{AsArray, StructArray};
+use duckdb::arrow::array::{AsArray as _, StructArray};
 use duckdb::arrow::datatypes::{DataType, FieldRef, Fields};
 use duckdb::arrow::error::ArrowError;
 use duckdb::arrow::record_batch::RecordBatch;
@@ -58,7 +58,9 @@ pub(super) fn format_query_output(output: &QueryOutput) -> Result<QueryResult, A
     let mut chars = toon(&result).len();
     while !result.rows.is_empty() && chars > MAX_CHARS {
         let remove = max(1, result.rows.len() / 10);
-        result.rows.truncate(result.rows.len() - remove);
+        result
+            .rows
+            .truncate(result.rows.len().saturating_sub(remove));
         result.row_count = result.rows.len();
         result.truncated = Some(true);
         result.warning = Some(format!(
@@ -172,14 +174,19 @@ pub(super) fn sql_type_name(data_type: &DataType) -> String {
                 .collect::<Vec<_>>()
                 .join(", ")
         ),
-        DataType::Map(field, _) => match field.data_type() {
-            DataType::Struct(kv) if kv.len() == 2 => format!(
-                "MAP({}, {})",
-                sql_type_name(kv[0].data_type()),
-                sql_type_name(kv[1].data_type())
-            ),
-            other => format!("MAP({})", sql_type_name(other)),
-        },
+        DataType::Map(field, _) => {
+            if let DataType::Struct(kv) = field.data_type()
+                && let [key, value] = &**kv
+            {
+                format!(
+                    "MAP({}, {})",
+                    sql_type_name(key.data_type()),
+                    sql_type_name(value.data_type())
+                )
+            } else {
+                format!("MAP({})", sql_type_name(field.data_type()))
+            }
+        }
         DataType::Dictionary(_, value) => sql_type_name(value),
         DataType::RunEndEncoded(_, value) => sql_type_name(value.data_type()),
         other => other.to_string(),

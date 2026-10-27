@@ -35,8 +35,8 @@ impl BrokerStock {
         let stock = self.stock.unwrap_or_default();
         match title {
             SPAWN_ANNOUNCEMENT => self.raise_to(tick, 1),
-            RESTOCK_ANNOUNCEMENT if stock < 1 || tick - self.tick > DEDUP_TICKS => {
-                self.raise_to(tick, stock.max(1) + 1)
+            RESTOCK_ANNOUNCEMENT if stock < 1 || tick.saturating_sub(self.tick) > DEDUP_TICKS => {
+                self.raise_to(tick, stock.max(1).saturating_add(1))
             }
             _ => Self::none(),
         }
@@ -49,10 +49,10 @@ impl BrokerStock {
         }
         self.stock = Some(stock);
         self.tick = tick;
-        (from + 1)..(stock + 1)
+        from.saturating_add(1)..stock.saturating_add(1)
     }
 
-    fn none() -> Range<i32> {
+    const fn none() -> Range<i32> {
         0..0
     }
 }

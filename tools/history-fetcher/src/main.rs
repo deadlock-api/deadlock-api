@@ -1,15 +1,23 @@
 #![forbid(unsafe_code)]
-#![deny(clippy::all)]
-#![deny(unreachable_pub)]
-#![deny(clippy::correctness)]
-#![deny(clippy::suspicious)]
-#![deny(clippy::style)]
-#![deny(clippy::complexity)]
-#![deny(clippy::perf)]
-#![deny(clippy::pedantic)]
-#![deny(clippy::std_instead_of_core)]
-#![expect(clippy::cast_precision_loss)]
-#![expect(clippy::cast_possible_truncation)]
+#![cfg_attr(
+    test,
+    allow(
+        clippy::arithmetic_side_effects,
+        clippy::disallowed_macros,
+        clippy::disallowed_methods,
+        clippy::expect_used,
+        clippy::indexing_slicing,
+        clippy::panic,
+        clippy::panic_in_result_fn,
+        clippy::print_stderr,
+        clippy::print_stdout,
+        clippy::string_slice,
+        clippy::unreachable,
+        clippy::unwrap_in_result,
+        clippy::unwrap_used,
+        reason = "tests may panic"
+    )
+)]
 
 use core::time::Duration;
 use std::collections::hash_map::Entry;
@@ -17,7 +25,7 @@ use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, LazyLock};
 
 use common::{BatchInserter, BatchInserterConfig, InsertAck};
-use futures::StreamExt;
+use futures::StreamExt as _;
 use metrics::{counter, gauge};
 use sqlx::{Pool, Postgres};
 use tokio::sync::RwLock;
@@ -81,6 +89,8 @@ enum Error {
     Env(#[from] std::env::VarError),
     #[error(transparent)]
     Client(#[from] common::ClientError),
+    #[error(transparent)]
+    Http(#[from] reqwest::Error),
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -92,7 +102,7 @@ async fn main() -> Result<(), Error> {
     let _otel_guard = common::init_tracing(env!("CARGO_PKG_NAME"));
     common::init_metrics()?;
 
-    let http_client = common::http_client();
+    let http_client = common::http_client()?;
     let ch_client = common::get_ch_client()?;
 
     // Initialize PostgreSQL connection pool for prioritization queries
@@ -105,9 +115,9 @@ async fn main() -> Result<(), Error> {
     let prioritized_accounts = initialize_prioritized_accounts(&pg_pool).await;
 
     // Spawn background task to periodically refresh prioritized accounts
-    spawn_prioritization_refresh_task(pg_pool.clone(), prioritized_accounts.clone());
+    spawn_prioritization_refresh_task(pg_pool.clone(), Arc::clone(&prioritized_accounts));
 
-    spawn_rank_interval_refresh_task();
+    spawn_rank_interval_refresh_task()?;
 
     // All fetchers queue their entries here; they are flushed in one CH insert once
     // HISTORY_BATCH_SIZE rows are pending or HISTORY_FLUSH_INTERVAL_MS elapsed.
@@ -173,14 +183,14 @@ async fn main() -> Result<(), Error> {
 }
 
 /// Keeps [`RANK_INTERVAL`] current.
-fn spawn_rank_interval_refresh_task() {
+fn spawn_rank_interval_refresh_task() -> Result<(), common::ClientError> {
     common::spawn_season_refresh_task(|season| {
         let interval = season.map(|s| s.interval);
         debug!(rank_interval = ?interval, "Refreshed ranked interval");
         *RANK_INTERVAL
             .write()
             .unwrap_or_else(std::sync::PoisonError::into_inner) = interval;
-    });
+    })
 }
 
 fn rank_interval() -> Option<u32> {
@@ -216,7 +226,7 @@ async fn update_prioritized_account(
             if attempts > 0 {
                 counter!("history_fetcher.prioritized_fetch.retry").increment(1);
             }
-            attempts += 1;
+            attempts = attempts.saturating_add(1);
             async {
                 update_account(inserter, http_client, account, Some(bot_id))
                     .await
@@ -254,16 +264,20 @@ async fn update_prioritized_account(
     }
 }
 
-/// Marks `account` as last fetched one window ago, so the next cycle picks it up again.
-/// `false` if it is no longer tracked.
+/// Marks `account` as last fetched one window ago (or never, if the clock does not reach that
+/// far back), so the next cycle picks it up again. `false` if it is no longer tracked.
 async fn requeue(prioritized_accounts: &PrioritizedAccountsMap, account: u32) -> bool {
     let window = Duration::from_secs(*PRIORITIZATION_WINDOW_SECS);
-    let mut map = prioritized_accounts.write().await;
-    let Some(entry) = map.get_mut(&i64::from(account)) else {
-        return false;
-    };
-    entry.1 = Some(Instant::now() - window);
-    true
+    if let Some(entry) = prioritized_accounts
+        .write()
+        .await
+        .get_mut(&i64::from(account))
+    {
+        entry.1 = Instant::now().checked_sub(window);
+        true
+    } else {
+        false
+    }
 }
 
 /// Fetches an account's match history and queues its entries for insertion. `None` if the
@@ -394,6 +408,10 @@ async fn fetch_account_match_history(
 /// Initializes the prioritized accounts map by fetching all prioritized accounts
 /// that are friends with a bot from the database.
 /// All accounts start with `last_fetched_at = None` to indicate they haven't been fetched yet.
+#[expect(
+    clippy::cast_precision_loss,
+    reason = "account counts stay far below 2^53"
+)]
 async fn initialize_prioritized_accounts(pg_pool: &Pool<Postgres>) -> PrioritizedAccountsMap {
     let accounts = match common::get_all_prioritized_accounts_with_bots(pg_pool).await {
         Ok(accounts) => {
@@ -450,6 +468,10 @@ async fn get_due_prioritized_accounts(accounts: &PrioritizedAccountsMap) -> Vec<
 
     map.iter()
         .filter_map(|(&steam_id3, (bot_id, last_fetched))| {
+            let Ok(account) = u32::try_from(steam_id3) else {
+                warn!(steam_id3, "Prioritized account id is not a valid account id, skipping");
+                return None;
+            };
             if let Some(last) = last_fetched {
                 let since = now.duration_since(*last);
                 if since <= window {
@@ -463,8 +485,7 @@ async fn get_due_prioritized_accounts(accounts: &PrioritizedAccountsMap) -> Vec<
                 );
                 counter!("history_fetcher.prioritized_fetch.sla_breach").increment(1);
             }
-            #[expect(clippy::cast_sign_loss)]
-            Some((steam_id3 as u32, bot_id.clone()))
+            Some((account, bot_id.clone()))
         })
         .collect()
 }
@@ -472,6 +493,10 @@ async fn get_due_prioritized_accounts(accounts: &PrioritizedAccountsMap) -> Vec<
 /// Refreshes the prioritized accounts map from the database.
 /// Adds new accounts with `last_fetched_at = None` and removes accounts
 /// that are no longer prioritized or no longer friends with a bot.
+#[expect(
+    clippy::cast_precision_loss,
+    reason = "account counts stay far below 2^53"
+)]
 async fn refresh_prioritized_accounts(pg_pool: &Pool<Postgres>, accounts: &PrioritizedAccountsMap) {
     let current_prioritized = match common::get_all_prioritized_accounts_with_bots(pg_pool).await {
         Ok(accounts) => accounts,
@@ -494,15 +519,15 @@ async fn refresh_prioritized_accounts(pg_pool: &Pool<Postgres>, accounts: &Prior
         }
         keep
     });
-    let removed_count = before - map.len();
+    let removed_count = before.saturating_sub(map.len());
 
     // Add new accounts and update bot_id for existing ones
-    let mut added_count = 0;
+    let mut added_count: usize = 0;
     for (id, bot_id) in current_map {
         match map.entry(id) {
             Entry::Vacant(e) => {
                 e.insert((bot_id, None));
-                added_count += 1;
+                added_count = added_count.saturating_add(1);
                 debug!(steam_id3 = id, "Added new account to prioritized tracking");
             }
             Entry::Occupied(mut e) => {

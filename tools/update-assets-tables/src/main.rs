@@ -1,13 +1,23 @@
 #![forbid(unsafe_code)]
-#![deny(clippy::all)]
-#![deny(unreachable_pub)]
-#![deny(clippy::correctness)]
-#![deny(clippy::suspicious)]
-#![deny(clippy::style)]
-#![deny(clippy::complexity)]
-#![deny(clippy::perf)]
-#![deny(clippy::pedantic)]
-#![deny(clippy::std_instead_of_core)]
+#![cfg_attr(
+    test,
+    allow(
+        clippy::arithmetic_side_effects,
+        clippy::disallowed_macros,
+        clippy::disallowed_methods,
+        clippy::expect_used,
+        clippy::indexing_slicing,
+        clippy::panic,
+        clippy::panic_in_result_fn,
+        clippy::print_stderr,
+        clippy::print_stdout,
+        clippy::string_slice,
+        clippy::unreachable,
+        clippy::unwrap_in_result,
+        clippy::unwrap_used,
+        reason = "tests may panic"
+    )
+)]
 
 use core::time::Duration;
 
@@ -15,7 +25,7 @@ use metrics::counter;
 use models::{Hero, Item};
 use tracing::{debug, error, info, instrument, warn};
 
-use crate::models::{ChHero, ChItem, ItemType};
+use crate::models::{ChHero, ChItem};
 
 mod models;
 
@@ -25,6 +35,8 @@ enum Error {
     Metrics(#[from] common::MetricsError),
     #[error(transparent)]
     Env(#[from] std::env::VarError),
+    #[error(transparent)]
+    Http(#[from] reqwest::Error),
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -47,13 +59,17 @@ const MAX_FETCH_ATTEMPTS: u32 = 4;
 const CACHE_BUST_AFTER_ATTEMPTS: u32 = 2;
 
 #[tokio::main]
+#[expect(
+    clippy::infinite_loop,
+    reason = "the service runs until run_until_shutdown drops the loop on a shutdown signal"
+)]
 async fn main() -> Result<(), Error> {
     let _otel_guard = common::init_tracing(env!("CARGO_PKG_NAME"));
     common::init_metrics()?;
 
     let mut interval = tokio::time::interval(Duration::from_secs(UPDATE_INTERVAL_S));
     let ch_client = common::get_ch_client()?;
-    let http_client = common::http_client();
+    let http_client = common::http_client()?;
     common::run_until_shutdown(async move {
         loop {
             interval.tick().await;
@@ -79,14 +95,14 @@ async fn fetch_with_retries<T: serde::de::DeserializeOwned>(
     http_client: &reqwest::Client,
     base_url: &str,
 ) -> reqwest::Result<T> {
-    let mut attempt = 0;
+    let mut attempt: u32 = 0;
     let backoff = common::Backoff {
         retries: MAX_FETCH_ATTEMPTS - 1,
         initial_delay: Duration::from_secs(1),
         max_delay: Duration::from_secs(4),
     };
     common::retry_with_backoff(&format!("Fetching {base_url}"), backoff, || {
-        attempt += 1;
+        attempt = attempt.saturating_add(1);
         let url = if attempt > CACHE_BUST_AFTER_ATTEMPTS {
             let bust = std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
@@ -133,18 +149,18 @@ async fn update_heroes(
     for hero in heroes {
         if hero.disabled.is_some_and(|d| d) {
             debug!("Hero {} is disabled, skipping", hero.name);
-            skipped_disabled += 1;
+            skipped_disabled = skipped_disabled.saturating_add(1);
             continue;
         }
         if hero.in_development.is_some_and(|d| d) {
             debug!("Hero {} is in development, skipping", hero.name);
-            skipped_in_dev += 1;
+            skipped_in_dev = skipped_in_dev.saturating_add(1);
             continue;
         }
         debug!("Inserting hero {} (id={})", hero.name, hero.id);
         let ch_hero: ChHero = hero.into();
         insert.write(&ch_hero).await?;
-        inserted += 1;
+        inserted = inserted.saturating_add(1);
         counter!("assets_updater.heroes.updated").increment(1);
     }
     insert.end().await?;
@@ -176,23 +192,23 @@ async fn update_items(
 
     let mut skipped_not_shopable: u32 = 0;
     let mut skipped_unknown_type: u32 = 0;
-    let items: Vec<Item> = raw_items
+    let items: Vec<ChItem> = raw_items
         .into_iter()
         .filter(|i| {
             let keep = i.shopable.is_none_or(|s| s);
             if !keep {
-                skipped_not_shopable += 1;
+                skipped_not_shopable = skipped_not_shopable.saturating_add(1);
                 debug!("Item {} skipped: not shopable", i.name);
             }
             keep
         })
-        .filter(|i| {
-            let keep = i.r#type != ItemType::Unknown;
-            if !keep {
-                skipped_unknown_type += 1;
+        .filter_map(|i| match ChItem::try_from(i) {
+            Ok(item) => Some(item),
+            Err(i) => {
+                skipped_unknown_type = skipped_unknown_type.saturating_add(1);
                 debug!("Item {} skipped: unknown type", i.name);
+                None
             }
-            keep
         })
         .collect();
 
@@ -203,8 +219,8 @@ async fn update_items(
     let mut inserted: u32 = 0;
     for item in items {
         debug!("Inserting item {} (id={})", item.name, item.id);
-        insert.write(&item.into()).await?;
-        inserted += 1;
+        insert.write(&item).await?;
+        inserted = inserted.saturating_add(1);
         counter!("assets_updater.items.updated").increment(1);
     }
     insert.end().await?;

@@ -54,15 +54,15 @@ pub(crate) fn build(dir: &Path, manifest: &Manifest) -> Result<BuiltCatalog, Dum
             continue;
         }
         let mut files = table.published_files();
-        if files.is_empty() {
-            continue;
-        }
         // Newest file first: with additive schema changes it carries the complete column set.
         files.sort_by_key(|f| core::cmp::Reverse(f.built_at));
+        let Some(newest) = files.first() else {
+            continue;
+        };
         let ident = sql_ident(name);
         conn.execute_batch(&format!(
             "CREATE TABLE lake.{ident} AS SELECT * FROM read_parquet({}) WHERE 1 = 0;",
-            sql_str(&manifest.url(&files[0].key))
+            sql_str(&manifest.url(&newest.key))
         ))?;
         for file in &files {
             conn.execute_batch(&format!(
@@ -110,7 +110,12 @@ pub(crate) fn build(dir: &Path, manifest: &Manifest) -> Result<BuiltCatalog, Dum
     let meta = Connection::open(&catalog_path)?;
     meta.execute_batch("CHECKPOINT;")?;
     meta.close().map_err(|(_, e)| e)?;
-    let _ = std::fs::remove_file(dir.join("catalog.ducklake.wal"));
+    let wal = dir.join("catalog.ducklake.wal");
+    if let Err(e) = std::fs::remove_file(&wal)
+        && e.kind() != std::io::ErrorKind::NotFound
+    {
+        warn!("data dump: failed to remove {wal:?}: {e}");
+    }
 
     Ok(BuiltCatalog {
         path: catalog_path,

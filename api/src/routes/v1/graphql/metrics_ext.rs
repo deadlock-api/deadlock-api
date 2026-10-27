@@ -50,9 +50,15 @@ impl Extension for MetricsExtensionInner {
         metrics::histogram!("graphql_request_duration_seconds").record(elapsed);
 
         if let Some(vr) = self.validation_result.get() {
-            #[expect(clippy::cast_precision_loss)]
+            #[expect(
+                clippy::cast_precision_loss,
+                reason = "metric/ratio values are far below f64 precision limits"
+            )]
             metrics::histogram!("graphql_query_complexity").record(vr.complexity as f64);
-            #[expect(clippy::cast_precision_loss)]
+            #[expect(
+                clippy::cast_precision_loss,
+                reason = "metric/ratio values are far below f64 precision limits"
+            )]
             metrics::histogram!("graphql_query_depth").record(vr.depth as f64);
             span.record("graphql.complexity", vr.complexity);
             span.record("graphql.depth", vr.depth);
@@ -78,7 +84,8 @@ impl Extension for MetricsExtensionInner {
         next: NextValidation<'_>,
     ) -> Result<ValidationResult, Vec<ServerError>> {
         let result = next.run(ctx).await?;
-        let _ = self.validation_result.set(result);
+        // Validation runs once per request; should it run again, the first result is kept.
+        self.validation_result.get_or_init(|| result);
         if result.complexity > COMPLEXITY_LIMIT {
             return Err(vec![ServerError::new(
                 format!(

@@ -14,7 +14,7 @@
 //! settings. Every setting is a record tagged 2 holding a key record (the varint murmur2 hash of the
 //! convar name without its `citadel_` prefix) and a value record (the value as a string).
 
-use base64::Engine;
+use base64::Engine as _;
 use base64::alphabet::Alphabet;
 use base64::engine::{DecodePaddingMode, GeneralPurpose, GeneralPurposeConfig};
 use prost::encoding::{decode_varint, encode_varint, encoded_len_varint};
@@ -55,7 +55,7 @@ pub(super) fn decode(code: &str) -> Result<Settings, CrosshairError> {
             let (Some(key), Some(value)) = (fields.next(), fields.next()) else {
                 return Err(CrosshairError::Malformed);
             };
-            let value = str::from_utf8(value?.1).map_err(|_| CrosshairError::Malformed)?;
+            let value = str::from_utf8(value?.1).map_err(|_not_utf8| CrosshairError::Malformed)?;
             settings.apply(varint_value(key?.1), value);
         }
     }
@@ -81,7 +81,7 @@ pub(crate) fn encode(settings: &Settings) -> String {
         Ok(compressed) if compressed.len() < payload.len() => (FLAG_ZSTD, compressed),
         _ => (0, payload),
     };
-    let mut raw = Vec::with_capacity(HEADER_LEN + body.len());
+    let mut raw = Vec::with_capacity(HEADER_LEN.saturating_add(body.len()));
     raw.extend_from_slice(&[VERSION, flags]);
     raw.extend_from_slice(&checksum);
     raw.extend_from_slice(&body);
@@ -105,7 +105,8 @@ fn decode_payload(code: &str) -> Result<Vec<u8>, CrosshairError> {
     let payload = if flags & FLAG_ZSTD == 0 {
         body.to_vec()
     } else {
-        zstd::bulk::decompress(body, MAX_PAYLOAD_LEN).map_err(|_| CrosshairError::Decompress)?
+        zstd::bulk::decompress(body, MAX_PAYLOAD_LEN)
+            .map_err(|_corrupt| CrosshairError::Decompress)?
     };
     if crc32fast::hash(&payload) != u32::from_le_bytes([c0, c1, c2, c3]) {
         return Err(CrosshairError::Checksum);
@@ -118,7 +119,7 @@ fn varint_value(bytes: &[u8]) -> u32 {
     bytes
         .iter()
         .rev()
-        .fold(0, |acc, byte| acc << 7 | u32::from(byte & 0x7f))
+        .fold(0, |acc, byte| (acc << 7) | u32::from(byte & 0x7f))
 }
 
 fn write_record(out: &mut Vec<u8>, tag: u32, body: &[u8]) {
@@ -140,7 +141,7 @@ struct Records<'a> {
 }
 
 impl<'a> Records<'a> {
-    fn new(buf: &'a [u8]) -> Self {
+    const fn new(buf: &'a [u8]) -> Self {
         Self { buf }
     }
 
@@ -161,7 +162,8 @@ impl<'a> Records<'a> {
 
     fn read_record(&mut self) -> Result<(u32, &'a [u8]), CrosshairError> {
         let tag = self.read_varint()?;
-        let len = usize::try_from(self.read_varint()?).map_err(|_| CrosshairError::Malformed)?;
+        let len =
+            usize::try_from(self.read_varint()?).map_err(|_too_long| CrosshairError::Malformed)?;
         let (body, rest) = self
             .buf
             .split_at_checked(len)

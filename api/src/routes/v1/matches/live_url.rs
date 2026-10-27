@@ -5,7 +5,7 @@ use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use cached::macros::cached;
-use redis::{AsyncTypedCommands, ExpireOption};
+use redis::{AsyncTypedCommands as _, ExpireOption};
 use serde::{Deserialize, Serialize};
 use sqlx::{Pool, Postgres};
 use tracing::debug;
@@ -238,7 +238,7 @@ pub(super) async fn resolve_broadcast_url(
         && let Some(broadcast_url) = cached.get("broadcast_url").and_then(|v| v.as_str())
     {
         return Ok((
-            broadcast_url.to_string(),
+            broadcast_url.to_owned(),
             cached.get("lobby_id").and_then(serde_json::Value::as_u64),
         ));
     }

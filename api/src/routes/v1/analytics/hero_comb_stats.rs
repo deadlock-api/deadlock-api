@@ -8,7 +8,7 @@ use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum_extra::extract::Query;
 use clickhouse::Row;
-use itertools::Itertools;
+use itertools::Itertools as _;
 use serde::{Deserialize, Serialize};
 use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
@@ -153,15 +153,18 @@ pub struct HeroCombStats {
     pub matches: u64,
 }
 
-impl AddAssign<&HeroCombStats> for HeroCombStats {
+impl AddAssign<&Self> for HeroCombStats {
     fn add_assign(&mut self, rhs: &Self) {
-        self.wins += rhs.wins;
-        self.losses += rhs.losses;
-        self.matches += rhs.matches;
+        self.wins = self.wins.saturating_add(rhs.wins);
+        self.losses = self.losses.saturating_add(rhs.losses);
+        self.matches = self.matches.saturating_add(rhs.matches);
     }
 }
 
-#[expect(clippy::too_many_lines)]
+#[expect(
+    clippy::too_many_lines,
+    reason = "one linear query builder reads clearer than split helpers"
+)]
 fn build_query(query: &HeroCombStatsQuery) -> String {
     let team_size = if query.game_mode == Some(GameMode::StreetBrawl) {
         4
@@ -177,7 +180,7 @@ fn build_query(query: &HeroCombStatsQuery) -> String {
         }
         .build(),
     );
-    #[expect(deprecated)]
+    #[expect(deprecated, reason = "reads the deprecated legacy query parameters")]
     let account_filter_values = with_legacy_id(query.account_ids.as_deref(), query.account_id);
     let has_account_filter = !account_filter_values.is_empty();
     let account_list = id_list(&account_filter_values);
@@ -307,7 +310,9 @@ async fn get_comb_stats(
         Some(x) => x,
     };
     let min_matches = query.min_matches.map_or(DEFAULT_MIN_MATCHES, u64::from);
-    let max_matches = query.max_matches.map_or(u64::from(u32::MAX), u64::from);
+    let max_matches = query
+        .max_matches
+        .map_or_else(|| u64::from(u32::MAX), u64::from);
     let mut comb_stats_agg: HashMap<Vec<u32>, HeroCombStats> = HashMap::new();
     for comb_stat in comb_stats.iter() {
         for comb_hero_ids in comb_stat
@@ -316,14 +321,15 @@ async fn get_comb_stats(
             .copied()
             .combinations(usize::from(comb_size))
         {
-            *comb_stats_agg
+            comb_stats_agg
                 .entry(comb_hero_ids)
                 .or_insert_with_key(|hero_ids| HeroCombStats {
                     hero_ids: hero_ids.clone(),
                     wins: 0,
                     losses: 0,
                     matches: 0,
-                }) += comb_stat;
+                })
+                .add_assign(comb_stat);
         }
     }
     Ok(Arc::new(
@@ -339,7 +345,10 @@ async fn get_comb_stats(
     ))
 }
 
-#[expect(clippy::cast_precision_loss)]
+#[expect(
+    clippy::cast_precision_loss,
+    reason = "metric/ratio values are far below f64 precision limits"
+)]
 fn win_rate(stats: &HeroCombStats) -> f64 {
     stats.wins as f64 / stats.matches.max(1) as f64
 }
@@ -390,7 +399,7 @@ pub(crate) async fn hero_comb_stats(
         query.max_average_badge,
     )?;
     validate_comb_size(query.comb_size)?;
-    #[expect(deprecated)]
+    #[expect(deprecated, reason = "reads the deprecated legacy query parameters")]
     filter_protected_accounts(&state, &mut query.account_ids, query.account_id).await?;
     get_comb_stats(&state.ch_client_ro, query).await.map(Json)
 }
@@ -404,9 +413,9 @@ mod proptests {
 
     #[test]
     fn comb_size_validation() {
-        assert!(validate_comb_size(None).is_ok());
-        assert!(validate_comb_size(Some(2)).is_ok());
-        assert!(validate_comb_size(Some(6)).is_ok());
+        validate_comb_size(None).unwrap();
+        validate_comb_size(Some(2)).unwrap();
+        validate_comb_size(Some(6)).unwrap();
         assert!(validate_comb_size(Some(1)).is_err());
         assert!(validate_comb_size(Some(7)).is_err());
     }

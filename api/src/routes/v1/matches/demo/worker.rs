@@ -12,11 +12,11 @@ use std::time::Instant;
 
 use object_store::aws::AmazonS3;
 use object_store::path::Path;
-use object_store::{ObjectStoreExt, WriteMultipart};
+use object_store::{ObjectStoreExt as _, WriteMultipart};
 use redis::aio::ConnectionManager;
 use reqwest::StatusCode;
 use tokio::sync::{Semaphore, mpsc};
-use tracing::{error, info};
+use tracing::{error, info, warn};
 
 use super::format::ArtifactStream;
 use super::job::{JobRecord, JobStatus, store as store_job};
@@ -67,20 +67,20 @@ impl DemoQueryQueue {
         let completed = Arc::new(AtomicU64::new(0));
         let public_url = Arc::<str>::from(public_url.trim_end_matches('/'));
 
-        let completed_worker = completed.clone();
+        let completed_worker = Arc::clone(&completed);
         tokio::spawn(async move {
             let sem = Arc::new(Semaphore::new(MAX_CONCURRENT));
             while let Some(job) = rx.recv().await {
                 if crate::SHUTTING_DOWN.load(Ordering::Relaxed) {
                     break;
                 }
-                let Ok(permit) = sem.clone().acquire_owned().await else {
+                let Ok(permit) = Arc::clone(&sem).acquire_owned().await else {
                     break;
                 };
                 let redis = redis.clone();
                 let r2 = r2.clone();
-                let public_url = public_url.clone();
-                let completed = completed_worker.clone();
+                let public_url = Arc::clone(&public_url);
+                let completed = Arc::clone(&completed_worker);
                 tokio::spawn(async move {
                     let _permit = permit;
                     run_job(redis, &r2, &public_url, job).await;
@@ -232,6 +232,14 @@ struct PhaseTimings {
     upload_parts: u64,
 }
 
+/// Abort a failed upload; the job already reports the error that caused it, so a failing
+/// abort is only logged.
+async fn abort_upload(writer: WriteMultipart) {
+    if let Err(e) = writer.abort().await {
+        warn!("Failed to abort demo query artifact upload: {e}");
+    }
+}
+
 fn millis(since: Instant) -> u64 {
     u64::try_from(since.elapsed().as_millis()).unwrap_or(u64::MAX)
 }
@@ -289,19 +297,19 @@ async fn upload(
         let t = Instant::now();
         if let Err(e) = writer.wait_for_capacity(UPLOAD_CONCURRENCY).await {
             timings.phase = "upload";
-            let _ = writer.abort().await;
+            abort_upload(writer).await;
             return Err(e.into());
         }
-        timings.upload_wait_ms += millis(t);
-        timings.artifact_bytes += chunk.len() as u64;
-        timings.upload_parts += 1;
+        timings.upload_wait_ms = timings.upload_wait_ms.saturating_add(millis(t));
+        timings.artifact_bytes = timings.artifact_bytes.saturating_add(chunk.len() as u64);
+        timings.upload_parts = timings.upload_parts.saturating_add(1);
         writer.put(chunk);
     }
 
     // The chunk channel also closes when the query or serializer fails partway through, which
     // would otherwise commit a truncated artifact as if it were complete.
     if let Err(e) = artifact.finish().await {
-        let _ = writer.abort().await;
+        abort_upload(writer).await;
         return Err(e);
     }
     timings.query_ms = millis(started);

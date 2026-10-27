@@ -1,11 +1,11 @@
 use core::error::Error;
 use core::marker::PhantomData;
 use core::time::Duration;
-use std::io::{self, BufRead, Cursor, Seek, SeekFrom, Write};
+use std::io::{self, BufRead as _, Cursor, Seek as _, SeekFrom, Write as _};
 use std::time::Instant;
 
 use bytes::buf::Reader;
-use bytes::{Buf, Bytes};
+use bytes::{Buf as _, Bytes};
 use haste_core::demostream::{
     CmdFormat, CmdHeader, DemoStream, ReadCmdError, ReadCmdHeaderError, SeekableDemoStream,
 };
@@ -121,7 +121,7 @@ pub enum FragmentType {
 // BroadcasHttpClient.
 
 #[derive(thiserror::Error, Debug)]
-pub enum BroadcastHttpClientError<HttpClientError: Error + Send + Sync + 'static> {
+pub enum BroadcastHttpClientError<HttpClientError: Send + Sync + 'static> {
     #[error("could not build request")]
     BuildRequestError(#[source] http::Error),
     #[error("http client error")]
@@ -130,6 +130,8 @@ pub enum BroadcastHttpClientError<HttpClientError: Error + Send + Sync + 'static
     StatusCode(http::StatusCode),
     #[error("could not deserialize json")]
     JsonError(#[source] serde_json::Error),
+    #[error("invalid fragment number ({0})")]
+    InvalidFragment(i32),
 }
 
 impl<HttpClientError: Error + Send + Sync + 'static> BroadcastHttpClientError<HttpClientError> {
@@ -139,7 +141,7 @@ impl<HttpClientError: Error + Send + Sync + 'static> BroadcastHttpClientError<Ht
         match self {
             Self::StatusCode(status) => status.is_server_error(),
             Self::HttpClientError(_) => true,
-            Self::BuildRequestError(_) | Self::JsonError(_) => false,
+            Self::BuildRequestError(_) | Self::JsonError(_) | Self::InvalidFragment(_) => false,
         }
     }
 }
@@ -179,16 +181,16 @@ impl<'client, C: HttpClient + 'client> BroadcasHttpClient<'client, C> {
     /// (yet or anymore) exist and is handled by the caller.
     async fn get(&self, url: &str) -> Result<Bytes, BroadcastHttpClientError<C::Error>> {
         let mut delay = TRANSIENT_RETRY_INITIAL_DELAY;
-        let mut attempt = 0;
+        let mut attempt: u32 = 0;
         loop {
             match self.get_once(url).await {
                 Err(err) if err.is_transient() && attempt < MAX_TRANSIENT_RETRIES => {
-                    attempt += 1;
+                    attempt = attempt.saturating_add(1);
                     log::warn!(
                         "transient error fetching {url} (attempt {attempt}/{MAX_TRANSIENT_RETRIES}), retrying in {delay:?}: {err}"
                     );
                     tokio::time::sleep(delay).await;
-                    delay = (delay * 2).min(TRANSIENT_RETRY_MAX_DELAY);
+                    delay = delay.saturating_mul(2).min(TRANSIENT_RETRY_MAX_DELAY);
                 }
                 result => return result,
             }
@@ -210,7 +212,9 @@ impl<'client, C: HttpClient + 'client> BroadcasHttpClient<'client, C> {
         &self,
         signup_fragment: i32,
     ) -> Result<Bytes, BroadcastHttpClientError<C::Error>> {
-        assert!(signup_fragment >= 0);
+        if signup_fragment < 0 {
+            return Err(BroadcastHttpClientError::InvalidFragment(signup_fragment));
+        }
         let url = format!("{}/{signup_fragment}/start", self.base_url);
         self.get(&url).await
     }
@@ -277,7 +281,10 @@ impl<'client, C: HttpClient + 'client> BroadcastHttp<'client, C> {
         Ok(Self {
             client,
             stream_fragment: sync_response.fragment,
-            keyframe_interval: Duration::from_secs(sync_response.keyframe_interval as u64),
+            // NOTE: a negative interval is treated as no interval.
+            keyframe_interval: Duration::from_secs(u64::from(
+                sync_response.keyframe_interval.max(0).unsigned_abs(),
+            )),
             signup_fragment: sync_response.signup_fragment,
             sync_response,
             stream_state: StreamState::Start,
@@ -297,7 +304,7 @@ impl<'client, C: HttpClient + 'client> BroadcastHttp<'client, C> {
         Ok(this)
     }
 
-    pub fn sync_response(&self) -> &SyncResponse {
+    pub const fn sync_response(&self) -> &SyncResponse {
         &self.sync_response
     }
 
@@ -329,26 +336,24 @@ impl<'client, C: HttpClient + 'client> BroadcastHttp<'client, C> {
         Ok(full)
     }
 
-    async fn handle_deltaframes(&mut self) -> Result<Bytes, BroadcastHttpClientError<C::Error>> {
+    /// the arguments are the fields of the current [`StreamState::Deltaframes`] state.
+    async fn handle_deltaframes(
+        &mut self,
+        mut num_retries: u32,
+        mut fetch_after: Instant,
+        mut catchup: bool,
+    ) -> Result<Bytes, BroadcastHttpClientError<C::Error>> {
         // NOTE: loop simply allows to avoid going recursive, which is problematic in async context
         // and cannot be done without boxed futures.
         loop {
-            let StreamState::Deltaframes {
-                num_retries,
-                fetch_after,
-                catchup,
-            } = self.stream_state
-            else {
-                unreachable!();
-            };
-
             if !catchup {
                 // this branch most likely never will be taken :thinking:
                 if fetch_after.elapsed() > Duration::ZERO {
+                    catchup = true;
                     self.stream_state = StreamState::Deltaframes {
                         num_retries,
                         fetch_after,
-                        catchup: true,
+                        catchup,
                     };
                     log::debug!("entering state: {:?}", self.stream_state);
                     continue;
@@ -369,10 +374,10 @@ impl<'client, C: HttpClient + 'client> BroadcastHttp<'client, C> {
                     // StreamState::Deltaframes stream_fragment must not be incremented. both, full
                     // fragment and delta framgnet, are needed; otherwise it'll not be possible to
                     // parse packet entities.
-                    self.stream_fragment += 1;
+                    self.stream_fragment = self.stream_fragment.saturating_add(1);
                     self.stream_state = StreamState::Deltaframes {
                         num_retries: 0,
-                        fetch_after: start + self.keyframe_interval,
+                        fetch_after: self.next_fetch(start),
                         catchup,
                     };
                     log::debug!("entering state: {:?}", self.stream_state);
@@ -386,16 +391,26 @@ impl<'client, C: HttpClient + 'client> BroadcastHttp<'client, C> {
                         ));
                     }
 
+                    num_retries = num_retries.saturating_add(1);
+                    fetch_after = self.next_fetch(start);
+                    catchup = false;
                     self.stream_state = StreamState::Deltaframes {
-                        num_retries: num_retries + 1,
-                        fetch_after: start + self.keyframe_interval,
-                        catchup: false,
+                        num_retries,
+                        fetch_after,
+                        catchup,
                     };
                     log::debug!("entering state: {:?}", self.stream_state);
                 }
                 Err(source) => return Err(source),
             }
         }
+    }
+
+    /// when to fetch the next fragment after a fetch that started at `start`.
+    fn next_fetch(&self, start: Instant) -> Instant {
+        // NOTE: the interval is at most i32::MAX seconds, which no clock overflows on; should it
+        // anyway, fetch right away.
+        start.checked_add(self.keyframe_interval).unwrap_or(start)
     }
 
     // TODO: can a consumer pass buffer to http client to read body into to avoid allocations / or
@@ -407,7 +422,14 @@ impl<'client, C: HttpClient + 'client> BroadcastHttp<'client, C> {
             StreamState::Stop => return None,
             StreamState::Start => self.handle_start().await,
             StreamState::Fullframe => self.handle_fullframe().await,
-            StreamState::Deltaframes { .. } => self.handle_deltaframes().await,
+            StreamState::Deltaframes {
+                num_retries,
+                fetch_after,
+                catchup,
+            } => {
+                self.handle_deltaframes(num_retries, fetch_after, catchup)
+                    .await
+            }
         } {
             Ok(packet) => {
                 match self.stream_buffer {
@@ -447,19 +469,17 @@ impl<'client, C: HttpClient + 'client> BroadcastHttp<'client, C> {
 // ----
 // demo stream
 
-// NOTE: interacting with stream (read/seek) that has not packets is a developer error, it's is
-// okay to panic.
-macro_rules! no_packet_panic {
-    () => {
-        panic!("attempted reading on BroadcastHttp with no packets")
-    };
+// NOTE: interacting with stream (read/seek) that has not packets is a developer error.
+fn no_packet_error() -> io::Error {
+    io::Error::other("attempted reading on BroadcastHttp with no packets")
 }
 
-// NOTE: this is a developer error, it's is okay to panic.
-macro_rules! not_seekable_panic {
-    () => {
-        panic!("attempted invoking seek-related operation on BroadcastHttp constructed not with `start_streaming_and_buffer`")
-    };
+// NOTE: this is a developer error.
+fn not_seekable_error() -> io::Error {
+    io::Error::other(
+        "attempted invoking seek-related operation on BroadcastHttp constructed not with \
+         `start_streaming_and_buffer`",
+    )
 }
 
 impl<'client, C: HttpClient + 'client> DemoStream for BroadcastHttp<'client, C> {
@@ -468,22 +488,22 @@ impl<'client, C: HttpClient + 'client> DemoStream for BroadcastHttp<'client, C> 
     // stream ops
     // ----
 
-    /// panics if `next_packet` never succeded.
+    /// errors if `next_packet` never succeded.
     fn is_at_eof(&mut self) -> Result<bool, io::Error> {
         match self.stream_buffer {
-            StreamBuffer::Last(None) => no_packet_panic!(),
+            StreamBuffer::Last(None) => Err(no_packet_error()),
             StreamBuffer::Last(Some(ref r)) => Ok(!r.get_ref().has_remaining()),
-            StreamBuffer::Seekable(ref c) => Ok(c.position() as usize >= c.get_ref().len()),
+            StreamBuffer::Seekable(ref c) => Ok(c.position() >= c.get_ref().len() as u64),
         }
     }
 
     // cmd header
     // ----
 
-    /// panics if `next_packet` never succeded.
+    /// errors if `next_packet` never succeded.
     fn read_cmd_header(&mut self) -> Result<CmdHeader, ReadCmdHeaderError> {
         match self.stream_buffer {
-            StreamBuffer::Last(None) => no_packet_panic!(),
+            StreamBuffer::Last(None) => Err(no_packet_error().into()),
             StreamBuffer::Last(Some(ref mut r)) => read_cmd_header(r),
             StreamBuffer::Seekable(ref mut c) => read_cmd_header(c),
         }
@@ -492,10 +512,10 @@ impl<'client, C: HttpClient + 'client> DemoStream for BroadcastHttp<'client, C> 
     // cmd
     // ----
 
-    /// panics if `next_packet` never succeded.
+    /// errors if `next_packet` never succeded.
     fn read_cmd(&mut self, cmd_header: &CmdHeader) -> Result<&[u8], ReadCmdError> {
         match self.stream_buffer {
-            StreamBuffer::Last(None) => no_packet_panic!(),
+            StreamBuffer::Last(None) => Err(no_packet_error().into()),
 
             StreamBuffer::Last(Some(ref mut r)) => {
                 let size = cmd_header.body_size as usize;
@@ -513,26 +533,28 @@ impl<'client, C: HttpClient + 'client> DemoStream for BroadcastHttp<'client, C> 
 
             StreamBuffer::Seekable(ref mut c) => {
                 let size = cmd_header.body_size as usize;
-                let pos = c.position() as usize;
+                let pos = usize::try_from(c.position()).map_err(io::Error::other)?;
 
                 // it probably could be possible that body of the response was not transferred /
                 // read correctly?
                 // NOTE: a cursor can be seeked past the end of its buffer.
-                let remaining = c.get_ref().len().saturating_sub(pos);
-                if remaining < size {
+                let end = pos.saturating_add(size);
+                if c.get_ref().len() < end {
                     return Err(io::Error::from(io::ErrorKind::UnexpectedEof).into());
                 }
 
                 // NOTE: Cursor's advance will not discard data from the underlying Vec<u8>
                 c.consume(size);
-                Ok(&c.get_ref()[pos..pos + size])
+                c.get_ref()
+                    .get(pos..end)
+                    .ok_or_else(|| io::Error::from(io::ErrorKind::UnexpectedEof).into())
             }
         }
     }
 
     fn skip_cmd(&mut self, cmd_header: &CmdHeader) -> Result<(), io::Error> {
         match self.stream_buffer {
-            StreamBuffer::Last(None) => no_packet_panic!(),
+            StreamBuffer::Last(None) => Err(no_packet_error()),
             StreamBuffer::Last(Some(ref mut r)) => {
                 let size = cmd_header.body_size as usize;
                 let bytes = r.get_mut();
@@ -552,48 +574,48 @@ impl<'client, C: HttpClient + 'client> DemoStream for BroadcastHttp<'client, C> 
 impl<'client, C: HttpClient + 'client> SeekableDemoStream for BroadcastHttp<'client, C> {
     type TotalTicksError = ReadCmdHeaderError;
 
-    /// panics if [`BroadcastHttp`] was not constructed with `start_reading_and_buffer`. othwerwise
+    /// errors if [`BroadcastHttp`] was not constructed with `start_reading_and_buffer`. othwerwise
     /// delegated to [`std::io::Cursor`].
     fn seek(&mut self, pos: SeekFrom) -> Result<u64, io::Error> {
         match self.stream_buffer {
-            StreamBuffer::Last(_) => not_seekable_panic!(),
+            StreamBuffer::Last(_) => Err(not_seekable_error()),
             StreamBuffer::Seekable(ref mut c) => c.seek(pos),
         }
     }
 
-    /// panics if [`BroadcastHttp`] was not constructed with `start_reading_and_buffer`.
+    /// errors if [`BroadcastHttp`] was not constructed with `start_reading_and_buffer`.
     fn stream_position(&mut self) -> Result<u64, io::Error> {
         match self.stream_buffer {
-            StreamBuffer::Last(_) => not_seekable_panic!(),
+            StreamBuffer::Last(_) => Err(not_seekable_error()),
             StreamBuffer::Seekable(ref mut c) => Ok(c.position()),
         }
     }
 
-    /// panics if [`BroadcastHttp`] was not constructed with `start_reading_and_buffer`.
+    /// errors if [`BroadcastHttp`] was not constructed with `start_reading_and_buffer`.
     fn stream_len(&mut self) -> Result<u64, io::Error> {
         match self.stream_buffer {
-            StreamBuffer::Last(_) => not_seekable_panic!(),
+            StreamBuffer::Last(_) => Err(not_seekable_error()),
             StreamBuffer::Seekable(ref c) => Ok(c.get_ref().len() as u64),
         }
     }
 
-    /// panics if [`BroadcastHttp`] was not constructed with `start_reading_and_buffer`.
+    /// broadcasts have no header, so this is 0 (even if [`BroadcastHttp`] was not constructed
+    /// with `start_reading_and_buffer`).
     fn start_position(&self) -> u64 {
-        match self.stream_buffer {
-            StreamBuffer::Last(_) => not_seekable_panic!(),
-            StreamBuffer::Seekable(_) => 0,
-        }
+        0
     }
 
-    /// panics if [`BroadcastHttp`] was not constructed with `start_reading_and_buffer`.
+    /// errors if [`BroadcastHttp`] was not constructed with `start_reading_and_buffer`.
     fn total_ticks(&mut self) -> Result<i32, ReadCmdHeaderError> {
         match self.stream_buffer {
-            StreamBuffer::Last(_) => not_seekable_panic!(),
+            StreamBuffer::Last(_) => Err(not_seekable_error().into()),
             StreamBuffer::Seekable(_) => {
-                if self.total_ticks.is_none() {
-                    self.total_ticks = Some(scan_for_last_tick(self)?);
+                if let Some(total_ticks) = self.total_ticks {
+                    return Ok(total_ticks);
                 }
-                Ok(self.total_ticks.unwrap())
+                let total_ticks = scan_for_last_tick(self)?;
+                self.total_ticks = Some(total_ticks);
+                Ok(total_ticks)
             }
         }
     }

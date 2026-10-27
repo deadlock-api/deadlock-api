@@ -16,7 +16,7 @@ pub(crate) struct PatreonClient {
 }
 
 impl PatreonClient {
-    pub(crate) fn new(
+    pub(crate) const fn new(
         http_client: reqwest::Client,
         client_id: String,
         client_secret: String,
@@ -136,7 +136,10 @@ impl PatreonClient {
 
                 return Ok(Some(Membership {
                     tier_id,
-                    pledge_amount_cents: entitled_cents / cadence,
+                    // `cadence` is at least 1, so the division cannot fail.
+                    pledge_amount_cents: entitled_cents
+                        .checked_div(cadence)
+                        .unwrap_or(entitled_cents),
                     patron_status: member.attributes.patron_status,
                 }));
             }

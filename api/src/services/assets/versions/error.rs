@@ -18,7 +18,7 @@ pub(crate) enum AssetsError {
 impl AssetsError {
     /// Whether a source file doesn't exist for the requested version (e.g.
     /// `scripts/loot_tables.vdata`, which is gone from build 6711 on).
-    pub(crate) fn is_not_found(&self) -> bool {
+    pub(crate) const fn is_not_found(&self) -> bool {
         matches!(self, Self::Store(e) if e.is_not_found())
     }
 }

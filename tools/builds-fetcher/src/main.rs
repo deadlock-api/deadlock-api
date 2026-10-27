@@ -1,22 +1,31 @@
 #![forbid(unsafe_code)]
-#![deny(clippy::all)]
-#![deny(unreachable_pub)]
-#![deny(clippy::correctness)]
-#![deny(clippy::suspicious)]
-#![deny(clippy::style)]
-#![deny(clippy::complexity)]
-#![deny(clippy::perf)]
-#![deny(clippy::pedantic)]
-#![deny(clippy::std_instead_of_core)]
-#![expect(clippy::cast_possible_wrap)]
+#![cfg_attr(
+    test,
+    allow(
+        clippy::arithmetic_side_effects,
+        clippy::disallowed_macros,
+        clippy::disallowed_methods,
+        clippy::expect_used,
+        clippy::indexing_slicing,
+        clippy::panic,
+        clippy::panic_in_result_fn,
+        clippy::print_stderr,
+        clippy::print_stdout,
+        clippy::string_slice,
+        clippy::unreachable,
+        clippy::unwrap_in_result,
+        clippy::unwrap_used,
+        reason = "tests may panic"
+    )
+)]
 
 use core::time::Duration;
 use std::collections::HashMap;
 use std::time::Instant;
 
-use itertools::Itertools;
+use itertools::Itertools as _;
 use metrics::counter;
-use rand::prelude::SliceRandom;
+use rand::prelude::SliceRandom as _;
 use rand::rng;
 use sqlx::postgres::PgQueryResult;
 use sqlx::types::time::PrimitiveDateTime;
@@ -47,6 +56,8 @@ enum Error {
     Env(#[from] std::env::VarError),
     #[error(transparent)]
     Client(#[from] common::ClientError),
+    #[error(transparent)]
+    Http(#[from] reqwest::Error),
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -59,10 +70,14 @@ enum FetchBuildsError {
 }
 
 #[tokio::main]
+#[expect(
+    clippy::infinite_loop,
+    reason = "the service runs until run_until_shutdown drops the loop on a shutdown signal"
+)]
 async fn main() -> Result<(), Error> {
     let _otel_guard = common::init_tracing(env!("CARGO_PKG_NAME"));
     common::init_metrics()?;
-    let http_client = common::http_client();
+    let http_client = common::http_client()?;
     let pg_client = common::get_pg_client().await?;
     let ch_client = common::get_ch_client()?;
 
@@ -140,7 +155,7 @@ async fn fetch_missing_builds(
     };
     let hero_by_build: HashMap<i32, u32> = seen
         .into_iter()
-        .map(|(hero_id, build_id)| (build_id as i32, hero_id))
+        .map(|(hero_id, build_id)| (build_id.cast_signed(), hero_id))
         .collect();
     let build_ids: Vec<i32> = hero_by_build.keys().copied().collect();
 
@@ -168,7 +183,9 @@ async fn fetch_missing_builds(
     );
 
     for build_id in missing {
-        let hero_id = hero_by_build[&build_id];
+        let Some(&hero_id) = hero_by_build.get(&build_id) else {
+            continue;
+        };
         let builds = match fetch_builds(
             http_client,
             hero_id,
@@ -195,7 +212,7 @@ async fn fetch_missing_builds(
             if let Err(e) =
                 sqlx::query("INSERT INTO hero_builds_fetch_failed(build_id, hero) VALUES ($1, $2) ON CONFLICT DO NOTHING")
                     .bind(build_id)
-                    .bind(hero_id as i32)
+                    .bind(hero_id.cast_signed())
                     .execute(pg_client)
                     .await
             {
@@ -280,16 +297,16 @@ async fn insert_builds(
          ignores, reports, rollup_category, language, updated_at, published_at, data)",
     );
     query.push_values(rows, |mut b, (build, hero_build, data)| {
-        b.push_bind(hero_build.hero_id.map_or_default(|x| x as i32))
-            .push_bind(hero_build.hero_build_id.map_or_default(|x| x as i32))
-            .push_bind(hero_build.version.map_or_default(|x| x as i32))
-            .push_bind(hero_build.author_account_id.map(|x| x as i32))
-            .push_bind(build.num_weekly_favorites.map_or_default(|x| x as i32))
-            .push_bind(build.num_favorites.map_or_default(|x| x as i32))
-            .push_bind(build.num_ignores.map_or_default(|x| x as i32))
-            .push_bind(build.num_reports.map_or_default(|x| x as i32))
-            .push_bind(build.rollup_category.map(|x| x as i32))
-            .push_bind(hero_build.language.map(|x| x as i32))
+        b.push_bind(hero_build.hero_id.map_or_default(u32::cast_signed))
+            .push_bind(hero_build.hero_build_id.map_or_default(u32::cast_signed))
+            .push_bind(hero_build.version.map_or_default(u32::cast_signed))
+            .push_bind(hero_build.author_account_id.map(u32::cast_signed))
+            .push_bind(build.num_weekly_favorites.map_or_default(u32::cast_signed))
+            .push_bind(build.num_favorites.map_or_default(u32::cast_signed))
+            .push_bind(build.num_ignores.map_or_default(u32::cast_signed))
+            .push_bind(build.num_reports.map_or_default(u32::cast_signed))
+            .push_bind(build.rollup_category.map(u32::cast_signed))
+            .push_bind(hero_build.language.map(u32::cast_signed))
             .push_bind(hero_build.last_updated_timestamp.and_then(ts_to_pg))
             .push_bind(hero_build.publish_timestamp.and_then(ts_to_pg))
             .push_bind(data);

@@ -21,7 +21,7 @@ use cached::macros::cached;
 use indexmap::IndexMap;
 use object_store::aws::AmazonS3;
 use serde::{Deserialize, Serialize};
-use strum::{Display, EnumIter, EnumString, IntoEnumIterator};
+use strum::{Display, EnumIter, EnumString, IntoEnumIterator as _};
 use utoipa::ToSchema;
 
 use crate::services::assets::versions::common::{Color, IMAGE_BASE_URL, SVGS_BASE_URL};
@@ -290,15 +290,15 @@ fn zipline_paths(version: u32) -> Vec<ZiplanePath> {
         .zip(geometry::LANE_COLORS)
         .zip(origins.iter().copied())
         .map(|((lane, color), origin)| {
-            let pick = |a: usize, b: usize, c: usize| -> Vec<[f64; 3]> {
-                lane.iter().map(|n| [n[a], n[b], n[c]]).collect()
+            let pick = |point: fn(&[f64; 9]) -> [f64; 3]| -> Vec<[f64; 3]> {
+                lane.iter().map(point).collect()
             };
             ZiplanePath {
                 origin,
                 color: color.to_owned(),
-                p0_points: pick(0, 1, 2),
-                p1_points: pick(3, 4, 5),
-                p2_points: pick(6, 7, 8),
+                p0_points: pick(|n| [n[0], n[1], n[2]]),
+                p1_points: pick(|n| [n[3], n[4], n[5]]),
+                p2_points: pick(|n| [n[6], n[7], n[8]]),
                 color_parsed: Color::from_hex(color).unwrap_or(Color {
                     red: 0,
                     green: 0,
@@ -328,7 +328,7 @@ fn minimap_relative([x, y, _]: [f64; 3]) -> (f64, f64) {
 }
 
 impl MapEntities {
-    fn lists_mut(&mut self) -> [&mut Vec<MapEntity>; 16] {
+    const fn lists_mut(&mut self) -> [&mut Vec<MapEntity>; 16] {
         [
             &mut self.crates,
             &mut self.tough_crates,

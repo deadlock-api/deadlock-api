@@ -31,8 +31,11 @@ use crate::utils::sql::{cached_ch_query, impl_match_info};
 /// Last sample before the recording cadence coarsens from 180s steps to 300s.
 const DEFAULT_SAMPLE_S: u32 = 900;
 
-#[expect(clippy::unnecessary_wraps)]
-fn default_sample_time_s() -> Option<u32> {
+#[expect(
+    clippy::unnecessary_wraps,
+    reason = "serde default fn must return the field type"
+)]
+const fn default_sample_time_s() -> Option<u32> {
     Some(DEFAULT_SAMPLE_S)
 }
 

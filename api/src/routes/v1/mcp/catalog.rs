@@ -2,7 +2,7 @@ use core::sync::atomic::{AtomicBool, Ordering};
 use core::time::Duration;
 use std::collections::{BTreeMap, HashMap};
 use std::path::{Path, PathBuf};
-use std::sync::{Arc, LazyLock, Mutex};
+use std::sync::{Arc, Mutex};
 
 use arc_swap::ArcSwapOption;
 use arrow_duckdb::array::UInt32Array;
@@ -10,7 +10,6 @@ use arrow_duckdb::compute::take_record_batch;
 use duckdb::arrow::datatypes::SchemaRef;
 use duckdb::arrow::record_batch::RecordBatch;
 use duckdb::{AccessMode, Config, Connection};
-use regex::Regex;
 use tokio::sync::{OwnedSemaphorePermit, Semaphore};
 use tokio_util::sync::CancellationToken;
 use tracing::{debug, info, warn};
@@ -46,7 +45,14 @@ const CA_BUNDLES: [&str; 5] = [
     "/etc/ssl/cert.pem",
 ];
 
-static IDENT: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^[A-Za-z_][A-Za-z0-9_]*$").unwrap());
+/// Whether `name` is a plain SQL identifier (`^[A-Za-z_][A-Za-z0-9_]*$`).
+fn is_ident(name: &str) -> bool {
+    let mut chars = name.chars();
+    chars
+        .next()
+        .is_some_and(|c| c.is_ascii_alphabetic() || c == '_')
+        && chars.all(|c| c.is_ascii_alphanumeric() || c == '_')
+}
 
 #[derive(Debug, thiserror::Error)]
 pub enum CatalogError {
@@ -153,7 +159,12 @@ pub(crate) struct SnapshotCatalog {
 impl SnapshotCatalog {
     pub(crate) fn new(config: &McpSnapshotConfig) -> Result<Self, CatalogError> {
         let work_dir = std::env::temp_dir().join("deadlock-mcp");
-        let _ = std::fs::remove_dir_all(&work_dir);
+        // Clears what a previous process left behind; a missing directory is the usual case.
+        if let Err(e) = std::fs::remove_dir_all(&work_dir)
+            && e.kind() != std::io::ErrorKind::NotFound
+        {
+            warn!("Failed to clear MCP work dir {}: {e}", work_dir.display());
+        }
         std::fs::create_dir_all(&work_dir)?;
         Ok(Self {
             http: reqwest::Client::builder()
@@ -203,7 +214,9 @@ impl SnapshotCatalog {
             () = cancel.cancelled() => return Err(QueryError::Cancelled),
             permit = self.acquire_slot() => permit?,
         };
-        let deadline = tokio::time::Instant::now() + QUERY_TIMEOUT;
+        let now = tokio::time::Instant::now();
+        // Adding a constant timeout of seconds to the current instant cannot overflow.
+        let deadline = now.checked_add(QUERY_TIMEOUT).unwrap_or(now);
         let conn = snapshot
             .conn
             .lock()
@@ -250,13 +263,16 @@ impl SnapshotCatalog {
     }
 
     async fn acquire_slot(&self) -> Result<OwnedSemaphorePermit, QueryError> {
-        tokio::time::timeout(
+        // Timing out is all `Elapsed` reports, so it maps to `Busy` without losing detail.
+        let Ok(acquired) = tokio::time::timeout(
             QUEUE_TIMEOUT,
             Arc::clone(&self.query_permits).acquire_owned(),
         )
         .await
-        .map_err(|_| QueryError::Busy)?
-        .map_err(|e| QueryError::Internal(e.to_string()))
+        else {
+            return Err(QueryError::Busy);
+        };
+        acquired.map_err(|e| QueryError::Internal(e.to_string()))
     }
 
     /// Rebuilds the catalog if the lake's manifest changed. Returns whether a rebuild happened.
@@ -299,7 +315,7 @@ impl SnapshotCatalog {
             .iter()
             .filter(|(name, t)| {
                 t.status == TableStatus::Ready
-                    && IDENT.is_match(name)
+                    && is_ident(name)
                     && !t.published_files().is_empty()
             })
             .map(|(name, t)| {
@@ -476,7 +492,7 @@ fn build_database(
         .query_map([], |row| row.get(0))?
         .collect::<Result<_, _>>()?;
     let mut expected = Vec::new();
-    for name in lake.iter().filter(|n| IDENT.is_match(n)) {
+    for name in lake.iter().filter(|n| is_ident(n)) {
         let Some(meta) = table_meta(manifest_tables, name) else {
             continue;
         };
@@ -603,7 +619,10 @@ fn prepare_capped<'conn>(
     max_rows: usize,
     cancelled: &AtomicBool,
 ) -> Result<duckdb::Statement<'conn>, QueryError> {
-    let capped = format!("SELECT * FROM ({canonical}) LIMIT {}", max_rows + 1);
+    let capped = format!(
+        "SELECT * FROM ({canonical}) LIMIT {}",
+        max_rows.saturating_add(1)
+    );
     // `prepare` runs every statement but the last, so the sandbox must not depend on `DuckDB`
     // writing `canonical` back as exactly one statement.
     read_only_statement(conn, &capped)?;
@@ -646,7 +665,12 @@ fn run_cancellable_query(
         if bytes > remaining_bytes {
             // Keeps the share of rows that fits, assuming they are about the same size, copied
             // out so the rest of the batch is freed: a slice holds on to all of its buffers.
-            let fit = (batch.num_rows() * remaining_bytes / bytes).min(remaining);
+            let fit = batch
+                .num_rows()
+                .saturating_mul(remaining_bytes)
+                .checked_div(bytes)
+                .unwrap_or(0)
+                .min(remaining);
             let rows = UInt32Array::from_iter_values(0..u32::try_from(fit).unwrap_or(u32::MAX));
             let kept = take_record_batch(&batch, &rows)
                 .map_err(|e| QueryError::Internal(e.to_string()))?;
@@ -659,8 +683,8 @@ fn run_cancellable_query(
             truncated = true;
             break;
         }
-        remaining -= batch.num_rows();
-        remaining_bytes -= bytes;
+        remaining = remaining.saturating_sub(batch.num_rows());
+        remaining_bytes = remaining_bytes.saturating_sub(bytes);
         batches.push(batch);
     }
     Ok(QueryOutput {
@@ -679,7 +703,7 @@ fn check_cancelled(cancelled: &AtomicBool) -> Result<(), QueryError> {
 
 #[cfg(test)]
 mod tests {
-    use duckdb::arrow::array::AsArray;
+    use duckdb::arrow::array::AsArray as _;
     use duckdb::arrow::datatypes::Int64Type;
 
     use super::*;
@@ -985,16 +1009,14 @@ mod tests {
     fn a_capped_query_cannot_break_out_of_its_subquery() {
         let conn = Connection::open_in_memory().unwrap();
         let canonical = "SELECT 1) t; CREATE TABLE escaped AS SELECT 1; SELECT * FROM (SELECT 1";
-        assert!(
-            prepare_capped(
-                &conn,
-                "SELECT 1",
-                canonical,
-                MAX_ROWS,
-                &AtomicBool::new(false)
-            )
-            .is_err()
-        );
+        prepare_capped(
+            &conn,
+            "SELECT 1",
+            canonical,
+            MAX_ROWS,
+            &AtomicBool::new(false),
+        )
+        .unwrap_err();
         let tables: i64 = conn
             .query_row("SELECT count(*) FROM duckdb_tables()", [], |row| row.get(0))
             .unwrap();

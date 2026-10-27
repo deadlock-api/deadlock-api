@@ -30,11 +30,11 @@ pub(super) struct ImageQuery {
     scale: u32,
 }
 
-fn default_screen_height() -> u32 {
+const fn default_screen_height() -> u32 {
     DEFAULT_SCREEN_HEIGHT
 }
 
-fn default_scale() -> u32 {
+const fn default_scale() -> u32 {
     1
 }
 

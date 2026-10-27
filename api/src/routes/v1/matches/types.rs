@@ -1,5 +1,5 @@
 use clickhouse::Row;
-use itertools::Itertools;
+use itertools::Itertools as _;
 use serde::{Deserialize, Deserializer, Serialize};
 use strum::{Display, EnumString, FromRepr};
 use utoipa::{IntoParams, ToSchema};
@@ -87,13 +87,13 @@ pub(crate) enum RegionMode {
 
 impl From<RegionMode> for i32 {
     fn from(val: RegionMode) -> Self {
-        val as i32
+        val as Self
     }
 }
 
 impl From<RegionMode> for u32 {
     fn from(val: RegionMode) -> Self {
-        val as u32
+        val as Self
     }
 }
 
@@ -145,7 +145,7 @@ pub(crate) enum ServerRegion {
 }
 
 impl ServerRegion {
-    pub(crate) fn region_mode(self) -> RegionMode {
+    pub(crate) const fn region_mode(self) -> RegionMode {
         match self {
             Self::Europe
             | Self::EuAmsterdam
@@ -178,13 +178,13 @@ impl ServerRegion {
 
 impl From<ServerRegion> for i32 {
     fn from(val: ServerRegion) -> Self {
-        val as i32
+        val as Self
     }
 }
 
 impl From<ServerRegion> for u32 {
     fn from(val: ServerRegion) -> Self {
-        val as u32
+        val as Self
     }
 }
 
@@ -311,8 +311,11 @@ impl MatchMode {
 }
 
 impl GameMode {
-    #[expect(clippy::unnecessary_wraps)]
-    pub fn default_option() -> Option<Self> {
+    #[expect(
+        clippy::unnecessary_wraps,
+        reason = "serde default fn must return the field type"
+    )]
+    pub const fn default_option() -> Option<Self> {
         Some(Self::Normal)
     }
 
@@ -326,10 +329,10 @@ impl GameMode {
     /// Same as [`Self::sql_filter`] but qualifies the column reference with the given
     /// prefix (e.g. `"mp."`).
     pub fn sql_filter_with_prefix(game_mode: Option<Self>, prefix: &str) -> String {
-        match game_mode {
-            Some(mode) => format!("{prefix}game_mode = {}", mode as i32),
-            None => "1=1".to_string(),
-        }
+        game_mode.map_or_else(
+            || "1=1".to_owned(),
+            |mode| format!("{prefix}game_mode = {}", mode as i32),
+        )
     }
 
     /// Deserializes an `Option<GameMode>` from a query parameter.
@@ -338,7 +341,7 @@ impl GameMode {
     where
         D: Deserializer<'de>,
     {
-        use serde::de::IntoDeserializer;
+        use serde::de::IntoDeserializer as _;
         let s = Option::<String>::deserialize(deserializer)?;
         match s.as_deref() {
             None | Some("" | "null") => Ok(None),
@@ -367,13 +370,13 @@ pub(crate) fn reject_brawl_badge_filter(
 
 impl From<GameMode> for i32 {
     fn from(val: GameMode) -> Self {
-        val as i32
+        val as Self
     }
 }
 
 impl From<GameMode> for u32 {
     fn from(val: GameMode) -> Self {
-        val as u32
+        val as Self
     }
 }
 

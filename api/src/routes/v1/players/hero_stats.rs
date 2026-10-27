@@ -136,7 +136,10 @@ pub struct HeroStats {
 /// First match with MVP ranks. Every match from this id on carries them.
 const MVP_RANK_SINCE_MATCH_ID: u64 = 50_367_982;
 
-#[expect(clippy::too_many_lines)]
+#[expect(
+    clippy::too_many_lines,
+    reason = "one linear query builder reads clearer than split helpers"
+)]
 fn build_query(query: &HeroStatsQuery) -> String {
     let account_ids = id_list(&query.account_ids);
     let hero_ids_in = query.hero_ids.as_ref().map(|heroes| id_list(heroes));
@@ -145,8 +148,8 @@ fn build_query(query: &HeroStatsQuery) -> String {
         format!("account_id IN ({account_ids})"),
         MatchMode::sql_filter(query.match_mode.as_deref()),
         GameMode::sql_filter(query.game_mode),
-        "net_worth > 0".to_string(),
-        "duration_s > 0".to_string(),
+        "net_worth > 0".to_owned(),
+        "duration_s > 0".to_owned(),
     ];
     if let Some(ref ids) = hero_ids_in {
         mp_filters.push(format!("hero_id IN ({ids})"));

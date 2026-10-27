@@ -1,11 +1,11 @@
 use dungers::varint;
-use prost::Message;
+use prost::Message as _;
 use std::io::{self, Read, Seek, SeekFrom};
 use valveprotos::common::CDemoFileInfo;
 
 use crate::demostream::{
     CmdHeader, DemoStream, ReadCmdError, ReadCmdHeaderError, SeekableDemoStream, decode_demo_cmd,
-    decompress_cmd_body, split_cmd_buf,
+    decompress_cmd_body, demo_cmd_header_size, split_cmd_buf,
 };
 
 // #define DEMO_RECORD_BUFFER_SIZE 2*1024*1024
@@ -97,7 +97,7 @@ impl<R: Read + Seek> DemoFile<R> {
         })
     }
 
-    pub fn demo_header(&self) -> &DemoHeader {
+    pub const fn demo_header(&self) -> &DemoHeader {
         &self.demo_header
     }
 
@@ -107,8 +107,9 @@ impl<R: Read + Seek> DemoFile<R> {
         } else {
             let backup = self.rdr.stream_position()?;
 
-            self.rdr
-                .seek(SeekFrom::Start(self.demo_header.fileinfo_offset as u64))?;
+            let fileinfo_offset = u64::try_from(self.demo_header.fileinfo_offset)
+                .map_err(|err| io::Error::new(io::ErrorKind::InvalidData, err))?;
+            self.rdr.seek(SeekFrom::Start(fileinfo_offset))?;
             let cmd_header = self.read_cmd_header()?;
             let file_info = CDemoFileInfo::decode(self.read_cmd(&cmd_header)?)?;
 
@@ -149,9 +150,9 @@ impl<R: Read + Seek> DemoStream for DemoFile<R> {
             // sent.
             // ticks everywhere are represented as i32, casting u32::MAX to i32 is okay because
             // bits in u32::MAX == bits in -1 i32.
-            tick: tick as i32,
+            tick: tick.cast_signed(),
             body_size,
-            size: (cmd_n + tick_n + body_size_n) as u8,
+            size: demo_cmd_header_size(cmd_n, tick_n, body_size_n)?,
         })
     }
 

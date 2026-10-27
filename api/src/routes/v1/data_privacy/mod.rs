@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use axum::Json;
 use axum::extract::State;
 use axum::response::IntoResponse;
-use cached::Cached;
+use cached::Cached as _;
 use serde::Deserialize;
 use utoipa::{IntoParams, ToSchema};
 
@@ -23,7 +23,7 @@ pub(crate) struct DataPrivacyRequest {
 
 /// `protected_user_accounts.steam_id` is `INTEGER`: store the u32 bit pattern, read back with
 /// `i32::cast_unsigned`, so ids of 2^31 and above round-trip.
-fn steam_id_i32(steam_id: u32) -> i32 {
+const fn steam_id_i32(steam_id: u32) -> i32 {
     steam_id.cast_signed()
 }
 

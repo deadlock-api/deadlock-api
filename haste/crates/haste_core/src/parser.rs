@@ -1,6 +1,6 @@
 #[cfg(feature = "async")]
 use core::future::Future;
-use prost::Message;
+use prost::Message as _;
 use std::io;
 use std::io::SeekFrom;
 use std::sync::Arc;
@@ -30,9 +30,11 @@ use crate::stringtables::{StringTableContainer, StringTableError};
 
 pub use crate::instancebaseline::InstanceBaselineError;
 
-/// failures of the parser itself: reading the demo stream, decoding commands, packets, string
-/// tables and entities, or a demo that is inconsistent with itself. errors returned by a
-/// [`Visitor`] are not included, see [`ParserError`].
+/// failures of the parser itself.
+///
+/// reading the demo stream, decoding commands, packets, string tables and entities, or a demo
+/// that is inconsistent with itself. errors returned by a [`Visitor`] are not included, see
+/// [`ParserError`].
 #[derive(thiserror::Error, Debug)]
 pub enum ParseError {
     #[error(transparent)]
@@ -72,10 +74,11 @@ pub enum ParseError {
     StringTableNotFound,
 }
 
-/// error of the parser's run methods, which call into a visitor: either the parser failed
-/// ([`ParseError`]) or the visitor returned an error `E` (its `Error` type), which is passed
-/// through as is so that it can be matched on (for example to treat a sentinel error that stops
-/// parsing early as success).
+/// error of the parser's run methods, which call into a visitor.
+///
+/// either the parser failed ([`ParseError`]) or the visitor returned an error `E` (its `Error`
+/// type), which is passed through as is so that it can be matched on (for example to treat a
+/// sentinel error that stops parsing early as success).
 #[derive(thiserror::Error, Debug)]
 pub enum ParserError<E> {
     #[error(transparent)]
@@ -130,7 +133,11 @@ const DEFAULT_TICK_INTERVAL: f32 = 1.0 / 30.0;
 /// ratio of 2.133, and truncating it to 2 yields 3600 instead of the actual 3840, which makes
 /// `Parser::run_to_tick` skip the last full packet before some targets and end up with no
 /// entities.
-#[allow(clippy::cast_possible_truncation, clippy::cast_precision_loss)]
+#[expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_precision_loss,
+    reason = "a tick count of a few thousand, rounded from an f32 ratio"
+)]
 fn full_packet_interval(tick_interval: f32) -> i32 {
     let ratio = DEFAULT_TICK_INTERVAL / tick_interval;
     (DEFAULT_FULL_PACKET_INTERVAL as f32 * ratio).round() as i32
@@ -195,7 +202,7 @@ struct EntityDeltaReader<'a> {
 }
 
 impl<'a> EntityDeltaReader<'a> {
-    fn new(msg: &PacketEntities<'a>) -> Self {
+    const fn new(msg: &PacketEntities<'a>) -> Self {
         Self {
             br: BitReader::new(msg.entity_data),
             remaining: msg.updated_entries,
@@ -370,7 +377,8 @@ impl Context {
             }
             self.string_table_buf.resize(decompress_len, 0);
             snap::raw::Decoder::new().decompress(sd, &mut self.string_table_buf)?;
-            &self.string_table_buf[..decompress_len]
+            // `resize` made the buffer exactly `decompress_len` long.
+            self.string_table_buf.as_slice()
         } else {
             msg.string_data()
         };
@@ -394,14 +402,10 @@ impl Context {
         &mut self,
         msg: &CsvcMsgUpdateStringTable,
     ) -> Result<(), ParseError> {
-        debug_assert!(msg.table_id.is_some(), "invalid table id");
-        let table_id = msg.table_id() as usize;
-
-        debug_assert!(
-            self.string_tables.has_table(table_id),
-            "trying to update non-existent table"
-        );
-        let Some(string_table) = self.string_tables.get_table_mut(table_id) else {
+        let Some(string_table) = usize::try_from(msg.table_id())
+            .ok()
+            .and_then(|table_id| self.string_tables.get_table_mut(table_id))
+        else {
             return Err(ParseError::StringTableNotFound);
         };
 
@@ -436,7 +440,7 @@ impl Context {
         if rdr.remaining <= 0 {
             return Ok(None);
         }
-        rdr.remaining -= 1;
+        rdr.remaining = rdr.remaining.saturating_sub(1);
 
         let Some(entity_classes) = self.entity_classes.as_deref() else {
             return Err(ParseError::EntityClassesNotAvailable);
@@ -446,7 +450,11 @@ impl Context {
         };
 
         let br = &mut rdr.br;
-        rdr.entity_index += br.read_ubitvar()? as i32 + 1;
+        // NOTE: valve's (wrapping) int arithmetic: `iEntityIndex += 1 + buf.ReadUBitVar()`.
+        rdr.entity_index = rdr
+            .entity_index
+            .wrapping_add(br.read_ubitvar()?.cast_signed())
+            .wrapping_add(1);
         let entity_index = rdr.entity_index;
 
         let delta_header = DeltaHeader::from_bit_reader(br)?;
@@ -493,7 +501,7 @@ impl Context {
     // NOTE: following methods are public-facing api; do not use them internally
 
     #[must_use]
-    pub fn string_tables(&self) -> Option<&StringTableContainer> {
+    pub const fn string_tables(&self) -> Option<&StringTableContainer> {
         if self.string_tables.is_empty() {
             None
         } else {
@@ -521,12 +529,12 @@ impl Context {
     }
 
     #[must_use]
-    pub fn tick_interval(&self) -> f32 {
+    pub const fn tick_interval(&self) -> f32 {
         self.tick_interval
     }
 
     #[must_use]
-    pub fn tick(&self) -> i32 {
+    pub const fn tick(&self) -> i32 {
         self.tick
     }
 
@@ -535,7 +543,7 @@ impl Context {
     /// deadlock doubled it from 16384 to 32768 in build 6712 (this moved the world origin cell
     /// from 32 to 64). `None` for replays that predate it.
     #[must_use]
-    pub fn max_coord(&self) -> Option<f32> {
+    pub const fn max_coord(&self) -> Option<f32> {
         self.max_coord
     }
 
@@ -554,9 +562,10 @@ impl Context {
     }
 }
 
-/// the parts of parser state that never change within a demo (flattened serializers from
-/// `DemSendTables` and entity classes from `DemClassInfo`), reference counted so that parsers of
-/// the same demo can share them instead of parsing them again (see
+/// the parts of parser state that never change within a demo.
+///
+/// flattened serializers from `DemSendTables` and entity classes from `DemClassInfo`, reference
+/// counted so that parsers of the same demo can share them instead of parsing them again (see
 /// [`Parser::shared_state`] and [`Parser::set_shared_state`]).
 #[derive(Clone)]
 pub struct SharedState {
@@ -573,7 +582,7 @@ pub trait Visitor {
     /// when a consumer only cares about a subset of entity types.
     ///
     /// The default tracks everything.
-    #[allow(unused_variables)]
+    #[expect(unused_variables, reason = "the default ignores its arguments")]
     fn should_track_entity(&self, serializer_name_hash: u64) -> bool {
         true
     }
@@ -583,11 +592,11 @@ pub trait Visitor {
     /// Used when fast-forwarding through the demo to build up parser state (serializers, entity
     /// classes, instance baselines) that must exist before a segment can be parsed, without
     /// emitting the rows from that warm-up region. The default is a no-op (always recording).
-    #[allow(unused_variables)]
+    #[expect(unused_variables, reason = "the default ignores its arguments")]
     fn set_collecting(&mut self, collecting: bool) {}
 
     // TODO: include updated fields (list of field paths?)
-    #[allow(unused_variables)]
+    #[expect(unused_variables, reason = "the default ignores its arguments")]
     fn on_entity(
         &mut self,
         ctx: &Context,
@@ -597,7 +606,7 @@ pub trait Visitor {
         Ok(())
     }
 
-    #[allow(unused_variables)]
+    #[expect(unused_variables, reason = "the default ignores its arguments")]
     fn on_cmd(
         &mut self,
         ctx: &Context,
@@ -607,7 +616,7 @@ pub trait Visitor {
         Ok(())
     }
 
-    #[allow(unused_variables)]
+    #[expect(unused_variables, reason = "the default ignores its arguments")]
     fn on_packet(
         &mut self,
         ctx: &Context,
@@ -617,7 +626,7 @@ pub trait Visitor {
         Ok(())
     }
 
-    #[allow(unused_variables)]
+    #[expect(unused_variables, reason = "the default ignores its arguments")]
     fn on_tick_end(&mut self, ctx: &Context) -> Result<(), Self::Error> {
         Ok(())
     }
@@ -636,7 +645,7 @@ pub trait AsyncVisitor {
     /// when a consumer only cares about a subset of entity types.
     ///
     /// The default tracks everything.
-    #[allow(unused_variables)]
+    #[expect(unused_variables, reason = "the default ignores its arguments")]
     fn should_track_entity(&self, serializer_name_hash: u64) -> bool {
         true
     }
@@ -646,11 +655,11 @@ pub trait AsyncVisitor {
     /// Used when fast-forwarding through the demo to build up parser state (serializers, entity
     /// classes, instance baselines) that must exist before a segment can be parsed, without
     /// emitting the rows from that warm-up region. The default is a no-op (always recording).
-    #[allow(unused_variables)]
+    #[expect(unused_variables, reason = "the default ignores its arguments")]
     fn set_collecting(&mut self, collecting: bool) {}
 
     // TODO: include updated fields (list of field paths?)
-    #[allow(unused_variables)]
+    #[expect(unused_variables, reason = "the default ignores its arguments")]
     fn on_entity(
         &mut self,
         ctx: &Context,
@@ -660,7 +669,7 @@ pub trait AsyncVisitor {
         async { Ok(()) }
     }
 
-    #[allow(unused_variables)]
+    #[expect(unused_variables, reason = "the default ignores its arguments")]
     fn on_cmd(
         &mut self,
         ctx: &Context,
@@ -670,7 +679,7 @@ pub trait AsyncVisitor {
         async { Ok(()) }
     }
 
-    #[allow(unused_variables)]
+    #[expect(unused_variables, reason = "the default ignores its arguments")]
     fn on_packet(
         &mut self,
         ctx: &Context,
@@ -680,7 +689,7 @@ pub trait AsyncVisitor {
         async { Ok(()) }
     }
 
-    #[allow(unused_variables)]
+    #[expect(unused_variables, reason = "the default ignores its arguments")]
     fn on_tick_end(
         &mut self,
         ctx: &Context,
@@ -878,15 +887,15 @@ impl<D: DemoStream, V: Visitor> Parser<D, V> {
     // public api
     // ----
 
-    pub fn demo_stream(&self) -> &D {
+    pub const fn demo_stream(&self) -> &D {
         &self.demo_stream
     }
 
-    pub fn demo_stream_mut(&mut self) -> &mut D {
+    pub const fn demo_stream_mut(&mut self) -> &mut D {
         &mut self.demo_stream
     }
 
-    pub fn context(&self) -> &Context {
+    pub const fn context(&self) -> &Context {
         &self.ctx
     }
 
@@ -911,7 +920,7 @@ impl<D: DemoStream, V: Visitor> Parser<D, V> {
         self.visitor
     }
 
-    pub fn visitor_mut(&mut self) -> &mut V {
+    pub const fn visitor_mut(&mut self) -> &mut V {
         &mut self.visitor
     }
 }
@@ -971,7 +980,7 @@ impl<D: SeekableDemoStream, V: Visitor> Parser<D, V> {
         // everything? it does not seem like it: string tables must be handled.
         let mut did_handle_last_full_packet = false;
 
-        self.run_seekable(|notnotself: &mut Parser<D, V>, cmd_header: &CmdHeader| {
+        self.run_seekable(|notnotself: &mut Self, cmd_header: &CmdHeader| {
             if cmd_header.tick > target_tick {
                 return Ok(None);
             }
@@ -983,12 +992,12 @@ impl<D: SeekableDemoStream, V: Visitor> Parser<D, V> {
             }
 
             let is_full_packet = cmd_header.cmd == EDemoCommands::DemFullPacket;
-            let distance_to_target_tick = target_tick - notnotself.ctx.tick;
+            let distance_to_target_tick = target_tick.saturating_sub(notnotself.ctx.tick);
             // TODO: what if there's no full packet ahead? maybe dem file is
             // corrupted or something... scan for full packets before enterint
             // the "run"?
             let has_full_packet_ahead =
-                distance_to_target_tick > notnotself.ctx.full_packet_interval + 100;
+                distance_to_target_tick > notnotself.ctx.full_packet_interval.saturating_add(100);
             if is_full_packet {
                 let cmd_body = notnotself.demo_stream.read_cmd(cmd_header)?;
                 notnotself
@@ -1059,7 +1068,7 @@ impl<D: SeekableDemoStream, V: Visitor> Parser<D, V> {
     pub fn parse_shared_state(&mut self) -> Result<Option<SharedState>, ParserError<V::Error>> {
         self.reset()?;
         self.ctx.skip_entity_packets = true;
-        let result = self.run_seekable(|s: &mut Parser<D, V>, cmd_header: &CmdHeader| {
+        let result = self.run_seekable(|s: &mut Self, cmd_header: &CmdHeader| {
             if s.ctx.serializers.is_some() && s.ctx.entity_classes.is_some() {
                 return Ok(None);
             }
@@ -1107,10 +1116,10 @@ impl<D: SeekableDemoStream, V: Visitor> Parser<D, V> {
             self.ctx.skip_entity_packets = true;
         }
 
-        let result = self.run_seekable(|s: &mut Parser<D, V>, cmd_header: &CmdHeader| {
+        let result = self.run_seekable(|s: &mut Self, cmd_header: &CmdHeader| {
             if cmd_header.cmd == EDemoCommands::DemFullPacket {
                 let this_ordinal = fp_seen;
-                fp_seen += 1;
+                fp_seen = fp_seen.saturating_add(1);
                 if this_ordinal < ordinal {
                     // A full packet before ours. Its entity packet is superseded by ours, but its
                     // string tables are not: a full packet only restates the tables that changed
@@ -1192,7 +1201,7 @@ impl<D: AsyncDemoStream, V: AsyncVisitor> AsyncStreamingParser<D, V> {
         self.visitor
     }
 
-    pub fn visitor_mut(&mut self) -> &mut V {
+    pub const fn visitor_mut(&mut self) -> &mut V {
         &mut self.visitor
     }
 
@@ -1323,15 +1332,15 @@ impl<D: AsyncDemoStream, V: AsyncVisitor> AsyncStreamingParser<D, V> {
         Ok(())
     }
 
-    pub fn demo_stream(&self) -> &D {
+    pub const fn demo_stream(&self) -> &D {
         &self.demo_stream
     }
 
-    pub fn demo_stream_mut(&mut self) -> &mut D {
+    pub const fn demo_stream_mut(&mut self) -> &mut D {
         &mut self.demo_stream
     }
 
-    pub fn context(&self) -> &Context {
+    pub const fn context(&self) -> &Context {
         &self.ctx
     }
 }

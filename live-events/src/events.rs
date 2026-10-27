@@ -1,5 +1,5 @@
 use core::time::Duration;
-use std::string::ToString;
+use std::string::ToString as _;
 
 use async_stream::try_stream;
 use axum::extract::{Path, Query, State};
@@ -7,13 +7,13 @@ use axum::http::{HeaderMap, HeaderValue, header};
 use axum::response::sse::{Event, KeepAlive};
 use axum::response::{IntoResponse, Sse};
 use bytes::Bytes;
-use futures::{Stream, TryStreamExt};
+use futures::{Stream, TryStreamExt as _};
 use haste::broadcast::BroadcastHttp;
 use haste::packet_channel_broadcast_stream::PacketChannelBroadcastStream;
 use haste::parser::AsyncStreamingParser;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use strum::VariantArray;
+use strum::VariantArray as _;
 use tracing::{debug, error, info, warn};
 
 use crate::demo_parser::entity_events::EntityType;
@@ -62,7 +62,7 @@ fn all_sse_events() -> Vec<String> {
                 "error",
             ]
             .into_iter()
-            .map(ToString::to_string),
+            .map(str::to_owned),
         )
         .collect()
 }
@@ -135,16 +135,16 @@ async fn demo_event_stream(
             debug!("Client disconnected, stopping demo stream");
             return;
         }
-        let event = match error {
-            None => {
+        let event = error.map_or_else(
+            || {
                 info!("Demo stream ended");
                 Event::default().event("end").data("end")
-            }
-            Some(message) => {
+            },
+            |message| {
                 error!("Demo stream failed: {message}");
                 Event::default().event("error").data(message)
-            }
-        };
+            },
+        );
         if let Err(e) = sender.send_timeout(event, FINAL_EVENT_TIMEOUT).await {
             warn!("Failed to send final event: {e}");
         }

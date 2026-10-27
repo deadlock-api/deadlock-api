@@ -6,9 +6,10 @@ use haste_core::demostream::{CmdHeader, DemoStream};
 use haste_core::flattenedserializers::{FlattenedSerializer, FlattenedSerializerField};
 use haste_core::parser::{Context, Visitor};
 use haste_core::valveprotos::common::EDemoCommands;
-use prost::Message;
+use prost::Message as _;
+use tracing::debug;
 
-use super::super::error::{Error, Result};
+use super::super::error::{DemoError, Result};
 use super::super::schema::type_mapping::{FieldType, parse_var_type};
 use super::super::schema::{
     ArrayColumn, ArrayInfo, ArrayLen, ElemExtract, EntitySchema, FieldInfo, SymbolTable,
@@ -33,12 +34,12 @@ impl<D> SchemaDiscoveryVisitor<D> {
     }
 
     fn symbols_handle(&self) -> Arc<Mutex<Option<Vec<String>>>> {
-        self.symbols.clone()
+        Arc::clone(&self.symbols)
     }
 }
 
 impl<D: DemoStream> Visitor for SchemaDiscoveryVisitor<D> {
-    type Error = Error;
+    type Error = DemoError;
 
     fn on_cmd(
         &mut self,
@@ -58,7 +59,7 @@ impl<D: DemoStream> Visitor for SchemaDiscoveryVisitor<D> {
             // the parse early (the caller discards this value) so schema discovery
             // never decodes the gameplay body.
             EDemoCommands::DemSyncTick => {
-                return Err(Error::Schema("schema discovery complete".into()));
+                return Err(DemoError::Schema("schema discovery complete".into()));
             }
             _ => {}
         }
@@ -70,16 +71,16 @@ fn extract_symbols_from_send_tables<D: DemoStream>(data: &[u8]) -> Result<Vec<St
     use haste_core::valveprotos::common::CsvcMsgFlattenedSerializer;
 
     let send_tables = D::decode_cmd_send_tables(data)
-        .map_err(|e| Error::Schema(format!("Failed to decode send tables: {e}")))?;
+        .map_err(|e| DemoError::Schema(format!("Failed to decode send tables: {e}")))?;
 
     let raw_data = send_tables.data.unwrap_or_default();
-    let mut data_slice = &raw_data[..];
+    let mut data_slice = &*raw_data;
 
     skip_uvarint64(&mut data_slice)
-        .map_err(|e| Error::Schema(format!("Failed to read varint: {e}")))?;
+        .map_err(|e| DemoError::Schema(format!("Failed to read varint: {e}")))?;
 
     let msg = CsvcMsgFlattenedSerializer::decode(data_slice)
-        .map_err(|e| Error::Schema(format!("Failed to decode flattened serializer: {e}")))?;
+        .map_err(|e| DemoError::Schema(format!("Failed to decode flattened serializer: {e}")))?;
 
     Ok(msg.symbols)
 }
@@ -93,7 +94,7 @@ fn skip_uvarint64(data: &mut &[u8]) -> core::result::Result<(), &'static str> {
         if byte & 0x80 == 0 {
             break;
         }
-        shift += 7;
+        shift = shift.saturating_add(7);
         if shift >= 64 {
             return Err("varint too long");
         }
@@ -115,7 +116,7 @@ fn build_schemas(
 
     let serializers = ctx
         .serializers()
-        .ok_or_else(|| Error::Schema("No serializers in context".to_string()))?;
+        .ok_or_else(|| DemoError::Schema("No serializers in context".to_owned()))?;
 
     let mut schemas = Vec::new();
     for serializer in serializers.values() {
@@ -171,16 +172,13 @@ fn collect_fields_recursive(
                 continue;
             };
 
-            let nested_path = match parent_path {
-                Some(pp) => format!("{pp}.{var_name}"),
-                None => var_name.to_string(),
-            };
+            let nested_path =
+                parent_path.map_or_else(|| var_name.to_owned(), |pp| format!("{pp}.{var_name}"));
 
             // Composite key must match how the parser builds field_key in entities.rs.
-            let nested_key = match parent_key {
-                Some(pk) => haste_core::fxhash::add_u64_to_hash(pk, field.var_name.hash),
-                None => field.var_name.hash,
-            };
+            let nested_key = parent_key.map_or(field.var_name.hash, |pk| {
+                haste_core::fxhash::add_u64_to_hash(pk, field.var_name.hash)
+            });
 
             collect_fields_recursive(
                 nested_serializer,
@@ -188,7 +186,7 @@ fn collect_fields_recursive(
                 Some(&nested_path),
                 Some(nested_key),
                 fields,
-                depth + 1,
+                depth.saturating_add(1),
             );
             continue;
         }
@@ -216,19 +214,19 @@ fn extract_field_info(
 
     let send_node = match (parent_path, field_send_node) {
         (Some(pp), Some(sn)) => Some(format!("{pp}.{sn}")),
-        (Some(pp), None) => Some(pp.to_string()),
-        (None, Some(sn)) => Some(sn.to_string()),
+        (Some(pp), None) => Some(pp.to_owned()),
+        (None, Some(sn)) => Some(sn.to_owned()),
         (None, None) => None,
     };
 
     // Composite key must match how the parser computes field_key in entities.rs.
-    let key = match parent_key {
-        Some(pk) => haste_core::fxhash::add_u64_to_hash(pk, field.var_name.hash),
-        None => compute_field_key(send_node.as_deref(), var_name),
-    };
+    let key = parent_key.map_or_else(
+        || compute_field_key(send_node.as_deref(), var_name),
+        |pk| haste_core::fxhash::add_u64_to_hash(pk, field.var_name.hash),
+    );
 
     let array = build_array_info(field, symbol_table, var_type);
-    let mut field_info = FieldInfo::new(var_name.to_string(), var_type.to_string(), send_node, key);
+    let mut field_info = FieldInfo::new(var_name.to_owned(), var_type.to_owned(), send_node, key);
     field_info.array = array;
     Some(field_info)
 }
@@ -269,7 +267,7 @@ fn build_array_info(
                 .iter()
                 .enumerate()
                 .map(|(c, suffix)| ArrayColumn {
-                    suffix: (*suffix).to_string(),
+                    suffix: (*suffix).to_owned(),
                     element_type: base.clone(),
                     extract: ElemExtract::Component(c),
                 })
@@ -325,7 +323,14 @@ fn collect_struct_leaves(
         {
             steps.push(tf.var_name.hash);
             let prefix = format!("{name_prefix}__{var_name}");
-            collect_struct_leaves(sub, symbol_table, steps, &prefix, out, depth + 1);
+            collect_struct_leaves(
+                sub,
+                symbol_table,
+                steps,
+                &prefix,
+                out,
+                depth.saturating_add(1),
+            );
             steps.pop();
             continue;
         }
@@ -386,18 +391,21 @@ fn discover_schemas<D: BuildStream>(
     let symbols_handle = visitor.symbols_handle();
 
     let mut parser =
-        super::sync_parser::<D, _>(data, visitor).map_err(|e| Error::Schema(e.to_string()))?;
+        super::sync_parser::<D, _>(data, visitor).map_err(|e| DemoError::Schema(e.to_string()))?;
 
-    // Run until schema discovery completes (at DEM_SyncTick)
-    let _ = parser.run_to_end();
+    // Run until schema discovery completes (at DEM_SyncTick). A parse error (e.g. a prefix that
+    // ends mid-command) is expected here; whether the schema was seen is checked below.
+    if let Err(e) = parser.run_to_end() {
+        debug!("Schema discovery parse stopped: {e}");
+    }
 
     let symbols = symbols_handle
         .lock()
-        .map_err(|_| Error::Schema("Failed to lock symbols".to_string()))?
+        .map_err(|e| DemoError::Schema(format!("Failed to lock symbols: {e}")))?
         .take()
         // No send-tables seen before the input ran out: the caller gave us a prefix
         // that stops short of the schema. Signal "need more bytes" distinctly.
-        .ok_or(Error::IncompleteDemo)?;
+        .ok_or(DemoError::IncompleteDemo)?;
 
     build_schemas(parser.context(), symbols, wanted)
 }

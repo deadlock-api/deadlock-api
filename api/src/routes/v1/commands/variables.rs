@@ -2,11 +2,11 @@ use std::collections::HashMap;
 
 use chrono::Duration;
 use futures::future::join;
-use itertools::Itertools;
+use itertools::Itertools as _;
 use serde::{Deserialize, Serialize};
 use strum::{EnumString, IntoStaticStr, VariantArray};
 use thiserror::Error;
-use tracing::warn;
+use tracing::{debug, warn};
 use utoipa::ToSchema;
 use valveprotos::deadlock::{CMsgClientToGcGetLeaderboardResponse, ECitadelMatchMode};
 
@@ -193,15 +193,17 @@ impl ResolverContext {
     }
 
     fn all_matches(&self) -> Result<&[PlayerMatchHistoryEntry], VariableResolveError> {
-        self.all_matches
-            .as_deref()
-            .map_err(|_| VariableResolveError::NoData("match history"))
+        self.all_matches.as_deref().map_err(|e| {
+            debug!("match history unavailable: {e}");
+            VariableResolveError::NoData("match history")
+        })
     }
 
     fn todays_matches(&self) -> Result<&[PlayerMatchHistoryEntry], VariableResolveError> {
-        self.todays_matches
-            .as_deref()
-            .map_err(|_| VariableResolveError::NoData("todays matches"))
+        self.todays_matches.as_deref().map_err(|e| {
+            debug!("todays matches unavailable: {e}");
+            VariableResolveError::NoData("todays matches")
+        })
     }
 
     fn hero_matches(
@@ -215,9 +217,10 @@ impl ResolverContext {
     }
 
     fn season(&self) -> Result<&CurrentSeason, VariableResolveError> {
-        self.season
-            .as_ref()
-            .map_err(|_| VariableResolveError::NoData("current season"))
+        self.season.as_ref().map_err(|e| {
+            debug!("current season unavailable: {e}");
+            VariableResolveError::NoData("current season")
+        })
     }
 
     fn season_matches(
@@ -239,7 +242,7 @@ impl Variable {
 
     /// Deprecated variables still resolve, so existing commands keep working, but they are hidden
     /// from the available variables list.
-    pub(super) fn is_deprecated(self) -> bool {
+    pub(super) const fn is_deprecated(self) -> bool {
         matches!(
             self,
             Self::PredictedRank
@@ -249,7 +252,7 @@ impl Variable {
         )
     }
 
-    fn needs_all_matches(self) -> bool {
+    const fn needs_all_matches(self) -> bool {
         matches!(
             self,
             Self::HighestDeathCount
@@ -286,7 +289,7 @@ impl Variable {
         )
     }
 
-    fn needs_season(self) -> bool {
+    const fn needs_season(self) -> bool {
         matches!(
             self,
             Self::SeasonName
@@ -302,7 +305,7 @@ impl Variable {
         )
     }
 
-    fn needs_todays_matches(self) -> bool {
+    const fn needs_todays_matches(self) -> bool {
         matches!(
             self,
             Self::HeroesPlayedToday
@@ -314,7 +317,7 @@ impl Variable {
         )
     }
 
-    pub(super) fn get_category(self) -> VariableCategory {
+    pub(super) const fn get_category(self) -> VariableCategory {
         match self {
             Self::LatestPatchnotesLink
             | Self::LatestPatchnotesTitle
@@ -380,7 +383,7 @@ impl Variable {
         }
     }
 
-    pub(super) fn get_description(self) -> &'static str {
+    pub(super) const fn get_description(self) -> &'static str {
         match self {
             Self::Rank
             | Self::RankImg
@@ -447,7 +450,7 @@ impl Variable {
         }
     }
 
-    pub(super) fn get_default_label(&self) -> Option<&str> {
+    pub(super) const fn get_default_label(&self) -> Option<&str> {
         match self {
             Self::HeroHoursPlayed => Some("{hero_name} Hours Played"),
             Self::HeroKd => Some("{hero_name} Kd"),
@@ -481,7 +484,10 @@ impl Variable {
         }
     }
 
-    #[expect(clippy::too_many_lines)]
+    #[expect(
+        clippy::too_many_lines,
+        reason = "one linear query builder reads clearer than split helpers"
+    )]
     pub(super) async fn resolve(
         &self,
         rate_limit_key: &RateLimitKey,
@@ -517,8 +523,8 @@ impl Variable {
                     .and_then(|r| {
                         r.images
                             .get(&format!("subrank{subrank}"))
-                            .or(r.images.get("large"))
-                            .or(r.images.get("large_webp"))
+                            .or_else(|| r.images.get("large"))
+                            .or_else(|| r.images.get("large_webp"))
                     })
                     .cloned()
                     .ok_or(VariableResolveError::NoData("rank img"))
@@ -557,7 +563,7 @@ impl Variable {
                     Self::get_leaderboard_entry(rate_limit_key, state, steam_id, region, None)
                         .await?
                         .and_then(|entry| entry.rank)
-                        .map_or("N/A".to_owned(), |rank| format!("#{rank}")),
+                        .map_or_else(|| "N/A".to_owned(), |rank| format!("#{rank}")),
                 )
             }
             Self::SteamAccountName => get_steam_account_name(rate_limit_key, state, steam_id).await,
@@ -814,10 +820,11 @@ impl Variable {
             .ok_or(VariableResolveError::NoData("todays matches"))?;
 
         // If the first match is older than 8 hours ago, we can assume that the player has no matches today
-        if first_match.start_time
-            < u32::try_from((chrono::Utc::now() - Duration::hours(8)).timestamp())
-                .unwrap_or_default()
-        {
+        let cutoff = chrono::Utc::now()
+            .checked_sub_signed(Duration::hours(8))
+            .and_then(|t| u32::try_from(t.timestamp()).ok())
+            .unwrap_or_default();
+        if first_match.start_time < cutoff {
             return Ok(vec![]);
         }
 
@@ -826,7 +833,7 @@ impl Variable {
                 matches
                     .into_iter()
                     .tuple_windows()
-                    .take_while(|(c, l)| c.start_time - l.start_time <= 6 * 60 * 60)
+                    .take_while(|(c, l)| c.start_time.abs_diff(l.start_time) <= 6 * 60 * 60)
                     .map(|(_, c)| c),
             )
             .collect())
@@ -905,9 +912,14 @@ fn hours_played<'a>(matches: impl IntoIterator<Item = &'a PlayerMatchHistoryEntr
 }
 
 fn kd<'a>(matches: impl IntoIterator<Item = &'a PlayerMatchHistoryEntry>) -> String {
-    let (kills, deaths) = matches.into_iter().fold((0, 0), |(kills, deaths), m| {
-        (kills + m.player_kills, deaths + m.player_deaths)
-    });
+    let (kills, deaths) = matches
+        .into_iter()
+        .fold((0u32, 0u32), |(kills, deaths), m| {
+            (
+                kills.saturating_add(m.player_kills),
+                deaths.saturating_add(m.player_deaths),
+            )
+        });
     format!("{:.2}", f64::from(kills) / f64::from(deaths.max(1)))
 }
 
@@ -928,11 +940,11 @@ fn losses<'a>(matches: impl IntoIterator<Item = &'a PlayerMatchHistoryEntry>) ->
 }
 
 fn wins_losses<'a>(matches: impl IntoIterator<Item = &'a PlayerMatchHistoryEntry>) -> String {
-    let (wins, losses) = matches.into_iter().fold((0, 0), |(wins, losses), m| {
+    let (wins, losses) = matches.into_iter().fold((0u32, 0u32), |(wins, losses), m| {
         if m.won() {
-            (wins + 1, losses)
+            (wins.saturating_add(1), losses)
         } else {
-            (wins, losses + 1)
+            (wins, losses.saturating_add(1))
         }
     });
     format!("{wins}-{losses}")
@@ -940,7 +952,10 @@ fn wins_losses<'a>(matches: impl IntoIterator<Item = &'a PlayerMatchHistoryEntry
 
 fn winrate<'a>(matches: impl IntoIterator<Item = &'a PlayerMatchHistoryEntry>) -> String {
     let (wins, total) = matches.into_iter().fold((0u32, 0u32), |(wins, total), m| {
-        (wins + u32::from(m.won()), total + 1)
+        (
+            wins.saturating_add(u32::from(m.won())),
+            total.saturating_add(1),
+        )
     });
     format!("{:.2}%", f64::from(wins) / f64::from(total.max(1)) * 100.0)
 }

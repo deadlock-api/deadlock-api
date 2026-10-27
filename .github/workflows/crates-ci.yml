@@ -17,6 +17,7 @@ on:
       - 'Cargo.lock'
       - 'rust-toolchain.toml'
       - 'rustfmt.toml'
+      - 'clippy.toml'
       - '.github/workflows/crates-ci.yml'
       - '.github/workflows/rust-ci-checks.yml'
   pull_request:
@@ -30,6 +31,7 @@ on:
       - 'Cargo.lock'
       - 'rust-toolchain.toml'
       - 'rustfmt.toml'
+      - 'clippy.toml'
       - '.github/workflows/crates-ci.yml'
       - '.github/workflows/rust-ci-checks.yml'
   workflow_dispatch:

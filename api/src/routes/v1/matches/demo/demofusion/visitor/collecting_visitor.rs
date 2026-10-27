@@ -14,7 +14,7 @@ use haste_core::entities::{DeltaHeader, Entity};
 use haste_core::parser::{Context, Visitor};
 
 use super::super::entity_batch_builder::EntityBatchBuilder;
-use super::super::error::Error;
+use super::super::error::DemoError;
 use super::super::event_batch_builder::EventBatchBuilder;
 use super::super::events::{EventType, decode_event};
 use super::super::schema::EntitySchema;
@@ -51,14 +51,14 @@ impl CollectingVisitor {
     pub(crate) fn new(
         entities: &[(EntitySchema, Option<Arc<[usize]>>)],
         event_types: &[EventType],
-    ) -> Self {
+    ) -> Result<Self, DemoError> {
         let mut entity_map = HashMap::with_capacity(entities.len());
         for (schema, projection) in entities {
             entity_map.insert(
                 schema.serializer_hash,
                 EntityCollector {
                     name: Arc::clone(&schema.serializer_name),
-                    builder: EntityBatchBuilder::new_projected(schema, projection.as_deref()),
+                    builder: EntityBatchBuilder::new_projected(schema, projection.as_deref())?,
                 },
             );
         }
@@ -69,20 +69,20 @@ impl CollectingVisitor {
                 event_type.message_id(),
                 EventCollector {
                     table_name: event_type.table_name(),
-                    builder: EventBatchBuilder::new(event_type),
+                    builder: EventBatchBuilder::new(event_type)?,
                 },
             );
         }
 
-        Self {
+        Ok(Self {
             entities: entity_map,
             events,
             collecting: true,
-        }
+        })
     }
 
     /// Finish every builder into its single table batch.
-    pub(crate) fn finish(self) -> Result<CollectedBatches, Error> {
+    pub(crate) fn finish(self) -> Result<CollectedBatches, DemoError> {
         let mut entity_out = HashMap::with_capacity(self.entities.len());
         for mut collector in self.entities.into_values() {
             entity_out.insert(collector.name, collector.builder.finish()?);
@@ -101,7 +101,7 @@ impl CollectingVisitor {
 }
 
 impl Visitor for CollectingVisitor {
-    type Error = Error;
+    type Error = DemoError;
 
     fn should_track_entity(&self, serializer_name_hash: u64) -> bool {
         self.entities.contains_key(&serializer_name_hash)
@@ -141,7 +141,7 @@ impl Visitor for CollectingVisitor {
         if let Some(collector) = self.events.get_mut(&packet_type)
             && let Some(event) = decode_event(packet_type, data)
         {
-            collector.builder.append(ctx.tick(), &event);
+            collector.builder.append(ctx.tick(), &event)?;
         }
         Ok(())
     }

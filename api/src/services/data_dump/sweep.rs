@@ -9,7 +9,7 @@ use std::collections::HashSet;
 use std::sync::Arc;
 
 use chrono::{DateTime, Utc};
-use futures::{StreamExt, TryStreamExt};
+use futures::{StreamExt as _, TryStreamExt as _};
 use object_store::ObjectStore;
 use object_store::path::Path;
 use tracing::info;

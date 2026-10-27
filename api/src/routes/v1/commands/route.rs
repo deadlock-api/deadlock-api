@@ -6,9 +6,9 @@ use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum_extra::extract::Query;
-use itertools::Itertools;
+use itertools::Itertools as _;
 use serde::{Deserialize, Serialize};
-use strum::VariantArray;
+use strum::VariantArray as _;
 use tracing::warn;
 use utoipa::{IntoParams, ToSchema};
 
@@ -40,7 +40,7 @@ impl From<Variable> for VariableDescription {
         Self {
             name: v.get_name().to_owned(),
             description: v.get_description().to_owned(),
-            default_label: v.get_default_label().map(ToString::to_string),
+            default_label: v.get_default_label().map(str::to_owned),
             extra_args: v.extra_args(),
             category: v.get_category(),
         }

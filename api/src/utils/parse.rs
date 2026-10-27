@@ -11,9 +11,8 @@ pub(crate) fn parse_rfc2822_datetime<'de, D>(
 where
     D: Deserializer<'de>,
 {
-    String::deserialize(deserializer)
-        .map_err(serde::de::Error::custom)
-        .and_then(|s| DateTime::parse_from_rfc2822(&s).map_err(serde::de::Error::custom))
+    let s = String::deserialize(deserializer).map_err(serde::de::Error::custom)?;
+    DateTime::parse_from_rfc2822(&s).map_err(serde::de::Error::custom)
 }
 
 // Steam ID Parsing
@@ -25,7 +24,7 @@ pub(crate) fn steamid64_to_steamid3(steam_id: u64) -> Result<u32, TryFromIntErro
         return u32::try_from(steam_id);
     }
     // (steam_id - STEAM_ID_64_IDENT) as u32
-    u32::try_from(steam_id - STEAM_ID_64_IDENT)
+    u32::try_from(steam_id.saturating_sub(STEAM_ID_64_IDENT))
 }
 
 pub(crate) fn steamid3_to_steamid64(steam_id: u32) -> u64 {
@@ -47,9 +46,10 @@ impl SteamIdRaw {
             Self::String(s) => s
                 .trim()
                 .parse::<u64>()
-                .map_err(|_| "Invalid steam id string".to_owned())?,
+                .map_err(|_not_a_number| "Invalid steam id string".to_owned())?,
         };
-        steamid64_to_steamid3(steam_id).map_err(|_| format!("Invalid steam id: {steam_id}"))
+        steamid64_to_steamid3(steam_id)
+            .map_err(|_too_large| format!("Invalid steam id: {steam_id}"))
     }
 }
 
@@ -143,7 +143,7 @@ where
                 .iter()
                 .map(|s| {
                     s.parse()
-                        .map_err(|_| E::custom("Failed to parse list item"))
+                        .map_err(|_unparsable| E::custom("Failed to parse list item"))
                 })
                 .collect(),
             Self::CommaStringList(str) => {
@@ -153,9 +153,9 @@ where
                 }
                 str.split(',')
                     .map(|s| {
-                        s.trim()
-                            .parse()
-                            .map_err(|_| E::custom("Failed to parse comma separated list"))
+                        s.trim().parse().map_err(|_unparsable| {
+                            E::custom("Failed to parse comma separated list")
+                        })
                     })
                     .collect()
             }
@@ -223,9 +223,9 @@ where
             if part.is_empty() {
                 continue;
             }
-            let id = part
-                .parse()
-                .map_err(|_| serde::de::Error::custom("Failed to parse item_order list"))?;
+            let id = part.parse().map_err(|_unparsable| {
+                serde::de::Error::custom("Failed to parse item_order list")
+            })?;
             chain.push(id);
         }
         if !chain.is_empty() {
@@ -241,7 +241,7 @@ pub(crate) const MIN_DEMO_PLAYER_TIMESTAMP: i64 = 1_772_323_200;
 
 pub(crate) fn default_last_month_timestamp() -> Option<i64> {
     let now = chrono::Utc::now().date_naive();
-    let last_month = now - chrono::Duration::days(30);
+    let last_month = now.checked_sub_signed(chrono::Duration::days(30))?;
     let last_month = last_month.and_hms_opt(0, 0, 0)?;
     last_month.and_utc().timestamp().into()
 }
@@ -250,7 +250,7 @@ pub(crate) fn default_true_option() -> Option<bool> {
     true.into()
 }
 
-pub(crate) fn default_true() -> bool {
+pub(crate) const fn default_true() -> bool {
     true
 }
 
@@ -369,7 +369,7 @@ mod tests {
     #[case("{\"ids\": \"123456,76561197960265728\"}")] // Steam ID 64 of account 0
     #[case("{\"ids\": \"123456,0\"}")] // Account 0
     fn test_comma_separated_steam_ids_invalid(#[case] json: &str) {
-        assert!(serde_json::from_str::<SteamIdsTestStruct>(json).is_err());
+        serde_json::from_str::<SteamIdsTestStruct>(json).unwrap_err();
     }
 
     #[derive(Deserialize, Debug)]
@@ -399,7 +399,7 @@ mod tests {
     #[case("{\"ids\": \"76561197960265728\"}")] // Steam ID 64 of account 0
     #[case("{\"ids\": \"0\"}")] // Account 0
     fn test_comma_separated_steam_ids_option_invalid(#[case] json: &str) {
-        assert!(serde_json::from_str::<SteamIdsOptionTestStruct>(json).is_err());
+        serde_json::from_str::<SteamIdsOptionTestStruct>(json).unwrap_err();
     }
 
     #[derive(Deserialize, Debug)]
@@ -437,7 +437,7 @@ mod tests {
     #[case("{\"ids\": \"1,\"2\", 3\"}")] // Mixed numbers and strings, do we want to support this?
     fn test_comma_separated_deserialize_option_invalid(#[case] json: &str) {
         let result = serde_json::from_str::<CommaSeparatedOptionTestStruct>(json);
-        assert!(result.is_err());
+        result.unwrap_err();
     }
 
     #[derive(Deserialize)]
@@ -505,7 +505,7 @@ mod tests {
     #[case("{\"order\": \"1,2,notanumber\"}")]
     fn test_comma_separated_chains_deserialize_option_invalid(#[case] json: &str) {
         let result = serde_json::from_str::<ChainsOptionTestStruct>(json);
-        assert!(result.is_err());
+        result.unwrap_err();
     }
 
     #[derive(Deserialize)]

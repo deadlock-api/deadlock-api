@@ -1,8 +1,8 @@
 use core::time::Duration;
 
 use axum::http::StatusCode;
-use itertools::Itertools;
-use redis::{AsyncTypedCommands, RedisResult};
+use itertools::Itertools as _;
+use redis::{AsyncTypedCommands as _, RedisResult};
 use tracing::{error, info};
 use valveprotos::deadlock::{
     CMsgClientToGcPartyLeave, CMsgClientToGcPartyLeaveResponse, CMsgClientToGcPartySetReadyState,
@@ -19,7 +19,7 @@ use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::steam::client::SteamClient;
 use crate::services::steam::types::SteamProxyQuery;
 
-pub(super) fn build_proxy_query<M: prost::Message>(
+pub(super) const fn build_proxy_query<M: prost::Message>(
     msg_type: EgcCitadelClientMessages,
     msg: M,
     username: String,
@@ -47,11 +47,11 @@ pub(super) async fn get_party_info_with_retries(
     redis_client: &mut redis::aio::ConnectionManager,
     lobby_id: u64,
 ) -> RedisResult<Option<String>> {
-    let mut attempts_left = 100;
+    let mut attempts_left = 100u32;
     let mut interval = tokio::time::interval(Duration::from_millis(100));
     loop {
         let result = get_party_info(redis_client, lobby_id).await;
-        attempts_left -= 1;
+        attempts_left = attempts_left.saturating_sub(1);
         if matches!(result, Ok(Some(_))) || attempts_left == 0 {
             return result;
         }
@@ -91,9 +91,12 @@ pub(super) async fn resolve_lobby_bot(
     wait_for_party: bool,
 ) -> APIResult<(u64, String)> {
     apply_custom_match_rate_limits(state, rate_limit_key, endpoint).await?;
-    let lobby_id = lobby_id.parse().map_err(|_| {
-        APIError::status_msg(StatusCode::BAD_REQUEST, "Invalid lobby id".to_owned())
-    })?;
+    let Ok(lobby_id) = lobby_id.parse() else {
+        return Err(APIError::status_msg(
+            StatusCode::BAD_REQUEST,
+            "Invalid lobby id".to_owned(),
+        ));
+    };
     let redis_client = &mut state.redis_client.clone();
     let party_info = if wait_for_party {
         get_party_info_with_retries(redis_client, lobby_id).await?

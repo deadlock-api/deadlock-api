@@ -10,7 +10,7 @@ use std::sync::Arc;
 use chrono::{DateTime, Utc};
 use object_store::path::Path;
 use object_store::{
-    Attribute, Attributes, ObjectStore, ObjectStoreExt, PutMode, PutOptions, PutPayload,
+    Attribute, Attributes, ObjectStore, ObjectStoreExt as _, PutMode, PutOptions, PutPayload,
     UpdateVersion,
 };
 use serde::{Deserialize, Serialize};
@@ -120,7 +120,7 @@ pub(crate) struct TableState {
 }
 
 impl TableState {
-    pub(crate) fn new(policy: PolicyKind, columns: Vec<Column>) -> Self {
+    pub(crate) const fn new(policy: PolicyKind, columns: Vec<Column>) -> Self {
         Self {
             policy,
             status: TableStatus::Building,
@@ -241,13 +241,12 @@ pub(crate) async fn publish(
     manifest: &Manifest,
     e_tag: Option<&str>,
 ) -> Result<Option<String>, DumpError> {
-    let mode = match e_tag {
-        Some(e_tag) => PutMode::Update(UpdateVersion {
+    let mode = e_tag.map_or(PutMode::Create, |e_tag| {
+        PutMode::Update(UpdateVersion {
             e_tag: Some(e_tag.to_owned()),
             version: None,
-        }),
-        None => PutMode::Create,
-    };
+        })
+    });
     let body = serde_json::to_vec_pretty(manifest)?;
     let result = store
         .put_opts(

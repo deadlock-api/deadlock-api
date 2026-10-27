@@ -34,7 +34,7 @@ pub(crate) struct SteamAccountsRepository {
 }
 
 impl SteamAccountsRepository {
-    pub(crate) fn new(pg_client: Pool<Postgres>) -> Self {
+    pub(crate) const fn new(pg_client: Pool<Postgres>) -> Self {
         Self { pg_client }
     }
 
@@ -95,7 +95,6 @@ impl SteamAccountsRepository {
     }
 
     /// Counts active (non-deleted) Steam accounts for a patron.
-    #[expect(clippy::cast_possible_truncation)]
     pub(crate) async fn count_active_accounts(
         &self,
         patron_id: Uuid,
@@ -112,17 +111,16 @@ impl SteamAccountsRepository {
         .fetch_one(&self.pg_client)
         .await?;
 
-        // Count will always fit in i32 for practical patron slot limits
-        Ok(row.count as i32)
+        Ok(i32::try_from(row.count).unwrap_or(i32::MAX))
     }
 
     /// Counts Steam accounts in cooldown (deleted within the last 24 hours) for a patron.
-    #[expect(clippy::cast_possible_truncation)]
     pub(crate) async fn count_accounts_in_cooldown(
         &self,
         patron_id: Uuid,
     ) -> SteamAccountsRepositoryResult<i32> {
-        let cooldown_threshold = Utc::now() - Duration::hours(24);
+        let now = Utc::now();
+        let cooldown_threshold = now.checked_sub_signed(Duration::hours(24)).unwrap_or(now);
 
         let row = sqlx::query!(
             r#"
@@ -138,8 +136,7 @@ impl SteamAccountsRepository {
         .fetch_one(&self.pg_client)
         .await?;
 
-        // Count will always fit in i32 for practical patron slot limits
-        Ok(row.count as i32)
+        Ok(i32::try_from(row.count).unwrap_or(i32::MAX))
     }
 
     /// Finds a soft-deleted Steam account by `steam_id3` for a patron.
@@ -268,10 +265,7 @@ impl SteamAccountsRepository {
         .fetch_optional(&self.pg_client)
         .await?;
 
-        match row {
-            Some(row) => Ok(row),
-            None => Err(SteamAccountsRepositoryError::AccountNotFound),
-        }
+        row.ok_or(SteamAccountsRepositoryError::AccountNotFound)
     }
 
     /// Gets active (non-deleted) Steam accounts for a patron, ordered by `created_at ASC`.

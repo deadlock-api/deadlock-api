@@ -267,7 +267,7 @@ impl ScoreboardQuerySortBy {
     /// row versions. `sum`/`avg`/`max` columns can be corrected downward by a newer version, so
     /// reading raw rows would diverge from `FINAL` — those keep the dedup path. Unscoped reads
     /// use `FINAL` + `count()` regardless, which is exact and cheaper than the raw scan.
-    pub(super) fn dedup_free(self) -> bool {
+    pub(super) const fn dedup_free(self) -> bool {
         matches!(self, Self::Matches)
     }
 
@@ -291,14 +291,14 @@ impl ScoreboardQuerySortBy {
     }
 
     /// Whether the sort reads the player's rank, which heroes do not have.
-    pub(super) fn is_rank_sort(self) -> bool {
+    pub(super) const fn is_rank_sort(self) -> bool {
         matches!(self, Self::Rank | Self::PeakRank)
     }
 
     /// Whether the sort reads `match_player.permanent_buffs`. The scoreboards' account-scoped
     /// path (`player_match_stats`) has the column too, but only for recent rows, and none of
     /// `match_player`'s projections carries it.
-    pub(super) fn is_buff_sort(self) -> bool {
+    pub(super) const fn is_buff_sort(self) -> bool {
         matches!(
             self,
             Self::MaxPermanentBuffsPerMatch
@@ -311,7 +311,7 @@ impl ScoreboardQuerySortBy {
     /// `match_id`) dedup subquery. Empty means the sort only needs `match_id`, which is always
     /// projected. Used by `player_scoreboard` to deduplicate `ReplacingMergeTree` rows without
     /// `FINAL` while still getting correct `sum` / `countIf` aggregates.
-    pub(super) fn inner_columns(self) -> &'static [&'static str] {
+    pub(super) const fn inner_columns(self) -> &'static [&'static str] {
         match self {
             Self::Matches => &[],
             Self::Rank | Self::PeakRank => &[

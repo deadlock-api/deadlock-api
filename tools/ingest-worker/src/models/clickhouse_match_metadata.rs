@@ -1,8 +1,8 @@
 use clickhouse::Row;
 use serde::Serialize;
-use std::io::Read;
+use std::io::Read as _;
 
-use prost::Message;
+use prost::Message as _;
 use tracing::warn;
 use valveprotos::deadlock::c_msg_match_hero_release_votes::HeroVote;
 use valveprotos::deadlock::c_msg_match_meta_data_contents::{
@@ -419,12 +419,19 @@ fn average_badge(match_info: &MatchInfo) -> Option<u32> {
 /// even would starve odd ranks of that mass and leave a sawtooth in the rank distribution.
 ///
 /// Callers filter out zero badges, so the dense mean is at least 1.
-#[expect(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+#[expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss,
+    reason = "the mean of u32 badges is a non-negative integer within u32"
+)]
 fn mean_badge(badges: &[u32]) -> Option<u32> {
     let count = u32::try_from(badges.len()).ok().filter(|c| *c > 0)?;
-    let dense_sum: u32 = badges.iter().map(|badge| badge - 4 * (badge / 10)).sum();
+    let dense_sum = badges
+        .iter()
+        .map(|badge| badge.saturating_sub((badge / 10).saturating_mul(4)))
+        .fold(0, u32::saturating_add);
     let dense_mean = (f64::from(dense_sum) / f64::from(count) + 0.5).floor() as u32;
-    Some(dense_mean + 4 * ((dense_mean - 1) / 6))
+    Some(dense_mean.saturating_add((dense_mean.saturating_sub(1) / 6).saturating_mul(4)))
 }
 
 /// Decode the hero release votes carried in the match's `extra_messages` blocks.
@@ -492,7 +499,7 @@ pub(crate) struct MatchShared<'a> {
 }
 
 impl<'a> MatchShared<'a> {
-    #[expect(clippy::too_many_lines)]
+    #[expect(clippy::too_many_lines, reason = "one field after another")]
     pub(crate) fn new(match_info: &'a MatchInfo) -> Self {
         let hero_votes = hero_release_votes(match_info)
             .into_iter()
@@ -603,8 +610,12 @@ impl<'a> MatchShared<'a> {
     }
 }
 
-#[expect(clippy::too_many_lines)]
+#[expect(clippy::too_many_lines, reason = "one field after another")]
 impl From<(&MatchShared<'_>, bool, &Players)> for ClickhouseMatchPlayer {
+    #[expect(
+        clippy::cast_possible_truncation,
+        reason = "objective masks have 16 bits and hero ids fit u8, like their ClickHouse columns"
+    )]
     fn from((shared, won, value): (&MatchShared<'_>, bool, &Players)) -> Self {
         let match_info = shared.match_info;
         // One value per stats tick (or per item) for a field.
@@ -890,7 +901,7 @@ impl From<(&MatchShared<'_>, bool, &Players)> for ClickhouseMatchPlayer {
                 .power_up_buffs
                 .iter()
                 .map(PowerUpBuff::r#type)
-                .map(std::string::ToString::to_string)
+                .map(str::to_owned)
                 .collect(),
             power_up_buffs_value: value
                 .power_up_buffs
@@ -1066,7 +1077,10 @@ fn custom_user_stats_deltas(
                         .iter()
                         .find(|v| v.id() == id)
                         .map_or(0, CustomUserStat::value);
-                    #[allow(clippy::cast_possible_wrap)]
+                    #[expect(
+                        clippy::cast_possible_wrap,
+                        reason = "a wrapped u32 difference read as i32 is the signed delta"
+                    )]
                     let delta = value.wrapping_sub(prev) as i32;
                     prev = value;
                     delta
@@ -1160,7 +1174,11 @@ mod tests {
             .iter()
             .scan(0i64, |sum, d| {
                 *sum += i64::from(*d);
-                #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+                #[expect(
+                    clippy::cast_possible_truncation,
+                    clippy::cast_sign_loss,
+                    reason = "truncating to 32 bits is what restores the values"
+                )]
                 Some(*sum as u32)
             })
             .collect();

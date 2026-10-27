@@ -22,7 +22,7 @@ pub(crate) struct RateLimitClient {
 }
 
 impl RateLimitClient {
-    pub(crate) fn new(
+    pub(crate) const fn new(
         redis_client: ConnectionManager,
         pg_client: Pool<Postgres>,
         emergency_mode: bool,
@@ -220,9 +220,12 @@ impl RateLimitClient {
         Ok(rows
             .iter()
             .map(|row| Quota {
-                #[expect(clippy::cast_sign_loss)]
+                #[expect(clippy::cast_sign_loss, reason = "quota rows hold non-negative limits")]
                 limit: row.rate_limit as usize,
-                #[expect(clippy::cast_sign_loss)]
+                #[expect(
+                    clippy::cast_sign_loss,
+                    reason = "quota rows hold non-negative periods"
+                )]
                 period: Duration::from_micros(row.rate_period.microseconds as u64),
                 r#type: QuotaType::Key,
             })
@@ -262,7 +265,7 @@ fn add_increment_cmds(
         .expire(key, i64::try_from(retention.as_secs()).unwrap_or(i64::MAX));
 }
 
-fn quota_key<'a>(quota: &Quota, key: &'a str, prefixed_key: &'a str) -> &'a str {
+const fn quota_key<'a>(quota: &Quota, key: &'a str, prefixed_key: &'a str) -> &'a str {
     if quota.r#type.is_global() {
         key
     } else {
@@ -278,7 +281,11 @@ fn add_check_cmds(
     period: Duration,
     current_time: DateTime<Utc>,
 ) {
-    let start = (current_time - period).timestamp_micros();
+    let start = chrono::TimeDelta::from_std(period)
+        .ok()
+        .and_then(|period| current_time.checked_sub_signed(period))
+        .unwrap_or(DateTime::<Utc>::MIN_UTC)
+        .timestamp_micros();
     let end = current_time.timestamp_micros();
     pipe.zcount(key, start, end)
         .zrangebyscore_limit(key, start, end, 0, 1);
@@ -306,5 +313,5 @@ fn parse_check(
         .and_then(DateTime::from_timestamp_micros)
         .unwrap_or_else(Utc::now);
     // Subtract 1 to exclude the just-added entry from the increment
-    Ok((num_requests - 1, oldest_timestamp))
+    Ok((num_requests.saturating_sub(1), oldest_timestamp))
 }

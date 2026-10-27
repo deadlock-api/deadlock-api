@@ -21,15 +21,16 @@ use std::sync::{Arc, LazyLock};
 use bytes::Bytes;
 use datafusion::arrow::datatypes::SchemaRef;
 use datafusion::arrow::record_batch::RecordBatch;
-use datafusion::common::tree_node::{TreeNode, TreeNodeRecursion};
+use datafusion::common::tree_node::{TreeNode as _, TreeNodeRecursion};
 use datafusion::datasource::MemTable;
 use datafusion::execution::SendableRecordBatchStream;
 use datafusion::execution::context::SQLOptions;
 use datafusion::logical_expr::LogicalPlan;
 use datafusion::prelude::SessionConfig;
 use rayon::prelude::*;
+use tracing::debug;
 
-use super::error::{Error, Result};
+use super::error::{DemoError, Result};
 use super::events::{EventType, event_schema};
 use super::schema::EntitySchema;
 use super::session::session_context;
@@ -47,13 +48,13 @@ const PARSE_THREADS: usize = 8;
 /// default (one per core) lets a single query crowd out request handling.
 const QUERY_PARTITIONS: usize = 4;
 
-static PARSE_POOL: LazyLock<rayon::ThreadPool> = LazyLock::new(|| {
-    rayon::ThreadPoolBuilder::new()
-        .num_threads(PARSE_THREADS)
-        .thread_name(|i| format!("demo-parse-{i}"))
-        .build()
-        .expect("demo parse pool builds")
-});
+static PARSE_POOL: LazyLock<core::result::Result<rayon::ThreadPool, rayon::ThreadPoolBuildError>> =
+    LazyLock::new(|| {
+        rayon::ThreadPoolBuilder::new()
+            .num_threads(PARSE_THREADS)
+            .thread_name(|i| format!("demo-parse-{i}"))
+            .build()
+    });
 
 /// Run `query` against a single parse of `demo` and return a stream of its
 /// result batches. The demo is parsed exactly once; only the columns the query
@@ -69,7 +70,7 @@ static PARSE_POOL: LazyLock<rayon::ThreadPool> = LazyLock::new(|| {
 ///
 /// Returns an error if the table names cannot be extracted from `query`, the
 /// demo cannot be parsed, or `DataFusion` fails to plan or execute the query
-/// (see [`Error`](super::Error)).
+/// (see [`DemoError`](super::DemoError)).
 pub(crate) async fn query(demo: Bytes, query: &str) -> Result<SendableRecordBatchStream> {
     query_stream::<SyncDemoStream>(demo, query).await
 }
@@ -102,7 +103,7 @@ async fn query_stream<D: BuildStream + 'static>(
         off_runtime(move || parse_and_collect::<D>(&demo, &entity_specs, &event_types)).await?
     };
 
-    let ctx = session_context(SessionConfig::new().with_target_partitions(QUERY_PARTITIONS));
+    let ctx = session_context(SessionConfig::new().with_target_partitions(QUERY_PARTITIONS))?;
 
     for schema in &referenced_entities {
         let arrow_schema = projected_entity_schema(schema, &projections)?;
@@ -136,7 +137,7 @@ async fn off_runtime<T: Send + 'static>(
 ) -> Result<T> {
     tokio::task::spawn_blocking(parse)
         .await
-        .map_err(|e| Error::ParseTask(e.to_string()))?
+        .map_err(|e| DemoError::ParseTask(e.to_string()))?
 }
 
 /// User SQL may only read: DDL (`CREATE EXTERNAL TABLE` would reach the local file store), DML
@@ -201,7 +202,7 @@ pub(crate) fn projected_entity_schema(
                 .arrow_schema
                 .project(&cols.iter().copied().collect::<Vec<_>>())?,
         ),
-        Some(EntityProjection::All) | None => schema.arrow_schema.clone(),
+        Some(EntityProjection::All) | None => Arc::clone(&schema.arrow_schema),
     })
 }
 
@@ -212,12 +213,12 @@ pub(crate) async fn discover_entity_projections(
     entities: &[EntitySchema],
     event_types: &[EventType],
 ) -> Result<HashMap<Arc<str>, EntityProjection>> {
-    let ctx = session_context(SessionConfig::new());
+    let ctx = session_context(SessionConfig::new())?;
     // DataFusion normalizes unquoted identifiers to lowercase in the plan, so
     // key the lookup by the lowercased table name.
     let mut entity_keys: HashMap<String, Arc<str>> = HashMap::with_capacity(entities.len());
     for schema in entities {
-        let table = MemTable::try_new(schema.arrow_schema.clone(), vec![vec![]])?;
+        let table = MemTable::try_new(Arc::clone(&schema.arrow_schema), vec![vec![]])?;
         ctx.register_table(&*schema.serializer_name, Arc::new(table))?;
         entity_keys.insert(
             schema.serializer_name.to_ascii_lowercase(),
@@ -283,18 +284,23 @@ fn parse_and_collect<D: BuildStream>(
     // signon, and the final segment (`end == None`) runs to EOF. With no full packets there is a
     // single whole-demo segment.
     let num_segments = num_full_packets.max(1);
-    let collected: Vec<CollectedBatches> = PARSE_POOL.install(|| {
+    let parse_pool = PARSE_POOL
+        .as_ref()
+        .map_err(|e| DemoError::ParseTask(format!("demo parse pool failed to build: {e}")))?;
+    let collected: Vec<CollectedBatches> = parse_pool.install(|| {
         (0..num_segments)
             .into_par_iter()
             .map(|ordinal| -> Result<CollectedBatches> {
-                let visitor = CollectingVisitor::new(entity_specs, event_types);
+                let visitor = CollectingVisitor::new(entity_specs, event_types)?;
                 let mut parser = sync_parser::<D, _>(demo_bytes.clone(), visitor)?;
                 if let Some(shared_state) = &shared_state {
                     parser.set_shared_state(shared_state.clone());
                 }
                 // Mirrors the single-threaded path: parse errors (e.g. a truncated tail) are
                 // tolerated and whatever was collected so far is kept.
-                let _ = parser.run_full_packet(ordinal);
+                if let Err(e) = parser.run_full_packet(ordinal) {
+                    debug!("Demo segment {ordinal} parse ended early: {e}");
+                }
                 parser.into_visitor().finish()
             })
             .collect::<Result<Vec<_>>>()
@@ -329,7 +335,7 @@ pub(crate) enum EntityProjection {
 
 impl Default for EntityProjection {
     fn default() -> Self {
-        EntityProjection::Columns(BTreeSet::new())
+        Self::Columns(BTreeSet::new())
     }
 }
 
@@ -359,7 +365,7 @@ mod tests {
 
     #[tokio::test]
     async fn read_only_sql_rejects_side_effects() {
-        let ctx = session_context(SessionConfig::new());
+        let ctx = session_context(SessionConfig::new()).unwrap();
         for sql in [
             "CREATE EXTERNAL TABLE t (a INT) STORED AS CSV LOCATION '/etc/passwd'",
             "CREATE TABLE t AS SELECT 1",
@@ -371,10 +377,8 @@ mod tests {
                 "{sql}"
             );
         }
-        assert!(
-            ctx.sql_with_options("SELECT 1", read_only_sql())
-                .await
-                .is_ok()
-        );
+        ctx.sql_with_options("SELECT 1", read_only_sql())
+            .await
+            .unwrap();
     }
 }

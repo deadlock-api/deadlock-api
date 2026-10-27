@@ -28,7 +28,7 @@ pub(crate) struct AssetsClient {
 }
 
 impl AssetsClient {
-    pub(crate) fn new(r2_client: AmazonS3, version_store: VersionStore) -> Self {
+    pub(crate) const fn new(r2_client: AmazonS3, version_store: VersionStore) -> Self {
         Self {
             r2_client,
             version_store,

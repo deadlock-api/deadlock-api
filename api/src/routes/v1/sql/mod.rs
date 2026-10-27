@@ -13,7 +13,7 @@ https://data.deadlock-api.com (DuckDB / DuckLake) or the MCP server at `/v1/mcp`
 ")))]
 struct ApiDoc;
 
-#[expect(deprecated)]
+#[expect(deprecated, reason = "registers deprecated handlers")]
 pub(super) fn router() -> OpenApiRouter<AppState> {
     OpenApiRouter::with_openapi(ApiDoc::openapi())
         .routes(routes!(route::sql))

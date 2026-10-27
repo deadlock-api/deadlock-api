@@ -42,3 +42,6 @@ required-features = ["requests"]
 [[bin]]
 name = "graph-imports"
 path = "scripts/graph-imports.rs"
+
+[lints]
+workspace = true

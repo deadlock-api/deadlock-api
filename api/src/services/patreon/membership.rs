@@ -26,8 +26,7 @@ pub(crate) async fn handle_reactivation(
         return Ok(());
     }
 
-    #[expect(clippy::cast_sign_loss)]
-    let available_slots = (slot_limit - active_count) as usize;
+    let available_slots = usize::try_from(slot_limit.saturating_sub(active_count)).unwrap_or(0);
 
     let deleted_accounts = steam_accounts_repository
         .get_deleted_accounts_for_patron(patron_id)
@@ -60,7 +59,6 @@ pub(crate) async fn handle_reactivation(
 ///
 /// Soft-deletes the oldest accounts beyond the slot limit; without an active membership or a
 /// slot override that is every account.
-#[expect(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
 pub(crate) async fn handle_downgrade_or_cancellation(
     steam_accounts_repository: &SteamAccountsRepository,
     patron_id: uuid::Uuid,
@@ -80,14 +78,15 @@ pub(crate) async fn handle_downgrade_or_cancellation(
     }
 
     let slot_limit = calculate_slot_limit(slot_override, pledge_amount_cents, is_active);
-    // Safe cast: practical slot limits will never exceed i32::MAX
-    let active_count = active_accounts.len() as i32;
-    if active_count <= slot_limit {
+    let active_count = active_accounts.len();
+    // A negative limit allows no accounts.
+    let allowed = usize::try_from(slot_limit).unwrap_or(0);
+    if active_count <= allowed {
         return Ok(());
     }
 
     // Oldest first: the accounts are already ordered by created_at ASC.
-    let excess_count = (active_count - slot_limit.max(0)).unsigned_abs() as usize;
+    let excess_count = active_count.saturating_sub(allowed);
     info!(
         "Patron {patreon_user_id} has {slot_limit} slots for {active_count} active accounts, soft-deleting {excess_count} oldest"
     );

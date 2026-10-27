@@ -1,7 +1,7 @@
 //! End-to-end build pipeline: KV3 → raw → public item shape.
 
 use indexmap::IndexMap;
-use serde::Deserialize;
+use serde::Deserialize as _;
 use serde_json::Value;
 
 use crate::services::assets::versions::common::entity_id;
@@ -310,11 +310,14 @@ fn shop_filters(field: Option<&UsageFlagsField>) -> Option<Vec<String>> {
 /// stay one word (`AntiCC` -> `anti_cc`, `HP` -> `hp`), `_` is kept as-is.
 fn pascal_to_snake(s: &str) -> String {
     let chars: Vec<char> = s.chars().collect();
-    let mut out = String::with_capacity(s.len() + 4);
+    let mut out = String::with_capacity(s.len().saturating_add(4));
     for (i, &c) in chars.iter().enumerate() {
-        if c.is_ascii_uppercase() && i > 0 {
-            let prev = chars[i - 1];
-            let next_lower = chars.get(i + 1).is_some_and(char::is_ascii_lowercase);
+        if c.is_ascii_uppercase()
+            && let Some(&prev) = i.checked_sub(1).and_then(|j| chars.get(j))
+        {
+            let next_lower = chars
+                .get(i.saturating_add(1))
+                .is_some_and(char::is_ascii_lowercase);
             if prev != '_'
                 && (prev.is_ascii_lowercase()
                     || prev.is_ascii_digit()
@@ -366,9 +369,8 @@ fn coerce_recoil_range(v: Value) -> Value {
 /// Abilities prefer the raw `m_strAbilityImage` and fall back to CSS.
 fn resolve_item_image(base: &RawItemBaseFields, icons_css: &CssIndex) -> Option<String> {
     base.image.clone().or_else(|| {
-        base.css_class
-            .as_deref()
-            .and_then(|c| icons_css.find_ability_icon(c))
+        let c = base.css_class.as_deref()?;
+        icons_css.find_ability_icon(c)
     })
 }
 
@@ -385,13 +387,16 @@ fn resolve_item_image_with_css(base: &RawItemBaseFields, icons_css: &CssIndex) -
     }
 }
 
-fn webp_of(image: Option<&str>) -> Option<String> {
-    image.map(|p| p.replace(".png", ".webp"))
+fn webp_of(image: &str) -> String {
+    image.replace(".png", ".webp")
 }
 
 // ---------- transform ability ----------
 
-#[expect(clippy::too_many_arguments)]
+#[expect(
+    clippy::too_many_arguments,
+    reason = "the per-item inputs of one build step"
+)]
 async fn transform_ability(
     ctx: &TemplateCtx<'_>,
     prop_icons_css: &CssIndex,
@@ -405,7 +410,7 @@ async fn transform_ability(
 ) -> Ability {
     let image_raw = resolve_item_image(&raw.base, icons_css);
     let image = parse_img_path(image_raw.as_deref());
-    let image_webp = webp_of(image.as_deref());
+    let image_webp = image.as_deref().map(webp_of);
 
     let properties = raw.base.properties.clone().map(|m| {
         m.into_iter()
@@ -579,12 +584,11 @@ async fn build_ability_tooltip_details(
                                                 .as_deref()
                                                 .filter(|s| !s.is_empty())
                                                 .and_then(|_| {
-                                                    p.important_property.as_ref().and_then(|ip| {
-                                                        ctx.localization
-                                                            .get(&format!("Citadel_{ip}"))
-                                                            .or_else(|| ctx.localization.get(ip))
-                                                            .cloned()
-                                                    })
+                                                    let ip = p.important_property.as_ref()?;
+                                                    ctx.localization
+                                                        .get(&format!("Citadel_{ip}"))
+                                                        .or_else(|| ctx.localization.get(ip))
+                                                        .cloned()
                                                 }),
                                             important_property_icon: parse_img_path(
                                                 p.important_property
@@ -634,7 +638,10 @@ async fn build_ability_tooltip_details(
 
 // ---------- transform weapon ----------
 
-#[expect(clippy::too_many_arguments)]
+#[expect(
+    clippy::too_many_arguments,
+    reason = "the per-item inputs of one build step"
+)]
 fn transform_weapon(
     ctx: &TemplateCtx<'_>,
     prop_icons_css: &CssIndex,
@@ -648,7 +655,7 @@ fn transform_weapon(
 ) -> Weapon {
     let image_raw = resolve_item_image_with_css(&raw.base, icons_css);
     let image = parse_img_path(image_raw.as_deref());
-    let image_webp = webp_of(image.as_deref());
+    let image_webp = image.as_deref().map(webp_of);
 
     let name = weapon_loc_candidates(&class_name, ctx.heroes)
         .iter()
@@ -904,7 +911,10 @@ fn normalize_spread(s: Option<&StringOrFloatList>) -> Option<serde_json::Value> 
 
 // ---------- transform upgrade ----------
 
-#[expect(clippy::too_many_arguments)]
+#[expect(
+    clippy::too_many_arguments,
+    reason = "the per-item inputs of one build step"
+)]
 async fn transform_upgrade(
     ctx: &TemplateCtx<'_>,
     prop_icons_css: &CssIndex,
@@ -919,12 +929,12 @@ async fn transform_upgrade(
 ) -> Upgrade {
     let image_raw = resolve_item_image_with_css(&raw.base, icons_css);
     let image = parse_img_path(image_raw.as_deref());
-    let image_webp = webp_of(image.as_deref());
+    let image_webp = image.as_deref().map(webp_of);
 
     let shop_image = parse_img_path(raw.shop_image.as_deref());
-    let shop_image_webp = webp_of(shop_image.as_deref());
+    let shop_image_webp = shop_image.as_deref().map(webp_of);
     let shop_image_small = parse_img_path(raw.shop_image_small.as_deref());
-    let shop_image_small_webp = webp_of(shop_image_small.as_deref());
+    let shop_image_small_webp = shop_image_small.as_deref().map(webp_of);
 
     let item_slot_type: ItemSlotType = raw.item_slot_type.parse().unwrap_or(ItemSlotType::Weapon);
     let activation: AbilityActivation = raw
@@ -1188,7 +1198,7 @@ mod tests {
 
     async fn fetch_zst(client: &reqwest::Client, version: u32, rel: &str) -> String {
         use async_compression::tokio::bufread::ZstdDecoder;
-        use tokio::io::AsyncReadExt;
+        use tokio::io::AsyncReadExt as _;
 
         let url = format!("{PUBLIC_BASE}/{version}/{rel}.zst");
         let bytes = client
@@ -1236,7 +1246,10 @@ mod tests {
         let arr = val.as_array().expect("array");
         let names: std::collections::HashSet<&str> = arr
             .iter()
-            .filter_map(|v| v.get("class_name").and_then(|s| s.as_str()))
+            .filter_map(|v| {
+                let s = v.get("class_name")?;
+                s.as_str()
+            })
             .collect();
         for needed in [
             "citadel_ability_self_vacuum",

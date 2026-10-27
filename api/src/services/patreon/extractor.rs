@@ -37,7 +37,7 @@ impl FromRequestParts<AppState> for PatronSession {
         if let Some(token) = token
             && let Ok(claims) = validate_session_token(token, &state.config.jwt_secret)
         {
-            return Ok(PatronSession {
+            return Ok(Self {
                 patron_id: claims.patron_id,
             });
         }
@@ -48,7 +48,7 @@ impl FromRequestParts<AppState> for PatronSession {
         if let Some(api_key) = api_key
             && let Some(patron_id) = get_patron_id_for_api_key(&state.pg_client, api_key).await?
         {
-            return Ok(PatronSession { patron_id });
+            return Ok(Self { patron_id });
         }
 
         Err(APIError::status_msg(

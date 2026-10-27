@@ -6,7 +6,6 @@ edition.workspace = true
 [dependencies]
 dungers_varint = { workspace = true, optional = true }
 thiserror.workspace = true
-bytemuck.workspace = true
 
 [features]
 varint = ["dep:dungers_varint"]
@@ -14,3 +13,6 @@ varint = ["dep:dungers_varint"]
 [[test]]
 name = "varint"
 required-features = ["varint"]
+
+[lints]
+workspace = true

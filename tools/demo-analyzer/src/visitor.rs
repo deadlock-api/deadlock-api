@@ -5,7 +5,7 @@ use std::sync::{Arc, Mutex, MutexGuard};
 use haste::entities::{DeltaHeader, Entity, ehandle_to_index};
 use haste::fxhash;
 use haste::parser::{AsyncVisitor, Context};
-use prost::Message;
+use prost::Message as _;
 use tracing::debug;
 use valveprotos::deadlock::{CCitadelUserMsgBannedHeroes, CitadelUserMessageIds};
 
@@ -26,7 +26,7 @@ pub(crate) struct ControllerData {
 }
 
 impl ControllerData {
-    fn is_complete(&self) -> bool {
+    const fn is_complete(&self) -> bool {
         self.steam_id.is_some() && self.steam_name.is_some()
     }
 }
@@ -38,7 +38,7 @@ pub(crate) struct PawnData {
 }
 
 impl PawnData {
-    fn is_complete(&self) -> bool {
+    const fn is_complete(&self) -> bool {
         self.controller_index.is_some() && self.hero_build_id.is_some()
     }
 }
@@ -88,7 +88,7 @@ pub(crate) struct DemoAnalyzerVisitor {
 }
 
 impl DemoAnalyzerVisitor {
-    pub(crate) fn new(state: Arc<Mutex<SharedState>>, expected_players: usize) -> Self {
+    pub(crate) const fn new(state: Arc<Mutex<SharedState>>, expected_players: usize) -> Self {
         Self {
             state,
             expected_players,
@@ -141,7 +141,7 @@ impl DemoAnalyzerVisitor {
             .map_err(|e| VisitorError::LockPoisoned(e.to_string()))
     }
 
-    fn handle_entity(&mut self, ctx: &Context, entity: &Entity) -> Result<(), VisitorError> {
+    fn handle_entity(&self, ctx: &Context, entity: &Entity) -> Result<(), VisitorError> {
         let hash = entity.serializer().serializer_name.hash;
 
         if hash == PLAYER_CONTROLLER_HASH {
@@ -221,18 +221,17 @@ impl DemoAnalyzerVisitor {
 
     /// Bans from the game rules entity (build 6711+). Read once the array's length and every
     /// element are present; older demos send them in the `BannedHeroes` message instead.
-    fn handle_game_rules(&mut self, ctx: &Context, entity: &Entity) -> Result<(), VisitorError> {
+    fn handle_game_rules(&self, ctx: &Context, entity: &Entity) -> Result<(), VisitorError> {
         let Some(len) = entity.get_value::<u64>(&BANNED_HEROES_HASH) else {
             return Ok(());
         };
         let Some(banned_hero_ids) = (0..len)
             .map(|i| {
-                entity
-                    .get_value::<u64>(&fxhash::add_u64_to_hash(
-                        BANNED_HEROES_HASH,
-                        fxhash::add_u64_to_hash(0, i),
-                    ))
-                    .and_then(|id| u32::try_from(id).ok())
+                let id = entity.get_value::<u64>(&fxhash::add_u64_to_hash(
+                    BANNED_HEROES_HASH,
+                    fxhash::add_u64_to_hash(0, i),
+                ))?;
+                u32::try_from(id).ok()
             })
             .collect::<Option<Vec<u32>>>()
         else {
@@ -246,7 +245,9 @@ impl DemoAnalyzerVisitor {
         state.bans_received = true;
         let tick = ctx.tick();
         debug!(tick, banned_heroes = ?state.banned_hero_ids, "Extracted banned heroes from game rules");
-        if state.all_data_complete(self.expected_players) {
+        let complete = state.all_data_complete(self.expected_players);
+        drop(state);
+        if complete {
             debug!(tick, "All data collected after bans, stopping parse early");
             return Err(VisitorError::AllDataCollected);
         }
@@ -254,7 +255,7 @@ impl DemoAnalyzerVisitor {
     }
 
     fn handle_packet(
-        &mut self,
+        &self,
         ctx: &Context,
         packet_type: u32,
         data: &[u8],

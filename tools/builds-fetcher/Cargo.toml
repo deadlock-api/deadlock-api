@@ -17,3 +17,6 @@ time = "0.3.55"
 tokio = { workspace = true }
 tracing = { workspace = true }
 valveprotos = { workspace = true, features = ["gc-client", "serde"] }
+
+[lints]
+workspace = true
