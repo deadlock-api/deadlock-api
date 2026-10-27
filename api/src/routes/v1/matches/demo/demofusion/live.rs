@@ -5,6 +5,7 @@
 //! rows are pushed into `DataFusion` [`StreamingTable`]s, so projection/filter queries emit rows
 //! continuously. A whole-match `GROUP BY` / `ORDER BY` still only completes once the broadcast ends.
 
+use core::sync::atomic::{AtomicUsize, Ordering};
 use core::time::Duration;
 use std::collections::{HashMap, HashSet};
 use std::io::{self, Read};
@@ -15,6 +16,7 @@ use datafusion::arrow::datatypes::SchemaRef;
 use datafusion::arrow::record_batch::RecordBatch;
 use datafusion::catalog::streaming::StreamingTable;
 use datafusion::datasource::MemTable;
+use datafusion::error::DataFusionError;
 use datafusion::execution::{SendableRecordBatchStream, TaskContext};
 use datafusion::physical_plan::stream::RecordBatchStreamAdapter;
 use datafusion::physical_plan::streaming::PartitionStream;
@@ -25,7 +27,7 @@ use haste_core::entities::{DeltaHeader, Entity};
 use haste_core::parser::{Context, Parser, Visitor};
 use haste_core::valveprotos::common::EDemoCommands;
 use serde::Deserialize;
-use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender, unbounded_channel};
+use tokio::sync::mpsc::{Receiver, Sender, UnboundedReceiver, UnboundedSender, unbounded_channel};
 use tracing::{debug, info, warn};
 
 use super::entity_batch_builder::EntityBatchBuilder;
@@ -44,6 +46,11 @@ use super::visitor::{BroadcastDemoStream, discover_schemas_from_demo};
 /// broadcast, so the initial connect retries for at least this long before giving up.
 const CONNECT_RETRY_BUDGET: Duration = Duration::from_mins(1);
 const CONNECT_RETRY_INTERVAL: Duration = Duration::from_secs(2);
+/// Decoded rows one live query may hold queued for its consumer before it is stopped. Rows queue up
+/// when the client stops reading the stream, or for joins/aggregations that only emit at the end.
+const MAX_QUEUED_BYTES: usize = 256 << 20;
+/// Fetched broadcast fragments queued ahead of the parser; beyond it the fetch waits for the parse.
+const MAX_QUEUED_FRAGMENTS: usize = 64;
 
 /// Run `query` over a live GOTV/spectator broadcast, streaming result rows as the match plays.
 ///
@@ -92,11 +99,12 @@ pub(crate) async fn query_live(
         discover_entity_projections(query, &referenced_entities, &event_types).await?;
     let entity_specs = build_entity_specs(&referenced_entities, &projections);
 
-    let (bytes_tx, bytes_rx) = std::sync::mpsc::channel::<Bytes>();
-    // `bytes_rx` is alive right here, so this only fails if the channel itself is broken.
+    let (bytes_tx, bytes_rx) = tokio::sync::mpsc::channel::<Bytes>(MAX_QUEUED_FRAGMENTS);
+    // The channel is empty and `bytes_rx` is alive right here, so this cannot fail.
     bytes_tx
-        .send(signon)
+        .try_send(signon)
         .map_err(|e| DemoError::Broadcast(format!("failed to queue the signon fragment: {e}")))?;
+    let budget = QueueBudget::default();
 
     // Every live table is a single channel, so repartitioning buys no parallelism — and
     // `RepartitionExec` coalesces batches from bounded inputs, which would hold decoded rows
@@ -110,6 +118,7 @@ pub(crate) async fn query_live(
             &schema.serializer_name,
             projected_entity_schema(schema, &projections)?,
             rx,
+            budget.clone(),
         )?;
         entities.insert(
             schema.serializer_hash,
@@ -136,7 +145,7 @@ pub(crate) async fn query_live(
             continue;
         };
         let (tx, rx) = unbounded_channel();
-        register_streaming_table(&ctx, table_name, arrow_schema, rx)?;
+        register_streaming_table(&ctx, table_name, arrow_schema, rx, budget.clone())?;
         events.insert(
             event_type.message_id(),
             Channel {
@@ -148,7 +157,12 @@ pub(crate) async fn query_live(
 
     spawn_producer(client, http, bytes_tx, base_url.to_owned());
 
-    let visitor = StreamingCollector { entities, events };
+    let visitor = StreamingCollector {
+        entities,
+        events,
+        budget,
+        stopped: false,
+    };
     tokio::task::spawn_blocking(move || {
         let stream = LiveBroadcastStream::new(bytes_rx);
         if let Ok(mut parser) = Parser::from_stream_with_visitor(stream, visitor) {
@@ -175,7 +189,7 @@ pub(crate) async fn query_live(
 fn spawn_producer(
     client: &'static reqwest::Client,
     mut http: BroadcastHttp<'static, reqwest::Client>,
-    bytes_tx: std::sync::mpsc::Sender<Bytes>,
+    bytes_tx: Sender<Bytes>,
     broadcast_url: String,
 ) {
     tokio::spawn(async move {
@@ -183,7 +197,7 @@ fn spawn_producer(
         let error = loop {
             match http.next_packet().await {
                 Some(Ok(bytes)) => {
-                    if bytes_tx.send(bytes).is_err() {
+                    if bytes_tx.send(bytes).await.is_err() {
                         // The query finished or the client went away.
                         return;
                     }
@@ -351,11 +365,13 @@ fn register_streaming_table(
     ctx: &SessionContext,
     name: &str,
     schema: SchemaRef,
-    rx: UnboundedReceiver<RecordBatch>,
+    rx: UnboundedReceiver<QueuedBatch>,
+    budget: QueueBudget,
 ) -> Result<()> {
     let partition = Arc::new(ChannelPartition {
         schema: Arc::clone(&schema),
         rx: Mutex::new(Some(rx)),
+        budget,
     });
     ctx.register_table(
         name,
@@ -364,22 +380,67 @@ fn register_streaming_table(
     Ok(())
 }
 
+/// A decoded batch for a live table, or the error that stops the query.
+type QueuedBatch = core::result::Result<RecordBatch, DataFusionError>;
+
 struct Channel<B> {
     builder: B,
-    tx: UnboundedSender<RecordBatch>,
+    tx: UnboundedSender<QueuedBatch>,
 }
 
-fn send_batch(batch: RecordBatch, tx: &UnboundedSender<RecordBatch>) -> Result<()> {
-    if batch.num_rows() > 0 && tx.send(batch).is_err() {
+/// Bytes of decoded batches one live query has queued but its tables have not yet handed out.
+#[derive(Clone, Default)]
+struct QueueBudget(Arc<AtomicUsize>);
+
+impl QueueBudget {
+    /// Counts `bytes` as queued; `false` once the query holds more than [`MAX_QUEUED_BYTES`].
+    fn reserve(&self, bytes: usize) -> bool {
+        let queued = self.0.fetch_add(bytes, Ordering::Relaxed);
+        queued.saturating_add(bytes) <= MAX_QUEUED_BYTES
+    }
+
+    /// Undoes the [`reserve`](Self::reserve) of a batch its table handed out. Only ever called with
+    /// the size of a batch that was reserved, so the count cannot underflow.
+    fn release(&self, bytes: usize) {
+        self.0.fetch_sub(bytes, Ordering::Relaxed);
+    }
+}
+
+/// Queue `batch` for its table. Past the query's [`MAX_QUEUED_BYTES`] the table gets an error
+/// instead, which ends the query, and the parse is stopped.
+fn send_batch(
+    batch: RecordBatch,
+    tx: &UnboundedSender<QueuedBatch>,
+    budget: &QueueBudget,
+) -> Result<()> {
+    if batch.num_rows() == 0 {
+        return Ok(());
+    }
+    if !budget.reserve(batch.get_array_memory_size()) {
+        let message = format!(
+            "Live query stopped: more than {} MiB of result rows are queued unread. Read the stream \
+             as it arrives, and avoid joins or aggregations that hold rows until the broadcast ends.",
+            MAX_QUEUED_BYTES >> 20
+        );
+        if tx
+            .send(Err(DataFusionError::Execution(message.clone())))
+            .is_err()
+        {
+            debug!("Live result stream closed before the queue limit error");
+        }
+        return Err(DemoError::Broadcast(message));
+    }
+    if tx.send(Ok(batch)).is_err() {
         return Err(DemoError::Broadcast("live result stream closed".into()));
     }
     Ok(())
 }
 
-/// A `DataFusion` partition yielding the `RecordBatch`es sent on its channel until it closes.
+/// A `DataFusion` partition yielding the batches sent on its channel until it closes.
 struct ChannelPartition {
     schema: SchemaRef,
-    rx: Mutex<Option<UnboundedReceiver<RecordBatch>>>,
+    rx: Mutex<Option<UnboundedReceiver<QueuedBatch>>>,
+    budget: QueueBudget,
 }
 
 impl core::fmt::Debug for ChannelPartition {
@@ -400,9 +461,17 @@ impl PartitionStream for ChannelPartition {
             .lock()
             .unwrap_or_else(std::sync::PoisonError::into_inner)
             .take();
-        let stream = futures::stream::unfold(rx, |rx| async move {
-            let mut rx = rx?;
-            rx.recv().await.map(|batch| (Ok(batch), Some(rx)))
+        let budget = self.budget.clone();
+        let stream = futures::stream::unfold(rx, move |rx| {
+            let budget = budget.clone();
+            async move {
+                let mut rx = rx?;
+                let batch = rx.recv().await?;
+                if let Ok(batch) = &batch {
+                    budget.release(batch.get_array_memory_size());
+                }
+                Some((batch, Some(rx)))
+            }
         });
         Box::pin(RecordBatchStreamAdapter::new(
             Arc::clone(&self.schema),
@@ -414,17 +483,29 @@ impl PartitionStream for ChannelPartition {
 struct StreamingCollector {
     entities: HashMap<u64, Channel<EntityBatchBuilder>>,
     events: HashMap<u32, Channel<EventBatchBuilder>>,
+    budget: QueueBudget,
+    /// Set once a send fails, so the final flush after a stopped parse sends nothing more.
+    stopped: bool,
 }
 
 impl StreamingCollector {
     /// Send each table's accumulated batch immediately. Empty builders are skipped by `send_batch`,
     /// so rows flow out as soon as they are decoded (flushed every tick) with no buffering delay.
     fn flush(&mut self) -> Result<()> {
+        if self.stopped {
+            return Ok(());
+        }
+        let sent = self.send_all();
+        self.stopped = sent.is_err();
+        sent
+    }
+
+    fn send_all(&mut self) -> Result<()> {
         for ch in self.entities.values_mut() {
-            send_batch(ch.builder.finish()?, &ch.tx)?;
+            send_batch(ch.builder.finish()?, &ch.tx, &self.budget)?;
         }
         for ch in self.events.values_mut() {
-            send_batch(ch.builder.finish()?, &ch.tx)?;
+            send_batch(ch.builder.finish()?, &ch.tx, &self.budget)?;
         }
         Ok(())
     }
@@ -470,8 +551,9 @@ impl Visitor for StreamingCollector {
 const BROADCAST_CMD_HEADER_SIZE: u8 = 10; // 1 cmd + 4 tick + 1 unused + 4 body_size
 
 /// A blocking [`Read`] over an ordered stream of broadcast fragments; a closed channel reads as EOF.
+/// Must only be read off the async runtime (the parser runs in `spawn_blocking`).
 struct ChannelReader {
-    rx: std::sync::mpsc::Receiver<Bytes>,
+    rx: Receiver<Bytes>,
     current: Bytes,
     pos: usize,
 }
@@ -479,12 +561,12 @@ struct ChannelReader {
 impl Read for ChannelReader {
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
         while self.pos >= self.current.len() {
-            match self.rx.recv() {
-                Ok(bytes) => {
+            match self.rx.blocking_recv() {
+                Some(bytes) => {
                     self.current = bytes;
                     self.pos = 0;
                 }
-                Err(_) => return Ok(0),
+                None => return Ok(0),
             }
         }
         // The loop above leaves `pos` inside `current`.
@@ -508,7 +590,7 @@ struct LiveBroadcastStream {
 }
 
 impl LiveBroadcastStream {
-    const fn new(rx: std::sync::mpsc::Receiver<Bytes>) -> Self {
+    const fn new(rx: Receiver<Bytes>) -> Self {
         Self {
             reader: ChannelReader {
                 rx,
@@ -588,10 +670,25 @@ mod tests {
         let ctx = SessionContext::new_with_config(SessionConfig::new().with_target_partitions(1));
         let ctrl = schema(("m_steamID", DataType::UInt64));
         let pawn = schema(("CBodyComponent__m_cellX", DataType::UInt32));
+        let budget = QueueBudget::default();
         let (ctrl_tx, rx) = unbounded_channel();
-        register_streaming_table(&ctx, "CCitadelPlayerController", Arc::clone(&ctrl), rx).unwrap();
+        register_streaming_table(
+            &ctx,
+            "CCitadelPlayerController",
+            Arc::clone(&ctrl),
+            rx,
+            budget.clone(),
+        )
+        .unwrap();
         let (pawn_tx, rx) = unbounded_channel();
-        register_streaming_table(&ctx, "CCitadelPlayerPawn", Arc::clone(&pawn), rx).unwrap();
+        register_streaming_table(
+            &ctx,
+            "CCitadelPlayerPawn",
+            Arc::clone(&pawn),
+            rx,
+            budget.clone(),
+        )
+        .unwrap();
 
         let query = r#"SELECT 'ctrl' AS row_kind, "tick", "entity_index", "delta_type" AS delta, "m_steamID" AS steam_id, NULL AS position_x FROM CCitadelPlayerController
             UNION ALL
@@ -604,34 +701,36 @@ mod tests {
             .await
             .unwrap();
 
-        ctrl_tx
-            .send(
-                RecordBatch::try_new(
-                    ctrl,
-                    vec![
-                        Arc::new(Int32Array::from(vec![1])),
-                        Arc::new(Int32Array::from(vec![5])),
-                        Arc::new(StringArray::from(vec!["update"])),
-                        Arc::new(UInt64Array::from(vec![Some(7)])),
-                    ],
-                )
-                .unwrap(),
+        send_batch(
+            RecordBatch::try_new(
+                ctrl,
+                vec![
+                    Arc::new(Int32Array::from(vec![1])),
+                    Arc::new(Int32Array::from(vec![5])),
+                    Arc::new(StringArray::from(vec!["update"])),
+                    Arc::new(UInt64Array::from(vec![Some(7)])),
+                ],
             )
-            .unwrap();
-        pawn_tx
-            .send(
-                RecordBatch::try_new(
-                    pawn,
-                    vec![
-                        Arc::new(Int32Array::from(vec![1])),
-                        Arc::new(Int32Array::from(vec![6])),
-                        Arc::new(StringArray::from(vec!["update"])),
-                        Arc::new(UInt32Array::from(vec![Some(3)])),
-                    ],
-                )
-                .unwrap(),
+            .unwrap(),
+            &ctrl_tx,
+            &budget,
+        )
+        .unwrap();
+        send_batch(
+            RecordBatch::try_new(
+                pawn,
+                vec![
+                    Arc::new(Int32Array::from(vec![1])),
+                    Arc::new(Int32Array::from(vec![6])),
+                    Arc::new(StringArray::from(vec!["update"])),
+                    Arc::new(UInt32Array::from(vec![Some(3)])),
+                ],
             )
-            .unwrap();
+            .unwrap(),
+            &pawn_tx,
+            &budget,
+        )
+        .unwrap();
 
         let mut rows = 0;
         while rows < 2 {
@@ -645,5 +744,56 @@ mod tests {
         while let Some(batch) = stream.next().await {
             batch.unwrap();
         }
+        assert_eq!(
+            budget.0.load(Ordering::Relaxed),
+            0,
+            "read batches must free the budget"
+        );
+    }
+
+    fn one_row(schema: &SchemaRef) -> RecordBatch {
+        RecordBatch::try_new(
+            Arc::clone(schema),
+            vec![
+                Arc::new(Int32Array::from(vec![1])),
+                Arc::new(Int32Array::from(vec![5])),
+                Arc::new(StringArray::from(vec!["update"])),
+                Arc::new(UInt64Array::from(vec![Some(7)])),
+            ],
+        )
+        .unwrap()
+    }
+
+    /// A query whose rows queue up unread must stop the parse and end its stream with an error.
+    #[tokio::test]
+    async fn queue_limit_stops_the_query_with_an_error() {
+        let ctx = SessionContext::new_with_config(SessionConfig::new().with_target_partitions(1));
+        let ctrl = schema(("m_steamID", DataType::UInt64));
+        let budget = QueueBudget::default();
+        let (tx, rx) = unbounded_channel();
+        register_streaming_table(
+            &ctx,
+            "CCitadelPlayerController",
+            Arc::clone(&ctrl),
+            rx,
+            budget.clone(),
+        )
+        .unwrap();
+        let mut stream = ctx
+            .sql("SELECT * FROM CCitadelPlayerController")
+            .await
+            .unwrap()
+            .execute_stream()
+            .await
+            .unwrap();
+
+        send_batch(one_row(&ctrl), &tx, &budget).unwrap();
+        budget.0.fetch_add(MAX_QUEUED_BYTES, Ordering::Relaxed);
+        let err = send_batch(one_row(&ctrl), &tx, &budget).unwrap_err();
+        assert!(err.to_string().contains("queued unread"), "{err}");
+
+        assert_eq!(stream.next().await.unwrap().unwrap().num_rows(), 1);
+        let err = stream.next().await.unwrap().unwrap_err();
+        assert!(err.to_string().contains("queued unread"), "{err}");
     }
 }

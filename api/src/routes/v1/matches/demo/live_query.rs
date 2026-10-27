@@ -6,7 +6,10 @@
 //! query fails mid-stream.
 
 use core::convert::Infallible;
+use core::task::Poll;
 use core::time::Duration;
+use std::collections::HashMap;
+use std::sync::{LazyLock, Mutex, PoisonError};
 
 use axum::extract::{Query, State};
 use axum::response::IntoResponse;
@@ -32,6 +35,58 @@ use crate::utils::broadcast_url::validate_broadcast_url;
 /// How long one live query may stream, from the request on. Long enough for the longest match plus
 /// the broadcast delay; past it the query is cut off so a stuck or runaway one cannot run forever.
 const LIVE_QUERY_TIMEOUT: Duration = Duration::from_hours(2);
+/// Live queries one client (API key, Cloudflare Worker or IP) may stream at once. Every stream runs
+/// its own broadcast fetch and parse, so a client that reconnects without closing its old streams
+/// would otherwise stack hundreds of parses of the same match (host OOM kills, Oct 2026).
+const MAX_STREAMS_PER_CLIENT: usize = 4;
+/// Live queries this replica streams at once, across all clients.
+const MAX_STREAMS: usize = 48;
+
+/// Concurrent live queries per client id, plus their total.
+#[derive(Default)]
+struct StreamSlots {
+    per_client: HashMap<String, usize>,
+    total: usize,
+}
+
+static STREAM_SLOTS: LazyLock<Mutex<StreamSlots>> = LazyLock::new(Mutex::default);
+
+/// One running live query; frees its slot on drop.
+struct StreamSlot {
+    client_id: String,
+}
+
+impl StreamSlot {
+    /// Takes a slot for `client_id`, or explains which limit is reached.
+    fn acquire(client_id: String) -> Result<Self, &'static str> {
+        let mut slots = STREAM_SLOTS.lock().unwrap_or_else(PoisonError::into_inner);
+        if slots.total >= MAX_STREAMS {
+            return Err("Too many live queries are running on the server, try again later");
+        }
+        let count = slots.per_client.entry(client_id.clone()).or_default();
+        if *count >= MAX_STREAMS_PER_CLIENT {
+            return Err(
+                "Too many concurrent live queries for this client: close a running stream first",
+            );
+        }
+        *count = count.saturating_add(1);
+        slots.total = slots.total.saturating_add(1);
+        Ok(Self { client_id })
+    }
+}
+
+impl Drop for StreamSlot {
+    fn drop(&mut self) {
+        let mut slots = STREAM_SLOTS.lock().unwrap_or_else(PoisonError::into_inner);
+        slots.total = slots.total.saturating_sub(1);
+        if let Some(count) = slots.per_client.get_mut(&self.client_id) {
+            *count = count.saturating_sub(1);
+            if *count == 0 {
+                slots.per_client.remove(&self.client_id);
+            }
+        }
+    }
+}
 
 #[derive(Deserialize, IntoParams)]
 pub(super) struct LiveQueryParams {
@@ -85,6 +140,12 @@ hero id or pawn entity index rather than through `m_hPawn`.
 | Global | With broadcast_url: 100req/m<br>With match_id, without API key: 60req/10m, 300req/h<br>With match_id, with API key: 20req/10m, 100req/h |
 
 With `match_id`, only spectating counts against the limits; a match spectated within the last hour is served from cache.
+
+At most 4 live queries per client (API key, or IP without one) stream at once; further requests get a
+`429` until a stream ends or its connection is closed. Close streams you no longer read.
+
+A query whose result rows queue up unread (a client not reading the stream, or a join/aggregation
+that holds rows until the broadcast ends) is stopped with an `error` event once it buffers 256 MiB.
 "
 )]
 pub(super) async fn live_query(
@@ -103,6 +164,9 @@ pub(super) async fn live_query(
             ],
         )
         .await?;
+    // Taken before spectating so a client at its stream limit doesn't spend spectate quota.
+    let slot = StreamSlot::acquire(rate_limit_key.client_id())
+        .map_err(|reason| APIError::status_msg(StatusCode::TOO_MANY_REQUESTS, reason))?;
 
     let broadcast_url = match (params.broadcast_url, params.match_id) {
         (Some(url), _) => url,
@@ -130,7 +194,7 @@ pub(super) async fn live_query(
     // open through the wait for the signon fragment.
     let stream = live_sse(broadcast_url, params.query)
         .take_until(crate::SHUTDOWN_TOKEN.clone().cancelled_owned());
-    Ok(Sse::new(stream).keep_alive(
+    Ok(Sse::new(release_on_end(stream, slot)).keep_alive(
         KeepAlive::new()
             .interval(Duration::from_secs(15))
             .text("ping"),
@@ -166,6 +230,16 @@ fn live_sse(broadcast_url: String, query: String) -> impl Stream<Item = Result<E
     });
 
     futures::stream::select(status_stream, result_stream)
+}
+
+/// Holds `slot` until `stream` yields its last item or is dropped, so a finished live query frees
+/// its slot even while the client keeps the connection open.
+fn release_on_end<S: Stream>(stream: S, slot: StreamSlot) -> impl Stream<Item = S::Item> {
+    let mut slot = Some(slot);
+    stream.chain(futures::stream::poll_fn(move |_| {
+        drop(slot.take());
+        Poll::Ready(None)
+    }))
 }
 
 /// Adapt an `UnboundedReceiver` into a `Stream`, ending once the sender is dropped and the queue
@@ -264,5 +338,36 @@ mod tests {
         assert_eq!(events.len(), 2, "{events:?}");
         assert!(events[0].contains("timed out"), "{events:?}");
         assert!(events[1].contains("end"), "{events:?}");
+    }
+
+    #[test]
+    fn stream_slots_cap_each_client() {
+        let client = "test:stream_slots_cap_each_client".to_owned();
+        let slots: Vec<_> = (0..MAX_STREAMS_PER_CLIENT)
+            .map(|_| StreamSlot::acquire(client.clone()).unwrap())
+            .collect();
+        assert!(StreamSlot::acquire(client.clone()).is_err());
+        StreamSlot::acquire("test:other_client".to_owned()).unwrap();
+        drop(slots);
+        StreamSlot::acquire(client).unwrap();
+    }
+
+    #[tokio::test]
+    async fn finished_stream_frees_its_slot_before_being_dropped() {
+        let client = "test:finished_stream_frees_its_slot".to_owned();
+        let slots: Vec<_> = (1..MAX_STREAMS_PER_CLIENT)
+            .map(|_| StreamSlot::acquire(client.clone()).unwrap())
+            .collect();
+        let mut stream = Box::pin(release_on_end(
+            futures::stream::iter([1, 2]),
+            StreamSlot::acquire(client.clone()).unwrap(),
+        ));
+        assert_eq!(stream.next().await, Some(1));
+        assert!(StreamSlot::acquire(client.clone()).is_err());
+        assert_eq!(stream.next().await, Some(2));
+        assert_eq!(stream.next().await, None);
+        // The ended stream (still alive here) must not hold its slot any more.
+        StreamSlot::acquire(client).unwrap();
+        drop(slots);
     }
 }
