@@ -10,7 +10,10 @@
 //! Their rows are built from the same expressions as the base queries (see [`normal`]), so they
 //! count exactly what those count, without FINAL like them.
 
-use super::{ItemFlowStatsQuery, NW_BUCKET, TIME_PHASE_COLUMNS, query_parts, time_phase_expr};
+use super::{
+    ItemFlowStatsQuery, NW_BUCKET, TIME_PHASE_COLUMNS, UPGRADE_IDS_WITH, query_parts,
+    time_phase_expr,
+};
 use crate::routes::v1::analytics::common_filters::is_non_empty;
 use crate::routes::v1::analytics::rollup_window::{
     Coverage, DaySplit, EdgeRows, Rollup, RollupFilters,
@@ -71,8 +74,8 @@ impl Kind {
                 ("greatest_badge", "ifNull(average_badge, 65535)"),
                 ("day", "toDate(start_time)"),
                 ("from_column", "toUInt8(i - 1)"),
-                ("from_item_id", "toUInt32(from_item)"),
-                ("to_item_id", "toUInt32(to_item)"),
+                ("from_item_id", "toUInt32(u_ids[from_pos])"),
+                ("to_item_id", "toUInt32(u_ids[to_pos])"),
             ],
             Self::Totals => &[
                 ("game_mode", "game_mode"),
@@ -196,10 +199,12 @@ FROM (
 ){group_by}"
             )
         }
+        // `by_column` holds positions in `u_ids`, decoded by the grain.
         Kind::Edges => {
             let by_column_select = &parts.by_column_select;
             format!(
-                "SELECT
+                "WITH {UPGRADE_IDS_WITH}
+SELECT
     {grain_select}{measures}
 FROM (
     {upgrades_with}
@@ -208,8 +213,8 @@ FROM (
     PREWHERE {prewhere}
 )
 ARRAY JOIN arrayPopBack(arrayEnumerate(by_column)) AS i
-ARRAY JOIN by_column[i] AS from_item
-ARRAY JOIN by_column[i + 1] AS to_item{group_by}"
+ARRAY JOIN by_column[i] AS from_pos
+ARRAY JOIN by_column[i + 1] AS to_pos{group_by}"
             )
         }
         Kind::Totals => {
@@ -341,6 +346,14 @@ mod tests {
                 .collect::<Vec<_>>();
             assert_eq!(columns, expected, "{kind:?}");
         }
+    }
+
+    #[test]
+    fn edges_rows_define_the_upgrade_positions() {
+        let body = agg_select_body(Kind::Edges, "TRUE");
+        assert!(body.starts_with("WITH (SELECT arraySort(groupArray(id))"));
+        assert!(body.contains(") AS u_ids\nSELECT"));
+        assert!(body.contains("toUInt32(u_ids[from_pos]) AS from_item_id"));
     }
 
     #[test]

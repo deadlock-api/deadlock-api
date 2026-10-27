@@ -265,6 +265,11 @@ const TIME_PHASE_BOUNDARIES: &[u32] = &[540, 1200, 1800];
 /// Number of normal-mode columns (`TIME_PHASE_BOUNDARIES.len() + 1`).
 const TIME_PHASE_COLUMNS: u8 = 4;
 
+/// `WITH` entry: the sorted upgrade ids, whose 1-based positions `by_column` holds (see
+/// [`build_edges_query`]). Every query that selects `by_column` needs it.
+const UPGRADE_IDS_WITH: &str = "(SELECT arraySort(groupArray(id)) FROM items WHERE type = 'upgrade'
+            HAVING throwIf(count() > 255, 'too many upgrades for UInt8 positions') = 0) AS u_ids";
+
 /// The 0-based normal-mode column of a purchase at `buy_time_expr`. `b <= buy_time` puts a
 /// boundary minute into the *later* phase (e.g. 9:00 → 9-20m), so a 12-minute purchase lands in
 /// 9-20m, never in 0-9m. One comparison per boundary (never above `TIME_PHASE_COLUMNS - 1`)
@@ -331,9 +336,12 @@ struct QueryParts {
     player_filters: String,
     /// Array player filters excluding the locked build path (for the baseline population).
     base_player_filters: String,
-    /// Boolean predicate selecting the locked build-path population (`1` when nothing is locked).
-    /// Combined with `base_player_filters` via conditional aggregation for the summary totals.
+    /// Boolean predicate selecting the locked build-path population (`1` when nothing is locked),
+    /// over the names of `locks_with`. Combined with `base_player_filters` via conditional
+    /// aggregation for the summary totals.
     locked_predicate: String,
+    /// `WITH` entries `, <clause> AS locked_<i>`, one per lock, for the totals query.
+    locks_with: String,
     column_expr: String,
     /// Extra columns to carry into the per-purchase subquery (e.g. street brawl round durations).
     extra_select: String,
@@ -417,14 +425,24 @@ fn query_parts(query: &ItemFlowStatsQuery) -> QueryParts {
             )
         })
         .collect_vec();
+    // The totals query names each lock once in its `WITH` and combines the names: spelled out, the
+    // leave-one-out sets repeat every clause ~2n times, and 25 locks broke `max_ast_elements`.
+    let locks_with = locked_clauses
+        .iter()
+        .enumerate()
+        .map(|(i, clause)| format!(",\n        {clause} AS locked_{i}"))
+        .join("");
+    let locked_names = (0..locked_clauses.len())
+        .map(|i| format!("locked_{i}"))
+        .collect_vec();
     // Per locked item, the predicate of all the other locks (`1` when it is the only one).
-    let others = (0..locked_clauses.len())
+    let others = (0..locked_names.len())
         .map(|skip| {
-            let rest = locked_clauses
+            let rest = locked_names
                 .iter()
                 .enumerate()
                 .filter(|(i, _)| *i != skip)
-                .map(|(_, clause)| clause.as_str())
+                .map(|(_, name)| name.as_str())
                 .collect_vec();
             if rest.is_empty() {
                 "1".to_owned()
@@ -445,10 +463,10 @@ fn query_parts(query: &ItemFlowStatsQuery) -> QueryParts {
             others.iter().map(|p| format!("countIf({p})")).join(", "),
         )
     };
-    let locked_predicate = if locked_clauses.is_empty() {
+    let locked_predicate = if locked_names.is_empty() {
         "1".to_owned()
     } else {
-        locked_clauses.join(" AND ")
+        locked_names.join(" AND ")
     };
     let base_player_filters = join_filters(&base_filter_vec);
     let player_filters = base_player_filters.clone() + &join_filters(&locked_clauses);
@@ -492,7 +510,7 @@ fn query_parts(query: &ItemFlowStatsQuery) -> QueryParts {
         .map(|c| format!("countIf(won AND has(bought_columns, {c}))"))
         .join(", ");
     // Without locks the build's games are the baseline's, and the same text lets ClickHouse count them once.
-    let locked_and = if locked_clauses.is_empty() {
+    let locked_and = if locked_names.is_empty() {
         String::new()
     } else {
         format!("({locked_predicate}) AND ")
@@ -515,6 +533,7 @@ fn query_parts(query: &ItemFlowStatsQuery) -> QueryParts {
         player_filters,
         base_player_filters,
         locked_predicate,
+        locks_with,
         column_expr,
         extra_select,
         first_purchase,
@@ -535,6 +554,7 @@ fn build_totals_query(parts: &QueryParts) -> String {
         prewhere,
         base_player_filters,
         locked_predicate: lp,
+        locks_with,
         bought_columns,
         reached_select,
         leave_one_out_select,
@@ -545,7 +565,7 @@ fn build_totals_query(parts: &QueryParts) -> String {
     format!(
         "
     {upgrades_with},
-        {bought_columns} AS bought_columns
+        {bought_columns} AS bought_columns{locks_with}
     SELECT
         countIf(won AND ({lp}))      AS s_wins,
         countIf((not won) AND ({lp})) AS s_losses,
@@ -715,8 +735,7 @@ fn build_edges_query(query: &ItemFlowStatsQuery, parts: &QueryParts) -> String {
     // shape: CPU -19..-24%, memory -41%, identical results.
     format!(
         "
-    WITH (SELECT arraySort(groupArray(id)) FROM items WHERE type = 'upgrade'
-            HAVING throwIf(count() > 255, 'too many upgrades for UInt8 positions') = 0) AS u_ids
+    WITH {UPGRADE_IDS_WITH}
     SELECT
         from_column,
         toUInt32(u_ids[from_pos]) AS from_item_id,
@@ -1036,6 +1055,22 @@ mod tests {
         assert_valid_sql(&sql);
         assert!(sql.contains("hasAll(items.item_id, [1])"));
         assert!(!sql.contains("upgrades.item_id"));
+    }
+
+    #[test]
+    fn totals_name_each_lock_once() {
+        let locks = 25;
+        let query = ItemFlowStatsQuery {
+            game_mode: Some(GameMode::Normal),
+            hero_ids: Some(vec![15]),
+            locked_item_ids: Some((1..=locks).collect()),
+            locked_columns: Some((0..locks).map(|i| i % 4).collect()),
+            ..Default::default()
+        };
+        let sql = build_totals_query(&query_parts(&query));
+        assert_valid_sql(&sql);
+        assert_eq!(sql.matches("arrayExists(").count(), locks as usize);
+        assert!(sql.contains("AS locked_24\n    SELECT"));
     }
 }
 
