@@ -14,7 +14,9 @@
 .asset-index/
 .assets-build/
 .playwright-mcp/
-website/
+website/*
+# Workspace members (see Cargo.toml): cargo needs their manifests to load the workspace.
+!website/wasm/
 scripts/
 live-events/docker-compose.yaml
 tools/docker-compose.yaml
