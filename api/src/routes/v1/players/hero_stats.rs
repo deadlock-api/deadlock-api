@@ -265,10 +265,6 @@ impl BatchQueryGrouped for PlayerHeroStatsQuery {
     type Group = HeroStatsQuery;
     type Value = HeroStats;
 
-    fn batch_window_ms() -> u64 {
-        1000
-    }
-
     fn build_query(group: &HeroStatsQuery, keys: &[u32]) -> String {
         let mut query = group.clone();
         query.account_ids = keys.to_vec();

@@ -2,11 +2,12 @@ use core::hash::Hash;
 use core::marker::PhantomData;
 use core::time::Duration;
 use std::collections::HashMap;
+use std::sync::Arc;
 
 use axum::http::StatusCode;
 use clickhouse::{RowOwned, RowRead};
 use metrics::{counter, gauge, histogram};
-use tokio::sync::{mpsc, oneshot};
+use tokio::sync::{Semaphore, mpsc, oneshot};
 use tracing::{debug, warn};
 
 use crate::error::{APIError, APIResult};
@@ -24,8 +25,11 @@ pub(crate) trait BatchQuery: Send + Sync + 'static {
     fn build_query(keys: &[Self::Key]) -> String;
     fn key_of(value: &Self::Value) -> Self::Key;
 
-    fn batch_window_ms() -> u64 {
-        100
+    /// How long an idle batcher waits for more keys before sending the first one. Only worth
+    /// setting for callers that enqueue many keys at the same instant (GraphQL resolvers);
+    /// under load, batches form while earlier queries run (see [`MAX_IN_FLIGHT`]).
+    fn linger_ms() -> u64 {
+        0
     }
     fn max_batch_size() -> usize {
         1000
@@ -39,8 +43,9 @@ pub(crate) trait BatchQueryMulti: Send + Sync + 'static {
     fn build_query(keys: &[Self::Key]) -> String;
     fn key_of(value: &Self::Value) -> Self::Key;
 
-    fn batch_window_ms() -> u64 {
-        200
+    /// See [`BatchQuery::linger_ms`].
+    fn linger_ms() -> u64 {
+        0
     }
     fn max_batch_size() -> usize {
         1000
@@ -55,8 +60,9 @@ pub(crate) trait BatchQueryGrouped: Send + Sync + 'static {
     fn build_query(group: &Self::Group, keys: &[Self::Key]) -> String;
     fn key_of(value: &Self::Value) -> Self::Key;
 
-    fn batch_window_ms() -> u64 {
-        50
+    /// See [`BatchQuery::linger_ms`].
+    fn linger_ms() -> u64 {
+        0
     }
     fn max_batch_size() -> usize {
         1000
@@ -68,7 +74,8 @@ pub(crate) trait BatchQueryGrouped: Send + Sync + 'static {
 /// Metric names of one batcher kind, built at compile time so recording a batch doesn't
 /// format (and allocate) a name per metric.
 struct MetricNames {
-    window_ms: &'static str,
+    in_flight: &'static str,
+    slot_wait_timeouts: &'static str,
     batch_size: &'static str,
     unique_ids: &'static str,
     batches: &'static str,
@@ -79,7 +86,8 @@ struct MetricNames {
 macro_rules! metric_names {
     ($prefix:literal) => {
         MetricNames {
-            window_ms: concat!($prefix, ".window_ms"),
+            in_flight: concat!($prefix, ".in_flight"),
+            slot_wait_timeouts: concat!($prefix, ".slot_wait_timeouts"),
             batch_size: concat!($prefix, ".batch_size"),
             unique_ids: concat!($prefix, ".unique_ids"),
             batches: concat!($prefix, ".batches"),
@@ -96,7 +104,7 @@ trait BatcherInner: Send + Sync + 'static {
 
     fn build_query(group: &Self::Group, keys: &[Self::Key]) -> String;
     fn key_of(value: &Self::Value) -> Self::Key;
-    fn batch_window_ms() -> u64;
+    fn linger_ms() -> u64;
     fn max_batch_size() -> usize;
 
     /// Metric names, prefixed e.g. `clickhouse_batcher` or `clickhouse_batcher_multi`.
@@ -119,8 +127,8 @@ macro_rules! ungrouped_bridge {
             fn key_of(value: &Self::Value) -> Self::Key {
                 T::key_of(value)
             }
-            fn batch_window_ms() -> u64 {
-                T::batch_window_ms()
+            fn linger_ms() -> u64 {
+                T::linger_ms()
             }
             fn max_batch_size() -> usize {
                 T::max_batch_size()
@@ -146,8 +154,8 @@ impl<T: BatchQueryGrouped> BatcherInner for GroupedBridge<T> {
     fn key_of(value: &Self::Value) -> Self::Key {
         T::key_of(value)
     }
-    fn batch_window_ms() -> u64 {
-        T::batch_window_ms()
+    fn linger_ms() -> u64 {
+        T::linger_ms()
     }
     fn max_batch_size() -> usize {
         T::max_batch_size()
@@ -203,11 +211,32 @@ async fn await_response<V>(rx: oneshot::Receiver<APIResult<Vec<V>>>) -> APIResul
         .map_err(|_closed| APIError::internal("Batcher dropped response"))?
 }
 
-fn next_window<I: BatcherInner>(prev_batch_size: usize) -> Duration {
-    if prev_batch_size >= I::max_batch_size() {
-        Duration::ZERO
-    } else {
-        Duration::from_millis(I::batch_window_ms())
+/// Batches one batcher keeps querying at once. A request that finds a free slot is sent right
+/// away; while all slots are busy, new requests collect into the next batch, so batches grow
+/// with load instead of every request waiting out a fixed window.
+///
+/// Replaces fixed windows of 100 ms to 1 s, which set the API's p50: an idle batcher held its
+/// first request for the whole window (steam profiles waited ~490 ms for an 80 ms query).
+/// Replayed on an hour of production arrivals, two slots cut the median wait of steam profile,
+/// rank and salts lookups to 66, 31 and 21 ms, at ~+0.4 `ClickHouse` cores over the windows. One
+/// slot left requests stuck behind big multi-account batches (rank mean 147 ms vs. 64 ms).
+const MAX_IN_FLIGHT: usize = 2;
+
+/// Longest a batch waits for a slot before it is sent anyway, so queries stalled in `ClickHouse`
+/// can't hold every later request for up to the 20 s query timeout. It matches the longest of
+/// the old fixed windows for steam profiles and ranks, so the worst case is no worse than before.
+const MAX_SLOT_WAIT: Duration = Duration::from_millis(500);
+
+/// Pushes requests already waiting in the channel onto `pending`, up to the batch cap.
+fn drain_queued<I: BatcherInner>(
+    rx: &mut mpsc::Receiver<EngineRequest<I>>,
+    pending: &mut Vec<EngineRequest<I>>,
+) {
+    while pending.len() < I::max_batch_size() {
+        match rx.try_recv() {
+            Ok(req) => pending.push(req),
+            Err(_) => break,
+        }
     }
 }
 
@@ -215,34 +244,65 @@ async fn batch_loop<I: BatcherInner>(
     ch_client: clickhouse::Client,
     mut rx: mpsc::Receiver<EngineRequest<I>>,
 ) {
-    let mut prev_batch_size: usize = 0;
+    let slots = Arc::new(Semaphore::new(MAX_IN_FLIGHT));
 
     while let Some(first) = rx.recv().await {
         let mut pending = vec![first];
 
-        let window = next_window::<I>(prev_batch_size);
-        let now = tokio::time::Instant::now();
-        let deadline = now.checked_add(window).unwrap_or(now);
-        loop {
-            if pending.len() >= I::max_batch_size() {
-                break;
-            }
-            match tokio::time::timeout_at(deadline, rx.recv()).await {
-                Ok(Some(req)) => pending.push(req),
-                Ok(None) | Err(_) => break,
+        let linger = Duration::from_millis(I::linger_ms());
+        if !linger.is_zero() {
+            let now = tokio::time::Instant::now();
+            let deadline = now.checked_add(linger).unwrap_or(now);
+            while pending.len() < I::max_batch_size() {
+                match tokio::time::timeout_at(deadline, rx.recv()).await {
+                    Ok(Some(req)) => pending.push(req),
+                    Ok(None) | Err(_) => break,
+                }
             }
         }
 
-        prev_batch_size = pending.len();
-        gauge!(I::METRICS.window_ms).set(window.as_secs_f64() * 1000.0);
+        // Wait for a free slot, collecting the requests that arrive meanwhile. Without a permit
+        // (slot wait timed out) the batch runs outside the slots.
+        let now = tokio::time::Instant::now();
+        let slot_deadline = now.checked_add(MAX_SLOT_WAIT).unwrap_or(now);
+        let acquire = || tokio::time::timeout_at(slot_deadline, Arc::clone(&slots).acquire_owned());
+        let permit = loop {
+            if pending.len() >= I::max_batch_size() {
+                break acquire().await.ok().and_then(Result::ok);
+            }
+            tokio::select! {
+                biased;
+                permit = acquire() => break permit.ok().and_then(Result::ok),
+                req = rx.recv() => match req {
+                    Some(req) => pending.push(req),
+                    None => break acquire().await.ok().and_then(Result::ok),
+                },
+            }
+        };
+        if permit.is_none() {
+            counter!(I::METRICS.slot_wait_timeouts).increment(1);
+        }
+        drain_queued::<I>(&mut rx, &mut pending);
+        #[expect(
+            clippy::cast_precision_loss,
+            reason = "slot counts recorded as metrics"
+        )]
+        gauge!(I::METRICS.in_flight)
+            .set(MAX_IN_FLIGHT.saturating_sub(slots.available_permits()) as f64);
 
+        // The groups of one round share the slot; it frees once all their queries finish.
+        let permit = Arc::new(permit);
         let mut by_group: HashMap<I::Group, Vec<EngineRequest<I>>> = HashMap::new();
         for req in pending {
             by_group.entry(req.group.clone()).or_default().push(req);
         }
         for (group, reqs) in by_group {
             let ch = ch_client.clone();
-            tokio::spawn(async move { execute_batch::<I>(&ch, &group, reqs).await });
+            let permit = Arc::clone(&permit);
+            tokio::spawn(async move {
+                execute_batch::<I>(&ch, &group, reqs).await;
+                drop(permit);
+            });
         }
     }
 }

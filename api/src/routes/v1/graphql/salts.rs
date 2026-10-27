@@ -136,6 +136,11 @@ impl BatchQuery for MatchSaltsGraphQlQuery {
     type Key = u64;
     type Value = MatchSalts;
 
+    /// The nested resolvers enqueue all of a response's matches at the same instant.
+    fn linger_ms() -> u64 {
+        10
+    }
+
     fn build_query(keys: &[u64]) -> String {
         format!(
             "SELECT {COLUMNS} FROM match_salts FINAL WHERE match_id IN ({}) AND {} \

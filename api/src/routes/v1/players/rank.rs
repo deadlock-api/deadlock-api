@@ -229,10 +229,6 @@ impl BatchQuery for PlayerRankQuery {
     type Key = u32;
     type Value = LastRankedMatchRow;
 
-    fn batch_window_ms() -> u64 {
-        500
-    }
-
     fn build_query(keys: &[u32]) -> String {
         let ids = in_clause(keys);
         format!(

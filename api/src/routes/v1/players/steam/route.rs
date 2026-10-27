@@ -206,13 +206,9 @@ impl BatchQuery for SteamProfileQuery {
     type Key = u32;
     type Value = SteamProfileRow;
 
-    fn batch_window_ms() -> u64 {
-        500
-    }
-
-    /// Scan cost grows linearly with the batch (~7 ms and ~10k rows per account), so a large batch
-    /// buys no throughput while stalling every request in it behind the slowest one. The cap is
-    /// well under the 1000 default to bound that tail.
+    /// A large batch buys little throughput (a 1000-account batch cost 1.17 s) while stalling every
+    /// request in it behind the slowest one. The cap is well under the 1000 default to bound that
+    /// tail.
     fn max_batch_size() -> usize {
         100
     }
@@ -266,17 +262,16 @@ impl BatchQuery for SteamProfileQuery {
 
 pub(crate) type SteamProfileBatcher = ClickhouseBatcher<SteamProfileQuery>;
 
-/// Same lookup as [`SteamProfileQuery`] with a much shorter collection window.
-/// The GraphQL nested `steam` resolvers all enqueue at the same instant (right
-/// after the parent rows arrive), so the long REST window would only add
-/// response latency instead of coalescing more work.
+/// Same lookup as [`SteamProfileQuery`], lingering briefly when idle: the GraphQL nested `steam`
+/// resolvers all enqueue at the same instant (right after the parent rows arrive), so a few ms
+/// gather them into one query instead of sending the first key alone.
 pub(crate) struct SteamProfileGraphQlQuery;
 
 impl BatchQuery for SteamProfileGraphQlQuery {
     type Key = u32;
     type Value = SteamProfileRow;
 
-    fn batch_window_ms() -> u64 {
+    fn linger_ms() -> u64 {
         10
     }
 
