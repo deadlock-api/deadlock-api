@@ -13,10 +13,5 @@ allowBuilds:
   sharp: true
   workerd: true
 
-minimumReleaseAgeExclude:
-  - lucide-react@1.18.0
-  - miniflare@4.20260611.0
-  - wrangler@4.100.0
-
 patchedDependencies:
   react-remove-scroll-bar@2.3.8: patches/react-remove-scroll-bar@2.3.8.patch
