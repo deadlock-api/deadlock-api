@@ -155,7 +155,7 @@ pub(crate) async fn query_live(
         events.insert(
             event_type.message_id(),
             Channel {
-                builder: EventBatchBuilder::new(*event_type)?,
+                builder: EventBatchBuilder::try_new(*event_type)?,
                 tx,
             },
         );

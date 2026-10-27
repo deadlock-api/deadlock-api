@@ -274,7 +274,7 @@ impl AppState {
         );
 
         debug!("Creating MCP snapshot catalog");
-        let mcp_catalog = Arc::new(SnapshotCatalog::new(&config.mcp_snapshot)?);
+        let mcp_catalog = Arc::new(SnapshotCatalog::try_new(&config.mcp_snapshot)?);
         Arc::clone(&mcp_catalog).spawn_refresh_loop();
 
         if config.data_dump.enabled {

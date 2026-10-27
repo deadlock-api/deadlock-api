@@ -69,7 +69,7 @@ impl CollectingVisitor {
                 event_type.message_id(),
                 EventCollector {
                     table_name: event_type.table_name(),
-                    builder: EventBatchBuilder::new(event_type)?,
+                    builder: EventBatchBuilder::try_new(event_type)?,
                 },
             );
         }

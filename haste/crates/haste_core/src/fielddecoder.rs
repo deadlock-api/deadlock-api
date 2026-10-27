@@ -79,7 +79,7 @@ pub(crate) enum F32Decoder {
 }
 
 impl F32Decoder {
-    pub(crate) fn new(field: &FlattenedSerializerField) -> Result<Self, DecoderError> {
+    pub(crate) fn try_new(field: &FlattenedSerializerField) -> Result<Self, DecoderError> {
         if field.var_name.hash == fxhash::hash_bytes(b"m_flSimulationTime")
             || field.var_name.hash == fxhash::hash_bytes(b"m_flAnimTime")
         {
@@ -245,11 +245,11 @@ impl FieldDecoder {
     }
 
     pub(crate) fn new_f32(field: &FlattenedSerializerField) -> Result<Self, DecoderError> {
-        F32Decoder::new(field).map(Self::F32)
+        F32Decoder::try_new(field).map(Self::F32)
     }
 
     pub(crate) fn new_vector2(field: &FlattenedSerializerField) -> Result<Self, DecoderError> {
-        F32Decoder::new(field).map(Self::Vector2)
+        F32Decoder::try_new(field).map(Self::Vector2)
     }
 
     pub(crate) fn new_vector3(field: &FlattenedSerializerField) -> Result<Self, DecoderError> {
@@ -258,12 +258,12 @@ impl FieldDecoder {
                 fractional_bits: field.coord_size_params.normal_fractional_bits,
             })
         } else {
-            F32Decoder::new(field).map(Self::Vector3)
+            F32Decoder::try_new(field).map(Self::Vector3)
         }
     }
 
     pub(crate) fn new_vector4(field: &FlattenedSerializerField) -> Result<Self, DecoderError> {
-        F32Decoder::new(field).map(Self::Vector4)
+        F32Decoder::try_new(field).map(Self::Vector4)
     }
 
     pub(crate) fn new_qangle(field: &FlattenedSerializerField) -> Result<Self, DecoderError> {

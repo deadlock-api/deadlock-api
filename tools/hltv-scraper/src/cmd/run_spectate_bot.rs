@@ -146,7 +146,7 @@ struct SpectatorBot {
 }
 
 impl SpectatorBot {
-    async fn new(proxy_api_url: String, api_token: String) -> Result<Self> {
+    async fn try_new(proxy_api_url: String, api_token: String) -> Result<Self> {
         let redis = common::get_redis_client().await?;
 
         Ok(Self {
@@ -613,7 +613,7 @@ pub(crate) async fn run_bot(
     proxy_api_token: String,
     max_spectating_matches: Option<usize>,
 ) -> Result<()> {
-    let bot = Arc::new(SpectatorBot::new(proxy_url, proxy_api_token).await?);
+    let bot = Arc::new(SpectatorBot::try_new(proxy_url, proxy_api_token).await?);
     let mut server = tokio::spawn(run_server(Arc::clone(&bot)));
     let shutdown = common::shutdown_token();
 

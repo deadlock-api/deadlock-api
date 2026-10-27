@@ -157,7 +157,7 @@ pub(crate) struct SnapshotCatalog {
 }
 
 impl SnapshotCatalog {
-    pub(crate) fn new(config: &McpSnapshotConfig) -> Result<Self, CatalogError> {
+    pub(crate) fn try_new(config: &McpSnapshotConfig) -> Result<Self, CatalogError> {
         let work_dir = std::env::temp_dir().join("deadlock-mcp");
         // Clears what a previous process left behind; a missing directory is the usual case.
         if let Err(e) = std::fs::remove_dir_all(&work_dir)

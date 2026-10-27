@@ -20,7 +20,7 @@ pub(super) struct EventBatchBuilder {
 }
 
 impl EventBatchBuilder {
-    pub(super) fn new(event_type: EventType) -> Result<Self, ArrowError> {
+    pub(super) fn try_new(event_type: EventType) -> Result<Self, ArrowError> {
         let table_name = event_type.table_name();
         let schema = event_schema(table_name).ok_or_else(|| {
             ArrowError::SchemaError(format!("No schema for event table {table_name}"))
@@ -142,7 +142,7 @@ mod tests {
     fn test_event_batch_builder_append_and_finish() {
         use valveprotos::deadlock::CCitadelUserMsgBossDamaged;
 
-        let mut builder = EventBatchBuilder::new(EventType::BossDamaged).unwrap();
+        let mut builder = EventBatchBuilder::try_new(EventType::BossDamaged).unwrap();
 
         let msg = CCitadelUserMsgBossDamaged {
             objective_team: Some(1),
@@ -167,7 +167,7 @@ mod tests {
 
         // ping_data is a message holding another message (ping_location); a missing
         // ping_data must still null the inner struct's children or finish() panics.
-        let mut builder = EventBatchBuilder::new(EventType::MapPing).unwrap();
+        let mut builder = EventBatchBuilder::try_new(EventType::MapPing).unwrap();
         let event = DecodedEvent::MapPing(CCitadelUserMsgMapPing::default());
         builder.append(1000, &event).unwrap();
 
@@ -182,7 +182,7 @@ mod tests {
             DamageRecord, ModifierRecord,
         };
 
-        let mut builder = EventBatchBuilder::new(EventType::RecentDamageSummary).unwrap();
+        let mut builder = EventBatchBuilder::try_new(EventType::RecentDamageSummary).unwrap();
 
         let msg = CCitadelUserMsgRecentDamageSummary {
             player_slot: Some(3),

@@ -134,8 +134,8 @@ impl VersionStore {
         self.versions.load().last().copied()
     }
 
-    pub(crate) fn all(&self) -> Arc<Vec<u32>> {
-        self.versions.load_full()
+    pub(crate) fn all(&self) -> Vec<u32> {
+        self.versions.load().to_vec()
     }
 
     pub(crate) fn contains(&self, v: u32) -> bool {

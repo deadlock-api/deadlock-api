@@ -1,6 +1,6 @@
 use core::fmt::Binary;
 use core::hash::BuildHasherDefault;
-use std::fmt::{self};
+use std::fmt;
 use std::sync::Arc;
 
 use dungers::bitbuf::BitError;
