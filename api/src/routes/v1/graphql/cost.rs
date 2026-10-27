@@ -168,15 +168,16 @@ pub(super) fn rows(limit: u32, row_units: usize) -> usize {
 /// A skipped player row reads only the key and filter columns (lazy materialization covers every
 /// `limit` up to [`MAX_LIMIT`]): 0.63 / 1.5-2.0 / 7.2 CPU-s at offset 1M / 10M / 60M in `match_id`
 /// order. Sorting past them over 7 days of `start_time` took 1.1 / 1.5 / 2.0 CPU-s at offset 1M /
-/// 5M / 30M, 0.4 at 0 (2026-10-19).
+/// 5M / 30M, 0.4 at 0 (2026-10-19). Pinned matches: 60-80 ms for 3 ids, ~3 ms per further id;
+/// an unfiltered `start_time` sort of the whole table: 6.5 CPU-s (2026-10-27).
 fn match_players_scan(scan: &Scan, offset: u32) -> usize {
     scan.ms(
         ScanCosts {
-            pinned: 20,
+            pinned: 60,
             key_ordered: 300,
             base: 200,
             per_day: 25,
-            full: 5_400,
+            full: 7_000,
             skip_ns: 150,
             sorted_skip_ns: 150,
         },
@@ -185,16 +186,16 @@ fn match_players_scan(scan: &Scan, offset: u32) -> usize {
 }
 
 /// Two passes over `match_player` (pick the matches, then aggregate their players); a pinned
-/// match opens every selected column of its part (one match with heavy players: 97 ms median,
-/// 323 max, 2026-10-18); unordered,
-/// the `GROUP BY match_id` of every scanned row costs ~5x the player-row sort. A skipped match
-/// in `match_id` order reads its 12 player rows and the threads read ahead of them: 2.0 / 5.2 /
+/// match opens every selected column of its part (one match with heavy players: 130-180 ms
+/// median, 250 p90, 390 max over 1,131 requests, 2026-10-27); unordered, the `GROUP BY
+/// match_id` of every scanned row costs ~5x the player-row sort. A skipped match in `match_id`
+/// order reads its 12 player rows and the threads read ahead of them: 2.0 / 5.2 /
 /// 10.3 CPU-s at offset 1M / 5M / 20M (2026-10-19). The `GROUP BY` already aggregates every row of
 /// an unordered scan, so skipping its groups is free (7 days: 1.8 CPU-s at offset 0 and 1M).
 fn matches_scan(scan: &Scan, offset: u32) -> usize {
     scan.ms(
         ScanCosts {
-            pinned: 120,
+            pinned: 220,
             key_ordered: 600,
             base: 300,
             per_day: 160,
@@ -269,9 +270,10 @@ pub(super) fn match_history(
 
 /// `match_salts` (29M rows, unpartitioned) pages in `match_id` order until it has `limit` matches
 /// with salts, so a sparse range scans up to the whole table: ~0.5 CPU-s measured (2026-10-18).
-/// Pinned `match_id`s cost ~0.2 ms each to select and up to ~2.5 ms per returned row, whose
-/// `FINAL` merges a granule of its own when the ids are spread (1 / 10 / 100 / 3,364 spread ids:
-/// 14 / 59 / 246 / 2,157 ms).
+/// Pinned `match_id`s cost ~0.5 ms each to select (p90 of 1,662 production requests, 2026-10-27:
+/// 394 / 1,046 / 1,523 ms at 206 / 1,323 / 3,456 ids returning 100) and up to ~2.5 ms per
+/// returned row, whose `FINAL` merges a granule of its own when the ids are spread; one id took
+/// 17 ms median, 30 at p90.
 pub(super) fn match_salts(where_: Option<&MatchSaltsWhere>, limit: u32, row_units: usize) -> usize {
     let ids = where_.and_then(|w| w.match_id.as_ref()).map_or(0, |f| {
         usize::from(f.eq.is_some()).saturating_add(f.r#in.as_ref().map_or(0, Vec::len))
@@ -281,8 +283,8 @@ pub(super) fn match_salts(where_: Option<&MatchSaltsWhere>, limit: u32, row_unit
     }
     let returned = limit.min(u32::try_from(ids).unwrap_or(u32::MAX));
     let merges = (returned as usize).saturating_mul(5).div_ceil(2);
-    (ids / 5)
-        .saturating_add(20)
+    (ids / 2)
+        .saturating_add(30)
         .saturating_add(merges)
         .saturating_add(rows(returned, SALTS_LOOKUP_UNITS.saturating_add(row_units)))
 }
@@ -401,7 +403,7 @@ mod tests {
             "{ match_players(where: {match_id: {in: [1, 2]}}, limit: 10000) { match_id kills } }",
         )
         .await;
-        assert!(c < 50, "{c}");
+        assert!(c < 100, "{c}");
     }
 
     #[tokio::test]
@@ -412,7 +414,7 @@ mod tests {
         )
         .await;
         assert!((500..1_000).contains(&range), "{range}");
-        // 3,364 pinned ids, default limit 100: 0.4-0.6 CPU-s.
+        // ~3,400 pinned ids, default limit 100: 1.1 CPU-s median, 1.5 at p90 (2026-10-27).
         let ids = (1..=3364)
             .map(|i| i.to_string())
             .collect::<Vec<_>>()
@@ -422,7 +424,7 @@ mod tests {
         ))
         .await;
         assert!(!rejected);
-        assert!((600..1_500).contains(&pinned), "{pinned}");
+        assert!((1_500..2_500).contains(&pinned), "{pinned}");
     }
 
     #[tokio::test]

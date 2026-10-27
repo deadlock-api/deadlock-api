@@ -86,6 +86,38 @@ fn nested_subfield_source(parent: &str, subfield: &str) -> String {
     format!("{parent}.{subfield}")
 }
 
+/// Above this many fields `final_stats` is read whole: each subcolumn has its own read overhead,
+/// so all 50 read separately cost ~1.7x the whole column.
+const FINAL_STATS_SUBCOLUMN_MAX: usize = 20;
+
+/// The requested fields of the `final_stats` tuple. The whole column decodes all 50 fields and
+/// the `custom_user_stats` map: 13-14 ms per account-history row, 2.3x the 11 fields a client
+/// asked for (2026-10-27, caches off). `CAST` names the fields; aliasing them would clash with
+/// the top-level columns of the same names (`kills`, ...).
+fn final_stats_expr(subfields: &[&str]) -> String {
+    if subfields.len() > FINAL_STATS_SUBCOLUMN_MAX {
+        return "final_stats AS final_stats".to_owned();
+    }
+    let values = subfields
+        .iter()
+        .map(|f| format!("final_stats.{f}"))
+        .collect::<Vec<_>>()
+        .join(", ");
+    let types = subfields
+        .iter()
+        .map(|&f| {
+            let ty = if f == "custom_user_stats" {
+                "Map(LowCardinality(String), UInt32)"
+            } else {
+                "UInt32"
+            };
+            format!("{f} {ty}")
+        })
+        .collect::<Vec<_>>()
+        .join(", ");
+    format!("CAST(tuple({values}), 'Tuple({types})') AS final_stats")
+}
+
 fn column_expr(col: &Column, aggregated: bool) -> String {
     if aggregated {
         format!("any({}) AS {}", col.ch_expr, col.gql)
@@ -423,13 +455,18 @@ fn player_select_list(projection: &Projection) -> String {
     if !projection.stats_subfields.is_empty() {
         parts.push(nested_array_expr("stats", &projection.stats_subfields));
     }
+    if !projection.final_stats_subfields.is_empty() {
+        parts.push(final_stats_expr(&projection.final_stats_subfields));
+    }
     parts.join(", ")
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::routes::v1::graphql::projection::{MATCH_COLUMNS, PLAYER_COLUMNS, Projection};
+    use crate::routes::v1::graphql::projection::{
+        FINAL_STAT_SUBFIELDS, MATCH_COLUMNS, PLAYER_COLUMNS, Projection,
+    };
 
     fn match_id_only() -> Projection {
         Projection {
@@ -554,6 +591,41 @@ mod tests {
             "arrayMap((time_stamp_s, custom_user_stats) -> tuple(time_stamp_s, custom_user_stats), stats.time_stamp_s, arrayMap(i -> mapFromArrays(custom_user_stats_keys, arrayMap(v -> toUInt32(arrayCumSum(v)[i]), custom_user_stats_values)), arrayEnumerate(stats.time_stamp_s))) AS stats"
         ));
         crate::utils::proptest_utils::assert_valid_sql(&sql);
+    }
+
+    #[test]
+    fn final_stats_reads_only_requested_fields() {
+        let build = |fields: Vec<&'static str>| {
+            let projection = Projection {
+                player_columns: PLAYER_COLUMNS
+                    .iter()
+                    .filter(|c| matches!(c.gql, "match_id" | "kills"))
+                    .copied()
+                    .collect(),
+                final_stats_subfields: fields,
+                ..Default::default()
+            };
+            build_match_players_query(&BuildArgs {
+                projection: &projection,
+                filters: &[],
+                order_by: OrderKey::MatchId,
+                order_dir: OrderDir::Desc,
+                limit: 1,
+                offset: 0,
+                via_player_match_stats: false,
+                excluded_accounts: &[],
+            })
+            .unwrap()
+        };
+        let few = build(vec!["kills", "custom_user_stats"]);
+        assert!(few.contains(
+            "kills AS kills, CAST(tuple(final_stats.kills, final_stats.custom_user_stats), \
+             'Tuple(kills UInt32, custom_user_stats Map(LowCardinality(String), UInt32))') AS final_stats"
+        ));
+        crate::utils::proptest_utils::assert_valid_sql(&few);
+        let all = build(FINAL_STAT_SUBFIELDS.to_vec());
+        assert!(all.contains(", final_stats AS final_stats "));
+        crate::utils::proptest_utils::assert_valid_sql(&all);
     }
 
     #[test]

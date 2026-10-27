@@ -176,7 +176,7 @@ pub(super) struct MatchPlayer {
     pub(super) max_teammate_healing: Option<u32>,
     pub(super) max_teammate_barriering: Option<u32>,
     /// The last `stats` snapshot of the match.
-    #[graphql(complexity = 85)]
+    #[graphql(complexity = "8_usize.saturating_mul(child_complexity).min(400)")]
     pub(super) final_stats: Option<Stat>,
 
     // Player-level flags

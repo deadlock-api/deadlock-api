@@ -132,7 +132,6 @@ pub(super) const PLAYER_COLUMNS: &[Column] = &[
     col("max_tech_power"),
     col("max_teammate_healing"),
     col("max_teammate_barriering"),
-    col("final_stats"),
     col("won"),
     col("hero_xp"),
     col("hero_equips"),
@@ -320,6 +319,61 @@ pub(super) const STAT_SUBFIELDS: &[&str] = &[
     "gold_source_item_goose_egg_gold_orbs",
 ];
 
+/// Fields of the materialized `final_stats` tuple (the last `stats` snapshot): all `UInt32` but
+/// `custom_user_stats`, a `Map(LowCardinality(String), UInt32)`.
+pub(super) const FINAL_STAT_SUBFIELDS: &[&str] = &[
+    "ability_kills",
+    "ability_points",
+    "absorption_provided",
+    "assists",
+    "boss_damage",
+    "bullet_kills",
+    "creep_damage",
+    "creep_kills",
+    "damage_absorbed",
+    "damage_mitigated",
+    "deaths",
+    "denies",
+    "gold_boss",
+    "gold_boss_orb",
+    "gold_death_loss",
+    "gold_denied",
+    "gold_lane_creep",
+    "gold_lane_creep_orbs",
+    "gold_neutral_creep",
+    "gold_neutral_creep_orbs",
+    "gold_player",
+    "gold_player_orbs",
+    "gold_treasure",
+    "headshot_kills",
+    "heal_lost",
+    "heal_prevented",
+    "hero_bullets_hit",
+    "hero_bullets_hit_crit",
+    "kills",
+    "level",
+    "max_health",
+    "melee_kills",
+    "net_worth",
+    "neutral_damage",
+    "neutral_kills",
+    "player_barriering",
+    "player_damage",
+    "player_damage_taken",
+    "player_healing",
+    "possible_creeps",
+    "self_damage",
+    "self_healing",
+    "shots_hit",
+    "shots_missed",
+    "teammate_barriering",
+    "teammate_healing",
+    "tech_power",
+    "time_stamp_s",
+    "weapon_power",
+    "custom_user_stats",
+];
+
 fn lookup<'a>(columns: &'a [Column], gql: &str) -> Option<&'a Column> {
     columns.iter().find(|c| c.gql == gql)
 }
@@ -331,6 +385,7 @@ pub(super) struct Projection {
     pub(super) items_subfields: Vec<&'static str>,
     pub(super) upgrades_subfields: Vec<&'static str>,
     pub(super) stats_subfields: Vec<&'static str>,
+    pub(super) final_stats_subfields: Vec<&'static str>,
 }
 
 impl Projection {
@@ -386,6 +441,16 @@ fn project_players(look: &Lookahead<'_>, projection: &mut Projection) {
         STAT_SUBFIELDS,
         &mut projection.stats_subfields,
     );
+    collect_subfields(
+        look,
+        "final_stats",
+        FINAL_STAT_SUBFIELDS,
+        &mut projection.final_stats_subfields,
+    );
+    // Only `gold_source_*` asked for, which the tuple lacks: still serve the (all-null) object.
+    if look.field("final_stats").exists() && projection.final_stats_subfields.is_empty() {
+        projection.final_stats_subfields.push("time_stamp_s");
+    }
 }
 
 pub(super) fn project_match_history(look: &Lookahead<'_>) -> Vec<Column> {
