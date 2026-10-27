@@ -49,7 +49,7 @@ const CONNECT_RETRY_BUDGET: Duration = Duration::from_mins(1);
 const CONNECT_RETRY_INTERVAL: Duration = Duration::from_secs(2);
 /// Decoded rows one live query may hold queued for its consumer before it is stopped. Rows queue up
 /// when the client stops reading the stream, or for joins/aggregations that only emit at the end.
-const MAX_QUEUED_BYTES: usize = 256 << 20;
+const MAX_QUEUED_BYTES: usize = 128 << 20;
 /// Fetched broadcast fragments queued ahead of the parser; beyond it the fetch waits for the parse.
 const MAX_QUEUED_FRAGMENTS: usize = 64;
 

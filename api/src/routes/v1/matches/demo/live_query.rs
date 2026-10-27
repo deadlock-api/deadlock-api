@@ -40,10 +40,12 @@ const LIVE_QUERY_TIMEOUT: Duration = Duration::from_hours(2);
 /// its own broadcast fetch and parse, so a client that reconnects without closing its old streams
 /// would otherwise stack hundreds of parses of the same match (host OOM kills, Oct 2026). Behind
 /// Cloudflare a client's disconnect often never reaches the server, so a new stream past the limit
-/// ends the client's oldest one instead of being turned away.
-const MAX_STREAMS_PER_CLIENT: usize = 4;
-/// Live queries this replica streams at once, across all clients.
-const MAX_STREAMS: usize = 48;
+/// ends the client's oldest one instead of being turned away. Sites behind one Cloudflare Worker or
+/// API key serve many viewers at once (one held ~10 streams), so the limit leaves room for that.
+const MAX_STREAMS_PER_CLIENT: usize = 16;
+/// Live queries this replica streams at once, across all clients. With the per-query queue limit
+/// this keeps even all-unread streams under the API container's memory limit.
+const MAX_STREAMS: usize = 192;
 
 /// Running live queries per client id, oldest first, plus their total.
 #[derive(Default)]
@@ -166,12 +168,12 @@ hero id or pawn entity index rather than through `m_hPawn`.
 
 With `match_id`, only spectating counts against the limits; a match spectated within the last hour is served from cache.
 
-At most 4 live queries per client (API key, or IP without one) stream at once. A 5th ends the
+At most 16 live queries per client (API key, or IP without one) stream at once. A 17th ends the
 client's oldest stream with an `error` event (status 409), so open a new stream only when you no
 longer need an old one. A `429` means the server as a whole is at its live query limit.
 
 A query whose result rows queue up unread (a client not reading the stream, or a join/aggregation
-that holds rows until the broadcast ends) is stopped with an `error` event once it buffers 256 MiB.
+that holds rows until the broadcast ends) is stopped with an `error` event once it buffers 128 MiB.
 "
 )]
 pub(super) async fn live_query(
@@ -273,7 +275,7 @@ fn evicted_event(evicted: CancellationToken) -> impl Stream<Item = Result<Event,
             vec![
                 Ok(error_event(
                     StatusCode::CONFLICT,
-                    "Ended by a newer live query from the same client (at most 4 run at once)",
+                    "Ended by a newer live query from the same client (at most 16 run at once)",
                 )),
                 Ok(end_event()),
             ]
