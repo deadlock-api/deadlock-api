@@ -333,6 +333,8 @@ fn min_matches_pushdown(
         })
         .join(", ");
     // Only the hero columns: reading `stats` here would double the scan this pruning pays for.
+    // The window count reads `lane_pairs` once; an `IN (SELECT ... FROM lane_pairs)` would scan
+    // and aggregate `lane_duos` a second time.
     let cte = format!(
         "
 lane_duos AS (
@@ -356,8 +358,8 @@ lane_pairs AS (
 ),
 kept_matches AS (
     SELECT match_id
-    FROM lane_pairs
-    WHERE ({cols}) IN (SELECT {cols} FROM lane_pairs GROUP BY {cols} HAVING count() >= {min})
+    FROM (SELECT match_id, count() OVER (PARTITION BY {cols}) AS n FROM lane_pairs)
+    WHERE n >= {min}
 ),"
     );
     MinMatchesPushdown {
