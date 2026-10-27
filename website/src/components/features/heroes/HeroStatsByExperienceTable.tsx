@@ -1,4 +1,4 @@
-import { keepPreviousData, useQueries, useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { Minus, TrendingDown, TrendingUp } from "lucide-react";
 import { parseAsBoolean, parseAsStringLiteral, useQueryState } from "nuqs";
 import { useMemo } from "react";
@@ -13,12 +13,11 @@ import { Delta } from "~/components/ui/delta";
 import { useSort } from "~/components/ui/hooks/use-sort";
 import { NoValue } from "~/components/ui/no-value";
 import { SortButton, ariaSort } from "~/components/ui/sort-button";
-import { Stack } from "~/components/ui/stack";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { Tooltip, TooltipHeader, TooltipStat, TooltipStats, TooltipTarget } from "~/components/ui/tooltip";
 import type { Dayjs } from "~/dayjs";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
-import { EXPERIENCE_BUCKETS } from "~/lib/constants";
+import { EXPERIENCE_BUCKET_BOUNDS, EXPERIENCE_BUCKETS } from "~/lib/constants";
 import { findKey } from "~/lib/find-keys";
 import { formatSignedPercent } from "~/lib/format";
 import { type GameMode, hasSoulEconomy, type MatchMode } from "~/lib/game-mode";
@@ -72,36 +71,21 @@ export function HeroStatsByExperienceTable({
 }: HeroStatsByExperienceTableProps) {
   const { minUnixTimestamp, maxUnixTimestamp } = useNormalizedTimeRange(minDate, maxDate);
 
-  const buckets = useQueries({
-    combine: (queries) => ({
-      data: queries.map((query) => query.data),
-      settled: queries.every((query) => !query.isPending),
-      failed: queries.some((query) => query.isError),
-      refetching: queries.some((query) => query.isFetching),
-      stale: queries.some((query) => query.isPlaceholderData),
-      refetch: () => {
-        for (const query of queries) if (query.isError) void query.refetch();
-      },
+  // Every bucket in one request: the API reads the window once and returns each bucket's lower bound as `bucket`.
+  const experience = useQuery({
+    ...heroChartStatsQueryOptions("by-experience", {
+      minHeroMatches,
+      heroMatchesTotalBuckets: EXPERIENCE_BUCKET_BOUNDS,
+      minAverageBadge: minRankId,
+      maxAverageBadge: maxRankId,
+      minUnixTimestamp: minUnixTimestamp ?? 0,
+      maxUnixTimestamp,
+      bucket: "no_bucket",
+      gameMode,
+      matchMode,
     }),
-    queries: EXPERIENCE_BUCKETS.map((bucket) => {
-      const heroStatsByExperienceQuery = {
-        minHeroMatches,
-        minHeroMatchesTotal: bucket.min,
-        maxHeroMatchesTotal: bucket.max,
-        minAverageBadge: minRankId,
-        maxAverageBadge: maxRankId,
-        minUnixTimestamp: minUnixTimestamp ?? 0,
-        maxUnixTimestamp,
-        bucket: "no_bucket" as const,
-        gameMode,
-        matchMode,
-      };
-      // A changed filter keeps the old table on screen, washed out, until the new one lands.
-      return {
-        ...heroChartStatsQueryOptions("by-experience", heroStatsByExperienceQuery),
-        placeholderData: keepPreviousData,
-      };
-    }),
+    // A changed filter keeps the old table on screen, washed out, until the new one lands.
+    placeholderData: keepPreviousData,
   });
 
   const { data: assetsHeroes, isLoading: isLoadingAssetsHeroes } = useQuery(heroesQueryOptions);
@@ -114,11 +98,9 @@ export function HeroStatsByExperienceTable({
     return map;
   }, [assetsHeroes]);
 
-  const bucketData = buckets.data;
-  const anyLoaded = bucketData.some((data) => data != null);
-  // The table waits for every bucket: rows are sorted by the trend across all of them, so each late bucket reordered
-  // the whole table under the reader. A failed bucket shows as "-" with a retry above the table.
-  const allLoading = !buckets.settled || isLoadingAssetsHeroes;
+  const experienceData = experience.data;
+  const anyLoaded = experienceData != null;
+  const allLoading = experience.isPending || isLoadingAssetsHeroes;
 
   const isPercentStat = heroStat === "winrate";
 
@@ -126,17 +108,15 @@ export function HeroStatsByExperienceTable({
     if (!anyLoaded) return [];
 
     const heroIds = new Set<number>();
-    for (const data of bucketData) {
-      for (const entry of data || []) {
-        heroIds.add(entry.hero_id);
-      }
+    for (const entry of experienceData) {
+      heroIds.add(entry.hero_id);
     }
 
     const rows: HeroRow[] = [];
 
     for (const heroId of heroIds) {
       const bucketEntries = EXPERIENCE_BUCKETS.map((_, i) => {
-        const entry = bucketData[i]?.find((e) => e.hero_id === heroId);
+        const entry = experienceData.find((e) => e.hero_id === heroId && e.bucket === EXPERIENCE_BUCKETS[i].min);
         if (!entry || entry.matches < MIN_MATCHES_PER_BUCKET) return null;
         return entry;
       });
@@ -162,7 +142,7 @@ export function HeroStatsByExperienceTable({
     }
 
     return rows;
-  }, [anyLoaded, bucketData, heroStat]);
+  }, [anyLoaded, experienceData, heroStat]);
 
   const [sortKey, setSortKey] = useQueryState("exp_sort_key", parseAsStringLiteral(SORT_KEYS).withDefault("trend"));
   const [sortAsc, setSortAsc] = useQueryState("exp_sort_asc", parseAsBoolean.withDefault(false));
@@ -220,8 +200,8 @@ export function HeroStatsByExperienceTable({
     return (
       <ErrorState
         title="Could not load hero stats by experience"
-        onRetry={buckets.refetch}
-        retrying={buckets.refetching}
+        onRetry={() => void experience.refetch()}
+        retrying={experience.isFetching}
       />
     );
   }
@@ -286,84 +266,74 @@ export function HeroStatsByExperienceTable({
   );
 
   return (
-    <Stack gap={3}>
-      {buckets.failed && (
-        <ErrorState
-          title="Some experience groups failed to load"
-          description="Their columns show no values. Try loading them again."
-          onRetry={buckets.refetch}
-          retrying={buckets.refetching}
-        />
-      )}
-      <StaleOverlay active={buckets.stale} label="hero experience stats">
-        <Table aria-label="Hero stats by experience">
-          <TableHeader tone="muted">
-            <TableRow>
-              <TableHead className="w-10 text-center">#</TableHead>
-              <SortableHeader
-                label="Hero"
-                sortKey="name"
-                activeSortKey={sortKey}
-                sortDir={sortDir}
-                onSortChange={handleSort}
-                align="start"
-                className="@md/table:min-w-40"
-                data-pinned
-              />
-              {EXPERIENCE_BUCKETS.map((bucket, i) => (
-                <TableHead
-                  key={bucket.label}
-                  className="text-center select-none"
-                  aria-sort={ariaSort(sortKey === `value-${i}` || sortKey === `delta-${i}`, sortDir)}
-                >
-                  <div className="flex flex-col items-center gap-1">
+    <StaleOverlay active={experience.isPlaceholderData} label="hero experience stats">
+      <Table aria-label="Hero stats by experience">
+        <TableHeader tone="muted">
+          <TableRow>
+            <TableHead className="w-10 text-center">#</TableHead>
+            <SortableHeader
+              label="Hero"
+              sortKey="name"
+              activeSortKey={sortKey}
+              sortDir={sortDir}
+              onSortChange={handleSort}
+              align="start"
+              className="@md/table:min-w-40"
+              data-pinned
+            />
+            {EXPERIENCE_BUCKETS.map((bucket, i) => (
+              <TableHead
+                key={bucket.label}
+                className="text-center select-none"
+                aria-sort={ariaSort(sortKey === `value-${i}` || sortKey === `delta-${i}`, sortDir)}
+              >
+                <div className="flex flex-col items-center gap-1">
+                  <SortButton
+                    active={sortKey === `value-${i}`}
+                    sortDir={sortDir}
+                    onClick={() => handleSort(`value-${i}`)}
+                  >
+                    {bucket.label}
+                  </SortButton>
+                  <span className="text-xs font-normal text-muted-foreground">{bucket.sublabel}</span>
+                  {i !== BASELINE_BUCKET ? (
                     <SortButton
-                      active={sortKey === `value-${i}`}
+                      active={sortKey === `delta-${i}`}
                       sortDir={sortDir}
-                      onClick={() => handleSort(`value-${i}`)}
+                      onClick={() => handleSort(`delta-${i}`)}
+                      className="text-xs font-normal text-muted-foreground"
                     >
-                      {bucket.label}
+                      {"Δ"} vs Beginner
                     </SortButton>
-                    <span className="text-xs font-normal text-muted-foreground">{bucket.sublabel}</span>
-                    {i !== BASELINE_BUCKET ? (
-                      <SortButton
-                        active={sortKey === `delta-${i}`}
-                        sortDir={sortDir}
-                        onClick={() => handleSort(`delta-${i}`)}
-                        className="text-xs font-normal text-muted-foreground"
-                      >
-                        {"Δ"} vs Beginner
-                      </SortButton>
-                    ) : (
-                      <span className="text-xs font-normal text-muted-foreground">baseline</span>
-                    )}
-                  </div>
-                </TableHead>
-              ))}
-              <SortableHeader
-                label="Trend"
-                sortKey="trend"
-                activeSortKey={sortKey}
-                sortDir={sortDir}
-                onSortChange={handleSort}
-              />
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {sortedRows.length === 0 ? (
-              <TableEmptyRow colSpan={EXPERIENCE_BUCKETS.length + 3}>No hero stats for these filters.</TableEmptyRow>
-            ) : (
-              sortedRows.map((row, index) => (
-                <TableRow key={row.heroId} data-find={findKey.hero(row.heroId)}>
-                  <TableCell className="text-center font-semibold text-muted-foreground">{index + 1}</TableCell>
-                  {heroCells.get(row.heroId)}
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </StaleOverlay>
-    </Stack>
+                  ) : (
+                    <span className="text-xs font-normal text-muted-foreground">baseline</span>
+                  )}
+                </div>
+              </TableHead>
+            ))}
+            <SortableHeader
+              label="Trend"
+              sortKey="trend"
+              activeSortKey={sortKey}
+              sortDir={sortDir}
+              onSortChange={handleSort}
+            />
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {sortedRows.length === 0 ? (
+            <TableEmptyRow colSpan={EXPERIENCE_BUCKETS.length + 3}>No hero stats for these filters.</TableEmptyRow>
+          ) : (
+            sortedRows.map((row, index) => (
+              <TableRow key={row.heroId} data-find={findKey.hero(row.heroId)}>
+                <TableCell className="text-center font-semibold text-muted-foreground">{index + 1}</TableCell>
+                {heroCells.get(row.heroId)}
+              </TableRow>
+            ))
+          )}
+        </TableBody>
+      </Table>
+    </StaleOverlay>
   );
 }
 

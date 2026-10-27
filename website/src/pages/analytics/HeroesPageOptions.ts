@@ -108,7 +108,7 @@ async function prefetchHeroView(
     case "stats-by-experience": {
       const [
         { heroChartStatsQueryOptions, heroRankStatsQueryOptions },
-        { DURATION_BUCKETS, EXPERIENCE_BUCKETS },
+        { DURATION_BUCKETS, EXPERIENCE_BUCKET_BOUNDS },
         { ranksQueryOptions },
       ] = await Promise.all([
         import("~/queries/hero-stats-query"),
@@ -153,18 +153,17 @@ async function prefetchHeroView(
           prefetchCached(queryClient, ranksQueryOptions),
         ]);
       }
-      return Promise.all(
-        EXPERIENCE_BUCKETS.map((bucket) =>
-          prefetchCached(
-            queryClient,
-            heroChartStatsQueryOptions("by-experience", {
-              ...base,
-              minHeroMatchesTotal: bucket.min,
-              maxHeroMatchesTotal: bucket.max,
-              bucket: "no_bucket",
-            }),
-          ),
-        ),
+      // Every bucket in one request, without the total floor of `base`: the table does not send one.
+      return prefetchCached(
+        queryClient,
+        heroChartStatsQueryOptions("by-experience", {
+          minHeroMatches: 0,
+          ...ranks,
+          ...range,
+          ...mode,
+          heroMatchesTotalBuckets: EXPERIENCE_BUCKET_BOUNDS,
+          bucket: "no_bucket",
+        }),
       );
     }
     case "hero-combs": {

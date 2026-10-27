@@ -167,11 +167,15 @@ export const DURATION_BUCKETS = [
   { label: "50m+", minS: 3000, maxS: 7000 },
 ] as const;
 
-// The API counts both ends in, so the buckets must not share one; the last is open, or players past it are dropped.
+// The API buckets by the lower bounds alone (`hero_matches_total_buckets`): each bucket ends where the next one starts
+// and the last is open, so `max` is one below the next `min` and only labels the bucket.
 export const EXPERIENCE_BUCKETS: readonly { label: string; sublabel: string; min: number; max?: number }[] = [
   { label: "Beginner", sublabel: "1-24 matches", min: 1, max: 24 },
   { label: "Intermediate", sublabel: "25-99 matches", min: 25, max: 99 },
   { label: "Experienced", sublabel: "100+ matches", min: 100 },
 ];
+
+/** The lower bounds of `EXPERIENCE_BUCKETS`: the API returns them as the `bucket` of each row. */
+export const EXPERIENCE_BUCKET_BOUNDS = EXPERIENCE_BUCKETS.map((bucket) => bucket.min);
 
 export const MIN_MATCHES_PER_BUCKET = 10;
