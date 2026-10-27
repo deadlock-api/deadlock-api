@@ -12,6 +12,11 @@ on:
       # The crosshair editor ports the renderer (website/src/lib/crosshair-render.ts), tested against its PNGs.
       - 'api/src/services/crosshair/render.rs'
       - 'api/src/services/crosshair/fixtures/**'
+      # The wasm modules (website/wasm/*) build on valveprotos in the root cargo workspace.
+      - 'valveprotos/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'rust-toolchain.toml'
   pull_request:
     branches:
       - master
@@ -23,6 +28,11 @@ on:
       # The crosshair editor ports the renderer (website/src/lib/crosshair-render.ts), tested against its PNGs.
       - 'api/src/services/crosshair/render.rs'
       - 'api/src/services/crosshair/fixtures/**'
+      # The wasm modules (website/wasm/*) build on valveprotos in the root cargo workspace.
+      - 'valveprotos/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'rust-toolchain.toml'
   workflow_dispatch:
 
 jobs:
@@ -60,6 +70,22 @@ jobs:
 
       - name: Typecheck
         run: pnpm typecheck
+
+      # The wasm modules (website/wasm/*, built by scripts/build-wasm.mjs) need the wasm target and protoc
+      # (valveprotos); `pnpm test:unit` and `pnpm build` build them.
+      - name: Install protoc
+        uses: taiki-e/install-action@5488ac5a951645ce95062214902ac4b6bc1a1037 # v2.87.32
+        with:
+          tool: protoc
+
+      - name: Add the wasm target
+        run: rustup target add wasm32-unknown-unknown
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        with:
+          shared-key: website-wasm-${{ runner.os }}-${{ runner.arch }}
+          save-if: ${{ github.ref == 'refs/heads/master' }}
 
       - name: Unit tests
         # Every *.test.ts(x) under src/, tracker tests included.

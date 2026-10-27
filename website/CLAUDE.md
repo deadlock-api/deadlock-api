@@ -22,7 +22,14 @@ tanstack-start
 │   ├── lib/ai-search/          # AI search: Mercury Decide picks the page (server fn, secret INCEPTION_API_KEY);
 │   │                           # hero and item names are matched in code
 │   ├── lib/server-api-key.ts   # the website's own API key (secret DEADLOCK_API_KEY), sent only on server-side requests
+│   ├── lib/wasm/               # loader for the wasm modules (module.ts) and their typed wrappers; load one only on the
+│   │                           # page that needs it (as `~/wasm/<crate>.wasm?url`, fetched from an effect or a press)
+│   ├── wasm/                   # built .wasm files, not tracked
 │   └── lib/utils.ts            # cn() helper
+├── wasm/                       # Rust crates (members of the root cargo workspace) built to src/wasm/<crate>.wasm by
+│                               # scripts/build-wasm.mjs, which `vite dev` / `vite build` run (plugins/wasm-modules.mjs).
+│                               # A new module: a cdylib crate that exports its functions with `wasm_abi::export!`.
+│                               # Needs cargo, protoc and the wasm32-unknown-unknown target (added on first build)
 ├── docs/design-system.md       # the design system contract (read before any UI work)
 ├── scripts/lint-design-system.mjs  # enforces it, part of `pnpm lint`
 ├── content/blog/               # markdown blog posts (bundled at build time via Vite glob)
