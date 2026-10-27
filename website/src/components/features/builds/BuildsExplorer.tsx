@@ -466,8 +466,6 @@ function BuildsExplorerView({
         />
         <BuildDetailPanel
           row={selected}
-          rows={rows}
-          performanceById={performance}
           authorBuilds={rows.filter(
             (row) =>
               row.hero_build_id !== selected.hero_build_id &&

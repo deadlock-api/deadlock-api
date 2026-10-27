@@ -1,11 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
-import { Gamepad2, GitCompareArrows, Hammer } from "lucide-react";
-import { useState } from "react";
+import { Gamepad2, Hammer } from "lucide-react";
 
 import { AbilityOrderGrid } from "~/components/domain/assets/AbilityOrderGrid";
 import { PlayerCell } from "~/components/domain/player/PlayerCell";
 import { useBuildItemUsage, useSkillOrder } from "~/components/features/builds/build-hooks";
-import { BuildCompareDialog } from "~/components/features/builds/BuildCompareDialog";
 import { BuildItemTile } from "~/components/features/builds/BuildItemTile";
 import { Panel, PanelHeader, PanelScrollArea, PanelSection } from "~/components/patterns/panel/Panel";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
@@ -15,7 +13,6 @@ import { CopyButton } from "~/components/ui/copy-button";
 import { InfoTip } from "~/components/ui/info-tip";
 import { day } from "~/dayjs";
 import { useHeroBuildCodec } from "~/hooks/useHeroBuildCodec";
-import type { BuildPerformanceTotals } from "~/lib/build-performance";
 import { type BuildRow, buildCategoryName, buildLanguageName } from "~/lib/build-stats";
 import { formatPercent } from "~/lib/format";
 import { cn } from "~/lib/utils";
@@ -58,8 +55,6 @@ function CopyGameCodeButton({ buildId, className }: { buildId: number; className
 /** One build as written: who made it, the items of each of its categories and its skill order. */
 export function BuildDetailPanel({
   row,
-  rows,
-  performanceById,
   authorBuilds,
   onBuildIdChange,
   purchaseFilters,
@@ -71,10 +66,6 @@ export function BuildDetailPanel({
   className,
 }: {
   row: BuildRow;
-  /** Every listed build, to compare this one with. */
-  rows: readonly BuildRow[];
-  /** Every listed build's performance totals, by id. */
-  performanceById: Readonly<Record<number, BuildPerformanceTotals>> | undefined;
   /** The author's other listed builds for this hero. */
   authorBuilds: readonly BuildRow[];
   onBuildIdChange: (buildId: number) => void;
@@ -89,7 +80,6 @@ export function BuildDetailPanel({
   profilePending: boolean;
   className?: string;
 }) {
-  const [comparing, setComparing] = useState(false);
   const { meta } = row;
   const {
     usage,
@@ -117,14 +107,7 @@ export function BuildDetailPanel({
             </span>
           </span>
         )}
-        {/* Named, not an icon alone: comparing two builds is the way into the details for those who want them. */}
-        {rows.length > 1 && (
-          <Button variant="ghost" size="xs" className="ms-auto" onClick={() => setComparing(true)}>
-            <GitCompareArrows aria-hidden="true" />
-            Compare
-          </Button>
-        )}
-        <CopyGameCodeButton buildId={row.hero_build_id} className={rows.length > 1 ? undefined : "ms-auto"} />
+        <CopyGameCodeButton buildId={row.hero_build_id} className="ms-auto" />
         <CopyButton
           text={String(row.hero_build_id)}
           variant="ghost"
@@ -224,15 +207,6 @@ export function BuildDetailPanel({
           <EmptyState variant="plain" title="This build is no longer published" />
         )}
       </PanelScrollArea>
-      {comparing && (
-        <BuildCompareDialog
-          open={comparing}
-          onOpenChange={setComparing}
-          build={row}
-          rows={rows}
-          performance={performanceById}
-        />
-      )}
     </Panel>
   );
 }
