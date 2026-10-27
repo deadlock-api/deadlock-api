@@ -767,9 +767,20 @@ fn build_query(
                 info_filters.join(" AND ")
             ),
         };
+        // In `match_id` order `DISTINCT` reads match_player in key order and stops at the
+        // `LIMIT`; `GROUP BY` aggregates every matching row first (an unbounded
+        // `max_match_id` page: 408M rows, 5 CPU-s -> 2.8M rows, 0.6 CPU-s).
+        let t_matches = match query.order_by {
+            SortKey::MatchId => {
+                format!("SELECT DISTINCT match_id FROM {t_matches_source}{order}{limit}")
+            }
+            SortKey::StartTime | SortKey::AverageBadge => {
+                format!("SELECT match_id FROM {t_matches_source} GROUP BY match_id {order} {limit}")
+            }
+        };
         let players_filter = players_filter.map_or_default(|f| format!(" AND {f} "));
         format!(
-            "WITH t_matches AS (SELECT match_id FROM {t_matches_source} GROUP BY match_id {order} {limit})\
+            "WITH t_matches AS ({t_matches})\
              {select} FROM match_player WHERE match_player.match_id IN t_matches {players_filter}{tail}"
         )
     };
@@ -937,7 +948,11 @@ mod proptests {
         )
         .expect("query should build");
         assert_valid_sql(&sql);
-        assert!(sql.contains("t_matches AS (SELECT match_id FROM player_match_stats INNER JOIN"));
+        assert!(
+            sql.contains(
+                "t_matches AS (SELECT DISTINCT match_id FROM player_match_stats INNER JOIN"
+            )
+        );
         assert!(sql.contains(
             "WHERE account_id IN (848124002) AND match_mode IN ('Ranked', 'Unranked') AND"
         ));
@@ -961,7 +976,9 @@ mod proptests {
             None,
         )
         .expect("query should build");
-        assert!(sql.contains("t_matches AS (SELECT match_id FROM match_player INNER JOIN"));
+        assert!(
+            sql.contains("t_matches AS (SELECT DISTINCT match_id FROM match_player INNER JOIN")
+        );
         assert!(!sql.contains("FROM player_match_stats"));
     }
 
