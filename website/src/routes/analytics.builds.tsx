@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { parseAsArrayOf, parseAsInteger, throttle, useQueryState, useQueryStates } from "nuqs";
 import { startTransition, Suspense } from "react";
 
@@ -13,6 +13,7 @@ import { day } from "~/dayjs";
 import { useKnownHeroId } from "~/hooks/useAssetById";
 import { useDateRangeState } from "~/hooks/useDateRangeState";
 import { useModeState } from "~/hooks/useModeState";
+import { designerBuildFromGame, designerHref, stageNames } from "~/lib/build-designer-code";
 import {
   DEFAULT_MATCH_MODE,
   DEFAULT_MODE,
@@ -123,6 +124,7 @@ export const Route = createFileRoute("/analytics/builds")({
 });
 
 function BuildsPage() {
+  const navigate = useNavigate();
   const [heroParam, setHero] = useQueryState("hero", parseAsInteger.withDefault(DEFAULT_HERO_ID));
   const heroId = useKnownHeroId(heroParam) ?? DEFAULT_HERO_ID;
   const [buildId, setBuildId] = useQueryState("build", parseAsInteger);
@@ -202,6 +204,10 @@ function BuildsPage() {
               void setHero(choice.heroId, together);
               void setBuildId(choice.buildId, together);
             })
+          }
+          // A player's own build, not published: it has no stats here, but opens in the Build Designer.
+          onUnpublishedBuild={(build) =>
+            void navigate({ href: designerHref(designerBuildFromGame(build, stageNames(false))) })
           }
         />
         <Filter.ModeWithRank

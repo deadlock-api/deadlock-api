@@ -1,4 +1,5 @@
-import { GitCompareArrows, Hammer } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { Gamepad2, GitCompareArrows, Hammer } from "lucide-react";
 import { useState } from "react";
 
 import { AbilityOrderGrid } from "~/components/domain/assets/AbilityOrderGrid";
@@ -13,11 +14,12 @@ import { Button } from "~/components/ui/button";
 import { CopyButton } from "~/components/ui/copy-button";
 import { InfoTip } from "~/components/ui/info-tip";
 import { day } from "~/dayjs";
+import { useHeroBuildCodec } from "~/hooks/useHeroBuildCodec";
 import type { BuildPerformanceTotals } from "~/lib/build-performance";
 import { type BuildRow, buildCategoryName, buildLanguageName } from "~/lib/build-stats";
 import { formatPercent } from "~/lib/format";
 import { cn } from "~/lib/utils";
-import type { BuildPurchaseFilters } from "~/queries/hero-build-stats-query";
+import { type BuildPurchaseFilters, heroBuildGameQueryOptions } from "~/queries/hero-build-stats-query";
 import type { SteamProfile } from "~/queries/steam-queries";
 
 /**
@@ -31,6 +33,25 @@ function CategoryTitle({ name, description }: { name: string; description: strin
       <span className="min-w-0">{name}</span>
       <InfoTip label={`About ${name}`} content={description} />
     </span>
+  );
+}
+
+/** "Copy game code": the build as the game stores it, a code to paste in game. */
+function CopyGameCodeButton({ buildId, className }: { buildId: number; className?: string }) {
+  const codec = useHeroBuildCodec();
+  const { data: build } = useQuery(heroBuildGameQueryOptions(buildId));
+  return (
+    <CopyButton
+      variant="ghost"
+      size="xs"
+      icon={Gamepad2}
+      // Ready before a press can come: the code is written at once, while the press still allows a clipboard write.
+      disabled={codec == null || build == null}
+      text={() => (codec && build ? codec.encode(build) : "")}
+      className={className}
+    >
+      Copy game code
+    </CopyButton>
   );
 }
 
@@ -103,12 +124,12 @@ export function BuildDetailPanel({
             Compare
           </Button>
         )}
+        <CopyGameCodeButton buildId={row.hero_build_id} className={rows.length > 1 ? undefined : "ms-auto"} />
         <CopyButton
           text={String(row.hero_build_id)}
           variant="ghost"
           size="xs"
           aria-label={`Copy build ID ${row.hero_build_id}`}
-          className={rows.length > 1 ? undefined : "ms-auto"}
         >
           <span className="tabular-nums">ID {row.hero_build_id}</span>
         </CopyButton>

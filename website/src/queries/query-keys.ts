@@ -73,6 +73,8 @@ export const queryKeys = {
       ["graphql-hero-build-meta", heroId, buildIds] as const,
     /** One build by its ID alone, to find the hero it is for. */
     heroBuildLookup: (buildId: number) => ["graphql-hero-build-lookup", buildId] as const,
+    /** One build as the game stores it, to copy as a game build code. */
+    heroBuildGame: (buildId: number) => ["api-hero-build-game", buildId] as const,
     heroSwapStats: (params: AnalyticsApiHeroSwapStatsRequest) => ["api-hero-swap-stats", params] as const,
     heroTierInputs: (stats: AnalyticsApiHeroStatsRequest, bans: AnalyticsApiHeroBanStatsRequest | null) =>
       ["hero-tier-inputs", stats, bans] as const,

@@ -8,6 +8,7 @@ import { buildAbilityOrder, type BuildItemPurchase, type BuildMeta, type BuildSt
 import { API_ORIGIN } from "~/lib/constants";
 import { GraphqlHttpError } from "~/lib/graphql";
 import { serverApiKeyHeaders } from "~/lib/server-api-key";
+import type { HeroBuild } from "~/lib/wasm/hero-build";
 
 import { queryKeys } from "./query-keys";
 
@@ -225,6 +226,21 @@ export function buildItemPurchasesQueryOptions(buildId: number, params: BuildPur
         sold: sold ?? 0,
         avg_sell_time_s,
       }));
+    },
+    staleTime: CACHE_DURATIONS.ONE_HOUR,
+  });
+}
+
+/** The latest version of a published build as the game stores it (`CMsgHeroBuild`), null when none has the ID. */
+export function heroBuildGameQueryOptions(buildId: number) {
+  return queryOptions({
+    queryKey: queryKeys.analytics.heroBuildGame(buildId),
+    queryFn: async ({ signal }): Promise<HeroBuild | null> => {
+      const search = new URLSearchParams({ build_id: String(buildId), only_latest: "true", limit: "1" });
+      const response = await fetch(`${API_ORIGIN}/v1/builds?${search}`, { headers: serverApiKeyHeaders(), signal });
+      if (!response.ok) throw new Error(`${response.status}: ${await response.text()}`);
+      const builds = (await response.json()) as { hero_build: HeroBuild }[];
+      return builds[0]?.hero_build ?? null;
     },
     staleTime: CACHE_DURATIONS.ONE_HOUR,
   });
