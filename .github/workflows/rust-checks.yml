@@ -54,7 +54,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - run: rustup component add rustfmt
+      - uses: ./.github/actions/rust-toolchain
+        with:
+          components: rustfmt
       - uses: taiki-e/cache-cargo-install-action@9ee83daaa7b96a6fab930949ecf1122bba04a389 # v3.0.8
         with:
           tool: cargo-machete
@@ -78,8 +80,8 @@ jobs:
       - uses: ./.github/actions/setup-rust
         with:
           cache-key: ${{ inputs.cache-key }}
+          components: clippy
           sticky-disks: ${{ startsWith(inputs.runs-on, 'blacksmith') }}
-      - run: rustup component add clippy
       - name: Clippy
         run: cargo clippy $(printf -- '-p %s ' ${{ inputs.packages }}) --all-targets --all-features --locked -- -D warnings
       # A sticky target dir is never pruned by rust-cache, so artifacts of old dependency versions

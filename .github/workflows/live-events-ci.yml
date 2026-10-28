@@ -16,7 +16,7 @@ on:
       - '_typos.toml'
       - '.github/workflows/live-events-ci.yml'
       - '.github/workflows/rust-checks.yml'
-      - '.github/actions/setup-rust/**'
+      - '.github/actions/**'
   pull_request:
     branches:
       - master

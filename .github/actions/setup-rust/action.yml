@@ -8,6 +8,10 @@ inputs:
       Cache name. Jobs whose builds differ (clippy vs test profile, other packages) need their own,
       or they evict each other's artifacts.
     required: true
+  components:
+    description: "Space-separated rustup components to add (e.g. 'clippy')."
+    required: false
+    default: ""
   sticky-disks:
     description: "Cache on Blacksmith sticky disks instead of rust-cache (Blacksmith runners only)."
     required: false
@@ -21,14 +25,9 @@ runs:
       shell: bash
       run: sudo apt-get update && sudo apt-get install -y protobuf-compiler libprotobuf-dev clang mold
 
-    # Blacksmith runners ship without Rust; GitHub's have rustup.
-    - name: Install Rust toolchain
-      shell: bash
-      run: |
-        if ! command -v rustup >/dev/null; then
-          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
-        fi
+    - uses: ./.github/actions/rust-toolchain
+      with:
+        components: ${{ inputs.components }}
 
     # Blacksmith serves rust-cache from GitHub's backend at ~3.5 MB/s (4 min for 1 GB); sticky
     # disks mount in seconds. Only master commits them, like rust-cache's save-if, so PR runs

@@ -17,6 +17,7 @@ on:
       - 'Cargo.toml'
       - 'Cargo.lock'
       - 'rust-toolchain.toml'
+      - '.github/actions/rust-toolchain/**'
   pull_request:
     branches:
       - master
@@ -66,8 +67,10 @@ jobs:
         with:
           tool: protoc
 
-      - name: Add the wasm target
-        run: rustup target add wasm32-unknown-unknown
+      - name: Install Rust with the wasm target
+        uses: ./.github/actions/rust-toolchain
+        with:
+          targets: wasm32-unknown-unknown
 
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3

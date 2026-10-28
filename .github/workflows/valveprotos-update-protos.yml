@@ -26,11 +26,9 @@ jobs:
       - name: Install Protocol Buffers compiler
         run: sudo apt-get update && sudo apt-get install -y protobuf-compiler libprotobuf-dev clang mold
 
-      - name: Update Rust toolchain to stable
-        run: |
-          rustup override set stable
-          rustup update stable
-          rustup component add rustfmt
+      - uses: ./.github/actions/rust-toolchain
+        with:
+          components: rustfmt
 
       - name: Run fetch-protos
         # fetch-protos reads and writes paths relative to the crate root. The build
