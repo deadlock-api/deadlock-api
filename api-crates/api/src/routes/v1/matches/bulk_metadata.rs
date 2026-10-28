@@ -24,9 +24,7 @@ use crate::routes::v1::players::without_protected;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::rate_limiter::{Quota, RateLimit, Scope, describe};
 use crate::utils::json_stream::{ResponseFormat, stream_rows};
-use crate::utils::parse::{
-    comma_separated_deserialize_option, comma_separated_steam_ids_option, default_true,
-};
+use crate::utils::parse::{comma_separated_deserialize_option, default_true};
 use crate::utils::types::SortDirectionAsc;
 
 const RATE_LIMIT: RateLimit = RateLimit::new(
@@ -183,7 +181,7 @@ pub(super) struct BulkMatchMetadataQuery {
     is_new_player_pool: Option<bool>,
     /// Filter matches by account IDs of players that participated in the match.
     #[serde(default)]
-    #[serde(deserialize_with = "comma_separated_steam_ids_option")]
+    #[serde(deserialize_with = "steam_id::de::account_ids_option")]
     #[cfg_attr(
         test,
         proptest(strategy = "crate::utils::proptest_utils::arb_small_u32_list()")

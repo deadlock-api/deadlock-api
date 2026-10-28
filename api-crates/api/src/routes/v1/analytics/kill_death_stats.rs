@@ -15,10 +15,7 @@ use super::common_filters::{
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::matches::types::{GameMode, MatchMode, reject_brawl_badge_filter};
-use crate::utils::parse::{
-    comma_separated_deserialize_option, comma_separated_steam_ids_option,
-    default_last_month_timestamp,
-};
+use crate::utils::parse::{comma_separated_deserialize_option, default_last_month_timestamp};
 use crate::utils::sql::{
     DURATION_COLUMN, MatchPoolFilters, cached_ch_query, impl_match_info, join_filters,
 };
@@ -60,7 +57,7 @@ pub(crate) struct KillDeathStatsQuery {
     max_duration_s: Option<u64>,
     /// Filter matches by account IDs of players that participated in the match.
     #[serde(default)]
-    #[serde(deserialize_with = "comma_separated_steam_ids_option")]
+    #[serde(deserialize_with = "steam_id::de::account_ids_option")]
     #[cfg_attr(
         test,
         proptest(strategy = "crate::utils::proptest_utils::arb_small_u32_list()")

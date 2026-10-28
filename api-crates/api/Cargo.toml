@@ -14,6 +14,7 @@ tokio = { version = "1.54.1", features = ["macros", "rt-multi-thread", "signal",
 tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
 redis = { workspace = true }
 clickhouse = { version = "0.15.3", features = ["chrono", "uuid", "zstd"] }
+clickhouse-utils = { workspace = true }
 sqlx = { version = "0.9.0", features = ["chrono", "derive", "postgres", "runtime-tokio", "sqlx-toml", "uuid"] }
 uuid = { version = "1.29.0", features = ["serde", "v4"] }
 cached = { workspace = true, features = ["async"] }
@@ -35,7 +36,7 @@ itertools = "0.15.0"
 xxhash-rust = { version = "0.8.19", features = ["xxh3"] }
 futures = "0.3.34"
 snap = "1.1.2"
-steam-id = { workspace = true }
+steam-id = { workspace = true, features = ["serde"] }
 steam-proxy = { workspace = true }
 telemetry = { workspace = true }
 keyvalues = { workspace = true }

@@ -3,6 +3,7 @@ use haste::fxhash;
 use haste::fxhash::add_u64_to_hash;
 use haste::parser::Context;
 use serde::{Deserialize, Serialize};
+use steam_id::SteamId;
 use strum::{Display, EnumString, FromRepr, VariantArray};
 
 #[allow(
@@ -12,7 +13,6 @@ use strum::{Display, EnumString, FromRepr, VariantArray};
 use crate::demo_parser::hashes::*;
 use crate::demo_parser::types::Delta;
 use crate::demo_parser::utils;
-use crate::utils::steamid64_to_steamid3;
 
 #[derive(
     FromRepr,
@@ -203,7 +203,8 @@ impl EntityUpdateEvent for PlayerControllerEvent {
             pawn: utils::get_entity_handle_index(entity, PAWN_HASH),
             steam_id: entity
                 .get_value(&STEAM_ID_HASH)
-                .and_then(|s| steamid64_to_steamid3(s).ok()),
+                .and_then(|s| SteamId::from_account_or_steam64(s).ok())
+                .map(SteamId::account_id),
             steam_name: entity.get_value(&STEAM_NAME_HASH),
             team: entity.get_value(&TEAM_HASH),
             hero_badge_xp: entity.get_value(&HERO_BADGE_XP_HASH),

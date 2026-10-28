@@ -14,10 +14,7 @@ use super::common_filters::{
 use crate::context::AppState;
 use crate::error::APIResult;
 use crate::routes::v1::matches::types::{GameMode, MatchMode, reject_brawl_badge_filter};
-use crate::utils::parse::{
-    comma_separated_deserialize_option, comma_separated_steam_ids_option,
-    default_last_month_timestamp,
-};
+use crate::utils::parse::{comma_separated_deserialize_option, default_last_month_timestamp};
 use crate::utils::sql::{cached_ch_query, impl_match_info};
 
 /// `buff_type` of the synthetic per-player entry prepended to every row's buff list, whose
@@ -80,7 +77,7 @@ pub(crate) struct BuffStatsQuery {
     hero_ids: Option<Vec<u32>>,
     /// Comma separated list of account ids to include
     #[param(inline, min_items = 1, max_items = 1_000)]
-    #[serde(default, deserialize_with = "comma_separated_steam_ids_option")]
+    #[serde(default, deserialize_with = "steam_id::de::account_ids_option")]
     #[cfg_attr(
         test,
         proptest(strategy = "crate::utils::proptest_utils::arb_small_u32_list()")

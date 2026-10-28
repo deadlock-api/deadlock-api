@@ -84,7 +84,7 @@ pub static SHUTDOWN_TOKEN: std::sync::LazyLock<tokio_util::sync::CancellationTok
     std::sync::LazyLock::new(tokio_util::sync::CancellationToken::new);
 
 /// Cancelled by [`shutdown_background_tasks`] once the server has stopped serving requests, so
-/// background insert batchers run their final flush and exit. Separate from [`SHUTDOWN_TOKEN`],
+/// insert batchers run their final flush and exit. Separate from [`SHUTDOWN_TOKEN`],
 /// which fires before the drain while requests (and their log rows) are still arriving.
 pub(crate) static BACKGROUND_SHUTDOWN: std::sync::LazyLock<tokio_util::sync::CancellationToken> =
     std::sync::LazyLock::new(tokio_util::sync::CancellationToken::new);
@@ -139,12 +139,6 @@ pub async fn router(port: u16) -> Result<NormalizePath<Router>, StartupError> {
     debug!("Loading application state");
     let state = AppState::from_env().await?;
     debug!("Application state loaded");
-
-    // Start the background request logger flush task
-    std::sync::Arc::clone(&state.request_logger).start_background_flush();
-
-    // Start background flush tasks for all insert batchers
-    state.batchers.start_background_flushes();
 
     // Start the daily Patreon verification job for token refresh and membership sync
     if !cfg!(debug_assertions) {

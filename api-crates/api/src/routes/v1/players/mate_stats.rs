@@ -2,16 +2,16 @@ use std::sync::Arc;
 
 use axum::Json;
 use axum::extract::{Path, State};
-use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum_extra::extract::Query;
 use clickhouse::Row;
+use clickhouse_utils::BatchError;
 use serde::{Deserialize, Serialize};
 use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
 
 use crate::context::AppState;
-use crate::error::{APIError, APIResult};
+use crate::error::APIResult;
 use crate::routes::v1::matches::types::GameMode;
 use crate::routes::v1::players::ensure_not_protected;
 use crate::routes::v1::players::roster_stats::{RosterSide, RosterStatsQuery};
@@ -97,10 +97,8 @@ async fn fetch_friend_account_ids(
     match steam_profile_batcher.load(account_id).await {
         Ok(profile) => Ok(profile.friends_account_id),
         // A missing steam profile simply means there is no friends list to filter on.
-        Err(APIError::StatusMsg { status, .. }) if status == StatusCode::NOT_FOUND => {
-            Ok(Vec::new())
-        }
-        Err(e) => Err(e),
+        Err(BatchError::NotFound) => Ok(Vec::new()),
+        Err(e) => Err(e.into()),
     }
 }
 

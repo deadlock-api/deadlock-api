@@ -8,6 +8,7 @@ use axum_extra::extract::Query;
 use cached::macros::cached;
 use chrono::Utc;
 use clickhouse::Row as _;
+use clickhouse_utils::{BatchInserter, BatchQueryMulti, ClickhouseBatcherMulti, in_clause};
 use itertools::{Itertools as _, chain};
 use serde::Deserialize;
 use tracing::{debug, warn};
@@ -23,8 +24,6 @@ use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::assets::common::{Language, resolve_version};
 use crate::services::assets::versions::ranked_seasons::{fetch_ranked_seasons, interval_at};
-use crate::services::clickhouse_batcher::{BatchQueryMulti, ClickhouseBatcherMulti, in_clause};
-use crate::services::clickhouse_insert_batcher::{BatchInsert, ClickhouseInsertBatcher};
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::rate_limiter::{DOCUMENTED_DEFAULT, Quota, RateLimit, Scope, describe};
 use crate::services::steam::client::SteamClient;
@@ -163,20 +162,10 @@ async fn fetch_ch_match_history(
     batcher: &MatchHistoryReadBatcher,
     account_id: u32,
 ) -> Result<PlayerMatchHistory, APIError> {
-    batcher.load(account_id).await
+    Ok(batcher.load(account_id).await?)
 }
 
-pub(crate) struct MatchHistoryInsert;
-
-impl BatchInsert for MatchHistoryInsert {
-    type Row = PlayerMatchHistoryEntry;
-
-    fn table_name() -> &'static str {
-        "player_match_history"
-    }
-}
-
-pub(crate) type MatchHistoryInsertBatcher = ClickhouseInsertBatcher<MatchHistoryInsert>;
+pub(crate) type MatchHistoryInsertBatcher = BatchInserter<PlayerMatchHistoryEntry>;
 
 #[derive(Copy, Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash)]
 pub(crate) struct MatchHistoryQuery {
@@ -192,7 +181,7 @@ pub(crate) struct MatchHistoryQuery {
 /// then merges both sides. Steam wins, but keeps ranked fields only `ClickHouse`
 /// has: the ranked call covers just the current interval, so older ranked matches
 /// are stored, never re-fetched.
-async fn merge_and_store(
+fn merge_and_store(
     state: &AppState,
     ch_match_history: PlayerMatchHistory,
     steam_match_history: PlayerMatchHistory,
@@ -211,9 +200,7 @@ async fn merge_and_store(
         })
         .cloned()
         .collect_vec();
-    if !pending.is_empty() {
-        state.batchers.match_history_insert.insert(pending).await;
-    }
+    state.batchers.match_history_insert.try_insert(pending);
 
     let merged = steam_match_history
         .into_iter()
@@ -475,8 +462,7 @@ pub(super) async fn match_history(
         }
     };
 
-    let combined_match_history =
-        merge_and_store(&state, ch_match_history, steam_match_history).await;
+    let combined_match_history = merge_and_store(&state, ch_match_history, steam_match_history);
     Ok((
         StatusCode::OK,
         called_steam(true),

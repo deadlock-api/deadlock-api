@@ -13,7 +13,7 @@ use sqlx::{Pool, Postgres};
 use thiserror::Error;
 use tracing::{debug, error, warn};
 
-use crate::context::batchers::Batchers;
+use crate::context::batchers::{Batchers, insert_batcher};
 use crate::context::config::Config;
 use crate::routes::v1::mcp::{CatalogError, SnapshotCatalog};
 use crate::services::assets::client::AssetsClient;
@@ -212,7 +212,7 @@ impl AppState {
 
         // Create a Request Logger
         debug!("Creating Request Logger");
-        let request_logger = Arc::new(RequestLogger::new(ch_client.clone()));
+        let request_logger: Arc<RequestLogger> = insert_batcher(&ch_client, "request_logs");
 
         // Create batchers
         debug!("Creating batchers");

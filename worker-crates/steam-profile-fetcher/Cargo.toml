@@ -9,7 +9,7 @@ clickhouse = { workspace = true }
 clickhouse-utils = { workspace = true }
 db-clients = { workspace = true }
 service-utils = { workspace = true }
-steam-id = { workspace = true }
+steam-id = { workspace = true, features = ["serde"] }
 telemetry = { workspace = true, features = ["prometheus"] }
 futures = { workspace = true }
 itertools = { workspace = true }

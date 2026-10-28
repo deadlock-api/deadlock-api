@@ -7,18 +7,18 @@ use axum::response::IntoResponse;
 use axum_extra::extract::Query;
 use cached::macros::cached;
 use clickhouse::Row;
+use clickhouse_utils::{BatchError, BatchQuery, ClickhouseBatcher, in_clause};
 use itertools::Itertools as _;
+use serde::de::IntoDeserializer as _;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::players::{ensure_not_protected, without_protected};
-use crate::services::clickhouse_batcher::{BatchQuery, ClickhouseBatcher, in_clause};
 use crate::services::rank_image::{self, RankImageFormat, RankImageQuery};
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::rate_limiter::{Quota, RateLimit, Scope, describe};
-use crate::utils::parse::{comma_separated_steam_ids, list_steam_id3};
 use crate::utils::types::AccountIdQuery;
 
 const RATE_LIMIT: RateLimit = RateLimit::new(
@@ -284,8 +284,8 @@ pub(crate) async fn fetch_last_ranked_match(
 ) -> Result<Option<LastRankedMatch>, APIError> {
     match batcher.load(account_id).await {
         Ok(row) => Ok(Some(row.into())),
-        Err(APIError::StatusMsg { status, .. }) if status == StatusCode::NOT_FOUND => Ok(None),
-        Err(e) => Err(e),
+        Err(BatchError::NotFound) => Ok(None),
+        Err(e) => Err(e.into()),
     }
 }
 
@@ -348,7 +348,7 @@ fn check_account_id_count(account_ids: &[u32], max: usize) -> APIResult<()> {
 pub(crate) struct RankBatchQuery {
     /// Comma separated list of account ids, in `SteamID3` or `SteamID64` format.
     #[param(inline, min_items = 1, max_items = 1_000)]
-    #[serde(deserialize_with = "comma_separated_steam_ids")]
+    #[serde(deserialize_with = "steam_id::de::account_ids")]
     account_ids: Vec<u32>,
 }
 
@@ -451,7 +451,7 @@ async fn serve_rank_image(
 
 const MAX_AVG_ACCOUNT_IDS: usize = 12;
 
-/// Like [`comma_separated_steam_ids`], but skips empty entries (`1,2,`).
+/// Like [`steam_id::de::account_ids`], but skips empty entries (`1,2,`).
 fn deserialize_account_ids<'de, D>(deserializer: D) -> Result<Vec<u32>, D::Error>
 where
     D: serde::Deserializer<'de>,
@@ -460,10 +460,7 @@ where
     raw.split(',')
         .map(str::trim)
         .filter(|s| !s.is_empty())
-        .map(|s| {
-            let steam_id = s.parse::<u64>().map_err(serde::de::Error::custom)?;
-            list_steam_id3(steam_id).map_err(serde::de::Error::custom)
-        })
+        .map(|s| steam_id::de::account_id(s.into_deserializer()))
         .collect()
 }
 

@@ -4,6 +4,7 @@ use std::sync::Arc;
 use axum::body::Body;
 use axum::http::{Response, header};
 use axum::response::IntoResponse;
+use clickhouse_utils::BatchError;
 use reqwest::StatusCode;
 use serde_json::json;
 use thiserror::Error;
@@ -108,6 +109,15 @@ impl APIError {
 impl From<clickhouse::error::Error> for APIError {
     fn from(e: clickhouse::error::Error) -> Self {
         Self::Clickhouse(Arc::new(e))
+    }
+}
+
+impl From<BatchError> for APIError {
+    fn from(e: BatchError) -> Self {
+        match e {
+            BatchError::NotFound => Self::status_msg(StatusCode::NOT_FOUND, e.to_string()),
+            BatchError::Unavailable | BatchError::QueryFailed => Self::internal(e.to_string()),
+        }
     }
 }
 

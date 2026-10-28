@@ -112,7 +112,7 @@ pub(crate) async fn track_requests(
             graphql_variables: graphql.as_ref().and_then(|g| g.variables.clone()),
             graphql_query: graphql.map(|g| g.query),
         };
-        state.request_logger.insert_one(log).await;
+        state.request_logger.try_insert(vec![log]);
     }
 
     response

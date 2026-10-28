@@ -31,6 +31,7 @@ use haste::async_demofile::AsyncDemoFile;
 use haste::demofile::DemoHeaderError;
 use haste::parser::{AsyncStreamingParser, ParserError};
 use metrics::{counter, gauge};
+use steam_id::SteamId;
 use tokio::io::AsyncReadExt as _;
 use tokio_util::io::StreamReader;
 use tracing::{debug, error, info, warn};
@@ -437,14 +438,10 @@ fn correlate(match_info: &MatchWithReplay, state: &SharedState) -> MatchUpdate {
             continue;
         };
 
-        let account_id = if steam_id >= steam_id::STEAM_ID_IDENT {
-            steam_id::steam_id64_to_account_id(steam_id)
-        } else {
-            let Ok(id) = u32::try_from(steam_id) else {
-                continue;
-            };
-            id
+        let Ok(steam_id) = SteamId::from_account_or_steam64(steam_id) else {
+            continue;
         };
+        let account_id = steam_id.account_id();
 
         players.push(DemoPlayer {
             account_id,

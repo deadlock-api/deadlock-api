@@ -476,7 +476,7 @@ async fn fetch_steam_account_name_cached(
         .check(rate_limit_key, ACCOUNT_NAME_RATE_LIMIT)
         .await
         .map_err(|e| SteamAccountNameError::RateLimitExceeded(e.to_string()))?;
-    let steamid64 = crate::utils::parse::steamid3_to_steamid64(steam_id);
+    let steamid64 = steam_id::SteamId::from_account_id(steam_id).steam64();
     // Errors drop the URL: it carries the API key and they get logged.
     let player_summaries: GetPlayerSummariesResponse = async {
         http_client

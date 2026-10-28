@@ -11,14 +11,13 @@ use crate::error::APIResult;
 use crate::routes::v1::players::ensure_not_protected;
 use crate::routes::v1::players::rank::badge_from_flat_progress_sql;
 use crate::services::rate_limiter::extractor::RateLimitKey;
-use crate::utils::parse::parse_steam_id;
 use crate::utils::types::AccountIdQuery;
 
 #[derive(Deserialize, IntoParams, Default, Clone, Copy, Eq, PartialEq, Hash)]
 pub(super) struct HeroMMRHistoryPath {
     /// The players `SteamID3`
     #[serde(default)]
-    #[serde(deserialize_with = "parse_steam_id")]
+    #[serde(deserialize_with = "steam_id::de::account_id")]
     account_id: u32,
     /// The hero ID to fetch the MMR history for. See more: <https://api.deadlock-api.com/v1/assets/heroes>
     hero_id: u8,

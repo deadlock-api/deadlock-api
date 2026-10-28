@@ -9,6 +9,7 @@ use haste::entities::{DeltaHeader, Entity};
 use haste::parser::{AsyncVisitor, Context};
 use haste::stringtables::StringTableItem;
 use prost::Message as _;
+use steam_id::SteamId;
 use tokio::sync::mpsc::Sender;
 use tracing::debug;
 use valveprotos::common::{CMsgPlayerInfo, EDemoCommands};
@@ -32,7 +33,6 @@ use crate::demo_parser::error::DemoParseError;
 use crate::demo_parser::hashes::*;
 use crate::demo_parser::types::{Delta, DemoEvent, DemoEventPayload};
 use crate::demo_parser::utils::{get_entity_handle_index, handle_to_entity_index};
-use crate::utils::steamid64_to_steamid3;
 
 /// How long the parser waits for a client to make room in its event buffer before giving
 /// up on it. Sends wait (rather than fail on a full buffer) so a client that is merely
@@ -299,7 +299,9 @@ impl SendingVisitor {
                 ctx,
                 DemoEventPayload::ChatMessage {
                     steam_name,
-                    steam_id: steam_id.and_then(|s| steamid64_to_steamid3(s).ok()),
+                    steam_id: steam_id
+                        .and_then(|s| SteamId::from_account_or_steam64(s).ok())
+                        .map(SteamId::account_id),
                     text: msg.text,
                     all_chat: msg.all_chat,
                     lane_color: msg.lane_color,

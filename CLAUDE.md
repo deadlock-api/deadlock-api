@@ -10,11 +10,11 @@ live-events/ # rust service for live match event streaming
 util-crates/ # libraries shared by the services:
   telemetry/ # console logs + otlp export (all services); feature `prometheus` for the workers' scrape endpoint
   service-utils/ # env config, graceful shutdown, retries with backoff, shared http clients
-  steam-id/ # account id <-> SteamID64
+  steam-id/ # SteamId: a player's account id <-> SteamID64/Steam3/Steam2; feature `serde` has the deserializers for account id query params
   steam-proxy/ # sv-proxy request/response types and client
   crosshair/ # crosshair share codes (DL.…) to settings and back, and settings to png; used by the api's /crosshair routes and, as wasm (website/wasm/crosshair), the website's crosshair editor
   db-clients/ # clickhouse/postgres/redis/s3/file-cache connections from env, shared postgres queries
-  clickhouse-utils/ # inserts, retrying batch inserter, match id bounds for the workers
+  clickhouse-utils/ # inserts, retrying batch inserter, batched key lookups (BatchQuery), match id bounds
   assets-client/ # heroes and ranked seasons from the public asset endpoints
   demofusion/ # sql (datafusion) over demo files and live broadcasts, parsed with haste; used by the api's /matches/demo routes
   keyvalues/ # parsers for valve's kv3 (.vdata) and localization text files, used by the api's asset endpoints

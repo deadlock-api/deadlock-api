@@ -17,10 +17,7 @@ use super::rollup_window::{Coverage, DaySplit, EdgeRows, Rollup, RollupFilters};
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::matches::types::{GameMode, MatchMode, reject_brawl_badge_filter};
-use crate::utils::parse::{
-    comma_separated_deserialize_option, comma_separated_steam_ids_option,
-    default_last_month_timestamp, parse_steam_id_option,
-};
+use crate::utils::parse::{comma_separated_deserialize_option, default_last_month_timestamp};
 use crate::utils::sql::{MatchInfoFilters, cached_ch_query, impl_match_info};
 
 #[derive(Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash, Default)]
@@ -121,12 +118,12 @@ pub(crate) struct HeroStatsQuery {
     )]
     ability_unlock_order_prefix: Option<Vec<u32>>,
     /// Filter for matches with a specific player account ID.
-    #[serde(default, deserialize_with = "parse_steam_id_option")]
+    #[serde(default, deserialize_with = "steam_id::de::account_id_option")]
     #[deprecated]
     account_id: Option<u32>,
     /// Comma separated list of account ids to include
     #[param(inline, min_items = 1, max_items = 1_000)]
-    #[serde(default, deserialize_with = "comma_separated_steam_ids_option")]
+    #[serde(default, deserialize_with = "steam_id::de::account_ids_option")]
     #[cfg_attr(
         test,
         proptest(strategy = "crate::utils::proptest_utils::arb_small_u32_list()")

@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use chrono::Duration;
+use clickhouse_utils::BatchError;
 use futures::future::join;
 use itertools::Itertools as _;
 use serde::{Deserialize, Serialize};
@@ -39,6 +40,8 @@ pub(super) enum VariableResolveError {
     Request(#[from] reqwest::Error),
     #[error(transparent)]
     Api(#[from] APIError),
+    #[error(transparent)]
+    Batch(#[from] BatchError),
     #[error(transparent)]
     Assets(#[from] AssetsError),
 }
@@ -809,7 +812,7 @@ impl Variable {
         let matches =
             match fetch_steam_match_history(steam_client, account_id, false, None, None).await {
                 Ok(m) => {
-                    match_history_insert_batcher.insert(m.clone()).await;
+                    match_history_insert_batcher.try_insert(m.clone());
                     m
                 }
                 Err(_) => match_history_read_batcher.load(account_id).await?,

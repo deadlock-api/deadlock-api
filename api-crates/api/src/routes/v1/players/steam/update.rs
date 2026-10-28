@@ -6,13 +6,13 @@ use clickhouse::Row;
 use futures::StreamExt as _;
 use itertools::Itertools as _;
 use serde::{Deserialize, Serialize};
+use steam_id::SteamId;
 use tracing::{instrument, warn};
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::rate_limiter::{Quota, RateLimit, Scope};
-use crate::utils::parse::{parse_steam_id, steamid3_to_steamid64};
 
 pub(super) const RATE_LIMIT: RateLimit = RateLimit::new(
     "steam_refresh",
@@ -46,7 +46,7 @@ struct SteamPlayerSummariesInner {
 
 #[derive(Debug, Deserialize)]
 struct SteamPlayer {
-    #[serde(deserialize_with = "parse_steam_id")]
+    #[serde(deserialize_with = "steam_id::de::account_id")]
     steamid: u32,
     #[serde(default)]
     personaname: String,
@@ -77,7 +77,7 @@ struct SteamFriendList {
 
 #[derive(Debug, Deserialize)]
 struct SteamFriend {
-    #[serde(deserialize_with = "parse_steam_id")]
+    #[serde(deserialize_with = "steam_id::de::account_id")]
     steamid: u32,
     friend_since: u32,
 }
@@ -156,7 +156,7 @@ async fn fetch_steam_summaries(
     }
     let steamids = account_ids
         .iter()
-        .map(|&id| steamid3_to_steamid64(id).to_string())
+        .map(|&id| SteamId::from_account_id(id).to_string())
         .join(",");
     let url = format!(
         "https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key={api_key}&steamids={steamids}"
@@ -210,7 +210,7 @@ async fn fetch_friends_for_account(
     api_key: &str,
     account_id: u32,
 ) -> reqwest::Result<Vec<SteamFriend>> {
-    let steam_id64 = steamid3_to_steamid64(account_id);
+    let steam_id64 = SteamId::from_account_id(account_id).steam64();
     let url = format!(
         "https://api.steampowered.com/ISteamUser/GetFriendList/v1/?key={api_key}&steamid={steam_id64}&relationship=friend"
     );

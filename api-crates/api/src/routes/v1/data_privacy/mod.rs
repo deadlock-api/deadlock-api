@@ -10,13 +10,11 @@ use utoipa::{IntoParams, ToSchema};
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::services::steam::client::GET_PROTECTED_USERS_CACHED;
-use crate::utils;
-use crate::utils::parse::parse_steam_id;
 use crate::utils::sql::id_list;
 
 #[derive(Clone, Deserialize, IntoParams, ToSchema)]
 pub(crate) struct DataPrivacyRequest {
-    #[serde(deserialize_with = "parse_steam_id")]
+    #[serde(deserialize_with = "steam_id::de::account_id")]
     steam_id: u32,
     open_id_params: HashMap<String, String>,
 }
@@ -33,7 +31,7 @@ async fn verify_ownership(
     open_id_params: &HashMap<String, String>,
     steam_id: u32,
 ) -> APIResult<()> {
-    let steamid64 = utils::parse::steamid3_to_steamid64(steam_id);
+    let steamid64 = steam_id::SteamId::from_account_id(steam_id).steam64();
     state
         .steam_client
         .verify_user_owns_steam_id(open_id_params, steamid64)

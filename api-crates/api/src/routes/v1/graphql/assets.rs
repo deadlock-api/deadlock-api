@@ -5,11 +5,10 @@
 use std::sync::Arc;
 
 use async_graphql::{ComplexObject, Context, Result as GqlResult};
-use axum::http::StatusCode;
+use clickhouse_utils::BatchError;
 use object_store::aws::AmazonS3;
 
 use crate::context::AppState;
-use crate::error::{APIError, APIResult};
 use crate::routes::v1::assets::common::{AssetsQuery, Language, load_localized};
 use crate::routes::v1::builds::structs::Build;
 use crate::routes::v1::graphql::builds::load_hero_build;
@@ -81,13 +80,10 @@ pub(super) async fn find_item(ctx: &Context<'_>, item_id: u32) -> GqlResult<Opti
 }
 
 /// A batcher lookup for the nested resolvers: a 404 is `None`.
-pub(super) fn found<T>(result: APIResult<T>) -> GqlResult<Option<T>> {
+pub(super) fn found<T>(result: Result<T, BatchError>) -> GqlResult<Option<T>> {
     match result {
         Ok(value) => Ok(Some(value)),
-        Err(APIError::StatusMsg {
-            status: StatusCode::NOT_FOUND,
-            ..
-        }) => Ok(None),
+        Err(BatchError::NotFound) => Ok(None),
         Err(e) => Err(async_graphql::Error::new(e.to_string())),
     }
 }

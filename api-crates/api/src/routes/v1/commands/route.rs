@@ -19,7 +19,6 @@ use crate::routes::v1::leaderboard::types::LeaderboardRegion;
 use crate::routes::v1::players::ensure_not_protected;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::rate_limiter::{DOCUMENTED_DEFAULT, Quota, RateLimit, Scope, describe};
-use crate::utils::parse::parse_steam_id;
 
 const RATE_LIMIT: RateLimit = RateLimit::new(
     "command",
@@ -112,7 +111,7 @@ pub(super) struct CommandResolveQuery {
     #[param(inline)]
     region: LeaderboardRegion,
     /// The players `SteamID3`
-    #[serde(deserialize_with = "parse_steam_id")]
+    #[serde(deserialize_with = "steam_id::de::account_id")]
     account_id: u32,
     /// The command template to resolve
     #[serde(default)]
@@ -178,7 +177,7 @@ pub(super) struct VariablesResolveQuery {
     #[serde(default)]
     #[param(inline)]
     region: LeaderboardRegion,
-    #[serde(deserialize_with = "parse_steam_id")]
+    #[serde(deserialize_with = "steam_id::de::account_id")]
     account_id: u32,
     /// Variables to resolve, separated by commas.
     #[serde(default)]

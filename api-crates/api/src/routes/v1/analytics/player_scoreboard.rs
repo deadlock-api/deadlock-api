@@ -19,7 +19,7 @@ use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::analytics::scoreboard_types::ScoreboardQuerySortBy;
 use crate::routes::v1::matches::types::{GameMode, MatchMode, reject_brawl_badge_filter};
-use crate::utils::parse::{comma_separated_deserialize_option, comma_separated_steam_ids_option};
+use crate::utils::parse::comma_separated_deserialize_option;
 use crate::utils::sql::{cached_ch_query, having_clause, id_list, impl_match_info};
 use crate::utils::types::SortDirectionDesc;
 
@@ -99,7 +99,7 @@ pub(crate) struct PlayerScoreboardQuery {
     limit: Option<u32>,
     /// Comma separated list of account ids to include
     #[param(inline, min_items = 1, max_items = 1_000)]
-    #[serde(default, deserialize_with = "comma_separated_steam_ids_option")]
+    #[serde(default, deserialize_with = "steam_id::de::account_ids_option")]
     #[cfg_attr(
         test,
         proptest(strategy = "crate::utils::proptest_utils::arb_small_u32_list()")

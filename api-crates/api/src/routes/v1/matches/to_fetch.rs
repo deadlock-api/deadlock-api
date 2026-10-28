@@ -9,6 +9,7 @@ use axum::response::{IntoResponse, Response};
 use axum_extra::extract::Query;
 use cached::macros::cached;
 use clickhouse::Row;
+use clickhouse_utils::{BatchInserter, BatchQuery, ClickhouseBatcher};
 use serde::{Deserialize, Serialize};
 use sqlx::{Pool, Postgres};
 use tracing::{debug, warn};
@@ -16,10 +17,7 @@ use uuid::Uuid;
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
-use crate::services::clickhouse_batcher::{BatchQuery, ClickhouseBatcher};
-use crate::services::clickhouse_insert_batcher::{BatchInsert, ClickhouseInsertBatcher};
 use crate::services::lease::RELEASE_IF_OWNED;
-use crate::utils::parse::parse_steam_id_option;
 use crate::utils::request::header_str;
 use crate::utils::sql::id_list;
 
@@ -82,17 +80,7 @@ impl PendingMatchRow {
     }
 }
 
-pub(crate) struct PendingMatchInsert;
-
-impl BatchInsert for PendingMatchInsert {
-    type Row = PendingMatchRow;
-
-    fn table_name() -> &'static str {
-        "pending_matches"
-    }
-}
-
-pub(crate) type PendingMatchInsertBatcher = ClickhouseInsertBatcher<PendingMatchInsert>;
+pub(crate) type PendingMatchInsertBatcher = BatchInserter<PendingMatchRow>;
 
 /// The newest match id seen in `active_matches`. Ids above it can't be real matches yet.
 #[cached(ttl_secs = 60, convert = "{ 0 }", key = "u8", sync_writes = "default")]
@@ -211,7 +199,7 @@ pub(crate) async fn queue_requested_matches(state: &AppState, match_ids: &[u64])
             PendingMatchRow::requested(match_id, start_times.get(&match_id).copied().unwrap_or(now))
         })
         .collect();
-    state.batchers.pending_match_insert.insert(rows).await;
+    state.batchers.pending_match_insert.try_insert(rows);
 }
 
 /// [`queue_requested_matches`] for one match, off the request path.
@@ -226,14 +214,14 @@ pub(crate) fn queue_requested_match(state: &AppState, match_id: u64) {
 pub(crate) async fn queue_live_match(state: &AppState, match_id: u64) {
     let now = u32::try_from(chrono::Utc::now().timestamp()).unwrap_or(u32::MAX);
     let row = PendingMatchRow::requested(match_id, now);
-    state.batchers.pending_match_insert.insert_one(row).await;
+    state.batchers.pending_match_insert.try_insert(vec![row]);
 }
 
 /// Marks a match Steam says does not exist as done, taking it out of the to-fetch pool.
 pub(crate) async fn resolve_invalid_match(state: &AppState, match_id: u64) {
     if (MIN_MATCH_ID..u64::from(u32::MAX)).contains(&match_id) {
         let row = PendingMatchRow::invalid(match_id);
-        state.batchers.pending_match_insert.insert_one(row).await;
+        state.batchers.pending_match_insert.try_insert(vec![row]);
     }
 }
 
@@ -432,7 +420,7 @@ async fn pending_pool_for_account(
 #[derive(Deserialize)]
 pub(super) struct ToFetchQuery {
     /// Filter for matches with a specific player account ID.
-    #[serde(default, deserialize_with = "parse_steam_id_option")]
+    #[serde(default, deserialize_with = "steam_id::de::account_id_option")]
     account_id: Option<u32>,
 }
 

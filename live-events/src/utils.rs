@@ -1,4 +1,3 @@
-use core::num::TryFromIntError;
 use core::str::FromStr;
 use core::time::Duration;
 
@@ -68,13 +67,6 @@ where
             Some(out)
         }
     })
-}
-
-const STEAM_ID_64_IDENT: u64 = 76561197960265728;
-
-pub(crate) fn steamid64_to_steamid3(steam_id: u64) -> Result<u32, TryFromIntError> {
-    // If steam id is smaller than the Steam ID 64 identifier, it's a Steam ID 3
-    u32::try_from(steam_id.checked_sub(STEAM_ID_64_IDENT).unwrap_or(steam_id))
 }
 
 #[derive(Deserialize, Debug)]

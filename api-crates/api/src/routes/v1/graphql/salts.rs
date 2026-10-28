@@ -5,6 +5,7 @@ use core::fmt::Write as _;
 
 use async_graphql::{ComplexObject, Context, InputObject, Result as GqlResult, SimpleObject};
 use clickhouse::Row;
+use clickhouse_utils::{BatchQuery, ClickhouseBatcher, in_clause};
 use serde::Deserialize;
 
 use crate::context::AppState;
@@ -12,7 +13,6 @@ use crate::routes::v1::graphql::assets::found;
 use crate::routes::v1::graphql::filters::{U32Filter, U64Filter};
 use crate::routes::v1::graphql::schema::run_built_query;
 use crate::routes::v1::graphql::sql::OrderDir;
-use crate::services::clickhouse_batcher::{BatchQuery, ClickhouseBatcher, in_clause};
 
 const COLUMNS: &str =
     "match_id, cluster_id, metadata_salt, replay_salt, toUnixTimestamp(created_at) AS created_at";

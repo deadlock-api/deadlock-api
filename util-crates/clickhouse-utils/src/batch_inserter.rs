@@ -1,4 +1,4 @@
-//! Batched `ClickHouse` inserts shared by the ingestion workers.
+//! Batched `ClickHouse` inserts shared by the ingestion workers and the API.
 
 use core::sync::atomic::{AtomicUsize, Ordering};
 use core::time::Duration;
@@ -8,7 +8,7 @@ use clickhouse::{RowOwned, RowWrite};
 use tokio::sync::{Mutex, mpsc, oneshot};
 use tokio::task::JoinHandle;
 use tokio_util::sync::CancellationToken;
-use tracing::{error, info};
+use tracing::{error, info, warn};
 
 use service_utils::{Backoff, retry_with_backoff};
 
@@ -17,7 +17,7 @@ use service_utils::{Backoff, retry_with_backoff};
 pub struct BatchInserterConfig {
     /// Target table.
     pub table: String,
-    /// Prefix of the flush metrics: `{prefix}.batch_flush.{success,failure,entries}`,
+    /// Prefix of the flush metrics: `{prefix}.batch_flush.{success,failure,entries,dropped}`,
     /// labelled with the table.
     pub metrics_prefix: String,
     /// Flush once this many rows are pending.
@@ -26,7 +26,8 @@ pub struct BatchInserterConfig {
     pub flush_interval: Option<Duration>,
     /// Number of concurrent flushing workers.
     pub workers: usize,
-    /// Number of queued [`BatchInserter::insert`] calls before callers wait.
+    /// Number of queued [`BatchInserter::insert`] calls before callers wait (or
+    /// [`BatchInserter::try_insert`] drops rows).
     pub queue_capacity: usize,
 }
 
@@ -72,6 +73,7 @@ struct Stats {
 /// report `false`.
 pub struct BatchInserter<T> {
     tx: mpsc::Sender<Request<T>>,
+    config: Arc<BatchInserterConfig>,
     shutdown: CancellationToken,
     workers: std::sync::Mutex<Vec<JoinHandle<()>>>,
     stats: Arc<Stats>,
@@ -111,6 +113,7 @@ where
             .collect();
         Self {
             tx,
+            config,
             shutdown,
             workers: std::sync::Mutex::new(workers),
             stats,
@@ -121,6 +124,28 @@ where
     /// inserter is shut down.
     pub async fn insert(&self, rows: Vec<T>) -> Option<InsertAck> {
         Some(self.reserve().await?.insert(rows))
+    }
+
+    /// Queues `rows` without waiting, for callers that must not stall on `ClickHouse`. Drops
+    /// them (logged and counted as `{prefix}.batch_flush.dropped`) if the queue is full or the
+    /// inserter is shut down. Returns whether they were queued.
+    pub fn try_insert(&self, rows: Vec<T>) -> bool {
+        if rows.is_empty() {
+            return true;
+        }
+        let count = rows.len();
+        let (ack, _) = oneshot::channel();
+        if !self.shutdown.is_cancelled() && self.tx.try_send(Request { rows, ack }).is_ok() {
+            return true;
+        }
+        let table = self.config.table.as_str();
+        warn!("[{table} inserter] Queue full or shut down, dropping {count} rows");
+        metrics::counter!(
+            format!("{}.batch_flush.dropped", self.config.metrics_prefix),
+            "table" => table.to_owned()
+        )
+        .increment(count as u64);
+        false
     }
 
     /// Waits for room in the queue without queueing anything yet. Dropping the permit
@@ -316,6 +341,14 @@ mod tests {
     }
 
     fn inserter(mock: &Mock, flush_interval: Option<Duration>) -> BatchInserter<TestRow> {
+        inserter_with_queue(mock, flush_interval, 8)
+    }
+
+    fn inserter_with_queue(
+        mock: &Mock,
+        flush_interval: Option<Duration>,
+        queue_capacity: usize,
+    ) -> BatchInserter<TestRow> {
         let client = clickhouse::Client::default()
             .with_mock(mock)
             .with_validation(false);
@@ -327,7 +360,7 @@ mod tests {
                 max_rows: 3,
                 flush_interval,
                 workers: 1,
-                queue_capacity: 8,
+                queue_capacity,
             },
         )
     }
@@ -364,5 +397,22 @@ mod tests {
         let ack = inserter.insert(rows(&[7])).await.unwrap();
         assert!(ack.flushed().await);
         assert_eq!(recorded.collect::<Vec<TestRow>>().await, rows(&[7]));
+    }
+
+    #[tokio::test]
+    async fn try_insert_drops_rows_when_the_queue_is_full() {
+        let mock = Mock::new();
+        let recorded = mock.add(handlers::record::<TestRow>());
+        let inserter = inserter_with_queue(&mock, None, 1);
+        // Hold the only queue slot so the worker can't drain it.
+        let permit = inserter.reserve().await.unwrap();
+        assert!(!inserter.try_insert(rows(&[1])));
+        drop(permit);
+
+        assert!(inserter.try_insert(rows(&[2])));
+        assert!(inserter.try_insert(Vec::new()));
+        inserter.shutdown().await;
+        assert!(!inserter.try_insert(rows(&[3])));
+        assert_eq!(recorded.collect::<Vec<TestRow>>().await, rows(&[2]));
     }
 }

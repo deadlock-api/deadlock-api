@@ -26,17 +26,16 @@ use crate::error::{APIError, APIResult};
 use crate::routes::v1::matches::types::ActiveMatch;
 use crate::services::rate_limiter::{DOCUMENTED_DEFAULT, describe};
 use crate::services::steam::types::{SteamProxyQuery, SteamProxyResult};
-use crate::utils::parse::{comma_separated_steam_ids_option, parse_steam_id_option};
 
 #[derive(Deserialize, IntoParams)]
 pub(super) struct ActiveMatchesQuery {
     /// The account ID to filter active matches by (`SteamID3`)
-    #[serde(default, deserialize_with = "parse_steam_id_option")]
+    #[serde(default, deserialize_with = "steam_id::de::account_id_option")]
     #[deprecated]
     account_id: Option<u32>,
     /// Comma separated list of account ids to include
     #[param(inline, min_items = 1, max_items = 1_000)]
-    #[serde(default, deserialize_with = "comma_separated_steam_ids_option")]
+    #[serde(default, deserialize_with = "steam_id::de::account_ids_option")]
     account_ids: Option<Vec<u32>>,
 }
 

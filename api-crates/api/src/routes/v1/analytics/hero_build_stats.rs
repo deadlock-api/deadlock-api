@@ -18,10 +18,7 @@ use super::common_filters::{
 use crate::context::AppState;
 use crate::error::APIResult;
 use crate::routes::v1::matches::types::MatchMode;
-use crate::utils::parse::{
-    comma_separated_deserialize_option, comma_separated_steam_ids_option,
-    default_last_month_timestamp, parse_steam_id_option,
-};
+use crate::utils::parse::{comma_separated_deserialize_option, default_last_month_timestamp};
 use crate::utils::sql::{cached_ch_query, id_list, impl_match_info, join_filters};
 
 #[derive(Debug, Clone, Copy, Deserialize, ToSchema, Default, Display, PartialEq, Eq, Hash)]
@@ -169,12 +166,12 @@ pub(super) struct HeroBuildStatsQuery {
     #[param(minimum = 1, default = 20)]
     min_matches: Option<u64>,
     /// Filter for matches with a specific player account ID.
-    #[serde(default, deserialize_with = "parse_steam_id_option")]
+    #[serde(default, deserialize_with = "steam_id::de::account_id_option")]
     #[deprecated]
     account_id: Option<u32>,
     /// Comma separated list of account ids to include
     #[param(inline, min_items = 1, max_items = 1_000)]
-    #[serde(default, deserialize_with = "comma_separated_steam_ids_option")]
+    #[serde(default, deserialize_with = "steam_id::de::account_ids_option")]
     #[cfg_attr(
         test,
         proptest(strategy = "crate::utils::proptest_utils::arb_small_u32_list()")

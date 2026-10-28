@@ -1,4 +1,8 @@
+use core::time::Duration;
 use std::sync::Arc;
+
+use clickhouse::{RowOwned, RowWrite};
+use clickhouse_utils::{BatchInserter, BatchInserterConfig};
 
 use crate::routes::v1::graphql::salts::MatchSaltsGraphQlBatcher;
 use crate::routes::v1::matches::metadata::DemoPlayerBatcher;
@@ -34,12 +38,12 @@ impl Batchers {
     pub(crate) fn new(ch_client: &clickhouse::Client, ch_client_ro: &clickhouse::Client) -> Self {
         Self {
             match_history_read: MatchHistoryReadBatcher::new(ch_client_ro.clone()),
-            match_history_insert: Arc::new(MatchHistoryInsertBatcher::new(ch_client.clone())),
+            match_history_insert: insert_batcher(ch_client, "player_match_history"),
             match_salts_read: MatchSaltsReadBatcher::new(ch_client_ro.clone()),
             match_salts_graphql: MatchSaltsGraphQlBatcher::new(ch_client_ro.clone()),
             match_salts_exists: MatchSaltsExistsBatcher::new(ch_client_ro.clone()),
             match_info_exists: MatchInfoExistsBatcher::new(ch_client_ro.clone()),
-            pending_match_insert: Arc::new(PendingMatchInsertBatcher::new(ch_client.clone())),
+            pending_match_insert: insert_batcher(ch_client, "pending_matches"),
             estimated_start_time: EstimatedStartTimeBatcher::new(ch_client_ro.clone()),
             player_hero_stats: PlayerHeroStatsBatcher::new(ch_client_ro.clone()),
             demo_player: DemoPlayerBatcher::new(ch_client_ro.clone()),
@@ -48,10 +52,32 @@ impl Batchers {
             player_rank: PlayerRankBatcher::new(ch_client_ro.clone()),
         }
     }
+}
 
-    /// Spawn background flush tasks for all insert batchers.
-    pub(crate) fn start_background_flushes(&self) {
-        Arc::clone(&self.match_history_insert).start_background_flush();
-        Arc::clone(&self.pending_match_insert).start_background_flush();
-    }
+/// A [`BatchInserter`] for `table` that flushes every 10 s or at 10k rows, and runs its final
+/// flush once [`crate::BACKGROUND_SHUTDOWN`] fires (after the server stopped serving).
+pub(crate) fn insert_batcher<T>(
+    ch_client: &clickhouse::Client,
+    table: &str,
+) -> Arc<BatchInserter<T>>
+where
+    T: RowOwned + RowWrite + Send + Sync + 'static,
+{
+    let inserter = Arc::new(BatchInserter::spawn(
+        ch_client,
+        BatchInserterConfig {
+            table: table.to_owned(),
+            metrics_prefix: "clickhouse_insert_batcher".to_owned(),
+            max_rows: 10_000,
+            flush_interval: Some(Duration::from_secs(10)),
+            workers: 1,
+            queue_capacity: 10_000,
+        },
+    ));
+    let shutdown = Arc::clone(&inserter);
+    crate::BACKGROUND_TASKS.spawn(async move {
+        crate::BACKGROUND_SHUTDOWN.cancelled().await;
+        shutdown.shutdown().await;
+    });
+    inserter
 }

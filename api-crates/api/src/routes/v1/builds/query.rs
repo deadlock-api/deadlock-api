@@ -8,7 +8,6 @@ use sqlx::QueryBuilder;
 use strum::Display;
 use utoipa::{IntoParams, ToSchema};
 
-use crate::utils::parse::parse_steam_id_option;
 use crate::utils::types::SortDirectionDesc;
 
 fn default_limit() -> Option<u32> {
@@ -115,7 +114,7 @@ pub(crate) struct BuildsSearchQuery {
     /// Filter builds by rollup category.
     pub(crate) rollup_category: Option<u32>,
     /// The author's `SteamID3`
-    #[serde(default, deserialize_with = "parse_steam_id_option")]
+    #[serde(default, deserialize_with = "steam_id::de::account_id_option")]
     pub(crate) author_id: Option<u32>,
 }
 

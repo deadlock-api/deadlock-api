@@ -1,24 +1,55 @@
+//! Batched key lookups: concurrent callers' keys are collected into one `IN (...)` query.
+
+use core::fmt;
 use core::hash::Hash;
 use core::marker::PhantomData;
 use core::time::Duration;
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use axum::http::StatusCode;
 use clickhouse::{RowOwned, RowRead};
 use metrics::{counter, gauge, histogram};
 use tokio::sync::{Semaphore, mpsc, oneshot};
 use tracing::{debug, warn};
 
-use crate::error::{APIError, APIResult};
-use crate::utils::sql::join_display;
-
 /// Render a comma-separated list of keys for use inside a SQL `IN (...)` clause.
-pub(crate) fn in_clause<K: core::fmt::Display>(keys: &[K]) -> String {
-    join_display(keys, ",")
+pub fn in_clause<K: fmt::Display>(keys: &[K]) -> String {
+    let mut out = String::new();
+    for (i, key) in keys.iter().enumerate() {
+        if i > 0 {
+            out.push(',');
+        }
+        _ = fmt::Write::write_fmt(&mut out, format_args!("{key}"));
+    }
+    out
 }
 
-pub(crate) trait BatchQuery: Send + Sync + 'static {
+/// Why a batched lookup failed.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BatchError {
+    /// The batcher's task is gone.
+    Unavailable,
+    /// The batch query failed; it is logged once for the whole batch.
+    QueryFailed,
+    /// [`ClickhouseBatcher::load`] found no row for the key.
+    NotFound,
+}
+
+impl fmt::Display for BatchError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(match self {
+            Self::Unavailable => "Batcher unavailable",
+            Self::QueryFailed => "Batch query failed",
+            Self::NotFound => "Not found",
+        })
+    }
+}
+
+impl core::error::Error for BatchError {}
+
+type BatchResult<T> = Result<T, BatchError>;
+
+pub trait BatchQuery: Send + Sync + 'static {
     type Key: Hash + Eq + Clone + Send + Sync + 'static;
     type Value: RowOwned + RowRead + serde::de::DeserializeOwned + Clone + Send + Sync;
 
@@ -27,16 +58,18 @@ pub(crate) trait BatchQuery: Send + Sync + 'static {
 
     /// How long an idle batcher waits for more keys before sending the first one. Only worth
     /// setting for callers that enqueue many keys at the same instant (GraphQL resolvers);
-    /// under load, batches form while earlier queries run (see [`MAX_IN_FLIGHT`]).
+    /// under load, batches form while earlier queries run (see `MAX_IN_FLIGHT`).
+    #[must_use]
     fn linger_ms() -> u64 {
         0
     }
+    #[must_use]
     fn max_batch_size() -> usize {
         1000
     }
 }
 
-pub(crate) trait BatchQueryMulti: Send + Sync + 'static {
+pub trait BatchQueryMulti: Send + Sync + 'static {
     type Key: Hash + Eq + Clone + Send + Sync + 'static;
     type Value: RowOwned + RowRead + serde::de::DeserializeOwned + Clone + Send + Sync;
 
@@ -44,15 +77,17 @@ pub(crate) trait BatchQueryMulti: Send + Sync + 'static {
     fn key_of(value: &Self::Value) -> Self::Key;
 
     /// See [`BatchQuery::linger_ms`].
+    #[must_use]
     fn linger_ms() -> u64 {
         0
     }
+    #[must_use]
     fn max_batch_size() -> usize {
         1000
     }
 }
 
-pub(crate) trait BatchQueryGrouped: Send + Sync + 'static {
+pub trait BatchQueryGrouped: Send + Sync + 'static {
     type Key: Hash + Eq + Clone + Send + Sync + 'static;
     type Group: Hash + Eq + Clone + Send + Sync + 'static;
     type Value: RowOwned + RowRead + serde::de::DeserializeOwned + Clone + Send + Sync;
@@ -61,9 +96,11 @@ pub(crate) trait BatchQueryGrouped: Send + Sync + 'static {
     fn key_of(value: &Self::Value) -> Self::Key;
 
     /// See [`BatchQuery::linger_ms`].
+    #[must_use]
     fn linger_ms() -> u64 {
         0
     }
+    #[must_use]
     fn max_batch_size() -> usize {
         1000
     }
@@ -166,7 +203,7 @@ impl<T: BatchQueryGrouped> BatcherInner for GroupedBridge<T> {
 struct EngineRequest<I: BatcherInner> {
     key: I::Key,
     group: I::Group,
-    response_tx: oneshot::Sender<APIResult<Vec<I::Value>>>,
+    response_tx: oneshot::Sender<BatchResult<Vec<I::Value>>>,
 }
 
 struct BatchEngine<I: BatcherInner> {
@@ -192,7 +229,7 @@ impl<I: BatcherInner> BatchEngine<I> {
         &self,
         group: I::Group,
         key: I::Key,
-    ) -> APIResult<oneshot::Receiver<APIResult<Vec<I::Value>>>> {
+    ) -> BatchResult<oneshot::Receiver<BatchResult<Vec<I::Value>>>> {
         let (response_tx, response_rx) = oneshot::channel();
         self.tx
             .send(EngineRequest {
@@ -201,14 +238,13 @@ impl<I: BatcherInner> BatchEngine<I> {
                 response_tx,
             })
             .await
-            .map_err(|_closed| APIError::internal("Batcher unavailable"))?;
+            .map_err(|_closed| BatchError::Unavailable)?;
         Ok(response_rx)
     }
 }
 
-async fn await_response<V>(rx: oneshot::Receiver<APIResult<Vec<V>>>) -> APIResult<Vec<V>> {
-    rx.await
-        .map_err(|_closed| APIError::internal("Batcher dropped response"))?
+async fn await_response<V>(rx: oneshot::Receiver<BatchResult<Vec<V>>>) -> BatchResult<Vec<V>> {
+    rx.await.map_err(|_closed| BatchError::Unavailable)?
 }
 
 /// Batches one batcher keeps querying at once. A request that finds a free slot is sent right
@@ -318,7 +354,7 @@ async fn execute_batch<I: BatcherInner>(
 ) {
     type SenderMap<I> = HashMap<
         <I as BatcherInner>::Key,
-        Vec<oneshot::Sender<APIResult<Vec<<I as BatcherInner>::Value>>>>,
+        Vec<oneshot::Sender<BatchResult<Vec<<I as BatcherInner>::Value>>>>,
     >;
 
     let batch_size = pending.len();
@@ -347,10 +383,7 @@ async fn execute_batch<I: BatcherInner>(
             warn!("Batch query failed: {e}");
             for (_, txs) in senders {
                 for tx in txs {
-                    if tx
-                        .send(Err(APIError::internal("Batch query failed")))
-                        .is_err()
-                    {
+                    if tx.send(Err(BatchError::QueryFailed)).is_err() {
                         debug!("Batch waiter went away before its error");
                     }
                 }
@@ -384,7 +417,7 @@ async fn execute_batch<I: BatcherInner>(
 
 // --- Public wrappers ---
 
-pub(crate) struct ClickhouseBatcher<T: BatchQuery> {
+pub struct ClickhouseBatcher<T: BatchQuery> {
     engine: BatchEngine<SingleBridge<T>>,
 }
 
@@ -397,23 +430,24 @@ impl<T: BatchQuery> Clone for ClickhouseBatcher<T> {
 }
 
 impl<T: BatchQuery> ClickhouseBatcher<T> {
-    pub(crate) fn new(ch_client: clickhouse::Client) -> Self {
+    #[must_use]
+    pub fn new(ch_client: clickhouse::Client) -> Self {
         Self {
             engine: BatchEngine::new(ch_client),
         }
     }
 
-    pub(crate) async fn load(&self, key: T::Key) -> APIResult<T::Value> {
+    pub async fn load(&self, key: T::Key) -> BatchResult<T::Value> {
         let rx = self.engine.enqueue((), key).await?;
         counter!("clickhouse_batcher.requests").increment(1);
         let rows = await_response(rx).await?;
         rows.into_iter().next().ok_or_else(|| {
             counter!("clickhouse_batcher.not_found").increment(1);
-            APIError::status_msg(StatusCode::NOT_FOUND, "Not found")
+            BatchError::NotFound
         })
     }
 
-    pub(crate) async fn load_many(&self, keys: &[T::Key]) -> APIResult<Vec<T::Value>> {
+    pub async fn load_many(&self, keys: &[T::Key]) -> BatchResult<Vec<T::Value>> {
         let mut receivers = Vec::with_capacity(keys.len());
         for key in keys {
             receivers.push(self.engine.enqueue((), key.clone()).await?);
@@ -436,7 +470,7 @@ impl<T: BatchQuery> ClickhouseBatcher<T> {
     }
 }
 
-pub(crate) struct ClickhouseBatcherMulti<T: BatchQueryMulti> {
+pub struct ClickhouseBatcherMulti<T: BatchQueryMulti> {
     engine: BatchEngine<MultiBridge<T>>,
 }
 
@@ -449,20 +483,21 @@ impl<T: BatchQueryMulti> Clone for ClickhouseBatcherMulti<T> {
 }
 
 impl<T: BatchQueryMulti> ClickhouseBatcherMulti<T> {
-    pub(crate) fn new(ch_client: clickhouse::Client) -> Self {
+    #[must_use]
+    pub fn new(ch_client: clickhouse::Client) -> Self {
         Self {
             engine: BatchEngine::new(ch_client),
         }
     }
 
-    pub(crate) async fn load(&self, key: T::Key) -> APIResult<Vec<T::Value>> {
+    pub async fn load(&self, key: T::Key) -> BatchResult<Vec<T::Value>> {
         let rx = self.engine.enqueue((), key).await?;
         counter!("clickhouse_batcher_multi.requests").increment(1);
         await_response(rx).await
     }
 }
 
-pub(crate) struct ClickhouseBatcherGrouped<T: BatchQueryGrouped> {
+pub struct ClickhouseBatcherGrouped<T: BatchQueryGrouped> {
     engine: BatchEngine<GroupedBridge<T>>,
 }
 
@@ -475,17 +510,14 @@ impl<T: BatchQueryGrouped> Clone for ClickhouseBatcherGrouped<T> {
 }
 
 impl<T: BatchQueryGrouped> ClickhouseBatcherGrouped<T> {
-    pub(crate) fn new(ch_client: clickhouse::Client) -> Self {
+    #[must_use]
+    pub fn new(ch_client: clickhouse::Client) -> Self {
         Self {
             engine: BatchEngine::new(ch_client),
         }
     }
 
-    pub(crate) async fn load_many(
-        &self,
-        group: &T::Group,
-        keys: &[T::Key],
-    ) -> APIResult<Vec<T::Value>> {
+    pub async fn load_many(&self, group: &T::Group, keys: &[T::Key]) -> BatchResult<Vec<T::Value>> {
         let mut receivers = Vec::with_capacity(keys.len());
         for key in keys {
             receivers.push(self.engine.enqueue(group.clone(), key.clone()).await?);

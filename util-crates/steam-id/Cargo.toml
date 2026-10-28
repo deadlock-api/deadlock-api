@@ -4,5 +4,15 @@ version = "0.1.0"
 edition = "2024"
 description = "Conversions between Steam account ids and SteamID64s"
 
+[features]
+serde = ["dep:serde"]
+
+[dependencies]
+serde = { workspace = true, optional = true }
+
+[dev-dependencies]
+rstest = "0.28.0"
+serde_json = { workspace = true }
+
 [lints]
 workspace = true

@@ -1,5 +1,5 @@
-//! `ClickHouse` helpers for the workers: one-shot inserts, a retrying batch inserter and match id
-//! bounds.
+//! `ClickHouse` helpers for the API and the workers: one-shot inserts, a retrying batch inserter,
+//! batched key lookups and match id bounds.
 
 #![forbid(unsafe_code)]
 #![cfg_attr(
@@ -23,7 +23,9 @@
 )]
 
 mod batch_inserter;
+mod batch_query;
 mod ch;
 
 pub use batch_inserter::*;
+pub use batch_query::*;
 pub use ch::*;

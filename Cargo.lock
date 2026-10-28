@@ -2867,6 +2867,7 @@ dependencies = [
  "chrono",
  "clickhouse",
  "clickhouse-sql-parser",
+ "clickhouse-utils",
  "crosshair",
  "cssparser",
  "datafusion",
@@ -2950,6 +2951,7 @@ dependencies = [
  "serde",
  "serde-env",
  "serde_json",
+ "steam-id",
  "strum 0.28.0",
  "telemetry",
  "thiserror",
@@ -7207,6 +7209,11 @@ checksum = "d7beae5182595e9a8b683fa98c4317f956c9a2dec3b9716990d20023cc60c766"
 [[package]]
 name = "steam-id"
 version = "0.1.0"
+dependencies = [
+ "rstest",
+ "serde",
+ "serde_json",
+]
 
 [[package]]
 name = "steam-profile-fetcher"

@@ -11,6 +11,7 @@ use axum_extra::extract::Query;
 use bytes::Bytes;
 use cached::{Cached as _, TtlCache};
 use clickhouse::Row;
+use clickhouse_utils::{BatchQueryMulti, ClickhouseBatcherMulti, in_clause};
 use futures::future::join;
 use futures::stream::BoxStream;
 use metrics::counter;
@@ -31,7 +32,6 @@ use valveprotos::deadlock::{
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::matches::salts::{self, fetch_match_salts};
-use crate::services::clickhouse_batcher::{BatchQueryMulti, ClickhouseBatcherMulti, in_clause};
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::rate_limiter::{DOCUMENTED_DEFAULT, Quota, RateLimit, Scope, describe};
 use crate::utils::compression::is_zstd;

@@ -7,7 +7,9 @@ use axum::response::IntoResponse;
 use axum_extra::extract::Query;
 use chrono::Utc;
 use clickhouse::Row;
+use clickhouse_utils::{BatchQuery, ClickhouseBatcher, in_clause};
 use serde::{Deserialize, Serialize};
+use steam_id::SteamId;
 use tracing::{debug, warn};
 use utoipa::{IntoParams, ToSchema};
 
@@ -17,11 +19,11 @@ use crate::routes::v1::players::steam::update::{
     MAX_REFRESH_ACCOUNT_IDS, SteamProfileInsertRow, refresh_steam_profiles,
 };
 use crate::routes::v1::players::{ensure_not_protected, without_protected};
-use crate::services::clickhouse_batcher::{BatchQuery, ClickhouseBatcher, in_clause};
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::rate_limiter::{DOCUMENTED_DEFAULT, describe};
 use crate::services::steam_search_index::IndexedProfile;
-use crate::utils::parse::{comma_separated_deserialize, steamid64_to_steamid3};
+use crate::utils::parse::comma_separated_deserialize;
+
 use crate::utils::types::AccountIdQuery;
 
 #[derive(Deserialize, IntoParams, Clone)]
@@ -345,7 +347,8 @@ pub(super) async fn steam(
 ) -> APIResult<impl IntoResponse> {
     let account_ids = account_ids
         .into_iter()
-        .filter_map(|s| steamid64_to_steamid3(s).ok())
+        .filter_map(|s| SteamId::from_account_or_steam64(s).ok())
+        .map(SteamId::account_id)
         .collect::<Vec<_>>();
     if account_ids.is_empty() {
         return Err(APIError::status_msg(
@@ -504,9 +507,9 @@ async fn search_steam(
 
     if let Some(account_id) = search_query
         .trim()
-        .parse::<u64>()
+        .parse::<SteamId>()
         .ok()
-        .and_then(|id| steamid64_to_steamid3(id).ok())
+        .map(SteamId::account_id)
         && profiles.first().map(|p| p.account_id) != Some(account_id)
     {
         profiles.retain(|p| p.account_id != account_id);

@@ -3,6 +3,7 @@ use std::env;
 use itertools::Itertools as _;
 use rand::rng;
 use rand::seq::IndexedRandom as _;
+use steam_id::SteamId;
 use tracing::instrument;
 
 use crate::models::{
@@ -44,7 +45,7 @@ pub(crate) async fn fetch_steam_profiles(
     // Convert account IDs to Steam ID64 format
     let steam_ids = account_ids
         .iter()
-        .map(|&id| steam_id::account_id_to_steam_id64(id))
+        .map(|&id| SteamId::from_account_id(id))
         .join(",");
 
     // Build the API URL
@@ -75,7 +76,7 @@ pub(crate) async fn fetch_steam_friends(
     account_id: u32,
 ) -> Result<Vec<SteamFriend>, SteamApiError> {
     let api_key = pick_api_key()?;
-    let steam_id64 = steam_id::account_id_to_steam_id64(account_id);
+    let steam_id64 = SteamId::from_account_id(account_id);
     let url = format!(
         "https://api.steampowered.com/ISteamUser/GetFriendList/v1/?key={api_key}&steamid={steam_id64}&relationship=friend"
     );

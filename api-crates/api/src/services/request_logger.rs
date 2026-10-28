@@ -1,23 +1,12 @@
 use std::collections::HashMap;
 
 use clickhouse::Row;
+use clickhouse_utils::BatchInserter;
 use serde::Serialize;
 use uuid::Uuid;
 
-use crate::services::clickhouse_insert_batcher::{BatchInsert, ClickhouseInsertBatcher};
-
 /// Buffers [`RequestLog`] rows and batch-inserts them into `request_logs`.
-pub(crate) type RequestLogger = ClickhouseInsertBatcher<RequestLogBatch>;
-
-pub(crate) struct RequestLogBatch;
-
-impl BatchInsert for RequestLogBatch {
-    type Row = RequestLog;
-
-    fn table_name() -> &'static str {
-        "request_logs"
-    }
-}
+pub(crate) type RequestLogger = BatchInserter<RequestLog>;
 
 #[derive(Debug, Clone, Serialize, Row)]
 pub(crate) struct RequestLog {
