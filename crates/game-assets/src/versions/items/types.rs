@@ -14,8 +14,6 @@
     )
 )]
 
-#[cfg(feature = "graphql")]
-use async_graphql::Json;
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use strum::{Display, EnumString};
@@ -545,22 +543,22 @@ pub struct Ability {
 #[cfg(feature = "graphql")]
 #[async_graphql::ComplexObject(rename_fields = "snake_case")]
 impl Ability {
-    async fn properties(&self) -> Json<Option<IndexMap<String, ItemProperty>>> {
-        Json(self.properties.clone())
+    async fn properties(&self) -> async_graphql::Json<Option<IndexMap<String, ItemProperty>>> {
+        async_graphql::Json(self.properties.clone())
     }
-    async fn weapon_info(&self) -> Json<Option<RawItemWeaponInfoInner>> {
-        Json(self.weapon_info.clone())
+    async fn weapon_info(&self) -> async_graphql::Json<Option<RawItemWeaponInfoInner>> {
+        async_graphql::Json(self.weapon_info.clone())
     }
-    async fn tooltip_details(&self) -> Json<Option<AbilityTooltipDetails>> {
-        Json(self.tooltip_details.clone())
+    async fn tooltip_details(&self) -> async_graphql::Json<Option<AbilityTooltipDetails>> {
+        async_graphql::Json(self.tooltip_details.clone())
     }
-    async fn upgrades(&self) -> Json<Option<Vec<RawAbilityUpgrade>>> {
-        Json(self.upgrades.clone())
+    async fn upgrades(&self) -> async_graphql::Json<Option<Vec<RawAbilityUpgrade>>> {
+        async_graphql::Json(self.upgrades.clone())
     }
     async fn dependent_abilities(
         &self,
-    ) -> Json<Option<IndexMap<String, Option<DependantAbilities>>>> {
-        Json(self.dependent_abilities.clone())
+    ) -> async_graphql::Json<Option<IndexMap<String, Option<DependantAbilities>>>> {
+        async_graphql::Json(self.dependent_abilities.clone())
     }
 }
 
@@ -604,14 +602,16 @@ pub struct Weapon {
 #[cfg(feature = "graphql")]
 #[async_graphql::ComplexObject(rename_fields = "snake_case")]
 impl Weapon {
-    async fn properties(&self) -> Json<Option<IndexMap<String, ItemProperty>>> {
-        Json(self.properties.clone())
+    async fn properties(&self) -> async_graphql::Json<Option<IndexMap<String, ItemProperty>>> {
+        async_graphql::Json(self.properties.clone())
     }
-    async fn weapon_info(&self) -> Json<Option<WeaponInfo>> {
-        Json(self.weapon_info.clone())
+    async fn weapon_info(&self) -> async_graphql::Json<Option<WeaponInfo>> {
+        async_graphql::Json(self.weapon_info.clone())
     }
-    async fn custom_crosshair_settings(&self) -> Json<Option<RawCustomCrosshairSettings>> {
-        Json(self.custom_crosshair_settings.clone())
+    async fn custom_crosshair_settings(
+        &self,
+    ) -> async_graphql::Json<Option<RawCustomCrosshairSettings>> {
+        async_graphql::Json(self.custom_crosshair_settings.clone())
     }
 }
 
@@ -693,20 +693,20 @@ pub struct Upgrade {
 #[cfg(feature = "graphql")]
 #[async_graphql::ComplexObject(rename_fields = "snake_case")]
 impl Upgrade {
-    async fn weapon_info(&self) -> Json<Option<RawItemWeaponInfoInner>> {
-        Json(self.weapon_info.clone())
+    async fn weapon_info(&self) -> async_graphql::Json<Option<RawItemWeaponInfoInner>> {
+        async_graphql::Json(self.weapon_info.clone())
     }
-    async fn properties(&self) -> Json<Option<IndexMap<String, UpgradeProperty>>> {
-        Json(self.properties.clone())
+    async fn properties(&self) -> async_graphql::Json<Option<IndexMap<String, UpgradeProperty>>> {
+        async_graphql::Json(self.properties.clone())
     }
-    async fn tooltip_sections(&self) -> Json<Option<Vec<UpgradeTooltipSection>>> {
-        Json(self.tooltip_sections.clone())
+    async fn tooltip_sections(&self) -> async_graphql::Json<Option<Vec<UpgradeTooltipSection>>> {
+        async_graphql::Json(self.tooltip_sections.clone())
     }
-    async fn upgrades(&self) -> Json<Option<Vec<RawAbilityUpgrade>>> {
-        Json(self.upgrades.clone())
+    async fn upgrades(&self) -> async_graphql::Json<Option<Vec<RawAbilityUpgrade>>> {
+        async_graphql::Json(self.upgrades.clone())
     }
-    async fn corrupted_info(&self) -> Json<Option<CorruptedItemInfo>> {
-        Json(self.corrupted_info.clone())
+    async fn corrupted_info(&self) -> async_graphql::Json<Option<CorruptedItemInfo>> {
+        async_graphql::Json(self.corrupted_info.clone())
     }
 }
 

@@ -6,8 +6,6 @@
     )
 )]
 
-#[cfg(feature = "graphql")]
-use async_graphql::Json;
 #[cfg(feature = "utoipa")]
 use std::collections::HashMap as StdMap;
 use std::collections::{HashMap, HashSet};
@@ -488,42 +486,48 @@ impl Hero {
 #[cfg(feature = "graphql")]
 #[async_graphql::ComplexObject(rename_fields = "snake_case")]
 impl Hero {
-    async fn item_draft_weights(&self) -> Json<Option<IndexMap<String, f64>>> {
-        Json(self.item_draft_weights.clone())
+    async fn item_draft_weights(&self) -> async_graphql::Json<Option<IndexMap<String, f64>>> {
+        async_graphql::Json(self.item_draft_weights.clone())
     }
-    async fn models(&self) -> Json<IndexMap<String, String>> {
-        Json(self.models.clone())
+    async fn models(&self) -> async_graphql::Json<IndexMap<String, String>> {
+        async_graphql::Json(self.models.clone())
     }
-    async fn items(&self) -> Json<IndexMap<HeroItemType, String>> {
-        Json(self.items.clone())
+    async fn items(&self) -> async_graphql::Json<IndexMap<HeroItemType, String>> {
+        async_graphql::Json(self.items.clone())
     }
-    async fn starting_stats(&self) -> Json<StartingStats> {
-        Json(self.starting_stats.clone())
+    async fn starting_stats(&self) -> async_graphql::Json<StartingStats> {
+        async_graphql::Json(self.starting_stats.clone())
     }
-    async fn item_slot_info(&self) -> Json<IndexMap<ItemSlotType, ItemSlotInfo>> {
-        Json(self.item_slot_info.clone())
+    async fn item_slot_info(&self) -> async_graphql::Json<IndexMap<ItemSlotType, ItemSlotInfo>> {
+        async_graphql::Json(self.item_slot_info.clone())
     }
-    async fn colors(&self) -> Json<HeroColors> {
-        Json(self.colors.clone())
+    async fn colors(&self) -> async_graphql::Json<HeroColors> {
+        async_graphql::Json(self.colors.clone())
     }
-    async fn cost_bonuses(&self) -> Json<Option<IndexMap<ItemSlotType, Vec<MapModCostBonus>>>> {
-        Json(self.cost_bonuses.clone())
+    async fn cost_bonuses(
+        &self,
+    ) -> async_graphql::Json<Option<IndexMap<ItemSlotType, Vec<MapModCostBonus>>>> {
+        async_graphql::Json(self.cost_bonuses.clone())
     }
-    async fn level_info(&self) -> Json<IndexMap<String, LevelInfo>> {
-        Json(self.level_info.clone())
+    async fn level_info(&self) -> async_graphql::Json<IndexMap<String, LevelInfo>> {
+        async_graphql::Json(self.level_info.clone())
     }
-    async fn scaling_stats(&self) -> Json<IndexMap<String, ScalingStat>> {
-        Json(self.scaling_stats.clone())
+    async fn scaling_stats(&self) -> async_graphql::Json<IndexMap<String, ScalingStat>> {
+        async_graphql::Json(self.scaling_stats.clone())
     }
     #[graphql(deprecation = "Removed from the game in build 6711; always empty for newer builds.")]
-    async fn purchase_bonuses(&self) -> Json<IndexMap<ItemSlotType, Vec<PurchaseBonus>>> {
-        Json(self.purchase_bonuses.clone())
+    async fn purchase_bonuses(
+        &self,
+    ) -> async_graphql::Json<IndexMap<ItemSlotType, Vec<PurchaseBonus>>> {
+        async_graphql::Json(self.purchase_bonuses.clone())
     }
-    async fn standard_level_up_upgrades(&self) -> Json<IndexMap<String, f64>> {
-        Json(self.standard_level_up_upgrades.clone())
+    async fn standard_level_up_upgrades(&self) -> async_graphql::Json<IndexMap<String, f64>> {
+        async_graphql::Json(self.standard_level_up_upgrades.clone())
     }
-    async fn item_draft_bucketing(&self) -> Json<Option<IndexMap<String, Option<DraftBucketing>>>> {
-        Json(self.item_draft_bucketing.clone())
+    async fn item_draft_bucketing(
+        &self,
+    ) -> async_graphql::Json<Option<IndexMap<String, Option<DraftBucketing>>>> {
+        async_graphql::Json(self.item_draft_bucketing.clone())
     }
 }
 
