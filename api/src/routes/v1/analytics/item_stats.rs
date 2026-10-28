@@ -1251,6 +1251,15 @@ fn build_query(query: &ItemStatsQuery) -> String {
     if !has_buyer_hero_filter && (enemy_hero_ids.is_none() || use_items_arrays) {
         settings.push("optimize_use_projections = 0");
     }
+    // The enemy semi-join's IN set holds every (match, team) the enemy heroes played in the
+    // window, ~2M for a popular hero over 7 weeks. Because it leads with `match_id`, every key
+    // condition (sorting key, partition key) copies and sorts it to prune by it, and it never
+    // prunes: those matches are spread over every granule. Not building that index keeps the
+    // same rows and bytes. Measured on hero vs enemy hero weekly buckets: -36% wall, -17% CPU,
+    // -10% memory; on the base-table no-hero shape no significant change.
+    if enemy_hero_ids.is_some() {
+        settings.push("use_index_for_in_with_subqueries = 0");
+    }
     let settings_clause = settings.join(", ");
     // `corrupted_items=only`: skip players without any corrupted purchase before the item
     // arrays are read. The predicate only needs `items.upgrade_info`, a small, low-entropy
@@ -1790,6 +1799,7 @@ mod tests {
         assert!(sql.contains(
             "AND (match_id, if(team = 'Team0', 'Team1', 'Team0')) IN (SELECT match_id, enemy_team FROM t_enemy_teams)\nWHERE true"
         ));
+        assert!(sql.contains("use_index_for_in_with_subqueries = 0"));
 
         let same_lane = build_query(&ItemStatsQuery {
             enemy_hero_ids: Some(vec![66]),
@@ -1802,6 +1812,7 @@ mod tests {
 
         let plain = build_query(&ItemStatsQuery::default());
         assert!(!plain.contains("PREWHERE"));
+        assert!(!plain.contains("use_index_for_in_with_subqueries"));
         assert!(plain.contains("\nWHERE match_mode IN ('Ranked', 'Unranked') AND 1=1 "));
     }
 
