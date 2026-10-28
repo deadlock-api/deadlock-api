@@ -6,6 +6,7 @@ on:
       - master
     paths:
       - 'live-events/**'
+      - 'common/**'
       - '.github/workflows/live-events-ci.yml'
       - 'Cargo.toml'
       - 'Cargo.lock'
@@ -20,6 +21,7 @@ on:
       - master
     paths:
       - 'live-events/**'
+      - 'common/**'
       - '.github/workflows/live-events-ci.yml'
       - 'Cargo.toml'
       - 'Cargo.lock'

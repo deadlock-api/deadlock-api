@@ -1,14 +1,18 @@
+#[cfg(feature = "prometheus")]
 use core::net::SocketAddrV4;
 
+#[cfg(feature = "prometheus")]
 use metrics_exporter_prometheus::PrometheusBuilder;
 use opentelemetry::trace::TracerProvider as _;
-use opentelemetry_appender_tracing::layer::OpenTelemetryTracingBridge;
+use opentelemetry_appender_tracing::layer::{OpenTelemetryTracingBridge, TracingSpanAttributes};
 use opentelemetry_otlp::{LogExporter, SpanExporter, WithExportConfig as _};
 use opentelemetry_sdk::Resource;
 use opentelemetry_sdk::logs::SdkLoggerProvider;
 use opentelemetry_sdk::propagation::TraceContextPropagator;
 use opentelemetry_sdk::trace::SdkTracerProvider;
 use tracing_subscriber::filter::filter_fn;
+use tracing_subscriber::fmt::FormatFields;
+use tracing_subscriber::fmt::format::DefaultFields;
 use tracing_subscriber::layer::SubscriberExt as _;
 use tracing_subscriber::util::SubscriberInitExt as _;
 use tracing_subscriber::{EnvFilter, Layer as _};
@@ -59,15 +63,58 @@ fn build_otel_providers(
     Ok((tracer_provider, logger_provider))
 }
 
+/// Default `EnvFilter` directives of [`init_tracing`], used when `RUST_LOG` is unset.
+pub const TOOLS_LOG_FILTER: &str = "debug,h2=warn,hyper_util=warn,reqwest=warn,rustls=warn,sqlx=warn,\
+     steam_vent=info,opentelemetry_sdk=info,tower=info,opentelemetry-otlp=info";
+
+/// How [`init_tracing_with`] sets up logging for one service.
+pub struct TracingConfig<'a, N> {
+    /// `service.name` of the exported traces and logs.
+    pub service_name: &'a str,
+    /// `EnvFilter` directives used when `RUST_LOG` is unset.
+    pub default_filter: &'a str,
+    /// Span fields copied onto every exported log record. None when empty.
+    pub span_attributes: &'a [&'static str],
+    /// Field formatter of the console log layer.
+    pub console_fields: N,
+}
+
+impl<'a> TracingConfig<'a, DefaultFields> {
+    /// Default console format, no span fields on exported log records.
+    #[must_use]
+    pub fn new(service_name: &'a str, default_filter: &'a str) -> Self {
+        Self {
+            service_name,
+            default_filter,
+            span_attributes: &[],
+            console_fields: DefaultFields::new(),
+        }
+    }
+}
+
+/// Console logging plus OTLP export with the tools' defaults, see [`init_tracing_with`].
 #[must_use]
 pub fn init_tracing(service_name: &str) -> Option<OtelGuard> {
-    let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| {
-        EnvFilter::new(
-            "debug,h2=warn,hyper_util=warn,reqwest=warn,rustls=warn,sqlx=warn,steam_vent=info,\
-             opentelemetry_sdk=info,tower=info,opentelemetry-otlp=info",
-        )
-    });
-    let fmt_layer = tracing_subscriber::fmt::layer();
+    init_tracing_with(TracingConfig::new(service_name, TOOLS_LOG_FILTER))
+}
+
+/// Installs the global subscriber: console logs, and OTLP traces and logs when
+/// `OTEL_EXPORTER_OTLP_ENDPOINT` is set. Keep the guard alive until exit, dropping it flushes
+/// the exporters.
+#[must_use]
+pub fn init_tracing_with<N>(config: TracingConfig<'_, N>) -> Option<OtelGuard>
+where
+    N: for<'w> FormatFields<'w> + Send + Sync + 'static,
+{
+    let TracingConfig {
+        service_name,
+        default_filter,
+        span_attributes,
+        console_fields,
+    } = config;
+    let env_filter =
+        EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new(default_filter));
+    let fmt_layer = tracing_subscriber::fmt::layer().fmt_fields(console_fields);
 
     // Logged once the subscriber is up.
     let mut otel_error = None;
@@ -88,10 +135,15 @@ pub fn init_tracing(service_name: &str) -> Option<OtelGuard> {
             opentelemetry::global::set_text_map_propagator(TraceContextPropagator::new());
             let trace_layer = tracing_opentelemetry::layer()
                 .with_tracer(tracer_provider.tracer(service_name.to_owned()));
-            let log_layer =
-                OpenTelemetryTracingBridge::new(&logger_provider).with_filter(filter_fn(|meta| {
-                    !meta.target().starts_with("opentelemetry")
-                }));
+            let mut log_bridge = OpenTelemetryTracingBridge::builder(&logger_provider);
+            if !span_attributes.is_empty() {
+                log_bridge = log_bridge.with_tracing_span_attributes(
+                    TracingSpanAttributes::allowlist(span_attributes.iter().copied()),
+                );
+            }
+            let log_layer = log_bridge.build().with_filter(filter_fn(|meta| {
+                !meta.target().starts_with("opentelemetry")
+            }));
             let guard = OtelGuard {
                 tracer_provider,
                 logger_provider,
@@ -125,6 +177,7 @@ pub fn init_tracing(service_name: &str) -> Option<OtelGuard> {
     guard
 }
 
+#[cfg(feature = "prometheus")]
 #[derive(Debug, thiserror::Error)]
 pub enum MetricsError {
     #[error(transparent)]
@@ -133,6 +186,7 @@ pub enum MetricsError {
     Install(#[from] metrics_exporter_prometheus::BuildError),
 }
 
+#[cfg(feature = "prometheus")]
 pub fn init_metrics() -> Result<(), MetricsError> {
     Ok(PrometheusBuilder::new()
         .with_http_listener("0.0.0.0:9002".parse::<SocketAddrV4>()?)

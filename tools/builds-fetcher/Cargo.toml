@@ -5,7 +5,7 @@ edition = "2024"
 
 [dependencies]
 clickhouse = { workspace = true }
-common = { workspace = true }
+common = { workspace = true, features = ["clients", "prometheus", "steam-proxy"] }
 itertools = { workspace = true }
 metrics = { workspace = true }
 rand = { workspace = true }

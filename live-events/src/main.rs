@@ -26,9 +26,6 @@ use axum::ServiceExt;
 use axum::extract::Request;
 use deadlock_live_events::{StartupError, router};
 use tracing::{error, info, warn};
-use tracing_subscriber::EnvFilter;
-use tracing_subscriber::layer::SubscriberExt as _;
-use tracing_subscriber::util::SubscriberInitExt as _;
 
 const PORT: u16 = 3000;
 
@@ -36,23 +33,12 @@ const PORT: u16 = 3000;
 /// demo streams last as long as their match, so they are cut off after this.
 const SHUTDOWN_GRACE: Duration = Duration::from_secs(5);
 
-fn init_tracing() {
-    let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| {
-        EnvFilter::new(
-            "debug,hyper_util=warn,tower_http=info,reqwest=warn,rustls=warn,sqlx=warn,h2=warn",
-        )
-    });
-    let fmt_layer = tracing_subscriber::fmt::layer();
-
-    tracing_subscriber::registry()
-        .with(fmt_layer)
-        .with(env_filter)
-        .init();
-}
-
 #[tokio::main]
 async fn main() -> Result<(), StartupError> {
-    init_tracing();
+    let _otel_guard = common::init_tracing_with(common::TracingConfig::new(
+        "deadlock-live-events",
+        "debug,hyper_util=warn,tower_http=info,reqwest=warn,rustls=warn,sqlx=warn,h2=warn",
+    ));
 
     let router = router()?;
     let address = SocketAddr::from((Ipv4Addr::UNSPECIFIED, PORT));

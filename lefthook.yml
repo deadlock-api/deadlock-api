@@ -18,6 +18,12 @@ pre-commit:
       run: cargo machete
       fail_text: "Unused dependencies in tools/. Run 'cargo machete --fix' to fix."
 
+    common-machete:
+      root: "common/"
+      glob: "common/{Cargo.toml,src/**}"
+      run: cargo machete
+      fail_text: "Unused dependencies in common/. Run 'cargo machete --fix' to fix."
+
     live-events-machete:
       root: "live-events/"
       glob: "live-events/{Cargo.toml,src/**}"

@@ -6,7 +6,7 @@ edition = "2021"
 [dependencies]
 cached = { workspace = true, features = ["async"] }
 clickhouse = { workspace = true }
-common = { workspace = true }
+common = { workspace = true, features = ["clients", "prometheus"] }
 futures = { workspace = true }
 itertools = { workspace = true }
 metrics = { workspace = true }

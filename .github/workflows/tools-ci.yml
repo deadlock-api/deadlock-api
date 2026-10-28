@@ -10,6 +10,7 @@ on:
       - master
     paths:
       - 'tools/**'
+      - 'common/**'
       - '.sqlx/**'
       - '.github/workflows/tools-ci.yml'
       - 'Cargo.toml'
@@ -25,6 +26,7 @@ on:
       - master
     paths:
       - 'tools/**'
+      - 'common/**'
       - '.sqlx/**'
       - '.github/workflows/tools-ci.yml'
       - 'Cargo.toml'
@@ -51,7 +53,7 @@ jobs:
     with:
       working-directory: tools
       packages: >-
-        active-matches-scraper builds-fetcher common demo-analyzer
+        active-matches-scraper builds-fetcher demo-analyzer
         history-fetcher hltv-scraper ingest-worker matchdata-downloader player-match-history salt-scraper
         steam-profile-fetcher update-assets-tables
       clippy-args: --all-features
@@ -110,7 +112,7 @@ jobs:
         uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
         with:
           filters: |
-            change: [ 'tools/${{ matrix.component }}/**', 'tools/common/**', 'tools/player-match-history/**', 'tools/Dockerfile', 'Cargo.toml', 'Cargo.lock', 'rust-toolchain.toml', 'valveprotos/**', 'haste/**', '.sqlx/**' ]
+            change: [ 'tools/${{ matrix.component }}/**', 'common/**', 'tools/player-match-history/**', 'tools/Dockerfile', 'Cargo.toml', 'Cargo.lock', 'rust-toolchain.toml', 'valveprotos/**', 'haste/**', '.sqlx/**' ]
       - name: Check if component should build
         id: should_deploy
         run: |

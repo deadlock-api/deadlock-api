@@ -10,7 +10,7 @@ base64 = { workspace = true }
 bytes = { workspace = true }
 cached = { workspace = true, features = ["async"] }
 clap = { workspace = true, features = ["env"] }
-common = { workspace = true }
+common = { workspace = true, features = ["clients", "prometheus"] }
 dashmap = "6.2.1"
 dungers = { workspace = true, features = ["bitbuf"] }
 haste = { workspace = true }

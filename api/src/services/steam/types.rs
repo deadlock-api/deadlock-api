@@ -1,8 +1,6 @@
 use core::time::Duration;
 use std::sync::Arc;
 
-use base64::Engine as _;
-use base64::prelude::BASE64_STANDARD;
 use chrono::{DateTime, FixedOffset};
 use prost::Message;
 use reqwest::StatusCode;
@@ -25,11 +23,7 @@ pub(crate) struct SteamProxyQuery<M: Message> {
     pub(crate) username: Option<String>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
-pub(crate) struct SteamProxyRawResponse {
-    pub(crate) data: String,
-    pub(crate) username: String,
-}
+pub(crate) use common::SteamProxyResponse as SteamProxyRawResponse;
 
 /// Body of a non-success proxy response. Auth and bad-request errors are plain text instead.
 #[derive(Debug, Deserialize)]
@@ -52,12 +46,12 @@ pub(crate) struct SteamProxyResponse<M: Message> {
 impl<M: Message + Default> TryFrom<SteamProxyRawResponse> for SteamProxyResponse<M> {
     type Error = SteamProxyError;
 
-    fn try_from(
-        SteamProxyRawResponse { data, username }: SteamProxyRawResponse,
-    ) -> Result<Self, Self::Error> {
-        let decoded_data = BASE64_STANDARD.decode(&data)?;
-        let msg = M::decode(decoded_data.as_slice())?;
-        Ok(Self { msg, username })
+    fn try_from(raw: SteamProxyRawResponse) -> Result<Self, Self::Error> {
+        let msg = raw.decode::<M, SteamProxyError>()?;
+        Ok(Self {
+            msg,
+            username: raw.username,
+        })
     }
 }
 

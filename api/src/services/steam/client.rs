@@ -2,14 +2,12 @@ use core::time::Duration;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
-use base64::Engine as _;
-use base64::prelude::BASE64_STANDARD;
 use cached::macros::cached;
+use common::SteamProxyRequest;
 use metrics::counter;
 use prost::Message;
 use rand::prelude::IndexedRandom as _;
 use reqwest::Response;
-use serde_json::json;
 use tracing::{debug, warn};
 use url::Url;
 use valveprotos::deadlock::CMsgClientToGcGetMatchMetaDataResponse;
@@ -72,18 +70,19 @@ impl SteamClient {
         &self,
         query: SteamProxyQuery<M>,
     ) -> SteamProxyResult<SteamProxyRawResponse> {
-        let serialized_message = query.msg.encode_to_vec();
-        let encoded_message = BASE64_STANDARD.encode(&serialized_message);
-        let body = json!({
-            "message_kind": query.msg_type as i32,
-            "job_cooldown_millis": query.cooldown_time.as_millis(),
-            "rate_limit_cooldown_millis": query.cooldown_time.as_millis().saturating_mul(2),
-            "soft_cooldown_millis": query.soft_cooldown_millis.unwrap_or_else(|| query.cooldown_time.checked_div(2).unwrap_or_default()).as_millis(),
-            "bot_in_all_groups": query.in_all_groups,
-            "bot_in_any_groups": query.in_any_groups,
-            "data": encoded_message,
-            "bot_username": query.username,
-        });
+        let body = SteamProxyRequest {
+            message_kind: query.msg_type as i32,
+            job_cooldown_millis: query.cooldown_time.as_millis(),
+            rate_limit_cooldown_millis: query.cooldown_time.as_millis().saturating_mul(2),
+            soft_cooldown_millis: query
+                .soft_cooldown_millis
+                .unwrap_or_else(|| query.cooldown_time.checked_div(2).unwrap_or_default())
+                .as_millis(),
+            bot_in_all_groups: query.in_all_groups.as_deref(),
+            bot_in_any_groups: query.in_any_groups.as_deref(),
+            bot_username: query.username.as_deref(),
+            data: SteamProxyRequest::<String>::encode_message(&query.msg),
+        };
         let msg_type = query.msg_type.as_str_name();
         let result = self.call_proxy(&query, &body).await;
         if result.is_ok() {

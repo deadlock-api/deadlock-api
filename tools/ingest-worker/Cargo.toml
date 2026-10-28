@@ -9,7 +9,7 @@ bytes = "1"
 zstd = "0.14"
 clap = { workspace = true }
 clickhouse = { workspace = true, features = ["test-util", "time"] }
-common = { workspace = true }
+common = { workspace = true, features = ["clients", "prometheus"] }
 futures = { workspace = true }
 metrics = { workspace = true }
 object_store = { workspace = true }

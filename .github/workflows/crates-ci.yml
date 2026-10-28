@@ -1,7 +1,7 @@
 name: Crates CI
 
-# Checks for the library crates imported into the workspace (valveprotos, and
-# haste with its dungers crates) and the website's wasm modules (website/wasm/*).
+# Checks for the shared library crates (common, valveprotos, and haste with its
+# dungers crates) and the website's wasm modules (website/wasm/*).
 # Their consumers (api, tools, live-events, website) are checked by their own
 # workflows, which also trigger on changes to these crates.
 
@@ -10,6 +10,7 @@ on:
     branches:
       - master
     paths:
+      - 'common/**'
       - 'valveprotos/**'
       - 'haste/**'
       - 'website/wasm/**'
@@ -24,6 +25,7 @@ on:
     branches:
       - master
     paths:
+      - 'common/**'
       - 'valveprotos/**'
       - 'haste/**'
       - 'website/wasm/**'
@@ -44,6 +46,15 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
 
 jobs:
+  common:
+    uses: ./.github/workflows/rust-ci-checks.yml
+    with:
+      working-directory: common
+      packages: common
+      clippy-args: --all-features
+      lint-extra-apt-packages: clang mold
+      rust-cache-shared-key: common-build-cache
+
   valveprotos:
     uses: ./.github/workflows/rust-ci-checks.yml
     with:
@@ -77,7 +88,7 @@ jobs:
           shared-key: "crates-test-cache-${{ runner.os }}-${{ runner.arch }}"
           save-if: ${{ github.ref == 'refs/heads/master' }}
       - name: Tests
-        run: cargo test --locked -p valveprotos -p haste -p haste_core -p haste_broadcast -p haste_vartype -p dungers -p dungers_bitbuf -p dungers_charsor -p dungers_varint --all-features
+        run: cargo test --locked -p common -p valveprotos -p haste -p haste_core -p haste_broadcast -p haste_vartype -p dungers -p dungers_bitbuf -p dungers_charsor -p dungers_varint --all-features
 
   website-wasm:
     uses: ./.github/workflows/rust-ci-checks.yml

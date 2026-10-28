@@ -1,12 +1,12 @@
 [workspace]
 members = [
     "api",
+    "common",
     "haste",
     "haste/crates/*",
     "live-events",
     "tools/active-matches-scraper",
     "tools/builds-fetcher",
-    "tools/common",
     "tools/demo-analyzer",
     "tools/history-fetcher",
     "tools/hltv-scraper",
@@ -26,7 +26,7 @@ edition = "2024"
 
 [workspace.dependencies]
 # Shared in-repo crates
-common = { version = "0.1.0", path = "tools/common" }
+common = { version = "0.1.0", path = "common" }
 player-match-history = { path = "tools/player-match-history" }
 valveprotos = { path = "valveprotos" }
 wasm-abi = { path = "website/wasm/abi" }

@@ -6,6 +6,7 @@ on:
       - master
     paths:
       - 'api/**'
+      - 'common/**'
       - 'tools/player-match-history/**'
       - '.sqlx/**'
       - '.github/workflows/api-ci.yml'
@@ -23,6 +24,7 @@ on:
       - master
     paths:
       - 'api/**'
+      - 'common/**'
       - 'tools/player-match-history/**'
       - '.sqlx/**'
       - '.github/workflows/api-ci.yml'

@@ -2,6 +2,7 @@ use core::num::TryFromIntError;
 use core::str::FromStr;
 
 use chrono::{DateTime, FixedOffset};
+use common::STEAM_ID_IDENT;
 use serde::{Deserialize, Deserializer};
 
 // Date Parsing
@@ -16,19 +17,18 @@ where
 }
 
 // Steam ID Parsing
-const STEAM_ID_64_IDENT: u64 = 76561197960265728;
 
 pub(crate) fn steamid64_to_steamid3(steam_id: u64) -> Result<u32, TryFromIntError> {
     // If steam id is smaller than the Steam ID 64 identifier, it's a Steam ID 3
-    if steam_id < STEAM_ID_64_IDENT {
+    if steam_id < STEAM_ID_IDENT {
         return u32::try_from(steam_id);
     }
-    // (steam_id - STEAM_ID_64_IDENT) as u32
-    u32::try_from(steam_id.saturating_sub(STEAM_ID_64_IDENT))
+    // (steam_id - STEAM_ID_IDENT) as u32
+    u32::try_from(steam_id.saturating_sub(STEAM_ID_IDENT))
 }
 
 pub(crate) fn steamid3_to_steamid64(steam_id: u32) -> u64 {
-    u64::from(steam_id) + STEAM_ID_64_IDENT
+    common::account_id_to_steam_id64(steam_id)
 }
 
 /// A Steam account id as sent by a client: a number or a string, `SteamID3` or `SteamID64`.

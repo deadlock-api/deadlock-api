@@ -19,26 +19,40 @@
     )
 )]
 
+#[cfg(feature = "clients")]
 mod assets;
+#[cfg(feature = "clients")]
 mod batch_inserter;
+#[cfg(feature = "clients")]
 mod ch;
+#[cfg(feature = "clients")]
 mod clients;
 mod http;
+#[cfg(feature = "clients")]
 mod prioritization;
 mod retry;
 mod shutdown;
 mod steam;
+#[cfg(feature = "steam-proxy")]
+mod steam_proxy;
 mod telemetry;
 mod utils;
 
+#[cfg(feature = "clients")]
 pub use assets::*;
+#[cfg(feature = "clients")]
 pub use batch_inserter::*;
+#[cfg(feature = "clients")]
 pub use ch::*;
+#[cfg(feature = "clients")]
 pub use clients::*;
 pub use http::*;
+#[cfg(feature = "clients")]
 pub use prioritization::*;
 pub use retry::*;
 pub use shutdown::*;
 pub use steam::*;
+#[cfg(feature = "steam-proxy")]
+pub use steam_proxy::*;
 pub use telemetry::*;
 pub use utils::*;

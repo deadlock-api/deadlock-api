@@ -6,7 +6,7 @@ edition = "2024"
 [dependencies]
 clap = { workspace = true }
 clickhouse = { workspace = true, features = ["time", "test-util"] }
-common = { workspace = true }
+common = { workspace = true, features = ["clients", "prometheus"] }
 futures = { workspace = true }
 metrics = { workspace = true }
 object_store = { workspace = true }

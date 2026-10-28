@@ -7,7 +7,7 @@ edition = "2024"
 async-compression = { workspace = true, features = ["tokio", "bzip2", "zstd"] }
 clap = { workspace = true, features = ["env"] }
 clickhouse = { workspace = true, features = ["time"] }
-common = { workspace = true }
+common = { workspace = true, features = ["clients", "prometheus"] }
 futures = { workspace = true }
 haste = { workspace = true, features = ["async"] }
 metrics = { workspace = true }
