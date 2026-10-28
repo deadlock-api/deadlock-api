@@ -50,6 +50,8 @@ export const queryKeys = {
     corruption: () => ["assets-corruption"] as const,
     itemPricePerTier: () => ["assets-item-price-per-tier"] as const,
     buildTags: () => ["assets-build-tags"] as const,
+    /** The wasm module that reads and writes game build codes. */
+    heroBuildCodec: () => ["assets-hero-build-codec"] as const,
   },
   leaderboard: {
     data: (region: string, heroId?: number | null) => ["api-leaderboard-data", region, heroId] as const,

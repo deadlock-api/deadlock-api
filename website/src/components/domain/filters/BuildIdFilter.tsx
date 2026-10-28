@@ -6,7 +6,7 @@ import { Button } from "~/components/ui/button";
 import { Field } from "~/components/ui/field";
 import { Input } from "~/components/ui/input";
 import type { HeroBuild } from "~/lib/wasm/hero-build";
-import { loadHeroBuildCodec } from "~/lib/wasm/load-hero-build";
+import { heroBuildCodecQueryOptions } from "~/lib/wasm/load-hero-build";
 import { WasmCallError } from "~/lib/wasm/module";
 import { heroBuildLookupQueryOptions } from "~/queries/hero-build-stats-query";
 
@@ -55,7 +55,7 @@ export function BuildIdFilter({
     }
     let pasted: HeroBuild;
     try {
-      pasted = (await loadHeroBuildCodec()).decode(text);
+      pasted = (await queryClient.query(heroBuildCodecQueryOptions)).decode(text);
     } catch (caught) {
       if (caught instanceof WasmCallError) return "Enter a build ID or paste a build code from the game";
       throw caught;

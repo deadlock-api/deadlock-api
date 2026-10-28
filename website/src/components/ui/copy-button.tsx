@@ -6,9 +6,13 @@ import { Button } from "~/components/ui/button";
 import { useCopyToClipboard } from "~/components/ui/hooks/use-copy-to-clipboard";
 import { cn } from "~/lib/utils";
 
-type CopyButtonProps = ComponentProps<typeof Button> & {
-  /** A function defers the value to click time, for text that only exists in the browser like the page URL. */
-  text: string | (() => string);
+type CopyButtonProps = Omit<ComponentProps<typeof Button>, "loading" | "loadingLabel"> & {
+  /**
+   * A function defers the value to click time, for text that only exists in the browser like the page URL. It may
+   * return a promise, for text that takes loading to make: the press still allows the clipboard write, and the button
+   * shows a spinner until the text is copied. A rejected promise fails the copy.
+   */
+  text: string | (() => string | Promise<string>);
   /**
    * What is copied, when it is not plain text: `Link` for a URL. A check mark replaces it once copied. `null` leaves
    * a labelled button without an icon, as in a line of quiet text actions; an `icon*` size always needs one.
@@ -28,7 +32,7 @@ export function CopyButton({
   onClick,
   ...props
 }: CopyButtonProps) {
-  const { copied, copy } = useCopyToClipboard();
+  const { copying, copied, copy } = useCopyToClipboard();
   const iconDisplay = size?.startsWith("icon") ?? false;
 
   return (
@@ -39,6 +43,8 @@ export function CopyButton({
       data-slot="copy-button"
       data-state={copied ? "copied" : "idle"}
       className={cn("shrink-0", className)}
+      loading={copying}
+      loadingLabel="Copying"
       {...props}
       aria-label={
         iconDisplay ? (copied ? "Copied" : (props["aria-label"] ?? props.title ?? "Copy")) : props["aria-label"]
@@ -52,7 +58,7 @@ export function CopyButton({
         }
       }}
     >
-      {Icon === null && !iconDisplay ? null : copied ? <Check /> : Icon ? <Icon /> : <Copy />}
+      {copying || (Icon === null && !iconDisplay) ? null : copied ? <Check /> : Icon ? <Icon /> : <Copy />}
       {!iconDisplay && (copied ? "Copied" : children)}
     </Button>
   );

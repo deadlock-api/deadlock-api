@@ -1077,6 +1077,13 @@ export function Primitives() {
             aria-label="Copy link"
             title="Copy link"
           />
+          <CopyButton
+            text={() => new Promise((resolve) => setTimeout(() => resolve("made at the press"), 1500))}
+            variant="outline"
+            size="sm"
+          >
+            Copy (loads first)
+          </CopyButton>
         </Variants>
       </Specimen>
 

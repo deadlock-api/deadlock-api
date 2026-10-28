@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { Gamepad2, Hammer } from "lucide-react";
 
 import { AbilityOrderGrid } from "~/components/domain/assets/AbilityOrderGrid";
@@ -12,10 +12,10 @@ import { Button } from "~/components/ui/button";
 import { CopyButton } from "~/components/ui/copy-button";
 import { InfoTip } from "~/components/ui/info-tip";
 import { day } from "~/dayjs";
-import { useHeroBuildCodec } from "~/hooks/useHeroBuildCodec";
 import { type BuildRow, buildCategoryName, buildLanguageName } from "~/lib/build-stats";
 import { formatPercent } from "~/lib/format";
 import { cn } from "~/lib/utils";
+import { heroBuildCodecQueryOptions } from "~/lib/wasm/load-hero-build";
 import { type BuildPurchaseFilters, heroBuildGameQueryOptions } from "~/queries/hero-build-stats-query";
 import type { SteamProfile } from "~/queries/steam-queries";
 
@@ -34,19 +34,28 @@ function CategoryTitle({ name, description }: { name: string; description: strin
 }
 
 /** "Copy game code": the build as the game stores it, a code to paste in game. */
-function CopyGameCodeButton({ buildId, className }: { buildId: number; className?: string }) {
-  const codec = useHeroBuildCodec();
-  const { data: build } = useQuery(heroBuildGameQueryOptions(buildId));
+function CopyGameCodeButton({
+  buildId,
+  disabled = false,
+  className,
+}: {
+  buildId: number;
+  /** The build is not published (or not loaded yet): there is nothing to copy. */
+  disabled?: boolean;
+  className?: string;
+}) {
+  const queryClient = useQueryClient();
+  // The build and the codec load at the press, not with the page: few visitors copy one.
+  const code = async () => {
+    const [codec, build] = await Promise.all([
+      queryClient.query(heroBuildCodecQueryOptions),
+      queryClient.query(heroBuildGameQueryOptions(buildId)),
+    ]);
+    if (!build) throw new Error(`build ${buildId} is not published`);
+    return codec.encode(build);
+  };
   return (
-    <CopyButton
-      variant="ghost"
-      size="xs"
-      icon={Gamepad2}
-      // Ready before a press can come: the code is written at once, while the press still allows a clipboard write.
-      disabled={codec == null || build == null}
-      text={() => (codec && build ? codec.encode(build) : "")}
-      className={className}
-    >
+    <CopyButton variant="ghost" size="xs" icon={Gamepad2} disabled={disabled} text={code} className={className}>
       Copy game code
     </CopyButton>
   );
@@ -107,7 +116,7 @@ export function BuildDetailPanel({
             </span>
           </span>
         )}
-        <CopyGameCodeButton buildId={row.hero_build_id} className="ms-auto" />
+        <CopyGameCodeButton buildId={row.hero_build_id} disabled={!meta} className="ms-auto" />
         <CopyButton
           text={String(row.hero_build_id)}
           variant="ghost"

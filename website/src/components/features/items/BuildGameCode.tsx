@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ClipboardPaste, Gamepad2 } from "lucide-react";
 import { useId, useState } from "react";
 
@@ -8,9 +8,8 @@ import { Field } from "~/components/ui/field";
 import { Popover, PopoverContent, PopoverTrigger } from "~/components/ui/popover";
 import { Stack } from "~/components/ui/stack";
 import { Textarea } from "~/components/ui/textarea";
-import { useHeroBuildCodec } from "~/hooks/useHeroBuildCodec";
 import { type DesignerBuild, designerBuildFromGame, gameBuildFromDesigner } from "~/lib/build-designer-code";
-import { loadHeroBuildCodec } from "~/lib/wasm/load-hero-build";
+import { heroBuildCodecQueryOptions } from "~/lib/wasm/load-hero-build";
 import { WasmCallError } from "~/lib/wasm/module";
 import { itemUpgradesQueryOptions } from "~/queries/asset-queries";
 
@@ -23,7 +22,7 @@ export function ImportGameBuildButton({
   stageNames: readonly string[];
   onImport: (build: DesignerBuild) => void;
 }) {
-  const codec = useHeroBuildCodec();
+  const queryClient = useQueryClient();
   const { data: upgrades } = useQuery(itemUpgradesQueryOptions);
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState("");
@@ -39,7 +38,7 @@ export function ImportGameBuildButton({
     }
     setReading(true);
     try {
-      const reader = codec ?? (await loadHeroBuildCodec());
+      const reader = await queryClient.query(heroBuildCodecQueryOptions);
       const build = designerBuildFromGame(reader.decode(draft), stageNames);
       // Items the shop no longer has (a build from an older patch) cannot be planned.
       const known = upgrades ? new Set(upgrades.map((item) => item.id)) : null;
@@ -106,15 +105,15 @@ export function CopyGameBuildButton({
   /** Nothing to copy yet: the button keeps its place on the row. */
   disabled?: boolean;
 }) {
-  const codec = useHeroBuildCodec();
+  const queryClient = useQueryClient();
   return (
     <CopyButton
       variant="ghost"
       size="xs"
       icon={Gamepad2}
-      // Ready before a press can come: the code is written at once, while the press still allows a clipboard write.
-      disabled={disabled || codec == null}
-      text={() => codec?.encode(gameBuildFromDesigner(build)) ?? ""}
+      disabled={disabled}
+      // The codec loads at the first press, not with the page.
+      text={async () => (await queryClient.query(heroBuildCodecQueryOptions)).encode(gameBuildFromDesigner(build))}
     >
       Copy game code
     </CopyButton>
