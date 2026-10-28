@@ -1,8 +1,8 @@
 import { GoogleFont, ImageResponse } from "@cf-wasm/og";
 
-import { API_ORIGIN } from "~/lib/constants";
-import { type CrosshairRenderSettings, renderCrosshair } from "~/lib/crosshair-render";
-import { serverApiKeyHeaders } from "~/lib/server-api-key";
+import { type CrosshairCodec, crosshairCodec } from "~/lib/wasm/crosshair";
+import { loadWasmModule } from "~/lib/wasm/module";
+import crosshairWasm from "~/wasm/crosshair-wasm.wasm?module";
 
 // Bundled as data URIs: the Worker cannot fetch the site's own public files from its own domain.
 import logo from "../../../public/favicon.png?inline";
@@ -21,17 +21,27 @@ const RETRY_AGE = 5 * 60;
 
 const FONTS = ([700, 800] as const).map((weight) => new GoogleFont("Inter", { weight }));
 
+let codec: Promise<CrosshairCodec> | undefined;
+
+/** The crosshair module, instantiated once per Worker isolate; a failed load is tried again on the next card. */
+function loadCodec(): Promise<CrosshairCodec> {
+  codec ??= loadWasmModule(crosshairWasm, ["decode", "encode", "render"])
+    .then(crosshairCodec)
+    .catch((error: unknown) => {
+      codec = undefined;
+      throw error;
+    });
+  return codec;
+}
+
 /**
  * The crosshair of a code as rows of same-coloured pixel runs, enlarged by the largest whole scale that fits the card.
  * It is drawn as rectangles rather than an image, since the card's renderer smooths every image it draws, which would
- * blur the crosshair's square pixels. The pixels come from the site's renderer, the same as the API's.
+ * blur the crosshair's square pixels. The pixels come from the crosshair module, the API's own renderer.
  */
 async function loadCrosshair(code: string, screenHeight: string): Promise<CrosshairPixels | undefined> {
-  const response = await fetch(`${API_ORIGIN}/v1/crosshair/code/settings?${new URLSearchParams({ code })}`, {
-    headers: serverApiKeyHeaders(),
-  });
-  if (!response.ok) return undefined;
-  const image = renderCrosshair((await response.json()) as CrosshairRenderSettings, Number(screenHeight));
+  const crosshair = await loadCodec();
+  const image = crosshair.render(crosshair.decode(code), Number(screenHeight));
   if (!image) return undefined;
   const scale = Math.max(1, Math.min(MAX_SCALE, Math.floor(CROSSHAIR_SIZE / image.size)));
   const { pixels } = image;

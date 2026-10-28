@@ -12,7 +12,7 @@ util-crates/ # libraries shared by the services:
   service-utils/ # env config, graceful shutdown, retries with backoff, shared http clients
   steam-id/ # account id <-> SteamID64
   steam-proxy/ # sv-proxy request/response types and client
-  crosshair/ # crosshair share codes (DL.…) to settings and back, and settings to png; used by the api's /crosshair routes
+  crosshair/ # crosshair share codes (DL.…) to settings and back, and settings to png; used by the api's /crosshair routes and, as wasm (website/wasm/crosshair), the website's crosshair editor
   db-clients/ # clickhouse/postgres/redis/s3/file-cache connections from env, shared postgres queries
   clickhouse-utils/ # inserts, retrying batch inserter, match id bounds for the workers
   assets-client/ # heroes and ranked seasons from the public asset endpoints
@@ -21,7 +21,7 @@ util-crates/ # libraries shared by the services:
   valveprotos/ # rust protobuf bindings for steam/deadlock (formerly valveprotos-rs)
   haste/ # source 2 demo/broadcast parser (formerly deadlock-api/haste); crates/dungers* are its bitbuf/varint/charsor primitives (formerly deadlock-api/dungers)
 website/ # tanstack start website, using generated openapi SDKs hitting the api
-website/wasm/ # rust crates compiled to wasm for the website (hero build codes on valveprotos); abi/ is their shared ABI
+website/wasm/ # rust crates compiled to wasm for the website (hero build codes on valveprotos, crosshairs on util-crates/crosshair); abi/ is their shared ABI
 ```
 
 All Rust crates form one cargo workspace rooted at `Cargo.toml` (single `Cargo.lock`, `target/`,
@@ -37,12 +37,6 @@ asserts. Use `?`, `get`, slice patterns, and `checked_`/`saturating_`/`wrapping_
 `allow`/`expect`. Tests are exempt through the `#![cfg_attr(test, allow(...))]` block at each crate root, which every
 new crate root needs too. Other lints may get an item-level `#[expect(lint, reason = "...")]`. Every allow/expect needs
 a `reason`.
-
-## Twin implementations
-
-The crosshair renderer exists twice, in Rust (`util-crates/crosshair/src/render.rs`, used by the API) and as a
-line-by-line TypeScript port (`website/src/lib/crosshair-render.ts`, used by the crosshair editor). A change to one must
-be made to the other in the same commit. The TypeScript test checks pixel parity against the Rust fixture PNGs.
 
 ## Website UI: strict laws
 

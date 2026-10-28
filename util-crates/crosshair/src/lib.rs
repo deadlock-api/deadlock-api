@@ -1,4 +1,7 @@
 //! Deadlock crosshairs: share codes (`DL.…`) to settings and back, and settings to images.
+//!
+//! The API serves it over `/v1/crosshair`, and the website's crosshair editor runs it as wasm
+//! (`website/wasm/crosshair`).
 
 #![cfg_attr(
     test,
@@ -27,6 +30,7 @@ mod settings;
 
 use bytes::Bytes;
 use image::ImageEncoder as _;
+use image::RgbaImage;
 use image::codecs::png::PngEncoder;
 
 pub use self::code::encode;
@@ -86,28 +90,33 @@ pub fn decode(input: &str) -> Result<Settings, CrosshairError> {
     }
 }
 
-/// Renders `settings` as they look on a screen `screen_height` pixels tall, as a PNG with a
+/// Renders `settings` as they look on a screen `screen_height` pixels tall, as RGBA pixels on a
 /// transparent background, cropped square around the crosshair.
-///
-/// `scale` enlarges it afterwards,
-/// every pixel drawn as a `scale`-sized square, for a picture larger than the crosshair itself
-/// (a link preview); it is lowered when the result would pass `MAX_SCALED_SIZE`.
-pub fn render_png(
-    settings: &Settings,
-    screen_height: u32,
-    scale: u32,
-) -> Result<Bytes, CrosshairError> {
+pub fn render(settings: &Settings, screen_height: u32) -> Result<RgbaImage, CrosshairError> {
     if !(MIN_SCREEN_HEIGHT..=MAX_SCREEN_HEIGHT).contains(&screen_height) {
         return Err(CrosshairError::ScreenHeight);
-    }
-    if !(1..=MAX_SCALE).contains(&scale) {
-        return Err(CrosshairError::Scale);
     }
     #[expect(
         clippy::cast_precision_loss,
         reason = "screen heights are far below f32's exact integer range"
     )]
-    let mut image = render::render(settings, screen_height as f32)?;
+    render::render(settings, screen_height as f32)
+}
+
+/// [`render`] as a PNG.
+///
+/// `scale` enlarges it afterwards, every pixel drawn as a `scale`-sized square, for a picture
+/// larger than the crosshair itself (a link preview); it is lowered when the result would pass
+/// `MAX_SCALED_SIZE`.
+pub fn render_png(
+    settings: &Settings,
+    screen_height: u32,
+    scale: u32,
+) -> Result<Bytes, CrosshairError> {
+    if !(1..=MAX_SCALE).contains(&scale) {
+        return Err(CrosshairError::Scale);
+    }
+    let mut image = render(settings, screen_height)?;
     let fit = MAX_SCALED_SIZE
         .checked_div(image.width())
         .unwrap_or(MAX_SCALED_SIZE);

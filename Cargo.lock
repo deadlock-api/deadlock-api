@@ -1936,10 +1936,21 @@ dependencies = [
  "murmur2",
  "prost",
  "rstest",
+ "ruzstd",
  "serde",
  "thiserror",
  "utoipa",
- "zstd 0.14.3",
+]
+
+[[package]]
+name = "crosshair-wasm"
+version = "0.1.0"
+dependencies = [
+ "base64 0.23.1",
+ "crosshair",
+ "serde",
+ "serde_json",
+ "wasm-abi",
 ]
 
 [[package]]

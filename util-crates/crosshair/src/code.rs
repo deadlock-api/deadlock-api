@@ -14,10 +14,13 @@
 //! settings. Every setting is a record tagged 2 holding a key record (the varint murmur2 hash of the
 //! convar name without its `citadel_` prefix) and a value record (the value as a string).
 
+use std::io::Read as _;
+
 use base64::Engine as _;
 use base64::alphabet::Alphabet;
 use base64::engine::{DecodePaddingMode, GeneralPurpose, GeneralPurposeConfig};
 use prost::encoding::{decode_varint, encode_varint, encoded_len_varint};
+use ruzstd::decoding::StreamingDecoder;
 
 use super::CrosshairError;
 use super::settings::Settings;
@@ -32,7 +35,7 @@ const SETTINGS_TAG: u32 = 2;
 const KEY_TAG: u32 = 1;
 const VALUE_TAG: u32 = 2;
 /// Real codes decompress to well under 1 KiB; this only guards against decompression bombs.
-const MAX_PAYLOAD_LEN: usize = 64 * 1024;
+const MAX_PAYLOAD_LEN: u64 = 64 * 1024;
 
 const ALPHABET: Alphabet =
     match Alphabet::new("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789._") {
@@ -76,16 +79,14 @@ pub fn encode(settings: &Settings) -> String {
     write_varint_record(&mut payload, REVISION_TAG, REVISION);
     write_record(&mut payload, SETTINGS_TAG, &entries);
 
-    // Like the game, only compress when that makes the code shorter.
+    // The game compresses a code when that makes it shorter. ruzstd, the zstd that builds for the
+    // website's wasm module, does not shrink a payload this small, and the game reads uncompressed
+    // codes too (it writes them itself when only a few settings changed).
     let checksum = crc32fast::hash(&payload).to_le_bytes();
-    let (flags, body) = match zstd::bulk::compress(&payload, zstd::DEFAULT_COMPRESSION_LEVEL) {
-        Ok(compressed) if compressed.len() < payload.len() => (FLAG_ZSTD, compressed),
-        _ => (0, payload),
-    };
-    let mut raw = Vec::with_capacity(HEADER_LEN.saturating_add(body.len()));
-    raw.extend_from_slice(&[VERSION, flags]);
+    let mut raw = Vec::with_capacity(HEADER_LEN.saturating_add(payload.len()));
+    raw.extend_from_slice(&[VERSION, 0]);
     raw.extend_from_slice(&checksum);
-    raw.extend_from_slice(&body);
+    raw.extend_from_slice(&payload);
     format!("{PREFIX}{}", BASE64.encode(raw))
 }
 
@@ -106,11 +107,23 @@ fn decode_payload(code: &str) -> Result<Vec<u8>, CrosshairError> {
     let payload = if flags & FLAG_ZSTD == 0 {
         body.to_vec()
     } else {
-        zstd::bulk::decompress(body, MAX_PAYLOAD_LEN)
-            .map_err(|_corrupt| CrosshairError::Decompress)?
+        decompress(body)?
     };
     if crc32fast::hash(&payload) != u32::from_le_bytes([c0, c1, c2, c3]) {
         return Err(CrosshairError::Checksum);
+    }
+    Ok(payload)
+}
+
+fn decompress(body: &[u8]) -> Result<Vec<u8>, CrosshairError> {
+    let decoder = StreamingDecoder::new(body).map_err(|_corrupt| CrosshairError::Decompress)?;
+    let mut payload = Vec::new();
+    decoder
+        .take(MAX_PAYLOAD_LEN.saturating_add(1))
+        .read_to_end(&mut payload)
+        .map_err(|_corrupt| CrosshairError::Decompress)?;
+    if payload.len() as u64 > MAX_PAYLOAD_LEN {
+        return Err(CrosshairError::Decompress);
     }
     Ok(payload)
 }

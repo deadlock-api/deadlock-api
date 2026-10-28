@@ -5,7 +5,7 @@ import { defineConfig, loadEnv } from "vite";
 
 import { annotateSource } from "./plugins/annotate-source.mjs";
 import { clientOnlyModules } from "./plugins/client-only-modules.mjs";
-import { wasmModules } from "./plugins/wasm-modules.mjs";
+import { wasmModuleImports, wasmModules } from "./plugins/wasm-modules.mjs";
 
 // Server-only secrets from `.env` for the dev server, which renders in this Node process; the Worker gets them as
 // Wrangler secrets. Without the `VITE_` prefix they never enter a bundle.
@@ -39,6 +39,7 @@ export default defineConfig({
   },
   plugins: [
     wasmModules(),
+    wasmModuleImports(),
     clientOnlyModules(),
     tanstackStart({
       router: {

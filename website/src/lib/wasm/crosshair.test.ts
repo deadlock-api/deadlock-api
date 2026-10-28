@@ -3,55 +3,41 @@ import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import { inflateSync } from "node:zlib";
 
-import { type CrosshairRenderSettings, renderCrosshair } from "./crosshair-render";
+import { DEFAULT_CROSSHAIR_SETTINGS } from "../crosshair";
+import { crosshairCodec } from "./crosshair";
+import { loadWasmModule, WasmCallError } from "./module";
 
-/** The API's reference renders, which the website's renderer must match pixel for pixel. */
-const FIXTURES = new URL("../../../util-crates/crosshair/src/fixtures/", import.meta.url);
+// Built by `pnpm build:wasm` (part of `pnpm test:unit`).
+const wasm = readFileSync(new URL("../../wasm/crosshair-wasm.wasm", import.meta.url));
+/** Codes exported by the game, and the API's reference renders of them. */
+const FIXTURES = new URL("../../../../util-crates/crosshair/src/fixtures/", import.meta.url);
 
-const DEFAULTS: CrosshairRenderSettings = {
-  pip_gap_static: false,
-  pip_width: 2,
-  pip_height: 16,
-  pip_gap: 4,
-  pip_opacity: 0.5,
-  pip_outline_border: 1,
-  pip_outline_gap: 0,
-  pip_outline_opacity: 0.7,
-  dot_size: 4,
-  dot_opacity: 0.7,
-  dot_outline_border: 2,
-  dot_outline_gap: 0,
-  dot_outline_opacity: 0.7,
-  color_r: 255,
-  color_g: 255,
-  color_b: 255,
-  outline_color_r: 0,
-  outline_color_g: 0,
-  outline_color_b: 0,
-};
+const codec = crosshairCodec(await loadWasmModule(wasm, ["decode", "encode", "render"]));
 
-/** The settings in the fixture codes, as the API's tests decode them. */
-const TEAL_DOT = {
-  ...DEFAULTS,
-  pip_opacity: 0,
-  pip_outline_opacity: 0,
-  dot_size: 6,
-  dot_opacity: 1,
-  color_r: 2,
-  color_g: 255,
-  color_b: 242,
-};
-const RED_PIPS = {
-  ...DEFAULTS,
-  pip_width: 3,
-  pip_height: 10,
-  pip_gap: 2,
-  pip_opacity: 0.9,
-  pip_outline_opacity: 1,
-  dot_size: 2,
-  color_r: 255,
-  color_g: 40,
-  color_b: 40,
+/** The settings in the fixture codes, as the crate's tests decode them. */
+const SETTINGS = {
+  teal_dot: {
+    ...DEFAULT_CROSSHAIR_SETTINGS,
+    pip_opacity: 0,
+    pip_outline_opacity: 0,
+    dot_size: 6,
+    dot_opacity: 1,
+    color_r: 2,
+    color_g: 255,
+    color_b: 242,
+  },
+  red_pips: {
+    ...DEFAULT_CROSSHAIR_SETTINGS,
+    pip_width: 3,
+    pip_height: 10,
+    pip_gap: 2,
+    pip_opacity: 0.9,
+    pip_outline_opacity: 1,
+    dot_size: 2,
+    color_r: 255,
+    color_g: 40,
+    color_b: 40,
+  },
 };
 
 /** Decodes an 8-bit RGBA, non-interlaced PNG, the only kind the fixtures are. */
@@ -94,14 +80,17 @@ function decodePng(file: Buffer): { width: number; pixels: Uint8Array } {
   return { width, pixels };
 }
 
-for (const [name, settings] of [
-  ["teal_dot", TEAL_DOT],
-  ["red_pips", RED_PIPS],
-] as const) {
+for (const [name, settings] of Object.entries(SETTINGS)) {
+  test(`${name} decodes to its settings and back`, () => {
+    const code = readFileSync(new URL(`${name}.txt`, FIXTURES), "utf8");
+    assert.deepEqual(codec.decode(code), settings);
+    assert.deepEqual(codec.decode(codec.encode(settings)), settings);
+  });
+
   for (const height of [1080, 1440, 2160]) {
     test(`${name} at ${height}p matches the API's render`, () => {
       const expected = decodePng(readFileSync(new URL(`${name}_${height}.png`, FIXTURES)));
-      const image = renderCrosshair(settings, height);
+      const image = codec.render(settings, height);
       assert.ok(image);
       assert.equal(image.size, expected.width);
       assert.deepEqual(Buffer.from(image.pixels), Buffer.from(expected.pixels));
@@ -109,15 +98,18 @@ for (const [name, settings] of [
   }
 }
 
-test("a crosshair too large to draw has no image", () => {
-  assert.equal(renderCrosshair({ ...DEFAULTS, dot_size: 100_000 }, 1080), null);
+test("console commands decode on top of the defaults", () => {
+  assert.deepEqual(codec.decode("citadel_crosshair_pip_width 5; citadel_crosshair_color_r 245"), {
+    ...DEFAULT_CROSSHAIR_SETTINGS,
+    pip_width: 5,
+    color_r: 245,
+  });
 });
 
-test("an invisible crosshair is only its padding", () => {
-  const image = renderCrosshair(
-    { ...DEFAULTS, pip_opacity: 0, pip_outline_opacity: 0, dot_opacity: 0, dot_outline_opacity: 0 },
-    1080,
-  );
-  assert.equal(image?.size, 4);
-  assert.ok(image?.pixels.every((byte) => byte === 0));
+test("text that is not a crosshair code fails with the crate's message", () => {
+  assert.throws(() => codec.decode("DL.AQDe"), new WasmCallError("Crosshair code is malformed"));
+});
+
+test("a crosshair too large to draw has no image", () => {
+  assert.equal(codec.render({ ...DEFAULT_CROSSHAIR_SETTINGS, dot_size: 100_000 }, 1080), null);
 });

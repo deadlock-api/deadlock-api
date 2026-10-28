@@ -52,6 +52,8 @@ export const queryKeys = {
     buildTags: () => ["assets-build-tags"] as const,
     /** The wasm module that reads and writes game build codes. */
     heroBuildCodec: () => ["assets-hero-build-codec"] as const,
+    /** The wasm module that reads, writes and draws crosshairs. */
+    crosshairCodec: () => ["assets-crosshair-codec"] as const,
   },
   leaderboard: {
     data: (region: string, heroId?: number | null) => ["api-leaderboard-data", region, heroId] as const,
@@ -125,11 +127,6 @@ export const queryKeys = {
       extraArgs: Readonly<Record<string, string>>,
     ) => ["streamkit-stats", region, accountId, variables, extraArgs] as const,
     versions: () => ["streamkit-widget-versions"] as const,
-  },
-  crosshair: {
-    codeSettings: (code: string) => ["api-crosshair-code-settings", code] as const,
-    codeImage: (code: string, screenHeight: number) => ["api-crosshair-code-image", code, screenHeight] as const,
-    code: (settings: object) => ["api-crosshair-code", settings] as const,
   },
   map: (clientVersion?: number) => ["assets-map", clientVersion ?? "latest"] as const,
   players: {

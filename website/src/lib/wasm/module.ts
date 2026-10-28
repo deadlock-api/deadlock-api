@@ -26,7 +26,10 @@ export interface WasmModule<Fn extends string> {
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 
-async function instantiate(source: BufferSource | Response | PromiseLike<Response>): Promise<WebAssembly.Instance> {
+type WasmSource = WebAssembly.Module | BufferSource | Response | PromiseLike<Response>;
+
+async function instantiate(source: WasmSource): Promise<WebAssembly.Instance> {
+  if (source instanceof WebAssembly.Module) return WebAssembly.instantiate(source, {});
   if (source instanceof ArrayBuffer || ArrayBuffer.isView(source)) {
     return (await WebAssembly.instantiate(source, {})).instance;
   }
@@ -40,11 +43,12 @@ async function instantiate(source: BufferSource | Response | PromiseLike<Respons
 }
 
 /**
- * Instantiates a module from its bytes or its `fetch` and checks that it exports `functions`. In the browser, pass
- * `fetch(url)` with the url of a `~/wasm/<crate>.wasm?url` import.
+ * Instantiates a module from its bytes, its `fetch` or its compiled module, and checks that it exports `functions`. In
+ * the browser, pass `fetch(url)` with the url of a `~/wasm/<crate>.wasm?url` import. On the server, pass the compiled
+ * module of a `~/wasm/<crate>.wasm?module` import: the Worker may not compile wasm from bytes.
  */
 export async function loadWasmModule<Fn extends string>(
-  source: BufferSource | Response | PromiseLike<Response>,
+  source: WasmSource,
   functions: readonly Fn[],
 ): Promise<WasmModule<Fn>> {
   const exports = (await instantiate(source)).exports as unknown as AbiExports & Record<Fn, AbiFunction>;

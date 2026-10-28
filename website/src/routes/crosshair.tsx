@@ -1,4 +1,4 @@
-import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { Bookmark, BookmarkX, ClipboardPaste, Dices, Download, Library, Link } from "lucide-react";
 import { parseAsString, parseAsStringLiteral, useQueryState } from "nuqs";
@@ -29,20 +29,13 @@ import { Text } from "~/components/ui/text";
 import { Textarea } from "~/components/ui/textarea";
 import { useHydrated } from "~/hooks/useHydrated";
 import { API_ORIGIN } from "~/lib/constants";
-import { renderCrosshair, toPngDataUrl } from "~/lib/crosshair-render";
-import { isClientError } from "~/lib/http";
+import { CROSSHAIR_CODE_PREFIX, DEFAULT_CROSSHAIR_SETTINGS, isCrosshairCode, toPngDataUrl } from "~/lib/crosshair";
 import { CROSSHAIR_CARD_VERSION } from "~/lib/og/card-kit";
 import { pageTitle, seo, SITE_URL } from "~/lib/seo";
 import { useStoredState } from "~/lib/use-stored-state";
-import {
-  CROSSHAIR_CODE_PREFIX,
-  type CrosshairSettings,
-  DEFAULT_CROSSHAIR_SETTINGS,
-  crosshairCodeImageQueryOptions,
-  crosshairCodeQueryOptions,
-  crosshairCodeSettingsQueryOptions,
-  isCrosshairCode,
-} from "~/queries/crosshair-queries";
+import type { CrosshairCodec, CrosshairSettings } from "~/lib/wasm/crosshair";
+import { crosshairCodecQueryOptions } from "~/lib/wasm/load-crosshair";
+import { WasmCallError } from "~/lib/wasm/module";
 
 export const Route = createFileRoute("/crosshair")({
   component: CrosshairEditor,
@@ -195,46 +188,45 @@ function CrosshairEditor() {
 
   const code = codeParam.trim();
   const queryClient = useQueryClient();
-  const imported = useQuery(crosshairCodeSettingsQueryOptions(code));
+  // The crosshair module reads, writes and draws crosshairs with the API's own code. It loads in the browser only, so
+  // the server renders the page without a crosshair.
+  const hydrated = useHydrated();
+  const codec = useQuery({ ...crosshairCodecQueryOptions, enabled: hydrated });
+  const imported = useMemo(() => codec.data && decodeOrUndefined(codec.data, code), [codec.data, code]);
   // Slider changes apply on top of the imported code; importing another code starts over from it.
   const [edits, setEdits] = useState<CrosshairSettings>();
-  const settings = edits ?? imported.data ?? DEFAULT_CROSSHAIR_SETTINGS;
+  const settings = edits ?? imported ?? DEFAULT_CROSSHAIR_SETTINGS;
   const update = (patch: Partial<CrosshairSettings>) => setEdits({ ...settings, ...patch });
 
-  // Drawn here on every change, pixel for pixel as the API draws it; the server has no canvas, so only once hydrated.
-  const hydrated = useHydrated();
+  // Drawn here on every change, pixel for pixel as the API draws it.
   const image = useMemo(() => {
-    if (!hydrated) return undefined;
-    const drawn = renderCrosshair(settings, Number(resolution));
+    if (!codec.data) return undefined;
+    const drawn = codec.data.render(settings, Number(resolution));
     return drawn && toPngDataUrl(drawn);
-  }, [hydrated, settings, resolution]);
-  const shareCode = useQuery({ ...crosshairCodeQueryOptions(settings), placeholderData: keepPreviousData });
+  }, [codec.data, settings, resolution]);
+  // The code of what is on screen.
+  const currentCode = useMemo(() => codec.data?.encode(settings), [codec.data, settings]);
   // The API serves the same PNG for the share code, so a link to it shows this crosshair anywhere.
-  const imageLink =
-    shareCode.data && !shareCode.isPlaceholderData
-      ? `${API_ORIGIN}/v1/crosshair/code/image?${new URLSearchParams({ code: shareCode.data, screen_height: resolution })}`
-      : undefined;
-  // The code of what is on screen, once it is encoded; a placeholder is the previous crosshair's.
-  const currentCode = shareCode.isPlaceholderData ? undefined : shareCode.data;
+  const imageLink = currentCode
+    ? `${API_ORIGIN}/v1/crosshair/code/image?${new URLSearchParams({ code: currentCode, screen_height: resolution })}`
+    : undefined;
 
-  // The code of what is on screen becomes the URL's once it arrives, so the address (and its link preview) always holds
-  // a share code, also for console commands or the default crosshair. A code from the link is left alone until it has
-  // loaded, and kept when it is invalid so its error shows. The settings are cached under the new code, so opening
-  // that address shows them without asking the API.
-  const importing = code !== "" && edits === undefined && imported.data === undefined;
+  // The code of what is on screen becomes the URL's, so the address (and its link preview) always holds a share code,
+  // also for console commands or the default crosshair. A code from the link is left alone until the module has read
+  // it, and kept when it is invalid.
+  const importing = code !== "" && edits === undefined && imported === undefined;
   useEffect(() => {
     if (importing || currentCode === undefined || currentCode === code) return;
-    queryClient.setQueryData(crosshairCodeSettingsQueryOptions(currentCode).queryKey, settings);
     void setCodeParam(currentCode);
-  }, [importing, currentCode, code, settings, queryClient, setCodeParam]);
+  }, [importing, currentCode, code, setCodeParam]);
 
   const [bookmarks, saveBookmarks] = useStoredState<CrosshairBookmark[]>(BOOKMARKS_KEY, () => []);
   const bookmarked = currentCode !== undefined && bookmarks.some((bookmark) => bookmark.code === currentCode);
   const toggleBookmark = async () => {
-    // While a slider moves, the code for its latest value may still be on its way; the click waits for it.
+    // Before the crosshair module has loaded, the click waits for it.
     let code = currentCode;
     try {
-      code ??= await queryClient.query(crosshairCodeQueryOptions(settings));
+      code ??= (await queryClient.query(crosshairCodecQueryOptions)).encode(settings);
     } catch {
       toast.error("Could not bookmark this crosshair. Please try again.");
       return;
@@ -246,17 +238,17 @@ function CrosshairEditor() {
     );
   };
 
-  /** Loads a pasted code into the settings; the error to show when it is not a code the API accepts. */
+  /** Loads a pasted code into the settings; the error to show when it is not a code the crosshair module reads. */
   const importCode = async (value: string): Promise<string | null> => {
     const next = value.trim();
     if (!isCrosshairCode(next)) {
       return `Paste a code that starts with "${CROSSHAIR_CODE_PREFIX}" or crosshair console commands. Check that you copied all of it.`;
     }
     try {
-      await queryClient.query(crosshairCodeSettingsQueryOptions(next));
+      (await queryClient.query(crosshairCodecQueryOptions)).decode(next);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Could not import this code.";
-      return isClientError(error) ? `${message}. Check that you copied the whole code.` : message;
+      return error instanceof WasmCallError ? `${message}. Check that you copied the whole code.` : message;
     }
     setEdits(undefined);
     await setCodeParam(next);
@@ -401,21 +393,30 @@ function CrosshairEditor() {
                     </Segmented>
                   </Field>
                 </Inline>
-                <Preview
-                  image={image}
-                  backdrop={backdrop}
-                  zoom={Number(zoom)}
-                  resolutionLabel={RESOLUTION_LABELS[resolution]}
-                  zoomControl={
-                    <Segmented value={zoom} onValueChange={setZoom} size="sm" width="hug" aria-label="Zoom">
-                      {ZOOMS.map((value) => (
-                        <SegmentedItem key={value} value={value}>
-                          {value}×
-                        </SegmentedItem>
-                      ))}
-                    </Segmented>
-                  }
-                />
+                {codec.isError ? (
+                  <ErrorState
+                    title="The crosshair could not be drawn"
+                    description="The crosshair module did not load."
+                    onRetry={() => void codec.refetch()}
+                    retrying={codec.isFetching}
+                  />
+                ) : (
+                  <Preview
+                    image={image}
+                    backdrop={backdrop}
+                    zoom={Number(zoom)}
+                    resolutionLabel={RESOLUTION_LABELS[resolution]}
+                    zoomControl={
+                      <Segmented value={zoom} onValueChange={setZoom} size="sm" width="hug" aria-label="Zoom">
+                        {ZOOMS.map((value) => (
+                          <SegmentedItem key={value} value={value}>
+                            {value}×
+                          </SegmentedItem>
+                        ))}
+                      </Segmented>
+                    }
+                  />
+                )}
                 <Inline gap={2}>
                   <CopyButton variant="outline" icon={Link} text={imageLink ?? ""} disabled={!imageLink}>
                     Copy image link
@@ -444,15 +445,15 @@ function CrosshairEditor() {
           </CardHeader>
           <CardContent>
             <Stack gap={3}>
-              {shareCode.data ? (
+              {currentCode ? (
                 <Code size="lg" className="break-all">
-                  {shareCode.data}
+                  {currentCode}
                 </Code>
               ) : (
-                <Text variant="label">{shareCode.isError ? shareCode.error.message : "Encoding…"}</Text>
+                <Text variant="label">{codec.isError ? "The crosshair encoder did not load." : "Encoding…"}</Text>
               )}
               <Inline gap={2}>
-                <CopyButton text={shareCode.data ?? ""} disabled={!shareCode.data || shareCode.isPlaceholderData}>
+                <CopyButton text={currentCode ?? ""} disabled={!currentCode}>
                   Copy code
                 </CopyButton>
               </Inline>
@@ -675,7 +676,12 @@ function BookmarkRow({
   onLoad: () => void;
   onRemove: () => void;
 }) {
-  const image = useQuery(crosshairCodeImageQueryOptions(bookmark.code, 1080));
+  const codec = useQuery(crosshairCodecQueryOptions).data;
+  const image = useMemo(() => {
+    const settings = codec && decodeOrUndefined(codec, bookmark.code);
+    const drawn = settings && codec?.render(settings, 1080);
+    return drawn ? toPngDataUrl(drawn) : undefined;
+  }, [codec, bookmark.code]);
   const saved = new Date(bookmark.savedAt).toLocaleDateString(undefined, { dateStyle: "medium" });
   return (
     <Inline gap={1} wrap="nowrap">
@@ -683,7 +689,7 @@ function BookmarkRow({
         className="min-w-0 flex-1"
         leading={
           <PixelStage size="sm" backdrop="game">
-            {image.data && <PixelImage src={image.data} alt="" />}
+            {image && <PixelImage src={image} alt="" />}
           </PixelStage>
         }
         description={bookmark.code}
@@ -696,4 +702,14 @@ function BookmarkRow({
       </Button>
     </Inline>
   );
+}
+
+/** The settings of `code`, or `undefined` when it is not a crosshair code. */
+function decodeOrUndefined(codec: CrosshairCodec, code: string): CrosshairSettings | undefined {
+  if (!isCrosshairCode(code)) return undefined;
+  try {
+    return codec.decode(code);
+  } catch {
+    return undefined;
+  }
 }
