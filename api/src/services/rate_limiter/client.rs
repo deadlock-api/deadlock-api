@@ -75,12 +75,14 @@ impl RateLimitClient {
                 }
             }
             None if requires_key(limit.quotas) => {
+                count_denial("key_required");
                 return Err(APIError::status_msg(
                     StatusCode::FORBIDDEN,
                     "API key is required for this endpoint",
                 ));
             }
             None if self.emergency_mode => {
+                count_denial("emergency_mode");
                 return Err(APIError::status_msg(
                     StatusCode::SERVICE_UNAVAILABLE,
                     "Service is in emergency mode",
@@ -96,10 +98,13 @@ impl RateLimitClient {
     async fn validate_api_key(&self, api_key: Uuid) -> APIResult<()> {
         match self.is_api_key_valid(api_key).await {
             Ok(true) => Ok(()),
-            Ok(false) => Err(APIError::status_msg(
-                StatusCode::FORBIDDEN,
-                "Invalid API key",
-            )),
+            Ok(false) => {
+                count_denial("invalid_key");
+                Err(APIError::status_msg(
+                    StatusCode::FORBIDDEN,
+                    "Invalid API key",
+                ))
+            }
             Err(e) => {
                 warn!("Failed to validate API key due to DB error: {e}, failing open");
                 Ok(())
@@ -155,6 +160,11 @@ impl RateLimitClient {
             })
             .collect())
     }
+}
+
+/// Counts a request turned away before any quota was checked.
+fn count_denial(reason: &'static str) {
+    metrics::counter!("rate_limit_denied", "reason" => reason).increment(1);
 }
 
 fn has(quotas: &[Quota], scope: Scope) -> bool {

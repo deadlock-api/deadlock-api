@@ -9,11 +9,13 @@ description = "Sliding-window rate limiting with per-client and global quotas"
 redis = ["dep:redis", "redis/script"]
 
 [dependencies]
+metrics = { workspace = true }
 redis = { workspace = true, optional = true }
 thiserror = { workspace = true }
 tracing = { workspace = true }
 
 [dev-dependencies]
+metrics-util = { version = "0.20.4", default-features = false, features = ["debugging"] }
 tokio = { workspace = true, features = ["macros", "rt"] }
 
 [lints]

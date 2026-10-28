@@ -4794,7 +4794,9 @@ dependencies = [
  "crossbeam-epoch",
  "crossbeam-utils",
  "hashbrown 0.16.1",
+ "indexmap",
  "metrics",
+ "ordered-float",
  "quanta",
  "rand 0.9.5",
  "rand_xoshiro",
@@ -5967,6 +5969,8 @@ dependencies = [
 name = "rate-limit"
 version = "0.1.0"
 dependencies = [
+ "metrics",
+ "metrics-util",
  "redis",
  "thiserror",
  "tokio",

@@ -1,5 +1,5 @@
 use core::num::NonZeroU64;
-use std::time::SystemTime;
+use std::time::{Instant, SystemTime};
 
 use tracing::warn;
 
@@ -9,6 +9,10 @@ use crate::{Charge, Exceeded, Log, RateLimit, Scope, Status, Store, Window};
 ///
 /// A subject's requests are kept under `{subject}:{bucket}`, shared counts under `{bucket}`. The
 /// limiter fails open: when the store errors, the request is let through without limits.
+///
+/// Every check is counted in `rate_limit_checks{bucket, outcome}` (`admitted`, `rejected_client`
+/// by a subject's quota, `rejected_shared` by a quota shared by everyone, `failed_open`), and the
+/// store's latency in `rate_limit_store_duration_seconds`.
 #[derive(Debug, Clone, Default)]
 pub struct RateLimiter<T> {
     store: T,
@@ -99,28 +103,45 @@ impl<T: Store> RateLimiter<T> {
             windows: &windows,
             if_admitted: &shared,
         };
-        let usages = match self.store.charge(charge).await {
+        let started = Instant::now();
+        let usages = self.store.charge(charge).await;
+        metrics::histogram!("rate_limit_store_duration_seconds")
+            .record(started.elapsed().as_secs_f64());
+        let usages = match usages {
             Ok(usages) => usages,
             Err(e) => {
                 warn!(
                     bucket = limit.bucket,
                     "Failed to check rate limits, not applying them: {e}"
                 );
+                count(limit.bucket, "failed_open");
                 return Ok(None);
             }
         };
 
         let mut statuses = Vec::with_capacity(usages.len());
-        for (&quota, usage) in limit.quotas.iter().zip(usages) {
+        for ((&quota, key), usage) in limit.quotas.iter().zip(&keys).zip(usages) {
             let status = Status::new(quota, usage, cost, now);
             if status.is_exceeded() {
+                let outcome = if key.is_some() {
+                    "rejected_client"
+                } else {
+                    "rejected_shared"
+                };
+                count(limit.bucket, outcome);
                 return Err(Exceeded(status));
             }
             statuses.push(status);
         }
+        count(limit.bucket, "admitted");
         Ok(statuses.into_iter().min_by_key(Status::remaining))
     }
 }
+fn count(bucket: &str, outcome: &'static str) {
+    metrics::counter!("rate_limit_checks", "bucket" => bucket.to_owned(), "outcome" => outcome)
+        .increment(1);
+}
+
 #[cfg(test)]
 mod tests {
     use core::time::Duration;
@@ -332,6 +353,69 @@ mod tests {
         ) -> impl Future<Output = Result<Vec<Usage>, BrokenError>> + Send {
             core::future::ready(Err(BrokenError))
         }
+    }
+
+    #[test]
+    fn counts_outcomes() {
+        use metrics_util::debugging::{DebugValue, DebuggingRecorder};
+
+        let recorder = DebuggingRecorder::new();
+        let snapshotter = recorder.snapshotter();
+        metrics::with_local_recorder(&recorder, || {
+            let runtime = tokio::runtime::Builder::new_current_thread()
+                .build()
+                .unwrap();
+            let limiter = RateLimiter::new(MemoryStore::new());
+            let quotas = [
+                Quota::new(By::Address, 1, MIN),
+                Quota::new(By::Everyone, 2, MIN),
+            ];
+            let limit = RateLimit::new("b", &quotas);
+            runtime.block_on(async {
+                limiter
+                    .charge_at(&("a", "x"), limit, ONE, at(0))
+                    .await
+                    .unwrap();
+                limiter
+                    .charge_at(&("a", "x"), limit, ONE, at(1))
+                    .await
+                    .unwrap_err();
+                limiter
+                    .charge_at(&("b", "y"), limit, ONE, at(2))
+                    .await
+                    .unwrap();
+                limiter
+                    .charge_at(&("c", "z"), limit, ONE, at(3))
+                    .await
+                    .unwrap_err();
+                RateLimiter::new(Broken)
+                    .check(&("a", "x"), limit)
+                    .await
+                    .unwrap();
+            });
+        });
+        let mut counts: Vec<(String, u64)> = snapshotter
+            .snapshot()
+            .into_vec()
+            .into_iter()
+            .filter_map(|(key, _, _, value)| {
+                let DebugValue::Counter(n) = value else {
+                    return None;
+                };
+                let outcome = key.key().labels().find(|l| l.key() == "outcome")?;
+                Some((outcome.value().to_owned(), n))
+            })
+            .collect();
+        counts.sort();
+        assert_eq!(
+            counts,
+            [
+                ("admitted".to_owned(), 2),
+                ("failed_open".to_owned(), 1),
+                ("rejected_client".to_owned(), 1),
+                ("rejected_shared".to_owned(), 1),
+            ]
+        );
     }
 
     #[tokio::test]
