@@ -65,4 +65,5 @@ export const TRACKER_SITES: readonly TrackerSite[] = [
   { name: "Deadlock Update Tracker", icon: "/tracker-sites/deadlock-update-tracker.webp" },
   { name: "MetaBot.GG", icon: "/tracker-sites/metabot.webp" },
   { name: "Deadlockub", icon: "/tracker-sites/deadlockub.webp" },
+  { name: "Deadlocker", icon: "/tracker-sites/deadlocker-net.webp" },
 ];
