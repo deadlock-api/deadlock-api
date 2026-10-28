@@ -27,6 +27,7 @@ edition = "2024"
 assets-client = { path = "util-crates/assets-client" }
 clickhouse-utils = { path = "util-crates/clickhouse-utils" }
 db-clients = { path = "util-crates/db-clients" }
+demofusion = { path = "util-crates/demofusion" }
 keyvalues = { path = "util-crates/keyvalues" }
 player-match-history = { path = "worker-crates/player-match-history" }
 rate-limit = { path = "api-crates/rate-limit" }

@@ -25,7 +25,6 @@ use tokio::time::Instant;
 use tokio_util::sync::CancellationToken;
 use utoipa::IntoParams;
 
-use super::demofusion;
 use crate::context::{AppState, LiveQueryConfig};
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::matches::live_url::{
@@ -33,7 +32,7 @@ use crate::routes::v1::matches::live_url::{
 };
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::rate_limiter::{Limits, Quota, RateLimit, Scope, describe};
-use crate::utils::broadcast_url::validate_broadcast_url;
+use crate::utils::broadcast_url::{broadcast_client, validate_broadcast_url};
 
 /// Every live query; spectating a match for one draws on the spectate limits too.
 const RATE_LIMIT: RateLimit = RateLimit::new(
@@ -260,7 +259,18 @@ fn live_sse(
     let status_stream = receiver_stream(status_rx).map(|msg| Ok(status_event(&msg)));
 
     let result_stream = futures::stream::once(async move {
-        demofusion::query_live(&broadcast_url, &query, status_tx, cancel, queue_limit_bytes).await
+        let client = broadcast_client().map_err(|e| {
+            demofusion::DemoError::Broadcast(format!("failed to build broadcast HTTP client: {e}"))
+        })?;
+        demofusion::query_live(
+            client,
+            &broadcast_url,
+            &query,
+            status_tx,
+            cancel,
+            queue_limit_bytes,
+        )
+        .await
     })
     .flat_map(move |res| match res {
         Ok(rows) => sse_rows(rows, deadline).left_stream(),

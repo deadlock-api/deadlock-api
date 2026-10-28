@@ -15,6 +15,8 @@ Monorepo for the [Deadlock API](https://deadlock-api.com) project.
     `valveprotos-rs`)
   - [`haste/`](util-crates/haste/) - Source 2 demo and broadcast parser (formerly `deadlock-api/haste`), including
     the `dungers` bit buffer, varint and char cursor crates it uses (formerly `deadlock-api/dungers`)
+  - [`demofusion/`](util-crates/demofusion/) - SQL queries (Apache DataFusion) over demo files and live broadcasts,
+    parsed with `haste`
   - [`keyvalues/`](util-crates/keyvalues/) - parsers for Valve's KV3 (`.vdata`) and localization files
   - `telemetry`, `service-utils`, `steam-id`, `steam-proxy`, `db-clients`, `clickhouse-utils` and `assets-client`,
     the service plumbing that used to live in one `common` crate

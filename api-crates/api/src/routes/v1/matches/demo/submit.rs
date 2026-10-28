@@ -8,7 +8,6 @@ use axum::response::IntoResponse;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
-use super::demofusion;
 use super::format::map_demofusion_err;
 use super::job::{self, JobRecord, JobStatus};
 use super::schema::fetch_demo_schema;

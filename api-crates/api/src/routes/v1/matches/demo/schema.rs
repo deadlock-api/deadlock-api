@@ -5,6 +5,7 @@ use axum::response::IntoResponse;
 use axum_extra::extract::Query;
 use bytes::Bytes;
 use clickhouse::Row;
+use demofusion::{TableKind, TableSchema};
 use futures::TryStreamExt as _;
 use serde::{Deserialize, Serialize};
 use tokio::io::{AsyncRead, AsyncReadExt as _};
@@ -13,8 +14,6 @@ use utoipa::{IntoParams, ToSchema};
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
-use crate::routes::v1::matches::demo::demofusion;
-use crate::routes::v1::matches::demo::demofusion::{TableKind, TableSchema};
 use crate::routes::v1::matches::demo::download::http_client;
 use crate::routes::v1::matches::salts::{fetch_match_salts, replay_file_url};
 use crate::services::rate_limiter::extractor::RateLimitKey;

@@ -1,4 +1,3 @@
-mod demofusion;
 mod download;
 mod format;
 mod job;

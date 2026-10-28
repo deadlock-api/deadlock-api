@@ -1,0 +1,40 @@
+[package]
+name = "demofusion"
+version = "0.1.0"
+edition = "2024"
+description = "SQL queries over Deadlock demo files and live broadcasts via Apache DataFusion"
+
+[dependencies]
+bytes = { workspace = true }
+datafusion = { version = "55", default-features = false, features = [
+    "sql",
+    "parquet",
+    "recursive_protection",
+    "string_expressions",
+    "datetime_expressions",
+    "regex_expressions",
+    "unicode_expressions",
+    "nested_expressions",
+    "crypto_expressions",
+    "encoding_expressions",
+] }
+futures = { workspace = true }
+haste_broadcast = { workspace = true }
+haste_core = { workspace = true }
+prost = { workspace = true }
+rayon = "1"
+reqwest = { version = "0.13.5", features = ["json"] }
+serde = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true, features = ["sync", "time"] }
+tokio-util = { workspace = true }
+tracing = { workspace = true }
+# `reflect` exposes the descriptor set build.rs generates the event tables from.
+valveprotos = { workspace = true, features = ["user-msgs", "reflect"] }
+
+[build-dependencies]
+prost-reflect = "0.16"
+heck = "0.5"
+
+[lints]
+workspace = true

@@ -9,7 +9,7 @@ use core::sync::atomic::{AtomicUsize, Ordering};
 use core::time::Duration;
 use std::collections::{HashMap, HashSet};
 use std::io::{self, Read};
-use std::sync::{Arc, LazyLock, Mutex};
+use std::sync::{Arc, Mutex};
 
 use bytes::Bytes;
 use datafusion::arrow::datatypes::SchemaRef;
@@ -59,6 +59,10 @@ const MAX_QUEUED_FRAGMENTS: usize = 64;
 /// still can't emit until the broadcast ends. The stream ends when the broadcast stops (match ends
 /// or relay stops serving); dropping it tears the background fetch/parse down.
 ///
+/// `client` fetches the broadcast fragments. It should time out stalled reads (haste retries a
+/// timed-out fetch and then ends the stream; a stalled relay would otherwise hold the producer and
+/// the parser thread forever) and only follow redirects to trusted relay hosts.
+///
 /// `status_tx` receives human-readable progress messages while the initial connection is retried, so
 /// a caller streaming this over SSE can surface them to a waiting client instead of going quiet.
 ///
@@ -72,7 +76,8 @@ const MAX_QUEUED_FRAGMENTS: usize = 64;
 ///
 /// Returns an error if the broadcast cannot be started or its schema decoded, or for the same
 /// reasons as [`query`](super::query).
-pub(crate) async fn query_live(
+pub async fn query_live(
+    client: &reqwest::Client,
     base_url: &str,
     query: &str,
     status_tx: UnboundedSender<String>,
@@ -83,7 +88,6 @@ pub(crate) async fn query_live(
 
     // The `/start` signon fragment carries the send-tables the schema is built from, and also seeds
     // the parser so serializers/class-info are in place before deltas.
-    let client = broadcast_client()?;
     let (http, signon) = connect_with_retry(client, base_url, &status_tx).await?;
 
     // Schema discovery is CPU-bound haste parsing; run it off the async runtime, and catch a panic
@@ -161,7 +165,7 @@ pub(crate) async fn query_live(
         );
     }
 
-    spawn_producer(client, http, bytes_tx, base_url.to_owned(), cancel);
+    spawn_producer(client.clone(), http, bytes_tx, base_url.to_owned(), cancel);
 
     let visitor = StreamingCollector {
         entities,
@@ -194,7 +198,7 @@ pub(crate) async fn query_live(
 /// Why the broadcast stopped is logged with the relay's `/sync` answer at that moment, telling a
 /// finished match apart from a relay that was still serving when haste gave up on it.
 fn spawn_producer(
-    client: &'static reqwest::Client,
+    client: reqwest::Client,
     mut http: BroadcastHttp<'static, reqwest::Client>,
     bytes_tx: Sender<Bytes>,
     broadcast_url: String,
@@ -223,7 +227,7 @@ fn spawn_producer(
             }
         };
         drop(bytes_tx);
-        let relay_sync = relay_sync_status(client, &broadcast_url).await;
+        let relay_sync = relay_sync_status(&client, &broadcast_url).await;
         match error {
             None => info!(broadcast_url, fragments, relay_sync, "Live broadcast ended"),
             Some(e) => warn!(
@@ -338,25 +342,6 @@ async fn relay_sync_status(client: &reqwest::Client, base_url: &str) -> String {
 
 fn sync_url(base_url: &str) -> String {
     format!("{}/sync", base_url.trim_end_matches('/'))
-}
-
-/// Broadcast fetch client. Redirects are only followed to hosts that pass the broadcast URL
-/// allow-list, so a relay cannot bounce the server elsewhere. The timeouts match live-events'
-/// client for the same relays: haste retries a timed-out fetch and then ends the stream, where a
-/// stalled relay would otherwise hold the producer and the parser thread forever.
-static BROADCAST_CLIENT: LazyLock<reqwest::Result<reqwest::Client>> = LazyLock::new(|| {
-    reqwest::Client::builder()
-        .connect_timeout(Duration::from_secs(10))
-        .read_timeout(Duration::from_secs(60))
-        .redirect(crate::utils::broadcast_url::redirect_policy())
-        .build()
-});
-
-/// The shared broadcast client; building it only fails when the TLS backend cannot start.
-fn broadcast_client() -> Result<&'static reqwest::Client> {
-    BROADCAST_CLIENT
-        .as_ref()
-        .map_err(|e| DemoError::Broadcast(format!("failed to build broadcast HTTP client: {e}")))
 }
 
 async fn try_connect(

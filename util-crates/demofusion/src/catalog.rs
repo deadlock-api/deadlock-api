@@ -20,7 +20,7 @@ use super::visitor::{SyncDemoStream, discover_all_schemas_from_demo};
 
 /// Which kind of table a [`TableSchema`] describes.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum TableKind {
+pub enum TableKind {
     /// An entity table, named after its Source 2 serializer (e.g. `CCitadelPlayerPawn`).
     /// Discovered from the demo's send-tables, so the set varies per demo.
     Entity,
@@ -31,19 +31,19 @@ pub(crate) enum TableKind {
 
 /// One queryable table: its SQL name, kind, and Arrow schema (column names + types).
 #[derive(Debug, Clone)]
-pub(crate) struct TableSchema {
+pub struct TableSchema {
     /// The table name to use in `FROM` (case-insensitive in SQL, but given here verbatim).
-    pub(crate) name: String,
-    pub(crate) kind: TableKind,
+    pub name: String,
+    pub kind: TableKind,
     /// Column names and Arrow types. `tick` is always present; entity tables also
     /// carry `entity_index` and `delta_type`.
-    pub(crate) schema: SchemaRef,
+    pub schema: SchemaRef,
 }
 
-/// Return every table queryable against `demo` — both entity tables (discovered
-/// from the demo's send-tables) and event tables — along with each table's columns
-/// and types. This is everything needed to write a SQL query with
-/// [`query`](super::query).
+/// Return every table queryable against `demo`, with each table's columns and types.
+///
+/// Covers both entity tables (discovered from the demo's send-tables) and event tables:
+/// everything needed to write a SQL query with [`query`](super::query).
 ///
 /// Unlike [`query`](super::query), this builds schemas for *all* entity types in
 /// the demo, not just the ones a query references, so it parses the demo header
@@ -57,7 +57,7 @@ pub(crate) struct TableSchema {
 ///
 /// Returns an error if the demo header cannot be parsed or the send-tables are
 /// missing or malformed (see [`DemoError`](super::DemoError)).
-pub(crate) fn schema(demo: Bytes) -> Result<Vec<TableSchema>> {
+pub fn schema(demo: Bytes) -> Result<Vec<TableSchema>> {
     let mut tables = Vec::new();
 
     for entity in discover_all_schemas_from_demo::<SyncDemoStream>(demo)? {
@@ -84,14 +84,15 @@ pub(crate) fn schema(demo: Bytes) -> Result<Vec<TableSchema>> {
 }
 
 /// Plan and optimize `query` against empty tables shaped like `tables` (as returned by
-/// [`schema`]), without parsing any game data. A query that passes fails in
-/// [`query`](super::query) only at execution time; one that fails here (unknown table or
-/// column, type mismatch, unparsable SQL) would fail there too.
+/// [`schema`]), without parsing any game data.
+///
+/// A query that passes fails in [`query`](super::query) only at execution time; one that fails
+/// here (unknown table or column, type mismatch, unparsable SQL) would fail there too.
 ///
 /// # Errors
 ///
 /// Returns the `DataFusion` error the query fails to plan with.
-pub(crate) async fn validate(query: &str, tables: &[TableSchema]) -> Result<()> {
+pub async fn validate(query: &str, tables: &[TableSchema]) -> Result<()> {
     extract_table_names(query)?;
 
     let ctx = session_context(SessionConfig::new())?;

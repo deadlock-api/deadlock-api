@@ -1,5 +1,8 @@
 //! Allow-list for broadcast URLs the API fetches on behalf of a caller.
 
+use core::time::Duration;
+use std::sync::LazyLock;
+
 use reqwest::Url;
 use reqwest::redirect::Policy;
 
@@ -42,9 +45,26 @@ fn validate_url(url: &Url) -> Result<(), &'static str> {
     Ok(())
 }
 
+/// Broadcast fetch client. Redirects are only followed to hosts that pass the allow-list, so a
+/// relay cannot bounce the server elsewhere. The timeouts match live-events' client for the same
+/// relays: haste retries a timed-out fetch and then ends the stream, where a stalled relay would
+/// otherwise hold the producer and the parser thread forever.
+static BROADCAST_CLIENT: LazyLock<reqwest::Result<reqwest::Client>> = LazyLock::new(|| {
+    reqwest::Client::builder()
+        .connect_timeout(Duration::from_secs(10))
+        .read_timeout(Duration::from_secs(60))
+        .redirect(redirect_policy())
+        .build()
+});
+
+/// The shared broadcast client; building it only fails when the TLS backend cannot start.
+pub(crate) fn broadcast_client() -> Result<&'static reqwest::Client, &'static reqwest::Error> {
+    BROADCAST_CLIENT.as_ref()
+}
+
 /// Redirect policy for broadcast fetches: a redirect is only followed if its target passes the
 /// same allow-list, so a relay cannot bounce the server to another host.
-pub(crate) fn redirect_policy() -> Policy {
+fn redirect_policy() -> Policy {
     Policy::custom(|attempt| {
         // `previous()` includes the initial URL: one entry more than redirects followed so far.
         if attempt.previous().len() > MAX_REDIRECTS {

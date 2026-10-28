@@ -13,7 +13,6 @@ use tokio::task::JoinHandle;
 
 use super::OutputFormat;
 use crate::error::{APIError, APIResult};
-use crate::routes::v1::matches::demo::demofusion;
 use crate::utils::compression::ZSTD_MAGIC;
 
 /// Result batches queued between the query and the serializer, and serialized chunks queued

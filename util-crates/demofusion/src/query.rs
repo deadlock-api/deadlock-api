@@ -57,7 +57,9 @@ static PARSE_POOL: LazyLock<core::result::Result<rayon::ThreadPool, rayon::Threa
     });
 
 /// Run `query` against a single parse of `demo` and return a stream of its
-/// result batches. The demo is parsed exactly once; only the columns the query
+/// result batches.
+///
+/// The demo is parsed exactly once; only the columns the query
 /// references are decoded. Results are streamed straight from `DataFusion` — never
 /// collected into a `Vec<RecordBatch>`.
 ///
@@ -71,7 +73,7 @@ static PARSE_POOL: LazyLock<core::result::Result<rayon::ThreadPool, rayon::Threa
 /// Returns an error if the table names cannot be extracted from `query`, the
 /// demo cannot be parsed, or `DataFusion` fails to plan or execute the query
 /// (see [`DemoError`](super::DemoError)).
-pub(crate) async fn query(demo: Bytes, query: &str) -> Result<SendableRecordBatchStream> {
+pub async fn query(demo: Bytes, query: &str) -> Result<SendableRecordBatchStream> {
     query_stream::<SyncDemoStream>(demo, query).await
 }
 
