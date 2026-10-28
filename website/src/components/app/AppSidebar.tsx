@@ -52,11 +52,23 @@ function SidebarContent() {
       <SideNavHeader>
         <SideNavBrand asChild>
           <SmartLink href="/">
+            {/* Both marks are in the markup and the theme shows one (effects.css), so a season set by the visitor's own
+                date never re-renders the sidebar. The seasonal one is lazy: outside the season it is never fetched. */}
             <img
+              data-slot="brand-logo"
               src="https://deadlock-api.com/favicon.webp"
               alt="Deadlock API Logo"
               width={32}
               height={32}
+              className="aspect-square object-contain"
+            />
+            <img
+              data-slot="brand-logo-season"
+              src="/season/hexe-lantern.svg"
+              alt="Deadlock API Logo"
+              width={32}
+              height={32}
+              loading="lazy"
               className="aspect-square object-contain"
             />
             <span className="truncate">Deadlock API</span>

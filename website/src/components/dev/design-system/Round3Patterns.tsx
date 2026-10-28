@@ -41,6 +41,7 @@ import { AppBody, AppFrame, PageBackdrop } from "~/components/patterns/page/AppF
 import { Hero, HeroActions, HeroLead } from "~/components/patterns/page/Hero";
 import { PageHeader } from "~/components/patterns/page/PageHeader";
 import { PageShell } from "~/components/patterns/page/PageShell";
+import { SeasonFlock, SeasonPuff, SeasonSky } from "~/components/patterns/page/SeasonScene";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent } from "~/components/ui/card";
@@ -79,6 +80,46 @@ function PageChromeSpecimens() {
           <AppBody as="div" variant="bare">
             <Badge variant="muted">widget content on a transparent body</Badge>
           </AppBody>
+        </Variants>
+      </Specimen>
+
+      <Specimen
+        name="SeasonSky and SeasonFlock"
+        source="patterns/page/SeasonScene"
+        note="Seasonal decoration under and over every page: the moon and bats behind the glass panel, and a flock that crosses the top of the screen now and then (none under reduced motion). Both draw nothing until a seasonal theme scope (.theme-halloween, set on <html> by a head script from the visitor's own date, October 30th through November 1st, and always on the dev server) turns them on. The scope is a token swap: a pumpkin brand, night-violet surfaces, the mark turned jack-o'-lantern witch, floating and flickering, a cobweb with its spider in the AppFrame's corner. In the scope, hero and item art plays a trick on hover (data-trick), buttons squish when pressed, sidebar icons shiver and a display title flickers. SeasonFlock haunted (a minute idle) darkens the edges and raises the witch; SeasonPuff is the bat, ghost or Boo! of a click."
+      >
+        <Variants label=".theme-halloween (the body is rendered as a div here)" className="block">
+          <Viewport className="theme-halloween h-80">
+            <AppBody as="div" backgroundSrc="/background.svg" className="h-full">
+              <PageBackdrop src="/logo/hexe.svg" />
+              <SeasonSky />
+              <AppFrame className="min-h-80">
+                <PageHeader as="div" title="A page" description="Everything a route renders sits on this panel." />
+                <Inline gap={2}>
+                  <Button>Primary</Button>
+                  <Button variant="outline">Outline</Button>
+                </Inline>
+              </AppFrame>
+              <SeasonFlock />
+            </AppBody>
+          </Viewport>
+        </Variants>
+        <Variants
+          label="SeasonFlock haunted (the visitor is idle), and SeasonPuff (a click: bat, ghost, boo)"
+          className="block"
+        >
+          <Viewport className="theme-halloween h-80">
+            <AppBody as="div" backgroundSrc="/background.svg" className="h-full">
+              <AppFrame className="min-h-80">
+                <PageHeader as="div" size="display" title="Boo" />
+              </AppFrame>
+              <SeasonFlock haunted>
+                <SeasonPuff kind="bat" x={80} y={120} />
+                <SeasonPuff kind="ghost" x={160} y={160} />
+                <SeasonPuff kind="boo" x={240} y={120} />
+              </SeasonFlock>
+            </AppBody>
+          </Viewport>
         </Variants>
       </Specimen>
 

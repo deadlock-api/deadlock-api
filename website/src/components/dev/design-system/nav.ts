@@ -166,6 +166,7 @@ export const NAV: readonly NavChapter[] = [
         title: "Page",
         items: [
           "AppBody, PageBackdrop and AppFrame",
+          "SeasonSky and SeasonFlock",
           "PageShell",
           "PageShell align and height",
           "PageHeader",

@@ -69,14 +69,86 @@ body[data-feedback-spotlight] [data-slot="dialog-overlay"] {
    that fades it out towards the content, tilted into the corner. */
 .page-backdrop {
   transform: perspective(900px) rotateX(12deg) rotateY(-8deg) rotateZ(-14deg);
-  -webkit-mask-image: var(--page-backdrop-image), linear-gradient(to top left, black 10%, rgb(0 0 0 / 0.15) 80%);
-  mask-image: var(--page-backdrop-image), linear-gradient(to top left, black 10%, rgb(0 0 0 / 0.15) 80%);
+  /* A seasonal theme swaps the mark through --season-backdrop-image (tokens.css). */
+  -webkit-mask-image:
+    var(--season-backdrop-image, var(--page-backdrop-image)),
+    linear-gradient(to top left, black 10%, rgb(0 0 0 / 0.15) 80%);
+  mask-image:
+    var(--season-backdrop-image, var(--page-backdrop-image)),
+    linear-gradient(to top left, black 10%, rgb(0 0 0 / 0.15) 80%);
   -webkit-mask-size: 100% 100%;
   mask-size: 100% 100%;
   -webkit-mask-repeat: no-repeat;
   mask-repeat: no-repeat;
   -webkit-mask-composite: source-in;
   mask-composite: intersect;
+  animation: var(--season-backdrop-animation);
+}
+
+/* In the Halloween theme the mark (the witch as a jack-o'-lantern) comes alive: she drifts and sways in her corner (translate and rotate, which add to
+   the tilt of the transform) while her light flickers like a candle. */
+@keyframes season-witch-float {
+  from {
+    translate: 0 0;
+    rotate: -3deg;
+  }
+  to {
+    translate: -2rem -2.5rem;
+    rotate: 4deg;
+  }
+}
+
+/* Her light is a candle's: it burns unevenly, gutters twice and catches again. */
+@keyframes season-witch-flicker {
+  0%,
+  100% {
+    opacity: 0.14;
+  }
+  8% {
+    opacity: 0.17;
+  }
+  14% {
+    opacity: 0.12;
+  }
+  22% {
+    opacity: 0.18;
+  }
+  30% {
+    opacity: 0.15;
+  }
+  38% {
+    opacity: 0.19;
+  }
+  40% {
+    opacity: 0.07;
+  }
+  42% {
+    opacity: 0.16;
+  }
+  44% {
+    opacity: 0.09;
+  }
+  48% {
+    opacity: 0.15;
+  }
+  60% {
+    opacity: 0.2;
+  }
+  68% {
+    opacity: 0.13;
+  }
+  78% {
+    opacity: 0.17;
+  }
+  80% {
+    opacity: 0.06;
+  }
+  82% {
+    opacity: 0.14;
+  }
+  90% {
+    opacity: 0.18;
+  }
 }
 
 /* Native dialogs make the page inert, but scroll locking is separate. */
@@ -174,4 +246,919 @@ html:has(.mobile-navigation[open]) {
   [data-found] {
     animation: none;
   }
+}
+
+/* Seasonal decoration (patterns/page/SeasonScene). Every layer is hidden until a seasonal theme sets
+   --season-display, and draws the images and colors that theme names. None of it takes part in layout or input. */
+[data-slot="season-sky"],
+[data-slot="season-flock"] {
+  display: var(--season-display);
+}
+
+/* A low mist along the bottom of the screen, behind the panel. */
+[data-slot="season-sky-fog"] {
+  position: absolute;
+  inset-inline: 0;
+  inset-block-end: 0;
+  height: 35vh;
+  background: linear-gradient(to top, var(--season-fog), transparent);
+}
+
+/* The moon, high in the end corner behind the glass panel, which blurs it into a glow. */
+[data-slot="season-sky-moon"] {
+  position: absolute;
+  inset-block-start: 4rem;
+  inset-inline-end: 10%;
+  width: 7rem;
+  height: 7rem;
+  border-radius: 50%;
+  background: var(--season-moon);
+  box-shadow:
+    0 0 3rem 1rem color-mix(in oklab, var(--season-moon) 30%, transparent),
+    0 0 10rem 4rem color-mix(in oklab, var(--season-moon) 10%, transparent);
+  opacity: 0.55;
+}
+
+/* A few bats resting in the air in front of the moon. */
+[data-slot="season-sky-bats"] {
+  position: absolute;
+  inset-block-start: 5.5rem;
+  inset-inline-end: calc(10% - 2rem);
+  width: 11rem;
+  height: 3.75rem;
+  background-color: var(--season-silhouette);
+  -webkit-mask: var(--season-flock-image) center / contain no-repeat;
+  mask: var(--season-flock-image) center / contain no-repeat;
+}
+
+/* Bats that cross the top of the screen now and then: about eight seconds in flight, then a long pause. Translate
+   flies them and scale flaps their wings, two properties, so the animations never overwrite each other. Without
+   motion there is no flight at all. */
+@keyframes season-flight {
+  0% {
+    translate: -100% 0;
+  }
+  6% {
+    translate: 30vw -1.5rem;
+  }
+  12% {
+    translate: 65vw 1rem;
+  }
+  18%,
+  100% {
+    translate: 100vw -1rem;
+  }
+}
+
+@keyframes season-flap {
+  to {
+    scale: 1 0.78;
+  }
+}
+
+[data-slot="season-flock-bats"] {
+  position: absolute;
+  inset-block-start: 2rem;
+  left: 0;
+  width: 10rem;
+  height: 3.5rem;
+  translate: -100% 0;
+  background-color: var(--season-flock);
+  -webkit-mask: var(--season-flock-image) center / contain no-repeat;
+  mask: var(--season-flock-image) center / contain no-repeat;
+  animation:
+    season-flight 50s linear 3s infinite,
+    season-flap 0.3s ease-in-out infinite alternate;
+}
+
+/* A smaller flock on the way back, higher up and half a cycle later. */
+@keyframes season-flight-back {
+  0% {
+    translate: 100vw 0;
+  }
+  7% {
+    translate: 60vw 1.25rem;
+  }
+  14% {
+    translate: 25vw -0.5rem;
+  }
+  20%,
+  100% {
+    translate: -100% 0.5rem;
+  }
+}
+
+@keyframes season-flap-back {
+  from {
+    scale: -1 1;
+  }
+  to {
+    scale: -1 0.78;
+  }
+}
+
+[data-slot="season-flock-bats-back"] {
+  position: absolute;
+  inset-block-start: 0.75rem;
+  left: 0;
+  width: 6rem;
+  height: 2rem;
+  translate: 100vw 0;
+  background-color: var(--season-flock);
+  -webkit-mask: var(--season-flock-image) center / contain no-repeat;
+  mask: var(--season-flock-image) center / contain no-repeat;
+  animation:
+    season-flight-back 50s linear 28s infinite,
+    season-flap-back 0.25s ease-in-out infinite alternate;
+}
+
+/* A ghost that rises from the bottom start corner once in a while, swaying, and fades out halfway up. */
+@keyframes season-haunt {
+  0% {
+    translate: 0 120%;
+    opacity: 0;
+  }
+  4% {
+    opacity: 1;
+  }
+  10% {
+    translate: 2rem -30vh;
+  }
+  16%,
+  100% {
+    translate: -1rem -55vh;
+    opacity: 0;
+  }
+}
+
+@keyframes season-sway {
+  from {
+    rotate: -6deg;
+  }
+  to {
+    rotate: 6deg;
+  }
+}
+
+[data-slot="season-flock-ghost"] {
+  position: absolute;
+  inset-block-end: 0;
+  inset-inline-start: 6%;
+  width: 3.5rem;
+  height: 4.375rem;
+  translate: 0 120%;
+  opacity: 0;
+  background-color: var(--season-ghost);
+  -webkit-mask: var(--season-ghost-image) center / contain no-repeat;
+  mask: var(--season-ghost-image) center / contain no-repeat;
+  animation:
+    season-haunt 45s ease-in-out 15s infinite,
+    season-sway 1.8s ease-in-out infinite alternate;
+}
+
+/* The witch herself on her broom, once a minute, the long way across the upper screen. The mark and the broom are
+   two mask layers of one element, so they fly as one. */
+@keyframes season-ride {
+  0% {
+    translate: -100% 30vh;
+    rotate: -8deg;
+  }
+  4% {
+    translate: 25vw 20vh;
+    rotate: -4deg;
+  }
+  8% {
+    translate: 55vw 24vh;
+    rotate: -10deg;
+  }
+  14%,
+  100% {
+    translate: 100vw 8vh;
+    rotate: -14deg;
+  }
+}
+
+@keyframes season-bob {
+  to {
+    scale: 1.04 0.96;
+  }
+}
+
+[data-slot="season-flock-witch"] {
+  position: absolute;
+  inset-block-start: 0;
+  left: 0;
+  width: 7rem;
+  height: 6rem;
+  translate: -100% 30vh;
+  background-color: var(--season-flock);
+  -webkit-mask:
+    var(--season-witch-image) 70% 0 / 3.4rem 3.7rem no-repeat,
+    var(--season-broom-image) bottom / 100% 1.75rem no-repeat;
+  mask:
+    var(--season-witch-image) 70% 0 / 3.4rem 3.7rem no-repeat,
+    var(--season-broom-image) bottom / 100% 1.75rem no-repeat;
+  animation:
+    season-ride 60s ease-in-out 40s infinite,
+    season-bob 0.6s ease-in-out infinite alternate;
+}
+
+/* Two eyes that open in the dark of the end gutter, look around with two blinks, and are gone again. */
+@keyframes season-eyes {
+  0%,
+  84%,
+  100% {
+    opacity: 0;
+    scale: 1 0.1;
+  }
+  86%,
+  89%,
+  91%,
+  94%,
+  96% {
+    opacity: 1;
+    scale: 1 1;
+  }
+  90%,
+  95% {
+    scale: 1 0.1;
+  }
+}
+
+[data-slot="season-flock-eyes"] {
+  position: absolute;
+  inset-block-end: 22%;
+  inset-inline-end: 1.5%;
+  width: 2.75rem;
+  height: 0.9rem;
+  opacity: 0;
+  background:
+    radial-gradient(closest-side, var(--season-eyes), transparent) left / 45% 100% no-repeat,
+    radial-gradient(closest-side, var(--season-eyes), transparent) right / 45% 100% no-repeat;
+  filter: drop-shadow(0 0 0.4rem var(--season-eyes));
+  animation: season-eyes 37s ease-in-out 9s infinite;
+}
+
+/* The haunting, while a visitor has been idle for a while (`data-haunted`, set by the app): the dark closes in from
+   the edges and the witch rises from the bottom of the screen, a little closer at the end. The first input takes it
+   all away at once. */
+[data-slot="season-flock-haunt"] {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  background: radial-gradient(ellipse at center, transparent 30%, var(--season-dark) 100%);
+}
+
+/* The witch rising: a silhouette of the dark itself, with her own light (a flickering ember behind the mask) showing
+   through her eyes and smile. Both layers share one box and one animation. */
+[data-slot="season-flock-haunt"]::before,
+[data-slot="season-flock-haunt"]::after {
+  content: "";
+  position: absolute;
+  inset-block-end: 0;
+  left: 50%;
+  width: min(60vh, 26rem);
+  aspect-ratio: 729 / 790;
+  translate: -50% 100%;
+}
+
+[data-slot="season-flock-haunt"]::before {
+  background:
+    radial-gradient(circle at 34% 62%, var(--season-eyes) 0 6%, transparent 11%),
+    radial-gradient(circle at 58% 62%, var(--season-eyes) 0 6%, transparent 11%),
+    radial-gradient(ellipse at 46% 80%, var(--primary) 0 8%, transparent 14%);
+  filter: blur(0.15rem);
+}
+
+[data-slot="season-flock-haunt"]::after {
+  background-color: var(--season-silhouette);
+  -webkit-mask: var(--season-witch-image) center / contain no-repeat;
+  mask: var(--season-witch-image) center / contain no-repeat;
+  filter: drop-shadow(0 0 1.5rem var(--primary));
+}
+
+@keyframes season-haunt-dark {
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes season-haunt-rise {
+  0% {
+    translate: -50% 100%;
+    scale: 1;
+  }
+  85% {
+    translate: -50% 10%;
+    scale: 1;
+  }
+  93% {
+    translate: -50% 4%;
+    scale: 1.3;
+  }
+  100% {
+    translate: -50% 6%;
+    scale: 1.22;
+  }
+}
+
+[data-slot="season-flock"][data-haunted] [data-slot="season-flock-haunt"] {
+  animation: season-haunt-dark 5s ease-in forwards;
+}
+
+[data-slot="season-flock"][data-haunted] [data-slot="season-flock-haunt"]::after {
+  animation: season-haunt-rise 9s cubic-bezier(0.3, 0, 0.2, 1) 2s forwards;
+}
+
+[data-slot="season-flock"][data-haunted] [data-slot="season-flock-haunt"]::before {
+  animation:
+    season-haunt-rise 9s cubic-bezier(0.3, 0, 0.2, 1) 2s forwards,
+    season-ember 1.3s steps(6, jump-none) 2s infinite;
+}
+
+@keyframes season-ember {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  20% {
+    opacity: 0.55;
+  }
+  45% {
+    opacity: 0.9;
+  }
+  60% {
+    opacity: 0.35;
+  }
+  80% {
+    opacity: 1;
+  }
+}
+
+/* More eyes in the dark, each pair on its own clock, and a second ghost on the other side. */
+[data-slot="season-flock-eyes"]:nth-child(2 of [data-slot="season-flock-eyes"]) {
+  inset-block-end: 8%;
+  inset-inline-end: auto;
+  inset-inline-start: 1.5%;
+  scale: 0.8;
+  animation-duration: 53s;
+  animation-delay: 21s;
+}
+
+[data-slot="season-flock-eyes"]:nth-child(3 of [data-slot="season-flock-eyes"]) {
+  inset-block-end: auto;
+  inset-block-start: 40%;
+  inset-inline-end: 0.75%;
+  animation-duration: 67s;
+  animation-delay: 33s;
+}
+
+[data-slot="season-flock-ghost"]:nth-child(2 of [data-slot="season-flock-ghost"]) {
+  inset-inline-start: auto;
+  inset-inline-end: 12%;
+  width: 2.5rem;
+  height: 3.125rem;
+  animation:
+    season-haunt 61s ease-in-out 38s infinite,
+    season-sway 1.4s ease-in-out infinite alternate;
+}
+
+/* Will-o'-the-wisps: little lights that wander up from the mist, flickering as they go. */
+@keyframes season-wisp {
+  0% {
+    translate: 0 0;
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  35% {
+    translate: 1.5rem -6vh;
+  }
+  65% {
+    translate: -1rem -14vh;
+  }
+  90% {
+    opacity: 0.8;
+  }
+  100% {
+    translate: 0.5rem -22vh;
+    opacity: 0;
+  }
+}
+
+@keyframes season-wisp-flicker {
+  0%,
+  100% {
+    scale: 1;
+    filter: brightness(1);
+  }
+  30% {
+    scale: 0.7;
+    filter: brightness(0.6);
+  }
+  55% {
+    scale: 1.15;
+    filter: brightness(1.3);
+  }
+  75% {
+    scale: 0.85;
+  }
+}
+
+[data-slot="season-flock-wisp"] {
+  position: absolute;
+  inset-block-end: 4%;
+  inset-inline-start: 4%;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  opacity: 0;
+  background: var(--season-eyes);
+  box-shadow:
+    0 0 0.5rem 0.15rem var(--season-eyes),
+    0 0 1.5rem 0.5rem color-mix(in oklab, var(--primary) 50%, transparent);
+  animation:
+    season-wisp 14s ease-in-out infinite,
+    season-wisp-flicker 0.9s ease-in-out infinite;
+}
+
+[data-slot="season-flock-wisp"]:nth-child(2 of [data-slot="season-flock-wisp"]) {
+  inset-inline-start: 14%;
+  inset-block-end: 10%;
+  animation-duration: 19s, 0.7s;
+  animation-delay: 4s, 0s;
+}
+
+[data-slot="season-flock-wisp"]:nth-child(3 of [data-slot="season-flock-wisp"]) {
+  inset-inline-start: auto;
+  inset-inline-end: 3%;
+  inset-block-end: 6%;
+  animation-duration: 17s, 1.1s;
+  animation-delay: 7s, 0s;
+}
+
+[data-slot="season-flock-wisp"]:nth-child(4 of [data-slot="season-flock-wisp"]) {
+  inset-inline-start: auto;
+  inset-inline-end: 9%;
+  inset-block-end: 14%;
+  scale: 0.7;
+  animation-duration: 23s, 0.8s;
+  animation-delay: 11s, 0s;
+}
+
+[data-slot="season-flock-wisp"]:nth-child(5 of [data-slot="season-flock-wisp"]) {
+  inset-inline-start: 45%;
+  inset-block-end: 2%;
+  animation-duration: 27s, 1s;
+  animation-delay: 15s, 0s;
+}
+
+[data-slot="season-flock-wisp"]:nth-child(6 of [data-slot="season-flock-wisp"]) {
+  inset-inline-start: 70%;
+  inset-block-end: 3%;
+  animation-duration: 21s, 0.6s;
+  animation-delay: 2s, 0s;
+}
+
+/* A click's surprise (SeasonPuff): a bat flaps off up and away, a ghost floats up and fades, a "Boo!" pops. */
+[data-slot="season-puff"] {
+  position: absolute;
+  left: var(--puff-x);
+  top: var(--puff-y);
+  translate: -50% -50%;
+}
+
+@keyframes season-puff-bat {
+  0% {
+    translate: -50% -50%;
+    scale: 0.4;
+    opacity: 0;
+  }
+  15% {
+    scale: 1;
+    opacity: 1;
+  }
+  100% {
+    translate: 6rem -9rem;
+    scale: 0.6;
+    opacity: 0;
+  }
+}
+
+[data-slot="season-puff"][data-kind="bat"] {
+  width: 2.5rem;
+  height: 1rem;
+  background-color: var(--season-flock);
+  -webkit-mask: var(--season-bat-image) center / contain no-repeat;
+  mask: var(--season-bat-image) center / contain no-repeat;
+  animation:
+    season-puff-bat 1.1s ease-in forwards,
+    season-flap 0.12s ease-in-out infinite alternate;
+}
+
+@keyframes season-puff-ghost {
+  0% {
+    translate: -50% -30%;
+    scale: 0.3;
+    opacity: 0;
+  }
+  20% {
+    scale: 1;
+    opacity: 1;
+  }
+  100% {
+    translate: -50% -450%;
+    opacity: 0;
+  }
+}
+
+[data-slot="season-puff"][data-kind="ghost"] {
+  width: 1.75rem;
+  height: 2.2rem;
+  background-color: var(--season-ghost);
+  -webkit-mask: var(--season-ghost-image) center / contain no-repeat;
+  mask: var(--season-ghost-image) center / contain no-repeat;
+  animation:
+    season-puff-ghost 1.4s ease-out forwards,
+    season-sway 0.35s ease-in-out infinite alternate;
+}
+
+@keyframes season-puff-boo {
+  0% {
+    scale: 0.2;
+    rotate: -20deg;
+    opacity: 0;
+  }
+  25% {
+    scale: 1.25;
+    rotate: 8deg;
+    opacity: 1;
+  }
+  40% {
+    scale: 1;
+    rotate: -4deg;
+  }
+  100% {
+    translate: -50% -250%;
+    opacity: 0;
+  }
+}
+
+[data-slot="season-puff"][data-kind="boo"] {
+  font-family: var(--font-game);
+  font-size: var(--text-lg, 1.125rem);
+  line-height: 1;
+  color: var(--primary);
+  text-shadow: 0 0 0.5rem var(--primary);
+  white-space: nowrap;
+  animation: season-puff-boo 1.1s ease-out forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-slot="season-flock"] {
+    display: none;
+  }
+}
+
+/* A cobweb in the end corner of the glass panel, under the page's content (the panel's backdrop filter makes it a
+   stacking context, so -1 stays inside it). */
+[data-slot="app-frame-panel"]::before {
+  content: "";
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-end: 0;
+  z-index: -1;
+  width: 7rem;
+  height: 7rem;
+  border-start-end-radius: inherit;
+  background-color: var(--season-web);
+  -webkit-mask: var(--season-corner-image) top right / contain no-repeat;
+  mask: var(--season-corner-image) top right / contain no-repeat;
+  pointer-events: none;
+}
+
+[data-slot="app-frame-panel"]:dir(rtl)::before {
+  scale: -1 1;
+}
+
+/* Its spider, letting itself down on a thread and climbing back, swaying a little. The element grows from the top
+   of the panel, the spider sits at its bottom and a one-pixel line draws the thread above it. */
+@keyframes season-spider-drop {
+  0%,
+  100% {
+    height: 2.75rem;
+  }
+  50% {
+    height: 6rem;
+  }
+}
+
+@keyframes season-spider-sway {
+  from {
+    rotate: -3deg;
+  }
+  to {
+    rotate: 3deg;
+  }
+}
+
+[data-slot="app-frame-panel"]::after {
+  content: "";
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-end: 1.6rem;
+  z-index: -1;
+  width: 0.9rem;
+  height: 2.75rem;
+  transform-origin: top center;
+  background-color: var(--season-spider);
+  -webkit-mask:
+    var(--season-spider-image) bottom / 0.9rem 3.6rem no-repeat,
+    linear-gradient(black, black) top / 1px calc(100% - 3.6rem) no-repeat;
+  mask:
+    var(--season-spider-image) bottom / 0.9rem 3.6rem no-repeat,
+    linear-gradient(black, black) top / 1px calc(100% - 3.6rem) no-repeat;
+  pointer-events: none;
+  animation:
+    season-spider-drop 9s ease-in-out infinite,
+    season-spider-sway 2.6s ease-in-out infinite alternate;
+}
+
+/* The sky's own life: clouds drifting past the moon, the bats before it flapping, and once in a while a far-off
+   lightning that lights the whole sky twice, dimly and briefly (two flickers, well under three a second). */
+@keyframes season-cloud {
+  from {
+    translate: 0 0;
+  }
+  to {
+    translate: -130vw 0;
+  }
+}
+
+[data-slot="season-sky-cloud"] {
+  position: absolute;
+  inset-block-start: 5rem;
+  left: 100%;
+  width: 18rem;
+  height: 4rem;
+  border-radius: 50%;
+  background:
+    radial-gradient(ellipse at 30% 60%, var(--season-fog) 0 40%, transparent 70%),
+    radial-gradient(ellipse at 65% 40%, var(--season-fog) 0 45%, transparent 72%);
+  opacity: 0.9;
+  animation: season-cloud 80s linear infinite;
+}
+
+[data-slot="season-sky-cloud"]:nth-child(2 of [data-slot="season-sky-cloud"]) {
+  inset-block-start: 9rem;
+  width: 12rem;
+  height: 3rem;
+  animation-duration: 115s;
+  animation-delay: -50s;
+}
+
+[data-slot="season-sky-bats"] {
+  animation: season-flap 0.4s ease-in-out infinite alternate;
+}
+
+@keyframes season-lightning {
+  0%,
+  92%,
+  93.2%,
+  94%,
+  95.5%,
+  100% {
+    opacity: 0;
+  }
+  92.6% {
+    opacity: 0.12;
+  }
+  94.6% {
+    opacity: 0.18;
+  }
+}
+
+[data-slot="season-sky-lightning"] {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  background: linear-gradient(to bottom, var(--season-moon), transparent 70%);
+  animation: season-lightning 29s linear 6s infinite;
+}
+
+/* The cobweb stirs in a draught. */
+@keyframes season-web-sway {
+  from {
+    rotate: -1.5deg;
+  }
+  to {
+    rotate: 1.5deg;
+  }
+}
+
+.theme-halloween [data-slot="app-frame-panel"]::before {
+  transform-origin: top right;
+  animation: season-web-sway 5s ease-in-out infinite alternate;
+}
+
+/* Halloween play in the UI itself. These live in the theme scope, like its tokens: outside it nothing here applies.
+   Reduced motion collapses every one of them (base.css). */
+
+/* A display title (the home page's) hums like an old sign with a pumpkin glow, and drops out for a blink now and then. */
+@keyframes season-title-flicker {
+  0%,
+  100%,
+  31%,
+  33.5%,
+  35%,
+  71%,
+  73% {
+    opacity: 1;
+    filter: drop-shadow(0 0 1.25rem color-mix(in oklab, var(--primary) 45%, transparent));
+  }
+  32%,
+  34% {
+    opacity: 0.55;
+    filter: none;
+  }
+  72% {
+    opacity: 0.75;
+    filter: none;
+  }
+  50% {
+    filter: drop-shadow(0 0 2rem color-mix(in oklab, var(--primary) 60%, transparent));
+  }
+}
+
+.theme-halloween [data-slot="page-header-title"][data-size="display"] {
+  animation: season-title-flicker 7s linear infinite;
+}
+
+/* Hero, item and ability art plays one of five tricks when hovered: which one is fixed per image (`data-trick`). */
+@keyframes season-trick-spin {
+  to {
+    rotate: 360deg;
+  }
+}
+
+@keyframes season-trick-shudder {
+  0%,
+  100% {
+    translate: 0 0;
+    rotate: 0deg;
+  }
+  15% {
+    translate: -2px 1px;
+    rotate: -6deg;
+  }
+  30% {
+    translate: 2px -1px;
+    rotate: 5deg;
+  }
+  45% {
+    translate: -2px 0;
+    rotate: -4deg;
+  }
+  60% {
+    translate: 1px 1px;
+    rotate: 3deg;
+  }
+  80% {
+    translate: -1px 0;
+    rotate: -1deg;
+  }
+}
+
+@keyframes season-trick-flip {
+  0% {
+    transform: perspective(20rem) rotateY(0);
+  }
+  50% {
+    transform: perspective(20rem) rotateY(180deg) scale(1.1);
+  }
+  100% {
+    transform: perspective(20rem) rotateY(360deg);
+  }
+}
+
+@keyframes season-trick-pop {
+  0%,
+  100% {
+    scale: 1 1;
+  }
+  20% {
+    scale: 1.35 0.75;
+  }
+  40% {
+    scale: 0.8 1.3;
+  }
+  60% {
+    scale: 1.15 0.9;
+  }
+  80% {
+    scale: 0.97 1.03;
+  }
+}
+
+@keyframes season-trick-haunt {
+  0%,
+  100% {
+    translate: 0 0;
+    opacity: 1;
+  }
+  40% {
+    translate: 0 -0.4rem;
+    opacity: 0.25;
+  }
+  60% {
+    translate: 0 -0.4rem;
+    opacity: 0.35;
+  }
+}
+
+.theme-halloween [data-slot="asset-image"][data-trick="0"]:hover {
+  animation: season-trick-spin 0.6s var(--ease-standard);
+}
+
+.theme-halloween [data-slot="asset-image"][data-trick="1"]:hover {
+  animation: season-trick-shudder 0.45s linear 2;
+}
+
+.theme-halloween [data-slot="asset-image"][data-trick="2"]:hover {
+  animation: season-trick-flip 0.7s ease-in-out;
+}
+
+.theme-halloween [data-slot="asset-image"][data-trick="3"]:hover {
+  animation: season-trick-pop 0.6s ease-out;
+}
+
+.theme-halloween [data-slot="asset-image"][data-trick="4"]:hover {
+  animation: season-trick-haunt 1.2s ease-in-out;
+}
+
+/* A button squishes like jelly when pressed. */
+@keyframes season-squish {
+  30% {
+    scale: 1.08 0.88;
+  }
+  60% {
+    scale: 0.96 1.05;
+  }
+}
+
+.theme-halloween [data-slot="button"]:active {
+  animation: season-squish 0.35s ease-out;
+}
+
+/* The sidebar's icons shiver when their entry is hovered, and a link card's art bobs. */
+@keyframes season-shiver {
+  0%,
+  100% {
+    rotate: 0deg;
+  }
+  20% {
+    rotate: -14deg;
+  }
+  40% {
+    rotate: 12deg;
+  }
+  60% {
+    rotate: -8deg;
+  }
+  80% {
+    rotate: 4deg;
+  }
+}
+
+.theme-halloween [data-slot="side-nav-item"]:hover > svg {
+  animation: season-shiver 0.5s ease-in-out;
+}
+
+@keyframes season-bob-up {
+  50% {
+    translate: 0 -0.3rem;
+    rotate: -6deg;
+  }
+}
+
+.theme-halloween [data-slot="link-card-media"]:hover,
+.theme-halloween :hover > [data-slot="link-card-media"] {
+  animation: season-bob-up 0.6s ease-in-out;
+}
+
+/* The sidebar's brand mark: the season's own (AppSidebar renders both). */
+[data-slot="brand-logo-season"],
+.theme-halloween [data-slot="brand-logo"] {
+  display: none;
+}
+
+.theme-halloween [data-slot="brand-logo-season"] {
+  display: block;
+}
+
+/* Selected text glows pumpkin. */
+.theme-halloween ::selection {
+  background-color: color-mix(in oklab, var(--primary) 40%, transparent);
+  color: var(--foreground);
 }

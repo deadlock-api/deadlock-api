@@ -12,10 +12,12 @@ import { ApiErrorFallback } from "~/components/app/ApiErrorFallback";
 import { AppSidebar, MobileMenuButton } from "~/components/app/AppSidebar";
 import { Breadcrumbs } from "~/components/app/Breadcrumbs";
 import { FindOnPage } from "~/components/app/FindOnPage";
+import { HauntedSeasonFlock } from "~/components/app/HauntedSeasonFlock";
 import { PendingNavigation } from "~/components/app/PendingNavigation";
 import { ThemeProvider } from "~/components/app/ThemeProvider";
 import { FeedbackWidget } from "~/components/features/annotate/FeedbackWidget";
 import { AppBody, AppFrame, PageBackdrop } from "~/components/patterns/page/AppFrame";
+import { SeasonSky } from "~/components/patterns/page/SeasonScene";
 import { SkipLink } from "~/components/ui/skip-link";
 import { Toaster } from "~/components/ui/sonner";
 import { Stack } from "~/components/ui/stack";
@@ -26,6 +28,7 @@ import { installChunkReloadHandlers, isChunkLoadError, reloadOnceForStaleChunk }
 import { runWhenIdle } from "~/lib/idle";
 import { readPreferences } from "~/lib/preferences.isomorphic";
 import { catchPrefetch, ensureCached } from "~/lib/prefetch-safe";
+import { seasonScript } from "~/lib/season";
 import { seo } from "~/lib/seo";
 import type { RouterContext } from "~/router";
 
@@ -230,6 +233,7 @@ function RootComponent() {
                 {/* Low priority: a 10% opacity decoration, it was preloaded ahead of the CSS and the font and became every page's
                     largest contentful paint. */}
                 <PageBackdrop src="/logo/hexe.svg" />
+                <SeasonSky />
                 <AppFrame>
                   <Stack gap={4} className="flex-1">
                     <Breadcrumbs />
@@ -251,6 +255,7 @@ function RootComponent() {
                     </PendingNavigation>
                   </Stack>
                 </AppFrame>
+                <HauntedSeasonFlock />
               </main>
             </div>
             {/* Keep notification actions clear of the fixed feedback launcher. */}
@@ -269,6 +274,9 @@ function RootDocument({ children, bare = false }: { children: React.ReactNode; b
     <html lang="en" suppressHydrationWarning>
       <head>
         <HeadContent />
+        {/* The seasonal theme, by the visitor's own date, before the body paints. A stream overlay keeps its viewer's
+            look in every season. */}
+        {!bare && <script dangerouslySetInnerHTML={{ __html: seasonScript() }} />}
       </head>
       <AppBody variant={bare ? "bare" : "page"} backgroundSrc="/background.svg">
         {children}

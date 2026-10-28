@@ -46,6 +46,20 @@
 
   /* Dense data type size: Tailwind's text-xs (12px), the floor. In rem, so it follows the reader's font size. */
   --type-xs: 0.75rem;
+
+  /* The Halloween theme (.theme-halloween): a pumpkin brand on night surfaces, the ink greys shifted to violet at
+     the same lightness, so every contrast pair of the default theme still holds. */
+  --pumpkin-500: #ff7518;
+  /* The pumpkin at 10% over the night card, opaque (as --red-950 is for the brand red). */
+  --pumpkin-950: #291617;
+  --night-950: #07040c;
+  --night-900: #110c17;
+  --night-880: #150f1b;
+  --night-850: #19121f;
+  --night-800: #221829;
+  --night-700: #2c2236;
+  --night-400: #7a6797;
+  --moon-100: #fff3d6;
 }
 
 /* Tier 2: semantic tokens. What a color is for. */
@@ -219,6 +233,76 @@
   /* The brand rule down the leading edge of a table's current row: a mark that is not only a fill. Physical (a shadow
      has no logical form); the table marks the first cell, which is at the start in either direction only in LTR. */
   --shadow-current-start: inset 2px 0 0 0 var(--primary);
+}
+
+/* Seasonal decoration (patterns/page/SeasonScene, the AppFrame's corner, the PageBackdrop's mark). Off by default; a
+   seasonal theme turns it on and names its images. */
+:root {
+  --season-display: none;
+  --season-corner-image: none;
+  --season-flock-image: none;
+  --season-bat-image: none;
+  --season-flock: transparent;
+  --season-silhouette: transparent;
+  --season-moon: transparent;
+  --season-web: transparent;
+  --season-spider-image: none;
+  --season-spider: transparent;
+  --season-ghost-image: none;
+  --season-ghost: transparent;
+  --season-fog: transparent;
+  /* Unset: the PageBackdrop draws the mark its `src` names. A theme sets it to swap the mark. */
+  /* --season-backdrop-image */
+  /* The PageBackdrop mark's own motion: the witch floating and flickering in the Halloween theme. */
+  --season-backdrop-animation: none;
+  --season-witch-image: none;
+  --season-broom-image: none;
+  /* The eyes that open in the dark, and the shade that closes in on an idle visitor. */
+  --season-eyes: transparent;
+  --season-dark: transparent;
+}
+
+/* The Halloween theme, set on <html> by a head script (lib/season.ts) from the visitor's own date, October 30th to November 1st. A token swap only: the brand
+   turns pumpkin, the surfaces night violet, and the seasonal decoration comes on. Data colors (positive, negative,
+   series, tiers, game identity) stay as they are, so a chart reads the same in every season. */
+.theme-halloween {
+  --background: var(--night-950);
+  --card: var(--night-900);
+  --popover: var(--night-900);
+  --secondary: var(--night-850);
+  --muted: var(--night-850);
+  --accent: var(--night-800);
+  --table-stripe: var(--night-880);
+  --table-total: var(--pumpkin-950);
+  --primary: var(--pumpkin-500);
+  --ring: var(--pumpkin-500);
+  --border: var(--night-700);
+  --input: var(--night-700);
+  --sidebar: var(--night-950);
+  --sidebar-accent: var(--night-800);
+  --sidebar-border: var(--night-700);
+  --chart-grid: var(--night-700);
+
+  --season-display: block;
+  --season-corner-image: url("/season/cobweb.svg");
+  --season-flock-image: url("/season/bats.svg");
+  --season-bat-image: url("/season/bat.svg");
+  --season-flock: var(--night-400);
+  --season-silhouette: var(--night-950);
+  --season-moon: var(--moon-100);
+  --season-web: color-mix(in oklab, var(--ink-100) 16%, transparent);
+  --season-spider-image: url("/season/spider.svg");
+  --season-spider: color-mix(in oklab, var(--ink-100) 40%, transparent);
+  --season-ghost-image: url("/season/ghost.svg");
+  --season-ghost: color-mix(in oklab, var(--ink-100) 28%, transparent);
+  --season-fog: color-mix(in oklab, var(--night-400) 16%, transparent);
+  --season-backdrop-animation:
+    season-witch-float 7s ease-in-out infinite alternate, season-witch-flicker 4s linear infinite;
+  --season-backdrop-image: url("/season/hexe-lantern-mask.svg");
+  --season-witch-image: url("/logo/hexe.svg");
+  --season-broom-image: url("/season/broom.svg");
+  --season-eyes: var(--amber-400);
+  --season-dark: color-mix(in oklab, var(--night-950) 90%, transparent);
 }
 
 /* Tier 3: the Tailwind theme. Every entry here becomes a utility. */

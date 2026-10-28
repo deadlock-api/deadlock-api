@@ -28,6 +28,13 @@ const ASSET_ORIGIN = "https://assets-bucket.deadlock-api.com/";
 /** Candidate widths: the art is drawn at 16 to 80px, and the originals are 200px or more, lossless. */
 const WIDTHS = [48, 96, 160] as const;
 
+/** One of five, fixed per image: which trick the art plays when hovered in a seasonal theme (effects.css). */
+function trickOf(src: string): number {
+  let sum = 0;
+  for (const char of src) sum = (sum + (char.codePointAt(0) ?? 0)) % 5;
+  return sum;
+}
+
 export function AssetImage({
   asset,
   loading = false,
@@ -60,6 +67,8 @@ export function AssetImage({
         sizes="auto, 80px"
         alt={asset.alt}
         title={asset.title ?? asset.alt}
+        data-slot="asset-image"
+        data-trick={trickOf(original)}
         data-emphasis={emphasis}
         data-palette={palette}
         {...props}
@@ -87,6 +96,8 @@ export function AssetImage({
         src={src}
         alt={asset.alt}
         title={asset.title ?? asset.alt}
+        data-slot="asset-image"
+        data-trick={trickOf(original)}
         data-emphasis={emphasis}
         data-palette={palette}
         {...props}

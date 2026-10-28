@@ -83,7 +83,9 @@ export function PageHeader({
               {eyebrow}
             </div>
           )}
-          <Title className={titleVariants({ size })}>{title}</Title>
+          <Title data-slot="page-header-title" data-size={size ?? "default"} className={titleVariants({ size })}>
+            {title}
+          </Title>
           {description && (
             <p
               className={cn("text-sm text-muted-foreground", size && size !== "default" && "max-w-2xl leading-relaxed")}
