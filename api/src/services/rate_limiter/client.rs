@@ -1,22 +1,24 @@
+use core::num::NonZeroU64;
 use core::time::Duration;
+use std::borrow::Cow;
 
 use axum::http::StatusCode;
 use cached::macros::cached;
-use chrono::{DateTime, Utc};
-use redis::RedisResult;
+use rate_limit::{RateLimiter, RedisStore};
 use redis::aio::ConnectionManager;
+use sqlx::postgres::types::PgInterval;
 use sqlx::{Pool, Postgres};
 use tracing::warn;
 use uuid::Uuid;
 
 use crate::error::{APIError, APIResult};
 use crate::services::rate_limiter::extractor::RateLimitKey;
-use crate::services::rate_limiter::types::QuotaType;
-use crate::services::rate_limiter::{Quota, Status};
+use crate::services::rate_limiter::{Quota, RateLimit, Scope, Status};
 
+/// Applies [`RateLimit`] policies to API clients, shared across replicas through Redis.
 #[derive(Clone)]
 pub(crate) struct RateLimitClient {
-    redis_client: ConnectionManager,
+    limiter: RateLimiter<RedisStore>,
     pg_client: Pool<Postgres>,
     emergency_mode: bool,
 }
@@ -28,155 +30,79 @@ impl RateLimitClient {
         emergency_mode: bool,
     ) -> Self {
         Self {
-            redis_client,
+            limiter: RateLimiter::new(RedisStore::new(redis_client)),
             pg_client,
             emergency_mode,
         }
     }
 
-    pub(crate) async fn apply_limits(
+    /// Counts a request by `client` against `limit`: [`Self::charge`] with a cost of 1.
+    pub(crate) async fn check(
         &self,
-        rate_limit_key: &RateLimitKey,
-        key: &str,
-        quotas: &[Quota],
+        client: &RateLimitKey,
+        limit: RateLimit<'_>,
     ) -> APIResult<Option<Status>> {
-        if quotas.is_empty() {
-            return Ok(None);
-        }
-
-        if let Some(api_key) = rate_limit_key.api_key {
-            // If API key is present, check if it is valid
-            match self.is_api_key_valid(api_key).await {
-                Ok(false) => {
-                    return Err(APIError::status_msg(
-                        StatusCode::FORBIDDEN,
-                        "Invalid API key",
-                    ));
-                }
-                Err(e) => {
-                    warn!("Failed to validate API key due to DB error: {e}, failing open");
-                }
-                Ok(true) => {}
-            }
-        } else if quotas.iter().any(|q| q.r#type.is_key())
-            && !quotas.iter().any(|q| q.r#type.is_ip())
-        {
-            // If API key is not present check if this route requires an API key
-            // Routes that have a key limit, but no IP limit, require an API key
-            // This way we can make routes key-only, by only assigning a key limit
-            return Err(APIError::status_msg(
-                StatusCode::FORBIDDEN,
-                "API key is required for this endpoint",
-            ));
-        } else if self.emergency_mode {
-            // If API key is not present check if the service is in emergency mode
-            // If the service is in emergency mode, only requests with an API key are allowed
-            return Err(APIError::status_msg(
-                StatusCode::SERVICE_UNAVAILABLE,
-                "Service is in emergency mode",
-            ));
-        }
-
-        let prefixed_key = format!("{}:{key}", rate_limit_key.client_id());
-
-        let quotas = self.effective_quotas(rate_limit_key, key, quotas).await;
-
-        // Increment the per-user key and read every quota window in a single round trip.
-        // `ignore_errors` keeps per-command results, so a failing quota check only skips that
-        // quota, exactly like separate round trips did.
-        let current_time = Utc::now();
-        let mut pipe = redis::pipe();
-        pipe.ignore_errors();
-        add_increment_cmds(
-            &mut pipe,
-            &prefixed_key,
-            current_time.timestamp_micros(),
-            longest_period(&quotas, |q| !q.r#type.is_global()).unwrap_or_default(),
-        );
-        for quota in &quotas {
-            add_check_cmds(
-                &mut pipe,
-                quota_key(quota, key, &prefixed_key),
-                quota.period,
-                current_time,
-            );
-        }
-        let results: Vec<RedisResult<redis::Value>> =
-            match pipe.query_async(&mut self.redis_client.clone()).await {
-                Ok(results) => results,
-                Err(e) => {
-                    warn!("Failed to increment rate limit key: {e}, will not apply limits");
-                    return Ok(None);
-                }
-            };
-        let mut results = results.into_iter();
-
-        // If incrementing the per-user key fails, we don't apply any limits
-        if let Some(e) = results.by_ref().take(INCREMENT_CMDS).find_map(Result::err) {
-            warn!("Failed to increment rate limit key: {e}, will not apply limits");
-            return Ok(None);
-        }
-
-        // Check all quotas
-        let mut all_statuses = Vec::new();
-        for &quota in &quotas {
-            let check = parse_check(results.next(), results.next(), current_time);
-            let Ok((requests, oldest_request)) = check else {
-                let quota_key = quota_key(&quota, key, &prefixed_key);
-                warn!("Failed to check rate limit key: {quota_key}, will not apply limits");
-                continue;
-            };
-            let status = Status {
-                quota,
-                requests,
-                oldest_request,
-            };
-            status.raise_if_exceeded()?;
-            all_statuses.push(status);
-        }
-
-        // Increment the global key only after quota checks pass to prevent
-        // a single abusive user from exhausting the global rate limit for everyone
-        if let Some(retention) = longest_period(&quotas, |q| q.r#type.is_global())
-            && let Err(e) = self.increment_key(key, retention).await
-        {
-            warn!("Failed to increment rate limit key: {e}, will not apply limits");
-            return Ok(None);
-        }
-
-        // Return the status with the lowest remaining requests (most critical)
-        Ok(all_statuses.into_iter().min_by_key(Status::remaining))
+        self.charge(client, limit, NonZeroU64::MIN).await
     }
 
-    /// The quotas to enforce: the API key's custom quotas for this route if it has any,
-    /// otherwise the route defaults (minus IP quotas when a key is present and key quotas exist).
-    async fn effective_quotas(
+    /// Charges a request by `client` costing `cost` against `limit`.
+    ///
+    /// An API key must be valid, and its custom quotas for the bucket (`api_key_limits`) replace
+    /// the policy's. Clients without a key are turned away from key-only policies and while the
+    /// service is in emergency mode.
+    ///
+    /// Returns the status of the tightest quota, `None` when no limits were applied.
+    pub(crate) async fn charge(
         &self,
-        rate_limit_key: &RateLimitKey,
-        key: &str,
-        quotas: &[Quota],
-    ) -> Vec<Quota> {
-        match rate_limit_key.api_key {
-            None => quotas.to_vec(),
+        client: &RateLimitKey,
+        limit: RateLimit<'_>,
+        cost: NonZeroU64,
+    ) -> APIResult<Option<Status>> {
+        let quotas: Cow<'_, [Quota]> = match client.api_key {
             Some(api_key) => {
-                let custom_quotas = match self.get_custom_quotas(api_key, key).await {
-                    Ok(quotas) => quotas,
-                    Err(e) => {
+                self.validate_api_key(api_key).await?;
+                let custom = self
+                    .get_custom_quotas(api_key, limit.bucket)
+                    .await
+                    .unwrap_or_else(|e| {
                         warn!("Failed to fetch custom quotas due to DB error: {e}, using defaults");
                         Vec::new()
-                    }
-                };
-                if custom_quotas.is_empty() {
-                    let has_api_key_limits = quotas.iter().any(|q| q.r#type.is_key());
-                    // Remove IP quotas if there are key quotas and api_key is present
-                    quotas
-                        .iter()
-                        .filter(|q| !has_api_key_limits || !q.r#type.is_ip())
-                        .copied()
-                        .collect()
+                    });
+                if custom.is_empty() {
+                    keyed_client_quotas(limit.quotas).collect()
                 } else {
-                    custom_quotas
+                    custom.into()
                 }
+            }
+            None if requires_key(limit.quotas) => {
+                return Err(APIError::status_msg(
+                    StatusCode::FORBIDDEN,
+                    "API key is required for this endpoint",
+                ));
+            }
+            None if self.emergency_mode => {
+                return Err(APIError::status_msg(
+                    StatusCode::SERVICE_UNAVAILABLE,
+                    "Service is in emergency mode",
+                ));
+            }
+            None => limit.quotas.into(),
+        };
+
+        let limit = RateLimit::new(limit.bucket, &quotas);
+        Ok(self.limiter.charge(client, limit, cost).await?)
+    }
+
+    async fn validate_api_key(&self, api_key: Uuid) -> APIResult<()> {
+        match self.is_api_key_valid(api_key).await {
+            Ok(true) => Ok(()),
+            Ok(false) => Err(APIError::status_msg(
+                StatusCode::FORBIDDEN,
+                "Invalid API key",
+            )),
+            Err(e) => {
+                warn!("Failed to validate API key due to DB error: {e}, failing open");
+                Ok(())
             }
         }
     }
@@ -201,117 +127,123 @@ impl RateLimitClient {
     #[cached(
         max_size = 10_000,
         ttl_secs = 600,
-        convert = r#"{ format!("{api_key}-{path}") }"#,
+        convert = r#"{ format!("{api_key}-{bucket}") }"#,
         key = "String",
         in_impl = true
     )]
     async fn get_custom_quotas(
         &self,
         api_key: Uuid,
-        path: &str,
+        bucket: &str,
     ) -> Result<Vec<Quota>, sqlx::Error> {
         let rows = sqlx::query!(
             "SELECT rate_limit, rate_period FROM api_key_limits WHERE key = $1 AND path = $2",
             api_key,
-            path
+            bucket
         )
         .fetch_all(&self.pg_client)
         .await?;
         Ok(rows
-            .iter()
-            .map(|row| Quota {
-                #[expect(clippy::cast_sign_loss, reason = "quota rows hold non-negative limits")]
-                limit: row.rate_limit as usize,
-                #[expect(
-                    clippy::cast_sign_loss,
-                    reason = "quota rows hold non-negative periods"
-                )]
-                period: Duration::from_micros(row.rate_period.microseconds as u64),
-                r#type: QuotaType::Key,
+            .into_iter()
+            .filter_map(|row| {
+                let limit = u64::try_from(row.rate_limit).ok()?;
+                Some(Quota::new(
+                    Scope::Key,
+                    limit,
+                    interval_duration(&row.rate_period)?,
+                ))
             })
             .collect())
     }
-
-    async fn increment_key(&self, key: &str, retention: Duration) -> RedisResult<()> {
-        let mut pipe = redis::pipe();
-        add_increment_cmds(&mut pipe, key, Utc::now().timestamp_micros(), retention);
-        pipe.exec_async(&mut self.redis_client.clone()).await
-    }
 }
 
-/// Number of commands [`add_increment_cmds`] adds to a pipeline.
-const INCREMENT_CMDS: usize = 3;
+fn has(quotas: &[Quota], scope: Scope) -> bool {
+    quotas.iter().any(|q| q.scope == scope)
+}
 
-/// How long a key must keep requests: as long as the longest of its quotas looks back.
-fn longest_period(quotas: &[Quota], reads_key: impl Fn(&Quota) -> bool) -> Option<Duration> {
+/// Whether only clients with an API key are admitted: key quotas but no IP quotas.
+fn requires_key(quotas: &[Quota]) -> bool {
+    has(quotas, Scope::Key) && !has(quotas, Scope::Ip)
+}
+
+/// The quotas a client with an API key is held to: key quotas replace IP quotas if there are any.
+fn keyed_client_quotas(quotas: &[Quota]) -> impl Iterator<Item = Quota> {
+    let skip_ip = has(quotas, Scope::Key);
     quotas
         .iter()
-        .filter(|q| reads_key(q))
-        .map(|q| q.period)
-        .max()
-}
-
-/// Records one request at `current_time` (micros) in the sorted set `key`, trimming entries
-/// older than `retention`.
-fn add_increment_cmds(
-    pipe: &mut redis::Pipeline,
-    key: &str,
-    current_time: i64,
-    retention: Duration,
-) {
-    let retention_micros = i64::try_from(retention.as_micros()).unwrap_or(i64::MAX);
-    pipe.zrembyscore(key, 0, current_time.saturating_sub(retention_micros))
-        .zadd(key, current_time, current_time)
-        .expire(key, i64::try_from(retention.as_secs()).unwrap_or(i64::MAX));
-}
-
-const fn quota_key<'a>(quota: &Quota, key: &'a str, prefixed_key: &'a str) -> &'a str {
-    if quota.r#type.is_global() {
-        key
-    } else {
-        prefixed_key
-    }
-}
-
-/// Adds the two commands that count requests in `key` within `period` before `current_time`
-/// and fetch the oldest of them; [`parse_check`] reads their replies.
-fn add_check_cmds(
-    pipe: &mut redis::Pipeline,
-    key: &str,
-    period: Duration,
-    current_time: DateTime<Utc>,
-) {
-    let start = chrono::TimeDelta::from_std(period)
-        .ok()
-        .and_then(|period| current_time.checked_sub_signed(period))
-        .unwrap_or(DateTime::<Utc>::MIN_UTC)
-        .timestamp_micros();
-    let end = current_time.timestamp_micros();
-    pipe.zcount(key, start, end)
-        .zrangebyscore_limit(key, start, end, 0, 1);
-}
-
-fn parse_check(
-    count: Option<RedisResult<redis::Value>>,
-    oldest: Option<RedisResult<redis::Value>>,
-    current_time: DateTime<Utc>,
-) -> RedisResult<(usize, DateTime<Utc>)> {
-    let (Some(count), Some(oldest)) = (count, oldest) else {
-        return Err(redis::RedisError::from((
-            redis::ErrorKind::Client,
-            "missing rate limit check reply",
-        )));
-    };
-    let num_requests: usize = redis::from_redis_value(count?)?;
-    let oldest_timestamps: Vec<i64> = redis::from_redis_value(oldest?)?;
-    if num_requests == 0 {
-        return Ok((0, current_time));
-    }
-    let oldest_timestamp = oldest_timestamps
-        .first()
+        .filter(move |q| !(skip_ip && q.scope == Scope::Ip))
         .copied()
-        .and_then(DateTime::from_timestamp_micros)
-        .unwrap_or_else(Utc::now);
-    // Subtract 1 to exclude the just-added entry from the increment
-    Ok((num_requests.saturating_sub(1), oldest_timestamp))
+}
+
+/// A Postgres interval as a duration, counting days as 24 hours. `None` for negative intervals
+/// and intervals with months, which have no fixed length.
+fn interval_duration(interval: &PgInterval) -> Option<Duration> {
+    if interval.months != 0 {
+        return None;
+    }
+    let days = u64::try_from(interval.days).ok()?;
+    let micros = u64::try_from(interval.microseconds).ok()?;
+    Duration::from_secs(days.checked_mul(86_400)?).checked_add(Duration::from_micros(micros))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const MIN: Duration = Duration::from_mins(1);
+
+    fn scopes(quotas: impl Iterator<Item = Quota>) -> Vec<Scope> {
+        quotas.map(|q| q.scope).collect()
+    }
+
+    #[test]
+    fn key_quotas_replace_ip_quotas_for_keyed_clients() {
+        let quotas = [
+            Quota::new(Scope::Ip, 1, MIN),
+            Quota::new(Scope::Key, 2, MIN),
+            Quota::new(Scope::Global, 3, MIN),
+        ];
+        assert_eq!(
+            scopes(keyed_client_quotas(&quotas)),
+            [Scope::Key, Scope::Global]
+        );
+        assert!(!requires_key(&quotas));
+
+        let quotas = [
+            Quota::new(Scope::Ip, 1, MIN),
+            Quota::new(Scope::Global, 3, MIN),
+        ];
+        assert_eq!(
+            scopes(keyed_client_quotas(&quotas)),
+            [Scope::Ip, Scope::Global]
+        );
+    }
+
+    #[test]
+    fn key_only_policies_require_a_key() {
+        assert!(requires_key(&[
+            Quota::new(Scope::Key, 2, MIN),
+            Quota::new(Scope::Global, 3, MIN)
+        ]));
+        assert!(!requires_key(&[Quota::new(Scope::Global, 3, MIN)]));
+    }
+
+    #[test]
+    fn interval_durations() {
+        let interval = |months, days, microseconds| PgInterval {
+            months,
+            days,
+            microseconds,
+        };
+        assert_eq!(
+            interval_duration(&interval(0, 0, 60_000_000)),
+            Some(Duration::from_mins(1))
+        );
+        assert_eq!(
+            interval_duration(&interval(0, 1, 3_600_000_000)),
+            Some(Duration::from_hours(25))
+        );
+        assert_eq!(interval_duration(&interval(1, 0, 0)), None);
+        assert_eq!(interval_duration(&interval(0, 0, -1)), None);
+    }
 }

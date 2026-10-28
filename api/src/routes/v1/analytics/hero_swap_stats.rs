@@ -147,7 +147,7 @@ async fn get_hero_swap_stats(
     ),
     tags = ["Analytics"],
     summary = "Hero Swap Stats",
-    description = "
+    description = super::describe("
 Retrieves hero swap statistics for each hero based on historical match data from demo analysis.
 
 A player swapped when the hero they had locked before the pre-game swap window (`pregame_hero_id`) differs from the hero they played. Only players whose pre-game hero was extracted from the demo are counted, so all fields share the same sample:
@@ -158,15 +158,7 @@ A player swapped when the hero they had locked before the pre-game swap window (
 
 Results are cached for **1 hour** based on the combination of query parameters provided.
 
-### Rate Limits:
-> The rate limits below are **shared across all analytics endpoints**.
-
-| Type | Limit |
-| ---- | ----- |
-| IP | 200req/min |
-| Key | 400req/min |
-| Global | 2000req/min |
-    "
+    ")
 )]
 pub(super) async fn hero_swap_stats(
     Query(query): Query<HeroSwapStatsQuery>,

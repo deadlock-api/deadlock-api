@@ -1,0 +1,20 @@
+[package]
+name = "rate-limit"
+version = "0.1.0"
+edition = "2024"
+description = "Sliding-window rate limiting with per-client and global quotas"
+
+[features]
+# A `Store` backed by Redis sorted sets, shared by every replica.
+redis = ["dep:redis", "redis/script"]
+
+[dependencies]
+redis = { workspace = true, optional = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["macros", "rt"] }
+
+[lints]
+workspace = true

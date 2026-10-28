@@ -5,6 +5,7 @@ use crate::context::AppState;
 use crate::error::APIResult;
 use crate::routes::v1::matches::custom::ready::LobbyIdQuery;
 use crate::routes::v1::matches::custom::utils;
+use crate::services::rate_limiter::describe;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 
 #[utoipa::path(
@@ -19,16 +20,13 @@ use crate::services::rate_limiter::extractor::RateLimitKey;
     ),
     tags = ["Custom Matches"],
     summary = "Start Match",
-    description = "
+    description = describe(
+        "
 This endpoint starts a custom match.
 
-### Rate Limits:
-| Type | Limit |
-| ---- | ----- |
-| IP | 10req/h |
-| Key | 100req/30min |
-| Global | 1000req/h |
-"
+    ",
+        utils::QUOTAS,
+    )
 )]
 pub(super) async fn start(
     Path(LobbyIdQuery { lobby_id }): Path<LobbyIdQuery>,

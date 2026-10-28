@@ -174,18 +174,10 @@ async fn get_hero_scoreboard(
     ),
     tags = ["Analytics"],
     summary = "Hero Scoreboard",
-    description = "
+    description = super::describe("
 This endpoint returns the hero scoreboard.
 
-### Rate Limits:
-> The rate limits below are **shared across all analytics endpoints**.
-
-| Type | Limit |
-| ---- | ----- |
-| IP | 200req/min |
-| Key | 400req/min |
-| Global | 2000req/min |
-    "
+    ")
 )]
 pub(super) async fn hero_scoreboard(
     Query(mut query): Query<HeroScoreboardQuery>,

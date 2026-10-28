@@ -11,6 +11,7 @@ use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::matches::salts::insert_salts;
 use crate::routes::v1::matches::types::ClickhouseSalts;
+use crate::services::rate_limiter::{DOCUMENTED_DEFAULT, describe};
 
 const MAX_SALTS_PER_REQUEST: usize = 1000;
 
@@ -26,7 +27,8 @@ const MAX_SALTS_PER_REQUEST: usize = 1000;
     ),
     tags = ["Internal"],
     summary = "Match Salts Ingest",
-    description = "
+    description = describe(
+        "
 You can use this endpoint to help us collecting data.
 
 The endpoint accepts a list of MatchSalts objects, which contain the following fields:
@@ -37,13 +39,9 @@ The endpoint accepts a list of MatchSalts objects, which contain the following f
 - `replay_salt`: The replay salt
 - `username`: The username of the person who submitted the match (defaults to the request's `User-Agent`)
 
-### Rate Limits:
-| Type | Limit |
-| ---- | ----- |
-| IP | 100req/s |
-| Key | - |
-| Global | - |
-    "
+    ",
+        DOCUMENTED_DEFAULT,
+    )
 )]
 pub(super) async fn ingest_salts(
     State(state): State<AppState>,

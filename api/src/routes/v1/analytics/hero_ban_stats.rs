@@ -123,7 +123,7 @@ async fn get_hero_ban_stats(
     ),
     tags = ["Analytics"],
     summary = "Hero Ban Stats",
-    description = "
+    description = super::describe("
 Retrieves ban statistics for each hero based on historical match data from demo analysis.
 
 Only matches with successfully extracted ban data are included. `matches` counts them per bucket, so a hero's ban rate
@@ -131,15 +131,7 @@ is `bans / matches`. Matches where ban extraction failed (empty `banned_hero_ids
 
 Results are cached for **1 hour** based on the combination of query parameters provided.
 
-### Rate Limits:
-> The rate limits below are **shared across all analytics endpoints**.
-
-| Type | Limit |
-| ---- | ----- |
-| IP | 200req/min |
-| Key | 400req/min |
-| Global | 2000req/min |
-    "
+    ")
 )]
 pub(super) async fn hero_ban_stats(
     Query(query): Query<HeroBanStatsQuery>,

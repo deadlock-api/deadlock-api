@@ -6,6 +6,7 @@ use utoipa::IntoParams;
 use crate::context::AppState;
 use crate::error::APIResult;
 use crate::routes::v1::matches::custom::utils;
+use crate::services::rate_limiter::describe;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 
 #[derive(Deserialize, IntoParams, Clone)]
@@ -25,16 +26,13 @@ pub(crate) struct LobbyIdQuery {
     ),
     tags = ["Custom Matches"],
     summary = "Ready Up",
-    description = "
+    description = describe(
+        "
 This endpoint allows you to ready up for a custom match.
 
-### Rate Limits:
-| Type | Limit |
-| ---- | ----- |
-| IP | 10req/h |
-| Key | 100req/30min |
-| Global | 1000req/h |
-"
+    ",
+        utils::QUOTAS,
+    )
 )]
 pub(super) async fn ready_up(
     Path(LobbyIdQuery { lobby_id }): Path<LobbyIdQuery>,
@@ -59,16 +57,13 @@ pub(super) async fn ready_up(
     ),
     tags = ["Custom Matches"],
     summary = "Unready",
-    description = "
+    description = describe(
+        "
 This endpoint allows you to unready for a custom match.
 
-### Rate Limits:
-| Type | Limit |
-| ---- | ----- |
-| IP | 10req/h |
-| Key | 100req/30min |
-| Global | 1000req/h |
-"
+    ",
+        utils::QUOTAS,
+    )
 )]
 pub(super) async fn unready(
     Path(LobbyIdQuery { lobby_id }): Path<LobbyIdQuery>,

@@ -10,6 +10,7 @@ use crate::error::APIResult;
 use crate::routes::v1::builds::query;
 use crate::routes::v1::builds::query::BuildsSearchQuery;
 use crate::routes::v1::builds::structs::Build;
+use crate::services::rate_limiter::{DOCUMENTED_DEFAULT, describe};
 
 pub(crate) async fn fetch_builds(
     pg_client: &sqlx::Pool<sqlx::Postgres>,
@@ -38,16 +39,13 @@ pub(crate) async fn fetch_builds(
     ),
     tags = ["Builds"],
     summary = "Search",
-    description = "
+    description = describe(
+        "
 Search for builds based on various criteria.
 
-### Rate Limits:
-| Type | Limit |
-| ---- | ----- |
-| IP | 100req/s |
-| Key | - |
-| Global | - |
-    "
+    ",
+        DOCUMENTED_DEFAULT,
+    )
 )]
 pub(super) async fn search_builds(
     Query(params): Query<BuildsSearchQuery>,

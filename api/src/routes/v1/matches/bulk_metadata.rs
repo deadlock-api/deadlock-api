@@ -21,13 +21,22 @@ use crate::error::{APIError, APIResult};
 use crate::routes::v1::matches::to_fetch::queue_unknown_matches;
 use crate::routes::v1::matches::types::{GameMode, MatchMode, reject_brawl_badge_filter};
 use crate::routes::v1::players::without_protected;
-use crate::services::rate_limiter::Quota;
 use crate::services::rate_limiter::extractor::RateLimitKey;
+use crate::services::rate_limiter::{Quota, RateLimit, Scope, describe};
 use crate::utils::json_stream::{ResponseFormat, stream_rows};
 use crate::utils::parse::{
     comma_separated_deserialize_option, comma_separated_steam_ids_option, default_true,
 };
 use crate::utils::types::SortDirectionAsc;
+
+const RATE_LIMIT: RateLimit = RateLimit::new(
+    "match_metadata_bulk",
+    &[
+        Quota::new(Scope::Ip, 30, Duration::from_mins(1)),
+        Quota::new(Scope::Key, 30, Duration::from_secs(10)),
+        Quota::new(Scope::Global, 600, Duration::from_mins(1)),
+    ],
+);
 
 const fn default_limit() -> u32 {
     1000
@@ -821,7 +830,8 @@ fn fetch_lines(
     ),
     tags = ["Matches"],
     summary = "Bulk Metadata",
-    description = "
+    description = describe(
+        "
 This endpoints lets you fetch multiple match metadata at once. The response is a JSON array of match metadata.
 
 When player info is included, each player object contains `hero_build_id` and `pregame_hero_id` fields (if available) from demo analysis.
@@ -830,13 +840,9 @@ When player info is included, each player object contains `hero_build_id` and `p
 
 > **Note:** The `pregame_hero_id` is the hero the player had locked before the pre-game swap window (`null` if unknown). A player swapped heroes when it differs from their `hero_id`.
 
-### Rate Limits:
-| Type | Limit |
-| ---- | ----- |
-| IP | 30req/min |
-| Key | 30req/10s |
-| Global | 600req/min |
-    "
+    ",
+        RATE_LIMIT,
+    )
 )]
 pub(super) async fn bulk_metadata(
     Query(mut query): Query<BulkMatchMetadataQuery>,
@@ -857,15 +863,7 @@ pub(super) async fn bulk_metadata(
     }
     state
         .rate_limit_client
-        .apply_limits(
-            &rate_limit_key,
-            "match_metadata_bulk",
-            &[
-                Quota::ip_limit(30, Duration::from_mins(1)),
-                Quota::key_limit(30, Duration::from_secs(10)),
-                Quota::global_limit(600, Duration::from_mins(1)),
-            ],
-        )
+        .check(&rate_limit_key, RATE_LIMIT)
         .await?;
     if query.limit == 0 || query.limit > 10000 {
         return Err(APIError::status_msg(

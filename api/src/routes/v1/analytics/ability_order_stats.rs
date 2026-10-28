@@ -425,18 +425,10 @@ async fn validate_query(state: &AppState, query: &mut AbilityOrderStatsQuery) ->
     ),
     tags = ["Analytics"],
     summary = "Ability Order Stats",
-    description = "
+    description = super::describe("
 Retrieves statistics for the ability order of a hero.
 
-### Rate Limits:
-> The rate limits below are **shared across all analytics endpoints**.
-
-| Type | Limit |
-| ---- | ----- |
-| IP | 200req/min |
-| Key | 400req/min |
-| Global | 2000req/min |
-    "
+    ")
 )]
 pub(super) async fn ability_order_stats(
     Query(mut query): Query<AbilityOrderStatsQuery>,
@@ -459,22 +451,14 @@ pub(super) async fn ability_order_stats(
     ),
     tags = ["Analytics"],
     summary = "Ability Order Tree",
-    description = "
+    description = super::describe("
 Retrieves the ability upgrade orders of a hero as a tree: one node per order prefix, with the stats of every player
 whose order starts with it. `min_matches` applies to each node, so a node counts all its players even when their full
 orders are rare (which `/ability-order-stats`, grouping by full order, leaves out). A node's parent is always present.
 
 In `street_brawl`, ability points come in blocks, and the upgrades within one block are sorted by ability id.
 
-### Rate Limits:
-> The rate limits below are **shared across all analytics endpoints**.
-
-| Type | Limit |
-| ---- | ----- |
-| IP | 200req/min |
-| Key | 400req/min |
-| Global | 2000req/min |
-    "
+    ")
 )]
 pub(super) async fn ability_order_tree(
     Query(mut query): Query<AbilityOrderStatsQuery>,
@@ -498,7 +482,7 @@ pub(super) async fn ability_order_tree(
     ),
     tags = ["Analytics"],
     summary = "Ability Max First Stats",
-    description = "
+    description = super::describe("
 Retrieves which ability the players of a hero max first: one row per ability, with every player whose upgrade order
 unlocks and upgrades it three times before any other ability, and one row (`ability_id` null) for the players who maxed
 none. Every player is in exactly one row, so the rows add up to all the hero's players, and `min_matches` never drops
@@ -506,15 +490,7 @@ the null row. Unlike summing `/ability-order-tree` nodes, no player is lost to `
 
 In `street_brawl`, ability points come in blocks, and the upgrades within one block are sorted by ability id.
 
-### Rate Limits:
-> The rate limits below are **shared across all analytics endpoints**.
-
-| Type | Limit |
-| ---- | ----- |
-| IP | 200req/min |
-| Key | 400req/min |
-| Global | 2000req/min |
-    "
+    ")
 )]
 pub(super) async fn ability_max_first_stats(
     Query(mut query): Query<AbilityOrderStatsQuery>,

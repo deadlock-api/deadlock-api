@@ -16,6 +16,7 @@ use crate::routes::v1::matches::types::GameMode;
 use crate::routes::v1::players::ensure_not_protected;
 use crate::routes::v1::players::roster_stats::{RosterSide, RosterStatsQuery};
 use crate::routes::v1::players::steam::route::SteamProfileBatcher;
+use crate::services::rate_limiter::{DOCUMENTED_DEFAULT, describe};
 use crate::utils::sql::{cached_ch_query, impl_match_info};
 use crate::utils::types::AccountIdQuery;
 
@@ -134,16 +135,13 @@ async fn get_mate_stats(
     ),
     tags = ["Players"],
     summary = "Mate Stats",
-    description = "
+    description = describe(
+        "
 This endpoint returns the mate stats.
 
-### Rate Limits:
-| Type | Limit |
-| ---- | ----- |
-| IP | 100req/s |
-| Key | - |
-| Global | - |
-    "
+    ",
+        DOCUMENTED_DEFAULT,
+    )
 )]
 pub(super) async fn mate_stats(
     Path(AccountIdQuery { account_id }): Path<AccountIdQuery>,

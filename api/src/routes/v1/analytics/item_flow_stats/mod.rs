@@ -972,7 +972,7 @@ async fn get_item_flow_stats(
     ),
     tags = ["Analytics"],
     summary = "Item Flow Stats",
-    description = "
+    description = crate::routes::v1::analytics::describe("
 Retrieves item build-flow statistics: per-phase item win/pick rates and the transitions between them.
 
 Items are grouped into columns by the in-match phase they were bought in: fixed time phases (0-9m,
@@ -997,15 +997,7 @@ normal item they replaced still is.
 
 Results are cached for **1 hour** based on the unique combination of query parameters provided.
 
-### Rate Limits:
-> The rate limits below are **shared across all analytics endpoints**.
-
-| Type | Limit |
-| ---- | ----- |
-| IP | 200req/min |
-| Key | 400req/min |
-| Global | 2000req/min |
-    "
+    ")
 )]
 pub(super) async fn item_flow_stats(
     Query(mut query): Query<ItemFlowStatsQuery>,

@@ -23,7 +23,7 @@ use crate::services::assets::client::AssetsClient;
 use crate::services::assets::versions::items::Item;
 use crate::services::assets::versions::items::types::{ItemSlotType, ItemType};
 use crate::services::rate_limiter::extractor::RateLimitKey;
-use crate::services::rate_limiter::{Quota, RateLimitClient};
+use crate::services::rate_limiter::{Quota, RateLimit, RateLimitClient, Scope};
 use crate::services::steam::client::SteamClient;
 use crate::services::steam::types::FeedItem;
 
@@ -57,11 +57,14 @@ pub(super) struct McpServer {
 /// script peaked at 22 queries a minute and 281 a day, while the permanent pollers ran 768 to
 /// 10,800 a day. The daily quota is what turns a poller away; the shorter ones stop bursts from
 /// filling the query slots. An API key gets its own bucket and can be given custom quotas.
-const QUERY_QUOTAS: [Quota; 3] = [
-    Quota::ip_limit(30, Duration::from_mins(1)),
-    Quota::ip_limit(300, Duration::from_hours(1)),
-    Quota::ip_limit(400, Duration::from_hours(24)),
-];
+const QUERY_RATE_LIMIT: RateLimit = RateLimit::new(
+    "mcp_query",
+    &[
+        Quota::new(Scope::Ip, 30, Duration::from_mins(1)),
+        Quota::new(Scope::Ip, 300, Duration::from_hours(1)),
+        Quota::new(Scope::Ip, 400, Duration::from_hours(24)),
+    ],
+);
 
 /// Built once: the server is created per request, and every tool shares the same output schema
 /// and annotations.
@@ -217,13 +220,9 @@ impl McpServer {
         let key = RateLimitKey::from_request_parts(&mut parts, &())
             .await
             .ok()?;
-        match self
-            .rate_limit
-            .apply_limits(&key, "mcp_query", &QUERY_QUOTAS)
-            .await
-        {
+        match self.rate_limit.check(&key, QUERY_RATE_LIMIT).await {
             Ok(_) => None,
-            Err(APIError::RateLimitExceeded { status }) => Some(query_error(
+            Err(APIError::RateLimitExceeded(status)) => Some(query_error(
                 format!(
                     "Rate limit exceeded: {} queries per {} seconds. Next query allowed in {} \
                      seconds. This server is meant for coding agents running a few queries, not \

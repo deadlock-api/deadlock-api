@@ -17,8 +17,17 @@ use super::{OutputFormat, job_id};
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::matches::salts::{fetch_match_salts, replay_file_url};
-use crate::services::rate_limiter::Quota;
 use crate::services::rate_limiter::extractor::RateLimitKey;
+use crate::services::rate_limiter::{Quota, RateLimit, Scope, describe};
+
+const RATE_LIMIT: RateLimit = RateLimit::new(
+    "demo_query",
+    &[
+        Quota::new(Scope::Ip, 200, Duration::from_hours(1)),
+        Quota::new(Scope::Key, 400, Duration::from_hours(1)),
+        Quota::new(Scope::Global, 600, Duration::from_hours(1)),
+    ],
+);
 
 #[derive(Deserialize, ToSchema)]
 pub(super) struct DemoQueryRequest {
@@ -53,7 +62,8 @@ pub(super) struct DemoQueryJobResponse {
     ),
     tags = ["Demo"],
     summary = "Demo Query",
-    description = "
+    description = describe(
+        "
 Submit a SQL query against a match's demo file. The work (download + decompress + parse +
 query) takes ~55s, so this is asynchronous: the endpoint returns a `job_id` you poll via
 `/demo/query/{job_id}`. Once done, the status response carries a public URL to the result
@@ -68,13 +78,9 @@ Identical `(match_id, query, format)` submissions are deduplicated and reuse a c
 at a `CCitadelObserverPawn`, not the hero's `CCitadelPlayerPawn`. Join controllers to hero pawns by
 hero id or pawn entity index rather than through `m_hPawn`.
 
-### Rate Limits:
-| Type | Limit |
-| ---- | ----- |
-| IP | 200req/h |
-| Key | 400req/h |
-| Global | 600req/h |
-"
+    ",
+        RATE_LIMIT,
+    )
 )]
 pub(super) async fn submit(
     rate_limit_key: RateLimitKey,
@@ -90,15 +96,7 @@ pub(super) async fn submit(
 
     state
         .rate_limit_client
-        .apply_limits(
-            &rate_limit_key,
-            "demo_query",
-            &[
-                Quota::ip_limit(200, Duration::from_hours(1)),
-                Quota::key_limit(400, Duration::from_hours(1)),
-                Quota::global_limit(600, Duration::from_hours(1)),
-            ],
-        )
+        .check(&rate_limit_key, RATE_LIMIT)
         .await?;
 
     let id = job_id(req.match_id, &req.query, req.format);

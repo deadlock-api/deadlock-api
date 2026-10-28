@@ -565,18 +565,10 @@ async fn get_game_stats(
     ),
     tags = ["Analytics"],
     summary = "Game Stats",
-    description = "
+    description = super::describe("
 Retrieves aggregate game-level statistics.
 
-### Rate Limits:
-> The rate limits below are **shared across all analytics endpoints**.
-
-| Type | Limit |
-| ---- | ----- |
-| IP | 200req/min |
-| Key | 400req/min |
-| Global | 2000req/min |
-    "
+    ")
 )]
 pub(crate) async fn game_stats(
     Query(mut query): Query<GameStatsQuery>,

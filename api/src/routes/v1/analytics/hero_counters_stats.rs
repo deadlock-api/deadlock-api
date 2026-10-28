@@ -363,22 +363,14 @@ async fn get_hero_counter_stats(
     ),
     tags = ["Analytics"],
     summary = "Hero Counter Stats",
-    description = "
+    description = super::describe("
 Retrieves hero-versus-hero matchup statistics based on historical match data.
 
 This endpoint analyzes completed matches to calculate how often a specific hero (`hero_id`) wins against an enemy hero (`enemy_hero_id`) and the total number of times they have faced each other under the specified filter conditions.
 
 Results are cached for **1 hour** based on the combination of query parameters provided. Subsequent identical requests within this timeframe will receive the cached response.
 
-### Rate Limits:
-> The rate limits below are **shared across all analytics endpoints**.
-
-| Type | Limit |
-| ---- | ----- |
-| IP | 200req/min |
-| Key | 400req/min |
-| Global | 2000req/min |
-    "
+    ")
 )]
 pub(super) async fn hero_counters_stats(
     Query(mut query): Query<HeroCounterStatsQuery>,

@@ -386,7 +386,7 @@ fn retain_valid_builds(stats: &[HeroBuildStats], valid_build_ids: &[i32]) -> Vec
     ),
     tags = ["Analytics"],
     summary = "Hero Build Stats",
-    description = "
+    description = super::describe("
 Retrieves performance statistics for hero builds based on historical match data from demo analysis.
 
 Only includes builds that exist in the hero builds database.
@@ -395,15 +395,7 @@ The `hero_build_id` is the first build the player had selected when the game sta
 
 Results are cached for **1 hour** based on the combination of query parameters provided.
 
-### Rate Limits:
-> The rate limits below are **shared across all analytics endpoints**.
-
-| Type | Limit |
-| ---- | ----- |
-| IP | 200req/min |
-| Key | 400req/min |
-| Global | 2000req/min |
-    "
+    ")
 )]
 pub(super) async fn hero_build_stats(
     Path(HeroBuildStatsPath { hero_id }): Path<HeroBuildStatsPath>,

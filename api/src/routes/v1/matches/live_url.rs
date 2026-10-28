@@ -22,12 +22,36 @@ use valveprotos::gcsdk::EgcPlatform;
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::matches::to_fetch::queue_live_match;
-use crate::services::rate_limiter::Quota;
 use crate::services::rate_limiter::extractor::RateLimitKey;
+use crate::services::rate_limiter::{DOCUMENTED_DEFAULT, Quota, RateLimit, Scope, describe};
 use crate::services::steam::client::SteamClient;
 use crate::services::steam::types::SteamProxyQuery;
 use crate::utils::broadcast_url::validate_broadcast_url;
 use crate::utils::types::MatchIdQuery;
+
+/// Spectating for clients with an API key. Anonymous callers (thousands of IPs spectating one match
+/// each) and API keys draw from separate global pools, so anonymous demand cannot starve keyed
+/// clients. Keys with custom `spectate` limits in `api_key_limits` replace these quotas, global
+/// pool included.
+pub(super) const SPECTATE_RATE_LIMIT: RateLimit = RateLimit::new(
+    "spectate",
+    &[
+        Quota::new(Scope::Key, 10, Duration::from_mins(10)),
+        Quota::new(Scope::Key, 50, Duration::from_hours(1)),
+        Quota::new(Scope::Global, 20, Duration::from_mins(10)),
+        Quota::new(Scope::Global, 100, Duration::from_hours(1)),
+    ],
+);
+
+/// Spectating for clients without an API key.
+pub(super) const ANONYMOUS_SPECTATE_RATE_LIMIT: RateLimit = RateLimit::new(
+    "spectate_anon",
+    &[
+        Quota::new(Scope::Ip, 6, Duration::from_hours(1)),
+        Quota::new(Scope::Global, 60, Duration::from_mins(10)),
+        Quota::new(Scope::Global, 300, Duration::from_hours(1)),
+    ],
+);
 
 const SPECTATED_MATCHES_KEY: &str = "spectated_matches";
 const LIVE_URL_TTL_SECS: i64 = 60 * 60;
@@ -152,7 +176,8 @@ pub(super) async fn spectate_match(
     ),
     tags = ["Matches"],
     summary = "Live Broadcast URL",
-    description = "
+    description = describe(
+        "
 This endpoints spectates a match and returns the live URL to be used in any demofile broadcast parser.
 
 Example Parsers:
@@ -161,14 +186,12 @@ Example Parsers:
 
 Only spectating counts against these limits; a match spectated within the last hour is served from cache.
 
-### Rate Limits:
-| Type | Limit |
-| ---- | ----- |
-| IP | 6req/h |
-| Key | 10req/10m, 50req/h |
-| Global (without API key) | 60req/10m, 300req/h |
-| Global (with API key) | 20req/10m, 100req/h |
-    "
+    ",
+        [
+            ("Without API key", ANONYMOUS_SPECTATE_RATE_LIMIT.quotas),
+            ("With API key", SPECTATE_RATE_LIMIT.quotas),
+        ],
+    )
 )]
 pub(super) async fn url(
     Path(MatchIdQuery { match_id }): Path<MatchIdQuery>,
@@ -243,33 +266,12 @@ pub(super) async fn resolve_broadcast_url(
         ));
     }
 
-    // Anonymous callers (thousands of IPs spectating one match each) and API keys draw from
-    // separate global pools, so anonymous demand cannot starve keyed clients. Keys with custom
-    // `spectate` limits in `api_key_limits` replace these quotas, global pool included.
-    let (pool, quotas) = if rate_limit_key.api_key.is_some() {
-        (
-            "spectate",
-            vec![
-                Quota::key_limit(10, Duration::from_mins(10)),
-                Quota::key_limit(50, Duration::from_hours(1)),
-                Quota::global_limit(20, Duration::from_mins(10)),
-                Quota::global_limit(100, Duration::from_hours(1)),
-            ],
-        )
+    let limit = if rate_limit_key.api_key.is_some() {
+        SPECTATE_RATE_LIMIT
     } else {
-        (
-            "spectate_anon",
-            vec![
-                Quota::ip_limit(6, Duration::from_hours(1)),
-                Quota::global_limit(60, Duration::from_mins(10)),
-                Quota::global_limit(300, Duration::from_hours(1)),
-            ],
-        )
+        ANONYMOUS_SPECTATE_RATE_LIMIT
     };
-    state
-        .rate_limit_client
-        .apply_limits(rate_limit_key, pool, &quotas)
-        .await?;
+    state.rate_limit_client.check(rate_limit_key, limit).await?;
 
     let live_events_pool = match rate_limit_key.api_key {
         Some(api_key) => uses_live_events_pool(&state.pg_client, api_key)
@@ -335,20 +337,17 @@ async fn store_live_urls(
     ),
     tags = ["Matches"],
     summary = "Live Broadcast URLs",
-    description = "
+    description = describe(
+        "
 Returns a list of all currently available live broadcast URLs.
 
 These can be used in any demofile broadcast parser:
 - [Demofile-Net](https://github.com/saul/demofile-net)
 - [Haste](https://github.com/blukai/haste/)
 
-### Rate Limits:
-| Type | Limit |
-| ---- | ----- |
-| IP | 100req/s |
-| Key | - |
-| Global | - |
-    "
+    ",
+        DOCUMENTED_DEFAULT,
+    )
 )]
 pub(super) async fn urls(State(state): State<AppState>) -> APIResult<impl IntoResponse> {
     let values: Vec<String> = state
@@ -375,7 +374,8 @@ pub(super) async fn urls(State(state): State<AppState>) -> APIResult<impl IntoRe
     ),
     tags = ["Matches"],
     summary = "Ingest Live Broadcast URLs",
-    description = "
+    description = describe(
+        "
 Submit one or more live broadcast URLs so they show up in the `GET /live/urls` listing.
 
 Each submitted URL is stored for 1 hour; re-submit periodically to keep a match listed
@@ -385,13 +385,9 @@ These URLs can be used in any demofile broadcast parser:
 - [Demofile-Net](https://github.com/saul/demofile-net)
 - [Haste](https://github.com/blukai/haste/)
 
-### Rate Limits:
-| Type | Limit |
-| ---- | ----- |
-| IP | 100req/s |
-| Key | - |
-| Global | - |
-    "
+    ",
+        DOCUMENTED_DEFAULT,
+    )
 )]
 pub(super) async fn ingest_urls(
     State(state): State<AppState>,

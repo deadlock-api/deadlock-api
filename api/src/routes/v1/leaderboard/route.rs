@@ -28,6 +28,7 @@ use crate::error::{APIError, APIResult};
 use crate::routes::v1::leaderboard::types::{
     HeroLeaderboardClickhouse, Leaderboard, LeaderboardClickhouse, LeaderboardRegion,
 };
+use crate::services::rate_limiter::{DOCUMENTED_DEFAULT, describe};
 use crate::services::steam::types::{
     SteamProxyError, SteamProxyQuery, SteamProxyRawResponse, SteamProxyResponse,
 };
@@ -302,7 +303,8 @@ async fn fetch_leaderboard(
     ),
     tags = ["Leaderboard"],
     summary = "Leaderboard as Protobuf",
-    description = "
+    description = describe(
+        "
 Returns the leaderboard, serialized as protobuf message.
 
 You have to decode the protobuf message.
@@ -316,13 +318,9 @@ Relevant Protobuf Message:
 
 Valve updates the leaderboard once per hour.
 
-### Rate Limits:
-| Type | Limit |
-| ---- | ----- |
-| IP | 100req/s |
-| Key | - |
-| Global | - |
-    "
+    ",
+        DOCUMENTED_DEFAULT,
+    )
 )]
 pub(super) async fn leaderboard_raw(
     State(state): State<AppState>,
@@ -343,7 +341,8 @@ pub(super) async fn leaderboard_raw(
     ),
     tags = ["Leaderboard"],
     summary = "Hero Leaderboard as Protobuf",
-    description = "
+    description = describe(
+        "
 Returns the leaderboard for a specific hero, serialized as protobuf message.
 
 You have to decode the protobuf message.
@@ -357,13 +356,9 @@ Relevant Protobuf Message:
 
 Valve updates the leaderboard once per hour.
 
-### Rate Limits:
-| Type | Limit |
-| ---- | ----- |
-| IP | 100req/s |
-| Key | - |
-| Global | - |
-    "
+    ",
+        DOCUMENTED_DEFAULT,
+    )
 )]
 pub(super) async fn leaderboard_hero_raw(
     State(state): State<AppState>,
@@ -385,20 +380,17 @@ pub(super) async fn leaderboard_hero_raw(
     ),
     tags = ["Leaderboard"],
     summary = "Leaderboard",
-    description = "
+    description = describe(
+        "
 Returns the leaderboard.
 
 ### Note:
 
 Valve updates the leaderboard once per hour.
 
-### Rate Limits:
-| Type | Limit |
-| ---- | ----- |
-| IP | 100req/s |
-| Key | - |
-| Global | - |
-    "
+    ",
+        DOCUMENTED_DEFAULT,
+    )
 )]
 pub(super) async fn leaderboard(
     State(state): State<AppState>,
@@ -421,20 +413,17 @@ pub(super) async fn leaderboard(
     ),
     tags = ["Leaderboard"],
     summary = "Hero Leaderboard",
-    description = "
+    description = describe(
+        "
 Returns the leaderboard for a specific hero.
 
 ### Note:
 
 Valve updates the leaderboard once per hour.
 
-### Rate Limits:
-| Type | Limit |
-| ---- | ----- |
-| IP | 100req/s |
-| Key | - |
-| Global | - |
-    "
+    ",
+        DOCUMENTED_DEFAULT,
+    )
 )]
 pub(super) async fn leaderboard_hero(
     State(state): State<AppState>,

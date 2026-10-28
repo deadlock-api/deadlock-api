@@ -10,6 +10,7 @@ use utoipa::ToSchema;
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
+use crate::services::rate_limiter::{DOCUMENTED_DEFAULT, describe};
 
 #[derive(Debug, Copy, Clone, Serialize, Deserialize, Default, ToSchema)]
 pub struct StatusServices {
@@ -75,16 +76,13 @@ async fn check_health(
     ),
     tags = ["Info"],
     summary = "Health Check",
-    description = "
+    description = describe(
+        "
 Checks the health of the services.
 
-### Rate Limits:
-| Type | Limit |
-| ---- | ----- |
-| IP | 100req/s |
-| Key | - |
-| Global | - |
-    "
+    ",
+        DOCUMENTED_DEFAULT,
+    )
 )]
 pub(super) async fn health_check(State(state): State<AppState>) -> APIResult<Json<Status>> {
     if crate::SHUTTING_DOWN.load(core::sync::atomic::Ordering::Relaxed) {

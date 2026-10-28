@@ -10,9 +10,21 @@ use tracing::{instrument, warn};
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
-use crate::services::rate_limiter::Quota;
 use crate::services::rate_limiter::extractor::RateLimitKey;
+use crate::services::rate_limiter::{Quota, RateLimit, Scope};
 use crate::utils::parse::{parse_steam_id, steamid3_to_steamid64};
+
+pub(super) const RATE_LIMIT: RateLimit = RateLimit::new(
+    "steam_refresh",
+    &[
+        Quota::new(Scope::Ip, 3, Duration::from_mins(1)),
+        Quota::new(Scope::Ip, 15, Duration::from_hours(1)),
+        Quota::new(Scope::Key, 10, Duration::from_mins(1)),
+        Quota::new(Scope::Key, 60, Duration::from_hours(1)),
+        Quota::new(Scope::Global, 30, Duration::from_mins(1)),
+        Quota::new(Scope::Global, 200, Duration::from_hours(1)),
+    ],
+);
 
 /// Matches the `GetPlayerSummaries` upstream batch size so a single summary
 /// call covers the whole request.
@@ -95,18 +107,7 @@ pub(super) async fn refresh_steam_profiles(
 ) -> APIResult<Vec<SteamProfileInsertRow>> {
     state
         .rate_limit_client
-        .apply_limits(
-            rate_limit_key,
-            "steam_refresh",
-            &[
-                Quota::ip_limit(3, Duration::from_mins(1)),
-                Quota::ip_limit(15, Duration::from_hours(1)),
-                Quota::key_limit(10, Duration::from_mins(1)),
-                Quota::key_limit(60, Duration::from_hours(1)),
-                Quota::global_limit(30, Duration::from_mins(1)),
-                Quota::global_limit(200, Duration::from_hours(1)),
-            ],
-        )
+        .check(rate_limit_key, RATE_LIMIT)
         .await?;
 
     if account_ids.is_empty() {

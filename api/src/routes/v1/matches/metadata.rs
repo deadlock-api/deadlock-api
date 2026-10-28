@@ -30,12 +30,21 @@ use valveprotos::deadlock::{
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
-use crate::routes::v1::matches::salts::fetch_match_salts;
+use crate::routes::v1::matches::salts::{self, fetch_match_salts};
 use crate::services::clickhouse_batcher::{BatchQueryMulti, ClickhouseBatcherMulti, in_clause};
-use crate::services::rate_limiter::Quota;
 use crate::services::rate_limiter::extractor::RateLimitKey;
+use crate::services::rate_limiter::{DOCUMENTED_DEFAULT, Quota, RateLimit, Scope, describe};
 use crate::utils::compression::is_zstd;
 use crate::utils::types::MatchIdQuery;
+
+const S3_RATE_LIMIT: RateLimit = RateLimit::new(
+    "match_metadata_s3",
+    &[
+        Quota::new(Scope::Ip, 100, Duration::from_secs(10)),
+        Quota::new(Scope::Key, 100, Duration::from_secs(1)),
+        Quota::new(Scope::Global, 700, Duration::from_secs(1)), // This is a limitation by Hetzner Object Store
+    ],
+);
 
 #[derive(Debug, Clone, Row, Deserialize)]
 pub(crate) struct DemoPlayerRow {
@@ -219,15 +228,7 @@ async fn fetch_match_metadata_raw(
 
     state
         .rate_limit_client
-        .apply_limits(
-            rate_limit_key,
-            "match_metadata_s3",
-            &[
-                Quota::ip_limit(100, Duration::from_secs(10)),
-                Quota::key_limit(100, Duration::from_secs(1)),
-                Quota::global_limit(700, Duration::from_secs(1)), // This is a limitation by Hetzner Object Store
-            ],
-        )
+        .check(rate_limit_key, S3_RATE_LIMIT)
         .await?;
 
     // If not in cache, fetch from S3
@@ -304,7 +305,8 @@ async fn parse_match_metadata_raw(raw_data: &[u8]) -> APIResult<CMsgMatchMetaDat
     ),
     tags = ["Matches"],
     summary = "Metadata as Protobuf",
-    description = "
+    description = describe(
+        "
 This endpoints returns the raw .meta.bz2 file for the given `match_id`.
 
 You have to decompress it and decode the protobuf message.
@@ -315,13 +317,13 @@ Relevant Protobuf Messages:
 - CMsgMatchMetaData
 - CMsgMatchMetaDataContents
 
-### Rate Limits:
-| Type | Limit |
-| ---- | ----- |
-| IP | From Cache: 100req/s<br>From S3: 100req/10s<br>From Steam: 3req/h |
-| Key | From Cache: 100req/s<br>From S3: 100req/s<br>From Steam: 300req/h |
-| Global | From Cache: 100req/s<br>From S3: 700req/s<br>From Steam: 1500req/h |
-    "
+    ",
+        [
+            ("From cache", DOCUMENTED_DEFAULT),
+            ("From S3", S3_RATE_LIMIT.quotas),
+            ("From Steam", salts::RATE_LIMIT.quotas),
+        ],
+    )
 )]
 pub(super) async fn metadata_raw(
     Path(MatchIdQuery { match_id }): Path<MatchIdQuery>,
@@ -375,7 +377,8 @@ pub(super) async fn metadata_raw(
     ),
     tags = ["Matches"],
     summary = "Metadata",
-    description = "
+    description = describe(
+        "
 This endpoint returns the match metadata for the given `match_id` parsed into JSON.
 
 Each player object is enriched with a `hero_build_id` field (if available) from demo analysis.
@@ -390,13 +393,13 @@ Relevant Protobuf Messages:
 - CMsgMatchMetaData
 - CMsgMatchMetaDataContents
 
-### Rate Limits:
-| Type | Limit |
-| ---- | ----- |
-| IP | From Cache: 100req/s<br>From S3: 100req/10s<br>From Steam: 3req/h |
-| Key | From Cache: 100req/s<br>From S3: 100req/s<br>From Steam: 300req/h |
-| Global | From Cache: 100req/s<br>From S3: 700req/s<br>From Steam: 1500req/h |
-    "
+    ",
+        [
+            ("From cache", DOCUMENTED_DEFAULT),
+            ("From S3", S3_RATE_LIMIT.quotas),
+            ("From Steam", salts::RATE_LIMIT.quotas),
+        ],
+    )
 )]
 pub(super) async fn metadata(
     Path(MatchIdQuery { match_id }): Path<MatchIdQuery>,

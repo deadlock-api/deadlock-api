@@ -38,7 +38,7 @@ use utoipa_axum::routes;
 use crate::context::AppState;
 use crate::middleware::cache::CacheControlMiddleware;
 use crate::middleware::rate_limit::{RateLimitState, rate_limit};
-use crate::services::rate_limiter::Quota;
+use crate::services::rate_limiter::{self, Limits, Quota, RateLimit, Scope};
 
 #[derive(OpenApi)]
 #[openapi(tags((name = "Analytics", description = "
@@ -48,16 +48,30 @@ Features scoreboards for both heroes and players.
 ")))]
 struct ApiDoc;
 
+/// Shared by all analytics endpoints.
+const RATE_LIMIT: RateLimit = RateLimit::new(
+    "analytics",
+    &[
+        Quota::new(Scope::Ip, 200, Duration::from_mins(1)),
+        Quota::new(Scope::Key, 400, Duration::from_mins(1)),
+        Quota::new(Scope::Global, 2000, Duration::from_mins(1)),
+    ],
+);
+
+/// An endpoint description followed by the rate limits all analytics endpoints share.
+fn describe(description: &str) -> String {
+    rate_limiter::describe(
+        description,
+        Limits::from(RATE_LIMIT)
+            .note("The rate limits below are **shared across all analytics endpoints**."),
+    )
+}
+
 pub(super) fn router(state: &AppState) -> OpenApiRouter<AppState> {
-    let rate_limit_state = RateLimitState::new(
-        state.rate_limit_client.clone(),
-        "analytics",
-        vec![
-            Quota::ip_limit(200, Duration::from_mins(1)),
-            Quota::key_limit(400, Duration::from_mins(1)),
-            Quota::global_limit(2000, Duration::from_mins(1)),
-        ],
-    );
+    let rate_limit_state = RateLimitState {
+        client: state.rate_limit_client.clone(),
+        limit: RATE_LIMIT,
+    };
 
     OpenApiRouter::with_openapi(ApiDoc::openapi()).merge(
         OpenApiRouter::new()

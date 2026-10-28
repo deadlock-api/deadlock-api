@@ -9,6 +9,7 @@ use utoipa::{IntoParams, ToSchema};
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
+use crate::services::rate_limiter::{DOCUMENTED_DEFAULT, describe};
 
 #[derive(Serialize, ToSchema)]
 struct GetCustomMatchIdResponse {
@@ -49,16 +50,13 @@ async fn get_party_match_id(
     ),
     tags = ["Custom Matches"],
     summary = "Get Match ID",
-    description = "
+    description = describe(
+        "
 This endpoint allows you to get the match id of a custom match.
 
-### Rate Limits:
-| Type | Limit |
-| ---- | ----- |
-| IP | 100req/s |
-| Key | - |
-| Global | - |
-"
+    ",
+        DOCUMENTED_DEFAULT,
+    )
 )]
 pub(super) async fn get_custom(
     Path(PartyIdQuery { party_id }): Path<PartyIdQuery>,

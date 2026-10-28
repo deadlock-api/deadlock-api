@@ -14,8 +14,8 @@ use valveprotos::deadlock::{
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
-use crate::services::rate_limiter::Quota;
 use crate::services::rate_limiter::extractor::RateLimitKey;
+use crate::services::rate_limiter::{Quota, RateLimit, Scope};
 use crate::services::steam::client::SteamClient;
 use crate::services::steam::types::SteamProxyQuery;
 
@@ -59,24 +59,21 @@ pub(super) async fn get_party_info_with_retries(
     }
 }
 
-/// Applies the rate limits every custom match endpoint shares, bucketed by `endpoint`.
+/// The quotas of every custom match endpoint, each counted in its own bucket.
+pub(super) const QUOTAS: &[Quota] = &[
+    Quota::new(Scope::Ip, 10, Duration::from_hours(1)),
+    Quota::new(Scope::Key, 100, Duration::from_mins(30)),
+    Quota::new(Scope::Global, 1000, Duration::from_hours(1)),
+];
+
+/// Applies [`QUOTAS`] in the bucket `endpoint`.
 pub(super) async fn apply_custom_match_rate_limits(
     state: &AppState,
     rate_limit_key: &RateLimitKey,
     endpoint: &str,
 ) -> APIResult<()> {
-    state
-        .rate_limit_client
-        .apply_limits(
-            rate_limit_key,
-            endpoint,
-            &[
-                Quota::ip_limit(10, Duration::from_hours(1)),
-                Quota::key_limit(100, Duration::from_mins(30)),
-                Quota::global_limit(1000, Duration::from_hours(1)),
-            ],
-        )
-        .await?;
+    let limit = RateLimit::new(endpoint, QUOTAS);
+    state.rate_limit_client.check(rate_limit_key, limit).await?;
     Ok(())
 }
 

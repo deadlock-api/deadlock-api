@@ -19,6 +19,7 @@ use crate::routes::v1::players::steam::update::{
 use crate::routes::v1::players::{ensure_not_protected, without_protected};
 use crate::services::clickhouse_batcher::{BatchQuery, ClickhouseBatcher, in_clause};
 use crate::services::rate_limiter::extractor::RateLimitKey;
+use crate::services::rate_limiter::{DOCUMENTED_DEFAULT, describe};
 use crate::services::steam_search_index::IndexedProfile;
 use crate::utils::parse::{comma_separated_deserialize, steamid64_to_steamid3};
 use crate::utils::types::AccountIdQuery;
@@ -314,7 +315,8 @@ pub(crate) async fn steam_single(
     ),
     tags = ["Steam"],
     summary = "Batch Steam Profile",
-    description = "
+    description = describe(
+        "
 This endpoint returns Steam profiles of players.
 
 Pass `refresh=true` to force a live refresh of the listed accounts from the
@@ -326,13 +328,12 @@ shared Steam Web API key budget.
 
 See: https://developer.valvesoftware.com/wiki/Steam_Web_API#GetPlayerSummaries_(v0002)
 
-### Rate Limits:
-| Type | Limit |
-| ---- | ----- |
-| IP | 100req/s (read path), 3req/min + 15req/h (refresh) |
-| Key | - (read path), 10req/min + 60req/h (refresh) |
-| Global | - (read path), 30req/min + 200req/h (refresh) |
-    "
+    ",
+        [
+            ("Read", DOCUMENTED_DEFAULT),
+            ("Refresh", super::update::RATE_LIMIT.quotas),
+        ],
+    )
 )]
 pub(super) async fn steam(
     rate_limit_key: RateLimitKey,
@@ -554,18 +555,15 @@ async fn search_steam(
     ),
     tags = ["Steam"],
     summary = "Steam Profile Search",
-    description = "
+    description = describe(
+        "
 This endpoint lets you search for Steam profiles by account_id or personaname.
 
 See: https://developer.valvesoftware.com/wiki/Steam_Web_API#GetPlayerSummaries_(v0002)
 
-### Rate Limits:
-| Type | Limit |
-| ---- | ----- |
-| IP | 100req/s |
-| Key | - |
-| Global | - |
-    "
+    ",
+        DOCUMENTED_DEFAULT,
+    )
 )]
 pub(super) async fn steam_search(
     Query(SteamSearchQuery {

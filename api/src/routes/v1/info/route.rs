@@ -11,6 +11,7 @@ use tracing::warn;
 use utoipa::ToSchema;
 
 use crate::context::AppState;
+use crate::services::rate_limiter::{DOCUMENTED_DEFAULT, describe};
 
 const TABLE_SIZES_QUERY: &str = "
 SELECT
@@ -137,16 +138,13 @@ async fn fetch_ch_info(ch_client: &clickhouse::Client) -> APIInfo {
     ),
     tags = ["Info"],
     summary = "API Info",
-    description = "
+    description = describe(
+        "
 Returns information about the API.
 
-### Rate Limits:
-| Type | Limit |
-| ---- | ----- |
-| IP | 100req/s |
-| Key | - |
-| Global | - |
-    "
+    ",
+        DOCUMENTED_DEFAULT,
+    )
 )]
 pub(super) async fn info(State(state): State<AppState>) -> impl IntoResponse {
     Json(fetch_ch_info(&state.ch_client_ro).await)

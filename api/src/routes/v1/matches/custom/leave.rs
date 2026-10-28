@@ -5,6 +5,7 @@ use crate::context::AppState;
 use crate::error::APIResult;
 use crate::routes::v1::matches::custom::ready::LobbyIdQuery;
 use crate::routes::v1::matches::custom::utils;
+use crate::services::rate_limiter::describe;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 
 #[utoipa::path(
@@ -19,17 +20,14 @@ use crate::services::rate_limiter::extractor::RateLimitKey;
     ),
     tags = ["Custom Matches"],
     summary = "Leave Lobby",
-    description = "
+    description = describe(
+        "
 This endpoint makes the bot leave the custom match lobby early.
 By default the bot leaves automatically after 15 minutes, but this endpoint allows you to trigger it sooner.
 
-### Rate Limits:
-| Type | Limit |
-| ---- | ----- |
-| IP | 10req/h |
-| Key | 100req/30min |
-| Global | 1000req/h |
-"
+    ",
+        utils::QUOTAS,
+    )
 )]
 pub(super) async fn leave(
     Path(LobbyIdQuery { lobby_id }): Path<LobbyIdQuery>,

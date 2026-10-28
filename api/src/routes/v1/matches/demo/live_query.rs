@@ -28,10 +28,21 @@ use utoipa::IntoParams;
 use super::demofusion;
 use crate::context::{AppState, LiveQueryConfig};
 use crate::error::{APIError, APIResult};
-use crate::routes::v1::matches::live_url::resolve_broadcast_url;
-use crate::services::rate_limiter::Quota;
+use crate::routes::v1::matches::live_url::{
+    ANONYMOUS_SPECTATE_RATE_LIMIT, SPECTATE_RATE_LIMIT, resolve_broadcast_url,
+};
 use crate::services::rate_limiter::extractor::RateLimitKey;
+use crate::services::rate_limiter::{Limits, Quota, RateLimit, Scope, describe};
 use crate::utils::broadcast_url::validate_broadcast_url;
+
+/// Every live query; spectating a match for one draws on the spectate limits too.
+const RATE_LIMIT: RateLimit = RateLimit::new(
+    "demo_live_query",
+    &[
+        Quota::new(Scope::Ip, 20, Duration::from_mins(1)),
+        Quota::new(Scope::Global, 100, Duration::from_mins(1)),
+    ],
+);
 
 /// How long one live query may stream, from the request on. Long enough for the longest match plus
 /// the broadcast delay; past it the query is cut off so a stuck or runaway one cannot run forever.
@@ -135,7 +146,8 @@ match), `status` events report retry progress instead of the stream going quiet.
     ),
     tags = ["Demo"],
     summary = "Live Demo Query (SSE)",
-    description = "
+    description = describe(
+        "
 Run a SQL query over a match's **live** broadcast and stream result rows over Server-Sent Events as
 the match plays, instead of waiting for the demo to finish (see the async `/demo/query`).
 
@@ -149,15 +161,6 @@ Projection/filter queries emit rows continuously as they are decoded. A whole-ma
 at a `CCitadelObserverPawn`, not the hero's `CCitadelPlayerPawn`. Join controllers to hero pawns by
 hero id or pawn entity index rather than through `m_hPawn`.
 
-### Rate Limits:
-| Type | Limit |
-| ---- | ----- |
-| IP | With broadcast_url: 20req/m<br>With match_id: 6req/h |
-| Key | With broadcast_url: -<br>With match_id: 10req/10m, 50req/h |
-| Global | With broadcast_url: 100req/m<br>With match_id, without API key: 60req/10m, 300req/h<br>With match_id, with API key: 20req/10m, 100req/h |
-
-With `match_id`, only spectating counts against the limits; a match spectated within the last hour is served from cache.
-
 A limited number of live queries per client (API key, or IP without one) stream at once, 16 by
 default. One more ends the client's oldest stream with an `error` event (status 409), so open a new
 stream only when you no longer need an old one. A `429` means the server as a whole is at its live
@@ -166,7 +169,23 @@ query limit.
 A query whose result rows queue up unread (a client not reading the stream, or a join/aggregation
 that holds rows until the broadcast ends) is stopped with an `error` event once it buffers too much
 (128 MiB by default).
-"
+",
+        Limits::from([
+            ("Every query", RATE_LIMIT.quotas),
+            (
+                "Spectating a `match_id` without API key",
+                ANONYMOUS_SPECTATE_RATE_LIMIT.quotas,
+            ),
+            (
+                "Spectating a `match_id` with API key",
+                SPECTATE_RATE_LIMIT.quotas,
+            ),
+        ])
+        .note(
+            "A match spectated within the last hour is served from cache and does not count \
+             against the spectate limits.",
+        ),
+    )
 )]
 pub(super) async fn live_query(
     rate_limit_key: RateLimitKey,
@@ -175,14 +194,7 @@ pub(super) async fn live_query(
 ) -> APIResult<impl IntoResponse> {
     state
         .rate_limit_client
-        .apply_limits(
-            &rate_limit_key,
-            "demo_live_query",
-            &[
-                Quota::ip_limit(20, Duration::from_mins(1)),
-                Quota::global_limit(100, Duration::from_mins(1)),
-            ],
-        )
+        .check(&rate_limit_key, RATE_LIMIT)
         .await?;
     // Taken before spectating so a full server doesn't spend spectate quota.
     let limits = &state.config.live_query;

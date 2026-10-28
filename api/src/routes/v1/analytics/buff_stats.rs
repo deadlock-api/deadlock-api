@@ -284,7 +284,7 @@ async fn get_buff_stats(
     ),
     tags = ["Analytics"],
     summary = "Buff Stats",
-    description = "
+    description = super::describe("
 Retrieves pickup statistics per power-up buff type (e.g. `hp_permanent_pickup_lv2`): how often
 players pick each one up and, for matches since build 6712 (2026-09-29), when they pick it up
 and how much stat it grants.
@@ -297,15 +297,7 @@ Buff display names, value units and graph colors: <https://api.deadlock-api.com/
 
 Results are cached for **1 hour** based on the unique combination of query parameters provided.
 
-### Rate Limits:
-> The rate limits below are **shared across all analytics endpoints**.
-
-| Type | Limit |
-| ---- | ----- |
-| IP | 200req/min |
-| Key | 400req/min |
-| Global | 2000req/min |
-    "
+    ")
 )]
 pub(crate) async fn buff_stats(
     Query(mut query): Query<BuffStatsQuery>,

@@ -25,11 +25,31 @@ use crate::routes::v1::assets::common::{Language, resolve_version};
 use crate::services::assets::versions::ranked_seasons::{fetch_ranked_seasons, interval_at};
 use crate::services::clickhouse_batcher::{BatchQueryMulti, ClickhouseBatcherMulti, in_clause};
 use crate::services::clickhouse_insert_batcher::{BatchInsert, ClickhouseInsertBatcher};
-use crate::services::rate_limiter::Quota;
 use crate::services::rate_limiter::extractor::RateLimitKey;
+use crate::services::rate_limiter::{DOCUMENTED_DEFAULT, Quota, RateLimit, Scope, describe};
 use crate::services::steam::client::SteamClient;
 use crate::services::steam::types::SteamProxyQuery;
 use crate::utils::types::AccountIdQuery;
+
+/// Fetching a bot friend's history from Steam.
+const RATE_LIMIT: RateLimit = RateLimit::new(
+    "match_history",
+    &[
+        Quota::new(Scope::Ip, 10, Duration::from_hours(1)),
+        Quota::new(Scope::Key, 300, Duration::from_hours(1)),
+        Quota::new(Scope::Global, 1500, Duration::from_hours(1)),
+    ],
+);
+
+/// Refetching a bot friend's whole history from Steam.
+const REFETCH_RATE_LIMIT: RateLimit = RateLimit::new(
+    "match_history_refetch",
+    &[
+        Quota::new(Scope::Ip, 1, Duration::from_hours(1)),
+        Quota::new(Scope::Key, 5, Duration::from_hours(1)),
+        Quota::new(Scope::Global, 10, Duration::from_hours(1)),
+    ],
+);
 
 const MAX_REFETCH_ITERATIONS: i32 = 100;
 
@@ -377,7 +397,8 @@ pub(crate) async fn fetch_steam_match_history(
     ),
     tags = ["Players"],
     summary = "Match History",
-    description = "
+    description = describe(
+        "
 This endpoint returns the player match history for the given `account_id`.
 
 If the account is friends with one of our bots, the match history is a combination of the data from **Steam** and **ClickHouse**, so you always get the most up-to-date data and full history.
@@ -389,13 +410,13 @@ Relevant Protobuf Messages:
 - CMsgClientToGcGetMatchHistory
 - CMsgClientToGcGetMatchHistoryResponse
 
-### Rate Limits (only applies to bot friends):
-| Type | Limit |
-| ---- | ----- |
-| IP | 100req/s<br>Bot-Friend: 10req/h<br>With `force_refetch=true`: 1req/h |
-| Key | -<br>Bot-Friend: 300req/h<br>With `force_refetch=true`: 5req/h |
-| Global | -<br>Bot-Friend: 1500req/h<br>With `force_refetch=true`: 10req/h |
-    "
+    ",
+        [
+            ("Stored history", DOCUMENTED_DEFAULT),
+            ("Bot friends", RATE_LIMIT.quotas),
+            ("With `force_refetch=true`", REFETCH_RATE_LIMIT.quotas),
+        ],
+    )
 )]
 pub(super) async fn match_history(
     Path(AccountIdQuery { account_id }): Path<AccountIdQuery>,
@@ -418,30 +439,12 @@ pub(super) async fn match_history(
         return Ok((StatusCode::OK, called_steam(false), Json(ch_match_history)));
     }
 
-    // Apply rate limits based on the query parameters
-    let (endpoint, quotas) = if query.force_refetch {
-        (
-            "match_history_refetch",
-            [
-                Quota::ip_limit(1, Duration::from_hours(1)),
-                Quota::key_limit(5, Duration::from_hours(1)),
-                Quota::global_limit(10, Duration::from_hours(1)),
-            ],
-        )
+    let limit = if query.force_refetch {
+        REFETCH_RATE_LIMIT
     } else {
-        (
-            "match_history",
-            [
-                Quota::ip_limit(10, Duration::from_hours(1)),
-                Quota::key_limit(300, Duration::from_hours(1)),
-                Quota::global_limit(1500, Duration::from_hours(1)),
-            ],
-        )
+        RATE_LIMIT
     };
-    let res = state
-        .rate_limit_client
-        .apply_limits(&rate_limit_key, endpoint, &quotas)
-        .await;
+    let res = state.rate_limit_client.check(&rate_limit_key, limit).await;
     if let Err(e) = res {
         warn!("Reached rate limits: {e:?}");
         if query.force_refetch {

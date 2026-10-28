@@ -14,9 +14,29 @@ use utoipa::IntoParams;
 use crate::context::AppState;
 use crate::error::{APIError, APIResult, LogInternal as _};
 use crate::routes::v1::mcp::{QueryError, write_json};
-use crate::services::rate_limiter::Quota;
 use crate::services::rate_limiter::extractor::RateLimitKey;
+use crate::services::rate_limiter::{Quota, RateLimit, Scope, describe};
 use crate::utils::json_stream::ResponseFormat;
+
+const SQL_RATE_LIMIT: RateLimit = RateLimit::new(
+    "sql",
+    &[
+        Quota::new(Scope::Ip, 2, Duration::from_mins(1)),
+        Quota::new(Scope::Ip, 20, Duration::from_hours(1)),
+        Quota::new(Scope::Key, 10, Duration::from_mins(1)),
+        Quota::new(Scope::Global, 30, Duration::from_mins(1)),
+    ],
+);
+
+const LIST_TABLES_RATE_LIMIT: RateLimit = RateLimit::new(
+    "sql_list_tables",
+    &[
+        Quota::new(Scope::Ip, 10, Duration::from_mins(1)),
+        Quota::new(Scope::Global, 60, Duration::from_mins(1)),
+    ],
+);
+
+const TABLE_SCHEMA_RATE_LIMIT: RateLimit = LIST_TABLES_RATE_LIMIT.with_bucket("sql_table_schema");
 
 /// Rows a query returns at most; the rest are cut off and `X-Truncated: true` is set.
 const MAX_ROWS: usize = 100_000;
@@ -54,7 +74,8 @@ pub struct TableSchemaRow {
     ),
     tags = ["SQL"],
     summary = "Query",
-    description = "
+    description = describe(
+        "
 **Deprecated.** Direct SQL access will be removed. Use the public data lake at
 https://data.deadlock-api.com (DuckDB / DuckLake, or the MCP server at `/v1/mcp`) instead;
 see https://deadlock-api.com/data-dumps.
@@ -64,13 +85,9 @@ the database), the same one the MCP server at `/v1/mcp` queries. Unqualified tab
 to its views; filter `match_player` on `match_id` or `start_time` to skip files. At most 100,000
 rows are returned (`X-Truncated: true` when cut off), and queries time out after 45 seconds.
 
-### Rate Limits:
-| Type | Limit |
-| ---- | ----- |
-| IP | 2req/min, 20req/hr |
-| Key | 10req/min |
-| Global | 30req/min |
-    "
+    ",
+        SQL_RATE_LIMIT,
+    )
 )]
 #[deprecated(
     note = "use the public data lake at https://data.deadlock-api.com (DuckDB, MCP at /v1/mcp) instead"
@@ -80,18 +97,7 @@ pub(super) async fn sql(
     Query(query): Query<SQLQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
-    check_access(
-        &state,
-        &rate_limit_key,
-        "sql",
-        &[
-            Quota::ip_limit(2, Duration::from_mins(1)),
-            Quota::ip_limit(20, Duration::from_hours(1)),
-            Quota::key_limit(10, Duration::from_mins(1)),
-            Quota::global_limit(30, Duration::from_mins(1)),
-        ],
-    )
-    .await?;
+    check_access(&state, &rate_limit_key, SQL_RATE_LIMIT).await?;
 
     let format = query.format;
     debug!("CUSTOM QUERY: {}", query.query);
@@ -144,12 +150,11 @@ fn query_error(error: &QueryError) -> APIError {
     APIError::status_msg(status, error.to_string())
 }
 
-/// Rejects the request unless custom queries are enabled, then applies `quotas`.
+/// Rejects the request unless custom queries are enabled, then applies `limit`.
 async fn check_access(
     state: &AppState,
     rate_limit_key: &RateLimitKey,
-    bucket: &str,
-    quotas: &[Quota],
+    limit: RateLimit<'_>,
 ) -> APIResult<()> {
     if !state.config.clickhouse.allow_custom_queries {
         return Err(APIError::status_msg(
@@ -157,10 +162,7 @@ async fn check_access(
             "Custom queries are disabled",
         ));
     }
-    state
-        .rate_limit_client
-        .apply_limits(rate_limit_key, bucket, quotas)
-        .await?;
+    state.rate_limit_client.check(rate_limit_key, limit).await?;
     Ok(())
 }
 
@@ -173,20 +175,17 @@ async fn check_access(
     ),
     tags = ["SQL"],
     summary = "List Tables",
-    description = "
+    description = describe(
+        "
 **Deprecated.** Direct SQL access will be removed. Use the public data lake at
 https://data.deadlock-api.com (DuckDB / DuckLake, or the MCP server at `/v1/mcp`) instead;
 see https://deadlock-api.com/data-dumps.
 
 Lists all tables of the public data lake.
 
-### Rate Limits:
-| Type | Limit |
-| ---- | ----- |
-| IP | 10req/min |
-| Key | - |
-| Global | 60req/min |
-    "
+    ",
+        LIST_TABLES_RATE_LIMIT,
+    )
 )]
 #[deprecated(
     note = "use the public data lake at https://data.deadlock-api.com (DuckDB, MCP at /v1/mcp) instead"
@@ -195,16 +194,7 @@ pub(super) async fn list_tables(
     rate_limit_key: RateLimitKey,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
-    check_access(
-        &state,
-        &rate_limit_key,
-        "sql_list_tables",
-        &[
-            Quota::ip_limit(10, Duration::from_mins(1)),
-            Quota::global_limit(60, Duration::from_mins(1)),
-        ],
-    )
-    .await?;
+    check_access(&state, &rate_limit_key, LIST_TABLES_RATE_LIMIT).await?;
 
     let snapshot = state
         .mcp_catalog
@@ -223,7 +213,8 @@ pub(super) async fn list_tables(
     ),
     tags = ["SQL"],
     summary = "Table Schema",
-    description = "
+    description = describe(
+        "
 **Deprecated.** Direct SQL access will be removed. Use the public data lake at
 https://data.deadlock-api.com (DuckDB / DuckLake, or the MCP server at `/v1/mcp`) instead;
 see https://deadlock-api.com/data-dumps.
@@ -231,13 +222,9 @@ see https://deadlock-api.com/data-dumps.
 Returns the columns of a data lake table with their `DuckDB` types; column comments carry the
 original `ClickHouse` type.
 
-### Rate Limits:
-| Type | Limit |
-| ---- | ----- |
-| IP | 10req/min |
-| Key | - |
-| Global | 60req/min |
-    "
+    ",
+        TABLE_SCHEMA_RATE_LIMIT,
+    )
 )]
 #[deprecated(
     note = "use the public data lake at https://data.deadlock-api.com (DuckDB, MCP at /v1/mcp) instead"
@@ -247,16 +234,7 @@ pub(super) async fn table_schema(
     Path(TableQuery { table }): Path<TableQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
-    check_access(
-        &state,
-        &rate_limit_key,
-        "sql_table_schema",
-        &[
-            Quota::ip_limit(10, Duration::from_mins(1)),
-            Quota::global_limit(60, Duration::from_mins(1)),
-        ],
-    )
-    .await?;
+    check_access(&state, &rate_limit_key, TABLE_SCHEMA_RATE_LIMIT).await?;
 
     let snapshot = state
         .mcp_catalog

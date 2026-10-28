@@ -9,7 +9,6 @@ use utoipa::{IntoParams, ToSchema};
 use crate::context::AppState;
 use crate::error::APIResult;
 use crate::routes::v1::players::ensure_not_protected;
-use crate::routes::v1::players::mmr::apply_mmr_rate_limits;
 use crate::routes::v1::players::rank::badge_from_flat_progress_sql;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::utils::parse::parse_steam_id;
@@ -116,7 +115,10 @@ pub(super) async fn mmr_history(
     State(state): State<AppState>,
     rate_limit_key: RateLimitKey,
 ) -> APIResult<impl IntoResponse> {
-    apply_mmr_rate_limits(&state, &rate_limit_key).await?;
+    state
+        .rate_limit_client
+        .check(&rate_limit_key, super::RATE_LIMIT)
+        .await?;
     ensure_not_protected(&state, &[account_id]).await?;
     get_mmr_history(&state.ch_client_ro, account_id, None)
         .await
@@ -151,7 +153,10 @@ pub(super) async fn hero_mmr_history(
     State(state): State<AppState>,
     rate_limit_key: RateLimitKey,
 ) -> APIResult<impl IntoResponse> {
-    apply_mmr_rate_limits(&state, &rate_limit_key).await?;
+    state
+        .rate_limit_client
+        .check(&rate_limit_key, super::RATE_LIMIT)
+        .await?;
     ensure_not_protected(&state, &[account_id]).await?;
     get_mmr_history(&state.ch_client_ro, account_id, Some(hero_id))
         .await

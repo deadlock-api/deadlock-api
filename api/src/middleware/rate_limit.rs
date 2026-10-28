@@ -1,51 +1,25 @@
-use std::sync::Arc;
-
 use axum::extract::{Request, State};
 use axum::middleware::Next;
 use axum::response::{IntoResponse as _, Response};
 
 use crate::services::rate_limiter::extractor::RateLimitKey;
-use crate::services::rate_limiter::{Quota, RateLimitClient};
+use crate::services::rate_limiter::{RateLimit, RateLimitClient, RateLimitHeaders};
 
+/// Applies one policy to every route of a router.
 #[derive(Clone)]
 pub(crate) struct RateLimitState {
     pub(crate) client: RateLimitClient,
-    pub(crate) key: &'static str,
-    pub(crate) quotas: Arc<[Quota]>,
-}
-
-impl RateLimitState {
-    pub(crate) fn new(
-        client: RateLimitClient,
-        key: &'static str,
-        quotas: impl Into<Arc<[Quota]>>,
-    ) -> Self {
-        Self {
-            client,
-            key,
-            quotas: quotas.into(),
-        }
-    }
+    pub(crate) limit: RateLimit<'static>,
 }
 
 pub(crate) async fn rate_limit(
-    State(state): State<RateLimitState>,
+    State(RateLimitState { client, limit }): State<RateLimitState>,
     rate_limit_key: RateLimitKey,
     request: Request,
     next: Next,
 ) -> Response {
-    let status = match state
-        .client
-        .apply_limits(&rate_limit_key, state.key, &state.quotas)
-        .await
-    {
-        Ok(s) => s,
-        Err(e) => return e.into_response(),
-    };
-
-    let mut response = next.run(request).await;
-    if let Some(status) = status {
-        response.headers_mut().extend(status.response_headers());
+    match client.check(&rate_limit_key, limit).await {
+        Ok(status) => (status.map(RateLimitHeaders), next.run(request).await).into_response(),
+        Err(e) => e.into_response(),
     }
-    response
 }

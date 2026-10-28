@@ -12,7 +12,7 @@ use tracing::{debug, error, info, warn};
 use crate::context::AppStateError;
 use crate::services::ch_admission::ChQueryError;
 use crate::services::crosshair::CrosshairError;
-use crate::services::rate_limiter;
+use crate::services::rate_limiter::{Exceeded, RateLimitHeaders, Status};
 use crate::services::steam::types::SteamProxyError;
 
 pub(super) type APIResult<T> = Result<T, APIError>;
@@ -36,8 +36,8 @@ pub(super) enum APIError {
         status: StatusCode,
         message: serde_json::Value,
     },
-    #[error("Rate limit exceeded")]
-    RateLimitExceeded { status: rate_limiter::Status },
+    #[error("Rate limit exceeded: {} per {}s", .0.quota.limit, .0.quota.period.as_secs())]
+    RateLimitExceeded(Status),
     #[error("Internal server error: {message}")]
     InternalError { message: String },
     #[error("Steam Proxy Error: {0}")]
@@ -196,6 +196,12 @@ fn log_status(status: StatusCode, message: &dyn core::fmt::Debug) {
     }
 }
 
+impl From<Exceeded> for APIError {
+    fn from(rate_limit::Exceeded(status): Exceeded) -> Self {
+        Self::RateLimitExceeded(status)
+    }
+}
+
 impl IntoResponse for APIError {
     #[expect(clippy::too_many_lines, reason = "one match arm per error variant")]
     fn into_response(self) -> Response<Body> {
@@ -208,23 +214,22 @@ impl IntoResponse for APIError {
                 log_status(status, &message);
                 build_error_response(status, message)
             }
-            Self::RateLimitExceeded { status } => {
+            Self::RateLimitExceeded(status) => {
                 warn!(?status, "Rate limit exceeded");
-                let mut res = build_error_response(
+                let body = build_error_response(
                     StatusCode::TOO_MANY_REQUESTS,
                     json!({
-                        "type": status.limit_type(),
+                        "type": status.quota.scope.as_str(),
                         "quota": {
                             "limit": status.quota.limit,
                             "period": status.quota.period.as_secs(),
                         },
-                        "requests": status.requests,
+                        "requests": status.used,
                         "remaining": status.remaining(),
                         "next_request_in": status.retry_after_secs(),
                     }),
                 );
-                res.headers_mut().extend(status.response_headers());
-                res
+                (RateLimitHeaders(status), body).into_response()
             }
             Self::Crosshair(e) => match e {
                 CrosshairError::Encode(_) => Self::internal(e.to_string()).into_response(),
@@ -431,22 +436,22 @@ mod tests {
 
     #[test]
     fn test_api_error_rate_limit_exceeded() {
-        use chrono::Utc;
+        use crate::services::rate_limiter::{Quota, Scope};
 
-        let quota = rate_limiter::Quota::ip_limit(100, Duration::from_mins(1));
-        let status = rate_limiter::Status {
-            quota,
-            requests: 100,
-            oldest_request: Utc::now(),
+        let status = Status {
+            quota: Quota::new(Scope::Ip, 100, Duration::from_mins(1)),
+            used: 100,
+            cost: core::num::NonZeroU64::MIN,
+            reset_at: std::time::SystemTime::now() + Duration::from_secs(30),
         };
 
-        let error = APIError::RateLimitExceeded { status };
-        let response = error.into_response();
+        let response = APIError::RateLimitExceeded(status).into_response();
         assert_eq!(response.status(), StatusCode::TOO_MANY_REQUESTS);
         assert_eq!(
             response.headers().get(header::CONTENT_TYPE).unwrap(),
             "application/json"
         );
+        assert_eq!(response.headers()["Retry-After"], "30");
     }
 
     #[test]

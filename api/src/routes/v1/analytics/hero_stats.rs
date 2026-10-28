@@ -762,18 +762,10 @@ async fn get_hero_stats(
     ),
     tags = ["Analytics"],
     summary = "Hero Stats",
-    description = "
+    description = super::describe("
 Retrieves performance statistics for each hero based on historical match data.
 
-### Rate Limits:
-> The rate limits below are **shared across all analytics endpoints**.
-
-| Type | Limit |
-| ---- | ----- |
-| IP | 200req/min |
-| Key | 400req/min |
-| Global | 2000req/min |
-    "
+    ")
 )]
 pub(crate) async fn hero_stats(
     Query(mut query): Query<HeroStatsQuery>,

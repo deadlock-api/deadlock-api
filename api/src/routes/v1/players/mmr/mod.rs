@@ -9,12 +9,32 @@ use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
 use crate::context::AppState;
-use crate::error::APIResult;
-use crate::services::rate_limiter::Quota;
-use crate::services::rate_limiter::extractor::RateLimitKey;
+use crate::services::rate_limiter::{Limits, Quota, RateLimit, Scope};
+
+pub(super) const RATE_LIMIT: RateLimit = RateLimit::new(
+    "mmr",
+    &[
+        Quota::new(Scope::Ip, 20, Duration::from_mins(1)),
+        Quota::new(Scope::Key, 100, Duration::from_mins(1)),
+        Quota::new(Scope::Key, 2_000, Duration::from_hours(1)),
+        Quota::new(Scope::Global, 200, Duration::from_mins(1)),
+    ],
+);
+
+/// The distribution queries scan every ranked match instead of a primary-key range, costing roughly
+/// two orders of magnitude more than the account-scoped MMR endpoints, so they get their own bucket.
+pub(super) const DISTRIBUTION_RATE_LIMIT: RateLimit = RateLimit::new(
+    "mmr_distribution",
+    &[
+        Quota::new(Scope::Ip, 5, Duration::from_mins(1)),
+        Quota::new(Scope::Key, 25, Duration::from_mins(1)),
+        Quota::new(Scope::Global, 50, Duration::from_mins(1)),
+    ],
+);
 
 #[derive(OpenApi)]
-#[openapi(tags((name = "MMR", description = "
+#[openapi(tags((name = "MMR", description = [
+"
 # DEPRECATED! READ THIS FIRST!
 
 All MMR endpoints are deprecated and will be removed. We no longer estimate a MMR: Valve reports the
@@ -37,64 +57,16 @@ matches played on that hero.
 
 The rank and rank-history endpoints share one bucket:
 
-| Type | Limit |
-| ---- | ----- |
-| IP | 20req/min |
-| Key | 100req/min & 2000req/h |
-| Global | 200req/min |
-
+",
+    &Limits::from(RATE_LIMIT).to_string(),
+    "
 The distribution endpoints aggregate over every ranked match and are far more expensive, so they
 have their own, tighter bucket:
 
-| Type | Limit |
-| ---- | ----- |
-| IP | 5req/min |
-| Key | 25req/min |
-| Global | 50req/min |
-    "
-)))]
+",
+    &Limits::from(DISTRIBUTION_RATE_LIMIT).to_string(),
+].concat())))]
 struct ApiDoc;
-
-pub(super) async fn apply_mmr_rate_limits(
-    state: &AppState,
-    rate_limit_key: &RateLimitKey,
-) -> APIResult<()> {
-    state
-        .rate_limit_client
-        .apply_limits(
-            rate_limit_key,
-            "mmr",
-            &[
-                Quota::ip_limit(20, Duration::from_mins(1)),
-                Quota::key_limit(100, Duration::from_mins(1)),
-                Quota::key_limit(2_000, Duration::from_hours(1)),
-                Quota::global_limit(200, Duration::from_mins(1)),
-            ],
-        )
-        .await?;
-    Ok(())
-}
-
-/// The distribution queries scan every ranked match instead of a primary-key range, costing roughly
-/// two orders of magnitude more than the account-scoped MMR endpoints, so they get their own bucket.
-pub(super) async fn apply_mmr_distribution_rate_limits(
-    state: &AppState,
-    rate_limit_key: &RateLimitKey,
-) -> APIResult<()> {
-    state
-        .rate_limit_client
-        .apply_limits(
-            rate_limit_key,
-            "mmr_distribution",
-            &[
-                Quota::ip_limit(5, Duration::from_mins(1)),
-                Quota::key_limit(25, Duration::from_mins(1)),
-                Quota::global_limit(50, Duration::from_mins(1)),
-            ],
-        )
-        .await?;
-    Ok(())
-}
 
 #[expect(deprecated, reason = "registers deprecated handlers")]
 pub(super) fn router() -> OpenApiRouter<AppState> {

@@ -9,8 +9,17 @@ use uuid::Uuid;
 use crate::context::AppState;
 use crate::error::{APIResult, LogInternal as _};
 use crate::routes::v1::feedback::structs::{FeedbackSubmission, truncate_user_agent};
-use crate::services::rate_limiter::Quota;
 use crate::services::rate_limiter::extractor::RateLimitKey;
+use crate::services::rate_limiter::{Quota, RateLimit, Scope, describe};
+
+const RATE_LIMIT: RateLimit = RateLimit::new(
+    "feedback",
+    &[
+        Quota::new(Scope::Ip, 10, Duration::from_mins(1)),
+        Quota::new(Scope::Ip, 100, Duration::from_hours(1)),
+        Quota::new(Scope::Global, 2000, Duration::from_hours(1)),
+    ],
+);
 
 #[utoipa::path(
     post,
@@ -24,16 +33,13 @@ use crate::services::rate_limiter::extractor::RateLimitKey;
     ),
     tags = ["Internal"],
     summary = "Submit Website Feedback",
-    description = "
+    description = describe(
+        "
 Stores a component annotation or general feedback submitted from deadlock-api.com.
 
-### Rate Limits:
-| Type | Limit |
-| ---- | ----- |
-| IP | 10req/min, 100req/h |
-| Key | - |
-| Global | 2000req/h |
-    "
+    ",
+        RATE_LIMIT,
+    )
 )]
 pub(super) async fn submit_feedback(
     rate_limit_key: RateLimitKey,
@@ -43,15 +49,7 @@ pub(super) async fn submit_feedback(
 ) -> APIResult<impl IntoResponse> {
     state
         .rate_limit_client
-        .apply_limits(
-            &rate_limit_key,
-            "feedback",
-            &[
-                Quota::ip_limit(10, Duration::from_mins(1)),
-                Quota::ip_limit(100, Duration::from_hours(1)),
-                Quota::global_limit(2000, Duration::from_hours(1)),
-            ],
-        )
+        .check(&rate_limit_key, RATE_LIMIT)
         .await?;
 
     let page_path = submission.validate()?;

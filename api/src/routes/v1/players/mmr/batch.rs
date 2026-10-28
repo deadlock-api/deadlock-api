@@ -9,7 +9,6 @@ use utoipa::IntoParams;
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
-use crate::routes::v1::players::mmr::apply_mmr_rate_limits;
 use crate::routes::v1::players::mmr::mmr_history::MMRHistory;
 use crate::routes::v1::players::rank::badge_from_flat_progress_sql;
 use crate::routes::v1::players::without_protected;
@@ -94,7 +93,10 @@ async fn checked_account_ids(
     rate_limit_key: &RateLimitKey,
     account_ids: Vec<u32>,
 ) -> APIResult<Vec<u32>> {
-    apply_mmr_rate_limits(state, rate_limit_key).await?;
+    state
+        .rate_limit_client
+        .check(rate_limit_key, super::RATE_LIMIT)
+        .await?;
     let account_ids = without_protected(state, account_ids).await?;
     if account_ids.len() > 1_000 {
         return Err(APIError::status_msg(

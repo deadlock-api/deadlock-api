@@ -374,20 +374,12 @@ fn validate_comb_size(comb_size: Option<u8>) -> APIResult<()> {
     ),
     tags = ["Analytics"],
     summary = "Hero Comb Stats",
-    description = "
+    description = super::describe("
 Retrieves overall statistics for each hero combination.
 
 Results are cached for **1 hour**. The cache key is determined by the specific combination of filter parameters used in the query. Subsequent requests using the exact same filters within this timeframe will receive the cached response.
 
-### Rate Limits:
-> The rate limits below are **shared across all analytics endpoints**.
-
-| Type | Limit |
-| ---- | ----- |
-| IP | 200req/min |
-| Key | 400req/min |
-| Global | 2000req/min |
-    "
+    ")
 )]
 pub(crate) async fn hero_comb_stats(
     Query(mut query): Query<HeroCombStatsQuery>,

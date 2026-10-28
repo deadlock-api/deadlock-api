@@ -2,6 +2,7 @@ use axum::Json;
 use axum::response::IntoResponse;
 
 use crate::error::APIResult;
+use crate::services::rate_limiter::{DOCUMENTED_DEFAULT, describe};
 
 const BIG_PATCH_DAYS: &[&str] = &[
     "2026-09-29T20:25:11Z",
@@ -30,19 +31,15 @@ const BIG_PATCH_DAYS: &[&str] = &[
     responses((status = OK, body = [String])),
     tags = ["Patches"],
     summary = "Big Days",
-    description = r#"
+    description = describe(
+        r#"
 Returns a list of dates where Deadlock's "big" patch days were, usually bi-weekly.
 The exact date is the time when the update was announced.
 
 This list is manually maintained, and so new patch dates may be delayed by a few hours.
-
-### Rate Limits:
-| Type | Limit |
-| ---- | ----- |
-| IP | 100req/s |
-| Key | - |
-| Global | - |
     "#,
+        DOCUMENTED_DEFAULT,
+    )
 )]
 pub(super) async fn big_patch_days() -> APIResult<impl IntoResponse> {
     Ok(Json(BIG_PATCH_DAYS))

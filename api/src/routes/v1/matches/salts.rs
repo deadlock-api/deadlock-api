@@ -21,10 +21,20 @@ use crate::error::{APIError, APIResult};
 use crate::routes::v1::matches::to_fetch::{queue_requested_match, resolve_invalid_match};
 use crate::routes::v1::matches::types::ClickhouseSalts;
 use crate::services::clickhouse_batcher::{BatchQuery, ClickhouseBatcher, in_clause};
-use crate::services::rate_limiter::Quota;
 use crate::services::rate_limiter::extractor::RateLimitKey;
+use crate::services::rate_limiter::{DOCUMENTED_DEFAULT, Quota, RateLimit, Scope, describe};
 use crate::services::steam::types::{SteamProxyError, SteamProxyQuery, SteamProxyResponse};
 use crate::utils::types::MatchIdQuery;
+
+/// Fetching salts from Steam.
+pub(crate) const RATE_LIMIT: RateLimit = RateLimit::new(
+    "salts",
+    &[
+        Quota::new(Scope::Ip, 3, Duration::from_hours(1)),
+        Quota::new(Scope::Key, 300, Duration::from_hours(1)),
+        Quota::new(Scope::Global, 1500, Duration::from_hours(1)),
+    ],
+);
 
 /// Bot cooldown after a `GetMatchMetaData` job, i.e. 50 of them per bot per day.
 const SALTS_JOB_COOLDOWN: Duration = Duration::from_secs(24 * 60 * 60 / 50);
@@ -308,15 +318,7 @@ pub(super) async fn fetch_match_salts(
     // Rate limited: queue the match so the to-fetch workers pick it up instead.
     state
         .rate_limit_client
-        .apply_limits(
-            rate_limit_key,
-            "salts",
-            &[
-                Quota::ip_limit(3, Duration::from_hours(1)),
-                Quota::key_limit(300, Duration::from_hours(1)),
-                Quota::global_limit(1500, Duration::from_hours(1)),
-            ],
-        )
+        .check(rate_limit_key, RATE_LIMIT)
         .await
         .inspect_err(|_| queue_requested_match(state, match_id))?;
 
@@ -405,18 +407,18 @@ pub(super) struct SaltsQuery {
     ),
     tags = ["Matches"],
     summary = "Salts",
-    description = "
+    description = describe(
+        "
 This endpoints returns salts that can be used to fetch metadata and demofile for a match.
 
 **Note:** We currently fetch many matches without salts, so for these matches we do not have salts stored.
 
-### Rate Limits:
-| Type | Limit |
-| ---- | ----- |
-| IP | From DB: 100req/s<br>From Steam: 10req/30mins |
-| Key | From DB: -<br>From Steam: 10req/min |
-| Global | From DB: -<br>From Steam: 10req/10s |
-    "
+    ",
+        [
+            ("From DB", DOCUMENTED_DEFAULT),
+            ("From Steam", RATE_LIMIT.quotas),
+        ],
+    )
 )]
 pub(super) async fn salts(
     Path(MatchIdQuery { match_id }): Path<MatchIdQuery>,

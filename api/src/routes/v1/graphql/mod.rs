@@ -25,13 +25,22 @@ use uuid::Uuid;
 
 use crate::context::AppState;
 use crate::error::APIError;
-use crate::services::rate_limiter::Quota;
 use crate::services::rate_limiter::extractor::RateLimitKey;
+use crate::services::rate_limiter::{Limits, Quota, RateLimit, Scope, describe};
 
 use builds::HeroBuildLoader;
 use schema::{GraphQLSchema, build_schema};
 
 pub(super) const RATE_LIMIT_KEY: &str = "graphql_match_player";
+
+const RATE_LIMIT: RateLimit = RateLimit::new(
+    RATE_LIMIT_KEY,
+    &[
+        Quota::new(Scope::Ip, 300, Duration::from_mins(1)),
+        Quota::new(Scope::Key, 500, Duration::from_secs(10)),
+        Quota::new(Scope::Global, 5000, Duration::from_mins(1)),
+    ],
+);
 
 /// Longest query or variables text kept in `request_logs`; the body limit alone allows 10 MB.
 const MAX_LOGGED_TEXT_BYTES: usize = 64 * 1024;
@@ -114,18 +123,15 @@ fn shared_schema() -> &'static GraphQLSchema {
     ),
     tags = ["GraphQL"],
     summary = "GraphQL Playground",
-    description = "
+    description = describe(
+        "
 Interactive GraphiQL playground for exploring the GraphQL API.
 
 Open this endpoint in a browser to access the playground. Send GraphQL queries via `POST /v1/graphql` with a JSON body of the form `{ \"query\": \"...\", \"variables\": {...} }`.
 
-### Rate Limits (POST):
-| Type | Limit |
-| ---- | ----- |
-| IP | 300req/min |
-| Key | 500req/10s |
-| Global | 5000req/min |
-    "
+    ",
+        Limits::from(RATE_LIMIT).note("They apply to `POST /v1/graphql`."),
+    )
 )]
 async fn playground() -> impl IntoResponse {
     Html(GraphiQLSource::build().endpoint("/v1/graphql").finish())
@@ -138,15 +144,7 @@ async fn graphql_handler(
 ) -> Result<Response, APIError> {
     state
         .rate_limit_client
-        .apply_limits(
-            &rate_limit_key,
-            RATE_LIMIT_KEY,
-            &[
-                Quota::ip_limit(300, Duration::from_mins(1)),
-                Quota::key_limit(500, Duration::from_secs(10)),
-                Quota::global_limit(5000, Duration::from_mins(1)),
-            ],
-        )
+        .check(&rate_limit_key, RATE_LIMIT)
         .await?;
 
     let hero_build_loader =

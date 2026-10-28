@@ -36,6 +36,7 @@ xxhash-rust = { version = "0.8.19", features = ["xxh3"] }
 futures = "0.3.34"
 snap = "1.1.2"
 common = { workspace = true, features = ["steam-proxy"] }
+rate-limit = { workspace = true, features = ["redis"] }
 player-match-history = { workspace = true, features = ["utoipa"] }
 valveprotos = { workspace = true, features = ["gc-client", "serde", "user-msgs", "reflect"] }
 prost = "0.14.4"

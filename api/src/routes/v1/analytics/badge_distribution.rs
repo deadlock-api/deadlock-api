@@ -180,7 +180,7 @@ async fn get_badge_distribution(
     ),
     tags = ["Analytics"],
     summary = "Badge Distribution",
-    description = "
+    description = super::describe("
 This endpoint returns the player badge distribution.
 
 `total_matches` counts matches by their average badge, while `unique_players` counts players by the
@@ -190,15 +190,7 @@ ranked matches.
 
 Ranks exist only from the first ranked season on, so `min_unix_timestamp` is clamped to its start.
 
-### Rate Limits:
-> The rate limits below are **shared across all analytics endpoints**.
-
-| Type | Limit |
-| ---- | ----- |
-| IP | 200req/min |
-| Key | 400req/min |
-| Global | 2000req/min |
-    "
+    ")
 )]
 pub(crate) async fn badge_distribution(
     Query(query): Query<BadgeDistributionQuery>,

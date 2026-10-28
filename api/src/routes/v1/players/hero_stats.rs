@@ -13,6 +13,7 @@ use crate::error::{APIError, APIResult};
 use crate::routes::v1::matches::types::{GameMode, MatchMode, reject_brawl_badge_filter};
 use crate::routes::v1::players::{ensure_not_protected, without_protected};
 use crate::services::clickhouse_batcher::{BatchQueryGrouped, ClickhouseBatcherGrouped};
+use crate::services::rate_limiter::{DOCUMENTED_DEFAULT, describe};
 use crate::utils::parse::{comma_separated_deserialize_option, comma_separated_steam_ids};
 use crate::utils::types::AccountIdQuery;
 
@@ -309,16 +310,13 @@ async fn get_hero_stats(
     ),
     tags = ["Players"],
     summary = "Hero Stats",
-    description = "
+    description = describe(
+        "
 This endpoint returns statistics for each hero played by a given player account.
 
-### Rate Limits:
-| Type | Limit |
-| ---- | ----- |
-| IP | 100req/s |
-| Key | - |
-| Global | - |
-    "
+    ",
+        DOCUMENTED_DEFAULT,
+    )
 )]
 pub(super) async fn player_hero_stats(
     Query(mut query): Query<HeroStatsQuery>,

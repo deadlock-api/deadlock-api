@@ -29,6 +29,7 @@ use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::matches::custom::utils;
 use crate::routes::v1::matches::types::{GameMode, ServerRegion};
+use crate::services::rate_limiter::describe;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::steam::client::SteamClient;
 use crate::services::steam::types::{SteamProxyQuery, SteamProxyResponse};
@@ -195,7 +196,8 @@ async fn switch_to_spectator_slot(
     ),
     tags = ["Custom Matches"],
     summary = "Create Match",
-    description = "
+    description = describe(
+        "
 This endpoint creates a custom match using a bot account.
 
 **Process:**
@@ -216,13 +218,9 @@ _Protobuf definitions: [https://github.com/SteamDatabase/Protobufs](https://gith
 **Note:**
 The bot will leave the match 15 minutes after creation, regardless of match state.
 
-### Rate Limits:
-| Type | Limit |
-| ---- | ----- |
-| IP | 10req/h |
-| Key | 100req/30min |
-| Global | 1000req/h |
-"
+    ",
+        utils::QUOTAS,
+    )
 )]
 pub(super) async fn create_custom(
     rate_limit_key: RateLimitKey,

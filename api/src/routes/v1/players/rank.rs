@@ -16,10 +16,20 @@ use crate::error::{APIError, APIResult};
 use crate::routes::v1::players::{ensure_not_protected, without_protected};
 use crate::services::clickhouse_batcher::{BatchQuery, ClickhouseBatcher, in_clause};
 use crate::services::rank_image::{self, RankImageFormat, RankImageQuery};
-use crate::services::rate_limiter::Quota;
 use crate::services::rate_limiter::extractor::RateLimitKey;
+use crate::services::rate_limiter::{Quota, RateLimit, Scope, describe};
 use crate::utils::parse::{comma_separated_steam_ids, list_steam_id3};
 use crate::utils::types::AccountIdQuery;
+
+const RATE_LIMIT: RateLimit = RateLimit::new(
+    "rank",
+    &[
+        Quota::new(Scope::Ip, 20, Duration::from_mins(1)),
+        Quota::new(Scope::Key, 100, Duration::from_mins(1)),
+        Quota::new(Scope::Key, 2_000, Duration::from_hours(1)),
+        Quota::new(Scope::Global, 200, Duration::from_mins(1)),
+    ],
+);
 
 /// Convert a raw badge value (11–116) to a 1-based contiguous index (1–66).
 ///
@@ -353,7 +363,8 @@ pub(crate) struct RankBatchQuery {
     ),
     tags = ["Players"],
     summary = "Batch Rank",
-    description = "
+    description = describe(
+        "
 Returns the rank of each player at the end of their latest ranked match, the batch form of
 `/v1/players/{account_id}/rank`. See that endpoint for how the badge is derived.
 
@@ -361,13 +372,9 @@ Every requested account is returned once, in no particular order. Players none o
 ranked matches reports a rank get `badge`, `rank` and `subrank` of `0` and a `null` `last_match`.
 Protected accounts are left out.
 
-### Rate Limits:
-| Type | Limit |
-| ---- | ----- |
-| IP | 20req/min |
-| Key | 100req/min & 2000req/h |
-| Global | 200req/min |
-"
+    ",
+        RATE_LIMIT,
+    )
 )]
 pub(super) async fn rank_batch(
     Query(RankBatchQuery { account_ids }): Query<RankBatchQuery>,
@@ -377,16 +384,7 @@ pub(super) async fn rank_batch(
     check_account_id_count(&account_ids, MAX_BATCH_ACCOUNT_IDS)?;
     state
         .rate_limit_client
-        .apply_limits(
-            &rate_limit_key,
-            "rank",
-            &[
-                Quota::ip_limit(20, Duration::from_mins(1)),
-                Quota::key_limit(100, Duration::from_mins(1)),
-                Quota::key_limit(2_000, Duration::from_hours(1)),
-                Quota::global_limit(200, Duration::from_mins(1)),
-            ],
-        )
+        .check(&rate_limit_key, RATE_LIMIT)
         .await?;
 
     let account_ids = without_protected(&state, account_ids.into_iter().unique()).await?;

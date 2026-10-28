@@ -19,10 +19,20 @@ use valveprotos::deadlock::{
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::builds::structs::Build;
-use crate::services::rate_limiter::Quota;
 use crate::services::rate_limiter::extractor::RateLimitKey;
+use crate::services::rate_limiter::{Quota, RateLimit, Scope, describe};
 use crate::services::steam::types::{SteamProxyError, SteamProxyQuery, SteamProxyResponse};
 use crate::utils::types::AccountIdQuery;
+
+/// Shared by the live build endpoints, which ask Steam.
+const RATE_LIMIT: RateLimit = RateLimit::new(
+    "builds_live",
+    &[
+        Quota::new(Scope::Ip, 20, Duration::from_mins(1)),
+        Quota::new(Scope::Key, 100, Duration::from_mins(1)),
+        Quota::new(Scope::Global, 500, Duration::from_mins(1)),
+    ],
+);
 
 #[derive(Debug, Deserialize, IntoParams)]
 pub(super) struct LiveBuildPath {
@@ -148,22 +158,6 @@ async fn fetch_and_store_builds(
 }
 
 /// Rate limits of the endpoints that hit the Game Coordinator.
-async fn apply_live_limits(state: &AppState, rate_limit_key: &RateLimitKey) -> APIResult<()> {
-    state
-        .rate_limit_client
-        .apply_limits(
-            rate_limit_key,
-            "builds_live",
-            &[
-                Quota::ip_limit(20, Duration::from_mins(1)),
-                Quota::key_limit(100, Duration::from_mins(1)),
-                Quota::global_limit(500, Duration::from_mins(1)),
-            ],
-        )
-        .await?;
-    Ok(())
-}
-
 fn to_build(result: &HeroBuildResult) -> APIResult<Build> {
     Ok(serde_json::from_value(serde_json::to_value(result)?)?)
 }
@@ -181,7 +175,8 @@ fn to_build(result: &HeroBuildResult) -> APIResult<Build> {
     ),
     tags = ["Builds"],
     summary = "Fetch Live",
-    description = "
+    description = describe(
+        "
 Returns a single build. If the build is already in our database it is served from there, otherwise it is
 fetched live from the Deadlock Game Coordinator and stored in the database.
 
@@ -195,13 +190,9 @@ Relevant Protobuf Messages:
 - CMsgClientToGCFindHeroBuilds
 - CMsgClientToGCFindHeroBuildsResponse
 
-### Rate Limits:
-| Type | Limit |
-| ---- | ----- |
-| IP | 20req/min |
-| Key | 100req/min |
-| Global | 500req/min |
-    "
+    ",
+        RATE_LIMIT,
+    )
 )]
 pub(super) async fn fetch_build_live(
     Path(LiveBuildPath { hero_id, build_id }): Path<LiveBuildPath>,
@@ -215,7 +206,10 @@ pub(super) async fn fetch_build_live(
         return Ok(Json(build));
     }
 
-    apply_live_limits(&state, &rate_limit_key).await?;
+    state
+        .rate_limit_client
+        .check(&rate_limit_key, RATE_LIMIT)
+        .await?;
 
     let msg = CMsgClientToGcFindHeroBuilds {
         hero_id: Some(hero_id),
@@ -247,7 +241,8 @@ pub(super) async fn fetch_build_live(
     ),
     tags = ["Builds"],
     summary = "Fetch Live by Author",
-    description = "
+    description = describe(
+        "
 Fetches all builds of an author directly from the Deadlock Game Coordinator and stores them in the database.
 
 Unlike the search endpoint, this does not rely on builds already being in our database, so it can be used to
@@ -259,20 +254,19 @@ Relevant Protobuf Messages:
 - CMsgClientToGCFindHeroBuilds
 - CMsgClientToGCFindHeroBuildsResponse
 
-### Rate Limits:
-| Type | Limit |
-| ---- | ----- |
-| IP | 20req/min |
-| Key | 100req/min |
-| Global | 500req/min |
-    "
+    ",
+        RATE_LIMIT,
+    )
 )]
 pub(super) async fn fetch_builds_by_author_live(
     Path(AccountIdQuery { account_id }): Path<AccountIdQuery>,
     rate_limit_key: RateLimitKey,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
-    apply_live_limits(&state, &rate_limit_key).await?;
+    state
+        .rate_limit_client
+        .check(&rate_limit_key, RATE_LIMIT)
+        .await?;
 
     let msg = CMsgClientToGcFindHeroBuilds {
         author_account_id: Some(account_id),

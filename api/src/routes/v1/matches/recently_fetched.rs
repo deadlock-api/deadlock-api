@@ -10,6 +10,7 @@ use utoipa::ToSchema;
 
 use crate::context::AppState;
 use crate::error::APIResult;
+use crate::services::rate_limiter::{DOCUMENTED_DEFAULT, describe};
 
 #[derive(Debug, Clone, Row, Deserialize)]
 struct ClickhouseMatchInfoRow {
@@ -104,16 +105,13 @@ async fn get_recently_fetched_match_ids(
     ),
     tags = ["Matches"],
     summary = "Recently Fetched",
-    description = "
+    description = describe(
+        "
 This endpoint returns a list of match ids that have been fetched within the last 10 minutes.
 
-### Rate Limits:
-| Type | Limit |
-| ---- | ----- |
-| IP | 100req/s |
-| Key | - |
-| Global | - |
-    "
+    ",
+        DOCUMENTED_DEFAULT,
+    )
 )]
 pub(super) async fn recently_fetched(
     State(state): State<AppState>,

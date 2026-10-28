@@ -24,6 +24,7 @@ use valveprotos::deadlock::{
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::matches::types::ActiveMatch;
+use crate::services::rate_limiter::{DOCUMENTED_DEFAULT, describe};
 use crate::services::steam::types::{SteamProxyQuery, SteamProxyResult};
 use crate::utils::parse::{comma_separated_steam_ids_option, parse_steam_id_option};
 
@@ -112,7 +113,8 @@ fn parse_active_matches_raw(raw_data: &[u8]) -> APIResult<Vec<ActiveMatch>> {
     ),
     tags = ["Matches"],
     summary = "Active as Protobuf",
-    description = "
+    description = describe(
+        "
 Returns active matches that are currently being played, serialized as protobuf message.
 
 Fetched from the watch tab in game, which is limited to the **top 200 matches**.
@@ -124,13 +126,9 @@ Protobuf definitions can be found here: [https://github.com/SteamDatabase/Protob
 Relevant Protobuf Message:
 - CMsgClientToGcGetActiveMatchesResponse
 
-### Rate Limits:
-| Type | Limit |
-| ---- | ----- |
-| IP | 100req/s |
-| Key | - |
-| Global | - |
-    "
+    ",
+        DOCUMENTED_DEFAULT,
+    )
 )]
 pub(super) async fn active_matches_raw(
     State(state): State<AppState>,
@@ -149,18 +147,15 @@ pub(super) async fn active_matches_raw(
     ),
     tags = ["Matches"],
     summary = "Active",
-    description = "
+    description = describe(
+        "
 Returns active matches that are currently being played.
 
 Fetched from the watch tab in game, which is limited to the **top 200 matches**.
 
-### Rate Limits:
-| Type | Limit |
-| ---- | ----- |
-| IP | 100req/s |
-| Key | - |
-| Global | - |
-    "
+    ",
+        DOCUMENTED_DEFAULT,
+    )
 )]
 pub(super) async fn active_matches(
     Query(query): Query<ActiveMatchesQuery>,

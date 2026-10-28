@@ -86,20 +86,12 @@ async fn get_build_item_stats(
     ),
     tags = ["Analytics"],
     summary = "Build Item Stats",
-    description = "
+    description = super::describe("
 Retrieves item statistics from hero builds.
 
 Results are cached for **1 hour** based on the unique combination of query parameters provided. Subsequent identical requests within this timeframe will receive the cached response.
 
-### Rate Limits:
-> The rate limits below are **shared across all analytics endpoints**.
-
-| Type | Limit |
-| ---- | ----- |
-| IP | 200req/min |
-| Key | 400req/min |
-| Global | 2000req/min |
-    "
+    ")
 )]
 pub(super) async fn build_item_stats(
     Query(query): Query<BuildItemStatsQuery>,

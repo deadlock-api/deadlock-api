@@ -695,7 +695,7 @@ async fn get_lane_soul_curve(
     ),
     tags = ["Analytics"],
     summary = "Lane Soul Curve (Subject to Change)",
-    description = "
+    description = super::describe("
 > **⚠️ Subject to change:** This endpoint is newly added and not yet stable. Its parameters, response fields and semantics may change or be removed without notice.
 
 Retrieves how a duo's lead over the duo they laned against develops over the course of the match.
@@ -712,15 +712,7 @@ Pass `hero_ids` and `enemy_hero_ids` to scope the response to the duos you care 
 
 Results are cached for **1 hour** based on the combination of query parameters provided. Subsequent identical requests within this timeframe will receive the cached response.
 
-### Rate Limits:
-> The rate limits below are **shared across all analytics endpoints**.
-
-| Type | Limit |
-| ---- | ----- |
-| IP | 200req/min |
-| Key | 400req/min |
-| Global | 2000req/min |
-    "
+    ")
 )]
 pub(super) async fn lane_soul_curve(
     Query(mut query): Query<LaneSoulCurveQuery>,

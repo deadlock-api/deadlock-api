@@ -495,7 +495,7 @@ async fn get_player_stats_metrics(
     ),
     tags = ["Analytics"],
     summary = "Player Stats Metrics",
-    description = "
+    description = super::describe("
 Returns comprehensive statistical analysis of player performance.
 
 `avg`, `std` and the percentiles describe the distribution over single matches: each player's
@@ -508,15 +508,7 @@ Results are cached for **1 hour** based on the unique combination of query param
 
 > Note: Quantiles are calculated using the [DDSketch](https://www.vldb.org/pvldb/vol12/p2195-masson.pdf) algorithm, so they are not exact but have a maximum relative error of 0.01.
 
-### Rate Limits:
-> The rate limits below are **shared across all analytics endpoints**.
-
-| Type | Limit |
-| ---- | ----- |
-| IP | 200req/min |
-| Key | 400req/min |
-| Global | 2000req/min |
-    "
+    ")
 )]
 pub(crate) async fn player_stats_metrics(
     Query(mut query): Query<PlayerStatsMetricsQuery>,

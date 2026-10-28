@@ -17,9 +17,17 @@ use crate::error::{APIError, APIResult};
 use crate::routes::v1::commands::variables::{ResolverContext, Variable, VariableCategory};
 use crate::routes::v1::leaderboard::types::LeaderboardRegion;
 use crate::routes::v1::players::ensure_not_protected;
-use crate::services::rate_limiter::Quota;
 use crate::services::rate_limiter::extractor::RateLimitKey;
+use crate::services::rate_limiter::{DOCUMENTED_DEFAULT, Quota, RateLimit, Scope, describe};
 use crate::utils::parse::parse_steam_id;
+
+const RATE_LIMIT: RateLimit = RateLimit::new(
+    "command",
+    &[
+        Quota::new(Scope::Ip, 60, Duration::from_mins(1)),
+        Quota::new(Scope::Global, 300, Duration::from_mins(1)),
+    ],
+);
 
 #[derive(Debug, Clone, Serialize, ToSchema)]
 struct VariableDescription {
@@ -56,16 +64,13 @@ impl From<Variable> for VariableDescription {
     ),
     tags = ["Commands"],
     summary = "Available Variables",
-    description = "
+    description = describe(
+        "
 Returns a list of available variables that can be used in the command endpoint.
 
-### Rate Limits:
-| Type | Limit |
-| ---- | ----- |
-| IP | 100req/s |
-| Key | - |
-| Global | - |
-    "
+    ",
+        DOCUMENTED_DEFAULT,
+    )
 )]
 pub(super) async fn available_variables() -> APIResult<impl IntoResponse> {
     let variable_descriptions = Variable::VARIANTS
@@ -86,16 +91,13 @@ pub(super) async fn available_variables() -> APIResult<impl IntoResponse> {
     ),
     tags = ["Commands"],
     summary = "Widget Versions",
-    description = "
+    description = describe(
+        "
 Returns a map of str->int of widget versions.
 
-### Rate Limits:
-| Type | Limit |
-| ---- | ----- |
-| IP | 100req/s |
-| Key | - |
-| Global | - |
-"
+    ",
+        DOCUMENTED_DEFAULT,
+    )
 )]
 pub(super) async fn widget_versions() -> APIResult<impl IntoResponse> {
     let data = tokio::fs::read("widget_versions.json").await?;
@@ -130,16 +132,13 @@ pub(super) struct CommandResolveQuery {
     ),
     tags = ["Commands"],
     summary = "Resolve Command",
-    description = "
+    description = describe(
+        "
     Resolves a command and returns the resolved command.
 
-### Rate Limits:
-| Type | Limit |
-| ---- | ----- |
-| IP | 60req/60s |
-| Key | - |
-| Global | 300req/60s |
-    "
+    ",
+        RATE_LIMIT,
+    )
 )]
 pub(super) async fn command_resolve(
     rate_limit_key: RateLimitKey,
@@ -199,16 +198,13 @@ pub(super) struct VariablesResolveQuery {
     ),
     tags = ["Commands"],
     summary = "Resolve Variables",
-    description = "
+    description = describe(
+        "
 Resolves variables and returns a map of variable name to resolved value.
 
-### Rate Limits:
-| Type | Limit |
-| ---- | ----- |
-| IP | 60req/min |
-| Key | - |
-| Global | 300req/min |
-    "
+    ",
+        RATE_LIMIT,
+    )
 )]
 pub(super) async fn variables_resolve(
     rate_limit_key: RateLimitKey,
@@ -256,14 +252,7 @@ async fn resolve_variables(
 ) -> APIResult<Vec<(&'static Variable, String)>> {
     state
         .rate_limit_client
-        .apply_limits(
-            rate_limit_key,
-            "command",
-            &[
-                Quota::ip_limit(60, Duration::from_mins(1)),
-                Quota::global_limit(300, Duration::from_mins(1)),
-            ],
-        )
+        .check(rate_limit_key, RATE_LIMIT)
         .await?;
     ensure_not_protected(state, &[account_id]).await?;
 

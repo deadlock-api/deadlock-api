@@ -4,6 +4,7 @@ use axum::response::IntoResponse;
 
 use crate::context::AppState;
 use crate::error::APIResult;
+use crate::services::rate_limiter::{DOCUMENTED_DEFAULT, describe};
 use crate::services::steam::types::FeedItem;
 
 #[utoipa::path(
@@ -15,7 +16,8 @@ use crate::services::steam::types::FeedItem;
     ),
     tags = ["Patches"],
     summary = "Notes",
-    description = "
+    description = describe(
+        "
 Returns a unified feed combining patch notes from the official Forum changelog and the Steam news feed.
 
 Each entry is tagged with a `source` field (`forum` or `steam`).
@@ -23,13 +25,9 @@ Each entry is tagged with a `source` field (`forum` or `steam`).
 - Forum RSS: https://forums.playdeadlock.com/forums/changelog.10/index.rss
 - Steam News RSS: https://store.steampowered.com/feeds/news/app/1422450/
 
-### Rate Limits:
-| Type | Limit |
-| ---- | ----- |
-| IP | 100req/s |
-| Key | - |
-| Global | - |
-    "
+    ",
+        DOCUMENTED_DEFAULT,
+    )
 )]
 pub(super) async fn feed(State(state): State<AppState>) -> APIResult<impl IntoResponse> {
     state

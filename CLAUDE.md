@@ -7,6 +7,7 @@ api/ # rust api, served in production at https://api.deadlock-api.com
 common/ # plumbing shared by api, tools and live-events (tracing, http, steam ids); feature-gated db clients and sv-proxy client
 tools/ # rust microservices for data ingestion and scraping
 live-events/ # rust service for live match event streaming
+rate-limit/ # generic sliding-window rate limiter (caller-defined scopes, per-request costs, Redis or in-memory store)
 valveprotos/ # rust protobuf bindings for steam/deadlock (formerly valveprotos-rs)
 haste/ # source 2 demo/broadcast parser (formerly deadlock-api/haste); crates/dungers* are its bitbuf/varint/charsor primitives (formerly deadlock-api/dungers)
 website/ # tanstack start website, using generated openapi SDKs hitting the api

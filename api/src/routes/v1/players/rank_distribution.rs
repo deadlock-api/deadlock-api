@@ -9,8 +9,9 @@ use utoipa::{IntoParams, ToSchema};
 
 use crate::context::AppState;
 use crate::error::APIResult;
-use crate::routes::v1::players::mmr::apply_mmr_distribution_rate_limits;
+use crate::routes::v1::players::mmr;
 use crate::routes::v1::players::rank::badge_from_flat_progress_sql;
+use crate::services::rate_limiter::describe;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::utils::parse::default_last_month_timestamp;
 use crate::utils::sql::{DURATION_COLUMN, MatchPoolFilters, cached_ch_query, impl_match_info};
@@ -114,7 +115,8 @@ cached_ch_query! {
     ),
     tags = ["Players"],
     summary = "Rank Distribution",
-    description = "
+    description = describe(
+        "
 Counts players by the rank Valve reported at the end of their latest ranked match within the
 filtered range, i.e. the rank `/v1/players/{account_id}/rank` would return for them. Only ranked
 matches carry a rank, so the filters only ever select ranked matches, and players still in
@@ -123,20 +125,19 @@ placement games are not counted.
 `/v1/analytics/badge-distribution` reports the same player counts as `unique_players` next to the
 match counts by average badge; use this endpoint when you only need the players.
 
-### Rate Limits:
-| Type | Limit |
-| ---- | ----- |
-| IP | 5req/min |
-| Key | 25req/min |
-| Global | 50req/min |
-"
+    ",
+        super::mmr::DISTRIBUTION_RATE_LIMIT,
+    )
 )]
 pub(super) async fn rank_distribution(
     Query(query): Query<RankDistributionQuery>,
     State(state): State<AppState>,
     rate_limit_key: RateLimitKey,
 ) -> APIResult<impl IntoResponse> {
-    apply_mmr_distribution_rate_limits(&state, &rate_limit_key).await?;
+    state
+        .rate_limit_client
+        .check(&rate_limit_key, mmr::DISTRIBUTION_RATE_LIMIT)
+        .await?;
     let query_str = build_query(&query);
     debug!(?query_str);
     Ok(run_query(&state.ch_client_ro, &query_str).await.map(Json)?)

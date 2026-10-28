@@ -17,13 +17,21 @@ use wreq_util::Emulation;
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::middleware::cors::is_own_origin;
-use crate::services::rate_limiter::Quota;
 use crate::services::rate_limiter::extractor::RateLimitKey;
+use crate::services::rate_limiter::{Quota, RateLimit, Scope};
 use crate::services::steam::types::{
     FeedItem, ForumRssV2, GetPlayerSummariesResponse, Patch, Rss, SteamAccountNameError,
     SteamAccountVerifyError, SteamProxyError, SteamProxyQuery, SteamProxyRawResponse,
     SteamProxyResponse, SteamProxyResult, SteamRss,
 };
+
+const ACCOUNT_NAME_RATE_LIMIT: RateLimit = RateLimit::new(
+    "steam_account_name",
+    &[
+        Quota::new(Scope::Ip, 50, Duration::from_hours(1)),
+        Quota::new(Scope::Global, 500, Duration::from_hours(1)),
+    ],
+);
 
 const STEAM_OPENID_ENDPOINT: &str = "https://steamcommunity.com/openid/login";
 const RSS_ENDPOINT: &str = "https://forums.playdeadlock.com/forums/changelog.10/index.rss";
@@ -465,14 +473,7 @@ async fn fetch_steam_account_name_cached(
 ) -> Result<String, SteamAccountNameError> {
     state
         .rate_limit_client
-        .apply_limits(
-            rate_limit_key,
-            "steam_account_name",
-            &[
-                Quota::ip_limit(50, Duration::from_hours(1)),
-                Quota::global_limit(500, Duration::from_hours(1)),
-            ],
-        )
+        .check(rate_limit_key, ACCOUNT_NAME_RATE_LIMIT)
         .await
         .map_err(|e| SteamAccountNameError::RateLimitExceeded(e.to_string()))?;
     let steamid64 = crate::utils::parse::steamid3_to_steamid64(steam_id);

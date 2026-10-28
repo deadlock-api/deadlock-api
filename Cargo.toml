@@ -5,6 +5,7 @@ members = [
     "haste",
     "haste/crates/*",
     "live-events",
+    "rate-limit",
     "tools/active-matches-scraper",
     "tools/builds-fetcher",
     "tools/demo-analyzer",
@@ -28,6 +29,7 @@ edition = "2024"
 # Shared in-repo crates
 common = { version = "0.1.0", path = "common" }
 player-match-history = { path = "tools/player-match-history" }
+rate-limit = { path = "rate-limit" }
 valveprotos = { path = "valveprotos" }
 wasm-abi = { path = "website/wasm/abi" }
 haste = { path = "haste" }
