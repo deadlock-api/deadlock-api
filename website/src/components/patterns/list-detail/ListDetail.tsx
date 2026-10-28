@@ -25,7 +25,14 @@ function ListDetail({ className, children, ...props }: React.ComponentProps<"div
 
 /** The details of the picked entry. */
 function ListDetailMain({ className, ...props }: React.ComponentProps<"section">) {
-  return <section data-slot="list-detail-main" className={cn("flex min-w-0 flex-col gap-4", className)} {...props} />;
+  return (
+    <section
+      data-slot="list-detail-main"
+      // Its own column from the first paint: the list comes after it in the streamed HTML and would push it over.
+      className={cn("flex min-w-0 flex-col gap-4 @3xl/list-detail:col-start-2", className)}
+      {...props}
+    />
+  );
 }
 
 /** How long the arrow keys rest before the entry they stopped on opens, so a held key walks past the ones between. */
