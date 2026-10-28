@@ -1,7 +1,8 @@
 use core::error::Error;
+use core::io::Cursor;
 use core::marker::PhantomData;
 use core::time::Duration;
-use std::io::{self, BufRead as _, Cursor, Seek as _, SeekFrom, Write as _};
+use std::io::{self, BufRead as _, Seek as _, SeekFrom, Write as _};
 use std::time::Instant;
 
 use bytes::buf::Reader;
