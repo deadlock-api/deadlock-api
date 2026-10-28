@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
 
 use crate::error::{APIError, APIResult};
-use crate::services::crosshair::{self, DEFAULT_SCREEN_HEIGHT, Settings};
+use crosshair::{DEFAULT_SCREEN_HEIGHT, Settings};
 
 #[derive(Debug, Deserialize, IntoParams)]
 #[into_params(parameter_in = Query)]

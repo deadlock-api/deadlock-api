@@ -22,7 +22,7 @@ use prost::encoding::{decode_varint, encode_varint, encoded_len_varint};
 use super::CrosshairError;
 use super::settings::Settings;
 
-pub(super) const PREFIX: &str = "DL.";
+pub(crate) const PREFIX: &str = "DL.";
 const VERSION: u8 = 1;
 const FLAG_ZSTD: u8 = 1;
 const HEADER_LEN: usize = 6;
@@ -62,7 +62,8 @@ pub(super) fn decode(code: &str) -> Result<Settings, CrosshairError> {
     Ok(settings)
 }
 
-pub(crate) fn encode(settings: &Settings) -> String {
+#[must_use]
+pub fn encode(settings: &Settings) -> String {
     let mut entries = Vec::new();
     let mut entry = Vec::new();
     for (key, value) in settings.entries() {
@@ -192,7 +193,7 @@ impl<'a> Iterator for Records<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::services::crosshair::fixtures::{RED_PIPS, TEAL_DOT};
+    use crate::fixtures::{RED_PIPS, TEAL_DOT};
 
     #[test]
     fn decodes_a_compressed_code() {

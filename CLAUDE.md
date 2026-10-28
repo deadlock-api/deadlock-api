@@ -12,6 +12,7 @@ util-crates/ # libraries shared by the services:
   service-utils/ # env config, graceful shutdown, retries with backoff, shared http clients
   steam-id/ # account id <-> SteamID64
   steam-proxy/ # sv-proxy request/response types and client
+  crosshair/ # crosshair share codes (DL.…) to settings and back, and settings to png; used by the api's /crosshair routes
   db-clients/ # clickhouse/postgres/redis/s3/file-cache connections from env, shared postgres queries
   clickhouse-utils/ # inserts, retrying batch inserter, match id bounds for the workers
   assets-client/ # heroes and ranked seasons from the public asset endpoints
@@ -39,7 +40,7 @@ a `reason`.
 
 ## Twin implementations
 
-The crosshair renderer exists twice, in Rust (`api-crates/api/src/services/crosshair/render.rs`, used by the API) and as a
+The crosshair renderer exists twice, in Rust (`util-crates/crosshair/src/render.rs`, used by the API) and as a
 line-by-line TypeScript port (`website/src/lib/crosshair-render.ts`, used by the crosshair editor). A change to one must
 be made to the other in the same commit. The TypeScript test checks pixel parity against the Rust fixture PNGs.
 

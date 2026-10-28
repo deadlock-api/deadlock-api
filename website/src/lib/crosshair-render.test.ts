@@ -6,7 +6,7 @@ import { inflateSync } from "node:zlib";
 import { type CrosshairRenderSettings, renderCrosshair } from "./crosshair-render";
 
 /** The API's reference renders, which the website's renderer must match pixel for pixel. */
-const FIXTURES = new URL("../../../api-crates/api/src/services/crosshair/fixtures/", import.meta.url);
+const FIXTURES = new URL("../../../util-crates/crosshair/src/fixtures/", import.meta.url);
 
 const DEFAULTS: CrosshairRenderSettings = {
   pip_gap_static: false,

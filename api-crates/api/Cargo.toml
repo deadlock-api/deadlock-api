@@ -41,6 +41,7 @@ telemetry = { workspace = true }
 keyvalues = { workspace = true }
 rate-limit = { workspace = true, features = ["redis"] }
 player-match-history = { workspace = true, features = ["utoipa"] }
+crosshair = { workspace = true, features = ["utoipa"] }
 valveprotos = { workspace = true, features = ["gc-client", "serde"] }
 demofusion = { workspace = true }
 prost = "0.14.4"
@@ -74,7 +75,6 @@ arc-swap = "1.9.3"
 cssparser = "0.38"
 indexmap = { version = "2", features = ["serde"] }
 murmur2 = "0.1.0"
-crc32fast = "1.5"
 datafusion = { version = "55", default-features = false, features = [
     "sql",
     "parquet",

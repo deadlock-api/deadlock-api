@@ -4,7 +4,6 @@ pub(crate) mod ch_cache;
 pub(crate) mod clickhouse_batcher;
 pub(crate) mod clickhouse_insert_batcher;
 pub(crate) mod cohort_agg_refresh;
-pub(crate) mod crosshair;
 pub(crate) mod data_dump;
 pub(crate) mod lease;
 pub(crate) mod patreon;

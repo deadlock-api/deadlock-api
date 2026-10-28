@@ -18,6 +18,7 @@ Monorepo for the [Deadlock API](https://deadlock-api.com) project.
   - [`demofusion/`](util-crates/demofusion/) - SQL queries (Apache DataFusion) over demo files and live broadcasts,
     parsed with `haste`
   - [`keyvalues/`](util-crates/keyvalues/) - parsers for Valve's KV3 (`.vdata`) and localization files
+  - [`crosshair/`](util-crates/crosshair/) - crosshair share codes (`DL.…`) to settings and back, and settings to PNG
   - `telemetry`, `service-utils`, `steam-id`, `steam-proxy`, `db-clients`, `clickhouse-utils` and `assets-client`,
     the service plumbing that used to live in one `common` crate
 

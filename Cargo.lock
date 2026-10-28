@@ -1926,6 +1926,23 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a31eee39dddec8330830986fcd7625edb5a24ec90ea038215273bbc3adb08ac6"
 
 [[package]]
+name = "crosshair"
+version = "0.1.0"
+dependencies = [
+ "base64 0.23.1",
+ "bytes",
+ "crc32fast",
+ "image",
+ "murmur2",
+ "prost",
+ "rstest",
+ "serde",
+ "thiserror",
+ "utoipa",
+ "zstd 0.14.3",
+]
+
+[[package]]
 name = "crunchy"
 version = "0.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2839,7 +2856,7 @@ dependencies = [
  "chrono",
  "clickhouse",
  "clickhouse-sql-parser",
- "crc32fast",
+ "crosshair",
  "cssparser",
  "datafusion",
  "demofusion",

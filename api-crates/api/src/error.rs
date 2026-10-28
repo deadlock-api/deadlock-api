@@ -11,9 +11,9 @@ use tracing::{debug, error, info, warn};
 
 use crate::context::AppStateError;
 use crate::services::ch_admission::ChQueryError;
-use crate::services::crosshair::CrosshairError;
 use crate::services::rate_limiter::{Exceeded, RateLimitHeaders, Status};
 use crate::services::steam::types::SteamProxyError;
+use crosshair::CrosshairError;
 
 pub(super) type APIResult<T> = Result<T, APIError>;
 

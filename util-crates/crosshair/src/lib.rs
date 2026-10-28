@@ -1,28 +1,48 @@
 //! Deadlock crosshairs: share codes (`DL.…`) to settings and back, and settings to images.
 
+#![cfg_attr(
+    test,
+    allow(
+        clippy::arithmetic_side_effects,
+        clippy::disallowed_macros,
+        clippy::disallowed_methods,
+        clippy::expect_used,
+        clippy::indexing_slicing,
+        clippy::panic,
+        clippy::panic_in_result_fn,
+        clippy::print_stderr,
+        clippy::print_stdout,
+        clippy::string_slice,
+        clippy::unreachable,
+        clippy::unwrap_in_result,
+        clippy::unwrap_used,
+        reason = "tests may panic"
+    )
+)]
+
 mod code;
 mod console;
 mod render;
 mod settings;
 
-use axum::body::Bytes;
+use bytes::Bytes;
 use image::ImageEncoder as _;
 use image::codecs::png::PngEncoder;
 
-pub(crate) use self::code::encode;
-pub(crate) use self::settings::Settings;
+pub use self::code::encode;
+pub use self::settings::Settings;
 
 /// Screen heights, in pixels, that crosshairs can be rendered for.
-pub(crate) const MIN_SCREEN_HEIGHT: u32 = 480;
-pub(crate) const MAX_SCREEN_HEIGHT: u32 = 4320;
-pub(crate) const DEFAULT_SCREEN_HEIGHT: u32 = 1080;
+pub const MIN_SCREEN_HEIGHT: u32 = 480;
+pub const MAX_SCREEN_HEIGHT: u32 = 4320;
+pub const DEFAULT_SCREEN_HEIGHT: u32 = 1080;
 /// How many pixels per side an image pixel may be enlarged to.
-pub(crate) const MAX_SCALE: u32 = 16;
+pub const MAX_SCALE: u32 = 16;
 /// The largest edge an enlarged image is allowed; a larger `scale` is lowered to fit.
 const MAX_SCALED_SIZE: u32 = 2048;
 
 #[derive(Debug, thiserror::Error)]
-pub(crate) enum CrosshairError {
+pub enum CrosshairError {
     #[error("Crosshair code is too long")]
     CodeTooLong,
     #[error(
@@ -54,7 +74,7 @@ const MAX_CODE_LEN: usize = 4096;
 
 /// The settings in a share code (`DL.…`) or in crosshair console commands
 /// (`citadel_crosshair_dot_size 4; citadel_crosshair_color_r 245`).
-pub(crate) fn decode(input: &str) -> Result<Settings, CrosshairError> {
+pub fn decode(input: &str) -> Result<Settings, CrosshairError> {
     if input.len() > MAX_CODE_LEN {
         return Err(CrosshairError::CodeTooLong);
     }
@@ -67,10 +87,12 @@ pub(crate) fn decode(input: &str) -> Result<Settings, CrosshairError> {
 }
 
 /// Renders `settings` as they look on a screen `screen_height` pixels tall, as a PNG with a
-/// transparent background, cropped square around the crosshair. `scale` enlarges it afterwards,
+/// transparent background, cropped square around the crosshair.
+///
+/// `scale` enlarges it afterwards,
 /// every pixel drawn as a `scale`-sized square, for a picture larger than the crosshair itself
 /// (a link preview); it is lowered when the result would pass `MAX_SCALED_SIZE`.
-pub(crate) fn render_png(
+pub fn render_png(
     settings: &Settings,
     screen_height: u32,
     scale: u32,

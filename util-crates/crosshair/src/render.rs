@@ -370,8 +370,8 @@ mod tests {
     use rstest::rstest;
 
     use super::*;
-    use crate::services::crosshair::code;
-    use crate::services::crosshair::fixtures::{RED_PIPS, TEAL_DOT};
+    use crate::code;
+    use crate::fixtures::{RED_PIPS, TEAL_DOT};
 
     /// The fixtures were rendered by the reference implementation this module was ported from.
     #[rstest]

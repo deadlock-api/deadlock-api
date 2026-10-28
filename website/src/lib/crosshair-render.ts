@@ -2,9 +2,9 @@
  * Draws a crosshair from its settings the way the game's HUD does, pixel for pixel the same as the API's renderer, so
  * the editor can redraw on every slider step without a request.
  *
- * **Twin implementation:** this is a line-by-line port of `api-crates/api/src/services/crosshair/render.rs`. Any change to either
+ * **Twin implementation:** this is a line-by-line port of `util-crates/crosshair/src/render.rs`. Any change to either
  * must be made to both, in the same commit. `crosshair-render.test.ts` checks this file against the Rust renderer's
- * PNGs in `api-crates/api/src/services/crosshair/fixtures/`.
+ * PNGs in `util-crates/crosshair/src/fixtures/`.
  *
  * The layout mirrors the reticle panels in the game's client: a round dot with a ring outline in the centre and four
  * pips around it, each with a rectangular outline. Lengths are in units of 1/1080 of the screen height. Each pixel is
