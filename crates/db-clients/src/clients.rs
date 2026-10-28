@@ -63,6 +63,21 @@ pub fn get_store() -> Result<impl object_store::ObjectStore, ClientError> {
     )
 }
 
+/// The R2 bucket with the versioned game assets, from the same `R2_*` variables as the API
+/// (`R2_ENDPOINT` defaults to the account's R2 endpoint, `R2_REGION` to `auto`).
+pub fn get_r2_client() -> Result<object_store::aws::AmazonS3, ClientError> {
+    let account_id = env::var("R2_ACCOUNT_ID")?;
+    let endpoint = env::var("R2_ENDPOINT")
+        .unwrap_or_else(|_| format!("https://{account_id}.r2.cloudflarestorage.com"));
+    Ok(AmazonS3Builder::new()
+        .with_region(env::var("R2_REGION").unwrap_or_else(|_| "auto".to_owned()))
+        .with_bucket_name(env::var("R2_BUCKET")?)
+        .with_access_key_id(env::var("R2_ACCESS_KEY_ID")?)
+        .with_secret_access_key(env::var("R2_SECRET_ACCESS_KEY")?)
+        .with_endpoint(endpoint)
+        .build()?)
+}
+
 /// The metadata file cache the API serves recent matches from: a directory shared with the API
 /// container (`FILE_CACHE_DIR`), keyed like the bucket it replaced. A host cron deletes files
 /// older than 7 days.

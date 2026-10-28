@@ -1,55 +1,33 @@
 use clickhouse::Row;
-use serde::{Deserialize, Serialize};
-use serde_repr::{Deserialize_repr, Serialize_repr};
+use game_assets::versions::heroes::Hero;
+use game_assets::versions::items::Item;
+use game_assets::versions::items::types::ItemSlotType;
+use serde::Serialize;
+use serde_repr::Serialize_repr;
 
-#[derive(Deserialize, Serialize, Row)]
-pub(crate) struct Item {
-    pub id: u32,
-    pub name: String,
-    #[serde(default, rename = "item_tier")]
-    pub tier: Option<u8>,
-    #[serde(default)]
-    pub shopable: Option<bool>,
-    pub r#type: ItemType,
-    #[serde(default, rename = "item_slot_type")]
-    pub slot_type: Option<SlotType>,
-    pub cost: Option<u32>,
-}
-
-#[derive(Serialize, Deserialize, PartialEq, Eq, Debug)]
-#[serde(rename_all = "snake_case")]
-pub(crate) enum ItemType {
-    Upgrade,
-    Ability,
-    #[serde(other)]
-    Unknown,
-}
-
-#[derive(Serialize, Deserialize, PartialEq, Eq, Debug)]
-#[serde(rename_all = "snake_case")]
-pub(crate) enum SlotType {
-    Weapon,
-    Vitality,
-    Spirit,
-}
-
-#[derive(Serialize_repr, Deserialize_repr, PartialEq, Eq, Debug)]
-#[serde(rename_all = "snake_case")]
+#[derive(Serialize_repr, PartialEq, Eq, Debug)]
 #[repr(i8)]
 pub(crate) enum CHItemType {
     Upgrade = 0,
     Ability = 1,
-    #[serde(other)]
-    Unknown = 2,
 }
 
-#[derive(Serialize_repr, Deserialize_repr, PartialEq, Eq, Debug)]
-#[serde(rename_all = "snake_case")]
+#[derive(Serialize_repr, PartialEq, Eq, Debug)]
 #[repr(i8)]
 pub(crate) enum CHSlotType {
     Weapon = 0,
     Vitality = 1,
     Spirit = 2,
+}
+
+impl From<ItemSlotType> for CHSlotType {
+    fn from(value: ItemSlotType) -> Self {
+        match value {
+            ItemSlotType::Weapon => Self::Weapon,
+            ItemSlotType::Vitality => Self::Vitality,
+            ItemSlotType::Spirit => Self::Spirit,
+        }
+    }
 }
 
 #[derive(Serialize, Row)]
@@ -62,38 +40,39 @@ pub(crate) struct ChItem {
     pub cost: Option<u32>,
 }
 
-/// Fails, handing the item back, for an item of unknown type.
-impl TryFrom<Item> for ChItem {
-    type Error = Item;
-
-    fn try_from(value: Item) -> Result<Self, Item> {
-        let r#type = match value.r#type {
-            ItemType::Upgrade => CHItemType::Upgrade,
-            ItemType::Ability => CHItemType::Ability,
-            ItemType::Unknown => return Err(value),
-        };
-        Ok(Self {
-            id: value.id,
-            name: value.name,
-            tier: value.tier,
-            r#type,
-            slot_type: match value.slot_type {
-                Some(SlotType::Weapon) => Some(CHSlotType::Weapon),
-                Some(SlotType::Vitality) => Some(CHSlotType::Vitality),
-                Some(SlotType::Spirit) => Some(CHSlotType::Spirit),
-                None => None,
-            },
-            cost: value.cost,
-        })
-    }
+/// Why an item doesn't get a row.
+#[derive(Debug, PartialEq, Eq)]
+pub(crate) enum ItemSkip {
+    NotShopable,
+    /// Weapons; the table only knows upgrades and abilities.
+    UnknownType,
 }
 
-#[derive(Deserialize)]
-pub(crate) struct Hero {
-    pub id: u8,
-    pub name: String,
-    pub disabled: Option<bool>,
-    pub in_development: Option<bool>,
+impl TryFrom<&Item> for ChItem {
+    type Error = ItemSkip;
+
+    fn try_from(item: &Item) -> Result<Self, ItemSkip> {
+        match item {
+            Item::Upgrade(u) if !u.shopable => Err(ItemSkip::NotShopable),
+            Item::Upgrade(u) => Ok(Self {
+                id: item.id(),
+                name: u.name.clone(),
+                tier: Some(u.item_tier),
+                r#type: CHItemType::Upgrade,
+                slot_type: Some(u.item_slot_type.into()),
+                cost: u.cost,
+            }),
+            Item::Ability(a) => Ok(Self {
+                id: item.id(),
+                name: a.name.clone(),
+                tier: None,
+                r#type: CHItemType::Ability,
+                slot_type: None,
+                cost: None,
+            }),
+            Item::Weapon(_) => Err(ItemSkip::UnknownType),
+        }
+    }
 }
 
 #[derive(Serialize, Row)]
@@ -102,11 +81,14 @@ pub(crate) struct ChHero {
     pub name: String,
 }
 
-impl From<Hero> for ChHero {
-    fn from(value: Hero) -> Self {
-        Self {
-            id: value.id,
-            name: value.name,
-        }
+/// Fails for a hero id that doesn't fit the table's `UInt8`.
+impl TryFrom<&Hero> for ChHero {
+    type Error = core::num::TryFromIntError;
+
+    fn try_from(hero: &Hero) -> Result<Self, Self::Error> {
+        Ok(Self {
+            id: u8::try_from(hero.id)?,
+            name: hero.name.clone(),
+        })
     }
 }

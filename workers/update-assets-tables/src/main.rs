@@ -21,11 +21,12 @@
 
 use core::time::Duration;
 
+use game_assets::client::{AssetsClient, AssetsClientError};
+use game_assets::versions::store::VersionStore;
 use metrics::counter;
-use models::{Hero, Item};
 use tracing::{debug, error, info, instrument, warn};
 
-use crate::models::{ChHero, ChItem};
+use crate::models::{ChHero, ChItem, ItemSkip};
 
 mod models;
 
@@ -36,13 +37,13 @@ enum Error {
     #[error(transparent)]
     Env(#[from] std::env::VarError),
     #[error(transparent)]
-    Http(#[from] reqwest::Error),
+    Clients(#[from] db_clients::ClientError),
 }
 
 #[derive(Debug, thiserror::Error)]
 enum UpdateError {
     #[error(transparent)]
-    Fetch(#[from] reqwest::Error),
+    Assets(#[from] AssetsClientError),
     #[error(transparent)]
     Clickhouse(#[from] clickhouse::error::Error),
     #[error("{staging} holds {staged} rows, expected {inserted}; keeping the current {table}")]
@@ -55,8 +56,6 @@ enum UpdateError {
 }
 
 const UPDATE_INTERVAL_S: u64 = 60 * 60; // Run every hour
-const MAX_FETCH_ATTEMPTS: u32 = 4;
-const CACHE_BUST_AFTER_ATTEMPTS: u32 = 2;
 
 #[tokio::main]
 #[expect(
@@ -69,15 +68,21 @@ async fn main() -> Result<(), Error> {
 
     let mut interval = tokio::time::interval(Duration::from_secs(UPDATE_INTERVAL_S));
     let ch_client = db_clients::get_ch_client()?;
-    let http_client = service_utils::http_client()?;
+    // Builds the heroes and items from the versioned game files on R2, like the API's
+    // /v1/assets endpoints. The refresh loop picks up a new patch within 15 minutes.
+    let r2_client = db_clients::get_r2_client()?;
+    let version_store = VersionStore::new();
+    version_store.spawn_refresh_loop(r2_client.clone());
+    let assets_client = AssetsClient::new(r2_client, version_store);
     service_utils::run_until_shutdown(async move {
         loop {
             interval.tick().await;
 
             info!("Updating assets");
+            // Boxed: building the items in place makes these futures tens of KB.
             let (heroes_result, items_result) = tokio::join!(
-                update_heroes(&ch_client, &http_client),
-                update_items(&ch_client, &http_client),
+                Box::pin(update_heroes(&ch_client, &assets_client)),
+                Box::pin(update_items(&ch_client, &assets_client)),
             );
             if let Err(e) = heroes_result {
                 error!("Failed to update heroes: {e}");
@@ -91,53 +96,16 @@ async fn main() -> Result<(), Error> {
     .await
 }
 
-async fn fetch_with_retries<T: serde::de::DeserializeOwned>(
-    http_client: &reqwest::Client,
-    base_url: &str,
-) -> reqwest::Result<T> {
-    let mut attempt: u32 = 0;
-    let backoff = service_utils::Backoff {
-        retries: MAX_FETCH_ATTEMPTS - 1,
-        initial_delay: Duration::from_secs(1),
-        max_delay: Duration::from_secs(4),
-    };
-    service_utils::retry_with_backoff(&format!("Fetching {base_url}"), backoff, || {
-        attempt = attempt.saturating_add(1);
-        let url = if attempt > CACHE_BUST_AFTER_ATTEMPTS {
-            let bust = std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .map_or(0, |d| d.as_millis());
-            let sep = if base_url.contains('?') { '&' } else { '?' };
-            format!("{base_url}{sep}_cb={bust}")
-        } else {
-            base_url.to_owned()
-        };
-        async move {
-            http_client
-                .get(&url)
-                .send()
-                .await?
-                .error_for_status()?
-                .json::<T>()
-                .await
-        }
-    })
-    .await
-}
-
 #[instrument(skip_all)]
 async fn update_heroes(
     ch_client: &clickhouse::Client,
-    http_client: &reqwest::Client,
+    assets_client: &AssetsClient,
 ) -> Result<(), UpdateError> {
     info!("Updating heroes");
-    let heroes: Vec<Hero> = fetch_with_retries(
-        http_client,
-        "https://api.deadlock-api.com/v1/assets/heroes?only_active=true",
-    )
-    .await?;
+    let all_heroes = assets_client.heroes().await?;
+    let heroes: Vec<_> = all_heroes.iter().filter(|h| h.is_active()).collect();
     let fetched = heroes.len();
-    info!("Fetched {fetched} heroes from upstream");
+    info!("Built {fetched} active heroes from the game files");
 
     let staging = create_staging(ch_client, "heroes").await?;
     let mut insert = sync_insert_client(ch_client)
@@ -147,18 +115,24 @@ async fn update_heroes(
     let mut skipped_disabled: u32 = 0;
     let mut skipped_in_dev: u32 = 0;
     for hero in heroes {
-        if hero.disabled.is_some_and(|d| d) {
+        if hero.disabled {
             debug!("Hero {} is disabled, skipping", hero.name);
             skipped_disabled = skipped_disabled.saturating_add(1);
             continue;
         }
-        if hero.in_development.is_some_and(|d| d) {
+        if hero.in_development {
             debug!("Hero {} is in development, skipping", hero.name);
             skipped_in_dev = skipped_in_dev.saturating_add(1);
             continue;
         }
+        let Ok(ch_hero) = ChHero::try_from(hero) else {
+            warn!(
+                "Hero {} has id {}, too large for the table, skipping",
+                hero.name, hero.id
+            );
+            continue;
+        };
         debug!("Inserting hero {} (id={})", hero.name, hero.id);
-        let ch_hero: ChHero = hero.into();
         insert.write(&ch_hero).await?;
         inserted = inserted.saturating_add(1);
         counter!("assets_updater.heroes.updated").increment(1);
@@ -182,31 +156,27 @@ async fn update_heroes(
 #[instrument(skip_all)]
 async fn update_items(
     ch_client: &clickhouse::Client,
-    http_client: &reqwest::Client,
+    assets_client: &AssetsClient,
 ) -> Result<(), UpdateError> {
     info!("Updating items");
-    let raw_items: Vec<Item> =
-        fetch_with_retries(http_client, "https://api.deadlock-api.com/v1/assets/items").await?;
+    let raw_items = assets_client.items().await?;
     let fetched = raw_items.len();
-    info!("Fetched {fetched} items from upstream");
+    info!("Built {fetched} items from the game files");
 
     let mut skipped_not_shopable: u32 = 0;
     let mut skipped_unknown_type: u32 = 0;
     let items: Vec<ChItem> = raw_items
-        .into_iter()
-        .filter(|i| {
-            let keep = i.shopable.is_none_or(|s| s);
-            if !keep {
-                skipped_not_shopable = skipped_not_shopable.saturating_add(1);
-                debug!("Item {} skipped: not shopable", i.name);
-            }
-            keep
-        })
+        .iter()
         .filter_map(|i| match ChItem::try_from(i) {
             Ok(item) => Some(item),
-            Err(i) => {
+            Err(ItemSkip::NotShopable) => {
+                skipped_not_shopable = skipped_not_shopable.saturating_add(1);
+                debug!("Item {} skipped: not shopable", i.class_name());
+                None
+            }
+            Err(ItemSkip::UnknownType) => {
                 skipped_unknown_type = skipped_unknown_type.saturating_add(1);
-                debug!("Item {} skipped: unknown type", i.name);
+                debug!("Item {} skipped: unknown type", i.class_name());
                 None
             }
         })

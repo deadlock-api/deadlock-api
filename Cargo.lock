@@ -8269,8 +8269,8 @@ version = "0.1.0"
 dependencies = [
  "clickhouse",
  "db-clients",
+ "game-assets",
  "metrics",
- "reqwest",
  "serde",
  "serde_repr",
  "service-utils",

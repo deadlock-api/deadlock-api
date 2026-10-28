@@ -6,10 +6,10 @@ edition = "2024"
 [dependencies]
 clickhouse = { workspace = true }
 db-clients = { workspace = true }
+game-assets = { workspace = true }
 service-utils = { workspace = true }
 telemetry = { workspace = true, features = ["prometheus"] }
 metrics = { workspace = true }
-reqwest = { workspace = true, features = ["json"] }
 serde = { workspace = true }
 serde_repr = { workspace = true }
 thiserror = { workspace = true }
