@@ -3,8 +3,7 @@
 Monorepo for the main game data Rust API and website of https://deadlock-api.com
 
 ```
-api-crates/api/ # rust api, served in production at https://api.deadlock-api.com
-api-crates/rate-limit/ # generic sliding-window rate limiter (caller-defined scopes, per-request costs, Redis or in-memory store)
+api/ # rust api, served in production at https://api.deadlock-api.com
 worker-crates/ # rust microservices for data ingestion and scraping; migrations/ holds the clickhouse + postgres migrations
 live-events/ # rust service for live match event streaming
 util-crates/ # libraries shared by the services:
@@ -16,6 +15,7 @@ util-crates/ # libraries shared by the services:
   db-clients/ # clickhouse/postgres/redis/s3/file-cache connections from env, shared postgres queries
   clickhouse-utils/ # inserts, retrying batch inserter, batched key lookups (BatchQuery), match id bounds
   assets-client/ # heroes and ranked seasons from the public asset endpoints
+  rate-limit/ # generic sliding-window rate limiter (caller-defined scopes, per-request costs, Redis or in-memory store), used by the api
   game-assets/ # the versioned game files on R2 (.vdata, css, localization) to the api's /v1/assets JSON; features `utoipa`/`graphql`/`schemars` add the api's derives
   demofusion/ # sql (datafusion) over demo files and live broadcasts, parsed with haste; used by the api's /matches/demo routes
   keyvalues/ # parsers for valve's kv3 (.vdata) and localization text files, used by game-assets

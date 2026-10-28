@@ -5,7 +5,7 @@ on:
     branches:
       - master
     paths: &paths
-      - 'api-crates/**'
+      - 'api/**'
       - 'worker-crates/player-match-history/**'
       - 'util-crates/**'
       - '.sqlx/**'
@@ -52,9 +52,9 @@ jobs:
     uses: ./.github/workflows/rust-checks.yml
     secrets: inherit
     with:
-      packages: deadlock-api-rust rate-limit
-      paths: api-crates
-      typos-paths: api-crates
+      packages: deadlock-api-rust
+      paths: api
+      typos-paths: api
       test: true
       runs-on: blacksmith-4vcpu-ubuntu-2404
       cache-key: api-build-cache
@@ -92,7 +92,7 @@ jobs:
         with:
           # Build context is the repo root: api is a member of the root cargo workspace.
           context: .
-          file: api-crates/api/Dockerfile
+          file: api/Dockerfile
           tags: ${{ env.IMAGE_NAME }}:build-${{ github.sha }}
           push: true
 

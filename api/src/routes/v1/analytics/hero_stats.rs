@@ -955,7 +955,7 @@ mod tests {
     #[test]
     fn edge_rows_mirror_the_rollup_views() {
         let migration = include_str!(
-            "../../../../../../worker-crates/migrations/clickhouse/50_power_up_buff_analytics.sql"
+            "../../../../../worker-crates/migrations/clickhouse/50_power_up_buff_analytics.sql"
         );
         let rows = mv_rows(&EdgeRows {
             where_clause: String::new(),

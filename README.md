@@ -4,8 +4,7 @@ Monorepo for the [Deadlock API](https://deadlock-api.com) project.
 
 ## Structure
 
-- **[`api-crates/`](api-crates/)** - Rust crates of the API: [`api/`](api-crates/api/), the Axum backend serving game
-  data, analytics, leaderboards, and more, and [`rate-limit/`](api-crates/rate-limit/), its sliding-window rate limiter
+- **[`api/`](api/)** - Rust API (Axum) serving game data, analytics, leaderboards, and more
 - **[`website/`](website/)** - React frontend (Vite + React Router) for the Deadlock API website
 - **[`worker-crates/`](worker-crates/)** - Rust microservices for data ingestion, scraping, and pipeline processing,
   plus the database migrations
@@ -19,20 +18,23 @@ Monorepo for the [Deadlock API](https://deadlock-api.com) project.
     parsed with `haste`
   - [`keyvalues/`](util-crates/keyvalues/) - parsers for Valve's KV3 (`.vdata`) and localization files
   - [`crosshair/`](util-crates/crosshair/) - crosshair share codes (`DL.…`) to settings and back, and settings to PNG
+  - [`game-assets/`](util-crates/game-assets/) - the versioned game files (`.vdata`, CSS, localization) to the
+    API's `/v1/assets` JSON
+  - [`rate-limit/`](util-crates/rate-limit/) - the API's sliding-window rate limiter
   - `telemetry`, `service-utils`, `steam-id`, `steam-proxy`, `db-clients`, `clickhouse-utils` and `assets-client`,
     the service plumbing that used to live in one `common` crate
 
 All Rust crates are members of one cargo workspace (`Cargo.toml` at the repo root), sharing a
 single `Cargo.lock` and `target/`. Build or run any of them from the root with `cargo <cmd> -p <package>`.
 Docker images for the Rust services are built with the repo root as context, e.g.
-`docker build -f api-crates/api/Dockerfile .`.
+`docker build -f api/Dockerfile .`.
 
 ## Getting Started
 
 ### API
 
 ```bash
-cd api-crates/api
+cd api
 cp .env.example .env
 # Edit .env with your credentials
 cargo run

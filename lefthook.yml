@@ -13,8 +13,8 @@ pre-commit:
 
     # The crates CI also runs typos on (config: _typos.toml).
     rust-typos:
-      glob: "{api-crates,live-events,util-crates,worker-crates}/**"
-      run: typos api-crates live-events util-crates worker-crates
+      glob: "{api,live-events,util-crates,worker-crates}/**"
+      run: typos api live-events util-crates worker-crates
       fail_text: "Typos found. Run the same typos command with --write-changes to fix."
 
     website-fmt:

@@ -1712,7 +1712,7 @@ mod tests {
     #[test]
     fn agg_select_body_matches_the_item_stats_agg_v2_columns() {
         let migration = include_str!(
-            "../../../../../../worker-crates/migrations/clickhouse/52_item_stats_agg_incremental.sql"
+            "../../../../../worker-crates/migrations/clickhouse/52_item_stats_agg_incremental.sql"
         );
         let create = &migration[migration.find("CREATE TABLE").unwrap()..];
         let create = &create[..create.find("ENGINE").unwrap()];
