@@ -1,59 +1,11 @@
-use core::time::Duration;
-use std::sync::Arc;
-
 use chrono::{DateTime, FixedOffset};
-use prost::Message;
 use reqwest::StatusCode;
 use serde::{Deserialize, Serialize};
+use steam_proxy::SteamProxyError;
 use thiserror::Error;
 use utoipa::ToSchema;
-use valveprotos::deadlock::EgcCitadelClientMessages;
 
 use crate::utils::parse::parse_rfc2822_datetime;
-
-#[derive(Debug, Clone)]
-pub(crate) struct SteamProxyQuery<M: Message> {
-    pub(crate) msg_type: EgcCitadelClientMessages,
-    pub(crate) msg: M,
-    pub(crate) in_all_groups: Option<Vec<String>>,
-    pub(crate) in_any_groups: Option<Vec<String>>,
-    pub(crate) cooldown_time: Duration,
-    pub(crate) soft_cooldown_millis: Option<Duration>,
-    pub(crate) request_timeout: Duration,
-    pub(crate) username: Option<String>,
-}
-
-pub(crate) use steam_proxy::SteamProxyResponse as SteamProxyRawResponse;
-
-/// Body of a non-success proxy response. Auth and bad-request errors are plain text instead.
-#[derive(Debug, Deserialize)]
-struct SteamProxyErrorResponse {
-    message: String,
-    pool_limit_info: Option<SteamProxyPoolLimitInfo>,
-}
-
-#[derive(Debug, Deserialize)]
-struct SteamProxyPoolLimitInfo {
-    wait_for_millis: u64,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-pub(crate) struct SteamProxyResponse<M: Message> {
-    pub(crate) msg: M,
-    pub(crate) username: String,
-}
-
-impl<M: Message + Default> TryFrom<SteamProxyRawResponse> for SteamProxyResponse<M> {
-    type Error = SteamProxyError;
-
-    fn try_from(raw: SteamProxyRawResponse) -> Result<Self, Self::Error> {
-        let msg = raw.decode::<M, SteamProxyError>()?;
-        Ok(Self {
-            msg,
-            username: raw.username,
-        })
-    }
-}
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub(super) struct GetPlayerSummariesResponse {
@@ -72,74 +24,19 @@ pub(super) struct PlayerSummary {
 
 pub(crate) type SteamProxyResult<T> = Result<T, SteamProxyError>;
 
-/// Error type for Steam proxy calls. Cloneable, so a cached failure can be replayed.
-#[derive(Debug, Clone, Error)]
-pub(crate) enum SteamProxyError {
-    #[error("no proxy base url configured")]
-    NoBaseUrl,
-    #[error("request timed out: {0}")]
-    Timeout(Arc<reqwest::Error>),
-    #[error("failed to decode proxy response: {0}")]
-    Decode(Arc<reqwest::Error>),
-    #[error("request failed: {0}")]
-    Request(Arc<reqwest::Error>),
-    /// Every bot that could serve the request is on cooldown (429).
-    #[error("all bots are on cooldown: {message}")]
-    Cooldown {
-        message: String,
-        /// The proxy's suggested wait before the next request of the same kind.
-        wait_for: Option<Duration>,
-    },
-    /// No bot of the group is logged in (503).
-    #[error("no bot is alive: {0}")]
-    NoAliveBots(String),
-    /// The bot failed even after retries and was reset (502), or the proxy's store failed (500).
-    #[error("proxy failed with {0}: {1}")]
-    Failed(StatusCode, String),
-    /// Bad auth or a malformed request: the same request fails again.
-    #[error("proxy rejected the request with {0}: {1}")]
-    Rejected(StatusCode, String),
-    #[error("failed to decode base64 data: {0}")]
-    Base64(#[from] base64::DecodeError),
-    #[error("failed to parse protobuf message: {0}")]
-    Protobuf(#[from] prost::DecodeError),
-}
-
-impl From<reqwest::Error> for SteamProxyError {
-    fn from(e: reqwest::Error) -> Self {
-        if e.is_timeout() {
-            Self::Timeout(Arc::new(e))
-        } else if e.is_decode() {
-            Self::Decode(Arc::new(e))
-        } else {
-            Self::Request(Arc::new(e))
-        }
-    }
-}
-
-impl SteamProxyError {
-    /// Classifies a non-success proxy response by its status and body.
-    pub(crate) fn from_status(status: StatusCode, body: String) -> Self {
-        let (message, wait_for) = match serde_json::from_str(&body) {
-            Ok(SteamProxyErrorResponse {
-                message,
-                pool_limit_info,
-            }) => (
-                message,
-                pool_limit_info.map(|i| Duration::from_millis(i.wait_for_millis)),
-            ),
-            Err(_) => (body, None),
-        };
-        match status {
-            StatusCode::TOO_MANY_REQUESTS => Self::Cooldown { message, wait_for },
-            StatusCode::SERVICE_UNAVAILABLE => Self::NoAliveBots(message),
-            s if s.is_server_error() => Self::Failed(s, message),
-            s => Self::Rejected(s, message),
-        }
-    }
-
+/// How the API answers a failed Steam proxy call.
+pub(crate) trait SteamProxyErrorResponse {
     /// Status for the API's own response.
-    pub(crate) const fn response_status(&self) -> StatusCode {
+    fn response_status(&self) -> StatusCode;
+    /// Message for the API's own response, telling the client to retry only when a later
+    /// attempt can succeed.
+    fn response_message(&self) -> &'static str;
+    /// Seconds the client should wait before retrying, when the proxy's bot pool is drained.
+    fn retry_after_secs(&self) -> Option<u64>;
+}
+
+impl SteamProxyErrorResponse for SteamProxyError {
+    fn response_status(&self) -> StatusCode {
         match self {
             Self::Cooldown { .. } | Self::NoAliveBots(_) | Self::Request(_) => {
                 StatusCode::SERVICE_UNAVAILABLE
@@ -150,13 +47,11 @@ impl SteamProxyError {
             | Self::Decode(_)
             | Self::Base64(_)
             | Self::Protobuf(_)
-            | Self::NoBaseUrl => StatusCode::INTERNAL_SERVER_ERROR,
+            | Self::NoProxyUrl => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
 
-    /// Message for the API's own response, telling the client to retry only when a later
-    /// attempt can succeed.
-    pub(crate) const fn response_message(&self) -> &'static str {
+    fn response_message(&self) -> &'static str {
         match self {
             Self::Cooldown { .. } | Self::NoAliveBots(_) => {
                 "Steam is busy. Retry after the delay in the Retry-After header."
@@ -172,17 +67,11 @@ impl SteamProxyError {
             Self::Protobuf(_) => {
                 "Failed to parse protobuf message from Steam. Retrying won't help."
             }
-            Self::NoBaseUrl => "No Steam proxy URL configured.",
+            Self::NoProxyUrl => "No Steam proxy URL configured.",
         }
     }
 
-    /// Whether the same call can succeed when repeated right away.
-    pub(crate) const fn is_retryable(&self) -> bool {
-        matches!(self, Self::Request(_) | Self::Timeout(_) | Self::Failed(..))
-    }
-
-    /// Seconds the client should wait before retrying, when the proxy's bot pool is drained.
-    pub(crate) fn retry_after_secs(&self) -> Option<u64> {
+    fn retry_after_secs(&self) -> Option<u64> {
         match self {
             Self::Cooldown { wait_for, .. } => {
                 Some(wait_for.map_or(10, |w| w.as_secs().saturating_add(1)))

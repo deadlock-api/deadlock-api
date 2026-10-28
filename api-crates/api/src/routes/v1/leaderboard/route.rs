@@ -16,6 +16,7 @@ use futures::join;
 use itertools::Itertools as _;
 use prost::Message as _;
 use serde::Deserialize;
+use steam_proxy::{SteamProxyError, SteamProxyOptions, SteamProxyReply, SteamProxyResponse};
 use tracing::warn;
 use utoipa::IntoParams;
 use valveprotos::deadlock::{
@@ -29,9 +30,6 @@ use crate::routes::v1::leaderboard::types::{
     HeroLeaderboardClickhouse, Leaderboard, LeaderboardClickhouse, LeaderboardRegion,
 };
 use crate::services::rate_limiter::{DOCUMENTED_DEFAULT, describe};
-use crate::services::steam::types::{
-    SteamProxyError, SteamProxyQuery, SteamProxyRawResponse, SteamProxyResponse,
-};
 
 #[derive(Debug, Deserialize, IntoParams)]
 pub(super) struct LeaderboardQuery {
@@ -74,7 +72,7 @@ pub(crate) async fn fetch_leaderboard_raw(
     region: LeaderboardRegion,
     hero_id: Option<u32>,
     leaderboard_id: Option<u32>,
-) -> Result<SteamProxyRawResponse, SteamProxyError> {
+) -> Result<SteamProxyResponse, SteamProxyError> {
     let msg = CMsgClientToGcGetLeaderboard {
         leaderboard_region: Some(region as i32),
         hero_id,
@@ -82,16 +80,18 @@ pub(crate) async fn fetch_leaderboard_raw(
     };
     let response = state
         .steam_client
-        .call_steam_proxy_raw(SteamProxyQuery {
-            msg_type: EgcCitadelClientMessages::KEMsgClientToGcGetLeaderboard,
-            msg,
-            in_all_groups: None,
-            in_any_groups: None,
-            cooldown_time: Duration::from_mins(1),
-            request_timeout: Duration::from_secs(2),
-            soft_cooldown_millis: None,
-            username: None,
-        })
+        .call_steam_proxy_raw(
+            EgcCitadelClientMessages::KEMsgClientToGcGetLeaderboard,
+            &msg,
+            SteamProxyOptions {
+                in_all_groups: None,
+                in_any_groups: None,
+                cooldown: Duration::from_mins(1),
+                soft_cooldown: None,
+                request_timeout: Duration::from_secs(2),
+                username: None,
+            },
+        )
         .await?;
     // Snapshots track the current leaderboard only; other leaderboards would mix seasons. A
     // response that does not decode is skipped here; the caller reports it.
@@ -273,7 +273,7 @@ async fn fetch_leaderboard(
         fetch_leaderboard_raw(state, region, hero_id, leaderboard_id),
         fetch_all_steam_names(&state.ch_client_ro),
     );
-    let proto_leaderboard: SteamProxyResponse<CMsgClientToGcGetLeaderboardResponse> =
+    let proto_leaderboard: SteamProxyReply<CMsgClientToGcGetLeaderboardResponse> =
         raw_leaderboard?.try_into()?;
     let mut leaderboard: Leaderboard = proto_leaderboard.msg.try_into()?;
     match steam_names {

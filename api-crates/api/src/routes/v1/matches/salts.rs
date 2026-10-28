@@ -9,6 +9,7 @@ use cached::macros::cached;
 use clickhouse::Row;
 use clickhouse_utils::{BatchQuery, ClickhouseBatcher, in_clause};
 use serde::{Deserialize, Serialize};
+use steam_proxy::{SteamProxyError, SteamProxyOptions, SteamProxyReply};
 use tracing::{debug, warn};
 use utoipa::{IntoParams, ToSchema};
 use valveprotos::deadlock::c_msg_client_to_gc_get_match_meta_data_response::EResult;
@@ -23,7 +24,6 @@ use crate::routes::v1::matches::to_fetch::{queue_requested_match, resolve_invali
 use crate::routes::v1::matches::types::ClickhouseSalts;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::rate_limiter::{DOCUMENTED_DEFAULT, Quota, RateLimit, Scope, describe};
-use crate::services::steam::types::{SteamProxyError, SteamProxyQuery, SteamProxyResponse};
 use crate::utils::types::MatchIdQuery;
 
 /// Fetching salts from Steam.
@@ -330,25 +330,27 @@ pub(super) async fn fetch_match_salts(
     };
     let result = state
         .steam_client
-        .call_steam_proxy_raw(SteamProxyQuery {
-            msg_type: EgcCitadelClientMessages::KEMsgClientToGcGetMatchMetaData,
-            msg,
-            in_all_groups: Some(vec!["GetMatchMetaData".to_owned()]),
-            in_any_groups: None,
-            cooldown_time: SALTS_JOB_COOLDOWN,
-            request_timeout: Duration::from_secs(2),
-            username: None,
-            // The salt scraper claims a full soft cooldown for prioritized matches, so an
-            // on-demand lookup takes none and 503s rather than borrowing a bot that is still
-            // cooling down. Custom matches keep half a window, as their salts have no other
-            // source. `None` is not the strict choice here: the client substitutes
-            // `cooldown_time / 2`.
-            soft_cooldown_millis: Some(if is_custom {
-                Duration::from_secs(SALTS_JOB_COOLDOWN.as_secs() / 2)
-            } else {
-                Duration::ZERO
-            }),
-        })
+        .call_steam_proxy_raw(
+            EgcCitadelClientMessages::KEMsgClientToGcGetMatchMetaData,
+            &msg,
+            SteamProxyOptions {
+                in_all_groups: Some(&["GetMatchMetaData"]),
+                in_any_groups: None,
+                cooldown: SALTS_JOB_COOLDOWN,
+                // The salt scraper claims a full soft cooldown for prioritized matches, so an
+                // on-demand lookup takes none and 503s rather than borrowing a bot that is still
+                // cooling down. Custom matches keep half a window, as their salts have no other
+                // source. `None` is not the strict choice here: the client substitutes
+                // `cooldown / 2`.
+                soft_cooldown: Some(if is_custom {
+                    Duration::from_secs(SALTS_JOB_COOLDOWN.as_secs() / 2)
+                } else {
+                    Duration::ZERO
+                }),
+                request_timeout: Duration::from_secs(2),
+                username: None,
+            },
+        )
         .await;
     let result = match result {
         Ok(result) => result,
@@ -361,7 +363,7 @@ pub(super) async fn fetch_match_salts(
         }
     };
     let username = format!("api-fetch:{}", result.username);
-    let salts: SteamProxyResponse<CMsgClientToGcGetMatchMetaDataResponse> = result.try_into()?;
+    let salts: SteamProxyReply<CMsgClientToGcGetMatchMetaDataResponse> = result.try_into()?;
     let salts = salts.msg;
     if salts.result == Some(EResult::KEResultInvalidMatch as i32) {
         // Steam doesn't know the match: stop handing it out to the to-fetch workers.

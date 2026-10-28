@@ -11,6 +11,7 @@ use clickhouse::Row as _;
 use clickhouse_utils::{BatchInserter, BatchQueryMulti, ClickhouseBatcherMulti, in_clause};
 use itertools::{Itertools as _, chain};
 use serde::Deserialize;
+use steam_proxy::SteamProxyOptions;
 use tracing::{debug, warn};
 use utoipa::IntoParams;
 use valveprotos::deadlock::{
@@ -27,7 +28,6 @@ use crate::services::assets::versions::ranked_seasons::{fetch_ranked_seasons, in
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::rate_limiter::{DOCUMENTED_DEFAULT, Quota, RateLimit, Scope, describe};
 use crate::services::steam::client::SteamClient;
-use crate::services::steam::types::SteamProxyQuery;
 use crate::utils::types::AccountIdQuery;
 
 /// Fetching a bot friend's history from Steam.
@@ -249,16 +249,18 @@ async fn fetch_match_history_raw(
         cabal_id: None,
     };
     let response: CMsgClientToGcGetMatchHistoryResponse = steam_client
-        .call_steam_proxy(SteamProxyQuery {
-            msg_type: EgcCitadelClientMessages::KEMsgClientToGcGetMatchHistory,
-            msg,
-            in_all_groups: Some(vec!["GetMatchHistory".to_owned()]),
-            in_any_groups: None,
-            cooldown_time: Duration::from_secs(24 * 60 * 60 / 50),
-            request_timeout: Duration::from_secs(3),
-            username: bot_username,
-            soft_cooldown_millis: None,
-        })
+        .call_steam_proxy(
+            EgcCitadelClientMessages::KEMsgClientToGcGetMatchHistory,
+            &msg,
+            SteamProxyOptions {
+                in_all_groups: Some(&["GetMatchHistory"]),
+                in_any_groups: None,
+                cooldown: Duration::from_secs(24 * 60 * 60 / 50),
+                soft_cooldown: None,
+                request_timeout: Duration::from_secs(3),
+                username: bot_username.as_deref(),
+            },
+        )
         .await?
         .msg;
     if response.result.is_none_or(|r| {

@@ -15,6 +15,7 @@ use moka::Expiry;
 use moka::future::Cache;
 use prost::Message as _;
 use serde::Deserialize;
+use steam_proxy::SteamProxyOptions;
 use utoipa::IntoParams;
 use valveprotos::deadlock::{
     CMsgClientToGcGetActiveMatches, CMsgClientToGcGetActiveMatchesResponse,
@@ -25,7 +26,7 @@ use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::matches::types::ActiveMatch;
 use crate::services::rate_limiter::{DOCUMENTED_DEFAULT, describe};
-use crate::services::steam::types::{SteamProxyQuery, SteamProxyResult};
+use crate::services::steam::types::{SteamProxyErrorResponse as _, SteamProxyResult};
 
 #[derive(Deserialize, IntoParams)]
 pub(super) struct ActiveMatchesQuery {
@@ -73,16 +74,18 @@ async fn fetch_active_matches_raw(state: &AppState) -> SteamProxyResult<Bytes> {
         .get_with((), async {
             let steam_response = state
                 .steam_client
-                .call_steam_proxy_raw(SteamProxyQuery {
-                    msg_type: EgcCitadelClientMessages::KEMsgClientToGcGetActiveMatches,
-                    msg: CMsgClientToGcGetActiveMatches::default(),
-                    in_all_groups: Some(vec!["LowRateLimitApis".to_owned()]),
-                    in_any_groups: None,
-                    cooldown_time: Duration::from_mins(10),
-                    request_timeout: Duration::from_secs(2),
-                    username: None,
-                    soft_cooldown_millis: None,
-                })
+                .call_steam_proxy_raw(
+                    EgcCitadelClientMessages::KEMsgClientToGcGetActiveMatches,
+                    &CMsgClientToGcGetActiveMatches::default(),
+                    SteamProxyOptions {
+                        in_all_groups: Some(&["LowRateLimitApis"]),
+                        in_any_groups: None,
+                        cooldown: Duration::from_mins(10),
+                        soft_cooldown: None,
+                        request_timeout: Duration::from_secs(2),
+                        username: None,
+                    },
+                )
                 .await?;
             Ok(BASE64_STANDARD.decode(&steam_response.data)?.into())
         })

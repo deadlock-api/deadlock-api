@@ -8,6 +8,7 @@ use cached::macros::cached;
 use redis::{AsyncTypedCommands as _, ExpireOption};
 use serde::{Deserialize, Serialize};
 use sqlx::{Pool, Postgres};
+use steam_proxy::SteamProxyOptions;
 use tracing::debug;
 use tryhard::RetryPolicy;
 use utoipa::ToSchema;
@@ -25,7 +26,6 @@ use crate::routes::v1::matches::to_fetch::queue_live_match;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::rate_limiter::{DOCUMENTED_DEFAULT, Quota, RateLimit, Scope, describe};
 use crate::services::steam::client::SteamClient;
-use crate::services::steam::types::SteamProxyQuery;
 use crate::utils::broadcast_url::validate_broadcast_url;
 use crate::utils::types::MatchIdQuery;
 
@@ -124,19 +124,18 @@ pub(super) async fn spectate_match(
         "SpectateLobby"
     };
     let response: CMsgClientToGcSpectateLobbyResponse = steam_client
-        .call_steam_proxy(SteamProxyQuery {
-            msg_type: EgcCitadelClientMessages::KEMsgClientToGcSpectateLobby,
-            msg,
-            in_all_groups: None,
-            in_any_groups: Some(vec![
-                primary_group.to_owned(),
-                "SpectateLobbyOnDemand".to_owned(),
-            ]),
-            cooldown_time: Duration::from_secs(24 * 60 * 60 / 50),
-            request_timeout: Duration::from_secs(2),
-            username: None,
-            soft_cooldown_millis: None,
-        })
+        .call_steam_proxy(
+            EgcCitadelClientMessages::KEMsgClientToGcSpectateLobby,
+            &msg,
+            SteamProxyOptions {
+                in_all_groups: None,
+                in_any_groups: Some(&[primary_group, "SpectateLobbyOnDemand"]),
+                cooldown: Duration::from_secs(24 * 60 * 60 / 50),
+                soft_cooldown: None,
+                request_timeout: Duration::from_secs(2),
+                username: None,
+            },
+        )
         .await
         .map(|s| s.msg)?;
 

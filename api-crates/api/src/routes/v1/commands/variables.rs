@@ -5,6 +5,7 @@ use clickhouse_utils::BatchError;
 use futures::future::join;
 use itertools::Itertools as _;
 use serde::{Deserialize, Serialize};
+use steam_proxy::SteamProxyReply;
 use strum::{EnumString, IntoStaticStr, VariantArray};
 use thiserror::Error;
 use tracing::{debug, warn};
@@ -26,7 +27,6 @@ use crate::services::assets::versions::error::AssetsError;
 use crate::services::assets::versions::ranked_seasons::{fetch_ranked_seasons, season_at};
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::steam::client::SteamClient;
-use crate::services::steam::types::SteamProxyResponse;
 
 #[derive(Debug, Error)]
 pub(super) enum VariableResolveError {
@@ -852,7 +852,7 @@ impl Variable {
         let (leaderboard, steam_name) = join(
             async {
                 let raw_leaderboard = fetch_leaderboard_raw(state, region, hero_id, None).await?;
-                let proto_leaderboard: SteamProxyResponse<CMsgClientToGcGetLeaderboardResponse> =
+                let proto_leaderboard: SteamProxyReply<CMsgClientToGcGetLeaderboardResponse> =
                     raw_leaderboard.try_into()?;
                 let leaderboard: APIResult<Leaderboard> = proto_leaderboard.msg.try_into();
                 leaderboard

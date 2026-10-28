@@ -5,12 +5,11 @@ use std::sync::Arc;
 use cached::macros::cached;
 use metrics::counter;
 use prost::Message;
-use rand::prelude::IndexedRandom as _;
 use reqwest::Response;
-use steam_proxy::SteamProxyRequest;
+use steam_proxy::{SteamProxyClient, SteamProxyOptions, SteamProxyReply, SteamProxyResponse};
 use tracing::{debug, warn};
 use url::Url;
-use valveprotos::deadlock::CMsgClientToGcGetMatchMetaDataResponse;
+use valveprotos::deadlock::{CMsgClientToGcGetMatchMetaDataResponse, EgcCitadelClientMessages};
 use wreq::redirect;
 use wreq_util::Emulation;
 
@@ -21,8 +20,7 @@ use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::rate_limiter::{Quota, RateLimit, Scope};
 use crate::services::steam::types::{
     FeedItem, ForumRssV2, GetPlayerSummariesResponse, Patch, Rss, SteamAccountNameError,
-    SteamAccountVerifyError, SteamProxyError, SteamProxyQuery, SteamProxyRawResponse,
-    SteamProxyResponse, SteamProxyResult, SteamRss,
+    SteamAccountVerifyError, SteamProxyResult, SteamRss,
 };
 
 const ACCOUNT_NAME_RATE_LIMIT: RateLimit = RateLimit::new(
@@ -46,8 +44,7 @@ pub(crate) struct SteamClient {
     /// Chrome-emulating client used only for the forum RSS feed, which sits behind the stile bot
     /// wall. Keeps the clearance cookie handed out by [`fetch_through_stile`] across fetches.
     forum_client: wreq::Client,
-    steam_proxy_urls: Vec<String>,
-    steam_proxy_api_key: String,
+    steam_proxy: SteamProxyClient,
     steam_api_key: String,
 }
 
@@ -59,72 +56,44 @@ impl SteamClient {
         steam_api_key: String,
     ) -> Self {
         Self {
-            http_client,
             forum_client: build_forum_client(),
-            steam_proxy_urls,
-            steam_proxy_api_key,
+            steam_proxy: SteamProxyClient::new(
+                http_client.clone(),
+                steam_proxy_urls,
+                steam_proxy_api_key,
+            ),
+            http_client,
             steam_api_key,
         }
     }
 
-    pub(crate) async fn call_steam_proxy<M: Message, R: Message + Default>(
+    /// Runs a Game Coordinator job through the Steam proxy and decodes its response.
+    pub(crate) async fn call_steam_proxy<R: Message + Default>(
         &self,
-        query: SteamProxyQuery<M>,
-    ) -> SteamProxyResult<SteamProxyResponse<R>> {
-        self.call_steam_proxy_raw(query).await?.try_into()
+        msg_type: EgcCitadelClientMessages,
+        msg: &impl Message,
+        options: SteamProxyOptions<'_>,
+    ) -> SteamProxyResult<SteamProxyReply<R>> {
+        self.call_steam_proxy_raw(msg_type, msg, options)
+            .await?
+            .try_into()
     }
 
-    pub(crate) async fn call_steam_proxy_raw<M: Message>(
+    /// Runs a Game Coordinator job through the Steam proxy.
+    pub(crate) async fn call_steam_proxy_raw(
         &self,
-        query: SteamProxyQuery<M>,
-    ) -> SteamProxyResult<SteamProxyRawResponse> {
-        let body = SteamProxyRequest {
-            message_kind: query.msg_type as i32,
-            job_cooldown_millis: query.cooldown_time.as_millis(),
-            rate_limit_cooldown_millis: query.cooldown_time.as_millis().saturating_mul(2),
-            soft_cooldown_millis: query
-                .soft_cooldown_millis
-                .unwrap_or_else(|| query.cooldown_time.checked_div(2).unwrap_or_default())
-                .as_millis(),
-            bot_in_all_groups: query.in_all_groups.as_deref(),
-            bot_in_any_groups: query.in_any_groups.as_deref(),
-            bot_username: query.username.as_deref(),
-            data: SteamProxyRequest::<String>::encode_message(&query.msg),
-        };
-        let msg_type = query.msg_type.as_str_name();
-        let result = self.call_proxy(&query, &body).await;
+        msg_type: EgcCitadelClientMessages,
+        msg: &impl Message,
+        options: SteamProxyOptions<'_>,
+    ) -> SteamProxyResult<SteamProxyResponse> {
+        let result = self.steam_proxy.call_raw(msg_type, msg, options).await;
+        let msg_type = msg_type.as_str_name();
         if result.is_ok() {
             debug!("Successfully called Steam proxy for {msg_type}");
         }
         let error = if result.is_ok() { "false" } else { "true" };
         counter!("steam.proxy.call", "msg_type" => msg_type, "error" => error).increment(1);
         result
-    }
-
-    async fn call_proxy<M: Message, T: serde::Serialize + Sync + ?Sized>(
-        &self,
-        query: &SteamProxyQuery<M>,
-        body: &T,
-    ) -> SteamProxyResult<SteamProxyRawResponse> {
-        let url = self
-            .steam_proxy_urls
-            .choose(&mut rand::rng())
-            .ok_or(SteamProxyError::NoBaseUrl)?;
-
-        let response = self
-            .http_client
-            .post(url)
-            .bearer_auth(&self.steam_proxy_api_key)
-            .timeout(query.request_timeout)
-            .json(body)
-            .send()
-            .await?;
-        let status = response.status();
-        if !status.is_success() {
-            let body = response.text().await.unwrap_or_default();
-            return Err(SteamProxyError::from_status(status, body));
-        }
-        response.json().await.map_err(Into::into)
     }
 
     /// Get the current client version from the Steam Database

@@ -7246,10 +7246,12 @@ dependencies = [
  "base64 0.23.1",
  "metrics",
  "prost",
+ "rand 0.10.3",
  "reqwest",
  "serde",
  "serde_json",
  "thiserror",
+ "tokio",
  "tracing",
  "valveprotos",
 ]

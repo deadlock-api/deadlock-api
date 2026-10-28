@@ -30,6 +30,7 @@ use rand::rng;
 use sqlx::postgres::PgQueryResult;
 use sqlx::types::time::PrimitiveDateTime;
 use sqlx::{Pool, Postgres, QueryBuilder};
+use steam_proxy::{SteamProxyClient, SteamProxyError, SteamProxyOptions};
 use time::OffsetDateTime;
 use tokio::time::sleep;
 use tracing::{debug, info, instrument, warn};
@@ -63,7 +64,7 @@ enum Error {
 #[derive(Debug, thiserror::Error)]
 enum FetchBuildsError {
     #[error(transparent)]
-    SteamProxy(#[from] steam_proxy::SteamProxyError),
+    SteamProxy(#[from] SteamProxyError),
     /// An empty result from a busy or failing GC says nothing about the build.
     #[error("The GC could not answer: response {0}")]
     Unanswered(i32),
@@ -78,12 +79,14 @@ async fn main() -> Result<(), Error> {
     let _otel_guard = telemetry::init_tracing(env!("CARGO_PKG_NAME"));
     telemetry::init_metrics()?;
     let http_client = service_utils::http_client()?;
+    // After a Steam rate limit, crawler bots rest four job cooldowns (the API's calls two).
+    let proxy = SteamProxyClient::from_env(http_client.clone()).with_rate_limit_cooldown_factor(4);
     let pg_client = db_clients::get_pg_client().await?;
     let ch_client = db_clients::get_ch_client()?;
 
     service_utils::run_until_shutdown(async move {
         loop {
-            run_update_loop(&http_client, &pg_client, &ch_client).await;
+            run_update_loop(&http_client, &proxy, &pg_client, &ch_client).await;
         }
     })
     .await
@@ -91,6 +94,7 @@ async fn main() -> Result<(), Error> {
 
 async fn run_update_loop(
     http_client: &reqwest::Client,
+    proxy: &SteamProxyClient,
     pg_client: &Pool<Postgres>,
     ch_client: &clickhouse::Client,
 ) {
@@ -116,12 +120,12 @@ async fn run_update_loop(
         .cartesian_product(ASCII_LOWER.iter())
     {
         if last_missing_fetch.is_none_or(|t| t.elapsed() >= MISSING_BUILDS_INTERVAL) {
-            fetch_missing_builds(http_client, pg_client, ch_client).await;
+            fetch_missing_builds(proxy, pg_client, ch_client).await;
             last_missing_fetch = Some(Instant::now());
         }
         let search = format!("{a}{b}{c}");
         for &hero_id in &heroes {
-            update_builds(http_client, pg_client, hero_id, &[0], Some(&search)).await;
+            update_builds(proxy, pg_client, hero_id, &[0], Some(&search)).await;
         }
     }
 }
@@ -131,7 +135,7 @@ async fn run_update_loop(
 /// `hero_builds_fetch_failed` and never tried again.
 #[instrument(skip_all)]
 async fn fetch_missing_builds(
-    http_client: &reqwest::Client,
+    proxy: &SteamProxyClient,
     pg_client: &Pool<Postgres>,
     ch_client: &clickhouse::Client,
 ) {
@@ -186,26 +190,19 @@ async fn fetch_missing_builds(
         let Some(&hero_id) = hero_by_build.get(&build_id) else {
             continue;
         };
-        let builds = match fetch_builds(
-            http_client,
-            hero_id,
-            &[0],
-            None,
-            Some(build_id.cast_unsigned()),
-        )
-        .await
-        {
-            Ok(builds) => {
-                counter!("builds_fetcher.fetch_missing_build.success").increment(1);
-                builds
-            }
-            Err(e) => {
-                counter!("builds_fetcher.fetch_missing_build.failure").increment(1);
-                warn!("Failed to fetch build {build_id}: {e}");
-                sleep(Duration::from_secs(10)).await;
-                continue;
-            }
-        };
+        let builds =
+            match fetch_builds(proxy, hero_id, &[0], None, Some(build_id.cast_unsigned())).await {
+                Ok(builds) => {
+                    counter!("builds_fetcher.fetch_missing_build.success").increment(1);
+                    builds
+                }
+                Err(e) => {
+                    counter!("builds_fetcher.fetch_missing_build.failure").increment(1);
+                    warn!("Failed to fetch build {build_id}: {e}");
+                    sleep(Duration::from_secs(10)).await;
+                    continue;
+                }
+            };
         if builds.is_empty() {
             counter!("builds_fetcher.fetch_missing_build.not_found").increment(1);
             debug!("Build {build_id} not found, marking as failed");
@@ -227,15 +224,15 @@ async fn fetch_missing_builds(
     }
 }
 
-#[instrument(skip(http_client, pg_client))]
+#[instrument(skip(proxy, pg_client))]
 async fn update_builds(
-    http_client: &reqwest::Client,
+    proxy: &SteamProxyClient,
     pg_client: &Pool<Postgres>,
     hero_id: u32,
     langs: &[i32],
     search: Option<&str>,
 ) {
-    let builds = match fetch_builds(http_client, hero_id, langs, search, None).await {
+    let builds = match fetch_builds(proxy, hero_id, langs, search, None).await {
         Ok(builds) => {
             counter!("builds_fetcher.fetch_builds.success", "hero_id" => hero_id.to_string())
                 .increment(1);
@@ -322,9 +319,9 @@ async fn insert_builds(
     query.execute(pg_client).await
 }
 
-#[instrument(skip(http_client))]
+#[instrument(skip(proxy))]
 async fn fetch_builds(
-    http_client: &reqwest::Client,
+    proxy: &SteamProxyClient,
     hero_id: u32,
     langs: &[i32],
     search: Option<&str>,
@@ -337,22 +334,23 @@ async fn fetch_builds(
         hero_build_id,
         ..Default::default()
     };
-    let (_, response): (_, CMsgClientToGcFindHeroBuildsResponse) = steam_proxy::call_steam_proxy(
-        http_client,
-        EgcCitadelClientMessages::KEMsgClientToGcFindHeroBuilds,
-        &msg,
-        steam_proxy::SteamProxyOptions {
-            in_all_groups: None,
-            in_any_groups: None,
-            cooldown: Duration::from_mins(20),
-            // No soft cooldown: the crawler never borrows a cooling-down bot, leaving that
-            // headroom to the API's on-demand build lookups.
-            soft_cooldown: Some(Duration::ZERO),
-            request_timeout: Duration::from_secs(5),
-            username: None,
-        },
-    )
-    .await?;
+    let response: CMsgClientToGcFindHeroBuildsResponse = proxy
+        .call(
+            EgcCitadelClientMessages::KEMsgClientToGcFindHeroBuilds,
+            &msg,
+            SteamProxyOptions {
+                in_all_groups: None,
+                in_any_groups: None,
+                cooldown: Duration::from_mins(20),
+                // No soft cooldown: the crawler never borrows a cooling-down bot, leaving that
+                // headroom to the API's on-demand build lookups.
+                soft_cooldown: Some(Duration::ZERO),
+                request_timeout: Duration::from_secs(5),
+                username: None,
+            },
+        )
+        .await?
+        .msg;
     // Only a busy or failing GC is retried; any other answer, or none, is taken as before.
     if let Some(code) = response.response
         && (code == EResponse::KEInternalError as i32 || code == EResponse::KETooBusy as i32)

@@ -3,6 +3,7 @@ use core::time::Duration;
 use axum::http::StatusCode;
 use itertools::Itertools as _;
 use redis::{AsyncTypedCommands as _, RedisResult};
+use steam_proxy::SteamProxyOptions;
 use tracing::{error, info};
 use valveprotos::deadlock::{
     CMsgClientToGcPartyLeave, CMsgClientToGcPartyLeaveResponse, CMsgClientToGcPartySetReadyState,
@@ -17,22 +18,16 @@ use crate::error::{APIError, APIResult};
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::rate_limiter::{Quota, RateLimit, Scope};
 use crate::services::steam::client::SteamClient;
-use crate::services::steam::types::SteamProxyQuery;
 
-pub(super) const fn build_proxy_query<M: prost::Message>(
-    msg_type: EgcCitadelClientMessages,
-    msg: M,
-    username: String,
-) -> SteamProxyQuery<M> {
-    SteamProxyQuery {
-        msg_type,
-        msg,
+/// Options for a job on the bot that hosts the party.
+pub(super) const fn party_options(username: &str) -> SteamProxyOptions<'_> {
+    SteamProxyOptions {
         in_all_groups: None,
         in_any_groups: None,
-        cooldown_time: Duration::ZERO,
+        cooldown: Duration::ZERO,
+        soft_cooldown: None,
         request_timeout: Duration::from_secs(2),
         username: Some(username),
-        soft_cooldown_millis: None,
     }
 }
 
@@ -123,11 +118,11 @@ pub(super) async fn make_ready(
         hero_roster: None,
     };
     let response: CMsgClientToGcPartySetReadyStateResponse = steam_client
-        .call_steam_proxy(build_proxy_query(
+        .call_steam_proxy(
             EgcCitadelClientMessages::KEMsgClientToGcPartySetReadyState,
-            msg,
-            username.clone(),
-        ))
+            &msg,
+            party_options(&username),
+        )
         .await?
         .msg;
 
@@ -153,11 +148,11 @@ pub(super) async fn leave_party(
         party_id: party_id.into(),
     };
     let response: CMsgClientToGcPartyLeaveResponse = steam_client
-        .call_steam_proxy(build_proxy_query(
+        .call_steam_proxy(
             EgcCitadelClientMessages::KEMsgClientToGcPartyLeave,
-            msg,
-            username.clone(),
-        ))
+            &msg,
+            party_options(&username),
+        )
         .await?
         .msg;
 
@@ -183,11 +178,11 @@ pub(super) async fn start_match(
         party_id: party_id.into(),
     };
     let response: CMsgClientToGcPartyStartMatchResponse = steam_client
-        .call_steam_proxy(build_proxy_query(
+        .call_steam_proxy(
             EgcCitadelClientMessages::KEMsgClientToGcPartyStartMatch,
-            msg,
-            username.clone(),
-        ))
+            &msg,
+            party_options(&username),
+        )
         .await?
         .msg;
 

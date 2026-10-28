@@ -28,6 +28,7 @@ use clickhouse_utils::{BatchInserter, BatchInserterConfig, InsertAck};
 use futures::StreamExt as _;
 use metrics::{counter, gauge};
 use sqlx::{Pool, Postgres};
+use steam_proxy::{SteamProxyClient, SteamProxyError, SteamProxyOptions};
 use tokio::sync::RwLock;
 use tokio::time::Instant;
 use tracing::{debug, error, info, instrument, warn};
@@ -102,7 +103,9 @@ async fn main() -> Result<(), Error> {
     let _otel_guard = telemetry::init_tracing(env!("CARGO_PKG_NAME"));
     telemetry::init_metrics()?;
 
-    let http_client = service_utils::http_client()?;
+    // After a Steam rate limit, crawler bots rest four job cooldowns (the API's calls two).
+    let proxy = SteamProxyClient::from_env(service_utils::http_client()?)
+        .with_rate_limit_cooldown_factor(4);
     let ch_client = db_clients::get_ch_client()?;
 
     // Initialize PostgreSQL connection pool for prioritization queries
@@ -155,12 +158,12 @@ async fn main() -> Result<(), Error> {
 
         let fetch_due = futures::stream::iter(due)
             .map(|(account, bot_id)| {
-                let (inserter, http_client, prioritized_accounts) =
-                    (&inserter, &http_client, &prioritized_accounts);
+                let (inserter, proxy, prioritized_accounts) =
+                    (&inserter, &proxy, &prioritized_accounts);
                 async move {
                     update_prioritized_account(
                         inserter,
-                        http_client,
+                        proxy,
                         account,
                         &bot_id,
                         prioritized_accounts,
@@ -204,10 +207,10 @@ fn rank_interval() -> Option<u32> {
 /// insertion, `last_fetched_at` is set and the account's slot is freed; the flush ack is
 /// awaited in the background and re-queues the account if the insert failed. If all fetch
 /// retries fail, sets `last_fetched_at` to one window ago to re-queue for next cycle.
-#[instrument(skip(http_client, inserter, prioritized_accounts))]
+#[instrument(skip(proxy, inserter, prioritized_accounts))]
 async fn update_prioritized_account(
     inserter: &BatchInserter<PlayerMatchHistoryEntry>,
-    http_client: &reqwest::Client,
+    proxy: &SteamProxyClient,
     account: u32,
     bot_id: &str,
     prioritized_accounts: &PrioritizedAccountsMap,
@@ -228,7 +231,7 @@ async fn update_prioritized_account(
             }
             attempts = attempts.saturating_add(1);
             async {
-                update_account(inserter, http_client, account, Some(bot_id))
+                update_account(inserter, proxy, account, Some(bot_id))
                     .await
                     .ok_or(PrioritizedFetchError(account))
             }
@@ -282,16 +285,15 @@ async fn requeue(prioritized_accounts: &PrioritizedAccountsMap, account: u32) ->
 
 /// Fetches an account's match history and queues its entries for insertion. `None` if the
 /// fetch failed; otherwise the ack of the queued insert, if there was anything to insert.
-#[instrument(skip(http_client, inserter))]
+#[instrument(skip(proxy, inserter))]
 async fn update_account(
     inserter: &BatchInserter<PlayerMatchHistoryEntry>,
-    http_client: &reqwest::Client,
+    proxy: &SteamProxyClient,
     account: u32,
     bot_username: Option<&str>,
 ) -> Option<Option<InsertAck>> {
     let rank_interval = rank_interval();
-    let match_history = match fetch_account_match_history(http_client, account, bot_username, None)
-        .await
+    let match_history = match fetch_account_match_history(proxy, account, bot_username, None).await
     {
         Ok(r) => r,
         Err(e) => {
@@ -316,8 +318,7 @@ async fn update_account(
     // their ranked_* values. Failing here only costs those fields.
     let mut matches = Vec::new();
     if let Some(interval) = rank_interval {
-        match fetch_account_match_history(http_client, account, bot_username, Some(interval)).await
-        {
+        match fetch_account_match_history(proxy, account, bot_username, Some(interval)).await {
             Ok(r) if r.result == Some(EResult::KEResultSuccess as i32) => {
                 matches = r.matches;
             }
@@ -371,11 +372,11 @@ async fn confirm_insert(ack: InsertAck, account: u32) -> bool {
 /// each entry then carries the ranked_* fields. It gates them on all three of
 /// `game_mode`, `match_mode` and `rank_interval`; with any one unset it omits them.
 async fn fetch_account_match_history(
-    http_client: &reqwest::Client,
+    proxy: &SteamProxyClient,
     account: u32,
     bot_username: Option<&str>,
     rank_interval: Option<u32>,
-) -> Result<CMsgClientToGcGetMatchHistoryResponse, steam_proxy::SteamProxyError> {
+) -> Result<CMsgClientToGcGetMatchHistoryResponse, SteamProxyError> {
     let msg = CMsgClientToGcGetMatchHistory {
         account_id: account.into(),
         game_mode: rank_interval
@@ -388,21 +389,21 @@ async fn fetch_account_match_history(
         ..Default::default()
     };
     let job_cooldown = Duration::from_millis(*HISTORY_COOLDOWN_MILLIS);
-    steam_proxy::call_steam_proxy(
-        http_client,
-        EgcCitadelClientMessages::KEMsgClientToGcGetMatchHistory,
-        &msg,
-        steam_proxy::SteamProxyOptions {
-            in_all_groups: Some(&["GetMatchHistory"]),
-            in_any_groups: None,
-            cooldown: job_cooldown,
-            soft_cooldown: Some(job_cooldown),
-            request_timeout: Duration::from_secs(5),
-            username: bot_username,
-        },
-    )
-    .await
-    .map(|(_, response)| response)
+    proxy
+        .call(
+            EgcCitadelClientMessages::KEMsgClientToGcGetMatchHistory,
+            &msg,
+            SteamProxyOptions {
+                in_all_groups: Some(&["GetMatchHistory"]),
+                in_any_groups: None,
+                cooldown: job_cooldown,
+                soft_cooldown: Some(job_cooldown),
+                request_timeout: Duration::from_secs(5),
+                username: bot_username,
+            },
+        )
+        .await
+        .map(|reply| reply.msg)
 }
 
 /// Initializes the prioritized accounts map by fetching all prioritized accounts

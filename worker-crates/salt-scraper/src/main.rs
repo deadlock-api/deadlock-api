@@ -26,6 +26,7 @@ use clickhouse::Client;
 use futures::StreamExt as _;
 use metrics::{counter, gauge};
 use models::{MatchSalt, PendingMatch};
+use steam_proxy::{SteamProxyClient, SteamProxyError, SteamProxyOptions};
 use tracing::{debug, error, info, instrument, warn};
 use valveprotos::deadlock::c_msg_client_to_gc_get_match_meta_data_response::EResult::KEResultRateLimited;
 use valveprotos::deadlock::{
@@ -51,7 +52,7 @@ enum Error {
 #[derive(Debug, thiserror::Error)]
 enum FetchError {
     #[error(transparent)]
-    SteamProxy(#[from] steam_proxy::SteamProxyError),
+    SteamProxy(#[from] SteamProxyError),
     #[error("Got a rate limited response: {0:?}")]
     RateLimited(CMsgClientToGcGetMatchMetaDataResponse),
     #[error(transparent)]
@@ -91,7 +92,9 @@ async fn main() -> Result<(), Error> {
 
     let ch_client = db_clients::get_ch_client()?;
 
-    let http_client = service_utils::http_client()?;
+    // After a Steam rate limit, crawler bots rest four job cooldowns (the API's calls two).
+    let proxy = SteamProxyClient::from_env(service_utils::http_client()?)
+        .with_rate_limit_cooldown_factor(4);
 
     // Initialize PostgreSQL connection pool for prioritization queries
     let pg_pool = db_clients::get_pg_client()
@@ -177,10 +180,10 @@ async fn main() -> Result<(), Error> {
             // Failed matches stay uncovered, so the next cycle's query picks them up again.
             let failed: Vec<u64> = futures::stream::iter(pending_matches)
                 .map(|m| {
-                    let (http_client, ch_client) = (&http_client, &ch_client);
+                    let (proxy, ch_client) = (&proxy, &ch_client);
                     async move {
                         let match_id = m.match_id;
-                        match fetch_prioritized_match(http_client, ch_client, match_id).await {
+                        match fetch_prioritized_match(proxy, ch_client, match_id).await {
                             Ok(()) => {
                                 counter!("salt_scraper.prioritized_fetch.success").increment(1);
                                 info!("Fetched prioritized match {match_id}");
@@ -214,9 +217,9 @@ async fn main() -> Result<(), Error> {
 /// Fetches a prioritized match's salts and stores them, each with its own exponential backoff
 /// retry (configurable max retries, default 5). The Steam call and the insert are retried
 /// separately: every Steam call puts a bot on cooldown, so a failed insert must not repeat it.
-#[instrument(skip(http_client, ch_client))]
+#[instrument(skip(proxy, ch_client))]
 async fn fetch_prioritized_match(
-    http_client: &reqwest::Client,
+    proxy: &SteamProxyClient,
     ch_client: &Client,
     match_id: u64,
 ) -> Result<(), FetchError> {
@@ -230,7 +233,7 @@ async fn fetch_prioritized_match(
                 counter!("salt_scraper.prioritized_fetch.retry").increment(1);
             }
             attempts = attempts.saturating_add(1);
-            fetch_match_salts(http_client, match_id)
+            fetch_match_salts(proxy, match_id)
         })
         .await?;
 
@@ -250,10 +253,10 @@ async fn fetch_prioritized_match(
 
 /// Fetches a match's salts from the GC, failing on a rate limited response.
 async fn fetch_match_salts(
-    http_client: &reqwest::Client,
+    proxy: &SteamProxyClient,
     match_id: u64,
 ) -> Result<(String, CMsgClientToGcGetMatchMetaDataResponse), FetchError> {
-    let (username, salts) = match fetch_salts(http_client, match_id).await {
+    let (username, salts) = match fetch_salts(proxy, match_id).await {
         Ok(r) => {
             counter!("salt_scraper.fetch_salts.success").increment(1);
             debug!("Fetched salts: {:?}", r.1);
@@ -276,9 +279,9 @@ async fn fetch_match_salts(
 }
 
 async fn fetch_salts(
-    http_client: &reqwest::Client,
+    proxy: &SteamProxyClient,
     match_id: u64,
-) -> Result<(String, CMsgClientToGcGetMatchMetaDataResponse), steam_proxy::SteamProxyError> {
+) -> Result<(String, CMsgClientToGcGetMatchMetaDataResponse), SteamProxyError> {
     let msg = CMsgClientToGcGetMatchMetaData {
         match_id: Some(match_id),
         ..Default::default()
@@ -289,20 +292,21 @@ async fn fetch_salts(
     // is still cooling down; the on-demand salts endpoint asks for no window at all and gives
     // these bots up instead.
     let soft_cooldown = Some(job_cooldown);
-    steam_proxy::call_steam_proxy(
-        http_client,
-        EgcCitadelClientMessages::KEMsgClientToGcGetMatchMetaData,
-        &msg,
-        steam_proxy::SteamProxyOptions {
-            in_all_groups: Some(&["GetMatchMetaData"]),
-            in_any_groups: None,
-            cooldown: job_cooldown,
-            soft_cooldown,
-            request_timeout: Duration::from_secs(5),
-            username: None,
-        },
-    )
-    .await
+    proxy
+        .call(
+            EgcCitadelClientMessages::KEMsgClientToGcGetMatchMetaData,
+            &msg,
+            SteamProxyOptions {
+                in_all_groups: Some(&["GetMatchMetaData"]),
+                in_any_groups: None,
+                cooldown: job_cooldown,
+                soft_cooldown,
+                request_timeout: Duration::from_secs(5),
+                username: None,
+            },
+        )
+        .await
+        .map(|reply| (reply.username, reply.msg))
 }
 
 async fn ingest_salts(ch_client: &Client, salts: &MatchSalt) -> clickhouse::error::Result<()> {

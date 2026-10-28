@@ -7,13 +7,14 @@ use axum::response::IntoResponse;
 use clickhouse_utils::BatchError;
 use reqwest::StatusCode;
 use serde_json::json;
+use steam_proxy::SteamProxyError;
 use thiserror::Error;
 use tracing::{debug, error, info, warn};
 
 use crate::context::AppStateError;
 use crate::services::ch_admission::ChQueryError;
 use crate::services::rate_limiter::{Exceeded, RateLimitHeaders, Status};
-use crate::services::steam::types::SteamProxyError;
+use crate::services::steam::types::SteamProxyErrorResponse as _;
 use crosshair::CrosshairError;
 
 pub(super) type APIResult<T> = Result<T, APIError>;

@@ -8,14 +8,16 @@ description = "Request and response types of sv-proxy, and a client for it"
 base64 = { workspace = true }
 metrics = { workspace = true }
 prost = { workspace = true }
+rand = { workspace = true }
 reqwest = { workspace = true, features = ["json"] }
 serde = { workspace = true }
+serde_json = { workspace = true }
 thiserror = { workspace = true }
 tracing = { workspace = true }
 valveprotos = { workspace = true, features = ["gc-client", "serde"] }
 
 [dev-dependencies]
-serde_json = { workspace = true }
+tokio = { workspace = true }
 
 [lints]
 workspace = true

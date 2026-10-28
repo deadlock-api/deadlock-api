@@ -8,6 +8,7 @@ use axum_extra::extract::Query;
 use chrono::{DateTime, NaiveDateTime};
 use serde::Deserialize;
 use sqlx::QueryBuilder;
+use steam_proxy::{SteamProxyError, SteamProxyOptions, SteamProxyReply};
 use tracing::warn;
 use tryhard::RetryPolicy;
 use utoipa::IntoParams;
@@ -21,7 +22,6 @@ use crate::error::{APIError, APIResult};
 use crate::routes::v1::builds::structs::Build;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::rate_limiter::{Quota, RateLimit, Scope, describe};
-use crate::services::steam::types::{SteamProxyError, SteamProxyQuery, SteamProxyResponse};
 use crate::utils::types::AccountIdQuery;
 
 /// Shared by the live build endpoints, which ask Steam.
@@ -124,31 +124,32 @@ async fn fetch_and_store_builds(
     state: &AppState,
     msg: CMsgClientToGcFindHeroBuilds,
 ) -> APIResult<Vec<HeroBuildResult>> {
-    let response: SteamProxyResponse<CMsgClientToGcFindHeroBuildsResponse> =
-        tryhard::retry_fn(|| {
-            state.steam_client.call_steam_proxy(SteamProxyQuery {
-                msg_type: EgcCitadelClientMessages::KEMsgClientToGcFindHeroBuilds,
-                msg: msg.clone(),
+    let response: SteamProxyReply<CMsgClientToGcFindHeroBuildsResponse> = tryhard::retry_fn(|| {
+        state.steam_client.call_steam_proxy(
+            EgcCitadelClientMessages::KEMsgClientToGcFindHeroBuilds,
+            &msg,
+            SteamProxyOptions {
                 in_all_groups: None,
                 in_any_groups: None,
-                cooldown_time: Duration::from_secs(5),
-                // The builds-fetcher crawls with a 20 minute job cooldown and no soft cooldown,
-                // keeping every bot cooling down. On-demand lookups borrow a bot for that whole
-                // window, otherwise they never find a free bot and 503.
-                soft_cooldown_millis: Some(Duration::from_mins(20)),
+                cooldown: Duration::from_secs(5),
+                // The builds-fetcher crawls with a 20 minute job cooldown and no soft
+                // cooldown, keeping every bot cooling down. On-demand lookups borrow a bot
+                // for that whole window, otherwise they never find a free bot and 503.
+                soft_cooldown: Some(Duration::from_mins(20)),
                 request_timeout: Duration::from_secs(5),
                 username: None,
-            })
-        })
-        .retries(3)
-        .custom_backoff(|_, e: &SteamProxyError| {
-            if e.is_retryable() {
-                RetryPolicy::Delay(Duration::from_millis(10))
-            } else {
-                RetryPolicy::Break
-            }
-        })
-        .await?;
+            },
+        )
+    })
+    .retries(3)
+    .custom_backoff(|_, e: &SteamProxyError| {
+        if e.is_retryable() {
+            RetryPolicy::Delay(Duration::from_millis(10))
+        } else {
+            RetryPolicy::Break
+        }
+    })
+    .await?;
 
     let results = response.msg.results;
     if let Err(e) = insert_builds(&state.pg_client, &results).await {

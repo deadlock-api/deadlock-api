@@ -12,6 +12,7 @@ use rand::Rng as _;
 use rand::prelude::ThreadRng;
 use reqwest::Url;
 use serde::{Deserialize, Serialize};
+use steam_proxy::{SteamProxyOptions, SteamProxyReply};
 use tokio::time::sleep;
 use tracing::{debug, error};
 use tryhard::RetryPolicy;
@@ -32,7 +33,6 @@ use crate::routes::v1::matches::types::{GameMode, ServerRegion};
 use crate::services::rate_limiter::describe;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::steam::client::SteamClient;
-use crate::services::steam::types::{SteamProxyQuery, SteamProxyResponse};
 
 #[derive(Clone, Deserialize, IntoParams, ToSchema)]
 pub(super) struct CreateCustomRequest {
@@ -91,7 +91,7 @@ fn generate_callback_secret(length_bytes: usize) -> String {
 async fn create_party(
     state: &AppState,
     settings: Option<&CreateCustomRequest>,
-) -> APIResult<SteamProxyResponse<CMsgClientToGcPartyCreateResponse>> {
+) -> APIResult<SteamProxyReply<CMsgClientToGcPartyCreateResponse>> {
     let server_region = settings.and_then(|m| m.server_region);
     let region_mode = server_region.map(ServerRegion::region_mode);
 
@@ -136,18 +136,20 @@ async fn create_party(
         dev_force_hideout: None,
         hideout_search_key: None,
     };
-    let result: SteamProxyResponse<CMsgClientToGcPartyCreateResponse> = state
+    let result: SteamProxyReply<CMsgClientToGcPartyCreateResponse> = state
         .steam_client
-        .call_steam_proxy(SteamProxyQuery {
-            msg_type: EgcCitadelClientMessages::KEMsgClientToGcPartyCreate,
-            msg,
-            in_all_groups: None,
-            in_any_groups: None,
-            cooldown_time: Duration::from_hours(2),
-            request_timeout: Duration::from_secs(2),
-            username: None,
-            soft_cooldown_millis: None,
-        })
+        .call_steam_proxy(
+            EgcCitadelClientMessages::KEMsgClientToGcPartyCreate,
+            &msg,
+            SteamProxyOptions {
+                in_all_groups: None,
+                in_any_groups: None,
+                cooldown: Duration::from_hours(2),
+                soft_cooldown: None,
+                request_timeout: Duration::from_secs(2),
+                username: None,
+            },
+        )
         .await?;
     Ok(result)
 }
@@ -166,11 +168,11 @@ async fn switch_to_spectator_slot(
         ..Default::default()
     };
     let response: CMsgClientToGcPartyActionResponse = steam_client
-        .call_steam_proxy(utils::build_proxy_query(
+        .call_steam_proxy(
             EgcCitadelClientMessages::KEMsgClientToGcPartyAction,
-            msg,
-            username,
-        ))
+            &msg,
+            utils::party_options(&username),
+        )
         .await?
         .msg;
     if response
@@ -242,7 +244,7 @@ pub(super) async fn create_custom(
 
     let callback_url = payload.as_ref().and_then(|p| p.callback_url.clone());
 
-    let SteamProxyResponse {
+    let SteamProxyReply {
         username,
         msg: created_party,
     } = tryhard::retry_fn(|| create_party(&state, payload.as_ref()))
