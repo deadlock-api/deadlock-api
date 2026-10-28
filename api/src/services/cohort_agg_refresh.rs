@@ -257,7 +257,7 @@ pub(crate) fn cohort_rollup_rows(table: &str) -> Option<impl Fn(&str) -> String>
 }
 
 /// Keep in sync with the backfill in
-/// `worker-crates/migrations/clickhouse/41_create_item_enemy_stats_agg.sql`. The opposing-team
+/// `workers/migrations/clickhouse/41_create_item_enemy_stats_agg.sql`. The opposing-team
 /// expression mirrors the semi-join of the `item_stats` base query so both count the same rows.
 /// `enemy_hero_id` keeps only the buyers facing that hero.
 pub(crate) fn enemy_hero_select_body(since_clause: &str, enemy_hero_id: Option<u32>) -> String {

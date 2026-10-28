@@ -1,6 +1,6 @@
 name: Crates CI
 
-# Checks for the shared library crates (util-crates/*, including valveprotos and haste with its
+# Checks for the shared library crates (crates/*, including valveprotos and haste with its
 # dungers crates) and the website's wasm modules (website/wasm/*). Their consumers (api, workers,
 # live-events, website) are checked by their own workflows, which also trigger on changes to
 # these crates.
@@ -10,7 +10,7 @@ on:
     branches:
       - master
     paths: &paths
-      - 'util-crates/**'
+      - 'crates/**'
       - 'website/wasm/**'
       - 'Cargo.toml'
       - 'Cargo.lock'
@@ -45,7 +45,7 @@ jobs:
         haste haste_core haste_broadcast haste_vartype
         dungers dungers_bitbuf dungers_charsor dungers_varint
         hero-build wasm-abi
-      paths: util-crates website/wasm
-      typos-paths: util-crates website/wasm
+      paths: crates website/wasm
+      typos-paths: crates website/wasm
       test: true
       cache-key: crates-build-cache

@@ -4,9 +4,9 @@ Monorepo for the main game data Rust API and website of https://deadlock-api.com
 
 ```
 api/ # rust api, served in production at https://api.deadlock-api.com
-worker-crates/ # rust microservices for data ingestion and scraping; migrations/ holds the clickhouse + postgres migrations
+workers/ # rust microservices for data ingestion and scraping; migrations/ holds the clickhouse + postgres migrations
 live-events/ # rust service for live match event streaming
-util-crates/ # libraries shared by the services:
+crates/ # libraries shared by the services:
   telemetry/ # console logs + otlp export (all services); feature `prometheus` for the workers' scrape endpoint
   service-utils/ # env config, graceful shutdown, retries with backoff, shared http clients
   steam-id/ # SteamId: a player's account id <-> SteamID64/Steam3/Steam2; feature `serde` has the deserializers for account id query params
@@ -22,7 +22,7 @@ util-crates/ # libraries shared by the services:
   valveprotos/ # rust protobuf bindings for steam/deadlock (formerly valveprotos-rs)
   haste/ # source 2 demo/broadcast parser (formerly deadlock-api/haste); crates/dungers* are its bitbuf/varint/charsor primitives (formerly deadlock-api/dungers)
 website/ # tanstack start website, using generated openapi SDKs hitting the api
-website/wasm/ # rust crates compiled to wasm for the website (hero build codes on valveprotos, crosshairs on util-crates/crosshair); abi/ is their shared ABI
+website/wasm/ # rust crates compiled to wasm for the website (hero build codes on valveprotos, crosshairs on crates/crosshair); abi/ is their shared ABI
 ```
 
 All Rust crates form one cargo workspace rooted at `Cargo.toml` (single `Cargo.lock`, `target/`,

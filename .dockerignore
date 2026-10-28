@@ -19,7 +19,7 @@ website/*
 !website/wasm/
 scripts/
 live-events/docker-compose.yaml
-worker-crates/docker-compose.yaml
+workers/docker-compose.yaml
 api/docker-compose.yaml
 **/*.rs.bk
 **/*.pdb

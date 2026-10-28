@@ -9,16 +9,16 @@ WORKDIR /app
 # the target.cfg rustflags from cargo config. Use the short-name form so it
 # works for build scripts linked via gcc as well as the final target.
 ENV RUSTFLAGS="-Clink-arg=-fuse-ld=mold -Ctarget-cpu=znver2"
-# Build context is the repo root (one cargo workspace); build only the packages under worker-crates/.
+# Build context is the repo root (one cargo workspace); build only the packages under workers/.
 # The target cache mount is shared with the other Rust images, so copy out only the workers'
 # own binaries (named after their packages; library packages produce none).
 COPY . .
 RUN --mount=type=cache,target=/usr/local/cargo/registry \
     --mount=type=cache,target=/usr/local/cargo/git \
     --mount=type=cache,target=/app/target,sharing=locked \
-    cargo build --release --locked $(for m in worker-crates/*/Cargo.toml; do sed -n 's/^name = "\(.*\)"/-p \1/p' "$m"; done) \
+    cargo build --release --locked $(for m in workers/*/Cargo.toml; do sed -n 's/^name = "\(.*\)"/-p \1/p' "$m"; done) \
     && mkdir -p /tmp/release-bin \
-    && for m in worker-crates/*/Cargo.toml; do \
+    && for m in workers/*/Cargo.toml; do \
          name=$(sed -n 's/^name = "\(.*\)"/\1/p' "$m"); \
          if [ -f "/app/target/release/$name" ]; then cp "/app/target/release/$name" /tmp/release-bin/; fi; \
        done

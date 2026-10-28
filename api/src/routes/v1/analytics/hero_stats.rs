@@ -312,7 +312,7 @@ const MV_MEASURES: &str = "n_matches, n_wins, sum_kills, sum_deaths, sum_assists
     n_permanent_buff_timing_matches, sum_first_permanent_buff_time_s";
 
 /// The hero-stats rollup rows of a window's partial days. Keep in sync with the `SELECT` of both
-/// views in `worker-crates/migrations/clickhouse/50_power_up_buff_analytics.sql`.
+/// views in `workers/migrations/clickhouse/50_power_up_buff_analytics.sql`.
 fn mv_rows(
     EdgeRows {
         where_clause,
@@ -955,7 +955,7 @@ mod tests {
     #[test]
     fn edge_rows_mirror_the_rollup_views() {
         let migration = include_str!(
-            "../../../../../worker-crates/migrations/clickhouse/50_power_up_buff_analytics.sql"
+            "../../../../../workers/migrations/clickhouse/50_power_up_buff_analytics.sql"
         );
         let rows = mv_rows(&EdgeRows {
             where_clause: String::new(),

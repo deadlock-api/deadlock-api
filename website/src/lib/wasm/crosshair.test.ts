@@ -10,7 +10,7 @@ import { loadWasmModule, WasmCallError } from "./module";
 // Built by `pnpm build:wasm` (part of `pnpm test:unit`).
 const wasm = readFileSync(new URL("../../wasm/crosshair-wasm.wasm", import.meta.url));
 /** Codes exported by the game, and the API's reference renders of them. */
-const FIXTURES = new URL("../../../../util-crates/crosshair/src/fixtures/", import.meta.url);
+const FIXTURES = new URL("../../../../crates/crosshair/src/fixtures/", import.meta.url);
 
 const codec = crosshairCodec(await loadWasmModule(wasm, ["decode", "encode", "render"]));
 

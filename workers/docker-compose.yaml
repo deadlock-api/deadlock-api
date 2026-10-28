@@ -2,7 +2,7 @@ services:
   active-matches-scraper:
     build:
       context: ..
-      dockerfile: worker-crates/Dockerfile
+      dockerfile: workers/Dockerfile
     command: ["active-matches-scraper"]
     restart: always
     env_file: .env
@@ -10,7 +10,7 @@ services:
   ingest-worker:
     build:
       context: ..
-      dockerfile: worker-crates/Dockerfile
+      dockerfile: workers/Dockerfile
     command: ["ingest-worker"]
     restart: always
     env_file: .env
@@ -19,7 +19,7 @@ services:
   matchdata-downloader:
     build:
       context: ..
-      dockerfile: worker-crates/Dockerfile
+      dockerfile: workers/Dockerfile
     command: ["matchdata-downloader"]
     restart: always
     env_file: .env
@@ -28,7 +28,7 @@ services:
   salt-scraper:
     build:
       context: ..
-      dockerfile: worker-crates/Dockerfile
+      dockerfile: workers/Dockerfile
     command: ["salt-scraper"]
     restart: always
     environment:
@@ -38,7 +38,7 @@ services:
   history-fetcher:
     build:
       context: ..
-      dockerfile: worker-crates/Dockerfile
+      dockerfile: workers/Dockerfile
     command: ["history-fetcher"]
     restart: always
     env_file: .env
@@ -48,7 +48,7 @@ services:
   steam-profile-fetcher:
     build:
       context: ..
-      dockerfile: worker-crates/Dockerfile
+      dockerfile: workers/Dockerfile
     command: ["steam-profile-fetcher"]
     restart: always
     env_file: .env
@@ -56,7 +56,7 @@ services:
   builds-fetcher:
     build:
       context: ..
-      dockerfile: worker-crates/Dockerfile
+      dockerfile: workers/Dockerfile
     command: ["builds-fetcher"]
     restart: always
     env_file: .env
@@ -66,7 +66,7 @@ services:
   update-assets-tables:
     build:
       context: ..
-      dockerfile: worker-crates/Dockerfile
+      dockerfile: workers/Dockerfile
     command: ["update-assets-tables"]
     restart: always
     env_file: .env
@@ -76,7 +76,7 @@ services:
   demo-analyzer:
     build:
       context: ..
-      dockerfile: worker-crates/Dockerfile
+      dockerfile: workers/Dockerfile
     command: ["demo-analyzer"]
     restart: always
     env_file: .env
@@ -84,7 +84,7 @@ services:
   hltv-spectator:
     build:
       context: ..
-      dockerfile: worker-crates/Dockerfile
+      dockerfile: workers/Dockerfile
     command: ["hltv-scraper", "run-spectate-bot"]
     restart: always
     env_file: .env
@@ -92,7 +92,7 @@ services:
   hltv-scraper:
     build:
       context: ..
-      dockerfile: worker-crates/Dockerfile
+      dockerfile: workers/Dockerfile
     command: ["hltv-scraper", "scrape-hltv-matches"]
     restart: always
     env_file: .env

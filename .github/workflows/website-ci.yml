@@ -10,8 +10,8 @@ on:
       # The tracker demo ports its metric formulas (website/src/lib/tracker/player-metric-formulas.ts).
       - 'api/src/routes/v1/analytics/player_stats_metrics.rs'
       # The wasm modules (website/wasm/*) build on valveprotos and the crosshair crate in the root cargo workspace.
-      - 'util-crates/valveprotos/**'
-      - 'util-crates/crosshair/**'
+      - 'crates/valveprotos/**'
+      - 'crates/crosshair/**'
       - 'Cargo.toml'
       - 'Cargo.lock'
       - 'rust-toolchain.toml'

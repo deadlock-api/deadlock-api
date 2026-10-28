@@ -10,8 +10,8 @@ on:
     branches:
       - master
     paths: &paths
-      - 'worker-crates/**'
-      - 'util-crates/**'
+      - 'workers/**'
+      - 'crates/**'
       - '.sqlx/**'
       - 'Cargo.toml'
       - 'Cargo.lock'
@@ -45,8 +45,8 @@ jobs:
         active-matches-scraper builds-fetcher demo-analyzer
         history-fetcher hltv-scraper ingest-worker matchdata-downloader player-match-history salt-scraper
         steam-profile-fetcher update-assets-tables
-      paths: worker-crates
-      typos-paths: worker-crates
+      paths: workers
+      typos-paths: workers
       cache-key: tools-build-cache
 
   # One image holds every worker binary. It builds in parallel with the checks; the components'
@@ -71,7 +71,7 @@ jobs:
         with:
           # Build context is the repo root: the workers are members of the root cargo workspace.
           context: .
-          file: worker-crates/Dockerfile
+          file: workers/Dockerfile
           platforms: linux/amd64
           push: true
           tags: ${{ env.BASE_IMAGE }}:build-${{ github.sha }}
@@ -88,8 +88,8 @@ jobs:
         ingest-worker matchdata-downloader salt-scraper steam-profile-fetcher update-assets-tables
       # Everything every worker builds on.
       SHARED_PATHS: >-
-        util-crates/** .sqlx/** worker-crates/player-match-history/**
-        worker-crates/Dockerfile Cargo.toml Cargo.lock rust-toolchain.toml
+        crates/** .sqlx/** workers/player-match-history/**
+        workers/Dockerfile Cargo.toml Cargo.lock rust-toolchain.toml
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Generate path filters
@@ -100,7 +100,7 @@ jobs:
             echo 'yaml<<EOF'
             for component in $COMPONENTS; do
               echo "$component:"
-              for path in "worker-crates/$component/**" $SHARED_PATHS; do echo "  - '$path'"; done
+              for path in "workers/$component/**" $SHARED_PATHS; do echo "  - '$path'"; done
             done
             echo 'EOF'
           } >> "$GITHUB_OUTPUT"

@@ -2,20 +2,20 @@
 members = [
     "api",
     "live-events",
-    "util-crates/*",
-    "util-crates/haste/crates/*",
+    "crates/*",
+    "crates/haste/crates/*",
     "website/wasm/*",
-    "worker-crates/active-matches-scraper",
-    "worker-crates/builds-fetcher",
-    "worker-crates/demo-analyzer",
-    "worker-crates/history-fetcher",
-    "worker-crates/hltv-scraper",
-    "worker-crates/ingest-worker",
-    "worker-crates/matchdata-downloader",
-    "worker-crates/player-match-history",
-    "worker-crates/salt-scraper",
-    "worker-crates/steam-profile-fetcher",
-    "worker-crates/update-assets-tables",
+    "workers/active-matches-scraper",
+    "workers/builds-fetcher",
+    "workers/demo-analyzer",
+    "workers/history-fetcher",
+    "workers/hltv-scraper",
+    "workers/ingest-worker",
+    "workers/matchdata-downloader",
+    "workers/player-match-history",
+    "workers/salt-scraper",
+    "workers/steam-profile-fetcher",
+    "workers/update-assets-tables",
 ]
 resolver = "3"
 
@@ -24,29 +24,29 @@ edition = "2024"
 
 [workspace.dependencies]
 # Shared in-repo crates
-assets-client = { path = "util-crates/assets-client" }
-clickhouse-utils = { path = "util-crates/clickhouse-utils" }
-crosshair = { path = "util-crates/crosshair" }
-db-clients = { path = "util-crates/db-clients" }
-demofusion = { path = "util-crates/demofusion" }
-game-assets = { path = "util-crates/game-assets" }
-keyvalues = { path = "util-crates/keyvalues" }
-player-match-history = { path = "worker-crates/player-match-history" }
-rate-limit = { path = "util-crates/rate-limit" }
-service-utils = { path = "util-crates/service-utils" }
-steam-id = { path = "util-crates/steam-id" }
-steam-proxy = { path = "util-crates/steam-proxy" }
-telemetry = { path = "util-crates/telemetry" }
-valveprotos = { path = "util-crates/valveprotos" }
+assets-client = { path = "crates/assets-client" }
+clickhouse-utils = { path = "crates/clickhouse-utils" }
+crosshair = { path = "crates/crosshair" }
+db-clients = { path = "crates/db-clients" }
+demofusion = { path = "crates/demofusion" }
+game-assets = { path = "crates/game-assets" }
+keyvalues = { path = "crates/keyvalues" }
+player-match-history = { path = "workers/player-match-history" }
+rate-limit = { path = "crates/rate-limit" }
+service-utils = { path = "crates/service-utils" }
+steam-id = { path = "crates/steam-id" }
+steam-proxy = { path = "crates/steam-proxy" }
+telemetry = { path = "crates/telemetry" }
+valveprotos = { path = "crates/valveprotos" }
 wasm-abi = { path = "website/wasm/abi" }
-haste = { path = "util-crates/haste" }
-haste_broadcast = { path = "util-crates/haste/crates/haste_broadcast" }
-haste_core = { path = "util-crates/haste/crates/haste_core" }
-haste_vartype = { path = "util-crates/haste/crates/haste_vartype" }
-dungers = { path = "util-crates/haste/crates/dungers" }
-dungers_bitbuf = { path = "util-crates/haste/crates/dungers_bitbuf" }
-dungers_charsor = { path = "util-crates/haste/crates/dungers_charsor" }
-dungers_varint = { path = "util-crates/haste/crates/dungers_varint" }
+haste = { path = "crates/haste" }
+haste_broadcast = { path = "crates/haste/crates/haste_broadcast" }
+haste_core = { path = "crates/haste/crates/haste_core" }
+haste_vartype = { path = "crates/haste/crates/haste_vartype" }
+dungers = { path = "crates/haste/crates/dungers" }
+dungers_bitbuf = { path = "crates/haste/crates/dungers_bitbuf" }
+dungers_charsor = { path = "crates/haste/crates/dungers_charsor" }
+dungers_varint = { path = "crates/haste/crates/dungers_varint" }
 
 async-compression = "0.4.51"
 base64 = "0.23.1"

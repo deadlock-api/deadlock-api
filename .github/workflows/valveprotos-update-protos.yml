@@ -1,6 +1,6 @@
 name: Update Protos
 
-# Pulls the latest protos from SteamDatabase/Protobufs into util-crates/valveprotos/protos
+# Pulls the latest protos from SteamDatabase/Protobufs into crates/valveprotos/protos
 # and opens a PR with the changes, or refreshes the already open one (same
 # branch). Migrated from the standalone valveprotos-rs repository.
 
@@ -33,7 +33,7 @@ jobs:
       - name: Run fetch-protos
         # fetch-protos reads and writes paths relative to the crate root. The build
         # script needs the proto features on, or protoc gets no input files.
-        working-directory: util-crates/valveprotos
+        working-directory: crates/valveprotos
         run: cargo run --locked -p valveprotos --all-features --bin fetch-protos
 
       - name: Open or update PR
@@ -42,7 +42,7 @@ jobs:
           # PRs opened with GITHUB_TOKEN don't trigger other workflows, so the PR's
           # CI only runs when a PAT / app token is provided as PROTOS_PR_TOKEN.
           token: ${{ secrets.PROTOS_PR_TOKEN || github.token }}
-          add-paths: util-crates/valveprotos/protos
+          add-paths: crates/valveprotos/protos
           branch: valveprotos/update-protos
           delete-branch: true
           commit-message: "valveprotos: update protos"

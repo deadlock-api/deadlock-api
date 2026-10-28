@@ -12,7 +12,7 @@ with Source2Viewer-CLI (tested with 20.0) and run this script on the result:
         -f maps/dl_midtown/entities/ -e vents_c -o out
     uv run scripts/extract_map_geometry.py \
         out/maps/dl_midtown/entities/default_ents.vents \
-        > util-crates/game-assets/src/versions/map/city_never_sleeps.rs
+        > crates/game-assets/src/versions/map/city_never_sleeps.rs
     cargo fmt -p deadlock-api-rust
 
 Output (Rust statics, world coordinates):

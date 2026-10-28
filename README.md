@@ -6,21 +6,21 @@ Monorepo for the [Deadlock API](https://deadlock-api.com) project.
 
 - **[`api/`](api/)** - Rust API (Axum) serving game data, analytics, leaderboards, and more
 - **[`website/`](website/)** - React frontend (Vite + React Router) for the Deadlock API website
-- **[`worker-crates/`](worker-crates/)** - Rust microservices for data ingestion, scraping, and pipeline processing,
+- **[`workers/`](workers/)** - Rust microservices for data ingestion, scraping, and pipeline processing,
   plus the database migrations
 - **[`live-events/`](live-events/)** - Rust service for live match event streaming via SSE
-- **[`util-crates/`](util-crates/)** - Rust libraries shared by the services, among them:
-  - [`valveprotos/`](util-crates/valveprotos/) - Rust bindings for the Steam and Deadlock protobufs (formerly
+- **[`crates/`](crates/)** - Rust libraries shared by the services, among them:
+  - [`valveprotos/`](crates/valveprotos/) - Rust bindings for the Steam and Deadlock protobufs (formerly
     `valveprotos-rs`)
-  - [`haste/`](util-crates/haste/) - Source 2 demo and broadcast parser (formerly `deadlock-api/haste`), including
+  - [`haste/`](crates/haste/) - Source 2 demo and broadcast parser (formerly `deadlock-api/haste`), including
     the `dungers` bit buffer, varint and char cursor crates it uses (formerly `deadlock-api/dungers`)
-  - [`demofusion/`](util-crates/demofusion/) - SQL queries (Apache DataFusion) over demo files and live broadcasts,
+  - [`demofusion/`](crates/demofusion/) - SQL queries (Apache DataFusion) over demo files and live broadcasts,
     parsed with `haste`
-  - [`keyvalues/`](util-crates/keyvalues/) - parsers for Valve's KV3 (`.vdata`) and localization files
-  - [`crosshair/`](util-crates/crosshair/) - crosshair share codes (`DL.…`) to settings and back, and settings to PNG
-  - [`game-assets/`](util-crates/game-assets/) - the versioned game files (`.vdata`, CSS, localization) to the
+  - [`keyvalues/`](crates/keyvalues/) - parsers for Valve's KV3 (`.vdata`) and localization files
+  - [`crosshair/`](crates/crosshair/) - crosshair share codes (`DL.…`) to settings and back, and settings to PNG
+  - [`game-assets/`](crates/game-assets/) - the versioned game files (`.vdata`, CSS, localization) to the
     API's `/v1/assets` JSON
-  - [`rate-limit/`](util-crates/rate-limit/) - the API's sliding-window rate limiter
+  - [`rate-limit/`](crates/rate-limit/) - the API's sliding-window rate limiter
   - `telemetry`, `service-utils`, `steam-id`, `steam-proxy`, `db-clients`, `clickhouse-utils` and `assets-client`,
     the service plumbing that used to live in one `common` crate
 
@@ -52,8 +52,8 @@ pnpm dev
 ### Workers
 
 ```bash
-# Set up worker-crates/.env with your credentials
-cd worker-crates
+# Set up workers/.env with your credentials
+cd workers
 cargo run -p <service-name>
 ```
 

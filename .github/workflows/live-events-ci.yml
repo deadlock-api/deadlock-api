@@ -6,7 +6,7 @@ on:
       - master
     paths: &paths
       - 'live-events/**'
-      - 'util-crates/**'
+      - 'crates/**'
       - 'Cargo.toml'
       - 'Cargo.lock'
       - '.cargo/**'

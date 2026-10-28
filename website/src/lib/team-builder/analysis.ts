@@ -68,7 +68,7 @@ export interface DraftModel {
 }
 
 /**
- * Fitted by `worker-crates/analysis/team-builder`, one model per game mode, on stats windows of 14, 30 and
+ * Fitted by `workers/analysis/team-builder`, one model per game mode, on stats windows of 14, 30 and
  * 56 days at once so the model holds whichever range the filter asks for. Statistics only: the
  * shrinkage is an empirical-Bayes estimate of how far true rates spread beyond sampling noise, and
  * the weights are the maximum-likelihood logistic regression on the four terms.

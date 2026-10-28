@@ -80,8 +80,7 @@ pub fn render_json(json: &str) -> Result<String, String> {
 mod tests {
     use super::*;
 
-    const RED_PIPS: &str =
-        include_str!("../../../../util-crates/crosshair/src/fixtures/red_pips.txt");
+    const RED_PIPS: &str = include_str!("../../../../crates/crosshair/src/fixtures/red_pips.txt");
 
     #[test]
     fn round_trips_settings_through_json() {
