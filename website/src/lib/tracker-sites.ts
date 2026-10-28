@@ -62,4 +62,5 @@ export const TRACKER_SITES: readonly TrackerSite[] = [
   { name: "Buildlock.io", icon: "/tracker-sites/buildlock-io.webp" },
   { name: "Deadlock Vault", icon: "/tracker-sites/deadlock-vault.svg" },
   { name: "DenyPick", icon: "/tracker-sites/denypick.webp" },
+  { name: "Deadlock Update Tracker", icon: "/tracker-sites/deadlock-update-tracker.webp" },
 ];
