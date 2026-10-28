@@ -3,9 +3,9 @@ import { Slot } from "radix-ui";
 import { GAP, type Space } from "~/components/ui/layout-props";
 import { cn } from "~/lib/utils";
 
-type Columns = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 12;
+type Columns = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 12;
 /** Column counts by the width of the grid's own container, not of the viewport. */
-type ResponsiveColumns = { base?: Columns; sm?: Columns; md?: Columns; lg?: Columns; xl?: Columns };
+type ResponsiveColumns = { base?: Columns; xs?: Columns; sm?: Columns; md?: Columns; lg?: Columns; xl?: Columns };
 
 // Written out in full so Tailwind can see every class.
 const COLUMNS: Record<keyof ResponsiveColumns, Record<Columns, string>> = {
@@ -18,7 +18,20 @@ const COLUMNS: Record<keyof ResponsiveColumns, Record<Columns, string>> = {
     6: "grid-cols-6",
     7: "grid-cols-7",
     8: "grid-cols-8",
+    9: "grid-cols-9",
     12: "grid-cols-12",
+  },
+  xs: {
+    1: "@xs:grid-cols-1",
+    2: "@xs:grid-cols-2",
+    3: "@xs:grid-cols-3",
+    4: "@xs:grid-cols-4",
+    5: "@xs:grid-cols-5",
+    6: "@xs:grid-cols-6",
+    7: "@xs:grid-cols-7",
+    8: "@xs:grid-cols-8",
+    9: "@xs:grid-cols-9",
+    12: "@xs:grid-cols-12",
   },
   sm: {
     1: "@sm:grid-cols-1",
@@ -29,6 +42,7 @@ const COLUMNS: Record<keyof ResponsiveColumns, Record<Columns, string>> = {
     6: "@sm:grid-cols-6",
     7: "@sm:grid-cols-7",
     8: "@sm:grid-cols-8",
+    9: "@sm:grid-cols-9",
     12: "@sm:grid-cols-12",
   },
   md: {
@@ -40,6 +54,7 @@ const COLUMNS: Record<keyof ResponsiveColumns, Record<Columns, string>> = {
     6: "@md:grid-cols-6",
     7: "@md:grid-cols-7",
     8: "@md:grid-cols-8",
+    9: "@md:grid-cols-9",
     12: "@md:grid-cols-12",
   },
   lg: {
@@ -51,6 +66,7 @@ const COLUMNS: Record<keyof ResponsiveColumns, Record<Columns, string>> = {
     6: "@2xl:grid-cols-6",
     7: "@2xl:grid-cols-7",
     8: "@2xl:grid-cols-8",
+    9: "@2xl:grid-cols-9",
     12: "@2xl:grid-cols-12",
   },
   xl: {
@@ -62,6 +78,7 @@ const COLUMNS: Record<keyof ResponsiveColumns, Record<Columns, string>> = {
     6: "@4xl:grid-cols-6",
     7: "@4xl:grid-cols-7",
     8: "@4xl:grid-cols-8",
+    9: "@4xl:grid-cols-9",
     12: "@4xl:grid-cols-12",
   },
 };
