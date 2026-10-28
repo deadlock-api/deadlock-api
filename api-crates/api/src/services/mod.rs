@@ -1,4 +1,3 @@
-pub(super) mod assets;
 pub(crate) mod ch_admission;
 pub(crate) mod ch_cache;
 pub(crate) mod cohort_agg_refresh;

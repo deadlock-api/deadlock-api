@@ -3,13 +3,13 @@ use std::sync::Arc;
 use axum::Json;
 use axum::extract::{Path, Query, State};
 use axum::response::IntoResponse;
+use game_assets::versions::heroes::{Hero, fetch_heroes};
 use serde::Deserialize;
 use utoipa::IntoParams;
 
 use crate::context::AppState;
 use crate::error::APIResult;
 use crate::routes::v1::assets::common::{AssetsQuery, Language, find_or_404, load_localized};
-use crate::services::assets::versions::heroes::{Hero, fetch_heroes};
 
 #[derive(Debug, Deserialize, IntoParams)]
 pub(crate) struct HeroesListQuery {

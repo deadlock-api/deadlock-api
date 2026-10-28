@@ -1,11 +1,11 @@
 use axum::Json;
 use axum::extract::{Path, Query, State};
 use axum::response::IntoResponse;
+use game_assets::versions::modifiers::{Modifier, fetch_modifiers};
 
 use crate::context::AppState;
 use crate::error::APIResult;
 use crate::routes::v1::assets::common::{VersionQuery, find_by_id_or_classname, load_versioned};
-use crate::services::assets::versions::modifiers::{Modifier, fetch_modifiers};
 
 #[utoipa::path(
     get,

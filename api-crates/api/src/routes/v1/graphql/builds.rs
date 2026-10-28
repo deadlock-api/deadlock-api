@@ -7,6 +7,8 @@ use std::sync::Arc;
 
 use async_graphql::dataloader::{DataLoader, Loader};
 use async_graphql::{ComplexObject, Context, InputObject, Result as GqlResult};
+use game_assets::versions::heroes::Hero;
+use game_assets::versions::items::Item as AssetItem;
 use sqlx::{Pool, Postgres, QueryBuilder};
 use tracing::{Instrument as _, info_span};
 
@@ -20,8 +22,6 @@ use crate::routes::v1::graphql::assets::{find_hero, find_item, load_steam_profil
 use crate::routes::v1::graphql::cost::MAX_LIMIT;
 use crate::routes::v1::graphql::schema::{OrderDirection, app_state, record_rows_returned};
 use crate::routes::v1::graphql::types::SteamProfile;
-use crate::services::assets::versions::heroes::Hero;
-use crate::services::assets::versions::items::Item as AssetItem;
 use crate::utils::types::SortDirectionDesc;
 
 /// Filters for the `hero_builds` query. All set fields are AND-ed. Mirrors

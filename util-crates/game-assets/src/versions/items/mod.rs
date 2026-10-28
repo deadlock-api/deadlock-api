@@ -1,0 +1,74 @@
+//! `/v1/assets/items` data layer: fetch source files from R2, parse,
+//! transform, and cache the public item list. SVG icons are fetched from
+//! the public asset bucket (see `svg`).
+
+#![expect(
+    clippy::too_many_lines,
+    clippy::case_sensitive_file_extension_comparisons,
+    clippy::cast_possible_truncation,
+    clippy::cast_lossless,
+    clippy::similar_names,
+    clippy::if_not_else,
+    reason = "port of the legacy item pipeline; mirrors its field-by-field mapping"
+)]
+
+use std::sync::Arc;
+
+use cached::macros::cached;
+use object_store::aws::AmazonS3;
+
+use crate::versions::error::AssetsError;
+use crate::versions::localization;
+use crate::versions::store;
+
+mod build;
+mod css_lookup;
+mod detect;
+mod generic_data;
+mod paths;
+pub(crate) mod raw;
+mod svg;
+mod template;
+pub mod types;
+
+pub use types::Item;
+
+#[cached(
+    max_size = 32,
+    ttl_secs = 86400,
+    convert = r#"{ (version, language.to_owned()) }"#,
+    key = "(u32, String)"
+)]
+pub async fn fetch_items(
+    r2: &AmazonS3,
+    version: u32,
+    language: &str,
+) -> Result<Arc<Vec<Item>>, AssetsError> {
+    let text = |rel: &'static str| async move {
+        store::fetch_text(r2, version, rel)
+            .await
+            .map_err(AssetsError::from)
+    };
+    let (abilities, heroes, generic, loc, icons_css, prop_icons_css, base_styles_css) = tokio::try_join!(
+        text("scripts/abilities.vdata"),
+        text("scripts/heroes.vdata"),
+        text("scripts/generic_data.vdata"),
+        localization::fetch_localization(r2, version, language),
+        text("styles/ability_icons.css"),
+        text("styles/ability_property_icons.css"),
+        text("styles/citadel_base_styles.css"),
+    )?;
+
+    let items = build::build_items(build::BuildInputs {
+        abilities_vdata: &abilities,
+        heroes_vdata: &heroes,
+        generic_data_vdata: &generic,
+        localization: &loc,
+        ability_icons_css: &icons_css,
+        ability_property_icons_css: &prop_icons_css,
+        citadel_base_styles_css: &base_styles_css,
+    })
+    .await?;
+
+    Ok(Arc::new(items))
+}

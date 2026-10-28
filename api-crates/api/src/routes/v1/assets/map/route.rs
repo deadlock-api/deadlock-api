@@ -1,11 +1,11 @@
 use axum::Json;
 use axum::extract::{Query, State};
 use axum::response::IntoResponse;
+use game_assets::versions::map::{MapData, fetch_map};
 
 use crate::context::AppState;
 use crate::error::APIResult;
 use crate::routes::v1::assets::common::{VersionQuery, load_versioned};
-use crate::services::assets::versions::map::{MapData, fetch_map};
 
 #[utoipa::path(
     get,

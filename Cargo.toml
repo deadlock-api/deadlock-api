@@ -29,6 +29,7 @@ clickhouse-utils = { path = "util-crates/clickhouse-utils" }
 crosshair = { path = "util-crates/crosshair" }
 db-clients = { path = "util-crates/db-clients" }
 demofusion = { path = "util-crates/demofusion" }
+game-assets = { path = "util-crates/game-assets" }
 keyvalues = { path = "util-crates/keyvalues" }
 player-match-history = { path = "worker-crates/player-match-history" }
 rate-limit = { path = "api-crates/rate-limit" }

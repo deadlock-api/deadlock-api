@@ -19,12 +19,12 @@ use valveprotos::deadlock::{
     ECitadelMatchMode, EgcCitadelClientMessages, c_msg_client_to_gc_get_match_history_response,
 };
 
+use game_assets::versions::ranked_seasons::{fetch_ranked_seasons, interval_at};
 pub(crate) use player_match_history::{ETERNUS_MAX_BADGE, PlayerMatchHistoryEntry};
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::assets::common::{Language, resolve_version};
-use crate::services::assets::versions::ranked_seasons::{fetch_ranked_seasons, interval_at};
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::rate_limiter::{DOCUMENTED_DEFAULT, Quota, RateLimit, Scope, describe};
 use crate::services::steam::client::SteamClient;

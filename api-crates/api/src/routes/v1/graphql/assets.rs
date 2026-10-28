@@ -6,6 +6,10 @@ use std::sync::Arc;
 
 use async_graphql::{ComplexObject, Context, Result as GqlResult};
 use clickhouse_utils::BatchError;
+use game_assets::versions::error::AssetsError;
+use game_assets::versions::heroes::{Hero, fetch_heroes};
+use game_assets::versions::items::{Item as AssetItem, fetch_items};
+use game_assets::versions::ranks::{Rank, fetch_ranks};
 use object_store::aws::AmazonS3;
 
 use crate::context::AppState;
@@ -18,10 +22,6 @@ use crate::routes::v1::graphql::schema::app_state;
 use crate::routes::v1::graphql::types::{
     Item as GameplayItem, Match, MatchHistoryEntry, MatchPlayer, SteamProfile,
 };
-use crate::services::assets::versions::error::AssetsError;
-use crate::services::assets::versions::heroes::{Hero, fetch_heroes};
-use crate::services::assets::versions::items::{Item as AssetItem, fetch_items};
-use crate::services::assets::versions::ranks::{Rank, fetch_ranks};
 
 /// Resolve version + language and run a cached asset builder, mapping the
 /// REST-layer error into a GraphQL error. Reuses [`load_localized`].

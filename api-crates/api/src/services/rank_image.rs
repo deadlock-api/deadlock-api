@@ -19,6 +19,7 @@ use ab_glyph::{Font as _, FontVec, Glyph, PxScale, ScaleFont as _, point};
 use axum::body::Bytes;
 use axum::http::StatusCode;
 use cached::macros::cached;
+use game_assets::versions::ranks::RankImages;
 use image::{ImageEncoder as _, Rgba, RgbaImage};
 use object_store::ObjectStoreExt as _;
 use object_store::path::Path as ObjectPath;
@@ -27,7 +28,6 @@ use utoipa::ToSchema;
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
-use crate::services::assets::versions::ranks::RankImages;
 
 /// There are only 66 badges per format and they change only when a new asset build lands.
 pub(crate) const CACHE_TTL: Duration = Duration::from_hours(24);

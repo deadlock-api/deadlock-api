@@ -39,7 +39,7 @@ snap = "1.1.2"
 steam-id = { workspace = true, features = ["serde"] }
 steam-proxy = { workspace = true }
 telemetry = { workspace = true }
-keyvalues = { workspace = true }
+game-assets = { workspace = true, features = ["graphql", "schemars", "utoipa"] }
 rate-limit = { workspace = true, features = ["redis"] }
 player-match-history = { workspace = true, features = ["utoipa"] }
 crosshair = { workspace = true, features = ["utoipa"] }
@@ -73,9 +73,6 @@ jsonwebtoken = { version = "11", features = ["aws_lc_rs"] }
 async-trait = "0.1.92"
 tantivy = { version = "0.27.0", features = ["zstd-compression"] }
 arc-swap = "1.9.3"
-cssparser = "0.38"
-indexmap = { version = "2", features = ["serde"] }
-murmur2 = "0.1.0"
 datafusion = { version = "55", default-features = false, features = [
     "sql",
     "parquet",
@@ -105,7 +102,6 @@ clickhouse-sql-parser = { git = "https://github.com/raimannma/clickhouse-antlr4"
 proptest = "1"
 proptest-derive = "0.9"
 rstest = "0.28.0"
-insta = { version = "1", features = ["json"] }
 tempfile = "3.27.0"
 
 [lints]

@@ -1,10 +1,10 @@
 use axum::extract::State;
 use axum::http::header;
 use axum::response::IntoResponse;
+use game_assets::index::{IndexFolder, fetch_index};
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
-use crate::services::assets::index::{IndexFolder, fetch_index};
 
 async fn respond(state: &AppState, folder: IndexFolder) -> APIResult<impl IntoResponse + use<>> {
     let body = fetch_index(&state.r2_client, folder)

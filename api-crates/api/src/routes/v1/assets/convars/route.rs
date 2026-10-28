@@ -2,11 +2,11 @@ use axum::Json;
 use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
+use game_assets::versions::convars::{Convar, fetch_convars};
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::assets::common::{VersionQuery, load_versioned};
-use crate::services::assets::versions::convars::{Convar, fetch_convars};
 
 #[utoipa::path(
     get,

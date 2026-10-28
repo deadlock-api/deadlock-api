@@ -5,6 +5,7 @@ use axum::body::Body;
 use axum::http::{Response, header};
 use axum::response::IntoResponse;
 use clickhouse_utils::BatchError;
+use game_assets::client::AssetsClientError;
 use reqwest::StatusCode;
 use serde_json::json;
 use steam_proxy::SteamProxyError;
@@ -119,6 +120,12 @@ impl From<BatchError> for APIError {
             BatchError::NotFound => Self::status_msg(StatusCode::NOT_FOUND, e.to_string()),
             BatchError::Unavailable | BatchError::QueryFailed => Self::internal(e.to_string()),
         }
+    }
+}
+
+impl From<AssetsClientError> for APIError {
+    fn from(e: AssetsClientError) -> Self {
+        Self::internal(e.to_string())
     }
 }
 

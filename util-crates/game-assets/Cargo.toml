@@ -1,0 +1,42 @@
+[package]
+name = "game-assets"
+version = "0.1.0"
+edition = "2024"
+description = "Builds the public Deadlock asset JSON (heroes, items, ranks, map, …) from the versioned game files on R2"
+
+[features]
+utoipa = ["dep:utoipa"]
+graphql = ["dep:async-graphql"]
+schemars = ["dep:schemars"]
+
+[dependencies]
+arc-swap = "1.9.3"
+async-graphql = { version = "7", optional = true }
+bytes = { workspace = true }
+cached = { workspace = true, features = ["async"] }
+chrono = { version = "0.4.45", features = ["serde"] }
+cssparser = "0.38"
+indexmap = { version = "2", features = ["serde"] }
+keyvalues = { workspace = true }
+murmur2 = "0.1.0"
+object_store = { workspace = true }
+regex = "1.13.1"
+reqwest = { workspace = true }
+schemars = { version = "1.2.3", optional = true }
+serde = { workspace = true }
+serde_json = { workspace = true, features = ["preserve_order"] }
+strum = { version = "0.28.0", features = ["derive"] }
+thiserror = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+utoipa = { version = "6.0.0", optional = true }
+zstd = "0.14"
+
+[dev-dependencies]
+axum = "0.8.9"
+async-compression = { workspace = true, features = ["zstd", "tokio"] }
+insta = { version = "1", features = ["json"] }
+tokio = { workspace = true, features = ["io-util"] }
+
+[lints]
+workspace = true

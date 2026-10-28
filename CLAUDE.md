@@ -16,8 +16,9 @@ util-crates/ # libraries shared by the services:
   db-clients/ # clickhouse/postgres/redis/s3/file-cache connections from env, shared postgres queries
   clickhouse-utils/ # inserts, retrying batch inserter, batched key lookups (BatchQuery), match id bounds
   assets-client/ # heroes and ranked seasons from the public asset endpoints
+  game-assets/ # the versioned game files on R2 (.vdata, css, localization) to the api's /v1/assets JSON; features `utoipa`/`graphql`/`schemars` add the api's derives
   demofusion/ # sql (datafusion) over demo files and live broadcasts, parsed with haste; used by the api's /matches/demo routes
-  keyvalues/ # parsers for valve's kv3 (.vdata) and localization text files, used by the api's asset endpoints
+  keyvalues/ # parsers for valve's kv3 (.vdata) and localization text files, used by game-assets
   valveprotos/ # rust protobuf bindings for steam/deadlock (formerly valveprotos-rs)
   haste/ # source 2 demo/broadcast parser (formerly deadlock-api/haste); crates/dungers* are its bitbuf/varint/charsor primitives (formerly deadlock-api/dungers)
 website/ # tanstack start website, using generated openapi SDKs hitting the api

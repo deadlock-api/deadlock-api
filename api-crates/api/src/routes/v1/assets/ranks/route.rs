@@ -2,11 +2,11 @@ use axum::Json;
 use axum::extract::{Path, Query, State};
 use axum::http::{StatusCode, header};
 use axum::response::IntoResponse;
+use game_assets::versions::ranks::{Rank, fetch_ranks};
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::assets::common::{AssetsQuery, find_or_404, load_localized};
-use crate::services::assets::versions::ranks::{Rank, fetch_ranks};
 use crate::services::rank_image::{self, RankImageQuery};
 
 #[utoipa::path(

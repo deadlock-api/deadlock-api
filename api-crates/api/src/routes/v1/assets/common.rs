@@ -6,6 +6,7 @@
 )]
 
 use axum::Json;
+use game_assets::versions::error::AssetsError;
 use object_store::aws::AmazonS3;
 use reqwest::StatusCode;
 use serde::Deserialize;
@@ -14,7 +15,6 @@ use utoipa::IntoParams;
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
-use crate::services::assets::versions::error::AssetsError;
 
 /// Query params for `/v1/assets/*` endpoints that accept both a language and a
 /// client version. Endpoints that don't accept a language use [`VersionQuery`].
@@ -99,7 +99,7 @@ impl Language {
 
 /// Resolve the caller's requested `client_version`, falling back to the latest
 /// known version. An unknown version may trigger an on-demand refresh, see
-/// [`VersionStore::refresh_for`](crate::services::assets::versions::store::VersionStore::refresh_for).
+/// [`VersionStore::refresh_for`](game_assets::versions::store::VersionStore::refresh_for).
 pub(crate) async fn resolve_version(
     state: &AppState,
     client_version: Option<u32>,

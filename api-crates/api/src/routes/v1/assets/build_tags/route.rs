@@ -1,11 +1,11 @@
 use axum::Json;
 use axum::extract::{Path, Query, State};
 use axum::response::IntoResponse;
+use game_assets::versions::build_tags::{BuildTag, fetch_build_tags};
 
 use crate::context::AppState;
 use crate::error::APIResult;
 use crate::routes::v1::assets::common::{AssetsQuery, find_or_404, load_localized};
-use crate::services::assets::versions::build_tags::{BuildTag, fetch_build_tags};
 
 #[utoipa::path(
     get,

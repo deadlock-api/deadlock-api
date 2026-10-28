@@ -3,6 +3,10 @@ use std::collections::HashMap;
 use chrono::Duration;
 use clickhouse_utils::BatchError;
 use futures::future::join;
+use game_assets::client::AssetsClient;
+use game_assets::client::AssetsClientError;
+use game_assets::versions::error::AssetsError;
+use game_assets::versions::ranked_seasons::{fetch_ranked_seasons, season_at};
 use itertools::Itertools as _;
 use serde::{Deserialize, Serialize};
 use steam_proxy::SteamProxyReply;
@@ -22,9 +26,6 @@ use crate::routes::v1::players::match_history::{
     PlayerMatchHistoryEntry, fetch_steam_match_history,
 };
 use crate::routes::v1::players::rank::fetch_last_ranked_match;
-use crate::services::assets::client::AssetsClient;
-use crate::services::assets::versions::error::AssetsError;
-use crate::services::assets::versions::ranked_seasons::{fetch_ranked_seasons, season_at};
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::steam::client::SteamClient;
 
@@ -44,6 +45,8 @@ pub(super) enum VariableResolveError {
     Batch(#[from] BatchError),
     #[error(transparent)]
     Assets(#[from] AssetsError),
+    #[error(transparent)]
+    AssetsClient(#[from] AssetsClientError),
 }
 
 #[derive(Debug, Serialize, Clone, Copy, ToSchema)]

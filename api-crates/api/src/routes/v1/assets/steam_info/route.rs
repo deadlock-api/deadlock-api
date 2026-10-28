@@ -2,13 +2,11 @@ use axum::Json;
 use axum::extract::{Query, State};
 use axum::http::header;
 use axum::response::IntoResponse;
+use game_assets::versions::steam_info::{SteamInfo, fetch_all_steam_info, fetch_steam_info};
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::assets::common::{VersionQuery, load_versioned};
-use crate::services::assets::versions::steam_info::{
-    SteamInfo, fetch_all_steam_info, fetch_steam_info,
-};
 
 #[utoipa::path(
     get,

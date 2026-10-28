@@ -12,6 +12,9 @@ use async_graphql::extensions::{Analyzer, Tracing};
 use async_graphql::{
     Context, EmptyMutation, EmptySubscription, Enum, Object, Result as GqlResult, Schema,
 };
+use game_assets::versions::heroes::Hero;
+use game_assets::versions::items::Item as AssetItem;
+use game_assets::versions::ranks::Rank;
 use tokio::io::AsyncBufReadExt as _;
 use tracing::{Instrument as _, debug, info_span};
 
@@ -34,9 +37,6 @@ use crate::routes::v1::graphql::sql::{
     build_match_players_query, build_matches_query,
 };
 use crate::routes::v1::graphql::types::{Match, MatchHistoryEntry, MatchPlayer};
-use crate::services::assets::versions::heroes::Hero;
-use crate::services::assets::versions::items::Item as AssetItem;
-use crate::services::assets::versions::ranks::Rank;
 
 pub(super) fn app_state<'a>(ctx: &'a Context<'_>) -> GqlResult<&'a AppState> {
     ctx.data::<AppState>()

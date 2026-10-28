@@ -4,6 +4,8 @@ use std::fs::File;
 use std::io;
 use std::sync::Arc;
 
+use game_assets::client::AssetsClient;
+use game_assets::versions::store::VersionStore;
 use object_store::aws::{AmazonS3, AmazonS3Builder};
 use object_store::local::LocalFileSystem;
 use object_store::{BackoffConfig, RetryConfig};
@@ -16,8 +18,6 @@ use tracing::{debug, error, warn};
 use crate::context::batchers::{Batchers, insert_batcher};
 use crate::context::config::Config;
 use crate::routes::v1::mcp::{CatalogError, SnapshotCatalog};
-use crate::services::assets::client::AssetsClient;
-use crate::services::assets::versions::store::VersionStore;
 use crate::services::ch_admission::spawn_controller as spawn_ch_admission_controller;
 use crate::services::ch_cache;
 use crate::services::data_dump::DataDump;
