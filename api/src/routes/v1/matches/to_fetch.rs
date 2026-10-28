@@ -221,8 +221,9 @@ pub(crate) async fn queue_unknown_matches(
         return Ok(());
     }
     let ids = id_list(match_ids);
+    // A literal array of today's match ids is Array(UInt32), which doesn't decode as u64.
     let query = format!(
-        "SELECT match_id FROM (SELECT arrayJoin([{ids}]) AS match_id) \
+        "SELECT match_id FROM (SELECT arrayJoin(CAST([{ids}], 'Array(UInt64)')) AS match_id) \
          WHERE match_id NOT IN (SELECT match_id FROM match_player WHERE match_id IN ({ids})) \
            AND match_id NOT IN (SELECT match_id FROM pending_matches WHERE match_id IN ({ids})) \
          SETTINGS log_comment = 'queue_unknown_matches'"
